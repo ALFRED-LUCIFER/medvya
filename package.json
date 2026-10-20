@@ -6,6 +6,7 @@
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",
     "dev": "pnpm --filter clinic dev",
-    "check:synthetic": "node tools/check-synthetic/check.mjs"
+    "check:synthetic": "node tools/check-synthetic/check.mjs",
+    "test": "pnpm -r test"
   }
 }

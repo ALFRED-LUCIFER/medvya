@@ -43,6 +43,7 @@ jobs:
       - run: pnpm -r lint
       - run: pnpm -r build # includes tsc type-checking
       - run: pnpm audit --audit-level high
+      - run: node tools/check-synthetic/check.mjs --self-test && node tools/check-synthetic/check.mjs
 
   secrets:
     runs-on: ubuntu-latest

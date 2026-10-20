@@ -2,12 +2,25 @@
 
 Medvya is a clinic and doctor platform for India and the UAE: front desk, EMR, AI-drafted notes under clinician sign-off, billing, care follow-up and a patient portal, with hospital integration later.
 
-This repository currently holds the **product knowledge base and the delivery plan**. Application code starts with ticket [MDV-P0-001](tickets/P0-foundation/MDV-P0-001.md).
+This repository holds the product knowledge base, the delivery plan and the application code (from ticket [MDV-P0-001](tickets/P0-foundation/MDV-P0-001.md)). Read [AGENTS.md](AGENTS.md) before changing code.
+
+## Run locally
+
+Prerequisites: .NET SDK 10 (pinned in `global.json`), Node.js 22+ and pnpm 11.
+
+```bash
+dotnet build Medvya.sln                       # API + modules, warnings are errors
+dotnet run --project src/Host.Api             # API, health check at /health
+pnpm install && pnpm build                    # web workspaces (web/*, packages/*)
+pnpm dev                                      # clinic app on http://localhost:5173
+```
 
 | Folder | Content |
 |---|---|
 | [docs/](docs/README.md) | Everything from the design project and PRD v2: product, requirements, design system, architecture, security/compliance, delivery rules, gap analysis, ADRs |
 | [tickets/](tickets/README.md) | 223 Jira-style tickets for phases P0–P8, each with acceptance criteria, traceability, dates and a confidence level; date-wise [schedule](tickets/schedule.md); [Jira CSV](tickets/jira-import.csv); [coverage report](tickets/coverage-report.md) |
+| [src/](src) | .NET 10 modular monolith: `Host.Api` and modules (`Identity`, `Tenancy`, `Audit`), each split into Domain / Application / Infrastructure / Api |
+| [web/](web) · [packages/](packages) | React 19 + Vite clinic app; `@medvya/ui` (Medvya MUI theme) |
 | [design/](design/README.md) | Imported Claude Design source files (read-only) |
 | [tools/](tools) | `prd-extract` (design data → docs), `tickets/build.py` (ticket sources → files + coverage check) |
 

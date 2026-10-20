@@ -2,7 +2,7 @@
 
 Medvya is a clinic and doctor platform for India and the UAE: front desk, EMR, AI-drafted notes under clinician sign-off, billing, care follow-up and a patient portal, with hospital integration later.
 
-This repository holds the product knowledge base, the delivery plan and the application code (from ticket [MDV-P0-001](tickets/P0-foundation/MDV-P0-001.md)). Read [AGENTS.md](AGENTS.md) before changing code.
+This repository holds the product knowledge base, the delivery plan and the application code (from ticket [MDV-P0-001](tickets/P0-foundation/MDV-P0-001.md)). Read [AGENTS.md](AGENTS.md), [SECURITY.md](SECURITY.md) and the [secure development policy](docs/compliance/secure-development.md) before changing code.
 
 ## Run locally
 

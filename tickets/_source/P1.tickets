@@ -716,7 +716,7 @@ ac:
 - Layout is readable at 3 metres (minimum 48px token text) and in Arabic/English.
 
 === MDV-P1-032
-title: Email confirmations and 24 h / 2 h reminders via Azure Communication Services and Hangfire
+title: Email confirmations and 24 h / 2 h reminders via SendGrid and Hangfire
 type: Story
 epic: MDV-P1-E08
 prd: P1-09
@@ -730,7 +730,7 @@ depends: MDV-P1-021, MDV-P1-019
 confidence: 86 | Stack decided (Hangfire on Azure SQL, ACS); template rules defined.
 sources: PRD v2 P1-09, P1 NFR 2; docs/03-architecture/integrations.md
 desc:
-Hangfire server (Worker.Jobs) on Azure SQL in its own schema/user — no Redis or Service Bus in P1. Events: booking confirmation, reschedule, cancellation, 24 h and 2 h reminders, leave rebooking. Templates per tenant/language without clinical details. NOTIFICATION and NOTIFICATION_ATTEMPT record provider id, delivery state and retries with backoff; reminders are cancelled when the appointment changes.
+Hangfire server (Worker.Jobs) on Azure SQL in its own schema/user — no Redis or Service Bus in P1. Email provider: SendGrid (founder decision 20 Oct 2026, free tier) behind the Notifications adapter; Azure Communication Services remains an alternative. Events: booking confirmation, reschedule, cancellation, 24 h and 2 h reminders, leave rebooking. Templates per tenant/language without clinical details. NOTIFICATION and NOTIFICATION_ATTEMPT record provider id, delivery state and retries with backoff; reminders are cancelled when the appointment changes.
 ac:
 - Booking triggers a confirmation within 1 minute; reminders are sent at 24 h and 2 h before (facility time), respecting quiet hours and channel consent.
 - Rescheduling or cancelling cancels pending reminders and sends the right message once (idempotency test).

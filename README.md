@@ -6,9 +6,10 @@ This repository holds the product knowledge base, the delivery plan and the appl
 
 ## Run locally
 
-Prerequisites: .NET SDK 10 (pinned in `global.json`), Node.js 22+ and pnpm 11.
+Prerequisites: .NET SDK 10 (pinned in `global.json`), Node.js 22+, pnpm 11, and Docker with Compose. On Apple silicon, SQL Server needs amd64 emulation through Rosetta (Colima: `colima start --vz-rosetta --memory 4`).
 
 ```bash
+pnpm services:up                              # SQL Server :1433, Azurite blob :10000, email sink UI http://localhost:5025
 dotnet build Medvya.sln                       # API + modules, warnings are errors
 dotnet run --project src/Host.Api             # API, health check at /health
 pnpm install && pnpm build                    # web workspaces (web/*, packages/*)

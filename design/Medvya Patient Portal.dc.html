@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+Arabic:wght@400;600;700&family=Material+Symbols+Outlined:opsz,wght,FILL@20..24,400,0..1&display=swap" rel="stylesheet">
+<style>body{margin:0;background:#EAEFF3;color:#142536;font-family:Manrope,system-ui,sans-serif;-webkit-font-smoothing:antialiased}a{color:#2563EB;text-decoration:none}a:hover{text-decoration:underline}button{font-family:Manrope,system-ui,sans-serif}.ms{font-family:'Material Symbols Outlined';font-weight:400;font-style:normal;line-height:1;display:inline-block;white-space:nowrap;font-feature-settings:'liga'}</style>
+</helmet>
+<div style="padding:40px 32px 80px;display:flex;flex-direction:column;gap:28px;max-width:1800px;margin:0 auto">
+  <header style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:16px">
+    <div><div style="font:600 12px 'JetBrains Mono',monospace;color:#0F766E">R-01 · R-02 · R-03 · R-04 · Patient portal · M2 · mobile-first PWA</div><h1 style="margin:6px 0 0;font-size:30px;letter-spacing:-0.02em;color:#102A43">Medvya for patients</h1><p style="margin:6px 0 0;font-size:15px;color:#506579;max-width:720px;line-height:1.55">Patients see only what their doctor has released. Unreviewed AI drafts, internal notes and other patients never appear. Text is 17px minimum and every action is at least 48px tall.</p></div>
+    <div style="display:flex;gap:8px"><a href="Medvya Foundations.dc.html" style="height:40px;padding:0 14px;border-radius:10px;border:1px solid #CBD6E0;background:#fff;display:flex;align-items:center;font-size:14px;font-weight:600;color:#142536">Foundations</a><a href="Medvya Clinician App.dc.html" style="height:40px;padding:0 14px;border-radius:10px;border:1px solid #CBD6E0;background:#fff;display:flex;align-items:center;font-size:14px;font-weight:600;color:#142536">Clinician app</a></div>
+  </header>
+
+  <div style="display:flex;flex-wrap:wrap;gap:32px;align-items:flex-start">
+
+    <!-- PHONE 1 HOME -->
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:13px;font-weight:700;color:#334E68">1 · Home</div>
+      <div data-screen-label="R-01 Portal home" style="width:390px;height:820px;border-radius:44px;background:#102A43;padding:10px;box-sizing:border-box;box-shadow:0 12px 32px rgba(16,42,67,.18)">
+        <div style="width:100%;height:100%;border-radius:36px;background:#F7FAFC;overflow:hidden;display:flex;flex-direction:column">
+          <div style="height:44px;display:flex;justify-content:space-between;align-items:center;padding:0 26px;font-size:14px;font-weight:700"><span>10:42</span><span class="ms" style="font-size:18px">signal_cellular_alt</span></div>
+          <div style="flex:1;overflow:hidden;padding:8px 20px;display:flex;flex-direction:column;gap:16px">
+            <div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:14px;color:#506579">Namaste,</div><div style="font-size:24px;font-weight:800;color:#102A43">Meera</div></div><button style="height:40px;padding:0 12px;border-radius:999px;border:1px solid #DFE7ED;background:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px;cursor:pointer"><span class="ms" style="font-size:18px">translate</span>EN</button></div>
+            <div style="background:#102A43;color:#fff;border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:10px">
+              <div style="font-size:13px;color:#8FE3D6;font-weight:700">New from Dr. Arjun Rao</div>
+              <div style="font-size:19px;font-weight:700;line-height:1.35">Your visit summary and prescription are ready</div>
+              <button onClick="{{ goSummary }}" style="height:48px;border-radius:12px;border:0;background:#0E9384;color:#fff;font-size:16px;font-weight:700;cursor:pointer">View summary</button>
+            </div>
+            <div style="background:#fff;border:1px solid #DFE7ED;border-radius:16px;padding:16px;display:flex;gap:14px;align-items:center"><div style="width:52px;height:56px;border-radius:12px;background:#E7F6F4;color:#0F766E;display:flex;flex-direction:column;align-items:center;justify-content:center"><span style="font-size:12px;font-weight:700">OCT</span><span style="font-size:20px;font-weight:800">18</span></div><div style="flex:1"><div style="font-size:16px;font-weight:700">Results review</div><div style="font-size:14px;color:#506579">Sat 10:00 · Iyer Family Clinic</div></div><span class="ms" style="color:#506579">chevron_right</span></div>
+            <div style="font-size:15px;font-weight:800;color:#102A43;margin-top:4px">To do</div>
+            <sc-for list="{{ todos }}" as="t" hint-placeholder-count="3">
+              <div style="background:#fff;border:1px solid #DFE7ED;border-radius:14px;padding:14px;display:flex;gap:12px;align-items:center"><span class="ms" style="font-size:22px;color:{{ t.c }}">{{ t.icon }}</span><div style="flex:1"><div style="font-size:15.5px;font-weight:700">{{ t.title }}</div><div style="font-size:13.5px;color:#506579">{{ t.sub }}</div></div></div>
+            </sc-for>
+          </div>
+          <div style="height:76px;border-top:1px solid #DFE7ED;background:#fff;display:grid;grid-template-columns:repeat(5,1fr);padding-bottom:10px">
+            <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="5"><div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:{{ t.c }};font-size:11.5px;font-weight:700"><span class="ms" style="font-size:24px">{{ t.icon }}</span>{{ t.label }}</div></sc-for>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PHONE 2 SUMMARY -->
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:13px;font-weight:700;color:#334E68">2 · Released visit summary</div>
+      <div data-screen-label="R-01 Released visit summary" style="width:390px;height:820px;border-radius:44px;background:#102A43;padding:10px;box-sizing:border-box;box-shadow:0 12px 32px rgba(16,42,67,.18)">
+        <div style="width:100%;height:100%;border-radius:36px;background:#fff;overflow:hidden;display:flex;flex-direction:column">
+          <div style="height:44px;display:flex;justify-content:space-between;align-items:center;padding:0 26px;font-size:14px;font-weight:700"><span>10:43</span><span class="ms" style="font-size:18px">signal_cellular_alt</span></div>
+          <div style="padding:6px 16px 10px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #EEF2F5"><span class="ms" style="font-size:24px">arrow_back</span><div style="font-size:17px;font-weight:800">Visit · 4 Oct 2026</div></div>
+          <div style="flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:#087F5B"><span class="ms" style="font-size:17px">verified</span>Reviewed and shared by Dr. Arjun Rao</div>
+            <div style="display:flex;gap:6px" role="tablist"><sc-for list="{{ langs }}" as="l" hint-placeholder-count="3"><button onClick="{{ l.pick }}" style="height:36px;padding:0 12px;border-radius:999px;border:1px solid {{ l.line }};background:{{ l.bg }};color:{{ l.fg }};font-size:13.5px;font-weight:700;cursor:pointer">{{ l.label }}</button></sc-for></div>
+            <div style="font-size:17px;line-height:1.6;color:#142536">{{ summary }}</div>
+            <div style="font-size:15px;font-weight:800;color:#102A43">Your medicines</div>
+            <sc-for list="{{ meds }}" as="m" hint-placeholder-count="3"><div style="border:1px solid #DFE7ED;border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:2px"><div style="font-size:16px;font-weight:700;color:{{ m.c }}">{{ m.n }}</div><div style="font-size:14.5px;color:#334E68">{{ m.how }}</div></div></sc-for>
+            <div style="font-size:12.5px;color:#506579">Translated with AI and checked against the English summary your doctor approved. If unsure, ask the clinic.</div>
+          </div>
+          <div style="padding:12px 20px 20px;display:flex;gap:10px;border-top:1px solid #EEF2F5"><button style="flex:1;height:50px;border-radius:12px;border:1px solid #CBD6E0;background:#fff;font-size:15px;font-weight:700;cursor:pointer">Download PDF</button><button style="flex:1;height:50px;border-radius:12px;border:0;background:#0E9384;color:#fff;font-size:15px;font-weight:700;cursor:pointer">Message clinic</button></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PHONE 3 RECORDS -->
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:13px;font-weight:700;color:#334E68">3 · Records & lab reports</div>
+      <div data-screen-label="R-01 Records and labs" style="width:390px;height:820px;border-radius:44px;background:#102A43;padding:10px;box-sizing:border-box;box-shadow:0 12px 32px rgba(16,42,67,.18)">
+        <div style="width:100%;height:100%;border-radius:36px;background:#F7FAFC;overflow:hidden;display:flex;flex-direction:column">
+          <div style="height:44px;display:flex;justify-content:space-between;align-items:center;padding:0 26px;font-size:14px;font-weight:700"><span>10:45</span><span class="ms" style="font-size:18px">signal_cellular_alt</span></div>
+          <div style="padding:6px 20px 12px"><div style="font-size:24px;font-weight:800;color:#102A43">Records</div></div>
+          <div style="flex:1;overflow-y:auto;padding:0 20px;display:flex;flex-direction:column;gap:8px">
+            <sc-for list="{{ records }}" as="r" hint-placeholder-count="5">
+              <div style="background:#fff;border:1px solid #DFE7ED;border-radius:14px;padding:14px;display:flex;gap:12px;align-items:flex-start;opacity:{{ r.op }}"><span class="ms" style="font-size:22px;color:{{ r.c }};margin-top:1px">{{ r.icon }}</span><div style="flex:1"><div style="font-size:15.5px;font-weight:700">{{ r.title }}</div><div style="font-size:13.5px;color:#506579">{{ r.sub }}</div><div style="margin-top:6px;display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;color:{{ r.sc }}"><span class="ms" style="font-size:14px">{{ r.sIcon }}</span>{{ r.st }}</div></div></div>
+            </sc-for>
+            <div style="border:1px dashed #CBD6E0;border-radius:14px;padding:14px;display:flex;gap:10px;font-size:13.5px;color:#506579;line-height:1.5"><span class="ms" style="font-size:20px">lock_clock</span>New results appear here after your doctor reviews them. Most are reviewed within 2 working days.</div>
+          </div>
+          <div style="height:76px;border-top:1px solid #DFE7ED;background:#fff;display:grid;grid-template-columns:repeat(5,1fr);padding-bottom:10px">
+            <sc-for list="{{ tabs2 }}" as="t" hint-placeholder-count="5"><div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:{{ t.c }};font-size:11.5px;font-weight:700"><span class="ms" style="font-size:24px">{{ t.icon }}</span>{{ t.label }}</div></sc-for>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:13px;font-weight:700;color:#334E68">5 · Book or reschedule (R-02)</div>
+      <div data-screen-label="R-02 Portal booking" style="width:390px;height:820px;border-radius:44px;background:#102A43;padding:10px;box-sizing:border-box;box-shadow:0 12px 32px rgba(16,42,67,.18)">
+        <div style="width:100%;height:100%;border-radius:36px;background:#F7FAFC;overflow:hidden;display:flex;flex-direction:column">
+          <div style="height:44px;display:flex;justify-content:space-between;align-items:center;padding:0 26px;font-size:14px;font-weight:700"><span>10:50</span><span class="ms" style="font-size:18px">signal_cellular_alt</span></div>
+          <div style="padding:6px 16px 10px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #EEF2F5"><span class="ms" style="font-size:24px">arrow_back</span><div style="font-size:17px;font-weight:800">Book a visit</div></div>
+          <div style="flex:1;overflow:hidden;padding:16px 20px;display:flex;flex-direction:column;gap:14px">
+            <div style="display:flex;gap:8px"><sc-for list="{{ visitTypes }}" as="v" hint-placeholder-count="2"><button onClick="{{ v.pick }}" style="flex:1;height:48px;border-radius:12px;border:2px solid {{ v.line }};background:{{ v.bg }};font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px"><span class="ms" style="font-size:20px">{{ v.icon }}</span>{{ v.label }}</button></sc-for></div>
+            <div style="font-size:15px;font-weight:800">Dr. Arjun Rao · General medicine</div>
+            <div style="display:flex;gap:6px;overflow:hidden"><sc-for list="{{ days }}" as="d" hint-placeholder-count="5"><button onClick="{{ d.pick }}" style="flex:1;height:64px;border-radius:12px;border:1px solid {{ d.line }};background:{{ d.bg }};color:{{ d.fg }};cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px"><span style="font-size:11.5px;font-weight:700">{{ d.dow }}</span><span style="font-size:18px;font-weight:800">{{ d.n }}</span></button></sc-for></div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"><sc-for list="{{ slots }}" as="t" hint-placeholder-count="9"><button onClick="{{ t.pick }}" disabled="{{ t.off }}" style="height:48px;border-radius:10px;border:1px solid {{ t.line }};background:{{ t.bg }};color:{{ t.fg }};font-size:15px;font-weight:700;cursor:pointer;text-decoration:{{ t.td }}">{{ t.t }}</button></sc-for></div>
+            <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:14px;font-weight:700">Reason (optional)</span><input placeholder="e.g. review my reports" style="height:48px;padding:0 12px;border-radius:12px;border:1px solid #CBD6E0;font-size:16px"></input></label>
+            <div style="font-size:13.5px;color:#506579">Fee ₹600 · pay at clinic or by UPI. Free cancellation up to 2 hours before.</div>
+          </div>
+          <div style="padding:12px 20px 20px;border-top:1px solid #EEF2F5"><button onClick="{{ book }}" style="width:100%;height:52px;border-radius:12px;border:0;background:{{ bookBg }};color:#fff;font-size:16px;font-weight:800;cursor:pointer">{{ bookLabel }}</button></div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:13px;font-weight:700;color:#334E68">6 · Caregiver access (R-04)</div>
+      <div data-screen-label="R-04 Caregiver proxy" style="width:390px;height:820px;border-radius:44px;background:#102A43;padding:10px;box-sizing:border-box;box-shadow:0 12px 32px rgba(16,42,67,.18)">
+        <div style="width:100%;height:100%;border-radius:36px;background:#F7FAFC;overflow:hidden;display:flex;flex-direction:column">
+          <div style="height:44px;display:flex;justify-content:space-between;align-items:center;padding:0 26px;font-size:14px;font-weight:700"><span>10:50</span><span class="ms" style="font-size:18px">signal_cellular_alt</span></div>
+          <div style="padding:6px 16px 10px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #EEF2F5"><span class="ms" style="font-size:24px">arrow_back</span><div style="font-size:17px;font-weight:800">Add a caregiver</div></div>
+          <div style="flex:1;overflow:hidden;padding:16px 20px;display:flex;flex-direction:column;gap:12px">
+            <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:14px;font-weight:700">Name</span><input defaultValue="Kavya Iyer" style="height:48px;padding:0 12px;border-radius:12px;border:1px solid #CBD6E0;font-size:16px"></input></label>
+            <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:14px;font-weight:700">Mobile</span><input defaultValue="+91 98400 55210" style="height:48px;padding:0 12px;border-radius:12px;border:1px solid #CBD6E0;font-size:16px"></input></label>
+            <div style="font-size:14px;font-weight:700">What can they see?</div>
+            <sc-for list="{{ scopes }}" as="c" hint-placeholder-count="4"><button onClick="{{ c.toggle }}" style="display:flex;gap:12px;align-items:center;padding:12px;border-radius:12px;border:1px solid {{ c.line }};background:#fff;text-align:left;cursor:pointer;width:100%"><span class="ms" style="font-size:22px;color:{{ c.c }}">{{ c.icon }}</span><span style="flex:1;font-size:15px;font-weight:700">{{ c.label }}</span><span class="ms" style="font-size:22px;color:{{ c.c }}">{{ c.check }}</span></button></sc-for>
+            <div style="font-size:13px;color:#506579;line-height:1.5">Access ends on 04 Oct 2027. You can remove it any time. They will see “Viewing as caregiver for Meera”.</div>
+          </div>
+          <div style="padding:12px 20px 20px;border-top:1px solid #EEF2F5"><button onClick="{{ invite }}" style="width:100%;height:52px;border-radius:12px;border:0;background:{{ invBg }};color:#fff;font-size:16px;font-weight:800;cursor:pointer">{{ invLabel }}</button></div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:13px;font-weight:700;color:#334E68">7 · UAE · Arabic (RTL) home</div>
+      <div data-screen-label="R-01 UAE Arabic RTL home" style="width:390px;height:820px;border-radius:44px;background:#102A43;padding:10px;box-sizing:border-box;box-shadow:0 12px 32px rgba(16,42,67,.18)">
+        <div dir="rtl" style="width:100%;height:100%;border-radius:36px;background:#F7FAFC;overflow:hidden;display:flex;flex-direction:column;font-family:'Noto Sans Arabic',Manrope,sans-serif">
+          <div style="height:44px;display:flex;justify-content:space-between;align-items:center;padding:0 26px;font-size:14px;font-weight:700"><span>10:42</span><span class="ms" style="font-size:18px">signal_cellular_alt</span></div>
+          <div style="flex:1;overflow:hidden;padding:8px 20px;display:flex;flex-direction:column;gap:14px">
+            <div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:14px;color:#506579">مرحباً،</div><div style="font-size:24px;font-weight:700;color:#102A43">فاطمة</div></div><span style="height:40px;padding:0 12px;border-radius:999px;border:1px solid #DFE7ED;background:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px"><span class="ms" style="font-size:18px">translate</span>ع</span></div>
+            <div style="background:#102A43;color:#fff;border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:10px"><div style="font-size:13px;color:#8FE3D6;font-weight:600">جديد من د. عمر حداد</div><div style="font-size:19px;font-weight:700;line-height:1.5">ملخص زيارتك ووصفتك الطبية جاهزان</div><button style="height:48px;border-radius:12px;border:0;background:#0E9384;color:#fff;font-size:16px;font-weight:700;font-family:inherit">عرض الملخص</button></div>
+            <div style="background:#fff;border:1px solid #DFE7ED;border-radius:16px;padding:16px;display:flex;gap:14px;align-items:center"><div style="width:52px;height:56px;border-radius:12px;background:#E7F6F4;color:#0F766E;display:flex;flex-direction:column;align-items:center;justify-content:center"><span style="font-size:12px;font-weight:700">أكتوبر</span><span style="font-size:20px;font-weight:800;font-family:Manrope">18</span></div><div style="flex:1"><div style="font-size:16px;font-weight:700">مراجعة النتائج</div><div style="font-size:14px;color:#506579">السبت 10:00 · عيادة النور</div></div><span class="ms" style="color:#506579">chevron_left</span></div>
+            <div style="background:#fff;border:1px solid #DFE7ED;border-radius:14px;padding:14px;display:flex;gap:12px;align-items:center"><span class="ms" style="font-size:22px;color:#087F5B">verified</span><div style="flex:1"><div style="font-size:15.5px;font-weight:700">التأمين: ثقة (ضمان)</div><div style="font-size:13.5px;color:#506579">مؤهل · نسبة التحمل 0٪ · صالحة حتى 12/2026</div></div></div>
+            <div style="background:#fff;border:1px solid #DFE7ED;border-radius:14px;padding:14px;display:flex;gap:12px;align-items:center"><span class="ms" style="font-size:22px;color:#1D4ED8">biotech</span><div style="flex:1"><div style="font-size:15.5px;font-weight:700">فحص HbA1c</div><div style="font-size:13.5px;color:#506579">تمت مراجعته من قبل الطبيب</div></div></div>
+          </div>
+          <div style="height:76px;border-top:1px solid #DFE7ED;background:#fff;display:grid;grid-template-columns:repeat(5,1fr);padding-bottom:10px;font-size:11.5px;font-weight:700">
+            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:#0F766E"><span class="ms" style="font-size:24px">home</span>الرئيسية</div><div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:#8296A8"><span class="ms" style="font-size:24px">event</span>المواعيد</div><div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:#8296A8"><span class="ms" style="font-size:24px">folder_shared</span>السجلات</div><div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:#8296A8"><span class="ms" style="font-size:24px">chat</span>الرسائل</div><div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:#8296A8"><span class="ms" style="font-size:24px">person</span>حسابي</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- PHONE 4 CONSENT -->
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:13px;font-weight:700;color:#334E68">4 · Consent, privacy & caregiver access</div>
+      <div data-screen-label="R-03 Consent and privacy" style="width:390px;height:820px;border-radius:44px;background:#102A43;padding:10px;box-sizing:border-box;box-shadow:0 12px 32px rgba(16,42,67,.18)">
+        <div style="width:100%;height:100%;border-radius:36px;background:#F7FAFC;overflow:hidden;display:flex;flex-direction:column">
+          <div style="height:44px;display:flex;justify-content:space-between;align-items:center;padding:0 26px;font-size:14px;font-weight:700"><span>10:47</span><span class="ms" style="font-size:18px">signal_cellular_alt</span></div>
+          <div style="padding:6px 20px 12px"><div style="font-size:24px;font-weight:800;color:#102A43">Privacy & consent</div><div style="font-size:14px;color:#506579">Each choice is separate. Changes apply to future visits.</div></div>
+          <div style="flex:1;overflow:hidden;padding:0 20px;display:flex;flex-direction:column;gap:10px">
+            <sc-for list="{{ consents }}" as="c" hint-placeholder-count="5">
+              <button onClick="{{ c.toggle }}" role="switch" aria-checked="{{ c.on }}" style="background:#fff;border:1px solid #DFE7ED;border-radius:14px;padding:14px;display:flex;gap:12px;align-items:center;text-align:left;cursor:pointer;width:100%">
+                <div style="flex:1"><div style="font-size:15.5px;font-weight:700;color:#142536">{{ c.title }}</div><div style="font-size:13px;color:#506579;line-height:1.4">{{ c.sub }}</div></div>
+                <span style="display:flex;flex-direction:column;align-items:flex-end;gap:4px"><span style="width:48px;height:28px;border-radius:999px;background:{{ c.track }};position:relative;display:block"><span style="position:absolute;top:3px;left:{{ c.knob }};width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2)"></span></span><span style="font-size:11.5px;font-weight:800;color:{{ c.lc }}">{{ c.label }}</span></span>
+              </button>
+            </sc-for>
+            <div style="background:#fff;border:1px solid #DFE7ED;border-radius:14px;padding:14px;display:flex;gap:12px;align-items:center"><span class="ms" style="font-size:22px;color:#0F766E">family_restroom</span><div style="flex:1"><div style="font-size:15.5px;font-weight:700">Kavya Iyer · daughter</div><div style="font-size:13px;color:#506579">Can view appointments and medicines · until 04 Oct 2027</div></div><span style="font-size:13px;font-weight:700;color:#B42333">Remove</span></div>
+          </div>
+          <div style="padding:12px 20px 20px;font:400 11.5px 'JetBrains Mono',monospace;color:#506579">Policy v2026.2 · India (DPDP Act) · last change {{ lastChange }}</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { lang: 'English', c: [true, true, false, true, false], changed: '04 Oct 10:02', vt: 0, day: 1, slot: null, booked: false, sc: [true, true, false, false], invited: false };
+  renderVals() {
+    const s = this.state;
+    const S = {
+      English: 'Your feet are burning because diabetes may be starting to affect the nerves. We are changing your metformin to one tablet a day with dinner, adding a night-time capsule for the burning, and stopping the cholesterol tablet that caused muscle aches. Please do the blood and urine tests this week.',
+      'தமிழ்': 'நீரிழிவு நரம்புகளை பாதிக்கத் தொடங்கியிருக்கலாம், அதனால் கால்கள் எரிகின்றன. மெட்ஃபார்மினை இரவு உணவுடன் ஒரு மாத்திரையாக மாற்றுகிறோம். எரிச்சலுக்கு இரவில் ஒரு காப்ஸ்யூல் சேர்க்கிறோம். தசை வலி தந்த கொழுப்பு மாத்திரையை நிறுத்துகிறோம்.',
+      'हिन्दी': 'डायबिटीज़ का असर नसों पर शुरू हो सकता है, इसलिए पैरों में जलन है। मेटफ़ॉर्मिन अब रात के खाने के साथ एक गोली होगी, जलन के लिए रात में एक कैप्सूल, और मांसपेशियों में दर्द देने वाली कोलेस्ट्रॉल की गोली बंद।'
+    };
+    const tab = on => (label, icon, i) => ({ label, icon, c: i === on ? '#0F766E' : '#8296A8' });
+    const T = [['Home', 'home'], ['Visits', 'event'], ['Records', 'folder_shared'], ['Messages', 'chat'], ['Me', 'person']];
+    const CS = [
+      ['Record my consultations', 'Helps your doctor write notes. You are asked again at each visit.'],
+      ['Reminders on WhatsApp', 'Appointment and test reminders. No medical details in messages.'],
+      ['Share records with ABHA (ABDM)', 'Lets other hospitals see records you approve.'],
+      ['Caregiver access', 'People you choose can see your appointments and medicines.'],
+      ['Health tips & offers', 'Optional. Never needed for your care.']
+    ];
+    return {
+      goSummary: () => {},
+      todos: [
+        { icon: 'biotech', c: '#1D4ED8', title: 'Blood & urine tests', sub: 'HbA1c, lipids, urine ACR, B12 · before 14 Oct' },
+        { icon: 'medication', c: '#0F766E', title: 'Start new medicines', sub: '2 to start · 1 to stop' },
+        { icon: 'footprint', c: '#3E6A4D', title: 'Foot clinic appointment', sub: 'Referral sent · clinic will call you' }
+      ],
+      tabs: T.map((t, i) => tab(0)(t[0], t[1], i)), tabs2: T.map((t, i) => tab(2)(t[0], t[1], i)),
+      langs: Object.keys(S).map(l => ({ label: l, pick: () => this.setState({ lang: l }), bg: s.lang === l ? '#102A43' : '#fff', fg: s.lang === l ? '#fff' : '#142536', line: s.lang === l ? '#102A43' : '#CBD6E0' })),
+      summary: S[s.lang],
+      meds: [
+        { n: 'Metformin XR 1000 mg · start', how: '1 tablet with dinner, every day', c: '#142536' },
+        { n: 'Pregabalin 75 mg · start', how: '1 capsule at bedtime for 30 days', c: '#142536' },
+        { n: 'Atorvastatin 10 mg · stop', how: 'Do not take any more', c: '#B42333' }
+      ],
+      records: [
+        { icon: 'description', c: '#0F766E', title: 'Visit summary · 4 Oct', sub: 'Dr. Arjun Rao', st: 'Shared by your doctor', sIcon: 'verified', sc: '#087F5B', op: 1 },
+        { icon: 'prescriptions', c: '#0F766E', title: 'e-Prescription RX-40912', sub: '3 items', st: 'Shared by your doctor', sIcon: 'verified', sc: '#087F5B', op: 1 },
+        { icon: 'biotech', c: '#1D4ED8', title: 'HbA1c · 28 Sep', sub: '7.9 % · above your target of 7 %', st: 'Reviewed by doctor', sIcon: 'verified', sc: '#087F5B', op: 1 },
+        { icon: 'biotech', c: '#8296A8', title: 'Lab tests · 4 Oct order', sub: 'Waiting for your sample', st: 'Ordered', sIcon: 'schedule', sc: '#506579', op: 0.8 },
+        { icon: 'local_hospital', c: '#506579', title: 'Discharge summary · Mar 2026', sub: 'Kauvery Hospital · uploaded', st: 'Uploaded by you', sIcon: 'upload', sc: '#506579', op: 1 }
+      ],
+      consents: CS.map(([title, sub], i) => { const on = s.c[i]; return { title, sub, on: on ? 'true' : 'false', track: on ? '#0E9384' : '#CBD6E0', knob: on ? '23px' : '3px', label: on ? 'On' : 'Off', lc: on ? '#087F5B' : '#506579', toggle: () => this.setState(p => ({ c: p.c.map((v, j) => j === i ? !v : v), changed: 'just now' })) }; }),
+      lastChange: s.changed,
+      visitTypes: [['In clinic', 'storefront'], ['Video', 'videocam']].map(([label, icon], i) => ({ label, icon, pick: () => this.setState({ vt: i }), line: s.vt === i ? '#0E9384' : '#DFE7ED', bg: s.vt === i ? '#F3FBFA' : '#fff' })),
+      days: [['Mon', 13], ['Tue', 14], ['Wed', 15], ['Thu', 16], ['Fri', 17]].map(([dow, n], i) => ({ dow, n, pick: () => this.setState({ day: i, slot: null }), bg: s.day === i ? '#102A43' : '#fff', fg: s.day === i ? '#fff' : '#142536', line: s.day === i ? '#102A43' : '#DFE7ED' })),
+      slots: ['09:00', '09:20', '09:40', '10:00', '10:20', '17:00', '17:20', '17:40', '18:00'].map((t, i) => { const off = (i + s.day) % 4 === 0, on = s.slot === t; return { t, off, pick: () => this.setState({ slot: t }), bg: on ? '#0E9384' : off ? '#F1F5F8' : '#fff', fg: on ? '#fff' : off ? '#8296A8' : '#142536', line: on ? '#0E9384' : '#DFE7ED', td: off ? 'line-through' : 'none' }; }),
+      book: () => s.slot && this.setState({ booked: true }), bookBg: s.booked ? '#087F5B' : s.slot ? '#0E9384' : '#CBD6E0', bookLabel: s.booked ? 'Booked · confirmation sent' : s.slot ? 'Confirm ' + s.slot : 'Choose a time',
+      scopes: [['Appointments', 'event'], ['Medicines', 'medication'], ['Lab results', 'biotech'], ['Messages with clinic', 'chat']].map(([label, icon], i) => ({ label, icon, check: s.sc[i] ? 'check_box' : 'check_box_outline_blank', c: s.sc[i] ? '#0F766E' : '#8296A8', line: s.sc[i] ? '#BFE5DF' : '#DFE7ED', toggle: () => this.setState(p => ({ sc: p.sc.map((v, j) => j === i ? !v : v) })) })),
+      invite: () => this.setState({ invited: true }), invBg: s.invited ? '#087F5B' : '#0E9384', invLabel: s.invited ? 'Invite sent · they must verify with OTP' : 'Send invite'
+    };
+  }
+}
+</script>
+</body>
+</html>

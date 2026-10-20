@@ -1,0 +1,626 @@
+# P2 · Doctor workspace and EMR core · Weeks 9–15 · R2 Consult
+# exit: 1 ≥ 20 real visits per pilot doctor signed · 2 allergy & interaction checks fire in 100 % seeded conflicts · 3 signed notes cannot be edited (automated test) · 4 each doctor approves own Rx print layout
+# nfr:  1 clinical data legal review before first real note · 2 print layouts A4/A5, 200 % zoom, screen-reader labels · 3 Rx PDF server-side, stored with hash
+# pkg:  1 30-min doctor & nurse training · 2 note template pack per specialty · 3 R2 release notes + known issues
+# dep:  1 formulary data source per country · 2 doctor licence verification process defined
+
+@epic MDV-P2-E01 | Doctor Today and search | P2-01 | Doctors start the day from Today and find patients safely.
+@epic MDV-P2-E02 | Patient 360, timeline and documents | P2-02, P2-07 | One verified chart with provenance on every fact and secure documents.
+@epic MDV-P2-E03 | Nurse intake | P2-03 | Vitals, allergy verification and patient-reported medicines handed off to the doctor.
+@epic MDV-P2-E04 | Consultation note, coding and reconciliation | P2-04, P2-05 | Write, code, reconcile and sign an immutable note; amend only by addendum.
+@epic MDV-P2-E05 | Prescriptions, orders and referrals | P2-06 | Safe prescribing from a country formulary, printed multilingual Rx, investigation orders and referrals.
+@epic MDV-P2-E06 | Clinical safety and R2 gate | P2-08 | Hazard log, legal review, training, templates and the R2 exit gate.
+
+=== MDV-P2-001
+title: Encounters module: start a consultation from the board/Today, bound to one patient and appointment
+type: Task
+epic: MDV-P2-E04
+prd: P2-04
+priority: MUST
+roles: Doctor
+labels: encounters, domain
+estimate: 2
+weeks: 9
+depends: MDV-P1-028
+confidence: 88 | Domain rules defined (one verified encounter per visit; identity banner everywhere).
+sources: docs/03-architecture/modules.md; docs/03-architecture/state-machines.md
+desc:
+ENCOUNTER aggregate (tenant, facility, patient, lead clinician, appointment, status, started_at, authority_mode = medvya), created when the doctor calls the patient in / starts the consultation. Board state "In consult" and Today reflect it. Identity banner component bound to the encounter (name, age, sex, MRN, DOB, allergies, consent state, encounter date/room).
+ac:
+- Starting a consult creates exactly one active encounter for the appointment; a second start reuses it (idempotent).
+- Every clinical screen in P2 shows the identity banner for the bound encounter; switching patient requires closing or explicitly leaving the encounter.
+- Encounter start/end events update the reception board within 2 seconds.
+- Encounter APIs require the clinician relationship/purpose policy (MDV-P2-024).
+
+=== MDV-P2-002
+title: Doctor Today (D-01): schedule, patient flags, pending notes, inbox counts
+type: Story
+epic: MDV-P2-E01
+prd: P2-01
+screens: D-01
+priority: MUST
+roles: Doctor, Solo doctor
+labels: today, ui
+estimate: 3
+weeks: 9-10
+depends: MDV-P2-001
+confidence: 86 | Hi-fi Today exists for desktop and mobile; results inbox counts are placeholders until P4.
+sources: design/Medvya Clinician App (D-01 Doctor Today); design/Medvya Mobile and Tablet (Doctor Today)
+desc:
+/today: today's schedule with time, name, age/sex, reason category and status chips (Seen · note signed, In room, Waiting · 12 min, Checked in · vitals done, Joined waiting room, Booked, No-show); "Next patient" hero with Start consultation; pending/unsigned notes; flags (allergy, incomplete registration); inbox counts (P4 placeholder behind flag); mine vs clinic toggle (D-04). Mobile version with bottom tabs.
+ac:
+- Today shows only the signed-in doctor's appointments by default and the clinic view when toggled (permissions respected).
+- Unsigned notes from previous days appear as "pending notes" until signed.
+- Clicking a patient opens Patient 360 for that encounter; "Start consultation" starts/opens the encounter.
+- Status chips use icon + label and update live from the board.
+- Mobile layout keeps the consult button in thumb reach with the next patient hero.
+
+=== MDV-P2-003
+title: Privacy-safe global search (⌘K) with care-relationship check and "Request access"
+type: Story
+epic: MDV-P2-E01
+prd: P2-01
+screens: D-02
+priority: MUST
+roles: Doctor, Nurse
+labels: search, privacy
+estimate: 2
+weeks: 10
+depends: MDV-P1-018, MDV-P2-024
+confidence: 88 | Designed with explicit privacy rule.
+sources: design/Medvya Clinician App (D-02); docs/02-design/screen-specs.md#global-search-d-02
+desc:
+⌘K / Ctrl+K overlay: search name, MRN, phone. Results show initials + age + MRN tail until opened. Patients outside the user's care relationship show "Request access" (in clinics: request to owner; hospitals: break-glass in P7). Actions: Open chart · Start visit · Book.
+ac:
+- Results never include full names or identifiers before a record is opened (payload test).
+- Opening a patient without a care relationship is blocked and offers Request access; the request is audited and notifies the owner.
+- Keyboard: open with ⌘K/Ctrl+K, arrow navigation, Enter to open, Esc to close; screen-reader announcements.
+- p95 search latency < 300 ms.
+
+=== MDV-P2-004
+title: Patient 360 (E-01): banner with identity and allergies always visible; problems, medicines, vitals trends
+type: Story
+epic: MDV-P2-E02
+prd: P2-02
+screens: E-01
+priority: MUST
+roles: Doctor, Nurse
+labels: emr, chart
+estimate: 3
+weeks: 10-11
+depends: MDV-P2-001, MDV-P2-024
+confidence: 85 | Hi-fi P360 exists; the AI-summary half ships in P3 (A-01).
+sources: design/Medvya Clinician App (E-01 Patient 360); design/Medvya Mobile and Tablet (Tablet Patient 360)
+desc:
+/patients/:id: fixed identity banner (allergy chip never collapses; text + icon), verified chart cards: problems (with verification state), medicines (active/stopped with source), allergies, last vitals, key labs with trend mini-charts (HbA1c, BP, weight), last encounters. Start consultation in banner. Tablet two-column layout. The right-hand "AI summary · not reviewed" panel is reserved and hidden by flag until P3.
+ac:
+- Allergy state is shown with icon + text (e.g. "Allergy: Penicillin · verified"); "No known allergies" and "Allergies not recorded" are distinct states.
+- Every chart fact shows its provenance tag (Clinician verified, Patient reported, Imported, Synced from HIS) — never an unlabelled value.
+- Opening Patient 360 writes an audit event with purpose.
+- Receptionist role cannot load Patient 360 (403, audited).
+- Layout matches desktop and tablet designs; works at 200 % zoom.
+
+=== MDV-P2-005
+title: Longitudinal timeline and trends with source labels and filters (E-02)
+type: Story
+epic: MDV-P2-E02
+prd: P2-02
+screens: E-02
+priority: MUST
+roles: Doctor
+labels: emr, timeline, provenance
+estimate: 2.5
+weeks: 11
+depends: MDV-P2-004
+confidence: 86 | Hi-fi timeline with provenance and filters exists.
+sources: design/Medvya Clinical Screens (E-02); design/Medvya Gap Analysis (one timeline for all sources, MUST)
+desc:
+/patients/:id/timeline: one chronological list across encounters, labs, medicines, documents with filters (All, Encounters, Labs, Medicines, Documents, source) and provenance tags (Medvya · signed, Clinician verified, Lab feed, Synced from HIS, Uploaded by patient, Imported). Trend chart toggle (HbA1c / BP / weight) with values and dates. "Load earlier…" pagination.
+ac:
+- Each entry shows date, title, subtitle, author/source and provenance tag.
+- Filters combine and persist per user session; empty filter result shows a clear empty state.
+- Trend charts show values with units and dates, accessible as a data table for screen readers.
+- Pagination loads older entries without losing scroll position.
+
+=== MDV-P2-006
+title: Documents: upload, malware scan, secure viewer with time-limited links, scan to patient file (E-03)
+type: Story
+epic: MDV-P2-E02
+prd: P2-07, P2-02
+screens: E-03
+priority: MUST
+roles: Doctor, Nurse, Receptionist (upload only)
+labels: documents, blob, security
+estimate: 3
+weeks: 11-12
+depends: MDV-P2-004
+confidence: 82 | Designed; AI extraction button is P5 (N-08) and stays hidden.
+sources: design/Medvya Clinical Screens (E-03); design/Medvya Gap Analysis (Scan to patient file, SHOULD); PRD v2 P2-07
+desc:
+Upload PDF/images (desk scanner, phone camera, file) with type and source; stored in private Blob (CMK) with random keys; Defender for Storage / malware scan before availability; viewer streams via user-delegation SAS valid ≤ 5 minutes, watermarked with viewer and time; no download for reception; original file always kept; failed upload → retry.
+ac:
+- A file is not viewable until the malware scan passes; infected files are quarantined and the uploader is told.
+- Viewer links expire within 5 minutes and are bound to the requesting user; blob names contain no PHI.
+- Receptionists can upload and see the document list but cannot open clinical documents (policy test).
+- Original files are immutable; metadata edits (type, date) are audited.
+- Phone camera capture works on mobile web (multi-page to single PDF).
+
+=== MDV-P2-007
+title: Nurse intake queue and vitals with out-of-range re-measure and escalation (N-01)
+type: Story
+epic: MDV-P2-E03
+prd: P2-03
+screens: N-01
+priority: MUST
+roles: Nurse
+labels: nurse, vitals
+estimate: 3
+weeks: 10-11
+depends: MDV-P2-001, MDV-P1-028
+confidence: 88 | Hi-fi interactive N-01 with flag rules and copy.
+sources: design/Medvya Clinical Screens (N-01); docs/02-design/screen-specs.md#n-01-nurse-intake
+desc:
+/nurse intake queue (cards from "With nurse" column, Open intake) → /nurse/:id/intake: identity check, large inputs for BP systolic/diastolic, pulse, temperature, SpO₂, weight with previous value; out-of-range values flagged in words ("High · re-check", "Outside usual range", "+2.2 kg since …"), prompt to re-measure, then "Escalate to doctor" with reason (creates an urgent item on the doctor's Today). Chief complaint in patient's words.
+ac:
+- Values are validated for physiological plausibility (reject impossible values) and flagged against configurable ranges with text, not colour only.
+- A flagged value requires re-measure or an explicit "keep value" before handoff.
+- Escalate to doctor requires a reason and appears on the treating doctor's Today within 2 seconds.
+- Saved vitals become OBSERVATIONs with source "Nurse intake", verified by the nurse, visible in Patient 360.
+- Tablet-first layout with ≥ 44 px targets.
+
+=== MDV-P2-008
+title: Allergy verification and patient-reported medicines with handoff to the doctor (N-01)
+type: Story
+epic: MDV-P2-E03
+prd: P2-03
+screens: N-01
+priority: MUST
+roles: Nurse
+labels: nurse, allergies, safety
+estimate: 2
+weeks: 11
+depends: MDV-P2-007
+confidence: 90 | Explicit rules: each allergy must be set; handoff disabled until confirmed.
+sources: design/Medvya Clinical Screens (N-01)
+desc:
+Each existing or reported allergy must be set to Confirmed / Patient reported / Unknown / Not an allergy; new allergies can be added with reaction. Medicines captured as patient-reported (name, dose, frequency) or "Needs clarification" for unknown names. "Hand off · Ready for doctor" is disabled with "Confirm allergy status to hand off" until every allergy has a status; handoff moves the board card to Ready for doctor.
+ac:
+- Handoff is impossible (UI and API) while any allergy lacks a status.
+- Allergy statuses and medicine statements store source (nurse intake, patient) and actor.
+- Handoff updates the board and Today in real time.
+- "No known allergies" must be explicitly confirmed; it is never the default.
+
+=== MDV-P2-009
+title: Consultation note editor: chief complaint, SOAP, specialty templates, manual note when recording is declined (E-04)
+type: Story
+epic: MDV-P2-E04
+prd: P2-04
+screens: E-04
+priority: MUST
+roles: Doctor
+labels: notes, emr
+estimate: 3
+weeks: 11-12
+depends: MDV-P2-004, MDV-P2-025
+confidence: 85 | Hi-fi manual note design and SOAP structure exist; template content comes from MDV-P2-025.
+sources: design/Medvya Wireframes (E-04); docs/02-design/screen-specs.md#e-04-manual-note-consent-declined
+desc:
+Note editor with sections (Chief complaint, Subjective, Objective, Assessment, Plan) per template; Objective prefilled from verified chart only (nurse vitals) with provenance; quick phrases and previous-note snippets; autosave drafts every few seconds (server-side, encrypted at rest) so refresh/network loss loses nothing. This is the non-AI baseline that AI must never break; in P3 the "Recording declined" banner reuses it without guilt copy.
+ac:
+- Drafts autosave and survive refresh, network drop and session timeout (restored after re-auth with patient confirmation).
+- Prefilled content is only from verified chart data and is labelled with its source.
+- Templates can be switched; switching preserves typed content in matching sections and warns about unmapped content.
+- Note editor is fully keyboard operable and readable at 200 % zoom.
+
+=== MDV-P2-010
+title: Diagnosis coding with ICD-10 and problem verification states (E-07)
+type: Story
+epic: MDV-P2-E04
+prd: P2-04
+screens: E-07
+priority: MUST
+roles: Doctor
+labels: coding, problems
+estimate: 2
+weeks: 12
+depends: MDV-P2-009
+confidence: 82 | Designed; ICD-10 code set licensing/version per country must be confirmed (WHO ICD-10 vs ICD-10-CM for UAE claims).
+sources: design/Medvya Clinical Screens (E-07)
+desc:
+Problem list editing in the encounter: ICD-10 search (code + description), add/update problems with verification state (Verified, Added today · verified, Patient reported, Provisional), onset, status (active/resolved). Coded diagnoses link to the encounter for later claims (P5).
+ac:
+- ICD-10 search returns results by code or words in < 300 ms.
+- Each problem stores code system/version, verification state, author and encounter.
+- Provisional problems are visually distinct and not exported as confirmed diagnoses.
+- Code set version is configurable per country (decision recorded).
+
+=== MDV-P2-011
+title: Medication reconciliation: chart vs patient-reported vs other source, keep / change / stop (E-07)
+type: Story
+epic: MDV-P2-E04
+prd: P2-04
+screens: E-07
+priority: MUST
+roles: Doctor
+labels: reconciliation, medicines, safety
+estimate: 2.5
+weeks: 12
+depends: MDV-P2-008
+confidence: 86 | Hi-fi reconciliation table with decisions and disabled confirm until all decided.
+sources: design/Medvya Clinical Screens (E-07); design/Medvya Gap Analysis (Medication reconciliation, MUST)
+desc:
+Reconciliation table: medicine, chart, patient-reported, other source (HIS column hidden until P7), conflict flag, decision Keep / Change / Stop (patient-only items: Add / Ignore). Summary "n of m decided · k sources disagree". "Confirm changes" disabled until every row has a decision; confirmed decisions update MEDICATION_STATEMENT review_state and feed the Rx composer (stop → discontinue line).
+ac:
+- Confirm is disabled until all rows are decided (UI + API).
+- Each decision records actor, time and reason for Stop/Change; history is kept.
+- Conflicts are flagged with text (e.g. "atorvastatin active in chart, patient says stopped").
+- Stopped medicines show as stopped with date in Patient 360 and the timeline.
+
+=== MDV-P2-012
+title: Sign and finalise: immutable signed note v1 with re-authentication (E-06)
+type: Story
+epic: MDV-P2-E04
+prd: P2-05
+screens: E-06
+covers: exit:3
+priority: MUST
+roles: Doctor
+labels: signing, immutability, ledger
+estimate: 2.5
+weeks: 12-13
+depends: MDV-P2-009, MDV-P1-007
+confidence: 90 | Sign modal copy and immutability rule fully specified; ledger approach in ADR-006.
+sources: design/Medvya Clinician App (sign modal, signed banner); docs/adr/ADR-006-immutable-signed-records.md
+desc:
+Sign modal: "Sign note for {name}? MRN · DOB · encounter id. I have reviewed every section … read-only after signing. Prescriptions and orders are authorised separately." CTA "Sign as Dr. {name}" requires passkey/MFA step-up. Signed NOTE_VERSION v1 is stored in a ledger table with document hash; banner "SIGNED v1 · read-only" and signer line with licence number and time.
+ac:
+- Only a doctor with a verified licence and care relationship can sign; step-up authentication is required within the last 5 minutes.
+- After signing, the note body cannot be modified through any API; an automated test attempts direct API and repository updates and both fail (exit gate 3).
+- The stored document hash verifies against the rendered content; ledger verification passes.
+- Signing writes NoteSigned.v1 (no PHI) and an audit event; Today removes it from pending notes.
+
+=== MDV-P2-013
+title: Addenda, version history and print/PDF of the signed note (E-06)
+type: Story
+epic: MDV-P2-E04
+prd: P2-05
+screens: E-06
+priority: MUST
+roles: Doctor
+labels: signing, addendum, print
+estimate: 2
+weeks: 13
+depends: MDV-P2-012
+confidence: 88 | Designed (addendum composer → sign; version history; A4 print header rule).
+sources: design/Medvya Clinical Screens (E-06); design/Medvya Wireframes (E-06)
+desc:
+Addendum composer on a signed note creates a new signed version (amends_version_id, reason) with the same sign flow; version history lists v1, v2… with signer and time. Print/PDF: A4, header with patient name, MRN and DOB on every page, signer block, version, "Corrections are added as signed addenda".
+ac:
+- An addendum never alters v1; viewing shows the original plus addenda in order.
+- Addendum requires a reason and step-up authentication.
+- PDF renders server-side with MRN/DOB on every page and is stored with hash.
+- Print view passes screen-reader and 200 % zoom checks.
+
+=== MDV-P2-014
+title: Country formulary and order sets: India (Schedule H/H1/X) and UAE drug codes, admin add medicine (F-13)
+type: Story
+epic: MDV-P2-E05
+prd: P2-06
+screens: F-13
+covers: dep:1
+priority: MUST
+roles: Practice admin, Doctor
+labels: formulary, prescribing
+estimate: 3
+weeks: 11-12
+depends: MDV-P1-005
+confidence: 62 | Formulary data source and licence per country are not yet chosen (dependency 1, Q-04); settings data was truncated in the design import.
+sources: design/Medvya Clinician App (Settings → Medicines); PRD v2 P2-06, dependency 1; docs/01-prd/source-conflicts.md (Q-04)
+desc:
+FORMULARY_ITEM per tenant and country: generic (INN), strength, form, brands, national code (UAE drug code), regulatory class (India Schedule H/H1/X; UAE controlled), ATC, default sig, status. Seed from the chosen data source; admin can add a medicine (validated) and build order sets (e.g. "Diabetes review labs"). Medicines not in the formulary can be prescribed as free text, flagged for review.
+ac:
+- The data source and licence for each country are decided and recorded in an ADR before seeding (dependency 1 closed).
+- Search by generic or brand returns strength/form options in < 300 ms.
+- Controlled/scheduled classes are labelled and drive print requirements (e.g. Schedule H warning text).
+- Admin-added medicines are audited and marked "clinic-added".
+- Order sets can be created and used in the order composer.
+
+=== MDV-P2-015
+title: Prescription composer with dose builder and add-medicine-while-prescribing (E-05, E-11)
+type: Story
+epic: MDV-P2-E05
+prd: P2-06
+screens: E-05, E-11
+priority: MUST
+roles: Doctor
+labels: prescribing
+estimate: 3
+weeks: 12-13
+depends: MDV-P2-014, MDV-P2-011
+confidence: 84 | Hi-fi Rx composer exists (source chips, safety chips, toggles).
+sources: design/Medvya Clinician App (E-05 Rx & orders); docs/02-design/screen-specs.md#e-05--e-11--e-10-rx-and-orders
+desc:
+Rx items: drug (from formulary), form/strength, dose builder (dose, unit, route, frequency, timing e.g. "with dinner", duration, quantity), instructions; source chip (Added by you, Chart reconciliation); safety chip (results of MDV-P2-016). Discontinue lines from reconciliation. Free-text medicine allowed with review flag.
+ac:
+- Dose builder produces a structured sig and a human-readable instruction in the selected print language.
+- Lines from reconciliation (stop) appear as discontinue lines automatically.
+- Free-text medicines are flagged and excluded from interaction checks with a visible warning.
+- Draft Rx autosaves; Rx is not authorised until MDV-P2-017.
+
+=== MDV-P2-016
+title: Allergy and interaction safety checks before authorisation
+type: Story
+epic: MDV-P2-E05
+prd: P2-06
+screens: E-11
+covers: exit:2
+priority: MUST
+roles: Doctor
+labels: safety, prescribing
+estimate: 3
+weeks: 13
+depends: MDV-P2-015
+confidence: 70 | Check logic is clear; interaction knowledge base source/licence is not yet chosen and must be clinically validated.
+sources: PRD v2 P2-06, exit 2; docs/02-design/screen-specs.md
+desc:
+Checks run on every add/change and again on authorisation: allergy/cross-sensitivity (e.g. penicillin class), drug–drug interactions (severity levels), duplicate therapy, dose range per age/renal function where data exists (e.g. "Renal dose OK · eGFR 72"). Severe findings require an override reason; results show as chips with words, not colour only.
+ac:
+- A seeded conflict set (allergy class, interacting pairs, duplicates, out-of-range doses) triggers the expected alert in 100 % of cases (automated test; exit gate 2).
+- Authorising with a severe alert requires an override reason, recorded and audited.
+- Alerts state severity in words and the evidence (e.g. "Allergy: Penicillin · verified").
+- The interaction source and version are shown in an info panel and recorded with each check result.
+
+=== MDV-P2-017
+title: Rx authorisation (separate from note), server-side multilingual printed Rx A4/A5 with hash and QR verify (E-10)
+type: Story
+epic: MDV-P2-E05
+prd: P2-06
+screens: E-10
+covers: nfr:2, nfr:3, exit:4
+priority: MUST
+roles: Doctor
+labels: prescribing, print, pdf
+estimate: 3
+weeks: 13-14
+depends: MDV-P2-016, MDV-P1-007
+confidence: 82 | Print design exists; QuestPDF licence tier to confirm (Q-05).
+sources: design/Medvya Clinician App (E-10 Printed prescription); PRD v2 P2 NFR 2–3, exit 4
+desc:
+"Authorise prescription" is a separate action from signing the note (step-up auth). Server-side PDF (QuestPDF) in A4 and A5: clinic header/logo, doctor name, qualifications, licence number, signature image, patient identifiers, generic names first then brand, sig in the chosen language (English + local language), scheduled-drug notes, QR code to verify authenticity; stored with SHA-256 hash.
+ac:
+- An Rx cannot be printed or shared until authorised; authorisation is audited.
+- PDF renders server-side for A4 and A5 and is stored with a hash; the QR verify page shows validity without exposing PHI beyond what the patient holds.
+- Language option prints instructions in English plus Hindi/Tamil/Arabic (RTL correct) for the pilot languages.
+- Each pilot doctor reviews and approves their own Rx layout (approval recorded per doctor; exit gate 4).
+- Print layout passes 200 % zoom and screen-reader labelling checks in the on-screen preview.
+
+=== MDV-P2-018
+title: Investigation orders composer with Draft → Ordered states (E-05)
+type: Story
+epic: MDV-P2-E05
+prd: P2-06
+screens: E-05
+priority: MUST
+roles: Doctor
+labels: orders
+estimate: 2
+weeks: 13
+depends: MDV-P2-014
+confidence: 84 | Designed (toggle items, Draft/Ordered/Not included states, place orders separately).
+sources: design/Medvya Clinician App (E-05 orders)
+desc:
+Order composer with lab/imaging tests from order sets or search, notes (e.g. "fasting 10 h"), destination lab (free text in P2), "Place orders" action separate from note signing. CLINICAL_ORDER state Draft → Ordered; printed/PDF investigation slip. Results arrive in P4 (C-01).
+ac:
+- Orders stay Draft until "Place orders"; placing is audited and shows state Ordered with icon + label.
+- An investigation slip PDF can be printed/shared with patient identifiers and instructions.
+- Orders appear on the patient timeline with state.
+- Placing orders never happens automatically from note signing.
+
+=== MDV-P2-019
+title: Referrals out and in with status (E-09)
+type: Story
+epic: MDV-P2-E05
+prd: P2-06
+screens: E-09
+priority: MUST
+roles: Doctor
+labels: referrals
+estimate: 2
+weeks: 14
+depends: MDV-P2-018
+confidence: 80 | Screen hi-fi exists; external delivery channels are manual (letter/PDF/email) in P2.
+sources: design/Medvya Clinician App (E-09 Referral); docs/02-design/components-theme-copy.md (REFERRAL entity)
+desc:
+REFERRAL: to clinician/facility (free text or directory), urgency, reason, attached summary, channel (print, email, patient carries), consent for sharing, state (draft → sent → appointment booked → report received → closed). Incoming referral letters are filed as documents linked to a referral-in.
+ac:
+- Sending a referral requires sharing consent where the policy demands it and records channel and time.
+- Referral letter PDF includes only the selected summary content.
+- Status can be updated with evidence (e.g. report received → document link).
+- Open referrals are visible on Patient 360.
+
+=== MDV-P2-020
+title: Share Rx with patient/pharmacy (e-Rx PDF/link) and pharmacy dispatch record (E-10)
+type: Story
+epic: MDV-P2-E05
+prd: P2-06
+screens: E-10
+priority: MUST
+roles: Doctor, Receptionist
+labels: prescribing, sharing
+estimate: 1.5
+weeks: 14
+depends: MDV-P2-017
+confidence: 70 | Design shows "e-Rx to pharmacy"; PRD excludes regulator e-prescription submission until P5, so P2 scope is limited to secure PDF/link sharing.
+sources: design/Medvya Clinician App (E-10); PRD v2 P2 "Not in this phase: e-prescription submission to regulators"
+desc:
+Share the authorised Rx PDF to the patient (WhatsApp/SMS/email secure link with OTP, no PHI in message text) or to a named pharmacy (email/link), recording PHARMACY_DISPATCH (pharmacy ref, state, dispensed_at manual update). Regulator e-Rx submission is out of scope (P5-04).
+ac:
+- Share links expire, require OTP to the patient's registered mobile and are audited when opened.
+- Message text contains no medicine names or clinical details.
+- Pharmacy dispatch records state changes with actor.
+- No regulator submission endpoint exists in P2 (scope guard).
+
+=== MDV-P2-021
+title: Clinical safety case and hazard log with a named clinical safety reviewer
+type: Chore
+epic: MDV-P2-E06
+prd: P2-08
+priority: MUST
+roles: Clinical advisor, Founder
+labels: clinical-safety, compliance
+estimate: 2
+weeks: 9-10
+depends: MDV-P0-024
+confidence: 78 | Content scope defined; reviewer identity is an open question (Q-07).
+sources: PRD v2 P2-08; docs/04-security-compliance/README.md
+desc:
+docs/clinical-safety/: intended use, hazard log (wrong patient, missed allergy, wrong dose, lost result, unsigned note treated as signed, duplicate merge error, …) with severity/likelihood, mitigations tied to tests, residual risk and release sign-off template. Name the clinical safety reviewer who signs each release from P2 onward; define clinical incident review process.
+ac:
+- Hazard log covers every P2 clinical feature with at least one mitigation linked to a test or control.
+- A named clinical safety reviewer is recorded and signs the R2 release.
+- Clinical incident review process (report → triage → fix → review) is documented and tested once with a tabletop exercise.
+
+=== MDV-P2-022
+title: Legal review of clinical data processing before the first real note
+type: Chore
+epic: MDV-P2-E06
+prd: P2-08
+covers: nfr:1
+priority: MUST
+roles: Founder, external counsel
+labels: legal, compliance
+estimate: 0.5
+weeks: 9-11
+depends: MDV-P1-044
+confidence: 62 | External counsel dependency.
+sources: PRD v2 P2 NFR 1; PRD v2 §10 note (P2 for clinical data)
+desc:
+Counsel reviews clinical data handling (purposes, consent/lawful basis, retention of notes/prescriptions per country rules, patient rights) before any real clinical note is created in production.
+ac:
+- Written sign-off before clinical features are enabled for real patients (flag remains off until then).
+- Retention periods for notes, prescriptions and documents per country are confirmed and loaded into retention configuration.
+
+=== MDV-P2-023
+title: Define and operate the doctor licence verification process
+type: Chore
+epic: MDV-P2-E06
+prd: P2-05
+covers: dep:2
+priority: MUST
+roles: Medvya operations, Founder
+labels: licence, operations
+estimate: 0.5
+weeks: 9
+depends: MDV-P1-007
+confidence: 75 | Process must be designed with registries per authority (NMC/state councils, DoH/DHA/MOHAP).
+sources: PRD v2 P2 dependency 2; design/Medvya Access and Onboarding (F-04 licence notice)
+desc:
+Runbook for verifying licences: which public register per authority, evidence captured (screenshot/reference), SLA (usually within 1 working day), rejection reasons, re-verification on expiry, and who may perform it (ops vs owner attestation).
+ac:
+- Runbook published in docs/runbooks/licence-verification.md and linked from F-09.
+- Every pilot doctor's licence is verified with recorded evidence before they sign real notes.
+
+=== MDV-P2-024
+title: Clinical authorisation: care relationship and purpose checks, request access for clinics
+type: Task
+epic: MDV-P2-E02
+prd: P2-02
+priority: MUST
+roles: Doctor, Nurse, Practice owner
+labels: authorisation, privacy
+estimate: 2
+weeks: 9-10
+depends: MDV-P0-014
+confidence: 84 | Matrix and principle defined; relationship rules for small clinics need a sensible default (all clinicians of the facility treat all its patients unless restricted).
+sources: docs/02-design/sitemap-and-permissions.md; PRD v2 principle "Least privilege, audited"
+desc:
+Implement the relationship + purpose parts of the authorisation hooks from P0: a clinician has a care relationship when the patient has an appointment/encounter with them, is in their facility's active patient list (configurable clinic policy), or access was granted. Purpose is recorded with every read. Request-access workflow for clinics; hospitals' break-glass comes in P7.
+ac:
+- Clinicians without relationship get 403 + "Request access" (audited); owners can grant time-limited access.
+- Every clinical read records purpose (treatment, registration, billing, audit).
+- Clinic policy "all facility clinicians" vs "assigned only" is configurable and tested.
+- Nurse access is limited per the matrix (Limited on Patient 360; entry of vitals/allergies).
+
+=== MDV-P2-025
+title: Note template engine and specialty template pack for the partner clinics
+type: Chore
+epic: MDV-P2-E06
+prd: P2-04
+covers: pkg:2
+priority: MUST
+roles: Doctor, Clinical advisor
+labels: templates
+estimate: 1.5
+weeks: 11-12
+depends: MDV-P1-004
+confidence: 85 | Template list from F-04 (General OPD, Diabetes review, Hypertension, Paediatrics, Antenatal, Teleconsult).
+sources: design/Medvya Access and Onboarding (F-04 step 5); PRD v2 P2 delivery package 2
+desc:
+Template model (sections, prompts, required fields, quick phrases) with versioning; seed the six designed templates and specialty variants requested by the pilot doctors; templates selectable in onboarding and settings.
+ac:
+- Six base templates exist and are reviewed by the clinical advisor.
+- Each pilot doctor has their specialty template(s) configured before R2.
+- Template changes create new versions; existing notes keep the version they used.
+
+=== MDV-P2-026
+title: Doctor and nurse training (30 min each) and R2 materials
+type: Chore
+epic: MDV-P2-E06
+prd: P2-03, P2-05
+covers: pkg:1
+priority: MUST
+roles: Founder, Doctor, Nurse
+labels: training
+estimate: 1
+weeks: 14
+depends: MDV-P2-017
+confidence: 88 | Deliverable explicit.
+sources: PRD v2 P2 delivery package 1
+desc:
+Training: Today, Patient 360, nurse intake and handoff, note writing, coding, reconciliation, signing and addenda, Rx authorisation and printing, orders, referrals, what never happens automatically. Quick reference card for doctors and nurses.
+ac:
+- All pilot doctors and nurses trained; attendance recorded.
+- Quick reference cards available at each workstation.
+
+=== MDV-P2-027
+title: Print, accessibility and zoom verification across clinical screens
+type: Task
+epic: MDV-P2-E06
+prd: P2-05, P2-06
+covers: nfr:2
+priority: MUST
+roles: Developer
+labels: a11y, print
+estimate: 1
+weeks: 14
+depends: MDV-P2-013, MDV-P2-017
+confidence: 90 | Checks explicit.
+sources: PRD v2 P2 NFR 2, X5; docs/02-design/components-theme-copy.md (a11y checklist)
+desc:
+Verify A4/A5 Rx and A4 signed note print layouts, 200 % zoom on all P2 screens, screen-reader labels on clinical controls (vitals inputs, allergy states, reconciliation decisions, sign button state), keyboard path consult → sign.
+ac:
+- axe shows no violations on P2 screens; manual screen-reader pass recorded for N-01, E-07 and sign modal.
+- Full keyboard path from Today → Patient 360 → note → sign → Rx authorise → print works.
+- Print outputs match the designs and include identifiers on every page.
+
+=== MDV-P2-028
+title: R2 pilot, exit gate review (≥ 20 signed visits per doctor) and release notes
+type: Gate
+epic: MDV-P2-E06
+prd: P2-05
+covers: exit:1, exit:2, exit:3, exit:4, pkg:3
+priority: MUST
+roles: Founder, Clinical safety reviewer, pilot doctors
+labels: release, gate, pilot
+estimate: 1.5
+weeks: 15
+depends: MDV-P2-012, MDV-P2-016, MDV-P2-017, MDV-P2-021, MDV-P2-022, MDV-P2-026
+confidence: 72 | Depends on pilot visit volume within ~1 week of R2 availability.
+sources: PRD v2 §08, P2 exit criteria
+desc:
+Pilot R2 on flags; evidence for: ≥ 20 real visits per pilot doctor signed in Medvya; allergy/interaction seeded tests 100 %; signed-note immutability test; each doctor's Rx layout approval. Clinical safety reviewer signs the release. R2 release notes and known-issues list. Journey steps for J1/J2/J3 without AI turn green.
+ac:
+- Evidence for all four exit criteria attached and confirmed at the exit gate review.
+- Clinical safety reviewer sign-off recorded for R2.
+- R2 release notes list P2-01…P2-08 status and exclusions (AI drafting, billing, results inbox, regulator e-prescription).
+- Playwright journeys J2/J3 pass for the non-AI path (consent declined/manual note).

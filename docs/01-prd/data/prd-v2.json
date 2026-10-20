@@ -1,0 +1,4469 @@
+{
+ "dbCompare": [
+  {
+   "k": "Fit with .NET",
+   "a": "Native: EF Core and SqlClient first-class",
+   "b": "Good: Npgsql EF Core provider",
+   "c": "SDK only, not relational"
+  },
+  {
+   "k": "Column encryption admins cannot read",
+   "a": "Always Encrypted (client-side keys; VBS enclaves for range and LIKE)",
+   "b": "None built in; application-level encryption needed",
+   "c": "Client-side encryption via SDK"
+  },
+  {
+   "k": "Tamper-evident history",
+   "a": "Ledger tables, cryptographic digests",
+   "b": "pgaudit logs, not cryptographic",
+   "c": "No"
+  },
+  {
+   "k": "Row-level security for tenants",
+   "a": "Yes, security predicates",
+   "b": "Yes, RLS policies",
+   "c": "No (partition keys)"
+  },
+  {
+   "k": "Dynamic data masking",
+   "a": "Built in",
+   "b": "Views or extensions",
+   "c": "No"
+  },
+  {
+   "k": "Entra-only auth + managed identity",
+   "a": "Yes",
+   "b": "Yes",
+   "c": "Yes"
+  },
+  {
+   "k": "Customer-managed keys",
+   "a": "TDE with CMK, database-level CMK",
+   "b": "CMK with auto-rotation",
+   "c": "CMK"
+  },
+  {
+   "k": "Threat detection",
+   "a": "Defender for SQL",
+   "b": "Defender for open-source databases",
+   "c": "Defender for Cosmos DB"
+  },
+  {
+   "k": "Relational clinical + billing model",
+   "a": "Yes",
+   "b": "Yes",
+   "c": "Poor fit"
+  },
+  {
+   "k": "Verdict",
+   "a": "Chosen",
+   "b": "Strong alternative",
+   "c": "Not for core data"
+  }
+ ],
+ "secLayers": [
+  {
+   "n": "01",
+   "k": "Network",
+   "d": "Private endpoint only; public network access disabled; App Service VNet integration; no IP firewall exceptions"
+  },
+  {
+   "n": "02",
+   "k": "Who can connect",
+   "d": "Microsoft Entra authentication only; the API uses a managed identity; separate least-privilege database users per module and for migrations; no standing human access (just-in-time elevation)"
+  },
+  {
+   "n": "03",
+   "k": "Encryption at rest",
+   "d": "TDE with a customer-managed key in Key Vault or Managed HSM, automatic rotation; backups and Blob Storage under the same key policy"
+  },
+  {
+   "n": "04",
+   "k": "Encryption in use",
+   "d": "Always Encrypted on Aadhaar, Emirates ID, passport, ABHA and insurance member numbers; column master key usable only by the API identity, so database admins and Medvya staff see ciphertext"
+  },
+  {
+   "n": "05",
+   "k": "In transit",
+   "d": "TLS 1.2+ (1.3 where supported), Encrypt=Strict connections, HSTS on all web endpoints"
+  },
+  {
+   "n": "06",
+   "k": "Row access",
+   "d": "Row-level security predicate on tenant_id set through SESSION_CONTEXT per request, plus EF Core query filters; cross-tenant tests in CI"
+  },
+  {
+   "n": "07",
+   "k": "Masking",
+   "d": "Dynamic data masking on phone, email and date of birth for support and reporting roles"
+  },
+  {
+   "n": "08",
+   "k": "Tamper evidence",
+   "d": "Ledger tables for audit events, signed notes, consents and invoices; digests stored in immutable Blob Storage and verified on schedule"
+  },
+  {
+   "n": "09",
+   "k": "Monitoring",
+   "d": "Azure SQL auditing to Log Analytics and immutable storage; Defender for SQL alerts on injection and anomalous access; alert on bulk reads and exports"
+  },
+  {
+   "n": "10",
+   "k": "Backup and recovery",
+   "d": "Point-in-time restore (up to 35 days), long-term retention per country rule, backups kept in-country, monthly restore drill"
+  },
+  {
+   "n": "11",
+   "k": "Application",
+   "d": "Parameterised queries only (EF Core/Dapper), no dynamic SQL, input validation, rate limits, watermarked exports"
+  },
+  {
+   "n": "12",
+   "k": "Secrets",
+   "d": "Key Vault with RBAC, soft delete and purge protection; GitHub OIDC to Azure; no secrets in code or config files"
+  }
+ ],
+ "completeness": [
+  {
+   "c": "Product",
+   "i": "Personas, journeys and first release per persona",
+   "s": "Covered",
+   "w": "Sections 2, 3; X-03",
+   "sc": "#087F5B"
+  },
+  {
+   "c": "Product",
+   "i": "Every phase has recipients, exit gate and delivery package",
+   "s": "Covered",
+   "w": "Section 4",
+   "sc": "#087F5B"
+  },
+  {
+   "c": "Product",
+   "i": "Pricing and packaging",
+   "s": "Open",
+   "w": "Decision due at P4 start",
+   "sc": "#B26A00"
+  },
+  {
+   "c": "Product",
+   "i": "Training, in-app guides, support model and SLA",
+   "s": "Covered",
+   "w": "P1, P5-09, P5 package",
+   "sc": "#087F5B"
+  },
+  {
+   "c": "Clinical",
+   "i": "Clinician approval of all AI output",
+   "s": "Covered",
+   "w": "P3-04, principles",
+   "sc": "#087F5B"
+  },
+  {
+   "c": "Clinical",
+   "i": "Clinical safety case and hazard log",
+   "s": "Added v2",
+   "w": "P2-08",
+   "sc": "#1D4ED8"
+  },
+  {
+   "c": "Clinical",
+   "i": "Emergency symptoms, wrong patient, AI outage states",
+   "s": "Covered",
+   "w": "P3-06, X4",
+   "sc": "#087F5B"
+  },
+  {
+   "c": "Clinical",
+   "i": "Closed-loop results and follow-ups",
+   "s": "Covered",
+   "w": "P4-05",
+   "sc": "#087F5B"
+  },
+  {
+   "c": "Security",
+   "i": "Threat model and data classification",
+   "s": "Added v2",
+   "w": "P0-08, P0-10",
+   "sc": "#1D4ED8"
+  },
+  {
+   "c": "Security",
+   "i": "Database encryption at rest, in use and in transit",
+   "s": "Added v2",
+   "w": "P0-09, section 7b",
+   "sc": "#1D4ED8"
+  },
+  {
+   "c": "Security",
+   "i": "Identity, MFA, passkeys, session control",
+   "s": "Covered",
+   "w": "P0-03",
+   "sc": "#087F5B"
+  },
+  {
+   "c": "Security",
+   "i": "Tenant isolation tested",
+   "s": "Covered",
+   "w": "P0-04, P0 exit",
+   "sc": "#087F5B"
+  },
+  {
+   "c": "Security",
+   "i": "Tamper-evident audit",
+   "s": "Added v2",
+   "w": "P0-06 ledger",
+   "sc": "#1D4ED8"
+  },
+  {
+   "c": "Security",
+   "i": "Pen test, incident response, breach notification",
+   "s": "Added v2",
+   "w": "P5-10, P5-11",
+   "sc": "#1D4ED8"
+  },
+  {
+   "c": "Security",
+   "i": "Staff offboarding and access review",
+   "s": "Added v2",
+   "w": "P1-11",
+   "sc": "#1D4ED8"
+  },
+  {
+   "c": "Compliance",
+   "i": "DPDP Act and Rules, UAE health-data law, ADHICS",
+   "s": "Covered",
+   "w": "X2, P5-11",
+   "sc": "#087F5B"
+  },
+  {
+   "c": "Compliance",
+   "i": "Terms, privacy notice, DPA, versioned consents",
+   "s": "Added v2",
+   "w": "P1-12, P3-01",
+   "sc": "#1D4ED8"
+  },
+  {
+   "c": "Compliance",
+   "i": "Retention, deletion and data-subject rights for clinics",
+   "s": "Added v2",
+   "w": "P5-12",
+   "sc": "#1D4ED8"
+  },
+  {
+   "c": "Compliance",
+   "i": "ISO 27001 / SOC 2 certification",
+   "s": "Open",
+   "w": "Readiness in P5-11; certify when a contract needs it",
+   "sc": "#B26A00"
+  },
+  {
+   "c": "Data",
+   "i": "Migration from legacy systems",
+   "s": "Covered",
+   "w": "P5-01, P5-02",
+   "sc": "#087F5B"
+  },
+  {
+   "c": "Data",
+   "i": "Backup, restore drills, RPO/RTO",
+   "s": "Covered",
+   "w": "X7, P5",
+   "sc": "#087F5B"
+  },
+  {
+   "c": "Data",
+   "i": "Reporting store that keeps PHI out of analytics",
+   "s": "Open",
+   "w": "Decide read replica vs warehouse before P4-10",
+   "sc": "#B26A00"
+  },
+  {
+   "c": "Data",
+   "i": "ERD mapped to Azure SQL types",
+   "s": "Open",
+   "w": "Before end of P0",
+   "sc": "#B26A00"
+  },
+  {
+   "c": "Operations",
+   "i": "Environments, flags, versioning",
+   "s": "Covered",
+   "w": "Section 8",
+   "sc": "#087F5B"
+  },
+  {
+   "c": "Operations",
+   "i": "Cost budgets and alerts",
+   "s": "Added v2",
+   "w": "P0-02",
+   "sc": "#1D4ED8"
+  },
+  {
+   "c": "Operations",
+   "i": "On-call, runbooks, status page",
+   "s": "Covered",
+   "w": "P5 package, P5-09",
+   "sc": "#087F5B"
+  },
+  {
+   "c": "Commercial",
+   "i": "Subscription billing and order form",
+   "s": "Covered",
+   "w": "P5-07, P5 package",
+   "sc": "#087F5B"
+  },
+  {
+   "c": "Design",
+   "i": "15 requirements without screens",
+   "s": "Open",
+   "w": "N-02 to N-16, section 9",
+   "sc": "#B26A00"
+  },
+  {
+   "c": "Design",
+   "i": "Duplicate screen IDs in Foundations",
+   "s": "Open",
+   "w": "Renumber P-09 receipts to P-15",
+   "sc": "#B26A00"
+  }
+ ],
+ "compCounts": [
+  {
+   "s": "Covered",
+   "n": 14,
+   "c": "#087F5B"
+  },
+  {
+   "s": "Added v2",
+   "n": 9,
+   "c": "#1D4ED8"
+  },
+  {
+   "s": "Open",
+   "n": 6,
+   "c": "#B26A00"
+  }
+ ],
+ "phases": [
+  {
+   "code": "P0",
+   "short": "Foundation",
+   "name": "Foundation and safety",
+   "weeks": "Weeks 1–3",
+   "s": 1,
+   "e": 3,
+   "rel": "R0 · Internal platform",
+   "to": "Founder and clinical advisor (staging, synthetic data only)",
+   "dayOne": "Sign in with MFA, invite a colleague, see role-based navigation and walk the six end-to-end journeys on staging.",
+   "goal": "A secure, deployable base that every later phase builds on, and clinical sign-off that the core flows are right before code depends on them.",
+   "feats": [
+    {
+     "id": "P0-01",
+     "t": "Repository and delivery",
+     "d": ".NET 10 solution (ASP.NET Core API + BFF, React web apps), EF Core 10 migration bundles, Docker Compose with SQL Server locally. GitHub Actions runs build, .NET analyzers, unit and integration tests (Testcontainers), CodeQL, dependency and secret scanning on every pull request. Protected main; deploys only from tags.",
+     "scr": [],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": false,
+     "added": false,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P0-02",
+     "t": "Azure environments as code",
+     "d": "Bicep for dev, staging and production in the launch country: App Service (Linux, .NET 10), Azure SQL Database behind a private endpoint with public access disabled, private Blob Storage, Key Vault with purge protection, Application Insights, Defender for Cloud. Budgets and cost alerts per environment. OIDC federation from GitHub; no stored cloud secrets.",
+     "scr": [],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": false,
+     "added": false,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P0-03",
+     "t": "Identity",
+     "d": "Sign-in, MFA (TOTP and passkeys), recovery, idle timeout on shared clinic PCs, device/session revocation, invite acceptance.",
+     "scr": [
+      {
+       "id": "F-03",
+       "name": "Sign up · MFA / passkey · recovery"
+      },
+      {
+       "id": "F-06",
+       "name": "Invite acceptance"
+      }
+     ],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": false,
+     "added": false,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P0-04",
+     "t": "Tenancy",
+     "d": "Organisation → facility → membership. clinic_id on every clinic-owned row, enforced by an EF Core global query filter and Azure SQL row-level security (tenant set in SESSION_CONTEXT per request). One doctor can belong to several clinics through memberships.",
+     "scr": [],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": false,
+     "added": false,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P0-05",
+     "t": "Authorisation",
+     "d": "Role-permission matrix from Foundations (solo doctor, doctor, receptionist, nurse, practice admin, care coordinator, patient) checked server-side by ASP.NET Core authorisation policies on every endpoint, independently of the UI. Explicit 403 screens.",
+     "scr": [
+      {
+       "id": "F-05",
+       "name": "Session expired · 403 · 404 · offline"
+      }
+     ],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": false,
+     "added": false,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P0-06",
+     "t": "Audit log",
+     "d": "Append-only record of every read and write of patient data, sign-in, export and permission change: actor, tenant, patient, purpose, time, IP. Stored in Azure SQL ledger tables so any tampering is detectable.",
+     "scr": [],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": false,
+     "added": false,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P0-07",
+     "t": "Design system in code",
+     "d": "Medvya MUI theme and tokens, clinical status primitives, component states and microcopy from Handoff; light theme; WCAG 2.2 AA base; English, Hindi and Arabic (RTL) string pipeline.",
+     "scr": [
+      {
+       "id": "X-03",
+       "name": "Six end-to-end journeys (storyboard)"
+      }
+     ],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": false,
+     "added": false,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P0-08",
+     "t": "Safety and compliance groundwork",
+     "d": "Threat model, data map, DPIA draft (DPDP), record-retention map per country, ADR-001 stack decision, ADR-002 launch market.",
+     "scr": [],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": false,
+     "added": false,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P0-09",
+     "t": "Database security baseline",
+     "d": "Entra-only database authentication, API connects with a managed identity (no passwords anywhere), separate least-privilege database users per module and for migrations, Always Encrypted on national ID and insurance member columns, dynamic data masking for support roles, TDE with customer-managed key. Details in section 7b.",
+     "scr": [],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": false,
+     "added": true,
+     "bg": "#F3F7FF"
+    },
+    {
+     "id": "P0-10",
+     "t": "Secure development and data classification",
+     "d": "Every field classified (public, internal, personal, sensitive health, national ID); synthetic-only test data policy; SECURITY.md and code review rules; privileged access through just-in-time elevation only; offline break-glass account.",
+     "scr": [],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": false,
+     "added": true,
+     "bg": "#F3F7FF"
+    }
+   ],
+   "nfr": [
+    "OWASP ASVS L2 used as the checklist from the first commit",
+    "Structured logs with PHI redaction; telemetry processor drops request bodies and classified fields",
+    "Daily encrypted backup + point-in-time restore enabled"
+   ],
+   "exit": [
+    "Clinical advisor walks all six journeys (X-03) and signs off the flows",
+    "Restore from backup tested once and timed",
+    "Cross-tenant read attempt blocked by RLS in automated test",
+    "CI green on protected main; staging deploy from a tag"
+   ],
+   "pkg": [
+    "Staging URL with seeded synthetic tenant",
+    "ADR set, threat model, role matrix, data map",
+    "R0 release notes"
+   ],
+   "deps": [
+    "Azure subscription and launch region confirmed",
+    "Founder decision on launch market (ADR-002)"
+   ],
+   "notIn": "Any real patient data. Public website. Booking.",
+   "c": "#102A43",
+   "col": "2 / 5",
+   "expand": true
+  },
+  {
+   "code": "P1",
+   "short": "Front desk MVP",
+   "name": "Front desk and appointments MVP",
+   "weeks": "Weeks 4–10",
+   "s": 4,
+   "e": 10,
+   "rel": "R1 · Front Desk",
+   "to": "Receptionists, doctors (schedule view) and owners at 2 design-partner clinics",
+   "dayOne": "Register patients, book, reschedule and cancel appointments, check patients in, run the waiting room and send automatic confirmations and reminders.",
+   "goal": "A clinic can run its entire appointment day in Medvya. This is the workflow to validate with real clinics before anything clinical is built on top.",
+   "feats": [
+    {
+     "id": "P1-01",
+     "t": "Public site",
+     "d": "Landing for solo doctors and clinics, country and data-residency selector, trust centre, demo request.",
+     "scr": [
+      {
+       "id": "F-01",
+       "name": "Landing (solo doctor / hospital)"
+      },
+      {
+       "id": "F-02",
+       "name": "Country & data residency selector"
+      },
+      {
+       "id": "F-07",
+       "name": "Trust centre & demo request"
+      }
+     ],
+     "pr": "SHOULD",
+     "prc": "#B26A00",
+     "need": false,
+     "added": false,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P1-02",
+     "t": "Clinic onboarding and settings",
+     "d": "Solo doctor and clinic modes; practice profile, locations, operating hours, holidays, notification preferences.",
+     "scr": [
+      {
+       "id": "F-04",
+       "name": "Solo doctor onboarding (licence, schedule, invite)"
+      },
+      {
+       "id": "F-08",
+       "name": "Practice settings (profile, availability, staff, services, notifications, data)"
+      }
+     ],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": false,
+     "added": false,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P1-03",
+     "t": "Doctor and staff accounts",
+     "d": "Add doctor (licence number and country, signature, schedule), add staff with roles and scope, custom roles, invites.",
+     "scr": [
+      {
+       "id": "F-09",
+       "name": "Add doctor (clinic mode): licence, schedule, fees, access, signature"
+      },
+      {
+       "id": "F-10",
+       "name": "Add staff & roles (scope, permissions, invite, custom roles)"
+      }
+     ],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": false,
+     "added": false,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P1-04",
+     "t": "Schedules and availability",
+     "d": "Working hours, breaks, slot length per service, leave and schedule exceptions, time zones, per-location calendars.",
+     "scr": [
+      {
+       "id": "P-04",
+       "name": "Day/week calendar · walk-in · reschedule · no-show"
+      }
+     ],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": false,
+     "added": false,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P1-05",
+     "t": "Patient registration",
+     "d": "India (ABHA optional, Aadhaar masked) and UAE (Emirates ID entered manually); guardian, emergency contact; duplicate warning while typing; merge review; patient directory and search.",
+     "scr": [
+      {
+       "id": "P-02",
+       "name": "Register patient · India (ABHA) & UAE (Emirates ID)"
+      },
+      {
+       "id": "P-03",
+       "name": "Duplicate / merge review"
+      }
+     ],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": false,
+     "added": false,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P1-06",
+     "t": "Booking",
+     "d": "Create, reschedule, cancel, no-show, walk-in, recurring and waitlist; day, week and list calendar views.",
+     "scr": [
+      {
+       "id": "P-04",
+       "name": "Day/week calendar · walk-in · reschedule · no-show"
+      },
+      {
+       "id": "P-05",
+       "name": "Waitlist & room queue · queue TV display"
+      }
+     ],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": false,
+     "added": false,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P1-07",
+     "t": "No double booking",
+     "d": "Unique index on (doctor, location, slot start), booking inside a serializable transaction with an application lock per doctor-day, and a short slot hold. The frontend check is only a convenience.",
+     "scr": [],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": false,
+     "added": false,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P1-08",
+     "t": "Reception board and queue",
+     "d": "Check-in, nonclinical statuses, call or room patient, shared waiting room, multi-doctor overview, waiting-room TV display.",
+     "scr": [
+      {
+       "id": "P-01",
+       "name": "Appointment & reception board"
+      },
+      {
+       "id": "P-05",
+       "name": "Waitlist & room queue · queue TV display"
+      },
+      {
+       "id": "D-04",
+       "name": "Clinic overview (multi-doctor Today, shared waiting room)"
+      }
+     ],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": false,
+     "added": false,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P1-09",
+     "t": "Confirmations and reminders",
+     "d": "Email (Azure Communication Services) and SMS confirmations, 24 h and 2 h reminders, cancellations; retries and delivery status; notification centre.",
+     "scr": [
+      {
+       "id": "D-03",
+       "name": "Notification centre"
+      }
+     ],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": false,
+     "added": false,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P1-10",
+     "t": "Practice access log",
+     "d": "Owner can see who opened which record and when.",
+     "scr": [
+      {
+       "id": "F-12",
+       "name": "Practice access log"
+      }
+     ],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": false,
+     "added": false,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P1-11",
+     "t": "Staff lifecycle",
+     "d": "Offboarding removes access immediately and ends sessions; licence and registration expiry reminders; quarterly access review prompt for owners.",
+     "scr": [
+      {
+       "id": "F-10",
+       "name": "Add staff & roles (scope, permissions, invite, custom roles)"
+      }
+     ],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": false,
+     "added": true,
+     "bg": "#F3F7FF"
+    },
+    {
+     "id": "P1-12",
+     "t": "Legal and consent at registration",
+     "d": "Terms of service, privacy notice, clinic data processing agreement, and separate patient consents for treatment, reminders and marketing, each versioned and recorded.",
+     "scr": [
+      {
+       "id": "P-02",
+       "name": "Register patient · India (ABHA) & UAE (Emirates ID)"
+      },
+      {
+       "id": "F-08",
+       "name": "Practice settings (profile, availability, staff, services, notifications, data)"
+      }
+     ],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": false,
+     "added": true,
+     "bg": "#F3F7FF"
+    }
+   ],
+   "nfr": [
+    "Booking API p95 < 300 ms; calendar first render < 2.5 s on a clinic PC over 4G",
+    "Hangfire on Azure SQL for reminders; no Redis or Service Bus yet",
+    "Mobile-responsive reception views (tablet at the desk)"
+   ],
+   "exit": [
+    "Both clinics run 2 consecutive weeks of real bookings without paper fallback",
+    "0 double bookings with 100 parallel attempts on one slot",
+    "Median check-in ≤ 60 s for a returning patient",
+    "≥ 98% reminders delivered; failures visible to reception",
+    "No open high or critical security findings"
+   ],
+   "pkg": [
+    "Production tenant per clinic",
+    "30-minute reception training and a one-page desk card",
+    "WhatsApp/phone support channel with named contact",
+    "Baseline metrics captured (no-shows, check-in time)"
+   ],
+   "deps": [
+    "Privacy notice and consent wording reviewed for DPDP / UAE",
+    "India DLT SMS sender ID and templates registered",
+    "Two partner clinics signed with a pilot agreement"
+   ],
+   "notIn": "Clinical notes, prescriptions, billing, AI, patient portal.",
+   "c": "#2563EB",
+   "col": "5 / 12",
+   "expand": true
+  },
+  {
+   "code": "P2",
+   "short": "Doctor workspace",
+   "name": "Doctor workspace and EMR core",
+   "weeks": "Weeks 9–15",
+   "s": 9,
+   "e": 15,
+   "rel": "R2 · Consult",
+   "to": "Doctors and nurses at the 2 partner clinics",
+   "dayOne": "Open Doctor Today, see the patient chart, record vitals, write and sign a note, and print a prescription, without AI.",
+   "goal": "A doctor completes a full visit, from chart to signed note and prescription, in Medvya. This is also the fallback that AI must never break.",
+   "feats": [
+    {
+     "id": "P2-01",
+     "t": "Doctor Today",
+     "d": "Today’s schedule, patient flags, pending notes, inbox counts; privacy-safe global search.",
+     "scr": [
+      {
+       "id": "D-01",
+       "name": "Doctor Today"
+      },
+      {
+       "id": "D-02",
+       "name": "Global privacy-safe search (⌘K)"
+      }
+     ],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": false,
+     "added": false,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P2-02",
+     "t": "Patient 360",
+     "d": "Banner with identity and allergies always visible; problems, medicines, history, vitals trends, one timeline with source labels, documents.",
+     "scr": [
+      {
+       "id": "E-01",
+       "name": "Patient 360"
+      },
+      {
+       "id": "E-02",
+       "name": "Longitudinal timeline & trends"
+      },
+      {
+       "id": "E-03",
+       "name": "Documents upload & secure viewer"
+      }
+     ],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": false,
+     "added": false,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P2-03",
+     "t": "Nurse intake",
+     "d": "Vitals, allergy verification, patient-reported medicines, handoff to doctor.",
+     "scr": [
+      {
+       "id": "N-01",
+       "name": "Nurse intake: vitals, allergies, meds"
+      }
+     ],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": false,
+     "added": false,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P2-04",
+     "t": "Consultation note",
+     "d": "Chief complaint, SOAP and specialty templates, ICD-10 coding, medicine reconciliation (keep, stop, change).",
+     "scr": [
+      {
+       "id": "E-04",
+       "name": "Manual note (consent declined)"
+      },
+      {
+       "id": "E-07",
+       "name": "Diagnosis coding & meds reconciliation"
+      }
+     ],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": false,
+     "added": false,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P2-05",
+     "t": "Sign and finalise",
+     "d": "Signed notes are immutable; changes only by dated addendum; print and PDF.",
+     "scr": [
+      {
+       "id": "E-06",
+       "name": "Signed note · addendum · print"
+      }
+     ],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": false,
+     "added": false,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P2-06",
+     "t": "Prescriptions and orders",
+     "d": "Country formulary (India Schedule H/H1/X, UAE drug codes), dose builder, allergy and interaction checks, add medicine, multilingual printed Rx, investigation orders, referrals in and out.",
+     "scr": [
+      {
+       "id": "E-05",
+       "name": "Prescriptions & investigation orders"
+      },
+      {
+       "id": "E-10",
+       "name": "Printed prescription · e-Rx to pharmacy · multilingual"
+      },
+      {
+       "id": "E-11",
+       "name": "Add medicine while prescribing (dose builder, safety checks)"
+      },
+      {
+       "id": "F-13",
+       "name": "Medicines & formulary · India Schedule H/H1/X · UAE drug codes, order sets"
+      },
+      {
+       "id": "E-09",
+       "name": "Referral out / in with status"
+      }
+     ],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": false,
+     "added": false,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P2-07",
+     "t": "Documents",
+     "d": "Private blob storage, malware scan, secure viewer with time-limited links, original file always kept.",
+     "scr": [
+      {
+       "id": "E-03",
+       "name": "Documents upload & secure viewer"
+      }
+     ],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": false,
+     "added": false,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P2-08",
+     "t": "Clinical safety case",
+     "d": "Hazard log for every clinical feature (wrong patient, missed allergy, wrong dose, lost result), mitigations tied to tests, and a named clinical safety reviewer who signs each release from P2 onward.",
+     "scr": [],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": false,
+     "added": true,
+     "bg": "#F3F7FF"
+    }
+   ],
+   "nfr": [
+    "Clinical data legal review complete before first real note",
+    "Print layouts: A4/A5 Rx, 200% zoom, screen-reader labels on clinical controls",
+    "Prescription PDF rendered server-side and stored with hash"
+   ],
+   "exit": [
+    "≥ 20 real visits per pilot doctor signed in Medvya",
+    "Allergy and interaction checks fire in 100% of seeded conflict tests",
+    "Signed notes cannot be edited (only addendum), proven by automated test",
+    "Each doctor approves their own Rx print layout"
+   ],
+   "pkg": [
+    "30-minute doctor and nurse training",
+    "Note template pack per specialty at the partner clinics",
+    "R2 release notes and known-issues list"
+   ],
+   "deps": [
+    "Formulary data source per country licensed or curated",
+    "Doctor licence verification process defined"
+   ],
+   "notIn": "AI drafting, billing, results inbox, e-prescription submission to regulators.",
+   "c": "#0E9384",
+   "col": "10 / 17",
+   "expand": true
+  },
+  {
+   "code": "P3",
+   "short": "AI scribe",
+   "name": "AI-drafted notes under clinician review",
+   "weeks": "Weeks 13–20",
+   "s": 13,
+   "e": 20,
+   "rel": "R3 · Scribe",
+   "to": "5–10 opt-in clinicians under clinical review",
+   "dayOne": "Record a consented consultation on phone or desktop, review a draft note with evidence links, correct it and sign.",
+   "goal": "Medvya drafts the note from the conversation; the doctor checks each statement against its source and signs. Nothing AI-generated is saved without explicit approval.",
+   "feats": [
+    {
+     "id": "P3-01",
+     "t": "Recording consent",
+     "d": "Per-encounter consent separate from treatment consent; declined consent goes straight to a manual note; clinic consent templates and recording policy; consent revoked mid-visit stops capture.",
+     "scr": [
+      {
+       "id": "A-02",
+       "name": "Recording consent & device selection"
+      },
+      {
+       "id": "H-09",
+       "name": "Consent templates & recording policy"
+      },
+      {
+       "id": "A-09",
+       "name": "Consent revoked · patient changed"
+      }
+     ],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": false,
+     "added": false,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P3-02",
+     "t": "Capture",
+     "d": "Phone (mobile web) or desktop microphone; visible timer, pause and consent indicator; encrypted chunked upload with resume; battery and network warnings.",
+     "scr": [
+      {
+       "id": "A-03",
+       "name": "Live AI consultation"
+      },
+      {
+       "id": "A-06",
+       "name": "Upload/sync progress · failed upload · AI unavailable"
+      },
+      {
+       "id": "X-01",
+       "name": "Mobile: Today, capture, note, appointments, records, pairing"
+      }
+     ],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": false,
+     "added": false,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P3-03",
+     "t": "Transcription and speakers",
+     "d": "In-region Azure AI Speech; provisional speaker labels the doctor confirms; overlap and uncertain-speaker handling with no identity asserted.",
+     "scr": [
+      {
+       "id": "A-04",
+       "name": "Multi-speaker transcript review"
+      },
+      {
+       "id": "A-10",
+       "name": "Speaker overlap / unconfirmed speaker"
+      }
+     ],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": false,
+     "added": false,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P3-04",
+     "t": "Draft note with evidence",
+     "d": "Every statement links to transcript segments; unknown fields left blank, never guessed; no invented negatives, medicines or doses; template switch; clinician edits tracked.",
+     "scr": [
+      {
+       "id": "A-05",
+       "name": "AI note & source-evidence review"
+      }
+     ],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": false,
+     "added": false,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P3-05",
+     "t": "Pre-visit brief",
+     "d": "Verified chart facts kept visibly separate from AI summary.",
+     "scr": [
+      {
+       "id": "A-01",
+       "name": "Pre-visit brief (verified vs AI split)"
+      }
+     ],
+     "pr": "SHOULD",
+     "prc": "#B26A00",
+     "need": false,
+     "added": false,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P3-06",
+     "t": "Safety states",
+     "d": "Emergency-symptom warning (no autonomous triage); AI unavailable → editable manual note with no data loss; wrong-patient suspicion locks the session.",
+     "scr": [
+      {
+       "id": "A-08",
+       "name": "Emergency symptom warning"
+      },
+      {
+       "id": "A-06",
+       "name": "Upload/sync progress · failed upload · AI unavailable"
+      }
+     ],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": false,
+     "added": false,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P3-07",
+     "t": "AI worker",
+     "d": ".NET 10 worker service on Azure Service Bus using Microsoft.Extensions.AI; no direct database access, scoped short-lived inputs, versioned prompts and models, de-identified evaluation set run in CI before any prompt change; audio deleted per retention policy.",
+     "scr": [],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": false,
+     "added": false,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P3-08",
+     "t": "Dictation",
+     "d": "Doctor dictates sections of the note; same review-and-approve rule.",
+     "scr": [],
+     "pr": "SHOULD",
+     "prc": "#B26A00",
+     "need": false,
+     "added": false,
+     "bg": "#F7FAFC"
+    }
+   ],
+   "nfr": [
+    "Draft ready ≤ 60 s (p50) after recording stops",
+    "No training on customer data without separate lawful basis",
+    "AI vendor DPA and regional processing confirmed per country"
+   ],
+   "exit": [
+    "0 fabricated medicines or doses across the evaluation set",
+    "≥ 80% of drafts signed with only minor edits (clinician rated)",
+    "Consent recorded for 100% of recordings; declined path tested",
+    "Clinician trust survey and note time compared with P2 baseline"
+   ],
+   "pkg": [
+    "AI safety card for clinicians",
+    "Waiting-room consent notice in English, Hindi and Arabic",
+    "Evaluation report and AI incident procedure"
+   ],
+   "deps": [
+    "Azure OpenAI / Speech availability in Central India and UAE North",
+    "Legal review of recording consent in each market"
+   ],
+   "notIn": "Wearable clip, earpiece assistant, Arabic–Hindi–Malayalam mixed-language notes (P6).",
+   "c": "#7155D8",
+   "col": "14 / 22",
+   "expand": true
+  },
+  {
+   "code": "P4",
+   "short": "Clinic operations",
+   "name": "Billing, care follow-up and patient portal",
+   "weeks": "Weeks 17–26",
+   "s": 17,
+   "e": 26,
+   "rel": "R4 · Clinic Ops",
+   "to": "Clinic owners and admins, care coordinators and the clinics’ patients",
+   "dayOne": "Bill and collect payment, close the cash drawer, track every result and follow-up to closure, and let patients book and see their records.",
+   "goal": "The clinic runs its money and its follow-ups in Medvya, and patients can serve themselves.",
+   "feats": [
+    {
+     "id": "P4-01",
+     "t": "Services and fees",
+     "d": "Price lists with GST/SAC (India), VAT/CPT and payer price lists (UAE), packages.",
+     "scr": [
+      {
+       "id": "F-11",
+       "name": "Services & fees · India GST/SAC, TPA tariffs · UAE CPT, VAT, payer price lists, packages"
+      }
+     ],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": false,
+     "added": false,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P4-02",
+     "t": "Invoicing",
+     "d": "Charge capture, invoice, receipt, tax invoice, credit note, advance receipt, refund; legal numbering per country; A5 and 80 mm thermal print.",
+     "scr": [
+      {
+       "id": "P-06",
+       "name": "Charge capture · invoice · payment · refund"
+      },
+      {
+       "id": "P-15",
+       "name": "Receipt, tax invoice, credit note, advance receipt · GST / VAT · A5 + 80 mm (was duplicate P-09)"
+      }
+     ],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": false,
+     "added": false,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P4-03",
+     "t": "Payments",
+     "d": "Cash, UPI, card and advance; split and partial; Razorpay (India), Network International or Stripe (UAE); provider tokenisation only.",
+     "scr": [
+      {
+       "id": "P-10",
+       "name": "Split & partial payment (cash + UPI + card + advance)"
+      }
+     ],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": false,
+     "added": false,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P4-04",
+     "t": "Packages, dues and close",
+     "d": "Packages and session redemption, dues and ageing, patient statement, cash reconciliation, day-end close with denominations, shift report, doctor revenue and payout.",
+     "scr": [
+      {
+       "id": "P-11",
+       "name": "Packages & advances · session redemption"
+      },
+      {
+       "id": "P-12",
+       "name": "Dues, ageing & patient statement"
+      },
+      {
+       "id": "P-07",
+       "name": "Cash reconciliation"
+      },
+      {
+       "id": "P-13",
+       "name": "Day-end cash close · denominations · shift report"
+      },
+      {
+       "id": "P-09",
+       "name": "Doctor revenue & payout report"
+      }
+     ],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": false,
+     "added": false,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P4-05",
+     "t": "Closed-loop results and care",
+     "d": "Results inbox with identity match and acknowledgement; care plans with owners and due dates; contact log; overdue escalation. A sent reminder never closes a task.",
+     "scr": [
+      {
+       "id": "C-01",
+       "name": "Clinical results inbox"
+      },
+      {
+       "id": "C-05",
+       "name": "Inbound report identity match"
+      },
+      {
+       "id": "C-02",
+       "name": "Care plans & follow-ups"
+      },
+      {
+       "id": "C-03",
+       "name": "Patient contact log & reminders"
+      },
+      {
+       "id": "C-04",
+       "name": "Overdue escalation"
+      }
+     ],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": false,
+     "added": false,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P4-06",
+     "t": "Clinic messages",
+     "d": "Patient ↔ clinic inbox with AI reply draft that staff approve.",
+     "scr": [
+      {
+       "id": "C-06",
+       "name": "Clinic messages inbox (AI reply draft, feedback)"
+      }
+     ],
+     "pr": "SHOULD",
+     "prc": "#B26A00",
+     "need": false,
+     "added": false,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P4-07",
+     "t": "Patient portal",
+     "d": "Home, released visit summaries, prescriptions, records and labs, booking and reschedule, consent and privacy controls, caregiver proxy; Arabic RTL.",
+     "scr": [
+      {
+       "id": "R-01",
+       "name": "Patient portal home, visit summaries, records & labs"
+      },
+      {
+       "id": "R-02",
+       "name": "Portal booking & reschedule"
+      },
+      {
+       "id": "R-03",
+       "name": "Portal consent & privacy"
+      },
+      {
+       "id": "R-04",
+       "name": "Caregiver proxy authorisation"
+      }
+     ],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": false,
+     "added": false,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P4-08",
+     "t": "Doctor discovery",
+     "d": "Public doctor and clinic profiles with live availability, indexed for search.",
+     "scr": [
+      {
+       "id": "N-02",
+       "name": "Public doctor profiles & doctor discovery (SEO)"
+      }
+     ],
+     "pr": "SHOULD",
+     "prc": "#B26A00",
+     "need": true,
+     "added": false,
+     "bg": "#FFF7F6"
+    },
+    {
+     "id": "P4-09",
+     "t": "WhatsApp",
+     "d": "Reminders and confirmations in English, Arabic and Hindi; one-tap reschedule; “doctor running late” broadcast; opt-in records.",
+     "scr": [
+      {
+       "id": "N-03",
+       "name": "WhatsApp templates, opt-in & delivery status"
+      }
+     ],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": true,
+     "added": false,
+     "bg": "#FFF7F6"
+    },
+    {
+     "id": "P4-10",
+     "t": "Clinic reports",
+     "d": "Appointments, no-shows, revenue, follow-up completion, note time saved.",
+     "scr": [
+      {
+       "id": "H-07",
+       "name": "Analytics (throughput, open loops, adoption)"
+      }
+     ],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": false,
+     "added": false,
+     "bg": "#F7FAFC"
+    }
+   ],
+   "nfr": [
+    "Money stored as integer minor units; payment webhooks idempotent",
+    "Portal p95 < 2 s on mobile; OTP sign-in for patients",
+    "Released-result rules: doctor controls what patients see and when"
+   ],
+   "exit": [
+    "Cash close balances with zero unexplained variance for 10 consecutive days",
+    "Invoice formats reviewed by a chartered accountant (India) / tax adviser (UAE)",
+    "0 abnormal results unacknowledged > 72 h during pilot",
+    "≥ 30% of bookings confirmed by patients via portal or WhatsApp"
+   ],
+   "pkg": [
+    "Billing setup service (price list import)",
+    "Owner dashboard walkthrough",
+    "Patient-facing help pages in three languages"
+   ],
+   "deps": [
+    "Payment gateway merchant approvals (can take weeks)",
+    "WhatsApp Business API template approval"
+   ],
+   "notIn": "Insurance claims and eligibility (P5). Teleconsultation (P8).",
+   "c": "#B26A00",
+   "col": "18 / 28",
+   "expand": true
+  },
+  {
+   "code": "P5",
+   "short": "Commercial launch",
+   "name": "Commercial launch v1.0",
+   "weeks": "Weeks 24–32",
+   "s": 24,
+   "e": 32,
+   "rel": "R5 · v1.0 GA",
+   "to": "First paying clinic (week 29), then the first 5 paying clinics in the launch market",
+   "dayOne": "Switch from the old system without closing, with history migrated, insurance checked at the desk and a paid subscription.",
+   "goal": "Everything a clinic owner needs to say yes: their data moved, no downtime, regulator-ready, learnable in one shift, and no lock-in.",
+   "feats": [
+    {
+     "id": "P5-01",
+     "t": "Migration pipeline",
+     "d": "Read-only connection (self-hosted integration runtime, no open ports), AI-proposed column and code mappings approved by a person, dry-run report signed by the owner, day-one load, change-data-capture parallel run for 1–2 weeks, background backfill. Oracle, SQL Server, MySQL, CSV/Excel.",
+     "scr": [
+      {
+       "id": "N-04",
+       "name": "Migration: connect, mapping approval, dry-run report"
+      }
+     ],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": true,
+     "added": false,
+     "bg": "#FFF7F6"
+    },
+    {
+     "id": "P5-02",
+     "t": "Data quality",
+     "d": "Problems grouped by type and fixed by rule; duplicate scoring incl. Arabic–English name spellings; every imported value badged with source; merges and fixes reversible.",
+     "scr": [
+      {
+       "id": "N-05",
+       "name": "Data-quality queue (fix by rule) & bulk duplicate merge"
+      }
+     ],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": true,
+     "added": false,
+     "bg": "#FFF7F6"
+    },
+    {
+     "id": "P5-03",
+     "t": "Insurance",
+     "d": "Live eligibility and co-pay estimate; pre-authorisation, claims, resubmission, remittance matching. India TPA/PMJAY/CGHS; UAE eClaimLink and Shafafiya.",
+     "scr": [
+      {
+       "id": "P-08",
+       "name": "Insurance eligibility & claims handoff"
+      },
+      {
+       "id": "P-14",
+       "name": "Pre-authorisation, resubmission, remittance · India TPA/PMJAY/CGHS · UAE eClaimLink"
+      }
+     ],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": false,
+     "added": false,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P5-04",
+     "t": "UAE market pack",
+     "d": "Emirates ID card-reader check-in (< 30 s); health-exchange pull and push for the launch emirate; regulator e-prescription and e-sick leave.",
+     "scr": [
+      {
+       "id": "N-06",
+       "name": "Emirates ID card-reader check-in"
+      },
+      {
+       "id": "N-07",
+       "name": "Health exchange pull/push status (Malaffi / NABIDH / Riayati)"
+      },
+      {
+       "id": "N-09",
+       "name": "Letters, certificates & e-sick leave"
+      }
+     ],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": true,
+     "added": false,
+     "bg": "#FFF7F6"
+    },
+    {
+     "id": "P5-05",
+     "t": "Outside records",
+     "d": "Patient uploads PDFs or photos before the visit; extraction into trends marked “Unverified · patient upload” until the doctor accepts.",
+     "scr": [
+      {
+       "id": "N-08",
+       "name": "Patient report upload & AI extraction review"
+      }
+     ],
+     "pr": "SHOULD",
+     "prc": "#B26A00",
+     "need": true,
+     "added": false,
+     "bg": "#FFF7F6"
+    },
+    {
+     "id": "P5-06",
+     "t": "Voice appointment assistant v1",
+     "d": "Answers the clinic number after hours and when lines are busy; books, moves and cancels from the live calendar; verifies identity before sharing details; no medical advice; hands over to staff with transcript.",
+     "scr": [
+      {
+       "id": "N-10",
+       "name": "Voice appointment assistant: live calls console & owner settings"
+      }
+     ],
+     "pr": "SHOULD",
+     "prc": "#B26A00",
+     "need": true,
+     "added": false,
+     "bg": "#FFF7F6"
+    },
+    {
+     "id": "P5-07",
+     "t": "Medvya subscription",
+     "d": "Plans, trial, subscription invoices to clinics (GST/VAT), seat counts, dunning.",
+     "scr": [
+      {
+       "id": "N-11",
+       "name": "Medvya plans, trial, subscription billing for clinics"
+      }
+     ],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": true,
+     "added": false,
+     "bg": "#FFF7F6"
+    },
+    {
+     "id": "P5-08",
+     "t": "Platform operations console",
+     "d": "Tenant catalogue, onboarding automation, feature flags per tenant, time-boxed support access that is audited and visible to the clinic.",
+     "scr": [
+      {
+       "id": "N-12",
+       "name": "Platform admin console: tenants, onboarding, support access (audited)"
+      }
+     ],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": true,
+     "added": false,
+     "bg": "#FFF7F6"
+    },
+    {
+     "id": "P5-09",
+     "t": "Adoption and exit",
+     "d": "In-app guides per role, help centre, feedback, status page; full clinic data export in FHIR and CSV.",
+     "scr": [
+      {
+       "id": "N-13",
+       "name": "In-app guides, help centre, feedback & status page"
+      },
+      {
+       "id": "N-14",
+       "name": "Clinic data export (FHIR + CSV)"
+      }
+     ],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": true,
+     "added": false,
+     "bg": "#FFF7F6"
+    },
+    {
+     "id": "P5-10",
+     "t": "Hardening",
+     "d": "External penetration test, DR drill, accessibility audit, load test, dark and high-contrast themes.",
+     "scr": [
+      {
+       "id": "X-02",
+       "name": "Dark mode & high-contrast variants"
+      }
+     ],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": false,
+     "added": false,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P5-11",
+     "t": "Security operations",
+     "d": "Incident response plan with breach notification steps for DPDP and UAE regulators, Defender and Sentinel alerts routed to on-call, Customer Lockbox, vulnerability disclosure policy, ADHICS control evidence, ISO 27001 readiness gap assessment.",
+     "scr": [],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": false,
+     "added": true,
+     "bg": "#F3F7FF"
+    },
+    {
+     "id": "P5-12",
+     "t": "Retention, deletion and data rights",
+     "d": "Scheduled jobs apply each country’s record-retention rule; audio deleted on schedule; patient access, correction and erasure requests handled for clinics (full enterprise workflow H-10 in P7).",
+     "scr": [
+      {
+       "id": "H-10",
+       "name": "Data subject requests & export"
+      }
+     ],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": false,
+     "added": true,
+     "bg": "#F3F7FF"
+    }
+   ],
+   "nfr": [
+    "RPO ≤ 15 min, RTO ≤ 4 h, rehearsed",
+    "99.5% monthly availability target with status page",
+    "Support: first response < 4 business hours"
+   ],
+   "exit": [
+    "First paying clinic cuts over without closing (week 29)",
+    "Migration dry-run report signed before load",
+    "Pen test: no open high or critical findings",
+    "30 days at ≥ 99.5% availability before GA (week 32)"
+   ],
+   "pkg": [
+    "Signed order form and SLA",
+    "Migration report and go-live runbook",
+    "Role training (30 min each) and in-app guides",
+    "v1.0 release notes"
+   ],
+   "deps": [
+    "Regulator onboarding and conformance testing (Malaffi, NABIDH, Riayati, eClaimLink, Shafafiya) controls UAE dates; India launch can proceed independently",
+    "Card-reader hardware sourcing"
+   ],
+   "notIn": "Other two UAE exchanges, ABHA consent records, outbound voice calls (P6/P8).",
+   "c": "#8A1626",
+   "col": "25 / 34",
+   "expand": true
+  },
+  {
+   "code": "P6",
+   "short": "Clip & advanced AI",
+   "name": "Wearable capture and advanced AI",
+   "weeks": "Weeks 33–42 (after hardware is stable)",
+   "s": 33,
+   "e": 42,
+   "rel": "R6 · Clip",
+   "to": "Doctors issued a Medvya clip, and their practice admins",
+   "dayOne": "Pair a clip, record without a phone on the desk, get mixed-language notes and a private earpiece assistant.",
+   "goal": "Hands-free capture and multilingual AI once the phone-first flow is trusted.",
+   "feats": [
+    {
+     "id": "P6-01",
+     "t": "Clip lifecycle",
+     "d": "Pairing code, self-test, battery and health, encrypted offline buffer, firmware updates, loss/theft revoke.",
+     "scr": [
+      {
+       "id": "W-01",
+       "name": "Clip pairing (code) · self-test"
+      },
+      {
+       "id": "W-02",
+       "name": "Device health · battery · offline queue · firmware"
+      },
+      {
+       "id": "W-03",
+       "name": "Loss/theft revoke"
+      }
+     ],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": false,
+     "added": false,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P6-02",
+     "t": "Private voice assistant",
+     "d": "Earpiece-only answers to the doctor; never spoken to the patient.",
+     "scr": [
+      {
+       "id": "A-07",
+       "name": "Private voice assistant (earpiece only)"
+      }
+     ],
+     "pr": "SHOULD",
+     "prc": "#B26A00",
+     "need": false,
+     "added": false,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P6-03",
+     "t": "Multilingual notes",
+     "d": "Arabic, English, Hindi and Malayalam including mixed-language consultations; original and translation side by side.",
+     "scr": [
+      {
+       "id": "A-04",
+       "name": "Multi-speaker transcript review"
+      }
+     ],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": false,
+     "added": false,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P6-04",
+     "t": "Outbound voice",
+     "d": "Reminder and recall calls for patients without WhatsApp; waitlist fill from cancellations.",
+     "scr": [
+      {
+       "id": "N-10",
+       "name": "Voice appointment assistant: live calls console & owner settings"
+      }
+     ],
+     "pr": "SHOULD",
+     "prc": "#B26A00",
+     "need": false,
+     "added": false,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P6-05",
+     "t": "Stronger AI QA",
+     "d": "Per-language evaluation sets, clinician trust metrics, red-team prompts on uploaded documents.",
+     "scr": [],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": false,
+     "added": false,
+     "bg": "#F7FAFC"
+    }
+   ],
+   "nfr": [
+    "Visible recording light on device; start/stop bound to an encounter",
+    "Signed firmware and secure update path"
+   ],
+   "exit": [
+    "Device, consent, offline and overlap test suites pass",
+    "Battery lasts a full clinic day",
+    "Revoke takes effect in < 1 minute"
+   ],
+   "pkg": [
+    "Device kit and quick-start",
+    "Fleet guide for admins"
+   ],
+   "deps": [
+    "Hardware partner and certification",
+    "Language model quality per language"
+   ],
+   "notIn": "Autonomous triage or diagnosis.",
+   "c": "#4F7A5E",
+   "col": "34 / 44",
+   "expand": true
+  },
+  {
+   "code": "P7",
+   "short": "Hospital enterprise",
+   "name": "Hospital enterprise and integrations",
+   "weeks": "Weeks 36–60",
+   "s": 36,
+   "e": 60,
+   "rel": "R7 · Enterprise",
+   "to": "First hospital customer: IT, administrators and clinicians",
+   "dayOne": "Connect Medvya to the hospital HIS, sign in with hospital SSO, and write signed notes back with conflicts surfaced.",
+   "goal": "Medvya works inside a hospital that keeps its own system of record.",
+   "feats": [
+    {
+     "id": "P7-01",
+     "t": "Record authority",
+     "d": "Per facility: Medvya or external HIS holds the official chart; synced copies labelled.",
+     "scr": [
+      {
+       "id": "H-08",
+       "name": "Hospital onboarding · record authority"
+      }
+     ],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": false,
+     "added": false,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P7-02",
+     "t": "Organisation",
+     "d": "Facilities, departments, multi-location administration.",
+     "scr": [
+      {
+       "id": "H-02",
+       "name": "Organisation, facilities, departments"
+      }
+     ],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": false,
+     "added": false,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P7-03",
+     "t": "SSO and provisioning",
+     "d": "SAML/OIDC SSO, SCIM, department and facility role grants.",
+     "scr": [
+      {
+       "id": "H-03",
+       "name": "SSO & role grants"
+      }
+     ],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": false,
+     "added": false,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P7-04",
+     "t": "Integrations",
+     "d": "HL7 v2 and FHIR interfaces, write-back queue with conflict and retry, lab feeds (HL7 ORU), imaging viewer links.",
+     "scr": [
+      {
+       "id": "H-01",
+       "name": "Hospital integration & administration"
+      },
+      {
+       "id": "H-04",
+       "name": "Write-back conflict & retry"
+      },
+      {
+       "id": "N-15",
+       "name": "Lab feeds (HL7 ORU) & imaging viewer links"
+      }
+     ],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": true,
+     "added": false,
+     "bg": "#FFF7F6"
+    },
+    {
+     "id": "P7-05",
+     "t": "Governance",
+     "d": "Audit log and break-glass review, retention and residency policies, data subject requests and export, full analytics.",
+     "scr": [
+      {
+       "id": "H-05",
+       "name": "Audit log & break-glass review"
+      },
+      {
+       "id": "H-06",
+       "name": "Retention, residency (India/UAE)"
+      },
+      {
+       "id": "H-10",
+       "name": "Data subject requests & export"
+      },
+      {
+       "id": "H-07",
+       "name": "Analytics (throughput, open loops, adoption)"
+      }
+     ],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": false,
+     "added": false,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P7-06",
+     "t": "Dedicated deployment",
+     "d": "Per-hospital stamp, customer-managed keys, private links (Azure Architecture stage 4).",
+     "scr": [],
+     "pr": "MUST",
+     "prc": "#8A1626",
+     "need": false,
+     "added": false,
+     "bg": "#F7FAFC"
+    }
+   ],
+   "nfr": [
+    "SIEM export, privileged access review",
+    "Move from App Service to AKS when stamp count or isolation requires it"
+   ],
+   "exit": [
+    "Integration contract and security review passed",
+    "Write-back success ≥ 99% with every conflict visible",
+    "Hospital clinical sign-off"
+   ],
+   "pkg": [
+    "Integration specification and runbook",
+    "Security evidence pack"
+   ],
+   "deps": [
+    "Hospital procurement and HIS vendor cooperation"
+   ],
+   "notIn": "Full hospital inventory, ERP.",
+   "c": "#334E68",
+   "col": "37 / 62",
+   "expand": true
+  },
+  {
+   "code": "P8",
+   "short": "Scale & specialty",
+   "name": "Scale and specialty features",
+   "weeks": "Week 52 onward",
+   "s": 52,
+   "e": 64,
+   "rel": "R8 · Ongoing",
+   "to": "All customers, by demand",
+   "dayOne": "Features released individually as minor versions.",
+   "goal": "Add features where customer demand and clinical evidence justify them.",
+   "feats": [
+    {
+     "id": "P8-01",
+     "t": "Teleconsultation",
+     "d": "Video visit with identity check and ambient notes.",
+     "scr": [
+      {
+       "id": "A-11",
+       "name": "Teleconsultation (video, identity check, ambient notes)"
+      }
+     ],
+     "pr": "SHOULD",
+     "prc": "#B26A00",
+     "need": false,
+     "added": false,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P8-02",
+     "t": "Vaccinations and recalls",
+     "d": "Child, travel and adult schedules with reminders.",
+     "scr": [
+      {
+       "id": "E-08",
+       "name": "Vaccinations & recalls"
+      }
+     ],
+     "pr": "COULD",
+     "prc": "#829AB1",
+     "need": false,
+     "added": false,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P8-03",
+     "t": "India ABDM records",
+     "d": "ABHA consent requests and linked records from other facilities.",
+     "scr": [],
+     "pr": "SHOULD",
+     "prc": "#B26A00",
+     "need": false,
+     "added": false,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P8-04",
+     "t": "Remaining UAE exchanges",
+     "d": "The two exchanges not used at launch.",
+     "scr": [
+      {
+       "id": "N-07",
+       "name": "Health exchange pull/push status (Malaffi / NABIDH / Riayati)"
+      }
+     ],
+     "pr": "SHOULD",
+     "prc": "#B26A00",
+     "need": false,
+     "added": false,
+     "bg": "#F7FAFC"
+    },
+    {
+     "id": "P8-05",
+     "t": "Front-desk extras",
+     "d": "Kiosk / QR self check-in, clinic letter inbox, offline read and draft.",
+     "scr": [
+      {
+       "id": "N-16",
+       "name": "Kiosk / QR self check-in, clinic letter inbox, offline mode"
+      }
+     ],
+     "pr": "COULD",
+     "prc": "#829AB1",
+     "need": true,
+     "added": false,
+     "bg": "#FFF7F6"
+    },
+    {
+     "id": "P8-06",
+     "t": "Platform",
+     "d": "FHIR public APIs, native mobile apps (Expo), saved migration templates per legacy vendor, specialty templates.",
+     "scr": [],
+     "pr": "COULD",
+     "prc": "#829AB1",
+     "need": false,
+     "added": false,
+     "bg": "#F7FAFC"
+    }
+   ],
+   "nfr": [
+    "Each feature gated by its own evidence review"
+   ],
+   "exit": [
+    "Per feature: adoption target agreed before build"
+   ],
+   "pkg": [
+    "Minor-version release notes"
+   ],
+   "deps": [
+    "Regulatory classification review for any decision-support feature"
+   ],
+   "notIn": "See postponed scope below.",
+   "c": "#829AB1",
+   "col": "53 / 66",
+   "expand": true
+  }
+ ],
+ "weekTicks": [
+  {
+   "n": 1,
+   "col": "2 / span 6"
+  },
+  {
+   "n": 8,
+   "col": "9 / span 6"
+  },
+  {
+   "n": 16,
+   "col": "17 / span 6"
+  },
+  {
+   "n": 24,
+   "col": "25 / span 6"
+  },
+  {
+   "n": 32,
+   "col": "33 / span 6"
+  },
+  {
+   "n": 40,
+   "col": "41 / span 6"
+  },
+  {
+   "n": 48,
+   "col": "49 / span 6"
+  },
+  {
+   "n": 56,
+   "col": "57 / span 6"
+  },
+  {
+   "n": 64,
+   "col": "65 / span 6"
+  }
+ ],
+ "milestones": [
+  {
+   "t": "Internal demo",
+   "row": 1,
+   "col": "4 / span 8"
+  },
+  {
+   "t": "First real bookings",
+   "row": 2,
+   "col": "11 / span 8"
+  },
+  {
+   "t": "First signed AI note",
+   "row": 1,
+   "col": "19 / span 8"
+  },
+  {
+   "t": "First paying clinic",
+   "row": 2,
+   "col": "30 / span 8"
+  },
+  {
+   "t": "v1.0 GA",
+   "row": 1,
+   "col": "33 / span 8"
+  },
+  {
+   "t": "First hospital",
+   "row": 2,
+   "col": "61 / span 8"
+  }
+ ],
+ "principles": [
+  {
+   "t": "The clinician signs",
+   "d": "AI drafts; a named clinician reviews evidence and approves before anything is saved to the record."
+  },
+  {
+   "t": "Consent before capture",
+   "d": "Recording, sharing, reminders and marketing are separate consents. Manual documentation is always available."
+  },
+  {
+   "t": "Provenance on every fact",
+   "d": "Every value shows where it came from: clinic, exchange, patient upload, import or AI, with original files kept."
+  },
+  {
+   "t": "Least privilege, audited",
+   "d": "Tenant, facility, role and relationship checks on the server; every patient-data read is logged."
+  },
+  {
+   "t": "Country data stays in country",
+   "d": "Separate India and UAE data planes; no shared patient datastore."
+  },
+  {
+   "t": "Evolve on evidence",
+   "d": "One application and one database per country until load or a contract proves otherwise."
+  }
+ ],
+ "personas": [
+  {
+   "n": "Receptionist",
+   "loop": "Calendar → register / dedup → check-in → queue → invoice → call next patient.",
+   "ph": "P1",
+   "c": "#2563EB"
+  },
+  {
+   "n": "Practice owner / admin",
+   "loop": "Settings, staff, schedules, services, reports, day-end close, subscription.",
+   "ph": "P1",
+   "c": "#2563EB"
+  },
+  {
+   "n": "Solo doctor",
+   "loop": "Today → chart → consultation → signed note and Rx → follow-up → billing.",
+   "ph": "P2",
+   "c": "#0E9384"
+  },
+  {
+   "n": "Clinic doctor",
+   "loop": "Same loop inside a shared clinic, with a shared waiting room.",
+   "ph": "P2",
+   "c": "#0E9384"
+  },
+  {
+   "n": "Nurse",
+   "loop": "Rooming list → identity check → vitals and allergies → handoff → delegated tasks.",
+   "ph": "P2",
+   "c": "#0E9384"
+  },
+  {
+   "n": "Care coordinator",
+   "loop": "Results inbox, overdue tasks, contact outcomes, escalations.",
+   "ph": "P4",
+   "c": "#B26A00"
+  },
+  {
+   "n": "Patient / caregiver",
+   "loop": "Book, consent, see released records and instructions, act as proxy.",
+   "ph": "P4",
+   "c": "#B26A00"
+  },
+  {
+   "n": "Medvya operations",
+   "loop": "Onboard tenants, run migrations, support with audited access.",
+   "ph": "P5",
+   "c": "#8A1626"
+  },
+  {
+   "n": "Hospital clinician",
+   "loop": "HIS-linked list, governed chart, write-back status.",
+   "ph": "P7",
+   "c": "#334E68"
+  },
+  {
+   "n": "Hospital IT / privacy officer",
+   "loop": "Facilities, SSO, integrations, audit, retention, data requests.",
+   "ph": "P7",
+   "c": "#334E68"
+  }
+ ],
+ "nfr": [
+  {
+   "id": "X1",
+   "t": "Security",
+   "pts": [
+    "MFA for all staff; passkeys preferred; session timeout on shared PCs",
+    "Encryption in transit (TLS 1.2+) and at rest; Always Encrypted for national IDs and insurance member numbers; TDE with customer-managed key",
+    "Private endpoints; no public database; managed identities instead of secrets; remaining secrets only in Key Vault",
+    "Rate limiting middleware, CSP, HSTS, BFF cookies, antiforgery; FluentValidation on every input"
+   ]
+  },
+  {
+   "id": "X2",
+   "t": "Privacy and compliance",
+   "pts": [
+    "DPDP Act and 2025 Rules (India); UAE health-data law, ADHICS and emirate rules",
+    "Consent, privacy notices, retention rules and data-subject requests",
+    "No PHI in logs, analytics or error monitoring",
+    "Legal review before each new class of real data (P1, P2, P3)"
+   ]
+  },
+  {
+   "id": "X3",
+   "t": "Clinical safety",
+   "pts": [
+    "Allergy never conveyed by colour alone; patient identity always on screen",
+    "Hard stop on uncertain patient match",
+    "Unknowns are left blank, never inferred",
+    "Clinical incident review process from P2"
+   ]
+  },
+  {
+   "id": "X4",
+   "t": "Every-flow states",
+   "pts": [
+    "First-use, empty, loading/slow, error, unauthorised, offline, no-consent",
+    "Large text (200% zoom), mobile and print",
+    "Safe recovery: no data loss on refresh or network drop"
+   ]
+  },
+  {
+   "id": "X5",
+   "t": "Accessibility and language",
+   "pts": [
+    "WCAG 2.2 AA, keyboard and screen-reader support",
+    "English, Hindi and Arabic with full RTL from P0; Malayalam in AI from P6",
+    "Touch targets ≥ 44 px on tablet and mobile"
+   ]
+  },
+  {
+   "id": "X6",
+   "t": "Performance",
+   "pts": [
+    "Page interactive < 2.5 s (p75) on a typical clinic PC",
+    "API p95 < 300 ms for reads, < 600 ms for writes",
+    "Booking correct under concurrency, not just fast"
+   ]
+  },
+  {
+   "id": "X7",
+   "t": "Reliability and data",
+   "pts": [
+    "Daily encrypted backups, PITR, monthly restore test",
+    "RPO ≤ 15 min, RTO ≤ 4 h from P5",
+    "Forward-only reviewed migrations; reversible imports"
+   ]
+  },
+  {
+   "id": "X8",
+   "t": "Quality and observability",
+   "pts": [
+    "xUnit + Testcontainers (SQL Server), Vitest for UI, Playwright E2E for each journey",
+    "OpenTelemetry → Application Insights with PHI scrubbing",
+    "Each feature behind a tenant flag with an owner"
+   ]
+  }
+ ],
+ "metrics": [
+  {
+   "m": "Check-in time (returning patient)",
+   "t": "≤ 60 s median; ≤ 30 s with ID reader",
+   "p": "P1",
+   "h": "Event timestamps from arrival to checked-in"
+  },
+  {
+   "m": "No-show rate",
+   "t": "−25% vs clinic baseline",
+   "p": "P1",
+   "h": "Baseline from first 2 weeks; reminders and confirmations"
+  },
+  {
+   "m": "Double bookings",
+   "t": "0",
+   "p": "P1",
+   "h": "Constraint violations and support tickets"
+  },
+  {
+   "m": "Time to signed note",
+   "t": "−40% vs P2 manual baseline",
+   "p": "P3",
+   "h": "Encounter end to signature"
+  },
+  {
+   "m": "AI drafts signed with minor edits",
+   "t": "≥ 80%",
+   "p": "P3",
+   "h": "Edit distance + clinician rating"
+  },
+  {
+   "m": "Fabricated medication or dose",
+   "t": "0",
+   "p": "P3",
+   "h": "Evaluation set and clinician reports"
+  },
+  {
+   "m": "Abnormal results acknowledged in 72 h",
+   "t": "100%",
+   "p": "P4",
+   "h": "Results inbox state history"
+  },
+  {
+   "m": "Day-end close variance",
+   "t": "0 unexplained",
+   "p": "P4",
+   "h": "Cash close records"
+  },
+  {
+   "m": "Clinic activation",
+   "t": "50 appointments in first 14 days",
+   "p": "P5",
+   "h": "Per new tenant"
+  },
+  {
+   "m": "Go-live time after contract",
+   "t": "≤ 2 weeks",
+   "p": "P5",
+   "h": "Contract date to cutover"
+  },
+  {
+   "m": "Logo retention",
+   "t": "≥ 90% at 6 months",
+   "p": "P5",
+   "h": "Paying clinics still active"
+  }
+ ],
+ "stack": [
+  {
+   "l": "Backend",
+   "d": "ASP.NET Core on .NET 10 LTS (C# 14), modular monolith, minimal APIs + OpenAPI",
+   "w": "Supported to Nov 2028; plan the move to the next LTS in 2027–28. Architecture v2 decision 1",
+   "p": "Arch v2"
+  },
+  {
+   "l": "Web apps",
+   "d": "React 19 + TypeScript + Vite, MUI with the Medvya theme, TanStack Query, React Hook Form + Zod",
+   "w": "Designs and Handoff already target MUI, so no token conversion",
+   "p": "Build plan"
+  },
+  {
+   "l": "Session security",
+   "d": "ASP.NET Core BFF: HTTP-only secure cookies, antiforgery; no access tokens in the browser",
+   "w": "Removes token theft through XSS; one origin for app and API",
+   "p": "v2"
+  },
+  {
+   "l": "Public site",
+   "d": "ASP.NET Core Razor Pages for landing, trust centre and doctor profiles (SEO)",
+   "w": "Server-rendered, no patient data, same deployment",
+   "p": "v2"
+  },
+  {
+   "l": "Modules",
+   "d": "One project per module (Patients, Scheduling, Encounters…) with internal contracts and domain events; architecture tests enforce boundaries",
+   "w": "Rules live in modules, not controllers",
+   "p": "All"
+  },
+  {
+   "l": "Database",
+   "d": "Azure SQL Database, one logical server per country; elastic pool for clinics, dedicated database for hospitals",
+   "w": "Compared and secured in section 7b",
+   "p": "v2"
+  },
+  {
+   "l": "Data access",
+   "d": "EF Core 10 with reviewed migration bundles; Dapper for reporting queries",
+   "w": "Always Encrypted handled by Microsoft.Data.SqlClient",
+   "p": "v2"
+  },
+  {
+   "l": "Identity",
+   "d": "Microsoft Entra External ID for staff and patients; Entra federation for hospital SSO; MFA and passkeys",
+   "w": "No password storage in Medvya",
+   "p": "Build plan"
+  },
+  {
+   "l": "Authorisation",
+   "d": "ASP.NET Core policies: tenant, facility, role, relationship, purpose + SQL row-level security",
+   "w": "From the Foundations role-permission matrix",
+   "p": "Arch v2"
+  },
+  {
+   "l": "Jobs and messaging",
+   "d": "Hangfire on Azure SQL (P1); Azure Service Bus + .NET workers for AI and integrations (P3+)",
+   "w": "Redis only on measured need",
+   "p": "v2"
+  },
+  {
+   "l": "AI",
+   "d": ".NET worker with Microsoft.Extensions.AI, Azure AI Speech and Azure OpenAI in region; Python only for offline evaluation",
+   "w": "One production language; worker has no database credentials",
+   "p": "v2"
+  },
+  {
+   "l": "Realtime",
+   "d": "SignalR for reception board, queue TV and live transcript",
+   "w": "",
+   "p": "v2"
+  },
+  {
+   "l": "Files and PDFs",
+   "d": "Private Blob Storage with CMK, malware scan, user-delegation SAS; QuestPDF for Rx and invoices",
+   "w": "Check the QuestPDF licence tier",
+   "p": "v2"
+  },
+  {
+   "l": "Interoperability",
+   "d": "Firely .NET SDK for FHIR; HL7 v2 for exchanges and labs (P5, P7)",
+   "w": "",
+   "p": "v2"
+  },
+  {
+   "l": "Hosting",
+   "d": "Azure App Service (Linux) per country; Container Apps or AKS from P7 stamps",
+   "w": "Azure Architecture stages 1 → 4",
+   "p": "Both"
+  },
+  {
+   "l": "Quality and delivery",
+   "d": "xUnit, Testcontainers, Vitest, Playwright; OpenTelemetry → Application Insights; GitHub Actions with OIDC, CodeQL, Dependabot, secret scanning",
+   "w": "",
+   "p": "Build plan"
+  }
+ ],
+ "process": [
+  {
+   "n": 1,
+   "t": "Scope freeze",
+   "d": "Requirement IDs for the phase locked; changes go to the next phase unless safety-critical."
+  },
+  {
+   "n": 2,
+   "t": "Staging acceptance",
+   "d": "Playwright journeys green; exit criteria checked on synthetic data; security scan clean."
+  },
+  {
+   "n": 3,
+   "t": "Pilot on flags",
+   "d": "Recipients get the release behind tenant flags; daily check-ins for the first week."
+  },
+  {
+   "n": 4,
+   "t": "Exit gate review",
+   "d": "Founder, clinical advisor and one pilot user confirm each exit criterion with evidence."
+  },
+  {
+   "n": 5,
+   "t": "Handover",
+   "d": "Delivery package sent: release notes, training, runbook, known issues. Phase closed."
+  }
+ ],
+ "pastedMap": [
+  {
+   "i": "Clinic registration and settings",
+   "src": "Phase 1",
+   "ph": "P1",
+   "n": "F-04, F-08",
+   "c": "#2563EB"
+  },
+  {
+   "i": "Doctor and receptionist accounts",
+   "src": "Phase 1",
+   "ph": "P1",
+   "n": "Identity in P0; F-09, F-10 in P1",
+   "c": "#2563EB"
+  },
+  {
+   "i": "Patient registration and search",
+   "src": "Phase 1",
+   "ph": "P1",
+   "n": "P-02, P-03, D-02",
+   "c": "#2563EB"
+  },
+  {
+   "i": "Doctor working hours and availability",
+   "src": "Phase 1",
+   "ph": "P1",
+   "n": "P1-04",
+   "c": "#2563EB"
+  },
+  {
+   "i": "Booking, cancellation, rescheduling",
+   "src": "Phase 1",
+   "ph": "P1",
+   "n": "P1-06, P1-07",
+   "c": "#2563EB"
+  },
+  {
+   "i": "Daily calendar and reception queue",
+   "src": "Phase 1",
+   "ph": "P1",
+   "n": "P-01, P-04, P-05",
+   "c": "#2563EB"
+  },
+  {
+   "i": "Email confirmations and reminders",
+   "src": "Phase 1",
+   "ph": "P1",
+   "n": "P1-09 (plus SMS)",
+   "c": "#2563EB"
+  },
+  {
+   "i": "RBAC, audit trails, backups",
+   "src": "Phase 1",
+   "ph": "P0",
+   "n": "Moved earlier: needed before any real data",
+   "c": "#102A43"
+  },
+  {
+   "i": "Consultation notes and patient history",
+   "src": "Phase 2",
+   "ph": "P2",
+   "n": "",
+   "c": "#0E9384"
+  },
+  {
+   "i": "Prescription generation and PDF",
+   "src": "Phase 2",
+   "ph": "P2",
+   "n": "E-05, E-10",
+   "c": "#0E9384"
+  },
+  {
+   "i": "Documents and attachments",
+   "src": "Phase 2",
+   "ph": "P2",
+   "n": "E-03",
+   "c": "#0E9384"
+  },
+  {
+   "i": "Walk-in and waiting-room management",
+   "src": "Phase 2",
+   "ph": "P1",
+   "n": "Moved earlier: already designed and core to reception",
+   "c": "#2563EB"
+  },
+  {
+   "i": "Services, pricing, invoicing, payments",
+   "src": "Phase 2",
+   "ph": "P4",
+   "n": "",
+   "c": "#B26A00"
+  },
+  {
+   "i": "Patient portal and follow-up visits",
+   "src": "Phase 2",
+   "ph": "P4",
+   "n": "R-01–R-04, C-02",
+   "c": "#B26A00"
+  },
+  {
+   "i": "Clinic analytics and reports",
+   "src": "Phase 2",
+   "ph": "P4",
+   "n": "Full enterprise analytics in P7",
+   "c": "#B26A00"
+  },
+  {
+   "i": "AI-assisted clinical documentation",
+   "src": "Phase 3",
+   "ph": "P3",
+   "n": "Moved earlier: the product’s main differentiator",
+   "c": "#7155D8"
+  },
+  {
+   "i": "Voice dictation with clinician approval",
+   "src": "Phase 3",
+   "ph": "P3",
+   "n": "P3-08",
+   "c": "#7155D8"
+  },
+  {
+   "i": "WhatsApp reminder integration",
+   "src": "Phase 3",
+   "ph": "P4",
+   "n": "Moved earlier: a Should in both markets",
+   "c": "#B26A00"
+  },
+  {
+   "i": "Multi-location administration",
+   "src": "Phase 3",
+   "ph": "P7",
+   "n": "Basic multiple locations already in P1-04",
+   "c": "#334E68"
+  },
+  {
+   "i": "Video consultations",
+   "src": "Phase 3",
+   "ph": "P8",
+   "n": "A-11",
+   "c": "#829AB1"
+  },
+  {
+   "i": "External EMR / hospital integrations",
+   "src": "Phase 3",
+   "ph": "P7",
+   "n": "",
+   "c": "#334E68"
+  },
+  {
+   "i": "FHIR-compatible interoperability APIs",
+   "src": "Phase 3",
+   "ph": "P8",
+   "n": "FHIR export in P5, exchange interfaces in P5/P7",
+   "c": "#829AB1"
+  }
+ ],
+ "archMap": [
+  {
+   "n": 1,
+   "i": "Landing, pricing, security, demo, trust centre",
+   "ph": "P1",
+   "c": "#2563EB"
+  },
+  {
+   "n": 2,
+   "i": "Sign-in, MFA, recovery, invite, expired, denied",
+   "ph": "P0",
+   "c": "#102A43"
+  },
+  {
+   "n": 3,
+   "i": "Solo onboarding, licence, schedules, consent policy",
+   "ph": "P1",
+   "c": "#2563EB"
+  },
+  {
+   "n": 4,
+   "i": "Hospital onboarding, SSO, record-ownership",
+   "ph": "P7",
+   "c": "#334E68"
+  },
+  {
+   "n": 5,
+   "i": "Doctor Today",
+   "ph": "P2",
+   "c": "#0E9384"
+  },
+  {
+   "n": 6,
+   "i": "Calendar, slots, no-show, waitlist, recurring",
+   "ph": "P1",
+   "c": "#2563EB"
+  },
+  {
+   "n": 7,
+   "i": "Registration, dedup, directory, search",
+   "ph": "P1",
+   "c": "#2563EB"
+  },
+  {
+   "n": 8,
+   "i": "Check-in and waiting-room board",
+   "ph": "P1",
+   "c": "#2563EB"
+  },
+  {
+   "n": 9,
+   "i": "Nurse rooming, vitals, handoff",
+   "ph": "P2",
+   "c": "#0E9384"
+  },
+  {
+   "n": 10,
+   "i": "Patient 360 with provenance",
+   "ph": "P2",
+   "c": "#0E9384"
+  },
+  {
+   "n": 11,
+   "i": "Encounter prep, pre-visit brief",
+   "ph": "P3",
+   "c": "#7155D8"
+  },
+  {
+   "n": 12,
+   "i": "Consent, declined fallback, device readiness",
+   "ph": "P3",
+   "c": "#7155D8"
+  },
+  {
+   "n": 13,
+   "i": "Active recording",
+   "ph": "P3",
+   "c": "#7155D8"
+  },
+  {
+   "n": 14,
+   "i": "Upload, processing, retry, recovery",
+   "ph": "P3",
+   "c": "#7155D8"
+  },
+  {
+   "n": 15,
+   "i": "Editable transcript, speakers, translation",
+   "ph": "P3",
+   "c": "#7155D8"
+  },
+  {
+   "n": 16,
+   "i": "AI draft + evidence, provenance warning",
+   "ph": "P3",
+   "c": "#7155D8"
+  },
+  {
+   "n": 17,
+   "i": "Diagnoses, meds, eRx, orders, physician sign",
+   "ph": "P2",
+   "c": "#0E9384"
+  },
+  {
+   "n": 18,
+   "i": "Care plan preview, tasks, instructions",
+   "ph": "P4",
+   "c": "#B26A00"
+  },
+  {
+   "n": 19,
+   "i": "Sign, addendum, export, HIS write-back",
+   "ph": "P2",
+   "c": "#0E9384"
+  },
+  {
+   "n": 20,
+   "i": "Results inbox, acknowledgement, escalation",
+   "ph": "P4",
+   "c": "#B26A00"
+  },
+  {
+   "n": 21,
+   "i": "Follow-up board, contact attempts",
+   "ph": "P4",
+   "c": "#B26A00"
+  },
+  {
+   "n": 22,
+   "i": "Billing, invoices, refunds, reconciliation",
+   "ph": "P4",
+   "c": "#B26A00"
+  },
+  {
+   "n": 23,
+   "i": "Patient portal, proxy, privacy",
+   "ph": "P4",
+   "c": "#B26A00"
+  },
+  {
+   "n": 24,
+   "i": "Device fleet",
+   "ph": "P6",
+   "c": "#4F7A5E"
+  },
+  {
+   "n": 25,
+   "i": "Hospital admin, governance, audit",
+   "ph": "P7",
+   "c": "#334E68"
+  },
+  {
+   "n": 26,
+   "i": "Analytics without overclaiming",
+   "ph": "P4",
+   "c": "#B26A00"
+  },
+  {
+   "n": 27,
+   "i": "Every-flow states",
+   "ph": "Every",
+   "c": "#087F5B"
+  }
+ ],
+ "gapMap": [
+  {
+   "i": "UAE health exchange pull and push",
+   "pr": "MUST",
+   "prc": "#8A1626",
+   "ph": "P5",
+   "c": "#8A1626"
+  },
+  {
+   "i": "Old reports uploaded by patient + extraction",
+   "pr": "MUST",
+   "prc": "#8A1626",
+   "ph": "P5",
+   "c": "#8A1626"
+  },
+  {
+   "i": "India ABHA consent-based records",
+   "pr": "SHOULD",
+   "prc": "#B26A00",
+   "ph": "P8",
+   "c": "#829AB1"
+  },
+  {
+   "i": "External lab and imaging feeds",
+   "pr": "SHOULD",
+   "prc": "#B26A00",
+   "ph": "P7",
+   "c": "#334E68"
+  },
+  {
+   "i": "Clinic inbox for letters",
+   "pr": "LATER",
+   "prc": "#829AB1",
+   "ph": "P8",
+   "c": "#829AB1"
+  },
+  {
+   "i": "Legacy migration (Option B)",
+   "pr": "MUST",
+   "prc": "#8A1626",
+   "ph": "P5",
+   "c": "#8A1626"
+  },
+  {
+   "i": "Fix-by-rule data quality, duplicate matching",
+   "pr": "MUST",
+   "prc": "#8A1626",
+   "ph": "P5",
+   "c": "#8A1626"
+  },
+  {
+   "i": "One timeline for all sources",
+   "pr": "MUST",
+   "prc": "#8A1626",
+   "ph": "P2",
+   "c": "#0E9384"
+  },
+  {
+   "i": "Medication reconciliation",
+   "pr": "MUST",
+   "prc": "#8A1626",
+   "ph": "P2",
+   "c": "#0E9384"
+  },
+  {
+   "i": "Regulator eRx and sick leave",
+   "pr": "MUST",
+   "prc": "#8A1626",
+   "ph": "P5",
+   "c": "#8A1626"
+  },
+  {
+   "i": "Pre-visit summary",
+   "pr": "SHOULD",
+   "prc": "#B26A00",
+   "ph": "P3",
+   "c": "#7155D8"
+  },
+  {
+   "i": "Ambient notes in Arabic, English, Indian languages",
+   "pr": "SHOULD",
+   "prc": "#B26A00",
+   "ph": "P6",
+   "c": "#4F7A5E"
+  },
+  {
+   "i": "Letters and certificates",
+   "pr": "SHOULD",
+   "prc": "#B26A00",
+   "ph": "P5",
+   "c": "#8A1626"
+  },
+  {
+   "i": "Vaccination records and recalls",
+   "pr": "LATER",
+   "prc": "#829AB1",
+   "ph": "P8",
+   "c": "#829AB1"
+  },
+  {
+   "i": "Offline mode",
+   "pr": "LATER",
+   "prc": "#829AB1",
+   "ph": "P8",
+   "c": "#829AB1"
+  },
+  {
+   "i": "Emirates ID reader check-in",
+   "pr": "MUST",
+   "prc": "#8A1626",
+   "ph": "P5",
+   "c": "#8A1626"
+  },
+  {
+   "i": "Live insurance eligibility",
+   "pr": "MUST",
+   "prc": "#8A1626",
+   "ph": "P5",
+   "c": "#8A1626"
+  },
+  {
+   "i": "Duplicate warning while typing",
+   "pr": "MUST",
+   "prc": "#8A1626",
+   "ph": "P1",
+   "c": "#2563EB"
+  },
+  {
+   "i": "WhatsApp reminders and running-late broadcast",
+   "pr": "SHOULD",
+   "prc": "#B26A00",
+   "ph": "P4",
+   "c": "#B26A00"
+  },
+  {
+   "i": "Queue and token screen",
+   "pr": "SHOULD",
+   "prc": "#B26A00",
+   "ph": "P1",
+   "c": "#2563EB"
+  },
+  {
+   "i": "Scan to patient file",
+   "pr": "SHOULD",
+   "prc": "#B26A00",
+   "ph": "P2",
+   "c": "#0E9384"
+  },
+  {
+   "i": "Self check-in kiosk or QR",
+   "pr": "LATER",
+   "prc": "#829AB1",
+   "ph": "P8",
+   "c": "#829AB1"
+  },
+  {
+   "i": "Voice assistant inbound",
+   "pr": "MUST",
+   "prc": "#8A1626",
+   "ph": "P5",
+   "c": "#8A1626"
+  },
+  {
+   "i": "Voice assistant outbound + waitlist fill",
+   "pr": "LATER",
+   "prc": "#829AB1",
+   "ph": "P6",
+   "c": "#4F7A5E"
+  },
+  {
+   "i": "Role training in one shift; no lock-in export",
+   "pr": "MUST",
+   "prc": "#8A1626",
+   "ph": "P5",
+   "c": "#8A1626"
+  }
+ ],
+ "cov": {
+  "screensTxt": "96/96",
+  "cards": [
+   {
+    "t": "DESIGNED SCREENS ASSIGNED",
+    "v": "81/81",
+    "s": "Every screen in the project has a phase"
+   },
+   {
+    "t": "NEW SCREENS IDENTIFIED",
+    "v": "15",
+    "s": "Required by sources but not yet designed (N-xx)"
+   },
+   {
+    "t": "OCT 2026 CHECKLIST",
+    "v": "22/22",
+    "s": "4 items re-sequenced, with reasons"
+   },
+   {
+    "t": "ARCH v2 INVENTORY",
+    "v": "27/27",
+    "s": "All 27 screen groups mapped"
+   },
+   {
+    "t": "GAP ANALYSIS ITEMS",
+    "v": "25/25",
+    "s": "12 Musts placed at or before launch"
+   },
+   {
+    "t": "SCREENS NOT IN A REQUIREMENT",
+    "v": "0",
+    "s": "Every screen is cited by a requirement ID"
+   }
+  ]
+ },
+ "findings": [
+  {
+   "k": "CONFLICT",
+   "c": "#8A1626",
+   "t": "Three different stacks across sources",
+   "d": "Architecture v2 (.NET), Build Plan (Vite + NestJS + AKS) and the October 2026 plan (Next.js 16 + App Service). Resolved in v2: .NET 10 + Azure SQL Database (sections 7 and 7b)."
+  },
+  {
+   "k": "CHANGE",
+   "c": "#8A1626",
+   "t": "ERD and Build Plan assume PostgreSQL",
+   "d": "Map types before P0 ends: jsonb → json/nvarchar(max), exclusion constraint → unique slot index, RLS policies → SQL security predicates, money stays integer minor units. Update the Build Plan and Azure Architecture pages to match."
+  },
+  {
+   "k": "ADDED v2",
+   "c": "#1D4ED8",
+   "t": "Requirements missing from every source",
+   "d": "Database security baseline, data classification, staff offboarding, legal and consent records, clinical safety case, security operations with breach notification, retention and deletion jobs. Added as P0-09, P0-10, P1-11, P1-12, P2-08, P5-11, P5-12."
+  },
+  {
+   "k": "ID CLASH",
+   "c": "#8A1626",
+   "t": "P-09 used for two screens",
+   "d": "Doctor revenue report and receipts/tax invoices share P-09 in the Foundations inventory, and P-10 to P-14 are listed twice. Receipts renumbered to P-15 here; update Foundations to match."
+  },
+  {
+   "k": "MISSING",
+   "c": "#B26A00",
+   "t": "No screens for SaaS operations",
+   "d": "Subscription billing for clinics (N-11) and a platform operations console with audited support access (N-12) are required to sell and support Medvya but appear in no source."
+  },
+  {
+   "k": "MISSING",
+   "c": "#B26A00",
+   "t": "Gap-analysis Musts without designs",
+   "d": "Migration and data-quality (N-04, N-05), Emirates ID reader (N-06), exchange status (N-07), patient-upload extraction (N-08), certificates and e-sick leave (N-09), voice assistant (N-10)."
+  },
+  {
+   "k": "MISSING",
+   "c": "#B26A00",
+   "t": "Doctor discovery has no design",
+   "d": "The October plan lists public doctor profiles and discovery in the patient experience (N-02)."
+  },
+  {
+   "k": "SEQUENCE",
+   "c": "#2563EB",
+   "t": "AI moved ahead of billing",
+   "d": "The October plan puts AI documentation in its Phase 3; the product’s landing promise and designs centre on it, so it pilots in P3 with 5–10 clinicians while billing follows in P4."
+  },
+  {
+   "k": "SEQUENCE",
+   "c": "#2563EB",
+   "t": "Market-specific Musts gate UAE, not India",
+   "d": "Exchange connection, Emirates ID and eClaimLink are UAE launch blockers. If India launches first, they move within P5 without delaying the first paying clinic."
+  },
+  {
+   "k": "CHECK",
+   "c": "#087F5B",
+   "t": "Inventory statuses",
+   "d": "P-01 and C-01 are marked “next” rather than hi-fi in Foundations; confirm final designs before P1 and P4 build respectively."
+  }
+ ],
+ "filters": [
+  {
+   "label": "All",
+   "bg": "#102A43",
+   "fg": "#fff"
+  },
+  {
+   "label": "P0",
+   "bg": "#fff",
+   "fg": "#142536"
+  },
+  {
+   "label": "P1",
+   "bg": "#fff",
+   "fg": "#142536"
+  },
+  {
+   "label": "P2",
+   "bg": "#fff",
+   "fg": "#142536"
+  },
+  {
+   "label": "P3",
+   "bg": "#fff",
+   "fg": "#142536"
+  },
+  {
+   "label": "P4",
+   "bg": "#fff",
+   "fg": "#142536"
+  },
+  {
+   "label": "P5",
+   "bg": "#fff",
+   "fg": "#142536"
+  },
+  {
+   "label": "P6",
+   "bg": "#fff",
+   "fg": "#142536"
+  },
+  {
+   "label": "P7",
+   "bg": "#fff",
+   "fg": "#142536"
+  },
+  {
+   "label": "P8",
+   "bg": "#fff",
+   "fg": "#142536"
+  },
+  {
+   "label": "Design needed",
+   "bg": "#fff",
+   "fg": "#142536"
+  }
+ ],
+ "matrix": [
+  {
+   "id": "F-03",
+   "name": "Sign up · MFA / passkey · recovery",
+   "mod": "Found",
+   "role": "All",
+   "src": "M1",
+   "ph": "P0",
+   "need": false,
+   "mc": "#102A43",
+   "pc": "#102A43",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "F-05",
+   "name": "Session expired · 403 · 404 · offline",
+   "mod": "Found",
+   "role": "All",
+   "src": "M1",
+   "ph": "P0",
+   "need": false,
+   "mc": "#102A43",
+   "pc": "#102A43",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "F-06",
+   "name": "Invite acceptance",
+   "mod": "Found",
+   "role": "Staff",
+   "src": "M1",
+   "ph": "P0",
+   "need": false,
+   "mc": "#102A43",
+   "pc": "#102A43",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "X-03",
+   "name": "Six end-to-end journeys (storyboard)",
+   "mod": "Found",
+   "role": "All",
+   "src": "M1",
+   "ph": "P0",
+   "need": false,
+   "mc": "#102A43",
+   "pc": "#102A43",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "D-03",
+   "name": "Notification centre",
+   "mod": "EMR",
+   "role": "All staff",
+   "src": "M1",
+   "ph": "P1",
+   "need": false,
+   "mc": "#0E9384",
+   "pc": "#2563EB",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "D-04",
+   "name": "Clinic overview (multi-doctor Today, shared waiting room)",
+   "mod": "PMS",
+   "role": "Dr, Reception",
+   "src": "M2",
+   "ph": "P1",
+   "need": false,
+   "mc": "#2563EB",
+   "pc": "#2563EB",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "F-01",
+   "name": "Landing (solo doctor / hospital)",
+   "mod": "Found",
+   "role": "Public",
+   "src": "M1",
+   "ph": "P1",
+   "need": false,
+   "mc": "#102A43",
+   "pc": "#2563EB",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "F-02",
+   "name": "Country & data residency selector",
+   "mod": "Found",
+   "role": "Public",
+   "src": "M1",
+   "ph": "P1",
+   "need": false,
+   "mc": "#102A43",
+   "pc": "#2563EB",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "F-04",
+   "name": "Solo doctor onboarding (licence, schedule, invite)",
+   "mod": "Found",
+   "role": "Solo Dr",
+   "src": "M1",
+   "ph": "P1",
+   "need": false,
+   "mc": "#102A43",
+   "pc": "#2563EB",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "F-07",
+   "name": "Trust centre & demo request",
+   "mod": "Found",
+   "role": "Public",
+   "src": "M1",
+   "ph": "P1",
+   "need": false,
+   "mc": "#102A43",
+   "pc": "#2563EB",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "F-08",
+   "name": "Practice settings (profile, availability, staff, services, notifications, data)",
+   "mod": "Found",
+   "role": "Admin, Solo Dr",
+   "src": "M1",
+   "ph": "P1",
+   "need": false,
+   "mc": "#102A43",
+   "pc": "#2563EB",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "F-09",
+   "name": "Add doctor (clinic mode): licence, schedule, fees, access, signature",
+   "mod": "Found",
+   "role": "Admin",
+   "src": "M2",
+   "ph": "P1",
+   "need": false,
+   "mc": "#102A43",
+   "pc": "#2563EB",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "F-10",
+   "name": "Add staff & roles (scope, permissions, invite, custom roles)",
+   "mod": "Found",
+   "role": "Admin",
+   "src": "M1",
+   "ph": "P1",
+   "need": false,
+   "mc": "#102A43",
+   "pc": "#2563EB",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "F-12",
+   "name": "Practice access log",
+   "mod": "Ent",
+   "role": "Admin",
+   "src": "M1",
+   "ph": "P1",
+   "need": false,
+   "mc": "#334E68",
+   "pc": "#2563EB",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "P-01",
+   "name": "Appointment & reception board",
+   "mod": "PMS",
+   "role": "Reception",
+   "src": "M1",
+   "ph": "P1",
+   "need": false,
+   "mc": "#2563EB",
+   "pc": "#2563EB",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "P-02",
+   "name": "Register patient · India (ABHA) & UAE (Emirates ID)",
+   "mod": "PMS",
+   "role": "Reception",
+   "src": "M1",
+   "ph": "P1",
+   "need": false,
+   "mc": "#2563EB",
+   "pc": "#2563EB",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "P-03",
+   "name": "Duplicate / merge review",
+   "mod": "PMS",
+   "role": "Reception",
+   "src": "M1",
+   "ph": "P1",
+   "need": false,
+   "mc": "#2563EB",
+   "pc": "#2563EB",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "P-04",
+   "name": "Day/week calendar · walk-in · reschedule · no-show",
+   "mod": "PMS",
+   "role": "Reception, Dr",
+   "src": "M1",
+   "ph": "P1",
+   "need": false,
+   "mc": "#2563EB",
+   "pc": "#2563EB",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "P-05",
+   "name": "Waitlist & room queue · queue TV display",
+   "mod": "PMS",
+   "role": "Reception, Nurse",
+   "src": "M1",
+   "ph": "P1",
+   "need": false,
+   "mc": "#2563EB",
+   "pc": "#2563EB",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "D-01",
+   "name": "Doctor Today",
+   "mod": "EMR",
+   "role": "Doctors",
+   "src": "M1",
+   "ph": "P2",
+   "need": false,
+   "mc": "#0E9384",
+   "pc": "#0E9384",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "D-02",
+   "name": "Global privacy-safe search (⌘K)",
+   "mod": "EMR",
+   "role": "Doctors",
+   "src": "M1",
+   "ph": "P2",
+   "need": false,
+   "mc": "#0E9384",
+   "pc": "#0E9384",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "E-01",
+   "name": "Patient 360",
+   "mod": "EMR",
+   "role": "Doctors",
+   "src": "M1",
+   "ph": "P2",
+   "need": false,
+   "mc": "#0E9384",
+   "pc": "#0E9384",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "E-02",
+   "name": "Longitudinal timeline & trends",
+   "mod": "EMR",
+   "role": "Doctors",
+   "src": "M1",
+   "ph": "P2",
+   "need": false,
+   "mc": "#0E9384",
+   "pc": "#0E9384",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "E-03",
+   "name": "Documents upload & secure viewer",
+   "mod": "EMR",
+   "role": "Dr, Nurse",
+   "src": "M1",
+   "ph": "P2",
+   "need": false,
+   "mc": "#0E9384",
+   "pc": "#0E9384",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "E-04",
+   "name": "Manual note (consent declined)",
+   "mod": "EMR",
+   "role": "Doctors",
+   "src": "M1",
+   "ph": "P2",
+   "need": false,
+   "mc": "#0E9384",
+   "pc": "#0E9384",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "E-05",
+   "name": "Prescriptions & investigation orders",
+   "mod": "EMR",
+   "role": "Doctors",
+   "src": "M2",
+   "ph": "P2",
+   "need": false,
+   "mc": "#0E9384",
+   "pc": "#0E9384",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "E-06",
+   "name": "Signed note · addendum · print",
+   "mod": "EMR",
+   "role": "Doctors",
+   "src": "M1",
+   "ph": "P2",
+   "need": false,
+   "mc": "#0E9384",
+   "pc": "#0E9384",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "E-07",
+   "name": "Diagnosis coding & meds reconciliation",
+   "mod": "EMR",
+   "role": "Doctors",
+   "src": "M2",
+   "ph": "P2",
+   "need": false,
+   "mc": "#0E9384",
+   "pc": "#0E9384",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "E-09",
+   "name": "Referral out / in with status",
+   "mod": "EMR",
+   "role": "Doctors",
+   "src": "M2",
+   "ph": "P2",
+   "need": false,
+   "mc": "#0E9384",
+   "pc": "#0E9384",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "E-10",
+   "name": "Printed prescription · e-Rx to pharmacy · multilingual",
+   "mod": "EMR",
+   "role": "Doctors",
+   "src": "M1",
+   "ph": "P2",
+   "need": false,
+   "mc": "#0E9384",
+   "pc": "#0E9384",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "E-11",
+   "name": "Add medicine while prescribing (dose builder, safety checks)",
+   "mod": "EMR",
+   "role": "Doctors",
+   "src": "M2",
+   "ph": "P2",
+   "need": false,
+   "mc": "#0E9384",
+   "pc": "#0E9384",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "F-13",
+   "name": "Medicines & formulary · India Schedule H/H1/X · UAE drug codes, order sets",
+   "mod": "EMR",
+   "role": "Dr, Admin",
+   "src": "M2",
+   "ph": "P2",
+   "need": false,
+   "mc": "#0E9384",
+   "pc": "#0E9384",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "N-01",
+   "name": "Nurse intake: vitals, allergies, meds",
+   "mod": "EMR",
+   "role": "Nurse",
+   "src": "M2",
+   "ph": "P2",
+   "need": false,
+   "mc": "#0E9384",
+   "pc": "#0E9384",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "A-01",
+   "name": "Pre-visit brief (verified vs AI split)",
+   "mod": "AI",
+   "role": "Doctors",
+   "src": "M1",
+   "ph": "P3",
+   "need": false,
+   "mc": "#7155D8",
+   "pc": "#7155D8",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "A-02",
+   "name": "Recording consent & device selection",
+   "mod": "AI",
+   "role": "Doctors",
+   "src": "M1",
+   "ph": "P3",
+   "need": false,
+   "mc": "#7155D8",
+   "pc": "#7155D8",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "A-03",
+   "name": "Live AI consultation",
+   "mod": "AI",
+   "role": "Doctors",
+   "src": "M1",
+   "ph": "P3",
+   "need": false,
+   "mc": "#7155D8",
+   "pc": "#7155D8",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "A-04",
+   "name": "Multi-speaker transcript review",
+   "mod": "AI",
+   "role": "Doctors",
+   "src": "M1",
+   "ph": "P3",
+   "need": false,
+   "mc": "#7155D8",
+   "pc": "#7155D8",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "A-05",
+   "name": "AI note & source-evidence review",
+   "mod": "AI",
+   "role": "Doctors",
+   "src": "M1",
+   "ph": "P3",
+   "need": false,
+   "mc": "#7155D8",
+   "pc": "#7155D8",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "A-06",
+   "name": "Upload/sync progress · failed upload · AI unavailable",
+   "mod": "AI",
+   "role": "Doctors",
+   "src": "M1",
+   "ph": "P3",
+   "need": false,
+   "mc": "#7155D8",
+   "pc": "#7155D8",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "A-08",
+   "name": "Emergency symptom warning",
+   "mod": "AI",
+   "role": "Doctors",
+   "src": "M1",
+   "ph": "P3",
+   "need": false,
+   "mc": "#7155D8",
+   "pc": "#7155D8",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "A-09",
+   "name": "Consent revoked · patient changed",
+   "mod": "AI",
+   "role": "Doctors",
+   "src": "M1",
+   "ph": "P3",
+   "need": false,
+   "mc": "#7155D8",
+   "pc": "#7155D8",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "A-10",
+   "name": "Speaker overlap / unconfirmed speaker",
+   "mod": "AI",
+   "role": "Doctors",
+   "src": "M1",
+   "ph": "P3",
+   "need": false,
+   "mc": "#7155D8",
+   "pc": "#7155D8",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "H-09",
+   "name": "Consent templates & recording policy",
+   "mod": "Ent",
+   "role": "Admins",
+   "src": "M1",
+   "ph": "P3",
+   "need": false,
+   "mc": "#334E68",
+   "pc": "#7155D8",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "X-01",
+   "name": "Mobile: Today, capture, note, appointments, records, pairing",
+   "mod": "Found",
+   "role": "All",
+   "src": "M1",
+   "ph": "P3",
+   "need": false,
+   "mc": "#102A43",
+   "pc": "#7155D8",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "C-01",
+   "name": "Clinical results inbox",
+   "mod": "Care",
+   "role": "Doctors",
+   "src": "M2",
+   "ph": "P4",
+   "need": false,
+   "mc": "#4F7A5E",
+   "pc": "#B26A00",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "C-02",
+   "name": "Care plans & follow-ups",
+   "mod": "Care",
+   "role": "Dr, Care coord.",
+   "src": "M2",
+   "ph": "P4",
+   "need": false,
+   "mc": "#4F7A5E",
+   "pc": "#B26A00",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "C-03",
+   "name": "Patient contact log & reminders",
+   "mod": "Care",
+   "role": "Care coord.",
+   "src": "M2",
+   "ph": "P4",
+   "need": false,
+   "mc": "#4F7A5E",
+   "pc": "#B26A00",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "C-04",
+   "name": "Overdue escalation",
+   "mod": "Care",
+   "role": "Care coord.",
+   "src": "M2",
+   "ph": "P4",
+   "need": false,
+   "mc": "#4F7A5E",
+   "pc": "#B26A00",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "C-05",
+   "name": "Inbound report identity match",
+   "mod": "Care",
+   "role": "Dr, Care",
+   "src": "M2",
+   "ph": "P4",
+   "need": false,
+   "mc": "#4F7A5E",
+   "pc": "#B26A00",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "C-06",
+   "name": "Clinic messages inbox (AI reply draft, feedback)",
+   "mod": "Care",
+   "role": "Dr, Reception",
+   "src": "M2",
+   "ph": "P4",
+   "need": false,
+   "mc": "#4F7A5E",
+   "pc": "#B26A00",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "F-11",
+   "name": "Services & fees · India GST/SAC, TPA tariffs · UAE CPT, VAT, payer price lists, packages",
+   "mod": "PMS",
+   "role": "Admin",
+   "src": "M2",
+   "ph": "P4",
+   "need": false,
+   "mc": "#2563EB",
+   "pc": "#B26A00",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "H-07",
+   "name": "Analytics (throughput, open loops, adoption)",
+   "mod": "Ent",
+   "role": "Admins",
+   "src": "M2",
+   "ph": "P4",
+   "need": false,
+   "mc": "#334E68",
+   "pc": "#B26A00",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "N-02",
+   "name": "Public doctor profiles & doctor discovery (SEO)",
+   "mod": "New",
+   "role": "Public, Patient",
+   "src": "Oct plan",
+   "ph": "P4",
+   "need": true,
+   "mc": "#B42318",
+   "pc": "#B26A00",
+   "st": "DESIGN NEEDED",
+   "sc": "#B42318"
+  },
+  {
+   "id": "N-03",
+   "name": "WhatsApp templates, opt-in & delivery status",
+   "mod": "New",
+   "role": "Admin",
+   "src": "Gap",
+   "ph": "P4",
+   "need": true,
+   "mc": "#B42318",
+   "pc": "#B26A00",
+   "st": "DESIGN NEEDED",
+   "sc": "#B42318"
+  },
+  {
+   "id": "P-06",
+   "name": "Charge capture · invoice · payment · refund",
+   "mod": "PMS",
+   "role": "Reception",
+   "src": "M2",
+   "ph": "P4",
+   "need": false,
+   "mc": "#2563EB",
+   "pc": "#B26A00",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "P-07",
+   "name": "Cash reconciliation",
+   "mod": "PMS",
+   "role": "Reception, Admin",
+   "src": "M2",
+   "ph": "P4",
+   "need": false,
+   "mc": "#2563EB",
+   "pc": "#B26A00",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "P-09",
+   "name": "Doctor revenue & payout report",
+   "mod": "PMS",
+   "role": "Admin",
+   "src": "M2",
+   "ph": "P4",
+   "need": false,
+   "mc": "#2563EB",
+   "pc": "#B26A00",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "P-10",
+   "name": "Split & partial payment (cash + UPI + card + advance)",
+   "mod": "PMS",
+   "role": "Reception",
+   "src": "M2",
+   "ph": "P4",
+   "need": false,
+   "mc": "#2563EB",
+   "pc": "#B26A00",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "P-11",
+   "name": "Packages & advances · session redemption",
+   "mod": "PMS",
+   "role": "Reception, Admin",
+   "src": "M2",
+   "ph": "P4",
+   "need": false,
+   "mc": "#2563EB",
+   "pc": "#B26A00",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "P-12",
+   "name": "Dues, ageing & patient statement",
+   "mod": "PMS",
+   "role": "Reception, Admin",
+   "src": "M2",
+   "ph": "P4",
+   "need": false,
+   "mc": "#2563EB",
+   "pc": "#B26A00",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "P-13",
+   "name": "Day-end cash close · denominations · shift report",
+   "mod": "PMS",
+   "role": "Reception, Admin",
+   "src": "M2",
+   "ph": "P4",
+   "need": false,
+   "mc": "#2563EB",
+   "pc": "#B26A00",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "P-15",
+   "name": "Receipt, tax invoice, credit note, advance receipt · GST / VAT · A5 + 80 mm (was duplicate P-09)",
+   "mod": "PMS",
+   "role": "Reception, Admin",
+   "src": "M2",
+   "ph": "P4",
+   "need": false,
+   "mc": "#2563EB",
+   "pc": "#B26A00",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "R-01",
+   "name": "Patient portal home, visit summaries, records & labs",
+   "mod": "Portal",
+   "role": "Patient",
+   "src": "M2",
+   "ph": "P4",
+   "need": false,
+   "mc": "#0F766E",
+   "pc": "#B26A00",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "R-02",
+   "name": "Portal booking & reschedule",
+   "mod": "Portal",
+   "role": "Patient",
+   "src": "M2",
+   "ph": "P4",
+   "need": false,
+   "mc": "#0F766E",
+   "pc": "#B26A00",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "R-03",
+   "name": "Portal consent & privacy",
+   "mod": "Portal",
+   "role": "Patient",
+   "src": "M2",
+   "ph": "P4",
+   "need": false,
+   "mc": "#0F766E",
+   "pc": "#B26A00",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "R-04",
+   "name": "Caregiver proxy authorisation",
+   "mod": "Portal",
+   "role": "Patient",
+   "src": "M2",
+   "ph": "P4",
+   "need": false,
+   "mc": "#0F766E",
+   "pc": "#B26A00",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "N-04",
+   "name": "Migration: connect, mapping approval, dry-run report",
+   "mod": "New",
+   "role": "Medvya ops, Owner",
+   "src": "Gap",
+   "ph": "P5",
+   "need": true,
+   "mc": "#B42318",
+   "pc": "#8A1626",
+   "st": "DESIGN NEEDED",
+   "sc": "#B42318"
+  },
+  {
+   "id": "N-05",
+   "name": "Data-quality queue (fix by rule) & bulk duplicate merge",
+   "mod": "New",
+   "role": "Medvya ops, Reception",
+   "src": "Gap",
+   "ph": "P5",
+   "need": true,
+   "mc": "#B42318",
+   "pc": "#8A1626",
+   "st": "DESIGN NEEDED",
+   "sc": "#B42318"
+  },
+  {
+   "id": "N-06",
+   "name": "Emirates ID card-reader check-in",
+   "mod": "New",
+   "role": "Reception",
+   "src": "Gap",
+   "ph": "P5",
+   "need": true,
+   "mc": "#B42318",
+   "pc": "#8A1626",
+   "st": "DESIGN NEEDED",
+   "sc": "#B42318"
+  },
+  {
+   "id": "N-07",
+   "name": "Health exchange pull/push status (Malaffi / NABIDH / Riayati)",
+   "mod": "New",
+   "role": "Dr, Admin",
+   "src": "Gap",
+   "ph": "P5",
+   "need": true,
+   "mc": "#B42318",
+   "pc": "#8A1626",
+   "st": "DESIGN NEEDED",
+   "sc": "#B42318"
+  },
+  {
+   "id": "N-08",
+   "name": "Patient report upload & AI extraction review",
+   "mod": "New",
+   "role": "Patient, Dr",
+   "src": "Gap",
+   "ph": "P5",
+   "need": true,
+   "mc": "#B42318",
+   "pc": "#8A1626",
+   "st": "DESIGN NEEDED",
+   "sc": "#B42318"
+  },
+  {
+   "id": "N-09",
+   "name": "Letters, certificates & e-sick leave",
+   "mod": "New",
+   "role": "Doctors",
+   "src": "Gap",
+   "ph": "P5",
+   "need": true,
+   "mc": "#B42318",
+   "pc": "#8A1626",
+   "st": "DESIGN NEEDED",
+   "sc": "#B42318"
+  },
+  {
+   "id": "N-10",
+   "name": "Voice appointment assistant: live calls console & owner settings",
+   "mod": "New",
+   "role": "Reception, Owner",
+   "src": "Gap",
+   "ph": "P5",
+   "need": true,
+   "mc": "#B42318",
+   "pc": "#8A1626",
+   "st": "DESIGN NEEDED",
+   "sc": "#B42318"
+  },
+  {
+   "id": "N-11",
+   "name": "Medvya plans, trial, subscription billing for clinics",
+   "mod": "New",
+   "role": "Owner",
+   "src": "PRD",
+   "ph": "P5",
+   "need": true,
+   "mc": "#B42318",
+   "pc": "#8A1626",
+   "st": "DESIGN NEEDED",
+   "sc": "#B42318"
+  },
+  {
+   "id": "N-12",
+   "name": "Platform admin console: tenants, onboarding, support access (audited)",
+   "mod": "New",
+   "role": "Medvya ops",
+   "src": "PRD",
+   "ph": "P5",
+   "need": true,
+   "mc": "#B42318",
+   "pc": "#8A1626",
+   "st": "DESIGN NEEDED",
+   "sc": "#B42318"
+  },
+  {
+   "id": "N-13",
+   "name": "In-app guides, help centre, feedback & status page",
+   "mod": "New",
+   "role": "All",
+   "src": "Gap",
+   "ph": "P5",
+   "need": true,
+   "mc": "#B42318",
+   "pc": "#8A1626",
+   "st": "DESIGN NEEDED",
+   "sc": "#B42318"
+  },
+  {
+   "id": "N-14",
+   "name": "Clinic data export (FHIR + CSV)",
+   "mod": "New",
+   "role": "Owner",
+   "src": "Gap",
+   "ph": "P5",
+   "need": true,
+   "mc": "#B42318",
+   "pc": "#8A1626",
+   "st": "DESIGN NEEDED",
+   "sc": "#B42318"
+  },
+  {
+   "id": "P-08",
+   "name": "Insurance eligibility & claims handoff",
+   "mod": "PMS",
+   "role": "Admin",
+   "src": "M4",
+   "ph": "P5",
+   "need": false,
+   "mc": "#2563EB",
+   "pc": "#8A1626",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "P-14",
+   "name": "Pre-authorisation, resubmission, remittance · India TPA/PMJAY/CGHS · UAE eClaimLink",
+   "mod": "PMS",
+   "role": "Reception, Admin",
+   "src": "M3",
+   "ph": "P5",
+   "need": false,
+   "mc": "#2563EB",
+   "pc": "#8A1626",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "X-02",
+   "name": "Dark mode & high-contrast variants",
+   "mod": "Found",
+   "role": "All",
+   "src": "M1",
+   "ph": "P5",
+   "need": false,
+   "mc": "#102A43",
+   "pc": "#8A1626",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "A-07",
+   "name": "Private voice assistant (earpiece only)",
+   "mod": "AI",
+   "role": "Doctors",
+   "src": "M3",
+   "ph": "P6",
+   "need": false,
+   "mc": "#7155D8",
+   "pc": "#4F7A5E",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "W-01",
+   "name": "Clip pairing (code) · self-test",
+   "mod": "Device",
+   "role": "Doctors",
+   "src": "M3",
+   "ph": "P6",
+   "need": false,
+   "mc": "#9A6700",
+   "pc": "#4F7A5E",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "W-02",
+   "name": "Device health · battery · offline queue · firmware",
+   "mod": "Device",
+   "role": "Doctors",
+   "src": "M3",
+   "ph": "P6",
+   "need": false,
+   "mc": "#9A6700",
+   "pc": "#4F7A5E",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "W-03",
+   "name": "Loss/theft revoke",
+   "mod": "Device",
+   "role": "Dr, Admin",
+   "src": "M3",
+   "ph": "P6",
+   "need": false,
+   "mc": "#9A6700",
+   "pc": "#4F7A5E",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "H-01",
+   "name": "Hospital integration & administration",
+   "mod": "Ent",
+   "role": "Hosp. IT",
+   "src": "M4",
+   "ph": "P7",
+   "need": false,
+   "mc": "#334E68",
+   "pc": "#334E68",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "H-02",
+   "name": "Organisation, facilities, departments",
+   "mod": "Ent",
+   "role": "Hosp. IT",
+   "src": "M4",
+   "ph": "P7",
+   "need": false,
+   "mc": "#334E68",
+   "pc": "#334E68",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "H-03",
+   "name": "SSO & role grants",
+   "mod": "Ent",
+   "role": "Hosp. IT",
+   "src": "M4",
+   "ph": "P7",
+   "need": false,
+   "mc": "#334E68",
+   "pc": "#334E68",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "H-04",
+   "name": "Write-back conflict & retry",
+   "mod": "Ent",
+   "role": "Hosp. IT, Dr",
+   "src": "M4",
+   "ph": "P7",
+   "need": false,
+   "mc": "#334E68",
+   "pc": "#334E68",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "H-05",
+   "name": "Audit log & break-glass review",
+   "mod": "Ent",
+   "role": "Hosp. IT",
+   "src": "M4",
+   "ph": "P7",
+   "need": false,
+   "mc": "#334E68",
+   "pc": "#334E68",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "H-06",
+   "name": "Retention, residency (India/UAE)",
+   "mod": "Ent",
+   "role": "Hosp. IT",
+   "src": "M4",
+   "ph": "P7",
+   "need": false,
+   "mc": "#334E68",
+   "pc": "#334E68",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "H-08",
+   "name": "Hospital onboarding · record authority",
+   "mod": "Ent",
+   "role": "Hosp. IT",
+   "src": "M4",
+   "ph": "P7",
+   "need": false,
+   "mc": "#334E68",
+   "pc": "#334E68",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "H-10",
+   "name": "Data subject requests & export",
+   "mod": "Ent",
+   "role": "Privacy officer",
+   "src": "M4",
+   "ph": "P7",
+   "need": false,
+   "mc": "#334E68",
+   "pc": "#334E68",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "N-15",
+   "name": "Lab feeds (HL7 ORU) & imaging viewer links",
+   "mod": "New",
+   "role": "Dr, Hosp. IT",
+   "src": "Gap",
+   "ph": "P7",
+   "need": true,
+   "mc": "#B42318",
+   "pc": "#334E68",
+   "st": "DESIGN NEEDED",
+   "sc": "#B42318"
+  },
+  {
+   "id": "A-11",
+   "name": "Teleconsultation (video, identity check, ambient notes)",
+   "mod": "AI",
+   "role": "Doctors",
+   "src": "M2",
+   "ph": "P8",
+   "need": false,
+   "mc": "#7155D8",
+   "pc": "#829AB1",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "E-08",
+   "name": "Vaccinations & recalls",
+   "mod": "EMR",
+   "role": "Dr, Nurse",
+   "src": "Later",
+   "ph": "P8",
+   "need": false,
+   "mc": "#0E9384",
+   "pc": "#829AB1",
+   "st": "DESIGNED",
+   "sc": "#087F5B"
+  },
+  {
+   "id": "N-16",
+   "name": "Kiosk / QR self check-in, clinic letter inbox, offline mode",
+   "mod": "New",
+   "role": "Patient, Reception",
+   "src": "Gap",
+   "ph": "P8",
+   "need": true,
+   "mc": "#B42318",
+   "pc": "#829AB1",
+   "st": "DESIGN NEEDED",
+   "sc": "#B42318"
+  }
+ ],
+ "matrixNote": "96 of 96 rows shown · 81 designed screens + 15 new screens required",
+ "risks": [
+  {
+   "r": "Regulator onboarding slower than planned",
+   "i": "HIGH",
+   "m": "Start applications in P1; India launch path does not depend on UAE integrations",
+   "p": "P5",
+   "c": "#8A1626"
+  },
+  {
+   "r": "AI note quality or clinician trust too low",
+   "i": "HIGH",
+   "m": "Evaluation set in CI, opt-in pilot, manual note always available, clear evidence links",
+   "p": "P3",
+   "c": "#8A1626"
+  },
+  {
+   "r": "Single developer bandwidth",
+   "i": "HIGH",
+   "m": "Strict phase scope freeze, overlapping only pilots, postponed infrastructure list",
+   "p": "All",
+   "c": "#8A1626"
+  },
+  {
+   "r": "Legacy data varies per clinic",
+   "i": "MED",
+   "m": "Dry-run report before sign-off, fix-by-rule queue, reusable mapping templates",
+   "p": "P5",
+   "c": "#B26A00"
+  },
+  {
+   "r": "Consent and data-protection rules change",
+   "i": "MED",
+   "m": "Consent model versioned; legal review per data class; DPDP phased timeline tracked",
+   "p": "P1+",
+   "c": "#B26A00"
+  },
+  {
+   "r": "Payment gateway and WhatsApp approvals delayed",
+   "i": "MED",
+   "m": "Apply during P2; cash and SMS paths work without them",
+   "p": "P4",
+   "c": "#B26A00"
+  },
+  {
+   "r": "Double booking or wrong-patient errors",
+   "i": "HIGH",
+   "m": "Database constraints, identity hard stops, concurrency tests in every release",
+   "p": "P1+",
+   "c": "#8A1626"
+  },
+  {
+   "r": "Always Encrypted limits queries on protected columns",
+   "i": "MED",
+   "m": "Deterministic encryption for exact ID lookups, VBS enclaves for range/LIKE; keep the protected set small",
+   "p": "P0",
+   "c": "#B26A00"
+  },
+  {
+   "r": "Database cost as clinics grow",
+   "i": "MED",
+   "m": "Elastic pools for pooled clinics, serverless for non-production, monthly cost review",
+   "p": "P5",
+   "c": "#B26A00"
+  },
+  {
+   "r": "AI model not available in-region",
+   "i": "MED",
+   "m": "Confirm region per model in P0; abstraction in AI worker to switch provider",
+   "p": "P3",
+   "c": "#B26A00"
+  }
+ ],
+ "decisions": [
+  {
+   "q": "Launch market: India or a UAE emirate first?",
+   "by": "P0 wk 1",
+   "def": "India first for the pilot; UAE pack built in P5 while regulator onboarding runs"
+  },
+  {
+   "q": "Confirm stack (ADR-001)",
+   "by": "P0 wk 1",
+   "def": "Decided in v2: .NET 10 + React/MUI + Azure SQL Database"
+  },
+  {
+   "q": "Azure SQL tier at launch",
+   "by": "P0 wk 2",
+   "def": "Serverless for dev/staging; General Purpose provisioned with zone redundancy for production; Business Critical for hospital stamps"
+  },
+  {
+   "q": "Pricing model (per doctor, per clinic, AI add-on)",
+   "by": "P4 start",
+   "def": "Per doctor per month, AI notes included in higher plan"
+  },
+  {
+   "q": "AI provider and regions",
+   "by": "P2 end",
+   "def": "Azure OpenAI + Azure AI Speech in-region"
+  },
+  {
+   "q": "Wearable hardware partner",
+   "by": "P5 end",
+   "def": "Defer until phone capture metrics are met"
+  },
+  {
+   "q": "Teleconsultation earlier than P8?",
+   "by": "P4 review",
+   "def": "Keep in P8 unless two paying clinics require it"
+  }
+ ],
+ "postponed": [
+  "AI diagnosis or autonomous triage",
+  "Complex agent orchestration with broad record access",
+  "Full hospital inventory and ERP",
+  "Insurance claims beyond eligibility, pre-auth and remittance",
+  "Wearables beyond the Medvya clip",
+  "Microservices, Kubernetes, Kafka, GraphQL, Elasticsearch before P7"
+ ],
+ "expand": true
+}

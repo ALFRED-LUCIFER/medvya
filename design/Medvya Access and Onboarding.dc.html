@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=Material+Symbols+Outlined:opsz,wght,FILL@20..24,400,0..1&display=swap" rel="stylesheet">
+<style>body{margin:0;background:#E9EEF2;color:#142536;font-family:Manrope,system-ui,sans-serif;-webkit-font-smoothing:antialiased}a{color:#2563EB;text-decoration:none}a:hover{text-decoration:underline}button,input,select{font-family:Manrope,system-ui,sans-serif}.ms{font-family:'Material Symbols Outlined';font-weight:400;font-style:normal;line-height:1;display:inline-block;white-space:nowrap;font-feature-settings:'liga'}</style>
+</helmet>
+<div style="padding:40px;display:flex;flex-direction:column;gap:40px">
+  <header style="display:flex;flex-direction:column;gap:6px;max-width:980px">
+    <div style="font:600 12px 'JetBrains Mono',monospace;color:#506579">Medvya · F-01 to F-07 · public site, sign-in, onboarding, errors</div>
+    <h1 style="margin:0;font-size:30px;letter-spacing:-0.02em;color:#102A43">Access & onboarding</h1>
+  </header>
+
+  <!-- F-01 LANDING -->
+  <section id="F-01" data-screen-label="F-01 Landing" style="width:1240px;background:#fff;border-radius:16px;border:1px solid #D5DCE2;overflow:hidden">
+    <nav style="height:68px;display:flex;align-items:center;gap:28px;padding:0 40px;border-bottom:1px solid #EEF2F5">
+      <div style="display:flex;align-items:center;gap:10px"><div style="width:32px;height:32px;border-radius:10px;background:#102A43;color:#5EEAD4;display:flex;align-items:center;justify-content:center;font-weight:800">M</div><span style="font-size:19px;font-weight:800;color:#102A43">Medvya</span></div>
+      <div style="display:flex;gap:22px;font-size:14px;font-weight:600;color:#334E68"><span>For doctors</span><span>For hospitals</span><span>Trust centre</span><span>Pricing</span></div>
+      <div style="flex:1"></div>
+      <div style="display:flex;gap:6px;padding:4px;background:#F1F5F8;border-radius:9px"><sc-for list="{{ regions }}" as="r" hint-placeholder-count="2"><button onClick="{{ r.pick }}" style="height:30px;padding:0 10px;border-radius:6px;border:0;background:{{ r.bg }};color:{{ r.fg }};font-size:12.5px;font-weight:700;cursor:pointer">{{ r.label }}</button></sc-for></div>
+      <button style="height:40px;padding:0 14px;border-radius:10px;border:1px solid #CBD6E0;background:#fff;font-size:14px;font-weight:700;cursor:pointer">Sign in</button>
+    </nav>
+    <div style="display:grid;grid-template-columns:1.05fr 1fr;gap:48px;padding:64px 40px 48px;align-items:center">
+      <div style="display:flex;flex-direction:column;gap:22px">
+        <span style="align-self:flex-start;font-size:12.5px;font-weight:800;color:#0F766E;background:#E7F6F4;padding:5px 10px;border-radius:999px">{{ heroTag }}</span>
+        <h2 style="margin:0;font-size:46px;line-height:1.08;letter-spacing:-0.03em;color:#102A43;text-wrap:pretty">Talk to your patient. Medvya writes the note. You approve it.</h2>
+        <p style="margin:0;font-size:17px;line-height:1.6;color:#506579;max-width:520px">A 60-second brief before every visit, consent-first ambient notes in {{ heroLangs }}, and accountable follow-ups. Appointments and billing included for independent doctors.</p>
+        <div style="display:flex;gap:12px;flex-wrap:wrap"><button style="height:52px;padding:0 22px;border-radius:12px;border:0;background:#0E9384;color:#fff;font-size:16px;font-weight:800;cursor:pointer">I'm a doctor · start free trial</button><button style="height:52px;padding:0 22px;border-radius:12px;border:1px solid #CBD6E0;background:#fff;font-size:16px;font-weight:700;cursor:pointer">For hospitals · book a demo</button></div>
+        <div style="font-size:13px;color:#506579">{{ heroResidency }}</div>
+      </div>
+      <div style="height:380px;border-radius:18px;background:repeating-linear-gradient(45deg,#EEF2F5 0 10px,#F7FAFC 10px 20px);border:1px solid #DFE7ED;display:flex;align-items:center;justify-content:center;font:500 12px 'JetBrains Mono',monospace;color:#8296A8">product shot · consultation note review</div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;padding:0 40px 48px">
+      <sc-for list="{{ pillars }}" as="p" hint-placeholder-count="3"><div style="border:1px solid #DFE7ED;border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:8px"><span class="ms" style="font-size:26px;color:#0F766E">{{ p.icon }}</span><div style="font-size:16px;font-weight:800;color:#102A43">{{ p.t }}</div><div style="font-size:14px;color:#506579;line-height:1.55">{{ p.d }}</div></div></sc-for>
+    </div>
+  </section>
+
+  <div style="display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start">
+    <!-- F-02 REGION -->
+    <section id="F-02" data-screen-label="F-02 Region and residency" style="width:600px;background:#fff;border-radius:16px;border:1px solid #D5DCE2;padding:32px;display:flex;flex-direction:column;gap:18px;box-sizing:border-box">
+      <span style="font:600 11px 'JetBrains Mono',monospace;color:#506579">F-02 · M1</span>
+      <h2 style="margin:0;font-size:24px;color:#102A43">Where do you practise?</h2>
+      <p style="margin:0;font-size:14.5px;color:#506579;line-height:1.55">Your patients' data is stored and processed in this country. It cannot be moved to the other region later without a new account and export.</p>
+      <sc-for list="{{ regionCards }}" as="c" hint-placeholder-count="2"><button onClick="{{ c.pick }}" style="text-align:left;display:flex;gap:14px;padding:16px;border-radius:14px;border:2px solid {{ c.line }};background:{{ c.bg }};cursor:pointer"><span class="ms" style="font-size:28px;color:#102A43">public</span><span style="display:flex;flex-direction:column;gap:4px"><span style="font-size:16px;font-weight:800">{{ c.n }}</span><span style="font-size:13px;color:#506579;line-height:1.5">{{ c.d }}</span></span></button></sc-for>
+      <button style="height:48px;border-radius:12px;border:0;background:#102A43;color:#fff;font-size:15px;font-weight:800;cursor:pointer">Continue in {{ regionName }}</button>
+    </section>
+
+    <!-- F-03 SIGN IN -->
+    <section id="F-03" data-screen-label="F-03 Sign in and MFA" style="width:600px;background:#F7FAFC;border-radius:16px;border:1px solid #D5DCE2;padding:32px;display:flex;flex-direction:column;gap:16px;box-sizing:border-box">
+      <span style="font:600 11px 'JetBrains Mono',monospace;color:#506579">F-03 · M1 · step {{ authStepN }} of 3</span>
+      <sc-if value="{{ auth.s0 }}"><h2 style="margin:0;font-size:24px;color:#102A43">Sign in to Medvya</h2><label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;font-weight:700">Email or mobile</span><input defaultValue="arjun.rao@iyerclinic.example.in" style="height:48px;padding:0 14px;border-radius:12px;border:1px solid #CBD6E0;font-size:15px"></input></label><button onClick="{{ authNext }}" style="height:48px;border-radius:12px;border:0;background:#0E9384;color:#fff;font-size:15px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px"><span class="ms" style="font-size:20px">passkey</span>Continue with passkey</button><button onClick="{{ authOtp }}" style="height:44px;border-radius:12px;border:1px solid #CBD6E0;background:#fff;font-size:14px;font-weight:700;cursor:pointer">Use a one-time code instead</button><div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:#2563EB;font-weight:700">Hospital staff? Sign in with SSO</span><span style="color:#2563EB;font-weight:700">Can't sign in?</span></div></sc-if>
+      <sc-if value="{{ auth.s1 }}"><h2 style="margin:0;font-size:24px;color:#102A43">Enter the 6-digit code</h2><p style="margin:0;font-size:14px;color:#506579">Sent to +91 •••• ••3146. Expires in 4:52.</p><div style="display:flex;gap:8px"><sc-for list="{{ otp }}" as="d" hint-placeholder-count="6"><span style="width:52px;height:60px;border-radius:12px;border:1px solid {{ d.line }};background:#fff;display:flex;align-items:center;justify-content:center;font:600 24px 'JetBrains Mono',monospace">{{ d.v }}</span></sc-for></div><sc-if value="{{ otpErr }}"><span style="font-size:13px;font-weight:700;color:#B42333;display:flex;gap:4px;align-items:center"><span class="ms" style="font-size:16px">error</span>Incorrect code. 2 attempts left before a 15-minute lock.</span></sc-if><div style="display:flex;gap:8px"><button onClick="{{ otpWrong }}" style="flex:1;height:46px;border-radius:12px;border:1px solid #CBD6E0;background:#fff;font-size:14px;font-weight:700;cursor:pointer">Try wrong code</button><button onClick="{{ authNext }}" style="flex:1;height:46px;border-radius:12px;border:0;background:#0E9384;color:#fff;font-size:14px;font-weight:800;cursor:pointer">Verify</button></div></sc-if>
+      <sc-if value="{{ auth.s2 }}"><div style="display:flex;gap:12px;align-items:center"><span class="ms" style="font-size:32px;color:#087F5B">verified_user</span><div><h2 style="margin:0;font-size:22px;color:#102A43">Signed in</h2><div style="font-size:13.5px;color:#506579">Choose where you are working today</div></div></div><sc-for list="{{ facilities }}" as="f" hint-placeholder-count="2"><div style="display:flex;justify-content:space-between;align-items:center;padding:14px;border-radius:12px;border:1px solid #DFE7ED;background:#fff"><span><strong>{{ f.n }}</strong><span style="display:block;font-size:12.5px;color:#506579">{{ f.r }}</span></span><span class="ms" style="color:#506579">chevron_right</span></div></sc-for><button onClick="{{ authReset }}" style="height:40px;border-radius:10px;border:1px solid #DFE7ED;background:#fff;font-size:13px;font-weight:600;cursor:pointer">Restart demo</button></sc-if>
+    </section>
+  </div>
+
+  <!-- F-04 ONBOARDING -->
+  <section id="F-04" data-screen-label="F-04 Solo doctor onboarding" style="width:1240px;background:#F7FAFC;border-radius:16px;border:1px solid #D5DCE2;overflow:hidden;display:grid;grid-template-columns:280px minmax(0,1fr)">
+    <aside style="background:#102A43;color:#C9D6E2;padding:28px 20px;display:flex;flex-direction:column;gap:6px">
+      <span style="font:600 11px 'JetBrains Mono',monospace;color:#8FA6BD">F-04 · solo doctor · M1</span>
+      <div style="font-size:18px;font-weight:800;color:#fff;margin:6px 0 14px">Set up your practice</div>
+      <sc-for list="{{ obSteps }}" as="s" hint-placeholder-count="6"><button onClick="{{ s.go }}" style="display:flex;gap:10px;align-items:center;height:44px;padding:0 10px;border-radius:9px;border:0;background:{{ s.bg }};color:{{ s.fg }};font-size:14px;font-weight:700;cursor:pointer;text-align:left"><span style="width:24px;height:24px;border-radius:50%;background:{{ s.dot }};color:#fff;display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:800;flex-shrink:0">{{ s.n }}</span>{{ s.label }}</button></sc-for>
+      <div style="margin-top:auto;font-size:12.5px;color:#8FA6BD;line-height:1.5">Progress saves automatically. You can see patients before finishing; recording unlocks after licence verification.</div>
+    </aside>
+    <div style="padding:32px;display:flex;flex-direction:column;gap:18px">
+      <div><h2 style="margin:0;font-size:22px;color:#102A43">{{ ob.title }}</h2><p style="margin:4px 0 0;font-size:14px;color:#506579">{{ ob.intro }}</p></div>
+      <sc-if value="{{ ob.notice }}"><div style="display:flex;gap:10px;padding:12px 14px;border-radius:10px;background:{{ ob.nBg }};border:1px solid {{ ob.nLine }};font-size:13.5px;color:{{ ob.nFg }};line-height:1.5"><span class="ms" style="font-size:19px">{{ ob.nIcon }}</span><span>{{ ob.notice }}</span></div></sc-if>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px 16px">
+        <sc-for list="{{ ob.fields }}" as="f" hint-placeholder-count="6"><label style="display:flex;flex-direction:column;gap:6px;grid-column:{{ f.gc }}"><span style="font-size:13px;font-weight:700">{{ f.k }}</span><input defaultValue="{{ f.v }}" placeholder="{{ f.ph }}" style="height:46px;padding:0 12px;border-radius:10px;border:1px solid #CBD6E0;font-size:15px;background:#fff"></input><sc-if value="{{ f.hint }}"><span style="font-size:12px;color:#506579">{{ f.hint }}</span></sc-if></label></sc-for>
+      </div>
+      <sc-if value="{{ ob.templates }}"><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px"><sc-for list="{{ ob.templates }}" as="t" hint-placeholder-count="6"><div style="padding:12px;border-radius:12px;border:2px solid {{ t.line }};background:#fff;display:flex;flex-direction:column;gap:4px"><span style="font-size:14px;font-weight:800">{{ t.n }}</span><span style="font-size:12px;color:#506579">{{ t.d }}</span></div></sc-for></div></sc-if>
+      <div style="display:flex;justify-content:space-between;padding-top:10px;border-top:1px solid #E6EAEE"><button onClick="{{ obBack }}" style="height:46px;padding:0 18px;border-radius:10px;border:1px solid #CBD6E0;background:#fff;font-size:14px;font-weight:600;cursor:pointer">Back</button><button onClick="{{ obNext }}" style="height:46px;padding:0 20px;border-radius:10px;border:0;background:#0E9384;color:#fff;font-size:14px;font-weight:800;cursor:pointer">{{ ob.cta }}</button></div>
+    </div>
+  </section>
+
+  <div style="display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start">
+    <!-- F-06 INVITE -->
+    <section id="F-06" data-screen-label="F-06 Invite acceptance" style="width:400px;background:#fff;border-radius:16px;border:1px solid #D5DCE2;padding:28px;display:flex;flex-direction:column;gap:14px;box-sizing:border-box">
+      <span style="font:600 11px 'JetBrains Mono',monospace;color:#506579">F-06 · M1</span>
+      <h2 style="margin:0;font-size:21px;color:#102A43">Join Iyer Family Clinic</h2>
+      <p style="margin:0;font-size:14px;color:#506579;line-height:1.5">Dr. Arjun Rao invited you as <strong style="color:#142536">Receptionist</strong>.</p>
+      <div style="display:flex;flex-direction:column;gap:6px;padding:12px;border-radius:10px;background:#F7FAFC;font-size:13px"><span>✓ Register patients, bookings, check-in, billing</span><span style="color:#506579">✕ Clinical notes, prescriptions, results</span><span style="color:#506579">Facility: Adyar · clinic hours only</span></div>
+      <button style="height:46px;border-radius:12px;border:0;background:#0E9384;color:#fff;font-size:15px;font-weight:800;cursor:pointer">Create passkey & join</button>
+      <span style="font-size:12px;color:#506579">Invite expires 09 Oct 2026. Not you? Ignore this message.</span>
+    </section>
+    <!-- F-07 TRUST -->
+    <section id="F-07" data-screen-label="F-07 Trust centre" style="width:820px;background:#fff;border-radius:16px;border:1px solid #D5DCE2;padding:28px;display:flex;flex-direction:column;gap:16px;box-sizing:border-box">
+      <span style="font:600 11px 'JetBrains Mono',monospace;color:#506579">F-07 · Trust centre · public</span>
+      <h2 style="margin:0;font-size:24px;color:#102A43">How Medvya handles patient data</h2>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px"><sc-for list="{{ trust }}" as="t" hint-placeholder-count="6"><div style="border:1px solid #DFE7ED;border-radius:12px;padding:14px;display:flex;gap:10px"><span class="ms" style="font-size:22px;color:#0F766E">{{ t.icon }}</span><div><div style="font-size:14.5px;font-weight:800">{{ t.t }}</div><div style="font-size:13px;color:#506579;line-height:1.5">{{ t.d }}</div></div></div></sc-for></div>
+      <div style="font-size:12.5px;color:#506579">We describe our controls; we do not claim certifications we have not obtained. Policy versions and sub-processors are listed with dates.</div>
+    </section>
+  </div>
+
+  <!-- F-05 ERRORS -->
+  <section id="F-05" data-screen-label="F-05 System states" style="display:grid;grid-template-columns:repeat(4,300px);gap:16px">
+    <sc-for list="{{ errors }}" as="e" hint-placeholder-count="4"><div style="background:#fff;border:1px solid #D5DCE2;border-radius:16px;padding:22px;display:flex;flex-direction:column;gap:10px"><span style="font:600 11px 'JetBrains Mono',monospace;color:#506579">{{ e.id }}</span><span class="ms" style="font-size:30px;color:{{ e.c }}">{{ e.icon }}</span><div style="font-size:17px;font-weight:800;color:#102A43">{{ e.t }}</div><div style="font-size:13.5px;color:#506579;line-height:1.55">{{ e.d }}</div><button style="margin-top:auto;height:42px;border-radius:10px;border:0;background:#102A43;color:#fff;font-size:13.5px;font-weight:700;cursor:pointer">{{ e.cta }}</button></div></sc-for>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { region: 'India', auth: 0, otpErr: false, ob: 0 };
+  renderVals() {
+    const s = this.state, IN = s.region === 'India';
+    const OB = [
+      ['Your profile', 'How your name appears on prescriptions and the portal.', [['Full name', 'Dr. Arjun Rao'], ['Specialty', 'General medicine'], ['Qualifications', 'MBBS, MD (General Medicine)', 1], ['Languages you consult in', IN ? 'English, Tamil, Hindi' : 'Arabic, English']]],
+      ['Licence', IN ? 'State Medical Council or NMC registration.' : 'DoH, DHA or MOHAP professional licence.', [[IN ? 'Council' : 'Authority', IN ? 'Tamil Nadu Medical Council' : 'DoH Abu Dhabi'], ['Registration / licence no.', IN ? 'TNMC 84213' : 'GD-29918'], ['Certificate', 'Upload PDF or photo', 1]], ['Verification pending · usually within 1 working day. You can book and register patients meanwhile; ambient recording and signing unlock after verification.', '#FDF5E7', '#EFD5A6', '#7A4710', 'pending']],
+      ['Clinic', 'Address and registration details for invoices and prescriptions.', [['Clinic name', 'Iyer Family Clinic', 1], ['Address', IN ? '14, 2nd Main Road, Adyar, Chennai 600020' : 'Villa 22, Khalifa City, Abu Dhabi', 1], [IN ? 'Clinical establishment reg.' : 'Facility licence', IN ? 'TN-CE-2021-008812' : 'MF-4471'], [IN ? 'GSTIN (optional)' : 'TRN', IN ? '' : '100234567800003']]],
+      ['Hours & fees', 'You can refine these later in Settings.', [['Weekdays', '09:00–13:00, 17:00–20:00'], ['Saturday', '09:00–13:00'], ['Slot length', '20 min'], ['Consultation fee', IN ? '₹1,000 new · ₹600 follow-up' : 'AED 350 new · AED 250 follow-up']]],
+      ['Note templates', 'Pick defaults; AI drafts follow these sections.', [], null, [['General OPD', 'SOAP · short', 1], ['Diabetes review', 'Glycaemic, foot, eye, renal', 1], ['Hypertension', 'BP trend, adherence', 1], ['Paediatrics', 'Growth, vaccines', 0], ['Antenatal', 'Trimester checklist', 0], ['Teleconsult', 'Brief · identity check', 1]]],
+      ['Invite your team', 'Optional. You can work solo.', [['Receptionist email or mobile', '', 0, 'name@example.in'], ['Nurse email or mobile', '', 0, 'Optional']]]
+    ];
+    const cur = OB[s.ob];
+    return {
+      regions: ['India', 'UAE'].map(r => ({ label: r, pick: () => this.setState({ region: r }), bg: s.region === r ? '#fff' : 'transparent', fg: s.region === r ? '#102A43' : '#506579' })),
+      heroTag: IN ? 'Built for Indian OPD · ABDM-ready' : 'Built for UAE clinics · DoH / DHA aware',
+      heroLangs: IN ? 'English, Hindi, Tamil and more' : 'Arabic and English',
+      heroResidency: IN ? 'Data stays in India · Azure Central India' : 'Data stays in the UAE · Azure UAE North',
+      pillars: [{ icon: 'summarize', t: 'Know the patient in 60 seconds', d: 'Verified history and an AI summary, clearly separated.' }, { icon: 'how_to_reg', t: 'Consent before every recording', d: 'Patients can say no; manual notes always work.' }, { icon: 'assignment_turned_in', t: 'Nothing falls through', d: 'Results and follow-ups tracked until someone closes them.' }],
+      regionCards: [['India', 'Azure Central India · DPDP Act · ABDM integration available'], ['UAE', 'Azure UAE North · separate deployment · DoH / DHA / MOHAP integrations per emirate']].map(([n, d]) => ({ n, d, pick: () => this.setState({ region: n }), line: s.region === n ? '#0E9384' : '#DFE7ED', bg: s.region === n ? '#F3FBFA' : '#fff' })),
+      regionName: s.region,
+      authStepN: s.auth + 1, auth: { s0: s.auth === 0, s1: s.auth === 1, s2: s.auth === 2 },
+      authNext: () => this.setState(p => ({ auth: Math.min(2, p.auth + 1), otpErr: false })), authOtp: () => this.setState({ auth: 1 }), otpWrong: () => this.setState({ otpErr: true }), authReset: () => this.setState({ auth: 0, otpErr: false }),
+      otp: '482917'.split('').map(v => ({ v: s.otpErr ? '•' : v, line: s.otpErr ? '#B42333' : '#CBD6E0' })), otpErr: s.otpErr,
+      facilities: [{ n: 'Iyer Family Clinic · Adyar', r: 'Doctor · owner' }, { n: 'Kauvery Hospital · OPD block', r: 'Visiting consultant · hospital SSO' }],
+      obSteps: OB.map(([label], i) => ({ label, n: i < s.ob ? '✓' : String(i + 1), go: () => this.setState({ ob: i }), bg: i === s.ob ? '#1B3A57' : 'transparent', fg: i === s.ob ? '#fff' : '#C9D6E2', dot: i < s.ob ? '#0E9384' : i === s.ob ? '#2563EB' : '#2C4A66' })),
+      ob: { title: cur[0], intro: cur[1], fields: cur[2].map(([k, v, span, ph]) => ({ k, v, ph: ph || '', gc: span ? '1 / -1' : 'auto', hint: '' })), notice: cur[3] ? cur[3][0] : '', nBg: cur[3] ? cur[3][1] : '', nLine: cur[3] ? cur[3][2] : '', nFg: cur[3] ? cur[3][3] : '', nIcon: cur[3] ? cur[3][4] : '', templates: cur[4] ? cur[4].map(([n, d, on]) => ({ n, d, line: on ? '#0E9384' : '#DFE7ED' })) : '', cta: s.ob === 5 ? 'Finish · go to Today' : 'Continue' },
+      obBack: () => this.setState(p => ({ ob: Math.max(0, p.ob - 1) })), obNext: () => this.setState(p => ({ ob: p.ob === 5 ? 0 : p.ob + 1 })),
+      trust: [['public', 'Data residency', 'India and UAE run as separate deployments with separate keys, logs and backups.'], ['how_to_reg', 'Consent model', 'Treatment, recording, sharing, reminders and marketing are separate choices.'], ['auto_awesome', 'AI drafts', 'AI output is a draft until a licensed clinician reviews and signs it.'], ['inventory_2', 'Retention', 'Audio kept 30 days by default; records per local medical rules.'], ['policy', 'Audit', 'Every access to a chart is logged and reviewable.'], ['groups', 'Sub-processors', 'Listed with region and purpose; changes announced 30 days ahead.']].map(([icon, t, d]) => ({ icon, t, d })),
+      errors: [['F-05a', 'lock_clock', '#334E68', 'Session expired', 'Your unsaved draft is kept on this device. Sign in again to continue; you will be asked to confirm the patient.', 'Sign in again'], ['F-05b', 'block', '#8A1626', 'No access to this facility', 'You are signed in to Iyer Family Clinic. This record belongs to another facility.', 'Request access'], ['F-05c', 'travel_explore', '#334E68', 'Page not found', 'The link may be old. Nothing has been changed.', 'Back to Today'], ['F-05d', 'wifi_off', '#975A16', 'You are offline', 'Recording continues to the encrypted device buffer. Notes and orders will save when you reconnect.', 'Retry now']].map(([id, icon, c, t, d, cta]) => ({ id, icon, c, t, d, cta }))
+    };
+  }
+}
+</script>
+</body>
+</html>

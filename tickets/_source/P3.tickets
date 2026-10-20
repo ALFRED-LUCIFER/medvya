@@ -1,0 +1,594 @@
+# P3 · AI-drafted notes under clinician review · Weeks 13–20 · R3 Scribe
+# exit: 1 0 fabricated medicines/doses across eval set · 2 ≥ 80 % drafts signed with minor edits · 3 consent for 100 % of recordings; declined path tested · 4 trust survey + note time vs P2 baseline
+# nfr:  1 draft ≤ 60 s p50 after stop · 2 no training on customer data without separate lawful basis · 3 AI vendor DPA + regional processing confirmed per country
+# pkg:  1 AI safety card · 2 waiting-room consent notice EN/HI/AR · 3 evaluation report + AI incident procedure
+# dep:  1 Azure OpenAI / Speech availability Central India & UAE North · 2 legal review of recording consent per market
+
+@epic MDV-P3-E01 | Recording consent and policy | P3-01 | Per-encounter consent separate from treatment consent; decline and revocation always safe.
+@epic MDV-P3-E02 | Capture and upload | P3-02 | Phone or desktop capture with visible state and resilient encrypted upload.
+@epic MDV-P3-E03 | Transcription, speakers and AI worker | P3-03, P3-07 | In-region transcription with provisional speakers, via an unprivileged .NET AI worker.
+@epic MDV-P3-E04 | Evidence-linked draft and review | P3-04, P3-05, P3-08 | Every drafted statement links to its source; the doctor accepts, edits and signs.
+@epic MDV-P3-E05 | Safety states | P3-06 | Emergency prompt, AI outage, wrong patient and overlap handled without data loss or autonomy.
+@epic MDV-P3-E06 | AI quality, compliance and R3 gate | P3-07 | Evaluation in CI, vendor/legal clearance, safety materials and the R3 gate.
+
+=== MDV-P3-001
+title: Spike: Azure AI Speech and Azure OpenAI in-region capability check and ADR for speech/LLM providers
+type: Spike
+epic: MDV-P3-E06
+prd: P3-07, P3-03
+covers: dep:1
+priority: MUST
+roles: Developer
+labels: ai, spike, adr
+estimate: 2
+weeks: 13
+depends: MDV-P0-003
+confidence: 70 | Regional model availability and Tamil/Hindi diarisation quality are unknown until tested.
+sources: PRD v2 P3 dependency 1, risk "AI model not available in-region"; docs/03-architecture/ai-pipeline.md
+desc:
+In the launch region confirm: batch transcription with diarisation and language identification for en-IN, hi-IN, ta-IN (and ar-AE for UAE), Azure OpenAI chat model with JSON-schema output, data residency/processing terms. Run 10 synthetic recordings through the pipeline and measure WER, diarisation error and latency. Record ADR-007 (speech/LLM providers, models, versions, regions, fallback).
+ac:
+- ADR-007 accepted with model names/versions, regions, quotas and fallback provider abstraction.
+- Measured latency supports the ≤ 60 s p50 draft target or the gap is quantified with a plan.
+- Language/diarisation quality per language is recorded on the synthetic set.
+- Confirmation that no data leaves the country for inference (documented with Microsoft terms).
+
+=== MDV-P3-002
+title: Consent templates and recording policy administration (H-09)
+type: Story
+epic: MDV-P3-E01
+prd: P3-01
+screens: H-09
+priority: MUST
+roles: Practice admin
+labels: consent, admin
+estimate: 2
+weeks: 13
+depends: MDV-P1-019
+confidence: 82 | Wireframe defines templates per language, kinds, retention and versioning.
+sources: design/Medvya Wireframes (H-09); docs/04-security-compliance/README.md#consent-model-separate-versioned-receipts
+desc:
+/admin/consent: consent templates per kind (treatment, recording, sharing, reminders, marketing) and language (EN/TA/HI/AR…) with versions (e.g. v2026.2); recording policy (audio retention days and purpose, who may record, devices allowed). Publishing a new version never changes old receipts.
+ac:
+- Admin can draft, preview and publish a template version per language; published versions are immutable.
+- Receipts reference the exact template version and language shown.
+- Recording policy (retention days default 30, purpose "documentation only") is editable only by admins and audited.
+- Recording consent script in the patient's language is served from the published template.
+
+=== MDV-P3-003
+title: Per-encounter recording consent with device selection; decline goes straight to manual note (A-02, E-04)
+type: Story
+epic: MDV-P3-E01
+prd: P3-01
+screens: A-02
+covers: exit:3
+priority: MUST
+roles: Doctor
+labels: consent, capture
+estimate: 3
+weeks: 13-14
+depends: MDV-P3-002, MDV-P2-009
+confidence: 86 | Hi-fi consent screen with script languages, pill states and device list.
+sources: design/Medvya Clinician App (A-02); docs/02-design/screen-specs.md#ai-scribe-p3--medvya-clinician-app-medvya-clinical-screens
+desc:
+Encounter step "Consent": show consent script in the chosen language (English/Tamil/Hindi; Arabic for UAE) for the doctor to read; record decision given/declined, by whom (patient, guardian), people in the room (ENCOUNTER_PARTICIPANT), device choice (this phone with mic test, desk microphone, clip disabled until P6). Decline → manual note (E-04) with "No recording for this visit. You can write the note manually." and no guilt copy. Consent pill in the banner.
+ac:
+- Recording cannot start without a "given" consent receipt for this encounter (server-enforced; FSM CONSENT_VERIFIED).
+- 100 % of recording sessions reference a consent receipt (database constraint + test; exit gate 3).
+- Declined path leads to the manual note with the same sign flow (Playwright test).
+- Consent is per encounter; treatment consent at registration never implies recording consent.
+- Microphone permission denial shows guidance and offers manual note.
+
+=== MDV-P3-004
+title: Consent revoked mid-visit stops capture and discards later audio (A-09)
+type: Story
+epic: MDV-P3-E01
+prd: P3-01
+screens: A-09
+priority: MUST
+roles: Doctor
+labels: consent, safety
+estimate: 1.5
+weeks: 15
+depends: MDV-P3-005
+confidence: 88 | Designed state with copy and receipt.
+sources: design/Medvya Clinical Screens (A-09b Consent withdrawn); docs/03-architecture/state-machines.md#capture-fsm-p3-p6
+desc:
+"Patient withdrew consent" action during recording: capture stops immediately (CONSENT_REVOKED), audio after the revocation time is discarded client- and server-side, pending AI jobs are cancelled or limited to pre-revocation audio per policy, a receipt is recorded, and the doctor continues manually.
+ac:
+- After revocation no further chunks are accepted for that session (server rejects).
+- Audio after the revocation timestamp is deleted and the deletion is recorded.
+- Pending jobs re-check consent and do not process revoked ranges (worker test).
+- UI shows "Recording stopped at {t}. Audio after withdrawal was discarded." and a "Continue manually" action.
+
+=== MDV-P3-005
+title: Capture on phone (mobile web) or desktop mic with timer, pause, consent indicator and warnings (A-03, X-01)
+type: Story
+epic: MDV-P3-E02
+prd: P3-02
+screens: A-03, X-01
+priority: MUST
+roles: Doctor
+labels: capture, audio, mobile
+estimate: 3
+weeks: 14-15
+depends: MDV-P3-003
+confidence: 80 | Designed; iOS Safari background/lock-screen audio limits need testing.
+sources: design/Medvya Clinician App (A-03); design/Medvya Mobile and Tablet (Capture · recording)
+desc:
+MediaRecorder capture in browser: large REC timer, pause/resume, stop, waveform (static with reduced motion), consent pill always visible, live provisional transcript panel (if supported, marked provisional, never auto-entering the record). Mobile: screen stays awake (Wake Lock), lock-screen/notification shows recording indicator without PHI. Battery and network warnings. Low audio warning (A-06d) if levels too low.
+ac:
+- Start/pause/stop transitions follow the capture FSM and are mirrored server-side.
+- The recording indicator and timer are visible at all times during capture, including on mobile.
+- No PHI appears in OS notifications or the page title while recording.
+- Warnings appear for battery < 20 %, offline/poor network and low audio level, each with text guidance.
+- Works on current Chrome/Edge desktop, Android Chrome and iOS Safari (tested matrix recorded).
+
+=== MDV-P3-006
+title: Encrypted chunked upload with resume; upload progress, failed/partial recovery states (A-06)
+type: Story
+epic: MDV-P3-E02
+prd: P3-02
+screens: A-06
+priority: MUST
+roles: Doctor
+labels: upload, resilience
+estimate: 3
+weeks: 15
+depends: MDV-P3-005
+confidence: 82 | States designed (A-06a/b); resumable upload pattern known.
+sources: design/Medvya Clinical Screens (A-06a, A-06b); docs/03-architecture/ai-pipeline.md
+desc:
+Audio split into sequence-numbered chunks, encrypted in transit, uploaded with a user-delegation SAS scoped to one session prefix; chunk manifest with SHA-256 committed via API. Interrupted transfer resumes only missing chunks (TRANSFER_INTERRUPTED). States: "Uploading 14 of 17 encrypted chunks" (review can start), "Upload failed · 3 chunks missing" with recovered range and options Retry from phone / Continue partial (missing range flagged in transcript and draft).
+ac:
+- Killing the network mid-upload and restoring resumes without re-sending committed chunks and without duplicates (test).
+- A SAS token cannot write outside its session prefix and expires within minutes.
+- Integrity hash mismatch rejects a chunk and requests re-upload.
+- Continuing with partial audio marks the missing time range in the transcript and every affected draft section.
+- No audio is retained on the device after successful upload (cleared buffer).
+
+=== MDV-P3-007
+title: Azure Service Bus and .NET AI worker skeleton without database credentials (scoped job + callback)
+type: Task
+epic: MDV-P3-E03
+prd: P3-07
+priority: MUST
+roles: Developer
+labels: ai-worker, service-bus, security
+estimate: 3
+weeks: 14-15
+depends: MDV-P3-001
+confidence: 85 | Architecture specified in PRD v2 P3-07 and the AI pipeline doc.
+sources: PRD v2 P3-07; docs/03-architecture/ai-pipeline.md#worker-privileges
+desc:
+Service Bus namespace (private endpoint) and queues with dead-letter; outbox dispatcher publishes opaque job ids; Worker.Ai (.NET 10, Microsoft.Extensions.AI) authenticates with its own managed identity, calls a restricted internal API to re-check consent/tenant/retention and obtain short-lived audio access, and returns results through an authenticated internal callback. Prompts and model versions are versioned files in the repo.
+ac:
+- The worker identity has no database permissions (verified in infra test) and cannot call public endpoints beyond the internal API.
+- Duplicate delivery of the same job produces exactly one logical result (idempotency test).
+- Poison messages go to dead-letter with an alert; no PHI in message bodies.
+- Each AI run records model ref, prompt hash, schema version and region.
+
+=== MDV-P3-008
+title: Transcription with diarisation and language identification (in-region Azure AI Speech)
+type: Story
+epic: MDV-P3-E03
+prd: P3-03
+covers: nfr:1
+priority: MUST
+roles: System
+labels: transcription, ai
+estimate: 3
+weeks: 15-16
+depends: MDV-P3-007, MDV-P3-006
+confidence: 75 | Mixed Tamil/Hindi/English quality is unproven until the spike and evaluation results.
+sources: PRD v2 P3-03; design/Medvya Clinician App (SEGS sample: Tamil/Hindi/English)
+desc:
+Batch transcription of the completed recording (authoritative source), diarisation into provisional speakers, per-segment language and original-language text with English translation, timestamps and confidence bands. TRANSCRIPT, TRANSCRIPT_SEGMENT (encrypted content), SPEAKER_LABEL (provisional). Provisional live captions never populate the record.
+ac:
+- A 10-minute synthetic consultation is transcribed and diarised with segments, timestamps, language tags and translations.
+- Segment content is stored encrypted; no transcript text appears in logs/telemetry.
+- Transcription latency contributes ≤ 40 s p50 for a 10-minute visit, leaving budget for drafting (overall ≤ 60 s p50 measured in MDV-P3-025).
+- Low-confidence segments are marked and surfaced in review.
+
+=== MDV-P3-009
+title: Multi-speaker transcript review with speaker confirmation (A-04)
+type: Story
+epic: MDV-P3-E03
+prd: P3-03
+screens: A-04
+priority: MUST
+roles: Doctor
+labels: transcript, speakers, safety
+estimate: 2.5
+weeks: 16
+depends: MDV-P3-008
+confidence: 86 | Hi-fi interactive design with suggestion reasons and talk share.
+sources: design/Medvya Clinician App (A-04); docs/02-design/screen-specs.md
+desc:
+Speakers panel: each provisional speaker (A/B/C) with suggested identity and reason (device owner voice profile, answers to "Meera", consent roster), talk share, Confirm. Tags Doctor / Patient? / Companion? are dashed until confirmed. Transcript shows original language beside translation; edits to transcript text are tracked.
+ac:
+- Speaker labels remain provisional until the doctor confirms; a speaker label never asserts patient identity automatically.
+- Family members never inherit the patient identity; statements by a companion are attributed to the companion.
+- Confirmations are recorded with actor and time and propagate to draft attribution.
+- Transcript edits are versioned and visible in the evidence panel.
+
+=== MDV-P3-010
+title: Overlapping speech and unconfirmed speaker handling (A-10)
+type: Story
+epic: MDV-P3-E03
+prd: P3-03
+screens: A-10
+priority: MUST
+roles: Doctor
+labels: speakers, safety
+estimate: 1.5
+weeks: 16
+depends: MDV-P3-009
+confidence: 85 | Designed state and rule ("flagged until assigned or marked unknown").
+sources: design/Medvya Clinical Screens (A-10)
+desc:
+Detect overlapping speech ranges and segments with uncertain attribution; show "Overlapping speech 02:10–02:18 · attribution uncertain" with Assign speaker / Mark unknown. Draft statements derived from those segments stay flagged until resolved.
+ac:
+- Segments flagged as overlap/uncertain cannot back an unflagged draft statement.
+- Assign/Mark unknown updates all dependent draft fields' flags.
+- Sign remains blocked while overlap flags are unresolved (counted in "n unresolved").
+
+=== MDV-P3-011
+title: Draft note generation with JSON schema, evidence links and "unknown stays blank"
+type: Story
+epic: MDV-P3-E04
+prd: P3-04
+priority: MUST
+roles: System
+labels: ai, drafting, safety
+estimate: 4
+weeks: 16-17
+depends: MDV-P3-008, MDV-P2-025
+confidence: 72 | Prompting for zero fabrication with mixed languages needs iteration against the evaluation set.
+sources: PRD v2 P3-04; docs/03-architecture/ai-pipeline.md
+desc:
+Worker drafts the note per the encounter template using Azure OpenAI with a JSON schema: each field has text, evidence links (transcript segment ids or verified chart refs), speaker, flags (warn: e.g. stated by companion / dose stated once; conflict: contradicts chart). Validators reject outputs with unsupported statements, invented negatives, medicines or doses not in evidence. Transcripts treated as untrusted input (instructions inside ignored).
+ac:
+- Every drafted statement has ≥ 1 evidence link; statements without evidence are dropped and logged as validator rejections.
+- Medicines and doses in the draft must appear in transcript evidence or the verified chart; otherwise rejected (unit + eval tests).
+- Missing information leaves the field blank with "Not discussed" rather than a guess.
+- Conflicts with verified chart data (e.g. medicine active vs stopped) are flagged as conflict.
+- A prompt-injection phrase inside the transcript does not change behaviour (red-team test).
+
+=== MDV-P3-012
+title: Note review with evidence panel and audio replay; accept/edit per field; sign gated on 0 unresolved (A-05)
+type: Story
+epic: MDV-P3-E04
+prd: P3-04
+screens: A-05
+priority: MUST
+roles: Doctor
+labels: review, evidence, signing
+estimate: 4
+weeks: 17-18
+depends: MDV-P3-011, MDV-P2-012
+confidence: 86 | Hi-fi interactive design with field states, flags and evidence panel.
+sources: design/Medvya Clinician App (A-05); docs/02-design/screen-specs.md
+desc:
+SOAP sections with fields in states: AI draft · not reviewed (violet dashed) → Accepted by you / Edited by you; verified chart data shown as verified. Selecting a field shows evidence: speaker, timestamp, original-language quote, translation, source ref (e.g. "Transcript seg #4 · RS-2291 · Tamil → English") and secure audio replay of that range. Flags shown with text. Sign button "Sign note (n unresolved)" disabled until n = 0; then the P2 sign modal with edit summary.
+ac:
+- Nothing AI-generated is saved to the record without explicit per-field acceptance or edit by the doctor.
+- Sign is disabled while any field is unreviewed or flagged (UI + API).
+- Audio replay streams only the evidence range via a short-lived link and is audited.
+- The edit summary (fields edited vs accepted) is stored with the signed version.
+- The AI badge copy is exactly "AI draft · not reviewed" (microcopy ai.badge).
+
+=== MDV-P3-013
+title: Template switch and regeneration with confirmation; clinician edits tracked
+type: Story
+epic: MDV-P3-E04
+prd: P3-04
+screens: A-05
+priority: MUST
+roles: Doctor
+labels: review, templates
+estimate: 1.5
+weeks: 18
+depends: MDV-P3-012
+confidence: 82 | Required by P3-04; UI pattern implied by the master prompt ("note rewrite/regeneration confirmation").
+sources: PRD v2 P3-04; design/uploads/DoctorMate_Claude_Complete_UIUX_Wireframe_Prompt.md (regeneration confirmation)
+desc:
+Switching template or regenerating creates a new draft version; the doctor confirms because accepted/edited fields may be replaced (option to keep accepted fields). All clinician edits are tracked (field, before/after, time) for quality metrics (edit distance).
+ac:
+- Regeneration requires confirmation and never discards accepted/edited fields without an explicit choice.
+- Draft versions are kept and linked to AI runs.
+- Edit distance per field is computed for the ≥ 80 % minor-edits metric (MDV-P3-026).
+
+=== MDV-P3-014
+title: Pre-visit brief: verified chart facts visibly separate from AI summary (A-01)
+type: Story
+epic: MDV-P3-E04
+prd: P3-05
+screens: A-01
+priority: SHOULD
+roles: Doctor
+labels: brief, ai
+estimate: 2.5
+weeks: 18-19
+depends: MDV-P3-011, MDV-P2-004
+confidence: 80 | Designed split view; content limited to in-clinic data until outside records (P5).
+sources: design/Medvya Clinician App (E-01 with AI summary); design/Medvya Mobile and Tablet (tablet P360 AI summary panel)
+desc:
+Encounter step "Brief": left verified chart (problems, last labs, meds with verification, today's vitals), right "AI summary · not reviewed" (dashed violet) with 3–5 bullets each linking to its source (e.g. "Urine microalbumin was not done as ordered (lab PDF p.2)"). Generated before the visit from structured chart data; never mixed with verified styling.
+ac:
+- Every AI bullet links to a source record; bullets without a source are not shown.
+- The AI panel is visually distinct (violet dashed, label) and never styled as verified.
+- If AI is unavailable the brief shows verified data only with a notice.
+- Brief generation respects relationship/purpose authorisation and is audited.
+
+=== MDV-P3-015
+title: Emergency-symptom warning as a prompt, not triage (A-08)
+type: Story
+epic: MDV-P3-E05
+prd: P3-06
+screens: A-08
+priority: MUST
+roles: Doctor
+labels: safety, ai
+estimate: 1.5
+weeks: 17
+depends: MDV-P3-008
+confidence: 84 | Designed with explicit copy and actions.
+sources: design/Medvya Clinical Screens (A-08); design/Medvya Wireframes (A-08)
+desc:
+During or after transcription, phrases indicating possible emergencies (configurable list reviewed by the clinical advisor, multilingual) raise "Possible emergency mentioned at 02:41: '…'. This is a prompt, not triage. You decide; acknowledgement is logged." Actions: Acknowledge / Not relevant (reason).
+ac:
+- The prompt never changes orders, notes or patient messages automatically.
+- Acknowledge/Not relevant are recorded with actor, time and reason.
+- The phrase list is versioned and clinically reviewed; detection is tested in en/hi/ta.
+
+=== MDV-P3-016
+title: AI unavailable → editable manual note with no data loss (A-06)
+type: Story
+epic: MDV-P3-E05
+prd: P3-06
+screens: A-06
+priority: MUST
+roles: Doctor
+labels: resilience, fallback
+estimate: 1.5
+weeks: 16
+depends: MDV-P3-007, MDV-P2-009
+confidence: 88 | Designed state and microcopy.
+sources: design/Medvya Clinician App (A-06 AI unavailable); design/Medvya Wireframes (A-06c)
+desc:
+If the AI service is down, slow beyond threshold or the job fails, show "AI drafting is unavailable right now. Your recording is saved." with Write manually and Notify me later. The recording remains stored for later drafting; the manual note works immediately.
+ac:
+- Simulated AI outage (feature flag / fault injection) shows the state within the timeout and loses no audio or typed text.
+- "Notify me later" creates a notification when the draft becomes available.
+- A later AI draft never overwrites manual content; it is offered as a separate draft to compare.
+
+=== MDV-P3-017
+title: Wrong-patient suspicion locks the session; re-binding needs a reason and is audited (A-09)
+type: Story
+epic: MDV-P3-E05
+prd: P3-06
+screens: A-09
+priority: MUST
+roles: Doctor
+labels: safety, identity
+estimate: 1.5
+weeks: 17
+depends: MDV-P3-008
+confidence: 82 | Designed ("Different name heard"); detection heuristic is simple name matching and needs clinical review.
+sources: design/Medvya Clinical Screens (A-09a); docs/03-architecture/state-machines.md (PATIENT_CHANGED)
+desc:
+If the transcript mentions a different patient name than the bound encounter, or the doctor reports a mix-up, show "Different name heard … Encounter is bound to {name}" with Stop & lock / It is correct. Stop & lock freezes the session; re-binding a recording to another patient requires a reason, creates a new encounter and consent check, and is audited.
+ac:
+- Stop & lock prevents further capture and drafting for that session.
+- Re-binding requires a reason and a new consent for the correct encounter; both are audited.
+- A recording can never be attached to two active encounters (constraint test).
+
+=== MDV-P3-018
+title: De-identified evaluation set and CI gate before any prompt or model change
+type: Task
+epic: MDV-P3-E06
+prd: P3-07
+covers: exit:1
+priority: MUST
+roles: Developer, Clinical advisor
+labels: ai-quality, evals, ci
+estimate: 4
+weeks: 14-19
+depends: MDV-P3-011
+confidence: 70 | Building a representative synthetic/de-identified multilingual set takes clinical time.
+sources: PRD v2 P3-07, exit 1; docs/03-architecture/ai-pipeline.md#quality-gate-p3-07-p6-05
+desc:
+tests/ai-evals: ≥ 50 synthetic/de-identified consultations covering code-switching (Hindi/English, Tamil/English), relatives' voices, noise, missing allergies, medication strengths, negation, interrupted recording, contradictions, report-to-patient mismatch. Python offline harness computes critical omission, unsupported assertion, speaker attribution, wrong-patient attach, dose error, fabricated medicines/doses. CI job runs on any change to prompts/models/schema and blocks merge on regression.
+ac:
+- Evaluation set exists with ground-truth notes reviewed by the clinical advisor; no real patient data.
+- The CI gate runs automatically on prompt/model/schema changes and blocks on any fabricated medicine or dose (exit gate 1 requires 0).
+- Metrics are reported separately, not as a single score, in an evaluation report.
+- Evaluation results are versioned with prompt hash and model version.
+
+=== MDV-P3-019
+title: Audio retention purge and legal hold
+type: Task
+epic: MDV-P3-E06
+prd: P3-07
+priority: MUST
+roles: System, Practice admin
+labels: retention, privacy
+estimate: 1.5
+weeks: 18
+depends: MDV-P3-006, MDV-P3-002
+confidence: 85 | Policy default (30 days) and mechanism specified.
+sources: PRD v2 P3-07; design/Medvya Enterprise Pages (H-06 retention); docs/04-security-compliance/README.md#retention-h-06-defaults-subject-to-legal-review
+desc:
+Scheduled job deletes audio chunks after the tenant's retention period (default 30 days) unless a legal hold exists; transcripts/drafts kept with the signed note. Deletion recorded (counts, ranges) without PHI. Blob lifecycle rules as backstop.
+ac:
+- Audio older than the retention period is deleted and the deletion is logged; held items are skipped.
+- Evidence replay after deletion shows "Audio deleted per retention policy" while transcript evidence remains.
+- Retention changes apply prospectively and are audited.
+
+=== MDV-P3-020
+title: Dictation of note sections with the same review-and-approve rule
+type: Story
+epic: MDV-P3-E04
+prd: P3-08
+priority: SHOULD
+roles: Doctor
+labels: dictation
+estimate: 2
+weeks: 19
+depends: MDV-P3-012
+confidence: 78 | No dedicated design; reuses capture and review components.
+sources: PRD v2 P3-08
+desc:
+Mic button on a note section: the doctor dictates (no patient consent needed when only the doctor speaks, policy-configurable), transcription fills that section as an AI-draft field requiring accept/edit before signing.
+ac:
+- Dictated text appears as "AI draft · not reviewed" and must be accepted or edited.
+- Dictation audio follows the same retention policy and is never mixed with the consultation recording.
+- Works on desktop and mobile web.
+
+=== MDV-P3-021
+title: Mobile capture and note review (swipe to accept, evidence bottom sheet) (X-01)
+type: Story
+epic: MDV-P3-E02
+prd: P3-02
+screens: X-01
+priority: MUST
+roles: Doctor
+labels: mobile, review
+estimate: 2.5
+weeks: 18-19
+depends: MDV-P3-012, MDV-P3-005
+confidence: 84 | Hi-fi mobile frames for Today, capture, note review, appointments, records.
+sources: design/Medvya Mobile and Tablet (Doctor Today, Capture, Note review, Appointments, Patient record)
+desc:
+Mobile versions: Today (6/15 seen, next patient, critical items), Capture (REC, waveform, chunks uploaded, screen stays on), Note review (field cards, swipe right to accept, tap to edit, evidence bottom sheet with 6 s secure replay, "Sign note (n unresolved)" pinned), Appointments agenda, Patient record with sticky banner. Wearable pairing frame is P6.
+ac:
+- All listed mobile frames work at 360–430 px with 48 px targets and sticky identity banner.
+- Swipe-to-accept has an accessible alternative (button) for keyboard/screen-reader users.
+- Sign stays pinned above the tab bar and disabled until 0 unresolved.
+
+=== MDV-P3-022
+title: AI vendor DPA, no-training guarantee and regional processing confirmed per country
+type: Chore
+epic: MDV-P3-E06
+prd: P3-07
+covers: nfr:2, nfr:3
+priority: MUST
+roles: Founder
+labels: legal, ai, vendors
+estimate: 0.5
+weeks: 13-15
+depends: MDV-P3-001
+confidence: 75 | Contractual; Microsoft terms are standard but must be verified for the specific services and regions.
+sources: PRD v2 P3 NFR 2–3
+desc:
+Confirm and file: data processing terms for Azure OpenAI and AI Speech (no training on customer data, abuse-monitoring configuration/exemption where available, data residency per region), sub-processor list update, and the internal rule "no training on customer data without separate lawful basis".
+ac:
+- DPA/terms references and abuse-monitoring status are recorded per country in docs/compliance/ai-vendors.md.
+- Trust centre sub-processor list is updated with region and purpose (30-day notice rule acknowledged).
+- A configuration check verifies the AI resources live only in the approved region.
+
+=== MDV-P3-023
+title: Legal review of recording consent in each market
+type: Chore
+epic: MDV-P3-E06
+prd: P3-01
+covers: dep:2
+priority: MUST
+roles: Founder, external counsel
+labels: legal, consent
+estimate: 0.5
+weeks: 13-14
+depends: MDV-P1-044
+confidence: 60 | External counsel; may change consent script or flow.
+sources: PRD v2 P3 dependency 2; PRD v2 §10 note (P3 for audio)
+desc:
+Counsel reviews recording consent script and flow (per-encounter, minors/guardians, companions in the room, revocation, retention, purpose limitation) for India and, if applicable, the UAE.
+ac:
+- Approved recording consent texts per language are published as templates (MDV-P3-002).
+- Any required flow change is ticketed before P3 scope freeze.
+- Sign-off recorded before the first real recording.
+
+=== MDV-P3-024
+title: AI safety card, waiting-room consent notice (EN/HI/AR) and AI incident procedure
+type: Chore
+epic: MDV-P3-E06
+prd: P3-06, P3-07
+covers: pkg:1, pkg:2, pkg:3
+priority: MUST
+roles: Founder, Clinical advisor
+labels: safety, training
+estimate: 1
+weeks: 19
+depends: MDV-P3-018, MDV-P3-023
+confidence: 85 | Deliverables explicit.
+sources: PRD v2 P3 delivery package
+desc:
+AI safety card for clinicians (what the AI does/doesn't, how to read evidence and flags, never sign without review, how to report an AI incident). Waiting-room poster/notice explaining recording and the right to decline in English, Hindi and Arabic (plus Tamil for pilot). AI incident procedure (report, triage, disable flag, notify, root cause, evaluation set update). Evaluation report from MDV-P3-018.
+ac:
+- Safety card and notices reviewed by the clinical advisor and counsel and delivered to pilot clinics.
+- AI incident procedure includes a kill-switch flag per tenant and is tested once in a tabletop.
+- Evaluation report is attached to R3 release notes.
+
+=== MDV-P3-025
+title: Performance: draft ready ≤ 60 s (p50) after recording stops
+type: Task
+epic: MDV-P3-E06
+prd: P3-07
+covers: nfr:1
+priority: MUST
+roles: Developer
+labels: performance, ai
+estimate: 1.5
+weeks: 19
+depends: MDV-P3-011
+confidence: 75 | Depends on regional model latency (spike result).
+sources: PRD v2 P3 NFR 1; design/Medvya Azure Architecture (SLO note draft < 60 s)
+desc:
+Measure end-to-end latency (stop → upload complete → transcription → draft → callback) on synthetic 5/10/15-minute consultations; optimise (parallel chunk upload, streaming transcription where approved, prompt size). Add telemetry and alert on p50 > 60 s.
+ac:
+- p50 ≤ 60 s and p90 recorded for 10-minute consultations on staging.
+- Latency dashboard and alert exist (no PHI).
+
+=== MDV-P3-026
+title: Clinician quality metrics: minor-edit rate, trust survey and note time vs P2 baseline
+type: Task
+epic: MDV-P3-E06
+prd: P3-04
+covers: exit:2, exit:4
+priority: MUST
+roles: Founder, pilot clinicians
+labels: metrics, ai-quality
+estimate: 1.5
+weeks: 19-20
+depends: MDV-P3-013
+confidence: 80 | Metrics defined in PRD v2 §06; survey design is simple.
+sources: PRD v2 P3 exit 2 & 4, §06 metrics
+desc:
+Compute per-draft edit distance + clinician rating ("minor edits?") to report the share signed with only minor edits; run a clinician trust survey; compare time-to-signed-note against the P2 manual baseline (target −40 %).
+ac:
+- Dashboard shows % drafts signed with minor edits per clinician and overall (target ≥ 80 %).
+- Trust survey completed by all opt-in clinicians; results summarised.
+- Time to signed note compared with the P2 baseline with method stated.
+
+=== MDV-P3-027
+title: R3 pilot with 5–10 opt-in clinicians, exit gate review and release notes
+type: Gate
+epic: MDV-P3-E06
+prd: P3-04
+covers: exit:1, exit:2, exit:3, exit:4
+priority: MUST
+roles: Founder, Clinical safety reviewer, pilot clinicians
+labels: release, gate, pilot
+estimate: 1.5
+weeks: 20
+depends: MDV-P3-018, MDV-P3-024, MDV-P3-026, MDV-P3-003
+confidence: 70 | Needs enough pilot volume and clinician time within the window.
+sources: PRD v2 §08, P3 exit criteria
+desc:
+Opt-in pilot under clinical review on per-tenant flags; exit gate review with evidence for: 0 fabricated medicines/doses on the eval set; ≥ 80 % minor edits; 100 % consented recordings and tested decline path; trust survey and note-time comparison. Clinical safety reviewer signs R3. Journeys J1/J2 AI steps (A-02…A-05) turn green.
+ac:
+- Evidence for all four exit criteria attached and confirmed.
+- Kill switch per tenant verified before go-live.
+- R3 release notes include evaluation report and exclusions (clip, earpiece assistant, mixed Arabic/Hindi/Malayalam notes).
+- Playwright J1 (consent declined branch) and J2 (consent → sign) pass with a stubbed AI provider.

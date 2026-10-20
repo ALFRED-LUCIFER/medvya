@@ -1,0 +1,225 @@
+# P6 · Wearable capture and advanced AI · Weeks 33–42 (after hardware is stable) · R6 Clip
+# exit: 1 device, consent, offline, overlap test suites pass · 2 battery lasts a full clinic day · 3 revoke < 1 minute
+# nfr:  1 visible recording light; start/stop bound to an encounter · 2 signed firmware + secure update path
+# pkg:  1 device kit + quick-start · 2 fleet guide for admins
+# dep:  1 hardware partner + certification · 2 language model quality per language
+
+@epic MDV-P6-E01 | Medvya clip lifecycle | P6-01 | Pair, check, buffer, update and revoke the clip safely.
+@epic MDV-P6-E02 | Advanced AI | P6-02, P6-03, P6-05 | Earpiece-only assistant, mixed-language notes and stronger AI QA.
+@epic MDV-P6-E03 | Outbound voice and R6 gate | P6-04 | Reminder/recall calls and waitlist fill; R6 release.
+
+=== MDV-P6-001
+title: Hardware partner, device certification and regulated-device classification advice
+type: Chore
+epic: MDV-P6-E01
+prd: P6-01
+covers: dep:1
+priority: MUST
+roles: Founder
+labels: hardware, regulatory
+estimate: 2
+weeks: 33-34
+confidence: 45 | Hardware partner not chosen (decision default: defer until phone metrics are met); CDSCO/UAE classification advice pending.
+sources: PRD v2 P6 dependency 1, open decision "Wearable hardware partner"; design/uploads/DoctorMate_Software_Architecture_Azure_India_UAE_2026 (1).md §10 (regulated-device check, ESP32-S3 limits)
+desc:
+Select the hardware partner (ESP32-S3 prototype limits: BLE control path, Wi-Fi or phone audio), obtain radio/safety certifications needed per country and classification advice (India CDSCO, UAE) for the intended use (recording accessory, human-approved documentation).
+ac:
+- Partner contract and BOM recorded; certification plan with dates.
+- Written classification advice for the final intended use and marketing claims.
+- Go/no-go decision recorded against the phone-capture metrics from P3.
+
+=== MDV-P6-002
+title: Clip pairing with code match and microphone self-test (W-01)
+type: Story
+epic: MDV-P6-E01
+prd: P6-01
+screens: W-01
+priority: MUST
+roles: Doctor
+labels: clip, pairing, ble
+estimate: 4
+weeks: 34-36
+depends: MDV-P6-001
+confidence: 60 | Flow designed; depends on firmware/BLE capabilities.
+sources: design/Medvya Mobile and Tablet (Wearable pairing); design/Medvya Wireframes (W-01)
+desc:
+Hold button 3 s → LED pulses → companion shows 4-digit code that must match the clip's LED pattern → mic self-test ("say testing") → pair to the doctor (DEVICE_PAIRING valid 90 days). Clip becomes selectable at consent (A-02).
+ac:
+- Pairing requires explicit code confirmation; mismatches abort and are logged.
+- Pairing expires after 90 days and requires re-pairing.
+- Self-test failure blocks pairing with guidance.
+- Paired clip appears in A-02 device list with battery and firmware.
+
+=== MDV-P6-003
+title: Clip capture bound to encounter and consent with visible recording light (capture FSM)
+type: Story
+epic: MDV-P6-E01
+prd: P6-01
+screens: W-01
+covers: nfr:1, exit:1
+priority: MUST
+roles: Doctor
+labels: clip, capture, consent
+estimate: 4
+weeks: 36-37
+depends: MDV-P6-002, MDV-P3-006
+confidence: 60 | Firmware-enforced LED and nonce-bound sessions depend on hardware.
+sources: docs/03-architecture/state-machines.md#capture-fsm-p3-p6; PRD v2 P6 NFR 1
+desc:
+Start/stop only for the verified current encounter with consent; device-bound session start with nonce; LED on throughout capture (firmware-enforced); chunks uploaded via phone relay or Wi-Fi with integrity hashes; never attachable to two encounters.
+ac:
+- The clip cannot record without an active encounter + consent authorisation (server and firmware).
+- LED is on whenever the microphone captures (hardware test).
+- Replayed or out-of-sequence chunks are rejected.
+- Device, consent and overlap test suites pass (exit gate 1).
+
+=== MDV-P6-004
+title: Device health, battery, encrypted offline buffer, upload conflicts and staged firmware updates (W-02)
+type: Story
+epic: MDV-P6-E01
+prd: P6-01
+screens: W-02
+covers: nfr:2, exit:1, exit:2
+priority: MUST
+roles: Doctor, Practice admin
+labels: clip, firmware, offline
+estimate: 4
+weeks: 37-39
+depends: MDV-P6-003
+confidence: 58 | Signed OTA and battery life depend on hardware maturity.
+sources: design/Medvya Wireframes (W-02); design/Medvya Clinician App (W-02 Devices)
+desc:
+Device page: battery %, BLE status, firmware version, encrypted offline queue ("2 recordings in encrypted queue"), Sync now, staged firmware update (1.4.2 → 1.5.0) with signed images and rollback/anti-rollback; upload conflict (same session on phone + clip) keeps both and the clinician picks.
+ac:
+- Firmware updates only accept signed images; tampered images are rejected (test).
+- Offline recordings stay encrypted on the device and sync later without loss (offline suite; exit gate 1).
+- Battery lasts a full clinic day (≥ 8 h mixed use) in a field test (exit gate 2).
+- Upload conflicts surface a choice and never silently merge.
+
+=== MDV-P6-005
+title: Loss/theft revoke effective in under one minute (W-03)
+type: Story
+epic: MDV-P6-E01
+prd: P6-01
+screens: W-03
+covers: exit:3
+priority: MUST
+roles: Doctor, Practice admin
+labels: clip, security
+estimate: 2
+weeks: 39
+depends: MDV-P6-004
+confidence: 72 | Server-side revocation is in our control; device key wipe depends on firmware.
+sources: design/Medvya Wireframes (W-03)
+desc:
+Revoke with reason (lost/stolen/retired): binding revoked, keys/tokens invalidated, queued audio on the device becomes unreadable, audit event and admin notification.
+ac:
+- After revoke, the device cannot authenticate or upload within 60 seconds (exit gate 3 test).
+- Revocation is audited and the admin notified.
+- A revoked device must be re-provisioned to be used again.
+
+=== MDV-P6-006
+title: Private voice assistant through earpiece only (A-07)
+type: Story
+epic: MDV-P6-E02
+prd: P6-02
+screens: A-07
+priority: SHOULD
+roles: Doctor
+labels: ai, voice, privacy
+estimate: 4
+weeks: 38-40
+depends: MDV-P6-003
+confidence: 55 | Requires private audio route detection and low-latency speech; safety constraints strict.
+sources: design/Medvya Clinical Screens (A-07); design/Medvya Wireframes (A-07)
+desc:
+Doctor taps or hotword to ask (e.g. "last eGFR"); answers shown as text first and spoken only through a connected private earpiece ("whisper mode"); if the earpiece disconnects, the assistant turns off; answers come only from the patient's verified chart with source.
+ac:
+- The assistant never speaks through the room speaker; disconnecting the earpiece disables it immediately (test).
+- Every answer cites its chart source; no diagnosis or treatment advice.
+- Queries and answers are audited without storing audio beyond policy.
+
+=== MDV-P6-007
+title: Multilingual notes: Arabic, English, Hindi and Malayalam incl. mixed-language consultations
+type: Story
+epic: MDV-P6-E02
+prd: P6-03
+screens: A-04
+covers: dep:2
+priority: MUST
+roles: Doctor
+labels: ai, languages
+estimate: 4
+weeks: 35-38
+depends: MDV-P3-018
+confidence: 55 | Model quality per language is a stated dependency.
+sources: PRD v2 P6-03, dependency 2
+desc:
+Extend transcription and drafting to Arabic and Malayalam (and mixed AR/EN, ML/EN, HI/EN) with original and translation side by side in transcript and evidence; per-language evaluation sets.
+ac:
+- Per-language evaluation sets meet the same safety gate (0 fabricated medicines/doses).
+- Transcript and evidence show original-language text beside the translation for each language.
+- Language quality results are documented per language before enabling it per tenant.
+
+=== MDV-P6-008
+title: Stronger AI QA: per-language evaluation sets, clinician trust metrics, red-team prompts on uploaded documents
+type: Task
+epic: MDV-P6-E02
+prd: P6-05
+covers: exit:1
+priority: MUST
+roles: Developer, Clinical advisor
+labels: ai-quality, red-team
+estimate: 3
+weeks: 36-40
+depends: MDV-P6-007, MDV-P5-014
+confidence: 70 | Extends the P3 harness.
+sources: PRD v2 P6-05
+desc:
+Per-language evaluation sets, ongoing clinician trust metrics, red-team prompt-injection tests against uploaded documents and transcripts, overlap/speaker suites for multi-speaker clip recordings.
+ac:
+- CI runs per-language and red-team suites on every prompt/model change.
+- Overlap and speaker-attribution suites pass for clip recordings (exit gate 1).
+- Trust metrics are reported monthly per clinician cohort.
+
+=== MDV-P6-009
+title: Outbound voice reminder and recall calls; waitlist fill from cancellations
+type: Story
+epic: MDV-P6-E03
+prd: P6-04
+screens: N-10
+priority: SHOULD
+roles: Patient, Receptionist
+labels: voice, outbound
+estimate: 3
+weeks: 39-41
+depends: MDV-P5-015
+confidence: 58 | Builds on the P5 voice assistant; consent for automated calls per country must be confirmed.
+sources: design/Medvya Gap Analysis (G-06 outbound calls); PRD v2 P6-04
+desc:
+Automated reminder/recall calls for patients without WhatsApp, and calls/messages to waitlisted patients when a slot frees; same identity and safety rules as inbound.
+ac:
+- Calls are placed only to patients with a consent/opt-in for calls.
+- Waitlist fill offers slots in order and books only on explicit confirmation.
+- Call outcomes are logged as contact attempts and never close care tasks by themselves.
+
+=== MDV-P6-010
+title: Device kit, quick-start guide, fleet guide and R6 gate
+type: Gate
+epic: MDV-P6-E03
+prd: P6-01
+covers: pkg:1, pkg:2, exit:1, exit:2, exit:3
+priority: MUST
+roles: Founder, Practice admin
+labels: release, gate, hardware
+estimate: 2
+weeks: 42
+depends: MDV-P6-004, MDV-P6-005, MDV-P6-008
+confidence: 55 | Depends on hardware readiness.
+sources: PRD v2 P6 delivery package, exit criteria
+desc:
+Device kit (clip, charger, quick-start), fleet guide for admins (assign, firmware rings, revoke), evidence for exit criteria, R6 release notes. Journey J4 (ward round with clip) passes.
+ac:
+- Quick-start and fleet guides published; kits delivered to pilot doctors.
+- Exit criteria evidence attached; R6 notes list exclusions (autonomous triage/diagnosis).
+- Playwright/device test for J4 passes (with device simulator where needed).

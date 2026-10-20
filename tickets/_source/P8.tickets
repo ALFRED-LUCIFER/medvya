@@ -1,0 +1,147 @@
+# P8 · Scale and specialty features · Week 52 onward · R8 Ongoing
+# exit: 1 per feature: adoption target agreed before build
+# nfr:  1 each feature gated by its own evidence review
+# pkg:  1 minor-version release notes
+# dep:  1 regulatory classification review for any decision-support feature
+
+@epic MDV-P8-E01 | Demand-driven features | P8-01, P8-02, P8-03, P8-04, P8-05, P8-06 | Features released individually as minor versions when demand and evidence justify them.
+
+=== MDV-P8-001
+title: Feature intake: adoption target, evidence review and regulatory classification check for every P8 feature
+type: Chore
+epic: MDV-P8-E01
+prd: P8-01, P8-02, P8-03, P8-04, P8-05, P8-06
+covers: exit:1, nfr:1, dep:1, pkg:1
+priority: MUST
+roles: Founder, Clinical advisor
+labels: governance
+estimate: 1
+weeks: 52
+confidence: 85 | Process requirement is explicit.
+sources: PRD v2 P8
+desc:
+Before building any P8 feature: agreed adoption target, evidence review (customer demand, clinical evidence), regulatory classification review for any decision-support aspect, and a minor-version release-notes template.
+ac:
+- Each P8 ticket links an approved intake record before work starts.
+- Minor-version release notes template exists and is used.
+
+=== MDV-P8-002
+title: Teleconsultation: video visit with identity check and ambient notes (A-11)
+type: Story
+epic: MDV-P8-E01
+prd: P8-01
+screens: A-11
+priority: SHOULD
+roles: Doctor, Patient
+labels: telehealth, video
+estimate: 6
+weeks: 52-56
+depends: MDV-P8-001, MDV-P3-012
+confidence: 60 | Hi-fi design exists; telemedicine rules per country and video vendor to decide (open decision: earlier only if two paying clinics require it).
+sources: design/Medvya Clinician App (A-11 Teleconsultation); PRD v2 open decision "Teleconsultation earlier than P8?"
+desc:
+Video visit (ACS video) with identity check of the patient, camera/mic/recording toggles, consent for recording, ambient notes through the P3 pipeline, portal join flow.
+ac:
+- Identity check is completed and recorded before consultation starts.
+- Recording requires its own consent; declined → manual note.
+- Telemedicine guideline requirements per country are documented and met.
+
+=== MDV-P8-003
+title: Vaccinations and recalls: child, travel and adult schedules with reminders (E-08)
+type: Story
+epic: MDV-P8-E01
+prd: P8-02
+screens: E-08
+priority: COULD
+roles: Doctor, Nurse
+labels: vaccinations
+estimate: 4
+weeks: 54-57
+depends: MDV-P8-001
+confidence: 70 | Hi-fi E-08 exists (schedule vs given, dose recording); clinical scope approval required.
+sources: design/Medvya Clinical Screens (E-08)
+desc:
+Schedule vs given (age, vaccines, date, status Given / Reported by guardian / Due / Upcoming), record dose given (vaccine, batch/lot, expiry, site & route, given by, next due), recall reminders.
+ac:
+- Only if clinically approved for scope (intake record).
+- Dose records capture batch, expiry, site/route and giver; next due computed per schedule.
+- Recall reminders respect consent and contain no clinical details.
+
+=== MDV-P8-004
+title: India ABDM: ABHA consent requests and linked records from other facilities
+type: Story
+epic: MDV-P8-E01
+prd: P8-03
+priority: SHOULD
+roles: Doctor, Patient
+labels: abdm, india, interop
+estimate: 6
+weeks: 56-60
+depends: MDV-P8-001
+confidence: 45 | Requires ABDM sandbox certification and current implementation-guide conformance.
+sources: design/Medvya Gap Analysis (India ABHA consent-based records); docs/03-architecture/integrations.md
+desc:
+HIP/HIU integration: Scan & Share at reception, consent requests approved on the patient's phone, linked records (FHIR bundles) shown with source for the consented period; care-context linking of Medvya visits.
+ac:
+- ABDM sandbox certification passed.
+- Linked records display with ABDM provenance and consent period, never merged into verified data without clinician acceptance.
+
+=== MDV-P8-005
+title: Remaining UAE health exchanges (the two not used at launch) (N-07)
+type: Story
+epic: MDV-P8-E01
+prd: P8-04
+screens: N-07
+priority: SHOULD
+roles: Doctor, Practice admin
+labels: hie, uae
+estimate: 5
+weeks: 56-62
+depends: MDV-P5-012
+confidence: 45 | Regulator onboarding per exchange.
+sources: PRD v2 P8-04
+desc:
+Add the remaining two of Malaffi / NABIDH / Riayati as configurations of the P5 exchange module.
+ac:
+- Conformance passed for each added exchange.
+- Facility emirate selects the right exchange automatically.
+
+=== MDV-P8-006
+title: Front-desk extras: kiosk/QR self check-in, clinic letter inbox, offline read and draft (N-16)
+type: Story
+epic: MDV-P8-E01
+prd: P8-05
+screens: N-16
+priority: COULD
+roles: Patient, Receptionist, Doctor
+labels: kiosk, offline, design-needed
+estimate: 6
+weeks: 58-62
+depends: MDV-P8-001
+confidence: 45 | DESIGN NEEDED; offline mode has significant security implications.
+sources: design/Medvya Gap Analysis (kiosk, letter inbox, offline LATER); PRD v2 P8-05
+desc:
+Self check-in on tablet/QR (confirm details and consent), dedicated clinic email inbox with auto-matching and "needs filing" queue, offline read of today's charts and draft notes with encrypted local storage and sync.
+ac:
+- Designs approved before build.
+- Offline data is encrypted, time-limited and wiped on sign-out; conflicts on sync are surfaced.
+- Inbound letters are matched with the same identity-match rules as results.
+
+=== MDV-P8-007
+title: Platform: public FHIR APIs, native mobile apps (Expo), saved migration templates per vendor, specialty templates
+type: Story
+epic: MDV-P8-E01
+prd: P8-06
+priority: COULD
+roles: Developer, Partners
+labels: platform, mobile, api
+estimate: 8
+weeks: 60-64
+depends: MDV-P8-001, MDV-P5-019
+confidence: 45 | Broad bucket; each item needs its own intake.
+sources: PRD v2 P8-06; design/Medvya Build Plan (mobile phase 2 with Expo)
+desc:
+Public FHIR APIs with SMART-on-FHIR auth, native apps (Expo) sharing contracts and i18n, a library of saved migration templates per legacy vendor, and additional specialty note templates.
+ac:
+- Each item passes its own intake record before work starts.
+- Public APIs enforce the same tenant/relationship/purpose authorisation and audit.

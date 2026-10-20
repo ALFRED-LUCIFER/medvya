@@ -1,0 +1,22 @@
+# Medvya
+
+Medvya is a clinic and doctor platform for India and the UAE: front desk, EMR, AI-drafted notes under clinician sign-off, billing, care follow-up and a patient portal, with hospital integration later.
+
+This repository currently holds the **product knowledge base and the delivery plan**. Application code starts with ticket [MDV-P0-001](tickets/P0-foundation/MDV-P0-001.md).
+
+| Folder | Content |
+|---|---|
+| [docs/](docs/README.md) | Everything from the design project and PRD v2: product, requirements, design system, architecture, security/compliance, delivery rules, gap analysis, ADRs |
+| [tickets/](tickets/README.md) | 223 Jira-style tickets for phases P0–P8, each with acceptance criteria, traceability, dates and a confidence level; date-wise [schedule](tickets/schedule.md); [Jira CSV](tickets/jira-import.csv); [coverage report](tickets/coverage-report.md) |
+| [design/](design/README.md) | Imported Claude Design source files (read-only) |
+| [tools/](tools) | `prd-extract` (design data → docs), `tickets/build.py` (ticket sources → files + coverage check) |
+
+Regenerate after editing sources:
+
+```bash
+python3 -I tools/prd-extract/render_docs.py      # docs/01-prd from PRD v2 data
+python3 -I tools/prd-extract/render_design.py    # docs/02-design from Foundations/Handoff data
+python3 -I tools/tickets/build.py                # tickets/* + coverage check (exit 1 on any gap)
+```
+
+All patient data in this repository is **synthetic**.

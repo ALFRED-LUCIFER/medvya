@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=Material+Symbols+Outlined:opsz,wght,FILL@20..24,400,0..1&display=swap" rel="stylesheet">
+<style>body{margin:0;background:#F7FAFC;color:#142536;font-family:Manrope,system-ui,sans-serif;-webkit-font-smoothing:antialiased}a{color:#2563EB;text-decoration:none}a:hover{color:#1D4ED8;text-decoration:underline}.ms{font-family:'Material Symbols Outlined';font-weight:400;font-style:normal;line-height:1;letter-spacing:normal;text-transform:none;display:inline-block;white-space:nowrap;font-feature-settings:'liga';-webkit-font-smoothing:antialiased}</style>
+</helmet>
+<div style="max-width:1280px;margin:0 auto;padding:48px 32px 96px;display:flex;flex-direction:column;gap:64px">
+
+<header style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:24px;border-bottom:1px solid #DFE7ED;padding-bottom:32px">
+  <div style="display:flex;flex-direction:column;gap:12px">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div style="width:40px;height:40px;border-radius:12px;background:#102A43;display:flex;align-items:center;justify-content:center;color:#5EEAD4;font-weight:800;font-size:20px">M</div>
+      <span style="font-size:28px;font-weight:800;letter-spacing:-0.02em;color:#102A43">Medvya</span>
+    </div>
+    <h1 style="margin:0;font-size:40px;line-height:1.15;letter-spacing:-0.025em;font-weight:700;color:#102A43;max-width:760px;text-wrap:pretty">Product foundations: visual direction, design tokens, role sitemap and completion checklist</h1>
+    <p style="margin:0;font-size:16px;line-height:1.6;color:#506579;max-width:720px">Source: DoctorMate Architecture v2 (PMS · EMR · AI · Care · Portal · Enterprise) and the UI/UX master prompt. Working name replaced with Medvya. All patient data is synthetic.</p>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <a href="Medvya Clinician App.dc.html" style="display:flex;align-items:center;gap:8px;height:44px;padding:0 18px;border-radius:10px;background:#0E9384;color:#fff;font-weight:700;font-size:14px;text-decoration:none"><span class="ms" style="font-size:20px">play_arrow</span>Clinician app</a><a href="Medvya Patient Portal.dc.html" style="display:flex;align-items:center;height:44px;padding:0 16px;border-radius:10px;border:1px solid #CBD6E0;background:#fff;color:#142536;font-weight:700;font-size:14px">Patient portal</a><a href="Medvya Enterprise Admin.dc.html" style="display:flex;align-items:center;height:44px;padding:0 16px;border-radius:10px;border:1px solid #CBD6E0;background:#fff;color:#142536;font-weight:700;font-size:14px">Enterprise admin</a><a href="Medvya Patient Registration.dc.html" style="display:flex;align-items:center;height:44px;padding:0 16px;border-radius:10px;border:1px solid #CBD6E0;background:#fff;color:#142536;font-weight:700;font-size:14px">Registration</a><a href="Medvya Clinical Screens.dc.html" style="display:flex;align-items:center;height:44px;padding:0 16px;border-radius:10px;border:1px solid #CBD6E0;background:#fff;color:#142536;font-weight:700;font-size:14px">Clinical Screens</a><a href="Medvya Access and Onboarding.dc.html" style="display:flex;align-items:center;height:44px;padding:0 16px;border-radius:10px;border:1px solid #CBD6E0;background:#fff;color:#142536;font-weight:700;font-size:14px">Access and Onboarding</a><a href="Medvya Enterprise Pages.dc.html" style="display:flex;align-items:center;height:44px;padding:0 16px;border-radius:10px;border:1px solid #CBD6E0;background:#fff;color:#142536;font-weight:700;font-size:14px">Enterprise Pages</a><a href="Medvya Mobile and Tablet.dc.html" style="display:flex;align-items:center;height:44px;padding:0 16px;border-radius:10px;border:1px solid #CBD6E0;background:#fff;color:#142536;font-weight:700;font-size:14px">Mobile and Tablet</a><a href="Medvya Handoff.dc.html" style="display:flex;align-items:center;height:44px;padding:0 16px;border-radius:10px;border:1px solid #CBD6E0;background:#fff;color:#142536;font-weight:700;font-size:14px">Handoff</a><a href="Medvya Journeys.dc.html" style="display:flex;align-items:center;height:44px;padding:0 16px;border-radius:10px;border:1px solid #CBD6E0;background:#fff;color:#142536;font-weight:700;font-size:14px">Journeys</a><a href="Medvya Wireframes.dc.html" style="display:flex;align-items:center;height:44px;padding:0 16px;border-radius:10px;border:1px solid #CBD6E0;background:#fff;color:#142536;font-weight:700;font-size:14px">Wireframes</a>
+  </div>
+</header>
+
+<section style="display:flex;flex-direction:column;gap:24px">
+  <div style="display:flex;align-items:baseline;gap:12px"><span style="font:500 13px 'JetBrains Mono',monospace;color:#0E9384">01</span><h2 style="margin:0;font-size:24px;font-weight:700;color:#102A43">Visual direction</h2></div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:20px">
+    <div style="background:#fff;border:1px solid #DFE7ED;border-radius:12px;padding:24px;display:flex;flex-direction:column;gap:12px">
+      <div style="font:600 11px/1 Manrope;letter-spacing:.08em;text-transform:uppercase;color:#0F766E">Principles</div>
+      <div style="display:flex;flex-direction:column;gap:12px;font-size:15px;line-height:1.55">
+        <div><strong style="color:#102A43">Verified first.</strong> Clinician-verified data sits in solid ink. AI output is always violet, labelled "AI draft · not reviewed", and never shares the verified style.</div>
+        <div><strong style="color:#102A43">One patient, one banner.</strong> Every clinical screen carries a fixed identity banner: name, age, sex, MRN, DOB, allergies, consent and encounter date.</div>
+        <div><strong style="color:#102A43">Status is text + shape + colour.</strong> Each clinical state has a label and an icon, so colour is never the only signal.</div>
+        <div><strong style="color:#102A43">Quiet surfaces.</strong> White cards on cool off-white, 1px borders, almost no shadow. Amber and red appear only for real clinical risk.</div>
+      </div>
+    </div>
+    <div style="background:#102A43;border-radius:12px;padding:24px;display:flex;flex-direction:column;justify-content:space-between;gap:24px;color:#fff;min-height:240px">
+      <div style="font:600 11px/1 Manrope;letter-spacing:.08em;text-transform:uppercase;color:#5EEAD4">Type · Manrope</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div style="font-size:44px;font-weight:700;letter-spacing:-0.03em;line-height:1.05">Meera Iyer, 54 F</div>
+        <div style="font-size:15px;color:#B6C6D6">HbA1c 7.9 % · BP 138/86 mmHg · eGFR 72</div>
+      </div>
+      <div style="display:flex;gap:24px;font:400 13px 'JetBrains Mono',monospace;color:#8FA6BD;flex-wrap:wrap"><span>MRN DQ-10-4482</span><span>tabular-nums 0123456789</span></div>
+    </div>
+  </div>
+</section>
+
+<section style="display:flex;flex-direction:column;gap:24px">
+  <div style="display:flex;align-items:baseline;gap:12px"><span style="font:500 13px 'JetBrains Mono',monospace;color:#0E9384">02</span><h2 style="margin:0;font-size:24px;font-weight:700;color:#102A43">Colour tokens</h2><span style="font-size:13px;color:#506579">light / dark · contrast on white</span></div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px">
+    <sc-for list="{{ colors }}" as="c" hint-placeholder-count="13">
+      <div style="background:#fff;border:1px solid #DFE7ED;border-radius:12px;overflow:hidden;display:flex;flex-direction:column">
+        <div style="display:flex;height:72px"><div style="flex:2;background:{{ c.hex }}"></div><div style="flex:1;background:{{ c.dark }}"></div></div>
+        <div style="padding:12px 14px;display:flex;flex-direction:column;gap:4px">
+          <div style="font:500 12px 'JetBrains Mono',monospace;color:#142536">{{ c.token }}</div>
+          <div style="display:flex;justify-content:space-between;font:400 12px 'JetBrains Mono',monospace;color:#506579"><span>{{ c.hex }}</span><span>{{ c.ratio }}</span></div>
+          <div style="font-size:12px;color:#506579;line-height:1.4">{{ c.use }}</div>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+  <div style="font:600 11px/1 Manrope;letter-spacing:.08em;text-transform:uppercase;color:#506579;margin-top:8px">Module groupings · used as a 3px nav rail tint and section label, never as page fills</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px">
+    <sc-for list="{{ modules }}" as="m" hint-placeholder-count="7">
+      <div style="background:{{ m.tint }};border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:8px;border:1px solid {{ m.line }}">
+        <div style="display:flex;align-items:center;gap:8px;color:{{ m.ink }}"><span class="ms" style="font-size:20px">{{ m.icon }}</span><strong style="font-size:15px">{{ m.name }}</strong></div>
+        <div style="font-size:12.5px;line-height:1.45;color:#3B5266">{{ m.desc }}</div>
+        <div style="font:500 11px 'JetBrains Mono',monospace;color:{{ m.ink }}">{{ m.phase }}</div>
+      </div>
+    </sc-for>
+  </div>
+</section>
+
+<section style="display:flex;flex-direction:column;gap:24px">
+  <div style="display:flex;align-items:baseline;gap:12px"><span style="font:500 13px 'JetBrains Mono',monospace;color:#0E9384">03</span><h2 style="margin:0;font-size:24px;font-weight:700;color:#102A43">Scale tokens</h2></div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:20px">
+    <div style="background:#fff;border:1px solid #DFE7ED;border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:12px">
+      <div style="font:600 11px/1 Manrope;letter-spacing:.08em;text-transform:uppercase;color:#506579">Type</div>
+      <sc-for list="{{ typeScale }}" as="t" hint-placeholder-count="7">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;border-bottom:1px solid #EEF2F5;padding-bottom:8px">
+          <span style="font-size:{{ t.size }}px;font-weight:{{ t.w }};color:#102A43;letter-spacing:-0.01em">{{ t.name }}</span>
+          <span style="font:400 11px 'JetBrains Mono',monospace;color:#506579;white-space:nowrap">{{ t.spec }}</span>
+        </div>
+      </sc-for>
+    </div>
+    <div style="background:#fff;border:1px solid #DFE7ED;border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:12px">
+      <div style="font:600 11px/1 Manrope;letter-spacing:.08em;text-transform:uppercase;color:#506579">Spacing · 8px base</div>
+      <sc-for list="{{ spacing }}" as="s" hint-placeholder-count="8">
+        <div style="display:flex;align-items:center;gap:12px"><span style="font:400 11px 'JetBrains Mono',monospace;color:#506579;width:56px">{{ s.token }}</span><div style="height:12px;width:{{ s.px }}px;background:#0E9384;border-radius:3px"></div><span style="font:400 11px 'JetBrains Mono',monospace;color:#506579">{{ s.px }}</span></div>
+      </sc-for>
+    </div>
+    <div style="background:#fff;border:1px solid #DFE7ED;border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:14px">
+      <div style="font:600 11px/1 Manrope;letter-spacing:.08em;text-transform:uppercase;color:#506579">Radius · elevation · layout</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <div style="width:56px;height:56px;border:1px solid #DFE7ED;border-radius:6px;display:flex;align-items:flex-end;padding:4px;box-sizing:border-box;font:400 10px 'JetBrains Mono',monospace;color:#506579">6</div>
+        <div style="width:56px;height:56px;border:1px solid #DFE7ED;border-radius:10px;display:flex;align-items:flex-end;padding:4px;box-sizing:border-box;font:400 10px 'JetBrains Mono',monospace;color:#506579">10</div>
+        <div style="width:56px;height:56px;border:1px solid #DFE7ED;border-radius:12px;display:flex;align-items:flex-end;padding:4px;box-sizing:border-box;font:400 10px 'JetBrains Mono',monospace;color:#506579">12</div>
+        <div style="width:56px;height:56px;border:1px solid #DFE7ED;border-radius:999px;display:flex;align-items:center;justify-content:center;font:400 10px 'JetBrains Mono',monospace;color:#506579">pill</div>
+      </div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <div style="flex:1;min-width:80px;height:48px;background:#fff;border:1px solid #DFE7ED;border-radius:10px;font:400 10px 'JetBrains Mono',monospace;color:#506579;display:flex;align-items:center;justify-content:center">e0 border</div>
+        <div style="flex:1;min-width:80px;height:48px;background:#fff;border-radius:10px;box-shadow:0 1px 2px rgba(16,42,67,.06),0 4px 12px rgba(16,42,67,.06);font:400 10px 'JetBrains Mono',monospace;color:#506579;display:flex;align-items:center;justify-content:center">e1 popover</div>
+        <div style="flex:1;min-width:80px;height:48px;background:#fff;border-radius:10px;box-shadow:0 12px 32px rgba(16,42,67,.16);font:400 10px 'JetBrains Mono',monospace;color:#506579;display:flex;align-items:center;justify-content:center">e2 modal</div>
+      </div>
+      <div style="font-size:13px;line-height:1.6;color:#3B5266">Breakpoints: <code>xs 360</code> · <code>md 768</code> · <code>lg 1280</code> · <code>xl 1600</code>. Touch target ≥ 44px. Icons 20/24px, Material Symbols Outlined. Motion 160ms ease-out; respects <code>prefers-reduced-motion</code>. RTL-ready logical properties for UAE Arabic.</div>
+    </div>
+  </div>
+</section>
+
+<section style="display:flex;flex-direction:column;gap:24px">
+  <div style="display:flex;align-items:baseline;gap:12px"><span style="font:500 13px 'JetBrains Mono',monospace;color:#0E9384">04</span><h2 style="margin:0;font-size:24px;font-weight:700;color:#102A43">Clinical status primitives</h2></div>
+  <div style="background:#fff;border:1px solid #DFE7ED;border-radius:12px;padding:24px;display:flex;flex-direction:column;gap:24px">
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="font:600 11px/1 Manrope;letter-spacing:.08em;text-transform:uppercase;color:#506579">Closed-loop result state machine · each state has its own icon + label</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+        <sc-for list="{{ loop }}" as="s" hint-placeholder-count="7">
+          <div style="display:flex;align-items:center;gap:6px;height:30px;padding:0 12px;border-radius:999px;background:{{ s.bg }};color:{{ s.fg }};font-size:13px;font-weight:600;border:1px solid {{ s.line }}"><span class="ms" style="font-size:16px">{{ s.icon }}</span>{{ s.label }}</div>
+        </sc-for>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:16px">
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div style="font:600 11px/1 Manrope;letter-spacing:.08em;text-transform:uppercase;color:#506579">Provenance tags</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          <span style="display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;border-radius:6px;background:#F2EFFC;color:#5B3FC4;font-size:12px;font-weight:700;border:1px dashed #A897E8"><span class="ms" style="font-size:14px">auto_awesome</span>AI draft · not reviewed</span>
+          <span style="display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;border-radius:6px;background:#E6F4EF;color:#087F5B;font-size:12px;font-weight:700"><span class="ms" style="font-size:14px">verified</span>Clinician verified</span>
+          <span style="display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;border-radius:6px;background:#EDF1F5;color:#334E68;font-size:12px;font-weight:700"><span class="ms" style="font-size:14px">person</span>Patient reported</span>
+          <span style="display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;border-radius:6px;background:#EFF4FF;color:#1D4ED8;font-size:12px;font-weight:700"><span class="ms" style="font-size:14px">sync_alt</span>Synced from HIS</span>
+          <span style="display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;border-radius:6px;background:#102A43;color:#fff;font-size:12px;font-weight:700"><span class="ms" style="font-size:14px">lock</span>Signed · read-only</span>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div style="font:600 11px/1 Manrope;letter-spacing:.08em;text-transform:uppercase;color:#506579">Alerts · severity in words</div>
+        <div style="display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:10px;background:#FDECEE;color:#8A1626;border:1px solid #F3B9C0"><span class="ms" style="font-size:20px">error</span><div style="font-size:13px;line-height:1.45"><strong>Critical · unacknowledged</strong> Potassium 6.1 mmol/L received 09:12</div></div>
+        <div style="display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:10px;background:#FDF5E7;color:#7A4710;border:1px solid #EFD5A6"><span class="ms" style="font-size:20px">warning</span><div style="font-size:13px;line-height:1.45"><strong>Attention · uncertain</strong> Dose not stated in conversation</div></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div style="font:600 11px/1 Manrope;letter-spacing:.08em;text-transform:uppercase;color:#506579">Recording + consent</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          <span style="display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 11px;border-radius:999px;background:#B42333;color:#fff;font-size:12px;font-weight:700"><span style="width:8px;height:8px;border-radius:50%;background:#fff"></span>REC 04:12</span>
+          <span style="display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 11px;border-radius:999px;background:#FDF5E7;color:#7A4710;font-size:12px;font-weight:700;border:1px solid #EFD5A6"><span class="ms" style="font-size:15px">pause</span>Paused</span>
+          <span style="display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 11px;border-radius:999px;background:#E6F4EF;color:#087F5B;font-size:12px;font-weight:700"><span class="ms" style="font-size:15px">task_alt</span>Recording consent · given</span>
+          <span style="display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 11px;border-radius:999px;background:#EDF1F5;color:#334E68;font-size:12px;font-weight:700"><span class="ms" style="font-size:15px">do_not_disturb_on</span>Declined · manual note</span>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div style="font:600 11px/1 Manrope;letter-spacing:.08em;text-transform:uppercase;color:#506579">Patient identity banner · fixed on every clinical screen</div>
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:16px 24px;padding:12px 16px;border-radius:12px;background:#fff;border:1px solid #DFE7ED;border-left:4px solid #0E9384">
+        <div style="display:flex;align-items:center;gap:10px"><div style="width:36px;height:36px;border-radius:50%;background:#E7F6F4;color:#0F766E;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px">MI</div><div><div style="font-weight:700;font-size:16px;color:#102A43">Meera Iyer <span style="font-weight:500;color:#506579">54 F</span></div><div style="font:400 12px 'JetBrains Mono',monospace;color:#506579">MRN DQ-10-4482 · DOB 12 Mar 1972</div></div></div>
+        <span style="display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 10px;border-radius:6px;background:#FDECEE;color:#8A1626;font-size:12px;font-weight:700"><span class="ms" style="font-size:15px">medication</span>Allergy: Penicillin · verified</span>
+        <span style="display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 10px;border-radius:6px;background:#E6F4EF;color:#087F5B;font-size:12px;font-weight:700"><span class="ms" style="font-size:15px">task_alt</span>Consent given 10:02</span>
+        <span style="font-size:13px;color:#506579">Encounter 04 Oct 2026 · OPD Room 3</span>
+        <span style="margin-left:auto;font:600 10px 'JetBrains Mono',monospace;letter-spacing:.06em;color:#975A16;background:#FDF5E7;padding:4px 8px;border-radius:4px">SYNTHETIC</span>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div style="font:600 11px/1 Manrope;letter-spacing:.08em;text-transform:uppercase;color:#506579">Buttons · primary / secondary / AI / destructive / disabled · focus ring 2px #2563EB offset 2px</div>
+      <div style="display:flex;flex-wrap:wrap;gap:10px">
+        <button style="height:44px;padding:0 18px;border-radius:10px;border:0;background:#0E9384;color:#fff;font:700 14px Manrope;display:flex;align-items:center;gap:8px;cursor:pointer" style-hover="background:#0C7D70"><span class="ms" style="font-size:18px">draw</span>Sign note</button>
+        <button style="height:44px;padding:0 18px;border-radius:10px;border:1px solid #CBD6E0;background:#fff;color:#142536;font:600 14px Manrope;cursor:pointer" style-hover="background:#F1F5F8">Save draft</button>
+        <button style="height:44px;padding:0 18px;border-radius:10px;border:1px solid #D4CBF5;background:#F2EFFC;color:#5B3FC4;font:700 14px Manrope;display:flex;align-items:center;gap:8px;cursor:pointer"><span class="ms" style="font-size:18px">auto_awesome</span>Generate draft</button>
+        <button style="height:44px;padding:0 18px;border-radius:10px;border:1px solid #F3B9C0;background:#fff;color:#B42333;font:700 14px Manrope;cursor:pointer">Stop recording</button>
+        <button style="height:44px;padding:0 18px;border-radius:10px;border:0;background:#E6ECF1;color:#8296A8;font:600 14px Manrope;cursor:not-allowed" disabled="">Approve (2 unresolved)</button>
+        <button style="height:44px;padding:0 18px;border-radius:10px;border:1px solid #CBD6E0;background:#fff;color:#142536;font:600 14px Manrope;outline:2px solid #2563EB;outline-offset:2px">Focused</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="display:flex;flex-direction:column;gap:24px">
+  <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><span style="font:500 13px 'JetBrains Mono',monospace;color:#0E9384">05</span><h2 style="margin:0;font-size:24px;font-weight:700;color:#102A43">Role-based sitemap</h2><span style="font-size:13px;color:#506579">routes · release phase · <span class="ms" style="font-size:14px;vertical-align:-2px">lock</span> restricted</span></div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,290px),1fr));gap:16px">
+    <sc-for list="{{ sitemap }}" as="r" hint-placeholder-count="8">
+      <div style="background:#fff;border:1px solid #DFE7ED;border-radius:12px;overflow:hidden;display:flex;flex-direction:column">
+        <div style="padding:14px 16px;border-bottom:1px solid #EEF2F5;display:flex;align-items:center;gap:10px"><span class="ms" style="font-size:20px;color:#0F766E">{{ r.icon }}</span><div><div style="font-weight:700;font-size:15px;color:#102A43">{{ r.role }}</div><div style="font-size:12px;color:#506579">{{ r.shell }}</div></div></div>
+        <div style="padding:6px 0">
+          <sc-for list="{{ r.routes }}" as="x" hint-placeholder-count="6">
+            <div style="display:flex;align-items:center;gap:8px;padding:6px 16px;font-size:13px">
+              <span style="width:3px;height:16px;border-radius:2px;background:{{ x.color }};flex:none"></span>
+              <span style="flex:1;color:#142536">{{ x.label }}</span>
+              <span style="font:400 11px 'JetBrains Mono',monospace;color:#8296A8">{{ x.path }}</span>
+              <span style="font:600 10px 'JetBrains Mono',monospace;color:{{ x.phaseFg }};background:{{ x.phaseBg }};padding:2px 5px;border-radius:4px">{{ x.phase }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+</section>
+
+<section style="display:flex;flex-direction:column;gap:24px">
+  <div style="display:flex;align-items:baseline;gap:12px"><span style="font:500 13px 'JetBrains Mono',monospace;color:#0E9384">06</span><h2 style="margin:0;font-size:24px;font-weight:700;color:#102A43">Role-permission matrix</h2></div>
+  <div style="background:#fff;border:1px solid #DFE7ED;border-radius:12px;overflow-x:auto">
+    <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:980px">
+      <thead><tr style="background:#F7FAFC">
+        <th style="text-align:left;padding:12px 16px;font-weight:700;color:#102A43;border-bottom:1px solid #DFE7ED">Capability</th>
+        <sc-for list="{{ roles }}" as="ro" hint-placeholder-count="8"><th style="text-align:left;padding:12px 10px;font-weight:600;color:#506579;border-bottom:1px solid #DFE7ED;font-size:12px">{{ ro }}</th></sc-for>
+      </tr></thead>
+      <tbody>
+        <sc-for list="{{ matrix }}" as="row" hint-placeholder-count="14">
+          <tr>
+            <td style="padding:10px 16px;border-bottom:1px solid #EEF2F5;color:#142536;font-weight:600;white-space:nowrap"><span style="display:inline-block;width:3px;height:14px;border-radius:2px;background:{{ row.color }};margin-right:8px;vertical-align:-2px"></span>{{ row.cap }}</td>
+            <sc-for list="{{ row.cells }}" as="cell" hint-placeholder-count="8"><td style="padding:8px 10px;border-bottom:1px solid #EEF2F5"><span style="display:inline-block;font-size:12px;font-weight:600;padding:3px 8px;border-radius:6px;background:{{ cell.bg }};color:{{ cell.fg }}">{{ cell.v }}</span></td></sc-for>
+          </tr>
+        </sc-for>
+      </tbody>
+    </table>
+  </div>
+  <p style="margin:0;font-size:13px;color:#506579;line-height:1.6">Access is tenant + facility + role + care relationship + purpose. Break-glass grants temporary read with typed justification and post-hoc review. Receptionists never see clinical notes; patients never see unreviewed AI output.</p>
+</section>
+
+<section style="display:flex;flex-direction:column;gap:24px">
+  <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><span style="font:500 13px 'JetBrains Mono',monospace;color:#0E9384">07</span><h2 style="margin:0;font-size:24px;font-weight:700;color:#102A43">Screen inventory & completion checklist</h2><span style="font-size:13px;color:#506579">{{ totalCount }} of {{ totalCount }} wireframed · {{ doneCount }} in hi-fi · {{ pendingCount }} hi-fi open</span></div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <sc-for list="{{ filters }}" as="f" hint-placeholder-count="8">
+      <button onClick="{{ f.pick }}" style="height:34px;padding:0 14px;border-radius:999px;border:1px solid {{ f.line }};background:{{ f.bg }};color:{{ f.fg }};font:600 13px Manrope;cursor:pointer">{{ f.label }}</button>
+    </sc-for>
+  </div>
+  <div style="background:#fff;border:1px solid #DFE7ED;border-radius:12px;overflow-x:auto">
+    <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:860px">
+      <thead><tr style="background:#F7FAFC;text-align:left;color:#506579;font-size:12px">
+        <th style="padding:10px 16px;border-bottom:1px solid #DFE7ED">ID</th><th style="padding:10px;border-bottom:1px solid #DFE7ED">Screen</th><th style="padding:10px;border-bottom:1px solid #DFE7ED">Module</th><th style="padding:10px;border-bottom:1px solid #DFE7ED">Roles</th><th style="padding:10px;border-bottom:1px solid #DFE7ED">Route</th><th style="padding:10px;border-bottom:1px solid #DFE7ED">Phase</th><th style="padding:10px;border-bottom:1px solid #DFE7ED">Status</th>
+      </tr></thead>
+      <tbody>
+        <sc-for list="{{ screens }}" as="s" hint-placeholder-count="20">
+          <tr>
+            <td style="padding:9px 16px;border-bottom:1px solid #EEF2F5;font:400 12px 'JetBrains Mono',monospace;color:#506579;white-space:nowrap">{{ s.id }}</td>
+            <td style="padding:9px 10px;border-bottom:1px solid #EEF2F5;font-weight:600;color:#142536">{{ s.name }}</td>
+            <td style="padding:9px 10px;border-bottom:1px solid #EEF2F5"><span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#3B5266"><span style="width:8px;height:8px;border-radius:2px;background:{{ s.color }}"></span>{{ s.mod }}</span></td>
+            <td style="padding:9px 10px;border-bottom:1px solid #EEF2F5;font-size:12px;color:#506579">{{ s.roles }}</td>
+            <td style="padding:9px 10px;border-bottom:1px solid #EEF2F5;font:400 12px 'JetBrains Mono',monospace;color:#506579">{{ s.route }}</td>
+            <td style="padding:9px 10px;border-bottom:1px solid #EEF2F5;font:600 11px 'JetBrains Mono',monospace;color:#334E68;white-space:nowrap">{{ s.phase }}</td>
+            <td style="padding:9px 10px;border-bottom:1px solid #EEF2F5"><span style="white-space:nowrap;display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;padding:3px 8px;border-radius:6px;background:{{ s.stBg }};color:{{ s.stFg }}"><span class="ms" style="font-size:14px">{{ s.stIcon }}</span>{{ s.status }}</span></td>
+          </tr>
+        </sc-for>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section style="display:flex;flex-direction:column;gap:16px">
+  <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><span style="font:500 13px 'JetBrains Mono',monospace;color:#0E9384">08</span><h2 style="margin:0;font-size:24px;font-weight:700;color:#102A43">Architecture & ERD coverage</h2><span style="font-size:13px;color:#506579">{{ erdCount }} entities · every one mapped to a screen or marked backend-only</span></div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,380px),1fr));gap:16px">
+    <sc-for list="{{ erd }}" as="g" hint-placeholder-count="4">
+      <div style="background:#fff;border:1px solid #DFE7ED;border-radius:12px;overflow:hidden">
+        <div style="padding:12px 16px;border-bottom:1px solid #EEF2F5;font-size:14px;font-weight:800;color:#102A43">{{ g.name }}</div>
+        <sc-for list="{{ g.rows }}" as="r" hint-placeholder-count="6"><div style="display:grid;grid-template-columns:minmax(150px,190px) minmax(0,1fr);gap:10px;padding:7px 16px;border-bottom:1px solid #F1F5F8;font-size:12.5px"><span style="font:500 11.5px 'JetBrains Mono',monospace;color:#142536;overflow-wrap:anywhere">{{ r.e }}</span><span style="color:{{ r.c }}">{{ r.s }}</span></div></sc-for>
+      </div>
+    </sc-for>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:16px">
+    <sc-for list="{{ machines }}" as="m" hint-placeholder-count="3">
+      <div style="background:#fff;border:1px solid #DFE7ED;border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:8px"><div style="font-size:14px;font-weight:800;color:#102A43">{{ m.name }}</div><div style="display:flex;flex-wrap:wrap;gap:4px"><sc-for list="{{ m.states }}" as="x" hint-placeholder-count="8"><span style="font:500 10.5px 'JetBrains Mono',monospace;padding:3px 6px;border-radius:4px;background:{{ x.bg }};color:{{ x.fg }}">{{ x.t }}</span></sc-for></div><div style="font-size:12.5px;color:#506579;line-height:1.5">{{ m.where }}</div></div>
+    </sc-for>
+  </div>
+</section>
+
+<section style="display:flex;flex-direction:column;gap:16px">
+  <div style="display:flex;align-items:baseline;gap:12px"><span style="font:500 13px 'JetBrains Mono',monospace;color:#0E9384">09</span><h2 style="margin:0;font-size:24px;font-weight:700;color:#102A43">Still open</h2></div>
+  <div style="background:#fff;border:1px solid #DFE7ED;border-radius:12px;padding:20px 24px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:12px 32px;font-size:14px;line-height:1.55">
+    <div><strong>Open screens:</strong> none in the inventory. E-08 vaccinations is designed but scheduled for a later release.</div>
+    <div><strong>Clickable journeys:</strong> J1, J2, J3 (front desk → nurse intake → doctor) and J5 run inside the clinician app. J4 uses the clip tweak; J6 uses the authority = HIS tweak and continues in Enterprise Admin.</div>
+    <div><strong>Static vs interactive:</strong> Access & onboarding, enterprise pages and mobile/tablet frames are hi-fi with light interaction; they are not wired to the clinician app state.</div>
+    <div><strong>Content:</strong> Arabic RTL shown for UAE portal home, registration and clinician mobile Today. The desktop clinician app is English only. Consent and legal text need clinical and legal review.</div>
+    <div><strong>Handoff:</strong> Figma file itself (frame names are specified), Storybook stories and real contrast-tool report export.</div>
+  </div>
+  </div>
+</section>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { filter: 'All' };
+  renderVals() {
+    const M = {
+      PMS: '#2563EB', EMR: '#0E9384', AI: '#7155D8', Care: '#4F7A5E', Portal: '#0F766E', Ent: '#102A43', Device: '#9A6B1F', Found: '#8296A8'
+    };
+    const ph = p => ({ M1: ['#E6F4EF', '#087F5B'], M2: ['#EFF4FF', '#1D4ED8'], M3: ['#FDF5E7', '#7A4710'], M4: ['#EDF1F5', '#334E68'], Later: ['#F1F5F8', '#8296A8'] })[p] || ['#F1F5F8', '#506579'];
+    const r = (label, path, mod, phase) => ({ label, path, color: M[mod], phase, phaseBg: ph(phase)[0], phaseFg: ph(phase)[1] });
+
+    const colors = [
+      ['brand.950', '#102A43', '#0B1622', '14.5:1', 'Sidebar, headings'],
+      ['brand.700', '#0F766E', '#2BB3A3', '5.5:1', 'Active nav, brand'],
+      ['brand.500', '#0E9384', '#2BB3A3', '3.9:1', 'Primary action fill (white text bold)'],
+      ['action.600', '#2563EB', '#6B9BFF', '5.2:1', 'Links, secondary actions'],
+      ['ai.600', '#7155D8', '#A08CF0', '5.3:1', 'AI-provisional only'],
+      ['surface.base', '#F7FAFC', '#0F1C2A', '—', 'App canvas'],
+      ['surface.card', '#FFFFFF', '#12202E', '—', 'Cards, tables'],
+      ['ink.900', '#142536', '#E6EDF3', '15.6:1', 'Body text'],
+      ['ink.600', '#506579', '#9DB0C2', '5.9:1', 'Secondary text'],
+      ['border.default', '#DFE7ED', '#22364A', '—', '1px separation'],
+      ['danger.700', '#B42333', '#F47A86', '6.4:1', 'Critical, unacknowledged'],
+      ['warning.700', '#975A16', '#E9B15F', '5.6:1', 'Uncertainty, attention'],
+      ['success.700', '#087F5B', '#4CC79C', '5.2:1', 'Confirmed success']
+    ].map(([token, hex, dark, ratio, use]) => ({ token, hex, dark, ratio, use }));
+
+    const modules = [
+      ['PMS · Practice', 'event_available', '#EFF4FF', '#D3E0FD', '#1D4ED8', 'Registration, schedule, reception, waitlist, billing', 'M1 appts · M2 billing'],
+      ['EMR · Clinical', 'clinical_notes', '#E7F6F4', '#BFE5DF', '#0F766E', 'Patient 360, chart, meds, orders, results, signed notes', 'M1 notes · M2 orders'],
+      ['AI Assistant', 'auto_awesome', '#F2EFFC', '#DCD3F7', '#5B3FC4', 'Brief, consent, capture, transcript, evidence, drafts', 'M1 scribe'],
+      ['Care coordination', 'assignment_turned_in', '#EEF4EF', '#D2E2D6', '#3E6A4D', 'Inbox, result loop, tasks, reminders, follow-up proof', 'M2'],
+      ['Patient portal', 'person_heart', '#F1F8F7', '#D3E9E6', '#0F766E', 'Booking, consent, released records, messages, proxy', 'M2'],
+      ['Wearable clip', 'settings_voice', '#FBF6EC', '#EEDFC2', '#7A4710', 'Pairing, battery, offline queue, firmware, fleet', 'M3'],
+      ['Hospital enterprise', 'domain', '#EDF1F5', '#D3DDE6', '#102A43', 'Facilities, SSO, HIS/FHIR, audit, residency', 'M4']
+    ].map(([name, icon, tint, line, ink, desc, phase]) => ({ name, icon, tint, line, ink, desc, phase }));
+
+    const typeScale = [
+      ['Display', 32, 700, '32/40 · 700'], ['H1 Page', 24, 700, '24/32 · 700'], ['H2 Section', 18, 700, '18/26 · 700'],
+      ['Body large', 16, 500, '16/26 · 500'], ['Body', 15, 500, '15/24 · 500'], ['Dense table', 14, 500, '14/20 · 500'], ['Caption', 12, 600, '12/16 · 600']
+    ].map(([name, size, w, spec]) => ({ name, size, w, spec }));
+    const spacing = [4, 8, 12, 16, 24, 32, 48, 64].map((px, i) => ({ px, token: 'sp.' + [0.5, 1, 1.5, 2, 3, 4, 6, 8][i] }));
+
+    const loop = [
+      ['Ordered', 'send', '#EFF4FF', '#1D4ED8', '#D3E0FD'],
+      ['Sample collected', 'colorize', '#EFF4FF', '#1D4ED8', '#D3E0FD'],
+      ['Result received', 'inbox', '#FDF5E7', '#7A4710', '#EFD5A6'],
+      ['Reviewed by doctor', 'visibility', '#E7F6F4', '#0F766E', '#BFE5DF'],
+      ['Patient contacted', 'call', '#EEF4EF', '#3E6A4D', '#D2E2D6'],
+      ['Message delivered ≠ done', 'mark_chat_read', '#F1F5F8', '#506579', '#DFE7ED'],
+      ['Follow-up completed', 'task_alt', '#087F5B', '#FFFFFF', '#087F5B']
+    ].map(([label, icon, bg, fg, line]) => ({ label, icon, bg, fg, line }));
+
+    const sitemap = [
+      { role: 'Solo doctor', icon: 'stethoscope', shell: 'Doctor shell · own practice', routes: [
+        r('Today', '/today', 'EMR', 'M1'), r('Calendar & booking', '/schedule', 'PMS', 'M1'), r('Patients & Patient 360', '/patients/:id', 'EMR', 'M1'),
+        r('Consult (consent → sign)', '/encounter/:id', 'AI', 'M1'), r('Rx & orders', '/encounter/:id/orders', 'EMR', 'M2'), r('Results inbox', '/inbox', 'Care', 'M2'),
+        r('Invoices', '/billing', 'PMS', 'M2'), r('Devices', '/devices', 'Device', 'M3'), r('Practice settings', '/settings', 'Ent', 'M1')] },
+      { role: 'Hospital clinician', icon: 'local_hospital', shell: 'Doctor shell · facility scoped', routes: [
+        r('Today / ward list', '/today', 'EMR', 'M4'), r('Patient 360 (HIS authority)', '/patients/:id', 'EMR', 'M4'), r('Ward round capture', '/encounter/:id', 'AI', 'M3'),
+        r('Write-back receipts', '/encounter/:id/sync', 'Ent', 'M4'), r('Results inbox', '/inbox', 'Care', 'M2'), r('Break-glass access', '/access/break-glass', 'Ent', 'M4')] },
+      { role: 'Receptionist', icon: 'support_agent', shell: 'Front-desk shell · no clinical notes', routes: [
+        r('Reception board', '/front-desk', 'PMS', 'M1'), r('Register patient', '/patients/new', 'PMS', 'M1'), r('Duplicate review', '/patients/merge', 'PMS', 'M1'),
+        r('Calendar & waitlist', '/schedule', 'PMS', 'M1'), r('Check-in & queue', '/queue', 'PMS', 'M1'), r('Billing & receipts', '/billing', 'PMS', 'M2'), r('Cash reconciliation', '/billing/reconcile', 'PMS', 'M2')] },
+      { role: 'Nurse', icon: 'vaccines', shell: 'Nurse console', routes: [
+        r('Intake queue', '/nurse', 'PMS', 'M2'), r('Vitals & allergies', '/nurse/:id/intake', 'EMR', 'M2'), r('Meds reconciliation', '/nurse/:id/meds', 'EMR', 'M2'),
+        r('Escalate to doctor', '/nurse/:id/escalate', 'Care', 'M2'), r('My tasks', '/tasks', 'Care', 'M2')] },
+      { role: 'Care coordinator', icon: 'assignment_ind', shell: 'Care shell', routes: [
+        r('Care queue', '/care', 'Care', 'M2'), r('Care plan', '/care/plans/:id', 'Care', 'M2'), r('Patient contact log', '/care/contacts', 'Care', 'M2'),
+        r('Overdue escalations', '/care/overdue', 'Care', 'M2'), r('Follow-up booking', '/schedule', 'PMS', 'M2')] },
+      { role: 'Patient / caregiver', icon: 'person', shell: 'Portal shell · mobile-first', routes: [
+        r('Home', '/p', 'Portal', 'M2'), r('Appointments', '/p/appointments', 'Portal', 'M2'), r('Released records', '/p/records', 'Portal', 'M2'),
+        r('Prescriptions & labs', '/p/rx', 'Portal', 'M2'), r('Consent & privacy', '/p/consent', 'Portal', 'M2'), r('Messages', '/p/messages', 'Portal', 'M2'), r('Proxy / caregiver', '/p/proxy', 'Portal', 'M2')] },
+      { role: 'Practice admin', icon: 'storefront', shell: 'Admin shell · single facility', routes: [
+        r('Facility setup', '/admin/facility', 'Ent', 'M1'), r('Staff & invites', '/admin/staff', 'Ent', 'M1'), r('Service catalogue', '/admin/services', 'PMS', 'M2'),
+        r('Clinic analytics', '/admin/analytics', 'Ent', 'M2'), r('Device fleet', '/admin/devices', 'Device', 'M3')] },
+      { role: 'Hospital admin / IT', icon: 'admin_panel_settings', shell: 'Enterprise shell', routes: [
+        r('Organisation & facilities', '/ent/org', 'Ent', 'M4'), r('SSO & role grants', '/ent/access', 'Ent', 'M4'), r('Record authority', '/ent/authority', 'Ent', 'M4'),
+        r('Integrations (FHIR/HL7/ABDM/HIE)', '/ent/integrations', 'Ent', 'M4'), r('Conflict & retry queue', '/ent/integrations/queue', 'Ent', 'M4'),
+        r('Audit & break-glass review', '/ent/audit', 'Ent', 'M4'), r('Retention & residency', '/ent/compliance', 'Ent', 'M4'), r('Fleet & firmware', '/ent/devices', 'Device', 'M4')] }
+    ];
+
+    const roles = ['Solo Dr', 'Hosp. Dr', 'Reception', 'Nurse', 'Care coord.', 'Patient', 'Pract. admin', 'Hosp. IT'];
+    const V = {
+      F: ['Full', '#E6F4EF', '#087F5B'], R: ['Read', '#EFF4FF', '#1D4ED8'], O: ['Own', '#E7F6F4', '#0F766E'], X: ['—', '#F7FAFC', '#8296A8'],
+      L: ['Limited', '#FDF5E7', '#7A4710'], S: ['Sign', '#102A43', '#FFFFFF'], P: ['Released', '#F1F8F7', '#0F766E'], C: ['Config', '#EDF1F5', '#334E68'], B: ['Break-glass', '#FDECEE', '#8A1626']
+    };
+    const mx = [
+      ['Register / book patients', 'PMS', 'F F F R R O F X'], ['Check-in & queue', 'PMS', 'F R F F R X R X'], ['Invoices & payments', 'PMS', 'F X F X X O F X'],
+      ['Patient 360 chart', 'EMR', 'F F X L L P X B'], ['Vitals & allergies entry', 'EMR', 'F F X F X X X X'], ['Clinical notes', 'EMR', 'S S X R R P X X'],
+      ['Prescriptions & orders', 'EMR', 'S S X X X P X X'], ['Recording consent & capture', 'AI', 'F F X L X O X X'], ['AI drafts & evidence', 'AI', 'F F X X X X X X'],
+      ['Result review / acknowledge', 'Care', 'S S X X R X X X'], ['Care tasks & patient contact', 'Care', 'F F X F F X X X'], ['Release records to portal', 'Portal', 'F F X X L O X X'],
+      ['Device pairing & fleet', 'Device', 'O O X O X X C C'], ['Staff, roles, integrations', 'Ent', 'C X X X X X C C'], ['Audit log', 'Ent', 'R X X X X X R F']
+    ];
+    const matrix = mx.map(([cap, mod, codes]) => ({ cap, color: M[mod], cells: codes.split(' ').map(c => ({ v: V[c][0], bg: V[c][1], fg: V[c][2] })) }));
+
+    const ST = { hifi: ['Hi-fi + lo-fi done', '#E6F4EF', '#087F5B', 'check_circle'], next: ['Hi-fi + lo-fi done', '#E6F4EF', '#087F5B', 'check_circle'], wf: ['Lo-fi done · hi-fi open', '#EFF4FF', '#1D4ED8', 'radio_button_partial'] };
+    const S = (id, name, mod, roles, route, phase, st0) => { const st = st0 === 'next' ? 'hifi' : st0; return { id, name, mod, color: M[mod], roles, route, phase, status: ST[st][0], stBg: ST[st][1], stFg: ST[st][2], stIcon: ST[st][3], st }; };
+    const all = [
+      S('F-01', 'Landing (Solo doctor / Hospital)', 'Found', 'Public', '/', 'M1', 'hifi'), S('F-02', 'Country & data residency selector', 'Found', 'Public', '/region', 'M1', 'hifi'),
+      S('F-03', 'Sign up · MFA / passkey · recovery', 'Found', 'All', '/auth/*', 'M1', 'hifi'), S('F-04', 'Solo doctor onboarding (licence, schedule, invite)', 'Found', 'Solo Dr', '/onboarding', 'M1', 'hifi'),
+      S('F-05', 'Session expired · 403 · 404 · offline', 'Found', 'All', '/error/*', 'M1', 'hifi'),
+      S('D-01', 'Doctor Today', 'EMR', 'Doctors', '/today', 'M1', 'hifi'), S('D-02', 'Global privacy-safe search (⌘K)', 'EMR', 'Doctors', 'overlay', 'M1', 'hifi'),
+      S('P-01', 'Appointment & reception board', 'PMS', 'Reception', '/front-desk', 'M1', 'next'), S('P-02', 'Register patient · India (ABHA) & UAE (Emirates ID)', 'PMS', 'Reception', '/patients/new', 'M1', 'hifi'),
+      S('P-03', 'Duplicate / merge review', 'PMS', 'Reception', '/patients/merge', 'M1', 'hifi'), S('P-04', 'Day/week calendar · walk-in · reschedule · no-show', 'PMS', 'Reception, Dr', '/schedule', 'M1', 'hifi'),
+      S('P-05', 'Waitlist & room queue', 'PMS', 'Reception, Nurse', '/queue', 'M1', 'hifi'), S('P-06', 'Charge capture · invoice · payment · refund', 'PMS', 'Reception', '/billing', 'M2', 'hifi'),
+      S('P-07', 'Cash reconciliation', 'PMS', 'Reception, Admin', '/billing/reconcile', 'M2', 'hifi'), S('P-08', 'Insurance eligibility & claims handoff', 'PMS', 'Admin', '/billing/claims', 'M4', 'hifi'),
+      S('N-01', 'Nurse intake: vitals, allergies, meds reconciliation', 'EMR', 'Nurse', '/nurse/:id/intake', 'M2', 'hifi'),
+      S('E-01', 'Patient 360', 'EMR', 'Doctors', '/patients/:id', 'M1', 'hifi'), S('E-02', 'Longitudinal timeline & trends', 'EMR', 'Doctors', '/patients/:id/timeline', 'M1', 'hifi'),
+      S('E-03', 'Documents upload & secure viewer', 'EMR', 'Doctors, Nurse', '/patients/:id/docs', 'M1', 'hifi'), S('E-04', 'Manual note (consent declined)', 'EMR', 'Doctors', '/encounter/:id/manual', 'M1', 'hifi'),
+      S('E-05', 'Prescriptions & investigation orders', 'EMR', 'Doctors', '/encounter/:id/orders', 'M2', 'hifi'), S('E-06', 'Signed note · addendum · print', 'EMR', 'Doctors', '/notes/:id', 'M1', 'hifi'),
+      S('A-01', 'Pre-visit brief (verified vs AI split)', 'AI', 'Doctors', '/encounter/:id/brief', 'M1', 'hifi'), S('A-02', 'Recording consent & device selection', 'AI', 'Doctors', '/encounter/:id/consent', 'M1', 'hifi'),
+      S('A-03', 'Live AI consultation', 'AI', 'Doctors', '/encounter/:id/live', 'M1', 'hifi'), S('A-04', 'Multi-speaker transcript review', 'AI', 'Doctors', '/encounter/:id/transcript', 'M1', 'hifi'),
+      S('A-05', 'AI note & source-evidence review', 'AI', 'Doctors', '/encounter/:id/note', 'M1', 'hifi'), S('A-06', 'Upload/sync progress · failed upload · AI unavailable', 'AI', 'Doctors', 'state', 'M1', 'next'),
+      S('A-07', 'Private voice assistant (earpiece only)', 'AI', 'Doctors', 'overlay', 'M3', 'hifi'),
+      S('C-01', 'Clinical results inbox', 'Care', 'Doctors', '/inbox', 'M2', 'next'), S('C-02', 'Care plans & follow-ups', 'Care', 'Dr, Care coord.', '/care/plans/:id', 'M2', 'next'),
+      S('C-03', 'Patient contact log & reminders', 'Care', 'Care coord.', '/care/contacts', 'M2', 'hifi'), S('C-04', 'Overdue escalation', 'Care', 'Care coord.', '/care/overdue', 'M2', 'hifi'),
+      S('R-01', 'Patient portal home & records', 'Portal', 'Patient', '/p', 'M2', 'next'), S('R-02', 'Portal booking & reschedule', 'Portal', 'Patient', '/p/appointments', 'M2', 'hifi'),
+      S('R-03', 'Portal consent & privacy', 'Portal', 'Patient', '/p/consent', 'M2', 'hifi'), S('R-04', 'Caregiver proxy authorisation', 'Portal', 'Patient', '/p/proxy', 'M2', 'hifi'),
+      S('W-01', 'Clip pairing (code) · self-test', 'Device', 'Doctors', '/devices/pair', 'M3', 'hifi'), S('W-02', 'Device health · battery · offline queue · firmware', 'Device', 'Doctors', '/devices/:id', 'M3', 'hifi'),
+      S('W-03', 'Loss/theft revoke', 'Device', 'Dr, Admin', '/devices/:id/revoke', 'M3', 'hifi'),
+      S('H-01', 'Hospital integration & administration', 'Ent', 'Hosp. IT', '/ent/integrations', 'M4', 'next'), S('H-02', 'Org, facilities, departments', 'Ent', 'Hosp. IT', '/ent/org', 'M4', 'hifi'),
+      S('H-03', 'SSO & role grants', 'Ent', 'Hosp. IT', '/ent/access', 'M4', 'hifi'), S('H-04', 'Write-back conflict & retry', 'Ent', 'Hosp. IT, Dr', '/ent/integrations/queue', 'M4', 'hifi'),
+      S('H-05', 'Audit log & break-glass review', 'Ent', 'Hosp. IT', '/ent/audit', 'M4', 'hifi'), S('H-06', 'Retention, residency (India/UAE)', 'Ent', 'Hosp. IT', '/ent/compliance', 'M4', 'hifi'),
+      S('H-07', 'Analytics (throughput, open loops, adoption)', 'Ent', 'Admins', '/admin/analytics', 'M2', 'hifi'),
+      S('F-06', 'Invite acceptance', 'Found', 'Staff', '/invite/:token', 'M1', 'hifi'), S('F-07', 'Trust centre & demo request', 'Found', 'Public', '/trust', 'M1', 'hifi'),
+      S('H-08', 'Hospital onboarding · record authority', 'Ent', 'Hosp. IT', '/ent/onboarding', 'M4', 'hifi'), S('H-09', 'Consent templates & recording policy', 'Ent', 'Admins', '/admin/consent', 'M1', 'hifi'),
+      S('H-10', 'Data subject requests & export', 'Ent', 'Privacy officer', '/ent/requests', 'M4', 'hifi'), S('A-08', 'Emergency symptom warning', 'AI', 'Doctors', 'state', 'M1', 'hifi'),
+      S('A-09', 'Consent revoked · patient changed', 'AI', 'Doctors', 'state', 'M1', 'hifi'), S('A-10', 'Speaker overlap / unconfirmed speaker', 'AI', 'Doctors', 'state', 'M1', 'hifi'),
+      S('E-07', 'Diagnosis coding & meds reconciliation', 'EMR', 'Doctors', '/encounter/:id/reconcile', 'M2', 'hifi'), S('E-08', 'Vaccinations (if in scope)', 'EMR', 'Doctors, Nurse', '/patients/:id/immunizations', 'Later', 'hifi'),
+      S('C-05', 'Inbound report identity match', 'Care', 'Doctors, Care', '/inbox/match', 'M2', 'hifi'),
+      S('F-08', 'Practice settings (profile, availability, staff, services, notifications, data)', 'Found', 'Pract. admin, Solo Dr', '/settings', 'M1', 'hifi'),
+      S('F-09', 'Add doctor (clinic mode): details, licence India/UAE, schedule, fees, access, signature', 'Found', 'Pract. admin', '/settings/doctors/new', 'M2', 'hifi'),
+      S('F-10', 'Add staff & roles (role picker, scope, permissions, invite, custom roles)', 'Found', 'Pract. admin', '/settings/staff/new', 'M1', 'hifi'),
+      S('F-11', 'Services & fees · India (INR, GST/SAC, TPA tariffs) / UAE (AED, CPT, VAT, payer price lists), packages', 'PMS', 'Pract. admin', '/settings/services', 'M2', 'hifi'),
+      S('C-06', 'Clinic messages inbox (patient ↔ clinic, AI reply draft, feedback)', 'Care', 'Dr, Reception, Care', '/messages', 'M2', 'hifi'), S('D-03', 'Notification centre', 'EMR', 'All staff', 'overlay', 'M1', 'hifi'),
+      S('A-11', 'Teleconsultation (video, identity check, ambient notes)', 'AI', 'Doctors', '/encounter/:id/video', 'M2', 'hifi'), S('E-09', 'Referral out / in with status', 'EMR', 'Doctors', '/referrals', 'M2', 'hifi'),
+      S('E-10', 'Printed prescription · e-Rx to pharmacy · multilingual', 'EMR', 'Doctors', '/rx/:id/print', 'M1', 'hifi'), S('D-04', 'Clinic overview (multi-doctor Today, shared waiting room)', 'PMS', 'Doctors, Reception', '/today?view=clinic', 'M2', 'hifi'),
+      S('P-14', 'Pre-authorisation & claim resubmission · India TPA/PMJAY/CGHS · UAE eClaimLink/DHA, remittance match', 'PMS', 'Reception, Admin', '/billing/preauth', 'M3', 'hifi'), S('P-10', 'Split & partial payment (cash + UPI + card + advance)', 'PMS', 'Reception', '/billing/collect', 'M2', 'hifi'), S('P-11', 'Packages & advances · session redemption', 'PMS', 'Reception, Admin', '/billing/packages', 'M2', 'hifi'), S('P-12', 'Dues, ageing & patient statement', 'PMS', 'Reception, Admin', '/billing/dues', 'M2', 'hifi'), S('P-13', 'Day-end cash close · denominations · shift report', 'PMS', 'Reception, Admin', '/billing/day-close', 'M2', 'hifi'),
+      S('P-09', 'Doctor revenue & payout report', 'PMS', 'Pract. admin', '/billing/reports', 'M2', 'hifi'), S('F-12', 'Practice access log', 'Ent', 'Pract. admin', '/settings/audit', 'M1', 'hifi'),
+      S('X-03', 'Six end-to-end journeys (storyboard, linked)', 'Found', 'All', 'Medvya Journeys', 'M1', 'hifi'),
+      S('P-14', 'Pre-authorisation & claim resubmission · India TPA/PMJAY/CGHS · UAE eClaimLink/DHA, remittance match', 'PMS', 'Reception, Admin', '/billing/preauth', 'M3', 'hifi'), S('P-10', 'Split & partial payment (cash + UPI + card + advance)', 'PMS', 'Reception', '/billing/collect', 'M2', 'hifi'), S('P-11', 'Packages & advances · session redemption', 'PMS', 'Reception, Admin', '/billing/packages', 'M2', 'hifi'), S('P-12', 'Dues, ageing & patient statement', 'PMS', 'Reception, Admin', '/billing/dues', 'M2', 'hifi'), S('P-13', 'Day-end cash close · denominations · shift report', 'PMS', 'Reception, Admin', '/billing/day-close', 'M2', 'hifi'),
+      S('P-09', 'Receipt, tax invoice, credit note, advance receipt · India GST / UAE VAT · A5 + 80 mm thermal', 'PMS', 'Reception, Admin', '/billing/:id/print', 'M2', 'hifi'), S('F-13', 'Medicines & formulary · India (Schedule H/H1/X) / UAE (drug codes, controlled) · add medicine, order sets', 'EMR', 'Doctors, Pract. admin', '/settings/formulary', 'M2', 'hifi'), S('E-11', 'Add medicine while prescribing (search, dose builder, safety checks)', 'EMR', 'Doctors', '/encounter/:id/orders', 'M2', 'hifi'),
+      S('X-01', 'Mobile: Today, capture, note, appts, records, pairing', 'Found', 'All', 'responsive', 'M1', 'hifi'), S('X-02', 'Dark mode & high-contrast variants', 'Found', 'All', 'theme', 'M1', 'hifi')
+    ];
+    const fl = this.state.filter;
+    const pick = f => () => this.setState({ filter: f });
+    const filterList = [['All', 'All'], ['Hi-fi done', 'hifi'], ['Hi-fi open', 'wf'], ['M1', 'M1'], ['M2', 'M2'], ['M3', 'M3'], ['M4', 'M4']];
+    const filters = filterList.map(([label, key]) => { const on = fl === key; return { label, pick: pick(key), bg: on ? '#102A43' : '#fff', fg: on ? '#fff' : '#142536', line: on ? '#102A43' : '#CBD6E0' }; });
+    const screens = all.filter(s => fl === 'All' || s.st === fl || s.phase === fl);
+
+    const E = (e, s) => ({ e, s, c: s.startsWith('Backend') ? '#8296A8' : '#142536' });
+    const erd = [
+      { name: 'A · Tenant, PMS & billing', rows: [E('TENANT', 'F-02 region · H-06 residency'), E('FACILITY', 'F-04 · H-02'), E('DEPARTMENT', 'H-02'), E('USER', 'F-03 sign-in'), E('TENANT_USER / MEMBERSHIP', 'F-06 invite · H-03 role grants'), E('CLINICIAN_PROFILE', 'F-04 licence (verified flag)'), E('PATIENT', 'P-02 registration'), E('PATIENT_IDENTIFIER', 'P-02 ABHA · Aadhaar last 4 · Emirates ID · passport'), E('PATIENT_RELATIONSHIP*', 'P-02 emergency contact, guardian'), E('PAYER_COVERAGE*', 'P-02 payer step · P-08'), E('SCHEDULE_SLOT', 'F-04 schedule · P-04'), E('APPOINTMENT', 'P-01 · P-04 · R-02'), E('ENCOUNTER', 'A-02 binding · H-08 authority_mode'), E('INVOICE / INVOICE_LINE', 'P-06'), E('PAYMENT', 'P-06 · P-07'), E('CLAIM', 'P-08 (M4)')] },
+      { name: 'B · EMR & clinical authority', rows: [E('OBSERVATION', 'N-01 · E-01 vitals'), E('PROBLEM', 'E-01 · E-07 coding'), E('ALLERGY', 'N-01 · banner'), E('MEDICATION_STATEMENT', 'N-01 · E-07 reconciliation'), E('CLINICAL_NOTE / NOTE_VERSION', 'A-05 · E-06'), E('CLINICIAN_SIGNATURE', 'A-05 sign modal'), E('CLINICAL_ORDER', 'E-05'), E('CLINICAL_RESULT', 'C-01'), E('PRESCRIPTION / _ITEM', 'E-05 · R-01'), E('CLINICAL_DOCUMENT', 'E-03 · C-05'), E('DOCUMENT_PROVENANCE', 'E-02 · E-03 source tags'), E('EXTERNAL_RECORD_LINK', 'E-01 “Synced from HIS” · H-04')] },
+      { name: 'C · Clip, consent, transcript & AI', rows: [E('CONSENT_RECEIPT', 'A-02 · P-02 · R-03 · H-09 templates'), E('ENCOUNTER_PARTICIPANT', 'A-02 people in room · A-04'), E('DEVICE', 'W-02'), E('DEVICE_PAIRING', 'W-01 · W-03'), E('RECORDING_SESSION', 'A-03 · A-09'), E('AUDIO_CHUNK', 'A-06a upload · A-06b failed'), E('TRANSCRIPT_SEGMENT', 'A-04'), E('SPEAKER_LABEL', 'A-04 · A-10'), E('AI_JOB', 'A-06c unavailable · processing'), E('AI_ARTIFACT', 'A-01 brief · A-05 draft'), E('EVIDENCE_LINK', 'A-05 evidence panel')] },
+      { name: 'D · Care, portal, integration & audit', rows: [E('CARE_PLAN', 'C-02'), E('CARE_ACTION / CARE_TASK', 'C-02 · C-04'), E('ACTION_EVENT / CARE_TASK_EVENT', 'C-02 stage track'), E('INBOX_ITEM', 'C-01 · C-05'), E('REVIEW_ACKNOWLEDGEMENT', 'C-01 Mark as reviewed'), E('MESSAGE_DELIVERY / NOTIFICATION', 'C-03 · Visit summary'), E('NOTIFICATION_ATTEMPT', 'C-03 contact log'), E('PORTAL_ACCESS', 'R-01 · P-02 invite'), E('PORTAL_PROXY', 'R-04 · R-03'), E('INTEGRATION_CONNECTION', 'H-01 tiles'), E('EXTERNAL_PATIENT_MAP / RESOURCE_MAP', 'P-02 · H-01'), E('INTEGRATION_MESSAGE / DELIVERY', 'H-01 queue · H-04'), E('INTEGRATION_ATTEMPT', 'H-01 attempts list'), E('AUDIT_EVENT', 'H-05'), E('OUTBOX_EVENT', 'Backend-only (domain events)')] }
+    ];
+    const chip = (t, k) => ({ t, bg: k === 'x' ? '#FDECEE' : '#EEF2F5', fg: k === 'x' ? '#8A1626' : '#334E68' });
+    const machines = [
+      { name: 'Capture FSM', states: ['UNPAIRED', 'PAIRED', 'IDLE', 'CONSENT_VERIFIED', 'CAPTURING', 'PAUSED', 'STOPPED', 'SYNCING', 'PROCESSING', 'DRAFT_READY', 'REVIEWED', 'SIGNED', 'EMR_PENDING', 'EMR_CONFIRMED'].map(t => chip(t)).concat(['CONSENT_REVOKED', 'PATIENT_CHANGED', 'TRANSFER_INTERRUPTED'].map(t => chip(t, 'x'))), where: 'W-01 → A-02 → A-03 → A-06 → A-04 → A-05 → H-04; exceptions in A-09 and A-06b.' },
+      { name: 'Care task lifecycle', states: ['PROPOSED', 'PHYSICIAN_APPROVED', 'ASSIGNED', 'AWAITING_REPORT', 'REPORT_RECEIVED', 'AWAITING_REVIEW', 'REVIEWED', 'CONTACT_PENDING', 'PATIENT_CONTACTED', 'FOLLOWUP_BOOKED', 'CLOSED'].map(t => chip(t)).concat(['BLOCKED', 'OVERDUE', 'CANCELLED', 'UNREACHABLE'].map(t => chip(t, 'x'))), where: 'E-05 → C-01 → C-02 → C-03 → C-04. Sent reminder never closes a task.' },
+      { name: 'Failure modes the UI must show', states: ['No consent', 'Clip disconnected', 'Low audio', 'Uncertain speaker', 'Wrong patient', 'AI outage', 'Record conflict', 'Late result', 'Emergency symptom'].map(t => chip(t, 'x')), where: 'E-04 · W-02 · A-06d · A-10 · A-09 · A-06c · H-04 / E-07 · C-04 · A-08.' }
+    ];
+    return {
+      erd, machines, erdCount: erd.reduce((n, g) => n + g.rows.length, 0),
+      colors, modules, typeScale, spacing, loop, sitemap, roles, matrix, filters, screens,
+      doneCount: all.filter(s => s.st === 'hifi').length, pendingCount: all.filter(s => s.st !== 'hifi').length, totalCount: all.length
+    };
+  }
+}
+</script>
+</body>
+</html>

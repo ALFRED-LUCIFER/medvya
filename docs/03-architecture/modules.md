@@ -1,0 +1,31 @@
+# Module boundaries (modular monolith)
+
+Sources: Software Architecture §4, PRD v2 §07 repository, Foundations ERD coverage. Each module owns its schema in Azure SQL (`[patients].[Patient]` etc.) and exposes contracts. Cross-module reads go through application queries or events. **Never** through another module's EF DbContext.
+
+| Module | Owns (entities) | Critical invariant | First phase | Representative endpoints |
+|---|---|---|---|---|
+| Identity | USER, SESSION, PASSKEY/MFA factor, INVITATION | No password storage in Medvya (Entra External ID). Session revocation is immediate. Offboarding ends all sessions | P0 | `GET /v1/me/context`, `POST /v1/invitations/{token}/accept` |
+| Tenancy | TENANT (organisation), FACILITY, DEPARTMENT, MEMBERSHIP, ROLE, ROLE_PERMISSION, FEATURE_FLAG | Tenant/facility/role/relationship/purpose checked on **every** read and write. Role alone never grants another facility | P0 | `GET /v1/facilities`, `POST /v1/memberships` |
+| Audit | AUDIT_EVENT (ledger), ACCESS_REVIEW, BREAK_GLASS_GRANT | Append-only. Every patient-data read/write, sign-in, export and permission change is recorded. No PHI in the payload, only opaque refs | P0 | `GET /v1/admin/audit?scope=authorized` |
+| Practice | PRACTICE_PROFILE, LOCATION, OPERATING_HOURS, HOLIDAY, CLINICIAN_PROFILE, CLINICIAN_LICENCE, SCHEDULE_TEMPLATE, LEAVE, SERVICE_CATALOGUE, PRICE_VERSION, PACKAGE, FORMULARY_ITEM, ORDER_SET | A licence is not verified just because a user typed it. Issued invoices keep their price version | P1 | `POST /v1/practice/doctors`, `PUT /v1/practice/hours` |
+| Patients | PATIENT, PATIENT_IDENTIFIER, PATIENT_RELATIONSHIP, PAYER_COVERAGE, CONSENT_RECEIPT, MERGE_REQUEST, EXTERNAL_PATIENT_MAP | No unreviewed dedup. Phone alone never matches. National IDs are Always Encrypted (Aadhaar last 4 only). MRN is facility-scoped | P1 | `POST /v1/patients`, `GET /v1/patients/search`, `POST /v1/patients/merge-requests` |
+| Scheduling | SCHEDULE_SLOT, APPOINTMENT, SLOT_HOLD, WAITLIST_ENTRY, QUEUE_TOKEN, VISIT_STATUS_EVENT | **No double booking:** unique index (doctor, location, slot_start), serializable transaction + app lock per doctor-day, short slot hold | P1 | `POST /v1/appointments`, `POST /v1/appointments/{id}/check-in` |
+| Notifications | NOTIFICATION_TEMPLATE, NOTIFICATION, NOTIFICATION_ATTEMPT, CHANNEL_OPT_IN, IN_APP_NOTIFICATION | Templates carry no clinical details. Delivered ≠ done. Retries are idempotent | P1 | `GET /v1/notifications` |
+| Encounters | ENCOUNTER, ENCOUNTER_PARTICIPANT, OBSERVATION, ALLERGY, PROBLEM, MEDICATION_STATEMENT, CLINICAL_NOTE, NOTE_VERSION, CLINICIAN_SIGNATURE | Signed versions are immutable. Amendments are addenda. Recordings and notes belong to exactly one verified encounter | P2 | `POST /v1/encounters`, `POST /v1/notes/{id}/sign`, `POST /v1/notes/{id}/addenda` |
+| Prescribing | PRESCRIPTION, PRESCRIPTION_ITEM, CLINICAL_ORDER, REFERRAL, PHARMACY_DISPATCH | Rx authorisation is separate from note signing. Allergy/interaction checks run before authorisation | P2 | `POST /v1/prescriptions/{id}/authorise` |
+| Documents | CLINICAL_DOCUMENT, DOCUMENT_PROVENANCE, EXTRACTION_ITEM | Original file always kept. Malware scan before viewing. Time-limited links. Extracted values stay provisional until confirmed | P2 | `POST /v1/documents`, `GET /v1/documents/{id}/view-link` |
+| Scribe | RECORDING_SESSION, AUDIO_CHUNK, TRANSCRIPT, TRANSCRIPT_SEGMENT, SPEAKER_LABEL, AI_JOB/AI_RUN, NOTE_DRAFT, EVIDENCE_LINK | Capture needs a valid encounter + consent. AI never signs. Unknowns stay blank. Every statement links to evidence | P3 | `POST /v1/encounters/{id}/recordings/start`, `POST /v1/recordings/{id}/chunks/commit` |
+| Billing | INVOICE, INVOICE_LINE, PAYMENT, PAYMENT_SPLIT, DOC_SEQUENCE, PACKAGE_ENROLMENT, REDEMPTION, DUE, STATEMENT, CASH_SESSION | Money in integer minor units. Legal numbering per country (gapless DOC_SEQUENCE). Paid only on provider confirmation. Idempotent webhooks | P4 | `POST /v1/invoices/{id}/issue`, `POST /v1/payments/webhooks/{provider}` |
+| Care | INBOX_ITEM, REVIEW_ACKNOWLEDGEMENT, CARE_PLAN, CARE_TASK, CARE_TASK_EVENT, CONTACT_ATTEMPT, MESSAGE_THREAD, MESSAGE | Received ≠ reviewed ≠ contacted ≠ completed. A sent reminder never closes a task. Low-confidence matches need a human | P4 | `POST /v1/inbox/{id}/acknowledge`, `POST /v1/care-tasks/{id}/events` |
+| Portal | PORTAL_ACCESS, PORTAL_PROXY, RELEASE (what is visible to the patient) | The patient sees only released items. No AI drafts. Proxy is scoped and expires | P4 | `GET /p/v1/records`, `POST /p/v1/proxies` |
+| Insurance | PAYER, ELIGIBILITY_CHECK, PRIOR_AUTH, CLAIM, CLAIM_RESUBMISSION, REMITTANCE | Medvya records payer decisions and does not decide eligibility | P5 | `POST /v1/eligibility-checks` |
+| Migration | SOURCE_CONNECTION, MAPPING_TEMPLATE, IMPORT_RUN, DQ_ISSUE, IMPORTED_VALUE_PROVENANCE | Dry run before load. Every imported value is badged with its source. Merges and fixes are reversible | P5 | `POST /v1/migrations/{id}/dry-run` |
+| Platform | TENANT_CATALOGUE, SUBSCRIPTION, PLAN, SEAT, SUPPORT_ACCESS_GRANT | Support access is time-boxed, audited and visible to the clinic | P5 | ops console only |
+| Devices | DEVICE, DEVICE_PAIRING, FIRMWARE_RELEASE | Pairing needs a code match. Revoke takes effect in < 1 min | P6 | `POST /v1/devices/pair` |
+| Integrations | INTEGRATION_CONNECTION, EXTERNAL_RESOURCE_MAP, INTEGRATION_MESSAGE, INTEGRATION_DELIVERY, INTEGRATION_ATTEMPT, RECORD_AUTHORITY | Never overwrite the HIS silently. Delivery stays pending until a receipt arrives. Idempotency key per delivery | P5/P7 | `GET /v1/integrations/{id}/deliveries` |
+
+Cross-cutting backend-only tables: `OUTBOX_EVENT` (domain events → Service Bus/Hangfire) and Hangfire's job storage (separate schema).
+
+## Domain events (examples)
+
+`PatientRegistered.v1`, `AppointmentBooked.v1`, `AppointmentCheckedIn.v1`, `EncounterStarted.v1`, `NoteSigned.v1`, `PrescriptionAuthorised.v1`, `ResultReceived.v1`, `ResultAcknowledged.v1`, `InvoiceIssued.v1`, `PaymentConfirmed.v1`, `ConsentRecorded.v1`, `ConsentRevoked.v1`. Payloads carry **opaque IDs only, no PHI**.

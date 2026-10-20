@@ -1,0 +1,734 @@
+# P4 · Billing, care follow-up and patient portal · Weeks 17–26 · R4 Clinic Ops
+# exit: 1 cash close zero unexplained variance 10 consecutive days · 2 invoice formats reviewed by CA (IN) / tax adviser (AE) · 3 0 abnormal results unacknowledged > 72 h · 4 ≥ 30 % bookings confirmed by patients via portal/WhatsApp
+# nfr:  1 money integer minor units; idempotent payment webhooks · 2 portal p95 < 2 s mobile; OTP sign-in · 3 released-result rules (doctor controls what/when)
+# pkg:  1 billing setup service (price list import) · 2 owner dashboard walkthrough · 3 patient help pages in three languages
+# dep:  1 payment gateway merchant approvals · 2 WhatsApp Business template approval
+
+@epic MDV-P4-E01 | Services, invoicing and documents | P4-01, P4-02 | Country-correct price lists, invoices, receipts, credit notes and legal numbering.
+@epic MDV-P4-E02 | Payments, packages, dues and day close | P4-03, P4-04 | Collect money safely, track dues and packages, and close the drawer with zero unexplained variance.
+@epic MDV-P4-E03 | Closed-loop results and care | P4-05, P4-06 | Every result and follow-up is owned, reviewed and closed with evidence; a sent message never closes care.
+@epic MDV-P4-E04 | Patient portal | P4-07 | Patients book, see released records, manage consent and authorise caregivers (incl. Arabic RTL).
+@epic MDV-P4-E05 | WhatsApp, discovery and clinic reports | P4-08, P4-09, P4-10 | Messaging patients in their channel, public profiles and owner reports without overclaiming.
+@epic MDV-P4-E06 | R4 readiness and gate | P4-02, P4-03 | External approvals, tax review, training and the R4 exit gate.
+
+=== MDV-P4-001
+title: Money and legal document numbering foundation (minor units, DOC_SEQUENCE per country and financial year)
+type: Task
+epic: MDV-P4-E01
+prd: P4-02
+covers: nfr:1
+priority: MUST
+roles: System
+labels: billing, money, numbering
+estimate: 2
+weeks: 17
+depends: MDV-P0-016
+confidence: 88 | Rules explicit (minor units; numbering formats shown in receipts design).
+sources: PRD v2 P4 NFR 1; design/Medvya Clinician App (receipt numbering RCT/25-26/n, INV/25-26/n, CN/25-26/n; UAE TI-AD/RC-AD/CN-AD); docs/02-design/components-theme-copy.md (DOC_SEQUENCE)
+desc:
+Money value object (bigint minor units + ISO currency), rounding rules per currency, amount-in-words (Indian lakh/thousand; AED). DOC_SEQUENCE per tenant, country, doc type (receipt, invoice, credit, advance), financial year (India Apr–Mar) and prefix, incremented gaplessly inside the issuing transaction.
+ac:
+- No floating-point money anywhere in domain/database (architecture test on property types).
+- Concurrent issuing of 100 invoices produces 100 consecutive numbers with no gaps or duplicates (test).
+- Financial-year rollover starts a new sequence per configured prefix.
+- Amount in words matches the design examples for INR and AED.
+
+=== MDV-P4-002
+title: Services and fees catalogue with price versions, India GST/SAC, UAE CPT/VAT, payer price lists and packages (F-11)
+type: Story
+epic: MDV-P4-E01
+prd: P4-01
+screens: F-11
+priority: MUST
+roles: Practice admin
+labels: services, pricing, tax
+estimate: 3
+weeks: 17-18
+depends: MDV-P4-001
+confidence: 72 | Price-version rule and preview are designed; settings data truncated; tax treatment must be confirmed by advisers.
+sources: design/Medvya Clinician App (Settings → Services); docs/02-design/screen-specs.md#practice-settings-f-08--f-12--medvya-clinician-app--data-truncated-labels-only
+desc:
+SERVICE_CATALOGUE (name, category, code, SAC (IN) or CPT (AE), tax code, duration) with PRICE_VERSION (amount, currency, effective_from, optional payer price list), packages (items, sessions, validity, price). Editor with invoice line preview; saving creates a new price version effective from a date; archive instead of delete. Note "Tax treatment must be confirmed with your tax advisor".
+ac:
+- Saving a price creates a new version; issued invoices keep the price version they were issued with (test).
+- India services carry SAC and GST rate/exemption; UAE services carry CPT and VAT rate (5 % or zero-rated) per line.
+- Payer-specific price lists override the default for insured patients (UAE).
+- Packages define sessions and validity and are sellable from billing.
+- Changes are audited; only admins can edit.
+
+=== MDV-P4-003
+title: Price list import tool (billing setup service)
+type: Task
+epic: MDV-P4-E01
+prd: P4-01
+covers: pkg:1
+priority: MUST
+roles: Medvya operations, Practice admin
+labels: import, onboarding
+estimate: 1.5
+weeks: 18
+depends: MDV-P4-002
+confidence: 85 | Simple CSV/XLSX import with validation.
+sources: PRD v2 P4 delivery package 1
+desc:
+Import services and prices from CSV/XLSX with a validation preview (codes, tax, duplicates), dry run, then commit as price versions effective from a date.
+ac:
+- Invalid rows are reported with reasons and nothing is committed until the preview is approved.
+- Import is idempotent by service code and records who imported.
+- Template files for India and UAE are provided.
+
+=== MDV-P4-004
+title: Charge capture and invoice lifecycle (draft → issued → paid/failed/refunded), separate from clinical sign-off (P-06)
+type: Story
+epic: MDV-P4-E01
+prd: P4-02
+screens: P-06
+priority: MUST
+roles: Receptionist
+labels: billing, invoices
+estimate: 3
+weeks: 18-19
+depends: MDV-P4-002
+confidence: 86 | Invoice states, actions and events are designed in detail.
+sources: design/Medvya Clinician App (P-06 Billing); docs/02-design/screen-specs.md#billing-p4--medvya-clinician-app
+desc:
+/billing: invoice list with state chips; detail with lines (service, code, qty, tax, amount), discount with mandatory reason, totals, events timeline. Suggested lines from the encounter (services, procedures, in-house tests) marked "suggested" for the receptionist to confirm — billing never changes clinical records. Patient banner in admin view (no clinical data). Actions per state as designed.
+ac:
+- Invoice states and allowed actions match docs/03-architecture/state-machines.md#invoice-p4 (server-enforced).
+- Discounts require a reason and are audited; issued invoices are immutable (ledger) — corrections via credit note.
+- Billing screens never display clinical notes or diagnoses (security test on payloads).
+- Issuing assigns the legal number from DOC_SEQUENCE.
+
+=== MDV-P4-005
+title: Receipts, tax invoices, credit notes, advance receipts for India GST and UAE VAT in A5 and 80 mm thermal (P-15)
+type: Story
+epic: MDV-P4-E01
+prd: P4-02
+screens: P-15
+covers: exit:2
+priority: MUST
+roles: Receptionist, Practice admin
+labels: billing, print, tax
+estimate: 3
+weeks: 19-20
+depends: MDV-P4-004
+confidence: 80 | Formats designed for both countries; legal acceptance pending adviser review (exit 2).
+sources: design/Medvya Clinician App (P-09/P-15 receipt print); docs/01-prd/source-conflicts.md (C-09 renumbering)
+desc:
+Server-side PDF (A5) and thermal 80 mm layouts: clinic name/address, GSTIN + CE reg (IN) or TRN + DoH facility (AE), document title (Arabic alt for AE), number, date/time with zone, place of supply (IN tax invoice), against-invoice (credit), patient (MRN; masked EID for AE), consultant/payer block, lines with SAC/CPT, tax, totals (UAE insurer pays / patient co-pay), amount in words, payment block with provider reference, footer notes and QR verify. Share via WhatsApp/email link (P4-009) or print.
+ac:
+- Every document type renders for India and UAE matching the design fields; snapshots are approved.
+- A chartered accountant (India) and a UAE tax adviser review and approve the formats (exit gate 2; MDV-P4-031).
+- Thermal layout prints correctly on an 80 mm printer and A5 on standard printers.
+- Documents are stored with hash and are re-printable identically.
+
+=== MDV-P4-006
+title: Refunds and credit notes
+type: Story
+epic: MDV-P4-E01
+prd: P4-02
+screens: P-06
+priority: MUST
+roles: Receptionist, Practice admin
+labels: billing, refunds
+estimate: 1.5
+weeks: 20
+depends: MDV-P4-005, MDV-P4-007
+confidence: 85 | Designed (Refund action, refunded state, credit note print).
+sources: design/Medvya Clinician App (P-06 refunded, credit note)
+desc:
+Refund full or partial to the original method via provider API (or cash with reason), generating a credit note against the invoice; permissions configurable (e.g. admin approval above a threshold).
+ac:
+- A refund creates a credit note referencing the original invoice number and updates dues/reports.
+- Provider refunds are confirmed by webhook before showing "Refunded"; failures are visible.
+- Refunds above the threshold require admin approval; all refunds are audited.
+
+=== MDV-P4-007
+title: India payments with Razorpay (UPI collect/QR, card, refunds) and idempotent webhooks (P-10)
+type: Story
+epic: MDV-P4-E02
+prd: P4-03
+screens: P-10
+covers: nfr:1, dep:1
+priority: MUST
+roles: Receptionist, Patient
+labels: payments, india
+estimate: 3
+weeks: 19-20
+depends: MDV-P4-004, MDV-P4-032
+confidence: 72 | Integration pattern standard; merchant approval timing is an external dependency.
+sources: PRD v2 P4-03, NFR 1, dependency 1; design/Medvya Clinician App (Send UPI link, Awaiting provider confirmation)
+desc:
+Payment adapter for Razorpay: UPI collect request / QR / payment link, card; tokenisation by provider only (no card data stored). "Paid" only after verified provider webhook (pay.pending "Awaiting provider confirmation"); timeouts → failed with retry. Webhooks verified by signature, idempotent by event id.
+ac:
+- An invoice becomes Paid only after a verified webhook or provider API confirmation (test with forged webhook rejected).
+- Replaying the same webhook 10 times changes state once (idempotency test).
+- No card number, CVV or UPI PIN is ever stored or logged.
+- Payment failures and timeouts show "Payment failed" with retry and record-cash options.
+
+=== MDV-P4-008
+title: UAE payments (Network International or Stripe) and card-on-terminal recording (P-10)
+type: Story
+epic: MDV-P4-E02
+prd: P4-03
+screens: P-10
+priority: MUST
+roles: Receptionist
+labels: payments, uae
+estimate: 2
+weeks: 20-21
+depends: MDV-P4-007
+confidence: 68 | Provider choice open (Network International vs Stripe); depends on merchant approval and UAE launch timing.
+sources: PRD v2 P4-03; design/Medvya Clinician App (Card on terminal, no card data stored)
+desc:
+Second adapter for the UAE provider (decision recorded) and a "card on terminal" method recording terminal batch reference without card data; insurer co-pay collection.
+ac:
+- Provider choice recorded in an ADR; adapter passes the same contract tests as Razorpay.
+- Card-on-terminal records reference and amount only and reconciles in day close.
+- Co-pay collection is linked to the insurer-pending invoice.
+
+=== MDV-P4-009
+title: Split and partial payments with advance usage; balance moves to dues (P-10)
+type: Story
+epic: MDV-P4-E02
+prd: P4-03
+screens: P-10
+priority: MUST
+roles: Receptionist
+labels: payments
+estimate: 2
+weeks: 21
+depends: MDV-P4-007
+confidence: 88 | Interactive design with remaining/over-collected rules.
+sources: design/Medvya Clinician App (P-10 split payment)
+desc:
+Collect one invoice with cash + UPI + card + advance in any combination; live remaining amount ("Balance remaining" / "Fully covered" / "Over-collected · reduce an amount"); confirming with a remaining balance moves it to Dues with a due date; log per method (received by, provider confirmed, card approved, advance adjusted).
+ac:
+- Over-collection cannot be confirmed.
+- Each split is a PAYMENT_SPLIT with its own state; the invoice is Paid only when all non-cash splits are confirmed.
+- Remaining balance creates a DUE with due date and appears in dues (P-12).
+- Advance usage reduces the advance balance atomically.
+
+=== MDV-P4-010
+title: Packages and advances with session redemption (P-11)
+type: Story
+epic: MDV-P4-E02
+prd: P4-04
+screens: P-11
+priority: MUST
+roles: Receptionist, Practice admin
+labels: packages
+estimate: 2
+weeks: 21-22
+depends: MDV-P4-002, MDV-P4-009
+confidence: 86 | Designed with redemption rule and ₹0 line.
+sources: design/Medvya Clinician App (P-11 packages)
+desc:
+Sell a package (advance receipt), track sessions used/left with validity and status (Active, Expires soon, Completed). "Redeem 1 session today" books it against today's visit and adds a ₹0/AED 0 line on the invoice. Expired balances follow the refund policy from settings.
+ac:
+- Redemption decrements sessions atomically and cannot exceed the total.
+- Expiry status updates daily; expiring-soon packages are listed for reception.
+- Unused balance value is computed per the policy and shown.
+
+=== MDV-P4-011
+title: Dues, ageing and patient statement with no-PHI balance reminders (P-12)
+type: Story
+epic: MDV-P4-E02
+prd: P4-04
+screens: P-12
+priority: MUST
+roles: Receptionist, Practice admin
+labels: dues, statements
+estimate: 2
+weeks: 22
+depends: MDV-P4-009
+confidence: 86 | Designed with ageing colours and reminder copy.
+sources: design/Medvya Clinician App (P-12 dues and statement)
+desc:
+Dues list with patient, reason, amount, age (days, colour + text by bucket), statement PDF per patient (debits/credits), reminder message "You have a pending balance with {clinic}. Pay securely: link" (no clinical details).
+ac:
+- Ageing buckets (0–30, 31–60, 61–90, 90+) are correct and filterable.
+- Statements reconcile to invoices/payments exactly.
+- Reminders respect channel consent and contain no clinical information.
+
+=== MDV-P4-012
+title: Cash reconciliation and day-end close with denominations, second-person confirmation and shift report (P-07, P-13)
+type: Story
+epic: MDV-P4-E02
+prd: P4-04
+screens: P-07, P-13
+covers: exit:1
+priority: MUST
+roles: Receptionist, Practice admin
+labels: cash, day-close
+estimate: 3
+weeks: 22-23
+depends: MDV-P4-009, MDV-P4-008
+confidence: 86 | Designed with denominations per country, variance rule and summary.
+sources: design/Medvya Clinician App (P-13 day-end cash close); design/Medvya Wireframes (P-07)
+desc:
+CASH_SESSION: opening float, counted denominations (INR/AED sets), expected cash from receipts, summary by method (cash, UPI settled, card batch, refunds, insurer receivable), variance. Any variance requires a note and a second staff member's confirmation ("Attention · cash short ₹200"). Close produces a shift report PDF.
+ac:
+- Expected cash equals the sum of cash receipts minus cash refunds plus float (test).
+- Closing with variance ≠ 0 requires a note and a second, different staff user's confirmation.
+- Closed sessions are immutable; corrections create an adjustment entry.
+- Pilot clinics close with zero unexplained variance for 10 consecutive days (exit gate 1, tracked in MDV-P4-033).
+
+=== MDV-P4-013
+title: Doctor revenue and payout report (P-09)
+type: Story
+epic: MDV-P4-E02
+prd: P4-04
+screens: P-09
+priority: MUST
+roles: Practice admin
+labels: reports, payouts
+estimate: 1.5
+weeks: 23
+depends: MDV-P4-012
+confidence: 80 | Formula stated in design; payout share configuration lives in Doctors settings (truncated data).
+sources: design/Medvya Clinician App (revenue report note); docs/01-prd/source-conflicts.md (C-09: P-09 = revenue report)
+desc:
+Per doctor and period: gross, discounts, refunds, net (= gross − discounts − refunds), insurer receivable counted when settled, payout share per doctor (configured in Settings → Doctors), payout amount. Admin only; export CSV.
+ac:
+- Net and payout figures reconcile with invoices/payments for the period.
+- Only practice admins can view (403 for others).
+- Payout share changes are versioned by effective date.
+
+=== MDV-P4-014
+title: Results intake and inbound report identity match (manual upload/entry; low-confidence needs a human) (C-05)
+type: Story
+epic: MDV-P4-E03
+prd: P4-05
+screens: C-05
+priority: MUST
+roles: Doctor, Care coordinator, Receptionist
+labels: results, matching, safety
+estimate: 3
+weeks: 19-20
+depends: MDV-P2-006, MDV-P2-018
+confidence: 82 | Designed; HL7 lab feeds arrive only in P7, so P4 intake is upload/manual entry.
+sources: design/Medvya Clinical Screens (C-05); docs/02-design/screen-specs.md#care-p4--medvya-clinician-app-medvya-clinical-screens
+desc:
+Results arrive as uploaded PDFs/images (lab email/WhatsApp from patient) or manual entry of structured values. Matching suggests patients by name, DOB, MRN and open orders; low-confidence matches ("name matches, DOB differs") require a human to choose a candidate or reject. Confirmed results become INBOX_ITEMs linked to the order (state Result received).
+ac:
+- A result with low-confidence match cannot enter any patient chart until a user confirms (UI + API).
+- Candidates show MRN, DOB and open orders; the confirmation records actor and time.
+- Matching a result to an open order moves the order's loop state to Result received.
+- Unmatched documents stay in an "Unmatched" queue with count.
+
+=== MDV-P4-015
+title: Clinical results inbox: severity in words, review/acknowledge, assign follow-up, release to patient (C-01)
+type: Story
+epic: MDV-P4-E03
+prd: P4-05
+screens: C-01
+covers: nfr:3, exit:3
+priority: MUST
+roles: Doctor
+labels: results, inbox, safety
+estimate: 3
+weeks: 20-21
+depends: MDV-P4-014
+confidence: 82 | Interactive hi-fi exists but Foundations marks C-01 status "next" (confirm final design before build).
+sources: design/Medvya Clinician App (C-01); PRD v2 finding CHECK (C-01 "next")
+desc:
+/inbox: rows with severity (Critical/Abnormal/Normal, icon + word), patient, test, time, loop state (Received · not reviewed → Reviewed → Assigned → Released → Completed). Detail: analyte, value, range, flag, previous value, source and match basis; optional AI context note (dashed, not reviewed). "Mark as reviewed" stores actor/time (REVIEW_ACKNOWLEDGEMENT); Assign follow-up and Release to patient unlock only after review; release follows release rules (doctor controls what/when).
+ac:
+- Assign and Release are impossible before review (server-enforced).
+- Critical results unreviewed after a configurable time escalate (notification to the doctor and covering clinician).
+- A patient never sees a result before the doctor releases it (portal test; NFR 3).
+- Pilot report shows 0 abnormal results unacknowledged > 72 h (exit gate 3) or lists breaches with actions.
+notes:
+- Confirm final C-01 design before build (PRD v2 finding).
+
+=== MDV-P4-016
+title: Care plans and tasks with owners, due dates, stage tracks and evidence to close (C-02)
+type: Story
+epic: MDV-P4-E03
+prd: P4-05
+screens: C-02
+priority: MUST
+roles: Doctor, Care coordinator
+labels: care, tasks
+estimate: 3
+weeks: 21-22
+depends: MDV-P4-015, MDV-P2-012
+confidence: 82 | Designed with stage tracks and evidence rule; "next" status in Foundations.
+sources: design/Medvya Clinician App (C-02 care plans); docs/03-architecture/state-machines.md#care-task-lifecycle-p4
+desc:
+CARE_PLAN created from a signed note (proposed actions → physician approved): actions (labs, referral, results review visit, adherence call, eye exam) each with owner, due date, stage track (e.g. Ordered → Sample collected → Result received → Reviewed by doctor) and evidence required to complete a stage (e.g. "LR-2311 reviewed", "Call log 11 Oct, 3 min"). Overdue shown in words.
+ac:
+- Tasks follow the care-task lifecycle; BLOCKED/OVERDUE/CANCELLED/UNREACHABLE require reason and actor.
+- A sent reminder or delivered message never completes a stage or closes a task (test).
+- Completing the final stage requires evidence (linked record or log entry).
+- Owners see their tasks in "My tasks"; reassignment is audited.
+
+=== MDV-P4-017
+title: Patient contact log and reminders: outcome required; "delivered" is not a contact (C-03)
+type: Story
+epic: MDV-P4-E03
+prd: P4-05
+screens: C-03
+priority: MUST
+roles: Care coordinator
+labels: care, contacts
+estimate: 2
+weeks: 22
+depends: MDV-P4-016
+confidence: 88 | Designed with channels and outcome list.
+sources: design/Medvya Clinical Screens (C-03)
+desc:
+Log contact attempts per task: channel (Call/WhatsApp/SMS), outcome (Spoke · rebooked, Spoke · declined, No answer · retry tomorrow, Wrong number, Message delivered (not a contact)), notes, time, by whom. Templates without clinical details; opt-in per channel shown.
+ac:
+- Save outcome is disabled until channel and outcome are selected.
+- "Message delivered" never moves a task to Patient contacted (test) — microcopy msg.delivered "Delivered — this does not complete the task".
+- Contact history is shown on the task and patient record.
+
+=== MDV-P4-018
+title: Overdue escalation: escalate to doctor, reassign, or close with reason (C-04)
+type: Story
+epic: MDV-P4-E03
+prd: P4-05
+screens: C-04
+covers: exit:3
+priority: MUST
+roles: Care coordinator, Doctor
+labels: care, escalation
+estimate: 1.5
+weeks: 22-23
+depends: MDV-P4-017
+confidence: 88 | Designed list and actions.
+sources: design/Medvya Clinical Screens (C-04)
+desc:
+/care/overdue: tasks past due with days late and reminders delivered; Escalate to doctor creates an inbox item for the responsible clinician; Reassign; Close with reason. SLA timers per task type.
+ac:
+- Escalation creates an inbox item and notification for the responsible clinician within 1 minute.
+- Overdue lists sort by severity and days late; filters by owner.
+- Closing an overdue task requires a reason and is audited.
+
+=== MDV-P4-019
+title: Clinic messages inbox (patient ↔ clinic) with AI reply draft approved by staff (C-06)
+type: Story
+epic: MDV-P4-E03
+prd: P4-06
+screens: C-06
+priority: SHOULD
+roles: Receptionist, Doctor, Care coordinator
+labels: messages, ai
+estimate: 3
+weeks: 23-24
+depends: MDV-P4-020, MDV-P3-007
+confidence: 75 | Designed; message data was in the truncated part of the design script; AI reply safety rules need clinical review.
+sources: design/Medvya Clinician App (C-06); docs/02-design/screen-specs.md
+desc:
+Threads by category with owner and SLA; filters (Open, …). AI drafts a reply (dashed "AI draft") that staff edit/approve before sending; clinical questions are flagged "Attention · clinical question. Routed to Dr. … Staff can acknowledge but only a clinician can give medical advice." Message bodies encrypted at rest.
+ac:
+- No AI-drafted reply is sent without explicit staff approval.
+- Clinical questions are routed to the clinician; non-clinicians cannot send clinical advice (role check on send for flagged threads).
+- SLA breach shows on the thread and in notifications.
+- Message content never appears in push notifications or logs.
+
+=== MDV-P4-020
+title: Patient portal authentication: OTP sign-in, portal invitations, patient session (BFF)
+type: Story
+epic: MDV-P4-E04
+prd: P4-07
+screens: R-01
+covers: nfr:2
+priority: MUST
+roles: Patient
+labels: portal, auth
+estimate: 2.5
+weeks: 19-20
+depends: MDV-P1-019
+confidence: 82 | Entra External ID patient flows + OTP; UAE PASS later (P5 pack).
+sources: PRD v2 P4 NFR 2; design/Medvya Patient Registration (portal invite consent)
+desc:
+web/portal PWA with BFF session: invitation from registration (portal consent) → OTP to the registered mobile → session; rate limiting; device remember option; patient can be linked to several clinics (separate tenants) with a clinic switcher.
+ac:
+- Patients sign in with OTP; brute force is rate-limited and locked per policy.
+- A patient sees only their own records (and proxies they hold); IDOR tests pass on all portal endpoints.
+- Portal p95 < 2 s on mobile for home and records (measured on 4G profile).
+- Sessions expire and can be revoked; no tokens in browser storage.
+
+=== MDV-P4-021
+title: Portal home, released visit summaries (with checked translations), prescriptions, records and labs (R-01)
+type: Story
+epic: MDV-P4-E04
+prd: P4-07
+screens: R-01
+covers: nfr:3
+priority: MUST
+roles: Patient
+labels: portal
+estimate: 3
+weeks: 20-22
+depends: MDV-P4-020, MDV-P4-022
+confidence: 80 | Hi-fi frames exist; "next" status in Foundations for R-01.
+sources: design/Medvya Patient Portal (Home, Visit summary, Records); docs/02-design/screen-specs.md#patient-portal-p4--medvya-patient-portal
+desc:
+Home (greeting, "New from Dr…" card, next appointment, To-do from released care plan items), visit summary (Reviewed and shared by Dr…, language tabs, plain-language summary, medicines start/stop, translation disclaimer, Download PDF, Message clinic), records list with statuses (Shared by your doctor, Reviewed by doctor, Ordered, Uploaded by you) and the "appear after your doctor reviews them" notice. 17 px minimum text, 48 px targets.
+ac:
+- Only items released by the doctor appear; unreviewed AI drafts and internal notes never appear (test with seeded unreleased items).
+- Translations are shown with "Translated with AI and checked against the English summary your doctor approved…" and only after the doctor approved the source summary.
+- PDF download works and is audited.
+- Meets 17 px minimum text and 48 px targets (automated check) and works offline-tolerant (graceful errors).
+
+=== MDV-P4-022
+title: Release rules: the doctor controls what patients see and when
+type: Story
+epic: MDV-P4-E04
+prd: P4-07
+covers: nfr:3
+priority: MUST
+roles: Doctor
+labels: portal, release, safety
+estimate: 1.5
+weeks: 20
+depends: MDV-P4-015, MDV-P2-012
+confidence: 85 | Principle explicit in PRD and portal design; per-type defaults need clinical sign-off.
+sources: PRD v2 P4 NFR 3; design/Medvya Patient Portal (header text)
+desc:
+RELEASE records per item (visit summary, prescription, result, document) with who released and when; tenant defaults per type (e.g. normal results auto-release after review vs manual), never auto-release abnormal results without review. Unrelease (hide) with reason.
+ac:
+- Nothing is visible in the portal without a release record; abnormal results cannot be auto-released.
+- Release/unrelease is audited and reflected in the portal within 1 minute.
+- Default policies are configurable and documented, reviewed by the clinical advisor.
+
+=== MDV-P4-023
+title: Portal booking and reschedule with fee and cancellation policy shown (R-02)
+type: Story
+epic: MDV-P4-E04
+prd: P4-07
+screens: R-02
+covers: exit:4
+priority: MUST
+roles: Patient
+labels: portal, booking
+estimate: 2.5
+weeks: 22-23
+depends: MDV-P4-020, MDV-P1-022
+confidence: 88 | Interactive hi-fi frame with exact rules.
+sources: design/Medvya Patient Portal (Book or reschedule); docs/02-design/screen-specs.md
+desc:
+Visit type (In clinic / Video placeholder until P8), doctor, day strip, available slots (unavailable struck through), optional reason (never shown to reception beyond category), fee and cancellation policy before confirm, confirm → "Booked · confirmation sent"; reschedule/cancel within policy. Uses the same booking path (holds, no double booking).
+ac:
+- Portal bookings go through the same concurrency-safe booking service (100-parallel test includes portal channel).
+- Fee and cancellation policy are shown before confirming; late cancellations follow the policy.
+- Free-text reason is stored encrypted and shown only to clinicians.
+- Booking source is recorded (portal) for the ≥ 30 % patient-confirmed metric (exit gate 4).
+
+=== MDV-P4-024
+title: Portal consent and privacy controls with policy version and change log (R-03)
+type: Story
+epic: MDV-P4-E04
+prd: P4-07
+screens: R-03
+priority: MUST
+roles: Patient
+labels: portal, consent
+estimate: 1.5
+weeks: 23
+depends: MDV-P4-020, MDV-P1-019
+confidence: 88 | Interactive hi-fi with separate switches and footer.
+sources: design/Medvya Patient Portal (Privacy & consent)
+desc:
+Separate switches: record my consultations (asked again each visit), reminders on WhatsApp (no medical details), share records with ABHA/HIE, caregiver access, health tips & offers; each change creates a consent receipt; footer "Policy v… · {country law} · last change {time}". Withdrawal of recording consent offers audio deletion request (P5-12/H-10).
+ac:
+- Each toggle creates a new receipt; history is visible to the patient.
+- Turning off WhatsApp reminders stops future WhatsApp messages immediately.
+- Withdrawing recording preference is reflected at the next visit's consent step (still asked per visit).
+
+=== MDV-P4-025
+title: Caregiver proxy authorisation with scopes, expiry, OTP verification and revocation (R-04)
+type: Story
+epic: MDV-P4-E04
+prd: P4-07
+screens: R-04
+priority: MUST
+roles: Patient, Caregiver
+labels: portal, proxy
+estimate: 2.5
+weeks: 23-24
+depends: MDV-P4-020
+confidence: 82 | Designed; minor/guardian rules per country need legal confirmation.
+sources: design/Medvya Patient Portal (Add a caregiver); design/Medvya Wireframes (R-04)
+desc:
+Patient adds a caregiver (name, mobile) with scopes (appointments, medicines, lab results, messages) and expiry; invite "they must verify with OTP"; caregiver sees "Viewing as caregiver for {name}" and only scoped items; patient can revoke anytime. Guardian proxies for minors follow country rules (from registration guardian).
+ac:
+- A caregiver can access only the granted scopes until expiry (authorisation tests per scope).
+- Revocation takes effect within 1 minute.
+- Caregiver banner is always visible; actions are audited as the caregiver acting for the patient.
+- Minor/guardian proxy rules are configured per country after legal confirmation.
+
+=== MDV-P4-026
+title: Portal Arabic RTL and patient help pages in three languages
+type: Task
+epic: MDV-P4-E04
+prd: P4-07
+screens: R-01
+covers: pkg:3
+priority: MUST
+roles: Patient
+labels: portal, i18n, rtl, help
+estimate: 1.5
+weeks: 24
+depends: MDV-P4-021
+confidence: 85 | UAE Arabic home is designed; help content needs writing and translation review.
+sources: design/Medvya Patient Portal (UAE Arabic RTL home); PRD v2 P4 delivery package 3
+desc:
+Full Arabic RTL for every portal screen (Noto Sans Arabic, flipped chevrons, Arabic dates with readable numerals); help pages (how to sign in, book, see results, consent, caregiver) in English, Hindi and Arabic (plus Tamil for the pilot if needed).
+ac:
+- Every portal screen passes RTL visual checks at 390 px.
+- Help pages exist in three languages and are linked from the portal.
+- Translations reviewed by a native speaker.
+
+=== MDV-P4-027
+title: Public doctor and clinic profiles with live availability, indexed for search (N-02, design needed)
+type: Story
+epic: MDV-P4-E05
+prd: P4-08
+screens: N-02
+priority: SHOULD
+roles: Public, Patient
+labels: public-site, seo, design-needed
+estimate: 3
+weeks: 24-25
+depends: MDV-P4-023
+confidence: 55 | DESIGN NEEDED: no screen exists; scope comes only from the October plan line item.
+sources: PRD v2 P4-08 (N-02 DESIGN NEEDED); docs/01-prd/traceability.md
+desc:
+Design first (spike), then Razor public pages per doctor/clinic: name, specialty, qualifications, languages, location, hours, fees (if the clinic opts in), next available slots (live, no PHI) and "Book" into the portal flow; schema.org markup and sitemap. Opt-in per doctor/clinic.
+ac:
+- A design for N-02 is produced and approved before implementation.
+- Profiles are opt-in and show no patient data; availability shows slot times only.
+- Pages are indexable (sitemap, schema.org Physician/MedicalClinic) and fast (Lighthouse ≥ 90).
+- Booking from a profile leads into portal sign-in/booking.
+
+=== MDV-P4-028
+title: WhatsApp reminders and confirmations (EN/AR/HI), opt-in records, delivery status, one-tap reschedule, "doctor running late" broadcast (N-03, design needed)
+type: Story
+epic: MDV-P4-E05
+prd: P4-09
+screens: N-03
+covers: dep:2, exit:4
+priority: MUST
+roles: Patient, Receptionist, Practice admin
+labels: whatsapp, notifications, design-needed
+estimate: 3
+weeks: 21-23
+depends: MDV-P1-032, MDV-P4-023
+confidence: 62 | DESIGN NEEDED for the admin screen; WhatsApp template approval is an external dependency.
+sources: PRD v2 P4-09 (N-03); design/Medvya Gap Analysis (WhatsApp reminders SHOULD); docs/03-architecture/integrations.md
+desc:
+WhatsApp Business adapter in Notifications: approved templates in English, Arabic and Hindi (confirmation, reminder, reschedule link, running late, balance due, portal update), opt-in records per patient/channel, delivery/read status, one-tap reschedule link into the portal, "doctor running 20 min late" broadcast to today's affected patients. Admin screen for templates/opt-ins/status (design first).
+ac:
+- Only approved templates are sent; messages carry no clinical details (validation).
+- Messages are sent only with a WhatsApp opt-in receipt; opt-out via reply is honoured.
+- Delivery status updates the notification record; failures fall back to SMS if configured.
+- Running-late broadcast reaches only patients booked with that doctor today and is audited.
+- Patient confirmations via WhatsApp count toward the ≥ 30 % metric (exit gate 4).
+
+=== MDV-P4-029
+title: Spike: reporting store that keeps PHI out of analytics (read replica vs warehouse)
+type: Spike
+epic: MDV-P4-E05
+prd: P4-10
+priority: MUST
+roles: Developer
+labels: analytics, privacy, spike
+estimate: 1
+weeks: 22
+depends: MDV-P0-016
+confidence: 75 | Open item in PRD completeness check with a clear decision deadline.
+sources: PRD v2 completeness "Reporting store that keeps PHI out of analytics" (decide before P4-10); docs/01-prd/source-conflicts.md (Q-06)
+desc:
+Decide between Azure SQL read replica with masked/aggregated views and a separate de-identified warehouse; define the metric model for reports and how drill-down to authorised detail works.
+ac:
+- ADR-008 records the choice, cost and PHI controls.
+- Report queries never run against tables with unmasked PHI for non-clinical roles.
+
+=== MDV-P4-030
+title: Clinic reports and owner dashboard: appointments, no-shows, revenue, follow-up completion, note time saved (H-07)
+type: Story
+epic: MDV-P4-E05
+prd: P4-10
+screens: H-07
+covers: pkg:2
+priority: MUST
+roles: Practice owner, Practice admin
+labels: analytics, reports
+estimate: 3
+weeks: 24-25
+depends: MDV-P4-029, MDV-P4-013, MDV-P3-026
+confidence: 80 | Analytics page designed (KPIs, charts, open loops) with explicit "estimate" caveat.
+sources: design/Medvya Enterprise Pages (H-07); docs/02-design/screen-specs.md#enterprise-p7--medvya-enterprise-admin-medvya-enterprise-pages
+desc:
+KPIs: visits, notes signed same day, documentation time per visit (estimate with method caveat), unreviewed results > 48 h, no-show rate, revenue, follow-up completion; charts (visits per day by doctor/location, open loops); drill-down only to authorised detail. Owner walkthrough session.
+ac:
+- Documentation time is labelled as an estimate with the method stated; no clinical outcome claims.
+- Drill-down respects role permissions (admins see counts; clinicians see their patients).
+- Figures reconcile with source data for a sample month.
+- Owner dashboard walkthrough delivered to each pilot owner (delivery package 2).
+
+=== MDV-P4-031
+title: Invoice and receipt formats reviewed by a chartered accountant (India) and tax adviser (UAE)
+type: Chore
+epic: MDV-P4-E06
+prd: P4-02
+covers: exit:2
+priority: MUST
+roles: Founder, external advisers
+labels: tax, compliance
+estimate: 0.5
+weeks: 21-23
+depends: MDV-P4-005
+confidence: 65 | External advisers' availability and possible format changes.
+sources: PRD v2 P4 exit 2
+desc:
+Send sample receipts, tax invoices, credit notes and advance receipts (both countries, A5 + thermal) to a CA and a UAE tax adviser; apply corrections.
+ac:
+- Written approval from both advisers is on file (or UAE marked not-in-scope by ADR-002 with plan).
+- Requested changes are implemented and re-approved before R4.
+
+=== MDV-P4-032
+title: Apply for payment gateway merchant accounts and WhatsApp Business template approvals
+type: Chore
+epic: MDV-P4-E06
+prd: P4-03, P4-09
+covers: dep:1, dep:2
+priority: MUST
+roles: Founder
+labels: external, payments, whatsapp
+estimate: 0.5
+weeks: 17
+confidence: 60 | External approvals can take weeks (PRD risk MED); mitigation was to apply during P2.
+sources: PRD v2 P4 dependencies; §10 risk "Payment gateway and WhatsApp approvals delayed"
+desc:
+Submit merchant applications (Razorpay; Network International or Stripe for UAE) and WhatsApp Business account + templates. Ideally started during P2 per the risk mitigation; this ticket tracks to approval.
+ac:
+- Merchant accounts approved (or fallback: cash + manual UPI QR documented) before payments go live.
+- WhatsApp templates approved in three languages (or SMS fallback documented).
+
+=== MDV-P4-033
+title: R4 pilot, exit gate review and release notes
+type: Gate
+epic: MDV-P4-E06
+prd: P4-04, P4-05
+covers: exit:1, exit:2, exit:3, exit:4
+priority: MUST
+roles: Founder, Clinical safety reviewer, pilot owners
+labels: release, gate, pilot
+estimate: 1.5
+weeks: 26
+depends: MDV-P4-012, MDV-P4-015, MDV-P4-031, MDV-P4-028, MDV-P4-023
+confidence: 68 | Ten consecutive zero-variance days and the 30 % patient-confirmation target need enough pilot time in weeks 24–26.
+sources: PRD v2 §08, P4 exit criteria
+desc:
+Pilot R4 on flags; collect evidence: 10 consecutive days of zero unexplained cash variance; adviser-approved invoice formats; 0 abnormal results unacknowledged > 72 h; ≥ 30 % bookings confirmed by patients via portal/WhatsApp. Release notes; journeys J1 (billing) and J5 (results loop) pass.
+ac:
+- Evidence for all four exit criteria attached and confirmed.
+- Clinical safety reviewer signs the release (results loop and portal release rules).
+- R4 release notes list P4-01…P4-10 status and exclusions (insurance claims, teleconsultation).
+- Playwright J1 billing step and J5 delayed-result journey pass.

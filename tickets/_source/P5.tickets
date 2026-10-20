@@ -1,0 +1,653 @@
+# P5 · Commercial launch v1.0 · Weeks 24–32 · R5 v1.0 GA
+# exit: 1 first paying clinic cuts over without closing (wk 29) · 2 migration dry-run report signed before load · 3 pen test no open high/critical · 4 30 days ≥ 99.5 % availability before GA (wk 32)
+# nfr:  1 RPO ≤ 15 min, RTO ≤ 4 h rehearsed · 2 99.5 % monthly availability with status page · 3 support first response < 4 business hours
+# pkg:  1 signed order form + SLA · 2 migration report + go-live runbook · 3 role training (30 min each) + in-app guides · 4 v1.0 release notes
+# dep:  1 regulator onboarding & conformance (UAE dates) · 2 card-reader hardware sourcing
+
+@epic MDV-P5-E01 | Legacy migration and data quality | P5-01, P5-02 | Move a clinic's history without closing: dry run, day-one load, parallel run, backfill, fix by rule.
+@epic MDV-P5-E02 | Insurance | P5-03 | Live eligibility, pre-authorisation, claims, resubmission and remittance per country.
+@epic MDV-P5-E03 | UAE market pack | P5-04 | Emirates ID reader, launch-emirate exchange, regulator e-Rx and e-sick leave.
+@epic MDV-P5-E04 | Outside records and voice assistant | P5-05, P5-06 | Patient uploads with verified extraction; an inbound voice booking assistant with safe handover.
+@epic MDV-P5-E05 | SaaS operations | P5-07, P5-08, P5-09 | Subscriptions, platform console with audited support access, guides, status page and full data export.
+@epic MDV-P5-E06 | Hardening, security operations and data rights | P5-10, P5-11, P5-12 | Pen test, DR drill, a11y audit, load test, dark/high-contrast, incident response, retention and data rights.
+@epic MDV-P5-E07 | Go-live and v1.0 GA | P5-01 | First paying clinic cut-over, availability evidence and the GA gate.
+
+=== MDV-P5-001
+title: Design the 11 new P5 screens (N-04 … N-14) before build
+type: Spike
+epic: MDV-P5-E07
+prd: P5-01, P5-02, P5-04, P5-05, P5-06, P5-07, P5-08, P5-09
+screens: N-04, N-05, N-06, N-07, N-08, N-09, N-10, N-11, N-12, N-13, N-14
+priority: MUST
+roles: Founder, Designer
+labels: design, design-needed
+estimate: 4
+weeks: 22-24
+confidence: 60 | These screens have no designs; gap analysis gives behaviour but no layouts (PRD finding MISSING).
+sources: PRD v2 findings MISSING (N-04…N-14); design/Medvya Gap Analysis
+desc:
+Produce lo-fi then hi-fi designs in the design project for: migration connect/mapping/dry-run (N-04), data-quality queue & bulk merge (N-05), EID reader check-in (N-06), exchange pull/push status (N-07), patient upload extraction review (N-08), letters/certificates/e-sick leave (N-09), voice assistant console & owner settings (N-10), plans/trial/subscription (N-11), platform ops console (N-12), in-app guides/help/feedback/status (N-13), clinic export (N-14). Re-import designs into design/.
+ac:
+- Each N-screen has an approved design with states (empty, loading, error, 403, offline) and IN/AE variants where relevant.
+- Designs are imported into design/ and screen-specs updated.
+- Confidence of dependent tickets is re-assessed after design (raise to ≥ 75 % where resolved).
+
+=== MDV-P5-002
+title: Migration: read-only source connection via self-hosted integration runtime (Oracle, SQL Server, MySQL, CSV/Excel) (N-04)
+type: Story
+epic: MDV-P5-E01
+prd: P5-01
+screens: N-04
+priority: MUST
+roles: Medvya operations
+labels: migration, data-factory
+estimate: 3
+weeks: 24-25
+depends: MDV-P5-001
+confidence: 65 | Approach defined (gap analysis Option B); every clinic's legacy schema differs.
+sources: design/Medvya Gap Analysis (G-02 steps 1); PRD v2 P5-01
+desc:
+Azure Data Factory with a self-hosted integration runtime on a clinic PC (outbound only, no open ports), read-only DB user, encrypted transfer into a raw staging schema in-country. Connectors: Oracle, SQL Server, MySQL, CSV/Excel upload. Source connection registered per migration project.
+ac:
+- Connection requires only outbound connectivity from the clinic; no inbound firewall changes.
+- The source database user is read-only (verified by attempting a write that fails).
+- Raw data lands in the in-country staging area, encrypted, isolated per tenant, with retention limits.
+- Connection test and inventory (tables, row counts) are shown to operations.
+
+=== MDV-P5-003
+title: Migration mapping: AI-proposed column and code mappings (LOINC, ICD-10, formulary) approved by a person; reusable vendor templates (N-04)
+type: Story
+epic: MDV-P5-E01
+prd: P5-01
+screens: N-04
+priority: MUST
+roles: Medvya operations, Practice owner
+labels: migration, mapping, ai
+estimate: 4
+weeks: 25-26
+depends: MDV-P5-002
+confidence: 62 | AI mapping quality and code-system licensing (LOINC) need validation.
+sources: design/Medvya Gap Analysis (G-02 step 2); PRD v2 P5-01
+desc:
+AI proposes source→target column mappings and code mappings (local test names → LOINC, diagnoses → ICD-10, drugs → country formulary); a person approves each mapping once; approved mappings are saved as a template per legacy vendor for reuse.
+ac:
+- No mapping is applied without human approval; approvals are recorded with actor and time.
+- Templates can be applied to a new clinic on the same vendor and diffed for changes.
+- Unmapped values are listed for manual decision; nothing is silently dropped.
+
+=== MDV-P5-004
+title: Migration dry run into a test tenant and owner-signed dry-run report (N-04)
+type: Story
+epic: MDV-P5-E01
+prd: P5-01
+screens: N-04
+covers: exit:2, pkg:2
+priority: MUST
+roles: Medvya operations, Practice owner
+labels: migration, report
+estimate: 2.5
+weeks: 26
+depends: MDV-P5-003, MDV-P5-006
+confidence: 72 | Report contents specified; repeatability needs careful engineering.
+sources: design/Medvya Gap Analysis (G-02 step 3); PRD v2 P5 exit 2
+desc:
+Full trial load into an isolated test tenant; report: patient counts, duplicates found, records missing EID/ABHA, values failing checks, mapping coverage, sample comparisons. The owner signs the report in-app before any production load. Re-runnable any number of times.
+ac:
+- Production load is impossible until a dry-run report for the same mapping version is signed by the owner (exit gate 2).
+- Re-running the dry run is idempotent and produces a comparable report with deltas.
+- The report is exportable as PDF and stored with hash.
+
+=== MDV-P5-005
+title: Day-one load, change-data-capture parallel run and background backfill (N-04)
+type: Story
+epic: MDV-P5-E01
+prd: P5-01
+screens: N-04
+covers: exit:1
+priority: MUST
+roles: Medvya operations
+labels: migration, cdc
+estimate: 4
+weeks: 27-29
+depends: MDV-P5-004
+confidence: 58 | CDC on clinic Oracle (Debezium/LogMiner or GoldenGate) depends on clinic infrastructure and licences.
+sources: design/Medvya Gap Analysis (G-02 steps 4–6)
+desc:
+Load what day one needs (patients seen in last 24 months, future appointments, balances, active meds, allergies, problems, last results) in hours; CDC streams new legacy rows during a 1–2 week parallel run with fallback to the old system; older visits backfilled overnight in batches; scanned PDFs indexed first, OCR on open; legacy stays read-only for an agreed period.
+ac:
+- Day-one load completes within the agreed window with counts matching the signed dry run.
+- During the parallel run, changes in the legacy system appear in Medvya within the agreed latency, without duplicates.
+- Every imported value carries an "Imported" badge with source system, original id and import date.
+- Cut-over checklist allows staff to fall back at any time until sign-off.
+
+=== MDV-P5-006
+title: Data-quality queue: problems grouped by type and fixed by rule; reversible (N-05)
+type: Story
+epic: MDV-P5-E01
+prd: P5-02
+screens: N-05
+priority: MUST
+roles: Medvya operations, Receptionist
+labels: data-quality
+estimate: 3
+weeks: 25-26
+depends: MDV-P5-002
+confidence: 65 | Behaviour defined; UI is DESIGN NEEDED.
+sources: design/Medvya Gap Analysis (Making corrections fast); PRD v2 P5-02
+desc:
+DQ issues grouped by type (e.g. "Glucose in mg/dL stored as mmol/L", missing DOB, invalid phone); a fix rule is defined once and applied to all matching rows, then the load re-runs; each fix is reversible and audited.
+ac:
+- Fix-by-rule applies to all matching rows and records the rule, count and actor.
+- Any rule application can be undone, restoring original values.
+- Remaining issues are counted per type in the dry-run report.
+
+=== MDV-P5-007
+title: Duplicate scoring incl. Arabic–English name spellings, bulk merge for high confidence, desk confirmation for borderline (N-05)
+type: Story
+epic: MDV-P5-E01
+prd: P5-02
+screens: N-05
+priority: MUST
+roles: Medvya operations, Receptionist
+labels: dedup, merge
+estimate: 3
+weeks: 26-27
+depends: MDV-P5-006, MDV-P1-017
+confidence: 68 | Transliteration matching (Mohammed/Muhammad) needs tuning; merge reversibility designed in P1.
+sources: design/Medvya Gap Analysis (Duplicate matching); PRD v2 P5-02
+desc:
+Scoring on EID/ABHA, phone, DOB and name with transliteration variants; high-confidence pairs merged in bulk (reversible); borderline pairs queued for the receptionist to confirm when the patient is at the desk. Merges audited and undoable.
+ac:
+- Scoring identifies seeded Arabic–English variant duplicates with documented precision/recall on the synthetic set.
+- Bulk merges are reversible individually and in batch.
+- Borderline pairs appear as a desk prompt on check-in for that patient.
+
+=== MDV-P5-008
+title: Insurance coverage and live eligibility with co-pay estimate at the desk (P-08)
+type: Story
+epic: MDV-P5-E02
+prd: P5-03
+screens: P-08
+priority: MUST
+roles: Receptionist, Practice admin
+labels: insurance, eligibility
+estimate: 3
+weeks: 27-28
+depends: MDV-P1-013, MDV-P4-004
+confidence: 58 | Payer APIs differ per country and need onboarding; India TPA flows are largely portal/email.
+sources: design/Medvya Wireframes (P-08); design/Medvya Clinician App (insurance tab); PRD v2 P5-03
+desc:
+ELIGIBILITY_CHECK per coverage: live check via adapter where available (UAE platforms; India TPA where an API exists) else manual result entry with reference; shows eligible/not eligible, co-pay and validity; estimate shown to the patient. Medvya does not decide eligibility.
+ac:
+- Eligibility results store source, reference, timestamp and the user who checked.
+- Co-pay estimate appears in billing and on the UAE portal insurance card.
+- Adapter failures fall back to manual entry without blocking care.
+
+=== MDV-P5-009
+title: Pre-authorisation, claims, resubmission and remittance matching — India TPA/PMJAY/CGHS (P-14)
+type: Story
+epic: MDV-P5-E02
+prd: P5-03
+screens: P-14
+priority: MUST
+roles: Receptionist, Practice admin
+labels: insurance, claims, india
+estimate: 4
+weeks: 28-29
+depends: MDV-P5-008, MDV-P2-010
+confidence: 65 | Form fields and claim-action list are designed; scheme-specific rules vary.
+sources: design/Medvya Clinician App (P-14 pre-authorisation); docs/02-design/screen-specs.md
+desc:
+Cashless pre-auth form (patient, insurer/TPA, policy, scheme, provisional diagnosis ICD-10, proposed treatment, estimate, treating doctor) with required-documents checklist (signed note, labs, masked ID, policy card); record approval reference from TPA email/portal; claims with status; rejected/query items with reason and fix → resubmission; remittance advice matching to invoices.
+ac:
+- Pre-auth cannot be submitted without required documents attached.
+- Claims list shows actions needed (rejected with reason, query) and resubmission history.
+- Remittance matching reconciles amounts to invoices and flags short payments.
+- Only signed clinical documents can be attached.
+
+=== MDV-P5-010
+title: UAE claims via eClaimLink (Dubai) / Shafafiya (Abu Dhabi) for the launch emirate (P-14)
+type: Story
+epic: MDV-P5-E02
+prd: P5-03
+screens: P-14
+covers: dep:1
+priority: MUST
+roles: Practice admin
+labels: insurance, claims, uae, regulator
+estimate: 4
+weeks: 29-31
+depends: MDV-P5-009, MDV-P1-046
+confidence: 45 | Requires regulator onboarding and conformance testing outside our control (PRD risk HIGH).
+sources: PRD v2 P5-03, dependency 1; design/Medvya Gap Analysis
+desc:
+Adapter for the launch emirate's claims platform: prior authorisation, claim submission, resubmission, remittance download/matching, using the regulator's current specification after onboarding.
+ac:
+- Conformance tests with the regulator are passed (evidence stored).
+- Claims round-trip in the regulator test environment with remittance matched.
+- If onboarding is not complete by week 31, the UAE launch scope is formally deferred without blocking an India launch.
+
+=== MDV-P5-011
+title: Emirates ID card-reader check-in under 30 seconds and UAE PASS (N-06)
+type: Story
+epic: MDV-P5-E03
+prd: P5-04
+screens: N-06
+covers: dep:2
+priority: MUST
+roles: Receptionist
+labels: uae, card-reader, check-in
+estimate: 3
+weeks: 28-29
+depends: MDV-P5-001, MDV-P1-014
+confidence: 55 | Hardware sourcing and reader SDK/browser integration are unknown.
+sources: design/Medvya Patient Registration (Read EID card banner); design/Medvya Gap Analysis (G-04); PRD v2 P5-04
+desc:
+Tap/insert the EID: demographics (name EN/AR, DOB, nationality, expiry) fill in, duplicate check runs, exchange history is requested; staff confirm against the person. UAE PASS as an alternative for patient identity. Target < 30 s check-in.
+ac:
+- Card-reader hardware model chosen and sourced (dependency 2) with a supported integration path (local agent or WebUSB).
+- Median check-in with reader < 30 s in a timed test.
+- Expired EID warns but does not block; data read is shown for confirmation before save.
+
+=== MDV-P5-012
+title: Health-exchange pull and push for the launch emirate (Malaffi / NABIDH / Riayati) (N-07)
+type: Story
+epic: MDV-P5-E03
+prd: P5-04
+screens: N-07
+covers: dep:1
+priority: MUST
+roles: Doctor, Practice admin
+labels: hie, uae, interop
+estimate: 5
+weeks: 28-31
+depends: MDV-P5-011, MDV-P1-046
+confidence: 40 | Regulator onboarding and conformance testing control the dates; one integration module, three configurations.
+sources: design/Medvya Gap Analysis (G-01); PRD v2 P5-04; docs/03-architecture/integrations.md
+desc:
+Integration worker module: patient registration/search by EID at check-in, pull allergies, diagnoses, medicines, labs and discharge summaries into the timeline labelled with source; push every signed visit (HL7 v2/FHIR per programme). Status screen (N-07) shows connection health and per-encounter push status.
+ac:
+- Conformance testing passed for the launch emirate (evidence stored).
+- Pulled data appears with "Exchange" provenance and is never merged into verified chart data without clinician acceptance.
+- Every signed visit is pushed with receipt; failures retry and are visible in N-07.
+- India launch is not blocked if this slips (scope rule from PRD).
+
+=== MDV-P5-013
+title: Regulator e-prescription and e-sick leave; letters and certificates from templates (N-09)
+type: Story
+epic: MDV-P5-E03
+prd: P5-04
+screens: N-09
+priority: MUST
+roles: Doctor
+labels: erx, certificates, uae
+estimate: 3
+weeks: 29-30
+depends: MDV-P5-001, MDV-P2-017
+confidence: 50 | Regulator formats/APIs per emirate unknown until onboarding; letters/certificates are straightforward.
+sources: design/Medvya Gap Analysis (G-03 regulator eRx and sick leave MUST; letters SHOULD); PRD v2 P5-04
+desc:
+Submit authorised prescriptions to the emirate's eRx service; issue electronic sick-leave certificates in the accepted format; letters and certificates (referral, fitness, medical report) from templates, signed and sent to the portal.
+ac:
+- eRx submissions return a regulator reference stored on the prescription; failures are visible and retryable.
+- Sick-leave certificates follow the regulator format and are signed by an authenticated doctor action.
+- Letter templates produce signed PDFs released to the portal.
+
+=== MDV-P5-014
+title: Patient report upload with AI extraction marked "Unverified · patient upload" until accepted (N-08)
+type: Story
+epic: MDV-P5-E04
+prd: P5-05
+screens: N-08
+priority: SHOULD
+roles: Patient, Doctor
+labels: uploads, ai, extraction
+estimate: 3
+weeks: 28-29
+depends: MDV-P5-001, MDV-P3-007, MDV-P2-006
+confidence: 65 | Extraction pattern exists in E-03 design; N-08 itself needs design; Document Intelligence region availability to confirm.
+sources: design/Medvya Gap Analysis (G-01 old reports MUST); design/Medvya Clinical Screens (E-03 extracts with Confirm); PRD v2 P5-05
+desc:
+Patients upload PDFs/photos via portal (or WhatsApp link) before a visit; AI worker + Azure Document Intelligence extract lab values, dates and diagnoses into trend charts tagged "Unverified · patient upload"; the doctor accepts each value in one click; the original file is always kept beside the extracted values.
+ac:
+- Extracted values never enter verified trends until a clinician accepts them.
+- Each extracted value links to the page/region of the original file.
+- Uploads are malware-scanned and size/type limited; prompt-injection content in documents is ignored.
+
+=== MDV-P5-015
+title: Voice appointment assistant v1 (inbound): book/move/cancel from the live calendar, identity check, no medical advice, staff handover (N-10)
+type: Story
+epic: MDV-P5-E04
+prd: P5-06
+screens: N-10
+priority: SHOULD
+roles: Patient (caller), Receptionist, Practice owner
+labels: voice, ai, telephony
+estimate: 6
+weeks: 29-31
+depends: MDV-P5-001, MDV-P1-022, MDV-P3-007
+confidence: 50 | New capability with telephony (ACS + SIP trunk), multilingual speech and strict safety rules; design needed.
+sources: design/Medvya Gap Analysis (G-06 voice appointment assistant); PRD v2 P5-06
+desc:
+Azure Communication Services number/SIP trunk to the clinic line; answers after hours and when lines are busy; states it is automated; identifies caller by phone then DOB or last 4 of EID/ABHA before sharing details; books/moves/cancels via the same PMS API (holds, no double booking); routine FAQs; emergency words → emergency script + immediate transfer; handover on request, after two failed attempts, complaints, billing disputes or VIPs, with transcript and summary shown to staff; reception console (listen, take over) and owner settings (hours, bookable doctors, greeting/voice, consent wording, weekly report).
+ac:
+- The assistant never gives medical advice, triage or results; red-team call scripts verify refusals.
+- No appointment detail is disclosed before identity verification succeeds.
+- Emergency phrases trigger the emergency number script and immediate transfer in every tested language.
+- Bookings via voice obey the same concurrency and audit rules as reception.
+- Owners can switch it on/off per branch and hour; call recording follows the configured consent wording.
+
+=== MDV-P5-016
+title: Medvya subscription: plans, trial, subscription invoices with GST/VAT, seat counts, dunning (N-11)
+type: Story
+epic: MDV-P5-E05
+prd: P5-07
+screens: N-11
+priority: MUST
+roles: Practice owner, Medvya operations
+labels: saas, billing
+estimate: 4
+weeks: 25-27
+depends: MDV-P5-001, MDV-P4-001
+confidence: 60 | Pricing model is an open decision (due at P4 start; default per doctor per month, AI in higher plan).
+sources: PRD v2 P5-07, open decision "Pricing model"
+desc:
+Plans and trial (from F-01 "start free trial"), seat counting (doctors/staff), subscription invoices to clinics with GST (India) / VAT (UAE) under Medvya's own numbering, payment collection, dunning (reminders, grace period, read-only mode — never blocking access to patient records needed for care).
+ac:
+- Pricing decision is recorded (ADR) before implementation.
+- Trial converts to paid with correct tax invoice; seat changes prorate.
+- Dunning never blocks clinicians from reading existing patient records (safety rule); it limits new features/admin.
+- Subscription data lives in the platform control plane with no PHI.
+
+=== MDV-P5-017
+title: Platform operations console: tenant catalogue, onboarding automation, per-tenant flags, time-boxed audited support access visible to the clinic (N-12)
+type: Story
+epic: MDV-P5-E05
+prd: P5-08
+screens: N-12
+priority: MUST
+roles: Medvya operations, Practice owner
+labels: platform, support, audit
+estimate: 4
+weeks: 26-28
+depends: MDV-P5-001, MDV-P0-028
+confidence: 65 | Requirements clear; design needed; support-access model must satisfy DPDP/ADHICS.
+sources: PRD v2 P5-08; design/Medvya Azure Architecture (global control plane)
+desc:
+Ops console (separate app/role, no PHI in the control plane): tenant list per country with plan, status, flags; onboarding automation (create tenant, seed config, invite owner); support access requests that the clinic approves, time-boxed (e.g. 2 h), scoped, fully audited and visible to the clinic in its access log.
+ac:
+- Support staff cannot see tenant data without an approved, time-limited grant; access ends automatically.
+- Every support action is audited and listed in the clinic's access log (F-12).
+- Flags can be toggled per tenant from the console with audit.
+- The control plane stores no PHI (data map updated).
+
+=== MDV-P5-018
+title: In-app role guides, help centre, feedback and public status page (N-13)
+type: Story
+epic: MDV-P5-E05
+prd: P5-09
+screens: N-13
+covers: nfr:2, pkg:3
+priority: MUST
+roles: All
+labels: adoption, help, status
+estimate: 3
+weeks: 28-30
+depends: MDV-P5-001
+confidence: 72 | Content effort; status page tooling simple.
+sources: PRD v2 P5-09; design/Medvya Gap Analysis (Learn in one shift)
+desc:
+Contextual in-app guides per role (reception, nurse, doctor, admin) for first use; help centre articles (en/hi/ar); in-app feedback; public status page showing availability and incidents (no PHI). 30-minute role training packs.
+ac:
+- Each role has a first-run guide covering its core loop and can dismiss/replay it.
+- Status page reports monthly availability against the 99.5 % target and incident history.
+- Feedback creates a ticket in the support tool with tenant id but no PHI unless the user attaches it deliberately (warning shown).
+- Role training (30 min each) materials exist for the delivery package.
+
+=== MDV-P5-019
+title: Full clinic data export in FHIR and CSV (no lock-in) (N-14)
+type: Story
+epic: MDV-P5-E05
+prd: P5-09
+screens: N-14
+priority: MUST
+roles: Practice owner
+labels: export, fhir, interop
+estimate: 3
+weeks: 29-30
+depends: MDV-P5-001
+confidence: 70 | FHIR mapping with Firely SDK is known work; volume/performance needs testing.
+sources: PRD v2 P5-09; design/Medvya Gap Analysis (No lock-in)
+desc:
+Owner-requested export of all clinic data: FHIR R4 bulk (Patient, Encounter, Observation, Condition, AllergyIntolerance, MedicationStatement/Request, DocumentReference, …) and CSV per table, plus original documents; delivered as an encrypted, time-limited download; step-up auth, audited, watermarked manifest.
+ac:
+- Export validates against FHIR R4 base profiles (validator in CI on synthetic data).
+- Export requires owner step-up auth, is audited, and the link expires.
+- Re-importing the CSV export into a fresh test tenant reproduces counts.
+
+=== MDV-P5-020
+title: External penetration test and remediation — no open high/critical findings
+type: Gate
+epic: MDV-P5-E06
+prd: P5-10
+covers: exit:3
+priority: MUST
+roles: Founder, external tester
+labels: security, pentest
+estimate: 2
+weeks: 29-30
+depends: MDV-P5-017
+confidence: 70 | Vendor scheduling and remediation time.
+sources: PRD v2 P5-10, exit 3; design/Medvya Build Plan (external pen test before pilot)
+desc:
+Commission an external pen test covering staff app, portal, public site, APIs, AI worker interfaces and Azure configuration; remediate and retest.
+ac:
+- Report received; all high/critical findings fixed and retested (exit gate 3).
+- Mediums have dated remediation tickets; report stored in docs/compliance.
+
+=== MDV-P5-021
+title: Disaster-recovery drill proving RPO ≤ 15 min and RTO ≤ 4 h
+type: Task
+epic: MDV-P5-E06
+prd: P5-10
+covers: nfr:1
+priority: MUST
+roles: Developer
+labels: dr, reliability
+estimate: 1.5
+weeks: 30
+depends: MDV-P0-019
+confidence: 80 | Mechanisms exist; drill is execution.
+sources: PRD v2 P5-10, NFR 1, X7; docs/03-architecture/azure-deployment.md
+desc:
+Simulate region/database loss in staging: restore SQL (PITR/geo-restore in-country), Blob, Key Vault, app config and queued jobs; measure RPO and RTO; update runbooks.
+ac:
+- Measured RPO ≤ 15 min and RTO ≤ 4 h with timestamps recorded.
+- Queued jobs (reminders, AI, integrations) resume without duplicates after restore.
+- DR runbook updated and reviewed.
+
+=== MDV-P5-022
+title: Accessibility audit and load test before GA
+type: Task
+epic: MDV-P5-E06
+prd: P5-10
+priority: MUST
+roles: Developer, external auditor
+labels: a11y, performance
+estimate: 2
+weeks: 30-31
+depends: MDV-P5-018
+confidence: 78 | Standard activities.
+sources: PRD v2 P5-10; docs/02-design/components-theme-copy.md (a11y checklist)
+desc:
+WCAG 2.2 AA audit (automated + manual screen reader, keyboard, 200 % zoom, RTL) of staff app and portal; load test at 5× pilot volume per country with target latencies.
+ac:
+- No open WCAG AA blockers on core journeys.
+- Under 5× pilot load: reads p95 < 300 ms, writes < 600 ms, page interactive < 2.5 s p75.
+
+=== MDV-P5-023
+title: Dark mode and high-contrast themes (X-02)
+type: Story
+epic: MDV-P5-E06
+prd: P5-10
+screens: X-02
+priority: MUST
+roles: All
+labels: theme, a11y
+estimate: 2
+weeks: 30-31
+depends: MDV-P0-020
+confidence: 88 | Dark tokens and high-contrast rules are defined.
+sources: design/Medvya Mobile and Tablet (X-02); docs/02-design/responsive-and-dark.md
+desc:
+Dark palette (canvas #0F1C2A, card #12202E, accents #2BB3A3/#6B9BFF/#A08CF0, red #F47A86, ok #4CC79C) and high-contrast theme (2 px borders, no tints, underlined links); user preference + OS setting; AI stays dashed; red/amber keep labels.
+ac:
+- All screens render correctly in dark and high-contrast (visual tests on core journeys).
+- Contrast ratios meet AA in both themes (automated check).
+- Theme preference persists per user.
+
+=== MDV-P5-024
+title: Security operations: incident response with DPDP/UAE breach notification, Defender + Sentinel alerts to on-call, Customer Lockbox, VDP, ADHICS evidence, ISO 27001 gap assessment
+type: Chore
+epic: MDV-P5-E06
+prd: P5-11
+priority: MUST
+roles: Founder, Developer
+labels: secops, compliance
+estimate: 3
+weeks: 27-30
+depends: MDV-P0-024
+confidence: 70 | Mostly process/documentation; ADHICS evidence depends on UAE scope.
+sources: PRD v2 P5-11; docs/04-security-compliance/README.md#compliance-artefacts-and-when-they-are-due
+desc:
+Incident response plan with breach-notification steps and timelines for DPDP and UAE regulators; Defender for Cloud and Microsoft Sentinel analytic rules routed to on-call (bulk reads/exports, failed logins, privilege changes); Customer Lockbox enabled; vulnerability disclosure policy; ADHICS control evidence pack (if UAE); ISO 27001 readiness gap assessment.
+ac:
+- IR plan tested in a tabletop (breach scenario) with timings recorded.
+- Alerts for bulk export, anomalous access and privilege escalation reach on-call within 15 minutes in a test.
+- VDP published on the trust centre; Customer Lockbox enabled.
+- Gap assessment lists ISO 27001 controls with status and owners.
+
+=== MDV-P5-025
+title: Retention and deletion jobs per country; patient access/correction/erasure requests for clinics
+type: Story
+epic: MDV-P5-E06
+prd: P5-12
+screens: H-10
+priority: MUST
+roles: Practice owner, System
+labels: retention, data-rights, privacy
+estimate: 3
+weeks: 29-30
+depends: MDV-P3-019, MDV-P0-024
+confidence: 68 | Retention periods need legal confirmation; enterprise H-10 workflow is P7.
+sources: PRD v2 P5-12; design/Medvya Enterprise Pages (H-10 patterns)
+desc:
+Scheduled jobs apply each country's record-retention rule (audio, transcripts, notes, documents, billing, audit) with legal-hold support; clinic-level handling of patient requests: access (export of the patient's record), correction (with audit, clinical content via addendum), erasure (where lawful; medical records under retention hold explained), withdrawal of recording consent (audio purge with receipt).
+ac:
+- Retention jobs delete only data past its period and not under legal hold; deletions logged without PHI.
+- Access requests produce a patient export within the legal deadline, tracked with due dates.
+- Erasure requests explain partial fulfilment when retention law applies (status "Partially fulfilled · legal hold").
+- Recording-consent withdrawal purges audio and records the purge receipt.
+
+=== MDV-P5-026
+title: Support model: first response under 4 business hours, on-call rota and runbooks
+type: Chore
+epic: MDV-P5-E07
+prd: P5-08
+covers: nfr:3
+priority: MUST
+roles: Founder
+labels: support, operations
+estimate: 1
+weeks: 30
+depends: MDV-P5-018
+confidence: 75 | Solo-founder capacity is the main risk (Build Plan advice: runbooks so someone else can restore).
+sources: PRD v2 P5 NFR 3; design/Medvya Build Plan (direction advice)
+desc:
+Support tool and SLA targets (first response < 4 business hours), severity definitions, on-call rota (including a backup person), runbooks (incident, restore, key rotation, patient mismatch), support metrics.
+ac:
+- SLA and severity matrix published to customers.
+- Support response time is measured; pilot month shows ≥ 95 % within target.
+- A second person can execute the restore runbook (verified once).
+
+=== MDV-P5-027
+title: Availability monitoring: 30 days at ≥ 99.5 % before GA
+type: Task
+epic: MDV-P5-E07
+prd: P5-10
+covers: exit:4, nfr:2
+priority: MUST
+roles: Developer
+labels: slo, monitoring
+estimate: 1
+weeks: 28-32
+depends: MDV-P5-018
+confidence: 75 | Measurement is easy; achieving it depends on stability in weeks 28–32.
+sources: PRD v2 P5 exit 4, NFR 2
+desc:
+Synthetic availability probes per country (sign-in, booking read, portal home), SLO dashboard and error budget, monthly availability calculation published on the status page.
+ac:
+- Probes run every minute from in-country locations; availability computed per month.
+- 30 consecutive days ≥ 99.5 % before week 32 (exit gate 4) or the GA date moves.
+
+=== MDV-P5-028
+title: Commercial readiness: order form and SLA signed with the first paying clinic
+type: Chore
+epic: MDV-P5-E07
+prd: P5-07
+covers: pkg:1
+priority: MUST
+roles: Founder
+labels: commercial
+estimate: 1
+weeks: 27
+depends: MDV-P5-016
+confidence: 65 | Commercial negotiation.
+sources: PRD v2 P5 delivery package 1
+desc:
+Order form, master subscription terms, SLA (availability, support response, RPO/RTO), DPA and migration statement of work for the first paying clinic.
+ac:
+- Signed order form, SLA and DPA on file before cut-over.
+- SLA numbers match the measured capabilities (99.5 %, < 4 h response, RPO/RTO).
+
+=== MDV-P5-029
+title: First paying clinic cut-over without closing (week 29) with go-live runbook
+type: Gate
+epic: MDV-P5-E07
+prd: P5-01
+covers: exit:1, pkg:2
+priority: MUST
+roles: Founder, Medvya operations, clinic owner
+labels: go-live, migration
+estimate: 2
+weeks: 29
+depends: MDV-P5-005, MDV-P5-028
+confidence: 55 | Depends on migration complexity of the specific clinic and parallel-run stability.
+sources: PRD v2 P5 exit 1; design/Medvya Gap Analysis (no downtime)
+desc:
+Go-live runbook (roles, timeline, fallback, comms), migration report handed over, training delivered, cut-over during clinic hours with parallel run, hypercare for two weeks.
+ac:
+- The clinic does not close for the switch; fallback was available until sign-off (exit gate 1).
+- Migration report and go-live runbook delivered (delivery package 2).
+- Hypercare issues tracked to closure with the clinic.
+
+=== MDV-P5-030
+title: v1.0 general availability gate and release notes
+type: Gate
+epic: MDV-P5-E07
+prd: P5-10
+covers: exit:1, exit:2, exit:3, exit:4, pkg:4
+priority: MUST
+roles: Founder, Clinical safety reviewer
+labels: release, gate, ga
+estimate: 1
+weeks: 32
+depends: MDV-P5-020, MDV-P5-027, MDV-P5-029
+confidence: 62 | Aggregates several externally dependent outcomes.
+sources: PRD v2 §08, P5 exit criteria
+desc:
+Exit gate review with evidence for all P5 exit criteria; clinical safety sign-off; v1.0 release notes (features, known issues, excluded scope: other UAE exchanges, ABHA consent records, outbound voice).
+ac:
+- All four exit criteria evidenced and confirmed.
+- v1.0 release notes published; version tagged v1.0.0 from main.
+- Journeys J1–J5 pass end-to-end on staging with the GA build.

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>body{margin:0;background:#F0F2F4;color:#142536;font-family:Manrope,system-ui,sans-serif}a{color:#2563EB;text-decoration:none}a:hover{text-decoration:underline}</style>
+</helmet>
+<div style="padding:40px 40px 80px;display:flex;flex-direction:column;gap:36px">
+  <header style="display:flex;flex-direction:column;gap:6px;max-width:900px">
+    <div style="font:600 12px 'JetBrains Mono',monospace;color:#506579">Medvya · low-fidelity wireframes · every remaining screen + system states</div>
+    <h1 style="margin:0;font-size:30px;letter-spacing:-0.02em;color:#102A43">Wireframe architecture</h1>
+    <p style="margin:0;font-size:15px;color:#506579;line-height:1.55">Each frame carries its inventory ID, route, phase and roles, as listed in <a href="Medvya Foundations.dc.html">Foundations</a>. Hi-fi versions live in <a href="Medvya Clinician App.dc.html">Clinician App</a>, <a href="Medvya Patient Portal.dc.html">Patient Portal</a> and <a href="Medvya Enterprise Admin.dc.html">Enterprise Admin</a>. Legend: dark = navigation · teal = primary action · dashed violet = AI-provisional · red outline = clinical alert.</p>
+  </header>
+  <sc-for list="{{ groups }}" as="g" hint-placeholder-count="6">
+    <section style="display:flex;flex-direction:column;gap:16px">
+      <div style="display:flex;align-items:center;gap:10px"><span style="width:12px;height:12px;border-radius:3px;background:{{ g.color }}"></span><h2 style="margin:0;font-size:18px;color:#102A43">{{ g.name }}</h2><span style="font-size:13px;color:#506579">{{ g.count }} frames</span></div>
+      <div style="display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start">
+        <sc-for list="{{ g.frames }}" as="f" hint-placeholder-count="4">
+          <div id="{{ f.id }}" data-screen-label="{{ f.id }} {{ f.name }}" style="width:{{ f.cardW }};background:#fff;border:1px solid #D5DCE2;border-radius:10px;overflow:hidden;display:flex;flex-direction:column">
+            <div style="padding:10px 12px;border-bottom:1px solid #E6EAEE;display:flex;flex-direction:column;gap:4px">
+              <div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline"><span style="font:600 11px 'JetBrains Mono',monospace;color:#102A43;background:#EEF1F4;padding:2px 6px;border-radius:4px">{{ f.id }}</span><span style="font:600 10.5px 'JetBrains Mono',monospace;color:#506579">{{ f.phase }} · {{ f.roles }}</span></div>
+              <div style="font-size:14px;font-weight:700;color:#142536">{{ f.name }}</div>
+              <div style="font:400 11px 'JetBrains Mono',monospace;color:#8296A8">{{ f.route }}</div>
+            </div>
+            <div style="padding:10px;background:#F7F8FA">
+              <div style="display:grid;grid-template-columns:repeat({{ f.cols }},1fr);grid-auto-rows:22px;gap:4px">
+                <sc-for list="{{ f.blocks }}" as="b" hint-placeholder-count="6">
+                  <div style="grid-column:{{ b.gc }};grid-row:{{ b.gr }};background:{{ b.bg }};border:1px {{ b.bs }} {{ b.bc }};border-radius:4px;display:flex;align-items:center;justify-content:center;padding:0 4px;overflow:hidden;font:600 9.5px/1.15 Manrope;color:{{ b.fg }};text-align:center">{{ b.label }}</div>
+                </sc-for>
+              </div>
+            </div>
+            <div style="padding:10px 12px;font-size:12px;line-height:1.5;color:#3B5266;border-top:1px solid #E6EAEE">{{ f.note }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+  </sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const K = {
+  nav: ['#2B3A4A', '#2B3A4A', 'solid', '#fff'], box: ['#fff', '#C5CDD5', 'solid', '#506579'], txt: ['#E9EDF1', '#E9EDF1', 'solid', '#506579'],
+  pri: ['#0E9384', '#0E9384', 'solid', '#fff'], ai: ['#F4F1FD', '#9C88E6', 'dashed', '#5B3FC4'], al: ['#fff', '#C83A4B', 'solid', '#B42333'],
+  id: ['#fff', '#0E9384', 'solid', '#0F766E'], warn: ['#FFF8EB', '#D2A25A', 'solid', '#7A4710'], rec: ['#B42333', '#B42333', 'solid', '#fff']
+};
+// "col row w h kind label"
+const W = [
+  ['Foundation & access', '#8296A8', [
+    ['F-01', 'Landing · Solo doctor / Hospital', '/', 'M1', 'Public', 'd', '1 1 12 1 nav Medvya · Product · Trust · Pricing · Sign in;1 2 7 3 txt Headline + promise (60-s brief, ambient notes, consent-first);8 2 5 5 box Product shot placeholder;1 5 3 1 pri I am a doctor;4 5 4 1 box For hospitals · Book demo;1 7 4 2 box Trust: residency India/UAE;5 7 4 2 box Consent & safety;9 7 4 2 box Integrations', 'Two CTAs only. Country selector in footer. Pricing placeholder; no fake metrics.'],
+    ['F-02', 'Country & data residency', '/region', 'M1', 'Public', 'd', '3 1 8 1 txt Where do you practise?;3 2 4 3 box India · Azure Central India · DPDP;7 2 4 3 box UAE · Azure UAE North · DoH/DHA;3 5 8 2 txt What stays in-country: PHI, audio, backups, AI processing;5 7 4 1 pri Continue', 'Choice locks the tenant to one data plane. Changing later = new tenant + export.'],
+    ['F-03', 'Sign up · MFA / passkey · recovery', '/auth/*', 'M1', 'All', 'd', '4 1 6 1 txt Sign in to Medvya;4 2 6 1 box Email / phone;4 3 6 1 pri Continue with passkey;4 4 6 1 box Use OTP instead;4 5 6 2 box MFA step: authenticator / SMS fallback;4 7 6 1 txt Forgot access? · Hospital SSO', 'States: wrong code, locked (15 min), passkey unsupported, SSO-enforced tenant.'],
+    ['F-04', 'Solo doctor onboarding', '/onboarding', 'M1', 'Solo Dr', 'd', '1 1 12 1 nav Steps: Profile · Licence · Clinic · Schedule · Invite · Done;1 2 8 4 box Licence: council + reg. no. + upload (verification pending badge);9 2 4 6 txt Progress 2/6 · can save & resume;1 6 4 1 box Default templates by specialty;5 6 4 1 box Invite receptionist;1 8 3 1 box Back;6 8 3 1 pri Next', 'Recording disabled until licence is verified. Specialty sets note templates.'],
+    ['F-05', 'Session expired · 403 · 404 · offline', '/error/*', 'M1', 'All', 'd', '1 1 6 4 box Session expired · unsaved draft kept locally · Sign in again;7 1 6 4 box 403 · You don’t have access to this facility · Request access;1 5 6 4 box 404 · Page not found · Back to Today;7 5 6 4 warn Offline · recording continues to device buffer · sync when online', 'On re-auth mid-encounter, patient identity must be re-confirmed before continuing.']
+  ]],
+  ['Doctor home & EMR', '#0E9384', [
+    ['D-02', 'Global privacy-safe search (⌘K)', 'overlay', 'M1', 'Doctors', 'd', '3 1 8 1 box Search name / MRN / phone;3 2 8 1 txt Results show initials + age + MRN tail only;3 3 8 1 box Meera I. · 54 F · ••4482;3 4 8 1 box Meera K. · 31 F · ••9012;3 5 8 1 txt Actions: Open chart · Start visit · Book;3 6 8 2 txt Out-of-scope patients: “Request access” (break-glass)', 'No PHI in previews; full name revealed only on open with relationship check.'],
+    ['E-02', 'Longitudinal timeline & trends', '/patients/:id/timeline', 'M1', 'Doctors', 'd', '1 1 12 1 id Patient identity banner;1 2 3 7 box Filters: encounters, labs, meds, docs, source;4 2 9 3 box Trend chart: HbA1c / BP / weight (toggle);4 5 9 1 txt 04 Oct · Signed note · Dr. Rao;4 6 9 1 txt 28 Sep · Lab received → reviewed;4 7 9 1 txt 03 Mar · Discharge summary · imported (provenance);4 8 9 1 txt Load earlier…', 'Every entry shows source (Medvya / HIS / upload / patient) and verification.'],
+    ['E-03', 'Documents · upload & secure viewer', '/patients/:id/docs', 'M1', 'Doctors, Nurse', 'd', '1 1 12 1 id Patient identity banner;1 2 4 6 box Document list + type + source;5 2 8 5 box Secure viewer (watermarked, no download for reception);5 7 4 1 ai Extract findings (AI);9 7 4 1 box Classify & file;1 8 4 1 warn Failed upload · retry', 'AI extraction lands as provisional; doctor confirms each value into the chart.'],
+    ['E-06', 'Signed note · addendum · print', '/notes/:id', 'M1', 'Doctors', 'd', '1 1 12 1 id Patient identity banner;1 2 12 1 nav SIGNED v1 · read-only · Print · Addendum;1 3 8 5 box Note body (SOAP);9 3 4 3 box Version history v1;9 6 4 2 box Addendum composer → sign;1 8 12 1 txt Print layout: A4, header with MRN/DOB on every page', 'Amendments never edit v1; addendum is a new signed version.'],
+    ['N-01', 'Nurse intake: vitals, allergies, meds', '/nurse/:id/intake', 'M2', 'Nurse', 'd', '1 1 12 1 id Patient identity banner;1 2 6 4 box Vitals: BP, HR, Temp, SpO₂, Wt (large inputs);7 2 6 2 al Allergies: confirm / reported / unknown;7 4 6 2 box Meds: patient-reported vs confirmed;1 6 6 2 box Chief complaint (patient words);7 6 6 1 box Escalate to doctor;7 7 6 1 pri Hand off · Ready for doctor', 'Out-of-range vitals prompt re-measure, then escalate with reason.'],
+    ['E-04', 'Manual note (consent declined)', '/encounter/:id/manual', 'M1', 'Doctors', 'd', '1 1 12 1 id Banner · Recording declined;1 2 8 6 box SOAP sections, prefilled from verified chart only;9 2 4 3 box Quick phrases / templates;9 5 4 2 box Previous note snippets;9 7 4 1 pri Review & sign', 'Hi-fi in Clinician App (decline path). No guilt copy; same sign flow.']
+  ]],
+  ['PMS · Practice management', '#2563EB', [
+    ['P-02', 'Register patient + identity validation', '/patients/new', 'M1', 'Reception', 'd', '1 1 12 1 nav Register patient;1 2 6 1 box Name · DOB · Sex;1 3 6 1 box Phone · email;1 4 6 1 box ABHA / Emirates ID (optional);7 2 6 3 warn Possible match: Meera Iyer 12 Mar 1972 · review;1 5 6 2 box Language · consent for reminders;1 7 3 1 box Save draft;9 7 4 1 pri Register & book', 'Phone alone never dedupes. Minimum fields for busy desk; rest completed later.'],
+    ['P-03', 'Duplicate / merge review', '/patients/merge', 'M1', 'Reception, Admin', 'd', '1 1 12 1 nav Possible duplicate · side by side;1 2 6 5 box Record A · MRN 4482 · 12 visits;7 2 6 5 box Record B · MRN 9970 · 1 visit;1 7 4 1 box Not the same person;9 7 4 1 pri Request merge (clinician approves)', 'Merge needs second approver when clinical data exists on both records.'],
+    ['P-04', 'Calendar · walk-in · reschedule · no-show', '/schedule', 'M1', 'Reception, Dr', 'd', '1 1 12 1 nav Day · Week · Doctor ▾ · + Book;1 2 2 7 txt Times;3 2 5 7 box Dr. Rao column (slots, states);8 2 5 7 box Dr. Sheikh column;3 4 5 1 pri 10:00 Meera · In room;8 5 5 1 al 09:10 Joseph · No-show', 'Drag to reschedule with confirm; cancel asks reason; no-show offers rebook.'],
+    ['P-05', 'Waitlist & room queue', '/queue', 'M1', 'Reception, Nurse', 'd', '1 1 12 1 nav Queue · TV display mode;1 2 8 6 box Ordered list: token, name initials, wait, state;9 2 4 3 box Rooms 1–4 status;9 5 4 3 box Waitlist (earlier slot);1 8 4 1 box Call next', 'TV mode shows token numbers only, never names.'],
+    ['P-06', 'Charge capture · invoice · payment', '/billing', 'M2', 'Reception', 'd', '1 1 12 1 id Patient banner (admin view, no clinical);1 2 7 4 box Line items: consult, procedure, tests;8 2 5 4 box Totals · GST · discount (reason);1 6 4 1 box UPI link;5 6 4 1 box Card / cash;1 7 12 1 txt States: draft · issued · paid · partial · failed · refunded;9 8 4 1 pri Issue invoice', 'Billing is separate from clinical sign-off. Amounts stored in minor units.'],
+    ['P-07', 'Cash reconciliation', '/billing/reconcile', 'M2', 'Reception, Admin', 'd', '1 1 12 1 nav Day close · 04 Oct;1 2 4 2 box Expected cash;5 2 4 2 box Counted cash;9 2 4 2 warn Variance −₹200;1 4 12 4 box Payment list with provider refs;9 8 4 1 pri Close day', 'Variance needs note + second staff confirmation.'],
+    ['P-08', 'Insurance eligibility & claims handoff', '/billing/claims', 'M4', 'Admin', 'd', '1 1 12 1 nav Claims (adapter per payer / TPA);1 2 12 1 txt India TPA and UAE payer flows differ; shown per deployment;1 3 6 4 box Eligibility check result;7 3 6 4 box Claim status timeline;1 7 12 1 txt Later release placeholder', 'Not uniform across India/UAE; adapter boundary only in M4.']
+  ]],
+  ['AI assistant & states', '#7155D8', [
+    ['A-06a', 'Upload / sync progress', 'state', 'M1', 'Doctors', 'd', '1 1 12 1 id Banner;1 2 12 2 box Encrypted chunks 14/17 uploaded · 2.1 MB left;1 4 12 1 txt Safe to close? “Keep app open until upload completes”;1 5 6 1 box Pause upload;7 5 6 1 pri Continue reviewing', 'Transcript drafts as chunks arrive; note waits for complete upload.'],
+    ['A-06b', 'Failed upload · partial recovery', 'state', 'M1', 'Doctors', 'd', '1 1 12 1 id Banner;1 2 12 2 al Upload failed · 3 chunks missing (04:10–05:30);1 4 12 2 txt Recovered 05:12 of 06:48. Missing section highlighted in transcript.;1 6 6 1 pri Retry from device;7 6 6 1 box Continue with partial', 'Missing time-range is shown in the transcript and flagged in the draft.'],
+    ['A-06c', 'AI unavailable', 'state', 'M1', 'Doctors', 'd', '1 1 12 1 id Banner;3 2 8 3 warn AI drafting unavailable · recording safe;3 5 4 1 pri Write manually;7 5 4 1 box Notify me later', 'Hi-fi in Clinician App (aiAvailable = off).'],
+    ['A-06d', 'Low audio · wrong patient · no consent', 'state', 'M1', 'Doctors', 'd', '1 1 12 2 warn Low audio quality · move mic closer;1 3 12 2 al Wrong patient? Encounter is Meera Iyer · Stop & re-bind;1 5 12 2 box No consent recorded · Start disabled · Manual note', 'Re-binding a recording to another patient needs a reason and is audited.'],
+    ['A-07', 'Private voice assistant (earpiece)', 'overlay', 'M3', 'Doctors', 'd', '1 1 12 1 id Banner · REC;7 2 6 4 ai Whisper: “Last eGFR 72, 28 Sep”;1 2 6 4 box Live consult view;1 6 12 1 txt Only with private earpiece connected; doctor triggers by tap/hotword;1 7 12 1 rec Earpiece disconnected → assistant off', 'Never speaks PHI through the room speaker.']
+  ]],
+  ['Care coordination', '#4F7A5E', [
+    ['C-03', 'Patient contact log & reminders', '/care/contacts', 'M2', 'Care coord.', 'd', '1 1 12 1 nav Contacts · Templates · Opt-ins;1 2 8 6 box Log: call / WhatsApp / SMS · outcome · by whom;9 2 4 3 box New contact: outcome required;9 5 4 3 txt Delivered ≠ spoke ≠ completed', 'Templates contain no clinical details; patient opt-in shown per channel.'],
+    ['C-04', 'Overdue escalation', '/care/overdue', 'M2', 'Care coord.', 'd', '1 1 12 1 nav Overdue · by days · by owner;1 2 12 1 al Joseph M. · BP review · 9 days · 2 reminders;1 3 12 1 warn Meera I. · eye exam · 4 days;1 4 12 4 box Escalate to doctor / reassign / close with reason;9 8 4 1 pri Escalate', 'Escalation creates an inbox item for the responsible clinician.']
+  ]],
+  ['Portal, clip & enterprise', '#102A43', [
+    ['R-02', 'Portal booking & reschedule', '/p/appointments', 'M2', 'Patient', 'm', '1 1 4 1 nav Book a visit;1 2 4 2 box Doctor + reason;1 4 4 4 box Slot picker;1 8 4 1 txt Fee shown before confirm;1 9 4 1 pri Confirm', 'Reason is free text and is never shown on reception screens beyond category.'],
+    ['R-04', 'Caregiver proxy authorisation', '/p/proxy', 'M2', 'Patient', 'm', '1 1 4 1 nav Add caregiver;1 2 4 2 box Name + phone;1 4 4 3 box Scope: appts / meds / results / messages;1 7 4 1 box Expiry date;1 8 4 1 pri Send invite;1 9 4 1 txt Minor/guardian rules per country', 'Patient can revoke anytime; caregiver sees a banner “Viewing as caregiver”.'],
+    ['W-01', 'Clip pairing · code · self-test', '/devices/pair', 'M3', 'Doctors', 'm', '1 1 4 1 nav Pair Medvya Clip;1 2 4 3 box Hold button 3 s · LED pulses;1 5 4 1 box Code on clip: 4 8 1 2;1 6 4 2 box Mic self-test: say “testing”;1 8 4 1 pri Pair to Dr. Rao;1 9 4 1 txt Pairing expires in 90 days', 'Explicit code match; clip records only when bound to an encounter with consent.'],
+    ['W-02', 'Device health · offline queue · firmware', '/devices/:id', 'M3', 'Doctors', 'm', '1 1 4 1 nav Medvya Clip ••21;1 2 2 2 box Battery 78 %;3 2 2 2 box BLE · good;1 4 4 2 warn 2 recordings in encrypted queue;1 6 4 2 box Firmware 1.4.2 → 1.5.0 (staged);1 8 4 1 pri Sync now;1 9 4 1 al Report lost / revoke', 'Upload conflict: same session on phone + clip → keep both, clinician picks.'],
+    ['W-03', 'Loss / theft revoke', '/devices/:id/revoke', 'M3', 'Dr, Admin', 'm', '1 1 4 1 nav Revoke device;1 2 4 3 al Revoking wipes keys; queued audio on device becomes unreadable;1 5 4 2 box Reason · lost / stolen / retired;1 7 4 1 pri Revoke now', 'Audit event + admin notification.'],
+    ['H-02', 'Org, facilities, departments', '/ent/org', 'M4', 'Hosp. IT', 'd', '1 1 3 8 nav Enterprise nav;4 1 9 1 txt Kauvery Group;4 2 4 6 box Facility tree: Chennai · Trichy · Salem · Hosur;8 2 5 6 box Department detail: timezone, record authority, staff count', 'Facility scope drives every permission check.'],
+    ['H-03', 'SSO & role grants', '/ent/access', 'M4', 'Hosp. IT', 'd', '1 1 3 8 nav Enterprise nav;4 1 9 1 box OIDC / SAML · SCIM status;4 2 9 5 box Role grant table: user × facility × role × expiry;4 7 5 1 box Licence count 214 / 250;9 7 4 1 pri Invite staff', 'Role alone never grants cross-facility access.'],
+    ['H-04', 'Write-back conflict & retry', '/ent/integrations/queue', 'M4', 'Hosp. IT, Dr', 'd', '1 1 3 8 nav Enterprise nav;4 1 9 1 txt Queue;4 2 5 6 box Failed / conflict items;9 2 4 3 box Medvya vs HIS diff;9 5 4 1 pri Retry / send to clinician', 'Hi-fi in Enterprise Admin.'],
+    ['H-05', 'Audit log & break-glass review', '/ent/audit', 'M4', 'Hosp. IT', 'd', '1 1 3 8 nav Enterprise nav;4 1 9 1 box Filters: actor, patient ref, action, purpose;4 2 9 4 box Append-only event table;4 6 9 2 al Break-glass: Dr. S. Menon · pending review', 'Reviewer records outcome; repeated break-glass triggers privacy officer alert.'],
+    ['H-06', 'Retention & residency', '/ent/compliance', 'M4', 'Hosp. IT', 'd', '1 1 3 8 nav Enterprise nav;4 1 9 2 box Region: India · Central India · keys in Key Vault;4 3 4 4 box Audio retention: 30 days (purpose: documentation);8 3 5 4 box Patient export & deletion requests;4 7 9 2 txt Vendor purge receipts', 'Shows country-specific policy labels without claiming certification.'],
+    ['H-07', 'Analytics', '/admin/analytics', 'M2', 'Admins', 'd', '1 1 12 1 nav Analytics · illustrative data;1 2 4 2 box Throughput / day;5 2 4 2 box Unreviewed results;9 2 4 2 box Overdue follow-ups;1 4 6 4 box No-show rate trend;7 4 6 4 box Documentation time estimate* (method caveat);1 8 12 1 txt Drill-down only to authorised detail', 'Documentation time is an estimate with a stated method.']
+  ]],
+  ['Added from architecture & ERD audit', '#975A16', [
+    ['F-06', 'Invite acceptance', '/invite/:token', 'M1', 'Staff', 'd', '4 1 6 1 txt Iyer Family Clinic invited you as Receptionist;4 2 6 2 box Role + facility scope + expiry shown;4 4 6 1 box Create passkey / set MFA;4 5 6 1 pri Accept invite;4 6 6 1 txt Expired link → ask admin to resend', 'MEMBERSHIP status invited → active; licence check for clinicians.'],
+    ['F-07', 'Trust centre & demo request', '/trust', 'M1', 'Public', 'd', '1 1 12 1 nav Trust centre;1 2 6 3 box Data residency: India / UAE planes;7 2 6 3 box Consent model & AI drafts policy;1 5 6 3 box Sub-processors & retention;7 5 6 3 box Demo request form (no PHI);', 'No certification claims; links to policy versions.'],
+    ['H-08', 'Hospital onboarding · record authority', '/ent/onboarding', 'M4', 'Hosp. IT', 'd', '1 1 12 1 nav Steps: Org · Facilities · SSO · HIS · Authority · Pilot;1 2 6 5 box Who owns the chart? Medvya EMR / Existing HIS (per facility);7 2 6 3 box HIS connection test (FHIR R4 / HL7 v2);7 5 6 2 warn Conflicting authority between facilities;9 8 4 1 pri Activate pilot', 'Sets authority_mode on ENCOUNTER; prevents a second conflicting chart.'],
+    ['H-09', 'Consent templates & recording policy', '/admin/consent', 'M1', 'Admins', 'd', '1 1 12 1 nav Consent templates · versions;1 2 6 5 box Template text per language (EN/TA/HI/AR) · version v2026.2;7 2 6 2 box Kinds: treatment · recording · sharing · reminders · marketing;7 4 6 2 box Audio retention 30 days · purpose;7 6 6 1 box Publish new version (old receipts keep old version);', 'CONSENT_RECEIPT stores policy_version + jurisdiction.'],
+    ['A-08', 'Emergency symptom warning', 'state', 'M1', 'Doctors', 'd', '1 1 12 1 id Banner · REC;1 2 12 2 al Possible emergency mentioned: “chest pain radiating to arm” (02:41);1 4 12 1 txt Prompt only, not triage. Doctor decides.;1 5 6 1 pri Acknowledge;7 5 6 1 box Not relevant (reason)', 'No autonomous triage; acknowledgement logged.'],
+    ['A-09', 'Consent revoked · patient changed', 'state', 'M1', 'Doctors', 'd', '1 1 12 2 al Consent revoked 03:12 · capture stopped · audio after 03:12 discarded;1 3 12 2 al Different patient detected? Stop & lock session;1 5 6 1 pri Start new encounter + consent;7 5 6 1 box Continue manually', 'FSM: CONSENT_REVOKED terminates; PATIENT_CHANGED forces new encounter.'],
+    ['A-10', 'Speaker overlap / unconfirmed speaker', 'state', 'M1', 'Doctors', 'd', '1 1 12 1 id Banner;1 2 12 2 warn Overlapping speech 02:10–02:18 · attribution uncertain;1 4 12 2 ai Draft marks statements from unconfirmed speakers;1 6 12 1 box Assign speaker / mark unknown', 'Speaker label ≠ identity; family never inherits patient identity.'],
+    ['E-07', 'Diagnosis coding & meds reconciliation', '/encounter/:id/reconcile', 'M2', 'Doctors', 'd', '1 1 12 1 id Banner;1 2 6 4 box Problems: ICD-10 search, verified / provisional;7 2 6 4 box Meds: chart vs patient-reported vs HIS · keep / stop / change;1 6 12 1 warn Conflict: atorvastatin active in HIS, stopped today;9 8 4 1 pri Confirm changes', 'Feeds PROBLEM.verification and MEDICATION_STATEMENT.review_state.'],
+    ['E-08', 'Vaccinations', '/patients/:id/immunizations', 'Later', 'Doctors, Nurse', 'd', '1 1 12 1 id Banner;1 2 12 5 box Schedule vs given (if in approved scope);1 7 12 1 txt Later release placeholder', 'Only if clinically approved for scope.'],
+    ['C-05', 'Inbound report identity match', '/inbox/match', 'M2', 'Doctors, Care', 'd', '1 1 12 1 nav Unmatched documents (2);1 2 6 5 box PDF preview · lab name, MRN on report;7 2 6 3 warn Low-confidence match: name matches, DOB differs;7 5 6 2 box Choose patient / reject;', 'INBOX_ITEM.patient_match_state must be human-confirmed when low confidence.'],
+    ['H-10', 'Data subject request & export', '/ent/requests', 'M4', 'Privacy officer', 'd', '1 1 12 1 nav Requests: access · correction · deletion · export;1 2 12 4 box Request queue with legal hold flags;1 6 6 2 box Vendor purge receipts;7 6 6 2 box Tamper-evident export', 'DPDP (India) / UAE data law handling, subject to legal review.']
+  ]],
+  ['Responsive · mobile', '#0F766E', [
+    ['X-01a', 'Mobile · Doctor Today', '/today', 'M1', 'Doctors', 'm', '1 1 4 1 nav Today · 6/15 seen;1 2 4 2 pri Next: Meera Iyer · Start;1 4 4 1 al 1 critical result;1 5 4 4 box Schedule list;1 9 4 1 nav Tab bar', 'Single column; consult button always in thumb reach.'],
+    ['X-01b', 'Mobile · capture', '/encounter/:id/live', 'M1', 'Doctors', 'm', '1 1 4 1 id Meera I. · MRN ••4482;1 2 4 1 rec REC 04:12;1 3 4 2 box Waveform;1 5 4 3 box Live transcript;1 8 2 2 box Pause;3 8 2 2 al Stop', 'Screen stays awake; lock screen shows recording indicator without PHI.'],
+    ['X-01c', 'Mobile · note review', '/encounter/:id/note', 'M1', 'Doctors', 'm', '1 1 4 1 id Banner;1 2 4 1 ai AI DRAFT · 6 to review;1 3 4 5 box Field cards: swipe accept / tap edit;1 8 4 1 box Evidence sheet (bottom drawer);1 9 4 1 pri Sign (when 0)', 'Evidence opens as a bottom sheet with audio replay.'],
+    ['X-01d', 'Mobile · appointments', '/schedule', 'M1', 'Reception, Dr', 'm', '1 1 4 1 nav Today ▾;1 2 4 7 box Agenda list with state chips;1 9 4 1 pri + Book', 'Tablet uses two columns: agenda + detail.'],
+    ['X-01e', 'Mobile · patient records', '/patients/:id', 'M1', 'Doctors', 'm', '1 1 4 1 id Banner (sticky);1 2 4 2 box Brief: verified / AI tabs;1 4 4 2 box Problems · meds · allergies;1 6 4 3 box Timeline', 'Allergy chip never collapses.'],
+    ['X-02', 'Dark mode & high contrast', 'theme', 'M1', 'All', 'd', '1 1 6 8 nav Dark: #0F1C2A canvas · #12202E cards;7 1 6 8 box High contrast: 2px borders, no tints, underlined links', 'Tokens defined in Foundations (light/dark pairs).']
+  ]]
+];
+class Component extends DCLogic {
+  renderVals() {
+    const groups = W.map(([name, color, frames]) => ({ name, color, count: frames.length, frames: frames.map(([id, nm, route, phase, roles, dev, spec, note]) => {
+      const m = dev === 'm';
+      return { id, name: nm, route, phase, roles, note, cols: m ? 4 : 12, cardW: m ? '220px' : '400px',
+        blocks: spec.split(';').map(t => { const p = t.trim().split(' '); const [c, r, w, h, kind] = p; const k = K[kind] || K.box; return { gc: `${c} / span ${w}`, gr: `${r} / span ${h}`, bg: k[0], bc: k[1], bs: k[2], fg: k[3], label: p.slice(5).join(' ') }; }) };
+    }) }));
+    return { groups };
+  }
+}
+</script>
+</body>
+</html>

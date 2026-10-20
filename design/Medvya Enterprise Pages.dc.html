@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=Material+Symbols+Outlined:opsz,wght,FILL@20..24,400,0..1&display=swap" rel="stylesheet">
+<style>body{margin:0;background:#E9EEF2;color:#142536;font-family:Manrope,system-ui,sans-serif;-webkit-font-smoothing:antialiased}a{color:#2563EB;text-decoration:none}a:hover{text-decoration:underline}button{font-family:Manrope,system-ui,sans-serif}.ms{font-family:'Material Symbols Outlined';font-weight:400;font-style:normal;line-height:1;display:inline-block;white-space:nowrap;font-feature-settings:'liga'}</style>
+</helmet>
+<div style="padding:40px;display:flex;flex-direction:column;gap:36px">
+  <header style="display:flex;flex-direction:column;gap:6px;max-width:980px">
+    <div style="font:600 12px 'JetBrains Mono',monospace;color:#506579">Medvya Enterprise · H-02, H-03, H-06, H-07, H-08, H-10 · M2/M4</div>
+    <h1 style="margin:0;font-size:30px;letter-spacing:-0.02em;color:#102A43">Hospital enterprise pages</h1>
+    <p style="margin:0;font-size:15px;color:#506579">Integrations, write-back queue and audit are in <a href="Medvya Enterprise Admin.dc.html">Enterprise Admin</a>. All figures are illustrative.</p>
+  </header>
+
+  <!-- H-08 -->
+  <section id="H-08" data-screen-label="H-08 Hospital onboarding record authority" style="width:1240px;background:#fff;border-radius:16px;border:1px solid #D5DCE2;overflow:hidden">
+    <div style="padding:12px 20px;border-bottom:1px solid #EEF2F5;display:flex;gap:10px;align-items:center"><span style="font:600 11px 'JetBrains Mono',monospace;background:#102A43;color:#fff;padding:3px 7px;border-radius:4px">H-08</span><span style="font-size:15px;font-weight:800">Hospital onboarding</span></div>
+    <div style="display:flex;gap:6px;padding:14px 20px;border-bottom:1px solid #EEF2F5;flex-wrap:wrap"><sc-for list="{{ obSteps }}" as="s" hint-placeholder-count="6"><button onClick="{{ s.go }}" style="height:34px;padding:0 12px;border-radius:8px;border:1px solid {{ s.line }};background:{{ s.bg }};color:{{ s.fg }};font-size:12.5px;font-weight:700;cursor:pointer">{{ s.label }}</button></sc-for></div>
+    <div style="padding:24px 20px;display:flex;flex-direction:column;gap:16px">
+      <h2 style="margin:0;font-size:20px;color:#102A43">Who holds the official chart, per facility?</h2>
+      <p style="margin:0;font-size:14px;color:#506579;max-width:760px">Choose one authority per facility. Medvya never keeps a second, conflicting chart: with an existing HIS, Medvya shows synced copies and writes back only clinician-signed content.</p>
+      <div style="border:1px solid #DFE7ED;border-radius:12px;overflow:hidden">
+        <sc-for list="{{ authRows }}" as="r" hint-placeholder-count="4">
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) 280px 220px;gap:12px;padding:14px 16px;border-top:1px solid #EEF2F5;align-items:center">
+            <div><div style="font-size:14.5px;font-weight:700">{{ r.n }}</div><div style="font-size:12.5px;color:#506579">{{ r.sub }}</div></div>
+            <div style="display:flex;gap:4px;padding:4px;background:#EAEFF3;border-radius:9px"><sc-for list="{{ r.opts }}" as="o" hint-placeholder-count="2"><button onClick="{{ o.pick }}" style="flex:1;height:32px;border-radius:6px;border:0;background:{{ o.bg }};color:{{ o.fg }};font-size:12.5px;font-weight:700;cursor:pointer">{{ o.label }}</button></sc-for></div>
+            <span style="font-size:12px;font-weight:800;color:{{ r.c }};display:flex;gap:4px;align-items:center"><span class="ms" style="font-size:15px">{{ r.icon }}</span>{{ r.st }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <sc-if value="{{ mixed }}"><div style="display:flex;gap:10px;padding:12px 14px;border-radius:10px;background:#FDF5E7;border:1px solid #EFD5A6;font-size:13.5px;color:#7A4710"><span class="ms" style="font-size:19px">warning</span><span><strong>Attention · mixed authority.</strong> Patients who visit both Trichy and Chennai will have records in two systems. Cross-facility views will show source badges and conflicts for review.</span></div></sc-if>
+    </div>
+  </section>
+
+  <div style="display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start">
+    <!-- H-02 -->
+    <section id="H-02" data-screen-label="H-02 Organisation and facilities" style="width:606px;background:#fff;border-radius:16px;border:1px solid #D5DCE2;overflow:hidden">
+      <div style="padding:12px 20px;border-bottom:1px solid #EEF2F5;display:flex;gap:10px;align-items:center"><span style="font:600 11px 'JetBrains Mono',monospace;background:#102A43;color:#fff;padding:3px 7px;border-radius:4px">H-02</span><span style="font-size:15px;font-weight:800">Organisation, facilities, departments</span></div>
+      <div style="padding:16px 20px;display:flex;flex-direction:column;gap:8px">
+        <sc-for list="{{ facilities }}" as="f" hint-placeholder-count="4"><div style="border:1px solid #DFE7ED;border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:6px"><div style="display:flex;justify-content:space-between;gap:8px"><span style="font-size:14.5px;font-weight:800">{{ f.n }}</span><span style="font-size:11.5px;font-weight:800;color:{{ f.c }}">{{ f.auth }}</span></div><div style="font-size:12.5px;color:#506579">{{ f.meta }}</div><div style="display:flex;gap:4px;flex-wrap:wrap"><sc-for list="{{ f.depts }}" as="d" hint-placeholder-count="4"><span style="font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:999px;background:#F1F5F8;color:#334E68">{{ d }}</span></sc-for></div></div></sc-for>
+      </div>
+    </section>
+    <!-- H-03 -->
+    <section id="H-03" data-screen-label="H-03 SSO and role grants" style="width:606px;background:#fff;border-radius:16px;border:1px solid #D5DCE2;overflow:hidden">
+      <div style="padding:12px 20px;border-bottom:1px solid #EEF2F5;display:flex;gap:10px;align-items:center"><span style="font:600 11px 'JetBrains Mono',monospace;background:#102A43;color:#fff;padding:3px 7px;border-radius:4px">H-03</span><span style="font-size:15px;font-weight:800">SSO & role grants</span></div>
+      <div style="padding:16px 20px;display:flex;flex-direction:column;gap:12px">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"><sc-for list="{{ ssoTiles }}" as="t" hint-placeholder-count="3"><div style="border:1px solid #DFE7ED;border-radius:10px;padding:10px"><div style="font-size:11.5px;color:#506579;font-weight:700">{{ t.k }}</div><div style="font-size:14px;font-weight:800;color:{{ t.c }}">{{ t.v }}</div></div></sc-for></div>
+        <div style="border:1px solid #DFE7ED;border-radius:10px;overflow:hidden;font-size:13px">
+          <div style="display:grid;grid-template-columns:1.3fr 1fr 1fr 90px;gap:8px;padding:8px 12px;background:#F7FAFC;font-size:11.5px;font-weight:800;color:#506579"><span>User</span><span>Role</span><span>Facility scope</span><span>Expires</span></div>
+          <sc-for list="{{ grants }}" as="g" hint-placeholder-count="5"><div style="display:grid;grid-template-columns:1.3fr 1fr 1fr 90px;gap:8px;padding:9px 12px;border-top:1px solid #EEF2F5"><span style="font-weight:700">{{ g.u }}</span><span>{{ g.r }}</span><span style="color:#506579">{{ g.f }}</span><span style="color:{{ g.c }};font-weight:700">{{ g.e }}</span></div></sc-for>
+        </div>
+        <div style="font-size:12.5px;color:#506579">Role alone never grants access to another facility. Quarterly access review due 31 Oct.</div>
+      </div>
+    </section>
+  </div>
+
+  <div style="display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start">
+    <!-- H-06 -->
+    <section id="H-06" data-screen-label="H-06 Retention and residency" style="width:606px;background:#fff;border-radius:16px;border:1px solid #D5DCE2;overflow:hidden">
+      <div style="padding:12px 20px;border-bottom:1px solid #EEF2F5;display:flex;gap:10px;align-items:center"><span style="font:600 11px 'JetBrains Mono',monospace;background:#102A43;color:#fff;padding:3px 7px;border-radius:4px">H-06</span><span style="font-size:15px;font-weight:800">Retention & residency</span></div>
+      <div style="padding:16px 20px;display:flex;flex-direction:column;gap:6px">
+        <sc-for list="{{ retention }}" as="r" hint-placeholder-count="7"><div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;padding:10px 0;border-bottom:1px solid #F1F5F8;align-items:center"><div><div style="font-size:14px;font-weight:700">{{ r.k }}</div><div style="font-size:12px;color:#506579">{{ r.sub }}</div></div><span style="font-size:13px;font-weight:800;color:{{ r.c }};text-align:right">{{ r.v }}</span></div></sc-for>
+        <div style="font-size:12px;color:#506579;margin-top:6px">Labels show configured policy, subject to local legal review. They are not certification claims.</div>
+      </div>
+    </section>
+    <!-- H-10 -->
+    <section id="H-10" data-screen-label="H-10 Data subject requests" style="width:606px;background:#fff;border-radius:16px;border:1px solid #D5DCE2;overflow:hidden">
+      <div style="padding:12px 20px;border-bottom:1px solid #EEF2F5;display:flex;gap:10px;align-items:center"><span style="font:600 11px 'JetBrains Mono',monospace;background:#102A43;color:#fff;padding:3px 7px;border-radius:4px">H-10</span><span style="font-size:15px;font-weight:800">Patient data requests</span></div>
+      <div style="padding:16px 20px;display:flex;flex-direction:column;gap:8px">
+        <sc-for list="{{ dsr }}" as="d" hint-placeholder-count="4"><div style="border:1px solid #DFE7ED;border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:6px"><div style="display:flex;justify-content:space-between;gap:8px"><span style="font-size:14px;font-weight:800">{{ d.kind }} · <span style="font-family:'JetBrains Mono',monospace;font-weight:500;font-size:12px">{{ d.ref }}</span></span><span style="font-size:11.5px;font-weight:800;padding:2px 8px;border-radius:6px;background:{{ d.bg }};color:{{ d.fg }}">{{ d.st }}</span></div><div style="font-size:12.5px;color:#506579">{{ d.sub }}</div><sc-if value="{{ d.cta }}"><button onClick="{{ d.run }}" style="align-self:flex-start;height:32px;padding:0 10px;border-radius:8px;border:1px solid #CBD6E0;background:#fff;font-size:12.5px;font-weight:700;cursor:pointer">{{ d.cta }}</button></sc-if></div></sc-for>
+      </div>
+    </section>
+  </div>
+
+  <!-- H-07 ANALYTICS -->
+  <section id="H-07" data-screen-label="H-07 Analytics" style="width:1240px;background:#fff;border-radius:16px;border:1px solid #D5DCE2;overflow:hidden">
+    <div style="padding:12px 20px;border-bottom:1px solid #EEF2F5;display:flex;gap:10px;align-items:center;justify-content:space-between"><div style="display:flex;gap:10px;align-items:center"><span style="font:600 11px 'JetBrains Mono',monospace;background:#102A43;color:#fff;padding:3px 7px;border-radius:4px">H-07</span><span style="font-size:15px;font-weight:800">Analytics · September 2026</span></div><span style="font:600 10px 'JetBrains Mono',monospace;color:#975A16;background:#FDF5E7;padding:4px 8px;border-radius:4px">ILLUSTRATIVE DATA</span></div>
+    <div style="padding:20px;display:flex;flex-direction:column;gap:18px">
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px"><sc-for list="{{ kpis }}" as="k" hint-placeholder-count="5"><div style="border:1px solid #DFE7ED;border-radius:12px;padding:14px"><div style="font-size:12.5px;color:#506579;font-weight:700">{{ k.k }}</div><div style="font-size:26px;font-weight:700;color:#102A43;font-variant-numeric:tabular-nums">{{ k.v }}</div><div style="font-size:12px;color:{{ k.c }};font-weight:700">{{ k.d }}</div></div></sc-for></div>
+      <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:16px">
+        <div style="border:1px solid #DFE7ED;border-radius:12px;padding:16px"><div style="font-size:14px;font-weight:800;margin-bottom:12px">Visits per day by facility</div><div style="display:flex;align-items:flex-end;gap:5px;height:150px;border-bottom:1px solid #DFE7ED"><sc-for list="{{ bars }}" as="b" hint-placeholder-count="20"><div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;height:100%"><div style="height:{{ b.a }}px;background:#0E9384"></div><div style="height:{{ b.b }}px;background:#93B4F5"></div></div></sc-for></div><div style="display:flex;gap:16px;margin-top:10px;font-size:12px;color:#506579"><span style="display:flex;gap:6px;align-items:center"><span style="width:10px;height:10px;background:#0E9384;border-radius:2px"></span>Chennai</span><span style="display:flex;gap:6px;align-items:center"><span style="width:10px;height:10px;background:#93B4F5;border-radius:2px"></span>Trichy</span></div></div>
+        <div style="border:1px solid #DFE7ED;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px"><div style="font-size:14px;font-weight:800">Open loops (drill down to authorised detail)</div><sc-for list="{{ loops }}" as="l" hint-placeholder-count="4"><div style="display:flex;flex-direction:column;gap:4px"><div style="display:flex;justify-content:space-between;font-size:13px"><span>{{ l.k }}</span><strong>{{ l.v }}</strong></div><div style="height:8px;border-radius:4px;background:#EEF3F7;overflow:hidden"><div style="height:100%;width:{{ l.w }};background:{{ l.c }}"></div></div></div></sc-for></div>
+      </div>
+      <div style="font-size:12.5px;color:#506579;line-height:1.5">* Documentation time is an estimate: median minutes from visit end to note signed, compared with the clinic's pre-Medvya baseline survey. It is not a measured clinical outcome.</div>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { step: 4, auth: { 0: 'his', 1: 'his', 2: 'dq', 3: 'his' }, dsr: {} };
+  renderVals() {
+    const s = this.state;
+    const ST = ['Organisation', 'Facilities', 'SSO', 'HIS connection', 'Record authority', 'Pilot go-live'];
+    const FAC = [['Kauvery Chennai · Alwarpet', '412 beds · HIS: Kauvery HIS (FHIR R4)'], ['Kauvery Trichy · Cantonment', '260 beds · same HIS'], ['Kauvery Clinic · Velachery', 'OPD clinic · no HIS'], ['Kauvery Salem', '180 beds · HIS connection pending']];
+    const authRows = FAC.map(([n, sub], i) => { const a = s.auth[i]; return { n, sub, opts: [['dq', 'Medvya EMR'], ['his', 'Existing HIS']].map(([k, label]) => ({ label, pick: () => this.setState(p => ({ auth: { ...p.auth, [i]: k } })), bg: a === k ? '#fff' : 'transparent', fg: a === k ? '#102A43' : '#506579' })), st: a === 'his' ? (i === 3 ? 'HIS not connected yet' : 'HIS authoritative · write-back on') : 'Medvya authoritative', icon: a === 'his' ? (i === 3 ? 'warning' : 'sync_alt') : 'clinical_notes', c: a === 'his' && i === 3 ? '#975A16' : a === 'his' ? '#1D4ED8' : '#0F766E' }; });
+    const vals = Object.values(s.auth);
+    const DS = [['Access request', 'DSR-0091', 'Patient asked for a copy of all records (portal).', 'In progress · due 18 Oct', '#EFF4FF', '#1D4ED8', 'Generate export'], ['Correction', 'DSR-0088', 'Wrong DOB on registration. Clinical content unchanged.', 'Completed', '#E6F4EF', '#087F5B', ''], ['Deletion', 'DSR-0085', 'Account deletion requested. Medical records under retention hold.', 'Partially fulfilled · legal hold', '#FDF5E7', '#7A4710', 'View hold reason'], ['Withdraw recording consent', 'DSR-0084', 'Delete stored audio for all visits.', 'Audio purged · vendor receipt 3 Oct', '#E6F4EF', '#087F5B', '']];
+    return {
+      obSteps: ST.map((label, i) => ({ label: (i < s.step ? '✓ ' : '') + label, go: () => this.setState({ step: i }), bg: i === s.step ? '#102A43' : '#fff', fg: i === s.step ? '#fff' : i < s.step ? '#087F5B' : '#506579', line: i === s.step ? '#102A43' : '#DFE7ED' })),
+      authRows, mixed: vals.includes('dq') && vals.includes('his'),
+      facilities: FAC.map(([n, meta], i) => ({ n, meta, auth: s.auth[i] === 'his' ? 'HIS authority' : 'Medvya authority', c: s.auth[i] === 'his' ? '#1D4ED8' : '#0F766E', depts: [['General medicine', 'Cardiology', 'Endocrinology', 'Emergency'], ['General medicine', 'Orthopaedics', 'Paediatrics'], ['Family medicine', 'Physiotherapy'], ['General medicine', 'Nephrology']][i] })),
+      ssoTiles: [['Identity provider', 'Azure Entra ID', '#102A43'], ['SCIM provisioning', 'Active · 214 users', '#087F5B'], ['MFA policy', 'Required · passkey first', '#087F5B']].map(([k, v, c]) => ({ k, v, c })),
+      grants: [['Dr. S. Menon', 'Doctor · Emergency', 'Chennai', 'None', '#506579'], ['Dr. Kavitha Raman', 'Doctor · Endocrinology', 'Chennai, Velachery', 'None', '#506579'], ['Locum · Dr. P. Iqbal', 'Doctor', 'Trichy', '31 Oct', '#975A16'], ['R. Varghese', 'Integration admin', 'All facilities', 'None', '#506579'], ['Audit · J. Thomas', 'Privacy officer', 'All · read-only', '31 Dec', '#975A16']].map(([u, r, f, e, c]) => ({ u, r, f, e, c })),
+      retention: [['Data region', 'Primary, backups and AI processing', 'India · Central India', '#102A43'], ['Encryption keys', 'Customer-managed in Key Vault', 'CMK · rotated 90 days', '#087F5B'], ['Consultation audio', 'Purpose: documentation only', '30 days, then delete', '#102A43'], ['Transcripts & AI drafts', 'Kept with the signed note', 'Same as medical record', '#102A43'], ['Medical records', 'Per applicable Indian rules', 'Configured with legal team', '#975A16'], ['Audit events', 'Append-only, exportable', '7 years (configurable)', '#102A43'], ['Cross-border transfer', 'India ↔ UAE', 'Disabled', '#087F5B']].map(([k, sub, v, c]) => ({ k, sub, v, c })),
+      dsr: DS.map(([kind, ref, sub, st, bg, fg, cta]) => ({ kind, ref, sub, st: s.dsr[ref] ? 'Export ready · tamper-evident ZIP' : st, bg: s.dsr[ref] ? '#E6F4EF' : bg, fg: s.dsr[ref] ? '#087F5B' : fg, cta: s.dsr[ref] ? '' : cta, run: () => this.setState(p => ({ dsr: { ...p.dsr, [ref]: true } })) })),
+      kpis: [['Visits', '18,420', '+6 % vs Aug', '#087F5B'], ['Notes signed same day', '91 %', '+4 pts', '#087F5B'], ['Doc time / visit*', '3.1 min', 'estimate · see note', '#506579'], ['Unreviewed results > 48 h', '37', 'needs attention', '#B42333'], ['No-show rate', '8.2 %', '−0.6 pts', '#087F5B']].map(([k, v, d, c]) => ({ k, v, d, c })),
+      bars: Array.from({ length: 20 }, (_, i) => ({ a: 50 + ((i * 37) % 45), b: 25 + ((i * 23) % 30) })),
+      loops: [['Results received, not reviewed', '37', '62%', '#B42333'], ['Follow-ups overdue', '112', '48%', '#975A16'], ['Write-backs pending', '9', '12%', '#1D4ED8'], ['Referrals without report', '54', '35%', '#334E68']].map(([k, v, w, c]) => ({ k, v, w, c }))
+    };
+  }
+}
+</script>
+</body>
+</html>

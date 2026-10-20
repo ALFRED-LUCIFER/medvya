@@ -1,0 +1,667 @@
+# P0 · Foundation and safety · Weeks 1–3 · R0 Internal platform
+# exit: 1 journeys sign-off · 2 restore tested+timed · 3 cross-tenant RLS test · 4 CI green + staging deploy from tag
+# nfr:  1 OWASP ASVS L2 · 2 PHI-redacted structured logs · 3 daily encrypted backup + PITR
+# pkg:  1 staging URL + seeded synthetic tenant · 2 ADR set, threat model, role matrix, data map · 3 R0 release notes
+# dep:  1 Azure subscription + launch region · 2 founder decision on launch market (ADR-002)
+
+@epic MDV-P0-E01 | Repository, CI/CD and environments | P0-01, P0-02 | A deployable .NET 10 + React monorepo with green CI and tagged deploys to staging.
+@epic MDV-P0-E02 | Identity, tenancy and authorisation | P0-03, P0-04, P0-05 | Staff sign in with MFA into the right facility and only see what their role allows, enforced on the server and in SQL.
+@epic MDV-P0-E03 | Audit, data security and observability | P0-06, P0-09, P0-10 | Every patient-data access is provable; national IDs are unreadable to admins; nothing sensitive leaks into logs.
+@epic MDV-P0-E04 | Design system and journeys | P0-07 | The Medvya theme, clinical primitives and i18n/RTL pipeline in code; the six journeys signed off.
+@epic MDV-P0-E05 | Safety, compliance groundwork and R0 gate | P0-08, P0-10 | Decisions, threat model, data map, DPIA and policies recorded; R0 handed over.
+
+=== MDV-P0-001
+title: Create the Medvya monorepo skeleton (Medvya.sln, web workspaces, packages)
+type: Task
+epic: MDV-P0-E01
+prd: P0-01
+priority: MUST
+roles: Developer
+labels: platform, repo
+estimate: 1
+weeks: 1
+depends: MDV-P0-002
+confidence: 92 | Layout fully specified by PRD v2 §07 and docs/03-architecture/repository-structure.md.
+sources: PRD v2 §07 Repository; docs/03-architecture/repository-structure.md
+desc:
+Create the repository layout agreed in ADR-001: Medvya.sln with src/Host.Api, src/BuildingBlocks/*, src/Modules/<Module>/{Domain,Application,Infrastructure,Api} for the P0 modules (Identity, Tenancy, Audit), src/Workers/Worker.Jobs, web/clinic, web/portal (placeholder), packages/{ui,api-client,i18n,test-fixtures}, tests/*, infra/bicep, docs, tools.
+Pin the .NET 10 SDK (global.json), central package management (Directory.Packages.props), nullable + warnings-as-errors + analyzers (Directory.Build.props), pnpm workspaces for web/* and packages/*.
+ac:
+- Given a fresh clone, when I run `dotnet build` and `pnpm install && pnpm -r build`, then both succeed with zero warnings.
+- The folder layout matches docs/03-architecture/repository-structure.md for every folder needed in P0; later modules are not created yet.
+- global.json pins a .NET 10 SDK; Directory.Packages.props holds every NuGet version; no project file contains a version number.
+- web/clinic starts with `pnpm --filter clinic dev` on React 19 + TypeScript + Vite and renders a placeholder page using packages/ui.
+- README.md explains prerequisites, local start and links to docs/; AGENTS.md states the synthetic-data-only and no-PHI-in-logs rules.
+tests:
+- CI job builds the solution and the web workspace on a clean runner.
+
+=== MDV-P0-002
+title: Record and accept ADR-001 (stack) and supporting ADRs 003–006
+type: Chore
+epic: MDV-P0-E05
+prd: P0-08
+covers: pkg:2
+priority: MUST
+roles: Founder, Developer
+labels: adr, compliance
+estimate: 0.5
+weeks: 1
+confidence: 90 | PRD v2 already decided the stack; this ticket only formalises it. Drafts exist in docs/adr.
+sources: docs/adr/ADR-001-stack.md; docs/01-prd/source-conflicts.md
+desc:
+Review the drafted ADR-001 (stack), ADR-003 (country isolation), ADR-004 (BFF), ADR-005 (tenant isolation/RLS) and ADR-006 (immutable signed records) and move them to Accepted. Superseded stack statements in the Build Plan and Azure Architecture design pages are listed in docs/01-prd/source-conflicts.md and must not be implemented.
+ac:
+- ADR-001, 003, 004, 005 and 006 have status Accepted with date and decider.
+- Each ADR lists the alternatives rejected and why (NestJS, Next.js, PostgreSQL, Cosmos DB, AKS in P0–P6).
+- docs/01-prd/source-conflicts.md rows C-01…C-07 reference the accepted ADRs.
+- A short note is sent to the design project owner to update the Build Plan and Azure Architecture pages (PRD v2 finding "CHANGE").
+
+=== MDV-P0-003
+title: Decide launch market (ADR-002) and confirm Azure subscription and region
+type: Chore
+epic: MDV-P0-E05
+prd: P0-08
+covers: dep:1, dep:2
+priority: MUST
+roles: Founder
+labels: adr, decision, azure
+estimate: 0.5
+weeks: 1
+confidence: 70 | Business decision outside engineering; default (India first, Central India) is documented but not yet confirmed by the founder.
+sources: docs/adr/ADR-002-launch-market.md; PRD v2 §10 open decisions
+desc:
+The founder decides the launch market (default: India first) and confirms the Azure subscription, billing owner and launch region (Central India or UAE North). Also confirm Azure OpenAI and AI Speech model availability in the chosen region (PRD risk "AI model not available in-region" says confirm in P0).
+ac:
+- ADR-002 is Accepted with the chosen market and the reasoning.
+- Azure subscription ID, tenant, billing owner and launch region are recorded in docs/03-architecture/azure-deployment.md (no secrets).
+- Microsoft for Startups (Founders Hub) credit application is submitted or explicitly declined.
+- Availability of Azure OpenAI (chat model) and AI Speech (batch transcription + diarisation, languages en-IN/hi-IN/ta-IN or ar-AE) in the launch region is confirmed with a dated note.
+- If UAE is chosen, PRD sequencing impact (EID reader and exchange on the critical path to week 29) is acknowledged in the ADR.
+notes:
+- Open question Q-01 in docs/01-prd/source-conflicts.md.
+
+=== MDV-P0-004
+title: GitHub repository protections and PR pipeline (build, analyzers, tests, CodeQL, dependency and secret scanning)
+type: Task
+epic: MDV-P0-E01
+prd: P0-01
+covers: exit:4
+priority: MUST
+roles: Developer
+labels: ci, security
+estimate: 1.5
+weeks: 1
+depends: MDV-P0-001
+confidence: 90 | Standard GitHub Actions setup; requirement is explicit.
+sources: PRD v2 P0-01; docs/03-architecture/repository-structure.md#repository-rules-build-plan-b-04-adapted-to-prd-v2
+desc:
+Create .github/workflows/pr.yml running on every pull request: dotnet build with analyzers as errors, dotnet test (unit + Testcontainers integration), pnpm lint, tsc --noEmit, vitest, CodeQL (C# + TypeScript), dependency review, secret scanning with push protection, Dependabot for NuGet/npm/GitHub Actions. Protect main: PR required, status checks required, linear history, no force push, signed tags for releases. Add CODEOWNERS and a PR template with the X1–X8 checklist.
+ac:
+- A PR that fails build, tests, lint, type-check, CodeQL or secret scanning cannot be merged into main.
+- Direct pushes and force pushes to main are rejected.
+- Dependabot opens update PRs for NuGet, npm and Actions weekly.
+- The PR template contains the X1–X8 Definition-of-Done checklist and a "synthetic data only" confirmation.
+- Pipeline duration for the skeleton is under 10 minutes.
+
+=== MDV-P0-005
+title: Local development environment with Docker Compose (SQL Server, Azurite, mail and SMS sinks)
+type: Task
+epic: MDV-P0-E01
+prd: P0-01
+priority: MUST
+roles: Developer
+labels: dev-env
+estimate: 1
+weeks: 1
+depends: MDV-P0-001
+confidence: 90 | Explicit in P0-01; well-known tooling.
+sources: PRD v2 P0-01, §08 Environments
+desc:
+docker-compose.yml with SQL Server 2022 (Developer), Azurite (Blob), smtp4dev (email sink) and a fake SMS endpoint, plus a one-command start (`make dev` or `pnpm dev`) that applies EF Core migrations and seeds the synthetic tenant. Local identity uses a development Entra External ID tenant or a dev-only OIDC stub that is impossible to enable outside Development.
+ac:
+- Given Docker is running, when I run the documented start command, then API, web/clinic and all dependencies start and the seeded synthetic tenant can sign in within 5 minutes on a clean machine.
+- The dev OIDC stub refuses to start unless ASPNETCORE_ENVIRONMENT=Development (verified by a test).
+- No real secrets are needed locally; .env.example lists variable names only.
+- Emails and SMS sent locally appear in the sinks and are never delivered externally.
+
+=== MDV-P0-006
+title: Azure environments as code (Bicep): App Service, Azure SQL private endpoint, Blob, Key Vault, App Insights, Defender, budgets
+type: Task
+epic: MDV-P0-E01
+prd: P0-02
+priority: MUST
+roles: Developer
+labels: infra, bicep, azure
+estimate: 3
+weeks: 1-2
+depends: MDV-P0-003
+confidence: 80 | Resources are explicit; private networking cost and region SKU availability still need confirming in the subscription.
+sources: PRD v2 P0-02, §07b; docs/03-architecture/azure-deployment.md
+desc:
+infra/bicep/main.bicep + modules (network, appservice, sql, storage, keyvault, monitoring, defender, budgets) and parameter files for dev, staging and prod in the launch country (UAE parameter files created but not deployed unless ADR-002 says UAE). App Service (Linux, .NET 10) with VNet integration and a staging slot; Azure SQL with Entra-only auth, private endpoint, public network access disabled; Storage with private endpoint and no public blob access; Key Vault with RBAC, soft delete and purge protection; Application Insights + Log Analytics; Defender for Cloud plans; budgets and cost alerts per environment; Azure Policy denying resources outside the allowed region(s).
+ac:
+- `az deployment sub what-if` and a real deployment of dev succeed from CI with no manual portal steps.
+- Azure SQL `publicNetworkAccess` is Disabled and only reachable through the private endpoint (verified by a connectivity test from outside the VNet failing).
+- Key Vault has purge protection enabled; Storage has `allowBlobPublicAccess=false`.
+- A budget with email alerts at 50/80/100 % exists for each environment.
+- Azure Policy assignment denies creating resources in any region other than the configured country region(s).
+- No secret value appears in any Bicep or parameter file.
+notes:
+- Private endpoints add cost; capture the monthly estimate in the PR description (Software Architecture §9.3).
+
+=== MDV-P0-007
+title: GitHub OIDC federation to Azure and tagged deploy to staging
+type: Task
+epic: MDV-P0-E01
+prd: P0-01, P0-02
+covers: exit:4, pkg:1
+priority: MUST
+roles: Developer
+labels: cd, azure
+estimate: 1.5
+weeks: 2
+depends: MDV-P0-004, MDV-P0-006
+confidence: 88 | Standard pattern; only App Service slot swap specifics to tune.
+sources: PRD v2 P0-01, P0-02, §08
+desc:
+Federated credentials (one app identity per environment) so GitHub Actions deploys without stored cloud secrets. deploy-staging.yml runs on a signed tag `v0.*`: build once, run EF Core migration bundle with the migration identity, deploy to the staging slot, smoke test, swap. Production workflow exists but requires a manual approval and only accepts tags from main.
+ac:
+- No Azure client secret or publish profile exists in GitHub secrets (only federated credentials).
+- Pushing tag v0.0.1 on main deploys to staging end-to-end and the health endpoint returns 200 with the tag version.
+- A tag on a non-main commit is rejected by the workflow.
+- Migrations run with the dedicated migration database user, not the app identity.
+- Deploy is repeatable: re-running the same tag is idempotent.
+
+=== MDV-P0-008
+title: Database security baseline part 1: Entra-only auth, managed identity, least-privilege users per module and for migrations
+type: Task
+epic: MDV-P0-E03
+prd: P0-09
+priority: MUST
+roles: Developer
+labels: database, security
+estimate: 1.5
+weeks: 2
+depends: MDV-P0-006
+confidence: 85 | Azure SQL features are well documented; per-module schema permissions need care with EF Core.
+sources: PRD v2 P0-09, §07b layers 01–02; docs/03-architecture/data-model.md
+desc:
+Configure Microsoft Entra-only authentication on the logical server. The App Service managed identity is the only application principal. Create one database user/role per module schema (identity, tenancy, audit, … ) with GRANT only on its own schema, a separate migration principal with DDL rights, and a read-only reporting role. Connection strings use `Authentication=Active Directory Managed Identity; Encrypt=Strict`. No SQL logins with passwords exist.
+ac:
+- Attempting SQL authentication with a username/password fails (Entra-only is on).
+- The app identity cannot ALTER/CREATE objects; the migration identity can; verified by integration test against Testcontainers SQL Server using equivalent roles.
+- A module's database role cannot SELECT from another module's schema (architecture/integration test).
+- Connection strings in App Service settings contain no password; `Encrypt=Strict` is enforced.
+- Human access to production data is only via just-in-time elevation (documented runbook, links MDV-P0-025).
+
+=== MDV-P0-009
+title: Database security baseline part 2: Always Encrypted (national/insurance IDs), dynamic data masking, TDE with customer-managed key
+type: Task
+epic: MDV-P0-E03
+prd: P0-09
+priority: MUST
+roles: Developer
+labels: database, encryption
+estimate: 2.5
+weeks: 2-3
+depends: MDV-P0-008
+confidence: 72 | Always Encrypted with EF Core and VBS enclaves has query limitations (PRD risk: MED); design of deterministic vs randomized columns needs a short spike.
+sources: PRD v2 P0-09, §07b layers 03–07, risk "Always Encrypted limits queries"
+desc:
+Column master key in Key Vault usable only by the API identity; column encryption keys for: Aadhaar last-4, ABHA number/address, Emirates ID, passport, visa/residency number, insurance member number. Deterministic encryption for exact-match lookups (EID, ABHA), randomized + VBS enclave where range/LIKE is required. Dynamic data masking on phone, email and date of birth for support/reporting roles. TDE protector switched to a customer-managed key with automatic rotation.
+ac:
+- A DBA/admin querying an encrypted column (SSMS without CMK access) sees ciphertext only.
+- The API can insert and look up a patient by exact Emirates ID and by exact ABHA through EF Core (integration test with a test CMK).
+- A login in the support role sees masked phone/email/DOB values.
+- TDE protector is a Key Vault key with rotation policy; backups inherit it.
+- The protected-column list is documented in the data classification register (MDV-P0-016) and kept deliberately small.
+tests:
+- Integration test proves an exact-match lookup on deterministic EID works and a LIKE query is rejected without enclave.
+
+=== MDV-P0-010
+title: Tenancy model with EF Core global filters and Azure SQL row-level security (cross-tenant test in CI)
+type: Story
+epic: MDV-P0-E02
+prd: P0-04
+covers: exit:3
+priority: MUST
+roles: All staff
+labels: tenancy, rls, security
+estimate: 3
+weeks: 2
+depends: MDV-P0-001, MDV-P0-008
+confidence: 88 | Pattern specified in PRD v2 P0-04 and ADR-005; main risk is connection-pool session-context handling, covered by the tests.
+sources: PRD v2 P0-04, §07b layer 06; docs/adr/ADR-005-tenant-isolation-rls.md
+desc:
+Organisation (tenant) → facility → membership model. `tenant_id` (PRD: clinic_id) on every clinic-owned table. A DbConnection interceptor sets SESSION_CONTEXT(N'tenant_id') read-only on every open from the authenticated membership; a SQL security policy applies FILTER and BLOCK predicates; EF Core global query filters mirror it. One user can hold memberships in several clinics; the active facility is chosen at sign-in.
+ac:
+- Given two tenants with data, when user A of tenant 1 queries any tenant-owned table, then no row of tenant 2 is returned, even when the EF query filter is disabled with IgnoreQueryFilters() (RLS still blocks).
+- Inserting or updating a row with another tenant's tenant_id is blocked by the BLOCK predicate.
+- A user with memberships in two clinics sees only the active facility's tenant data and can switch facility, which re-establishes session context.
+- Session context is reset on every pooled connection open (test opens 100 pooled connections alternating tenants with zero leaks).
+- The cross-tenant read/write test runs in CI on every PR and fails the build on any leak (P0 exit gate 3).
+
+=== MDV-P0-011
+title: Staff sign-in through the BFF with Entra External ID: MFA (TOTP), passkeys and recovery
+type: Story
+epic: MDV-P0-E02
+prd: P0-03
+screens: F-03
+priority: MUST
+roles: All staff
+labels: identity, auth
+estimate: 3
+weeks: 2
+depends: MDV-P0-007
+confidence: 78 | Flow and copy are designed (F-03); Entra External ID passkey and custom-UI capabilities must be validated in a short spike before final UI.
+sources: design/Medvya Access and Onboarding (F-03); docs/02-design/screen-specs.md#f-03-sign-in-and-mfa-3-steps; docs/adr/ADR-004-bff-session.md
+desc:
+Implement OIDC Authorization Code + PKCE against Microsoft Entra External ID inside Host.Api (BFF). Tokens stay server-side; the browser gets an HTTP-only, Secure, SameSite=Strict session cookie and an antiforgery token. MFA is mandatory for all staff (TOTP authenticator; passkeys preferred; SMS OTP only as fallback where allowed). Account recovery flow. Screen F-03: email or mobile → "Continue with passkey" / "Use a one-time code instead" → 6-digit code → facility picker.
+ac:
+- A staff user cannot reach any authenticated page or API without completing MFA.
+- After sign-in no access or refresh token is readable from JavaScript (document.cookie and storage contain none).
+- Wrong code shows "Incorrect code. 2 attempts left before a 15-minute lock." and the account is locked for 15 minutes after the final failure (rate-limited server-side).
+- Passkey-unsupported browsers fall back to the one-time code path with a clear message.
+- An SSO-enforced tenant (placeholder flag for P7) hides password/OTP options and shows "Hospital staff? Sign in with SSO".
+- Recovery ("Can't sign in?") re-verifies identity and forces MFA re-enrolment; it never reveals whether an account exists.
+- Sign-in, failure, lockout and recovery events are written to the audit log (MDV-P0-017).
+
+=== MDV-P0-012
+title: Session control: facility picker, idle timeout on shared clinic PCs, device/session revocation
+type: Story
+epic: MDV-P0-E02
+prd: P0-03
+screens: F-03
+priority: MUST
+roles: All staff
+labels: identity, session
+estimate: 2
+weeks: 2-3
+depends: MDV-P0-011, MDV-P0-010
+confidence: 85 | Behaviour specified (F-03 step 3, F-05a); idle-timeout values per tenant need a default.
+sources: PRD v2 P0-03; design/Medvya Access and Onboarding (F-03, F-05a)
+desc:
+After MFA the user picks a facility ("Choose where you are working today") listing each membership with role. `/v1/me/context` returns user, active membership, permissions and feature flags. Configurable idle timeout per tenant (default 15 min on shared-device mode, 8 h max session); unsaved drafts are kept locally (encrypted, no PHI in plain localStorage) and on re-auth the user must re-confirm the patient (F-05a). Users can see and revoke their sessions/devices; admins can revoke any staff session.
+ac:
+- Given a user with two memberships, when they sign in, then they must choose a facility and the session is scoped to it; switching facility re-scopes without re-entering MFA.
+- After the idle timeout the session ends and the "Session expired" screen (F-05a) appears; signing in again returns to the previous route and asks to confirm the patient before continuing.
+- Revoking a session from "My devices" or by an admin ends it within 60 seconds on the next request.
+- No patient data is stored in localStorage/sessionStorage in clear text (automated check in Playwright).
+- `/v1/me/context` never returns permissions the role does not grant.
+
+=== MDV-P0-013
+title: Invite a colleague and accept the invitation (membership invited → active)
+type: Story
+epic: MDV-P0-E02
+prd: P0-03
+screens: F-06
+priority: MUST
+roles: Practice admin, Staff
+labels: identity, invitations
+estimate: 2
+weeks: 3
+depends: MDV-P0-011, MDV-P0-014
+confidence: 88 | Hi-fi F-06 exists with copy, scope and expiry rules.
+sources: design/Medvya Access and Onboarding (F-06); docs/02-design/screen-specs.md#f-06-invite-acceptance
+desc:
+An admin invites a person by email or mobile with a role and facility scope. The invitee opens /invite/:token, sees "Join {clinic} … invited you as {Role}", the capability list (✓ allowed / ✕ not allowed, e.g. reception cannot see clinical notes), facility scope and hours, then creates a passkey (or MFA) and joins. Membership moves invited → active. Expired or reused tokens show "Ask your admin to resend".
+ac:
+- Invitation tokens are single-use, random (≥128 bits), expire after the configured period (default 7 days) and are stored hashed.
+- The acceptance screen shows role, facility scope and capability list exactly as derived from the role-permission matrix.
+- After acceptance the membership is active and the user lands on the role's home route.
+- An expired, revoked or already-used token shows the expired state and creates no membership.
+- Invites and acceptances are audited; the invite email/SMS contains no patient data.
+- Clinician invites are flagged "licence verification required" (verification itself ships in P1, MDV-P1-007).
+
+=== MDV-P0-014
+title: Server-side authorisation from the Foundations role-permission matrix
+type: Story
+epic: MDV-P0-E02
+prd: P0-05
+covers: pkg:2
+priority: MUST
+roles: All
+labels: authorisation, security
+estimate: 3
+weeks: 2-3
+depends: MDV-P0-010
+confidence: 87 | Matrix is defined (docs/02-design/sitemap-and-permissions.md); relationship/purpose checks for clinical data become real in P2.
+sources: PRD v2 P0-05; docs/02-design/sitemap-and-permissions.md#role-permission-matrix-foundations-06
+desc:
+Encode the role-permission matrix (solo doctor, doctor, receptionist, nurse, practice admin, care coordinator, patient; hospital roles later) as capabilities. ASP.NET Core authorization policies check tenant, facility, role/capability, and — as hooks for P2 — care relationship and purpose. Every endpoint must declare a policy; an architecture test fails the build for any endpoint without one. Export the matrix as docs (role matrix is part of the P0 delivery package).
+ac:
+- Every API endpoint has an explicit authorization policy; an automated test enumerates endpoints and fails if any is anonymous by accident (allow-list for public endpoints).
+- A receptionist calling a clinical-note endpoint gets 403 regardless of UI (security test), and the attempt is audited as "Denied".
+- Capabilities per role match the Foundations matrix cell-by-cell (table-driven test generated from docs/02-design/data/foundations.json).
+- Custom roles can only be composed from existing capabilities; locked capabilities from a built-in role cannot be granted (preparation for F-10).
+- docs/02-design/sitemap-and-permissions.md is the published role matrix and is linked from the R0 release notes.
+
+=== MDV-P0-015
+title: System state screens: session expired, 403 no facility access, 404, offline
+type: Story
+epic: MDV-P0-E02
+prd: P0-05
+screens: F-05
+priority: MUST
+roles: All
+labels: ux, errors
+estimate: 1
+weeks: 3
+depends: MDV-P0-020
+confidence: 92 | Four hi-fi states with exact copy (F-05a–d).
+sources: design/Medvya Access and Onboarding (F-05); docs/02-design/screen-specs.md#f-05-system-states
+desc:
+Implement F-05a Session expired, F-05b No access to this facility (Request access), F-05c Page not found (Back to Today), F-05d You are offline (Retry now) with the designed copy, icons and single CTA. API Problem Details 401/403/404 map to these screens; offline detection uses navigator.onLine + failed fetch.
+ac:
+- A 403 from any API shows F-05b with copy "You don’t have access to this facility." (microcopy key err.403) and a "Request access" action that creates an access request (stored, audited).
+- An unknown route shows F-05c and states that nothing has been changed.
+- Going offline shows F-05d without losing form input; reconnecting restores the page.
+- Each state is keyboard-accessible, announced to screen readers, and translated (en/hi/ar) with RTL layout for Arabic.
+
+=== MDV-P0-016
+title: Data classification register and ERD → Azure SQL type mapping
+type: Chore
+epic: MDV-P0-E03
+prd: P0-10, P0-08
+covers: pkg:2
+priority: MUST
+roles: Developer, Founder
+labels: data, compliance
+estimate: 1.5
+weeks: 1-2
+depends: MDV-P0-002
+confidence: 85 | Mapping rules are given in PRD v2 findings; classification classes are fixed by P0-10.
+sources: PRD v2 P0-10, finding "ERD and Build Plan assume PostgreSQL", completeness "ERD mapped to Azure SQL types"; docs/03-architecture/data-model.md
+desc:
+Produce docs/03-architecture/data-classification.md listing every planned field for P0–P2 entities with its class (public, internal, personal, sensitive health, national ID) and control (RLS, masking, Always Encrypted, audit-on-read). Finalise the ERD → Azure SQL mapping (uuid → uniqueidentifier, jsonb → json/nvarchar(max)+ISJSON, exclusion constraint → unique slot index + app lock, RLS policies → security predicates, money → bigint minor units). Add a [Classification] attribute in code used by the PHI redaction processor and EF configuration.
+ac:
+- Every column in the P0 schema has a classification attribute; a unit test fails if a new entity property lacks one.
+- The register lists the Always Encrypted column set and the masking set used by MDV-P0-009.
+- The mapping table closes the PRD completeness item "ERD mapped to Azure SQL types" (status Covered).
+- The data map (what data, where stored, which country, which processors) is published as part of the P0 delivery package.
+
+=== MDV-P0-017
+title: Append-only audit log on Azure SQL ledger tables with audit middleware
+type: Story
+epic: MDV-P0-E03
+prd: P0-06
+priority: MUST
+roles: Practice admin, System
+labels: audit, ledger
+estimate: 2.5
+weeks: 2-3
+depends: MDV-P0-010, MDV-P0-016
+confidence: 85 | Requirement explicit; ledger table behaviour with EF Core needs a small proof (append-only ledger is supported).
+sources: PRD v2 P0-06, §07b layer 08; docs/adr/ADR-006-immutable-signed-records.md
+desc:
+AUDIT_EVENT as an append-only ledger table: actor, tenant, facility, patient ref (opaque id), action, resource ref, purpose, outcome (allowed/denied), timestamp, IP, correlation id — no PHI values. A mediator behaviour and endpoint filter write an event for every read and write of patient data, sign-in, export and permission change. Ledger digests are exported daily to immutable Blob and verified by a scheduled job.
+ac:
+- Every endpoint tagged as patient-data read or write produces exactly one audit event per request (test enumerates endpoints).
+- The app identity cannot UPDATE or DELETE audit rows (permission test); ledger verification detects a tampered row in a test database.
+- Audit events contain opaque patient ids only; a test scans payloads for names, phone numbers and identifiers and fails if found.
+- Daily digest export to an immutable (time-based retention) container succeeds and verification runs on schedule with an alert on mismatch.
+- Denied authorization attempts are audited with outcome "denied".
+
+=== MDV-P0-018
+title: Observability with OpenTelemetry and PHI redaction (structured logs, telemetry processor)
+type: Task
+epic: MDV-P0-E03
+prd: P0-10
+covers: nfr:2
+priority: MUST
+roles: Developer
+labels: observability, privacy
+estimate: 1.5
+weeks: 2
+depends: MDV-P0-016
+confidence: 88 | Explicit NFR; implementation pattern known.
+sources: PRD v2 P0 NFR 2, X2, X8; docs/03-architecture/README.md#trust-boundaries-software-architecture-2
+desc:
+OpenTelemetry tracing/metrics/logs → Application Insights. A telemetry processor drops request/response bodies, query strings, auth headers, blob URLs and any field marked sensitive by the classification attribute. Structured logging with message templates only (no string-concatenated values of classified fields). Front-end error reporting strips URLs with ids and never sends form values.
+ac:
+- A test request containing a synthetic patient name, phone and Emirates ID produces telemetry in which none of those values appear (automated log scan in integration tests).
+- Request bodies and query strings are never exported; correlation ids are.
+- Dashboards show request rate, p95 latency, error rate and dependency failures for staging.
+- An alert fires on 5xx rate > 2 % over 5 minutes in staging/prod.
+
+=== MDV-P0-019
+title: Backups, point-in-time restore and a timed restore drill
+type: Task
+epic: MDV-P0-E01
+prd: P0-02
+covers: nfr:3, exit:2
+priority: MUST
+roles: Developer
+labels: backup, dr
+estimate: 1
+weeks: 3
+depends: MDV-P0-006
+confidence: 90 | Azure SQL PITR is built in; drill is a runbook exercise.
+sources: PRD v2 P0 NFR 3, exit 2, X7; docs/04-security-compliance/README.md
+desc:
+Configure PITR retention (35 days in prod), long-term retention per country rule, backups kept in-country; storage soft delete/versioning for Blob. Write runbook docs/runbooks/restore.md and perform one restore of staging to a new database, verifying data and timing.
+ac:
+- PITR and LTR settings are defined in Bicep, not set by hand.
+- A restore drill of staging completes and the elapsed time is recorded in the runbook (P0 exit gate 2).
+- Restored database passes a smoke test (row counts per table match the point in time).
+- Backup storage redundancy keeps data in-country (no geo-replication outside the country).
+
+=== MDV-P0-020
+title: Medvya design system in code: MUI theme, tokens and clinical status primitives (packages/ui)
+type: Story
+epic: MDV-P0-E04
+prd: P0-07
+priority: MUST
+roles: All
+labels: design-system, ui
+estimate: 3
+weeks: 1-2
+depends: MDV-P0-001
+confidence: 92 | Theme is given verbatim in Handoff and component states are fully specified.
+sources: docs/02-design/tokens.md; docs/02-design/components-theme-copy.md
+desc:
+packages/ui exports the Medvya MUI theme (verbatim from Handoff, plus the `ai` palette via module augmentation and dark tokens prepared but off) and the clinical primitives: Button states (default/hover/focus/loading/disabled with count), StatusChip (ordered/received/reviewed/completed, icon + label), ProvenanceTag (AI draft · not reviewed dashed violet / Verified / Synced from HIS / Patient reported / Imported / Signed), Alert (critical/attention/info with words), TextField states, RecordingPill (REC/paused/declined), IdentityBanner (name, age, sex, MRN, DOB, allergies never collapsed, consent, encounter, SYNTHETIC marker). A storybook-like gallery page in web/clinic (/__ui) shows every state.
+ac:
+- Theme values (palette, typography, shape 10, spacing 8, breakpoints xs 0/sm 360/md 768/lg 1280/xl 1600, MuiButton minHeight 44 and no text-transform, MuiPaper 1px #DFE7ED border no shadow, tabular-nums in tables) match docs/02-design/components-theme-copy.md exactly.
+- Every primitive renders all states listed in Handoff §1; no status is conveyed by colour alone (icon + text present, checked by test).
+- Focus ring is 2px #2563EB with 2px offset on all interactive primitives.
+- axe reports no violations on the gallery page; text contrast of tokens matches the Foundations ratios (≥ 4.5:1 for text).
+- prefers-reduced-motion disables animation in RecordingPill/progress.
+
+=== MDV-P0-021
+title: Internationalisation pipeline: English, Hindi, Arabic with full RTL
+type: Task
+epic: MDV-P0-E04
+prd: P0-07
+priority: MUST
+roles: All
+labels: i18n, rtl
+estimate: 1.5
+weeks: 2
+depends: MDV-P0-020
+confidence: 88 | Requirement explicit (X5); translations themselves need human review later.
+sources: PRD v2 P0-07, X5; docs/02-design/responsive-and-dark.md#rtl-and-languages
+desc:
+packages/i18n with ICU message format, keys from Handoff microcopy (ai.badge, note.signBlocked, consent.declined, result.received, msg.delivered, pay.pending, ai.unavailable, err.403, push.generic …). Locale switch en/hi/ar; Arabic switches MUI to RTL (stylis RTL plugin, logical properties), Noto Sans Arabic font, flipped directional icons. Brand name "Medvya" comes from a single key so the working name can be replaced globally.
+ac:
+- Switching to Arabic flips layout direction for the whole app shell and the gallery without visual overlap (Playwright screenshot test at 360 and 1280 px).
+- No user-facing string is hard-coded in components (lint rule fails on JSX text literals outside i18n).
+- Missing translation keys fall back to English and are reported in CI.
+- Handoff microcopy keys exist with the exact English text from docs/02-design/components-theme-copy.md.
+- Numbers, dates and currency format per locale and country (₹ with Indian grouping, AED).
+
+=== MDV-P0-022
+title: App shell with role-based navigation (desktop sidebar, tablet rail, mobile tabs)
+type: Story
+epic: MDV-P0-E04
+prd: P0-05, P0-07
+priority: MUST
+roles: All staff
+labels: ui, navigation
+estimate: 2
+weeks: 3
+depends: MDV-P0-012, MDV-P0-014, MDV-P0-021
+confidence: 85 | Shell is designed in the Clinician App and Mobile/Tablet files; later-phase items must be hidden by flags.
+sources: design/Medvya Clinician App (sidebar); design/Medvya Mobile and Tablet; docs/02-design/sitemap-and-permissions.md
+desc:
+Navy sidebar (Clinical · Practice · Assistant · Admin groups) with module rail colours, facility name, signed-in user and role; tablet 72px icon rail; mobile bottom tabs (Today · Patients · Inbox · Messages · More). Items are filtered by the user's capabilities and by tenant feature flags (MDV-P0-028) so later-phase screens stay hidden. Notification bell placeholder (D-03 ships in P1).
+ac:
+- A receptionist sees only Practice items (front desk, schedule, register) and never Clinical items.
+- A doctor sees Clinical + Practice items allowed by the matrix; items behind disabled flags are not rendered.
+- Layout switches at 768 px (rail) and 360–767 px (bottom tabs) per the responsive rules.
+- Keyboard: skip-to-content link, visible focus, logical tab order; sidebar is a nav landmark.
+- The day-one R0 capability "see role-based navigation" can be demonstrated for each role in the seeded tenant.
+
+=== MDV-P0-023
+title: Six end-to-end journeys as Playwright specs and clinical advisor sign-off (X-03)
+type: Gate
+epic: MDV-P0-E04
+prd: P0-07
+screens: X-03
+covers: exit:1
+priority: MUST
+roles: Clinical advisor, Founder
+labels: journeys, e2e, clinical
+estimate: 2
+weeks: 3
+depends: MDV-P0-022, MDV-P0-027
+confidence: 80 | Journeys are fully storyboarded; sign-off depends on the clinical advisor's availability in week 3.
+sources: docs/02-design/journeys.md; design/Medvya Journeys
+desc:
+Walk the clinical advisor through J1–J6 on the designs/staging storyboard and capture sign-off or change requests. Create tests/e2e journey specs (J1–J6) as skeletons: P0 implements the steps that exist (sign-in, role navigation, invite); remaining steps are marked test.fixme with the screen ID and phase so each later phase turns them green.
+ac:
+- Clinical advisor sign-off (or a list of requested changes with owners) for each of J1–J6 is recorded in docs/02-design/journeys.md with date.
+- tests/e2e contains one spec per journey with every step from the storyboard, referencing screen IDs; P0 steps pass, later steps are fixme with phase tags.
+- Any change requested by the advisor is raised as a ticket in the relevant phase before P1 scope freeze.
+- The P0 exit gate item "Clinical advisor walks all six journeys and signs off" is evidenced.
+
+=== MDV-P0-024
+title: Threat model, data map, DPIA draft (DPDP) and record-retention map per country
+type: Chore
+epic: MDV-P0-E05
+prd: P0-08
+covers: pkg:2
+priority: MUST
+roles: Founder, Developer
+labels: compliance, security
+estimate: 2.5
+weeks: 1-3
+depends: MDV-P0-016
+confidence: 75 | Engineering can draft; DPIA and retention periods need legal input before P1 real data.
+sources: PRD v2 P0-08; docs/04-security-compliance/README.md
+desc:
+docs/compliance/threat-model.md (STRIDE per trust boundary: browser→BFF, BFF→SQL/Blob, jobs, future AI and integrations), data map (data categories, purposes, systems, country, processors/sub-processors), DPIA draft against DPDP Act + Rules (and a UAE health-data note), record-retention map per country (audio, transcripts, notes, audit, billing) with "to confirm by counsel" markers. Feed mitigations back as tickets.
+ac:
+- Threat model covers every trust boundary in docs/03-architecture/README.md with at least one mitigation per threat and links to tickets.
+- Data map lists every P0–P2 data category with storage location, country and processor.
+- DPIA draft lists purposes, lawful basis/consent, data minimisation, retention and risks, with open items assigned.
+- Retention map has a row for each data class with proposed default and legal-review status.
+- All four documents are part of the R0 delivery package.
+
+=== MDV-P0-025
+title: Secure development policies: SECURITY.md, code review rules, synthetic-only data, JIT access, offline break-glass account
+type: Chore
+epic: MDV-P0-E05
+prd: P0-10
+priority: MUST
+roles: Founder, Developer
+labels: security, policy
+estimate: 1
+weeks: 1
+depends: MDV-P0-001
+confidence: 90 | Content is explicit in P0-10 and the Build Plan security baseline.
+sources: PRD v2 P0-10; design/Medvya Build Plan (B-05 security baseline)
+desc:
+SECURITY.md (reporting, supported versions), code review rules (security-sensitive code reviewed by hand, per Build Plan advice), synthetic-only test data policy (no real data in repo, CI, fixtures, AI evals), privileged access via just-in-time elevation (Entra PIM or documented manual JIT) and an offline break-glass account procedure stored outside the system.
+ac:
+- SECURITY.md, docs/compliance/secure-development.md and the synthetic data policy exist and are linked from README.
+- PIM/JIT configuration (or documented procedure) means no standing Owner/Contributor or DB admin access in production.
+- Break-glass account exists, is excluded from conditional access only as documented, credentials stored offline, and its use triggers an alert.
+- A CI check rejects fixture files containing patterns of real national IDs (e.g. valid Aadhaar checksum) or obvious real data markers.
+
+=== MDV-P0-026
+title: OWASP ASVS L2 baseline: security headers, CSP, HSTS, rate limiting, input validation
+type: Task
+epic: MDV-P0-E03
+prd: P0-10, P0-03
+covers: nfr:1
+priority: MUST
+roles: Developer
+labels: security, asvs
+estimate: 1.5
+weeks: 2
+depends: MDV-P0-011
+confidence: 88 | Explicit NFR and X1 list.
+sources: PRD v2 P0 NFR 1, X1; docs/04-security-compliance/README.md#security-by-layer-software-architecture-10
+desc:
+Adopt OWASP ASVS L2 as the checklist (docs/compliance/asvs-l2.md with status per control). Implement strict CSP (no inline scripts), HSTS, X-Content-Type-Options, Referrer-Policy, Permissions-Policy; ASP.NET Core rate limiting on sign-in, OTP, invite acceptance and search; FluentValidation pipeline on every command; request size limits; antiforgery on state-changing BFF calls.
+ac:
+- Security headers score A on an automated header check against staging.
+- Sign-in/OTP endpoints return 429 after the configured threshold per IP and per account.
+- A command without a validator fails an architecture test.
+- ASVS L2 checklist exists with each control marked Done/Planned(phase)/N/A and is reviewed in the R0 gate.
+
+=== MDV-P0-027
+title: Synthetic data generator and seeded staging tenant
+type: Task
+epic: MDV-P0-E05
+prd: P0-10
+covers: pkg:1
+priority: MUST
+roles: Developer
+labels: test-data
+estimate: 1
+weeks: 3
+depends: MDV-P0-010, MDV-P0-014
+confidence: 90 | Synthetic cast is defined in the designs.
+sources: docs/00-overview/personas.md#synthetic-cast-used-across-the-designs
+desc:
+tools/synthetic-data-generator and packages/test-fixtures produce the synthetic cast (Iyer Family Clinic, Dr. Arjun Rao, A. Joseph, S. Thomas RN, Priya N., Meera Iyer, Deepak Nair; a UAE tenant Al Noor Family Clinic with Dr. Omar Haddad and Fatima Al Mansoori) with users for every role. Staging is seeded on deploy; data is visibly marked SYNTHETIC.
+ac:
+- Staging has a seeded India tenant with one user per role (and a UAE tenant if parameters enabled) able to sign in with MFA.
+- All seeded records carry a synthetic marker and use invalid-by-construction identifiers (e.g. ABHA/EID numbers that fail real checksums).
+- Re-seeding is idempotent and never runs against production (guarded by environment check + test).
+- The staging URL and seed accounts are listed in the R0 delivery package (secrets shared out of band).
+
+=== MDV-P0-028
+title: Per-tenant feature flags with owner and kill switch
+type: Task
+epic: MDV-P0-E01
+prd: P0-04
+priority: MUST
+roles: Developer, Medvya operations
+labels: feature-flags
+estimate: 1
+weeks: 3
+depends: MDV-P0-010
+confidence: 85 | Required by release process §08 and X8; simple table-backed implementation suffices until P5 ops console.
+sources: PRD v2 §08 Feature flags, X8
+desc:
+Feature flags stored per tenant (flag key, enabled, owner, created/changed by, audit). Evaluated server-side and exposed in /v1/me/context; UI hides routes and nav items for disabled flags; API rejects calls to disabled features with 404. Flags can be turned off without redeploy.
+ac:
+- Turning a flag off hides the feature for that tenant within one minute without redeploy.
+- Every flag has an owner and description; flag changes are audited.
+- API endpoints behind a disabled flag return 404 (not 403) and are not listed in the tenant's navigation.
+- Flags default to off for new features.
+
+=== MDV-P0-029
+title: R0 exit gate review and release notes (internal platform)
+type: Gate
+epic: MDV-P0-E05
+prd: P0-01
+covers: exit:1, exit:2, exit:3, exit:4, pkg:1, pkg:2, pkg:3
+priority: MUST
+roles: Founder, Clinical advisor
+labels: release, gate
+estimate: 0.5
+weeks: 3
+depends: MDV-P0-007, MDV-P0-010, MDV-P0-019, MDV-P0-023, MDV-P0-024
+confidence: 85 | Mechanical once the linked tickets are done; depends on advisor availability.
+sources: PRD v2 §08 Release process; tickets/P0-foundation/README.md
+desc:
+Run the five-step release process for R0: scope freeze, staging acceptance, (no pilot: internal), exit gate review with evidence for each criterion, handover of the delivery package (staging URL + seeded synthetic tenant, ADR set, threat model, role matrix, data map, R0 release notes).
+ac:
+- Each P0 exit criterion has linked evidence: journeys sign-off record, timed restore drill, CI run showing the cross-tenant RLS test, staging deploy log from a tag on protected main.
+- R0 release notes list delivered requirement IDs (P0-01…P0-10), known issues and what is not included (no real patient data, no public website, no booking).
+- Delivery package is handed to the founder and clinical advisor.
+- Open high/critical security findings: none (or explicitly accepted with a dated plan).

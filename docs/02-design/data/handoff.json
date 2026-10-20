@@ -1,0 +1,664 @@
+{
+ "comps": [
+  {
+   "n": "Button · primary",
+   "mui": "<Button variant=\"contained\">",
+   "states": [
+    {
+     "k": "default",
+     "t": "Sign note",
+     "icon": "",
+     "h": "40px",
+     "r": "10px",
+     "b": "0",
+     "bg": "#0E9384",
+     "fg": "#fff",
+     "ol": "none",
+     "op": 1
+    },
+    {
+     "k": "hover",
+     "t": "Sign note",
+     "icon": "",
+     "h": "40px",
+     "r": "10px",
+     "b": "0",
+     "bg": "#0C7D70",
+     "fg": "#fff",
+     "ol": "none",
+     "op": 1
+    },
+    {
+     "k": "focus",
+     "t": "Sign note",
+     "icon": "",
+     "h": "40px",
+     "r": "10px",
+     "b": "0",
+     "bg": "#0E9384",
+     "fg": "#fff",
+     "ol": "2px solid #2563EB",
+     "op": 1
+    },
+    {
+     "k": "loading",
+     "t": "Signing…",
+     "icon": "progress_activity",
+     "h": "40px",
+     "r": "10px",
+     "b": "0",
+     "bg": "#5FB8AD",
+     "fg": "#fff",
+     "ol": "none",
+     "op": 1
+    },
+    {
+     "k": "disabled",
+     "t": "Sign (2 left)",
+     "icon": "",
+     "h": "40px",
+     "r": "10px",
+     "b": "0",
+     "bg": "#E6ECF1",
+     "fg": "#8296A8",
+     "ol": "none",
+     "op": 1
+    }
+   ]
+  },
+  {
+   "n": "Status chip · clinical loop",
+   "mui": "<StatusChip state>",
+   "states": [
+    {
+     "k": "ordered",
+     "t": "Ordered",
+     "icon": "send",
+     "h": "28px",
+     "r": "999px",
+     "b": "0",
+     "bg": "#EFF4FF",
+     "fg": "#1D4ED8",
+     "ol": "none",
+     "op": 1
+    },
+    {
+     "k": "received",
+     "t": "Received",
+     "icon": "inbox",
+     "h": "28px",
+     "r": "999px",
+     "b": "0",
+     "bg": "#FDF5E7",
+     "fg": "#7A4710",
+     "ol": "none",
+     "op": 1
+    },
+    {
+     "k": "reviewed",
+     "t": "Reviewed",
+     "icon": "visibility",
+     "h": "28px",
+     "r": "999px",
+     "b": "0",
+     "bg": "#E7F6F4",
+     "fg": "#0F766E",
+     "ol": "none",
+     "op": 1
+    },
+    {
+     "k": "completed",
+     "t": "Completed",
+     "icon": "task_alt",
+     "h": "28px",
+     "r": "999px",
+     "b": "0",
+     "bg": "#087F5B",
+     "fg": "#fff",
+     "ol": "none",
+     "op": 1
+    }
+   ]
+  },
+  {
+   "n": "Provenance tag",
+   "mui": "<ProvenanceTag source>",
+   "states": [
+    {
+     "k": "ai",
+     "t": "AI draft · not reviewed",
+     "icon": "auto_awesome",
+     "h": "26px",
+     "r": "6px",
+     "b": "1px dashed #A897E8",
+     "bg": "#F2EFFC",
+     "fg": "#5B3FC4",
+     "ol": "none",
+     "op": 1
+    },
+    {
+     "k": "verified",
+     "t": "Verified",
+     "icon": "verified",
+     "h": "26px",
+     "r": "6px",
+     "b": "0",
+     "bg": "#E6F4EF",
+     "fg": "#087F5B",
+     "ol": "none",
+     "op": 1
+    },
+    {
+     "k": "his",
+     "t": "Synced from HIS",
+     "icon": "sync_alt",
+     "h": "26px",
+     "r": "6px",
+     "b": "0",
+     "bg": "#EFF4FF",
+     "fg": "#1D4ED8",
+     "ol": "none",
+     "op": 1
+    },
+    {
+     "k": "signed",
+     "t": "Signed",
+     "icon": "lock",
+     "h": "26px",
+     "r": "6px",
+     "b": "0",
+     "bg": "#102A43",
+     "fg": "#fff",
+     "ol": "none",
+     "op": 1
+    }
+   ]
+  },
+  {
+   "n": "Alert",
+   "mui": "<Alert severity>",
+   "states": [
+    {
+     "k": "critical",
+     "t": "Critical · unacknowledged",
+     "icon": "error",
+     "h": "40px",
+     "r": "10px",
+     "b": "1px solid #F3B9C0",
+     "bg": "#FDECEE",
+     "fg": "#8A1626",
+     "ol": "none",
+     "op": 1
+    },
+    {
+     "k": "attention",
+     "t": "Attention · uncertain",
+     "icon": "warning",
+     "h": "40px",
+     "r": "10px",
+     "b": "1px solid #EFD5A6",
+     "bg": "#FDF5E7",
+     "fg": "#7A4710",
+     "ol": "none",
+     "op": 1
+    },
+    {
+     "k": "info",
+     "t": "Info",
+     "icon": "info",
+     "h": "40px",
+     "r": "10px",
+     "b": "1px solid #DFE7ED",
+     "bg": "#F7FAFC",
+     "fg": "#334E68",
+     "ol": "none",
+     "op": 1
+    }
+   ]
+  },
+  {
+   "n": "Text field",
+   "mui": "<TextField>",
+   "states": [
+    {
+     "k": "default",
+     "t": "Deepak Nair",
+     "icon": "",
+     "h": "44px",
+     "r": "10px",
+     "b": "1px solid #CBD6E0",
+     "bg": "#fff",
+     "fg": "#142536",
+     "ol": "none",
+     "op": 1
+    },
+    {
+     "k": "focus",
+     "t": "Deepak Nair",
+     "icon": "",
+     "h": "44px",
+     "r": "10px",
+     "b": "1px solid #2563EB",
+     "bg": "#fff",
+     "fg": "#142536",
+     "ol": "2px solid #2563EB",
+     "op": 1
+    },
+    {
+     "k": "error",
+     "t": "68203",
+     "icon": "",
+     "h": "44px",
+     "r": "10px",
+     "b": "1px solid #B42333",
+     "bg": "#fff",
+     "fg": "#142536",
+     "ol": "none",
+     "op": 1
+    },
+    {
+     "k": "disabled",
+     "t": "Locked",
+     "icon": "",
+     "h": "44px",
+     "r": "10px",
+     "b": "1px solid #DFE7ED",
+     "bg": "#F1F5F8",
+     "fg": "#8296A8",
+     "ol": "none",
+     "op": 1
+    }
+   ]
+  },
+  {
+   "n": "Recording indicator",
+   "mui": "<RecordingPill>",
+   "states": [
+    {
+     "k": "recording",
+     "t": "REC 04:12",
+     "icon": "",
+     "h": "28px",
+     "r": "999px",
+     "b": "0",
+     "bg": "#B42333",
+     "fg": "#fff",
+     "ol": "none",
+     "op": 1
+    },
+    {
+     "k": "paused",
+     "t": "Paused",
+     "icon": "pause",
+     "h": "28px",
+     "r": "999px",
+     "b": "0",
+     "bg": "#FDF5E7",
+     "fg": "#7A4710",
+     "ol": "none",
+     "op": 1
+    },
+    {
+     "k": "declined",
+     "t": "Declined · manual",
+     "icon": "do_not_disturb_on",
+     "h": "28px",
+     "r": "999px",
+     "b": "0",
+     "bg": "#EDF1F5",
+     "fg": "#334E68",
+     "ol": "none",
+     "op": 1
+    }
+   ]
+  }
+ ],
+ "themeCode": "export const medvyaTheme = createTheme({\n  palette: {\n    mode: 'light',\n    primary:   { main: '#0E9384', dark: '#0F766E', contrastText: '#FFFFFF' },\n    secondary: { main: '#2563EB' },\n    error:     { main: '#B42333' },   // clinical critical only\n    warning:   { main: '#975A16' },   // uncertainty / attention\n    success:   { main: '#087F5B' },   // confirmed, never inferred\n    ai:        { main: '#7155D8', light: '#F2EFFC' }, // module augmentation\n    background:{ default: '#F7FAFC', paper: '#FFFFFF' },\n    text:      { primary: '#142536', secondary: '#506579' },\n    divider: '#DFE7ED',\n  },\n  shape: { borderRadius: 10 },\n  spacing: 8,\n  typography: {\n    fontFamily: 'Manrope, system-ui, sans-serif',\n    h1: { fontSize: 24, fontWeight: 700, lineHeight: '32px' },\n    h2: { fontSize: 18, fontWeight: 700, lineHeight: '26px' },\n    body1: { fontSize: 15, fontWeight: 500, lineHeight: '24px' },\n    body2: { fontSize: 14, lineHeight: '20px' },\n    caption: { fontSize: 12, fontWeight: 600 },\n  },\n  components: {\n    MuiButton: { defaultProps: { disableElevation: true }, styleOverrides: { root: { minHeight: 44, fontWeight: 700, textTransform: 'none' } } },\n    MuiPaper:  { styleOverrides: { root: { border: '1px solid #DFE7ED', boxShadow: 'none' } } },\n    MuiTableCell: { styleOverrides: { root: { fontVariantNumeric: 'tabular-nums' } } },\n  },\n  breakpoints: { values: { xs: 0, sm: 360, md: 768, lg: 1280, xl: 1600 } },\n});",
+ "routes": [
+  {
+   "p": "/today",
+   "g": "clinician",
+   "f": "Doctor/Today · desktop | tablet | mobile",
+   "href": "Medvya Clinician App.dc.html",
+   "file": "Medvya Clinician App"
+  },
+  {
+   "p": "/patients/:id",
+   "g": "clinician + relationship",
+   "f": "EMR/Patient360 · desktop | tablet | mobile",
+   "href": "Medvya Clinician App.dc.html",
+   "file": "Medvya Clinician App"
+  },
+  {
+   "p": "/encounter/:id/consent",
+   "g": "clinician + encounter",
+   "f": "AI/Consent · desktop | tablet | mobile",
+   "href": "Medvya Clinician App.dc.html",
+   "file": "Medvya Clinician App"
+  },
+  {
+   "p": "/encounter/:id/live",
+   "g": "consent=given",
+   "f": "AI/Live · desktop | tablet | mobile",
+   "href": "Medvya Clinician App.dc.html",
+   "file": "Medvya Clinician App"
+  },
+  {
+   "p": "/encounter/:id/transcript",
+   "g": "clinician",
+   "f": "AI/Transcript · desktop | tablet | mobile",
+   "href": "Medvya Clinician App.dc.html",
+   "file": "Medvya Clinician App"
+  },
+  {
+   "p": "/encounter/:id/note",
+   "g": "clinician",
+   "f": "AI/NoteReview · desktop | tablet | mobile",
+   "href": "Medvya Clinician App.dc.html",
+   "file": "Medvya Clinician App"
+  },
+  {
+   "p": "/encounter/:id/orders",
+   "g": "licensed approver",
+   "f": "EMR/RxOrders · desktop | tablet | mobile",
+   "href": "Medvya Clinician App.dc.html",
+   "file": "Medvya Clinician App"
+  },
+  {
+   "p": "/rx/:id/print",
+   "g": "clinician",
+   "f": "EMR/RxPrint · desktop | tablet | mobile",
+   "href": "Medvya Clinician App.dc.html",
+   "file": "Medvya Clinician App"
+  },
+  {
+   "p": "/inbox",
+   "g": "clinician",
+   "f": "Care/ResultsInbox · desktop | tablet | mobile",
+   "href": "Medvya Clinician App.dc.html",
+   "file": "Medvya Clinician App"
+  },
+  {
+   "p": "/care/plans/:id",
+   "g": "care roles",
+   "f": "Care/CarePlan · desktop | tablet | mobile",
+   "href": "Medvya Clinician App.dc.html",
+   "file": "Medvya Clinician App"
+  },
+  {
+   "p": "/messages",
+   "g": "staff",
+   "f": "Care/Messages · desktop | tablet | mobile",
+   "href": "Medvya Clinician App.dc.html",
+   "file": "Medvya Clinician App"
+  },
+  {
+   "p": "/front-desk",
+   "g": "reception",
+   "f": "PMS/ReceptionBoard · desktop | tablet | mobile",
+   "href": "Medvya Clinician App.dc.html",
+   "file": "Medvya Clinician App"
+  },
+  {
+   "p": "/schedule",
+   "g": "reception, clinician",
+   "f": "PMS/Schedule · desktop | tablet | mobile",
+   "href": "Medvya Clinician App.dc.html",
+   "file": "Medvya Clinician App"
+  },
+  {
+   "p": "/billing",
+   "g": "reception, admin",
+   "f": "PMS/Billing · desktop | tablet | mobile",
+   "href": "Medvya Clinician App.dc.html",
+   "file": "Medvya Clinician App"
+  },
+  {
+   "p": "/patients/new",
+   "g": "reception",
+   "f": "PMS/Register · desktop | tablet | mobile",
+   "href": "Medvya Patient Registration.dc.html",
+   "file": "Medvya Patient Registration"
+  },
+  {
+   "p": "/nurse/:id/intake",
+   "g": "nurse",
+   "f": "EMR/NurseIntake · desktop | tablet | mobile",
+   "href": "Medvya Clinical Screens.dc.html",
+   "file": "Medvya Clinical Screens"
+  },
+  {
+   "p": "/settings/*",
+   "g": "practice admin",
+   "f": "Admin/Settings · desktop | tablet | mobile",
+   "href": "Medvya Clinician App.dc.html",
+   "file": "Medvya Clinician App"
+  },
+  {
+   "p": "/devices",
+   "g": "clinician",
+   "f": "Device/Devices · desktop | tablet | mobile",
+   "href": "Medvya Clinician App.dc.html",
+   "file": "Medvya Clinician App"
+  },
+  {
+   "p": "/p/*",
+   "g": "patient / proxy",
+   "f": "Portal/* · desktop | tablet | mobile",
+   "href": "Medvya Patient Portal.dc.html",
+   "file": "Medvya Patient Portal"
+  },
+  {
+   "p": "/ent/integrations",
+   "g": "integration admin",
+   "f": "Ent/Integrations · desktop | tablet | mobile",
+   "href": "Medvya Enterprise Admin.dc.html",
+   "file": "Medvya Enterprise Admin"
+  },
+  {
+   "p": "/ent/*",
+   "g": "hospital admin",
+   "f": "Ent/* · desktop | tablet | mobile",
+   "href": "Medvya Enterprise Pages.dc.html",
+   "file": "Medvya Enterprise Pages"
+  },
+  {
+   "p": "/auth/*, /onboarding",
+   "g": "public",
+   "f": "Access/* · desktop | tablet | mobile",
+   "href": "Medvya Access and Onboarding.dc.html",
+   "file": "Medvya Access and Onboarding"
+  }
+ ],
+ "copy": [
+  {
+   "k": "ai.badge",
+   "v": "AI draft · not reviewed"
+  },
+  {
+   "k": "note.signBlocked",
+   "v": "Sign note ({n} unresolved)"
+  },
+  {
+   "k": "consent.script.en",
+   "v": "With your permission, Medvya will record our conversation today…"
+  },
+  {
+   "k": "consent.declined",
+   "v": "No recording for this visit. You can write the note manually."
+  },
+  {
+   "k": "result.received",
+   "v": "Received · not reviewed"
+  },
+  {
+   "k": "msg.delivered",
+   "v": "Delivered — this does not complete the task"
+  },
+  {
+   "k": "pay.pending",
+   "v": "Awaiting provider confirmation"
+  },
+  {
+   "k": "ai.unavailable",
+   "v": "AI drafting is unavailable right now. Your recording is saved."
+  },
+  {
+   "k": "err.403",
+   "v": "You don’t have access to this facility."
+  },
+  {
+   "k": "push.generic",
+   "v": "New update from {clinic}. Open Medvya to view."
+  }
+ ],
+ "a11y": [
+  {
+   "t": "Text contrast ≥ 4.5:1 (tokens verified in Foundations)",
+   "icon": "check_box_outline_blank",
+   "c": "#8296A8"
+  },
+  {
+   "t": "Status never by colour alone: icon + label on every chip",
+   "icon": "check_box_outline_blank",
+   "c": "#8296A8"
+  },
+  {
+   "t": "Visible 2px focus ring on all interactive elements",
+   "icon": "check_box_outline_blank",
+   "c": "#8296A8"
+  },
+  {
+   "t": "Full keyboard path: consent → record → review → sign",
+   "icon": "check_box_outline_blank",
+   "c": "#8296A8"
+  },
+  {
+   "t": "Touch targets ≥ 44px (48px in portal)",
+   "icon": "check_box_outline_blank",
+   "c": "#8296A8"
+  },
+  {
+   "t": "Form errors announced via aria-live and shown under the field",
+   "icon": "check_box_outline_blank",
+   "c": "#8296A8"
+  },
+  {
+   "t": "Tables have header cells and readable at 200 % zoom",
+   "icon": "check_box_outline_blank",
+   "c": "#8296A8"
+  },
+  {
+   "t": "prefers-reduced-motion stops waveform and progress animations",
+   "icon": "check_box_outline_blank",
+   "c": "#8296A8"
+  },
+  {
+   "t": "Print styles for Rx, visit summary and signed note",
+   "icon": "check_box_outline_blank",
+   "c": "#8296A8"
+  },
+  {
+   "t": "RTL layout verified for Arabic name and UAE portal",
+   "icon": "check_box_outline_blank",
+   "c": "#8296A8"
+  }
+ ],
+ "erd": [
+  {
+   "n": "PATIENT_RELATIONSHIP",
+   "cols": "id, patient_id, related_name, relationship, phone, is_emergency, is_guardian",
+   "by": "P-02"
+  },
+  {
+   "n": "PAYER_COVERAGE",
+   "cols": "id, patient_id, payer_id, plan, member_no, valid_to, country",
+   "by": "P-02, P-08"
+  },
+  {
+   "n": "SERVICE_CATALOGUE",
+   "cols": "id, tenant_id, name, category, code, sac_or_cpt, tax_code, duration_min",
+   "by": "F-11"
+  },
+  {
+   "n": "PRICE_VERSION",
+   "cols": "id, service_id, payer_id?, amount_minor, currency, effective_from",
+   "by": "F-11, P-06"
+  },
+  {
+   "n": "PACKAGE",
+   "cols": "id, tenant_id, name, items_json, validity_days, amount_minor",
+   "by": "F-11"
+  },
+  {
+   "n": "ROLE / ROLE_PERMISSION",
+   "cols": "id, tenant_id, name, built_in · role_id, capability, granted",
+   "by": "F-10, H-03"
+  },
+  {
+   "n": "CLINICIAN_LICENCE",
+   "cols": "id, clinician_id, authority, number, category, expires_at, verified_by, verified_at",
+   "by": "F-09"
+  },
+  {
+   "n": "SCHEDULE_TEMPLATE / LEAVE",
+   "cols": "id, clinician_id, weekday, start, end, room · from, to, reason",
+   "by": "F-04, P-04"
+  },
+  {
+   "n": "MESSAGE_THREAD / MESSAGE",
+   "cols": "id, patient_id, category, owner_id, sla_due, state · thread_id, author, body_ciphertext",
+   "by": "C-06"
+  },
+  {
+   "n": "REFERRAL",
+   "cols": "id, encounter_id, to_clinician_ref, urgency, channel, state, consent_id",
+   "by": "E-09"
+  },
+  {
+   "n": "PHARMACY_DISPATCH",
+   "cols": "id, prescription_id, pharmacy_ref, state, dispensed_at",
+   "by": "E-10"
+  },
+  {
+   "n": "DOC_SEQUENCE",
+   "cols": "id, tenant_id, country, doc_type (receipt|invoice|credit|advance), fin_year, prefix, next_no",
+   "by": "P-09"
+  },
+  {
+   "n": "PAYMENT_SPLIT",
+   "cols": "id, invoice_id, method, amount_minor, provider_ref, state, confirmed_at",
+   "by": "P-10"
+  },
+  {
+   "n": "PACKAGE_ENROLMENT / REDEMPTION",
+   "cols": "id, patient_id, package_id, paid_minor, sessions_total, valid_to · id, enrolment_id, encounter_id, at",
+   "by": "P-11"
+  },
+  {
+   "n": "DUE / STATEMENT",
+   "cols": "id, patient_id, invoice_id, amount_minor, due_at, state · id, patient_id, period, pdf_ref",
+   "by": "P-12"
+  },
+  {
+   "n": "CASH_SESSION",
+   "cols": "id, facility_id, user_id, opened_at, float_minor, counted_json, variance_minor, reason, closed_at",
+   "by": "P-13"
+  },
+  {
+   "n": "REMITTANCE / CLAIM_RESUBMISSION",
+   "cols": "id, payer_id, ra_ref, total_minor · id, claim_id, reason_code, corrected_json, submitted_at",
+   "by": "P-14"
+  },
+  {
+   "n": "FORMULARY_ITEM / ORDER_SET",
+   "cols": "id, tenant_id, country, inn, strength, form, reg_class, national_code, atc, defaults_json · id, name, items_json",
+   "by": "F-13, E-11"
+  },
+  {
+   "n": "ELIGIBILITY_CHECK / PRIOR_AUTH",
+   "cols": "id, coverage_id, result, copay, ref · id, order_id, state, valid_to",
+   "by": "P-08"
+  }
+ ]
+}

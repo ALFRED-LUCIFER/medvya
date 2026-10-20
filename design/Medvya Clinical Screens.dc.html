@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=Material+Symbols+Outlined:opsz,wght,FILL@20..24,400,0..1&display=swap" rel="stylesheet">
+<style>body{margin:0;background:#E9EEF2;color:#142536;font-family:Manrope,system-ui,sans-serif;-webkit-font-smoothing:antialiased}a{color:#2563EB;text-decoration:none}a:hover{text-decoration:underline}button,input,select,textarea{font-family:Manrope,system-ui,sans-serif}.ms{font-family:'Material Symbols Outlined';font-weight:400;font-style:normal;line-height:1;display:inline-block;white-space:nowrap;font-feature-settings:'liga'}@keyframes pg{from{width:20%}to{width:82%}}</style>
+</helmet>
+<div style="padding:40px;display:flex;flex-direction:column;gap:48px">
+  <header style="display:flex;flex-direction:column;gap:6px;max-width:980px">
+    <div style="font:600 12px 'JetBrains Mono',monospace;color:#506579">Medvya · clinical, front-desk and care screens · hi-fi</div>
+    <h1 style="margin:0;font-size:30px;letter-spacing:-0.02em;color:#102A43">Clinical screens</h1>
+    <p style="margin:0;font-size:15px;color:#506579;line-height:1.55">Each frame is labelled with its inventory ID. Interactive where it matters: nurse vitals validation, medicine reconciliation decisions, addendum signing, merge review, contact outcomes and report matching.</p>
+  </header>
+
+  <!-- N-01 NURSE INTAKE -->
+  <section id="N-01" data-screen-label="N-01 Nurse intake" style="width:1180px;background:#F7FAFC;border-radius:16px;border:1px solid #D5DCE2;overflow:hidden;display:flex;flex-direction:column">
+    <div style="padding:10px 18px;background:#fff;border-bottom:1px solid #DFE7ED;display:flex;gap:10px;align-items:center"><span style="font:600 11px 'JetBrains Mono',monospace;background:#102A43;color:#fff;padding:3px 7px;border-radius:4px">N-01</span><span style="font-size:14px;font-weight:800">Nurse intake · vitals, allergies, medicines</span><span style="font-size:12px;color:#506579">Nurse · M2</span></div>
+    <div style="padding:10px 18px;background:#fff;border-bottom:1px solid #DFE7ED;display:flex;flex-wrap:wrap;gap:10px 20px;align-items:center;box-shadow:inset 4px 0 0 #0E9384"><strong style="font-size:15px">Lakshmi Pillai <span style="font-weight:500;color:#506579">72 F</span></strong><span style="font:400 12px 'JetBrains Mono',monospace;color:#506579">MRN DQ-10-2291 · DOB 30 Nov 1953</span><span style="font-size:12px;font-weight:700;padding:3px 9px;border-radius:6px;background:#F1F5F8;color:#334E68">Allergies: not yet confirmed today</span><span style="font-size:12.5px;color:#506579">Token A-08 · for Dr. Rao · Room 1</span></div>
+    <div style="display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:18px;padding:18px">
+      <div style="background:#fff;border:1px solid #DFE7ED;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0;font-size:16px;color:#102A43">Vitals</h2><span style="font-size:12px;color:#506579">Last visit 02 Oct shown in grey</span></div>
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px">
+          <sc-for list="{{ vitals }}" as="v" hint-placeholder-count="6">
+            <label style="display:flex;flex-direction:column;gap:5px;padding:10px;border-radius:10px;border:1px solid {{ v.line }};background:{{ v.bg }}">
+              <span style="font-size:12.5px;font-weight:700;color:#334E68;display:flex;justify-content:space-between">{{ v.k }}<span style="font-weight:500;color:#8296A8">{{ v.prev }}</span></span>
+              <span style="display:flex;align-items:baseline;gap:6px"><input value="{{ v.val }}" onChange="{{ v.onChange }}" inputMode="decimal" style="width:100%;min-width:0;height:44px;padding:0 10px;border-radius:8px;border:1px solid #CBD6E0;font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;box-sizing:border-box"></input><span style="font-size:12px;color:#506579;white-space:nowrap">{{ v.u }}</span></span>
+              <sc-if value="{{ v.flag }}"><span style="font-size:12px;font-weight:700;color:{{ v.fc }};display:flex;gap:4px;align-items:center"><span class="ms" style="font-size:15px">{{ v.ficon }}</span>{{ v.flag }}</span></sc-if>
+            </label>
+          </sc-for>
+        </div>
+        <sc-if value="{{ bpHigh }}">
+          <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:12px 14px;border-radius:10px;background:#FDF5E7;border:1px solid #EFD5A6">
+            <span class="ms" style="font-size:20px;color:#975A16">warning</span>
+            <div style="flex:1 1 280px;font-size:13.5px;color:#7A4710;line-height:1.5"><strong>Attention · BP {{ bpText }}.</strong> Re-measure after 5 minutes seated. If still high, escalate to Dr. Rao with a reason.</div>
+            <button onClick="{{ remeasure }}" style="height:38px;padding:0 12px;border-radius:9px;border:1px solid #D2A25A;background:#fff;color:#7A4710;font-size:13px;font-weight:700;cursor:pointer">Re-measure</button>
+            <button onClick="{{ escalate }}" style="height:38px;padding:0 12px;border-radius:9px;border:0;background:#975A16;color:#fff;font-size:13px;font-weight:700;cursor:pointer">{{ escLabel }}</button>
+          </div>
+        </sc-if>
+        <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;font-weight:700">Chief complaint · in patient's words</span><input value="Feeling tired, ankles swollen since discharge" style="height:44px;padding:0 12px;border-radius:10px;border:1px solid #CBD6E0;font-size:15px"></input></label>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:18px">
+        <div style="background:#fff;border:1px solid #DFE7ED;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px">
+          <h2 style="margin:0;font-size:16px;color:#102A43">Allergies</h2>
+          <sc-for list="{{ allergies }}" as="a" hint-placeholder-count="2">
+            <div style="display:flex;flex-direction:column;gap:6px;padding:10px;border:1px solid #DFE7ED;border-radius:10px"><div style="font-size:14px;font-weight:700">{{ a.n }} <span style="font-weight:500;color:#506579">{{ a.r }}</span></div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{ a.opts }}" as="o" hint-placeholder-count="4"><button onClick="{{ o.pick }}" style="height:32px;padding:0 10px;border-radius:8px;border:1px solid {{ o.line }};background:{{ o.bg }};color:{{ o.fg }};font-size:12.5px;font-weight:700;cursor:pointer">{{ o.label }}</button></sc-for></div></div>
+          </sc-for>
+          <button style="align-self:flex-start;height:34px;padding:0 10px;border-radius:8px;border:1px dashed #CBD6E0;background:#fff;font-size:13px;font-weight:700;cursor:pointer">+ Add allergy · or record “No known allergies”</button>
+        </div>
+        <div style="background:#fff;border:1px solid #DFE7ED;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:8px">
+          <h2 style="margin:0;font-size:16px;color:#102A43">Medicines the patient says they take</h2>
+          <sc-for list="{{ nurseMeds }}" as="m" hint-placeholder-count="3"><div style="display:flex;justify-content:space-between;gap:8px;font-size:14px;padding:6px 0;border-bottom:1px solid #F1F5F8"><span><strong>{{ m.n }}</strong> <span style="color:#506579">{{ m.s }}</span></span><span style="font-size:11.5px;font-weight:800;color:{{ m.c }}">{{ m.st }}</span></div></sc-for>
+          <span style="font-size:12px;color:#506579">Recorded as patient-reported. The doctor confirms in reconciliation (E-07).</span>
+        </div>
+        <button onClick="{{ handoff }}" disabled="{{ handoffOff }}" style="height:48px;border-radius:10px;border:0;background:{{ hoBg }};color:{{ hoFg }};font-size:15px;font-weight:800;cursor:pointer">{{ hoLabel }}</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- E-07 RECONCILIATION -->
+  <section id="E-07" data-screen-label="E-07 Diagnosis coding and medicines reconciliation" style="width:1180px;background:#F7FAFC;border-radius:16px;border:1px solid #D5DCE2;overflow:hidden">
+    <div style="padding:10px 18px;background:#fff;border-bottom:1px solid #DFE7ED;display:flex;gap:10px;align-items:center"><span style="font:600 11px 'JetBrains Mono',monospace;background:#102A43;color:#fff;padding:3px 7px;border-radius:4px">E-07</span><span style="font-size:14px;font-weight:800">Diagnosis coding & medicines reconciliation</span><span style="font-size:12px;color:#506579">Doctor · M2</span></div>
+    <div style="padding:10px 18px;background:#fff;border-bottom:1px solid #DFE7ED;display:flex;flex-wrap:wrap;gap:10px 20px;align-items:center;box-shadow:inset 4px 0 0 #0E9384"><strong style="font-size:15px">Meera Iyer <span style="font-weight:500;color:#506579">54 F</span></strong><span style="font:400 12px 'JetBrains Mono',monospace;color:#506579">MRN DQ-10-4482 · DOB 12 Mar 1972</span><span style="font-size:12px;font-weight:700;padding:3px 9px;border-radius:6px;background:#FDECEE;color:#8A1626">Allergy: Penicillin · verified</span></div>
+    <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:18px;padding:18px">
+      <div style="background:#fff;border:1px solid #DFE7ED;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px">
+        <h2 style="margin:0;font-size:16px;color:#102A43">Problems & diagnoses</h2>
+        <div style="display:flex;align-items:center;gap:8px;height:44px;padding:0 12px;border:1px solid #CBD6E0;border-radius:10px;color:#8296A8;font-size:14px"><span class="ms" style="font-size:19px">search</span>Search ICD-10 or plain words, e.g. “neuropathy”</div>
+        <sc-for list="{{ problems }}" as="p" hint-placeholder-count="4"><div style="display:flex;gap:10px;align-items:center;padding:10px;border:1px solid {{ p.line }};border-radius:10px;background:{{ p.bg }}"><span style="font:500 12px 'JetBrains Mono',monospace;color:#334E68;min-width:56px">{{ p.code }}</span><span style="flex:1;font-size:14px;font-weight:600">{{ p.n }}</span><span style="font-size:11.5px;font-weight:800;padding:3px 8px;border-radius:6px;background:{{ p.sBg }};color:{{ p.sFg }}">{{ p.st }}</span></div></sc-for>
+      </div>
+      <div style="background:#fff;border:1px solid #DFE7ED;border-radius:12px;overflow:hidden">
+        <div style="padding:14px 16px;border-bottom:1px solid #EEF2F5;display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0;font-size:16px;color:#102A43">Medicines · 3 sources</h2><span style="font-size:12.5px;color:#506579">{{ recSummary }}</span></div>
+        <div style="display:grid;grid-template-columns:minmax(0,1.3fr) repeat(3,minmax(0,1fr)) 210px;gap:8px;padding:8px 16px;font-size:11.5px;font-weight:800;color:#506579;background:#F7FAFC"><span>Medicine</span><span>Medvya chart</span><span>Patient says</span><span>Hospital HIS</span><span>Decision</span></div>
+        <sc-for list="{{ recRows }}" as="r" hint-placeholder-count="4">
+          <div style="display:grid;grid-template-columns:minmax(0,1.3fr) repeat(3,minmax(0,1fr)) 210px;gap:8px;padding:12px 16px;border-top:1px solid #EEF2F5;align-items:center;font-size:13.5px;background:{{ r.bg }}">
+            <span style="font-weight:700">{{ r.n }}<sc-if value="{{ r.conflict }}"><span style="display:block;font-size:11.5px;font-weight:800;color:#B42333">Sources disagree</span></sc-if></span>
+            <span style="color:#334E68">{{ r.chart }}</span><span style="color:#334E68">{{ r.pt }}</span><span style="color:#1D4ED8">{{ r.his }}</span>
+            <span style="display:flex;gap:4px;flex-wrap:wrap"><sc-for list="{{ r.opts }}" as="o" hint-placeholder-count="3"><button onClick="{{ o.pick }}" style="height:30px;padding:0 8px;border-radius:7px;border:1px solid {{ o.line }};background:{{ o.bg }};color:{{ o.fg }};font-size:12px;font-weight:700;cursor:pointer">{{ o.label }}</button></sc-for></span>
+          </div>
+        </sc-for>
+        <div style="padding:12px 16px;display:flex;justify-content:space-between;gap:10px;align-items:center;border-top:1px solid #EEF2F5;flex-wrap:wrap"><span style="font-size:12.5px;color:#506579">Confirmed changes update MEDICATION_STATEMENT and, if HIS is authority, queue a reviewed write-back.</span><button disabled="{{ recOff }}" style="height:42px;padding:0 16px;border-radius:10px;border:0;background:{{ recBtnBg }};color:{{ recBtnFg }};font-size:14px;font-weight:800;cursor:pointer">Confirm reconciliation</button></div>
+      </div>
+    </div>
+  </section>
+
+  <div style="display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start">
+    <!-- E-02 TIMELINE -->
+    <section id="E-02" data-screen-label="E-02 Timeline and trends" style="width:576px;background:#F7FAFC;border-radius:16px;border:1px solid #D5DCE2;overflow:hidden">
+      <div style="padding:10px 18px;background:#fff;border-bottom:1px solid #DFE7ED;display:flex;gap:10px;align-items:center"><span style="font:600 11px 'JetBrains Mono',monospace;background:#102A43;color:#fff;padding:3px 7px;border-radius:4px">E-02</span><span style="font-size:14px;font-weight:800">Longitudinal timeline & trends</span></div>
+      <div style="padding:16px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{ tlFilters }}" as="f" hint-placeholder-count="5"><button onClick="{{ f.pick }}" style="height:30px;padding:0 10px;border-radius:999px;border:1px solid {{ f.line }};background:{{ f.bg }};color:{{ f.fg }};font-size:12px;font-weight:700;cursor:pointer">{{ f.label }}</button></sc-for></div>
+        <div style="background:#fff;border:1px solid #DFE7ED;border-radius:12px;padding:14px">
+          <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;margin-bottom:8px"><span>BP systolic · 12 months</span><span style="color:#506579">target &lt; 140</span></div>
+          <div style="display:flex;align-items:flex-end;gap:6px;height:90px;border-bottom:1px solid #DFE7ED;position:relative"><div style="position:absolute;left:0;right:0;bottom:62px;border-top:1px dashed #D2A25A"></div><sc-for list="{{ bpTrend }}" as="b" hint-placeholder-count="8"><div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;justify-content:flex-end;height:100%"><span style="font-size:10.5px;font-weight:700;color:#334E68">{{ b.v }}</span><div style="width:100%;max-width:26px;height:{{ b.h }}px;border-radius:4px 4px 0 0;background:{{ b.c }}"></div></div></sc-for></div>
+        </div>
+        <sc-for list="{{ timeline }}" as="t" hint-placeholder-count="6"><div style="display:grid;grid-template-columns:84px 20px minmax(0,1fr);gap:8px;align-items:start"><span style="font:400 11.5px 'JetBrains Mono',monospace;color:#506579;padding-top:2px">{{ t.d }}</span><span class="ms" style="font-size:18px;color:{{ t.c }}">{{ t.icon }}</span><div><div style="font-size:14px;font-weight:700">{{ t.title }}</div><div style="font-size:12.5px;color:#506579">{{ t.sub }}</div><span style="display:inline-block;margin-top:4px;font-size:11px;font-weight:800;padding:2px 7px;border-radius:5px;background:{{ t.pBg }};color:{{ t.pFg }}">{{ t.prov }}</span></div></div></sc-for>
+      </div>
+    </section>
+
+    <!-- E-03 DOCUMENTS -->
+    <section id="E-03" data-screen-label="E-03 Documents and secure viewer" style="width:576px;background:#F7FAFC;border-radius:16px;border:1px solid #D5DCE2;overflow:hidden">
+      <div style="padding:10px 18px;background:#fff;border-bottom:1px solid #DFE7ED;display:flex;gap:10px;align-items:center"><span style="font:600 11px 'JetBrains Mono',monospace;background:#102A43;color:#fff;padding:3px 7px;border-radius:4px">E-03</span><span style="font-size:14px;font-weight:800">Documents · secure viewer · AI extraction</span></div>
+      <div style="padding:16px;display:grid;grid-template-columns:180px minmax(0,1fr);gap:12px">
+        <div style="display:flex;flex-direction:column;gap:6px"><sc-for list="{{ docs }}" as="d" hint-placeholder-count="4"><button onClick="{{ d.pick }}" style="text-align:left;padding:8px 10px;border-radius:9px;border:1px solid {{ d.line }};background:{{ d.bg }};cursor:pointer;display:flex;flex-direction:column;gap:2px"><span style="font-size:12.5px;font-weight:700">{{ d.n }}</span><span style="font-size:11px;color:#506579">{{ d.src }}</span></button></sc-for><div style="padding:8px 10px;border-radius:9px;border:1px dashed #EFD5A6;background:#FFFBF3;font-size:11.5px;color:#7A4710;line-height:1.4"><strong>Upload failed</strong> · scan_0931.jpg · <span style="text-decoration:underline">Retry</span></div></div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="height:200px;border-radius:10px;background:repeating-linear-gradient(45deg,#EEF2F5 0 8px,#fff 8px 16px);border:1px solid #DFE7ED;display:flex;align-items:center;justify-content:center;position:relative"><span style="font:500 11px 'JetBrains Mono',monospace;color:#8296A8">document page · watermarked “Dr. A. Rao · 10:52”</span></div>
+          <div style="padding:10px;border-radius:10px;background:#F8F6FE;border:1px dashed #A897E8;display:flex;flex-direction:column;gap:6px"><span style="font-size:11.5px;font-weight:800;color:#5B3FC4;display:flex;gap:4px;align-items:center"><span class="ms" style="font-size:15px">auto_awesome</span>Extracted values · not in chart until you confirm</span>
+            <sc-for list="{{ extracts }}" as="x" hint-placeholder-count="3"><div style="display:flex;gap:8px;align-items:center;font-size:13px"><span style="flex:1">{{ x.k }} <strong>{{ x.v }}</strong> <span style="font:400 11px 'JetBrains Mono',monospace;color:#7155D8">p.{{ x.p }}</span></span><button onClick="{{ x.toggle }}" style="height:28px;padding:0 8px;border-radius:7px;border:1px solid {{ x.line }};background:{{ x.bg }};color:{{ x.fg }};font-size:11.5px;font-weight:700;cursor:pointer">{{ x.label }}</button></div></sc-for>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div style="display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start">
+    <!-- E-06 SIGNED NOTE + ADDENDUM -->
+    <section id="E-06" data-screen-label="E-06 Signed note and addendum" style="width:576px;background:#F7FAFC;border-radius:16px;border:1px solid #D5DCE2;overflow:hidden">
+      <div style="padding:10px 18px;background:#fff;border-bottom:1px solid #DFE7ED;display:flex;gap:10px;align-items:center"><span style="font:600 11px 'JetBrains Mono',monospace;background:#102A43;color:#fff;padding:3px 7px;border-radius:4px">E-06</span><span style="font-size:14px;font-weight:800">Signed note · addendum</span></div>
+      <div style="padding:16px;display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;gap:10px;align-items:center;padding:10px 12px;border-radius:10px;background:#102A43;color:#fff"><span class="ms" style="font-size:20px">lock</span><span style="font-size:13px;font-weight:700">Signed v1 · Dr. Arjun Rao · 04 Oct 10:31 · read-only</span></div>
+        <div style="background:#fff;border:1px solid #DFE7ED;border-radius:10px;padding:12px;font-size:13.5px;line-height:1.6;color:#334E68"><strong style="color:#142536">Plan.</strong> Switch metformin to XR 1000 mg once daily with dinner. Start pregabalin 75 mg at night. Stop atorvastatin. HbA1c, lipids, urine ACR, B12. Podiatry referral.</div>
+        <sc-for list="{{ addenda }}" as="a" hint-placeholder-count="1"><div style="background:#fff;border:1px solid #DFE7ED;border-left:0;border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:4px;box-shadow:inset 3px 0 0 #102A43"><span style="font-size:11.5px;font-weight:800;color:#102A43">ADDENDUM v{{ a.v }} · {{ a.t }}</span><span style="font-size:13.5px">{{ a.text }}</span></div></sc-for>
+        <textarea value="{{ addText }}" onChange="{{ onAdd }}" rows="2" placeholder="Write an addendum. The original stays unchanged." style="font:500 14px/1.5 Manrope;padding:10px;border-radius:10px;border:1px solid #CBD6E0;resize:vertical"></textarea>
+        <div style="display:flex;gap:8px;justify-content:flex-end"><button style="height:40px;padding:0 12px;border-radius:9px;border:1px solid #CBD6E0;background:#fff;font-size:13px;font-weight:700;cursor:pointer;display:flex;gap:6px;align-items:center"><span class="ms" style="font-size:17px">print</span>Print</button><button onClick="{{ signAdd }}" style="height:40px;padding:0 14px;border-radius:9px;border:0;background:#0E9384;color:#fff;font-size:13px;font-weight:800;cursor:pointer">Sign addendum</button></div>
+      </div>
+    </section>
+
+    <!-- P-03 MERGE -->
+    <section id="P-03" data-screen-label="P-03 Duplicate merge review" style="width:576px;background:#F7FAFC;border-radius:16px;border:1px solid #D5DCE2;overflow:hidden">
+      <div style="padding:10px 18px;background:#fff;border-bottom:1px solid #DFE7ED;display:flex;gap:10px;align-items:center"><span style="font:600 11px 'JetBrains Mono',monospace;background:#102A43;color:#fff;padding:3px 7px;border-radius:4px">P-03</span><span style="font-size:14px;font-weight:800">Duplicate / merge review</span><span style="font-size:12px;color:#506579">Reception requests · clinician approves</span></div>
+      <div style="padding:16px;display:flex;flex-direction:column;gap:12px">
+        <div style="display:grid;grid-template-columns:120px 1fr 1fr;gap:0;border:1px solid #DFE7ED;border-radius:10px;overflow:hidden;background:#fff;font-size:13px">
+          <sc-for list="{{ mergeRows }}" as="m" hint-placeholder-count="7"><span style="padding:8px 10px;border-top:1px solid #F1F5F8;color:#506579;font-weight:700;background:#F7FAFC">{{ m.k }}</span><span style="padding:8px 10px;border-top:1px solid #F1F5F8;background:{{ m.bg }}">{{ m.a }}</span><span style="padding:8px 10px;border-top:1px solid #F1F5F8;background:{{ m.bg }}">{{ m.b }}</span></sc-for>
+        </div>
+        <div style="font-size:12.5px;color:#506579">Highlighted rows differ. Both records have clinical data, so a second approver (clinician) is required. Merges are reversible for 30 days.</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end"><sc-for list="{{ mergeActions }}" as="b" hint-placeholder-count="3"><button onClick="{{ b.run }}" style="height:40px;padding:0 12px;border-radius:9px;border:{{ b.border }};background:{{ b.bg }};color:{{ b.fg }};font-size:13px;font-weight:700;cursor:pointer">{{ b.label }}</button></sc-for></div>
+        <sc-if value="{{ mergeDone }}"><div style="display:flex;gap:8px;align-items:center;font-size:13px;font-weight:700;color:{{ mergeC }}"><span class="ms" style="font-size:18px">{{ mergeIcon }}</span>{{ mergeDone }}</div></sc-if>
+      </div>
+    </section>
+  </div>
+
+  <!-- P-05 QUEUE TV -->
+  <section id="P-05" data-screen-label="P-05 Queue TV display" style="width:1180px;border-radius:16px;overflow:hidden;border:1px solid #D5DCE2">
+    <div style="padding:10px 18px;background:#fff;border-bottom:1px solid #DFE7ED;display:flex;gap:10px;align-items:center"><span style="font:600 11px 'JetBrains Mono',monospace;background:#102A43;color:#fff;padding:3px 7px;border-radius:4px">P-05</span><span style="font-size:14px;font-weight:800">Waiting-room TV display</span><span style="font-size:12px;color:#506579">Token numbers only · no names</span></div>
+    <div style="background:#0B1F33;color:#fff;padding:28px 32px;display:grid;grid-template-columns:1.2fr 1fr;gap:28px">
+      <div style="display:flex;flex-direction:column;gap:16px"><span style="font-size:18px;color:#8FE3D6;font-weight:700">Now calling · இப்போது அழைக்கப்படுகிறது · अब बुलाया जा रहा है</span>
+        <sc-for list="{{ tvNow }}" as="n" hint-placeholder-count="2"><div style="display:flex;align-items:center;gap:24px;padding:18px 22px;border-radius:16px;background:#12304D"><span style="font:600 64px 'JetBrains Mono',monospace;letter-spacing:.02em">{{ n.tok }}</span><span style="display:flex;flex-direction:column"><span style="font-size:26px;font-weight:800">{{ n.room }}</span><span style="font-size:16px;color:#B6C6D6">{{ n.dr }}</span></span></div></sc-for>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px"><span style="font-size:18px;color:#B6C6D6;font-weight:700">Next</span><sc-for list="{{ tvNext }}" as="n" hint-placeholder-count="4"><div style="display:flex;justify-content:space-between;padding:12px 16px;border-radius:12px;background:#102A43;font-size:22px"><span style="font-family:'JetBrains Mono',monospace;font-weight:600">{{ n.tok }}</span><span style="color:#B6C6D6">{{ n.wait }}</span></div></sc-for><span style="font-size:14px;color:#8FA6BD;margin-top:8px">Emergency? Tell the front desk immediately.</span></div>
+    </div>
+  </section>
+
+  <!-- CARE: C-03, C-04, C-05 -->
+  <div style="display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start">
+    <section id="C-03" data-screen-label="C-03 Contact log" style="width:376px;background:#F7FAFC;border-radius:16px;border:1px solid #D5DCE2;overflow:hidden">
+      <div style="padding:10px 16px;background:#fff;border-bottom:1px solid #DFE7ED;display:flex;gap:10px;align-items:center"><span style="font:600 11px 'JetBrains Mono',monospace;background:#102A43;color:#fff;padding:3px 7px;border-radius:4px">C-03</span><span style="font-size:14px;font-weight:800">Log patient contact</span></div>
+      <div style="padding:14px;display:flex;flex-direction:column;gap:10px">
+        <div style="font-size:13.5px"><strong>Joseph Mathew</strong> · BP review overdue 9 days</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{ channels }}" as="c" hint-placeholder-count="3"><button onClick="{{ c.pick }}" style="height:34px;padding:0 10px;border-radius:8px;border:1px solid {{ c.line }};background:{{ c.bg }};color:{{ c.fg }};font-size:12.5px;font-weight:700;cursor:pointer;display:flex;gap:4px;align-items:center"><span class="ms" style="font-size:16px">{{ c.icon }}</span>{{ c.label }}</button></sc-for></div>
+        <span style="font-size:13px;font-weight:700">Outcome (required)</span>
+        <div style="display:flex;flex-direction:column;gap:6px"><sc-for list="{{ outcomes }}" as="o" hint-placeholder-count="5"><button onClick="{{ o.pick }}" style="text-align:left;height:38px;padding:0 12px;border-radius:9px;border:1px solid {{ o.line }};background:{{ o.bg }};font-size:13px;font-weight:600;cursor:pointer">{{ o.label }}</button></sc-for></div>
+        <button onClick="{{ saveContact }}" disabled="{{ contactOff }}" style="height:42px;border-radius:10px;border:0;background:{{ ctBg }};color:{{ ctFg }};font-size:14px;font-weight:800;cursor:pointer">{{ ctLabel }}</button>
+      </div>
+    </section>
+    <section id="C-04" data-screen-label="C-04 Overdue escalation" style="width:376px;background:#F7FAFC;border-radius:16px;border:1px solid #D5DCE2;overflow:hidden">
+      <div style="padding:10px 16px;background:#fff;border-bottom:1px solid #DFE7ED;display:flex;gap:10px;align-items:center"><span style="font:600 11px 'JetBrains Mono',monospace;background:#102A43;color:#fff;padding:3px 7px;border-radius:4px">C-04</span><span style="font-size:14px;font-weight:800">Overdue & escalation</span></div>
+      <div style="padding:14px;display:flex;flex-direction:column;gap:8px">
+        <sc-for list="{{ overdue }}" as="o" hint-placeholder-count="4"><div style="background:#fff;border:1px solid {{ o.line }};border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:6px"><div style="display:flex;justify-content:space-between;gap:8px"><span style="font-size:13.5px;font-weight:700">{{ o.pt }}</span><span style="font-size:11.5px;font-weight:800;color:{{ o.c }}">{{ o.late }}</span></div><span style="font-size:12.5px;color:#506579">{{ o.what }}</span><div style="display:flex;gap:6px"><button onClick="{{ o.esc }}" style="height:30px;padding:0 10px;border-radius:7px;border:0;background:{{ o.eBg }};color:{{ o.eFg }};font-size:12px;font-weight:700;cursor:pointer">{{ o.eLabel }}</button><button style="height:30px;padding:0 10px;border-radius:7px;border:1px solid #CBD6E0;background:#fff;font-size:12px;font-weight:700;cursor:pointer">Close with reason</button></div></div></sc-for>
+      </div>
+    </section>
+    <section id="C-05" data-screen-label="C-05 Report identity match" style="width:376px;background:#F7FAFC;border-radius:16px;border:1px solid #D5DCE2;overflow:hidden">
+      <div style="padding:10px 16px;background:#fff;border-bottom:1px solid #DFE7ED;display:flex;gap:10px;align-items:center"><span style="font:600 11px 'JetBrains Mono',monospace;background:#102A43;color:#fff;padding:3px 7px;border-radius:4px">C-05</span><span style="font-size:14px;font-weight:800">Match incoming report</span></div>
+      <div style="padding:14px;display:flex;flex-direction:column;gap:10px">
+        <div style="height:120px;border-radius:10px;background:repeating-linear-gradient(45deg,#EEF2F5 0 8px,#fff 8px 16px);border:1px solid #DFE7ED;display:flex;align-items:center;justify-content:center;font:500 11px 'JetBrains Mono',monospace;color:#8296A8">lab PDF · “S. Khan, 34 F, MRN —”</div>
+        <div style="padding:10px;border-radius:10px;background:#FDF5E7;border:1px solid #EFD5A6;font-size:12.5px;color:#7A4710"><strong>Attention · low-confidence match.</strong> Name matches; DOB not on report; no MRN.</div>
+        <sc-for list="{{ matches }}" as="m" hint-placeholder-count="2"><button onClick="{{ m.pick }}" style="text-align:left;padding:10px 12px;border-radius:10px;border:2px solid {{ m.line }};background:#fff;cursor:pointer;display:flex;flex-direction:column;gap:2px"><span style="font-size:13.5px;font-weight:700">{{ m.n }}</span><span style="font-size:12px;color:#506579">{{ m.sub }}</span></button></sc-for>
+        <div style="display:flex;gap:6px"><button onClick="{{ confirmMatch }}" disabled="{{ matchOff }}" style="flex:1;height:40px;border-radius:9px;border:0;background:{{ mBg }};color:{{ mFg }};font-size:13px;font-weight:800;cursor:pointer">{{ mLabel }}</button><button style="height:40px;padding:0 10px;border-radius:9px;border:1px solid #CBD6E0;background:#fff;font-size:13px;font-weight:700;cursor:pointer">Reject · ask lab</button></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- E-08 VACCINATIONS -->
+  <section id="E-08" data-screen-label="E-08 Vaccinations" style="width:1180px;background:#F7FAFC;border-radius:16px;border:1px solid #D5DCE2;overflow:hidden">
+    <div style="padding:10px 18px;background:#fff;border-bottom:1px solid #DFE7ED;display:flex;gap:10px;align-items:center"><span style="font:600 11px 'JetBrains Mono',monospace;background:#102A43;color:#fff;padding:3px 7px;border-radius:4px">E-08</span><span style="font-size:14px;font-weight:800">Vaccinations</span><span style="font-size:12px;color:#506579">Later release · only if clinically in scope</span></div>
+    <div style="padding:10px 18px;background:#fff;border-bottom:1px solid #DFE7ED;display:flex;flex-wrap:wrap;gap:10px 20px;align-items:center;box-shadow:inset 4px 0 0 #0E9384"><strong style="font-size:15px">Aarav Menon <span style="font-weight:500;color:#506579">18 months M</span></strong><span style="font:400 12px 'JetBrains Mono',monospace;color:#506579">MRN DQ-12-0412 · DOB 04 Apr 2025</span><span style="font-size:12px;font-weight:700;padding:3px 9px;border-radius:6px;background:#E6F4EF;color:#087F5B">No known allergies · confirmed</span><span style="font-size:12.5px;color:#506579">Guardian: Divya Menon (mother)</span></div>
+    <div style="display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:18px;padding:18px">
+      <div style="background:#fff;border:1px solid #DFE7ED;border-radius:12px;overflow:hidden">
+        <div style="display:grid;grid-template-columns:110px minmax(0,1fr) 120px 150px;gap:10px;padding:9px 16px;background:#F7FAFC;font-size:11.5px;font-weight:800;color:#506579"><span>Due age</span><span>Vaccine</span><span>Date</span><span>Status</span></div>
+        <sc-for list="{{ vaccines }}" as="v" hint-placeholder-count="8"><div style="display:grid;grid-template-columns:110px minmax(0,1fr) 120px 150px;gap:10px;padding:10px 16px;border-top:1px solid #EEF2F5;font-size:13.5px;align-items:center;background:{{ v.bg }}"><span style="color:#506579;font-weight:700">{{ v.age }}</span><span style="font-weight:700">{{ v.n }}</span><span style="font:400 12px 'JetBrains Mono',monospace;color:#334E68">{{ v.d }}</span><span style="display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:800;padding:3px 8px;border-radius:6px;background:{{ v.sBg }};color:{{ v.sFg }};justify-self:start"><span class="ms" style="font-size:14px">{{ v.icon }}</span>{{ v.st }}</span></div></sc-for>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="background:#fff;border:1px solid #DFE7ED;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px">
+          <h2 style="margin:0;font-size:16px;color:#102A43">Record a dose</h2>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><sc-for list="{{ doseFields }}" as="f" hint-placeholder-count="6"><label style="display:flex;flex-direction:column;gap:5px"><span style="font-size:12.5px;font-weight:700">{{ f.k }}</span><input defaultValue="{{ f.v }}" style="height:42px;padding:0 10px;border-radius:9px;border:1px solid #CBD6E0;font-size:14px;font-family:{{ f.font }}"></input></label></sc-for></div>
+          <button onClick="{{ giveDose }}" style="height:44px;border-radius:10px;border:0;background:{{ doseBg }};color:{{ doseFg }};font-size:14px;font-weight:800;cursor:pointer">{{ doseLabel }}</button>
+        </div>
+        <div style="background:#fff;border:1px solid #DFE7ED;border-radius:12px;padding:14px 16px;font-size:13px;color:#334E68;line-height:1.55;display:flex;flex-direction:column;gap:6px"><strong style="color:#102A43">Schedule source</strong><span>India: national immunisation schedule (UIP) with IAP options. UAE: MOHAP / DoH schedule. The clinic chooses one per deployment; Medvya does not recommend vaccines on its own.</span><span>Doses given elsewhere are recorded as “Reported by guardian” until a card or certificate is uploaded.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- AI STATES -->
+  <section style="display:flex;flex-direction:column;gap:14px">
+    <h2 style="margin:0;font-size:20px;color:#102A43">Recording & AI states</h2>
+    <div style="display:grid;grid-template-columns:repeat(4,280px);gap:16px">
+      <sc-for list="{{ aiStates }}" as="a" hint-placeholder-count="8">
+        <div id="{{ a.id }}" data-screen-label="{{ a.id }} {{ a.title }}" style="background:#fff;border:1px solid #D5DCE2;border-radius:14px;overflow:hidden;display:flex;flex-direction:column">
+          <div style="padding:8px 12px;border-bottom:1px solid #EEF2F5;display:flex;gap:8px;align-items:center"><span style="font:600 10.5px 'JetBrains Mono',monospace;background:#102A43;color:#fff;padding:2px 6px;border-radius:4px">{{ a.id }}</span><span style="font-size:12.5px;font-weight:800">{{ a.title }}</span></div>
+          <div style="padding:14px;display:flex;flex-direction:column;gap:10px;flex:1">
+            <div style="display:flex;gap:8px;align-items:flex-start;padding:10px;border-radius:10px;background:{{ a.bg }};border:1px solid {{ a.line }};color:{{ a.fg }}"><span class="ms" style="font-size:20px">{{ a.icon }}</span><div style="font-size:13px;line-height:1.45"><strong>{{ a.head }}</strong> {{ a.body }}</div></div>
+            <sc-if value="{{ a.progress }}"><div style="height:8px;border-radius:4px;background:#EEF3F7;overflow:hidden">{{ a.bar }}</div></sc-if>
+            <div style="font-size:12px;color:#506579;line-height:1.45">{{ a.note }}</div>
+            <div style="margin-top:auto;display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{ a.actions }}" as="b" hint-placeholder-count="2"><button style="height:34px;padding:0 10px;border-radius:8px;border:{{ b.border }};background:{{ b.bg }};color:{{ b.fg }};font-size:12.5px;font-weight:700;cursor:pointer">{{ b.label }}</button></sc-for></div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { sys: '168', dia: '96', hr: '88', temp: '36.8', spo2: '97', wt: '63.2', rem: false, esc: false, handed: false, allg: { 0: null, 1: null }, rec: {}, tl: 'All', doc: 0, ext: {}, add: [], addText: '', merge: null, ch: 'Call', out: null, saved: false, escd: {}, match: null, matched: false, dose: false };
+  renderVals() {
+    const s = this.state;
+    const num = v => parseFloat(v);
+    const V = [['BP systolic', 'sys', 'mmHg', '142', v => v >= 160 ? 'high' : v >= 140 ? 'warn' : ''], ['BP diastolic', 'dia', 'mmHg', '88', v => v >= 100 ? 'high' : v >= 90 ? 'warn' : ''], ['Pulse', 'hr', 'bpm', '84', v => v > 110 || v < 50 ? 'warn' : ''], ['Temperature', 'temp', '°C', '36.6', v => v >= 38 ? 'warn' : ''], ['SpO₂', 'spo2', '%', '98', v => v < 92 ? 'high' : v < 95 ? 'warn' : ''], ['Weight', 'wt', 'kg', '61.0', v => v - 61 >= 2 ? 'warn' : '']];
+    const vitals = V.map(([k, key, u, prev, rule]) => { const r = rule(num(s[key])); return { k, u, prev: 'prev ' + prev, val: s[key], onChange: e => this.setState({ [key]: e.target.value }), flag: r === 'high' ? 'High · re-check' : r === 'warn' ? (key === 'wt' ? '+' + (num(s.wt) - 61).toFixed(1) + ' kg since 02 Oct' : 'Outside usual range') : '', fc: r === 'high' ? '#B42333' : '#975A16', ficon: r === 'high' ? 'error' : 'warning', line: r === 'high' ? '#F3B9C0' : r === 'warn' ? '#EFD5A6' : '#EEF2F5', bg: r === 'high' ? '#FFF7F8' : r === 'warn' ? '#FFFBF3' : '#fff' }; });
+    const bpHigh = num(s.sys) >= 160 || num(s.dia) >= 100;
+    const AL = [['Penicillin', '· rash (from 2019 record)'], ['Sulfa drugs', '· mentioned by daughter, unclear']];
+    const AOP = ['Confirmed', 'Patient reported', 'Unknown', 'Not an allergy'];
+    const allergies = AL.map(([n, r], i) => ({ n, r, opts: AOP.map(label => { const on = s.allg[i] === label; return { label, pick: () => this.setState(p => ({ allg: { ...p.allg, [i]: label } })), bg: on ? '#102A43' : '#fff', fg: on ? '#fff' : '#142536', line: on ? '#102A43' : '#CBD6E0' }; }) }));
+    const allDone = s.allg[0] && s.allg[1];
+    const P = [['E11.42', 'Type 2 diabetes with polyneuropathy', 'Added today · verified', '#E6F4EF', '#087F5B'], ['I10', 'Essential hypertension', 'Verified', '#E6F4EF', '#087F5B'], ['E78.5', 'Dyslipidaemia', 'Patient reported', '#EDF1F5', '#334E68'], ['T46.6X5A', 'Statin intolerance (myalgia)', 'Provisional', '#FDF5E7', '#7A4710']];
+    const problems = P.map(([code, n, st, sBg, sFg]) => ({ code, n, st, sBg, sFg, line: '#DFE7ED', bg: '#fff' }));
+    const MR = [['Metformin', '500 mg BD', '500 mg, misses evening', '500 mg BD', false], ['Telmisartan', '40 mg OD', '40 mg OD', '80 mg OD (12 Sep)', true], ['Atorvastatin', '10 mg OD', 'Stopped 2 months ago', '10 mg OD · refill 02 Oct', true], ['Vitamin D3', '—', '60,000 IU weekly', '—', true]];
+    const OPTS = ['Keep', 'Change', 'Stop'];
+    const recRows = MR.map(([n, chart, pt, his, conflict], i) => ({ n, chart, pt, his, conflict, bg: conflict && !s.rec[i] ? '#FFFBF5' : '#fff', opts: (chart === '—' ? ['Add', 'Ignore'] : OPTS).map(label => { const on = s.rec[i] === label; return { label, pick: () => this.setState(p => ({ rec: { ...p.rec, [i]: label } })), bg: on ? '#102A43' : '#fff', fg: on ? '#fff' : '#142536', line: on ? '#102A43' : '#CBD6E0' }; }) }));
+    const decided = Object.keys(s.rec).length;
+    const TLF = ['All', 'Encounters', 'Labs', 'Medicines', 'Documents'];
+    const TL = [['04 Oct 2026', 'clinical_notes', '#0F766E', 'Follow-up visit · signed', 'Dr. Arjun Rao · ambient', 'Medvya · signed', '#102A43', '#fff', 'Encounters'], ['04 Oct 2026', 'medication', '#0F766E', 'Atorvastatin stopped', 'Statin intolerance', 'Clinician verified', '#E6F4EF', '#087F5B', 'Medicines'], ['28 Sep 2026', 'biotech', '#1D4ED8', 'HbA1c 7.9 %', 'Metropolis · reviewed 29 Sep', 'Lab feed · HL7', '#EFF4FF', '#1D4ED8', 'Labs'], ['12 Sep 2026', 'sync_alt', '#1D4ED8', 'Telmisartan 80 mg', 'Kauvery HIS prescription', 'Synced from HIS', '#EFF4FF', '#1D4ED8', 'Medicines'], ['03 Mar 2026', 'description', '#506579', 'Discharge summary', 'Kauvery Hospital · PDF', 'Uploaded by patient', '#EDF1F5', '#334E68', 'Documents']];
+    const timeline = TL.filter(t => s.tl === 'All' || t[8] === s.tl).map(([d, icon, c, title, sub, prov, pBg, pFg]) => ({ d, icon, c, title, sub, prov, pBg, pFg }));
+    const BPT = [148, 152, 144, 146, 138, 142, 136, 138];
+    const DOCS = [['Discharge summary', 'Kauvery · uploaded by patient'], ['Lab report 28 Sep', 'Metropolis · HL7 + PDF'], ['Referral letter', 'Dr. P. Menon · email'], ['ECG 09 Sep', 'In-house']];
+    const EX = [['eGFR', '68 mL/min', 2], ['Discharge diagnosis', 'Community-acquired pneumonia', 1], ['Discharge medication', 'Amoxicillin-clavulanate', 3]];
+    const MRG = [['Name', 'Deepak Nair', 'Deepak K. Nair', 1], ['DOB', '14 Aug 1979', '14 Aug 1979', 0], ['Sex', 'Male', 'Male', 0], ['Mobile', '+91 98470 21346', '+91 98470 21346', 0], ['ABHA', '91-4410-…6612', '—', 1], ['Visits', '1 (today)', '3 (2024–2025)', 1], ['Allergies', 'None recorded', 'Sulfa (reported)', 1]];
+    const B = (label, run, p) => ({ label, run, bg: p ? '#102A43' : '#fff', fg: p ? '#fff' : '#142536', border: p ? '0' : '1px solid #CBD6E0' });
+    const OUTS = ['Spoke to patient · rebooked', 'Spoke to patient · declined', 'No answer · retry tomorrow', 'Wrong number', 'Message delivered (not a contact)'];
+    const OV = [['Joseph Mathew', 'BP review · 2 reminders delivered, no reply', '9 days', '#B42333', '#F3B9C0'], ['Meera Iyer', 'Retinal eye exam', '4 days', '#975A16', '#EFD5A6'], ['Lakshmi Pillai', 'Post-discharge call not logged', '1 day', '#975A16', '#EFD5A6'], ['Rahul Menon', 'Repeat potassium in 48 h', 'Due today', '#334E68', '#DFE7ED']];
+    const btn = (label, p) => ({ label, bg: p ? '#102A43' : '#fff', fg: p ? '#fff' : '#142536', border: p ? '0' : '1px solid #CBD6E0' });
+    const AS = [
+      ['A-06a', 'Upload in progress', 'cloud_upload', '#EFF4FF', '#D3E0FD', '#1D4ED8', 'Uploading 14 of 17 encrypted chunks.', '2.1 MB left on Wi-Fi.', 'Keep the app open. You can start reviewing the transcript already.', [btn('Pause'), btn('Review now', 1)], true],
+      ['A-06b', 'Failed upload · partial', 'cloud_off', '#FDECEE', '#F3B9C0', '#8A1626', 'Upload failed · 3 chunks missing.', 'Recovered 05:12 of 06:48 (04:10–05:30 missing).', 'Missing range is marked in the transcript and flagged in the draft.', [btn('Retry from phone', 1), btn('Continue partial')]],
+      ['A-06d', 'Low audio quality', 'hearing', '#FDF5E7', '#EFD5A6', '#7A4710', 'Attention · low audio.', 'Speaker 3 is far from the mic.', 'Ask them to move closer or confirm their words during review.', [btn('Dismiss'), btn('Mark segment', 1)]],
+      ['A-09a', 'Wrong patient suspected', 'person_alert', '#FDECEE', '#F3B9C0', '#8A1626', 'Different name heard: “Mrs. Lakshmi”.', 'Encounter is bound to Meera Iyer.', 'Stop and lock the session; re-binding needs a reason and is audited.', [btn('Stop & lock', 1), btn('It is correct')]],
+      ['A-09b', 'Consent withdrawn', 'do_not_disturb_on', '#FDECEE', '#F3B9C0', '#8A1626', 'Recording stopped at 03:12.', 'Audio after withdrawal was discarded.', 'Continue documentation manually. Receipt CR-88241 recorded.', [btn('Continue manually', 1)]],
+      ['A-10', 'Overlapping speakers', 'record_voice_over', '#FDF5E7', '#EFD5A6', '#7A4710', 'Overlapping speech 02:10–02:18.', 'Attribution uncertain.', 'Statements stay flagged in the draft until you assign or mark unknown.', [btn('Assign speaker', 1), btn('Mark unknown')]],
+      ['A-08', 'Emergency symptom mentioned', 'emergency', '#FDECEE', '#F3B9C0', '#8A1626', 'Possible emergency mentioned at 02:41:', '“chest pain going to my left arm”.', 'This is a prompt, not triage. You decide; acknowledgement is logged.', [btn('Acknowledge', 1), btn('Not relevant')]],
+      ['A-07', 'Private voice assistant', 'hearing', '#F2EFFC', '#DCD3F7', '#5B3FC4', 'Earpiece connected · whisper mode.', '“Last eGFR 72, 28 September.”', 'Works only with a private earpiece and a doctor tap. Never speaks through the room speaker.', [btn('Disconnect'), btn('Ask again', 1)]]
+    ];
+    return {
+      vitals, bpHigh, bpText: s.sys + '/' + s.dia, remeasure: () => this.setState({ sys: '158', dia: '94', rem: true }), escalate: () => this.setState({ esc: true }), escLabel: s.esc ? 'Escalated to Dr. Rao' : 'Escalate to doctor',
+      allergies, nurseMeds: [{ n: 'Furosemide', s: '20 mg OD (from discharge)', st: 'Patient reported', c: '#334E68' }, { n: 'Amlodipine', s: '5 mg OD', st: 'Patient reported', c: '#334E68' }, { n: '“A white tablet for sugar”', s: 'name unknown', st: 'Needs clarification', c: '#975A16' }],
+      handoff: () => this.setState({ handed: true }), handoffOff: !allDone, hoBg: s.handed ? '#E6F4EF' : allDone ? '#0E9384' : '#E6ECF1', hoFg: s.handed ? '#087F5B' : allDone ? '#fff' : '#8296A8', hoLabel: s.handed ? 'Handed off · Ready for doctor' : allDone ? 'Hand off to Dr. Rao' : 'Confirm allergy status to hand off',
+      problems, recRows, recSummary: decided + ' of 4 decided · 3 sources disagree', recOff: decided < 4, recBtnBg: decided < 4 ? '#E6ECF1' : '#0E9384', recBtnFg: decided < 4 ? '#8296A8' : '#fff',
+      tlFilters: TLF.map(label => ({ label, pick: () => this.setState({ tl: label }), bg: s.tl === label ? '#102A43' : '#fff', fg: s.tl === label ? '#fff' : '#142536', line: s.tl === label ? '#102A43' : '#CBD6E0' })), timeline,
+      bpTrend: BPT.map(v => ({ v, h: Math.round((v - 110) * 1.6), c: v >= 140 ? '#D2A25A' : '#0E9384' })),
+      docs: DOCS.map(([n, src], i) => ({ n, src, pick: () => this.setState({ doc: i }), bg: s.doc === i ? '#F3F8FA' : '#fff', line: s.doc === i ? '#0E9384' : '#DFE7ED' })),
+      extracts: EX.map(([k, v, p], i) => { const on = s.ext[i]; return { k, v, p, label: on ? 'Added to chart' : 'Confirm', bg: on ? '#E6F4EF' : '#fff', fg: on ? '#087F5B' : '#5B3FC4', line: on ? '#BFE5DF' : '#A897E8', toggle: () => this.setState(q => ({ ext: { ...q.ext, [i]: !on } })) }; }),
+      addenda: s.add, addText: s.addText, onAdd: e => this.setState({ addText: e.target.value }), signAdd: () => s.addText.trim() && this.setState(p => ({ add: p.add.concat([{ v: p.add.length + 2, t: 'Dr. Arjun Rao · just now', text: p.addText }]), addText: '' })),
+      mergeRows: MRG.map(([k, a, b, d]) => ({ k, a, b, bg: d ? '#FFFBF3' : '#fff' })),
+      mergeActions: [B('Not the same person', () => this.setState({ merge: 'no' })), B('Request clinician approval', () => this.setState({ merge: 'req' }), 1)],
+      mergeDone: s.merge === 'no' ? 'Kept separate · reason logged' : s.merge === 'req' ? 'Sent to Dr. Rao for approval · records not merged yet' : '', mergeC: s.merge === 'no' ? '#334E68' : '#1D4ED8', mergeIcon: s.merge === 'no' ? 'call_split' : 'hourglass_top',
+      tvNow: [{ tok: 'A-07', room: 'Room 3', dr: 'Dr. Arjun Rao' }, { tok: 'B-02', room: 'Room 2', dr: 'Dr. Kavitha Raman' }], tvNext: [{ tok: 'A-08', wait: '≈ 10 min' }, { tok: 'A-09', wait: '≈ 25 min' }, { tok: 'B-03', wait: '≈ 15 min' }, { tok: 'A-10', wait: '≈ 40 min' }],
+      channels: [['Call', 'call'], ['WhatsApp', 'chat'], ['SMS', 'sms']].map(([label, icon]) => ({ label, icon, pick: () => this.setState({ ch: label }), bg: s.ch === label ? '#102A43' : '#fff', fg: s.ch === label ? '#fff' : '#142536', line: s.ch === label ? '#102A43' : '#CBD6E0' })),
+      outcomes: OUTS.map(label => ({ label, pick: () => this.setState({ out: label }), bg: s.out === label ? '#EEF4EF' : '#fff', line: s.out === label ? '#4F7A5E' : '#DFE7ED' })),
+      saveContact: () => this.setState({ saved: true }), contactOff: !s.out, ctBg: s.saved ? '#E6F4EF' : s.out ? '#4F7A5E' : '#E6ECF1', ctFg: s.saved ? '#087F5B' : s.out ? '#fff' : '#8296A8', ctLabel: s.saved ? (s.out && s.out.startsWith('Message') ? 'Logged · task stays open' : 'Logged · ' + (s.out || '')) : 'Save outcome',
+      overdue: OV.map(([pt, what, late, c, line], i) => ({ pt, what, late, c, line, esc: () => this.setState(p => ({ escd: { ...p.escd, [i]: true } })), eLabel: s.escd[i] ? 'In Dr. Rao’s inbox' : 'Escalate to doctor', eBg: s.escd[i] ? '#E6F4EF' : '#102A43', eFg: s.escd[i] ? '#087F5B' : '#fff' })),
+      matches: [['Sana Khan · 34 F', 'MRN DQ-10-7710 · DOB 02 May 1992 · lab order ORD-9930 open'], ['Sana Khanum · 36 F', 'MRN DQ-11-0221 · no open orders']].map(([n, sub], i) => ({ n, sub, pick: () => this.setState({ match: i }), line: s.match === i ? '#0E9384' : '#DFE7ED' })),
+      confirmMatch: () => this.setState({ matched: true }), matchOff: s.match === null, mBg: s.matched ? '#E6F4EF' : s.match === null ? '#E6ECF1' : '#0E9384', mFg: s.matched ? '#087F5B' : s.match === null ? '#8296A8' : '#fff', mLabel: s.matched ? 'Matched · routed to inbox (not reviewed)' : 'Confirm patient',
+      vaccines: [['Birth', 'BCG · OPV-0 · Hep B-1', '04 Apr 2025', 'Given', 'check_circle', '#E6F4EF', '#087F5B'], ['6 weeks', 'Pentavalent-1 · OPV-1 · Rota-1 · PCV-1', '16 May 2025', 'Given', 'check_circle', '#E6F4EF', '#087F5B'], ['10 weeks', 'Pentavalent-2 · OPV-2 · Rota-2', '13 Jun 2025', 'Reported by guardian', 'person', '#EDF1F5', '#334E68'], ['14 weeks', 'Pentavalent-3 · OPV-3 · Rota-3 · PCV-2', '11 Jul 2025', 'Given', 'check_circle', '#E6F4EF', '#087F5B'], ['9 months', 'MR-1 · PCV booster', '05 Jan 2026', 'Given', 'check_circle', '#E6F4EF', '#087F5B'], ['16–24 months', 'MR-2 · DPT booster-1 · OPV booster', this.state.dose ? '05 Oct 2026' : 'Due now', this.state.dose ? 'Given today' : 'Due', this.state.dose ? 'check_circle' : 'schedule', this.state.dose ? '#E6F4EF' : '#FDF5E7', this.state.dose ? '#087F5B' : '#7A4710'], ['5–6 years', 'DPT booster-2', '—', 'Upcoming', 'event', '#F1F5F8', '#506579']].map(([age, n, d, st, icon, sBg, sFg]) => ({ age, n, d, st, icon, sBg, sFg, bg: st === 'Due' ? '#FFFBF3' : '#fff' })),
+      doseFields: [['Vaccine', 'MR-2', 0], ['Batch / lot', 'MR24-0981', 1], ['Expiry', '03/2027', 1], ['Site & route', 'Right arm · SC', 0], ['Given by', 'S. Thomas RN', 0], ['Next due', 'DPT booster-2 at 5 y', 0]].map(([k, v, m]) => ({ k, v, font: m ? "'JetBrains Mono',monospace" : 'Manrope,system-ui,sans-serif' })),
+      giveDose: () => this.setState({ dose: true }), doseBg: this.state.dose ? '#E6F4EF' : '#0E9384', doseFg: this.state.dose ? '#087F5B' : '#fff', doseLabel: this.state.dose ? 'Recorded · certificate released to guardian portal' : 'Record dose given',
+      aiStates: AS.map(([id, title, icon, bg, line, fg, head, body, note, actions, progress]) => ({ id, title, icon, bg, line, fg, head, body, note, actions, progress: !!progress, bar: progress ? React.createElement('div', { style: { height: '100%', background: '#2563EB', borderRadius: 4, animation: 'pg 3s ease-out infinite alternate' } }) : null }))
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+Arabic:wght@400;600;700&family=Material+Symbols+Outlined:opsz,wght,FILL@20..24,400,0..1&display=swap" rel="stylesheet">
+<style>body{margin:0;background:#DDE4EA;color:#142536;font-family:Manrope,system-ui,sans-serif;-webkit-font-smoothing:antialiased}a{color:#2563EB;text-decoration:none}a:hover{text-decoration:underline}button{font-family:Manrope,system-ui,sans-serif}.ms{font-family:'Material Symbols Outlined';font-weight:400;font-style:normal;line-height:1;display:inline-block;white-space:nowrap;font-feature-settings:'liga'}@keyframes wv{0%,100%{transform:scaleY(.25)}50%{transform:scaleY(1)}}</style>
+</helmet>
+<div style="padding:40px;display:flex;flex-direction:column;gap:40px">
+  <header style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:16px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:900px"><div style="font:600 12px 'JetBrains Mono',monospace;color:#506579">X-01 mobile (360–430) · tablet (768–1024) · X-02 dark mode</div><h1 style="margin:0;font-size:30px;letter-spacing:-0.02em;color:#102A43">Mobile, tablet & dark mode</h1></div>
+    <div style="display:flex;gap:4px;padding:4px;background:#C9D3DC;border-radius:10px"><sc-for list="{{ themes }}" as="t" hint-placeholder-count="2"><button onClick="{{ t.pick }}" style="height:34px;padding:0 14px;border-radius:7px;border:0;background:{{ t.bg }};color:{{ t.fg }};font-size:13px;font-weight:700;cursor:pointer">{{ t.label }}</button></sc-for></div>
+  </header>
+
+  <div style="display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start">
+    <sc-for list="{{ phones }}" as="p" hint-placeholder-count="6">
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="font-size:13px;font-weight:700;color:#334E68">{{ p.label }}</div>
+        <div data-screen-label="{{ p.label }}" style="width:380px;height:800px;border-radius:44px;background:#0B1622;padding:10px;box-sizing:border-box;box-shadow:0 12px 32px rgba(16,42,67,.2)">
+          <div style="width:100%;height:100%;border-radius:36px;background:{{ c.canvas }};color:{{ c.ink }};overflow:hidden;display:flex;flex-direction:column">
+            <div style="height:42px;display:flex;justify-content:space-between;align-items:center;padding:0 24px;font-size:14px;font-weight:700;flex-shrink:0"><span>10:42</span><span style="display:flex;gap:6px;align-items:center"><sc-if value="{{ p.rec }}"><span style="width:8px;height:8px;border-radius:50%;background:#E5484D"></span></sc-if><span class="ms" style="font-size:18px">signal_cellular_alt</span></span></div>
+            <sc-if value="{{ p.banner }}"><div style="margin:0 12px;padding:10px 12px;border-radius:12px;background:{{ c.card }};border:1px solid {{ c.line }};display:flex;flex-direction:column;gap:4px;box-shadow:inset 3px 0 0 {{ c.teal }}"><div style="display:flex;justify-content:space-between"><strong style="font-size:15px">Meera Iyer <span style="font-weight:500;color:{{ c.ink2 }}">54 F</span></strong><span style="font:400 11px 'JetBrains Mono',monospace;color:{{ c.ink2 }}">••4482</span></div><div style="display:flex;gap:6px;flex-wrap:wrap"><span style="font-size:11px;font-weight:800;padding:2px 7px;border-radius:5px;background:{{ c.redBg }};color:{{ c.red }}">Penicillin allergy</span><span style="font-size:11px;font-weight:800;padding:2px 7px;border-radius:5px;background:{{ c.okBg }};color:{{ c.ok }}">Consent given</span></div></div></sc-if>
+            <div style="flex:1;overflow:hidden;padding:12px;display:flex;flex-direction:column;gap:10px">
+              <sc-if value="{{ p.title }}"><div style="font-size:22px;font-weight:800;padding:0 4px">{{ p.title }}</div></sc-if>
+              <sc-if value="{{ p.hero }}"><div style="border-radius:16px;padding:16px;background:{{ c.hero }};color:#fff;display:flex;flex-direction:column;gap:8px"><span style="font-size:12.5px;font-weight:700;color:#8FE3D6">{{ p.hero.k }}</span><span style="font-size:18px;font-weight:800">{{ p.hero.t }}</span><button style="height:48px;border-radius:12px;border:0;background:{{ c.teal }};color:#fff;font-size:15px;font-weight:800">{{ p.hero.cta }}</button></div></sc-if>
+              <sc-if value="{{ p.recPanel }}"><div style="border-radius:16px;padding:18px;background:{{ c.card }};border:1px solid {{ c.recLine }};display:flex;flex-direction:column;align-items:center;gap:10px"><span style="font-size:12.5px;font-weight:800;letter-spacing:.06em;color:{{ c.red }}">● RECORDING</span><span style="font-size:48px;font-weight:700;font-variant-numeric:tabular-nums">04:12</span><div style="width:100%;height:48px">{{ wave }}</div><div style="display:flex;gap:14px"><button style="width:64px;height:64px;border-radius:50%;border:1px solid {{ c.line }};background:{{ c.card }};color:{{ c.ink }}"><span class="ms" style="font-size:28px">pause</span></button><button style="height:64px;padding:0 24px;border-radius:999px;border:0;background:#B42333;color:#fff;font-size:16px;font-weight:800;display:flex;align-items:center;gap:8px"><span class="ms" style="font-size:24px">stop</span>Stop</button></div><span style="font-size:12px;color:{{ c.ink2 }}">Phone mic · 14/14 chunks uploaded · screen stays on</span></div></sc-if>
+              <sc-if value="{{ p.aiBar }}"><div style="padding:10px 12px;border-radius:12px;background:{{ c.aiBg }};border:1px dashed {{ c.aiLine }};color:{{ c.ai }};font-size:13px;font-weight:800;display:flex;gap:6px;align-items:center"><span class="ms" style="font-size:17px">auto_awesome</span>AI draft · 6 items to review</div></sc-if>
+              <sc-for list="{{ p.rows }}" as="r" hint-placeholder-count="5">
+                <div style="padding:12px;border-radius:14px;background:{{ r.bg }};border:1px {{ r.bs }} {{ r.line }};display:flex;gap:10px;align-items:center">
+                  <sc-if value="{{ r.icon }}"><span class="ms" style="font-size:22px;color:{{ r.ic }}">{{ r.icon }}</span></sc-if>
+                  <sc-if value="{{ r.time }}"><span style="font:500 12.5px 'JetBrains Mono',monospace;color:{{ c.ink2 }};width:44px">{{ r.time }}</span></sc-if>
+                  <div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:700">{{ r.t }}</div><div style="font-size:12.5px;color:{{ c.ink2 }}">{{ r.s }}</div></div>
+                  <sc-if value="{{ r.chip }}"><span style="font-size:11px;font-weight:800;padding:3px 8px;border-radius:6px;background:{{ r.cBg }};color:{{ r.cFg }};white-space:nowrap">{{ r.chip }}</span></sc-if>
+                </div>
+              </sc-for>
+              <sc-if value="{{ p.code }}"><div style="display:flex;gap:8px;justify-content:center;margin:6px 0"><sc-for list="{{ code }}" as="d" hint-placeholder-count="4"><span style="width:58px;height:70px;border-radius:12px;border:1px solid {{ c.line }};background:{{ c.card }};display:flex;align-items:center;justify-content:center;font:600 30px 'JetBrains Mono',monospace">{{ d }}</span></sc-for></div></sc-if>
+            </div>
+            <sc-if value="{{ p.cta }}"><div style="padding:10px 12px 18px;border-top:1px solid {{ c.line }}"><button style="width:100%;height:52px;border-radius:14px;border:0;background:{{ p.ctaBg }};color:#fff;font-size:16px;font-weight:800">{{ p.cta }}</button></div></sc-if>
+            <sc-if value="{{ p.tabs }}"><div style="height:72px;border-top:1px solid {{ c.line }};background:{{ c.card }};display:grid;grid-template-columns:repeat(5,1fr);padding-bottom:8px;flex-shrink:0"><sc-for list="{{ tabs }}" as="t" hint-placeholder-count="5"><div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11px;font-weight:700;color:{{ t.c }}"><span class="ms" style="font-size:24px">{{ t.icon }}</span>{{ t.l }}</div></sc-for></div></sc-if>
+          </div>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+
+
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <div style="font-size:13px;font-weight:700;color:#334E68">UAE clinician · Arabic RTL · Doctor Today</div>
+    <div data-screen-label="Mobile Doctor Today Arabic RTL" style="width:380px;height:800px;border-radius:44px;background:#0B1622;padding:10px;box-sizing:border-box;box-shadow:0 12px 32px rgba(16,42,67,.2)">
+      <div dir="rtl" style="width:100%;height:100%;border-radius:36px;background:#F7FAFC;color:#142536;overflow:hidden;display:flex;flex-direction:column;font-family:'Noto Sans Arabic',Manrope,sans-serif">
+        <div style="height:42px;display:flex;justify-content:space-between;align-items:center;padding:0 24px;font-size:14px;font-weight:700"><span>10:42</span><span class="ms" style="font-size:18px">signal_cellular_alt</span></div>
+        <div style="flex:1;padding:12px;display:flex;flex-direction:column;gap:10px">
+          <div style="font-size:22px;font-weight:700;padding:0 4px">اليوم · 6 من 15</div>
+          <div style="border-radius:16px;padding:16px;background:#102A43;color:#fff;display:flex;flex-direction:column;gap:8px"><span style="font-size:12.5px;color:#8FE3D6">المريض التالي</span><span style="font-size:18px;font-weight:700">فاطمة المنصوري · غرفة 2</span><button style="height:48px;border-radius:12px;border:0;background:#0E9384;color:#fff;font-size:15px;font-weight:700;font-family:inherit">بدء الاستشارة</button></div>
+          <div style="padding:12px;border-radius:14px;background:#fff;border:1px solid #F3B9C0;display:flex;gap:10px;align-items:center"><span class="ms" style="font-size:22px;color:#8A1626">error</span><div style="flex:1"><div style="font-size:15px;font-weight:700">بوتاسيوم 6.1 mmol/L</div><div style="font-size:12.5px;color:#506579">عمر ص. · حرج · لم تتم المراجعة</div></div><span style="font-size:11px;font-weight:800;padding:3px 8px;border-radius:6px;background:#FDECEE;color:#8A1626">حرج</span></div>
+          <div style="padding:12px;border-radius:14px;background:#fff;border:1px solid #DFE7ED;display:flex;gap:10px;align-items:center"><span style="font:500 12.5px 'JetBrains Mono',monospace;color:#506579">10:20</span><div style="flex:1"><div style="font-size:15px;font-weight:700">عائشة رحمن</div><div style="font-size:12.5px;color:#506579">متابعة · تأمين ضمان · مؤهل</div></div><span style="font-size:11px;font-weight:800;padding:3px 8px;border-radius:6px;background:#EFF4FF;color:#1D4ED8">تم التسجيل</span></div>
+          <div style="padding:12px;border-radius:14px;background:#F8F6FE;border:1px dashed #A897E8;color:#5B3FC4;font-size:13px;font-weight:700;display:flex;gap:6px;align-items:center"><span class="ms" style="font-size:17px">auto_awesome</span>مسودة ذكاء اصطناعي · غير مراجَعة · 2</div>
+        </div>
+        <div style="height:72px;border-top:1px solid #DFE7ED;background:#fff;display:grid;grid-template-columns:repeat(5,1fr);padding-bottom:8px;font-size:11px;font-weight:700"><div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:#0F766E"><span class="ms" style="font-size:24px">today</span>اليوم</div><div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:#506579"><span class="ms" style="font-size:24px">groups</span>المرضى</div><div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:#506579"><span class="ms" style="font-size:24px">inbox</span>النتائج</div><div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:#506579"><span class="ms" style="font-size:24px">chat</span>الرسائل</div><div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:#506579"><span class="ms" style="font-size:24px">menu</span>المزيد</div></div>
+      </div>
+    </div>
+  </div>
+  <!-- TABLET -->
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <div style="font-size:13px;font-weight:700;color:#334E68">Tablet · 1024 × 768 · Patient 360 with brief (landscape, nurse & doctor)</div>
+    <div data-screen-label="Tablet Patient 360" style="width:1064px;height:808px;border-radius:32px;background:#0B1622;padding:20px;box-sizing:border-box;box-shadow:0 12px 32px rgba(16,42,67,.2)">
+      <div style="width:100%;height:100%;border-radius:16px;background:{{ c.canvas }};color:{{ c.ink }};overflow:hidden;display:grid;grid-template-columns:72px minmax(0,1fr)">
+        <div style="background:{{ c.nav }};display:flex;flex-direction:column;align-items:center;gap:8px;padding:14px 0"><div style="width:36px;height:36px;border-radius:10px;background:#0E9384;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;margin-bottom:10px">M</div><sc-for list="{{ railIcons }}" as="i" hint-placeholder-count="6"><div style="width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:{{ i.bg }};color:{{ i.c }}"><span class="ms" style="font-size:24px">{{ i.icon }}</span></div></sc-for></div>
+        <div style="display:flex;flex-direction:column;min-width:0">
+          <div style="padding:12px 18px;background:{{ c.card }};border-bottom:1px solid {{ c.line }};display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;box-shadow:inset 4px 0 0 {{ c.teal }}"><strong style="font-size:17px">Meera Iyer <span style="font-weight:500;color:{{ c.ink2 }}">54 F</span></strong><span style="font:400 12px 'JetBrains Mono',monospace;color:{{ c.ink2 }}">MRN DQ-10-4482 · DOB 12 Mar 1972</span><span style="font-size:12px;font-weight:800;padding:3px 9px;border-radius:6px;background:{{ c.redBg }};color:{{ c.red }}">Allergy: Penicillin · verified</span><button style="margin-left:auto;height:44px;padding:0 16px;border-radius:12px;border:0;background:{{ c.teal }};color:#fff;font-size:14px;font-weight:800">Start consultation</button></div>
+          <div style="flex:1;padding:16px;display:grid;grid-template-columns:1fr 1fr;gap:14px;overflow:hidden">
+            <div style="background:{{ c.card }};border:1px solid {{ c.line }};border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px"><span style="align-self:flex-start;font-size:12px;font-weight:800;padding:3px 9px;border-radius:6px;background:{{ c.okBg }};color:{{ c.ok }}">Verified chart</span><sc-for list="{{ tabVerified }}" as="v" hint-placeholder-count="4"><div style="display:flex;gap:10px;font-size:14.5px"><span style="min-width:96px;color:{{ c.ink2 }};font-weight:700;font-size:13px">{{ v.k }}</span><span>{{ v.v }}</span></div></sc-for></div>
+            <div style="background:{{ c.aiBg }};border:1px dashed {{ c.aiLine }};border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px"><span style="align-self:flex-start;font-size:12px;font-weight:800;color:{{ c.ai }}">AI summary · not reviewed</span><sc-for list="{{ tabAi }}" as="v" hint-placeholder-count="3"><div style="font-size:14.5px;line-height:1.5;color:{{ c.aiInk }}">{{ v }}</div></sc-for></div>
+            <div style="background:{{ c.card }};border:1px solid {{ c.line }};border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px"><strong style="font-size:15px">Medicines</strong><sc-for list="{{ tabMeds }}" as="m" hint-placeholder-count="3"><div style="display:flex;justify-content:space-between;font-size:14px;padding:6px 0;border-bottom:1px solid {{ c.line }}"><span>{{ m.n }}</span><span style="font-size:12px;font-weight:800;color:{{ m.c }}">{{ m.st }}</span></div></sc-for></div>
+            <div style="background:{{ c.card }};border:1px solid {{ c.line }};border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px"><strong style="font-size:15px">HbA1c</strong><div style="display:flex;align-items:flex-end;gap:14px;height:110px;border-bottom:1px solid {{ c.line }}"><sc-for list="{{ tabTrend }}" as="h" hint-placeholder-count="4"><div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;justify-content:flex-end;height:100%"><span style="font-size:13px;font-weight:700">{{ h.v }}</span><div style="width:100%;max-width:40px;height:{{ h.h }}px;border-radius:6px 6px 0 0;background:{{ h.c }}"></div></div></sc-for></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <section style="background:#fff;border-radius:16px;border:1px solid #D5DCE2;padding:20px 24px;max-width:1064px;display:flex;flex-direction:column;gap:10px">
+    <h2 style="margin:0;font-size:17px;color:#102A43">Responsive rules</h2>
+    <sc-for list="{{ rules }}" as="r" hint-placeholder-count="6"><div style="display:grid;grid-template-columns:150px minmax(0,1fr);gap:12px;font-size:14px;padding:6px 0;border-bottom:1px solid #F1F5F8"><strong>{{ r.k }}</strong><span style="color:#334E68">{{ r.v }}</span></div></sc-for>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;dark&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  state = { dark: this.props.dark ?? false };
+  renderVals() {
+    const d = this.state.dark;
+    const c = d ? { canvas: '#0F1C2A', card: '#12202E', ink: '#E6EDF3', ink2: '#9DB0C2', line: '#22364A', teal: '#2BB3A3', hero: '#0B1622', nav: '#0B1622', red: '#F47A86', redBg: '#3A1A22', ok: '#4CC79C', okBg: '#12342B', ai: '#A08CF0', aiBg: '#1D1A33', aiLine: '#5A4B9E', aiInk: '#D7CFFA', recLine: '#6B2A33' }
+      : { canvas: '#F7FAFC', card: '#FFFFFF', ink: '#142536', ink2: '#506579', line: '#DFE7ED', teal: '#0E9384', hero: '#102A43', nav: '#102A43', red: '#8A1626', redBg: '#FDECEE', ok: '#087F5B', okBg: '#E6F4EF', ai: '#5B3FC4', aiBg: '#F8F6FE', aiLine: '#A897E8', aiInk: '#2D2266', recLine: '#F3B9C0' };
+    const row = (t, s, o = {}) => ({ t, s, icon: o.icon || '', ic: o.ic || c.teal, time: o.time || '', chip: o.chip || '', cBg: o.cBg || c.okBg, cFg: o.cFg || c.ok, bg: o.ai ? c.aiBg : c.card, line: o.ai ? c.aiLine : o.alert ? c.recLine : c.line, bs: o.ai ? 'dashed' : 'solid' });
+    const warnBg = d ? '#3A2A12' : '#FDF5E7', warn = d ? '#E9B15F' : '#7A4710', blueBg = d ? '#16284A' : '#EFF4FF', blue = d ? '#6B9BFF' : '#1D4ED8', grayBg = d ? '#1B2C3D' : '#F1F5F8';
+    const phones = [
+      { label: 'Doctor Today', title: 'Today · 6/15 seen', hero: { k: 'Next patient', t: 'Meera Iyer · Room 3', cta: 'Start consultation' }, tabs: true, rows: [row('Potassium 6.1 mmol/L', 'Rahul M. · critical · not reviewed', { icon: 'error', ic: c.red, alert: 1, chip: 'Critical', cBg: c.redBg, cFg: c.red }), row('Farhan Qureshi', 'Walk-in · fever', { time: '10:20', chip: 'Waiting 12m', cBg: warnBg, cFg: warn }), row('Lakshmi Pillai', 'Post-discharge', { time: '10:40', chip: 'Vitals done', cBg: blueBg, cFg: blue }), row('Ananya Sharma', 'Video visit', { time: '11:00', chip: 'Joined', cBg: blueBg, cFg: blue })] },
+      { label: 'Capture · recording', banner: true, rec: true, recPanel: true, rows: [row('Speaker 2 · Patient?', '“மூணு வாரமா ரெண்டு காலும் எரிச்சல்…”', { icon: 'record_voice_over', ic: c.ink2 }), row('Low audio from Speaker 3', 'Ask them to move closer', { icon: 'hearing', ic: warn, chip: 'Attention', cBg: warnBg, cFg: warn })] },
+      { label: 'Note review', banner: true, aiBar: true, cta: 'Sign note (2 unresolved)', ctaBg: '#8296A8', rows: [row('Tingling, burning both feet ~3 weeks', 'Swipe right to accept · tap to edit', { icon: 'auto_awesome', ic: c.ai, ai: 1 }), row('Misses evening metformin 3×/week', 'Stated by daughter · confirm', { icon: 'warning', ic: warn, ai: 1 }), row('BP 138/86, Wt 71.4 kg', 'Nurse intake · verified', { icon: 'verified', ic: c.ok }), row('Evidence · 02:31 · Hindi', 'Tap to play 6 s secure replay', { icon: 'play_circle', ic: c.ink2 })] },
+      { label: 'Appointments', title: 'Sat 4 Oct', tabs: true, cta: '+ Book appointment', ctaBg: '#2563EB', rows: [row('Rahul Menon', 'BP review', { time: '09:30', chip: 'Completed', cBg: grayBg, cFg: c.ink2 }), row('Meera Iyer', 'Diabetes follow-up', { time: '10:00', chip: 'In room', cBg: c.okBg, cFg: c.ok }), row('Farhan Qureshi', 'Walk-in', { time: '10:20', chip: 'Checked in', cBg: blueBg, cFg: blue }), row('Vikram Desai', 'New · 40 min', { time: '11:20', chip: 'Booked', cBg: grayBg, cFg: c.ink2 }), row('Joseph Mathew', 'Follow-up', { time: '09:10', chip: 'No-show', cBg: c.redBg, cFg: c.red })] },
+      { label: 'Patient record', banner: true, tabs: true, rows: [row('Type 2 diabetes · E11.42', 'Verified · since 2019', { icon: 'verified', ic: c.ok }), row('HbA1c 7.9 %', '28 Sep · reviewed · up from 7.6', { icon: 'biotech', ic: blue }), row('Metformin XR 1000 mg', 'Started 04 Oct · with dinner', { icon: 'medication', ic: c.teal }), row('Atorvastatin', 'Stopped 04 Oct · intolerance', { icon: 'block', ic: c.ink2 }), row('Signed note · 04 Oct', 'Dr. Arjun Rao · read-only', { icon: 'lock', ic: c.ink })] },
+      { label: 'Wearable pairing', title: 'Pair Medvya Clip', code: true, cta: 'Codes match · continue', ctaBg: c.teal, rows: [row('Step 2 of 4 · Match the code', 'The clip shows the same code in its LED pattern.', { icon: 'settings_voice', ic: c.teal }), row('Clip ••21', 'Battery 78 % · FW 1.4.2 · within 1 m', { icon: 'bluetooth', ic: blue })] }
+    ];
+    return {
+      themes: [['Light', false], ['Dark', true]].map(([label, v]) => ({ label, pick: () => this.setState({ dark: v }), bg: d === v ? '#fff' : 'transparent', fg: d === v ? '#102A43' : '#334E68' })),
+      c, phones, code: ['4', '8', '1', '2'],
+      tabs: [['Today', 'today'], ['Patients', 'groups'], ['Inbox', 'inbox'], ['Messages', 'chat'], ['More', 'menu']].map(([l, icon], i) => ({ l, icon, c: i === 0 ? c.teal : c.ink2 })),
+      wave: React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 3, height: '100%' }, 'aria-hidden': true }, Array.from({ length: 36 }, (_, i) => React.createElement('span', { key: i, style: { flex: 1, height: '100%', borderRadius: 2, background: c.teal, transform: 'scaleY(.25)', animation: `wv ${0.8 + (i * 37 % 9) / 10}s ease-in-out ${(i * 53 % 11) / 10}s infinite` } }))),
+      railIcons: ['today', 'groups', 'chat', 'inbox', 'calendar_month', 'tune'].map((icon, i) => ({ icon, bg: i === 1 ? '#1B3A57' : 'transparent', c: i === 1 ? '#fff' : '#8FA6BD' })),
+      tabVerified: [['Problems', 'Type 2 diabetes, hypertension'], ['Last HbA1c', '7.9 % · 28 Sep'], ['Medicines', 'Metformin, telmisartan, atorvastatin'], ['Today', 'BP 138/86 · Wt 71.4 kg']].map(([k, v]) => ({ k, v })),
+      tabAi: ['Urine microalbumin was not done as ordered (lab PDF p.2).', 'Reported “foot burning” when booking (01 Oct).', 'No eye exam in the last 12 months.'],
+      tabMeds: [['Metformin 500 mg BD', 'Verified', c.ok], ['Telmisartan 40 mg OD', 'Verified', c.ok], ['Atorvastatin 10 mg OD', 'Not confirmed', warn]].map(([n, st, col]) => ({ n, st, c: col })),
+      tabTrend: [['8.4', 84], ['8.0', 76], ['7.6', 66], ['7.9', 72]].map(([v, h], i) => ({ v, h, c: i === 3 ? c.teal : c.line })),
+      rules: [['Mobile 360+', 'Single column, sticky identity banner, bottom tab bar, primary action pinned above the tabs, 48px targets.'], ['Tablet 768+', 'Icon rail navigation, two-column cards, consult button in banner; front desk board scrolls horizontally.'], ['Desktop 1280+', 'Full sidebar, three-panel layouts (list · detail · evidence).'], ['Widescreen 1600+', 'Max content width 1440; evidence panel stays visible.'], ['Dark mode', 'Same semantics, lighter accents (#2BB3A3, #6B9BFF, #A08CF0); AI stays dashed; red/amber keep text labels.'], ['Reduced motion', 'Waveform and progress animations stop; state still shown in text.']].map(([k, v]) => ({ k, v }))
+    };
+  }
+}
+</script>
+</body>
+</html>

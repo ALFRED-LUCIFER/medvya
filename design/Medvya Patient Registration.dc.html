@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+Arabic:wght@400;600&family=Material+Symbols+Outlined:opsz,wght,FILL@20..24,400,0..1&display=swap" rel="stylesheet">
+<style>body{margin:0;background:#F7FAFC;color:#142536;font-family:Manrope,system-ui,sans-serif;-webkit-font-smoothing:antialiased}a{color:#2563EB;text-decoration:none}a:hover{text-decoration:underline}button,input,select{font-family:Manrope,system-ui,sans-serif}input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid #2563EB;outline-offset:2px}.ms{font-family:'Material Symbols Outlined';font-weight:400;font-style:normal;line-height:1;display:inline-block;white-space:nowrap;font-feature-settings:'liga'}</style>
+</helmet>
+<div data-screen-label="P-02 Register patient India UAE" style="min-height:100vh;display:flex;flex-direction:column">
+  <header style="height:60px;background:#fff;border-bottom:1px solid #DFE7ED;display:flex;align-items:center;gap:14px;padding:0 24px;position:sticky;top:0;z-index:5;box-shadow:inset 0 -3px 0 #2563EB">
+    <a href="Medvya Clinician App.dc.html" style="display:flex;align-items:center;gap:6px;font-size:14px;font-weight:700;color:#142536"><span class="ms" style="font-size:20px">arrow_back</span>Front desk</a>
+    <div style="width:1px;height:24px;background:#DFE7ED"></div>
+    <div style="display:flex;flex-direction:column"><span style="font-size:12px;font-weight:700;color:#1D4ED8">PMS · P-02 · M1</span><span style="font-size:16px;font-weight:800;color:#102A43">Register new patient</span></div>
+    <div style="flex:1"></div>
+    <div style="display:flex;gap:4px;padding:4px;background:#EAEFF3;border-radius:10px" role="tablist" aria-label="Form mode">
+      <sc-for list="{{ modes }}" as="m" hint-placeholder-count="2"><button onClick="{{ m.pick }}" style="height:32px;padding:0 12px;border-radius:7px;border:0;background:{{ m.bg }};color:{{ m.fg }};font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">{{ m.label }}</button></sc-for>
+    </div>
+    <div style="display:flex;gap:4px;padding:4px;background:#EAEFF3;border-radius:10px" role="tablist" aria-label="Country">
+      <sc-for list="{{ countries }}" as="c" hint-placeholder-count="2"><button onClick="{{ c.pick }}" style="height:32px;padding:0 12px;border-radius:7px;border:0;background:{{ c.bg }};color:{{ c.fg }};font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">{{ c.label }}</button></sc-for>
+    </div>
+    <span style="font:600 10px 'JetBrains Mono',monospace;color:#975A16;background:#FDF5E7;padding:5px 8px;border-radius:4px;white-space:nowrap">SYNTHETIC</span>
+  </header>
+
+  <div style="display:grid;grid-template-columns:minmax(190px,230px) minmax(420px,1fr);gap:20px;padding:24px;align-items:start;max-width:1440px;width:100%;box-sizing:border-box;margin:0 auto">
+    <nav aria-label="Registration steps" style="display:flex;flex-direction:column;gap:4px;position:sticky;top:84px">
+      <div style="font-size:12px;color:#506579;font-weight:600;padding:0 10px 8px">{{ deployLine }}</div>
+      <sc-for list="{{ steps }}" as="s" hint-placeholder-count="6">
+        <button onClick="{{ s.go }}" style="display:flex;align-items:center;gap:10px;min-height:44px;padding:6px 10px;border-radius:10px;border:0;background:{{ s.bg }};color:{{ s.fg }};text-align:left;cursor:pointer;font-size:14px;font-weight:700;opacity:{{ s.op }}">
+          <span style="width:26px;height:26px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;background:{{ s.dotBg }};color:{{ s.dotFg }}">{{ s.n }}</span>
+          <span style="display:flex;flex-direction:column;min-width:0"><span>{{ s.label }}</span><span style="font-size:11.5px;font-weight:600;color:#506579">{{ s.sub }}</span></span>
+        </button>
+      </sc-for>
+    </nav>
+
+    <main style="display:flex;flex-direction:column;gap:16px;min-width:0">
+      <sc-if value="{{ showForm }}" hint-placeholder-val="{{ true }}">
+        <section style="background:#fff;border:1px solid #DFE7ED;border-radius:12px;padding:22px;display:flex;flex-direction:column;gap:18px">
+          <div><h1 style="margin:0;font-size:20px;color:#102A43">{{ stepTitle }}</h1><p style="margin:4px 0 0;font-size:14px;color:#506579;line-height:1.5">{{ stepIntro }}</p></div>
+
+          <sc-if value="{{ showIdVerify }}">
+            <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:14px 16px;border-radius:12px;border:1px solid #D3E0FD;background:#F5F8FF">
+              <span class="ms" style="font-size:26px;color:#1D4ED8">{{ idv.icon }}</span>
+              <div style="flex:1 1 260px;min-width:0"><div style="font-size:15px;font-weight:700;color:#142536">{{ idv.title }}</div><div style="font-size:13px;color:#506579;line-height:1.45">{{ idv.sub }}</div></div>
+              <sc-for list="{{ idv.actions }}" as="a" hint-placeholder-count="2"><button onClick="{{ a.run }}" style="height:40px;padding:0 14px;border-radius:9px;border:{{ a.border }};background:{{ a.bg }};color:{{ a.fg }};font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap"><span class="ms" style="font-size:17px">{{ a.icon }}</span>{{ a.label }}</button></sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{ idVerified }}"><div style="display:flex;gap:8px;align-items:center;font-size:13px;font-weight:700;color:#087F5B"><span class="ms" style="font-size:18px">verified</span>{{ idVerifiedText }}</div></sc-if>
+
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px 16px">
+            <sc-for list="{{ fields }}" as="f" hint-placeholder-count="6">
+              <label style="grid-column:{{ f.gc }};display:flex;flex-direction:column;gap:6px;min-width:0">
+                <span style="font-size:13px;font-weight:700;color:#142536;display:flex;gap:6px;align-items:baseline">{{ f.label }}<sc-if value="{{ f.req }}"><span style="color:#B42333;font-size:12px">required</span></sc-if><sc-if value="{{ f.tag }}"><span style="font:600 10px 'JetBrains Mono',monospace;color:{{ f.tagFg }};background:{{ f.tagBg }};padding:1px 5px;border-radius:4px">{{ f.tag }}</span></sc-if></span>
+                <sc-if value="{{ f.isSelect }}"><select defaultValue="{{ f.val }}" style="height:44px;padding:0 10px;border-radius:10px;border:1px solid #CBD6E0;background:#fff;font-size:15px;color:#142536"><sc-for list="{{ f.opts }}" as="o" hint-placeholder-count="3"><option value="{{ o }}">{{ o }}</option></sc-for></select></sc-if>
+                <sc-if value="{{ f.isInput }}"><input value="{{ f.val }}" onChange="{{ f.onChange }}" placeholder="{{ f.ph }}" dir="{{ f.dir }}" inputMode="{{ f.im }}" style="height:44px;padding:0 12px;border-radius:10px;border:1px solid {{ f.line }};background:#fff;font-size:15px;color:#142536;font-family:{{ f.font }};box-sizing:border-box;width:100%"></input></sc-if>
+                <sc-if value="{{ f.err }}"><span style="font-size:12.5px;font-weight:600;color:#B42333;display:flex;gap:4px;align-items:center"><span class="ms" style="font-size:15px">error</span>{{ f.err }}</span></sc-if>
+                <sc-if value="{{ f.hint }}"><span style="font-size:12px;color:#506579;line-height:1.4">{{ f.hint }}</span></sc-if>
+              </label>
+            </sc-for>
+          </div>
+
+          <sc-if value="{{ showChoices }}">
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <sc-for list="{{ choices }}" as="c" hint-placeholder-count="4">
+                <button onClick="{{ c.toggle }}" role="switch" aria-checked="{{ c.aria }}" style="display:flex;gap:14px;align-items:center;padding:14px 16px;border-radius:12px;border:1px solid {{ c.line }};background:{{ c.bg }};text-align:left;cursor:pointer;width:100%">
+                  <span class="ms" style="font-size:22px;color:{{ c.ic }}">{{ c.icon }}</span>
+                  <span style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-size:15px;font-weight:700;color:#142536">{{ c.title }}</span><span style="font-size:13px;color:#506579;line-height:1.45">{{ c.sub }}</span></span>
+                  <span style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0"><span style="width:44px;height:26px;border-radius:999px;background:{{ c.track }};position:relative;display:block"><span style="position:absolute;top:3px;left:{{ c.knob }};width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2)"></span></span><span style="font-size:11px;font-weight:800;color:{{ c.ic }}">{{ c.state }}</span></span>
+                </button>
+              </sc-for>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ showNote }}"><div style="display:flex;gap:10px;padding:12px 14px;border-radius:10px;background:#F7FAFC;border:1px solid #EEF2F5;font-size:13.5px;color:#334E68;line-height:1.5"><span class="ms" style="font-size:19px;color:#506579">info</span><span>{{ note }}</span></div></sc-if>
+
+          <sc-if value="{{ showReview }}">
+            <div style="display:flex;flex-direction:column;gap:14px">
+              <sc-if value="{{ dupOpen }}">
+                <div style="border:1px solid #EFD5A6;background:#FFFBF3;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px">
+                  <div style="display:flex;gap:10px;align-items:flex-start"><span class="ms" style="font-size:22px;color:#975A16">person_search</span><div><div style="font-size:15px;font-weight:800;color:#7A4710">Attention · possible existing record</div><div style="font-size:13.5px;color:#7A4710">Matched on name + date of birth. A shared phone number alone is never treated as a match.</div></div></div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                    <div style="background:#fff;border:1px solid #DFE7ED;border-radius:10px;padding:12px;font-size:13.5px;line-height:1.5;display:flex;flex-direction:column;gap:2px"><div style="font-size:11px;font-weight:800;color:#1D4ED8;letter-spacing:.05em">NEW ENTRY</div><strong>{{ dup.newName }}</strong><div>{{ dup.newDob }}</div><div>{{ dup.newPhone }}</div><div>{{ dup.newId }}</div></div>
+                    <div style="background:#fff;border:1px solid #DFE7ED;border-radius:10px;padding:12px;font-size:13.5px;line-height:1.5;display:flex;flex-direction:column;gap:2px"><div style="font-size:11px;font-weight:800;color:#506579;letter-spacing:.05em">EXISTING · {{ dup.mrn }}</div><strong>{{ dup.oldName }}</strong><div>{{ dup.oldDob }}</div><div>{{ dup.oldPhone }}</div><div>{{ dup.oldId }}</div></div>
+                  </div>
+                  <div style="display:flex;flex-wrap:wrap;gap:8px"><button onClick="{{ notSame }}" style="height:40px;padding:0 14px;border-radius:9px;border:0;background:#102A43;color:#fff;font-size:13px;font-weight:700;cursor:pointer">Not the same person · continue</button><button style="height:40px;padding:0 14px;border-radius:9px;border:1px solid #CBD6E0;background:#fff;font-size:13px;font-weight:700;cursor:pointer">Use existing record</button><button style="height:40px;padding:0 14px;border-radius:9px;border:1px solid #CBD6E0;background:#fff;font-size:13px;font-weight:700;cursor:pointer">Request merge review (P-03)</button></div>
+                </div>
+              </sc-if>
+              <sc-for list="{{ review }}" as="r" hint-placeholder-count="5">
+                <div style="display:grid;grid-template-columns:180px minmax(0,1fr) auto;gap:12px;padding:10px 0;border-bottom:1px solid #EEF2F5;align-items:start"><span style="font-size:13px;font-weight:700;color:#506579">{{ r.k }}</span><span style="font-size:14.5px;color:#142536;line-height:1.5">{{ r.v }}</span><button onClick="{{ r.edit }}" style="height:30px;padding:0 10px;border-radius:7px;border:1px solid #DFE7ED;background:#fff;font-size:12px;font-weight:700;cursor:pointer">Edit</button></div>
+              </sc-for>
+            </div>
+          </sc-if>
+
+          <div style="display:flex;justify-content:space-between;gap:10px;padding-top:6px;border-top:1px solid #EEF2F5;flex-wrap:wrap">
+            <button onClick="{{ back }}" disabled="{{ atStart }}" style="height:44px;padding:0 16px;border-radius:10px;border:1px solid #CBD6E0;background:#fff;font-size:14px;font-weight:600;cursor:pointer;opacity:{{ backOp }}">Back</button>
+            <div style="display:flex;gap:10px"><button style="height:44px;padding:0 16px;border-radius:10px;border:1px solid #CBD6E0;background:#fff;font-size:14px;font-weight:600;cursor:pointer">Save draft</button><button onClick="{{ next }}" disabled="{{ nextDisabled }}" style="height:44px;padding:0 18px;border-radius:10px;border:0;background:{{ nextBg }};color:{{ nextFg }};font-size:14px;font-weight:800;cursor:pointer">{{ nextLabel }}</button></div>
+          </div>
+        </section>
+      </sc-if>
+
+      <sc-if value="{{ done }}">
+        <section style="background:#fff;border:1px solid #DFE7ED;border-radius:12px;padding:26px;display:flex;flex-direction:column;gap:16px">
+          <div style="display:flex;gap:12px;align-items:center"><span class="ms" style="font-size:30px;color:#087F5B">how_to_reg</span><div><h1 style="margin:0;font-size:22px;color:#102A43">{{ doneName }} is registered</h1><div style="font:500 13px 'JetBrains Mono',monospace;color:#506579">{{ doneMrn }}</div></div></div>
+          <div style="display:flex;flex-direction:column">
+            <sc-for list="{{ written }}" as="w" hint-placeholder-count="6"><div style="display:grid;grid-template-columns:minmax(150px,200px) minmax(0,1fr) auto;gap:12px;padding:9px 0;border-bottom:1px solid #EEF2F5;align-items:center"><span style="font:500 12px 'JetBrains Mono',monospace;color:#102A43">{{ w.ent }}</span><span style="font-size:13.5px;color:#334E68">{{ w.v }}</span><span style="font-size:11.5px;font-weight:800;padding:3px 8px;border-radius:6px;background:{{ w.bg }};color:{{ w.fg }};white-space:nowrap">{{ w.st }}</span></div></sc-for>
+          </div>
+          <sc-if value="{{ incomplete }}"><div style="display:flex;gap:10px;padding:12px 14px;border-radius:10px;background:#FDF5E7;border:1px solid #EFD5A6;font-size:13.5px;color:#7A4710;line-height:1.5"><span class="ms" style="font-size:19px">pending_actions</span><span><strong>Attention · quick registration.</strong> Address, emergency contact and payer are missing. A completion task was added to the front-desk queue for the patient's next arrival.</span></div></sc-if>
+          <div style="display:flex;gap:10px;flex-wrap:wrap"><button style="height:44px;padding:0 18px;border-radius:10px;border:0;background:#2563EB;color:#fff;font-size:14px;font-weight:800;cursor:pointer">Book appointment</button><button style="height:44px;padding:0 18px;border-radius:10px;border:1px solid #CBD6E0;background:#fff;font-size:14px;font-weight:700;cursor:pointer">Check in now (walk-in)</button><button onClick="{{ restart }}" style="height:44px;padding:0 18px;border-radius:10px;border:1px solid #CBD6E0;background:#fff;font-size:14px;font-weight:600;cursor:pointer">Register another</button></div>
+        </section>
+      </sc-if>
+    </main>
+
+    <aside style="grid-column:2;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;align-items:start">
+      <section style="background:#fff;border:1px solid #DFE7ED;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;gap:12px;align-items:center"><div style="width:52px;height:52px;border-radius:12px;background:repeating-linear-gradient(45deg,#EEF2F5 0 6px,#F7FAFC 6px 12px);border:1px dashed #CBD6E0;display:flex;align-items:center;justify-content:center;font:500 9px 'JetBrains Mono',monospace;color:#8296A8;text-align:center">photo</div><div style="min-width:0"><div style="font-size:16px;font-weight:800;color:#102A43">{{ pv.name }}</div><div style="font-size:13px;color:#506579">{{ pv.meta }}</div><sc-if value="{{ pv.ar }}"><div dir="rtl" style="font-family:'Noto Sans Arabic',sans-serif;font-size:14px;color:#334E68">{{ pv.ar }}</div></sc-if></div></div>
+        <div style="font:400 12px 'JetBrains Mono',monospace;color:#506579">MRN assigned on save · facility-scoped</div>
+      </section>
+      <section style="background:#fff;border:1px solid #DFE7ED;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:8px">
+        <div style="font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#506579">Data map · this step writes</div>
+        <sc-for list="{{ dataMap }}" as="d" hint-placeholder-count="3"><div style="display:flex;flex-direction:column;gap:2px;padding:6px 0;border-bottom:1px solid #F1F5F8"><span style="font:600 12px 'JetBrains Mono',monospace;color:#102A43">{{ d.ent }}</span><span style="font-size:12.5px;color:#506579;line-height:1.4">{{ d.cols }}</span></div></sc-for>
+      </section>
+      <section style="background:#fff;border:1px solid #DFE7ED;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:6px">
+        <div style="font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#506579">Rules</div>
+        <sc-for list="{{ rules }}" as="r" hint-placeholder-count="4"><div style="display:flex;gap:8px;font-size:12.5px;color:#334E68;line-height:1.45"><span class="ms" style="font-size:15px;color:#0F766E;margin-top:1px">check_small</span><span>{{ r }}</span></div></sc-for>
+      </section>
+    </aside>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;country&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;India&quot;,&quot;UAE&quot;],&quot;default&quot;:&quot;India&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+const DATA = {
+  India: {
+    name: 'Deepak Nair', meta: '47 M · Malayalam, English', ar: '',
+    deploy: 'India deployment · Kochi clinic · DPDP',
+    id: [
+      { label: 'First name', val: 'Deepak', req: 1 }, { label: 'Last name', val: 'Nair', req: 1 },
+      { label: 'Date of birth', val: '14/08/1979', req: 1, hint: 'Or record age only if DOB unknown (marked “estimated”)', im: 'numeric' },
+      { label: 'Sex at birth', sel: ['Male', 'Female', 'Intersex', 'Not recorded'], val: 'Male', req: 1 },
+      { label: 'Gender identity', sel: ['Same as sex at birth', 'Woman', 'Man', 'Transgender', 'Non-binary', 'Prefer not to say'], val: 'Same as sex at birth', tag: 'optional' },
+      { label: 'Preferred language', sel: ['Malayalam', 'Tamil', 'Hindi', 'English', 'Kannada', 'Telugu', 'Bengali', 'Marathi'], val: 'Malayalam' },
+      { label: 'ABHA number', val: '91-4410-2378-6612', mono: 1, tag: 'ABDM', hint: '14 digits. Verified via ABDM OTP or Scan & Share QR. Stored tokenised.' },
+      { label: 'ABHA address', val: 'deepak.nair@abdm', mono: 1, tag: 'ABDM' },
+      { label: 'Other ID type', sel: ['None', 'Aadhaar (last 4 only)', 'PAN', 'Voter ID', 'Passport', 'Driving licence'], val: 'Aadhaar (last 4 only)', hint: 'Full Aadhaar is never stored. Not required for care.' },
+      { label: 'ID value', val: 'XXXX XXXX 4417', mono: 1 }
+    ],
+    contact: [
+      { label: 'Mobile', val: '+91 98470 21346', req: 1, im: 'tel', hint: 'Shared family phones are common; never used alone to match records.' },
+      { label: 'Alternate phone', val: '', ph: '+91' , im: 'tel'},
+      { label: 'Email', val: 'deepak.n@example.in', span: 2 },
+      { label: 'House / flat, building', val: '12/402, Sea Breeze Apartments', span: 2 },
+      { label: 'Street / locality', val: 'Marine Drive' }, { label: 'City / town / village', val: 'Kochi' },
+      { label: 'District', val: 'Ernakulam' }, { label: 'State / UT', sel: ['Kerala', 'Tamil Nadu', 'Karnataka', 'Maharashtra', 'Delhi', 'Telangana', 'West Bengal'], val: 'Kerala' },
+      { label: 'PIN code', key: 'pin', req: 1, mono: 1, im: 'numeric' }, { label: 'Country', val: 'India' }
+    ],
+    family: [
+      { label: 'Emergency contact name', val: 'Lakshmi Nair', req: 1 }, { label: 'Relationship', sel: ['Spouse', 'Parent', 'Child', 'Sibling', 'Friend', 'Other'], val: 'Spouse' },
+      { label: 'Emergency contact phone', val: '+91 98470 55120', req: 1, im: 'tel' }, { label: 'Guardian (if under 18)', val: '', ph: 'Not required · adult', hint: 'Becomes required and drives portal proxy rules when age < 18.' }
+    ],
+    payer: [
+      { label: 'Payment type', sel: ['Self-pay', 'Corporate / employer', 'Private insurance (TPA)', 'Government scheme'], val: 'Private insurance (TPA)', req: 1 },
+      { label: 'Insurer', sel: ['Star Health', 'HDFC ERGO', 'ICICI Lombard', 'Niva Bupa', 'New India Assurance'], val: 'Star Health' },
+      { label: 'TPA', val: 'Medi Assist' }, { label: 'Policy / member no.', val: 'SH-23-778120-01', mono: 1 },
+      { label: 'Government scheme', sel: ['None', 'AB PM-JAY', 'CGHS', 'ECHS', 'State scheme (e.g. KASP)'], val: 'None', tag: 'M4', hint: 'Eligibility and claims adapters ship in M4; recorded as reference only before then.' },
+      { label: 'Policy valid until', val: '31/03/2027', im: 'numeric' }
+    ],
+    consents: [
+      ['Consent to treatment', 'Standard OPD treatment consent, policy v2026.2', 'gavel', true, true],
+      ['Appointment & test reminders · WhatsApp', 'Template messages only, no clinical details', 'chat', true],
+      ['Reminders · SMS', 'Fallback channel', 'sms', false],
+      ['Link records to ABHA (ABDM)', 'Lets the patient share records with other providers through ABDM consent', 'hub', false],
+      ['Portal access', 'Send portal invite to the mobile number', 'person_heart', true],
+      ['Health tips & offers', 'Separate from care. Off by default.', 'campaign', false]
+    ],
+    dup: { newName: 'Deepak Nair', newDob: '14 Aug 1979', newPhone: '+91 98470 21346', newId: 'ABHA ••6612', oldName: 'Deepak K. Nair', oldDob: '14 Aug 1979', oldPhone: '+91 98470 21346 (shared)', oldId: 'No ABHA', mrn: 'DQ-11-0872' },
+    mrn: 'DQ-11-1093', idv: { icon: 'qr_code_scanner', title: 'Verify with ABHA', sub: 'Ask the patient to scan the clinic QR (Scan & Share) or verify ABHA with an OTP to the Aadhaar-linked mobile. Demographics are pre-filled after consent.', a1: 'Scan & Share QR', a2: 'Verify with OTP', done: 'ABHA verified via OTP · demographics pulled with patient consent 10:14' },
+    rules: ['Minimum to register: name, DOB or age, sex, mobile.', 'Phone alone never dedupes; match uses name + DOB + identifier.', 'ABHA is optional; care never depends on it.', 'Aadhaar: last 4 digits only, never the full number.', 'Receptionist cannot see clinical notes after registration.']
+  },
+  UAE: {
+    name: 'Fatima Al Mansoori', meta: '38 F · Arabic, English', ar: 'فاطمة المنصوري',
+    deploy: 'UAE deployment · Abu Dhabi clinic · DoH',
+    id: [
+      { label: 'Full name as on Emirates ID (English)', val: 'Fatima Ahmed Al Mansoori', req: 1, span: 2 },
+      { label: 'Full name (Arabic)', val: 'فاطمة أحمد المنصوري', dir: 'rtl', span: 2, font: "'Noto Sans Arabic',sans-serif" },
+      { label: 'Date of birth', val: '03/02/1988', req: 1, im: 'numeric' },
+      { label: 'Sex', sel: ['Female', 'Male', 'Not recorded'], val: 'Female', req: 1 },
+      { label: 'Nationality', sel: ['United Arab Emirates', 'India', 'Pakistan', 'Philippines', 'Egypt', 'United Kingdom', 'Other'], val: 'United Arab Emirates', req: 1 },
+      { label: 'Preferred language', sel: ['Arabic', 'English', 'Hindi', 'Urdu', 'Malayalam', 'Tagalog'], val: 'Arabic' },
+      { label: 'Emirates ID', key: 'eid', req: 1, mono: 1, tag: 'ICP', im: 'numeric' },
+      { label: 'Emirates ID expiry', val: '11/2029', im: 'numeric' },
+      { label: 'Passport (visitors / no EID)', val: '', ph: 'Optional for residents', mono: 1 },
+      { label: 'Visa / residency file no.', val: '', ph: 'Visitors only', mono: 1 }
+    ],
+    contact: [
+      { label: 'Mobile', val: '+971 50 412 2291', req: 1, im: 'tel' }, { label: 'Alternate phone', val: '', ph: '+971', im: 'tel' },
+      { label: 'Email', val: 'fatima.m@example.ae', span: 2 },
+      { label: 'Villa / building & flat', val: 'Villa 14', span: 2 },
+      { label: 'Area / community', val: 'Al Karamah' }, { label: 'Emirate', sel: ['Abu Dhabi', 'Dubai', 'Sharjah', 'Ajman', 'Umm Al Quwain', 'Ras Al Khaimah', 'Fujairah'], val: 'Abu Dhabi', req: 1, hint: 'Drives the HIE: Malaffi (Abu Dhabi), NABIDH (Dubai), Riayati (other emirates).' },
+      { label: 'Makani / address number', val: '', ph: 'Optional', mono: 1 }, { label: 'P.O. Box', val: '', ph: 'Optional' }
+    ],
+    family: [
+      { label: 'Emergency contact name', val: 'Ahmed Al Mansoori', req: 1 }, { label: 'Relationship', sel: ['Spouse', 'Parent', 'Child', 'Sibling', 'Sponsor', 'Other'], val: 'Spouse' },
+      { label: 'Emergency contact phone', val: '+971 50 618 0034', req: 1, im: 'tel' }, { label: 'Guardian / sponsor (if minor or dependant)', val: '', ph: 'Not required · adult' }
+    ],
+    payer: [
+      { label: 'Payment type', sel: ['Insurance', 'Self-pay', 'Corporate'], val: 'Insurance', req: 1, hint: 'Health insurance is mandatory for residents in Abu Dhabi and Dubai.' },
+      { label: 'Insurer / plan', sel: ['Thiqa (Daman)', 'Daman Enhanced', 'ADNIC', 'AXA GIG', 'Dubai Insurance (EBP)'], val: 'Thiqa (Daman)' },
+      { label: 'Member card no.', val: '1-2345-678901-2', mono: 1 }, { label: 'Card expiry', val: '31/12/2026', im: 'numeric' },
+      { label: 'Network / tier', val: 'Thiqa network' }, { label: 'Eligibility check', sel: ['Not checked', 'Eligible', 'Not eligible'], val: 'Not checked', tag: 'M4', hint: 'Real-time eligibility (e.g. via payer/TPA portal) ships in M4.' }
+    ],
+    consents: [
+      ['Consent to treatment', 'Standard outpatient consent, policy v2026.1 (AE)', 'gavel', true, true],
+      ['Reminders · SMS', 'Template messages only, no clinical details', 'sms', true],
+      ['Reminders · WhatsApp', 'Opt-in per channel', 'chat', false],
+      ['Health information exchange (Malaffi)', 'Shown per emirate HIE policy; confirm local opt-in/opt-out rules with facility', 'hub', true],
+      ['Portal access', 'UAE PASS sign-in where available', 'person_heart', true],
+      ['Health tips & offers', 'Separate from care. Off by default.', 'campaign', false]
+    ],
+    dup: { newName: 'Fatima Ahmed Al Mansoori', newDob: '03 Feb 1988', newPhone: '+971 50 412 2291', newId: 'EID 784-1988-•••••67-1', oldName: 'Fatima Al Mansouri', oldDob: '03 Feb 1988', oldPhone: '+971 55 990 1102', oldId: 'Passport only', mrn: 'DQ-AE-0331' },
+    mrn: 'DQ-AE-0458', idv: { icon: 'badge', title: 'Read Emirates ID or verify with UAE PASS', sub: 'Insert the card in the reader or scan the back. Name (EN/AR), DOB, nationality and expiry are filled from the card; staff confirm against the person.', a1: 'Read EID card', a2: 'UAE PASS', done: 'Emirates ID read from card reader · expiry valid · confirmed by A. Joseph' },
+    rules: ['Minimum to register: name, DOB, sex, mobile, Emirates ID or passport.', 'Expired Emirates ID shows a warning, it does not block care.', 'Arabic name supports right-to-left entry.', 'HIE submission depends on the facility emirate.', 'UAE records never leave the UAE deployment.']
+  }
+};
+const STEPS = [['Identity & IDs', 'Name, DOB, identifiers'], ['Contact & address', 'Phone, address format'], ['Family & emergency', 'Contacts, guardian'], ['Payer', 'Self-pay, insurance'], ['Consents', 'Separate choices'], ['Review', 'Duplicates & save']];
+const MAPS = [
+  [['PATIENT', 'tenant_id, facility_id, local_patient_number, demographics_ciphertext'], ['PATIENT_IDENTIFIER', 'scheme, tokenized_value, issuer']],
+  [['PATIENT (demographics)', 'phone, email, address (encrypted)'], ['NOTIFICATION prefs', 'channel availability']],
+  [['PATIENT_RELATIONSHIP', 'emergency contact, guardian'], ['PORTAL_PROXY', 'authority, expiry (if guardian/caregiver)']],
+  [['PAYER_COVERAGE', 'payer, plan, member_no, valid_to'], ['CLAIM (M4)', 'eligibility reference only']],
+  [['CONSENT_RECEIPT', 'consent_type, policy_version, decision, decided_at'], ['PORTAL_ACCESS', 'auth_subject, state']],
+  [['EXTERNAL_PATIENT_MAP', 'ABHA / EID ↔ local id'], ['AUDIT_EVENT', 'PatientRegistered.v1 via outbox']]
+];
+class Component extends DCLogic {
+  state = { country: this.props.country ?? 'India', step: 0, quick: false, verified: false, pin: '6820', eid: '784-1988-1234567-1', dupOpen: true, done: false, cons: {} };
+  renderVals() {
+    const s = this.state, D = DATA[s.country], IN = s.country === 'India';
+    const pinErr = IN && !/^\d{6}$/.test(s.pin) ? 'PIN code must be 6 digits' : '';
+    const eidErr = !IN && !/^784-\d{4}-\d{7}-\d$/.test(s.eid) ? 'Format 784-YYYY-NNNNNNN-N' : '';
+    const mk = f => {
+      const isSelect = !!f.sel, val = f.key ? s[f.key] : f.val, err = f.key === 'pin' ? pinErr : f.key === 'eid' ? eidErr : '';
+      return { label: f.label, gc: (f.span || 1) > 1 ? '1 / -1' : 'auto', req: !!f.req, tag: f.tag || '', tagBg: f.tag === 'M4' ? '#EDF1F5' : '#EFF4FF', tagFg: f.tag === 'M4' ? '#334E68' : '#1D4ED8',
+        isSelect, isInput: !isSelect, opts: f.sel || [], val: val || '', ph: f.ph || '', dir: f.dir || 'ltr', im: f.im || 'text',
+        font: f.font || (f.mono ? "'JetBrains Mono',monospace" : 'Manrope,system-ui,sans-serif'), line: err ? '#B42333' : '#CBD6E0', err, hint: f.hint || '',
+        onChange: f.key ? e => this.setState({ [f.key]: e.target.value }) : () => {} };
+    };
+    const quickFields = IN
+      ? [{ label: 'Full name', val: 'Deepak Nair', req: 1, span: 2 }, { label: 'Mobile', val: '+91 98470 21346', req: 1 }, { label: 'DOB or age', val: '14/08/1979', req: 1 }, { label: 'Sex', sel: ['Male', 'Female', 'Intersex', 'Not recorded'], val: 'Male', req: 1 }, { label: 'ABHA (optional)', val: '', ph: 'Add later', mono: 1 }]
+      : [{ label: 'Name as on Emirates ID', val: 'Fatima Ahmed Al Mansoori', req: 1, span: 2 }, { label: 'Mobile', val: '+971 50 412 2291', req: 1 }, { label: 'Date of birth', val: '03/02/1988', req: 1 }, { label: 'Sex', sel: ['Female', 'Male', 'Not recorded'], val: 'Female', req: 1 }, { label: 'Emirates ID', key: 'eid', req: 1, mono: 1 }];
+    const per = [D.id, D.contact, D.family, D.payer, [], []];
+    const titles = IN
+      ? [['Identity & identifiers', 'Enter what the patient can provide now. ABHA is optional.'], ['Contact & address', 'Indian address format with PIN code.'], ['Family & emergency contact', 'Emergency contact is required for full registration.'], ['Payer', 'Self-pay is the default for most OPD visits.'], ['Consents & preferences', 'Each choice is recorded separately with its policy version. Recording consent is asked at each visit, not here.'], ['Review & duplicate check', 'Confirm details with the patient before saving.']]
+      : [['Identity & identifiers', 'Read the Emirates ID where possible to avoid typing errors.'], ['Contact & address', 'UAE address format. Emirate sets the health information exchange.'], ['Family & emergency contact', 'Sponsor or guardian is needed for dependants and minors.'], ['Payer', 'Capture insurance card details for every insured patient.'], ['Consents & preferences', 'Each choice is recorded separately with its policy version. Recording consent is asked at each visit, not here.'], ['Review & duplicate check', 'Confirm details with the patient before saving.']];
+    const step = s.quick ? 0 : s.step;
+    const cons = D.consents.map(([title, sub, icon, def, locked], i) => {
+      const key = s.country + i, on = s.cons[key] ?? def;
+      return { title, sub, icon, aria: on ? 'true' : 'false', track: on ? '#0E9384' : '#CBD6E0', knob: on ? '21px' : '3px', state: locked ? 'Required' : on ? 'On' : 'Off', ic: on ? '#087F5B' : '#506579', line: on ? '#BFE5DF' : '#DFE7ED', bg: on ? '#F7FCFB' : '#fff',
+        toggle: () => !locked && this.setState(p => ({ cons: { ...p.cons, [key]: !on } })) };
+    });
+    const go = n => () => this.setState({ step: n, quick: false });
+    const btn = (label, icon, run, primary) => ({ label, icon, run, bg: primary ? '#1D4ED8' : '#fff', fg: primary ? '#fff' : '#1D4ED8', border: primary ? '0' : '1px solid #D3E0FD' });
+    const isLast = s.quick || step === 5;
+    const blocked = !!(pinErr && !s.quick) || !!eidErr || (isLast && s.dupOpen && !s.quick);
+    return {
+      modes: [['Quick (busy desk)', true], ['Full registration', false]].map(([label, q]) => ({ label, pick: () => this.setState({ quick: q, done: false }), bg: s.quick === q ? '#fff' : 'transparent', fg: s.quick === q ? '#102A43' : '#506579' })),
+      countries: ['India', 'UAE'].map(c => ({ label: c, pick: () => this.setState({ country: c, step: 0, verified: false, done: false, dupOpen: true }), bg: s.country === c ? '#fff' : 'transparent', fg: s.country === c ? '#102A43' : '#506579' })),
+      deployLine: D.deploy,
+      steps: STEPS.map(([label, sub], i) => { const cur = !s.quick && i === step && !s.done, done = !s.quick && (i < step || s.done); return { n: done ? '✓' : String(i + 1), label, sub, go: go(i), bg: cur ? '#EFF4FF' : 'transparent', fg: '#142536', dotBg: cur ? '#1D4ED8' : done ? '#087F5B' : '#EAEFF3', dotFg: cur || done ? '#fff' : '#506579', op: s.quick ? 0.45 : 1 }; }),
+      showForm: !s.done, done: s.done,
+      stepTitle: s.quick ? 'Quick registration' : titles[step][0], stepIntro: s.quick ? 'Minimum safe fields so the patient can be seen now. The rest becomes a completion task.' : titles[step][1],
+      showIdVerify: step === 0 && !s.verified, idVerified: step === 0 && s.verified, idVerifiedText: D.idv.done,
+      idv: { icon: D.idv.icon, title: D.idv.title, sub: D.idv.sub, actions: [btn(D.idv.a1, IN ? 'qr_code_2' : 'contactless', () => this.setState({ verified: true }), true), btn(D.idv.a2, IN ? 'sms' : 'verified_user', () => this.setState({ verified: true }), false)] },
+      fields: (s.quick ? quickFields : per[step]).map(mk),
+      showChoices: !s.quick && step === 4, choices: cons,
+      showNote: !s.quick && (step === 2 || step === 3), note: step === 2 ? 'Emergency contacts are not given portal access. To let a family member see records, the patient authorises a caregiver proxy (R-04).' : 'Billing data stays in PMS and is never shown with clinical notes. Card numbers are not stored; payments go through the provider.',
+      showReview: !s.quick && step === 5, dupOpen: s.dupOpen, dup: D.dup, notSame: () => this.setState({ dupOpen: false }),
+      review: [['Name', D.name + (D.ar ? ' · ' + D.ar : '')], ['Identifiers', IN ? 'ABHA 91-4410-2378-6612 (verified) · Aadhaar ••4417' : 'Emirates ID ' + s.eid + ' (card read)'], ['Contact', IN ? '+91 98470 21346 · 12/402 Sea Breeze Apts, Marine Drive, Kochi, Ernakulam, Kerala ' + s.pin : '+971 50 412 2291 · Villa 14, Al Karamah, Abu Dhabi'], ['Emergency', IN ? 'Lakshmi Nair (spouse) +91 98470 55120' : 'Ahmed Al Mansoori (spouse) +971 50 618 0034'], ['Payer', IN ? 'Star Health via Medi Assist · SH-23-778120-01' : 'Thiqa (Daman) · 1-2345-678901-2 · eligibility not checked'], ['Consents', cons.filter(c => c.state !== 'Off').map(c => c.title).join(' · ')]].map(([k, v], i) => ({ k, v, edit: go(Math.min(i, 4)) })),
+      back: () => this.setState({ step: Math.max(0, step - 1) }), atStart: s.quick || step === 0, backOp: s.quick || step === 0 ? 0.5 : 1,
+      next: () => isLast ? this.setState({ done: true }) : this.setState({ step: step + 1 }),
+      nextDisabled: blocked, nextBg: blocked ? '#E6ECF1' : '#2563EB', nextFg: blocked ? '#8296A8' : '#fff',
+      nextLabel: isLast ? (blocked && s.dupOpen && !s.quick ? 'Resolve duplicate to save' : 'Register patient') : 'Continue',
+      doneName: D.name, doneMrn: 'MRN ' + D.mrn + ' · ' + (IN ? 'Kochi clinic' : 'Abu Dhabi clinic') + ' · registered 10:16 by A. Joseph',
+      incomplete: s.quick,
+      written: [
+        { ent: 'PATIENT', v: D.mrn + ' · demographics encrypted', st: 'Created', bg: '#E6F4EF', fg: '#087F5B' },
+        { ent: 'PATIENT_IDENTIFIER', v: IN ? 'scheme=ABHA (tokenised) · scheme=AADHAAR_LAST4' : 'scheme=EMIRATES_ID (tokenised)', st: 'Created', bg: '#E6F4EF', fg: '#087F5B' },
+        { ent: 'EXTERNAL_PATIENT_MAP', v: IN ? 'ABDM care-context link pending patient consent' : 'Malaffi patient registration queued', st: s.quick ? 'Skipped' : 'Queued', bg: '#EFF4FF', fg: '#1D4ED8' },
+        { ent: 'CONSENT_RECEIPT', v: s.quick ? 'treatment only' : cons.filter(c => c.state !== 'Off').length + ' decisions · policy versioned', st: 'Recorded', bg: '#E6F4EF', fg: '#087F5B' },
+        { ent: 'PAYER_COVERAGE', v: s.quick ? '—' : (IN ? 'Star Health / Medi Assist' : 'Thiqa'), st: s.quick ? 'Missing' : 'Saved', bg: s.quick ? '#FDF5E7' : '#E6F4EF', fg: s.quick ? '#7A4710' : '#087F5B' },
+        { ent: 'PORTAL_ACCESS', v: 'Invite to mobile · ' + (IN ? 'OTP sign-in' : 'UAE PASS / OTP'), st: 'Invited', bg: '#EFF4FF', fg: '#1D4ED8' },
+        { ent: 'AUDIT_EVENT', v: 'PatientRegistered.v1 (no PHI in event payload)', st: 'Logged', bg: '#F1F5F8', fg: '#506579' }
+      ],
+      restart: () => this.setState({ step: 0, done: false, verified: false, dupOpen: true }),
+      pv: { name: D.name, meta: D.meta, ar: D.ar },
+      dataMap: (s.quick ? [['PATIENT', 'minimum demographics'], ['PATIENT_IDENTIFIER', 'optional'], ['CARE_TASK', 'complete-registration task for front desk']] : MAPS[step]).map(([ent, cols]) => ({ ent, cols })),
+      rules: D.rules
+    };
+  }
+}
+</script>
+</body>
+</html>

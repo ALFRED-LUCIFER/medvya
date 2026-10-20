@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=Material+Symbols+Outlined:opsz,wght,FILL@20..24,400,0..1&display=swap" rel="stylesheet">
+<style>body{margin:0;background:#F7FAFC;color:#142536;font-family:Manrope,system-ui,sans-serif;-webkit-font-smoothing:antialiased}a{color:#2563EB;text-decoration:none}a:hover{text-decoration:underline}button{font-family:Manrope,system-ui,sans-serif}button:focus-visible{outline:2px solid #2563EB;outline-offset:2px}.ms{font-family:'Material Symbols Outlined';font-weight:400;font-style:normal;line-height:1;display:inline-block;white-space:nowrap;font-feature-settings:'liga'}</style>
+</helmet>
+<div style="display:grid;grid-template-columns:clamp(196px,20vw,232px) minmax(0,1fr);min-height:100vh;min-width:900px" data-screen-label="H-01 Hospital integration and administration">
+  <aside style="background:#0B1F33;color:#C9D6E2;padding:18px 12px;display:flex;flex-direction:column;gap:2px;position:sticky;top:0;height:100vh;box-sizing:border-box">
+    <div style="display:flex;align-items:center;gap:10px;padding:2px 8px 18px"><div style="width:32px;height:32px;border-radius:10px;background:#fff;color:#102A43;display:flex;align-items:center;justify-content:center;font-weight:800">M</div><div style="min-width:0"><div style="font-weight:800;font-size:16px;color:#fff">Medvya Enterprise</div><div style="font-size:11px;color:#8FA6BD;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ orgName }}</div></div></div>
+    <sc-for list="{{ nav }}" as="n" hint-placeholder-count="9">
+      <div style="flex-shrink:0;display:flex;align-items:center;gap:10px;height:40px;padding:0 10px;border-radius:8px;background:{{ n.bg }};color:{{ n.fg }};font-size:14px;font-weight:600;box-shadow:{{ n.rail }};white-space:nowrap"><span class="ms" style="font-size:20px">{{ n.icon }}</span><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis">{{ n.label }}</span></div>
+    </sc-for>
+    <div style="margin-top:auto;padding:12px 10px;border-top:1px solid #1E3A55;font-size:12px;color:#8FA6BD;line-height:1.5;display:flex;flex-direction:column"><span>Signed in as <strong style="color:#fff">R. Varghese</strong></span><span>Integration admin · MFA (passkey)</span></div>
+  </aside>
+  <main style="padding:24px 28px 60px;display:flex;flex-direction:column;gap:20px;min-width:0">
+    <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:16px">
+      <div><div style="font-size:13px;color:#334E68;font-weight:700;display:flex;align-items:center;gap:6px"><span class="ms" style="font-size:16px">domain</span>Hospital enterprise · M4</div><h1 style="margin:4px 0 0;font-size:26px;letter-spacing:-0.02em;color:#102A43">Integrations</h1></div>
+      <div style="display:flex;gap:6px;padding:4px;background:#EAEFF3;border-radius:10px" role="tablist" aria-label="Deployment">
+        <sc-for list="{{ regions }}" as="r" hint-placeholder-count="2"><button onClick="{{ r.pick }}" style="height:34px;padding:0 14px;border-radius:7px;border:0;background:{{ r.bg }};color:{{ r.fg }};font-size:13px;font-weight:700;cursor:pointer;box-shadow:{{ r.sh }}">{{ r.label }}</button></sc-for>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center;padding:12px 16px;border-radius:12px;background:#102A43;color:#fff">
+      <span class="ms" style="font-size:22px;color:#8FE3D6">public</span>
+      <div style="flex:1;min-width:260px"><div style="font-size:14px;font-weight:700">{{ residency }}</div><div style="font-size:12.5px;color:#B6C6D6">{{ residencySub }}</div></div>
+      <span style="font:500 12px 'JetBrains Mono',monospace;color:#B6C6D6">{{ tenant }}</span>
+    </div>
+
+    <section style="background:#fff;border:1px solid #DFE7ED;border-radius:12px;padding:18px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:center">
+      <div style="display:flex;flex-direction:column;gap:6px"><h2 style="margin:0;font-size:16px;color:#102A43">Record authority</h2><p style="margin:0;font-size:14px;color:#506579;line-height:1.55;max-width:680px">{{ authorityText }}</p></div>
+      <div style="display:flex;gap:6px;padding:4px;background:#EAEFF3;border-radius:10px">
+        <button onClick="{{ setDq }}" style="height:40px;padding:0 14px;border-radius:7px;border:0;background:{{ dqBg }};color:{{ dqFg }};font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px"><span class="ms" style="font-size:17px">clinical_notes</span>Medvya EMR</button>
+        <button onClick="{{ setHis }}" style="height:40px;padding:0 14px;border-radius:7px;border:0;background:{{ hisBg }};color:{{ hisFg }};font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px"><span class="ms" style="font-size:17px">sync_alt</span>Existing HIS</button>
+      </div>
+    </section>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px">
+      <sc-for list="{{ conns }}" as="c" hint-placeholder-count="5">
+        <div style="background:#fff;border:1px solid {{ c.line }};border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px"><div><div style="font-size:15px;font-weight:700;color:#142536">{{ c.name }}</div><div style="font:400 12px 'JetBrains Mono',monospace;color:#506579">{{ c.proto }}</div></div><span style="display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:800;padding:3px 8px;border-radius:6px;background:{{ c.sBg }};color:{{ c.sFg }};white-space:nowrap"><span class="ms" style="font-size:14px">{{ c.sIcon }}</span>{{ c.status }}</span></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12.5px"><span style="color:#506579">Last message</span><span style="text-align:right;font-weight:600">{{ c.last }}</span><span style="color:#506579">24 h volume</span><span style="text-align:right;font-weight:600;font-variant-numeric:tabular-nums">{{ c.vol }}</span><span style="color:#506579">Direction</span><span style="text-align:right;font-weight:600">{{ c.dir }}</span></div>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="display:grid;grid-template-columns:minmax(0,1.5fr) minmax(300px,1fr);gap:20px;align-items:start">
+      <section style="background:#fff;border:1px solid #DFE7ED;border-radius:12px;overflow:hidden">
+        <div style="padding:14px 18px;border-bottom:1px solid #EEF2F5;display:flex;justify-content:space-between;align-items:center;gap:8px"><h2 style="margin:0;font-size:16px;color:#102A43">Write-back & conflict queue</h2><span style="font-size:12.5px;color:#506579">{{ queueSummary }}</span></div>
+        <sc-for list="{{ queue }}" as="q" hint-placeholder-count="4">
+          <button onClick="{{ q.pick }}" style="width:100%;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 12px;padding:12px 18px;border:0;border-bottom:1px solid #EEF2F5;background:{{ q.bg }};text-align:left;cursor:pointer;box-shadow:{{ q.rail }}">
+            <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:14px;font-weight:700;color:#142536">{{ q.what }}</span><span style="font:400 12px 'JetBrains Mono',monospace;color:#506579">{{ q.ref }}</span></span>
+            <span style="display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:800;padding:3px 8px;border-radius:6px;background:{{ q.sBg }};color:{{ q.sFg }};white-space:nowrap;align-self:start"><span class="ms" style="font-size:14px">{{ q.sIcon }}</span>{{ q.status }}</span>
+          </button>
+        </sc-for>
+      </section>
+      <section style="background:#fff;border:1px solid #DFE7ED;border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:12px;position:sticky;top:20px">
+        <div style="font:500 12px 'JetBrains Mono',monospace;color:#506579">{{ det.ref }}</div>
+        <h3 style="margin:0;font-size:16px;color:#102A43">{{ det.what }}</h3>
+        <div style="font-size:13.5px;color:#506579;line-height:1.55">{{ det.reason }}</div>
+        <sc-if value="{{ det.conflict }}">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div style="border:1px solid #DFE7ED;border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:4px"><span style="font-size:11px;font-weight:800;color:#0F766E">Medvya · signed v1</span><span style="font-size:13.5px">Atorvastatin 10 mg · <strong>stopped</strong> 04 Oct (statin intolerance)</span></div>
+            <div style="border:1px solid #D3E0FD;border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:4px"><span style="font-size:11px;font-weight:800;color:#1D4ED8">HIS · current</span><span style="font-size:13.5px">Atorvastatin 10 mg · <strong>active</strong> (pharmacy refill 02 Oct)</span></div>
+          </div>
+        </sc-if>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <sc-for list="{{ det.attempts }}" as="a" hint-placeholder-count="3"><div style="display:flex;justify-content:space-between;gap:8px;font:400 12px 'JetBrains Mono',monospace;color:#506579"><span>{{ a.t }}</span><span style="color:{{ a.c }}">{{ a.r }}</span></div></sc-for>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          <sc-for list="{{ det.actions }}" as="b" hint-placeholder-count="2"><button onClick="{{ b.run }}" style="height:40px;padding:0 14px;border-radius:9px;border:{{ b.border }};background:{{ b.bg }};color:{{ b.fg }};font-size:13px;font-weight:700;cursor:pointer">{{ b.label }}</button></sc-for>
+        </div>
+        <div style="font-size:12px;color:#506579;line-height:1.5">Medvya never overwrites the HIS silently. Clinical conflicts go to the signing clinician; transport errors can be retried by IT.</div>
+      </section>
+    </div>
+
+    <section style="background:#fff;border:1px solid #DFE7ED;border-radius:12px;overflow:hidden">
+      <div style="padding:14px 18px;border-bottom:1px solid #EEF2F5;display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0;font-size:16px;color:#102A43">Access audit · H-05</h2><span style="font-size:12.5px;color:#506579">Append-only · no PHI in logs</span></div>
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px;min-width:760px">
+        <thead><tr style="text-align:left;color:#506579;font-size:12px;background:#F7FAFC"><th style="padding:9px 18px">Time</th><th style="padding:9px">Actor</th><th style="padding:9px">Action</th><th style="padding:9px">Patient ref</th><th style="padding:9px">Purpose</th><th style="padding:9px">Review</th></tr></thead>
+        <tbody><sc-for list="{{ audit }}" as="a" hint-placeholder-count="5"><tr><td style="padding:9px 18px;border-top:1px solid #EEF2F5;font:400 12px 'JetBrains Mono',monospace;color:#506579">{{ a.t }}</td><td style="padding:9px;border-top:1px solid #EEF2F5;font-weight:600">{{ a.who }}</td><td style="padding:9px;border-top:1px solid #EEF2F5">{{ a.act }}</td><td style="padding:9px;border-top:1px solid #EEF2F5;font:400 12px 'JetBrains Mono',monospace">{{ a.pt }}</td><td style="padding:9px;border-top:1px solid #EEF2F5;color:#506579">{{ a.why }}</td><td style="padding:9px;border-top:1px solid #EEF2F5"><span style="font-size:11.5px;font-weight:800;padding:3px 8px;border-radius:6px;background:{{ a.bg }};color:{{ a.fg }}">{{ a.rev }}</span></td></tr></sc-for></tbody>
+      </table></div>
+    </section>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;region&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;India&quot;,&quot;UAE&quot;],&quot;default&quot;:&quot;India&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  state = { region: this.props.region ?? 'India', auth: 'his', sel: 'w1', q: { w1: 'failed', w2: 'conflict', w3: 'ok', w4: 'ok' } };
+  renderVals() {
+    const s = this.state, IN = s.region === 'India';
+    const pill = st => ({ ok: ['Delivered · receipt', '#E6F4EF', '#087F5B', 'task_alt'], failed: ['Failed · retrying paused', '#FDECEE', '#8A1626', 'error'], conflict: ['Conflict · clinician review', '#FDF5E7', '#7A4710', 'sync_problem'], retry: ['Retrying…', '#EFF4FF', '#1D4ED8', 'autorenew'], sent: ['Sent to clinician', '#EFF4FF', '#1D4ED8', 'forward_to_inbox'] })[st];
+    const Q = {
+      w1: { what: 'Signed note → HIS (FHIR DocumentReference)', ref: 'OUT-77120 · ENC-2026-10-04-0031', reason: 'HIS returned 503 Service Unavailable three times. The signed note is safe in Medvya and marked "Not yet in HIS" on the chart.', attempts: [['10:31:04', '503'], ['10:33:10', '503'], ['10:41:30', '503 · paused']] },
+      w2: { what: 'Medication statement update → HIS', ref: 'OUT-77121 · MED-5531', reason: 'HIS record changed after the note was signed. A clinician must decide which statement is correct.', attempts: [['10:31:05', '409 version mismatch']], conflict: true },
+      w3: { what: 'Lab order → LIS (HL7 v2 ORM^O01)', ref: 'OUT-77122 · ORD-9921', reason: 'Accepted by LIS with ACK AA.', attempts: [['10:35:12', 'ACK AA']] },
+      w4: { what: (IN ? 'ABDM care context link' : 'Malaffi encounter submission'), ref: 'OUT-77123', reason: 'Accepted.', attempts: [['10:35:40', '202 Accepted']] }
+    };
+    const setQ = (k, v) => this.setState(p => ({ q: { ...p.q, [k]: v } }));
+    const queue = Object.entries(Q).map(([k, x]) => { const p = pill(s.q[k]), on = s.sel === k; return { what: x.what, ref: x.ref, status: p[0], sBg: p[1], sFg: p[2], sIcon: p[3], bg: on ? '#F3F8FA' : '#fff', rail: on ? 'inset 3px 0 0 #102A43' : 'none', pick: () => this.setState({ sel: k }) }; });
+    const D = Q[s.sel], st = s.q[s.sel];
+    const attempts = D.attempts.map(([t, r]) => ({ t, r, c: /50|409/.test(r) ? '#B42333' : '#087F5B' }));
+    if (st === 'ok' && s.sel === 'w1') attempts.push({ t: '10:52:02', r: '201 Created · receipt HIS-DR-88120', c: '#087F5B' });
+    const btn = (label, run, primary) => ({ label, run, bg: primary ? '#102A43' : '#fff', fg: primary ? '#fff' : '#142536', border: primary ? '0' : '1px solid #CBD6E0' });
+    const actions = st === 'failed' ? [btn('Retry now', () => { setQ('w1', 'retry'); setTimeout(() => setQ('w1', 'ok'), 1200); }, true), btn('View payload metadata', () => {})]
+      : st === 'conflict' ? [btn('Send to Dr. Rao for decision', () => setQ('w2', 'sent'), true), btn('Keep HIS, add Medvya addendum', () => {})]
+      : [btn('View receipt', () => {})];
+    const C = IN ? [
+      ['Kauvery HIS', 'FHIR R4 · OAuth2 client', s.q.w1 === 'failed' ? 'Degraded' : 'Healthy', '2 min ago', '4,210', 'Read + write'],
+      ['Metropolis LIS', 'HL7 v2.5 · MLLP over VPN', 'Healthy', '40 s ago', '1,882', 'Orders out · results in'],
+      ['ABDM gateway', 'ABHA · HIP/HIU consent', 'Healthy', '6 min ago', '311', 'Consent-based'],
+      ['Azure AD SSO', 'OIDC · SCIM provisioning', 'Healthy', '1 h ago', '96 sign-ins', 'Identity'],
+      ['WhatsApp Business', 'Template messages · no PHI', 'Healthy', '3 min ago', '742', 'Outbound']
+    ] : [
+      ['Cleveland-style HIS (synthetic)', 'FHIR R4 · mTLS', s.q.w1 === 'failed' ? 'Degraded' : 'Healthy', '2 min ago', '3,050', 'Read + write'],
+      ['Reference lab', 'HL7 v2.5 · MLLP', 'Healthy', '1 min ago', '1,204', 'Orders out · results in'],
+      ['Malaffi (Abu Dhabi HIE)', 'Subject to DoH onboarding', 'Not connected', '—', '—', 'Pending approval'],
+      ['NABIDH / Riayati', 'Dubai DHA / MOHAP', 'Not connected', '—', '—', 'Per facility emirate'],
+      ['Entra ID SSO', 'OIDC · UAE tenant', 'Healthy', '1 h ago', '58 sign-ins', 'Identity']
+    ];
+    const conns = C.map(([name, proto, status, last, vol, dir]) => { const m = status === 'Healthy' ? ['#E6F4EF', '#087F5B', 'check_circle', '#DFE7ED'] : status === 'Degraded' ? ['#FDECEE', '#8A1626', 'error', '#F3B9C0'] : ['#F1F5F8', '#506579', 'radio_button_unchecked', '#DFE7ED']; return { name, proto, status, last, vol, dir, sBg: m[0], sFg: m[1], sIcon: m[2], line: m[3] }; });
+    const navL = [['Organisation', 'corporate_fare'], ['Facilities & departments', 'apartment'], ['Staff & role grants', 'badge'], ['SSO & MFA', 'key'], ['Integrations', 'hub'], ['Audit & break-glass', 'policy'], ['Device fleet', 'settings_voice'], ['Retention & residency', 'inventory_2'], ['Analytics', 'monitoring']];
+    const his = s.auth === 'his';
+    const open = Object.values(s.q).filter(v => v !== 'ok').length;
+    return {
+      orgName: IN ? 'Kauvery Group · 4 facilities' : 'Al Noor Health (synthetic) · 2 facilities',
+      nav: navL.map(([label, icon]) => { const on = label === 'Integrations'; return { label, icon, bg: on ? '#1B3A57' : 'transparent', fg: on ? '#fff' : '#C9D6E2', rail: on ? 'inset 3px 0 0 #8FA6BD' : 'none' }; }),
+      regions: ['India', 'UAE'].map(r => ({ label: r === 'India' ? 'India deployment' : 'UAE deployment', pick: () => this.setState({ region: r }), bg: s.region === r ? '#fff' : 'transparent', fg: s.region === r ? '#102A43' : '#506579', sh: s.region === r ? '0 1px 2px rgba(16,42,67,.12)' : 'none' })),
+      residency: IN ? 'India data plane · Azure Central India' : 'UAE data plane · Azure UAE North',
+      residencySub: IN ? 'PHI, audio, backups and AI processing stay in India. No routine PHI flow to the UAE deployment.' : 'Separate subscription, keys, logs and approved model endpoint. No shared PHI datastore with India.',
+      tenant: IN ? 'tenant tn_in_7f21 · DPDP' : 'tenant tn_ae_3c08 · DoH / DHA',
+      authorityText: his ? 'The hospital HIS is the system of record. Medvya shows synced copies with a "Synced from HIS" badge, writes back only clinician-signed content, and sends every conflict for review.' : 'Medvya is the system of record for patients, encounters and notes in this tenant. Use this for clinics without an HIS.',
+      setDq: () => this.setState({ auth: 'dq' }), setHis: () => this.setState({ auth: 'his' }),
+      dqBg: !his ? '#fff' : 'transparent', dqFg: !his ? '#102A43' : '#506579', hisBg: his ? '#fff' : 'transparent', hisFg: his ? '#102A43' : '#506579',
+      conns, queue, queueSummary: open + ' need attention',
+      det: { what: D.what, ref: D.ref, reason: st === 'ok' && s.sel === 'w1' ? 'Delivered after retry. Chart badge updated to "In HIS".' : st === 'sent' ? 'Sent to Dr. Arjun Rao\'s inbox. Write-back waits for the decision.' : D.reason, conflict: !!D.conflict, attempts, actions },
+      audit: [
+        { t: '10:52:02', who: 'system · integration', act: 'Write-back delivered (retry)', pt: 'pt_8f…a21', why: 'Record sync', rev: 'Auto', bg: '#F1F5F8', fg: '#506579' },
+        { t: '10:31:00', who: 'Dr. Arjun Rao', act: 'Signed note v1', pt: 'pt_8f…a21', why: 'Treatment', rev: 'Not required', bg: '#F1F5F8', fg: '#506579' },
+        { t: '09:58:41', who: 'Dr. S. Menon (ED)', act: 'Break-glass chart view', pt: 'pt_31…c07', why: '"Unconscious, no consent possible"', rev: 'Pending review', bg: '#FDECEE', fg: '#8A1626' },
+        { t: '09:40:12', who: 'A. Joseph (reception)', act: 'Denied: open clinical note', pt: 'pt_8f…a21', why: '—', rev: 'Policy enforced', bg: '#EFF4FF', fg: '#1D4ED8' },
+        { t: '08:15:03', who: 'R. Varghese', act: 'Rotated LIS client secret', pt: '—', why: 'Security', rev: 'Logged', bg: '#F1F5F8', fg: '#506579' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

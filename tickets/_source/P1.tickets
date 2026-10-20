@@ -1,0 +1,1035 @@
+# P1 · Front desk and appointments MVP · Weeks 4–10 · R1 Front Desk
+# exit: 1 two clinics 2 consecutive weeks real bookings no paper · 2 0 double bookings at 100 parallel · 3 median check-in ≤ 60 s · 4 ≥ 98 % reminders delivered, failures visible · 5 no open high/critical findings
+# nfr:  1 booking p95 < 300 ms, calendar first render < 2.5 s on 4G · 2 Hangfire on Azure SQL, no Redis/Service Bus · 3 tablet-responsive reception
+# pkg:  1 production tenant per clinic · 2 30-min reception training + desk card · 3 support channel with named contact · 4 baseline metrics
+# dep:  1 privacy notice + consent wording reviewed (DPDP/UAE) · 2 DLT SMS sender + templates · 3 two partner clinics signed
+
+@epic MDV-P1-E01 | Public site | P1-01 | Landing, region/residency selector, trust centre and demo request on the Razor public site.
+@epic MDV-P1-E02 | Clinic onboarding and practice settings | P1-02, P1-12 | A solo doctor or clinic can set up the practice, hours, holidays, notifications and legal terms.
+@epic MDV-P1-E03 | Doctors, staff and staff lifecycle | P1-03, P1-11 | Owners add doctors (licence, signature, schedule) and staff (roles, scope); access ends immediately on offboarding.
+@epic MDV-P1-E04 | Schedules and availability | P1-04 | Working hours, breaks, slot lengths, leave and exceptions per doctor and location.
+@epic MDV-P1-E05 | Patient registration, duplicates and consents | P1-05, P1-12 | Register India and UAE patients quickly and safely, with separate versioned consents and no silent duplicates.
+@epic MDV-P1-E06 | Booking and no double booking | P1-06, P1-07 | Create, move, cancel and track appointments with database-guaranteed slot integrity.
+@epic MDV-P1-E07 | Reception board and queue | P1-08 | Run the waiting room: check-in, statuses, call/room, multi-doctor overview and TV display.
+@epic MDV-P1-E08 | Confirmations, reminders and notification centre | P1-09 | Email/SMS confirmations and reminders with delivery status; in-app notification centre.
+@epic MDV-P1-E09 | Practice access log | P1-10 | Owners see who opened which record and when.
+@epic MDV-P1-E10 | Pilot readiness and R1 gate | P1-01, P1-12 | External dependencies, production tenants, training, baselines, security review and the R1 exit gate.
+
+=== MDV-P1-001
+title: Public site on Razor Pages and landing page (solo doctor / hospital CTAs, region-aware copy)
+type: Story
+epic: MDV-P1-E01
+prd: P1-01
+screens: F-01
+priority: SHOULD
+roles: Public
+labels: public-site, marketing
+estimate: 2
+weeks: 4
+confidence: 88 | Hi-fi F-01 with exact copy for both regions; product shot asset still a placeholder.
+sources: design/Medvya Access and Onboarding (F-01); docs/02-design/screen-specs.md#f-01-landing
+desc:
+Server-rendered Razor Pages in Host.Api/PublicSite (no patient data). Nav: For doctors · For hospitals · Trust centre · Pricing (placeholder) · region switch India/UAE · Sign in. Hero "Talk to your patient. Medvya writes the note. You approve it." with exactly two CTAs: "I'm a doctor · start free trial" → onboarding (F-04), "For hospitals · book a demo" → demo request (F-07). Region switch changes hero tag, languages and residency line. Three pillars.
+ac:
+- The landing page renders without JavaScript, scores ≥ 90 on Lighthouse performance and accessibility on mobile.
+- Region switch India/UAE changes the hero tag, language list and residency line exactly as in screen-specs F-01, and is remembered via a non-tracking cookie.
+- Only the two designed CTAs exist above the fold; Pricing shows a placeholder with no invented prices or metrics.
+- Pages are available in English, Hindi and Arabic (RTL) with SEO metadata and no third-party trackers without consent.
+- No PHI or tenant data is reachable from public pages (separate route group, no auth cookie read).
+
+=== MDV-P1-002
+title: Country and data-residency selector that binds a new tenant to one data plane
+type: Story
+epic: MDV-P1-E01
+prd: P1-01
+screens: F-02
+priority: SHOULD
+roles: Public, Solo doctor, Practice owner
+labels: public-site, residency, tenancy
+estimate: 1.5
+weeks: 4
+depends: MDV-P1-001
+confidence: 85 | Designed; routing to a second country deployment only matters once UAE is live (ADR-002).
+sources: design/Medvya Access and Onboarding (F-02); docs/adr/ADR-003-country-isolation.md
+desc:
+"Where do you practise?" with India (Azure Central India · DPDP Act · ABDM integration available) and UAE (Azure UAE North · separate deployment · DoH/DHA/MOHAP per emirate) cards. Explains data stays in-country and cannot be moved later without a new account and export. "Continue in {region}" routes sign-up to that country's deployment; if a country is not yet live, it captures interest instead.
+ac:
+- Selecting a region and continuing creates the tenant only in that country's deployment; tenant.country_code and residency_region are immutable afterwards (domain test).
+- The residency explanation text matches the design and is translated.
+- If the selected country deployment is not live, the user sees a waitlist form (no PHI) instead of sign-up.
+- The selection is recorded in the onboarding audit trail.
+
+=== MDV-P1-003
+title: Trust centre and demo request (no PHI)
+type: Story
+epic: MDV-P1-E01
+prd: P1-01
+screens: F-07
+priority: SHOULD
+roles: Public, Hospital buyer
+labels: public-site, trust
+estimate: 1.5
+weeks: 5
+depends: MDV-P1-001
+confidence: 82 | Content blocks designed; final policy/sub-processor text depends on legal review (MDV-P1-044).
+sources: design/Medvya Access and Onboarding (F-07); docs/02-design/screen-specs.md#f-07-trust-centre
+desc:
+Trust centre with the six blocks (Data residency, Consent model, AI drafts, Retention, Audit, Sub-processors) and a dated list of policy versions and sub-processors; footer "We describe our controls; we do not claim certifications we have not obtained." Demo request form (name, organisation, role, country, email/phone, message) with no free-text PHI warning and rate limiting/bot protection.
+ac:
+- All six blocks render with the designed copy; policy versions and sub-processors show effective dates.
+- No page claims a certification (lint check for "ISO 27001 certified", "HIPAA compliant" etc. in public copy).
+- Demo requests are stored, emailed to the founder, rate-limited and protected against bots; the form warns not to include patient information.
+- Content is editable without redeploy (Markdown files or settings) and versioned.
+
+=== MDV-P1-004
+title: Solo doctor and clinic sign-up with the six-step onboarding wizard (autosave)
+type: Story
+epic: MDV-P1-E02
+prd: P1-02
+screens: F-04
+priority: MUST
+roles: Solo doctor, Practice owner
+labels: onboarding
+estimate: 3
+weeks: 4-5
+depends: MDV-P1-002
+confidence: 85 | Hi-fi F-04 defines steps and fields for India and UAE; licence verification back-office flow is MDV-P1-007.
+sources: design/Medvya Access and Onboarding (F-04); docs/02-design/screen-specs.md#f-04-solo-doctor-onboarding-6-steps-autosave
+desc:
+Steps: 1 Your profile · 2 Licence (council/authority, number, certificate upload; "Verification pending" notice) · 3 Clinic (name, address, CE reg./facility licence, GSTIN/TRN) · 4 Hours & fees · 5 Note templates (multi-select, used from P2/P3) · 6 Invite your team (optional). Progress autosaves; the user can leave and resume; "Finish · go to Today". Clinic mode supports several doctors and locations (owner who is not a doctor skips step 2).
+ac:
+- Each step validates per country (India council list/registration number; UAE DoH/DHA/MOHAP licence; GSTIN optional format check; TRN 15 digits) with errors shown under the field and announced via aria-live.
+- Leaving mid-wizard and signing in again resumes at the same step with saved values.
+- Until licence verification, the doctor can book and register patients; recording/signing capabilities are disabled with the designed notice (feature-level check, not just UI).
+- Step 6 sends invitations through the P0 invitation flow (MDV-P0-013).
+- Finishing lands on the role's home (Today for doctors, Front desk for owners/reception) and creates tenant, facility, membership, practice profile, hours and fee defaults.
+- The whole wizard works at 768 px (tablet) and is keyboard-completable.
+
+=== MDV-P1-005
+title: Practice settings: profile, locations, operating hours and holidays (F-08)
+type: Story
+epic: MDV-P1-E02
+prd: P1-02
+screens: F-08
+priority: MUST
+roles: Practice admin, Solo doctor
+labels: settings
+estimate: 2.5
+weeks: 5
+depends: MDV-P1-004
+confidence: 72 | Tabs and labels are designed but the settings data script was truncated on import, so field-level details are partly inferred.
+sources: design/Medvya Clinician App (Practice settings); design/README.md (truncation note); docs/02-design/screen-specs.md#practice-settings-f-08--f-12--medvya-clinician-app--data-truncated-labels-only
+desc:
+/settings with tabs: Profile (clinic name, logo "Shown on prescriptions, invoices and the patient portal", address, registration numbers, contact), Locations (multiple sites, rooms/resources such as procedure room), Hours (operating hours per location, weekday toggles), Holidays (closures; booking blocked). Notifications and Data tabs are MDV-P1-006; Doctors/Staff tabs are MDV-P1-007/008; Services is P4.
+ac:
+- Owners/admins can edit profile and locations; other roles get 403 (server-side).
+- A holiday blocks new bookings on that date for the location and lists existing appointments that need moving.
+- Logo upload is validated (type, size), malware-scanned, stored in private Blob and served via time-limited link.
+- Every settings change is written to the audit log with before/after (no PHI involved).
+- Settings work in English/Hindi/Arabic with RTL.
+notes:
+- Replace the truncated design file (design/README.md) before final UI polish; confidence rises to High once the full settings data is available.
+
+=== MDV-P1-006
+title: Practice settings: notification preferences and data tab
+type: Story
+epic: MDV-P1-E02
+prd: P1-02
+screens: F-08
+priority: MUST
+roles: Practice admin
+labels: settings, notifications
+estimate: 1.5
+weeks: 6
+depends: MDV-P1-005, MDV-P1-032
+confidence: 72 | Tab exists in design; contents inferred from PRD P1-02/P1-09 because the settings data was truncated.
+sources: PRD v2 P1-02, P1-09; design/Medvya Clinician App (Practice settings)
+desc:
+Notifications tab: which events send messages (booking confirmation, 24 h reminder, 2 h reminder, cancellation), channels enabled (email, SMS; WhatsApp placeholder for P4), sender name, quiet hours, template preview (no clinical details). Data tab: tenant country and residency (read-only), export placeholder (P5), retention defaults (read-only labels), link to access log (F-12).
+ac:
+- Turning off a reminder type stops future scheduling of that reminder (already-queued ones are cancelled).
+- Template previews show placeholders only; templates cannot include clinical fields (validation rejects clinical merge fields).
+- Quiet hours prevent SMS sending inside the window (job reschedules to the window end).
+- Residency and country are displayed read-only with the trust-centre wording.
+
+=== MDV-P1-007
+title: Add doctor (clinic mode): details, licence India/UAE, verification, schedule link, fees, access and signature image (F-09)
+type: Story
+epic: MDV-P1-E03
+prd: P1-03
+screens: F-09
+priority: MUST
+roles: Practice admin, Medvya operations
+labels: staff, licence
+estimate: 3
+weeks: 5-6
+depends: MDV-P1-005, MDV-P0-013
+confidence: 70 | Wizard steps and signature rule are designed; the data script for the wizard was truncated and the licence verification back-office process is not yet defined (P2 dependency).
+sources: design/Medvya Clinician App (Add doctor); docs/02-design/screen-specs.md#practice-settings-f-08--f-12--medvya-clinician-app--data-truncated-labels-only; PRD v2 P2 dependency "Doctor licence verification process defined"
+desc:
+Settings → Doctors → Add doctor wizard: details (name, specialty, qualifications, languages) → licence (country, authority: state medical council/NMC or DoH/DHA/MOHAP, number, category, expiry, certificate upload) → verification (status pending/verified/rejected, verified_by, verified_at; done by Medvya operations or owner attestation per policy) → schedule (link to MDV-P1-011) → fees (default consultation fees; full services in P4) → access (role and facility scope) → signature (drawn or uploaded image; optional clinic stamp). Creates CLINICIAN_PROFILE and CLINICIAN_LICENCE and sends an invitation.
+ac:
+- A doctor cannot record or sign until licence status is Verified; the restriction is enforced server-side.
+- Licence number format is validated per authority where a format is known; expiry date is required.
+- The verification decision records who verified and when, and is audited; rejected licences notify the owner with the reason.
+- The signature image is stored privately and appears only on printed prescriptions; the UI states "Signing in Medvya is always an authenticated action by the doctor (passkey / MFA), never the image alone."
+- The new doctor appears in schedule columns once hours are set.
+notes:
+- Define the licence verification process (who checks which register, SLA "usually within 1 working day") with the founder; this closes the P2 dependency.
+
+=== MDV-P1-008
+title: Add staff with role, facility scope, permissions and invite; custom roles (F-10)
+type: Story
+epic: MDV-P1-E03
+prd: P1-03
+screens: F-10
+priority: MUST
+roles: Practice admin
+labels: staff, roles
+estimate: 2.5
+weeks: 5
+depends: MDV-P0-014, MDV-P0-013
+confidence: 78 | Role picker, locked-permission rule and table columns are designed; wizard data truncated.
+sources: design/Medvya Clinician App (Add staff); docs/02-design/sitemap-and-permissions.md
+desc:
+Settings → Staff: table (Name, Role, Access, MFA, Status) and "Add staff member": role picker with descriptions (receptionist, nurse, care coordinator, practice admin; doctors redirected to Add doctor) → facility scope and hours → permissions (locked rows from the role cannot be granted/removed here) → invite. Custom roles composed from capabilities.
+ac:
+- Choosing "Doctor" shows "Doctors need licence verification. Use Settings → Doctors → Add doctor." and does not create a staff membership.
+- Locked permissions from a built-in role are displayed but not editable; custom roles cannot exceed the capabilities of practice admin.
+- The invite uses the P0 flow; the staff table shows invited/active/suspended/offboarded and MFA enrolment state.
+- Every permission change is written to the audit log ("Every change is written to the audit log").
+- A receptionist created here cannot open clinical endpoints (security test reused from P0).
+
+=== MDV-P1-009
+title: Staff offboarding removes access immediately and ends all sessions
+type: Story
+epic: MDV-P1-E03
+prd: P1-11
+screens: F-10
+priority: MUST
+roles: Practice admin
+labels: staff, security, lifecycle
+estimate: 1
+weeks: 6
+depends: MDV-P1-008, MDV-P0-012
+confidence: 90 | Requirement is explicit and session revocation exists from P0.
+sources: PRD v2 P1-11
+desc:
+"Offboard" on a staff member sets membership to offboarded, revokes all sessions and devices for that tenant, cancels pending invites, reassigns or flags their open items (none clinical yet in P1), and records reason and actor.
+ac:
+- After offboarding, the next request from any of the person's sessions in that tenant fails within 60 seconds and they cannot sign in to that tenant.
+- Memberships in other tenants are unaffected.
+- The action requires confirmation, a reason, and is audited.
+- The last practice admin cannot offboard themselves (prevents lock-out).
+
+=== MDV-P1-010
+title: Licence/registration expiry reminders and quarterly access review prompt
+type: Story
+epic: MDV-P1-E03
+prd: P1-11
+priority: MUST
+roles: Practice owner
+labels: compliance, jobs
+estimate: 1.5
+weeks: 7
+depends: MDV-P1-007, MDV-P1-032
+confidence: 85 | Requirement explicit; uses Hangfire jobs from MDV-P1-032.
+sources: PRD v2 P1-11; design/Medvya Enterprise Pages (H-03 "Quarterly access review due")
+desc:
+Scheduled job notifies owners 60/30/7 days before a doctor licence or facility registration expires and on expiry (doctor recording/signing then disabled again). Quarterly access review: owners get a task listing every active membership, role and last sign-in; they confirm or offboard each and the completion is recorded.
+ac:
+- Expiry notifications are sent at 60/30/7/0 days and appear in the notification centre (D-03) and by email.
+- On expiry, capabilities that require a verified licence are disabled server-side until renewed and re-verified.
+- The quarterly review lists all memberships and records a decision per person; completion date is shown in settings.
+- Both jobs are idempotent and audited.
+
+=== MDV-P1-011
+title: Schedule templates: working hours, breaks, slot length per service, per-location calendars, time zones
+type: Story
+epic: MDV-P1-E04
+prd: P1-04
+screens: P-04
+priority: MUST
+roles: Practice admin, Doctor
+labels: scheduling
+estimate: 3
+weeks: 5-6
+depends: MDV-P1-005, MDV-P1-007
+confidence: 80 | Behaviour clear from PRD and schedule design; slot-per-service rules need a short refinement (service catalogue fully arrives in P4).
+sources: PRD v2 P1-04; design/Medvya Clinician App (Schedule, settings hours); docs/02-design/screen-specs.md#schedule-p-04--medvya-clinician-app
+desc:
+Per doctor and location: weekly template (weekday, start, end, room/resource), breaks (e.g. lunch), default slot length (15/20/30 min) and per-visit-type length (e.g. new consult 40 min = 2 slots). Facility time zone; all times stored UTC and displayed in facility time. Resources (procedure room) can be scheduled like a doctor column. Generates bookable slots on the fly (no pre-materialised slot table required) or materialises slots per day — decision recorded.
+ac:
+- Given a template Mon–Fri 09:00–13:00 and 17:00–20:00 with 20-minute slots, then the calendar shows bookable slots exactly in those windows in facility local time.
+- Breaks and closed days show as Unavailable (hatched) with the reason and cannot be booked.
+- Changing a template affects only future unbooked slots; existing appointments outside new hours are listed for action.
+- Visit types can span multiple slots and the calendar renders them spanning.
+- Daylight-saving-free zones (IST, GST) and a test zone with DST are handled correctly (unit tests).
+
+=== MDV-P1-012
+title: Leave and schedule exceptions with re-offer of affected appointments
+type: Story
+epic: MDV-P1-E04
+prd: P1-04
+screens: P-04
+priority: MUST
+roles: Practice admin, Doctor, Receptionist
+labels: scheduling
+estimate: 1.5
+weeks: 6
+depends: MDV-P1-011, MDV-P1-021
+confidence: 82 | Designed message "6 booked patients will be offered new slots before leave is saved".
+sources: design/Medvya Clinician App (Settings hours leave notice)
+desc:
+Add leave (from, to, reason) or one-off exceptions (extra session, shortened day). Before saving, the system lists booked patients in the range; reception chooses to offer new slots (sends rebooking message with link/phone) or reschedule manually. Leave is saved only after each affected appointment has an action.
+ac:
+- Saving leave that overlaps booked appointments shows the count and list and requires an action per appointment before save.
+- Affected patients receive a rebooking message (no clinical details) and the appointments move to "needs rebooking" on the board.
+- Extra sessions create bookable slots for that day only.
+- Leave and exceptions are audited.
+
+=== MDV-P1-013
+title: Patient registration — India full flow (identity, ABHA optional, Aadhaar last 4, Indian address, payer)
+type: Story
+epic: MDV-P1-E05
+prd: P1-05
+screens: P-02
+priority: MUST
+roles: Receptionist
+labels: registration, india
+estimate: 4
+weeks: 5-6
+depends: MDV-P0-009, MDV-P0-017
+confidence: 88 | Hi-fi P-02 with interactive validation rules and data map; ABHA verification via ABDM is manual entry in P1 (API in P8).
+sources: design/Medvya Patient Registration; docs/02-design/screen-specs.md#patient-registration-p-02--medvya-patient-registration
+desc:
+/patients/new full mode, India: steps Identity & IDs → Contact & address → Family & emergency (MDV-P1-020) → Payer → Consents (MDV-P1-019) → Review (MDV-P1-016). Identity: first/last name, DOB or age ("estimated"), sex at birth, optional gender identity, preferred language, ABHA number (14 digits) and address (optional, manual entry; "Verify with ABHA" banner shows the P8 path as disabled/coming later), other ID type with Aadhaar last 4 only. Contact: mobile (required), alternate, email, house/flat, street, city, district, state/UT, PIN (6 digits), country. Payer: self-pay / corporate / private insurance (TPA) / government scheme (reference only). Side panel shows preview card and "Data map · this step writes".
+ac:
+- Minimum to register (India): name, DOB or age, sex, mobile; other fields optional; validation messages match the design (e.g. "PIN code must be 6 digits").
+- Aadhaar can only be stored as last 4 digits; entering 12 digits is rejected with an explanation; ABHA is stored via Always Encrypted and is never required for care.
+- On save, PATIENT (demographics), PATIENT_IDENTIFIER (tokenised), PAYER_COVERAGE, CONSENT_RECEIPT and AUDIT_EVENT PatientRegistered.v1 (no PHI in payload) are written in one transaction and a facility-scoped MRN is assigned.
+- The success screen shows name, MRN, timestamp and actor and offers Book appointment · Check in now (walk-in) · Register another.
+- The receptionist cannot see any clinical data from the registration or directory screens (security test).
+- Form is keyboard-completable, errors announced via aria-live, works at tablet width.
+
+=== MDV-P1-014
+title: Patient registration — UAE flow (Emirates ID manual entry, Arabic name RTL, emirate, insurance card)
+type: Story
+epic: MDV-P1-E05
+prd: P1-05
+screens: P-02
+priority: MUST
+roles: Receptionist
+labels: registration, uae, rtl
+estimate: 2.5
+weeks: 6
+depends: MDV-P1-013
+confidence: 86 | Hi-fi UAE variant exists; card reader and UAE PASS are P5 (N-06).
+sources: design/Medvya Patient Registration (UAE); docs/02-design/screen-specs.md#patient-registration-p-02--medvya-patient-registration
+desc:
+UAE variant: full name as on EID (English) + Arabic name (RTL input, Noto Sans Arabic), DOB, sex, nationality, preferred language, Emirates ID (format 784-YYYY-NNNNNNN-N) and expiry, passport/visa for visitors; UAE address (villa/building, area, emirate required, Makani optional, P.O. Box); payer insurance/self-pay/corporate with insurer/plan, member card no. (Always Encrypted), card expiry, network; eligibility marked "M4/P5".
+ac:
+- Minimum to register (UAE): name, DOB, sex, mobile and Emirates ID or passport.
+- Invalid EID format shows "Format 784-YYYY-NNNNNNN-N"; an expired EID shows a warning but never blocks registration.
+- Arabic name field accepts RTL input and displays correctly in the preview card and review step.
+- The selected emirate determines the HIE label (Malaffi / NABIDH / Riayati) shown in consents (no connection in P1).
+- UAE tenant data is stored only in the UAE deployment (configuration test: UAE tenant cannot be created in the India deployment).
+
+=== MDV-P1-015
+title: Quick registration for a busy desk with a completion task
+type: Story
+epic: MDV-P1-E05
+prd: P1-05
+screens: P-02
+priority: MUST
+roles: Receptionist
+labels: registration
+estimate: 1.5
+weeks: 6
+depends: MDV-P1-013
+confidence: 90 | Designed in detail including the completion-task notice.
+sources: design/Medvya Patient Registration (Quick mode)
+desc:
+Mode toggle "Quick (busy desk)" with minimum safe fields (India: full name, mobile, DOB or age, sex, ABHA optional; UAE: name as on EID, mobile, DOB, sex, Emirates ID). On save, a CARE_TASK-like front-desk completion task "Address, emergency contact and payer are missing" is added to the queue for the patient's next arrival; payer shows Missing.
+ac:
+- Quick registration can be completed in under 45 seconds by a trained user with keyboard only (timed usability check).
+- After quick save, the patient card on the board and the patient header show an "Incomplete registration" tag until the task is closed.
+- Completing the missing fields later closes the task automatically.
+- Duplicate check (MDV-P1-016) still runs in quick mode.
+
+=== MDV-P1-016
+title: Duplicate warning while typing and duplicate resolution before save
+type: Story
+epic: MDV-P1-E05
+prd: P1-05
+screens: P-02
+priority: MUST
+roles: Receptionist
+labels: registration, dedup, safety
+estimate: 2.5
+weeks: 6
+depends: MDV-P1-013
+confidence: 85 | Matching rule and UI are designed; scoring thresholds need tuning on pilot data.
+sources: design/Medvya Patient Registration (Review & duplicate check); design/Medvya Gap Analysis (G-04 "Duplicate warning while typing" MUST)
+desc:
+As name + DOB (and identifiers) are typed, call /v1/patients/duplicate-check (debounced) and show "Possible match" inline. On the Review step, a side-by-side NEW vs EXISTING panel ("Attention · possible existing record. Matched on name + date of birth. A shared phone number alone is never treated as a match.") with actions: Not the same person · continue / Use existing record / Request merge review (P-03). Save is blocked ("Resolve duplicate to save") until one is chosen.
+ac:
+- A candidate is suggested when name similarity + identical DOB, or an exact identifier (ABHA/EID/passport) match exists; phone-only matches never produce a suggestion (test).
+- Duplicate-check responses show initials, age and masked identifiers only, never full details of the other record until "Use existing record" is chosen.
+- Save remains disabled until the receptionist resolves the duplicate; the decision and actor are audited.
+- "Use existing record" opens that patient without creating a new one; "Request merge review" creates a merge request (MDV-P1-017).
+- p95 duplicate-check latency < 300 ms on staging data of 50,000 synthetic patients.
+
+=== MDV-P1-017
+title: Duplicate / merge review with second approver when both records hold clinical data (P-03)
+type: Story
+epic: MDV-P1-E05
+prd: P1-05
+screens: P-03
+priority: MUST
+roles: Receptionist, Practice admin, Doctor
+labels: dedup, merge, safety
+estimate: 2.5
+weeks: 7
+depends: MDV-P1-016
+confidence: 82 | Designed; reversibility (unmerge) is formally required in P5-02 but the data model must allow it now.
+sources: design/Medvya Clinical Screens (P-03); docs/03-architecture/state-machines.md#merge-request-p1p5
+desc:
+/patients/merge: side-by-side comparison (name, DOB, sex, mobile, ABHA/EID, visits, allergies) with actions Not the same person / Request clinician approval. Merge executes only after approval; when both records have clinical data (from P2 on) a second approver (clinician) is required. Merge keeps both originals, maps the loser to the survivor and is reversible.
+ac:
+- "Not the same person" closes the request and suppresses the same pair from future suggestions.
+- A merge without the required approver(s) is impossible (server-side), and approvals are audited.
+- After merge, searching either MRN finds the surviving record; appointments and identifiers move; the merge can be undone by an admin within the retention period.
+- Merge history is visible on the patient record.
+
+=== MDV-P1-018
+title: Patient directory and privacy-safe search for the front desk
+type: Story
+epic: MDV-P1-E05
+prd: P1-05
+screens: P-02
+priority: MUST
+roles: Receptionist, Practice admin
+labels: patients, search
+estimate: 2
+weeks: 7
+depends: MDV-P1-013
+confidence: 84 | Directory/search is required by P1-05; doctor-facing ⌘K search (D-02) is P2 but shares the backend.
+sources: PRD v2 P1-05; docs/02-design/screen-specs.md#global-search-d-02
+desc:
+Search by name, MRN, phone, ABHA/EID (exact). Results show initials, age, sex and MRN tail until a record is opened; opening a record is audited with purpose "registration/booking". Directory list with filters (incomplete registration, recently registered) and pagination. Deterministic Always Encrypted columns support exact ID lookups.
+ac:
+- Searching by full phone number or exact EID/ABHA returns the matching patient(s); partial ID search is not allowed.
+- Result rows show only initials, age, sex and MRN tail; full demographics appear only after opening, which writes an audit event.
+- Empty state: "No patients match. Register a new patient".
+- Search p95 < 300 ms with 50,000 synthetic patients; endpoint rate-limited.
+
+=== MDV-P1-019
+title: Legal terms and separate versioned consents at registration (treatment, reminders per channel, sharing, portal, marketing)
+type: Story
+epic: MDV-P1-E05
+prd: P1-12
+screens: P-02, F-08
+covers: dep:1
+priority: MUST
+roles: Receptionist, Practice owner
+labels: consent, legal, compliance
+estimate: 3
+weeks: 6-7
+depends: MDV-P1-013, MDV-P1-044
+confidence: 75 | Consent UI and receipt model are designed; final wording depends on the DPDP/UAE legal review (dependency 1).
+sources: PRD v2 P1-12; design/Medvya Patient Registration (Consents step); docs/04-security-compliance/README.md#consent-model-separate-versioned-receipts
+desc:
+Tenant level: owner accepts Medvya Terms of Service and the clinic Data Processing Agreement during onboarding; the clinic privacy notice is published (versioned). Patient level (Consents step): treatment (required, locked), reminders on WhatsApp/SMS (per channel), link to ABHA (India) / HIE (UAE, per emirate), portal access (invite in P4), health tips & offers (off by default). Each decision stores CONSENT_RECEIPT with consent_type, policy_version, jurisdiction, decision, decided_at, channel and actor. Recording consent is NOT asked here (per-visit, P3).
+ac:
+- Every consent is a separate toggle; marketing defaults off; treatment is required and cannot be toggled off.
+- Each decision creates an immutable receipt (ledger) with policy version and jurisdiction; changing a decision creates a new receipt and keeps history.
+- The privacy notice version shown at registration is the currently published one; publishing a new version does not alter old receipts.
+- Owners cannot activate the production tenant until ToS and DPA acceptance is recorded.
+- Reminder sending (MDV-P1-032/033) checks the channel consent before every send (test).
+- Final wording is the legally reviewed text from MDV-P1-044 in en/hi/ar.
+
+=== MDV-P1-020
+title: Family, emergency contact and guardian rules (under-18 guardian required)
+type: Story
+epic: MDV-P1-E05
+prd: P1-05
+screens: P-02
+priority: MUST
+roles: Receptionist
+labels: registration, relationships
+estimate: 1
+weeks: 6
+depends: MDV-P1-013
+confidence: 88 | Designed with explicit rules and notes.
+sources: design/Medvya Patient Registration (Family & emergency)
+desc:
+PATIENT_RELATIONSHIP: emergency contact name, relationship, phone (required for full registration), guardian (required when age < 18; UAE: guardian/sponsor for dependants). Note shown: emergency contacts get no portal access; caregiver access is via patient-authorised proxy (P4 R-04).
+ac:
+- When DOB indicates age < 18, guardian becomes required and save is blocked without it.
+- Emergency contact is required for full registration but not for quick registration.
+- Emergency contacts never receive portal access or patient data (no account is created).
+- Relationship values are country-specific (UAE includes Sponsor).
+
+=== MDV-P1-021
+title: Create an appointment from the calendar with a short slot hold
+type: Story
+epic: MDV-P1-E06
+prd: P1-06, P1-07
+screens: P-04
+priority: MUST
+roles: Receptionist, Doctor
+labels: booking
+estimate: 2.5
+weeks: 6-7
+depends: MDV-P1-011, MDV-P1-018
+confidence: 88 | Designed interaction (click empty slot → book); hold mechanism specified in P1-07.
+sources: design/Medvya Clinician App (Schedule); PRD v2 P1-06, P1-07
+desc:
+Clicking an empty slot opens the booking panel for that doctor/resource and time; select or register a patient, visit type (sets length), reason category (free-text reason never shown on reception screens beyond category), channel. A slot hold (default 2 minutes) reserves the slot while the receptionist completes the form; confirmation creates the appointment and triggers the confirmation message (MDV-P1-032).
+ac:
+- Opening the booking panel creates a hold; another user trying the same slot sees it as "being booked" and cannot confirm it.
+- Holds expire automatically after the configured time and the slot becomes free.
+- A booking for an unavailable column (doctor not working) is impossible from UI and API.
+- Booking writes AppointmentBooked.v1 (no PHI) and an audit event; the appointment appears on the board in Booked.
+- Booking API p95 < 300 ms under the P1 load profile (MDV-P1-037).
+
+=== MDV-P1-022
+title: No double booking under concurrency (unique index, serializable transaction, doctor-day app lock)
+type: Story
+epic: MDV-P1-E06
+prd: P1-07
+covers: exit:2
+priority: MUST
+roles: System
+labels: booking, concurrency, safety
+estimate: 2
+weeks: 7
+depends: MDV-P1-021
+confidence: 90 | Mechanism fully specified by PRD v2; test is explicit in the exit gate.
+sources: PRD v2 P1-07, exit 2; docs/03-architecture/data-model.md#key-constraints
+desc:
+Filtered unique index on (doctor_id, location_id, slot_start) for non-cancelled appointments; booking inside a SERIALIZABLE transaction with sp_getapplock on "doctor:{id}:{date}"; the frontend check is only a convenience. Multi-slot visits reserve every covered slot.
+ac:
+- An automated test fires 100 parallel booking attempts at one slot; exactly one succeeds and 99 receive a clear "slot no longer available" error (exit gate 2), on Testcontainers SQL Server and on staging.
+- Overlapping multi-slot bookings are rejected the same way.
+- Deadlocks/lock timeouts are retried safely without creating duplicates.
+- The test runs in CI on every PR touching Scheduling.
+
+=== MDV-P1-023
+title: Calendar views: day, week and list (per doctor and resource), mobile/tablet responsive
+type: Story
+epic: MDV-P1-E06
+prd: P1-06
+screens: P-04
+covers: nfr:1
+priority: MUST
+roles: Receptionist, Doctor
+labels: calendar, performance
+estimate: 3
+weeks: 6-7
+depends: MDV-P1-011
+confidence: 86 | Day view is hi-fi with states; week/list derived; mobile agenda in X-01.
+sources: design/Medvya Clinician App (Schedule); design/Medvya Mobile and Tablet (Appointments); docs/02-design/screen-specs.md#schedule-p-04--medvya-clinician-app
+desc:
+Day view with columns per doctor/resource and time rows; week view per doctor; list view (agenda) for mobile and printing. Appointment chips show name, type, time and state with icon + label (Booked, Checked in, In room, Completed, No-show dashed, Cancelled dashed, Unavailable hatched). Doctor filter, date navigation, today button. Doctors see their own schedule view (read-only booking actions per permissions).
+ac:
+- Calendar first render < 2.5 s on a clinic PC over throttled 4G for a 3-doctor day (Lighthouse/Playwright perf budget).
+- States are distinguishable without colour (icon + label) and announced to screen readers; empty slots are buttons with accessible names like "Book Dr. Arjun Rao at 10:20".
+- Week and list views show the same appointments as day view (consistency test).
+- At ≤ 767 px the list/agenda view is the default with a pinned "+ Book" action.
+
+=== MDV-P1-024
+title: Reschedule (incl. drag with confirm), cancel with reason, mark no-show with rebook offer
+type: Story
+epic: MDV-P1-E06
+prd: P1-06
+screens: P-04
+priority: MUST
+roles: Receptionist
+labels: booking
+estimate: 2
+weeks: 7
+depends: MDV-P1-021, MDV-P1-022
+confidence: 90 | Action rules per state are designed explicitly.
+sources: design/Medvya Clinician App (Schedule detail panel); docs/03-architecture/state-machines.md#appointment--visit-p1
+desc:
+Detail panel actions with state rules: Check in (only Booked), Reschedule (not Completed), Cancel (asks reason; not Completed/Cancelled), Mark no-show (only Booked). Drag-and-drop reschedule asks for confirmation and uses the same booking concurrency path. No-show offers "Rebook" which opens booking with the patient preselected. Reschedule/cancel notify the patient (MDV-P1-032).
+ac:
+- Disallowed actions are disabled with an explanation and rejected by the API if called.
+- Cancel without a reason is impossible; reasons are a short list + free text.
+- A reschedule keeps history (old slot, new slot, actor, time) and frees the old slot atomically.
+- No-show offers rebook and is counted in the no-show metric (MDV-P1-041).
+
+=== MDV-P1-025
+title: Walk-in registration and booking straight to the queue
+type: Story
+epic: MDV-P1-E06
+prd: P1-06
+screens: P-01, P-04
+priority: MUST
+roles: Receptionist
+labels: booking, walk-in
+estimate: 1
+weeks: 7
+depends: MDV-P1-021, MDV-P1-015
+confidence: 88 | "Walk-in" action is on the reception board design; tag "Walk-in" shown on cards.
+sources: design/Medvya Clinician App (Front desk Walk-in button)
+desc:
+"Walk-in" on the board: find or quick-register the patient, choose doctor (or "next available"), create an appointment in the next free slot or as an unscheduled walk-in, and check in immediately; card tagged Walk-in.
+ac:
+- A walk-in can be registered (quick) and checked in in under 60 seconds.
+- If no slot is free, the walk-in is queued without breaking the no-double-booking rule (unscheduled walk-ins do not occupy slots).
+- Walk-ins appear in the Checked in column with wait time and the Walk-in tag.
+
+=== MDV-P1-026
+title: Recurring appointments (series) with per-occurrence exceptions
+type: Story
+epic: MDV-P1-E06
+prd: P1-06
+screens: P-04
+priority: MUST
+roles: Receptionist
+labels: booking
+estimate: 1.5
+weeks: 8
+depends: MDV-P1-022
+confidence: 80 | Required by PRD P1-06 but not visualised in the designs; follows calendar patterns.
+sources: PRD v2 P1-06
+desc:
+Create a series (e.g. weekly physiotherapy × 10): each occurrence is a normal appointment booked through the same concurrency path; conflicts are reported before confirming; editing/cancelling one occurrence or "this and following".
+ac:
+- Creating a series shows which occurrences conflict and lets the user skip or move them before confirming.
+- Each occurrence is an independent appointment protected by the double-booking rules.
+- Cancelling "this and following" cancels the remaining series with one reason and one notification.
+
+=== MDV-P1-027
+title: Waitlist with "offer earlier slot"
+type: Story
+epic: MDV-P1-E06
+prd: P1-06
+screens: P-05
+priority: MUST
+roles: Receptionist
+labels: waitlist
+estimate: 1.5
+weeks: 8
+depends: MDV-P1-024, MDV-P1-033
+confidence: 84 | Waitlist panel and "Offer {time}" action are designed on the reception board.
+sources: design/Medvya Clinician App (Waitlist · earlier slot wanted)
+desc:
+Patients can be added to a waitlist with preference (doctor, days, earliest/time window). When a slot frees (cancellation/reschedule), matching waitlist entries are highlighted with "Offer {time}". Offering sends a message; acceptance books through the normal path.
+ac:
+- A freed slot shows matching waitlist candidates ordered by request time.
+- "Offer" places a hold and sends a message without clinical details; if not accepted within the hold window, the next candidate can be offered.
+- Accepting books the slot and removes the patient from the waitlist.
+
+=== MDV-P1-028
+title: Reception board with visit columns and one-tap check-in
+type: Story
+epic: MDV-P1-E07
+prd: P1-08
+screens: P-01
+covers: exit:3
+priority: MUST
+roles: Receptionist
+labels: front-desk, board
+estimate: 3
+weeks: 7-8
+depends: MDV-P1-021
+confidence: 82 | Board is hi-fi; Foundations marks P-01 status "next" (PRD finding: confirm final design before P1 build).
+sources: design/Medvya Clinician App (P-01); docs/02-design/screen-specs.md#front-desk-board-p-01--medvya-clinician-app; PRD v2 finding CHECK
+desc:
+/front-desk board for today: Booked → Checked in → With nurse → Ready for doctor → In consult → Billing → Done with counts. Card shows name, time, doctor/visit type and nonclinical tags; CTA per column (Check in, Send to nurse, Intake done, Call in, Consult done, Payment received). "Receptionist view hides clinical notes" banner. Check-in for a returning patient: find appointment → confirm identity (name + DOB) → mark arrived, flag incomplete registration.
+ac:
+- A returning patient with an appointment can be checked in with ≤ 3 interactions; median check-in time is instrumented from arrival click to checked-in (exit gate 3 measurement).
+- Column transitions follow the visit state machine; invalid moves are rejected server-side.
+- Cards never show clinical information (reason shown only as category); verified by a security test on the board API payload.
+- Billing column exists but payment actions are placeholders until P4 (feature flag).
+- Board works at tablet width (horizontal scroll per responsive rules).
+notes:
+- Confirm the final P-01 design with the founder before build (PRD v2 finding: P-01 status "next").
+
+=== MDV-P1-029
+title: Real-time board updates, call/room patient, nonclinical statuses (SignalR)
+type: Story
+epic: MDV-P1-E07
+prd: P1-08
+screens: P-01
+priority: MUST
+roles: Receptionist, Nurse, Doctor
+labels: front-desk, realtime
+estimate: 2
+weeks: 8
+depends: MDV-P1-028
+confidence: 85 | SignalR chosen in PRD v2 stack; behaviour designed.
+sources: PRD v2 §07 Realtime; design/Medvya Clinician App (P-01)
+desc:
+SignalR hub scoped per tenant+facility pushes board changes to all open boards and Today views. "Call in" assigns a room and changes state; wait timers update live ("Waiting 12 min"). Reconnect logic resyncs state.
+ac:
+- A state change on one device appears on another device's board within 2 seconds.
+- Hub connections are authorised per facility; a user cannot subscribe to another facility's board (security test).
+- After a network drop the board resyncs without duplicates or lost moves.
+- Messages carry ids and nonclinical fields only.
+
+=== MDV-P1-030
+title: Clinic overview: multi-doctor Today and shared waiting room (D-04)
+type: Story
+epic: MDV-P1-E07
+prd: P1-08
+screens: D-04
+priority: MUST
+roles: Doctor, Receptionist
+labels: front-desk, overview
+estimate: 1.5
+weeks: 8
+depends: MDV-P1-029
+confidence: 80 | Screen is hi-fi (D-04) but the clinician Today itself ships in P2; P1 builds the overview for reception and the doctor schedule view.
+sources: design/Medvya Foundations inventory (D-04 /today?view=clinic); design/Medvya Clinician App (Doctor workload panel)
+desc:
+Clinic view showing each doctor's queue length, running delay and next patient, a shared waiting room list, and the ability to reassign a waiting patient to another doctor (with reason). Doctor workload panel on the board.
+ac:
+- Overview lists every doctor working today with counts per state and current delay estimate.
+- Reassigning a waiting patient moves the appointment to the other doctor's queue atomically and is audited.
+- Doctors see their own schedule view in P1 (read-only) with their next patients.
+
+=== MDV-P1-031
+title: Queue TV display with tokens only, never names (P-05)
+type: Story
+epic: MDV-P1-E07
+prd: P1-08
+screens: P-05
+priority: MUST
+roles: Receptionist, Patient (waiting room)
+labels: queue, tv, privacy
+estimate: 1.5
+weeks: 8
+depends: MDV-P1-029
+confidence: 90 | Designed with explicit rule "token numbers only, never names".
+sources: design/Medvya Clinical Screens (P-05 Queue TV display); design/Medvya Gap Analysis (Queue and token screen)
+desc:
+Tokens issued at check-in (prefix per doctor/room, e.g. A-07). TV route /queue/tv?display=… authenticated by a device display token (no user login) shows "Now: token · room · doctor" and "Next: token · ≈ wait". Large type, high contrast, auto-refresh via SignalR, works on a basic smart-TV browser.
+ac:
+- The TV payload contains tokens, rooms, doctor display names and waits only; no patient names, MRNs or reasons (API contract test).
+- Display tokens are revocable and scoped to one facility.
+- Calling a patient updates the TV within 2 seconds and optionally plays a chime.
+- Layout is readable at 3 metres (minimum 48px token text) and in Arabic/English.
+
+=== MDV-P1-032
+title: Email confirmations and 24 h / 2 h reminders via Azure Communication Services and Hangfire
+type: Story
+epic: MDV-P1-E08
+prd: P1-09
+covers: nfr:2, exit:4
+priority: MUST
+roles: Patient, Receptionist
+labels: notifications, jobs
+estimate: 2.5
+weeks: 7-8
+depends: MDV-P1-021, MDV-P1-019
+confidence: 86 | Stack decided (Hangfire on Azure SQL, ACS); template rules defined.
+sources: PRD v2 P1-09, P1 NFR 2; docs/03-architecture/integrations.md
+desc:
+Hangfire server (Worker.Jobs) on Azure SQL in its own schema/user — no Redis or Service Bus in P1. Events: booking confirmation, reschedule, cancellation, 24 h and 2 h reminders, leave rebooking. Templates per tenant/language without clinical details. NOTIFICATION and NOTIFICATION_ATTEMPT record provider id, delivery state and retries with backoff; reminders are cancelled when the appointment changes.
+ac:
+- Booking triggers a confirmation within 1 minute; reminders are sent at 24 h and 2 h before (facility time), respecting quiet hours and channel consent.
+- Rescheduling or cancelling cancels pending reminders and sends the right message once (idempotency test).
+- Delivery status (queued, sent, delivered, failed, bounced) is stored and visible to reception for each appointment.
+- Failed sends are retried with backoff up to the configured limit and then shown as failed on the board/notification centre.
+- Hangfire dashboard is only reachable by Medvya operations through authenticated admin route; no Redis or Service Bus resources exist in P1 infrastructure.
+
+=== MDV-P1-033
+title: SMS confirmations and reminders with India DLT templates and delivery receipts
+type: Story
+epic: MDV-P1-E08
+prd: P1-09
+covers: dep:2, exit:4
+priority: MUST
+roles: Patient, Receptionist
+labels: notifications, sms, india
+estimate: 2
+weeks: 8
+depends: MDV-P1-032, MDV-P1-045
+confidence: 68 | Depends on DLT sender/template registration (external lead time) and the SMS provider decision (open question Q-03).
+sources: PRD v2 P1-09, dependency 2; docs/01-prd/source-conflicts.md (Q-03)
+desc:
+SMS adapter (Azure Communication Services where supported, otherwise a DLT-registered aggregator) behind the Notifications interface. India messages use the registered DLT template IDs and sender; UAE uses its approved sender. Delivery receipts update NOTIFICATION_ATTEMPT. Reminder delivery rate is computed per clinic.
+ac:
+- SMS uses only registered templates; a message not matching a registered template is not sent (validation test).
+- Delivery receipts are processed (webhook verified/authenticated) and update status; failures are visible to reception.
+- Delivery rate dashboard shows ≥ 98 % delivered during the pilot or lists every failure with reason (exit gate 4).
+- Messages contain no clinical details; sender name is the clinic's.
+
+=== MDV-P1-034
+title: Notification centre for staff (D-03), push-safe content
+type: Story
+epic: MDV-P1-E08
+prd: P1-09
+screens: D-03
+priority: MUST
+roles: All staff
+labels: notifications, ui
+estimate: 1.5
+weeks: 8
+depends: MDV-P1-032, MDV-P0-022
+confidence: 85 | Overlay is designed with the push rule; event list for P1 is small (failed reminders, expiries, access requests, rebooking needed).
+sources: design/Medvya Clinician App (Notifications overlay); docs/02-design/screen-specs.md#notification-centre-d-03
+desc:
+Bell with count opens an overlay listing in-app notifications (kind, title, time) with "Mark all read". P1 events: reminder failed, leave rebooking needed, licence expiring, access request, quarterly access review due. Browser/phone push (optional) uses the generic text only.
+ac:
+- Notifications are scoped to the user's tenant/facility and role.
+- Push or browser notifications never include patient names or results; content is "New update from {clinic}. Open Medvya to view." (test on payload).
+- Mark all read and per-item read state persist across devices.
+- Overlay is keyboard accessible and screen-reader friendly.
+
+=== MDV-P1-035
+title: Practice access log for owners (F-12): who opened which record and when
+type: Story
+epic: MDV-P1-E09
+prd: P1-10
+screens: F-12
+priority: MUST
+roles: Practice owner
+labels: audit, settings
+estimate: 1.5
+weeks: 8
+depends: MDV-P0-017
+confidence: 84 | Requirement explicit; screen listed in inventory (/settings/audit) but its detail data was in the truncated part of the design.
+sources: PRD v2 P1-10; design/Medvya Foundations inventory (F-12)
+desc:
+/settings/audit: filter by staff member, patient (search), action, date range; shows time, actor, role, action, patient (name visible to the owner after selecting), purpose and outcome (allowed/denied). Export to CSV (watermarked, audited).
+ac:
+- Only practice owners/admins can open the log (403 for others, audited).
+- Filtering by patient lists every read and write of that patient's record by anyone, with timestamps.
+- Denied attempts (e.g. receptionist opening a clinical note) appear with outcome "Denied".
+- Exports are audited and watermarked with exporter and time.
+- Query p95 < 600 ms for a 30-day range in the pilot volume.
+
+=== MDV-P1-036
+title: Tablet-responsive reception views (desk tablet)
+type: Task
+epic: MDV-P1-E07
+prd: P1-08
+covers: nfr:3
+priority: MUST
+roles: Receptionist
+labels: responsive, a11y
+estimate: 1
+weeks: 9
+depends: MDV-P1-028, MDV-P1-023, MDV-P1-013
+confidence: 88 | Responsive rules defined for tablet (768+): icon rail, horizontal board scroll.
+sources: docs/02-design/responsive-and-dark.md; PRD v2 P1 NFR 3
+desc:
+Verify and fix registration, calendar, board, queue and settings at 768–1024 px (landscape and portrait): icon rail navigation, 44 px targets, board horizontal scroll, booking panel as a drawer.
+ac:
+- Playwright visual checks at 768×1024 and 1024×768 pass for every P1 screen without clipped controls.
+- All touch targets ≥ 44 px (automated check).
+- Registration and check-in journeys complete on a tablet emulation end-to-end.
+
+=== MDV-P1-037
+title: Performance budget and load test for booking and calendar
+type: Task
+epic: MDV-P1-E06
+prd: P1-06, P1-07
+covers: nfr:1
+priority: MUST
+roles: Developer
+labels: performance
+estimate: 1.5
+weeks: 9
+depends: MDV-P1-022, MDV-P1-023
+confidence: 86 | Targets explicit; tool choice (k6/NBomber) open but trivial.
+sources: PRD v2 P1 NFR 1, X6
+desc:
+Load profile for two clinics plus headroom (e.g. 20 concurrent receptionists, 200 bookings/hour, board subscriptions). Measure booking API p95, search p95, board load, calendar first render on throttled 4G. Add the budgets to CI (nightly) with alerts on regression.
+ac:
+- Booking API p95 < 300 ms and reads p95 < 300 ms / writes < 600 ms under the profile on staging.
+- Calendar first render < 2.5 s on a typical clinic PC profile over 4G throttling.
+- Nightly performance job fails and alerts on > 20 % regression.
+
+=== MDV-P1-038
+title: P1 security review: threat-model update, ASVS checks, authorisation tests, dependency scan — no open high/critical
+type: Gate
+epic: MDV-P1-E10
+prd: P1-05, P1-11
+covers: exit:5
+priority: MUST
+roles: Developer, external reviewer (part-time)
+labels: security, gate
+estimate: 2
+weeks: 9
+depends: MDV-P1-019, MDV-P1-009, MDV-P1-035
+confidence: 80 | Process clear; using a part-time external reviewer (Build Plan advice) depends on availability.
+sources: PRD v2 P1 exit 5; design/Medvya Build Plan (direction advice: part-time security reviewer)
+desc:
+Before real demographics enter production: update the threat model for P1 features (public site, registration, booking, messaging, TV display), run ASVS L2 checks, the authorisation matrix tests, IDOR tests on patient and appointment endpoints, DAST against staging, dependency/container scan, and a short external review of security-sensitive code.
+ac:
+- No open high or critical findings; mediums have dated remediation tickets.
+- IDOR test suite covers every P1 endpoint taking a patient/appointment id.
+- Public endpoints (landing, demo, TV display, webhooks) are rate-limited and pass DAST.
+- The review report is stored in docs/compliance and linked in R1 release notes.
+
+=== MDV-P1-039
+title: Production deployment for the launch country and a production tenant per pilot clinic
+type: Task
+epic: MDV-P1-E10
+prd: P1-02
+covers: pkg:1, dep:3
+priority: MUST
+roles: Developer, Practice owner
+labels: release, production
+estimate: 1.5
+weeks: 9
+depends: MDV-P1-038, MDV-P1-043
+confidence: 82 | Infra exists from P0; depends on signed pilot agreements.
+sources: PRD v2 P1 delivery package 1
+desc:
+Deploy production for the launch country from a tag, verify private networking, backups, alerts and the 12 data-protection layers, then create one production tenant per partner clinic with owner accounts (MFA) and feature flags for R1 only.
+ac:
+- Production passes the 12-layer checklist (docs/04-security-compliance) with evidence.
+- Each partner clinic has its own tenant; owners signed in with MFA and accepted ToS/DPA.
+- Only R1 features are enabled by flags; clinical modules are not reachable.
+- Synthetic data is never present in production (check).
+
+=== MDV-P1-040
+title: Reception training (30 min), one-page desk card and support channel with named contact
+type: Chore
+epic: MDV-P1-E10
+prd: P1-08
+covers: pkg:2, pkg:3
+priority: MUST
+roles: Founder, Receptionist
+labels: training, support
+estimate: 1.5
+weeks: 9
+depends: MDV-P1-039
+confidence: 88 | Deliverables explicit.
+sources: PRD v2 P1 delivery package 2–3
+desc:
+30-minute reception training (register quick/full, duplicates, book/reschedule/cancel/no-show, walk-in, check-in, board, TV, reminders, what reception cannot see). One-page desk card per country (A4, en + local language). Support channel (WhatsApp/phone) with a named contact and hours; escalation path for security/privacy incidents.
+ac:
+- Training delivered to every receptionist at both clinics, attendance recorded.
+- Desk card printed and available at each desk, covering the top 8 tasks and who to call.
+- Support contact, hours and escalation are communicated in writing and listed in the R1 release notes.
+
+=== MDV-P1-041
+title: Baseline metrics capture and in-product measurement (check-in time, no-shows, double bookings, reminder delivery)
+type: Task
+epic: MDV-P1-E10
+prd: P1-08, P1-09
+covers: pkg:4, exit:3
+priority: MUST
+roles: Founder, Practice owner
+labels: metrics
+estimate: 1.5
+weeks: 9-10
+depends: MDV-P1-028, MDV-P1-033
+confidence: 84 | Metrics and methods are defined in PRD v2 §06; clinic pre-Medvya baseline needs manual capture.
+sources: PRD v2 §06 metrics; docs/01-prd/cross-cutting-metrics-process.md
+desc:
+Capture each clinic's pre-Medvya baseline (no-show rate, check-in time, double-booking incidents) during the first 2 weeks, and instrument: check-in time (arrival → checked in) median, no-show rate, double-booking constraint violations, reminder delivery rate. Owner-facing mini report (full reports P4).
+ac:
+- Baseline values per clinic are recorded with method and dates.
+- Median check-in time for returning patients is computed from event timestamps and is ≤ 60 s during the measured pilot weeks (exit gate 3) or the gap is reported.
+- Metrics contain no PHI and are visible to owners.
+
+=== MDV-P1-042
+title: R1 pilot (2 consecutive weeks of real bookings), exit gate review and release notes
+type: Gate
+epic: MDV-P1-E10
+prd: P1-06, P1-08
+covers: exit:1, exit:2, exit:3, exit:4, exit:5
+priority: MUST
+roles: Founder, Clinical advisor, pilot users
+labels: release, gate, pilot
+estimate: 2
+weeks: 10
+depends: MDV-P1-039, MDV-P1-040, MDV-P1-041, MDV-P1-022, MDV-P1-038
+confidence: 65 | Week 10 ends 01 Jan 2027; year-end holidays may prevent "2 consecutive weeks" in-window (open question Q-08).
+sources: PRD v2 §08 release process, P1 exit criteria; docs/01-prd/roadmap.md (calendar risks)
+desc:
+Pilot on flags with daily check-ins in week one, then exit gate review with evidence: two consecutive weeks of real bookings without paper fallback at both clinics; double-booking test result; median check-in; reminder delivery ≥ 98 % with failures visible; no open high/critical findings. Publish R1 release notes and known issues; turn J3 front-desk steps green in the journey specs.
+ac:
+- Evidence for each of the five exit criteria is attached and confirmed by founder, clinical advisor and one pilot user.
+- If the holiday period prevents two consecutive weeks, the gate is formally moved to the first two full January weeks and recorded (no silent slip).
+- R1 release notes list P1-01…P1-12 delivered status, known issues and what is not included (clinical notes, Rx, billing, AI, portal).
+- Journey J3 front-desk steps (P-01, P-02, P-03) pass in Playwright.
+
+=== MDV-P1-043
+title: Sign pilot agreements with two partner clinics
+type: Chore
+epic: MDV-P1-E10
+prd: P1-02
+covers: dep:3
+priority: MUST
+roles: Founder
+labels: commercial, pilot
+estimate: 1
+weeks: 4-6
+confidence: 60 | Commercial dependency outside engineering control.
+sources: PRD v2 P1 dependency 3
+desc:
+Pilot agreement with two design-partner clinics: scope (R1 then R2), duration, support, data processing agreement, feedback commitments, baseline-measurement consent, exit terms.
+ac:
+- Two signed pilot agreements including DPA are on file before production tenants are created.
+- Each clinic names an owner contact and a receptionist champion.
+- Pilot start dates are scheduled with each clinic (considering the year-end holiday).
+
+=== MDV-P1-044
+title: Legal review of privacy notice, ToS, DPA and consent wording (DPDP India; UAE health data)
+type: Chore
+epic: MDV-P1-E10
+prd: P1-12
+covers: dep:1
+priority: MUST
+roles: Founder, external counsel
+labels: legal, compliance
+estimate: 1
+weeks: 4-6
+depends: MDV-P0-024
+confidence: 60 | Depends on external counsel; wording may change consent UI.
+sources: PRD v2 P1 dependency 1, P1-12; docs/04-security-compliance/README.md
+desc:
+Counsel reviews the clinic privacy notice, Medvya Terms, clinic DPA, patient consent texts (treatment, reminders per channel, sharing/ABHA/HIE, portal, marketing) for India (DPDP Act + Rules, commencement schedule) and the UAE (if in scope), plus the retention map from P0. Translated versions reviewed for en/hi/ar.
+ac:
+- Approved texts with version numbers (e.g. v2026.2) are stored in the repo and loaded into consent templates.
+- Review notes list any change to the consent model and the resulting ticket updates.
+- Sign-off is recorded before the first real patient is registered (P1 for demographics).
+
+=== MDV-P1-045
+title: Register India DLT sender ID and SMS templates (and UAE SMS sender if applicable)
+type: Chore
+epic: MDV-P1-E10
+prd: P1-09
+covers: dep:2
+priority: MUST
+roles: Founder
+labels: sms, external
+estimate: 0.5
+weeks: 4-6
+confidence: 62 | External approval lead time varies.
+sources: PRD v2 P1 dependency 2
+desc:
+Register the principal entity, sender ID(s) and every SMS template (confirmation, reminders, cancellation, rebooking, waitlist offer, OTP) on a DLT platform; choose the SMS provider (Q-03). Record template IDs in configuration.
+ac:
+- Entity, header (sender) and all P1 templates are approved with template IDs recorded.
+- SMS provider contract/account exists and is connected in staging.
+- A fallback (email only) is documented if approval slips.
+
+=== MDV-P1-046
+title: Start UAE regulator onboarding applications early (risk mitigation)
+type: Chore
+epic: MDV-P1-E10
+priority: SHOULD
+roles: Founder
+labels: regulatory, uae
+estimate: 0.5
+weeks: 6-8
+depends: MDV-P0-003
+confidence: 55 | Requirements and timelines are controlled by regulators; mitigation step named in PRD v2 risk register.
+sources: PRD v2 §10 risk "Regulator onboarding slower than planned" (mitigation: start applications in P1)
+desc:
+Start the onboarding/vendor applications for the launch emirate HIE (Malaffi, NABIDH or Riayati) and claims platform (eClaimLink/Shafafiya), and record each programme's current requirements, sandbox access and conformance-test steps.
+ac:
+- Applications submitted (or blocked reasons recorded) for the launch emirate exchange and claims platform.
+- A tracker lists each programme's requirements, contacts and expected timeline; P5 tickets are updated with the findings.

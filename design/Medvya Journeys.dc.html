@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=Material+Symbols+Outlined:opsz,wght,FILL@20..24,400,0..1&display=swap" rel="stylesheet">
+<style>body{margin:0;background:#F0F3F6;color:#142536;font-family:Manrope,system-ui,sans-serif;-webkit-font-smoothing:antialiased}a{color:#2563EB;text-decoration:none}a:hover{text-decoration:underline}.ms{font-family:'Material Symbols Outlined';font-weight:400;font-style:normal;line-height:1;display:inline-block;white-space:nowrap;font-feature-settings:'liga'}</style>
+</helmet>
+<div style="padding:40px 40px 80px;display:flex;flex-direction:column;gap:40px">
+  <header style="display:flex;flex-direction:column;gap:6px;max-width:960px">
+    <div style="font:600 12px 'JetBrains Mono',monospace;color:#506579">Medvya · six end-to-end journeys · every step opens the real screen</div>
+    <h1 style="margin:0;font-size:30px;letter-spacing:-0.02em;color:#102A43">User journeys</h1>
+    <p style="margin:0;font-size:15px;color:#506579;line-height:1.55">Each card is one step: who acts, on which screen, and what changes. A lock means a clinician approval boundary. Amber cards are recovery branches. Click any card to open that screen.</p>
+  </header>
+  <sc-for list="{{ journeys }}" as="j" hint-placeholder-count="6">
+    <section id="{{ j.id }}" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><span style="font:600 12px 'JetBrains Mono',monospace;padding:3px 8px;background:#102A43;color:#fff;border-radius:5px">{{ j.id }}</span><h2 style="margin:0;font-size:20px;color:#102A43">{{ j.name }}</h2><span style="font-size:13px;color:#506579">{{ j.who }}</span></div>
+      <div style="display:flex;gap:12px;overflow-x:auto;padding-bottom:6px;align-items:stretch">
+        <sc-for list="{{ j.steps }}" as="s" hint-placeholder-count="6">
+          <a href="{{ s.href }}" style="flex:0 0 220px;display:flex;flex-direction:column;gap:8px;padding:14px;border-radius:12px;background:{{ s.bg }};border:1px solid {{ s.line }};color:#142536;text-decoration:none">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:6px"><span style="font:600 11px 'JetBrains Mono',monospace;color:#506579">{{ s.n }} · {{ s.sid }}</span><sc-if value="{{ s.gate }}"><span class="ms" style="font-size:17px;color:#102A43" title="Approval boundary">lock</span></sc-if></div>
+            <div style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:800;color:{{ s.rc }}"><span class="ms" style="font-size:16px">{{ s.icon }}</span>{{ s.role }}</div>
+            <div style="font-size:14.5px;font-weight:700;line-height:1.35">{{ s.title }}</div>
+            <div style="font-size:12.5px;color:#506579;line-height:1.45">{{ s.note }}</div>
+            <div style="margin-top:auto;font-size:12px;font-weight:700;color:#2563EB;display:flex;align-items:center;gap:4px">Open screen<span class="ms" style="font-size:15px">arrow_forward</span></div>
+          </a>
+        </sc-for>
+      </div>
+    </section>
+  </sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const A = s => 'Medvya Clinician App.dc.html#s=' + s;
+    const R = { dr: ['Doctor', 'stethoscope', '#0F766E'], rc: ['Reception', 'support_agent', '#1D4ED8'], nu: ['Nurse', 'vaccines', '#0F766E'], cc: ['Care coordinator', 'assignment_ind', '#3E6A4D'], pt: ['Patient', 'person', '#0F766E'], it: ['Hospital IT', 'admin_panel_settings', '#334E68'], ad: ['Practice admin', 'storefront', '#334E68'], sys: ['System', 'memory', '#5B3FC4'] };
+    const st = (sid, r, title, note, href, o = {}) => ({ sid, role: R[r][0], icon: R[r][1], rc: R[r][2], title, note, href, gate: !!o.gate, bg: o.alt ? '#FFFBF3' : '#fff', line: o.alt ? '#EFD5A6' : '#DFE7ED' });
+    const W = id => 'Medvya Wireframes.dc.html#' + id, E = 'Medvya Enterprise Admin.dc.html', P = 'Medvya Patient Registration.dc.html';
+    const J = [
+      ['J1', 'First solo-doctor visit', 'Solo doctor · M1', [
+        st('F-04', 'ad', 'Set up practice', 'Licence, clinic profile, hours, invite receptionist.', A('settings')), st('F-11', 'ad', 'Add services & fees', 'INR catalogue, GST-exempt consults.', A('settings&tab=services')),
+        st('P-02', 'rc', 'Register first patient', 'Quick or full registration, ABHA optional.', P), st('P-04', 'rc', 'Book & check in', 'Slot booked, WhatsApp confirmation.', A('schedule')),
+        st('A-02', 'dr', 'Consent & start recording', 'Patient agrees in Tamil; phone mic.', A('consent')), st('E-04', 'dr', 'Branch: consent declined', 'Manual note, same sign flow.', A('consent'), { alt: 1 }),
+        st('A-05', 'dr', 'Review & sign note', 'Evidence-linked draft; sign.', A('note'), { gate: 1 }), st('P-06', 'rc', 'Invoice & UPI payment', 'Paid only on provider confirmation.', A('billing'))]],
+      ['J2', 'Returning diabetic patient', 'Meera Iyer · M1–M2', [
+        st('D-01', 'dr', 'Today → next patient', 'Meera in Room 3.', A('today')), st('E-01', 'dr', '60-second brief', 'Verified vs AI summary split.', A('p360')),
+        st('A-03', 'dr', 'Live consultation', 'Tamil, Hindi, English; 3 voices.', A('consent')), st('A-04', 'dr', 'Confirm speakers', 'Patient and daughter confirmed.', A('transcript')),
+        st('A-05', 'dr', 'Resolve conflicts & sign', 'Statin stopped vs chart active.', A('note'), { gate: 1 }), st('E-05', 'dr', 'Authorise Rx & orders', 'Separate approvals.', A('orders'), { gate: 1 }),
+        st('E-10', 'dr', 'Print / e-Rx to pharmacy', 'Generic names first; QR verify.', A('rxprint')), st('C-02', 'cc', 'Care plan created', 'Owner Priya; reminder ≠ done.', A('care'))]],
+      ['J3', 'Busy reception → nurse handoff', 'Front desk · M1–M2', [
+        st('P-01', 'rc', 'Walk-in arrives', 'Reception board, token issued.', A('frontdesk')), st('P-02', 'rc', 'Quick registration', '5 fields; completion task created.', P),
+        st('P-03', 'rc', 'Branch: possible duplicate', 'Name + DOB match; request merge review.', P, { alt: 1 }), st('P-01', 'rc', 'Send to nurse', 'Card moves to “With nurse”.', A('frontdesk')),
+        st('N-01', 'nu', 'Vitals & allergies', 'Open intake from the “With nurse” card; hand off returns to the board.', A('nurse')), st('P-01', 'nu', 'Ready for doctor', 'Doctor sees it on Today.', A('frontdesk')),
+        st('D-01', 'dr', 'Clinic overview', 'Shared waiting room, reassign doctor.', A('today'))]],
+      ['J4', 'Multilingual ward round · 3 speakers · clip', 'Hospital clinician · M3–M4', [
+        st('W-01', 'dr', 'Pair clip', 'Code match, mic self-test; clip then selectable at consent.', A('devices')), st('A-02', 'dr', 'Bind encounter & consent', 'Patient + spouse consent; clip selected.', A('consent')),
+        st('W-02', 'sys', 'Branch: offline on ward', 'Encrypted queue on clip; sync later.', A('devices'), { alt: 1 }), st('A-10', 'dr', 'Overlap & unconfirmed speaker', 'Statements flagged, not attributed.', W('A-10'), { alt: 1 }),
+        st('A-04', 'dr', 'Confirm 3 speakers', 'Doctor, patient, spouse.', A('transcript')), st('A-05', 'dr', 'Sign note', 'HIS is authority; write-back queued.', A('note'), { gate: 1 })]],
+      ['J5', 'Delayed lab result escalation', 'Care loop · M2', [
+        st('E-05', 'dr', 'Order placed', 'State: Ordered.', A('orders')), st('C-05', 'sys', 'Report arrives, low-confidence match', 'Human confirms patient.', W('C-05'), { alt: 1 }),
+        st('C-01', 'dr', 'Received ≠ reviewed', 'Critical K⁺ 6.1 sits unacknowledged.', A('inbox')), st('C-04', 'cc', 'Overdue escalation', 'Escalate to doctor after SLA.', W('C-04'), { alt: 1 }),
+        st('C-01', 'dr', 'Mark reviewed', 'Acknowledgement with actor & time.', A('inbox'), { gate: 1 }), st('C-06', 'cc', 'Contact patient', 'Message via portal; log outcome.', A('messages')),
+        st('C-02', 'cc', 'Close with evidence', 'Follow-up booked & attended.', A('care'))]],
+      ['J6', 'Hospital with existing HIS · failed write-back', 'Enterprise · M4', [
+        st('H-08', 'it', 'Set record authority', 'HIS is system of record.', E), st('A-05', 'dr', 'Clinician signs note', 'Set Tweak authority = HIS; signed banner shows “Not yet in HIS”.', A('note'), { gate: 1 }),
+        st('H-01', 'sys', 'HIS returns 503 ×3', 'Chart shows "Not yet in HIS".', E, { alt: 1 }), st('H-01', 'it', 'Retry', 'Delivered with receipt.', E),
+        st('H-04', 'dr', 'Conflict to clinician', 'HIS med active vs Medvya stopped.', E, { alt: 1, gate: 1 }), st('H-05', 'it', 'Inspect audit event', 'Append-only trail.', E)]]
+    ];
+    return { journeys: J.map(([id, name, who, steps]) => ({ id, name, who, steps: steps.map((x, i) => ({ ...x, n: String(i + 1) })) })) };
+  }
+}
+</script>
+</body>
+</html>

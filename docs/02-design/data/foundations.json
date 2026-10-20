@@ -1,0 +1,3236 @@
+{
+ "erd": [
+  {
+   "name": "A · Tenant, PMS & billing",
+   "rows": [
+    {
+     "e": "TENANT",
+     "s": "F-02 region · H-06 residency",
+     "c": "#142536"
+    },
+    {
+     "e": "FACILITY",
+     "s": "F-04 · H-02",
+     "c": "#142536"
+    },
+    {
+     "e": "DEPARTMENT",
+     "s": "H-02",
+     "c": "#142536"
+    },
+    {
+     "e": "USER",
+     "s": "F-03 sign-in",
+     "c": "#142536"
+    },
+    {
+     "e": "TENANT_USER / MEMBERSHIP",
+     "s": "F-06 invite · H-03 role grants",
+     "c": "#142536"
+    },
+    {
+     "e": "CLINICIAN_PROFILE",
+     "s": "F-04 licence (verified flag)",
+     "c": "#142536"
+    },
+    {
+     "e": "PATIENT",
+     "s": "P-02 registration",
+     "c": "#142536"
+    },
+    {
+     "e": "PATIENT_IDENTIFIER",
+     "s": "P-02 ABHA · Aadhaar last 4 · Emirates ID · passport",
+     "c": "#142536"
+    },
+    {
+     "e": "PATIENT_RELATIONSHIP*",
+     "s": "P-02 emergency contact, guardian",
+     "c": "#142536"
+    },
+    {
+     "e": "PAYER_COVERAGE*",
+     "s": "P-02 payer step · P-08",
+     "c": "#142536"
+    },
+    {
+     "e": "SCHEDULE_SLOT",
+     "s": "F-04 schedule · P-04",
+     "c": "#142536"
+    },
+    {
+     "e": "APPOINTMENT",
+     "s": "P-01 · P-04 · R-02",
+     "c": "#142536"
+    },
+    {
+     "e": "ENCOUNTER",
+     "s": "A-02 binding · H-08 authority_mode",
+     "c": "#142536"
+    },
+    {
+     "e": "INVOICE / INVOICE_LINE",
+     "s": "P-06",
+     "c": "#142536"
+    },
+    {
+     "e": "PAYMENT",
+     "s": "P-06 · P-07",
+     "c": "#142536"
+    },
+    {
+     "e": "CLAIM",
+     "s": "P-08 (M4)",
+     "c": "#142536"
+    }
+   ]
+  },
+  {
+   "name": "B · EMR & clinical authority",
+   "rows": [
+    {
+     "e": "OBSERVATION",
+     "s": "N-01 · E-01 vitals",
+     "c": "#142536"
+    },
+    {
+     "e": "PROBLEM",
+     "s": "E-01 · E-07 coding",
+     "c": "#142536"
+    },
+    {
+     "e": "ALLERGY",
+     "s": "N-01 · banner",
+     "c": "#142536"
+    },
+    {
+     "e": "MEDICATION_STATEMENT",
+     "s": "N-01 · E-07 reconciliation",
+     "c": "#142536"
+    },
+    {
+     "e": "CLINICAL_NOTE / NOTE_VERSION",
+     "s": "A-05 · E-06",
+     "c": "#142536"
+    },
+    {
+     "e": "CLINICIAN_SIGNATURE",
+     "s": "A-05 sign modal",
+     "c": "#142536"
+    },
+    {
+     "e": "CLINICAL_ORDER",
+     "s": "E-05",
+     "c": "#142536"
+    },
+    {
+     "e": "CLINICAL_RESULT",
+     "s": "C-01",
+     "c": "#142536"
+    },
+    {
+     "e": "PRESCRIPTION / _ITEM",
+     "s": "E-05 · R-01",
+     "c": "#142536"
+    },
+    {
+     "e": "CLINICAL_DOCUMENT",
+     "s": "E-03 · C-05",
+     "c": "#142536"
+    },
+    {
+     "e": "DOCUMENT_PROVENANCE",
+     "s": "E-02 · E-03 source tags",
+     "c": "#142536"
+    },
+    {
+     "e": "EXTERNAL_RECORD_LINK",
+     "s": "E-01 “Synced from HIS” · H-04",
+     "c": "#142536"
+    }
+   ]
+  },
+  {
+   "name": "C · Clip, consent, transcript & AI",
+   "rows": [
+    {
+     "e": "CONSENT_RECEIPT",
+     "s": "A-02 · P-02 · R-03 · H-09 templates",
+     "c": "#142536"
+    },
+    {
+     "e": "ENCOUNTER_PARTICIPANT",
+     "s": "A-02 people in room · A-04",
+     "c": "#142536"
+    },
+    {
+     "e": "DEVICE",
+     "s": "W-02",
+     "c": "#142536"
+    },
+    {
+     "e": "DEVICE_PAIRING",
+     "s": "W-01 · W-03",
+     "c": "#142536"
+    },
+    {
+     "e": "RECORDING_SESSION",
+     "s": "A-03 · A-09",
+     "c": "#142536"
+    },
+    {
+     "e": "AUDIO_CHUNK",
+     "s": "A-06a upload · A-06b failed",
+     "c": "#142536"
+    },
+    {
+     "e": "TRANSCRIPT_SEGMENT",
+     "s": "A-04",
+     "c": "#142536"
+    },
+    {
+     "e": "SPEAKER_LABEL",
+     "s": "A-04 · A-10",
+     "c": "#142536"
+    },
+    {
+     "e": "AI_JOB",
+     "s": "A-06c unavailable · processing",
+     "c": "#142536"
+    },
+    {
+     "e": "AI_ARTIFACT",
+     "s": "A-01 brief · A-05 draft",
+     "c": "#142536"
+    },
+    {
+     "e": "EVIDENCE_LINK",
+     "s": "A-05 evidence panel",
+     "c": "#142536"
+    }
+   ]
+  },
+  {
+   "name": "D · Care, portal, integration & audit",
+   "rows": [
+    {
+     "e": "CARE_PLAN",
+     "s": "C-02",
+     "c": "#142536"
+    },
+    {
+     "e": "CARE_ACTION / CARE_TASK",
+     "s": "C-02 · C-04",
+     "c": "#142536"
+    },
+    {
+     "e": "ACTION_EVENT / CARE_TASK_EVENT",
+     "s": "C-02 stage track",
+     "c": "#142536"
+    },
+    {
+     "e": "INBOX_ITEM",
+     "s": "C-01 · C-05",
+     "c": "#142536"
+    },
+    {
+     "e": "REVIEW_ACKNOWLEDGEMENT",
+     "s": "C-01 Mark as reviewed",
+     "c": "#142536"
+    },
+    {
+     "e": "MESSAGE_DELIVERY / NOTIFICATION",
+     "s": "C-03 · Visit summary",
+     "c": "#142536"
+    },
+    {
+     "e": "NOTIFICATION_ATTEMPT",
+     "s": "C-03 contact log",
+     "c": "#142536"
+    },
+    {
+     "e": "PORTAL_ACCESS",
+     "s": "R-01 · P-02 invite",
+     "c": "#142536"
+    },
+    {
+     "e": "PORTAL_PROXY",
+     "s": "R-04 · R-03",
+     "c": "#142536"
+    },
+    {
+     "e": "INTEGRATION_CONNECTION",
+     "s": "H-01 tiles",
+     "c": "#142536"
+    },
+    {
+     "e": "EXTERNAL_PATIENT_MAP / RESOURCE_MAP",
+     "s": "P-02 · H-01",
+     "c": "#142536"
+    },
+    {
+     "e": "INTEGRATION_MESSAGE / DELIVERY",
+     "s": "H-01 queue · H-04",
+     "c": "#142536"
+    },
+    {
+     "e": "INTEGRATION_ATTEMPT",
+     "s": "H-01 attempts list",
+     "c": "#142536"
+    },
+    {
+     "e": "AUDIT_EVENT",
+     "s": "H-05",
+     "c": "#142536"
+    },
+    {
+     "e": "OUTBOX_EVENT",
+     "s": "Backend-only (domain events)",
+     "c": "#8296A8"
+    }
+   ]
+  }
+ ],
+ "machines": [
+  {
+   "name": "Capture FSM",
+   "states": [
+    {
+     "t": "UNPAIRED",
+     "bg": "#EEF2F5",
+     "fg": "#334E68"
+    },
+    {
+     "t": "PAIRED",
+     "bg": "#EEF2F5",
+     "fg": "#334E68"
+    },
+    {
+     "t": "IDLE",
+     "bg": "#EEF2F5",
+     "fg": "#334E68"
+    },
+    {
+     "t": "CONSENT_VERIFIED",
+     "bg": "#EEF2F5",
+     "fg": "#334E68"
+    },
+    {
+     "t": "CAPTURING",
+     "bg": "#EEF2F5",
+     "fg": "#334E68"
+    },
+    {
+     "t": "PAUSED",
+     "bg": "#EEF2F5",
+     "fg": "#334E68"
+    },
+    {
+     "t": "STOPPED",
+     "bg": "#EEF2F5",
+     "fg": "#334E68"
+    },
+    {
+     "t": "SYNCING",
+     "bg": "#EEF2F5",
+     "fg": "#334E68"
+    },
+    {
+     "t": "PROCESSING",
+     "bg": "#EEF2F5",
+     "fg": "#334E68"
+    },
+    {
+     "t": "DRAFT_READY",
+     "bg": "#EEF2F5",
+     "fg": "#334E68"
+    },
+    {
+     "t": "REVIEWED",
+     "bg": "#EEF2F5",
+     "fg": "#334E68"
+    },
+    {
+     "t": "SIGNED",
+     "bg": "#EEF2F5",
+     "fg": "#334E68"
+    },
+    {
+     "t": "EMR_PENDING",
+     "bg": "#EEF2F5",
+     "fg": "#334E68"
+    },
+    {
+     "t": "EMR_CONFIRMED",
+     "bg": "#EEF2F5",
+     "fg": "#334E68"
+    },
+    {
+     "t": "CONSENT_REVOKED",
+     "bg": "#FDECEE",
+     "fg": "#8A1626"
+    },
+    {
+     "t": "PATIENT_CHANGED",
+     "bg": "#FDECEE",
+     "fg": "#8A1626"
+    },
+    {
+     "t": "TRANSFER_INTERRUPTED",
+     "bg": "#FDECEE",
+     "fg": "#8A1626"
+    }
+   ],
+   "where": "W-01 → A-02 → A-03 → A-06 → A-04 → A-05 → H-04; exceptions in A-09 and A-06b."
+  },
+  {
+   "name": "Care task lifecycle",
+   "states": [
+    {
+     "t": "PROPOSED",
+     "bg": "#EEF2F5",
+     "fg": "#334E68"
+    },
+    {
+     "t": "PHYSICIAN_APPROVED",
+     "bg": "#EEF2F5",
+     "fg": "#334E68"
+    },
+    {
+     "t": "ASSIGNED",
+     "bg": "#EEF2F5",
+     "fg": "#334E68"
+    },
+    {
+     "t": "AWAITING_REPORT",
+     "bg": "#EEF2F5",
+     "fg": "#334E68"
+    },
+    {
+     "t": "REPORT_RECEIVED",
+     "bg": "#EEF2F5",
+     "fg": "#334E68"
+    },
+    {
+     "t": "AWAITING_REVIEW",
+     "bg": "#EEF2F5",
+     "fg": "#334E68"
+    },
+    {
+     "t": "REVIEWED",
+     "bg": "#EEF2F5",
+     "fg": "#334E68"
+    },
+    {
+     "t": "CONTACT_PENDING",
+     "bg": "#EEF2F5",
+     "fg": "#334E68"
+    },
+    {
+     "t": "PATIENT_CONTACTED",
+     "bg": "#EEF2F5",
+     "fg": "#334E68"
+    },
+    {
+     "t": "FOLLOWUP_BOOKED",
+     "bg": "#EEF2F5",
+     "fg": "#334E68"
+    },
+    {
+     "t": "CLOSED",
+     "bg": "#EEF2F5",
+     "fg": "#334E68"
+    },
+    {
+     "t": "BLOCKED",
+     "bg": "#FDECEE",
+     "fg": "#8A1626"
+    },
+    {
+     "t": "OVERDUE",
+     "bg": "#FDECEE",
+     "fg": "#8A1626"
+    },
+    {
+     "t": "CANCELLED",
+     "bg": "#FDECEE",
+     "fg": "#8A1626"
+    },
+    {
+     "t": "UNREACHABLE",
+     "bg": "#FDECEE",
+     "fg": "#8A1626"
+    }
+   ],
+   "where": "E-05 → C-01 → C-02 → C-03 → C-04. Sent reminder never closes a task."
+  },
+  {
+   "name": "Failure modes the UI must show",
+   "states": [
+    {
+     "t": "No consent",
+     "bg": "#FDECEE",
+     "fg": "#8A1626"
+    },
+    {
+     "t": "Clip disconnected",
+     "bg": "#FDECEE",
+     "fg": "#8A1626"
+    },
+    {
+     "t": "Low audio",
+     "bg": "#FDECEE",
+     "fg": "#8A1626"
+    },
+    {
+     "t": "Uncertain speaker",
+     "bg": "#FDECEE",
+     "fg": "#8A1626"
+    },
+    {
+     "t": "Wrong patient",
+     "bg": "#FDECEE",
+     "fg": "#8A1626"
+    },
+    {
+     "t": "AI outage",
+     "bg": "#FDECEE",
+     "fg": "#8A1626"
+    },
+    {
+     "t": "Record conflict",
+     "bg": "#FDECEE",
+     "fg": "#8A1626"
+    },
+    {
+     "t": "Late result",
+     "bg": "#FDECEE",
+     "fg": "#8A1626"
+    },
+    {
+     "t": "Emergency symptom",
+     "bg": "#FDECEE",
+     "fg": "#8A1626"
+    }
+   ],
+   "where": "E-04 · W-02 · A-06d · A-10 · A-09 · A-06c · H-04 / E-07 · C-04 · A-08."
+  }
+ ],
+ "erdCount": 54,
+ "colors": [
+  {
+   "token": "brand.950",
+   "hex": "#102A43",
+   "dark": "#0B1622",
+   "ratio": "14.5:1",
+   "use": "Sidebar, headings"
+  },
+  {
+   "token": "brand.700",
+   "hex": "#0F766E",
+   "dark": "#2BB3A3",
+   "ratio": "5.5:1",
+   "use": "Active nav, brand"
+  },
+  {
+   "token": "brand.500",
+   "hex": "#0E9384",
+   "dark": "#2BB3A3",
+   "ratio": "3.9:1",
+   "use": "Primary action fill (white text bold)"
+  },
+  {
+   "token": "action.600",
+   "hex": "#2563EB",
+   "dark": "#6B9BFF",
+   "ratio": "5.2:1",
+   "use": "Links, secondary actions"
+  },
+  {
+   "token": "ai.600",
+   "hex": "#7155D8",
+   "dark": "#A08CF0",
+   "ratio": "5.3:1",
+   "use": "AI-provisional only"
+  },
+  {
+   "token": "surface.base",
+   "hex": "#F7FAFC",
+   "dark": "#0F1C2A",
+   "ratio": "—",
+   "use": "App canvas"
+  },
+  {
+   "token": "surface.card",
+   "hex": "#FFFFFF",
+   "dark": "#12202E",
+   "ratio": "—",
+   "use": "Cards, tables"
+  },
+  {
+   "token": "ink.900",
+   "hex": "#142536",
+   "dark": "#E6EDF3",
+   "ratio": "15.6:1",
+   "use": "Body text"
+  },
+  {
+   "token": "ink.600",
+   "hex": "#506579",
+   "dark": "#9DB0C2",
+   "ratio": "5.9:1",
+   "use": "Secondary text"
+  },
+  {
+   "token": "border.default",
+   "hex": "#DFE7ED",
+   "dark": "#22364A",
+   "ratio": "—",
+   "use": "1px separation"
+  },
+  {
+   "token": "danger.700",
+   "hex": "#B42333",
+   "dark": "#F47A86",
+   "ratio": "6.4:1",
+   "use": "Critical, unacknowledged"
+  },
+  {
+   "token": "warning.700",
+   "hex": "#975A16",
+   "dark": "#E9B15F",
+   "ratio": "5.6:1",
+   "use": "Uncertainty, attention"
+  },
+  {
+   "token": "success.700",
+   "hex": "#087F5B",
+   "dark": "#4CC79C",
+   "ratio": "5.2:1",
+   "use": "Confirmed success"
+  }
+ ],
+ "modules": [
+  {
+   "name": "PMS · Practice",
+   "icon": "event_available",
+   "tint": "#EFF4FF",
+   "line": "#D3E0FD",
+   "ink": "#1D4ED8",
+   "desc": "Registration, schedule, reception, waitlist, billing",
+   "phase": "M1 appts · M2 billing"
+  },
+  {
+   "name": "EMR · Clinical",
+   "icon": "clinical_notes",
+   "tint": "#E7F6F4",
+   "line": "#BFE5DF",
+   "ink": "#0F766E",
+   "desc": "Patient 360, chart, meds, orders, results, signed notes",
+   "phase": "M1 notes · M2 orders"
+  },
+  {
+   "name": "AI Assistant",
+   "icon": "auto_awesome",
+   "tint": "#F2EFFC",
+   "line": "#DCD3F7",
+   "ink": "#5B3FC4",
+   "desc": "Brief, consent, capture, transcript, evidence, drafts",
+   "phase": "M1 scribe"
+  },
+  {
+   "name": "Care coordination",
+   "icon": "assignment_turned_in",
+   "tint": "#EEF4EF",
+   "line": "#D2E2D6",
+   "ink": "#3E6A4D",
+   "desc": "Inbox, result loop, tasks, reminders, follow-up proof",
+   "phase": "M2"
+  },
+  {
+   "name": "Patient portal",
+   "icon": "person_heart",
+   "tint": "#F1F8F7",
+   "line": "#D3E9E6",
+   "ink": "#0F766E",
+   "desc": "Booking, consent, released records, messages, proxy",
+   "phase": "M2"
+  },
+  {
+   "name": "Wearable clip",
+   "icon": "settings_voice",
+   "tint": "#FBF6EC",
+   "line": "#EEDFC2",
+   "ink": "#7A4710",
+   "desc": "Pairing, battery, offline queue, firmware, fleet",
+   "phase": "M3"
+  },
+  {
+   "name": "Hospital enterprise",
+   "icon": "domain",
+   "tint": "#EDF1F5",
+   "line": "#D3DDE6",
+   "ink": "#102A43",
+   "desc": "Facilities, SSO, HIS/FHIR, audit, residency",
+   "phase": "M4"
+  }
+ ],
+ "typeScale": [
+  {
+   "name": "Display",
+   "size": 32,
+   "w": 700,
+   "spec": "32/40 · 700"
+  },
+  {
+   "name": "H1 Page",
+   "size": 24,
+   "w": 700,
+   "spec": "24/32 · 700"
+  },
+  {
+   "name": "H2 Section",
+   "size": 18,
+   "w": 700,
+   "spec": "18/26 · 700"
+  },
+  {
+   "name": "Body large",
+   "size": 16,
+   "w": 500,
+   "spec": "16/26 · 500"
+  },
+  {
+   "name": "Body",
+   "size": 15,
+   "w": 500,
+   "spec": "15/24 · 500"
+  },
+  {
+   "name": "Dense table",
+   "size": 14,
+   "w": 500,
+   "spec": "14/20 · 500"
+  },
+  {
+   "name": "Caption",
+   "size": 12,
+   "w": 600,
+   "spec": "12/16 · 600"
+  }
+ ],
+ "spacing": [
+  {
+   "px": 4,
+   "token": "sp.0.5"
+  },
+  {
+   "px": 8,
+   "token": "sp.1"
+  },
+  {
+   "px": 12,
+   "token": "sp.1.5"
+  },
+  {
+   "px": 16,
+   "token": "sp.2"
+  },
+  {
+   "px": 24,
+   "token": "sp.3"
+  },
+  {
+   "px": 32,
+   "token": "sp.4"
+  },
+  {
+   "px": 48,
+   "token": "sp.6"
+  },
+  {
+   "px": 64,
+   "token": "sp.8"
+  }
+ ],
+ "loop": [
+  {
+   "label": "Ordered",
+   "icon": "send",
+   "bg": "#EFF4FF",
+   "fg": "#1D4ED8",
+   "line": "#D3E0FD"
+  },
+  {
+   "label": "Sample collected",
+   "icon": "colorize",
+   "bg": "#EFF4FF",
+   "fg": "#1D4ED8",
+   "line": "#D3E0FD"
+  },
+  {
+   "label": "Result received",
+   "icon": "inbox",
+   "bg": "#FDF5E7",
+   "fg": "#7A4710",
+   "line": "#EFD5A6"
+  },
+  {
+   "label": "Reviewed by doctor",
+   "icon": "visibility",
+   "bg": "#E7F6F4",
+   "fg": "#0F766E",
+   "line": "#BFE5DF"
+  },
+  {
+   "label": "Patient contacted",
+   "icon": "call",
+   "bg": "#EEF4EF",
+   "fg": "#3E6A4D",
+   "line": "#D2E2D6"
+  },
+  {
+   "label": "Message delivered ≠ done",
+   "icon": "mark_chat_read",
+   "bg": "#F1F5F8",
+   "fg": "#506579",
+   "line": "#DFE7ED"
+  },
+  {
+   "label": "Follow-up completed",
+   "icon": "task_alt",
+   "bg": "#087F5B",
+   "fg": "#FFFFFF",
+   "line": "#087F5B"
+  }
+ ],
+ "sitemap": [
+  {
+   "role": "Solo doctor",
+   "icon": "stethoscope",
+   "shell": "Doctor shell · own practice",
+   "routes": [
+    {
+     "label": "Today",
+     "path": "/today",
+     "color": "#0E9384",
+     "phase": "M1",
+     "phaseBg": "#E6F4EF",
+     "phaseFg": "#087F5B"
+    },
+    {
+     "label": "Calendar & booking",
+     "path": "/schedule",
+     "color": "#2563EB",
+     "phase": "M1",
+     "phaseBg": "#E6F4EF",
+     "phaseFg": "#087F5B"
+    },
+    {
+     "label": "Patients & Patient 360",
+     "path": "/patients/:id",
+     "color": "#0E9384",
+     "phase": "M1",
+     "phaseBg": "#E6F4EF",
+     "phaseFg": "#087F5B"
+    },
+    {
+     "label": "Consult (consent → sign)",
+     "path": "/encounter/:id",
+     "color": "#7155D8",
+     "phase": "M1",
+     "phaseBg": "#E6F4EF",
+     "phaseFg": "#087F5B"
+    },
+    {
+     "label": "Rx & orders",
+     "path": "/encounter/:id/orders",
+     "color": "#0E9384",
+     "phase": "M2",
+     "phaseBg": "#EFF4FF",
+     "phaseFg": "#1D4ED8"
+    },
+    {
+     "label": "Results inbox",
+     "path": "/inbox",
+     "color": "#4F7A5E",
+     "phase": "M2",
+     "phaseBg": "#EFF4FF",
+     "phaseFg": "#1D4ED8"
+    },
+    {
+     "label": "Invoices",
+     "path": "/billing",
+     "color": "#2563EB",
+     "phase": "M2",
+     "phaseBg": "#EFF4FF",
+     "phaseFg": "#1D4ED8"
+    },
+    {
+     "label": "Devices",
+     "path": "/devices",
+     "color": "#9A6B1F",
+     "phase": "M3",
+     "phaseBg": "#FDF5E7",
+     "phaseFg": "#7A4710"
+    },
+    {
+     "label": "Practice settings",
+     "path": "/settings",
+     "color": "#102A43",
+     "phase": "M1",
+     "phaseBg": "#E6F4EF",
+     "phaseFg": "#087F5B"
+    }
+   ]
+  },
+  {
+   "role": "Hospital clinician",
+   "icon": "local_hospital",
+   "shell": "Doctor shell · facility scoped",
+   "routes": [
+    {
+     "label": "Today / ward list",
+     "path": "/today",
+     "color": "#0E9384",
+     "phase": "M4",
+     "phaseBg": "#EDF1F5",
+     "phaseFg": "#334E68"
+    },
+    {
+     "label": "Patient 360 (HIS authority)",
+     "path": "/patients/:id",
+     "color": "#0E9384",
+     "phase": "M4",
+     "phaseBg": "#EDF1F5",
+     "phaseFg": "#334E68"
+    },
+    {
+     "label": "Ward round capture",
+     "path": "/encounter/:id",
+     "color": "#7155D8",
+     "phase": "M3",
+     "phaseBg": "#FDF5E7",
+     "phaseFg": "#7A4710"
+    },
+    {
+     "label": "Write-back receipts",
+     "path": "/encounter/:id/sync",
+     "color": "#102A43",
+     "phase": "M4",
+     "phaseBg": "#EDF1F5",
+     "phaseFg": "#334E68"
+    },
+    {
+     "label": "Results inbox",
+     "path": "/inbox",
+     "color": "#4F7A5E",
+     "phase": "M2",
+     "phaseBg": "#EFF4FF",
+     "phaseFg": "#1D4ED8"
+    },
+    {
+     "label": "Break-glass access",
+     "path": "/access/break-glass",
+     "color": "#102A43",
+     "phase": "M4",
+     "phaseBg": "#EDF1F5",
+     "phaseFg": "#334E68"
+    }
+   ]
+  },
+  {
+   "role": "Receptionist",
+   "icon": "support_agent",
+   "shell": "Front-desk shell · no clinical notes",
+   "routes": [
+    {
+     "label": "Reception board",
+     "path": "/front-desk",
+     "color": "#2563EB",
+     "phase": "M1",
+     "phaseBg": "#E6F4EF",
+     "phaseFg": "#087F5B"
+    },
+    {
+     "label": "Register patient",
+     "path": "/patients/new",
+     "color": "#2563EB",
+     "phase": "M1",
+     "phaseBg": "#E6F4EF",
+     "phaseFg": "#087F5B"
+    },
+    {
+     "label": "Duplicate review",
+     "path": "/patients/merge",
+     "color": "#2563EB",
+     "phase": "M1",
+     "phaseBg": "#E6F4EF",
+     "phaseFg": "#087F5B"
+    },
+    {
+     "label": "Calendar & waitlist",
+     "path": "/schedule",
+     "color": "#2563EB",
+     "phase": "M1",
+     "phaseBg": "#E6F4EF",
+     "phaseFg": "#087F5B"
+    },
+    {
+     "label": "Check-in & queue",
+     "path": "/queue",
+     "color": "#2563EB",
+     "phase": "M1",
+     "phaseBg": "#E6F4EF",
+     "phaseFg": "#087F5B"
+    },
+    {
+     "label": "Billing & receipts",
+     "path": "/billing",
+     "color": "#2563EB",
+     "phase": "M2",
+     "phaseBg": "#EFF4FF",
+     "phaseFg": "#1D4ED8"
+    },
+    {
+     "label": "Cash reconciliation",
+     "path": "/billing/reconcile",
+     "color": "#2563EB",
+     "phase": "M2",
+     "phaseBg": "#EFF4FF",
+     "phaseFg": "#1D4ED8"
+    }
+   ]
+  },
+  {
+   "role": "Nurse",
+   "icon": "vaccines",
+   "shell": "Nurse console",
+   "routes": [
+    {
+     "label": "Intake queue",
+     "path": "/nurse",
+     "color": "#2563EB",
+     "phase": "M2",
+     "phaseBg": "#EFF4FF",
+     "phaseFg": "#1D4ED8"
+    },
+    {
+     "label": "Vitals & allergies",
+     "path": "/nurse/:id/intake",
+     "color": "#0E9384",
+     "phase": "M2",
+     "phaseBg": "#EFF4FF",
+     "phaseFg": "#1D4ED8"
+    },
+    {
+     "label": "Meds reconciliation",
+     "path": "/nurse/:id/meds",
+     "color": "#0E9384",
+     "phase": "M2",
+     "phaseBg": "#EFF4FF",
+     "phaseFg": "#1D4ED8"
+    },
+    {
+     "label": "Escalate to doctor",
+     "path": "/nurse/:id/escalate",
+     "color": "#4F7A5E",
+     "phase": "M2",
+     "phaseBg": "#EFF4FF",
+     "phaseFg": "#1D4ED8"
+    },
+    {
+     "label": "My tasks",
+     "path": "/tasks",
+     "color": "#4F7A5E",
+     "phase": "M2",
+     "phaseBg": "#EFF4FF",
+     "phaseFg": "#1D4ED8"
+    }
+   ]
+  },
+  {
+   "role": "Care coordinator",
+   "icon": "assignment_ind",
+   "shell": "Care shell",
+   "routes": [
+    {
+     "label": "Care queue",
+     "path": "/care",
+     "color": "#4F7A5E",
+     "phase": "M2",
+     "phaseBg": "#EFF4FF",
+     "phaseFg": "#1D4ED8"
+    },
+    {
+     "label": "Care plan",
+     "path": "/care/plans/:id",
+     "color": "#4F7A5E",
+     "phase": "M2",
+     "phaseBg": "#EFF4FF",
+     "phaseFg": "#1D4ED8"
+    },
+    {
+     "label": "Patient contact log",
+     "path": "/care/contacts",
+     "color": "#4F7A5E",
+     "phase": "M2",
+     "phaseBg": "#EFF4FF",
+     "phaseFg": "#1D4ED8"
+    },
+    {
+     "label": "Overdue escalations",
+     "path": "/care/overdue",
+     "color": "#4F7A5E",
+     "phase": "M2",
+     "phaseBg": "#EFF4FF",
+     "phaseFg": "#1D4ED8"
+    },
+    {
+     "label": "Follow-up booking",
+     "path": "/schedule",
+     "color": "#2563EB",
+     "phase": "M2",
+     "phaseBg": "#EFF4FF",
+     "phaseFg": "#1D4ED8"
+    }
+   ]
+  },
+  {
+   "role": "Patient / caregiver",
+   "icon": "person",
+   "shell": "Portal shell · mobile-first",
+   "routes": [
+    {
+     "label": "Home",
+     "path": "/p",
+     "color": "#0F766E",
+     "phase": "M2",
+     "phaseBg": "#EFF4FF",
+     "phaseFg": "#1D4ED8"
+    },
+    {
+     "label": "Appointments",
+     "path": "/p/appointments",
+     "color": "#0F766E",
+     "phase": "M2",
+     "phaseBg": "#EFF4FF",
+     "phaseFg": "#1D4ED8"
+    },
+    {
+     "label": "Released records",
+     "path": "/p/records",
+     "color": "#0F766E",
+     "phase": "M2",
+     "phaseBg": "#EFF4FF",
+     "phaseFg": "#1D4ED8"
+    },
+    {
+     "label": "Prescriptions & labs",
+     "path": "/p/rx",
+     "color": "#0F766E",
+     "phase": "M2",
+     "phaseBg": "#EFF4FF",
+     "phaseFg": "#1D4ED8"
+    },
+    {
+     "label": "Consent & privacy",
+     "path": "/p/consent",
+     "color": "#0F766E",
+     "phase": "M2",
+     "phaseBg": "#EFF4FF",
+     "phaseFg": "#1D4ED8"
+    },
+    {
+     "label": "Messages",
+     "path": "/p/messages",
+     "color": "#0F766E",
+     "phase": "M2",
+     "phaseBg": "#EFF4FF",
+     "phaseFg": "#1D4ED8"
+    },
+    {
+     "label": "Proxy / caregiver",
+     "path": "/p/proxy",
+     "color": "#0F766E",
+     "phase": "M2",
+     "phaseBg": "#EFF4FF",
+     "phaseFg": "#1D4ED8"
+    }
+   ]
+  },
+  {
+   "role": "Practice admin",
+   "icon": "storefront",
+   "shell": "Admin shell · single facility",
+   "routes": [
+    {
+     "label": "Facility setup",
+     "path": "/admin/facility",
+     "color": "#102A43",
+     "phase": "M1",
+     "phaseBg": "#E6F4EF",
+     "phaseFg": "#087F5B"
+    },
+    {
+     "label": "Staff & invites",
+     "path": "/admin/staff",
+     "color": "#102A43",
+     "phase": "M1",
+     "phaseBg": "#E6F4EF",
+     "phaseFg": "#087F5B"
+    },
+    {
+     "label": "Service catalogue",
+     "path": "/admin/services",
+     "color": "#2563EB",
+     "phase": "M2",
+     "phaseBg": "#EFF4FF",
+     "phaseFg": "#1D4ED8"
+    },
+    {
+     "label": "Clinic analytics",
+     "path": "/admin/analytics",
+     "color": "#102A43",
+     "phase": "M2",
+     "phaseBg": "#EFF4FF",
+     "phaseFg": "#1D4ED8"
+    },
+    {
+     "label": "Device fleet",
+     "path": "/admin/devices",
+     "color": "#9A6B1F",
+     "phase": "M3",
+     "phaseBg": "#FDF5E7",
+     "phaseFg": "#7A4710"
+    }
+   ]
+  },
+  {
+   "role": "Hospital admin / IT",
+   "icon": "admin_panel_settings",
+   "shell": "Enterprise shell",
+   "routes": [
+    {
+     "label": "Organisation & facilities",
+     "path": "/ent/org",
+     "color": "#102A43",
+     "phase": "M4",
+     "phaseBg": "#EDF1F5",
+     "phaseFg": "#334E68"
+    },
+    {
+     "label": "SSO & role grants",
+     "path": "/ent/access",
+     "color": "#102A43",
+     "phase": "M4",
+     "phaseBg": "#EDF1F5",
+     "phaseFg": "#334E68"
+    },
+    {
+     "label": "Record authority",
+     "path": "/ent/authority",
+     "color": "#102A43",
+     "phase": "M4",
+     "phaseBg": "#EDF1F5",
+     "phaseFg": "#334E68"
+    },
+    {
+     "label": "Integrations (FHIR/HL7/ABDM/HIE)",
+     "path": "/ent/integrations",
+     "color": "#102A43",
+     "phase": "M4",
+     "phaseBg": "#EDF1F5",
+     "phaseFg": "#334E68"
+    },
+    {
+     "label": "Conflict & retry queue",
+     "path": "/ent/integrations/queue",
+     "color": "#102A43",
+     "phase": "M4",
+     "phaseBg": "#EDF1F5",
+     "phaseFg": "#334E68"
+    },
+    {
+     "label": "Audit & break-glass review",
+     "path": "/ent/audit",
+     "color": "#102A43",
+     "phase": "M4",
+     "phaseBg": "#EDF1F5",
+     "phaseFg": "#334E68"
+    },
+    {
+     "label": "Retention & residency",
+     "path": "/ent/compliance",
+     "color": "#102A43",
+     "phase": "M4",
+     "phaseBg": "#EDF1F5",
+     "phaseFg": "#334E68"
+    },
+    {
+     "label": "Fleet & firmware",
+     "path": "/ent/devices",
+     "color": "#9A6B1F",
+     "phase": "M4",
+     "phaseBg": "#EDF1F5",
+     "phaseFg": "#334E68"
+    }
+   ]
+  }
+ ],
+ "roles": [
+  "Solo Dr",
+  "Hosp. Dr",
+  "Reception",
+  "Nurse",
+  "Care coord.",
+  "Patient",
+  "Pract. admin",
+  "Hosp. IT"
+ ],
+ "matrix": [
+  {
+   "cap": "Register / book patients",
+   "color": "#2563EB",
+   "cells": [
+    {
+     "v": "Full",
+     "bg": "#E6F4EF",
+     "fg": "#087F5B"
+    },
+    {
+     "v": "Full",
+     "bg": "#E6F4EF",
+     "fg": "#087F5B"
+    },
+    {
+     "v": "Full",
+     "bg": "#E6F4EF",
+     "fg": "#087F5B"
+    },
+    {
+     "v": "Read",
+     "bg": "#EFF4FF",
+     "fg": "#1D4ED8"
+    },
+    {
+     "v": "Read",
+     "bg": "#EFF4FF",
+     "fg": "#1D4ED8"
+    },
+    {
+     "v": "Own",
+     "bg": "#E7F6F4",
+     "fg": "#0F766E"
+    },
+    {
+     "v": "Full",
+     "bg": "#E6F4EF",
+     "fg": "#087F5B"
+    },
+    {
+     "v": "—",
+     "bg": "#F7FAFC",
+     "fg": "#8296A8"
+    }
+   ]
+  },
+  {
+   "cap": "Check-in & queue",
+   "color": "#2563EB",
+   "cells": [
+    {
+     "v": "Full",
+     "bg": "#E6F4EF",
+     "fg": "#087F5B"
+    },
+    {
+     "v": "Read",
+     "bg": "#EFF4FF",
+     "fg": "#1D4ED8"
+    },
+    {
+     "v": "Full",
+     "bg": "#E6F4EF",
+     "fg": "#087F5B"
+    },
+    {
+     "v": "Full",
+     "bg": "#E6F4EF",
+     "fg": "#087F5B"
+    },
+    {
+     "v": "Read",
+     "bg": "#EFF4FF",
+     "fg": "#1D4ED8"
+    },
+    {
+     "v": "—",
+     "bg": "#F7FAFC",
+     "fg": "#8296A8"
+    },
+    {
+     "v": "Read",
+     "bg": "#EFF4FF",
+     "fg": "#1D4ED8"
+    },
+    {
+     "v": "—",
+     "bg": "#F7FAFC",
+     "fg": "#8296A8"
+    }
+   ]
+  },
+  {
+   "cap": "Invoices & payments",
+   "color": "#2563EB",
+   "cells": [
+    {
+     "v": "Full",
+     "bg": "#E6F4EF",
+     "fg": "#087F5B"
+    },
+    {
+     "v": "—",
+     "bg": "#F7FAFC",
+     "fg": "#8296A8"
+    },
+    {
+     "v": "Full",
+     "bg": "#E6F4EF",
+     "fg": "#087F5B"
+    },
+    {
+     "v": "—",
+     "bg": "#F7FAFC",
+     "fg": "#8296A8"
+    },
+    {
+     "v": "—",
+     "bg": "#F7FAFC",
+     "fg": "#8296A8"
+    },
+    {
+     "v": "Own",
+     "bg": "#E7F6F4",
+     "fg": "#0F766E"
+    },
+    {
+     "v": "Full",
+     "bg": "#E6F4EF",
+     "fg": "#087F5B"
+    },
+    {
+     "v": "—",
+     "bg": "#F7FAFC",
+     "fg": "#8296A8"
+    }
+   ]
+  },
+  {
+   "cap": "Patient 360 chart",
+   "color": "#0E9384",
+   "cells": [
+    {
+     "v": "Full",
+     "bg": "#E6F4EF",
+     "fg": "#087F5B"
+    },
+    {
+     "v": "Full",
+     "bg": "#E6F4EF",
+     "fg": "#087F5B"
+    },
+    {
+     "v": "—",
+     "bg": "#F7FAFC",
+     "fg": "#8296A8"
+    },
+    {
+     "v": "Limited",
+     "bg": "#FDF5E7",
+     "fg": "#7A4710"
+    },
+    {
+     "v": "Limited",
+     "bg": "#FDF5E7",
+     "fg": "#7A4710"
+    },
+    {
+     "v": "Released",
+     "bg": "#F1F8F7",
+     "fg": "#0F766E"
+    },
+    {
+     "v": "—",
+     "bg": "#F7FAFC",
+     "fg": "#8296A8"
+    },
+    {
+     "v": "Break-glass",
+     "bg": "#FDECEE",
+     "fg": "#8A1626"
+    }
+   ]
+  },
+  {
+   "cap": "Vitals & allergies entry",
+   "color": "#0E9384",
+   "cells": [
+    {
+     "v": "Full",
+     "bg": "#E6F4EF",
+     "fg": "#087F5B"
+    },
+    {
+     "v": "Full",
+     "bg": "#E6F4EF",
+     "fg": "#087F5B"
+    },
+    {
+     "v": "—",
+     "bg": "#F7FAFC",
+     "fg": "#8296A8"
+    },
+    {
+     "v": "Full",
+     "bg": "#E6F4EF",
+     "fg": "#087F5B"
+    },
+    {
+     "v": "—",
+     "bg": "#F7FAFC",
+     "fg": "#8296A8"
+    },
+    {
+     "v": "—",
+     "bg": "#F7FAFC",
+     "fg": "#8296A8"
+    },
+    {
+     "v": "—",
+     "bg": "#F7FAFC",
+     "fg": "#8296A8"
+    },
+    {
+     "v": "—",
+     "bg": "#F7FAFC",
+     "fg": "#8296A8"
+    }
+   ]
+  },
+  {
+   "cap": "Clinical notes",
+   "color": "#0E9384",
+   "cells": [
+    {
+     "v": "Sign",
+     "bg": "#102A43",
+     "fg": "#FFFFFF"
+    },
+    {
+     "v": "Sign",
+     "bg": "#102A43",
+     "fg": "#FFFFFF"
+    },
+    {
+     "v": "—",
+     "bg": "#F7FAFC",
+     "fg": "#8296A8"
+    },
+    {
+     "v": "Read",
+     "bg": "#EFF4FF",
+     "fg": "#1D4ED8"
+    },
+    {
+     "v": "Read",
+     "bg": "#EFF4FF",
+     "fg": "#1D4ED8"
+    },
+    {
+     "v": "Released",
+     "bg": "#F1F8F7",
+     "fg": "#0F766E"
+    },
+    {
+     "v": "—",
+     "bg": "#F7FAFC",
+     "fg": "#8296A8"
+    },
+    {
+     "v": "—",
+     "bg": "#F7FAFC",
+     "fg": "#8296A8"
+    }
+   ]
+  },
+  {
+   "cap": "Prescriptions & orders",
+   "color": "#0E9384",
+   "cells": [
+    {
+     "v": "Sign",
+     "bg": "#102A43",
+     "fg": "#FFFFFF"
+    },
+    {
+     "v": "Sign",
+     "bg": "#102A43",
+     "fg": "#FFFFFF"
+    },
+    {
+     "v": "—",
+     "bg": "#F7FAFC",
+     "fg": "#8296A8"
+    },
+    {
+     "v": "—",
+     "bg": "#F7FAFC",
+     "fg": "#8296A8"
+    },
+    {
+     "v": "—",
+     "bg": "#F7FAFC",
+     "fg": "#8296A8"
+    },
+    {
+     "v": "Released",
+     "bg": "#F1F8F7",
+     "fg": "#0F766E"
+    },
+    {
+     "v": "—",
+     "bg": "#F7FAFC",
+     "fg": "#8296A8"
+    },
+    {
+     "v": "—",
+     "bg": "#F7FAFC",
+     "fg": "#8296A8"
+    }
+   ]
+  },
+  {
+   "cap": "Recording consent & capture",
+   "color": "#7155D8",
+   "cells": [
+    {
+     "v": "Full",
+     "bg": "#E6F4EF",
+     "fg": "#087F5B"
+    },
+    {
+     "v": "Full",
+     "bg": "#E6F4EF",
+     "fg": "#087F5B"
+    },
+    {
+     "v": "—",
+     "bg": "#F7FAFC",
+     "fg": "#8296A8"
+    },
+    {
+     "v": "Limited",
+     "bg": "#FDF5E7",
+     "fg": "#7A4710"
+    },
+    {
+     "v": "—",
+     "bg": "#F7FAFC",
+     "fg": "#8296A8"
+    },
+    {
+     "v": "Own",
+     "bg": "#E7F6F4",
+     "fg": "#0F766E"
+    },
+    {
+     "v": "—",
+     "bg": "#F7FAFC",
+     "fg": "#8296A8"
+    },
+    {
+     "v": "—",
+     "bg": "#F7FAFC",
+     "fg": "#8296A8"
+    }
+   ]
+  },
+  {
+   "cap": "AI drafts & evidence",
+   "color": "#7155D8",
+   "cells": [
+    {
+     "v": "Full",
+     "bg": "#E6F4EF",
+     "fg": "#087F5B"
+    },
+    {
+     "v": "Full",
+     "bg": "#E6F4EF",
+     "fg": "#087F5B"
+    },
+    {
+     "v": "—",
+     "bg": "#F7FAFC",
+     "fg": "#8296A8"
+    },
+    {
+     "v": "—",
+     "bg": "#F7FAFC",
+     "fg": "#8296A8"
+    },
+    {
+     "v": "—",
+     "bg": "#F7FAFC",
+     "fg": "#8296A8"
+    },
+    {
+     "v": "—",
+     "bg": "#F7FAFC",
+     "fg": "#8296A8"
+    },
+    {
+     "v": "—",
+     "bg": "#F7FAFC",
+     "fg": "#8296A8"
+    },
+    {
+     "v": "—",
+     "bg": "#F7FAFC",
+     "fg": "#8296A8"
+    }
+   ]
+  },
+  {
+   "cap": "Result review / acknowledge",
+   "color": "#4F7A5E",
+   "cells": [
+    {
+     "v": "Sign",
+     "bg": "#102A43",
+     "fg": "#FFFFFF"
+    },
+    {
+     "v": "Sign",
+     "bg": "#102A43",
+     "fg": "#FFFFFF"
+    },
+    {
+     "v": "—",
+     "bg": "#F7FAFC",
+     "fg": "#8296A8"
+    },
+    {
+     "v": "—",
+     "bg": "#F7FAFC",
+     "fg": "#8296A8"
+    },
+    {
+     "v": "Read",
+     "bg": "#EFF4FF",
+     "fg": "#1D4ED8"
+    },
+    {
+     "v": "—",
+     "bg": "#F7FAFC",
+     "fg": "#8296A8"
+    },
+    {
+     "v": "—",
+     "bg": "#F7FAFC",
+     "fg": "#8296A8"
+    },
+    {
+     "v": "—",
+     "bg": "#F7FAFC",
+     "fg": "#8296A8"
+    }
+   ]
+  },
+  {
+   "cap": "Care tasks & patient contact",
+   "color": "#4F7A5E",
+   "cells": [
+    {
+     "v": "Full",
+     "bg": "#E6F4EF",
+     "fg": "#087F5B"
+    },
+    {
+     "v": "Full",
+     "bg": "#E6F4EF",
+     "fg": "#087F5B"
+    },
+    {
+     "v": "—",
+     "bg": "#F7FAFC",
+     "fg": "#8296A8"
+    },
+    {
+     "v": "Full",
+     "bg": "#E6F4EF",
+     "fg": "#087F5B"
+    },
+    {
+     "v": "Full",
+     "bg": "#E6F4EF",
+     "fg": "#087F5B"
+    },
+    {
+     "v": "—",
+     "bg": "#F7FAFC",
+     "fg": "#8296A8"
+    },
+    {
+     "v": "—",
+     "bg": "#F7FAFC",
+     "fg": "#8296A8"
+    },
+    {
+     "v": "—",
+     "bg": "#F7FAFC",
+     "fg": "#8296A8"
+    }
+   ]
+  },
+  {
+   "cap": "Release records to portal",
+   "color": "#0F766E",
+   "cells": [
+    {
+     "v": "Full",
+     "bg": "#E6F4EF",
+     "fg": "#087F5B"
+    },
+    {
+     "v": "Full",
+     "bg": "#E6F4EF",
+     "fg": "#087F5B"
+    },
+    {
+     "v": "—",
+     "bg": "#F7FAFC",
+     "fg": "#8296A8"
+    },
+    {
+     "v": "—",
+     "bg": "#F7FAFC",
+     "fg": "#8296A8"
+    },
+    {
+     "v": "Limited",
+     "bg": "#FDF5E7",
+     "fg": "#7A4710"
+    },
+    {
+     "v": "Own",
+     "bg": "#E7F6F4",
+     "fg": "#0F766E"
+    },
+    {
+     "v": "—",
+     "bg": "#F7FAFC",
+     "fg": "#8296A8"
+    },
+    {
+     "v": "—",
+     "bg": "#F7FAFC",
+     "fg": "#8296A8"
+    }
+   ]
+  },
+  {
+   "cap": "Device pairing & fleet",
+   "color": "#9A6B1F",
+   "cells": [
+    {
+     "v": "Own",
+     "bg": "#E7F6F4",
+     "fg": "#0F766E"
+    },
+    {
+     "v": "Own",
+     "bg": "#E7F6F4",
+     "fg": "#0F766E"
+    },
+    {
+     "v": "—",
+     "bg": "#F7FAFC",
+     "fg": "#8296A8"
+    },
+    {
+     "v": "Own",
+     "bg": "#E7F6F4",
+     "fg": "#0F766E"
+    },
+    {
+     "v": "—",
+     "bg": "#F7FAFC",
+     "fg": "#8296A8"
+    },
+    {
+     "v": "—",
+     "bg": "#F7FAFC",
+     "fg": "#8296A8"
+    },
+    {
+     "v": "Config",
+     "bg": "#EDF1F5",
+     "fg": "#334E68"
+    },
+    {
+     "v": "Config",
+     "bg": "#EDF1F5",
+     "fg": "#334E68"
+    }
+   ]
+  },
+  {
+   "cap": "Staff, roles, integrations",
+   "color": "#102A43",
+   "cells": [
+    {
+     "v": "Config",
+     "bg": "#EDF1F5",
+     "fg": "#334E68"
+    },
+    {
+     "v": "—",
+     "bg": "#F7FAFC",
+     "fg": "#8296A8"
+    },
+    {
+     "v": "—",
+     "bg": "#F7FAFC",
+     "fg": "#8296A8"
+    },
+    {
+     "v": "—",
+     "bg": "#F7FAFC",
+     "fg": "#8296A8"
+    },
+    {
+     "v": "—",
+     "bg": "#F7FAFC",
+     "fg": "#8296A8"
+    },
+    {
+     "v": "—",
+     "bg": "#F7FAFC",
+     "fg": "#8296A8"
+    },
+    {
+     "v": "Config",
+     "bg": "#EDF1F5",
+     "fg": "#334E68"
+    },
+    {
+     "v": "Config",
+     "bg": "#EDF1F5",
+     "fg": "#334E68"
+    }
+   ]
+  },
+  {
+   "cap": "Audit log",
+   "color": "#102A43",
+   "cells": [
+    {
+     "v": "Read",
+     "bg": "#EFF4FF",
+     "fg": "#1D4ED8"
+    },
+    {
+     "v": "—",
+     "bg": "#F7FAFC",
+     "fg": "#8296A8"
+    },
+    {
+     "v": "—",
+     "bg": "#F7FAFC",
+     "fg": "#8296A8"
+    },
+    {
+     "v": "—",
+     "bg": "#F7FAFC",
+     "fg": "#8296A8"
+    },
+    {
+     "v": "—",
+     "bg": "#F7FAFC",
+     "fg": "#8296A8"
+    },
+    {
+     "v": "—",
+     "bg": "#F7FAFC",
+     "fg": "#8296A8"
+    },
+    {
+     "v": "Read",
+     "bg": "#EFF4FF",
+     "fg": "#1D4ED8"
+    },
+    {
+     "v": "Full",
+     "bg": "#E6F4EF",
+     "fg": "#087F5B"
+    }
+   ]
+  }
+ ],
+ "filters": [
+  {
+   "label": "All",
+   "bg": "#102A43",
+   "fg": "#fff",
+   "line": "#102A43"
+  },
+  {
+   "label": "Hi-fi done",
+   "bg": "#fff",
+   "fg": "#142536",
+   "line": "#CBD6E0"
+  },
+  {
+   "label": "Hi-fi open",
+   "bg": "#fff",
+   "fg": "#142536",
+   "line": "#CBD6E0"
+  },
+  {
+   "label": "M1",
+   "bg": "#fff",
+   "fg": "#142536",
+   "line": "#CBD6E0"
+  },
+  {
+   "label": "M2",
+   "bg": "#fff",
+   "fg": "#142536",
+   "line": "#CBD6E0"
+  },
+  {
+   "label": "M3",
+   "bg": "#fff",
+   "fg": "#142536",
+   "line": "#CBD6E0"
+  },
+  {
+   "label": "M4",
+   "bg": "#fff",
+   "fg": "#142536",
+   "line": "#CBD6E0"
+  }
+ ],
+ "screens": [
+  {
+   "id": "F-01",
+   "name": "Landing (Solo doctor / Hospital)",
+   "mod": "Found",
+   "color": "#8296A8",
+   "roles": "Public",
+   "route": "/",
+   "phase": "M1",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "F-02",
+   "name": "Country & data residency selector",
+   "mod": "Found",
+   "color": "#8296A8",
+   "roles": "Public",
+   "route": "/region",
+   "phase": "M1",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "F-03",
+   "name": "Sign up · MFA / passkey · recovery",
+   "mod": "Found",
+   "color": "#8296A8",
+   "roles": "All",
+   "route": "/auth/*",
+   "phase": "M1",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "F-04",
+   "name": "Solo doctor onboarding (licence, schedule, invite)",
+   "mod": "Found",
+   "color": "#8296A8",
+   "roles": "Solo Dr",
+   "route": "/onboarding",
+   "phase": "M1",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "F-05",
+   "name": "Session expired · 403 · 404 · offline",
+   "mod": "Found",
+   "color": "#8296A8",
+   "roles": "All",
+   "route": "/error/*",
+   "phase": "M1",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "D-01",
+   "name": "Doctor Today",
+   "mod": "EMR",
+   "color": "#0E9384",
+   "roles": "Doctors",
+   "route": "/today",
+   "phase": "M1",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "D-02",
+   "name": "Global privacy-safe search (⌘K)",
+   "mod": "EMR",
+   "color": "#0E9384",
+   "roles": "Doctors",
+   "route": "overlay",
+   "phase": "M1",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "P-01",
+   "name": "Appointment & reception board",
+   "mod": "PMS",
+   "color": "#2563EB",
+   "roles": "Reception",
+   "route": "/front-desk",
+   "phase": "M1",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "P-02",
+   "name": "Register patient · India (ABHA) & UAE (Emirates ID)",
+   "mod": "PMS",
+   "color": "#2563EB",
+   "roles": "Reception",
+   "route": "/patients/new",
+   "phase": "M1",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "P-03",
+   "name": "Duplicate / merge review",
+   "mod": "PMS",
+   "color": "#2563EB",
+   "roles": "Reception",
+   "route": "/patients/merge",
+   "phase": "M1",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "P-04",
+   "name": "Day/week calendar · walk-in · reschedule · no-show",
+   "mod": "PMS",
+   "color": "#2563EB",
+   "roles": "Reception, Dr",
+   "route": "/schedule",
+   "phase": "M1",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "P-05",
+   "name": "Waitlist & room queue",
+   "mod": "PMS",
+   "color": "#2563EB",
+   "roles": "Reception, Nurse",
+   "route": "/queue",
+   "phase": "M1",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "P-06",
+   "name": "Charge capture · invoice · payment · refund",
+   "mod": "PMS",
+   "color": "#2563EB",
+   "roles": "Reception",
+   "route": "/billing",
+   "phase": "M2",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "P-07",
+   "name": "Cash reconciliation",
+   "mod": "PMS",
+   "color": "#2563EB",
+   "roles": "Reception, Admin",
+   "route": "/billing/reconcile",
+   "phase": "M2",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "P-08",
+   "name": "Insurance eligibility & claims handoff",
+   "mod": "PMS",
+   "color": "#2563EB",
+   "roles": "Admin",
+   "route": "/billing/claims",
+   "phase": "M4",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "N-01",
+   "name": "Nurse intake: vitals, allergies, meds reconciliation",
+   "mod": "EMR",
+   "color": "#0E9384",
+   "roles": "Nurse",
+   "route": "/nurse/:id/intake",
+   "phase": "M2",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "E-01",
+   "name": "Patient 360",
+   "mod": "EMR",
+   "color": "#0E9384",
+   "roles": "Doctors",
+   "route": "/patients/:id",
+   "phase": "M1",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "E-02",
+   "name": "Longitudinal timeline & trends",
+   "mod": "EMR",
+   "color": "#0E9384",
+   "roles": "Doctors",
+   "route": "/patients/:id/timeline",
+   "phase": "M1",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "E-03",
+   "name": "Documents upload & secure viewer",
+   "mod": "EMR",
+   "color": "#0E9384",
+   "roles": "Doctors, Nurse",
+   "route": "/patients/:id/docs",
+   "phase": "M1",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "E-04",
+   "name": "Manual note (consent declined)",
+   "mod": "EMR",
+   "color": "#0E9384",
+   "roles": "Doctors",
+   "route": "/encounter/:id/manual",
+   "phase": "M1",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "E-05",
+   "name": "Prescriptions & investigation orders",
+   "mod": "EMR",
+   "color": "#0E9384",
+   "roles": "Doctors",
+   "route": "/encounter/:id/orders",
+   "phase": "M2",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "E-06",
+   "name": "Signed note · addendum · print",
+   "mod": "EMR",
+   "color": "#0E9384",
+   "roles": "Doctors",
+   "route": "/notes/:id",
+   "phase": "M1",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "A-01",
+   "name": "Pre-visit brief (verified vs AI split)",
+   "mod": "AI",
+   "color": "#7155D8",
+   "roles": "Doctors",
+   "route": "/encounter/:id/brief",
+   "phase": "M1",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "A-02",
+   "name": "Recording consent & device selection",
+   "mod": "AI",
+   "color": "#7155D8",
+   "roles": "Doctors",
+   "route": "/encounter/:id/consent",
+   "phase": "M1",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "A-03",
+   "name": "Live AI consultation",
+   "mod": "AI",
+   "color": "#7155D8",
+   "roles": "Doctors",
+   "route": "/encounter/:id/live",
+   "phase": "M1",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "A-04",
+   "name": "Multi-speaker transcript review",
+   "mod": "AI",
+   "color": "#7155D8",
+   "roles": "Doctors",
+   "route": "/encounter/:id/transcript",
+   "phase": "M1",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "A-05",
+   "name": "AI note & source-evidence review",
+   "mod": "AI",
+   "color": "#7155D8",
+   "roles": "Doctors",
+   "route": "/encounter/:id/note",
+   "phase": "M1",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "A-06",
+   "name": "Upload/sync progress · failed upload · AI unavailable",
+   "mod": "AI",
+   "color": "#7155D8",
+   "roles": "Doctors",
+   "route": "state",
+   "phase": "M1",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "A-07",
+   "name": "Private voice assistant (earpiece only)",
+   "mod": "AI",
+   "color": "#7155D8",
+   "roles": "Doctors",
+   "route": "overlay",
+   "phase": "M3",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "C-01",
+   "name": "Clinical results inbox",
+   "mod": "Care",
+   "color": "#4F7A5E",
+   "roles": "Doctors",
+   "route": "/inbox",
+   "phase": "M2",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "C-02",
+   "name": "Care plans & follow-ups",
+   "mod": "Care",
+   "color": "#4F7A5E",
+   "roles": "Dr, Care coord.",
+   "route": "/care/plans/:id",
+   "phase": "M2",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "C-03",
+   "name": "Patient contact log & reminders",
+   "mod": "Care",
+   "color": "#4F7A5E",
+   "roles": "Care coord.",
+   "route": "/care/contacts",
+   "phase": "M2",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "C-04",
+   "name": "Overdue escalation",
+   "mod": "Care",
+   "color": "#4F7A5E",
+   "roles": "Care coord.",
+   "route": "/care/overdue",
+   "phase": "M2",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "R-01",
+   "name": "Patient portal home & records",
+   "mod": "Portal",
+   "color": "#0F766E",
+   "roles": "Patient",
+   "route": "/p",
+   "phase": "M2",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "R-02",
+   "name": "Portal booking & reschedule",
+   "mod": "Portal",
+   "color": "#0F766E",
+   "roles": "Patient",
+   "route": "/p/appointments",
+   "phase": "M2",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "R-03",
+   "name": "Portal consent & privacy",
+   "mod": "Portal",
+   "color": "#0F766E",
+   "roles": "Patient",
+   "route": "/p/consent",
+   "phase": "M2",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "R-04",
+   "name": "Caregiver proxy authorisation",
+   "mod": "Portal",
+   "color": "#0F766E",
+   "roles": "Patient",
+   "route": "/p/proxy",
+   "phase": "M2",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "W-01",
+   "name": "Clip pairing (code) · self-test",
+   "mod": "Device",
+   "color": "#9A6B1F",
+   "roles": "Doctors",
+   "route": "/devices/pair",
+   "phase": "M3",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "W-02",
+   "name": "Device health · battery · offline queue · firmware",
+   "mod": "Device",
+   "color": "#9A6B1F",
+   "roles": "Doctors",
+   "route": "/devices/:id",
+   "phase": "M3",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "W-03",
+   "name": "Loss/theft revoke",
+   "mod": "Device",
+   "color": "#9A6B1F",
+   "roles": "Dr, Admin",
+   "route": "/devices/:id/revoke",
+   "phase": "M3",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "H-01",
+   "name": "Hospital integration & administration",
+   "mod": "Ent",
+   "color": "#102A43",
+   "roles": "Hosp. IT",
+   "route": "/ent/integrations",
+   "phase": "M4",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "H-02",
+   "name": "Org, facilities, departments",
+   "mod": "Ent",
+   "color": "#102A43",
+   "roles": "Hosp. IT",
+   "route": "/ent/org",
+   "phase": "M4",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "H-03",
+   "name": "SSO & role grants",
+   "mod": "Ent",
+   "color": "#102A43",
+   "roles": "Hosp. IT",
+   "route": "/ent/access",
+   "phase": "M4",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "H-04",
+   "name": "Write-back conflict & retry",
+   "mod": "Ent",
+   "color": "#102A43",
+   "roles": "Hosp. IT, Dr",
+   "route": "/ent/integrations/queue",
+   "phase": "M4",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "H-05",
+   "name": "Audit log & break-glass review",
+   "mod": "Ent",
+   "color": "#102A43",
+   "roles": "Hosp. IT",
+   "route": "/ent/audit",
+   "phase": "M4",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "H-06",
+   "name": "Retention, residency (India/UAE)",
+   "mod": "Ent",
+   "color": "#102A43",
+   "roles": "Hosp. IT",
+   "route": "/ent/compliance",
+   "phase": "M4",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "H-07",
+   "name": "Analytics (throughput, open loops, adoption)",
+   "mod": "Ent",
+   "color": "#102A43",
+   "roles": "Admins",
+   "route": "/admin/analytics",
+   "phase": "M2",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "F-06",
+   "name": "Invite acceptance",
+   "mod": "Found",
+   "color": "#8296A8",
+   "roles": "Staff",
+   "route": "/invite/:token",
+   "phase": "M1",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "F-07",
+   "name": "Trust centre & demo request",
+   "mod": "Found",
+   "color": "#8296A8",
+   "roles": "Public",
+   "route": "/trust",
+   "phase": "M1",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "H-08",
+   "name": "Hospital onboarding · record authority",
+   "mod": "Ent",
+   "color": "#102A43",
+   "roles": "Hosp. IT",
+   "route": "/ent/onboarding",
+   "phase": "M4",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "H-09",
+   "name": "Consent templates & recording policy",
+   "mod": "Ent",
+   "color": "#102A43",
+   "roles": "Admins",
+   "route": "/admin/consent",
+   "phase": "M1",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "H-10",
+   "name": "Data subject requests & export",
+   "mod": "Ent",
+   "color": "#102A43",
+   "roles": "Privacy officer",
+   "route": "/ent/requests",
+   "phase": "M4",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "A-08",
+   "name": "Emergency symptom warning",
+   "mod": "AI",
+   "color": "#7155D8",
+   "roles": "Doctors",
+   "route": "state",
+   "phase": "M1",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "A-09",
+   "name": "Consent revoked · patient changed",
+   "mod": "AI",
+   "color": "#7155D8",
+   "roles": "Doctors",
+   "route": "state",
+   "phase": "M1",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "A-10",
+   "name": "Speaker overlap / unconfirmed speaker",
+   "mod": "AI",
+   "color": "#7155D8",
+   "roles": "Doctors",
+   "route": "state",
+   "phase": "M1",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "E-07",
+   "name": "Diagnosis coding & meds reconciliation",
+   "mod": "EMR",
+   "color": "#0E9384",
+   "roles": "Doctors",
+   "route": "/encounter/:id/reconcile",
+   "phase": "M2",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "E-08",
+   "name": "Vaccinations (if in scope)",
+   "mod": "EMR",
+   "color": "#0E9384",
+   "roles": "Doctors, Nurse",
+   "route": "/patients/:id/immunizations",
+   "phase": "Later",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "C-05",
+   "name": "Inbound report identity match",
+   "mod": "Care",
+   "color": "#4F7A5E",
+   "roles": "Doctors, Care",
+   "route": "/inbox/match",
+   "phase": "M2",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "F-08",
+   "name": "Practice settings (profile, availability, staff, services, notifications, data)",
+   "mod": "Found",
+   "color": "#8296A8",
+   "roles": "Pract. admin, Solo Dr",
+   "route": "/settings",
+   "phase": "M1",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "F-09",
+   "name": "Add doctor (clinic mode): details, licence India/UAE, schedule, fees, access, signature",
+   "mod": "Found",
+   "color": "#8296A8",
+   "roles": "Pract. admin",
+   "route": "/settings/doctors/new",
+   "phase": "M2",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "F-10",
+   "name": "Add staff & roles (role picker, scope, permissions, invite, custom roles)",
+   "mod": "Found",
+   "color": "#8296A8",
+   "roles": "Pract. admin",
+   "route": "/settings/staff/new",
+   "phase": "M1",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "F-11",
+   "name": "Services & fees · India (INR, GST/SAC, TPA tariffs) / UAE (AED, CPT, VAT, payer price lists), packages",
+   "mod": "PMS",
+   "color": "#2563EB",
+   "roles": "Pract. admin",
+   "route": "/settings/services",
+   "phase": "M2",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "C-06",
+   "name": "Clinic messages inbox (patient ↔ clinic, AI reply draft, feedback)",
+   "mod": "Care",
+   "color": "#4F7A5E",
+   "roles": "Dr, Reception, Care",
+   "route": "/messages",
+   "phase": "M2",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "D-03",
+   "name": "Notification centre",
+   "mod": "EMR",
+   "color": "#0E9384",
+   "roles": "All staff",
+   "route": "overlay",
+   "phase": "M1",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "A-11",
+   "name": "Teleconsultation (video, identity check, ambient notes)",
+   "mod": "AI",
+   "color": "#7155D8",
+   "roles": "Doctors",
+   "route": "/encounter/:id/video",
+   "phase": "M2",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "E-09",
+   "name": "Referral out / in with status",
+   "mod": "EMR",
+   "color": "#0E9384",
+   "roles": "Doctors",
+   "route": "/referrals",
+   "phase": "M2",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "E-10",
+   "name": "Printed prescription · e-Rx to pharmacy · multilingual",
+   "mod": "EMR",
+   "color": "#0E9384",
+   "roles": "Doctors",
+   "route": "/rx/:id/print",
+   "phase": "M1",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "D-04",
+   "name": "Clinic overview (multi-doctor Today, shared waiting room)",
+   "mod": "PMS",
+   "color": "#2563EB",
+   "roles": "Doctors, Reception",
+   "route": "/today?view=clinic",
+   "phase": "M2",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "P-14",
+   "name": "Pre-authorisation & claim resubmission · India TPA/PMJAY/CGHS · UAE eClaimLink/DHA, remittance match",
+   "mod": "PMS",
+   "color": "#2563EB",
+   "roles": "Reception, Admin",
+   "route": "/billing/preauth",
+   "phase": "M3",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "P-10",
+   "name": "Split & partial payment (cash + UPI + card + advance)",
+   "mod": "PMS",
+   "color": "#2563EB",
+   "roles": "Reception",
+   "route": "/billing/collect",
+   "phase": "M2",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "P-11",
+   "name": "Packages & advances · session redemption",
+   "mod": "PMS",
+   "color": "#2563EB",
+   "roles": "Reception, Admin",
+   "route": "/billing/packages",
+   "phase": "M2",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "P-12",
+   "name": "Dues, ageing & patient statement",
+   "mod": "PMS",
+   "color": "#2563EB",
+   "roles": "Reception, Admin",
+   "route": "/billing/dues",
+   "phase": "M2",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "P-13",
+   "name": "Day-end cash close · denominations · shift report",
+   "mod": "PMS",
+   "color": "#2563EB",
+   "roles": "Reception, Admin",
+   "route": "/billing/day-close",
+   "phase": "M2",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "P-09",
+   "name": "Doctor revenue & payout report",
+   "mod": "PMS",
+   "color": "#2563EB",
+   "roles": "Pract. admin",
+   "route": "/billing/reports",
+   "phase": "M2",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "F-12",
+   "name": "Practice access log",
+   "mod": "Ent",
+   "color": "#102A43",
+   "roles": "Pract. admin",
+   "route": "/settings/audit",
+   "phase": "M1",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "X-03",
+   "name": "Six end-to-end journeys (storyboard, linked)",
+   "mod": "Found",
+   "color": "#8296A8",
+   "roles": "All",
+   "route": "Medvya Journeys",
+   "phase": "M1",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "P-14",
+   "name": "Pre-authorisation & claim resubmission · India TPA/PMJAY/CGHS · UAE eClaimLink/DHA, remittance match",
+   "mod": "PMS",
+   "color": "#2563EB",
+   "roles": "Reception, Admin",
+   "route": "/billing/preauth",
+   "phase": "M3",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "P-10",
+   "name": "Split & partial payment (cash + UPI + card + advance)",
+   "mod": "PMS",
+   "color": "#2563EB",
+   "roles": "Reception",
+   "route": "/billing/collect",
+   "phase": "M2",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "P-11",
+   "name": "Packages & advances · session redemption",
+   "mod": "PMS",
+   "color": "#2563EB",
+   "roles": "Reception, Admin",
+   "route": "/billing/packages",
+   "phase": "M2",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "P-12",
+   "name": "Dues, ageing & patient statement",
+   "mod": "PMS",
+   "color": "#2563EB",
+   "roles": "Reception, Admin",
+   "route": "/billing/dues",
+   "phase": "M2",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "P-13",
+   "name": "Day-end cash close · denominations · shift report",
+   "mod": "PMS",
+   "color": "#2563EB",
+   "roles": "Reception, Admin",
+   "route": "/billing/day-close",
+   "phase": "M2",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "P-09",
+   "name": "Receipt, tax invoice, credit note, advance receipt · India GST / UAE VAT · A5 + 80 mm thermal",
+   "mod": "PMS",
+   "color": "#2563EB",
+   "roles": "Reception, Admin",
+   "route": "/billing/:id/print",
+   "phase": "M2",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "F-13",
+   "name": "Medicines & formulary · India (Schedule H/H1/X) / UAE (drug codes, controlled) · add medicine, order sets",
+   "mod": "EMR",
+   "color": "#0E9384",
+   "roles": "Doctors, Pract. admin",
+   "route": "/settings/formulary",
+   "phase": "M2",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "E-11",
+   "name": "Add medicine while prescribing (search, dose builder, safety checks)",
+   "mod": "EMR",
+   "color": "#0E9384",
+   "roles": "Doctors",
+   "route": "/encounter/:id/orders",
+   "phase": "M2",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "X-01",
+   "name": "Mobile: Today, capture, note, appts, records, pairing",
+   "mod": "Found",
+   "color": "#8296A8",
+   "roles": "All",
+   "route": "responsive",
+   "phase": "M1",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  },
+  {
+   "id": "X-02",
+   "name": "Dark mode & high-contrast variants",
+   "mod": "Found",
+   "color": "#8296A8",
+   "roles": "All",
+   "route": "theme",
+   "phase": "M1",
+   "status": "Hi-fi + lo-fi done",
+   "stBg": "#E6F4EF",
+   "stFg": "#087F5B",
+   "stIcon": "check_circle",
+   "st": "hifi"
+  }
+ ],
+ "doneCount": 86,
+ "pendingCount": 0,
+ "totalCount": 86
+}

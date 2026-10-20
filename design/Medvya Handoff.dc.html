@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=Material+Symbols+Outlined:opsz,wght,FILL@20..24,400,0..1&display=swap" rel="stylesheet">
+<style>body{margin:0;background:#F7FAFC;color:#142536;font-family:Manrope,system-ui,sans-serif;-webkit-font-smoothing:antialiased}a{color:#2563EB;text-decoration:none}a:hover{text-decoration:underline}button{font-family:Manrope,system-ui,sans-serif}.ms{font-family:'Material Symbols Outlined';font-weight:400;font-style:normal;line-height:1;display:inline-block;white-space:nowrap;font-feature-settings:'liga'}</style>
+</helmet>
+<div style="max-width:1280px;margin:0 auto;padding:48px 32px 96px;display:flex;flex-direction:column;gap:48px">
+  <header style="display:flex;flex-direction:column;gap:8px">
+    <div style="font:600 12px 'JetBrains Mono',monospace;color:#0E9384">Medvya · developer handoff · React 19 + TypeScript + MUI</div>
+    <h1 style="margin:0;font-size:34px;letter-spacing:-0.02em;color:#102A43">Handoff</h1>
+    <p style="margin:0;font-size:15px;color:#506579;max-width:760px;line-height:1.55">Component states, MUI theme, routes, Figma frame names, microcopy, accessibility checks and the ERD additions the screens rely on. Tokens and the screen checklist live in <a href="Medvya Foundations.dc.html">Foundations</a>.</p>
+  </header>
+
+  <section style="display:flex;flex-direction:column;gap:16px">
+    <h2 style="margin:0;font-size:22px;color:#102A43">1 · Component states</h2>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,380px),1fr));gap:16px">
+      <sc-for list="{{ comps }}" as="cp" hint-placeholder-count="6">
+        <div style="background:#fff;border:1px solid #DFE7ED;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;justify-content:space-between;align-items:baseline"><strong style="font-size:15px;color:#102A43">{{ cp.n }}</strong><span style="font:400 11px 'JetBrains Mono',monospace;color:#506579">{{ cp.mui }}</span></div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+            <sc-for list="{{ cp.states }}" as="v" hint-placeholder-count="6"><div style="display:flex;flex-direction:column;gap:4px;align-items:flex-start"><span style="height:{{ v.h }};padding:0 12px;border-radius:{{ v.r }};border:{{ v.b }};background:{{ v.bg }};color:{{ v.fg }};font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px;outline:{{ v.ol }};outline-offset:2px;opacity:{{ v.op }}"><sc-if value="{{ v.icon }}"><span class="ms" style="font-size:16px">{{ v.icon }}</span></sc-if>{{ v.t }}</span><span style="font:400 10.5px 'JetBrains Mono',monospace;color:#8296A8">{{ v.k }}</span></div></sc-for>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:16px">
+    <h2 style="margin:0;font-size:22px;color:#102A43">2 · MUI theme (excerpt)</h2>
+    <pre style="margin:0;background:#0B1622;color:#D6E2EC;border-radius:12px;padding:20px;font:400 12.5px/1.6 'JetBrains Mono',monospace;overflow-x:auto;white-space:pre">{{ themeCode }}</pre>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:16px">
+    <h2 style="margin:0;font-size:22px;color:#102A43">3 · Routes & Figma frames</h2>
+    <div style="background:#fff;border:1px solid #DFE7ED;border-radius:12px;overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:900px">
+        <thead><tr style="text-align:left;color:#506579;font-size:12px;background:#F7FAFC"><th style="padding:10px 14px">Route</th><th style="padding:10px">Guard</th><th style="padding:10px">Figma frame</th><th style="padding:10px">Design file</th></tr></thead>
+        <tbody><sc-for list="{{ routes }}" as="r" hint-placeholder-count="12"><tr><td style="padding:9px 14px;border-top:1px solid #EEF2F5;font:400 12px 'JetBrains Mono',monospace">{{ r.p }}</td><td style="padding:9px 10px;border-top:1px solid #EEF2F5;font-size:12.5px;color:#334E68">{{ r.g }}</td><td style="padding:9px 10px;border-top:1px solid #EEF2F5;font:400 12px 'JetBrains Mono',monospace;color:#102A43">{{ r.f }}</td><td style="padding:9px 10px;border-top:1px solid #EEF2F5"><a href="{{ r.href }}">{{ r.file }}</a></td></tr></sc-for></tbody>
+      </table>
+    </div>
+  </section>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,520px),1fr));gap:20px">
+    <section style="background:#fff;border:1px solid #DFE7ED;border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:10px">
+      <h2 style="margin:0;font-size:18px;color:#102A43">4 · Microcopy (testable)</h2>
+      <sc-for list="{{ copy }}" as="m" hint-placeholder-count="8"><div style="display:grid;grid-template-columns:140px minmax(0,1fr);gap:10px;padding:7px 0;border-bottom:1px solid #F1F5F8;font-size:13px"><span style="font:500 11.5px 'JetBrains Mono',monospace;color:#506579">{{ m.k }}</span><span>“{{ m.v }}”</span></div></sc-for>
+    </section>
+    <section style="background:#fff;border:1px solid #DFE7ED;border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:10px">
+      <h2 style="margin:0;font-size:18px;color:#102A43">5 · Accessibility checklist · WCAG 2.2 AA</h2>
+      <sc-for list="{{ a11y }}" as="a" hint-placeholder-count="10"><button onClick="{{ a.toggle }}" style="display:flex;gap:10px;align-items:flex-start;padding:7px 0;border:0;border-bottom:1px solid #F1F5F8;background:transparent;text-align:left;cursor:pointer;font-size:13px;color:#142536"><span class="ms" style="font-size:19px;color:{{ a.c }}">{{ a.icon }}</span><span>{{ a.t }}</span></button></sc-for>
+    </section>
+  </div>
+
+  <section style="display:flex;flex-direction:column;gap:16px">
+    <h2 style="margin:0;font-size:22px;color:#102A43">6 · ERD additions required by the designs</h2>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:12px">
+      <sc-for list="{{ erd }}" as="e" hint-placeholder-count="9"><div style="background:#fff;border:1px solid #DFE7ED;border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:6px"><div style="font:600 13px 'JetBrains Mono',monospace;color:#102A43">{{ e.n }}</div><div style="font:400 11.5px 'JetBrains Mono',monospace;color:#334E68;line-height:1.6">{{ e.cols }}</div><div style="font-size:12px;color:#506579">Used by {{ e.by }}</div></div></sc-for>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { done: {} };
+  renderVals() {
+    const v = (k, t, o = {}) => ({ k, t, icon: o.icon || '', h: o.h || '40px', r: o.r || '10px', b: o.b || '0', bg: o.bg || '#0E9384', fg: o.fg || '#fff', ol: o.ol || 'none', op: o.op || 1 });
+    const comps = [
+      { n: 'Button · primary', mui: '<Button variant="contained">', states: [v('default', 'Sign note'), v('hover', 'Sign note', { bg: '#0C7D70' }), v('focus', 'Sign note', { ol: '2px solid #2563EB' }), v('loading', 'Signing…', { icon: 'progress_activity', bg: '#5FB8AD' }), v('disabled', 'Sign (2 left)', { bg: '#E6ECF1', fg: '#8296A8' })] },
+      { n: 'Status chip · clinical loop', mui: '<StatusChip state>', states: [v('ordered', 'Ordered', { icon: 'send', h: '28px', r: '999px', bg: '#EFF4FF', fg: '#1D4ED8' }), v('received', 'Received', { icon: 'inbox', h: '28px', r: '999px', bg: '#FDF5E7', fg: '#7A4710' }), v('reviewed', 'Reviewed', { icon: 'visibility', h: '28px', r: '999px', bg: '#E7F6F4', fg: '#0F766E' }), v('completed', 'Completed', { icon: 'task_alt', h: '28px', r: '999px', bg: '#087F5B' })] },
+      { n: 'Provenance tag', mui: '<ProvenanceTag source>', states: [v('ai', 'AI draft · not reviewed', { icon: 'auto_awesome', h: '26px', r: '6px', bg: '#F2EFFC', fg: '#5B3FC4', b: '1px dashed #A897E8' }), v('verified', 'Verified', { icon: 'verified', h: '26px', r: '6px', bg: '#E6F4EF', fg: '#087F5B' }), v('his', 'Synced from HIS', { icon: 'sync_alt', h: '26px', r: '6px', bg: '#EFF4FF', fg: '#1D4ED8' }), v('signed', 'Signed', { icon: 'lock', h: '26px', r: '6px', bg: '#102A43' })] },
+      { n: 'Alert', mui: '<Alert severity>', states: [v('critical', 'Critical · unacknowledged', { icon: 'error', bg: '#FDECEE', fg: '#8A1626', b: '1px solid #F3B9C0' }), v('attention', 'Attention · uncertain', { icon: 'warning', bg: '#FDF5E7', fg: '#7A4710', b: '1px solid #EFD5A6' }), v('info', 'Info', { icon: 'info', bg: '#F7FAFC', fg: '#334E68', b: '1px solid #DFE7ED' })] },
+      { n: 'Text field', mui: '<TextField>', states: [v('default', 'Deepak Nair', { bg: '#fff', fg: '#142536', b: '1px solid #CBD6E0', h: '44px' }), v('focus', 'Deepak Nair', { bg: '#fff', fg: '#142536', b: '1px solid #2563EB', ol: '2px solid #2563EB', h: '44px' }), v('error', '68203', { bg: '#fff', fg: '#142536', b: '1px solid #B42333', h: '44px' }), v('disabled', 'Locked', { bg: '#F1F5F8', fg: '#8296A8', b: '1px solid #DFE7ED', h: '44px' })] },
+      { n: 'Recording indicator', mui: '<RecordingPill>', states: [v('recording', 'REC 04:12', { h: '28px', r: '999px', bg: '#B42333' }), v('paused', 'Paused', { icon: 'pause', h: '28px', r: '999px', bg: '#FDF5E7', fg: '#7A4710' }), v('declined', 'Declined · manual', { icon: 'do_not_disturb_on', h: '28px', r: '999px', bg: '#EDF1F5', fg: '#334E68' })] }
+    ];
+    const themeCode = `export const medvyaTheme = createTheme({
+  palette: {
+    mode: 'light',
+    primary:   { main: '#0E9384', dark: '#0F766E', contrastText: '#FFFFFF' },
+    secondary: { main: '#2563EB' },
+    error:     { main: '#B42333' },   // clinical critical only
+    warning:   { main: '#975A16' },   // uncertainty / attention
+    success:   { main: '#087F5B' },   // confirmed, never inferred
+    ai:        { main: '#7155D8', light: '#F2EFFC' }, // module augmentation
+    background:{ default: '#F7FAFC', paper: '#FFFFFF' },
+    text:      { primary: '#142536', secondary: '#506579' },
+    divider: '#DFE7ED',
+  },
+  shape: { borderRadius: 10 },
+  spacing: 8,
+  typography: {
+    fontFamily: 'Manrope, system-ui, sans-serif',
+    h1: { fontSize: 24, fontWeight: 700, lineHeight: '32px' },
+    h2: { fontSize: 18, fontWeight: 700, lineHeight: '26px' },
+    body1: { fontSize: 15, fontWeight: 500, lineHeight: '24px' },
+    body2: { fontSize: 14, lineHeight: '20px' },
+    caption: { fontSize: 12, fontWeight: 600 },
+  },
+  components: {
+    MuiButton: { defaultProps: { disableElevation: true }, styleOverrides: { root: { minHeight: 44, fontWeight: 700, textTransform: 'none' } } },
+    MuiPaper:  { styleOverrides: { root: { border: '1px solid #DFE7ED', boxShadow: 'none' } } },
+    MuiTableCell: { styleOverrides: { root: { fontVariantNumeric: 'tabular-nums' } } },
+  },
+  breakpoints: { values: { xs: 0, sm: 360, md: 768, lg: 1280, xl: 1600 } },
+});`;
+    const A = 'Medvya Clinician App.dc.html';
+    const R = [['/today', 'clinician', 'Doctor/Today', A], ['/patients/:id', 'clinician + relationship', 'EMR/Patient360', A], ['/encounter/:id/consent', 'clinician + encounter', 'AI/Consent', A], ['/encounter/:id/live', 'consent=given', 'AI/Live', A], ['/encounter/:id/transcript', 'clinician', 'AI/Transcript', A], ['/encounter/:id/note', 'clinician', 'AI/NoteReview', A], ['/encounter/:id/orders', 'licensed approver', 'EMR/RxOrders', A], ['/rx/:id/print', 'clinician', 'EMR/RxPrint', A], ['/inbox', 'clinician', 'Care/ResultsInbox', A], ['/care/plans/:id', 'care roles', 'Care/CarePlan', A], ['/messages', 'staff', 'Care/Messages', A], ['/front-desk', 'reception', 'PMS/ReceptionBoard', A], ['/schedule', 'reception, clinician', 'PMS/Schedule', A], ['/billing', 'reception, admin', 'PMS/Billing', A], ['/patients/new', 'reception', 'PMS/Register', 'Medvya Patient Registration.dc.html'], ['/nurse/:id/intake', 'nurse', 'EMR/NurseIntake', 'Medvya Clinical Screens.dc.html'], ['/settings/*', 'practice admin', 'Admin/Settings', A], ['/devices', 'clinician', 'Device/Devices', A], ['/p/*', 'patient / proxy', 'Portal/*', 'Medvya Patient Portal.dc.html'], ['/ent/integrations', 'integration admin', 'Ent/Integrations', 'Medvya Enterprise Admin.dc.html'], ['/ent/*', 'hospital admin', 'Ent/*', 'Medvya Enterprise Pages.dc.html'], ['/auth/*, /onboarding', 'public', 'Access/*', 'Medvya Access and Onboarding.dc.html']];
+    const routes = R.map(([p, g, f, href]) => ({ p, g, f: f + ' · desktop | tablet | mobile', href, file: href.replace('.dc.html', '') }));
+    const copy = [['ai.badge', 'AI draft · not reviewed'], ['note.signBlocked', 'Sign note ({n} unresolved)'], ['consent.script.en', 'With your permission, Medvya will record our conversation today…'], ['consent.declined', 'No recording for this visit. You can write the note manually.'], ['result.received', 'Received · not reviewed'], ['msg.delivered', 'Delivered — this does not complete the task'], ['pay.pending', 'Awaiting provider confirmation'], ['ai.unavailable', 'AI drafting is unavailable right now. Your recording is saved.'], ['err.403', 'You don’t have access to this facility.'], ['push.generic', 'New update from {clinic}. Open Medvya to view.']].map(([k, v]) => ({ k, v }));
+    const AL = ['Text contrast ≥ 4.5:1 (tokens verified in Foundations)', 'Status never by colour alone: icon + label on every chip', 'Visible 2px focus ring on all interactive elements', 'Full keyboard path: consent → record → review → sign', 'Touch targets ≥ 44px (48px in portal)', 'Form errors announced via aria-live and shown under the field', 'Tables have header cells and readable at 200 % zoom', 'prefers-reduced-motion stops waveform and progress animations', 'Print styles for Rx, visit summary and signed note', 'RTL layout verified for Arabic name and UAE portal'];
+    const a11y = AL.map((t, i) => ({ t, icon: this.state.done[i] ? 'check_box' : 'check_box_outline_blank', c: this.state.done[i] ? '#087F5B' : '#8296A8', toggle: () => this.setState(p => ({ done: { ...p.done, [i]: !p.done[i] } })) }));
+    const erd = [['PATIENT_RELATIONSHIP', 'id, patient_id, related_name, relationship, phone, is_emergency, is_guardian', 'P-02'], ['PAYER_COVERAGE', 'id, patient_id, payer_id, plan, member_no, valid_to, country', 'P-02, P-08'], ['SERVICE_CATALOGUE', 'id, tenant_id, name, category, code, sac_or_cpt, tax_code, duration_min', 'F-11'], ['PRICE_VERSION', 'id, service_id, payer_id?, amount_minor, currency, effective_from', 'F-11, P-06'], ['PACKAGE', 'id, tenant_id, name, items_json, validity_days, amount_minor', 'F-11'], ['ROLE / ROLE_PERMISSION', 'id, tenant_id, name, built_in · role_id, capability, granted', 'F-10, H-03'], ['CLINICIAN_LICENCE', 'id, clinician_id, authority, number, category, expires_at, verified_by, verified_at', 'F-09'], ['SCHEDULE_TEMPLATE / LEAVE', 'id, clinician_id, weekday, start, end, room · from, to, reason', 'F-04, P-04'], ['MESSAGE_THREAD / MESSAGE', 'id, patient_id, category, owner_id, sla_due, state · thread_id, author, body_ciphertext', 'C-06'], ['REFERRAL', 'id, encounter_id, to_clinician_ref, urgency, channel, state, consent_id', 'E-09'], ['PHARMACY_DISPATCH', 'id, prescription_id, pharmacy_ref, state, dispensed_at', 'E-10'], ['DOC_SEQUENCE', 'id, tenant_id, country, doc_type (receipt|invoice|credit|advance), fin_year, prefix, next_no', 'P-09'], ['PAYMENT_SPLIT', 'id, invoice_id, method, amount_minor, provider_ref, state, confirmed_at', 'P-10'], ['PACKAGE_ENROLMENT / REDEMPTION', 'id, patient_id, package_id, paid_minor, sessions_total, valid_to · id, enrolment_id, encounter_id, at', 'P-11'], ['DUE / STATEMENT', 'id, patient_id, invoice_id, amount_minor, due_at, state · id, patient_id, period, pdf_ref', 'P-12'], ['CASH_SESSION', 'id, facility_id, user_id, opened_at, float_minor, counted_json, variance_minor, reason, closed_at', 'P-13'], ['REMITTANCE / CLAIM_RESUBMISSION', 'id, payer_id, ra_ref, total_minor · id, claim_id, reason_code, corrected_json, submitted_at', 'P-14'], ['FORMULARY_ITEM / ORDER_SET', 'id, tenant_id, country, inn, strength, form, reg_class, national_code, atc, defaults_json · id, name, items_json', 'F-13, E-11'], ['ELIGIBILITY_CHECK / PRIOR_AUTH', 'id, coverage_id, result, copay, ref · id, order_id, state, valid_to', 'P-08']].map(([n, cols, by]) => ({ n, cols, by }));
+    return { comps, themeCode, routes, copy, a11y, erd };
+  }
+}
+</script>
+</body>
+</html>

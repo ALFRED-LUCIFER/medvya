@@ -1,0 +1,280 @@
+# P7 · Hospital enterprise and integrations · Weeks 36–60 · R7 Enterprise
+# exit: 1 integration contract + security review passed · 2 write-back ≥ 99 % success, every conflict visible · 3 hospital clinical sign-off
+# nfr:  1 SIEM export, privileged access review · 2 App Service → AKS when stamp count or isolation requires it
+# pkg:  1 integration specification + runbook · 2 security evidence pack
+# dep:  1 hospital procurement + HIS vendor cooperation
+
+@epic MDV-P7-E01 | Hospital onboarding and record authority | P7-01, P7-02 | Per-facility authority and multi-facility organisation without a second conflicting chart.
+@epic MDV-P7-E02 | Enterprise identity | P7-03 | SSO, SCIM and facility-scoped role grants.
+@epic MDV-P7-E03 | Integrations and write-back | P7-04 | FHIR/HL7 interfaces, lab feeds, imaging links and a visible write-back queue.
+@epic MDV-P7-E04 | Governance and dedicated deployment | P7-05, P7-06 | Audit, break-glass, retention/residency, data requests, analytics and a dedicated hospital stamp.
+
+=== MDV-P7-001
+title: Hospital procurement, HIS vendor engagement and integration contract
+type: Chore
+epic: MDV-P7-E01
+prd: P7-04
+covers: dep:1, exit:1, pkg:1
+priority: MUST
+roles: Founder, Hospital IT
+labels: enterprise, contract
+estimate: 3
+weeks: 36-40
+confidence: 40 | Entirely dependent on a hospital customer and its HIS vendor.
+sources: PRD v2 P7 dependency 1, exit 1
+desc:
+Sign the first hospital; agree the integration specification with the HIS vendor (FHIR R4 resources/HL7 messages, auth, environments, error semantics, receipts), security review and runbook.
+ac:
+- Signed hospital contract and integration specification (delivery package 1).
+- Security review by the hospital passed (exit gate 1).
+
+=== MDV-P7-002
+title: Hospital onboarding wizard and record authority per facility (H-08)
+type: Story
+epic: MDV-P7-E01
+prd: P7-01
+screens: H-08
+priority: MUST
+roles: Hospital IT
+labels: enterprise, authority
+estimate: 3
+weeks: 40-42
+depends: MDV-P7-001
+confidence: 78 | Interactive design with mixed-authority warning exists.
+sources: design/Medvya Enterprise Pages (H-08); docs/02-design/screen-specs.md#enterprise-p7--medvya-enterprise-admin-medvya-enterprise-pages
+desc:
+Steps Organisation → Facilities → SSO → HIS connection → Record authority → Pilot go-live. Per facility choose Medvya EMR or Existing HIS; statuses "HIS authoritative · write-back on" / "Medvya authoritative" / "HIS not connected yet"; mixed-authority warning; sets ENCOUNTER.authority_mode.
+ac:
+- Authority is set per facility and stamped on every new encounter.
+- With HIS authority, chart items show "Synced from HIS" and Medvya never creates a second authoritative chart.
+- Mixed authority shows the attention banner and cross-facility views show source badges.
+
+=== MDV-P7-003
+title: Organisation, facilities and departments administration (H-02)
+type: Story
+epic: MDV-P7-E01
+prd: P7-02
+screens: H-02
+priority: MUST
+roles: Hospital IT
+labels: enterprise, org
+estimate: 2
+weeks: 41-42
+depends: MDV-P7-002
+confidence: 82 | Designed.
+sources: design/Medvya Enterprise Pages (H-02)
+desc:
+Facility tree with departments, beds/type metadata, authority badge, time zone; multi-location administration.
+ac:
+- Facility scope drives every permission check (tests with cross-facility users).
+- Departments are assignable to staff and encounters.
+
+=== MDV-P7-004
+title: SSO (SAML/OIDC via Entra federation), SCIM provisioning and facility/department role grants with expiry (H-03)
+type: Story
+epic: MDV-P7-E02
+prd: P7-03
+screens: H-03
+priority: MUST
+roles: Hospital IT
+labels: sso, scim, roles
+estimate: 4
+weeks: 42-45
+depends: MDV-P7-003
+confidence: 72 | Standard Entra federation; SCIM specifics depend on the hospital IdP.
+sources: design/Medvya Enterprise Pages (H-03)
+desc:
+Federate hospital IdP; SSO-enforced tenant; SCIM create/update/deactivate users; grants table user × role × facility scope × expiry; locum grants with end dates; licence count; quarterly access review.
+ac:
+- Deactivating a user in the hospital IdP removes Medvya access within the SCIM cycle.
+- Role alone never grants another facility (tests).
+- Expired grants end access automatically.
+
+=== MDV-P7-005
+title: Hospital integration console: connection tiles for HIS, LIS, ABDM/HIE, SSO, messaging (H-01)
+type: Story
+epic: MDV-P7-E03
+prd: P7-04
+screens: H-01
+priority: MUST
+roles: Hospital IT
+labels: integrations, monitoring
+estimate: 3
+weeks: 44-46
+depends: MDV-P7-001
+confidence: 75 | Designed; H-01 status "next" in Foundations.
+sources: design/Medvya Enterprise Admin (H-01)
+desc:
+Tiles with protocol, status (Healthy/Degraded/Not connected), last message, 24 h volume, direction; residency banner per deployment; record-authority switch.
+ac:
+- Tile status reflects real health checks and message flow.
+- Secrets for connections live in Key Vault; rotation is audited.
+
+=== MDV-P7-006
+title: FHIR R4 HIS interface and write-back queue with conflict review and retry (H-04)
+type: Story
+epic: MDV-P7-E03
+prd: P7-04
+screens: H-04
+covers: exit:2
+priority: MUST
+roles: Hospital IT, Doctor
+labels: fhir, write-back, integration
+estimate: 8
+weeks: 46-52
+depends: MDV-P7-005, MDV-P7-002
+confidence: 55 | Depends on the specific HIS vendor's FHIR capabilities.
+sources: design/Medvya Enterprise Admin (H-04 queue); docs/03-architecture/state-machines.md#integration-delivery-p7
+desc:
+Firely SDK client; read patient/encounter/meds into "Synced from HIS" copies; write back only clinician-signed content (DocumentReference, MedicationStatement…) with idempotency keys and receipts; queue states Delivered/Failed/Conflict/Retrying/Sent to clinician; conflict diff (Medvya signed v1 vs HIS current) routed to the signing clinician; transport errors retried by IT; chart shows "Not yet in HIS".
+ac:
+- Medvya never overwrites the HIS silently; conflicts always go to the clinician (test).
+- Write-back success ≥ 99 % in the pilot with every failure/conflict visible (exit gate 2).
+- Duplicate deliveries are prevented by idempotency keys.
+- Attempts list shows timestamps and response codes without PHI in logs.
+
+=== MDV-P7-007
+title: Lab feeds (HL7 v2 ORU/ORM over MLLP/VPN) and imaging viewer links (N-15)
+type: Story
+epic: MDV-P7-E03
+prd: P7-04
+screens: N-15
+priority: MUST
+roles: Doctor, Hospital IT
+labels: hl7, lab, imaging, design-needed
+estimate: 5
+weeks: 48-52
+depends: MDV-P7-005, MDV-P4-014
+confidence: 50 | DESIGN NEEDED for N-15; lab vendor specifics unknown.
+sources: PRD v2 P7-04 (N-15); design/Medvya Gap Analysis (external lab and imaging feeds)
+desc:
+Orders out (ORM^O01) and results in (ORU) with ACK handling; results land in the results inbox with identity match; radiology reports as text with DICOMweb viewer links (no image copies).
+ac:
+- ORU messages create inbox items matched to orders; low-confidence matches still need a human.
+- ACK/NACK handling and retries are visible in H-01.
+- Imaging opens in the provider viewer via link only.
+
+=== MDV-P7-008
+title: Audit log and break-glass review (H-05)
+type: Story
+epic: MDV-P7-E04
+prd: P7-05
+screens: H-05
+priority: MUST
+roles: Hospital IT, Privacy officer, Doctor
+labels: audit, break-glass
+estimate: 3
+weeks: 50-52
+depends: MDV-P0-017
+confidence: 80 | Designed; audit foundation exists since P0.
+sources: design/Medvya Enterprise Admin (H-05 audit table); docs/02-design/sitemap-and-permissions.md
+desc:
+Break-glass: temporary read with typed justification, banner, short expiry, post-hoc review queue; audit explorer with filters (actor, patient ref, action, purpose); repeated break-glass alerts the privacy officer.
+ac:
+- Break-glass requires justification, expires automatically and appears as "Pending review".
+- Reviewers record outcomes; repeated use triggers an alert.
+- Audit explorer shows opaque patient refs; no PHI in logs.
+
+=== MDV-P7-009
+title: Retention and residency policies (H-06) and data subject requests with tamper-evident export (H-10)
+type: Story
+epic: MDV-P7-E04
+prd: P7-05
+screens: H-06, H-10
+priority: MUST
+roles: Privacy officer, Hospital IT
+labels: retention, residency, dsr
+estimate: 4
+weeks: 52-55
+depends: MDV-P5-025
+confidence: 72 | Designed; legal rules per hospital contract.
+sources: design/Medvya Enterprise Pages (H-06, H-10)
+desc:
+Policy page (region, CMK rotation, audio retention, transcripts, medical records, audit retention, cross-border disabled — labels are configured policy, not certifications); request queue (access, correction, deletion with legal hold, withdraw recording consent with vendor purge receipt), tamper-evident export ZIP.
+ac:
+- Policies are configurable per hospital tenant and enforced by retention jobs.
+- Requests track due dates and outcomes; deletion under legal hold shows "Partially fulfilled · legal hold".
+- Exports are tamper-evident (hash manifest) and audited.
+
+=== MDV-P7-010
+title: Full enterprise analytics (throughput, open loops, adoption) with authorised drill-down (H-07)
+type: Story
+epic: MDV-P7-E04
+prd: P7-05
+screens: H-07
+priority: MUST
+roles: Hospital admin
+labels: analytics
+estimate: 3
+weeks: 54-56
+depends: MDV-P4-030
+confidence: 78 | Designed; extends P4 clinic reports across facilities.
+sources: design/Medvya Enterprise Pages (H-07)
+desc:
+Cross-facility KPIs and charts, open loops, adoption metrics, estimate caveats, drill-down to authorised detail only.
+ac:
+- Metrics aggregate across facilities with per-facility filters.
+- Drill-down obeys facility and role scope.
+
+=== MDV-P7-011
+title: Dedicated hospital stamp: own compute, database, Key Vault (CMK/HSM), storage, private link; AKS move when required
+type: Task
+epic: MDV-P7-E04
+prd: P7-06
+covers: nfr:2
+priority: MUST
+roles: Developer
+labels: infra, stamp, aks
+estimate: 6
+weeks: 52-58
+depends: MDV-P7-001
+confidence: 55 | Stage-4 architecture is described at a high level; specifics depend on the hospital contract.
+sources: design/Medvya Azure Architecture (stages 3–4, dedicated hospital stamp); docs/03-architecture/azure-deployment.md
+desc:
+Bicep stamp template for a dedicated hospital deployment (Container Apps or AKS when isolation/node pools require it), customer-managed keys in Managed HSM, private link/VPN to the HIS, own upgrade ring and maintenance window, registration in the control plane.
+ac:
+- A new stamp can be created from the template without manual steps and registered for routing.
+- Hospital data, keys, logs and backups are isolated from pooled tenants.
+- Decision to move from App Service to AKS is recorded with the triggering evidence.
+
+=== MDV-P7-012
+title: SIEM export and privileged access review
+type: Task
+epic: MDV-P7-E04
+prd: P7-05
+covers: nfr:1, pkg:2
+priority: MUST
+roles: Developer, Hospital security
+labels: siem, security
+estimate: 2
+weeks: 55-57
+depends: MDV-P5-024
+confidence: 75 | Sentinel/Log Analytics export is standard.
+sources: PRD v2 P7 NFR 1, delivery package 2
+desc:
+Export security/audit events to the hospital SIEM (no PHI), quarterly privileged access review, security evidence pack (pen test, controls, ADHICS/ISO mappings, DR results).
+ac:
+- Hospital SIEM receives the agreed event stream.
+- Privileged access review completed and recorded.
+- Security evidence pack delivered.
+
+=== MDV-P7-013
+title: R7 hospital pilot, clinical sign-off and release
+type: Gate
+epic: MDV-P7-E03
+prd: P7-04
+covers: exit:1, exit:2, exit:3, pkg:1, pkg:2
+priority: MUST
+roles: Founder, Hospital IT, hospital clinicians
+labels: release, gate
+estimate: 2
+weeks: 58-60
+depends: MDV-P7-006, MDV-P7-008, MDV-P7-012
+confidence: 50 | Hospital-driven timeline.
+sources: PRD v2 P7 exit criteria
+desc:
+Pilot on hospital wards with HIS authority; evidence for contract/security review, write-back ≥ 99 % with conflicts visible, hospital clinical sign-off; journey J6 passes.
+ac:
+- All three exit criteria evidenced.
+- Journey J6 (failed write-back → retry → conflict → audit) passes.
+- Integration runbook and security evidence pack delivered.

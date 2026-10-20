@@ -1,0 +1,1 @@
+export { medvyaTheme } from './theme';

@@ -1,0 +1,7 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Medvya.Identity.Application\Medvya.Identity.Application.csproj" />
+  </ItemGroup>
+
+</Project>

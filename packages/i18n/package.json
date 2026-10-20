@@ -1,0 +1,21 @@
+{
+  "name": "@medvya/i18n",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "main": "src/index.tsx",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "test": "vitest run",
+    "report": "node report-missing.mjs"
+  },
+  "peerDependencies": {
+    "react": "^19"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "react": "^19.3.1",
+    "typescript": "~6.0.3",
+    "vitest": "^3.2.7"
+  }
+}

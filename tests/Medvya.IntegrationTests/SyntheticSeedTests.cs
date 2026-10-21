@@ -1,3 +1,4 @@
+using Medvya.Patients.Domain;
 using Medvya.SyntheticData;
 using Medvya.Tenancy.Domain;
 using Microsoft.EntityFrameworkCore;
@@ -16,11 +17,11 @@ public class SyntheticSeedTests(SqlServerFixture sql) : IClassFixture<SqlServerF
     [Fact]
     public async Task SeedingTwiceGivesTheSameRowsWithEveryRoleMarkedSynthetic()
     {
-        await SyntheticSeed.SeedAsync(sql.ConnectionString, "Test", includeUae: true);
+        await SyntheticSeed.SeedAsync(sql.ConnectionString, "Test", includeUae: true, SqlServerFixture.Keys);
         var india = await Counts(SyntheticSeed.India.Tenant.Id);
         var uae = await Counts(SyntheticSeed.Uae.Tenant.Id);
 
-        await SyntheticSeed.SeedAsync(sql.ConnectionString, "Test", includeUae: true);
+        await SyntheticSeed.SeedAsync(sql.ConnectionString, "Test", includeUae: true, SqlServerFixture.Keys);
         Assert.Equal(india, await Counts(SyntheticSeed.India.Tenant.Id));
         Assert.Equal(uae, await Counts(SyntheticSeed.Uae.Tenant.Id));
         Assert.Equal((1, 1, Enum.GetValues<Role>().Length), india);
@@ -47,7 +48,7 @@ public class SyntheticSeedTests(SqlServerFixture sql) : IClassFixture<SqlServerF
     [InlineData(null)]
     public async Task RefusesToRunOutsideDevelopmentStagingOrTest(string? environment)
     {
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => SyntheticSeed.SeedAsync(sql.ConnectionString, environment, includeUae: true));
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => SyntheticSeed.SeedAsync(sql.ConnectionString, environment, includeUae: true, SqlServerFixture.Keys));
         Assert.Contains("refused", ex.Message, StringComparison.Ordinal);
     }
 }

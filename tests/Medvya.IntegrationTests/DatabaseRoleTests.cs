@@ -32,6 +32,9 @@ public class DatabaseRoleTests(SqlServerFixture sql) : IClassFixture<SqlServerFi
     [InlineData("CREATE TABLE audit.Injected (Id int)")]
     [InlineData("DROP SECURITY POLICY security.tenant_isolation")]
     [InlineData("ALTER SECURITY POLICY audit.tenant_isolation WITH (STATE = OFF)")]
+    [InlineData("ALTER SECURITY POLICY security.patients_tenant_isolation WITH (STATE = OFF)")]
+    [InlineData("ALTER TABLE patients.Patients ALTER COLUMN Mobile DROP MASKED")]
+    [InlineData("DROP TABLE patients.Identifiers")]
     public Task AppCannotChangeTheSchema(string ddl) => Denied("app_user", ddl);
 
     [Fact]
@@ -40,6 +43,7 @@ public class DatabaseRoleTests(SqlServerFixture sql) : IClassFixture<SqlServerFi
         await Run("migrator_user", "CREATE TABLE tenancy.MigratorProbe (Id int); ALTER TABLE tenancy.MigratorProbe ADD Name nvarchar(10) NULL; DROP TABLE tenancy.MigratorProbe;");
         await Denied("migrator_user", "SELECT TOP 1 Id FROM tenancy.Tenants");
         await Denied("migrator_user", "DELETE FROM tenancy.Tenants");
+        await Denied("migrator_user", "SELECT TOP 1 Id FROM patients.Patients");
         await Denied("migrator_user", "INSERT INTO audit.AuditEvents (Id, TenantId, Action, ResourceType, Purpose, Outcome, OccurredAt) VALUES (NEWID(), NEWID(), N'x', N'x', N'x', N'x', SYSDATETIMEOFFSET())");
     }
 
@@ -54,6 +58,10 @@ public class DatabaseRoleTests(SqlServerFixture sql) : IClassFixture<SqlServerFi
         await Denied("identity_user", "SELECT TOP 1 Id FROM tenancy.Tenants");
         await Denied("tenancy_user", "SELECT TOP 1 Id FROM [identity].Users");
         await Denied("identity_user", "DELETE FROM [identity].Users");
+        await Run("patients_user", "SELECT TOP 1 Id FROM patients.Patients");
+        await Denied("patients_user", "SELECT TOP 1 Id FROM tenancy.Tenants");
+        await Denied("patients_user", "SELECT TOP 1 Id FROM audit.AuditEvents");
+        await Denied("tenancy_user", "SELECT TOP 1 Id FROM patients.Patients");
     }
 
     [Fact]
@@ -78,6 +86,9 @@ public class DatabaseRoleTests(SqlServerFixture sql) : IClassFixture<SqlServerFi
         await Denied("reporting_user", "SELECT TOP 1 Id FROM audit.AuditEvents");
         await Denied("reporting_user", "SELECT TOP 1 DisplayName FROM [identity].Users");
         await Denied("reporting_user", "CREATE TABLE tenancy.Injected (Id int)");
+        await Run("reporting_user", "SELECT TOP 1 Id, FullName FROM patients.Patients"); // masked: PatientRegistryTests
+        await Denied("reporting_user", "UPDATE patients.Patients SET Mobile = N'x'");
+        await Denied("reporting_user", "DELETE FROM patients.Identifiers");
     }
 
     [Fact]

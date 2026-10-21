@@ -12,6 +12,13 @@
     <ProjectReference Include="..\BuildingBlocks\Medvya.BuildingBlocks.Domain\Medvya.BuildingBlocks.Domain.csproj" />
   </ItemGroup>
 
+  <!-- Public site reuses the shared design tokens and message catalogues instead of copying them (MDV-P1-001). -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\packages\ui\src\styles.css" LogicalName="PublicSite.tokens.css" />
+    <EmbeddedResource Include="..\..\packages\i18n\messages\*.json" LogicalName="PublicSite.messages.%(Filename).json" />
+    <EmbeddedResource Include="PublicSite\site.css" LogicalName="PublicSite.site.css" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="Azure.Monitor.OpenTelemetry.Exporter" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" />

@@ -1,0 +1,16 @@
+@page
+@model PricingModel
+@{
+    var p = Model;
+    ViewData["Title"] = $"{p.T("site.pricing.title")} · {p.T("app.name")}";
+    ViewData["Description"] = p.T("site.pricing.body");
+}
+<section class="page" aria-labelledby="pricing-title">
+    <h1 id="pricing-title">@p.T("site.pricing.title")</h1>
+    @* Placeholder by design (F-01): no prices or metrics until they are decided. *@
+    <p class="lede">@p.T("site.pricing.body")</p>
+    <div class="ctas">
+        <a class="button button-primary" href="@p.Href(PublicSite.DoctorStart)">@p.T("site.cta.doctor")</a>
+        <a class="button button-outline" href="@p.Href(PublicSite.DemoRequest)">@p.T("site.cta.hospital")</a>
+    </div>
+</section>

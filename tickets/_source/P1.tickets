@@ -521,6 +521,10 @@ ac:
 - Booking API p95 < 300 ms under the P1 load profile (MDV-P1-037).
 
 === MDV-P1-022
+status: In progress
+progress:
+- Open [PR #60](https://github.com/ALFRED-LUCIFER/medvya/pull/60) (stacked on #59): SCHEDULE_SLOT rows per 5-minute unit with a unique index on (calendar, location, slot start); every hold and booking in a SERIALIZABLE transaction after `sp_getapplock` per doctor-day; deadlocks and lock timeouts retried, then "busy"; 100 parallel bookings or holds of one slot give exactly one on Testcontainers SQL Server (also overlapping multi-slot); mutation-checked (unique index, lock, all guards: 16 double bookings without them)
+- Left: the 100-parallel run on staging (needs MDV-P0-006); freeing slots on cancel/no-show/reschedule (MDV-P1-024)
 title: No double booking under concurrency (unique index, serializable transaction, doctor-day app lock)
 type: Story
 epic: MDV-P1-E06

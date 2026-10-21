@@ -1,0 +1,39 @@
+@page
+@model IndexModel
+@{
+    var p = Model;
+    ViewData["Title"] = $"{p.T("app.name")} · {p.T("site.hero.title")}";
+    var lede = p.T("site.hero.lede", new Dictionary<string, string> { ["languages"] = p.TRegion("site.hero.languages") });
+    ViewData["Description"] = lede;
+    // Decorative line icons (stand-ins for the design's Material Symbols, which would need a third-party font).
+    var pillars = new (string Key, string Icon)[]
+    {
+        ("brief", "M7 3h7l5 5v13H7zM14 3v5h5M10 12h6M10 16h6"),
+        ("consent", "M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21a7 7 0 0 1 12-5M15 18l2 2 5-5"),
+        ("followUp", "M9 4h6v3H9zM9 5H6v16h12V5h-3M9 14l2 2 4-4"),
+    };
+}
+<section class="hero" aria-labelledby="hero-title">
+    <div class="hero-copy">
+        <p class="tag">@p.TRegion("site.hero.tag")</p>
+        <h1 id="hero-title">@p.T("site.hero.title")</h1>
+        <p class="lede">@lede</p>
+        <div class="ctas">
+            <a class="button button-primary" href="@p.Href(PublicSite.DoctorStart)">@p.T("site.cta.doctor")</a>
+            <a class="button button-outline" href="@p.Href(PublicSite.DemoRequest)">@p.T("site.cta.hospital")</a>
+        </div>
+        <p class="residency">@p.TRegion("site.residency")</p>
+    </div>
+    @* shortcut: striped placeholder until the product shot (consultation note review) exists, per the design. *@
+    <div class="product-shot" aria-hidden="true"></div>
+</section>
+<ul class="pillars">
+    @foreach (var (key, icon) in pillars)
+    {
+        <li>
+            <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" focusable="false"><path d="@icon" /></svg>
+            <h2>@p.T($"site.pillar.{key}.title")</h2>
+            <p>@p.T($"site.pillar.{key}.body")</p>
+        </li>
+    }
+</ul>

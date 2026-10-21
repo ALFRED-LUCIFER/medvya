@@ -10,6 +10,8 @@
 
 **Tickets:** 13 · **Estimate:** 48 dev-days vs **125 working days** in the window (fits) · **Average confidence:** 66%
 
+**Status:** To do 13
+
 ## Epics
 
 | Epic | Title | Requirements | Goal |
@@ -21,21 +23,21 @@
 
 ## Tickets
 
-| Key | Title | Type | Prio | PRD | Screens | Est | Weeks | Dates | Confidence |
-|---|---|---|---|---|---|---|---|---|---|
-| [MDV-P7-001](MDV-P7-001.md) | Hospital procurement, HIS vendor engagement and integration contract | Chore | MUST | P7-04 | — | 3 | 36–40 | 28 Jun → 30 Jul 2027 | 40% Low |
-| [MDV-P7-002](MDV-P7-002.md) | Hospital onboarding wizard and record authority per facility (H-08) | Story | MUST | P7-01 | H-08 | 3 | 40–42 | 26 Jul → 13 Aug 2027 | 78% Medium |
-| [MDV-P7-003](MDV-P7-003.md) | Organisation, facilities and departments administration (H-02) | Story | MUST | P7-02 | H-02 | 2 | 41–42 | 02 Aug → 13 Aug 2027 | 82% Medium |
-| [MDV-P7-004](MDV-P7-004.md) | SSO (SAML/OIDC via Entra federation), SCIM provisioning and facility/department role grants with expiry (H-03) | Story | MUST | P7-03 | H-03 | 4 | 42–45 | 09 Aug → 03 Sep 2027 | 72% Medium |
-| [MDV-P7-005](MDV-P7-005.md) | Hospital integration console: connection tiles for HIS, LIS, ABDM/HIE, SSO, messaging (H-01) | Story | MUST | P7-04 | H-01 | 3 | 44–46 | 23 Aug → 10 Sep 2027 | 75% Medium |
-| [MDV-P7-006](MDV-P7-006.md) | FHIR R4 HIS interface and write-back queue with conflict review and retry (H-04) | Story | MUST | P7-04 | H-04 | 8 | 46–52 | 06 Sep → 22 Oct 2027 | 55% Low |
-| [MDV-P7-007](MDV-P7-007.md) | Lab feeds (HL7 v2 ORU/ORM over MLLP/VPN) and imaging viewer links (N-15) | Story | MUST | P7-04 | N-15 | 5 | 48–52 | 20 Sep → 22 Oct 2027 | 50% Low |
-| [MDV-P7-008](MDV-P7-008.md) | Audit log and break-glass review (H-05) | Story | MUST | P7-05 | H-05 | 3 | 50–52 | 04 Oct → 22 Oct 2027 | 80% Medium |
-| [MDV-P7-009](MDV-P7-009.md) | Retention and residency policies (H-06) and data subject requests with tamper-evident export (H-10) | Story | MUST | P7-05 | H-06, H-10 | 4 | 52–55 | 18 Oct → 12 Nov 2027 | 72% Medium |
-| [MDV-P7-011](MDV-P7-011.md) | Dedicated hospital stamp: own compute, database, Key Vault (CMK/HSM), storage, private link; AKS move when required | Task | MUST | P7-06 | — | 6 | 52–58 | 18 Oct → 03 Dec 2027 | 55% Low |
-| [MDV-P7-010](MDV-P7-010.md) | Full enterprise analytics (throughput, open loops, adoption) with authorised drill-down (H-07) | Story | MUST | P7-05 | H-07 | 3 | 54–56 | 01 Nov → 19 Nov 2027 | 78% Medium |
-| [MDV-P7-012](MDV-P7-012.md) | SIEM export and privileged access review | Task | MUST | P7-05 | — | 2 | 55–57 | 08 Nov → 26 Nov 2027 | 75% Medium |
-| [MDV-P7-013](MDV-P7-013.md) | R7 hospital pilot, clinical sign-off and release | Gate | MUST | P7-04 | — | 2 | 58–60 | 29 Nov → 17 Dec 2027 | 50% Low |
+| Key | Status | Title | Type | Prio | PRD | Screens | Est | Weeks | Dates | Confidence |
+|---|---|---|---|---|---|---|---|---|---|---|
+| [MDV-P7-001](MDV-P7-001.md) | To do | Hospital procurement, HIS vendor engagement and integration contract | Chore | MUST | P7-04 | — | 3 | 36–40 | 28 Jun → 30 Jul 2027 | 40% Low |
+| [MDV-P7-002](MDV-P7-002.md) | To do | Hospital onboarding wizard and record authority per facility (H-08) | Story | MUST | P7-01 | H-08 | 3 | 40–42 | 26 Jul → 13 Aug 2027 | 78% Medium |
+| [MDV-P7-003](MDV-P7-003.md) | To do | Organisation, facilities and departments administration (H-02) | Story | MUST | P7-02 | H-02 | 2 | 41–42 | 02 Aug → 13 Aug 2027 | 82% Medium |
+| [MDV-P7-004](MDV-P7-004.md) | To do | SSO (SAML/OIDC via Entra federation), SCIM provisioning and facility/department role grants with expiry (H-03) | Story | MUST | P7-03 | H-03 | 4 | 42–45 | 09 Aug → 03 Sep 2027 | 72% Medium |
+| [MDV-P7-005](MDV-P7-005.md) | To do | Hospital integration console: connection tiles for HIS, LIS, ABDM/HIE, SSO, messaging (H-01) | Story | MUST | P7-04 | H-01 | 3 | 44–46 | 23 Aug → 10 Sep 2027 | 75% Medium |
+| [MDV-P7-006](MDV-P7-006.md) | To do | FHIR R4 HIS interface and write-back queue with conflict review and retry (H-04) | Story | MUST | P7-04 | H-04 | 8 | 46–52 | 06 Sep → 22 Oct 2027 | 55% Low |
+| [MDV-P7-007](MDV-P7-007.md) | To do | Lab feeds (HL7 v2 ORU/ORM over MLLP/VPN) and imaging viewer links (N-15) | Story | MUST | P7-04 | N-15 | 5 | 48–52 | 20 Sep → 22 Oct 2027 | 50% Low |
+| [MDV-P7-008](MDV-P7-008.md) | To do | Audit log and break-glass review (H-05) | Story | MUST | P7-05 | H-05 | 3 | 50–52 | 04 Oct → 22 Oct 2027 | 80% Medium |
+| [MDV-P7-009](MDV-P7-009.md) | To do | Retention and residency policies (H-06) and data subject requests with tamper-evident export (H-10) | Story | MUST | P7-05 | H-06, H-10 | 4 | 52–55 | 18 Oct → 12 Nov 2027 | 72% Medium |
+| [MDV-P7-011](MDV-P7-011.md) | To do | Dedicated hospital stamp: own compute, database, Key Vault (CMK/HSM), storage, private link; AKS move when required | Task | MUST | P7-06 | — | 6 | 52–58 | 18 Oct → 03 Dec 2027 | 55% Low |
+| [MDV-P7-010](MDV-P7-010.md) | To do | Full enterprise analytics (throughput, open loops, adoption) with authorised drill-down (H-07) | Story | MUST | P7-05 | H-07 | 3 | 54–56 | 01 Nov → 19 Nov 2027 | 78% Medium |
+| [MDV-P7-012](MDV-P7-012.md) | To do | SIEM export and privileged access review | Task | MUST | P7-05 | — | 2 | 55–57 | 08 Nov → 26 Nov 2027 | 75% Medium |
+| [MDV-P7-013](MDV-P7-013.md) | To do | R7 hospital pilot, clinical sign-off and release | Gate | MUST | P7-04 | — | 2 | 58–60 | 29 Nov → 17 Dec 2027 | 50% Low |
 
 ## Exit criteria (release gate)
 

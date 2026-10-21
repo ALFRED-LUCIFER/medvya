@@ -10,6 +10,8 @@
 
 **Tickets:** 29 · **Estimate:** 49.5 dev-days vs **15 working days** in the window (OVER by 34.5 days: needs scope trade-off or overlap) · **Average confidence:** 86%
 
+**Status:** To do 9 · Partly done 5 · Blocked 6 · Done 9
+
 ## Epics
 
 | Epic | Title | Requirements | Goal |
@@ -22,37 +24,37 @@
 
 ## Tickets
 
-| Key | Title | Type | Prio | PRD | Screens | Est | Weeks | Dates | Confidence |
-|---|---|---|---|---|---|---|---|---|---|
-| [MDV-P0-001](MDV-P0-001.md) | Create the Medvya monorepo skeleton (Medvya.sln, web workspaces, packages) | Task | MUST | P0-01 | — | 1 | 1–1 | 26 Oct → 30 Oct 2026 | 92% High |
-| [MDV-P0-002](MDV-P0-002.md) | Record and accept ADR-001 (stack) and supporting ADRs 003–006 | Chore | MUST | P0-08 | — | 0.5 | 1–1 | 26 Oct → 30 Oct 2026 | 90% High |
-| [MDV-P0-003](MDV-P0-003.md) | Decide launch market (ADR-002) and confirm Azure subscription and region | Chore | MUST | P0-08 | — | 0.5 | 1–1 | 26 Oct → 30 Oct 2026 | 70% Medium |
-| [MDV-P0-004](MDV-P0-004.md) | GitHub repository protections and PR pipeline (build, analyzers, tests, CodeQL, dependency and secret scanning) | Task | MUST | P0-01 | — | 1.5 | 1–1 | 26 Oct → 30 Oct 2026 | 90% High |
-| [MDV-P0-005](MDV-P0-005.md) | Local development environment with Docker Compose (SQL Server, Azurite, mail and SMS sinks) | Task | MUST | P0-01 | — | 1 | 1–1 | 26 Oct → 30 Oct 2026 | 90% High |
-| [MDV-P0-006](MDV-P0-006.md) | Azure environments as code (Bicep): App Service, Azure SQL private endpoint, Blob, Key Vault, App Insights, Defender, budgets | Task | MUST | P0-02 | — | 3 | 1–2 | 26 Oct → 06 Nov 2026 | 80% Medium |
-| [MDV-P0-016](MDV-P0-016.md) | Data classification register and ERD → Azure SQL type mapping | Chore | MUST | P0-10, P0-08 | — | 1.5 | 1–2 | 26 Oct → 06 Nov 2026 | 85% High |
-| [MDV-P0-020](MDV-P0-020.md) | Medvya design system in code: shadcn/ui + Tailwind tokens and clinical status primitives (packages/ui) | Story | MUST | P0-07 | — | 3 | 1–2 | 26 Oct → 06 Nov 2026 | 92% High |
-| [MDV-P0-024](MDV-P0-024.md) | Threat model, data map, DPIA draft (DPDP) and record-retention map per country | Chore | MUST | P0-08 | — | 2.5 | 1–3 | 26 Oct → 13 Nov 2026 | 75% Medium |
-| [MDV-P0-025](MDV-P0-025.md) | Secure development policies: SECURITY.md, code review rules, synthetic-only data, JIT access, offline break-glass account | Chore | MUST | P0-10 | — | 1 | 1–1 | 26 Oct → 30 Oct 2026 | 90% High |
-| [MDV-P0-007](MDV-P0-007.md) | GitHub OIDC federation to Azure and tagged deploy to staging | Task | MUST | P0-01, P0-02 | — | 1.5 | 2–2 | 02 Nov → 06 Nov 2026 | 88% High |
-| [MDV-P0-008](MDV-P0-008.md) | Database security baseline part 1: Entra-only auth, managed identity, least-privilege users per module and for migrations | Task | MUST | P0-09 | — | 1.5 | 2–2 | 02 Nov → 06 Nov 2026 | 85% High |
-| [MDV-P0-009](MDV-P0-009.md) | Database security baseline part 2: Always Encrypted (national/insurance IDs), dynamic data masking, TDE with customer-managed key | Task | MUST | P0-09 | — | 2.5 | 2–3 | 02 Nov → 13 Nov 2026 | 72% Medium |
-| [MDV-P0-010](MDV-P0-010.md) | Tenancy model with EF Core global filters and Azure SQL row-level security (cross-tenant test in CI) | Story | MUST | P0-04 | — | 3 | 2–2 | 02 Nov → 06 Nov 2026 | 88% High |
-| [MDV-P0-011](MDV-P0-011.md) | Staff sign-in through the BFF with Entra External ID: MFA (TOTP), passkeys and recovery | Story | MUST | P0-03 | F-03 | 3 | 2–2 | 02 Nov → 06 Nov 2026 | 78% Medium |
-| [MDV-P0-012](MDV-P0-012.md) | Session control: facility picker, idle timeout on shared clinic PCs, device/session revocation | Story | MUST | P0-03 | F-03 | 2 | 2–3 | 02 Nov → 13 Nov 2026 | 85% High |
-| [MDV-P0-014](MDV-P0-014.md) | Server-side authorisation from the Foundations role-permission matrix | Story | MUST | P0-05 | — | 3 | 2–3 | 02 Nov → 13 Nov 2026 | 87% High |
-| [MDV-P0-017](MDV-P0-017.md) | Append-only audit log on Azure SQL ledger tables with audit middleware | Story | MUST | P0-06 | — | 2.5 | 2–3 | 02 Nov → 13 Nov 2026 | 85% High |
-| [MDV-P0-018](MDV-P0-018.md) | Observability with OpenTelemetry and PHI redaction (structured logs, telemetry processor) | Task | MUST | P0-10 | — | 1.5 | 2–2 | 02 Nov → 06 Nov 2026 | 88% High |
-| [MDV-P0-021](MDV-P0-021.md) | Internationalisation pipeline: English, Hindi, Arabic with full RTL | Task | MUST | P0-07 | — | 1.5 | 2–2 | 02 Nov → 06 Nov 2026 | 88% High |
-| [MDV-P0-026](MDV-P0-026.md) | OWASP ASVS L2 baseline: security headers, CSP, HSTS, rate limiting, input validation | Task | MUST | P0-10, P0-03 | — | 1.5 | 2–2 | 02 Nov → 06 Nov 2026 | 88% High |
-| [MDV-P0-013](MDV-P0-013.md) | Invite a colleague and accept the invitation (membership invited → active) | Story | MUST | P0-03 | F-06 | 2 | 3–3 | 09 Nov → 13 Nov 2026 | 88% High |
-| [MDV-P0-015](MDV-P0-015.md) | System state screens: session expired, 403 no facility access, 404, offline | Story | MUST | P0-05 | F-05 | 1 | 3–3 | 09 Nov → 13 Nov 2026 | 92% High |
-| [MDV-P0-019](MDV-P0-019.md) | Backups, point-in-time restore and a timed restore drill | Task | MUST | P0-02 | — | 1 | 3–3 | 09 Nov → 13 Nov 2026 | 90% High |
-| [MDV-P0-022](MDV-P0-022.md) | App shell with role-based navigation (desktop sidebar, tablet rail, mobile tabs) | Story | MUST | P0-05, P0-07 | — | 2 | 3–3 | 09 Nov → 13 Nov 2026 | 85% High |
-| [MDV-P0-023](MDV-P0-023.md) | Six end-to-end journeys as Playwright specs and clinical advisor sign-off (X-03) | Gate | MUST | P0-07 | X-03 | 2 | 3–3 | 09 Nov → 13 Nov 2026 | 80% Medium |
-| [MDV-P0-027](MDV-P0-027.md) | Synthetic data generator and seeded staging tenant | Task | MUST | P0-10 | — | 1 | 3–3 | 09 Nov → 13 Nov 2026 | 90% High |
-| [MDV-P0-028](MDV-P0-028.md) | Per-tenant feature flags with owner and kill switch | Task | MUST | P0-04 | — | 1 | 3–3 | 09 Nov → 13 Nov 2026 | 85% High |
-| [MDV-P0-029](MDV-P0-029.md) | R0 exit gate review and release notes (internal platform) | Gate | MUST | P0-01 | — | 0.5 | 3–3 | 09 Nov → 13 Nov 2026 | 85% High |
+| Key | Status | Title | Type | Prio | PRD | Screens | Est | Weeks | Dates | Confidence |
+|---|---|---|---|---|---|---|---|---|---|---|
+| [MDV-P0-001](MDV-P0-001.md) | Done | Create the Medvya monorepo skeleton (Medvya.sln, web workspaces, packages) | Task | MUST | P0-01 | — | 1 | 1–1 | 26 Oct → 30 Oct 2026 | 92% High |
+| [MDV-P0-002](MDV-P0-002.md) | Partly done | Record and accept ADR-001 (stack) and supporting ADRs 003–006 | Chore | MUST | P0-08 | — | 0.5 | 1–1 | 26 Oct → 30 Oct 2026 | 90% High |
+| [MDV-P0-003](MDV-P0-003.md) | Blocked | Decide launch market (ADR-002) and confirm Azure subscription and region | Chore | MUST | P0-08 | — | 0.5 | 1–1 | 26 Oct → 30 Oct 2026 | 70% Medium |
+| [MDV-P0-004](MDV-P0-004.md) | Done | GitHub repository protections and PR pipeline (build, analyzers, tests, CodeQL, dependency and secret scanning) | Task | MUST | P0-01 | — | 1.5 | 1–1 | 26 Oct → 30 Oct 2026 | 90% High |
+| [MDV-P0-005](MDV-P0-005.md) | Partly done | Local development environment with Docker Compose (SQL Server, Azurite, mail and SMS sinks) | Task | MUST | P0-01 | — | 1 | 1–1 | 26 Oct → 30 Oct 2026 | 90% High |
+| [MDV-P0-006](MDV-P0-006.md) | Blocked | Azure environments as code (Bicep): App Service, Azure SQL private endpoint, Blob, Key Vault, App Insights, Defender, budgets | Task | MUST | P0-02 | — | 3 | 1–2 | 26 Oct → 06 Nov 2026 | 80% Medium |
+| [MDV-P0-016](MDV-P0-016.md) | Done | Data classification register and ERD → Azure SQL type mapping | Chore | MUST | P0-10, P0-08 | — | 1.5 | 1–2 | 26 Oct → 06 Nov 2026 | 85% High |
+| [MDV-P0-020](MDV-P0-020.md) | Done | Medvya design system in code: shadcn/ui + Tailwind tokens and clinical status primitives (packages/ui) | Story | MUST | P0-07 | — | 3 | 1–2 | 26 Oct → 06 Nov 2026 | 92% High |
+| [MDV-P0-024](MDV-P0-024.md) | Done | Threat model, data map, DPIA draft (DPDP) and record-retention map per country | Chore | MUST | P0-08 | — | 2.5 | 1–3 | 26 Oct → 13 Nov 2026 | 75% Medium |
+| [MDV-P0-025](MDV-P0-025.md) | Done | Secure development policies: SECURITY.md, code review rules, synthetic-only data, JIT access, offline break-glass account | Chore | MUST | P0-10 | — | 1 | 1–1 | 26 Oct → 30 Oct 2026 | 90% High |
+| [MDV-P0-007](MDV-P0-007.md) | Blocked | GitHub OIDC federation to Azure and tagged deploy to staging | Task | MUST | P0-01, P0-02 | — | 1.5 | 2–2 | 02 Nov → 06 Nov 2026 | 88% High |
+| [MDV-P0-008](MDV-P0-008.md) | To do | Database security baseline part 1: Entra-only auth, managed identity, least-privilege users per module and for migrations | Task | MUST | P0-09 | — | 1.5 | 2–2 | 02 Nov → 06 Nov 2026 | 85% High |
+| [MDV-P0-009](MDV-P0-009.md) | To do | Database security baseline part 2: Always Encrypted (national/insurance IDs), dynamic data masking, TDE with customer-managed key | Task | MUST | P0-09 | — | 2.5 | 2–3 | 02 Nov → 13 Nov 2026 | 72% Medium |
+| [MDV-P0-010](MDV-P0-010.md) | Done | Tenancy model with EF Core global filters and Azure SQL row-level security (cross-tenant test in CI) | Story | MUST | P0-04 | — | 3 | 2–2 | 02 Nov → 06 Nov 2026 | 88% High |
+| [MDV-P0-011](MDV-P0-011.md) | Blocked | Staff sign-in through the BFF with Entra External ID: MFA (TOTP), passkeys and recovery | Story | MUST | P0-03 | F-03 | 3 | 2–2 | 02 Nov → 06 Nov 2026 | 78% Medium |
+| [MDV-P0-012](MDV-P0-012.md) | Blocked | Session control: facility picker, idle timeout on shared clinic PCs, device/session revocation | Story | MUST | P0-03 | F-03 | 2 | 2–3 | 02 Nov → 13 Nov 2026 | 85% High |
+| [MDV-P0-014](MDV-P0-014.md) | Partly done | Server-side authorisation from the Foundations role-permission matrix | Story | MUST | P0-05 | — | 3 | 2–3 | 02 Nov → 13 Nov 2026 | 87% High |
+| [MDV-P0-017](MDV-P0-017.md) | To do | Append-only audit log on Azure SQL ledger tables with audit middleware | Story | MUST | P0-06 | — | 2.5 | 2–3 | 02 Nov → 13 Nov 2026 | 85% High |
+| [MDV-P0-018](MDV-P0-018.md) | Partly done | Observability with OpenTelemetry and PHI redaction (structured logs, telemetry processor) | Task | MUST | P0-10 | — | 1.5 | 2–2 | 02 Nov → 06 Nov 2026 | 88% High |
+| [MDV-P0-021](MDV-P0-021.md) | Done | Internationalisation pipeline: English, Hindi, Arabic with full RTL | Task | MUST | P0-07 | — | 1.5 | 2–2 | 02 Nov → 06 Nov 2026 | 88% High |
+| [MDV-P0-026](MDV-P0-026.md) | Done | OWASP ASVS L2 baseline: security headers, CSP, HSTS, rate limiting, input validation | Task | MUST | P0-10, P0-03 | — | 1.5 | 2–2 | 02 Nov → 06 Nov 2026 | 88% High |
+| [MDV-P0-013](MDV-P0-013.md) | Blocked | Invite a colleague and accept the invitation (membership invited → active) | Story | MUST | P0-03 | F-06 | 2 | 3–3 | 09 Nov → 13 Nov 2026 | 88% High |
+| [MDV-P0-015](MDV-P0-015.md) | Partly done | System state screens: session expired, 403 no facility access, 404, offline | Story | MUST | P0-05 | F-05 | 1 | 3–3 | 09 Nov → 13 Nov 2026 | 92% High |
+| [MDV-P0-019](MDV-P0-019.md) | To do | Backups, point-in-time restore and a timed restore drill | Task | MUST | P0-02 | — | 1 | 3–3 | 09 Nov → 13 Nov 2026 | 90% High |
+| [MDV-P0-022](MDV-P0-022.md) | To do | App shell with role-based navigation (desktop sidebar, tablet rail, mobile tabs) | Story | MUST | P0-05, P0-07 | — | 2 | 3–3 | 09 Nov → 13 Nov 2026 | 85% High |
+| [MDV-P0-023](MDV-P0-023.md) | To do | Six end-to-end journeys as Playwright specs and clinical advisor sign-off (X-03) | Gate | MUST | P0-07 | X-03 | 2 | 3–3 | 09 Nov → 13 Nov 2026 | 80% Medium |
+| [MDV-P0-027](MDV-P0-027.md) | To do | Synthetic data generator and seeded staging tenant | Task | MUST | P0-10 | — | 1 | 3–3 | 09 Nov → 13 Nov 2026 | 90% High |
+| [MDV-P0-028](MDV-P0-028.md) | To do | Per-tenant feature flags with owner and kill switch | Task | MUST | P0-04 | — | 1 | 3–3 | 09 Nov → 13 Nov 2026 | 85% High |
+| [MDV-P0-029](MDV-P0-029.md) | To do | R0 exit gate review and release notes (internal platform) | Gate | MUST | P0-01 | — | 0.5 | 3–3 | 09 Nov → 13 Nov 2026 | 85% High |
 
 ## Exit criteria (release gate)
 

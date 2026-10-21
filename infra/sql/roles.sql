@@ -26,6 +26,7 @@ IF SCHEMA_ID(N'security') IS NULL EXEC(N'CREATE SCHEMA security AUTHORIZATION db
 IF SCHEMA_ID(N'audit') IS NULL EXEC(N'CREATE SCHEMA audit AUTHORIZATION dbo');
 IF SCHEMA_ID(N'identity') IS NULL EXEC(N'CREATE SCHEMA [identity] AUTHORIZATION dbo');
 IF SCHEMA_ID(N'patients') IS NULL EXEC(N'CREATE SCHEMA patients AUTHORIZATION dbo');
+IF SCHEMA_ID(N'billing') IS NULL EXEC(N'CREATE SCHEMA billing AUTHORIZATION dbo');
 IF SCHEMA_ID(N'leads') IS NULL EXEC(N'CREATE SCHEMA leads AUTHORIZATION dbo');
 
 IF DATABASE_PRINCIPAL_ID(N'medvya_migrator') IS NULL CREATE ROLE medvya_migrator AUTHORIZATION dbo;
@@ -35,6 +36,7 @@ IF DATABASE_PRINCIPAL_ID(N'medvya_tenancy') IS NULL CREATE ROLE medvya_tenancy A
 IF DATABASE_PRINCIPAL_ID(N'medvya_audit') IS NULL CREATE ROLE medvya_audit AUTHORIZATION dbo;
 IF DATABASE_PRINCIPAL_ID(N'medvya_identity') IS NULL CREATE ROLE medvya_identity AUTHORIZATION dbo;
 IF DATABASE_PRINCIPAL_ID(N'medvya_patients') IS NULL CREATE ROLE medvya_patients AUTHORIZATION dbo;
+IF DATABASE_PRINCIPAL_ID(N'medvya_billing') IS NULL CREATE ROLE medvya_billing AUTHORIZATION dbo;
 IF DATABASE_PRINCIPAL_ID(N'medvya_leads') IS NULL CREATE ROLE medvya_leads AUTHORIZATION dbo;
 
 -- Migration principal: schema objects, security policies and ledger tables. No rights on module data.
@@ -62,6 +64,8 @@ GRANT SELECT, INSERT, UPDATE ON SCHEMA::[identity] TO medvya_identity;
 GRANT SELECT, INSERT, UPDATE, DELETE, UNMASK ON SCHEMA::patients TO medvya_patients;
 GRANT VIEW ANY COLUMN MASTER KEY DEFINITION, VIEW ANY COLUMN ENCRYPTION KEY DEFINITION TO medvya_patients;
 
+-- Billing module (MDV-P4-001): no DELETE, because deleting a DOC_SEQUENCE row would restart a legal number series.
+GRANT SELECT, INSERT, UPDATE ON SCHEMA::billing TO medvya_billing;
 -- Leads module (MDV-P1-003): demo requests from the public site. Add and read only; corrections and deletion are an administrator's job.
 GRANT SELECT, INSERT ON SCHEMA::leads TO medvya_leads;
 
@@ -69,6 +73,7 @@ ALTER ROLE medvya_tenancy ADD MEMBER medvya_app;
 ALTER ROLE medvya_audit ADD MEMBER medvya_app;
 ALTER ROLE medvya_identity ADD MEMBER medvya_app;
 ALTER ROLE medvya_patients ADD MEMBER medvya_app;
+ALTER ROLE medvya_billing ADD MEMBER medvya_app;
 ALTER ROLE medvya_leads ADD MEMBER medvya_app;
 
 -- Reporting and support read masked patient demographics and ciphertext identifiers (no UNMASK, no column master key).

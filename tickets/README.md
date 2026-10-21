@@ -15,7 +15,7 @@ Conventions, Definition of Ready/Done and the confidence scale: [docs/05-deliver
 | P1 Front desk and appointments MVP | [P1-front-desk](P1-front-desk/README.md) | 16 Nov 2026 → 01 Jan 2027 | 46 | 2 | 4 | 86.5 | 35 | 81% |
 | P2 Doctor workspace and EMR core | [P2-doctor-workspace](P2-doctor-workspace/README.md) | 21 Dec 2026 → 05 Feb 2027 | 28 | 0 | 0 | 60 | 35 | 82% |
 | P3 AI-drafted notes under clinician review | [P3-ai-scribe](P3-ai-scribe/README.md) | 18 Jan 2027 → 12 Mar 2027 | 27 | 0 | 0 | 57.5 | 40 | 80% |
-| P4 Billing, care follow-up and patient portal | [P4-clinic-operations](P4-clinic-operations/README.md) | 15 Feb 2027 → 23 Apr 2027 | 33 | 0 | 0 | 72.5 | 50 | 79% |
+| P4 Billing, care follow-up and patient portal | [P4-clinic-operations](P4-clinic-operations/README.md) | 15 Feb 2027 → 23 Apr 2027 | 33 | 1 | 0 | 72.5 | 50 | 79% |
 | P5 Commercial launch v1.0 | [P5-commercial-launch](P5-commercial-launch/README.md) | 05 Apr 2027 → 04 Jun 2027 | 30 | 0 | 0 | 88 | 45 | 64% |
 | P6 Wearable capture and advanced AI | [P6-clip-advanced-ai](P6-clip-advanced-ai/README.md) | 07 Jun 2027 → 13 Aug 2027 | 10 | 0 | 0 | 32 | 50 | 59% |
 | P7 Hospital enterprise and integrations | [P7-hospital-enterprise](P7-hospital-enterprise/README.md) | 28 Jun 2027 → 17 Dec 2027 | 13 | 0 | 0 | 48 | 125 | 66% |

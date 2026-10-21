@@ -3,12 +3,12 @@ using System.Data.Common;
 using Medvya.BuildingBlocks.Domain;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 
-namespace Medvya.Tenancy.Infrastructure.Persistence;
+namespace Medvya.BuildingBlocks.Infrastructure;
 
 /// <summary>
 /// Sets SESSION_CONTEXT('tenant_id') read-only on every connection open, so SQL row-level security filters every query.
 /// Pooled connections are reset (sp_reset_connection) on reuse, which clears it, so a pooled connection never carries another tenant.
-/// shortcut: lives in Tenancy until a second module has a DbContext; then move to BuildingBlocks.Infrastructure.
+/// Shared by every module DbContext (Tenancy, Audit, …).
 /// </summary>
 public sealed class TenantSessionInterceptor(ICurrentTenant tenant) : DbConnectionInterceptor
 {

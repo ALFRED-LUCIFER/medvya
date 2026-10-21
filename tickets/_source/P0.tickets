@@ -431,6 +431,10 @@ ac:
 - The data map (what data, where stored, which country, which processors) is published as part of the P0 delivery package.
 
 === MDV-P0-017
+status: Partly done
+progress:
+- Merged [PR #31](https://github.com/ALFRED-LUCIFER/medvya/pull/31): audit.AuditEvents is an append-only SQL ledger table with tenant RLS; `.Audited()` endpoint filter writes one event per request and fails closed; ledger digest verification test; mutation-checked
+- Left: denied-attempt auditing (needs sign-in, MDV-P0-011); daily digest export to immutable Blob (needs Azure, MDV-P0-006); endpoint enumeration test once patient endpoints exist
 title: Append-only audit log on Azure SQL ledger tables with audit middleware
 type: Story
 epic: MDV-P0-E03

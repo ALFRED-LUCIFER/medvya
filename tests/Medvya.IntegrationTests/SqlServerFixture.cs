@@ -1,5 +1,8 @@
+using Medvya.Audit.Infrastructure.Persistence;
 using Medvya.BuildingBlocks.Domain;
+using Medvya.BuildingBlocks.Infrastructure;
 using Medvya.Tenancy.Infrastructure.Persistence;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Testcontainers.MsSql;
 
@@ -13,7 +16,8 @@ public sealed class SqlServerFixture : IAsyncLifetime
         .WithCreateParameterModifier(p => p.Platform = "linux/amd64")
         .Build();
 
-    public string ConnectionString => container.GetConnectionString();
+    // A real application database: the container default (master) is a system database, where ledger tables are refused.
+    public string ConnectionString => new SqlConnectionStringBuilder(container.GetConnectionString()) { InitialCatalog = "medvya" }.ConnectionString;
 
     public sealed class FixedTenant(Guid? id) : ICurrentTenant { public Guid? TenantId => id; }
 
@@ -26,11 +30,22 @@ public sealed class SqlServerFixture : IAsyncLifetime
             .Options, tenant);
     }
 
+    public AuditDbContext Audit(Guid? tenantId)
+    {
+        var tenant = new FixedTenant(tenantId);
+        return new AuditDbContext(new DbContextOptionsBuilder<AuditDbContext>()
+            .UseSqlServer(ConnectionString)
+            .AddInterceptors(new TenantSessionInterceptor(tenant))
+            .Options, tenant);
+    }
+
     public async Task InitializeAsync()
     {
         await container.StartAsync();
         await using var db = Context(null);
         await db.Database.MigrateAsync();
+        await using var audit = Audit(null);
+        await audit.Database.MigrateAsync();
     }
 
     public Task DisposeAsync() => container.DisposeAsync().AsTask();

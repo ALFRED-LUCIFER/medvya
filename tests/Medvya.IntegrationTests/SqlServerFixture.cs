@@ -1,4 +1,5 @@
 using Medvya.Audit.Infrastructure.Persistence;
+using Medvya.Billing.Infrastructure.Persistence;
 using System.Security.Cryptography;
 using Medvya.BuildingBlocks.Domain;
 using Medvya.BuildingBlocks.Infrastructure;
@@ -66,12 +67,21 @@ public sealed class SqlServerFixture : IAsyncLifetime
         return new PatientsDbContext(new DbContextOptionsBuilder<PatientsDbContext>().UseSqlServer(conn, contextOwnsConnection: true).Options, new FixedTenant(tenantId));
     }
 
+    public BillingDbContext Billing(Guid? tenantId)
+    {
+        var tenant = new FixedTenant(tenantId);
+        return new BillingDbContext(new DbContextOptionsBuilder<BillingDbContext>()
+            .UseSqlServer(ConnectionString)
+            .AddInterceptors(new TenantSessionInterceptor(tenant))
+            .Options, tenant);
+    }
+
     /// <summary>Database users without logins (no passwords), one per role in infra/sql/roles.sql; tests impersonate them.</summary>
     public static readonly IReadOnlyDictionary<string, string> RoleUsers = new Dictionary<string, string>
     {
         ["migrator_user"] = "medvya_migrator", ["app_user"] = "medvya_app", ["reporting_user"] = "medvya_reporting",
         ["tenancy_user"] = "medvya_tenancy", ["audit_user"] = "medvya_audit", ["identity_user"] = "medvya_identity",
-        ["patients_user"] = "medvya_patients",
+        ["patients_user"] = "medvya_patients", ["billing_user"] = "medvya_billing",
     };
 
     /// <summary>Opens a connection running as <paramref name="user"/> (EXECUTE AS USER), optionally in a tenant. Unpooled, so the impersonation dies with it.</summary>
@@ -128,6 +138,8 @@ public sealed class SqlServerFixture : IAsyncLifetime
         await patients.Database.MigrateAsync();
         await using var identity = new IdentityDbContext(new DbContextOptionsBuilder<IdentityDbContext>().UseSqlServer(migrator).Options);
         await identity.Database.MigrateAsync();
+        await using var billing = new BillingDbContext(new DbContextOptionsBuilder<BillingDbContext>().UseSqlServer(migrator).Options, new FixedTenant(null));
+        await billing.Database.MigrateAsync();
     }
 
     public IdentityDbContext Identity() => new(new DbContextOptionsBuilder<IdentityDbContext>().UseSqlServer(ConnectionString).Options);

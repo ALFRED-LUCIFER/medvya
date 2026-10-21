@@ -87,6 +87,12 @@ Every stored field has one class. In code, each domain property carries `[Classi
 | CLINICAL_DOCUMENT.title, extracted values | SensitiveHealth | Audit |
 | FORMULARY_ITEM.*, ORDER_SET.* | Internal | — |
 
+### Billing (P4, started in MDV-P4-001)
+
+| Entity.field | Class | Control |
+|---|---|---|
+| DOC_SEQUENCE.* (tenant, country, doc_type, fin_year, prefix, next_no) | Internal | Tenant RLS. No `DELETE` for the app (`medvya_billing`) |
+
 ## Protected column sets
 
 **Always Encrypted (MDV-P0-009).** Keep this set small (PRD risk: Always Encrypted limits queries):

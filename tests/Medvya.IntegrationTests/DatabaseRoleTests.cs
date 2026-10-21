@@ -35,6 +35,8 @@ public class DatabaseRoleTests(SqlServerFixture sql) : IClassFixture<SqlServerFi
     [InlineData("ALTER SECURITY POLICY security.patients_tenant_isolation WITH (STATE = OFF)")]
     [InlineData("ALTER TABLE patients.Patients ALTER COLUMN Mobile DROP MASKED")]
     [InlineData("DROP TABLE patients.Identifiers")]
+    [InlineData("ALTER SECURITY POLICY security.billing_tenant_isolation WITH (STATE = OFF)")]
+    [InlineData("DROP TABLE billing.DocSequences")]
     [InlineData("ALTER SECURITY POLICY security.scheduling_tenant_isolation WITH (STATE = OFF)")]
     [InlineData("DROP TABLE scheduling.Templates")]
     public Task AppCannotChangeTheSchema(string ddl) => Denied("app_user", ddl);
@@ -64,12 +66,20 @@ public class DatabaseRoleTests(SqlServerFixture sql) : IClassFixture<SqlServerFi
         await Denied("patients_user", "SELECT TOP 1 Id FROM tenancy.Tenants");
         await Denied("patients_user", "SELECT TOP 1 Id FROM audit.AuditEvents");
         await Denied("tenancy_user", "SELECT TOP 1 Id FROM patients.Patients");
+        await Run("billing_user", "SELECT TOP 1 Id FROM billing.DocSequences");
+        await Denied("billing_user", "SELECT TOP 1 Id FROM patients.Patients");
+        await Denied("billing_user", "SELECT TOP 1 Id FROM tenancy.Tenants");
+        await Denied("patients_user", "SELECT TOP 1 Id FROM billing.DocSequences");
+        await Denied("migrator_user", "SELECT TOP 1 Id FROM billing.DocSequences");
         await Run("scheduling_user", "SELECT TOP 1 Id FROM scheduling.Templates");
         await Denied("scheduling_user", "SELECT TOP 1 Id FROM tenancy.Memberships");
         await Denied("scheduling_user", "SELECT TOP 1 Id FROM patients.Patients");
         await Denied("patients_user", "SELECT TOP 1 Id FROM scheduling.Templates");
         await Denied("reporting_user", "SELECT TOP 1 Id FROM scheduling.Templates");
     }
+
+    [Fact]
+    public Task BillingRoleCannotDeleteANumberSeries() => Denied("billing_user", "DELETE FROM billing.DocSequences"); // would restart legal numbering
 
     [Fact]
     public async Task AuditRoleCanAppendButNeverChangeOrDelete()

@@ -7,6 +7,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="OpenTelemetry.Exporter.InMemory" />
+    <PackageReference Include="Testcontainers.MsSql" />
     <PackageReference Include="xunit" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
     <PackageReference Include="xunit.runner.visualstudio" />
@@ -18,6 +19,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Host.Api\Host.Api.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Tenancy\Medvya.Tenancy.Infrastructure\Medvya.Tenancy.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

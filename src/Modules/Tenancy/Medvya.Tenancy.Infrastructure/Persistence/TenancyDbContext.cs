@@ -13,6 +13,7 @@ public sealed class TenancyDbContext(DbContextOptions<TenancyDbContext> options,
     public DbSet<Tenant> Tenants => Set<Tenant>();
     public DbSet<Facility> Facilities => Set<Facility>();
     public DbSet<Membership> Memberships => Set<Membership>();
+    public DbSet<FeatureFlag> FeatureFlags => Set<FeatureFlag>();
 
     Guid? CurrentTenantId => tenant.TenantId;
 
@@ -39,6 +40,15 @@ public sealed class TenancyDbContext(DbContextOptions<TenancyDbContext> options,
             e.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
             e.HasOne<Facility>().WithMany().HasForeignKey(x => x.FacilityId).OnDelete(DeleteBehavior.Restrict);
             e.HasIndex(x => new { x.TenantId, x.UserId, x.FacilityId }).IsUnique();
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<FeatureFlag>(e =>
+        {
+            e.Property(x => x.Key).HasMaxLength(100);
+            e.Property(x => x.Owner).HasMaxLength(100);
+            e.Property(x => x.Description).HasMaxLength(500);
+            e.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
+            e.HasIndex(x => new { x.TenantId, x.Key }).IsUnique();
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
     }

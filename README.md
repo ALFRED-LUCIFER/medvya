@@ -17,6 +17,16 @@ pnpm dev                                      # clinic app on http://localhost:5
 dotnet test Medvya.sln                        # includes tenant-isolation tests on a throwaway SQL Server (Testcontainers)
 ```
 
+One command starts the services, applies every module's EF Core migrations (Tenancy, Audit) and seeds the synthetic cast (MDV-P0-027): the India tenant "Iyer Family Clinic (synthetic)", facility Adyar, with one membership per role. Add `--uae` for "Al Noor Family Clinic (synthetic)". Re-running is safe (fixed ids, existing rows are kept). The seeder refuses any environment other than Development, Staging or Test.
+
+```bash
+pnpm dev:db                                   # or: pnpm dev:db --uae
+ConnectionStrings__Medvya="Server=localhost,1433;Database=medvya;User Id=sa;Password=Local_dev_only_1;TrustServerCertificate=True" \
+  dotnet run --project src/Host.Api           # API against the seeded database
+```
+
+Seeded users cannot sign in yet: sign-in arrives with MDV-P0-011, and patient records with the patient registration ticket. The cast is in [tools/synthetic-data-generator/SyntheticSeed.cs](tools/synthetic-data-generator/SyntheticSeed.cs).
+
 With Colima, point Testcontainers at its socket first:
 
 ```bash
@@ -30,7 +40,7 @@ export DOCKER_HOST="unix://$HOME/.colima/default/docker.sock" TESTCONTAINERS_DOC
 | [src/](src) | .NET 10 modular monolith: `Host.Api` and modules (`Identity`, `Tenancy`, `Audit`), each split into Domain / Application / Infrastructure / Api |
 | [web/](web) · [packages/](packages) | React 19 + Vite clinic app; `@medvya/ui` (shadcn/ui + Tailwind 4 design system, ADR-010) |
 | [design/](design/README.md) | Imported Claude Design source files (read-only) |
-| [tools/](tools) | `prd-extract` (design data → docs), `tickets/build.py` (ticket sources → files + coverage check) |
+| [tools/](tools) | `prd-extract` (design data → docs), `tickets/build.py` (ticket sources → files + coverage check), `synthetic-data-generator` (migrate + seed, `pnpm dev:db`), `check-synthetic` |
 
 Regenerate after editing sources:
 

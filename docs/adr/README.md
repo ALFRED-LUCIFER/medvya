@@ -11,4 +11,4 @@ Format: Context · Decision · Consequences · Status. One decision per file. Ne
 | [ADR-005](ADR-005-tenant-isolation-rls.md) | Tenant isolation: EF query filters + Azure SQL RLS | Proposed | P0 |
 | [ADR-006](ADR-006-immutable-signed-records.md) | Immutable signed records, ledger tables, addenda | Proposed | P0/P2 |
 
-The Software Architecture blueprint also lists ADR topics for speech providers, consent ledger and audio retention. They are ticketed in P3 (MDV-P3-0xx).
+The Software Architecture blueprint also lists ADR topics for speech providers, consent ledger and audio retention. They are ticketed in P3: speech and LLM providers as ADR-007 (MDV-P3-001), consent templates and receipts (MDV-P3-002), audio retention (MDV-P3-019).

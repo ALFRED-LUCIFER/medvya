@@ -7,7 +7,7 @@ Applies to everyone who writes or reviews Medvya code, including AI coding assis
 - Real patient data never enters the repository, CI logs, test fixtures, screenshots, issue trackers or AI evaluation sets.
 - Use the synthetic cast in [docs/00-overview/personas.md](../00-overview/personas.md). Mark seeded records `SYNTHETIC`.
 - National IDs in fixtures must be **invalid by construction**: Aadhaar-like numbers must fail the Verhoeff check, and Emirates-ID-like numbers must fail the Luhn check. `node tools/check-synthetic/check.mjs` enforces this on every PR and fails the build on a checksum-valid ID.
-- Production data is never copied to dev or staging. Debugging production uses audited support access (MDV-P5-08), not data exports.
+- Production data is never copied to dev or staging. Debugging production uses audited support access (MDV-P5-017), not data exports.
 
 ## 2 · Code review rules
 

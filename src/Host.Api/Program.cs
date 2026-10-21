@@ -5,6 +5,7 @@ using Host.Api.Middleware;
 using Medvya.Audit.Infrastructure;
 using Medvya.BuildingBlocks.Domain;
 using Medvya.Identity.Infrastructure;
+using Medvya.Leads.Infrastructure;
 using Medvya.Tenancy.Infrastructure;
 using Host.Api.Observability;
 using Host.Api.PublicSite;
@@ -21,13 +22,15 @@ builder.WebHost.ConfigureKestrel(k =>
 
 builder.AddStaffAuthentication();
 builder.Services.AddAuthorization();
-builder.Services.AddPublicSite();
+builder.AddPublicSite();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<RequestContext>();
 builder.Services.AddScoped<ICurrentTenant>(sp => sp.GetRequiredService<RequestContext>());
 builder.Services.AddScoped<ICurrentUser>(sp => sp.GetRequiredService<RequestContext>());
 // Without a database, audited and flag-gated endpoints cannot resolve IAuditLog / IFeatureFlags and fail closed (500).
-if (builder.Configuration.GetConnectionString("Medvya") is { } sql) builder.Services.AddAuditModule(sql).AddTenancyModule(sql).AddIdentityModule(sql);
+if (builder.Configuration.GetConnectionString("Medvya") is { } sql)
+    builder.Services.AddAuditModule(sql).AddTenancyModule(sql).AddIdentityModule(sql)
+        .AddLeadsModule(sql, builder.Configuration.GetSection("Leads:Email").Get<LeadsEmailOptions>() ?? new());
 builder.Services.AddHsts(o => { o.MaxAge = TimeSpan.FromDays(365); o.IncludeSubDomains = true; });
 
 var permitsPerMinute = builder.Configuration.GetValue("RateLimiting:PermitsPerMinute", 300);

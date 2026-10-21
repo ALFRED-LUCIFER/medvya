@@ -17,10 +17,13 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 // Every primitive in every state (MDV-P0-020). Synthetic data only.
-export default function UiGallery() {
+// Dev-only page: its sample text is exempt from react/jsx-no-literals (.oxlintrc.json).
+export default function UiGallery({ switcher }: { switcher: React.ReactNode }) {
   return (
     <Box component="main" sx={{ maxWidth: 1280, mx: 'auto', p: 3, display: 'flex', flexDirection: 'column', gap: 4 }}>
-      <Typography variant="h1">Medvya UI primitives</Typography>
+      <Stack direction="row" useFlexGap sx={{ gap: 2, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+        <Typography variant="h1">Medvya UI primitives</Typography>{switcher}
+      </Stack>
       <Section title="Patient identity banner">
         <IdentityBanner patient={{ name: 'Meera Iyer', age: 54, sex: 'F', mrn: 'DQ-10-4482', dob: '12 Mar 1972',
           allergies: [{ name: 'Penicillin', status: 'verified' }], consent: 'given', encounter: 'Encounter 04 Oct 2026 · OPD Room 3', synthetic: true }} />

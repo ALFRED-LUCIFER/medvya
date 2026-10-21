@@ -30,7 +30,8 @@ export const medvyaTheme = createTheme({
   shape: { borderRadius: 10 },
   spacing: 8,
   typography: {
-    fontFamily: 'Manrope, system-ui, sans-serif',
+    // Self-hosted fonts loaded by the app (no third-party font requests); Arabic falls through to Noto Sans Arabic.
+    fontFamily: "'Manrope Variable', Manrope, 'Noto Sans Arabic', system-ui, sans-serif",
     h1: { fontSize: 24, fontWeight: 700, lineHeight: '32px' },
     h2: { fontSize: 18, fontWeight: 700, lineHeight: '26px' },
     body1: { fontSize: 15, fontWeight: 500, lineHeight: '24px' },

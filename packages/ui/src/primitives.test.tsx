@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { render } from '@testing-library/react';
 import { ThemeProvider } from '@mui/material';
 import axe from 'axe-core';
+import { I18nProvider } from '@medvya/i18n';
 import { medvyaTheme } from './theme';
 import {
   alertLooks, ClinicalAlert, IdentityBanner, provenanceLooks, ProvenanceTag,
@@ -10,6 +11,8 @@ import {
 } from './primitives';
 
 const ui = (n: React.ReactNode) => render(<ThemeProvider theme={medvyaTheme}>{n}</ThemeProvider>);
+// Visible text without the invisible Unicode isolates used around embedded IDs.
+const visible = (e: HTMLElement) => (e.textContent ?? '').replace(/[\u2068\u2069]/g, '');
 
 function contrast(a: string, b: string) {
   const lum = (hex: string) => {
@@ -51,14 +54,21 @@ describe('clinical primitives', () => {
     const base = { name: 'Meera Iyer', age: 54, sex: 'F' as const, mrn: 'DQ-10-4482', dob: '12 Mar 1972' };
     expect(ui(<IdentityBanner patient={{ ...base, allergies: [] }} />).container.textContent).toContain('No known allergies');
     expect(ui(<IdentityBanner patient={{ ...base, allergies: null }} />).container.textContent).toContain('Allergies not recorded');
-    expect(ui(<IdentityBanner patient={{ ...base, allergies: [{ name: 'Penicillin', status: 'verified' }] }} />).container.textContent)
+    expect(visible(ui(<IdentityBanner patient={{ ...base, allergies: [{ name: 'Penicillin', status: 'verified' as const }] }} />).container))
       .toContain('Allergy: Penicillin · verified');
+  });
+
+  it('renders translated, right-to-left text in Arabic', () => {
+    const { container } = render(<I18nProvider locale="ar" country="AE"><ThemeProvider theme={medvyaTheme}>
+      <ProvenanceTag source="ai" /><RecordingPill state="recording" elapsedSeconds={252} /></ThemeProvider></I18nProvider>);
+    expect(container.textContent).toContain('مسودة ذكاء اصطناعي');
+    expect(container.textContent).toContain('04:12');
   });
 
   it('has no axe violations', async () => {
     const { container } = ui(<main>
       <IdentityBanner patient={{ name: 'Meera Iyer', age: 54, sex: 'F', mrn: 'DQ-10-4482', dob: '12 Mar 1972',
-        allergies: [{ name: 'Penicillin', status: 'verified' }], consent: 'given', encounter: 'Encounter 04 Oct 2026 · OPD Room 3', synthetic: true }} />
+        allergies: [{ name: 'Penicillin', status: 'verified' as const }], consent: 'given', encounter: 'Encounter 04 Oct 2026 · OPD Room 3', synthetic: true }} />
       <ClinicalAlert severity="critical">Potassium 6.1 mmol/L received 09:12</ClinicalAlert>
       <ClinicalAlert severity="attention">Dose not stated in conversation</ClinicalAlert>
     </main>);

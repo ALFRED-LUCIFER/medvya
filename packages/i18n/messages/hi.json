@@ -1,0 +1,50 @@
+{
+  "_review": "Machine-drafted. Needs native-speaker and clinical review before real patients (MDV-P0-021).",
+  "app.tagline": "क्लिनिक ऐप · आधार संस्करण",
+  "app.language": "भाषा",
+
+  "ai.badge": "AI ड्राफ्ट · समीक्षा नहीं हुई",
+  "note.signBlocked": "नोट पर हस्ताक्षर करें ({n} अनसुलझे)",
+  "consent.script": "आपकी अनुमति से, Medvya आज हमारी बातचीत रिकॉर्ड करेगा ताकि मैं आपके मेडिकल नोट्स लिख सकूँ। इसे केवल आपकी देखभाल टीम देख सकती है। आप कभी भी मना कर सकते हैं, आपके इलाज पर कोई असर नहीं होगा।",
+  "consent.declined": "इस विज़िट के लिए कोई रिकॉर्डिंग नहीं। आप नोट स्वयं लिख सकते हैं।",
+  "result.received": "प्राप्त · समीक्षा नहीं हुई",
+  "msg.delivered": "पहुँचा — इससे कार्य पूरा नहीं होता",
+  "pay.pending": "भुगतान प्रदाता की पुष्टि की प्रतीक्षा",
+  "ai.unavailable": "AI ड्राफ्टिंग अभी उपलब्ध नहीं है। आपकी रिकॉर्डिंग सुरक्षित है।",
+  "err.403": "आपको इस सुविधा तक पहुँच नहीं है।",
+  "push.generic": "{clinic} से नई जानकारी। देखने के लिए Medvya खोलें।",
+
+  "status.ordered": "ऑर्डर किया गया",
+  "status.collected": "सैंपल लिया गया",
+  "status.received": "रिपोर्ट प्राप्त",
+  "status.reviewed": "डॉक्टर ने समीक्षा की",
+  "status.contacted": "मरीज़ से संपर्क हुआ",
+  "status.delivered": "संदेश पहुँचा ≠ कार्य पूरा",
+  "status.completed": "फ़ॉलो-अप पूरा",
+
+  "provenance.verified": "चिकित्सक द्वारा सत्यापित",
+  "provenance.patient": "मरीज़ द्वारा बताया गया",
+  "provenance.his": "HIS से सिंक किया गया",
+  "provenance.imported": "आयातित",
+  "provenance.signed": "हस्ताक्षरित · केवल पढ़ने हेतु",
+
+  "alert.critical": "गंभीर · स्वीकार नहीं किया गया",
+  "alert.attention": "ध्यान दें · अनिश्चित",
+  "alert.info": "जानकारी",
+
+  "recording.rec": "REC {time}",
+  "recording.paused": "रुका हुआ",
+  "recording.declined": "मना किया · हाथ से नोट",
+  "recording.given": "रिकॉर्डिंग सहमति · दी गई",
+  "recording.notAsked": "रिकॉर्डिंग सहमति · अभी नहीं पूछी गई",
+
+  "banner.patient": "मरीज़ {name}",
+  "banner.mrnDob": "MRN {mrn} · जन्मतिथि {dob}",
+  "banner.allergy": "एलर्जी: {name} · {status}",
+  "banner.allergy.verified": "सत्यापित",
+  "banner.allergy.patientReported": "मरीज़ द्वारा बताया गया",
+  "banner.allergy.unknown": "अज्ञात",
+  "banner.noAllergies": "कोई ज्ञात एलर्जी नहीं",
+  "banner.allergiesNotRecorded": "एलर्जी दर्ज नहीं",
+  "banner.synthetic": "कृत्रिम डेटा"
+}

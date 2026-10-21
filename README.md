@@ -14,6 +14,13 @@ dotnet build Medvya.sln                       # API + modules, warnings are erro
 dotnet run --project src/Host.Api             # API, health check at /health
 pnpm install && pnpm build                    # web workspaces (web/*, packages/*)
 pnpm dev                                      # clinic app on http://localhost:5173
+dotnet test Medvya.sln                        # includes tenant-isolation tests on a throwaway SQL Server (Testcontainers)
+```
+
+With Colima, point Testcontainers at its socket first:
+
+```bash
+export DOCKER_HOST="unix://$HOME/.colima/default/docker.sock" TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock
 ```
 
 | Folder | Content |

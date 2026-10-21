@@ -1,0 +1,5 @@
+root = true
+
+# EF Core migrations are generated; analyzers treat them as generated code.
+[**/Migrations/*.cs]
+generated_code = true

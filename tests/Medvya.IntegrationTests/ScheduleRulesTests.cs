@@ -142,6 +142,15 @@ public class ScheduleRulesTests
     }
 
     [Fact]
+    public void TemplateTimesSitOnFiveMinuteBoundariesSoSlotUnitsLineUp()
+    {
+        var template = MorningAndEvening();
+        template.Hours = [Hours(DayOfWeek.Monday, T(9, 3), T(13))];
+        template.Breaks = [new ScheduleBreak { Weekday = DayOfWeek.Monday, Start = T(11), End = T(11, 12) }];
+        Assert.Equal([new ValidationError("hours[0]", "five_minutes"), new ValidationError("breaks[0]", "five_minutes")], Errors(template));
+    }
+
+    [Fact]
     public void TheLocalDateIsTheFacilitysNotUtcs() =>
         Assert.Equal(new DateOnly(2026, 10, 20), ScheduleRules.LocalDate(new DateTimeOffset(2026, 10, 19, 20, 0, 0, TimeSpan.Zero), Kolkata));
 }

@@ -579,6 +579,10 @@ ac:
 - The day-one R0 capability "see role-based navigation" can be demonstrated for each role in the seeded tenant.
 
 === MDV-P0-023
+status: Partly done
+progress:
+- Merged [PR #32](https://github.com/ALFRED-LUCIFER/medvya/pull/32): `tests/e2e` Playwright specs J1–J6 read from the storyboard (42 steps as `fixme`, tagged with screen and milestone); P0 shell checks pass in CI
+- Left: clinical advisor sign-off recorded in docs/02-design/journeys.md (needs the advisor); sign-in and invite steps (MDV-P0-011)
 title: Six end-to-end journeys as Playwright specs and clinical advisor sign-off (X-03)
 type: Gate
 epic: MDV-P0-E04

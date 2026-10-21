@@ -19,6 +19,7 @@ Who can do what inside a Medvya database. The roles are defined in one idempoten
 Rules:
 
 - **Row-level security applies to every role.** A principal without a tenant `SESSION_CONTEXT` sees no clinic rows, reporting included. The RLS predicate functions need no grant for the app: SQL Server evaluates security predicates without checking the querying user's rights (`AppRoleWorksThroughRowLevelSecurity`).
+- **The one cross-tenant read (facility picker, MDV-P0-012).** A connection that sets `SESSION_CONTEXT('user_id')` and **no** tenant (only `MembershipDirectory` does) sees that user's `Active` memberships and the tenants and facilities they belong to, nothing else; `FeatureFlags` and every other table stay tenant-only, and block predicates stay tenant-only, so such a connection writes nothing. Tenant-scoped connections never set `user_id`, and the predicates require the tenant to be absent, so they see exactly what they did before (`MembershipDirectoryTests`).
 - **Database settings are the administrator's.** `roles.sql` turns on snapshot isolation (needed for ledger verification), so the migrator needs no `ALTER DATABASE`, which would also let it create users and change role membership.
 - **Adding a module:** add its schema and `medvya_<module>` role to `roles.sql`, grant only `ON SCHEMA::<module>`, add the role to `medvya_app`, and add a cross-schema test to `DatabaseRoleTests`. Put RLS predicate functions in the `security` schema, so the migrator needs no `SELECT` on the module schema.
 

@@ -23,7 +23,7 @@ builder.WebHost.ConfigureKestrel(k =>
 });
 
 builder.AddStaffAuthentication();
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorizationBuilder().AddStaffAdminPolicy();
 builder.AddPublicSite();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<RequestContext>();

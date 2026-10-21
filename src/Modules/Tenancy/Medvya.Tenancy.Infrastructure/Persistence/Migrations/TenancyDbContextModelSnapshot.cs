@@ -125,6 +125,8 @@ namespace Medvya.Tenancy.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("FacilityId");
 
+                    b.HasIndex("UserId");
+
                     b.HasIndex("TenantId", "UserId", "FacilityId")
                         .IsUnique();
 
@@ -143,6 +145,11 @@ namespace Medvya.Tenancy.Infrastructure.Persistence.Migrations
                         .HasColumnType("nchar(2)")
                         .IsFixedLength();
 
+                    b.Property<int>("IdleTimeoutMinutes")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(15);
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -155,7 +162,10 @@ namespace Medvya.Tenancy.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Tenants", "tenancy");
+                    b.ToTable("Tenants", "tenancy", t =>
+                        {
+                            t.HasCheckConstraint("CK_Tenants_IdleTimeoutMinutes", "IdleTimeoutMinutes BETWEEN 1 AND 480");
+                        });
                 });
 
             modelBuilder.Entity("Medvya.Tenancy.Domain.Facility", b =>

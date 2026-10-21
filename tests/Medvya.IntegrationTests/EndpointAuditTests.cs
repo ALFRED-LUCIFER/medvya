@@ -25,6 +25,11 @@ public sealed class EndpointAuditTests(SqlServerFixture sql) : IClassFixture<Sql
     [
         "POST /bff/logout",     // ends the staff session
         "GET /v1/me/context",   // the signed-in staff user, memberships and permissions
+        // Session control (MDV-P0-012): staff sessions only; each change writes its own auth/session audit event (SessionControl).
+        "POST /v1/me/facility",
+        "GET /v1/me/sessions",
+        "DELETE /v1/me/sessions/{id:guid}",
+        "DELETE /v1/staff/{userId:guid}/sessions",
     ];
 
     readonly Guid tenant = Guid.NewGuid();

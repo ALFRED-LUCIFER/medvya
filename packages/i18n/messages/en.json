@@ -64,7 +64,6 @@
   "shell.noScreens.title": "Nothing to show yet",
   "shell.noScreens.body": "No screens are switched on for your role at this facility. Ask your practice admin if you expected access.",
   "shell.chooseFacility.title": "Choose where you are working today",
-  "shell.chooseFacility.body": "Signed in as {name}. No facility is selected yet. Choosing a facility is being added; until then, ask your practice admin if you need access.",
   "shell.roleAtFacility": "{role} · {facility}",
   "nav.group.clinical": "Clinical",
   "nav.group.practice": "Practice",
@@ -203,5 +202,10 @@
   "site.waitlist.title": "Medvya is not open in {region} yet",
   "site.waitlist.body": "Leave your name and how to reach you, and we will tell you when it opens.",
   "site.waitlist.submit": "Join the waitlist",
-  "site.waitlist.sent": "Thank you. You are on the waitlist for {region}."
+  "site.waitlist.sent": "Thank you. You are on the waitlist for {region}.",
+  "session.picker.facility": "{tenant} · {facility}",
+  "session.picker.none": "You have no active clinic membership yet. Ask your clinic admin to invite you.",
+  "session.picker.failed": "That facility could not be opened. Try again, or ask your clinic admin.",
+  "session.picker.cancel": "Keep current facility",
+  "session.switchFacility": "Change facility"
 }

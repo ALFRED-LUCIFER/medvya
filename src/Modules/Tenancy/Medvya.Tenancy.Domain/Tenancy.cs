@@ -9,6 +9,8 @@ public sealed class Tenant
     [Classification(DataClass.Public)] public required string Name { get; set; }
     [Classification(DataClass.Internal)] public required string CountryCode { get; init; }
     [Classification(DataClass.Internal)] public required string ResidencyRegion { get; init; }
+    /// <summary>Staff sessions end after this many idle minutes (MDV-P0-012). 15 suits shared clinic PCs; 1–480.</summary>
+    [Classification(DataClass.Internal)] public int IdleTimeoutMinutes { get; set; } = 15;
 }
 
 public sealed class Facility

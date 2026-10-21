@@ -1,3 +1,4 @@
+using Medvya.BuildingBlocks.Domain;
 using Medvya.BuildingBlocks.Infrastructure;
 using Medvya.Tenancy.Application;
 using Medvya.Tenancy.Infrastructure.Persistence;
@@ -16,6 +17,7 @@ public static class TenancyModule
         return services
             .AddDbContext<TenancyDbContext>((sp, o) => o.UseSqlServer(connectionString).AddInterceptors(sp.GetRequiredService<TenantSessionInterceptor>()))
             .AddScoped<IFeatureFlags, FeatureFlags>()
-            .AddScoped<IFacilityDirectory, FacilityDirectory>();
+            .AddScoped<IFacilityDirectory, FacilityDirectory>()
+            .AddScoped<IMembershipDirectory>(sp => new MembershipDirectory(connectionString, sp.GetRequiredService<ICurrentUser>()));
     }
 }

@@ -64,7 +64,6 @@
   "shell.noScreens.title": "अभी दिखाने के लिए कुछ नहीं",
   "shell.noScreens.body": "इस सुविधा में आपकी भूमिका के लिए कोई स्क्रीन चालू नहीं है। अगर आपको पहुँच की उम्मीद थी, तो अपने प्रैक्टिस एडमिन से पूछें।",
   "shell.chooseFacility.title": "चुनें कि आज आप कहाँ काम कर रहे हैं",
-  "shell.chooseFacility.body": "{name} के रूप में साइन इन। अभी कोई सुविधा चुनी नहीं गई है। सुविधा चुनने का विकल्प जोड़ा जा रहा है; तब तक पहुँच के लिए अपने प्रैक्टिस एडमिन से पूछें।",
   "shell.roleAtFacility": "{role} · {facility}",
   "nav.group.clinical": "क्लिनिकल",
   "nav.group.practice": "प्रैक्टिस",
@@ -203,5 +202,10 @@
   "site.waitlist.title": "Medvya अभी {region} में शुरू नहीं हुआ है",
   "site.waitlist.body": "अपना नाम और संपर्क का तरीका छोड़ें, शुरू होने पर हम आपको बताएँगे।",
   "site.waitlist.submit": "प्रतीक्षा सूची में शामिल हों",
-  "site.waitlist.sent": "धन्यवाद। आप {region} की प्रतीक्षा सूची में हैं।"
+  "site.waitlist.sent": "धन्यवाद। आप {region} की प्रतीक्षा सूची में हैं।",
+  "session.picker.facility": "{tenant} · {facility}",
+  "session.picker.none": "अभी आपकी कोई सक्रिय क्लिनिक सदस्यता नहीं है। अपने क्लिनिक एडमिन से आमंत्रण भेजने को कहें।",
+  "session.picker.failed": "यह सुविधा नहीं खुल सकी। फिर से कोशिश करें, या अपने क्लिनिक एडमिन से पूछें।",
+  "session.picker.cancel": "मौजूदा सुविधा पर ही रहें",
+  "session.switchFacility": "सुविधा बदलें"
 }

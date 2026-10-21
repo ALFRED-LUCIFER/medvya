@@ -11,7 +11,8 @@ public static class IdentityModule
     public static IServiceCollection AddIdentityModule(this IServiceCollection services, string connectionString) =>
         services
             .AddDbContext<IdentityDbContext>(o => o.UseSqlServer(connectionString))
-            .AddScoped<IStaffUsers, StaffUsers>();
+            .AddScoped<IStaffUsers, StaffUsers>()
+            .AddScoped<IStaffSessions, StaffSessions>();
 }
 
 sealed class StaffUsers(IdentityDbContext db) : IStaffUsers

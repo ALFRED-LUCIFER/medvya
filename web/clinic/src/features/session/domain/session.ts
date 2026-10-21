@@ -41,3 +41,12 @@ export function toSession(me: MeContext): Session {
  * Released (patient-only) and BreakGlass (an audited emergency path, never everyday navigation) are deliberately excluded.
  */
 export const seeAccess: readonly Access[] = ['Read', 'Own', 'Limited', 'Full', 'Sign', 'Config'];
+
+/** What the client knows about its session: none, one that ended under it (F-05a), or a working context. */
+export type SessionStatus = { kind: 'signedOut' } | { kind: 'expired' } | { kind: 'signedIn'; me: MeContext };
+
+/** No session now: "expired" if this tab had one (idle timeout, revoked), otherwise simply signed out. */
+export function nextSession(hadSession: boolean, me: MeContext | null): SessionStatus {
+  if (me) return { kind: 'signedIn', me };
+  return hadSession ? { kind: 'expired' } : { kind: 'signedOut' };
+}

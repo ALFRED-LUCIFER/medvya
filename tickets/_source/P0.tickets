@@ -122,7 +122,8 @@ ac:
 status: Partly done
 progress:
 - Merged [PR #3](https://github.com/ALFRED-LUCIFER/medvya/pull/3): docker-compose with SQL Server 2022 (healthcheck, runs under Rosetta on Apple silicon), Azurite, smtp4dev; `pnpm services:up`
-- Left: one-command start that migrates + seeds (needs MDV-P0-027), dev-only OIDC stub (MDV-P0-011), SMS sink (MDV-P1-033)
+- Merged [PR #34](https://github.com/ALFRED-LUCIFER/medvya/pull/34): `pnpm dev:db` starts the services, applies the Tenancy and Audit migrations and seeds the synthetic tenant
+- Left: dev-only OIDC stub (MDV-P0-011), SMS sink (MDV-P1-033)
 title: Local development environment with Docker Compose (SQL Server, Azurite, mail and SMS sinks)
 type: Task
 epic: MDV-P0-E01
@@ -198,6 +199,11 @@ ac:
 - Deploy is repeatable: re-running the same tag is idempotent.
 
 === MDV-P0-008
+status: Partly done
+progress:
+- Merged [PR #36](https://github.com/ALFRED-LUCIFER/medvya/pull/36): `infra/sql/roles.sql` (idempotent, run by the admin before migrations) defines `medvya_migrator` (DDL only), `medvya_app` (= module roles, no DDL), `medvya_tenancy` / `medvya_audit` (own schema only; audit INSERT+SELECT) and `medvya_reporting` (read-only)
+- Tested on SQL Server (Testcontainers): app cannot CREATE/ALTER/DROP, all migrations run as the migrator, module roles cannot read each other's schema, audit cannot UPDATE/DELETE, reporting cannot write; 7 mutations each caught. Documented in `docs/03-architecture/database-security.md`
+- Left: Entra-only auth, managed identities mapped to roles, passwordless `Encrypt=Strict` connection strings, deploy step running roles.sql then migrations (needs Azure, MDV-P0-006); JIT human access runbook (MDV-P0-025)
 title: Database security baseline part 1: Entra-only auth, managed identity, least-privilege users per module and for migrations
 type: Task
 epic: MDV-P0-E03
@@ -684,6 +690,10 @@ ac:
 - ASVS L2 checklist exists with each control marked Done/Planned(phase)/N/A and is reviewed in the R0 gate.
 
 === MDV-P0-027
+status: Partly done
+progress:
+- Merged [PR #34](https://github.com/ALFRED-LUCIFER/medvya/pull/34): `tools/synthetic-data-generator` migrates and seeds "Iyer Family Clinic (synthetic)" (Adyar) with one membership per role, and "Al Noor Family Clinic (synthetic)" with `--uae`; fixed ids make re-seeding idempotent; refuses anything but Development/Staging/Test; Testcontainers tests, mutation-checked
+- Left: seed users and sign-in with MFA (MDV-P0-011), patient records once the patient table exists, seeding staging on deploy and listing seed accounts in the R0 package (needs MDV-P0-006)
 title: Synthetic data generator and seeded staging tenant
 type: Task
 epic: MDV-P0-E05
@@ -706,6 +716,10 @@ ac:
 - The staging URL and seed accounts are listed in the R0 delivery package (secrets shared out of band).
 
 === MDV-P0-028
+status: Partly done
+progress:
+- Merged [PR #35](https://github.com/ALFRED-LUCIFER/medvya/pull/35): `tenancy.FeatureFlags` (key, enabled, owner, description, created/changed by and at) under the EF query filter and RLS; missing flag = off; every change audited before it is saved (fail closed); no cache, so a change applies on the next request; `.RequireFeature(key)` returns 404 and runs before `.Audited()`; 10 tests on SQL Server, mutation-checked
+- Left: authorised ops endpoint to change flags (needs MDV-P0-011), console UI (MDV-P5), flags in `/v1/me/context` and hiding nav/routes (needs MDV-P0-011 and the app shell)
 title: Per-tenant feature flags with owner and kill switch
 type: Task
 epic: MDV-P0-E01

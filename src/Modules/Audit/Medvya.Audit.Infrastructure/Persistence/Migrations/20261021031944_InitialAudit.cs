@@ -18,7 +18,11 @@ namespace Medvya.Audit.Infrastructure.Persistence.Migrations
             // cryptographic digests, so tampering is impossible through SQL and detectable at the storage level.
             // EF Core cannot express ledger tables, hence raw SQL; the column set matches the AuditEvent model.
             // Ledger verification (sp_verify_database_ledger) needs snapshot isolation; Azure SQL has it on, SQL Server does not.
-            migrationBuilder.Sql("ALTER DATABASE CURRENT SET ALLOW_SNAPSHOT_ISOLATION ON;", suppressTransaction: true);
+            // Guarded (MDV-P0-008): infra/sql/roles.sql turns it on as administrator, so the migration role needs no ALTER DATABASE.
+            migrationBuilder.Sql("""
+                IF (SELECT snapshot_isolation_state FROM sys.databases WHERE database_id = DB_ID()) = 0
+                    ALTER DATABASE CURRENT SET ALLOW_SNAPSHOT_ISOLATION ON;
+                """, suppressTransaction: true);
             migrationBuilder.Sql("""
                 CREATE TABLE audit.AuditEvents (
                     Id uniqueidentifier NOT NULL CONSTRAINT PK_AuditEvents PRIMARY KEY,

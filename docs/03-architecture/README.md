@@ -9,6 +9,7 @@
 | [frontend-architecture.md](frontend-architecture.md) | **Hard rule:** domain-driven feature folders, controller hooks, presentational components, TanStack Query / React Hook Form placement (lint-enforced) |
 | [modules.md](modules.md) | Module ownership, invariants, endpoints, domain events |
 | [data-classification.md](data-classification.md) | Classification register: every planned P0–P2 field with its class and controls; Always Encrypted and masking sets |
+| [database-security.md](database-security.md) | Database roles (migrator, app, per-module, reporting), `infra/sql/roles.sql`, mapping to Entra managed identities |
 | [data-model.md](data-model.md) | ERD for Azure SQL: conventions, Postgres → Azure SQL mapping, data classification, constraints |
 | [state-machines.md](state-machines.md) | Capture FSM, care-task lifecycle, appointment/visit, invoice, write-back, membership |
 | [api-sketch.md](api-sketch.md) | MVP endpoint sketch and API rules |

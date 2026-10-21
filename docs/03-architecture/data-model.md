@@ -11,7 +11,7 @@ Sources: Software Architecture §6–8 (written for PostgreSQL), Foundations ERD
 - **Money:** `bigint amount_minor` + `char(3) currency`. Never `decimal` for stored money.
 - **Free JSON:** `nvarchar(max)` with `ISJSON` check, or the native `json` type where available.
 - **Soft delete:** avoided for clinical data. Use status + retention jobs. Hard delete only via retention/erasure workflows (P5-12).
-- **Schemas:** one per module (`patients`, `scheduling`, `encounters`, …). One least-privilege DB user per module, plus a separate migration user (P0-09).
+- **Schemas:** one per module (`patients`, `scheduling`, `encounters`, …). One least-privilege DB role per module, an app role made of them, a separate migration role and a read-only reporting role: [database-security.md](database-security.md) (P0-09, MDV-P0-008).
 
 ## PostgreSQL → Azure SQL mapping (from PRD v2 finding)
 

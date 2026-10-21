@@ -10,6 +10,8 @@
 
 **Tickets:** 27 · **Estimate:** 57.5 dev-days vs **40 working days** in the window (OVER by 17.5 days: needs scope trade-off or overlap) · **Average confidence:** 80%
 
+**Status:** To do 27
+
 ## Epics
 
 | Epic | Title | Requirements | Goal |
@@ -23,35 +25,35 @@
 
 ## Tickets
 
-| Key | Title | Type | Prio | PRD | Screens | Est | Weeks | Dates | Confidence |
-|---|---|---|---|---|---|---|---|---|---|
-| [MDV-P3-001](MDV-P3-001.md) | Spike: Azure AI Speech and Azure OpenAI in-region capability check and ADR for speech/LLM providers | Spike | MUST | P3-07, P3-03 | — | 2 | 13–13 | 18 Jan → 22 Jan 2027 | 70% Medium |
-| [MDV-P3-002](MDV-P3-002.md) | Consent templates and recording policy administration (H-09) | Story | MUST | P3-01 | H-09 | 2 | 13–13 | 18 Jan → 22 Jan 2027 | 82% Medium |
-| [MDV-P3-003](MDV-P3-003.md) | Per-encounter recording consent with device selection; decline goes straight to manual note (A-02, E-04) | Story | MUST | P3-01 | A-02 | 3 | 13–14 | 18 Jan → 29 Jan 2027 | 86% High |
-| [MDV-P3-022](MDV-P3-022.md) | AI vendor DPA, no-training guarantee and regional processing confirmed per country | Chore | MUST | P3-07 | — | 0.5 | 13–15 | 18 Jan → 05 Feb 2027 | 75% Medium |
-| [MDV-P3-023](MDV-P3-023.md) | Legal review of recording consent in each market | Chore | MUST | P3-01 | — | 0.5 | 13–14 | 18 Jan → 29 Jan 2027 | 60% Low |
-| [MDV-P3-005](MDV-P3-005.md) | Capture on phone (mobile web) or desktop mic with timer, pause, consent indicator and warnings (A-03, X-01) | Story | MUST | P3-02 | A-03, X-01 | 3 | 14–15 | 25 Jan → 05 Feb 2027 | 80% Medium |
-| [MDV-P3-007](MDV-P3-007.md) | Azure Service Bus and .NET AI worker skeleton without database credentials (scoped job + callback) | Task | MUST | P3-07 | — | 3 | 14–15 | 25 Jan → 05 Feb 2027 | 85% High |
-| [MDV-P3-018](MDV-P3-018.md) | De-identified evaluation set and CI gate before any prompt or model change | Task | MUST | P3-07 | — | 4 | 14–19 | 25 Jan → 05 Mar 2027 | 70% Medium |
-| [MDV-P3-004](MDV-P3-004.md) | Consent revoked mid-visit stops capture and discards later audio (A-09) | Story | MUST | P3-01 | A-09 | 1.5 | 15–15 | 01 Feb → 05 Feb 2027 | 88% High |
-| [MDV-P3-006](MDV-P3-006.md) | Encrypted chunked upload with resume; upload progress, failed/partial recovery states (A-06) | Story | MUST | P3-02 | A-06 | 3 | 15–15 | 01 Feb → 05 Feb 2027 | 82% Medium |
-| [MDV-P3-008](MDV-P3-008.md) | Transcription with diarisation and language identification (in-region Azure AI Speech) | Story | MUST | P3-03 | — | 3 | 15–16 | 01 Feb → 12 Feb 2027 | 75% Medium |
-| [MDV-P3-009](MDV-P3-009.md) | Multi-speaker transcript review with speaker confirmation (A-04) | Story | MUST | P3-03 | A-04 | 2.5 | 16–16 | 08 Feb → 12 Feb 2027 | 86% High |
-| [MDV-P3-010](MDV-P3-010.md) | Overlapping speech and unconfirmed speaker handling (A-10) | Story | MUST | P3-03 | A-10 | 1.5 | 16–16 | 08 Feb → 12 Feb 2027 | 85% High |
-| [MDV-P3-011](MDV-P3-011.md) | Draft note generation with JSON schema, evidence links and "unknown stays blank" | Story | MUST | P3-04 | — | 4 | 16–17 | 08 Feb → 19 Feb 2027 | 72% Medium |
-| [MDV-P3-016](MDV-P3-016.md) | AI unavailable → editable manual note with no data loss (A-06) | Story | MUST | P3-06 | A-06 | 1.5 | 16–16 | 08 Feb → 12 Feb 2027 | 88% High |
-| [MDV-P3-012](MDV-P3-012.md) | Note review with evidence panel and audio replay; accept/edit per field; sign gated on 0 unresolved (A-05) | Story | MUST | P3-04 | A-05 | 4 | 17–18 | 15 Feb → 26 Feb 2027 | 86% High |
-| [MDV-P3-015](MDV-P3-015.md) | Emergency-symptom warning as a prompt, not triage (A-08) | Story | MUST | P3-06 | A-08 | 1.5 | 17–17 | 15 Feb → 19 Feb 2027 | 84% Medium |
-| [MDV-P3-017](MDV-P3-017.md) | Wrong-patient suspicion locks the session; re-binding needs a reason and is audited (A-09) | Story | MUST | P3-06 | A-09 | 1.5 | 17–17 | 15 Feb → 19 Feb 2027 | 82% Medium |
-| [MDV-P3-013](MDV-P3-013.md) | Template switch and regeneration with confirmation; clinician edits tracked | Story | MUST | P3-04 | A-05 | 1.5 | 18–18 | 22 Feb → 26 Feb 2027 | 82% Medium |
-| [MDV-P3-014](MDV-P3-014.md) | Pre-visit brief: verified chart facts visibly separate from AI summary (A-01) | Story | SHOULD | P3-05 | A-01 | 2.5 | 18–19 | 22 Feb → 05 Mar 2027 | 80% Medium |
-| [MDV-P3-019](MDV-P3-019.md) | Audio retention purge and legal hold | Task | MUST | P3-07 | — | 1.5 | 18–18 | 22 Feb → 26 Feb 2027 | 85% High |
-| [MDV-P3-021](MDV-P3-021.md) | Mobile capture and note review (swipe to accept, evidence bottom sheet) (X-01) | Story | MUST | P3-02 | X-01 | 2.5 | 18–19 | 22 Feb → 05 Mar 2027 | 84% Medium |
-| [MDV-P3-020](MDV-P3-020.md) | Dictation of note sections with the same review-and-approve rule | Story | SHOULD | P3-08 | — | 2 | 19–19 | 01 Mar → 05 Mar 2027 | 78% Medium |
-| [MDV-P3-024](MDV-P3-024.md) | AI safety card, waiting-room consent notice (EN/HI/AR) and AI incident procedure | Chore | MUST | P3-06, P3-07 | — | 1 | 19–19 | 01 Mar → 05 Mar 2027 | 85% High |
-| [MDV-P3-025](MDV-P3-025.md) | Performance: draft ready ≤ 60 s (p50) after recording stops | Task | MUST | P3-07 | — | 1.5 | 19–19 | 01 Mar → 05 Mar 2027 | 75% Medium |
-| [MDV-P3-026](MDV-P3-026.md) | Clinician quality metrics: minor-edit rate, trust survey and note time vs P2 baseline | Task | MUST | P3-04 | — | 1.5 | 19–20 | 01 Mar → 12 Mar 2027 | 80% Medium |
-| [MDV-P3-027](MDV-P3-027.md) | R3 pilot with 5–10 opt-in clinicians, exit gate review and release notes | Gate | MUST | P3-04 | — | 1.5 | 20–20 | 08 Mar → 12 Mar 2027 | 70% Medium |
+| Key | Status | Title | Type | Prio | PRD | Screens | Est | Weeks | Dates | Confidence |
+|---|---|---|---|---|---|---|---|---|---|---|
+| [MDV-P3-001](MDV-P3-001.md) | To do | Spike: Azure AI Speech and Azure OpenAI in-region capability check and ADR for speech/LLM providers | Spike | MUST | P3-07, P3-03 | — | 2 | 13–13 | 18 Jan → 22 Jan 2027 | 70% Medium |
+| [MDV-P3-002](MDV-P3-002.md) | To do | Consent templates and recording policy administration (H-09) | Story | MUST | P3-01 | H-09 | 2 | 13–13 | 18 Jan → 22 Jan 2027 | 82% Medium |
+| [MDV-P3-003](MDV-P3-003.md) | To do | Per-encounter recording consent with device selection; decline goes straight to manual note (A-02, E-04) | Story | MUST | P3-01 | A-02 | 3 | 13–14 | 18 Jan → 29 Jan 2027 | 86% High |
+| [MDV-P3-022](MDV-P3-022.md) | To do | AI vendor DPA, no-training guarantee and regional processing confirmed per country | Chore | MUST | P3-07 | — | 0.5 | 13–15 | 18 Jan → 05 Feb 2027 | 75% Medium |
+| [MDV-P3-023](MDV-P3-023.md) | To do | Legal review of recording consent in each market | Chore | MUST | P3-01 | — | 0.5 | 13–14 | 18 Jan → 29 Jan 2027 | 60% Low |
+| [MDV-P3-005](MDV-P3-005.md) | To do | Capture on phone (mobile web) or desktop mic with timer, pause, consent indicator and warnings (A-03, X-01) | Story | MUST | P3-02 | A-03, X-01 | 3 | 14–15 | 25 Jan → 05 Feb 2027 | 80% Medium |
+| [MDV-P3-007](MDV-P3-007.md) | To do | Azure Service Bus and .NET AI worker skeleton without database credentials (scoped job + callback) | Task | MUST | P3-07 | — | 3 | 14–15 | 25 Jan → 05 Feb 2027 | 85% High |
+| [MDV-P3-018](MDV-P3-018.md) | To do | De-identified evaluation set and CI gate before any prompt or model change | Task | MUST | P3-07 | — | 4 | 14–19 | 25 Jan → 05 Mar 2027 | 70% Medium |
+| [MDV-P3-004](MDV-P3-004.md) | To do | Consent revoked mid-visit stops capture and discards later audio (A-09) | Story | MUST | P3-01 | A-09 | 1.5 | 15–15 | 01 Feb → 05 Feb 2027 | 88% High |
+| [MDV-P3-006](MDV-P3-006.md) | To do | Encrypted chunked upload with resume; upload progress, failed/partial recovery states (A-06) | Story | MUST | P3-02 | A-06 | 3 | 15–15 | 01 Feb → 05 Feb 2027 | 82% Medium |
+| [MDV-P3-008](MDV-P3-008.md) | To do | Transcription with diarisation and language identification (in-region Azure AI Speech) | Story | MUST | P3-03 | — | 3 | 15–16 | 01 Feb → 12 Feb 2027 | 75% Medium |
+| [MDV-P3-009](MDV-P3-009.md) | To do | Multi-speaker transcript review with speaker confirmation (A-04) | Story | MUST | P3-03 | A-04 | 2.5 | 16–16 | 08 Feb → 12 Feb 2027 | 86% High |
+| [MDV-P3-010](MDV-P3-010.md) | To do | Overlapping speech and unconfirmed speaker handling (A-10) | Story | MUST | P3-03 | A-10 | 1.5 | 16–16 | 08 Feb → 12 Feb 2027 | 85% High |
+| [MDV-P3-011](MDV-P3-011.md) | To do | Draft note generation with JSON schema, evidence links and "unknown stays blank" | Story | MUST | P3-04 | — | 4 | 16–17 | 08 Feb → 19 Feb 2027 | 72% Medium |
+| [MDV-P3-016](MDV-P3-016.md) | To do | AI unavailable → editable manual note with no data loss (A-06) | Story | MUST | P3-06 | A-06 | 1.5 | 16–16 | 08 Feb → 12 Feb 2027 | 88% High |
+| [MDV-P3-012](MDV-P3-012.md) | To do | Note review with evidence panel and audio replay; accept/edit per field; sign gated on 0 unresolved (A-05) | Story | MUST | P3-04 | A-05 | 4 | 17–18 | 15 Feb → 26 Feb 2027 | 86% High |
+| [MDV-P3-015](MDV-P3-015.md) | To do | Emergency-symptom warning as a prompt, not triage (A-08) | Story | MUST | P3-06 | A-08 | 1.5 | 17–17 | 15 Feb → 19 Feb 2027 | 84% Medium |
+| [MDV-P3-017](MDV-P3-017.md) | To do | Wrong-patient suspicion locks the session; re-binding needs a reason and is audited (A-09) | Story | MUST | P3-06 | A-09 | 1.5 | 17–17 | 15 Feb → 19 Feb 2027 | 82% Medium |
+| [MDV-P3-013](MDV-P3-013.md) | To do | Template switch and regeneration with confirmation; clinician edits tracked | Story | MUST | P3-04 | A-05 | 1.5 | 18–18 | 22 Feb → 26 Feb 2027 | 82% Medium |
+| [MDV-P3-014](MDV-P3-014.md) | To do | Pre-visit brief: verified chart facts visibly separate from AI summary (A-01) | Story | SHOULD | P3-05 | A-01 | 2.5 | 18–19 | 22 Feb → 05 Mar 2027 | 80% Medium |
+| [MDV-P3-019](MDV-P3-019.md) | To do | Audio retention purge and legal hold | Task | MUST | P3-07 | — | 1.5 | 18–18 | 22 Feb → 26 Feb 2027 | 85% High |
+| [MDV-P3-021](MDV-P3-021.md) | To do | Mobile capture and note review (swipe to accept, evidence bottom sheet) (X-01) | Story | MUST | P3-02 | X-01 | 2.5 | 18–19 | 22 Feb → 05 Mar 2027 | 84% Medium |
+| [MDV-P3-020](MDV-P3-020.md) | To do | Dictation of note sections with the same review-and-approve rule | Story | SHOULD | P3-08 | — | 2 | 19–19 | 01 Mar → 05 Mar 2027 | 78% Medium |
+| [MDV-P3-024](MDV-P3-024.md) | To do | AI safety card, waiting-room consent notice (EN/HI/AR) and AI incident procedure | Chore | MUST | P3-06, P3-07 | — | 1 | 19–19 | 01 Mar → 05 Mar 2027 | 85% High |
+| [MDV-P3-025](MDV-P3-025.md) | To do | Performance: draft ready ≤ 60 s (p50) after recording stops | Task | MUST | P3-07 | — | 1.5 | 19–19 | 01 Mar → 05 Mar 2027 | 75% Medium |
+| [MDV-P3-026](MDV-P3-026.md) | To do | Clinician quality metrics: minor-edit rate, trust survey and note time vs P2 baseline | Task | MUST | P3-04 | — | 1.5 | 19–20 | 01 Mar → 12 Mar 2027 | 80% Medium |
+| [MDV-P3-027](MDV-P3-027.md) | To do | R3 pilot with 5–10 opt-in clinicians, exit gate review and release notes | Gate | MUST | P3-04 | — | 1.5 | 20–20 | 08 Mar → 12 Mar 2027 | 70% Medium |
 
 ## Exit criteria (release gate)
 

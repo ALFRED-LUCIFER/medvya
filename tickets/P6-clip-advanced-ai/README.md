@@ -10,6 +10,8 @@
 
 **Tickets:** 10 · **Estimate:** 32 dev-days vs **50 working days** in the window (fits) · **Average confidence:** 59%
 
+**Status:** To do 10
+
 ## Epics
 
 | Epic | Title | Requirements | Goal |
@@ -20,18 +22,18 @@
 
 ## Tickets
 
-| Key | Title | Type | Prio | PRD | Screens | Est | Weeks | Dates | Confidence |
-|---|---|---|---|---|---|---|---|---|---|
-| [MDV-P6-001](MDV-P6-001.md) | Hardware partner, device certification and regulated-device classification advice | Chore | MUST | P6-01 | — | 2 | 33–34 | 07 Jun → 18 Jun 2027 | 45% Low |
-| [MDV-P6-002](MDV-P6-002.md) | Clip pairing with code match and microphone self-test (W-01) | Story | MUST | P6-01 | W-01 | 4 | 34–36 | 14 Jun → 02 Jul 2027 | 60% Low |
-| [MDV-P6-007](MDV-P6-007.md) | Multilingual notes: Arabic, English, Hindi and Malayalam incl. mixed-language consultations | Story | MUST | P6-03 | A-04 | 4 | 35–38 | 21 Jun → 16 Jul 2027 | 55% Low |
-| [MDV-P6-003](MDV-P6-003.md) | Clip capture bound to encounter and consent with visible recording light (capture FSM) | Story | MUST | P6-01 | W-01 | 4 | 36–37 | 28 Jun → 09 Jul 2027 | 60% Low |
-| [MDV-P6-008](MDV-P6-008.md) | Stronger AI QA: per-language evaluation sets, clinician trust metrics, red-team prompts on uploaded documents | Task | MUST | P6-05 | — | 3 | 36–40 | 28 Jun → 30 Jul 2027 | 70% Medium |
-| [MDV-P6-004](MDV-P6-004.md) | Device health, battery, encrypted offline buffer, upload conflicts and staged firmware updates (W-02) | Story | MUST | P6-01 | W-02 | 4 | 37–39 | 05 Jul → 23 Jul 2027 | 58% Low |
-| [MDV-P6-006](MDV-P6-006.md) | Private voice assistant through earpiece only (A-07) | Story | SHOULD | P6-02 | A-07 | 4 | 38–40 | 12 Jul → 30 Jul 2027 | 55% Low |
-| [MDV-P6-005](MDV-P6-005.md) | Loss/theft revoke effective in under one minute (W-03) | Story | MUST | P6-01 | W-03 | 2 | 39–39 | 19 Jul → 23 Jul 2027 | 72% Medium |
-| [MDV-P6-009](MDV-P6-009.md) | Outbound voice reminder and recall calls; waitlist fill from cancellations | Story | SHOULD | P6-04 | N-10 | 3 | 39–41 | 19 Jul → 06 Aug 2027 | 58% Low |
-| [MDV-P6-010](MDV-P6-010.md) | Device kit, quick-start guide, fleet guide and R6 gate | Gate | MUST | P6-01 | — | 2 | 42–42 | 09 Aug → 13 Aug 2027 | 55% Low |
+| Key | Status | Title | Type | Prio | PRD | Screens | Est | Weeks | Dates | Confidence |
+|---|---|---|---|---|---|---|---|---|---|---|
+| [MDV-P6-001](MDV-P6-001.md) | To do | Hardware partner, device certification and regulated-device classification advice | Chore | MUST | P6-01 | — | 2 | 33–34 | 07 Jun → 18 Jun 2027 | 45% Low |
+| [MDV-P6-002](MDV-P6-002.md) | To do | Clip pairing with code match and microphone self-test (W-01) | Story | MUST | P6-01 | W-01 | 4 | 34–36 | 14 Jun → 02 Jul 2027 | 60% Low |
+| [MDV-P6-007](MDV-P6-007.md) | To do | Multilingual notes: Arabic, English, Hindi and Malayalam incl. mixed-language consultations | Story | MUST | P6-03 | A-04 | 4 | 35–38 | 21 Jun → 16 Jul 2027 | 55% Low |
+| [MDV-P6-003](MDV-P6-003.md) | To do | Clip capture bound to encounter and consent with visible recording light (capture FSM) | Story | MUST | P6-01 | W-01 | 4 | 36–37 | 28 Jun → 09 Jul 2027 | 60% Low |
+| [MDV-P6-008](MDV-P6-008.md) | To do | Stronger AI QA: per-language evaluation sets, clinician trust metrics, red-team prompts on uploaded documents | Task | MUST | P6-05 | — | 3 | 36–40 | 28 Jun → 30 Jul 2027 | 70% Medium |
+| [MDV-P6-004](MDV-P6-004.md) | To do | Device health, battery, encrypted offline buffer, upload conflicts and staged firmware updates (W-02) | Story | MUST | P6-01 | W-02 | 4 | 37–39 | 05 Jul → 23 Jul 2027 | 58% Low |
+| [MDV-P6-006](MDV-P6-006.md) | To do | Private voice assistant through earpiece only (A-07) | Story | SHOULD | P6-02 | A-07 | 4 | 38–40 | 12 Jul → 30 Jul 2027 | 55% Low |
+| [MDV-P6-005](MDV-P6-005.md) | To do | Loss/theft revoke effective in under one minute (W-03) | Story | MUST | P6-01 | W-03 | 2 | 39–39 | 19 Jul → 23 Jul 2027 | 72% Medium |
+| [MDV-P6-009](MDV-P6-009.md) | To do | Outbound voice reminder and recall calls; waitlist fill from cancellations | Story | SHOULD | P6-04 | N-10 | 3 | 39–41 | 19 Jul → 06 Aug 2027 | 58% Low |
+| [MDV-P6-010](MDV-P6-010.md) | To do | Device kit, quick-start guide, fleet guide and R6 gate | Gate | MUST | P6-01 | — | 2 | 42–42 | 09 Aug → 13 Aug 2027 | 55% Low |
 
 ## Exit criteria (release gate)
 

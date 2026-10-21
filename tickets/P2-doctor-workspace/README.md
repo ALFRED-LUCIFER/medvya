@@ -10,6 +10,8 @@
 
 **Tickets:** 28 · **Estimate:** 60 dev-days vs **35 working days** in the window (OVER by 25 days: needs scope trade-off or overlap) · **Average confidence:** 82%
 
+**Status:** To do 28
+
 ## Epics
 
 | Epic | Title | Requirements | Goal |
@@ -23,36 +25,36 @@
 
 ## Tickets
 
-| Key | Title | Type | Prio | PRD | Screens | Est | Weeks | Dates | Confidence |
-|---|---|---|---|---|---|---|---|---|---|
-| [MDV-P2-001](MDV-P2-001.md) | Encounters module: start a consultation from the board/Today, bound to one patient and appointment | Task | MUST | P2-04 | — | 2 | 9–9 | 21 Dec → 25 Dec 2026 | 88% High |
-| [MDV-P2-002](MDV-P2-002.md) | Doctor Today (D-01): schedule, patient flags, pending notes, inbox counts | Story | MUST | P2-01 | D-01 | 3 | 9–10 | 21 Dec → 01 Jan 2027 | 86% High |
-| [MDV-P2-021](MDV-P2-021.md) | Clinical safety case and hazard log with a named clinical safety reviewer | Chore | MUST | P2-08 | — | 2 | 9–10 | 21 Dec → 01 Jan 2027 | 78% Medium |
-| [MDV-P2-022](MDV-P2-022.md) | Legal review of clinical data processing before the first real note | Chore | MUST | P2-08 | — | 0.5 | 9–11 | 21 Dec → 08 Jan 2027 | 62% Low |
-| [MDV-P2-023](MDV-P2-023.md) | Define and operate the doctor licence verification process | Chore | MUST | P2-05 | — | 0.5 | 9–9 | 21 Dec → 25 Dec 2026 | 75% Medium |
-| [MDV-P2-024](MDV-P2-024.md) | Clinical authorisation: care relationship and purpose checks, request access for clinics | Task | MUST | P2-02 | — | 2 | 9–10 | 21 Dec → 01 Jan 2027 | 84% Medium |
-| [MDV-P2-003](MDV-P2-003.md) | Privacy-safe global search (⌘K) with care-relationship check and "Request access" | Story | MUST | P2-01 | D-02 | 2 | 10–10 | 28 Dec → 01 Jan 2027 | 88% High |
-| [MDV-P2-004](MDV-P2-004.md) | Patient 360 (E-01): banner with identity and allergies always visible; problems, medicines, vitals trends | Story | MUST | P2-02 | E-01 | 3 | 10–11 | 28 Dec → 08 Jan 2027 | 85% High |
-| [MDV-P2-007](MDV-P2-007.md) | Nurse intake queue and vitals with out-of-range re-measure and escalation (N-01) | Story | MUST | P2-03 | N-01 | 3 | 10–11 | 28 Dec → 08 Jan 2027 | 88% High |
-| [MDV-P2-005](MDV-P2-005.md) | Longitudinal timeline and trends with source labels and filters (E-02) | Story | MUST | P2-02 | E-02 | 2.5 | 11–11 | 04 Jan → 08 Jan 2027 | 86% High |
-| [MDV-P2-006](MDV-P2-006.md) | Documents: upload, malware scan, secure viewer with time-limited links, scan to patient file (E-03) | Story | MUST | P2-07, P2-02 | E-03 | 3 | 11–12 | 04 Jan → 15 Jan 2027 | 82% Medium |
-| [MDV-P2-008](MDV-P2-008.md) | Allergy verification and patient-reported medicines with handoff to the doctor (N-01) | Story | MUST | P2-03 | N-01 | 2 | 11–11 | 04 Jan → 08 Jan 2027 | 90% High |
-| [MDV-P2-009](MDV-P2-009.md) | Consultation note editor: chief complaint, SOAP, specialty templates, manual note when recording is declined (E-04) | Story | MUST | P2-04 | E-04 | 3 | 11–12 | 04 Jan → 15 Jan 2027 | 85% High |
-| [MDV-P2-014](MDV-P2-014.md) | Country formulary and order sets: India (Schedule H/H1/X) and UAE drug codes, admin add medicine (F-13) | Story | MUST | P2-06 | F-13 | 3 | 11–12 | 04 Jan → 15 Jan 2027 | 62% Low |
-| [MDV-P2-025](MDV-P2-025.md) | Note template engine and specialty template pack for the partner clinics | Chore | MUST | P2-04 | — | 1.5 | 11–12 | 04 Jan → 15 Jan 2027 | 85% High |
-| [MDV-P2-010](MDV-P2-010.md) | Diagnosis coding with ICD-10 and problem verification states (E-07) | Story | MUST | P2-04 | E-07 | 2 | 12–12 | 11 Jan → 15 Jan 2027 | 82% Medium |
-| [MDV-P2-011](MDV-P2-011.md) | Medication reconciliation: chart vs patient-reported vs other source, keep / change / stop (E-07) | Story | MUST | P2-04 | E-07 | 2.5 | 12–12 | 11 Jan → 15 Jan 2027 | 86% High |
-| [MDV-P2-012](MDV-P2-012.md) | Sign and finalise: immutable signed note v1 with re-authentication (E-06) | Story | MUST | P2-05 | E-06 | 2.5 | 12–13 | 11 Jan → 22 Jan 2027 | 90% High |
-| [MDV-P2-015](MDV-P2-015.md) | Prescription composer with dose builder and add-medicine-while-prescribing (E-05, E-11) | Story | MUST | P2-06 | E-05, E-11 | 3 | 12–13 | 11 Jan → 22 Jan 2027 | 84% Medium |
-| [MDV-P2-013](MDV-P2-013.md) | Addenda, version history and print/PDF of the signed note (E-06) | Story | MUST | P2-05 | E-06 | 2 | 13–13 | 18 Jan → 22 Jan 2027 | 88% High |
-| [MDV-P2-016](MDV-P2-016.md) | Allergy and interaction safety checks before authorisation | Story | MUST | P2-06 | E-11 | 3 | 13–13 | 18 Jan → 22 Jan 2027 | 70% Medium |
-| [MDV-P2-017](MDV-P2-017.md) | Rx authorisation (separate from note), server-side multilingual printed Rx A4/A5 with hash and QR verify (E-10) | Story | MUST | P2-06 | E-10 | 3 | 13–14 | 18 Jan → 29 Jan 2027 | 82% Medium |
-| [MDV-P2-018](MDV-P2-018.md) | Investigation orders composer with Draft → Ordered states (E-05) | Story | MUST | P2-06 | E-05 | 2 | 13–13 | 18 Jan → 22 Jan 2027 | 84% Medium |
-| [MDV-P2-019](MDV-P2-019.md) | Referrals out and in with status (E-09) | Story | MUST | P2-06 | E-09 | 2 | 14–14 | 25 Jan → 29 Jan 2027 | 80% Medium |
-| [MDV-P2-020](MDV-P2-020.md) | Share Rx with patient/pharmacy (e-Rx PDF/link) and pharmacy dispatch record (E-10) | Story | MUST | P2-06 | E-10 | 1.5 | 14–14 | 25 Jan → 29 Jan 2027 | 70% Medium |
-| [MDV-P2-026](MDV-P2-026.md) | Doctor and nurse training (30 min each) and R2 materials | Chore | MUST | P2-03, P2-05 | — | 1 | 14–14 | 25 Jan → 29 Jan 2027 | 88% High |
-| [MDV-P2-027](MDV-P2-027.md) | Print, accessibility and zoom verification across clinical screens | Task | MUST | P2-05, P2-06 | — | 1 | 14–14 | 25 Jan → 29 Jan 2027 | 90% High |
-| [MDV-P2-028](MDV-P2-028.md) | R2 pilot, exit gate review (≥ 20 signed visits per doctor) and release notes | Gate | MUST | P2-05 | — | 1.5 | 15–15 | 01 Feb → 05 Feb 2027 | 72% Medium |
+| Key | Status | Title | Type | Prio | PRD | Screens | Est | Weeks | Dates | Confidence |
+|---|---|---|---|---|---|---|---|---|---|---|
+| [MDV-P2-001](MDV-P2-001.md) | To do | Encounters module: start a consultation from the board/Today, bound to one patient and appointment | Task | MUST | P2-04 | — | 2 | 9–9 | 21 Dec → 25 Dec 2026 | 88% High |
+| [MDV-P2-002](MDV-P2-002.md) | To do | Doctor Today (D-01): schedule, patient flags, pending notes, inbox counts | Story | MUST | P2-01 | D-01 | 3 | 9–10 | 21 Dec → 01 Jan 2027 | 86% High |
+| [MDV-P2-021](MDV-P2-021.md) | To do | Clinical safety case and hazard log with a named clinical safety reviewer | Chore | MUST | P2-08 | — | 2 | 9–10 | 21 Dec → 01 Jan 2027 | 78% Medium |
+| [MDV-P2-022](MDV-P2-022.md) | To do | Legal review of clinical data processing before the first real note | Chore | MUST | P2-08 | — | 0.5 | 9–11 | 21 Dec → 08 Jan 2027 | 62% Low |
+| [MDV-P2-023](MDV-P2-023.md) | To do | Define and operate the doctor licence verification process | Chore | MUST | P2-05 | — | 0.5 | 9–9 | 21 Dec → 25 Dec 2026 | 75% Medium |
+| [MDV-P2-024](MDV-P2-024.md) | To do | Clinical authorisation: care relationship and purpose checks, request access for clinics | Task | MUST | P2-02 | — | 2 | 9–10 | 21 Dec → 01 Jan 2027 | 84% Medium |
+| [MDV-P2-003](MDV-P2-003.md) | To do | Privacy-safe global search (⌘K) with care-relationship check and "Request access" | Story | MUST | P2-01 | D-02 | 2 | 10–10 | 28 Dec → 01 Jan 2027 | 88% High |
+| [MDV-P2-004](MDV-P2-004.md) | To do | Patient 360 (E-01): banner with identity and allergies always visible; problems, medicines, vitals trends | Story | MUST | P2-02 | E-01 | 3 | 10–11 | 28 Dec → 08 Jan 2027 | 85% High |
+| [MDV-P2-007](MDV-P2-007.md) | To do | Nurse intake queue and vitals with out-of-range re-measure and escalation (N-01) | Story | MUST | P2-03 | N-01 | 3 | 10–11 | 28 Dec → 08 Jan 2027 | 88% High |
+| [MDV-P2-005](MDV-P2-005.md) | To do | Longitudinal timeline and trends with source labels and filters (E-02) | Story | MUST | P2-02 | E-02 | 2.5 | 11–11 | 04 Jan → 08 Jan 2027 | 86% High |
+| [MDV-P2-006](MDV-P2-006.md) | To do | Documents: upload, malware scan, secure viewer with time-limited links, scan to patient file (E-03) | Story | MUST | P2-07, P2-02 | E-03 | 3 | 11–12 | 04 Jan → 15 Jan 2027 | 82% Medium |
+| [MDV-P2-008](MDV-P2-008.md) | To do | Allergy verification and patient-reported medicines with handoff to the doctor (N-01) | Story | MUST | P2-03 | N-01 | 2 | 11–11 | 04 Jan → 08 Jan 2027 | 90% High |
+| [MDV-P2-009](MDV-P2-009.md) | To do | Consultation note editor: chief complaint, SOAP, specialty templates, manual note when recording is declined (E-04) | Story | MUST | P2-04 | E-04 | 3 | 11–12 | 04 Jan → 15 Jan 2027 | 85% High |
+| [MDV-P2-014](MDV-P2-014.md) | To do | Country formulary and order sets: India (Schedule H/H1/X) and UAE drug codes, admin add medicine (F-13) | Story | MUST | P2-06 | F-13 | 3 | 11–12 | 04 Jan → 15 Jan 2027 | 62% Low |
+| [MDV-P2-025](MDV-P2-025.md) | To do | Note template engine and specialty template pack for the partner clinics | Chore | MUST | P2-04 | — | 1.5 | 11–12 | 04 Jan → 15 Jan 2027 | 85% High |
+| [MDV-P2-010](MDV-P2-010.md) | To do | Diagnosis coding with ICD-10 and problem verification states (E-07) | Story | MUST | P2-04 | E-07 | 2 | 12–12 | 11 Jan → 15 Jan 2027 | 82% Medium |
+| [MDV-P2-011](MDV-P2-011.md) | To do | Medication reconciliation: chart vs patient-reported vs other source, keep / change / stop (E-07) | Story | MUST | P2-04 | E-07 | 2.5 | 12–12 | 11 Jan → 15 Jan 2027 | 86% High |
+| [MDV-P2-012](MDV-P2-012.md) | To do | Sign and finalise: immutable signed note v1 with re-authentication (E-06) | Story | MUST | P2-05 | E-06 | 2.5 | 12–13 | 11 Jan → 22 Jan 2027 | 90% High |
+| [MDV-P2-015](MDV-P2-015.md) | To do | Prescription composer with dose builder and add-medicine-while-prescribing (E-05, E-11) | Story | MUST | P2-06 | E-05, E-11 | 3 | 12–13 | 11 Jan → 22 Jan 2027 | 84% Medium |
+| [MDV-P2-013](MDV-P2-013.md) | To do | Addenda, version history and print/PDF of the signed note (E-06) | Story | MUST | P2-05 | E-06 | 2 | 13–13 | 18 Jan → 22 Jan 2027 | 88% High |
+| [MDV-P2-016](MDV-P2-016.md) | To do | Allergy and interaction safety checks before authorisation | Story | MUST | P2-06 | E-11 | 3 | 13–13 | 18 Jan → 22 Jan 2027 | 70% Medium |
+| [MDV-P2-017](MDV-P2-017.md) | To do | Rx authorisation (separate from note), server-side multilingual printed Rx A4/A5 with hash and QR verify (E-10) | Story | MUST | P2-06 | E-10 | 3 | 13–14 | 18 Jan → 29 Jan 2027 | 82% Medium |
+| [MDV-P2-018](MDV-P2-018.md) | To do | Investigation orders composer with Draft → Ordered states (E-05) | Story | MUST | P2-06 | E-05 | 2 | 13–13 | 18 Jan → 22 Jan 2027 | 84% Medium |
+| [MDV-P2-019](MDV-P2-019.md) | To do | Referrals out and in with status (E-09) | Story | MUST | P2-06 | E-09 | 2 | 14–14 | 25 Jan → 29 Jan 2027 | 80% Medium |
+| [MDV-P2-020](MDV-P2-020.md) | To do | Share Rx with patient/pharmacy (e-Rx PDF/link) and pharmacy dispatch record (E-10) | Story | MUST | P2-06 | E-10 | 1.5 | 14–14 | 25 Jan → 29 Jan 2027 | 70% Medium |
+| [MDV-P2-026](MDV-P2-026.md) | To do | Doctor and nurse training (30 min each) and R2 materials | Chore | MUST | P2-03, P2-05 | — | 1 | 14–14 | 25 Jan → 29 Jan 2027 | 88% High |
+| [MDV-P2-027](MDV-P2-027.md) | To do | Print, accessibility and zoom verification across clinical screens | Task | MUST | P2-05, P2-06 | — | 1 | 14–14 | 25 Jan → 29 Jan 2027 | 90% High |
+| [MDV-P2-028](MDV-P2-028.md) | To do | R2 pilot, exit gate review (≥ 20 signed visits per doctor) and release notes | Gate | MUST | P2-05 | — | 1.5 | 15–15 | 01 Feb → 05 Feb 2027 | 72% Medium |
 
 ## Exit criteria (release gate)
 

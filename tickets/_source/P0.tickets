@@ -11,6 +11,9 @@
 @epic MDV-P0-E05 | Safety, compliance groundwork and R0 gate | P0-08, P0-10 | Decisions, threat model, data map, DPIA and policies recorded; R0 handed over.
 
 === MDV-P0-001
+status: Done
+progress:
+- Merged [PR #1](https://github.com/ALFRED-LUCIFER/medvya/pull/1): Medvya.sln, .NET 10 pinned, Host.Api /health, Identity/Tenancy/Audit modules, pnpm workspace, web/clinic, packages/ui, AGENTS.md
 title: Create the Medvya monorepo skeleton (Medvya.sln, web workspaces, packages)
 type: Task
 epic: MDV-P0-E01
@@ -36,6 +39,10 @@ tests:
 - CI job builds the solution and the web workspace on a clean runner.
 
 === MDV-P0-002
+status: Partly done
+progress:
+- ADR-001 and ADR-003…006 drafted; ADR-009 (front-end architecture) and ADR-010 (shadcn/ui + Tailwind, replaces MUI) accepted in [PR #26](https://github.com/ALFRED-LUCIFER/medvya/pull/26) and [PR #29](https://github.com/ALFRED-LUCIFER/medvya/pull/29)
+- Left: founder acceptance of ADR-001, 003, 004, 005, 006
 title: Record and accept ADR-001 (stack) and supporting ADRs 003–006
 type: Chore
 epic: MDV-P0-E05
@@ -57,6 +64,9 @@ ac:
 - A short note is sent to the design project owner to update the Build Plan and Azure Architecture pages (PRD v2 finding "CHANGE").
 
 === MDV-P0-003
+status: Blocked
+progress:
+- Waiting on founder: launch market (default India), Azure subscription and region, AI model availability check
 title: Decide launch market (ADR-002) and confirm Azure subscription and region
 type: Chore
 epic: MDV-P0-E05
@@ -81,6 +91,11 @@ notes:
 - Open question Q-01 in docs/01-prd/source-conflicts.md.
 
 === MDV-P0-004
+status: Done
+progress:
+- Merged [PR #13](https://github.com/ALFRED-LUCIFER/medvya/pull/13): PR pipeline (dotnet build/test incl. Testcontainers, vulnerable NuGet check, web lint/build/test, pnpm audit, synthetic-ID check, gitleaks), Dependabot, CODEOWNERS, PR template
+- Repo public: branch protection on main (checks dotnet, web, secrets required), GitHub secret scanning + push protection, CodeQL default setup, Dependabot security updates enabled
+- Found and fixed on the way: tinypool critical advisories (vitest 3 → 5), a race in the telemetry test
 title: GitHub repository protections and PR pipeline (build, analyzers, tests, CodeQL, dependency and secret scanning)
 type: Task
 epic: MDV-P0-E01
@@ -104,6 +119,10 @@ ac:
 - Pipeline duration for the skeleton is under 10 minutes.
 
 === MDV-P0-005
+status: Partly done
+progress:
+- Merged [PR #3](https://github.com/ALFRED-LUCIFER/medvya/pull/3): docker-compose with SQL Server 2022 (healthcheck, runs under Rosetta on Apple silicon), Azurite, smtp4dev; `pnpm services:up`
+- Left: one-command start that migrates + seeds (needs MDV-P0-027), dev-only OIDC stub (MDV-P0-011), SMS sink (MDV-P1-033)
 title: Local development environment with Docker Compose (SQL Server, Azurite, mail and SMS sinks)
 type: Task
 epic: MDV-P0-E01
@@ -125,6 +144,9 @@ ac:
 - Emails and SMS sent locally appear in the sinks and are never delivered externally.
 
 === MDV-P0-006
+status: Blocked
+progress:
+- Needs MDV-P0-003 (Azure subscription and region)
 title: Azure environments as code (Bicep): App Service, Azure SQL private endpoint, Blob, Key Vault, App Insights, Defender, budgets
 type: Task
 epic: MDV-P0-E01
@@ -150,6 +172,9 @@ notes:
 - Private endpoints add cost; capture the monthly estimate in the PR description (Software Architecture §9.3).
 
 === MDV-P0-007
+status: Blocked
+progress:
+- Needs MDV-P0-006
 title: GitHub OIDC federation to Azure and tagged deploy to staging
 type: Task
 epic: MDV-P0-E01
@@ -219,6 +244,11 @@ tests:
 - Integration test proves an exact-match lookup on deterministic EID works and a LIKE query is rejected without enclave.
 
 === MDV-P0-010
+status: Done
+progress:
+- Merged [PR #27](https://github.com/ALFRED-LUCIFER/medvya/pull/27): Tenant/Facility/Membership, EF global filters + SQL Server row-level security on SESSION_CONTEXT (FILTER + BLOCK predicates)
+- Testcontainers tests on SQL Server 2022: cross-tenant reads blocked with filters off and with raw SQL, cross-tenant writes/moves blocked, no tenant = no rows, 100 pooled connections without leaks; mutation-checked (RLS off → 4/5 fail). Satisfies P0 exit criterion 3
+- Also pinned System.Security.Cryptography.Pkcs 10.0.13 (CVE-2026-70162)
 title: Tenancy model with EF Core global filters and Azure SQL row-level security (cross-tenant test in CI)
 type: Story
 epic: MDV-P0-E02
@@ -242,6 +272,9 @@ ac:
 - The cross-tenant read/write test runs in CI on every PR and fails the build on any leak (P0 exit gate 3).
 
 === MDV-P0-011
+status: Blocked
+progress:
+- Needs an Entra External ID tenant (Azure, MDV-P0-003)
 title: Staff sign-in through the BFF with Entra External ID: MFA (TOTP), passkeys and recovery
 type: Story
 epic: MDV-P0-E02
@@ -267,6 +300,9 @@ ac:
 - Sign-in, failure, lockout and recovery events are written to the audit log (MDV-P0-017).
 
 === MDV-P0-012
+status: Blocked
+progress:
+- Needs MDV-P0-011
 title: Session control: facility picker, idle timeout on shared clinic PCs, device/session revocation
 type: Story
 epic: MDV-P0-E02
@@ -290,6 +326,9 @@ ac:
 - `/v1/me/context` never returns permissions the role does not grant.
 
 === MDV-P0-013
+status: Blocked
+progress:
+- Needs MDV-P0-011
 title: Invite a colleague and accept the invitation (membership invited → active)
 type: Story
 epic: MDV-P0-E02
@@ -314,6 +353,10 @@ ac:
 - Clinician invites are flagged "licence verification required" (verification itself ships in P1, MDV-P1-007).
 
 === MDV-P0-014
+status: Partly done
+progress:
+- Merged [PR #12](https://github.com/ALFRED-LUCIFER/medvya/pull/12): RoleMatrix (15 capabilities × 8 roles) checked cell by cell against Foundations (mutation-checked); every endpoint must declare a policy or AllowAnonymous
+- Left: capability policies on real endpoints and the receptionist → clinical 403 test (needs sign-in, MDV-P0-011); custom roles (MDV-P1-008)
 title: Server-side authorisation from the Foundations role-permission matrix
 type: Story
 epic: MDV-P0-E02
@@ -337,6 +380,10 @@ ac:
 - docs/02-design/sitemap-and-permissions.md is the published role matrix and is linked from the R0 release notes.
 
 === MDV-P0-015
+status: Partly done
+progress:
+- Merged [PR #11](https://github.com/ALFRED-LUCIFER/medvya/pull/11): SystemState for session expired / no access / not found / offline in en-hi-ar; 404 route; offline banner keeps typed input (browser-verified)
+- Left: "Request access" must store and audit the request (needs MDV-P0-017); wire 401/403 from the API client (MDV-P0-011)
 title: System state screens: session expired, 403 no facility access, 404, offline
 type: Story
 epic: MDV-P0-E02
@@ -359,6 +406,9 @@ ac:
 - Each state is keyboard-accessible, announced to screen readers, and translated (en/hi/ar) with RTL layout for Arabic.
 
 === MDV-P0-016
+status: Done
+progress:
+- Merged [PR #7](https://github.com/ALFRED-LUCIFER/medvya/pull/7): [Classification] attribute + architecture test (self-test caught nested-type bug), register in docs/03-architecture/data-classification.md with Always Encrypted and masking sets
 title: Data classification register and ERD → Azure SQL type mapping
 type: Chore
 epic: MDV-P0-E03
@@ -403,6 +453,10 @@ ac:
 - Denied authorization attempts are audited with outcome "denied".
 
 === MDV-P0-018
+status: Partly done
+progress:
+- Merged [PR #9](https://github.com/ALFRED-LUCIFER/medvya/pull/9): OpenTelemetry with allowlist scrubbing of spans and logs; test simulates PHI logging and is mutation-checked
+- Left: Application Insights dashboards and the 5xx alert (needs Azure, MDV-P0-006)
 title: Observability with OpenTelemetry and PHI redaction (structured logs, telemetry processor)
 type: Task
 epic: MDV-P0-E03
@@ -447,6 +501,10 @@ ac:
 - Backup storage redundancy keeps data in-country (no geo-replication outside the country).
 
 === MDV-P0-020
+status: Done
+progress:
+- Merged [PR #5](https://github.com/ALFRED-LUCIFER/medvya/pull/5) (MUI) then [PR #29](https://github.com/ALFRED-LUCIFER/medvya/pull/29) (shadcn/ui + Radix + Tailwind 4, ADR-010): tokens in styles.css, clinical primitives, UI gallery at /__ui
+- WCAG fixes found by tests: primary #0F766E (was 3.8:1), success-on-tint #07774F (was 4.42:1); browser axe 0 violations in English and Arabic
 title: Medvya design system in code: shadcn/ui + Tailwind tokens and clinical status primitives (packages/ui)
 type: Story
 epic: MDV-P0-E04
@@ -469,6 +527,10 @@ ac:
 - prefers-reduced-motion disables animation in RecordingPill/progress.
 
 === MDV-P0-021
+status: Done
+progress:
+- Merged [PR #6](https://github.com/ALFRED-LUCIFER/medvya/pull/6) and updated in [PR #29](https://github.com/ALFRED-LUCIFER/medvya/pull/29): @medvya/i18n (en/hi/ar), RTL via html dir + logical utilities, self-hosted fonts, jsx-no-literals lint
+- Follow-up: native-speaker review of hi/ar; Arabic recording-consent text waits for legal review (MDV-P3-023)
 title: Internationalisation pipeline: English, Hindi, Arabic with full RTL
 type: Task
 epic: MDV-P0-E04
@@ -536,6 +598,10 @@ ac:
 - The P0 exit gate item "Clinical advisor walks all six journeys and signs off" is evidenced.
 
 === MDV-P0-024
+status: Done
+progress:
+- Merged [PR #10](https://github.com/ALFRED-LUCIFER/medvya/pull/10): threat model (STRIDE per boundary), data map (incl. SendGrid), DPIA draft (DPDP + UAE notes), retention map
+- Needs counsel review (MDV-P1-044) before real patient data
 title: Threat model, data map, DPIA draft (DPDP) and record-retention map per country
 type: Chore
 epic: MDV-P0-E05
@@ -559,6 +625,10 @@ ac:
 - All four documents are part of the R0 delivery package.
 
 === MDV-P0-025
+status: Done
+progress:
+- Merged [PR #4](https://github.com/ALFRED-LUCIFER/medvya/pull/4): SECURITY.md, secure development policy, synthetic-ID checker (Verhoeff/Luhn) in CI
+- PIM/JIT and break-glass are documented procedures; executing them needs Azure (MDV-P0-006)
 title: Secure development policies: SECURITY.md, code review rules, synthetic-only data, JIT access, offline break-glass account
 type: Chore
 epic: MDV-P0-E05
@@ -580,6 +650,10 @@ ac:
 - A CI check rejects fixture files containing patterns of real national IDs (e.g. valid Aadhaar checksum) or obvious real data markers.
 
 === MDV-P0-026
+status: Done
+progress:
+- Merged [PR #8](https://github.com/ALFRED-LUCIFER/medvya/pull/8): security headers incl. strict CSP + HSTS, per-IP rate limit, 1 MiB body limit, ASVS L2 checklist
+- Stricter sign-in/OTP limits come with MDV-P0-011
 title: OWASP ASVS L2 baseline: security headers, CSP, HSTS, rate limiting, input validation
 type: Task
 epic: MDV-P0-E03

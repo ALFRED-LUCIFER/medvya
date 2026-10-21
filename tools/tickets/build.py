@@ -51,9 +51,11 @@ PHASE_DIR = {
     "P4": "P4-clinic-operations", "P5": "P5-commercial-launch", "P6": "P6-clip-advanced-ai",
     "P7": "P7-hospital-enterprise", "P8": "P8-scale-specialty",
 }
-SINGLE = {"title", "type", "epic", "prd", "screens", "covers", "priority", "roles", "labels",
+SINGLE = {"status", "title", "type", "epic", "prd", "screens", "covers", "priority", "roles", "labels",
           "estimate", "weeks", "depends", "confidence", "sources"}
-MULTI = {"desc", "ac", "tests", "notes"}
+MULTI = {"desc", "ac", "tests", "notes", "progress"}
+# Delivery status per ticket; anything other than "To do" should carry progress lines (PR, what is left).
+STATUSES = ["To do", "In progress", "Partly done", "Blocked", "Done"]
 TYPES = {"Story", "Task", "Spike", "Gate", "Chore"}
 PRIOS = {"MUST", "SHOULD", "COULD"}
 JIRA_PRIO = {"MUST": "Highest", "SHOULD": "High", "COULD": "Medium"}
@@ -100,7 +102,7 @@ def parse(path):
             epics.append({"key": key, "title": title, "prd": split_list(prd), "goal": goal})
             continue
         if line.startswith("=== "):
-            cur = {"key": line[4:].strip(), "desc": [], "ac": [], "tests": [], "notes": [], "_src": f"{os.path.basename(path)}:{n}"}
+            cur = {"key": line[4:].strip(), "desc": [], "ac": [], "tests": [], "notes": [], "progress": [], "_src": f"{os.path.basename(path)}:{n}"}
             tickets.append(cur)
             section = None
             continue
@@ -119,7 +121,7 @@ def parse(path):
             continue
         if section == "desc":
             cur["desc"].append(line)
-        elif section in ("ac", "tests", "notes"):
+        elif section in ("ac", "tests", "notes", "progress"):
             if line.lstrip().startswith("- "):
                 cur[section].append(line.lstrip()[2:].strip())
             elif cur[section]:
@@ -149,6 +151,11 @@ for t in all_tickets:
     for f in ("title", "type", "epic", "priority", "estimate", "weeks", "confidence"):
         if not t.get(f):
             errors.append(f"{k}: missing {f}")
+    t["status"] = t.get("status") or "To do"
+    if t["status"] not in STATUSES:
+        errors.append(f"{k}: bad status {t['status']}")
+    if t["status"] != "To do" and not t["progress"]:
+        errors.append(f"{k}: status {t['status']} needs progress lines")
     if t.get("type") not in TYPES:
         errors.append(f"{k}: bad type {t.get('type')}")
     if t.get("priority") not in PRIOS:
@@ -253,6 +260,7 @@ for code, tks in by_phase.items():
                 cov.append(f"{kind} {i}: {p[field][i - 1]}")
         L = [GEN, f"# {t['key']} · {t['title']}\n",
              "| Field | Value |\n|---|---|",
+             f"| **Status** | **{t['status']}** |",
              f"| Type | {t['type']} |", f"| Epic | {t['epic']} · {all_epics[t['epic']]['title']} |",
              f"| Phase / release | {code} · {p['name']} · {p['rel']} |",
              f"| Priority | {t['priority']} (Jira: {JIRA_PRIO[t['priority']]}) |",
@@ -265,6 +273,9 @@ for code, tks in by_phase.items():
              f"| **Confidence** | **{t['conf']}% · {band(t['conf'])}** — {t['conf_why']} |"]
         if cov:
             L.append(f"| Phase gate items | {'<br>'.join(cov)} |")
+        if t["progress"]:
+            L.append("\n## Progress\n")
+            L += [f"- {x}" for x in t["progress"]]
         L.append("\n## Description\n\n" + "\n".join(t["desc"]).strip() + "\n")
         L.append("## Acceptance criteria\n")
         L += [f"- [ ] **AC{i}.** {a}" for i, a in enumerate(t["ac"], 1)]
@@ -290,12 +301,13 @@ for code, tks in by_phase.items():
          f"**Tickets:** {len(tks)} · **Estimate:** {est:g} dev-days vs **{cap} working days** in the window "
          f"({'fits' if est <= cap else 'OVER by ' + format(est - cap, 'g') + ' days: needs scope trade-off or overlap'}) · "
          f"**Average confidence:** {round(sum(t['conf'] for t in tks) / len(tks))}%\n",
+         "**Status:** " + " · ".join(f"{st} {sum(1 for t in tks if t['status'] == st)}" for st in STATUSES if any(t['status'] == st for t in tks)) + "\n",
          "## Epics\n\n| Epic | Title | Requirements | Goal |\n|---|---|---|---|"]
     for e in [e for e in all_epics.values() if e["phase"] == code]:
         L.append(f"| {e['key']} | {e['title']} | {', '.join(e['prd']) or '—'} | {e['goal']} |")
-    L.append("\n## Tickets\n\n| Key | Title | Type | Prio | PRD | Screens | Est | Weeks | Dates | Confidence |\n|---|---|---|---|---|---|---|---|---|---|")
+    L.append("\n## Tickets\n\n| Key | Status | Title | Type | Prio | PRD | Screens | Est | Weeks | Dates | Confidence |\n|---|---|---|---|---|---|---|---|---|---|---|")
     for t in sorted(tks, key=lambda t: (t["w0"], t["key"])):
-        L.append(f"| [{t['key']}]({t['key']}.md) | {t['title']} | {t['type']} | {t['priority']} | {', '.join(t['prd_l']) or '—'} | {', '.join(t['scr_l']) or '—'} | {t['est']:g} | {t['w0']}–{t['w1']} | {wk_start(t['w0']).strftime('%d %b')} → {wk_end(t['w1']).strftime('%d %b %Y')} | {t['conf']}% {band(t['conf'])} |")
+        L.append(f"| [{t['key']}]({t['key']}.md) | {t['status']} | {t['title']} | {t['type']} | {t['priority']} | {', '.join(t['prd_l']) or '—'} | {', '.join(t['scr_l']) or '—'} | {t['est']:g} | {t['w0']}–{t['w1']} | {wk_start(t['w0']).strftime('%d %b')} → {wk_end(t['w1']).strftime('%d %b %Y')} | {t['conf']}% {band(t['conf'])} |")
     L.append("\n## Exit criteria (release gate)\n")
     for i, x in enumerate(p["exit"], 1):
         ts = [t["key"] for t in tks if i in t["cov"].get("exit", set())]
@@ -336,13 +348,13 @@ L = [GEN, "# Medvya delivery tickets\n",
      f"confidence: High {dist['High']} · Medium {dist['Medium']} · Low {dist['Low']} · "
      f"coverage: {'✅ every requirement, screen, exit criterion, NFR, package item and dependency is ticketed' if not missing else '❌ gaps, see coverage report'}\n",
      "Conventions, Definition of Ready/Done and the confidence scale: [docs/05-delivery](../docs/05-delivery/README.md).\n",
-     "| Phase | Folder | Window | Tickets | Estimate (dev-days) | Capacity (days) | Avg confidence |\n|---|---|---|---|---|---|---|"]
+     "| Phase | Folder | Window | Tickets | Done | Partly / in progress | Estimate (dev-days) | Capacity (days) | Avg confidence |\n|---|---|---|---|---|---|---|---|---|"]
 for code in PHASE_DIR:
     tks = by_phase.get(code, [])
     if not tks:
         continue
     p = phases[code]
-    L.append(f"| {code} {p['name']} | [{PHASE_DIR[code]}]({PHASE_DIR[code]}/README.md) | {fmt(wk_start(p['s']))} → {fmt(wk_end(p['e']))} | {len(tks)} | {sum(t['est'] for t in tks):g} | {(p['e'] - p['s'] + 1) * 5} | {round(sum(t['conf'] for t in tks) / len(tks))}% |")
+    L.append(f"| {code} {p['name']} | [{PHASE_DIR[code]}]({PHASE_DIR[code]}/README.md) | {fmt(wk_start(p['s']))} → {fmt(wk_end(p['e']))} | {len(tks)} | {sum(t['status'] == 'Done' for t in tks)} | {sum(t['status'] in ('Partly done', 'In progress') for t in tks)} | {sum(t['est'] for t in tks):g} | {(p['e'] - p['s'] + 1) * 5} | {round(sum(t['conf'] for t in tks) / len(tks))}% |")
 ga = [t for t in all_tickets if t["phase"] in ("P0", "P1", "P2", "P3", "P4", "P5")]
 ga_est = sum(t["est"] for t in ga)
 L.append("\n## Capacity check (read this before committing to dates)\n")
@@ -362,15 +374,15 @@ open(os.path.join(OUT, "README.md"), "w").write("\n".join(L).replace("](../P", "
 # ---------------- jira csv ----------------
 with open(os.path.join(OUT, "jira-import.csv"), "w", newline="") as f:
     w = csv.writer(f)
-    w.writerow(["Issue Key", "Issue Type", "Summary", "Epic Link", "Priority", "Labels", "Original Estimate (days)",
+    w.writerow(["Issue Key", "Status", "Issue Type", "Summary", "Epic Link", "Priority", "Labels", "Original Estimate (days)",
                 "Start date", "Due date", "Fix Version", "PRD Requirements", "Screens", "Depends On", "Confidence %",
                 "Confidence Band", "Description", "Acceptance Criteria"])
     for e in all_epics.values():
         p = phases[e["phase"]]
-        w.writerow([e["key"], "Epic", e["title"], "", "Highest", f"phase-{e['phase']}", "", wk_start(p["s"]).isoformat(),
+        w.writerow([e["key"], "", "Epic", e["title"], "", "Highest", f"phase-{e['phase']}", "", wk_start(p["s"]).isoformat(),
                     wk_end(p["e"]).isoformat(), p["rel"], ", ".join(e["prd"]), "", "", "", "", e["goal"], ""])
     for t in all_tickets:
-        w.writerow([t["key"], t["type"], t["title"], t["epic"], JIRA_PRIO[t["priority"]],
+        w.writerow([t["key"], t["status"], t["type"], t["title"], t["epic"], JIRA_PRIO[t["priority"]],
                     " ".join(["phase-" + t["phase"]] + [slug(x) for x in split_list(t.get("labels", ""))]),
                     f"{t['est']:g}", wk_start(t["w0"]).isoformat(), wk_end(t["w1"]).isoformat(), phases[t["phase"]]["rel"],
                     ", ".join(t["prd_l"]), ", ".join(t["scr_l"]), ", ".join(t["dep_l"]), t["conf"], band(t["conf"]),

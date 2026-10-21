@@ -10,6 +10,8 @@
 
 **Tickets:** 30 · **Estimate:** 88 dev-days vs **45 working days** in the window (OVER by 43 days: needs scope trade-off or overlap) · **Average confidence:** 64%
 
+**Status:** To do 30
+
 ## Epics
 
 | Epic | Title | Requirements | Goal |
@@ -24,38 +26,38 @@
 
 ## Tickets
 
-| Key | Title | Type | Prio | PRD | Screens | Est | Weeks | Dates | Confidence |
-|---|---|---|---|---|---|---|---|---|---|
-| [MDV-P5-001](MDV-P5-001.md) | Design the 11 new P5 screens (N-04 … N-14) before build | Spike | MUST | P5-01, P5-02, P5-04, P5-05, P5-06, P5-07, P5-08, P5-09 | N-04, N-05, N-06, N-07, N-08, N-09, N-10, N-11, N-12, N-13, N-14 | 4 | 22–24 | 22 Mar → 09 Apr 2027 | 60% Low |
-| [MDV-P5-002](MDV-P5-002.md) | Migration: read-only source connection via self-hosted integration runtime (Oracle, SQL Server, MySQL, CSV/Excel) (N-04) | Story | MUST | P5-01 | N-04 | 3 | 24–25 | 05 Apr → 16 Apr 2027 | 65% Medium |
-| [MDV-P5-003](MDV-P5-003.md) | Migration mapping: AI-proposed column and code mappings (LOINC, ICD-10, formulary) approved by a person; reusable vendor templates (N-04) | Story | MUST | P5-01 | N-04 | 4 | 25–26 | 12 Apr → 23 Apr 2027 | 62% Low |
-| [MDV-P5-006](MDV-P5-006.md) | Data-quality queue: problems grouped by type and fixed by rule; reversible (N-05) | Story | MUST | P5-02 | N-05 | 3 | 25–26 | 12 Apr → 23 Apr 2027 | 65% Medium |
-| [MDV-P5-016](MDV-P5-016.md) | Medvya subscription: plans, trial, subscription invoices with GST/VAT, seat counts, dunning (N-11) | Story | MUST | P5-07 | N-11 | 4 | 25–27 | 12 Apr → 30 Apr 2027 | 60% Low |
-| [MDV-P5-004](MDV-P5-004.md) | Migration dry run into a test tenant and owner-signed dry-run report (N-04) | Story | MUST | P5-01 | N-04 | 2.5 | 26–26 | 19 Apr → 23 Apr 2027 | 72% Medium |
-| [MDV-P5-007](MDV-P5-007.md) | Duplicate scoring incl. Arabic–English name spellings, bulk merge for high confidence, desk confirmation for borderline (N-05) | Story | MUST | P5-02 | N-05 | 3 | 26–27 | 19 Apr → 30 Apr 2027 | 68% Medium |
-| [MDV-P5-017](MDV-P5-017.md) | Platform operations console: tenant catalogue, onboarding automation, per-tenant flags, time-boxed audited support access visible to the clinic (N-12) | Story | MUST | P5-08 | N-12 | 4 | 26–28 | 19 Apr → 07 May 2027 | 65% Medium |
-| [MDV-P5-005](MDV-P5-005.md) | Day-one load, change-data-capture parallel run and background backfill (N-04) | Story | MUST | P5-01 | N-04 | 4 | 27–29 | 26 Apr → 14 May 2027 | 58% Low |
-| [MDV-P5-008](MDV-P5-008.md) | Insurance coverage and live eligibility with co-pay estimate at the desk (P-08) | Story | MUST | P5-03 | P-08 | 3 | 27–28 | 26 Apr → 07 May 2027 | 58% Low |
-| [MDV-P5-024](MDV-P5-024.md) | Security operations: incident response with DPDP/UAE breach notification, Defender + Sentinel alerts to on-call, Customer Lockbox, VDP, ADHICS evidence, ISO 27001 gap assessment | Chore | MUST | P5-11 | — | 3 | 27–30 | 26 Apr → 21 May 2027 | 70% Medium |
-| [MDV-P5-028](MDV-P5-028.md) | Commercial readiness: order form and SLA signed with the first paying clinic | Chore | MUST | P5-07 | — | 1 | 27–27 | 26 Apr → 30 Apr 2027 | 65% Medium |
-| [MDV-P5-009](MDV-P5-009.md) | Pre-authorisation, claims, resubmission and remittance matching — India TPA/PMJAY/CGHS (P-14) | Story | MUST | P5-03 | P-14 | 4 | 28–29 | 03 May → 14 May 2027 | 65% Medium |
-| [MDV-P5-011](MDV-P5-011.md) | Emirates ID card-reader check-in under 30 seconds and UAE PASS (N-06) | Story | MUST | P5-04 | N-06 | 3 | 28–29 | 03 May → 14 May 2027 | 55% Low |
-| [MDV-P5-012](MDV-P5-012.md) | Health-exchange pull and push for the launch emirate (Malaffi / NABIDH / Riayati) (N-07) | Story | MUST | P5-04 | N-07 | 5 | 28–31 | 03 May → 28 May 2027 | 40% Low |
-| [MDV-P5-014](MDV-P5-014.md) | Patient report upload with AI extraction marked "Unverified · patient upload" until accepted (N-08) | Story | SHOULD | P5-05 | N-08 | 3 | 28–29 | 03 May → 14 May 2027 | 65% Medium |
-| [MDV-P5-018](MDV-P5-018.md) | In-app role guides, help centre, feedback and public status page (N-13) | Story | MUST | P5-09 | N-13 | 3 | 28–30 | 03 May → 21 May 2027 | 72% Medium |
-| [MDV-P5-027](MDV-P5-027.md) | Availability monitoring: 30 days at ≥ 99.5 % before GA | Task | MUST | P5-10 | — | 1 | 28–32 | 03 May → 04 Jun 2027 | 75% Medium |
-| [MDV-P5-010](MDV-P5-010.md) | UAE claims via eClaimLink (Dubai) / Shafafiya (Abu Dhabi) for the launch emirate (P-14) | Story | MUST | P5-03 | P-14 | 4 | 29–31 | 10 May → 28 May 2027 | 45% Low |
-| [MDV-P5-013](MDV-P5-013.md) | Regulator e-prescription and e-sick leave; letters and certificates from templates (N-09) | Story | MUST | P5-04 | N-09 | 3 | 29–30 | 10 May → 21 May 2027 | 50% Low |
-| [MDV-P5-015](MDV-P5-015.md) | Voice appointment assistant v1 (inbound): book/move/cancel from the live calendar, identity check, no medical advice, staff handover (N-10) | Story | SHOULD | P5-06 | N-10 | 6 | 29–31 | 10 May → 28 May 2027 | 50% Low |
-| [MDV-P5-019](MDV-P5-019.md) | Full clinic data export in FHIR and CSV (no lock-in) (N-14) | Story | MUST | P5-09 | N-14 | 3 | 29–30 | 10 May → 21 May 2027 | 70% Medium |
-| [MDV-P5-020](MDV-P5-020.md) | External penetration test and remediation — no open high/critical findings | Gate | MUST | P5-10 | — | 2 | 29–30 | 10 May → 21 May 2027 | 70% Medium |
-| [MDV-P5-025](MDV-P5-025.md) | Retention and deletion jobs per country; patient access/correction/erasure requests for clinics | Story | MUST | P5-12 | H-10 | 3 | 29–30 | 10 May → 21 May 2027 | 68% Medium |
-| [MDV-P5-029](MDV-P5-029.md) | First paying clinic cut-over without closing (week 29) with go-live runbook | Gate | MUST | P5-01 | — | 2 | 29–29 | 10 May → 14 May 2027 | 55% Low |
-| [MDV-P5-021](MDV-P5-021.md) | Disaster-recovery drill proving RPO ≤ 15 min and RTO ≤ 4 h | Task | MUST | P5-10 | — | 1.5 | 30–30 | 17 May → 21 May 2027 | 80% Medium |
-| [MDV-P5-022](MDV-P5-022.md) | Accessibility audit and load test before GA | Task | MUST | P5-10 | — | 2 | 30–31 | 17 May → 28 May 2027 | 78% Medium |
-| [MDV-P5-023](MDV-P5-023.md) | Dark mode and high-contrast themes (X-02) | Story | MUST | P5-10 | X-02 | 2 | 30–31 | 17 May → 28 May 2027 | 88% High |
-| [MDV-P5-026](MDV-P5-026.md) | Support model: first response under 4 business hours, on-call rota and runbooks | Chore | MUST | P5-08 | — | 1 | 30–30 | 17 May → 21 May 2027 | 75% Medium |
-| [MDV-P5-030](MDV-P5-030.md) | v1.0 general availability gate and release notes | Gate | MUST | P5-10 | — | 1 | 32–32 | 31 May → 04 Jun 2027 | 62% Low |
+| Key | Status | Title | Type | Prio | PRD | Screens | Est | Weeks | Dates | Confidence |
+|---|---|---|---|---|---|---|---|---|---|---|
+| [MDV-P5-001](MDV-P5-001.md) | To do | Design the 11 new P5 screens (N-04 … N-14) before build | Spike | MUST | P5-01, P5-02, P5-04, P5-05, P5-06, P5-07, P5-08, P5-09 | N-04, N-05, N-06, N-07, N-08, N-09, N-10, N-11, N-12, N-13, N-14 | 4 | 22–24 | 22 Mar → 09 Apr 2027 | 60% Low |
+| [MDV-P5-002](MDV-P5-002.md) | To do | Migration: read-only source connection via self-hosted integration runtime (Oracle, SQL Server, MySQL, CSV/Excel) (N-04) | Story | MUST | P5-01 | N-04 | 3 | 24–25 | 05 Apr → 16 Apr 2027 | 65% Medium |
+| [MDV-P5-003](MDV-P5-003.md) | To do | Migration mapping: AI-proposed column and code mappings (LOINC, ICD-10, formulary) approved by a person; reusable vendor templates (N-04) | Story | MUST | P5-01 | N-04 | 4 | 25–26 | 12 Apr → 23 Apr 2027 | 62% Low |
+| [MDV-P5-006](MDV-P5-006.md) | To do | Data-quality queue: problems grouped by type and fixed by rule; reversible (N-05) | Story | MUST | P5-02 | N-05 | 3 | 25–26 | 12 Apr → 23 Apr 2027 | 65% Medium |
+| [MDV-P5-016](MDV-P5-016.md) | To do | Medvya subscription: plans, trial, subscription invoices with GST/VAT, seat counts, dunning (N-11) | Story | MUST | P5-07 | N-11 | 4 | 25–27 | 12 Apr → 30 Apr 2027 | 60% Low |
+| [MDV-P5-004](MDV-P5-004.md) | To do | Migration dry run into a test tenant and owner-signed dry-run report (N-04) | Story | MUST | P5-01 | N-04 | 2.5 | 26–26 | 19 Apr → 23 Apr 2027 | 72% Medium |
+| [MDV-P5-007](MDV-P5-007.md) | To do | Duplicate scoring incl. Arabic–English name spellings, bulk merge for high confidence, desk confirmation for borderline (N-05) | Story | MUST | P5-02 | N-05 | 3 | 26–27 | 19 Apr → 30 Apr 2027 | 68% Medium |
+| [MDV-P5-017](MDV-P5-017.md) | To do | Platform operations console: tenant catalogue, onboarding automation, per-tenant flags, time-boxed audited support access visible to the clinic (N-12) | Story | MUST | P5-08 | N-12 | 4 | 26–28 | 19 Apr → 07 May 2027 | 65% Medium |
+| [MDV-P5-005](MDV-P5-005.md) | To do | Day-one load, change-data-capture parallel run and background backfill (N-04) | Story | MUST | P5-01 | N-04 | 4 | 27–29 | 26 Apr → 14 May 2027 | 58% Low |
+| [MDV-P5-008](MDV-P5-008.md) | To do | Insurance coverage and live eligibility with co-pay estimate at the desk (P-08) | Story | MUST | P5-03 | P-08 | 3 | 27–28 | 26 Apr → 07 May 2027 | 58% Low |
+| [MDV-P5-024](MDV-P5-024.md) | To do | Security operations: incident response with DPDP/UAE breach notification, Defender + Sentinel alerts to on-call, Customer Lockbox, VDP, ADHICS evidence, ISO 27001 gap assessment | Chore | MUST | P5-11 | — | 3 | 27–30 | 26 Apr → 21 May 2027 | 70% Medium |
+| [MDV-P5-028](MDV-P5-028.md) | To do | Commercial readiness: order form and SLA signed with the first paying clinic | Chore | MUST | P5-07 | — | 1 | 27–27 | 26 Apr → 30 Apr 2027 | 65% Medium |
+| [MDV-P5-009](MDV-P5-009.md) | To do | Pre-authorisation, claims, resubmission and remittance matching — India TPA/PMJAY/CGHS (P-14) | Story | MUST | P5-03 | P-14 | 4 | 28–29 | 03 May → 14 May 2027 | 65% Medium |
+| [MDV-P5-011](MDV-P5-011.md) | To do | Emirates ID card-reader check-in under 30 seconds and UAE PASS (N-06) | Story | MUST | P5-04 | N-06 | 3 | 28–29 | 03 May → 14 May 2027 | 55% Low |
+| [MDV-P5-012](MDV-P5-012.md) | To do | Health-exchange pull and push for the launch emirate (Malaffi / NABIDH / Riayati) (N-07) | Story | MUST | P5-04 | N-07 | 5 | 28–31 | 03 May → 28 May 2027 | 40% Low |
+| [MDV-P5-014](MDV-P5-014.md) | To do | Patient report upload with AI extraction marked "Unverified · patient upload" until accepted (N-08) | Story | SHOULD | P5-05 | N-08 | 3 | 28–29 | 03 May → 14 May 2027 | 65% Medium |
+| [MDV-P5-018](MDV-P5-018.md) | To do | In-app role guides, help centre, feedback and public status page (N-13) | Story | MUST | P5-09 | N-13 | 3 | 28–30 | 03 May → 21 May 2027 | 72% Medium |
+| [MDV-P5-027](MDV-P5-027.md) | To do | Availability monitoring: 30 days at ≥ 99.5 % before GA | Task | MUST | P5-10 | — | 1 | 28–32 | 03 May → 04 Jun 2027 | 75% Medium |
+| [MDV-P5-010](MDV-P5-010.md) | To do | UAE claims via eClaimLink (Dubai) / Shafafiya (Abu Dhabi) for the launch emirate (P-14) | Story | MUST | P5-03 | P-14 | 4 | 29–31 | 10 May → 28 May 2027 | 45% Low |
+| [MDV-P5-013](MDV-P5-013.md) | To do | Regulator e-prescription and e-sick leave; letters and certificates from templates (N-09) | Story | MUST | P5-04 | N-09 | 3 | 29–30 | 10 May → 21 May 2027 | 50% Low |
+| [MDV-P5-015](MDV-P5-015.md) | To do | Voice appointment assistant v1 (inbound): book/move/cancel from the live calendar, identity check, no medical advice, staff handover (N-10) | Story | SHOULD | P5-06 | N-10 | 6 | 29–31 | 10 May → 28 May 2027 | 50% Low |
+| [MDV-P5-019](MDV-P5-019.md) | To do | Full clinic data export in FHIR and CSV (no lock-in) (N-14) | Story | MUST | P5-09 | N-14 | 3 | 29–30 | 10 May → 21 May 2027 | 70% Medium |
+| [MDV-P5-020](MDV-P5-020.md) | To do | External penetration test and remediation — no open high/critical findings | Gate | MUST | P5-10 | — | 2 | 29–30 | 10 May → 21 May 2027 | 70% Medium |
+| [MDV-P5-025](MDV-P5-025.md) | To do | Retention and deletion jobs per country; patient access/correction/erasure requests for clinics | Story | MUST | P5-12 | H-10 | 3 | 29–30 | 10 May → 21 May 2027 | 68% Medium |
+| [MDV-P5-029](MDV-P5-029.md) | To do | First paying clinic cut-over without closing (week 29) with go-live runbook | Gate | MUST | P5-01 | — | 2 | 29–29 | 10 May → 14 May 2027 | 55% Low |
+| [MDV-P5-021](MDV-P5-021.md) | To do | Disaster-recovery drill proving RPO ≤ 15 min and RTO ≤ 4 h | Task | MUST | P5-10 | — | 1.5 | 30–30 | 17 May → 21 May 2027 | 80% Medium |
+| [MDV-P5-022](MDV-P5-022.md) | To do | Accessibility audit and load test before GA | Task | MUST | P5-10 | — | 2 | 30–31 | 17 May → 28 May 2027 | 78% Medium |
+| [MDV-P5-023](MDV-P5-023.md) | To do | Dark mode and high-contrast themes (X-02) | Story | MUST | P5-10 | X-02 | 2 | 30–31 | 17 May → 28 May 2027 | 88% High |
+| [MDV-P5-026](MDV-P5-026.md) | To do | Support model: first response under 4 business hours, on-call rota and runbooks | Chore | MUST | P5-08 | — | 1 | 30–30 | 17 May → 21 May 2027 | 75% Medium |
+| [MDV-P5-030](MDV-P5-030.md) | To do | v1.0 general availability gate and release notes | Gate | MUST | P5-10 | — | 1 | 32–32 | 31 May → 04 Jun 2027 | 62% Low |
 
 ## Exit criteria (release gate)
 

@@ -10,6 +10,8 @@
 
 **Tickets:** 33 · **Estimate:** 72.5 dev-days vs **50 working days** in the window (OVER by 22.5 days: needs scope trade-off or overlap) · **Average confidence:** 79%
 
+**Status:** To do 33
+
 ## Epics
 
 | Epic | Title | Requirements | Goal |
@@ -23,41 +25,41 @@
 
 ## Tickets
 
-| Key | Title | Type | Prio | PRD | Screens | Est | Weeks | Dates | Confidence |
-|---|---|---|---|---|---|---|---|---|---|
-| [MDV-P4-001](MDV-P4-001.md) | Money and legal document numbering foundation (minor units, DOC_SEQUENCE per country and financial year) | Task | MUST | P4-02 | — | 2 | 17–17 | 15 Feb → 19 Feb 2027 | 88% High |
-| [MDV-P4-002](MDV-P4-002.md) | Services and fees catalogue with price versions, India GST/SAC, UAE CPT/VAT, payer price lists and packages (F-11) | Story | MUST | P4-01 | F-11 | 3 | 17–18 | 15 Feb → 26 Feb 2027 | 72% Medium |
-| [MDV-P4-032](MDV-P4-032.md) | Apply for payment gateway merchant accounts and WhatsApp Business template approvals | Chore | MUST | P4-03, P4-09 | — | 0.5 | 17–17 | 15 Feb → 19 Feb 2027 | 60% Low |
-| [MDV-P4-003](MDV-P4-003.md) | Price list import tool (billing setup service) | Task | MUST | P4-01 | — | 1.5 | 18–18 | 22 Feb → 26 Feb 2027 | 85% High |
-| [MDV-P4-004](MDV-P4-004.md) | Charge capture and invoice lifecycle (draft → issued → paid/failed/refunded), separate from clinical sign-off (P-06) | Story | MUST | P4-02 | P-06 | 3 | 18–19 | 22 Feb → 05 Mar 2027 | 86% High |
-| [MDV-P4-005](MDV-P4-005.md) | Receipts, tax invoices, credit notes, advance receipts for India GST and UAE VAT in A5 and 80 mm thermal (P-15) | Story | MUST | P4-02 | P-15 | 3 | 19–20 | 01 Mar → 12 Mar 2027 | 80% Medium |
-| [MDV-P4-007](MDV-P4-007.md) | India payments with Razorpay (UPI collect/QR, card, refunds) and idempotent webhooks (P-10) | Story | MUST | P4-03 | P-10 | 3 | 19–20 | 01 Mar → 12 Mar 2027 | 72% Medium |
-| [MDV-P4-014](MDV-P4-014.md) | Results intake and inbound report identity match (manual upload/entry; low-confidence needs a human) (C-05) | Story | MUST | P4-05 | C-05 | 3 | 19–20 | 01 Mar → 12 Mar 2027 | 82% Medium |
-| [MDV-P4-020](MDV-P4-020.md) | Patient portal authentication: OTP sign-in, portal invitations, patient session (BFF) | Story | MUST | P4-07 | R-01 | 2.5 | 19–20 | 01 Mar → 12 Mar 2027 | 82% Medium |
-| [MDV-P4-006](MDV-P4-006.md) | Refunds and credit notes | Story | MUST | P4-02 | P-06 | 1.5 | 20–20 | 08 Mar → 12 Mar 2027 | 85% High |
-| [MDV-P4-008](MDV-P4-008.md) | UAE payments (Network International or Stripe) and card-on-terminal recording (P-10) | Story | MUST | P4-03 | P-10 | 2 | 20–21 | 08 Mar → 19 Mar 2027 | 68% Medium |
-| [MDV-P4-015](MDV-P4-015.md) | Clinical results inbox: severity in words, review/acknowledge, assign follow-up, release to patient (C-01) | Story | MUST | P4-05 | C-01 | 3 | 20–21 | 08 Mar → 19 Mar 2027 | 82% Medium |
-| [MDV-P4-021](MDV-P4-021.md) | Portal home, released visit summaries (with checked translations), prescriptions, records and labs (R-01) | Story | MUST | P4-07 | R-01 | 3 | 20–22 | 08 Mar → 26 Mar 2027 | 80% Medium |
-| [MDV-P4-022](MDV-P4-022.md) | Release rules: the doctor controls what patients see and when | Story | MUST | P4-07 | — | 1.5 | 20–20 | 08 Mar → 12 Mar 2027 | 85% High |
-| [MDV-P4-009](MDV-P4-009.md) | Split and partial payments with advance usage; balance moves to dues (P-10) | Story | MUST | P4-03 | P-10 | 2 | 21–21 | 15 Mar → 19 Mar 2027 | 88% High |
-| [MDV-P4-010](MDV-P4-010.md) | Packages and advances with session redemption (P-11) | Story | MUST | P4-04 | P-11 | 2 | 21–22 | 15 Mar → 26 Mar 2027 | 86% High |
-| [MDV-P4-016](MDV-P4-016.md) | Care plans and tasks with owners, due dates, stage tracks and evidence to close (C-02) | Story | MUST | P4-05 | C-02 | 3 | 21–22 | 15 Mar → 26 Mar 2027 | 82% Medium |
-| [MDV-P4-028](MDV-P4-028.md) | WhatsApp reminders and confirmations (EN/AR/HI), opt-in records, delivery status, one-tap reschedule, "doctor running late" broadcast (N-03, design needed) | Story | MUST | P4-09 | N-03 | 3 | 21–23 | 15 Mar → 02 Apr 2027 | 62% Low |
-| [MDV-P4-031](MDV-P4-031.md) | Invoice and receipt formats reviewed by a chartered accountant (India) and tax adviser (UAE) | Chore | MUST | P4-02 | — | 0.5 | 21–23 | 15 Mar → 02 Apr 2027 | 65% Medium |
-| [MDV-P4-011](MDV-P4-011.md) | Dues, ageing and patient statement with no-PHI balance reminders (P-12) | Story | MUST | P4-04 | P-12 | 2 | 22–22 | 22 Mar → 26 Mar 2027 | 86% High |
-| [MDV-P4-012](MDV-P4-012.md) | Cash reconciliation and day-end close with denominations, second-person confirmation and shift report (P-07, P-13) | Story | MUST | P4-04 | P-07, P-13 | 3 | 22–23 | 22 Mar → 02 Apr 2027 | 86% High |
-| [MDV-P4-017](MDV-P4-017.md) | Patient contact log and reminders: outcome required; "delivered" is not a contact (C-03) | Story | MUST | P4-05 | C-03 | 2 | 22–22 | 22 Mar → 26 Mar 2027 | 88% High |
-| [MDV-P4-018](MDV-P4-018.md) | Overdue escalation: escalate to doctor, reassign, or close with reason (C-04) | Story | MUST | P4-05 | C-04 | 1.5 | 22–23 | 22 Mar → 02 Apr 2027 | 88% High |
-| [MDV-P4-023](MDV-P4-023.md) | Portal booking and reschedule with fee and cancellation policy shown (R-02) | Story | MUST | P4-07 | R-02 | 2.5 | 22–23 | 22 Mar → 02 Apr 2027 | 88% High |
-| [MDV-P4-029](MDV-P4-029.md) | Spike: reporting store that keeps PHI out of analytics (read replica vs warehouse) | Spike | MUST | P4-10 | — | 1 | 22–22 | 22 Mar → 26 Mar 2027 | 75% Medium |
-| [MDV-P4-013](MDV-P4-013.md) | Doctor revenue and payout report (P-09) | Story | MUST | P4-04 | P-09 | 1.5 | 23–23 | 29 Mar → 02 Apr 2027 | 80% Medium |
-| [MDV-P4-019](MDV-P4-019.md) | Clinic messages inbox (patient ↔ clinic) with AI reply draft approved by staff (C-06) | Story | SHOULD | P4-06 | C-06 | 3 | 23–24 | 29 Mar → 09 Apr 2027 | 75% Medium |
-| [MDV-P4-024](MDV-P4-024.md) | Portal consent and privacy controls with policy version and change log (R-03) | Story | MUST | P4-07 | R-03 | 1.5 | 23–23 | 29 Mar → 02 Apr 2027 | 88% High |
-| [MDV-P4-025](MDV-P4-025.md) | Caregiver proxy authorisation with scopes, expiry, OTP verification and revocation (R-04) | Story | MUST | P4-07 | R-04 | 2.5 | 23–24 | 29 Mar → 09 Apr 2027 | 82% Medium |
-| [MDV-P4-026](MDV-P4-026.md) | Portal Arabic RTL and patient help pages in three languages | Task | MUST | P4-07 | R-01 | 1.5 | 24–24 | 05 Apr → 09 Apr 2027 | 85% High |
-| [MDV-P4-027](MDV-P4-027.md) | Public doctor and clinic profiles with live availability, indexed for search (N-02, design needed) | Story | SHOULD | P4-08 | N-02 | 3 | 24–25 | 05 Apr → 16 Apr 2027 | 55% Low |
-| [MDV-P4-030](MDV-P4-030.md) | Clinic reports and owner dashboard: appointments, no-shows, revenue, follow-up completion, note time saved (H-07) | Story | MUST | P4-10 | H-07 | 3 | 24–25 | 05 Apr → 16 Apr 2027 | 80% Medium |
-| [MDV-P4-033](MDV-P4-033.md) | R4 pilot, exit gate review and release notes | Gate | MUST | P4-04, P4-05 | — | 1.5 | 26–26 | 19 Apr → 23 Apr 2027 | 68% Medium |
+| Key | Status | Title | Type | Prio | PRD | Screens | Est | Weeks | Dates | Confidence |
+|---|---|---|---|---|---|---|---|---|---|---|
+| [MDV-P4-001](MDV-P4-001.md) | To do | Money and legal document numbering foundation (minor units, DOC_SEQUENCE per country and financial year) | Task | MUST | P4-02 | — | 2 | 17–17 | 15 Feb → 19 Feb 2027 | 88% High |
+| [MDV-P4-002](MDV-P4-002.md) | To do | Services and fees catalogue with price versions, India GST/SAC, UAE CPT/VAT, payer price lists and packages (F-11) | Story | MUST | P4-01 | F-11 | 3 | 17–18 | 15 Feb → 26 Feb 2027 | 72% Medium |
+| [MDV-P4-032](MDV-P4-032.md) | To do | Apply for payment gateway merchant accounts and WhatsApp Business template approvals | Chore | MUST | P4-03, P4-09 | — | 0.5 | 17–17 | 15 Feb → 19 Feb 2027 | 60% Low |
+| [MDV-P4-003](MDV-P4-003.md) | To do | Price list import tool (billing setup service) | Task | MUST | P4-01 | — | 1.5 | 18–18 | 22 Feb → 26 Feb 2027 | 85% High |
+| [MDV-P4-004](MDV-P4-004.md) | To do | Charge capture and invoice lifecycle (draft → issued → paid/failed/refunded), separate from clinical sign-off (P-06) | Story | MUST | P4-02 | P-06 | 3 | 18–19 | 22 Feb → 05 Mar 2027 | 86% High |
+| [MDV-P4-005](MDV-P4-005.md) | To do | Receipts, tax invoices, credit notes, advance receipts for India GST and UAE VAT in A5 and 80 mm thermal (P-15) | Story | MUST | P4-02 | P-15 | 3 | 19–20 | 01 Mar → 12 Mar 2027 | 80% Medium |
+| [MDV-P4-007](MDV-P4-007.md) | To do | India payments with Razorpay (UPI collect/QR, card, refunds) and idempotent webhooks (P-10) | Story | MUST | P4-03 | P-10 | 3 | 19–20 | 01 Mar → 12 Mar 2027 | 72% Medium |
+| [MDV-P4-014](MDV-P4-014.md) | To do | Results intake and inbound report identity match (manual upload/entry; low-confidence needs a human) (C-05) | Story | MUST | P4-05 | C-05 | 3 | 19–20 | 01 Mar → 12 Mar 2027 | 82% Medium |
+| [MDV-P4-020](MDV-P4-020.md) | To do | Patient portal authentication: OTP sign-in, portal invitations, patient session (BFF) | Story | MUST | P4-07 | R-01 | 2.5 | 19–20 | 01 Mar → 12 Mar 2027 | 82% Medium |
+| [MDV-P4-006](MDV-P4-006.md) | To do | Refunds and credit notes | Story | MUST | P4-02 | P-06 | 1.5 | 20–20 | 08 Mar → 12 Mar 2027 | 85% High |
+| [MDV-P4-008](MDV-P4-008.md) | To do | UAE payments (Network International or Stripe) and card-on-terminal recording (P-10) | Story | MUST | P4-03 | P-10 | 2 | 20–21 | 08 Mar → 19 Mar 2027 | 68% Medium |
+| [MDV-P4-015](MDV-P4-015.md) | To do | Clinical results inbox: severity in words, review/acknowledge, assign follow-up, release to patient (C-01) | Story | MUST | P4-05 | C-01 | 3 | 20–21 | 08 Mar → 19 Mar 2027 | 82% Medium |
+| [MDV-P4-021](MDV-P4-021.md) | To do | Portal home, released visit summaries (with checked translations), prescriptions, records and labs (R-01) | Story | MUST | P4-07 | R-01 | 3 | 20–22 | 08 Mar → 26 Mar 2027 | 80% Medium |
+| [MDV-P4-022](MDV-P4-022.md) | To do | Release rules: the doctor controls what patients see and when | Story | MUST | P4-07 | — | 1.5 | 20–20 | 08 Mar → 12 Mar 2027 | 85% High |
+| [MDV-P4-009](MDV-P4-009.md) | To do | Split and partial payments with advance usage; balance moves to dues (P-10) | Story | MUST | P4-03 | P-10 | 2 | 21–21 | 15 Mar → 19 Mar 2027 | 88% High |
+| [MDV-P4-010](MDV-P4-010.md) | To do | Packages and advances with session redemption (P-11) | Story | MUST | P4-04 | P-11 | 2 | 21–22 | 15 Mar → 26 Mar 2027 | 86% High |
+| [MDV-P4-016](MDV-P4-016.md) | To do | Care plans and tasks with owners, due dates, stage tracks and evidence to close (C-02) | Story | MUST | P4-05 | C-02 | 3 | 21–22 | 15 Mar → 26 Mar 2027 | 82% Medium |
+| [MDV-P4-028](MDV-P4-028.md) | To do | WhatsApp reminders and confirmations (EN/AR/HI), opt-in records, delivery status, one-tap reschedule, "doctor running late" broadcast (N-03, design needed) | Story | MUST | P4-09 | N-03 | 3 | 21–23 | 15 Mar → 02 Apr 2027 | 62% Low |
+| [MDV-P4-031](MDV-P4-031.md) | To do | Invoice and receipt formats reviewed by a chartered accountant (India) and tax adviser (UAE) | Chore | MUST | P4-02 | — | 0.5 | 21–23 | 15 Mar → 02 Apr 2027 | 65% Medium |
+| [MDV-P4-011](MDV-P4-011.md) | To do | Dues, ageing and patient statement with no-PHI balance reminders (P-12) | Story | MUST | P4-04 | P-12 | 2 | 22–22 | 22 Mar → 26 Mar 2027 | 86% High |
+| [MDV-P4-012](MDV-P4-012.md) | To do | Cash reconciliation and day-end close with denominations, second-person confirmation and shift report (P-07, P-13) | Story | MUST | P4-04 | P-07, P-13 | 3 | 22–23 | 22 Mar → 02 Apr 2027 | 86% High |
+| [MDV-P4-017](MDV-P4-017.md) | To do | Patient contact log and reminders: outcome required; "delivered" is not a contact (C-03) | Story | MUST | P4-05 | C-03 | 2 | 22–22 | 22 Mar → 26 Mar 2027 | 88% High |
+| [MDV-P4-018](MDV-P4-018.md) | To do | Overdue escalation: escalate to doctor, reassign, or close with reason (C-04) | Story | MUST | P4-05 | C-04 | 1.5 | 22–23 | 22 Mar → 02 Apr 2027 | 88% High |
+| [MDV-P4-023](MDV-P4-023.md) | To do | Portal booking and reschedule with fee and cancellation policy shown (R-02) | Story | MUST | P4-07 | R-02 | 2.5 | 22–23 | 22 Mar → 02 Apr 2027 | 88% High |
+| [MDV-P4-029](MDV-P4-029.md) | To do | Spike: reporting store that keeps PHI out of analytics (read replica vs warehouse) | Spike | MUST | P4-10 | — | 1 | 22–22 | 22 Mar → 26 Mar 2027 | 75% Medium |
+| [MDV-P4-013](MDV-P4-013.md) | To do | Doctor revenue and payout report (P-09) | Story | MUST | P4-04 | P-09 | 1.5 | 23–23 | 29 Mar → 02 Apr 2027 | 80% Medium |
+| [MDV-P4-019](MDV-P4-019.md) | To do | Clinic messages inbox (patient ↔ clinic) with AI reply draft approved by staff (C-06) | Story | SHOULD | P4-06 | C-06 | 3 | 23–24 | 29 Mar → 09 Apr 2027 | 75% Medium |
+| [MDV-P4-024](MDV-P4-024.md) | To do | Portal consent and privacy controls with policy version and change log (R-03) | Story | MUST | P4-07 | R-03 | 1.5 | 23–23 | 29 Mar → 02 Apr 2027 | 88% High |
+| [MDV-P4-025](MDV-P4-025.md) | To do | Caregiver proxy authorisation with scopes, expiry, OTP verification and revocation (R-04) | Story | MUST | P4-07 | R-04 | 2.5 | 23–24 | 29 Mar → 09 Apr 2027 | 82% Medium |
+| [MDV-P4-026](MDV-P4-026.md) | To do | Portal Arabic RTL and patient help pages in three languages | Task | MUST | P4-07 | R-01 | 1.5 | 24–24 | 05 Apr → 09 Apr 2027 | 85% High |
+| [MDV-P4-027](MDV-P4-027.md) | To do | Public doctor and clinic profiles with live availability, indexed for search (N-02, design needed) | Story | SHOULD | P4-08 | N-02 | 3 | 24–25 | 05 Apr → 16 Apr 2027 | 55% Low |
+| [MDV-P4-030](MDV-P4-030.md) | To do | Clinic reports and owner dashboard: appointments, no-shows, revenue, follow-up completion, note time saved (H-07) | Story | MUST | P4-10 | H-07 | 3 | 24–25 | 05 Apr → 16 Apr 2027 | 80% Medium |
+| [MDV-P4-033](MDV-P4-033.md) | To do | R4 pilot, exit gate review and release notes | Gate | MUST | P4-04, P4-05 | — | 1.5 | 26–26 | 19 Apr → 23 Apr 2027 | 68% Medium |
 
 ## Exit criteria (release gate)
 

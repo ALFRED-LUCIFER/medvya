@@ -20,7 +20,7 @@
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
     "@medvya/i18n": "workspace:*",
-    "@mui/icons-material": "^7.3.11",
+    "@mui/icons-material": "^9.5.0",
     "@mui/material": "^7.3.5",
     "@testing-library/react": "^16.3.3",
     "@types/react": "^19.3.0",

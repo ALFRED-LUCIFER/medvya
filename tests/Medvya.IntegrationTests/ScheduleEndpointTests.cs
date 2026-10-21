@@ -102,6 +102,49 @@ public sealed class ScheduleEndpointTests(SqlServerFixture sql) : IClassFixture<
     }
 
     [Fact]
+    public async Task ReceptionHoldsAndBooksWhileASecondDeskIsTurnedAway()
+    {
+        var patient = Guid.NewGuid();
+        await using (var patients = sql.Patients(tenant))
+        {
+            patients.Patients.Add(new Patients.Domain.Patient
+            {
+                Id = patient, TenantId = tenant, FacilityId = facility, Mrn = "000001", CountryCode = "IN", FullName = "Meera Iyer (synthetic)",
+                DateOfBirth = new(1972, 3, 12), SexAtBirth = Patients.Domain.SexAtBirth.Female, Mobile = "+919000000101", RegisteredAt = DateTimeOffset.UtcNow, ChangedAt = DateTimeOffset.UtcNow,
+            });
+            await patients.SaveChangesAsync();
+        }
+        (await Client(admin).PutAsJsonAsync("/v1/schedule/templates", Template(20))).EnsureSuccessStatusCode();
+        // The host runs on the real clock: book 09:00 IST next Monday.
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var monday = today.AddDays(((int)DayOfWeek.Monday - (int)today.DayOfWeek + 7) % 7 + 7);
+        var start = new DateTimeOffset(monday.ToDateTime(new TimeOnly(9, 0)), TimeSpan.FromHours(5.5));
+        var slot = new { facilityId = facility, calendarId = doctor, start, visitType = "FollowUp" };
+
+        using var held = await Client(reception).PostAsJsonAsync("/v1/slot-holds", slot);
+        Assert.Equal(HttpStatusCode.OK, held.StatusCode);
+        var holdId = JsonDocument.Parse(await held.Content.ReadAsStringAsync()).RootElement.GetProperty("id").GetGuid();
+
+        using var second = await Client(doctor).PostAsJsonAsync("/v1/slot-holds", slot);
+        Assert.Equal(HttpStatusCode.Conflict, second.StatusCode);
+        Assert.Equal("being_booked", JsonDocument.Parse(await second.Content.ReadAsStringAsync()).RootElement.GetProperty("code").GetString());
+
+        using var lookup = await Client(reception).GetAsync($"/v1/schedule/patients/{patient}?facilityId={facility}");
+        Assert.Contains("Meera Iyer (synthetic)", await lookup.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+
+        using var booked = await Client(reception).PostAsJsonAsync("/v1/appointments",
+            new { holdId, patientId = patient, reasonCategory = "General", channel = "Phone", reasonText = "Synthetic: feeling dizzy" });
+        Assert.Equal(HttpStatusCode.OK, booked.StatusCode);
+        var body = await booked.Content.ReadAsStringAsync();
+        Assert.Contains("\"state\":\"Booked\"", body, StringComparison.Ordinal);
+        Assert.DoesNotContain("dizzy", body, StringComparison.Ordinal); // the free-text reason never comes back
+
+        Assert.Equal(["schedule.template.update", "slot.hold", "slot.hold", "patient.lookup", "appointment.book"], await AuditActions());
+        await using var audit = sql.Audit(tenant);
+        Assert.Equal(patient, (await audit.Events.SingleAsync(e => e.Action == "patient.lookup")).PatientId);
+    }
+
+    [Fact]
     public async Task InvalidInputGetsFieldCodesAndNoSignInGets401()
     {
         using var invalid = await Client(admin).PutAsJsonAsync("/v1/schedule/templates", Template(7));

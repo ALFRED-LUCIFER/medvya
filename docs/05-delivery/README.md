@@ -8,6 +8,8 @@
 4. **Exit gate review.** Founder, clinical advisor and one pilot user confirm each exit criterion with evidence.
 5. **Handover.** The delivery package is sent: release notes, training, runbook, known issues. The phase is closed.
 
+**Feature flags (MDV-P0-028):** per tenant, stored in `tenancy.FeatureFlags` (owner team and description required, same row-level security as other tenancy tables). A flag with no row is off. Gate an endpoint with `.RequireFeature("area.feature")`: while the flag is off the endpoint answers 404, before any other filter. Change a flag only through `IFeatureFlags.SetAsync`, which audits it (`flag.enable` / `flag.disable`) and takes effect on the next request; never edit the table by hand. Not yet built: the authorised operations endpoint that calls it (needs sign-in, MDV-P0-011), the console UI (P5-08), and listing flags in `/v1/me/context` for navigation.
+
 **Versioning:** R0–R4 are 0.x pilot releases. R5 = v1.0 GA. Later phases ship as minor versions. Migrations are forward-only and reviewed.
 
 ## Definition of Ready (ticket can start)

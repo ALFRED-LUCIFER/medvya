@@ -7,6 +7,7 @@
 | [../01-prd/technology-and-db-security.md](../01-prd/technology-and-db-security.md) | Authoritative stack table (PRD v2 §07), DB comparison, 12 protection layers |
 | [repository-structure.md](repository-structure.md) | Proposed monorepo tree and repository rules |
 | [modules.md](modules.md) | Module ownership, invariants, endpoints, domain events |
+| [data-classification.md](data-classification.md) | Classification register: every planned P0–P2 field with its class and controls; Always Encrypted and masking sets |
 | [data-model.md](data-model.md) | ERD for Azure SQL: conventions, Postgres → Azure SQL mapping, data classification, constraints |
 | [state-machines.md](state-machines.md) | Capture FSM, care-task lifecycle, appointment/visit, invoice, write-back, membership |
 | [api-sketch.md](api-sketch.md) | MVP endpoint sketch and API rules |

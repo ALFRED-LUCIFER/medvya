@@ -48,7 +48,7 @@ src/features/<feature>/components/ presentational: props in, events out (no serv
 
 - Lint enforces the layers (`web/clinic/.oxlintrc.json`). Full guide: `docs/03-architecture/frontend-architecture.md`.
 - Server state → TanStack Query. Forms → React Hook Form + Zod (schemas in `domain/`). Routing → React Router. No other state library without an ADR.
-- UI uses `@medvya/ui` primitives and the Medvya MUI theme. No ad-hoc colours: they must meet WCAG 2.2 AA (contrast is tested).
+- UI is **shadcn/ui + Radix + Tailwind 4** (ADR-010) from `@medvya/ui`. Never add MUI or another component library. New shadcn components go into `packages/ui` via the shadcn CLI. Colours and spacing come from the tokens in `packages/ui/src/styles.css`. No ad-hoc colours: they must meet WCAG 2.2 AA (contrast is tested). Use Tailwind logical utilities (`ms-*`, `ps-*`, `start-*`) so right-to-left works.
 - **No hard-coded user-facing text** (`react/jsx-no-literals`). Every string is a key in `packages/i18n/messages/{en,hi,ar}.json`. Arabic must work right-to-left.
 - Accessibility: keyboard path, visible focus ring, screen-reader labels, 44px targets (48px in the patient portal), 200% zoom, reduced motion.
 

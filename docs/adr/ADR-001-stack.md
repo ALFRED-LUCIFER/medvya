@@ -18,7 +18,7 @@ A single owner-developer must build and secure the product. It handles health da
 |---|---|
 | Backend | ASP.NET Core on **.NET 10 LTS** (C# 14), modular monolith, minimal APIs + OpenAPI |
 | Session | ASP.NET Core **BFF** (HTTP-only secure cookies, antiforgery; no tokens in the browser) |
-| Web | **React 19 + TypeScript + Vite**, MUI with the Medvya theme, TanStack Query, React Hook Form + Zod, React Router (SPA) |
+| Web | **React 19 + TypeScript + Vite**, shadcn/ui + Radix + Tailwind 4 (ADR-010 supersedes the original MUI choice), TanStack Query, React Hook Form + Zod, React Router (SPA) |
 | Public site | ASP.NET Core Razor Pages (landing, trust centre, doctor profiles) |
 | Database | **Azure SQL Database** (one logical server per country), EF Core 10 migration bundles, Dapper for reporting |
 | Identity | Microsoft Entra External ID (staff and patients), Entra federation for hospitals |

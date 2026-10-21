@@ -12,7 +12,7 @@ These docs were built from the Claude Design project **"DOQVI UI mockups and fou
 |---|---|
 | [00-overview](00-overview) | Product summary, problem, markets, principles, personas, glossary |
 | [01-prd](01-prd) | PRD v2 phase by phase: roadmap and calendar, the full requirement catalogue, exit gates, cross-cutting NFRs, metrics, risks, open decisions, traceability, completeness check, source conflicts |
-| [02-design](02-design) | Design system (tokens, type, status primitives, component states, MUI theme, microcopy), screen inventory, role sitemap and permission matrix, journeys, responsive/dark rules, accessibility checklist |
+| [02-design](02-design) | Design system (tokens, type, status primitives, component states, Handoff theme reference, microcopy), screen inventory, role sitemap and permission matrix, journeys, responsive/dark rules, accessibility checklist |
 | [03-architecture](03-architecture) | Tech stack, proposed repository structure, module boundaries, data model / ERD mapped to Azure SQL, state machines, API sketch, Azure deployment stages, integrations, AI pipeline |
 | [04-security-compliance](04-security-compliance) | 12-layer database security, security by layer, data residency, consent model, retention, India/UAE regulatory notes |
 | [05-delivery](05-delivery) | Release process, environments, feature flags, versioning, Definition of Ready/Done, ticket conventions and confidence scale |

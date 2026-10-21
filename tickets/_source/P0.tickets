@@ -447,7 +447,7 @@ ac:
 - Backup storage redundancy keeps data in-country (no geo-replication outside the country).
 
 === MDV-P0-020
-title: Medvya design system in code: MUI theme, tokens and clinical status primitives (packages/ui)
+title: Medvya design system in code: shadcn/ui + Tailwind tokens and clinical status primitives (packages/ui)
 type: Story
 epic: MDV-P0-E04
 prd: P0-07
@@ -460,9 +460,9 @@ depends: MDV-P0-001
 confidence: 92 | Theme is given verbatim in Handoff and component states are fully specified.
 sources: docs/02-design/tokens.md; docs/02-design/components-theme-copy.md
 desc:
-packages/ui exports the Medvya MUI theme (verbatim from Handoff, plus the `ai` palette via module augmentation and dark tokens prepared but off) and the clinical primitives: Button states (default/hover/focus/loading/disabled with count), StatusChip (ordered/received/reviewed/completed, icon + label), ProvenanceTag (AI draft · not reviewed dashed violet / Verified / Synced from HIS / Patient reported / Imported / Signed), Alert (critical/attention/info with words), TextField states, RecordingPill (REC/paused/declined), IdentityBanner (name, age, sex, MRN, DOB, allergies never collapsed, consent, encounter, SYNTHETIC marker). A storybook-like gallery page in web/clinic (/__ui) shows every state.
+packages/ui is the design system (ADR-010): shadcn/ui components (Radix) and Tailwind 4 tokens from Foundations/Handoff (`styles.css`), plus the clinical primitives: Button states (default/hover/focus/loading/disabled with count), StatusChip (ordered/received/reviewed/completed, icon + label), ProvenanceTag (AI draft · not reviewed dashed violet / Verified / Synced from HIS / Patient reported / Imported / Signed), Alert (critical/attention/info with words), TextField states, RecordingPill (REC/paused/declined), IdentityBanner (name, age, sex, MRN, DOB, allergies never collapsed, consent, encounter, SYNTHETIC marker). A storybook-like gallery page in web/clinic (/__ui) shows every state.
 ac:
-- Theme values (palette, typography, shape 10, spacing 8, breakpoints xs 0/sm 360/md 768/lg 1280/xl 1600, MuiButton minHeight 44 and no text-transform, MuiPaper 1px #DFE7ED border no shadow, tabular-nums in tables) match docs/02-design/components-theme-copy.md exactly.
+- Tokens in packages/ui/src/styles.css (palette, Manrope/JetBrains Mono, radius 10, breakpoints 360/768/1280/1600) match docs/02-design/tokens.md, with WCAG deviations listed in docs/02-design/README.md; buttons are ≥ 44px, bold, not uppercase; cards have a 1px #DFE7ED border and no shadow.
 - Every primitive renders all states listed in Handoff §1; no status is conveyed by colour alone (icon + text present, checked by test).
 - Focus ring is 2px #2563EB with 2px offset on all interactive primitives.
 - axe reports no violations on the gallery page; text contrast of tokens matches the Foundations ratios (≥ 4.5:1 for text).

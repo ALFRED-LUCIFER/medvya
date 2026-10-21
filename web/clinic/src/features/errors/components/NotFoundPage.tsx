@@ -1,10 +1,9 @@
-import { Box } from '@mui/material';
 import { SystemState } from '@medvya/ui';
 
 export default function NotFoundPage({ onBackToToday }: { onBackToToday: () => void }) {
   return (
-    <Box component="main" sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center', p: 2 }}>
+    <main className="grid min-h-screen place-items-center p-4">
       <SystemState state="notFound" onAction={onBackToToday} />
-    </Box>
+    </main>
   );
 }

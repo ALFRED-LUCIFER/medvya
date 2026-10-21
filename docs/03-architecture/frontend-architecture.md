@@ -22,8 +22,8 @@ Shared, feature-independent code lives in packages: `@medvya/ui` (design-system 
 
 | Layer | Allowed | Forbidden (lint-enforced) |
 |---|---|---|
-| `domain/` | Types, pure functions, validation rules, Zod schemas | React, MUI, services, hooks, components, `fetch`, `window`, `document`, storage |
-| `services/` | HTTP via the API client, storage, browser APIs. Returns plain data | React, MUI, hooks, components |
+| `domain/` | Types, pure functions, validation rules, Zod schemas | React, UI kit, services, hooks, components, `fetch`, `window`, `document`, storage |
+| `services/` | HTTP via the API client, storage, browser APIs. Returns plain data | React, UI kit, hooks, components |
 | `hooks/` (controllers) | React state and effects, **TanStack Query** (`useQuery`/`useMutation`), **React Hook Form**, calling services, applying domain rules. Returns a **view model + handlers** | UI (MUI, components), direct `fetch`/`localStorage` |
 | `components/` | Rendering, layout, `useI18n()`, local UI-only state (open/closed, hover) | Services, controller hooks, TanStack, `fetch`, storage |
 | `app/` | Calls controller hooks and passes their results to components; providers; router | Business rules (put them in `domain/`) |
@@ -69,6 +69,7 @@ Why it matters for Medvya:
 | Forms and validation | **React Hook Form + Zod** (Zod schemas in `domain/`) | First form: registration (MDV-P1-013) |
 | Routing | **React Router** (SPA) | App shell (MDV-P0-022) |
 | API client | Generated from OpenAPI into `@medvya/api-client` | With the first endpoint used by the UI (MDV-P0-012) |
-| UI | MUI + `@medvya/ui` | In place |
+| UI | shadcn/ui + Radix + Tailwind 4 + Lucide via `@medvya/ui` (ADR-010) | In place |
+| Tables, dates, calendar | TanStack Table, react-day-picker (shadcn calendar), FullCalendar | With the first table/schedule screen (P1) |
 
 No other state library (Redux, Zustand…) unless a decision record justifies it. Server state belongs in TanStack Query, form state in React Hook Form, and the little UI state left in `useState`.

@@ -28,7 +28,7 @@ export DOCKER_HOST="unix://$HOME/.colima/default/docker.sock" TESTCONTAINERS_DOC
 | [docs/](docs/README.md) | Everything from the design project and PRD v2: product, requirements, design system, architecture, security/compliance, delivery rules, gap analysis, ADRs |
 | [tickets/](tickets/README.md) | 223 Jira-style tickets for phases P0–P8, each with acceptance criteria, traceability, dates and a confidence level; date-wise [schedule](tickets/schedule.md); [Jira CSV](tickets/jira-import.csv); [coverage report](tickets/coverage-report.md) |
 | [src/](src) | .NET 10 modular monolith: `Host.Api` and modules (`Identity`, `Tenancy`, `Audit`), each split into Domain / Application / Infrastructure / Api |
-| [web/](web) · [packages/](packages) | React 19 + Vite clinic app; `@medvya/ui` (Medvya MUI theme) |
+| [web/](web) · [packages/](packages) | React 19 + Vite clinic app; `@medvya/ui` (shadcn/ui + Tailwind 4 design system, ADR-010) |
 | [design/](design/README.md) | Imported Claude Design source files (read-only) |
 | [tools/](tools) | `prd-extract` (design data → docs), `tickets/build.py` (ticket sources → files + coverage check) |
 

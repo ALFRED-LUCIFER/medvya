@@ -1,6 +1,6 @@
 # Architecture
 
-**Shape:** one ASP.NET Core (.NET 10 LTS) modular monolith per country. It contains the BFF and the public Razor site, with React 19 + MUI SPAs for staff (`web/clinic`) and patients (`web/portal`). The database is Azure SQL Database (one logical server per country). Jobs run on Hangfire on Azure SQL in P1, plus Azure Service Bus with .NET workers for AI and integrations from P3. Hosting is Azure App Service (Linux) until P7 stamps.
+**Shape:** one ASP.NET Core (.NET 10 LTS) modular monolith per country. It contains the BFF and the public Razor site, with React 19 + shadcn/ui/Tailwind SPAs for staff (`web/clinic`) and patients (`web/portal`). The database is Azure SQL Database (one logical server per country). Jobs run on Hangfire on Azure SQL in P1, plus Azure Service Bus with .NET workers for AI and integrations from P3. Hosting is Azure App Service (Linux) until P7 stamps.
 
 | File | Content |
 |---|---|

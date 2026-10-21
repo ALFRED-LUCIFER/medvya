@@ -17,7 +17,7 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P0-005](P0-foundation/MDV-P0-005.md) | Local development environment with Docker Compose (SQL Server, Azurite, mail and SMS sinks) | P0 | wk 1–1 | 90% |
 | [MDV-P0-006](P0-foundation/MDV-P0-006.md) | Azure environments as code (Bicep): App Service, Azure SQL private endpoint, Blob, Key Vault, App Insights, Defender, budgets | P0 | wk 1–2 | 80% |
 | [MDV-P0-016](P0-foundation/MDV-P0-016.md) | Data classification register and ERD → Azure SQL type mapping | P0 | wk 1–2 | 85% |
-| [MDV-P0-020](P0-foundation/MDV-P0-020.md) | Medvya design system in code: MUI theme, tokens and clinical status primitives (packages/ui) | P0 | wk 1–2 | 92% |
+| [MDV-P0-020](P0-foundation/MDV-P0-020.md) | Medvya design system in code: shadcn/ui + Tailwind tokens and clinical status primitives (packages/ui) | P0 | wk 1–2 | 92% |
 | [MDV-P0-024](P0-foundation/MDV-P0-024.md) | Threat model, data map, DPIA draft (DPDP) and record-retention map per country | P0 | wk 1–3 | 75% |
 | [MDV-P0-025](P0-foundation/MDV-P0-025.md) | Secure development policies: SECURITY.md, code review rules, synthetic-only data, JIT access, offline break-glass account | P0 | wk 1–1 | 90% |
 
@@ -36,7 +36,7 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P0-016](P0-foundation/MDV-P0-016.md) | Data classification register and ERD → Azure SQL type mapping | P0 | wk 1–2 | 85% |
 | [MDV-P0-017](P0-foundation/MDV-P0-017.md) | Append-only audit log on Azure SQL ledger tables with audit middleware | P0 | wk 2–3 | 85% |
 | [MDV-P0-018](P0-foundation/MDV-P0-018.md) | Observability with OpenTelemetry and PHI redaction (structured logs, telemetry processor) | P0 | wk 2–2 | 88% |
-| [MDV-P0-020](P0-foundation/MDV-P0-020.md) | Medvya design system in code: MUI theme, tokens and clinical status primitives (packages/ui) | P0 | wk 1–2 | 92% |
+| [MDV-P0-020](P0-foundation/MDV-P0-020.md) | Medvya design system in code: shadcn/ui + Tailwind tokens and clinical status primitives (packages/ui) | P0 | wk 1–2 | 92% |
 | [MDV-P0-021](P0-foundation/MDV-P0-021.md) | Internationalisation pipeline: English, Hindi, Arabic with full RTL | P0 | wk 2–2 | 88% |
 | [MDV-P0-024](P0-foundation/MDV-P0-024.md) | Threat model, data map, DPIA draft (DPDP) and record-retention map per country | P0 | wk 1–3 | 75% |
 | [MDV-P0-026](P0-foundation/MDV-P0-026.md) | OWASP ASVS L2 baseline: security headers, CSP, HSTS, rate limiting, input validation | P0 | wk 2–2 | 88% |

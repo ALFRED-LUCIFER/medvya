@@ -18,7 +18,7 @@ The design project contains documents written at different times. **PRD v2 (20 O
 | C-12 | Azure Architecture DR/RPO | Azure Architecture P1: RPO 15 min / RTO 4 h. Pooled scale: RPO 5 min / RTO 1 h | **RPO ≤ 15 min, RTO ≤ 4 h from P5** (PRD v2 X7); stricter numbers only per enterprise contract | — |
 | C-13 | Brand / working name | Uploads use "DoctorMate"; one Build Plan header shows "D" | **Medvya** (working name, trademark clearance pending) | Keep the name global and replaceable (i18n key) |
 | C-14 | Data plane of the Build Plan security list | "Postgres row-level security", "pgvector later" | Azure SQL equivalents (RLS predicates). Vector search is out of scope until a need is proven | — |
-| C-15 | UI library | PRD v1 / October plan: **shadcn/ui + Radix + Tailwind 4**, Lucide icons ("port MUI tokens to Tailwind in P0"). Handoff, UI/UX prompt, Architecture v2 and Build Plan: **MUI** | **MUI with the Medvya theme** (PRD v2 §07: "Designs and Handoff already target MUI, so no token conversion") | Implemented in `@medvya/ui` (MDV-P0-020). **Founder confirmation requested on 21 Oct 2026**; switching is cheap while only primitives and the gallery exist |
+| C-15 | UI library | PRD v1 / October plan: **shadcn/ui + Radix + Tailwind 4**, Lucide icons ("port MUI tokens to Tailwind in P0"). Handoff, UI/UX prompt, Architecture v2 and Build Plan: **MUI** | **shadcn/ui + Radix + Tailwind 4** (founder decision 21 Oct 2026, ADR-010), overriding PRD v2's MUI | Migrated in `@medvya/ui`; MUI removed |
 
 ## Open questions found while building docs and tickets (not answered by any source)
 

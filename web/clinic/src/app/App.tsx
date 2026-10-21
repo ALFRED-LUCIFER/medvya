@@ -19,12 +19,13 @@ import { useShellController } from '../features/shell/hooks/useShellController';
 // Patient screens load on first use, keeping them out of the first-paint bundle.
 const PatientDirectoryRoute = lazy(() => import('./PatientRoutes').then(m => ({ default: m.PatientDirectoryRoute })));
 const PatientRecordRoute = lazy(() => import('./PatientRoutes').then(m => ({ default: m.PatientRecordRoute })));
+const QuickRegistrationRoute = lazy(() => import('./PatientRoutes').then(m => ({ default: m.QuickRegistrationRoute })));
 
 type Props = { locale: Locale; onLocaleChange: (l: Locale) => void };
 
 // Composition only: controllers feed presentational components; routes exist only for screens this membership may see.
 export default function App({ locale, onLocaleChange }: Props) {
-  const { t } = useI18n();
+  const { t, country } = useI18n();
   const navigate = useNavigate();
   const { online, retry } = useConnectivityController();
   const shell = useShellController();
@@ -35,6 +36,8 @@ export default function App({ locale, onLocaleChange }: Props) {
   const first = shell.items[0];
   const searchPath = allows(active ?? null, patientDirectory) ? patientDirectory.path : null;
   const registerPath = shell.items.find(i => i.id === 'register')?.path ?? null;
+  const pathOf = (id: string) => shell.items.find(i => i.id === id)?.path ?? null;
+  const registration = <QuickRegistrationRoute country={country} actorName={shell.displayName ?? ''} bookPath={pathOf('schedule')} checkInPath={pathOf('frontDesk')} />;
 
   const routes = shell.loading ? <Route path="*" element={<ShellMessage standalone busy title={t('shell.loading')} />} />
     : !shell.session ? <>
@@ -53,7 +56,7 @@ export default function App({ locale, onLocaleChange }: Props) {
             <Suspense fallback={<ShellMessage busy title={t('shell.loading')} />}><Outlet /></Suspense>
           </AppShell>}>
           <Route index element={first ? <Navigate to={first.path} replace /> : <ShellMessage title={t('shell.noScreens.title')} body={t('shell.noScreens.body')} />} />
-          {shell.items.map(i => <Route key={i.id} path={i.path} element={<ComingSoon title={t(`nav.${i.id}`)} phase={i.phase} />} />)}
+          {shell.items.map(i => <Route key={i.id} path={i.path} element={i.id === 'register' ? registration : <ComingSoon title={t(`nav.${i.id}`)} phase={i.phase} />} />)}
           {searchPath && <>
             <Route path={searchPath} element={<PatientDirectoryRoute registerPath={registerPath} />} />
             <Route path={`${searchPath}/:patientId`} element={<PatientRecordRoute />} />

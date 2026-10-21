@@ -14,7 +14,7 @@ namespace Medvya.Patients.Infrastructure;
 /// read runs, so a read that cannot be audited never happens and each request leaves exactly one event.
 /// shortcut: the audit event is written on its own connection, so a commit that fails after the audit write leaves an audit row
 /// for a change that did not land (as FeatureFlags); share the transaction when an outbox exists.
-/// shortcut: registration still trusts the command's facility id; it moves to the active facility with the registration endpoint (MDV-P1-016).
+/// The facility of a registration is the command's; the HTTP endpoint fills it from the active facility, never from the request body.
 /// shortcut: reads see the active facility's patients only; sharing patients across one tenant's facilities waits for multi-site rules (P7).
 /// </summary>
 public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant, ICurrentFacility facility, ICurrentUser user, IAuditLog audit, TimeProvider clock)
@@ -29,6 +29,11 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
         var now = clock.GetUtcNow();
         var rules = CountryRules.For(command.CountryCode);
         var (c, dob, estimated, warnings) = rules.Validate(command, rules.Today(now));
+
+        // Checked here as well as while typing: the save is refused until the desk has decided about every possible match.
+        var duplicates = await DuplicatesAsync(c.FacilityId, c.FullName, estimated ? null : dob, rules.MatchKeys(c.Identifiers), cancellationToken);
+        var resolved = c.Duplicates?.CandidateIds ?? [];
+        if (duplicates.Any(d => !resolved.Contains(d.PatientId))) throw new PatientValidationException([new("duplicates", "unresolved")]);
 
         await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
         var patient = new Patient
@@ -49,9 +54,19 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
             DisplayValue = PatientIdentifier.IsLookup(i.Scheme) ? null : i.Value,
         }));
         if (c.Payer is not null) db.PayerCoverages.Add(Coverage(tenantId, patient.Id, c.Payer));
+        var decisions = duplicates.Select(d => new MergeRequest
+        {
+            Id = Guid.CreateVersion7(), TenantId = tenantId, PatientId = patient.Id, CandidatePatientId = d.PatientId,
+            Status = c.Duplicates!.Decision == DuplicateDecision.MergeReview ? MergeRequestStatus.Proposed : MergeRequestStatus.NotSame,
+            DecidedBy = user.UserId, DecidedAt = now,
+        }).ToList();
+        db.MergeRequests.AddRange(decisions);
         await db.SaveChangesAsync(cancellationToken);
 
         await AuditAsync("patient.register", patient.Id, now, cancellationToken); // PatientRegistered.v1: opaque ids only
+        foreach (var d in decisions)
+            await AuditAsync(d.Status == MergeRequestStatus.Proposed ? "patient.duplicate.merge_review" : "patient.duplicate.not_same",
+                patient.Id, now, cancellationToken, "merge_request", d.Id);
         await tx.CommitAsync(cancellationToken);
         return new(patient.Id, patient.Mrn, now, user.UserId, patient.Status, warnings);
     }
@@ -89,7 +104,7 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
             .Select(p => new { p.Id, p.FullName, p.DateOfBirth, p.DateOfBirthEstimated, p.SexAtBirth, p.Mrn, p.Status, p.CountryCode })
             .ToListAsync(cancellationToken);
         var items = rows.Select(p => new PatientSummary(p.Id, Initials(p.FullName), CountryRules.AgeOn(CountryRules.For(p.CountryCode).Today(now), p.DateOfBirth),
-            p.DateOfBirthEstimated, p.SexAtBirth, p.Mrn.Length <= 4 ? p.Mrn : p.Mrn[^4..], p.Status)).ToList();
+            p.DateOfBirthEstimated, p.SexAtBirth, Tail(p.Mrn), p.Status)).ToList();
         return new(term.Kind, items, search.Page, PatientSearch.PageSize, total);
     }
 
@@ -105,11 +120,54 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
         return initials.ToUpperInvariant();
     }
 
-    IQueryable<Patient> FacilityPatients()
+    IQueryable<Patient> FacilityPatients() => FacilityPatients(facility.FacilityId ?? throw new InvalidOperationException("No facility context."));
+
+    IQueryable<Patient> FacilityPatients(Guid facilityId) => db.Patients.AsNoTracking().Where(p => p.FacilityId == facilityId);
+
+    /// <summary>At most this many possible matches are shown: enough to decide, too few to browse the register through this door.</summary>
+    const int MaxCandidates = 5;
+
+    public Task<IReadOnlyList<DuplicateCandidate>> FindDuplicatesAsync(DuplicateQuery query, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(query);
         var facilityId = facility.FacilityId ?? throw new InvalidOperationException("No facility context.");
-        return db.Patients.AsNoTracking().Where(p => p.FacilityId == facilityId);
+        return DuplicatesAsync(facilityId, query.FullName, query.DateOfBirth, CountryRules.For(query.CountryCode).MatchKeys(query.Identifiers), cancellationToken);
     }
+
+    /// <summary>Exact identifier matches, then a similar name with the identical recorded date of birth. Phone is never read.</summary>
+    async Task<IReadOnlyList<DuplicateCandidate>> DuplicatesAsync(Guid facilityId, string fullName, DateOnly? dateOfBirth, IReadOnlyList<IdentifierInput> keys, CancellationToken cancellationToken)
+    {
+        var byIdentifier = new Dictionary<Guid, List<IdentifierScheme>>();
+        foreach (var key in keys)
+        {
+            // Deterministic Always Encrypted: equality on ciphertext, never a decrypting scan.
+            var ids = await db.Identifiers.Where(i => i.Scheme == key.Scheme && i.LookupValue == key.Value).Select(i => i.PatientId).ToListAsync(cancellationToken);
+            foreach (var id in ids) (byIdentifier.TryGetValue(id, out var schemes) ? schemes : byIdentifier[id] = []).Add(key.Scheme);
+        }
+
+        var byName = new HashSet<Guid>();
+        if (dateOfBirth is { } dob)
+        {
+            // An estimated date of birth (from a stated age) is not a date of birth: it never counts as "identical".
+            var sameDay = await FacilityPatients(facilityId).Where(p => p.DateOfBirth == dob && !p.DateOfBirthEstimated)
+                .Select(p => new { p.Id, p.FullName }).ToListAsync(cancellationToken);
+            byName = [.. sameDay.Where(p => NameMatch.Similar(fullName, p.FullName)).Select(p => p.Id)];
+        }
+
+        var matched = byIdentifier.Keys.Union(byName).ToList();
+        if (matched.Count == 0) return [];
+        var now = clock.GetUtcNow();
+        var rows = await FacilityPatients(facilityId).Where(p => matched.Contains(p.Id)).OrderByDescending(p => p.RegisteredAt).Take(MaxCandidates)
+            .Select(p => new { p.Id, p.FullName, p.DateOfBirth, p.SexAtBirth, p.Mrn, p.CountryCode }).ToListAsync(cancellationToken);
+        var shown = rows.Select(r => r.Id).ToList();
+        var identifiers = await db.Identifiers.AsNoTracking().Where(i => shown.Contains(i.PatientId)).ToListAsync(cancellationToken);
+        return [.. rows.Select(p => new DuplicateCandidate(
+            p.Id, Initials(p.FullName), CountryRules.AgeOn(CountryRules.For(p.CountryCode).Today(now), p.DateOfBirth), p.SexAtBirth, Tail(p.Mrn),
+            byName.Contains(p.Id), byIdentifier.TryGetValue(p.Id, out var s) ? s : [],
+            [.. identifiers.Where(i => i.PatientId == p.Id).OrderBy(i => i.Scheme).Select(i => new MaskedIdentifier(i.Scheme, Tail(i.LookupValue ?? i.DisplayValue ?? "")))]))];
+    }
+
+    static string Tail(string value) => value.Length <= 4 ? value : value[^4..];
 
     public async Task<RegistrationStatus> CompleteRegistrationAsync(Guid patientId, PatientAddress? address, PayerInput? payer, CancellationToken cancellationToken = default)
     {
@@ -170,11 +228,11 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
         return Mrn.Format(next);
     }
 
-    Task AuditAsync(string action, Guid? patientId, DateTimeOffset now, CancellationToken cancellationToken) =>
+    Task AuditAsync(string action, Guid? patientId, DateTimeOffset now, CancellationToken cancellationToken, string resourceType = "patient", Guid? resourceId = null) =>
         audit.WriteAsync(new AuditEvent
         {
-            Id = Guid.CreateVersion7(), TenantId = TenantId(), ActorUserId = user.UserId, Action = action, ResourceType = "patient",
-            ResourceId = patientId, PatientId = patientId, Purpose = Purpose, Outcome = AuditOutcome.Allowed, OccurredAt = now,
+            Id = Guid.CreateVersion7(), TenantId = TenantId(), ActorUserId = user.UserId, Action = action, ResourceType = resourceType,
+            ResourceId = resourceId ?? patientId, PatientId = patientId, Purpose = Purpose, Outcome = AuditOutcome.Allowed, OccurredAt = now,
         }, cancellationToken);
 
     Guid TenantId() => tenant.TenantId ?? throw new InvalidOperationException("No tenant context.");

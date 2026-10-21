@@ -62,8 +62,9 @@ public sealed record PatientAddress
 public enum IdentifierScheme { Abha, AbhaAddress, AadhaarLast4, EmiratesId, Passport, Visa }
 
 /// <summary>
-/// A national, health or travel identifier. Always Encrypted (MDV-P0-009): schemes searched by exact match (ABHA number and
-/// address, Emirates ID) go in the deterministic LookupValue, the rest in the randomized DisplayValue. Exactly one is set.
+/// A national, health or travel identifier. Always Encrypted (MDV-P0-009): schemes matched exactly (ABHA number and address,
+/// Emirates ID, and passport for the duplicate check, MDV-P1-016) go in the deterministic LookupValue, the rest (Aadhaar last 4,
+/// visa file) in the randomized DisplayValue. Exactly one is set.
 /// </summary>
 public sealed class PatientIdentifier
 {
@@ -76,7 +77,31 @@ public sealed class PatientIdentifier
     /// <summary>Document expiry (Emirates ID, passport, visa).</summary>
     [Classification(DataClass.Personal)] public DateOnly? ExpiresOn { get; init; }
 
-    public static bool IsLookup(IdentifierScheme scheme) => scheme is IdentifierScheme.Abha or IdentifierScheme.AbhaAddress or IdentifierScheme.EmiratesId;
+    public static bool IsLookup(IdentifierScheme scheme) =>
+        scheme is IdentifierScheme.Abha or IdentifierScheme.AbhaAddress or IdentifierScheme.EmiratesId or IdentifierScheme.Passport;
+
+    /// <summary>Schemes the desk search box recognises (MDV-P1-018). A passport number looks like any short code, so it is matched by the duplicate check only.</summary>
+    public static bool IsDeskSearchKey(IdentifierScheme scheme) => scheme is IdentifierScheme.Abha or IdentifierScheme.AbhaAddress or IdentifierScheme.EmiratesId;
+}
+
+/// <summary>Proposed: the desk asked for a merge review (P-03, MDV-P1-017). NotSame: the desk decided the two are different people.</summary>
+public enum MergeRequestStatus { Proposed, NotSame }
+
+/// <summary>
+/// A duplicate decision taken at registration (MDV-P1-016) about a new patient and an existing possible match. Records only the
+/// decision; merging and the second approver are MDV-P1-017 (state machine: docs/03-architecture/state-machines.md).
+/// </summary>
+public sealed class MergeRequest
+{
+    [Classification(DataClass.Internal)] public Guid Id { get; init; }
+    [Classification(DataClass.Internal)] public Guid TenantId { get; init; }
+    /// <summary>The record just registered.</summary>
+    [Classification(DataClass.Internal)] public Guid PatientId { get; init; }
+    /// <summary>The existing record it was matched with.</summary>
+    [Classification(DataClass.Internal)] public Guid CandidatePatientId { get; init; }
+    [Classification(DataClass.Internal)] public MergeRequestStatus Status { get; init; }
+    [Classification(DataClass.Internal)] public Guid? DecidedBy { get; init; }
+    [Classification(DataClass.Internal)] public DateTimeOffset DecidedAt { get; init; }
 }
 
 /// <summary>India: Self-pay, Corporate, Private insurance (TPA), Government scheme. UAE: Insurance (= PrivateInsurance), Self-pay, Corporate.</summary>

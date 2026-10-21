@@ -24,6 +24,44 @@ namespace Medvya.Patients.Infrastructure.Persistence.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("Medvya.Patients.Domain.MergeRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("CandidatePatientId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("DecidedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("DecidedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("PatientId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CandidatePatientId");
+
+                    b.HasIndex("PatientId");
+
+                    b.HasIndex("TenantId", "PatientId", "CandidatePatientId")
+                        .IsUnique();
+
+                    b.ToTable("MergeRequests", "patients");
+                });
+
             modelBuilder.Entity("Medvya.Patients.Domain.Patient", b =>
                 {
                     b.Property<Guid>("Id")
@@ -148,6 +186,8 @@ namespace Medvya.Patients.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("TenantId", "FacilityId", "DateOfBirth");
+
                     b.HasIndex("TenantId", "FacilityId", "Mobile");
 
                     b.HasIndex("TenantId", "FacilityId", "Mrn")
@@ -239,6 +279,21 @@ namespace Medvya.Patients.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("PayerCoverages", "patients");
+                });
+
+            modelBuilder.Entity("Medvya.Patients.Domain.MergeRequest", b =>
+                {
+                    b.HasOne("Medvya.Patients.Domain.Patient", null)
+                        .WithMany()
+                        .HasForeignKey("CandidatePatientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Medvya.Patients.Domain.Patient", null)
+                        .WithMany()
+                        .HasForeignKey("PatientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Medvya.Patients.Domain.PatientIdentifier", b =>

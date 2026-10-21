@@ -45,23 +45,37 @@ public class TelemetryRedactionTests
         };
     }
 
+    // The server ends its request span after the client already has the response; this marks when it has been exported.
+    sealed class SignalWhenExported(ActivityTraceId traceId, TaskCompletionSource exported) : BaseProcessor<Activity>
+    {
+        public override void OnEnd(Activity data)
+        {
+            if (data.TraceId == traceId && data.Kind == ActivityKind.Server) exported.TrySetResult();
+        }
+    }
+
     [Fact]
     public async Task PatientDataNeverReachesExportedLogsOrTraces()
     {
         var logs = new List<string>();
         var spans = new List<Activity>();
+        // Our own trace id, so spans from other hosts in this process (tracing listeners are process-wide) are told apart.
+        var traceId = ActivityTraceId.CreateRandom();
+        var spanExported = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b
             .ConfigureLogging(l => l.AddOpenTelemetry(o => o.AddProcessor(new Snapshot(logs))))
             .ConfigureServices(s =>
             {
                 s.AddSingleton<IStartupFilter, LeakyMiddleware>();
-                s.AddOpenTelemetry().WithTracing(t => t.AddInMemoryExporter(spans));
+                s.AddOpenTelemetry().WithTracing(t => t.AddInMemoryExporter(spans).AddProcessor(new SignalWhenExported(traceId, spanExported)));
             }));
 
         var query = $"/health?name={Uri.EscapeDataString(Name)}&phone={Uri.EscapeDataString(Phone)}&eid={EmiratesId}";
-        var res = await factory.CreateClient().GetAsync(new Uri(query, UriKind.Relative));
+        using var request = new HttpRequestMessage(HttpMethod.Get, new Uri(query, UriKind.Relative));
+        request.Headers.Add("traceparent", $"00-{traceId}-{ActivitySpanId.CreateRandom()}-01");
+        var res = await factory.CreateClient().SendAsync(request);
         res.EnsureSuccessStatusCode();
-        factory.Services.GetRequiredService<TracerProvider>().ForceFlush();
+        await spanExported.Task.WaitAsync(TimeSpan.FromSeconds(10));
         await factory.DisposeAsync(); // stop the host so nothing appends to logs/spans while we read them
 
         var exported = string.Join('\n', logs) + "\n" + string.Join('\n',
@@ -74,7 +88,7 @@ public class TelemetryRedactionTests
         Assert.Contains("Registered {PatientName} {Mobile} {EmiratesId} {RequestId}", exported, StringComparison.Ordinal);
         Assert.Contains("StatusCode=409", exported, StringComparison.Ordinal);
         Assert.Contains("exception.type=System.InvalidOperationException", exported, StringComparison.Ordinal);
-        Assert.Contains(spans, a => Equals(a.GetTagItem("http.route"), "/health"));
+        Assert.Contains(spans, a => a.TraceId == traceId && Equals(a.GetTagItem("http.route"), "/health"));
         Assert.Contains(logs, l => !l.Contains("|00000000000000000000000000000000|", StringComparison.Ordinal));
     }
 }

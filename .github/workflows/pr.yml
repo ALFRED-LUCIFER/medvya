@@ -42,6 +42,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm -r lint
       - run: pnpm -r build # includes tsc type-checking
+      - run: pnpm -r test
       - run: pnpm audit --audit-level high
       - run: node tools/check-synthetic/check.mjs --self-test && node tools/check-synthetic/check.mjs
 

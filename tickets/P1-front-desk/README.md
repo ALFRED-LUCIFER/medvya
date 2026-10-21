@@ -59,7 +59,7 @@
 | [MDV-P1-024](MDV-P1-024.md) | Reschedule (incl. drag with confirm), cancel with reason, mark no-show with rebook offer | Story | MUST | P1-06 | P-04 | 2 | 7–7 | 07 Dec → 11 Dec 2026 | 90% High |
 | [MDV-P1-025](MDV-P1-025.md) | Walk-in registration and booking straight to the queue | Story | MUST | P1-06 | P-01, P-04 | 1 | 7–7 | 07 Dec → 11 Dec 2026 | 88% High |
 | [MDV-P1-028](MDV-P1-028.md) | Reception board with visit columns and one-tap check-in | Story | MUST | P1-08 | P-01 | 3 | 7–8 | 07 Dec → 18 Dec 2026 | 82% Medium |
-| [MDV-P1-032](MDV-P1-032.md) | Email confirmations and 24 h / 2 h reminders via Azure Communication Services and Hangfire | Story | MUST | P1-09 | — | 2.5 | 7–8 | 07 Dec → 18 Dec 2026 | 86% High |
+| [MDV-P1-032](MDV-P1-032.md) | Email confirmations and 24 h / 2 h reminders via SendGrid and Hangfire | Story | MUST | P1-09 | — | 2.5 | 7–8 | 07 Dec → 18 Dec 2026 | 86% High |
 | [MDV-P1-026](MDV-P1-026.md) | Recurring appointments (series) with per-occurrence exceptions | Story | MUST | P1-06 | P-04 | 1.5 | 8–8 | 14 Dec → 18 Dec 2026 | 80% Medium |
 | [MDV-P1-027](MDV-P1-027.md) | Waitlist with "offer earlier slot" | Story | MUST | P1-06 | P-05 | 1.5 | 8–8 | 14 Dec → 18 Dec 2026 | 84% Medium |
 | [MDV-P1-029](MDV-P1-029.md) | Real-time board updates, call/room patient, nonclinical statuses (SignalR) | Story | MUST | P1-08 | P-01 | 2 | 8–8 | 14 Dec → 18 Dec 2026 | 85% High |

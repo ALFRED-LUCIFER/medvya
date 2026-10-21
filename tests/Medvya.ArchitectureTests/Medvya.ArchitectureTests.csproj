@@ -1,0 +1,27 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\docs\02-design\data\foundations.json" Link="foundations.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Modules\Identity\Medvya.Identity.Domain\Medvya.Identity.Domain.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Tenancy\Medvya.Tenancy.Domain\Medvya.Tenancy.Domain.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Audit\Medvya.Audit.Domain\Medvya.Audit.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

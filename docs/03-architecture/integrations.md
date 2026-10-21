@@ -5,7 +5,7 @@ Every integration sits behind an adapter in `Integrations` or `Notifications`, u
 | Integration | Purpose | Phase | Country | Notes / dependency |
 |---|---|---|---|---|
 | Microsoft Entra External ID | Staff and patient sign-in, MFA, passkeys | P0 | Both | BFF keeps tokens server-side. Hospital federation (SAML/OIDC) and SCIM in P7 |
-| Azure Communication Services — email | Confirmations, reminders, invites | P1 | Both | Templates without clinical details |
+| Email: **SendGrid** (founder decision, 20 Oct 2026; free tier to start) | Confirmations, reminders, invites | P1 | Both | Templates without clinical details. Behind the Notifications adapter so Azure Communication Services stays a drop-in alternative. Confirm SendGrid data-processing terms before real patient emails (P1-044) |
 | SMS | Confirmations, reminders, OTP | P1 | Both | India: **DLT sender ID and templates must be registered** (P1 dependency) |
 | WhatsApp Business API | Reminders, confirmations, one-tap reschedule, running-late broadcast | P4 | Both | **Template approval** dependency. Opt-in records per channel |
 | Razorpay | UPI, card, refunds, webhooks | P4 | India | Merchant approval can take weeks (apply during P2) |

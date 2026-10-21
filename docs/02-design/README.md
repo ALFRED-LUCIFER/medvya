@@ -19,3 +19,12 @@ Four rules carry through every screen:
 | [journeys.md](journeys.md) | J1–J6 end-to-end journeys (X-03) with approval gates and recovery branches |
 | [responsive-and-dark.md](responsive-and-dark.md) | Mobile/tablet/desktop rules, dark mode, RTL |
 | [data/](data) | Machine-readable Foundations and Handoff data extracted from the design files |
+
+## Deviations from the design files (fix these in the design project)
+
+| Where | Design value | Implemented | Why |
+|---|---|---|---|
+| Success text on the `#E6F4EF` tint ("Clinician verified" tag, "Recording consent · given", "Paid", "Eligible" chips) | `#087F5B` | `#07774F` | `#087F5B` on `#E6F4EF` is 4.42:1, below WCAG AA 4.5:1. Found by the contrast test in `packages/ui` (MDV-P0-020). `#087F5B` on white (5.2:1) is unchanged |
+| `primary.main` (buttons, links in primary colour) | `#0E9384`, hover `#0F766E` | `#0F766E`, hover `#0B5C55` | White 14px bold text on `#0E9384` is 3.8:1, and `#0E9384` text on the canvas is 3.62:1. Both fail WCAG AA (the large-text exception needs ≥ 18.66px bold). Found by page-level axe on the UI gallery (MDV-P0-020). `#0F766E` is the design's own brand.700. `#0E9384` stays available for non-text accents |
+| `ai` palette entry | `main`, `light` | adds `dark: #5B3FC4`, `contrastText: #FFFFFF` | MUI needs them for `<Button color="ai">`. Both are existing AI design colours |
+| Focus ring | listed in the a11y checklist, not in the theme | `MuiButtonBase` / `MuiOutlinedInput` overrides: 2px `#2563EB`, offset 2 | Makes the Handoff rule apply to every interactive MUI component |

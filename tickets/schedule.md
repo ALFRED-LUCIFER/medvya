@@ -121,7 +121,7 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P1-024](P1-front-desk/MDV-P1-024.md) | Reschedule (incl. drag with confirm), cancel with reason, mark no-show with rebook offer | P1 | wk 7–7 | 90% |
 | [MDV-P1-025](P1-front-desk/MDV-P1-025.md) | Walk-in registration and booking straight to the queue | P1 | wk 7–7 | 88% |
 | [MDV-P1-028](P1-front-desk/MDV-P1-028.md) | Reception board with visit columns and one-tap check-in | P1 | wk 7–8 | 82% |
-| [MDV-P1-032](P1-front-desk/MDV-P1-032.md) | Email confirmations and 24 h / 2 h reminders via Azure Communication Services and Hangfire | P1 | wk 7–8 | 86% |
+| [MDV-P1-032](P1-front-desk/MDV-P1-032.md) | Email confirmations and 24 h / 2 h reminders via SendGrid and Hangfire | P1 | wk 7–8 | 86% |
 | [MDV-P1-046](P1-front-desk/MDV-P1-046.md) | Start UAE regulator onboarding applications early (risk mitigation) | P1 | wk 6–8 | 55% |
 
 ## Week 8 · 14 Dec 2026 – 18 Dec 2026 · load 15.9 dev-days ⚠ over capacity
@@ -134,7 +134,7 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P1-029](P1-front-desk/MDV-P1-029.md) | Real-time board updates, call/room patient, nonclinical statuses (SignalR) | P1 | wk 8–8 | 85% |
 | [MDV-P1-030](P1-front-desk/MDV-P1-030.md) | Clinic overview: multi-doctor Today and shared waiting room (D-04) | P1 | wk 8–8 | 80% |
 | [MDV-P1-031](P1-front-desk/MDV-P1-031.md) | Queue TV display with tokens only, never names (P-05) | P1 | wk 8–8 | 90% |
-| [MDV-P1-032](P1-front-desk/MDV-P1-032.md) | Email confirmations and 24 h / 2 h reminders via Azure Communication Services and Hangfire | P1 | wk 7–8 | 86% |
+| [MDV-P1-032](P1-front-desk/MDV-P1-032.md) | Email confirmations and 24 h / 2 h reminders via SendGrid and Hangfire | P1 | wk 7–8 | 86% |
 | [MDV-P1-033](P1-front-desk/MDV-P1-033.md) | SMS confirmations and reminders with India DLT templates and delivery receipts | P1 | wk 8–8 | 68% |
 | [MDV-P1-034](P1-front-desk/MDV-P1-034.md) | Notification centre for staff (D-03), push-safe content | P1 | wk 8–8 | 85% |
 | [MDV-P1-035](P1-front-desk/MDV-P1-035.md) | Practice access log for owners (F-12): who opened which record and when | P1 | wk 8–8 | 84% |

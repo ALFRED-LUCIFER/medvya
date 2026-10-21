@@ -1,0 +1,59 @@
+name: pr
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dotnet:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - run: dotnet build Medvya.sln # analyzers run as part of the build; warnings are errors (Directory.Build.props)
+      - run: dotnet test Medvya.sln --no-build
+      - name: Vulnerable NuGet packages
+        # shortcut: substitutes for GitHub dependency review, which needs Advanced Security on private repos
+        run: |
+          dotnet package list --project Medvya.sln --vulnerable --include-transitive | tee vuln.txt
+          ! grep -q "has the following vulnerable packages" vuln.txt
+
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -r lint
+      - run: pnpm -r build # includes tsc type-checking
+      - run: pnpm -r test
+      - run: pnpm audit --audit-level high
+      - run: node tools/check-synthetic/check.mjs --self-test && node tools/check-synthetic/check.mjs
+
+  secrets:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      # shortcut: gitleaks stands in for GitHub secret scanning + push protection (Advanced Security on private repos); switch when the repo gets it
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

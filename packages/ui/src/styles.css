@@ -28,6 +28,17 @@
   --color-warning-700: #975a16; /* uncertainty / attention */
   --color-success-700: #087f5b; /* confirmed, never inferred */
 
+  /* Navy navigation (Clinician App sidebar); ink and muted are tested for AA on brand-950 and nav-hover */
+  --color-nav-hover: #1b3a57;   /* hover and current item */
+  --color-nav-ink: #c9d6e2;
+  --color-nav-muted: #8fa6bd;   /* group headings, role (design #6f88a1 lifted for AA) */
+  --color-nav-line: #1e3a55;
+  /* Module rail colours: non-text accent beside the current item, never the only cue (aria-current + fill) */
+  --color-rail-clinical: #2bb3a3;
+  --color-rail-practice: #6b9bff;
+  --color-rail-assistant: #e9b15f;
+  --color-rail-admin: #8fa6bd;
+
   /* shadcn semantic tokens mapped to Medvya */
   --color-background: #f7fafc;
   --color-foreground: #142536;

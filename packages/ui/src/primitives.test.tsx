@@ -36,6 +36,9 @@ describe('clinical primitives', () => {
       expect(contrast('#FFFFFF', tokens[bg]), `white on ${bg}`).toBeGreaterThanOrEqual(4.5);
     for (const fg of ['foreground', 'muted-foreground', 'action-600', 'primary'])
       expect(contrast(tokens[fg], tokens['background']), `${fg} on background`).toBeGreaterThanOrEqual(4.5);
+    // Navy navigation text on the sidebar and on the hovered/current item.
+    for (const fg of ['nav-ink', 'nav-muted']) for (const bg of ['brand-950', 'nav-hover'])
+      expect(contrast(tokens[fg], tokens[bg]), `${fg} on ${bg}`).toBeGreaterThanOrEqual(4.5);
   });
 
   it('never conveys status by colour alone: each state has words and a shape cue', () => {

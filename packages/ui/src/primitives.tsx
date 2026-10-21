@@ -4,7 +4,7 @@ import { keyframes } from '@mui/material/styles';
 import {
   Send, Colorize, Inbox, Visibility, Call, MarkChatRead, TaskAlt,
   AutoAwesome, Verified, Person, SyncAlt, Upload, Lock,
-  Error as ErrorIcon, Warning, Info, Pause, DoNotDisturbOn, Medication, HelpOutline,
+  Error as ErrorIcon, Warning, Info, Pause, DoNotDisturbOn, Medication, HelpOutlineOutlined,
   LockClock, Block, TravelExplore, WifiOff,
 } from '@mui/icons-material';
 import { useI18n, type MessageKey } from '@medvya/i18n';
@@ -45,7 +45,7 @@ export const recordingLooks = {
   paused:    { label: 'recording.paused', icon: Pause, bg: '#FDF5E7', fg: '#7A4710' },
   declined:  { label: 'recording.declined', icon: DoNotDisturbOn, bg: '#EDF1F5', fg: '#334E68' },
   given:     { label: 'recording.given', icon: TaskAlt, bg: '#E6F4EF', fg: okOnTint },
-  notAsked:  { label: 'recording.notAsked', icon: HelpOutline, bg: '#FDF5E7', fg: '#7A4710' },
+  notAsked:  { label: 'recording.notAsked', icon: HelpOutlineOutlined, bg: '#FDF5E7', fg: '#7A4710' },
 } satisfies Record<string, Look>;
 
 function Pill({ look, text, height = 28, radius = 999, children }: { look: Look; text?: string; height?: number; radius?: number; children?: ReactNode }) {
@@ -106,7 +106,7 @@ const iso = (v: string) => `\u2068${v}\u2069`;
 
 const allergyLook: Look = { label: 'banner.allergy', icon: Medication, bg: '#FDECEE', fg: '#8A1626' };
 const noAllergyLook: Look = { label: 'banner.noAllergies', icon: Medication, bg: '#F1F5F8', fg: '#334E68' };
-const unknownAllergyLook: Look = { label: 'banner.allergiesNotRecorded', icon: HelpOutline, bg: '#FDF5E7', fg: '#7A4710' };
+const unknownAllergyLook: Look = { label: 'banner.allergiesNotRecorded', icon: HelpOutlineOutlined, bg: '#FDF5E7', fg: '#7A4710' };
 
 /** Fixed patient identity banner for every clinical screen (Foundations §04). Allergies never collapse. */
 export function IdentityBanner({ patient }: { patient: BannerPatient }) {

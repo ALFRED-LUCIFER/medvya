@@ -17,8 +17,8 @@
     "@fontsource/noto-sans-arabic": "^5.3.0",
     "@medvya/i18n": "workspace:*",
     "@medvya/ui": "workspace:*",
-    "@mui/icons-material": "^7.3.11",
-    "@mui/material": "^7.3.11",
+    "@mui/icons-material": "^9.5.0",
+    "@mui/material": "^9.5.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "stylis": "^4.4.0",
@@ -31,7 +31,7 @@
     "@types/stylis": "^4.2.7",
     "@vitejs/plugin-react": "^6.1.2",
     "oxlint": "^1.88.0",
-    "typescript": "~6.0.3",
+    "typescript": "~7.0.2",
     "vite": "^8.3.4"
   }
 }

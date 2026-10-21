@@ -1,0 +1,33 @@
+# Local development only. Synthetic data only; never point this at real patient data.
+name: medvya
+
+services:
+  sql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    platform: linux/amd64 # no arm64 image; runs under emulation on Apple silicon
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: Developer
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:-Local_dev_only_1}
+    ports: ["1433:1433"]
+    volumes: [sql-data:/var/opt/mssql]
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q 'SELECT 1' -b -o /dev/null"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite:latest
+    command: azurite-blob --blobHost 0.0.0.0 --loose
+    ports: ["10000:10000"]
+    volumes: [azurite-data:/data]
+
+  mail:
+    image: rnwood/smtp4dev:latest # catches all outgoing email; UI on http://localhost:5025
+    ports: ["2525:25", "5025:80"]
+
+volumes:
+  sql-data:
+  azurite-data:

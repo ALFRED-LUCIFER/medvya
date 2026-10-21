@@ -6,6 +6,8 @@
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",
     "dev": "pnpm --filter clinic dev",
+    "services:up": "docker compose up -d --wait",
+    "services:down": "docker compose down",
     "check:synthetic": "node tools/check-synthetic/check.mjs",
     "test": "pnpm -r test"
   }

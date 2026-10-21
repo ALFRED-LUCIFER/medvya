@@ -10,7 +10,7 @@
 
 **Tickets:** 29 · **Estimate:** 49.5 dev-days vs **15 working days** in the window (OVER by 34.5 days: needs scope trade-off or overlap) · **Average confidence:** 86%
 
-**Status:** To do 8 · Partly done 6 · Blocked 6 · Done 9
+**Status:** To do 7 · Partly done 7 · Blocked 6 · Done 9
 
 ## Epics
 
@@ -51,7 +51,7 @@
 | [MDV-P0-015](MDV-P0-015.md) | Partly done | System state screens: session expired, 403 no facility access, 404, offline | Story | MUST | P0-05 | F-05 | 1 | 3–3 | 09 Nov → 13 Nov 2026 | 92% High |
 | [MDV-P0-019](MDV-P0-019.md) | To do | Backups, point-in-time restore and a timed restore drill | Task | MUST | P0-02 | — | 1 | 3–3 | 09 Nov → 13 Nov 2026 | 90% High |
 | [MDV-P0-022](MDV-P0-022.md) | To do | App shell with role-based navigation (desktop sidebar, tablet rail, mobile tabs) | Story | MUST | P0-05, P0-07 | — | 2 | 3–3 | 09 Nov → 13 Nov 2026 | 85% High |
-| [MDV-P0-023](MDV-P0-023.md) | To do | Six end-to-end journeys as Playwright specs and clinical advisor sign-off (X-03) | Gate | MUST | P0-07 | X-03 | 2 | 3–3 | 09 Nov → 13 Nov 2026 | 80% Medium |
+| [MDV-P0-023](MDV-P0-023.md) | Partly done | Six end-to-end journeys as Playwright specs and clinical advisor sign-off (X-03) | Gate | MUST | P0-07 | X-03 | 2 | 3–3 | 09 Nov → 13 Nov 2026 | 80% Medium |
 | [MDV-P0-027](MDV-P0-027.md) | To do | Synthetic data generator and seeded staging tenant | Task | MUST | P0-10 | — | 1 | 3–3 | 09 Nov → 13 Nov 2026 | 90% High |
 | [MDV-P0-028](MDV-P0-028.md) | To do | Per-tenant feature flags with owner and kill switch | Task | MUST | P0-04 | — | 1 | 3–3 | 09 Nov → 13 Nov 2026 | 85% High |
 | [MDV-P0-029](MDV-P0-029.md) | To do | R0 exit gate review and release notes (internal platform) | Gate | MUST | P0-01 | — | 0.5 | 3–3 | 09 Nov → 13 Nov 2026 | 85% High |

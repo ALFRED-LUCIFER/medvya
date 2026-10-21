@@ -3,15 +3,24 @@ using Medvya.BuildingBlocks.Domain;
 using Medvya.BuildingBlocks.Infrastructure;
 using Medvya.Identity.Domain;
 using Medvya.Identity.Infrastructure.Persistence;
+using Medvya.Patients.Domain;
+using Medvya.Patients.Infrastructure;
+using Medvya.Patients.Infrastructure.Persistence;
 using Medvya.Tenancy.Domain;
 using Medvya.Tenancy.Infrastructure.Persistence;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 
 namespace Medvya.SyntheticData;
 
 public sealed record CastMember(Guid UserId, string Name, Membership Membership);
 
-public sealed record CastTenant(Tenant Tenant, Facility Facility, IReadOnlyList<CastMember> Members);
+public sealed record CastPatient(Patient Patient, IReadOnlyList<PatientIdentifier> Identifiers, PayerCoverage Payer);
+
+public sealed record CastTenant(Tenant Tenant, Facility Facility, IReadOnlyList<CastMember> Members)
+{
+    public IReadOnlyList<CastPatient> Patients { get; init; } = [];
+}
 
 /// <summary>
 /// The synthetic cast (docs/00-overview/personas.md) as tenants, facilities and one membership per role (MDV-P0-027).
@@ -23,7 +32,7 @@ public static class SyntheticSeed
 
     static readonly string[] AllowedEnvironments = ["Development", "Staging", "Test"];
 
-    // Recognisable fixed ids: 5e1d<tenant>-<kind>-…-<n>; kind 0 tenant, 1 facility, 2 user, 3 membership.
+    // Recognisable fixed ids: 5e1d<tenant>-<kind>-…-<n>; kind 0 tenant, 1 facility, 2 user, 3 membership, 4 patient, 5 identifier, 6 payer.
     static Guid Id(int tenant, int kind, int n) => Guid.Parse($"5e1d{tenant:x4}-{kind:x4}-4000-8000-{n:x12}");
 
     static CastTenant Clinic(int t, string name, string country, string region, string facility, string timeZone, params (string Name, Role Role)[] people)
@@ -37,7 +46,7 @@ public static class SyntheticSeed
         return new(tenant, site, members);
     }
 
-    // shortcut: patient records (Meera Iyer, Deepak Nair, Fatima Al Mansoori) wait for the patient table; Patient rows here are portal user memberships only.
+    // Patient-role memberships are portal users; the patient records themselves are CastTenant.Patients.
     public static readonly CastTenant India = Clinic(1, "Iyer Family Clinic", "IN", "centralindia", "Adyar", "Asia/Kolkata",
         ("Dr. Arjun Rao", Role.SoloDoctor),
         ("Dr. S. Menon", Role.HospitalDoctor),
@@ -46,11 +55,57 @@ public static class SyntheticSeed
         ("Priya N.", Role.CareCoordinator),
         ("Meera Iyer", Role.Patient),
         ("K. Lakshmi", Role.PracticeAdmin), // not in the design cast; Dr. Rao already holds the doctor membership at Adyar
-        ("R. Varghese", Role.HospitalIt));
+        ("R. Varghese", Role.HospitalIt)) with
+    {
+        Patients =
+        [
+            Person(1, 1, "IN", "DQ-10-4482", "Meera Iyer", null, new(1972, 3, 12), SexAtBirth.Female, "+919000000101",
+                new PatientAddress { Line1 = "4 Synthetic Street", City = "Chennai", District = "Chennai", Region = "Tamil Nadu", PostalCode = "600020" },
+                new PayerCoverage { Kind = PayerKind.SelfPay },
+                (IdentifierScheme.AadhaarLast4, "0101")),
+            Person(1, 2, "IN", "DQ-10-4483", "Deepak Nair", null, new(1979, 5, 20), SexAtBirth.Male, "+919000000102",
+                new PatientAddress { Line1 = "7 Synthetic Lane", City = "Kochi", District = "Ernakulam", Region = "Kerala", PostalCode = "682001" },
+                new PayerCoverage { Kind = PayerKind.PrivateInsurance, PayerName = "Synthetic TPA" + Marker, MemberNumber = "SYN-TPA-0102" },
+                (IdentifierScheme.Abha, "91000000000102"), (IdentifierScheme.AbhaAddress, "deepak.nair.synthetic@sbx")),
+        ],
+    };
 
     public static readonly CastTenant Uae = Clinic(2, "Al Noor Family Clinic", "AE", "uaenorth", "Abu Dhabi", "Asia/Dubai",
         ("Dr. Omar Haddad", Role.SoloDoctor),
-        ("Fatima Al Mansoori", Role.Patient));
+        ("Fatima Al Mansoori", Role.Patient)) with
+    {
+        Patients =
+        [
+            // EID fails its Luhn check by construction (pnpm check:synthetic).
+            Person(2, 1, "AE", "AN-01-0001", "Fatima Al Mansoori", "فاطمة المنصوري", new(1988, 4, 2), SexAtBirth.Female, "+971500000201",
+                new PatientAddress { Line1 = "Villa 1 (synthetic)", Line2 = "Al Reem", City = "Abu Dhabi", Region = "AUH" },
+                new PayerCoverage { Kind = PayerKind.PrivateInsurance, PayerName = "Thiqa", MemberNumber = "SYN-THQ-0201" },
+                (IdentifierScheme.EmiratesId, "784-1988-1234567-1")),
+        ],
+    };
+
+    static CastPatient Person(int t, int n, string country, string mrn, string name, string? arabicName, DateOnly dob, SexAtBirth sex, string mobile,
+        PatientAddress address, PayerCoverage payer, params (IdentifierScheme Scheme, string Value)[] ids)
+    {
+        var tenantId = Id(t, 0, 1);
+        var patient = new Patient
+        {
+            Id = Id(t, 4, n), TenantId = tenantId, FacilityId = Id(t, 1, 1), Mrn = mrn, CountryCode = country,
+            FullName = name + Marker, ArabicName = arabicName is null ? null : arabicName + Marker, DateOfBirth = dob, SexAtBirth = sex,
+            Mobile = mobile, Address = address, Status = RegistrationStatus.Complete,
+            RegisteredAt = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero), ChangedAt = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero),
+        };
+        var identifiers = ids.Select((id, i) => new PatientIdentifier
+        {
+            Id = Id(t, 5, n * 10 + i), TenantId = tenantId, PatientId = patient.Id, Scheme = id.Scheme,
+            LookupValue = PatientIdentifier.IsLookup(id.Scheme) ? id.Value : null,
+            DisplayValue = PatientIdentifier.IsLookup(id.Scheme) ? null : id.Value,
+        }).ToList();
+        return new(patient, identifiers, new PayerCoverage
+        {
+            Id = Id(t, 6, n), TenantId = tenantId, PatientId = patient.Id, Kind = payer.Kind, PayerName = payer.PayerName, MemberNumber = payer.MemberNumber,
+        });
+    }
 
     public static IReadOnlyList<CastTenant> Tenants(bool includeUae) => includeUae ? [India, Uae] : [India];
 
@@ -61,8 +116,11 @@ public static class SyntheticSeed
             throw new InvalidOperationException($"Synthetic seeding refused: environment '{environment}' is not Development, Staging or Test.");
     }
 
-    /// <summary>Applies every module's migrations, then adds any missing cast rows. Existing rows are left as they are.</summary>
-    public static async Task SeedAsync(string connectionString, string? environment, bool includeUae, CancellationToken ct = default)
+    /// <summary>
+    /// Creates the Always Encrypted keys (wrapped by <paramref name="keys"/>, which must be registered), applies every module's
+    /// migrations, then adds any missing cast rows. Existing rows are left as they are.
+    /// </summary>
+    public static async Task SeedAsync(string connectionString, string? environment, bool includeUae, LocalKeyStoreProvider keys, CancellationToken ct = default)
     {
         EnsureNonProduction(environment);
 
@@ -71,6 +129,12 @@ public static class SyntheticSeed
             await audit.Database.MigrateAsync(ct);
         await using var identity = new IdentityDbContext(new DbContextOptionsBuilder<IdentityDbContext>().UseSqlServer(connectionString).Options);
         await identity.Database.MigrateAsync(ct);
+        await using (var admin = new SqlConnection(connectionString))
+        {
+            await admin.OpenAsync(ct);
+            await ColumnEncryption.EnsureKeysAsync(admin, LocalKeyStoreProvider.ProviderName, LocalKeyStoreProvider.KeyPath, keys, ct);
+        }
+        await using (var patients = Patients(connectionString, null)) await patients.Database.MigrateAsync(ct);
 
         foreach (var c in Tenants(includeUae))
         {
@@ -89,8 +153,21 @@ public static class SyntheticSeed
                 Id = m.UserId, Issuer = IdentityProviders.Development, Subject = m.UserId.ToString(), DisplayName = m.Name,
             }));
             await identity.SaveChangesAsync(ct);
+
+            await using var pdb = Patients(connectionString, c.Tenant.Id);
+            var seeded = await pdb.Patients.Select(p => p.Id).ToListAsync(ct);
+            foreach (var p in c.Patients.Where(p => !seeded.Contains(p.Patient.Id)))
+            {
+                pdb.Patients.Add(p.Patient);
+                pdb.Identifiers.AddRange(p.Identifiers);
+                pdb.PayerCoverages.Add(p.Payer);
+            }
+            await pdb.SaveChangesAsync(ct);
         }
     }
+
+    static PatientsDbContext Patients(string connectionString, Guid? tenantId) =>
+        new(Options<PatientsDbContext>(PatientsModule.WithColumnEncryption(connectionString), tenantId), new FixedTenant(tenantId));
 
     sealed class FixedTenant(Guid? id) : ICurrentTenant { public Guid? TenantId => id; }
 

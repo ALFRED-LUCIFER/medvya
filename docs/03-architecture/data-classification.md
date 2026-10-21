@@ -45,9 +45,9 @@ Every stored field has one class. In code, each domain property carries `[Classi
 | CLINICIAN_LICENCE.certificate_blob_key | Internal | Private Blob |
 | CLINICIAN_PROFILE.signature_blob_key | Personal | Private Blob. Print only |
 | PATIENT.id, tenant_id, facility_id, mrn (local_patient_number) | Internal | — |
-| PATIENT.first_name, last_name, arabic_name | Personal | DDM. Audit |
-| PATIENT.date_of_birth, age_estimated | Personal | DDM. Audit |
-| PATIENT.sex_at_birth, gender_identity | SensitiveHealth | Audit |
+| PATIENT.full_name (as on the ID), arabic_name | Personal | DDM. Audit |
+| PATIENT.date_of_birth (DDM), date_of_birth_estimated | Personal | Audit |
+| PATIENT.sex_at_birth, gender_identity | SensitiveHealth | Audit. DDM on gender_identity |
 | PATIENT.preferred_language, nationality | Personal | — |
 | PATIENT.mobile, alternate_phone, email | Personal | DDM |
 | PATIENT.address_* (house, street, city, district, state/emirate, PIN, Makani, P.O. box) | Personal | DDM |
@@ -95,9 +95,9 @@ Every stored field has one class. In code, each domain property carries `[Classi
 | PATIENT_IDENTIFIER.value (Aadhaar last 4, passport, visa file) | Randomized | Display only, no lookup |
 | PAYER_COVERAGE.member_no | Deterministic | Exact match for eligibility and claims |
 
-The column holds several schemes, so in practice it is split into `value_lookup` (deterministic) and `value_display` (randomized) by scheme. That decision is recorded with MDV-P0-009.
+Decision (MDV-P0-009): PATIENT_IDENTIFIER holds several schemes, so it has two encrypted columns and each row uses exactly one, chosen by scheme: `LookupValue` (deterministic, BIN2) for ABHA number, ABHA address and Emirates ID, and `DisplayValue` (randomized) for Aadhaar last 4, passport and visa file number. PAYER_COVERAGE.MemberNumber is deterministic. Nothing else is encrypted: names, phone and DOB are protected by RLS, masking and audit instead, so they stay searchable for duplicate checks. Physical columns, keys and the local/Azure key providers: [database-security.md](database-security.md#always-encrypted-mdv-p0-009). The architecture test cannot see encryption; `PatientRegistryTests.AnAdministratorWithoutTheKeySeesOnlyCiphertext` pins the list.
 
-**Dynamic data masking (support and reporting roles):** USER.email, USER.mobile, PATIENT names, date_of_birth, mobile, alternate_phone, email, address fields, PATIENT_RELATIONSHIP.phone, NOTIFICATION.recipient, AUDIT_EVENT.ip.
+**Dynamic data masking (support and reporting roles):** USER.email, USER.mobile, PATIENT names, date_of_birth, gender_identity, mobile, alternate_phone, email, address fields (done for PATIENT in MDV-P0-009; the rest land with their tables), PATIENT_RELATIONSHIP.phone, NOTIFICATION.recipient, AUDIT_EVENT.ip.
 
 ## ERD → Azure SQL type mapping
 

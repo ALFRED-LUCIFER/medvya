@@ -1,4 +1,4 @@
-# Database roles and principals (MDV-P0-008)
+# Database roles, principals, encryption and masking (MDV-P0-008, MDV-P0-009)
 
 Who can do what inside a Medvya database. The roles are defined in one idempotent script, [`infra/sql/roles.sql`](../../infra/sql/roles.sql), which is the single source of truth. Tests: `tests/Medvya.IntegrationTests/DatabaseRoleTests.cs`.
 
@@ -6,12 +6,13 @@ Who can do what inside a Medvya database. The roles are defined in one idempoten
 
 | Role | Rights | Never |
 |---|---|---|
-| `medvya_migrator` | `CREATE TABLE/VIEW/FUNCTION/PROCEDURE/TYPE`, `ALTER ANY SCHEMA`, `REFERENCES`, `ALTER ANY SECURITY POLICY`, `ENABLE LEDGER`; `SELECT/INSERT/DELETE` on `dbo` (EF migrations history only); `SELECT` on `security` (predicate functions) and `audit` (see Known limits) | Read or write tenancy data, write audit data, `ALTER DATABASE`, create roles or users, grant rights |
+| `medvya_migrator` | `CREATE TABLE/VIEW/FUNCTION/PROCEDURE/TYPE`, `ALTER ANY SCHEMA`, `REFERENCES`, `ALTER ANY SECURITY POLICY`, `ENABLE LEDGER`, `ALTER ANY MASK`; `SELECT/INSERT/DELETE` on `dbo` (EF migrations history only); `SELECT` on `security` (predicate functions) and `audit` (see Known limits) | Read or write tenancy or patient data, write audit data, create column master/encryption keys, `ALTER DATABASE`, create roles or users, grant rights |
 | `medvya_app` | Membership of every module role, nothing else | Any DDL: `CREATE`, `ALTER`, `DROP`, security policies |
 | `medvya_tenancy` | `SELECT/INSERT/UPDATE/DELETE ON SCHEMA::tenancy` | Any other schema |
 | `medvya_identity` | `SELECT/INSERT/UPDATE ON SCHEMA::identity` (staff accounts) | `DELETE` (offboarding is a membership status), any other schema |
+| `medvya_patients` | `SELECT/INSERT/UPDATE/DELETE/UNMASK ON SCHEMA::patients`; `VIEW ANY COLUMN MASTER KEY DEFINITION`, `VIEW ANY COLUMN ENCRYPTION KEY DEFINITION` (key metadata only, for parameter encryption) | Any other schema; decrypting without the column master key |
 | `medvya_audit` | `SELECT/INSERT ON SCHEMA::audit` | `UPDATE`/`DELETE` (the ledger table refuses them too), any other schema |
-| `medvya_reporting` | `SELECT ON SCHEMA::tenancy` | Any write, any DDL, `audit` (until masking exists) |
+| `medvya_reporting` | `SELECT ON SCHEMA::tenancy` and `SCHEMA::patients` (masked, identifiers as ciphertext). Support staff use this role | Any write, any DDL, `UNMASK`, `audit` (until `ClientIp` is masked), `identity` |
 
 Rules:
 
@@ -22,10 +23,32 @@ Rules:
 ## Order of operations
 
 1. The administrator runs `roles.sql` (on every deploy; it is idempotent and also covers new modules).
-2. The migration principal runs EF migrations (`dotnet ef database update`, one per module context).
-3. The application starts as the app principal.
+2. The administrator runs `ColumnEncryption.EnsureKeysAsync` (Always Encrypted key metadata, idempotent; see below).
+3. The migration principal runs EF migrations (`dotnet ef database update`, one per module context).
+4. The application starts as the app principal.
 
-The integration test fixture does exactly this: `roles.sql` as `sa`, then every migration impersonating a `medvya_migrator` member. A migration that needs more than the migrator role fails the whole suite.
+The integration test fixture does exactly this: `roles.sql` and the keys as `sa`, then every migration impersonating a `medvya_migrator` member. A migration that needs more than the migrator role fails the whole suite.
+
+## Always Encrypted (MDV-P0-009)
+
+National and insurance identifiers are encrypted in the client (SqlClient) with a column encryption key (CEK) that SQL Server stores only wrapped by a column master key (CMK). The CMK never reaches the database, so a DBA or `sa` sees ciphertext (`varbinary`) and cannot decrypt. Protected columns (kept deliberately small, see [data-classification.md](data-classification.md#protected-column-sets)):
+
+| Column | Encryption | Holds |
+|---|---|---|
+| `patients.Identifiers.LookupValue` | Deterministic, `Latin1_General_BIN2` | ABHA number, ABHA address, Emirates ID (exact-match lookup) |
+| `patients.Identifiers.DisplayValue` | Randomized | Aadhaar last 4, passport, visa file number |
+| `patients.PayerCoverages.MemberNumber` | Deterministic, `Latin1_General_BIN2` | Insurance member / policy number (exact match for eligibility and claims) |
+
+- **Keys, same shape everywhere.** `ColumnEncryption.EnsureKeysAsync(adminConnection, providerName, keyPath, provider)` (Patients.Infrastructure) creates `CMK_Medvya` (metadata: provider name + key path) and a random 256-bit `CEK_Patients` wrapped by the CMK, unless they exist. Migrations then create the encrypted columns on `CEK_Patients` (raw SQL in `InitialPatients`, as EF Core cannot express `ENCRYPTED WITH`). Only the key store provider differs:
+  - **Azure (MDV-P0-006, not built yet):** the Azure Key Vault provider (`Microsoft.Data.SqlClient.AlwaysEncrypted.AzureKeyVaultProvider`), CMK an RSA key in the country Key Vault; only the API managed identity gets unwrap, the deploy identity gets wrap for key creation.
+  - **Developer machines and tests:** `LocalKeyStoreProvider` (`MEDVYA_LOCAL_RSA`), an RSA key held by the process, because the Windows certificate store provider does not exist on macOS/Linux. Tests generate a key per test run; `pnpm dev:db` keeps one at `~/.config/Medvya/local-column-master-key.pem` (macOS/Linux application data folder, owner-only permissions), outside the repository like user secrets. It protects synthetic data only.
+- **Connections.** Only the Patients module's connection sets `Column Encryption Setting=Enabled` (`PatientsModule.WithColumnEncryption`), so other modules skip the parameter-encryption round trip. The host registers the key store provider once per process before the first query.
+- **Queries.** Deterministic columns support equality only (`=`, joins, grouping); `LIKE`, ranges and sorting on encrypted columns are rejected by SQL Server ("Encryption scheme mismatch"). Lookup input is normalised by the country rules exactly as it was on write, or the ciphertexts would not match. No secure enclave is used.
+- Tests: `PatientRegistryTests` (ciphertext for the administrator, exact EID and ABHA lookups through EF Core as `medvya_app`, `LIKE` rejected, protected-column list).
+
+## Dynamic data masking (MDV-P0-009)
+
+`patients.Patients` masks full and Arabic name, date of birth, gender identity, mobile, alternate phone, email (`email()`) and every address column (`default()`). `medvya_patients` holds `UNMASK` on the `patients` schema only (SQL Server 2022 granular UNMASK), so the app reads clear values; `medvya_reporting` (reporting and support) sees `xxxx`, `1900-01-01` and `aXXX@XXXX.com`. Masking limits casual exposure only: it is not a control against a principal that can run arbitrary queries, which is why reporting stays read-only and inside RLS. A later `ALTER COLUMN` on a masked column must restate the mask. Test: `ReportingSeesMaskedDemographicsWhileTheAppSeesClearValues`.
 
 ## Mapping to Azure (MDV-P0-006)
 
@@ -53,4 +76,6 @@ Also in MDV-P0-006, not testable locally: Entra-only authentication on the logic
 
 - The audit module's RLS predicate lives in the `audit` schema (migration `InitialAudit`), so the migrator has `SELECT` on `audit`. RLS still hides rows from it. Moving the predicate to `security` lets that grant go.
 - One app principal holds every module role, as the app is one process. The module roles still make cross-schema access a deliberate grant, and they allow separate principals per worker later (for example a jobs worker with only the roles it needs).
-- Dynamic data masking for reporting and support roles comes with the Patients module (see [data-classification.md](data-classification.md)).
+- `audit.AuditEvents.ClientIp` is not masked yet (ledger table), so reporting has no `audit` access.
+- TDE with a customer-managed key and the Key Vault CMK are Azure work (MDV-P0-006); locally SQL Server uses its default TDE-off setup.
+- The deploy pipeline step that runs `EnsureKeysAsync` with the Key Vault provider is not built (MDV-P0-006).

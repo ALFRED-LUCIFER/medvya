@@ -1,0 +1,5 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\BuildingBlocks\Medvya.BuildingBlocks.Domain\Medvya.BuildingBlocks.Domain.csproj" />
+  </ItemGroup>
+</Project>

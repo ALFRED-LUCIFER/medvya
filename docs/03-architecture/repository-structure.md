@@ -70,11 +70,9 @@ medvya/
 ├── web/
 │   ├── clinic/                     # staff SPA: React 19 + TS + Vite + MUI (Medvya theme), TanStack Query, RHF + Zod, React Router
 │   │   └── src/
-│   │       ├── app/{router,providers,auth,theme,i18n}/
-│   │       ├── routes/{today,patients,encounter,front-desk,schedule,queue,nurse,inbox,care,messages,billing,settings,devices,ent}/
-│   │       ├── features/           # one folder per screen ID group, e.g. features/registration (P-02)
-│   │       ├── entities/{patient,appointment,encounter,note,invoice,task}/
-│   │       └── shared/{api,components,hooks,utils,errors}/
+│   │       ├── app/                # composition: providers, router, controllers → components
+│   │       ├── features/<feature>/{domain,services,hooks,components}/   # hard rule, see frontend-architecture.md (ADR-009)
+│   │       └── dev/                # UI gallery and other developer-only pages
 │   └── portal/                     # patient PWA (P4): same stack, 17px min type, 48px targets, RTL
 │
 ├── packages/                       # shared TS packages (pnpm workspaces)

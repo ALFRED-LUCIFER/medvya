@@ -494,6 +494,10 @@ ac:
 - Relationship values are country-specific (UAE includes Sponsor).
 
 === MDV-P1-021
+status: In progress
+progress:
+- Open [PR #59](https://github.com/ALFRED-LUCIFER/medvya/pull/59) (stacked on #55): slot holds (`POST /v1/slot-holds`, one per user, expire after `Scheduling:SlotHold`, default 2 min; others see "being booked"), booking from the hold (`POST /v1/appointments`) re-checking the template, appointment + first status event + AppointmentBooked.v1 (opaque ids) in one transaction, audited endpoints, patient confirmed by name and MRN; booking panel with React Hook Form + Zod; mutation-checked (expiry, holder check, RLS); browser-verified (en, ar RTL, keyboard, axe)
+- Left: concurrency guarantees (MDV-P1-022); patient search instead of id (MDV-P1-018); confirmation message (MDV-P1-032); p95 < 300 ms under the P1 load profile (MDV-P1-037)
 title: Create an appointment from the calendar with a short slot hold
 type: Story
 epic: MDV-P1-E06

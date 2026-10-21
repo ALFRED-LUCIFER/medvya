@@ -10,7 +10,7 @@
 
 **Tickets:** 46 · **Estimate:** 86.5 dev-days vs **35 working days** in the window (OVER by 51.5 days: needs scope trade-off or overlap) · **Average confidence:** 81%
 
-**Status:** To do 41 · In progress 4 · Done 1
+**Status:** To do 40 · In progress 5 · Done 1
 
 ## Epics
 
@@ -51,7 +51,7 @@
 | [MDV-P1-016](MDV-P1-016.md) | To do | Duplicate warning while typing and duplicate resolution before save | Story | MUST | P1-05 | P-02 | 2.5 | 6–6 | 30 Nov → 04 Dec 2026 | 85% High |
 | [MDV-P1-019](MDV-P1-019.md) | To do | Legal terms and separate versioned consents at registration (treatment, reminders per channel, sharing, portal, marketing) | Story | MUST | P1-12 | P-02, F-08 | 3 | 6–7 | 30 Nov → 11 Dec 2026 | 75% Medium |
 | [MDV-P1-020](MDV-P1-020.md) | To do | Family, emergency contact and guardian rules (under-18 guardian required) | Story | MUST | P1-05 | P-02 | 1 | 6–6 | 30 Nov → 04 Dec 2026 | 88% High |
-| [MDV-P1-021](MDV-P1-021.md) | To do | Create an appointment from the calendar with a short slot hold | Story | MUST | P1-06, P1-07 | P-04 | 2.5 | 6–7 | 30 Nov → 11 Dec 2026 | 88% High |
+| [MDV-P1-021](MDV-P1-021.md) | In progress | Create an appointment from the calendar with a short slot hold | Story | MUST | P1-06, P1-07 | P-04 | 2.5 | 6–7 | 30 Nov → 11 Dec 2026 | 88% High |
 | [MDV-P1-023](MDV-P1-023.md) | To do | Calendar views: day, week and list (per doctor and resource), mobile/tablet responsive | Story | MUST | P1-06 | P-04 | 3 | 6–7 | 30 Nov → 11 Dec 2026 | 86% High |
 | [MDV-P1-046](MDV-P1-046.md) | To do | Start UAE regulator onboarding applications early (risk mitigation) | Chore | SHOULD | — | — | 0.5 | 6–8 | 30 Nov → 18 Dec 2026 | 55% Low |
 | [MDV-P1-010](MDV-P1-010.md) | To do | Licence/registration expiry reminders and quarterly access review prompt | Story | MUST | P1-11 | — | 1.5 | 7–7 | 07 Dec → 11 Dec 2026 | 85% High |

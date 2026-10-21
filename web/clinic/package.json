@@ -18,7 +18,7 @@
     "@medvya/i18n": "workspace:*",
     "@medvya/ui": "workspace:*",
     "@mui/icons-material": "^7.3.11",
-    "@mui/material": "^7.3.11",
+    "@mui/material": "^9.5.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "stylis": "^4.4.0",

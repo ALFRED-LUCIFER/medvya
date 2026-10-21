@@ -8,6 +8,7 @@
     "dev": "pnpm --filter clinic dev",
     "services:up": "docker compose up -d --wait",
     "services:down": "docker compose down",
+    "dev:db": "pnpm services:up && DOTNET_ENVIRONMENT=Development ConnectionStrings__Medvya=\"Server=localhost,1433;Database=medvya;User Id=sa;Password=${MSSQL_SA_PASSWORD:-Local_dev_only_1};TrustServerCertificate=True\" dotnet run --project tools/synthetic-data-generator --",
     "check:synthetic": "node tools/check-synthetic/check.mjs",
     "test": "pnpm -r test",
     "e2e": "pnpm --filter e2e e2e"

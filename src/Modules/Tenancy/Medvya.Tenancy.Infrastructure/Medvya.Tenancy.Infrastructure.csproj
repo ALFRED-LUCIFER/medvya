@@ -4,6 +4,7 @@
     <ProjectReference Include="..\Medvya.Tenancy.Application\Medvya.Tenancy.Application.csproj" />
     <ProjectReference Include="..\..\..\BuildingBlocks\Medvya.BuildingBlocks.Domain\Medvya.BuildingBlocks.Domain.csproj" />
     <ProjectReference Include="..\Medvya.Tenancy.Domain\Medvya.Tenancy.Domain.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\Medvya.BuildingBlocks.Infrastructure\Medvya.BuildingBlocks.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>

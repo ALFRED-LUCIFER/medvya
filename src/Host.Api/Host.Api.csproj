@@ -7,6 +7,7 @@
     <ProjectReference Include="..\Modules\Tenancy\Medvya.Tenancy.Infrastructure\Medvya.Tenancy.Infrastructure.csproj" />
     <ProjectReference Include="..\Modules\Audit\Medvya.Audit.Api\Medvya.Audit.Api.csproj" />
     <ProjectReference Include="..\Modules\Audit\Medvya.Audit.Infrastructure\Medvya.Audit.Infrastructure.csproj" />
+    <ProjectReference Include="..\BuildingBlocks\Medvya.BuildingBlocks.Domain\Medvya.BuildingBlocks.Domain.csproj" />
   </ItemGroup>
 
   <ItemGroup>

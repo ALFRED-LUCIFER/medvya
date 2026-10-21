@@ -20,6 +20,8 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Host.Api\Host.Api.csproj" />
     <ProjectReference Include="..\..\src\Modules\Tenancy\Medvya.Tenancy.Infrastructure\Medvya.Tenancy.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Audit\Medvya.Audit.Infrastructure\Medvya.Audit.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Audit\Medvya.Audit.Api\Medvya.Audit.Api.csproj" />
   </ItemGroup>
 
 </Project>

@@ -12,6 +12,7 @@ builder.WebHost.ConfigureKestrel(k =>
     k.Limits.MaxRequestBodySize = 1_048_576;
 });
 
+builder.Services.AddAuthorization();
 builder.Services.AddHsts(o => { o.MaxAge = TimeSpan.FromDays(365); o.IncludeSubDomains = true; });
 
 var permitsPerMinute = builder.Configuration.GetValue("RateLimiting:PermitsPerMinute", 300);
@@ -31,6 +32,7 @@ app.UseSecurityHeaders();
 app.UseRateLimiter();
 
 // Deploy smoke tests (MDV-P0-007) read the version from here.
-app.MapGet("/health", () => Results.Ok(new { status = "ok", version = typeof(Program).Assembly.GetName().Version?.ToString() }));
+app.MapGet("/health", () => Results.Ok(new { status = "ok", version = typeof(Program).Assembly.GetName().Version?.ToString() }))
+    .AllowAnonymous(); // the only deliberately public endpoint
 
 app.Run();

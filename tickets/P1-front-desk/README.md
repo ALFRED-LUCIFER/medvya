@@ -10,7 +10,7 @@
 
 **Tickets:** 46 · **Estimate:** 86.5 dev-days vs **35 working days** in the window (OVER by 51.5 days: needs scope trade-off or overlap) · **Average confidence:** 81%
 
-**Status:** To do 41 · In progress 3 · Done 2
+**Status:** To do 40 · In progress 3 · Partly done 1 · Done 2
 
 ## Epics
 
@@ -32,7 +32,7 @@
 | Key | Status | Title | Type | Prio | PRD | Screens | Est | Weeks | Dates | Confidence |
 |---|---|---|---|---|---|---|---|---|---|---|
 | [MDV-P1-001](MDV-P1-001.md) | Done | Public site on Razor Pages and landing page (solo doctor / hospital CTAs, region-aware copy) | Story | SHOULD | P1-01 | F-01 | 2 | 4–4 | 16 Nov → 20 Nov 2026 | 88% High |
-| [MDV-P1-002](MDV-P1-002.md) | To do | Country and data-residency selector that binds a new tenant to one data plane | Story | SHOULD | P1-01 | F-02 | 1.5 | 4–4 | 16 Nov → 20 Nov 2026 | 85% High |
+| [MDV-P1-002](MDV-P1-002.md) | Partly done | Country and data-residency selector that binds a new tenant to one data plane | Story | SHOULD | P1-01 | F-02 | 1.5 | 4–4 | 16 Nov → 20 Nov 2026 | 85% High |
 | [MDV-P1-004](MDV-P1-004.md) | To do | Solo doctor and clinic sign-up with the six-step onboarding wizard (autosave) | Story | MUST | P1-02 | F-04 | 3 | 4–5 | 16 Nov → 27 Nov 2026 | 85% High |
 | [MDV-P1-043](MDV-P1-043.md) | To do | Sign pilot agreements with two partner clinics | Chore | MUST | P1-02 | — | 1 | 4–6 | 16 Nov → 04 Dec 2026 | 60% Low |
 | [MDV-P1-044](MDV-P1-044.md) | To do | Legal review of privacy notice, ToS, DPA and consent wording (DPDP India; UAE health data) | Chore | MUST | P1-12 | — | 1 | 4–6 | 16 Nov → 04 Dec 2026 | 60% Low |

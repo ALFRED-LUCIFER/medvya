@@ -18,6 +18,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="..\..\infra\sql\roles.sql" Link="roles.sql" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\Host.Api\Host.Api.csproj" />
     <ProjectReference Include="..\..\src\Modules\Tenancy\Medvya.Tenancy.Infrastructure\Medvya.Tenancy.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\Modules\Audit\Medvya.Audit.Infrastructure\Medvya.Audit.Infrastructure.csproj" />

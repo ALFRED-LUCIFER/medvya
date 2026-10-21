@@ -2,7 +2,6 @@
   "_review": "Machine-drafted. Needs native-speaker and clinical review before real patients (MDV-P0-021). consent.script is intentionally missing until legal review (MDV-P3-023).",
   "app.tagline": "تطبيق العيادة · الإصدار الأساسي",
   "app.language": "اللغة",
-
   "ai.badge": "مسودة ذكاء اصطناعي · غير مراجَعة",
   "note.signBlocked": "توقيع الملاحظة ({n} غير محلولة)",
   "consent.declined": "لا تسجيل لهذه الزيارة. يمكنك كتابة الملاحظة يدويًا.",
@@ -12,7 +11,6 @@
   "ai.unavailable": "صياغة الذكاء الاصطناعي غير متاحة حاليًا. تسجيلك محفوظ.",
   "err.403": "ليس لديك صلاحية الوصول إلى هذه المنشأة.",
   "push.generic": "تحديث جديد من {clinic}. افتح Medvya للعرض.",
-
   "status.ordered": "تم الطلب",
   "status.collected": "تم أخذ العينة",
   "status.received": "تم استلام النتيجة",
@@ -20,23 +18,19 @@
   "status.contacted": "تم التواصل مع المريض",
   "status.delivered": "تم تسليم الرسالة ≠ اكتمال",
   "status.completed": "اكتملت المتابعة",
-
   "provenance.verified": "تحقق منه الطبيب",
   "provenance.patient": "أفاد به المريض",
   "provenance.his": "متزامن من نظام المستشفى",
   "provenance.imported": "مستورد",
   "provenance.signed": "موقّع · للقراءة فقط",
-
   "alert.critical": "حرج · لم يتم الإقرار",
   "alert.attention": "تنبيه · غير مؤكد",
   "alert.info": "معلومة",
-
   "recording.rec": "تسجيل {time}",
   "recording.paused": "متوقف مؤقتًا",
   "recording.declined": "مرفوض · ملاحظة يدوية",
   "recording.given": "موافقة التسجيل · ممنوحة",
   "recording.notAsked": "موافقة التسجيل · لم تُطلب بعد",
-
   "banner.patient": "المريض {name}",
   "banner.mrnDob": "رقم الملف {mrn} · تاريخ الميلاد {dob}",
   "banner.allergy": "حساسية: {name} · {status}",
@@ -45,5 +39,16 @@
   "banner.allergy.unknown": "غير معروفة",
   "banner.noAllergies": "لا توجد حساسية معروفة",
   "banner.allergiesNotRecorded": "الحساسية غير مسجلة",
-  "banner.synthetic": "بيانات اصطناعية"
+  "banner.synthetic": "بيانات اصطناعية",
+  "state.sessionExpired.title": "انتهت الجلسة",
+  "state.sessionExpired.body": "مسودتك غير المحفوظة محفوظة على هذا الجهاز. سجّل الدخول مرة أخرى للمتابعة؛ سيُطلب منك تأكيد المريض.",
+  "state.sessionExpired.cta": "تسجيل الدخول مرة أخرى",
+  "state.noAccess.body": "أنت مسجّل الدخول في {facility}. هذا السجل يتبع منشأة أخرى.",
+  "state.noAccess.cta": "طلب صلاحية الوصول",
+  "state.notFound.title": "الصفحة غير موجودة",
+  "state.notFound.body": "قد يكون الرابط قديمًا. لم يتم تغيير أي شيء.",
+  "state.notFound.cta": "العودة إلى اليوم",
+  "state.offline.title": "أنت غير متصل",
+  "state.offline.body": "يستمر التسجيل في ذاكرة الجهاز المشفرة. سيتم حفظ الملاحظات والطلبات عند إعادة الاتصال.",
+  "state.offline.cta": "أعد المحاولة الآن"
 }

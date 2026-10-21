@@ -2,7 +2,7 @@ import { Box, Button, Stack, TextField, Typography } from '@mui/material';
 import { AutoAwesome, Draw, StopCircle } from '@mui/icons-material';
 import {
   alertLooks, ClinicalAlert, IdentityBanner, provenanceLooks, ProvenanceTag,
-  RecordingPill, recordingLooks, StatusChip, statusLooks,
+  RecordingPill, recordingLooks, StatusChip, statusLooks, SystemState, systemStates,
 } from '@medvya/ui';
 
 const keys = <T extends object>(o: T) => Object.keys(o) as (keyof T)[];
@@ -43,6 +43,9 @@ export default function UiGallery({ switcher }: { switcher: React.ReactNode }) {
       <Section title="Recording and consent">{keys(recordingLooks).map(s => <RecordingPill key={s} state={s} elapsedSeconds={252} />)}</Section>
       <Section title="Alerts">
         {keys(alertLooks).map(s => <Box key={s} sx={{ minWidth: 320 }}><ClinicalAlert severity={s}>Synthetic example text</ClinicalAlert></Box>)}
+      </Section>
+      <Section title="System states (F-05)">
+        {keys(systemStates).map(s => <SystemState key={s} state={s} facility="Iyer Family Clinic · Adyar" onAction={() => {}} />)}
       </Section>
       <Section title="Text fields">
         <TextField label="Full name" defaultValue="Deepak Nair" />

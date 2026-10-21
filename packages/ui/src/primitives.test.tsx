@@ -7,7 +7,7 @@ import { I18nProvider } from '@medvya/i18n';
 import { medvyaTheme } from './theme';
 import {
   alertLooks, ClinicalAlert, IdentityBanner, provenanceLooks, ProvenanceTag,
-  RecordingPill, recordingLooks, StatusChip, statusLooks, type Look,
+  RecordingPill, recordingLooks, StatusChip, statusLooks, SystemState, systemStates, type Look,
 } from './primitives';
 
 const ui = (n: React.ReactNode) => render(<ThemeProvider theme={medvyaTheme}>{n}</ThemeProvider>);
@@ -63,6 +63,24 @@ describe('clinical primitives', () => {
       <ProvenanceTag source="ai" /><RecordingPill state="recording" elapsedSeconds={252} /></ThemeProvider></I18nProvider>);
     expect(container.textContent).toContain('مسودة ذكاء اصطناعي');
     expect(container.textContent).toContain('04:12');
+  });
+
+  it('renders every F-05 system state with one action and the right announcement role', async () => {
+    for (const state of Object.keys(systemStates) as (keyof typeof systemStates)[]) {
+      const { container, unmount } = ui(<main><SystemState state={state} facility="Iyer Family Clinic" onAction={() => {}} /></main>);
+      expect(container.querySelectorAll('button')).toHaveLength(1);
+      expect(container.querySelector('h1')?.textContent?.length).toBeGreaterThan(0);
+      expect(container.querySelector(state === 'offline' ? '[role=status]' : '[role=alert]')).not.toBeNull();
+      const result = await axe.run(container, { rules: { 'color-contrast': { enabled: false } } });
+      expect(result.violations.map(v => v.id), state).toEqual([]);
+      unmount();
+    }
+    const noAccess = ui(<SystemState state="noAccess" facility="Iyer Family Clinic" onAction={() => {}} />).container.textContent;
+    expect(noAccess).toContain('You don’t have access to this facility.');
+    expect(noAccess).toContain('You are signed in to Iyer Family Clinic.');
+    const ar = render(<I18nProvider locale="ar" country="AE"><ThemeProvider theme={medvyaTheme}>
+      <SystemState state="notFound" onAction={() => {}} /></ThemeProvider></I18nProvider>).container.textContent;
+    expect(ar).toContain('الصفحة غير موجودة');
   });
 
   it('has no axe violations', async () => {

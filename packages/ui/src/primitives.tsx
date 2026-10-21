@@ -1,10 +1,11 @@
 import type { ReactNode } from 'react';
-import { Box, Typography } from '@mui/material';
+import { Box, Button, Typography } from '@mui/material';
 import { keyframes } from '@mui/material/styles';
 import {
   Send, Colorize, Inbox, Visibility, Call, MarkChatRead, TaskAlt,
   AutoAwesome, Verified, Person, SyncAlt, Upload, Lock,
   Error as ErrorIcon, Warning, Info, Pause, DoNotDisturbOn, Medication, HelpOutline,
+  LockClock, Block, TravelExplore, WifiOff,
 } from '@mui/icons-material';
 import { useI18n, type MessageKey } from '@medvya/i18n';
 
@@ -128,6 +129,28 @@ export function IdentityBanner({ patient }: { patient: BannerPatient }) {
       {patient.consent && <RecordingPill state={patient.consent} />}
       {patient.encounter && <Typography sx={{ fontSize: 13, color: 'text.secondary' }}>{patient.encounter}</Typography>}
       {patient.synthetic && <Box component="span" sx={{ font: "600 10px 'JetBrains Mono', monospace", color: '#975A16', bgcolor: '#FDF5E7', px: 1, py: 0.5, borderRadius: '4px' }}>{t('banner.synthetic')}</Box>}
+    </Box>
+  );
+}
+
+export const systemStates = {
+  sessionExpired: { title: 'state.sessionExpired.title', body: 'state.sessionExpired.body', cta: 'state.sessionExpired.cta', icon: LockClock, color: '#334E68' },
+  noAccess:       { title: 'err.403', body: 'state.noAccess.body', cta: 'state.noAccess.cta', icon: Block, color: '#8A1626' },
+  notFound:       { title: 'state.notFound.title', body: 'state.notFound.body', cta: 'state.notFound.cta', icon: TravelExplore, color: '#334E68' },
+  offline:        { title: 'state.offline.title', body: 'state.offline.body', cta: 'state.offline.cta', icon: WifiOff, color: '#975A16' },
+} satisfies Record<string, { title: MessageKey; body: MessageKey; cta: MessageKey; icon: typeof Send; color: string }>;
+
+/** F-05 system states: one message, one action, announced to assistive technology. */
+export function SystemState({ state, onAction, facility = '' }: { state: keyof typeof systemStates; onAction: () => void; facility?: string }) {
+  const { t } = useI18n();
+  const s = systemStates[state], Icon = s.icon;
+  return (
+    <Box role={state === 'offline' ? 'status' : 'alert'} sx={{ display: 'flex', flexDirection: 'column', gap: 1.25, alignItems: 'flex-start', p: 3,
+      maxWidth: 420, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', borderRadius: '16px' }}>
+      <Icon sx={{ fontSize: 30, color: s.color }} aria-hidden />
+      <Typography component="h1" sx={{ fontSize: 17, fontWeight: 800 }}>{t(s.title)}</Typography>
+      <Typography sx={{ fontSize: 14, color: 'text.secondary' }}>{t(s.body, { facility })}</Typography>
+      <Button variant="contained" onClick={onAction} sx={{ mt: 1, bgcolor: '#102A43', '&:hover': { bgcolor: '#0B1622' } }}>{t(s.cta)}</Button>
     </Box>
   );
 }

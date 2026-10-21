@@ -1,4 +1,5 @@
 using Medvya.Patients.Application;
+using Medvya.Patients.Domain;
 using Medvya.Patients.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,7 +14,7 @@ public sealed class PatientDirectory(PatientsDbContext db) : IPatientDirectory
         if (patientIds.Count == 0) return new Dictionary<Guid, PatientSummary>();
         var ids = patientIds.Distinct().ToList();
         return await db.Patients.AsNoTracking().Where(p => ids.Contains(p.Id))
-            .Select(p => new PatientSummary(p.Id, p.FacilityId, p.FullName, p.Mrn))
+            .Select(p => new PatientSummary(p.Id, p.FacilityId, p.FullName, p.Mrn, p.DateOfBirth, p.Status == RegistrationStatus.Incomplete))
             .ToDictionaryAsync(p => p.Id, cancellationToken);
     }
 }

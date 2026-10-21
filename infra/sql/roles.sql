@@ -25,6 +25,7 @@ IF SCHEMA_ID(N'tenancy') IS NULL EXEC(N'CREATE SCHEMA tenancy AUTHORIZATION dbo'
 IF SCHEMA_ID(N'security') IS NULL EXEC(N'CREATE SCHEMA security AUTHORIZATION dbo');
 IF SCHEMA_ID(N'audit') IS NULL EXEC(N'CREATE SCHEMA audit AUTHORIZATION dbo');
 IF SCHEMA_ID(N'identity') IS NULL EXEC(N'CREATE SCHEMA [identity] AUTHORIZATION dbo');
+IF SCHEMA_ID(N'patients') IS NULL EXEC(N'CREATE SCHEMA patients AUTHORIZATION dbo');
 
 IF DATABASE_PRINCIPAL_ID(N'medvya_migrator') IS NULL CREATE ROLE medvya_migrator AUTHORIZATION dbo;
 IF DATABASE_PRINCIPAL_ID(N'medvya_app') IS NULL CREATE ROLE medvya_app AUTHORIZATION dbo;
@@ -32,10 +33,11 @@ IF DATABASE_PRINCIPAL_ID(N'medvya_reporting') IS NULL CREATE ROLE medvya_reporti
 IF DATABASE_PRINCIPAL_ID(N'medvya_tenancy') IS NULL CREATE ROLE medvya_tenancy AUTHORIZATION dbo;
 IF DATABASE_PRINCIPAL_ID(N'medvya_audit') IS NULL CREATE ROLE medvya_audit AUTHORIZATION dbo;
 IF DATABASE_PRINCIPAL_ID(N'medvya_identity') IS NULL CREATE ROLE medvya_identity AUTHORIZATION dbo;
+IF DATABASE_PRINCIPAL_ID(N'medvya_patients') IS NULL CREATE ROLE medvya_patients AUTHORIZATION dbo;
 
 -- Migration principal: schema objects, security policies and ledger tables. No rights on module data.
 GRANT CREATE TABLE, CREATE VIEW, CREATE FUNCTION, CREATE PROCEDURE, CREATE TYPE, ALTER ANY SCHEMA, REFERENCES,
-      ALTER ANY SECURITY POLICY, ENABLE LEDGER TO medvya_migrator;
+      ALTER ANY SECURITY POLICY, ENABLE LEDGER, ALTER ANY MASK TO medvya_migrator;
 GRANT SELECT, INSERT, DELETE ON SCHEMA::dbo TO medvya_migrator; -- dbo holds only __EFMigrationsHistory
 -- CREATE SECURITY POLICY needs SELECT on the predicate function. security holds only predicate functions.
 GRANT SELECT ON SCHEMA::security TO medvya_migrator;
@@ -52,12 +54,20 @@ GRANT SELECT, INSERT ON SCHEMA::audit TO medvya_audit;
 -- Identity module: staff accounts. Never deleted (offboarding is a membership status), so no DELETE.
 GRANT SELECT, INSERT, UPDATE ON SCHEMA::[identity] TO medvya_identity;
 
+-- Patients module (MDV-P1-013, MDV-P0-009): row access plus UNMASK on its own schema only, so the app reads clear demographics
+-- while every role without UNMASK sees the dynamic data masks. Always Encrypted values still need the column master key,
+-- which no database role can grant. Reading key metadata lets SqlClient encrypt parameters (sp_describe_parameter_encryption).
+GRANT SELECT, INSERT, UPDATE, DELETE, UNMASK ON SCHEMA::patients TO medvya_patients;
+GRANT VIEW ANY COLUMN MASTER KEY DEFINITION, VIEW ANY COLUMN ENCRYPTION KEY DEFINITION TO medvya_patients;
+
 ALTER ROLE medvya_tenancy ADD MEMBER medvya_app;
 ALTER ROLE medvya_audit ADD MEMBER medvya_app;
 ALTER ROLE medvya_identity ADD MEMBER medvya_app;
+ALTER ROLE medvya_patients ADD MEMBER medvya_app;
 
--- shortcut: reporting reads tenancy only; audit (ClientIp is Personal) is added once dynamic data masking lands
--- with the Patients module (docs/03-architecture/data-classification.md).
+-- Reporting and support read masked patient demographics and ciphertext identifiers (no UNMASK, no column master key).
+-- shortcut: audit stays out of reporting until AUDIT_EVENT.ClientIp is masked on the ledger table; add it with that migration.
 GRANT SELECT ON SCHEMA::tenancy TO medvya_reporting;
+GRANT SELECT ON SCHEMA::patients TO medvya_reporting;
 
 COMMIT;

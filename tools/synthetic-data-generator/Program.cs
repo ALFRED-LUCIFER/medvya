@@ -1,3 +1,4 @@
+using Medvya.Patients.Infrastructure;
 using Medvya.SyntheticData;
 
 // Usage: dotnet run --project tools/synthetic-data-generator [-- --uae]
@@ -10,7 +11,12 @@ if (string.IsNullOrWhiteSpace(connectionString))
     return 1;
 }
 
+// Local column master key for Always Encrypted, kept outside the repository like user secrets; protects synthetic data only.
+SyntheticSeed.EnsureNonProduction(environment);
+var keyFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Medvya", "local-column-master-key.pem");
+var keys = LocalKeyStoreProvider.Register(() => LocalKeyStoreProvider.LoadOrCreate(keyFile));
+
 var includeUae = args.Contains("--uae");
-await SyntheticSeed.SeedAsync(connectionString, environment, includeUae);
+await SyntheticSeed.SeedAsync(connectionString, environment, includeUae, keys);
 await Console.Out.WriteLineAsync($"Migrated and seeded {SyntheticSeed.Tenants(includeUae).Count} synthetic tenant(s).");
 return 0;

@@ -55,7 +55,7 @@ src/features/<feature>/components/ presentational: props in, events out (no serv
 ## 5 · Definition of Done (every PR)
 
 - [ ] Ticket acceptance criteria met and demonstrated
-- [ ] `dotnet build` (0 warnings) · `dotnet test` · `pnpm -r build` · `pnpm -r lint` · `pnpm -r test` · `pnpm check:synthetic` all pass locally
+- [ ] `dotnet build` (0 warnings) · `dotnet test` · `pnpm -r build` · `pnpm -r lint` · `pnpm -r test` · `pnpm e2e` · `pnpm check:synthetic` all pass locally
 - [ ] New/changed behaviour tested; safety tests mutation-checked
 - [ ] UI verified in a browser (English and Arabic), axe clean
 - [ ] Cross-cutting X1–X8 (`docs/05-delivery/README.md`) considered: security, privacy, clinical safety, states (empty/loading/error/403/offline), a11y and language, performance, reliability, observability
@@ -86,3 +86,4 @@ src/features/<feature>/components/ presentational: props in, events out (no serv
 | Architecture, data model, classification | `docs/03-architecture/` |
 | Security, compliance, threat model | `docs/04-security-compliance/`, `docs/compliance/` |
 | Decisions | `docs/adr/` |
+| End-to-end journeys J1–J6 (Playwright, steps read from `docs/02-design/journeys.md`) | `tests/e2e/`: turn a step green by passing its implementation to `journey('Jn', { step: … })` |

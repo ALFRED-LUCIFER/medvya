@@ -13,6 +13,7 @@ import ChooseFacilityPage from '../features/shell/components/ChooseFacilityPage'
 import MorePage from '../features/shell/components/MorePage';
 import ShellMessage, { ComingSoon } from '../features/shell/components/ShellMessage';
 import { useShellController } from '../features/shell/hooks/useShellController';
+import ScheduleRoute from './ScheduleRoute';
 
 type Props = { locale: Locale; onLocaleChange: (l: Locale) => void };
 
@@ -45,7 +46,9 @@ export default function App({ locale, onLocaleChange }: Props) {
             <Outlet />
           </AppShell>}>
           <Route index element={first ? <Navigate to={first.path} replace /> : <ShellMessage title={t('shell.noScreens.title')} body={t('shell.noScreens.body')} />} />
-          {shell.items.map(i => <Route key={i.id} path={i.path} element={<ComingSoon title={t(`nav.${i.id}`)} phase={i.phase} />} />)}
+          {shell.items.map(i => <Route key={i.id} path={i.path} element={i.id === 'schedule'
+            ? <ScheduleRoute facilityId={active.facilityId} online={online} />
+            : <ComingSoon title={t(`nav.${i.id}`)} phase={i.phase} />} />)}
           <Route path="/more" element={<MorePage {...account} role={active.role} facilityName={active.facilityName} groups={shell.groups} />} />
           <Route path="*" element={<NotFoundPage onBackToToday={toHome} />} />
         </Route>

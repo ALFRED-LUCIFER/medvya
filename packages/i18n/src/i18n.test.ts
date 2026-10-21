@@ -28,4 +28,11 @@ describe('i18n', () => {
     expect(makeI18n('ar', 'AE').formatNumber(1234)).toMatch(/1.?234/);
     expect(makeI18n('hi', 'IN').dir).toBe('ltr');
   });
+
+  it('shows times in the facility zone, whatever the device zone is', () => {
+    const at = new Date('2026-10-19T03:30:00Z');
+    expect(makeI18n('en', 'IN').formatTime(at, 'Asia/Kolkata')).toBe('09:00');
+    expect(makeI18n('ar', 'AE').formatTime(at, 'Asia/Dubai')).toBe('07:30'); // Western digits in Arabic too
+    expect(makeI18n('en', 'IN').formatDay('2026-10-19')).toContain('Monday');
+  });
 });

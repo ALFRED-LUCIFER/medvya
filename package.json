@@ -9,6 +9,7 @@
     "services:up": "docker compose up -d --wait",
     "services:down": "docker compose down",
     "check:synthetic": "node tools/check-synthetic/check.mjs",
-    "test": "pnpm -r test"
+    "test": "pnpm -r test",
+    "e2e": "pnpm --filter e2e e2e"
   }
 }

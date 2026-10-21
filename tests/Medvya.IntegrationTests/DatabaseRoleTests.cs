@@ -50,6 +50,10 @@ public class DatabaseRoleTests(SqlServerFixture sql) : IClassFixture<SqlServerFi
         await Run("audit_user", "SELECT TOP 1 Id FROM audit.AuditEvents");
         await Denied("tenancy_user", "SELECT TOP 1 Id FROM audit.AuditEvents");
         await Denied("audit_user", "SELECT TOP 1 Id FROM tenancy.Tenants");
+        await Run("identity_user", "SELECT TOP 1 Id FROM [identity].Users");
+        await Denied("identity_user", "SELECT TOP 1 Id FROM tenancy.Tenants");
+        await Denied("tenancy_user", "SELECT TOP 1 Id FROM [identity].Users");
+        await Denied("identity_user", "DELETE FROM [identity].Users");
     }
 
     [Fact]
@@ -72,6 +76,7 @@ public class DatabaseRoleTests(SqlServerFixture sql) : IClassFixture<SqlServerFi
         await Denied("reporting_user", "UPDATE tenancy.Tenants SET Name = N'x'");
         await Denied("reporting_user", "DELETE FROM tenancy.Tenants");
         await Denied("reporting_user", "SELECT TOP 1 Id FROM audit.AuditEvents");
+        await Denied("reporting_user", "SELECT TOP 1 DisplayName FROM [identity].Users");
         await Denied("reporting_user", "CREATE TABLE tenancy.Injected (Id int)");
     }
 

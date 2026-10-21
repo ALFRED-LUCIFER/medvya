@@ -10,7 +10,7 @@
 
 **Tickets:** 29 · **Estimate:** 49.5 dev-days vs **15 working days** in the window (OVER by 34.5 days: needs scope trade-off or overlap) · **Average confidence:** 86%
 
-**Status:** To do 4 · Partly done 10 · Blocked 6 · Done 9
+**Status:** To do 4 · Partly done 11 · Blocked 5 · Done 9
 
 ## Epics
 
@@ -40,7 +40,7 @@
 | [MDV-P0-008](MDV-P0-008.md) | Partly done | Database security baseline part 1: Entra-only auth, managed identity, least-privilege users per module and for migrations | Task | MUST | P0-09 | — | 1.5 | 2–2 | 02 Nov → 06 Nov 2026 | 85% High |
 | [MDV-P0-009](MDV-P0-009.md) | To do | Database security baseline part 2: Always Encrypted (national/insurance IDs), dynamic data masking, TDE with customer-managed key | Task | MUST | P0-09 | — | 2.5 | 2–3 | 02 Nov → 13 Nov 2026 | 72% Medium |
 | [MDV-P0-010](MDV-P0-010.md) | Done | Tenancy model with EF Core global filters and Azure SQL row-level security (cross-tenant test in CI) | Story | MUST | P0-04 | — | 3 | 2–2 | 02 Nov → 06 Nov 2026 | 88% High |
-| [MDV-P0-011](MDV-P0-011.md) | Blocked | Staff sign-in through the BFF with Entra External ID: MFA (TOTP), passkeys and recovery | Story | MUST | P0-03 | F-03 | 3 | 2–2 | 02 Nov → 06 Nov 2026 | 78% Medium |
+| [MDV-P0-011](MDV-P0-011.md) | Partly done | Staff sign-in through the BFF with Entra External ID: MFA (TOTP), passkeys and recovery | Story | MUST | P0-03 | F-03 | 3 | 2–2 | 02 Nov → 06 Nov 2026 | 78% Medium |
 | [MDV-P0-012](MDV-P0-012.md) | Blocked | Session control: facility picker, idle timeout on shared clinic PCs, device/session revocation | Story | MUST | P0-03 | F-03 | 2 | 2–3 | 02 Nov → 13 Nov 2026 | 85% High |
 | [MDV-P0-014](MDV-P0-014.md) | Partly done | Server-side authorisation from the Foundations role-permission matrix | Story | MUST | P0-05 | — | 3 | 2–3 | 02 Nov → 13 Nov 2026 | 87% High |
 | [MDV-P0-017](MDV-P0-017.md) | Partly done | Append-only audit log on Azure SQL ledger tables with audit middleware | Story | MUST | P0-06 | — | 2.5 | 2–3 | 02 Nov → 13 Nov 2026 | 85% High |

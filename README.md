@@ -17,7 +17,7 @@ pnpm dev                                      # clinic app on http://localhost:5
 dotnet test Medvya.sln                        # includes tenant-isolation tests on a throwaway SQL Server (Testcontainers)
 ```
 
-One command starts the services, applies every module's EF Core migrations (Tenancy, Audit) and seeds the synthetic cast (MDV-P0-027): the India tenant "Iyer Family Clinic (synthetic)", facility Adyar, with one membership per role. Add `--uae` for "Al Noor Family Clinic (synthetic)". Re-running is safe (fixed ids, existing rows are kept). The seeder refuses any environment other than Development, Staging or Test.
+One command starts the services, applies every module's EF Core migrations (Tenancy, Audit, Identity) and seeds the synthetic cast (MDV-P0-027): the India tenant "Iyer Family Clinic (synthetic)", facility Adyar, with one membership per role. Add `--uae` for "Al Noor Family Clinic (synthetic)". Re-running is safe (fixed ids, existing rows are kept). The seeder refuses any environment other than Development, Staging or Test.
 
 ```bash
 pnpm dev:db                                   # or: pnpm dev:db --uae
@@ -25,7 +25,7 @@ ConnectionStrings__Medvya="Server=localhost,1433;Database=medvya;User Id=sa;Pass
   dotnet run --project src/Host.Api           # API against the seeded database
 ```
 
-Seeded users cannot sign in yet: sign-in arrives with MDV-P0-011, and patient records with the patient registration ticket. The cast is in [tools/synthetic-data-generator/SyntheticSeed.cs](tools/synthetic-data-generator/SyntheticSeed.cs).
+Sign in at http://localhost:5173 (with `pnpm dev` and the API running): **Sign in** opens the development sign-in page, a minimal OIDC provider inside the API that lists the seeded synthetic users. It exists only when `ASPNETCORE_ENVIRONMENT=Development`; every other environment uses Entra External ID over https (ADR-004). Patient records arrive with the patient registration ticket. The cast is in [tools/synthetic-data-generator/SyntheticSeed.cs](tools/synthetic-data-generator/SyntheticSeed.cs).
 
 With Colima, point Testcontainers at its socket first:
 

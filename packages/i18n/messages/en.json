@@ -51,5 +51,9 @@
   "state.notFound.cta": "Back to Today",
   "state.offline.title": "You are offline",
   "state.offline.body": "Recording continues to the encrypted device buffer. Notes and orders will save when you reconnect.",
-  "state.offline.cta": "Retry now"
+  "state.offline.cta": "Retry now",
+  "session.signIn": "Sign in",
+  "session.signOut": "Sign out",
+  "session.signedInAs": "Signed in as {name}",
+  "session.failed": "Sign-in did not complete. Try again, or ask your clinic admin if it keeps happening."
 }

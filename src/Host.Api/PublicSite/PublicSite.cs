@@ -4,6 +4,7 @@ using System.Text.Encodings.Web;
 using System.Text.RegularExpressions;
 using System.Text.Unicode;
 using Microsoft.AspNetCore.Mvc.ApplicationModels;
+using Microsoft.Extensions.Configuration.Json;
 using Microsoft.Extensions.WebEncoders;
 
 namespace Host.Api.PublicSite;
@@ -22,15 +23,29 @@ public static partial class PublicSite
     // Each language in its own script, as in the clinic app's language picker.
     public static readonly Dictionary<string, string> LanguageNames = new() { ["en"] = "English", ["hi"] = "हिन्दी", ["ar"] = "العربية" };
 
-    // Page addresses without the language prefix. Region, trust centre and demo request arrive with MDV-P1-002 and MDV-P1-003.
+    // Page addresses without the language prefix. The region selector arrives with MDV-P1-002.
     public const string DoctorStart = "/region";
     public const string TrustCentre = "/trust";
-    public const string DemoRequest = "/trust#demo";
+    public const string DemoForm = "/trust#demo";
     public const string Pricing = "/pricing";
 
     sealed class PublicSiteEndpoint;
 
-    public static IServiceCollection AddPublicSite(this IServiceCollection services)
+    public static WebApplicationBuilder AddPublicSite(this WebApplicationBuilder builder)
+    {
+        // Trust centre lists are content, not code: editable on the server without a redeploy (MDV-P1-003). Lowest precedence,
+        // so an app setting or environment variable can still override one value.
+        builder.Configuration.Sources.Insert(0, new JsonConfigurationSource
+        {
+            FileProvider = builder.Environment.ContentRootFileProvider, Path = "PublicSite/trust-centre.json", Optional = false, ReloadOnChange = true,
+        });
+        builder.Services.Configure<TrustCentreContent>(builder.Configuration.GetSection("TrustCentre"));
+        builder.Services.AddSingleton(new DemoRequestLimiter(builder.Configuration.GetValue("PublicSite:DemoRequestsPerHour", 5)));
+        builder.Services.AddPublicSitePages();
+        return builder;
+    }
+
+    static IServiceCollection AddPublicSitePages(this IServiceCollection services)
     {
         services.AddRazorPages(o =>
         {

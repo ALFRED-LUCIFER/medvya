@@ -1,0 +1,5 @@
+@import "tailwindcss";
+@import "@medvya/ui/styles.css";
+
+/* The design-system package lives outside this app; scan it for Tailwind classes too. */
+@source "../../../packages/ui/src";

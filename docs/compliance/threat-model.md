@@ -76,6 +76,6 @@ Status column: **Done** = implemented and tested; otherwise the ticket that deli
 
 ## Residual risks accepted for now
 
-- `style-src 'unsafe-inline'` in the CSP (MUI/Emotion). Remove with nonces when the BFF serves the SPA.
+- `style-src 'unsafe-inline'` in the CSP, for inline state-colour style attributes only (ADR-010). Remove by moving those colours to classes.
 - Branch protection is enabled only once CI can be pushed (`workflow` scope); until then, review discipline only.
 - Solo founder: limited separation of duties for privileged access. Mitigated by PIM activation logs and the break-glass procedure (`secure-development.md`).

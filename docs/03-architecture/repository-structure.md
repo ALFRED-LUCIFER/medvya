@@ -68,7 +68,7 @@ medvya/
 │       └── Worker.Integration/     # P5/P7: HL7 v2 / FHIR adapters, HIE push/pull, write-back with retry/dead-letter
 │
 ├── web/
-│   ├── clinic/                     # staff SPA: React 19 + TS + Vite + MUI (Medvya theme), TanStack Query, RHF + Zod, React Router
+│   ├── clinic/                     # staff SPA: React 19 + TS + Vite + shadcn/ui + Tailwind 4 (ADR-010), TanStack Query, RHF + Zod, React Router
 │   │   └── src/
 │   │       ├── app/                # composition: providers, router, controllers → components
 │   │       ├── features/<feature>/{domain,services,hooks,components}/   # hard rule, see frontend-architecture.md (ADR-009)
@@ -76,7 +76,7 @@ medvya/
 │   └── portal/                     # patient PWA (P4): same stack, 17px min type, 48px targets, RTL
 │
 ├── packages/                       # shared TS packages (pnpm workspaces)
-│   ├── ui/                         # Medvya MUI theme + clinical primitives (IdentityBanner, StatusChip, ProvenanceTag, RecordingPill, Alert)
+│   ├── ui/                         # design system: shadcn/ui components, Tailwind tokens, clinical primitives (IdentityBanner, StatusChip, ProvenanceTag, RecordingPill, Alert)
 │   ├── api-client/                 # generated from Host.Api OpenAPI (never hand-written)
 │   ├── i18n/                       # en · hi · ar strings (+ ta, ml for portal/AI later); microcopy keys from Handoff
 │   └── test-fixtures/              # synthetic patients (Meera Iyer, Deepak Nair, Fatima Al Mansoori …)

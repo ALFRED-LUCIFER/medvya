@@ -2,7 +2,7 @@
 // Synthetic data must use invalid-by-construction IDs (docs/compliance/secure-development.md).
 // Usage: node tools/check-synthetic/check.mjs   (--self-test runs the built-in checks)
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 
 const D = [[0,1,2,3,4,5,6,7,8,9],[1,2,3,4,0,6,7,8,9,5],[2,3,4,0,1,7,8,9,5,6],[3,4,0,1,2,8,9,5,6,7],[4,0,1,2,3,9,5,6,7,8],[5,9,8,7,6,0,4,3,2,1],[6,5,9,8,7,1,0,4,3,2],[7,6,5,9,8,2,1,0,4,3],[8,7,6,5,9,3,2,1,0,4],[9,8,7,6,5,4,3,2,1,0]];
 const P = [[0,1,2,3,4,5,6,7,8,9],[1,5,7,6,2,8,3,0,9,4],[5,8,0,3,7,9,6,1,4,2],[8,9,1,6,0,4,3,5,2,7],[9,4,5,3,1,2,7,6,8,0],[4,2,8,6,5,7,3,9,0,1],[2,7,9,3,8,0,6,4,1,5],[7,0,4,6,9,1,3,2,5,8]];
@@ -40,7 +40,8 @@ if (process.argv.includes('--self-test')) {
 
 // Imported design files are read-only references; everything else must stay synthetic.
 const files = execFileSync('git', ['ls-files'], { encoding: 'utf8' }).split('\n')
-  .filter(f => f && !f.startsWith('design/') && !/\.(png|jpe?g|gif|ico|woff2?|lock)$/.test(f) && f !== 'pnpm-lock.yaml');
+  // existsSync: skip files still tracked but already deleted in the working tree.
+  .filter(f => f && existsSync(f) && !f.startsWith('design/') && !/\.(png|jpe?g|gif|ico|woff2?|lock)$/.test(f) && f !== 'pnpm-lock.yaml');
 let bad = 0;
 for (const f of files) {
   for (const hit of findRealLooking(readFileSync(f, 'utf8'))) { console.error(`${f}: ${hit}`); bad++; }

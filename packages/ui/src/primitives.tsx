@@ -1,84 +1,83 @@
-import type { ReactNode } from 'react';
-import { Box, Button, Typography } from '@mui/material';
-import { keyframes } from '@mui/material/styles';
+import type { CSSProperties, ReactNode } from 'react';
 import {
-  Send, Colorize, Inbox, Visibility, Call, MarkChatRead, TaskAlt,
-  AutoAwesome, Verified, Person, SyncAlt, Upload, Lock,
-  Error as ErrorIcon, Warning, Info, Pause, DoNotDisturbOn, Medication, HelpOutlineOutlined,
-  LockClock, Block, TravelExplore, WifiOff,
-} from '@mui/icons-material';
+  Send, Pipette, Inbox, Eye, Phone, MessageSquareCheck, CircleCheck,
+  Sparkles, BadgeCheck, User, ArrowLeftRight, Upload, Lock,
+  CircleAlert, TriangleAlert, Info, Pause, CircleMinus, Pill as PillIcon, CircleHelp,
+  Clock, Ban, SearchX, WifiOff, type LucideIcon,
+} from 'lucide-react';
 import { useI18n, type MessageKey } from '@medvya/i18n';
+import { Button } from '#components/ui/button';
 
 // Every clinical state is icon + words + colour, never colour alone (Foundations §01).
 // Values come from Handoff §1 and Foundations §04; see docs/02-design.
 // Deviation: success text on the #E6F4EF tint is #07774F, not #087F5B (4.42:1 fails WCAG AA; 4.93:1 passes).
+// Colours stay in these tables (applied inline) so the contrast test checks exactly what renders.
 const okOnTint = '#07774F';
-export type Look = { label: MessageKey; icon: typeof Send; bg: string; fg: string; border?: string };
+export type Look = { label: MessageKey; icon: LucideIcon; bg: string; fg: string; border?: string };
 
 export const statusLooks = {
   ordered:   { label: 'status.ordered', icon: Send, bg: '#EFF4FF', fg: '#1D4ED8' },
-  collected: { label: 'status.collected', icon: Colorize, bg: '#EFF4FF', fg: '#1D4ED8' },
+  collected: { label: 'status.collected', icon: Pipette, bg: '#EFF4FF', fg: '#1D4ED8' },
   received:  { label: 'status.received', icon: Inbox, bg: '#FDF5E7', fg: '#7A4710' },
-  reviewed:  { label: 'status.reviewed', icon: Visibility, bg: '#E7F6F4', fg: '#0F766E' },
-  contacted: { label: 'status.contacted', icon: Call, bg: '#EEF4EF', fg: '#3E6A4D' },
-  delivered: { label: 'status.delivered', icon: MarkChatRead, bg: '#F1F5F8', fg: '#506579' },
-  completed: { label: 'status.completed', icon: TaskAlt, bg: '#087F5B', fg: '#FFFFFF' },
+  reviewed:  { label: 'status.reviewed', icon: Eye, bg: '#E7F6F4', fg: '#0F766E' },
+  contacted: { label: 'status.contacted', icon: Phone, bg: '#EEF4EF', fg: '#3E6A4D' },
+  delivered: { label: 'status.delivered', icon: MessageSquareCheck, bg: '#F1F5F8', fg: '#506579' },
+  completed: { label: 'status.completed', icon: CircleCheck, bg: '#087F5B', fg: '#FFFFFF' },
 } satisfies Record<string, Look>;
 
 export const provenanceLooks = {
-  ai:       { label: 'ai.badge', icon: AutoAwesome, bg: '#F2EFFC', fg: '#5B3FC4', border: '1px dashed #A897E8' },
-  verified: { label: 'provenance.verified', icon: Verified, bg: '#E6F4EF', fg: okOnTint },
-  patient:  { label: 'provenance.patient', icon: Person, bg: '#F1F5F8', fg: '#334E68' },
-  his:      { label: 'provenance.his', icon: SyncAlt, bg: '#EFF4FF', fg: '#1D4ED8' },
+  ai:       { label: 'ai.badge', icon: Sparkles, bg: '#F2EFFC', fg: '#5B3FC4', border: '1px dashed #A897E8' },
+  verified: { label: 'provenance.verified', icon: BadgeCheck, bg: '#E6F4EF', fg: okOnTint },
+  patient:  { label: 'provenance.patient', icon: User, bg: '#F1F5F8', fg: '#334E68' },
+  his:      { label: 'provenance.his', icon: ArrowLeftRight, bg: '#EFF4FF', fg: '#1D4ED8' },
   imported: { label: 'provenance.imported', icon: Upload, bg: '#EDF1F5', fg: '#334E68' },
   signed:   { label: 'provenance.signed', icon: Lock, bg: '#102A43', fg: '#FFFFFF' },
 } satisfies Record<string, Look>;
 
 export const alertLooks = {
-  critical:  { label: 'alert.critical', icon: ErrorIcon, bg: '#FDECEE', fg: '#8A1626', border: '1px solid #F3B9C0' },
-  attention: { label: 'alert.attention', icon: Warning, bg: '#FDF5E7', fg: '#7A4710', border: '1px solid #EFD5A6' },
+  critical:  { label: 'alert.critical', icon: CircleAlert, bg: '#FDECEE', fg: '#8A1626', border: '1px solid #F3B9C0' },
+  attention: { label: 'alert.attention', icon: TriangleAlert, bg: '#FDF5E7', fg: '#7A4710', border: '1px solid #EFD5A6' },
   info:      { label: 'alert.info', icon: Info, bg: '#F7FAFC', fg: '#334E68', border: '1px solid #DFE7ED' },
 } satisfies Record<string, Look>;
 
 export const recordingLooks = {
   recording: { label: 'recording.rec', icon: Pause, bg: '#B42333', fg: '#FFFFFF' }, // icon unused: the blinking dot is the shape cue
   paused:    { label: 'recording.paused', icon: Pause, bg: '#FDF5E7', fg: '#7A4710' },
-  declined:  { label: 'recording.declined', icon: DoNotDisturbOn, bg: '#EDF1F5', fg: '#334E68' },
-  given:     { label: 'recording.given', icon: TaskAlt, bg: '#E6F4EF', fg: okOnTint },
-  notAsked:  { label: 'recording.notAsked', icon: HelpOutlineOutlined, bg: '#FDF5E7', fg: '#7A4710' },
+  declined:  { label: 'recording.declined', icon: CircleMinus, bg: '#EDF1F5', fg: '#334E68' },
+  given:     { label: 'recording.given', icon: CircleCheck, bg: '#E6F4EF', fg: okOnTint },
+  notAsked:  { label: 'recording.notAsked', icon: CircleHelp, bg: '#FDF5E7', fg: '#7A4710' },
 } satisfies Record<string, Look>;
 
-function Pill({ look, text, height = 28, radius = 999, children }: { look: Look; text?: string; height?: number; radius?: number; children?: ReactNode }) {
+const paint = (look: Look): CSSProperties => ({ backgroundColor: look.bg, color: look.fg, border: look.border });
+
+function Pill({ look, text, tag = false, children }: { look: Look; text?: string; tag?: boolean; children?: ReactNode }) {
   const { t } = useI18n();
   const Icon = look.icon;
   return (
-    <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75, height, px: 1.25, borderRadius: `${radius}px`,
-      bgcolor: look.bg, color: look.fg, border: look.border ?? 0, fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap', lineHeight: 1 }}>
-      {children ?? <Icon sx={{ fontSize: 16 }} aria-hidden />}
+    <span style={paint(look)} className={`inline-flex items-center gap-1.5 px-2.5 text-[13px] font-bold leading-none whitespace-nowrap ${tag ? 'h-[26px] rounded-sm' : 'h-7 rounded-full'}`}>
+      {children ?? <Icon className="size-4" aria-hidden />}
       {text ?? t(look.label)}
-    </Box>
+    </span>
   );
 }
 
 export const StatusChip = ({ state }: { state: keyof typeof statusLooks }) => <Pill look={statusLooks[state]} />;
 
-export const ProvenanceTag = ({ source }: { source: keyof typeof provenanceLooks }) =>
-  <Pill look={provenanceLooks[source]} height={26} radius={6} />;
+export const ProvenanceTag = ({ source }: { source: keyof typeof provenanceLooks }) => <Pill look={provenanceLooks[source]} tag />;
 
 export function ClinicalAlert({ severity, children }: { severity: keyof typeof alertLooks; children: ReactNode }) {
   const { t } = useI18n();
   const look = alertLooks[severity], Icon = look.icon;
   return (
-    <Box role={severity === 'critical' ? 'alert' : 'status'} sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', p: 1.5, borderRadius: '10px',
-      bgcolor: look.bg, color: look.fg, border: look.border }}>
-      <Icon sx={{ fontSize: 20, mt: '2px' }} aria-hidden />
-      <Box><Typography component="strong" sx={{ fontWeight: 800, fontSize: 14 }}>{t(look.label)}</Typography>
-        <Typography sx={{ fontSize: 14, color: 'inherit' }}>{children}</Typography></Box>
-    </Box>
+    <div role={severity === 'critical' ? 'alert' : 'status'} style={paint(look)} className="flex items-start gap-2 rounded-md p-3">
+      <Icon className="mt-0.5 size-5 shrink-0" aria-hidden />
+      <div className="text-sm">
+        <strong className="font-extrabold">{t(look.label)}</strong>
+        <p>{children}</p>
+      </div>
+    </div>
   );
 }
-
-const blink = keyframes`0%,100%{opacity:1}50%{opacity:.35}`;
 
 export function RecordingPill({ state, elapsedSeconds = 0 }: { state: keyof typeof recordingLooks; elapsedSeconds?: number }) {
   const { t } = useI18n();
@@ -87,8 +86,8 @@ export function RecordingPill({ state, elapsedSeconds = 0 }: { state: keyof type
   const mm = String(Math.floor(elapsedSeconds / 60)).padStart(2, '0'), ss = String(elapsedSeconds % 60).padStart(2, '0');
   return (
     <Pill look={look} text={t('recording.rec', { time: `${mm}:${ss}` })}>
-      <Box component="span" aria-hidden sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#FFFFFF',
-        animation: `${blink} 1s ease-in-out infinite`, '@media (prefers-reduced-motion: reduce)': { animation: 'none' } }} />
+      {/* animate-pulse stops under prefers-reduced-motion (styles.css) */}
+      <span aria-hidden className="size-2 animate-pulse rounded-full bg-white" />
     </Pill>
   );
 }
@@ -101,56 +100,55 @@ export type BannerPatient = {
   consent?: keyof typeof recordingLooks; encounter?: string; synthetic?: boolean;
 };
 
-// Unicode first-strong isolate: keeps Latin IDs and dates intact inside Arabic sentences.
-const iso = (v: string) => `\u2068${v}\u2069`;
+// Unicode first-strong isolate + non-breaking spaces: keeps Latin IDs and dates intact (order and line) inside Arabic sentences.
+const iso = (v: string) => `\u2068${v.replaceAll(' ', '\u00A0')}\u2069`;
 
-const allergyLook: Look = { label: 'banner.allergy', icon: Medication, bg: '#FDECEE', fg: '#8A1626' };
-const noAllergyLook: Look = { label: 'banner.noAllergies', icon: Medication, bg: '#F1F5F8', fg: '#334E68' };
-const unknownAllergyLook: Look = { label: 'banner.allergiesNotRecorded', icon: HelpOutlineOutlined, bg: '#FDF5E7', fg: '#7A4710' };
+const allergyLook: Look = { label: 'banner.allergy', icon: PillIcon, bg: '#FDECEE', fg: '#8A1626' };
+const noAllergyLook: Look = { label: 'banner.noAllergies', icon: PillIcon, bg: '#F1F5F8', fg: '#334E68' };
+const unknownAllergyLook: Look = { label: 'banner.allergiesNotRecorded', icon: CircleHelp, bg: '#FDF5E7', fg: '#7A4710' };
 
 /** Fixed patient identity banner for every clinical screen (Foundations §04). Allergies never collapse. */
 export function IdentityBanner({ patient }: { patient: BannerPatient }) {
   const { t } = useI18n();
   const initials = patient.name.split(' ').map(p => p[0]).slice(0, 2).join('');
   return (
-    <Box component="section" aria-label={t('banner.patient', { name: patient.name })} sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px 16px', p: 1.5,
-      bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', borderRadius: '12px', boxShadow: 'inset 4px 0 0 #0E9384' }}>
-      <Box aria-hidden sx={{ width: 40, height: 40, borderRadius: '50%', bgcolor: '#102A43', color: '#fff', display: 'grid', placeItems: 'center', fontWeight: 800 }}>{initials}</Box>
-      <Box>
-        <Typography component="h2" sx={{ fontSize: 17, fontWeight: 800 }}>
-          {patient.name} <Box component="span" sx={{ fontWeight: 500, color: 'text.secondary' }}>{patient.age} {patient.sex}</Box>
-        </Typography>
-        <Typography sx={{ font: "400 12px 'JetBrains Mono', monospace", color: 'text.secondary' }}>{t('banner.mrnDob', { mrn: iso(patient.mrn), dob: iso(patient.dob) })}</Typography>
-      </Box>
+    <section aria-label={t('banner.patient', { name: patient.name })}
+      className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border bg-card p-3 shadow-[inset_4px_0_0_var(--color-brand-500)] rtl:shadow-[inset_-4px_0_0_var(--color-brand-500)]">
+      <div aria-hidden className="grid size-10 place-items-center rounded-full bg-brand-950 font-extrabold text-white">{initials}</div>
+      <div>
+        <h2 className="text-[17px] font-extrabold">
+          {patient.name} <span className="font-medium text-muted-foreground">{patient.age} {patient.sex}</span>
+        </h2>
+        <p className="font-mono text-xs text-muted-foreground">{t('banner.mrnDob', { mrn: iso(patient.mrn), dob: iso(patient.dob) })}</p>
+      </div>
       {patient.allergies === null ? <Pill look={unknownAllergyLook} />
         : patient.allergies.length === 0 ? <Pill look={noAllergyLook} />
         : patient.allergies.map(a => <Pill key={a.name} look={allergyLook}
             text={t('banner.allergy', { name: iso(a.name), status: t(`banner.allergy.${a.status}`) })} />)}
       {patient.consent && <RecordingPill state={patient.consent} />}
-      {patient.encounter && <Typography sx={{ fontSize: 13, color: 'text.secondary' }}>{patient.encounter}</Typography>}
-      {patient.synthetic && <Box component="span" sx={{ font: "600 10px 'JetBrains Mono', monospace", color: '#975A16', bgcolor: '#FDF5E7', px: 1, py: 0.5, borderRadius: '4px' }}>{t('banner.synthetic')}</Box>}
-    </Box>
+      {patient.encounter && <p className="text-[13px] text-muted-foreground">{patient.encounter}</p>}
+      {patient.synthetic && <span className="rounded-sm bg-[#FDF5E7] px-2 py-1 font-mono text-[10px] font-semibold text-warning-700">{t('banner.synthetic')}</span>}
+    </section>
   );
 }
 
 export const systemStates = {
-  sessionExpired: { title: 'state.sessionExpired.title', body: 'state.sessionExpired.body', cta: 'state.sessionExpired.cta', icon: LockClock, color: '#334E68' },
-  noAccess:       { title: 'err.403', body: 'state.noAccess.body', cta: 'state.noAccess.cta', icon: Block, color: '#8A1626' },
-  notFound:       { title: 'state.notFound.title', body: 'state.notFound.body', cta: 'state.notFound.cta', icon: TravelExplore, color: '#334E68' },
+  sessionExpired: { title: 'state.sessionExpired.title', body: 'state.sessionExpired.body', cta: 'state.sessionExpired.cta', icon: Clock, color: '#334E68' },
+  noAccess:       { title: 'err.403', body: 'state.noAccess.body', cta: 'state.noAccess.cta', icon: Ban, color: '#8A1626' },
+  notFound:       { title: 'state.notFound.title', body: 'state.notFound.body', cta: 'state.notFound.cta', icon: SearchX, color: '#334E68' },
   offline:        { title: 'state.offline.title', body: 'state.offline.body', cta: 'state.offline.cta', icon: WifiOff, color: '#975A16' },
-} satisfies Record<string, { title: MessageKey; body: MessageKey; cta: MessageKey; icon: typeof Send; color: string }>;
+} satisfies Record<string, { title: MessageKey; body: MessageKey; cta: MessageKey; icon: LucideIcon; color: string }>;
 
 /** F-05 system states: one message, one action, announced to assistive technology. */
 export function SystemState({ state, onAction, facility = '' }: { state: keyof typeof systemStates; onAction: () => void; facility?: string }) {
   const { t } = useI18n();
   const s = systemStates[state], Icon = s.icon;
   return (
-    <Box role={state === 'offline' ? 'status' : 'alert'} sx={{ display: 'flex', flexDirection: 'column', gap: 1.25, alignItems: 'flex-start', p: 3,
-      maxWidth: 420, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', borderRadius: '16px' }}>
-      <Icon sx={{ fontSize: 30, color: s.color }} aria-hidden />
-      <Typography component="h1" sx={{ fontSize: 17, fontWeight: 800 }}>{t(s.title)}</Typography>
-      <Typography sx={{ fontSize: 14, color: 'text.secondary' }}>{t(s.body, { facility })}</Typography>
-      <Button variant="contained" onClick={onAction} sx={{ mt: 1, bgcolor: '#102A43', '&:hover': { bgcolor: '#0B1622' } }}>{t(s.cta)}</Button>
-    </Box>
+    <div role={state === 'offline' ? 'status' : 'alert'} className="flex max-w-[420px] flex-col items-start gap-2.5 rounded-xl border bg-card p-6">
+      <Icon className="size-7" style={{ color: s.color }} aria-hidden />
+      <h1 className="text-[17px] font-extrabold">{t(s.title)}</h1>
+      <p className="text-sm text-muted-foreground">{t(s.body, { facility })}</p>
+      <Button variant="navy" onClick={onAction} className="mt-2">{t(s.cta)}</Button>
+    </div>
   );
 }

@@ -1,18 +1,20 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
 import { render } from '@testing-library/react';
-import { ThemeProvider } from '@mui/material';
 import axe from 'axe-core';
 import { I18nProvider } from '@medvya/i18n';
-import { medvyaTheme } from './theme';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import {
   alertLooks, ClinicalAlert, IdentityBanner, provenanceLooks, ProvenanceTag,
   RecordingPill, recordingLooks, StatusChip, statusLooks, SystemState, systemStates, type Look,
 } from './primitives';
 
-const ui = (n: React.ReactNode) => render(<ThemeProvider theme={medvyaTheme}>{n}</ThemeProvider>);
+const ui = (n: React.ReactNode) => render(<>{n}</>);
+// Design tokens are defined once, in styles.css; read them so the test checks what ships.
+const tokens = Object.fromEntries([...readFileSync(join(process.cwd(), 'src/styles.css'), 'utf8').matchAll(/--color-([\w-]+):\s*(#[0-9a-fA-F]{6})/g)].map(m => [m[1], m[2]]));
 // Visible text without the invisible Unicode isolates used around embedded IDs.
-const visible = (e: HTMLElement) => (e.textContent ?? '').replace(/[\u2068\u2069]/g, '');
+const visible = (e: HTMLElement) => (e.textContent ?? '').replace(/[\u2068\u2069]/g, '').replaceAll('\u00A0', ' ');
 
 function contrast(a: string, b: string) {
   const lum = (hex: string) => {
@@ -29,10 +31,11 @@ const allLooks: [string, Look][] = [statusLooks, provenanceLooks, alertLooks, re
 describe('clinical primitives', () => {
   it('meets WCAG AA text contrast (4.5:1) for every state', () => {
     for (const [name, l] of allLooks) expect(contrast(l.fg, l.bg), name).toBeGreaterThanOrEqual(4.5);
-    const p = medvyaTheme.palette;
-    for (const bg of [p.primary.main, p.primary.dark, p.ai.main, p.ai.dark, p.error.main])
-      expect(contrast('#FFFFFF', bg), `white on ${bg}`).toBeGreaterThanOrEqual(4.5); // filled buttons
-    expect(contrast(p.primary.main, p.background.default), 'outlined/text button').toBeGreaterThanOrEqual(4.5);
+    // Filled buttons (white text) and outlined/link text on the canvas.
+    for (const bg of ['primary', 'brand-800', 'ai-600', 'ai-700', 'destructive', 'brand-950'])
+      expect(contrast('#FFFFFF', tokens[bg]), `white on ${bg}`).toBeGreaterThanOrEqual(4.5);
+    for (const fg of ['foreground', 'muted-foreground', 'action-600', 'primary'])
+      expect(contrast(tokens[fg], tokens['background']), `${fg} on background`).toBeGreaterThanOrEqual(4.5);
   });
 
   it('never conveys status by colour alone: each state has words and a shape cue', () => {
@@ -59,8 +62,8 @@ describe('clinical primitives', () => {
   });
 
   it('renders translated, right-to-left text in Arabic', () => {
-    const { container } = render(<I18nProvider locale="ar" country="AE"><ThemeProvider theme={medvyaTheme}>
-      <ProvenanceTag source="ai" /><RecordingPill state="recording" elapsedSeconds={252} /></ThemeProvider></I18nProvider>);
+    const { container } = render(<I18nProvider locale="ar" country="AE">
+      <ProvenanceTag source="ai" /><RecordingPill state="recording" elapsedSeconds={252} /></I18nProvider>);
     expect(container.textContent).toContain('مسودة ذكاء اصطناعي');
     expect(container.textContent).toContain('04:12');
   });
@@ -78,8 +81,8 @@ describe('clinical primitives', () => {
     const noAccess = ui(<SystemState state="noAccess" facility="Iyer Family Clinic" onAction={() => {}} />).container.textContent;
     expect(noAccess).toContain('You don’t have access to this facility.');
     expect(noAccess).toContain('You are signed in to Iyer Family Clinic.');
-    const ar = render(<I18nProvider locale="ar" country="AE"><ThemeProvider theme={medvyaTheme}>
-      <SystemState state="notFound" onAction={() => {}} /></ThemeProvider></I18nProvider>).container.textContent;
+    const ar = render(<I18nProvider locale="ar" country="AE">
+      <SystemState state="notFound" onAction={() => {}} /></I18nProvider>).container.textContent;
     expect(ar).toContain('الصفحة غير موجودة');
   });
 

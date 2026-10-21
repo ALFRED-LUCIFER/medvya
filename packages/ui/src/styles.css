@@ -1,0 +1,74 @@
+/*
+ * Medvya design tokens (Foundations §02–§03) for Tailwind 4 + shadcn/ui.
+ * Single source of colour truth: primitives and the contrast test read these values.
+ * `static` emits every variable even when no utility uses it (base styles reference var(--color-ring)).
+ * Deviations from the design file (WCAG AA fixes) are listed in docs/02-design/README.md.
+ */
+@import "tw-animate-css";
+
+@theme static {
+  /* Brand and semantic palette */
+  --color-brand-950: #102a43;   /* sidebar, headings, navy actions */
+  --color-brand-900: #0b1622;
+  --color-brand-700: #0f766e;   /* primary actions (was #0e9384: 3.8:1 with white, fails AA) */
+  --color-brand-800: #0b5c55;   /* primary hover */
+  --color-brand-500: #0e9384;   /* non-text accents only (e.g. banner rail) */
+  --color-action-600: #2563eb;  /* links, focus ring */
+  --color-ai-600: #7155d8;      /* AI-provisional only */
+  --color-ai-700: #5b3fc4;
+  --color-ai-50: #f2effc;
+  --color-ink-900: #142536;
+  --color-ink-700: #334e68;
+  --color-ink-600: #506579;
+  --color-ink-400: #8296a8;
+  --color-surface: #f7fafc;
+  --color-line: #dfe7ed;
+  --color-line-strong: #cbd6e0;
+  --color-danger-700: #b42333;  /* critical only */
+  --color-warning-700: #975a16; /* uncertainty / attention */
+  --color-success-700: #087f5b; /* confirmed, never inferred */
+
+  /* shadcn semantic tokens mapped to Medvya */
+  --color-background: #f7fafc;
+  --color-foreground: #142536;
+  --color-card: #ffffff;
+  --color-card-foreground: #142536;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #142536;
+  --color-primary: #0f766e;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #ffffff;
+  --color-secondary-foreground: #142536;
+  --color-muted: #f1f5f8;
+  --color-muted-foreground: #506579;
+  --color-accent: #eff4ff;
+  --color-accent-foreground: #142536;
+  --color-destructive: #b42333;
+  --color-destructive-foreground: #ffffff;
+  --color-border: #dfe7ed;
+  --color-input: #cbd6e0;
+  --color-ring: #2563eb;
+
+  --radius: 10px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  /* Self-hosted fonts are loaded by the app; Arabic falls through to Noto Sans Arabic. */
+  --font-sans: "Manrope Variable", Manrope, "Noto Sans Arabic", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --breakpoint-sm: 360px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1280px;
+  --breakpoint-xl: 1600px;
+}
+
+@layer base {
+  html { background: var(--color-background); color: var(--color-foreground); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
+  * { border-color: var(--color-border); }
+  /* Handoff: visible 2px focus ring on every interactive element. */
+  :focus-visible { outline: 2px solid var(--color-ring); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+}

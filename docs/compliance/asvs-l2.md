@@ -32,4 +32,4 @@ default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src
 font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
 ```
 
-`style-src 'unsafe-inline'` is a known exception: MUI/Emotion injects `<style>` tags at runtime. Scripts stay strict. Removing the exception means an Emotion nonce per response, which is worth doing once the SPA is served by Host.Api (MDV-P0-011). Fonts are self-hosted (MDV-P0-021), so `font-src 'self'` needs no third-party domains.
+`style-src 'unsafe-inline'` is a known exception, now only for inline `style` attributes (clinical state colours from the primitives' look tables). Emotion was removed with ADR-010, so no `<style>` tags are injected at runtime. Scripts stay strict. Remove the exception by moving state colours to Tailwind classes. Fonts are self-hosted (MDV-P0-021), so `font-src 'self'` needs no third-party domains.

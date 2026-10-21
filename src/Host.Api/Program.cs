@@ -1,7 +1,9 @@
 using System.Threading.RateLimiting;
 using Host.Api.Middleware;
+using Host.Api.Observability;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.AddMedvyaTelemetry();
 
 builder.WebHost.ConfigureKestrel(k =>
 {

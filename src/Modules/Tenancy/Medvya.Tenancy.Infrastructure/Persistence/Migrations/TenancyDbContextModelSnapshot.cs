@@ -49,6 +49,53 @@ namespace Medvya.Tenancy.Infrastructure.Persistence.Migrations
                     b.ToTable("Facilities", "tenancy");
                 });
 
+            modelBuilder.Entity("Medvya.Tenancy.Domain.FeatureFlag", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("ChangedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("ChangedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Owner")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "Key")
+                        .IsUnique();
+
+                    b.ToTable("FeatureFlags", "tenancy");
+                });
+
             modelBuilder.Entity("Medvya.Tenancy.Domain.Membership", b =>
                 {
                     b.Property<Guid>("Id")
@@ -112,6 +159,15 @@ namespace Medvya.Tenancy.Infrastructure.Persistence.Migrations
                 });
 
             modelBuilder.Entity("Medvya.Tenancy.Domain.Facility", b =>
+                {
+                    b.HasOne("Medvya.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Medvya.Tenancy.Domain.FeatureFlag", b =>
                 {
                     b.HasOne("Medvya.Tenancy.Domain.Tenant", null)
                         .WithMany()

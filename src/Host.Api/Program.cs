@@ -3,6 +3,7 @@ using Host.Api.Context;
 using Host.Api.Middleware;
 using Medvya.Audit.Infrastructure;
 using Medvya.BuildingBlocks.Domain;
+using Medvya.Tenancy.Infrastructure;
 using Host.Api.Observability;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -20,8 +21,8 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<RequestContext>();
 builder.Services.AddScoped<ICurrentTenant>(sp => sp.GetRequiredService<RequestContext>());
 builder.Services.AddScoped<ICurrentUser>(sp => sp.GetRequiredService<RequestContext>());
-// Without a database, audited endpoints cannot resolve IAuditLog and fail closed (500), never unaudited.
-if (builder.Configuration.GetConnectionString("Medvya") is { } sql) builder.Services.AddAuditModule(sql);
+// Without a database, audited and flag-gated endpoints cannot resolve IAuditLog / IFeatureFlags and fail closed (500).
+if (builder.Configuration.GetConnectionString("Medvya") is { } sql) builder.Services.AddAuditModule(sql).AddTenancyModule(sql);
 builder.Services.AddHsts(o => { o.MaxAge = TimeSpan.FromDays(365); o.IncludeSubDomains = true; });
 
 var permitsPerMinute = builder.Configuration.GetValue("RateLimiting:PermitsPerMinute", 300);

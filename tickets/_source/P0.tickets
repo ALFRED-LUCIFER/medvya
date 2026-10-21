@@ -227,6 +227,11 @@ ac:
 - Human access to production data is only via just-in-time elevation (documented runbook, links MDV-P0-025).
 
 === MDV-P0-009
+status: Partly done
+progress:
+- Merged [PR #40](https://github.com/ALFRED-LUCIFER/medvya/pull/40): Always Encrypted — deterministic for ABHA, ABHA address, Emirates ID and insurance member number (exact-match lookup through EF Core), randomized for Aadhaar last 4, passport and visa; key setup identical locally and in Azure (local RSA key store provider for dev/tests); tests prove the admin sees only ciphertext and LIKE is rejected
+- Dynamic data masking on names, DOB, phone, email and address; `medvya_patients` role has UNMASK, reporting sees masked values (tested); protected-column list in the data classification register; mutation-checked
+- Left (needs Azure, MDV-P0-006): Key Vault column master key, TDE with customer-managed key and rotation, deploy step that creates keys
 title: Database security baseline part 2: Always Encrypted (national/insurance IDs), dynamic data masking, TDE with customer-managed key
 type: Task
 epic: MDV-P0-E03
@@ -443,7 +448,8 @@ ac:
 status: Partly done
 progress:
 - Merged [PR #31](https://github.com/ALFRED-LUCIFER/medvya/pull/31): audit.AuditEvents is an append-only SQL ledger table with tenant RLS; `.Audited()` endpoint filter writes one event per request and fails closed; ledger digest verification test; mutation-checked
-- Left: denied-attempt auditing (needs sign-in, MDV-P0-011); daily digest export to immutable Blob (needs Azure, MDV-P0-006); endpoint enumeration test once patient endpoints exist
+- Merged [PR #50](https://github.com/ALFRED-LUCIFER/medvya/pull/50): endpoint enumeration test: every signed-in endpoint is `.Audited(...)` or reviewed as free of patient data (fails closed), and each audited endpoint is called on real SQL Server and must write exactly one audit row; mutation-checked
+- Left: denied-attempt auditing (needs the tenant context, MDV-P0-012); daily digest export to immutable Blob (needs Azure, MDV-P0-006)
 title: Append-only audit log on Azure SQL ledger tables with audit middleware
 type: Story
 epic: MDV-P0-E03
@@ -566,6 +572,11 @@ ac:
 - Numbers, dates and currency format per locale and country (₹ with Indian grouping, AED).
 
 === MDV-P0-022
+status: Partly done
+progress:
+- Merged [PR #41](https://github.com/ALFRED-LUCIFER/medvya/pull/41): React Router; navy sidebar (≥1280 px), 72 px icon rail (768–1279 px), mobile bottom tabs + More (<768 px); facility, user and role; bell placeholder; skip link, nav landmark, focus ring; en/hi/ar
+- Navigation is a pure domain map (route → capability/access → optional tenant flag → phase) filtered by `/v1/me/context`; post-P1 screens are flag-gated; 7 unit tests (mutation-checked) and Playwright for roles, breakpoints in English and Arabic, skip link and axe
+- Left: demonstrate per role in the seeded tenant once the facility picker returns capabilities (MDV-P0-012)
 title: App shell with role-based navigation (desktop sidebar, tablet rail, mobile tabs)
 type: Story
 epic: MDV-P0-E04

@@ -148,8 +148,12 @@ namespace Medvya.Patients.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("TenantId", "FacilityId", "Mobile");
+
                     b.HasIndex("TenantId", "FacilityId", "Mrn")
                         .IsUnique();
+
+                    b.HasIndex("TenantId", "FacilityId", "RegisteredAt");
 
                     b.ToTable("Patients", "patients");
                 });

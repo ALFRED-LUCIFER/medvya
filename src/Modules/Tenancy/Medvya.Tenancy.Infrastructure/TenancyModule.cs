@@ -15,6 +15,7 @@ public static class TenancyModule
         services.TryAddScoped<TenantSessionInterceptor>();
         return services
             .AddDbContext<TenancyDbContext>((sp, o) => o.UseSqlServer(connectionString).AddInterceptors(sp.GetRequiredService<TenantSessionInterceptor>()))
-            .AddScoped<IFeatureFlags, FeatureFlags>();
+            .AddScoped<IFeatureFlags, FeatureFlags>()
+            .AddScoped<IStaffAccess, StaffAccess>();
     }
 }

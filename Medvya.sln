@@ -71,6 +71,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Medvya.Billing.Application"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Medvya.Billing.Infrastructure", "src\Modules\Billing\Medvya.Billing.Infrastructure\Medvya.Billing.Infrastructure.csproj", "{98E8E1FE-1993-4746-AD73-7CE7060D64EC}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Medvya.Patients.Api", "src\Modules\Patients\Medvya.Patients.Api\Medvya.Patients.Api.csproj", "{478BFF56-A5E7-44CC-964E-D3C45D73EAA9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -369,6 +371,18 @@ Global
 		{98E8E1FE-1993-4746-AD73-7CE7060D64EC}.Release|x64.Build.0 = Release|Any CPU
 		{98E8E1FE-1993-4746-AD73-7CE7060D64EC}.Release|x86.ActiveCfg = Release|Any CPU
 		{98E8E1FE-1993-4746-AD73-7CE7060D64EC}.Release|x86.Build.0 = Release|Any CPU
+		{478BFF56-A5E7-44CC-964E-D3C45D73EAA9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{478BFF56-A5E7-44CC-964E-D3C45D73EAA9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{478BFF56-A5E7-44CC-964E-D3C45D73EAA9}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{478BFF56-A5E7-44CC-964E-D3C45D73EAA9}.Debug|x64.Build.0 = Debug|Any CPU
+		{478BFF56-A5E7-44CC-964E-D3C45D73EAA9}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{478BFF56-A5E7-44CC-964E-D3C45D73EAA9}.Debug|x86.Build.0 = Debug|Any CPU
+		{478BFF56-A5E7-44CC-964E-D3C45D73EAA9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{478BFF56-A5E7-44CC-964E-D3C45D73EAA9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{478BFF56-A5E7-44CC-964E-D3C45D73EAA9}.Release|x64.ActiveCfg = Release|Any CPU
+		{478BFF56-A5E7-44CC-964E-D3C45D73EAA9}.Release|x64.Build.0 = Release|Any CPU
+		{478BFF56-A5E7-44CC-964E-D3C45D73EAA9}.Release|x86.ActiveCfg = Release|Any CPU
+		{478BFF56-A5E7-44CC-964E-D3C45D73EAA9}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -405,5 +419,6 @@ Global
 		{EF1D7196-8388-4ED9-8125-CFF3FE1F9A1B} = {61DCC6D7-ECE4-129F-6A42-39B2DD414C68}
 		{4875272C-F774-4092-99B9-93BD0C07210C} = {61DCC6D7-ECE4-129F-6A42-39B2DD414C68}
 		{98E8E1FE-1993-4746-AD73-7CE7060D64EC} = {61DCC6D7-ECE4-129F-6A42-39B2DD414C68}
+		{478BFF56-A5E7-44CC-964E-D3C45D73EAA9} = {397E7A55-D285-C515-153E-84DDD2B9FF92}
 	EndGlobalSection
 EndGlobal

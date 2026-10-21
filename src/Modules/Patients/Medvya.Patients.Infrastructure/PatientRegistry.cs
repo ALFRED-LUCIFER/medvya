@@ -1,4 +1,3 @@
-using System.Globalization;
 using Medvya.Audit.Application;
 using Medvya.Audit.Domain;
 using Medvya.BuildingBlocks.Domain;
@@ -10,13 +9,16 @@ using Microsoft.EntityFrameworkCore;
 namespace Medvya.Patients.Infrastructure;
 
 /// <summary>
-/// Patient registration and lookup. Each write runs in one database transaction that commits only after its audit event is
-/// written, and each read is audited before data is returned, so nothing happens unaudited (fail closed).
+/// Patient registration, directory and search. Each write runs in one database transaction that commits only after its audit event
+/// is written (fail closed). Reads do not audit here: the calling endpoint's <c>.Audited()</c> filter writes one event before the
+/// read runs, so a read that cannot be audited never happens and each request leaves exactly one event.
 /// shortcut: the audit event is written on its own connection, so a commit that fails after the audit write leaves an audit row
 /// for a change that did not land (as FeatureFlags); share the transaction when an outbox exists.
-/// shortcut: the facility id is trusted from the caller; check it against the user's membership when endpoints exist (MDV-P0-011).
+/// shortcut: registration still trusts the command's facility id; it moves to the active facility with the registration endpoint (MDV-P1-016).
+/// shortcut: reads see the active facility's patients only; sharing patients across one tenant's facilities waits for multi-site rules (P7).
 /// </summary>
-public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant, ICurrentUser user, IAuditLog audit, TimeProvider clock) : IPatientRegistry
+public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant, ICurrentFacility facility, ICurrentUser user, IAuditLog audit, TimeProvider clock)
+    : IPatientRegistry
 {
     const string Purpose = "registration";
 
@@ -54,26 +56,59 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
         return new(patient.Id, patient.Mrn, now, user.UserId, patient.Status, warnings);
     }
 
-    public async Task<PatientRecord?> GetAsync(Guid patientId, CancellationToken cancellationToken = default)
+    public Task<PatientRecord?> GetAsync(Guid patientId, CancellationToken cancellationToken = default) => LoadAsync(patientId, cancellationToken);
+
+    public async Task<PatientSearchResult> SearchAsync(PatientSearch search, CancellationToken cancellationToken = default)
     {
-        var record = await LoadAsync(patientId, cancellationToken);
-        if (record is not null) await AuditAsync("patient.read", patientId, clock.GetUtcNow(), cancellationToken);
-        return record;
+        ArgumentNullException.ThrowIfNull(search);
+        if (search.Page is < 1 or > 1000) throw new PatientValidationException([new("page", "out_of_range")]);
+        var term = CountryRules.For(search.CountryCode).ParseSearch(search.Query);
+        var now = clock.GetUtcNow();
+
+        var patients = FacilityPatients();
+        var like = term.Kind == SearchKind.Name ? LikeContaining(term.Value!) : null;
+        patients = term.Kind switch
+        {
+            SearchKind.Name => patients.Where(p => EF.Functions.Like(p.FullName, like!, Escape) || (p.ArabicName != null && EF.Functions.Like(p.ArabicName, like!, Escape))),
+            SearchKind.Phone => patients.Where(p => p.Mobile == term.Value || p.AlternatePhone == term.Value),
+            SearchKind.Mrn => patients.Where(p => p.Mrn == term.Value),
+            // Deterministic Always Encrypted: SqlClient encrypts the parameter and SQL Server compares ciphertexts (equality only).
+            SearchKind.Identifier => patients.Where(p => db.Identifiers.Any(i => i.PatientId == p.Id && i.Scheme == term.Scheme && i.LookupValue == term.Value)),
+            _ => patients,
+        };
+        patients = search.Filter switch
+        {
+            DirectoryFilter.Incomplete => patients.Where(p => p.Status == RegistrationStatus.Incomplete),
+            DirectoryFilter.Recent => patients.Where(p => p.RegisteredAt >= now.AddDays(-PatientSearch.RecentDays)),
+            _ => patients,
+        };
+
+        var total = await patients.CountAsync(cancellationToken);
+        var ordered = term.Kind == SearchKind.Name ? patients.OrderBy(p => p.FullName).ThenBy(p => p.Id) : patients.OrderByDescending(p => p.RegisteredAt).ThenBy(p => p.Id);
+        var rows = await ordered.Skip((search.Page - 1) * PatientSearch.PageSize).Take(PatientSearch.PageSize)
+            .Select(p => new { p.Id, p.FullName, p.DateOfBirth, p.DateOfBirthEstimated, p.SexAtBirth, p.Mrn, p.Status, p.CountryCode })
+            .ToListAsync(cancellationToken);
+        var items = rows.Select(p => new PatientSummary(p.Id, Initials(p.FullName), CountryRules.AgeOn(CountryRules.For(p.CountryCode).Today(now), p.DateOfBirth),
+            p.DateOfBirthEstimated, p.SexAtBirth, p.Mrn.Length <= 4 ? p.Mrn : p.Mrn[^4..], p.Status)).ToList();
+        return new(term.Kind, items, search.Page, PatientSearch.PageSize, total);
     }
 
-    public async Task<PatientRecord?> FindByIdentifierAsync(string countryCode, IdentifierScheme scheme, string value, CancellationToken cancellationToken = default)
+    const string Escape = "\\";
+    static string LikeContaining(string text) => "%" + text.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("%", "\\%", StringComparison.Ordinal)
+        .Replace("_", "\\_", StringComparison.Ordinal).Replace("[", "\\[", StringComparison.Ordinal) + "%";
+
+    /// <summary>First letters of the first and last words (words that start with a letter, so "(synthetic)" is skipped).</summary>
+    internal static string Initials(string fullName)
     {
-        var normalized = CountryRules.For(countryCode).NormalizeLookup(scheme, value);
-        // Deterministic encryption: SqlClient encrypts the parameter, SQL Server compares ciphertexts. Equality only.
-        // shortcut: returns the first match; several records with one ID are duplicates for MDV-P1-016 to resolve.
-        var patientId = await db.Identifiers
-            .Where(i => i.Scheme == scheme && i.LookupValue == normalized)
-            .Select(i => (Guid?)i.PatientId)
-            .FirstOrDefaultAsync(cancellationToken);
-        var record = patientId is { } id ? await LoadAsync(id, cancellationToken) : null;
-        // Audited even when nothing matches: a national-ID lookup is itself a disclosure of interest.
-        await AuditAsync("patient.lookup", record?.Patient.Id, clock.GetUtcNow(), cancellationToken);
-        return record;
+        var words = fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries).Where(w => char.IsLetter(w[0])).ToList();
+        var initials = words.Count switch { 0 => "", 1 => words[0][..1], _ => $"{words[0][0]}{words[^1][0]}" };
+        return initials.ToUpperInvariant();
+    }
+
+    IQueryable<Patient> FacilityPatients()
+    {
+        var facilityId = facility.FacilityId ?? throw new InvalidOperationException("No facility context.");
+        return db.Patients.AsNoTracking().Where(p => p.FacilityId == facilityId);
     }
 
     public async Task<RegistrationStatus> CompleteRegistrationAsync(Guid patientId, PatientAddress? address, PayerInput? payer, CancellationToken cancellationToken = default)
@@ -115,7 +150,7 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
 
     async Task<PatientRecord?> LoadAsync(Guid patientId, CancellationToken cancellationToken)
     {
-        var patient = await db.Patients.AsNoTracking().SingleOrDefaultAsync(p => p.Id == patientId, cancellationToken);
+        var patient = await FacilityPatients().SingleOrDefaultAsync(p => p.Id == patientId, cancellationToken);
         if (patient is null) return null;
         var identifiers = await db.Identifiers.AsNoTracking().Where(i => i.PatientId == patientId).ToListAsync(cancellationToken);
         var payer = await db.PayerCoverages.AsNoTracking().SingleOrDefaultAsync(p => p.PatientId == patientId, cancellationToken);
@@ -123,7 +158,6 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
     }
 
     /// <summary>Next facility-scoped MRN, allocated inside the caller's transaction (HOLDLOCK serialises concurrent desks).</summary>
-    /// <remarks>shortcut: plain zero-padded number; add the facility prefix (e.g. DQ-11-) when facilities have codes.</remarks>
     async Task<string> NextMrnAsync(Guid tenantId, Guid facilityId, CancellationToken cancellationToken)
     {
         var next = (await db.Database.SqlQuery<int>($"""
@@ -133,7 +167,7 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
             WHEN NOT MATCHED THEN INSERT (TenantId, FacilityId, LastNumber) VALUES (s.TenantId, s.FacilityId, 1)
             OUTPUT inserted.LastNumber AS Value;
             """).ToListAsync(cancellationToken)).Single();
-        return next.ToString("D6", CultureInfo.InvariantCulture);
+        return Mrn.Format(next);
     }
 
     Task AuditAsync(string action, Guid? patientId, DateTimeOffset now, CancellationToken cancellationToken) =>

@@ -13,18 +13,23 @@ using static Medvya.IntegrationTests.PatientRulesTests;
 namespace Medvya.IntegrationTests;
 
 /// <summary>
-/// MDV-P1-013/014/015 and MDV-P0-009 against real SQL Server: registration, audited reads, exact lookups through Always Encrypted,
-/// dynamic data masking and tenant isolation. Synthetic data only; IDs fail their checksums by construction.
+/// MDV-P1-013/014/015/018 and MDV-P0-009 against real SQL Server: registration, audited writes, directory and exact search through
+/// Always Encrypted, dynamic data masking, facility scope and tenant isolation. Synthetic data only; IDs fail their checksums by construction.
+/// Read auditing is the endpoint's job (one event per request): PatientEndpointTests.
 /// </summary>
 public class PatientRegistryTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>
 {
-    readonly Guid tenantA = Guid.NewGuid(), tenantB = Guid.NewGuid(), actor = Guid.NewGuid();
+    readonly Guid tenantA = Guid.NewGuid(), tenantB = Guid.NewGuid(), actor = Guid.NewGuid(), facility = Guid.NewGuid();
 
     const string Eid = "784-1990-1234567-1";
     const string Abha = "91000000000002";
 
-    PatientRegistry Registry(Guid tenant, PatientsDbContext? db = null, IAuditLog? audit = null) =>
-        new(db ?? sql.Patients(tenant), new SqlServerFixture.FixedTenant(tenant), new FixedUser(actor), audit ?? new AuditLog(sql.Audit(tenant)), TimeProvider.System);
+    PatientRegistry Registry(Guid tenant, PatientsDbContext? db = null, IAuditLog? audit = null, Guid? at = null) =>
+        new(db ?? sql.Patients(tenant), new SqlServerFixture.FixedTenant(tenant), new FixedFacility(at ?? facility), new FixedUser(actor),
+            audit ?? new AuditLog(sql.Audit(tenant)), TimeProvider.System);
+
+    Task<PatientSearchResult> Search(Guid tenant, string country, string? query, PatientsDbContext? db = null, DirectoryFilter filter = DirectoryFilter.All, int page = 1) =>
+        Registry(tenant, db).SearchAsync(new(country, query, filter, page));
 
     static RegisterPatient IndiaFull(Guid facility) => IndiaBase with
     {
@@ -39,7 +44,6 @@ public class PatientRegistryTests(SqlServerFixture sql) : IClassFixture<SqlServe
     [Fact]
     public async Task FullRegistrationAssignsFacilityScopedMrnsAndIsAudited()
     {
-        var facility = Guid.NewGuid();
         var first = await Registry(tenantA).RegisterAsync(IndiaFull(facility));
         var second = await Registry(tenantA).RegisterAsync(IndiaFull(facility) with { Identifiers = [] });
         var otherFacility = await Registry(tenantA).RegisterAsync(IndiaFull(Guid.NewGuid()) with { Identifiers = [] });
@@ -54,13 +58,13 @@ public class PatientRegistryTests(SqlServerFixture sql) : IClassFixture<SqlServe
 
         await using var audit = sql.Audit(tenantA);
         var actions = await audit.Events.Where(e => e.PatientId == first.PatientId).OrderBy(e => e.OccurredAt).Select(e => e.Action).ToListAsync();
-        Assert.Equal(["patient.register", "patient.read"], actions);
+        Assert.Equal(["patient.register"], actions); // the read is audited once, by its endpoint
     }
 
     [Fact]
     public async Task QuickRegistrationStaysIncompleteUntilAddressAndPayerAreAdded()
     {
-        var quick = await Registry(tenantA).RegisterAsync(UaeQuick(Guid.NewGuid()));
+        var quick = await Registry(tenantA).RegisterAsync(UaeQuick(facility));
         Assert.Equal(RegistrationStatus.Incomplete, quick.Status);
 
         var address = new PatientAddress { Line1 = "Villa 1", Line2 = "Al Reem", Region = "AUH" };
@@ -72,34 +76,81 @@ public class PatientRegistryTests(SqlServerFixture sql) : IClassFixture<SqlServe
     }
 
     [Fact]
-    public async Task ExactLookupByEmiratesIdAndAbhaRunsAsTheAppRoleThroughEfCore()
+    public async Task ExactSearchByEmiratesIdAndAbhaRunsAsTheAppRoleThroughEfCore()
     {
         // The application's own database role, not the administrator: proves the grants needed for encrypted parameters.
-        await using (var db = await sql.PatientsAs("app_user", tenantA))
-        {
-            await Registry(tenantA, db).RegisterAsync(UaeQuick(Guid.NewGuid()));
-        }
-        await Registry(tenantA).RegisterAsync(IndiaFull(Guid.NewGuid()));
+        RegistrationResult uae;
+        await using (var db = await sql.PatientsAs("app_user", tenantA)) uae = await Registry(tenantA, db).RegisterAsync(UaeQuick(facility));
+        var india = await Registry(tenantA).RegisterAsync(IndiaFull(facility));
 
         await using (var db = await sql.PatientsAs("app_user", tenantA))
         {
-            var byEid = await Registry(tenantA, db).FindByIdentifierAsync("AE", IdentifierScheme.EmiratesId, "784199012345671");
-            Assert.Equal(Eid, byEid!.Identifiers.Single().LookupValue);
+            var byEid = await Search(tenantA, "AE", "784199012345671", db);
+            Assert.Equal((SearchKind.Identifier, uae.PatientId), (byEid.MatchedOn, Assert.Single(byEid.Items).Id));
         }
         await using (var db = await sql.PatientsAs("app_user", tenantA))
-        {
-            var byAbha = await Registry(tenantA, db).FindByIdentifierAsync("IN", IdentifierScheme.Abha, "91-0000-0000-0002");
-            Assert.Equal("Kerala", byAbha!.Patient.Address!.Region);
-        }
-        Assert.Null(await Registry(tenantA).FindByIdentifierAsync("AE", IdentifierScheme.EmiratesId, "784-1990-7654321-0"));
-        await Assert.ThrowsAsync<PatientValidationException>(() => Registry(tenantA).FindByIdentifierAsync("AE", IdentifierScheme.Passport, "SYN12345"));
+            Assert.Equal(india.PatientId, Assert.Single((await Search(tenantA, "IN", "91-0000-0000-0002", db)).Items).Id);
+        Assert.Empty((await Search(tenantA, "AE", "784-1990-7654321-0")).Items);
+        // A partial ID never matches: it is refused before any query runs.
+        await Assert.ThrowsAsync<PatientValidationException>(() => Search(tenantA, "AE", "784-1990-1234567"));
+    }
+
+    [Fact]
+    public async Task SearchRowsShowOnlyInitialsAgeSexAndTheMrnTail()
+    {
+        var registered = await Registry(tenantA).RegisterAsync(IndiaFull(facility) with { FullName = "Kavya Lakshmi Iyer (synthetic)", Identifiers = [] });
+        var result = await Search(tenantA, "IN", "kavya");
+
+        Assert.Equal(SearchKind.Name, result.MatchedOn);
+        var row = Assert.Single(result.Items);
+        var age = CountryRules.India.Today(DateTimeOffset.UtcNow).Year - 1980; // born 1 Jan 1980
+        Assert.Equal(new PatientSummary(registered.PatientId, "KI", age, false, SexAtBirth.Female, registered.Mrn[^4..], RegistrationStatus.Complete), row);
+        // The row type itself has no name, phone, date of birth or identifier to leak.
+        Assert.Equal(["AgeEstimated", "AgeYears", "Id", "Initials", "MrnTail", "SexAtBirth", "Status"], typeof(PatientSummary).GetProperties().Select(p => p.Name).Order());
+    }
+
+    [Fact]
+    public async Task PhoneAndMrnMatchExactlyAndNamesMatchContainedText()
+    {
+        var meera = await Registry(tenantA).RegisterAsync(IndiaFull(facility) with { FullName = "Meera Iyer (synthetic)", Mobile = "+91 90000 00101", Identifiers = [] });
+        await Registry(tenantA).RegisterAsync(IndiaFull(facility) with { FullName = "Meera_Rao (synthetic)", Mobile = "+91 90000 00102", Identifiers = [] });
+        await Registry(tenantA).RegisterAsync(IndiaFull(facility) with { FullName = "Sara Rao (synthetic)", Mobile = "+91 90000 00103", Identifiers = [] });
+
+        Assert.Equal(meera.PatientId, Assert.Single((await Search(tenantA, "IN", "090000 00101")).Items).Id);
+        Assert.Equal(meera.PatientId, Assert.Single((await Search(tenantA, "IN", meera.Mrn.TrimStart('0'))).Items).Id);
+        Assert.Equal(2, (await Search(tenantA, "IN", "MEERA")).Total);
+        Assert.Single((await Search(tenantA, "IN", "a_r")).Items); // "_" is matched literally, not as a wildcard ("Sara Rao")
+        await Assert.ThrowsAsync<PatientValidationException>(() => Search(tenantA, "IN", "90000 001")); // part of a phone number
+    }
+
+    [Fact]
+    public async Task DirectoryFiltersIncompleteAndRecentRegistrationsAndPages()
+    {
+        var quick = await Registry(tenantA).RegisterAsync(IndiaFull(facility) with { Quick = true, Address = null, Payer = null, Identifiers = [] });
+        for (var i = 0; i < PatientSearch.PageSize; i++) await Registry(tenantA).RegisterAsync(IndiaFull(facility) with { Identifiers = [] });
+
+        var all = await Search(tenantA, "IN", null);
+        Assert.Equal((SearchKind.Directory, PatientSearch.PageSize + 1, PatientSearch.PageSize), (all.MatchedOn, all.Total, all.Items.Count));
+        Assert.Single((await Search(tenantA, "IN", null, page: 2)).Items);
+        Assert.Equal(quick.PatientId, Assert.Single((await Search(tenantA, "IN", null, filter: DirectoryFilter.Incomplete)).Items).Id);
+        Assert.Equal(PatientSearch.PageSize + 1, (await Search(tenantA, "IN", null, filter: DirectoryFilter.Recent)).Total);
+        await Assert.ThrowsAsync<PatientValidationException>(() => Search(tenantA, "IN", null, page: 0));
+    }
+
+    [Fact]
+    public async Task AnotherFacilitysPatientIsNeitherListedNorOpened()
+    {
+        var elsewhere = await Registry(tenantA).RegisterAsync(IndiaFull(Guid.NewGuid()) with { FullName = "Rahul Menon (synthetic)" });
+        Assert.Empty((await Search(tenantA, "IN", "Rahul")).Items);
+        Assert.Empty((await Search(tenantA, "IN", "91-0000-0000-0002")).Items);
+        Assert.Null(await Registry(tenantA).GetAsync(elsewhere.PatientId));
     }
 
     [Fact]
     public async Task AnotherTenantNeverFindsThePatientEvenWithQueryFiltersOff()
     {
-        await Registry(tenantA).RegisterAsync(UaeQuick(Guid.NewGuid()));
-        Assert.Null(await Registry(tenantB).FindByIdentifierAsync("AE", IdentifierScheme.EmiratesId, Eid));
+        await Registry(tenantA).RegisterAsync(UaeQuick(facility));
+        Assert.Empty((await Search(tenantB, "AE", Eid)).Items);
 
         await using var db = sql.Patients(tenantB);
         Assert.Empty(await db.Patients.IgnoreQueryFilters().Where(p => p.TenantId == tenantA).ToListAsync()); // row-level security
@@ -108,7 +159,6 @@ public class PatientRegistryTests(SqlServerFixture sql) : IClassFixture<SqlServe
     [Fact]
     public async Task ARegistrationThatCannotBeAuditedIsNotSaved()
     {
-        var facility = Guid.NewGuid();
         await Assert.ThrowsAsync<InvalidOperationException>(() => Registry(tenantA, audit: new ThrowingLog()).RegisterAsync(IndiaFull(facility)));
 
         await using var db = sql.Patients(tenantA);
@@ -171,6 +221,8 @@ public class PatientRegistryTests(SqlServerFixture sql) : IClassFixture<SqlServe
     }
 
     sealed class FixedUser(Guid id) : ICurrentUser { public Guid? UserId => id; }
+
+    internal sealed class FixedFacility(Guid? id) : ICurrentFacility { public Guid? FacilityId => id; }
 
     sealed class ThrowingLog : IAuditLog
     {

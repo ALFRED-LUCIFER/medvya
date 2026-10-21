@@ -24,12 +24,14 @@ BEGIN TRANSACTION;
 IF SCHEMA_ID(N'tenancy') IS NULL EXEC(N'CREATE SCHEMA tenancy AUTHORIZATION dbo');
 IF SCHEMA_ID(N'security') IS NULL EXEC(N'CREATE SCHEMA security AUTHORIZATION dbo');
 IF SCHEMA_ID(N'audit') IS NULL EXEC(N'CREATE SCHEMA audit AUTHORIZATION dbo');
+IF SCHEMA_ID(N'identity') IS NULL EXEC(N'CREATE SCHEMA [identity] AUTHORIZATION dbo');
 
 IF DATABASE_PRINCIPAL_ID(N'medvya_migrator') IS NULL CREATE ROLE medvya_migrator AUTHORIZATION dbo;
 IF DATABASE_PRINCIPAL_ID(N'medvya_app') IS NULL CREATE ROLE medvya_app AUTHORIZATION dbo;
 IF DATABASE_PRINCIPAL_ID(N'medvya_reporting') IS NULL CREATE ROLE medvya_reporting AUTHORIZATION dbo;
 IF DATABASE_PRINCIPAL_ID(N'medvya_tenancy') IS NULL CREATE ROLE medvya_tenancy AUTHORIZATION dbo;
 IF DATABASE_PRINCIPAL_ID(N'medvya_audit') IS NULL CREATE ROLE medvya_audit AUTHORIZATION dbo;
+IF DATABASE_PRINCIPAL_ID(N'medvya_identity') IS NULL CREATE ROLE medvya_identity AUTHORIZATION dbo;
 
 -- Migration principal: schema objects, security policies and ledger tables. No rights on module data.
 GRANT CREATE TABLE, CREATE VIEW, CREATE FUNCTION, CREATE PROCEDURE, CREATE TYPE, ALTER ANY SCHEMA, REFERENCES,
@@ -47,8 +49,12 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON SCHEMA::tenancy TO medvya_tenancy;
 -- Audit module: append and read only. The ledger table refuses UPDATE/DELETE too; this refuses them first, by permission.
 GRANT SELECT, INSERT ON SCHEMA::audit TO medvya_audit;
 
+-- Identity module: staff accounts. Never deleted (offboarding is a membership status), so no DELETE.
+GRANT SELECT, INSERT, UPDATE ON SCHEMA::[identity] TO medvya_identity;
+
 ALTER ROLE medvya_tenancy ADD MEMBER medvya_app;
 ALTER ROLE medvya_audit ADD MEMBER medvya_app;
+ALTER ROLE medvya_identity ADD MEMBER medvya_app;
 
 -- shortcut: reporting reads tenancy only; audit (ClientIp is Personal) is added once dynamic data masking lands
 -- with the Patients module (docs/03-architecture/data-classification.md).

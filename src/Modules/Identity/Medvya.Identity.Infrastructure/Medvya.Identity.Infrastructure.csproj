@@ -2,6 +2,16 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Medvya.Identity.Application\Medvya.Identity.Application.csproj" />
+    <ProjectReference Include="..\Medvya.Identity.Domain\Medvya.Identity.Domain.csproj" />
+  </ItemGroup>
+
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
   </ItemGroup>
 
 </Project>

@@ -1,6 +1,8 @@
 using Medvya.Audit.Infrastructure.Persistence;
 using Medvya.BuildingBlocks.Domain;
 using Medvya.BuildingBlocks.Infrastructure;
+using Medvya.Identity.Domain;
+using Medvya.Identity.Infrastructure.Persistence;
 using Medvya.Tenancy.Domain;
 using Medvya.Tenancy.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -35,7 +37,6 @@ public static class SyntheticSeed
         return new(tenant, site, members);
     }
 
-    // shortcut: user names live only here until the Identity user table exists (MDV-P0-011); seed users with these ids then.
     // shortcut: patient records (Meera Iyer, Deepak Nair, Fatima Al Mansoori) wait for the patient table; Patient rows here are portal user memberships only.
     public static readonly CastTenant India = Clinic(1, "Iyer Family Clinic", "IN", "centralindia", "Adyar", "Asia/Kolkata",
         ("Dr. Arjun Rao", Role.SoloDoctor),
@@ -68,6 +69,8 @@ public static class SyntheticSeed
         await using (var tenancy = Tenancy(connectionString, null)) await tenancy.Database.MigrateAsync(ct);
         await using (var audit = new AuditDbContext(Options<AuditDbContext>(connectionString, null), new FixedTenant(null)))
             await audit.Database.MigrateAsync(ct);
+        await using var identity = new IdentityDbContext(new DbContextOptionsBuilder<IdentityDbContext>().UseSqlServer(connectionString).Options);
+        await identity.Database.MigrateAsync(ct);
 
         foreach (var c in Tenants(includeUae))
         {
@@ -78,6 +81,14 @@ public static class SyntheticSeed
             var existing = await db.Memberships.Select(m => m.Id).ToListAsync(ct);
             db.Memberships.AddRange(c.Members.Where(m => !existing.Contains(m.Membership.Id)).Select(m => m.Membership));
             await db.SaveChangesAsync(ct);
+
+            // Accounts for the development sign-in provider (Development only); the subject is the Medvya user id.
+            var users = await identity.Users.Select(u => u.Id).ToListAsync(ct);
+            identity.Users.AddRange(c.Members.Where(m => !users.Contains(m.UserId)).Select(m => new StaffUser
+            {
+                Id = m.UserId, Issuer = IdentityProviders.Development, Subject = m.UserId.ToString(), DisplayName = m.Name,
+            }));
+            await identity.SaveChangesAsync(ct);
         }
     }
 

@@ -50,5 +50,9 @@
   "state.notFound.cta": "العودة إلى اليوم",
   "state.offline.title": "أنت غير متصل",
   "state.offline.body": "يستمر التسجيل في ذاكرة الجهاز المشفرة. سيتم حفظ الملاحظات والطلبات عند إعادة الاتصال.",
-  "state.offline.cta": "أعد المحاولة الآن"
+  "state.offline.cta": "أعد المحاولة الآن",
+  "session.signIn": "تسجيل الدخول",
+  "session.signOut": "تسجيل الخروج",
+  "session.signedInAs": "تم تسجيل الدخول باسم {name}",
+  "session.failed": "لم يكتمل تسجيل الدخول. حاول مرة أخرى، أو اسأل مسؤول العيادة إذا تكرر ذلك."
 }

@@ -1,6 +1,7 @@
 using Medvya.Audit.Infrastructure.Persistence;
 using Medvya.BuildingBlocks.Domain;
 using Medvya.BuildingBlocks.Infrastructure;
+using Medvya.Identity.Infrastructure.Persistence;
 using Medvya.Tenancy.Infrastructure.Persistence;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -46,7 +47,7 @@ public sealed class SqlServerFixture : IAsyncLifetime
     public static readonly IReadOnlyDictionary<string, string> RoleUsers = new Dictionary<string, string>
     {
         ["migrator_user"] = "medvya_migrator", ["app_user"] = "medvya_app", ["reporting_user"] = "medvya_reporting",
-        ["tenancy_user"] = "medvya_tenancy", ["audit_user"] = "medvya_audit",
+        ["tenancy_user"] = "medvya_tenancy", ["audit_user"] = "medvya_audit", ["identity_user"] = "medvya_identity",
     };
 
     /// <summary>Opens a connection running as <paramref name="user"/> (EXECUTE AS USER), optionally in a tenant. Unpooled, so the impersonation dies with it.</summary>
@@ -95,7 +96,11 @@ public sealed class SqlServerFixture : IAsyncLifetime
         await db.Database.MigrateAsync();
         await using var audit = new AuditDbContext(new DbContextOptionsBuilder<AuditDbContext>().UseSqlServer(migrator).Options, new FixedTenant(null));
         await audit.Database.MigrateAsync();
+        await using var identity = new IdentityDbContext(new DbContextOptionsBuilder<IdentityDbContext>().UseSqlServer(migrator).Options);
+        await identity.Database.MigrateAsync();
     }
+
+    public IdentityDbContext Identity() => new(new DbContextOptionsBuilder<IdentityDbContext>().UseSqlServer(ConnectionString).Options);
 
     public Task DisposeAsync() => container.DisposeAsync().AsTask();
 }

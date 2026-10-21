@@ -31,6 +31,12 @@ public class SyntheticSeedTests(SqlServerFixture sql) : IClassFixture<SqlServerF
         Assert.EndsWith(SyntheticSeed.Marker, (await db.Facilities.SingleAsync()).Name, StringComparison.Ordinal);
         Assert.All(SyntheticSeed.Tenants(includeUae: true).SelectMany(t => t.Members),
             m => Assert.EndsWith(SyntheticSeed.Marker, m.Name, StringComparison.Ordinal));
+
+        // One development sign-in account per cast member, also idempotent.
+        await using var identity = sql.Identity();
+        var accounts = await identity.Users.ToListAsync();
+        Assert.Equal(SyntheticSeed.Tenants(includeUae: true).Sum(t => t.Members.Count), accounts.Count);
+        Assert.All(accounts, a => Assert.EndsWith(SyntheticSeed.Marker, a.DisplayName, StringComparison.Ordinal));
     }
 
     [Theory]

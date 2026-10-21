@@ -123,7 +123,8 @@ status: Partly done
 progress:
 - Merged [PR #3](https://github.com/ALFRED-LUCIFER/medvya/pull/3): docker-compose with SQL Server 2022 (healthcheck, runs under Rosetta on Apple silicon), Azurite, smtp4dev; `pnpm services:up`
 - Merged [PR #34](https://github.com/ALFRED-LUCIFER/medvya/pull/34): `pnpm dev:db` starts the services, applies the Tenancy and Audit migrations and seeds the synthetic tenant
-- Left: dev-only OIDC stub (MDV-P0-011), SMS sink (MDV-P1-033)
+- Dev-only OIDC provider (Development only, refusal tested) arrived with [PR #39](https://github.com/ALFRED-LUCIFER/medvya/pull/39)
+- Left: SMS sink (MDV-P1-033)
 title: Local development environment with Docker Compose (SQL Server, Azurite, mail and SMS sinks)
 type: Task
 epic: MDV-P0-E01
@@ -278,9 +279,11 @@ ac:
 - The cross-tenant read/write test runs in CI on every PR and fails the build on any leak (P0 exit gate 3).
 
 === MDV-P0-011
-status: Blocked
+status: Partly done
 progress:
-- Needs an Entra External ID tenant (Azure, MDV-P0-003)
+- Merged [PR #39](https://github.com/ALFRED-LUCIFER/medvya/pull/39): BFF sign-in in Host.Api — OIDC code + PKCE, tokens never stored, `__Host-medvya` HttpOnly/Secure/SameSite=Strict cookie, MFA required (`amr`), Medvya accounts only (`identity.Users`), CSRF header on state-changing calls, same-site return URLs, rate-limited login; `/bff/login`, `/bff/logout`, `/v1/me/context`; clinic app Sign in / Sign out
+- Development-only OIDC provider lists the seeded synthetic users; 8 integration tests on SQL Server, mutation-checked (MFA, account, return URL, CSRF, HttpOnly); verified in the browser (English, Arabic RTL, axe clean; no token in JS-readable cookies or storage)
+- Left (needs Entra External ID, MDV-P0-003/006): real provider config, passkeys, F-03 custom UI, lockout copy, recovery, SSO-enforced tenants; audit of sign-in events moves to the facility picker (MDV-P0-012), because audit rows belong to a tenant
 title: Staff sign-in through the BFF with Entra External ID: MFA (TOTP), passkeys and recovery
 type: Story
 epic: MDV-P0-E02

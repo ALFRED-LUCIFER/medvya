@@ -1,0 +1,71 @@
+@model PublicPage
+@inject IConfiguration Config
+@{
+    var p = Model;
+    var title = ViewData["Title"] as string ?? p.T("app.name");
+    var description = ViewData["Description"] as string;
+    // shortcut: the public site and the clinic app both want "/" on one host; give the site its own host name when App Service hosting lands (MDV-P0-007).
+    var signIn = Config["PublicSite:SignInUrl"] ?? "/bff/login";
+    string? Current(string path) => p.PagePath == path ? "page" : null;
+}
+<!doctype html>
+<html lang="@p.Lang" dir="@p.Dir">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>@title</title>
+    @if (description is not null)
+    {
+        <meta name="description" content="@description">
+        <meta property="og:description" content="@description">
+    }
+    <meta property="og:title" content="@title">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="@p.AbsoluteUrl(p.PagePath)">
+    <link rel="canonical" href="@p.AbsoluteUrl(p.PagePath)">
+    @foreach (var lang in PublicSite.Languages)
+    {
+        <link rel="alternate" hreflang="@lang" href="@p.AbsoluteUrl(p.PagePath, lang)">
+    }
+    <link rel="alternate" hreflang="x-default" href="@p.AbsoluteUrl(p.PagePath, "en")">
+    <link rel="stylesheet" href="@PublicSite.StylesheetHref">
+    @* shortcut: no favicon asset yet; the empty icon stops a 404 on every visit. Replace with the brand mark when design exports it. *@
+    <link rel="icon" href="data:,">
+</head>
+<body>
+    <a class="skip" href="#main">@p.T("shell.skip")</a>
+    <header class="site-header">
+        <a class="brand" href="@p.Href("/")"><span class="brand-mark" aria-hidden="true">M</span>@p.T("app.name")</a>
+        <nav class="site-nav" aria-label="@p.T("site.nav.label")">
+            <ul>
+                <li><a href="@p.Href(PublicSite.DoctorStart)">@p.T("site.nav.doctors")</a></li>
+                <li><a href="@p.Href(PublicSite.DemoRequest)">@p.T("site.nav.hospitals")</a></li>
+                <li><a href="@p.Href(PublicSite.TrustCentre)" aria-current="@Current(PublicSite.TrustCentre)">@p.T("site.nav.trust")</a></li>
+                <li><a href="@p.Href(PublicSite.Pricing)" aria-current="@Current(PublicSite.Pricing)">@p.T("site.nav.pricing")</a></li>
+            </ul>
+        </nav>
+        <div class="header-actions">
+            <ul class="region-switch" aria-label="@p.T("site.region.label")">
+                @foreach (var region in PublicSite.Regions)
+                {
+                    <li><a href="?region=@region" aria-current="@(p.Region == region ? "true" : null)">@p.T($"site.region.{region}")</a></li>
+                }
+            </ul>
+            <a class="button button-outline" href="@signIn">@p.T("session.signIn")</a>
+        </div>
+    </header>
+    <main id="main" tabindex="-1">
+        @RenderBody()
+    </main>
+    <footer class="site-footer">
+        <nav aria-label="@p.T("app.language")">
+            <ul class="language-switch">
+                @foreach (var lang in PublicSite.Languages)
+                {
+                    <li><a href="@p.Href(p.PagePath, lang)" lang="@lang" hreflang="@lang" aria-current="@(p.Lang == lang ? "true" : null)">@PublicSite.LanguageNames[lang]</a></li>
+                }
+            </ul>
+        </nav>
+    </footer>
+</body>
+</html>

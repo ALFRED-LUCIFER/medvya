@@ -7,6 +7,7 @@ using Medvya.BuildingBlocks.Domain;
 using Medvya.Identity.Infrastructure;
 using Medvya.Tenancy.Infrastructure;
 using Host.Api.Observability;
+using Host.Api.PublicSite;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddMedvyaTelemetry();
@@ -20,6 +21,7 @@ builder.WebHost.ConfigureKestrel(k =>
 
 builder.AddStaffAuthentication();
 builder.Services.AddAuthorization();
+builder.Services.AddPublicSite();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<RequestContext>();
 builder.Services.AddScoped<ICurrentTenant>(sp => sp.GetRequiredService<RequestContext>());
@@ -46,12 +48,14 @@ var app = builder.Build();
 if (!app.Environment.IsDevelopment()) app.UseHsts();
 app.UseSecurityHeaders();
 app.UseRateLimiter();
+app.RunPublicSiteBeforeAuthentication(); // public pages never read the session cookie
 app.UseStaffAuthentication();
 
 // Deploy smoke tests (MDV-P0-007) read the version from here.
 app.MapGet("/health", () => Results.Ok(new { status = "ok", version = typeof(Program).Assembly.GetName().Version?.ToString() }))
     .AllowAnonymous(); // public: deploy smoke tests
 app.MapStaffSession();
+app.MapPublicSite();
 if (app.Environment.IsDevelopment() && app.Configuration["Authentication:Oidc:Authority"]?.EndsWith(DevIdentityProvider.Path, StringComparison.Ordinal) == true)
     app.MapDevIdentityProvider();
 

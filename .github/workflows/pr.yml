@@ -56,6 +56,6 @@ jobs:
         with:
           fetch-depth: 0
       # shortcut: gitleaks stands in for GitHub secret scanning + push protection (Advanced Security on private repos); switch when the repo gets it
-      - uses: gitleaks/gitleaks-action@v2
+      - uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -11,7 +11,7 @@ Conventions, Definition of Ready/Done and the confidence scale: [docs/05-deliver
 
 | Phase | Folder | Window | Tickets | Done | Partly / in progress | Estimate (dev-days) | Capacity (days) | Avg confidence |
 |---|---|---|---|---|---|---|---|---|
-| P0 Foundation and safety | [P0-foundation](P0-foundation/README.md) | 26 Oct 2026 → 13 Nov 2026 | 29 | 9 | 7 | 49.5 | 15 | 86% |
+| P0 Foundation and safety | [P0-foundation](P0-foundation/README.md) | 26 Oct 2026 → 13 Nov 2026 | 29 | 9 | 10 | 49.5 | 15 | 86% |
 | P1 Front desk and appointments MVP | [P1-front-desk](P1-front-desk/README.md) | 16 Nov 2026 → 01 Jan 2027 | 46 | 0 | 0 | 86.5 | 35 | 81% |
 | P2 Doctor workspace and EMR core | [P2-doctor-workspace](P2-doctor-workspace/README.md) | 21 Dec 2026 → 05 Feb 2027 | 28 | 0 | 0 | 60 | 35 | 82% |
 | P3 AI-drafted notes under clinician review | [P3-ai-scribe](P3-ai-scribe/README.md) | 18 Jan 2027 → 12 Mar 2027 | 27 | 0 | 0 | 57.5 | 40 | 80% |

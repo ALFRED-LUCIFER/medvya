@@ -10,7 +10,7 @@
 
 **Tickets:** 46 · **Estimate:** 86.5 dev-days vs **35 working days** in the window (OVER by 51.5 days: needs scope trade-off or overlap) · **Average confidence:** 81%
 
-**Status:** To do 42 · In progress 3 · Done 1
+**Status:** To do 41 · In progress 3 · Done 2
 
 ## Epics
 
@@ -37,7 +37,7 @@
 | [MDV-P1-043](MDV-P1-043.md) | To do | Sign pilot agreements with two partner clinics | Chore | MUST | P1-02 | — | 1 | 4–6 | 16 Nov → 04 Dec 2026 | 60% Low |
 | [MDV-P1-044](MDV-P1-044.md) | To do | Legal review of privacy notice, ToS, DPA and consent wording (DPDP India; UAE health data) | Chore | MUST | P1-12 | — | 1 | 4–6 | 16 Nov → 04 Dec 2026 | 60% Low |
 | [MDV-P1-045](MDV-P1-045.md) | To do | Register India DLT sender ID and SMS templates (and UAE SMS sender if applicable) | Chore | MUST | P1-09 | — | 0.5 | 4–6 | 16 Nov → 04 Dec 2026 | 62% Low |
-| [MDV-P1-003](MDV-P1-003.md) | To do | Trust centre and demo request (no PHI) | Story | SHOULD | P1-01 | F-07 | 1.5 | 5–5 | 23 Nov → 27 Nov 2026 | 82% Medium |
+| [MDV-P1-003](MDV-P1-003.md) | Done | Trust centre and demo request (no PHI) | Story | SHOULD | P1-01 | F-07 | 1.5 | 5–5 | 23 Nov → 27 Nov 2026 | 82% Medium |
 | [MDV-P1-005](MDV-P1-005.md) | To do | Practice settings: profile, locations, operating hours and holidays (F-08) | Story | MUST | P1-02 | F-08 | 2.5 | 5–5 | 23 Nov → 27 Nov 2026 | 72% Medium |
 | [MDV-P1-007](MDV-P1-007.md) | To do | Add doctor (clinic mode): details, licence India/UAE, verification, schedule link, fees, access and signature image (F-09) | Story | MUST | P1-03 | F-09 | 3 | 5–6 | 23 Nov → 04 Dec 2026 | 70% Medium |
 | [MDV-P1-008](MDV-P1-008.md) | To do | Add staff with role, facility scope, permissions and invite; custom roles (F-10) | Story | MUST | P1-03 | F-10 | 2.5 | 5–5 | 23 Nov → 27 Nov 2026 | 78% Medium |

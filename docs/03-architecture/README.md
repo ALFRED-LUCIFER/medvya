@@ -6,6 +6,7 @@
 |---|---|
 | [../01-prd/technology-and-db-security.md](../01-prd/technology-and-db-security.md) | Authoritative stack table (PRD v2 §07), DB comparison, 12 protection layers |
 | [repository-structure.md](repository-structure.md) | Proposed monorepo tree and repository rules |
+| [frontend-architecture.md](frontend-architecture.md) | **Hard rule:** domain-driven feature folders, controller hooks, presentational components, TanStack Query / React Hook Form placement (lint-enforced) |
 | [modules.md](modules.md) | Module ownership, invariants, endpoints, domain events |
 | [data-classification.md](data-classification.md) | Classification register: every planned P0–P2 field with its class and controls; Always Encrypted and masking sets |
 | [data-model.md](data-model.md) | ERD for Azure SQL: conventions, Postgres → Azure SQL mapping, data classification, constraints |

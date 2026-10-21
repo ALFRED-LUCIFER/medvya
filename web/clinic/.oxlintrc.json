@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
+  "plugins": ["react", "typescript", "oxc", "import"],
   "rules": {
     "react/rules-of-hooks": "error",
     "react/only-export-components": ["warn", { "allowConstantExport": true }],
@@ -8,7 +8,52 @@
   },
   "overrides": [
     {
-      "files": ["src/UiGallery.tsx"],
+      "files": ["src/features/*/components/**"],
+      "rules": {
+        "no-restricted-imports": ["error", { "patterns": [
+          { "group": ["**/services/*", "**/services"], "message": "Components are presentational: get data and actions from a controller hook via props (docs/03-architecture/frontend-architecture.md)." },
+          { "group": ["**/hooks/*"], "message": "Components receive the controller's view model as props; app/ wires hooks to components." },
+          { "group": ["@tanstack/*"], "message": "Server state belongs in controller hooks, not components." }
+        ] }],
+        "no-restricted-globals": ["error",
+          { "name": "fetch", "message": "I/O lives in services/." },
+          { "name": "localStorage", "message": "I/O lives in services/." },
+          { "name": "sessionStorage", "message": "I/O lives in services/." },
+          { "name": "XMLHttpRequest", "message": "I/O lives in services/." }
+        ]
+      }
+    },
+    {
+      "files": ["src/features/*/hooks/**"],
+      "rules": {
+        "no-restricted-imports": ["error", { "patterns": [
+          { "group": ["**/components/*", "@mui/*"], "message": "Controller hooks return data and handlers, never UI." }
+        ] }],
+        "no-restricted-globals": ["error",
+          { "name": "fetch", "message": "Call a service from the hook; services own I/O." },
+          { "name": "localStorage", "message": "Call a service from the hook; services own I/O." }
+        ]
+      }
+    },
+    {
+      "files": ["src/features/*/services/**"],
+      "rules": {
+        "no-restricted-imports": ["error", { "patterns": [
+          { "group": ["react", "react-dom", "@mui/*", "**/hooks/*", "**/components/*"], "message": "Services are plain TypeScript I/O: no React, no UI." }
+        ] }]
+      }
+    },
+    {
+      "files": ["src/features/*/domain/**"],
+      "rules": {
+        "no-restricted-imports": ["error", { "patterns": [
+          { "group": ["react", "react-dom", "@mui/*", "**/hooks/*", "**/components/*", "**/services/*"], "message": "Domain is pure: types and rules only." }
+        ] }],
+        "no-restricted-globals": ["error", "fetch", "localStorage", "sessionStorage", "window", "document"]
+      }
+    },
+    {
+      "files": ["src/dev/**"],
       "rules": { "react/jsx-no-literals": "off" }
     }
   ]

@@ -1,0 +1,108 @@
+# Data classification register (MDV-P0-016)
+
+Every stored field has one class. In code, each domain property carries `[Classification(DataClass.X)]` (`src/BuildingBlocks/Medvya.BuildingBlocks.Domain/Classification.cs`). The architecture test `ClassificationTests` fails the build if any public domain property lacks it. Log redaction (MDV-P0-018), masking and encryption (MDV-P0-009) and audit-on-read (MDV-P0-017) all key off this class.
+
+## Classes and the controls they trigger
+
+| Class | `DataClass` | Examples | Controls |
+|---|---|---|---|
+| Public | `Public` | Clinic display name, doctor public profile | None beyond integrity |
+| Internal | `Internal` | Ids, status codes, timestamps, configuration, service catalogue | Tenant RLS. May appear in logs as opaque values |
+| Personal | `Personal` | Patient/staff name, phone, email, address, date of birth | RLS. **Dynamic data masking** for support and reporting roles. Never in logs or telemetry |
+| Sensitive health | `SensitiveHealth` | Notes, problems, allergies, medicines, vitals, results, transcripts, documents, free-text visit reason | RLS + relationship/purpose authorisation. **Audit on every read.** Never in logs. Blob under CMK |
+| National / financial ID | `NationalId` | Aadhaar last 4, ABHA number and address, Emirates ID, passport, visa file, insurance member number | **Always Encrypted** (only the API identity can decrypt). Exact-match lookups use deterministic encryption. Never in logs. Masked in UI except where needed |
+
+**Rule for logs and telemetry:** only `Internal` and `Public` values may be emitted. Everything else is dropped by the telemetry processor (MDV-P0-018).
+
+## Register: planned fields, P0–P2
+
+`AE` = Always Encrypted (D = deterministic, R = randomized + enclave). `DDM` = dynamic data masking. `Audit` = read is audited.
+
+### Identity / Tenancy (P0)
+
+| Entity.field | Class | Control |
+|---|---|---|
+| TENANT.id, country_code, residency_region, status | Internal | — |
+| TENANT.display_name | Public | — |
+| FACILITY.id, tenant_id, facility_type, timezone, authority_mode | Internal | — |
+| FACILITY.name, address | Public | — |
+| FACILITY.registration_no (CE reg., GSTIN, TRN, DoH facility licence) | Internal | — |
+| USER.id, entra_object_id, status | Internal | — |
+| USER.display_name, email, mobile | Personal | DDM |
+| MEMBERSHIP.* (ids, role, status, expires_at) | Internal | — |
+| INVITATION.token_hash, expires_at, status | Internal | Token stored hashed only |
+| INVITATION.email_or_mobile | Personal | DDM |
+| AUDIT_EVENT.* (actor id, tenant, patient ref (opaque), action, purpose, outcome, time) | Internal | Ledger table. Opaque patient ref only |
+| AUDIT_EVENT.ip | Personal | DDM |
+| FEATURE_FLAG.* | Internal | — |
+
+### Practice and patients (P1)
+
+| Entity.field | Class | Control |
+|---|---|---|
+| CLINICIAN_PROFILE.name, qualifications, specialty, languages | Public | (opt-in public profile P4) |
+| CLINICIAN_LICENCE.authority, number, category, expires_at | Internal | — |
+| CLINICIAN_LICENCE.certificate_blob_key | Internal | Private Blob |
+| CLINICIAN_PROFILE.signature_blob_key | Personal | Private Blob. Print only |
+| PATIENT.id, tenant_id, facility_id, mrn (local_patient_number) | Internal | — |
+| PATIENT.first_name, last_name, arabic_name | Personal | DDM. Audit |
+| PATIENT.date_of_birth, age_estimated | Personal | DDM. Audit |
+| PATIENT.sex_at_birth, gender_identity | SensitiveHealth | Audit |
+| PATIENT.preferred_language, nationality | Personal | — |
+| PATIENT.mobile, alternate_phone, email | Personal | DDM |
+| PATIENT.address_* (house, street, city, district, state/emirate, PIN, Makani, P.O. box) | Personal | DDM |
+| PATIENT_IDENTIFIER.scheme, issuer | Internal | — |
+| PATIENT_IDENTIFIER.value for ABHA number / ABHA address / Emirates ID | NationalId | **AE-D** (exact lookup) |
+| PATIENT_IDENTIFIER.value for Aadhaar (last 4 only), passport, visa file | NationalId | **AE-R** |
+| PATIENT_IDENTIFIER.expires_at (EID expiry) | Personal | — |
+| PATIENT_RELATIONSHIP.related_name, phone | Personal | DDM |
+| PATIENT_RELATIONSHIP.relationship, is_emergency, is_guardian | Internal | — |
+| PAYER_COVERAGE.payer_id, plan, valid_to, network | Internal | — |
+| PAYER_COVERAGE.member_no / policy_no | NationalId | **AE-D** |
+| CONSENT_RECEIPT.* (type, policy_version, jurisdiction, decision, decided_at, channel, actor) | Internal | Ledger table |
+| MERGE_REQUEST.* | Internal | Audit |
+| APPOINTMENT.id, doctor, location, slot_start, state, source, reason_category | Internal | — |
+| APPOINTMENT.reason_text (free text) | SensitiveHealth | Clinicians only. Audit |
+| WAITLIST_ENTRY.*, QUEUE_TOKEN.* | Internal | Tokens on TV, never names |
+| NOTIFICATION.template_id, channel, state, provider_ref | Internal | Templates carry no clinical data |
+| NOTIFICATION.recipient (phone/email) | Personal | DDM |
+
+### Clinical (P2)
+
+| Entity.field | Class | Control |
+|---|---|---|
+| ENCOUNTER.id, status, started_at, room, authority_mode | Internal | — |
+| ENCOUNTER.chief_complaint | SensitiveHealth | Audit |
+| OBSERVATION.code, value, unit, taken_at, source | SensitiveHealth | Audit |
+| ALLERGY.substance, reaction, status | SensitiveHealth | Audit |
+| PROBLEM.icd10_code, description, verification, onset | SensitiveHealth | Audit |
+| MEDICATION_STATEMENT.*, PRESCRIPTION_ITEM.* | SensitiveHealth | Audit |
+| CLINICAL_NOTE / NOTE_VERSION.body | SensitiveHealth | Ledger (signed). Audit |
+| NOTE_VERSION.document_hash, signed_at, signer_id | Internal | Ledger |
+| CLINICAL_ORDER.*, REFERRAL.reason, summary | SensitiveHealth | Audit |
+| REFERRAL.state, channel, urgency | Internal | — |
+| CLINICAL_DOCUMENT.blob_key, type, source | Internal | Private Blob (CMK). Content is SensitiveHealth |
+| CLINICAL_DOCUMENT.title, extracted values | SensitiveHealth | Audit |
+| FORMULARY_ITEM.*, ORDER_SET.* | Internal | — |
+
+## Protected column sets
+
+**Always Encrypted (MDV-P0-009).** Keep this set small (PRD risk: Always Encrypted limits queries):
+
+| Column | Encryption | Why |
+|---|---|---|
+| PATIENT_IDENTIFIER.value (ABHA number, ABHA address, Emirates ID) | Deterministic | Exact-match search at the desk |
+| PATIENT_IDENTIFIER.value (Aadhaar last 4, passport, visa file) | Randomized | Display only, no lookup |
+| PAYER_COVERAGE.member_no | Deterministic | Exact match for eligibility and claims |
+
+The column holds several schemes, so in practice it is split into `value_lookup` (deterministic) and `value_display` (randomized) by scheme. That decision is recorded with MDV-P0-009.
+
+**Dynamic data masking (support and reporting roles):** USER.email, USER.mobile, PATIENT names, date_of_birth, mobile, alternate_phone, email, address fields, PATIENT_RELATIONSHIP.phone, NOTIFICATION.recipient, AUDIT_EVENT.ip.
+
+## ERD → Azure SQL type mapping
+
+Closed: see [data-model.md](data-model.md#postgresql--azure-sql-mapping-from-prd-v2-finding). This resolves the PRD v2 completeness item "ERD mapped to Azure SQL types".
+
+## Data map
+
+Covered by MDV-P0-024 (threat model, data map, DPIA). Each class above maps to: **stored** in Azure SQL (country region) or Blob (CMK, same region); **processed** by Host.Api (and, from P3, the AI worker for SensitiveHealth audio and transcripts, in-region); **never** sent to logs, analytics or third countries.

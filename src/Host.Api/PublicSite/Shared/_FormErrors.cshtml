@@ -1,0 +1,20 @@
+@model PublicFormPage
+@{
+    var p = Model;
+}
+@if (p.FormError is not null || p.Errors.Count > 0)
+{
+    @* Without JavaScript, autofocus brings the visitor here: to the summary for a form-level problem, else to the first invalid field. *@
+    <div class="error-summary" role="alert" tabindex="-1" autofocus="@(p.FirstInvalid is null ? "autofocus" : null)">
+        <p>@p.T(p.FormError is null ? "site.form.error.summary" : $"site.form.error.{p.FormError}")</p>
+        @if (p.Errors.Count > 0)
+        {
+            <ul>
+                @foreach (var (field, id) in p.Fields.Where(f => p.Errors.ContainsKey(f.Field)))
+                {
+                    <li><a href="#@id">@p.FieldError(field)</a></li>
+                }
+            </ul>
+        }
+    </div>
+}

@@ -1,0 +1,51 @@
+@page
+@model RegionModel
+@{
+    var p = Model;
+    ViewData["Title"] = $"{p.T("site.region.title")} · {p.T("app.name")}";
+    ViewData["Description"] = p.T("site.region.body");
+    // The country just continued with wins over the saved region, so the cards and button match the waitlist shown.
+    var selected = p.WaitlistCountry ?? p.Region;
+    var chosen = new Dictionary<string, string> { ["region"] = p.RegionName(selected) };
+}
+<section class="page" aria-labelledby="region-title">
+    <h1 id="region-title">@p.T("site.region.title")</h1>
+    <p class="lede">@p.T("site.region.body")</p>
+    @* Choosing a card is the region switch (a link, no JavaScript); the button then continues in that country. *@
+    <ul class="region-cards" aria-label="@p.T("site.region.options")">
+        @foreach (var region in PublicSite.Regions)
+        {
+            <li>
+                <a class="region-card" href="?region=@region" aria-current="@(selected == region ? "true" : null)">
+                    <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true" focusable="false"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" /></svg>
+                    <span><strong>@p.RegionName(region)</strong><span>@p.T($"site.region.card.{region}")</span></span>
+                </a>
+            </li>
+        }
+    </ul>
+    <a class="button button-navy" href="?go=@selected">@p.T("site.region.continue", chosen)</a>
+
+    @if (p.WaitlistCountry is { } waiting)
+    {
+        var country = new Dictionary<string, string> { ["region"] = p.RegionName(waiting) };
+        <section id="waitlist" class="demo" aria-labelledby="waitlist-title">
+            <h2 id="waitlist-title">@p.T("site.waitlist.title", country)</h2>
+            <p>@p.T("site.waitlist.body")</p>
+            <p class="warning"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path d="M12 3l10 18H2zM12 10v5M12 18v.5" /></svg>@p.T("site.form.noPatientData")</p>
+            @if (p.Sent)
+            {
+                <p class="success" role="status">@p.T("site.waitlist.sent", country)</p>
+            }
+            else
+            {
+                <partial name="_FormErrors" />
+                <form method="post" novalidate>
+                    <input type="hidden" name="Form.Country" value="@waiting">
+                    <partial name="_NameField" />
+                    <partial name="_ContactFields" />
+                    <button class="button button-primary" type="submit">@p.T("site.waitlist.submit")</button>
+                </form>
+            }
+        </section>
+    }
+</section>

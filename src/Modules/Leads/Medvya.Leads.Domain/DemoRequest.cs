@@ -10,7 +10,7 @@ namespace Medvya.Leads.Domain;
 /// </summary>
 public sealed class DemoRequest
 {
-    public const int NameMax = 100, OrganisationMax = 150, RoleMax = 100, EmailMax = 254, PhoneMax = 20, MessageMax = 1000;
+    public const int NameMax = 100, OrganisationMax = 150, RoleMax = 100, EmailMax = LeadRules.EmailMax, PhoneMax = 20, MessageMax = 1000;
     public static readonly string[] Countries = ["IN", "AE", "OTHER"];
 
     [Classification(DataClass.Internal)] public Guid Id { get; init; } = Guid.NewGuid();
@@ -27,27 +27,39 @@ public sealed class DemoRequest
 }
 
 /// <summary>Validation of a submitted demo request. Returns field → error code, never the entered values.</summary>
-public static partial class DemoRequestRules
+public static class DemoRequestRules
 {
     public static IReadOnlyDictionary<string, string> Validate(DemoRequest r)
     {
         var errors = new Dictionary<string, string>(StringComparer.Ordinal);
-        Required(errors, nameof(r.Name), r.Name, DemoRequest.NameMax);
-        Required(errors, nameof(r.Organisation), r.Organisation, DemoRequest.OrganisationMax);
-        Required(errors, nameof(r.Role), r.Role, DemoRequest.RoleMax);
+        LeadRules.Required(errors, nameof(r.Name), r.Name, DemoRequest.NameMax);
+        LeadRules.Required(errors, nameof(r.Organisation), r.Organisation, DemoRequest.OrganisationMax);
+        LeadRules.Required(errors, nameof(r.Role), r.Role, DemoRequest.RoleMax);
         if (!DemoRequest.Countries.Contains(r.Country)) errors[nameof(r.Country)] = "required";
-        if (string.IsNullOrWhiteSpace(r.Email) && string.IsNullOrWhiteSpace(r.Phone)) errors["Contact"] = "required";
-        if (!string.IsNullOrWhiteSpace(r.Email) && (r.Email.Length > DemoRequest.EmailMax || !MailAddress.TryCreate(r.Email, out var a) || a.Address != r.Email))
-            errors[nameof(r.Email)] = "invalid";
-        if (!string.IsNullOrWhiteSpace(r.Phone) && !Phone().IsMatch(r.Phone)) errors[nameof(r.Phone)] = "invalid";
+        LeadRules.Contact(errors, r.Email, r.Phone);
         if (r.Message?.Length > DemoRequest.MessageMax) errors[nameof(r.Message)] = "tooLong";
         return errors;
     }
+}
 
-    static void Required(Dictionary<string, string> errors, string field, string? value, int max)
+/// <summary>Rules shared by the public-site forms: required text with a length limit, and an email or phone to reply to.</summary>
+public static partial class LeadRules
+{
+    public const int EmailMax = 254;
+
+    public static void Required(Dictionary<string, string> errors, string field, string? value, int max)
     {
         if (string.IsNullOrWhiteSpace(value)) errors[field] = "required";
         else if (value.Length > max) errors[field] = "tooLong";
+    }
+
+    public static void Contact(Dictionary<string, string> errors, string? email, string? phone)
+    {
+        if (string.IsNullOrWhiteSpace(email) && string.IsNullOrWhiteSpace(phone)) errors["Contact"] = "required";
+        // The bare address only: "Name <a@b>" would let a display name through.
+        if (!string.IsNullOrWhiteSpace(email) && (email.Length > EmailMax || !MailAddress.TryCreate(email, out var a) || a.Address != email))
+            errors["Email"] = "invalid";
+        if (!string.IsNullOrWhiteSpace(phone) && !Phone().IsMatch(phone)) errors["Phone"] = "invalid";
     }
 
     // Digits with optional +, spaces, brackets and dashes; 7 to 20 characters.

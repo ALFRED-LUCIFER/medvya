@@ -36,6 +36,18 @@ public class DemoRequestTests(SqlServerFixture sql) : IClassFixture<SqlServerFix
     }
 
     [Fact]
+    public async Task AWaitlistEntryIsStoredWithItsCountry()
+    {
+        await using var services = new ServiceCollection().AddLogging().AddLeadsModule(sql.ConnectionString, new LeadsEmailOptions()).BuildServiceProvider();
+        var entry = new WaitlistEntry { Name = "Fatima Al Hashimi", Country = "AE", Email = "fatima@example.com" };
+        await using (var scope = services.CreateAsyncScope())
+            await scope.ServiceProvider.GetRequiredService<IWaitlist>().JoinAsync(entry);
+
+        await using var db = new LeadsDbContext(new DbContextOptionsBuilder<LeadsDbContext>().UseSqlServer(sql.ConnectionString).Options);
+        Assert.Equal("AE", (await db.Waitlist.SingleAsync(w => w.Id == entry.Id)).Country);
+    }
+
+    [Fact]
     public async Task AFailedEmailDoesNotLoseTheRequest()
     {
         await using var services = new ServiceCollection().AddLogging()

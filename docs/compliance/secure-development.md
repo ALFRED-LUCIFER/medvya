@@ -1,6 +1,6 @@
 # Secure development policy (MDV-P0-025)
 
-Applies to everyone who writes or reviews Medvya code, including AI coding assistants. Checklist source: OWASP ASVS Level 2 (MDV-P0-026).
+Applies to everyone who writes or reviews Medvya code, including AI coding assistants. Checklist source: OWASP ASVS Level 2, tracked in [asvs-l2.md](asvs-l2.md) (MDV-P0-026).
 
 ## 1 · Synthetic data only
 

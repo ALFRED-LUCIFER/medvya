@@ -12,6 +12,7 @@ Who can do what inside a Medvya database. The roles are defined in one idempoten
 | `medvya_identity` | `SELECT/INSERT/UPDATE ON SCHEMA::identity` (staff accounts) | `DELETE` (offboarding is a membership status), any other schema |
 | `medvya_patients` | `SELECT/INSERT/UPDATE/DELETE/UNMASK ON SCHEMA::patients`; `VIEW ANY COLUMN MASTER KEY DEFINITION`, `VIEW ANY COLUMN ENCRYPTION KEY DEFINITION` (key metadata only, for parameter encryption) | Any other schema; decrypting without the column master key |
 | `medvya_billing` | `SELECT/INSERT/UPDATE ON SCHEMA::billing` | `DELETE` (deleting a DOC_SEQUENCE row would restart a legal number series), any other schema |
+| `medvya_scheduling` | `SELECT/INSERT/UPDATE/DELETE ON SCHEMA::scheduling` (templates, resources; appointments from MDV-P1-021) | Any other schema; reporting has no access until a reason-free view exists (appointments hold the SensitiveHealth visit reason) |
 | `medvya_audit` | `SELECT/INSERT ON SCHEMA::audit` | `UPDATE`/`DELETE` (the ledger table refuses them too), any other schema |
 | `medvya_reporting` | `SELECT ON SCHEMA::tenancy` and `SCHEMA::patients` (masked, identifiers as ciphertext). Support staff use this role | Any write, any DDL, `UNMASK`, `audit` (until `ClientIp` is masked), `identity` |
 

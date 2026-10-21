@@ -10,7 +10,7 @@
 
 **Tickets:** 46 · **Estimate:** 86.5 dev-days vs **35 working days** in the window (OVER by 51.5 days: needs scope trade-off or overlap) · **Average confidence:** 81%
 
-**Status:** To do 41 · In progress 3 · Done 2
+**Status:** To do 40 · In progress 4 · Done 2
 
 ## Epics
 
@@ -41,7 +41,7 @@
 | [MDV-P1-005](MDV-P1-005.md) | To do | Practice settings: profile, locations, operating hours and holidays (F-08) | Story | MUST | P1-02 | F-08 | 2.5 | 5–5 | 23 Nov → 27 Nov 2026 | 72% Medium |
 | [MDV-P1-007](MDV-P1-007.md) | To do | Add doctor (clinic mode): details, licence India/UAE, verification, schedule link, fees, access and signature image (F-09) | Story | MUST | P1-03 | F-09 | 3 | 5–6 | 23 Nov → 04 Dec 2026 | 70% Medium |
 | [MDV-P1-008](MDV-P1-008.md) | To do | Add staff with role, facility scope, permissions and invite; custom roles (F-10) | Story | MUST | P1-03 | F-10 | 2.5 | 5–5 | 23 Nov → 27 Nov 2026 | 78% Medium |
-| [MDV-P1-011](MDV-P1-011.md) | To do | Schedule templates: working hours, breaks, slot length per service, per-location calendars, time zones | Story | MUST | P1-04 | P-04 | 3 | 5–6 | 23 Nov → 04 Dec 2026 | 80% Medium |
+| [MDV-P1-011](MDV-P1-011.md) | In progress | Schedule templates: working hours, breaks, slot length per service, per-location calendars, time zones | Story | MUST | P1-04 | P-04 | 3 | 5–6 | 23 Nov → 04 Dec 2026 | 80% Medium |
 | [MDV-P1-013](MDV-P1-013.md) | In progress | Patient registration — India full flow (identity, ABHA optional, Aadhaar last 4, Indian address, payer) | Story | MUST | P1-05 | P-02 | 4 | 5–6 | 23 Nov → 04 Dec 2026 | 88% High |
 | [MDV-P1-006](MDV-P1-006.md) | To do | Practice settings: notification preferences and data tab | Story | MUST | P1-02 | F-08 | 1.5 | 6–6 | 30 Nov → 04 Dec 2026 | 72% Medium |
 | [MDV-P1-009](MDV-P1-009.md) | To do | Staff offboarding removes access immediately and ends all sessions | Story | MUST | P1-11 | F-10 | 1 | 6–6 | 30 Nov → 04 Dec 2026 | 90% High |

@@ -1,4 +1,5 @@
 using Medvya.Patients.Domain;
+using Medvya.Scheduling.Application;
 using Medvya.SyntheticData;
 using Medvya.Tenancy.Domain;
 using Microsoft.EntityFrameworkCore;
@@ -38,6 +39,12 @@ public class SyntheticSeedTests(SqlServerFixture sql) : IClassFixture<SqlServerF
         var accounts = await identity.Users.ToListAsync();
         Assert.Equal(SyntheticSeed.Tenants(includeUae: true).Sum(t => t.Members.Count), accounts.Count);
         Assert.All(accounts, a => Assert.EndsWith(SyntheticSeed.Marker, a.DisplayName, StringComparison.Ordinal));
+
+        // Schedule templates and the procedure room (MDV-P1-011): valid, seeded once.
+        await using var scheduling = sql.Scheduling(SyntheticSeed.India.Tenant.Id);
+        Assert.Equal((SyntheticSeed.India.Templates.Count, 1), (await scheduling.Templates.CountAsync(), await scheduling.Resources.CountAsync()));
+        Assert.All(SyntheticSeed.Tenants(includeUae: true).SelectMany(t => t.Templates), ScheduleRules.Validate);
+        Assert.All(SyntheticSeed.India.Resources, r => Assert.EndsWith(SyntheticSeed.Marker, r.Name, StringComparison.Ordinal));
     }
 
     [Theory]

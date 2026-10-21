@@ -5,6 +5,8 @@ using Host.Api.Middleware;
 using Medvya.Audit.Infrastructure;
 using Medvya.BuildingBlocks.Domain;
 using Medvya.Identity.Infrastructure;
+using Medvya.Scheduling.Api;
+using Medvya.Scheduling.Infrastructure;
 using Medvya.Leads.Infrastructure;
 using Medvya.Tenancy.Infrastructure;
 using Host.Api.Observability;
@@ -29,7 +31,7 @@ builder.Services.AddScoped<ICurrentTenant>(sp => sp.GetRequiredService<RequestCo
 builder.Services.AddScoped<ICurrentUser>(sp => sp.GetRequiredService<RequestContext>());
 // Without a database, audited and flag-gated endpoints cannot resolve IAuditLog / IFeatureFlags and fail closed (500).
 if (builder.Configuration.GetConnectionString("Medvya") is { } sql)
-    builder.Services.AddAuditModule(sql).AddTenancyModule(sql).AddIdentityModule(sql)
+    builder.Services.AddAuditModule(sql).AddTenancyModule(sql).AddIdentityModule(sql).AddSchedulingModule(sql)
         .AddLeadsModule(sql, builder.Configuration.GetSection("Leads:Email").Get<LeadsEmailOptions>() ?? new());
 builder.Services.AddHsts(o => { o.MaxAge = TimeSpan.FromDays(365); o.IncludeSubDomains = true; });
 
@@ -58,6 +60,7 @@ app.UseStaffAuthentication();
 app.MapGet("/health", () => Results.Ok(new { status = "ok", version = typeof(Program).Assembly.GetName().Version?.ToString() }))
     .AllowAnonymous(); // public: deploy smoke tests
 app.MapStaffSession();
+app.MapSchedulingEndpoints();
 app.MapPublicSite();
 if (app.Environment.IsDevelopment() && app.Configuration["Authentication:Oidc:Authority"]?.EndsWith(DevIdentityProvider.Path, StringComparison.Ordinal) == true)
     app.MapDevIdentityProvider();

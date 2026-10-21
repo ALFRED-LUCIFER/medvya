@@ -5,7 +5,7 @@ namespace Medvya.ArchitectureTests;
 
 public class ClassificationTests
 {
-    internal static readonly string[] DomainAssemblies = ["Medvya.Identity.Domain", "Medvya.Tenancy.Domain", "Medvya.Audit.Domain", "Medvya.Patients.Domain", "Medvya.Billing.Domain", "Medvya.Leads.Domain"];
+    internal static readonly string[] DomainAssemblies = ["Medvya.Identity.Domain", "Medvya.Tenancy.Domain", "Medvya.Audit.Domain", "Medvya.Patients.Domain", "Medvya.Billing.Domain", "Medvya.Scheduling.Domain", "Medvya.Leads.Domain"];
 
     internal static IEnumerable<string> Unclassified(IEnumerable<Type> types) =>
         types.Where(t => t.IsClass && (t.IsPublic || t.IsNestedPublic))

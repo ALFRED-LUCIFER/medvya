@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\Medvya.Scheduling.Domain\Medvya.Scheduling.Domain.csproj" />
+    <ProjectReference Include="..\..\Tenancy\Medvya.Tenancy.Domain\Medvya.Tenancy.Domain.csproj" />
+  </ItemGroup>
+</Project>

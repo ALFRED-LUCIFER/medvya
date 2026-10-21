@@ -23,7 +23,7 @@ public static partial class PublicSite
     // Each language in its own script, as in the clinic app's language picker.
     public static readonly Dictionary<string, string> LanguageNames = new() { ["en"] = "English", ["hi"] = "हिन्दी", ["ar"] = "العربية" };
 
-    // Page addresses without the language prefix. The region selector arrives with MDV-P1-002.
+    // Page addresses without the language prefix.
     public const string DoctorStart = "/region";
     public const string TrustCentre = "/trust";
     public const string DemoForm = "/trust#demo";
@@ -40,7 +40,8 @@ public static partial class PublicSite
             FileProvider = builder.Environment.ContentRootFileProvider, Path = "PublicSite/trust-centre.json", Optional = false, ReloadOnChange = true,
         });
         builder.Services.Configure<TrustCentreContent>(builder.Configuration.GetSection("TrustCentre"));
-        builder.Services.AddSingleton(new DemoRequestLimiter(builder.Configuration.GetValue("PublicSite:DemoRequestsPerHour", 5)));
+        builder.Services.AddSingleton<PublicFormGuard>();
+        builder.Services.Configure<DeploymentOptions>(builder.Configuration.GetSection("PublicSite:Deployments"));
         builder.Services.AddPublicSitePages();
         return builder;
     }

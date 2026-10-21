@@ -24,15 +24,15 @@ public sealed partial class TrustCentreTests(WebApplicationFactory<Program> fact
         var store = new RecordingDemoRequests();
         var app = factory.WithWebHostBuilder(b =>
         {
-            b.UseSetting("PublicSite:DemoRequestsPerHour", perHour.ToString(System.Globalization.CultureInfo.InvariantCulture));
-            b.UseSetting("PublicSite:DemoMinimumSeconds", minimumSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            b.UseSetting("PublicSite:SubmissionsPerHour", perHour.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            b.UseSetting("PublicSite:MinimumFillSeconds", minimumSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture));
             foreach (var (k, v) in settings) b.UseSetting(k, v);
             b.ConfigureTestServices(s => s.AddSingleton<IDemoRequests>(store));
         });
         return (app.CreateClient(new() { AllowAutoRedirect = false, HandleCookies = false }), store);
     }
 
-    static async Task<string> Html(HttpResponseMessage res) => WebUtility.HtmlDecode(await res.Content.ReadAsStringAsync());
+    internal static async Task<string> Html(HttpResponseMessage res) => WebUtility.HtmlDecode(await res.Content.ReadAsStringAsync());
 
     static readonly Dictionary<string, string> Valid = new()
     {
@@ -41,7 +41,7 @@ public sealed partial class TrustCentreTests(WebApplicationFactory<Program> fact
     };
 
     // GET the form, then POST it with its anti-forgery cookie and token (as a browser would), optionally overriding fields.
-    static async Task<HttpResponseMessage> Submit(HttpClient client, Dictionary<string, string> fields, bool withToken = true, string path = "/trust", string? extraCookie = null)
+    internal static async Task<HttpResponseMessage> Submit(HttpClient client, Dictionary<string, string> fields, bool withToken = true, string path = "/trust", string? extraCookie = null)
     {
         var form = await client.GetAsync(new Uri(path, UriKind.Relative));
         var html = await form.Content.ReadAsStringAsync();
@@ -54,7 +54,7 @@ public sealed partial class TrustCentreTests(WebApplicationFactory<Program> fact
         return await client.SendAsync(req);
     }
 
-    static string HiddenValue(string html, string name)
+    internal static string HiddenValue(string html, string name)
     {
         var tag = Regex.Match(html, $"<input[^>]*name=\"{Regex.Escape(name)}\"[^>]*>");
         var value = Regex.Match(tag.Value, "value=\"([^\"]*)\"");

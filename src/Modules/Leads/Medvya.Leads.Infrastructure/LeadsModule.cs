@@ -27,7 +27,17 @@ public static class LeadsModule
         services
             .AddDbContext<LeadsDbContext>(o => o.UseSqlServer(connectionString))
             .AddSingleton(email)
-            .AddScoped<IDemoRequests, DemoRequests>();
+            .AddScoped<IDemoRequests, DemoRequests>()
+            .AddScoped<IWaitlist, Waitlist>();
+}
+
+sealed class Waitlist(LeadsDbContext db) : IWaitlist
+{
+    public async Task JoinAsync(WaitlistEntry entry, CancellationToken cancellationToken = default)
+    {
+        db.Waitlist.Add(entry);
+        await db.SaveChangesAsync(cancellationToken);
+    }
 }
 
 sealed partial class DemoRequests(LeadsDbContext db, LeadsEmailOptions email, ILogger<DemoRequests> log) : IDemoRequests

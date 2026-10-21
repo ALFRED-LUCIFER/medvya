@@ -51,6 +51,18 @@ h1 { font-size: clamp(32px, 7vw, 46px); line-height: 1.08; letter-spacing: -0.03
 
 .page { display: flex; flex-direction: column; gap: 20px; max-width: 760px; padding: 40px 16px 48px; }
 
+/* F-02 region and residency */
+.region-cards { display: grid; gap: 12px; max-width: 600px; }
+.region-card { display: flex; gap: 14px; padding: 16px; border-radius: 14px; border: 2px solid var(--color-line); background: var(--color-card); color: var(--color-ink-900); text-decoration: none; }
+.region-card:hover { border-color: var(--color-line-strong); }
+.region-card[aria-current] { border-color: var(--color-brand-700); background: color-mix(in srgb, var(--color-brand-700) 5%, var(--color-card)); }
+.region-card svg { flex-shrink: 0; fill: none; stroke: var(--color-brand-950); stroke-width: 2; stroke-linecap: round; }
+.region-card > span { display: flex; flex-direction: column; gap: 4px; }
+.region-card strong { font-size: 16px; font-weight: 800; }
+.region-card strong + span { font-size: 13px; line-height: 1.5; color: var(--color-ink-600); }
+.button-navy { align-self: flex-start; min-height: 48px; padding: 0 22px; border-radius: var(--radius-lg); background: var(--color-brand-950); color: var(--color-card); font-size: 15px; font-weight: 800; }
+.button-navy:hover { background: var(--color-nav-hover); }
+
 /* F-07 trust centre and demo request */
 .trust { max-width: 880px; gap: 24px; }
 .trust h2 { font-size: 20px; font-weight: 800; color: var(--color-brand-950); }

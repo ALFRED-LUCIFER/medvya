@@ -42,7 +42,7 @@ medvya/
 │   │   ├── Audit/                  # ledger-backed audit events, access log queries, break-glass           (P0, P1, P7)
 │   │   ├── Practice/               # practice profile, locations, hours, holidays, doctors/licences, services & prices, formulary (P1, P2, P4)
 │   │   ├── Patients/               # registration, identifiers (Always Encrypted), relationships, consents, dedup/merge (P1)
-│   │   ├── Leads/                  # public-site demo requests (buyer contacts, never patient data)            (P1)
+│   │   ├── Leads/                  # public-site demo requests and waitlist (contacts, never patient data)    (P1)
 │   │   ├── Scheduling/             # schedules, slots, appointments, waitlist, queue/board, tokens         (P1)
 │   │   ├── Notifications/          # email/SMS/WhatsApp templates, attempts, delivery status, notification centre (P1, P4)
 │   │   ├── Encounters/             # encounter, vitals/observations, problems, allergies, meds, notes, signing, addenda (P2)

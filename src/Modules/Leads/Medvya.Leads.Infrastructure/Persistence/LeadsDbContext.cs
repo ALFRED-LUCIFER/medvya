@@ -7,6 +7,7 @@ namespace Medvya.Leads.Infrastructure.Persistence;
 public sealed class LeadsDbContext(DbContextOptions<LeadsDbContext> options) : DbContext(options)
 {
     public DbSet<DemoRequest> DemoRequests => Set<DemoRequest>();
+    public DbSet<WaitlistEntry> Waitlist => Set<WaitlistEntry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -22,6 +23,15 @@ public sealed class LeadsDbContext(DbContextOptions<LeadsDbContext> options) : D
             e.Property(x => x.Phone).HasMaxLength(DemoRequest.PhoneMax).IsUnicode(false);
             e.Property(x => x.Message).HasMaxLength(DemoRequest.MessageMax);
             e.HasIndex(x => x.ReceivedAt);
+        });
+        modelBuilder.Entity<WaitlistEntry>(e =>
+        {
+            e.ToTable("Waitlist");
+            e.Property(x => x.Name).HasMaxLength(WaitlistEntry.NameMax);
+            e.Property(x => x.Country).HasMaxLength(2).IsUnicode(false);
+            e.Property(x => x.Email).HasMaxLength(LeadRules.EmailMax);
+            e.Property(x => x.Phone).HasMaxLength(WaitlistEntry.PhoneMax).IsUnicode(false);
+            e.HasIndex(x => new { x.Country, x.ReceivedAt });
         });
     }
 }

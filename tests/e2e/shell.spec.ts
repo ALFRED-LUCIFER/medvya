@@ -1,6 +1,9 @@
 import { expect, test } from '@playwright/test';
 
-// P0 steps that exist today: app shell, F-05 system states, locale and right-to-left.
+// P0 steps that exist today: signed-out home, F-05 system states, locale and right-to-left (signed-in shell: app-shell.spec.ts).
+// CI has no API: answer /v1/me/context as "not signed in".
+test.beforeEach(({ page }) => page.route('**/v1/me/context', r => r.fulfill({ status: 401 })));
+
 test('home page renders', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();

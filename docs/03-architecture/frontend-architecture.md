@@ -72,4 +72,8 @@ Why it matters for Medvya:
 | UI | shadcn/ui + Radix + Tailwind 4 + Lucide via `@medvya/ui` (ADR-010) | In place |
 | Tables, dates, calendar | TanStack Table, react-day-picker (shadcn calendar), FullCalendar | With the first table/schedule screen (P1) |
 
+## Navigation and route guards (MDV-P0-022)
+
+`features/shell/domain/navigation.ts` is the single map of screen → path → required capability (and access levels) → optional tenant feature flag → delivery phase. The shell renders, and the router registers, only the items `visibleNav()` returns for the active membership from `/v1/me/context`, so a hidden screen has no route (it shows "Page not found"). Screens after the R1 launch carry a flag and stay hidden until the tenant turns it on. This is a UX filter only: every API endpoint still enforces its own policy (AGENTS.md 1.3).
+
 No other state library (Redux, Zustand…) unless a decision record justifies it. Server state belongs in TanStack Query, form state in React Hook Form, and the little UI state left in `useState`.

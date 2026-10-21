@@ -3,7 +3,7 @@ import type { MeContext } from '../domain/session';
 // The server holds the tokens (BFF, ADR-004); the browser only sends its HTTP-only session cookie.
 const csrf = { 'X-Medvya-Csrf': '1' };
 
-/** The signed-in user, or null when there is no session. */
+/** The signed-in user and working context, or null when there is no session. */
 export async function fetchMeContext(): Promise<MeContext | null> {
   const res = await fetch('/v1/me/context', { credentials: 'same-origin' });
   if (res.status === 401) return null;

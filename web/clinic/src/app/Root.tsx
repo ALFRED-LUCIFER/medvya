@@ -4,6 +4,7 @@ import '@fontsource/noto-sans-arabic/700.css';
 import '../index.css';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { I18nProvider } from '@medvya/i18n';
+import { BrowserRouter } from 'react-router';
 import { useLocaleController } from '../features/locale/hooks/useLocaleController';
 import App from './App';
 
@@ -16,7 +17,9 @@ export default function Root() {
   return (
     <QueryClientProvider client={queryClient}>
       <I18nProvider locale={locale} country="IN">
-        <App locale={locale} onLocaleChange={setLocale} />
+        <BrowserRouter>
+          <App locale={locale} onLocaleChange={setLocale} />
+        </BrowserRouter>
       </I18nProvider>
     </QueryClientProvider>
   );

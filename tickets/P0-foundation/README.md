@@ -10,7 +10,7 @@
 
 **Tickets:** 29 · **Estimate:** 49.5 dev-days vs **15 working days** in the window (OVER by 34.5 days: needs scope trade-off or overlap) · **Average confidence:** 86%
 
-**Status:** To do 4 · Partly done 11 · Blocked 5 · Done 9
+**Status:** To do 2 · Partly done 13 · Blocked 5 · Done 9
 
 ## Epics
 
@@ -38,7 +38,7 @@
 | [MDV-P0-025](MDV-P0-025.md) | Done | Secure development policies: SECURITY.md, code review rules, synthetic-only data, JIT access, offline break-glass account | Chore | MUST | P0-10 | — | 1 | 1–1 | 26 Oct → 30 Oct 2026 | 90% High |
 | [MDV-P0-007](MDV-P0-007.md) | Blocked | GitHub OIDC federation to Azure and tagged deploy to staging | Task | MUST | P0-01, P0-02 | — | 1.5 | 2–2 | 02 Nov → 06 Nov 2026 | 88% High |
 | [MDV-P0-008](MDV-P0-008.md) | Partly done | Database security baseline part 1: Entra-only auth, managed identity, least-privilege users per module and for migrations | Task | MUST | P0-09 | — | 1.5 | 2–2 | 02 Nov → 06 Nov 2026 | 85% High |
-| [MDV-P0-009](MDV-P0-009.md) | To do | Database security baseline part 2: Always Encrypted (national/insurance IDs), dynamic data masking, TDE with customer-managed key | Task | MUST | P0-09 | — | 2.5 | 2–3 | 02 Nov → 13 Nov 2026 | 72% Medium |
+| [MDV-P0-009](MDV-P0-009.md) | Partly done | Database security baseline part 2: Always Encrypted (national/insurance IDs), dynamic data masking, TDE with customer-managed key | Task | MUST | P0-09 | — | 2.5 | 2–3 | 02 Nov → 13 Nov 2026 | 72% Medium |
 | [MDV-P0-010](MDV-P0-010.md) | Done | Tenancy model with EF Core global filters and Azure SQL row-level security (cross-tenant test in CI) | Story | MUST | P0-04 | — | 3 | 2–2 | 02 Nov → 06 Nov 2026 | 88% High |
 | [MDV-P0-011](MDV-P0-011.md) | Partly done | Staff sign-in through the BFF with Entra External ID: MFA (TOTP), passkeys and recovery | Story | MUST | P0-03 | F-03 | 3 | 2–2 | 02 Nov → 06 Nov 2026 | 78% Medium |
 | [MDV-P0-012](MDV-P0-012.md) | Blocked | Session control: facility picker, idle timeout on shared clinic PCs, device/session revocation | Story | MUST | P0-03 | F-03 | 2 | 2–3 | 02 Nov → 13 Nov 2026 | 85% High |
@@ -50,7 +50,7 @@
 | [MDV-P0-013](MDV-P0-013.md) | Blocked | Invite a colleague and accept the invitation (membership invited → active) | Story | MUST | P0-03 | F-06 | 2 | 3–3 | 09 Nov → 13 Nov 2026 | 88% High |
 | [MDV-P0-015](MDV-P0-015.md) | Partly done | System state screens: session expired, 403 no facility access, 404, offline | Story | MUST | P0-05 | F-05 | 1 | 3–3 | 09 Nov → 13 Nov 2026 | 92% High |
 | [MDV-P0-019](MDV-P0-019.md) | To do | Backups, point-in-time restore and a timed restore drill | Task | MUST | P0-02 | — | 1 | 3–3 | 09 Nov → 13 Nov 2026 | 90% High |
-| [MDV-P0-022](MDV-P0-022.md) | To do | App shell with role-based navigation (desktop sidebar, tablet rail, mobile tabs) | Story | MUST | P0-05, P0-07 | — | 2 | 3–3 | 09 Nov → 13 Nov 2026 | 85% High |
+| [MDV-P0-022](MDV-P0-022.md) | Partly done | App shell with role-based navigation (desktop sidebar, tablet rail, mobile tabs) | Story | MUST | P0-05, P0-07 | — | 2 | 3–3 | 09 Nov → 13 Nov 2026 | 85% High |
 | [MDV-P0-023](MDV-P0-023.md) | Partly done | Six end-to-end journeys as Playwright specs and clinical advisor sign-off (X-03) | Gate | MUST | P0-07 | X-03 | 2 | 3–3 | 09 Nov → 13 Nov 2026 | 80% Medium |
 | [MDV-P0-027](MDV-P0-027.md) | Partly done | Synthetic data generator and seeded staging tenant | Task | MUST | P0-10 | — | 1 | 3–3 | 09 Nov → 13 Nov 2026 | 90% High |
 | [MDV-P0-028](MDV-P0-028.md) | Partly done | Per-tenant feature flags with owner and kill switch | Task | MUST | P0-04 | — | 1 | 3–3 | 09 Nov → 13 Nov 2026 | 85% High |

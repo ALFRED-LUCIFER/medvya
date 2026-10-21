@@ -250,6 +250,10 @@ ac:
 - Both jobs are idempotent and audited.
 
 === MDV-P1-011
+status: In progress
+progress:
+- Open [PR #55](https://github.com/ALFRED-LUCIFER/medvya/pull/55): Scheduling module (own schema, module role, EF filters + RLS) — weekly template per doctor or resource (sessions with room, breaks, slot length, per-visit-type lengths), slots generated on the fly in the facility zone (IST, GST and DST unit tests), P-04 day view with hatched unavailable time and reason, role checked against the membership at the facility, audited endpoints; mutation-checked; browser-verified (en, ar RTL, axe)
+- Left: listing appointments outside new hours and spanning visits on the grid (MDV-P1-021); template editing UI in Settings → Hours (MDV-P1-005)
 title: Schedule templates: working hours, breaks, slot length per service, per-location calendars, time zones
 type: Story
 epic: MDV-P1-E04

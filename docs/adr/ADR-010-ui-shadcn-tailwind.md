@@ -15,7 +15,7 @@ PRD v1 (the October plan) chose shadcn/ui + Tailwind. PRD v2 switched to MUI bec
 - **Lucide** icons.
 - **Right-to-left:** `<html dir>` from the locale controller plus Tailwind logical utilities (`ms-*`, `ps-*`, `start-*`, `rtl:` variant). No CSS-in-JS RTL plugin.
 - Clinical primitives (`IdentityBanner`, `StatusChip`, `ProvenanceTag`, `ClinicalAlert`, `RecordingPill`, `SystemState`) are built on these.
-- For data-heavy screens (planned): TanStack Table, react-day-picker (shadcn calendar), FullCalendar for the schedule.
+- For data-heavy screens (planned): TanStack Table and react-day-picker (shadcn calendar). The schedule is an own CSS grid (MDV-P1-011): FullCalendar's doctor and resource columns are a paid plugin.
 
 ## Consequences
 

@@ -295,6 +295,10 @@ ac:
 - Leave and exceptions are audited.
 
 === MDV-P1-013
+status: In progress
+progress:
+- Merged [PR #40](https://github.com/ALFRED-LUCIFER/medvya/pull/40): Patients module back end — India rules (minimum fields, ABHA optional, Aadhaar last 4 only, PIN, payer kinds), facility-scoped MRN, write and audit in one transaction (fail closed), audited reads, ABHA Always Encrypted with exact lookup
+- Left: endpoints and UI (P-02), consents (MDV-P1-019), family (MDV-P1-020), duplicates (MDV-P1-016)
 title: Patient registration — India full flow (identity, ABHA optional, Aadhaar last 4, Indian address, payer)
 type: Story
 epic: MDV-P1-E05
@@ -319,6 +323,10 @@ ac:
 - Form is keyboard-completable, errors announced via aria-live, works at tablet width.
 
 === MDV-P1-014
+status: In progress
+progress:
+- Merged [PR #40](https://github.com/ALFRED-LUCIFER/medvya/pull/40): UAE rules — Emirates ID format, expired EID warns, EID-or-passport minimum, Arabic name, emirate mapped to Malaffi/NABIDH/Riayati, Makani/P.O. Box, insurance member number Always Encrypted
+- Left: endpoints and RTL UI; UAE-deployment configuration test
 title: Patient registration — UAE flow (Emirates ID manual entry, Arabic name RTL, emirate, insurance card)
 type: Story
 epic: MDV-P1-E05
@@ -342,6 +350,10 @@ ac:
 - UAE tenant data is stored only in the UAE deployment (configuration test: UAE tenant cannot be created in the India deployment).
 
 === MDV-P1-015
+status: In progress
+progress:
+- Merged [PR #40](https://github.com/ALFRED-LUCIFER/medvya/pull/40): quick registration saves as Incomplete until address and payer exist; completing closes it
+- Left: board/header tag, CARE_TASK queue, emergency contact (MDV-P1-020), endpoints and UI, timed usability check
 title: Quick registration for a busy desk with a completion task
 type: Story
 epic: MDV-P1-E05

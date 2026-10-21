@@ -61,6 +61,8 @@ Every stored field has one class. In code, each domain property carries `[Classi
 | PAYER_COVERAGE.member_no / policy_no | NationalId | **AE-D** |
 | CONSENT_RECEIPT.* (type, policy_version, jurisdiction, decision, decided_at, channel, actor) | Internal | Ledger table |
 | MERGE_REQUEST.* | Internal | Audit |
+| SCHEDULE_TEMPLATE.* (calendar, weekday hours, room, breaks and their labels, slot and visit lengths) | Internal | — |
+| SCHEDULE_RESOURCE.* (name, e.g. "Procedure room") | Internal | — |
 | APPOINTMENT.id, doctor, location, slot_start, state, source, reason_category | Internal | — |
 | APPOINTMENT.reason_text (free text) | SensitiveHealth | Clinicians only. Audit |
 | WAITLIST_ENTRY.*, QUEUE_TOKEN.* | Internal | Tokens on TV, never names |

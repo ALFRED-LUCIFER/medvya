@@ -48,6 +48,11 @@ export const recordingLooks = {
   notAsked:  { label: 'recording.notAsked', icon: CircleHelp, bg: '#FDF5E7', fg: '#7A4710' },
 } satisfies Record<string, Look>;
 
+// Schedule (P-04): time and appointment states. Hatching (unavailable) or a dashed border is the shape cue beside icon and words.
+export const scheduleLooks = {
+  unavailable: { label: 'schedule.state.unavailable', icon: Ban, bg: '#DFE7ED', fg: '#506579' },
+} satisfies Record<string, Look>;
+
 const paint = (look: Look): CSSProperties => ({ backgroundColor: look.bg, color: look.fg, border: look.border });
 
 function Pill({ look, text, tag = false, children }: { look: Look; text?: string; tag?: boolean; children?: ReactNode }) {

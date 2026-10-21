@@ -6,6 +6,8 @@ using Medvya.Identity.Infrastructure.Persistence;
 using Medvya.Patients.Domain;
 using Medvya.Patients.Infrastructure;
 using Medvya.Patients.Infrastructure.Persistence;
+using Medvya.Scheduling.Domain;
+using Medvya.Scheduling.Infrastructure.Persistence;
 using Medvya.Tenancy.Domain;
 using Medvya.Tenancy.Infrastructure.Persistence;
 using Microsoft.Data.SqlClient;
@@ -20,6 +22,8 @@ public sealed record CastPatient(Patient Patient, IReadOnlyList<PatientIdentifie
 public sealed record CastTenant(Tenant Tenant, Facility Facility, IReadOnlyList<CastMember> Members)
 {
     public IReadOnlyList<CastPatient> Patients { get; init; } = [];
+    public IReadOnlyList<ScheduleResource> Resources { get; init; } = [];
+    public IReadOnlyList<ScheduleTemplate> Templates { get; init; } = [];
 }
 
 /// <summary>
@@ -32,7 +36,7 @@ public static class SyntheticSeed
 
     static readonly string[] AllowedEnvironments = ["Development", "Staging", "Test"];
 
-    // Recognisable fixed ids: 5e1d<tenant>-<kind>-…-<n>; kind 0 tenant, 1 facility, 2 user, 3 membership, 4 patient, 5 identifier, 6 payer.
+    // Recognisable fixed ids: 5e1d<tenant>-<kind>-…-<n>; kind 0 tenant, 1 facility, 2 user, 3 membership, 4 patient, 5 identifier, 6 payer, 7 schedule resource, 8 schedule template.
     static Guid Id(int tenant, int kind, int n) => Guid.Parse($"5e1d{tenant:x4}-{kind:x4}-4000-8000-{n:x12}");
 
     static CastTenant Clinic(int t, string name, string country, string region, string facility, string timeZone, params (string Name, Role Role)[] people)
@@ -68,6 +72,14 @@ public static class SyntheticSeed
                 new PayerCoverage { Kind = PayerKind.PrivateInsurance, PayerName = "Synthetic TPA" + Marker, MemberNumber = "SYN-TPA-0102" },
                 (IdentifierScheme.Abha, "91000000000102"), (IdentifierScheme.AbhaAddress, "deepak.nair.synthetic@sbx")),
         ],
+        // The P-04 design day: Dr. Rao in Room 3 with 20-minute slots, Dr. Menon "Not in today · Mon–Wed", a procedure room.
+        Resources = [Room(1, 1, "Procedure room")],
+        Templates =
+        [
+            Week(1, 1, Id(1, 2, 1), CalendarKind.Doctor, 20, Days(DayOfWeek.Monday, DayOfWeek.Saturday), "Room 3", (9, 13), (17, 20)),
+            Week(1, 2, Id(1, 2, 2), CalendarKind.Doctor, 20, Days(DayOfWeek.Monday, DayOfWeek.Wednesday), "Room 2", (10, 14)),
+            Week(1, 3, Id(1, 7, 1), CalendarKind.Resource, 30, Days(DayOfWeek.Monday, DayOfWeek.Saturday), null, (10, 13)),
+        ],
     };
 
     public static readonly CastTenant Uae = Clinic(2, "Al Noor Family Clinic", "AE", "uaenorth", "Abu Dhabi", "Asia/Dubai",
@@ -82,6 +94,20 @@ public static class SyntheticSeed
                 new PayerCoverage { Kind = PayerKind.PrivateInsurance, PayerName = "Thiqa", MemberNumber = "SYN-THQ-0201" },
                 (IdentifierScheme.EmiratesId, "784-1988-1234567-1")),
         ],
+        Templates = [Week(2, 1, Id(2, 2, 1), CalendarKind.Doctor, 20, Days(DayOfWeek.Monday, DayOfWeek.Friday), "Room 1", (9, 13), (16, 20))],
+    };
+
+    static ScheduleResource Room(int t, int n, string name) =>
+        new() { Id = Id(t, 7, n), TenantId = Id(t, 0, 1), FacilityId = Id(t, 1, 1), Name = name + Marker, CreatedAt = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero) };
+
+    static DayOfWeek[] Days(DayOfWeek from, DayOfWeek to) => [.. Enumerable.Range((int)from, to - from + 1).Select(d => (DayOfWeek)d)];
+
+    static ScheduleTemplate Week(int t, int n, Guid calendar, CalendarKind kind, int slotMinutes, DayOfWeek[] days, string? room, params (int From, int To)[] sessions) => new()
+    {
+        Id = Id(t, 8, n), TenantId = Id(t, 0, 1), FacilityId = Id(t, 1, 1), CalendarId = calendar, CalendarKind = kind, SlotMinutes = slotMinutes,
+        Hours = [.. days.SelectMany(d => sessions.Select(s => new WorkingHours { Weekday = d, Start = new(s.From, 0), End = new(s.To, 0), Room = room }))],
+        VisitLengths = [new VisitLength { VisitType = VisitType.NewConsultation, Minutes = 2 * slotMinutes }],
+        ChangedAt = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero),
     };
 
     static CastPatient Person(int t, int n, string country, string mrn, string name, string? arabicName, DateOnly dob, SexAtBirth sex, string mobile,
@@ -135,6 +161,7 @@ public static class SyntheticSeed
             await ColumnEncryption.EnsureKeysAsync(admin, LocalKeyStoreProvider.ProviderName, LocalKeyStoreProvider.KeyPath, keys, ct);
         }
         await using (var patients = Patients(connectionString, null)) await patients.Database.MigrateAsync(ct);
+        await using (var scheduling = Scheduling(connectionString, null)) await scheduling.Database.MigrateAsync(ct);
 
         foreach (var c in Tenants(includeUae))
         {
@@ -163,11 +190,21 @@ public static class SyntheticSeed
                 pdb.PayerCoverages.Add(p.Payer);
             }
             await pdb.SaveChangesAsync(ct);
+
+            await using var sdb = Scheduling(connectionString, c.Tenant.Id);
+            var resources = await sdb.Resources.Select(r => r.Id).ToListAsync(ct);
+            var templates = await sdb.Templates.Select(t => t.Id).ToListAsync(ct);
+            sdb.Resources.AddRange(c.Resources.Where(r => !resources.Contains(r.Id)));
+            sdb.Templates.AddRange(c.Templates.Where(t => !templates.Contains(t.Id)));
+            await sdb.SaveChangesAsync(ct);
         }
     }
 
     static PatientsDbContext Patients(string connectionString, Guid? tenantId) =>
         new(Options<PatientsDbContext>(PatientsModule.WithColumnEncryption(connectionString), tenantId), new FixedTenant(tenantId));
+
+    static SchedulingDbContext Scheduling(string connectionString, Guid? tenantId) =>
+        new(Options<SchedulingDbContext>(connectionString, tenantId), new FixedTenant(tenantId));
 
     sealed class FixedTenant(Guid? id) : ICurrentTenant { public Guid? TenantId => id; }
 

@@ -62,6 +62,7 @@ public class TelemetryRedactionTests
         var res = await factory.CreateClient().GetAsync(new Uri(query, UriKind.Relative));
         res.EnsureSuccessStatusCode();
         factory.Services.GetRequiredService<TracerProvider>().ForceFlush();
+        await factory.DisposeAsync(); // stop the host so nothing appends to logs/spans while we read them
 
         var exported = string.Join('\n', logs) + "\n" + string.Join('\n',
             spans.Select(a => a.DisplayName + " " + string.Join(';', a.TagObjects.Select(t => $"{t.Key}={t.Value}"))));

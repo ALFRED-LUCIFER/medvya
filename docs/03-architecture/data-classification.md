@@ -66,6 +66,7 @@ Every stored field has one class. In code, each domain property carries `[Classi
 | APPOINTMENT.id, doctor, location, slot_start, state, source, reason_category | Internal | — |
 | APPOINTMENT.reason_text (free text) | SensitiveHealth | Clinicians only. Audit. Never returned to reception screens or put in events (MDV-P1-021) |
 | SLOT_HOLD.* (calendar, slot, visit type, held_by, expires_at) | Internal | — |
+| SCHEDULE_SLOT.* (calendar, location, 5-minute slot start, appointment) | Internal | Unique (calendar, location, slot start) |
 | VISIT_STATUS_EVENT.* (appointment, state, actor, time) | Internal | Append-only history |
 | OUTBOX_EVENT.* (type, aggregate id, payload of opaque ids and instants) | Internal | No PHI in payloads |
 | WAITLIST_ENTRY.*, QUEUE_TOKEN.* | Internal | Tokens on TV, never names |

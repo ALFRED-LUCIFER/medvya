@@ -202,5 +202,6 @@
   "booking.error.not_bookable": "This time cannot be booked: the calendar is not open then, or the visit is too long for the time left.",
   "booking.error.in_past": "This slot has already started. Choose a later slot.",
   "booking.error.hold_expired": "The hold on this slot expired. Choose the slot again.",
-  "booking.error.failed": "Booking failed. Nothing was saved; try again."
+  "booking.error.failed": "Booking failed. Nothing was saved; try again.",
+  "booking.error.busy": "This calendar is busy with other bookings right now. Nothing was saved; try again."
 }

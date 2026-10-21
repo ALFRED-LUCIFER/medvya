@@ -62,6 +62,30 @@ public sealed class SlotHold
     [Classification(DataClass.Internal)] public DateTimeOffset ExpiresAt { get; init; }
 }
 
+/// <summary>
+/// SCHEDULE_SLOT: one 5-minute unit of time an appointment occupies in one calendar at one location (MDV-P1-022). The unique
+/// index on (calendar, location, slot start) lets the database refuse any second appointment that shares even five minutes,
+/// whatever slot grid either was booked on. Rows exist only while the appointment occupies its time.
+/// </summary>
+public sealed class ScheduleSlot
+{
+    public const int UnitMinutes = 5;
+
+    [Classification(DataClass.Internal)] public Guid Id { get; init; }
+    [Classification(DataClass.Internal)] public Guid TenantId { get; init; }
+    [Classification(DataClass.Internal)] public Guid FacilityId { get; init; }
+    [Classification(DataClass.Internal)] public Guid CalendarId { get; init; }
+    [Classification(DataClass.Internal)] public DateTimeOffset SlotStart { get; init; }
+    [Classification(DataClass.Internal)] public Guid AppointmentId { get; init; }
+
+    /// <summary>The 5-minute units of [start, end); start and end lie on 5-minute boundaries (template rule).</summary>
+    public static IEnumerable<ScheduleSlot> For(Appointment a)
+    {
+        for (var t = a.Start; t < a.End; t = t.AddMinutes(UnitMinutes))
+            yield return new ScheduleSlot { Id = Guid.CreateVersion7(), TenantId = a.TenantId, FacilityId = a.FacilityId, CalendarId = a.CalendarId, SlotStart = t, AppointmentId = a.Id };
+    }
+}
+
 /// <summary>One state change of an appointment, append-only: who, when and to what (the visit's history).</summary>
 public sealed class VisitStatusEvent
 {

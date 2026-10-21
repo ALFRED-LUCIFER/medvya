@@ -20,7 +20,8 @@ public sealed class SchedulingAccessDeniedException() : Exception("Not allowed a
 
 /// <summary>
 /// The slot cannot be held or booked: taken, being booked by someone else, not a slot of the template, in the past, or the
-/// hold expired. Code is a stable key ("slot_unavailable", "hold_expired", …) the UI translates; no patient data.
+/// hold expired, or "busy" when the doctor-day lock stayed taken through every retry. Code is a stable key ("slot_unavailable",
+/// "hold_expired", …) the UI translates; no patient data.
 /// </summary>
 public sealed class SlotUnavailableException(string code) : Exception("Slot no longer available: " + code)
 {

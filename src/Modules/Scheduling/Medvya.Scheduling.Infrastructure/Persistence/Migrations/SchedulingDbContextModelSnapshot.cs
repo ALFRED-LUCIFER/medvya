@@ -162,6 +162,37 @@ namespace Medvya.Scheduling.Infrastructure.Persistence.Migrations
                     b.ToTable("Resources", "scheduling");
                 });
 
+            modelBuilder.Entity("Medvya.Scheduling.Domain.ScheduleSlot", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("AppointmentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("CalendarId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("FacilityId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("SlotStart")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AppointmentId");
+
+                    b.HasIndex("CalendarId", "FacilityId", "SlotStart")
+                        .IsUnique();
+
+                    b.ToTable("ScheduleSlots", "scheduling");
+                });
+
             modelBuilder.Entity("Medvya.Scheduling.Domain.ScheduleTemplate", b =>
                 {
                     b.Property<Guid>("Id")
@@ -268,6 +299,15 @@ namespace Medvya.Scheduling.Infrastructure.Persistence.Migrations
                     b.HasIndex("AppointmentId");
 
                     b.ToTable("VisitStatusEvents", "scheduling");
+                });
+
+            modelBuilder.Entity("Medvya.Scheduling.Domain.ScheduleSlot", b =>
+                {
+                    b.HasOne("Medvya.Scheduling.Domain.Appointment", null)
+                        .WithMany()
+                        .HasForeignKey("AppointmentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Medvya.Scheduling.Domain.ScheduleTemplate", b =>

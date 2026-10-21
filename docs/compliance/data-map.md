@@ -7,6 +7,7 @@ What personal data Medvya holds, why, where it lives and who processes it. Field
 | Category | Data subjects | Examples | Purpose | Lawful basis (to confirm with counsel) | Stored in | From phase |
 |---|---|---|---|---|---|---|
 | Staff identity | Clinic staff | Name, email, mobile, role, licence | Account, access control, licence verification | Contract with the clinic | Entra External ID (identity); Azure SQL (profile) | P0 |
+| Demo requests | Hospital and clinic buyers | Name, organisation, role, country, email or phone, optional message. **No patient fields**; the form warns against typing patient details | Sales follow-up | Legitimate interest / consent (to confirm) | Azure SQL (`leads` schema); founder email without the message | P1 |
 | Audit trail | Staff, patients (opaque refs) | Who did what, when, purpose, IP | Security, accountability, legal obligation | Legal obligation / legitimate use | Azure SQL ledger + Log Analytics | P0 |
 | Patient demographics | Patients | Name, DOB, sex, phone, address, language | Registration, booking, reminders | Consent for treatment / legitimate use for healthcare (DPDP) | Azure SQL (DDM) | P1 |
 | National / insurance IDs | Patients | ABHA, Aadhaar last 4, Emirates ID, passport, member no. | Identification, dedup, claims | Consent / legal requirement (UAE EID) | Azure SQL (Always Encrypted) | P1 |

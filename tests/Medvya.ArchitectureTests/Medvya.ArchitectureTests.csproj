@@ -23,6 +23,7 @@
     <ProjectReference Include="..\..\src\Modules\Tenancy\Medvya.Tenancy.Domain\Medvya.Tenancy.Domain.csproj" />
     <ProjectReference Include="..\..\src\Modules\Audit\Medvya.Audit.Domain\Medvya.Audit.Domain.csproj" />
     <ProjectReference Include="..\..\src\Modules\Patients\Medvya.Patients.Domain\Medvya.Patients.Domain.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Leads\Medvya.Leads.Domain\Medvya.Leads.Domain.csproj" />
   </ItemGroup>
 
 </Project>

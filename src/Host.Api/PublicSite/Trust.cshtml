@@ -1,0 +1,160 @@
+@page
+@model TrustModel
+@using Medvya.Leads.Domain
+@{
+    var p = Model;
+    ViewData["Title"] = $"{p.T("site.trust.title")} · {p.T("app.name")}";
+    ViewData["Description"] = p.T("site.trust.footer");
+    // Decorative line icons for the six designed blocks (F-07).
+    var blocks = new (string Key, string Icon)[]
+    {
+        ("residency", "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"),
+        ("consent", "M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21a7 7 0 0 1 12-5M15 18l2 2 5-5"),
+        ("ai", "M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2zM19 15l1 2 2 1-2 1-1 2-1-2-2-1 2-1z"),
+        ("retention", "M3 7h18v4H3zM5 11v9h14v-9M10 15h4"),
+        ("audit", "M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6zM9 12l2 2 4-4"),
+        ("subProcessors", "M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM17 11a3 3 0 1 0 0-6M3 20a6 6 0 0 1 12 0M15 14a6 6 0 0 1 6 6"),
+    };
+    var fields = new (string Field, string Id)[]
+    {
+        ("Name", "demo-name"), ("Organisation", "demo-organisation"), ("Role", "demo-role"), ("Country", "demo-country"),
+        ("Contact", "demo-email"), ("Email", "demo-email"), ("Phone", "demo-phone"), ("Message", "demo-message"),
+    };
+    var firstInvalid = fields.FirstOrDefault(f => p.Errors.ContainsKey(f.Field)).Id;
+    string? Invalid(params string[] names) => names.Any(p.Errors.ContainsKey) ? "true" : null;
+    string? Focus(string id) => id == firstInvalid ? "autofocus" : null;
+    string? Described(string id, params string[] names) => names.Any(p.Errors.ContainsKey) ? $"{id}-error" : null;
+    var notInEffect = p.T("site.trust.notYetInEffect");
+    var country = p.Form.Country ?? p.Region;
+}
+<section class="page trust" aria-labelledby="trust-title">
+    <h1 id="trust-title">@p.T("site.trust.title")</h1>
+    <ul class="trust-blocks">
+        @foreach (var (key, icon) in blocks)
+        {
+            <li>
+                <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false"><path d="@icon" /></svg>
+                <div>
+                    <h2>@p.T($"site.trust.{key}.title")</h2>
+                    <p>@p.T($"site.trust.{key}.body")</p>
+                </div>
+            </li>
+        }
+    </ul>
+    <p class="note">@p.T("site.trust.footer")</p>
+
+    <section aria-labelledby="policies-title">
+        <h2 id="policies-title">@p.T("site.trust.policies.title")</h2>
+        <ul class="entries">
+            @foreach (var policy in p.Lists.Policies)
+            {
+                <li>
+                    <h3>@p.Localized(policy.Name)</h3>
+                    <dl>
+                        <dt>@p.T("site.trust.version")</dt><dd>@policy.Version</dd>
+                        <dt>@p.T("site.trust.effective")</dt><dd>@(policy.Effective is { } d ? p.Date(d) : notInEffect)</dd>
+                    </dl>
+                </li>
+            }
+        </ul>
+    </section>
+
+    <section aria-labelledby="subprocessors-title">
+        <h2 id="subprocessors-title">@p.T("site.trust.subProcessors.title")</h2>
+        <ul class="entries">
+            @foreach (var sub in p.Lists.SubProcessors)
+            {
+                <li>
+                    <h3>@sub.Name</h3>
+                    <dl>
+                        <dt>@p.T("site.trust.purpose")</dt><dd>@p.Localized(sub.Purpose)</dd>
+                        <dt>@p.T("site.trust.region")</dt><dd>@(sub.Region.TryGetValue(p.Region, out var r) ? r : p.T("site.trust.regionPending"))</dd>
+                        <dt>@p.T("site.trust.effective")</dt><dd>@(sub.Effective is { } d ? p.Date(d) : notInEffect)</dd>
+                    </dl>
+                </li>
+            }
+        </ul>
+        @if (p.Lists.Updated is { } updated)
+        {
+            <p class="note">@p.T("site.trust.contentVersion", new Dictionary<string, string> { ["version"] = p.Lists.Version, ["date"] = p.Date(updated) })</p>
+        }
+    </section>
+
+    <section id="demo" class="demo" aria-labelledby="demo-title">
+        <h2 id="demo-title">@p.T("site.demo.title")</h2>
+        <p>@p.T("site.demo.intro")</p>
+        <p class="warning"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path d="M12 3l10 18H2zM12 10v5M12 18v.5" /></svg>@p.T("site.demo.noPatientData")</p>
+        @if (p.Sent)
+        {
+            <p class="success" role="status">@p.T("site.demo.sent")</p>
+        }
+        else
+        {
+            @if (p.FormError is not null || p.Errors.Count > 0)
+            {
+                @* Without JavaScript, autofocus brings the visitor here: to the summary for a form-level problem, else to the first invalid field. *@
+                <div class="error-summary" role="alert" tabindex="-1" autofocus="@(firstInvalid is null ? "autofocus" : null)">
+                    <p>@p.T(p.FormError is null ? "site.demo.error.summary" : $"site.demo.error.{p.FormError}")</p>
+                    @if (p.Errors.Count > 0)
+                    {
+                        <ul>
+                            @foreach (var (field, id) in fields.Where(f => p.Errors.ContainsKey(f.Field)))
+                            {
+                                <li><a href="#@id">@p.FieldError(field)</a></li>
+                            }
+                        </ul>
+                    }
+                </div>
+            }
+            <form method="post" novalidate>
+                <input type="hidden" name="Form.Started" value="@p.Started">
+                <div class="field">
+                    <label for="demo-name">@p.T("site.demo.name")</label>
+                    <input id="demo-name" name="Form.Name" value="@p.Form.Name" maxlength="100" autocomplete="name" aria-invalid="@Invalid("Name")" aria-describedby="@Described("demo-name", "Name")" autofocus="@Focus("demo-name")">
+                    @if (p.Errors.ContainsKey("Name")) { <p id="demo-name-error" class="field-error">@p.FieldError("Name")</p> }
+                </div>
+                <div class="field">
+                    <label for="demo-organisation">@p.T("site.demo.organisation")</label>
+                    <input id="demo-organisation" name="Form.Organisation" value="@p.Form.Organisation" maxlength="150" autocomplete="organization" aria-invalid="@Invalid("Organisation")" aria-describedby="@Described("demo-organisation", "Organisation")" autofocus="@Focus("demo-organisation")">
+                    @if (p.Errors.ContainsKey("Organisation")) { <p id="demo-organisation-error" class="field-error">@p.FieldError("Organisation")</p> }
+                </div>
+                <div class="field">
+                    <label for="demo-role">@p.T("site.demo.role")</label>
+                    <input id="demo-role" name="Form.Role" value="@p.Form.Role" maxlength="100" autocomplete="organization-title" aria-invalid="@Invalid("Role")" aria-describedby="@Described("demo-role", "Role")" autofocus="@Focus("demo-role")">
+                    @if (p.Errors.ContainsKey("Role")) { <p id="demo-role-error" class="field-error">@p.FieldError("Role")</p> }
+                </div>
+                <div class="field">
+                    <label for="demo-country">@p.T("site.demo.country")</label>
+                    <select id="demo-country" name="Form.Country" aria-invalid="@Invalid("Country")" aria-describedby="@Described("demo-country", "Country")" autofocus="@Focus("demo-country")">
+                        @foreach (var c in DemoRequest.Countries)
+                        {
+                            <option value="@c" selected="@(c == country ? "selected" : null)">@p.T(c == "OTHER" ? "site.demo.country.OTHER" : $"site.region.{c}")</option>
+                        }
+                    </select>
+                    @if (p.Errors.ContainsKey("Country")) { <p id="demo-country-error" class="field-error">@p.FieldError("Country")</p> }
+                </div>
+                <fieldset class="field">
+                    <legend>@p.T("site.demo.contact")</legend>
+                    <p id="demo-contact-hint" class="hint">@p.T("site.demo.contactHint")</p>
+                    @if (p.Errors.ContainsKey("Contact")) { <p id="demo-email-error" class="field-error">@p.FieldError("Contact")</p> }
+                    <label for="demo-email">@p.T("site.demo.email")</label>
+                    <input id="demo-email" name="Form.Email" type="email" value="@p.Form.Email" maxlength="254" autocomplete="email" aria-invalid="@Invalid("Email", "Contact")" aria-describedby="demo-contact-hint @Described("demo-email", "Email", "Contact")" autofocus="@Focus("demo-email")">
+                    @if (p.Errors.ContainsKey("Email")) { <p id="demo-email-error" class="field-error">@p.FieldError("Email")</p> }
+                    <label for="demo-phone">@p.T("site.demo.phone")</label>
+                    <input id="demo-phone" name="Form.Phone" type="tel" value="@p.Form.Phone" maxlength="20" autocomplete="tel" aria-invalid="@Invalid("Phone")" aria-describedby="demo-contact-hint @Described("demo-phone", "Phone")" autofocus="@Focus("demo-phone")">
+                    @if (p.Errors.ContainsKey("Phone")) { <p id="demo-phone-error" class="field-error">@p.FieldError("Phone")</p> }
+                </fieldset>
+                <div class="field">
+                    <label for="demo-message">@p.T("site.demo.message")</label>
+                    <textarea id="demo-message" name="Form.Message" rows="4" maxlength="1000" aria-invalid="@Invalid("Message")" aria-describedby="@Described("demo-message", "Message")" autofocus="@Focus("demo-message")">@p.Form.Message</textarea>
+                    @if (p.Errors.ContainsKey("Message")) { <p id="demo-message-error" class="field-error">@p.FieldError("Message")</p> }
+                </div>
+                <div class="hp">
+                    <label for="demo-website">@p.T("site.demo.honeypot")</label>
+                    <input id="demo-website" name="Form.Website" tabindex="-1" autocomplete="off">
+                </div>
+                <button class="button button-primary" type="submit">@p.T("site.demo.submit")</button>
+            </form>
+        }
+    </section>
+</section>

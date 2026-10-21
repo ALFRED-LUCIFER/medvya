@@ -289,6 +289,11 @@ ac:
 - Leave and exceptions are audited.
 
 === MDV-P1-013
+status: Partly done
+progress:
+- Merged [PR #40](https://github.com/ALFRED-LUCIFER/medvya/pull/40): Patients module back end: `Patient`, `PatientIdentifier`, `PayerCoverage`; `IndiaRules` (minimum fields, mobile to E.164, ABHA 14 digits, Aadhaar last 4 only with 12 digits rejected, PIN 6 digits, payer kinds); ABHA stored with Always Encrypted; one transaction writes patient, identifiers, payer and the PatientRegistered audit event (committed only after the audit row) and assigns a facility-scoped MRN; query filters + RLS
+- Integration tests on SQL Server 2022 (rules, MRNs, audit failure rolls back, tenant isolation with filters off); mutation-checked
+- Left: HTTP endpoints and capability policies (facility id is trusted from the caller until then, `shortcut:` in `PatientRegistry`), the P-02 UI (steps, validation copy, success screen, aria-live, tablet width), CONSENT_RECEIPT (MDV-P1-019), the receptionist-sees-no-clinical-data security test (needs the endpoints), MRN prefix (needs facility codes)
 title: Patient registration — India full flow (identity, ABHA optional, Aadhaar last 4, Indian address, payer)
 type: Story
 epic: MDV-P1-E05
@@ -313,6 +318,10 @@ ac:
 - Form is keyboard-completable, errors announced via aria-live, works at tablet width.
 
 === MDV-P1-014
+status: Partly done
+progress:
+- Merged [PR #40](https://github.com/ALFRED-LUCIFER/medvya/pull/40): `UaeRules`: minimum fields (Emirates ID or passport), EID format 784-YYYY-NNNNNNN-N (15 digits accepted and normalised), expired EID is a warning only, emirate required and mapped to the HIE label (Malaffi / NABIDH / Riayati), Arabic name stored; Emirates ID and insurance member number stored with Always Encrypted; synthetic UAE seed (`--uae`)
+- Left: P-02 UAE UI (RTL Arabic name input, preview card, review step, format copy), HIE label on the consent screen (MDV-P1-019), configuration test that a UAE tenant cannot be created in the India deployment (MDV-P0-006); country comes from the caller until the tenant country is on the request context
 title: Patient registration — UAE flow (Emirates ID manual entry, Arabic name RTL, emirate, insurance card)
 type: Story
 epic: MDV-P1-E05
@@ -336,6 +345,10 @@ ac:
 - UAE tenant data is stored only in the UAE deployment (configuration test: UAE tenant cannot be created in the India deployment).
 
 === MDV-P1-015
+status: Partly done
+progress:
+- Merged [PR #40](https://github.com/ALFRED-LUCIFER/medvya/pull/40): quick registration saves the patient as `Incomplete` while address or payer is missing; `CompleteRegistrationAsync` closes it automatically (integration test quick → complete)
+- Left: the Quick mode toggle UI and the 45-second keyboard-only usability check, the "Incomplete registration" tag on the board and patient header, a real front-desk completion task in the queue (CARE_TASK), duplicate check in quick mode (MDV-P1-016)
 title: Quick registration for a busy desk with a completion task
 type: Story
 epic: MDV-P1-E05

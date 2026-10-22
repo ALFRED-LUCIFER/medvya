@@ -22,7 +22,12 @@ public sealed class BillingDbContext(DbContextOptions<BillingDbContext> options,
             e.Property(x => x.Prefix).HasMaxLength(16);
             // One row per series; DocumentNumbering's MERGE relies on this key.
             e.HasIndex(x => new { x.TenantId, x.CountryCode, x.DocumentType, x.FinancialYear, x.Prefix }).IsUnique();
-            e.ToTable(t => t.HasCheckConstraint("CK_DocSequences_NextNumber", "[NextNumber] >= 1"));
+            e.ToTable(t =>
+            {
+                t.HasCheckConstraint("CK_DocSequences_NextNumber", "[NextNumber] >= 1");
+                // A series only moves forward one number at a time (DocSequencesOnlyMoveForward); EF must not use a bare OUTPUT clause.
+                t.HasTrigger("TR_DocSequences_OnlyMoveForward");
+            });
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
     }

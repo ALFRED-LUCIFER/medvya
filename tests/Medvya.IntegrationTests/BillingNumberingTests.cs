@@ -97,7 +97,7 @@ public class BillingNumberingTests(SqlServerFixture sql) : IClassFixture<SqlServ
         // Tenant A can neither plant a row in B's name nor move its own series to B.
         inA.DocSequences.Add(new DocSequence { Id = Guid.NewGuid(), TenantId = tenantB, CountryCode = "IN", DocumentType = DocumentType.Receipt, FinancialYear = "26-27", Prefix = "RCT", NextNumber = 1 });
         var insert = await Assert.ThrowsAsync<DbUpdateException>(() => inA.SaveChangesAsync());
-        Assert.IsType<SqlException>(insert.InnerException);
+        Assert.Contains("block predicate", Assert.IsType<SqlException>(insert.InnerException).Message, StringComparison.Ordinal);
         await using var inA2 = sql.Billing(tenantA);
         var move = await Assert.ThrowsAsync<SqlException>(() => inA2.Database.ExecuteSqlAsync($"UPDATE billing.DocSequences SET TenantId = {tenantB}, Prefix = N'MOVE'"));
         Assert.Contains("block predicate", move.Message, StringComparison.Ordinal);
@@ -108,6 +108,33 @@ public class BillingNumberingTests(SqlServerFixture sql) : IClassFixture<SqlServ
         await using var tx = await none.Database.BeginTransactionAsync();
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
             new DocumentNumbering(none, new SqlServerFixture.FixedTenant(null)).IssueAsync("IN", DocumentType.Invoice, "INV", October));
+    }
+
+    [Fact]
+    public async Task TheAppRoleCannotRewindSkipOrMoveASeries()
+    {
+        var tenant = Guid.NewGuid();
+        await Issue(tenant, "IN", DocumentType.Invoice, "INV", October);
+        await Issue(tenant, "IN", DocumentType.Invoice, "INV", October);
+
+        // The billing role has UPDATE (the MERGE needs it), so the trigger is what keeps the series legal.
+        foreach (var statement in new[]
+        {
+            "UPDATE billing.DocSequences SET NextNumber = 1",                // rewind: numbers 1 and 2 would be issued again
+            "UPDATE billing.DocSequences SET NextNumber = NextNumber + 5",   // skip: a gap
+            "UPDATE billing.DocSequences SET FinancialYear = N'27-28'",      // move the series to another year
+            "UPDATE billing.DocSequences SET Prefix = N'INVB', NextNumber = NextNumber + 1",
+            "INSERT INTO billing.DocSequences (Id, TenantId, CountryCode, DocumentType, FinancialYear, Prefix, NextNumber) " +
+                "VALUES (NEWID(), CAST(SESSION_CONTEXT(N'tenant_id') AS uniqueidentifier), N'IN', N'Receipt', N'26-27', N'RCT', 50)", // starts with a gap
+        })
+        {
+            await using var conn = await sql.OpenAs("billing_user", tenant);
+            await using var cmd = new SqlCommand(statement, conn);
+            var refused = await Assert.ThrowsAsync<SqlException>(() => cmd.ExecuteNonQueryAsync());
+            Assert.True(refused.Number == 51000, $"{statement}: {refused.Number} {refused.Message}");
+        }
+
+        Assert.Equal("INV/26-27/00003", (await Issue(tenant, "IN", DocumentType.Invoice, "INV", October)).Value);
     }
 
     [Fact]

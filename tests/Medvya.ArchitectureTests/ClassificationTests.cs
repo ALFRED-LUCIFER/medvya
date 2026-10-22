@@ -13,6 +13,16 @@ public class ClassificationTests
                                .Where(p => p.GetCustomAttribute<ClassificationAttribute>() is null)
                                .Select(p => $"{t.FullName}.{p.Name}"));
 
+    /// <summary>The list above is hand-kept; a module missing from it would skip this test and FloatingPointMoneyTests.</summary>
+    [Fact]
+    public void EveryModuleDomainAssemblyIsChecked()
+    {
+        var root = new DirectoryInfo(AppContext.BaseDirectory);
+        while (!File.Exists(Path.Combine(root.FullName, "Medvya.sln"))) root = root.Parent ?? throw new InvalidOperationException("Medvya.sln not found above the test output.");
+        var modules = Directory.GetDirectories(Path.Combine(root.FullName, "src", "Modules"), "Medvya.*.Domain", SearchOption.AllDirectories).Select(Path.GetFileName);
+        Assert.Equal(modules.Order(), DomainAssemblies.Order());
+    }
+
     [Fact]
     public void EveryDomainPropertyHasADataClassification()
     {

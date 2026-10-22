@@ -22,10 +22,11 @@ public sealed class ScheduleService(SchedulingDbContext db, SchedulingContext co
         var now = context.Now;
         var date = day ?? ScheduleRules.LocalDate(now, zone);
         var (from, to) = (ScheduleRules.Instant(date, TimeOnly.MinValue, zone), ScheduleRules.Instant(date.AddDays(1), TimeOnly.MinValue, zone));
+        var earliest = from.AddMinutes(-ScheduleRules.MaxVisitMinutes); // lower bound so the (facility, start) index can seek
 
         var templates = await db.Templates.AsNoTracking().Where(t => t.FacilityId == facilityId).ToDictionaryAsync(t => t.CalendarId, cancellationToken);
         var appointments = await db.Appointments.AsNoTracking()
-            .Where(a => a.FacilityId == facilityId && a.Start < to && a.End > from).OrderBy(a => a.Start).ToListAsync(cancellationToken);
+            .Where(a => a.FacilityId == facilityId && a.Start < to && a.End > from && a.Start > earliest).OrderBy(a => a.Start).ToListAsync(cancellationToken);
         var me = context.UserId;
         var holds = await db.SlotHolds.AsNoTracking()
             .Where(h => h.FacilityId == facilityId && h.Start < to && h.End > from && h.ExpiresAt > now && h.HeldBy != me).ToListAsync(cancellationToken);

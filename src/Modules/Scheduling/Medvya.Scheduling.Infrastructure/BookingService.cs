@@ -123,7 +123,8 @@ public sealed class BookingService(SchedulingDbContext db, SchedulingContext con
             throw new SlotUnavailableException("not_bookable"); // e.g. the doctor is not working at this facility
         var end = ScheduleRules.SpanEnd(ScheduleRules.Day(template, ScheduleRules.LocalDate(start, zone), zone), start, ScheduleRules.SlotsFor(template, type))
             ?? throw new SlotUnavailableException("not_bookable"); // outside hours, in a break or too long for what is left
-        if (await db.Appointments.AnyAsync(a => a.FacilityId == facilityId && a.CalendarId == calendarId && a.Start < end && start < a.End
+        var earliest = start.AddMinutes(-ScheduleRules.MaxVisitMinutes); // no visit is longer, so the index seek has a lower bound
+        if (await db.Appointments.AnyAsync(a => a.FacilityId == facilityId && a.CalendarId == calendarId && a.Start < end && start < a.End && a.Start > earliest
                 && a.State != AppointmentState.Cancelled && a.State != AppointmentState.NoShow, cancellationToken))
             throw new SlotUnavailableException("slot_unavailable");
         return end;

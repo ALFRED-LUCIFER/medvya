@@ -134,6 +134,41 @@ public sealed class BookingServiceTests(SqlServerFixture sql) : IClassFixture<Sq
     }
 
     [Fact]
+    public async Task TheLongestVisitStillBlocksTheSlotsNearItsEnd()
+    {
+        // An 8-hour visit (the longest a template allows) from 09:00: the overlap check looks back that far, no further.
+        await using (var db = sql.Scheduling(h.Tenant))
+        {
+            db.Appointments.Add(new Appointment
+            {
+                Id = Guid.NewGuid(), TenantId = h.Tenant, FacilityId = h.Facility, CalendarId = h.Doctor, CalendarKind = CalendarKind.Doctor, PatientId = h.Patient,
+                VisitType = VisitType.Procedure, Start = At(9), End = At(9).AddMinutes(ScheduleRules.MaxVisitMinutes), State = AppointmentState.Booked,
+                BookedAt = MondayMorning, ChangedAt = MondayMorning,
+            });
+            await db.SaveChangesAsync();
+        }
+        Assert.Equal("slot_unavailable", await Code(h.Booking(h.Reception).HoldAsync(Slot(11, 40))));
+        Assert.DoesNotContain((await DoctorColumn(h.Reception)).Slots, s => s.Start < At(17));
+    }
+
+    [Fact]
+    public async Task TheDayViewReadsAppointmentsThroughAFacilityAndStartIndex()
+    {
+        await using var conn = await sql.OpenAs("dbo");
+        await using var cmd = new Microsoft.Data.SqlClient.SqlCommand("""
+            SELECT c.name, ic.is_included_column FROM sys.indexes i
+            JOIN sys.index_columns ic ON ic.object_id = i.object_id AND ic.index_id = i.index_id
+            JOIN sys.columns c ON c.object_id = ic.object_id AND c.column_id = ic.column_id
+            WHERE i.name = N'IX_Appointments_TenantId_FacilityId_Start' AND i.object_id = OBJECT_ID(N'scheduling.Appointments')
+            ORDER BY ic.is_included_column, ic.key_ordinal, c.name
+            """, conn);
+        var columns = new List<string>();
+        await using (var reader = await cmd.ExecuteReaderAsync())
+            while (await reader.ReadAsync()) columns.Add((reader.GetBoolean(1) ? "+" : "") + reader.GetString(0));
+        Assert.Equal(["TenantId", "FacilityId", "Start", "+CalendarId", "+End", "+PatientId", "+State", "+VisitType"], columns);
+    }
+
+    [Fact]
     public async Task AnotherFacilitysPatientIsNeitherFoundNorBookable()
     {
         // Same tenant, registered at Velachery: reception at Adyar must not open or book them by id.

@@ -186,6 +186,7 @@ function PatientPicker({ search: s, chosen, registerPath, invalid }: PickerProps
           })}
         </ul>
       )}
+      {/* shortcut: registering opens the registration screen and leaves this hold; hand back to the slot with the new patient chosen when registration can return a patient (MDV-P1-013). */}
       {registerPath && (
         <Link to={registerPath} className={cn(buttonVariants({ variant: 'link' }), 'self-start px-0')}>{t('patients.empty.register')}</Link>
       )}

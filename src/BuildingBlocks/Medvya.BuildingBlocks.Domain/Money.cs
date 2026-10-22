@@ -52,8 +52,18 @@ public sealed record Money
 
     public static Money Zero(Currency currency) => new(0, currency);
 
-    public static Money operator +(Money a, Money b) => new(checked(a.Minor + Same(a, b).Minor), a.Currency);
-    public static Money operator -(Money a, Money b) => new(checked(a.Minor - Same(a, b).Minor), a.Currency);
+    public static Money operator +(Money a, Money b)
+    {
+        var other = Same(a, b); // before a.Minor, so a null operand throws ArgumentNullException, not NullReferenceException
+        return new(checked(a.Minor + other.Minor), a.Currency);
+    }
+
+    public static Money operator -(Money a, Money b)
+    {
+        var other = Same(a, b);
+        return new(checked(a.Minor - other.Minor), a.Currency);
+    }
+
     public static Money operator -(Money a)
     {
         ArgumentNullException.ThrowIfNull(a);

@@ -37,6 +37,7 @@ public class DatabaseRoleTests(SqlServerFixture sql) : IClassFixture<SqlServerFi
     [InlineData("DROP TABLE patients.Identifiers")]
     [InlineData("ALTER SECURITY POLICY security.billing_tenant_isolation WITH (STATE = OFF)")]
     [InlineData("DROP TABLE billing.DocSequences")]
+    [InlineData("DISABLE TRIGGER billing.TR_DocSequences_OnlyMoveForward ON billing.DocSequences")]
     [InlineData("ALTER SECURITY POLICY security.scheduling_tenant_isolation WITH (STATE = OFF)")]
     [InlineData("DROP TABLE scheduling.Templates")]
     public Task AppCannotChangeTheSchema(string ddl) => Denied("app_user", ddl);

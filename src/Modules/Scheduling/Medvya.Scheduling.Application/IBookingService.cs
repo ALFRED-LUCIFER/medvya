@@ -2,10 +2,14 @@ using Medvya.Scheduling.Domain;
 
 namespace Medvya.Scheduling.Application;
 
-/// <summary>Scheduling settings. SlotHold is how long a slot stays reserved while the booking form is open.</summary>
+/// <summary>
+/// Scheduling settings. SlotHold is how long a slot stays reserved while the booking form is open. LockTimeout is how long one
+/// booking attempt waits for the doctor-day lock before it is retried (a few attempts, then "busy").
+/// </summary>
 public sealed class SchedulingOptions
 {
     public TimeSpan SlotHold { get; set; } = TimeSpan.FromMinutes(2);
+    public TimeSpan LockTimeout { get; set; } = TimeSpan.FromSeconds(10);
 }
 
 /// <summary>Reserve a slot (and the slots a longer visit type needs) while the booking form is open.</summary>

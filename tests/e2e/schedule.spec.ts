@@ -43,9 +43,10 @@ function scheduleDay(date: string) {
         calendarId: 'd-1', calendarKind: 'Doctor', name: 'Dr. Arjun Rao (synthetic)', slotMinutes: 20, visitLengths: lengths(20),
         hours: [{ start: at('09:00'), end: at('13:00'), room: 'Room 3' }, { start: at('17:00'), end: at('20:00'), room: 'Room 3' }],
         // 09:00–09:40 is a booked new consultation; 09:40 is being booked at another desk.
-        slots: [...slots(date, '09:40', '12:00', 20, [at('09:40')]), ...slots(date, '17:00', '20:00', 20)],
+        slots: [...slots(date, '09:40', '11:55', 20, [at('09:40')]), ...slots(date, '17:00', '20:00', 20)],
         appointments: [{ id: 'a-1', reference: 'APT-0A1B2C3D', patientId, patientName: 'Meera Iyer (synthetic)', visitType: 'NewConsultation', state: 'Booked', start: at('09:00'), end: at('09:40') }],
         unavailable: [
+          { start: at('11:55'), end: at('12:00'), reason: 'Break', label: 'Tea' }, // too short for its words
           { start: at('12:00'), end: at('13:00'), reason: 'Break', label: 'Lunch break' },
           { start: at('13:00'), end: at('17:00'), reason: 'NotWorking', label: null },
         ],
@@ -66,14 +67,15 @@ function scheduleDay(date: string) {
 type Calls = { dates: (string | null)[]; holds: Record<string, unknown>[]; releases: string[]; bookings: { body: Record<string, unknown>; csrf: string | undefined }[] };
 
 /** Signs in and answers the scheduling API; returns what the page sent. `holdCode` makes holds fail with that 409 code. */
-async function open(page: Page, { locale = 'en', status = 200, as = reception, holdCode = '' } = {}) {
+async function open(page: Page, { locale = 'en', status = 200, as = reception, holdCode = '', delayMs = 0 } = {}) {
   const calls: Calls = { dates: [], holds: [], releases: [], bookings: [] };
   await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
   await page.route('**/v1/me/context', r => r.fulfill({ json: as }));
-  await page.route('**/v1/schedule?*', r => {
+  await page.route('**/v1/schedule?*', async r => {
     const url = new URL(r.request().url());
     expect(url.searchParams.get('facilityId')).toBe('f-1');
     calls.dates.push(url.searchParams.get('date'));
+    if (delayMs) await new Promise(done => setTimeout(done, delayMs));
     return status === 200 ? r.fulfill({ json: scheduleDay(url.searchParams.get('date') ?? '2026-10-19') }) : r.fulfill({ status, json: {} });
   });
   await page.route('**/v1/slot-holds', r => {
@@ -104,7 +106,7 @@ test('shows bookable slots exactly in the template windows, in facility time', a
 
   const rao = column(page, 'Dr. Arjun Rao (synthetic)');
   const free = rao.getByRole('listitem').filter({ hasText: 'Free' });
-  await expect(free).toHaveCount(15);
+  await expect(free).toHaveCount(14);
   await expect(free.first()).toContainText('Free · 10:00'); // 04:30Z, not New York time
   await expect(free.last()).toContainText('Free · 19:40');
   await expect(rao).not.toContainText('Free · 12:00'); // lunch break
@@ -204,7 +206,8 @@ for (const [locale, book, message] of [
 
 test('no access says so and is not retried', async ({ page }) => {
   const calls = await open(page, { status: 403 });
-  await expect(page.getByRole('alert')).toContainText('You don’t have access to this facility.');
+  await expect(page.getByRole('heading', { name: 'You don’t have access to this facility.' })).toBeVisible();
+  await expect(page.getByRole('alert')).toHaveCount(0); // an access state, not a failure
   expect(calls.dates).toHaveLength(1);
 });
 
@@ -214,16 +217,61 @@ test('a failure offers a retry', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Try again' })).toBeVisible();
 });
 
-test('offline says the schedule loads on reconnect', async ({ page, context }) => {
+test('offline is said once, by the shell banner', async ({ page, context }) => {
   await page.route('**/v1/me/context', r => r.fulfill({ json: reception }));
   await page.route('**/v1/schedule?*', () => {}); // never answers
   await page.goto('/schedule');
   await expect(page.getByRole('status').filter({ hasText: 'Loading the schedule' })).toBeVisible();
   await context.setOffline(true);
-  await expect(page.getByRole('alert').filter({ hasText: 'The schedule loads when you reconnect.' })).toBeVisible();
+  await expect(page.getByText('You are offline')).toHaveCount(1);
   await context.setOffline(false);
   await page.unrouteAll({ behavior: 'ignoreErrors' });
 });
+
+test('a fast double click on Next moves two days, and the old day is marked as updating meanwhile', async ({ page }) => {
+  const calls = await open(page, { delayMs: 600 });
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Monday, 19 October 2026');
+  const next = page.getByRole('button', { name: 'Next day' });
+  await next.click();
+  await next.click(); // before the 20th has answered
+  await expect(page.getByRole('region', { name: 'Day schedule' })).toHaveAttribute('aria-busy', 'true');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Wednesday, 21 October 2026');
+  await expect(page.getByRole('region', { name: 'Day schedule' })).not.toHaveAttribute('aria-busy');
+  expect(calls.dates).toEqual([null, '2026-10-20', '2026-10-21']);
+});
+
+test('a break too short for its words keeps its reason as icon, tooltip and screen-reader text', async ({ page }) => {
+  await open(page);
+  const tea = column(page, 'Dr. Arjun Rao (synthetic)').getByRole('listitem').filter({ hasText: 'Unavailable 11:55–12:00 · Break · Tea' });
+  await expect(tea).toHaveAttribute('title', 'Unavailable · Break · Tea');
+  await expect(tea.locator('svg')).toBeVisible();
+});
+
+for (const locale of ['en', 'ar'])
+  test(`when the columns overflow, the grid scrolls by keyboard with sticky headers and time axis (${locale})`, async ({ page }) => {
+    await page.setViewportSize({ width: 520, height: 700 }); // narrower than three 168 px columns
+    await open(page, { locale });
+    const grid = page.getByRole('region', { name: locale === 'ar' ? 'جدول اليوم' : 'Day schedule' });
+    await expect(grid).toBeVisible();
+    expect(await grid.evaluate(e => e.scrollWidth > e.clientWidth && e.scrollHeight > e.clientHeight)).toBe(true);
+
+    await grid.focus(); // reachable by keyboard (scrollable-region-focusable)
+    await expect(grid).toBeFocused();
+    const header = page.getByRole('heading', { name: 'Dr. Arjun Rao (synthetic)' });
+    const axis = grid.locator('[aria-hidden] > span').first(); // the first time mark
+    const [headerY, axisX] = [(await header.boundingBox())!.y, (await axis.boundingBox())!.x];
+    await page.keyboard.press('PageDown');
+    await grid.evaluate((e, rtl) => { e.scrollLeft = rtl ? -400 : 400; }, locale === 'ar'); // RTL scrolls towards negative
+    await expect.poll(() => grid.evaluate(e => Math.abs(e.scrollLeft) > 0 && e.scrollTop > 0)).toBe(true);
+    expect((await header.boundingBox())!.y).toBeCloseTo(headerY, 0); // column headers stick to the top
+    expect((await axis.boundingBox())!.x).toBeCloseTo(axisX, 0); // times stick to the reading-start side
+
+    await page.addScriptTag({ path: axePath });
+    const violations = await page.evaluate(async () =>
+      (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations
+        .map(v => `${v.id} (${v.nodes.length})`));
+    expect(violations).toEqual([]);
+  });
 
 test('Arabic is right-to-left with the time axis on the reading-start side', async ({ page }) => {
   await open(page, { locale: 'ar' });

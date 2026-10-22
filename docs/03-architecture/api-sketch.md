@@ -21,7 +21,8 @@ POST   /v1/sessions/{id}/revoke
 GET    /v1/admin/audit?scope=authorized            # P0/P1 (F-12)
 POST   /v1/patients                                # P1 (P-02)
 POST   /v1/patients/search                         # privacy-safe results (D-02); text in the body, never the URL (P1-018)
-GET    /v1/patients/{id}                           # open a record (audited read, purpose registration)
+GET    /v1/patients/{id}                           # open a record (audited read, purpose registration); national/insurance numbers masked to the last 4
+POST   /v1/patients/{id}/identifiers/reveal        # full numbers on request (Register / book at Full), audited, rate-limited
 POST   /v1/patients/duplicate-check                # while typing (P1-05)
 POST   /v1/patients/merge-requests                 # P-03
 GET    /v1/schedule?view=day|week|list&date=&doctor=

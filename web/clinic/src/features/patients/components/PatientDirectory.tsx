@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { Link } from 'react-router';
 import { ChevronLeft, ChevronRight, CircleAlert, Search, TriangleAlert } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
@@ -14,6 +15,8 @@ type Props = {
   searched: boolean;
   onPageChange: (page: number) => void;
   result: SearchResult | null;
+  /** True while a new page, filter or search loads; the previous results stay on screen (marked busy) so focus is never lost. */
+  updating: boolean;
   state: 'loading' | 'ready' | 'invalid' | 'forbidden' | 'notFound' | 'error';
   errorCode: SearchErrorCode | null;
   onRetry: () => void;
@@ -27,6 +30,11 @@ export default function PatientDirectory(p: Props) {
   const { t } = useI18n();
   const hintId = 'patient-search-hint', errorId = 'patient-search-error';
   const invalid = p.state === 'invalid';
+  // One live region that stays mounted; only its text changes, so screen readers announce every change.
+  const status = p.state === 'loading' || p.updating ? t('patients.loading') : p.state === 'forbidden' ? t('err.403')
+    : p.state === 'error' || p.state === 'notFound' ? t('patients.error.title')
+    : p.state === 'ready' && p.result ? (p.result.items.length === 0 ? t('patients.empty') : t(`patients.matchedOn.${p.result.matchedOn}`, { n: p.result.total }))
+    : '';
   return (
     <div className="flex max-w-[880px] flex-col gap-5">
       <div className="flex flex-col gap-1">
@@ -61,6 +69,7 @@ export default function PatientDirectory(p: Props) {
         ))}
       </div>
 
+      <p role="status" className="sr-only">{status}</p>
       <Results {...p} />
     </div>
   );
@@ -68,16 +77,19 @@ export default function PatientDirectory(p: Props) {
 
 function Results(p: Props) {
   const { t } = useI18n();
-  if (p.state === 'loading') return <PatientsMessage busy title={t('patients.loading')} />;
+  const heading = useRef<HTMLHeadingElement>(null);
+  if (p.state === 'loading') return <PatientsMessage title={t('patients.loading')} />;
   if (p.state === 'forbidden') return <PatientsMessage title={t('err.403')} body={t('patients.forbidden.body')} />;
   if (p.state === 'error' || p.state === 'notFound')
-    return <PatientsMessage alert title={t('patients.error.title')} body={t('patients.error.body')} action={{ label: t('patients.retry'), onClick: p.onRetry }} />;
+    return <PatientsMessage title={t('patients.error.title')} body={t('patients.error.body')} action={{ label: t('patients.retry'), onClick: p.onRetry }} />;
   if (p.state === 'invalid' || !p.result) return null;
 
   const r = p.result;
+  // The page buttons can disable themselves (first or last page): move focus to the results heading, which stays mounted.
+  const toPage = (page: number) => { p.onPageChange(page); heading.current?.focus(); };
   if (r.items.length === 0)
     return (
-      <div role="status" className="flex flex-col items-start gap-2 rounded-xl border bg-card p-6">
+      <div className="flex flex-col items-start gap-2 rounded-xl border bg-card p-6">
         <p className="font-bold">{t('patients.empty')}</p>
         {p.registerPath && <Link to={p.registerPath} className={cn(buttonVariants({ variant: 'link' }), 'px-0')}>{t('patients.empty.register')}</Link>}
       </div>
@@ -85,20 +97,20 @@ function Results(p: Props) {
 
   const pages = pageCount(r);
   return (
-    <section aria-labelledby="patient-results" className="flex flex-col gap-3">
-      <div role="status">
-        <h2 id="patient-results" className="text-sm font-bold text-muted-foreground">{t(`patients.matchedOn.${r.matchedOn}`, { n: r.total })}</h2>
-      </div>
+    <section aria-labelledby="patient-results" aria-busy={p.updating || undefined} className={cn('flex flex-col gap-3', p.updating && 'opacity-60')}>
+      <h2 id="patient-results" ref={heading} tabIndex={-1} className="text-sm font-bold text-muted-foreground focus:outline-none">
+        {t(`patients.matchedOn.${r.matchedOn}`, { n: r.total })}
+      </h2>
       <ul className="flex flex-col divide-y rounded-xl border bg-card">
         {r.items.map(row => <Row key={row.id} row={row} to={p.recordPath(row.id)} />)}
       </ul>
       {pages > 1 && (
         <nav aria-label={t('patients.pagination')} className="flex flex-wrap items-center justify-between gap-2">
-          <Button variant="outline" disabled={r.page <= 1} onClick={() => p.onPageChange(r.page - 1)}>
+          <Button variant="outline" disabled={r.page <= 1 || p.updating} onClick={() => toPage(r.page - 1)}>
             <ChevronLeft className="rtl:rotate-180" aria-hidden />{t('patients.page.previous')}
           </Button>
           <p className="text-sm font-semibold">{t('patients.page', { page: r.page, pages })}</p>
-          <Button variant="outline" disabled={r.page >= pages} onClick={() => p.onPageChange(r.page + 1)}>
+          <Button variant="outline" disabled={r.page >= pages || p.updating} onClick={() => toPage(r.page + 1)}>
             {t('patients.page.next')}<ChevronRight className="rtl:rotate-180" aria-hidden />
           </Button>
         </nav>

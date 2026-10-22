@@ -92,6 +92,10 @@ namespace Medvya.Scheduling.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("TenantId", "PatientId");
 
+                    b.HasIndex("TenantId", "FacilityId", "Start");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("TenantId", "FacilityId", "Start"), new[] { "End", "CalendarId", "State", "PatientId", "VisitType" });
+
                     b.HasIndex("TenantId", "FacilityId", "CalendarId", "Start");
 
                     b.ToTable("Appointments", "scheduling");

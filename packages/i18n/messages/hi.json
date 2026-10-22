@@ -295,8 +295,7 @@
   "booking.heldUntil": "{time} तक आपके लिए रोका गया",
   "booking.visitType": "विज़िट का प्रकार",
   "booking.visitTypeLength": "{type} · {minutes} मिनट",
-  "booking.patient": "मरीज़ आईडी",
-  "booking.patientHint": "मरीज़ के रिकॉर्ड से आईडी पेस्ट करें। नाम या फ़ोन से खोज मरीज़ निर्देशिका के साथ आएगी।",
+  "booking.patient": "मरीज़",
   "booking.patientLooking": "मरीज़ खोजा जा रहा है…",
   "booking.patientFound": "{name} · एमआरएन {mrn}",
   "booking.patientMissing": "इस क्लिनिक में इस आईडी का कोई मरीज़ नहीं है।",
@@ -311,7 +310,7 @@
   "booking.done.title": "अपॉइंटमेंट बुक हो गया",
   "booking.done.body": "{name}, {time} पर · {reference}",
   "booking.done.dismiss": "ठीक है",
-  "booking.error.patientId": "सही मरीज़ आईडी दर्ज करें।",
+  "booking.error.patientId": "एक मरीज़ चुनें।",
   "booking.error.reasonText": "कारण 500 अक्षरों से कम रखें।",
   "booking.error.being_booked": "कोई और अभी यह स्लॉट बुक कर रहा है। कोई दूसरा स्लॉट चुनें।",
   "booking.error.slot_unavailable": "यह स्लॉट अब उपलब्ध नहीं है। कोई दूसरा स्लॉट चुनें।",
@@ -507,5 +506,7 @@
   "patients.record.revealNote": "केवल कार्ड या दावे की जाँच के लिए। हर बार एक्सेस लॉग में दर्ज होता है।",
   "patients.record.revealFailed": "पूरे नंबर नहीं दिखाए जा सके। फिर से कोशिश करें।",
   "patients.record.revealed": "पूरे नंबर दिखाए गए।",
-  "booking.error.busy": "यह कैलेंडर अभी दूसरी बुकिंग में व्यस्त है। कुछ भी सहेजा नहीं गया; फिर से कोशिश करें।"
+  "booking.error.busy": "यह कैलेंडर अभी दूसरी बुकिंग में व्यस्त है। कुछ भी सहेजा नहीं गया; फिर से कोशिश करें।",
+  "booking.patientResults": "मिले मरीज़",
+  "booking.patientPick": "{initials}, {age}, {sex}, एमआरएन का अंत {mrn}। इस बुकिंग के लिए चुनें"
 }

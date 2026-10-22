@@ -52,8 +52,8 @@ Every stored field has one class. In code, each domain property carries `[Classi
 | PATIENT.mobile, alternate_phone, email | Personal | DDM |
 | PATIENT.address_* (house, street, city, district, state/emirate, PIN, Makani, P.O. box) | Personal | DDM |
 | PATIENT_IDENTIFIER.scheme, issuer | Internal | — |
-| PATIENT_IDENTIFIER.value for ABHA number / ABHA address / Emirates ID | NationalId | **AE-D** (exact lookup) |
-| PATIENT_IDENTIFIER.value for Aadhaar (last 4 only), passport, visa file | NationalId | **AE-R** |
+| PATIENT_IDENTIFIER.value for ABHA number / ABHA address / Emirates ID / passport | NationalId | **AE-D** (exact lookup; passport since MDV-P1-016) |
+| PATIENT_IDENTIFIER.value for Aadhaar (last 4 only), visa file | NationalId | **AE-R** |
 | PATIENT_IDENTIFIER.expires_at (EID expiry) | Personal | — |
 | PATIENT_RELATIONSHIP.related_name, phone | Personal | DDM |
 | PATIENT_RELATIONSHIP.relationship, is_emergency, is_guardian | Internal | — |
@@ -102,11 +102,11 @@ Every stored field has one class. In code, each domain property carries `[Classi
 
 | Column | Encryption | Why |
 |---|---|---|
-| PATIENT_IDENTIFIER.value (ABHA number, ABHA address, Emirates ID) | Deterministic | Exact-match search at the desk |
-| PATIENT_IDENTIFIER.value (Aadhaar last 4, passport, visa file) | Randomized | Display only, no lookup |
+| PATIENT_IDENTIFIER.value (ABHA number, ABHA address, Emirates ID, passport) | Deterministic | Exact-match search at the desk; passport for the duplicate check only (MDV-P1-016) |
+| PATIENT_IDENTIFIER.value (Aadhaar last 4, visa file) | Randomized | Display only, no lookup |
 | PAYER_COVERAGE.member_no | Deterministic | Exact match for eligibility and claims |
 
-Decision (MDV-P0-009): PATIENT_IDENTIFIER holds several schemes, so it has two encrypted columns and each row uses exactly one, chosen by scheme: `LookupValue` (deterministic, BIN2) for ABHA number, ABHA address and Emirates ID, and `DisplayValue` (randomized) for Aadhaar last 4, passport and visa file number. PAYER_COVERAGE.MemberNumber is deterministic. Nothing else is encrypted: names, phone and DOB are protected by RLS, masking and audit instead, so they stay searchable for duplicate checks. Physical columns, keys and the local/Azure key providers: [database-security.md](database-security.md#always-encrypted-mdv-p0-009). The architecture test cannot see encryption; `PatientRegistryTests.AnAdministratorWithoutTheKeySeesOnlyCiphertext` pins the list.
+Decision (MDV-P0-009): PATIENT_IDENTIFIER holds several schemes, so it has two encrypted columns and each row uses exactly one, chosen by scheme: `LookupValue` (deterministic, BIN2) for ABHA number, ABHA address, Emirates ID and passport (passport moved here in MDV-P1-016 so the duplicate check can match it exactly; rows written earlier stay randomized and are not matched), and `DisplayValue` (randomized) for Aadhaar last 4 and visa file number. PAYER_COVERAGE.MemberNumber is deterministic. Nothing else is encrypted: names, phone and DOB are protected by RLS, masking and audit instead, so they stay searchable for duplicate checks. Physical columns, keys and the local/Azure key providers: [database-security.md](database-security.md#always-encrypted-mdv-p0-009). The architecture test cannot see encryption; `PatientRegistryTests.AnAdministratorWithoutTheKeySeesOnlyCiphertext` pins the list.
 
 **Dynamic data masking (support and reporting roles):** USER.email, USER.mobile, PATIENT names, date_of_birth, gender_identity, mobile, alternate_phone, email, address fields (done for PATIENT in MDV-P0-009; the rest land with their tables), PATIENT_RELATIONSHIP.phone, NOTIFICATION.recipient, AUDIT_EVENT.ip.
 

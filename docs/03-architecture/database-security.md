@@ -37,8 +37,8 @@ National and insurance identifiers are encrypted in the client (SqlClient) with 
 
 | Column | Encryption | Holds |
 |---|---|---|
-| `patients.Identifiers.LookupValue` | Deterministic, `Latin1_General_BIN2` | ABHA number, ABHA address, Emirates ID (exact-match lookup) |
-| `patients.Identifiers.DisplayValue` | Randomized | Aadhaar last 4, passport, visa file number |
+| `patients.Identifiers.LookupValue` | Deterministic, `Latin1_General_BIN2` | ABHA number, ABHA address, Emirates ID (exact-match search), passport (exact-match duplicate check, MDV-P1-016) |
+| `patients.Identifiers.DisplayValue` | Randomized | Aadhaar last 4, visa file number |
 | `patients.PayerCoverages.MemberNumber` | Deterministic, `Latin1_General_BIN2` | Insurance member / policy number (exact match for eligibility and claims) |
 
 - **Keys, same shape everywhere.** `ColumnEncryption.EnsureKeysAsync(adminConnection, providerName, keyPath, provider)` (Patients.Infrastructure) creates `CMK_Medvya` (metadata: provider name + key path) and a random 256-bit `CEK_Patients` wrapped by the CMK, unless they exist. Migrations then create the encrypted columns on `CEK_Patients` (raw SQL in `InitialPatients`, as EF Core cannot express `ENCRYPTED WITH`). Only the key store provider differs:

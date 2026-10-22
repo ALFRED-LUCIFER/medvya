@@ -21,12 +21,15 @@ public sealed class Facility
 
 public enum MembershipStatus { Invited, Active, Suspended, Offboarded }
 
-/// <summary>A user's role at one facility of one tenant. One person can hold memberships in several clinics.</summary>
+/// <summary>
+/// A user's role at one facility of one tenant. One person can hold memberships in several clinics.
+/// An Invited membership has no user yet; accepting its invitation sets the user and makes it Active (MDV-P0-013).
+/// </summary>
 public sealed class Membership
 {
     [Classification(DataClass.Internal)] public Guid Id { get; init; }
     [Classification(DataClass.Internal)] public Guid TenantId { get; init; }
-    [Classification(DataClass.Internal)] public Guid UserId { get; init; }
+    [Classification(DataClass.Internal)] public Guid? UserId { get; set; }
     [Classification(DataClass.Internal)] public Guid FacilityId { get; init; }
     [Classification(DataClass.Internal)] public Role Role { get; set; }
     [Classification(DataClass.Internal)] public MembershipStatus Status { get; set; }

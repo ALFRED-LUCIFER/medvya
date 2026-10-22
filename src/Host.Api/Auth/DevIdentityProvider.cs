@@ -24,7 +24,10 @@ public static class DevIdentityProvider
 
     static readonly string[] Code = ["code"], Public = ["public"], Rs256 = ["RS256"], S256 = ["S256"], MfaMethods = ["pwd", "mfa"], PasswordOnly = ["pwd"];
 
-    sealed record Grant(string Subject, string ClientId, string RedirectUri, string? Nonce, string Challenge, bool Mfa, DateTimeOffset Expires);
+    /// <summary>login_hint value that signs in as a brand-new synthetic person, to test accepting an invitation (MDV-P0-013).</summary>
+    public const string NewAccount = "new";
+
+    sealed record Grant(string Subject, string? Name, string ClientId, string RedirectUri, string? Nonce, string Challenge, bool Mfa, DateTimeOffset Expires);
 
     public static WebApplication MapDevIdentityProvider(this WebApplication app)
     {
@@ -53,7 +56,7 @@ public static class DevIdentityProvider
 
         dev.MapGet("/jwks", () => Results.Json(new { keys = new[] { JsonWebKeyConverter.ConvertFromRSASecurityKey(key) } }));
 
-        // Without login_hint: a list of seeded users. With it: issue a one-time code and return to the app.
+        // Without login_hint: a list of seeded users plus "new account". With it: issue a one-time code and return to the app.
         // no_mfa=true signs in without MFA, so tests can prove the app refuses that.
         dev.MapGet("/authorize", async (HttpRequest r, [FromServices] IdentityDbContext db, string client_id, string redirect_uri, string state,
             string code_challenge, string? code_challenge_method, string? nonce, string? login_hint, bool? no_mfa) =>
@@ -66,11 +69,16 @@ public static class DevIdentityProvider
                 var html = new StringBuilder("<!doctype html><title>Dev sign-in</title><h1>Development sign-in (synthetic users)</h1><ul>");
                 foreach (var u in users)
                     html.Append(CultureInfo.InvariantCulture, $"<li><a href=\"{WebUtility.HtmlEncode($"{r.Path}{r.QueryString}&login_hint={Uri.EscapeDataString(u.Subject)}")}\">{WebUtility.HtmlEncode(u.DisplayName)}</a></li>");
+                html.Append(CultureInfo.InvariantCulture, $"<li><a href=\"{WebUtility.HtmlEncode($"{r.Path}{r.QueryString}&login_hint={NewAccount}")}\">New synthetic person (not yet a Medvya user)</a></li>");
                 return Results.Content(html.Append("</ul>").ToString(), "text/html");
             }
-            if (users.All(u => u.Subject != login_hint)) return Results.BadRequest("Unknown user.");
+            // A fresh provider account each time: Medvya refuses it unless the sign-in carries a valid invitation.
+            var (subject, name) = login_hint == NewAccount
+                ? (Guid.NewGuid().ToString(), (string?)$"New colleague {RandomNumberGenerator.GetHexString(4)} (synthetic)")
+                : (login_hint, null);
+            if (name is null && users.All(u => u.Subject != subject)) return Results.BadRequest("Unknown user.");
             var code = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
-            grants[code] = new Grant(login_hint, client_id, redirect_uri, nonce, code_challenge, no_mfa != true, DateTimeOffset.UtcNow.AddMinutes(2));
+            grants[code] = new Grant(subject, name, client_id, redirect_uri, nonce, code_challenge, no_mfa != true, DateTimeOffset.UtcNow.AddMinutes(2));
             return Results.Redirect($"{redirect_uri}?code={code}&state={Uri.EscapeDataString(state)}");
         });
 
@@ -90,10 +98,17 @@ public static class DevIdentityProvider
                 NotBefore = now,
                 Expires = now.AddMinutes(5),
                 SigningCredentials = new SigningCredentials(key, SecurityAlgorithms.RsaSha256),
-                Claims = new Dictionary<string, object> { ["sub"] = g.Subject, ["amr"] = g.Mfa ? MfaMethods : PasswordOnly, ["nonce"] = g.Nonce ?? "" },
+                Claims = Claims(g),
             });
             return Results.Json(new { id_token = idToken, access_token = Convert.ToHexString(RandomNumberGenerator.GetBytes(16)), token_type = "Bearer", expires_in = 300 });
         });
         return app;
+    }
+
+    static Dictionary<string, object> Claims(Grant g)
+    {
+        var claims = new Dictionary<string, object> { ["sub"] = g.Subject, ["amr"] = g.Mfa ? MfaMethods : PasswordOnly, ["nonce"] = g.Nonce ?? "" };
+        if (g.Name is not null) claims["name"] = g.Name;
+        return claims;
     }
 }

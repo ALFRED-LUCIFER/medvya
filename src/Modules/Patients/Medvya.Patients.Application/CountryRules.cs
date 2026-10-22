@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net.Mail;
 using System.Text.RegularExpressions;
 using Medvya.Patients.Domain;
@@ -48,6 +49,13 @@ public abstract partial class CountryRules
     protected abstract PatientAddress CheckAddress(PatientAddress a, List<ValidationError> errors);
     /// <summary>Country minimums and warnings that depend on several fields.</summary>
     protected virtual void CheckRegistration(RegisterPatient c, DateOnly today, List<ValidationError> errors, List<string> warnings) { }
+
+    /// <summary>Age in whole years on <paramref name="today"/> (the birthday counts).</summary>
+    public static int AgeOn(DateOnly today, DateOnly dateOfBirth)
+    {
+        var age = today.Year - dateOfBirth.Year;
+        return dateOfBirth.AddYears(age) > today ? age - 1 : age;
+    }
 
     public DateOnly Today(DateTimeOffset now) => DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(now, TimeZoneInfo.FindSystemTimeZoneById(TimeZoneId)).DateTime);
 
@@ -109,14 +117,45 @@ public abstract partial class CountryRules
         return result;
     }
 
-    /// <summary>Normalises a lookup value the same way registration stored it, so deterministic encryption matches.</summary>
-    public string NormalizeLookup(IdentifierScheme scheme, string value)
+    /// <summary>
+    /// Reads one desk search box (MDV-P1-018): a full ABHA / Emirates ID, a full mobile number, an MRN, or a name. Identifiers and
+    /// phones are normalised exactly as registration stored them, so deterministic encryption and equality match.
+    /// Numbers only ever match exactly; a number that is none of these is refused ("full_number_required"), never partially matched.
+    /// </summary>
+    public SearchTerm ParseSearch(string? query)
     {
-        var errors = new List<ValidationError>();
-        if (!PatientIdentifier.IsLookup(scheme) || !Schemes.Contains(scheme)) errors.Add(new("scheme", "not_allowed"));
-        var normalized = errors.Count == 0 ? NormalizeIdentifier(scheme, value ?? "", "value", errors) : null;
-        if (errors.Count > 0) throw new PatientValidationException(errors);
-        return normalized!;
+        var q = query?.Trim() ?? "";
+        if (q.Length == 0) return new(SearchKind.Directory);
+        if (q.Length > 100) throw new PatientValidationException([new("query", "too_long")]);
+
+        var probe = new List<ValidationError>(); // format misses are expected while probing and dropped
+        foreach (var scheme in Schemes.Where(PatientIdentifier.IsDeskSearchKey).Order())
+            if (NormalizeIdentifier(scheme, q, "query", probe) is { } id) return new(SearchKind.Identifier, id, scheme);
+
+        if (NumberLike().IsMatch(q))
+        {
+            var compact = PhoneSeparators().Replace(q, "");
+            if (NormalizeMobile(compact) is { } mobile) return new(SearchKind.Phone, mobile);
+            if (compact.Length <= Mrn.Digits && compact.All(char.IsAsciiDigit)) return new(SearchKind.Mrn, Mrn.Format(int.Parse(compact, CultureInfo.InvariantCulture)));
+            throw new PatientValidationException([new("query", "full_number_required")]);
+        }
+        if (q.Any(char.IsDigit)) return new(SearchKind.Mrn, q.ToUpperInvariant()); // e.g. DQ-10-4482
+        if (q.Count(char.IsLetter) < 2) throw new PatientValidationException([new("query", "too_short")]);
+        return new(SearchKind.Name, q);
+    }
+
+    /// <summary>
+    /// The identifiers that can be matched exactly (deterministic encryption), normalised as stored. Incomplete or invalid values
+    /// are skipped, not rejected: the duplicate check runs while the desk is still typing.
+    /// </summary>
+    public IReadOnlyList<IdentifierInput> MatchKeys(IReadOnlyList<IdentifierInput> inputs)
+    {
+        ArgumentNullException.ThrowIfNull(inputs);
+        var probe = new List<ValidationError>();
+        return [.. inputs
+            .Where(i => PatientIdentifier.IsLookup(i.Scheme) && Schemes.Contains(i.Scheme))
+            .Select(i => NormalizeIdentifier(i.Scheme, i.Value ?? "", "identifier", probe) is { } v ? i with { Value = v } : null)
+            .OfType<IdentifierInput>()];
     }
 
     List<IdentifierInput> Identifiers(IReadOnlyList<IdentifierInput> inputs, List<ValidationError> errors)
@@ -181,6 +220,7 @@ public abstract partial class CountryRules
     }
 
     [GeneratedRegex(@"[\s\-().]")] protected static partial Regex PhoneSeparators();
+    [GeneratedRegex(@"^\+?[\d\s\-().]+$")] private static partial Regex NumberLike();
     [GeneratedRegex(@"[\s\-]")] protected static partial Regex IdSeparators();
     [GeneratedRegex("^[A-Z]{2}$")] private static partial Regex TwoLetters();
     [GeneratedRegex("^[A-Z0-9/-]{1,50}$")] private static partial Regex MemberNumber();

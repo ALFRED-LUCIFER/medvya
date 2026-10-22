@@ -18,6 +18,7 @@ public sealed class PatientsDbContext(DbContextOptions<PatientsDbContext> option
     public DbSet<Patient> Patients => Set<Patient>();
     public DbSet<PatientIdentifier> Identifiers => Set<PatientIdentifier>();
     public DbSet<PayerCoverage> PayerCoverages => Set<PayerCoverage>();
+    public DbSet<MergeRequest> MergeRequests => Set<MergeRequest>();
 
     Guid? CurrentTenantId => tenant.TenantId;
 
@@ -50,6 +51,14 @@ public sealed class PatientsDbContext(DbContextOptions<PatientsDbContext> option
                 a.Property(x => x.PoBox).HasMaxLength(10);
             });
             e.HasIndex(x => new { x.TenantId, x.FacilityId, x.Mrn }).IsUnique();
+            // Desk directory (newest first) and exact phone search (MDV-P1-018).
+            e.HasIndex(x => new { x.TenantId, x.FacilityId, x.RegisteredAt });
+            e.HasIndex(x => new { x.TenantId, x.FacilityId, x.Mobile });
+            // Duplicate check: patients with the same date of birth (MDV-P1-016).
+            e.HasIndex(x => new { x.TenantId, x.FacilityId, x.DateOfBirth });
+            // Name search scans this narrow covering index instead of the wide table rows (LIKE '%…%' cannot seek).
+            e.HasIndex(x => new { x.TenantId, x.FacilityId, x.FullName })
+                .IncludeProperties(x => new { x.ArabicName, x.DateOfBirth, x.DateOfBirthEstimated, x.SexAtBirth, x.Mrn, x.Status, x.CountryCode, x.RegisteredAt });
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         modelBuilder.Entity<PatientIdentifier>(e =>
@@ -70,6 +79,14 @@ public sealed class PatientsDbContext(DbContextOptions<PatientsDbContext> option
             e.Property(x => x.Network).HasMaxLength(100);
             e.HasOne<Patient>().WithMany().HasForeignKey(x => x.PatientId).OnDelete(DeleteBehavior.Restrict);
             e.HasIndex(x => x.PatientId).IsUnique(); // one current payer per patient in P1
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<MergeRequest>(e =>
+        {
+            e.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
+            e.HasOne<Patient>().WithMany().HasForeignKey(x => x.PatientId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<Patient>().WithMany().HasForeignKey(x => x.CandidatePatientId).OnDelete(DeleteBehavior.Restrict);
+            e.HasIndex(x => new { x.TenantId, x.PatientId, x.CandidatePatientId }).IsUnique();
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
     }

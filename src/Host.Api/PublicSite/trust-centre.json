@@ -1,0 +1,40 @@
+// Trust centre lists (MDV-P1-003). Editable without a redeploy: edit this file on the server (it reloads on save) or override
+// one value with an app setting, e.g. TrustCentre__Policies__0__Effective=2026-12-01. Keep it in git and raise Version on
+// every change so each published list is on record.
+// Rules: an entry gets an Effective date only once it is signed off (legal review MDV-P1-044, contract signed). Sub-processor
+// changes are announced 30 days ahead. Never add certifications or compliance claims (PublicSiteTests checks the copy).
+{
+  "TrustCentre": {
+    "Version": "2026.10-draft",
+    "Updated": "2026-10-21",
+    "Policies": [
+      {
+        "Name": { "en": "Privacy notice", "hi": "गोपनीयता सूचना", "ar": "إشعار الخصوصية" },
+        "Version": "draft"
+      },
+      {
+        "Name": { "en": "Terms of service", "hi": "सेवा की शर्तें", "ar": "شروط الخدمة" },
+        "Version": "draft"
+      },
+      {
+        "Name": { "en": "Data processing agreement for clinics", "hi": "क्लीनिकों के लिए डेटा प्रोसेसिंग अनुबंध", "ar": "اتفاقية معالجة البيانات للعيادات" },
+        "Version": "draft"
+      }
+    ],
+    "SubProcessors": [
+      {
+        "Name": "Microsoft Azure",
+        "Purpose": {
+          "en": "Hosting, database, file storage, encryption keys and monitoring",
+          "hi": "होस्टिंग, डेटाबेस, फ़ाइल स्टोरेज, एन्क्रिप्शन कुंजियाँ और मॉनिटरिंग",
+          "ar": "الاستضافة وقاعدة البيانات وتخزين الملفات ومفاتيح التشفير والمراقبة"
+        },
+        "Region": { "IN": "Azure Central India · South India", "AE": "Azure UAE North · UAE Central" }
+      },
+      {
+        "Name": "Microsoft Entra External ID",
+        "Purpose": { "en": "Staff sign-in", "hi": "स्टाफ़ साइन-इन", "ar": "تسجيل دخول الموظفين" }
+      }
+    ]
+  }
+}

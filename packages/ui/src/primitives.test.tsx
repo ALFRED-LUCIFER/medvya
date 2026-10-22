@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   alertLooks, ClinicalAlert, IdentityBanner, provenanceLooks, ProvenanceTag,
-  RecordingPill, recordingLooks, StatusChip, statusLooks, SystemState, systemStates, type Look,
+  RecordingPill, recordingLooks, scheduleLooks, frontDeskLooks, StatusChip, statusLooks, SystemState, systemStates, type Look,
 } from './primitives';
 
 const ui = (n: React.ReactNode) => render(<>{n}</>);
@@ -26,7 +26,7 @@ function contrast(a: string, b: string) {
   return (hi + 0.05) / (lo + 0.05);
 }
 
-const allLooks: [string, Look][] = [statusLooks, provenanceLooks, alertLooks, recordingLooks].flatMap(o => Object.entries(o));
+const allLooks: [string, Look][] = [statusLooks, provenanceLooks, alertLooks, recordingLooks, scheduleLooks, frontDeskLooks].flatMap(o => Object.entries(o));
 
 describe('clinical primitives', () => {
   it('meets WCAG AA text contrast (4.5:1) for every state', () => {

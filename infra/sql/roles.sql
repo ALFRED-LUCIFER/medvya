@@ -9,7 +9,7 @@
 --   medvya_<module>   rights on that module's own schema only.
 --
 -- Adding a module: create its schema and role below, grant only ON SCHEMA::<its schema>, add the role to medvya_app.
--- RLS predicate functions (security.fn_tenant_access, audit.fn_tenant_access) need no grant: SQL Server evaluates
+-- RLS predicate functions (security.fn_*, audit.fn_tenant_access) need no grant: SQL Server evaluates
 -- security predicates without checking the querying user's EXECUTE/SELECT rights (proven by DatabaseRoleTests).
 
 -- Database settings are the administrator's job, so the migration role needs no ALTER DATABASE.
@@ -26,6 +26,9 @@ IF SCHEMA_ID(N'security') IS NULL EXEC(N'CREATE SCHEMA security AUTHORIZATION db
 IF SCHEMA_ID(N'audit') IS NULL EXEC(N'CREATE SCHEMA audit AUTHORIZATION dbo');
 IF SCHEMA_ID(N'identity') IS NULL EXEC(N'CREATE SCHEMA [identity] AUTHORIZATION dbo');
 IF SCHEMA_ID(N'patients') IS NULL EXEC(N'CREATE SCHEMA patients AUTHORIZATION dbo');
+IF SCHEMA_ID(N'billing') IS NULL EXEC(N'CREATE SCHEMA billing AUTHORIZATION dbo');
+IF SCHEMA_ID(N'scheduling') IS NULL EXEC(N'CREATE SCHEMA scheduling AUTHORIZATION dbo');
+IF SCHEMA_ID(N'leads') IS NULL EXEC(N'CREATE SCHEMA leads AUTHORIZATION dbo');
 
 IF DATABASE_PRINCIPAL_ID(N'medvya_migrator') IS NULL CREATE ROLE medvya_migrator AUTHORIZATION dbo;
 IF DATABASE_PRINCIPAL_ID(N'medvya_app') IS NULL CREATE ROLE medvya_app AUTHORIZATION dbo;
@@ -34,6 +37,9 @@ IF DATABASE_PRINCIPAL_ID(N'medvya_tenancy') IS NULL CREATE ROLE medvya_tenancy A
 IF DATABASE_PRINCIPAL_ID(N'medvya_audit') IS NULL CREATE ROLE medvya_audit AUTHORIZATION dbo;
 IF DATABASE_PRINCIPAL_ID(N'medvya_identity') IS NULL CREATE ROLE medvya_identity AUTHORIZATION dbo;
 IF DATABASE_PRINCIPAL_ID(N'medvya_patients') IS NULL CREATE ROLE medvya_patients AUTHORIZATION dbo;
+IF DATABASE_PRINCIPAL_ID(N'medvya_billing') IS NULL CREATE ROLE medvya_billing AUTHORIZATION dbo;
+IF DATABASE_PRINCIPAL_ID(N'medvya_scheduling') IS NULL CREATE ROLE medvya_scheduling AUTHORIZATION dbo;
+IF DATABASE_PRINCIPAL_ID(N'medvya_leads') IS NULL CREATE ROLE medvya_leads AUTHORIZATION dbo;
 
 -- Migration principal: schema objects, security policies and ledger tables. No rights on module data.
 GRANT CREATE TABLE, CREATE VIEW, CREATE FUNCTION, CREATE PROCEDURE, CREATE TYPE, ALTER ANY SCHEMA, REFERENCES,
@@ -51,7 +57,8 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON SCHEMA::tenancy TO medvya_tenancy;
 -- Audit module: append and read only. The ledger table refuses UPDATE/DELETE too; this refuses them first, by permission.
 GRANT SELECT, INSERT ON SCHEMA::audit TO medvya_audit;
 
--- Identity module: staff accounts. Never deleted (offboarding is a membership status), so no DELETE.
+-- Identity module: staff accounts and sessions. Never deleted (offboarding is a membership status; a session is
+-- revoked, not removed), so no DELETE.
 GRANT SELECT, INSERT, UPDATE ON SCHEMA::[identity] TO medvya_identity;
 
 -- Patients module (MDV-P1-013, MDV-P0-009): row access plus UNMASK on its own schema only, so the app reads clear demographics
@@ -60,10 +67,21 @@ GRANT SELECT, INSERT, UPDATE ON SCHEMA::[identity] TO medvya_identity;
 GRANT SELECT, INSERT, UPDATE, DELETE, UNMASK ON SCHEMA::patients TO medvya_patients;
 GRANT VIEW ANY COLUMN MASTER KEY DEFINITION, VIEW ANY COLUMN ENCRYPTION KEY DEFINITION TO medvya_patients;
 
+-- Billing module (MDV-P4-001): no DELETE, because deleting a DOC_SEQUENCE row would restart a legal number series.
+GRANT SELECT, INSERT, UPDATE ON SCHEMA::billing TO medvya_billing;
+-- Scheduling module (MDV-P1-011): templates, resources and, later, appointments. Not in reporting: appointments will hold the
+-- free-text visit reason (SensitiveHealth); add a masked or reason-free view for reporting when the no-show metric needs it.
+GRANT SELECT, INSERT, UPDATE, DELETE ON SCHEMA::scheduling TO medvya_scheduling;
+-- Leads module (MDV-P1-003): demo requests from the public site. Add and read only; corrections and deletion are an administrator's job.
+GRANT SELECT, INSERT ON SCHEMA::leads TO medvya_leads;
+
 ALTER ROLE medvya_tenancy ADD MEMBER medvya_app;
 ALTER ROLE medvya_audit ADD MEMBER medvya_app;
 ALTER ROLE medvya_identity ADD MEMBER medvya_app;
 ALTER ROLE medvya_patients ADD MEMBER medvya_app;
+ALTER ROLE medvya_billing ADD MEMBER medvya_app;
+ALTER ROLE medvya_scheduling ADD MEMBER medvya_app;
+ALTER ROLE medvya_leads ADD MEMBER medvya_app;
 
 -- Reporting and support read masked patient demographics and ciphertext identifiers (no UNMASK, no column master key).
 -- shortcut: audit stays out of reporting until AUDIT_EVENT.ClientIp is masked on the ledger table; add it with that migration.

@@ -15,7 +15,7 @@ public sealed class StaffSignInTests(SqlServerFixture sql) : IClassFixture<SqlSe
 {
     readonly WebApplicationFactory<Program> factory = CreateFactory(sql.ConnectionString);
 
-    static WebApplicationFactory<Program> CreateFactory(string connectionString)
+    internal static WebApplicationFactory<Program> CreateFactory(string connectionString)
     {
         WebApplicationFactory<Program> factory = null!;
         factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b
@@ -43,7 +43,7 @@ public sealed class StaffSignInTests(SqlServerFixture sql) : IClassFixture<SqlSe
     }
 
     /// <summary>Walks the browser through login → provider → callback; returns the callback response.</summary>
-    static async Task<HttpResponseMessage> SignIn(HttpClient browser, string subject, string extra = "", string returnUrl = "/", Func<Task>? beforeCallback = null)
+    internal static async Task<HttpResponseMessage> SignIn(HttpClient browser, string subject, string extra = "", string returnUrl = "/", Func<Task>? beforeCallback = null)
     {
         var challenge = await browser.GetAsync(new Uri($"/bff/login?returnUrl={Uri.EscapeDataString(returnUrl)}", UriKind.Relative));
         Assert.Equal(HttpStatusCode.Redirect, challenge.StatusCode);

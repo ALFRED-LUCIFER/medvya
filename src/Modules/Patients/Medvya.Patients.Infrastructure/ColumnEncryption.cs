@@ -58,6 +58,8 @@ public sealed class LocalKeyStoreProvider(RSA key) : SqlColumnEncryptionKeyStore
 
     static readonly Lock Gate = new();
     static LocalKeyStoreProvider? registered;
+    // One RSA instance serves every connection; concurrent private-key operations on it fail on macOS (rsa_priv_crypt).
+    readonly Lock keyGate = new();
 
     /// <summary>
     /// Registers the provider for every SqlConnection in this process. SqlClient allows one global registration per process, so a
@@ -93,13 +95,13 @@ public sealed class LocalKeyStoreProvider(RSA key) : SqlColumnEncryptionKeyStore
     public override byte[] EncryptColumnEncryptionKey(string masterKeyPath, string encryptionAlgorithm, byte[] columnEncryptionKey)
     {
         CheckPath(masterKeyPath);
-        return key.Encrypt(columnEncryptionKey, RSAEncryptionPadding.OaepSHA256);
+        lock (keyGate) return key.Encrypt(columnEncryptionKey, RSAEncryptionPadding.OaepSHA256);
     }
 
     public override byte[] DecryptColumnEncryptionKey(string masterKeyPath, string encryptionAlgorithm, byte[] encryptedColumnEncryptionKey)
     {
         CheckPath(masterKeyPath);
-        return key.Decrypt(encryptedColumnEncryptionKey, RSAEncryptionPadding.OaepSHA256);
+        lock (keyGate) return key.Decrypt(encryptedColumnEncryptionKey, RSAEncryptionPadding.OaepSHA256);
     }
 
     static void CheckPath(string masterKeyPath)

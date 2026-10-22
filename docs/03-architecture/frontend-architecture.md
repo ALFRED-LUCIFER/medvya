@@ -66,11 +66,12 @@ Why it matters for Medvya:
 | Concern | Library | When it lands |
 |---|---|---|
 | Server state, caching, retries | **TanStack Query** | First API data: `/v1/me/context` (MDV-P0-012) |
-| Forms and validation | **React Hook Form + Zod** (Zod schemas in `domain/`) | First form: registration (MDV-P1-013) |
+| Forms and validation | **React Hook Form + Zod** (Zod schemas in `domain/`) | In place: invite colleague form (MDV-P0-013); registration (MDV-P1-013) next |
 | Routing | **React Router** (SPA) | App shell (MDV-P0-022) |
 | API client | Generated from OpenAPI into `@medvya/api-client` | With the first endpoint used by the UI (MDV-P0-012) |
 | UI | shadcn/ui + Radix + Tailwind 4 + Lucide via `@medvya/ui` (ADR-010) | In place |
-| Tables, dates, calendar | TanStack Table, react-day-picker (shadcn calendar), FullCalendar | With the first table/schedule screen (P1) |
+| Tables, dates | TanStack Table, react-day-picker (shadcn calendar) | With the first table screen (P1) |
+| Schedule grid | Own CSS grid in `features/schedule` (FullCalendar's doctor and resource columns are a paid plugin, and we need our own slot buttons, states and RTL) | MDV-P1-011 |
 
 ## Navigation and route guards (MDV-P0-022)
 

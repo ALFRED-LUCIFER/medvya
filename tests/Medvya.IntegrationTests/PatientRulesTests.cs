@@ -55,7 +55,7 @@ public class PatientRulesTests
     {
         var v = CountryRules.India.Validate((IndiaBase with { Identifiers = [new(IdentifierScheme.Abha, "91-0000-0000-0001")] }), Today);
         Assert.Equal("91000000000001", v.Command.Identifiers.Single().Value);
-        Assert.Equal("91000000000001", CountryRules.India.NormalizeLookup(IdentifierScheme.Abha, "91 0000 0000 0001"));
+        Assert.Equal(new SearchTerm(SearchKind.Identifier, "91000000000001", IdentifierScheme.Abha), CountryRules.India.ParseSearch("91 0000 0000 0001"));
         Assert.Contains(new ValidationError("identifiers[0]", "format"),
             Errors((IndiaBase with { Identifiers = [new(IdentifierScheme.Abha, "9100000000")] })));
     }
@@ -76,7 +76,7 @@ public class PatientRulesTests
     [InlineData("784-1990-1234567-1", "784-1990-1234567-1")]
     [InlineData("784199012345671", "784-1990-1234567-1")]
     public void EmiratesIdIsNormalisedToThePrintedFormat(string entered, string stored) =>
-        Assert.Equal(stored, CountryRules.Uae.NormalizeLookup(IdentifierScheme.EmiratesId, entered));
+        Assert.Equal(new SearchTerm(SearchKind.Identifier, stored, IdentifierScheme.EmiratesId), CountryRules.Uae.ParseSearch(entered));
 
     [Theory]
     [InlineData("784-90-1234567-1")]
@@ -120,6 +120,54 @@ public class PatientRulesTests
             (IndiaBase with { Mobile = "SECRET-MOBILE", Identifiers = [new(IdentifierScheme.AadhaarLast4, "000011112222")] }), Today));
         Assert.DoesNotContain("SECRET", ex.Message, StringComparison.Ordinal);
         Assert.DoesNotContain("000011112222", ex.Message, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("IN", "", SearchKind.Directory, null)]
+    [InlineData("IN", "  meera ", SearchKind.Name, "meera")]
+    [InlineData("IN", "+91 90000 00101", SearchKind.Phone, "+919000000101")]
+    [InlineData("IN", "09000000101", SearchKind.Phone, "+919000000101")]
+    [InlineData("IN", "deepak.nair.synthetic@sbx", SearchKind.Identifier, "deepak.nair.synthetic@sbx")]
+    [InlineData("IN", "42", SearchKind.Mrn, "000042")]
+    [InlineData("IN", "dq-10-4482", SearchKind.Mrn, "DQ-10-4482")]
+    [InlineData("AE", "050 000 0201", SearchKind.Phone, "+971500000201")]
+    [InlineData("AE", "فاطمة", SearchKind.Name, "فاطمة")]
+    public void DeskSearchReadsNamesPhonesMrnsAndIdentifiers(string country, string query, SearchKind kind, string? value)
+    {
+        var term = CountryRules.For(country).ParseSearch(query);
+        Assert.Equal((kind, value), (term.Kind, term.Value));
+    }
+
+    [Theory]
+    [InlineData("IN", "9100000000010", "full_number_required")] // 13 of the 14 ABHA digits
+    [InlineData("IN", "98470 213", "full_number_required")]     // part of a mobile number
+    [InlineData("IN", "0000 1111 2222", "full_number_required")] // a full Aadhaar is never a search key
+    [InlineData("AE", "784-1990-1234567", "full_number_required")]
+    [InlineData("IN", "M", "too_short")]
+    public void PartialNumbersAreRefusedNotPartiallyMatched(string country, string query, string code) =>
+        Assert.Equal([new ValidationError("query", code)],
+            Assert.Throws<PatientValidationException>(() => CountryRules.For(country).ParseSearch(query)).Errors);
+
+    [Theory]
+    [InlineData("Deepak Nair", "Deepak K. Nair", true)]                 // the design's example: middle initial
+    [InlineData("Fatima Ahmed Al Mansoori", "Fatima Al Mansouri", true)] // the UAE example: spelling and a dropped name
+    [InlineData("NAIR, Deepak", "deepak nair", true)]                    // order, case and punctuation
+    [InlineData("Zoë Mathew", "Zoe Mathew", true)]                       // accents
+    [InlineData("Meera", "Meera Iyer", true)]                            // one-word name
+    [InlineData("Meera Iyer", "Meera Rao", false)]                       // shared first name only
+    [InlineData("Kavya Iyer", "Divya Iyer", false)]                      // twins share a surname and birthday
+    [InlineData("A. B.", "A. B.", false)]                                // initials alone are not a name
+    public void NameSimilarityToleratesSpellingButNotADifferentPerson(string a, string b, bool similar) =>
+        Assert.Equal(similar, NameMatch.Similar(a, b));
+
+    [Fact]
+    public void OnlyCompleteExactMatchIdentifiersAreUsedToFindDuplicates()
+    {
+        var keys = CountryRules.India.MatchKeys([
+            new(IdentifierScheme.Abha, "91-0000-0000-0001"), new(IdentifierScheme.AadhaarLast4, "0001"),
+            new(IdentifierScheme.Passport, " synp123456 "), new(IdentifierScheme.AbhaAddress, "half.typed@"),
+            new(IdentifierScheme.EmiratesId, "784-1990-1234567-1")]); // not an Indian scheme
+        Assert.Equal([new IdentifierInput(IdentifierScheme.Abha, "91000000000001"), new IdentifierInput(IdentifierScheme.Passport, "SYNP123456")], keys);
     }
 
     [Fact]

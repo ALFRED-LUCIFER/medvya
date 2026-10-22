@@ -1,10 +1,13 @@
 using Medvya.Audit.Infrastructure.Persistence;
+using Medvya.Billing.Infrastructure.Persistence;
 using System.Security.Cryptography;
 using Medvya.BuildingBlocks.Domain;
 using Medvya.BuildingBlocks.Infrastructure;
 using Medvya.Patients.Infrastructure;
 using Medvya.Patients.Infrastructure.Persistence;
+using Medvya.Scheduling.Infrastructure.Persistence;
 using Medvya.Identity.Infrastructure.Persistence;
+using Medvya.Leads.Infrastructure.Persistence;
 using Medvya.Tenancy.Infrastructure.Persistence;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -66,24 +69,43 @@ public sealed class SqlServerFixture : IAsyncLifetime
         return new PatientsDbContext(new DbContextOptionsBuilder<PatientsDbContext>().UseSqlServer(conn, contextOwnsConnection: true).Options, new FixedTenant(tenantId));
     }
 
+    public BillingDbContext Billing(Guid? tenantId)
+    {
+        var tenant = new FixedTenant(tenantId);
+        return new BillingDbContext(new DbContextOptionsBuilder<BillingDbContext>()
+            .UseSqlServer(ConnectionString)
+            .AddInterceptors(new TenantSessionInterceptor(tenant))
+            .Options, tenant);
+    }
+
     /// <summary>Database users without logins (no passwords), one per role in infra/sql/roles.sql; tests impersonate them.</summary>
     public static readonly IReadOnlyDictionary<string, string> RoleUsers = new Dictionary<string, string>
     {
         ["migrator_user"] = "medvya_migrator", ["app_user"] = "medvya_app", ["reporting_user"] = "medvya_reporting",
         ["tenancy_user"] = "medvya_tenancy", ["audit_user"] = "medvya_audit", ["identity_user"] = "medvya_identity",
-        ["patients_user"] = "medvya_patients",
+        ["patients_user"] = "medvya_patients", ["billing_user"] = "medvya_billing",
+        ["scheduling_user"] = "medvya_scheduling",
+        ["leads_user"] = "medvya_leads",
     };
 
-    /// <summary>Opens a connection running as <paramref name="user"/> (EXECUTE AS USER), optionally in a tenant. Unpooled, so the impersonation dies with it.</summary>
-    public async Task<SqlConnection> OpenAs(string user, Guid? tenantId = null, bool columnEncryption = false)
+    /// <summary>
+    /// Opens a connection running as <paramref name="user"/> (EXECUTE AS USER), optionally in a tenant and/or for a signed-in
+    /// Medvya user (SESSION_CONTEXT user_id, as MembershipDirectory sets it). Unpooled, so the impersonation dies with it.
+    /// </summary>
+    public async Task<SqlConnection> OpenAs(string user, Guid? tenantId = null, bool columnEncryption = false, Guid? userId = null)
     {
         var builder = new SqlConnectionStringBuilder(ConnectionString) { Pooling = false };
         if (columnEncryption) builder.ColumnEncryptionSetting = SqlConnectionColumnEncryptionSetting.Enabled;
         var conn = new SqlConnection(builder.ConnectionString);
         await conn.OpenAsync();
-        await using var cmd = new SqlCommand("EXECUTE AS USER = @user; IF @tenant IS NOT NULL EXEC sys.sp_set_session_context N'tenant_id', @tenant, @read_only = 1;", conn);
+        await using var cmd = new SqlCommand("""
+            EXECUTE AS USER = @user;
+            IF @tenant IS NOT NULL EXEC sys.sp_set_session_context N'tenant_id', @tenant, @read_only = 1;
+            IF @userId IS NOT NULL EXEC sys.sp_set_session_context N'user_id', @userId, @read_only = 1;
+            """, conn);
         cmd.Parameters.AddWithValue("@user", user);
         cmd.Parameters.AddWithValue("@tenant", (object?)tenantId ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@userId", (object?)userId ?? DBNull.Value);
         await cmd.ExecuteNonQueryAsync();
         return conn;
     }
@@ -128,6 +150,21 @@ public sealed class SqlServerFixture : IAsyncLifetime
         await patients.Database.MigrateAsync();
         await using var identity = new IdentityDbContext(new DbContextOptionsBuilder<IdentityDbContext>().UseSqlServer(migrator).Options);
         await identity.Database.MigrateAsync();
+        await using var billing = new BillingDbContext(new DbContextOptionsBuilder<BillingDbContext>().UseSqlServer(migrator).Options, new FixedTenant(null));
+        await billing.Database.MigrateAsync();
+        await using var scheduling = new SchedulingDbContext(new DbContextOptionsBuilder<SchedulingDbContext>().UseSqlServer(migrator).Options, new FixedTenant(null));
+        await scheduling.Database.MigrateAsync();
+        await using var leads = new LeadsDbContext(new DbContextOptionsBuilder<LeadsDbContext>().UseSqlServer(migrator).Options);
+        await leads.Database.MigrateAsync();
+    }
+
+    public SchedulingDbContext Scheduling(Guid? tenantId)
+    {
+        var tenant = new FixedTenant(tenantId);
+        return new SchedulingDbContext(new DbContextOptionsBuilder<SchedulingDbContext>()
+            .UseSqlServer(ConnectionString)
+            .AddInterceptors(new TenantSessionInterceptor(tenant))
+            .Options, tenant);
     }
 
     public IdentityDbContext Identity() => new(new DbContextOptionsBuilder<IdentityDbContext>().UseSqlServer(ConnectionString).Options);

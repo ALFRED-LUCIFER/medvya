@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
-import { ArrowLeft, TriangleAlert } from 'lucide-react';
+import { ArrowLeft, Eye, TriangleAlert } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { buttonVariants, cn } from '@medvya/ui';
-import { addressLines, type PatientDetails } from '../domain/directory';
+import { Button, buttonVariants, cn } from '@medvya/ui';
+import { addressLines, type PatientDetails, type RevealedIdentifiers } from '../domain/directory';
 import PatientsMessage from './PatientsMessage';
 
 type Props = {
@@ -11,13 +11,21 @@ type Props = {
   state: 'loading' | 'ready' | 'invalid' | 'forbidden' | 'notFound' | 'error';
   onRetry: () => void;
   backPath: string;
+  /** Full numbers, after the audited reveal; null = masked to the last four. */
+  revealed: RevealedIdentifiers | null;
+  /** Only Register / book patients at Full may reveal (the server checks the same). */
+  canReveal: boolean;
+  revealing: boolean;
+  revealFailed: boolean;
+  onReveal: () => void;
 };
 
 // Keeps Latin IDs, phones and dates intact (order and line) inside Arabic text.
 const Ltr = ({ children }: { children: ReactNode }) => <bdi dir="ltr">{children}</bdi>;
 
 /** An opened record for the front desk: registration data only, never clinical data. Opening it was audited by the server. */
-export default function PatientRecord({ patient, state, onRetry, backPath }: Props) {
+export default function PatientRecord(props: Props) {
+  const { patient, state, onRetry, backPath } = props;
   const { t, formatDate } = useI18n();
   const date = (iso: string) => formatDate(new Date(`${iso.slice(0, 10)}T00:00:00`));
   const back = (
@@ -25,24 +33,34 @@ export default function PatientRecord({ patient, state, onRetry, backPath }: Pro
       <ArrowLeft className="rtl:rotate-180" aria-hidden />{t('patients.record.back')}
     </Link>
   );
+  // One live region that stays mounted; only its text changes, so screen readers announce every change.
+  const status = state === 'loading' ? t('patients.record.loading') : state === 'forbidden' ? t('err.403')
+    : state === 'notFound' ? t('patients.record.notFound.title') : state === 'error' ? t('patients.error.title')
+    : props.revealing ? t('patients.loading') : props.revealed ? t('patients.record.revealed') : '';
+  const live = <p role="status" className="sr-only">{status}</p>;
 
   if (!patient)
     return (
       <div className="flex max-w-[880px] flex-col gap-4">
         {back}
-        {state === 'loading' ? <PatientsMessage busy title={t('patients.record.loading')} />
+        {live}
+        {state === 'loading' ? <PatientsMessage title={t('patients.record.loading')} />
           : state === 'forbidden' ? <PatientsMessage title={t('err.403')} body={t('patients.forbidden.body')} />
           : state === 'notFound' ? <PatientsMessage title={t('patients.record.notFound.title')} body={t('patients.record.notFound.body')} />
-          : <PatientsMessage alert title={t('patients.error.title')} body={t('patients.error.body')} action={{ label: t('patients.retry'), onClick: onRetry }} />}
+          : <PatientsMessage title={t('patients.error.title')} body={t('patients.error.body')} action={{ label: t('patients.retry'), onClick: onRetry }} />}
       </div>
     );
 
   const p = patient;
   const none = <span className="text-muted-foreground">{t('patients.record.none')}</span>;
   const dob = p.dateOfBirthEstimated ? t('patients.record.dobEstimated', { date: date(p.dateOfBirth) }) : date(p.dateOfBirth);
+  const masked = (last: string) => t('patients.masked', { last });
+  const full = (scheme: string) => props.revealed?.identifiers.find(i => i.scheme === scheme)?.value;
+  const hasNumbers = p.identifiers.length > 0 || !!p.payer?.memberNumberLastFour;
   return (
     <div className="flex max-w-[880px] flex-col gap-4">
       {back}
+      {live}
       <header className="flex flex-col gap-1 rounded-xl border bg-card p-4">
         <h1 className="text-2xl font-extrabold">
           <bdi>{p.fullName}</bdi>
@@ -65,14 +83,16 @@ export default function PatientRecord({ patient, state, onRetry, backPath }: Pro
         <Field label={t('patients.record.gender')}>{p.genderIdentity ?? none}</Field>
         <Field label={t('patients.record.language')}>{p.preferredLanguage ?? none}</Field>
         <Field label={t('patients.record.nationality')}>{p.nationality ?? none}</Field>
-        <Field label={t('patients.record.registered')}>{date(p.registeredAt)}</Field>
+        {/* A calendar date in the facility's country time zone, from the server; never re-derived from a UTC instant. */}
+        <Field label={t('patients.record.registered')}>{date(p.registeredOn)}</Field>
       </Section>
 
       <Section title={t('patients.record.identifiers')}>
         {p.identifiers.length === 0 ? <Field label={t('patients.record.identifiers')}>{none}</Field>
           : p.identifiers.map(i => (
             <Field key={i.scheme} label={t(`patients.scheme.${i.scheme}`)}>
-              <Ltr>{i.value}</Ltr>{i.expiresOn && <span className="ms-1 text-muted-foreground">{t('patients.record.expires', { date: date(i.expiresOn) })}</span>}
+              <Ltr>{full(i.scheme) ?? masked(i.lastFour)}</Ltr>
+              {i.expiresOn && <span className="ms-1 text-muted-foreground">{t('patients.record.expires', { date: date(i.expiresOn) })}</span>}
             </Field>
           ))}
       </Section>
@@ -89,10 +109,20 @@ export default function PatientRecord({ patient, state, onRetry, backPath }: Pro
           <Field label={t('patients.record.payerKind')}>{t(`patients.payer.${p.payer.kind}`)}</Field>
           {p.payer.payerName && <Field label={t('patients.record.payerName')}><bdi>{p.payer.payerName}</bdi></Field>}
           {p.payer.plan && <Field label={t('patients.record.plan')}><bdi>{p.payer.plan}</bdi></Field>}
-          {p.payer.memberNumber && <Field label={t('patients.record.memberNumber')}><Ltr>{p.payer.memberNumber}</Ltr></Field>}
+          {p.payer.memberNumberLastFour && (
+            <Field label={t('patients.record.memberNumber')}><Ltr>{props.revealed?.memberNumber ?? masked(p.payer.memberNumberLastFour)}</Ltr></Field>
+          )}
           {p.payer.validTo && <Field label={t('patients.record.validTo')}>{date(p.payer.validTo)}</Field>}
         </> : <Field label={t('patients.record.payerKind')}>{t('patients.record.payerMissing')}</Field>}
       </Section>
+
+      {props.canReveal && hasNumbers && !props.revealed && (
+        <div className="flex flex-col items-start gap-1">
+          <Button variant="outline" loading={props.revealing} onClick={props.onReveal}><Eye aria-hidden />{t('patients.record.reveal')}</Button>
+          <p className="text-xs text-muted-foreground">{t('patients.record.revealNote')}</p>
+          {props.revealFailed && <p className="text-sm font-semibold text-danger-700">{t('patients.record.revealFailed')}</p>}
+        </div>
+      )}
     </div>
   );
 }

@@ -76,7 +76,7 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
     public async Task<PatientSearchResult> SearchAsync(PatientSearch search, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(search);
-        if (search.Page is < 1 or > 1000) throw new PatientValidationException([new("page", "out_of_range")]);
+        if (search.Page is < 1 or > PatientSearch.MaxPage) throw new PatientValidationException([new("page", "out_of_range")]);
         var term = CountryRules.For(search.CountryCode).ParseSearch(search.Query);
         var now = clock.GetUtcNow();
 

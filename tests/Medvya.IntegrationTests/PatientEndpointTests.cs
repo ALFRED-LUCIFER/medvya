@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Text.Json;
 using Medvya.Audit.Infrastructure;
+using Medvya.Patients.Application;
 using Medvya.Patients.Infrastructure;
 using Medvya.Tenancy.Domain;
 using Microsoft.AspNetCore.Builder;
@@ -50,24 +51,26 @@ public sealed class PatientEndpointTests(SqlServerFixture sql) : IClassFixture<S
 
     public Task DisposeAsync() => Task.CompletedTask;
 
-    async Task<Guid> Register(Guid at, string name, string mobile)
+    async Task<Guid> Register(Guid at, string name, string mobile, Func<RegisterPatient, RegisterPatient>? more = null)
     {
         var registry = new PatientRegistry(sql.Patients(tenant), new SqlServerFixture.FixedTenant(tenant), new PatientRegistryTests.FixedFacility(at),
             new SignedInUser(Guid.NewGuid()), new AuditLog(sql.Audit(tenant)), TimeProvider.System);
-        return (await registry.RegisterAsync(IndiaBase with { FacilityId = at, FullName = name, Mobile = mobile })).PatientId;
+        var command = IndiaBase with { FacilityId = at, FullName = name, Mobile = mobile };
+        return (await registry.RegisterAsync(more is null ? command : more(command))).PatientId;
     }
 
     sealed class SignedInUser(Guid id) : Medvya.BuildingBlocks.Domain.ICurrentUser { public Guid? UserId => id; }
 
-    WebApplicationFactory<Program> Host(int searchesPerMinute = 1000) =>
+    WebApplicationFactory<Program> Host(int searchesPerMinute = 1000, int recordsPerMinute = 1000) =>
         new WebApplicationFactory<Program>().WithWebHostBuilder(b => b
             .UseSetting("ConnectionStrings:Medvya", sql.ConnectionString)
             .UseSetting("RateLimiting:PatientSearchPerMinute", searchesPerMinute.ToString(System.Globalization.CultureInfo.InvariantCulture))
+            .UseSetting("RateLimiting:PatientRecordsPerMinute", recordsPerMinute.ToString(System.Globalization.CultureInfo.InvariantCulture))
             .ConfigureServices(s => s.AddSingleton<IStartupFilter>(new SignedIn(tenant))));
 
     /// <summary>Stands in for the session after the facility picker: user, tenant and facility claims from test headers.</summary>
     // shortcut: the claims are set directly because sign-in does not issue tenant/facility claims before the facility picker (MDV-P0-012).
-    sealed class SignedIn(Guid tenant) : IStartupFilter
+    internal sealed class SignedIn(Guid tenant) : IStartupFilter
     {
         public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => app =>
         {
@@ -203,6 +206,50 @@ public sealed class PatientEndpointTests(SqlServerFixture sql) : IClassFixture<S
         var body = await res.Content.ReadAsStringAsync();
         Assert.Contains("full_number_required", body, StringComparison.Ordinal);
         Assert.DoesNotContain("98470", body, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task IdentifiersAreMaskedUntilAnAuditedRevealByFullAccess()
+    {
+        var kavya = await Register(facility, "Kavya Iyer (synthetic)", "+91 90000 00103", c => c with
+        {
+            DateOfBirth = new DateOnly(2001, 6, 15), // not Meera's birthday, so the duplicate check (MDV-P1-016) has nothing to ask
+            Identifiers = [new(Medvya.Patients.Domain.IdentifierScheme.Abha, "91-0000-0000-0302")],
+            Payer = new(Medvya.Patients.Domain.PayerKind.PrivateInsurance, "TPA (synthetic)", MemberNumber: "SYN-TPA-7302"),
+        });
+        using var host = Host();
+        using var desk = Client(host, "receptionist");
+        using var nurse = Client(host, "nurse");
+
+        var opened = await desk.GetStringAsync(new Uri($"/v1/patients/{kavya}", UriKind.Relative));
+        Assert.DoesNotContain("91000000000302", opened, StringComparison.Ordinal);
+        Assert.DoesNotContain("SYN-TPA-7302", opened, StringComparison.Ordinal);
+        using (var doc = JsonDocument.Parse(opened))
+        {
+            Assert.Equal("0302", Assert.Single(doc.RootElement.GetProperty("identifiers").EnumerateArray()).GetProperty("lastFour").GetString());
+            Assert.Equal("7302", doc.RootElement.GetProperty("payer").GetProperty("memberNumberLastFour").GetString());
+        }
+
+        var reveal = new Uri($"/v1/patients/{kavya}/identifiers/reveal", UriKind.Relative);
+        Assert.Equal(HttpStatusCode.Forbidden, (await nurse.PostAsync(reveal, null)).StatusCode); // Read access only
+        var before = (await AuditTrail()).Count;
+        var revealed = await (await desk.PostAsync(reveal, null)).Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("91000000000302", Assert.Single(revealed.GetProperty("identifiers").EnumerateArray()).GetProperty("value").GetString());
+        Assert.Equal("SYN-TPA-7302", revealed.GetProperty("memberNumber").GetString());
+        Assert.Equal([("patient.identifiers.reveal", "registration", (Guid?)kavya)], (await AuditTrail())[before..]);
+    }
+
+    [Fact]
+    public async Task OpeningRecordsIsRateLimitedPerUser()
+    {
+        using var host = Host(recordsPerMinute: 2);
+        using var desk = Client(host, "receptionist");
+        using var admin = Client(host, "admin");
+        var uri = new Uri($"/v1/patients/{meera}", UriKind.Relative);
+        Assert.Equal(HttpStatusCode.OK, (await desk.GetAsync(uri)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await desk.GetAsync(uri)).StatusCode);
+        Assert.Equal(HttpStatusCode.TooManyRequests, (await desk.GetAsync(uri)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await admin.GetAsync(uri)).StatusCode);
     }
 
     [Fact]

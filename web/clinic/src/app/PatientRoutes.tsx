@@ -15,8 +15,8 @@ export function PatientDirectoryRoute({ registerPath }: { registerPath: string |
   return <PatientDirectory {...usePatientDirectoryController()} registerPath={registerPath} recordPath={recordPath} />;
 }
 
-function Record({ patientId }: { patientId: string }) {
-  return <PatientRecord {...usePatientRecordController(patientId)} backPath={patientDirectory.path} />;
+function Record({ patientId, canReveal }: { patientId: string; canReveal: boolean }) {
+  return <PatientRecord {...usePatientRecordController(patientId)} backPath={patientDirectory.path} canReveal={canReveal} />;
 }
 
 type RegistrationLinks = { country: Country; actorName: string; bookPath: string | null; checkInPath: string | null };
@@ -25,7 +25,7 @@ export function QuickRegistrationRoute(links: RegistrationLinks) {
   return <QuickRegistration {...useQuickRegistrationController(links.country)} {...links} recordPath={recordPath} />;
 }
 
-export function PatientRecordRoute() {
+export function PatientRecordRoute({ canReveal }: { canReveal: boolean }) {
   const { patientId = '' } = useParams();
-  return <Record key={patientId} patientId={patientId} />;
+  return <Record key={patientId} patientId={patientId} canReveal={canReveal} />;
 }

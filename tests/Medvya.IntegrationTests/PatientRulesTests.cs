@@ -152,6 +152,28 @@ public class PatientRulesTests
         Assert.Equal([new ValidationError("query", code)],
             Assert.Throws<PatientValidationException>(() => CountryRules.For(country).ParseSearch(query)).Errors);
 
+    [Theory]
+    [InlineData("Deepak Nair", "Deepak K. Nair", true)]                 // the design's example: middle initial
+    [InlineData("Fatima Ahmed Al Mansoori", "Fatima Al Mansouri", true)] // the UAE example: spelling and a dropped name
+    [InlineData("NAIR, Deepak", "deepak nair", true)]                    // order, case and punctuation
+    [InlineData("Zoë Mathew", "Zoe Mathew", true)]                       // accents
+    [InlineData("Meera", "Meera Iyer", true)]                            // one-word name
+    [InlineData("Meera Iyer", "Meera Rao", false)]                       // shared first name only
+    [InlineData("Kavya Iyer", "Divya Iyer", false)]                      // twins share a surname and birthday
+    [InlineData("A. B.", "A. B.", false)]                                // initials alone are not a name
+    public void NameSimilarityToleratesSpellingButNotADifferentPerson(string a, string b, bool similar) =>
+        Assert.Equal(similar, NameMatch.Similar(a, b));
+
+    [Fact]
+    public void OnlyCompleteExactMatchIdentifiersAreUsedToFindDuplicates()
+    {
+        var keys = CountryRules.India.MatchKeys([
+            new(IdentifierScheme.Abha, "91-0000-0000-0001"), new(IdentifierScheme.AadhaarLast4, "0001"),
+            new(IdentifierScheme.Passport, " synp123456 "), new(IdentifierScheme.AbhaAddress, "half.typed@"),
+            new(IdentifierScheme.EmiratesId, "784-1990-1234567-1")]); // not an Indian scheme
+        Assert.Equal([new IdentifierInput(IdentifierScheme.Abha, "91000000000001"), new IdentifierInput(IdentifierScheme.Passport, "SYNP123456")], keys);
+    }
+
     [Fact]
     public void TodayIsTakenInTheCountryTimeZone() =>
         // 20:00 UTC on 20 Oct is already 21 Oct in India: a baby born "today" there must not be a future date.

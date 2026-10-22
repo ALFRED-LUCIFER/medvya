@@ -88,16 +88,24 @@ public sealed class SqlServerFixture : IAsyncLifetime
         ["leads_user"] = "medvya_leads",
     };
 
-    /// <summary>Opens a connection running as <paramref name="user"/> (EXECUTE AS USER), optionally in a tenant. Unpooled, so the impersonation dies with it.</summary>
-    public async Task<SqlConnection> OpenAs(string user, Guid? tenantId = null, bool columnEncryption = false)
+    /// <summary>
+    /// Opens a connection running as <paramref name="user"/> (EXECUTE AS USER), optionally in a tenant and/or for a signed-in
+    /// Medvya user (SESSION_CONTEXT user_id, as MembershipDirectory sets it). Unpooled, so the impersonation dies with it.
+    /// </summary>
+    public async Task<SqlConnection> OpenAs(string user, Guid? tenantId = null, bool columnEncryption = false, Guid? userId = null)
     {
         var builder = new SqlConnectionStringBuilder(ConnectionString) { Pooling = false };
         if (columnEncryption) builder.ColumnEncryptionSetting = SqlConnectionColumnEncryptionSetting.Enabled;
         var conn = new SqlConnection(builder.ConnectionString);
         await conn.OpenAsync();
-        await using var cmd = new SqlCommand("EXECUTE AS USER = @user; IF @tenant IS NOT NULL EXEC sys.sp_set_session_context N'tenant_id', @tenant, @read_only = 1;", conn);
+        await using var cmd = new SqlCommand("""
+            EXECUTE AS USER = @user;
+            IF @tenant IS NOT NULL EXEC sys.sp_set_session_context N'tenant_id', @tenant, @read_only = 1;
+            IF @userId IS NOT NULL EXEC sys.sp_set_session_context N'user_id', @userId, @read_only = 1;
+            """, conn);
         cmd.Parameters.AddWithValue("@user", user);
         cmd.Parameters.AddWithValue("@tenant", (object?)tenantId ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@userId", (object?)userId ?? DBNull.Value);
         await cmd.ExecuteNonQueryAsync();
         return conn;
     }

@@ -136,7 +136,7 @@ public abstract partial class CountryRules
         if (numberLike && NormalizeMobile(compact) is { } mobile) return new(SearchKind.Phone, mobile);
 
         var probe = new List<ValidationError>(); // format misses are expected while probing and dropped
-        foreach (var scheme in Schemes.Where(PatientIdentifier.IsLookup).Order())
+        foreach (var scheme in Schemes.Where(PatientIdentifier.IsDeskSearchKey).Order())
             if (NormalizeIdentifier(scheme, q, "query", probe) is { } id) return new(SearchKind.Identifier, id, scheme);
 
         if (numberLike)
@@ -147,6 +147,20 @@ public abstract partial class CountryRules
         if (q.Any(char.IsDigit)) return new(SearchKind.Mrn, q.ToUpperInvariant()); // e.g. DQ-10-4482
         if (q.Count(char.IsLetter) < 2) throw new PatientValidationException([new("query", "too_short")]);
         return new(SearchKind.Name, q);
+    }
+
+    /// <summary>
+    /// The identifiers that can be matched exactly (deterministic encryption), normalised as stored. Incomplete or invalid values
+    /// are skipped, not rejected: the duplicate check runs while the desk is still typing.
+    /// </summary>
+    public IReadOnlyList<IdentifierInput> MatchKeys(IReadOnlyList<IdentifierInput> inputs)
+    {
+        ArgumentNullException.ThrowIfNull(inputs);
+        var probe = new List<ValidationError>();
+        return [.. inputs
+            .Where(i => PatientIdentifier.IsLookup(i.Scheme) && Schemes.Contains(i.Scheme))
+            .Select(i => NormalizeIdentifier(i.Scheme, i.Value ?? "", "identifier", probe) is { } v ? i with { Value = v } : null)
+            .OfType<IdentifierInput>()];
     }
 
     List<IdentifierInput> Identifiers(IReadOnlyList<IdentifierInput> inputs, List<ValidationError> errors)

@@ -96,6 +96,54 @@ namespace Medvya.Tenancy.Infrastructure.Persistence.Migrations
                     b.ToTable("FeatureFlags", "tenancy");
                 });
 
+            modelBuilder.Entity("Medvya.Tenancy.Domain.Invitation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("AcceptedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(254)
+                        .HasColumnType("nvarchar(254)");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("InvitedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("MembershipId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("RevokedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("binary(32)")
+                        .IsFixedLength();
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MembershipId");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.ToTable("Invitations", "tenancy");
+                });
+
             modelBuilder.Entity("Medvya.Tenancy.Domain.Membership", b =>
                 {
                     b.Property<Guid>("Id")
@@ -118,17 +166,23 @@ namespace Medvya.Tenancy.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid>("UserId")
+                    b.Property<Guid?>("UserId")
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
 
                     b.HasIndex("FacilityId");
 
-                    b.HasIndex("TenantId", "UserId", "FacilityId")
-                        .IsUnique();
+                    b.HasIndex("UserId");
 
-                    b.ToTable("Memberships", "tenancy");
+                    b.HasIndex("TenantId", "UserId", "FacilityId")
+                        .IsUnique()
+                        .HasFilter("[UserId] IS NOT NULL");
+
+                    b.ToTable("Memberships", "tenancy", t =>
+                        {
+                            t.HasCheckConstraint("CK_Memberships_UserUnlessInvited", "[Status] = 'Invited' OR [UserId] IS NOT NULL");
+                        });
                 });
 
             modelBuilder.Entity("Medvya.Tenancy.Domain.Tenant", b =>
@@ -143,6 +197,11 @@ namespace Medvya.Tenancy.Infrastructure.Persistence.Migrations
                         .HasColumnType("nchar(2)")
                         .IsFixedLength();
 
+                    b.Property<int>("IdleTimeoutMinutes")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(15);
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -155,7 +214,10 @@ namespace Medvya.Tenancy.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Tenants", "tenancy");
+                    b.ToTable("Tenants", "tenancy", t =>
+                        {
+                            t.HasCheckConstraint("CK_Tenants_IdleTimeoutMinutes", "IdleTimeoutMinutes BETWEEN 1 AND 480");
+                        });
                 });
 
             modelBuilder.Entity("Medvya.Tenancy.Domain.Facility", b =>
@@ -172,6 +234,15 @@ namespace Medvya.Tenancy.Infrastructure.Persistence.Migrations
                     b.HasOne("Medvya.Tenancy.Domain.Tenant", null)
                         .WithMany()
                         .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Medvya.Tenancy.Domain.Invitation", b =>
+                {
+                    b.HasOne("Medvya.Tenancy.Domain.Membership", null)
+                        .WithMany()
+                        .HasForeignKey("MembershipId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

@@ -1,4 +1,5 @@
 using Medvya.Audit.Api;
+using Medvya.BuildingBlocks.Domain;
 using Medvya.Patients.Application;
 using Medvya.Patients.Domain;
 using Medvya.Tenancy.Api;
@@ -33,16 +34,51 @@ public sealed record RevealedIdentifiers(IReadOnlyList<RevealedIdentifier> Ident
 
 public sealed record RevealedIdentifier(IdentifierScheme Scheme, string Value);
 
+/// <summary>What the desk has typed so far; identifiers that are not complete yet are skipped, not rejected.</summary>
+public sealed record DuplicateCheckRequest(string? FullName = null, DateOnly? DateOfBirth = null, IReadOnlyList<IdentifierInput>? Identifiers = null);
+
+/// <summary>A registration from the desk (P-02). Facility and country are not here: the server takes them from the session.</summary>
+public sealed record RegisterRequest
+{
+    public bool Quick { get; init; }
+    public string FullName { get; init; } = "";
+    public string? ArabicName { get; init; }
+    public DateOnly? DateOfBirth { get; init; }
+    public int? AgeYears { get; init; }
+    public SexAtBirth SexAtBirth { get; init; } = (SexAtBirth)(-1); // missing = invalid, never defaulted to a sex
+    public string? GenderIdentity { get; init; }
+    public string? PreferredLanguage { get; init; }
+    public string? Nationality { get; init; }
+    public string Mobile { get; init; } = "";
+    public string? AlternatePhone { get; init; }
+    public string? Email { get; init; }
+    public IReadOnlyList<IdentifierInput> Identifiers { get; init; } = [];
+    public PatientAddress? Address { get; init; }
+    public PayerInput? Payer { get; init; }
+    public DuplicateResolution? Duplicates { get; init; }
+
+    internal RegisterPatient ToCommand(Guid facilityId, string countryCode) => new()
+    {
+        FacilityId = facilityId, CountryCode = countryCode, Quick = Quick, FullName = FullName, ArabicName = ArabicName,
+        DateOfBirth = DateOfBirth, AgeYears = AgeYears, SexAtBirth = SexAtBirth, GenderIdentity = GenderIdentity,
+        PreferredLanguage = PreferredLanguage, Nationality = Nationality, Mobile = Mobile, AlternatePhone = AlternatePhone, Email = Email,
+        Identifiers = Identifiers, Address = Address, Payer = Payer, Duplicates = Duplicates,
+    };
+}
+
 public static class PatientEndpoints
 {
     /// <summary>Rate-limit policy for search endpoints (registered by the host, per signed-in user).</summary>
     public const string SearchRateLimit = "patient-search";
     /// <summary>Rate-limit policy for opening records and revealing their numbers (registered by the host, per signed-in user).</summary>
     public const string RecordRateLimit = "patient-record";
+    /// <summary>Rate-limit policy for the duplicate check, which runs while the desk types (registered by the host, per user).</summary>
+    public const string DuplicateCheckRateLimit = "patient-duplicate-check";
     const string Purpose = "registration";
 
     /// <summary>
-    /// Front-desk patient endpoints (MDV-P1-018). Register / book patients at Read or Full; every request is audited before it runs.
+    /// Front-desk patient endpoints (MDV-P1-018, MDV-P1-016). Reading needs Register / book patients at Read or Full, registering
+    /// at Full. Reads are audited before they run; a registration audits inside its own transaction.
     /// </summary>
     public static IEndpointRouteBuilder MapPatientEndpoints(this IEndpointRouteBuilder app)
     {
@@ -63,7 +99,45 @@ public static class PatientEndpoints
             .RequireCapability(Capability.RegisterBookPatients, Access.Full)
             .Audited("patient.identifiers.reveal", "patient", Purpose, patientRouteKey: "patientId")
             .RequireRateLimiting(RecordRateLimit);
+
+        patients.MapPost("/duplicate-check", DuplicateCheck)
+            .RequireCapability(Capability.RegisterBookPatients, Access.Full)
+            .Audited("patient.duplicate_check", "patient", Purpose)
+            .RequireRateLimiting(DuplicateCheckRateLimit);
+
+        patients.MapPost("/", Register)
+            .RequireCapability(Capability.RegisterBookPatients, Access.Full)
+            .AuditedByUseCase("patient.register", "patient", Purpose);
         return app;
+    }
+
+    static async Task<IResult> DuplicateCheck([FromBody] DuplicateCheckRequest? request, [FromServices] IStaffAccess staff, [FromServices] IPatientRegistry registry, CancellationToken ct)
+    {
+        request ??= new();
+        if (await staff.TenantCountryAsync(ct) is not { } country) return Results.Problem(statusCode: StatusCodes.Status403Forbidden, title: "No facility context");
+        // While typing, a name shorter than two letters is not an error: there is simply nothing to compare yet.
+        var name = request.FullName?.Trim() ?? "";
+        if (name.Length > 200) return Invalid(new PatientValidationException([new("fullName", "too_long")]));
+        var candidates = name.Count(char.IsLetter) < 2 && (request.Identifiers ?? []).Count == 0
+            ? []
+            : await registry.FindDuplicatesAsync(new(country, name, request.DateOfBirth, request.Identifiers ?? []), ct);
+        return Results.Ok(new { candidates });
+    }
+
+    static async Task<IResult> Register([FromBody] RegisterRequest request, [FromServices] IStaffAccess staff, [FromServices] ICurrentFacility facility,
+        [FromServices] IPatientRegistry registry, CancellationToken ct)
+    {
+        if (await staff.TenantCountryAsync(ct) is not { } country || facility.FacilityId is not { } facilityId)
+            return Results.Problem(statusCode: StatusCodes.Status403Forbidden, title: "No facility context");
+        try
+        {
+            // Facility and country come from the session and the tenant, never from the request body.
+            return Results.Ok(await registry.RegisterAsync(request.ToCommand(facilityId, country), ct));
+        }
+        catch (PatientValidationException e)
+        {
+            return Invalid(e);
+        }
     }
 
     static async Task<IResult> Search([FromBody] SearchRequest? request, [FromServices] IStaffAccess staff, [FromServices] IPatientRegistry registry, CancellationToken ct)

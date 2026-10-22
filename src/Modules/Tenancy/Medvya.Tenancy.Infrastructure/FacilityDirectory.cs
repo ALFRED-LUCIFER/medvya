@@ -21,5 +21,5 @@ public sealed class FacilityDirectory(TenancyDbContext db) : IFacilityDirectory
     public async Task<IReadOnlyList<Guid>> ActiveDoctorsAsync(Guid facilityId, CancellationToken cancellationToken = default) =>
         await db.Memberships.AsNoTracking()
             .Where(m => m.FacilityId == facilityId && m.Status == MembershipStatus.Active && Doctors.Contains(m.Role))
-            .Select(m => m.UserId).ToListAsync(cancellationToken);
+            .Select(m => m.UserId!.Value).ToListAsync(cancellationToken); // Active memberships always have a user (CK_Memberships_UserUnlessInvited)
 }

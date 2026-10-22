@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using Medvya.Patients.Application;
 using Medvya.Tenancy.Domain;
 using Microsoft.AspNetCore.Hosting;
@@ -17,8 +18,9 @@ namespace Medvya.IntegrationTests;
 public sealed class RunsAlone;
 
 /// <summary>
-/// MDV-P1-018 NFR: desk search p95 under 300 ms with 50,000 synthetic patients in one facility (real SQL Server), measured through
-/// the endpoint, so the capability check, the audit write and the Always Encrypted identifier lookup are all inside the timing.
+/// MDV-P1-018 and MDV-P1-016 NFRs: desk search and the duplicate check, p95 under 300 ms with 50,000 synthetic patients in one
+/// facility (real SQL Server). Measured through the endpoints, so the capability check, the audit write and the Always Encrypted
+/// identifier lookup are all inside the timing.
 /// </summary>
 [Collection(nameof(RunsAlone))]
 public sealed class PatientSearchPerformanceTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>
@@ -88,41 +90,63 @@ public sealed class PatientSearchPerformanceTests(SqlServerFixture sql) : IClass
     }
 
     [Fact]
-    public async Task SearchP95StaysUnder300MillisecondsWith50000Patients()
+    public async Task SearchAndDuplicateCheckP95StayUnder300MillisecondsWith50000Patients()
     {
         await SeedAsync();
         using var host = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b
             .UseSetting("ConnectionStrings:Medvya", sql.ConnectionString)
             .UseSetting("RateLimiting:PatientSearchPerMinute", "100000")
+            .UseSetting("RateLimiting:DuplicateChecksPerMinute", "100000")
             .ConfigureServices(s => s.AddSingleton<IStartupFilter>(new PatientEndpointTests.SignedIn(tenant))));
         using var desk = host.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost") });
         desk.DefaultRequestHeaders.Add("X-Test-User", receptionist.ToString());
         desk.DefaultRequestHeaders.Add("X-Test-Facility", facility.ToString());
 
+        async Task<(long Ms, JsonElement Body)> Post(string path, object body)
+        {
+            var clock = Stopwatch.StartNew();
+            using var res = await desk.PostAsJsonAsync(new Uri(path, UriKind.Relative), body);
+            var elapsed = clock.ElapsedMilliseconds;
+            Assert.Equal(HttpStatusCode.OK, res.StatusCode);
+            return (elapsed, await res.Content.ReadFromJsonAsync<JsonElement>());
+        }
+
         // Name, phone, MRN, exact ABHA (deterministic Always Encrypted), and the directory with its filters.
         string?[] queries = ["kavya", "deepak rao", "+91 90 0001 2345", "012345", "91 0000 0001 2345", null];
         var filters = new[] { "All", "Incomplete", "Recent" };
-
-        async Task<long> Timed(string? query, string filter)
+        async Task<long> Search(string? query, string filter)
         {
-            var clock = Stopwatch.StartNew();
-            using var res = await desk.PostAsJsonAsync(new Uri("/v1/patients/search", UriKind.Relative), new { query, filter });
-            var elapsed = clock.ElapsedMilliseconds;
-            Assert.Equal(HttpStatusCode.OK, res.StatusCode);
-            var body = await res.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+            var (ms, body) = await Post("/v1/patients/search", new { query, filter });
             Assert.True(body.GetProperty("items").GetArrayLength() > 0, $"no rows for {query ?? "(directory)"} {filter}");
-            return elapsed;
+            return ms;
         }
-
-        foreach (var q in queries) await Timed(q, "All"); // warm the plan cache, the connection pool and the encryption metadata
-        var timings = new List<long>();
+        foreach (var q in queries) await Search(q, "All"); // warm the plan cache, the connection pool and the encryption metadata
+        var searches = new List<long>();
         for (var round = 0; round < 8; round++)
             foreach (var q in queries)
                 foreach (var f in filters.Take(q is null ? 3 : 1))
-                    timings.Add(await Timed(q, f));
+                    searches.Add(await Search(q, f));
+        AssertP95(searches, "searches through the endpoint");
 
+        // Patient 12345 is "Suresh Joseph 12345", born 26 Oct 1965 (see SeedAsync), and about 30 patients share each birthday;
+        // the ABHA of patient 99 exists too, so both the name + DOB and the exact-identifier paths run.
+        async Task<long> Check()
+        {
+            var (ms, body) = await Post("/v1/patients/duplicate-check",
+                new { fullName = "Suresh Joseph", dateOfBirth = "1965-10-26", identifiers = new[] { new { scheme = "Abha", value = Abha(99) } } });
+            Assert.True(body.GetProperty("candidates").GetArrayLength() > 0, "no duplicate candidates");
+            return ms;
+        }
+        await Check();
+        var checks = new List<long>();
+        for (var i = 0; i < 30; i++) checks.Add(await Check());
+        AssertP95(checks, "duplicate checks through the endpoint");
+    }
+
+    static void AssertP95(List<long> timings, string what)
+    {
         timings.Sort();
         var p95 = timings[(int)Math.Ceiling(timings.Count * 0.95) - 1];
-        Assert.True(p95 < 300, string.Create(CultureInfo.InvariantCulture, $"p95 {p95} ms over {timings.Count} searches through the endpoint (max {timings[^1]} ms)"));
+        Assert.True(p95 < 300, string.Create(CultureInfo.InvariantCulture, $"p95 {p95} ms over {timings.Count} {what} (max {timings[^1]} ms)"));
     }
 }

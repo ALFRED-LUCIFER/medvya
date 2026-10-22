@@ -213,6 +213,7 @@ public sealed class PatientEndpointTests(SqlServerFixture sql) : IClassFixture<S
     {
         var kavya = await Register(facility, "Kavya Iyer (synthetic)", "+91 90000 00103", c => c with
         {
+            DateOfBirth = new DateOnly(2001, 6, 15), // not Meera's birthday, so the duplicate check (MDV-P1-016) has nothing to ask
             Identifiers = [new(Medvya.Patients.Domain.IdentifierScheme.Abha, "91-0000-0000-0302")],
             Payer = new(Medvya.Patients.Domain.PayerKind.PrivateInsurance, "TPA (synthetic)", MemberNumber: "SYN-TPA-7302"),
         });
@@ -249,6 +250,59 @@ public sealed class PatientEndpointTests(SqlServerFixture sql) : IClassFixture<S
         Assert.Equal(HttpStatusCode.OK, (await desk.GetAsync(uri)).StatusCode);
         Assert.Equal(HttpStatusCode.TooManyRequests, (await desk.GetAsync(uri)).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await admin.GetAsync(uri)).StatusCode);
+    }
+
+    [Fact]
+    public async Task TheDuplicateCheckAnswersPrivacySafeCandidatesAndIsAuditedOnce()
+    {
+        using var host = Host();
+        using var desk = Client(host, "receptionist");
+        var before = (await AuditTrail()).Count;
+
+        var res = await desk.PostAsJsonAsync(new Uri("/v1/patients/duplicate-check", UriKind.Relative), new { fullName = "Meera Iyer (synthetic)", dateOfBirth = "1980-01-01" });
+        Assert.Equal(HttpStatusCode.OK, res.StatusCode);
+        var json = await res.Content.ReadAsStringAsync();
+        var candidate = Assert.Single(JsonDocument.Parse(json).RootElement.GetProperty("candidates").EnumerateArray());
+        Assert.Equal((meera, "MI"), (candidate.GetProperty("patientId").GetGuid(), candidate.GetProperty("initials").GetString()));
+        foreach (var leak in new[] { "Meera", "Iyer", "+91", "1980" }) Assert.DoesNotContain(leak, json, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal([("patient.duplicate_check", "registration", null)], (await AuditTrail())[before..]);
+    }
+
+    [Fact]
+    public async Task OnlyFullRegisterAccessMayCheckForDuplicatesOrRegister()
+    {
+        using var host = Host();
+        using var nurse = Client(host, "nurse"); // Register / book patients: Read
+        Assert.Equal(HttpStatusCode.Forbidden, (await nurse.PostAsJsonAsync(new Uri("/v1/patients/duplicate-check", UriKind.Relative), new { fullName = "Meera Iyer" })).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await nurse.PostAsJsonAsync(new Uri("/v1/patients", UriKind.Relative), new { fullName = "Meera Iyer" })).StatusCode);
+    }
+
+    [Fact]
+    public async Task RegistrationTakesTheFacilityFromTheSessionAndWaitsForTheDuplicateDecision()
+    {
+        using var host = Host();
+        using var desk = Client(host, "receptionist");
+        var body = new Dictionary<string, object?>
+        {
+            ["quick"] = true, ["fullName"] = "Meera Iyer (synthetic)", ["dateOfBirth"] = "1980-01-01", ["sexAtBirth"] = "Female",
+            ["mobile"] = "+91 90000 00105", ["facilityId"] = otherFacility, // ignored: the facility is the session's
+        };
+        var uri = new Uri("/v1/patients", UriKind.Relative);
+
+        var refused = await desk.PostAsJsonAsync(uri, body);
+        Assert.Equal(HttpStatusCode.BadRequest, refused.StatusCode);
+        Assert.Contains("unresolved", await refused.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+
+        body["duplicates"] = new { decision = "NotSamePerson", candidateIds = new[] { meera } };
+        var saved = await desk.PostAsJsonAsync(uri, body);
+        Assert.Equal(HttpStatusCode.OK, saved.StatusCode);
+        var result = await saved.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("Incomplete", result.GetProperty("status").GetString());
+        var id = result.GetProperty("patientId").GetGuid();
+
+        // Registered at the active facility, so this desk can open it; the decision is audited with the registration.
+        Assert.Equal(HttpStatusCode.OK, (await desk.GetAsync(new Uri($"/v1/patients/{id}", UriKind.Relative))).StatusCode);
+        Assert.Contains(("patient.duplicate.not_same", "registration", (Guid?)id), await AuditTrail());
     }
 
     [Fact]

@@ -63,10 +63,11 @@ public sealed class PatientEndpointTests(SqlServerFixture sql) : IClassFixture<S
 
     sealed class SignedInUser(Guid id) : Medvya.BuildingBlocks.Domain.ICurrentUser { public Guid? UserId => id; }
 
-    WebApplicationFactory<Program> Host(int searchesPerMinute = 1000) =>
+    WebApplicationFactory<Program> Host(int searchesPerMinute = 1000, int duplicateChecksPerMinute = 1000) =>
         new WebApplicationFactory<Program>().WithWebHostBuilder(b => b
             .UseSetting("ConnectionStrings:Medvya", sql.ConnectionString)
             .UseSetting("RateLimiting:PatientSearchPerMinute", searchesPerMinute.ToString(System.Globalization.CultureInfo.InvariantCulture))
+            .UseSetting("RateLimiting:DuplicateChecksPerMinute", duplicateChecksPerMinute.ToString(System.Globalization.CultureInfo.InvariantCulture))
             .ConfigureTestServices(s =>
             {
                 s.AddAuthentication().AddScheme<AuthenticationSchemeOptions, SignedIn>(SignedIn.SchemeName, _ => { });
@@ -284,5 +285,17 @@ public sealed class PatientEndpointTests(SqlServerFixture sql) : IClassFixture<S
         Assert.Equal(HttpStatusCode.OK, (await Search(desk, new { })).StatusCode);
         Assert.Equal(HttpStatusCode.TooManyRequests, (await Search(desk, new { })).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await Search(admin, new { })).StatusCode);
+    }
+
+    [Fact]
+    public async Task TheDuplicateCheckIsRateLimitedPerUser()
+    {
+        using var host = Host(duplicateChecksPerMinute: 1);
+        using var desk = Client(host, "receptionist");
+        using var admin = Client(host, "admin");
+        static Task<HttpResponseMessage> Check(HttpClient c) => c.PostAsJsonAsync(new Uri("/v1/patients/duplicate-check", UriKind.Relative), new { fullName = "Meera Iyer (synthetic)" });
+        Assert.Equal(HttpStatusCode.OK, (await Check(desk)).StatusCode);
+        Assert.Equal(HttpStatusCode.TooManyRequests, (await Check(desk)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await Check(admin)).StatusCode); // another desk is not affected
     }
 }

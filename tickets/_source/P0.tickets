@@ -288,7 +288,7 @@ status: Partly done
 progress:
 - Merged [PR #39](https://github.com/ALFRED-LUCIFER/medvya/pull/39): BFF sign-in in Host.Api — OIDC code + PKCE, tokens never stored, `__Host-medvya` HttpOnly/Secure/SameSite=Strict cookie, MFA required (`amr`), Medvya accounts only (`identity.Users`), CSRF header on state-changing calls, same-site return URLs, rate-limited login; `/bff/login`, `/bff/logout`, `/v1/me/context`; clinic app Sign in / Sign out
 - Development-only OIDC provider lists the seeded synthetic users; 8 integration tests on SQL Server, mutation-checked (MFA, account, return URL, CSRF, HttpOnly); verified in the browser (English, Arabic RTL, axe clean; no token in JS-readable cookies or storage)
-- Left (needs Entra External ID, MDV-P0-003/006): real provider config, passkeys, F-03 custom UI, lockout copy, recovery, SSO-enforced tenants; audit of sign-in events moves to the facility picker (MDV-P0-012), because audit rows belong to a tenant
+- Left (needs Entra External ID, MDV-P0-003/006): real provider config, passkeys, F-03 custom UI, lockout copy, recovery, SSO-enforced tenants; sign-in events are now audited on facility choice (PR #65)
 title: Staff sign-in through the BFF with Entra External ID: MFA (TOTP), passkeys and recovery
 type: Story
 epic: MDV-P0-E02
@@ -314,9 +314,11 @@ ac:
 - Sign-in, failure, lockout and recovery events are written to the audit log (MDV-P0-017).
 
 === MDV-P0-012
-status: Blocked
+status: Partly done
 progress:
-- Needs MDV-P0-011
+- Merged [PR #65](https://github.com/ALFRED-LUCIFER/medvya/pull/65): server-side staff sessions (`identity.Sessions`) checked on every request; idle timeout per tenant (default 15 min) and 8 h cap; revocation by the user or a tenant admin effective on the next request; facility picker (`POST /v1/me/facility`) re-scopes without MFA; `/v1/me/context` returns memberships and the active membership with RoleMatrix capabilities and flags; F-03 picker and F-05a session-expired screen
+- Memberships listed across tenants through a `user_id` RLS rule that applies only on connections without a tenant; audits auth.signin, auth.facility.switch, auth.signout, session.revoke; mutation-checked (RLS user match, revocation); browser-verified for receptionist and doctor in English and Arabic, axe clean
+- Left: "My devices" UI beyond the API; encrypted local drafts and patient re-confirmation after re-sign-in (no drafts exist yet)
 title: Session control: facility picker, idle timeout on shared clinic PCs, device/session revocation
 type: Story
 epic: MDV-P0-E02
@@ -340,9 +342,10 @@ ac:
 - `/v1/me/context` never returns permissions the role does not grant.
 
 === MDV-P0-013
-status: Blocked
+status: Partly done
 progress:
-- Needs MDV-P0-011
+- Merged [PR #49](https://github.com/ALFRED-LUCIFER/medvya/pull/49): `tenancy.Invitations` with RLS; 256-bit single-use tokens stored as SHA-256, 7-day expiry, revocable; invite/revoke need StaffRolesIntegrations at Config; public preview rate-limited, 404 for any unusable token; join through BFF sign-in creates the account if new and activates the membership once, atomically; email over SMTP (smtp4dev locally, SendGrid relay in the cloud), no patient data; audited; F-06 page and admin invite form in en/hi/ar; mutation-checked
+- Left: SMS invitations (MDV-P1-033), staff list with resend/revoke UI (MDV-P1-008), licence verification (MDV-P1-007), matching the provider's verified email to the invited address (Entra spike)
 title: Invite a colleague and accept the invitation (membership invited → active)
 type: Story
 epic: MDV-P0-E02
@@ -575,11 +578,10 @@ ac:
 - Numbers, dates and currency format per locale and country (₹ with Indian grouping, AED).
 
 === MDV-P0-022
-status: Partly done
+status: Done
 progress:
-- Merged [PR #41](https://github.com/ALFRED-LUCIFER/medvya/pull/41): React Router; navy sidebar (≥1280 px), 72 px icon rail (768–1279 px), mobile bottom tabs + More (<768 px); facility, user and role; bell placeholder; skip link, nav landmark, focus ring; en/hi/ar
-- Navigation is a pure domain map (route → capability/access → optional tenant flag → phase) filtered by `/v1/me/context`; post-P1 screens are flag-gated; 7 unit tests (mutation-checked) and Playwright for roles, breakpoints in English and Arabic, skip link and axe
-- Left: demonstrate per role in the seeded tenant once the facility picker returns capabilities (MDV-P0-012)
+- Merged [PR #41](https://github.com/ALFRED-LUCIFER/medvya/pull/41): React Router; navy sidebar, 72 px icon rail, mobile bottom tabs + More; skip link, nav landmark, focus ring; en/hi/ar; navigation filtered by capabilities and tenant flags, unit and Playwright tests
+- Demonstrated per role in the seeded tenant with the facility picker ([PR #65](https://github.com/ALFRED-LUCIFER/medvya/pull/65)): receptionist sees Practice items only, doctor sees Clinical + Practice
 title: App shell with role-based navigation (desktop sidebar, tablet rail, mobile tabs)
 type: Story
 epic: MDV-P0-E04

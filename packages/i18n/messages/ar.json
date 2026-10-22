@@ -505,5 +505,6 @@
   "patients.record.reveal": "إظهار الأرقام كاملة",
   "patients.record.revealNote": "فقط للتحقق من بطاقة أو مطالبة. تُسجَّل كل مرة في سجل الوصول.",
   "patients.record.revealFailed": "تعذّر إظهار الأرقام كاملة. حاول مرة أخرى.",
-  "patients.record.revealed": "تم إظهار الأرقام كاملة."
+  "patients.record.revealed": "تم إظهار الأرقام كاملة.",
+  "booking.error.busy": "هذا التقويم مشغول بحجوزات أخرى الآن. لم يُحفظ شيء؛ حاول مرة أخرى."
 }

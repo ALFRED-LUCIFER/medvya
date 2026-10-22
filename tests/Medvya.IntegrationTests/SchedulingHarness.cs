@@ -35,6 +35,8 @@ internal sealed class SchedulingHarness(SqlServerFixture sql)
     public readonly Guid Patient = Guid.NewGuid(), SecondPatient = Guid.NewGuid();
     public ManualClock Clock { get; } = new(MondayMorning);
     public SchedulingOptions Options { get; } = new();
+    /// <summary>A pool big enough for a hundred desks booking at once (each request also opens Tenancy and Patients connections).</summary>
+    public string ConnectionString => new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(sql.ConnectionString) { MaxPoolSize = 400 }.ConnectionString;
     readonly List<ServiceProvider> providers = [];
 
     public async Task SeedAsync()
@@ -68,6 +70,19 @@ internal sealed class SchedulingHarness(SqlServerFixture sql)
         await patients.SaveChangesAsync();
     }
 
+    /// <summary>Adds <paramref name="count"/> receptionists at the facility: one desk per parallel caller.</summary>
+    public async Task<List<Guid>> AddReceptionistsAsync(int count)
+    {
+        var users = Enumerable.Range(0, count).Select(_ => Guid.NewGuid()).ToList();
+        await using var db = sql.Context(Tenant);
+        db.Memberships.AddRange(users.Select(u => new Membership
+        {
+            Id = Guid.NewGuid(), TenantId = Tenant, UserId = u, FacilityId = Facility, Role = Role.Receptionist, Status = MembershipStatus.Active,
+        }));
+        await db.SaveChangesAsync();
+        return users;
+    }
+
     sealed class FixedUser(Guid id) : ICurrentUser { public Guid? UserId => id; }
 
     IServiceProvider Scope(Guid user, Guid? inTenant)
@@ -76,9 +91,9 @@ internal sealed class SchedulingHarness(SqlServerFixture sql)
             .AddSingleton<ICurrentTenant>(new SqlServerFixture.FixedTenant(inTenant ?? Tenant))
             .AddSingleton<ICurrentUser>(new FixedUser(user))
             .AddSingleton<TimeProvider>(Clock)
-            .AddTenancyModule(sql.ConnectionString).AddIdentityModule(sql.ConnectionString)
-            .AddPatientsModule(sql.ConnectionString).AddSchedulingModule(sql.ConnectionString);
-        services.Configure<SchedulingOptions>(o => o.SlotHold = Options.SlotHold);
+            .AddTenancyModule(ConnectionString).AddIdentityModule(ConnectionString)
+            .AddPatientsModule(ConnectionString).AddSchedulingModule(ConnectionString);
+        services.Configure<SchedulingOptions>(o => (o.SlotHold, o.LockTimeout) = (Options.SlotHold, Options.LockTimeout));
         var provider = services.BuildServiceProvider();
         providers.Add(provider);
         return provider.CreateScope().ServiceProvider;

@@ -3,10 +3,12 @@ using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 using Host.Api.Auth;
 using Host.Api.Context;
+using Host.Api.Invitations;
 using Host.Api.Middleware;
 using Medvya.Audit.Api;
 using Medvya.Audit.Infrastructure;
 using Medvya.BuildingBlocks.Domain;
+using Medvya.BuildingBlocks.Infrastructure;
 using Medvya.Identity.Infrastructure;
 using Medvya.Patients.Api;
 using Medvya.Patients.Infrastructure;
@@ -30,7 +32,11 @@ builder.WebHost.ConfigureKestrel(k =>
 });
 
 builder.AddStaffAuthentication();
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorizationBuilder().AddStaffPolicies();
+// Enums travel as names ("Receptionist"), never as numbers that shift when an enum changes.
+builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+builder.Services.Configure<SmtpOptions>(builder.Configuration.GetSection("Email:Smtp")).AddSingleton<IEmailSender, SmtpEmailSender>();
+builder.Services.Configure<InvitationOptions>(builder.Configuration.GetSection("Invitations"));
 builder.AddPublicSite();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<RequestContext>();
@@ -83,6 +89,7 @@ app.MapGet("/health", () => Results.Ok(new { status = "ok", version = typeof(Pro
 app.MapStaffSession();
 app.MapSchedulingEndpoints();
 app.MapPublicSite();
+app.MapInvitations();
 app.MapPatientEndpoints();
 if (app.Environment.IsDevelopment() && app.Configuration["Authentication:Oidc:Authority"]?.EndsWith(DevIdentityProvider.Path, StringComparison.Ordinal) == true)
     app.MapDevIdentityProvider();

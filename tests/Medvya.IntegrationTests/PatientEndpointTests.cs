@@ -213,6 +213,11 @@ public sealed class PatientEndpointTests(SqlServerFixture sql) : IClassFixture<S
         await using var db = sql.Audit(tenant);
         var row = await db.Events.SingleAsync(e => e.Action == "patient.read" && e.PatientId == elsewhere);
         Assert.Equal(Medvya.Audit.Domain.AuditOutcome.NotFound, row.Outcome);
+
+        // Revealing that record's numbers is not found either, and audited as such (one row).
+        Assert.Equal(HttpStatusCode.NotFound, (await desk.PostAsync(new Uri($"/v1/patients/{elsewhere}/identifiers/reveal", UriKind.Relative), null)).StatusCode);
+        var reveal = await db.Events.SingleAsync(e => e.Action == "patient.identifiers.reveal" && e.PatientId == elsewhere);
+        Assert.Equal(Medvya.Audit.Domain.AuditOutcome.NotFound, reveal.Outcome);
     }
 
     [Fact]

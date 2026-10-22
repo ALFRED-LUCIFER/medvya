@@ -24,7 +24,9 @@ public sealed class DocumentNumbering(BillingDbContext db, ICurrentTenant tenant
         var financialYear = rules.FinancialYear(issuedAt);
         var documentType = type.ToString();
 
+        // OUTPUT goes INTO a table variable: SQL Server refuses a bare OUTPUT on a table with a trigger (TR_DocSequences_OnlyMoveForward).
         var number = (await db.Database.SqlQuery<long>($"""
+            DECLARE @issued TABLE (Value bigint NOT NULL);
             MERGE billing.DocSequences WITH (HOLDLOCK) AS s
             USING (SELECT {tenantId} AS TenantId, {rules.CountryCode} AS CountryCode, {documentType} AS DocumentType,
                           {financialYear} AS FinancialYear, {prefix} AS Prefix) AS k
@@ -33,7 +35,8 @@ public sealed class DocumentNumbering(BillingDbContext db, ICurrentTenant tenant
             WHEN MATCHED THEN UPDATE SET NextNumber = s.NextNumber + 1
             WHEN NOT MATCHED THEN INSERT (Id, TenantId, CountryCode, DocumentType, FinancialYear, Prefix, NextNumber)
                  VALUES ({Guid.CreateVersion7()}, k.TenantId, k.CountryCode, k.DocumentType, k.FinancialYear, k.Prefix, 2)
-            OUTPUT inserted.NextNumber - 1 AS Value;
+            OUTPUT inserted.NextNumber - 1 INTO @issued;
+            SELECT Value FROM @issued;
             """).ToListAsync(cancellationToken)).Single();
 
         return new(rules.Format(prefix, financialYear, number), financialYear, number);

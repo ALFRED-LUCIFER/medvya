@@ -63,8 +63,12 @@ namespace Medvya.Billing.Infrastructure.Persistence.Migrations
 
                     b.ToTable("DocSequences", "billing", t =>
                         {
+                            t.HasTrigger("TR_DocSequences_OnlyMoveForward");
+
                             t.HasCheckConstraint("CK_DocSequences_NextNumber", "[NextNumber] >= 1");
                         });
+
+                    b.HasAnnotation("SqlServer:UseSqlOutputClause", false);
                 });
 #pragma warning restore 612, 618
         }

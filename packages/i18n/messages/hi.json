@@ -502,5 +502,10 @@
   "registration.done.checkIn": "अभी चेक-इन करें (वॉक-इन)",
   "registration.done.open": "रिकॉर्ड खोलें",
   "registration.done.another": "एक और पंजीकृत करें",
+  "patients.masked": "••{last}",
+  "patients.record.reveal": "पूरे नंबर दिखाएँ",
+  "patients.record.revealNote": "केवल कार्ड या दावे की जाँच के लिए। हर बार एक्सेस लॉग में दर्ज होता है।",
+  "patients.record.revealFailed": "पूरे नंबर नहीं दिखाए जा सके। फिर से कोशिश करें।",
+  "patients.record.revealed": "पूरे नंबर दिखाए गए।",
   "booking.error.busy": "यह कैलेंडर अभी दूसरी बुकिंग में व्यस्त है। कुछ भी सहेजा नहीं गया; फिर से कोशिश करें।"
 }

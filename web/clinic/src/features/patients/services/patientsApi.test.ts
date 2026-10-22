@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ApiError, fetchPatient, searchPatients } from './patientsApi';
+import { ApiError, fetchPatient, revealIdentifiers, searchPatients } from './patientsApi';
 
 // Synthetic values only.
 const phone = '+91 90000 00101';
@@ -30,6 +30,15 @@ describe('patients api', () => {
     expect(error).toBeInstanceOf(ApiError);
     expect(error).toMatchObject({ status: 400, code: 'full_number_required' });
     expect(String((error as Error).message)).not.toContain('98470');
+  });
+
+  it('reveals full numbers only through an explicit POST with the CSRF header, never a cacheable GET', async () => {
+    const fetch = stubFetch(Response.json({ identifiers: [], memberNumber: null }));
+    await revealIdentifiers('5e1d0001-0004-4000-8000-000000000001');
+    const [url, init] = fetch.mock.calls[0]!;
+    expect(url).toBe('/v1/patients/5e1d0001-0004-4000-8000-000000000001/identifiers/reveal');
+    expect(init?.method).toBe('POST');
+    expect(init!.headers).toMatchObject({ 'X-Medvya-Csrf': '1' });
   });
 
   it('opens a record by its opaque id only', async () => {

@@ -128,14 +128,19 @@ public abstract partial class CountryRules
         if (q.Length == 0) return new(SearchKind.Directory);
         if (q.Length > 100) throw new PatientValidationException([new("query", "too_long")]);
 
+        var numberLike = NumberLike().IsMatch(q);
+        var compact = numberLike ? PhoneSeparators().Replace(q, "") : "";
+        // Separators only ("-", "( )", "+"): nothing to look up.
+        if (numberLike && !compact.Any(char.IsAsciiDigit)) throw new PatientValidationException([new("query", "too_short")]);
+        // A phone first: "0091 98470 21345" is 14 digits like an ABHA number, but an ABHA never starts with an international prefix.
+        if (numberLike && NormalizeMobile(compact) is { } mobile) return new(SearchKind.Phone, mobile);
+
         var probe = new List<ValidationError>(); // format misses are expected while probing and dropped
         foreach (var scheme in Schemes.Where(PatientIdentifier.IsDeskSearchKey).Order())
             if (NormalizeIdentifier(scheme, q, "query", probe) is { } id) return new(SearchKind.Identifier, id, scheme);
 
-        if (NumberLike().IsMatch(q))
+        if (numberLike)
         {
-            var compact = PhoneSeparators().Replace(q, "");
-            if (NormalizeMobile(compact) is { } mobile) return new(SearchKind.Phone, mobile);
             if (compact.Length <= Mrn.Digits && compact.All(char.IsAsciiDigit)) return new(SearchKind.Mrn, Mrn.Format(int.Parse(compact, CultureInfo.InvariantCulture)));
             throw new PatientValidationException([new("query", "full_number_required")]);
         }

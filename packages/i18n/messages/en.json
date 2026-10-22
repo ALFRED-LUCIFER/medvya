@@ -502,5 +502,10 @@
   "registration.done.checkIn": "Check in now (walk-in)",
   "registration.done.open": "Open record",
   "registration.done.another": "Register another",
+  "patients.masked": "••{last}",
+  "patients.record.reveal": "Show full numbers",
+  "patients.record.revealNote": "Only to check a card or a claim. Each time is recorded in the access log.",
+  "patients.record.revealFailed": "The full numbers could not be shown. Try again.",
+  "patients.record.revealed": "Full numbers shown.",
   "booking.error.busy": "This calendar is busy with other bookings right now. Nothing was saved; try again."
 }

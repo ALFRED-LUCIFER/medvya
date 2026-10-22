@@ -1,7 +1,9 @@
 using Medvya.Scheduling.Application;
 using Medvya.Scheduling.Domain;
 using Microsoft.Data.SqlClient;
+using Medvya.Identity.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Medvya.IntegrationTests;
 
@@ -50,8 +52,8 @@ public sealed class ScheduleServiceTests(SqlServerFixture sql) : IClassFixture<S
     {
         await using var provider = new ServiceCollection().AddIdentityModule(sql.ConnectionString).BuildServiceProvider();
         var staff = provider.GetRequiredService<Medvya.Identity.Application.IStaffUsers>();
-        var names = await staff.DisplayNamesAsync([doctor, doctor, Guid.NewGuid()]);
-        Assert.Equal(new Dictionary<Guid, string> { [doctor] = "Dr. Arjun Rao (synthetic)" }, names); // unknown ids left out, duplicates once
+        var names = await staff.DisplayNamesAsync([h.Doctor, h.Doctor, Guid.NewGuid()]);
+        Assert.Equal(new Dictionary<Guid, string> { [h.Doctor] = "Dr. Arjun Rao (synthetic)" }, names); // unknown ids left out, duplicates once
         Assert.Empty(await staff.DisplayNamesAsync([]));
     }
 

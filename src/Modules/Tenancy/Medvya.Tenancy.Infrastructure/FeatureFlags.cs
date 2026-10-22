@@ -23,6 +23,9 @@ public sealed partial class FeatureFlags(TenancyDbContext db, ICurrentTenant ten
             ? Task.FromResult(false)
             : db.FeatureFlags.AnyAsync(f => f.Key == key && f.Enabled, cancellationToken);
 
+    public async Task<IReadOnlyList<string>> EnabledKeysAsync(CancellationToken cancellationToken = default) =>
+        tenant.TenantId is null ? [] : await db.FeatureFlags.Where(f => f.Enabled).OrderBy(f => f.Key).Select(f => f.Key).ToListAsync(cancellationToken);
+
     public async Task SetAsync(string key, bool enabled, string owner, string description, CancellationToken cancellationToken = default)
     {
         if (key.Length > 100 || !KeyFormat().IsMatch(key)) throw new ArgumentException("Flag key must be lowercase letters, digits and . _ - (max 100).", nameof(key));

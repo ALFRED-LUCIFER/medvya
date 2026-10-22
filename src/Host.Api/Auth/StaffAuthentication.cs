@@ -1,5 +1,7 @@
 using System.Security.Claims;
 using Medvya.Identity.Application;
+using Medvya.Identity.Domain;
+using Medvya.Tenancy.Domain;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
@@ -30,9 +32,10 @@ public static partial class StaffAuthentication
             o.Cookie.HttpOnly = true;
             o.Cookie.SecurePolicy = CookieSecurePolicy.Always;
             o.Cookie.SameSite = SameSiteMode.Strict;
-            // shortcut: fixed 8 h session; per-tenant idle timeout and device revocation arrive with MDV-P0-012.
-            o.ExpireTimeSpan = TimeSpan.FromHours(8);
+            // The cookie lives at most 8 h; the server-side session (SessionControl) also enforces idle timeout and revocation.
+            o.ExpireTimeSpan = StaffSession.MaxLifetime;
             o.SlidingExpiration = false;
+            o.Events.OnValidatePrincipal = SessionControl.ValidatePrincipalAsync;
             // An API answers 401/403; the SPA decides where to send the user.
             o.Events.OnRedirectToLogin = ctx => { ctx.Response.StatusCode = StatusCodes.Status401Unauthorized; return Task.CompletedTask; };
             o.Events.OnRedirectToAccessDenied = ctx => { ctx.Response.StatusCode = StatusCodes.Status403Forbidden; return Task.CompletedTask; };
@@ -82,14 +85,27 @@ public static partial class StaffAuthentication
         var subject = principal.FindFirst("sub")?.Value;
         var user = issuer is null || subject is null ? null
             : await ctx.HttpContext.RequestServices.GetRequiredService<IStaffUsers>().FindAsync(issuer, subject, ctx.HttpContext.RequestAborted);
+        // Joining by invitation (MDV-P0-013): the token rode in the protected OIDC state.
+        if (issuer is not null && subject is not null && ctx.Properties?.Items.TryGetValue(InvitationSignIn.Item, out var invitation) == true && invitation is not null)
+        {
+            user = await InvitationSignIn.AcceptAsync(ctx.HttpContext, invitation, issuer, subject, principal.FindFirst("name")?.Value, user);
+            if (user is null)
+            {
+                SignInRefused(log, "invitation_unusable");
+                ctx.Fail("The invitation cannot be used.");
+                return;
+            }
+        }
         if (user is null)
         {
             SignInRefused(log, "unknown_account");
             ctx.Fail("No Medvya account for this sign-in.");
             return;
         }
+        var session = await ctx.HttpContext.RequestServices.GetRequiredService<IStaffSessions>()
+            .StartAsync(user.Id, ctx.Request.Headers.UserAgent.ToString(), ctx.HttpContext.RequestAborted);
         ctx.Principal = new ClaimsPrincipal(new ClaimsIdentity(
-            [new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()), new Claim("amr", "mfa")],
+            [new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()), new Claim("amr", "mfa"), new Claim(SessionControl.SessionIdClaim, session.Id.ToString())],
             CookieAuthenticationDefaults.AuthenticationScheme));
     }
 
@@ -118,26 +134,17 @@ public static partial class StaffAuthentication
 
     public static WebApplication MapStaffSession(this WebApplication app)
     {
-        app.MapGet("/bff/login", (string? returnUrl) => Results.Challenge(
-                new AuthenticationProperties { RedirectUri = returnUrl is not null && IsLocal(returnUrl) ? returnUrl : "/" },
-                [OpenIdConnectDefaults.AuthenticationScheme]))
+        app.MapGet("/bff/login", (string? returnUrl, string? invitation) =>
+            {
+                var properties = new AuthenticationProperties { RedirectUri = returnUrl is not null && IsLocal(returnUrl) ? returnUrl : "/" };
+                if (InvitationToken.Read(invitation) is not null) properties.Items[InvitationSignIn.Item] = invitation;
+                return Results.Challenge(properties, [OpenIdConnectDefaults.AuthenticationScheme]);
+            })
             .AllowAnonymous()
             .RequireRateLimiting(SignInRateLimit);
 
-        app.MapPost("/bff/logout", async (HttpContext ctx) =>
-        {
-            // shortcut: ends the Medvya session only; add provider sign-out (end_session_endpoint) with Entra (MDV-P0-011).
-            await ctx.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-            return Results.NoContent();
-        }).RequireAuthorization();
-
-        app.MapGet("/v1/me/context", async (ClaimsPrincipal principal, [FromServices] IStaffUsers users, CancellationToken ct) =>
-        {
-            var user = Guid.TryParse(principal.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? await users.GetAsync(id, ct) : null;
-            // shortcut: user only; memberships, active facility, permissions and flags arrive with the facility picker (MDV-P0-012).
-            return user is null ? Results.Unauthorized() : Results.Ok(new { user = new { user.Id, user.DisplayName } });
-        }).RequireAuthorization();
-        return app;
+        // /bff/logout and /v1/me/* live in SessionControl.
+        return app.MapSessionControl();
     }
 
     public const string SignInRateLimit = "sign-in";

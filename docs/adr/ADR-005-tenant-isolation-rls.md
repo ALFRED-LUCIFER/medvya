@@ -10,6 +10,10 @@
 - EF Core global query filters apply the same rule in the application (defence in depth).
 - Facility scoping and care relationship are enforced in application policies.
 
+## Implementation note (MDV-P0-012)
+
+The facility picker must list one person's memberships across tenants. A dedicated connection sets `SESSION_CONTEXT('user_id')` with no tenant; the filter predicates on `Tenants`, `Facilities` and `Memberships` then also admit that user's `Active` memberships and their tenants and facilities. The extra branch applies only when no tenant is set, block predicates are unchanged, and other tables (feature flags, patients, audit) are untouched. See docs/03-architecture/database-security.md.
+
 ## Consequences
 
 - An automated test proves that a cross-tenant read and write are blocked by RLS **even when the EF filter is bypassed** (P0 exit gate).

@@ -49,6 +49,10 @@ public static class RoleMatrix
 
     public static Access Of(Role role, Capability capability) => Table[(role, capability)];
 
+    /// <summary>Every capability the role holds (Access.None left out), in matrix order.</summary>
+    public static IReadOnlyList<(Capability Capability, Access Access)> Grants(Role role) =>
+        [.. Rows.Select(r => (r.Capability, Of(role, r.Capability))).Where(g => g.Item2 != Access.None)];
+
     static Access Parse(string code) => code switch
     {
         "F" => Access.Full, "R" => Access.Read, "O" => Access.Own, "L" => Access.Limited, "P" => Access.Released,

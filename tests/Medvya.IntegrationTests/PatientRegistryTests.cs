@@ -139,6 +139,9 @@ public class PatientRegistryTests(SqlServerFixture sql) : IClassFixture<SqlServe
         Assert.Equal(quick.PatientId, Assert.Single((await Search(tenantA, "IN", null, filter: DirectoryFilter.Incomplete)).Items).Id);
         Assert.Equal(PatientSearch.PageSize + 1, (await Search(tenantA, "IN", null, filter: DirectoryFilter.Recent)).Total);
         await Assert.ThrowsAsync<PatientValidationException>(() => Search(tenantA, "IN", null, page: 0));
+        // Paging is for the desk, not an export: past 50 pages (1,000 rows) it is refused.
+        await Assert.ThrowsAsync<PatientValidationException>(() => Search(tenantA, "IN", null, page: PatientSearch.MaxPage + 1));
+        Assert.Equal(50, PatientSearch.MaxPage);
     }
 
     [Fact]

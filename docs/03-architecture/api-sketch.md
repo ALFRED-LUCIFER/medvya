@@ -27,8 +27,10 @@ POST   /v1/patients/merge-requests                 # P-03
 GET    /v1/schedule?view=day|week|list&date=&doctor=
 POST   /v1/slot-holds                              # short hold before confirm (P1-07)
 POST   /v1/appointments                            # serializable + app lock
-POST   /v1/appointments/{id}/reschedule|cancel|no-show|check-in
-GET    /v1/board?date=                             # SignalR hub /hubs/board for live updates
+POST   /v1/appointments/{id}/reschedule|cancel|no-show
+POST   /v1/appointments/{id}/check-in              # P1-028; a repeat returns the visit unchanged
+POST   /v1/appointments/{id}/status                # next board column only (state machine), else 409
+GET    /v1/front-desk/board?facilityId=            # P-01 today, nonclinical; SignalR hub for live updates (P1-029)
 GET    /v1/queue/tv?display_token=                 # tokens only
 GET    /v1/notifications
 POST   /v1/encounters                              # P2

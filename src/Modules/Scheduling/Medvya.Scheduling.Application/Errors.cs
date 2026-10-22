@@ -26,3 +26,15 @@ public sealed class SlotUnavailableException(string code) : Exception("Slot no l
 {
     public string Code { get; } = code;
 }
+
+/// <summary>No appointment with this id in the tenant (tenant filters and row-level security hide other tenants' rows).</summary>
+public sealed class AppointmentNotFoundException() : Exception("Appointment not found.");
+
+/// <summary>
+/// The visit cannot make this move: not the next step of the state machine, or not on the visit's day. Code is a stable key
+/// ("invalid_transition", "not_today") the UI translates; no patient data.
+/// </summary>
+public sealed class VisitTransitionException(string code) : Exception("Visit cannot move: " + code)
+{
+    public string Code { get; } = code;
+}

@@ -6,7 +6,7 @@ Minimal APIs grouped per module, with OpenAPI generated from code and a TS clien
 
 - Every endpoint runs central authentication, authorisation and audit middleware, **plus** resource-specific authorisation inside the use case (tenant, facility, role, relationship, purpose).
 - No GET has side effects (except the audit write of the read itself).
-- Public URLs never contain storage names or clinical text. No PHI in query strings.
+- Public URLs never contain storage names or clinical text. No PHI in query strings: searches by name, phone or ID are `POST` with the text in the body.
 - Idempotency keys on all POSTs that create money, messages, orders or integration deliveries.
 - FluentValidation on every input. Problem Details (RFC 9457) for errors. 403 maps to the F-05b screen.
 - Rate limiting on sign-in, OTP, booking, search and portal endpoints.
@@ -20,7 +20,8 @@ POST   /v1/invitations/{token}/accept
 POST   /v1/sessions/{id}/revoke
 GET    /v1/admin/audit?scope=authorized            # P0/P1 (F-12)
 POST   /v1/patients                                # P1 (P-02)
-GET    /v1/patients/search?q=                      # privacy-safe results (D-02)
+POST   /v1/patients/search                         # privacy-safe results (D-02); text in the body, never the URL (P1-018)
+GET    /v1/patients/{id}                           # open a record (audited read, purpose registration)
 POST   /v1/patients/duplicate-check                # while typing (P1-05)
 POST   /v1/patients/merge-requests                 # P-03
 GET    /v1/schedule?view=day|week|list&date=&doctor=

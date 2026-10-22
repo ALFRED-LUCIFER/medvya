@@ -1,5 +1,6 @@
 import type { Locale } from '@medvya/i18n';
 import { useI18n } from '@medvya/i18n';
+import { lazy, Suspense } from 'react';
 import { Navigate, Outlet, Route, Routes, useNavigate } from 'react-router';
 import UiGallery from '../dev/UiGallery';
 import OfflineBanner from '../features/connectivity/components/OfflineBanner';
@@ -12,9 +13,14 @@ import AppShell from '../features/shell/components/AppShell';
 import ChooseFacilityPage from '../features/shell/components/ChooseFacilityPage';
 import MorePage from '../features/shell/components/MorePage';
 import ShellMessage, { ComingSoon } from '../features/shell/components/ShellMessage';
+import { allows, patientDirectory } from '../features/shell/domain/navigation';
 import { useShellController } from '../features/shell/hooks/useShellController';
 import FrontDeskRoute from './FrontDeskRoute';
 import ScheduleRoute from './ScheduleRoute';
+
+// Patient screens load on first use, keeping them out of the first-paint bundle.
+const PatientDirectoryRoute = lazy(() => import('./PatientRoutes').then(m => ({ default: m.PatientDirectoryRoute })));
+const PatientRecordRoute = lazy(() => import('./PatientRoutes').then(m => ({ default: m.PatientRecordRoute })));
 
 type Props = { locale: Locale; onLocaleChange: (l: Locale) => void };
 
@@ -29,6 +35,8 @@ export default function App({ locale, onLocaleChange }: Props) {
   const toHome = () => navigate('/');
   const active = shell.session?.active;
   const first = shell.items[0];
+  const searchPath = allows(active ?? null, patientDirectory) ? patientDirectory.path : null;
+  const registerPath = shell.items.find(i => i.id === 'register')?.path ?? null;
 
   const routes = shell.loading ? <Route path="*" element={<ShellMessage standalone busy title={t('shell.loading')} />} />
     : !shell.session ? <>
@@ -42,9 +50,9 @@ export default function App({ locale, onLocaleChange }: Props) {
     : <>
         <Route path="/choose-facility" element={<ChooseFacilityPage {...account} />} />
         <Route element={
-          <AppShell {...account} role={active.role} facilityName={active.facilityName} groups={shell.groups} tabs={shell.tabs}
+          <AppShell {...account} role={active.role} facilityName={active.facilityName} groups={shell.groups} tabs={shell.tabs} searchPath={searchPath}
             languageSwitcher={<LanguageSwitcher inline value={locale} onChange={onLocaleChange} />}>
-            <Outlet />
+            <Suspense fallback={<ShellMessage busy title={t('shell.loading')} />}><Outlet /></Suspense>
           </AppShell>}>
           <Route index element={first ? <Navigate to={first.path} replace /> : <ShellMessage title={t('shell.noScreens.title')} body={t('shell.noScreens.body')} />} />
           {shell.items.map(i => <Route key={i.id} path={i.path} element={i.id === 'schedule'
@@ -53,6 +61,10 @@ export default function App({ locale, onLocaleChange }: Props) {
             ? <FrontDeskRoute facilityId={active.facilityId} online={online} canMove={active.capabilities.CheckInQueue === 'Full'}
                 canRegister={active.capabilities.RegisterBookPatients === 'Full'} />
             : <ComingSoon title={t(`nav.${i.id}`)} phase={i.phase} />} />)}
+          {searchPath && <>
+            <Route path={searchPath} element={<PatientDirectoryRoute registerPath={registerPath} />} />
+            <Route path={`${searchPath}/:patientId`} element={<PatientRecordRoute />} />
+          </>}
           <Route path="/more" element={<MorePage {...account} role={active.role} facilityName={active.facilityName} groups={shell.groups} />} />
           <Route path="*" element={<NotFoundPage onBackToToday={toHome} />} />
         </Route>

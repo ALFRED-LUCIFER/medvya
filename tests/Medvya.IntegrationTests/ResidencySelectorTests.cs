@@ -112,6 +112,15 @@ public sealed partial class ResidencySelectorTests(WebApplicationFactory<Program
     }
 
     [Fact]
+    public async Task AWaitlistPostWithoutTheAntiForgeryTokenIsRefused()
+    {
+        var (client, store) = Site();
+        var fields = new Dictionary<string, string> { ["Form.Country"] = "AE", ["Form.Name"] = "Fatima Al Hashimi", ["Form.Email"] = "fatima@example.com" };
+        Assert.Equal(HttpStatusCode.BadRequest, (await Submit(client, fields, withToken: false, path: "/region?go=AE")).StatusCode);
+        Assert.Empty(store.Received);
+    }
+
+    [Fact]
     public async Task AWaitlistForAnUnknownCountryIsRefused()
     {
         var (client, store) = Site();

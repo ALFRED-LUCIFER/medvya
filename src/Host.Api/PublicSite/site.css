@@ -18,12 +18,13 @@ main:focus { outline: none; }
 .brand-mark { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: var(--radius-md); background: var(--color-brand-950); color: var(--color-rail-clinical); font-weight: 800; }
 .site-nav { order: 3; flex-basis: 100%; }
 .site-nav ul { display: flex; flex-wrap: wrap; gap: 0 20px; }
-.site-nav a { display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; color: var(--color-ink-700); text-decoration: none; }
+.site-nav a { display: inline-flex; align-items: center; min-height: 44px; min-width: 44px; justify-content: center; font-size: 14px; font-weight: 600; color: var(--color-ink-700); text-decoration: none; }
 .site-nav a:hover, .site-nav a[aria-current] { color: var(--color-brand-950); text-decoration: underline; text-underline-offset: 4px; }
 .header-actions { display: flex; align-items: center; gap: 12px; margin-inline-start: auto; }
 .region-switch { display: flex; gap: 4px; padding: 4px; border-radius: var(--radius-md); background: var(--color-muted); }
-.region-switch a { display: inline-flex; align-items: center; min-height: 40px; min-width: 44px; justify-content: center; padding: 0 12px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 700; color: var(--color-ink-600); text-decoration: none; }
-.region-switch a[aria-current] { background: var(--color-card); color: var(--color-brand-950); box-shadow: 0 1px 2px color-mix(in srgb, var(--color-brand-950) 12%, transparent); }
+.region-switch a { display: inline-flex; align-items: center; min-height: 44px; min-width: 44px; justify-content: center; padding: 0 12px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 700; color: var(--color-ink-600); text-decoration: none; }
+/* The white fill is 1.1:1 against the pill, so the underline (as in the nav) is what shows the current region. */
+.region-switch a[aria-current] { background: var(--color-card); color: var(--color-brand-950); box-shadow: 0 1px 2px color-mix(in srgb, var(--color-brand-950) 12%, transparent); text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 4px; }
 
 .button { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 16px; border-radius: var(--radius-md); font-size: 14px; font-weight: 700; text-decoration: none; border: 1px solid transparent; }
 .button-primary { background: var(--color-primary); color: var(--color-primary-foreground); font-weight: 800; }
@@ -100,7 +101,7 @@ form .button { align-self: flex-start; min-height: 48px; padding: 0 20px; font-s
 
 .site-footer { padding: 24px 16px 32px; border-block-start: 1px solid var(--color-line); background: var(--color-surface); }
 .language-switch { display: flex; flex-wrap: wrap; gap: 0 20px; }
-.language-switch a { display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; color: var(--color-ink-700); }
+.language-switch a { display: inline-flex; align-items: center; min-height: 44px; min-width: 44px; justify-content: center; font-size: 14px; font-weight: 600; color: var(--color-ink-700); }
 .language-switch a[aria-current] { color: var(--color-brand-950); font-weight: 800; }
 
 @media (min-width: 1024px) {

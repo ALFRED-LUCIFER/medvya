@@ -66,6 +66,8 @@ public static partial class PublicSite
             });
         });
         services.AddSingleton<SiteText>();
+        // The form token cookie defaults to never Secure; send it over HTTPS only whenever the page came over HTTPS.
+        services.AddAntiforgery(o => o.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest);
         // Write Hindi and Arabic as characters, not &#x...; entities (markup characters are still encoded).
         services.Configure<WebEncoderOptions>(o => o.TextEncoderSettings = new TextEncoderSettings(UnicodeRanges.All));
         return services;

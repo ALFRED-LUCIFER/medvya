@@ -47,10 +47,13 @@ public static partial class LeadRules
 {
     public const int EmailMax = 254;
 
+    /// <summary>Required single-line text. A browser never sends a line break from a text input, so one means a crafted post.</summary>
     public static void Required(Dictionary<string, string> errors, string field, string? value, int max)
     {
         if (string.IsNullOrWhiteSpace(value)) errors[field] = "required";
         else if (value.Length > max) errors[field] = "tooLong";
+        // Line breaks would also break the founder email: the organisation is in its subject line.
+        else if (value.Any(char.IsControl)) errors[field] = "invalid";
     }
 
     public static void Contact(Dictionary<string, string> errors, string? email, string? phone)

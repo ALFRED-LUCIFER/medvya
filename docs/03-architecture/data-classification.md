@@ -68,9 +68,21 @@ Every stored field has one class. In code, each domain property carries `[Classi
 | SLOT_HOLD.* (calendar, slot, visit type, held_by, expires_at) | Internal | — |
 | VISIT_STATUS_EVENT.* (appointment, state, actor, time) | Internal | Append-only history |
 | OUTBOX_EVENT.* (type, aggregate id, payload of opaque ids and instants) | Internal | No PHI in payloads |
-| WAITLIST_ENTRY.*, QUEUE_TOKEN.* | Internal | Tokens on TV, never names |
+| WAITLIST_ENTRY.*, QUEUE_TOKEN.* (reception queue) | Internal | Tokens on TV, never names |
 | NOTIFICATION.template_id, channel, state, provider_ref | Internal | Templates carry no clinical data |
 | NOTIFICATION.recipient (phone/email) | Personal | DDM |
+
+### Leads: public-site contacts (P1, MDV-P1-002/003)
+
+Not clinic data, so no tenant. Of the app roles only `medvya_leads` reaches the `leads` schema (select and insert); reporting does not.
+
+| Entity.field | Class | Control |
+|---|---|---|
+| leads.DemoRequests: id, organisation, role, country, received_at | Internal | — |
+| leads.DemoRequests: name, email, phone | Personal | Never in logs. Sent to the founder by email (data map) |
+| leads.DemoRequests: message (free text) | Personal | Never in logs and never emailed: a visitor could type patient details despite the warning |
+| leads.Waitlist: id, country, received_at | Internal | — |
+| leads.Waitlist: name, email, phone | Personal | Never in logs |
 
 ### Clinical (P2)
 

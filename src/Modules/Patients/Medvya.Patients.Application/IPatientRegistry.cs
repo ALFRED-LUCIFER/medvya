@@ -38,19 +38,55 @@ public sealed record RegistrationResult(Guid PatientId, string Mrn, DateTimeOffs
 
 public sealed record PatientRecord(Patient Patient, IReadOnlyList<PatientIdentifier> Identifiers, PayerCoverage? Payer);
 
+/// <summary>Medical record numbers: facility-scoped, zero-padded.</summary>
+/// <remarks>shortcut: plain zero-padded number; add the facility prefix (e.g. DQ-11-) when facilities have codes.</remarks>
+public static class Mrn
+{
+    public const int Digits = 6;
+    public static string Format(int number) => number.ToString("D6", System.Globalization.CultureInfo.InvariantCulture);
+}
+
+/// <summary>What a desk search box was read as (<see cref="CountryRules.ParseSearch"/>). Directory = no search text.</summary>
+public enum SearchKind { Directory, Name, Phone, Mrn, Identifier }
+
+public sealed record SearchTerm(SearchKind Kind, string? Value = null, IdentifierScheme? Scheme = null);
+
+/// <summary>Recent = registered in the last <see cref="PatientSearch.RecentDays"/> days.</summary>
+public enum DirectoryFilter { All, Incomplete, Recent }
+
+public sealed record PatientSearch(string CountryCode, string? Query, DirectoryFilter Filter = DirectoryFilter.All, int Page = 1)
+{
+    public const int PageSize = 20;
+    public const int RecentDays = 7;
+}
+
 /// <summary>
-/// Patients of the current tenant. Every call is audited (fail closed) and scoped by tenant query filters and row-level security.
-/// shortcut: no HTTP endpoints yet; they need staff sign-in and capability policies (MDV-P0-011) and the P-02 screen.
+/// A privacy-safe result row (MDV-P1-018): initials, age, sex and the MRN tail only. Full demographics need the record opened,
+/// which is audited.
+/// </summary>
+public sealed record PatientSearchRow(Guid Id, string Initials, int AgeYears, bool AgeEstimated, SexAtBirth SexAtBirth, string MrnTail, RegistrationStatus Status);
+
+public sealed record PatientSearchResult(SearchKind MatchedOn, IReadOnlyList<PatientSearchRow> Items, int Page, int PageSize, int Total);
+
+/// <summary>
+/// Patients of the current tenant at the current facility, scoped by tenant query filters and row-level security.
+/// Writes audit inside their own transaction (fail closed). Reads are audited by the calling endpoint (<c>.Audited()</c>, written
+/// before the read runs), so each request leaves exactly one audit event.
 /// </summary>
 public interface IPatientRegistry
 {
     /// <exception cref="PatientValidationException">With field/code pairs only; never the entered values.</exception>
     Task<RegistrationResult> RegisterAsync(RegisterPatient command, CancellationToken cancellationToken = default);
 
+    /// <summary>One patient of the current facility, or null (also for another facility's patient).</summary>
     Task<PatientRecord?> GetAsync(Guid patientId, CancellationToken cancellationToken = default);
 
-    /// <summary>Exact match on a lookup identifier (ABHA number, ABHA address, Emirates ID), normalised by the country rules first.</summary>
-    Task<PatientRecord?> FindByIdentifierAsync(string countryCode, IdentifierScheme scheme, string value, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// Directory page or search of the current facility's patients. Phone, MRN and identifiers (ABHA, ABHA address, Emirates ID, via
+    /// deterministic Always Encrypted) match exactly; names match on contained text.
+    /// </summary>
+    /// <exception cref="PatientValidationException">Unreadable query (see <see cref="CountryRules.ParseSearch"/>) or page.</exception>
+    Task<PatientSearchResult> SearchAsync(PatientSearch search, CancellationToken cancellationToken = default);
 
     /// <summary>Adds the missing address and payer; the registration becomes Complete (closing the desk's completion task) once both exist.</summary>
     Task<RegistrationStatus> CompleteRegistrationAsync(Guid patientId, PatientAddress? address, PayerInput? payer, CancellationToken cancellationToken = default);

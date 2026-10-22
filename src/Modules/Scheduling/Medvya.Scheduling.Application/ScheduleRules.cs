@@ -104,6 +104,20 @@ public static class ScheduleRules
         return new(hours, breaks, slots);
     }
 
+    /// <summary>End of a visit of <paramref name="slots"/> slots from <paramref name="start"/>, or null when start is not a slot of the day or the slots are not back to back.</summary>
+    public static DateTimeOffset? SpanEnd(CalendarDay day, DateTimeOffset start, int slots)
+    {
+        var first = -1;
+        for (var i = 0; i < day.Slots.Count && first < 0; i++) if (day.Slots[i].Start == start) first = i;
+        if (first < 0 || slots < 1 || first + slots > day.Slots.Count) return null;
+        for (var k = first; k < first + slots - 1; k++) if (day.Slots[k].End != day.Slots[k + 1].Start) return null;
+        return day.Slots[first + slots - 1].End;
+    }
+
+    /// <summary>True when [start, end) lies inside one working session and touches no break.</summary>
+    public static bool Covers(CalendarDay day, DateTimeOffset start, DateTimeOffset end) =>
+        day.Hours.Any(w => w.Start <= start && end <= w.End) && !day.Breaks.Any(b => b.Start < end && start < b.End);
+
     /// <summary>Unavailable blocks of a calendar within the day frame shown: everything outside its hours, plus its breaks.</summary>
     public static IReadOnlyList<UnavailableBlock> Unavailable(CalendarDay day, DateTimeOffset frameStart, DateTimeOffset frameEnd, bool hasTemplate)
     {

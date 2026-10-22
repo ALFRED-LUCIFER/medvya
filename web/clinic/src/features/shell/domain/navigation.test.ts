@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { toSession, type Access, type Capability, type Role } from '../../session/domain/session';
-import { mobileTabs, navItems, visibleNav } from './navigation';
+import { allows, mobileTabs, navItems, patientDirectory, visibleNav } from './navigation';
 
 // Copy of RoleMatrix.cs rows (what /v1/me/context sends as `capabilities` for each role).
 const roles: Role[] = ['SoloDoctor', 'HospitalDoctor', 'Receptionist', 'Nurse', 'CareCoordinator', 'Patient', 'PracticeAdmin', 'HospitalIt'];
@@ -56,6 +56,12 @@ describe('role-based navigation', () => {
     });
     expect(s.active?.facilityName).toBe('Adyar');
     expect(visibleNav(s.active)).toEqual([]);
+  });
+
+  it('opens the patient directory to the roles the API lets search (Register / book patients: Read or Full)', () => {
+    const may = (role: Role) => allows({ role, capabilities: capabilities(role), flags: [] }, patientDirectory);
+    expect(roles.filter(may)).toEqual(['SoloDoctor', 'HospitalDoctor', 'Receptionist', 'Nurse', 'CareCoordinator', 'PracticeAdmin']);
+    expect(allows(null, patientDirectory)).toBe(false);
   });
 
   it('puts at most four tabs in the mobile bar, in the design order', () => {

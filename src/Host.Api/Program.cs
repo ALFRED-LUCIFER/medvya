@@ -1,13 +1,20 @@
+using System.Security.Claims;
+using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 using Host.Api.Auth;
 using Host.Api.Context;
 using Host.Api.Middleware;
+using Medvya.Audit.Api;
 using Medvya.Audit.Infrastructure;
 using Medvya.BuildingBlocks.Domain;
 using Medvya.Identity.Infrastructure;
+using Medvya.Patients.Api;
+using Medvya.Patients.Infrastructure;
 using Medvya.Scheduling.Api;
+using Medvya.Scheduling.Application;
 using Medvya.Scheduling.Infrastructure;
 using Medvya.Leads.Infrastructure;
+using Medvya.Tenancy.Api;
 using Medvya.Tenancy.Infrastructure;
 using Host.Api.Observability;
 using Host.Api.PublicSite;
@@ -29,10 +36,21 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<RequestContext>();
 builder.Services.AddScoped<ICurrentTenant>(sp => sp.GetRequiredService<RequestContext>());
 builder.Services.AddScoped<ICurrentUser>(sp => sp.GetRequiredService<RequestContext>());
-// Without a database, audited and flag-gated endpoints cannot resolve IAuditLog / IFeatureFlags and fail closed (500).
+builder.Services.AddScoped<ICurrentFacility>(sp => sp.GetRequiredService<RequestContext>());
+builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+// Without a database, audited and flag-gated endpoints cannot resolve IAuditLog / IFeatureFlags and fail closed (500), and no
+// capability handler exists, so capability-guarded endpoints answer 403.
 if (builder.Configuration.GetConnectionString("Medvya") is { } sql)
-    builder.Services.AddAuditModule(sql).AddTenancyModule(sql).AddIdentityModule(sql).AddSchedulingModule(sql)
-        .AddLeadsModule(sql, builder.Configuration.GetSection("Leads:Email").Get<LeadsEmailOptions>() ?? new());
+{
+    builder.Services.AddAuditModule(sql).AddDeniedAccessAudit().AddTenancyModule(sql).AddIdentityModule(sql).AddPatientsModule(sql).AddSchedulingModule(sql)
+        .AddLeadsModule(sql, builder.Configuration.GetSection("Leads:Email").Get<LeadsEmailOptions>() ?? new()).AddCapabilityPolicies();
+    // shortcut: only Development has a column master key (the same local file as `pnpm dev:db`); the Azure Key Vault provider
+    // arrives with MDV-P0-006, and until then encrypted identifiers cannot be read anywhere else (fail closed).
+    if (builder.Environment.IsDevelopment())
+        LocalKeyStoreProvider.Register(() => LocalKeyStoreProvider.LoadOrCreate(builder.Configuration["ColumnEncryption:LocalKeyFile"]
+            ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Medvya", "local-column-master-key.pem")));
+}
+builder.Services.Configure<SchedulingOptions>(builder.Configuration.GetSection("Scheduling"));
 builder.Services.AddHsts(o => { o.MaxAge = TimeSpan.FromDays(365); o.IncludeSubDomains = true; });
 
 var permitsPerMinute = builder.Configuration.GetValue("RateLimiting:PermitsPerMinute", 300);
@@ -46,6 +64,9 @@ builder.Services.AddRateLimiter(o =>
     // Starting sign-in is cheap to abuse; codes and lockout are enforced by the identity provider.
     o.AddPolicy(StaffAuthentication.SignInRateLimit, ctx => RateLimitPartition.GetFixedWindowLimiter(ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = builder.Configuration.GetValue("RateLimiting:SignInPerMinute", 20), Window = TimeSpan.FromMinutes(1) }));
+    // Patient search per signed-in user: a desk searches a few times a minute; bulk enumeration is refused.
+    o.AddPolicy(PatientEndpoints.SearchRateLimit, ctx => RateLimitPartition.GetFixedWindowLimiter(ctx.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "anonymous",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = builder.Configuration.GetValue("RateLimiting:PatientSearchPerMinute", 30), Window = TimeSpan.FromMinutes(1) }));
 });
 
 var app = builder.Build();
@@ -62,6 +83,7 @@ app.MapGet("/health", () => Results.Ok(new { status = "ok", version = typeof(Pro
 app.MapStaffSession();
 app.MapSchedulingEndpoints();
 app.MapPublicSite();
+app.MapPatientEndpoints();
 if (app.Environment.IsDevelopment() && app.Configuration["Authentication:Oidc:Authority"]?.EndsWith(DevIdentityProvider.Path, StringComparison.Ordinal) == true)
     app.MapDevIdentityProvider();
 

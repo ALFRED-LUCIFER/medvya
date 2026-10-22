@@ -12,6 +12,10 @@ public sealed class SchedulingDbContext(DbContextOptions<SchedulingDbContext> op
 {
     public DbSet<ScheduleResource> Resources => Set<ScheduleResource>();
     public DbSet<ScheduleTemplate> Templates => Set<ScheduleTemplate>();
+    public DbSet<Appointment> Appointments => Set<Appointment>();
+    public DbSet<SlotHold> SlotHolds => Set<SlotHold>();
+    public DbSet<VisitStatusEvent> StatusEvents => Set<VisitStatusEvent>();
+    public DbSet<OutboxEvent> Outbox => Set<OutboxEvent>();
 
     Guid? CurrentTenantId => tenant.TenantId;
 
@@ -35,6 +39,39 @@ public sealed class SchedulingDbContext(DbContextOptions<SchedulingDbContext> op
                 o.Property(x => x.VisitType).HasConversion<string>();
             });
             e.HasIndex(x => new { x.TenantId, x.FacilityId, x.CalendarId }).IsUnique(); // one template per calendar and location
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<Appointment>(e =>
+        {
+            e.Property(x => x.CalendarKind).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.VisitType).HasConversion<string>().HasMaxLength(30);
+            e.Property(x => x.State).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.ReasonCategory).HasConversion<string>().HasMaxLength(30);
+            e.Property(x => x.ReasonText).HasMaxLength(500);
+            e.Property(x => x.Channel).HasConversion<string>().HasMaxLength(20);
+            e.HasIndex(x => new { x.TenantId, x.FacilityId, x.CalendarId, x.Start });
+            e.HasIndex(x => new { x.TenantId, x.PatientId });
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<SlotHold>(e =>
+        {
+            e.Property(x => x.VisitType).HasConversion<string>().HasMaxLength(30);
+            e.HasIndex(x => new { x.TenantId, x.FacilityId, x.CalendarId, x.Start });
+            e.HasIndex(x => new { x.TenantId, x.HeldBy });
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<VisitStatusEvent>(e =>
+        {
+            e.ToTable("VisitStatusEvents");
+            e.Property(x => x.State).HasConversion<string>().HasMaxLength(20);
+            e.HasOne<Appointment>().WithMany().HasForeignKey(x => x.AppointmentId).OnDelete(DeleteBehavior.Restrict);
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<OutboxEvent>(e =>
+        {
+            e.ToTable("OutboxEvents");
+            e.Property(x => x.Type).HasMaxLength(100);
+            e.HasIndex(x => new { x.PublishedAt, x.OccurredAt });
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
     }

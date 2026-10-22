@@ -1,5 +1,6 @@
 import type { Locale } from '@medvya/i18n';
 import { useI18n } from '@medvya/i18n';
+import { lazy, Suspense } from 'react';
 import { Navigate, Outlet, Route, Routes, useLocation, useNavigate } from 'react-router';
 import UiGallery from '../dev/UiGallery';
 import OfflineBanner from '../features/connectivity/components/OfflineBanner';
@@ -13,8 +14,14 @@ import SessionPanel from '../features/session/components/SessionPanel';
 import AppShell from '../features/shell/components/AppShell';
 import MorePage from '../features/shell/components/MorePage';
 import ShellMessage, { ComingSoon } from '../features/shell/components/ShellMessage';
+import { allows, patientDirectory } from '../features/shell/domain/navigation';
 import { useShellController } from '../features/shell/hooks/useShellController';
+import FrontDeskRoute from './FrontDeskRoute';
 import ScheduleRoute from './ScheduleRoute';
+
+// Patient screens load on first use, keeping them out of the first-paint bundle.
+const PatientDirectoryRoute = lazy(() => import('./PatientRoutes').then(m => ({ default: m.PatientDirectoryRoute })));
+const PatientRecordRoute = lazy(() => import('./PatientRoutes').then(m => ({ default: m.PatientRecordRoute })));
 
 type Props = { locale: Locale; onLocaleChange: (l: Locale) => void };
 
@@ -37,6 +44,8 @@ export default function App({ locale, onLocaleChange }: Props) {
     <FacilityPicker {...account} memberships={shell.session?.memberships ?? []} choosingId={shell.choosingId} failed={shell.chooseFailed}
       onChoose={id => shell.chooseFacility(id, () => navigate(from ?? '/', { replace: true }))} onCancel={active ? () => navigate(-1) : undefined} />
   );
+  const searchPath = allows(active ?? null, patientDirectory) ? patientDirectory.path : null;
+  const registerPath = shell.items.find(i => i.id === 'register')?.path ?? null;
 
   // F-05a: an ended session replaces every screen; signing in again comes back to this route.
   const routes = shell.loading ? <Route path="*" element={<ShellMessage standalone busy title={t('shell.loading')} />} />
@@ -52,14 +61,21 @@ export default function App({ locale, onLocaleChange }: Props) {
     : <>
         <Route path="/choose-facility" element={picker} />
         <Route element={
-          <AppShell {...account} role={active.role} facilityName={active.facilityName} groups={shell.groups} tabs={shell.tabs}
+          <AppShell {...account} role={active.role} facilityName={active.facilityName} groups={shell.groups} tabs={shell.tabs} searchPath={searchPath}
             languageSwitcher={<LanguageSwitcher inline value={locale} onChange={onLocaleChange} />}>
-            <Outlet />
+            <Suspense fallback={<ShellMessage busy title={t('shell.loading')} />}><Outlet /></Suspense>
           </AppShell>}>
           <Route index element={first ? <Navigate to={first.path} replace /> : <ShellMessage title={t('shell.noScreens.title')} body={t('shell.noScreens.body')} />} />
           {shell.items.map(i => <Route key={i.id} path={i.path} element={i.id === 'schedule'
-            ? <ScheduleRoute facilityId={active.facilityId} online={online} />
+            ? <ScheduleRoute facilityId={active.facilityId} online={online} canBook={active.capabilities.RegisterBookPatients === 'Full'} />
+            : i.id === 'frontDesk'
+            ? <FrontDeskRoute facilityId={active.facilityId} online={online} canMove={active.capabilities.CheckInQueue === 'Full'}
+                registerPath={registerPath} billingPath={shell.items.find(b => b.id === 'billing')?.path ?? null} />
             : <ComingSoon title={t(`nav.${i.id}`)} phase={i.phase} />} />)}
+          {searchPath && <>
+            <Route path={searchPath} element={<PatientDirectoryRoute registerPath={registerPath} />} />
+            <Route path={`${searchPath}/:patientId`} element={<PatientRecordRoute />} />
+          </>}
           <Route path="/more" element={<MorePage {...account} role={active.role} facilityName={active.facilityName} groups={shell.groups} />} />
           <Route path="*" element={<NotFoundPage onBackToToday={toHome} />} />
         </Route>

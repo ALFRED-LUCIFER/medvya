@@ -35,15 +35,25 @@ export const navItems: readonly NavItem[] = [
 
 export const navGroups: readonly NavGroup[] = ['clinical', 'practice', 'assistant', 'admin'];
 
-/** Items this membership may see: capability at an allowed level and, when gated, the tenant flag on. Hiding is UX only; the API enforces. */
-export function visibleNav(active: Pick<ActiveMembership, 'role' | 'capabilities' | 'flags'> | null): NavItem[] {
+type Guard = Pick<NavItem, 'capability' | 'access' | 'flag'>;
+type Active = Pick<ActiveMembership, 'role' | 'capabilities' | 'flags'> | null;
+
+/** True when this membership may use a screen: capability at an allowed level and, when gated, the tenant flag on. */
+export function allows(active: Active, guard: Guard): boolean {
   // Patients use the portal (/p); their "Own" access is to their own records, never clinic screens.
-  if (!active || active.role === 'Patient') return [];
-  return navItems.filter(i => {
-    const level = active.capabilities[i.capability] ?? 'None';
-    return (i.access ?? seeAccess).includes(level) && (!i.flag || active.flags.includes(i.flag));
-  });
+  if (!active || active.role === 'Patient') return false;
+  const level = active.capabilities[guard.capability] ?? 'None';
+  return (guard.access ?? seeAccess).includes(level) && (!guard.flag || active.flags.includes(guard.flag));
 }
+
+/** Items this membership may see. Hiding is UX only; the API enforces. */
+export const visibleNav = (active: Active): NavItem[] => navItems.filter(i => allows(active, i));
+
+/**
+ * Patient directory and search (MDV-P1-018), opened from the header search, not the sidebar, so every role that may look patients
+ * up reaches it the same way. Same rule as the API policy: Register / book patients at Read or Full.
+ */
+export const patientDirectory = { path: '/patients/directory', capability: 'RegisterBookPatients', access: ['Read', 'Full'] } as const satisfies Guard & { path: string };
 
 const tabPriority: readonly NavId[] = ['today', 'patients', 'inbox', 'messages', 'frontDesk', 'schedule', 'register', 'nurse'];
 

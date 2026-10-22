@@ -6,6 +6,7 @@
     <ProjectReference Include="..\..\..\BuildingBlocks\Medvya.BuildingBlocks.Infrastructure\Medvya.BuildingBlocks.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Tenancy\Medvya.Tenancy.Application\Medvya.Tenancy.Application.csproj" />
     <ProjectReference Include="..\..\Identity\Medvya.Identity.Application\Medvya.Identity.Application.csproj" />
+    <ProjectReference Include="..\..\Patients\Medvya.Patients.Application\Medvya.Patients.Application.csproj" />
   </ItemGroup>
 
   <ItemGroup>

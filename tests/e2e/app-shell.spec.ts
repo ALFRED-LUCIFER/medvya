@@ -99,7 +99,7 @@ test('keyboard: skip link is first, visible on focus and moves focus to main', a
   await signInAs(page, receptionist);
   await page.goto('/front-desk');
   // goto resolves on load, but the shell renders only after /v1/me/context answers; a Tab during loading lands nowhere.
-  await expect(page.getByRole('main').getByRole('heading', { name: 'Front desk' })).toBeVisible();
+  await expect(page.getByRole('main').getByRole('heading', { name: /^Reception board/ })).toBeVisible(); // the P-01 board (MDV-P1-028)
   await page.keyboard.press('Tab');
   const skip = page.getByRole('link', { name: 'Skip to main content' });
   await expect(skip).toBeFocused();

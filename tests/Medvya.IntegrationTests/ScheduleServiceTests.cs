@@ -1,7 +1,9 @@
 using Medvya.Scheduling.Application;
 using Medvya.Scheduling.Domain;
 using Microsoft.Data.SqlClient;
+using Medvya.Identity.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Medvya.IntegrationTests;
 
@@ -43,6 +45,16 @@ public sealed class ScheduleServiceTests(SqlServerFixture sql) : IClassFixture<S
     {
         h.Clock.Advance(TimeSpan.FromHours(17)); // 01:00 IST on Tuesday is still Monday 19:30 in UTC
         Assert.Equal(Monday.AddDays(1), (await h.Schedule(h.Reception).GetDayAsync(h.Facility, null)).Date);
+    }
+
+    [Fact]
+    public async Task DoctorNamesComeFromOneBatchedLookup()
+    {
+        await using var provider = new ServiceCollection().AddIdentityModule(sql.ConnectionString).BuildServiceProvider();
+        var staff = provider.GetRequiredService<Medvya.Identity.Application.IStaffUsers>();
+        var names = await staff.DisplayNamesAsync([h.Doctor, h.Doctor, Guid.NewGuid()]);
+        Assert.Equal(new Dictionary<Guid, string> { [h.Doctor] = "Dr. Arjun Rao (synthetic)" }, names); // unknown ids left out, duplicates once
+        Assert.Empty(await staff.DisplayNamesAsync([]));
     }
 
     [Fact]

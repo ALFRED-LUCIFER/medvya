@@ -24,10 +24,15 @@ public abstract class PublicPage(SiteText text) : PageModel
         var l => path == "/" ? $"/{l}" : $"/{l}{path}",
     };
 
+    // shortcut: canonical and hreflang links echo the request's Host header (AllowedHosts is "*"); set AllowedHosts to the site's own
+    // host name once it has one (MDV-P0-007).
     public string AbsoluteUrl(string path, string? lang = null) => $"{Request.Scheme}://{Request.Host}{Href(path, lang)}";
 
     public override void OnPageHandlerExecuting(PageHandlerExecutingContext context)
     {
+        // The copy depends on the region cookie and the links on the Host header, so no cache may keep a page. Same value the
+        // anti-forgery token sets on the form pages, so it never has to override (and warn about) ours.
+        Response.Headers.CacheControl = "no-cache, no-store";
         // ?region=AE (the region switch) stores the choice and returns to the clean address; links work without JavaScript.
         if (Request.Query["region"] is [{ } picked] && PublicSite.Regions.Contains(picked))
         {

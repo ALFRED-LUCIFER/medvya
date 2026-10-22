@@ -33,7 +33,9 @@ public sealed partial class PublicSiteTests : IClassFixture<WebApplicationFactor
         return await Html(await Client().SendAsync(req));
     }
 
-    public static TheoryData<string> Pages => new() { "/", "/pricing", "/hi", "/hi/pricing", "/ar", "/ar/pricing" };
+    internal static readonly string[] PagePaths =
+        ["/", "/pricing", "/trust", "/region", "/hi", "/hi/pricing", "/hi/trust", "/hi/region", "/ar", "/ar/pricing", "/ar/trust", "/ar/region"];
+    public static TheoryData<string> Pages => new(PagePaths);
 
     [Theory, MemberData(nameof(Pages))]
     public async Task PagesRenderWithoutScriptsOrThirdPartyResources(string path)
@@ -93,6 +95,22 @@ public sealed partial class PublicSiteTests : IClassFixture<WebApplicationFactor
         Assert.False(ignored.Headers.Contains("Set-Cookie"));
     }
 
+    [Fact]
+    public async Task OverHttpsEveryCookieIsSecureAndNoSharedCacheKeepsAPage()
+    {
+        var https = factory.CreateClient(new() { AllowAutoRedirect = false, HandleCookies = false, BaseAddress = new Uri("https://localhost") });
+        foreach (var path in new[] { "/?region=AE", "/trust", "/region?go=AE" })
+        {
+            var res = await https.GetAsync(new Uri(path, UriKind.Relative));
+            var cookie = Assert.Single(res.Headers.GetValues("Set-Cookie")); // the region preference, or the form's anti-forgery token
+            Assert.Contains("; secure", cookie, StringComparison.OrdinalIgnoreCase);
+            Assert.Equal((true, true), (res.Headers.CacheControl?.NoCache, res.Headers.CacheControl?.NoStore));
+        }
+        // The landing's copy follows the region cookie and its links the Host header, so no cache may keep it.
+        var landing = await https.GetAsync(new Uri("/", UriKind.Relative));
+        Assert.Equal((true, true), (landing.Headers.CacheControl?.NoCache, landing.Headers.CacheControl?.NoStore));
+    }
+
     [Theory]
     [InlineData("/", "en", "ltr")]
     [InlineData("/hi", "hi", "ltr")]
@@ -145,11 +163,17 @@ public sealed partial class PublicSiteTests : IClassFixture<WebApplicationFactor
             s.PostConfigure<AuthenticationOptions>(o => o.DefaultAuthenticateScheme = "probe");
         }));
         var client = app.CreateClient(new() { AllowAutoRedirect = false, HandleCookies = false });
-        foreach (var path in new[] { "/", "/ar/pricing", "/site.css", "/?region=AE" })
+        foreach (var path in new[] { "/", "/ar/pricing", "/trust", "/hi/region?go=AE", "/site.css", "/?region=AE" })
         {
             using var req = new HttpRequestMessage(HttpMethod.Get, new Uri(path, UriKind.Relative));
             req.Headers.Add("Cookie", "__Host-medvya=session-cookie-value");
             Assert.True((int)(await client.SendAsync(req)).StatusCode < 400, path);
+        }
+        // A form post too (refused for its missing token, but never by reading the session).
+        using (var post = new HttpRequestMessage(HttpMethod.Post, new Uri("/trust", UriKind.Relative)) { Content = new FormUrlEncodedContent([]) })
+        {
+            post.Headers.Add("Cookie", "__Host-medvya=session-cookie-value");
+            Assert.Equal(HttpStatusCode.BadRequest, (await client.SendAsync(post)).StatusCode);
         }
         Assert.Equal(0, probe.Calls);
 

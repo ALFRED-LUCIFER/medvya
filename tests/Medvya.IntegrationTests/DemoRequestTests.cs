@@ -95,4 +95,17 @@ public class DemoRequestRulesTests
         });
         Assert.Equal(new Dictionary<string, string> { ["Name"] = "tooLong", ["Organisation"] = "required", ["Country"] = "required", ["Message"] = "tooLong" }, errors);
     }
+
+    // A crafted post with a line break in the organisation used to be stored and then fail the founder email with a 500.
+    [Fact]
+    public void SingleLineFieldsRefuseLineBreaksAndControlCharacters()
+    {
+        var errors = DemoRequestRules.Validate(new DemoRequest
+        {
+            Name = "Kavya\nMenon", Organisation = "Synthetic General Hospital\r\nBcc: someone@example.com", Role = "Chief\u0000medical officer",
+            Country = "IN", Email = "a@example.com", Message = "Two lines\nare fine here.",
+        });
+        Assert.Equal(new Dictionary<string, string> { ["Name"] = "invalid", ["Organisation"] = "invalid", ["Role"] = "invalid" }, errors);
+        Assert.Equal("invalid", Assert.Single(WaitlistRules.Validate(new WaitlistEntry { Name = "Fatima\rAl Hashimi", Country = "AE", Email = "a@example.com" })).Value);
+    }
 }

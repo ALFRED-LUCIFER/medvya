@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, layoutDay, minSlotPx, type ScheduleDay } from './schedule';
+import { addDays, layoutDay, minSlotPx, stepDate, type ScheduleDay } from './schedule';
 
 // 09:00–13:00 and 17:00–20:00 IST with 20-minute slots (UTC+05:30), as the API sends it.
 const day: ScheduleDay = {
@@ -36,6 +36,14 @@ describe('day layout', () => {
     expect(marks).toHaveLength(22);
     expect(marks[0]).toEqual({ at: '2026-10-19T03:30:00.000Z', top: 0 });
     expect(marks[1]!.top).toBe(72);
+  });
+
+  it('steps from the date asked for, so a fast double click moves two days', () => {
+    // The 19th is still on screen (placeholder) after Next asked for the 20th: the second Next must land on the 21st.
+    expect(stepDate('2026-10-20', null, 1)).toBe('2026-10-21');
+    expect(stepDate('2026-10-20', '2026-10-19', 1)).toBe('2026-10-21'); // the date asked for wins over any earlier answer
+    expect(stepDate(null, '2026-10-19', -1)).toBe('2026-10-18'); // from today's answer
+    expect(stepDate(null, null, 1)).toBeNull(); // today not known yet: no step
   });
 
   it('steps calendar dates without time-zone drift', () => {

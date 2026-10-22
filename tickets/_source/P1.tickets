@@ -21,6 +21,7 @@ progress:
 - [PR #52](https://github.com/ALFRED-LUCIFER/medvya/pull/52): Razor Pages in Host.Api/PublicSite — F-01 landing (exact copy, two CTAs, three pillars) and pricing placeholder; no JavaScript, no third-party resources or fonts; copy from packages/i18n, colours from packages/ui tokens (embedded at build)
 - Region switch India/UAE is a plain link storing only the region code in an HttpOnly preference cookie; English, Hindi (/hi) and Arabic (/ar, RTL) with hreflang, canonical and description; public endpoints run before authentication so the session cookie is never read (probe test, mutation-checked)
 - Verified in the browser (axe clean at 360/640/1280 px in en/hi/ar, keyboard path, no-JS region switch, RTL); Lighthouse mobile 100/100 performance/accessibility on /, /ar and /hi/pricing (local)
+- Review fixes ([PR #67](https://github.com/ALFRED-LUCIFER/medvya/pull/67)): 44 px targets for region, nav and language links with an underline on the current region; anti-forgery cookie Secure over HTTPS; pages sent no-cache, no-store; tests cover every page (no script, session never read, no certification claim when rendered)
 - Left: product shot and favicon assets (design); own host name for the site when App Service hosting lands (MDV-P0-007); /region and /trust links go live with MDV-P1-002 and MDV-P1-003
 title: Public site on Razor Pages and landing page (solo doctor / hospital CTAs, region-aware copy)
 type: Story
@@ -48,6 +49,7 @@ status: Partly done
 progress:
 - [PR #56](https://github.com/ALFRED-LUCIFER/medvya/pull/56) (stacked on #57): /region with the designed copy and India/UAE cards (no JavaScript); "Continue in {region}" goes to that country's own sign-up address (PublicSite:Deployments:SignUpUrls) or, if the country is not live, to a waitlist (contact fields only) stored in the Leads module
 - Tenant.CountryCode and ResidencyRegion are init-only and EF throws on any later change (domain, EF and SQL Server tests, mutation-checked); copy translated (en/hi/ar); browser-verified (axe clean, keyboard, RTL); Lighthouse mobile 100 (local)
+- Review fixes ([PR #67](https://github.com/ALFRED-LUCIFER/medvya/pull/67)): waitlist refuses control characters in the name and has its own anti-forgery test; the form quota counts an IPv6 subscriber (/64), not each address
 - Left: record the selection in the onboarding audit trail and check the new tenant's country against the deployment when the tenant is created (MDV-P1-004); configure the live country's sign-up address once onboarding and the launch deployment exist (MDV-P0-003, MDV-P0-007)
 title: Country and data-residency selector that binds a new tenant to one data plane
 type: Story
@@ -73,9 +75,10 @@ ac:
 === MDV-P1-003
 status: Done
 progress:
-- [PR #54](https://github.com/ALFRED-LUCIFER/medvya/pull/54) (stacked on #52): /trust with the six designed blocks and footer; policy versions and sub-processors from PublicSite/trust-centre.json (reloads on change, overridable by app settings, versioned in git), each with its effective date or "Not yet in effect"
+- [PR #57](https://github.com/ALFRED-LUCIFER/medvya/pull/57) (re-opened from #54, which merged into a stale branch): /trust with the six designed blocks and footer; policy versions and sub-processors from PublicSite/trust-centre.json (reloads on change, overridable by app settings, versioned in git), each with its effective date or "Not yet in effect"
 - Demo request form (contact fields only, patient-information warning): server validation, anti-forgery, 5/hour per client, honeypot and minimum fill time; stored by the new Leads module (leads schema, insert/read-only role) and emailed to the founder without the free-text message (local SMTP sink)
 - Certification lint test over all public copy (en/hi/ar) and the content file; honeypot, rate limit and anti-forgery tests mutation-checked; browser-verified without JavaScript in English and Arabic (axe clean, rows and emails checked); Lighthouse mobile 100 on /trust and /ar/trust (local)
+- Review fixes ([PR #67](https://github.com/ALFRED-LUCIFER/medvya/pull/67)): a line break in the organisation no longer stores the request and then fails the founder email with a 500 (control characters refused); quota keyed by IPv6 /64; Leads rows in the classification register
 - Left: final policy and sub-processor text and dates after legal review (MDV-P1-044); transactional email provider instead of SMTP; back-office view of requests (P5); automated retention (MDV-P5-025)
 title: Trust centre and demo request (no PHI)
 type: Story
@@ -261,10 +264,12 @@ ac:
 - Both jobs are idempotent and audited.
 
 === MDV-P1-011
-status: In progress
+status: Partly done
 progress:
-- Open [PR #55](https://github.com/ALFRED-LUCIFER/medvya/pull/55): Scheduling module (own schema, module role, EF filters + RLS) — weekly template per doctor or resource (sessions with room, breaks, slot length, per-visit-type lengths), slots generated on the fly in the facility zone (IST, GST and DST unit tests), P-04 day view with hatched unavailable time and reason, role checked against the membership at the facility, audited endpoints; mutation-checked; browser-verified (en, ar RTL, axe)
-- Left: listing appointments outside new hours and spanning visits on the grid (MDV-P1-021); template editing UI in Settings → Hours (MDV-P1-005)
+- Merged [PR #55](https://github.com/ALFRED-LUCIFER/medvya/pull/55): Scheduling module (own schema, module role, EF filters + RLS) — weekly template per doctor or resource (sessions with room, breaks, slot length, per-visit-type lengths), slots generated on the fly in the facility zone (IST, GST and DST unit tests), P-04 day view with hatched unavailable time and reason, role checked against the membership at the facility, audited endpoints; mutation-checked; browser-verified (en, ar RTL, axe)
+- Merged [PR #59](https://github.com/ALFRED-LUCIFER/medvya/pull/59): saving a template lists future appointments the new hours leave outside; visits spanning several slots render spanning
+- Open [PR #63](https://github.com/ALFRED-LUCIFER/medvya/pull/63): review fixes on the day grid — date steps from the date asked for (fast double click), sticky headers and time axis inside a focusable scroll region (RTL-safe), one offline banner, short unavailable blocks keep their reason, house ShellMessage, token colours with hatch contrast test, batched doctor names, type scale; mutation-checked; browser-verified (en, ar at an overflowing width, axe clean)
+- Left: template editing UI in Settings → Hours (MDV-P1-005)
 title: Schedule templates: working hours, breaks, slot length per service, per-location calendars, time zones
 type: Story
 epic: MDV-P1-E04
@@ -444,9 +449,9 @@ ac:
 status: Done
 progress:
 - Merged [PR #58](https://github.com/ALFRED-LUCIFER/medvya/pull/58): `POST /v1/patients/search` (text in the body only, rows show initials/age/sex/MRN tail, exact phone/MRN/ABHA/EID via deterministic Always Encrypted, partial numbers refused, per-user rate limit) and `GET /v1/patients/{id}`; capability policy from the active membership, one audit event per request (Denied too), facility scope; clinic header search, directory with filters and paging, record page, en/hi/ar RTL, axe clean
-- Tested on SQL Server incl. 50,000 synthetic patients (p95 132 ms locally, green in CI with a covering name index); 12 mutations each caught
-- Follow-ups outside this ticket: real sessions reach it once the facility picker issues tenant/facility claims (MDV-P0-012); cross-facility patients within a tenant (P7); doctor ⌘K overlay (D-02, P2)
-- Open [PR #68](https://github.com/ALFRED-LUCIFER/medvya/pull/68): the per-user search and duplicate-check limits ran before authentication and keyed everyone as anonymous; they are now endpoint filters after sign-in, tested with a real authentication handler (old ordering fails the test); another facility's record is audited NotFound, not Allowed; X-Forwarded-For only from listed proxies
+- [PR #70](https://github.com/ALFRED-LUCIFER/medvya/pull/70) (in review): review fixes — national/insurance numbers masked to the last 4 with an audited reveal (Full access), per-user limit on record opens and paging capped at 50 pages, separator-only and 0091-phone queries, focus kept and one live status region while paging, facility-local registration date; p95 measured through the endpoints with 50,000 encrypted ABHAs (search 105–226 ms, duplicate check 16 ms locally); 9 mutations each caught
+- Open [PR #68](https://github.com/ALFRED-LUCIFER/medvya/pull/68): the per-user search, record and duplicate-check limits ran in the rate-limiting middleware before authentication and keyed everyone as anonymous; they are now endpoint filters after sign-in, tested with a real authentication handler (old ordering fails the tests); another facility's record is audited NotFound, not Allowed; X-Forwarded-For only from listed proxies
+- Follow-ups outside this ticket: read-volume alert with the practice access log (MDV-P1-035); cross-facility patients within a tenant (P7); doctor ⌘K overlay (D-02, P2)
 title: Patient directory and privacy-safe search for the front desk
 type: Story
 epic: MDV-P1-E05
@@ -516,9 +521,9 @@ ac:
 - Relationship values are country-specific (UAE includes Sponsor).
 
 === MDV-P1-021
-status: In progress
+status: Partly done
 progress:
-- Open [PR #59](https://github.com/ALFRED-LUCIFER/medvya/pull/59) (stacked on #55): slot holds (`POST /v1/slot-holds`, one per user, expire after `Scheduling:SlotHold`, default 2 min; others see "being booked"), booking from the hold (`POST /v1/appointments`) re-checking the template, appointment + first status event + AppointmentBooked.v1 (opaque ids) in one transaction, audited endpoints, patient confirmed by name and MRN; booking panel with React Hook Form + Zod; mutation-checked (expiry, holder check, RLS); browser-verified (en, ar RTL, keyboard, axe)
+- Merged [PR #59](https://github.com/ALFRED-LUCIFER/medvya/pull/59): slot holds (`POST /v1/slot-holds`, one per user, expire after `Scheduling:SlotHold`, default 2 min; others see "being booked"), booking from the hold (`POST /v1/appointments`) re-checking the template, appointment + first status event + AppointmentBooked.v1 (opaque ids) in one transaction, audited endpoints, patient confirmed by name and MRN; booking panel with React Hook Form + Zod; mutation-checked (expiry, holder check, RLS); browser-verified (en, ar RTL, keyboard, axe)
 - Left: concurrency guarantees (MDV-P1-022); patient search instead of id (MDV-P1-018); confirmation message (MDV-P1-032); p95 < 300 ms under the P1 load profile (MDV-P1-037)
 title: Create an appointment from the calendar with a short slot hold
 type: Story

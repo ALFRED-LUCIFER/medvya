@@ -180,7 +180,6 @@
   "schedule.error.title": "शेड्यूल लोड नहीं हो सका",
   "schedule.error.body": "कुछ भी बदला नहीं गया। अपना कनेक्शन जाँचें और फिर से कोशिश करें।",
   "schedule.retry": "फिर से कोशिश करें",
-  "schedule.offline": "आप ऑफ़लाइन हैं। दोबारा जुड़ने पर शेड्यूल लोड होगा।",
   "schedule.forbidden.body": "इस सुविधा के शेड्यूल तक पहुँच के लिए अपने प्रैक्टिस एडमिन से पूछें।",
   "schedule.empty.title": "यहाँ अभी कोई डॉक्टर या संसाधन नहीं है",
   "schedule.empty.body": "उनका कैलेंडर देखने के लिए प्रैक्टिस सेटिंग्स में डॉक्टर या प्रोसीजर रूम जैसा संसाधन जोड़ें।",
@@ -502,5 +501,10 @@
   "registration.done.book": "अपॉइंटमेंट बुक करें",
   "registration.done.checkIn": "अभी चेक-इन करें (वॉक-इन)",
   "registration.done.open": "रिकॉर्ड खोलें",
-  "registration.done.another": "एक और पंजीकृत करें"
+  "registration.done.another": "एक और पंजीकृत करें",
+  "patients.masked": "••{last}",
+  "patients.record.reveal": "पूरे नंबर दिखाएँ",
+  "patients.record.revealNote": "केवल कार्ड या दावे की जाँच के लिए। हर बार एक्सेस लॉग में दर्ज होता है।",
+  "patients.record.revealFailed": "पूरे नंबर नहीं दिखाए जा सके। फिर से कोशिश करें।",
+  "patients.record.revealed": "पूरे नंबर दिखाए गए।"
 }

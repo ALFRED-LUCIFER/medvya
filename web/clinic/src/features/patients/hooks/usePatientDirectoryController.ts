@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { asSearchError, toQuery, type DirectoryFilter, type SearchRequest } from '../domain/directory';
 import { ApiError, searchPatients } from '../services/patientsApi';
 
@@ -32,6 +32,8 @@ export function usePatientDirectoryController() {
     gcTime: patientDataGcTime,
     staleTime: Infinity, // each fetch is an audited read: reuse it until something changes it
     retry: noRetryOnAnswers,
+    // The previous page stays on screen while the next loads, so the list and its pagination never unmount (focus is kept).
+    placeholderData: keepPreviousData,
   });
   return {
     text,
@@ -42,6 +44,7 @@ export function usePatientDirectoryController() {
     searched: request.query !== null,
     onPageChange: (page: number) => setRequest(r => ({ ...r, page })),
     result: search.data ?? null,
+    updating: search.isPlaceholderData,
     state: loadState(search),
     errorCode: search.error instanceof ApiError ? asSearchError(search.error.code) : null,
     onRetry: () => void search.refetch(),

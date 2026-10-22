@@ -180,7 +180,6 @@
   "schedule.error.title": "The schedule could not be loaded",
   "schedule.error.body": "Nothing was changed. Check your connection and try again.",
   "schedule.retry": "Try again",
-  "schedule.offline": "You are offline. The schedule loads when you reconnect.",
   "schedule.forbidden.body": "Ask your practice admin for access to this facility's schedule.",
   "schedule.empty.title": "No doctors or resources here yet",
   "schedule.empty.body": "Add a doctor, or a resource such as a procedure room, in Practice settings to see their calendar.",
@@ -502,5 +501,10 @@
   "registration.done.book": "Book appointment",
   "registration.done.checkIn": "Check in now (walk-in)",
   "registration.done.open": "Open record",
-  "registration.done.another": "Register another"
+  "registration.done.another": "Register another",
+  "patients.masked": "••{last}",
+  "patients.record.reveal": "Show full numbers",
+  "patients.record.revealNote": "Only to check a card or a claim. Each time is recorded in the access log.",
+  "patients.record.revealFailed": "The full numbers could not be shown. Try again.",
+  "patients.record.revealed": "Full numbers shown."
 }

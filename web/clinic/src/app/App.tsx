@@ -73,7 +73,7 @@ export default function App({ locale, onLocaleChange }: Props) {
           </AppShell>}>
           <Route index element={first ? <Navigate to={first.path} replace /> : <ShellMessage title={t('shell.noScreens.title')} body={t('shell.noScreens.body')} />} />
           {shell.items.map(i => <Route key={i.id} path={i.path} element={i.id === 'schedule'
-            ? <ScheduleRoute facilityId={active.facilityId} online={online} canBook={active.capabilities.RegisterBookPatients === 'Full'} />
+            ? <ScheduleRoute facilityId={active.facilityId} canBook={active.capabilities.RegisterBookPatients === 'Full'} />
             : i.id === 'register' ? registration
             : i.id === 'frontDesk'
             ? <FrontDeskRoute facilityId={active.facilityId} online={online} canMove={active.capabilities.CheckInQueue === 'Full'}
@@ -83,7 +83,7 @@ export default function App({ locale, onLocaleChange }: Props) {
           {active.capabilities.StaffRolesIntegrations === 'Config' && <Route path="/admin/staff" element={<InviteColleagueRoute />} />}
           {searchPath && <>
             <Route path={searchPath} element={<PatientDirectoryRoute registerPath={registerPath} />} />
-            <Route path={`${searchPath}/:patientId`} element={<PatientRecordRoute />} />
+            <Route path={`${searchPath}/:patientId`} element={<PatientRecordRoute canReveal={active.capabilities.RegisterBookPatients === 'Full'} />} />
           </>}
           <Route path="/more" element={<MorePage {...account} role={active.role} facilityName={active.facilityName} groups={shell.groups} />} />
           <Route path="*" element={<NotFoundPage onBackToToday={toHome} />} />

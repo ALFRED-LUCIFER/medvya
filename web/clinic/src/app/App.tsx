@@ -59,7 +59,7 @@ export default function App({ locale, onLocaleChange }: Props) {
             ? <ScheduleRoute facilityId={active.facilityId} online={online} canBook={active.capabilities.RegisterBookPatients === 'Full'} />
             : i.id === 'frontDesk'
             ? <FrontDeskRoute facilityId={active.facilityId} online={online} canMove={active.capabilities.CheckInQueue === 'Full'}
-                canRegister={active.capabilities.RegisterBookPatients === 'Full'} />
+                registerPath={registerPath} billingPath={shell.items.find(b => b.id === 'billing')?.path ?? null} />
             : <ComingSoon title={t(`nav.${i.id}`)} phase={i.phase} />} />)}
           {searchPath && <>
             <Route path={searchPath} element={<PatientDirectoryRoute registerPath={registerPath} />} />

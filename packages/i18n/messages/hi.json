@@ -381,5 +381,6 @@
   "board.paymentLater": "भुगतान बिलिंग के साथ आएँगे।",
   "board.error.invalid_transition": "यह विज़िट पहले ही आगे बढ़ चुकी है। बोर्ड अद्यतन है।",
   "board.error.not_today": "यह अपॉइंटमेंट आज की नहीं है। उसी दिन चेक-इन करें।",
-  "board.error.failed": "यह सहेजा नहीं गया। फिर से कोशिश करें।"
+  "board.error.failed": "यह सहेजा नहीं गया। फिर से कोशिश करें।",
+  "board.action.takePayment": "भुगतान लें"
 }

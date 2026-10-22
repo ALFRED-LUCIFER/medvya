@@ -9,7 +9,7 @@ test.use({ timezoneId: 'America/New_York' });
 const persona = (role: string, displayName: string, capabilities: Record<string, string>) => ({
   user: { id: `u-${role}`, displayName },
   memberships: [{ id: 'm-1', tenantId: 't-1', tenantName: 'Iyer Family Clinic', facilityId: 'f-1', facilityName: 'Iyer Family Clinic · Adyar', role }],
-  active: { membershipId: 'm-1', tenantId: 't-1', facilityId: 'f-1', role, flags: [], capabilities },
+  active: { membershipId: 'm-1', tenantId: 't-1', facilityId: 'f-1', role, flags: [] as string[], capabilities },
 });
 const reception = persona('Receptionist', 'A. Joseph', { RegisterBookPatients: 'Full', CheckInQueue: 'Full' });
 const hospitalDoctor = persona('HospitalDoctor', 'Dr. S. Menon', { RegisterBookPatients: 'Full', CheckInQueue: 'Read', Patient360Chart: 'Full' });
@@ -119,6 +119,15 @@ test('moves follow the board and a conflict says the visit moved on', async ({ p
   await open(page, { moveCode: 'invalid_transition' });
   await cardOf(page, 'Lakshmi Pillai (synthetic)').getByRole('button', { name: 'Intake done' }).click();
   await expect(cardOf(page, 'Lakshmi Pillai (synthetic)').getByRole('alert')).toHaveText('This visit has already moved on. The board is up to date.');
+});
+
+test('with billing switched on (flag billing.invoices), Billing cards lead to payment instead of the placeholder', async ({ page }) => {
+  const billingOn = { ...reception, active: { ...reception.active, flags: ['billing.invoices'], capabilities: { ...reception.active.capabilities, InvoicesPayments: 'Full' } } };
+  await open(page, { as: billingOn });
+  const billing = cardOf(page, 'Rahul Menon (synthetic)');
+  await expect(billing.getByRole('link', { name: 'Take payment' })).toHaveAttribute('href', '/billing');
+  await expect(billing.getByRole('button', { name: 'Payment received' })).toHaveCount(0);
+  await expect(billing.getByRole('button', { name: 'Close visit' })).toBeEnabled();
 });
 
 test('a read-only role sees the board without actions', async ({ page }) => {

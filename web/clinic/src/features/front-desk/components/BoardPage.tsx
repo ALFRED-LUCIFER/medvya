@@ -37,6 +37,8 @@ type Props = {
   onMove: (id: string, state: BoardColumn) => void;
   /** "Register patient", shown when the role may register. */
   registerAction?: ReactNode;
+  /** Payment for Billing cards: present when billing is on (flag billing.invoices, P4); until then a disabled placeholder. */
+  paymentAction?: ReactNode;
 };
 
 /** P-01 Reception board: today's visits by state, one tap per step, nonclinical information only. */
@@ -114,7 +116,7 @@ function Column(props: Props & { state: BoardColumn; board: Board }) {
   );
 }
 
-function Card({ card, board, now, canMove, online, confirmingId, pendingId, failure, onStartCheckIn, onConfirmCheckIn, onCancelCheckIn, onMove }: Props & { card: BoardCard; board: Board }) {
+function Card({ card, board, now, canMove, online, confirmingId, pendingId, failure, paymentAction, onStartCheckIn, onConfirmCheckIn, onCancelCheckIn, onMove }: Props & { card: BoardCard; board: Board }) {
   const { t, formatTime, formatDate } = useI18n();
   const state = card.state as BoardColumn;
   const next = nextState(state);
@@ -151,13 +153,13 @@ function Card({ card, board, now, canMove, online, confirmingId, pendingId, fail
           {t(actionKeys[state])}
         </Button>
       ) : null}
-      {canMove && state === 'Billing' && (
+      {/* shortcut: with billing.invoices off (all of P1) payment is a disabled placeholder; P4 builds payments behind that flag. */}
+      {canMove && state === 'Billing' && (paymentAction ?? (
         <>
-          {/* shortcut: payment is a placeholder until invoices and payments land (MDV-P4 billing, flag billing.invoices). */}
           <Button variant="outline" className="whitespace-normal" disabled aria-describedby={`${nameId}-pay`}>{t('board.action.paymentReceived')}</Button>
           <p id={`${nameId}-pay`} className="text-xs text-muted-foreground">{t('board.paymentLater')}</p>
         </>
-      )}
+      ))}
       {error && <p role="alert" className="text-xs font-bold text-danger-700">{t(`board.error.${error}`)}</p>}
     </article>
   );

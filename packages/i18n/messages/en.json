@@ -381,5 +381,6 @@
   "board.paymentLater": "Payments arrive with billing.",
   "board.error.invalid_transition": "This visit has already moved on. The board is up to date.",
   "board.error.not_today": "This appointment is not today. Check it in on its day.",
-  "board.error.failed": "That did not save. Try again."
+  "board.error.failed": "That did not save. Try again.",
+  "board.action.takePayment": "Take payment"
 }

@@ -380,5 +380,6 @@
   "board.paymentLater": "تأتي المدفوعات مع الفوترة.",
   "board.error.invalid_transition": "انتقلت هذه الزيارة بالفعل. اللوحة محدّثة.",
   "board.error.not_today": "هذا الموعد ليس اليوم. سجّل وصوله في يومه.",
-  "board.error.failed": "لم يُحفظ ذلك. حاول مرة أخرى."
+  "board.error.failed": "لم يُحفظ ذلك. حاول مرة أخرى.",
+  "board.action.takePayment": "استلام الدفع"
 }

@@ -27,6 +27,9 @@ public sealed class EndpointAuditTests(SqlServerFixture sql) : IClassFixture<Sql
     [
         "POST /bff/logout",     // ends the staff session
         "GET /v1/me/context",   // the signed-in staff user, memberships and permissions
+        "GET /v1/invitations/facilities",   // facility ids and names of the admin's tenant (MDV-P0-013)
+        "POST /v1/invitations/",            // invites a staff member by email; audited as invitation.create inside the service
+        "DELETE /v1/invitations/{id:guid}", // revokes a staff invitation; audited as invitation.revoke inside the service
     ];
 
     readonly Guid tenant = Guid.NewGuid(), facility = Guid.NewGuid();
@@ -79,12 +82,12 @@ public sealed class EndpointAuditTests(SqlServerFixture sql) : IClassFixture<Sql
             {
                 foreach (var method in Methods(endpoint))
                 {
-                    // shortcut: route values are fresh ids and bodies are empty JSON; give an endpoint a synthetic sample body here when it needs one to pass binding.
+                    // shortcut: route values are fresh ids and bodies are empty JSON unless SampleBody has one; add a synthetic sample body there when an endpoint needs one.
+                    var name = Name(endpoint, method);
                     using var request = new HttpRequestMessage(new HttpMethod(method), new Uri(Path(endpoint.RoutePattern), UriKind.Relative));
-                    if (method is not ("GET" or "HEAD" or "DELETE")) request.Content = new StringContent("{}", System.Text.Encoding.UTF8, "application/json");
+                    if (method is not ("GET" or "HEAD" or "DELETE")) request.Content = new StringContent(SampleBody(name, role), System.Text.Encoding.UTF8, "application/json");
                     var before = await Count();
                     using var response = await client.SendAsync(request);
-                    var name = Name(endpoint, method);
                     if (!calls.TryGetValue(name, out var list)) calls[name] = list = [];
                     list.Add(new(role, await Count() - before, (int)response.StatusCode));
                 }
@@ -92,6 +95,22 @@ public sealed class EndpointAuditTests(SqlServerFixture sql) : IClassFixture<Sql
         }
         return calls;
     }
+
+    /// <summary>
+    /// A synthetic body that gets through validation, for endpoints whose use case audits only what it actually does
+    /// (<c>.AuditedByUseCase</c>): with an empty body they refuse the input before any patient data is touched, and the
+    /// allowed path, where the use case must write its event, would never run. One distinct synthetic person per role, so no
+    /// call stops at a duplicate warning.
+    /// </summary>
+    static string SampleBody(string endpoint, Role role) => endpoint switch
+    {
+        "POST /v1/patients/" => System.Text.Json.JsonSerializer.Serialize(new
+        {
+            quick = true, fullName = $"{role} Audit Probe (synthetic)", dateOfBirth = $"{1950 + (int)role}-02-0{1 + (int)role % 9}",
+            sexAtBirth = "Female", mobile = $"+91 90000 09{(int)role:D3}",
+        }),
+        _ => "{}",
+    };
 
     async Task<int> Count()
     {

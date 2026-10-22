@@ -37,6 +37,15 @@ public static class AuditedEndpoint
     }
 
     /// <summary>
+    /// For a write whose use case writes its own audit event inside its database transaction (e.g. PatientRegistered.v1, which
+    /// needs the new record's id and must roll back with it). Marks the endpoint as patient data, so refusals are audited by
+    /// <see cref="AuditDeniedAccess"/>, without writing a second event for allowed calls. The use case must audit; its tests prove it.
+    /// </summary>
+    public static TBuilder AuditedByUseCase<TBuilder>(this TBuilder builder, string action, string resourceType, string purpose)
+        where TBuilder : IEndpointConventionBuilder =>
+        builder.WithMetadata(new AuditedEndpointMetadata(action, resourceType, purpose, null));
+
+    /// <summary>
     /// A refused call to an audited endpoint is itself audited (outcome Denied, PRD v2 P0-06), so every request to patient data
     /// leaves exactly one event whatever the decision. Register with the Audit module; it needs <see cref="IAuditLog"/>.
     /// </summary>

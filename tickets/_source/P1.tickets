@@ -391,6 +391,11 @@ ac:
 - Duplicate check (MDV-P1-016) still runs in quick mode.
 
 === MDV-P1-016
+status: In progress
+progress:
+- [PR #61](https://github.com/ALFRED-LUCIFER/medvya/pull/61) (in review): possible match = exact ABHA/EID/passport (deterministic Always Encrypted) or similar name + identical non-estimated DOB, never phone; privacy-safe candidates (initials, age, masked IDs); registration re-checks and saves nothing until resolved (quick mode too); decisions stored as MergeRequest (NotSame / Proposed) and audited with the actor; `POST /v1/patients/duplicate-check` and `POST /v1/patients` (Full access, facility from the session); quick form with debounced warning, review panel and "Resolve duplicate to save", en/hi/ar RTL, axe clean
+- Tested on SQL Server (duplicate-check p95 10 ms with 50,000 synthetic patients locally); 13 mutations each caught
+- Left: merge review queue, approval and suppression of "not the same" pairs (MDV-P1-017); real sessions need MDV-P0-012; thresholds to tune on pilot data
 title: Duplicate warning while typing and duplicate resolution before save
 type: Story
 epic: MDV-P1-E05
@@ -436,11 +441,11 @@ ac:
 - Merge history is visible on the patient record.
 
 === MDV-P1-018
-status: In progress
+status: Done
 progress:
-- [PR #58](https://github.com/ALFRED-LUCIFER/medvya/pull/58) (in review): `POST /v1/patients/search` (text in the body only, rows show initials/age/sex/MRN tail, exact phone/MRN/ABHA/EID via deterministic Always Encrypted, partial numbers refused, per-user rate limit) and `GET /v1/patients/{id}`; capability policy from the active membership, one audit event per request (Denied too), facility scope; clinic header search, directory with filters and paging, record page, en/hi/ar RTL, axe clean
-- Tested on SQL Server incl. 50,000 synthetic patients (p95 176 ms locally); 12 mutations each caught
-- Left: real sessions need the facility picker's tenant/facility claims (MDV-P0-012); cross-facility patients within a tenant (P7); doctor ⌘K overlay (D-02, P2)
+- Merged [PR #58](https://github.com/ALFRED-LUCIFER/medvya/pull/58): `POST /v1/patients/search` (text in the body only, rows show initials/age/sex/MRN tail, exact phone/MRN/ABHA/EID via deterministic Always Encrypted, partial numbers refused, per-user rate limit) and `GET /v1/patients/{id}`; capability policy from the active membership, one audit event per request (Denied too), facility scope; clinic header search, directory with filters and paging, record page, en/hi/ar RTL, axe clean
+- Tested on SQL Server incl. 50,000 synthetic patients (p95 132 ms locally, green in CI with a covering name index); 12 mutations each caught
+- Follow-ups outside this ticket: real sessions reach it once the facility picker issues tenant/facility claims (MDV-P0-012); cross-facility patients within a tenant (P7); doctor ⌘K overlay (D-02, P2)
 title: Patient directory and privacy-safe search for the front desk
 type: Story
 epic: MDV-P1-E05
@@ -667,6 +672,12 @@ ac:
 - Accepting books the slot and removes the patient from the waitlist.
 
 === MDV-P1-028
+status: In progress
+progress:
+- Open [PR #62](https://github.com/ALFRED-LUCIFER/medvya/pull/62): P-01 board at /front-desk (7 columns with counts and a CTA each, nonclinical cards: reason category only, "Registration incomplete", wait timer on the server clock); check-in in two taps with a name + date-of-birth identity check; check-in time recorded as `medvya.front_desk.check_in.duration` (exit gate 3)
+- Server-side state machine (one step forward, else 409); each move is a conditional update + VisitStatusEvent in one transaction, so a repeat or a second desk never checks in twice (8 concurrent check-ins on SQL Server → one event); audited endpoints; board payload tested against an exact field allowlist; mutation-checked (guard, idempotency, conditional update, payload, roles); browser-verified (en, ar RTL, keyboard, axe, 200 % zoom, tablet)
+- Payment on Billing cards follows the `billing.invoices` flag: off (all of P1) a disabled placeholder, on a link to Billing (P4); merged with main after #59 and #58 landed
+- Left: real-time updates and call-in room (MDV-P1-029); walk-in (MDV-P1-025); waitlist (MDV-P1-027); workload panel (MDV-P1-030); real-API browser check once sign-in issues the tenant and facility claims (MDV-P0-012)
 title: Reception board with visit columns and one-tap check-in
 type: Story
 epic: MDV-P1-E07

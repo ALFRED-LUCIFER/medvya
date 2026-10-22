@@ -88,6 +88,20 @@ internal sealed class SchedulingHarness(SqlServerFixture sql)
 
     public IBookingService Booking(Guid user, Guid? inTenant = null) => Scope(user, inTenant).GetRequiredService<IBookingService>();
 
+    public IFrontDeskService FrontDesk(Guid user, Guid? inTenant = null) => Scope(user, inTenant).GetRequiredService<IFrontDeskService>();
+
+    /// <summary>Reception books Dr. Rao for <paramref name="patient"/> at a Monday wall-clock time, or at <paramref name="start"/>.</summary>
+    public async Task<AppointmentView> BookAsync(int hour, int minute = 0, Guid? patient = null, DateTimeOffset? start = null)
+    {
+        var booking = Booking(Reception);
+        var hold = await booking.HoldAsync(new HoldSlot { FacilityId = Facility, CalendarId = Doctor, Start = start ?? At(hour, minute), VisitType = Scheduling.Domain.VisitType.FollowUp });
+        return await booking.BookAsync(new BookAppointment
+        {
+            HoldId = hold.Id, PatientId = patient ?? Patient, ReasonCategory = Scheduling.Domain.ReasonCategory.ChronicReview,
+            ReasonText = "Synthetic: chest tightness on stairs", Channel = Scheduling.Domain.BookingChannel.Phone,
+        });
+    }
+
     /// <summary>Dr. Rao: Mon–Fri 09:00–13:00 and 17:00–20:00 IST, 20-minute slots, lunch 12:00–13:00 on Monday, new consultation 40 min.</summary>
     public Task<TemplateView> DoctorTemplateAsync() => Schedule(Admin).SaveTemplateAsync(DoctorTemplate());
 

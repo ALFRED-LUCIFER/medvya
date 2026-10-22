@@ -1,6 +1,6 @@
+import { lazy, Suspense } from 'react';
 import type { Locale } from '@medvya/i18n';
 import { useI18n } from '@medvya/i18n';
-import { lazy, Suspense } from 'react';
 import { Navigate, Outlet, Route, Routes, useNavigate } from 'react-router';
 import UiGallery from '../dev/UiGallery';
 import OfflineBanner from '../features/connectivity/components/OfflineBanner';
@@ -15,17 +15,22 @@ import MorePage from '../features/shell/components/MorePage';
 import ShellMessage, { ComingSoon } from '../features/shell/components/ShellMessage';
 import { allows, patientDirectory } from '../features/shell/domain/navigation';
 import { useShellController } from '../features/shell/hooks/useShellController';
+import FrontDeskRoute from './FrontDeskRoute';
 import ScheduleRoute from './ScheduleRoute';
 
+// Loaded on demand: invitations bring the form stack (React Hook Form, Zod) that most sessions never need.
+const InvitationRoute = lazy(() => import('./InvitationRoute'));
+const InviteColleagueRoute = lazy(() => import('./InviteColleagueRoute'));
 // Patient screens load on first use, keeping them out of the first-paint bundle.
 const PatientDirectoryRoute = lazy(() => import('./PatientRoutes').then(m => ({ default: m.PatientDirectoryRoute })));
 const PatientRecordRoute = lazy(() => import('./PatientRoutes').then(m => ({ default: m.PatientRecordRoute })));
+const QuickRegistrationRoute = lazy(() => import('./PatientRoutes').then(m => ({ default: m.QuickRegistrationRoute })));
 
 type Props = { locale: Locale; onLocaleChange: (l: Locale) => void };
 
 // Composition only: controllers feed presentational components; routes exist only for screens this membership may see.
 export default function App({ locale, onLocaleChange }: Props) {
-  const { t } = useI18n();
+  const { t, country } = useI18n();
   const navigate = useNavigate();
   const { online, retry } = useConnectivityController();
   const shell = useShellController();
@@ -36,6 +41,8 @@ export default function App({ locale, onLocaleChange }: Props) {
   const first = shell.items[0];
   const searchPath = allows(active ?? null, patientDirectory) ? patientDirectory.path : null;
   const registerPath = shell.items.find(i => i.id === 'register')?.path ?? null;
+  const pathOf = (id: string) => shell.items.find(i => i.id === id)?.path ?? null;
+  const registration = <QuickRegistrationRoute country={country} actorName={shell.displayName ?? ''} bookPath={pathOf('schedule')} checkInPath={pathOf('frontDesk')} />;
 
   const routes = shell.loading ? <Route path="*" element={<ShellMessage standalone busy title={t('shell.loading')} />} />
     : !shell.session ? <>
@@ -56,7 +63,13 @@ export default function App({ locale, onLocaleChange }: Props) {
           <Route index element={first ? <Navigate to={first.path} replace /> : <ShellMessage title={t('shell.noScreens.title')} body={t('shell.noScreens.body')} />} />
           {shell.items.map(i => <Route key={i.id} path={i.path} element={i.id === 'schedule'
             ? <ScheduleRoute facilityId={active.facilityId} online={online} canBook={active.capabilities.RegisterBookPatients === 'Full'} />
+            : i.id === 'register' ? registration
+            : i.id === 'frontDesk'
+            ? <FrontDeskRoute facilityId={active.facilityId} online={online} canMove={active.capabilities.CheckInQueue === 'Full'}
+                registerPath={registerPath} billingPath={shell.items.find(b => b.id === 'billing')?.path ?? null} />
             : <ComingSoon title={t(`nav.${i.id}`)} phase={i.phase} />} />)}
+          {/* shortcut: reachable by URL only; the Staff screen and its navigation entry come with F-10 (MDV-P1-008). */}
+          {active.capabilities.StaffRolesIntegrations === 'Config' && <Route path="/admin/staff" element={<InviteColleagueRoute />} />}
           {searchPath && <>
             <Route path={searchPath} element={<PatientDirectoryRoute registerPath={registerPath} />} />
             <Route path={`${searchPath}/:patientId`} element={<PatientRecordRoute />} />
@@ -69,10 +82,14 @@ export default function App({ locale, onLocaleChange }: Props) {
   return (
     <>
       {!online && <OfflineBanner onRetry={retry} />}
-      <Routes>
-        <Route path="/__ui" element={<UiGallery switcher={switcher} />} />
-        {routes}
-      </Routes>
+      <Suspense fallback={<ShellMessage standalone busy title={t('shell.loading')} />}>
+        <Routes>
+          <Route path="/__ui" element={<UiGallery switcher={switcher} />} />
+          {/* Public and token-based (F-06): the same page whether or not someone is signed in. */}
+          <Route path="/invite/:token" element={<InvitationRoute switcher={switcher} />} />
+          {routes}
+        </Routes>
+      </Suspense>
     </>
   );
 }

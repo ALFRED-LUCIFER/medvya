@@ -19,6 +19,7 @@ Who can do what inside a Medvya database. The roles are defined in one idempoten
 Rules:
 
 - **Row-level security applies to every role.** A principal without a tenant `SESSION_CONTEXT` sees no clinic rows, reporting included. The RLS predicate functions need no grant for the app: SQL Server evaluates security predicates without checking the querying user's rights (`AppRoleWorksThroughRowLevelSecurity`).
+- **The one cross-tenant read (facility picker, MDV-P0-012).** A connection that sets `SESSION_CONTEXT('user_id')` and **no** tenant (only `MembershipDirectory` does) sees that user's `Active` memberships and the tenants and facilities they belong to, nothing else; `FeatureFlags` and every other table stay tenant-only, and block predicates stay tenant-only, so such a connection writes nothing. Tenant-scoped connections never set `user_id`, and the predicates require the tenant to be absent, so they see exactly what they did before (`MembershipDirectoryTests`).
 - **Database settings are the administrator's.** `roles.sql` turns on snapshot isolation (needed for ledger verification), so the migrator needs no `ALTER DATABASE`, which would also let it create users and change role membership.
 - **Adding a module:** add its schema and `medvya_<module>` role to `roles.sql`, grant only `ON SCHEMA::<module>`, add the role to `medvya_app`, and add a cross-schema test to `DatabaseRoleTests`. Put RLS predicate functions in the `security` schema, so the migrator needs no `SELECT` on the module schema.
 
@@ -37,8 +38,8 @@ National and insurance identifiers are encrypted in the client (SqlClient) with 
 
 | Column | Encryption | Holds |
 |---|---|---|
-| `patients.Identifiers.LookupValue` | Deterministic, `Latin1_General_BIN2` | ABHA number, ABHA address, Emirates ID (exact-match lookup) |
-| `patients.Identifiers.DisplayValue` | Randomized | Aadhaar last 4, passport, visa file number |
+| `patients.Identifiers.LookupValue` | Deterministic, `Latin1_General_BIN2` | ABHA number, ABHA address, Emirates ID (exact-match search), passport (exact-match duplicate check, MDV-P1-016) |
+| `patients.Identifiers.DisplayValue` | Randomized | Aadhaar last 4, visa file number |
 | `patients.PayerCoverages.MemberNumber` | Deterministic, `Latin1_General_BIN2` | Insurance member / policy number (exact match for eligibility and claims) |
 
 - **Keys, same shape everywhere.** `ColumnEncryption.EnsureKeysAsync(adminConnection, providerName, keyPath, provider)` (Patients.Infrastructure) creates `CMK_Medvya` (metadata: provider name + key path) and a random 256-bit `CEK_Patients` wrapped by the CMK, unless they exist. Migrations then create the encrypted columns on `CEK_Patients` (raw SQL in `InitialPatients`, as EF Core cannot express `ENCRYPTED WITH`). Only the key store provider differs:

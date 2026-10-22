@@ -2,6 +2,8 @@ import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import en from '../messages/en.json';
 import hi from '../messages/hi.json';
 import ar from '../messages/ar.json';
+// shortcut: all three catalogs ship in the clinic's first-paint chunk (about 64 kB; with the registration copy it passed Vite's
+// 500 kB chunk warning); load hi/ar on demand when the catalogs grow further or before the patient portal (P4).
 
 export type Locale = 'en' | 'hi' | 'ar';
 export type Country = 'IN' | 'AE';

@@ -12,7 +12,10 @@ namespace Medvya.IntegrationTests;
 [CollectionDefinition(nameof(RunsAlone), DisableParallelization = true)]
 public sealed class RunsAlone;
 
-/// <summary>MDV-P1-018 NFR: desk search p95 under 300 ms with 50,000 synthetic patients in one facility (real SQL Server).</summary>
+/// <summary>
+/// MDV-P1-018 and MDV-P1-016 NFRs: desk search and the duplicate check, p95 under 300 ms with 50,000 synthetic patients in one
+/// facility (real SQL Server).
+/// </summary>
 [Collection(nameof(RunsAlone))]
 public sealed class PatientSearchPerformanceTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>
 {
@@ -49,16 +52,18 @@ public sealed class PatientSearchPerformanceTests(SqlServerFixture sql) : IClass
     }
 
     [Fact]
-    public async Task SearchP95StaysUnder300MillisecondsWith50000Patients()
+    public async Task SearchAndDuplicateCheckP95StayUnder300MillisecondsWith50000Patients()
     {
         await SeedAsync();
         string?[] queries = ["kavya", "deepak rao", "+91 90 0001 2345", "012345", null];
         var filters = new[] { DirectoryFilter.All, DirectoryFilter.Incomplete, DirectoryFilter.Recent };
 
+        PatientRegistry Registry() => new(sql.Patients(tenant), new SqlServerFixture.FixedTenant(tenant), new PatientRegistryTests.FixedFacility(facility),
+            new AuditLogTestUser(), new AuditLog(sql.Audit(tenant)), TimeProvider.System);
+
         async Task<long> Timed(string? query, DirectoryFilter filter)
         {
-            var registry = new PatientRegistry(sql.Patients(tenant), new SqlServerFixture.FixedTenant(tenant), new PatientRegistryTests.FixedFacility(facility),
-                new AuditLogTestUser(), new AuditLog(sql.Audit(tenant)), TimeProvider.System);
+            var registry = Registry();
             var clock = Stopwatch.StartNew();
             var result = await registry.SearchAsync(new("IN", query, filter));
             Assert.True(result.Items.Count > 0, $"no rows for {query ?? "(directory)"} {filter}");
@@ -72,9 +77,28 @@ public sealed class PatientSearchPerformanceTests(SqlServerFixture sql) : IClass
                 foreach (var f in filters.Take(q is null ? 3 : 1))
                     timings.Add(await Timed(q, f));
 
+        AssertP95(timings, "searches");
+
+        // Patient 12345 is "Suresh Joseph 12345", born 26 Oct 1965 (see SeedAsync); about 30 patients share each birthday.
+        async Task<long> TimedCheck()
+        {
+            var registry = Registry();
+            var clock = Stopwatch.StartNew();
+            var candidates = await registry.FindDuplicatesAsync(new("IN", "Suresh Joseph", new DateOnly(1965, 10, 26), [new(Medvya.Patients.Domain.IdentifierScheme.Abha, "91000000099999")]));
+            Assert.NotEmpty(candidates);
+            return clock.ElapsedMilliseconds;
+        }
+        await TimedCheck();
+        var checks = new List<long>();
+        for (var i = 0; i < 30; i++) checks.Add(await TimedCheck());
+        AssertP95(checks, "duplicate checks");
+    }
+
+    static void AssertP95(List<long> timings, string what)
+    {
         timings.Sort();
         var p95 = timings[(int)Math.Ceiling(timings.Count * 0.95) - 1];
-        Assert.True(p95 < 300, string.Create(CultureInfo.InvariantCulture, $"p95 {p95} ms over {timings.Count} searches (max {timings[^1]} ms)"));
+        Assert.True(p95 < 300, string.Create(CultureInfo.InvariantCulture, $"p95 {p95} ms over {timings.Count} {what} (max {timings[^1]} ms)"));
     }
 
     sealed class AuditLogTestUser : Medvya.BuildingBlocks.Domain.ICurrentUser { public Guid? UserId { get; } = Guid.NewGuid(); }

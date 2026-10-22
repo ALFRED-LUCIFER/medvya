@@ -31,15 +31,19 @@ public class PatientRegistryTests(SqlServerFixture sql) : IClassFixture<SqlServe
     Task<PatientSearchResult> Search(Guid tenant, string country, string? query, PatientsDbContext? db = null, DirectoryFilter filter = DirectoryFilter.All, int page = 1) =>
         Registry(tenant, db).SearchAsync(new(country, query, filter, page));
 
+    // A different date of birth per registration, so the duplicate check (MDV-P1-016) sees different people.
+    static int born;
+    static DateOnly NextDob() => new DateOnly(1950, 1, 1).AddDays(Interlocked.Increment(ref born));
+
     static RegisterPatient IndiaFull(Guid facility) => IndiaBase with
     {
-        FacilityId = facility, Email = "patient@example.test",
+        FacilityId = facility, Email = "patient@example.test", DateOfBirth = NextDob(),
         Identifiers = [new(IdentifierScheme.Abha, "91-0000-0000-0002"), new(IdentifierScheme.AadhaarLast4, "2222")],
         Address = new PatientAddress { Line1 = "12 Test Street", City = "Kochi", District = "Ernakulam", Region = "Kerala", PostalCode = "682001" },
         Payer = new(PayerKind.PrivateInsurance, "TPA (synthetic)", MemberNumber: "SYN-0001"),
     };
 
-    static RegisterPatient UaeQuick(Guid facility) => UaeBase with { FacilityId = facility, Quick = true };
+    static RegisterPatient UaeQuick(Guid facility) => UaeBase with { FacilityId = facility, Quick = true, DateOfBirth = NextDob() };
 
     [Fact]
     public async Task FullRegistrationAssignsFacilityScopedMrnsAndIsAudited()
@@ -98,7 +102,7 @@ public class PatientRegistryTests(SqlServerFixture sql) : IClassFixture<SqlServe
     [Fact]
     public async Task SearchRowsShowOnlyInitialsAgeSexAndTheMrnTail()
     {
-        var registered = await Registry(tenantA).RegisterAsync(IndiaFull(facility) with { FullName = "Kavya Lakshmi Iyer (synthetic)", Identifiers = [] });
+        var registered = await Registry(tenantA).RegisterAsync(IndiaFull(facility) with { FullName = "Kavya Lakshmi Iyer (synthetic)", DateOfBirth = new DateOnly(1980, 1, 1), Identifiers = [] });
         var result = await Search(tenantA, "IN", "kavya");
 
         Assert.Equal(SearchKind.Name, result.MatchedOn);
@@ -198,7 +202,7 @@ public class PatientRegistryTests(SqlServerFixture sql) : IClassFixture<SqlServe
     [Fact]
     public async Task ReportingSeesMaskedDemographicsWhileTheAppSeesClearValues()
     {
-        var registered = await Registry(tenantA).RegisterAsync(IndiaFull(Guid.NewGuid()));
+        var registered = await Registry(tenantA).RegisterAsync(IndiaFull(Guid.NewGuid()) with { DateOfBirth = new DateOnly(1980, 1, 1) });
         const string Query = "SELECT FullName, Mobile, Email, DateOfBirth, Address_PostalCode FROM patients.Patients WHERE Id = @id";
 
         async Task<object[]> Row(string user)

@@ -20,6 +20,7 @@ public static class SchedulingModule
             .AddScoped<SchedulingContext>()
             .AddScoped<DoctorDayTransaction>()
             .AddScoped<IScheduleService, ScheduleService>()
-            .AddScoped<IBookingService, BookingService>();
+            .AddScoped<IBookingService, BookingService>()
+            .AddScoped<IFrontDeskService, FrontDeskService>();
     }
 }

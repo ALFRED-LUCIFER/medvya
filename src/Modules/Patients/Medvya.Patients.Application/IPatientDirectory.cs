@@ -1,7 +1,10 @@
 namespace Medvya.Patients.Application;
 
-/// <summary>What the schedule shows about a patient: name and MRN. Never identifiers, contact details or clinical data.</summary>
-public sealed record PatientSummary(Guid Id, Guid FacilityId, string FullName, string Mrn);
+/// <summary>
+/// What the schedule and the reception board show about a patient: name and MRN, plus date of birth and whether registration
+/// is incomplete to confirm identity at check-in. Never identifiers, contact details or clinical data.
+/// </summary>
+public sealed record PatientSummary(Guid Id, Guid FacilityId, string FullName, string Mrn, DateOnly DateOfBirth, bool RegistrationIncomplete);
 
 /// <summary>
 /// Patient summaries for other modules (the schedule, booking). Not audited here: the calling endpoint writes one audit event

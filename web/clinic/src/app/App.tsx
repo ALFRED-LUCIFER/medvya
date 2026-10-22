@@ -47,7 +47,7 @@ export default function App({ locale, onLocaleChange }: Props) {
           </AppShell>}>
           <Route index element={first ? <Navigate to={first.path} replace /> : <ShellMessage title={t('shell.noScreens.title')} body={t('shell.noScreens.body')} />} />
           {shell.items.map(i => <Route key={i.id} path={i.path} element={i.id === 'schedule'
-            ? <ScheduleRoute facilityId={active.facilityId} />
+            ? <ScheduleRoute facilityId={active.facilityId} canBook={active.capabilities.RegisterBookPatients === 'Full'} />
             : <ComingSoon title={t(`nav.${i.id}`)} phase={i.phase} />} />)}
           <Route path="/more" element={<MorePage {...account} role={active.role} facilityName={active.facilityName} groups={shell.groups} />} />
           <Route path="*" element={<NotFoundPage onBackToToday={toHome} />} />

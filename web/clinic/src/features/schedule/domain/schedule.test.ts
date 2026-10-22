@@ -8,11 +8,13 @@ const day: ScheduleDay = {
     {
       calendarId: 'd-1', calendarKind: 'Doctor', name: 'Dr. Arjun Rao', slotMinutes: 20,
       hours: [{ start: '2026-10-19T03:30:00Z', end: '2026-10-19T07:30:00Z', room: 'Room 3' }, { start: '2026-10-19T11:30:00Z', end: '2026-10-19T14:30:00Z', room: 'Room 3' }],
-      slots: [{ start: '2026-10-19T03:50:00Z', end: '2026-10-19T04:10:00Z' }, { start: '2026-10-19T03:30:00Z', end: '2026-10-19T03:50:00Z' }],
+      slots: [{ start: '2026-10-19T03:50:00Z', end: '2026-10-19T04:10:00Z', held: true }, { start: '2026-10-19T03:30:00Z', end: '2026-10-19T03:50:00Z', held: false }],
+      appointments: [{ id: 'a-1', reference: 'APT-1', patientId: 'p-1', patientName: 'Meera Iyer', visitType: 'NewConsultation', state: 'Booked', start: '2026-10-19T04:10:00Z', end: '2026-10-19T04:50:00Z' }],
+      visitLengths: [{ visitType: 'NewConsultation', minutes: 40 }],
       unavailable: [{ start: '2026-10-19T07:30:00Z', end: '2026-10-19T11:30:00Z', reason: 'NotWorking', label: null }],
     },
     {
-      calendarId: 'r-1', calendarKind: 'Resource', name: 'Procedure room', slotMinutes: null, hours: [], slots: [],
+      calendarId: 'r-1', calendarKind: 'Resource', name: 'Procedure room', slotMinutes: null, hours: [], slots: [], appointments: [], visitLengths: [],
       unavailable: [{ start: '2026-10-19T03:30:00Z', end: '2026-10-19T14:30:00Z', reason: 'NoSchedule', label: null }],
     },
   ],
@@ -23,7 +25,7 @@ describe('day layout', () => {
     const layout = layoutDay(day);
     const [doctor, room] = layout.columns;
     expect(layout.height).toBe(11 * 60 * (minSlotPx / 20));
-    expect(doctor!.items.map(i => [i.kind, i.top, i.height])).toEqual([['slot', 0, 48], ['slot', 48, 48], ['unavailable', 240 * 2.4, 240 * 2.4]]);
+    expect(doctor!.items.map(i => [i.kind, i.top, i.height])).toEqual([['slot', 0, 48], ['slot', 48, 48], ['appointment', 96, 96], ['unavailable', 240 * 2.4, 240 * 2.4]]); // a 40-min visit spans two slots
     expect(doctor!.rooms).toEqual(['Room 3']);
     expect([doctor!.working, room!.working]).toEqual([true, false]);
     expect(room!.items).toHaveLength(1);

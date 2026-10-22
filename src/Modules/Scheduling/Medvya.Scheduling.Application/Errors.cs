@@ -17,3 +17,12 @@ public sealed class SchedulingValidationException(IReadOnlyList<ValidationError>
 
 /// <summary>The user has no active membership at the facility, or the role lacks the capability. Never says which.</summary>
 public sealed class SchedulingAccessDeniedException() : Exception("Not allowed at this facility.");
+
+/// <summary>
+/// The slot cannot be held or booked: taken, being booked by someone else, not a slot of the template, in the past, or the
+/// hold expired. Code is a stable key ("slot_unavailable", "hold_expired", …) the UI translates; no patient data.
+/// </summary>
+public sealed class SlotUnavailableException(string code) : Exception("Slot no longer available: " + code)
+{
+    public string Code { get; } = code;
+}

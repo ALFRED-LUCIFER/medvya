@@ -64,7 +64,10 @@ Every stored field has one class. In code, each domain property carries `[Classi
 | SCHEDULE_TEMPLATE.* (calendar, weekday hours, room, breaks and their labels, slot and visit lengths) | Internal | — |
 | SCHEDULE_RESOURCE.* (name, e.g. "Procedure room") | Internal | — |
 | APPOINTMENT.id, doctor, location, slot_start, state, source, reason_category | Internal | — |
-| APPOINTMENT.reason_text (free text) | SensitiveHealth | Clinicians only. Audit |
+| APPOINTMENT.reason_text (free text) | SensitiveHealth | Clinicians only. Audit. Never returned to reception screens or put in events (MDV-P1-021) |
+| SLOT_HOLD.* (calendar, slot, visit type, held_by, expires_at) | Internal | — |
+| VISIT_STATUS_EVENT.* (appointment, state, actor, time) | Internal | Append-only history |
+| OUTBOX_EVENT.* (type, aggregate id, payload of opaque ids and instants) | Internal | No PHI in payloads |
 | WAITLIST_ENTRY.*, QUEUE_TOKEN.* | Internal | Tokens on TV, never names |
 | NOTIFICATION.template_id, channel, state, provider_ref | Internal | Templates carry no clinical data |
 | NOTIFICATION.recipient (phone/email) | Personal | DDM |

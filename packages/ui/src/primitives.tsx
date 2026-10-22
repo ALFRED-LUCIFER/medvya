@@ -3,7 +3,7 @@ import {
   Send, Pipette, Inbox, Eye, Phone, MessageSquareCheck, CircleCheck,
   Sparkles, BadgeCheck, User, ArrowLeftRight, Upload, Lock,
   CircleAlert, TriangleAlert, Info, Pause, CircleMinus, Pill as PillIcon, CircleHelp,
-  Clock, Ban, SearchX, WifiOff, type LucideIcon,
+  Clock, Ban, SearchX, WifiOff, Hourglass, CalendarCheck, type LucideIcon,
 } from 'lucide-react';
 import { useI18n, type MessageKey } from '@medvya/i18n';
 import { Button } from '#components/ui/button';
@@ -52,6 +52,8 @@ export const recordingLooks = {
 export const scheduleLooks = {
   // Rendered as a hatch of the muted and line tokens; bg is the darker stop, so the contrast test checks the worst case.
   unavailable: { label: 'schedule.state.unavailable', icon: Ban, bg: 'var(--color-line)', fg: 'var(--color-ink-600)' },
+  held: { label: 'schedule.state.held', icon: Hourglass, bg: '#FDF5E7', fg: '#7A4710' },
+  booked: { label: 'schedule.state.Booked', icon: CalendarCheck, bg: '#FFFFFF', fg: '#1D4ED8', border: '1px solid #2563EB' },
 } satisfies Record<string, Look>;
 
 const paint = (look: Look): CSSProperties => ({ backgroundColor: look.bg, color: look.fg, border: look.border });

@@ -23,6 +23,114 @@ namespace Medvya.Scheduling.Infrastructure.Persistence.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("Medvya.Scheduling.Domain.Appointment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("BookedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("BookedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("CalendarId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("CalendarKind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTimeOffset>("ChangedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("ChangedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Channel")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTimeOffset>("End")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("FacilityId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("PatientId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ReasonCategory")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("ReasonText")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTimeOffset>("Start")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("VisitType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "PatientId");
+
+                    b.HasIndex("TenantId", "FacilityId", "CalendarId", "Start");
+
+                    b.ToTable("Appointments", "scheduling");
+                });
+
+            modelBuilder.Entity("Medvya.Scheduling.Domain.OutboxEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("AggregateId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("OccurredAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Payload")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTimeOffset?>("PublishedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PublishedAt", "OccurredAt");
+
+                    b.ToTable("OutboxEvents", "scheduling");
+                });
+
             modelBuilder.Entity("Medvya.Scheduling.Domain.ScheduleResource", b =>
                 {
                     b.Property<Guid>("Id")
@@ -89,6 +197,77 @@ namespace Medvya.Scheduling.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("Templates", "scheduling");
+                });
+
+            modelBuilder.Entity("Medvya.Scheduling.Domain.SlotHold", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("CalendarId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("End")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("FacilityId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("HeldBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("Start")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("VisitType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "HeldBy");
+
+                    b.HasIndex("TenantId", "FacilityId", "CalendarId", "Start");
+
+                    b.ToTable("SlotHolds", "scheduling");
+                });
+
+            modelBuilder.Entity("Medvya.Scheduling.Domain.VisitStatusEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("ActorUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("AppointmentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("OccurredAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AppointmentId");
+
+                    b.ToTable("VisitStatusEvents", "scheduling");
                 });
 
             modelBuilder.Entity("Medvya.Scheduling.Domain.ScheduleTemplate", b =>
@@ -176,6 +355,15 @@ namespace Medvya.Scheduling.Infrastructure.Persistence.Migrations
                     b.Navigation("Hours");
 
                     b.Navigation("VisitLengths");
+                });
+
+            modelBuilder.Entity("Medvya.Scheduling.Domain.VisitStatusEvent", b =>
+                {
+                    b.HasOne("Medvya.Scheduling.Domain.Appointment", null)
+                        .WithMany()
+                        .HasForeignKey("AppointmentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 #pragma warning restore 612, 618
         }

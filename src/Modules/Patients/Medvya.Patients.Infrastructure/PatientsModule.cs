@@ -21,7 +21,8 @@ public static class PatientsModule
         var encrypted = WithColumnEncryption(connectionString);
         return services
             .AddDbContext<PatientsDbContext>((sp, o) => o.UseSqlServer(encrypted).AddInterceptors(sp.GetRequiredService<TenantSessionInterceptor>()))
-            .AddScoped<IPatientRegistry, PatientRegistry>();
+            .AddScoped<IPatientRegistry, PatientRegistry>()
+            .AddScoped<IPatientDirectory, PatientDirectory>();
     }
 
     /// <summary>Only this module's connections pay for Always Encrypted (parameter-encryption round trips).</summary>

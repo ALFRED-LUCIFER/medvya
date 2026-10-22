@@ -1,15 +1,7 @@
-using Medvya.BuildingBlocks.Domain;
-using Medvya.Identity.Domain;
-using Medvya.Identity.Infrastructure;
 using Medvya.Scheduling.Application;
 using Medvya.Scheduling.Domain;
-using Medvya.Scheduling.Infrastructure;
-using Medvya.Tenancy.Domain;
-using Medvya.Tenancy.Infrastructure;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using static Medvya.IntegrationTests.ScheduleRulesTests;
 
 namespace Medvya.IntegrationTests;
 
@@ -19,75 +11,38 @@ namespace Medvya.IntegrationTests;
 /// </summary>
 public sealed class ScheduleServiceTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>, IAsyncLifetime
 {
-    internal static readonly DateOnly Monday = new(2026, 10, 19);
+    static readonly DateOnly Monday = SchedulingHarness.Monday;
+    readonly SchedulingHarness h = new(sql);
 
-    readonly Guid tenant = Guid.NewGuid(), facility = Guid.NewGuid(), otherFacility = Guid.NewGuid();
-    readonly Guid doctor = Guid.NewGuid(), reception = Guid.NewGuid(), admin = Guid.NewGuid(), portalUser = Guid.NewGuid(), elsewhere = Guid.NewGuid();
-    readonly List<ServiceProvider> providers = [];
+    public Task InitializeAsync() => h.SeedAsync();
 
-    public async Task InitializeAsync()
-    {
-        await using (var db = sql.Context(tenant))
-        {
-            db.Tenants.Add(new Tenant { Id = tenant, Name = "Iyer Family Clinic (synthetic)", CountryCode = "IN", ResidencyRegion = "centralindia" });
-            db.Facilities.Add(new Facility { Id = facility, TenantId = tenant, Name = "Adyar (synthetic)", TimeZone = "Asia/Kolkata" });
-            db.Facilities.Add(new Facility { Id = otherFacility, TenantId = tenant, Name = "Velachery (synthetic)", TimeZone = "Asia/Kolkata" });
-            foreach (var (user, role, at) in new[]
-            {
-                (doctor, Role.SoloDoctor, facility), (reception, Role.Receptionist, facility), (admin, Role.PracticeAdmin, facility),
-                (portalUser, Role.Patient, facility), (elsewhere, Role.PracticeAdmin, otherFacility),
-            })
-                db.Memberships.Add(new Membership { Id = Guid.NewGuid(), TenantId = tenant, UserId = user, FacilityId = at, Role = role, Status = MembershipStatus.Active });
-            await db.SaveChangesAsync();
-        }
-        await using var identity = sql.Identity();
-        identity.Users.Add(new StaffUser { Id = doctor, Issuer = "test-idp", Subject = doctor.ToString(), DisplayName = "Dr. Arjun Rao (synthetic)" });
-        await identity.SaveChangesAsync();
-    }
-
-    public async Task DisposeAsync()
-    {
-        foreach (var p in providers) await p.DisposeAsync();
-    }
-
-    sealed class FixedUser(Guid id) : ICurrentUser { public Guid? UserId => id; }
-
-    /// <summary>The scheduling service as the host builds it, for one user in one tenant.</summary>
-    IScheduleService As(Guid user, Guid? inTenant = null)
-    {
-        var provider = new ServiceCollection()
-            .AddSingleton<ICurrentTenant>(new SqlServerFixture.FixedTenant(inTenant ?? tenant))
-            .AddSingleton<ICurrentUser>(new FixedUser(user))
-            .AddTenancyModule(sql.ConnectionString).AddIdentityModule(sql.ConnectionString).AddSchedulingModule(sql.ConnectionString)
-            .BuildServiceProvider();
-        providers.Add(provider);
-        return provider.CreateScope().ServiceProvider.GetRequiredService<IScheduleService>();
-    }
-
-    SaveTemplate DoctorTemplate(int slotMinutes = 20) => new()
-    {
-        FacilityId = facility, CalendarId = doctor, CalendarKind = CalendarKind.Doctor, SlotMinutes = slotMinutes,
-        Hours = MorningAndEvening().Hours,
-        Breaks = [new ScheduleBreak { Weekday = DayOfWeek.Monday, Start = new(12, 0), End = new(13, 0), Label = "Lunch break" }],
-        VisitLengths = [new VisitLength { VisitType = VisitType.NewConsultation, Minutes = 40 }],
-    };
+    public Task DisposeAsync() => h.CloseAsync();
 
     [Fact]
     public async Task ASavedTemplateGivesBookableSlotsInFacilityLocalTime()
     {
-        var saved = await As(admin).SaveTemplateAsync(DoctorTemplate());
+        var saved = await h.DoctorTemplateAsync();
         Assert.Equal(("Dr. Arjun Rao (synthetic)", 20), (saved.Name, saved.SlotMinutes));
 
-        var day = await As(reception).GetDayAsync(facility, Monday);
+        var day = await h.Schedule(h.Reception).GetDayAsync(h.Facility, Monday);
         Assert.Equal(("Asia/Kolkata", Monday), (day.TimeZone, day.Date));
         Assert.Equal((new DateTimeOffset(2026, 10, 19, 3, 30, 0, TimeSpan.Zero), new DateTimeOffset(2026, 10, 19, 14, 30, 0, TimeSpan.Zero)), (day.Start, day.End));
-        var column = Assert.Single(day.Columns);
-        Assert.Equal((doctor, CalendarKind.Doctor, 18), (column.CalendarId, column.CalendarKind, column.Slots.Count)); // 21 slots minus the lunch hour
+        var column = day.Columns.Single(c => c.CalendarId == h.Doctor);
+        Assert.Equal((CalendarKind.Doctor, 18), (column.CalendarKind, column.Slots.Count)); // 21 slots minus the lunch hour
         Assert.Equal([UnavailableReason.Break, UnavailableReason.NotWorking], column.Unavailable.Select(u => u.Reason));
         Assert.Equal("Lunch break", column.Unavailable[0].Label);
+        Assert.Equal(40, column.VisitLengths.Single(v => v.VisitType == VisitType.NewConsultation).Minutes);
+        Assert.Equal(UnavailableReason.NoSchedule, Assert.Single(day.Columns.Single(c => c.CalendarId == h.SecondDoctor).Unavailable).Reason);
 
-        var sunday = await As(reception).GetDayAsync(facility, Monday.AddDays(6));
-        Assert.Equal(UnavailableReason.NotWorking, Assert.Single(Assert.Single(sunday.Columns).Unavailable).Reason); // closed all day
+        var sunday = await h.Schedule(h.Reception).GetDayAsync(h.Facility, Monday.AddDays(6));
+        Assert.Equal(UnavailableReason.NotWorking, Assert.Single(sunday.Columns.Single(c => c.CalendarId == h.Doctor).Unavailable).Reason); // closed all day
+    }
+
+    [Fact]
+    public async Task TodayIsTheFacilitysDate()
+    {
+        h.Clock.Advance(TimeSpan.FromHours(17)); // 01:00 IST on Tuesday is still Monday 19:30 in UTC
+        Assert.Equal(Monday.AddDays(1), (await h.Schedule(h.Reception).GetDayAsync(h.Facility, null)).Date);
     }
 
     [Fact]
@@ -103,77 +58,90 @@ public sealed class ScheduleServiceTests(SqlServerFixture sql) : IClassFixture<S
     [Fact]
     public async Task AResourceIsAColumnLikeADoctor()
     {
-        var room = await As(admin).AddResourceAsync(new AddResource { FacilityId = facility, Name = "  Procedure room  " });
+        var room = await h.Schedule(h.Admin).AddResourceAsync(new AddResource { FacilityId = h.Facility, Name = "  Procedure room  " });
         Assert.Equal("Procedure room", room.Name);
-        var before = await As(reception).GetDayAsync(facility, Monday);
-        Assert.Equal(["Dr. Arjun Rao (synthetic)", "Procedure room"], before.Columns.Select(c => c.Name));
+        var before = await h.Schedule(h.Reception).GetDayAsync(h.Facility, Monday);
+        Assert.Equal(["Dr. Arjun Rao (synthetic)", "Dr. S. Menon (synthetic)", "Procedure room"], before.Columns.Select(c => c.Name));
         Assert.All(before.Columns, c => Assert.Equal(UnavailableReason.NoSchedule, Assert.Single(c.Unavailable).Reason)); // nothing set up yet
 
-        await As(admin).SaveTemplateAsync(new SaveTemplate
+        await h.Schedule(h.Admin).SaveTemplateAsync(new SaveTemplate
         {
-            FacilityId = facility, CalendarId = room.Id, CalendarKind = CalendarKind.Resource, SlotMinutes = 30,
+            FacilityId = h.Facility, CalendarId = room.Id, CalendarKind = CalendarKind.Resource, SlotMinutes = 30,
             Hours = [new WorkingHours { Weekday = DayOfWeek.Monday, Start = new(10, 0), End = new(12, 0) }],
         });
-        var resource = (await As(reception).GetDayAsync(facility, Monday)).Columns.Single(c => c.CalendarKind == CalendarKind.Resource);
+        var resource = (await h.Schedule(h.Reception).GetDayAsync(h.Facility, Monday)).Columns.Single(c => c.CalendarKind == CalendarKind.Resource);
         Assert.Equal(4, resource.Slots.Count);
 
-        var duplicate = await Assert.ThrowsAsync<SchedulingValidationException>(() => As(admin).AddResourceAsync(new AddResource { FacilityId = facility, Name = "Procedure room" }));
+        var duplicate = await Assert.ThrowsAsync<SchedulingValidationException>(() => h.Schedule(h.Admin).AddResourceAsync(new AddResource { FacilityId = h.Facility, Name = "Procedure room" }));
         Assert.Equal([new ValidationError("name", "duplicate")], duplicate.Errors);
     }
 
     [Fact]
     public async Task ChangingATemplateReplacesTheOldOne()
     {
-        await As(admin).SaveTemplateAsync(DoctorTemplate());
-        await As(doctor).SaveTemplateAsync(DoctorTemplate(slotMinutes: 15) with { Breaks = [], VisitLengths = [] }); // the owner doctor configures too
+        await h.DoctorTemplateAsync();
+        await h.Schedule(h.Doctor).SaveTemplateAsync(h.DoctorTemplate(slotMinutes: 15) with { Breaks = [], VisitLengths = [] }); // the owner doctor configures too
 
-        Assert.Equal(15, Assert.Single(await As(admin).ListTemplatesAsync(facility)).SlotMinutes);
-        await using var db = sql.Scheduling(tenant);
-        Assert.Equal(1, await db.Templates.CountAsync(t => t.CalendarId == doctor));
-        Assert.Equal(28, Assert.Single((await As(reception).GetDayAsync(facility, Monday)).Columns).Slots.Count); // 16 + 12 quarter hours
+        Assert.Equal(15, (await h.Schedule(h.Admin).ListTemplatesAsync(h.Facility)).Single(t => t.CalendarId == h.Doctor).SlotMinutes);
+        await using var db = sql.Scheduling(h.Tenant);
+        Assert.Equal(1, await db.Templates.CountAsync(t => t.CalendarId == h.Doctor));
+        Assert.Equal(28, (await h.Schedule(h.Reception).GetDayAsync(h.Facility, Monday)).Columns.Single(c => c.CalendarId == h.Doctor).Slots.Count); // 16 + 12 quarter hours
     }
 
     [Fact]
     public async Task OnlyMembersWithTheRightRoleAtThisFacilityGetIn()
     {
-        await Assert.ThrowsAsync<SchedulingAccessDeniedException>(() => As(reception).SaveTemplateAsync(DoctorTemplate()));
-        await Assert.ThrowsAsync<SchedulingAccessDeniedException>(() => As(reception).AddResourceAsync(new AddResource { FacilityId = facility, Name = "Room" }));
-        await Assert.ThrowsAsync<SchedulingAccessDeniedException>(() => As(portalUser).GetDayAsync(facility, Monday)); // patients use the portal
-        await Assert.ThrowsAsync<SchedulingAccessDeniedException>(() => As(elsewhere).GetDayAsync(facility, Monday)); // admin of another facility
-        await Assert.ThrowsAsync<SchedulingAccessDeniedException>(() => As(admin, inTenant: Guid.NewGuid()).GetDayAsync(facility, Monday)); // another tenant
-        await Assert.ThrowsAsync<SchedulingAccessDeniedException>(() => As(Guid.NewGuid()).GetDayAsync(facility, Monday));
-        Assert.Single((await As(reception).GetDayAsync(facility, Monday)).Columns);
+        await Assert.ThrowsAsync<SchedulingAccessDeniedException>(() => h.Schedule(h.Reception).SaveTemplateAsync(h.DoctorTemplate()));
+        await Assert.ThrowsAsync<SchedulingAccessDeniedException>(() => h.Schedule(h.Reception).AddResourceAsync(new AddResource { FacilityId = h.Facility, Name = "Room" }));
+        await Assert.ThrowsAsync<SchedulingAccessDeniedException>(() => h.Schedule(h.PortalUser).GetDayAsync(h.Facility, Monday)); // patients use the portal
+        await Assert.ThrowsAsync<SchedulingAccessDeniedException>(() => h.Schedule(h.Elsewhere).GetDayAsync(h.Facility, Monday)); // admin of another facility
+        await Assert.ThrowsAsync<SchedulingAccessDeniedException>(() => h.Schedule(h.Admin, inTenant: Guid.NewGuid()).GetDayAsync(h.Facility, Monday)); // another tenant
+        await Assert.ThrowsAsync<SchedulingAccessDeniedException>(() => h.Schedule(Guid.NewGuid()).GetDayAsync(h.Facility, Monday));
+        Assert.Equal(2, (await h.Schedule(h.Nurse).GetDayAsync(h.Facility, Monday)).Columns.Count); // nurses read the calendar
     }
 
     [Fact]
     public async Task OnlyADoctorOrResourceOfTheFacilityCanHaveATemplate()
     {
-        var notADoctor = await Assert.ThrowsAsync<SchedulingValidationException>(() => As(admin).SaveTemplateAsync(DoctorTemplate() with { CalendarId = reception }));
+        var notADoctor = await Assert.ThrowsAsync<SchedulingValidationException>(() => h.Schedule(h.Admin).SaveTemplateAsync(h.DoctorTemplate() with { CalendarId = h.Reception }));
         Assert.Equal([new ValidationError("calendarId", "unknown")], notADoctor.Errors);
-        var wrongKind = await Assert.ThrowsAsync<SchedulingValidationException>(() => As(admin).SaveTemplateAsync(DoctorTemplate() with { CalendarKind = CalendarKind.Resource }));
+        var wrongKind = await Assert.ThrowsAsync<SchedulingValidationException>(() => h.Schedule(h.Admin).SaveTemplateAsync(h.DoctorTemplate() with { CalendarKind = CalendarKind.Resource }));
         Assert.Equal([new ValidationError("calendarId", "unknown")], wrongKind.Errors);
-        var invalid = await Assert.ThrowsAsync<SchedulingValidationException>(() => As(admin).SaveTemplateAsync(DoctorTemplate(slotMinutes: 7)));
+        var invalid = await Assert.ThrowsAsync<SchedulingValidationException>(() => h.Schedule(h.Admin).SaveTemplateAsync(h.DoctorTemplate(slotMinutes: 7)));
         Assert.Contains(new ValidationError("slotMinutes", "invalid"), invalid.Errors);
 
-        await using var db = sql.Scheduling(tenant);
+        await using var db = sql.Scheduling(h.Tenant);
         Assert.False(await db.Templates.AnyAsync()); // nothing rejected was saved
     }
 
     [Fact]
     public async Task AnotherTenantNeverSeesTheScheduleEvenWithQueryFiltersOff()
     {
-        await As(admin).SaveTemplateAsync(DoctorTemplate());
-        await As(admin).AddResourceAsync(new AddResource { FacilityId = facility, Name = "Procedure room" });
+        await h.DoctorTemplateAsync();
+        await h.Schedule(h.Admin).AddResourceAsync(new AddResource { FacilityId = h.Facility, Name = "Procedure room" });
+        var hold = await h.Booking(h.Reception).HoldAsync(new HoldSlot { FacilityId = h.Facility, CalendarId = h.Doctor, Start = SchedulingHarness.At(9), VisitType = VisitType.FollowUp });
+        await h.Booking(h.Reception).BookAsync(new BookAppointment { HoldId = hold.Id, PatientId = h.Patient });
+        await h.Booking(h.Reception).HoldAsync(new HoldSlot { FacilityId = h.Facility, CalendarId = h.Doctor, Start = SchedulingHarness.At(9, 20), VisitType = VisitType.FollowUp });
 
         await using var other = sql.Scheduling(Guid.NewGuid());
-        Assert.Empty(await other.Templates.IgnoreQueryFilters().Where(t => t.TenantId == tenant).ToListAsync()); // row-level security
-        Assert.Empty(await other.Resources.IgnoreQueryFilters().Where(r => r.TenantId == tenant).ToListAsync());
-        Assert.Empty(await other.Database.SqlQuery<Guid>($"SELECT TenantId AS Value FROM scheduling.Templates").ToListAsync());
+        Assert.Empty(await other.Templates.IgnoreQueryFilters().Where(t => t.TenantId == h.Tenant).ToListAsync()); // row-level security
+        Assert.Empty(await other.Resources.IgnoreQueryFilters().Where(r => r.TenantId == h.Tenant).ToListAsync());
+        Assert.Empty(await other.Appointments.IgnoreQueryFilters().Where(a => a.TenantId == h.Tenant).ToListAsync());
+        Assert.Empty(await other.SlotHolds.IgnoreQueryFilters().Where(x => x.TenantId == h.Tenant).ToListAsync());
+        Assert.Empty(await other.StatusEvents.IgnoreQueryFilters().Where(x => x.TenantId == h.Tenant).ToListAsync());
+        Assert.Empty(await other.Outbox.IgnoreQueryFilters().Where(x => x.TenantId == h.Tenant).ToListAsync());
+        Assert.Empty(await other.Database.SqlQuery<Guid>($"SELECT TenantId AS Value FROM scheduling.Appointments").ToListAsync());
         await using var none = sql.Scheduling(null);
         Assert.Empty(await none.Templates.IgnoreQueryFilters().ToListAsync());
+        Assert.Empty(await none.Appointments.IgnoreQueryFilters().ToListAsync());
 
-        other.Resources.Add(new ScheduleResource { Id = Guid.NewGuid(), TenantId = tenant, FacilityId = facility, Name = "Injected" });
+        await using var mine = sql.Scheduling(h.Tenant);
+        Assert.Equal(1, await mine.Appointments.CountAsync()); // the tenant itself sees its rows
+
+        other.Resources.Add(new ScheduleResource { Id = Guid.NewGuid(), TenantId = h.Tenant, FacilityId = h.Facility, Name = "Injected" });
         var blocked = await Assert.ThrowsAsync<DbUpdateException>(() => other.SaveChangesAsync());
         Assert.Contains("block predicate", Assert.IsType<SqlException>(blocked.InnerException).Message, StringComparison.Ordinal);
+        var move = await Assert.ThrowsAsync<SqlException>(() => mine.Database.ExecuteSqlAsync($"UPDATE scheduling.Appointments SET TenantId = {Guid.NewGuid()}"));
+        Assert.Contains("block predicate", move.Message, StringComparison.Ordinal);
     }
 }

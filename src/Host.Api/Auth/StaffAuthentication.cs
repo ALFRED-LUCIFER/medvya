@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Medvya.Identity.Application;
+using Medvya.Tenancy.Domain;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
@@ -82,6 +83,17 @@ public static partial class StaffAuthentication
         var subject = principal.FindFirst("sub")?.Value;
         var user = issuer is null || subject is null ? null
             : await ctx.HttpContext.RequestServices.GetRequiredService<IStaffUsers>().FindAsync(issuer, subject, ctx.HttpContext.RequestAborted);
+        // Joining by invitation (MDV-P0-013): the token rode in the protected OIDC state.
+        if (issuer is not null && subject is not null && ctx.Properties?.Items.TryGetValue(InvitationSignIn.Item, out var invitation) == true && invitation is not null)
+        {
+            user = await InvitationSignIn.AcceptAsync(ctx.HttpContext, invitation, issuer, subject, principal.FindFirst("name")?.Value, user);
+            if (user is null)
+            {
+                SignInRefused(log, "invitation_unusable");
+                ctx.Fail("The invitation cannot be used.");
+                return;
+            }
+        }
         if (user is null)
         {
             SignInRefused(log, "unknown_account");
@@ -118,9 +130,12 @@ public static partial class StaffAuthentication
 
     public static WebApplication MapStaffSession(this WebApplication app)
     {
-        app.MapGet("/bff/login", (string? returnUrl) => Results.Challenge(
-                new AuthenticationProperties { RedirectUri = returnUrl is not null && IsLocal(returnUrl) ? returnUrl : "/" },
-                [OpenIdConnectDefaults.AuthenticationScheme]))
+        app.MapGet("/bff/login", (string? returnUrl, string? invitation) =>
+            {
+                var properties = new AuthenticationProperties { RedirectUri = returnUrl is not null && IsLocal(returnUrl) ? returnUrl : "/" };
+                if (InvitationToken.Read(invitation) is not null) properties.Items[InvitationSignIn.Item] = invitation;
+                return Results.Challenge(properties, [OpenIdConnectDefaults.AuthenticationScheme]);
+            })
             .AllowAnonymous()
             .RequireRateLimiting(SignInRateLimit);
 

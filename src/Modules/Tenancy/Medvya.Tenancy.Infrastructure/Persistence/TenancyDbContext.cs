@@ -15,6 +15,7 @@ public sealed class TenancyDbContext(DbContextOptions<TenancyDbContext> options,
     public DbSet<Facility> Facilities => Set<Facility>();
     public DbSet<Membership> Memberships => Set<Membership>();
     public DbSet<FeatureFlag> FeatureFlags => Set<FeatureFlag>();
+    public DbSet<Invitation> Invitations => Set<Invitation>();
 
     Guid? CurrentTenantId => tenant.TenantId;
 
@@ -43,6 +44,8 @@ public sealed class TenancyDbContext(DbContextOptions<TenancyDbContext> options,
             e.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
             e.HasOne<Facility>().WithMany().HasForeignKey(x => x.FacilityId).OnDelete(DeleteBehavior.Restrict);
             e.HasIndex(x => new { x.TenantId, x.UserId, x.FacilityId }).IsUnique();
+            // Only an Invited membership may lack its user.
+            e.ToTable(t => t.HasCheckConstraint("CK_Memberships_UserUnlessInvited", "[Status] = 'Invited' OR [UserId] IS NOT NULL"));
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         modelBuilder.Entity<FeatureFlag>(e =>
@@ -52,6 +55,14 @@ public sealed class TenancyDbContext(DbContextOptions<TenancyDbContext> options,
             e.Property(x => x.Description).HasMaxLength(500);
             e.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
             e.HasIndex(x => new { x.TenantId, x.Key }).IsUnique();
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<Invitation>(e =>
+        {
+            e.Property(x => x.Email).HasMaxLength(254);
+            e.Property(x => x.TokenHash).HasMaxLength(32).IsFixedLength();
+            e.HasIndex(x => x.TokenHash).IsUnique();
+            e.HasOne<Membership>().WithMany().HasForeignKey(x => x.MembershipId).OnDelete(DeleteBehavior.Restrict);
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
     }

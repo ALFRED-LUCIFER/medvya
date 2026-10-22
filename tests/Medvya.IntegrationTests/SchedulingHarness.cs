@@ -32,7 +32,8 @@ internal sealed class SchedulingHarness(SqlServerFixture sql)
     public readonly Guid Tenant = Guid.NewGuid(), Facility = Guid.NewGuid(), OtherFacility = Guid.NewGuid();
     public readonly Guid Doctor = Guid.NewGuid(), SecondDoctor = Guid.NewGuid(), Reception = Guid.NewGuid(), Admin = Guid.NewGuid(),
         Nurse = Guid.NewGuid(), PortalUser = Guid.NewGuid(), Elsewhere = Guid.NewGuid();
-    public readonly Guid Patient = Guid.NewGuid(), SecondPatient = Guid.NewGuid();
+    /// <summary>Patient and SecondPatient are registered at Facility (Adyar); OtherFacilityPatient at OtherFacility (Velachery).</summary>
+    public readonly Guid Patient = Guid.NewGuid(), SecondPatient = Guid.NewGuid(), OtherFacilityPatient = Guid.NewGuid();
     public ManualClock Clock { get; } = new(MondayMorning);
     public SchedulingOptions Options { get; } = new();
     readonly List<ServiceProvider> providers = [];
@@ -59,10 +60,14 @@ internal sealed class SchedulingHarness(SqlServerFixture sql)
             await identity.SaveChangesAsync();
         }
         await using var patients = sql.Patients(Tenant);
-        foreach (var (id, name, mrn) in new[] { (Patient, "Meera Iyer (synthetic)", "000001"), (SecondPatient, "Deepak Nair (synthetic)", "000002") })
+        foreach (var (id, name, mrn, at) in new[]
+        {
+            (Patient, "Meera Iyer (synthetic)", "000001", Facility), (SecondPatient, "Deepak Nair (synthetic)", "000002", Facility),
+            (OtherFacilityPatient, "Lakshmi Pillai (synthetic)", "000001", OtherFacility),
+        })
             patients.Patients.Add(new Patient
             {
-                Id = id, TenantId = Tenant, FacilityId = Facility, Mrn = mrn, CountryCode = "IN", FullName = name, DateOfBirth = new(1972, 3, 12),
+                Id = id, TenantId = Tenant, FacilityId = at, Mrn = mrn, CountryCode = "IN", FullName = name, DateOfBirth = new(1972, 3, 12),
                 SexAtBirth = SexAtBirth.Female, Mobile = "+919000000101", Status = RegistrationStatus.Incomplete, RegisteredAt = MondayMorning, ChangedAt = MondayMorning,
             });
         await patients.SaveChangesAsync();

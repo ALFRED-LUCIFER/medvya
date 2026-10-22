@@ -134,6 +134,19 @@ public sealed class BookingServiceTests(SqlServerFixture sql) : IClassFixture<Sq
     }
 
     [Fact]
+    public async Task AnotherFacilitysPatientIsNeitherFoundNorBookable()
+    {
+        // Same tenant, registered at Velachery: reception at Adyar must not open or book them by id.
+        Assert.Null(await h.Booking(h.Reception).FindPatientAsync(h.Facility, h.OtherFacilityPatient));
+        var hold = await h.Booking(h.Reception).HoldAsync(Slot(9));
+        var refused = await Assert.ThrowsAsync<SchedulingValidationException>(() => h.Booking(h.Reception).BookAsync(Book(hold.Id) with { PatientId = h.OtherFacilityPatient }));
+        Assert.Equal([new ValidationError("patientId", "unknown")], refused.Errors);
+        await using var db = sql.Scheduling(h.Tenant);
+        Assert.Empty(await db.Appointments.ToListAsync());
+        Assert.Equal("Meera Iyer (synthetic)", (await h.Booking(h.Reception).BookAsync(Book(hold.Id))).PatientName); // the hold is still good
+    }
+
+    [Fact]
     public async Task OnlyStaffWhoMayBookCanHoldAndThePatientMustExistInThisTenant()
     {
         await Assert.ThrowsAsync<SchedulingAccessDeniedException>(() => h.Booking(h.Nurse).HoldAsync(Slot(9))); // nurses read the calendar only

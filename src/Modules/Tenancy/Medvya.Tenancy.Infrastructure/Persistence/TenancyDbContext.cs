@@ -1,6 +1,7 @@
 using Medvya.BuildingBlocks.Domain;
 using Medvya.Tenancy.Domain;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
 
 namespace Medvya.Tenancy.Infrastructure.Persistence;
 
@@ -23,8 +24,10 @@ public sealed class TenancyDbContext(DbContextOptions<TenancyDbContext> options,
         modelBuilder.Entity<Tenant>(e =>
         {
             e.Property(x => x.Name).HasMaxLength(200);
-            e.Property(x => x.CountryCode).HasMaxLength(2).IsFixedLength();
-            e.Property(x => x.ResidencyRegion).HasMaxLength(40);
+            // A tenant is bound to one country data plane for life (ADR-003, MDV-P1-002): changing either after the insert throws.
+            // shortcut: enforced by the domain (init-only) and EF; add a column DENY or trigger if a raw-SQL path ever updates tenants.
+            e.Property(x => x.CountryCode).HasMaxLength(2).IsFixedLength().Metadata.SetAfterSaveBehavior(PropertySaveBehavior.Throw);
+            e.Property(x => x.ResidencyRegion).HasMaxLength(40).Metadata.SetAfterSaveBehavior(PropertySaveBehavior.Throw);
             e.HasQueryFilter(x => x.Id == CurrentTenantId);
         });
         modelBuilder.Entity<Facility>(e =>

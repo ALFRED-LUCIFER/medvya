@@ -1,0 +1,22 @@
+@model PublicFormPage
+@{
+    var p = Model;
+    var email = $"{p.FormId}-email";
+    var phone = $"{p.FormId}-phone";
+    var hint = $"{p.FormId}-contact-hint";
+}
+<fieldset class="field">
+    <legend>@p.T("site.form.contact")</legend>
+    <p id="@hint" class="hint">@p.T("site.form.contactHint")</p>
+    @if (p.Errors.ContainsKey("Contact")) { <p id="@email-error" class="field-error">@p.FieldError("Contact")</p> }
+    <label for="@email">@p.T("site.form.email")</label>
+    <input id="@email" name="Form.Email" type="email" value="@p.Contact.Email" maxlength="254" autocomplete="email" aria-invalid="@p.Invalid("Email", "Contact")" aria-describedby="@hint @p.Described(email, "Email", "Contact")" autofocus="@p.Focus(email)">
+    @if (p.Errors.ContainsKey("Email")) { <p id="@email-error" class="field-error">@p.FieldError("Email")</p> }
+    <label for="@phone">@p.T("site.form.phone")</label>
+    <input id="@phone" name="Form.Phone" type="tel" value="@p.Contact.Phone" maxlength="20" autocomplete="tel" aria-invalid="@p.Invalid("Phone")" aria-describedby="@hint @p.Described(phone, "Phone")" autofocus="@p.Focus(phone)">
+    @if (p.Errors.ContainsKey("Phone")) { <p id="@phone-error" class="field-error">@p.FieldError("Phone")</p> }
+</fieldset>
+<div class="hp">
+    <label for="@p.FormId-website">@p.T("site.form.honeypot")</label>
+    <input id="@p.FormId-website" name="Form.Website" tabindex="-1" autocomplete="off">
+</div>

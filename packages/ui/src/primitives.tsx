@@ -50,7 +50,8 @@ export const recordingLooks = {
 
 // Schedule (P-04): time and appointment states. Hatching (unavailable) or a dashed border is the shape cue beside icon and words.
 export const scheduleLooks = {
-  unavailable: { label: 'schedule.state.unavailable', icon: Ban, bg: '#DFE7ED', fg: '#506579' },
+  // Rendered as a hatch of the muted and line tokens; bg is the darker stop, so the contrast test checks the worst case.
+  unavailable: { label: 'schedule.state.unavailable', icon: Ban, bg: 'var(--color-line)', fg: 'var(--color-ink-600)' },
   held: { label: 'schedule.state.held', icon: Hourglass, bg: '#FDF5E7', fg: '#7A4710' },
   booked: { label: 'schedule.state.Booked', icon: CalendarCheck, bg: '#FFFFFF', fg: '#1D4ED8', border: '1px solid #2563EB' },
 } satisfies Record<string, Look>;

@@ -264,10 +264,12 @@ ac:
 - Both jobs are idempotent and audited.
 
 === MDV-P1-011
-status: In progress
+status: Partly done
 progress:
-- Open [PR #55](https://github.com/ALFRED-LUCIFER/medvya/pull/55): Scheduling module (own schema, module role, EF filters + RLS) — weekly template per doctor or resource (sessions with room, breaks, slot length, per-visit-type lengths), slots generated on the fly in the facility zone (IST, GST and DST unit tests), P-04 day view with hatched unavailable time and reason, role checked against the membership at the facility, audited endpoints; mutation-checked; browser-verified (en, ar RTL, axe)
-- Left: listing appointments outside new hours and spanning visits on the grid (MDV-P1-021); template editing UI in Settings → Hours (MDV-P1-005)
+- Merged [PR #55](https://github.com/ALFRED-LUCIFER/medvya/pull/55): Scheduling module (own schema, module role, EF filters + RLS) — weekly template per doctor or resource (sessions with room, breaks, slot length, per-visit-type lengths), slots generated on the fly in the facility zone (IST, GST and DST unit tests), P-04 day view with hatched unavailable time and reason, role checked against the membership at the facility, audited endpoints; mutation-checked; browser-verified (en, ar RTL, axe)
+- Merged [PR #59](https://github.com/ALFRED-LUCIFER/medvya/pull/59): saving a template lists future appointments the new hours leave outside; visits spanning several slots render spanning
+- Open [PR #63](https://github.com/ALFRED-LUCIFER/medvya/pull/63): review fixes on the day grid — date steps from the date asked for (fast double click), sticky headers and time axis inside a focusable scroll region (RTL-safe), one offline banner, short unavailable blocks keep their reason, house ShellMessage, token colours with hatch contrast test, batched doctor names, type scale; mutation-checked; browser-verified (en, ar at an overflowing width, axe clean)
+- Left: template editing UI in Settings → Hours (MDV-P1-005)
 title: Schedule templates: working hours, breaks, slot length per service, per-location calendars, time zones
 type: Story
 epic: MDV-P1-E04
@@ -518,9 +520,9 @@ ac:
 - Relationship values are country-specific (UAE includes Sponsor).
 
 === MDV-P1-021
-status: In progress
+status: Partly done
 progress:
-- Open [PR #59](https://github.com/ALFRED-LUCIFER/medvya/pull/59) (stacked on #55): slot holds (`POST /v1/slot-holds`, one per user, expire after `Scheduling:SlotHold`, default 2 min; others see "being booked"), booking from the hold (`POST /v1/appointments`) re-checking the template, appointment + first status event + AppointmentBooked.v1 (opaque ids) in one transaction, audited endpoints, patient confirmed by name and MRN; booking panel with React Hook Form + Zod; mutation-checked (expiry, holder check, RLS); browser-verified (en, ar RTL, keyboard, axe)
+- Merged [PR #59](https://github.com/ALFRED-LUCIFER/medvya/pull/59): slot holds (`POST /v1/slot-holds`, one per user, expire after `Scheduling:SlotHold`, default 2 min; others see "being booked"), booking from the hold (`POST /v1/appointments`) re-checking the template, appointment + first status event + AppointmentBooked.v1 (opaque ids) in one transaction, audited endpoints, patient confirmed by name and MRN; booking panel with React Hook Form + Zod; mutation-checked (expiry, holder check, RLS); browser-verified (en, ar RTL, keyboard, axe)
 - Left: concurrency guarantees (MDV-P1-022); patient search instead of id (MDV-P1-018); confirmation message (MDV-P1-032); p95 < 300 ms under the P1 load profile (MDV-P1-037)
 title: Create an appointment from the calendar with a short slot hold
 type: Story

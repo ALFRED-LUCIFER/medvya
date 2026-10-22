@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Host.Api.PublicSite;
 using Medvya.Leads.Application;
 using Medvya.Leads.Domain;
 using Microsoft.AspNetCore.Hosting;
@@ -173,12 +174,21 @@ public sealed partial class TrustCentreTests(WebApplicationFactory<Program> fact
         Assert.Equal(HttpStatusCode.OK, (await client.GetAsync(new Uri("/trust", UriKind.Relative))).StatusCode); // reading is never limited
     }
 
+    [Theory]
+    [InlineData("203.0.113.7", "203.0.113.7")]
+    [InlineData("::ffff:203.0.113.7", "203.0.113.7")] // IPv4 through a dual-stack socket keeps its own quota
+    [InlineData("2001:db8:1:2:aaaa:bbbb:cccc:dddd", "2001:db8:1:2::/64")]
+    [InlineData("2001:db8:1:2::9", "2001:db8:1:2::/64")] // same subscriber, same quota
+    public void TheQuotaCountsAnIPv6SubscriberNotEachAddress(string ip, string key) =>
+        Assert.Equal(key, PublicFormGuard.Client(IPAddress.Parse(ip)));
+
     static readonly string[] Languages = ["en", "hi", "ar"];
     static readonly string[] KnownClaims = ["ISO 27001 certified", "HIPAA compliant", "SOC 2 Type II", "प्रमाणित", "معتمد", "GDPR-compliant"];
 
-    // AC: no page claims a certification. Covers every public-site string in every language and the trust centre content file.
+    // AC: no page claims a certification. Covers every public-site string in every language, the trust centre content file and
+    // every page as rendered in each language and region (so text typed straight into a page is caught too).
     [Fact]
-    public void PublicCopyClaimsNoCertification()
+    public async Task PublicCopyClaimsNoCertification()
     {
         var copy = Languages
             .SelectMany(l => JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(Path.Combine(RepoRoot(), "packages", "i18n", "messages", $"{l}.json")))!)
@@ -186,7 +196,15 @@ public sealed partial class TrustCentreTests(WebApplicationFactory<Program> fact
             .Select(kv => (Key: kv.Key, Value: kv.Value))
             .Append((Key: "trust-centre.json", Value: File.ReadAllText(Path.Combine(RepoRoot(), "src", "Host.Api", "PublicSite", "trust-centre.json"))))
             .ToList();
+        var client = Site().Client;
+        foreach (var page in PublicSiteTests.PagePaths)
+            foreach (var region in Host.Api.PublicSite.PublicSite.Regions)
+            {
+                using var req = new HttpRequestMessage(HttpMethod.Get, new Uri(page, UriKind.Relative)) { Headers = { { "Cookie", $"medvya-region={region}" } } };
+                copy.Add(($"{page} ({region})", await Html(await client.SendAsync(req))));
+            }
         Assert.Contains(copy, c => c.Key == "site.trust.footer");
+        Assert.Contains(copy, c => c.Key == "/ar/region (AE)");
         Assert.Empty(copy.Where(c => CertificationClaim().IsMatch(c.Value)).Select(c => c.Key));
         // The checker itself catches the claims named in the ticket.
         foreach (var claim in KnownClaims)

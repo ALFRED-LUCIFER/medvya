@@ -9,7 +9,7 @@
 --   medvya_<module>   rights on that module's own schema only.
 --
 -- Adding a module: create its schema and role below, grant only ON SCHEMA::<its schema>, add the role to medvya_app.
--- RLS predicate functions (security.fn_tenant_access, audit.fn_tenant_access) need no grant: SQL Server evaluates
+-- RLS predicate functions (security.fn_*, audit.fn_tenant_access) need no grant: SQL Server evaluates
 -- security predicates without checking the querying user's EXECUTE/SELECT rights (proven by DatabaseRoleTests).
 
 -- Database settings are the administrator's job, so the migration role needs no ALTER DATABASE.
@@ -57,7 +57,8 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON SCHEMA::tenancy TO medvya_tenancy;
 -- Audit module: append and read only. The ledger table refuses UPDATE/DELETE too; this refuses them first, by permission.
 GRANT SELECT, INSERT ON SCHEMA::audit TO medvya_audit;
 
--- Identity module: staff accounts. Never deleted (offboarding is a membership status), so no DELETE.
+-- Identity module: staff accounts and sessions. Never deleted (offboarding is a membership status; a session is
+-- revoked, not removed), so no DELETE.
 GRANT SELECT, INSERT, UPDATE ON SCHEMA::[identity] TO medvya_identity;
 
 -- Patients module (MDV-P1-013, MDV-P0-009): row access plus UNMASK on its own schema only, so the app reads clear demographics

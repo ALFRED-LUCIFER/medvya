@@ -9,6 +9,8 @@ public sealed class Tenant
     [Classification(DataClass.Public)] public required string Name { get; set; }
     [Classification(DataClass.Internal)] public required string CountryCode { get; init; }
     [Classification(DataClass.Internal)] public required string ResidencyRegion { get; init; }
+    /// <summary>Staff sessions end after this many idle minutes (MDV-P0-012). 15 suits shared clinic PCs; 1–480.</summary>
+    [Classification(DataClass.Internal)] public int IdleTimeoutMinutes { get; set; } = 15;
 }
 
 public sealed class Facility
@@ -21,12 +23,15 @@ public sealed class Facility
 
 public enum MembershipStatus { Invited, Active, Suspended, Offboarded }
 
-/// <summary>A user's role at one facility of one tenant. One person can hold memberships in several clinics.</summary>
+/// <summary>
+/// A user's role at one facility of one tenant. One person can hold memberships in several clinics.
+/// An Invited membership has no user yet; accepting its invitation sets the user and makes it Active (MDV-P0-013).
+/// </summary>
 public sealed class Membership
 {
     [Classification(DataClass.Internal)] public Guid Id { get; init; }
     [Classification(DataClass.Internal)] public Guid TenantId { get; init; }
-    [Classification(DataClass.Internal)] public Guid UserId { get; init; }
+    [Classification(DataClass.Internal)] public Guid? UserId { get; set; }
     [Classification(DataClass.Internal)] public Guid FacilityId { get; init; }
     [Classification(DataClass.Internal)] public Role Role { get; set; }
     [Classification(DataClass.Internal)] public MembershipStatus Status { get; set; }

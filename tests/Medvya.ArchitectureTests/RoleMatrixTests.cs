@@ -37,4 +37,18 @@ public class RoleMatrixTests
         Assert.Equal(Access.None, RoleMatrix.Of(Role.Patient, Capability.AiDraftsEvidence)); // patients never see unreviewed AI output
         Assert.Equal(Access.BreakGlass, RoleMatrix.Of(Role.HospitalIt, Capability.Patient360Chart));
     }
+
+    [Fact]
+    public void GrantsListExactlyTheRolesNonNoneCellsAndNothingElse()
+    {
+        foreach (var role in Enum.GetValues<Role>())
+        {
+            var grants = RoleMatrix.Grants(role);
+            Assert.All(grants, g => Assert.NotEqual(Access.None, g.Access));
+            Assert.Equal(
+                Enum.GetValues<Capability>().Where(c => RoleMatrix.Of(role, c) != Access.None).Select(c => (c, RoleMatrix.Of(role, c))),
+                grants.Select(g => (g.Capability, g.Access)));
+        }
+        Assert.DoesNotContain(RoleMatrix.Grants(Role.Receptionist), g => g.Capability == Capability.ClinicalNotes);
+    }
 }

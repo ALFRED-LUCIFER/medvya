@@ -1,10 +1,13 @@
 import { useMemo, useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { addDays, layoutDay } from '../domain/schedule';
+import { layoutDay, stepDate } from '../domain/schedule';
 import { ApiError, fetchScheduleDay } from '../services/scheduleApi';
 
-/** P-04 day view of the active facility. `date` null means "today in the facility", which the server decides. */
-export function useScheduleController(facilityId: string, online: boolean) {
+/**
+ * P-04 day view of the active facility. `date` null means "today in the facility", which the server decides. While the next
+ * day loads, the previous one stays on screen marked as updating. Offline is shown by the shell's banner, not here.
+ */
+export function useScheduleController(facilityId: string) {
   const [date, setDate] = useState<string | null>(null);
   const query = useQuery({
     queryKey: ['schedule', facilityId, date],
@@ -13,18 +16,20 @@ export function useScheduleController(facilityId: string, online: boolean) {
     retry: (count, error) => !(error instanceof ApiError && error.status === 403) && count < 2,
   });
   const day = useMemo(() => (query.data ? layoutDay(query.data) : null), [query.data]);
-  const shown = query.data?.date ?? date;
+  const today = query.isPlaceholderData ? null : (query.data?.date ?? null);
+  const step = (days: number) => setDate(requested => stepDate(requested, today, days) ?? requested);
   const forbidden = query.error instanceof ApiError && query.error.status === 403;
 
   return {
     day,
-    date: shown,
-    loading: query.isPending && online,
-    offline: !online && !query.data,
+    // The date asked for, else today's answer: the heading never shows the stale day as if it were the new one.
+    date: date ?? today,
+    updating: query.isPlaceholderData,
+    loading: query.isPending,
     forbidden,
     failed: query.isError && !forbidden && !query.data,
-    onPrevious: () => shown && setDate(addDays(shown, -1)),
-    onNext: () => shown && setDate(addDays(shown, 1)),
+    onPrevious: () => step(-1),
+    onNext: () => step(1),
     onToday: () => setDate(null),
     onRetry: () => void query.refetch(),
   };

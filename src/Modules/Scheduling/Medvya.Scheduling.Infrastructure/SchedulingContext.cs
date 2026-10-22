@@ -46,9 +46,9 @@ public sealed class SchedulingContext(
     /// <summary>Doctors first, then resources, each by name: the column order of the day view.</summary>
     public async Task<List<Calendar>> CalendarsAsync(Guid facilityId, CancellationToken cancellationToken)
     {
-        var doctors = new List<Calendar>();
-        foreach (var id in await facilities.ActiveDoctorsAsync(facilityId, cancellationToken))
-            doctors.Add(new(id, CalendarKind.Doctor, (await staff.GetAsync(id, cancellationToken))?.DisplayName ?? ""));
+        var ids = await facilities.ActiveDoctorsAsync(facilityId, cancellationToken);
+        var names = await staff.DisplayNamesAsync(ids, cancellationToken); // one query for every doctor
+        var doctors = ids.Select(id => new Calendar(id, CalendarKind.Doctor, names.GetValueOrDefault(id) ?? "")).ToList();
         var resources = await db.Resources.AsNoTracking().Where(r => r.FacilityId == facilityId)
             .Select(r => new Calendar(r.Id, CalendarKind.Resource, r.Name)).ToListAsync(cancellationToken);
         return [.. doctors.OrderBy(c => c.Name, StringComparer.Ordinal), .. resources.OrderBy(c => c.Name, StringComparer.Ordinal)];

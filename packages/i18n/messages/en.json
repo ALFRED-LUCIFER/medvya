@@ -180,7 +180,6 @@
   "schedule.error.title": "The schedule could not be loaded",
   "schedule.error.body": "Nothing was changed. Check your connection and try again.",
   "schedule.retry": "Try again",
-  "schedule.offline": "You are offline. The schedule loads when you reconnect.",
   "schedule.forbidden.body": "Ask your practice admin for access to this facility's schedule.",
   "schedule.empty.title": "No doctors or resources here yet",
   "schedule.empty.body": "Add a doctor, or a resource such as a procedure room, in Practice settings to see their calendar.",

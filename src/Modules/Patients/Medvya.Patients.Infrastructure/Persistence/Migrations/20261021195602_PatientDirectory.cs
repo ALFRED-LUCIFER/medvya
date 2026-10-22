@@ -11,6 +11,13 @@ namespace Medvya.Patients.Infrastructure.Persistence.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateIndex(
+                name: "IX_Patients_TenantId_FacilityId_FullName",
+                schema: "patients",
+                table: "Patients",
+                columns: new[] { "TenantId", "FacilityId", "FullName" })
+                .Annotation("SqlServer:Include", new[] { "ArabicName", "DateOfBirth", "DateOfBirthEstimated", "SexAtBirth", "Mrn", "Status", "CountryCode", "RegisteredAt" });
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Patients_TenantId_FacilityId_Mobile",
                 schema: "patients",
                 table: "Patients",
@@ -26,6 +33,11 @@ namespace Medvya.Patients.Infrastructure.Persistence.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropIndex(
+                name: "IX_Patients_TenantId_FacilityId_FullName",
+                schema: "patients",
+                table: "Patients");
+
             migrationBuilder.DropIndex(
                 name: "IX_Patients_TenantId_FacilityId_Mobile",
                 schema: "patients",

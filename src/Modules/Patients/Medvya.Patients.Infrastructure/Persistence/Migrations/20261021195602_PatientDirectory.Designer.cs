@@ -13,7 +13,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Medvya.Patients.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(PatientsDbContext))]
-    [Migration("20261021170919_PatientDirectory")]
+    [Migration("20261021195602_PatientDirectory")]
     partial class PatientDirectory
     {
         /// <inheritdoc />
@@ -150,6 +150,10 @@ namespace Medvya.Patients.Infrastructure.Persistence.Migrations
                         });
 
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "FacilityId", "FullName");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("TenantId", "FacilityId", "FullName"), new[] { "ArabicName", "DateOfBirth", "DateOfBirthEstimated", "SexAtBirth", "Mrn", "Status", "CountryCode", "RegisteredAt" });
 
                     b.HasIndex("TenantId", "FacilityId", "Mobile");
 

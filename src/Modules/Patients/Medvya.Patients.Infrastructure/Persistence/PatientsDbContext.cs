@@ -53,6 +53,9 @@ public sealed class PatientsDbContext(DbContextOptions<PatientsDbContext> option
             // Desk directory (newest first) and exact phone search (MDV-P1-018).
             e.HasIndex(x => new { x.TenantId, x.FacilityId, x.RegisteredAt });
             e.HasIndex(x => new { x.TenantId, x.FacilityId, x.Mobile });
+            // Name search scans this narrow covering index instead of the wide table rows (LIKE '%…%' cannot seek).
+            e.HasIndex(x => new { x.TenantId, x.FacilityId, x.FullName })
+                .IncludeProperties(x => new { x.ArabicName, x.DateOfBirth, x.DateOfBirthEstimated, x.SexAtBirth, x.Mrn, x.Status, x.CountryCode, x.RegisteredAt });
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         modelBuilder.Entity<PatientIdentifier>(e =>

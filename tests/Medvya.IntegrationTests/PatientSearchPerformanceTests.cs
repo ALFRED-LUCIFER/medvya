@@ -8,7 +8,12 @@ using Microsoft.Data.SqlClient;
 
 namespace Medvya.IntegrationTests;
 
+/// <summary>Timing tests run alone: other test classes sharing the CPU would measure the runner, not the query.</summary>
+[CollectionDefinition(nameof(RunsAlone), DisableParallelization = true)]
+public sealed class RunsAlone;
+
 /// <summary>MDV-P1-018 NFR: desk search p95 under 300 ms with 50,000 synthetic patients in one facility (real SQL Server).</summary>
+[Collection(nameof(RunsAlone))]
 public sealed class PatientSearchPerformanceTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>
 {
     const int Patients = 50_000;

@@ -1,9 +1,10 @@
-using System.Security.Claims;
+using System.Net;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 using Host.Api.Auth;
 using Host.Api.Context;
 using Host.Api.Middleware;
+using Microsoft.AspNetCore.HttpOverrides;
 using Medvya.Audit.Api;
 using Medvya.Audit.Infrastructure;
 using Medvya.BuildingBlocks.Domain;
@@ -53,6 +54,19 @@ if (builder.Configuration.GetConnectionString("Medvya") is { } sql)
 builder.Services.Configure<SchedulingOptions>(builder.Configuration.GetSection("Scheduling"));
 builder.Services.AddHsts(o => { o.MaxAge = TimeSpan.FromDays(365); o.IncludeSubDomains = true; });
 
+// Behind the App Service front end the client is in X-Forwarded-For. Only listed proxies are believed, so a client cannot
+// pick its own address for the per-IP limits or the audit trail; with none listed (the default, as in Development) the header
+// is ignored. shortcut: no proxy is listed until the App Service network is known; set ForwardedHeaders:KnownProxies (MDV-P0-007).
+builder.Services.Configure<ForwardedHeadersOptions>(o =>
+{
+    var proxies = builder.Configuration.GetSection("ForwardedHeaders:KnownProxies").Get<string[]>() ?? [];
+    o.KnownIPNetworks.Clear();
+    o.KnownProxies.Clear();
+    foreach (var proxy in proxies) o.KnownProxies.Add(IPAddress.Parse(proxy));
+    // With both lists empty the middleware would believe any sender, so no listed proxy means no forwarded headers at all.
+    o.ForwardedHeaders = proxies.Length > 0 ? ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto : ForwardedHeaders.None;
+});
+
 var permitsPerMinute = builder.Configuration.GetValue("RateLimiting:PermitsPerMinute", 300);
 builder.Services.AddRateLimiter(o =>
 {
@@ -64,13 +78,14 @@ builder.Services.AddRateLimiter(o =>
     // Starting sign-in is cheap to abuse; codes and lockout are enforced by the identity provider.
     o.AddPolicy(StaffAuthentication.SignInRateLimit, ctx => RateLimitPartition.GetFixedWindowLimiter(ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = builder.Configuration.GetValue("RateLimiting:SignInPerMinute", 20), Window = TimeSpan.FromMinutes(1) }));
-    // Patient search per signed-in user: a desk searches a few times a minute; bulk enumeration is refused.
-    o.AddPolicy(PatientEndpoints.SearchRateLimit, ctx => RateLimitPartition.GetFixedWindowLimiter(ctx.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "anonymous",
-        _ => new FixedWindowRateLimiterOptions { PermitLimit = builder.Configuration.GetValue("RateLimiting:PatientSearchPerMinute", 30), Window = TimeSpan.FromMinutes(1) }));
 });
+// Patient search per signed-in user: a desk searches a few times a minute; bulk enumeration is refused. Enforced after sign-in
+// (an endpoint filter), because the middleware above runs before authentication and would key every caller as anonymous.
+builder.Services.AddUserRateLimit(PatientEndpoints.SearchRateLimit, builder.Configuration.GetValue("RateLimiting:PatientSearchPerMinute", 30));
 
 var app = builder.Build();
 
+app.UseForwardedHeaders(); // first, so every later step sees the client's address
 if (!app.Environment.IsDevelopment()) app.UseHsts();
 app.UseSecurityHeaders();
 app.UseRateLimiter();

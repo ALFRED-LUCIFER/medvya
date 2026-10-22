@@ -26,7 +26,7 @@ public sealed record PatientDetails(
 
 public static class PatientEndpoints
 {
-    /// <summary>Rate-limit policy for search endpoints (registered by the host, per signed-in user).</summary>
+    /// <summary>Per-user rate limit for search endpoints (registered by the host with <see cref="UserRateLimit.AddUserRateLimit"/>).</summary>
     public const string SearchRateLimit = "patient-search";
     const string Purpose = "registration";
 
@@ -38,8 +38,8 @@ public static class PatientEndpoints
         var patients = app.MapGroup("/v1/patients").RequireCapability(Capability.RegisterBookPatients, Access.Read, Access.Full);
 
         patients.MapPost("/search", Search)
-            .Audited("patient.search", "patient", Purpose)
-            .RequireRateLimiting(SearchRateLimit);
+            .RequireUserRateLimit(SearchRateLimit) // before the audit filter: a refused search reads nothing
+            .Audited("patient.search", "patient", Purpose);
 
         patients.MapGet("/{patientId:guid}", Get)
             .Audited("patient.read", "patient", Purpose, patientRouteKey: "patientId");

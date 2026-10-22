@@ -449,7 +449,8 @@ status: Partly done
 progress:
 - Merged [PR #31](https://github.com/ALFRED-LUCIFER/medvya/pull/31): audit.AuditEvents is an append-only SQL ledger table with tenant RLS; `.Audited()` endpoint filter writes one event per request and fails closed; ledger digest verification test; mutation-checked
 - Merged [PR #50](https://github.com/ALFRED-LUCIFER/medvya/pull/50): endpoint enumeration test: every signed-in endpoint is `.Audited(...)` or reviewed as free of patient data (fails closed), and each audited endpoint is called on real SQL Server and must write exactly one audit row; mutation-checked
-- Left: denied-attempt auditing (needs the tenant context, MDV-P0-012); daily digest export to immutable Blob (needs Azure, MDV-P0-006)
+- Fix PR (branch fix/MDV-P0-017-audit-outcome-ratelimit): one outcome rule in the `.Audited()` filter, which now writes after the endpoint answers and before the answer is sent (401/403 → Denied, 404 → new NotFound, else Allowed); Scheduling maps its errors inside the filter, so a refused scheduling call is no longer audited as Allowed; clinic queries no longer refetch audited reads on tab focus or retry 4xx; mutation-checked
+- Left: daily digest export to immutable Blob (needs Azure, MDV-P0-006); audit row in the use case's own transaction for writes (shortcut in AuditedEndpoint)
 title: Append-only audit log on Azure SQL ledger tables with audit middleware
 type: Story
 epic: MDV-P0-E03

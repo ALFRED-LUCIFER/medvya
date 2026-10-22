@@ -97,8 +97,10 @@ public class AuditLedgerTests(SqlServerFixture sql) : IClassFixture<SqlServerFix
         Assert.Equal(HttpStatusCode.Forbidden, (await noTenant.GetTestClient().GetAsync($"/patients/{Guid.NewGuid()}")).StatusCode);
 
         await using var broken = App(tenantA, s => s.AddScoped<IAuditLog, ThrowingLog>());
+        // The audit store is down: the request fails and no answer (no patient data) leaves. Since MDV-P0-017's outcome fix the
+        // row is written once the endpoint has answered, so the handler has run (see the shortcut in AuditedEndpoint for writes).
         await Assert.ThrowsAsync<InvalidOperationException>(() => broken.GetTestClient().GetAsync($"/patients/{Guid.NewGuid()}"));
-        Assert.False(handlerRan); // no audit row, no patient data
+        Assert.True(handlerRan);
     }
 
     bool handlerRan;

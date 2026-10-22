@@ -440,6 +440,7 @@ status: In progress
 progress:
 - [PR #58](https://github.com/ALFRED-LUCIFER/medvya/pull/58) (in review): `POST /v1/patients/search` (text in the body only, rows show initials/age/sex/MRN tail, exact phone/MRN/ABHA/EID via deterministic Always Encrypted, partial numbers refused, per-user rate limit) and `GET /v1/patients/{id}`; capability policy from the active membership, one audit event per request (Denied too), facility scope; clinic header search, directory with filters and paging, record page, en/hi/ar RTL, axe clean
 - Tested on SQL Server incl. 50,000 synthetic patients (p95 176 ms locally); 12 mutations each caught
+- Fix PR (branch fix/MDV-P0-017-audit-outcome-ratelimit): the per-user search limit ran before authentication and keyed everyone as anonymous; it is now an endpoint filter after sign-in, tested with a real authentication handler (old ordering fails the test); another facility's record is audited NotFound, not Allowed; X-Forwarded-For only from listed proxies
 - Left: real sessions need the facility picker's tenant/facility claims (MDV-P0-012); cross-facility patients within a tenant (P7); doctor ⌘K overlay (D-02, P2)
 title: Patient directory and privacy-safe search for the front desk
 type: Story

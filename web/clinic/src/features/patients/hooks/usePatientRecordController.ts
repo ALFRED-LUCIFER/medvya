@@ -8,6 +8,7 @@ export function usePatientRecordController(patientId: string) {
     queryKey: ['patients', 'record', patientId],
     queryFn: () => fetchPatient(patientId), // no abort signal (see usePatientDirectoryController)
     gcTime: patientDataGcTime,
+    staleTime: Infinity, // each fetch is an audited read: reuse it until something changes it
     retry: noRetryOnAnswers,
   });
   return { patient: record.data ?? null, state: loadState(record), onRetry: () => void record.refetch() };

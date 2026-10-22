@@ -3,7 +3,7 @@ import {
   Send, Pipette, Inbox, Eye, Phone, MessageSquareCheck, CircleCheck,
   Sparkles, BadgeCheck, User, ArrowLeftRight, Upload, Lock,
   CircleAlert, TriangleAlert, Info, Pause, CircleMinus, Pill as PillIcon, CircleHelp,
-  Clock, Ban, SearchX, WifiOff, Hourglass, CalendarCheck, type LucideIcon,
+  Clock, Ban, SearchX, WifiOff, Hourglass, CalendarCheck, Tag, type LucideIcon,
 } from 'lucide-react';
 import { useI18n, type MessageKey } from '@medvya/i18n';
 import { Button } from '#components/ui/button';
@@ -56,6 +56,13 @@ export const scheduleLooks = {
   booked: { label: 'schedule.state.Booked', icon: CalendarCheck, bg: '#FFFFFF', fg: '#1D4ED8', border: '1px solid #2563EB' },
 } satisfies Record<string, Look>;
 
+// Reception board (P-01): nonclinical tags on visit cards. The reason is only ever its category.
+export const frontDeskLooks = {
+  reason: { label: 'board.tag.reason', icon: Tag, bg: '#F1F5F8', fg: '#334E68' },
+  incomplete: { label: 'board.tag.incomplete', icon: TriangleAlert, bg: '#FDF5E7', fg: '#7A4710' },
+  waiting: { label: 'board.waiting', icon: Hourglass, bg: '#FFFFFF', fg: '#7A4710' },
+} satisfies Record<string, Look>;
+
 const paint = (look: Look): CSSProperties => ({ backgroundColor: look.bg, color: look.fg, border: look.border });
 
 function Pill({ look, text, tag = false, children }: { look: Look; text?: string; tag?: boolean; children?: ReactNode }) {
@@ -65,6 +72,17 @@ function Pill({ look, text, tag = false, children }: { look: Look; text?: string
     <span style={paint(look)} className={`inline-flex items-center gap-1.5 px-2.5 text-[13px] font-bold leading-none whitespace-nowrap ${tag ? 'h-[26px] rounded-sm' : 'h-7 rounded-full'}`}>
       {children ?? <Icon className="size-4" aria-hidden />}
       {text ?? t(look.label)}
+    </span>
+  );
+}
+
+/** A reception-board tag: icon and words (`text` when they carry a value, e.g. the reason category). Wraps in narrow cards. */
+export function FrontDeskTag({ kind, text }: { kind: keyof typeof frontDeskLooks; text?: string }) {
+  const { t } = useI18n();
+  const look = frontDeskLooks[kind], Icon = look.icon;
+  return (
+    <span style={paint(look)} className="inline-flex max-w-full items-start gap-1 rounded-sm px-2 py-1 text-xs font-bold leading-tight">
+      <Icon className="mt-px size-3.5 shrink-0" aria-hidden />{text ?? t(look.label)}
     </span>
   );
 }

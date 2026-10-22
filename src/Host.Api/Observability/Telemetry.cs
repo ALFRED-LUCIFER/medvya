@@ -2,6 +2,7 @@ using System.Diagnostics;
 using Azure.Monitor.OpenTelemetry.Exporter;
 using OpenTelemetry;
 using OpenTelemetry.Logs;
+using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 
 namespace Host.Api.Observability;
@@ -30,6 +31,11 @@ public static class Telemetry
         {
             t.AddAspNetCoreInstrumentation().AddHttpClientInstrumentation().AddProcessor(new TraceScrubber());
             if (appInsights is not null) t.AddAzureMonitorTraceExporter(x => x.ConnectionString = appInsights);
+        }).WithMetrics(m =>
+        {
+            // Only Medvya's own meters, whose values are numbers and whose tags are opaque ids (check-in time, exit gate 3).
+            m.AddMeter(Medvya.Scheduling.Infrastructure.FrontDeskService.MeterName);
+            if (appInsights is not null) m.AddAzureMonitorMetricExporter(x => x.ConnectionString = appInsights);
         });
         return builder;
     }

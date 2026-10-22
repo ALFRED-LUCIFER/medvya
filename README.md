@@ -6,7 +6,7 @@ This repository holds the product knowledge base, the delivery plan and the appl
 
 ## Run locally
 
-Prerequisites: .NET SDK 10 (pinned in `global.json`), Node.js 22+, pnpm 11, and Docker with Compose. On Apple silicon, SQL Server needs amd64 emulation through Rosetta (Colima: `colima start --vz-rosetta --memory 4`).
+Prerequisites: .NET SDK 10 (pinned in `global.json`), Node.js 22+, pnpm 11, and Docker with Compose. On Apple silicon, SQL Server needs amd64 emulation through Rosetta (Colima: `colima start --vz-rosetta --memory 4`; Docker Desktop: turn on "Use Rosetta for x86_64/amd64 emulation"). If the SQL container exits with code 139, emulation is off or memory is short.
 
 ```bash
 pnpm services:up                              # SQL Server :1433, Azurite blob :10000, email sink UI http://localhost:5025
@@ -17,20 +17,23 @@ pnpm dev                                      # clinic app on http://localhost:5
 dotnet test Medvya.sln                        # includes tenant-isolation tests on a throwaway SQL Server (Testcontainers)
 ```
 
-One command starts the services, applies every module's EF Core migrations (Tenancy, Audit, Identity) and seeds the synthetic cast (MDV-P0-027): the India tenant "Iyer Family Clinic (synthetic)", facility Adyar, with one membership per role. Add `--uae` for "Al Noor Family Clinic (synthetic)". Re-running is safe (fixed ids, existing rows are kept). The seeder refuses any environment other than Development, Staging or Test.
+One command starts the services, applies the EF Core migrations of every module the app runs (Tenancy, Audit, Identity, Leads, Patients, Scheduling) and seeds the synthetic cast (MDV-P0-027): the India tenant "Iyer Family Clinic (synthetic)", facility Adyar, with one membership per role. Add `--uae` for "Al Noor Family Clinic (synthetic)". Re-running is safe (fixed ids, existing rows are kept). The seeder refuses any environment other than Development, Staging or Test.
 
 ```bash
 pnpm dev:db                                   # or: pnpm dev:db --uae
 ConnectionStrings__Medvya="Server=localhost,1433;Database=medvya;User Id=sa;Password=Local_dev_only_1;TrustServerCertificate=True" \
-  dotnet run --project src/Host.Api           # API against the seeded database
+  dotnet run --project src/Host.Api           # API on http://localhost:5080, the port the clinic proxy and dev sign-in expect
 ```
 
-Sign in at http://localhost:5173 (with `pnpm dev` and the API running): **Sign in** opens the development sign-in page, a minimal OIDC provider inside the API that lists the seeded synthetic users. It exists only when `ASPNETCORE_ENVIRONMENT=Development`; every other environment uses Entra External ID over https (ADR-004). Patient records arrive with the patient registration ticket. The cast is in [tools/synthetic-data-generator/SyntheticSeed.cs](tools/synthetic-data-generator/SyntheticSeed.cs).
+Sign in at http://localhost:5173 (with `pnpm dev` and the API running): **Sign in** opens the development sign-in page, a minimal OIDC provider inside the API that lists the seeded synthetic users and patients. It exists only when `ASPNETCORE_ENVIRONMENT=Development`; every other environment uses Entra External ID over https (ADR-004). The cast is in [tools/synthetic-data-generator/SyntheticSeed.cs](tools/synthetic-data-generator/SyntheticSeed.cs). The public site runs on the API itself: http://localhost:5080/ (also `/hi`, `/ar`).
 
-With Colima, point Testcontainers at its socket first:
+Point Testcontainers at your Docker socket first:
 
 ```bash
+# Colima
 export DOCKER_HOST="unix://$HOME/.colima/default/docker.sock" TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock
+# Docker Desktop
+export DOCKER_HOST="unix://$HOME/.docker/run/docker.sock" TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock
 ```
 
 | Folder | Content |

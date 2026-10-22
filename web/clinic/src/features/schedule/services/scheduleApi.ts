@@ -13,9 +13,9 @@ export class ApiError extends Error {
 }
 
 // State-changing calls carry the CSRF header the BFF requires (ADR-004).
-const csrf = { 'X-Medvya-Csrf': '1' };
+export const csrf = { 'X-Medvya-Csrf': '1' };
 
-async function send<T>(url: string, init: RequestInit = {}): Promise<T> {
+export async function send<T>(url: string, init: RequestInit = {}): Promise<T> {
   const res = await fetch(url, { credentials: 'same-origin', ...init });
   if (!res.ok) {
     const body = (await res.json().catch(() => null)) as { code?: string } | null;
@@ -24,7 +24,7 @@ async function send<T>(url: string, init: RequestInit = {}): Promise<T> {
   return (res.status === 204 ? undefined : await res.json()) as T;
 }
 
-const post = <T>(url: string, body: unknown) =>
+export const post = <T>(url: string, body: unknown) =>
   send<T>(url, { method: 'POST', headers: { ...csrf, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 
 /** The facility's day view; without a date the server picks today in the facility's time zone. Ids and dates only in the URL. */

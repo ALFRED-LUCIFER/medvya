@@ -46,6 +46,28 @@ public sealed class Appointment
 }
 
 /// <summary>
+/// The visit state machine (docs/03-architecture/state-machines.md): one step forward at a time along the reception board,
+/// so check-in is only allowed from Booked. Cancel, no-show and reschedule are separate actions (MDV-P1-024).
+/// </summary>
+public static class VisitFlow
+{
+    static readonly AppointmentState[] Order =
+    [
+        AppointmentState.Booked, AppointmentState.CheckedIn, AppointmentState.WithNurse, AppointmentState.ReadyForDoctor,
+        AppointmentState.InConsult, AppointmentState.Billing, AppointmentState.Done,
+    ];
+
+    /// <summary>The board's next column, or null at the end of the visit and for cancelled or no-show visits.</summary>
+    public static AppointmentState? Next(AppointmentState state)
+    {
+        var i = Array.IndexOf(Order, state);
+        return i >= 0 && i < Order.Length - 1 ? Order[i + 1] : null;
+    }
+
+    public static bool CanMove(AppointmentState from, AppointmentState to) => Next(from) == to;
+}
+
+/// <summary>
 /// A short reservation of a slot while one receptionist completes the booking form (MDV-P1-021). Others see the slot as
 /// "being booked" and cannot hold or book it until it is confirmed, released or expires. One active hold per user.
 /// </summary>

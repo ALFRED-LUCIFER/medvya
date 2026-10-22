@@ -27,7 +27,7 @@ public sealed record HoldView(Guid Id, Guid FacilityId, Guid CalendarId, VisitTy
 public sealed record BookAppointment
 {
     public Guid HoldId { get; init; }
-    /// <summary>shortcut: an id until front-desk search exists (MDV-P1-018); the panel shows the name and MRN to confirm.</summary>
+    /// <summary>Opaque id of a patient registered at the hold's facility, chosen with front-desk search (MDV-P1-018).</summary>
     public Guid PatientId { get; init; }
     public ReasonCategory ReasonCategory { get; init; }
     /// <summary>Optional, in the patient's words; stored for clinicians and never returned to reception screens.</summary>

@@ -71,8 +71,10 @@ public sealed class BookingService(SchedulingDbContext db, SchedulingContext con
         var reason = ScheduleService.Clean(command.ReasonText);
         if (reason?.Length > MaxReason) errors.Add(new("reasonText", "too_long"));
         SchedulingValidationException.ThrowIfAny(errors);
-        var patient = (await context.PatientsAsync([command.PatientId], cancellationToken)).GetValueOrDefault(command.PatientId)
-            ?? throw new SchedulingValidationException([new("patientId", "unknown")]);
+        // Only a patient registered at the hold's facility: a membership at one facility never reaches another's patients.
+        var patient = (await context.PatientsAsync([command.PatientId], cancellationToken)).GetValueOrDefault(command.PatientId) is { } p && p.FacilityId == hold.FacilityId
+            ? p
+            : throw new SchedulingValidationException([new("patientId", "unknown")]);
         var (_, zone) = await context.FacilityAsync(hold.FacilityId, cancellationToken);
 
         var appointment = await transaction.RunAsync([(hold.CalendarId, ScheduleRules.LocalDate(hold.Start, zone))], async () =>
@@ -106,7 +108,8 @@ public sealed class BookingService(SchedulingDbContext db, SchedulingContext con
     public async Task<PatientView?> FindPatientAsync(Guid facilityId, Guid patientId, CancellationToken cancellationToken = default)
     {
         await context.RequireAsync(facilityId, SchedulingAccess.CanBook, cancellationToken);
-        return (await context.PatientsAsync([patientId], cancellationToken)).TryGetValue(patientId, out var p) ? new(p.Id, p.FullName, p.Mrn) : null;
+        // Patients of this facility only, as front-desk search (MDV-P1-018): another facility's patient is "not found".
+        return (await context.PatientsAsync([patientId], cancellationToken)).TryGetValue(patientId, out var p) && p.FacilityId == facilityId ? new(p.Id, p.FullName, p.Mrn) : null;
     }
 
     /// <summary>
@@ -120,7 +123,8 @@ public sealed class BookingService(SchedulingDbContext db, SchedulingContext con
             throw new SlotUnavailableException("not_bookable"); // e.g. the doctor is not working at this facility
         var end = ScheduleRules.SpanEnd(ScheduleRules.Day(template, ScheduleRules.LocalDate(start, zone), zone), start, ScheduleRules.SlotsFor(template, type))
             ?? throw new SlotUnavailableException("not_bookable"); // outside hours, in a break or too long for what is left
-        if (await db.Appointments.AnyAsync(a => a.FacilityId == facilityId && a.CalendarId == calendarId && a.Start < end && start < a.End
+        var earliest = start.AddMinutes(-ScheduleRules.MaxVisitMinutes); // no visit is longer, so the index seek has a lower bound
+        if (await db.Appointments.AnyAsync(a => a.FacilityId == facilityId && a.CalendarId == calendarId && a.Start < end && start < a.End && a.Start > earliest
                 && a.State != AppointmentState.Cancelled && a.State != AppointmentState.NoShow, cancellationToken))
             throw new SlotUnavailableException("slot_unavailable");
         return end;

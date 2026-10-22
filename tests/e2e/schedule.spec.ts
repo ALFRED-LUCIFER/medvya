@@ -64,11 +64,17 @@ function scheduleDay(date: string) {
   };
 }
 
-type Calls = { dates: (string | null)[]; holds: Record<string, unknown>[]; releases: string[]; bookings: { body: Record<string, unknown>; csrf: string | undefined }[] };
+type Calls = {
+  dates: (string | null)[]; holds: Record<string, unknown>[]; releases: string[]; searches: { body: Record<string, unknown>; url: string }[];
+  bookings: { body: Record<string, unknown>; csrf: string | undefined }[];
+};
+
+// POST /v1/patients/search (MDV-P1-018): privacy-safe rows only. "Nair" finds Deepak Nair (synthetic), anything else nobody.
+const nair = { id: patientId, initials: 'DN', ageYears: 47, ageEstimated: false, sexAtBirth: 'Male', mrnTail: '0002', status: 'Complete' };
 
 /** Signs in and answers the scheduling API; returns what the page sent. `holdCode` makes holds fail with that 409 code. */
 async function open(page: Page, { locale = 'en', status = 200, as = reception, holdCode = '', delayMs = 0 } = {}) {
-  const calls: Calls = { dates: [], holds: [], releases: [], bookings: [] };
+  const calls: Calls = { dates: [], holds: [], releases: [], searches: [], bookings: [] };
   await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
   await page.route('**/v1/me/context', r => r.fulfill({ json: as }));
   await page.route('**/v1/schedule?*', async r => {
@@ -86,6 +92,12 @@ async function open(page: Page, { locale = 'en', status = 200, as = reception, h
     return r.fulfill({ json: { id: `h-${calls.holds.length}`, facilityId: 'f-1', ...body, end, expiresAt: ist('2026-10-19', '08:02') } });
   });
   await page.route('**/v1/slot-holds/*', r => { calls.releases.push(r.request().url().split('/').pop()!); return r.fulfill({ status: 204 }); });
+  await page.route('**/v1/patients/search', r => {
+    const body = r.request().postDataJSON() as { query: string };
+    calls.searches.push({ body, url: r.request().url() });
+    const items = body.query?.toLowerCase().includes('nair') ? [nair] : [];
+    return r.fulfill({ json: { matchedOn: 'Name', items, page: 1, pageSize: 20, total: items.length } });
+  });
   await page.route('**/v1/schedule/patients/*', r =>
     r.request().url().includes(patientId) ? r.fulfill({ json: { id: patientId, fullName: 'Deepak Nair (synthetic)', mrn: '000002' } }) : r.fulfill({ status: 404, json: {} }));
   await page.route('**/v1/appointments', r => {
@@ -156,10 +168,22 @@ test('reception books an empty slot: hold, longer visit type, confirm the patien
 
   const confirm = panel.getByRole('button', { name: 'Confirm booking' });
   await expect(confirm).toBeDisabled(); // no patient yet
-  await panel.getByLabel('Patient ID').fill('5e1d0001-0004-4000-8000-00000000ffff');
-  await expect(panel).toContainText('No patient with this ID at this clinic.');
-  await panel.getByLabel('Patient ID').fill(patientId);
-  await expect(panel).toContainText('Deepak Nair (synthetic) · MRN 000002');
+  const search = panel.getByRole('searchbox', { name: 'Name, MRN, phone or ID' });
+  await search.fill('Nobody Synthetic');
+  await search.press('Enter'); // searches; does not submit the booking
+  await expect(panel).toContainText('No patients match.');
+  await expect(panel.getByRole('link', { name: 'Register a new patient' })).toHaveAttribute('href', '/patients/new');
+  await search.fill('Nair');
+  await panel.getByRole('button', { name: 'Search' }).click();
+  const row = panel.getByRole('button', { name: 'D N, 47 y, Male, MRN ending 0002. Choose for this booking' });
+  await expect(row).toHaveAttribute('aria-pressed', 'false');
+  await expect(panel.getByRole('list', { name: 'Patients found' })).not.toContainText('Deepak'); // initials, age, sex and MRN tail only
+  await row.click();
+  await expect(row).toHaveAttribute('aria-pressed', 'true');
+  await expect(panel).toContainText('Deepak Nair (synthetic) · MRN 000002'); // the audited lookup confirms the chosen patient
+  expect(calls.searches.map(s => s.body.query)).toEqual(['Nobody Synthetic', 'Nair']);
+  expect(calls.searches.every(s => !s.url.includes('Nair'))).toBe(true); // search text only in the body
+  expect(calls.bookings).toEqual([]);
   await panel.getByRole('combobox', { name: 'Reason category' }).click();
   await page.getByRole('option', { name: 'Long-term condition review' }).click();
   await panel.getByLabel('Reason in the patient\'s words (optional)').fill('Synthetic: sugar readings high');
@@ -297,9 +321,18 @@ test('keyboard books without a mouse; 44 px targets; 200% zoom never scrolls the
   await page.keyboard.press('Enter');
   const panel = page.getByRole('complementary', { name: 'Book appointment' });
   await expect(panel).toContainText('Held for you until');
-  await panel.getByLabel('Patient ID').focus();
-  await page.keyboard.type(patientId);
+  await panel.getByRole('searchbox', { name: 'Name, MRN, phone or ID' }).focus();
+  await page.keyboard.type('Nair');
+  await page.keyboard.press('Enter');
+  const row = panel.getByRole('button', { name: /^D N, 47 y, Male/ });
+  await row.focus();
+  await page.keyboard.press('Enter');
   await expect(panel).toContainText('Deepak Nair (synthetic) · MRN 000002');
+  // A field error is tied to its field for screen readers (R14).
+  const reason = panel.getByLabel('Reason in the patient\'s words (optional)');
+  await reason.fill('x'.repeat(501));
+  await panel.getByRole('button', { name: 'Confirm booking' }).click();
+  await expect(reason).toHaveAccessibleDescription(/Keep the reason under 500 characters\./);
   for (const b of await panel.getByRole('button').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(44);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });

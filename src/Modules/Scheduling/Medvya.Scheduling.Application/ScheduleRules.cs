@@ -31,7 +31,9 @@ public sealed record UnavailableBlock(DateTimeOffset Start, DateTimeOffset End, 
 public static class ScheduleRules
 {
     public const int MaxSlotMinutes = 120;
-    const int MaxSessions = 50, MaxRoom = 50, MaxLabel = 60, MaxVisitMinutes = 480;
+    /// <summary>The longest visit a template allows: queries for what overlaps a time look back no further than this.</summary>
+    public const int MaxVisitMinutes = 480;
+    const int MaxSessions = 50, MaxRoom = 50, MaxLabel = 60;
 
     public static void Validate(ScheduleTemplate t)
     {

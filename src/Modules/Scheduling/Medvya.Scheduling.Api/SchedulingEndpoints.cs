@@ -35,7 +35,7 @@ public static class SchedulingEndpoints
         // Confirming the patient before booking opens their name and MRN, so the patient id is in the route and in the audit row.
         schedule.MapGet("/patients/{patientId:guid}", async (Guid patientId, Guid? facilityId, [FromServices] IBookingService service, CancellationToken ct) =>
                 await service.FindPatientAsync(facilityId ?? Guid.Empty, patientId, ct) is { } p ? Results.Ok(p) : Results.NotFound())
-            .AuditedWithErrors("patient.lookup", "patient", "treatment", patientRouteKey: "patientId");
+            .AuditedWithErrors("patient.lookup", "patient", "registration", patientRouteKey: "patientId"); // the purpose front-desk search uses (MDV-P1-018)
 
         var holds = app.MapGroup("/v1/slot-holds").RequireAuthorization();
         holds.MapPost("/", (HoldSlot command, [FromServices] IBookingService service, CancellationToken ct) => service.HoldAsync(command, ct))

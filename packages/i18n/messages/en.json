@@ -295,8 +295,7 @@
   "booking.heldUntil": "Held for you until {time}",
   "booking.visitType": "Visit type",
   "booking.visitTypeLength": "{type} · {minutes} min",
-  "booking.patient": "Patient ID",
-  "booking.patientHint": "Paste the ID from the patient's record. Search by name or phone comes with the patient directory.",
+  "booking.patient": "Patient",
   "booking.patientLooking": "Looking up the patient…",
   "booking.patientFound": "{name} · MRN {mrn}",
   "booking.patientMissing": "No patient with this ID at this clinic.",
@@ -311,7 +310,7 @@
   "booking.done.title": "Appointment booked",
   "booking.done.body": "{name} at {time} · {reference}",
   "booking.done.dismiss": "Done",
-  "booking.error.patientId": "Enter a valid patient ID.",
+  "booking.error.patientId": "Choose a patient.",
   "booking.error.reasonText": "Keep the reason under 500 characters.",
   "booking.error.being_booked": "Someone else is booking this slot right now. Choose another slot.",
   "booking.error.slot_unavailable": "This slot is no longer available. Choose another slot.",
@@ -507,5 +506,7 @@
   "patients.record.revealNote": "Only to check a card or a claim. Each time is recorded in the access log.",
   "patients.record.revealFailed": "The full numbers could not be shown. Try again.",
   "patients.record.revealed": "Full numbers shown.",
-  "booking.error.busy": "This calendar is busy with other bookings right now. Nothing was saved; try again."
+  "booking.error.busy": "This calendar is busy with other bookings right now. Nothing was saved; try again.",
+  "booking.patientResults": "Patients found",
+  "booking.patientPick": "{initials}, {age}, {sex}, MRN ending {mrn}. Choose for this booking"
 }

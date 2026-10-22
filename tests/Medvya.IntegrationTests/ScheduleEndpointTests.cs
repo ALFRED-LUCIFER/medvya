@@ -141,7 +141,8 @@ public sealed class ScheduleEndpointTests(SqlServerFixture sql) : IClassFixture<
 
         Assert.Equal(["schedule.template.update", "slot.hold", "slot.hold", "patient.lookup", "appointment.book"], await AuditActions());
         await using var audit = sql.Audit(tenant);
-        Assert.Equal(patient, (await audit.Events.SingleAsync(e => e.Action == "patient.lookup")).PatientId);
+        var lookup = await audit.Events.SingleAsync(e => e.Action == "patient.lookup");
+        Assert.Equal((patient, "registration"), (lookup.PatientId!.Value, lookup.Purpose)); // the purpose front-desk search (MDV-P1-018) uses
     }
 
     [Fact]

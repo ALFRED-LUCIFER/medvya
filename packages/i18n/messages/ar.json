@@ -294,8 +294,7 @@
   "booking.heldUntil": "محجوز لك حتى {time}",
   "booking.visitType": "نوع الزيارة",
   "booking.visitTypeLength": "{type} · {minutes} دقيقة",
-  "booking.patient": "رقم المريض",
-  "booking.patientHint": "الصق الرقم من سجل المريض. البحث بالاسم أو الهاتف يأتي مع دليل المرضى.",
+  "booking.patient": "المريض",
   "booking.patientLooking": "جارٍ البحث عن المريض…",
   "booking.patientFound": "{name} · رقم الملف {mrn}",
   "booking.patientMissing": "لا يوجد مريض بهذا الرقم في هذه العيادة.",
@@ -310,7 +309,7 @@
   "booking.done.title": "تم حجز الموعد",
   "booking.done.body": "{name} الساعة {time} · {reference}",
   "booking.done.dismiss": "تم",
-  "booking.error.patientId": "أدخل رقم مريض صحيحًا.",
+  "booking.error.patientId": "اختر مريضًا.",
   "booking.error.reasonText": "اجعل السبب أقل من 500 حرف.",
   "booking.error.being_booked": "شخص آخر يحجز هذه الفترة الآن. اختر فترة أخرى.",
   "booking.error.slot_unavailable": "هذه الفترة لم تعد متاحة. اختر فترة أخرى.",
@@ -505,5 +504,7 @@
   "patients.record.reveal": "إظهار الأرقام كاملة",
   "patients.record.revealNote": "فقط للتحقق من بطاقة أو مطالبة. تُسجَّل كل مرة في سجل الوصول.",
   "patients.record.revealFailed": "تعذّر إظهار الأرقام كاملة. حاول مرة أخرى.",
-  "patients.record.revealed": "تم إظهار الأرقام كاملة."
+  "patients.record.revealed": "تم إظهار الأرقام كاملة.",
+  "booking.patientResults": "المرضى الذين تم العثور عليهم",
+  "booking.patientPick": "{initials}، {age}، {sex}، رقم الملف ينتهي بـ {mrn}. اختر لهذا الحجز"
 }

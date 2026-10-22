@@ -1,7 +1,10 @@
 import type { UseFormReturn } from 'react-hook-form';
-import { CircleCheck, Hourglass } from 'lucide-react';
+import { Link } from 'react-router';
+import { CircleAlert, CircleCheck, Hourglass, Search } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea } from '@medvya/ui';
+import { Button, buttonVariants, cn, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea } from '@medvya/ui';
+import PatientSummaryLine from '../../patients/components/PatientSummaryLine';
+import type { SearchErrorCode, SearchResult } from '../../patients/domain/directory';
 import { channels, reasonCategories, visitTypes, type BookedAppointment, type BookingForm, type Hold, type PatientMatch, type SlotChoice, type SlotError } from '../domain/booking';
 import type { VisitLength, VisitType } from '../domain/schedule';
 
@@ -19,6 +22,15 @@ type Props = {
   onReasonCategory: (v: BookingForm['reasonCategory']) => void;
   onChannel: (v: BookingForm['channel']) => void;
   patient: { loading: boolean; match: PatientMatch | null } | null;
+  chosenPatientId: string;
+  /** Front-desk search (MDV-P1-018) to choose the patient; rows show initials, age, sex and MRN tail only. */
+  patientSearch: {
+    text: string; onText: (text: string) => void; onSubmit: () => void;
+    state: 'idle' | 'loading' | 'ready' | 'invalid' | 'forbidden' | 'notFound' | 'error';
+    result: SearchResult | null; errorCode: SearchErrorCode | null; onPick: (id: string) => void;
+  };
+  /** Where to register a new patient, when this membership may. */
+  registerPath: string | null;
   booking: boolean;
   bookError: SlotError | null;
   booked: BookedAppointment | null;
@@ -82,17 +94,11 @@ export default function BookingPanel(p: Props) {
           </Select>
         </div>
 
-        <div className={field}>
-          <Label htmlFor="booking-patient">{t('booking.patient')}</Label>
-          <Input id="booking-patient" className={control} autoComplete="off" spellCheck={false} aria-invalid={!!errors.patientId}
-            aria-describedby="booking-patient-hint" {...register('patientId')} />
-          <p id="booking-patient-hint" className="text-xs text-muted-foreground">{t('booking.patientHint')}</p>
-          {errors.patientId && <p className="text-sm font-bold text-destructive">{t('booking.error.patientId')}</p>}
-          {p.patient && (
-            <p role="status" className="text-sm font-bold">
-              {p.patient.loading ? t('booking.patientLooking') : p.patient.match ? t('booking.patientFound', { name: p.patient.match.fullName, mrn: p.patient.match.mrn }) : t('booking.patientMissing')}
-            </p>
-          )}
+        <PatientPicker search={p.patientSearch} chosen={p.chosenPatientId} registerPath={p.registerPath} invalid={!!errors.patientId} />
+
+        <div aria-live="polite" className="text-sm font-bold">
+          {p.patient && (p.patient.loading ? t('booking.patientLooking')
+            : p.patient.match ? t('booking.patientFound', { name: p.patient.match.fullName, mrn: p.patient.match.mrn }) : t('booking.patientMissing'))}
         </div>
 
         <div className={field}>
@@ -105,9 +111,10 @@ export default function BookingPanel(p: Props) {
 
         <div className={field}>
           <Label htmlFor="booking-reason-text">{t('booking.reasonText')}</Label>
-          <Textarea id="booking-reason-text" rows={3} aria-describedby="booking-reason-hint" aria-invalid={!!errors.reasonText} {...register('reasonText')} />
+          <Textarea id="booking-reason-text" rows={3} className="field-sizing-fixed" aria-invalid={!!errors.reasonText} {...register('reasonText')}
+            aria-describedby={errors.reasonText ? 'booking-reason-error booking-reason-hint' : 'booking-reason-hint'} />
           <p id="booking-reason-hint" className="text-xs text-muted-foreground">{t('booking.reasonTextHint')}</p>
-          {errors.reasonText && <p className="text-sm font-bold text-destructive">{t('booking.error.reasonText')}</p>}
+          {errors.reasonText && <p id="booking-reason-error" className="text-sm font-bold text-destructive">{t('booking.error.reasonText')}</p>}
         </div>
 
         <div className={field}>
@@ -125,5 +132,63 @@ export default function BookingPanel(p: Props) {
         </div>
       </form>
     </aside>
+  );
+}
+
+type PickerProps = { search: Props['patientSearch']; chosen: string; registerPath: string | null; invalid: boolean };
+
+/**
+ * Choose the patient with front-desk search (MDV-P1-018). Rows show initials, age, sex and MRN tail only; the name and MRN
+ * appear once one is chosen (an audited lookup). Inside the booking form, so Enter searches instead of submitting the booking.
+ */
+function PatientPicker({ search: s, chosen, registerPath, invalid }: PickerProps) {
+  const { t } = useI18n();
+  const hint = 'booking-patient-hint', searchError = 'booking-patient-search-error', pickError = 'booking-patient-error';
+  const describedBy = [invalid && pickError, s.state === 'invalid' && searchError, hint].filter(Boolean).join(' ');
+  return (
+    <fieldset className={field}>
+      <legend className="mb-1.5 text-sm font-medium">{t('booking.patient')}</legend>
+      <Label htmlFor="booking-patient-search" className="sr-only">{t('patients.search.label')}</Label>
+      <div className="flex gap-2">
+        <Input id="booking-patient-search" type="search" autoComplete="off" spellCheck={false} maxLength={100} className={cn(control, 'min-w-0 flex-1')}
+          placeholder={t('patients.search.label')} value={s.text} onChange={e => s.onText(e.target.value)} aria-describedby={describedBy}
+          aria-invalid={invalid || s.state === 'invalid' || undefined}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); s.onSubmit(); } }} />
+        <Button type="button" variant="outline" onClick={s.onSubmit}><Search aria-hidden />{t('patients.search.submit')}</Button>
+      </div>
+      <p id={hint} className="text-xs text-muted-foreground">{t('patients.search.hint')}</p>
+      {s.state === 'invalid' && (
+        <p id={searchError} className="flex items-center gap-1.5 text-sm font-semibold text-danger-700">
+          <CircleAlert className="size-4 shrink-0" aria-hidden />{t(s.errorCode ? `patients.invalid.${s.errorCode}` : 'patients.invalid.generic')}
+        </p>
+      )}
+      {invalid && <p id={pickError} className="text-sm font-bold text-destructive">{t('booking.error.patientId')}</p>}
+      <div aria-live="polite">
+        {s.state === 'loading' && <p className="text-sm text-muted-foreground">{t('patients.loading')}</p>}
+        {(s.state === 'error' || s.state === 'notFound') && <p className="text-sm font-bold text-destructive">{t('patients.error.title')}</p>}
+        {s.state === 'forbidden' && <p className="text-sm font-bold text-destructive">{t('patients.forbidden.body')}</p>}
+        {s.state === 'ready' && s.result?.items.length === 0 && <p className="text-sm font-bold">{t('patients.empty')}</p>}
+      </div>
+      {s.state === 'ready' && s.result && s.result.items.length > 0 && (
+        <ul aria-label={t('booking.patientResults')} className="flex max-h-64 flex-col divide-y overflow-y-auto rounded-md border">
+          {s.result.items.map(row => {
+            const age = t(row.ageEstimated ? 'patients.ageEstimated' : 'patients.age', { age: row.ageYears });
+            const label = t('booking.patientPick', { initials: row.initials.split('').join(' '), age, sex: t(`patients.sex.${row.sexAtBirth}`), mrn: row.mrnTail }) + (row.status === 'Incomplete' ? t('patients.row.incomplete') : '');
+            return (
+              <li key={row.id}>
+                <button type="button" aria-pressed={chosen === row.id} aria-label={label} onClick={() => s.onPick(row.id)}
+                  className={cn('flex min-h-14 w-full items-center gap-3 px-3 py-2 text-start hover:bg-accent focus-visible:-outline-offset-2', chosen === row.id && 'bg-accent')}>
+                  <PatientSummaryLine row={row} />
+                  {chosen === row.id && <CircleCheck aria-hidden className="size-5 shrink-0 text-success-700" />}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {registerPath && (
+        <Link to={registerPath} className={cn(buttonVariants({ variant: 'link' }), 'self-start px-0')}>{t('patients.empty.register')}</Link>
+      )}
+    </fieldset>
   );
 }

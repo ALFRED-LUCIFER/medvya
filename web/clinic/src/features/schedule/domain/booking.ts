@@ -16,7 +16,7 @@ export type PatientMatch = { id: string; fullName: string; mrn: string };
 /** The slot the user clicked, and the visit type that decides how many slots the hold covers. */
 export type SlotChoice = { calendarId: string; calendarName: string; start: string; visitType: VisitType };
 
-// shortcut: the patient is picked by id until front-desk search exists (MDV-P1-018); the panel shows name and MRN to confirm.
+// The patient is chosen with front-desk search (MDV-P1-018); the API takes the chosen opaque id and the panel shows name and MRN.
 export const bookingSchema = z.object({
   patientId: z.uuid(),
   reasonCategory: z.enum(reasonCategories),

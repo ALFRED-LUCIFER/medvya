@@ -22,15 +22,30 @@ public sealed record AddResource
 
 public sealed record ResourceView(Guid Id, Guid FacilityId, string Name);
 
-/// <summary>A calendar of the facility (doctor or resource) with its template, or null fields when none is set yet.</summary>
+/// <summary>An appointment on the schedule: name, type, time and state. Never the free-text reason.</summary>
+public sealed record AppointmentChip(
+    Guid Id, string Reference, Guid PatientId, string PatientName, VisitType VisitType, DateTimeOffset Start, DateTimeOffset End, AppointmentState State);
+
+/// <summary>
+/// A calendar of the facility (doctor or resource) with its template, or null fields when none is set yet. After a save,
+/// AppointmentsOutsideHours lists future appointments the new hours no longer cover, for reception to act on.
+/// </summary>
 public sealed record TemplateView(
     Guid CalendarId, CalendarKind CalendarKind, string Name, int? SlotMinutes,
-    IReadOnlyList<WorkingHours> Hours, IReadOnlyList<ScheduleBreak> Breaks, IReadOnlyList<VisitLength> VisitLengths, DateTimeOffset? ChangedAt);
+    IReadOnlyList<WorkingHours> Hours, IReadOnlyList<ScheduleBreak> Breaks, IReadOnlyList<VisitLength> VisitLengths, DateTimeOffset? ChangedAt,
+    IReadOnlyList<AppointmentChip> AppointmentsOutsideHours);
 
-/// <summary>One column of the day view: bookable slots and unavailable blocks within the day frame.</summary>
+/// <summary>A free slot. Held: someone else is booking it right now ("being booked"), so it cannot be held or booked.</summary>
+public sealed record SlotView(DateTimeOffset Start, DateTimeOffset End, bool Held);
+
+/// <summary>
+/// One column of the day view: free slots, appointments and unavailable blocks within the day frame, and the length of each
+/// visit type in this calendar (the booking panel shows it).
+/// </summary>
 public sealed record ScheduleColumn(
     Guid CalendarId, CalendarKind CalendarKind, string Name, int? SlotMinutes,
-    IReadOnlyList<WorkingWindow> Hours, IReadOnlyList<Slot> Slots, IReadOnlyList<UnavailableBlock> Unavailable);
+    IReadOnlyList<WorkingWindow> Hours, IReadOnlyList<SlotView> Slots, IReadOnlyList<UnavailableBlock> Unavailable,
+    IReadOnlyList<AppointmentChip> Appointments, IReadOnlyList<VisitLength> VisitLengths);
 
 /// <summary>
 /// The day view (P-04) of one facility. Instants are UTC; the client shows them in <see cref="TimeZone"/> (IANA), the

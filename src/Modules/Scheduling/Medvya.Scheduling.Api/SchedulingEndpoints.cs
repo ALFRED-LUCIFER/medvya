@@ -33,6 +33,25 @@ public static class SchedulingEndpoints
         schedule.MapPost("/resources", (AddResource command, [FromServices] IScheduleService service, CancellationToken ct) => service.AddResourceAsync(command, ct))
             .Audited("schedule.resource.create", "schedule_resource", "operations");
 
+        // Confirming the patient before booking opens their name and MRN, so the patient id is in the route and in the audit row.
+        schedule.MapGet("/patients/{patientId:guid}", async (Guid patientId, Guid? facilityId, [FromServices] IBookingService service, CancellationToken ct) =>
+                await service.FindPatientAsync(facilityId ?? Guid.Empty, patientId, ct) is { } p ? Results.Ok(p) : Results.NotFound())
+            .Audited("patient.lookup", "patient", "treatment", patientRouteKey: "patientId");
+
+        var holds = app.MapGroup("/v1/slot-holds").RequireAuthorization().AddEndpointFilter(MapErrors);
+        holds.MapPost("/", (HoldSlot command, [FromServices] IBookingService service, CancellationToken ct) => service.HoldAsync(command, ct))
+            .Audited("slot.hold", "slot_hold");
+        holds.MapDelete("/{holdId:guid}", async (Guid holdId, [FromServices] IBookingService service, CancellationToken ct) =>
+            {
+                await service.ReleaseHoldAsync(holdId, ct);
+                return Results.NoContent();
+            })
+            .Audited("slot.release", "slot_hold");
+
+        var appointments = app.MapGroup("/v1/appointments").RequireAuthorization().AddEndpointFilter(MapErrors);
+        appointments.MapPost("/", (BookAppointment command, [FromServices] IBookingService service, CancellationToken ct) => service.BookAsync(command, ct))
+            .Audited("appointment.book", "appointment");
+
         return app;
     }
 
@@ -50,6 +69,10 @@ public static class SchedulingEndpoints
         catch (SchedulingAccessDeniedException)
         {
             return Results.Problem(statusCode: StatusCodes.Status403Forbidden, title: "No access at this facility");
+        }
+        catch (SlotUnavailableException e)
+        {
+            return Results.Problem(statusCode: StatusCodes.Status409Conflict, title: "Slot no longer available", extensions: new Dictionary<string, object?> { ["code"] = e.Code });
         }
     }
 }

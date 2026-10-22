@@ -1,4 +1,6 @@
 using System.Globalization;
+using System.Net;
+using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.DataProtection;
@@ -53,10 +55,25 @@ public sealed class PublicFormGuard : IDisposable
         }
     }
 
+    // shortcut: the quota is in memory, so each app instance counts on its own; move it to a shared store before scaling out (MDV-P0-007).
     public bool TryAcquire(HttpContext ctx)
     {
-        using var lease = limiter.AttemptAcquire(ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown");
+        using var lease = limiter.AttemptAcquire(Client(ctx.Connection.RemoteIpAddress));
         return lease.IsAcquired;
+    }
+
+    /// <summary>
+    /// The quota's client key. One IPv6 subscriber gets a whole /64, so a per-address quota would be no quota at all; an IPv4
+    /// client seen through a dual-stack socket arrives as ::ffff:a.b.c.d and must keep its own key, not share ::/64 with every other.
+    /// </summary>
+    public static string Client(IPAddress? ip)
+    {
+        if (ip is null) return "unknown";
+        if (ip.IsIPv4MappedToIPv6) ip = ip.MapToIPv4();
+        if (ip.AddressFamily != AddressFamily.InterNetworkV6) return ip.ToString();
+        var bytes = ip.GetAddressBytes();
+        Array.Clear(bytes, 8, 8);
+        return $"{new IPAddress(bytes)}/64";
     }
 
     public void Dispose() => limiter.Dispose();

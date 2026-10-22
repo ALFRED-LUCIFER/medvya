@@ -16,7 +16,11 @@ const tokens = Object.fromEntries([...readFileSync(join(process.cwd(), 'src/styl
 // Visible text without the invisible Unicode isolates used around embedded IDs.
 const visible = (e: HTMLElement) => (e.textContent ?? '').replace(/[\u2068\u2069]/g, '').replaceAll('\u00A0', ' ');
 
+// Looks may name a token (var(--color-x)) instead of a hex value; resolve it to what ships.
+const hex = (c: string) => (c.startsWith('var(--color-') ? tokens[c.slice('var(--color-'.length, -1)]! : c);
+
 function contrast(a: string, b: string) {
+  [a, b] = [hex(a), hex(b)];
   const lum = (hex: string) => {
     const [r, g, bl] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255)
       .map(c => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
@@ -31,6 +35,8 @@ const allLooks: [string, Look][] = [statusLooks, provenanceLooks, alertLooks, re
 describe('clinical primitives', () => {
   it('meets WCAG AA text contrast (4.5:1) for every state', () => {
     for (const [name, l] of allLooks) expect(contrast(l.fg, l.bg), name).toBeGreaterThanOrEqual(4.5);
+    // Unavailable time is a hatch of two tokens: its words must read on both stops, not only on the look's bg.
+    for (const stop of ['muted', 'line']) expect(contrast(scheduleLooks.unavailable.fg, tokens[stop]!), `unavailable on ${stop}`).toBeGreaterThanOrEqual(4.5);
     // Filled buttons (white text) and outlined/link text on the canvas.
     for (const bg of ['primary', 'brand-800', 'ai-600', 'ai-700', 'destructive', 'brand-950'])
       expect(contrast('#FFFFFF', tokens[bg]), `white on ${bg}`).toBeGreaterThanOrEqual(4.5);

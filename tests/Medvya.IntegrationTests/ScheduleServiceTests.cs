@@ -91,6 +91,16 @@ public sealed class ScheduleServiceTests(SqlServerFixture sql) : IClassFixture<S
     }
 
     [Fact]
+    public async Task DoctorNamesComeFromOneBatchedLookup()
+    {
+        await using var provider = new ServiceCollection().AddIdentityModule(sql.ConnectionString).BuildServiceProvider();
+        var staff = provider.GetRequiredService<Medvya.Identity.Application.IStaffUsers>();
+        var names = await staff.DisplayNamesAsync([doctor, doctor, Guid.NewGuid()]);
+        Assert.Equal(new Dictionary<Guid, string> { [doctor] = "Dr. Arjun Rao (synthetic)" }, names); // unknown ids left out, duplicates once
+        Assert.Empty(await staff.DisplayNamesAsync([]));
+    }
+
+    [Fact]
     public async Task AResourceIsAColumnLikeADoctor()
     {
         var room = await As(admin).AddResourceAsync(new AddResource { FacilityId = facility, Name = "  Procedure room  " });

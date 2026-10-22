@@ -21,4 +21,12 @@ sealed class StaffUsers(IdentityDbContext db) : IStaffUsers
 
     public Task<StaffUser?> GetAsync(Guid id, CancellationToken cancellationToken = default) =>
         db.Users.AsNoTracking().SingleOrDefaultAsync(u => u.Id == id, cancellationToken);
+
+    public async Task<IReadOnlyDictionary<Guid, string>> DisplayNamesAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(ids);
+        if (ids.Count == 0) return new Dictionary<Guid, string>();
+        var list = ids.Distinct().ToList();
+        return await db.Users.AsNoTracking().Where(u => list.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.DisplayName, cancellationToken);
+    }
 }

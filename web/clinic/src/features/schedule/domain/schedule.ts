@@ -64,6 +64,16 @@ export function layoutDay(day: ScheduleDay): DayLayout {
   };
 }
 
+/**
+ * The date a Previous/Next step lands on. It steps from the date last asked for, never from the day still on screen while the
+ * next one loads, so a fast double click moves two days. Before any date was asked for ("today"), it steps from today's answer,
+ * which the caller passes as null while that answer is still a placeholder.
+ */
+export function stepDate(requested: string | null, today: string | null, days: number): string | null {
+  const from = requested ?? today;
+  return from ? addDays(from, days) : null;
+}
+
 /** The calendar date n days after a YYYY-MM-DD date. */
 export function addDays(date: string, n: number): string {
   const d = new Date(`${date}T12:00:00Z`);

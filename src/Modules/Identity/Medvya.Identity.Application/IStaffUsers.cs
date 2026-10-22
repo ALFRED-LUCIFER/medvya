@@ -8,4 +8,7 @@ public interface IStaffUsers
     Task<StaffUser?> FindAsync(string issuer, string subject, CancellationToken cancellationToken = default);
 
     Task<StaffUser?> GetAsync(Guid id, CancellationToken cancellationToken = default);
+
+    /// <summary>Display names of these users in one query; unknown ids are left out.</summary>
+    Task<IReadOnlyDictionary<Guid, string>> DisplayNamesAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken = default);
 }

@@ -32,7 +32,7 @@ builder.WebHost.ConfigureKestrel(k =>
 });
 
 builder.AddStaffAuthentication();
-builder.Services.AddAuthorizationBuilder().AddStaffPolicies();
+builder.Services.AddAuthorizationBuilder().AddStaffPolicies().AddStaffAdminPolicy();
 // Enums travel as names ("Receptionist"), never as numbers that shift when an enum changes.
 builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.Configure<SmtpOptions>(builder.Configuration.GetSection("Email:Smtp")).AddSingleton<IEmailSender, SmtpEmailSender>();
@@ -43,7 +43,6 @@ builder.Services.AddScoped<RequestContext>();
 builder.Services.AddScoped<ICurrentTenant>(sp => sp.GetRequiredService<RequestContext>());
 builder.Services.AddScoped<ICurrentUser>(sp => sp.GetRequiredService<RequestContext>());
 builder.Services.AddScoped<ICurrentFacility>(sp => sp.GetRequiredService<RequestContext>());
-builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 // Without a database, audited and flag-gated endpoints cannot resolve IAuditLog / IFeatureFlags and fail closed (500), and no
 // capability handler exists, so capability-guarded endpoints answer 403.
 if (builder.Configuration.GetConnectionString("Medvya") is { } sql)

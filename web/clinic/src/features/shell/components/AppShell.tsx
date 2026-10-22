@@ -15,6 +15,8 @@ type Props = {
   tabs: NavItem[];
   languageSwitcher: ReactNode;
   signingOut: boolean;
+  /** More than one active membership: offer the facility picker (MDV-P0-012). */
+  canSwitchFacility: boolean;
   onSignOut: () => void;
   /** Patient search target (D-02 header entry), when this membership may search patients. */
   searchPath?: string | null;
@@ -27,7 +29,7 @@ const initials = (name: string) => name.replace(/^Dr\.?\s+/i, '').split(/\s+/).m
  * Responsive shell (docs/02-design/responsive-and-dark.md): bottom tabs below 768 px, 72 px icon rail from 768 px,
  * full navy sidebar from 1280 px (the md/lg breakpoints in packages/ui/src/styles.css).
  */
-export default function AppShell({ displayName, role, facilityName, groups, tabs, languageSwitcher, signingOut, onSignOut, searchPath, children }: Props) {
+export default function AppShell({ displayName, role, facilityName, groups, tabs, languageSwitcher, signingOut, canSwitchFacility, onSignOut, searchPath, children }: Props) {
   const { t } = useI18n();
   return (
     <div className="min-h-screen md:grid md:grid-cols-[72px_minmax(0,1fr)] lg:grid-cols-[clamp(196px,22vw,232px)_minmax(0,1fr)]">
@@ -85,6 +87,7 @@ export default function AppShell({ displayName, role, facilityName, groups, tabs
             </Link>
           )}
           <div className="hidden md:block">{languageSwitcher}</div>
+          {canSwitchFacility && <Link to="/choose-facility" className={buttonVariants({ variant: 'outline', className: 'hidden md:inline-flex' })}>{t('session.switchFacility')}</Link>}
           <Button variant="outline" className="hidden md:inline-flex" loading={signingOut} onClick={onSignOut}>{t('session.signOut')}</Button>
           {/* shortcut: bell is a placeholder; the notification centre (D-03) ships in P1 (MDV-P1 notification centre ticket). */}
           <Button variant="ghost" size="icon" disabled aria-label={t('shell.notifications')}><Bell className="size-5" aria-hidden /></Button>

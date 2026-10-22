@@ -217,6 +217,17 @@ test('closing the panel releases the hold, and a slot taken meanwhile says so', 
   await expect(page.getByRole('button', { name: 'Confirm booking' })).toBeDisabled();
 });
 
+// MDV-P1-022: when the doctor-day lock stays taken through every retry, the desk is told plainly that nothing was saved.
+for (const [locale, book, message] of [
+  ['en', 'Book Dr. Arjun Rao (synthetic) at 10:20', 'This calendar is busy with other bookings right now. Nothing was saved; try again.'],
+  ['ar', 'احجز مع Dr. Arjun Rao (synthetic) الساعة 10:20', 'هذا التقويم مشغول بحجوزات أخرى الآن. لم يُحفظ شيء؛ حاول مرة أخرى.'],
+] as const)
+  test(`a busy calendar says nothing was saved (${locale})`, async ({ page }) => {
+    await open(page, { locale, holdCode: 'busy' });
+    await page.getByRole('button', { name: book }).click();
+    await expect(page.getByRole('alert')).toContainText(message);
+  });
+
 test('no access says so and is not retried', async ({ page }) => {
   const calls = await open(page, { status: 403 });
   await expect(page.getByRole('heading', { name: 'You don’t have access to this facility.' })).toBeVisible();

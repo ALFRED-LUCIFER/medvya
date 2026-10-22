@@ -381,5 +381,10 @@
   "board.error.invalid_transition": "انتقلت هذه الزيارة بالفعل. اللوحة محدّثة.",
   "board.error.not_today": "هذا الموعد ليس اليوم. سجّل وصوله في يومه.",
   "board.error.failed": "لم يُحفظ ذلك. حاول مرة أخرى.",
-  "board.action.takePayment": "استلام الدفع"
+  "board.action.takePayment": "استلام الدفع",
+  "patients.masked": "••{last}",
+  "patients.record.reveal": "إظهار الأرقام كاملة",
+  "patients.record.revealNote": "فقط للتحقق من بطاقة أو مطالبة. تُسجَّل كل مرة في سجل الوصول.",
+  "patients.record.revealFailed": "تعذّر إظهار الأرقام كاملة. حاول مرة أخرى.",
+  "patients.record.revealed": "تم إظهار الأرقام كاملة."
 }

@@ -58,6 +58,8 @@ public sealed record PatientSearch(string CountryCode, string? Query, DirectoryF
 {
     public const int PageSize = 20;
     public const int RecentDays = 7;
+    /// <summary>Directory paging stops here (1,000 rows): the desk searches beyond that; paging is not an export.</summary>
+    public const int MaxPage = 50;
 }
 
 /// <summary>

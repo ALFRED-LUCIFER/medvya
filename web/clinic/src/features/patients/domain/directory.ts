@@ -25,10 +25,14 @@ export type PatientDetails = {
   id: string; mrn: string; fullName: string; arabicName: string | null; dateOfBirth: string; dateOfBirthEstimated: boolean; ageYears: number;
   sexAtBirth: SexAtBirth; genderIdentity: string | null; preferredLanguage: string | null; nationality: string | null;
   mobile: string; alternatePhone: string | null; email: string | null; address: PatientAddress | null; status: RegistrationStatus;
-  registeredAt: string;
-  identifiers: { scheme: IdentifierScheme; value: string; expiresOn: string | null }[];
-  payer: { kind: PayerKind; payerName: string | null; plan: string | null; memberNumber: string | null; validTo: string | null; network: string | null } | null;
+  /** Calendar date (yyyy-mm-dd) in the facility's country time zone. */
+  registeredOn: string;
+  /** National and insurance numbers come masked to their last four characters; the full values need the audited reveal. */
+  identifiers: { scheme: IdentifierScheme; lastFour: string; expiresOn: string | null }[];
+  payer: { kind: PayerKind; payerName: string | null; plan: string | null; memberNumberLastFour: string | null; validTo: string | null; network: string | null } | null;
 };
+
+export type RevealedIdentifiers = { identifiers: { scheme: IdentifierScheme; value: string }[]; memberNumber: string | null };
 
 export const directoryFilters: readonly DirectoryFilter[] = ['All', 'Incomplete', 'Recent'];
 

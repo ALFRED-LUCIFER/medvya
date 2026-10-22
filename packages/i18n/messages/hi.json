@@ -382,5 +382,10 @@
   "board.error.invalid_transition": "यह विज़िट पहले ही आगे बढ़ चुकी है। बोर्ड अद्यतन है।",
   "board.error.not_today": "यह अपॉइंटमेंट आज की नहीं है। उसी दिन चेक-इन करें।",
   "board.error.failed": "यह सहेजा नहीं गया। फिर से कोशिश करें।",
-  "board.action.takePayment": "भुगतान लें"
+  "board.action.takePayment": "भुगतान लें",
+  "patients.masked": "••{last}",
+  "patients.record.reveal": "पूरे नंबर दिखाएँ",
+  "patients.record.revealNote": "केवल कार्ड या दावे की जाँच के लिए। हर बार एक्सेस लॉग में दर्ज होता है।",
+  "patients.record.revealFailed": "पूरे नंबर नहीं दिखाए जा सके। फिर से कोशिश करें।",
+  "patients.record.revealed": "पूरे नंबर दिखाए गए।"
 }

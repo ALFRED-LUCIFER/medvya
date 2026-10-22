@@ -382,5 +382,10 @@
   "board.error.invalid_transition": "This visit has already moved on. The board is up to date.",
   "board.error.not_today": "This appointment is not today. Check it in on its day.",
   "board.error.failed": "That did not save. Try again.",
-  "board.action.takePayment": "Take payment"
+  "board.action.takePayment": "Take payment",
+  "patients.masked": "••{last}",
+  "patients.record.reveal": "Show full numbers",
+  "patients.record.revealNote": "Only to check a card or a claim. Each time is recorded in the access log.",
+  "patients.record.revealFailed": "The full numbers could not be shown. Try again.",
+  "patients.record.revealed": "Full numbers shown."
 }

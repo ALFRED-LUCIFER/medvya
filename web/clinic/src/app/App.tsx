@@ -63,7 +63,7 @@ export default function App({ locale, onLocaleChange }: Props) {
             : <ComingSoon title={t(`nav.${i.id}`)} phase={i.phase} />} />)}
           {searchPath && <>
             <Route path={searchPath} element={<PatientDirectoryRoute registerPath={registerPath} />} />
-            <Route path={`${searchPath}/:patientId`} element={<PatientRecordRoute />} />
+            <Route path={`${searchPath}/:patientId`} element={<PatientRecordRoute canReveal={active.capabilities.RegisterBookPatients === 'Full'} />} />
           </>}
           <Route path="/more" element={<MorePage {...account} role={active.role} facilityName={active.facilityName} groups={shell.groups} />} />
           <Route path="*" element={<NotFoundPage onBackToToday={toHome} />} />

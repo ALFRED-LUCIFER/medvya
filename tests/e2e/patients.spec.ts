@@ -19,10 +19,10 @@ const rows = [
 const meera = {
   id: meeraId, mrn: 'DQ-10-4482', fullName: 'Meera Iyer (synthetic)', arabicName: null, dateOfBirth: '1972-03-12', dateOfBirthEstimated: false,
   ageYears: 54, sexAtBirth: 'Female', genderIdentity: null, preferredLanguage: 'Tamil', nationality: 'IN', mobile: '+919000000101',
-  alternatePhone: null, email: null, status: 'Complete', registeredAt: '2026-01-01T00:00:00+00:00',
+  alternatePhone: null, email: null, status: 'Complete', registeredOn: '2026-01-01',
   address: { line1: '4 Synthetic Street', city: 'Chennai', district: 'Chennai', region: 'Tamil Nadu', postalCode: '600020' },
-  identifiers: [{ scheme: 'AadhaarLast4', value: '0101', expiresOn: null }],
-  payer: { kind: 'SelfPay', payerName: null, plan: null, memberNumber: null, validTo: null, network: null },
+  identifiers: [{ scheme: 'Abha', lastFour: '0101', expiresOn: null }],
+  payer: { kind: 'PrivateInsurance', payerName: 'TPA (synthetic)', plan: null, memberNumberLastFour: '7302', validTo: null, network: null },
 };
 
 type SearchBody = { query: string | null; filter: string; page: number };
@@ -54,7 +54,7 @@ test('the desk finds a patient from the header, sees only initials and opens the
   const search = page.getByRole('searchbox', { name: 'Name, MRN, phone or ID' });
   await search.fill('meera');
   await search.press('Enter');
-  await expect(page.getByText('Name matches: 2')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Name matches: 2' })).toBeVisible();
 
   // Search text only ever travels in the POST body.
   const last = searches.at(-1)!;
@@ -93,7 +93,7 @@ test('no match offers registration; a partial number and a refused role explain 
 
   await search.fill('nobody');
   await search.press('Enter');
-  await expect(page.getByText('No patients match.')).toBeVisible();
+  await expect(page.getByRole('status')).toHaveText('No patients match.');
   await expect(page.getByRole('link', { name: 'Register a new patient' })).toHaveAttribute('href', '/patients/new');
 
   await search.fill('98470 213');
@@ -103,7 +103,7 @@ test('no match offers registration; a partial number and a refused role explain 
 
   await search.fill('forbidden');
   await search.press('Enter');
-  await expect(page.getByText('You don’t have access to this facility.')).toBeVisible();
+  await expect(page.getByRole('status')).toHaveText('You don’t have access to this facility.');
 });
 
 test('keyboard only: search, then open the first result', async ({ page }) => {
@@ -112,7 +112,7 @@ test('keyboard only: search, then open the first result', async ({ page }) => {
   await page.getByRole('searchbox').focus();
   await page.keyboard.type('meera');
   await page.keyboard.press('Enter');
-  await expect(page.getByText('Name matches: 2')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Name matches: 2' })).toBeVisible();
   await page.keyboard.press('Tab'); // Search button
   for (let i = 0; i < 3; i++) await page.keyboard.press('Tab'); // the three filters
   await page.keyboard.press('Tab');
@@ -145,3 +145,57 @@ for (const locale of ['en', 'ar'])
       await expect(page.getByRole('heading', { name: 'Meera Iyer (synthetic)' })).toBeVisible();
       expect(await axe(page)).toEqual([]);
     });
+
+test('identifiers stay masked until an explicit, audited reveal', async ({ page }) => {
+  await deskWith(page, found);
+  const reveals: string[] = [];
+  await page.route(`**/v1/patients/${meeraId}/identifiers/reveal`, r => {
+    reveals.push(r.request().method());
+    return r.fulfill({ json: { identifiers: [{ scheme: 'Abha', value: '91000000000101' }], memberNumber: 'SYN-TPA-7302' } });
+  });
+  await page.goto(`/patients/directory/${meeraId}`);
+  await expect(page.getByText('••0101')).toBeVisible();
+  await expect(page.getByText('••7302')).toBeVisible();
+  await expect(page.getByText('91000000000101')).toHaveCount(0);
+  await expect(page.getByText('01 Jan 2026')).toBeVisible(); // registeredOn, a facility-local date
+
+  await page.getByRole('button', { name: 'Show full numbers' }).click();
+  await expect(page.getByText('91000000000101')).toBeVisible();
+  await expect(page.getByText('SYN-TPA-7302')).toBeVisible();
+  await expect(page.getByRole('status')).toHaveText('Full numbers shown.');
+  expect(reveals).toEqual(['POST']);
+});
+
+test('a role with Read access only sees no reveal button', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('medvya.locale', 'en'));
+  await page.route('**/v1/me/context', r => r.fulfill({ json: { ...receptionist, active: { ...receptionist.active, role: 'Nurse', capabilities: { RegisterBookPatients: 'Read' } } } }));
+  await page.route(`**/v1/patients/${meeraId}`, r => r.fulfill({ json: meera }));
+  await page.goto(`/patients/directory/${meeraId}`);
+  await expect(page.getByText('••0101')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Show full numbers' })).toHaveCount(0);
+});
+
+test('paging keeps the list on screen and focus on the results, with one live status region', async ({ page }) => {
+  let release: () => void = () => {};
+  await deskWith(page, body => ({ json: { matchedOn: 'Directory', items: rows, page: body.page, pageSize: 20, total: 45 } }));
+  await page.goto('/patients/directory');
+  const status = page.getByRole('status');
+  await expect(status).toHaveCount(1);
+  await expect(status).toHaveText('Patients: 45');
+
+  // Hold the next page so the in-between state is visible.
+  await page.route('**/v1/patients/search**', async r => {
+    await new Promise<void>(resolve => { release = resolve; });
+    return r.fulfill({ json: { matchedOn: 'Directory', items: rows, page: 2, pageSize: 20, total: 45 } });
+  });
+  await page.getByRole('button', { name: 'Next' }).focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('heading', { name: 'Patients: 45' })).toBeFocused();
+  await expect(page.locator('section[aria-labelledby="patient-results"]')).toHaveAttribute('aria-busy', 'true');
+  await expect(page.getByRole('main').getByRole('list').getByRole('link')).toHaveCount(2); // the previous page stays
+  await expect(status).toHaveText('Searching…');
+  release();
+  await expect(page.getByText('Page 2 of 3')).toBeVisible();
+  await expect(status).toHaveText('Patients: 45');
+  await expect(page.getByRole('heading', { name: 'Patients: 45' })).toBeFocused();
+});

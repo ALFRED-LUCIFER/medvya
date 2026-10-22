@@ -1,4 +1,4 @@
-import type { PatientDetails, SearchRequest, SearchResult } from '../domain/directory';
+import type { PatientDetails, RevealedIdentifiers, SearchRequest, SearchResult } from '../domain/directory';
 
 // Same-origin BFF calls (ADR-004): the session cookie rides along; state-changing calls carry the CSRF header.
 const json = { 'Content-Type': 'application/json', 'X-Medvya-Csrf': '1' };
@@ -33,4 +33,11 @@ export async function fetchPatient(id: string): Promise<PatientDetails> {
   const res = await fetch(`/v1/patients/${encodeURIComponent(id)}`, { credentials: 'same-origin' });
   if (!res.ok) return fail(res);
   return res.json() as Promise<PatientDetails>;
+}
+
+/** The full identifier and member numbers of one record. A POST: each reveal is an audited action, never prefetched or cached. */
+export async function revealIdentifiers(id: string): Promise<RevealedIdentifiers> {
+  const res = await fetch(`/v1/patients/${encodeURIComponent(id)}/identifiers/reveal`, { method: 'POST', credentials: 'same-origin', headers: json });
+  if (!res.ok) return fail(res);
+  return res.json() as Promise<RevealedIdentifiers>;
 }

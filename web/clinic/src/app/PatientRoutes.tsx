@@ -12,11 +12,11 @@ export function PatientDirectoryRoute({ registerPath }: { registerPath: string |
   return <PatientDirectory {...usePatientDirectoryController()} registerPath={registerPath} recordPath={recordPath} />;
 }
 
-function Record({ patientId }: { patientId: string }) {
-  return <PatientRecord {...usePatientRecordController(patientId)} backPath={patientDirectory.path} />;
+function Record({ patientId, canReveal }: { patientId: string; canReveal: boolean }) {
+  return <PatientRecord {...usePatientRecordController(patientId)} backPath={patientDirectory.path} canReveal={canReveal} />;
 }
 
-export function PatientRecordRoute() {
+export function PatientRecordRoute({ canReveal }: { canReveal: boolean }) {
   const { patientId = '' } = useParams();
-  return <Record key={patientId} patientId={patientId} />;
+  return <Record key={patientId} patientId={patientId} canReveal={canReveal} />;
 }

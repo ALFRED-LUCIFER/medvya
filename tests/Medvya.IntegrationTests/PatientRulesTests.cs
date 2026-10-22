@@ -127,6 +127,7 @@ public class PatientRulesTests
     [InlineData("IN", "  meera ", SearchKind.Name, "meera")]
     [InlineData("IN", "+91 90000 00101", SearchKind.Phone, "+919000000101")]
     [InlineData("IN", "09000000101", SearchKind.Phone, "+919000000101")]
+    [InlineData("IN", "0091 98470 21345", SearchKind.Phone, "+919847021345")] // 14 digits like an ABHA, but an international prefix
     [InlineData("IN", "deepak.nair.synthetic@sbx", SearchKind.Identifier, "deepak.nair.synthetic@sbx")]
     [InlineData("IN", "42", SearchKind.Mrn, "000042")]
     [InlineData("IN", "dq-10-4482", SearchKind.Mrn, "DQ-10-4482")]
@@ -144,6 +145,9 @@ public class PatientRulesTests
     [InlineData("IN", "0000 1111 2222", "full_number_required")] // a full Aadhaar is never a search key
     [InlineData("AE", "784-1990-1234567", "full_number_required")]
     [InlineData("IN", "M", "too_short")]
+    [InlineData("IN", "-", "too_short")]   // separators only: nothing to look up (was a 500)
+    [InlineData("AE", "( )", "too_short")]
+    [InlineData("IN", "+", "too_short")]
     public void PartialNumbersAreRefusedNotPartiallyMatched(string country, string query, string code) =>
         Assert.Equal([new ValidationError("query", code)],
             Assert.Throws<PatientValidationException>(() => CountryRules.For(country).ParseSearch(query)).Errors);

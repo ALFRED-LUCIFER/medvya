@@ -67,6 +67,9 @@ builder.Services.AddRateLimiter(o =>
     // Patient search per signed-in user: a desk searches a few times a minute; bulk enumeration is refused.
     o.AddPolicy(PatientEndpoints.SearchRateLimit, ctx => RateLimitPartition.GetFixedWindowLimiter(ctx.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "anonymous",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = builder.Configuration.GetValue("RateLimiting:PatientSearchPerMinute", 30), Window = TimeSpan.FromMinutes(1) }));
+    // Opening records (and revealing their numbers) per signed-in user: a desk opens a few a minute; bulk reading is refused.
+    o.AddPolicy(PatientEndpoints.RecordRateLimit, ctx => RateLimitPartition.GetFixedWindowLimiter(ctx.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "anonymous",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = builder.Configuration.GetValue("RateLimiting:PatientRecordsPerMinute", 30), Window = TimeSpan.FromMinutes(1) }));
 });
 
 var app = builder.Build();

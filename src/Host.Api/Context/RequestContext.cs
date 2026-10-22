@@ -4,15 +4,15 @@ using Medvya.BuildingBlocks.Domain;
 namespace Host.Api.Context;
 
 /// <summary>
-/// Tenant, facility and user of the current request, from the signed-in principal.
-/// shortcut: tenant_id and facility_id are placeholder claim names until the facility picker issues them (MDV-P0-012); without them both are null and tenant data stays unreachable.
+/// Tenant, facility and user of the current request, from the signed-in principal. The tenant and facility claims are set
+/// when the user picks a facility (SessionControl); before that they are null and tenant data stays unreachable.
 /// </summary>
 public sealed class RequestContext(IHttpContextAccessor accessor) : ICurrentTenant, ICurrentFacility, ICurrentUser
 {
     Guid? linkTenant;
 
-    public Guid? TenantId => linkTenant ?? Read("tenant_id");
-    public Guid? FacilityId => Read("facility_id");
+    public Guid? TenantId => linkTenant ?? Read(Host.Api.Auth.SessionControl.TenantClaim);
+    public Guid? FacilityId => Read(Host.Api.Auth.SessionControl.FacilityClaim);
 
     /// <summary>
     /// Scopes this context to the tenant named by a tenant-bound link (an invitation token) instead of the session.

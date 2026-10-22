@@ -10,6 +10,10 @@ using Medvya.BuildingBlocks.Domain;
 using Medvya.Identity.Infrastructure;
 using Medvya.Patients.Api;
 using Medvya.Patients.Infrastructure;
+using Medvya.Scheduling.Api;
+using Medvya.Scheduling.Application;
+using Medvya.Scheduling.Infrastructure;
+using Medvya.Leads.Infrastructure;
 using Medvya.Tenancy.Api;
 using Medvya.Tenancy.Infrastructure;
 using Host.Api.Observability;
@@ -27,7 +31,7 @@ builder.WebHost.ConfigureKestrel(k =>
 
 builder.AddStaffAuthentication();
 builder.Services.AddAuthorization();
-builder.Services.AddPublicSite();
+builder.AddPublicSite();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<RequestContext>();
 builder.Services.AddScoped<ICurrentTenant>(sp => sp.GetRequiredService<RequestContext>());
@@ -38,13 +42,15 @@ builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Ad
 // capability handler exists, so capability-guarded endpoints answer 403.
 if (builder.Configuration.GetConnectionString("Medvya") is { } sql)
 {
-    builder.Services.AddAuditModule(sql).AddDeniedAccessAudit().AddTenancyModule(sql).AddIdentityModule(sql).AddPatientsModule(sql).AddCapabilityPolicies();
+    builder.Services.AddAuditModule(sql).AddDeniedAccessAudit().AddTenancyModule(sql).AddIdentityModule(sql).AddPatientsModule(sql).AddSchedulingModule(sql)
+        .AddLeadsModule(sql, builder.Configuration.GetSection("Leads:Email").Get<LeadsEmailOptions>() ?? new()).AddCapabilityPolicies();
     // shortcut: only Development has a column master key (the same local file as `pnpm dev:db`); the Azure Key Vault provider
     // arrives with MDV-P0-006, and until then encrypted identifiers cannot be read anywhere else (fail closed).
     if (builder.Environment.IsDevelopment())
         LocalKeyStoreProvider.Register(() => LocalKeyStoreProvider.LoadOrCreate(builder.Configuration["ColumnEncryption:LocalKeyFile"]
             ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Medvya", "local-column-master-key.pem")));
 }
+builder.Services.Configure<SchedulingOptions>(builder.Configuration.GetSection("Scheduling"));
 builder.Services.AddHsts(o => { o.MaxAge = TimeSpan.FromDays(365); o.IncludeSubDomains = true; });
 
 var permitsPerMinute = builder.Configuration.GetValue("RateLimiting:PermitsPerMinute", 300);
@@ -78,6 +84,7 @@ app.UseStaffAuthentication();
 app.MapGet("/health", () => Results.Ok(new { status = "ok", version = typeof(Program).Assembly.GetName().Version?.ToString() }))
     .AllowAnonymous(); // public: deploy smoke tests
 app.MapStaffSession();
+app.MapSchedulingEndpoints();
 app.MapPublicSite();
 app.MapPatientEndpoints();
 if (app.Environment.IsDevelopment() && app.Configuration["Authentication:Oidc:Authority"]?.EndsWith(DevIdentityProvider.Path, StringComparison.Ordinal) == true)

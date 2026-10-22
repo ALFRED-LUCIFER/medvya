@@ -5,7 +5,9 @@ using Medvya.BuildingBlocks.Domain;
 using Medvya.BuildingBlocks.Infrastructure;
 using Medvya.Patients.Infrastructure;
 using Medvya.Patients.Infrastructure.Persistence;
+using Medvya.Scheduling.Infrastructure.Persistence;
 using Medvya.Identity.Infrastructure.Persistence;
+using Medvya.Leads.Infrastructure.Persistence;
 using Medvya.Tenancy.Infrastructure.Persistence;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -82,6 +84,8 @@ public sealed class SqlServerFixture : IAsyncLifetime
         ["migrator_user"] = "medvya_migrator", ["app_user"] = "medvya_app", ["reporting_user"] = "medvya_reporting",
         ["tenancy_user"] = "medvya_tenancy", ["audit_user"] = "medvya_audit", ["identity_user"] = "medvya_identity",
         ["patients_user"] = "medvya_patients", ["billing_user"] = "medvya_billing",
+        ["scheduling_user"] = "medvya_scheduling",
+        ["leads_user"] = "medvya_leads",
     };
 
     /// <summary>Opens a connection running as <paramref name="user"/> (EXECUTE AS USER), optionally in a tenant. Unpooled, so the impersonation dies with it.</summary>
@@ -140,6 +144,19 @@ public sealed class SqlServerFixture : IAsyncLifetime
         await identity.Database.MigrateAsync();
         await using var billing = new BillingDbContext(new DbContextOptionsBuilder<BillingDbContext>().UseSqlServer(migrator).Options, new FixedTenant(null));
         await billing.Database.MigrateAsync();
+        await using var scheduling = new SchedulingDbContext(new DbContextOptionsBuilder<SchedulingDbContext>().UseSqlServer(migrator).Options, new FixedTenant(null));
+        await scheduling.Database.MigrateAsync();
+        await using var leads = new LeadsDbContext(new DbContextOptionsBuilder<LeadsDbContext>().UseSqlServer(migrator).Options);
+        await leads.Database.MigrateAsync();
+    }
+
+    public SchedulingDbContext Scheduling(Guid? tenantId)
+    {
+        var tenant = new FixedTenant(tenantId);
+        return new SchedulingDbContext(new DbContextOptionsBuilder<SchedulingDbContext>()
+            .UseSqlServer(ConnectionString)
+            .AddInterceptors(new TenantSessionInterceptor(tenant))
+            .Options, tenant);
     }
 
     public IdentityDbContext Identity() => new(new DbContextOptionsBuilder<IdentityDbContext>().UseSqlServer(ConnectionString).Options);

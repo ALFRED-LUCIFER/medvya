@@ -37,6 +37,8 @@ public class DatabaseRoleTests(SqlServerFixture sql) : IClassFixture<SqlServerFi
     [InlineData("DROP TABLE patients.Identifiers")]
     [InlineData("ALTER SECURITY POLICY security.billing_tenant_isolation WITH (STATE = OFF)")]
     [InlineData("DROP TABLE billing.DocSequences")]
+    [InlineData("ALTER SECURITY POLICY security.scheduling_tenant_isolation WITH (STATE = OFF)")]
+    [InlineData("DROP TABLE scheduling.Templates")]
     public Task AppCannotChangeTheSchema(string ddl) => Denied("app_user", ddl);
 
     [Fact]
@@ -69,6 +71,16 @@ public class DatabaseRoleTests(SqlServerFixture sql) : IClassFixture<SqlServerFi
         await Denied("billing_user", "SELECT TOP 1 Id FROM tenancy.Tenants");
         await Denied("patients_user", "SELECT TOP 1 Id FROM billing.DocSequences");
         await Denied("migrator_user", "SELECT TOP 1 Id FROM billing.DocSequences");
+        await Run("scheduling_user", "SELECT TOP 1 Id FROM scheduling.Templates");
+        await Denied("scheduling_user", "SELECT TOP 1 Id FROM tenancy.Memberships");
+        await Denied("scheduling_user", "SELECT TOP 1 Id FROM patients.Patients");
+        await Denied("patients_user", "SELECT TOP 1 Id FROM scheduling.Templates");
+        await Denied("reporting_user", "SELECT TOP 1 Id FROM scheduling.Templates");
+        await Run("leads_user", "SELECT TOP 1 Id FROM leads.DemoRequests");
+        await Denied("leads_user", "SELECT TOP 1 Id FROM patients.Patients");
+        await Denied("leads_user", "DELETE FROM leads.DemoRequests");
+        await Denied("leads_user", "UPDATE leads.DemoRequests SET Name = N'x'");
+        await Denied("patients_user", "SELECT TOP 1 Id FROM leads.DemoRequests");
     }
 
     [Fact]

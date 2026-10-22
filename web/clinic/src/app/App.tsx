@@ -15,6 +15,7 @@ import MorePage from '../features/shell/components/MorePage';
 import ShellMessage, { ComingSoon } from '../features/shell/components/ShellMessage';
 import { allows, patientDirectory } from '../features/shell/domain/navigation';
 import { useShellController } from '../features/shell/hooks/useShellController';
+import ScheduleRoute from './ScheduleRoute';
 
 // Patient screens load on first use, keeping them out of the first-paint bundle.
 const PatientDirectoryRoute = lazy(() => import('./PatientRoutes').then(m => ({ default: m.PatientDirectoryRoute })));
@@ -56,7 +57,10 @@ export default function App({ locale, onLocaleChange }: Props) {
             <Suspense fallback={<ShellMessage busy title={t('shell.loading')} />}><Outlet /></Suspense>
           </AppShell>}>
           <Route index element={first ? <Navigate to={first.path} replace /> : <ShellMessage title={t('shell.noScreens.title')} body={t('shell.noScreens.body')} />} />
-          {shell.items.map(i => <Route key={i.id} path={i.path} element={i.id === 'register' ? registration : <ComingSoon title={t(`nav.${i.id}`)} phase={i.phase} />} />)}
+          {shell.items.map(i => <Route key={i.id} path={i.path} element={i.id === 'schedule'
+            ? <ScheduleRoute facilityId={active.facilityId} online={online} canBook={active.capabilities.RegisterBookPatients === 'Full'} />
+            : i.id === 'register' ? registration
+            : <ComingSoon title={t(`nav.${i.id}`)} phase={i.phase} />} />)}
           {searchPath && <>
             <Route path={searchPath} element={<PatientDirectoryRoute registerPath={registerPath} />} />
             <Route path={`${searchPath}/:patientId`} element={<PatientRecordRoute />} />

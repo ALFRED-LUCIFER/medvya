@@ -9,6 +9,9 @@
     <ProjectReference Include="..\Modules\Audit\Medvya.Audit.Infrastructure\Medvya.Audit.Infrastructure.csproj" />
     <ProjectReference Include="..\Modules\Patients\Medvya.Patients.Api\Medvya.Patients.Api.csproj" />
     <ProjectReference Include="..\Modules\Patients\Medvya.Patients.Infrastructure\Medvya.Patients.Infrastructure.csproj" />
+    <ProjectReference Include="..\Modules\Scheduling\Medvya.Scheduling.Api\Medvya.Scheduling.Api.csproj" />
+    <ProjectReference Include="..\Modules\Scheduling\Medvya.Scheduling.Infrastructure\Medvya.Scheduling.Infrastructure.csproj" />
+    <ProjectReference Include="..\Modules\Leads\Medvya.Leads.Infrastructure\Medvya.Leads.Infrastructure.csproj" />
     <ProjectReference Include="..\BuildingBlocks\Medvya.BuildingBlocks.Domain\Medvya.BuildingBlocks.Domain.csproj" />
   </ItemGroup>
 
@@ -17,6 +20,8 @@
     <EmbeddedResource Include="..\..\packages\ui\src\styles.css" LogicalName="PublicSite.tokens.css" />
     <EmbeddedResource Include="..\..\packages\i18n\messages\*.json" LogicalName="PublicSite.messages.%(Filename).json" />
     <EmbeddedResource Include="PublicSite\site.css" LogicalName="PublicSite.site.css" />
+    <!-- Trust centre lists: content read at runtime so they can change without a redeploy (MDV-P1-003). -->
+    <Content Update="PublicSite\trust-centre.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

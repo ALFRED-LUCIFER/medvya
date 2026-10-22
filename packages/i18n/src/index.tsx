@@ -29,6 +29,10 @@ export function makeI18n(locale: Locale, country: Country) {
     t: (key: MessageKey, vars?: Record<string, string | number>) => translate(locale, key, vars),
     formatNumber: (n: number) => new Intl.NumberFormat(tag).format(n),
     formatDate: (d: Date) => new Intl.DateTimeFormat(tag, { day: '2-digit', month: 'short', year: 'numeric' }).format(d),
+    /** 24-hour time in an IANA zone: schedules show facility time whatever the device's zone is. */
+    formatTime: (d: Date, timeZone: string) => new Intl.DateTimeFormat(tag, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone }).format(d),
+    /** A calendar date (YYYY-MM-DD) as a long day, e.g. "Monday, 19 October 2026". */
+    formatDay: (date: string) => new Intl.DateTimeFormat(tag, { dateStyle: 'full', timeZone: 'UTC' }).format(new Date(`${date}T12:00:00Z`)),
     /** Money is stored in integer minor units (PRD v2 P4 NFR). */
     formatMoney: (minor: number, currency: 'INR' | 'AED') => new Intl.NumberFormat(tag, { style: 'currency', currency }).format(minor / 100),
   };

@@ -188,6 +188,10 @@ namespace Medvya.Patients.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("TenantId", "FacilityId", "DateOfBirth");
 
+                    b.HasIndex("TenantId", "FacilityId", "FullName");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("TenantId", "FacilityId", "FullName"), new[] { "ArabicName", "DateOfBirth", "DateOfBirthEstimated", "SexAtBirth", "Mrn", "Status", "CountryCode", "RegisteredAt" });
+
                     b.HasIndex("TenantId", "FacilityId", "Mobile");
 
                     b.HasIndex("TenantId", "FacilityId", "Mrn")

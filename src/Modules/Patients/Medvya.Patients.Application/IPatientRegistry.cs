@@ -85,9 +85,9 @@ public sealed record PatientSearch(string CountryCode, string? Query, DirectoryF
 /// A privacy-safe result row (MDV-P1-018): initials, age, sex and the MRN tail only. Full demographics need the record opened,
 /// which is audited.
 /// </summary>
-public sealed record PatientSummary(Guid Id, string Initials, int AgeYears, bool AgeEstimated, SexAtBirth SexAtBirth, string MrnTail, RegistrationStatus Status);
+public sealed record PatientSearchRow(Guid Id, string Initials, int AgeYears, bool AgeEstimated, SexAtBirth SexAtBirth, string MrnTail, RegistrationStatus Status);
 
-public sealed record PatientSearchResult(SearchKind MatchedOn, IReadOnlyList<PatientSummary> Items, int Page, int PageSize, int Total);
+public sealed record PatientSearchResult(SearchKind MatchedOn, IReadOnlyList<PatientSearchRow> Items, int Page, int PageSize, int Total);
 
 /// <summary>
 /// Patients of the current tenant at the current facility, scoped by tenant query filters and row-level security.

@@ -56,6 +56,9 @@ public sealed class PatientsDbContext(DbContextOptions<PatientsDbContext> option
             e.HasIndex(x => new { x.TenantId, x.FacilityId, x.Mobile });
             // Duplicate check: patients with the same date of birth (MDV-P1-016).
             e.HasIndex(x => new { x.TenantId, x.FacilityId, x.DateOfBirth });
+            // Name search scans this narrow covering index instead of the wide table rows (LIKE '%…%' cannot seek).
+            e.HasIndex(x => new { x.TenantId, x.FacilityId, x.FullName })
+                .IncludeProperties(x => new { x.ArabicName, x.DateOfBirth, x.DateOfBirthEstimated, x.SexAtBirth, x.Mrn, x.Status, x.CountryCode, x.RegisteredAt });
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         modelBuilder.Entity<PatientIdentifier>(e =>

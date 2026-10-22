@@ -103,7 +103,7 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
         var rows = await ordered.Skip((search.Page - 1) * PatientSearch.PageSize).Take(PatientSearch.PageSize)
             .Select(p => new { p.Id, p.FullName, p.DateOfBirth, p.DateOfBirthEstimated, p.SexAtBirth, p.Mrn, p.Status, p.CountryCode })
             .ToListAsync(cancellationToken);
-        var items = rows.Select(p => new PatientSummary(p.Id, Initials(p.FullName), CountryRules.AgeOn(CountryRules.For(p.CountryCode).Today(now), p.DateOfBirth),
+        var items = rows.Select(p => new PatientSearchRow(p.Id, Initials(p.FullName), CountryRules.AgeOn(CountryRules.For(p.CountryCode).Today(now), p.DateOfBirth),
             p.DateOfBirthEstimated, p.SexAtBirth, Tail(p.Mrn), p.Status)).ToList();
         return new(term.Kind, items, search.Page, PatientSearch.PageSize, total);
     }

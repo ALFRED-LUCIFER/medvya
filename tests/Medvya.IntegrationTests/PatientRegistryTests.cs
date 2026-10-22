@@ -108,9 +108,9 @@ public class PatientRegistryTests(SqlServerFixture sql) : IClassFixture<SqlServe
         Assert.Equal(SearchKind.Name, result.MatchedOn);
         var row = Assert.Single(result.Items);
         var age = CountryRules.India.Today(DateTimeOffset.UtcNow).Year - 1980; // born 1 Jan 1980
-        Assert.Equal(new PatientSummary(registered.PatientId, "KI", age, false, SexAtBirth.Female, registered.Mrn[^4..], RegistrationStatus.Complete), row);
+        Assert.Equal(new PatientSearchRow(registered.PatientId, "KI", age, false, SexAtBirth.Female, registered.Mrn[^4..], RegistrationStatus.Complete), row);
         // The row type itself has no name, phone, date of birth or identifier to leak.
-        Assert.Equal(["AgeEstimated", "AgeYears", "Id", "Initials", "MrnTail", "SexAtBirth", "Status"], typeof(PatientSummary).GetProperties().Select(p => p.Name).Order());
+        Assert.Equal(["AgeEstimated", "AgeYears", "Id", "Initials", "MrnTail", "SexAtBirth", "Status"], typeof(PatientSearchRow).GetProperties().Select(p => p.Name).Order());
     }
 
     [Fact]

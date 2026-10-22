@@ -6,17 +6,13 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Medvya.Tenancy.Infrastructure;
 
-/// <summary>One indexed membership lookup per check; the tenant comes from the query filter and row-level security.</summary>
-public sealed class StaffAccess(TenancyDbContext db, ICurrentUser user, ICurrentFacility facility) : IStaffAccess
+/// <summary>The active membership's role at the session's facility, through the facility directory; tenant from filters and RLS.</summary>
+public sealed class StaffAccess(TenancyDbContext db, IFacilityDirectory facilities, ICurrentUser user, ICurrentFacility facility) : IStaffAccess
 {
     public async Task<Access> AccessAsync(Capability capability, CancellationToken cancellationToken = default)
     {
         if (user.UserId is not { } userId || facility.FacilityId is not { } facilityId) return Access.None;
-        var role = await db.Memberships
-            .Where(m => m.UserId == userId && m.FacilityId == facilityId && m.Status == MembershipStatus.Active)
-            .Select(m => (Role?)m.Role)
-            .SingleOrDefaultAsync(cancellationToken);
-        return role is { } r ? RoleMatrix.Of(r, capability) : Access.None;
+        return await facilities.ActiveRoleAsync(userId, facilityId, cancellationToken) is { } role ? RoleMatrix.Of(role, capability) : Access.None;
     }
 
     public Task<string?> TenantCountryAsync(CancellationToken cancellationToken = default) =>

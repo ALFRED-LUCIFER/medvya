@@ -1,0 +1,11 @@
+@model PublicFormPage
+@{
+    var p = Model;
+    var id = $"{p.FormId}-name";
+}
+<input type="hidden" name="Form.Started" value="@p.Started">
+<div class="field">
+    <label for="@id">@p.T("site.form.name")</label>
+    <input id="@id" name="Form.Name" value="@p.Contact.Name" maxlength="100" autocomplete="name" aria-invalid="@p.Invalid("Name")" aria-describedby="@p.Described(id, "Name")" autofocus="@p.Focus(id)">
+    @if (p.Errors.ContainsKey("Name")) { <p id="@id-error" class="field-error">@p.FieldError("Name")</p> }
+</div>

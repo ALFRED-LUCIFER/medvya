@@ -3,6 +3,7 @@ using Medvya.BuildingBlocks.Domain;
 using Medvya.BuildingBlocks.Infrastructure;
 using Medvya.Identity.Domain;
 using Medvya.Identity.Infrastructure.Persistence;
+using Medvya.Leads.Infrastructure.Persistence;
 using Medvya.Patients.Domain;
 using Medvya.Patients.Infrastructure;
 using Medvya.Patients.Infrastructure.Persistence;
@@ -155,6 +156,8 @@ public static class SyntheticSeed
             await audit.Database.MigrateAsync(ct);
         await using var identity = new IdentityDbContext(new DbContextOptionsBuilder<IdentityDbContext>().UseSqlServer(connectionString).Options);
         await identity.Database.MigrateAsync(ct);
+        await using (var leads = new LeadsDbContext(new DbContextOptionsBuilder<LeadsDbContext>().UseSqlServer(connectionString).Options))
+            await leads.Database.MigrateAsync(ct);
         await using (var admin = new SqlConnection(connectionString))
         {
             await admin.OpenAsync(ct);

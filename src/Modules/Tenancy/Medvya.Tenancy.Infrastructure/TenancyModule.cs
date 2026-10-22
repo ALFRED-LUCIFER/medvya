@@ -9,7 +9,7 @@ namespace Medvya.Tenancy.Infrastructure;
 
 public static class TenancyModule
 {
-    /// <summary>Needs the Audit module too: flag changes are audited.</summary>
+    /// <summary>Needs the Audit module (flag changes and invitations are audited) and an IEmailSender (invitations).</summary>
     public static IServiceCollection AddTenancyModule(this IServiceCollection services, string connectionString)
     {
         services.TryAddScoped<TenantSessionInterceptor>();
@@ -17,6 +17,7 @@ public static class TenancyModule
             .AddDbContext<TenancyDbContext>((sp, o) => o.UseSqlServer(connectionString).AddInterceptors(sp.GetRequiredService<TenantSessionInterceptor>()))
             .AddScoped<IFeatureFlags, FeatureFlags>()
             .AddScoped<IFacilityDirectory, FacilityDirectory>()
+            .AddScoped<IInvitations, Invitations>()
             .AddScoped<IStaffAccess, StaffAccess>();
     }
 }

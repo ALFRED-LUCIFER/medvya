@@ -23,6 +23,9 @@ public class BillingRulesTests
     {
         Assert.Throws<InvalidOperationException>(() => Inr(100) + Aed(100));
         Assert.Throws<InvalidOperationException>(() => Inr(100) - Aed(100));
+        Assert.Throws<ArgumentNullException>(() => null! + Inr(100));
+        Assert.Throws<ArgumentNullException>(() => null! - Inr(100));
+        Assert.Throws<ArgumentNullException>(() => Inr(100) + null!);
         Assert.Throws<ArgumentOutOfRangeException>(() => Currency.From("USD"));
         Assert.Same(Currency.Aed, Currency.From("AED"));
     }
@@ -36,6 +39,7 @@ public class BillingRulesTests
         Assert.Throws<OverflowException>(() => Inr(long.MaxValue / 2 + 1).Times(2));
         Assert.Throws<OverflowException>(() => Inr(long.MaxValue).ApplyRate(10_001));
         Assert.Equal(Inr(long.MaxValue), Inr(long.MaxValue).ApplyRate(10_000)); // the intermediate product does not overflow
+        Assert.Equal(Inr(long.MaxValue), Inr(-1) - Inr(long.MinValue)); // the exact edge still fits
     }
 
     [Theory]

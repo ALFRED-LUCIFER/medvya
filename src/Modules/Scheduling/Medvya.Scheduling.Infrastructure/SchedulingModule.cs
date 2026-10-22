@@ -19,6 +19,7 @@ public static class SchedulingModule
             .AddDbContext<SchedulingDbContext>((sp, o) => o.UseSqlServer(connectionString).AddInterceptors(sp.GetRequiredService<TenantSessionInterceptor>()))
             .AddScoped<SchedulingContext>()
             .AddScoped<IScheduleService, ScheduleService>()
-            .AddScoped<IBookingService, BookingService>();
+            .AddScoped<IBookingService, BookingService>()
+            .AddScoped<IFrontDeskService, FrontDeskService>();
     }
 }

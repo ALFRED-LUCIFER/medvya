@@ -667,6 +667,12 @@ ac:
 - Accepting books the slot and removes the patient from the waitlist.
 
 === MDV-P1-028
+status: In progress
+progress:
+- Open [PR #62](https://github.com/ALFRED-LUCIFER/medvya/pull/62): P-01 board at /front-desk (7 columns with counts and a CTA each, nonclinical cards: reason category only, "Registration incomplete", wait timer on the server clock); check-in in two taps with a name + date-of-birth identity check; check-in time recorded as `medvya.front_desk.check_in.duration` (exit gate 3)
+- Server-side state machine (one step forward, else 409); each move is a conditional update + VisitStatusEvent in one transaction, so a repeat or a second desk never checks in twice (8 concurrent check-ins on SQL Server → one event); audited endpoints; board payload tested against an exact field allowlist; mutation-checked (guard, idempotency, conditional update, payload, roles); browser-verified (en, ar RTL, keyboard, axe, 200 % zoom, tablet)
+- Payment on Billing cards follows the `billing.invoices` flag: off (all of P1) a disabled placeholder, on a link to Billing (P4); merged with main after #59 and #58 landed
+- Left: real-time updates and call-in room (MDV-P1-029); walk-in (MDV-P1-025); waitlist (MDV-P1-027); workload panel (MDV-P1-030); real-API browser check once sign-in issues the tenant and facility claims (MDV-P0-012)
 title: Reception board with visit columns and one-tap check-in
 type: Story
 epic: MDV-P1-E07

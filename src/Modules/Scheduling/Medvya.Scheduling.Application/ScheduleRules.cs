@@ -46,6 +46,7 @@ public static class ScheduleRules
             var (h, field) = (t.Hours[i], $"hours[{i}]");
             if (!Enum.IsDefined(h.Weekday)) errors.Add(new(field, "weekday"));
             else if (h.Start >= h.End) errors.Add(new(field, "range")); // same-day sessions only
+            else if (!OnFiveMinutes(h.Start) || !OnFiveMinutes(h.End)) errors.Add(new(field, "five_minutes")); // slot units are 5 minutes
             else if (t.Hours.Take(i).Any(o => o.Weekday == h.Weekday && o.Start < h.End && h.Start < o.End)) errors.Add(new(field, "overlap"));
             if (h.Room?.Length > MaxRoom) errors.Add(new(field + ".room", "too_long"));
         }
@@ -54,6 +55,7 @@ public static class ScheduleRules
             var (b, field) = (t.Breaks[i], $"breaks[{i}]");
             if (!Enum.IsDefined(b.Weekday)) errors.Add(new(field, "weekday"));
             else if (b.Start >= b.End) errors.Add(new(field, "range"));
+            else if (!OnFiveMinutes(b.Start) || !OnFiveMinutes(b.End)) errors.Add(new(field, "five_minutes"));
             else if (!t.Hours.Any(h => h.Weekday == b.Weekday && h.Start <= b.Start && b.End <= h.End)) errors.Add(new(field, "outside_hours"));
             else if (t.Breaks.Take(i).Any(o => o.Weekday == b.Weekday && o.Start < b.End && b.Start < o.End)) errors.Add(new(field, "overlap"));
             if (b.Label?.Length > MaxLabel) errors.Add(new(field + ".label", "too_long"));
@@ -67,6 +69,8 @@ public static class ScheduleRules
         }
         SchedulingValidationException.ThrowIfAny(errors);
     }
+
+    static bool OnFiveMinutes(TimeOnly t) => t.Minute % 5 == 0 && t.Second == 0 && t.Millisecond == 0;
 
     /// <summary>Slots a visit of this type takes: its configured length in slots, else one slot.</summary>
     public static int SlotsFor(ScheduleTemplate t, VisitType type) =>

@@ -18,6 +18,7 @@ public static class SchedulingModule
         return services
             .AddDbContext<SchedulingDbContext>((sp, o) => o.UseSqlServer(connectionString).AddInterceptors(sp.GetRequiredService<TenantSessionInterceptor>()))
             .AddScoped<SchedulingContext>()
+            .AddScoped<DoctorDayTransaction>()
             .AddScoped<IScheduleService, ScheduleService>()
             .AddScoped<IBookingService, BookingService>()
             .AddScoped<IFrontDeskService, FrontDeskService>();

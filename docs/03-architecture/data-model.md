@@ -22,7 +22,7 @@ Sources: Software Architecture §6–8 (written for PostgreSQL), Foundations ERD
 | `timestamptz` | `datetimeoffset(3)` |
 | `text` | `nvarchar(n)` / `nvarchar(max)` (Unicode needed for Arabic, Hindi, Tamil) |
 | RLS policies | `CREATE SECURITY POLICY` with an inline TVF predicate on `SESSION_CONTEXT(N'tenant_id')`, FILTER + BLOCK predicates |
-| Exclusion constraint (no overlapping slots) | Unique index `(doctor_id, location_id, slot_start)` + serializable transaction + `sp_getapplock` per doctor-day (P1-07) |
+| Exclusion constraint (no overlapping slots) | Unique index `(doctor_id, location_id, slot_start)` on SCHEDULE_SLOT (one row per 5-minute unit an appointment occupies) + serializable transaction + `sp_getapplock` per doctor-day (P1-07, MDV-P1-022) |
 | `pgaudit` | Azure SQL auditing → Log Analytics + immutable storage. App audit in **ledger tables** |
 | `pgcrypto` / app encryption | **Always Encrypted** (deterministic for exact lookups on IDs; randomized + VBS enclave for range/LIKE) |
 | Partial index on active follow-ups | Filtered index `WHERE status IN (...)` |
@@ -54,7 +54,7 @@ CARE_PLAN · CARE_TASK (`owner_membership_id`, `task_type`, `clinical_status`, `
 ## Key constraints
 
 - `(tenant_id, facility_id, local_patient_number)` unique (MRN facility-scoped).
-- `(doctor_id, location_id, slot_start)` unique for active appointments (filtered index excluding cancelled).
+- `(doctor_id, location_id, slot_start)` unique on SCHEDULE_SLOT: every 5-minute unit of an occupying appointment has a row, deleted when the appointment is cancelled, marked no-show or moved, so overlaps on different slot grids are refused too (MDV-P1-022).
 - NOTE_VERSION: no UPDATE permission for the app user once `signed_at` is set (ledger table, append-only).
 - AUDIT_EVENT, CONSENT_RECEIPT, NOTE_VERSION (signed), INVOICE (issued) live in **ledger tables**. Digests are stored in immutable Blob and verified on schedule.
 - DOC_SEQUENCE increments inside the same transaction as issuing (gapless per country rules). Built in MDV-P4-001 as `billing.DocSequences`, one row per (tenant, country, document type, financial year, prefix), unique. `DocumentNumbering` runs one `MERGE … WITH (HOLDLOCK)` in the caller's transaction (it refuses to run without one): concurrent issuers of a series wait on the row lock, and a rollback returns the number. A trigger (`TR_DocSequences_OnlyMoveForward`) lets a series only start at 1 and move forward one number at a time with its key unchanged, because the app role needs `UPDATE` for the MERGE and could otherwise rewind or skip numbers. No SQL `SEQUENCE`/`IDENTITY`, which leave gaps on rollback. Formats come from the billing country rules: India `INV/25-26/00042`, financial year 1 April–31 March in India time, at most 16 characters (CGST Rule 46(b)); UAE `TI-AD-00042`, one continuous series, because the design's numbers carry no year and a yearly reset would repeat them. Both formats are reviewed by the advisers in MDV-P4-031.

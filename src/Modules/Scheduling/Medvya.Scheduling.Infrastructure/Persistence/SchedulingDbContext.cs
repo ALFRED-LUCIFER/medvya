@@ -14,6 +14,7 @@ public sealed class SchedulingDbContext(DbContextOptions<SchedulingDbContext> op
     public DbSet<ScheduleTemplate> Templates => Set<ScheduleTemplate>();
     public DbSet<Appointment> Appointments => Set<Appointment>();
     public DbSet<SlotHold> SlotHolds => Set<SlotHold>();
+    public DbSet<ScheduleSlot> ScheduleSlots => Set<ScheduleSlot>();
     public DbSet<VisitStatusEvent> StatusEvents => Set<VisitStatusEvent>();
     public DbSet<OutboxEvent> Outbox => Set<OutboxEvent>();
 
@@ -51,6 +52,14 @@ public sealed class SchedulingDbContext(DbContextOptions<SchedulingDbContext> op
             e.Property(x => x.Channel).HasConversion<string>().HasMaxLength(20);
             e.HasIndex(x => new { x.TenantId, x.FacilityId, x.CalendarId, x.Start });
             e.HasIndex(x => new { x.TenantId, x.PatientId });
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<ScheduleSlot>(e =>
+        {
+            e.ToTable("ScheduleSlots");
+            e.HasOne<Appointment>().WithMany().HasForeignKey(x => x.AppointmentId).OnDelete(DeleteBehavior.Restrict);
+            // No double booking (MDV-P1-022): one appointment per calendar, location and 5-minute unit, enforced by the database.
+            e.HasIndex(x => new { x.CalendarId, x.FacilityId, x.SlotStart }).IsUnique();
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         modelBuilder.Entity<SlotHold>(e =>

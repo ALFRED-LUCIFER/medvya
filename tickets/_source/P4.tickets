@@ -18,7 +18,9 @@ progress:
 - Country rules: India `INV/25-26/00042` (April–March, max 16 characters), UAE `TI-AD-00042` (continuous series: the design carries no year); amount in words (lakh/crore, million) matches the design examples
 - Tests on SQL Server 2022: 110 concurrent issues with 10 failing give exactly 1..100, rollback returns its number, FY rollover per prefix, cross-tenant blocked; no float/decimal in domain types or database columns; mutation-checked (unlocked increment, side-connection increment, RLS off, DELETE grant, rounding, overflow)
 - Review fix (PR #66): trigger `TR_DocSequences_OnlyMoveForward` stops the app role's UPDATE from rewinding, skipping or moving a series (it was only denied DELETE); MERGE output goes INTO a table variable; Money operators throw ArgumentNullException on null
-- Left: issuing invoices and per-facility prefix configuration (MDV-P4-004), cash rounding (MDV-P4-009/012), adviser review of formats (MDV-P4-031)
+- Fix (numbering capacity and words): India prefixes 1–3 characters so every series reaches 999,999 numbers a financial year within the 16 characters of [CGST Rule 46(b)](https://taxinformation.cbic.gov.in/content/html/tax_repository/gst/rules/cgst_rules/active/chapter6/rule46_v1.00.html) (5-digit padding, grows past it); the number after the last that fits is refused with `series_exhausted` before the MERGE changes anything, so no number is taken and the caller's transaction stays usable; "one paisa" / "two paise" (fils unchanged); mutation-checked (length guard, prefix limit, paisa)
+- Decided: UAE keeps one continuous, gap-free series with no yearly reset (VAT Executive Regulation Art. 59: sequential number, or a unique number identifying the invoice and its order; the FTA flags gaps; [Mondaq](https://www.mondaq.com/sales-taxes-vat-gst/670546/tax-invoice-under-uae-vat-law), [Wafeq](https://www.wafeq.com/en-ae/tax-and-reporting/vat-invoice-requirements-in-uae)). Amount in words follows the Indian convention ("and" only before paise or fils, "only" ends the phrase, no "and zero paise"; [Manager forum](https://forum.manager.io/t/amount-in-words-bug-india-paisa-paise/22703), [Petpooja](https://blog.petpooja.com/free-tools/amount-in-words-converter-free/)). Cash rounding is decided and recorded as acceptance criteria in MDV-P4-004 (India invoice round-off), MDV-P4-009 (UAE cash collection) and MDV-P4-012 (day close)
+- Left: issuing invoices and per-facility prefix configuration (MDV-P4-004), cash rounding (MDV-P4-004/009/012), sign-off of the printed formats (MDV-P4-031)
 title: Money and legal document numbering foundation (minor units, DOC_SEQUENCE per country and financial year)
 type: Task
 epic: MDV-P4-E01
@@ -105,6 +107,8 @@ ac:
 - Discounts require a reason and are audited; issued invoices are immutable (ledger) — corrections via credit note.
 - Billing screens never display clinical notes or diagnoses (security test on payloads).
 - Issuing assigns the legal number from DOC_SEQUENCE.
+- India: line items, tax and totals are exact to the paisa (integer minor units). The invoice carries a separate invoice-level "Round off" line that rounds the payable total to the nearest rupee (50 paise or more rounds up, less than 50 paise rounds down); the e-invoice `RndOffAmt` carries the same amount. Section 170 CGST rounding applies to amounts payable to the government, not to each invoice line (test: ₹1,234.50 → +₹0.50, ₹1,234.49 → −₹0.49). Sources: [CGST s.170](https://www.knowyourgst.com/gstlaw/cgst-act/170-rounding-off-of-tax-etc-170/), [GimBooks](https://www.gimbooks.com/blog/gst-invoice-round-off-differences/).
+- UAE: invoice lines, VAT and totals are exact to the fils, with no invoice-level rounding (cash-only rounding is MDV-P4-009).
 
 === MDV-P4-005
 title: Receipts, tax invoices, credit notes, advance receipts for India GST and UAE VAT in A5 and 80 mm thermal (P-15)
@@ -215,6 +219,8 @@ ac:
 - Each split is a PAYMENT_SPLIT with its own state; the invoice is Paid only when all non-cash splits are confirmed.
 - Remaining balance creates a DUE with due date and appears in dues (P-12).
 - Advance usage reduces the advance balance atomically.
+- India: the amount collected is the invoice's rounded payable total (the round-off line is on the invoice, MDV-P4-004); payments never round again.
+- UAE: card and online payments are exact to the fils. For a cash split only, the amount collected may be rounded to 25 fils, always down (never against the patient), and the difference is recorded as a rounding line on the payment (test: AED 10.40 cash → 10.25 collected, 0.15 rounding; 10.25 → no rounding line). The Ministry of Economy requires exact change and no federal rounding rule was found. Sources: [Gulf News, Abu Dhabi 25 fils](https://gulfnews.com/your-money/taxation/prices-to-be-rounded-up-to-25-fils-in-abu-dhabi-1.2156315), [Gulf News, small change](https://gulfnews.com/your-money/taxation/vat-small-change-issue-traders-asked-to-not-charge-more-than-20-fils-in-addition-to-the-bill-amount-1.2151742).
 
 === MDV-P4-010
 title: Packages and advances with session redemption (P-11)
@@ -280,6 +286,7 @@ ac:
 - Closing with variance ≠ 0 requires a note and a second, different staff user's confirmation.
 - Closed sessions are immutable; corrections create an adjustment entry.
 - Pilot clinics close with zero unexplained variance for 10 consecutive days (exit gate 1, tracked in MDV-P4-033).
+- UAE cash rounding lines (MDV-P4-009, always down to 25 fils) are listed in the summary and already reduce expected cash, so they never show as variance (test).
 
 === MDV-P4-013
 title: Doctor revenue and payout report (P-09)

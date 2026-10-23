@@ -9,6 +9,10 @@ import {
   alertLooks, ClinicalAlert, IdentityBanner, provenanceLooks, ProvenanceTag,
   RecordingPill, recordingLooks, scheduleLooks, frontDeskLooks, StatusChip, statusLooks, SystemState, systemStates, type Look,
 } from './primitives';
+import { Button } from './components/ui/button';
+import { Input } from './components/ui/input';
+import { Select, SelectTrigger, SelectValue } from './components/ui/select';
+import { Textarea } from './components/ui/textarea';
 
 const ui = (n: React.ReactNode) => render(<>{n}</>);
 // Design tokens are defined once, in styles.css; read them so the test checks what ships.
@@ -45,6 +49,24 @@ describe('clinical primitives', () => {
     // Navy navigation text on the sidebar and on the hovered/current item.
     for (const fg of ['nav-ink', 'nav-muted']) for (const bg of ['brand-950', 'nav-hover'])
       expect(contrast(tokens[fg], tokens[bg]), `${fg} on ${bg}`).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it('meets WCAG 1.4.11 non-text contrast (3:1) for control boundaries and the focus ring', () => {
+    // Every surface a control sits on or fills with (outline-button hover is accent). Only the light theme ships today.
+    const surfaces = ['background', 'surface', 'card', 'popover', 'secondary', 'muted', 'accent'];
+    // input: shadcn Input/Select/Textarea and outline Button; line-strong: public-site inputs and outline button.
+    for (const boundary of ['input', 'line-strong', 'ring']) for (const bg of surfaces)
+      expect(contrast(tokens[boundary]!, tokens[bg]!), `${boundary} on ${bg}`).toBeGreaterThanOrEqual(3);
+    // The controls draw that boundary, and keep the global focus ring instead of a faint halo.
+    const { container } = ui(<>
+      <Input /><Textarea /><Select><SelectTrigger><SelectValue /></SelectTrigger></Select><Button variant="outline">x</Button>
+    </>);
+    const controls = container.querySelectorAll('input, textarea, button');
+    expect(controls).toHaveLength(4);
+    for (const c of controls) {
+      expect(c.classList, c.outerHTML).toContain('border-input');
+      expect(c.classList, c.outerHTML).not.toContain('outline-none');
+    }
   });
 
   it('never conveys status by colour alone: each state has words and a shape cue', () => {

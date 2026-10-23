@@ -70,7 +70,7 @@ export default function PatientRecord(props: Props) {
           {t('patients.record.summary', { mrn: p.mrn, age: p.ageYears, sex: t(`patients.sex.${p.sexAtBirth}`) })}
         </p>
         {p.status === 'Incomplete' && (
-          <p className="mt-1 inline-flex items-center gap-1.5 self-start rounded-sm border border-line-strong px-2 py-1 text-sm font-bold text-warning-700">
+          <p className="mt-1 inline-flex items-center gap-1.5 self-start rounded-sm border px-2 py-1 text-sm font-bold text-warning-700">
             <TriangleAlert className="size-4" aria-hidden />{t('patients.status.Incomplete')}
           </p>
         )}

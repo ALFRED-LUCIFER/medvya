@@ -18,7 +18,7 @@ export default function PatientSummaryLine({ row }: { row: PatientSummary }) {
         <span className="font-mono text-xs text-muted-foreground"><bdi dir="ltr">{t('patients.mrnTail', { mrn: row.mrnTail })}</bdi></span>
       </span>
       {row.status === 'Incomplete' && (
-        <span aria-hidden className="inline-flex shrink-0 items-center gap-1 rounded-sm border border-line-strong bg-card px-2 py-1 text-xs font-bold text-warning-700">
+        <span aria-hidden className="inline-flex shrink-0 items-center gap-1 rounded-sm border bg-card px-2 py-1 text-xs font-bold text-warning-700">
           <TriangleAlert className="size-3.5" aria-hidden />{t('patients.status.Incomplete')}
         </span>
       )}

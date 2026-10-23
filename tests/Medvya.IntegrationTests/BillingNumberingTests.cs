@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using Medvya.Billing.Application;
 using Medvya.Billing.Domain;
 using Medvya.Billing.Infrastructure;
+using Medvya.Billing.Infrastructure.Persistence;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 
@@ -72,7 +73,7 @@ public class BillingNumberingTests(SqlServerFixture sql) : IClassFixture<SqlServ
         Assert.Equal("INV/26-27/00001", (await Issue(tenant, "IN", DocumentType.Invoice, "INV", lastMinute)).Value);
         Assert.Equal("INV/26-27/00002", (await Issue(tenant, "IN", DocumentType.Invoice, "INV", lastMinute)).Value);
         Assert.Equal("INV/27-28/00001", (await Issue(tenant, "IN", DocumentType.Invoice, "INV", firstMinute)).Value);
-        Assert.Equal("INVB/27-28/00001", (await Issue(tenant, "IN", DocumentType.Invoice, "INVB", firstMinute)).Value); // own series per prefix
+        Assert.Equal("INB/27-28/00001", (await Issue(tenant, "IN", DocumentType.Invoice, "INB", firstMinute)).Value); // own series per prefix
         Assert.Equal("INV/27-28/00001", (await Issue(tenant, "IN", DocumentType.CreditNote, "INV", firstMinute)).Value); // and per document type
         Assert.Equal("INV/27-28/00002", (await Issue(tenant, "IN", DocumentType.Invoice, "INV", firstMinute)).Value);
 
@@ -109,6 +110,39 @@ public class BillingNumberingTests(SqlServerFixture sql) : IClassFixture<SqlServ
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
             new DocumentNumbering(none, new SqlServerFixture.FixedTenant(null)).IssueAsync("IN", DocumentType.Invoice, "INV", October));
     }
+
+    [Fact]
+    public async Task AFullIndiaSeriesIsRefusedWithoutTakingANumber()
+    {
+        var tenant = Guid.NewGuid();
+        // 999,998 numbers already issued. The trigger only lets a series start at 1, so the seed switches it off inside its own
+        // transaction (DDL is transactional: other sessions never see the trigger off).
+        await using (var seed = sql.Billing(tenant))
+        {
+            await using var seedTx = await seed.Database.BeginTransactionAsync();
+            await seed.Database.ExecuteSqlAsync($"DISABLE TRIGGER billing.TR_DocSequences_OnlyMoveForward ON billing.DocSequences");
+            seed.DocSequences.Add(new DocSequence { Id = Guid.NewGuid(), TenantId = tenant, CountryCode = "IN", DocumentType = DocumentType.Invoice, FinancialYear = "26-27", Prefix = "INV", NextNumber = 999_999 });
+            await seed.SaveChangesAsync();
+            await seed.Database.ExecuteSqlAsync($"ENABLE TRIGGER billing.TR_DocSequences_OnlyMoveForward ON billing.DocSequences");
+            await seedTx.CommitAsync();
+        }
+
+        Assert.Equal("INV/26-27/999999", (await Issue(tenant, "IN", DocumentType.Invoice, "INV", October)).Value); // 16 characters
+
+        await using var db = sql.Billing(tenant);
+        await using var tx = await db.Database.BeginTransactionAsync();
+        var numbering = new DocumentNumbering(db, new SqlServerFixture.FixedTenant(tenant));
+        var refused = await Assert.ThrowsAsync<DocumentNumberingException>(() => numbering.IssueAsync("IN", DocumentType.Invoice, "INV", October));
+        Assert.Equal("series_exhausted", refused.Code);
+        Assert.Equal(1_000_000, await NextNumber(db, "INV")); // not taken, even inside the issuing transaction
+        // The transaction is still usable: the caller can go on (here: another series) or roll back.
+        Assert.Equal("RCT/26-27/00001", (await numbering.IssueAsync("IN", DocumentType.Receipt, "RCT", October)).Value);
+        await tx.RollbackAsync();
+        Assert.Equal(1_000_000, await NextNumber(db, "INV"));
+    }
+
+    static Task<long> NextNumber(BillingDbContext db, string prefix) =>
+        db.DocSequences.AsNoTracking().Where(s => s.Prefix == prefix).Select(s => s.NextNumber).SingleAsync();
 
     [Fact]
     public async Task TheAppRoleCannotRewindSkipOrMoveASeries()

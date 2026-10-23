@@ -36,8 +36,8 @@ public sealed record Currency
 /// All arithmetic is checked (overflow throws) and refuses to mix currencies. Fractions of a minor unit only arise from a rate
 /// (tax, percentage discount) and are rounded half away from zero to the currency's minor unit, the commercial rule used for
 /// GST (paise) and UAE VAT (fils).
-/// shortcut: no cash rounding (India rupee round-off, UAE 25 fils) yet; add it with cash payments and day close (MDV-P4-009, MDV-P4-012)
-/// once the advisers confirm it (MDV-P4-031).
+/// Cash rounding is not a Money rule but a separate document line, decided in the tickets: India invoice "Round off" to the
+/// rupee (MDV-P4-004), UAE cash only, down to 25 fils (MDV-P4-009, MDV-P4-012).
 /// </summary>
 public sealed record Money
 {

@@ -29,6 +29,9 @@ namespace Medvya.Leads.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<DateTimeOffset?>("ConsentedAt")
+                        .HasColumnType("datetimeoffset");
+
                     b.Property<string>("Country")
                         .IsRequired()
                         .HasMaxLength(5)
@@ -47,6 +50,11 @@ namespace Medvya.Leads.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NoticeVersion")
+                        .HasMaxLength(20)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(20)");
 
                     b.Property<string>("Organisation")
                         .IsRequired()
@@ -79,6 +87,9 @@ namespace Medvya.Leads.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<DateTimeOffset?>("ConsentedAt")
+                        .HasColumnType("datetimeoffset");
+
                     b.Property<string>("Country")
                         .IsRequired()
                         .HasMaxLength(2)
@@ -93,6 +104,11 @@ namespace Medvya.Leads.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NoticeVersion")
+                        .HasMaxLength(20)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(20)");
 
                     b.Property<string>("Phone")
                         .HasMaxLength(20)

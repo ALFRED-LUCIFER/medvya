@@ -97,6 +97,15 @@ textarea { resize: vertical; }
 .field-error { font-size: 13px; font-weight: 700; color: var(--color-danger-700); }
 .field-error::before { content: "! "; }
 .hp { display: none; }
+/* Privacy notice and consent (MDV-P1-002/003): the whole label row is the 44px target. */
+.notice { padding: 12px 14px; border: 1px solid var(--color-line); border-radius: var(--radius-md); background: var(--color-card); font-size: 13.5px; line-height: 1.5; }
+.notice h3 { margin: 0 0 6px; font-size: 14.5px; font-weight: 800; color: var(--color-brand-950); }
+.notice ul { list-style: disc; padding-inline-start: 20px; margin-block: 4px 6px; }
+.notice p + p { margin-block-start: 6px; }
+.notice a { overflow-wrap: anywhere; }
+.check { display: flex; gap: 10px; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; cursor: pointer; }
+.check input { flex-shrink: 0; width: 24px; height: 24px; min-height: 0; margin: 0; padding: 0; accent-color: var(--color-brand-700); }
+.check input[aria-invalid="true"]:not(:focus-visible) { outline: 2px solid var(--color-danger-700); outline-offset: 2px; }
 form .button { align-self: flex-start; min-height: 48px; padding: 0 20px; font-size: 15px; }
 
 .site-footer { padding: 24px 16px 32px; border-block-start: 1px solid var(--color-line); background: var(--color-surface); }

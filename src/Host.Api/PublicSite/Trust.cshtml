@@ -79,6 +79,10 @@
         {
             <p class="success" role="status">@p.T("site.demo.sent")</p>
         }
+        else if (p.PrivacyContact is null)
+        {
+            <p class="note">@p.T("site.form.closed")</p>
+        }
         else
         {
             <partial name="_FormErrors" />
@@ -110,6 +114,7 @@
                     <textarea id="demo-message" name="Form.Message" rows="4" maxlength="1000" aria-invalid="@p.Invalid("Message")" aria-describedby="@p.Described("demo-message", "Message")" autofocus="@p.Focus("demo-message")">@p.Form.Message</textarea>
                     @if (p.Errors.ContainsKey("Message")) { <p id="demo-message-error" class="field-error">@p.FieldError("Message")</p> }
                 </div>
+                <partial name="_PrivacyNotice" />
                 <button class="button button-primary" type="submit">@p.T("site.demo.submit")</button>
             </form>
         }

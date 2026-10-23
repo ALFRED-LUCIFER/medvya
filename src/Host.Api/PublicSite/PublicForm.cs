@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Threading.RateLimiting;
+using Medvya.Leads.Domain;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -19,6 +20,8 @@ public class ContactForm
     public string? Started { get; set; }
     /// <summary>Honeypot, hidden from people. Anything typed here is a bot.</summary>
     public string? Website { get; set; }
+    /// <summary>The unticked-by-default box under the privacy notice.</summary>
+    public bool Consent { get; set; }
 }
 
 /// <summary>
@@ -34,11 +37,18 @@ public sealed class PublicFormGuard : IDisposable
     public PublicFormGuard(IDataProtectionProvider dataProtection, IConfiguration config)
     {
         protector = dataProtection.CreateProtector("PublicSite.Form.Started");
+        PrivacyContact = config["PublicSite:PrivacyContact"] is { Length: > 0 } contact ? contact : null;
         minimumFillTime = TimeSpan.FromSeconds(config.GetValue("PublicSite:MinimumFillSeconds", 3));
         var perHour = config.GetValue("PublicSite:SubmissionsPerHour", 5);
         limiter = PartitionedRateLimiter.Create<string, string>(ip => RateLimitPartition.GetFixedWindowLimiter(ip,
             _ => new FixedWindowRateLimiterOptions { PermitLimit = perHour, Window = TimeSpan.FromHours(1) }));
     }
+
+    /// <summary>
+    /// Where a visitor withdraws consent or asks for deletion, named in the privacy notice. Without it the notice is incomplete, so no
+    /// form is offered. shortcut: set only in Development until the real address exists (MDV-P1-044).
+    /// </summary>
+    public string? PrivacyContact { get; }
 
     public string Start() => protector.Protect(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString(CultureInfo.InvariantCulture));
 
@@ -97,6 +107,16 @@ public abstract class PublicFormPage(SiteText text, PublicFormGuard guard) : Pub
     /// <summary>Prefix of the form's element ids, e.g. "demo" for demo-name.</summary>
     public abstract string FormId { get; }
 
+    // Privacy notice at the point of collection (DPDP Rules 2025 r.3, UAE PDPL Art. 13): what is collected, why, and how to withdraw.
+    public string? PrivacyContact => guard.PrivacyContact;
+    /// <summary>Label keys of every field the form collects, listed in the notice.</summary>
+    public abstract IReadOnlyList<string> NoticeFields { get; }
+    public abstract string NoticePurpose { get; }
+    /// <summary>IN or AE: whose data protection authority the notice names.</summary>
+    public virtual string NoticeRegion => Region;
+    protected DateTimeOffset? ConsentedAt => Contact.Consent ? DateTimeOffset.UtcNow : null;
+    protected string? NoticeVersion => Contact.Consent ? LeadRules.NoticeVersion : null;
+
     public string? FirstInvalid => Fields.FirstOrDefault(f => Errors.ContainsKey(f.Field)).Id;
 
     // Attribute values for an input; null leaves the attribute out.
@@ -113,6 +133,7 @@ public abstract class PublicFormPage(SiteText text, PublicFormGuard guard) : Pub
     /// <summary>Bots get the same answer as people and nothing is stored; people get errors or, once stored, <paramref name="sentUrl"/>.</summary>
     protected async Task<IActionResult> SubmitAsync(IReadOnlyDictionary<string, string> errors, Func<Task> store, string sentUrl)
     {
+        if (PrivacyContact is null) return NotFound();
         if (!string.IsNullOrEmpty(Contact.Website)) return LocalRedirect(sentUrl);
         if (!guard.StartedInTime(Contact.Started)) return Again("expired", StatusCodes.Status400BadRequest);
         Errors = errors;

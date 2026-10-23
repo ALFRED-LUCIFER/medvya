@@ -18,6 +18,10 @@ public sealed class WaitlistEntry
     [Classification(DataClass.Personal)] public string? Email { get; init; }
     [Classification(DataClass.Personal)] public string? Phone { get; init; }
     [Classification(DataClass.Internal)] public DateTimeOffset ReceivedAt { get; init; } = DateTimeOffset.UtcNow;
+    /// <summary>Proof of consent: when the visitor ticked the box under the privacy notice. Null only on rows stored before the notice existed.</summary>
+    [Classification(DataClass.Internal)] public DateTimeOffset? ConsentedAt { get; init; }
+    /// <summary>The <see cref="LeadRules.NoticeVersion"/> the visitor agreed to.</summary>
+    [Classification(DataClass.Internal)] public string? NoticeVersion { get; init; }
 }
 
 public static class WaitlistRules
@@ -28,6 +32,7 @@ public static class WaitlistRules
         LeadRules.Required(errors, nameof(e.Name), e.Name, WaitlistEntry.NameMax);
         if (!WaitlistEntry.Countries.Contains(e.Country)) errors[nameof(e.Country)] = "required";
         LeadRules.Contact(errors, e.Email, e.Phone);
+        LeadRules.Consent(errors, e.ConsentedAt, e.NoticeVersion);
         return errors;
     }
 }

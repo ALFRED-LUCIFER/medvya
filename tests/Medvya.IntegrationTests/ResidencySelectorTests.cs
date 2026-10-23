@@ -90,7 +90,7 @@ public sealed partial class ResidencySelectorTests(WebApplicationFactory<Program
     {
         var html = await Html(await Get(Site().Client, "/region?go=AE"));
         var names = FieldName().Matches(html).Select(m => m.Groups[1].Value).Order(StringComparer.Ordinal);
-        Assert.Equal(["Form.Country", "Form.Email", "Form.Name", "Form.Phone", "Form.Started", "Form.Website", "__RequestVerificationToken"], names);
+        Assert.Equal(["Form.Consent", "Form.Country", "Form.Email", "Form.Name", "Form.Phone", "Form.Started", "Form.Website", "__RequestVerificationToken"], names);
         Assert.Contains("Do not include patient information.", html, StringComparison.Ordinal);
     }
 
@@ -98,11 +98,14 @@ public sealed partial class ResidencySelectorTests(WebApplicationFactory<Program
     public async Task JoiningTheWaitlistStoresTheCountryAndThanksTheVisitor()
     {
         var (client, store) = Site();
-        var res = await Submit(client, new() { ["Form.Country"] = "AE", ["Form.Name"] = "Fatima Al Hashimi", ["Form.Email"] = "fatima@example.com", ["Form.Phone"] = "" }, path: "/region?go=AE");
+        var before = DateTimeOffset.UtcNow;
+        var res = await Submit(client, new() { ["Form.Country"] = "AE", ["Form.Name"] = "Fatima Al Hashimi", ["Form.Email"] = "fatima@example.com", ["Form.Phone"] = "", ["Form.Consent"] = "true" }, path: "/region?go=AE");
         Assert.Equal(HttpStatusCode.Redirect, res.StatusCode);
         Assert.Equal("/region?go=AE&sent=1#waitlist", res.Headers.Location?.OriginalString);
         var saved = Assert.Single(store.Received);
         Assert.Equal(("Fatima Al Hashimi", "AE", "fatima@example.com"), (saved.Name, saved.Country, saved.Email));
+        Assert.InRange(saved.ConsentedAt!.Value, before, DateTimeOffset.UtcNow);
+        Assert.Equal(LeadRules.NoticeVersion, saved.NoticeVersion);
         Assert.Contains("Thank you. You are on the waitlist for UAE.", await Html(await Get(client, "/region?go=AE&sent=1")), StringComparison.Ordinal);
 
         var invalid = await Submit(client, new() { ["Form.Country"] = "AE", ["Form.Name"] = "", ["Form.Email"] = "" }, path: "/region?go=AE");
@@ -112,10 +115,22 @@ public sealed partial class ResidencySelectorTests(WebApplicationFactory<Program
     }
 
     [Fact]
+    public async Task JoiningTheWaitlistWithoutConsentIsRefusedAndNothingIsStored()
+    {
+        var (client, store) = Site();
+        var res = await Submit(client, new() { ["Form.Country"] = "AE", ["Form.Name"] = "Fatima Al Hashimi", ["Form.Email"] = "fatima@example.com" }, path: "/region?go=AE");
+        Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
+        var html = await Html(res);
+        Assert.Contains("<li><a href=\"#waitlist-consent\">Tick the box to agree, so that we can use your details.</a></li>", html, StringComparison.Ordinal);
+        Assert.Contains("id=\"waitlist-consent\" name=\"Form.Consent\" type=\"checkbox\" value=\"true\" aria-invalid=\"true\" aria-describedby=\"waitlist-consent-error\" autofocus", html, StringComparison.Ordinal);
+        Assert.Empty(store.Received);
+    }
+
+    [Fact]
     public async Task AWaitlistPostWithoutTheAntiForgeryTokenIsRefused()
     {
         var (client, store) = Site();
-        var fields = new Dictionary<string, string> { ["Form.Country"] = "AE", ["Form.Name"] = "Fatima Al Hashimi", ["Form.Email"] = "fatima@example.com" };
+        var fields = new Dictionary<string, string> { ["Form.Country"] = "AE", ["Form.Name"] = "Fatima Al Hashimi", ["Form.Email"] = "fatima@example.com", ["Form.Consent"] = "true" };
         Assert.Equal(HttpStatusCode.BadRequest, (await Submit(client, fields, withToken: false, path: "/region?go=AE")).StatusCode);
         Assert.Empty(store.Received);
     }
@@ -124,7 +139,7 @@ public sealed partial class ResidencySelectorTests(WebApplicationFactory<Program
     public async Task AWaitlistForAnUnknownCountryIsRefused()
     {
         var (client, store) = Site();
-        var res = await SubmitWith(client, "/region?go=AE", new() { ["Form.Name"] = "x", ["Form.Email"] = "a@example.com", ["Form.Country"] = "US" });
+        var res = await SubmitWith(client, "/region?go=AE", new() { ["Form.Name"] = "x", ["Form.Email"] = "a@example.com", ["Form.Country"] = "US", ["Form.Consent"] = "true" });
         Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
         Assert.Empty(store.Received);
     }

@@ -234,5 +234,6 @@ public class PatientRegistryTests(SqlServerFixture sql) : IClassFixture<SqlServe
     sealed class ThrowingLog : IAuditLog
     {
         public Task WriteAsync(AuditEvent auditEvent, CancellationToken ct) => throw new InvalidOperationException("audit store down");
+        public Task WriteAsync(AuditEvent auditEvent, System.Data.Common.DbTransaction transaction, CancellationToken ct) => throw new InvalidOperationException("audit store down");
     }
 }

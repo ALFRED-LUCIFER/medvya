@@ -10,9 +10,7 @@ namespace Medvya.Scheduling.Infrastructure;
 /// <summary>
 /// Slot holds and booking (MDV-P1-021). Every write runs in a <see cref="DoctorDayTransaction"/> (MDV-P1-022) and re-checks that the slots are still slots of the
 /// template, free of appointments and not held by someone else. The booking, its first status event and AppointmentBooked.v1
-/// are written in one transaction. The request itself is audited by the endpoint.
-/// shortcut: the endpoint's audit row carries no patient id (the id is in the body); the appointment row keeps patient,
-/// booker and time. Add the patient id when the audit filter can take it from the use case (MDV-P0-017).
+/// are written in one transaction, with the attempt's audit event (MDV-P0-017), which now carries the patient id.
 /// </summary>
 public sealed class BookingService(SchedulingDbContext db, SchedulingContext context, DoctorDayTransaction transaction, IOptions<SchedulingOptions> options) : IBookingService
 {
@@ -44,6 +42,7 @@ public sealed class BookingService(SchedulingDbContext db, SchedulingContext con
             };
             db.SlotHolds.Add(hold);
             await db.SaveChangesAsync(cancellationToken);
+            await context.AuditAsync(SchedulingAudit.SlotHold, SchedulingAudit.HoldResource, SchedulingAudit.Treatment, hold.Id, null, cancellationToken);
             return new HoldView(hold.Id, hold.FacilityId, hold.CalendarId, hold.VisitType, hold.Start, hold.End, hold.ExpiresAt);
         }, cancellationToken);
     }
@@ -51,7 +50,10 @@ public sealed class BookingService(SchedulingDbContext db, SchedulingContext con
     public async Task ReleaseHoldAsync(Guid holdId, CancellationToken cancellationToken = default)
     {
         var me = context.UserId;
+        await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
         await db.SlotHolds.Where(h => h.Id == holdId && h.HeldBy == me).ExecuteDeleteAsync(cancellationToken);
+        await context.AuditAsync(SchedulingAudit.SlotRelease, SchedulingAudit.HoldResource, SchedulingAudit.Treatment, holdId, null, cancellationToken);
+        await tx.CommitAsync(cancellationToken);
     }
 
     public async Task<AppointmentView> BookAsync(BookAppointment command, CancellationToken cancellationToken = default)
@@ -99,6 +101,7 @@ public sealed class BookingService(SchedulingDbContext db, SchedulingContext con
             db.Outbox.Add(Booked(booked, now));
             await db.SlotHolds.Where(h => h.Id == hold.Id).ExecuteDeleteAsync(cancellationToken);
             await db.SaveChangesAsync(cancellationToken);
+            await context.AuditAsync(SchedulingAudit.Book, SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment, booked.Id, booked.PatientId, cancellationToken);
             return booked;
         }, cancellationToken);
         return new(appointment.Id, AppointmentReference.Of(appointment.Id), appointment.FacilityId, appointment.CalendarId, patient.Id, patient.FullName, patient.Mrn,

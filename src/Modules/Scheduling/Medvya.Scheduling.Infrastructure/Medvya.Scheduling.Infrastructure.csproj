@@ -7,6 +7,7 @@
     <ProjectReference Include="..\..\Tenancy\Medvya.Tenancy.Application\Medvya.Tenancy.Application.csproj" />
     <ProjectReference Include="..\..\Identity\Medvya.Identity.Application\Medvya.Identity.Application.csproj" />
     <ProjectReference Include="..\..\Patients\Medvya.Patients.Application\Medvya.Patients.Application.csproj" />
+    <ProjectReference Include="..\..\Audit\Medvya.Audit.Application\Medvya.Audit.Application.csproj" />
   </ItemGroup>
 
   <ItemGroup>

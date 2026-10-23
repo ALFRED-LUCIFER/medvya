@@ -41,7 +41,7 @@ public sealed class FrontDeskService(SchedulingDbContext db, SchedulingContext c
     public async Task<BoardCard> CheckInAsync(Guid appointmentId, CheckIn command, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
-        var (visit, moved) = await MoveAsync(appointmentId, AppointmentState.CheckedIn, cancellationToken);
+        var (visit, moved) = await MoveAsync(appointmentId, AppointmentState.CheckedIn, SchedulingAudit.CheckIn, cancellationToken);
         if (moved && command.ElapsedMs is long ms && ms > 0 && TimeSpan.FromMilliseconds(ms) <= MaxCheckIn)
             CheckInSeconds.Record(ms / 1000d, new KeyValuePair<string, object?>("tenant_id", visit.TenantId));
         return await CardAsync(visit, cancellationToken);
@@ -51,17 +51,20 @@ public sealed class FrontDeskService(SchedulingDbContext db, SchedulingContext c
     {
         ArgumentNullException.ThrowIfNull(command);
         if (command.State is not { } to || !Enum.IsDefined(to)) throw new SchedulingValidationException([new("state", "required")]);
-        var (visit, _) = await MoveAsync(appointmentId, to, cancellationToken);
+        var (visit, _) = await MoveAsync(appointmentId, to, SchedulingAudit.Status, cancellationToken);
         return await CardAsync(visit, cancellationToken);
     }
 
-    /// <summary>Moves the visit to <paramref name="to"/>; Moved is false when it was already there (an idempotent repeat).</summary>
-    async Task<(Appointment Visit, bool Moved)> MoveAsync(Guid appointmentId, AppointmentState to, CancellationToken cancellationToken)
+    /// <summary>
+    /// Moves the visit to <paramref name="to"/>; Moved is false when it was already there (an idempotent repeat). Either way the
+    /// attempt is audited as <paramref name="action"/> in the transaction of what it wrote.
+    /// </summary>
+    async Task<(Appointment Visit, bool Moved)> MoveAsync(Guid appointmentId, AppointmentState to, string action, CancellationToken cancellationToken)
     {
         var visit = await db.Appointments.AsNoTracking().SingleOrDefaultAsync(a => a.Id == appointmentId, cancellationToken)
             ?? throw new AppointmentNotFoundException();
         await context.RequireAsync(visit.FacilityId, SchedulingAccess.CanRunQueue, cancellationToken);
-        if (visit.State == to) return (visit, false);
+        if (visit.State == to) return (await RepeatAsync(visit, action, cancellationToken), false);
         Guard(visit.State, to);
         var (_, zone) = await context.FacilityAsync(visit.FacilityId, cancellationToken);
         var now = context.Now;
@@ -77,7 +80,7 @@ public sealed class FrontDeskService(SchedulingDbContext db, SchedulingContext c
             // Someone else moved it first: the same move is a repeat, anything else conflicts.
             await tx.RollbackAsync(cancellationToken);
             var current = await db.Appointments.AsNoTracking().SingleAsync(a => a.Id == appointmentId, cancellationToken);
-            if (current.State == to) return (current, false);
+            if (current.State == to) return (await RepeatAsync(current, action, cancellationToken), false);
             Guard(current.State, to);
             throw new VisitTransitionException("invalid_transition");
         }
@@ -86,11 +89,21 @@ public sealed class FrontDeskService(SchedulingDbContext db, SchedulingContext c
             Id = Guid.CreateVersion7(), TenantId = visit.TenantId, AppointmentId = visit.Id, State = to, ActorUserId = me, OccurredAt = now,
         });
         await db.SaveChangesAsync(cancellationToken);
+        await context.AuditAsync(action, SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment, visit.Id, visit.PatientId, cancellationToken);
         await tx.CommitAsync(cancellationToken);
         visit.State = to;
         visit.ChangedBy = me;
         visit.ChangedAt = now;
         return (visit, true);
+    }
+
+    /// <summary>A repeated move changes nothing; the attempt is still audited.</summary>
+    async Task<Appointment> RepeatAsync(Appointment visit, string action, CancellationToken cancellationToken)
+    {
+        await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
+        await context.AuditAsync(action, SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment, visit.Id, visit.PatientId, cancellationToken);
+        await tx.CommitAsync(cancellationToken);
+        return visit;
     }
 
     static void Guard(AppointmentState from, AppointmentState to)

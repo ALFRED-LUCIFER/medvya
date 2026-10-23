@@ -93,8 +93,9 @@ public sealed record PatientSearchResult(SearchKind MatchedOn, IReadOnlyList<Pat
 
 /// <summary>
 /// Patients of the current tenant at the current facility, scoped by tenant query filters and row-level security.
-/// Writes audit inside their own transaction (fail closed). Reads are audited by the calling endpoint (<c>.Audited()</c>, written
-/// before the read runs), so each request leaves exactly one audit event.
+/// Writes audit inside their own database transaction: the event commits with the change, and a failed audit write rolls it back
+/// (fail closed). Reads are audited by the calling endpoint (<c>.Audited()</c>, written before the answer is sent), so each request
+/// leaves exactly one audit event.
 /// </summary>
 public interface IPatientRegistry
 {

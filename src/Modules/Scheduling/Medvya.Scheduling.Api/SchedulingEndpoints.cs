@@ -27,10 +27,10 @@ public static class SchedulingEndpoints
             .AuditedWithErrors("schedule.template.read", "schedule_template", "operations");
 
         schedule.MapPut("/templates", (SaveTemplate command, [FromServices] IScheduleService service, CancellationToken ct) => service.SaveTemplateAsync(command, ct))
-            .AuditedWithErrors("schedule.template.update", "schedule_template", "operations");
+            .AuditedWriteWithErrors(SchedulingAudit.TemplateUpdate, SchedulingAudit.TemplateResource, SchedulingAudit.Operations);
 
         schedule.MapPost("/resources", (AddResource command, [FromServices] IScheduleService service, CancellationToken ct) => service.AddResourceAsync(command, ct))
-            .AuditedWithErrors("schedule.resource.create", "schedule_resource", "operations");
+            .AuditedWriteWithErrors(SchedulingAudit.ResourceCreate, SchedulingAudit.ResourceResource, SchedulingAudit.Operations);
 
         // Confirming the patient before booking opens their name and MRN, so the patient id is in the route and in the audit row.
         schedule.MapGet("/patients/{patientId:guid}", async (Guid patientId, Guid? facilityId, [FromServices] IBookingService service, CancellationToken ct) =>
@@ -39,24 +39,24 @@ public static class SchedulingEndpoints
 
         var holds = app.MapGroup("/v1/slot-holds").RequireAuthorization();
         holds.MapPost("/", (HoldSlot command, [FromServices] IBookingService service, CancellationToken ct) => service.HoldAsync(command, ct))
-            .AuditedWithErrors("slot.hold", "slot_hold");
+            .AuditedWriteWithErrors(SchedulingAudit.SlotHold, SchedulingAudit.HoldResource, SchedulingAudit.Treatment);
         holds.MapDelete("/{holdId:guid}", async (Guid holdId, [FromServices] IBookingService service, CancellationToken ct) =>
             {
                 await service.ReleaseHoldAsync(holdId, ct);
                 return Results.NoContent();
             })
-            .AuditedWithErrors("slot.release", "slot_hold");
+            .AuditedWriteWithErrors(SchedulingAudit.SlotRelease, SchedulingAudit.HoldResource, SchedulingAudit.Treatment);
 
         var appointments = app.MapGroup("/v1/appointments").RequireAuthorization();
         appointments.MapPost("/", (BookAppointment command, [FromServices] IBookingService service, CancellationToken ct) => service.BookAsync(command, ct))
-            .AuditedWithErrors("appointment.book", "appointment");
+            .AuditedWriteWithErrors(SchedulingAudit.Book, SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment);
         // The reception board (MDV-P1-028). A repeated check-in or move returns the visit unchanged; any other move is a 409.
         appointments.MapPost("/{appointmentId:guid}/check-in", (Guid appointmentId, CheckIn? command, [FromServices] IFrontDeskService service, CancellationToken ct) =>
                 service.CheckInAsync(appointmentId, command ?? new CheckIn(), ct))
-            .AuditedWithErrors("appointment.check_in", "appointment");
+            .AuditedWriteWithErrors(SchedulingAudit.CheckIn, SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment);
         appointments.MapPost("/{appointmentId:guid}/status", (Guid appointmentId, MoveVisit command, [FromServices] IFrontDeskService service, CancellationToken ct) =>
                 service.MoveAsync(appointmentId, command, ct))
-            .AuditedWithErrors("appointment.status", "appointment");
+            .AuditedWriteWithErrors(SchedulingAudit.Status, SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment);
 
         var frontDesk = app.MapGroup("/v1/front-desk").RequireAuthorization();
         frontDesk.MapGet("/board", (Guid? facilityId, [FromServices] IFrontDeskService service, CancellationToken ct) =>
@@ -73,6 +73,13 @@ public static class SchedulingEndpoints
     /// </summary>
     static RouteHandlerBuilder AuditedWithErrors(this RouteHandlerBuilder endpoint, string action, string resourceType, string purpose = "treatment", string? patientRouteKey = null) =>
         endpoint.Audited(action, resourceType, purpose, patientRouteKey).AddEndpointFilter(MapErrors);
+
+    /// <summary>
+    /// A write: the use case writes the allowed event in the transaction of its change (<see cref="SchedulingAudit"/> codes);
+    /// a refused, rejected or not-found attempt changed nothing and is audited by the endpoint, errors mapped inside as above.
+    /// </summary>
+    static RouteHandlerBuilder AuditedWriteWithErrors(this RouteHandlerBuilder endpoint, string action, string resourceType, string purpose) =>
+        endpoint.AuditedByUseCase(action, resourceType, purpose).AddEndpointFilter(MapErrors);
 
     /// <summary>Use-case errors as problem details: field/code pairs for 400, a generic 403 that never says why, 409 with a code.</summary>
     static async ValueTask<object?> MapErrors(EndpointFilterInvocationContext context, EndpointFilterDelegate next)

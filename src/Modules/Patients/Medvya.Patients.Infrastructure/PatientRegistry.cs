@@ -5,15 +5,14 @@ using Medvya.Patients.Application;
 using Medvya.Patients.Domain;
 using Medvya.Patients.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Medvya.Patients.Infrastructure;
 
 /// <summary>
-/// Patient registration, directory and search. Each write runs in one database transaction that commits only after its audit event
-/// is written (fail closed). Reads do not audit here: the calling endpoint's <c>.Audited()</c> filter writes one event before the
-/// read runs, so a read that cannot be audited never happens and each request leaves exactly one event.
-/// shortcut: the audit event is written on its own connection, so a commit that fails after the audit write leaves an audit row
-/// for a change that did not land (as FeatureFlags); share the transaction when an outbox exists.
+/// Patient registration, directory and search. Each write and its audit events run in one database transaction (fail closed): the
+/// events commit with the change, and a failed audit write rolls the change back. Reads do not audit here: the calling endpoint's
+/// <c>.Audited()</c> filter writes one event before the answer is sent, so each request leaves exactly one event.
 /// The facility of a registration is the command's; the HTTP endpoint fills it from the active facility, never from the request body.
 /// shortcut: reads see the active facility's patients only; sharing patients across one tenant's facilities waits for multi-site rules (P7).
 /// </summary>
@@ -63,9 +62,9 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
         db.MergeRequests.AddRange(decisions);
         await db.SaveChangesAsync(cancellationToken);
 
-        await AuditAsync("patient.register", patient.Id, now, cancellationToken); // PatientRegistered.v1: opaque ids only
+        await AuditAsync(tx, "patient.register", patient.Id, now, cancellationToken); // PatientRegistered.v1: opaque ids only
         foreach (var d in decisions)
-            await AuditAsync(d.Status == MergeRequestStatus.Proposed ? "patient.duplicate.merge_review" : "patient.duplicate.not_same",
+            await AuditAsync(tx, d.Status == MergeRequestStatus.Proposed ? "patient.duplicate.merge_review" : "patient.duplicate.not_same",
                 patient.Id, now, cancellationToken, "merge_request", d.Id);
         await tx.CommitAsync(cancellationToken);
         return new(patient.Id, patient.Mrn, now, user.UserId, patient.Status, warnings);
@@ -190,7 +189,7 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
         patient.ChangedAt = now;
         await db.SaveChangesAsync(cancellationToken);
 
-        await AuditAsync("patient.update", patientId, now, cancellationToken);
+        await AuditAsync(tx, "patient.update", patientId, now, cancellationToken);
         await tx.CommitAsync(cancellationToken);
         return patient.Status;
     }
@@ -228,12 +227,13 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
         return Mrn.Format(next);
     }
 
-    Task AuditAsync(string action, Guid? patientId, DateTimeOffset now, CancellationToken cancellationToken, string resourceType = "patient", Guid? resourceId = null) =>
+    // In the write's own transaction: the event commits or rolls back with the change it records.
+    Task AuditAsync(IDbContextTransaction tx, string action, Guid? patientId, DateTimeOffset now, CancellationToken cancellationToken, string resourceType = "patient", Guid? resourceId = null) =>
         audit.WriteAsync(new AuditEvent
         {
             Id = Guid.CreateVersion7(), TenantId = TenantId(), ActorUserId = user.UserId, Action = action, ResourceType = resourceType,
             ResourceId = resourceId ?? patientId, PatientId = patientId, Purpose = Purpose, Outcome = AuditOutcome.Allowed, OccurredAt = now,
-        }, cancellationToken);
+        }, tx.GetDbTransaction(), cancellationToken);
 
     Guid TenantId() => tenant.TenantId ?? throw new InvalidOperationException("No tenant context.");
 }

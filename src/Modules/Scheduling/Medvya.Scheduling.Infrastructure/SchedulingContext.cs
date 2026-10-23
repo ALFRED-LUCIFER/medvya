@@ -1,3 +1,5 @@
+using Medvya.Audit.Application;
+using Medvya.Audit.Domain;
 using Medvya.BuildingBlocks.Domain;
 using Medvya.Identity.Application;
 using Medvya.Patients.Application;
@@ -7,6 +9,7 @@ using Medvya.Scheduling.Infrastructure.Persistence;
 using Medvya.Tenancy.Application;
 using Medvya.Tenancy.Domain;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Medvya.Scheduling.Infrastructure;
 
@@ -21,8 +24,22 @@ public sealed record Calendar(Guid Id, CalendarKind Kind, string Name);
 /// </summary>
 public sealed class SchedulingContext(
     SchedulingDbContext db, IFacilityDirectory facilities, IStaffUsers staff, IPatientDirectory patients,
-    ICurrentTenant tenant, ICurrentUser user, TimeProvider clock)
+    ICurrentTenant tenant, ICurrentUser user, TimeProvider clock, IAuditLog audit)
 {
+    /// <summary>
+    /// Writes the use case's audit event inside its open transaction, after its changes are saved and before the commit, so the
+    /// event commits with the change and a failed audit write rolls it back (fail closed, MDV-P0-017). Opaque ids and codes only.
+    /// </summary>
+    public Task AuditAsync(string action, string resourceType, string purpose, Guid? resourceId, Guid? patientId, CancellationToken cancellationToken)
+    {
+        var tx = db.Database.CurrentTransaction ?? throw new InvalidOperationException("An audited write runs in a transaction.");
+        return audit.WriteAsync(new AuditEvent
+        {
+            Id = Guid.CreateVersion7(), TenantId = TenantId, ActorUserId = UserId, Action = action, ResourceType = resourceType,
+            ResourceId = resourceId, PatientId = patientId, Purpose = purpose, Outcome = AuditOutcome.Allowed, OccurredAt = Now,
+        }, tx.GetDbTransaction(), cancellationToken);
+    }
+
     public DateTimeOffset Now => clock.GetUtcNow();
 
     public Guid TenantId => tenant.TenantId ?? throw new InvalidOperationException("No tenant context.");

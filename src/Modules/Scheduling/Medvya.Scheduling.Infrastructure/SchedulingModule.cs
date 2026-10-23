@@ -9,7 +9,7 @@ namespace Medvya.Scheduling.Infrastructure;
 
 public static class SchedulingModule
 {
-    /// <summary>Needs the Tenancy module (facilities, memberships), Identity (doctor names) and Patients (patient names).</summary>
+    /// <summary>Needs the Tenancy module (facilities, memberships), Identity (doctor names), Patients (patient names) and Audit (write events).</summary>
     public static IServiceCollection AddSchedulingModule(this IServiceCollection services, string connectionString)
     {
         services.TryAddScoped<TenantSessionInterceptor>();

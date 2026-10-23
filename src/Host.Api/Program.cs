@@ -44,6 +44,7 @@ builder.Services.AddScoped<RequestContext>();
 builder.Services.AddScoped<ICurrentTenant>(sp => sp.GetRequiredService<RequestContext>());
 builder.Services.AddScoped<ICurrentUser>(sp => sp.GetRequiredService<RequestContext>());
 builder.Services.AddScoped<ICurrentFacility>(sp => sp.GetRequiredService<RequestContext>());
+builder.Services.AddScoped<IRequestOrigin>(sp => sp.GetRequiredService<RequestContext>());
 // Without a database, audited and flag-gated endpoints cannot resolve IAuditLog / IFeatureFlags and fail closed (500), and no
 // capability handler exists, so capability-guarded endpoints answer 403.
 if (builder.Configuration.GetConnectionString("Medvya") is { } sql)

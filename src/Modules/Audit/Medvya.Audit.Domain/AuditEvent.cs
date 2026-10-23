@@ -2,8 +2,11 @@ using Medvya.BuildingBlocks.Domain;
 
 namespace Medvya.Audit.Domain;
 
-/// <summary>Allowed: answered. Denied: refused (401/403). NotFound: nothing the caller may see there (404), e.g. another facility's record.</summary>
-public enum AuditOutcome { Allowed, Denied, NotFound }
+/// <summary>
+/// Allowed: answered or done. Denied: refused (401/403). NotFound: nothing the caller may see there (404), e.g. another facility's
+/// record. Rejected: the request was understood but not done (400/409/422: invalid input, an unresolved duplicate, a slot taken).
+/// </summary>
+public enum AuditOutcome { Allowed, Denied, NotFound, Rejected }
 
 /// <summary>
 /// One append-only audit record (PRD v2 P0-06). Opaque ids and fixed codes only: no names, identifiers or free text,

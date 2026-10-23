@@ -65,13 +65,17 @@ public sealed class PatientEndpointTests(SqlServerFixture sql) : IClassFixture<S
 
     sealed class SignedInUser(Guid id) : Medvya.BuildingBlocks.Domain.ICurrentUser { public Guid? UserId => id; }
 
-    WebApplicationFactory<Program> Host(int searchesPerMinute = 1000, int duplicateChecksPerMinute = 1000, int recordsPerMinute = 1000) =>
+    WebApplicationFactory<Program> Host(int searchesPerMinute = 1000, int duplicateChecksPerMinute = 1000, int recordsPerMinute = 1000, Action<IServiceCollection>? services = null) =>
         new WebApplicationFactory<Program>().WithWebHostBuilder(b => b
             .UseSetting("ConnectionStrings:Medvya", sql.ConnectionString)
             .UseSetting("RateLimiting:PatientSearchPerMinute", searchesPerMinute.ToString(System.Globalization.CultureInfo.InvariantCulture))
             .UseSetting("RateLimiting:DuplicateChecksPerMinute", duplicateChecksPerMinute.ToString(System.Globalization.CultureInfo.InvariantCulture))
             .UseSetting("RateLimiting:PatientRecordsPerMinute", recordsPerMinute.ToString(System.Globalization.CultureInfo.InvariantCulture))
-            .ConfigureTestServices(s => SignInFromHeaders(s, tenant)));
+            .ConfigureTestServices(s =>
+            {
+                SignInFromHeaders(s, tenant);
+                services?.Invoke(s);
+            }));
 
     /// <summary>Signs requests in from X-Test-User / X-Test-Facility through a real authentication scheme (see <see cref="SignedIn"/>).</summary>
     internal static void SignInFromHeaders(IServiceCollection s, Guid tenant)
@@ -328,6 +332,55 @@ public sealed class PatientEndpointTests(SqlServerFixture sql) : IClassFixture<S
         // Registered at the active facility, so this desk can open it; the decision is audited with the registration.
         Assert.Equal(HttpStatusCode.OK, (await desk.GetAsync(new Uri($"/v1/patients/{id}", UriKind.Relative))).StatusCode);
         Assert.Contains(("patient.duplicate.not_same", "registration", (Guid?)id), await AuditTrail());
+    }
+
+    /// <summary>Registration with the audit store down: the request fails and no patient, identifier or audit event is saved.</summary>
+    [Fact]
+    public async Task ARegistrationWhoseAuditCannotBeWrittenIsNotSaved()
+    {
+        using var host = Host(services: s => s.AddScoped<Medvya.Audit.Application.IAuditLog, DownInTransaction>());
+        using var desk = Client(host, "receptionist");
+        var before = (await AuditTrail()).Count;
+        var body = new { quick = true, fullName = "Leela Raman (synthetic)", dateOfBirth = "1991-07-14", sexAtBirth = "Female", mobile = "+91 90000 00177" };
+        try
+        {
+            using var response = await desk.PostAsJsonAsync(new Uri("/v1/patients", UriKind.Relative), body);
+            Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+        }
+        catch (InvalidOperationException e) when (e.Message == "audit store down") { } // the test server surfaces the error
+        await using var db = sql.Patients(tenant);
+        Assert.False(await db.Patients.AnyAsync(p => p.FullName == "Leela Raman (synthetic)"));
+        Assert.Equal(before, (await AuditTrail()).Count);
+    }
+
+    /// <summary>Audit store that fails inside a write's transaction (as an insert would), and works for reads.</summary>
+    sealed class DownInTransaction(Medvya.Audit.Infrastructure.Persistence.AuditDbContext db) : Medvya.Audit.Application.IAuditLog
+    {
+        public Task WriteAsync(Medvya.Audit.Domain.AuditEvent auditEvent, CancellationToken cancellationToken = default) => new AuditLog(db).WriteAsync(auditEvent, cancellationToken);
+        public Task WriteAsync(Medvya.Audit.Domain.AuditEvent auditEvent, System.Data.Common.DbTransaction transaction, CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("audit store down");
+    }
+
+    /// <summary>A refused registration (unresolved duplicate, invalid input) is one Rejected event, with codes only: none of what was entered.</summary>
+    [Fact]
+    public async Task ARejectedRegistrationIsOneRejectedEventWithoutTheValuesEntered()
+    {
+        using var host = Host();
+        using var desk = Client(host, "receptionist");
+        var uri = new Uri("/v1/patients", UriKind.Relative);
+        await using var audit = sql.Audit(tenant);
+        var seen = (await audit.Events.Select(e => e.Id).ToListAsync()).ToHashSet();
+
+        var duplicate = new { quick = true, fullName = "Meera Iyer (synthetic)", dateOfBirth = "1980-01-01", sexAtBirth = "Female", mobile = "+91 90000 00188" };
+        Assert.Equal(HttpStatusCode.BadRequest, (await desk.PostAsJsonAsync(uri, duplicate)).StatusCode);
+        var invalid = new { quick = true, fullName = "Meera Iyer (synthetic)", dateOfBirth = "1980-01-01", sexAtBirth = "Female", mobile = "98470 213" };
+        Assert.Equal(HttpStatusCode.BadRequest, (await desk.PostAsJsonAsync(uri, invalid)).StatusCode);
+
+        var rows = await audit.Events.Where(e => !seen.Contains(e.Id)).ToListAsync();
+        Assert.Equal(2, rows.Count); // one per attempt
+        Assert.All(rows, r => Assert.Equal(("patient.register", Medvya.Audit.Domain.AuditOutcome.Rejected, (Guid?)null), (r.Action, r.Outcome, r.PatientId)));
+        var stored = JsonSerializer.Serialize(rows);
+        foreach (var value in new[] { "Meera", "Iyer", "1980", "90000", "98470" }) Assert.DoesNotContain(value, stored, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

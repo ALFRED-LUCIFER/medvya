@@ -22,7 +22,7 @@ Status column: **Done** = implemented and tested; otherwise the ticket that deli
 | S | Stolen password or OTP; shared clinic PC left signed in | Entra External ID with MFA (passkeys preferred); idle timeout; device/session revocation | MDV-P0-011, MDV-P0-012 |
 | S | Token theft via XSS | BFF: tokens server-side, HTTP-only Secure SameSite=Strict cookie; strict CSP (no inline scripts) | CSP **Done** (P0-026); BFF MDV-P0-011 |
 | T | CSRF on state-changing calls | Antiforgery tokens + SameSite=Strict | MDV-P0-011 |
-| R | Staff deny opening a record | Append-only audit (ledger) of every patient read/write with actor, purpose, time and outcome (Allowed, Denied for 401/403, NotFound for 404, one rule in the audit filter) | MDV-P0-017 |
+| R | Staff deny opening a record or making a change | Append-only audit (ledger) of every patient read/write with actor, purpose, time and outcome (Allowed; Denied for 401/403; NotFound for 404; Rejected for 400/409/422, codes only), one rule for reads and writes; a write's event commits in the same database transaction as the change, so no committed change lacks its event and a failed audit write rolls the change back | MDV-P0-017 |
 | I | IDOR: guessing patient/appointment ids; receptionist reading notes | Server-side policy on every endpoint (tenant, facility, role, relationship, purpose); RLS; IDOR test suite | MDV-P0-014, MDV-P0-010, MDV-P1-038 |
 | I | PHI in URLs, logs, telemetry, browser storage | No PHI in URLs (API rule); allowlist telemetry scrubbing; nothing but UI language in localStorage | Telemetry **Done** (P0-018); storage **Done** (P0-021) |
 | I | Clickjacking, MIME sniffing, referrer leaks | `frame-ancestors 'none'`, X-Frame-Options DENY, nosniff, Referrer-Policy no-referrer | **Done** (P0-026) |

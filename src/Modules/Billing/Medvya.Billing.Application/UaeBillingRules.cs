@@ -5,9 +5,11 @@ using Medvya.BuildingBlocks.Domain;
 namespace Medvya.Billing.Application;
 
 /// <summary>
-/// UAE (VAT): dirhams and fils; printed PREFIX-00042 (design: TI-AD-03381, RC-AD-03381, CN-AD-0042). The FTA asks for a
-/// sequential, unique tax invoice number; the design's numbers carry no year, so the series is continuous and never resets
-/// (a yearly reset would repeat numbers). The prefix carries the emirate (AD).
+/// UAE (VAT): dirhams and fils ("fils" is singular and plural); printed PREFIX-00042 (design: TI-AD-03381, RC-AD-03381,
+/// CN-AD-0042). Decided: one continuous, gap-free series that never resets. VAT Executive Regulation Article 59 asks for a
+/// sequential number, or a unique number identifying the invoice and its order, and the FTA flags gaps
+/// (https://www.mondaq.com/sales-taxes-vat-gst/670546/tax-invoice-under-uae-vat-law,
+/// https://www.wafeq.com/en-ae/tax-and-reporting/vat-invoice-requirements-in-uae). The prefix carries the emirate (AD).
 /// </summary>
 sealed partial class UaeBillingRules : BillingCountryRules
 {

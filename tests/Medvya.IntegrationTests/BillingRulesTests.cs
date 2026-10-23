@@ -76,6 +76,12 @@ public class BillingRulesTests
     [InlineData("IN", -60_000, "Rupees six hundred only")] // credit note: the sign is the document's, not the words'
     [InlineData("AE", 125_000_050, "UAE dirhams one million two hundred and fifty thousand and fifty fils only")]
     [InlineData("AE", 1_101_900, "UAE dirhams eleven thousand nineteen only")]
+    // Indian convention: one paisa, two paise; "and" only before the paise or fils; fils is singular and plural.
+    [InlineData("IN", 1, "Rupees zero and one paisa only")]
+    [InlineData("IN", 2, "Rupees zero and two paise only")]
+    [InlineData("IN", 100_001, "Rupees one thousand and one paisa only")]
+    [InlineData("IN", 100_500, "Rupees one thousand five only")]
+    [InlineData("AE", 1, "UAE dirhams zero and one fils only")]
     public void AmountInWords(string country, long minor, string expected)
     {
         var rules = BillingCountryRules.For(country);
@@ -115,16 +121,22 @@ public class BillingRulesTests
     }
 
     [Fact]
-    public void IndiaNumbersNeverExceedTheGstSixteenCharacters()
+    public void IndiaNumbersGrowPastFiveDigitsButNeverExceedTheGstSixteenCharacters()
     {
         Assert.Equal("INV/25-26/100000", BillingCountryRules.India.Format("INV", "25-26", 100_000));
-        Assert.Throws<InvalidOperationException>(() => BillingCountryRules.India.Format("ADVR", "25-26", 100_000));
+        Assert.Equal("INV/25-26/999999", BillingCountryRules.India.Format("INV", "25-26", 999_999));
+        Assert.Throws<InvalidOperationException>(() => BillingCountryRules.India.Format("INV", "25-26", 1_000_000));
+        Assert.Equal(999_999, BillingCountryRules.India.MaxNumber("INV", "25-26"));
+        Assert.Equal(99_999_999, BillingCountryRules.India.MaxNumber("A", "25-26"));
+        Assert.Equal("A/25-26/99999999", BillingCountryRules.India.Format("A", "25-26", 99_999_999));
+        Assert.Equal(long.MaxValue - 1, BillingCountryRules.Uae.MaxNumber("TI-AD", "")); // no format limit: a continuous series
     }
 
     [Theory]
     [InlineData("IN", "INV", true)]
-    [InlineData("IN", "ADVR", true)]
-    [InlineData("IN", "INVOI", false)] // would leave no room for five digits within 16 characters
+    [InlineData("IN", "ADV", true)]
+    [InlineData("IN", "A", true)]
+    [InlineData("IN", "ADVR", false)] // would cap the series below 999,999 numbers a financial year within 16 characters
     [InlineData("IN", "inv", false)]
     [InlineData("IN", "IN/V", false)]
     [InlineData("IN", "", false)]

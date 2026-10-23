@@ -30,6 +30,7 @@ export function usePatientDirectoryController() {
     // No abort signal: a cancelled request has still been audited, and the remount would send (and audit) it again.
     queryFn: () => searchPatients(request),
     gcTime: patientDataGcTime,
+    staleTime: Infinity, // each fetch is an audited read: reuse it until something changes it
     retry: noRetryOnAnswers,
     // The previous page stays on screen while the next loads, so the list and its pagination never unmount (focus is kept).
     placeholderData: keepPreviousData,

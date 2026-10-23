@@ -1,6 +1,8 @@
 using System.Net;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Medvya.IntegrationTests;
 
@@ -52,4 +54,42 @@ public class SecurityBaselineTests
         var res = await Client().PostAsync(new Uri("/health", UriKind.Relative), body);
         Assert.NotEqual(HttpStatusCode.OK, res.StatusCode);
     }
+
+    /// <summary>Every request arrives from one front-end proxy at 10.0.0.5, as behind App Service.</summary>
+    sealed class FromProxy : IStartupFilter
+    {
+        public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => app =>
+        {
+            app.Use((ctx, nxt) => { ctx.Connection.RemoteIpAddress = IPAddress.Parse("10.0.0.5"); return nxt(ctx); });
+            next(app);
+        };
+    }
+
+    static async Task<List<HttpStatusCode>> FromClients(string? knownProxy, params string[] clients)
+    {
+        using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b =>
+        {
+            b.UseSetting("RateLimiting:PermitsPerMinute", "1").ConfigureServices(s => s.AddSingleton<IStartupFilter, FromProxy>());
+            if (knownProxy is not null) b.UseSetting("ForwardedHeaders:KnownProxies:0", knownProxy);
+        });
+        using var client = factory.CreateClient(new() { BaseAddress = new Uri("https://clinic.medvya.test") });
+        var codes = new List<HttpStatusCode>();
+        foreach (var ip in clients)
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, new Uri("/health", UriKind.Relative));
+            request.Headers.Add("X-Forwarded-For", ip);
+            codes.Add((await client.SendAsync(request)).StatusCode);
+        }
+        return codes;
+    }
+
+    [Fact]
+    public async Task BehindAKnownProxyEachClientHasItsOwnLimit() =>
+        Assert.Equal([HttpStatusCode.OK, HttpStatusCode.OK, HttpStatusCode.TooManyRequests],
+            await FromClients("10.0.0.5", "203.0.113.1", "203.0.113.2", "203.0.113.1"));
+
+    [Fact]
+    public async Task ForwardedAddressesFromAnUnlistedProxyAreIgnored() =>
+        // No proxy listed (the default): a caller cannot pick a fresh address per request to dodge the limit.
+        Assert.Equal([HttpStatusCode.OK, HttpStatusCode.TooManyRequests], await FromClients(null, "203.0.113.1", "203.0.113.2"));
 }

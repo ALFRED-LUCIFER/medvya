@@ -2,7 +2,8 @@ using Medvya.BuildingBlocks.Domain;
 
 namespace Medvya.Audit.Domain;
 
-public enum AuditOutcome { Allowed, Denied }
+/// <summary>Allowed: answered. Denied: refused (401/403). NotFound: nothing the caller may see there (404), e.g. another facility's record.</summary>
+public enum AuditOutcome { Allowed, Denied, NotFound }
 
 /// <summary>
 /// One append-only audit record (PRD v2 P0-06). Opaque ids and fixed codes only: no names, identifiers or free text,

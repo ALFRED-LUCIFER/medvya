@@ -99,6 +99,8 @@ public sealed class ScheduleEndpointTests(SqlServerFixture sql) : IClassFixture<
         using var response = await Client(reception).PutAsJsonAsync("/v1/schedule/templates", Template(20));
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
         Assert.Equal(["schedule.template.update"], await AuditActions());
+        await using var db = sql.Audit(tenant);
+        Assert.Equal(Medvya.Audit.Domain.AuditOutcome.Denied, (await db.Events.SingleAsync()).Outcome); // refused, so never "Allowed"
     }
 
     [Fact]

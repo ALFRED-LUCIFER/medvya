@@ -40,7 +40,8 @@ export function useBookingController(facilityId: string) {
 
   const [patientId, reasonCategory, channel] = useWatch({ control: form.control, name: ['patientId', 'reasonCategory', 'channel'] });
   const validId = z.uuid().safeParse(patientId).success;
-  const patient = useQuery({ queryKey: ['booking-patient', facilityId, patientId], queryFn: () => findPatient(facilityId, patientId), enabled: validId });
+  // An audited read (patient.lookup): fetched once per id, never again on focus or remount while cached.
+  const patient = useQuery({ queryKey: ['booking-patient', facilityId, patientId], queryFn: () => findPatient(facilityId, patientId), enabled: validId, staleTime: Infinity });
 
   // Search runs on submit, not per keystroke (each search is audited), with the directory's caching and retry rules.
   const [searchText, setSearchText] = useState('');
@@ -50,6 +51,7 @@ export function useBookingController(facilityId: string) {
     queryFn: () => searchPatients({ query, filter: 'All', page: 1 }),
     enabled: query !== null,
     gcTime: patientDataGcTime,
+    staleTime: Infinity, // as the directory: an audited search is reused, not refetched
     retry: noRetryOnAnswers,
   });
   const clearSearch = () => { setSearchText(''); setQuery(null); };

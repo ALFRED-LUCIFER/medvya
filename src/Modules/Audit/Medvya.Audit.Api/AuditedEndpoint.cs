@@ -15,9 +15,13 @@ public sealed record AuditedEndpointMetadata(string Action, string ResourceType,
 public static class AuditedEndpoint
 {
     /// <summary>
-    /// Writes exactly one audit event per request, <b>before</b> the handler runs: if the audit write fails, the request
-    /// fails and no patient data is returned (fail closed). Requests without a tenant are refused.
+    /// Writes exactly one audit event per request, once the endpoint has answered and <b>before</b> the answer is sent: if the
+    /// audit write fails, the request fails and no patient data is returned (fail closed). Requests without a tenant are refused.
+    /// The outcome follows one rule for every endpoint (<see cref="OutcomeOf"/>): 401/403 is Denied, 404 is NotFound, anything
+    /// else Allowed. Endpoints therefore map their own errors to results inside this filter, never around it.
     /// A request the authorization policy refuses never reaches this filter; <see cref="AuditDeniedAccess"/> records it instead.
+    /// shortcut: for a write, the row follows the use case's commit, so an audit failure after the commit answers 500 but leaves
+    /// the change without its row; write audit rows in the use case's transaction (outbox) when a module needs that (MDV-P0-017).
     /// </summary>
     public static TBuilder Audited<TBuilder>(this TBuilder builder, string action, string resourceType, string purpose = "treatment", string? patientRouteKey = null)
         where TBuilder : IEndpointConventionBuilder
@@ -30,11 +34,37 @@ public static class AuditedEndpoint
             if (http.RequestServices.GetRequiredService<ICurrentTenant>().TenantId is not { } tenantId)
                 return Results.Problem(statusCode: StatusCodes.Status403Forbidden, title: "No facility context");
 
-            await WriteAsync(http, metadata, tenantId, AuditOutcome.Allowed);
-            return await next(ctx);
+            object? result;
+            try
+            {
+                result = await next(ctx);
+            }
+            catch
+            {
+                await WriteAsync(http, metadata, tenantId, AuditOutcome.Allowed); // not refused: it failed while running
+                throw;
+            }
+            await WriteAsync(http, metadata, tenantId, OutcomeOf(result));
+            return result;
         });
         return builder;
     }
+
+    /// <summary>The audit outcome of an endpoint's answer: 401/403 Denied, 404 NotFound (e.g. a record outside the caller's facility), else Allowed.</summary>
+    public static AuditOutcome OutcomeOf(object? result) => StatusOf(result) switch
+    {
+        StatusCodes.Status401Unauthorized or StatusCodes.Status403Forbidden => AuditOutcome.Denied,
+        StatusCodes.Status404NotFound => AuditOutcome.NotFound,
+        _ => AuditOutcome.Allowed,
+    };
+
+    // A plain value is serialised as 200; typed unions (Results<…>) wrap the result that runs.
+    static int StatusOf(object? result) => result switch
+    {
+        INestedHttpResult nested => StatusOf(nested.Result),
+        IStatusCodeHttpResult { StatusCode: { } status } => status,
+        _ => StatusCodes.Status200OK,
+    };
 
     /// <summary>
     /// For a write whose use case writes its own audit event inside its database transaction (e.g. PatientRegistered.v1, which

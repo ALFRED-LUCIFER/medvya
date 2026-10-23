@@ -1,16 +1,20 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Security.Claims;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using Medvya.Audit.Infrastructure;
 using Medvya.Patients.Application;
 using Medvya.Patients.Infrastructure;
 using Medvya.Tenancy.Domain;
-using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using static Medvya.IntegrationTests.PatientRulesTests;
 
 namespace Medvya.IntegrationTests;
@@ -61,31 +65,42 @@ public sealed class PatientEndpointTests(SqlServerFixture sql) : IClassFixture<S
 
     sealed class SignedInUser(Guid id) : Medvya.BuildingBlocks.Domain.ICurrentUser { public Guid? UserId => id; }
 
-    WebApplicationFactory<Program> Host(int searchesPerMinute = 1000, int recordsPerMinute = 1000) =>
+    WebApplicationFactory<Program> Host(int searchesPerMinute = 1000, int duplicateChecksPerMinute = 1000, int recordsPerMinute = 1000) =>
         new WebApplicationFactory<Program>().WithWebHostBuilder(b => b
             .UseSetting("ConnectionStrings:Medvya", sql.ConnectionString)
             .UseSetting("RateLimiting:PatientSearchPerMinute", searchesPerMinute.ToString(System.Globalization.CultureInfo.InvariantCulture))
+            .UseSetting("RateLimiting:DuplicateChecksPerMinute", duplicateChecksPerMinute.ToString(System.Globalization.CultureInfo.InvariantCulture))
             .UseSetting("RateLimiting:PatientRecordsPerMinute", recordsPerMinute.ToString(System.Globalization.CultureInfo.InvariantCulture))
-            .ConfigureServices(s => s.AddSingleton<IStartupFilter>(new SignedIn(tenant))));
+            .ConfigureTestServices(s => SignInFromHeaders(s, tenant)));
 
-    /// <summary>Stands in for the session after the facility picker: user, tenant and facility claims from test headers.</summary>
-    // shortcut: the claims are set directly because sign-in does not issue tenant/facility claims before the facility picker (MDV-P0-012).
-    internal sealed class SignedIn(Guid tenant) : IStartupFilter
+    /// <summary>Signs requests in from X-Test-User / X-Test-Facility through a real authentication scheme (see <see cref="SignedIn"/>).</summary>
+    internal static void SignInFromHeaders(IServiceCollection s, Guid tenant)
     {
-        public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => app =>
+        s.AddAuthentication().AddScheme<AuthenticationSchemeOptions, SignedIn>(SignedIn.SchemeName, _ => { });
+        s.PostConfigure<AuthenticationOptions>(o => o.DefaultScheme = o.DefaultAuthenticateScheme = o.DefaultChallengeScheme = SignedIn.SchemeName);
+        s.AddSingleton(new TenantOf(tenant));
+    }
+
+    sealed record TenantOf(Guid Id);
+
+    /// <summary>
+    /// Stands in for the session after the facility picker: user, tenant and facility claims from test headers. A real
+    /// authentication handler, so the principal exists only from the host's authentication step on, exactly as a session
+    /// cookie's would: middleware that runs earlier (the rate limiter) sees an anonymous caller here too.
+    /// </summary>
+    // shortcut: the claims come from headers because sign-in does not issue tenant/facility claims before the facility picker (MDV-P0-012).
+    sealed class SignedIn(IOptionsMonitor<AuthenticationSchemeOptions> options, ILoggerFactory logger, UrlEncoder encoder, TenantOf tenant)
+        : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
+    {
+        public const string SchemeName = "synthetic";
+
+        protected override Task<AuthenticateResult> HandleAuthenticateAsync()
         {
-            app.Use((ctx, nxt) =>
-            {
-                if (ctx.Request.Headers.TryGetValue("X-Test-User", out var user))
-                {
-                    List<Claim> claims = [new(ClaimTypes.NameIdentifier, user.ToString()), new("tenant_id", tenant.ToString())];
-                    if (ctx.Request.Headers.TryGetValue("X-Test-Facility", out var f)) claims.Add(new("facility_id", f.ToString()));
-                    ctx.User = new ClaimsPrincipal(new ClaimsIdentity(claims, "synthetic"));
-                }
-                return nxt(ctx);
-            });
-            next(app);
-        };
+            if (!Request.Headers.TryGetValue("X-Test-User", out var user)) return Task.FromResult(AuthenticateResult.NoResult());
+            List<Claim> claims = [new(ClaimTypes.NameIdentifier, user.ToString()), new("tenant_id", tenant.Id.ToString())];
+            if (Request.Headers.TryGetValue("X-Test-Facility", out var f)) claims.Add(new("facility_id", f.ToString()));
+            return Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(new ClaimsPrincipal(new ClaimsIdentity(claims, SchemeName)), SchemeName)));
+        }
     }
 
     HttpClient Client(WebApplicationFactory<Program> host, string? user, bool withFacility = true)
@@ -194,6 +209,15 @@ public sealed class PatientEndpointTests(SqlServerFixture sql) : IClassFixture<S
         using var host = Host();
         using var desk = Client(host, "receptionist");
         Assert.Equal(HttpStatusCode.NotFound, (await desk.GetAsync(new Uri($"/v1/patients/{elsewhere}", UriKind.Relative))).StatusCode);
+        // Nothing was opened, so the trail must not say it was.
+        await using var db = sql.Audit(tenant);
+        var row = await db.Events.SingleAsync(e => e.Action == "patient.read" && e.PatientId == elsewhere);
+        Assert.Equal(Medvya.Audit.Domain.AuditOutcome.NotFound, row.Outcome);
+
+        // Revealing that record's numbers is not found either, and audited as such (one row).
+        Assert.Equal(HttpStatusCode.NotFound, (await desk.PostAsync(new Uri($"/v1/patients/{elsewhere}/identifiers/reveal", UriKind.Relative), null)).StatusCode);
+        var reveal = await db.Events.SingleAsync(e => e.Action == "patient.identifiers.reveal" && e.PatientId == elsewhere);
+        Assert.Equal(Medvya.Audit.Domain.AuditOutcome.NotFound, reveal.Outcome);
     }
 
     [Fact]
@@ -208,6 +232,7 @@ public sealed class PatientEndpointTests(SqlServerFixture sql) : IClassFixture<S
         Assert.DoesNotContain("98470", body, StringComparison.Ordinal);
     }
 
+    /// <summary>Per user, not per server: one desk using up its searches must not stop another desk (the limit runs after sign-in).</summary>
     [Fact]
     public async Task IdentifiersAreMaskedUntilAnAuditedRevealByFullAccess()
     {
@@ -315,5 +340,17 @@ public sealed class PatientEndpointTests(SqlServerFixture sql) : IClassFixture<S
         Assert.Equal(HttpStatusCode.OK, (await Search(desk, new { })).StatusCode);
         Assert.Equal(HttpStatusCode.TooManyRequests, (await Search(desk, new { })).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await Search(admin, new { })).StatusCode);
+    }
+
+    [Fact]
+    public async Task TheDuplicateCheckIsRateLimitedPerUser()
+    {
+        using var host = Host(duplicateChecksPerMinute: 1);
+        using var desk = Client(host, "receptionist");
+        using var admin = Client(host, "admin");
+        static Task<HttpResponseMessage> Check(HttpClient c) => c.PostAsJsonAsync(new Uri("/v1/patients/duplicate-check", UriKind.Relative), new { fullName = "Meera Iyer (synthetic)" });
+        Assert.Equal(HttpStatusCode.OK, (await Check(desk)).StatusCode);
+        Assert.Equal(HttpStatusCode.TooManyRequests, (await Check(desk)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await Check(admin)).StatusCode); // another desk is not affected
     }
 }

@@ -8,6 +8,7 @@ using Medvya.Patients.Application;
 using Medvya.Tenancy.Domain;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -97,7 +98,7 @@ public sealed class PatientSearchPerformanceTests(SqlServerFixture sql) : IClass
             .UseSetting("ConnectionStrings:Medvya", sql.ConnectionString)
             .UseSetting("RateLimiting:PatientSearchPerMinute", "100000")
             .UseSetting("RateLimiting:DuplicateChecksPerMinute", "100000")
-            .ConfigureServices(s => s.AddSingleton<IStartupFilter>(new PatientEndpointTests.SignedIn(tenant))));
+            .ConfigureTestServices(s => PatientEndpointTests.SignInFromHeaders(s, tenant)));
         using var desk = host.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost") });
         desk.DefaultRequestHeaders.Add("X-Test-User", receptionist.ToString());
         desk.DefaultRequestHeaders.Add("X-Test-Facility", facility.ToString());

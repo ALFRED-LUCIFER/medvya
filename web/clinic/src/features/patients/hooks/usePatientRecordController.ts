@@ -8,6 +8,7 @@ export function usePatientRecordController(patientId: string) {
     queryKey: ['patients', 'record', patientId],
     queryFn: () => fetchPatient(patientId), // no abort signal (see usePatientDirectoryController)
     gcTime: patientDataGcTime,
+    staleTime: Infinity, // each fetch is an audited read: reuse it until something changes it
     retry: noRetryOnAnswers,
   });
   // Full ABHA / Emirates ID / member numbers only on request; the server audits each reveal. Kept in memory for this screen only.

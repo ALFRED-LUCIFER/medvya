@@ -68,42 +68,42 @@ public sealed record RegisterRequest
 
 public static class PatientEndpoints
 {
-    /// <summary>Rate-limit policy for search endpoints (registered by the host, per signed-in user).</summary>
+    /// <summary>Per-user rate limit for search endpoints (registered by the host with <see cref="UserRateLimit.AddUserRateLimit"/>).</summary>
     public const string SearchRateLimit = "patient-search";
-    /// <summary>Rate-limit policy for opening records and revealing their numbers (registered by the host, per signed-in user).</summary>
+    /// <summary>Per-user rate limit for opening records and revealing their numbers (registered by the host, like search).</summary>
     public const string RecordRateLimit = "patient-record";
-    /// <summary>Rate-limit policy for the duplicate check, which runs while the desk types (registered by the host, per user).</summary>
+    /// <summary>Per-user rate limit for the duplicate check, which runs while the desk types (registered by the host, like search).</summary>
     public const string DuplicateCheckRateLimit = "patient-duplicate-check";
     const string Purpose = "registration";
 
     /// <summary>
     /// Front-desk patient endpoints (MDV-P1-018, MDV-P1-016). Reading needs Register / book patients at Read or Full, registering
-    /// at Full. Reads are audited before they run; a registration audits inside its own transaction.
+    /// at Full. Reads are audited once they answer, before the answer is sent; a registration audits inside its own transaction.
     /// </summary>
     public static IEndpointRouteBuilder MapPatientEndpoints(this IEndpointRouteBuilder app)
     {
         var patients = app.MapGroup("/v1/patients").RequireCapability(Capability.RegisterBookPatients, Access.Read, Access.Full);
 
         patients.MapPost("/search", Search)
-            .Audited("patient.search", "patient", Purpose)
-            .RequireRateLimiting(SearchRateLimit);
+            .RequireUserRateLimit(SearchRateLimit) // before the audit filter: a refused search reads nothing
+            .Audited("patient.search", "patient", Purpose);
 
         // shortcut: per-user limits only; no alert on unusual read volume (e.g. one user opening hundreds of records a day) until the
         // practice access log exists (MDV-P1-035).
         patients.MapGet("/{patientId:guid}", Get)
-            .Audited("patient.read", "patient", Purpose, patientRouteKey: "patientId")
-            .RequireRateLimiting(RecordRateLimit);
+            .RequireUserRateLimit(RecordRateLimit)
+            .Audited("patient.read", "patient", Purpose, patientRouteKey: "patientId");
 
         // POST, not GET: a reveal is an action that is audited on its own, never prefetched or cached.
         patients.MapPost("/{patientId:guid}/identifiers/reveal", Reveal)
             .RequireCapability(Capability.RegisterBookPatients, Access.Full)
-            .Audited("patient.identifiers.reveal", "patient", Purpose, patientRouteKey: "patientId")
-            .RequireRateLimiting(RecordRateLimit);
+            .RequireUserRateLimit(RecordRateLimit)
+            .Audited("patient.identifiers.reveal", "patient", Purpose, patientRouteKey: "patientId");
 
         patients.MapPost("/duplicate-check", DuplicateCheck)
             .RequireCapability(Capability.RegisterBookPatients, Access.Full)
-            .Audited("patient.duplicate_check", "patient", Purpose)
-            .RequireRateLimiting(DuplicateCheckRateLimit);
+            .RequireUserRateLimit(DuplicateCheckRateLimit)
+            .Audited("patient.duplicate_check", "patient", Purpose);
 
         patients.MapPost("/", Register)
             .RequireCapability(Capability.RegisterBookPatients, Access.Full)

@@ -1,0 +1,28 @@
+@model PublicFormPage
+@{
+    var p = Model;
+    var notice = $"{p.FormId}-notice";
+    var id = $"{p.FormId}-consent";
+}
+@* Shown before anything is stored (DPDP Rules 2025 r.3, UAE PDPL Art. 13). shortcut: legal review of the notice wording (MDV-P1-044). *@
+<div class="notice" aria-labelledby="@notice-title" role="group">
+    <h3 id="@notice-title">@p.T("site.notice.title")</h3>
+    <p>@p.T("site.notice.fields")</p>
+    <ul>
+        @foreach (var label in p.NoticeFields)
+        {
+            <li>@p.T(label)</li>
+        }
+    </ul>
+    <p>@p.NoticePurpose @p.T("site.notice.noSharing")</p>
+    <p>@p.T("site.notice.retention")</p>
+    <p>@p.T("site.notice.rights") <a href="mailto:@p.PrivacyContact" dir="ltr">@p.PrivacyContact</a></p>
+    <p>@p.T($"site.notice.complain.{p.NoticeRegion}")</p>
+</div>
+<div class="field">
+    <label class="check" for="@id">
+        <input id="@id" name="Form.Consent" type="checkbox" value="true" checked="@(p.Contact.Consent ? "checked" : null)" aria-invalid="@p.Invalid("Consent")" aria-describedby="@p.Described(id, "Consent")" autofocus="@p.Focus(id)">
+        <span>@p.T("site.form.consent")</span>
+    </label>
+    @if (p.Errors.ContainsKey("Consent")) { <p id="@id-error" class="field-error">@p.FieldError("Consent")</p> }
+</div>

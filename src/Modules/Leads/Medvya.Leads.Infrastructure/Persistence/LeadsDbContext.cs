@@ -22,6 +22,7 @@ public sealed class LeadsDbContext(DbContextOptions<LeadsDbContext> options) : D
             e.Property(x => x.Email).HasMaxLength(DemoRequest.EmailMax);
             e.Property(x => x.Phone).HasMaxLength(DemoRequest.PhoneMax).IsUnicode(false);
             e.Property(x => x.Message).HasMaxLength(DemoRequest.MessageMax);
+            e.Property(x => x.NoticeVersion).HasMaxLength(20).IsUnicode(false);
             e.HasIndex(x => x.ReceivedAt);
         });
         modelBuilder.Entity<WaitlistEntry>(e =>
@@ -31,6 +32,7 @@ public sealed class LeadsDbContext(DbContextOptions<LeadsDbContext> options) : D
             e.Property(x => x.Country).HasMaxLength(2).IsUnicode(false);
             e.Property(x => x.Email).HasMaxLength(LeadRules.EmailMax);
             e.Property(x => x.Phone).HasMaxLength(WaitlistEntry.PhoneMax).IsUnicode(false);
+            e.Property(x => x.NoticeVersion).HasMaxLength(20).IsUnicode(false);
             e.HasIndex(x => new { x.Country, x.ReceivedAt });
         });
     }

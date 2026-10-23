@@ -23,8 +23,11 @@ public sealed class TrustModel(SiteText text, IOptionsSnapshot<TrustCentreConten
     public override IReadOnlyList<(string Field, string Id)> Fields { get; } =
     [
         ("Name", "demo-name"), ("Organisation", "demo-organisation"), ("Role", "demo-role"), ("Country", "demo-country"),
-        ("Contact", "demo-email"), ("Email", "demo-email"), ("Phone", "demo-phone"), ("Message", "demo-message"),
+        ("Contact", "demo-email"), ("Email", "demo-email"), ("Phone", "demo-phone"), ("Message", "demo-message"), ("Consent", "demo-consent"),
     ];
+    public override IReadOnlyList<string> NoticeFields { get; } =
+        ["site.form.name", "site.demo.organisation", "site.demo.role", "site.demo.country", "site.form.email", "site.form.phone", "site.demo.message"];
+    public override string NoticePurpose => T("site.notice.purpose.demo");
     protected override string ErrorKey(string field) => field is "Organisation" or "Role" ? $"site.demo.error.{field}" : base.ErrorKey(field);
 
     public TrustCentreContent Lists => content.Value;
@@ -37,6 +40,7 @@ public sealed class TrustModel(SiteText text, IOptionsSnapshot<TrustCentreConten
         {
             Name = Clean(Form.Name) ?? "", Organisation = Clean(Form.Organisation) ?? "", Role = Clean(Form.Role) ?? "",
             Country = Clean(Form.Country) ?? "", Email = Clean(Form.Email), Phone = Clean(Form.Phone), Message = Clean(Form.Message),
+            ConsentedAt = ConsentedAt, NoticeVersion = NoticeVersion,
         };
         return SubmitAsync(DemoRequestRules.Validate(request), () => requests.SubmitAsync(request, cancellationToken),
             $"{Href(PublicSite.TrustCentre)}?sent=1#demo");

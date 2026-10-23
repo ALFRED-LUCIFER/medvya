@@ -39,6 +39,7 @@ public sealed partial class TrustCentreTests(WebApplicationFactory<Program> fact
     {
         ["Form.Name"] = "  Kavya Menon  ", ["Form.Organisation"] = "Synthetic General Hospital", ["Form.Role"] = "Chief medical officer",
         ["Form.Country"] = "IN", ["Form.Email"] = "kavya.menon@example.com", ["Form.Phone"] = "", ["Form.Message"] = "Twenty OPD rooms.",
+        ["Form.Consent"] = "true",
     };
 
     // GET the form, then POST it with its anti-forgery cookie and token (as a browser would), optionally overriding fields.
@@ -104,7 +105,7 @@ public sealed partial class TrustCentreTests(WebApplicationFactory<Program> fact
     {
         var html = await Html(await Site().Client.GetAsync(new Uri("/trust", UriKind.Relative)));
         var names = FieldName().Matches(html).Select(m => m.Groups[1].Value).Order(StringComparer.Ordinal);
-        Assert.Equal(["Form.Country", "Form.Email", "Form.Message", "Form.Name", "Form.Organisation", "Form.Phone", "Form.Role", "Form.Started", "Form.Website", "__RequestVerificationToken"], names);
+        Assert.Equal(["Form.Consent", "Form.Country", "Form.Email", "Form.Message", "Form.Name", "Form.Organisation", "Form.Phone", "Form.Role", "Form.Started", "Form.Website", "__RequestVerificationToken"], names);
         Assert.Contains("Do not include patient information. This form is only for your own contact details.", html, StringComparison.Ordinal);
     }
 
@@ -112,11 +113,15 @@ public sealed partial class TrustCentreTests(WebApplicationFactory<Program> fact
     public async Task AValidRequestIsSubmittedEvenWithAStaffSessionCookieAndThanksTheVisitor()
     {
         var (client, store) = Site();
+        var before = DateTimeOffset.UtcNow;
         var res = await Submit(client, Valid, extraCookie: "__Host-medvya=session-cookie-value"); // no CSRF header: the staff session is never read
         Assert.Equal(HttpStatusCode.Redirect, res.StatusCode);
         Assert.Equal("/trust?sent=1#demo", res.Headers.Location?.OriginalString);
         var saved = Assert.Single(store.Received);
         Assert.Equal(("Kavya Menon", "IN", "kavya.menon@example.com", (string?)null), (saved.Name, saved.Country, saved.Email, saved.Phone));
+        Assert.InRange(saved.ConsentedAt!.Value, before, DateTimeOffset.UtcNow); // proof of consent: when, and which notice
+        Assert.Equal(TimeSpan.Zero, saved.ConsentedAt.Value.Offset);
+        Assert.Equal(LeadRules.NoticeVersion, saved.NoticeVersion);
 
         var thanks = await Html(await client.GetAsync(new Uri("/trust?sent=1", UriKind.Relative)));
         Assert.Contains("role=\"status\">Thank you. We have received your request.", thanks, StringComparison.Ordinal);
@@ -136,6 +141,92 @@ public sealed partial class TrustCentreTests(WebApplicationFactory<Program> fact
 
         var noContact = await Submit(client, new(Valid) { ["Form.Email"] = "" });
         Assert.Contains("Enter an email address or a phone number.", await Html(noContact), StringComparison.Ordinal);
+        Assert.Empty(store.Received);
+    }
+
+    // DPDP Act s.6 / UAE PDPL Art. 6: no tick, no storing. The recording store is the only way to the database and the founder email.
+    [Fact]
+    public async Task ARequestWithoutConsentIsRefusedAndNothingIsStoredOrEmailed()
+    {
+        var (client, store) = Site();
+        var fields = new Dictionary<string, string>(Valid);
+        fields.Remove("Form.Consent");
+        var res = await Submit(client, fields);
+        Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
+        var html = await Html(res);
+        Assert.Contains("<li><a href=\"#demo-consent\">Tick the box to agree, so that we can use your details.</a></li>", html, StringComparison.Ordinal);
+        Assert.Contains("id=\"demo-consent\" name=\"Form.Consent\" type=\"checkbox\" value=\"true\" aria-invalid=\"true\" aria-describedby=\"demo-consent-error\" autofocus", html, StringComparison.Ordinal);
+        Assert.Contains("value=\"Synthetic General Hospital\"", html, StringComparison.Ordinal); // what was typed is kept
+        Assert.Empty(store.Received);
+
+        Assert.Equal(HttpStatusCode.BadRequest, (await Submit(client, new(Valid) { ["Form.Consent"] = "false" })).StatusCode);
+        Assert.Empty(store.Received);
+    }
+
+    [Fact]
+    public async Task TheConsentBoxIsUntickedUntilTheVisitorTicksIt()
+    {
+        var html = await Html(await Site().Client.GetAsync(new Uri("/trust", UriKind.Relative)));
+        Assert.Contains("<input id=\"demo-consent\" name=\"Form.Consent\" type=\"checkbox\" value=\"true\">", html, StringComparison.Ordinal);
+        Assert.Contains("I agree to Medvya using these details for the purpose above.", html, StringComparison.Ordinal);
+    }
+
+    // DPDP Rules 2025 r.3 and UAE PDPL Art. 13: who, which data, why, no other use, how long, how to withdraw, and where to complain.
+    [Theory]
+    [InlineData("/trust", "IN", "How Medvya uses these details", "We use them only to contact you about a demo.", "Data Protection Board of India", "UAE Data Office")]
+    [InlineData("/trust", "AE", "How Medvya uses these details", "We use them only to contact you about a demo.", "UAE Data Office", "Data Protection Board of India")]
+    [InlineData("/region?go=IN", "AE", "How Medvya uses these details", "We use them only to tell you when Medvya opens in India.", "Data Protection Board of India", "UAE Data Office")]
+    [InlineData("/region?go=AE", "IN", "How Medvya uses these details", "We use them only to tell you when Medvya opens in UAE.", "UAE Data Office", "Data Protection Board of India")]
+    [InlineData("/hi/trust", "IN", "Medvya इन विवरणों का उपयोग कैसे करता है", "हम इनका उपयोग केवल डेमो के बारे में आपसे संपर्क करने के लिए करते हैं।", "भारतीय डेटा संरक्षण बोर्ड", "यूएई डेटा कार्यालय")]
+    [InlineData("/hi/region?go=AE", "IN", "Medvya इन विवरणों का उपयोग कैसे करता है", "Medvya यूएई में कब शुरू होता है", "यूएई डेटा कार्यालय", "भारतीय डेटा संरक्षण बोर्ड")]
+    [InlineData("/ar/trust", "AE", "كيف يستخدم Medvya هذه البيانات", "نستخدمها فقط للتواصل معك بشأن عرض توضيحي.", "مكتب الإمارات للبيانات", "مجلس حماية البيانات في الهند")]
+    [InlineData("/ar/region?go=IN", "AE", "كيف يستخدم Medvya هذه البيانات", "لإبلاغك عند إطلاق Medvya في الهند.", "مجلس حماية البيانات في الهند", "مكتب الإمارات للبيانات")]
+    public async Task ThePrivacyNoticeIsShownAboveTheSubmitButtonWithTheRegionsAuthority(string path, string cookie, string title, string purpose, string authority, string otherAuthority)
+    {
+        using var req = new HttpRequestMessage(HttpMethod.Get, new Uri(path, UriKind.Relative)) { Headers = { { "Cookie", $"medvya-region={cookie}" } } };
+        var html = (await Html(await Site().Client.SendAsync(req))).ReplaceLineEndings("\n");
+        var notice = html.IndexOf($">{title}</h3>", StringComparison.Ordinal);
+        Assert.InRange(notice, 0, html.IndexOf("type=\"submit\"", StringComparison.Ordinal));
+        var block = html[notice..html.IndexOf("type=\"submit\"", StringComparison.Ordinal)];
+        Assert.Contains(purpose, block, StringComparison.Ordinal);
+        Assert.Contains(authority, block, StringComparison.Ordinal);
+        Assert.DoesNotContain(otherAuthority, block, StringComparison.Ordinal);
+        Assert.Contains("<a href=\"mailto:privacy@medvya.example\" dir=\"ltr\">privacy@medvya.example</a>", block, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task TheNoticeListsEveryFieldTheFormCollectsAndTheRetention()
+    {
+        var html = (await Html(await Site().Client.GetAsync(new Uri("/trust", UriKind.Relative)))).ReplaceLineEndings("\n");
+        var items = Regex.Matches(html[html.IndexOf("class=\"notice\"", StringComparison.Ordinal)..], "<li>([^<]+)</li>").Select(m => m.Groups[1].Value);
+        Assert.Equal(["Your name", "Organisation", "Your role", "Country", "Email", "Phone", "Message (optional)"], items);
+        Assert.Contains("We do not share or sell them, and we do not use them for anything else.", html, StringComparison.Ordinal);
+        Assert.Contains("We keep them for 2 years after our last contact with you, then delete them.", html, StringComparison.Ordinal);
+    }
+
+    // No privacy contact means no way to withdraw consent, so the notice would be incomplete: no form, and a crafted post stores nothing.
+    [Fact]
+    public async Task WithoutAPrivacyContactNoFormIsOfferedAndNothingIsStored()
+    {
+        var store = new RecordingDemoRequests();
+        var app = factory.WithWebHostBuilder(b =>
+        {
+            b.UseSetting("PublicSite:MinimumFillSeconds", "0");
+            b.UseSetting("PublicSite:PrivacyContact", "");
+            b.ConfigureTestServices(s => s.AddSingleton<IDemoRequests>(store));
+        });
+        var client = app.CreateClient(new() { AllowAutoRedirect = false, HandleCookies = false });
+        var html = await Html(await client.GetAsync(new Uri("/trust", UriKind.Relative)));
+        Assert.Contains("This form is not open yet.", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("<form", html, StringComparison.Ordinal);
+
+        // A valid token and start time taken from the app itself, as if a form had been rendered.
+        var antiforgery = app.Services.GetRequiredService<Microsoft.AspNetCore.Antiforgery.IAntiforgery>();
+        var tokens = antiforgery.GetTokens(new Microsoft.AspNetCore.Http.DefaultHttpContext { RequestServices = app.Services });
+        var values = new Dictionary<string, string>(Valid) { ["Form.Started"] = app.Services.GetRequiredService<PublicFormGuard>().Start(), [tokens.FormFieldName] = tokens.RequestToken! };
+        using var req = new HttpRequestMessage(HttpMethod.Post, new Uri("/trust", UriKind.Relative)) { Content = new FormUrlEncodedContent(values) };
+        req.Headers.Add("Cookie", $"{app.Services.GetRequiredService<Microsoft.Extensions.Options.IOptions<Microsoft.AspNetCore.Antiforgery.AntiforgeryOptions>>().Value.Cookie.Name}={tokens.CookieToken}");
+        Assert.Equal(HttpStatusCode.NotFound, (await client.SendAsync(req)).StatusCode);
         Assert.Empty(store.Received);
     }
 

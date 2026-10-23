@@ -30,7 +30,10 @@ public sealed class RegionModel(SiteText text, IOptionsSnapshot<DeploymentOption
     public override ContactForm Contact => Form;
     public override string FormId => "waitlist";
     public override IReadOnlyList<(string Field, string Id)> Fields { get; } =
-        [("Name", "waitlist-name"), ("Contact", "waitlist-email"), ("Email", "waitlist-email"), ("Phone", "waitlist-phone")];
+        [("Name", "waitlist-name"), ("Contact", "waitlist-email"), ("Email", "waitlist-email"), ("Phone", "waitlist-phone"), ("Consent", "waitlist-consent")];
+    public override IReadOnlyList<string> NoticeFields { get; } = ["site.form.name", "site.form.email", "site.form.phone", "site.demo.country"];
+    public override string NoticePurpose => T("site.notice.purpose.waitlist", new Dictionary<string, string> { ["region"] = RegionName(NoticeRegion) });
+    public override string NoticeRegion => WaitlistCountry ?? Region;
 
     /// <summary>The not-yet-live country whose waitlist is shown, if any.</summary>
     public string? WaitlistCountry { get; private set; }
@@ -49,7 +52,9 @@ public sealed class RegionModel(SiteText text, IOptionsSnapshot<DeploymentOption
     {
         if (Form.Country is not { } country || !PublicSite.Regions.Contains(country)) return Task.FromResult<IActionResult>(BadRequest());
         WaitlistCountry = country;
-        var entry = new WaitlistEntry { Name = Clean(Form.Name) ?? "", Country = country, Email = Clean(Form.Email), Phone = Clean(Form.Phone) };
+        var entry = new WaitlistEntry { Name = Clean(Form.Name) ?? "", Country = country, Email = Clean(Form.Email), Phone = Clean(Form.Phone),
+            ConsentedAt = ConsentedAt, NoticeVersion = NoticeVersion,
+        };
         return SubmitAsync(WaitlistRules.Validate(entry), () => waitlist.JoinAsync(entry, cancellationToken),
             $"{Href(PublicSite.DoctorStart)}?go={country}&sent=1#waitlist");
     }

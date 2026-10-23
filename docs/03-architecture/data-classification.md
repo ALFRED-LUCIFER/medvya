@@ -82,8 +82,10 @@ Not clinic data, so no tenant. Of the app roles only `medvya_leads` reaches the 
 | leads.DemoRequests: id, organisation, role, country, received_at | Internal | — |
 | leads.DemoRequests: name, email, phone | Personal | Never in logs. Sent to the founder by email (data map) |
 | leads.DemoRequests: message (free text) | Personal | Never in logs and never emailed: a visitor could type patient details despite the warning |
+| leads.DemoRequests: consented_at, notice_version | Internal | Proof of consent to the privacy notice shown above the form (UTC time, notice version). Null only on rows stored before the notice |
 | leads.Waitlist: id, country, received_at | Internal | — |
 | leads.Waitlist: name, email, phone | Personal | Never in logs |
+| leads.Waitlist: consented_at, notice_version | Internal | Proof of consent, as for demo requests |
 
 ### Clinical (P2)
 

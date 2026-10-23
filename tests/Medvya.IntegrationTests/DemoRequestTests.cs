@@ -27,6 +27,7 @@ public class DemoRequestTests(SqlServerFixture sql) : IClassFixture<SqlServerFix
         await using var db = new LeadsDbContext(new DbContextOptionsBuilder<LeadsDbContext>().UseSqlServer(sql.ConnectionString).Options);
         var stored = await db.DemoRequests.SingleAsync(r => r.Id == request.Id);
         Assert.Equal(("Kavya Menon", "Synthetic note: please call after 4 pm."), (stored.Name, stored.Message));
+        Assert.Equal((request.ConsentedAt, LeadRules.NoticeVersion), (stored.ConsentedAt, stored.NoticeVersion)); // proof of consent round-trips
 
         var mail = File.ReadAllText(Assert.Single(pickup.GetFiles("*.eml")).FullName);
         Assert.Contains("To: founder@medvya.example", mail, StringComparison.Ordinal);
@@ -39,12 +40,13 @@ public class DemoRequestTests(SqlServerFixture sql) : IClassFixture<SqlServerFix
     public async Task AWaitlistEntryIsStoredWithItsCountry()
     {
         await using var services = new ServiceCollection().AddLogging().AddLeadsModule(sql.ConnectionString, new LeadsEmailOptions()).BuildServiceProvider();
-        var entry = new WaitlistEntry { Name = "Fatima Al Hashimi", Country = "AE", Email = "fatima@example.com" };
+        var entry = new WaitlistEntry { Name = "Fatima Al Hashimi", Country = "AE", Email = "fatima@example.com", ConsentedAt = DemoRequestRulesTests.Consented, NoticeVersion = LeadRules.NoticeVersion };
         await using (var scope = services.CreateAsyncScope())
             await scope.ServiceProvider.GetRequiredService<IWaitlist>().JoinAsync(entry);
 
         await using var db = new LeadsDbContext(new DbContextOptionsBuilder<LeadsDbContext>().UseSqlServer(sql.ConnectionString).Options);
-        Assert.Equal("AE", (await db.Waitlist.SingleAsync(w => w.Id == entry.Id)).Country);
+        var stored = await db.Waitlist.SingleAsync(w => w.Id == entry.Id);
+        Assert.Equal(("AE", (DateTimeOffset?)DemoRequestRulesTests.Consented, LeadRules.NoticeVersion), (stored.Country, stored.ConsentedAt, stored.NoticeVersion));
     }
 
     [Fact]
@@ -65,10 +67,29 @@ public class DemoRequestTests(SqlServerFixture sql) : IClassFixture<SqlServerFix
 /// <summary>Demo request validation (MDV-P1-003): field/code pairs only, never the entered values.</summary>
 public class DemoRequestRulesTests
 {
+    internal static readonly DateTimeOffset Consented = new(2026, 10, 23, 9, 30, 0, TimeSpan.Zero);
+
     internal static DemoRequest Request(string? email = "kavya.menon@example.com", string? phone = null, string? message = null, string name = "Kavya Menon") => new()
     {
         Name = name, Organisation = "Synthetic General Hospital", Role = "Chief medical officer", Country = "IN", Email = email, Phone = phone, Message = message,
+        ConsentedAt = Consented, NoticeVersion = LeadRules.NoticeVersion,
     };
+
+    [Fact]
+    public void NothingIsAcceptedWithoutProofOfConsent()
+    {
+        var valid = Request();
+        Assert.Equal(new Dictionary<string, string> { ["Consent"] = "consent_required" }, DemoRequestRules.Validate(new DemoRequest
+        {
+            Name = valid.Name, Organisation = valid.Organisation, Role = valid.Role, Country = valid.Country, Email = valid.Email,
+        }));
+        Assert.Equal(new Dictionary<string, string> { ["Consent"] = "consent_required" }, DemoRequestRules.Validate(new DemoRequest
+        {
+            Name = valid.Name, Organisation = valid.Organisation, Role = valid.Role, Country = valid.Country, Email = valid.Email, ConsentedAt = Consented,
+        })); // a time without the notice it was given for proves nothing
+        Assert.Equal(new Dictionary<string, string> { ["Consent"] = "consent_required" },
+            WaitlistRules.Validate(new WaitlistEntry { Name = "Fatima Al Hashimi", Country = "AE", Email = "fatima@example.com" }));
+    }
 
     [Theory]
     [InlineData("kavya.menon@example.com", null, null)]
@@ -91,7 +112,7 @@ public class DemoRequestRulesTests
         var errors = DemoRequestRules.Validate(new DemoRequest
         {
             Name = new string('a', DemoRequest.NameMax + 1), Organisation = "", Role = "x", Country = "US", Email = "a@example.com",
-            Message = new string('m', DemoRequest.MessageMax + 1),
+            Message = new string('m', DemoRequest.MessageMax + 1), ConsentedAt = Consented, NoticeVersion = LeadRules.NoticeVersion,
         });
         Assert.Equal(new Dictionary<string, string> { ["Name"] = "tooLong", ["Organisation"] = "required", ["Country"] = "required", ["Message"] = "tooLong" }, errors);
     }
@@ -103,9 +124,9 @@ public class DemoRequestRulesTests
         var errors = DemoRequestRules.Validate(new DemoRequest
         {
             Name = "Kavya\nMenon", Organisation = "Synthetic General Hospital\r\nBcc: someone@example.com", Role = "Chief\u0000medical officer",
-            Country = "IN", Email = "a@example.com", Message = "Two lines\nare fine here.",
+            Country = "IN", Email = "a@example.com", Message = "Two lines\nare fine here.", ConsentedAt = Consented, NoticeVersion = LeadRules.NoticeVersion,
         });
         Assert.Equal(new Dictionary<string, string> { ["Name"] = "invalid", ["Organisation"] = "invalid", ["Role"] = "invalid" }, errors);
-        Assert.Equal("invalid", Assert.Single(WaitlistRules.Validate(new WaitlistEntry { Name = "Fatima\rAl Hashimi", Country = "AE", Email = "a@example.com" })).Value);
+        Assert.Equal("invalid", Assert.Single(WaitlistRules.Validate(new WaitlistEntry { Name = "Fatima\rAl Hashimi", Country = "AE", Email = "a@example.com", ConsentedAt = Consented, NoticeVersion = LeadRules.NoticeVersion })).Value);
     }
 }

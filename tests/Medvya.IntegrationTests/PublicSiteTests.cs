@@ -47,7 +47,8 @@ public sealed partial class PublicSiteTests : IClassFixture<WebApplicationFactor
         // Every link and stylesheet stays on this site (absolute URLs are only canonical/alternate links to itself).
         foreach (Match m in Href().Matches(html))
             Assert.True(m.Groups[1].Value.StartsWith('/') || m.Groups[1].Value.StartsWith('?') || m.Groups[1].Value.StartsWith('#')
-                || m.Groups[1].Value.StartsWith("http://localhost", StringComparison.Ordinal) || m.Groups[1].Value == "data:,", m.Groups[1].Value);
+                || m.Groups[1].Value.StartsWith("http://localhost", StringComparison.Ordinal) || m.Groups[1].Value == "data:,"
+                || m.Groups[1].Value == "mailto:privacy@medvya.example", m.Groups[1].Value); // the notice's withdrawal address: opens the visitor's mail app, loads nothing
         Assert.Contains("<meta name=\"viewport\"", html, StringComparison.Ordinal);
         Assert.Contains("<link rel=\"canonical\"", html, StringComparison.Ordinal);
     }

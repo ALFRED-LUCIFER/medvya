@@ -36,6 +36,10 @@
             {
                 <p class="success" role="status">@p.T("site.waitlist.sent", country)</p>
             }
+            else if (p.PrivacyContact is null)
+            {
+                <p class="note">@p.T("site.form.closed")</p>
+            }
             else
             {
                 <partial name="_FormErrors" />
@@ -43,6 +47,7 @@
                     <input type="hidden" name="Form.Country" value="@waiting">
                     <partial name="_NameField" />
                     <partial name="_ContactFields" />
+                    <partial name="_PrivacyNotice" />
                     <button class="button button-primary" type="submit">@p.T("site.waitlist.submit")</button>
                 </form>
             }

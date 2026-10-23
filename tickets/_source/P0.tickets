@@ -557,7 +557,7 @@ ac:
 status: Done
 progress:
 - Merged [PR #6](https://github.com/ALFRED-LUCIFER/medvya/pull/6) and updated in [PR #29](https://github.com/ALFRED-LUCIFER/medvya/pull/29): @medvya/i18n (en/hi/ar), RTL via html dir + logical utilities, self-hosted fonts, jsx-no-literals lint
-- Follow-up: native-speaker review of hi/ar; Arabic recording-consent text waits for legal review (MDV-P3-023)
+- Follow-up: native-speaker review of hi/ar; Arabic recording-consent text waits for legal review (MDV-P3-023); the public-site privacy notice and consent box (site.notice.*, site.form.consent) are machine-drafted in hi/ar and also wait for legal review (MDV-P1-044)
 title: Internationalisation pipeline: English, Hindi, Arabic with full RTL
 type: Task
 epic: MDV-P0-E04

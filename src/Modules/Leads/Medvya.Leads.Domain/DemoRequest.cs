@@ -24,6 +24,10 @@ public sealed class DemoRequest
     /// <summary>Free text. Never logged or emailed, because a visitor could ignore the warning and type patient details.</summary>
     [Classification(DataClass.Personal)] public string? Message { get; init; }
     [Classification(DataClass.Internal)] public DateTimeOffset ReceivedAt { get; init; } = DateTimeOffset.UtcNow;
+    /// <summary>Proof of consent: when the visitor ticked the box under the privacy notice. Null only on rows stored before the notice existed.</summary>
+    [Classification(DataClass.Internal)] public DateTimeOffset? ConsentedAt { get; init; }
+    /// <summary>The <see cref="LeadRules.NoticeVersion"/> the visitor agreed to.</summary>
+    [Classification(DataClass.Internal)] public string? NoticeVersion { get; init; }
 }
 
 /// <summary>Validation of a submitted demo request. Returns field → error code, never the entered values.</summary>
@@ -38,6 +42,7 @@ public static class DemoRequestRules
         if (!DemoRequest.Countries.Contains(r.Country)) errors[nameof(r.Country)] = "required";
         LeadRules.Contact(errors, r.Email, r.Phone);
         if (r.Message?.Length > DemoRequest.MessageMax) errors[nameof(r.Message)] = "tooLong";
+        LeadRules.Consent(errors, r.ConsentedAt, r.NoticeVersion);
         return errors;
     }
 }
@@ -46,6 +51,11 @@ public static class DemoRequestRules
 public static partial class LeadRules
 {
     public const int EmailMax = 254;
+    /// <summary>
+    /// Version of the privacy notice shown above both forms (site.notice.* in packages/i18n). Change it whenever that wording changes,
+    /// so each stored consent points at the text the visitor saw. shortcut: legal review of the notice wording (MDV-P1-044).
+    /// </summary>
+    public const string NoticeVersion = "2026-10-23";
 
     /// <summary>Required single-line text. A browser never sends a line break from a text input, so one means a crafted post.</summary>
     public static void Required(Dictionary<string, string> errors, string field, string? value, int max)
@@ -63,6 +73,12 @@ public static partial class LeadRules
         if (!string.IsNullOrWhiteSpace(email) && (email.Length > EmailMax || !MailAddress.TryCreate(email, out var a) || a.Address != email))
             errors["Email"] = "invalid";
         if (!string.IsNullOrWhiteSpace(phone) && !Phone().IsMatch(phone)) errors["Phone"] = "invalid";
+    }
+
+    /// <summary>DPDP Act s.6 and UAE PDPL Art. 6: consent is a clear affirmative act we can prove, so nothing is stored without it.</summary>
+    public static void Consent(Dictionary<string, string> errors, DateTimeOffset? consentedAt, string? noticeVersion)
+    {
+        if (consentedAt is null || string.IsNullOrEmpty(noticeVersion)) errors["Consent"] = "consent_required";
     }
 
     // Digits with optional +, spaces, brackets and dashes; 7 to 20 characters.

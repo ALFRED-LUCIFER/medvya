@@ -99,7 +99,7 @@ export default function QuickRegistration(p: Props) {
           {p.checking && <p className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin" aria-hidden />{t('registration.duplicates.checking')}</p>}
           {p.checkFailed && <p className="text-sm font-semibold text-warning-700">{t('registration.duplicates.checkFailed')}</p>}
           {unresolved && (
-            <p className="flex items-center gap-2 rounded-md border border-line-strong bg-card px-3 py-2 text-sm font-bold text-warning-700">
+            <p className="flex items-center gap-2 rounded-md border bg-card px-3 py-2 text-sm font-bold text-warning-700">
               <UserSearch className="size-5 shrink-0" aria-hidden />{t('registration.duplicates.inline', { n: p.candidates.length })}
             </p>
           )}

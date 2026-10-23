@@ -22,7 +22,7 @@ export default function RegistrationSuccess({ result, name, actorName, onRegiste
         {t('registration.done.meta', { mrn: result.mrn, date: formatDate(at), time, actor: actorName })}
       </p>
       {result.status === 'Incomplete' && (
-        <p className="flex items-start gap-2 rounded-md border border-line-strong px-3 py-2 text-sm text-warning-700">
+        <p className="flex items-start gap-2 rounded-md border px-3 py-2 text-sm text-warning-700">
           <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
           <span><strong>{t('registration.done.quickTitle')}</strong> {t('registration.done.quickBody')}</span>
         </p>

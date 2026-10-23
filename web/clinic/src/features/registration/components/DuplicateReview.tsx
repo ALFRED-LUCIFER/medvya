@@ -24,7 +24,7 @@ export default function DuplicateReview({ candidates, resolution, onResolve, onR
   const { t } = useI18n();
   const byName = candidates.some(c => c.matchedOnNameAndDateOfBirth);
   return (
-    <section aria-labelledby="duplicate-review" className="flex flex-col gap-4 rounded-xl border border-line-strong bg-card p-4 shadow-[inset_4px_0_0_var(--color-warning-700)] rtl:shadow-[inset_-4px_0_0_var(--color-warning-700)]">
+    <section aria-labelledby="duplicate-review" className="flex flex-col gap-4 rounded-xl border bg-card p-4 shadow-[inset_4px_0_0_var(--color-warning-700)] rtl:shadow-[inset_-4px_0_0_var(--color-warning-700)]">
       <div className="flex items-start gap-2">
         <UserSearch className="mt-0.5 size-5 shrink-0 text-warning-700" aria-hidden />
         <div>

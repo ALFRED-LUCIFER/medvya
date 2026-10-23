@@ -1,3 +1,4 @@
+using Medvya.Audit.Infrastructure;
 using Medvya.BuildingBlocks.Domain;
 using Medvya.Identity.Domain;
 using Medvya.Identity.Infrastructure;
@@ -96,7 +97,7 @@ internal sealed class SchedulingHarness(SqlServerFixture sql)
             .AddSingleton<ICurrentTenant>(new SqlServerFixture.FixedTenant(inTenant ?? Tenant))
             .AddSingleton<ICurrentUser>(new FixedUser(user))
             .AddSingleton<TimeProvider>(Clock)
-            .AddTenancyModule(ConnectionString).AddIdentityModule(ConnectionString)
+            .AddAuditModule(ConnectionString).AddTenancyModule(ConnectionString).AddIdentityModule(ConnectionString)
             .AddPatientsModule(ConnectionString).AddSchedulingModule(ConnectionString);
         services.Configure<SchedulingOptions>(o => (o.SlotHold, o.LockTimeout) = (Options.SlotHold, Options.LockTimeout));
         var provider = services.BuildServiceProvider();

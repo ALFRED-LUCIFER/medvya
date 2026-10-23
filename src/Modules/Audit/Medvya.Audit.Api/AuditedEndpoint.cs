@@ -15,13 +15,12 @@ public sealed record AuditedEndpointMetadata(string Action, string ResourceType,
 public static class AuditedEndpoint
 {
     /// <summary>
-    /// Writes exactly one audit event per request, once the endpoint has answered and <b>before</b> the answer is sent: if the
-    /// audit write fails, the request fails and no patient data is returned (fail closed). Requests without a tenant are refused.
-    /// The outcome follows one rule for every endpoint (<see cref="OutcomeOf"/>): 401/403 is Denied, 404 is NotFound, anything
-    /// else Allowed. Endpoints therefore map their own errors to results inside this filter, never around it.
-    /// A request the authorization policy refuses never reaches this filter; <see cref="AuditDeniedAccess"/> records it instead.
-    /// shortcut: for a write, the row follows the use case's commit, so an audit failure after the commit answers 500 but leaves
-    /// the change without its row; write audit rows in the use case's transaction (outbox) when a module needs that (MDV-P0-017).
+    /// For <b>reads</b>: writes exactly one audit event per request, once the endpoint has answered and <b>before</b> the answer is
+    /// sent: if the audit write fails, the request fails and no patient data is returned (fail closed). Requests without a tenant
+    /// are refused. The outcome follows one rule for every endpoint (<see cref="OutcomeFor"/>). Endpoints therefore map their own
+    /// errors to results inside this filter, never around it. Writes use <see cref="AuditedByUseCase"/> instead, so the row commits
+    /// with the change. A request the authorization policy refuses never reaches this filter; <see cref="AuditDeniedAccess"/>
+    /// records it instead.
     /// </summary>
     public static TBuilder Audited<TBuilder>(this TBuilder builder, string action, string resourceType, string purpose = "treatment", string? patientRouteKey = null)
         where TBuilder : IEndpointConventionBuilder
@@ -50,13 +49,20 @@ public static class AuditedEndpoint
         return builder;
     }
 
-    /// <summary>The audit outcome of an endpoint's answer: 401/403 Denied, 404 NotFound (e.g. a record outside the caller's facility), else Allowed.</summary>
-    public static AuditOutcome OutcomeOf(object? result) => StatusOf(result) switch
+    /// <summary>
+    /// The audit outcome of an HTTP answer, one rule for reads and writes: 401/403 Denied, 404 NotFound (e.g. a record outside the
+    /// caller's facility), 400/409/422 Rejected (invalid input, an unresolved duplicate, a slot taken), anything else Allowed.
+    /// </summary>
+    public static AuditOutcome OutcomeFor(int status) => status switch
     {
         StatusCodes.Status401Unauthorized or StatusCodes.Status403Forbidden => AuditOutcome.Denied,
         StatusCodes.Status404NotFound => AuditOutcome.NotFound,
+        StatusCodes.Status400BadRequest or StatusCodes.Status409Conflict or StatusCodes.Status422UnprocessableEntity => AuditOutcome.Rejected,
         _ => AuditOutcome.Allowed,
     };
+
+    /// <summary>The audit outcome of an endpoint's result (<see cref="OutcomeFor"/> of its status code).</summary>
+    public static AuditOutcome OutcomeOf(object? result) => OutcomeFor(StatusOf(result));
 
     // A plain value is serialised as 200; typed unions (Results<…>) wrap the result that runs.
     static int StatusOf(object? result) => result switch
@@ -67,13 +73,29 @@ public static class AuditedEndpoint
     };
 
     /// <summary>
-    /// For a write whose use case writes its own audit event inside its database transaction (e.g. PatientRegistered.v1, which
-    /// needs the new record's id and must roll back with it). Marks the endpoint as patient data, so refusals are audited by
-    /// <see cref="AuditDeniedAccess"/>, without writing a second event for allowed calls. The use case must audit; its tests prove it.
+    /// For <b>writes</b>: the use case writes the Allowed event inside the database transaction of its change
+    /// (<see cref="IAuditLog.WriteAsync(AuditEvent, System.Data.Common.DbTransaction, CancellationToken)"/>), so a committed change
+    /// always has its row and a failed audit write rolls the change back. When the endpoint answers anything but Allowed
+    /// (<see cref="OutcomeFor"/>: refused, not found, rejected), nothing was changed and this filter writes that one row, with
+    /// codes only. A request that fails (5xx) has rolled back and leaves no row. Refusals by the authorization policy are audited
+    /// by <see cref="AuditDeniedAccess"/>. The use case must audit its allowed path; the endpoint tests prove it per endpoint.
     /// </summary>
-    public static TBuilder AuditedByUseCase<TBuilder>(this TBuilder builder, string action, string resourceType, string purpose)
-        where TBuilder : IEndpointConventionBuilder =>
-        builder.WithMetadata(new AuditedEndpointMetadata(action, resourceType, purpose, null));
+    public static TBuilder AuditedByUseCase<TBuilder>(this TBuilder builder, string action, string resourceType, string purpose, string? patientRouteKey = null)
+        where TBuilder : IEndpointConventionBuilder
+    {
+        var metadata = new AuditedEndpointMetadata(action, resourceType, purpose, patientRouteKey);
+        builder.WithMetadata(metadata);
+        builder.AddEndpointFilter(async (ctx, next) =>
+        {
+            var http = ctx.HttpContext;
+            if (http.RequestServices.GetRequiredService<ICurrentTenant>().TenantId is not { } tenantId)
+                return Results.Problem(statusCode: StatusCodes.Status403Forbidden, title: "No facility context");
+            var result = await next(ctx);
+            if (OutcomeOf(result) is var outcome and not AuditOutcome.Allowed) await WriteAsync(http, metadata, tenantId, outcome);
+            return result;
+        });
+        return builder;
+    }
 
     /// <summary>
     /// A refused call to an audited endpoint is itself audited (outcome Denied, PRD v2 P0-06), so every request to patient data

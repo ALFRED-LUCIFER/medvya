@@ -88,7 +88,12 @@ public sealed class ScheduleService(SchedulingDbContext db, SchedulingContext co
         ScheduleRules.Validate(template); // the scoped context is discarded with the request, so a rejected change is never saved
         template.ChangedBy = context.UserId;
         template.ChangedAt = context.Now;
-        await db.SaveChangesAsync(cancellationToken);
+        await using (var tx = await db.Database.BeginTransactionAsync(cancellationToken))
+        {
+            await db.SaveChangesAsync(cancellationToken);
+            await context.AuditAsync(SchedulingAudit.TemplateUpdate, SchedulingAudit.TemplateResource, SchedulingAudit.Operations, template.Id, null, cancellationToken);
+            await tx.CommitAsync(cancellationToken);
+        }
 
         // Existing appointments are never moved by a template change; the ones the new hours no longer cover are listed for action.
         var (_, zone) = await context.FacilityAsync(command.FacilityId, cancellationToken);
@@ -116,7 +121,10 @@ public sealed class ScheduleService(SchedulingDbContext db, SchedulingContext co
             Id = Guid.CreateVersion7(), TenantId = context.TenantId, FacilityId = command.FacilityId, Name = name, CreatedBy = context.UserId, CreatedAt = context.Now,
         };
         db.Resources.Add(resource);
+        await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
+        await context.AuditAsync(SchedulingAudit.ResourceCreate, SchedulingAudit.ResourceResource, SchedulingAudit.Operations, resource.Id, null, cancellationToken);
+        await tx.CommitAsync(cancellationToken);
         return new(resource.Id, resource.FacilityId, resource.Name);
     }
 

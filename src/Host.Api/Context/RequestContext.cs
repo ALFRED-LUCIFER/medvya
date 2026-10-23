@@ -7,7 +7,7 @@ namespace Host.Api.Context;
 /// Tenant, facility and user of the current request, from the signed-in principal. The tenant and facility claims are set
 /// when the user picks a facility (SessionControl); before that they are null and tenant data stays unreachable.
 /// </summary>
-public sealed class RequestContext(IHttpContextAccessor accessor) : ICurrentTenant, ICurrentFacility, ICurrentUser
+public sealed class RequestContext(IHttpContextAccessor accessor) : ICurrentTenant, ICurrentFacility, ICurrentUser, IRequestOrigin
 {
     Guid? linkTenant;
 
@@ -20,6 +20,8 @@ public sealed class RequestContext(IHttpContextAccessor accessor) : ICurrentTena
     /// </summary>
     internal void UseLinkTenant(Guid tenantId) => linkTenant = tenantId;
     public Guid? UserId => Read(ClaimTypes.NameIdentifier);
+    public string? ClientIp => accessor.HttpContext?.Connection.RemoteIpAddress?.ToString();
+    public string? CorrelationId => accessor.HttpContext?.TraceIdentifier;
 
     Guid? Read(string claim) => Guid.TryParse(accessor.HttpContext?.User.FindFirst(claim)?.Value, out var id) ? id : null;
 }

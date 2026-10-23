@@ -111,7 +111,8 @@ public sealed class FrontDeskEndpointTests(SqlServerFixture sql) : IClassFixture
         using var readOnly = await Client(h.SecondDoctor).PostAsJsonAsync($"/v1/appointments/{visit.Id}/status", new { state = "ReadyForDoctor" });
         Assert.Equal(HttpStatusCode.Forbidden, readOnly.StatusCode);
 
+        // One event per attempt. Moves are audited by the use case on the test's stopped clock, so they are compared as a set.
         Assert.Equal(["appointment.check_in", "appointment.check_in", "appointment.status", "appointment.status", "appointment.status", "appointment.status"],
-            (await AuditActions()).Where(a => a.StartsWith("appointment.", StringComparison.Ordinal) && a != "appointment.book"));
+            (await AuditActions()).Where(a => a.StartsWith("appointment.", StringComparison.Ordinal) && a != "appointment.book").Order(StringComparer.Ordinal));
     }
 }

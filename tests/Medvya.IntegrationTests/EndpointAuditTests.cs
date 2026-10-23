@@ -68,8 +68,8 @@ public sealed class EndpointAuditTests(SqlServerFixture sql) : IClassFixture<Sql
             .Where(n => !NoPatientData.Contains(n))
             .ToList();
 
-    /// <summary>A request to an audited endpoint: who sent it, how many audit rows it wrote and the HTTP status.</summary>
-    internal sealed record Call(Role Role, int Rows, int Status)
+    /// <summary>A request to an audited endpoint: who sent it, how many audit rows it wrote, their outcomes and the HTTP status.</summary>
+    internal sealed record Call(Role Role, int Rows, int Status, IReadOnlyList<Medvya.Audit.Domain.AuditOutcome> Outcomes)
     {
         /// <summary>401/403 means authorization refused it; anything else went through the endpoint filter to the handler.</summary>
         public bool Allowed => Status is not (401 or 403);
@@ -91,10 +91,11 @@ public sealed class EndpointAuditTests(SqlServerFixture sql) : IClassFixture<Sql
                     var name = Name(endpoint, method);
                     using var request = new HttpRequestMessage(new HttpMethod(method), new Uri(Path(endpoint.RoutePattern), UriKind.Relative));
                     if (method is not ("GET" or "HEAD" or "DELETE")) request.Content = new StringContent(SampleBody(name, role), System.Text.Encoding.UTF8, "application/json");
-                    var before = await Count();
+                    var before = await Ids();
                     using var response = await client.SendAsync(request);
                     if (!calls.TryGetValue(name, out var list)) calls[name] = list = [];
-                    list.Add(new(role, await Count() - before, (int)response.StatusCode));
+                    var written = await NewOutcomes(before);
+                    list.Add(new(role, written.Count, (int)response.StatusCode, written));
                 }
             }
         }
@@ -107,8 +108,22 @@ public sealed class EndpointAuditTests(SqlServerFixture sql) : IClassFixture<Sql
     /// allowed path, where the use case must write its event, would never run. One distinct synthetic person per role, so no
     /// call stops at a duplicate warning.
     /// </summary>
-    static string SampleBody(string endpoint, Role role) => endpoint switch
+    static readonly string[] WritesWithSampleBodies = ["PUT /v1/schedule/templates", "POST /v1/schedule/resources", "POST /v1/slot-holds/", "POST /v1/patients/"];
+
+    string SampleBody(string endpoint, Role role) => endpoint switch
     {
+        // Scheduling writes audit in their own transaction (MDV-P0-017): a template and a resource each role may add, and one
+        // free slot per role next Monday in the solo doctor's calendar (the template is saved first, endpoints run in map order).
+        "PUT /v1/schedule/templates" => System.Text.Json.JsonSerializer.Serialize(new
+        {
+            facilityId = facility, calendarId = staff[Role.SoloDoctor], calendarKind = "Doctor", slotMinutes = 20,
+            hours = new[] { new { weekday = 1, start = "09:00:00", end = "13:00:00", room = "Room 3" } }, breaks = Array.Empty<object>(), visitLengths = Array.Empty<object>(),
+        }),
+        "POST /v1/schedule/resources" => System.Text.Json.JsonSerializer.Serialize(new { facilityId = facility, name = $"{role} room (synthetic)" }),
+        "POST /v1/slot-holds/" => System.Text.Json.JsonSerializer.Serialize(new
+        {
+            facilityId = facility, calendarId = staff[Role.SoloDoctor], visitType = "FollowUp", start = NextMondayIst(9).AddMinutes(20 * (int)role),
+        }),
         "POST /v1/patients/" => System.Text.Json.JsonSerializer.Serialize(new
         {
             quick = true, fullName = $"{role} Audit Probe (synthetic)", dateOfBirth = $"{1950 + (int)role}-02-0{1 + (int)role % 9}",
@@ -117,10 +132,24 @@ public sealed class EndpointAuditTests(SqlServerFixture sql) : IClassFixture<Sql
         _ => "{}",
     };
 
-    async Task<int> Count()
+    /// <summary>A wall-clock hour next Monday in IST, always in the future on the real clock the host runs on.</summary>
+    static DateTimeOffset NextMondayIst(int hour)
+    {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var monday = today.AddDays(((int)DayOfWeek.Monday - (int)today.DayOfWeek + 7) % 7 + 7);
+        return new DateTimeOffset(monday.ToDateTime(new TimeOnly(hour, 0)), TimeSpan.FromHours(5.5));
+    }
+
+    async Task<HashSet<Guid>> Ids()
     {
         await using var db = sql.Audit(tenant);
-        return await db.Events.CountAsync();
+        return [.. await db.Events.Select(e => e.Id).ToListAsync()];
+    }
+
+    async Task<List<Medvya.Audit.Domain.AuditOutcome>> NewOutcomes(HashSet<Guid> before)
+    {
+        await using var db = sql.Audit(tenant);
+        return (await db.Events.Select(e => new { e.Id, e.Outcome }).ToListAsync()).Where(e => !before.Contains(e.Id)).Select(e => e.Outcome).ToList();
     }
 
     static string Path(RoutePattern pattern) =>
@@ -174,9 +203,15 @@ public sealed class EndpointAuditTests(SqlServerFixture sql) : IClassFixture<Sql
         Assert.All(calls, e =>
         {
             Assert.All(e.Value, c => Assert.True(c.Rows == 1, $"{e.Key} as {c.Role}: {c.Rows} audit rows (HTTP {c.Status})"));
+            // One outcome rule for every path: the row says what the caller was told (403 Denied, 404 NotFound, 400/409 Rejected).
+            Assert.All(e.Value, c => Assert.True(c.Outcomes.Count != 1 || c.Outcomes[0] == AuditedEndpoint.OutcomeFor(c.Status),
+                $"{e.Key} as {c.Role}: HTTP {c.Status} audited as {string.Join(",", c.Outcomes)}"));
             // Without this a capability-guarded endpoint could pass on refused requests alone and its allowed path never be counted.
             Assert.True(e.Value.Exists(c => c.Allowed), $"{e.Key}: every role was refused, so the allowed path was not checked");
         });
+        // Writes whose use case audits in its own transaction: the allowed path ran for some role and left exactly that one event.
+        foreach (var write in WritesWithSampleBodies)
+            Assert.Contains(calls[write], c => c.Outcomes.SequenceEqual([Medvya.Audit.Domain.AuditOutcome.Allowed]) && c.Status == 200);
     }
 
     [Fact]

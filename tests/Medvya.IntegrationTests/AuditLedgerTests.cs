@@ -32,6 +32,31 @@ public class AuditLedgerTests(SqlServerFixture sql) : IClassFixture<SqlServerFix
         return e;
     }
 
+    /// <summary>A write's event is part of the write's transaction: rolled back with it, committed with it (MDV-P0-017).</summary>
+    [Fact]
+    public async Task AnEventWrittenInAWritesTransactionCommitsOrRollsBackWithIt()
+    {
+        var (rolledBack, committed) = (Event(tenantA), Event(tenantA));
+        await using (var scheduling = sql.Scheduling(tenantA))
+        {
+            await using var tx = await scheduling.Database.BeginTransactionAsync();
+            await using var unused = sql.Audit(tenantA);
+            await new AuditLog(unused).WriteAsync(rolledBack, Microsoft.EntityFrameworkCore.Storage.DbContextTransactionExtensions.GetDbTransaction(tx));
+            await tx.RollbackAsync(); // the change failed after its event was written
+        }
+        await using (var scheduling = sql.Scheduling(tenantA))
+        {
+            await using var tx = await scheduling.Database.BeginTransactionAsync();
+            await using var unused = sql.Audit(tenantA);
+            await new AuditLog(unused).WriteAsync(committed, Microsoft.EntityFrameworkCore.Storage.DbContextTransactionExtensions.GetDbTransaction(tx));
+            await tx.CommitAsync();
+        }
+
+        await using var db = sql.Audit(tenantA);
+        Assert.False(await db.Events.AnyAsync(e => e.Id == rolledBack.Id));
+        Assert.True(await db.Events.AnyAsync(e => e.Id == committed.Id));
+    }
+
     [Fact]
     public async Task EventsAreVisibleOnlyToTheirOwnTenant()
     {
@@ -97,8 +122,9 @@ public class AuditLedgerTests(SqlServerFixture sql) : IClassFixture<SqlServerFix
         Assert.Equal(HttpStatusCode.Forbidden, (await noTenant.GetTestClient().GetAsync($"/patients/{Guid.NewGuid()}")).StatusCode);
 
         await using var broken = App(tenantA, s => s.AddScoped<IAuditLog, ThrowingLog>());
-        // The audit store is down: the request fails and no answer (no patient data) leaves. Since MDV-P0-017's outcome fix the
-        // row is written once the endpoint has answered, so the handler has run (see the shortcut in AuditedEndpoint for writes).
+        // A read with the audit store down: the request fails and no answer (no patient data) leaves. The row is written once the
+        // read has answered, so the handler has run; it changed nothing. Writes audit inside their own transaction instead, so there
+        // the change itself is rolled back (WriteAuditTransactionTests, PatientEndpointTests, PatientRegistryTests).
         await Assert.ThrowsAsync<InvalidOperationException>(() => broken.GetTestClient().GetAsync($"/patients/{Guid.NewGuid()}"));
         Assert.True(handlerRan);
     }
@@ -108,6 +134,7 @@ public class AuditLedgerTests(SqlServerFixture sql) : IClassFixture<SqlServerFix
     sealed class ThrowingLog : IAuditLog
     {
         public Task WriteAsync(AuditEvent auditEvent, CancellationToken ct) => throw new InvalidOperationException("audit store down");
+        public Task WriteAsync(AuditEvent auditEvent, System.Data.Common.DbTransaction transaction, CancellationToken ct) => throw new InvalidOperationException("audit store down");
     }
 
     WebApplication App(Guid? tenant, Action<IServiceCollection> audit)

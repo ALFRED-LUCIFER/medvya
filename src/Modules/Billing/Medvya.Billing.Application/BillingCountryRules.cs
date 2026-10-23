@@ -4,7 +4,7 @@ namespace Medvya.Billing.Application;
 
 /// <summary>
 /// Money and legal numbering rules per country (AGENTS.md 3.3): one subclass per country, no country checks elsewhere.
-/// Formats follow the receipts design (P-15); the advisers' review of the formats is MDV-P4-031.
+/// Formats follow the receipts design (P-15); the printed documents' sign-off is MDV-P4-031.
 /// </summary>
 public abstract class BillingCountryRules
 {
@@ -30,7 +30,13 @@ public abstract class BillingCountryRules
     /// <summary>Rejects a prefix whose numbers would break the country's format rules.</summary>
     public abstract void CheckPrefix(string prefix);
 
-    /// <summary>Amount in words for printed documents, e.g. "Rupees two thousand only"; the sign is not spelled (credit notes say "credit").</summary>
+    /// <summary>The highest number the series can print; issuing past it is refused ("series_exhausted"). Default: no format limit, only the bigint column.</summary>
+    public virtual long MaxNumber(string prefix, string financialYear) => long.MaxValue - 1;
+
+    /// <summary>
+    /// Amount in words for printed documents, e.g. "Rupees two thousand only": "and" joins only the paise or fils, "only" ends
+    /// the phrase, zero paise are left out. The sign is not spelled (credit notes say "credit").
+    /// </summary>
     public abstract string AmountInWords(Money amount);
 
     protected (long Major, long Minor) Split(Money amount)

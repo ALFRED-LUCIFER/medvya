@@ -787,5 +787,20 @@
   "registration.state.Ladakh": "Ladakh",
   "registration.state.Lakshadweep": "Lakshadweep",
   "registration.state.Puducherry": "Puducherry",
-  "registration.review.separator": " · "
+  "registration.review.separator": " · ",
+  "registration.error.nothing_to_complete": "Add the address, the payer or both.",
+  "patients.completion.title": "Registration to complete",
+  "patients.completion.missing.both": "Address and payer are missing. Add them while the patient is at the desk.",
+  "patients.completion.missing.address": "The address is missing. Add it while the patient is at the desk.",
+  "patients.completion.missing.payer": "The payer is missing. Add it while the patient is at the desk.",
+  "patients.completion.action": "Complete registration",
+  "registration.complete.title": "Complete registration",
+  "registration.complete.intro": "Add what quick registration left out. The Incomplete registration tag goes once the address and the payer are both recorded.",
+  "registration.complete.address": "Address",
+  "registration.complete.payer": "Payer",
+  "registration.complete.save": "Save",
+  "registration.complete.back": "Back to the record",
+  "registration.complete.failed": "Nothing was saved. Try again.",
+  "registration.complete.done.Complete": "Registration complete. The completion task is closed.",
+  "registration.complete.done.Incomplete": "Saved. The registration stays incomplete until the address and the payer are both recorded."
 }

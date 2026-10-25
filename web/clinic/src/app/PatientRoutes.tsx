@@ -1,6 +1,8 @@
 import { useParams, useSearchParams } from 'react-router';
 import type { Country } from '@medvya/i18n';
+import CompleteRegistration from '../features/registration/components/CompleteRegistration';
 import Registration from '../features/registration/components/Registration';
+import { useCompletionController } from '../features/registration/hooks/useCompletionController';
 import { useRegistrationController } from '../features/registration/hooks/useRegistrationController';
 import PatientDirectory from '../features/patients/components/PatientDirectory';
 import PatientRecord from '../features/patients/components/PatientRecord';
@@ -15,8 +17,12 @@ export function PatientDirectoryRoute({ registerPath }: { registerPath: string |
   return <PatientDirectory {...usePatientDirectoryController()} registerPath={registerPath} recordPath={recordPath} />;
 }
 
+const completePath = (id: string) => `${recordPath(id)}/complete`;
+
+// Revealing numbers and completing a registration both need Register / book patients at Full (the server checks the same).
 function Record({ patientId, canReveal }: { patientId: string; canReveal: boolean }) {
-  return <PatientRecord {...usePatientRecordController(patientId)} backPath={patientDirectory.path} canReveal={canReveal} />;
+  return <PatientRecord {...usePatientRecordController(patientId)} backPath={patientDirectory.path} canReveal={canReveal}
+    completePath={canReveal ? completePath(patientId) : null} />;
 }
 
 type RegistrationLinks = { country: Country; actorName: string; bookPath: string | null; checkInPath: string | null };
@@ -31,4 +37,13 @@ export function RegistrationRoute(links: RegistrationLinks) {
 export function PatientRecordRoute({ canReveal }: { canReveal: boolean }) {
   const { patientId = '' } = useParams();
   return <Record key={patientId} patientId={patientId} canReveal={canReveal} />;
+}
+
+function Completion({ patientId, country }: { patientId: string; country: Country }) {
+  return <CompleteRegistration {...useCompletionController(patientId, country)} recordPath={recordPath(patientId)} />;
+}
+
+export function CompleteRegistrationRoute({ country }: { country: Country }) {
+  const { patientId = '' } = useParams();
+  return <Completion key={patientId} patientId={patientId} country={country} />;
 }

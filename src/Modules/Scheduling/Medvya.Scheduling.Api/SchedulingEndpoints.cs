@@ -24,6 +24,10 @@ public static class SchedulingEndpoints
                 service.GetDayAsync(facilityId ?? Guid.Empty, date, ct))
             .AuditedWithErrors("schedule.read", "schedule");
 
+        schedule.MapGet("/week", (Guid? facilityId, Guid? calendarId, DateOnly? date, [FromServices] IScheduleService service, CancellationToken ct) =>
+                service.GetWeekAsync(facilityId ?? Guid.Empty, calendarId ?? Guid.Empty, date, ct))
+            .AuditedWithErrors("schedule.read", "schedule");
+
         schedule.MapGet("/templates", (Guid? facilityId, [FromServices] IScheduleService service, CancellationToken ct) =>
                 service.ListTemplatesAsync(facilityId ?? Guid.Empty, ct))
             .AuditedWithErrors("schedule.template.read", "schedule_template", "operations");
@@ -52,6 +56,16 @@ public static class SchedulingEndpoints
         var appointments = app.MapGroup("/v1/appointments").RequireAuthorization();
         appointments.MapPost("/", (BookAppointment command, [FromServices] IBookingService service, CancellationToken ct) => service.BookAsync(command, ct))
             .AuditedWriteWithErrors(SchedulingAudit.Book, SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment);
+        // Changing a booking (MDV-P1-024): each frees the old slot in the same transaction; the use case writes the allowed event.
+        appointments.MapPost("/{appointmentId:guid}/reschedule", (Guid appointmentId, RescheduleAppointment command, [FromServices] IBookingService service, CancellationToken ct) =>
+                service.RescheduleAsync(appointmentId, command, ct))
+            .AuditedWriteWithErrors(SchedulingAudit.Reschedule, SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment);
+        appointments.MapPost("/{appointmentId:guid}/cancel", (Guid appointmentId, CancelAppointment command, [FromServices] IBookingService service, CancellationToken ct) =>
+                service.CancelAsync(appointmentId, command, ct))
+            .AuditedWriteWithErrors(SchedulingAudit.Cancel, SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment);
+        appointments.MapPost("/{appointmentId:guid}/no-show", (Guid appointmentId, [FromServices] IBookingService service, CancellationToken ct) =>
+                service.MarkNoShowAsync(appointmentId, ct))
+            .AuditedWriteWithErrors(SchedulingAudit.NoShow, SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment);
         // The reception board (MDV-P1-028). A repeated check-in or move returns the visit unchanged; any other move is a 409.
         appointments.MapPost("/{appointmentId:guid}/check-in", (Guid appointmentId, CheckIn? command, [FromServices] IFrontDeskService service, CancellationToken ct) =>
                 service.CheckInAsync(appointmentId, command ?? new CheckIn(), ct))

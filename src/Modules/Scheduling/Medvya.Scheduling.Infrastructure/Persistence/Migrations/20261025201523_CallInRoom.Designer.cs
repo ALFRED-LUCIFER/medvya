@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Medvya.Scheduling.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(SchedulingDbContext))]
-    [Migration("20261025173110_CallInRoom")]
+    [Migration("20261025201523_CallInRoom")]
     partial class CallInRoom
     {
         /// <inheritdoc />
@@ -106,6 +106,49 @@ namespace Medvya.Scheduling.Infrastructure.Persistence.Migrations
                     b.HasIndex("TenantId", "FacilityId", "CalendarId", "Start");
 
                     b.ToTable("Appointments", "scheduling");
+                });
+
+            modelBuilder.Entity("Medvya.Scheduling.Domain.AppointmentReschedule", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("ActorUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("AppointmentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("FromCalendarId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("FromEnd")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset>("FromStart")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset>("OccurredAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ToCalendarId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("ToEnd")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset>("ToStart")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AppointmentId");
+
+                    b.ToTable("AppointmentReschedules", "scheduling");
                 });
 
             modelBuilder.Entity("Medvya.Scheduling.Domain.OutboxEvent", b =>
@@ -294,6 +337,14 @@ namespace Medvya.Scheduling.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("AppointmentId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("CancelReason")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
                     b.Property<DateTimeOffset>("OccurredAt")
                         .HasColumnType("datetimeoffset");
 
@@ -310,6 +361,15 @@ namespace Medvya.Scheduling.Infrastructure.Persistence.Migrations
                     b.HasIndex("AppointmentId");
 
                     b.ToTable("VisitStatusEvents", "scheduling");
+                });
+
+            modelBuilder.Entity("Medvya.Scheduling.Domain.AppointmentReschedule", b =>
+                {
+                    b.HasOne("Medvya.Scheduling.Domain.Appointment", null)
+                        .WithMany()
+                        .HasForeignKey("AppointmentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Medvya.Scheduling.Domain.ScheduleSlot", b =>

@@ -375,7 +375,8 @@ ac:
 status: In progress
 progress:
 - Merged [PR #40](https://github.com/ALFRED-LUCIFER/medvya/pull/40): quick registration saves as Incomplete until address and payer exist; completing closes it
-- Left: board/header tag, CARE_TASK queue, emergency contact (MDV-P1-020), endpoints and UI, timed usability check
+- [PR #79](https://github.com/ALFRED-LUCIFER/medvya/pull/79): security fix — completion and registration writes reach the active facility's patients only; `POST /v1/patients/{id}/completion` (Full access): 200 + one Allowed row in the change's transaction, another facility's patient 404 + one NotFound row and nothing changed; mutation-checked
+- Left: board/header tag, CARE_TASK queue, emergency contact (MDV-P1-020), completion UI, timed usability check
 title: Quick registration for a busy desk with a completion task
 type: Story
 epic: MDV-P1-E05
@@ -555,7 +556,8 @@ ac:
 status: Partly done
 progress:
 - Merged [PR #60](https://github.com/ALFRED-LUCIFER/medvya/pull/60): SCHEDULE_SLOT rows per 5-minute unit with a unique index on (calendar, location, slot start); every hold and booking in a SERIALIZABLE transaction after `sp_getapplock` per doctor-day; deadlocks and lock timeouts retried, then "busy"; 100 parallel bookings or holds of one slot give exactly one on Testcontainers SQL Server (also overlapping multi-slot); mutation-checked (unique index, lock, all guards: 16 double bookings without them)
-- Left: the 100-parallel run on staging (needs MDV-P0-006); freeing slots on cancel/no-show/reschedule (MDV-P1-024)
+- [PR #80](https://github.com/ALFRED-LUCIFER/medvya/pull/80) (in review): cancel, no-show and reschedule free the visit's SCHEDULE_SLOT rows in the same doctor-day transaction; a reschedule locks both doctor-days and takes the new slot rows; 100 parallel reschedules into one slot move exactly one, reschedules racing holds let exactly one win; mutation-checked (slot rows kept, new rows not taken, one day locked, guards removed)
+- Left: the 100-parallel run on staging (needs MDV-P0-006)
 title: No double booking under concurrency (unique index, serializable transaction, doctor-day app lock)
 type: Story
 epic: MDV-P1-E06
@@ -578,6 +580,12 @@ ac:
 - The test runs in CI on every PR touching Scheduling.
 
 === MDV-P1-023
+status: In progress
+progress:
+- [PR #77](https://github.com/ALFRED-LUCIFER/medvya/pull/77) (in review): `GET /v1/schedule/week` (one doctor or resource, Monday–Sunday, every day built like the day view from one batched read on the (facility, start) index, capacity per day, audited, facility capability and calendar checked); day bounds and ISO week as tested rules (IST, GST, DST 23/25 h); Day/Week/List switch and doctor/resource filter, a doctor starts on their own column; list default at ≤ 767 px with a pinned Book at the next free slot; every state an icon + words (dashed No-show/Cancelled, hatched Unavailable) with a legend; the list prints as an agenda; en/hi/ar, RTL
+- Measured: day/week reads p95 29/33 ms through the endpoints with a fully booked year for 3 doctors (16,380 visits); 3-doctor day first render ≈ 2.2 s on the production build over Lighthouse throttled 4G (Playwright budget in CI)
+- Tested on SQL Server (week = day, local-midnight boundary, facility scoping) and in the browser against a real API (en/ar, keyboard, axe at 1280/1024/820/640/390 px); 14 mutations each caught
+- Left: the first-render and read budgets on staging under the P1 load profile (MDV-P1-037)
 title: Calendar views: day, week and list (per doctor and resource), mobile/tablet responsive
 type: Story
 epic: MDV-P1-E06
@@ -601,6 +609,11 @@ ac:
 - At ≤ 767 px the list/agenda view is the default with a pinned "+ Book" action.
 
 === MDV-P1-024
+status: In progress
+progress:
+- [PR #80](https://github.com/ALFRED-LUCIFER/medvya/pull/80) (in review): `POST /v1/appointments/{id}/reschedule|cancel|no-show` on the booking path (doctor-day locks, template and hold re-checks, old slot freed and new one taken in one transaction), audited by use case; reschedule history table (old slot, new slot, actor, time) and outbox events with opaque ids only; cancel reason list + note (Other needs one, note SensitiveHealth); no-show only from Booked after the start; cancel from Booked or Checked in (narrower than the design, recorded in state-machines.md); appointment panel with each action allowed or disabled with its reason, reschedule by click or drag always confirmed, same-kind calendars only, no-show offers rebook with the patient filled in; en/hi/ar, RTL
+- Tested on SQL Server (12 tests incl. 100-way reschedule race, reschedule vs hold race, lock waits on both days) and in the browser against a real API (two desks, drag, cancel, check-in, ar, axe); 23 mutations each caught
+- Left: patient notification of reschedule/cancel (MDV-P1-032, outbox events written); the no-show metric itself (MDV-P1-041, reads the NoShow events); reschedule history shown in the panel
 title: Reschedule (incl. drag with confirm), cancel with reason, mark no-show with rebook offer
 type: Story
 epic: MDV-P1-E06

@@ -10,7 +10,7 @@
 
 **Tickets:** 46 · **Estimate:** 86.5 dev-days vs **35 working days** in the window (OVER by 51.5 days: needs scope trade-off or overlap) · **Average confidence:** 81%
 
-**Status:** To do 34 · In progress 5 · Partly done 4 · Done 3
+**Status:** To do 32 · In progress 7 · Partly done 4 · Done 3
 
 ## Epics
 
@@ -52,13 +52,13 @@
 | [MDV-P1-019](MDV-P1-019.md) | To do | Legal terms and separate versioned consents at registration (treatment, reminders per channel, sharing, portal, marketing) | Story | MUST | P1-12 | P-02, F-08 | 3 | 6–7 | 30 Nov → 11 Dec 2026 | 75% Medium |
 | [MDV-P1-020](MDV-P1-020.md) | To do | Family, emergency contact and guardian rules (under-18 guardian required) | Story | MUST | P1-05 | P-02 | 1 | 6–6 | 30 Nov → 04 Dec 2026 | 88% High |
 | [MDV-P1-021](MDV-P1-021.md) | Partly done | Create an appointment from the calendar with a short slot hold | Story | MUST | P1-06, P1-07 | P-04 | 2.5 | 6–7 | 30 Nov → 11 Dec 2026 | 88% High |
-| [MDV-P1-023](MDV-P1-023.md) | To do | Calendar views: day, week and list (per doctor and resource), mobile/tablet responsive | Story | MUST | P1-06 | P-04 | 3 | 6–7 | 30 Nov → 11 Dec 2026 | 86% High |
+| [MDV-P1-023](MDV-P1-023.md) | In progress | Calendar views: day, week and list (per doctor and resource), mobile/tablet responsive | Story | MUST | P1-06 | P-04 | 3 | 6–7 | 30 Nov → 11 Dec 2026 | 86% High |
 | [MDV-P1-046](MDV-P1-046.md) | To do | Start UAE regulator onboarding applications early (risk mitigation) | Chore | SHOULD | — | — | 0.5 | 6–8 | 30 Nov → 18 Dec 2026 | 55% Low |
 | [MDV-P1-010](MDV-P1-010.md) | To do | Licence/registration expiry reminders and quarterly access review prompt | Story | MUST | P1-11 | — | 1.5 | 7–7 | 07 Dec → 11 Dec 2026 | 85% High |
 | [MDV-P1-017](MDV-P1-017.md) | To do | Duplicate / merge review with second approver when both records hold clinical data (P-03) | Story | MUST | P1-05 | P-03 | 2.5 | 7–7 | 07 Dec → 11 Dec 2026 | 82% Medium |
 | [MDV-P1-018](MDV-P1-018.md) | Done | Patient directory and privacy-safe search for the front desk | Story | MUST | P1-05 | P-02 | 2 | 7–7 | 07 Dec → 11 Dec 2026 | 84% Medium |
 | [MDV-P1-022](MDV-P1-022.md) | Partly done | No double booking under concurrency (unique index, serializable transaction, doctor-day app lock) | Story | MUST | P1-07 | — | 2 | 7–7 | 07 Dec → 11 Dec 2026 | 90% High |
-| [MDV-P1-024](MDV-P1-024.md) | To do | Reschedule (incl. drag with confirm), cancel with reason, mark no-show with rebook offer | Story | MUST | P1-06 | P-04 | 2 | 7–7 | 07 Dec → 11 Dec 2026 | 90% High |
+| [MDV-P1-024](MDV-P1-024.md) | In progress | Reschedule (incl. drag with confirm), cancel with reason, mark no-show with rebook offer | Story | MUST | P1-06 | P-04 | 2 | 7–7 | 07 Dec → 11 Dec 2026 | 90% High |
 | [MDV-P1-025](MDV-P1-025.md) | To do | Walk-in registration and booking straight to the queue | Story | MUST | P1-06 | P-01, P-04 | 1 | 7–7 | 07 Dec → 11 Dec 2026 | 88% High |
 | [MDV-P1-028](MDV-P1-028.md) | In progress | Reception board with visit columns and one-tap check-in | Story | MUST | P1-08 | P-01 | 3 | 7–8 | 07 Dec → 18 Dec 2026 | 82% Medium |
 | [MDV-P1-032](MDV-P1-032.md) | To do | Email confirmations and 24 h / 2 h reminders via SendGrid and Hangfire | Story | MUST | P1-09 | — | 2.5 | 7–8 | 07 Dec → 18 Dec 2026 | 86% High |

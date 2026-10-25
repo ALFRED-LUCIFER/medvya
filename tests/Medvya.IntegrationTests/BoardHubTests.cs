@@ -217,6 +217,25 @@ public sealed class BoardHubTests(SqlServerFixture sql) : IClassFixture<SqlServe
     }
 
     [Fact]
+    public async Task RescheduleCancelAndNoShowReachTheBoardToo()
+    {
+        var (moving, cancelled, missed) = (await h.BookAsync(9), await h.BookAsync(9, 20), await h.BookAsync(9, 40));
+        var (board, messages) = await Board(h.Reception);
+        await board.InvokeAsync(nameof(BoardHub.Watch), h.Facility);
+        var desk = Desk(h.Reception);
+
+        (await desk.PostAsJsonAsync($"/v1/appointments/{moving.Id}/reschedule", new { calendarId = h.Doctor, start = SchedulingHarness.At(10, 20) })).EnsureSuccessStatusCode();
+        (await desk.PostAsJsonAsync($"/v1/appointments/{cancelled.Id}/cancel", new { reason = "PatientRequest" })).EnsureSuccessStatusCode();
+        h.Clock.Advance(TimeSpan.FromHours(2)); // 10:00 IST: the 09:40 visit has started, so it can be a no-show
+        (await desk.PostAsync($"/v1/appointments/{missed.Id}/no-show", null)).EnsureSuccessStatusCode();
+
+        var seen = new List<(Guid, string?)>();
+        for (var i = 0; i < 3; i++)
+            seen.Add((await Next(messages, TimeSpan.FromSeconds(2)) is { } m ? (m.GetProperty("appointmentId").GetGuid(), m.GetProperty("state").GetString()) : (Guid.Empty, null)));
+        Assert.Equal([(moving.Id, "Booked"), (cancelled.Id, "Cancelled"), (missed.Id, "NoShow")], seen);
+    }
+
+    [Fact]
     public async Task ConnectingNeedsBoardAccessAtTheSessionsFacilityAndARefusalIsAudited()
     {
         var anonymous = await Assert.ThrowsAsync<HttpRequestException>(() => Board(null));

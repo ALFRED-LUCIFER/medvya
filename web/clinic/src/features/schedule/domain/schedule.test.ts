@@ -10,11 +10,11 @@ const day: ScheduleDay = {
       hours: [{ start: '2026-10-19T03:30:00Z', end: '2026-10-19T07:30:00Z', room: 'Room 3' }, { start: '2026-10-19T11:30:00Z', end: '2026-10-19T14:30:00Z', room: 'Room 3' }],
       slots: [{ start: '2026-10-19T03:50:00Z', end: '2026-10-19T04:10:00Z', held: true }, { start: '2026-10-19T03:30:00Z', end: '2026-10-19T03:50:00Z', held: false }],
       appointments: [{ id: 'a-1', reference: 'APT-1', patientId: 'p-1', patientName: 'Meera Iyer', visitType: 'NewConsultation', state: 'Booked', start: '2026-10-19T04:10:00Z', end: '2026-10-19T04:50:00Z' }],
-      visitLengths: [{ visitType: 'NewConsultation', minutes: 40 }],
+      visitLengths: [{ visitType: 'NewConsultation', minutes: 40 }], capacity: 21,
       unavailable: [{ start: '2026-10-19T07:30:00Z', end: '2026-10-19T11:30:00Z', reason: 'NotWorking', label: null }],
     },
     {
-      calendarId: 'r-1', calendarKind: 'Resource', name: 'Procedure room', slotMinutes: null, hours: [], slots: [], appointments: [], visitLengths: [],
+      calendarId: 'r-1', calendarKind: 'Resource', name: 'Procedure room', slotMinutes: null, hours: [], slots: [], appointments: [], visitLengths: [], capacity: 0,
       unavailable: [{ start: '2026-10-19T03:30:00Z', end: '2026-10-19T14:30:00Z', reason: 'NoSchedule', label: null }],
     },
   ],

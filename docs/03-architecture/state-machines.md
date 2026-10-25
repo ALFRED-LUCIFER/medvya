@@ -11,7 +11,11 @@ BOOKED ──check-in──▶ CHECKED_IN ──▶ WITH_NURSE ──▶ READY_F
   ╰─mark no-show──▶ NO_SHOW ──offer rebook──▶ (new BOOKED)
 WALK_IN ──▶ CHECKED_IN
 ```
-- Check-in is only allowed from BOOKED. No-show is only allowed from BOOKED. Cancel needs a reason and is not allowed once Completed.
+- Check-in is only allowed from BOOKED, on the visit's facility-local day.
+- No-show is only allowed from BOOKED, once the start time has passed.
+- Reschedule is only allowed from BOOKED, to a free slot of a calendar of the same kind. History is kept: the old slot, the new slot, who and when.
+- Cancel needs a reason from a short list, and Other needs a note. It is allowed from BOOKED, or from CHECKED_IN when the patient leaves before being seen. From WITH_NURSE on, the visit is finished on the board, and a completed, cancelled or no-show visit cannot be cancelled. This is narrower than the design's "not when Completed" (MDV-P1-024).
+- Reschedule, cancel and no-show free the visit's slots in the same transaction, under the doctor-day lock of every day they touch (MDV-P1-022, MDV-P1-024).
 - Statuses visible to reception are **nonclinical**.
 - Call in (READY_FOR_DOCTOR → IN_CONSULT) records the room of the doctor's session from the schedule template (MDV-P1-029).
 - Every committed move is pushed to the facility's open boards as ids and state only (SignalR, MDV-P1-029); boards refetch the board.

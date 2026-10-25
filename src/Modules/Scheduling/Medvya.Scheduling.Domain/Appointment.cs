@@ -18,13 +18,21 @@ public enum BookingChannel { InPerson, Phone, WhatsApp }
 [JsonConverter(typeof(JsonStringEnumConverter<ReasonCategory>))]
 public enum ReasonCategory { General, ChronicReview, Results, PostDischarge, Screening, Vaccination, Paperwork, Other }
 
+/// <summary>
+/// Why a visit was cancelled (MDV-P1-024): a short list, with a free-text note that Other requires.
+/// shortcut: a fixed list; make it clinic-configurable with practice settings (MDV-P1-005).
+/// </summary>
+[JsonConverter(typeof(JsonStringEnumConverter<CancelReason>))]
+public enum CancelReason { PatientRequest, PatientUnwell, DoctorUnavailable, BookedInError, ClinicClosed, Other }
+
 /// <summary>A booked visit in one calendar (doctor or resource) at one location. Start and End are UTC instants.</summary>
 public sealed class Appointment
 {
     [Classification(DataClass.Internal)] public Guid Id { get; init; }
     [Classification(DataClass.Internal)] public Guid TenantId { get; init; }
     [Classification(DataClass.Internal)] public Guid FacilityId { get; init; }
-    [Classification(DataClass.Internal)] public Guid CalendarId { get; init; }
+    /// <summary>Changes only by reschedule (MDV-P1-024), to a calendar of the same kind.</summary>
+    [Classification(DataClass.Internal)] public Guid CalendarId { get; set; }
     [Classification(DataClass.Internal)] public CalendarKind CalendarKind { get; init; }
     /// <summary>Opaque id of the patient in the Patients module.</summary>
     [Classification(DataClass.Internal)] public Guid PatientId { get; init; }
@@ -67,6 +75,18 @@ public static class VisitFlow
     }
 
     public static bool CanMove(AppointmentState from, AppointmentState to) => Next(from) == to;
+
+    /// <summary>Only a visit that has not started moves to another slot (Booked → Booked, history kept).</summary>
+    public static bool CanReschedule(AppointmentState state) => state == AppointmentState.Booked;
+
+    /// <summary>
+    /// Cancel before the clinical part of the visit: Booked, or Checked in when the patient leaves before being seen. From With
+    /// nurse on the visit is finished on the board, and a completed, cancelled or no-show visit cannot be cancelled.
+    /// </summary>
+    public static bool CanCancel(AppointmentState state) => state is AppointmentState.Booked or AppointmentState.CheckedIn;
+
+    /// <summary>Only a booked visit that never checked in is a no-show (and only once it has started: see the use case).</summary>
+    public static bool CanMarkNoShow(AppointmentState state) => state == AppointmentState.Booked;
 }
 
 /// <summary>
@@ -117,6 +137,26 @@ public sealed class VisitStatusEvent
     [Classification(DataClass.Internal)] public Guid TenantId { get; init; }
     [Classification(DataClass.Internal)] public Guid AppointmentId { get; init; }
     [Classification(DataClass.Internal)] public AppointmentState State { get; init; }
+    [Classification(DataClass.Internal)] public Guid? ActorUserId { get; init; }
+    [Classification(DataClass.Internal)] public DateTimeOffset OccurredAt { get; init; }
+    /// <summary>Why, for a cancellation (MDV-P1-024).</summary>
+    [Classification(DataClass.Internal)] public CancelReason? CancelReason { get; init; }
+    /// <summary>The desk's note on a cancellation; it may mention health, so it is never on reception screens, in logs or in events.</summary>
+    [Classification(DataClass.SensitiveHealth)] public string? Note { get; init; }
+}
+
+/// <summary>A reschedule (MDV-P1-024), append-only: the old slot, the new slot, who moved it and when.</summary>
+public sealed class AppointmentReschedule
+{
+    [Classification(DataClass.Internal)] public Guid Id { get; init; }
+    [Classification(DataClass.Internal)] public Guid TenantId { get; init; }
+    [Classification(DataClass.Internal)] public Guid AppointmentId { get; init; }
+    [Classification(DataClass.Internal)] public Guid FromCalendarId { get; init; }
+    [Classification(DataClass.Internal)] public DateTimeOffset FromStart { get; init; }
+    [Classification(DataClass.Internal)] public DateTimeOffset FromEnd { get; init; }
+    [Classification(DataClass.Internal)] public Guid ToCalendarId { get; init; }
+    [Classification(DataClass.Internal)] public DateTimeOffset ToStart { get; init; }
+    [Classification(DataClass.Internal)] public DateTimeOffset ToEnd { get; init; }
     [Classification(DataClass.Internal)] public Guid? ActorUserId { get; init; }
     [Classification(DataClass.Internal)] public DateTimeOffset OccurredAt { get; init; }
 }

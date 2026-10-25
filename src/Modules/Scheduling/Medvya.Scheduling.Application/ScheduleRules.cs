@@ -153,6 +153,20 @@ public static class ScheduleRules
         return new DateTimeOffset(local, offset).ToUniversalTime();
     }
 
+    /// <summary>
+    /// The UTC instants a facility-local date runs between: local midnight to the next local midnight. 24 hours in IST and GST;
+    /// 23 or 25 on a daylight-saving change day.
+    /// </summary>
+    public static (DateTimeOffset From, DateTimeOffset To) DayBounds(DateOnly date, TimeZoneInfo zone) =>
+        (Instant(date, TimeOnly.MinValue, zone), Instant(date.AddDays(1), TimeOnly.MinValue, zone));
+
+    /// <summary>Monday to Sunday of the week a date falls in (ISO 8601 weeks, as the week view shows them).</summary>
+    public static IReadOnlyList<DateOnly> Week(DateOnly date)
+    {
+        var monday = date.AddDays(-(((int)date.DayOfWeek + 6) % 7));
+        return [.. Enumerable.Range(0, 7).Select(monday.AddDays)];
+    }
+
     /// <summary>The facility-local calendar date of an instant.</summary>
     public static DateOnly LocalDate(DateTimeOffset instant, TimeZoneInfo zone) =>
         DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(instant, zone).DateTime);

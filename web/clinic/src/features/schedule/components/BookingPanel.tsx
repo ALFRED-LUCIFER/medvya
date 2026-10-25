@@ -38,6 +38,8 @@ type Props = {
   onConfirm: () => void;
   onClose: () => void;
   onDismissBooked: () => void;
+  /** Rebooking a no-show: the patient the next chosen slot is booked for. */
+  rebook?: { name: string } | null;
 };
 
 const field = 'flex flex-col gap-1.5';
@@ -59,8 +61,8 @@ export default function BookingPanel(p: Props) {
           </div>
         ) : (
           <>
-            <h2 className="text-base font-extrabold">{t('booking.hint.title')}</h2>
-            <p className="text-sm text-muted-foreground">{t('booking.hint.body')}</p>
+            <h2 className="text-base font-extrabold">{p.rebook ? t('booking.rebook.title', { name: p.rebook.name }) : t('booking.hint.title')}</h2>
+            <p className="text-sm text-muted-foreground">{t(p.rebook ? 'booking.rebook.body' : 'booking.hint.body')}</p>
           </>
         )}
       </aside>

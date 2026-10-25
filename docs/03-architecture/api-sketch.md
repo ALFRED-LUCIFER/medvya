@@ -30,7 +30,7 @@ GET    /v1/schedule?facilityId=&date=                # day of every doctor and r
 GET    /v1/schedule/week?facilityId=&calendarId=&date= # Monday–Sunday of one doctor or resource, each day as in the day view plus capacity (P1-023)
 POST   /v1/slot-holds                              # short hold before confirm (P1-07)
 POST   /v1/appointments                            # serializable + app lock
-POST   /v1/appointments/{id}/reschedule|cancel|no-show
+POST   /v1/appointments/{id}/reschedule|cancel|no-show   # P1-024: booking path (doctor-day locks, slot rows freed and taken); cancel body = reason + optional note
 POST   /v1/appointments/{id}/check-in              # P1-028; a repeat returns the visit unchanged
 POST   /v1/appointments/{id}/status                # next board column only (state machine), else 409
 GET    /v1/front-desk/board?facilityId=            # P-01 today, nonclinical; SignalR hub for live updates (P1-029)

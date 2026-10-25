@@ -21,6 +21,8 @@ export function useBookingController(facilityId: string) {
   const queryClient = useQueryClient();
   const [choice, setChoice] = useState<SlotChoice | null>(null);
   const [booked, setBooked] = useState<BookedAppointment | null>(null);
+  // A no-show's rebook (MDV-P1-024): the next slot chosen is booked for this patient, already filled in.
+  const [rebook, setRebook] = useState<{ id: string; name: string } | null>(null);
   const form = useForm<BookingForm>({ resolver: zodResolver(bookingSchema), defaultValues: emptyBooking });
   const refreshSchedule = () => queryClient.invalidateQueries({ queryKey: ['schedule', facilityId] });
 
@@ -30,6 +32,7 @@ export function useBookingController(facilityId: string) {
     mutationFn: (values: BookingForm) => bookAppointment(hold.data!.id, values),
     onSuccess: appointment => {
       setBooked(appointment);
+      setRebook(null);
       setChoice(null);
       hold.reset();
       form.reset(emptyBooking);
@@ -60,6 +63,7 @@ export function useBookingController(facilityId: string) {
     setBooked(null);
     book.reset();
     setChoice(next);
+    if (rebook) form.setValue('patientId', rebook.id, { shouldValidate: true });
     hold.mutate(next); // the server replaces this user's previous hold
   };
 
@@ -92,6 +96,7 @@ export function useBookingController(facilityId: string) {
     onConfirm: form.handleSubmit(values => book.mutate(values)),
     onClose: () => {
       if (hold.data) release.mutate(hold.data.id);
+      setRebook(null);
       setChoice(null);
       hold.reset();
       book.reset();
@@ -99,6 +104,8 @@ export function useBookingController(facilityId: string) {
       clearSearch();
     },
     onDismissBooked: () => setBooked(null),
+    rebook,
+    onRebook: (patient: { id: string; name: string }) => { setBooked(null); setRebook(patient); },
   };
 }
 

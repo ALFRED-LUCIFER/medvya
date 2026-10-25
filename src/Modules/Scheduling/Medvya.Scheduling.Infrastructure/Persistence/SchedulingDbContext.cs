@@ -16,6 +16,7 @@ public sealed class SchedulingDbContext(DbContextOptions<SchedulingDbContext> op
     public DbSet<SlotHold> SlotHolds => Set<SlotHold>();
     public DbSet<ScheduleSlot> ScheduleSlots => Set<ScheduleSlot>();
     public DbSet<VisitStatusEvent> StatusEvents => Set<VisitStatusEvent>();
+    public DbSet<AppointmentReschedule> Reschedules => Set<AppointmentReschedule>();
     public DbSet<OutboxEvent> Outbox => Set<OutboxEvent>();
 
     Guid? CurrentTenantId => tenant.TenantId;
@@ -75,6 +76,14 @@ public sealed class SchedulingDbContext(DbContextOptions<SchedulingDbContext> op
         {
             e.ToTable("VisitStatusEvents");
             e.Property(x => x.State).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.CancelReason).HasConversion<string>().HasMaxLength(30);
+            e.Property(x => x.Note).HasMaxLength(500);
+            e.HasOne<Appointment>().WithMany().HasForeignKey(x => x.AppointmentId).OnDelete(DeleteBehavior.Restrict);
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<AppointmentReschedule>(e =>
+        {
+            e.ToTable("AppointmentReschedules");
             e.HasOne<Appointment>().WithMany().HasForeignKey(x => x.AppointmentId).OnDelete(DeleteBehavior.Restrict);
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });

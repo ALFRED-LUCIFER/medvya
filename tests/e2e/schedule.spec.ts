@@ -58,7 +58,8 @@ function scheduleDay(date: string) {
         unavailable: [{ start: at('09:00'), end: at('20:00'), reason: 'NotWorking', label: null }],
       },
       {
-        calendarId: 'r-1', calendarKind: 'Resource', name: 'Procedure room (synthetic)', slotMinutes: 30, visitLengths: lengths(30), capacity: 6, appointments: [],
+        calendarId: 'r-1', calendarKind: 'Resource', name: 'Procedure room (synthetic)', slotMinutes: 30, visitLengths: lengths(30), capacity: 6,
+        appointments: [{ id: 'a-9', reference: 'APT-9C9C9C9C', patientId, patientName: 'Kavya Rao (synthetic)', visitType: 'Procedure', state: 'Cancelled', start: at('12:30'), end: at('13:00') }],
         hours: [{ start: at('10:00'), end: at('13:00'), room: null }], slots: slots(date, '10:00', '13:00', 30),
         unavailable: [{ start: at('09:00'), end: at('10:00'), reason: 'NotWorking', label: null }, { start: at('13:00'), end: at('20:00'), reason: 'NotWorking', label: null }],
       },
@@ -79,6 +80,7 @@ function scheduleWeek(calendarId: string, date: string) {
 }
 
 type Calls = {
+  changes: { url: string; body: Record<string, unknown> }[];
   weeks: { calendarId: string | null; date: string | null }[];
   dates: (string | null)[]; holds: Record<string, unknown>[]; releases: string[]; searches: { body: Record<string, unknown>; url: string }[];
   bookings: { body: Record<string, unknown>; csrf: string | undefined }[];
@@ -88,8 +90,8 @@ type Calls = {
 const nair = { id: patientId, initials: 'DN', ageYears: 47, ageEstimated: false, sexAtBirth: 'Male', mrnTail: '0002', status: 'Complete' };
 
 /** Signs in and answers the scheduling API; returns what the page sent. `holdCode` makes holds fail with that 409 code. */
-async function open(page: Page, { locale = 'en', status = 200, as = reception, holdCode = '', delayMs = 0 } = {}) {
-  const calls: Calls = { weeks: [], dates: [], holds: [], releases: [], searches: [], bookings: [] };
+async function open(page: Page, { locale = 'en', status = 200, as = reception, holdCode = '', delayMs = 0, changeCode = '' } = {}) {
+  const calls: Calls = { changes: [], weeks: [], dates: [], holds: [], releases: [], searches: [], bookings: [] };
   await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
   await page.route('**/v1/me/context', r => r.fulfill({ json: as }));
   await page.route('**/v1/schedule?*', async r => {
@@ -125,6 +127,16 @@ async function open(page: Page, { locale = 'en', status = 200, as = reception, h
   await page.route('**/v1/appointments', r => {
     calls.bookings.push({ body: r.request().postDataJSON() as Record<string, unknown>, csrf: r.request().headers()['x-medvya-csrf'] });
     return r.fulfill({ json: { id: 'a-2', reference: 'APT-9F8E7D6C', patientName: 'Deepak Nair (synthetic)', mrn: '000002', calendarId: 'd-1', start: ist('2026-10-19', '10:00'), end: ist('2026-10-19', '10:40'), state: 'Booked' } });
+  });
+  // MDV-P1-024: reschedule, cancel, no-show and check-in answer the changed visit (or a 409 code).
+  await page.route(/\/v1\/appointments\/[^/]+\/(reschedule|cancel|no-show|check-in)$/, r => {
+    const url = r.request().url(), body = (r.request().postDataJSON() ?? {}) as Record<string, unknown>;
+    calls.changes.push({ url, body });
+    if (changeCode) return r.fulfill({ status: 409, json: { title: 'Visit cannot make this move', code: changeCode } });
+    const base = scheduleDay('2026-10-19').columns[0]!.appointments[0]!;
+    const state = url.endsWith('/cancel') ? 'Cancelled' : url.endsWith('/no-show') ? 'NoShow' : url.endsWith('/check-in') ? 'CheckedIn' : 'Booked';
+    const start = (body.start as string | undefined) ?? base.start;
+    return r.fulfill({ json: { ...base, state, start, end: new Date(Date.parse(start) + 40 * 60_000).toISOString() } });
   });
   await page.goto('/schedule');
   return calls;
@@ -513,3 +525,129 @@ test('the list prints as an agenda: the schedule without navigation or controls'
   await expect(page.getByRole('button', { name: 'Today' })).toBeHidden();
   await expect(page.getByRole('complementary', { name: 'Book appointment' })).toBeHidden();
 });
+
+// MDV-P1-024: the detail panel, reschedule (click or drag, always confirmed), cancel with a reason, no-show with rebook.
+const meera = (page: Page) => column(page, 'Dr. Arjun Rao (synthetic)').getByRole('button', { name: /Meera Iyer \(synthetic\)/ });
+const visitPanel = (page: Page) => page.getByRole('complementary', { name: 'Appointment' });
+
+test('a visit opens its panel with each action allowed or explained', async ({ page }) => {
+  await page.clock.setFixedTime(new Date(ist('2026-10-19', '08:30'))); // before the 09:00 visit
+  await open(page);
+  await meera(page).click();
+  const panel = visitPanel(page);
+  await expect(panel).toContainText('APT-0A1B2C3D');
+  await expect(panel).toContainText('Mon, 19 Oct · 09:00 · 40 min');
+  await expect(panel).toContainText('New consultation');
+  for (const name of ['Check in', 'Reschedule', 'Cancel appointment']) await expect(panel.getByRole('button', { name, exact: true })).toBeEnabled();
+  const noShow = panel.getByRole('button', { name: 'Mark no-show' });
+  await expect(noShow).toBeDisabled();
+  await expect(noShow).toHaveAccessibleDescription('Possible once the start time has passed.');
+  await expect(page.getByRole('complementary', { name: 'Book appointment' })).toHaveCount(0); // one panel at a time
+
+  await column(page, 'Procedure room (synthetic)').getByRole('button', { name: /Kavya Rao \(synthetic\)/ }).click();
+  for (const name of ['Check in', 'Reschedule', 'Cancel appointment', 'Mark no-show'])
+    await expect(visitPanel(page).getByRole('button', { name, exact: true })).toHaveAccessibleDescription('The visit is cancelled.');
+  await visitPanel(page).getByRole('button', { name: 'Close' }).click();
+  await expect(page.getByRole('complementary', { name: 'Book appointment' })).toBeVisible();
+});
+
+test('reschedule picks a new slot, asks first, then moves; the old slot frees on the server', async ({ page }) => {
+  await page.clock.setFixedTime(new Date(ist('2026-10-19', '08:30')));
+  const calls = await open(page);
+  await meera(page).click();
+  await visitPanel(page).getByRole('button', { name: 'Reschedule' }).click();
+  await expect(visitPanel(page)).toContainText('Choose the new slot');
+  const target = page.getByRole('button', { name: 'Move Meera Iyer (synthetic) to Dr. Arjun Rao (synthetic) at 10:20' });
+  await expect(page.getByRole('button', { name: /^Move Meera Iyer \(synthetic\) to Procedure room/ })).toHaveCount(0); // only doctors' calendars
+  await target.click();
+  const confirm = page.getByRole('group', { name: 'Move this appointment?' });
+  await expect(confirm).toContainText('From Dr. Arjun Rao (synthetic), Mon, 19 Oct at 09:00 to Dr. Arjun Rao (synthetic), Mon, 19 Oct at 10:20.');
+  expect(calls.changes).toEqual([]); // nothing moves before the desk confirms
+  await confirm.getByRole('button', { name: 'Move appointment' }).click();
+  await expect(visitPanel(page)).toContainText('Moved. The old slot is free again.');
+  expect(calls.changes).toEqual([{ url: expect.stringMatching(/\/v1\/appointments\/a-1\/reschedule$/), body: { calendarId: 'd-1', start: ist('2026-10-19', '10:20') } }]);
+});
+
+test('dragging a visit onto an empty slot asks before moving it', async ({ page }) => {
+  await page.clock.setFixedTime(new Date(ist('2026-10-19', '08:30')));
+  const calls = await open(page);
+  const confirm = page.getByRole('group', { name: 'Move this appointment?' });
+  await meera(page).dragTo(page.getByRole('button', { name: 'Book Procedure room (synthetic) at 11:00' }));
+  await expect(confirm).toHaveCount(0); // a doctor's visit is never offered a room's slot (the server refuses it too)
+  await meera(page).dragTo(bookButton(page, '11:00'));
+  await expect(confirm).toContainText('to Dr. Arjun Rao (synthetic), Mon, 19 Oct at 11:00.');
+  expect(calls.changes).toEqual([]);
+  await confirm.getByRole('button', { name: 'Back' }).click(); // changed their mind: nothing sent
+  await expect(confirm).toHaveCount(0);
+  expect(calls.changes).toEqual([]);
+
+  await meera(page).dragTo(bookButton(page, '11:20'));
+  await confirm.getByRole('button', { name: 'Move appointment' }).click();
+  await expect(visitPanel(page)).toContainText('Moved. The old slot is free again.');
+  expect(calls.changes.map(c => c.body)).toEqual([{ calendarId: 'd-1', start: ist('2026-10-19', '11:20') }]);
+});
+
+test('cancel needs a reason, and a note for Other; the note never goes in a URL', async ({ page }) => {
+  await page.clock.setFixedTime(new Date(ist('2026-10-19', '08:30')));
+  const calls = await open(page);
+  await meera(page).click();
+  await visitPanel(page).getByRole('button', { name: 'Cancel appointment' }).click();
+  const confirm = visitPanel(page).getByRole('button', { name: 'Cancel appointment' });
+  await confirm.click();
+  await expect(visitPanel(page).getByRole('combobox', { name: 'Reason' })).toHaveAccessibleDescription('Choose a reason.');
+  await visitPanel(page).getByRole('combobox', { name: 'Reason' }).click();
+  await page.getByRole('option', { name: 'Other' }).click();
+  await confirm.click();
+  await expect(visitPanel(page).getByLabel('Note (required for Other)')).toHaveAccessibleDescription(/Add a note for “Other”\./);
+  expect(calls.changes).toEqual([]);
+  await visitPanel(page).getByLabel('Note (required for Other)').fill('Synthetic: moving to another city');
+  await confirm.click();
+  await expect(visitPanel(page)).toContainText('Appointment cancelled. The slot is free again.');
+  expect(calls.changes).toEqual([{ url: expect.stringMatching(/\/a-1\/cancel$/), body: { reason: 'Other', note: 'Synthetic: moving to another city' } }]);
+  expect(calls.changes[0]!.url).not.toContain('Synthetic');
+});
+
+test('a no-show offers a rebook that fills in the patient', async ({ page }) => {
+  await page.clock.setFixedTime(new Date(ist('2026-10-19', '09:10'))); // the 09:00 visit has started
+  const calls = await open(page);
+  await meera(page).click();
+  await visitPanel(page).getByRole('button', { name: 'Mark no-show' }).click();
+  await expect(visitPanel(page)).toContainText('Marked as a no-show. The slot is free again.');
+  await visitPanel(page).getByRole('button', { name: 'Rebook Meera Iyer (synthetic)' }).click();
+  const booking = page.getByRole('complementary', { name: 'Book appointment' });
+  await expect(booking).toContainText('Rebook Meera Iyer (synthetic)');
+  await bookButton(page, '10:00').click();
+  await expect(booking).toContainText('· MRN 000002'); // the patient is already chosen
+  expect(calls.changes.map(c => c.url.split('/').pop())).toEqual(['no-show']);
+  expect(calls.holds).toHaveLength(1);
+});
+
+test('a refused change says why and refreshes the schedule', async ({ page }) => {
+  await page.clock.setFixedTime(new Date(ist('2026-10-19', '08:30')));
+  const calls = await open(page, { changeCode: 'changed' });
+  const before = calls.dates.length;
+  await meera(page).click();
+  await visitPanel(page).getByRole('button', { name: 'Check in' }).click();
+  await expect(page.getByRole('alert')).toContainText('Someone changed this appointment meanwhile.');
+  await expect.poll(() => calls.dates.length).toBeGreaterThan(before);
+});
+
+for (const locale of ['en', 'ar'] as const)
+  test(`the appointment panel is keyboard-operable with 44 px targets and axe-clean (${locale})`, async ({ page }) => {
+    await page.clock.setFixedTime(new Date(ist('2026-10-19', '08:30')));
+    await open(page, { locale });
+    const chip = column(page, 'Dr. Arjun Rao (synthetic)').getByRole('button', { name: /Meera Iyer/ });
+    await chip.focus();
+    await page.keyboard.press('Enter');
+    const panel = page.getByRole('complementary', { name: locale === 'ar' ? 'الموعد' : 'Appointment' });
+    await expect(panel).toBeVisible();
+    for (const b of await panel.getByRole('button').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    await panel.getByRole('button', { name: locale === 'ar' ? 'إلغاء الموعد' : 'Cancel appointment' }).focus();
+    await page.keyboard.press('Enter');
+    await expect(panel.getByRole('combobox')).toBeVisible();
+    await page.addScriptTag({ path: axePath });
+    const violations = await page.evaluate(async () =>
+      (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations
+        .map(v => `${v.id} (${v.nodes.length})`));
+    expect(violations).toEqual([]);
+  });

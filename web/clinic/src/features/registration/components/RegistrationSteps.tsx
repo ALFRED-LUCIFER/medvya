@@ -98,15 +98,25 @@ export function IdentityStep({ f, country, ageInstead, values, today }: { f: For
   );
 }
 
-/** Step 2 · Contact & address: Indian address with PIN, or UAE address with emirate (which selects the HIE), Makani and P.O. Box. */
+/** Step 2 · Contact & address: phones and email, then the address. */
 export function ContactStep({ f, country, values }: { f: FormProps; country: Country; values: RegistrationForm }) {
   const { t } = useI18n();
-  const hie = hieFor(values.region);
   return (
     <div className={grid}>
       <TextField f={f} name="mobile" label={t('registration.field.mobile')} required hint={t('registration.hint.mobile')} ltr type="tel" inputMode="tel" />
       <TextField f={f} name="alternatePhone" label={t('registration.field.alternatePhone')} ltr type="tel" inputMode="tel" />
       <TextField f={f} name="email" label={t('registration.field.email')} ltr type="email" inputMode="email" wide />
+      <AddressFields f={f} country={country} values={values} />
+    </div>
+  );
+}
+
+/** Indian address with PIN, or UAE address with emirate (which selects the HIE), Makani and P.O. Box. Cells of a two-column grid. */
+export function AddressFields({ f, country, values }: { f: FormProps; country: Country; values: RegistrationForm }) {
+  const { t } = useI18n();
+  const hie = hieFor(values.region);
+  return (
+    <>
       <TextField f={f} name="line1" label={t(`registration.field.line1.${country}`)} wide hint={t('registration.hint.address')} />
       <TextField f={f} name="line2" label={t(`registration.field.line2.${country}`)} />
       {country === 'IN' ? (
@@ -124,7 +134,7 @@ export function ContactStep({ f, country, values }: { f: FormProps; country: Cou
           <TextField f={f} name="poBox" label={t('registration.field.poBox')} ltr inputMode="numeric" hint={t('registration.hint.optional')} />
         </>
       )}
-    </div>
+    </>
   );
 }
 

@@ -203,7 +203,11 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
     }
 
     /// <summary>The desk's completion task is open while address or payer is missing.</summary>
-    /// <remarks>shortcut: the emergency contact (MDV-P1-020) joins this check when relationships exist; the task is this status until CARE_TASK exists.</remarks>
+    /// <remarks>
+    /// shortcut: the desk's completion task is this status (board card, record header, directory "Incomplete" filter and the
+    /// record's "Complete registration" form); a CARE_TASK queue with owner and due date replaces it with care tasks (MDV-P4-016).
+    /// The emergency contact joins this check with relationships (MDV-P1-020).
+    /// </remarks>
     static RegistrationStatus StatusFor(PatientAddress? address, bool hasPayer) =>
         address is not null && hasPayer ? RegistrationStatus.Complete : RegistrationStatus.Incomplete;
 

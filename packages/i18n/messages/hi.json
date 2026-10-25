@@ -791,5 +791,20 @@
   "registration.state.Ladakh": "लद्दाख",
   "registration.state.Lakshadweep": "लक्षद्वीप",
   "registration.state.Puducherry": "पुडुचेरी",
-  "registration.review.separator": " · "
+  "registration.review.separator": " · ",
+  "registration.error.nothing_to_complete": "पता, भुगतानकर्ता या दोनों जोड़ें।",
+  "patients.completion.title": "पूरा करने के लिए पंजीकरण",
+  "patients.completion.missing.both": "पता और भुगतानकर्ता नहीं हैं। मरीज़ के डेस्क पर रहते हुए इन्हें जोड़ें।",
+  "patients.completion.missing.address": "पता नहीं है। मरीज़ के डेस्क पर रहते हुए इसे जोड़ें।",
+  "patients.completion.missing.payer": "भुगतानकर्ता नहीं है। मरीज़ के डेस्क पर रहते हुए इसे जोड़ें।",
+  "patients.completion.action": "पंजीकरण पूरा करें",
+  "registration.complete.title": "पंजीकरण पूरा करें",
+  "registration.complete.intro": "त्वरित पंजीकरण में जो छूटा वह जोड़ें। पता और भुगतानकर्ता दोनों दर्ज होने पर \"अधूरा पंजीकरण\" टैग हट जाता है।",
+  "registration.complete.address": "पता",
+  "registration.complete.payer": "भुगतानकर्ता",
+  "registration.complete.save": "सहेजें",
+  "registration.complete.back": "रिकॉर्ड पर वापस",
+  "registration.complete.failed": "कुछ भी सहेजा नहीं गया। फिर से कोशिश करें।",
+  "registration.complete.done.Complete": "पंजीकरण पूरा हुआ। पूरा करने का कार्य बंद हो गया।",
+  "registration.complete.done.Incomplete": "सहेजा गया। पता और भुगतानकर्ता दोनों दर्ज होने तक पंजीकरण अधूरा रहता है।"
 }

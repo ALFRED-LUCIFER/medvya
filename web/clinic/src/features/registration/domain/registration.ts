@@ -185,27 +185,49 @@ export function registrationSchema(country: Country, quick: boolean) {
     }
 
     if (filled(v.email) && !email.test(v.email.trim())) issue('email', 'format.email');
-    if (hasAddress(v, country)) {
-      if (!filled(v.line1)) issue('line1', 'required');
-      if (country === 'IN') {
-        if (!filled(v.city)) issue('city', 'required');
-        if (!(indiaStates as readonly string[]).includes(v.region)) issue('region', 'required');
-        if (!pin.test(v.postalCode.trim())) issue('postalCode', 'format.pin');
-      } else {
-        if (hieFor(v.region) === null) issue('region', 'emirate_required');
-        if (filled(v.makani) && !makani.test(v.makani.trim())) issue('makani', 'format.makani');
-        if (filled(v.poBox) && !poBox.test(v.poBox.trim())) issue('poBox', 'format.poBox');
-      }
-    }
+    checkAddressAndPayer(v, country, issue);
+  });
+}
 
-    if (v.payerKind !== '') {
-      const kind = v.payerKind as PayerKind;
-      if (!payerKinds[country].includes(kind)) issue('payerKind', 'required');
-      const asked = payerFields(country, kind);
-      if (asked.includes('payerName') && !filled(v.payerName)) issue('payerName', 'required');
-      if (kind === 'PrivateInsurance' && !filled(v.memberNumber)) issue('memberNumber', 'required');
-      else if (asked.includes('memberNumber') && filled(v.memberNumber) && !memberNumber.test(v.memberNumber.trim())) issue('memberNumber', 'format');
+type Issue = (path: FormField, message: string) => void;
+
+/** Address (once any part is entered) and payer (once a type is chosen): shared by full registration and completion. */
+function checkAddressAndPayer(v: RegistrationForm, country: Country, issue: Issue) {
+  if (hasAddress(v, country)) {
+    if (!filled(v.line1)) issue('line1', 'required');
+    if (country === 'IN') {
+      if (!filled(v.city)) issue('city', 'required');
+      if (!(indiaStates as readonly string[]).includes(v.region)) issue('region', 'required');
+      if (!pin.test(v.postalCode.trim())) issue('postalCode', 'format.pin');
+    } else {
+      if (hieFor(v.region) === null) issue('region', 'emirate_required');
+      if (filled(v.makani) && !makani.test(v.makani.trim())) issue('makani', 'format.makani');
+      if (filled(v.poBox) && !poBox.test(v.poBox.trim())) issue('poBox', 'format.poBox');
     }
+  }
+  if (v.payerKind !== '') {
+    const kind = v.payerKind as PayerKind;
+    if (!payerKinds[country].includes(kind)) issue('payerKind', 'required');
+    const asked = payerFields(country, kind);
+    if (asked.includes('payerName') && !filled(v.payerName)) issue('payerName', 'required');
+    if (kind === 'PrivateInsurance' && !filled(v.memberNumber)) issue('memberNumber', 'required');
+    else if (asked.includes('memberNumber') && filled(v.memberNumber) && !memberNumber.test(v.memberNumber.trim())) issue('memberNumber', 'format');
+  }
+}
+
+/**
+ * Completing a quick registration (MDV-P1-015): the address, the payer or both. With neither, the address is asked for
+ * ("nothing_to_complete" on line 1), since a save that adds nothing would close nothing.
+ */
+export function completionSchema(country: Country) {
+  return shape.pick({
+    line1: true, line2: true, city: true, district: true, region: true, postalCode: true, makani: true, poBox: true,
+    payerKind: true, payerName: true, plan: true, memberNumber: true, validTo: true, network: true,
+  }).superRefine((v, ctx) => {
+    const issue: Issue = (path, message) => ctx.addIssue({ code: 'custom', path: [path], message });
+    const form = { ...emptyForm, ...v };
+    if (!hasAddress(form, country) && v.payerKind === '') issue('line1', 'nothing_to_complete');
+    checkAddressAndPayer(form, country, issue);
   });
 }
 
@@ -311,10 +333,6 @@ const orNull = (s: string) => (filled(s) ? s.trim() : null);
 export function toRegisterRequest(v: RegistrationForm, country: Country, quick: boolean, duplicates: DuplicateResolution | null): RegisterRequest {
   const ageInstead = country === 'IN' && v.ageInstead;
   const full = !quick;
-  const shown = (f: FormField) => full && addressFields[country].includes(f);
-  const kind = v.payerKind as PayerKind | '';
-  const asked = payerFields(country, kind);
-  const payerValue = (f: PayerField) => (asked.includes(f) ? orNull(v[f]) : null);
   return {
     quick, fullName: v.fullName.trim(), arabicName: full && country === 'AE' ? orNull(v.arabicName) : null,
     dateOfBirth: ageInstead ? null : v.dateOfBirth, ageYears: ageInstead ? Number(v.ageYears) : null,
@@ -324,18 +342,39 @@ export function toRegisterRequest(v: RegistrationForm, country: Country, quick: 
     nationality: full && country === 'AE' ? orNull(v.nationality) : null,
     mobile: v.mobile.trim(), alternatePhone: full ? orNull(v.alternatePhone) : null, email: full ? orNull(v.email) : null,
     identifiers: identifierInputs(v, country, quick),
-    address: full && hasAddress(v, country) ? {
-      line1: v.line1.trim(), line2: orNull(v.line2), city: shown('city') ? orNull(v.city) : null, district: shown('district') ? orNull(v.district) : null,
-      region: orNull(v.region), postalCode: shown('postalCode') ? orNull(v.postalCode) : null,
-      makani: shown('makani') ? orNull(v.makani) : null, poBox: shown('poBox') ? orNull(v.poBox) : null,
-    } : null,
-    payer: full && kind !== '' ? {
-      kind, payerName: payerValue('payerName'), plan: payerValue('plan'), memberNumber: payerValue('memberNumber'),
-      validTo: asked.includes('validTo') && isoDate.test(v.validTo) ? v.validTo : null, network: payerValue('network'),
-    } : null,
+    address: full ? addressInput(v, country) : null,
+    payer: full ? payerInput(v, country) : null,
     duplicates,
   };
 }
+
+/** The address as entered, in this country's shape; null when no address field is filled. */
+function addressInput(v: RegistrationForm, country: Country): AddressInput | null {
+  if (!hasAddress(v, country)) return null;
+  const shown = (f: FormField) => (addressFields[country].includes(f) ? orNull(v[f] as string) : null);
+  return {
+    line1: v.line1.trim(), line2: orNull(v.line2), city: shown('city'), district: shown('district'), region: orNull(v.region),
+    postalCode: shown('postalCode'), makani: shown('makani'), poBox: shown('poBox'),
+  };
+}
+
+/** The payer with only the fields its type asks for; null when no type is chosen. */
+function payerInput(v: RegistrationForm, country: Country): PayerInput | null {
+  const kind = v.payerKind as PayerKind | '';
+  if (kind === '') return null;
+  const asked = payerFields(country, kind);
+  const value = (f: PayerField) => (asked.includes(f) ? orNull(v[f]) : null);
+  return {
+    kind, payerName: value('payerName'), plan: value('plan'), memberNumber: value('memberNumber'),
+    validTo: asked.includes('validTo') && isoDate.test(v.validTo) ? v.validTo : null, network: value('network'),
+  };
+}
+
+export type CompletionRequest = { address: AddressInput | null; payer: PayerInput | null };
+
+/** Only the address and payer go; the form's other fields (the completion form has none) are never sent. */
+export const toCompletionRequest = (v: Partial<RegistrationForm>, country: Country): CompletionRequest =>
+  ({ address: addressInput({ ...emptyForm, ...v }, country), payer: payerInput({ ...emptyForm, ...v }, country) });
 
 export type RegistrationResult = { patientId: string; mrn: string; registeredAt: string; status: RegistrationStatus; warnings: string[] };
 
@@ -344,7 +383,7 @@ export const knownErrors = [
   'required', 'too_long', 'format', 'out_of_range', 'scheme_not_allowed', 'duplicate_scheme', 'not_allowed', 'not_applicable',
   'emirates_id_required', 'emirates_id_or_passport_required', 'emirate_required', 'aadhaar_full_number_not_allowed',
   'format.Abha', 'format.AbhaAddress', 'format.AadhaarLast4', 'format.EmiratesId', 'format.Passport', 'format.pin', 'format.makani', 'format.poBox',
-  'format.email',
+  'format.email', 'nothing_to_complete',
 ] as const;
 export type KnownError = (typeof knownErrors)[number] | 'generic';
 export const errorCode = (code: string | undefined): KnownError =>

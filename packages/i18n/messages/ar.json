@@ -790,5 +790,20 @@
   "registration.state.Ladakh": "لاداخ",
   "registration.state.Lakshadweep": "لاكشادويب",
   "registration.state.Puducherry": "بودوتشيري",
-  "registration.review.separator": " · "
+  "registration.review.separator": " · ",
+  "registration.error.nothing_to_complete": "أضف العنوان أو جهة الدفع أو كليهما.",
+  "patients.completion.title": "تسجيل يجب إكماله",
+  "patients.completion.missing.both": "العنوان وجهة الدفع غير موجودين. أضفهما والمريض عند المكتب.",
+  "patients.completion.missing.address": "العنوان غير موجود. أضفه والمريض عند المكتب.",
+  "patients.completion.missing.payer": "جهة الدفع غير موجودة. أضفها والمريض عند المكتب.",
+  "patients.completion.action": "إكمال التسجيل",
+  "registration.complete.title": "إكمال التسجيل",
+  "registration.complete.intro": "أضف ما تركه التسجيل السريع. تختفي علامة \"تسجيل غير مكتمل\" بعد تسجيل العنوان وجهة الدفع كليهما.",
+  "registration.complete.address": "العنوان",
+  "registration.complete.payer": "جهة الدفع",
+  "registration.complete.save": "حفظ",
+  "registration.complete.back": "العودة إلى السجل",
+  "registration.complete.failed": "لم يُحفظ شيء. حاول مرة أخرى.",
+  "registration.complete.done.Complete": "اكتمل التسجيل. أُغلقت مهمة الإكمال.",
+  "registration.complete.done.Incomplete": "تم الحفظ. يبقى التسجيل غير مكتمل حتى يُسجَّل العنوان وجهة الدفع كلاهما."
 }

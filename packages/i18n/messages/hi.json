@@ -520,5 +520,19 @@
   "patients.record.revealed": "पूरे नंबर दिखाए गए।",
   "booking.error.busy": "यह कैलेंडर अभी दूसरी बुकिंग में व्यस्त है। कुछ भी सहेजा नहीं गया; फिर से कोशिश करें।",
   "booking.patientResults": "मिले मरीज़",
-  "booking.patientPick": "{initials}, {age}, {sex}, एमआरएन का अंत {mrn}। इस बुकिंग के लिए चुनें"
+  "booking.patientPick": "{initials}, {age}, {sex}, एमआरएन का अंत {mrn}। इस बुकिंग के लिए चुनें",
+  "schedule.weekRange": "{from} – {to}",
+  "schedule.prevWeek": "पिछला सप्ताह",
+  "schedule.nextWeek": "अगला सप्ताह",
+  "schedule.views": "शेड्यूल का दृश्य",
+  "schedule.view.day": "दिन",
+  "schedule.view.week": "सप्ताह",
+  "schedule.view.list": "सूची",
+  "schedule.filter": "डॉक्टर या संसाधन",
+  "schedule.filter.all": "सभी डॉक्टर और संसाधन",
+  "schedule.bookNext": "अपॉइंटमेंट बुक करें",
+  "schedule.legend": "रंगों और आकारों का अर्थ",
+  "schedule.weekOf": "{name} का सप्ताह",
+  "schedule.week.bookedOf": "{capacity} में से बुक",
+  "schedule.week.appointments": "{day} के अपॉइंटमेंट"
 }

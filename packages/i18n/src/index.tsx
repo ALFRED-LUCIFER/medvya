@@ -33,6 +33,8 @@ export function makeI18n(locale: Locale, country: Country) {
     formatTime: (d: Date, timeZone: string) => new Intl.DateTimeFormat(tag, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone }).format(d),
     /** A calendar date (YYYY-MM-DD) as a long day, e.g. "Monday, 19 October 2026". */
     formatDay: (date: string) => new Intl.DateTimeFormat(tag, { dateStyle: 'full', timeZone: 'UTC' }).format(new Date(`${date}T12:00:00Z`)),
+    /** A calendar date (YYYY-MM-DD) as a short day for narrow headers, e.g. "Mon, 19 Oct". */
+    formatShortDay: (date: string) => new Intl.DateTimeFormat(tag, { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' }).format(new Date(`${date}T12:00:00Z`)),
     /** Money is stored in integer minor units (PRD v2 P4 NFR). */
     formatMoney: (minor: number, currency: 'INR' | 'AED') => new Intl.NumberFormat(tag, { style: 'currency', currency }).format(minor / 100),
   };

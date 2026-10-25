@@ -3,7 +3,7 @@ import {
   Send, Pipette, Inbox, Eye, Phone, MessageSquareCheck, CircleCheck,
   Sparkles, BadgeCheck, User, ArrowLeftRight, Upload, Lock,
   CircleAlert, TriangleAlert, Info, Pause, CircleMinus, Pill as PillIcon, CircleHelp,
-  Clock, Ban, SearchX, WifiOff, Hourglass, CalendarCheck, Tag, type LucideIcon,
+  Clock, Ban, SearchX, WifiOff, Hourglass, CalendarCheck, Tag, UserCheck, DoorOpen, CalendarX, CircleX, type LucideIcon,
 } from 'lucide-react';
 import { useI18n, type MessageKey } from '@medvya/i18n';
 import { Button } from '#components/ui/button';
@@ -54,6 +54,11 @@ export const scheduleLooks = {
   unavailable: { label: 'schedule.state.unavailable', icon: Ban, bg: 'var(--color-line)', fg: 'var(--color-ink-600)' },
   held: { label: 'schedule.state.held', icon: Hourglass, bg: '#FDF5E7', fg: '#7A4710' },
   booked: { label: 'schedule.state.Booked', icon: CalendarCheck, bg: '#FFFFFF', fg: '#1D4ED8', border: '1px solid #2563EB' },
+  checkedIn: { label: 'schedule.state.CheckedIn', icon: UserCheck, bg: '#EFF4FF', fg: '#1D4ED8', border: '1px solid #93B4F5' },
+  inRoom: { label: 'schedule.state.InConsult', icon: DoorOpen, bg: '#E7F6F4', fg: '#0F766E', border: '1px solid #0E9384' },
+  completed: { label: 'schedule.state.Done', icon: CircleCheck, bg: '#F1F5F8', fg: '#506579', border: '1px solid #CBD6E0' },
+  noShow: { label: 'schedule.state.NoShow', icon: CalendarX, bg: '#FFF7F8', fg: '#8A1626', border: '1px dashed #C83A4B' },
+  cancelled: { label: 'schedule.state.Cancelled', icon: CircleX, bg: '#F7FAFC', fg: '#506579', border: '1px dashed #8296A8' },
 } satisfies Record<string, Look>;
 
 // Reception board (P-01): nonclinical tags on visit cards. The reason is only ever its category.

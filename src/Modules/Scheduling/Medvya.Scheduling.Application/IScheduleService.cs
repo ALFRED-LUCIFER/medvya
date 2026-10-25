@@ -40,12 +40,15 @@ public sealed record SlotView(DateTimeOffset Start, DateTimeOffset End, bool Hel
 
 /// <summary>
 /// One column of the day view: free slots, appointments and unavailable blocks within the day frame, and the length of each
-/// visit type in this calendar (the booking panel shows it).
+/// visit type in this calendar (the booking panel shows it). Capacity is the number of template slots that day, booked or free.
 /// </summary>
 public sealed record ScheduleColumn(
     Guid CalendarId, CalendarKind CalendarKind, string Name, int? SlotMinutes,
     IReadOnlyList<WorkingWindow> Hours, IReadOnlyList<SlotView> Slots, IReadOnlyList<UnavailableBlock> Unavailable,
-    IReadOnlyList<AppointmentChip> Appointments, IReadOnlyList<VisitLength> VisitLengths);
+    IReadOnlyList<AppointmentChip> Appointments, IReadOnlyList<VisitLength> VisitLengths, int Capacity);
+
+/// <summary>A week of one calendar (MDV-P1-023): seven days from Monday, each a day view with that calendar's column only.</summary>
+public sealed record ScheduleWeek(Guid FacilityId, string TimeZone, Guid CalendarId, IReadOnlyList<ScheduleDay> Days);
 
 /// <summary>
 /// The day view (P-04) of one facility. Instants are UTC; the client shows them in <see cref="TimeZone"/> (IANA), the
@@ -62,6 +65,10 @@ public interface IScheduleService
     /// <summary>Doctor and resource columns for the facility-local date (today in the facility when null).</summary>
     /// <exception cref="SchedulingAccessDeniedException">No calendar access at this facility.</exception>
     Task<ScheduleDay> GetDayAsync(Guid facilityId, DateOnly? day, CancellationToken cancellationToken = default);
+
+    /// <summary>The Monday-to-Sunday week containing the facility-local date (this week when null) for one doctor or resource.</summary>
+    /// <exception cref="SchedulingValidationException">The calendar is not a doctor or resource of the facility.</exception>
+    Task<ScheduleWeek> GetWeekAsync(Guid facilityId, Guid calendarId, DateOnly? day, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<TemplateView>> ListTemplatesAsync(Guid facilityId, CancellationToken cancellationToken = default);
 

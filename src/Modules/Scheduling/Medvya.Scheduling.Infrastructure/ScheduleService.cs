@@ -1,6 +1,8 @@
+using Medvya.Patients.Application;
 using Medvya.Scheduling.Application;
 using Medvya.Scheduling.Domain;
 using Medvya.Scheduling.Infrastructure.Persistence;
+using Medvya.Tenancy.Application;
 using Microsoft.EntityFrameworkCore;
 
 namespace Medvya.Scheduling.Infrastructure;
@@ -19,23 +21,49 @@ public sealed class ScheduleService(SchedulingDbContext db, SchedulingContext co
     {
         await context.RequireAsync(facilityId, SchedulingAccess.CanView, cancellationToken);
         var (facility, zone) = await context.FacilityAsync(facilityId, cancellationToken);
-        var now = context.Now;
-        var date = day ?? ScheduleRules.LocalDate(now, zone);
-        var (from, to) = (ScheduleRules.Instant(date, TimeOnly.MinValue, zone), ScheduleRules.Instant(date.AddDays(1), TimeOnly.MinValue, zone));
-        var earliest = from.AddMinutes(-ScheduleRules.MaxVisitMinutes); // lower bound so the (facility, start) index can seek
+        var date = day ?? ScheduleRules.LocalDate(context.Now, zone);
+        var calendars = await context.CalendarsAsync(facilityId, cancellationToken);
+        return (await DaysAsync(facility, zone, calendars, [date], cancellationToken)).Single();
+    }
 
-        var templates = await db.Templates.AsNoTracking().Where(t => t.FacilityId == facilityId).ToDictionaryAsync(t => t.CalendarId, cancellationToken);
+    public async Task<ScheduleWeek> GetWeekAsync(Guid facilityId, Guid calendarId, DateOnly? day, CancellationToken cancellationToken = default)
+    {
+        await context.RequireAsync(facilityId, SchedulingAccess.CanView, cancellationToken);
+        var (facility, zone) = await context.FacilityAsync(facilityId, cancellationToken);
+        var calendar = (await context.CalendarsAsync(facilityId, cancellationToken)).SingleOrDefault(c => c.Id == calendarId)
+            ?? throw new SchedulingValidationException([new("calendarId", "unknown")]);
+        var days = await DaysAsync(facility, zone, [calendar], ScheduleRules.Week(day ?? ScheduleRules.LocalDate(context.Now, zone)), cancellationToken);
+        return new(facilityId, facility.TimeZone, calendarId, days);
+    }
+
+    /// <summary>
+    /// Day views of these calendars for these facility-local dates, from one read each of templates, appointments, holds and patient
+    /// names (no query per day or per calendar). The appointment read seeks the (facility, start) index between bounded instants.
+    /// </summary>
+    async Task<List<ScheduleDay>> DaysAsync(FacilityInfo facility, TimeZoneInfo zone, IReadOnlyList<Calendar> calendars, IReadOnlyList<DateOnly> dates, CancellationToken cancellationToken)
+    {
+        var now = context.Now;
+        var (from, to) = (ScheduleRules.DayBounds(dates.Min(), zone).From, ScheduleRules.DayBounds(dates.Max(), zone).To);
+        var earliest = from.AddMinutes(-ScheduleRules.MaxVisitMinutes); // lower bound so the (facility, start) index can seek
+        var ids = calendars.Select(c => c.Id).ToList();
+        var templates = await db.Templates.AsNoTracking().Where(t => t.FacilityId == facility.Id && ids.Contains(t.CalendarId)).ToDictionaryAsync(t => t.CalendarId, cancellationToken);
         var appointments = await db.Appointments.AsNoTracking()
-            .Where(a => a.FacilityId == facilityId && a.Start < to && a.End > from && a.Start > earliest).OrderBy(a => a.Start).ToListAsync(cancellationToken);
+            .Where(a => a.FacilityId == facility.Id && a.Start < to && a.End > from && a.Start > earliest && ids.Contains(a.CalendarId)).OrderBy(a => a.Start).ToListAsync(cancellationToken);
         var me = context.UserId;
         var holds = await db.SlotHolds.AsNoTracking()
-            .Where(h => h.FacilityId == facilityId && h.Start < to && h.End > from && h.ExpiresAt > now && h.HeldBy != me).ToListAsync(cancellationToken);
+            .Where(h => h.FacilityId == facility.Id && ids.Contains(h.CalendarId) && h.Start < to && h.End > from && h.ExpiresAt > now && h.HeldBy != me).ToListAsync(cancellationToken);
         var names = await context.PatientsAsync(appointments.Select(a => a.PatientId), cancellationToken);
+        return [.. dates.Select(date => Day(facility, zone, calendars, templates, appointments, holds, names, date))];
+    }
 
-        var days = (await context.CalendarsAsync(facilityId, cancellationToken))
+    static ScheduleDay Day(FacilityInfo facility, TimeZoneInfo zone, IReadOnlyList<Calendar> calendars, Dictionary<Guid, ScheduleTemplate> templates,
+        List<Appointment> appointments, List<SlotHold> holds, IReadOnlyDictionary<Guid, PatientSummary> names, DateOnly date)
+    {
+        var (from, to) = ScheduleRules.DayBounds(date, zone);
+        var days = calendars
             .Select(c => (Calendar: c, Template: templates.GetValueOrDefault(c.Id)))
             .Select(x => (x.Calendar, x.Template, Day: x.Template is null ? CalendarDay.Closed : ScheduleRules.Day(x.Template, date, zone),
-                Booked: appointments.Where(a => a.CalendarId == x.Calendar.Id).ToList()))
+                Booked: appointments.Where(a => a.CalendarId == x.Calendar.Id && a.Start < to && a.End > from).ToList()))
             .ToList();
 
         // The frame covers every column's hours and every appointment, including one left outside changed hours.
@@ -53,9 +81,9 @@ public sealed class ScheduleService(SchedulingDbContext db, SchedulingContext co
                 .ToList();
             return new ScheduleColumn(x.Calendar.Id, x.Calendar.Kind, x.Calendar.Name, x.Template?.SlotMinutes, x.Day.Hours, slots,
                 ScheduleRules.Unavailable(x.Day, start, end, x.Template is not null),
-                [.. x.Booked.Select(a => SchedulingContext.Chip(a, names))], x.Template is null ? [] : Lengths(x.Template));
+                [.. x.Booked.Select(a => SchedulingContext.Chip(a, names))], x.Template is null ? [] : Lengths(x.Template), x.Day.Slots.Count);
         }).ToList();
-        return new(facilityId, facility.TimeZone, date, start, end, columns);
+        return new(facility.Id, facility.TimeZone, date, start, end, columns);
     }
 
     public async Task<IReadOnlyList<TemplateView>> ListTemplatesAsync(Guid facilityId, CancellationToken cancellationToken = default)

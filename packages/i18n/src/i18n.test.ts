@@ -34,5 +34,6 @@ describe('i18n', () => {
     expect(makeI18n('en', 'IN').formatTime(at, 'Asia/Kolkata')).toBe('09:00');
     expect(makeI18n('ar', 'AE').formatTime(at, 'Asia/Dubai')).toBe('07:30'); // Western digits in Arabic too
     expect(makeI18n('en', 'IN').formatDay('2026-10-19')).toContain('Monday');
+    expect(makeI18n('en', 'IN').formatShortDay('2026-10-19')).toBe('Mon, 19 Oct');
   });
 });

@@ -11,7 +11,7 @@ type Props = {
   opened: { appointment: Appointment; calendarName: string };
   mode: 'view' | 'pick' | 'confirmMove' | 'cancel';
   target: { calendarName: string; start: string } | null;
-  done: { kind: 'moved' | 'cancelled' | 'noShow' | 'checkedIn'; appointment: Appointment } | null;
+  done: { kind: 'moved' | 'cancelled' | 'noShow' | 'checkedIn'; appointment: Appointment; calendarName: string } | null;
   rules: Record<Action, Rule>;
   working: boolean;
   error: ChangeError | null;
@@ -61,7 +61,7 @@ export default function AppointmentPanel(p: Props) {
         <dt className="text-muted-foreground">{t('appointment.type')}</dt>
         <dd>{t(`visitType.${a.visitType}`)}</dd>
         <dt className="text-muted-foreground">{t('appointment.with')}</dt>
-        <dd>{p.done?.kind === 'moved' && p.target ? p.target.calendarName : p.opened.calendarName}</dd>
+        <dd>{p.done?.calendarName ?? p.opened.calendarName}</dd>
       </dl>
 
       {p.done && (

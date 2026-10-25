@@ -1,7 +1,7 @@
 import type { DragEvent } from 'react';
 import { useI18n } from '@medvya/i18n';
 import { cn, scheduleLooks } from '@medvya/ui';
-import type { ColumnItem, ColumnLayout, DayLayout } from '../domain/schedule';
+import type { CalendarKind, ColumnItem, ColumnLayout, DayLayout } from '../domain/schedule';
 import { hatched } from './looks';
 import { AppointmentChip, dragType, OpenableChip, type DropHandler, type OpenHandler } from './parts';
 
@@ -13,8 +13,11 @@ export type GridActions = {
   onSlot?: SlotHandler;
   onOpen?: OpenHandler;
   onDrop?: DropHandler;
-  /** The patient being rescheduled: empty slots then read "Move … to …" instead of "Book …". */
-  moving?: string;
+  /**
+   * The visit being rescheduled: empty slots of calendars of its kind then read "Move … to …" instead of "Book …"; other
+   * calendars offer nothing, as the server would refuse (a doctor's visit never moves into a room's calendar).
+   */
+  moving?: { patient: string; kind: CalendarKind };
 };
 
 /** Day view: a column per doctor and resource on one time scale, so a 40-minute visit spans two 20-minute slots. */
@@ -70,7 +73,7 @@ function Item({ item, column, day, time, onSlot, onOpen, onDrop, moving }: { ite
     const id = e.dataTransfer.getData(dragType);
     const from = day.columns.find(c => c.items.some(i => i.kind === 'appointment' && i.id === id));
     const visit = from?.items.find(i => i.kind === 'appointment' && i.id === id);
-    if (from && visit?.kind === 'appointment') onDrop?.(visit, { calendarId: from.calendarId, calendarName: from.name || t('schedule.doctor') }, { calendarId: column.calendarId, calendarName: name, start });
+    if (from && visit?.kind === 'appointment' && from.calendarKind === column.calendarKind) onDrop?.(visit, { calendarId: from.calendarId, calendarName: from.name || t('schedule.doctor') }, { calendarId: column.calendarId, calendarName: name, start });
   };
 
   if (item.kind === 'slot' && item.held) {
@@ -84,8 +87,8 @@ function Item({ item, column, day, time, onSlot, onOpen, onDrop, moving }: { ite
   if (item.kind === 'slot')
     return (
       <li className="absolute inset-x-0 border-t" style={box}>
-        {onSlot ? (
-          <button type="button" aria-label={moving ? t('schedule.slot.moveTo', { patient: moving, name, time: time(item.start) }) : t('schedule.slot.book', { name, time: time(item.start) })}
+        {onSlot && (!moving || moving.kind === column.calendarKind) ? (
+          <button type="button" aria-label={moving ? t('schedule.slot.moveTo', { patient: moving.patient, name, time: time(item.start) }) : t('schedule.slot.book', { name, time: time(item.start) })}
             onClick={() => onSlot(column.calendarId, name, item.start)}
             onDragOver={onDrop ? e => e.preventDefault() : undefined} onDrop={onDrop ? drop(item.start) : undefined}
             className={cn('size-full px-2 pt-0.5 text-start align-top hover:bg-accent focus-visible:-outline-offset-2', moving && 'bg-accent/40')}>

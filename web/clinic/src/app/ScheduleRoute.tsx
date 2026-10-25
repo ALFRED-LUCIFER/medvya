@@ -28,7 +28,9 @@ export default function ScheduleRoute({ facilityId, userId, canBook, canCheckIn,
       visit.onOpen(appointment, from.calendarId, from.calendarName);
       visit.onTarget(to.calendarId, to.calendarName, to.start);
     } : undefined,
-    moving: picking ? visit.opened?.appointment.patientName : undefined,
+    moving: picking && visit.opened
+      ? { patient: visit.opened.appointment.patientName, kind: schedule.day?.columns.find(c => c.calendarId === visit.opened!.calendarId)?.calendarKind ?? 'Doctor' }
+      : undefined,
   };
 
   const opened = visit.opened;

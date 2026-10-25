@@ -12,7 +12,7 @@ export type Opened = { appointment: Appointment; calendarId: string; calendarNam
 /** A new slot for the opened visit, picked by click or by drag, waiting for confirmation. */
 export type Target = { calendarId: string; calendarName: string; start: string };
 export type Mode = 'view' | 'pick' | 'confirmMove' | 'cancel';
-export type Done = { kind: 'moved' | 'cancelled' | 'noShow' | 'checkedIn'; appointment: Appointment };
+export type Done = { kind: 'moved' | 'cancelled' | 'noShow' | 'checkedIn'; appointment: Appointment; calendarName: string };
 
 /**
  * MDV-P1-024: the appointment panel. Opening a visit shows its actions under the state rules; Reschedule picks a new slot
@@ -27,15 +27,19 @@ export function useAppointmentController(facilityId: string, access: { timeZone:
   const [done, setDone] = useState<Done | null>(null);
   const form = useForm<CancelForm>({ resolver: zodResolver(cancelSchema), defaultValues: emptyCancel });
   const refreshSchedule = () => queryClient.invalidateQueries({ queryKey: ['schedule', facilityId] });
-  const finish = (kind: Done['kind']) => (appointment: Appointment) => {
-    setDone({ kind, appointment });
+  const finish = (kind: Done['kind'], calendarName?: string) => (appointment: Appointment) => {
+    setDone({ kind, appointment, calendarName: calendarName ?? opened!.calendarName });
     setMode('view');
     setTarget(null);
     form.reset(emptyCancel);
   };
   const id = () => opened!.appointment.id;
 
-  const move = useMutation({ mutationFn: (t: Target) => rescheduleAppointment(id(), t.calendarId, t.start), onSuccess: finish('moved'), onSettled: refreshSchedule });
+  const move = useMutation({
+    mutationFn: (t: Target) => rescheduleAppointment(id(), t.calendarId, t.start),
+    onSuccess: (a, t) => finish('moved', t.calendarName)(a),
+    onSettled: refreshSchedule,
+  });
   const cancel = useMutation({ mutationFn: (v: CancelForm) => cancelAppointment(id(), v.reason, v.note), onSuccess: finish('cancelled'), onSettled: refreshSchedule });
   const noShow = useMutation({ mutationFn: () => markNoShow(id()), onSuccess: finish('noShow'), onSettled: refreshSchedule });
   const arrive = useMutation({

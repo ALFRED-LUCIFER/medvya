@@ -558,6 +558,7 @@ test('reschedule picks a new slot, asks first, then moves; the old slot frees on
   await visitPanel(page).getByRole('button', { name: 'Reschedule' }).click();
   await expect(visitPanel(page)).toContainText('Choose the new slot');
   const target = page.getByRole('button', { name: 'Move Meera Iyer (synthetic) to Dr. Arjun Rao (synthetic) at 10:20' });
+  await expect(page.getByRole('button', { name: /^Move Meera Iyer \(synthetic\) to Procedure room/ })).toHaveCount(0); // only doctors' calendars
   await target.click();
   const confirm = page.getByRole('group', { name: 'Move this appointment?' });
   await expect(confirm).toContainText('From Dr. Arjun Rao (synthetic), Mon, 19 Oct at 09:00 to Dr. Arjun Rao (synthetic), Mon, 19 Oct at 10:20.');
@@ -570,13 +571,20 @@ test('reschedule picks a new slot, asks first, then moves; the old slot frees on
 test('dragging a visit onto an empty slot asks before moving it', async ({ page }) => {
   await page.clock.setFixedTime(new Date(ist('2026-10-19', '08:30')));
   const calls = await open(page);
-  await meera(page).dragTo(page.getByRole('button', { name: 'Book Procedure room (synthetic) at 11:00' }));
   const confirm = page.getByRole('group', { name: 'Move this appointment?' });
-  await expect(confirm).toContainText('to Procedure room (synthetic), Mon, 19 Oct at 11:00.');
+  await meera(page).dragTo(page.getByRole('button', { name: 'Book Procedure room (synthetic) at 11:00' }));
+  await expect(confirm).toHaveCount(0); // a doctor's visit is never offered a room's slot (the server refuses it too)
+  await meera(page).dragTo(bookButton(page, '11:00'));
+  await expect(confirm).toContainText('to Dr. Arjun Rao (synthetic), Mon, 19 Oct at 11:00.');
   expect(calls.changes).toEqual([]);
   await confirm.getByRole('button', { name: 'Back' }).click(); // changed their mind: nothing sent
   await expect(confirm).toHaveCount(0);
   expect(calls.changes).toEqual([]);
+
+  await meera(page).dragTo(bookButton(page, '11:20'));
+  await confirm.getByRole('button', { name: 'Move appointment' }).click();
+  await expect(visitPanel(page)).toContainText('Moved. The old slot is free again.');
+  expect(calls.changes.map(c => c.body)).toEqual([{ calendarId: 'd-1', start: ist('2026-10-19', '11:20') }]);
 });
 
 test('cancel needs a reason, and a note for Other; the note never goes in a URL', async ({ page }) => {

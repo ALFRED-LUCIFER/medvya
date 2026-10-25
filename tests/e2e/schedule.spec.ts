@@ -406,6 +406,7 @@ test('week and list views show the same appointments as the day view', async ({ 
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Mon, 19 Oct – Sun, 25 Oct');
   const week = page.getByRole('region', { name: 'Week of Dr. Arjun Rao (synthetic)' });
   const monday = week.getByRole('list', { name: 'Appointments on Monday, 19 October 2026' });
+  await expect(monday.getByRole('listitem')).toHaveCount(inDay.length); // allInnerTexts does not wait for the week to render
   expect(squash(await monday.getByRole('listitem').allInnerTexts())).toEqual(inDay);
   await expect(week.getByText('booked of 17')).toHaveCount(5); // Monday to Friday
   await expect(week.getByText('Not working')).toHaveCount(2); // Saturday and Sunday
@@ -491,6 +492,7 @@ for (const locale of ['en', 'ar'] as const)
       await expect(page.getByText('Meera Iyer (synthetic)').first()).toBeVisible();
       for (const size of [{ width: 1280, height: 720 }, { width: 640, height: 720 }]) { // 640 px is a 1280 px screen at 200 %
         await page.setViewportSize(size);
+        await page.evaluate(() => Promise.all(document.getAnimations().map(a => a.finished))); // axe must not sample a colour mid-transition
         await page.addScriptTag({ path: axePath });
         const violations = await page.evaluate(async () =>
           (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations

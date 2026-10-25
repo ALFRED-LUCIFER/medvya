@@ -72,6 +72,10 @@ namespace Medvya.Scheduling.Infrastructure.Persistence.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
+                    b.Property<string>("Room")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
                     b.Property<DateTimeOffset>("Start")
                         .HasColumnType("datetimeoffset");
 

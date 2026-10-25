@@ -382,7 +382,7 @@ progress:
 - Merged [PR #61](https://github.com/ALFRED-LUCIFER/medvya/pull/61): quick form (5 fields, keyboard only) with the duplicate check; [PR #62](https://github.com/ALFRED-LUCIFER/medvya/pull/62) board card and [PR #58](https://github.com/ALFRED-LUCIFER/medvya/pull/58) record header show "Registration incomplete"
 - Merged [PR #79](https://github.com/ALFRED-LUCIFER/medvya/pull/79): security fix — completion and registration writes reach the active facility's patients only; `POST /v1/patients/{id}/completion` (Full access): 200 + one Allowed row in the change's transaction, another facility's patient 404 + one NotFound row and nothing changed; mutation-checked
 - Merged [PR #82](https://github.com/ALFRED-LUCIFER/medvya/pull/82): quick and full are one form with a mode toggle; switching keeps what was typed
-- [PR #84](https://github.com/ALFRED-LUCIFER/medvya/pull/84): the record of an Incomplete patient shows the completion task (what is missing: address, payer or both) and "Complete registration" (Register / book at Full) reusing the registration address and payer fields and rules; saving posts only those two to the facility-scoped completion endpoint, Complete closes the task and the tag; 404 announced, nothing changed; en/hi/ar, axe clean, keyboard, 200 % zoom, real-API browser check
+- Merged [PR #84](https://github.com/ALFRED-LUCIFER/medvya/pull/84): the record of an Incomplete patient shows the completion task (what is missing: address, payer or both) and "Complete registration" (Register / book at Full) reusing the registration address and payer fields and rules; saving posts only those two to the facility-scoped completion endpoint, Complete closes the task and the tag; 404 announced, nothing changed; en/hi/ar, axe clean, keyboard, 200 % zoom, real-API browser check
 - [PR #PRNUM](https://github.com/ALFRED-LUCIFER/medvya/pull/PRNUM): the emergency contact is the third part the completion task waits for, added from the same completion form
 - Left: CARE_TASK queue with owner and due date replaces the Incomplete status as the task (MDV-P4-016, recorded as a shortcut); timed 45-second usability check with a trained user (pilot)
 title: Quick registration for a busy desk with a completion task
@@ -712,12 +712,13 @@ ac:
 - Accepting books the slot and removes the patient from the waitlist.
 
 === MDV-P1-028
-status: In progress
+status: Partly done
 progress:
-- Open [PR #62](https://github.com/ALFRED-LUCIFER/medvya/pull/62): P-01 board at /front-desk (7 columns with counts and a CTA each, nonclinical cards: reason category only, "Registration incomplete", wait timer on the server clock); check-in in two taps with a name + date-of-birth identity check; check-in time recorded as `medvya.front_desk.check_in.duration` (exit gate 3)
+- Merged [PR #62](https://github.com/ALFRED-LUCIFER/medvya/pull/62): P-01 board at /front-desk (7 columns with counts and a CTA each, nonclinical cards: reason category only, "Registration incomplete", wait timer on the server clock); check-in in two taps with a name + date-of-birth identity check; check-in time recorded as `medvya.front_desk.check_in.duration` (exit gate 3)
 - Server-side state machine (one step forward, else 409); each move is a conditional update + VisitStatusEvent in one transaction, so a repeat or a second desk never checks in twice (8 concurrent check-ins on SQL Server → one event); audited endpoints; board payload tested against an exact field allowlist; mutation-checked (guard, idempotency, conditional update, payload, roles); browser-verified (en, ar RTL, keyboard, axe, 200 % zoom, tablet)
 - Payment on Billing cards follows the `billing.invoices` flag: off (all of P1) a disabled placeholder, on a link to Billing (P4); merged with main after #59 and #58 landed
-- Left: real-time updates and call-in room (MDV-P1-029); walk-in (MDV-P1-025); waitlist (MDV-P1-027); workload panel (MDV-P1-030); real-API browser check once sign-in issues the tenant and facility claims (MDV-P0-012)
+- Real-time updates and the call-in room: [PR #83](https://github.com/ALFRED-LUCIFER/medvya/pull/83) (MDV-P1-029), browser-verified against the real API with sign-in issuing the tenant and facility claims (MDV-P0-012)
+- Left: walk-in (MDV-P1-025); waitlist (MDV-P1-027); workload panel (MDV-P1-030)
 title: Reception board with visit columns and one-tap check-in
 type: Story
 epic: MDV-P1-E07
@@ -744,6 +745,12 @@ notes:
 - Confirm the final P-01 design with the founder before build (PRD v2 finding: P-01 status "next").
 
 === MDV-P1-029
+status: In progress
+progress:
+- Open [PR #83](https://github.com/ALFRED-LUCIFER/medvya/pull/83): SignalR board hub at /v1/hubs/board. Connecting needs "Check-in & queue" at the session's facility (capability policy; a refusal is audited Denied). Every call re-checks the live staff session, and Watch joins only the session's own facility after the board's access check, audited Allowed or Denied and limited per user. Groups are tenant + facility ids from the session. Messages are `{appointmentId, state, changedAt}` only (exact-field allowlist test); boards refetch the audited board endpoint
+- The hub has no write methods: call-in and every status move stay on the audited HTTP endpoints with the visit state machine (409) and the in-transaction audit. Call-in records the room of the doctor's session from the template ("Called to Room 3"). After the commit, moves and bookings are pushed; a failed push never fails the move
+- Client: reconnect with back-off; refetch after every (re)join, so a move is never lost or duplicated; "Live updates paused · refreshing every 30 s" (words and icon) with 30 s polling while not live; no connection while offline; stops on 401/403. Mutation-checked (13 server, 6 client); a change reaches another desk within 2 s (SQL Server, LongPolling and WebSockets); browser-verified with two signed-in desks (en, ar RTL, keyboard, axe, reconnect after killing the connection)
+- Left: close hub connections at once when a session is revoked (MDV-P0-012); Azure SignalR Service before running more than one API instance (MDV-P0-007); Today views (P2) subscribe when they exist
 title: Real-time board updates, call/room patient, nonclinical statuses (SignalR)
 type: Story
 epic: MDV-P1-E07

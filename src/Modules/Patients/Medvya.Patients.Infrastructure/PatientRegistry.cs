@@ -13,7 +13,8 @@ namespace Medvya.Patients.Infrastructure;
 /// Patient registration, directory and search. Each write and its audit events run in one database transaction (fail closed): the
 /// events commit with the change, and a failed audit write rolls the change back. Reads do not audit here: the calling endpoint's
 /// <c>.Audited()</c> filter writes one event before the answer is sent, so each request leaves exactly one event.
-/// The facility of a registration is the command's; the HTTP endpoint fills it from the active facility, never from the request body.
+/// Reads and writes reach the active facility's patients only: a registration command must name the active facility (the HTTP
+/// endpoint fills it from the session, never from the request body), and another facility's patient is not found for completion.
 /// shortcut: reads see the active facility's patients only; sharing patients across one tenant's facilities waits for multi-site rules (P7).
 /// </summary>
 public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant, ICurrentFacility facility, ICurrentUser user, IAuditLog audit, TimeProvider clock)
@@ -25,6 +26,8 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
     {
         ArgumentNullException.ThrowIfNull(command);
         var tenantId = TenantId();
+        // Only at the facility the desk is working at: the use case never trusts a facility its caller did not sign in to.
+        if (command.FacilityId != FacilityId()) throw new InvalidOperationException("A registration must be at the active facility.");
         var now = clock.GetUtcNow();
         var rules = CountryRules.For(command.CountryCode);
         var (c, dob, estimated, warnings) = rules.Validate(command, rules.Today(now));
@@ -119,7 +122,9 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
         return initials.ToUpperInvariant();
     }
 
-    IQueryable<Patient> FacilityPatients() => FacilityPatients(facility.FacilityId ?? throw new InvalidOperationException("No facility context."));
+    IQueryable<Patient> FacilityPatients() => FacilityPatients(FacilityId());
+
+    Guid FacilityId() => facility.FacilityId ?? throw new InvalidOperationException("No facility context.");
 
     IQueryable<Patient> FacilityPatients(Guid facilityId) => db.Patients.AsNoTracking().Where(p => p.FacilityId == facilityId);
 
@@ -129,7 +134,7 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
     public Task<IReadOnlyList<DuplicateCandidate>> FindDuplicatesAsync(DuplicateQuery query, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(query);
-        var facilityId = facility.FacilityId ?? throw new InvalidOperationException("No facility context.");
+        var facilityId = FacilityId();
         return DuplicatesAsync(facilityId, query.FullName, query.DateOfBirth, CountryRules.For(query.CountryCode).MatchKeys(query.Identifiers), cancellationToken);
     }
 
@@ -168,11 +173,14 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
 
     static string Tail(string value) => value.Length <= 4 ? value : value[^4..];
 
-    public async Task<RegistrationStatus> CompleteRegistrationAsync(Guid patientId, PatientAddress? address, PayerInput? payer, CancellationToken cancellationToken = default)
+    public async Task<RegistrationStatus?> CompleteRegistrationAsync(Guid patientId, PatientAddress? address, PayerInput? payer, CancellationToken cancellationToken = default)
     {
         var tenantId = TenantId();
-        var patient = await db.Patients.SingleOrDefaultAsync(p => p.Id == patientId, cancellationToken)
-            ?? throw new KeyNotFoundException("Patient not found.");
+        var facilityId = FacilityId();
+        // Facility-scoped like every read here: another facility's patient is not found and nothing is changed.
+        var patient = await db.Patients.SingleOrDefaultAsync(p => p.Id == patientId && p.FacilityId == facilityId, cancellationToken);
+        if (patient is null) return null;
+        if (address is null && payer is null) throw new PatientValidationException([new("completion", "required")]);
         (address, payer) = CountryRules.For(patient.CountryCode).ValidateCompletion(address, payer);
         var now = clock.GetUtcNow();
 

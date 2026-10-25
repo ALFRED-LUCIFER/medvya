@@ -100,7 +100,7 @@ public sealed record PatientSearchResult(SearchKind MatchedOn, IReadOnlyList<Pat
 public interface IPatientRegistry
 {
     /// <summary>
-    /// Registers the patient. Possible duplicates are checked again here, not only while typing: while any match is not covered by
+    /// Registers the patient at the current facility (a command for any other facility is refused). Possible duplicates are checked again here, not only while typing: while any match is not covered by
     /// <see cref="RegisterPatient.Duplicates"/>, nothing is saved ("duplicates"/"unresolved"). Each decision is stored as a
     /// <see cref="MergeRequest"/> and audited with the actor, in the same transaction as the registration.
     /// </summary>
@@ -123,6 +123,11 @@ public interface IPatientRegistry
     /// <exception cref="PatientValidationException">Unreadable query (see <see cref="CountryRules.ParseSearch"/>) or page.</exception>
     Task<PatientSearchResult> SearchAsync(PatientSearch search, CancellationToken cancellationToken = default);
 
-    /// <summary>Adds the missing address and payer; the registration becomes Complete (closing the desk's completion task) once both exist.</summary>
-    Task<RegistrationStatus> CompleteRegistrationAsync(Guid patientId, PatientAddress? address, PayerInput? payer, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// Adds the missing address and/or payer to a patient of the current facility; the registration becomes Complete (closing the
+    /// desk's completion task) once both exist. Null when there is no such patient at this facility (also another facility's
+    /// patient): nothing is changed or audited, and the endpoint answers 404.
+    /// </summary>
+    /// <exception cref="PatientValidationException">Neither address nor payer given ("completion"/"required"), or either is invalid.</exception>
+    Task<RegistrationStatus?> CompleteRegistrationAsync(Guid patientId, PatientAddress? address, PayerInput? payer, CancellationToken cancellationToken = default);
 }

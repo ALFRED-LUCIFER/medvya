@@ -50,7 +50,8 @@ public class PatientRegistryTests(SqlServerFixture sql) : IClassFixture<SqlServe
     {
         var first = await Registry(tenantA).RegisterAsync(IndiaFull(facility));
         var second = await Registry(tenantA).RegisterAsync(IndiaFull(facility) with { Identifiers = [] });
-        var otherFacility = await Registry(tenantA).RegisterAsync(IndiaFull(Guid.NewGuid()) with { Identifiers = [] });
+        var other = Guid.NewGuid();
+        var otherFacility = await Registry(tenantA, at: other).RegisterAsync(IndiaFull(other) with { Identifiers = [] });
 
         Assert.Equal(("000001", "000002", "000001"), (first.Mrn, second.Mrn, otherFacility.Mrn));
         Assert.Equal((RegistrationStatus.Complete, actor), (first.Status, first.RegisteredBy!.Value));
@@ -147,10 +148,35 @@ public class PatientRegistryTests(SqlServerFixture sql) : IClassFixture<SqlServe
     [Fact]
     public async Task AnotherFacilitysPatientIsNeitherListedNorOpened()
     {
-        var elsewhere = await Registry(tenantA).RegisterAsync(IndiaFull(Guid.NewGuid()) with { FullName = "Rahul Menon (synthetic)" });
+        var other = Guid.NewGuid();
+        var elsewhere = await Registry(tenantA, at: other).RegisterAsync(IndiaFull(other) with { FullName = "Rahul Menon (synthetic)" });
         Assert.Empty((await Search(tenantA, "IN", "Rahul")).Items);
         Assert.Empty((await Search(tenantA, "IN", "91-0000-0000-0002")).Items);
         Assert.Null(await Registry(tenantA).GetAsync(elsewhere.PatientId));
+    }
+
+    /// <summary>Writes are facility-scoped like reads: a desk can neither register into nor complete another facility's record.</summary>
+    [Fact]
+    public async Task AnotherFacilitysPatientCannotBeCompletedOrRegisteredInto()
+    {
+        var other = Guid.NewGuid();
+        var elsewhere = await Registry(tenantA, at: other).RegisterAsync(UaeQuick(other));
+
+        var address = new PatientAddress { Line1 = "Villa 1", Line2 = "Al Reem", Region = "AUH" };
+        Assert.Null(await Registry(tenantA).CompleteRegistrationAsync(elsewhere.PatientId, address, new(PayerKind.SelfPay)));
+        await using (var db = sql.Patients(tenantA))
+        {
+            var unchanged = await db.Patients.SingleAsync(p => p.Id == elsewhere.PatientId);
+            Assert.Equal((RegistrationStatus.Incomplete, (PatientAddress?)null), (unchanged.Status, unchanged.Address));
+            Assert.False(await db.PayerCoverages.AnyAsync(c => c.PatientId == elsewhere.PatientId));
+        }
+        await using (var audit = sql.Audit(tenantA))
+            Assert.False(await audit.Events.AnyAsync(e => e.PatientId == elsewhere.PatientId && e.Action == "patient.update")); // nothing was changed
+
+        // A command naming another facility than the one the desk works at is refused before anything is written.
+        await Assert.ThrowsAsync<InvalidOperationException>(() => Registry(tenantA).RegisterAsync(UaeQuick(other)));
+        await using var check = sql.Patients(tenantA);
+        Assert.Equal(1, await check.Patients.CountAsync(p => p.FacilityId == other));
     }
 
     [Fact]
@@ -176,7 +202,8 @@ public class PatientRegistryTests(SqlServerFixture sql) : IClassFixture<SqlServe
     [Fact]
     public async Task AnAdministratorWithoutTheKeySeesOnlyCiphertext()
     {
-        await Registry(tenantA).RegisterAsync(UaeQuick(Guid.NewGuid()));
+        var other = Guid.NewGuid();
+        await Registry(tenantA, at: other).RegisterAsync(UaeQuick(other));
 
         // Column Encryption Setting off: what SSMS or a DBA without access to the column master key gets.
         await using var conn = await sql.OpenAs("dbo", tenantA);
@@ -205,7 +232,8 @@ public class PatientRegistryTests(SqlServerFixture sql) : IClassFixture<SqlServe
     [Fact]
     public async Task ReportingSeesMaskedDemographicsWhileTheAppSeesClearValues()
     {
-        var registered = await Registry(tenantA).RegisterAsync(IndiaFull(Guid.NewGuid()) with { DateOfBirth = new DateOnly(1980, 1, 1) });
+        var other = Guid.NewGuid();
+        var registered = await Registry(tenantA, at: other).RegisterAsync(IndiaFull(other) with { DateOfBirth = new DateOnly(1980, 1, 1) });
         const string Query = "SELECT FullName, Mobile, Email, DateOfBirth, Address_PostalCode FROM patients.Patients WHERE Id = @id";
 
         async Task<object[]> Row(string user)

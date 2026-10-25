@@ -224,6 +224,41 @@ public sealed class PatientEndpointTests(SqlServerFixture sql) : IClassFixture<S
         Assert.Equal(Medvya.Audit.Domain.AuditOutcome.NotFound, reveal.Outcome);
     }
 
+    /// <summary>
+    /// MDV-P1-015: completing a quick registration is facility-scoped like opening the record. Another facility's patient is 404,
+    /// is not changed, and leaves exactly one NotFound row; the desk's own patient becomes Complete with one Allowed row.
+    /// </summary>
+    [Fact]
+    public async Task OnlyTheActiveFacilitysPatientCanBeCompleted()
+    {
+        using var host = Host();
+        using var desk = Client(host, "receptionist");
+        var body = new
+        {
+            address = new { line1 = "12 Test Street", city = "Kochi", region = "Kerala", postalCode = "682001" },
+            payer = new { kind = "SelfPay" },
+        };
+        await using var audit = sql.Audit(tenant);
+
+        var refused = await desk.PostAsJsonAsync(new Uri($"/v1/patients/{elsewhere}/completion", UriKind.Relative), body);
+        Assert.Equal(HttpStatusCode.NotFound, refused.StatusCode);
+        await using (var db = sql.Patients(tenant))
+        {
+            var unchanged = await db.Patients.SingleAsync(p => p.Id == elsewhere);
+            Assert.Equal((Medvya.Patients.Domain.RegistrationStatus.Incomplete, (Medvya.Patients.Domain.PatientAddress?)null), (unchanged.Status, unchanged.Address));
+            Assert.False(await db.PayerCoverages.AnyAsync(c => c.PatientId == elsewhere));
+        }
+        var rows = await audit.Events.Where(e => e.PatientId == elsewhere && e.Action == "patient.update").ToListAsync();
+        Assert.Equal(Medvya.Audit.Domain.AuditOutcome.NotFound, Assert.Single(rows).Outcome);
+
+        var own = await Register(facility, "Leela Raman (synthetic)", "+91 90000 00131", c => c with { DateOfBirth = new DateOnly(1993, 4, 2), Quick = true, Address = null, Payer = null });
+        var completed = await desk.PostAsJsonAsync(new Uri($"/v1/patients/{own}/completion", UriKind.Relative), body);
+        Assert.Equal(HttpStatusCode.OK, completed.StatusCode);
+        Assert.Equal("Complete", (await completed.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("status").GetString());
+        var allowed = await audit.Events.Where(e => e.PatientId == own && e.Action == "patient.update").ToListAsync();
+        Assert.Equal(Medvya.Audit.Domain.AuditOutcome.Allowed, Assert.Single(allowed).Outcome);
+    }
+
     [Fact]
     public async Task AnUnreadableSearchAnswersACodeWithoutEchoingTheInput()
     {

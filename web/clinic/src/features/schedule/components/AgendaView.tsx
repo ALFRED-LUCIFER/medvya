@@ -6,9 +6,9 @@ import type { SlotHandler } from './DayGrid';
 import { hatched } from './looks';
 import { AppointmentChip } from './parts';
 
-/** List view (agenda): the day per doctor and resource in time order. The default on phones; also prints cleanly. */
 type Props = { sections: { column: ScheduleColumn; entries: AgendaEntry[] }[]; timeZone: string; updating: boolean; onSlot?: SlotHandler };
 
+/** List view (agenda): the day per doctor and resource in time order. The default on phones; also prints cleanly. */
 export default function AgendaView({ sections, timeZone, updating, onSlot }: Props) {
   const { t, formatTime } = useI18n();
   const time = (iso: string) => formatTime(new Date(iso), timeZone);
@@ -52,6 +52,7 @@ function Entry({ entry: e, name, calendarId, time, onSlot }: { entry: AgendaEntr
     return <span className="flex min-h-9 flex-1 items-center gap-1.5 rounded-md px-2 text-xs font-bold" style={{ backgroundColor: look.bg, color: look.fg }}><Icon aria-hidden className="size-3.5" />{t('schedule.slot.held', { time: time(e.start) })}</span>;
   }
   return onSlot
-    ? <Button variant="outline" className="flex-1 justify-start" aria-label={t('schedule.slot.book', { name, time: time(e.start) })} onClick={() => onSlot(calendarId, name, e.start)}>{t('schedule.slot.free', { time: time(e.start) })}</Button>
+    // The visible word is part of the full name (WCAG 2.5.3); the row's time column shows the time.
+    ? <Button variant="outline" className="flex-1 justify-start" aria-label={t('schedule.slot.book', { name, time: time(e.start) })} onClick={() => onSlot(calendarId, name, e.start)}>{t('schedule.slot.bookShort')}</Button>
     : <span className="flex-1 text-sm text-muted-foreground">{t('schedule.slot.free', { time: time(e.start) })}</span>;
 }

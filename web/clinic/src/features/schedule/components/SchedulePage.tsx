@@ -63,7 +63,8 @@ export default function SchedulePage(props: Props) {
           <h1 className="text-2xl font-extrabold tracking-tight">{title}</h1>
           {props.timeZone && <p className="text-sm text-muted-foreground">{t('schedule.facilityTime', { zone: props.timeZone })}</p>}
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        {/* Printing (the list view is the paper agenda) keeps the heading and the schedule, not the controls. */}
+        <div className="flex flex-wrap items-center gap-2 print:hidden">
           <Button variant="outline" size="icon" aria-label={t(isWeek ? 'schedule.prevWeek' : 'schedule.prevDay')} disabled={!date} onClick={props.onPrevious}>
             <ChevronLeft className="rtl:rotate-180" aria-hidden />
           </Button>
@@ -90,11 +91,11 @@ export default function SchedulePage(props: Props) {
       <Legend />
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
         <Body {...props} />
-        {props.panel && <div ref={panelRef} className="scroll-mt-20 max-lg:order-first lg:sticky lg:top-20">{props.panel}</div>}
+        {props.panel && <div ref={panelRef} className="scroll-mt-20 max-lg:order-first lg:sticky lg:top-20 print:hidden">{props.panel}</div>}
       </div>
       {props.onBookNext && (
         // Pinned above the phone's bottom tabs; the panel it opens sits above the list, so it is brought into view.
-        <Button className="fixed end-4 bottom-20 z-20 shadow-lg md:hidden"
+        <Button className="fixed end-4 bottom-20 z-20 shadow-lg md:hidden print:hidden"
           onClick={() => { props.onBookNext?.(); panelRef.current?.scrollIntoView({ block: 'start' }); }}>
           <Plus aria-hidden />{t('schedule.bookNext')}
         </Button>

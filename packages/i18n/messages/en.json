@@ -521,6 +521,7 @@
   "booking.error.busy": "This calendar is busy with other bookings right now. Nothing was saved; try again.",
   "booking.patientResults": "Patients found",
   "booking.patientPick": "{initials}, {age}, {sex}, MRN ending {mrn}. Choose for this booking",
+  "schedule.slot.bookShort": "Book",
   "schedule.weekRange": "{from} – {to}",
   "schedule.prevWeek": "Previous week",
   "schedule.nextWeek": "Next week",

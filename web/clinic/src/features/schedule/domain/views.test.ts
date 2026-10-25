@@ -50,7 +50,7 @@ describe('schedule views', () => {
 
   it('opens "+ Book" at the first free slot that has not started and is not being booked elsewhere', () => {
     const d = day('2026-10-19', [
-      column('d-1', { slots: [{ start: '2026-10-19T03:30:00Z', end: '', held: false }, { start: '2026-10-19T05:00:00Z', end: '', held: true }] }),
+      column('d-1', { slots: [{ start: '2026-10-19T03:30:00Z', end: '', held: false }, { start: '2026-10-19T04:10:00Z', end: '', held: true }] }),
       column('d-2', { slots: [{ start: '2026-10-19T04:50:00Z', end: '', held: false }] }),
     ]);
     const found = firstFreeSlot(d, new Date('2026-10-19T04:00:00Z'));

@@ -27,7 +27,11 @@ public sealed record PayerView(PayerKind Kind, string? PayerName, string? Plan, 
 public sealed record PatientDetails(
     Guid Id, string Mrn, string FullName, string? ArabicName, DateOnly DateOfBirth, bool DateOfBirthEstimated, int AgeYears, SexAtBirth SexAtBirth,
     string? GenderIdentity, string? PreferredLanguage, string? Nationality, string Mobile, string? AlternatePhone, string? Email,
-    PatientAddress? Address, RegistrationStatus Status, DateOnly RegisteredOn, IReadOnlyList<IdentifierView> Identifiers, PayerView? Payer);
+    PatientAddress? Address, RegistrationStatus Status, DateOnly RegisteredOn, IReadOnlyList<IdentifierView> Identifiers, PayerView? Payer,
+    ContactView? EmergencyContact, ContactView? Guardian);
+
+/// <summary>An emergency contact or guardian: a name and number to call (MDV-P1-020).</summary>
+public sealed record ContactView(string Name, RelationshipKind Relationship, string Phone);
 
 /// <summary>The full numbers, returned only by the audited reveal (checking the patient's card or a claim at the desk).</summary>
 public sealed record RevealedIdentifiers(IReadOnlyList<RevealedIdentifier> Identifiers, string? MemberNumber);
@@ -38,7 +42,7 @@ public sealed record RevealedIdentifier(IdentifierScheme Scheme, string Value);
 public sealed record DuplicateCheckRequest(string? FullName = null, DateOnly? DateOfBirth = null, IReadOnlyList<IdentifierInput>? Identifiers = null);
 
 /// <summary>The details that complete a quick registration (MDV-P1-015): address, payer or both.</summary>
-public sealed record CompletionRequest(PatientAddress? Address = null, PayerInput? Payer = null);
+public sealed record CompletionRequest(PatientAddress? Address = null, PayerInput? Payer = null, ContactInput? EmergencyContact = null);
 
 /// <summary>A registration from the desk (P-02). Facility and country are not here: the server takes them from the session.</summary>
 public sealed record RegisterRequest
@@ -58,6 +62,8 @@ public sealed record RegisterRequest
     public IReadOnlyList<IdentifierInput> Identifiers { get; init; } = [];
     public PatientAddress? Address { get; init; }
     public PayerInput? Payer { get; init; }
+    public ContactInput? EmergencyContact { get; init; }
+    public ContactInput? Guardian { get; init; }
     public DuplicateResolution? Duplicates { get; init; }
 
     internal RegisterPatient ToCommand(Guid facilityId, string countryCode) => new()
@@ -65,7 +71,7 @@ public sealed record RegisterRequest
         FacilityId = facilityId, CountryCode = countryCode, Quick = Quick, FullName = FullName, ArabicName = ArabicName,
         DateOfBirth = DateOfBirth, AgeYears = AgeYears, SexAtBirth = SexAtBirth, GenderIdentity = GenderIdentity,
         PreferredLanguage = PreferredLanguage, Nationality = Nationality, Mobile = Mobile, AlternatePhone = AlternatePhone, Email = Email,
-        Identifiers = Identifiers, Address = Address, Payer = Payer, Duplicates = Duplicates,
+        Identifiers = Identifiers, Address = Address, Payer = Payer, EmergencyContact = EmergencyContact, Guardian = Guardian, Duplicates = Duplicates,
     };
 }
 
@@ -153,7 +159,7 @@ public static class PatientEndpoints
         request ??= new();
         try
         {
-            return await registry.CompleteRegistrationAsync(patientId, request.Address, request.Payer, ct) is { } status
+            return await registry.CompleteRegistrationAsync(patientId, request.Address, request.Payer, request.EmergencyContact, ct) is { } status
                 ? Results.Ok(new { status })
                 : Results.NotFound();
         }
@@ -185,7 +191,8 @@ public static class PatientEndpoints
                 r.Patient.AlternatePhone, r.Patient.Email, r.Patient.Address, r.Patient.Status,
                 CountryRules.For(r.Patient.CountryCode).Today(r.Patient.RegisteredAt),
                 [.. r.Identifiers.OrderBy(i => i.Scheme).Select(i => new IdentifierView(i.Scheme, LastFour(i.LookupValue ?? i.DisplayValue), i.ExpiresOn))],
-                r.Payer is { } p ? new PayerView(p.Kind, p.PayerName, p.Plan, p.MemberNumber is null ? null : LastFour(p.MemberNumber), p.ValidTo, p.Network) : null))
+                r.Payer is { } p ? new PayerView(p.Kind, p.PayerName, p.Plan, p.MemberNumber is null ? null : LastFour(p.MemberNumber), p.ValidTo, p.Network) : null,
+                Contact(r.Relationships.FirstOrDefault(x => x.IsEmergencyContact)), Contact(r.Relationships.FirstOrDefault(x => x.IsGuardian))))
             : Results.NotFound();
 
     static async Task<IResult> Reveal(Guid patientId, [FromServices] IPatientRegistry registry, CancellationToken ct) =>
@@ -193,6 +200,8 @@ public static class PatientEndpoints
             ? Results.Ok(new RevealedIdentifiers(
                 [.. r.Identifiers.OrderBy(i => i.Scheme).Select(i => new RevealedIdentifier(i.Scheme, i.LookupValue ?? i.DisplayValue ?? ""))], r.Payer?.MemberNumber))
             : Results.NotFound();
+
+    static ContactView? Contact(PatientRelationship? r) => r is null ? null : new(r.Name, r.Relationship, r.Phone);
 
     static string LastFour(string? value) => value is null ? "" : value.Length <= 4 ? value : value[^4..];
 

@@ -4,6 +4,7 @@ using Medvya.BuildingBlocks.Domain;
 using Medvya.Patients.Application;
 using Medvya.Patients.Domain;
 using Medvya.Patients.Infrastructure.Persistence;
+using Medvya.Tenancy.Application;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 
@@ -17,8 +18,8 @@ namespace Medvya.Patients.Infrastructure;
 /// endpoint fills it from the session, never from the request body), and another facility's patient is not found for completion.
 /// shortcut: reads see the active facility's patients only; sharing patients across one tenant's facilities waits for multi-site rules (P7).
 /// </summary>
-public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant, ICurrentFacility facility, ICurrentUser user, IAuditLog audit, TimeProvider clock)
-    : IPatientRegistry
+public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant, ICurrentFacility facility, ICurrentUser user, IAuditLog audit, TimeProvider clock,
+    IFacilityDirectory facilities) : IPatientRegistry
 {
     const string Purpose = "registration";
 
@@ -30,7 +31,7 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
         if (command.FacilityId != FacilityId()) throw new InvalidOperationException("A registration must be at the active facility.");
         var now = clock.GetUtcNow();
         var rules = CountryRules.For(command.CountryCode);
-        var (c, dob, estimated, warnings) = rules.Validate(command, rules.Today(now));
+        var (c, dob, estimated, warnings) = rules.Validate(command, await FacilityTodayAsync(command.FacilityId, now, cancellationToken));
 
         // Checked here as well as while typing: the save is refused until the desk has decided about every possible match.
         var duplicates = await DuplicatesAsync(c.FacilityId, c.FullName, estimated ? null : dob, rules.MatchKeys(c.Identifiers), cancellationToken);
@@ -45,7 +46,7 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
             FullName = c.FullName, ArabicName = c.ArabicName, DateOfBirth = dob, DateOfBirthEstimated = estimated, SexAtBirth = c.SexAtBirth,
             GenderIdentity = c.GenderIdentity, PreferredLanguage = c.PreferredLanguage, Nationality = c.Nationality,
             Mobile = c.Mobile, AlternatePhone = c.AlternatePhone, Email = c.Email, Address = c.Address,
-            Status = StatusFor(c.Address, c.Payer is not null),
+            Status = StatusFor(c.Address, c.Payer is not null, c.EmergencyContact is not null),
             RegisteredBy = user.UserId, RegisteredAt = now, ChangedBy = user.UserId, ChangedAt = now,
         };
         db.Patients.Add(patient);
@@ -56,6 +57,9 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
             DisplayValue = PatientIdentifier.IsLookup(i.Scheme) ? null : i.Value,
         }));
         if (c.Payer is not null) db.PayerCoverages.Add(Coverage(tenantId, patient.Id, c.Payer));
+        // Names to call, never users: no account, membership or portal access is created for a contact (MDV-P1-020).
+        if (c.EmergencyContact is { } emergency) db.Relationships.Add(Relationship(tenantId, patient.Id, emergency, isEmergencyContact: true));
+        if (c.Guardian is { } guardian) db.Relationships.Add(Relationship(tenantId, patient.Id, guardian, isEmergencyContact: false));
         var decisions = duplicates.Select(d => new MergeRequest
         {
             Id = Guid.CreateVersion7(), TenantId = tenantId, PatientId = patient.Id, CandidatePatientId = d.PatientId,
@@ -173,15 +177,17 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
 
     static string Tail(string value) => value.Length <= 4 ? value : value[^4..];
 
-    public async Task<RegistrationStatus?> CompleteRegistrationAsync(Guid patientId, PatientAddress? address, PayerInput? payer, CancellationToken cancellationToken = default)
+    public async Task<RegistrationStatus?> CompleteRegistrationAsync(Guid patientId, PatientAddress? address, PayerInput? payer, ContactInput? emergencyContact = null,
+        CancellationToken cancellationToken = default)
     {
         var tenantId = TenantId();
         var facilityId = FacilityId();
         // Facility-scoped like every read here: another facility's patient is not found and nothing is changed.
         var patient = await db.Patients.SingleOrDefaultAsync(p => p.Id == patientId && p.FacilityId == facilityId, cancellationToken);
         if (patient is null) return null;
-        if (address is null && payer is null) throw new PatientValidationException([new("completion", "required")]);
-        (address, payer) = CountryRules.For(patient.CountryCode).ValidateCompletion(address, payer);
+        if (address is null && payer is null && emergencyContact is null) throw new PatientValidationException([new("completion", "required")]);
+        var (validAddress, validPayer, emergency) = CountryRules.For(patient.CountryCode).ValidateCompletion(address, payer, emergencyContact);
+        (address, payer) = (validAddress, validPayer);
         var now = clock.GetUtcNow();
 
         await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
@@ -192,7 +198,13 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
             if (current is not null) db.PayerCoverages.Remove(current);
             db.PayerCoverages.Add(Coverage(tenantId, patientId, payer));
         }
-        patient.Status = StatusFor(patient.Address, payer is not null || current is not null);
+        var hasEmergencyContact = await db.Relationships.AnyAsync(r => r.PatientId == patientId && r.IsEmergencyContact, cancellationToken);
+        if (emergency is not null)
+        {
+            db.Relationships.RemoveRange(await db.Relationships.Where(r => r.PatientId == patientId && r.IsEmergencyContact).ToListAsync(cancellationToken));
+            db.Relationships.Add(Relationship(tenantId, patientId, new(emergency.Name, emergency.Relationship, emergency.Phone), isEmergencyContact: true));
+        }
+        patient.Status = StatusFor(patient.Address, payer is not null || current is not null, emergency is not null || hasEmergencyContact);
         patient.ChangedBy = user.UserId;
         patient.ChangedAt = now;
         await db.SaveChangesAsync(cancellationToken);
@@ -202,14 +214,29 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
         return patient.Status;
     }
 
-    /// <summary>The desk's completion task is open while address or payer is missing.</summary>
+    /// <summary>The desk's completion task is open while the address, the payer or the emergency contact is missing.</summary>
     /// <remarks>
     /// shortcut: the desk's completion task is this status (board card, record header, directory "Incomplete" filter and the
     /// record's "Complete registration" form); a CARE_TASK queue with owner and due date replaces it with care tasks (MDV-P4-016).
-    /// The emergency contact joins this check with relationships (MDV-P1-020).
     /// </remarks>
-    static RegistrationStatus StatusFor(PatientAddress? address, bool hasPayer) =>
-        address is not null && hasPayer ? RegistrationStatus.Complete : RegistrationStatus.Incomplete;
+    static RegistrationStatus StatusFor(PatientAddress? address, bool hasPayer, bool hasEmergencyContact) =>
+        address is not null && hasPayer && hasEmergencyContact ? RegistrationStatus.Complete : RegistrationStatus.Incomplete;
+
+    static PatientRelationship Relationship(Guid tenantId, Guid patientId, ContactInput c, bool isEmergencyContact) => new()
+    {
+        Id = Guid.CreateVersion7(), TenantId = tenantId, PatientId = patientId, Name = c.Name!, Relationship = c.Relationship!.Value, Phone = c.Phone!,
+        IsEmergencyContact = isEmergencyContact, IsGuardian = !isEmergencyContact,
+    };
+
+    /// <summary>
+    /// The registration day on the facility's calendar (its IANA time zone): ages, the under-18 guardian rule and date checks
+    /// use it, so a patient turning 18 today in Kochi is an adult even while it is still yesterday in UTC.
+    /// </summary>
+    async Task<DateOnly> FacilityTodayAsync(Guid facilityId, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        var site = await facilities.FindAsync(facilityId, cancellationToken) ?? throw new InvalidOperationException("Unknown facility.");
+        return DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(now, TimeZoneInfo.FindSystemTimeZoneById(site.TimeZone)).DateTime);
+    }
 
     static PayerCoverage Coverage(Guid tenantId, Guid patientId, PayerInput p) => new()
     {
@@ -223,7 +250,8 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
         if (patient is null) return null;
         var identifiers = await db.Identifiers.AsNoTracking().Where(i => i.PatientId == patientId).ToListAsync(cancellationToken);
         var payer = await db.PayerCoverages.AsNoTracking().SingleOrDefaultAsync(p => p.PatientId == patientId, cancellationToken);
-        return new(patient, identifiers, payer);
+        var relationships = await db.Relationships.AsNoTracking().Where(r => r.PatientId == patientId).OrderBy(r => r.IsGuardian).ToListAsync(cancellationToken);
+        return new(patient, identifiers, payer, relationships);
     }
 
     /// <summary>Next facility-scoped MRN, allocated inside the caller's transaction (HOLDLOCK serialises concurrent desks).</summary>

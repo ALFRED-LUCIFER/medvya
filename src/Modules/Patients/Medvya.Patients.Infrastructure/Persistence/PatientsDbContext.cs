@@ -19,6 +19,7 @@ public sealed class PatientsDbContext(DbContextOptions<PatientsDbContext> option
     public DbSet<PatientIdentifier> Identifiers => Set<PatientIdentifier>();
     public DbSet<PayerCoverage> PayerCoverages => Set<PayerCoverage>();
     public DbSet<MergeRequest> MergeRequests => Set<MergeRequest>();
+    public DbSet<PatientRelationship> Relationships => Set<PatientRelationship>();
 
     Guid? CurrentTenantId => tenant.TenantId;
 
@@ -79,6 +80,16 @@ public sealed class PatientsDbContext(DbContextOptions<PatientsDbContext> option
             e.Property(x => x.Network).HasMaxLength(100);
             e.HasOne<Patient>().WithMany().HasForeignKey(x => x.PatientId).OnDelete(DeleteBehavior.Restrict);
             e.HasIndex(x => x.PatientId).IsUnique(); // one current payer per patient in P1
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<PatientRelationship>(e =>
+        {
+            e.ToTable("Relationships");
+            e.Property(x => x.Name).HasMaxLength(200);
+            e.Property(x => x.Relationship).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.Phone).HasMaxLength(20);
+            e.HasOne<Patient>().WithMany().HasForeignKey(x => x.PatientId).OnDelete(DeleteBehavior.Restrict);
+            e.HasIndex(x => new { x.TenantId, x.PatientId });
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         modelBuilder.Entity<MergeRequest>(e =>

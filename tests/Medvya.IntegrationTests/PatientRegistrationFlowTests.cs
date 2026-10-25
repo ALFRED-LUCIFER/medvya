@@ -51,7 +51,7 @@ public sealed class PatientRegistrationFlowTests(SqlServerFixture sql) : IClassF
     static readonly string[] RecordFields =
     [
         "id", "mrn", "fullName", "arabicName", "dateOfBirth", "dateOfBirthEstimated", "ageYears", "sexAtBirth", "genderIdentity", "preferredLanguage",
-        "nationality", "mobile", "alternatePhone", "email", "address", "status", "registeredOn", "identifiers", "payer",
+        "nationality", "mobile", "alternatePhone", "email", "address", "status", "registeredOn", "identifiers", "payer", "emergencyContact", "guardian",
     ];
 
     [Fact]
@@ -70,6 +70,7 @@ public sealed class PatientRegistrationFlowTests(SqlServerFixture sql) : IClassF
             },
             address = new { line1 = "12/402 Synthetic Apartments", line2 = "Marine Drive", city = "Kochi", district = "Ernakulam", region = "Kerala", postalCode = "682001" },
             payer = new { kind = "PrivateInsurance", payerName = "Synthetic Health Insurance", network = "Synthetic TPA", memberNumber = "SYN-23-000411-01", validTo = "2027-03-31" },
+            emergencyContact = new { name = "Suresh Pillai (synthetic)", relationship = "Spouse", phone = "+91 90000 00412" },
             countryCode = "AE", // ignored: the country is the tenant's
         });
         Assert.Equal(HttpStatusCode.OK, saved.StatusCode);
@@ -112,6 +113,7 @@ public sealed class PatientRegistrationFlowTests(SqlServerFixture sql) : IClassF
             identifiers = new object[] { new { scheme = "EmiratesId", value = "784-1988-1234567-1", expiresOn = "2020-11-30" } },
             address = new { line1 = "Villa 14", line2 = "Al Karamah", region = "AUH", makani = "1234567890", poBox = "4521" },
             payer = new { kind = "PrivateInsurance", payerName = "Synthetic Insurer", plan = "Enhanced", memberNumber = "1-2345-000458-2", validTo = "2026-12-31", network = "Synthetic network" },
+            emergencyContact = new { name = "Ahmed Al Mansoori (synthetic)", relationship = "Spouse", phone = "050 000 0459" },
         });
         Assert.Equal(HttpStatusCode.OK, saved.StatusCode);
         var result = await saved.Content.ReadFromJsonAsync<JsonElement>();
@@ -138,5 +140,29 @@ public sealed class PatientRegistrationFlowTests(SqlServerFixture sql) : IClassF
         Assert.Equal(HttpStatusCode.BadRequest, refused.StatusCode);
         var body = await refused.Content.ReadAsStringAsync();
         foreach (var code in new[] { "\"dateOfBirth\"", "scheme_not_allowed", "emirates_id_or_passport_required" }) Assert.Contains(code, body, StringComparison.Ordinal);
+    }
+
+    /// <summary>MDV-P1-020 over HTTP: a dependant child in the UAE is refused without a guardian and saved with a sponsor, shown on the record.</summary>
+    [Fact]
+    public async Task AChildNeedsAGuardianAndTheRecordShowsBothContacts()
+    {
+        using var clinic = await ClinicIn("AE");
+        using var desk = Desk(clinic);
+        var child = new Dictionary<string, object?>
+        {
+            ["quick"] = true, ["fullName"] = "Mariam Al Mansoori (synthetic)", ["dateOfBirth"] = "2019-06-01", ["sexAtBirth"] = "Female", ["mobile"] = "050 000 0460",
+            ["identifiers"] = new object[] { new { scheme = "EmiratesId", value = "784-2019-1234567-1" } },
+        };
+        var refused = await desk.PostAsJsonAsync(Patients, child);
+        Assert.Equal(HttpStatusCode.BadRequest, refused.StatusCode);
+        Assert.Contains("required_for_minor", await refused.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+
+        child["guardian"] = new { name = "Ahmed Al Mansoori (synthetic)", relationship = "Sponsor", phone = "050 000 0459" };
+        var saved = await desk.PostAsJsonAsync(Patients, child);
+        Assert.Equal(HttpStatusCode.OK, saved.StatusCode);
+        var id = (await saved.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("patientId").GetGuid();
+        var record = await desk.GetFromJsonAsync<JsonElement>(new Uri($"/v1/patients/{id}", UriKind.Relative));
+        Assert.Equal(("Sponsor", "+971500000459"), (record.GetProperty("guardian").GetProperty("relationship").GetString(), record.GetProperty("guardian").GetProperty("phone").GetString()));
+        Assert.Equal(JsonValueKind.Null, record.GetProperty("emergencyContact").ValueKind); // quick mode: added later with the completion
     }
 }

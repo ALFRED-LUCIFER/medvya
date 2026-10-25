@@ -27,6 +27,11 @@ journey('J1', {
     await page.getByRole('button', { name: 'Continue' }).click();
     await page.getByLabel('Mobile').fill('+91 90000 00501');
     await page.getByRole('button', { name: 'Continue' }).click();
+    await page.getByLabel('Emergency contact name').fill('Arun Iyer');
+    await page.getByRole('combobox', { name: 'Relationship', exact: true }).click();
+    await page.getByRole('option', { name: 'Spouse', exact: true }).click();
+    await page.getByLabel('Emergency contact phone').fill('+91 90000 00502');
+    await page.getByRole('button', { name: 'Continue' }).click();
     await page.getByRole('button', { name: 'Continue' }).click();
     await page.getByRole('button', { name: 'Register patient' }).click();
     await expect(page.getByRole('heading', { name: 'Meera Iyer is registered' })).toBeVisible();

@@ -321,7 +321,7 @@ status: Partly done
 progress:
 - Merged [PR #40](https://github.com/ALFRED-LUCIFER/medvya/pull/40): Patients module back end — India rules (minimum fields, ABHA optional, Aadhaar last 4 only, PIN, payer kinds), facility-scoped MRN, write and audit in one transaction (fail closed), audited reads, ABHA Always Encrypted with exact lookup
 - Merged [PR #61](https://github.com/ALFRED-LUCIFER/medvya/pull/61): `POST /v1/patients` (facility from the session, country from the tenant) with the duplicate check (MDV-P1-016); [PR #58](https://github.com/ALFRED-LUCIFER/medvya/pull/58) and [PR #70](https://github.com/ALFRED-LUCIFER/medvya/pull/70): record page with identifiers masked to the last 4
-- [PR #82](https://github.com/ALFRED-LUCIFER/medvya/pull/82): full registration UI at /patients/new (quick mode at ?mode=quick): Identity & IDs → Contact & address → Payer → Review, per-step validation, focus to each step's heading, errors announced; ABHA optional, Aadhaar last 4 only (12 digits refused with the reason), state/UT from the official list (checked on the server), PIN 6 digits, payer kinds with their own fields (TPA kept as the network); preview card, data map and rules panel; success screen with MRN, time, actor and next actions; country from the tenant via /v1/me/context; record answer tested against an exact field allowlist (registration data only, no clinical fields); en/hi/ar, axe clean, 375/768/1366 px, 200 % zoom; real-API browser check
+- Merged [PR #82](https://github.com/ALFRED-LUCIFER/medvya/pull/82): full registration UI at /patients/new (quick mode at ?mode=quick): Identity & IDs → Contact & address → Payer → Review, per-step validation, focus to each step's heading, errors announced; ABHA optional, Aadhaar last 4 only (12 digits refused with the reason), state/UT from the official list (checked on the server), PIN 6 digits, payer kinds with their own fields (TPA kept as the network); preview card, data map and rules panel; success screen with MRN, time, actor and next actions; country from the tenant via /v1/me/context; record answer tested against an exact field allowlist (registration data only, no clinical fields); en/hi/ar, axe clean, 375/768/1366 px, 200 % zoom; real-API browser check
 - Left: Family & emergency step (MDV-P1-020); Consents step and CONSENT_RECEIPT in the same transaction (MDV-P1-019); "Verify with ABHA" (P8); PAN / Voter ID / driving licence as other ID types and "Save draft" (in the design, not in the ACs)
 title: Patient registration — India full flow (identity, ABHA optional, Aadhaar last 4, Indian address, payer)
 type: Story
@@ -350,7 +350,7 @@ ac:
 status: In progress
 progress:
 - Merged [PR #40](https://github.com/ALFRED-LUCIFER/medvya/pull/40): UAE rules — Emirates ID format, expired EID warns, EID-or-passport minimum, Arabic name, emirate mapped to Malaffi/NABIDH/Riayati, Makani/P.O. Box, insurance member number Always Encrypted
-- [PR #82](https://github.com/ALFRED-LUCIFER/medvya/pull/82): UAE full registration UI — name as on EID plus Arabic name typed right to left (preview card and Review), Emirates ID or passport, "Format 784-YYYY-NNNNNNN-N", expired EID warns while typing and on the success screen but never blocks, nationality and language named with Intl.DisplayNames, emirate → HIE label (Malaffi / NABIDH / Riayati) under the field, Makani and P.O. Box, insurance with member card, expiry, plan and network (eligibility marked M4); HTTP test with a UAE tenant (rules follow the tenant, not the body); browser-checked in Arabic against the real API
+- Merged [PR #82](https://github.com/ALFRED-LUCIFER/medvya/pull/82): UAE full registration UI — name as on EID plus Arabic name typed right to left (preview card and Review), Emirates ID or passport, "Format 784-YYYY-NNNNNNN-N", expired EID warns while typing and on the success screen but never blocks, nationality and language named with Intl.DisplayNames, emirate → HIE label (Malaffi / NABIDH / Riayati) under the field, Makani and P.O. Box, insurance with member card, expiry, plan and network (eligibility marked M4); HTTP test with a UAE tenant (rules follow the tenant, not the body); browser-checked in Arabic against the real API
 - Left: the HIE label on the Consents step (MDV-P1-019); "UAE tenant cannot be created in the India deployment" belongs to tenant creation (MDV-P1-004); card reader and UAE PASS (P5)
 title: Patient registration — UAE flow (Emirates ID manual entry, Arabic name RTL, emirate, insurance card)
 type: Story
@@ -380,8 +380,9 @@ progress:
 - Merged [PR #40](https://github.com/ALFRED-LUCIFER/medvya/pull/40): quick registration saves as Incomplete until address and payer exist; completing closes it
 - Merged [PR #61](https://github.com/ALFRED-LUCIFER/medvya/pull/61): quick form (5 fields, keyboard only) with the duplicate check; [PR #62](https://github.com/ALFRED-LUCIFER/medvya/pull/62) board card and [PR #58](https://github.com/ALFRED-LUCIFER/medvya/pull/58) record header show "Registration incomplete"
 - Merged [PR #79](https://github.com/ALFRED-LUCIFER/medvya/pull/79): security fix — completion and registration writes reach the active facility's patients only; `POST /v1/patients/{id}/completion` (Full access): 200 + one Allowed row in the change's transaction, another facility's patient 404 + one NotFound row and nothing changed; mutation-checked
-- [PR #82](https://github.com/ALFRED-LUCIFER/medvya/pull/82): quick and full are one form with a mode toggle; switching keeps what was typed
-- Left: completion UI from the record (next PR in this stack); emergency contact in the completion check (MDV-P1-020); CARE_TASK queue (MDV-P4-016); timed usability check with a trained user (pilot)
+- Merged [PR #82](https://github.com/ALFRED-LUCIFER/medvya/pull/82): quick and full are one form with a mode toggle; switching keeps what was typed
+- [PR #84](https://github.com/ALFRED-LUCIFER/medvya/pull/84): the record of an Incomplete patient shows the completion task (what is missing: address, payer or both) and "Complete registration" (Register / book at Full) reusing the registration address and payer fields and rules; saving posts only those two to the facility-scoped completion endpoint, Complete closes the task and the tag; 404 announced, nothing changed; en/hi/ar, axe clean, keyboard, 200 % zoom, real-API browser check
+- Left: emergency contact in the completion check (MDV-P1-020); CARE_TASK queue with owner and due date replaces the Incomplete status as the task (MDV-P4-016, recorded as a shortcut); timed 45-second usability check with a trained user (pilot)
 title: Quick registration for a busy desk with a completion task
 type: Story
 epic: MDV-P1-E05
@@ -408,7 +409,7 @@ status: Done
 progress:
 - Merged [PR #61](https://github.com/ALFRED-LUCIFER/medvya/pull/61): possible match = exact ABHA/EID/passport (deterministic Always Encrypted) or similar name + identical non-estimated DOB, never phone; privacy-safe candidates (initials, age, masked IDs); registration re-checks and saves nothing until resolved (quick mode too); decisions stored as MergeRequest (NotSame / Proposed) and audited with the actor; `POST /v1/patients/duplicate-check` and `POST /v1/patients` (Full access, facility from the session); quick form with debounced warning, review panel and "Resolve duplicate to save", en/hi/ar RTL, axe clean
 - Tested on SQL Server (duplicate-check p95 10 ms with 50,000 synthetic patients locally); 13 mutations each caught
-- [PR #82](https://github.com/ALFRED-LUCIFER/medvya/pull/82): the same check and "Resolve duplicate to save" on the Review step of full registration, also matching ABHA address and passport
+- Merged [PR #82](https://github.com/ALFRED-LUCIFER/medvya/pull/82): the same check and "Resolve duplicate to save" on the Review step of full registration, also matching ABHA address and passport
 - Follow-ups outside this ticket: merge review queue, approval and suppression of "not the same" pairs (MDV-P1-017); thresholds to tune on pilot data
 title: Duplicate warning while typing and duplicate resolution before save
 type: Story
@@ -705,12 +706,13 @@ ac:
 - Accepting books the slot and removes the patient from the waitlist.
 
 === MDV-P1-028
-status: In progress
+status: Partly done
 progress:
-- Open [PR #62](https://github.com/ALFRED-LUCIFER/medvya/pull/62): P-01 board at /front-desk (7 columns with counts and a CTA each, nonclinical cards: reason category only, "Registration incomplete", wait timer on the server clock); check-in in two taps with a name + date-of-birth identity check; check-in time recorded as `medvya.front_desk.check_in.duration` (exit gate 3)
+- Merged [PR #62](https://github.com/ALFRED-LUCIFER/medvya/pull/62): P-01 board at /front-desk (7 columns with counts and a CTA each, nonclinical cards: reason category only, "Registration incomplete", wait timer on the server clock); check-in in two taps with a name + date-of-birth identity check; check-in time recorded as `medvya.front_desk.check_in.duration` (exit gate 3)
 - Server-side state machine (one step forward, else 409); each move is a conditional update + VisitStatusEvent in one transaction, so a repeat or a second desk never checks in twice (8 concurrent check-ins on SQL Server → one event); audited endpoints; board payload tested against an exact field allowlist; mutation-checked (guard, idempotency, conditional update, payload, roles); browser-verified (en, ar RTL, keyboard, axe, 200 % zoom, tablet)
 - Payment on Billing cards follows the `billing.invoices` flag: off (all of P1) a disabled placeholder, on a link to Billing (P4); merged with main after #59 and #58 landed
-- Left: real-time updates and call-in room (MDV-P1-029); walk-in (MDV-P1-025); waitlist (MDV-P1-027); workload panel (MDV-P1-030); real-API browser check once sign-in issues the tenant and facility claims (MDV-P0-012)
+- Real-time updates and the call-in room: [PR #83](https://github.com/ALFRED-LUCIFER/medvya/pull/83) (MDV-P1-029), browser-verified against the real API with sign-in issuing the tenant and facility claims (MDV-P0-012)
+- Left: walk-in (MDV-P1-025); waitlist (MDV-P1-027); workload panel (MDV-P1-030)
 title: Reception board with visit columns and one-tap check-in
 type: Story
 epic: MDV-P1-E07
@@ -737,6 +739,12 @@ notes:
 - Confirm the final P-01 design with the founder before build (PRD v2 finding: P-01 status "next").
 
 === MDV-P1-029
+status: In progress
+progress:
+- Open [PR #83](https://github.com/ALFRED-LUCIFER/medvya/pull/83): SignalR board hub at /v1/hubs/board. Connecting needs "Check-in & queue" at the session's facility (capability policy; a refusal is audited Denied). Every call re-checks the live staff session, and Watch joins only the session's own facility after the board's access check, audited Allowed or Denied and limited per user. Groups are tenant + facility ids from the session. Messages are `{appointmentId, state, changedAt}` only (exact-field allowlist test); boards refetch the audited board endpoint
+- The hub has no write methods: call-in and every status move stay on the audited HTTP endpoints with the visit state machine (409) and the in-transaction audit. Call-in records the room of the doctor's session from the template ("Called to Room 3"). After the commit, moves and bookings are pushed; a failed push never fails the move
+- Client: reconnect with back-off; refetch after every (re)join, so a move is never lost or duplicated; "Live updates paused · refreshing every 30 s" (words and icon) with 30 s polling while not live; no connection while offline; stops on 401/403. Mutation-checked (13 server, 6 client); a change reaches another desk within 2 s (SQL Server, LongPolling and WebSockets); browser-verified with two signed-in desks (en, ar RTL, keyboard, axe, reconnect after killing the connection)
+- Left: close hub connections at once when a session is revoked (MDV-P0-012); Azure SignalR Service before running more than one API instance (MDV-P0-007); Today views (P2) subscribe when they exist
 title: Real-time board updates, call/room patient, nonclinical statuses (SignalR)
 type: Story
 epic: MDV-P1-E07

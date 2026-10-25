@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
-import { ArrowLeft, Eye, TriangleAlert } from 'lucide-react';
+import { ArrowLeft, ClipboardList, Eye, TriangleAlert } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
 import { Button, buttonVariants, cn } from '@medvya/ui';
 import { addressLines, type PatientDetails, type RevealedIdentifiers } from '../domain/directory';
@@ -19,6 +19,8 @@ type Props = {
   revealing: boolean;
   revealFailed: boolean;
   onReveal: () => void;
+  /** "Complete registration" for an incomplete record; null when this role may not register (Register / book at Full). */
+  completePath: string | null;
 };
 
 // Keeps Latin IDs, phones and dates intact (order and line) inside Arabic text.
@@ -57,7 +59,9 @@ export default function PatientRecord(props: Props) {
   const dob = p.dateOfBirthEstimated ? t('patients.record.dobEstimated', { date: date(p.dateOfBirth) }) : date(p.dateOfBirth);
   // Codes stored at registration are shown in the UI language; older free-text values are shown as entered.
   const gender = genderIdentities.find(g => g === p.genderIdentity);
-  const named = (type: 'language' | 'region', code: string) => new Intl.DisplayNames([locale], { type }).of(code) ?? code;
+  const named = (type: 'language' | 'region', code: string) => {
+    try { return new Intl.DisplayNames([locale], { type }).of(code) ?? code; } catch { return code; } // free text from before codes: shown as entered
+  };
   const region = p.address?.region ? regionKey(country, p.address.region) : null;
   const address = p.address && region ? { ...p.address, region: t(region) } : p.address;
   const masked = (last: string) => t('patients.masked', { last });
@@ -82,6 +86,15 @@ export default function PatientRecord(props: Props) {
         )}
         <p className="text-xs text-muted-foreground">{t('patients.record.noClinical')}</p>
       </header>
+
+      {p.status === 'Incomplete' && props.completePath && (
+        // The desk's completion task (MDV-P1-015): what quick registration left out, closed once address and payer exist.
+        <section aria-labelledby="completion-task" className="flex flex-col items-start gap-2 rounded-xl border bg-card p-4 shadow-[inset_4px_0_0_var(--color-warning-700)] rtl:shadow-[inset_-4px_0_0_var(--color-warning-700)]">
+          <h2 id="completion-task" className="flex items-center gap-2 font-extrabold"><ClipboardList className="size-5 text-warning-700" aria-hidden />{t('patients.completion.title')}</h2>
+          <p>{t(!p.address && !p.payer ? 'patients.completion.missing.both' : !p.address ? 'patients.completion.missing.address' : 'patients.completion.missing.payer')}</p>
+          <Link to={props.completePath} className={buttonVariants()}>{t('patients.completion.action')}</Link>
+        </section>
+      )}
 
       <Section title={t('patients.record.identity')}>
         <Field label={t('patients.record.dob')}>{dob}</Field>

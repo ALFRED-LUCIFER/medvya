@@ -6,6 +6,7 @@ using Host.Api.Context;
 using Host.Api.Invitations;
 using Host.Api.Middleware;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.SignalR;
 using Medvya.Audit.Api;
 using Medvya.Audit.Infrastructure;
 using Medvya.BuildingBlocks.Domain;
@@ -58,6 +59,8 @@ if (builder.Configuration.GetConnectionString("Medvya") is { } sql)
             ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Medvya", "local-column-master-key.pem")));
 }
 builder.Services.Configure<SchedulingOptions>(builder.Configuration.GetSection("Scheduling"));
+// Live board (MDV-P1-029): every hub call runs as the connection's signed-in user, with its session checked again.
+builder.Services.AddSchedulingRealtime().AddHubOptions<BoardHub>(o => o.AddFilter<HubRequestContext>());
 builder.Services.AddHsts(o => { o.MaxAge = TimeSpan.FromDays(365); o.IncludeSubDomains = true; });
 
 // Behind the App Service front end the client is in X-Forwarded-For. Only listed proxies are believed, so a client cannot
@@ -92,6 +95,8 @@ builder.Services.AddUserRateLimit(PatientEndpoints.SearchRateLimit, builder.Conf
 builder.Services.AddUserRateLimit(PatientEndpoints.RecordRateLimit, builder.Configuration.GetValue("RateLimiting:PatientRecordsPerMinute", 30));
 // The duplicate check runs (debounced) while the desk types: a few calls per registration. Per user, after sign-in, likewise.
 builder.Services.AddUserRateLimit(PatientEndpoints.DuplicateCheckRateLimit, builder.Configuration.GetValue("RateLimiting:DuplicateChecksPerMinute", 60));
+// Joining the live board: once per page load and per reconnect; a client looping on it is refused. Per user, after sign-in.
+builder.Services.AddUserRateLimit(BoardHub.WatchRateLimit, builder.Configuration.GetValue("RateLimiting:BoardWatchPerMinute", 30));
 
 var app = builder.Build();
 

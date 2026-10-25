@@ -12,8 +12,16 @@ export type BoardCard = {
   start: string; end: string; state: AppointmentState;
   /** When the visit entered its current state. */
   since: string;
+  /** Where the patient was called in to (set at call-in); null before. */
+  room: string | null;
 };
 export type Board = { facilityId: string; timeZone: string; date: string; now: string; cards: BoardCard[] };
+
+/** Real-time connection to the board hub (MDV-P1-029): live, or paused (offline, dropped, refused) while the board refreshes on a timer. */
+export type LiveStatus = 'connecting' | 'live' | 'paused';
+
+/** Wait before reconnect attempt `attempt` (0, 1, …): 0.5 s doubling to at most 30 s, forever, since a desk board stays open all day. */
+export const retryDelay = (attempt: number) => Math.min(30_000, 500 * 2 ** attempt);
 
 /** The board's columns in visit order (docs/03-architecture/state-machines.md). */
 export const boardColumns = ['Booked', 'CheckedIn', 'WithNurse', 'ReadyForDoctor', 'InConsult', 'Billing', 'Done'] as const satisfies readonly AppointmentState[];

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { catalogs, type Country } from '@medvya/i18n';
 import {
-  ageOn, dataMap, duplicateQuery, eidExpired, emirates, emptyForm, errorCode, formField, hieFor, indiaStates, knownErrors, messageFor, payerFields,
-  payerKinds, payerLabel, regionKey, registrationSchema, resolves, rules, stepOf, toRegisterRequest, type DuplicateCandidate, type RegistrationForm,
+  ageOn, completionSchema, dataMap, duplicateQuery, eidExpired, emirates, emptyForm, errorCode, formField, hieFor, indiaStates, knownErrors, messageFor, payerFields,
+  payerKinds, payerLabel, regionKey, registrationSchema, resolves, rules, stepOf, toCompletionRequest, toRegisterRequest, type DuplicateCandidate, type RegistrationForm,
 } from './registration';
 
 // Synthetic values only (IDs fail their checksums).
@@ -148,5 +148,26 @@ describe('server errors and display', () => {
     ];
     for (const locale of ['en', 'hi', 'ar'] as const)
       expect(keys.filter(k => !k || !(k in catalogs[locale])), locale).toEqual([]);
+  });
+});
+
+describe('completing a quick registration (MDV-P1-015)', () => {
+  const completion = (country: Country, v: Partial<RegistrationForm>) => {
+    const r = completionSchema(country).safeParse({ ...emptyForm, ...v });
+    return r.success ? {} : Object.fromEntries(r.error.issues.map(i => [i.path.join('.'), i.message]));
+  };
+
+  it('needs the address, the payer or both, each checked by the country rules', () => {
+    expect(completion('IN', {})).toEqual({ line1: 'nothing_to_complete' });
+    expect(completion('IN', { payerKind: 'SelfPay' })).toEqual({});
+    expect(completion('IN', { line1: '4 Synthetic Street', city: 'Chennai', region: 'Tamil Nadu', postalCode: '6000' })).toEqual({ postalCode: 'format.pin' });
+    expect(completion('AE', { line1: 'Villa 14' })).toEqual({ region: 'emirate_required' });
+    expect(completion('AE', { payerKind: 'PrivateInsurance', payerName: 'Synthetic Insurer' })).toEqual({ memberNumber: 'required' });
+  });
+
+  it('sends only the address and the payer', () => {
+    expect(toCompletionRequest({ ...emptyForm, fullName: 'not sent', payerKind: 'SelfPay' }, 'IN')).toEqual({
+      address: null, payer: { kind: 'SelfPay', payerName: null, plan: null, memberNumber: null, validTo: null, network: null },
+    });
   });
 });

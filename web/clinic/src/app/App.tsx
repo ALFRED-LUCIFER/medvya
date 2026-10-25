@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react';
 import type { Locale } from '@medvya/i18n';
-import { useI18n } from '@medvya/i18n';
+import { I18nProvider, useI18n } from '@medvya/i18n';
 import { Navigate, Outlet, Route, Routes, useLocation, useNavigate } from 'react-router';
 import UiGallery from '../dev/UiGallery';
 import OfflineBanner from '../features/connectivity/components/OfflineBanner';
@@ -25,13 +25,13 @@ const InviteColleagueRoute = lazy(() => import('./InviteColleagueRoute'));
 // Patient screens load on first use, keeping them out of the first-paint bundle.
 const PatientDirectoryRoute = lazy(() => import('./PatientRoutes').then(m => ({ default: m.PatientDirectoryRoute })));
 const PatientRecordRoute = lazy(() => import('./PatientRoutes').then(m => ({ default: m.PatientRecordRoute })));
-const QuickRegistrationRoute = lazy(() => import('./PatientRoutes').then(m => ({ default: m.QuickRegistrationRoute })));
+const RegistrationRoute = lazy(() => import('./PatientRoutes').then(m => ({ default: m.RegistrationRoute })));
 
 type Props = { locale: Locale; onLocaleChange: (l: Locale) => void };
 
 // Composition only: controllers feed presentational components; routes exist only for screens this membership may see.
 export default function App({ locale, onLocaleChange }: Props) {
-  const { t, country } = useI18n();
+  const { t, country: signedOutCountry } = useI18n();
   const navigate = useNavigate();
   const location = useLocation();
   const { online, retry } = useConnectivityController();
@@ -41,6 +41,8 @@ export default function App({ locale, onLocaleChange }: Props) {
     canSwitchFacility: (shell.session?.memberships.length ?? 0) > 1 };
   const toHome = () => navigate('/');
   const active = shell.session?.active;
+  // Signed in at a facility, rules and formats follow the tenant's country (from the server, never the client).
+  const country = active?.country ?? signedOutCountry;
   const first = shell.items[0];
   // After choosing, continue to the page that sent the user to the picker (F-05a: back to the previous route after re-sign-in).
   const from = (location.state as { from?: string } | null)?.from;
@@ -51,7 +53,7 @@ export default function App({ locale, onLocaleChange }: Props) {
   const searchPath = allows(active ?? null, patientDirectory) ? patientDirectory.path : null;
   const registerPath = shell.items.find(i => i.id === 'register')?.path ?? null;
   const pathOf = (id: string) => shell.items.find(i => i.id === id)?.path ?? null;
-  const registration = <QuickRegistrationRoute country={country} actorName={shell.displayName ?? ''} bookPath={pathOf('schedule')} checkInPath={pathOf('frontDesk')} />;
+  const registration = <RegistrationRoute country={country} actorName={shell.displayName ?? ''} bookPath={pathOf('schedule')} checkInPath={pathOf('frontDesk')} />;
 
   // F-05a: an ended session replaces every screen; signing in again comes back to this route.
   const routes = shell.loading ? <Route path="*" element={<ShellMessage standalone busy title={t('shell.loading')} />} />
@@ -91,7 +93,7 @@ export default function App({ locale, onLocaleChange }: Props) {
       </>;
 
   return (
-    <>
+    <I18nProvider locale={locale} country={country}>
       {!online && <OfflineBanner onRetry={retry} />}
       <Suspense fallback={<ShellMessage standalone busy title={t('shell.loading')} />}>
         <Routes>
@@ -101,6 +103,6 @@ export default function App({ locale, onLocaleChange }: Props) {
           {routes}
         </Routes>
       </Suspense>
-    </>
+    </I18nProvider>
   );
 }

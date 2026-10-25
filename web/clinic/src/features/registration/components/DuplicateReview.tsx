@@ -3,16 +3,17 @@ import { CircleCheck, UserSearch } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
 import { Button, buttonVariants, cn } from '@medvya/ui';
 import type { IdentifierScheme } from '../../patients/domain/directory';
-import type { DuplicateCandidate, DuplicateDecision, QuickForm } from '../domain/registration';
+import type { DuplicateCandidate, DuplicateDecision } from '../domain/registration';
+
+/** What the desk typed, as shown beside each possible match. */
+export type NewEntry = { fullName: string; date: string; mobile: string; identifier: { scheme: IdentifierScheme; value: string } | null };
 
 type Props = {
   candidates: DuplicateCandidate[];
   resolution: DuplicateDecision | null;
   onResolve: (decision: DuplicateDecision) => void;
   onReconsider: () => void;
-  typed: QuickForm;
-  ageInstead: boolean;
-  scheme: IdentifierScheme;
+  entry: NewEntry;
   recordPath: (id: string) => string;
 };
 
@@ -20,7 +21,7 @@ type Props = {
  * "Attention · possible existing record" (P-02 review): what the desk typed beside each possible match. The existing record
  * shows only initials, age, sex, MRN tail and masked IDs until "Use existing record" opens it (an audited read).
  */
-export default function DuplicateReview({ candidates, resolution, onResolve, onReconsider, typed, ageInstead, scheme, recordPath }: Props) {
+export default function DuplicateReview({ candidates, resolution, onResolve, onReconsider, entry, recordPath }: Props) {
   const { t } = useI18n();
   const byName = candidates.some(c => c.matchedOnNameAndDateOfBirth);
   return (
@@ -40,10 +41,10 @@ export default function DuplicateReview({ candidates, resolution, onResolve, onR
           <li key={c.patientId} className="grid gap-3 md:grid-cols-2">
             <div className="rounded-lg border p-3">
               <p className="text-xs font-bold tracking-wide text-muted-foreground uppercase">{t('registration.duplicates.new')}</p>
-              <p className="font-bold"><bdi>{typed.fullName}</bdi></p>
-              <p className="text-sm"><bdi dir="ltr">{ageInstead ? t('registration.duplicates.age', { age: typed.ageYears }) : typed.dateOfBirth}</bdi></p>
-              <p className="text-sm"><bdi dir="ltr">{typed.mobile}</bdi></p>
-              {typed.identifier && <p className="text-sm">{t(`patients.scheme.${scheme}`)} <bdi dir="ltr">{typed.identifier}</bdi></p>}
+              <p className="font-bold"><bdi>{entry.fullName}</bdi></p>
+              <p className="text-sm"><bdi dir="ltr">{entry.date}</bdi></p>
+              <p className="text-sm"><bdi dir="ltr">{entry.mobile}</bdi></p>
+              {entry.identifier && <p className="text-sm">{t(`patients.scheme.${entry.identifier.scheme}`)} <bdi dir="ltr">{entry.identifier.value}</bdi></p>}
             </div>
             <div className="rounded-lg border p-3">
               <p className="text-xs font-bold tracking-wide text-muted-foreground uppercase"><bdi>{t('registration.duplicates.existing', { mrn: c.mrnTail })}</bdi></p>

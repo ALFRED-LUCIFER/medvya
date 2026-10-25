@@ -14,7 +14,7 @@ const queryClient = createQueryClient();
 // Right-to-left comes from <html dir> (set by the locale controller) plus Tailwind logical utilities (ms-*, ps-*, start-*).
 export default function Root() {
   const { locale, setLocale } = useLocaleController();
-  // shortcut: country fixed to IN until the tenant context exists (MDV-P0-012 /v1/me/context).
+  // Signed out there is no tenant yet: IN formats until App switches to the active tenant's country (/v1/me/context).
   return (
     <QueryClientProvider client={queryClient}>
       <I18nProvider locale={locale} country="IN">

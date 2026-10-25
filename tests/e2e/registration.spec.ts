@@ -2,13 +2,14 @@ import { createRequire } from 'node:module';
 import { expect, test, type Page, type Request } from '@playwright/test';
 
 // MDV-P1-016 duplicate warning while typing and resolution before save, on the quick registration form (MDV-P1-015).
+// The full flows (MDV-P1-013/014) are in registration-full.spec.ts.
 // CI has no API: /v1/me/context and /v1/patients/* are mocked with the synthetic cast; the server rules are covered by
 // PatientDuplicateTests and PatientEndpointTests on SQL Server.
 const receptionist = {
   user: { id: 'u-joseph', displayName: 'A. Joseph' },
   memberships: [{ id: 'm-1', tenantId: 't-1', tenantName: 'Iyer Family Clinic', facilityId: 'f-1', facilityName: 'Iyer Family Clinic · Adyar', role: 'Receptionist' }],
   active: {
-    membershipId: 'm-1', tenantId: 't-1', facilityId: 'f-1', role: 'Receptionist', flags: [],
+    membershipId: 'm-1', tenantId: 't-1', facilityId: 'f-1', role: 'Receptionist', flags: [], country: 'IN',
     capabilities: { RegisterBookPatients: 'Full', CheckInQueue: 'Full', InvoicesPayments: 'Full', Patient360Chart: 'None', ClinicalNotes: 'None' },
   },
 };
@@ -34,7 +35,7 @@ async function desk(page: Page, { locale = 'en', register }: { locale?: string; 
     };
     return r.fulfill({ status, json });
   });
-  await page.goto('/patients/new');
+  await page.goto('/patients/new?mode=quick');
   await expect(page.getByRole('heading', { name: locale === 'ar' ? 'تسجيل مريض جديد' : 'Register new patient' })).toBeVisible();
   return { checks, saves };
 }

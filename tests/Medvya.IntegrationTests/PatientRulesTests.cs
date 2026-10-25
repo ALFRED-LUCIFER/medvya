@@ -41,6 +41,16 @@ public class PatientRulesTests
             Errors((IndiaBase with { Address = new PatientAddress { Line1 = "12 Test Street", City = "Kochi", Region = "Kerala", PostalCode = pin } })));
 
     [Fact]
+    public void IndiaAddressNeedsAKnownStateOrUnionTerritory()
+    {
+        PatientAddress At(string region) => new() { Line1 = "12 Test Street", City = "Kochi", Region = region, PostalCode = "682001" };
+        Assert.Equal("Kerala", CountryRules.India.Validate((IndiaBase with { Address = At(" Kerala ") }), Today).Command.Address!.Region);
+        Assert.Equal(36, IndiaRules.StatesAndUnionTerritories.Count);
+        Assert.Contains(new ValidationError("address.region", "not_allowed"), Errors((IndiaBase with { Address = At("Kerela") })));
+        Assert.Contains(new ValidationError("address.region", "not_allowed"), Errors((IndiaBase with { Address = At("AUH") })));
+    }
+
+    [Fact]
     public void AadhaarKeepsOnlyTheLastFourDigits()
     {
         var full = (IndiaBase with { Identifiers = [new(IdentifierScheme.AadhaarLast4, "0000 1111 2222")] });

@@ -155,7 +155,7 @@ public sealed class SessionControlTests(SqlServerFixture sql) : IClassFixture<Sq
         // The app shell (MDV-P0-022) reads these exact names; numbers or camelCase enum values would break it.
         var json = await browser.GetStringAsync(new Uri("/v1/me/context", UriKind.Relative));
         foreach (var fragment in new[] { "\"user\":{\"id\":", "\"displayName\":", "\"memberships\":[{\"id\":", "\"tenantName\":", "\"facilityName\":",
-            "\"role\":\"Receptionist\"", "\"active\":{\"membershipId\":", "\"capabilities\":{\"RegisterBookPatients\":\"Full\"", "\"CheckInQueue\":\"Full\"",
+            "\"role\":\"Receptionist\"", "\"active\":{\"membershipId\":", "\"country\":\"IN\"", "\"capabilities\":{\"RegisterBookPatients\":\"Full\"", "\"CheckInQueue\":\"Full\"",
             "\"flags\":[\"clinic.alpha\"]" })
             Assert.Contains(fragment, json, StringComparison.Ordinal);
         Assert.DoesNotContain("ClinicalNotes", json, StringComparison.Ordinal);

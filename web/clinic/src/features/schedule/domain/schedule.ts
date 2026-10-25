@@ -17,6 +17,8 @@ export type VisitLength = { visitType: VisitType; minutes: number };
 export type ScheduleColumn = {
   calendarId: string; calendarKind: CalendarKind; name: string; slotMinutes: number | null;
   hours: WorkingWindow[]; slots: Slot[]; unavailable: Unavailable[]; appointments: Appointment[]; visitLengths: VisitLength[];
+  /** Template slots that day, booked or free. */
+  capacity: number;
 };
 
 /** One facility day. `date` is the facility-local date (YYYY-MM-DD); start and end frame the day for every column. */

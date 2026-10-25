@@ -22,6 +22,10 @@ public static class SchedulingEndpoints
                 service.GetDayAsync(facilityId ?? Guid.Empty, date, ct))
             .AuditedWithErrors("schedule.read", "schedule");
 
+        schedule.MapGet("/week", (Guid? facilityId, Guid? calendarId, DateOnly? date, [FromServices] IScheduleService service, CancellationToken ct) =>
+                service.GetWeekAsync(facilityId ?? Guid.Empty, calendarId ?? Guid.Empty, date, ct))
+            .AuditedWithErrors("schedule.read", "schedule");
+
         schedule.MapGet("/templates", (Guid? facilityId, [FromServices] IScheduleService service, CancellationToken ct) =>
                 service.ListTemplatesAsync(facilityId ?? Guid.Empty, ct))
             .AuditedWithErrors("schedule.template.read", "schedule_template", "operations");

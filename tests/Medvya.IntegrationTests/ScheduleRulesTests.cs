@@ -151,6 +151,29 @@ public class ScheduleRulesTests
     }
 
     [Fact]
+    public void ADayRunsFromLocalMidnightToLocalMidnightInTheFacilityZone()
+    {
+        // IST (+05:30) and GST (+04:00): local midnight is the evening before in UTC, and a day is always 24 hours.
+        Assert.Equal((new DateTimeOffset(2026, 10, 18, 18, 30, 0, TimeSpan.Zero), new DateTimeOffset(2026, 10, 19, 18, 30, 0, TimeSpan.Zero)), ScheduleRules.DayBounds(new(2026, 10, 19), Kolkata));
+        Assert.Equal((new DateTimeOffset(2026, 10, 18, 20, 0, 0, TimeSpan.Zero), new DateTimeOffset(2026, 10, 19, 20, 0, 0, TimeSpan.Zero)), ScheduleRules.DayBounds(new(2026, 10, 19), Dubai));
+        // A daylight-saving zone: the spring change day is 23 hours, the autumn one 25, and consecutive days meet without a gap.
+        Assert.Equal(TimeSpan.FromHours(23), Length(ScheduleRules.DayBounds(new(2026, 3, 29), London)));
+        Assert.Equal(TimeSpan.FromHours(25), Length(ScheduleRules.DayBounds(new(2026, 10, 25), London)));
+        Assert.Equal(ScheduleRules.DayBounds(new(2026, 3, 29), London).To, ScheduleRules.DayBounds(new(2026, 3, 30), London).From);
+        static TimeSpan Length((DateTimeOffset From, DateTimeOffset To) d) => d.To - d.From;
+    }
+
+    [Theory]
+    [InlineData("2026-10-19")] // Monday
+    [InlineData("2026-10-21")] // Wednesday
+    [InlineData("2026-10-25")] // Sunday ends the week, it does not start the next
+    public void TheWeekRunsMondayToSunday(string date)
+    {
+        var week = ScheduleRules.Week(DateOnly.Parse(date, System.Globalization.CultureInfo.InvariantCulture));
+        Assert.Equal([.. Enumerable.Range(19, 7).Select(d => new DateOnly(2026, 10, d))], week);
+    }
+
+    [Fact]
     public void TheLocalDateIsTheFacilitysNotUtcs() =>
         Assert.Equal(new DateOnly(2026, 10, 20), ScheduleRules.LocalDate(new DateTimeOffset(2026, 10, 19, 20, 0, 0, TimeSpan.Zero), Kolkata));
 }

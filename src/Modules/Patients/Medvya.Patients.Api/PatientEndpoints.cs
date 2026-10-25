@@ -37,6 +37,9 @@ public sealed record RevealedIdentifier(IdentifierScheme Scheme, string Value);
 /// <summary>What the desk has typed so far; identifiers that are not complete yet are skipped, not rejected.</summary>
 public sealed record DuplicateCheckRequest(string? FullName = null, DateOnly? DateOfBirth = null, IReadOnlyList<IdentifierInput>? Identifiers = null);
 
+/// <summary>The details that complete a quick registration (MDV-P1-015): address, payer or both.</summary>
+public sealed record CompletionRequest(PatientAddress? Address = null, PayerInput? Payer = null);
+
 /// <summary>A registration from the desk (P-02). Facility and country are not here: the server takes them from the session.</summary>
 public sealed record RegisterRequest
 {
@@ -108,6 +111,11 @@ public static class PatientEndpoints
         patients.MapPost("/", Register)
             .RequireCapability(Capability.RegisterBookPatients, Access.Full)
             .AuditedByUseCase("patient.register", "patient", Purpose);
+
+        // Only the active facility's patients: another facility's is 404 and changes nothing (audited NotFound by the filter).
+        patients.MapPost("/{patientId:guid}/completion", Complete)
+            .RequireCapability(Capability.RegisterBookPatients, Access.Full)
+            .AuditedByUseCase("patient.update", "patient", Purpose, patientRouteKey: "patientId");
         return app;
     }
 
@@ -133,6 +141,21 @@ public static class PatientEndpoints
         {
             // Facility and country come from the session and the tenant, never from the request body.
             return Results.Ok(await registry.RegisterAsync(request.ToCommand(facilityId, country), ct));
+        }
+        catch (PatientValidationException e)
+        {
+            return Invalid(e);
+        }
+    }
+
+    static async Task<IResult> Complete(Guid patientId, [FromBody] CompletionRequest? request, [FromServices] IPatientRegistry registry, CancellationToken ct)
+    {
+        request ??= new();
+        try
+        {
+            return await registry.CompleteRegistrationAsync(patientId, request.Address, request.Payer, ct) is { } status
+                ? Results.Ok(new { status })
+                : Results.NotFound();
         }
         catch (PatientValidationException e)
         {

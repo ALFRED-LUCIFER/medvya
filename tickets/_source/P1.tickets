@@ -379,8 +379,9 @@ status: Partly done
 progress:
 - Merged [PR #40](https://github.com/ALFRED-LUCIFER/medvya/pull/40): quick registration saves as Incomplete until address and payer exist; completing closes it
 - Merged [PR #61](https://github.com/ALFRED-LUCIFER/medvya/pull/61): quick form (5 fields, keyboard only) with the duplicate check; [PR #62](https://github.com/ALFRED-LUCIFER/medvya/pull/62) board card and [PR #58](https://github.com/ALFRED-LUCIFER/medvya/pull/58) record header show "Registration incomplete"
+- Merged [PR #79](https://github.com/ALFRED-LUCIFER/medvya/pull/79): security fix — completion and registration writes reach the active facility's patients only; `POST /v1/patients/{id}/completion` (Full access): 200 + one Allowed row in the change's transaction, another facility's patient 404 + one NotFound row and nothing changed; mutation-checked
 - [PR #PR_NUM](https://github.com/ALFRED-LUCIFER/medvya/pull/PR_NUM): quick and full are one form with a mode toggle; switching keeps what was typed
-- Left: completion endpoint and UI from the record (next PR in this stack); emergency contact in the completion check (MDV-P1-020); CARE_TASK queue (MDV-P4-016); timed usability check with a trained user (pilot)
+- Left: completion UI from the record (next PR in this stack); emergency contact in the completion check (MDV-P1-020); CARE_TASK queue (MDV-P4-016); timed usability check with a trained user (pilot)
 title: Quick registration for a busy desk with a completion task
 type: Story
 epic: MDV-P1-E05
@@ -584,6 +585,12 @@ ac:
 - The test runs in CI on every PR touching Scheduling.
 
 === MDV-P1-023
+status: In progress
+progress:
+- [PR #77](https://github.com/ALFRED-LUCIFER/medvya/pull/77) (in review): `GET /v1/schedule/week` (one doctor or resource, Monday–Sunday, every day built like the day view from one batched read on the (facility, start) index, capacity per day, audited, facility capability and calendar checked); day bounds and ISO week as tested rules (IST, GST, DST 23/25 h); Day/Week/List switch and doctor/resource filter, a doctor starts on their own column; list default at ≤ 767 px with a pinned Book at the next free slot; every state an icon + words (dashed No-show/Cancelled, hatched Unavailable) with a legend; the list prints as an agenda; en/hi/ar, RTL
+- Measured: day/week reads p95 29/33 ms through the endpoints with a fully booked year for 3 doctors (16,380 visits); 3-doctor day first render ≈ 2.2 s on the production build over Lighthouse throttled 4G (Playwright budget in CI)
+- Tested on SQL Server (week = day, local-midnight boundary, facility scoping) and in the browser against a real API (en/ar, keyboard, axe at 1280/1024/820/640/390 px); 14 mutations each caught
+- Left: the first-render and read budgets on staging under the P1 load profile (MDV-P1-037)
 title: Calendar views: day, week and list (per doctor and resource), mobile/tablet responsive
 type: Story
 epic: MDV-P1-E06

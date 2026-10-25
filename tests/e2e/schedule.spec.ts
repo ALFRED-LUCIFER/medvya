@@ -1,7 +1,7 @@
 import { createRequire } from 'node:module';
 import { expect, test, type Page } from '@playwright/test';
 
-// MDV-P1-011 / MDV-P1-021: the P-04 day view and booking from an empty slot. CI has no API, so /v1/me/context and the
+// MDV-P1-011 / MDV-P1-021 / MDV-P1-023: the P-04 day, week and list views and booking from an empty slot. CI has no API, so /v1/me/context and the
 // scheduling endpoints are mocked with the synthetic cast in the shapes the server sends (IScheduleService.cs,
 // IBookingService.cs). The device runs in New York to prove times are shown in facility time.
 test.use({ timezoneId: 'America/New_York' });
@@ -13,6 +13,8 @@ const persona = (role: string, displayName: string, capabilities: Record<string,
 });
 const reception = persona('Receptionist', 'A. Joseph', { RegisterBookPatients: 'Full', CheckInQueue: 'Full' });
 const nurse = persona('Nurse', 'S. Thomas RN', { RegisterBookPatients: 'Read', CheckInQueue: 'Full', VitalsAllergiesEntry: 'Full' });
+// A doctor whose calendar is d-1 (the calendar id is the doctor's user id), with read-only booking.
+const doctor = { ...persona('HospitalDoctor', 'Dr. Arjun Rao (synthetic)', { RegisterBookPatients: 'Read', Patient360Chart: 'Full' }), user: { id: 'd-1', displayName: 'Dr. Arjun Rao (synthetic)' } };
 
 const patientId = '5e1d0001-0004-4000-8000-000000000001';
 
@@ -40,7 +42,7 @@ function scheduleDay(date: string) {
     facilityId: 'f-1', timeZone: 'Asia/Kolkata', date, start: at('09:00'), end: at('20:00'),
     columns: [
       {
-        calendarId: 'd-1', calendarKind: 'Doctor', name: 'Dr. Arjun Rao (synthetic)', slotMinutes: 20, visitLengths: lengths(20),
+        calendarId: 'd-1', calendarKind: 'Doctor', name: 'Dr. Arjun Rao (synthetic)', slotMinutes: 20, visitLengths: lengths(20), capacity: 17,
         hours: [{ start: at('09:00'), end: at('13:00'), room: 'Room 3' }, { start: at('17:00'), end: at('20:00'), room: 'Room 3' }],
         // 09:00–09:40 is a booked new consultation; 09:40 is being booked at another desk.
         slots: [...slots(date, '09:40', '11:55', 20, [at('09:40')]), ...slots(date, '17:00', '20:00', 20)],
@@ -52,11 +54,11 @@ function scheduleDay(date: string) {
         ],
       },
       {
-        calendarId: 'd-2', calendarKind: 'Doctor', name: 'Dr. S. Menon (synthetic)', slotMinutes: 20, visitLengths: lengths(20), hours: [], slots: [], appointments: [],
+        calendarId: 'd-2', calendarKind: 'Doctor', name: 'Dr. S. Menon (synthetic)', slotMinutes: 20, visitLengths: lengths(20), capacity: 0, hours: [], slots: [], appointments: [],
         unavailable: [{ start: at('09:00'), end: at('20:00'), reason: 'NotWorking', label: null }],
       },
       {
-        calendarId: 'r-1', calendarKind: 'Resource', name: 'Procedure room (synthetic)', slotMinutes: 30, visitLengths: lengths(30), appointments: [],
+        calendarId: 'r-1', calendarKind: 'Resource', name: 'Procedure room (synthetic)', slotMinutes: 30, visitLengths: lengths(30), capacity: 6, appointments: [],
         hours: [{ start: at('10:00'), end: at('13:00'), room: null }], slots: slots(date, '10:00', '13:00', 30),
         unavailable: [{ start: at('09:00'), end: at('10:00'), reason: 'NotWorking', label: null }, { start: at('13:00'), end: at('20:00'), reason: 'NotWorking', label: null }],
       },
@@ -64,7 +66,20 @@ function scheduleDay(date: string) {
   };
 }
 
+/** GET /v1/schedule/week: Monday to Sunday of one calendar, each day that calendar's column of the day view; closed at weekends. */
+function scheduleWeek(calendarId: string, date: string) {
+  const asked = new Date(`${date}T12:00:00Z`);
+  const monday = Date.parse(`${date}T12:00:00Z`) - ((asked.getUTCDay() + 6) % 7) * 86_400_000;
+  const days = [...Array(7).keys()].map(i => {
+    const d = scheduleDay(new Date(monday + i * 86_400_000).toISOString().slice(0, 10));
+    const column = d.columns.find(c => c.calendarId === calendarId)!;
+    return { ...d, columns: [i < 5 ? column : { ...column, hours: [], slots: [], appointments: [], capacity: 0, unavailable: [] }] };
+  });
+  return { facilityId: 'f-1', timeZone: 'Asia/Kolkata', calendarId, days };
+}
+
 type Calls = {
+  weeks: { calendarId: string | null; date: string | null }[];
   dates: (string | null)[]; holds: Record<string, unknown>[]; releases: string[]; searches: { body: Record<string, unknown>; url: string }[];
   bookings: { body: Record<string, unknown>; csrf: string | undefined }[];
 };
@@ -74,7 +89,7 @@ const nair = { id: patientId, initials: 'DN', ageYears: 47, ageEstimated: false,
 
 /** Signs in and answers the scheduling API; returns what the page sent. `holdCode` makes holds fail with that 409 code. */
 async function open(page: Page, { locale = 'en', status = 200, as = reception, holdCode = '', delayMs = 0 } = {}) {
-  const calls: Calls = { dates: [], holds: [], releases: [], searches: [], bookings: [] };
+  const calls: Calls = { weeks: [], dates: [], holds: [], releases: [], searches: [], bookings: [] };
   await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
   await page.route('**/v1/me/context', r => r.fulfill({ json: as }));
   await page.route('**/v1/schedule?*', async r => {
@@ -83,6 +98,13 @@ async function open(page: Page, { locale = 'en', status = 200, as = reception, h
     calls.dates.push(url.searchParams.get('date'));
     if (delayMs) await new Promise(done => setTimeout(done, delayMs));
     return status === 200 ? r.fulfill({ json: scheduleDay(url.searchParams.get('date') ?? '2026-10-19') }) : r.fulfill({ status, json: {} });
+  });
+  await page.route('**/v1/schedule/week?*', r => {
+    const url = new URL(r.request().url());
+    expect(url.searchParams.get('facilityId')).toBe('f-1');
+    const calendarId = url.searchParams.get('calendarId'), date = url.searchParams.get('date');
+    calls.weeks.push({ calendarId, date });
+    return r.fulfill({ json: scheduleWeek(calendarId!, date ?? '2026-10-19') });
   });
   await page.route('**/v1/slot-holds', r => {
     const body = r.request().postDataJSON() as { calendarId: string; start: string; visitType: string };
@@ -275,6 +297,7 @@ for (const locale of ['en', 'ar'])
   test(`when the columns overflow, the grid scrolls by keyboard with sticky headers and time axis (${locale})`, async ({ page }) => {
     await page.setViewportSize({ width: 520, height: 700 }); // narrower than three 168 px columns
     await open(page, { locale });
+    await page.getByRole('button', { name: locale === 'ar' ? 'يوم' : 'Day', exact: true }).click(); // phones open the list (MDV-P1-023)
     const grid = page.getByRole('region', { name: locale === 'ar' ? 'جدول اليوم' : 'Day schedule' });
     await expect(grid).toBeVisible();
     expect(await grid.evaluate(e => e.scrollWidth > e.clientWidth && e.scrollHeight > e.clientHeight)).toBe(true);
@@ -350,3 +373,143 @@ for (const locale of ['en', 'ar'])
         .map(v => `${v.id} (${v.nodes.length})`));
     expect(violations).toEqual([]);
   });
+
+// MDV-P1-023: week and list views of the same data, the doctor's own view, phones and tablets.
+const visits = /Booked|Checked in|In room|Completed|No-show|Cancelled/;
+const squash = (texts: string[]) => texts.map(t => t.replace(/\s+/g, ' ').trim());
+
+test('week and list views show the same appointments as the day view', async ({ page }) => {
+  const calls = await open(page);
+  const inDay = squash(await column(page, 'Dr. Arjun Rao (synthetic)').getByRole('listitem').filter({ hasText: visits }).allInnerTexts());
+  expect(inDay).toHaveLength(1);
+
+  await page.getByRole('button', { name: 'List', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'List', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  const raoList = page.getByRole('region', { name: 'Dr. Arjun Rao (synthetic)' });
+  expect(squash(await raoList.getByRole('listitem').filter({ hasText: visits }).allInnerTexts()).map(t => t.replace(/^\S+ /, ''))).toEqual(inDay); // after the time
+  await expect(raoList.getByRole('button', { name: 'Book Dr. Arjun Rao (synthetic) at 10:00' })).toBeVisible(); // empty slots stay bookable
+  await expect(raoList.getByRole('listitem').filter({ hasText: 'Unavailable 12:00–13:00 · Break · Lunch break' })).toHaveCount(1);
+
+  await page.getByRole('button', { name: 'Week', exact: true }).click();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Mon, 19 Oct – Sun, 25 Oct');
+  const week = page.getByRole('region', { name: 'Week of Dr. Arjun Rao (synthetic)' });
+  const monday = week.getByRole('list', { name: 'Appointments on Monday, 19 October 2026' });
+  expect(squash(await monday.getByRole('listitem').allInnerTexts())).toEqual(inDay);
+  await expect(week.getByText('booked of 17')).toHaveCount(5); // Monday to Friday
+  await expect(week.getByText('Not working')).toHaveCount(2); // Saturday and Sunday
+  expect(calls.weeks).toEqual([{ calendarId: 'd-1', date: null }]); // all columns shown, so the first calendar's week
+
+  await page.getByRole('combobox', { name: 'Doctor or resource' }).click();
+  await page.getByRole('option', { name: 'Procedure room (synthetic)' }).click();
+  await expect(page.getByRole('region', { name: 'Week of Procedure room (synthetic)' })).toBeVisible();
+  await page.getByRole('button', { name: 'Next week' }).click();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Mon, 26 Oct – Sun, 1 Nov');
+  await expect.poll(() => calls.weeks.slice(1)).toEqual([{ calendarId: 'r-1', date: null }, { calendarId: 'r-1', date: '2026-10-26' }]);
+
+  await page.getByRole('button', { name: 'Tue, 27 Oct' }).click(); // a day opens its day view
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Tuesday, 27 October 2026');
+  await expect(page.getByRole('region', { name: 'Day schedule' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Procedure room (synthetic)' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Dr. Arjun Rao (synthetic)' })).toHaveCount(0); // the filter stays
+});
+
+test('every state is an icon and words, explained by the legend', async ({ page }) => {
+  await open(page);
+  const legend = page.getByRole('list', { name: 'What the colours and shapes mean' });
+  await expect(legend.getByRole('listitem')).toHaveText(['Booked', 'Checked in', 'In room', 'Completed', 'No-show', 'Cancelled', 'Being booked', 'Unavailable']);
+  for (const item of await legend.getByRole('listitem').all()) await expect(item.locator('svg')).toHaveCount(1);
+});
+
+test('a doctor starts on their own column, read-only, and can show everyone', async ({ page }) => {
+  await open(page, { as: doctor });
+  await expect(page.getByRole('combobox', { name: 'Doctor or resource' })).toHaveText('Dr. Arjun Rao (synthetic)');
+  await expect(page.getByRole('heading', { name: 'Dr. Arjun Rao (synthetic)' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Procedure room (synthetic)' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /^Book / })).toHaveCount(0); // free slots are listed, not buttons
+  await expect(page.getByRole('complementary', { name: 'Book appointment' })).toHaveCount(0);
+  await page.getByRole('combobox', { name: 'Doctor or resource' }).click();
+  await page.getByRole('option', { name: 'All doctors and resources' }).click();
+  await expect(page.getByRole('heading', { name: 'Procedure room (synthetic)' })).toBeVisible();
+});
+
+test('on a phone the list is the default, with a pinned Book that opens the next free slot', async ({ page }) => {
+  await page.clock.setFixedTime(new Date(ist('2026-10-19', '10:05'))); // 10:00 has started; 10:20 is the next free slot
+  await page.setViewportSize({ width: 390, height: 844 });
+  const calls = await open(page);
+  await expect(page.getByRole('button', { name: 'List', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('region', { name: 'Day schedule' })).toHaveCount(0);
+  const book = page.getByRole('button', { name: 'Book appointment' });
+  const tabs = page.locator('nav.fixed');
+  const [b, n] = [(await book.boundingBox())!, (await tabs.boundingBox())!];
+  expect(b.y + b.height).toBeLessThanOrEqual(n.y); // pinned above the bottom tabs
+  expect(b.height).toBeGreaterThanOrEqual(44);
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  await expect(book).toBeInViewport(); // still there at the end of the list
+  await book.click();
+  const panel = page.getByRole('complementary', { name: 'Book appointment' });
+  await expect(panel).toContainText('Dr. Arjun Rao (synthetic) · 10:20–10:40');
+  await expect(panel).toBeInViewport(); // brought into view above the list
+  await expect(book).toBeHidden(); // never covers the panel's fields while a booking is under way
+  expect(calls.holds[0]).toMatchObject({ calendarId: 'd-1', start: ist('2026-10-19', '10:20') });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});
+
+for (const width of [768, 1024])
+  test(`on a ${width} px tablet the day view opens and the week scrolls inside its own box`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 1000 });
+    await open(page);
+    await expect(page.getByRole('button', { name: 'Day', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByRole('region', { name: 'Day schedule' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Book appointment' })).toBeHidden(); // the pinned Book is for phones
+    await page.getByRole('button', { name: 'Week', exact: true }).click();
+    const week = page.getByRole('region', { name: 'Week of Dr. Arjun Rao (synthetic)' });
+    await expect(week.getByText('booked of 17').first()).toBeVisible();
+    await week.focus();
+    await expect(week).toBeFocused(); // keyboard can scroll it
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  });
+
+for (const locale of ['en', 'ar'] as const)
+  for (const view of ['Week', 'List'] as const)
+    test(`axe finds no violations in the ${view.toLowerCase()} view, full width and at 200% zoom (${locale})`, async ({ page }) => {
+      const name = { en: { Week: 'Week', List: 'List' }, ar: { Week: 'أسبوع', List: 'قائمة' } }[locale][view];
+      await open(page, { locale });
+      await page.getByRole('button', { name, exact: true }).click();
+      await expect(page.getByRole('button', { name, exact: true })).toHaveAttribute('aria-pressed', 'true');
+      await expect(page.getByText('Meera Iyer (synthetic)').first()).toBeVisible();
+      for (const size of [{ width: 1280, height: 720 }, { width: 640, height: 720 }]) { // 640 px is a 1280 px screen at 200 %
+        await page.setViewportSize(size);
+        await page.addScriptTag({ path: axePath });
+        const violations = await page.evaluate(async () =>
+          (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations
+            .map(v => `${v.id} (${v.nodes.length})`));
+        expect(violations).toEqual([]);
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+      }
+    });
+
+test('views and the filter are reachable by keyboard with 44 px targets', async ({ page }) => {
+  await open(page);
+  await page.getByRole('button', { name: 'Next day' }).focus();
+  for (const name of ['Day', 'Week', 'List']) {
+    await page.keyboard.press('Tab');
+    await expect(page.getByRole('button', { name, exact: true })).toBeFocused();
+    expect((await page.getByRole('button', { name, exact: true }).boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  }
+  await page.keyboard.press('Enter'); // List
+  await expect(page.getByRole('button', { name: 'List', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await page.keyboard.press('Tab');
+  await expect(page.getByRole('combobox', { name: 'Doctor or resource' })).toBeFocused();
+  expect((await page.getByRole('combobox', { name: 'Doctor or resource' }).boundingBox())!.height).toBeGreaterThanOrEqual(44);
+});
+
+test('the list prints as an agenda: the schedule without navigation or controls', async ({ page }) => {
+  await open(page);
+  await page.getByRole('button', { name: 'List', exact: true }).click();
+  await page.emulateMedia({ media: 'print' });
+  await expect(page.getByRole('region', { name: 'Dr. Arjun Rao (synthetic)' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  for (const nav of await page.getByRole('navigation').all()) await expect(nav).toBeHidden();
+  await expect(page.getByRole('button', { name: 'Today' })).toBeHidden();
+  await expect(page.getByRole('complementary', { name: 'Book appointment' })).toBeHidden();
+});

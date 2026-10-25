@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { CalendarCheck, CircleCheck, ClipboardCheck, DoorOpen, EyeOff, ReceiptText, Syringe, UserCheck, type LucideIcon } from 'lucide-react';
 import { useI18n, type MessageKey } from '@medvya/i18n';
 import { Button, FrontDeskTag } from '@medvya/ui';
-import { boardColumns, minutesSince, nextState, type Board, type BoardCard, type BoardColumn, type MoveError } from '../domain/board';
+import { boardColumns, minutesSince, nextState, type Board, type BoardCard, type BoardColumn, type LiveStatus, type MoveError } from '../domain/board';
 
 // Every column is words and an icon (never colour alone), following the Clinician App board (P-01).
 const columnIcons: Record<BoardColumn, LucideIcon> = {
@@ -23,6 +23,8 @@ type Props = {
   loading: boolean;
   offline: boolean;
   online: boolean;
+  /** Real-time connection (MDV-P1-029); while not live the board refreshes every 30 s. */
+  live: LiveStatus;
   forbidden: boolean;
   failed: boolean;
   /** Full "Check-in & queue" access; otherwise the board is read-only. */
@@ -55,6 +57,8 @@ export default function BoardPage(props: Props) {
           {board && <p className="text-[13px] text-muted-foreground">{t('schedule.facilityTime', { zone: board.timeZone })}</p>}
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {/* Live or paused: announced when it changes, in words and an icon, never colour alone. Nothing animates. */}
+          {!props.forbidden && <p role="status" className="inline-flex min-h-9 items-center"><FrontDeskTag kind={props.live} /></p>}
           <p className="inline-flex min-h-9 items-center gap-1.5 rounded-md bg-muted px-3 text-[12.5px] font-bold text-ink-700">
             <EyeOff aria-hidden className="size-4" />{t('board.hidesClinical')}
           </p>
@@ -138,6 +142,7 @@ function Card({ card, board, now, canMove, online, confirmingId, pendingId, fail
         {card.registrationIncomplete && <FrontDeskTag kind="incomplete" />}
       </div>
       {state === 'CheckedIn' && <FrontDeskTag kind="waiting" text={t('board.waiting', { minutes: minutesSince(card.since, now) })} />}
+      {card.room && state === 'InConsult' && <FrontDeskTag kind="room" text={t('board.room', { room: card.room })} />}
 
       {canMove && confirming ? (
         <div role="group" aria-label={t('board.confirm.title')} className="mt-1 flex flex-col gap-2 rounded-md border border-action-600 p-2">

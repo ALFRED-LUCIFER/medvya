@@ -3,6 +3,7 @@ using Medvya.Scheduling.Application;
 using Medvya.Scheduling.Domain;
 using Medvya.Scheduling.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Medvya.Scheduling.Infrastructure;
@@ -12,7 +13,9 @@ namespace Medvya.Scheduling.Infrastructure;
 /// template, free of appointments and not held by someone else. The booking, its first status event and AppointmentBooked.v1
 /// are written in one transaction, with the attempt's audit event (MDV-P0-017), which now carries the patient id.
 /// </summary>
-public sealed class BookingService(SchedulingDbContext db, SchedulingContext context, DoctorDayTransaction transaction, IOptions<SchedulingOptions> options) : IBookingService
+public sealed class BookingService(
+    SchedulingDbContext db, SchedulingContext context, DoctorDayTransaction transaction, IOptions<SchedulingOptions> options, IBoardNotifier notifier, ILogger<BookingService> log)
+    : IBookingService
 {
     const int MaxReason = 500;
 
@@ -104,6 +107,7 @@ public sealed class BookingService(SchedulingDbContext db, SchedulingContext con
             await context.AuditAsync(SchedulingAudit.Book, SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment, booked.Id, booked.PatientId, cancellationToken);
             return booked;
         }, cancellationToken);
+        await FrontDeskService.NotifyAsync(notifier, log, new(appointment.TenantId, appointment.FacilityId, appointment.Id, appointment.State, now)); // a new card on the board
         return new(appointment.Id, AppointmentReference.Of(appointment.Id), appointment.FacilityId, appointment.CalendarId, patient.Id, patient.FullName, patient.Mrn,
             appointment.VisitType, appointment.Start, appointment.End, appointment.State, appointment.ReasonCategory, appointment.Channel);
     }

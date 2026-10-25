@@ -63,7 +63,8 @@ Every stored field has one class. In code, each domain property carries `[Classi
 | MERGE_REQUEST.* | Internal | Audit |
 | SCHEDULE_TEMPLATE.* (calendar, weekday hours, room, breaks and their labels, slot and visit lengths) | Internal | — |
 | SCHEDULE_RESOURCE.* (name, e.g. "Procedure room") | Internal | — |
-| APPOINTMENT.id, doctor, location, slot_start, state, source, reason_category | Internal | — |
+| APPOINTMENT.id, doctor, location, slot_start, state, source, reason_category, room (set at call-in, MDV-P1-029) | Internal | — |
+| Board hub message `BoardChanged` (appointment id, state, changed at) | Internal | Ids and state only; payload allowlist test (MDV-P1-029) |
 | APPOINTMENT.reason_text (free text) | SensitiveHealth | Clinicians only. Audit. Never returned to reception screens or put in events (MDV-P1-021) |
 | SLOT_HOLD.* (calendar, slot, visit type, held_by, expires_at) | Internal | — |
 | SCHEDULE_SLOT.* (calendar, location, 5-minute slot start, appointment) | Internal | Unique (calendar, location, slot start) |

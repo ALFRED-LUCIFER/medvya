@@ -32,6 +32,7 @@ POST   /v1/appointments/{id}/reschedule|cancel|no-show
 POST   /v1/appointments/{id}/check-in              # P1-028; a repeat returns the visit unchanged
 POST   /v1/appointments/{id}/status                # next board column only (state machine), else 409
 GET    /v1/front-desk/board?facilityId=            # P-01 today, nonclinical; SignalR hub for live updates (P1-029)
+HUB    /v1/hubs/board  Watch(facilityId) → BoardChanged{appointmentId,state,changedAt}  # P1-029; session's facility only, boards refetch
 GET    /v1/queue/tv?display_token=                 # tokens only
 GET    /v1/notifications
 POST   /v1/encounters                              # P2

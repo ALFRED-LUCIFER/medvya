@@ -519,5 +519,9 @@
   "patients.record.revealed": "تم إظهار الأرقام كاملة.",
   "booking.error.busy": "هذا التقويم مشغول بحجوزات أخرى الآن. لم يُحفظ شيء؛ حاول مرة أخرى.",
   "booking.patientResults": "المرضى الذين تم العثور عليهم",
-  "booking.patientPick": "{initials}، {age}، {sex}، رقم الملف ينتهي بـ {mrn}. اختر لهذا الحجز"
+  "booking.patientPick": "{initials}، {age}، {sex}، رقم الملف ينتهي بـ {mrn}. اختر لهذا الحجز",
+  "board.room": "استُدعي إلى {room}",
+  "board.live.live": "تحديثات مباشرة",
+  "board.live.connecting": "جارٍ الاتصال…",
+  "board.live.paused": "التحديثات المباشرة متوقفة مؤقتًا · تحديث كل 30 ثانية"
 }

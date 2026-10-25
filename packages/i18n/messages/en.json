@@ -520,5 +520,9 @@
   "patients.record.revealed": "Full numbers shown.",
   "booking.error.busy": "This calendar is busy with other bookings right now. Nothing was saved; try again.",
   "booking.patientResults": "Patients found",
-  "booking.patientPick": "{initials}, {age}, {sex}, MRN ending {mrn}. Choose for this booking"
+  "booking.patientPick": "{initials}, {age}, {sex}, MRN ending {mrn}. Choose for this booking",
+  "board.room": "Called to {room}",
+  "board.live.live": "Live updates",
+  "board.live.connecting": "Connecting…",
+  "board.live.paused": "Live updates paused · refreshing every 30 s"
 }

@@ -113,7 +113,10 @@ public sealed class FrontDeskServiceTests(SqlServerFixture sql) : IClassFixture<
         foreach (var state in new[] { AppointmentState.WithNurse, AppointmentState.ReadyForDoctor, AppointmentState.InConsult, AppointmentState.Billing, AppointmentState.Done })
         {
             h.Clock.Advance(TimeSpan.FromMinutes(1));
-            Assert.Equal(state, (await desk.MoveAsync(visit.Id, new MoveVisit { State = state })).State);
+            var moved = await desk.MoveAsync(visit.Id, new MoveVisit { State = state });
+            Assert.Equal(state, moved.State);
+            // Call-in takes the room of the doctor's session from the template, and the visit keeps it.
+            Assert.Equal(state >= AppointmentState.InConsult ? "Room 3" : null, moved.Room);
         }
         Assert.Equal("invalid_transition", await Code(desk.CheckInAsync(visit.Id, new CheckIn()))); // check-in only from Booked
 

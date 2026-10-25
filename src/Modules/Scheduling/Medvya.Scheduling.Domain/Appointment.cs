@@ -32,6 +32,8 @@ public sealed class Appointment
     [Classification(DataClass.Internal)] public DateTimeOffset Start { get; set; }
     [Classification(DataClass.Internal)] public DateTimeOffset End { get; set; }
     [Classification(DataClass.Internal)] public AppointmentState State { get; set; }
+    /// <summary>The room the patient was called in to (call-in, MDV-P1-029); shown on the board and the queue TV.</summary>
+    [Classification(DataClass.Internal)] public string? Room { get; set; }
     [Classification(DataClass.Internal)] public ReasonCategory ReasonCategory { get; set; }
     /// <summary>The patient's own words. Clinicians only, never on reception screens, never in logs or events.</summary>
     [Classification(DataClass.SensitiveHealth)] public string? ReasonText { get; set; }

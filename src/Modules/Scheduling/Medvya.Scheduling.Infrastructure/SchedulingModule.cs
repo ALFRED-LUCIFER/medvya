@@ -15,6 +15,8 @@ public static class SchedulingModule
         services.TryAddScoped<TenantSessionInterceptor>();
         services.TryAddSingleton(TimeProvider.System);
         services.AddOptions<SchedulingOptions>();
+        services.AddLogging();
+        services.TryAddSingleton<IBoardNotifier, NoBoardNotifier>(); // the host replaces it with SignalR (Medvya.Scheduling.Api)
         return services
             .AddDbContext<SchedulingDbContext>((sp, o) => o.UseSqlServer(connectionString).AddInterceptors(sp.GetRequiredService<TenantSessionInterceptor>()))
             .AddScoped<SchedulingContext>()
@@ -23,4 +25,10 @@ public static class SchedulingModule
             .AddScoped<IBookingService, BookingService>()
             .AddScoped<IFrontDeskService, FrontDeskService>();
     }
+}
+
+/// <summary>Without a real-time host (tests, tools) nothing is pushed; boards still refetch on their own.</summary>
+internal sealed class NoBoardNotifier : IBoardNotifier
+{
+    public Task ChangedAsync(BoardChange change, CancellationToken cancellationToken = default) => Task.CompletedTask;
 }

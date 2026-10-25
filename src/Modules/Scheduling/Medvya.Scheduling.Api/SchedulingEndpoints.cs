@@ -1,5 +1,7 @@
 using Medvya.Audit.Api;
 using Medvya.Scheduling.Application;
+using Medvya.Tenancy.Api;
+using Medvya.Tenancy.Domain;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -62,6 +64,10 @@ public static class SchedulingEndpoints
         frontDesk.MapGet("/board", (Guid? facilityId, [FromServices] IFrontDeskService service, CancellationToken ct) =>
                 service.GetBoardAsync(facilityId ?? Guid.Empty, ct))
             .AuditedWithErrors("front_desk.board.read", "appointment");
+        // Live board updates (MDV-P1-029): ids and states only. The hub checks facility and capability on connect and on every call.
+        app.MapHub<BoardHub>(BoardHub.Path)
+            .RequireCapability(Capability.CheckInQueue, Access.Read, Access.Full)
+            .AuditRefusals(BoardHub.ConnectAction, SchedulingAudit.AppointmentResource);
 
         return app;
     }

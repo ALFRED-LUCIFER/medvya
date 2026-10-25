@@ -39,17 +39,24 @@ public static class SessionControl
     /// <summary>Runs on every cookie-authenticated request: the session row must still be live and match the cookie.</summary>
     public static async Task ValidatePrincipalAsync(CookieValidatePrincipalContext ctx)
     {
-        var principal = ctx.Principal!;
-        var sessions = ctx.HttpContext.RequestServices.GetRequiredService<IStaffSessions>();
-        var session = Read(principal, SessionIdClaim) is { } sid && Read(principal, ClaimTypes.NameIdentifier) is { } uid
-            ? await sessions.ValidateAsync(sid, uid, activity: !ctx.Request.Headers.ContainsKey(PassiveHeader), ctx.HttpContext.RequestAborted)
-            : null;
-        // A copy of the cookie from before a facility switch names another membership than the session: refuse it.
-        if (session is null || session.TenantId != Read(principal, TenantClaim) || session.MembershipId != Read(principal, MembershipClaim))
+        if (!await IsLiveAsync(ctx.Principal!, ctx.HttpContext.RequestServices, activity: !ctx.Request.Headers.ContainsKey(PassiveHeader), ctx.HttpContext.RequestAborted))
         {
             ctx.RejectPrincipal();
             await ctx.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
         }
+    }
+
+    /// <summary>
+    /// The principal's server-side session is still live and scoped to the membership the principal names. Also run on every
+    /// SignalR call (<see cref="Host.Api.Context.HubRequestContext"/>), where the cookie was checked only when the connection opened.
+    /// </summary>
+    public static async Task<bool> IsLiveAsync(ClaimsPrincipal principal, IServiceProvider services, bool activity, CancellationToken cancellationToken)
+    {
+        var session = Read(principal, SessionIdClaim) is { } sid && Read(principal, ClaimTypes.NameIdentifier) is { } uid
+            ? await services.GetRequiredService<IStaffSessions>().ValidateAsync(sid, uid, activity, cancellationToken)
+            : null;
+        // A copy of the cookie from before a facility switch names another membership than the session: refuse it.
+        return session is not null && session.TenantId == Read(principal, TenantClaim) && session.MembershipId == Read(principal, MembershipClaim);
     }
 
     public static WebApplication MapSessionControl(this WebApplication app)

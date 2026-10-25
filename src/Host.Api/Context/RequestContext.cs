@@ -10,6 +10,7 @@ namespace Host.Api.Context;
 public sealed class RequestContext(IHttpContextAccessor accessor) : ICurrentTenant, ICurrentFacility, ICurrentUser, IRequestOrigin
 {
     Guid? linkTenant;
+    HttpContext? connection;
 
     public Guid? TenantId => linkTenant ?? Read(Host.Api.Auth.SessionControl.TenantClaim);
     public Guid? FacilityId => Read(Host.Api.Auth.SessionControl.FacilityClaim);
@@ -19,11 +20,19 @@ public sealed class RequestContext(IHttpContextAccessor accessor) : ICurrentTena
     /// Only on a fresh DI scope created for that link (<see cref="LinkTenantScope"/>), so the request's own tenant never changes.
     /// </summary>
     internal void UseLinkTenant(Guid tenantId) => linkTenant = tenantId;
-    public Guid? UserId => Read(ClaimTypes.NameIdentifier);
-    public string? ClientIp => accessor.HttpContext?.Connection.RemoteIpAddress?.ToString();
-    public string? CorrelationId => accessor.HttpContext?.TraceIdentifier;
 
-    Guid? Read(string claim) => Guid.TryParse(accessor.HttpContext?.User.FindFirst(claim)?.Value, out var id) ? id : null;
+    /// <summary>
+    /// Reads a SignalR connection's own HttpContext (the principal it was opened with) instead of the ambient request: hub calls
+    /// run outside the request pipeline, on long polling inside another request entirely. Set per hub call (<see cref="HubRequestContext"/>).
+    /// </summary>
+    internal void UseConnection(HttpContext http) => connection = http;
+
+    HttpContext? Http => connection ?? accessor.HttpContext;
+    public Guid? UserId => Read(ClaimTypes.NameIdentifier);
+    public string? ClientIp => Http?.Connection.RemoteIpAddress?.ToString();
+    public string? CorrelationId => Http?.TraceIdentifier;
+
+    Guid? Read(string claim) => Guid.TryParse(Http?.User.FindFirst(claim)?.Value, out var id) ? id : null;
 }
 
 public static class LinkTenantScope

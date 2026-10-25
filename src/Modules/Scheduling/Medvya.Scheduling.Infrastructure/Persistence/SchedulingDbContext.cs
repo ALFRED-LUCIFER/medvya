@@ -49,6 +49,7 @@ public sealed class SchedulingDbContext(DbContextOptions<SchedulingDbContext> op
             e.Property(x => x.State).HasConversion<string>().HasMaxLength(20);
             e.Property(x => x.ReasonCategory).HasConversion<string>().HasMaxLength(30);
             e.Property(x => x.ReasonText).HasMaxLength(500);
+            e.Property(x => x.Room).HasMaxLength(50);
             e.Property(x => x.Channel).HasConversion<string>().HasMaxLength(20);
             e.HasIndex(x => new { x.TenantId, x.FacilityId, x.CalendarId, x.Start });
             // The day view and the board read a facility's time range: seek on Start and cover what the views need.

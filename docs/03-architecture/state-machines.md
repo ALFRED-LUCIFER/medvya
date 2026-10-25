@@ -13,6 +13,8 @@ WALK_IN ──▶ CHECKED_IN
 ```
 - Check-in is only allowed from BOOKED. No-show is only allowed from BOOKED. Cancel needs a reason and is not allowed once Completed.
 - Statuses visible to reception are **nonclinical**.
+- Call in (READY_FOR_DOCTOR → IN_CONSULT) records the room of the doctor's session from the schedule template (MDV-P1-029).
+- Every committed move is pushed to the facility's open boards as ids and state only (SignalR, MDV-P1-029); boards refetch the board.
 
 ## Membership (P0/P1)
 

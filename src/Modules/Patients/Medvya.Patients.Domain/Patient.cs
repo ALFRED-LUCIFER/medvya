@@ -27,7 +27,9 @@ public sealed class Patient
     /// <summary>True when the date of birth was derived from a stated age (India).</summary>
     [Classification(DataClass.Personal)] public bool DateOfBirthEstimated { get; set; }
     [Classification(DataClass.SensitiveHealth)] public SexAtBirth SexAtBirth { get; set; }
+    /// <summary>A code from the registration form (e.g. "NonBinary"), shown translated; optional and separate from sex at birth.</summary>
     [Classification(DataClass.SensitiveHealth)] public string? GenderIdentity { get; set; }
+    /// <summary>BCP 47 language code (e.g. "ml"), named in the UI language.</summary>
     [Classification(DataClass.Personal)] public string? PreferredLanguage { get; set; }
     /// <summary>ISO 3166-1 alpha-2.</summary>
     [Classification(DataClass.Personal)] public string? Nationality { get; set; }
@@ -45,6 +47,7 @@ public sealed class Patient
 
 /// <summary>
 /// One address shape for both countries. India: Line1 house/flat, Line2 street, City, District, Region state/UT, PostalCode PIN.
+/// India Region is the state/UT's official English name (IndiaRules.StatesAndUnionTerritories).
 /// UAE: Line1 villa/building, Line2 area, City, Region emirate code, Makani, PoBox.
 /// </summary>
 public sealed record PatientAddress
@@ -119,5 +122,6 @@ public sealed class PayerCoverage
     /// <summary>Insurance member card / policy number. Always Encrypted, deterministic (exact match for eligibility and claims).</summary>
     [Classification(DataClass.NationalId)] public string? MemberNumber { get; init; }
     [Classification(DataClass.Internal)] public DateOnly? ValidTo { get; init; }
+    /// <summary>UAE: the provider network or tier. India: the TPA that administers the policy (the claims network).</summary>
     [Classification(DataClass.Internal)] public string? Network { get; init; }
 }

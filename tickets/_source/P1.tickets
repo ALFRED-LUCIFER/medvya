@@ -317,10 +317,12 @@ ac:
 - Leave and exceptions are audited.
 
 === MDV-P1-013
-status: In progress
+status: Partly done
 progress:
 - Merged [PR #40](https://github.com/ALFRED-LUCIFER/medvya/pull/40): Patients module back end — India rules (minimum fields, ABHA optional, Aadhaar last 4 only, PIN, payer kinds), facility-scoped MRN, write and audit in one transaction (fail closed), audited reads, ABHA Always Encrypted with exact lookup
-- Left: endpoints and UI (P-02), consents (MDV-P1-019), family (MDV-P1-020), duplicates (MDV-P1-016)
+- Merged [PR #61](https://github.com/ALFRED-LUCIFER/medvya/pull/61): `POST /v1/patients` (facility from the session, country from the tenant) with the duplicate check (MDV-P1-016); [PR #58](https://github.com/ALFRED-LUCIFER/medvya/pull/58) and [PR #70](https://github.com/ALFRED-LUCIFER/medvya/pull/70): record page with identifiers masked to the last 4
+- [PR #82](https://github.com/ALFRED-LUCIFER/medvya/pull/82): full registration UI at /patients/new (quick mode at ?mode=quick): Identity & IDs → Contact & address → Payer → Review, per-step validation, focus to each step's heading, errors announced; ABHA optional, Aadhaar last 4 only (12 digits refused with the reason), state/UT from the official list (checked on the server), PIN 6 digits, payer kinds with their own fields (TPA kept as the network); preview card, data map and rules panel; success screen with MRN, time, actor and next actions; country from the tenant via /v1/me/context; record answer tested against an exact field allowlist (registration data only, no clinical fields); en/hi/ar, axe clean, 375/768/1366 px, 200 % zoom; real-API browser check
+- Left: Family & emergency step (MDV-P1-020); Consents step and CONSENT_RECEIPT in the same transaction (MDV-P1-019); "Verify with ABHA" (P8); PAN / Voter ID / driving licence as other ID types and "Save draft" (in the design, not in the ACs)
 title: Patient registration — India full flow (identity, ABHA optional, Aadhaar last 4, Indian address, payer)
 type: Story
 epic: MDV-P1-E05
@@ -348,7 +350,8 @@ ac:
 status: In progress
 progress:
 - Merged [PR #40](https://github.com/ALFRED-LUCIFER/medvya/pull/40): UAE rules — Emirates ID format, expired EID warns, EID-or-passport minimum, Arabic name, emirate mapped to Malaffi/NABIDH/Riayati, Makani/P.O. Box, insurance member number Always Encrypted
-- Left: endpoints and RTL UI; UAE-deployment configuration test
+- [PR #82](https://github.com/ALFRED-LUCIFER/medvya/pull/82): UAE full registration UI — name as on EID plus Arabic name typed right to left (preview card and Review), Emirates ID or passport, "Format 784-YYYY-NNNNNNN-N", expired EID warns while typing and on the success screen but never blocks, nationality and language named with Intl.DisplayNames, emirate → HIE label (Malaffi / NABIDH / Riayati) under the field, Makani and P.O. Box, insurance with member card, expiry, plan and network (eligibility marked M4); HTTP test with a UAE tenant (rules follow the tenant, not the body); browser-checked in Arabic against the real API
+- Left: the HIE label on the Consents step (MDV-P1-019); "UAE tenant cannot be created in the India deployment" belongs to tenant creation (MDV-P1-004); card reader and UAE PASS (P5)
 title: Patient registration — UAE flow (Emirates ID manual entry, Arabic name RTL, emirate, insurance card)
 type: Story
 epic: MDV-P1-E05
@@ -372,11 +375,13 @@ ac:
 - UAE tenant data is stored only in the UAE deployment (configuration test: UAE tenant cannot be created in the India deployment).
 
 === MDV-P1-015
-status: In progress
+status: Partly done
 progress:
 - Merged [PR #40](https://github.com/ALFRED-LUCIFER/medvya/pull/40): quick registration saves as Incomplete until address and payer exist; completing closes it
-- [PR #79](https://github.com/ALFRED-LUCIFER/medvya/pull/79): security fix — completion and registration writes reach the active facility's patients only; `POST /v1/patients/{id}/completion` (Full access): 200 + one Allowed row in the change's transaction, another facility's patient 404 + one NotFound row and nothing changed; mutation-checked
-- Left: board/header tag, CARE_TASK queue, emergency contact (MDV-P1-020), completion UI, timed usability check
+- Merged [PR #61](https://github.com/ALFRED-LUCIFER/medvya/pull/61): quick form (5 fields, keyboard only) with the duplicate check; [PR #62](https://github.com/ALFRED-LUCIFER/medvya/pull/62) board card and [PR #58](https://github.com/ALFRED-LUCIFER/medvya/pull/58) record header show "Registration incomplete"
+- Merged [PR #79](https://github.com/ALFRED-LUCIFER/medvya/pull/79): security fix — completion and registration writes reach the active facility's patients only; `POST /v1/patients/{id}/completion` (Full access): 200 + one Allowed row in the change's transaction, another facility's patient 404 + one NotFound row and nothing changed; mutation-checked
+- [PR #82](https://github.com/ALFRED-LUCIFER/medvya/pull/82): quick and full are one form with a mode toggle; switching keeps what was typed
+- Left: completion UI from the record (next PR in this stack); emergency contact in the completion check (MDV-P1-020); CARE_TASK queue (MDV-P4-016); timed usability check with a trained user (pilot)
 title: Quick registration for a busy desk with a completion task
 type: Story
 epic: MDV-P1-E05
@@ -399,11 +404,12 @@ ac:
 - Duplicate check (MDV-P1-016) still runs in quick mode.
 
 === MDV-P1-016
-status: In progress
+status: Done
 progress:
-- [PR #61](https://github.com/ALFRED-LUCIFER/medvya/pull/61) (in review): possible match = exact ABHA/EID/passport (deterministic Always Encrypted) or similar name + identical non-estimated DOB, never phone; privacy-safe candidates (initials, age, masked IDs); registration re-checks and saves nothing until resolved (quick mode too); decisions stored as MergeRequest (NotSame / Proposed) and audited with the actor; `POST /v1/patients/duplicate-check` and `POST /v1/patients` (Full access, facility from the session); quick form with debounced warning, review panel and "Resolve duplicate to save", en/hi/ar RTL, axe clean
+- Merged [PR #61](https://github.com/ALFRED-LUCIFER/medvya/pull/61): possible match = exact ABHA/EID/passport (deterministic Always Encrypted) or similar name + identical non-estimated DOB, never phone; privacy-safe candidates (initials, age, masked IDs); registration re-checks and saves nothing until resolved (quick mode too); decisions stored as MergeRequest (NotSame / Proposed) and audited with the actor; `POST /v1/patients/duplicate-check` and `POST /v1/patients` (Full access, facility from the session); quick form with debounced warning, review panel and "Resolve duplicate to save", en/hi/ar RTL, axe clean
 - Tested on SQL Server (duplicate-check p95 10 ms with 50,000 synthetic patients locally); 13 mutations each caught
-- Left: merge review queue, approval and suppression of "not the same" pairs (MDV-P1-017); real sessions need MDV-P0-012; thresholds to tune on pilot data
+- [PR #82](https://github.com/ALFRED-LUCIFER/medvya/pull/82): the same check and "Resolve duplicate to save" on the Review step of full registration, also matching ABHA address and passport
+- Follow-ups outside this ticket: merge review queue, approval and suppression of "not the same" pairs (MDV-P1-017); thresholds to tune on pilot data
 title: Duplicate warning while typing and duplicate resolution before save
 type: Story
 epic: MDV-P1-E05

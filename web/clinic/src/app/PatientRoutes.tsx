@@ -1,7 +1,7 @@
-import { useParams } from 'react-router';
+import { useParams, useSearchParams } from 'react-router';
 import type { Country } from '@medvya/i18n';
-import QuickRegistration from '../features/registration/components/QuickRegistration';
-import { useQuickRegistrationController } from '../features/registration/hooks/useQuickRegistrationController';
+import Registration from '../features/registration/components/Registration';
+import { useRegistrationController } from '../features/registration/hooks/useRegistrationController';
 import PatientDirectory from '../features/patients/components/PatientDirectory';
 import PatientRecord from '../features/patients/components/PatientRecord';
 import { usePatientDirectoryController } from '../features/patients/hooks/usePatientDirectoryController';
@@ -21,8 +21,11 @@ function Record({ patientId, canReveal }: { patientId: string; canReveal: boolea
 
 type RegistrationLinks = { country: Country; actorName: string; bookPath: string | null; checkInPath: string | null };
 
-export function QuickRegistrationRoute(links: RegistrationLinks) {
-  return <QuickRegistration {...useQuickRegistrationController(links.country)} {...links} recordPath={recordPath} />;
+/** ?mode=quick opens quick registration (the busy desk, walk-ins); without it, the full flow. The mode is not patient data. */
+export function RegistrationRoute(links: RegistrationLinks) {
+  const [params] = useSearchParams();
+  const quick = params.get('mode') === 'quick';
+  return <Registration {...useRegistrationController(links.country, quick)} {...links} recordPath={recordPath} quickPath="?mode=quick" fullPath="?mode=full" />;
 }
 
 export function PatientRecordRoute({ canReveal }: { canReveal: boolean }) {

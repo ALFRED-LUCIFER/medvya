@@ -4,6 +4,7 @@ import { ArrowLeft, Eye, TriangleAlert } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
 import { Button, buttonVariants, cn } from '@medvya/ui';
 import { addressLines, type PatientDetails, type RevealedIdentifiers } from '../domain/directory';
+import { genderIdentities, regionKey } from '../../registration/domain/registration';
 import PatientsMessage from './PatientsMessage';
 
 type Props = {
@@ -26,7 +27,7 @@ const Ltr = ({ children }: { children: ReactNode }) => <bdi dir="ltr">{children}
 /** An opened record for the front desk: registration data only, never clinical data. Opening it was audited by the server. */
 export default function PatientRecord(props: Props) {
   const { patient, state, onRetry, backPath } = props;
-  const { t, formatDate } = useI18n();
+  const { t, formatDate, locale, country } = useI18n();
   const date = (iso: string) => formatDate(new Date(`${iso.slice(0, 10)}T00:00:00`));
   const back = (
     <Link to={backPath} className={cn(buttonVariants({ variant: 'ghost' }), 'self-start px-2')}>
@@ -54,6 +55,11 @@ export default function PatientRecord(props: Props) {
   const p = patient;
   const none = <span className="text-muted-foreground">{t('patients.record.none')}</span>;
   const dob = p.dateOfBirthEstimated ? t('patients.record.dobEstimated', { date: date(p.dateOfBirth) }) : date(p.dateOfBirth);
+  // Codes stored at registration are shown in the UI language; older free-text values are shown as entered.
+  const gender = genderIdentities.find(g => g === p.genderIdentity);
+  const named = (type: 'language' | 'region', code: string) => new Intl.DisplayNames([locale], { type }).of(code) ?? code;
+  const region = p.address?.region ? regionKey(country, p.address.region) : null;
+  const address = p.address && region ? { ...p.address, region: t(region) } : p.address;
   const masked = (last: string) => t('patients.masked', { last });
   const full = (scheme: string) => props.revealed?.identifiers.find(i => i.scheme === scheme)?.value;
   const hasNumbers = p.identifiers.length > 0 || !!p.payer?.memberNumberLastFour;
@@ -80,9 +86,9 @@ export default function PatientRecord(props: Props) {
       <Section title={t('patients.record.identity')}>
         <Field label={t('patients.record.dob')}>{dob}</Field>
         <Field label={t('patients.record.sex')}>{t(`patients.sex.${p.sexAtBirth}`)}</Field>
-        <Field label={t('patients.record.gender')}>{p.genderIdentity ?? none}</Field>
-        <Field label={t('patients.record.language')}>{p.preferredLanguage ?? none}</Field>
-        <Field label={t('patients.record.nationality')}>{p.nationality ?? none}</Field>
+        <Field label={t('patients.record.gender')}>{gender ? t(`registration.gender.${gender}`) : p.genderIdentity ?? none}</Field>
+        <Field label={t('patients.record.language')}>{p.preferredLanguage ? named('language', p.preferredLanguage) : none}</Field>
+        <Field label={t('patients.record.nationality')}>{p.nationality ? named('region', p.nationality) : none}</Field>
         {/* A calendar date in the facility's country time zone, from the server; never re-derived from a UTC instant. */}
         <Field label={t('patients.record.registered')}>{date(p.registeredOn)}</Field>
       </Section>
@@ -101,7 +107,7 @@ export default function PatientRecord(props: Props) {
         <Field label={t('patients.record.mobile')}><Ltr>{p.mobile}</Ltr></Field>
         <Field label={t('patients.record.alternate')}>{p.alternatePhone ? <Ltr>{p.alternatePhone}</Ltr> : none}</Field>
         <Field label={t('patients.record.email')}>{p.email ? <Ltr>{p.email}</Ltr> : none}</Field>
-        <Field label={t('patients.record.address')}>{p.address ? <bdi>{addressLines(p.address).join(', ')}</bdi> : none}</Field>
+        <Field label={t('patients.record.address')}>{address ? <bdi>{addressLines(address).join(', ')}</bdi> : none}</Field>
       </Section>
 
       <Section title={t('patients.record.payer')}>

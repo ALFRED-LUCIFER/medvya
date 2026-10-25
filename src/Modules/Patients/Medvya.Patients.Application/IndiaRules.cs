@@ -17,6 +17,16 @@ public sealed partial class IndiaRules : CountryRules
 
     protected override bool AllowsAge => true;
 
+    /// <summary>The 28 states and 8 union territories by their official English names (stored as written here; the UI translates).</summary>
+    public static readonly IReadOnlySet<string> StatesAndUnionTerritories = new HashSet<string>(StringComparer.Ordinal)
+    {
+        "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jharkhand",
+        "Karnataka", "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Punjab", "Rajasthan",
+        "Sikkim", "Tamil Nadu", "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal",
+        "Andaman and Nicobar Islands", "Chandigarh", "Dadra and Nagar Haveli and Daman and Diu", "Delhi", "Jammu and Kashmir", "Ladakh",
+        "Lakshadweep", "Puducherry",
+    };
+
     protected override string? NormalizeMobile(string value) =>
         Mobile().Match(value) is { Success: true } m ? "+91" + m.Groups[1].Value : null;
 
@@ -43,6 +53,7 @@ public sealed partial class IndiaRules : CountryRules
     {
         if (a.City is null) errors.Add(new("address.city", "required"));
         if (a.Region is null) errors.Add(new("address.region", "required"));
+        else if (!StatesAndUnionTerritories.Contains(a.Region)) errors.Add(new("address.region", "not_allowed"));
         if (a.PostalCode is null || !Pin().IsMatch(a.PostalCode)) errors.Add(new("address.postalCode", "format")); // "PIN code must be 6 digits"
         NotApplicable(a.Makani, "address.makani", errors);
         NotApplicable(a.PoBox, "address.poBox", errors);

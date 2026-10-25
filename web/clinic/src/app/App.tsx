@@ -75,7 +75,8 @@ export default function App({ locale, onLocaleChange }: Props) {
           </AppShell>}>
           <Route index element={first ? <Navigate to={first.path} replace /> : <ShellMessage title={t('shell.noScreens.title')} body={t('shell.noScreens.body')} />} />
           {shell.items.map(i => <Route key={i.id} path={i.path} element={i.id === 'schedule'
-            ? <ScheduleRoute facilityId={active.facilityId} userId={shell.session?.user.id ?? ''} canBook={active.capabilities.RegisterBookPatients === 'Full'} registerPath={registerPath} />
+            ? <ScheduleRoute facilityId={active.facilityId} userId={shell.session?.user.id ?? ''} canBook={active.capabilities.RegisterBookPatients === 'Full'}
+                canCheckIn={active.capabilities.CheckInQueue === 'Full'} registerPath={registerPath} />
             : i.id === 'register' ? registration
             : i.id === 'frontDesk'
             ? <FrontDeskRoute facilityId={active.facilityId} online={online} canMove={active.capabilities.CheckInQueue === 'Full'}

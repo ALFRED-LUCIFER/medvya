@@ -32,8 +32,8 @@ public sealed class SlotUnavailableException(string code) : Exception("Slot no l
 public sealed class AppointmentNotFoundException() : Exception("Appointment not found.");
 
 /// <summary>
-/// The visit cannot make this move: not the next step of the state machine, or not on the visit's day. Code is a stable key
-/// ("invalid_transition", "not_today") the UI translates; no patient data.
+/// The visit cannot make this move: not allowed from its state, not on the visit's day, not started yet, or changed by someone
+/// else meanwhile. Code is a stable key ("invalid_transition", "not_today", "not_started", "changed") the UI translates; no patient data.
 /// </summary>
 public sealed class VisitTransitionException(string code) : Exception("Visit cannot move: " + code)
 {

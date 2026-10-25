@@ -23,13 +23,37 @@ export function AppointmentChip({ appointment: a, time, wrap = false, className 
   const { t } = useI18n();
   const look = stateLook(a.state);
   return (
-    <div className={cn('flex flex-col gap-0.5 overflow-hidden rounded-lg px-2 py-1', className)} style={{ backgroundColor: look.bg, color: look.fg, border: look.border }}>
+    // A span (displayed as a flex box) so the chip is valid inside the button that opens it.
+    <span className={cn('flex flex-col gap-0.5 overflow-hidden rounded-lg px-2 py-1', className)} style={{ backgroundColor: look.bg, color: look.fg, border: look.border }}>
       <span className={cn('text-sm font-bold text-foreground', wrap ? 'break-words' : 'truncate')}>{a.patientName}</span>
       <span className={cn('flex items-center gap-x-1 text-xs', wrap ? 'flex-wrap' : 'truncate')}>
         <StateLabel state={a.state} />
         {t('schedule.appointment.detail', { time: time(a.start), type: t(`visitType.${a.visitType}`) })}
       </span>
-    </div>
+    </span>
+  );
+}
+
+/** Opens a visit's detail panel. */
+export type OpenHandler = (appointment: Appointment, calendarId: string, calendarName: string) => void;
+/** A booked visit dropped on an empty slot (drag to reschedule; the panel then asks before moving). */
+export type DropHandler = (appointment: Appointment, from: { calendarId: string; calendarName: string }, to: { calendarId: string; calendarName: string; start: string }) => void;
+/** What the drag carries: the visit's id only, never patient data. */
+export const dragType = 'application/x-medvya-appointment';
+
+/**
+ * The chip as a button that opens the visit; a booked visit can also be dragged to a new slot when the role may book.
+ * Dragging is never the only way: the panel's Reschedule picks a slot by click or keyboard (WCAG 2.5.7).
+ */
+export function OpenableChip({ appointment, time, wrap, className, onOpen, draggable }: {
+  appointment: Appointment; time: (iso: string) => string; wrap?: boolean; className?: string; onOpen: () => void; draggable: boolean;
+}) {
+  return (
+    <button type="button" onClick={onOpen} draggable={draggable || undefined}
+      onDragStart={draggable ? e => { e.dataTransfer.setData(dragType, appointment.id); e.dataTransfer.effectAllowed = 'move'; } : undefined}
+      className={cn('block w-full rounded-lg text-start focus-visible:outline-offset-2', draggable && 'cursor-grab', className)}>
+      <AppointmentChip appointment={appointment} time={time} wrap={wrap} className="h-full" />
+    </button>
   );
 }
 

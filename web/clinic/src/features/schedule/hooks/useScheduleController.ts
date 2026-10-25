@@ -58,6 +58,7 @@ export function useScheduleController(facilityId: string, userId: string) {
     agenda: useMemo(() => (filtered ? agenda(filtered) : []), [filtered]),
     week: useMemo(() => (week.data ? weekDays(week.data) : null), [week.data]),
     weekName: columns.find(c => c.calendarId === weekCalendar)?.name ?? '',
+    weekCalendar,
     // "Now" is when this data arrived: pure during render, and a slot that started since is refused by the server anyway.
     nextFree: filtered ? firstFreeSlot(filtered, new Date(query.dataUpdatedAt)) : null,
     updating: current.isPlaceholderData,

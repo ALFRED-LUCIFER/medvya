@@ -1,15 +1,15 @@
 import { useI18n } from '@medvya/i18n';
 import { cn } from '@medvya/ui';
 import type { WeekDay } from '../domain/views';
-import { AppointmentChip } from './parts';
+import { AppointmentChip, OpenableChip, type OpenHandler } from './parts';
 
-type Props = { name: string; days: WeekDay[]; timeZone: string; updating: boolean; onOpenDay: (date: string) => void };
+type Props = { name: string; calendarId: string; days: WeekDay[]; timeZone: string; updating: boolean; onOpenDay: (date: string) => void; onOpen?: OpenHandler };
 
 /**
  * Week view of one doctor or resource: per day the booked count against capacity and that day's appointments; a day opens its
  * day view. Seven columns from tablet width (scrolling inside its own focusable box when narrower); stacked days on phones.
  */
-export default function WeekView({ name, days, timeZone, updating, onOpenDay }: Props) {
+export default function WeekView({ name, calendarId, days, timeZone, updating, onOpenDay, onOpen }: Props) {
   const { t, formatTime, formatDay, formatShortDay } = useI18n();
   const time = (iso: string) => formatTime(new Date(iso), timeZone);
   return (
@@ -36,7 +36,9 @@ export default function WeekView({ name, days, timeZone, updating, onOpenDay }: 
             )}
             {d.appointments.length > 0 && (
               <ul aria-label={t('schedule.week.appointments', { day: formatDay(d.date) })} className="flex flex-col gap-1.5">
-                {d.appointments.map(a => <li key={a.id}><AppointmentChip appointment={a} time={time} wrap /></li>)}
+                {d.appointments.map(a => <li key={a.id}>{onOpen
+                  ? <OpenableChip appointment={a} time={time} wrap onOpen={() => onOpen(a, calendarId, name)} draggable={false} />
+                  : <AppointmentChip appointment={a} time={time} wrap />}</li>)}
               </ul>
             )}
           </li>

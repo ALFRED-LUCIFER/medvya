@@ -6,11 +6,11 @@ import ShellMessage from '../../shell/components/ShellMessage';
 import type { DayLayout, ScheduleColumn } from '../domain/schedule';
 import { scheduleViews, type AgendaEntry, type ScheduleView, type WeekDay } from '../domain/views';
 import AgendaView from './AgendaView';
-import DayGrid, { type SlotHandler } from './DayGrid';
+import DayGrid, { type GridActions } from './DayGrid';
 import { Legend } from './parts';
 import WeekView from './WeekView';
 
-export type { SlotHandler } from './DayGrid';
+export type { GridActions, SlotHandler } from './DayGrid';
 
 type Props = {
   view: ScheduleView;
@@ -26,6 +26,7 @@ type Props = {
   agenda: { column: ScheduleColumn; entries: AgendaEntry[] }[];
   week: WeekDay[] | null;
   weekName: string;
+  weekCalendar: string | null;
   /** The previous data is still on screen while the asked-for one loads. */
   updating: boolean;
   loading: boolean;
@@ -38,7 +39,8 @@ type Props = {
   onNext: () => void;
   onToday: () => void;
   onRetry: () => void;
-  onSlot?: SlotHandler;
+  /** Book or pick an empty slot, open a visit (MDV-P1-024), drop a dragged visit on a slot; `moving` names the patient being moved. */
+  actions: GridActions;
   /** Opens booking at the next free slot (the pinned "+ Book" on phones); absent when the role may not book or nothing is free. */
   onBookNext?: () => void;
   /** The booking panel (or its hint), beside the schedule on wide screens and above it on narrow ones. */
@@ -119,7 +121,9 @@ function Body(p: Props) {
   if (p.loading || !p.day || !p.timeZone) return <ShellMessage heading="h2" busy title={t('schedule.loading')} />;
   if (p.day.columns.length === 0 && p.calendars.length === 0) return <ShellMessage heading="h2" title={t('schedule.empty.title')} body={t('schedule.empty.body')} />;
   if (p.view === 'week')
-    return p.week ? <WeekView name={p.weekName} days={p.week} timeZone={p.timeZone} updating={p.updating} onOpenDay={p.onOpenDay} /> : <ShellMessage heading="h2" busy title={t('schedule.loading')} />;
-  if (p.view === 'list') return <AgendaView sections={p.agenda} timeZone={p.timeZone} updating={p.updating} onSlot={p.onSlot} />;
-  return <DayGrid day={p.day} updating={p.updating} onSlot={p.onSlot} />;
+    return p.week && p.weekCalendar
+      ? <WeekView name={p.weekName} calendarId={p.weekCalendar} days={p.week} timeZone={p.timeZone} updating={p.updating} onOpenDay={p.onOpenDay} onOpen={p.actions.onOpen} />
+      : <ShellMessage heading="h2" busy title={t('schedule.loading')} />;
+  if (p.view === 'list') return <AgendaView sections={p.agenda} timeZone={p.timeZone} updating={p.updating} onSlot={p.actions.onSlot} onOpen={p.actions.onOpen} moving={p.actions.moving} />;
+  return <DayGrid day={p.day} updating={p.updating} {...p.actions} />;
 }

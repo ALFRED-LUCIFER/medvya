@@ -1,5 +1,6 @@
 import type { BookedAppointment, BookingForm, Hold, PatientMatch, SlotChoice } from '../domain/booking';
-import type { ScheduleDay } from '../domain/schedule';
+import type { CancelReason } from '../domain/changes';
+import type { Appointment, ScheduleDay } from '../domain/schedule';
 import type { ScheduleWeek } from '../domain/views';
 
 /** An API answer other than 2xx. `status` tells 403 from other failures; `code` is the 409 reason (e.g. "being_booked"). */
@@ -57,3 +58,12 @@ export async function findPatient(facilityId: string, patientId: string): Promis
     throw e;
   }
 }
+
+// MDV-P1-024: changing a booking. Ids in the path, the new slot or the reason in the body; never patient data in the URL.
+export const rescheduleAppointment = (appointmentId: string, calendarId: string, start: string) =>
+  post<Appointment>(`/v1/appointments/${appointmentId}/reschedule`, { calendarId, start });
+
+export const cancelAppointment = (appointmentId: string, reason: CancelReason, note: string) =>
+  post<Appointment>(`/v1/appointments/${appointmentId}/cancel`, { reason, note: note || null });
+
+export const markNoShow = (appointmentId: string) => post<Appointment>(`/v1/appointments/${appointmentId}/no-show`, {});

@@ -39,7 +39,7 @@ export default function AppShell({ displayName, role, facilityName, groups, tabs
 
       {/* Sidebar (≥1280) and icon rail (768–1279). Navy surface: focus ring switches to white for contrast. */}
       <nav aria-label={t('shell.mainNav')}
-        className="sticky top-0 hidden h-screen flex-col gap-1 overflow-y-auto bg-brand-950 px-3 py-4 text-nav-ink md:flex [&_:focus-visible]:outline-white">
+        className="sticky top-0 hidden h-screen flex-col gap-1 overflow-y-auto bg-brand-950 px-3 py-4 text-nav-ink md:flex print:hidden [&_:focus-visible]:outline-white">
         <div className="flex items-center gap-2.5 pb-4 max-lg:justify-center lg:px-2">
           <span aria-hidden className="grid size-9 shrink-0 place-items-center rounded-[10px] bg-brand-700 font-extrabold text-white">{t('app.name').charAt(0)}</span>
           <div className="hidden min-w-0 lg:block">
@@ -79,7 +79,7 @@ export default function AppShell({ displayName, role, facilityName, groups, tabs
       </nav>
 
       <div className="flex min-w-0 flex-col">
-        <header className="sticky top-0 z-10 flex min-h-15 items-center gap-3 border-b bg-card px-4 md:px-6">
+        <header className="sticky top-0 z-10 flex min-h-15 items-center gap-3 border-b bg-card px-4 md:px-6 print:hidden">
           <p className="min-w-0 flex-1 truncate font-bold lg:invisible">{facilityName}</p>
           {searchPath && (
             <Link to={searchPath} className={cn(buttonVariants({ variant: 'outline' }), 'max-sm:size-11 max-sm:px-0')}>
@@ -96,7 +96,7 @@ export default function AppShell({ displayName, role, facilityName, groups, tabs
       </div>
 
       {/* Mobile bottom tabs (360–767 px): Today · Patients · Inbox · Messages · More, filtered to what this role may see. */}
-      <nav aria-label={t('shell.mainNav')} className="fixed inset-x-0 bottom-0 z-10 grid h-[72px] auto-cols-fr grid-flow-col border-t bg-card md:hidden">
+      <nav aria-label={t('shell.mainNav')} className="fixed inset-x-0 bottom-0 z-10 grid h-[72px] auto-cols-fr grid-flow-col border-t bg-card md:hidden print:hidden">
         {[...tabs.map(i => ({ key: i.id, to: i.path, Icon: navIcons[i.id], label: t(`nav.${i.id}`) })), { key: 'more', to: '/more', Icon: Menu, label: t('nav.more') }]
           .map(({ key, to, Icon, label }) => (
             <NavLink key={key} to={to} end

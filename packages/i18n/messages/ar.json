@@ -519,5 +519,20 @@
   "patients.record.revealed": "تم إظهار الأرقام كاملة.",
   "booking.error.busy": "هذا التقويم مشغول بحجوزات أخرى الآن. لم يُحفظ شيء؛ حاول مرة أخرى.",
   "booking.patientResults": "المرضى الذين تم العثور عليهم",
-  "booking.patientPick": "{initials}، {age}، {sex}، رقم الملف ينتهي بـ {mrn}. اختر لهذا الحجز"
+  "booking.patientPick": "{initials}، {age}، {sex}، رقم الملف ينتهي بـ {mrn}. اختر لهذا الحجز",
+  "schedule.slot.bookShort": "احجز",
+  "schedule.weekRange": "{from} – {to}",
+  "schedule.prevWeek": "الأسبوع السابق",
+  "schedule.nextWeek": "الأسبوع التالي",
+  "schedule.views": "طريقة عرض المواعيد",
+  "schedule.view.day": "يوم",
+  "schedule.view.week": "أسبوع",
+  "schedule.view.list": "قائمة",
+  "schedule.filter": "الطبيب أو المورد",
+  "schedule.filter.all": "كل الأطباء والموارد",
+  "schedule.bookNext": "حجز موعد",
+  "schedule.legend": "معنى الألوان والأشكال",
+  "schedule.weekOf": "أسبوع {name}",
+  "schedule.week.bookedOf": "محجوز من {capacity}",
+  "schedule.week.appointments": "مواعيد {day}"
 }

@@ -1,5 +1,6 @@
 import type { BookedAppointment, BookingForm, Hold, PatientMatch, SlotChoice } from '../domain/booking';
 import type { ScheduleDay } from '../domain/schedule';
+import type { ScheduleWeek } from '../domain/views';
 
 /** An API answer other than 2xx. `status` tells 403 from other failures; `code` is the 409 reason (e.g. "being_booked"). */
 export class ApiError extends Error {
@@ -31,6 +32,12 @@ export const post = <T>(url: string, body: unknown) =>
 export function fetchScheduleDay(facilityId: string, date: string | null): Promise<ScheduleDay> {
   const query = new URLSearchParams({ facilityId, ...(date ? { date } : {}) });
   return send(`/v1/schedule?${query}`);
+}
+
+/** Monday to Sunday of one doctor or resource around the date (this week when null). */
+export function fetchScheduleWeek(facilityId: string, calendarId: string, date: string | null): Promise<ScheduleWeek> {
+  const query = new URLSearchParams({ facilityId, calendarId, ...(date ? { date } : {}) });
+  return send(`/v1/schedule/week?${query}`);
 }
 
 export const holdSlot = (facilityId: string, s: SlotChoice) =>

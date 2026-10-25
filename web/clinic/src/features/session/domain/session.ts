@@ -1,3 +1,5 @@
+import type { Country } from '@medvya/i18n';
+
 // Names mirror the enums in src/Modules/Tenancy/Medvya.Tenancy.Domain/RoleMatrix.cs (the server is the authority).
 export type Role = 'SoloDoctor' | 'HospitalDoctor' | 'Receptionist' | 'Nurse' | 'CareCoordinator' | 'Patient' | 'PracticeAdmin' | 'HospitalIt';
 export type Capability =
@@ -9,6 +11,8 @@ export type Access = 'None' | 'Read' | 'Own' | 'Limited' | 'Released' | 'Full' |
 export type Membership = { id: string; tenantId: string; tenantName: string; facilityId: string; facilityName: string; role: Role };
 export type ActiveMembership = {
   membershipId: string; tenantId: string; facilityId: string; role: Role;
+  /** The tenant's country: picks registration rules and formats. Set by the server, never chosen in the client. */
+  country?: Country;
   capabilities: Partial<Record<Capability, Access>>;
   flags: string[];
 };

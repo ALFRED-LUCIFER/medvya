@@ -21,6 +21,11 @@ export default function RegistrationSuccess({ result, name, actorName, onRegiste
       <p className="text-muted-foreground">
         {t('registration.done.meta', { mrn: result.mrn, date: formatDate(at), time, actor: actorName })}
       </p>
+      {result.warnings.map(w => (
+        <p key={w} className="flex items-start gap-2 rounded-md border px-3 py-2 text-sm text-warning-700">
+          <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />{t(`registration.done.warning.${w === 'emirates_id.expired' ? w : 'generic'}`)}
+        </p>
+      ))}
       {result.status === 'Incomplete' && (
         <p className="flex items-start gap-2 rounded-md border px-3 py-2 text-sm text-warning-700">
           <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />

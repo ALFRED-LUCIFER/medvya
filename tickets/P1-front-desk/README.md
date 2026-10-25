@@ -10,7 +10,7 @@
 
 **Tickets:** 46 · **Estimate:** 86.5 dev-days vs **35 working days** in the window (OVER by 51.5 days: needs scope trade-off or overlap) · **Average confidence:** 81%
 
-**Status:** To do 32 · In progress 7 · Partly done 4 · Done 3
+**Status:** To do 32 · In progress 2 · Partly done 8 · Done 4
 
 ## Epics
 
@@ -42,23 +42,23 @@
 | [MDV-P1-007](MDV-P1-007.md) | To do | Add doctor (clinic mode): details, licence India/UAE, verification, schedule link, fees, access and signature image (F-09) | Story | MUST | P1-03 | F-09 | 3 | 5–6 | 23 Nov → 04 Dec 2026 | 70% Medium |
 | [MDV-P1-008](MDV-P1-008.md) | To do | Add staff with role, facility scope, permissions and invite; custom roles (F-10) | Story | MUST | P1-03 | F-10 | 2.5 | 5–5 | 23 Nov → 27 Nov 2026 | 78% Medium |
 | [MDV-P1-011](MDV-P1-011.md) | Partly done | Schedule templates: working hours, breaks, slot length per service, per-location calendars, time zones | Story | MUST | P1-04 | P-04 | 3 | 5–6 | 23 Nov → 04 Dec 2026 | 80% Medium |
-| [MDV-P1-013](MDV-P1-013.md) | In progress | Patient registration — India full flow (identity, ABHA optional, Aadhaar last 4, Indian address, payer) | Story | MUST | P1-05 | P-02 | 4 | 5–6 | 23 Nov → 04 Dec 2026 | 88% High |
+| [MDV-P1-013](MDV-P1-013.md) | Partly done | Patient registration — India full flow (identity, ABHA optional, Aadhaar last 4, Indian address, payer) | Story | MUST | P1-05 | P-02 | 4 | 5–6 | 23 Nov → 04 Dec 2026 | 88% High |
 | [MDV-P1-006](MDV-P1-006.md) | To do | Practice settings: notification preferences and data tab | Story | MUST | P1-02 | F-08 | 1.5 | 6–6 | 30 Nov → 04 Dec 2026 | 72% Medium |
 | [MDV-P1-009](MDV-P1-009.md) | To do | Staff offboarding removes access immediately and ends all sessions | Story | MUST | P1-11 | F-10 | 1 | 6–6 | 30 Nov → 04 Dec 2026 | 90% High |
 | [MDV-P1-012](MDV-P1-012.md) | To do | Leave and schedule exceptions with re-offer of affected appointments | Story | MUST | P1-04 | P-04 | 1.5 | 6–6 | 30 Nov → 04 Dec 2026 | 82% Medium |
 | [MDV-P1-014](MDV-P1-014.md) | In progress | Patient registration — UAE flow (Emirates ID manual entry, Arabic name RTL, emirate, insurance card) | Story | MUST | P1-05 | P-02 | 2.5 | 6–6 | 30 Nov → 04 Dec 2026 | 86% High |
-| [MDV-P1-015](MDV-P1-015.md) | In progress | Quick registration for a busy desk with a completion task | Story | MUST | P1-05 | P-02 | 1.5 | 6–6 | 30 Nov → 04 Dec 2026 | 90% High |
-| [MDV-P1-016](MDV-P1-016.md) | In progress | Duplicate warning while typing and duplicate resolution before save | Story | MUST | P1-05 | P-02 | 2.5 | 6–6 | 30 Nov → 04 Dec 2026 | 85% High |
+| [MDV-P1-015](MDV-P1-015.md) | Partly done | Quick registration for a busy desk with a completion task | Story | MUST | P1-05 | P-02 | 1.5 | 6–6 | 30 Nov → 04 Dec 2026 | 90% High |
+| [MDV-P1-016](MDV-P1-016.md) | Done | Duplicate warning while typing and duplicate resolution before save | Story | MUST | P1-05 | P-02 | 2.5 | 6–6 | 30 Nov → 04 Dec 2026 | 85% High |
 | [MDV-P1-019](MDV-P1-019.md) | To do | Legal terms and separate versioned consents at registration (treatment, reminders per channel, sharing, portal, marketing) | Story | MUST | P1-12 | P-02, F-08 | 3 | 6–7 | 30 Nov → 11 Dec 2026 | 75% Medium |
 | [MDV-P1-020](MDV-P1-020.md) | To do | Family, emergency contact and guardian rules (under-18 guardian required) | Story | MUST | P1-05 | P-02 | 1 | 6–6 | 30 Nov → 04 Dec 2026 | 88% High |
 | [MDV-P1-021](MDV-P1-021.md) | Partly done | Create an appointment from the calendar with a short slot hold | Story | MUST | P1-06, P1-07 | P-04 | 2.5 | 6–7 | 30 Nov → 11 Dec 2026 | 88% High |
-| [MDV-P1-023](MDV-P1-023.md) | In progress | Calendar views: day, week and list (per doctor and resource), mobile/tablet responsive | Story | MUST | P1-06 | P-04 | 3 | 6–7 | 30 Nov → 11 Dec 2026 | 86% High |
+| [MDV-P1-023](MDV-P1-023.md) | Partly done | Calendar views: day, week and list (per doctor and resource), mobile/tablet responsive | Story | MUST | P1-06 | P-04 | 3 | 6–7 | 30 Nov → 11 Dec 2026 | 86% High |
 | [MDV-P1-046](MDV-P1-046.md) | To do | Start UAE regulator onboarding applications early (risk mitigation) | Chore | SHOULD | — | — | 0.5 | 6–8 | 30 Nov → 18 Dec 2026 | 55% Low |
 | [MDV-P1-010](MDV-P1-010.md) | To do | Licence/registration expiry reminders and quarterly access review prompt | Story | MUST | P1-11 | — | 1.5 | 7–7 | 07 Dec → 11 Dec 2026 | 85% High |
 | [MDV-P1-017](MDV-P1-017.md) | To do | Duplicate / merge review with second approver when both records hold clinical data (P-03) | Story | MUST | P1-05 | P-03 | 2.5 | 7–7 | 07 Dec → 11 Dec 2026 | 82% Medium |
 | [MDV-P1-018](MDV-P1-018.md) | Done | Patient directory and privacy-safe search for the front desk | Story | MUST | P1-05 | P-02 | 2 | 7–7 | 07 Dec → 11 Dec 2026 | 84% Medium |
 | [MDV-P1-022](MDV-P1-022.md) | Partly done | No double booking under concurrency (unique index, serializable transaction, doctor-day app lock) | Story | MUST | P1-07 | — | 2 | 7–7 | 07 Dec → 11 Dec 2026 | 90% High |
-| [MDV-P1-024](MDV-P1-024.md) | In progress | Reschedule (incl. drag with confirm), cancel with reason, mark no-show with rebook offer | Story | MUST | P1-06 | P-04 | 2 | 7–7 | 07 Dec → 11 Dec 2026 | 90% High |
+| [MDV-P1-024](MDV-P1-024.md) | Partly done | Reschedule (incl. drag with confirm), cancel with reason, mark no-show with rebook offer | Story | MUST | P1-06 | P-04 | 2 | 7–7 | 07 Dec → 11 Dec 2026 | 90% High |
 | [MDV-P1-025](MDV-P1-025.md) | To do | Walk-in registration and booking straight to the queue | Story | MUST | P1-06 | P-01, P-04 | 1 | 7–7 | 07 Dec → 11 Dec 2026 | 88% High |
 | [MDV-P1-028](MDV-P1-028.md) | In progress | Reception board with visit columns and one-tap check-in | Story | MUST | P1-08 | P-01 | 3 | 7–8 | 07 Dec → 18 Dec 2026 | 82% Medium |
 | [MDV-P1-032](MDV-P1-032.md) | To do | Email confirmations and 24 h / 2 h reminders via SendGrid and Hangfire | Story | MUST | P1-09 | — | 2.5 | 7–8 | 07 Dec → 18 Dec 2026 | 86% High |

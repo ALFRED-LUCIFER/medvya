@@ -62,7 +62,7 @@ public static class SessionControl
     public static WebApplication MapSessionControl(this WebApplication app)
     {
         app.MapGet("/v1/me/context", async (ClaimsPrincipal principal, [FromServices] IStaffUsers users, [FromServices] IMembershipDirectory directory,
-            [FromServices] IFeatureFlags flags, CancellationToken ct) =>
+            [FromServices] IFeatureFlags flags, [FromServices] IStaffAccess staff, CancellationToken ct) =>
         {
             var user = Read(principal, ClaimTypes.NameIdentifier) is { } id ? await users.GetAsync(id, ct) : null;
             if (user is null) return Results.Unauthorized();
@@ -78,6 +78,8 @@ public static class SessionControl
                     MembershipId = active.Id,
                     active.TenantId,
                     active.FacilityId,
+                    // The tenant's country picks the registration rules and formats on the client; never chosen by the client.
+                    Country = await staff.TenantCountryAsync(ct),
                     Role = active.Role.ToString(),
                     Capabilities = RoleMatrix.Grants(active.Role).ToDictionary(g => g.Capability.ToString(), g => g.Access.ToString()),
                     Flags = await flags.EnabledKeysAsync(ct),

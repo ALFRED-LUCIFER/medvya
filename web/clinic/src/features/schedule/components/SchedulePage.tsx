@@ -1,7 +1,7 @@
 import { useRef, type ReactNode } from 'react';
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
+import { Button, cn, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
 import ShellMessage from '../../shell/components/ShellMessage';
 import type { DayLayout, ScheduleColumn } from '../domain/schedule';
 import { scheduleViews, type AgendaEntry, type ScheduleView, type WeekDay } from '../domain/views';
@@ -89,7 +89,8 @@ export default function SchedulePage(props: Props) {
         </div>
       </header>
       <Legend />
-      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
+      {/* The schedule takes the full width when no booking panel sits beside it (the week view). */}
+      <div className={cn('grid grid-cols-[minmax(0,1fr)] items-start gap-5', props.panel && 'lg:grid-cols-[minmax(0,1fr)_340px]')}>
         <Body {...props} />
         {props.panel && <div ref={panelRef} className="scroll-mt-20 max-lg:order-first lg:sticky lg:top-20 print:hidden">{props.panel}</div>}
       </div>

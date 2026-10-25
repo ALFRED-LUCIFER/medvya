@@ -36,7 +36,7 @@ export default function WeekView({ name, days, timeZone, updating, onOpenDay }: 
             )}
             {d.appointments.length > 0 && (
               <ul aria-label={t('schedule.week.appointments', { day: formatDay(d.date) })} className="flex flex-col gap-1.5">
-                {d.appointments.map(a => <li key={a.id}><AppointmentChip appointment={a} time={time} /></li>)}
+                {d.appointments.map(a => <li key={a.id}><AppointmentChip appointment={a} time={time} wrap /></li>)}
               </ul>
             )}
           </li>

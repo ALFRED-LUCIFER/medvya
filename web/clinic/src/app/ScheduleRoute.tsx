@@ -18,6 +18,7 @@ export default function ScheduleRoute({ facilityId, userId, canBook, registerPat
   return (
     <SchedulePage {...schedule} panel={panel}
       onSlot={canBook ? booking.onSlot : undefined}
-      onBookNext={canBook && next ? () => booking.onSlot(next.column.calendarId, next.column.name, next.slot.start) : undefined} />
+      // Hidden while a booking is under way, so it never covers the panel's fields.
+      onBookNext={canBook && next && !booking.choice ? () => booking.onSlot(next.column.calendarId, next.column.name, next.slot.start) : undefined} />
   );
 }

@@ -449,6 +449,7 @@ test('on a phone the list is the default, with a pinned Book that opens the next
   const panel = page.getByRole('complementary', { name: 'Book appointment' });
   await expect(panel).toContainText('Dr. Arjun Rao (synthetic) · 10:20–10:40');
   await expect(panel).toBeInViewport(); // brought into view above the list
+  await expect(book).toBeHidden(); // never covers the panel's fields while a booking is under way
   expect(calls.holds[0]).toMatchObject({ calendarId: 'd-1', start: ist('2026-10-19', '10:20') });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });

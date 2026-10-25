@@ -37,7 +37,7 @@ export default function AgendaView({ sections, timeZone, updating, onSlot }: Pro
 
 function Entry({ entry: e, name, calendarId, time, onSlot }: { entry: AgendaEntry; name: string; calendarId: string; time: (iso: string) => string; onSlot?: SlotHandler }) {
   const { t } = useI18n();
-  if (e.kind === 'appointment') return <AppointmentChip appointment={e} time={time} className="min-w-0 flex-1" />;
+  if (e.kind === 'appointment') return <AppointmentChip appointment={e} time={time} wrap className="min-w-0 flex-1" />;
   if (e.kind === 'unavailable') {
     const reason = e.label ? t('schedule.reasonWithLabel', { reason: t(`schedule.reason.${e.reason}`), label: e.label }) : t(`schedule.reason.${e.reason}`);
     const Icon = scheduleLooks.unavailable.icon;

@@ -47,10 +47,10 @@ export default function PatientRecord(props: Props) {
       <div className="flex max-w-[880px] flex-col gap-4">
         {back}
         {live}
-        {state === 'loading' ? <PatientsMessage title={t('patients.record.loading')} />
-          : state === 'forbidden' ? <PatientsMessage title={t('err.403')} body={t('patients.forbidden.body')} />
-          : state === 'notFound' ? <PatientsMessage title={t('patients.record.notFound.title')} body={t('patients.record.notFound.body')} />
-          : <PatientsMessage title={t('patients.error.title')} body={t('patients.error.body')} action={{ label: t('patients.retry'), onClick: onRetry }} />}
+        {state === 'loading' ? <PatientsMessage pageHeading title={t('patients.record.loading')} />
+          : state === 'forbidden' ? <PatientsMessage pageHeading title={t('err.403')} body={t('patients.forbidden.body')} />
+          : state === 'notFound' ? <PatientsMessage pageHeading title={t('patients.record.notFound.title')} body={t('patients.record.notFound.body')} />
+          : <PatientsMessage pageHeading title={t('patients.error.title')} body={t('patients.error.body')} action={{ label: t('patients.retry'), onClick: onRetry }} />}
       </div>
     );
 

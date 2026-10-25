@@ -12,6 +12,12 @@ namespace Medvya.Audit.Api;
 /// <summary>Endpoint metadata: this endpoint reads or writes patient data and is audited (PRD v2 P0-06).</summary>
 public sealed record AuditedEndpointMetadata(string Action, string ResourceType, string Purpose, string? PatientRouteKey);
 
+/// <summary>
+/// Endpoint metadata: the endpoint carries no patient data itself but opens a way to it (a real-time connection), so a request
+/// the authorization policy refuses is audited Denied as on an audited endpoint; what an allowed caller then does is audited there.
+/// </summary>
+public sealed record AuditedRefusalMetadata(string Action, string ResourceType, string Purpose);
+
 public static class AuditedEndpoint
 {
     /// <summary>
@@ -101,6 +107,11 @@ public static class AuditedEndpoint
     /// A refused call to an audited endpoint is itself audited (outcome Denied, PRD v2 P0-06), so every request to patient data
     /// leaves exactly one event whatever the decision. Register with the Audit module; it needs <see cref="IAuditLog"/>.
     /// </summary>
+    /// <summary>Audits refusals by the authorization policy only (<see cref="AuditedRefusalMetadata"/>), e.g. on a SignalR hub's routes.</summary>
+    public static TBuilder AuditRefusals<TBuilder>(this TBuilder builder, string action, string resourceType, string purpose = "treatment")
+        where TBuilder : IEndpointConventionBuilder =>
+        builder.WithMetadata(new AuditedRefusalMetadata(action, resourceType, purpose));
+
     public static IServiceCollection AddDeniedAccessAudit(this IServiceCollection services) =>
         services.AddSingleton<IAuthorizationMiddlewareResultHandler, AuditDeniedAccess>();
 
@@ -126,7 +137,7 @@ public static class AuditedEndpoint
 }
 
 /// <summary>
-/// Records a forbidden request to an <c>.Audited()</c> endpoint, then answers as ASP.NET Core would (403). Only signed-in callers
+/// Records a forbidden request to an <c>.Audited()</c> (or <c>.AuditRefusals()</c>) endpoint, then answers as ASP.NET Core would (403). Only signed-in callers
 /// inside a tenant leave an event: an audit row belongs to a tenant, and anonymous calls are refused before any tenant is known.
 /// </summary>
 public sealed class AuditDeniedAccess : IAuthorizationMiddlewareResultHandler
@@ -138,9 +149,13 @@ public sealed class AuditDeniedAccess : IAuthorizationMiddlewareResultHandler
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(authorizeResult);
         if (authorizeResult.Forbidden
-            && context.GetEndpoint()?.Metadata.GetMetadata<AuditedEndpointMetadata>() is { } metadata
+            && Of(context.GetEndpoint()) is { } metadata
             && context.RequestServices.GetRequiredService<ICurrentTenant>().TenantId is { } tenantId)
             await AuditedEndpoint.WriteAsync(context, metadata, tenantId, AuditOutcome.Denied);
         await fallback.HandleAsync(next, context, policy, authorizeResult);
     }
+
+    static AuditedEndpointMetadata? Of(Endpoint? endpoint) =>
+        endpoint?.Metadata.GetMetadata<AuditedEndpointMetadata>()
+        ?? (endpoint?.Metadata.GetMetadata<AuditedRefusalMetadata>() is { } r ? new(r.Action, r.ResourceType, r.Purpose, null) : null);
 }

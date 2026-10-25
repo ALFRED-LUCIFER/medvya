@@ -63,7 +63,7 @@ async function open(page: Page, { locale = 'en', as = reception, status = 200, m
     return r.fulfill({ json: c });
   });
   await page.goto('/front-desk');
-  return calls;
+  return Object.assign(calls, { state }); // state: what the server's board holds now, for changes made at "another desk"
 }
 
 const column = (page: Page, name: string) => page.getByRole('region', { name: new RegExp(`^${name}`) });
@@ -191,6 +191,89 @@ test('keyboard checks in; 44 px targets; tablet and 200% zoom scroll the board, 
 
   await page.setViewportSize({ width: 1024, height: 768 }); // tablet landscape
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});
+
+/**
+ * A stand-in for the board hub (MDV-P1-029), speaking SignalR's JSON protocol over long polling, the client's fallback
+ * transport. It answers Watch, can push BoardChanged, and can drop the connection and refuse to reconnect until restored.
+ */
+async function fakeHub(page: Page) {
+  const RS = '\u001e';
+  let queue: string[] = [];
+  let waiting: ((body: string | null) => void) | null = null;
+  let down = false;
+  const hub = { watched: [] as unknown[], negotiations: 0 };
+  const flush = () => {
+    if (waiting && queue.length) {
+      const send = waiting;
+      waiting = null;
+      send(queue.join(''));
+      queue = [];
+    }
+  };
+  const emit = (message: object) => { queue.push(JSON.stringify(message) + RS); flush(); };
+  await page.route('**/v1/hubs/board/negotiate*', r => {
+    if (down) return r.fulfill({ status: 503, body: '' });
+    hub.negotiations++;
+    return r.fulfill({ json: { negotiateVersion: 1, connectionId: `c${hub.negotiations}`, connectionToken: `k${hub.negotiations}`,
+      availableTransports: [{ transport: 'LongPolling', transferFormats: ['Text', 'Binary'] }] } });
+  });
+  let firstPoll = true;
+  await page.route('**/v1/hubs/board?*', async r => {
+    const request = r.request();
+    expect(request.url()).not.toMatch(/Meera|Iyer/); // nothing about patients in the hub's URLs
+    if (request.method() === 'DELETE') return r.fulfill({ status: 202, body: '' });
+    if (request.method() === 'POST') {
+      for (const frame of (request.postData() ?? '').split(RS).filter(Boolean)) {
+        const message = JSON.parse(frame) as { protocol?: string; type?: number; target?: string; invocationId?: string; arguments?: unknown[] };
+        if (message.protocol) emit({}); // handshake
+        else if (message.type === 1 && message.target === 'Watch') {
+          hub.watched.push(message.arguments?.[0]);
+          emit({ type: 3, invocationId: message.invocationId, result: null });
+        }
+      }
+      return r.fulfill({ status: 200, body: '' });
+    }
+    if (firstPoll) { firstPoll = false; return r.fulfill({ status: 200, body: '' }); } // the long-polling transport's opening poll
+    const body = await new Promise<string | null>(resolve => { waiting = resolve; flush(); });
+    return body === null ? r.fulfill({ status: 204, body: '' }) : r.fulfill({ status: 200, body });
+  });
+  return Object.assign(hub, {
+    push: (appointmentId: string, state: string) => emit({ type: 1, target: 'BoardChanged', arguments: [{ appointmentId, state, changedAt: now }] }),
+    /** Ends the connection from the server side and refuses new ones until restored. */
+    drop: () => { down = true; firstPoll = true; waiting?.(null); waiting = null; queue = []; },
+    restore: () => { down = false; },
+  });
+}
+
+test('live: a change made at another desk appears without reloading, and a drop pauses then resyncs', async ({ page }) => {
+  const hub = await fakeHub(page);
+  const calls = await open(page);
+  const status = page.getByRole('status').filter({ hasText: /Live updates/ });
+  await expect(status).toHaveText('Live updates');
+  expect(hub.watched).toEqual(['f-1']);
+  await expect.poll(() => calls.boards).toBe(2); // the first load, then a refetch once joined
+
+  // Another desk calls in Farhan: the server's board changes, the hub says so, this board refetches.
+  calls.state.find(c => c.id === 'a2')!.state = 'InConsult';
+  hub.push('a2', 'InConsult');
+  await expect(column(page, 'In consult').getByRole('article', { name: 'Farhan Qureshi (synthetic)' })).toBeVisible();
+
+  // The connection drops and cannot come back for a while: the board says so in words, and misses nothing.
+  hub.drop();
+  await expect(status).toHaveText('Live updates paused · refreshing every 30 s');
+  calls.state.find(c => c.id === 'a3')!.state = 'ReadyForDoctor'; // changed while this board was not listening
+  hub.restore();
+  await expect(status).toHaveText('Live updates', { timeout: 20_000 });
+  await expect(column(page, 'Ready for doctor').getByRole('article', { name: 'Lakshmi Pillai (synthetic)' })).toBeVisible();
+  expect(hub.watched).toEqual(['f-1', 'f-1']);
+});
+
+test('live: unreachable hub shows the paused state, in Arabic too', async ({ page }) => {
+  await page.route('**/v1/hubs/board/negotiate*', r => r.fulfill({ status: 503, body: '' }));
+  await open(page, { locale: 'ar' });
+  await expect(page.getByRole('status').filter({ hasText: 'التحديثات المباشرة متوقفة مؤقتًا' })).toBeVisible();
+  await expect(cardOf(page, 'Meera Iyer (synthetic)')).toBeVisible(); // the board itself still loads and refreshes
 });
 
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');

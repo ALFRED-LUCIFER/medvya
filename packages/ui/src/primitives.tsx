@@ -3,7 +3,7 @@ import {
   Send, Pipette, Inbox, Eye, Phone, MessageSquareCheck, CircleCheck,
   Sparkles, BadgeCheck, User, ArrowLeftRight, Upload, Lock,
   CircleAlert, TriangleAlert, Info, Pause, CircleMinus, Pill as PillIcon, CircleHelp,
-  Clock, Ban, SearchX, WifiOff, Hourglass, CalendarCheck, Tag, UserCheck, DoorOpen, CalendarX, CircleX, type LucideIcon,
+  Clock, Ban, SearchX, WifiOff, Hourglass, CalendarCheck, Tag, UserCheck, DoorOpen, CalendarX, CircleX, Radio, RefreshCw, type LucideIcon,
 } from 'lucide-react';
 import { useI18n, type MessageKey } from '@medvya/i18n';
 import { Button } from '#components/ui/button';
@@ -66,6 +66,10 @@ export const frontDeskLooks = {
   reason: { label: 'board.tag.reason', icon: Tag, bg: '#F1F5F8', fg: '#334E68' },
   incomplete: { label: 'board.tag.incomplete', icon: TriangleAlert, bg: '#FDF5E7', fg: '#7A4710' },
   waiting: { label: 'board.waiting', icon: Hourglass, bg: '#FFFFFF', fg: '#7A4710' },
+  room: { label: 'board.room', icon: DoorOpen, bg: '#E7F6F4', fg: '#0F766E' },
+  live: { label: 'board.live.live', icon: Radio, bg: '#E6F4EF', fg: okOnTint },
+  connecting: { label: 'board.live.connecting', icon: RefreshCw, bg: '#F1F5F8', fg: '#334E68' },
+  paused: { label: 'board.live.paused', icon: WifiOff, bg: '#FDF5E7', fg: '#7A4710' },
 } satisfies Record<string, Look>;
 
 const paint = (look: Look): CSSProperties => ({ backgroundColor: look.bg, color: look.fg, border: look.border });

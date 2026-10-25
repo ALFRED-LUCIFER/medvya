@@ -16,7 +16,7 @@ const leela = {
   alternatePhone: null, email: null, status: 'Incomplete', registeredOn: '2026-10-25', address: null, identifiers: [], payer: null,
 };
 
-async function open(page: Page, { capabilities = full, locale = 'en' } = {}) {
+async function open(page: Page, { capabilities = full as Record<string, string>, locale = 'en' } = {}) {
   const saves: Request[] = [];
   await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
   await page.route('**/v1/me/context', r => r.fulfill({ json: desk(capabilities) }));

@@ -1,14 +1,24 @@
+import type { DragEvent } from 'react';
 import { useI18n } from '@medvya/i18n';
 import { cn, scheduleLooks } from '@medvya/ui';
 import type { ColumnItem, ColumnLayout, DayLayout } from '../domain/schedule';
 import { hatched } from './looks';
-import { AppointmentChip } from './parts';
+import { AppointmentChip, dragType, OpenableChip, type DropHandler, type OpenHandler } from './parts';
 
 /** Called when an empty slot is clicked; absent when the role may not book (the grid is then read-only). */
 export type SlotHandler = (calendarId: string, calendarName: string, start: string) => void;
 
+/** What the grid can do beyond showing: book or pick an empty slot, open a visit, drop a dragged visit on a slot. */
+export type GridActions = {
+  onSlot?: SlotHandler;
+  onOpen?: OpenHandler;
+  onDrop?: DropHandler;
+  /** The patient being rescheduled: empty slots then read "Move … to …" instead of "Book …". */
+  moving?: string;
+};
+
 /** Day view: a column per doctor and resource on one time scale, so a 40-minute visit spans two 20-minute slots. */
-export default function DayGrid({ day, updating, onSlot }: { day: DayLayout; updating: boolean; onSlot?: SlotHandler }) {
+export default function DayGrid({ day, updating, ...actions }: { day: DayLayout; updating: boolean } & GridActions) {
   const { t, formatTime } = useI18n();
   const time = (iso: string) => formatTime(new Date(iso), day.timeZone);
   // The grid scrolls inside its own box so headers stick to its top and the time axis to its reading-start side.
@@ -26,7 +36,7 @@ export default function DayGrid({ day, updating, onSlot }: { day: DayLayout; upd
         </div>
         {day.columns.map(c => (
           <ul key={c.calendarId} aria-labelledby={`schedule-col-${c.calendarId}`} className="relative border-s" style={{ height: day.height }}>
-            {c.items.map(i => <Item key={`${i.kind}-${i.start}`} item={i} column={c} time={time} onSlot={onSlot} />)}
+            {c.items.map(i => <Item key={`${i.kind}-${i.start}`} item={i} column={c} day={day} time={time} {...actions} />)}
           </ul>
         ))}
       </div>
@@ -50,10 +60,18 @@ function ColumnHeader({ column: c }: { column: ColumnLayout }) {
 /** Below this height the words do not fit; the block then shows its icon and names the reason as its tooltip. */
 const minLabelPx = 32;
 
-function Item({ item, column, time, onSlot }: { item: ColumnItem; column: ColumnLayout; time: (iso: string) => string; onSlot?: SlotHandler }) {
+function Item({ item, column, day, time, onSlot, onOpen, onDrop, moving }: { item: ColumnItem; column: ColumnLayout; day: DayLayout; time: (iso: string) => string } & GridActions) {
   const { t } = useI18n();
   const box = { top: item.top, height: item.height };
   const name = column.name || t('schedule.doctor');
+  // A visit dragged from any column of this day lands here; the panel confirms before anything moves.
+  const drop = (start: string) => (e: DragEvent) => {
+    e.preventDefault();
+    const id = e.dataTransfer.getData(dragType);
+    const from = day.columns.find(c => c.items.some(i => i.kind === 'appointment' && i.id === id));
+    const visit = from?.items.find(i => i.kind === 'appointment' && i.id === id);
+    if (from && visit?.kind === 'appointment') onDrop?.(visit, { calendarId: from.calendarId, calendarName: from.name || t('schedule.doctor') }, { calendarId: column.calendarId, calendarName: name, start });
+  };
 
   if (item.kind === 'slot' && item.held) {
     const look = scheduleLooks.held, Icon = look.icon;
@@ -67,8 +85,10 @@ function Item({ item, column, time, onSlot }: { item: ColumnItem; column: Column
     return (
       <li className="absolute inset-x-0 border-t" style={box}>
         {onSlot ? (
-          <button type="button" aria-label={t('schedule.slot.book', { name, time: time(item.start) })} onClick={() => onSlot(column.calendarId, name, item.start)}
-            className="size-full px-2 pt-0.5 text-start align-top hover:bg-accent focus-visible:-outline-offset-2">
+          <button type="button" aria-label={moving ? t('schedule.slot.moveTo', { patient: moving, name, time: time(item.start) }) : t('schedule.slot.book', { name, time: time(item.start) })}
+            onClick={() => onSlot(column.calendarId, name, item.start)}
+            onDragOver={onDrop ? e => e.preventDefault() : undefined} onDrop={onDrop ? drop(item.start) : undefined}
+            className={cn('size-full px-2 pt-0.5 text-start align-top hover:bg-accent focus-visible:-outline-offset-2', moving && 'bg-accent/40')}>
             <span aria-hidden className="font-mono text-xs text-muted-foreground">{time(item.start)}</span>
           </button>
         ) : (
@@ -82,7 +102,9 @@ function Item({ item, column, time, onSlot }: { item: ColumnItem; column: Column
   if (item.kind === 'appointment')
     return (
       <li className="absolute inset-x-1 z-[1] my-0.5" style={box}>
-        <AppointmentChip appointment={item} time={time} className="h-full" />
+        {onOpen
+          ? <OpenableChip appointment={item} time={time} className="h-full" onOpen={() => onOpen(item, column.calendarId, name)} draggable={!!onDrop && item.state === 'Booked'} />
+          : <AppointmentChip appointment={item} time={time} className="h-full" />}
       </li>
     );
   const look = scheduleLooks.unavailable, Icon = look.icon;

@@ -30,8 +30,8 @@ export default function CompleteRegistration(p: Props) {
   );
   // Announced: it answers the save (another facility's patient, or an old link); nothing was changed.
   if (p.failure === 'notFound')
-    return <div className="flex flex-col gap-4">{back}<div role="alert"><PatientsMessage title={t('patients.record.notFound.title')} body={t('patients.record.notFound.body')} /></div></div>;
-  if (p.failure === 'forbidden') return <PatientsMessage title={t('err.403')} body={t('registration.forbidden.body')} />;
+    return <div className="flex flex-col gap-4">{back}<div role="alert"><PatientsMessage pageHeading title={t('patients.record.notFound.title')} body={t('patients.record.notFound.body')} /></div></div>;
+  if (p.failure === 'forbidden') return <PatientsMessage pageHeading title={t('err.403')} body={t('registration.forbidden.body')} />;
 
   const { register, control, formState: { errors } } = p.form;
   const f = { register, control, errors };

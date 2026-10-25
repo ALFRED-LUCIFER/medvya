@@ -7,6 +7,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Medvya.Scheduling.Application\Medvya.Scheduling.Application.csproj" />
     <ProjectReference Include="..\..\Audit\Medvya.Audit.Api\Medvya.Audit.Api.csproj" />
+    <ProjectReference Include="..\..\Tenancy\Medvya.Tenancy.Api\Medvya.Tenancy.Api.csproj" />
   </ItemGroup>
 
 </Project>

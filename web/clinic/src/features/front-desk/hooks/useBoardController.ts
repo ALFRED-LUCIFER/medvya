@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { groupByColumn, moveError, serverNow, type Board, type BoardCard, type BoardColumn, type MoveError } from '../domain/board';
+import { groupByColumn, moveError, serverNow, type Board, type BoardCard, type BoardColumn, type LiveStatus, type MoveError } from '../domain/board';
 import { ApiError } from '../../schedule/services/scheduleApi';
+import { watchBoard } from '../services/boardLive';
 import { checkIn, fetchBoard, monotonicNow, moveVisit } from '../services/frontDeskApi';
 
 type Snapshot = { board: Board; fetchedAt: number };
@@ -11,17 +12,26 @@ type Move = { id: string; state: BoardColumn };
 const tickMs = 30_000;
 
 /**
- * P-01 reception board of the active facility (MDV-P1-028). Check-in is two taps: "Check in" opens the identity check
- * (name and date of birth) and "Confirm arrival" checks in; the time between them is sent for the exit-gate median.
- * shortcut: the board refreshes every 30 s until real-time updates land (MDV-P1-029).
+ * P-01 reception board of the active facility (MDV-P1-028, MDV-P1-029). Check-in is two taps: "Check in" opens the identity
+ * check (name and date of birth) and "Confirm arrival" checks in; the time between them is sent for the exit-gate median.
+ * Changes elsewhere arrive over the board hub and trigger a refetch; after a drop the board refetches once rejoined, and
+ * while not live it refreshes every 30 s, so a move is never lost or shown twice (the board is always replaced whole).
  */
 export function useBoardController(facilityId: string, online: boolean) {
   const queryClient = useQueryClient();
   const key = ['front-desk', facilityId];
+  const [connection, setLive] = useState<LiveStatus>('connecting');
+  // Offline: nothing to connect to; back online, a fresh connection joins and refetches whatever was missed.
+  const live: LiveStatus = online ? connection : 'paused';
+  useEffect(() => {
+    if (!online) return undefined;
+    const refresh = () => void queryClient.invalidateQueries({ queryKey: ['front-desk', facilityId] });
+    return watchBoard(facilityId, { onChange: refresh, onResync: refresh, onStatus: setLive });
+  }, [facilityId, online, queryClient]);
   const query = useQuery({
     queryKey: key,
     queryFn: async (): Promise<Snapshot> => ({ board: await fetchBoard(facilityId), fetchedAt: Date.now() }),
-    refetchInterval: 30_000,
+    refetchInterval: live === 'live' ? false : 30_000,
     retry: (count, error) => !(error instanceof ApiError && error.status === 403) && count < 2,
   });
 
@@ -67,6 +77,7 @@ export function useBoardController(facilityId: string, online: boolean) {
     loading: query.isPending && online,
     offline: !online && !snapshot,
     online,
+    live,
     forbidden,
     failed: query.isError && !forbidden && !snapshot,
     confirmingId: confirming?.id ?? null,

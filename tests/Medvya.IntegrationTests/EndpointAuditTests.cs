@@ -35,6 +35,11 @@ public sealed class EndpointAuditTests(SqlServerFixture sql) : IClassFixture<Sql
         "GET /v1/invitations/facilities",   // facility ids and names of the admin's tenant (MDV-P0-013)
         "POST /v1/invitations/",            // invites a staff member by email; audited as invitation.create inside the service
         "DELETE /v1/invitations/{id:guid}", // revokes a staff invitation; audited as invitation.revoke inside the service
+        // Live board hub (MDV-P1-029): opening the connection carries no patient data. A refused connect is audited Denied
+        // (.AuditRefusals, front_desk.board.connect); every Watch call is audited Allowed or Denied by the hub (front_desk.board.watch);
+        // messages are ids and state only, and the board itself is read through the audited GET /v1/front-desk/board (BoardHubTests).
+        "GET /v1/hubs/board/negotiate", // SignalR maps negotiate without method metadata; it answers POST only
+        "GET /v1/hubs/board",
     ];
 
     readonly Guid tenant = Guid.NewGuid(), facility = Guid.NewGuid();

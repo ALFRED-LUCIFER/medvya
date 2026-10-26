@@ -95,9 +95,10 @@ describe('clinical primitives', () => {
       .toContain('Allergy: Penicillin · verified');
   });
 
-  it('renders translated, right-to-left text in Arabic', () => {
-    const { container } = render(<I18nProvider locale="ar" country="AE">
+  it('renders translated, right-to-left text in Arabic', async () => {
+    const { container, findByText } = render(<I18nProvider locale="ar" country="AE">
       <ProvenanceTag source="ai" /><RecordingPill state="recording" elapsedSeconds={252} /></I18nProvider>);
+    await findByText('مسودة ذكاء اصطناعي', { exact: false }); // the Arabic catalog loads on demand
     expect(container.textContent).toContain('مسودة ذكاء اصطناعي');
     expect(container.textContent).toContain('04:12');
   });

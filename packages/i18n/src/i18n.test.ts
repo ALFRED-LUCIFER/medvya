@@ -1,8 +1,20 @@
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import handoff from '../../../docs/02-design/data/handoff.json';
-import { catalogs, makeI18n, translate, type MessageKey } from './index';
+import { catalogs, loadCatalog, makeI18n, translate, type MessageKey } from './index';
+
+describe('i18n catalogs', () => {
+  it('ships English only; Hindi and Arabic load on demand (first paint carries one catalog)', async () => {
+    expect(catalogs.en).toBeDefined();
+    expect(catalogs.hi).toBeUndefined();
+    expect(catalogs.ar).toBeUndefined();
+    await loadCatalog('hi');
+    expect(Object.keys(catalogs.hi!).length).toBeGreaterThan(100);
+  });
+});
 
 describe('i18n', () => {
+  beforeAll(async () => { await loadCatalog('hi'); await loadCatalog('ar'); });
+
   it('keeps the Handoff microcopy keys with their exact English text', () => {
     for (const { k, v } of handoff.copy) {
       const key = (k === 'consent.script.en' ? 'consent.script' : k) as MessageKey; // Handoff names the English variant
@@ -18,7 +30,7 @@ describe('i18n', () => {
   });
 
   it('has no keys in other locales that English lacks', () => {
-    for (const cat of [catalogs.hi, catalogs.ar])
+    for (const cat of [catalogs.hi!, catalogs.ar!])
       for (const k of Object.keys(cat)) if (!k.startsWith('_')) expect(k in catalogs.en, k).toBe(true);
   });
 

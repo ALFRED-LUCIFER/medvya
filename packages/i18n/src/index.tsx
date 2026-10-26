@@ -1,22 +1,30 @@
-import { createContext, useContext, useMemo, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import en from '../messages/en.json';
-import hi from '../messages/hi.json';
-import ar from '../messages/ar.json';
-// shortcut: all three catalogs ship in the clinic's first-paint chunk (about 64 kB; with the registration copy it passed Vite's
-// 500 kB chunk warning); load hi/ar on demand when the catalogs grow further or before the patient portal (P4).
 
 export type Locale = 'en' | 'hi' | 'ar';
 export type Country = 'IN' | 'AE';
 export type MessageKey = keyof typeof en;
 
 // shortcut: plain {var} interpolation, no plural/select; move to FormatJS (ICU) when the first plural string lands.
-export const catalogs: Record<Locale, Partial<Record<MessageKey, string>>> = { en, hi, ar };
+// English ships with the app (it is the fallback); Hindi and Arabic load on demand, so first paint carries one catalog, not three.
+export const catalogs: { en: Partial<Record<MessageKey, string>> } & Partial<Record<Locale, Partial<Record<MessageKey, string>>>> = { en };
+const loaders: Record<Exclude<Locale, 'en'>, () => Promise<{ default: Partial<Record<MessageKey, string>> }>> = {
+  hi: () => import('../messages/hi.json'),
+  ar: () => import('../messages/ar.json'),
+};
+
+/** Loads a locale's catalog once; if it cannot load (offline), that locale falls back to English rather than staying blank. */
+export async function loadCatalog(locale: Locale): Promise<void> {
+  if (catalogs[locale]) return;
+  try { catalogs[locale] = (await loaders[locale as Exclude<Locale, 'en'>]()).default; }
+  catch { catalogs[locale] = {}; }
+}
 export const locales: { code: Locale; label: string }[] = [
   { code: 'en', label: 'English' }, { code: 'hi', label: 'हिन्दी' }, { code: 'ar', label: 'العربية' },
 ];
 
 export function translate(locale: Locale, key: MessageKey, vars: Record<string, string | number> = {}) {
-  const text = catalogs[locale][key] ?? en[key]; // missing translations fall back to English
+  const text = catalogs[locale]?.[key] ?? en[key]; // missing translations (or a catalog not loaded) fall back to English
   return text.replace(/\{(\w+)\}/g, (m, name: string) => (name in vars ? String(vars[name]) : m));
 }
 
@@ -44,7 +52,16 @@ export type I18n = ReturnType<typeof makeI18n>;
 const I18nContext = createContext<I18n>(makeI18n('en', 'IN'));
 
 export function I18nProvider({ locale, country, children }: { locale: Locale; country: Country; children: ReactNode }) {
+  const [loaded, setLoaded] = useState(() => Boolean(catalogs[locale]));
+  useEffect(() => {
+    let current = true;
+    if (catalogs[locale]) setLoaded(true);
+    else { setLoaded(false); void loadCatalog(locale).then(() => { if (current) setLoaded(true); }); }
+    return () => { current = false; };
+  }, [locale]);
   const value = useMemo(() => makeI18n(locale, country), [locale, country]);
+  // Waits for the chosen catalog, so Hindi and Arabic never flash English (or the wrong direction) first.
+  if (!loaded && !catalogs[locale]) return null;
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
 }
 

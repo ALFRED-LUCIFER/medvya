@@ -1,5 +1,7 @@
 # Delivery process, conventions and ticket rules
 
+**Current plan to the first release:** [r1-roadmap.md](r1-roadmap.md) gives the ticket sequence to R1, the distance left, and the people items on the critical path.
+
 ## Release process (same five steps close every phase)
 
 1. **Scope freeze.** Requirement IDs for the phase are locked. Changes go to the next phase unless they are safety-critical.

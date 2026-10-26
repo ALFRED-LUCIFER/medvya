@@ -151,7 +151,7 @@ public sealed class PatientRegistrationFlowTests(SqlServerFixture sql) : IClassF
         var child = new Dictionary<string, object?>
         {
             ["quick"] = true, ["fullName"] = "Mariam Al Mansoori (synthetic)", ["dateOfBirth"] = "2019-06-01", ["sexAtBirth"] = "Female", ["mobile"] = "050 000 0460",
-            ["identifiers"] = new object[] { new { scheme = "EmiratesId", value = "784-2019-1234567-1" } },
+            ["identifiers"] = new object[] { new { scheme = "EmiratesId", value = "784-2019-1234567-2" } },
         };
         var refused = await desk.PostAsJsonAsync(Patients, child);
         Assert.Equal(HttpStatusCode.BadRequest, refused.StatusCode);

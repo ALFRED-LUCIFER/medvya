@@ -135,6 +135,8 @@ public sealed class EndpointAuditTests(SqlServerFixture sql) : IClassFixture<Sql
         {
             facilityId = facility, calendarId = staff[Role.SoloDoctor], visitType = "FollowUp", start = NextMondayIst(9).AddMinutes(20 * (int)role),
         }),
+        // A walk-in for a patient this facility does not have: refused as Rejected (400) by the roles that may book, Denied by the rest.
+        "POST /v1/appointments/walk-in" => System.Text.Json.JsonSerializer.Serialize(new { facilityId = facility, patientId = Guid.NewGuid(), visitType = "FollowUp", reasonCategory = "General" }),
         "POST /v1/patients/" => System.Text.Json.JsonSerializer.Serialize(new
         {
             quick = true, fullName = $"{role} Audit Probe (synthetic)", dateOfBirth = $"{1950 + (int)role}-02-0{1 + (int)role % 9}",

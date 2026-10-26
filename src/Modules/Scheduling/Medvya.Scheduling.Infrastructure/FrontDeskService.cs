@@ -282,6 +282,6 @@ public sealed partial class FrontDeskService(
     {
         var p = patients.GetValueOrDefault(a.PatientId);
         return new(a.Id, AppointmentReference.Of(a.Id), a.PatientId, p?.FullName ?? "", p?.DateOfBirth, p?.RegistrationIncomplete ?? false,
-            a.CalendarId, calendars.GetValueOrDefault(a.CalendarId, ""), a.VisitType, a.ReasonCategory, a.Start, a.End, a.State, a.ChangedAt, a.Room, tokens.GetValueOrDefault(a.Id));
+            a.CalendarId, calendars.GetValueOrDefault(a.CalendarId, ""), a.VisitType, a.ReasonCategory, a.Start, a.End, a.State, a.ChangedAt, a.Room, tokens.GetValueOrDefault(a.Id), a.WalkIn, a.Unscheduled);
     }
 }

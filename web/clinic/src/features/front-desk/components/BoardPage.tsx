@@ -168,6 +168,7 @@ function Card({ card, board, now, canMove, online, confirmingId, pendingId, fail
       <p className="text-xs text-muted-foreground">{t('board.meta', { doctor: card.calendarName || t('schedule.doctor'), type: t(`visitType.${card.visitType}`) })}</p>
       <div className="flex flex-wrap gap-1">
         <FrontDeskTag kind="reason" text={t(`reasonCategory.${card.reasonCategory}`)} />
+        {card.walkIn && <FrontDeskTag kind="walkIn" />}
         {card.registrationIncomplete && <FrontDeskTag kind="incomplete" />}
         {card.token && <FrontDeskTag kind="token" text={t('board.token', { token: card.token })} />}
       </div>

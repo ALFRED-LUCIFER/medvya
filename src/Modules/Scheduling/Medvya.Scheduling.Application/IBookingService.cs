@@ -35,10 +35,24 @@ public sealed record BookAppointment
     public BookingChannel Channel { get; init; }
 }
 
+/// <summary>
+/// A walk-in (MDV-P1-025): the patient is at the desk now. CalendarId null means "next available doctor". The visit takes the
+/// next free slot today through the booking path; with none free it is queued unscheduled under the chosen doctor.
+/// </summary>
+public sealed record WalkIn
+{
+    public Guid FacilityId { get; init; }
+    public Guid? CalendarId { get; init; }
+    public Guid PatientId { get; init; }
+    public VisitType VisitType { get; init; } = VisitType.FollowUp;
+    public ReasonCategory ReasonCategory { get; init; }
+}
+
 /// <summary>An appointment as reception sees it: no free-text reason.</summary>
 public sealed record AppointmentView(
     Guid Id, string Reference, Guid FacilityId, Guid CalendarId, Guid PatientId, string PatientName, string Mrn,
-    VisitType VisitType, DateTimeOffset Start, DateTimeOffset End, AppointmentState State, ReasonCategory ReasonCategory, BookingChannel Channel);
+    VisitType VisitType, DateTimeOffset Start, DateTimeOffset End, AppointmentState State, ReasonCategory ReasonCategory, BookingChannel Channel,
+    bool WalkIn = false, bool Unscheduled = false);
 
 public sealed record PatientView(Guid Id, string FullName, string Mrn);
 
@@ -71,6 +85,15 @@ public interface IBookingService
 
     /// <exception cref="SlotUnavailableException">The hold expired, is not the caller's, or the slot is no longer bookable.</exception>
     Task<AppointmentView> BookAsync(BookAppointment command, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// A walk-in (MDV-P1-025): books the earliest free slot from now today of the chosen doctor (or of any active doctor) on the
+    /// same path as <see cref="BookAsync"/> (doctor-day lock, template and overlap re-check, SCHEDULE_SLOT rows); with no free
+    /// slot and a chosen doctor, queues it unscheduled (no slot taken, so no double booking). The visit is Booked and tagged
+    /// walk-in; the desk then checks it in through the board's check-in.
+    /// </summary>
+    /// <exception cref="SlotUnavailableException">"no_free_slot": nothing free today and no doctor chosen to queue with; or "busy".</exception>
+    Task<AppointmentView> WalkInAsync(WalkIn command, CancellationToken cancellationToken = default);
 
     /// <summary>Name and MRN of a patient of this tenant, to confirm the patient before booking; null when unknown.</summary>
     Task<PatientView?> FindPatientAsync(Guid facilityId, Guid patientId, CancellationToken cancellationToken = default);

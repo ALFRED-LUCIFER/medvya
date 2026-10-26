@@ -322,7 +322,7 @@ progress:
 - Merged [PR #40](https://github.com/ALFRED-LUCIFER/medvya/pull/40): Patients module back end — India rules (minimum fields, ABHA optional, Aadhaar last 4 only, PIN, payer kinds), facility-scoped MRN, write and audit in one transaction (fail closed), audited reads, ABHA Always Encrypted with exact lookup
 - Merged [PR #61](https://github.com/ALFRED-LUCIFER/medvya/pull/61): `POST /v1/patients` (facility from the session, country from the tenant) with the duplicate check (MDV-P1-016); [PR #58](https://github.com/ALFRED-LUCIFER/medvya/pull/58) and [PR #70](https://github.com/ALFRED-LUCIFER/medvya/pull/70): record page with identifiers masked to the last 4
 - Merged [PR #82](https://github.com/ALFRED-LUCIFER/medvya/pull/82): full registration UI at /patients/new (quick mode at ?mode=quick): Identity & IDs → Contact & address → Payer → Review, per-step validation, focus to each step's heading, errors announced; ABHA optional, Aadhaar last 4 only (12 digits refused with the reason), state/UT from the official list (checked on the server), PIN 6 digits, payer kinds with their own fields (TPA kept as the network); preview card, data map and rules panel; success screen with MRN, time, actor and next actions; country from the tenant via /v1/me/context; record answer tested against an exact field allowlist (registration data only, no clinical fields); en/hi/ar, axe clean, 375/768/1366 px, 200 % zoom; real-API browser check
-- [PR #86](https://github.com/ALFRED-LUCIFER/medvya/pull/86): Family & emergency step (MDV-P1-020)
+- Merged [PR #86](https://github.com/ALFRED-LUCIFER/medvya/pull/86): Family & emergency step (MDV-P1-020)
 - Left: Consents step and CONSENT_RECEIPT in the same transaction (MDV-P1-019); "Verify with ABHA" (P8); PAN / Voter ID / driving licence as other ID types and "Save draft" (in the design, not in the ACs)
 title: Patient registration — India full flow (identity, ABHA optional, Aadhaar last 4, Indian address, payer)
 type: Story
@@ -383,7 +383,7 @@ progress:
 - Merged [PR #79](https://github.com/ALFRED-LUCIFER/medvya/pull/79): security fix — completion and registration writes reach the active facility's patients only; `POST /v1/patients/{id}/completion` (Full access): 200 + one Allowed row in the change's transaction, another facility's patient 404 + one NotFound row and nothing changed; mutation-checked
 - Merged [PR #82](https://github.com/ALFRED-LUCIFER/medvya/pull/82): quick and full are one form with a mode toggle; switching keeps what was typed
 - Merged [PR #84](https://github.com/ALFRED-LUCIFER/medvya/pull/84): the record of an Incomplete patient shows the completion task (what is missing: address, payer or both) and "Complete registration" (Register / book at Full) reusing the registration address and payer fields and rules; saving posts only those two to the facility-scoped completion endpoint, Complete closes the task and the tag; 404 announced, nothing changed; en/hi/ar, axe clean, keyboard, 200 % zoom, real-API browser check
-- [PR #86](https://github.com/ALFRED-LUCIFER/medvya/pull/86): the emergency contact is the third part the completion task waits for, added from the same completion form
+- Merged [PR #86](https://github.com/ALFRED-LUCIFER/medvya/pull/86): the emergency contact is the third part the completion task waits for, added from the same completion form
 - Left: CARE_TASK queue with owner and due date replaces the Incomplete status as the task (MDV-P4-016, recorded as a shortcut); timed 45-second usability check with a trained user (pilot)
 title: Quick registration for a busy desk with a completion task
 type: Story
@@ -513,7 +513,7 @@ ac:
 === MDV-P1-020
 status: Done
 progress:
-- [PR #86](https://github.com/ALFRED-LUCIFER/medvya/pull/86): PATIENT_RELATIONSHIP (`patients.Relationships`, name and phone masked, EF filter + RLS, cross-tenant test); emergency contact required for full registration, optional in quick mode and the third part the completion task waits for; guardian required whenever the patient is under 18 on the registration day in the facility's time zone (IFacilityDirectory), quick mode included; an estimated date of birth is never treated as known (the stated age decides; unknown counts as a minor); relationship values per country (UAE adds Sponsor); contacts never become users (no account or membership created, tested); Family & emergency step with the portal note, guardian fields in quick mode for a minor, contacts on the record and the completion form; SAFETY tests on the server mutation-checked (rule removed, quick-mode exemption, country day instead of facility day, unknown age as adult, 18th birthday off by one); en/hi/ar, axe clean
+- Merged [PR #86](https://github.com/ALFRED-LUCIFER/medvya/pull/86): PATIENT_RELATIONSHIP (`patients.Relationships`, name and phone masked, EF filter + RLS, cross-tenant test); emergency contact required for full registration, optional in quick mode and the third part the completion task waits for; guardian required whenever the patient is under 18 on the registration day in the facility's time zone (IFacilityDirectory), quick mode included; an estimated date of birth is never treated as known (the stated age decides; unknown counts as a minor); relationship values per country (UAE adds Sponsor); contacts never become users (no account or membership created, tested); Family & emergency step with the portal note, guardian fields in quick mode for a minor, contacts on the record and the completion form; SAFETY tests on the server mutation-checked (rule removed, quick-mode exemption, country day instead of facility day, unknown age as adult, 18th birthday off by one); en/hi/ar, axe clean
 - Follow-ups outside this ticket: guardian-driven portal proxy rules (P4 R-04)
 title: Family, emergency contact and guardian rules (under-18 guardian required)
 type: Story
@@ -649,6 +649,10 @@ ac:
 - No-show offers rebook and is counted in the no-show metric (MDV-P1-041).
 
 === MDV-P1-025
+status: Partly done
+progress:
+- [PR #89](https://github.com/ALFRED-LUCIFER/medvya/pull/89): "Walk-in" on the board → find the patient (front-desk search) or quick-register (MDV-P1-015, guardian rule for minors from MDV-P1-020) and come back with the patient chosen → doctor or "next available" → one tap: `POST /v1/appointments/walk-in` books the earliest free slot from now today on the booking path (doctor-day lock, template and overlap re-check, SCHEDULE_SLOT rows, status + outbox + audit `appointment.walk_in` in one transaction), then the board's own check-in (same state machine, its own audited transaction, time recorded for exit gate 3); with no free slot it is queued under the chosen doctor as an unscheduled walk-in (zero length, no SCHEDULE_SLOT rows, not drawn on the schedule), so no slot is ever double-booked; cards tagged "Walk-in" in Checked in with the wait time; SQL Server tests incl. 6 parallel walk-ins for 2 free slots (2 distinct slots, 4 queued), mutation-checked; en/hi/ar, axe clean
+- Left: the 60-second walk-in timed with a trained user at the pilot (the full flow runs in a few seconds in the browser checks)
 title: Walk-in registration and booking straight to the queue
 type: Story
 epic: MDV-P1-E06
@@ -718,7 +722,7 @@ progress:
 - Server-side state machine (one step forward, else 409); each move is a conditional update + VisitStatusEvent in one transaction, so a repeat or a second desk never checks in twice (8 concurrent check-ins on SQL Server → one event); audited endpoints; board payload tested against an exact field allowlist; mutation-checked (guard, idempotency, conditional update, payload, roles); browser-verified (en, ar RTL, keyboard, axe, 200 % zoom, tablet)
 - Payment on Billing cards follows the `billing.invoices` flag: off (all of P1) a disabled placeholder, on a link to Billing (P4); merged with main after #59 and #58 landed
 - Real-time updates and the call-in room: [PR #83](https://github.com/ALFRED-LUCIFER/medvya/pull/83) (MDV-P1-029), browser-verified against the real API with sign-in issuing the tenant and facility claims (MDV-P0-012)
-- Left: walk-in (MDV-P1-025); waitlist (MDV-P1-027); workload panel (MDV-P1-030)
+- Left: waitlist (MDV-P1-027); workload panel (MDV-P1-030); walk-in is MDV-P1-025 (PR #89)
 title: Reception board with visit columns and one-tap check-in
 type: Story
 epic: MDV-P1-E07

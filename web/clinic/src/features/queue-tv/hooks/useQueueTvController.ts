@@ -16,7 +16,7 @@ const unauthorized = (e: unknown) => e instanceof ApiError && e.status === 401;
 export function useQueueTvController(online: boolean) {
   const queryClient = useQueryClient();
   const [token] = useState(takePairingToken);
-  const pairing = useQuery({ queryKey: ['queue-tv-pair', token], queryFn: () => pairDisplay(token!), enabled: !!token, retry: false, staleTime: Infinity });
+  const pairing = useQuery({ queryKey: ['queue-tv-pair', token], queryFn: () => pairDisplay(token!).then(() => true), enabled: !!token, retry: false, staleTime: Infinity });
   const paired = !token || pairing.isSuccess;
 
   const [connection, setLive] = useState<LiveStatus>('connecting');

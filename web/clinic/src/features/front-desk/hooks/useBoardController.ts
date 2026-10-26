@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { workload } from '../domain/overview';
 import { groupByColumn, moveError, serverNow, type Board, type BoardCard, type BoardColumn, type LiveStatus, type MoveError } from '../domain/board';
 import { ApiError } from '../../schedule/services/scheduleApi';
 import { watchBoard } from '../services/boardLive';
@@ -67,13 +68,16 @@ export function useBoardController(facilityId: string, online: boolean) {
 
   const snapshot = query.data;
   const columns = useMemo(() => groupByColumn(snapshot?.board.cards ?? []), [snapshot]);
+  const now = snapshot ? serverNow(snapshot.board, snapshot.fetchedAt, tick) : tick;
   const forbidden = query.error instanceof ApiError && query.error.status === 403;
   const pendingId = arrive.isPending ? arrive.variables.id : move.isPending ? move.variables.id : null;
 
   return {
     board: snapshot?.board ?? null,
     columns,
-    now: snapshot ? serverNow(snapshot.board, snapshot.fetchedAt, tick) : tick,
+    now,
+    /** Doctor workload panel (MDV-P1-030): per doctor, how many wait and how late they run. */
+    workload: snapshot ? workload(snapshot.board.cards, now) : [],
     loading: query.isPending && online,
     offline: !online && !snapshot,
     online,

@@ -23,6 +23,7 @@ import ScheduleRoute from './ScheduleRoute';
 const InvitationRoute = lazy(() => import('./InvitationRoute'));
 const InviteColleagueRoute = lazy(() => import('./InviteColleagueRoute'));
 const DisplaysRoute = lazy(() => import('./DisplaysRoute'));
+const OverviewRoute = lazy(() => import('./OverviewRoute'));
 // Patient screens load on first use, keeping them out of the first-paint bundle.
 const PatientDirectoryRoute = lazy(() => import('./PatientRoutes').then(m => ({ default: m.PatientDirectoryRoute })));
 const PatientRecordRoute = lazy(() => import('./PatientRoutes').then(m => ({ default: m.PatientRecordRoute })));
@@ -86,6 +87,10 @@ export default function App({ locale, onLocaleChange }: Props) {
             : <ComingSoon title={t(`nav.${i.id}`)} phase={i.phase} />} />)}
           {/* shortcut: reachable by URL only; the Staff screen and its navigation entry come with F-10 (MDV-P1-008). */}
           {active.capabilities.StaffRolesIntegrations === 'Config' && <Route path="/admin/staff" element={<InviteColleagueRoute />} />}
+          {/* D-04 clinic overview (MDV-P1-030): for everyone who sees the board; moving patients needs the full queue capability. */}
+          {pathOf('frontDesk') && <Route path="/front-desk/overview" element={
+            <OverviewRoute facilityId={active.facilityId} online={online} canMove={active.capabilities.CheckInQueue === 'Full'}
+              userId={shell.session?.user.id ?? ''} boardPath={pathOf('frontDesk')!} />} />}
           {/* shortcut: reachable by URL only, like Staff; it moves to device management in Settings with MDV-P0-012. */}
           {active.capabilities.StaffRolesIntegrations === 'Config' && <Route path="/admin/displays" element={<DisplaysRoute facilityId={active.facilityId} />} />}
           {searchPath && <>

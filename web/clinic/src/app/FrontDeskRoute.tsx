@@ -1,4 +1,4 @@
-import { ReceiptText, UserPlus } from 'lucide-react';
+import { ReceiptText, Stethoscope, UserPlus } from 'lucide-react';
 import { Link } from 'react-router';
 import { useI18n } from '@medvya/i18n';
 import { buttonVariants } from '@medvya/ui';
@@ -23,5 +23,6 @@ export default function FrontDeskRoute({ facilityId, online, canMove, registerPa
   const payment = billingPath
     ? <Link to={billingPath} className={buttonVariants({ variant: 'outline', className: 'whitespace-normal' })}><ReceiptText aria-hidden />{t('board.action.takePayment')}</Link>
     : undefined;
-  return <BoardPage {...board} canMove={canMove} registerAction={register} paymentAction={payment} />;
+  const overview = <Link to="/front-desk/overview" className={buttonVariants({ variant: 'outline' })}><Stethoscope aria-hidden />{t('overview.title')}</Link>;
+  return <BoardPage {...board} canMove={canMove} registerAction={register} paymentAction={payment} overviewAction={overview} />;
 }

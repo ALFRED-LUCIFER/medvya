@@ -70,6 +70,9 @@ public static class SchedulingEndpoints
         appointments.MapPost("/{appointmentId:guid}/check-in", (Guid appointmentId, CheckIn? command, [FromServices] IFrontDeskService service, CancellationToken ct) =>
                 service.CheckInAsync(appointmentId, command ?? new CheckIn(), ct))
             .AuditedWriteWithErrors(SchedulingAudit.CheckIn, SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment);
+        appointments.MapPost("/{appointmentId:guid}/reassign", (Guid appointmentId, ReassignVisit command, [FromServices] IFrontDeskService service, CancellationToken ct) =>
+                service.ReassignAsync(appointmentId, command, ct))
+            .AuditedWriteWithErrors(SchedulingAudit.Reassign, SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment);
         appointments.MapPost("/{appointmentId:guid}/status", (Guid appointmentId, MoveVisit command, [FromServices] IFrontDeskService service, CancellationToken ct) =>
                 service.MoveAsync(appointmentId, command, ct))
             .AuditedWriteWithErrors(SchedulingAudit.Status, SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment);
@@ -78,6 +81,10 @@ public static class SchedulingEndpoints
         frontDesk.MapGet("/board", (Guid? facilityId, [FromServices] IFrontDeskService service, CancellationToken ct) =>
                 service.GetBoardAsync(facilityId ?? Guid.Empty, ct))
             .AuditedWithErrors("front_desk.board.read", "appointment");
+        // Clinic overview (D-04, MDV-P1-030): doctors' load and delay, the shared waiting room.
+        frontDesk.MapGet("/overview", (Guid? facilityId, [FromServices] IFrontDeskService service, CancellationToken ct) =>
+                service.GetOverviewAsync(facilityId ?? Guid.Empty, ct))
+            .AuditedWithErrors("front_desk.overview.read", "appointment");
         // Live board updates (MDV-P1-029): ids and states only. The hub checks facility and capability on connect and on every call.
         app.MapHub<BoardHub>(BoardHub.Path)
             .RequireCapability(Capability.CheckInQueue, Access.Read, Access.Full)

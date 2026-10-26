@@ -9,6 +9,7 @@ public static class SchedulingAudit
     public const string TemplateUpdate = "schedule.template.update", ResourceCreate = "schedule.resource.create",
         SlotHold = "slot.hold", SlotRelease = "slot.release", Book = "appointment.book", CheckIn = "appointment.check_in", Status = "appointment.status",
         Reschedule = "appointment.reschedule", Cancel = "appointment.cancel", NoShow = "appointment.no_show",
+        Reassign = "appointment.reassign",
         DisplayCreate = "queue_display.create", DisplayRevoke = "queue_display.revoke", DisplayPair = "queue_display.pair";
 
     public const string TemplateResource = "schedule_template", ResourceResource = "schedule_resource", HoldResource = "slot_hold", AppointmentResource = "appointment",

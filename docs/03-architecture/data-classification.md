@@ -70,7 +70,7 @@ Every stored field has one class. In code, each domain property carries `[Classi
 | SCHEDULE_SLOT.* (calendar, location, 5-minute slot start, appointment) | Internal | Unique (calendar, location, slot start) |
 | VISIT_STATUS_EVENT.* (appointment, state, actor, time, cancel reason) | Internal | Append-only history |
 | VISIT_STATUS_EVENT.note (cancellation note, free text) | SensitiveHealth | May mention health. Never on reception screens, in logs or in events (MDV-P1-024) |
-| APPOINTMENT_RESCHEDULE.* (appointment, old and new calendar and times, actor, time) | Internal | Append-only history (MDV-P1-024) |
+| APPOINTMENT_RESCHEDULE.* (appointment, old and new calendar and times, actor, time, reassign reason code) | Internal | Append-only history (MDV-P1-024); a reassign reason is a fixed code, never free text (MDV-P1-030) |
 | OUTBOX_EVENT.* (type, aggregate id, payload of opaque ids and instants) | Internal | No PHI in payloads |
 | WAITLIST_ENTRY.*, QUEUE_TOKEN.* (reception queue: facility day, letter per doctor, number, visit) | Internal | Tokens on TV, never names (MDV-P1-031) |
 | QUEUE_DISPLAY.* (facility, name, token hash, created/revoked by and at) | Internal | Only the SHA-256 of the display token is stored; the token is shown once |

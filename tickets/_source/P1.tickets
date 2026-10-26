@@ -348,7 +348,7 @@ ac:
 - Form is keyboard-completable, errors announced via aria-live, works at tablet width.
 
 === MDV-P1-014
-status: In progress
+status: Partly done
 progress:
 - Merged [PR #40](https://github.com/ALFRED-LUCIFER/medvya/pull/40): UAE rules — Emirates ID format, expired EID warns, EID-or-passport minimum, Arabic name, emirate mapped to Malaffi/NABIDH/Riayati, Makani/P.O. Box, insurance member number Always Encrypted
 - Merged [PR #82](https://github.com/ALFRED-LUCIFER/medvya/pull/82): UAE full registration UI — name as on EID plus Arabic name typed right to left (preview card and Review), Emirates ID or passport, "Format 784-YYYY-NNNNNNN-N", expired EID warns while typing and on the success screen but never blocks, nationality and language named with Intl.DisplayNames, emirate → HIE label (Malaffi / NABIDH / Riayati) under the field, Makani and P.O. Box, insurance with member card, expiry, plan and network (eligibility marked M4); HTTP test with a UAE tenant (rules follow the tenant, not the body); browser-checked in Arabic against the real API
@@ -384,6 +384,7 @@ progress:
 - Merged [PR #82](https://github.com/ALFRED-LUCIFER/medvya/pull/82): quick and full are one form with a mode toggle; switching keeps what was typed
 - Merged [PR #84](https://github.com/ALFRED-LUCIFER/medvya/pull/84): the record of an Incomplete patient shows the completion task (what is missing: address, payer or both) and "Complete registration" (Register / book at Full) reusing the registration address and payer fields and rules; saving posts only those two to the facility-scoped completion endpoint, Complete closes the task and the tag; 404 announced, nothing changed; en/hi/ar, axe clean, keyboard, 200 % zoom, real-API browser check
 - Merged [PR #86](https://github.com/ALFRED-LUCIFER/medvya/pull/86): the emergency contact is the third part the completion task waits for, added from the same completion form
+- Merged [PR #85](https://github.com/ALFRED-LUCIFER/medvya/pull/85): the record and completion pages keep one h1 while loading, refused or not found (axe page-has-heading-one), with a regression test
 - Left: CARE_TASK queue with owner and due date replaces the Incomplete status as the task (MDV-P4-016, recorded as a shortcut); timed 45-second usability check with a trained user (pilot)
 title: Quick registration for a busy desk with a completion task
 type: Story
@@ -598,6 +599,7 @@ progress:
 - Merged [PR #77](https://github.com/ALFRED-LUCIFER/medvya/pull/77): `GET /v1/schedule/week` (one doctor or resource, Monday–Sunday, every day built like the day view from one batched read on the (facility, start) index, capacity per day, audited, facility capability and calendar checked); day bounds and ISO week as tested rules (IST, GST, DST 23/25 h); Day/Week/List switch and doctor/resource filter, a doctor starts on their own column; list default at ≤ 767 px with a pinned Book at the next free slot; every state an icon + words (dashed No-show/Cancelled, hatched Unavailable) with a legend; the list prints as an agenda; en/hi/ar, RTL
 - Measured: day/week reads p95 29/33 ms through the endpoints with a fully booked year for 3 doctors (16,380 visits); 3-doctor day first render ≈ 2.2 s on the production build over Lighthouse throttled 4G (Playwright budget in CI)
 - Tested on SQL Server (week = day, local-midnight boundary, facility scoping) and in the browser against a real API (en/ar, keyboard, axe at 1280/1024/820/640/390 px); 14 mutations each caught
+- Merged [PR #85](https://github.com/ALFRED-LUCIFER/medvya/pull/85): two e2e races fixed (week list read before render, axe sampling a colour mid-transition), no assertion weakened; [PR #87](https://github.com/ALFRED-LUCIFER/medvya/pull/87): Hindi and Arabic catalogs load on demand, so first paint carries one catalog — CI first render 2502 → 2315 ms against the 2500 ms budget
 - Left: the first-render and read budgets on staging under the P1 load profile (MDV-P1-037)
 title: Calendar views: day, week and list (per doctor and resource), mobile/tablet responsive
 type: Story

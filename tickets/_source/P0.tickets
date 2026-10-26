@@ -96,6 +96,8 @@ progress:
 - Merged [PR #13](https://github.com/ALFRED-LUCIFER/medvya/pull/13): PR pipeline (dotnet build/test incl. Testcontainers, vulnerable NuGet check, web lint/build/test, pnpm audit, synthetic-ID check, gitleaks), Dependabot, CODEOWNERS, PR template
 - Repo public: branch protection on main (checks dotnet, web, secrets required), GitHub secret scanning + push protection, CodeQL default setup, Dependabot security updates enabled
 - Found and fixed on the way: tinypool critical advisories (vitest 3 → 5), a race in the telemetry test
+- Merged [PR #76](https://github.com/ALFRED-LUCIFER/medvya/pull/76): zod 4.6.6 for GHSA-mrhx-c7xc-m3w5 (high), so `pnpm audit --audit-level high` passes again
+- Merged [PR #78](https://github.com/ALFRED-LUCIFER/medvya/pull/78): global.json pins SDK 10.0.403 with rollForward `patch`; `latestFeature` made setup-dotnet install by channel through an aka.ms link that now returns HTTP 409, while an exact version installs from builds.dotnet.microsoft.com
 title: GitHub repository protections and PR pipeline (build, analyzers, tests, CodeQL, dependency and secret scanning)
 type: Task
 epic: MDV-P0-E01
@@ -124,6 +126,7 @@ progress:
 - Merged [PR #3](https://github.com/ALFRED-LUCIFER/medvya/pull/3): docker-compose with SQL Server 2022 (healthcheck, runs under Rosetta on Apple silicon), Azurite, smtp4dev; `pnpm services:up`
 - Merged [PR #34](https://github.com/ALFRED-LUCIFER/medvya/pull/34): `pnpm dev:db` starts the services, applies the Tenancy and Audit migrations and seeds the synthetic tenant
 - Dev-only OIDC provider (Development only, refusal tested) arrived with [PR #39](https://github.com/ALFRED-LUCIFER/medvya/pull/39)
+- Merged [PR #64](https://github.com/ALFRED-LUCIFER/medvya/pull/64): docs corrected — API on :5080 (what the clinic proxy and dev sign-in expect), Colima and Docker Desktop sockets, Rosetta and exit-139 hint, settings for parallel worktrees, seeded modules
 - Left: SMS sink (MDV-P1-033)
 title: Local development environment with Docker Compose (SQL Server, Azurite, mail and SMS sinks)
 type: Task

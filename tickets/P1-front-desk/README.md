@@ -10,7 +10,7 @@
 
 **Tickets:** 46 · **Estimate:** 86.5 dev-days vs **35 working days** in the window (OVER by 51.5 days: needs scope trade-off or overlap) · **Average confidence:** 81%
 
-**Status:** To do 28 · In progress 1 · Partly done 10 · Done 7
+**Status:** To do 28 · Partly done 11 · Done 7
 
 ## Epics
 
@@ -46,7 +46,7 @@
 | [MDV-P1-006](MDV-P1-006.md) | To do | Practice settings: notification preferences and data tab | Story | MUST | P1-02 | F-08 | 1.5 | 6–6 | 30 Nov → 04 Dec 2026 | 72% Medium |
 | [MDV-P1-009](MDV-P1-009.md) | To do | Staff offboarding removes access immediately and ends all sessions | Story | MUST | P1-11 | F-10 | 1 | 6–6 | 30 Nov → 04 Dec 2026 | 90% High |
 | [MDV-P1-012](MDV-P1-012.md) | To do | Leave and schedule exceptions with re-offer of affected appointments | Story | MUST | P1-04 | P-04 | 1.5 | 6–6 | 30 Nov → 04 Dec 2026 | 82% Medium |
-| [MDV-P1-014](MDV-P1-014.md) | In progress | Patient registration — UAE flow (Emirates ID manual entry, Arabic name RTL, emirate, insurance card) | Story | MUST | P1-05 | P-02 | 2.5 | 6–6 | 30 Nov → 04 Dec 2026 | 86% High |
+| [MDV-P1-014](MDV-P1-014.md) | Partly done | Patient registration — UAE flow (Emirates ID manual entry, Arabic name RTL, emirate, insurance card) | Story | MUST | P1-05 | P-02 | 2.5 | 6–6 | 30 Nov → 04 Dec 2026 | 86% High |
 | [MDV-P1-015](MDV-P1-015.md) | Partly done | Quick registration for a busy desk with a completion task | Story | MUST | P1-05 | P-02 | 1.5 | 6–6 | 30 Nov → 04 Dec 2026 | 90% High |
 | [MDV-P1-016](MDV-P1-016.md) | Done | Duplicate warning while typing and duplicate resolution before save | Story | MUST | P1-05 | P-02 | 2.5 | 6–6 | 30 Nov → 04 Dec 2026 | 85% High |
 | [MDV-P1-019](MDV-P1-019.md) | To do | Legal terms and separate versioned consents at registration (treatment, reminders per channel, sharing, portal, marketing) | Story | MUST | P1-12 | P-02, F-08 | 3 | 6–7 | 30 Nov → 11 Dec 2026 | 75% Medium |

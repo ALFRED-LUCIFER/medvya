@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { groupByColumn, minutesSince, moveError, nextState, serverNow, type BoardCard } from './board';
+import { groupByColumn, minutesSince, moveError, nextState, serverNow, walkInError, type BoardCard } from './board';
+
+describe('walk-in (MDV-P1-025)', () => {
+  it('tells "no free slot" (choose a doctor to queue with) and "busy" from other failures', () => {
+    expect([walkInError('no_free_slot'), walkInError('busy'), walkInError('slot_unavailable'), walkInError(undefined)]).toEqual(['no_free_slot', 'busy', 'failed', 'failed']);
+  });
+});
 
 const card = (id: string, state: BoardCard['state'], start: string): BoardCard => ({
   id, reference: `APT-${id}`, patientId: `p-${id}`, patientName: `Patient ${id} (synthetic)`, dateOfBirth: '1972-03-12', registrationIncomplete: false,

@@ -40,6 +40,11 @@ public sealed class EndpointAuditTests(SqlServerFixture sql) : IClassFixture<Sql
         // messages are ids and state only, and the board itself is read through the audited GET /v1/front-desk/board (BoardHubTests).
         "GET /v1/hubs/board/negotiate", // SignalR maps negotiate without method metadata; it answers POST only
         "GET /v1/hubs/board",
+        // Queue TV (MDV-P1-031): display sessions only, never staff. Tokens, rooms, doctor display names and waits, no patient
+        // data (QueueTvTests pins the fields); the hub's message is empty. Pairing a display is audited (queue_display.pair).
+        "GET /v1/queue/tv",
+        "GET /v1/queue/hub/negotiate",
+        "GET /v1/queue/hub",
     ];
 
     readonly Guid tenant = Guid.NewGuid(), facility = Guid.NewGuid();
@@ -113,7 +118,7 @@ public sealed class EndpointAuditTests(SqlServerFixture sql) : IClassFixture<Sql
     /// allowed path, where the use case must write its event, would never run. One distinct synthetic person per role, so no
     /// call stops at a duplicate warning.
     /// </summary>
-    static readonly string[] WritesWithSampleBodies = ["PUT /v1/schedule/templates", "POST /v1/schedule/resources", "POST /v1/slot-holds/", "POST /v1/patients/"];
+    static readonly string[] WritesWithSampleBodies = ["PUT /v1/schedule/templates", "POST /v1/schedule/resources", "POST /v1/slot-holds/", "POST /v1/patients/", "POST /v1/queue/displays/"];
 
     string SampleBody(string endpoint, Role role) => endpoint switch
     {
@@ -125,6 +130,7 @@ public sealed class EndpointAuditTests(SqlServerFixture sql) : IClassFixture<Sql
             hours = new[] { new { weekday = 1, start = "09:00:00", end = "13:00:00", room = "Room 3" } }, breaks = Array.Empty<object>(), visitLengths = Array.Empty<object>(),
         }),
         "POST /v1/schedule/resources" => System.Text.Json.JsonSerializer.Serialize(new { facilityId = facility, name = $"{role} room (synthetic)" }),
+        "POST /v1/queue/displays/" => System.Text.Json.JsonSerializer.Serialize(new { facilityId = facility, name = $"{role} waiting room TV (synthetic)" }),
         "POST /v1/slot-holds/" => System.Text.Json.JsonSerializer.Serialize(new
         {
             facilityId = facility, calendarId = staff[Role.SoloDoctor], visitType = "FollowUp", start = NextMondayIst(9).AddMinutes(20 * (int)role),

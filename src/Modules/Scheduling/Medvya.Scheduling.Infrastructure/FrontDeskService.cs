@@ -1,10 +1,12 @@
 using System.Diagnostics.Metrics;
+using System.Globalization;
 using Medvya.Patients.Application;
 using Medvya.Scheduling.Application;
 using Medvya.Scheduling.Domain;
 using Medvya.Scheduling.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Medvya.Scheduling.Infrastructure;
 
@@ -12,9 +14,11 @@ namespace Medvya.Scheduling.Infrastructure;
 /// The reception board (MDV-P1-028). A move is a conditional update (only from the state the caller saw) plus its status
 /// event, in one transaction: of two concurrent check-ins exactly one changes the row and writes the event, the other finds
 /// the visit already checked in and returns it unchanged. After the commit the open boards of the facility are told (ids and
-/// state only, MDV-P1-029) and refetch through the audited board endpoint.
+/// state only, MDV-P1-029) and refetch through the audited board endpoint. Check-in issues the visit's waiting-room token in the
+/// same transaction (MDV-P1-031).
 /// </summary>
-public sealed partial class FrontDeskService(SchedulingDbContext db, SchedulingContext context, IBoardNotifier notifier, ILogger<FrontDeskService> log) : IFrontDeskService
+public sealed partial class FrontDeskService(
+    SchedulingDbContext db, SchedulingContext context, IBoardNotifier notifier, IOptions<SchedulingOptions> options, ILogger<FrontDeskService> log) : IFrontDeskService
 {
     /// <summary>Meter of front-desk measurements. Values are durations only; the one tag is the opaque tenant id.</summary>
     public const string MeterName = "Medvya.FrontDesk";
@@ -37,7 +41,8 @@ public sealed partial class FrontDeskService(SchedulingDbContext db, SchedulingC
             .OrderBy(a => a.Start).ThenBy(a => a.Id).ToListAsync(cancellationToken);
         var patients = await context.PatientsAsync(visits.Select(a => a.PatientId), cancellationToken);
         var calendars = (await context.CalendarsAsync(facilityId, cancellationToken)).ToDictionary(c => c.Id, c => c.Name);
-        return new(facilityId, facility.TimeZone, date, now, [.. visits.Select(a => Card(a, patients, calendars))]);
+        var tokens = await TokensAsync([.. visits.Select(a => a.Id)], cancellationToken);
+        return new(facilityId, facility.TimeZone, date, now, [.. visits.Select(a => Card(a, patients, calendars, tokens))]);
     }
 
     public async Task<BoardCard> CheckInAsync(Guid appointmentId, CheckIn command, CancellationToken cancellationToken = default)
@@ -99,6 +104,7 @@ public sealed partial class FrontDeskService(SchedulingDbContext db, SchedulingC
         {
             Id = Guid.CreateVersion7(), TenantId = visit.TenantId, AppointmentId = visit.Id, State = to, ActorUserId = me, OccurredAt = now,
         });
+        if (to == AppointmentState.CheckedIn) await IssueTokenAsync(visit, ScheduleRules.LocalDate(now, zone), now, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
         await context.AuditAsync(action, SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment, visit.Id, visit.PatientId, cancellationToken);
         await tx.CommitAsync(cancellationToken);
@@ -139,6 +145,39 @@ public sealed partial class FrontDeskService(SchedulingDbContext db, SchedulingC
         return session?.Room ?? visit.Room;
     }
 
+    /// <summary>
+    /// The next token of the visit's calendar for the facility's day ("A-07"), added to the open check-in transaction. A per
+    /// facility-day app lock serialises issuing, so two desks never hand out the same number; the unique index is the backstop.
+    /// A calendar keeps its letter all day; a calendar new to the day takes the next free letter.
+    /// </summary>
+    async Task IssueTokenAsync(Appointment visit, DateOnly date, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await DoctorDayTransaction.LockAsync(db, string.Create(CultureInfo.InvariantCulture, $"queue:{visit.FacilityId}:{date:yyyy-MM-dd}"),
+                options.Value.LockTimeout, cancellationToken);
+        }
+        catch (DoctorDayTransaction.LockNotGrantedException)
+        {
+            throw new VisitTransitionException("busy"); // rolls back the check-in; the desk tries again
+        }
+        var today = db.QueueTokens.Where(t => t.FacilityId == visit.FacilityId && t.Date == date);
+        var prefix = await today.Where(t => t.CalendarId == visit.CalendarId).Select(t => t.Prefix).FirstOrDefaultAsync(cancellationToken)
+            ?? QueueToken.PrefixAt(await today.Select(t => t.CalendarId).Distinct().CountAsync(cancellationToken));
+        var number = (await today.Where(t => t.Prefix == prefix).MaxAsync(t => (int?)t.Number, cancellationToken) ?? 0) + 1;
+        db.QueueTokens.Add(new QueueToken
+        {
+            Id = Guid.CreateVersion7(), TenantId = visit.TenantId, FacilityId = visit.FacilityId, Date = date, CalendarId = visit.CalendarId,
+            Prefix = prefix, Number = number, AppointmentId = visit.Id, IssuedAt = now,
+        });
+    }
+
+    /// <summary>The tokens of these visits ("A-07"), by appointment id.</summary>
+    async Task<Dictionary<Guid, string>> TokensAsync(Guid[] appointmentIds, CancellationToken cancellationToken) =>
+        (await db.QueueTokens.AsNoTracking().Where(t => appointmentIds.Contains(t.AppointmentId))
+            .Select(t => new { t.AppointmentId, t.Prefix, t.Number }).ToListAsync(cancellationToken))
+        .ToDictionary(t => t.AppointmentId, t => QueueToken.Format(t.Prefix, t.Number));
+
     /// <summary>A repeated move changes nothing; the attempt is still audited.</summary>
     async Task<Appointment> RepeatAsync(Appointment visit, string action, CancellationToken cancellationToken)
     {
@@ -157,13 +196,13 @@ public sealed partial class FrontDeskService(SchedulingDbContext db, SchedulingC
     {
         var patients = await context.PatientsAsync([visit.PatientId], cancellationToken);
         var calendars = (await context.CalendarsAsync(visit.FacilityId, cancellationToken)).ToDictionary(c => c.Id, c => c.Name);
-        return Card(visit, patients, calendars);
+        return Card(visit, patients, calendars, await TokensAsync([visit.Id], cancellationToken));
     }
 
-    static BoardCard Card(Appointment a, IReadOnlyDictionary<Guid, PatientSummary> patients, Dictionary<Guid, string> calendars)
+    static BoardCard Card(Appointment a, IReadOnlyDictionary<Guid, PatientSummary> patients, Dictionary<Guid, string> calendars, Dictionary<Guid, string> tokens)
     {
         var p = patients.GetValueOrDefault(a.PatientId);
         return new(a.Id, AppointmentReference.Of(a.Id), a.PatientId, p?.FullName ?? "", p?.DateOfBirth, p?.RegistrationIncomplete ?? false,
-            a.CalendarId, calendars.GetValueOrDefault(a.CalendarId, ""), a.VisitType, a.ReasonCategory, a.Start, a.End, a.State, a.ChangedAt, a.Room);
+            a.CalendarId, calendars.GetValueOrDefault(a.CalendarId, ""), a.VisitType, a.ReasonCategory, a.Start, a.End, a.State, a.ChangedAt, a.Room, tokens.GetValueOrDefault(a.Id));
     }
 }

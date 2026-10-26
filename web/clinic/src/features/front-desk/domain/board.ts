@@ -14,6 +14,8 @@ export type BoardCard = {
   since: string;
   /** Where the patient was called in to (set at call-in); null before. */
   room: string | null;
+  /** The waiting-room token from check-in ("A-07", MDV-P1-031); null before. What the queue TV shows instead of a name. */
+  token: string | null;
 };
 export type Board = { facilityId: string; timeZone: string; date: string; now: string; cards: BoardCard[] };
 

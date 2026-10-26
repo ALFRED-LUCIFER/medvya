@@ -71,8 +71,10 @@ Status column: **Done** = implemented and tested; otherwise the ticket that deli
 
 | STRIDE | Threat | Mitigation | Status |
 |---|---|---|---|
-| I | Patient names shown in the waiting room | TV payload contains tokens, rooms and waits only (contract test) | MDV-P1-031 |
-| S | Anyone opening the TV URL | Revocable per-facility display token | MDV-P1-031 |
+| I | Patient names shown in the waiting room | TV payload contains tokens, rooms, doctor display names and waits only (exact-field contract test); the live push carries no data at all; the TV page loads outside the staff app and calls only its own endpoints (e2e) | **Done** (MDV-P1-031) |
+| S | Anyone opening the TV URL | Revocable per-facility display token (tenant + 32 random bytes, only its SHA-256 stored), sent once in the link's fragment (never in a URL the server sees), exchanged for an HttpOnly Secure SameSite=Strict cookie limited to `/v1/queue`; checked on every request; pairing audited | **Done** (MDV-P1-031) |
+| E | A display session used on staff endpoints, or a staff session on the TV | Separate authentication scheme and policy: staff endpoints take only the staff cookie, display endpoints only the display (tests both ways) | **Done** (MDV-P1-031) |
+| I | A revoked TV still connected over WebSockets | It gets only empty pings until it reconnects; every refetch and reconnect is refused at once | Accepted (MDV-P1-031) |
 
 ## Residual risks accepted for now
 

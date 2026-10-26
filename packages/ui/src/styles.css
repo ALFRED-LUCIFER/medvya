@@ -33,6 +33,12 @@
   --color-nav-ink: #c9d6e2;
   --color-nav-muted: #8fa6bd;   /* group headings, role (design #6f88a1 lifted for AA) */
   --color-nav-line: #1e3a55;
+  /* Waiting-room TV (P-05): light text on deep navy, read from 3 metres; every text colour is tested for AA on both surfaces */
+  --color-tv-bg: #0b1f33;
+  --color-tv-panel: #12304d;
+  --color-tv-heading: #8fe3d6;
+  --color-tv-muted: #b6c6d6;
+  --color-tv-note: #9fb3c8;     /* design #8fa6bd lifted for AA on the panel */
   /* Module rail colours: non-text accent beside the current item, never the only cue (aria-current + fill) */
   --color-rail-clinical: #2bb3a3;
   --color-rail-practice: #6b9bff;

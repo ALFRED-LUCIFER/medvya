@@ -3,7 +3,7 @@ import { csrf } from '../../schedule/services/scheduleApi';
 import { retryDelay, type LiveStatus } from '../domain/board';
 
 type Handlers = {
-  /** A visit changed (ids and state only): the caller refetches the board. */
+  /** Something changed (the board: ids and state only; the queue TV: nothing at all): the caller refetches. */
   onChange: () => void;
   /** Joined, first time or again: anything missed meanwhile must be fetched now. */
   onResync: () => void;
@@ -12,24 +12,29 @@ type Handlers = {
 
 export const boardHubPath = '/v1/hubs/board';
 
-// The hub's one refusal text (BoardHub.Refused): no access at this facility, so trying again cannot help.
-const refused = 'Not allowed at this facility.';
+// The hubs' refusal texts (BoardHub.Refused, QueueHub): no access, so trying again cannot help.
+const refusals = ['Not allowed at this facility.', 'Not a display.'];
 
 /** 401/403 on connecting, or the hub refusing the facility: stop and leave it to the board's own refresh to show why. */
 const isRefusal = (e: unknown) =>
-  (e instanceof HttpError && (e.statusCode === 401 || e.statusCode === 403)) || (e instanceof Error && e.message.includes(refused));
+  (e instanceof HttpError && (e.statusCode === 401 || e.statusCode === 403)) || (e instanceof Error && refusals.some(r => e.message.includes(r)));
 
 /**
  * Live board updates for one facility (MDV-P1-029) over the SignalR hub. The session cookie authenticates; the URL and the
- * messages carry no patient data. While not live the status is "paused" and the caller polls; after every (re)join the caller
- * refetches, so a change made while disconnected is never lost, and since the board is always replaced whole nothing is shown
- * twice. Returns a function that closes the connection.
+ * messages carry no patient data. Returns a function that closes the connection.
  */
-export function watchBoard(facilityId: string, { onChange, onResync, onStatus }: Handlers): () => void {
+export const watchBoard = (facilityId: string, handlers: Handlers) => watchHub(boardHubPath, 'BoardChanged', ['Watch', facilityId], handlers);
+
+/**
+ * A live connection to a hub: joins with the `join` call, then hears `event`. While not live the status is "paused" and the
+ * caller polls; after every (re)join the caller refetches, so a change made while disconnected is never lost, and since the
+ * caller always replaces its data whole nothing is shown twice. Stops for good when refused (401/403 or a refusal text).
+ */
+export function watchHub(path: string, event: string, [method, ...args]: [string, ...unknown[]], { onChange, onResync, onStatus }: Handlers): () => void {
   // The CSRF header rides on negotiate and long-polling requests (ADR-004); WebSocket upgrades are GETs, and the SameSite=Strict
-  // session cookie is never sent on another site's WebSocket.
+  // cookies are never sent on another site's WebSocket.
   const connection = new HubConnectionBuilder()
-    .withUrl(boardHubPath, { headers: csrf, withCredentials: true })
+    .withUrl(path, { headers: csrf, withCredentials: true })
     .withAutomaticReconnect({ nextRetryDelayInMilliseconds: ctx => retryDelay(ctx.previousRetryCount) })
     .configureLogging(LogLevel.None)
     .build();
@@ -43,7 +48,7 @@ export function watchBoard(facilityId: string, { onChange, onResync, onStatus }:
     if (!stopped) timer = setTimeout(() => void start(), retryDelay(attempt++));
   };
   const join = async () => {
-    await connection.invoke('Watch', facilityId);
+    await connection.invoke(method, ...args);
     attempt = 0;
     onStatus('live');
     onResync();
@@ -69,7 +74,7 @@ export function watchBoard(facilityId: string, { onChange, onResync, onStatus }:
     }
   };
 
-  connection.on('BoardChanged', onChange);
+  connection.on(event, onChange);
   connection.onreconnecting(() => onStatus('paused'));
   connection.onreconnected(() => void join().catch(() => void connection.stop()));
   // Automatic reconnect gives up only when the server ends the connection (e.g. a session ended) or a rejoin failed: start over.

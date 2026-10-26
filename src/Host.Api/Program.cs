@@ -34,7 +34,9 @@ builder.WebHost.ConfigureKestrel(k =>
 });
 
 builder.AddStaffAuthentication();
-builder.Services.AddAuthorizationBuilder().AddStaffPolicies().AddStaffAdminPolicy();
+// Waiting-room TVs sign in with a display token, never a staff session (MDV-P1-031).
+builder.Services.AddAuthentication().AddQueueDisplay();
+builder.Services.AddAuthorizationBuilder().AddStaffPolicies().AddStaffAdminPolicy().AddQueueDisplayPolicy();
 // Enums travel as names ("Receptionist"), never as numbers that shift when an enum changes.
 builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.Configure<SmtpOptions>(builder.Configuration.GetSection("Email:Smtp")).AddSingleton<IEmailSender, SmtpEmailSender>();
@@ -85,6 +87,7 @@ builder.Services.AddRateLimiter(o =>
         RateLimitPartition.GetFixedWindowLimiter(ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
             _ => new FixedWindowRateLimiterOptions { PermitLimit = permitsPerMinute, Window = TimeSpan.FromMinutes(1) }));
     // Starting sign-in is cheap to abuse; codes and lockout are enforced by the identity provider.
+    o.AddQueueDisplayPairingLimit(builder.Configuration.GetValue("RateLimiting:DisplayPairingPerMinute", 20));
     o.AddPolicy(StaffAuthentication.SignInRateLimit, ctx => RateLimitPartition.GetFixedWindowLimiter(ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = builder.Configuration.GetValue("RateLimiting:SignInPerMinute", 20), Window = TimeSpan.FromMinutes(1) }));
 });
@@ -114,6 +117,7 @@ app.MapStaffSession();
 app.MapSchedulingEndpoints();
 app.MapPublicSite();
 app.MapInvitations();
+app.MapQueueDisplaySession();
 app.MapPatientEndpoints();
 if (app.Environment.IsDevelopment() && app.Configuration["Authentication:Oidc:Authority"]?.EndsWith(DevIdentityProvider.Path, StringComparison.Ordinal) == true)
     app.MapDevIdentityProvider();

@@ -46,6 +46,9 @@ describe('clinical primitives', () => {
       expect(contrast('#FFFFFF', tokens[bg]), `white on ${bg}`).toBeGreaterThanOrEqual(4.5);
     for (const fg of ['foreground', 'muted-foreground', 'action-600', 'primary'])
       expect(contrast(tokens[fg], tokens['background']), `${fg} on background`).toBeGreaterThanOrEqual(4.5);
+    // Queue TV text on its page and on its panels (MDV-P1-031), white focus ring on both.
+    for (const fg of ['card', 'tv-heading', 'tv-muted', 'tv-note']) for (const bg of ['tv-bg', 'tv-panel', 'brand-950'])
+      expect(contrast(tokens[fg]!, tokens[bg]!), `${fg} on ${bg}`).toBeGreaterThanOrEqual(4.5);
     // Navy navigation text on the sidebar and on the hovered/current item.
     for (const fg of ['nav-ink', 'nav-muted']) for (const bg of ['brand-950', 'nav-hover'])
       expect(contrast(tokens[fg], tokens[bg]), `${fg} on ${bg}`).toBeGreaterThanOrEqual(4.5);

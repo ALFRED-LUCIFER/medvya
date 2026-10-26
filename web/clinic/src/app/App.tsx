@@ -22,6 +22,7 @@ import ScheduleRoute from './ScheduleRoute';
 // Loaded on demand: invitations bring the form stack (React Hook Form, Zod) that most sessions never need.
 const InvitationRoute = lazy(() => import('./InvitationRoute'));
 const InviteColleagueRoute = lazy(() => import('./InviteColleagueRoute'));
+const DisplaysRoute = lazy(() => import('./DisplaysRoute'));
 // Patient screens load on first use, keeping them out of the first-paint bundle.
 const PatientDirectoryRoute = lazy(() => import('./PatientRoutes').then(m => ({ default: m.PatientDirectoryRoute })));
 const PatientRecordRoute = lazy(() => import('./PatientRoutes').then(m => ({ default: m.PatientRecordRoute })));
@@ -85,6 +86,8 @@ export default function App({ locale, onLocaleChange }: Props) {
             : <ComingSoon title={t(`nav.${i.id}`)} phase={i.phase} />} />)}
           {/* shortcut: reachable by URL only; the Staff screen and its navigation entry come with F-10 (MDV-P1-008). */}
           {active.capabilities.StaffRolesIntegrations === 'Config' && <Route path="/admin/staff" element={<InviteColleagueRoute />} />}
+          {/* shortcut: reachable by URL only, like Staff; it moves to device management in Settings with MDV-P0-012. */}
+          {active.capabilities.StaffRolesIntegrations === 'Config' && <Route path="/admin/displays" element={<DisplaysRoute facilityId={active.facilityId} />} />}
           {searchPath && <>
             <Route path={searchPath} element={<PatientDirectoryRoute registerPath={registerPath} />} />
             <Route path={`${searchPath}/:patientId`} element={<PatientRecordRoute canReveal={active.capabilities.RegisterBookPatients === 'Full'} />} />

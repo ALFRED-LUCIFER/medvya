@@ -29,7 +29,8 @@ public sealed class DoctorDayTransaction(SchedulingDbContext db, IOptions<Schedu
             try
             {
                 await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
-                foreach (var (calendarId, date) in locks) await LockAsync(calendarId, date, cancellationToken);
+                foreach (var (calendarId, date) in locks)
+                    await LockAsync(db, string.Create(CultureInfo.InvariantCulture, $"doctor:{calendarId}:{date:yyyy-MM-dd}"), options.Value.LockTimeout, cancellationToken);
                 var result = await work();
                 await tx.CommitAsync(cancellationToken);
                 return result;
@@ -48,11 +49,10 @@ public sealed class DoctorDayTransaction(SchedulingDbContext db, IOptions<Schedu
         }
     }
 
-    /// <summary>Exclusive app lock owned by the current transaction; released by commit or rollback.</summary>
-    async Task LockAsync(Guid calendarId, DateOnly date, CancellationToken cancellationToken)
+    /// <summary>Exclusive app lock owned by the open transaction; released by commit or rollback. Throws when not granted in time.</summary>
+    internal static async Task LockAsync(SchedulingDbContext db, string resource, TimeSpan lockTimeout, CancellationToken cancellationToken)
     {
-        var resource = string.Create(CultureInfo.InvariantCulture, $"doctor:{calendarId}:{date:yyyy-MM-dd}");
-        var timeout = (int)options.Value.LockTimeout.TotalMilliseconds;
+        var timeout = (int)lockTimeout.TotalMilliseconds;
         var granted = (await db.Database.SqlQuery<int>($"""
             DECLARE @result int;
             EXEC @result = sys.sp_getapplock @Resource = {resource}, @LockMode = 'Exclusive', @LockOwner = 'Transaction', @LockTimeout = {timeout};
@@ -61,7 +61,7 @@ public sealed class DoctorDayTransaction(SchedulingDbContext db, IOptions<Schedu
         if (granted < 0) throw new LockNotGrantedException(); // -1 timeout, -2 cancelled, -3 chosen as deadlock victim
     }
 
-    sealed class LockNotGrantedException() : Exception("Doctor-day lock not granted.");
+    internal sealed class LockNotGrantedException() : Exception("Scheduling lock not granted.");
 
     static bool IsTransient(Exception e) => e is LockNotGrantedException || Sql(e) is { Number: 1205 or 1222 };
 

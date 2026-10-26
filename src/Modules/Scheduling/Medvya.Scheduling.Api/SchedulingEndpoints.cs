@@ -83,6 +83,24 @@ public static class SchedulingEndpoints
             .RequireCapability(Capability.CheckInQueue, Access.Read, Access.Full)
             .AuditRefusals(BoardHub.ConnectAction, SchedulingAudit.AppointmentResource);
 
+        // Waiting-room TVs (MDV-P1-031). The TV signs in as a display (QueueDisplayAuth), never as staff, and reads tokens only.
+        var queue = app.MapGroup("/v1/queue");
+        queue.MapGet("/tv", ([FromServices] IQueueService service, CancellationToken ct) => service.TvAsync(ct))
+            .RequireAuthorization(QueueDisplayAuth.Policy);
+        app.MapHub<QueueHub>(QueueHub.Path).RequireAuthorization(QueueDisplayAuth.Policy);
+        // Staff who configure the facility add and revoke its displays.
+        var displays = app.MapGroup("/v1/queue/displays").RequireAuthorization();
+        displays.MapGet("/", (Guid? facilityId, [FromServices] IQueueService service, CancellationToken ct) => service.ListDisplaysAsync(facilityId ?? Guid.Empty, ct))
+            .AuditedWithErrors("queue_display.read", SchedulingAudit.DisplayResource, SchedulingAudit.Operations);
+        displays.MapPost("/", (CreateDisplay command, [FromServices] IQueueService service, CancellationToken ct) => service.CreateDisplayAsync(command, ct))
+            .AuditedWriteWithErrors(SchedulingAudit.DisplayCreate, SchedulingAudit.DisplayResource, SchedulingAudit.Operations);
+        displays.MapDelete("/{displayId:guid}", async (Guid displayId, [FromServices] IQueueService service, CancellationToken ct) =>
+            {
+                await service.RevokeDisplayAsync(displayId, ct);
+                return Results.NoContent();
+            })
+            .AuditedWriteWithErrors(SchedulingAudit.DisplayRevoke, SchedulingAudit.DisplayResource, SchedulingAudit.Operations);
+
         return app;
     }
 
@@ -127,6 +145,10 @@ public static class SchedulingEndpoints
         catch (AppointmentNotFoundException)
         {
             return Results.Problem(statusCode: StatusCodes.Status404NotFound, title: "Appointment not found");
+        }
+        catch (DisplayNotFoundException)
+        {
+            return Results.Problem(statusCode: StatusCodes.Status404NotFound, title: "Display not found");
         }
     }
 }

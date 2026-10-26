@@ -28,6 +28,9 @@ public sealed class SlotUnavailableException(string code) : Exception("Slot no l
     public string Code { get; } = code;
 }
 
+/// <summary>No queue display with this id in the tenant.</summary>
+public sealed class DisplayNotFoundException() : Exception("Display not found.");
+
 /// <summary>No appointment with this id in the tenant (tenant filters and row-level security hide other tenants' rows).</summary>
 public sealed class AppointmentNotFoundException() : Exception("Appointment not found.");
 

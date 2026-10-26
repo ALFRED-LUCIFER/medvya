@@ -176,6 +176,9 @@ for (const [country, locale] of [['IN', 'en'], ['IN', 'hi'], ['AE', 'ar'], ['AE'
 test('a minor needs a guardian before saving, in quick mode too, and the guardian is sent', async ({ page }) => {
   const saves = await desk(page, 'IN');
   await page.getByRole('link', { name: 'Quick (busy desk)' }).click();
+  // Type only once quick mode is on screen: a field filled while the full form is being replaced can miss the new input.
+  await expect(page.getByRole('link', { name: 'Quick (busy desk)' })).toHaveAttribute('aria-current', 'page');
+  await expect(page.getByRole('heading', { name: 'Identity', exact: true, level: 2 })).toBeVisible();
   await page.getByLabel('Full name').fill('Arjun Nair');
   await page.getByLabel('Mobile').fill('+91 90000 00413');
   await page.getByRole('textbox', { name: 'Date of birth', exact: true }).fill('2016-05-01');

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { catalogs, type Country } from '@medvya/i18n';
+import { catalogs, loadCatalog, type Country } from '@medvya/i18n';
 import {
   ageOn, completionSchema, dataMap, duplicateQuery, isMinor, eidExpired, emirates, emptyForm, errorCode, formField, hieFor, indiaStates, knownErrors, messageFor, payerFields,
   payerKinds, payerLabel, regionKey, registrationSchema, resolves, rules, stepOf, toCompletionRequest, toRegisterRequest, type DuplicateCandidate, type RegistrationForm,
@@ -143,7 +143,8 @@ describe('server errors and display', () => {
     expect([ageOn('1979-08-14', '2026-08-13'), ageOn('1979-08-14', '2026-08-14'), ageOn('2030-01-01', '2026-08-14'), ageOn('1979-08', '2026-08-14')]).toEqual([46, 47, null, null]);
   });
 
-  it('has every message the registration screens can ask for, in English, Hindi and Arabic', () => {
+  it('has every message the registration screens can ask for, in English, Hindi and Arabic', async () => {
+    await loadCatalog('hi'); await loadCatalog('ar');
     const keys = [
       ...knownErrors.map(e => `registration.error.${e}`),
       ...(['IN', 'AE'] as const).flatMap(c => payerKinds[c].flatMap(k => payerFields(c, k).map(f => payerLabel(c, k, f)))),
@@ -152,7 +153,7 @@ describe('server errors and display', () => {
       ...Object.values(dataMap).flat().map(d => `registration.map.${d.key}`),
     ];
     for (const locale of ['en', 'hi', 'ar'] as const)
-      expect(keys.filter(k => !k || !(k in catalogs[locale])), locale).toEqual([]);
+      expect(keys.filter(k => !k || !(k in catalogs[locale]!)), locale).toEqual([]);
   });
 });
 

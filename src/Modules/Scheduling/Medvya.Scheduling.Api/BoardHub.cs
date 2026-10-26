@@ -67,16 +67,17 @@ public sealed class BoardHub(
     }, Context.ConnectionAborted);
 }
 
-/// <summary>Sends board changes to the facility's group in this tenant.</summary>
+/// <summary>Sends board changes to the facility's boards (ids and state) and queue TVs (an empty "changed") in this tenant.</summary>
 // shortcut: in-process SignalR reaches only connections on this instance; add Azure SignalR Service (in country) before
 // running more than one API instance (MDV-P0-007).
-public sealed class SignalRBoardNotifier(IHubContext<BoardHub> hub) : IBoardNotifier
+public sealed class SignalRBoardNotifier(IHubContext<BoardHub> boards, IHubContext<QueueHub> tvs) : IBoardNotifier
 {
-    public Task ChangedAsync(BoardChange change, CancellationToken cancellationToken = default)
+    public async Task ChangedAsync(BoardChange change, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(change);
-        return hub.Clients.Group(BoardGroups.Of(change.TenantId, change.FacilityId))
+        await boards.Clients.Group(BoardGroups.Of(change.TenantId, change.FacilityId))
             .SendAsync(nameof(BoardChanged), new BoardChanged(change.AppointmentId, change.State.ToString(), change.ChangedAt), cancellationToken);
+        await tvs.Clients.Group(QueueGroups.Of(change.TenantId, change.FacilityId)).SendAsync(QueueHub.Changed, cancellationToken);
     }
 }
 

@@ -18,6 +18,8 @@ public sealed class SchedulingDbContext(DbContextOptions<SchedulingDbContext> op
     public DbSet<VisitStatusEvent> StatusEvents => Set<VisitStatusEvent>();
     public DbSet<AppointmentReschedule> Reschedules => Set<AppointmentReschedule>();
     public DbSet<OutboxEvent> Outbox => Set<OutboxEvent>();
+    public DbSet<QueueToken> QueueTokens => Set<QueueToken>();
+    public DbSet<QueueDisplay> QueueDisplays => Set<QueueDisplay>();
 
     Guid? CurrentTenantId => tenant.TenantId;
 
@@ -86,6 +88,23 @@ public sealed class SchedulingDbContext(DbContextOptions<SchedulingDbContext> op
         {
             e.ToTable("AppointmentReschedules");
             e.HasOne<Appointment>().WithMany().HasForeignKey(x => x.AppointmentId).OnDelete(DeleteBehavior.Restrict);
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<QueueToken>(e =>
+        {
+            e.Property(x => x.Prefix).HasMaxLength(4);
+            e.HasOne<Appointment>().WithMany().HasForeignKey(x => x.AppointmentId).OnDelete(DeleteBehavior.Restrict);
+            // One token per visit, and a token number is never given twice on the facility's day (MDV-P1-031).
+            e.HasIndex(x => x.AppointmentId).IsUnique();
+            e.HasIndex(x => new { x.TenantId, x.FacilityId, x.Date, x.Prefix, x.Number }).IsUnique();
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<QueueDisplay>(e =>
+        {
+            e.Property(x => x.Name).HasMaxLength(60);
+            e.Property(x => x.TokenHash).HasMaxLength(32);
+            e.HasIndex(x => x.TokenHash).IsUnique();
+            e.HasIndex(x => new { x.TenantId, x.FacilityId });
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         modelBuilder.Entity<OutboxEvent>(e =>

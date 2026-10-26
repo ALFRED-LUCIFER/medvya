@@ -72,7 +72,8 @@ Every stored field has one class. In code, each domain property carries `[Classi
 | VISIT_STATUS_EVENT.note (cancellation note, free text) | SensitiveHealth | May mention health. Never on reception screens, in logs or in events (MDV-P1-024) |
 | APPOINTMENT_RESCHEDULE.* (appointment, old and new calendar and times, actor, time) | Internal | Append-only history (MDV-P1-024) |
 | OUTBOX_EVENT.* (type, aggregate id, payload of opaque ids and instants) | Internal | No PHI in payloads |
-| WAITLIST_ENTRY.*, QUEUE_TOKEN.* (reception queue) | Internal | Tokens on TV, never names |
+| WAITLIST_ENTRY.*, QUEUE_TOKEN.* (reception queue: facility day, letter per doctor, number, visit) | Internal | Tokens on TV, never names (MDV-P1-031) |
+| QUEUE_DISPLAY.* (facility, name, token hash, created/revoked by and at) | Internal | Only the SHA-256 of the display token is stored; the token is shown once |
 | NOTIFICATION.template_id, channel, state, provider_ref | Internal | Templates carry no clinical data |
 | NOTIFICATION.recipient (phone/email) | Personal | DDM |
 

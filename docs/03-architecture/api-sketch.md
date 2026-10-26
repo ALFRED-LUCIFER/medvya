@@ -36,7 +36,10 @@ POST   /v1/appointments/{id}/check-in              # P1-028; a repeat returns th
 POST   /v1/appointments/{id}/status                # next board column only (state machine), else 409
 GET    /v1/front-desk/board?facilityId=            # P-01 today, nonclinical; SignalR hub for live updates (P1-029)
 HUB    /v1/hubs/board  Watch(facilityId) → BoardChanged{appointmentId,state,changedAt}  # P1-029; session's facility only, boards refetch
-GET    /v1/queue/tv?display_token=                 # tokens only
+POST   /v1/queue/tv/session  {token}               # P1-031: pairs a TV (token from the link's #fragment) → HttpOnly display cookie
+GET    /v1/queue/tv                                # display cookie only: {now:[{token,room,doctor}], next:[{token,waitMinutes}]}
+HUB    /v1/queue/hub  Watch() → QueueChanged()     # display only; the push has no arguments, the TV refetches
+GET|POST /v1/queue/displays · DELETE /v1/queue/displays/{id}   # staff with practice configuration: add (token shown once), list, revoke
 GET    /v1/notifications
 POST   /v1/encounters                              # P2
 GET    /v1/patients/{id}/timeline

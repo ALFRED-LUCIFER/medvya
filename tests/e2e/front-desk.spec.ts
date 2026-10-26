@@ -1,5 +1,6 @@
 import { createRequire } from 'node:module';
 import { expect, test, type Page } from '@playwright/test';
+import { fakeHub } from './support/fakeHub';
 
 // MDV-P1-028: the P-01 reception board and one-tap check-in. CI has no API, so /v1/me/context and the front-desk endpoints
 // are mocked with the synthetic cast in the shapes the server sends (IFrontDeskService.cs). The device runs in New York to
@@ -28,7 +29,7 @@ const card = (id: string, name: string, time: string, state: string, extra: Part
 });
 const cards = () => [
   card('a1', 'Meera Iyer (synthetic)', '11:00', 'Booked', { reasonCategory: 'ChronicReview', registrationIncomplete: true }),
-  card('a2', 'Farhan Qureshi (synthetic)', '10:20', 'CheckedIn', { since: ist('10:20') }),
+  card('a2', 'Farhan Qureshi (synthetic)', '10:20', 'CheckedIn', { since: ist('10:20'), token: 'A-07' }),
   card('a3', 'Lakshmi Pillai (synthetic)', '10:40', 'WithNurse', { reasonCategory: 'PostDischarge' }),
   card('a4', 'Vikram Desai (synthetic)', '10:00', 'InConsult', { visitType: 'NewConsultation' }),
   card('a5', 'Rahul Menon (synthetic)', '09:30', 'Billing'),
@@ -83,6 +84,7 @@ test('shows today\'s visits by status with nonclinical tags, in facility time', 
   await expect(meera).toContainText('Long-term condition review'); // the reason as its category only
   await expect(meera).toContainText('Registration incomplete');
   await expect(cardOf(page, 'Farhan Qureshi (synthetic)')).toContainText('Waiting 12 min');
+  await expect(cardOf(page, 'Farhan Qureshi (synthetic)')).toContainText('Token A-07'); // what the queue TV shows instead of the name
   // Each column's action, as designed.
   await expect(cardOf(page, 'Farhan Qureshi (synthetic)').getByRole('button')).toHaveText('Send to nurse');
   await expect(cardOf(page, 'Lakshmi Pillai (synthetic)').getByRole('button')).toHaveText('Intake done');
@@ -193,70 +195,17 @@ test('keyboard checks in; 44 px targets; tablet and 200% zoom scroll the board, 
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
 
-/**
- * A stand-in for the board hub (MDV-P1-029), speaking SignalR's JSON protocol over long polling, the client's fallback
- * transport. It answers Watch, can push BoardChanged, and can drop the connection and refuse to reconnect until restored.
- */
-async function fakeHub(page: Page) {
-  const RS = '\u001e';
-  let queue: string[] = [];
-  let waiting: ((body: string | null) => void) | null = null;
-  let down = false;
-  const hub = { watched: [] as unknown[], negotiations: 0 };
-  const flush = () => {
-    if (waiting && queue.length) {
-      const send = waiting;
-      waiting = null;
-      send(queue.join(''));
-      queue = [];
-    }
-  };
-  const emit = (message: object) => { queue.push(JSON.stringify(message) + RS); flush(); };
-  await page.route('**/v1/hubs/board/negotiate*', r => {
-    if (down) return r.fulfill({ status: 503, body: '' });
-    hub.negotiations++;
-    return r.fulfill({ json: { negotiateVersion: 1, connectionId: `c${hub.negotiations}`, connectionToken: `k${hub.negotiations}`,
-      availableTransports: [{ transport: 'LongPolling', transferFormats: ['Text', 'Binary'] }] } });
-  });
-  let firstPoll = true;
-  await page.route('**/v1/hubs/board?*', async r => {
-    const request = r.request();
-    expect(request.url()).not.toMatch(/Meera|Iyer/); // nothing about patients in the hub's URLs
-    if (request.method() === 'DELETE') return r.fulfill({ status: 202, body: '' });
-    if (request.method() === 'POST') {
-      for (const frame of (request.postData() ?? '').split(RS).filter(Boolean)) {
-        const message = JSON.parse(frame) as { protocol?: string; type?: number; target?: string; invocationId?: string; arguments?: unknown[] };
-        if (message.protocol) emit({}); // handshake
-        else if (message.type === 1 && message.target === 'Watch') {
-          hub.watched.push(message.arguments?.[0]);
-          emit({ type: 3, invocationId: message.invocationId, result: null });
-        }
-      }
-      return r.fulfill({ status: 200, body: '' });
-    }
-    if (firstPoll) { firstPoll = false; return r.fulfill({ status: 200, body: '' }); } // the long-polling transport's opening poll
-    const body = await new Promise<string | null>(resolve => { waiting = resolve; flush(); });
-    return body === null ? r.fulfill({ status: 204, body: '' }) : r.fulfill({ status: 200, body });
-  });
-  return Object.assign(hub, {
-    push: (appointmentId: string, state: string) => emit({ type: 1, target: 'BoardChanged', arguments: [{ appointmentId, state, changedAt: now }] }),
-    /** Ends the connection from the server side and refuses new ones until restored. */
-    drop: () => { down = true; firstPoll = true; waiting?.(null); waiting = null; queue = []; },
-    restore: () => { down = false; },
-  });
-}
-
 test('live: a change made at another desk appears without reloading, and a drop pauses then resyncs', async ({ page }) => {
-  const hub = await fakeHub(page);
+  const hub = await fakeHub(page, '/v1/hubs/board', /Meera|Iyer/); // nothing about patients in the hub's URLs
   const calls = await open(page);
   const status = page.getByRole('status').filter({ hasText: /Live updates/ });
   await expect(status).toHaveText('Live updates');
-  expect(hub.watched).toEqual(['f-1']);
+  expect(hub.watched).toEqual([['f-1']]);
   await expect.poll(() => calls.boards).toBe(2); // the first load, then a refetch once joined
 
   // Another desk calls in Farhan: the server's board changes, the hub says so, this board refetches.
   calls.state.find(c => c.id === 'a2')!.state = 'InConsult';
-  hub.push('a2', 'InConsult');
+  hub.push('BoardChanged', [{ appointmentId: 'a2', state: 'InConsult', changedAt: now }]);
   await expect(column(page, 'In consult').getByRole('article', { name: 'Farhan Qureshi (synthetic)' })).toBeVisible();
 
   // The connection drops and cannot come back for a while: the board says so in words, and misses nothing.
@@ -266,7 +215,7 @@ test('live: a change made at another desk appears without reloading, and a drop 
   hub.restore();
   await expect(status).toHaveText('Live updates', { timeout: 20_000 });
   await expect(column(page, 'Ready for doctor').getByRole('article', { name: 'Lakshmi Pillai (synthetic)' })).toBeVisible();
-  expect(hub.watched).toEqual(['f-1', 'f-1']);
+  expect(hub.watched).toEqual([['f-1'], ['f-1']]);
 });
 
 test('live: unreachable hub shows the paused state, in Arabic too', async ({ page }) => {

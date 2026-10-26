@@ -141,6 +141,7 @@ function Card({ card, board, now, canMove, online, confirmingId, pendingId, fail
         <FrontDeskTag kind="reason" text={t(`reasonCategory.${card.reasonCategory}`)} />
         {card.walkIn && <FrontDeskTag kind="walkIn" />}
         {card.registrationIncomplete && <FrontDeskTag kind="incomplete" />}
+        {card.token && <FrontDeskTag kind="token" text={t('board.token', { token: card.token })} />}
       </div>
       {state === 'CheckedIn' && <FrontDeskTag kind="waiting" text={t('board.waiting', { minutes: minutesSince(card.since, now) })} />}
       {card.room && state === 'InConsult' && <FrontDeskTag kind="room" text={t('board.room', { room: card.room })} />}

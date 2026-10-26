@@ -749,12 +749,12 @@ notes:
 - Confirm the final P-01 design with the founder before build (PRD v2 finding: P-01 status "next").
 
 === MDV-P1-029
-status: In progress
+status: Done
 progress:
-- Open [PR #83](https://github.com/ALFRED-LUCIFER/medvya/pull/83): SignalR board hub at /v1/hubs/board. Connecting needs "Check-in & queue" at the session's facility (capability policy; a refusal is audited Denied). Every call re-checks the live staff session, and Watch joins only the session's own facility after the board's access check, audited Allowed or Denied and limited per user. Groups are tenant + facility ids from the session. Messages are `{appointmentId, state, changedAt}` only (exact-field allowlist test); boards refetch the audited board endpoint
+- Merged [PR #83](https://github.com/ALFRED-LUCIFER/medvya/pull/83): SignalR board hub at /v1/hubs/board. Connecting needs "Check-in & queue" at the session's facility (capability policy; a refusal is audited Denied). Every call re-checks the live staff session, and Watch joins only the session's own facility after the board's access check, audited Allowed or Denied and limited per user. Groups are tenant + facility ids from the session. Messages are `{appointmentId, state, changedAt}` only (exact-field allowlist test); boards refetch the audited board endpoint
 - The hub has no write methods: call-in and every status move stay on the audited HTTP endpoints with the visit state machine (409) and the in-transaction audit. Call-in records the room of the doctor's session from the template ("Called to Room 3"). After the commit, moves and bookings are pushed; a failed push never fails the move
 - Client: reconnect with back-off; refetch after every (re)join, so a move is never lost or duplicated; "Live updates paused · refreshing every 30 s" (words and icon) with 30 s polling while not live; no connection while offline; stops on 401/403. Mutation-checked (13 server, 6 client); a change reaches another desk within 2 s (SQL Server, LongPolling and WebSockets); browser-verified with two signed-in desks (en, ar RTL, keyboard, axe, reconnect after killing the connection)
-- Left: close hub connections at once when a session is revoked (MDV-P0-012); Azure SignalR Service before running more than one API instance (MDV-P0-007); Today views (P2) subscribe when they exist
+- Follow-ups (recorded shortcuts, not ACs): close hub connections at once when a session is revoked (MDV-P0-012); Azure SignalR Service before running more than one API instance (MDV-P0-007); Today views (P2) subscribe when they exist
 title: Real-time board updates, call/room patient, nonclinical statuses (SignalR)
 type: Story
 epic: MDV-P1-E07
@@ -798,6 +798,13 @@ ac:
 - Doctors see their own schedule view in P1 (read-only) with their next patients.
 
 === MDV-P1-031
+status: Done
+progress:
+- Open [PR #88](https://github.com/ALFRED-LUCIFER/medvya/pull/88): check-in issues a waiting-room token in the same transaction ("A-07": a letter per doctor for the facility's day, a number per letter; a facility-day app lock + unique index, so 8 concurrent check-ins get A-01…A-08); the token shows on the board card
+- TV sign-in without a staff session: staff with practice configuration add a display at /admin/displays and get its link once (`/queue/tv#token`; tenant + 32 random bytes, only the SHA-256 stored). The TV posts the token from the fragment (never a URL the server sees) and gets an HttpOnly, Secure, SameSite=Strict cookie limited to /v1/queue; a separate scheme and policy, so display sessions never reach staff endpoints and staff sessions never read the TV. Revoking refuses the next request; pairing, adding and revoking are audited
+- `GET /v1/queue/tv` returns `{now:[{token,room,doctor}], next:[{token,waitMinutes}]}` for the display's own facility only (exact-field contract test; no names, initials, MRN, birth date or reason); the queue hub's push has no arguments, the TV refetches; a call-in reaches the TV in under 2 s (LongPolling and WebSockets); optional chime switched on at the screen
+- P-05 page outside the staff app (no staff session or context calls; e2e checks every request it makes): tokens 48–80 px, light on navy (contrast-tested tokens), en/hi/ar with Arabic RTL, live/paused state in words; mutation-checked (12 server, 4 client); browser-verified on the real API at 1920×1080 and 1280×720 (en, ar, axe clean, no patient data in any response the TV received)
+- Follow-ups (recorded shortcuts, not ACs): displays are managed by URL until device management in Settings (MDV-P0-012); waits are place in queue × slot length until the running-delay estimate (MDV-P1-030)
 title: Queue TV display with tokens only, never names (P-05)
 type: Story
 epic: MDV-P1-E07

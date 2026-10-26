@@ -78,7 +78,7 @@ public sealed class FrontDeskEndpointTests(SqlServerFixture sql) : IClassFixture
         // Exactly these fields: adding one (the reason text, a phone number, an identifier) must be a reviewed change here.
         Assert.Equal(
             ["id", "reference", "patientId", "patientName", "dateOfBirth", "registrationIncomplete", "calendarId", "calendarName",
-             "visitType", "reasonCategory", "start", "end", "state", "since", "room", "walkIn", "unscheduled"],
+             "visitType", "reasonCategory", "start", "end", "state", "since", "room", "token", "walkIn", "unscheduled"],
             card.EnumerateObject().Select(p => p.Name));
         Assert.Equal(("ChronicReview", "Booked", "1972-03-12"), (card.GetProperty("reasonCategory").GetString(), card.GetProperty("state").GetString(), card.GetProperty("dateOfBirth").GetString()));
         Assert.DoesNotContain("chest", body, StringComparison.OrdinalIgnoreCase); // the reason in the patient's words

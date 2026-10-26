@@ -649,7 +649,10 @@ ac:
 - No-show offers rebook and is counted in the no-show metric (MDV-P1-041).
 
 === MDV-P1-025
-title: Walk-in registration and booking straight to the queue
+status: Partly done
+progress:
+- [PR #PRNUM](https://github.com/ALFRED-LUCIFER/medvya/pull/PRNUM): "Walk-in" on the board → find the patient (front-desk search) or quick-register (MDV-P1-015, guardian rule for minors from MDV-P1-020) and come back with the patient chosen → doctor or "next available" → one tap: `POST /v1/appointments/walk-in` books the earliest free slot from now today on the booking path (doctor-day lock, template and overlap re-check, SCHEDULE_SLOT rows, status + outbox + audit `appointment.walk_in` in one transaction), then the board's own check-in (same state machine, its own audited transaction, time recorded for exit gate 3); with no free slot it is queued under the chosen doctor as an unscheduled walk-in (zero length, no SCHEDULE_SLOT rows, not drawn on the schedule), so no slot is ever double-booked; cards tagged "Walk-in" in Checked in with the wait time; SQL Server tests incl. 6 parallel walk-ins for 2 free slots (2 distinct slots, 4 queued), mutation-checked; en/hi/ar, axe clean
+- Left: the 60-second walk-in timed with a trained user at the pilot (the full flow runs in a few seconds in the browser checks)
 type: Story
 epic: MDV-P1-E06
 prd: P1-06
@@ -718,7 +721,7 @@ progress:
 - Server-side state machine (one step forward, else 409); each move is a conditional update + VisitStatusEvent in one transaction, so a repeat or a second desk never checks in twice (8 concurrent check-ins on SQL Server → one event); audited endpoints; board payload tested against an exact field allowlist; mutation-checked (guard, idempotency, conditional update, payload, roles); browser-verified (en, ar RTL, keyboard, axe, 200 % zoom, tablet)
 - Payment on Billing cards follows the `billing.invoices` flag: off (all of P1) a disabled placeholder, on a link to Billing (P4); merged with main after #59 and #58 landed
 - Real-time updates and the call-in room: [PR #83](https://github.com/ALFRED-LUCIFER/medvya/pull/83) (MDV-P1-029), browser-verified against the real API with sign-in issuing the tenant and facility claims (MDV-P0-012)
-- Left: walk-in (MDV-P1-025); waitlist (MDV-P1-027); workload panel (MDV-P1-030)
+- Left: waitlist (MDV-P1-027); workload panel (MDV-P1-030); walk-in is MDV-P1-025 (PR #PRNUM)
 title: Reception board with visit columns and one-tap check-in
 type: Story
 epic: MDV-P1-E07

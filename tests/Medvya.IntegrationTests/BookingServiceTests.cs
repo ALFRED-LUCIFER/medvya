@@ -60,7 +60,7 @@ public sealed class BookingServiceTests(SqlServerFixture sql) : IClassFixture<Sq
         var evt = Assert.Single(await db.Outbox.ToListAsync());
         Assert.Equal(("AppointmentBooked.v1", booked.Id), (evt.Type, evt.AggregateId));
         var payload = JsonDocument.Parse(evt.Payload).RootElement;
-        Assert.Equal(["appointmentId", "facilityId", "calendarId", "patientId", "start", "end"], payload.EnumerateObject().Select(p => p.Name));
+        Assert.Equal(["appointmentId", "facilityId", "calendarId", "patientId", "start", "end", "walkIn", "unscheduled"], payload.EnumerateObject().Select(p => p.Name));
         Assert.DoesNotContain("Meera", evt.Payload, StringComparison.Ordinal); // opaque ids only
     }
 

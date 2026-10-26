@@ -26,6 +26,8 @@ const InviteColleagueRoute = lazy(() => import('./InviteColleagueRoute'));
 const PatientDirectoryRoute = lazy(() => import('./PatientRoutes').then(m => ({ default: m.PatientDirectoryRoute })));
 const PatientRecordRoute = lazy(() => import('./PatientRoutes').then(m => ({ default: m.PatientRecordRoute })));
 const RegistrationRoute = lazy(() => import('./PatientRoutes').then(m => ({ default: m.RegistrationRoute })));
+// Walk-in (MDV-P1-025) brings the patient picker and booking lists: loaded when opened, never at first paint.
+const WalkInRoute = lazy(() => import('./WalkInRoute'));
 const CompleteRegistrationRoute = lazy(() => import('./PatientRoutes').then(m => ({ default: m.CompleteRegistrationRoute })));
 
 type Props = { locale: Locale; onLocaleChange: (l: Locale) => void };
@@ -54,7 +56,10 @@ export default function App({ locale, onLocaleChange }: Props) {
   const searchPath = allows(active ?? null, patientDirectory) ? patientDirectory.path : null;
   const registerPath = shell.items.find(i => i.id === 'register')?.path ?? null;
   const pathOf = (id: string) => shell.items.find(i => i.id === id)?.path ?? null;
-  const registration = <RegistrationRoute country={country} actorName={shell.displayName ?? ''} bookPath={pathOf('schedule')} checkInPath={pathOf('frontDesk')} />;
+  // Walk-in (MDV-P1-025) books and checks in: Register / book patients and Check-in & queue, both at Full.
+  const walkInPath = pathOf('frontDesk') && active?.capabilities.CheckInQueue === 'Full' && active.capabilities.RegisterBookPatients === 'Full'
+    ? `${pathOf('frontDesk')}/walk-in` : null;
+  const registration = <RegistrationRoute country={country} actorName={shell.displayName ?? ''} bookPath={pathOf('schedule')} checkInPath={walkInPath} />;
 
   // F-05a: an ended session replaces every screen; signing in again comes back to this route.
   const routes = shell.loading ? <Route path="*" element={<ShellMessage standalone busy title={t('shell.loading')} />} />
@@ -81,8 +86,10 @@ export default function App({ locale, onLocaleChange }: Props) {
             : i.id === 'register' ? registration
             : i.id === 'frontDesk'
             ? <FrontDeskRoute facilityId={active.facilityId} online={online} canMove={active.capabilities.CheckInQueue === 'Full'}
-                registerPath={registerPath} billingPath={shell.items.find(b => b.id === 'billing')?.path ?? null} />
+                registerPath={registerPath} walkInPath={walkInPath} billingPath={shell.items.find(b => b.id === 'billing')?.path ?? null} />
             : <ComingSoon title={t(`nav.${i.id}`)} phase={i.phase} />} />)}
+          {walkInPath && registerPath &&
+            <Route path={walkInPath} element={<WalkInRoute facilityId={active.facilityId} boardPath={pathOf('frontDesk')!} registerPath={`${registerPath}?mode=quick`} />} />}
           {/* shortcut: reachable by URL only; the Staff screen and its navigation entry come with F-10 (MDV-P1-008). */}
           {active.capabilities.StaffRolesIntegrations === 'Config' && <Route path="/admin/staff" element={<InviteColleagueRoute />} />}
           {searchPath && <>

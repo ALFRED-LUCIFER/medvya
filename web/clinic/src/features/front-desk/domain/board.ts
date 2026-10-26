@@ -14,6 +14,9 @@ export type BoardCard = {
   since: string;
   /** Where the patient was called in to (set at call-in); null before. */
   room: string | null;
+  /** Arrived without an appointment (MDV-P1-025); unscheduled = queued with no free slot (holds no slot). */
+  walkIn?: boolean;
+  unscheduled?: boolean;
 };
 export type Board = { facilityId: string; timeZone: string; date: string; now: string; cards: BoardCard[] };
 
@@ -54,3 +57,15 @@ export const moveErrors = ['invalid_transition', 'not_today'] as const;
 export type MoveError = (typeof moveErrors)[number] | 'failed';
 export const moveError = (code: string | undefined): MoveError =>
   (moveErrors as readonly string[]).includes(code ?? '') ? (code as MoveError) : 'failed';
+
+// MDV-P1-025 walk-in: POST /v1/appointments/walk-in (IBookingService.WalkInAsync), then the board's check-in.
+/** calendarId "" = the next available doctor. */
+export type WalkInChoice = { calendarId: string; visitType: VisitType; reasonCategory: ReasonCategory };
+export type WalkInVisit = { id: string; calendarId: string; start: string; end: string; walkIn: boolean; unscheduled: boolean; patientName: string };
+export const emptyWalkIn: WalkInChoice = { calendarId: '', visitType: 'FollowUp', reasonCategory: 'General' };
+
+/** 409 codes of a walk-in: nothing free today (the desk then chooses a doctor to queue with), or the calendar is busy. */
+export const walkInErrors = ['no_free_slot', 'busy'] as const;
+export type WalkInError = (typeof walkInErrors)[number] | 'failed';
+export const walkInError = (code: string | undefined): WalkInError =>
+  (walkInErrors as readonly string[]).includes(code ?? '') ? (code as WalkInError) : 'failed';

@@ -5,11 +5,13 @@ import { Button } from '@medvya/ui';
 import type { IdentifierScheme, PayerKind } from '../../patients/domain/directory';
 import {
   eidExpired, emirates, genderIdentities, hieFor, indiaStates, languages, nationalities, otherIdChoices, payerFields, payerKinds, payerLabel,
-  isSex, quickIdentifier, regionKey, type RegistrationForm, type Step,
+  isSex, quickIdentifier, regionKey, relationships, type RegistrationForm, type Step,
 } from '../domain/registration';
 import { Checkbox, SelectField, SexField, TextField, type FormProps } from './FormFields';
 
 const grid = 'grid gap-4 md:grid-cols-2';
+
+const isRelationship = (country: Country, r: string): r is (typeof relationships)[Country][number] => (relationships[country] as readonly string[]).includes(r);
 
 function useNames() {
   const { locale } = useI18n();
@@ -26,8 +28,8 @@ function DateOfBirth({ f, country, ageInstead }: { f: FormProps; country: Countr
         hint={country === 'IN' ? t('registration.hint.dateOfBirth') : undefined} />;
 }
 
-/** Quick (busy desk): the minimum safe fields on one screen (MDV-P1-015). */
-export function QuickFields({ f, country, ageInstead }: { f: FormProps; country: Country; ageInstead: boolean }) {
+/** Quick (busy desk): the minimum safe fields on one screen (MDV-P1-015); a minor's guardian too (MDV-P1-020). */
+export function QuickFields({ f, country, ageInstead, minor }: { f: FormProps; country: Country; ageInstead: boolean; minor: boolean | null }) {
   const { t } = useI18n();
   const id = quickIdentifier[country];
   return (
@@ -41,6 +43,48 @@ export function QuickFields({ f, country, ageInstead }: { f: FormProps; country:
           hint={t(`registration.hint.identifier.${id.scheme}`)} ltr />
       </div>
       {country === 'IN' && <Checkbox f={f} name="ageInstead" label={t('registration.field.ageInstead')} />}
+      {minor && <div className={grid}><GuardianFields f={f} country={country} minor /></div>}
+    </>
+  );
+}
+
+/** The guardian (UAE: guardian or sponsor of a dependant): required while the patient is under 18. Cells of a two-column grid. */
+function GuardianFields({ f, country, minor }: { f: FormProps; country: Country; minor: boolean | null }) {
+  const { t } = useI18n();
+  const hint = t(minor ? 'registration.hint.guardian.minor' : minor === false ? 'registration.hint.guardian.adult' : 'registration.hint.guardian.unknown');
+  return (
+    <>
+      <TextField f={f} name="guardianName" label={t(`registration.field.guardianName.${country}`)} required={minor === true} hint={hint} wide />
+      <SelectField f={f} name="guardianRelationship" label={t('registration.field.guardianRelationship')} options={relationships[country]}
+        optionLabel={r => t(`registration.relationship.${r}`)} placeholder={t('registration.choose')} required={minor === true} />
+      <TextField f={f} name="guardianPhone" label={t('registration.field.guardianPhone')} required={minor === true} ltr type="tel" inputMode="tel" />
+    </>
+  );
+}
+
+/** The emergency contact: a name and number to call, never a portal user. Cells of a two-column grid. */
+export function EmergencyContactFields({ f, country, required }: { f: FormProps; country: Country; required: boolean }) {
+  const { t } = useI18n();
+  return (
+    <>
+      <TextField f={f} name="ecName" label={t('registration.field.ecName')} required={required} wide />
+      <SelectField f={f} name="ecRelationship" label={t('registration.field.ecRelationship')} options={relationships[country]}
+        optionLabel={r => t(`registration.relationship.${r}`)} placeholder={t('registration.choose')} required={required} />
+      <TextField f={f} name="ecPhone" label={t('registration.field.ecPhone')} required={required} ltr type="tel" inputMode="tel" />
+    </>
+  );
+}
+
+/** Step 3 · Family & emergency (MDV-P1-020): emergency contact (required here), guardian (required under 18). */
+export function FamilyStep({ f, country, minor }: { f: FormProps; country: Country; minor: boolean | null }) {
+  const { t } = useI18n();
+  return (
+    <>
+      <div className={grid}>
+        <EmergencyContactFields f={f} country={country} required />
+        <GuardianFields f={f} country={country} minor={minor} />
+      </div>
+      <p className="flex items-start gap-2 text-sm text-muted-foreground"><Info className="mt-0.5 size-4 shrink-0" aria-hidden />{t('registration.family.note')}</p>
     </>
   );
 }
@@ -177,6 +221,8 @@ export function ReviewStep({ country, values, ageInstead, onEdit }: { country: C
   const region = regionKey(country, values.region);
   const text = (v: string) => (v.trim() ? <bdi>{v.trim()}</bdi> : null);
   const number = (v: string) => (v.trim() ? <Ltr>{v.trim()}</Ltr> : null);
+  const contact = (name: string, relationship: string, phone: string) => name.trim()
+    ? <><bdi>{name.trim()}</bdi> {isRelationship(country, relationship) && t('registration.review.relationship', { relationship: t(`registration.relationship.${relationship}`) })} {number(phone)}</> : null;
   const born = ageInstead ? t('registration.duplicates.age', { age: values.ageYears })
     : /^\d{4}-\d{2}-\d{2}$/.test(values.dateOfBirth) ? formatDate(new Date(`${values.dateOfBirth}T00:00:00`)) : '';
   const rows: ReviewRow[] = [
@@ -187,6 +233,8 @@ export function ReviewStep({ country, values, ageInstead, onEdit }: { country: C
     { label: t('registration.review.contact'), step: 'contact', parts: [number(values.mobile), number(values.email), text(values.line1), text(values.line2),
       country === 'IN' ? text(values.city) : null, country === 'IN' ? text(values.district) : null, region ? t(region) : null,
       number(country === 'IN' ? values.postalCode : values.makani), country === 'AE' ? number(values.poBox) : null] },
+    { label: t('registration.review.family'), step: 'family', parts: [contact(values.ecName, values.ecRelationship, values.ecPhone),
+      values.guardianName.trim() ? <>{t('registration.review.guardian')} {contact(values.guardianName, values.guardianRelationship, values.guardianPhone)}</> : null] },
     { label: t('registration.review.payer'), step: 'payer',
       parts: kind ? [t(`registration.payerKind.${kind}`), ...payerFields(country, kind).map(p => (p === 'memberNumber' || p === 'validTo' ? number : text)(values[p]))]
         : [t('patients.record.payerMissing')] },

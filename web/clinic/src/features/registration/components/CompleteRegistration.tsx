@@ -6,7 +6,7 @@ import { Button, buttonVariants, cn } from '@medvya/ui';
 import type { RegistrationStatus } from '../../patients/domain/directory';
 import PatientsMessage from '../../patients/components/PatientsMessage';
 import type { RegistrationForm } from '../domain/registration';
-import { AddressFields, PayerStep } from './RegistrationSteps';
+import { AddressFields, EmergencyContactFields, PayerStep } from './RegistrationSteps';
 
 type Props = {
   form: UseFormReturn<RegistrationForm>;
@@ -30,8 +30,8 @@ export default function CompleteRegistration(p: Props) {
   );
   // Announced: it answers the save (another facility's patient, or an old link); nothing was changed.
   if (p.failure === 'notFound')
-    return <div className="flex flex-col gap-4">{back}<div role="alert"><PatientsMessage title={t('patients.record.notFound.title')} body={t('patients.record.notFound.body')} /></div></div>;
-  if (p.failure === 'forbidden') return <PatientsMessage title={t('err.403')} body={t('registration.forbidden.body')} />;
+    return <div className="flex flex-col gap-4">{back}<div role="alert"><PatientsMessage pageHeading title={t('patients.record.notFound.title')} body={t('patients.record.notFound.body')} /></div></div>;
+  if (p.failure === 'forbidden') return <PatientsMessage pageHeading title={t('err.403')} body={t('registration.forbidden.body')} />;
 
   const { register, control, formState: { errors } } = p.form;
   const f = { register, control, errors };
@@ -52,6 +52,11 @@ export default function CompleteRegistration(p: Props) {
           <section aria-labelledby="complete-address" className="flex flex-col gap-4 rounded-xl border bg-card p-4">
             <h2 id="complete-address" className="text-base font-extrabold">{t('registration.complete.address')}</h2>
             <div className="grid gap-4 md:grid-cols-2"><AddressFields f={f} country={p.country} values={p.values} /></div>
+          </section>
+          <section aria-labelledby="complete-contact" className="flex flex-col gap-4 rounded-xl border bg-card p-4">
+            <h2 id="complete-contact" className="text-base font-extrabold">{t('registration.complete.emergencyContact')}</h2>
+            <div className="grid gap-4 md:grid-cols-2"><EmergencyContactFields f={f} country={p.country} required={false} /></div>
+            <p className="text-sm text-muted-foreground">{t('registration.family.note')}</p>
           </section>
           <section aria-labelledby="complete-payer" className="flex flex-col gap-4 rounded-xl border bg-card p-4">
             <h2 id="complete-payer" className="text-base font-extrabold">{t('registration.complete.payer')}</h2>

@@ -24,9 +24,9 @@ public class PatientRegistryTests(SqlServerFixture sql) : IClassFixture<SqlServe
     const string Eid = "784-1990-1234567-1";
     const string Abha = "91000000000002";
 
-    PatientRegistry Registry(Guid tenant, PatientsDbContext? db = null, IAuditLog? audit = null, Guid? at = null) =>
+    PatientRegistry Registry(Guid tenant, PatientsDbContext? db = null, IAuditLog? audit = null, Guid? at = null, TimeProvider? clock = null, string zone = "Asia/Kolkata") =>
         new(db ?? sql.Patients(tenant), new SqlServerFixture.FixedTenant(tenant), new FixedFacility(at ?? facility), new FixedUser(actor),
-            audit ?? new AuditLog(sql.Audit(tenant)), TimeProvider.System);
+            audit ?? new AuditLog(sql.Audit(tenant)), clock ?? TimeProvider.System, new FacilityZone(zone));
 
     Task<PatientSearchResult> Search(Guid tenant, string country, string? query, PatientsDbContext? db = null, DirectoryFilter filter = DirectoryFilter.All, int page = 1) =>
         Registry(tenant, db).SearchAsync(new(country, query, filter, page));
@@ -43,7 +43,7 @@ public class PatientRegistryTests(SqlServerFixture sql) : IClassFixture<SqlServe
         Payer = new(PayerKind.PrivateInsurance, "TPA (synthetic)", MemberNumber: "SYN-0001"),
     };
 
-    static RegisterPatient UaeQuick(Guid facility) => UaeBase with { FacilityId = facility, Quick = true, DateOfBirth = NextDob() };
+    static RegisterPatient UaeQuick(Guid facility) => UaeBase with { FacilityId = facility, Quick = true, DateOfBirth = NextDob(), EmergencyContact = null };
 
     [Fact]
     public async Task FullRegistrationAssignsFacilityScopedMrnsAndIsAudited()
@@ -67,17 +67,60 @@ public class PatientRegistryTests(SqlServerFixture sql) : IClassFixture<SqlServe
     }
 
     [Fact]
-    public async Task QuickRegistrationStaysIncompleteUntilAddressAndPayerAreAdded()
+    public async Task QuickRegistrationStaysIncompleteUntilAddressPayerAndEmergencyContactAreAdded()
     {
         var quick = await Registry(tenantA).RegisterAsync(UaeQuick(facility));
         Assert.Equal(RegistrationStatus.Incomplete, quick.Status);
 
         var address = new PatientAddress { Line1 = "Villa 1", Line2 = "Al Reem", Region = "AUH" };
         Assert.Equal(RegistrationStatus.Incomplete, await Registry(tenantA).CompleteRegistrationAsync(quick.PatientId, address, null));
-        Assert.Equal(RegistrationStatus.Complete, await Registry(tenantA).CompleteRegistrationAsync(quick.PatientId, null, new(PayerKind.SelfPay)));
+        Assert.Equal(RegistrationStatus.Incomplete, await Registry(tenantA).CompleteRegistrationAsync(quick.PatientId, null, new(PayerKind.SelfPay)));
+        // MDV-P1-020: the emergency contact is the third thing the completion task waits for.
+        Assert.Equal(RegistrationStatus.Complete, await Registry(tenantA).CompleteRegistrationAsync(quick.PatientId, null, null, UaeContact));
 
         var record = await Registry(tenantA).GetAsync(quick.PatientId);
         Assert.Equal((RegistrationStatus.Complete, "AUH", PayerKind.SelfPay), (record!.Patient.Status, record.Patient.Address!.Region, record.Payer!.Kind));
+    }
+
+    /// <summary>
+    /// SAFETY (MDV-P1-020): the guardian rule takes the registration day on the facility's calendar. At 20:00 UTC on 20 Oct it is
+    /// already 21 Oct in Kochi, so a patient born 21 Oct 2008 is 18 there (no guardian needed) but still 17 in UTC.
+    /// </summary>
+    [Fact]
+    public async Task TheGuardianRuleUsesTheFacilitysDay()
+    {
+        var clock = new ManualClock(new DateTimeOffset(2026, 10, 20, 20, 0, 0, TimeSpan.Zero));
+        var turning18 = IndiaFull(facility) with { DateOfBirth = new DateOnly(2008, 10, 21), Identifiers = [], FullName = "Anjali Menon (synthetic)" };
+
+        var refused = await Assert.ThrowsAsync<PatientValidationException>(() => Registry(tenantA, clock: clock, zone: "Etc/UTC").RegisterAsync(turning18));
+        Assert.Equal([new ValidationError("guardian", "required_for_minor")], refused.Errors);
+        await using (var db = sql.Patients(tenantA))
+            Assert.False(await db.Patients.AnyAsync(p => p.FullName == "Anjali Menon (synthetic)")); // nothing saved
+
+        var adult = await Registry(tenantA, clock: clock, zone: "Asia/Kolkata").RegisterAsync(turning18);
+        Assert.Equal(RegistrationStatus.Complete, adult.Status);
+    }
+
+    /// <summary>Contacts are rows to call, never users: registering them creates no account, membership or portal access.</summary>
+    [Fact]
+    public async Task ContactsAreStoredForTheRecordAndNeverBecomeUsers()
+    {
+        int users, memberships;
+        await using (var identity = sql.Identity()) users = await identity.Users.CountAsync();
+        await using (var tenancy = sql.Context(tenantA)) memberships = await tenancy.Memberships.IgnoreQueryFilters().CountAsync();
+
+        var guardian = new ContactInput("Ravi Nair (synthetic)", RelationshipKind.Parent, "+91 90000 00010");
+        var child = await Registry(tenantA).RegisterAsync(IndiaFull(facility) with { DateOfBirth = new DateOnly(2016, 5, 1), Identifiers = [], Guardian = guardian });
+        var record = await Registry(tenantA).GetAsync(child.PatientId);
+        Assert.Equal([("Lakshmi Nair (synthetic)", RelationshipKind.Spouse, "+919000000009", true, false), ("Ravi Nair (synthetic)", RelationshipKind.Parent, "+919000000010", false, true)],
+            record!.Relationships.Select(r => (r.Name, r.Relationship, r.Phone, r.IsEmergencyContact, r.IsGuardian)));
+
+        await using (var identity = sql.Identity()) Assert.Equal(users, await identity.Users.CountAsync());
+        await using (var tenancy = sql.Context(tenantA)) Assert.Equal(memberships, await tenancy.Memberships.IgnoreQueryFilters().CountAsync());
+
+        // Tenant isolation, both layers: another tenant sees none of them even with the EF query filters off (row-level security).
+        await using var other = sql.Patients(tenantB);
+        Assert.Empty(await other.Relationships.IgnoreQueryFilters().Where(r => r.PatientId == child.PatientId).ToListAsync());
     }
 
     [Fact]
@@ -258,6 +301,15 @@ public class PatientRegistryTests(SqlServerFixture sql) : IClassFixture<SqlServe
     sealed class FixedUser(Guid id) : ICurrentUser { public Guid? UserId => id; }
 
     internal sealed class FixedFacility(Guid? id) : ICurrentFacility { public Guid? FacilityId => id; }
+
+    /// <summary>Every facility in this IANA time zone (the registration day is taken there, MDV-P1-020).</summary>
+    internal sealed class FacilityZone(string zone) : Medvya.Tenancy.Application.IFacilityDirectory
+    {
+        public Task<Medvya.Tenancy.Application.FacilityInfo?> FindAsync(Guid facilityId, CancellationToken cancellationToken = default) =>
+            Task.FromResult<Medvya.Tenancy.Application.FacilityInfo?>(new(facilityId, "Synthetic facility", zone));
+        public Task<Medvya.Tenancy.Domain.Role?> ActiveRoleAsync(Guid userId, Guid facilityId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<IReadOnlyList<Guid>> ActiveDoctorsAsync(Guid facilityId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+    }
 
     sealed class ThrowingLog : IAuditLog
     {

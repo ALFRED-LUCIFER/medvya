@@ -1,18 +1,23 @@
 import { describe, expect, it } from 'vitest';
 import { catalogs, type Country } from '@medvya/i18n';
 import {
-  ageOn, completionSchema, dataMap, duplicateQuery, eidExpired, emirates, emptyForm, errorCode, formField, hieFor, indiaStates, knownErrors, messageFor, payerFields,
+  ageOn, completionSchema, dataMap, duplicateQuery, isMinor, eidExpired, emirates, emptyForm, errorCode, formField, hieFor, indiaStates, knownErrors, messageFor, payerFields,
   payerKinds, payerLabel, regionKey, registrationSchema, resolves, rules, stepOf, toCompletionRequest, toRegisterRequest, type DuplicateCandidate, type RegistrationForm,
 } from './registration';
 
 // Synthetic values only (IDs fail their checksums).
-const deepak: RegistrationForm = { ...emptyForm, fullName: 'Deepak Nair', mobile: '+91 90000 00201', dateOfBirth: '1979-08-14', sexAtBirth: 'Male' };
-const fatima: RegistrationForm = { ...emptyForm, fullName: 'Fatima Al Mansoori', mobile: '050 000 0458', dateOfBirth: '1988-02-03', sexAtBirth: 'Female', emiratesId: '784-1988-1234567-1' };
+const lakshmi = { ecName: 'Lakshmi Nair', ecRelationship: 'Spouse', ecPhone: '+91 90000 00209' };
+const deepak: RegistrationForm = { ...emptyForm, fullName: 'Deepak Nair', mobile: '+91 90000 00201', dateOfBirth: '1979-08-14', sexAtBirth: 'Male', ...lakshmi };
+const fatima: RegistrationForm = {
+  ...emptyForm, fullName: 'Fatima Al Mansoori', mobile: '050 000 0458', dateOfBirth: '1988-02-03', sexAtBirth: 'Female', emiratesId: '784-1988-1234567-1',
+  ecName: 'Ahmed Al Mansoori', ecRelationship: 'Spouse', ecPhone: '050 000 0459',
+};
+const today = '2026-10-26';
 const candidate = (patientId: string): DuplicateCandidate => ({
   patientId, initials: 'DN', ageYears: 47, sexAtBirth: 'Male', mrnTail: '0872', matchedOnNameAndDateOfBirth: true, matchedIdentifiers: [], identifiers: [],
 });
 const errors = (country: Country, quick: boolean, v: RegistrationForm) => {
-  const r = registrationSchema(country, quick).safeParse(v);
+  const r = registrationSchema(country, quick, today).safeParse(v);
   return r.success ? {} : Object.fromEntries(r.error.issues.map(i => [i.path.join('.'), i.message]));
 };
 
@@ -165,9 +170,46 @@ describe('completing a quick registration (MDV-P1-015)', () => {
     expect(completion('AE', { payerKind: 'PrivateInsurance', payerName: 'Synthetic Insurer' })).toEqual({ memberNumber: 'required' });
   });
 
-  it('sends only the address and the payer', () => {
+  it('sends only the address, the payer and the emergency contact', () => {
     expect(toCompletionRequest({ ...emptyForm, fullName: 'not sent', payerKind: 'SelfPay' }, 'IN')).toEqual({
-      address: null, payer: { kind: 'SelfPay', payerName: null, plan: null, memberNumber: null, validTo: null, network: null },
+      address: null, payer: { kind: 'SelfPay', payerName: null, plan: null, memberNumber: null, validTo: null, network: null }, emergencyContact: null,
     });
+  });
+});
+
+describe('family, emergency contact and guardian (MDV-P1-020)', () => {
+  const ravi = { guardianName: 'Ravi Nair', guardianRelationship: 'Parent', guardianPhone: '+91 90000 00210' };
+  const child = { ...deepak, dateOfBirth: '2016-05-01' };
+
+  it('needs an emergency contact for full registration, not for quick', () => {
+    const none = { ...deepak, ecName: '', ecRelationship: '', ecPhone: '' };
+    expect(errors('IN', false, none)).toEqual({ ecName: 'required' });
+    expect(errors('IN', true, none)).toEqual({});
+    expect(errors('IN', false, { ...deepak, ecPhone: '' })).toEqual({ ecPhone: 'required' });
+  });
+
+  it('needs a guardian under 18, in quick mode too; the 18th birthday counts and a stated age decides', () => {
+    expect(errors('IN', false, child)).toEqual({ guardianName: 'required_for_minor' });
+    expect(errors('IN', true, child)).toEqual({ guardianName: 'required_for_minor' });
+    expect(errors('IN', true, { ...child, ...ravi })).toEqual({});
+    expect([isMinor({ ...deepak, dateOfBirth: '2008-10-26' }, 'IN', today), isMinor({ ...deepak, dateOfBirth: '2008-10-27' }, 'IN', today)]).toEqual([false, true]);
+    expect(isMinor({ ...deepak, ageInstead: true, ageYears: '17' }, 'IN', today)).toBe(true);
+    expect(isMinor({ ...deepak, dateOfBirth: '' }, 'IN', today)).toBeNull(); // unknown yet: not guessed
+  });
+
+  it('offers Sponsor in the UAE only', () => {
+    expect(errors('IN', false, { ...deepak, ecRelationship: 'Sponsor' })).toEqual({ ecRelationship: 'required' });
+    expect(errors('AE', false, { ...fatima, dateOfBirth: '2019-06-01', guardianName: 'Ahmed', guardianRelationship: 'Sponsor', guardianPhone: '050 000 0459' })).toEqual({});
+  });
+
+  it('sends the emergency contact in full mode and the guardian in both; maps their server errors', () => {
+    const full = toRegisterRequest({ ...child, ...ravi }, 'IN', false, null);
+    expect([full.emergencyContact, full.guardian]).toEqual([
+      { name: 'Lakshmi Nair', relationship: 'Spouse', phone: '+91 90000 00209' }, { name: 'Ravi Nair', relationship: 'Parent', phone: '+91 90000 00210' }]);
+    const quick = toRegisterRequest({ ...child, ...ravi }, 'IN', true, null);
+    expect([quick.emergencyContact, quick.guardian?.name]).toEqual([null, 'Ravi Nair']);
+    expect(['guardian', 'guardian.phone', 'emergencyContact.relationship'].map(f => formField(f, { identifiers: [] }, 'IN')))
+      .toEqual(['guardianName', 'guardianPhone', 'ecRelationship']);
+    expect(toCompletionRequest({ ...lakshmi }, 'IN').emergencyContact).toEqual({ name: 'Lakshmi Nair', relationship: 'Spouse', phone: '+91 90000 00209' });
   });
 });

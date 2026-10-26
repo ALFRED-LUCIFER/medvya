@@ -4,6 +4,9 @@ namespace Medvya.Patients.Application;
 
 public sealed record IdentifierInput(IdentifierScheme Scheme, string Value, DateOnly? ExpiresOn = null);
 
+/// <summary>An emergency contact or guardian: who to call. Name, relationship and phone are all needed.</summary>
+public sealed record ContactInput(string? Name, RelationshipKind? Relationship, string? Phone);
+
 public sealed record PayerInput(PayerKind Kind, string? PayerName = null, string? Plan = null, string? MemberNumber = null, DateOnly? ValidTo = null, string? Network = null);
 
 /// <summary>
@@ -31,6 +34,10 @@ public sealed record RegisterPatient
     public IReadOnlyList<IdentifierInput> Identifiers { get; init; } = [];
     public PatientAddress? Address { get; init; }
     public PayerInput? Payer { get; init; }
+    /// <summary>Required for full registration, optional in quick mode (MDV-P1-020).</summary>
+    public ContactInput? EmergencyContact { get; init; }
+    /// <summary>Required whenever the patient is under 18 on the registration day, in quick mode too (MDV-P1-020).</summary>
+    public ContactInput? Guardian { get; init; }
     /// <summary>The desk's decision about the possible matches it was shown (MDV-P1-016). Required while any exist.</summary>
     public DuplicateResolution? Duplicates { get; init; }
 }
@@ -57,7 +64,7 @@ public sealed record DuplicateResolution(DuplicateDecision Decision, IReadOnlyLi
 /// <summary>What the success screen shows: MRN, time and actor. Warnings are codes (e.g. "emirates_id.expired") that never block.</summary>
 public sealed record RegistrationResult(Guid PatientId, string Mrn, DateTimeOffset RegisteredAt, Guid? RegisteredBy, RegistrationStatus Status, IReadOnlyList<string> Warnings);
 
-public sealed record PatientRecord(Patient Patient, IReadOnlyList<PatientIdentifier> Identifiers, PayerCoverage? Payer);
+public sealed record PatientRecord(Patient Patient, IReadOnlyList<PatientIdentifier> Identifiers, PayerCoverage? Payer, IReadOnlyList<PatientRelationship> Relationships);
 
 /// <summary>Medical record numbers: facility-scoped, zero-padded.</summary>
 /// <remarks>shortcut: plain zero-padded number; add the facility prefix (e.g. DQ-11-) when facilities have codes.</remarks>
@@ -100,7 +107,9 @@ public sealed record PatientSearchResult(SearchKind MatchedOn, IReadOnlyList<Pat
 public interface IPatientRegistry
 {
     /// <summary>
-    /// Registers the patient at the current facility (a command for any other facility is refused). Possible duplicates are checked again here, not only while typing: while any match is not covered by
+    /// Registers the patient at the current facility (a command for any other facility is refused). Dates (age, the under-18
+    /// guardian rule, "today") are taken on the facility's calendar day in its time zone.
+    /// Possible duplicates are checked again here, not only while typing: while any match is not covered by
     /// <see cref="RegisterPatient.Duplicates"/>, nothing is saved ("duplicates"/"unresolved"). Each decision is stored as a
     /// <see cref="MergeRequest"/> and audited with the actor, in the same transaction as the registration.
     /// </summary>
@@ -124,10 +133,10 @@ public interface IPatientRegistry
     Task<PatientSearchResult> SearchAsync(PatientSearch search, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Adds the missing address and/or payer to a patient of the current facility; the registration becomes Complete (closing the
-    /// desk's completion task) once both exist. Null when there is no such patient at this facility (also another facility's
+    /// Adds the missing address, payer and/or emergency contact to a patient of the current facility; the registration becomes
+    /// Complete (closing the desk's completion task) once all three exist. Null when there is no such patient at this facility (also another facility's
     /// patient): nothing is changed or audited, and the endpoint answers 404.
     /// </summary>
-    /// <exception cref="PatientValidationException">Neither address nor payer given ("completion"/"required"), or either is invalid.</exception>
-    Task<RegistrationStatus?> CompleteRegistrationAsync(Guid patientId, PatientAddress? address, PayerInput? payer, CancellationToken cancellationToken = default);
+    /// <exception cref="PatientValidationException">Nothing given ("completion"/"required"), or a part is invalid.</exception>
+    Task<RegistrationStatus?> CompleteRegistrationAsync(Guid patientId, PatientAddress? address, PayerInput? payer, ContactInput? emergencyContact = null, CancellationToken cancellationToken = default);
 }

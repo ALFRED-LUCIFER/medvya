@@ -322,7 +322,8 @@ progress:
 - Merged [PR #40](https://github.com/ALFRED-LUCIFER/medvya/pull/40): Patients module back end — India rules (minimum fields, ABHA optional, Aadhaar last 4 only, PIN, payer kinds), facility-scoped MRN, write and audit in one transaction (fail closed), audited reads, ABHA Always Encrypted with exact lookup
 - Merged [PR #61](https://github.com/ALFRED-LUCIFER/medvya/pull/61): `POST /v1/patients` (facility from the session, country from the tenant) with the duplicate check (MDV-P1-016); [PR #58](https://github.com/ALFRED-LUCIFER/medvya/pull/58) and [PR #70](https://github.com/ALFRED-LUCIFER/medvya/pull/70): record page with identifiers masked to the last 4
 - Merged [PR #82](https://github.com/ALFRED-LUCIFER/medvya/pull/82): full registration UI at /patients/new (quick mode at ?mode=quick): Identity & IDs → Contact & address → Payer → Review, per-step validation, focus to each step's heading, errors announced; ABHA optional, Aadhaar last 4 only (12 digits refused with the reason), state/UT from the official list (checked on the server), PIN 6 digits, payer kinds with their own fields (TPA kept as the network); preview card, data map and rules panel; success screen with MRN, time, actor and next actions; country from the tenant via /v1/me/context; record answer tested against an exact field allowlist (registration data only, no clinical fields); en/hi/ar, axe clean, 375/768/1366 px, 200 % zoom; real-API browser check
-- Left: Family & emergency step (MDV-P1-020); Consents step and CONSENT_RECEIPT in the same transaction (MDV-P1-019); "Verify with ABHA" (P8); PAN / Voter ID / driving licence as other ID types and "Save draft" (in the design, not in the ACs)
+- [PR #86](https://github.com/ALFRED-LUCIFER/medvya/pull/86): Family & emergency step (MDV-P1-020)
+- Left: Consents step and CONSENT_RECEIPT in the same transaction (MDV-P1-019); "Verify with ABHA" (P8); PAN / Voter ID / driving licence as other ID types and "Save draft" (in the design, not in the ACs)
 title: Patient registration — India full flow (identity, ABHA optional, Aadhaar last 4, Indian address, payer)
 type: Story
 epic: MDV-P1-E05
@@ -381,8 +382,9 @@ progress:
 - Merged [PR #61](https://github.com/ALFRED-LUCIFER/medvya/pull/61): quick form (5 fields, keyboard only) with the duplicate check; [PR #62](https://github.com/ALFRED-LUCIFER/medvya/pull/62) board card and [PR #58](https://github.com/ALFRED-LUCIFER/medvya/pull/58) record header show "Registration incomplete"
 - Merged [PR #79](https://github.com/ALFRED-LUCIFER/medvya/pull/79): security fix — completion and registration writes reach the active facility's patients only; `POST /v1/patients/{id}/completion` (Full access): 200 + one Allowed row in the change's transaction, another facility's patient 404 + one NotFound row and nothing changed; mutation-checked
 - Merged [PR #82](https://github.com/ALFRED-LUCIFER/medvya/pull/82): quick and full are one form with a mode toggle; switching keeps what was typed
-- [PR #84](https://github.com/ALFRED-LUCIFER/medvya/pull/84): the record of an Incomplete patient shows the completion task (what is missing: address, payer or both) and "Complete registration" (Register / book at Full) reusing the registration address and payer fields and rules; saving posts only those two to the facility-scoped completion endpoint, Complete closes the task and the tag; 404 announced, nothing changed; en/hi/ar, axe clean, keyboard, 200 % zoom, real-API browser check
-- Left: emergency contact in the completion check (MDV-P1-020); CARE_TASK queue with owner and due date replaces the Incomplete status as the task (MDV-P4-016, recorded as a shortcut); timed 45-second usability check with a trained user (pilot)
+- Merged [PR #84](https://github.com/ALFRED-LUCIFER/medvya/pull/84): the record of an Incomplete patient shows the completion task (what is missing: address, payer or both) and "Complete registration" (Register / book at Full) reusing the registration address and payer fields and rules; saving posts only those two to the facility-scoped completion endpoint, Complete closes the task and the tag; 404 announced, nothing changed; en/hi/ar, axe clean, keyboard, 200 % zoom, real-API browser check
+- [PR #86](https://github.com/ALFRED-LUCIFER/medvya/pull/86): the emergency contact is the third part the completion task waits for, added from the same completion form
+- Left: CARE_TASK queue with owner and due date replaces the Incomplete status as the task (MDV-P4-016, recorded as a shortcut); timed 45-second usability check with a trained user (pilot)
 title: Quick registration for a busy desk with a completion task
 type: Story
 epic: MDV-P1-E05
@@ -509,6 +511,10 @@ ac:
 - Final wording is the legally reviewed text from MDV-P1-044 in en/hi/ar.
 
 === MDV-P1-020
+status: Done
+progress:
+- [PR #86](https://github.com/ALFRED-LUCIFER/medvya/pull/86): PATIENT_RELATIONSHIP (`patients.Relationships`, name and phone masked, EF filter + RLS, cross-tenant test); emergency contact required for full registration, optional in quick mode and the third part the completion task waits for; guardian required whenever the patient is under 18 on the registration day in the facility's time zone (IFacilityDirectory), quick mode included; an estimated date of birth is never treated as known (the stated age decides; unknown counts as a minor); relationship values per country (UAE adds Sponsor); contacts never become users (no account or membership created, tested); Family & emergency step with the portal note, guardian fields in quick mode for a minor, contacts on the record and the completion form; SAFETY tests on the server mutation-checked (rule removed, quick-mode exemption, country day instead of facility day, unknown age as adult, 18th birthday off by one); en/hi/ar, axe clean
+- Follow-ups outside this ticket: guardian-driven portal proxy rules (P4 R-04)
 title: Family, emergency contact and guardian rules (under-18 guardian required)
 type: Story
 epic: MDV-P1-E05

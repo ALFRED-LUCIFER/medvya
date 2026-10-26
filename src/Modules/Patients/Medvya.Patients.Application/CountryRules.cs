@@ -18,6 +18,9 @@ public sealed class PatientValidationException(IReadOnlyList<ValidationError> er
 /// <summary>A registration after validation: normalised values, the resolved date of birth and non-blocking warnings.</summary>
 public sealed record ValidatedRegistration(RegisterPatient Command, DateOnly DateOfBirth, bool DateOfBirthEstimated, IReadOnlyList<string> Warnings);
 
+/// <summary>A validated contact: trimmed name, a relationship the country uses, the phone normalised like a patient's mobile.</summary>
+public sealed record ValidContact(string Name, RelationshipKind Relationship, string Phone);
+
 /// <summary>
 /// Registration rules per country (AGENTS.md 3.3): one subclass per country, no country checks elsewhere.
 /// Formats only; national-ID checksums are deliberately not checked (the design asks for format, and synthetic IDs fail them).
@@ -40,6 +43,8 @@ public abstract partial class CountryRules
     protected abstract string TimeZoneId { get; }
     protected abstract IReadOnlySet<IdentifierScheme> Schemes { get; }
     protected abstract IReadOnlySet<PayerKind> PayerKinds { get; }
+    /// <summary>Relationship values the desk may choose (UAE adds Sponsor).</summary>
+    protected virtual IReadOnlySet<RelationshipKind> Relationships { get; } = Enum.GetValues<RelationshipKind>().Where(r => r != RelationshipKind.Sponsor).ToHashSet();
     protected virtual bool AllowsAge => false;
     /// <summary>E.164 form of a mobile number, or null when it is not a valid mobile number for the country.</summary>
     protected abstract string? NormalizeMobile(string value);
@@ -49,6 +54,16 @@ public abstract partial class CountryRules
     protected abstract PatientAddress CheckAddress(PatientAddress a, List<ValidationError> errors);
     /// <summary>Country minimums and warnings that depend on several fields.</summary>
     protected virtual void CheckRegistration(RegisterPatient c, DateOnly today, List<ValidationError> errors, List<string> warnings) { }
+
+    /// <summary>Below this age a guardian is required (MDV-P1-020).</summary>
+    public const int AdultAge = 18;
+
+    /// <summary>
+    /// Under 18 on <paramref name="today"/>, the registration day in the facility's time zone. An estimated date of birth is not
+    /// used as if it were known: the age the desk was told (<paramref name="statedAge"/>) decides, so nothing is guessed.
+    /// </summary>
+    public static bool IsMinor(DateOnly today, DateOnly dateOfBirth, bool estimated, int? statedAge) =>
+        estimated ? statedAge is not { } age || age < AdultAge : AgeOn(today, dateOfBirth) < AdultAge;
 
     /// <summary>Age in whole years on <paramref name="today"/> (the birthday counts).</summary>
     public static int AgeOn(DateOnly today, DateOnly dateOfBirth)
@@ -97,11 +112,21 @@ public abstract partial class CountryRules
         var address = c.Address is null ? null : Address(c.Address, errors);
         var payer = c.Payer is null ? null : Payer(c.Payer, errors);
 
+        // MDV-P1-020: an emergency contact for full registration; a guardian whenever the patient is a minor, quick mode included.
+        var emergency = c.EmergencyContact is null ? null : Contact(c.EmergencyContact, "emergencyContact", errors);
+        if (c.EmergencyContact is null && !c.Quick) errors.Add(new("emergencyContact", "required"));
+        var guardian = c.Guardian is null ? null : Contact(c.Guardian, "guardian", errors);
+        var dateKnown = !errors.Exists(e => e.Field is "dateOfBirth" or "ageYears");
+        // SAFETY: a patient under 18 on the registration day is never saved without a guardian.
+        if (dateKnown && c.Guardian is null && IsMinor(today, dob, estimated, c.AgeYears)) errors.Add(new("guardian", "required_for_minor"));
+
         var normalized = c with
         {
             FullName = fullName ?? "", ArabicName = arabicName, Mobile = mobile ?? "", AlternatePhone = alternate, Email = email,
             GenderIdentity = gender, PreferredLanguage = language, Nationality = nationality,
             Identifiers = identifiers, Address = address, Payer = payer,
+            EmergencyContact = emergency is null ? null : new(emergency.Name, emergency.Relationship, emergency.Phone),
+            Guardian = guardian is null ? null : new(guardian.Name, guardian.Relationship, guardian.Phone),
         };
         CheckRegistration(normalized, today, errors, warnings);
         if (errors.Count > 0) throw new PatientValidationException(errors);
@@ -109,12 +134,26 @@ public abstract partial class CountryRules
     }
 
     /// <summary>Validates the details added later to complete a quick registration.</summary>
-    public (PatientAddress? Address, PayerInput? Payer) ValidateCompletion(PatientAddress? address, PayerInput? payer)
+    public (PatientAddress? Address, PayerInput? Payer, ValidContact? EmergencyContact) ValidateCompletion(PatientAddress? address, PayerInput? payer, ContactInput? emergencyContact)
     {
         var errors = new List<ValidationError>();
-        var result = (address is null ? null : Address(address, errors), payer is null ? null : Payer(payer, errors));
+        var result = (address is null ? null : Address(address, errors), payer is null ? null : Payer(payer, errors),
+            emergencyContact is null ? null : Contact(emergencyContact, "emergencyContact", errors));
         if (errors.Count > 0) throw new PatientValidationException(errors);
         return result;
+    }
+
+    /// <summary>A validated contact, or null after adding its errors ("{prefix}.name", ".relationship", ".phone").</summary>
+    public ValidContact? Contact(ContactInput c, string prefix, List<ValidationError> errors)
+    {
+        ArgumentNullException.ThrowIfNull(c);
+        ArgumentNullException.ThrowIfNull(errors);
+        var before = errors.Count;
+        var name = Text(c.Name, prefix + ".name", required: true, errors);
+        if (c.Relationship is not { } relationship) errors.Add(new(prefix + ".relationship", "required"));
+        else if (!Relationships.Contains(relationship)) errors.Add(new(prefix + ".relationship", "not_allowed"));
+        var phone = Phone(c.Phone, prefix + ".phone", required: true, errors);
+        return errors.Count == before ? new(name!, c.Relationship!.Value, phone!) : null;
     }
 
     /// <summary>

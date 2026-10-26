@@ -14,6 +14,7 @@ const leela = {
   id, mrn: '001131', fullName: 'Leela Raman (synthetic)', arabicName: null, dateOfBirth: '1993-04-02', dateOfBirthEstimated: false, ageYears: 33,
   sexAtBirth: 'Female', genderIdentity: null, preferredLanguage: 'Tamil, English', nationality: null, mobile: '+919000000131',
   alternatePhone: null, email: null, status: 'Incomplete', registeredOn: '2026-10-25', address: null, identifiers: [], payer: null,
+  emergencyContact: null, guardian: null,
 };
 
 async function open(page: Page, { capabilities = full as Record<string, string>, locale = 'en' } = {}) {
@@ -30,13 +31,13 @@ async function open(page: Page, { capabilities = full as Record<string, string>,
 test('the record shows the completion task; completing it sends address and payer only and closes the task', async ({ page }) => {
   const saves = await open(page);
   const task = page.getByRole('region', { name: 'Registration to complete' });
-  await expect(task).toContainText('Address and payer are missing. Add them while the patient is at the desk.');
+  await expect(task).toContainText('Missing: address, payer, and emergency contact. Add them while the patient is at the desk.');
   await expect(page.getByText('Tamil, English')).toBeVisible(); // free text from before language codes is shown as entered
   await task.getByRole('link', { name: 'Complete registration' }).click();
   await expect(page).toHaveURL(`/patients/directory/${id}/complete`);
 
   await page.getByRole('button', { name: 'Save' }).click();
-  await expect(page.getByText('Add the address, the payer or both.')).toBeVisible();
+  await expect(page.getByText('Add the address, the payer or the emergency contact.')).toBeVisible();
   expect(saves).toHaveLength(0);
 
   await page.getByLabel('House / flat, building').fill('4 Synthetic Street');
@@ -46,6 +47,10 @@ test('the record shows the completion task; completing it sends address and paye
   await page.getByLabel('PIN code').fill('600020');
   await page.getByRole('combobox', { name: 'Payment type' }).click();
   await page.getByRole('option', { name: 'Self-pay', exact: true }).click();
+  await page.getByLabel('Emergency contact name').fill('Mohan Raman');
+  await page.getByRole('combobox', { name: 'Relationship', exact: true }).click();
+  await page.getByRole('option', { name: 'Sibling', exact: true }).click();
+  await page.getByLabel('Emergency contact phone').fill('+91 90000 00132');
   await page.getByRole('button', { name: 'Save' }).click();
 
   await expect(page.getByText('Registration complete. The completion task is closed.')).toBeVisible();
@@ -54,6 +59,7 @@ test('the record shows the completion task; completing it sends address and paye
   expect(saves[0]!.postDataJSON()).toEqual({
     address: { line1: '4 Synthetic Street', line2: null, city: 'Chennai', district: null, region: 'Tamil Nadu', postalCode: '600020', makani: null, poBox: null },
     payer: { kind: 'SelfPay', payerName: null, plan: null, memberNumber: null, validTo: null, network: null },
+    emergencyContact: { name: 'Mohan Raman', relationship: 'Sibling', phone: '+91 90000 00132' },
   });
   await page.getByRole('link', { name: 'Back to the record' }).click();
   await expect(page).toHaveURL(`/patients/directory/${id}`);
@@ -86,6 +92,7 @@ for (const locale of ['en', 'hi', 'ar'])
       await open(page, { locale });
       for (const path of [`/patients/directory/${id}`, `/patients/directory/${id}/complete`]) {
         await page.goto(path);
+        await page.waitForLoadState('networkidle'); // the loaded page, not its loading state, is what this test checks
         await expect(page.locator('main h1')).toBeVisible();
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
         for (const b of await page.locator('main button, main a, main input').all())
@@ -97,3 +104,20 @@ for (const locale of ['en', 'hi', 'ar'])
         expect(violations).toEqual([]);
       }
     });
+
+test('while loading and when refused, the record page still has its one h1 and is axe clean', async ({ page }) => {
+  await page.route('**/v1/me/context', r => r.fulfill({ json: desk(full) }));
+  let release!: () => void;
+  const held = new Promise<void>(resolve => { release = resolve; });
+  await page.route(`**/v1/patients/${id}`, async r => { await held; await r.fulfill({ status: 403, json: {} }); });
+  await page.goto(`/patients/directory/${id}`);
+  for (const text of ['Opening record…', 'You don’t have access to this facility.']) {
+    await expect(page.locator('main h1')).toHaveText(text);
+    await expect(page.locator('main h1')).toHaveCount(1);
+    await page.addScriptTag({ path: axePath });
+    const violations = await page.evaluate(async () =>
+      (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string }[] }> } }).axe.run()).violations.map(v => v.id));
+    expect(violations).toEqual([]);
+    release();
+  }
+});

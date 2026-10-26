@@ -26,7 +26,7 @@ async function desk(page: Page, country: 'IN' | 'AE', { locale = 'en', warnings 
 }
 
 async function choose(page: Page, label: string, option: string) {
-  await page.getByRole('combobox', { name: label }).click();
+  await page.getByRole('combobox', { name: label, exact: true }).click();
   await page.getByRole('option', { name: option, exact: true }).click();
 }
 
@@ -60,6 +60,16 @@ test('India: full registration in steps, with Aadhaar last 4 only, the PIN rule 
   await page.getByLabel('PIN code').fill('682001');
   await next(page);
 
+  // Family & emergency (MDV-P1-020): the emergency contact is required for full registration; an adult needs no guardian.
+  await expect(page.getByText('Not required · adult.')).toBeVisible();
+  await next(page);
+  await expect(page.getByText('Required.')).toBeVisible();
+  await page.getByLabel('Emergency contact name').fill('Suresh Pillai');
+  await choose(page, 'Relationship', 'Spouse');
+  await page.getByLabel('Emergency contact phone').fill('+91 90000 00412');
+  await expect(page.getByText('Emergency contacts are not given portal access.', { exact: false })).toBeVisible();
+  await next(page);
+
   await choose(page, 'Payment type', 'Insurance');
   await page.getByLabel('Insurer').fill('Synthetic Health');
   await page.getByLabel('TPA (optional)').fill('Synthetic TPA');
@@ -84,6 +94,7 @@ test('India: full registration in steps, with Aadhaar last 4 only, the PIN rule 
     identifiers: [{ scheme: 'Abha', value: '91-0000-0000-0411' }, { scheme: 'AadhaarLast4', value: '0411' }],
     address: { line1: '12/402 Synthetic Apartments', city: 'Kochi', region: 'Kerala', postalCode: '682001', makani: null },
     payer: { kind: 'PrivateInsurance', payerName: 'Synthetic Health', network: 'Synthetic TPA', memberNumber: 'SYN-23-000411-01' },
+    emergencyContact: { name: 'Suresh Pillai', relationship: 'Spouse', phone: '+91 90000 00412' }, guardian: null,
   });
   expect(body).not.toHaveProperty('countryCode'); // the country is the tenant's, never sent
   expect(body).not.toHaveProperty('facilityId');
@@ -112,6 +123,10 @@ test('UAE: Arabic name typed right to left, an expired Emirates ID warns, the em
   await page.getByLabel('Villa / building & flat').fill('Villa 14');
   await choose(page, 'Emirate', 'Dubai');
   await expect(page.getByText('Health information exchange for this emirate: NABIDH. No connection is made at registration.')).toBeVisible();
+  await next(page);
+  await page.getByLabel('Emergency contact name').fill('Ahmed Al Mansoori');
+  await choose(page, 'Relationship', 'Spouse');
+  await page.getByLabel('Emergency contact phone').fill('050 000 0459');
   await next(page);
   await next(page); // payer left for later
   await expect(page.getByText('فاطمة المنصوري', { exact: false }).first()).toBeVisible();
@@ -157,3 +172,26 @@ for (const [country, locale] of [['IN', 'en'], ['IN', 'hi'], ['AE', 'ar'], ['AE'
           .map(v => `${v.id} (${v.nodes.length})`));
       expect(violations).toEqual([]);
     });
+
+test('a minor needs a guardian before saving, in quick mode too, and the guardian is sent', async ({ page }) => {
+  const saves = await desk(page, 'IN');
+  await page.getByRole('link', { name: 'Quick (busy desk)' }).click();
+  // Type only once quick mode is on screen: a field filled while the full form is being replaced can miss the new input.
+  await expect(page.getByRole('link', { name: 'Quick (busy desk)' })).toHaveAttribute('aria-current', 'page');
+  await expect(page.getByRole('heading', { name: 'Identity', exact: true, level: 2 })).toBeVisible();
+  await page.getByLabel('Full name').fill('Arjun Nair');
+  await page.getByLabel('Mobile').fill('+91 90000 00413');
+  await page.getByRole('textbox', { name: 'Date of birth', exact: true }).fill('2016-05-01');
+  await page.getByRole('radio', { name: 'Male', exact: true }).check();
+  await expect(page.getByText('Required: the patient is under 18.')).toBeVisible();
+  await page.getByRole('button', { name: 'Register patient' }).click();
+  await expect(page.getByText('A guardian is required: the patient is under 18.')).toBeVisible();
+  expect(saves).toHaveLength(0);
+
+  await page.getByLabel('Guardian (if under 18)').fill('Ravi Nair');
+  await choose(page, "Guardian's relationship", 'Parent');
+  await page.getByLabel("Guardian's phone").fill('+91 90000 00414');
+  await page.getByRole('button', { name: 'Register patient' }).click();
+  await expect(page.getByRole('heading', { name: 'Arjun Nair is registered' })).toBeVisible();
+  expect(saves[0]!.postDataJSON()).toMatchObject({ quick: true, guardian: { name: 'Ravi Nair', relationship: 'Parent', phone: '+91 90000 00414' }, emergencyContact: null });
+});

@@ -12,11 +12,14 @@ public class PatientRulesTests
     {
         FacilityId = Guid.NewGuid(), CountryCode = "IN", FullName = "Test Patient (synthetic)", DateOfBirth = new DateOnly(1980, 1, 1),
         SexAtBirth = SexAtBirth.Female, Mobile = "+91 90000 00002",
+        EmergencyContact = new("Lakshmi Nair (synthetic)", RelationshipKind.Spouse, "+91 90000 00009"),
     };
+
+    internal static readonly ContactInput UaeContact = new("Ahmed Al Mansoori (synthetic)", RelationshipKind.Spouse, "050 000 0009");
 
     internal static readonly RegisterPatient UaeBase = IndiaBase with
     {
-        CountryCode = "AE", Mobile = "050 000 0001", Identifiers = [new(IdentifierScheme.EmiratesId, "784-1990-1234567-1", new DateOnly(2028, 1, 1))],
+        CountryCode = "AE", Mobile = "050 000 0001", EmergencyContact = UaeContact, Identifiers = [new(IdentifierScheme.EmiratesId, "784-1990-1234567-1", new DateOnly(2028, 1, 1))],
     };
 
     static IReadOnlyList<ValidationError> Errors(RegisterPatient c) =>
@@ -48,6 +51,48 @@ public class PatientRulesTests
         Assert.Equal(36, IndiaRules.StatesAndUnionTerritories.Count);
         Assert.Contains(new ValidationError("address.region", "not_allowed"), Errors((IndiaBase with { Address = At("Kerela") })));
         Assert.Contains(new ValidationError("address.region", "not_allowed"), Errors((IndiaBase with { Address = At("AUH") })));
+    }
+
+    [Fact]
+    public void FullRegistrationNeedsAnEmergencyContactQuickModeDoesNot()
+    {
+        Assert.Contains(new ValidationError("emergencyContact", "required"), Errors(IndiaBase with { EmergencyContact = null }));
+        CountryRules.India.Validate(IndiaBase with { EmergencyContact = null, Quick = true }, Today);
+        Assert.Equal([new ValidationError("emergencyContact.name", "required"), new ValidationError("emergencyContact.phone", "format")],
+            Errors(IndiaBase with { EmergencyContact = new(" ", RelationshipKind.Parent, "12345") }));
+        Assert.Equal("+919000000009", CountryRules.India.Validate(IndiaBase, Today).Command.EmergencyContact!.Phone);
+    }
+
+    /// <summary>SAFETY (MDV-P1-020): under 18 on the registration day means a guardian, in quick mode too; the 18th birthday counts.</summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void AMinorIsNeverRegisteredWithoutAGuardian(bool quick)
+    {
+        var seventeen = IndiaBase with { Quick = quick, DateOfBirth = Today.AddYears(-18).AddDays(1) }; // 18 tomorrow
+        Assert.Equal([new ValidationError("guardian", "required_for_minor")], Errors(seventeen));
+        CountryRules.India.Validate(seventeen with { Guardian = new("Ravi Nair (synthetic)", RelationshipKind.Parent, "+91 90000 00010") }, Today);
+        CountryRules.India.Validate(IndiaBase with { Quick = quick, DateOfBirth = Today.AddYears(-18) }, Today); // 18 today: an adult
+        Assert.Equal([new ValidationError("guardian", "required_for_minor")], Errors(UaeBase with { Quick = quick, DateOfBirth = Today.AddYears(-5) }));
+    }
+
+    /// <summary>An estimated date of birth is never treated as known: the stated age decides, and 17 is a minor.</summary>
+    [Fact]
+    public void WithAnEstimatedDateOfBirthTheStatedAgeDecides()
+    {
+        Assert.Equal([new ValidationError("guardian", "required_for_minor")], Errors(IndiaBase with { DateOfBirth = null, AgeYears = 17 }));
+        Assert.True(CountryRules.India.Validate(IndiaBase with { DateOfBirth = null, AgeYears = 18 }, Today).DateOfBirthEstimated);
+        Assert.True(CountryRules.IsMinor(Today, Today.AddYears(-40), estimated: true, statedAge: null)); // estimated without an age: unknown, so a guardian is asked for
+        Assert.False(CountryRules.IsMinor(Today, Today.AddYears(-18), estimated: false, statedAge: null));
+    }
+
+    [Fact]
+    public void RelationshipValuesAreCountrySpecific()
+    {
+        var sponsor = new ContactInput("Sponsor (synthetic)", RelationshipKind.Sponsor, "+91 90000 00011");
+        Assert.Contains(new ValidationError("emergencyContact.relationship", "not_allowed"), Errors(IndiaBase with { EmergencyContact = sponsor }));
+        CountryRules.Uae.Validate(UaeBase with { DateOfBirth = Today.AddYears(-10), Guardian = sponsor with { Phone = "050 000 0011" } }, Today);
+        Assert.Contains(new ValidationError("guardian.relationship", "required"), Errors(IndiaBase with { Guardian = new("A (synthetic)", null, "+91 90000 00012") }));
     }
 
     [Fact]

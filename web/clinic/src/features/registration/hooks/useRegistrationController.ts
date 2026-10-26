@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import type { Country } from '@medvya/i18n';
 import {
-  duplicateQuery, emptyForm, formField, isoDay, messageFor, registrationSchema, resolves, stepFields, stepOf, steps, toRegisterRequest,
+  duplicateQuery, emptyForm, formField, isMinor, isoDay, messageFor, registrationSchema, resolves, stepFields, stepOf, steps, toRegisterRequest,
   type DuplicateDecision, type DuplicateQuery, type DuplicateResolution, type FormField, type RegisterRequest, type RegistrationForm,
   type RegistrationResult, type Step,
 } from '../domain/registration';
@@ -30,7 +30,10 @@ function useDebounced<T>(value: T, ms: number): T {
  * Save stays blocked until the desk has decided about every possible match; the server enforces the same rule.
  */
 export function useRegistrationController(country: Country, quick: boolean) {
-  const schema = useMemo(() => registrationSchema(country, quick), [country, quick]);
+  // The desk's calendar day for the expired-ID warning, the preview age and the under-18 guardian rule; the server decides
+  // with the facility's day.
+  const [today] = useState(() => isoDay(new Date()));
+  const schema = useMemo(() => registrationSchema(country, quick, today), [country, quick, today]);
   const form = useForm<RegistrationForm>({ resolver: zodResolver(schema), defaultValues: emptyForm, mode: 'onTouched' });
   const values = useWatch({ control: form.control }) as RegistrationForm;
   const query = duplicateQuery(values, country, quick);
@@ -39,8 +42,6 @@ export function useRegistrationController(country: Country, quick: boolean) {
   const debounced = useMemo(() => JSON.parse(debouncedKey) as DuplicateQuery | null, [debouncedKey]);
   const [step, setStep] = useState<Step>('identity');
   const [reached, setReached] = useState(0);
-  // The desk's calendar day for the expired-ID warning and the preview age; the server decides with the facility's day.
-  const [today] = useState(() => isoDay(new Date()));
 
   const duplicates = useQuery({
     queryKey: ['patients', 'duplicates', debounced],
@@ -90,6 +91,8 @@ export function useRegistrationController(country: Country, quick: boolean) {
     values,
     today,
     ageInstead: country === 'IN' && values.ageInstead,
+    /** Under 18 (null while unknown): the guardian is then required, in quick mode too. */
+    minor: isMinor(values, country, today),
     step: quick ? null : step,
     /** Steps up to here can be opened from the stepper (later ones only once reached with Continue). */
     reachedIndex: reached,

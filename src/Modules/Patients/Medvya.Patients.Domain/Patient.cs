@@ -87,6 +87,27 @@ public sealed class PatientIdentifier
     public static bool IsDeskSearchKey(IdentifierScheme scheme) => scheme is IdentifierScheme.Abha or IdentifierScheme.AbhaAddress or IdentifierScheme.EmiratesId;
 }
 
+/// <summary>How a contact is related to the patient. Country-specific: Sponsor (of a dependant) is used in the UAE only.</summary>
+public enum RelationshipKind { Spouse, Parent, Child, Sibling, Friend, Sponsor, Other }
+
+/// <summary>
+/// An emergency contact or guardian of a patient (MDV-P1-020, PATIENT_RELATIONSHIP). A name to call, never a user: no account,
+/// portal access or patient data is created for them (caregiver access is a patient-authorised proxy, P4 R-04).
+/// </summary>
+public sealed class PatientRelationship
+{
+    [Classification(DataClass.Internal)] public Guid Id { get; init; }
+    [Classification(DataClass.Internal)] public Guid TenantId { get; init; }
+    [Classification(DataClass.Internal)] public Guid PatientId { get; init; }
+    [Classification(DataClass.Personal)] public required string Name { get; init; }
+    [Classification(DataClass.Personal)] public RelationshipKind Relationship { get; init; }
+    /// <summary>E.164, normalised by the country rules like the patient's mobile.</summary>
+    [Classification(DataClass.Personal)] public required string Phone { get; init; }
+    [Classification(DataClass.Internal)] public bool IsEmergencyContact { get; init; }
+    /// <summary>Required while the patient is under 18 (UAE: also the sponsor of a dependant).</summary>
+    [Classification(DataClass.Internal)] public bool IsGuardian { get; init; }
+}
+
 /// <summary>Proposed: the desk asked for a merge review (P-03, MDV-P1-017). NotSame: the desk decided the two are different people.</summary>
 public enum MergeRequestStatus { Proposed, NotSame }
 

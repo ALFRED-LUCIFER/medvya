@@ -3,7 +3,7 @@ import {
   Send, Pipette, Inbox, Eye, Phone, MessageSquareCheck, CircleCheck,
   Sparkles, BadgeCheck, User, ArrowLeftRight, Upload, Lock,
   CircleAlert, TriangleAlert, Info, Pause, CircleMinus, Pill as PillIcon, CircleHelp,
-  Clock, Ban, SearchX, WifiOff, Hourglass, CalendarCheck, Tag, UserCheck, DoorOpen, CalendarX, CircleX, Radio, RefreshCw, Ticket, type LucideIcon,
+  Clock, Ban, SearchX, WifiOff, Hourglass, CalendarCheck, Tag, UserCheck, DoorOpen, CalendarX, CircleX, Radio, RefreshCw, Footprints, Ticket, type LucideIcon,
 } from 'lucide-react';
 import { useI18n, type MessageKey } from '@medvya/i18n';
 import { Button } from '#components/ui/button';
@@ -65,6 +65,7 @@ export const scheduleLooks = {
 export const frontDeskLooks = {
   reason: { label: 'board.tag.reason', icon: Tag, bg: '#F1F5F8', fg: '#334E68' },
   incomplete: { label: 'board.tag.incomplete', icon: TriangleAlert, bg: '#FDF5E7', fg: '#7A4710' },
+  walkIn: { label: 'board.tag.walkIn', icon: Footprints, bg: '#EFF4FF', fg: '#1D4ED8' }, // "Walk-in" (MDV-P1-025)
   waiting: { label: 'board.waiting', icon: Hourglass, bg: '#FFFFFF', fg: '#7A4710' },
   room: { label: 'board.room', icon: DoorOpen, bg: '#E7F6F4', fg: '#0F766E' },
   token: { label: 'board.token', icon: Ticket, bg: '#EFF4FF', fg: '#1D4ED8' },

@@ -138,12 +138,13 @@ export default function BookingPanel(p: Props) {
 }
 
 type PickerProps = { search: Props['patientSearch']; chosen: string; registerPath: string | null; invalid: boolean };
+export type PatientSearchView = Props['patientSearch'];
 
 /**
  * Choose the patient with front-desk search (MDV-P1-018). Rows show initials, age, sex and MRN tail only; the name and MRN
  * appear once one is chosen (an audited lookup). Inside the booking form, so Enter searches instead of submitting the booking.
  */
-function PatientPicker({ search: s, chosen, registerPath, invalid }: PickerProps) {
+export function PatientPicker({ search: s, chosen, registerPath, invalid }: PickerProps) {
   const { t } = useI18n();
   const hint = 'booking-patient-hint', searchError = 'booking-patient-search-error', pickError = 'booking-patient-error';
   const describedBy = [invalid && pickError, s.state === 'invalid' && searchError, hint].filter(Boolean).join(' ');

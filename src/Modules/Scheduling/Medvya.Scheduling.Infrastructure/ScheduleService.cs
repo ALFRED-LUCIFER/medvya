@@ -48,7 +48,8 @@ public sealed class ScheduleService(SchedulingDbContext db, SchedulingContext co
         var ids = calendars.Select(c => c.Id).ToList();
         var templates = await db.Templates.AsNoTracking().Where(t => t.FacilityId == facility.Id && ids.Contains(t.CalendarId)).ToDictionaryAsync(t => t.CalendarId, cancellationToken);
         var appointments = await db.Appointments.AsNoTracking()
-            .Where(a => a.FacilityId == facility.Id && a.Start < to && a.End > from && a.Start > earliest && ids.Contains(a.CalendarId)).OrderBy(a => a.Start).ToListAsync(cancellationToken);
+            .Where(a => a.FacilityId == facility.Id && a.Start < to && a.End > from && a.Start > earliest && ids.Contains(a.CalendarId) && !a.Unscheduled) // queued walk-ins take no slot
+            .OrderBy(a => a.Start).ToListAsync(cancellationToken);
         var me = context.UserId;
         var holds = await db.SlotHolds.AsNoTracking()
             .Where(h => h.FacilityId == facility.Id && ids.Contains(h.CalendarId) && h.Start < to && h.End > from && h.ExpiresAt > now && h.HeldBy != me).ToListAsync(cancellationToken);
@@ -127,7 +128,7 @@ public sealed class ScheduleService(SchedulingDbContext db, SchedulingContext co
         var (_, zone) = await context.FacilityAsync(command.FacilityId, cancellationToken);
         var now = context.Now;
         var future = await db.Appointments.AsNoTracking()
-            .Where(a => a.FacilityId == command.FacilityId && a.CalendarId == calendar.Id && a.Start >= now).OrderBy(a => a.Start).ToListAsync(cancellationToken);
+            .Where(a => a.FacilityId == command.FacilityId && a.CalendarId == calendar.Id && a.Start >= now && !a.Unscheduled).OrderBy(a => a.Start).ToListAsync(cancellationToken);
         var outside = future
             .Where(a => Appointment.Occupies(a.State) && !ScheduleRules.Covers(ScheduleRules.Day(template, ScheduleRules.LocalDate(a.Start, zone), zone), a.Start, a.End))
             .ToList();

@@ -87,10 +87,16 @@ namespace Medvya.Scheduling.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<bool>("Unscheduled")
+                        .HasColumnType("bit");
+
                     b.Property<string>("VisitType")
                         .IsRequired()
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
+
+                    b.Property<bool>("WalkIn")
+                        .HasColumnType("bit");
 
                     b.HasKey("Id");
 

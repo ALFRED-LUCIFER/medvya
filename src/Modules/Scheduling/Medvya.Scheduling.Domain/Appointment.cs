@@ -46,6 +46,13 @@ public sealed class Appointment
     /// <summary>The patient's own words. Clinicians only, never on reception screens, never in logs or events.</summary>
     [Classification(DataClass.SensitiveHealth)] public string? ReasonText { get; set; }
     [Classification(DataClass.Internal)] public BookingChannel Channel { get; init; }
+    /// <summary>The patient arrived without an appointment (MDV-P1-025): the board tags the card "Walk-in".</summary>
+    [Classification(DataClass.Internal)] public bool WalkIn { get; init; }
+    /// <summary>
+    /// A walk-in queued with no free slot (MDV-P1-025): it occupies no slot (no SCHEDULE_SLOT rows, zero length at arrival), so
+    /// it never blocks or double-books the calendar, and it is not drawn on the schedule; it waits on the board.
+    /// </summary>
+    [Classification(DataClass.Internal)] public bool Unscheduled { get; set; }
     [Classification(DataClass.Internal)] public Guid? BookedBy { get; init; }
     [Classification(DataClass.Internal)] public DateTimeOffset BookedAt { get; init; }
     [Classification(DataClass.Internal)] public Guid? ChangedBy { get; set; }

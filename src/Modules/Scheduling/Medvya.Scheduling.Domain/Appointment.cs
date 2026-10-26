@@ -25,6 +25,13 @@ public enum ReasonCategory { General, ChronicReview, Results, PostDischarge, Scr
 [JsonConverter(typeof(JsonStringEnumConverter<CancelReason>))]
 public enum CancelReason { PatientRequest, PatientUnwell, DoctorUnavailable, BookedInError, ClinicClosed, Other }
 
+/// <summary>
+/// Why a waiting patient moved to another doctor's queue (MDV-P1-030). A fixed list only, no free text, so no clinical detail
+/// can be typed into it.
+/// </summary>
+[JsonConverter(typeof(JsonStringEnumConverter<ReassignReason>))]
+public enum ReassignReason { DoctorRunningLate, DoctorUnavailable, PatientRequest, BalanceWorkload }
+
 /// <summary>A booked visit in one calendar (doctor or resource) at one location. Start and End are UTC instants.</summary>
 public sealed class Appointment
 {
@@ -83,6 +90,9 @@ public static class VisitFlow
 
     public static bool CanMove(AppointmentState from, AppointmentState to) => Next(from) == to;
 
+    /// <summary>The board's columns in order.</summary>
+    public static IReadOnlyList<AppointmentState> BoardStates => Order;
+
     /// <summary>Only a visit that has not started moves to another slot (Booked → Booked, history kept).</summary>
     public static bool CanReschedule(AppointmentState state) => state == AppointmentState.Booked;
 
@@ -94,6 +104,9 @@ public static class VisitFlow
 
     /// <summary>Only a booked visit that never checked in is a no-show (and only once it has started: see the use case).</summary>
     public static bool CanMarkNoShow(AppointmentState state) => state == AppointmentState.Booked;
+
+    /// <summary>Waiting for a doctor (checked in, with the nurse or ready): may move to another doctor's queue (MDV-P1-030).</summary>
+    public static bool CanReassign(AppointmentState state) => state is AppointmentState.CheckedIn or AppointmentState.WithNurse or AppointmentState.ReadyForDoctor;
 }
 
 /// <summary>
@@ -166,6 +179,8 @@ public sealed class AppointmentReschedule
     [Classification(DataClass.Internal)] public DateTimeOffset ToEnd { get; init; }
     [Classification(DataClass.Internal)] public Guid? ActorUserId { get; init; }
     [Classification(DataClass.Internal)] public DateTimeOffset OccurredAt { get; init; }
+    /// <summary>Set when a waiting patient moved to another doctor the same day (MDV-P1-030); null for a reschedule.</summary>
+    [Classification(DataClass.Internal)] public ReassignReason? ReassignReason { get; init; }
 }
 
 /// <summary>

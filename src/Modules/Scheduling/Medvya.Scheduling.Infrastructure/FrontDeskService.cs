@@ -18,7 +18,8 @@ namespace Medvya.Scheduling.Infrastructure;
 /// same transaction (MDV-P1-031).
 /// </summary>
 public sealed partial class FrontDeskService(
-    SchedulingDbContext db, SchedulingContext context, IBoardNotifier notifier, IOptions<SchedulingOptions> options, ILogger<FrontDeskService> log) : IFrontDeskService
+    SchedulingDbContext db, SchedulingContext context, DoctorDayTransaction transaction, IBoardNotifier notifier, IOptions<SchedulingOptions> options,
+    ILogger<FrontDeskService> log) : IFrontDeskService
 {
     /// <summary>Meter of front-desk measurements. Values are durations only; the one tag is the opaque tenant id.</summary>
     public const string MeterName = "Medvya.FrontDesk";
@@ -60,6 +61,84 @@ public sealed partial class FrontDeskService(
         if (command.State is not { } to || !Enum.IsDefined(to)) throw new SchedulingValidationException([new("state", "required")]);
         var (visit, _) = await MoveAsync(appointmentId, to, SchedulingAudit.Status, cancellationToken);
         return await CardAsync(visit, cancellationToken);
+    }
+
+    public async Task<ClinicOverview> GetOverviewAsync(Guid facilityId, CancellationToken cancellationToken = default)
+    {
+        await context.RequireAsync(facilityId, SchedulingAccess.CanViewBoard, cancellationToken);
+        var (facility, zone) = await context.FacilityAsync(facilityId, cancellationToken);
+        var now = context.Now;
+        var date = ScheduleRules.LocalDate(now, zone);
+        var (from, to) = (ScheduleRules.Instant(date, TimeOnly.MinValue, zone), ScheduleRules.Instant(date.AddDays(1), TimeOnly.MinValue, zone));
+        var visits = await db.Appointments.AsNoTracking()
+            .Where(a => a.FacilityId == facilityId && a.CalendarKind == CalendarKind.Doctor && a.Start >= from && a.Start < to
+                && a.State != AppointmentState.Cancelled && a.State != AppointmentState.NoShow)
+            .OrderBy(a => a.Start).ThenBy(a => a.Id).ToListAsync(cancellationToken);
+        var patients = await context.PatientsAsync(visits.Select(a => a.PatientId), cancellationToken);
+        var tokens = await TokensAsync([.. visits.Select(a => a.Id)], cancellationToken);
+        var templates = await db.Templates.AsNoTracking().Where(t => t.FacilityId == facilityId && t.CalendarKind == CalendarKind.Doctor).ToListAsync(cancellationToken);
+        var working = templates.Where(t => ScheduleRules.Day(t, date, zone).Hours.Count > 0).Select(t => t.CalendarId).ToHashSet();
+        string Name(Guid patientId) => patients.GetValueOrDefault(patientId)?.FullName ?? "";
+
+        // Every doctor with hours today or a visit today, in the day view's order.
+        var doctors = (await context.CalendarsAsync(facilityId, cancellationToken))
+            .Where(c => c.Kind == CalendarKind.Doctor && (working.Contains(c.Id) || visits.Exists(v => v.CalendarId == c.Id)))
+            .Select(c =>
+            {
+                var own = visits.Where(v => v.CalendarId == c.Id).ToList();
+                var counts = VisitFlow.BoardStates.ToDictionary(s => s, s => own.Count(v => v.State == s));
+                var next = own.Where(v => v.State < AppointmentState.InConsult).Take(3)
+                    .Select(v => new NextVisit(v.Id, v.Start, v.State, Name(v.PatientId), tokens.GetValueOrDefault(v.Id))).ToList();
+                return new DoctorLoad(c.Id, c.Name, counts, ClinicDelay.Minutes(own.Select(v => (v.Start, v.State, v.ChangedAt)), now), next);
+            }).ToList();
+        var waiting = visits.Where(v => VisitFlow.CanReassign(v.State)).OrderBy(v => v.ChangedAt)
+            .Select(v => new WaitingVisit(v.Id, tokens.GetValueOrDefault(v.Id), Name(v.PatientId), v.CalendarId, v.State, v.Start, v.ChangedAt)).ToList();
+        return new(facilityId, facility.TimeZone, now, doctors, waiting);
+    }
+
+    public async Task<BoardCard> ReassignAsync(Guid appointmentId, ReassignVisit command, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        var seen = await db.Appointments.AsNoTracking().SingleOrDefaultAsync(a => a.Id == appointmentId, cancellationToken)
+            ?? throw new AppointmentNotFoundException();
+        await context.RequireAsync(seen.FacilityId, SchedulingAccess.CanRunQueue, cancellationToken);
+        var errors = new List<Application.ValidationError>();
+        if (command.CalendarId is not { } target) errors.Add(new("calendarId", "required"));
+        else if (target == seen.CalendarId) errors.Add(new("calendarId", "unchanged"));
+        else if (!await context.IsActiveAsync(seen.FacilityId, target, CalendarKind.Doctor, cancellationToken)) errors.Add(new("calendarId", "unknown"));
+        if (command.Reason is not { } reason || !Enum.IsDefined(reason)) errors.Add(new("reason", "required"));
+        SchedulingValidationException.ThrowIfAny(errors);
+        if (!VisitFlow.CanReassign(seen.State) || seen.CalendarKind != CalendarKind.Doctor) throw new VisitTransitionException("invalid_transition");
+        var (_, zone) = await context.FacilityAsync(seen.FacilityId, cancellationToken);
+        var (now, me, date) = (context.Now, context.UserId, ScheduleRules.LocalDate(seen.Start, zone));
+        if (date != ScheduleRules.LocalDate(now, zone)) throw new VisitTransitionException("not_today");
+        var to = command.CalendarId!.Value;
+
+        // Both doctors' days are locked, so a booking or another move of either waits; the visit moves only from the queue and
+        // state the desk saw. Its booked slot is freed: a waiting patient takes no slot in the new doctor's calendar.
+        var moved = await transaction.RunAsync([(seen.CalendarId, date), (to, date)], async () =>
+        {
+            if (await db.Appointments.Where(a => a.Id == seen.Id && a.CalendarId == seen.CalendarId && a.State == seen.State)
+                    .ExecuteUpdateAsync(u => u.SetProperty(a => a.CalendarId, to), cancellationToken) == 0)
+                throw new VisitTransitionException("changed");
+            await db.ScheduleSlots.Where(x => x.AppointmentId == seen.Id).ExecuteDeleteAsync(cancellationToken);
+            db.Reschedules.Add(new AppointmentReschedule
+            {
+                Id = Guid.CreateVersion7(), TenantId = seen.TenantId, AppointmentId = seen.Id, FromCalendarId = seen.CalendarId, FromStart = seen.Start, FromEnd = seen.End,
+                ToCalendarId = to, ToStart = seen.Start, ToEnd = seen.End, ActorUserId = me, OccurredAt = now, ReassignReason = command.Reason,
+            });
+            db.Outbox.Add(new OutboxEvent
+            {
+                Id = Guid.CreateVersion7(), TenantId = seen.TenantId, Type = "AppointmentReassigned.v1", AggregateId = seen.Id, OccurredAt = now,
+                Payload = System.Text.Json.JsonSerializer.Serialize(new { appointmentId = seen.Id, facilityId = seen.FacilityId, fromCalendarId = seen.CalendarId, calendarId = to, reason = command.Reason }),
+            });
+            await db.SaveChangesAsync(cancellationToken);
+            await context.AuditAsync(SchedulingAudit.Reassign, SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment, seen.Id, seen.PatientId, cancellationToken);
+            seen.CalendarId = to;
+            return seen;
+        }, cancellationToken);
+        await NotifyAsync(notifier, log, new(moved.TenantId, moved.FacilityId, moved.Id, moved.State, now));
+        return await CardAsync(moved, cancellationToken);
     }
 
     public async Task<string> WatchGroupAsync(Guid facilityId, CancellationToken cancellationToken = default)

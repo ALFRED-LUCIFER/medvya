@@ -34,6 +34,8 @@ POST   /v1/appointments/walk-in                    # P1-025: next free slot toda
 POST   /v1/appointments/{id}/reschedule|cancel|no-show   # P1-024: booking path (doctor-day locks, slot rows freed and taken); cancel body = reason + optional note
 POST   /v1/appointments/{id}/check-in              # P1-028; a repeat returns the visit unchanged
 POST   /v1/appointments/{id}/status                # next board column only (state machine), else 409
+POST   /v1/appointments/{id}/reassign  {calendarId, reason}   # P1-030: a waiting visit to another doctor today; reason is a code
+GET    /v1/front-desk/overview?facilityId=         # P1-030 D-04: doctors (counts per state, delay, next) and the waiting room
 GET    /v1/front-desk/board?facilityId=            # P-01 today, nonclinical; SignalR hub for live updates (P1-029)
 HUB    /v1/hubs/board  Watch(facilityId) → BoardChanged{appointmentId,state,changedAt}  # P1-029; session's facility only, boards refetch
 POST   /v1/queue/tv/session  {token}               # P1-031: pairs a TV (token from the link's #fragment) → HttpOnly display cookie

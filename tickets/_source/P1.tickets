@@ -718,13 +718,13 @@ ac:
 - Accepting books the slot and removes the patient from the waitlist.
 
 === MDV-P1-028
-status: Partly done
+status: Done
 progress:
 - Merged [PR #62](https://github.com/ALFRED-LUCIFER/medvya/pull/62): P-01 board at /front-desk (7 columns with counts and a CTA each, nonclinical cards: reason category only, "Registration incomplete", wait timer on the server clock); check-in in two taps with a name + date-of-birth identity check; check-in time recorded as `medvya.front_desk.check_in.duration` (exit gate 3)
 - Server-side state machine (one step forward, else 409); each move is a conditional update + VisitStatusEvent in one transaction, so a repeat or a second desk never checks in twice (8 concurrent check-ins on SQL Server → one event); audited endpoints; board payload tested against an exact field allowlist; mutation-checked (guard, idempotency, conditional update, payload, roles); browser-verified (en, ar RTL, keyboard, axe, 200 % zoom, tablet)
 - Payment on Billing cards follows the `billing.invoices` flag: off (all of P1) a disabled placeholder, on a link to Billing (P4); merged with main after #59 and #58 landed
 - Real-time updates and the call-in room: [PR #83](https://github.com/ALFRED-LUCIFER/medvya/pull/83) (MDV-P1-029), browser-verified against the real API with sign-in issuing the tenant and facility claims (MDV-P0-012)
-- Left: waitlist (MDV-P1-027); workload panel (MDV-P1-030); walk-in is MDV-P1-025 (PR #89)
+- Every AC met. Side panels are other tickets: walk-in MDV-P1-025 (PR #89), Doctor workload MDV-P1-030 ([PR #92](https://github.com/ALFRED-LUCIFER/medvya/pull/92)), waitlist MDV-P1-027 (not started)
 title: Reception board with visit columns and one-tap check-in
 type: Story
 epic: MDV-P1-E07
@@ -779,6 +779,12 @@ ac:
 - Messages carry ids and nonclinical fields only.
 
 === MDV-P1-030
+status: Done
+progress:
+- Open [PR #92](https://github.com/ALFRED-LUCIFER/medvya/pull/92): D-04 clinic overview at /front-desk/overview (`GET /v1/front-desk/overview`, audited, board access): every doctor with hours or visits today, visits per board state, running-late estimate (later of a late consultation start and the longest wait past its time; the same rule on the server and in the board's workload panel), next three patients with tokens, and the shared waiting room with wait timers; live through the board hub
+- Reassign (`POST /v1/appointments/{id}/reassign`): a waiting visit (checked in, with nurse, ready) moves to another active doctor of the facility today for one of four listed reasons (no free text), under both doctor-day locks with a conditional update (of two racing desks one wins), its booked slot freed, history and outbox event kept, token kept, audited in the same transaction; "Check-in & queue" Full only; pushed to boards and TVs
+- A doctor sees their own day first ("Your day"), read only, beside the per-doctor schedule view of MDV-P1-023; the board shows a "Doctor workload" panel (waiting count and delay in words, bar for the share); en/hi/ar, RTL, 44 px targets, axe clean; mutation-checked (12 server, 4 client)
+- Follow-ups (recorded shortcuts, not ACs): the delay is estimated from board states and times until visit timings exist (P2); a reassigned waiting patient takes no slot in the new doctor's calendar
 title: Clinic overview: multi-doctor Today and shared waiting room (D-04)
 type: Story
 epic: MDV-P1-E07

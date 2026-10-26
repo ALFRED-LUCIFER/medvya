@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { CalendarCheck, CircleCheck, ClipboardCheck, DoorOpen, EyeOff, ReceiptText, Syringe, UserCheck, type LucideIcon } from 'lucide-react';
 import { useI18n, type MessageKey } from '@medvya/i18n';
 import { Button, FrontDeskTag } from '@medvya/ui';
+import type { workload } from '../domain/overview';
 import { boardColumns, minutesSince, nextState, type Board, type BoardCard, type BoardColumn, type LiveStatus, type MoveError } from '../domain/board';
 
 // Every column is words and an icon (never colour alone), following the Clinician App board (P-01).
@@ -39,6 +40,9 @@ type Props = {
   onMove: (id: string, state: BoardColumn) => void;
   /** "Register patient", shown when the role may register. */
   registerAction?: ReactNode;
+  /** Link to the clinic overview (MDV-P1-030). */
+  overviewAction?: ReactNode;
+  workload: ReturnType<typeof workload>;
   /** Payment for Billing cards: present when billing is on (flag billing.invoices, P4); until then a disabled placeholder. */
   paymentAction?: ReactNode;
 };
@@ -62,11 +66,36 @@ export default function BoardPage(props: Props) {
           <p className="inline-flex min-h-9 items-center gap-1.5 rounded-md bg-muted px-3 text-[12.5px] font-bold text-ink-700">
             <EyeOff aria-hidden className="size-4" />{t('board.hidesClinical')}
           </p>
+          {props.overviewAction}
           {props.registerAction}
         </div>
       </header>
+      {props.board && props.workload.length > 0 && <Workload rows={props.workload} />}
       <Body {...props} />
     </div>
+  );
+}
+
+/** P-01 "Doctor workload": per doctor, the number waiting in words and a bar for the share of the longest queue. */
+function Workload({ rows }: { rows: Props['workload'] }) {
+  const { t } = useI18n();
+  return (
+    <section aria-labelledby="board-workload" className="flex flex-col gap-2 rounded-xl border bg-card p-4">
+      <h2 id="board-workload" className="text-[15px] font-extrabold">{t('overview.workload')}</h2>
+      <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {rows.map(r => (
+          <li key={r.calendarId} className="flex flex-col gap-1">
+            <span className="flex flex-wrap justify-between gap-2 text-[13.5px]">
+              <strong>{r.name}</strong>
+              <span className="text-muted-foreground">
+                {[t('overview.waitingCount', { count: r.waiting }), r.delayMinutes > 0 ? t('overview.late', { minutes: r.delayMinutes }) : t('overview.onTime')].join(' · ')}
+              </span>
+            </span>
+            <span aria-hidden className="h-2 overflow-hidden rounded bg-muted"><span className="block h-full rounded bg-action-600" style={{ width: `${Math.round(r.share * 100)}%` }} /></span>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 

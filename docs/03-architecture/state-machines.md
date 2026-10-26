@@ -19,6 +19,7 @@ WALK_IN ──▶ CHECKED_IN
 - Statuses visible to reception are **nonclinical**.
 - Call in (READY_FOR_DOCTOR → IN_CONSULT) records the room of the doctor's session from the schedule template (MDV-P1-029).
 - Every committed move is pushed to the facility's open boards as ids and state only (SignalR, MDV-P1-029); boards refetch the board.
+- A waiting visit (CHECKED_IN, WITH_NURSE, READY_FOR_DOCTOR) can move to another doctor's queue the same day without changing state (MDV-P1-030): one of four listed reasons, history kept, its booked slot freed, its token kept.
 
 ## Membership (P0/P1)
 

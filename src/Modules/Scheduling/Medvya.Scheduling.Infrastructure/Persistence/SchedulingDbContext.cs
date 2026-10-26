@@ -87,6 +87,7 @@ public sealed class SchedulingDbContext(DbContextOptions<SchedulingDbContext> op
         modelBuilder.Entity<AppointmentReschedule>(e =>
         {
             e.ToTable("AppointmentReschedules");
+            e.Property(x => x.ReassignReason).HasConversion<string>().HasMaxLength(30);
             e.HasOne<Appointment>().WithMany().HasForeignKey(x => x.AppointmentId).OnDelete(DeleteBehavior.Restrict);
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });

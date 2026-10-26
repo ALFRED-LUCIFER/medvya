@@ -58,7 +58,7 @@ public sealed class PatientEndpointTests(SqlServerFixture sql) : IClassFixture<S
     async Task<Guid> Register(Guid at, string name, string mobile, Func<RegisterPatient, RegisterPatient>? more = null)
     {
         var registry = new PatientRegistry(sql.Patients(tenant), new SqlServerFixture.FixedTenant(tenant), new PatientRegistryTests.FixedFacility(at),
-            new SignedInUser(Guid.NewGuid()), new AuditLog(sql.Audit(tenant)), TimeProvider.System);
+            new SignedInUser(Guid.NewGuid()), new AuditLog(sql.Audit(tenant)), TimeProvider.System, new PatientRegistryTests.FacilityZone("Asia/Kolkata"));
         var command = IndiaBase with { FacilityId = at, FullName = name, Mobile = mobile };
         return (await registry.RegisterAsync(more is null ? command : more(command))).PatientId;
     }
@@ -237,6 +237,7 @@ public sealed class PatientEndpointTests(SqlServerFixture sql) : IClassFixture<S
         {
             address = new { line1 = "12 Test Street", city = "Kochi", region = "Kerala", postalCode = "682001" },
             payer = new { kind = "SelfPay" },
+            emergencyContact = new { name = "Lakshmi Nair (synthetic)", relationship = "Spouse", phone = "+91 90000 00009" },
         };
         await using var audit = sql.Audit(tenant);
 

@@ -30,7 +30,18 @@ export type PatientDetails = {
   /** National and insurance numbers come masked to their last four characters; the full values need the audited reveal. */
   identifiers: { scheme: IdentifierScheme; lastFour: string; expiresOn: string | null }[];
   payer: { kind: PayerKind; payerName: string | null; plan: string | null; memberNumberLastFour: string | null; validTo: string | null; network: string | null } | null;
+  /** Names and numbers to call (MDV-P1-020); never portal users. */
+  emergencyContact: ContactView | null;
+  guardian: ContactView | null;
 };
+
+export type Relationship = 'Spouse' | 'Parent' | 'Child' | 'Sibling' | 'Friend' | 'Sponsor' | 'Other';
+export type ContactView = { name: string; relationship: Relationship; phone: string };
+
+/** What the desk's completion task still waits for (MDV-P1-015/020); the server sets the status from the same three. */
+export type Missing = 'address' | 'payer' | 'emergencyContact';
+export const missingParts = (p: Pick<PatientDetails, 'address' | 'payer' | 'emergencyContact'>): Missing[] =>
+  [!p.address && 'address' as const, !p.payer && 'payer' as const, !p.emergencyContact && 'emergencyContact' as const].filter((m): m is Missing => !!m);
 
 export type RevealedIdentifiers = { identifiers: { scheme: IdentifierScheme; value: string }[]; memberNumber: string | null };
 

@@ -3,7 +3,7 @@ import { Link } from 'react-router';
 import { ArrowLeft, ClipboardList, Eye, TriangleAlert } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
 import { Button, buttonVariants, cn } from '@medvya/ui';
-import { addressLines, type PatientDetails, type RevealedIdentifiers } from '../domain/directory';
+import { addressLines, missingParts, type ContactView, type PatientDetails, type RevealedIdentifiers } from '../domain/directory';
 import { genderIdentities, regionKey } from '../../registration/domain/registration';
 import PatientsMessage from './PatientsMessage';
 
@@ -65,6 +65,7 @@ export default function PatientRecord(props: Props) {
   const region = p.address?.region ? regionKey(country, p.address.region) : null;
   const address = p.address && region ? { ...p.address, region: t(region) } : p.address;
   const masked = (last: string) => t('patients.masked', { last });
+  const contact = (c: ContactView) => <><bdi>{c.name}</bdi> {t('registration.review.relationship', { relationship: t(`registration.relationship.${c.relationship}`) })} <Ltr>{c.phone}</Ltr></>;
   const full = (scheme: string) => props.revealed?.identifiers.find(i => i.scheme === scheme)?.value;
   const hasNumbers = p.identifiers.length > 0 || !!p.payer?.memberNumberLastFour;
   return (
@@ -91,7 +92,7 @@ export default function PatientRecord(props: Props) {
         // The desk's completion task (MDV-P1-015): what quick registration left out, closed once address and payer exist.
         <section aria-labelledby="completion-task" className="flex flex-col items-start gap-2 rounded-xl border bg-card p-4 shadow-[inset_4px_0_0_var(--color-warning-700)] rtl:shadow-[inset_-4px_0_0_var(--color-warning-700)]">
           <h2 id="completion-task" className="flex items-center gap-2 font-extrabold"><ClipboardList className="size-5 text-warning-700" aria-hidden />{t('patients.completion.title')}</h2>
-          <p>{t(!p.address && !p.payer ? 'patients.completion.missing.both' : !p.address ? 'patients.completion.missing.address' : 'patients.completion.missing.payer')}</p>
+          <p>{t('patients.completion.missing', { items: new Intl.ListFormat([locale], { type: 'conjunction' }).format(missingParts(p).map(m => t(`patients.completion.item.${m}`))) })}</p>
           <Link to={props.completePath} className={buttonVariants()}>{t('patients.completion.action')}</Link>
         </section>
       )}
@@ -121,6 +122,11 @@ export default function PatientRecord(props: Props) {
         <Field label={t('patients.record.alternate')}>{p.alternatePhone ? <Ltr>{p.alternatePhone}</Ltr> : none}</Field>
         <Field label={t('patients.record.email')}>{p.email ? <Ltr>{p.email}</Ltr> : none}</Field>
         <Field label={t('patients.record.address')}>{address ? <bdi>{addressLines(address).join(', ')}</bdi> : none}</Field>
+      </Section>
+
+      <Section title={t('patients.record.contacts')}>
+        <Field label={t('patients.record.emergencyContact')}>{p.emergencyContact ? contact(p.emergencyContact) : none}</Field>
+        <Field label={t('patients.record.guardian')}>{p.guardian ? contact(p.guardian) : none}</Field>
       </Section>
 
       <Section title={t('patients.record.payer')}>

@@ -8,9 +8,19 @@ import type { IdentifierScheme, PayerKind, RegistrationStatus, SexAtBirth } from
 export const sexes: readonly SexAtBirth[] = ['Female', 'Male', 'Other'];
 export const isSex = (s: string): s is SexAtBirth => (sexes as readonly string[]).includes(s);
 
-/** Full-mode steps. Family & emergency (MDV-P1-020) and Consents (MDV-P1-019) join with their tickets. */
-export type Step = 'identity' | 'contact' | 'payer' | 'review';
-export const steps: readonly Step[] = ['identity', 'contact', 'payer', 'review'];
+/** Full-mode steps. Consents (MDV-P1-019) joins with its ticket. */
+export type Step = 'identity' | 'contact' | 'family' | 'payer' | 'review';
+export const steps: readonly Step[] = ['identity', 'contact', 'family', 'payer', 'review'];
+
+/** Relationship values per country (RelationshipKind; the UAE adds Sponsor of a dependant). */
+export const relationships = {
+  IN: ['Spouse', 'Parent', 'Child', 'Sibling', 'Friend', 'Other'],
+  AE: ['Spouse', 'Parent', 'Child', 'Sibling', 'Sponsor', 'Other'],
+} as const satisfies Record<Country, readonly string[]>;
+export type Relationship = (typeof relationships)[Country][number];
+
+/** Below this age a guardian is required (CountryRules.AdultAge, MDV-P1-020). */
+export const adultAge = 18;
 
 /** The one identifier quick mode asks for: ABHA (optional) in India, Emirates ID (required) in the UAE. */
 export const quickIdentifier = {
@@ -120,6 +130,8 @@ const shape = z.object({
   line1: text(), line2: text(), city: text(), district: text(), region: text(), postalCode: text(), makani: text(), poBox: text(),
   payerKind: z.string(),
   payerName: text(), plan: text(100), memberNumber: text(50), validTo: z.string(), network: text(100),
+  ecName: text(), ecRelationship: z.string(), ecPhone: z.string().max(25, 'format'),
+  guardianName: text(), guardianRelationship: z.string(), guardianPhone: z.string().max(25, 'format'),
 });
 
 export type RegistrationForm = z.input<typeof shape>;
@@ -130,6 +142,7 @@ export const emptyForm: RegistrationForm = {
   abha: '', abhaAddress: '', otherIdType: '', otherIdValue: '', emiratesId: '', emiratesIdExpiry: '', passport: '', visa: '',
   mobile: '', alternatePhone: '', email: '', line1: '', line2: '', city: '', district: '', region: '', postalCode: '', makani: '', poBox: '',
   payerKind: '', payerName: '', plan: '', memberNumber: '', validTo: '', network: '',
+  ecName: '', ecRelationship: '', ecPhone: '', guardianName: '', guardianRelationship: '', guardianPhone: '',
 };
 
 /** Fields each full-mode step owns; "Continue" validates only these. */
@@ -137,6 +150,7 @@ export const stepFields: Record<Exclude<Step, 'review'>, readonly FormField[]> =
   identity: ['fullName', 'arabicName', 'dateOfBirth', 'ageYears', 'sexAtBirth', 'genderIdentity', 'preferredLanguage', 'nationality', 'abha', 'abhaAddress',
     'otherIdType', 'otherIdValue', 'emiratesId', 'emiratesIdExpiry', 'passport', 'visa'],
   contact: ['mobile', 'alternatePhone', 'email', 'line1', 'line2', 'city', 'district', 'region', 'postalCode', 'makani', 'poBox'],
+  family: ['ecName', 'ecRelationship', 'ecPhone', 'guardianName', 'guardianRelationship', 'guardianPhone'],
   payer: ['payerKind', 'payerName', 'plan', 'memberNumber', 'validTo', 'network'],
 };
 
@@ -151,7 +165,34 @@ const addressFields: Record<Country, readonly FormField[]> = {
 };
 export const hasAddress = (v: RegistrationForm, country: Country) => addressFields[country].some(f => filled(v[f] as string));
 
-export function registrationSchema(country: Country, quick: boolean) {
+/**
+ * Under 18 on <today> (yyyy-mm-dd): from the date of birth, or the stated age when the date is unknown (never guessed from it).
+ * Null while neither is complete.
+ */
+export function isMinor(v: Pick<RegistrationForm, 'ageInstead' | 'ageYears' | 'dateOfBirth'>, country: Country, today: string): boolean | null {
+  if (country === 'IN' && v.ageInstead) {
+    const age = Number(v.ageYears);
+    return v.ageYears.trim() === '' || !Number.isInteger(age) ? null : age < adultAge;
+  }
+  const age = ageOn(v.dateOfBirth, today);
+  return age === null ? null : age < adultAge;
+}
+
+type Contact = 'ec' | 'guardian';
+const contactFields = (c: Contact) => ({ name: `${c}Name`, relationship: `${c}Relationship`, phone: `${c}Phone` }) as const;
+const hasContact = (v: RegistrationForm, c: Contact) => Object.values(contactFields(c)).some(f => filled(v[f]));
+
+/** A contact needs name, relationship and phone once any part is entered, or when required. */
+function checkContact(v: RegistrationForm, country: Country, c: Contact, required: string | null, issue: Issue) {
+  const f = contactFields(c);
+  if (!hasContact(v, c)) { if (required) issue(f.name, required); return; }
+  if (!filled(v[f.name])) issue(f.name, 'required');
+  if (!(relationships[country] as readonly string[]).includes(v[f.relationship])) issue(f.relationship, 'required');
+  if (!filled(v[f.phone])) issue(f.phone, 'required');
+}
+
+/** <today>: yyyy-mm-dd on the desk's calendar, for the under-18 guardian rule; the server decides with the facility's day. */
+export function registrationSchema(country: Country, quick: boolean, today: string) {
   return shape.superRefine((v, ctx) => {
     const issue = (path: FormField, message: string) => ctx.addIssue({ code: 'custom', path: [path], message });
 
@@ -170,7 +211,10 @@ export function registrationSchema(country: Country, quick: boolean) {
       else if (eid === '' && quick) issue('emiratesId', 'required');
       else if (eid === '' && !filled(v.passport)) issue('emiratesId', 'emirates_id_or_passport_required');
     }
+    // MDV-P1-020: a guardian for a minor in either mode (the server enforces it); an emergency contact for full registration.
+    checkContact(v, country, 'guardian', isMinor(v, country, today) ? 'required_for_minor' : null, issue);
     if (quick) return;
+    checkContact(v, country, 'ec', 'required', issue);
 
     if (country === 'IN') {
       if (filled(v.abhaAddress) && !abhaAddress.test(v.abhaAddress.trim())) issue('abhaAddress', 'format.AbhaAddress');
@@ -223,11 +267,13 @@ export function completionSchema(country: Country) {
   return shape.pick({
     line1: true, line2: true, city: true, district: true, region: true, postalCode: true, makani: true, poBox: true,
     payerKind: true, payerName: true, plan: true, memberNumber: true, validTo: true, network: true,
+    ecName: true, ecRelationship: true, ecPhone: true,
   }).superRefine((v, ctx) => {
     const issue: Issue = (path, message) => ctx.addIssue({ code: 'custom', path: [path], message });
     const form = { ...emptyForm, ...v };
-    if (!hasAddress(form, country) && v.payerKind === '') issue('line1', 'nothing_to_complete');
+    if (!hasAddress(form, country) && v.payerKind === '' && !hasContact(form, 'ec')) issue('line1', 'nothing_to_complete');
     checkAddressAndPayer(form, country, issue);
+    checkContact(form, country, 'ec', null, issue);
   });
 }
 
@@ -324,8 +370,18 @@ export type RegisterRequest = {
   quick: boolean; fullName: string; arabicName: string | null; dateOfBirth: string | null; ageYears: number | null; sexAtBirth: SexAtBirth;
   genderIdentity: string | null; preferredLanguage: string | null; nationality: string | null;
   mobile: string; alternatePhone: string | null; email: string | null;
-  identifiers: IdentifierInput[]; address: AddressInput | null; payer: PayerInput | null; duplicates: DuplicateResolution | null;
+  identifiers: IdentifierInput[]; address: AddressInput | null; payer: PayerInput | null;
+  emergencyContact: ContactInput | null; guardian: ContactInput | null; duplicates: DuplicateResolution | null;
 };
+
+export type ContactInput = { name: string; relationship: Relationship; phone: string };
+
+/** A contact as entered; null when none of its fields is filled. */
+function contactInput(v: RegistrationForm, c: Contact): ContactInput | null {
+  if (!hasContact(v, c)) return null;
+  const f = contactFields(c);
+  return { name: v[f.name].trim(), relationship: v[f.relationship] as Relationship, phone: v[f.phone].trim() };
+}
 
 const orNull = (s: string) => (filled(s) ? s.trim() : null);
 
@@ -344,6 +400,8 @@ export function toRegisterRequest(v: RegistrationForm, country: Country, quick: 
     identifiers: identifierInputs(v, country, quick),
     address: full ? addressInput(v, country) : null,
     payer: full ? payerInput(v, country) : null,
+    emergencyContact: full ? contactInput(v, 'ec') : null,
+    guardian: contactInput(v, 'guardian'),
     duplicates,
   };
 }
@@ -370,11 +428,13 @@ function payerInput(v: RegistrationForm, country: Country): PayerInput | null {
   };
 }
 
-export type CompletionRequest = { address: AddressInput | null; payer: PayerInput | null };
+export type CompletionRequest = { address: AddressInput | null; payer: PayerInput | null; emergencyContact: ContactInput | null };
 
-/** Only the address and payer go; the form's other fields (the completion form has none) are never sent. */
-export const toCompletionRequest = (v: Partial<RegistrationForm>, country: Country): CompletionRequest =>
-  ({ address: addressInput({ ...emptyForm, ...v }, country), payer: payerInput({ ...emptyForm, ...v }, country) });
+/** Only the address, payer and emergency contact go; the form's other fields (the completion form has none) are never sent. */
+export function toCompletionRequest(v: Partial<RegistrationForm>, country: Country): CompletionRequest {
+  const form = { ...emptyForm, ...v };
+  return { address: addressInput(form, country), payer: payerInput(form, country), emergencyContact: contactInput(form, 'ec') };
+}
 
 export type RegistrationResult = { patientId: string; mrn: string; registeredAt: string; status: RegistrationStatus; warnings: string[] };
 
@@ -383,7 +443,7 @@ export const knownErrors = [
   'required', 'too_long', 'format', 'out_of_range', 'scheme_not_allowed', 'duplicate_scheme', 'not_allowed', 'not_applicable',
   'emirates_id_required', 'emirates_id_or_passport_required', 'emirate_required', 'aadhaar_full_number_not_allowed',
   'format.Abha', 'format.AbhaAddress', 'format.AadhaarLast4', 'format.EmiratesId', 'format.Passport', 'format.pin', 'format.makani', 'format.poBox',
-  'format.email', 'nothing_to_complete',
+  'format.email', 'nothing_to_complete', 'required_for_minor',
 ] as const;
 export type KnownError = (typeof knownErrors)[number] | 'generic';
 export const errorCode = (code: string | undefined): KnownError =>
@@ -409,6 +469,11 @@ export function formField(serverField: string, request: Pick<RegisterRequest, 'i
     const id = request.identifiers[Number(index)];
     return id ? identifierField(id.scheme, country) : null;
   }
+  const contact = /^(emergencyContact|guardian)(?:\.(name|relationship|phone))?$/.exec(serverField);
+  if (contact) {
+    const f = contactFields(contact[1] === 'guardian' ? 'guardian' : 'ec');
+    return contact[2] === 'relationship' ? f.relationship : contact[2] === 'phone' ? f.phone : f.name;
+  }
   return serverField === 'identifiers' ? quickIdentifier[country].field : null;
 }
 
@@ -425,6 +490,7 @@ export const dataMap = {
   quick: [{ entity: 'PATIENT', key: 'quick' }, { entity: 'PATIENT_IDENTIFIER', key: 'identifier' }],
   identity: [{ entity: 'PATIENT', key: 'identity' }, { entity: 'PATIENT_IDENTIFIER', key: 'identifier' }],
   contact: [{ entity: 'PATIENT', key: 'contact' }],
+  family: [{ entity: 'PATIENT_RELATIONSHIP', key: 'family' }],
   payer: [{ entity: 'PAYER_COVERAGE', key: 'payer' }],
   review: [{ entity: 'AUDIT_EVENT', key: 'audit' }],
 } as const satisfies Record<Step | 'quick', readonly { entity: string; key: string }[]>;

@@ -20,7 +20,7 @@ public sealed class PatientDuplicateTests(SqlServerFixture sql) : IClassFixture<
 
     PatientRegistry Registry(Guid? at = null) =>
         new(sql.Patients(tenant), new SqlServerFixture.FixedTenant(tenant), new PatientRegistryTests.FixedFacility(at ?? facility),
-            new User(actor), new AuditLog(sql.Audit(tenant)), TimeProvider.System);
+            new User(actor), new AuditLog(sql.Audit(tenant)), TimeProvider.System, new PatientRegistryTests.FacilityZone("Asia/Kolkata"));
 
     sealed class User(Guid id) : Medvya.BuildingBlocks.Domain.ICurrentUser { public Guid? UserId => id; }
 

@@ -240,6 +240,48 @@ namespace Medvya.Patients.Infrastructure.Persistence.Migrations
                     b.ToTable("Identifiers", "patients");
                 });
 
+            modelBuilder.Entity("Medvya.Patients.Domain.PatientRelationship", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsEmergencyContact")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsGuardian")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<Guid>("PatientId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Phone")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Relationship")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PatientId");
+
+                    b.HasIndex("TenantId", "PatientId");
+
+                    b.ToTable("Relationships", "patients");
+                });
+
             modelBuilder.Entity("Medvya.Patients.Domain.PayerCoverage", b =>
                 {
                     b.Property<Guid>("Id")
@@ -301,6 +343,15 @@ namespace Medvya.Patients.Infrastructure.Persistence.Migrations
                 });
 
             modelBuilder.Entity("Medvya.Patients.Domain.PatientIdentifier", b =>
+                {
+                    b.HasOne("Medvya.Patients.Domain.Patient", null)
+                        .WithMany()
+                        .HasForeignKey("PatientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Medvya.Patients.Domain.PatientRelationship", b =>
                 {
                     b.HasOne("Medvya.Patients.Domain.Patient", null)
                         .WithMany()

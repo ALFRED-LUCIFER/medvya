@@ -22,6 +22,8 @@ public sealed partial class UaeRules : CountryRules
     protected override IReadOnlySet<IdentifierScheme> Schemes { get; } =
         new HashSet<IdentifierScheme> { IdentifierScheme.EmiratesId, IdentifierScheme.Passport, IdentifierScheme.Visa };
 
+    protected override IReadOnlySet<RelationshipKind> Relationships { get; } = Enum.GetValues<RelationshipKind>().ToHashSet(); // incl. Sponsor
+
     protected override IReadOnlySet<PayerKind> PayerKinds { get; } =
         new HashSet<PayerKind> { PayerKind.PrivateInsurance, PayerKind.SelfPay, PayerKind.Corporate };
 

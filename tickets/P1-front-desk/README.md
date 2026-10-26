@@ -10,7 +10,7 @@
 
 **Tickets:** 46 · **Estimate:** 86.5 dev-days vs **35 working days** in the window (OVER by 51.5 days: needs scope trade-off or overlap) · **Average confidence:** 81%
 
-**Status:** To do 28 · Partly done 11 · Done 7
+**Status:** To do 27 · Partly done 10 · Done 9
 
 ## Epics
 
@@ -60,12 +60,12 @@
 | [MDV-P1-022](MDV-P1-022.md) | Partly done | No double booking under concurrency (unique index, serializable transaction, doctor-day app lock) | Story | MUST | P1-07 | — | 2 | 7–7 | 07 Dec → 11 Dec 2026 | 90% High |
 | [MDV-P1-024](MDV-P1-024.md) | Partly done | Reschedule (incl. drag with confirm), cancel with reason, mark no-show with rebook offer | Story | MUST | P1-06 | P-04 | 2 | 7–7 | 07 Dec → 11 Dec 2026 | 90% High |
 | [MDV-P1-025](MDV-P1-025.md) | Partly done | Walk-in registration and booking straight to the queue | Story | MUST | P1-06 | P-01, P-04 | 1 | 7–7 | 07 Dec → 11 Dec 2026 | 88% High |
-| [MDV-P1-028](MDV-P1-028.md) | Partly done | Reception board with visit columns and one-tap check-in | Story | MUST | P1-08 | P-01 | 3 | 7–8 | 07 Dec → 18 Dec 2026 | 82% Medium |
+| [MDV-P1-028](MDV-P1-028.md) | Done | Reception board with visit columns and one-tap check-in | Story | MUST | P1-08 | P-01 | 3 | 7–8 | 07 Dec → 18 Dec 2026 | 82% Medium |
 | [MDV-P1-032](MDV-P1-032.md) | To do | Email confirmations and 24 h / 2 h reminders via SendGrid and Hangfire | Story | MUST | P1-09 | — | 2.5 | 7–8 | 07 Dec → 18 Dec 2026 | 86% High |
 | [MDV-P1-026](MDV-P1-026.md) | To do | Recurring appointments (series) with per-occurrence exceptions | Story | MUST | P1-06 | P-04 | 1.5 | 8–8 | 14 Dec → 18 Dec 2026 | 80% Medium |
 | [MDV-P1-027](MDV-P1-027.md) | To do | Waitlist with "offer earlier slot" | Story | MUST | P1-06 | P-05 | 1.5 | 8–8 | 14 Dec → 18 Dec 2026 | 84% Medium |
 | [MDV-P1-029](MDV-P1-029.md) | Done | Real-time board updates, call/room patient, nonclinical statuses (SignalR) | Story | MUST | P1-08 | P-01 | 2 | 8–8 | 14 Dec → 18 Dec 2026 | 85% High |
-| [MDV-P1-030](MDV-P1-030.md) | To do | Clinic overview: multi-doctor Today and shared waiting room (D-04) | Story | MUST | P1-08 | D-04 | 1.5 | 8–8 | 14 Dec → 18 Dec 2026 | 80% Medium |
+| [MDV-P1-030](MDV-P1-030.md) | Done | Clinic overview: multi-doctor Today and shared waiting room (D-04) | Story | MUST | P1-08 | D-04 | 1.5 | 8–8 | 14 Dec → 18 Dec 2026 | 80% Medium |
 | [MDV-P1-031](MDV-P1-031.md) | Done | Queue TV display with tokens only, never names (P-05) | Story | MUST | P1-08 | P-05 | 1.5 | 8–8 | 14 Dec → 18 Dec 2026 | 90% High |
 | [MDV-P1-033](MDV-P1-033.md) | To do | SMS confirmations and reminders with India DLT templates and delivery receipts | Story | MUST | P1-09 | — | 2 | 8–8 | 14 Dec → 18 Dec 2026 | 68% Medium |
 | [MDV-P1-034](MDV-P1-034.md) | To do | Notification centre for staff (D-03), push-safe content | Story | MUST | P1-09 | D-03 | 1.5 | 8–8 | 14 Dec → 18 Dec 2026 | 85% High |

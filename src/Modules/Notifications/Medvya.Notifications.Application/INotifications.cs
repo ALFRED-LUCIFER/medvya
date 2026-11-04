@@ -1,0 +1,59 @@
+using Medvya.Notifications.Domain;
+
+namespace Medvya.Notifications.Application;
+
+/// <summary>An SMS as the operator expects it (India DLT): the registered sender header, the registered template id and the final text.</summary>
+public sealed record SmsMessage(string To, string Sender, string? TemplateId, string Text, string Reference);
+
+/// <summary>Hands one SMS to a provider. Throws when it was not accepted. The local sink and, later, the chosen aggregator implement it (MDV-P1-033).</summary>
+public interface ISmsGateway
+{
+    Task SendAsync(SmsMessage message, CancellationToken cancellationToken = default);
+}
+
+/// <summary>One message as reception sees it: no text, no address.</summary>
+public sealed record NotificationView(
+    Guid Id, Guid AppointmentId, NotificationKind Kind, NotificationChannel Channel, NotificationStatus Status, int Attempts, string? FailureCode, DateTimeOffset SendAt, DateTimeOffset UpdatedAt);
+
+/// <summary>Delivery of reminders and confirmations of one channel in a period (exit gate 4).</summary>
+public sealed record ChannelDelivery(NotificationChannel Channel, int Total, int Delivered, int Failed, int Pending);
+
+public sealed record DeliveryReport(IReadOnlyList<ChannelDelivery> Channels, IReadOnlyList<NotificationView> Failures);
+
+/// <summary>What reception may read of the messages sent to patients (MDV-P1-032/033). The caller must hold an active membership with view access at the facility.</summary>
+public interface INotificationQueries
+{
+    /// <summary>Every message of the appointment, oldest first.</summary>
+    Task<IReadOnlyList<NotificationView>> ForAppointmentAsync(Guid facilityId, Guid appointmentId, CancellationToken cancellationToken = default);
+
+    /// <summary>Per-channel counts since <paramref name="since"/> and every failed or bounced message (newest first, at most <paramref name="maxFailures"/>), with its reason code.</summary>
+    Task<DeliveryReport> DeliveryAsync(Guid facilityId, DateTimeOffset since, int maxFailures = 100, CancellationToken cancellationToken = default);
+}
+
+/// <summary>A delivery receipt from a provider, after the host verified its signature.</summary>
+public sealed record DeliveryReceipt(string Reference, NotificationStatus State, string? ReasonCode);
+
+public interface IReceiptProcessor
+{
+    /// <summary>Applies the receipt to the notification named by its reference (in the current tenant). Unknown references and receipts that would undo a final status are ignored.</summary>
+    Task<bool> ApplyAsync(DeliveryReceipt receipt, CancellationToken cancellationToken = default);
+}
+
+/// <summary>The background work of one tenant: send what is due. The host's job calls it inside each tenant's scope after publishing the outbox.</summary>
+public interface INotificationSender
+{
+    /// <summary>Sends up to <paramref name="batch"/> due messages; returns how many it handled.</summary>
+    Task<int> SendDueAsync(int batch = 50, CancellationToken cancellationToken = default);
+}
+
+public static class NotificationReference
+{
+    public static string Make(Guid tenantId, Guid notificationId) => $"{tenantId:N}.{notificationId:N}";
+
+    public static bool TryParse(string? reference, out Guid tenantId, out Guid notificationId)
+    {
+        tenantId = notificationId = default;
+        var parts = reference?.Split('.');
+        return parts is [var t, var n] && Guid.TryParseExact(t, "N", out tenantId) && Guid.TryParseExact(n, "N", out notificationId);
+    }
+}

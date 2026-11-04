@@ -6,7 +6,7 @@ namespace Medvya.Patients.Domain;
 public enum ConsentType { Treatment, Reminders, InformationExchange, Portal, Marketing }
 
 /// <summary>The channel of a <see cref="ConsentType.Reminders"/> decision; every other type has none.</summary>
-public enum ConsentChannel { WhatsApp, Sms }
+public enum ConsentChannel { WhatsApp, Sms, Email }
 
 /// <summary>
 /// One decision, immutable (CONSENT_RECEIPT, a ledger table: SQL Server rejects UPDATE and DELETE). Changing a decision adds a new

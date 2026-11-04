@@ -29,7 +29,7 @@ Feature: Legal terms and separate versioned consents at registration (treatment,
     When an owner tries to activate the production tenant
     Then activation is refused
 
-  @todo
+  @done
   Scenario: Reminders check channel consent before every send
     When a reminder is about to be sent
     Then the channel consent is checked first (test)

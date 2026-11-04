@@ -131,7 +131,7 @@ const shape = z.object({
   payerName: text(), plan: text(100), memberNumber: text(50), validTo: z.string(), network: text(100),
   ecName: text(), ecRelationship: z.string(), ecPhone: z.string().max(25, 'format'),
   guardianName: text(), guardianRelationship: z.string(), guardianPhone: z.string().max(25, 'format'),
-  consentWhatsApp: z.boolean(), consentSms: z.boolean(), consentExchange: z.boolean(), consentPortal: z.boolean(), consentMarketing: z.boolean(),
+  consentWhatsApp: z.boolean(), consentSms: z.boolean(), consentEmail: z.boolean(), consentExchange: z.boolean(), consentPortal: z.boolean(), consentMarketing: z.boolean(),
 });
 
 export type RegistrationForm = z.input<typeof shape>;
@@ -144,7 +144,7 @@ export const emptyForm: RegistrationForm = {
   payerKind: '', payerName: '', plan: '', memberNumber: '', validTo: '', network: '',
   ecName: '', ecRelationship: '', ecPhone: '', guardianName: '', guardianRelationship: '', guardianPhone: '',
   // Portal invite is on and everything else off until the patient says yes (docs/04-security-compliance: consent model).
-  consentWhatsApp: false, consentSms: false, consentExchange: false, consentPortal: true, consentMarketing: false,
+  consentWhatsApp: false, consentSms: false, consentEmail: false, consentExchange: false, consentPortal: true, consentMarketing: false,
 };
 
 /** Fields each full-mode step owns; "Continue" validates only these. */
@@ -154,7 +154,7 @@ export const stepFields: Record<Exclude<Step, 'review'>, readonly FormField[]> =
   contact: ['mobile', 'alternatePhone', 'email', 'line1', 'line2', 'city', 'district', 'region', 'postalCode', 'makani', 'poBox'],
   family: ['ecName', 'ecRelationship', 'ecPhone', 'guardianName', 'guardianRelationship', 'guardianPhone'],
   payer: ['payerKind', 'payerName', 'plan', 'memberNumber', 'validTo', 'network'],
-  consents: ['consentWhatsApp', 'consentSms', 'consentExchange', 'consentPortal', 'consentMarketing'],
+  consents: ['consentWhatsApp', 'consentSms', 'consentEmail', 'consentExchange', 'consentPortal', 'consentMarketing'],
 };
 
 /** The step that shows a field (for jumping to the first error). Quick mode shows mobile on its single screen. */
@@ -447,7 +447,7 @@ export function toCompletionRequest(v: Partial<RegistrationForm>, country: Count
  */
 export const consentPolicyVersion = '2026-11-draft';
 
-export type ConsentDecision = { type: 'Treatment' | 'Reminders' | 'InformationExchange' | 'Portal' | 'Marketing'; channel: 'WhatsApp' | 'Sms' | null; granted: boolean };
+export type ConsentDecision = { type: 'Treatment' | 'Reminders' | 'InformationExchange' | 'Portal' | 'Marketing'; channel: 'WhatsApp' | 'Sms' | 'Email' | null; granted: boolean };
 export type ConsentSet = { policyVersion: string; decisions: ConsentDecision[] };
 
 /** Treatment is always granted (locked on); quick mode asks nothing else. Every other choice is recorded as its own decision, declined ones too. */
@@ -455,7 +455,7 @@ export function consentSet(v: RegistrationForm, quick: boolean): ConsentSet {
   const decisions: ConsentDecision[] = [{ type: 'Treatment', channel: null, granted: true }];
   if (!quick) {
     decisions.push(
-      { type: 'Reminders', channel: 'WhatsApp', granted: v.consentWhatsApp }, { type: 'Reminders', channel: 'Sms', granted: v.consentSms },
+      { type: 'Reminders', channel: 'WhatsApp', granted: v.consentWhatsApp }, { type: 'Reminders', channel: 'Sms', granted: v.consentSms }, { type: 'Reminders', channel: 'Email', granted: v.consentEmail },
       { type: 'InformationExchange', channel: null, granted: v.consentExchange }, { type: 'Portal', channel: null, granted: v.consentPortal },
       { type: 'Marketing', channel: null, granted: v.consentMarketing },
     );

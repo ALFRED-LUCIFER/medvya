@@ -54,6 +54,7 @@ export default function ConsentsStep({ f, country, values }: { f: FormProps; cou
         <p className="text-sm text-muted-foreground">{t('registration.consents.reminders.body')}</p>
         <Decision f={f} values={values} name="consentWhatsApp" title={t('registration.consents.channel.whatsapp')} />
         <Decision f={f} values={values} name="consentSms" title={t('registration.consents.channel.sms')} />
+        <Decision f={f} values={values} name="consentEmail" title={t('registration.consents.channel.email')} />
       </fieldset>
       <div className="rounded-lg border p-3">
         <Decision f={f} values={values} name="consentExchange"

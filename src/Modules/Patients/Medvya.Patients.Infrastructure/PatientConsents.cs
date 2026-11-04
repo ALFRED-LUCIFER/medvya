@@ -23,9 +23,9 @@ public sealed class PatientConsents(PatientsDbContext db, ICurrentTenant tenant,
 
     public async Task<bool> IsGrantedAsync(Guid patientId, ConsentType type, ConsentChannel? channel = null, CancellationToken cancellationToken = default)
     {
-        // Newest receipt wins; none means no consent.
+        // Newest receipt wins (a tie at the same instant counts as withdrawn); none means no consent.
         var newest = await db.ConsentReceipts.AsNoTracking().Where(r => r.PatientId == patientId && r.Type == type && r.Channel == channel)
-            .OrderByDescending(r => r.DecidedAt).Select(r => (bool?)r.Granted).FirstOrDefaultAsync(cancellationToken);
+            .OrderByDescending(r => r.DecidedAt).ThenBy(r => r.Granted).Select(r => (bool?)r.Granted).FirstOrDefaultAsync(cancellationToken);
         return newest == true;
     }
 

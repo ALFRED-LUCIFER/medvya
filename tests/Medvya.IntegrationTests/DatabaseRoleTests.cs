@@ -82,6 +82,11 @@ public class DatabaseRoleTests(SqlServerFixture sql) : IClassFixture<SqlServerFi
         await Denied("leads_user", "DELETE FROM leads.DemoRequests");
         await Denied("leads_user", "UPDATE leads.DemoRequests SET Name = N'x'");
         await Denied("patients_user", "SELECT TOP 1 Id FROM leads.DemoRequests");
+        await Run("notifications_user", "SELECT TOP 1 Id FROM notifications.Notifications");
+        await Denied("notifications_user", "SELECT TOP 1 Id FROM patients.Patients");
+        await Denied("notifications_user", "SELECT TOP 1 Id FROM scheduling.Appointments");
+        await Denied("notifications_user", "DELETE FROM notifications.Attempts"); // the attempts are the delivery history
+        await Denied("scheduling_user", "SELECT TOP 1 Id FROM notifications.Notifications");
     }
 
     [Fact]

@@ -18,6 +18,7 @@ public sealed class SchedulingDbContext(DbContextOptions<SchedulingDbContext> op
     public DbSet<VisitStatusEvent> StatusEvents => Set<VisitStatusEvent>();
     public DbSet<AppointmentReschedule> Reschedules => Set<AppointmentReschedule>();
     public DbSet<OutboxEvent> Outbox => Set<OutboxEvent>();
+    public DbSet<OutboxTenant> OutboxTenants => Set<OutboxTenant>();
     public DbSet<QueueToken> QueueTokens => Set<QueueToken>();
     public DbSet<QueueDisplay> QueueDisplays => Set<QueueDisplay>();
 
@@ -110,10 +111,15 @@ public sealed class SchedulingDbContext(DbContextOptions<SchedulingDbContext> op
         });
         modelBuilder.Entity<OutboxEvent>(e =>
         {
-            e.ToTable("OutboxEvents");
+            e.ToTable("OutboxEvents", t => t.HasTrigger("TR_OutboxEvents_Tenant"));
             e.Property(x => x.Type).HasMaxLength(100);
             e.HasIndex(x => new { x.PublishedAt, x.OccurredAt });
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<OutboxTenant>(e =>
+        {
+            e.ToTable("OutboxTenants");
+            e.HasKey(x => x.TenantId);
         });
     }
 }

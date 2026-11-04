@@ -220,7 +220,7 @@ describe('consents (MDV-P1-019)', () => {
     const set = toRegisterRequest({ ...deepak, consentWhatsApp: true }, 'IN', false, null).consents;
     expect(set.policyVersion).toBe(consentPolicyVersion);
     expect(set.decisions.map(d => `${d.type}${d.channel ? `/${d.channel}` : ''}=${d.granted}`)).toEqual([
-      'Treatment=true', 'Reminders/WhatsApp=true', 'Reminders/Sms=false', 'InformationExchange=false', 'Portal=true', 'Marketing=false']);
+      'Treatment=true', 'Reminders/WhatsApp=true', 'Reminders/Sms=false', 'Reminders/Email=false', 'InformationExchange=false', 'Portal=true', 'Marketing=false']);
   });
 
   it('asks only for treatment in quick mode, and marketing starts off', () => {

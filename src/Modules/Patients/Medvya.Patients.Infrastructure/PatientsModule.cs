@@ -23,7 +23,8 @@ public static class PatientsModule
             .AddDbContext<PatientsDbContext>((sp, o) => o.UseSqlServer(encrypted).AddInterceptors(sp.GetRequiredService<TenantSessionInterceptor>()))
             .AddScoped<IPatientRegistry, PatientRegistry>()
             .AddScoped<IPatientConsents, PatientConsents>()
-            .AddScoped<IPatientDirectory, PatientDirectory>();
+            .AddScoped<IPatientDirectory, PatientDirectory>()
+            .AddScoped<IPatientContacts, PatientContacts>();
     }
 
     /// <summary>Only this module's connections pay for Always Encrypted (parameter-encryption round trips).</summary>

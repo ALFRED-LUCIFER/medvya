@@ -106,7 +106,7 @@ test('India: full registration in steps, with Aadhaar last 4 only, the PIN rule 
     payer: { kind: 'PrivateInsurance', payerName: 'Synthetic Health', network: 'Synthetic TPA', memberNumber: 'SYN-23-000411-01' },
     emergencyContact: { name: 'Suresh Pillai', relationship: 'Spouse', phone: '+91 90000 00412' }, guardian: null,
     consents: { policyVersion: '2026-11-draft', decisions: [
-      { type: 'Treatment', channel: null, granted: true }, { type: 'Reminders', channel: 'WhatsApp', granted: true }, { type: 'Reminders', channel: 'Sms', granted: false },
+      { type: 'Treatment', channel: null, granted: true }, { type: 'Reminders', channel: 'WhatsApp', granted: true }, { type: 'Reminders', channel: 'Sms', granted: false }, { type: 'Reminders', channel: 'Email', granted: false },
       { type: 'InformationExchange', channel: null, granted: false }, { type: 'Portal', channel: null, granted: true }, { type: 'Marketing', channel: null, granted: false }] },
   });
   expect(body).not.toHaveProperty('countryCode'); // the country is the tenant's, never sent

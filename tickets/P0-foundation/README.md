@@ -10,7 +10,7 @@
 
 **Tickets:** 29 · **Estimate:** 49.5 dev-days vs **15 working days** in the window (OVER by 34.5 days: needs scope trade-off or overlap) · **Average confidence:** 86%
 
-**Status:** To do 2 · Partly done 14 · Blocked 3 · Done 10
+**Status:** To do 2 · Partly done 16 · Blocked 1 · Done 10
 
 ## Epics
 
@@ -28,10 +28,10 @@
 |---|---|---|---|---|---|---|---|---|---|---|
 | [MDV-P0-001](MDV-P0-001.md) | Done | Create the Medvya monorepo skeleton (Medvya.sln, web workspaces, packages) | Task | MUST | P0-01 | — | 1 | 1–1 | 26 Oct → 30 Oct 2026 | 92% High |
 | [MDV-P0-002](MDV-P0-002.md) | Partly done | Record and accept ADR-001 (stack) and supporting ADRs 003–006 | Chore | MUST | P0-08 | — | 0.5 | 1–1 | 26 Oct → 30 Oct 2026 | 90% High |
-| [MDV-P0-003](MDV-P0-003.md) | Blocked | Decide launch market (ADR-002) and confirm Azure subscription and region | Chore | MUST | P0-08 | — | 0.5 | 1–1 | 26 Oct → 30 Oct 2026 | 70% Medium |
+| [MDV-P0-003](MDV-P0-003.md) | Partly done | Decide launch market (ADR-002) and confirm Azure subscription and region | Chore | MUST | P0-08 | — | 0.5 | 1–1 | 26 Oct → 30 Oct 2026 | 70% Medium |
 | [MDV-P0-004](MDV-P0-004.md) | Done | GitHub repository protections and PR pipeline (build, analyzers, tests, CodeQL, dependency and secret scanning) | Task | MUST | P0-01 | — | 1.5 | 1–1 | 26 Oct → 30 Oct 2026 | 90% High |
 | [MDV-P0-005](MDV-P0-005.md) | Partly done | Local development environment with Docker Compose (SQL Server, Azurite, mail and SMS sinks) | Task | MUST | P0-01 | — | 1 | 1–1 | 26 Oct → 30 Oct 2026 | 90% High |
-| [MDV-P0-006](MDV-P0-006.md) | Blocked | Azure environments as code (Bicep): App Service, Azure SQL private endpoint, Blob, Key Vault, App Insights, Defender, budgets | Task | MUST | P0-02 | — | 3 | 1–2 | 26 Oct → 06 Nov 2026 | 80% Medium |
+| [MDV-P0-006](MDV-P0-006.md) | Partly done | Azure environments as code (Bicep): App Service, Azure SQL private endpoint, Blob, Key Vault, App Insights, Defender, budgets | Task | MUST | P0-02 | — | 3 | 1–2 | 26 Oct → 06 Nov 2026 | 80% Medium |
 | [MDV-P0-016](MDV-P0-016.md) | Done | Data classification register and ERD → Azure SQL type mapping | Chore | MUST | P0-10, P0-08 | — | 1.5 | 1–2 | 26 Oct → 06 Nov 2026 | 85% High |
 | [MDV-P0-020](MDV-P0-020.md) | Done | Medvya design system in code: shadcn/ui + Tailwind tokens and clinical status primitives (packages/ui) | Story | MUST | P0-07 | — | 3 | 1–2 | 26 Oct → 06 Nov 2026 | 92% High |
 | [MDV-P0-024](MDV-P0-024.md) | Done | Threat model, data map, DPIA draft (DPDP) and record-retention map per country | Chore | MUST | P0-08 | — | 2.5 | 1–3 | 26 Oct → 13 Nov 2026 | 75% Medium |

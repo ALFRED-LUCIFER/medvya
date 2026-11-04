@@ -1,6 +1,6 @@
 # ADR-002 · Launch market
 
-- **Status:** Proposed. **Founder decision needed in P0 week 1** (ticket MDV-P0-003).
+- **Status:** Accepted for India (founder, 2026-11-04): India first, Central India. UAE stays designed but not deployed. Azure OpenAI / AI Speech availability in Central India still to be confirmed (MDV-P0-003).
 - **Date:** 2026-10-20
 
 ## Context

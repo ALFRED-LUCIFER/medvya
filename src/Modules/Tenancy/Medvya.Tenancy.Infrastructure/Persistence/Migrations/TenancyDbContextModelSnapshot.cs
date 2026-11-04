@@ -51,6 +51,41 @@ namespace Medvya.Tenancy.Infrastructure.Persistence.Migrations
                     b.ToTable("Closures", "tenancy");
                 });
 
+            modelBuilder.Entity("Medvya.Tenancy.Domain.CustomRole", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("BaseRole")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<string>("Capabilities")
+                        .IsRequired()
+                        .HasMaxLength(400)
+                        .HasColumnType("nvarchar(400)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "Name")
+                        .IsUnique();
+
+                    b.ToTable("CustomRoles", "tenancy");
+                });
+
             modelBuilder.Entity("Medvya.Tenancy.Domain.DoctorLicence", b =>
                 {
                     b.Property<Guid>("MembershipId")
@@ -215,6 +250,9 @@ namespace Medvya.Tenancy.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid?>("CustomRoleId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid>("FacilityId")
                         .HasColumnType("uniqueidentifier");
 
@@ -235,6 +273,8 @@ namespace Medvya.Tenancy.Infrastructure.Persistence.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CustomRoleId");
 
                     b.HasIndex("FacilityId");
 
@@ -458,6 +498,15 @@ namespace Medvya.Tenancy.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Medvya.Tenancy.Domain.CustomRole", b =>
+                {
+                    b.HasOne("Medvya.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Medvya.Tenancy.Domain.DoctorLicence", b =>
                 {
                     b.HasOne("Medvya.Tenancy.Domain.Membership", null)
@@ -496,6 +545,11 @@ namespace Medvya.Tenancy.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Medvya.Tenancy.Domain.Membership", b =>
                 {
+                    b.HasOne("Medvya.Tenancy.Domain.CustomRole", null)
+                        .WithMany()
+                        .HasForeignKey("CustomRoleId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("Medvya.Tenancy.Domain.Facility", null)
                         .WithMany()
                         .HasForeignKey("FacilityId")

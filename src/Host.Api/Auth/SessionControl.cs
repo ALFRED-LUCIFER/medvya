@@ -70,6 +70,12 @@ public static class SessionControl
             // Role comes from the live membership row, so a suspended membership is no longer offered as active.
             var active = memberships.FirstOrDefault(m => m.Id == Read(principal, MembershipClaim));
             var licencePending = active is not null && await staff.LicencePendingAsync(ct);
+            var capabilities = active is null ? new Dictionary<string, string>() : RoleMatrix.Grants(active.Role).Select(g => (g.Capability, Access: LicenceRules.Apply(g.Access, g.Capability, licencePending)))
+                .Where(g => g.Access != Access.None).ToDictionary(g => g.Capability.ToString(), g => g.Access.ToString());
+            // Capabilities a practice-defined role adds to its base role (MDV-P1-008); the same live check the endpoints use.
+            if (active is not null)
+                foreach (var extra in CustomRoleRules.Extras(active.Role))
+                    if (await staff.AccessAsync(extra, ct) is var access && access != Access.None) capabilities[extra.ToString()] = access.ToString();
             return Results.Ok(new
             {
                 user = new { user.Id, user.DisplayName },
@@ -84,8 +90,7 @@ public static class SessionControl
                     Role = active.Role.ToString(),
                     // Recording and signing stay off until the doctor's licence is verified (MDV-P1-004), as the server enforces on each call.
                     LicencePending = licencePending,
-                    Capabilities = RoleMatrix.Grants(active.Role).Select(g => (g.Capability, Access: LicenceRules.Apply(g.Access, g.Capability, licencePending)))
-                        .Where(g => g.Access != Access.None).ToDictionary(g => g.Capability.ToString(), g => g.Access.ToString()),
+                    Capabilities = capabilities,
                     Flags = await flags.EnabledKeysAsync(ct),
                 },
             });

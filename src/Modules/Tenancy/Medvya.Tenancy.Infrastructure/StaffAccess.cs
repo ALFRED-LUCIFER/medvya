@@ -18,8 +18,11 @@ public sealed class StaffAccess(TenancyDbContext db, IFacilityDirectory faciliti
 
     public Task<bool> LicencePendingAsync(CancellationToken cancellationToken = default) =>
         user.UserId is not { } userId || facility.FacilityId is not { } facilityId ? Task.FromResult(false)
+        // A doctor with no verified licence is gated, including one with no licence row at all (invited by another route), so the gate
+        // cannot be skipped by not submitting a licence.
         : db.Memberships.AnyAsync(m => m.UserId == userId && m.FacilityId == facilityId && m.Status == MembershipStatus.Active
-            && db.DoctorLicences.Any(l => l.MembershipId == m.Id && l.VerifiedAt == null), cancellationToken);
+            && (m.Role == Role.SoloDoctor || m.Role == Role.HospitalDoctor)
+            && !db.DoctorLicences.Any(l => l.MembershipId == m.Id && l.VerifiedAt != null), cancellationToken);
 
     public Task<string?> TenantCountryAsync(CancellationToken cancellationToken = default) =>
         db.Tenants.Select(t => t.CountryCode).SingleOrDefaultAsync(cancellationToken);

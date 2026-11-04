@@ -15,7 +15,7 @@ public interface IStaffAccess
     Task<Access> AccessAsync(Capability capability, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// True while the active membership holds a submitted doctor licence that is not verified yet: recording and signing
+    /// True while the active membership is a doctor whose licence is not verified (pending, rejected or never submitted): recording and signing
     /// capabilities are then <see cref="Access.None"/> in <see cref="AccessAsync"/> (MDV-P1-004, feature-level, not only the UI).
     /// </summary>
     Task<bool> LicencePendingAsync(CancellationToken cancellationToken = default);

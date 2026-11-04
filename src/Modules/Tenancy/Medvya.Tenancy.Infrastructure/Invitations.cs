@@ -25,7 +25,10 @@ public sealed class Invitations(TenancyDbContext db, ICurrentTenant tenant, ICur
     public async Task<IReadOnlyList<FacilityOption>> FacilitiesAsync(CancellationToken cancellationToken = default) =>
         await db.Facilities.OrderBy(f => f.Name).Select(f => new FacilityOption(f.Id, f.Name)).ToListAsync(cancellationToken);
 
-    public async Task<InvitationCreated?> CreateAsync(string email, Role role, Guid facilityId, CancellationToken cancellationToken = default)
+    public Task<InvitationCreated?> CreateAsync(string email, Role role, Guid facilityId, CancellationToken cancellationToken = default) =>
+        CreateAsync(email, role, facilityId, _ => { }, cancellationToken);
+
+    public async Task<InvitationCreated?> CreateAsync(string email, Role role, Guid facilityId, Action<Membership> stage, CancellationToken cancellationToken = default)
     {
         email = email.Trim();
         // A bare address only: no display name, no list, at most 254 characters (RFC 5321).
@@ -50,6 +53,7 @@ public sealed class Invitations(TenancyDbContext db, ICurrentTenant tenant, ICur
         };
         db.Memberships.Add(membership);
         db.Invitations.Add(invitation);
+        stage(membership);
 
         // Saved, audited and emailed inside one transaction: a failed audit or email leaves no invitation behind.
         // A commit that fails after the email went out leaves a link that shows the expired state, which is harmless.

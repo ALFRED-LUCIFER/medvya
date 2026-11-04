@@ -69,7 +69,7 @@ public static class SettingsEndpoints
     }
 
     /// <summary>Use-case errors as problem details: field/code pairs for 400, a generic 403 that never says why.</summary>
-    static async ValueTask<object?> MapErrors(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
+    internal static async ValueTask<object?> MapErrors(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
     {
         try
         {

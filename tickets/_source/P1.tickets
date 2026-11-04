@@ -335,7 +335,8 @@ progress:
 - Merged [PR #61](https://github.com/ALFRED-LUCIFER/medvya/pull/61): `POST /v1/patients` (facility from the session, country from the tenant) with the duplicate check (MDV-P1-016); [PR #58](https://github.com/ALFRED-LUCIFER/medvya/pull/58) and [PR #70](https://github.com/ALFRED-LUCIFER/medvya/pull/70): record page with identifiers masked to the last 4
 - Merged [PR #82](https://github.com/ALFRED-LUCIFER/medvya/pull/82): full registration UI at /patients/new (quick mode at ?mode=quick): Identity & IDs → Contact & address → Payer → Review, per-step validation, focus to each step's heading, errors announced; ABHA optional, Aadhaar last 4 only (12 digits refused with the reason), state/UT from the official list (checked on the server), PIN 6 digits, payer kinds with their own fields (TPA kept as the network); preview card, data map and rules panel; success screen with MRN, time, actor and next actions; country from the tenant via /v1/me/context; record answer tested against an exact field allowlist (registration data only, no clinical fields); en/hi/ar, axe clean, 375/768/1366 px, 200 % zoom; real-API browser check
 - Merged [PR #86](https://github.com/ALFRED-LUCIFER/medvya/pull/86): Family & emergency step (MDV-P1-020)
-- Left: Consents step and CONSENT_RECEIPT in the same transaction (MDV-P1-019); "Verify with ABHA" (P8); PAN / Voter ID / driving licence as other ID types and "Save draft" (in the design, not in the ACs)
+- Open PR (MDV-P1-019): the Consents step and CONSENT_RECEIPT written in the registration transaction; registration without treatment consent is refused and saves nothing
+- Left: "Verify with ABHA" (P8); PAN / Voter ID / driving licence as other ID types and "Save draft" (in the design, not in the ACs)
 title: Patient registration — India full flow (identity, ABHA optional, Aadhaar last 4, Indian address, payer)
 type: Story
 epic: MDV-P1-E05
@@ -365,7 +366,8 @@ progress:
 - Merged [PR #40](https://github.com/ALFRED-LUCIFER/medvya/pull/40): UAE rules — Emirates ID format, expired EID warns, EID-or-passport minimum, Arabic name, emirate mapped to Malaffi/NABIDH/Riayati, Makani/P.O. Box, insurance member number Always Encrypted
 - Merged [PR #82](https://github.com/ALFRED-LUCIFER/medvya/pull/82): UAE full registration UI — name as on EID plus Arabic name typed right to left (preview card and Review), Emirates ID or passport, "Format 784-YYYY-NNNNNNN-N", expired EID warns while typing and on the success screen but never blocks, nationality and language named with Intl.DisplayNames, emirate → HIE label (Malaffi / NABIDH / Riayati) under the field, Makani and P.O. Box, insurance with member card, expiry, plan and network (eligibility marked M4); HTTP test with a UAE tenant (rules follow the tenant, not the body); browser-checked in Arabic against the real API
 - Onboarding (MDV-P1-004): a UAE tenant cannot be created in an India deployment (Onboarding:DeploymentCountry, tested)
-- Left: the HIE label on the Consents step (MDV-P1-019); card reader and UAE PASS (P5)
+- Open PR (MDV-P1-019): the HIE label (Malaffi / NABIDH / Riayati) on the Consents step, from the emirate in the address
+- Left: card reader and UAE PASS (P5)
 title: Patient registration — UAE flow (Emirates ID manual entry, Arabic name RTL, emirate, insurance card)
 type: Story
 epic: MDV-P1-E05
@@ -500,6 +502,12 @@ ac:
 - Search p95 < 300 ms with 50,000 synthetic patients; endpoint rate-limited.
 
 === MDV-P1-019
+status: Partly done
+progress:
+- Open PR: patient consents at registration. Consents step (full mode; quick mode shows treatment only): treatment locked on, reminders per channel (WhatsApp, SMS), link to ABHA (India) / HIE named from the emirate (UAE), portal (on, invite in P4), health tips & offers (off); each decision, declined ones too, is a CONSENT_RECEIPT (type, channel, policy version, jurisdiction `IN` / `AE-<emirate>`, decision, time, staff actor) in `patients.ConsentReceipts`, an append-only SQL ledger table (UPDATE and DELETE rejected, tested) with RLS, written in the registration's own transaction
+- Registration without treatment consent, or with a stale wording version, is refused (400) and saves nothing (SAFETY test, mutation-checked); `POST /v1/patients/{id}/consents` records a changed decision as a new receipt, history kept, audited, active facility only (another facility 404, nothing written)
+- Reminders (MDV-P1-032/033) ask `IPatientConsents.IsGrantedAsync(patientId, type, channel)` in `Medvya.Patients.Application`: the newest receipt decides, no receipt means no consent; en/hi/ar, axe clean, 44 px rows, 768 px and Arabic RTL, real-API browser check
+- Left: legally reviewed wording and per-tenant published privacy notice versions (MDV-P1-044; wording is a marked DRAFT, `ConsentPolicy.CurrentVersion` / `consents` in registration.ts, shortcut recorded); tenant-level ToS and DPA acceptance and "owners cannot activate the production tenant before it" (no activation step exists yet, needs its own change in Tenancy); a screen to change a consent from the record (API ready; portal R-03 in P4); reminder sending checks the contract (MDV-P1-032/033 test)
 title: Legal terms and separate versioned consents at registration (treatment, reminders per channel, sharing, portal, marketing)
 type: Story
 epic: MDV-P1-E05

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { catalogs, loadCatalog, type Country } from '@medvya/i18n';
 import {
-  ageOn, completionSchema, dataMap, duplicateQuery, isMinor, eidExpired, emirates, emptyForm, errorCode, formField, hieFor, indiaStates, knownErrors, messageFor, payerFields,
+  ageOn, completionSchema, consentPolicyVersion, dataMap, duplicateQuery, isMinor, eidExpired, emirates, emptyForm, errorCode, formField, hieFor, indiaStates, knownErrors, messageFor, payerFields,
   payerKinds, payerLabel, regionKey, registrationSchema, resolves, rules, stepOf, toCompletionRequest, toRegisterRequest, type DuplicateCandidate, type RegistrationForm,
 } from './registration';
 
@@ -212,5 +212,19 @@ describe('family, emergency contact and guardian (MDV-P1-020)', () => {
     expect(['guardian', 'guardian.phone', 'emergencyContact.relationship'].map(f => formField(f, { identifiers: [] }, 'IN')))
       .toEqual(['guardianName', 'guardianPhone', 'ecRelationship']);
     expect(toCompletionRequest({ ...lakshmi }, 'IN').emergencyContact).toEqual({ name: 'Lakshmi Nair', relationship: 'Spouse', phone: '+91 90000 00209' });
+  });
+});
+
+describe('consents (MDV-P1-019)', () => {
+  it('always grants treatment and records every other choice as its own decision, declined ones too', () => {
+    const set = toRegisterRequest({ ...deepak, consentWhatsApp: true }, 'IN', false, null).consents;
+    expect(set.policyVersion).toBe(consentPolicyVersion);
+    expect(set.decisions.map(d => `${d.type}${d.channel ? `/${d.channel}` : ''}=${d.granted}`)).toEqual([
+      'Treatment=true', 'Reminders/WhatsApp=true', 'Reminders/Sms=false', 'InformationExchange=false', 'Portal=true', 'Marketing=false']);
+  });
+
+  it('asks only for treatment in quick mode, and marketing starts off', () => {
+    expect(toRegisterRequest(deepak, 'IN', true, null).consents.decisions).toEqual([{ type: 'Treatment', channel: null, granted: true }]);
+    expect(emptyForm.consentMarketing).toBe(false);
   });
 });

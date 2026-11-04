@@ -10,7 +10,7 @@
 
 **Tickets:** 46 · **Estimate:** 86.5 dev-days vs **35 working days** in the window (OVER by 51.5 days: needs scope trade-off or overlap) · **Average confidence:** 81%
 
-**Status:** To do 25 · Partly done 11 · Done 10
+**Status:** To do 24 · Partly done 12 · Done 10
 
 ## Epics
 
@@ -49,7 +49,7 @@
 | [MDV-P1-014](MDV-P1-014.md) | Partly done | Patient registration — UAE flow (Emirates ID manual entry, Arabic name RTL, emirate, insurance card) | Story | MUST | P1-05 | P-02 | 2.5 | 6–6 | 30 Nov → 04 Dec 2026 | 86% High |
 | [MDV-P1-015](MDV-P1-015.md) | Partly done | Quick registration for a busy desk with a completion task | Story | MUST | P1-05 | P-02 | 1.5 | 6–6 | 30 Nov → 04 Dec 2026 | 90% High |
 | [MDV-P1-016](MDV-P1-016.md) | Done | Duplicate warning while typing and duplicate resolution before save | Story | MUST | P1-05 | P-02 | 2.5 | 6–6 | 30 Nov → 04 Dec 2026 | 85% High |
-| [MDV-P1-019](MDV-P1-019.md) | To do | Legal terms and separate versioned consents at registration (treatment, reminders per channel, sharing, portal, marketing) | Story | MUST | P1-12 | P-02, F-08 | 3 | 6–7 | 30 Nov → 11 Dec 2026 | 75% Medium |
+| [MDV-P1-019](MDV-P1-019.md) | Partly done | Legal terms and separate versioned consents at registration (treatment, reminders per channel, sharing, portal, marketing) | Story | MUST | P1-12 | P-02, F-08 | 3 | 6–7 | 30 Nov → 11 Dec 2026 | 75% Medium |
 | [MDV-P1-020](MDV-P1-020.md) | Done | Family, emergency contact and guardian rules (under-18 guardian required) | Story | MUST | P1-05 | P-02 | 1 | 6–6 | 30 Nov → 04 Dec 2026 | 88% High |
 | [MDV-P1-021](MDV-P1-021.md) | Partly done | Create an appointment from the calendar with a short slot hold | Story | MUST | P1-06, P1-07 | P-04 | 2.5 | 6–7 | 30 Nov → 11 Dec 2026 | 88% High |
 | [MDV-P1-023](MDV-P1-023.md) | Partly done | Calendar views: day, week and list (per doctor and resource), mobile/tablet responsive | Story | MUST | P1-06 | P-04 | 3 | 6–7 | 30 Nov → 11 Dec 2026 | 86% High |

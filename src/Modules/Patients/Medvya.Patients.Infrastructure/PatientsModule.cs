@@ -22,6 +22,7 @@ public static class PatientsModule
         return services
             .AddDbContext<PatientsDbContext>((sp, o) => o.UseSqlServer(encrypted).AddInterceptors(sp.GetRequiredService<TenantSessionInterceptor>()))
             .AddScoped<IPatientRegistry, PatientRegistry>()
+            .AddScoped<IPatientConsents, PatientConsents>()
             .AddScoped<IPatientDirectory, PatientDirectory>();
     }
 

@@ -182,7 +182,8 @@ notes:
 status: Partly done
 progress:
 - Workflow `.github/workflows/deploy-dev.yml` (tag `v*` or manual) signs in with GitHub OIDC and deploys the API to the India dev web app; Entra app "Medvya CI deploy (dev, India)" has a federated credential for environment `dev`; repo environment `dev` holds the non-secret ids as variables
-- Left: the Contributor role for that app on rg-medvya-dev-in (owner must run the grant); first successful tagged run; staging slot, SQL migration step and web app deploy (shortcut in the workflow)
+- First tagged run `v0.0.1` succeeded on 2026-11-04 and `/health` answers 200 on the India dev web app
+- Left: staging slot, SQL migration step and web app deploy (shortcut in the workflow); Hangfire tables are created only in Development, so the deploy must create them (MDV-P1-032)
 title: GitHub OIDC federation to Azure and tagged deploy to staging
 type: Task
 epic: MDV-P0-E01

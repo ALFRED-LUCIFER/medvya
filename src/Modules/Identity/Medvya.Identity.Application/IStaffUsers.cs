@@ -17,4 +17,7 @@ public interface IStaffUsers
     /// Safe under races: a concurrent create for the same account returns the one that won.
     /// </summary>
     Task<StaffUser> FindOrCreateAsync(string issuer, string subject, string displayName, CancellationToken cancellationToken = default);
+
+    /// <summary>Sets the name shown for this user (the sign-up wizard asks for it; the provider's name claim may be missing).</summary>
+    Task SetDisplayNameAsync(Guid id, string displayName, CancellationToken cancellationToken = default);
 }

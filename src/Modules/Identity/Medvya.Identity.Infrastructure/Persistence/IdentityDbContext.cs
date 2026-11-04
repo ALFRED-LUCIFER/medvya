@@ -8,6 +8,7 @@ public sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> option
 {
     public DbSet<StaffUser> Users => Set<StaffUser>();
     public DbSet<StaffSession> Sessions => Set<StaffSession>();
+    public DbSet<OnboardingDraft> OnboardingDrafts => Set<OnboardingDraft>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -28,6 +29,13 @@ public sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> option
             e.HasOne<StaffUser>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
             e.HasIndex(x => new { x.UserId, x.CreatedAt });
             e.HasIndex(x => new { x.TenantId, x.UserId });
+        });
+        // Also a person's own data, not a clinic's. Every query in OnboardingDrafts names the user.
+        modelBuilder.Entity<OnboardingDraft>(e =>
+        {
+            e.HasKey(x => x.UserId);
+            e.Property(x => x.Country).HasMaxLength(2).IsFixedLength();
+            e.HasOne<StaffUser>().WithOne().HasForeignKey<OnboardingDraft>(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
         });
     }
 }

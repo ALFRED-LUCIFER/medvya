@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test';
+import { completeWizard, mockOnboarding } from '../support/onboarding';
 import { journey } from './storyboard';
 
 // Storyboard: docs/02-design/journeys.md. Implement steps as their screens ship.
@@ -13,6 +14,13 @@ const receptionist = {
 };
 
 journey('J1', {
+  // F-04: licence, clinic profile, hours and fees, invite the receptionist; the practice becomes the working context.
+  1: async ({ page }) => {
+    const api = await mockOnboarding(page);
+    await page.goto('/onboarding?country=IN');
+    await completeWizard(page);
+    await expect.poll(() => api.chose).toBe('m-1');
+  },
   // P-02: full registration with only the India minimum; ABHA left empty (optional, care never depends on it).
   3: async ({ page }) => {
     await page.route('**/v1/me/context', r => r.fulfill({ json: receptionist }));

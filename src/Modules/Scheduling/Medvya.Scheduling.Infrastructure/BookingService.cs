@@ -138,7 +138,7 @@ public sealed class BookingService(
                 }, cancellationToken);
                 return await ViewAsync(visit, patient, now);
             }
-            catch (SlotUnavailableException e) when (e.Code is "slot_unavailable" or "being_booked" or "not_bookable")
+            catch (SlotUnavailableException e) when (e.Code is "slot_unavailable" or "being_booked" or "not_bookable" or "closed")
             {
                 // Taken in the meantime: try the next free slot.
             }
@@ -364,6 +364,8 @@ public sealed class BookingService(
         if (template is null || (moving is not null && template.CalendarKind != moving.CalendarKind)
             || !await context.IsActiveAsync(facilityId, calendarId, template.CalendarKind, cancellationToken))
             throw new SlotUnavailableException("not_bookable"); // e.g. the doctor is not working at this facility, or a room for a doctor's visit
+        var date = ScheduleRules.LocalDate(start, zone);
+        if ((await context.ClosuresAsync(facilityId, date, date, cancellationToken)).Count > 0) throw new SlotUnavailableException("closed"); // a holiday at the location (MDV-P1-005)
         var end = ScheduleRules.SpanEnd(ScheduleRules.Day(template, ScheduleRules.LocalDate(start, zone), zone), start, ScheduleRules.SlotsFor(template, type))
             ?? throw new SlotUnavailableException("not_bookable"); // outside hours, in a break or too long for what is left
         var earliest = start.AddMinutes(-ScheduleRules.MaxVisitMinutes); // no visit is longer, so the index seek has a lower bound

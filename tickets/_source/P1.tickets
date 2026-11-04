@@ -128,6 +128,10 @@ ac:
 - The whole wizard works at 768 px (tablet) and is keyboard-completable.
 
 === MDV-P1-005
+status: Partly done
+progress:
+- Open PR (branch feat/MDV-P1-005-practice-settings): /settings with Profile, Locations (sites, rooms and resources), Hours (operating hours with weekday toggles, plus the bookable-schedule editor) and Holidays tabs; `/v1/settings/*` needs practice configuration (Config on Staff, roles, integrations), every other role gets 403 from the server (mutation-checked); a holiday refuses holds, bookings, reschedules and walk-in slots on that date through the booking path (mutation-checked), shows the day as Closed and lists booked visits to move; each change keeps before/after (SettingsChange) and a settings.* audit event in one transaction; logo checked by file signature (PNG/JPEG) and size 512 KB, stored in private Blob under a random key, shown through a 5-minute signed link; EN/HI/AR, RTL, axe clean, browser-verified against the real API and Azurite
+- Left: malware scan of the logo (no scanner in the repo; Defender for Storage with MDV-P0-006); settings are built on the seeded tenants, creating them is MDV-P1-004; Notifications/Data tabs MDV-P1-006, Doctors/Staff MDV-P1-007/008
 title: Practice settings: profile, locations, operating hours and holidays (F-08)
 type: Story
 epic: MDV-P1-E02
@@ -266,12 +270,12 @@ ac:
 - Both jobs are idempotent and audited.
 
 === MDV-P1-011
-status: Partly done
+status: Done
 progress:
 - Merged [PR #55](https://github.com/ALFRED-LUCIFER/medvya/pull/55): Scheduling module (own schema, module role, EF filters + RLS) — weekly template per doctor or resource (sessions with room, breaks, slot length, per-visit-type lengths), slots generated on the fly in the facility zone (IST, GST and DST unit tests), P-04 day view with hatched unavailable time and reason, role checked against the membership at the facility, audited endpoints; mutation-checked; browser-verified (en, ar RTL, axe)
 - Merged [PR #59](https://github.com/ALFRED-LUCIFER/medvya/pull/59): saving a template lists future appointments the new hours leave outside; visits spanning several slots render spanning
 - Open [PR #63](https://github.com/ALFRED-LUCIFER/medvya/pull/63): review fixes on the day grid — date steps from the date asked for (fast double click), sticky headers and time axis inside a focusable scroll region (RTL-safe), one offline banner, short unavailable blocks keep their reason, house ShellMessage, token colours with hatch contrast test, batched doctor names, type scale; mutation-checked; browser-verified (en, ar at an overflowing width, axe clean)
-- Left: template editing UI in Settings → Hours (MDV-P1-005)
+- Template editing UI (sessions and slot length per doctor or room) lives in Settings → Hours (MDV-P1-005); breaks and per-visit lengths are kept as saved, their editors are not built
 title: Schedule templates: working hours, breaks, slot length per service, per-location calendars, time zones
 type: Story
 epic: MDV-P1-E04

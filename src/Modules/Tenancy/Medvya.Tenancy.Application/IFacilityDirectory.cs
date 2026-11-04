@@ -18,4 +18,7 @@ public interface IFacilityDirectory
 
     /// <summary>User ids of the active doctor memberships (solo or hospital doctor) at this facility.</summary>
     Task<IReadOnlyList<Guid>> ActiveDoctorsAsync(Guid facilityId, CancellationToken cancellationToken = default);
+
+    /// <summary>Holidays of the facility between two facility-local dates (inclusive), name by date. Bookings on these dates are refused (MDV-P1-005).</summary>
+    Task<IReadOnlyDictionary<DateOnly, string>> ClosuresAsync(Guid facilityId, DateOnly first, DateOnly last, CancellationToken cancellationToken = default);
 }

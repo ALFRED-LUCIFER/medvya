@@ -54,11 +54,12 @@ public sealed class ScheduleService(SchedulingDbContext db, SchedulingContext co
         var holds = await db.SlotHolds.AsNoTracking()
             .Where(h => h.FacilityId == facility.Id && ids.Contains(h.CalendarId) && h.Start < to && h.End > from && h.ExpiresAt > now && h.HeldBy != me).ToListAsync(cancellationToken);
         var names = await context.PatientsAsync(appointments.Select(a => a.PatientId), cancellationToken);
-        return [.. dates.Select(date => Day(facility, zone, calendars, templates, appointments, holds, names, date))];
+        var closures = await context.ClosuresAsync(facility.Id, dates.Min(), dates.Max(), cancellationToken);
+        return [.. dates.Select(date => Day(facility, zone, calendars, templates, appointments, holds, names, date, closures.GetValueOrDefault(date)))];
     }
 
     static ScheduleDay Day(FacilityInfo facility, TimeZoneInfo zone, IReadOnlyList<Calendar> calendars, Dictionary<Guid, ScheduleTemplate> templates,
-        List<Appointment> appointments, List<SlotHold> holds, IReadOnlyDictionary<Guid, PatientSummary> names, DateOnly date)
+        List<Appointment> appointments, List<SlotHold> holds, IReadOnlyDictionary<Guid, PatientSummary> names, DateOnly date, string? holiday)
     {
         var (from, to) = ScheduleRules.DayBounds(date, zone);
         var days = calendars
@@ -76,12 +77,13 @@ public sealed class ScheduleService(SchedulingDbContext db, SchedulingContext co
         {
             var occupied = x.Booked.Where(a => Appointment.Occupies(a.State)).ToList();
             var held = holds.Where(h => h.CalendarId == x.Calendar.Id).ToList();
-            var slots = x.Day.Slots
+            // A holiday offers no slot and shows the whole day as closed under its name.
+            var slots = holiday is not null ? [] : x.Day.Slots
                 .Where(s => !occupied.Exists(a => a.Start < s.End && s.Start < a.End))
                 .Select(s => new SlotView(s.Start, s.End, held.Exists(h => h.Start < s.End && s.Start < h.End)))
                 .ToList();
             return new ScheduleColumn(x.Calendar.Id, x.Calendar.Kind, x.Calendar.Name, x.Template?.SlotMinutes, x.Day.Hours, slots,
-                ScheduleRules.Unavailable(x.Day, start, end, x.Template is not null),
+                holiday is not null ? [new UnavailableBlock(start, end, UnavailableReason.Closed, holiday)] : ScheduleRules.Unavailable(x.Day, start, end, x.Template is not null),
                 [.. x.Booked.Select(a => SchedulingContext.Chip(a, names))], x.Template is null ? [] : Lengths(x.Template), x.Day.Slots.Count);
         }).ToList();
         return new(facility.Id, facility.TimeZone, date, start, end, columns);
@@ -134,6 +136,17 @@ public sealed class ScheduleService(SchedulingDbContext db, SchedulingContext co
             .ToList();
         var names = await context.PatientsAsync(outside.Select(a => a.PatientId), cancellationToken);
         return View(calendar, template, [.. outside.Select(a => SchedulingContext.Chip(a, names))]);
+    }
+
+    public async Task<IReadOnlyList<AppointmentToMove>> AppointmentsOnAsync(Guid facilityId, DateOnly day, CancellationToken cancellationToken = default)
+    {
+        await context.RequireAsync(facilityId, SchedulingAccess.CanConfigure, cancellationToken);
+        var (_, zone) = await context.FacilityAsync(facilityId, cancellationToken);
+        var (from, to) = ScheduleRules.DayBounds(day, zone);
+        var visits = await db.Appointments.AsNoTracking()
+            .Where(a => a.FacilityId == facilityId && a.Start >= from && a.Start < to && !a.Unscheduled).OrderBy(a => a.Start).ToListAsync(cancellationToken);
+        var names = (await context.CalendarsAsync(facilityId, cancellationToken)).ToDictionary(c => c.Id, c => c.Name);
+        return [.. visits.Where(a => a.State == AppointmentState.Booked).Select(a => new AppointmentToMove(a.Id, AppointmentReference.Of(a.Id), names.GetValueOrDefault(a.CalendarId, ""), a.VisitType, a.Start, a.End))];
     }
 
     public async Task<ResourceView> AddResourceAsync(AddResource command, CancellationToken cancellationToken = default)

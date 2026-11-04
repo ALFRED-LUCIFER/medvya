@@ -112,7 +112,7 @@ importers:
         version: 5.3.0
       '@hookform/resolvers':
         specifier: 5.9.1
-        version: 5.9.1(react-hook-form@7.91.0(@types/react@19.3.0)(react@19.3.1))(zod@4.6.6)
+        version: 5.9.1(react-hook-form@7.91.0(@types/react@19.3.0)(react@19.3.1))(zod@4.6.7)
       '@medvya/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
@@ -141,8 +141,8 @@ importers:
         specifier: 8.5.0
         version: 8.5.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       zod:
-        specifier: 4.6.6
-        version: 4.6.6
+        specifier: 4.6.7
+        version: 4.6.7
     devDependencies:
       '@tailwindcss/vite':
         specifier: ^4.3.3
@@ -2473,8 +2473,8 @@ packages:
   xmlchars@2.2.0:
     resolution: {integrity: sha512-JZnDKK8B0RCDw84FNdDAIpZK+JuJw+s7Lz8nksI7SIuU3UXJJslUthsi+uWBUYOwPFwW7W7PRLRfUKpxjtjFCw==}
 
-  zod@4.6.6:
-    resolution: {integrity: sha512-4UmzQUF5fxvfcYHlbjBmejU+w+hbDnWFx4aS8kBx7nPBHcO2SqPbpAG8snbdg+Xse4pRefR98hgjFgIMCI/UhA==}
+  zod@4.6.7:
+    resolution: {integrity: sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg==}
 
 snapshots:
 
@@ -2632,12 +2632,12 @@ snapshots:
 
   '@fontsource/noto-sans-arabic@5.3.0': {}
 
-  '@hookform/resolvers@5.9.1(react-hook-form@7.91.0(@types/react@19.3.0)(react@19.3.1))(zod@4.6.6)':
+  '@hookform/resolvers@5.9.1(react-hook-form@7.91.0(@types/react@19.3.0)(react@19.3.1))(zod@4.6.7)':
     dependencies:
       '@standard-schema/utils': 0.3.0
       react-hook-form: 7.91.0(@types/react@19.3.0)(react@19.3.1)
     optionalDependencies:
-      zod: 4.6.6
+      zod: 4.6.7
 
   '@jridgewell/gen-mapping@0.3.13':
     dependencies:
@@ -4386,4 +4386,4 @@ snapshots:
 
   xmlchars@2.2.0: {}
 
-  zod@4.6.6: {}
+  zod@4.6.7: {}

@@ -26,6 +26,7 @@
     <ProjectReference Include="..\..\src\Modules\Billing\Medvya.Billing.Domain\Medvya.Billing.Domain.csproj" />
     <ProjectReference Include="..\..\src\Modules\Scheduling\Medvya.Scheduling.Domain\Medvya.Scheduling.Domain.csproj" />
     <ProjectReference Include="..\..\src\Modules\Leads\Medvya.Leads.Domain\Medvya.Leads.Domain.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Notifications\Medvya.Notifications.Domain\Medvya.Notifications.Domain.csproj" />
   </ItemGroup>
 
 </Project>

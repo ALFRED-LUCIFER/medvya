@@ -122,13 +122,13 @@ ac:
 - Pipeline duration for the skeleton is under 10 minutes.
 
 === MDV-P0-005
-status: Partly done
+status: Done
 progress:
 - Merged [PR #3](https://github.com/ALFRED-LUCIFER/medvya/pull/3): docker-compose with SQL Server 2022 (healthcheck, runs under Rosetta on Apple silicon), Azurite, smtp4dev; `pnpm services:up`
 - Merged [PR #34](https://github.com/ALFRED-LUCIFER/medvya/pull/34): `pnpm dev:db` starts the services, applies the Tenancy and Audit migrations and seeds the synthetic tenant
 - Dev-only OIDC provider (Development only, refusal tested) arrived with [PR #39](https://github.com/ALFRED-LUCIFER/medvya/pull/39)
 - Merged [PR #64](https://github.com/ALFRED-LUCIFER/medvya/pull/64): docs corrected — API on :5080 (what the clinic proxy and dev sign-in expect), Colima and Docker Desktop sockets, Rosetta and exit-139 hint, settings for parallel worktrees, seeded modules
-- Left: SMS sink (MDV-P1-033)
+- SMS sink: SMS sent locally goes to the mail sink (smtp4dev) as a message to `<number>@sms.sink.local` with sender and DLT template id, never to a phone (MDV-P1-033, `Notifications:Sms:Provider=Sink`, Development only)
 title: Local development environment with Docker Compose (SQL Server, Azurite, mail and SMS sinks)
 type: Task
 epic: MDV-P0-E01

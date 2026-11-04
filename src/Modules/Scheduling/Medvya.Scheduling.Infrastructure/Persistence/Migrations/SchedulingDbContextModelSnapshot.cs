@@ -18,7 +18,7 @@ namespace Medvya.Scheduling.Infrastructure.Persistence.Migrations
 #pragma warning disable 612, 618
             modelBuilder
                 .HasDefaultSchema("scheduling")
-                .HasAnnotation("ProductVersion", "10.0.13")
+                .HasAnnotation("ProductVersion", "10.0.14")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -189,7 +189,23 @@ namespace Medvya.Scheduling.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("PublishedAt", "OccurredAt");
 
-                    b.ToTable("OutboxEvents", "scheduling");
+                    b.ToTable("OutboxEvents", "scheduling", t =>
+                        {
+                            t.HasTrigger("TR_OutboxEvents_Tenant");
+                        });
+
+                    b.HasAnnotation("SqlServer:UseSqlOutputClause", false);
+                });
+
+            modelBuilder.Entity("Medvya.Scheduling.Domain.OutboxTenant", b =>
+                {
+                    b.Property<Guid>("TenantId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("TenantId");
+
+                    b.ToTable("OutboxTenants", "scheduling");
                 });
 
             modelBuilder.Entity("Medvya.Scheduling.Domain.QueueDisplay", b =>

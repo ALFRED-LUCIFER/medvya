@@ -64,9 +64,10 @@ ac:
 - A short note is sent to the design project owner to update the Build Plan and Azure Architecture pages (PRD v2 finding "CHANGE").
 
 === MDV-P0-003
-status: Blocked
+status: Partly done
 progress:
-- Waiting on founder: launch market (default India), Azure subscription and region, AI model availability check
+- Founder chose India first, region Central India, on 2026-11-04; ADR-002 updated to Accepted. A dev subscription is in use (subscription and tenant recorded outside the repo)
+- Left: record subscription/tenant/billing owner in docs/03-architecture/azure-deployment.md; Founders Hub credit decision; dated check of Azure OpenAI and AI Speech availability in Central India
 title: Decide launch market (ADR-002) and confirm Azure subscription and region
 type: Chore
 epic: MDV-P0-E05
@@ -149,9 +150,10 @@ ac:
 - Emails and SMS sent locally appear in the sinks and are never delivered externally.
 
 === MDV-P0-006
-status: Blocked
+status: Partly done
 progress:
-- Needs MDV-P0-003 (Azure subscription and region)
+- Dev environment for India as code in `infra/bicep/main.bicep` (single file), deployed to resource group rg-medvya-dev-in in Central India: App Service (F1), Azure SQL free offer with Entra-only auth, Storage, Key Vault (RBAC, purge protection), Log Analytics + Application Insights with a daily cap, a 1,800 INR monthly budget with 50/80/100 % alerts, and an allowed-locations policy
+- Left (shortcut, cost): private endpoints and SQL public access disabled, Defender plans, staging slot and VNet integration; staging and prod parameter files; deploy from CI (MDV-P0-007)
 title: Azure environments as code (Bicep): App Service, Azure SQL private endpoint, Blob, Key Vault, App Insights, Defender, budgets
 type: Task
 epic: MDV-P0-E01
@@ -177,9 +179,10 @@ notes:
 - Private endpoints add cost; capture the monthly estimate in the PR description (Software Architecture §9.3).
 
 === MDV-P0-007
-status: Blocked
+status: Partly done
 progress:
-- Needs MDV-P0-006
+- Workflow `.github/workflows/deploy-dev.yml` (tag `v*` or manual) signs in with GitHub OIDC and deploys the API to the India dev web app; Entra app "Medvya CI deploy (dev, India)" has a federated credential for environment `dev`; repo environment `dev` holds the non-secret ids as variables
+- Left: the Contributor role for that app on rg-medvya-dev-in (owner must run the grant); first successful tagged run; staging slot, SQL migration step and web app deploy (shortcut in the workflow)
 title: GitHub OIDC federation to Azure and tagged deploy to staging
 type: Task
 epic: MDV-P0-E01

@@ -84,7 +84,7 @@ def ticket_body(t, head, chunks, child_titles):
             ("Type / priority", f"{t['type']} · {t['priority']}"), ("Roles", t.get("roles", "—")),
             ("Estimate", f"{t['estimate']} ideal dev-days (weeks {t['weeks']})"), ("PRD", t.get("prd", "—")),
             ("Screens", t.get("screens", "—")), ("Depends on", t.get("depends", "—")),
-            ("Confidence", t["confidence"])]
+            ("Confidence", t["confidence"].replace("|", "·"))]
     out = ["| | |", "|---|---|", *(f"| {a} | {b} |" for a, b in rows), "", "## Description", "\n".join(t["desc"]).strip(), ""]
     out += ["## Acceptance criteria (Gherkin)",
             gherkin(head, chunks) if head else "\n".join(f"- {a}" for a in t["ac"]), ""]

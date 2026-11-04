@@ -82,7 +82,7 @@ public static class JobsSetup
     }
 }
 
-/// <summary>Development only, and only with Notifications:DevAllowAllConsent: lets a local run send without the consent module.</summary>
+/// <summary>Development only, and only with Notifications:DevAllowAllConsent: lets a local run send without any consent receipt.</summary>
 internal sealed class DevAllowAllConsent : IReminderConsent
 {
     public Task<bool> AllowsAsync(Guid patientId, Medvya.Notifications.Domain.NotificationChannel channel, CancellationToken cancellationToken = default) => Task.FromResult(true);

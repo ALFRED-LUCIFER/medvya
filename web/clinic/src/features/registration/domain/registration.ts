@@ -8,9 +8,8 @@ import type { IdentifierScheme, PayerKind, RegistrationStatus, SexAtBirth } from
 export const sexes: readonly SexAtBirth[] = ['Female', 'Male', 'Other'];
 export const isSex = (s: string): s is SexAtBirth => (sexes as readonly string[]).includes(s);
 
-/** Full-mode steps. Consents (MDV-P1-019) joins with its ticket. */
-export type Step = 'identity' | 'contact' | 'family' | 'payer' | 'review';
-export const steps: readonly Step[] = ['identity', 'contact', 'family', 'payer', 'review'];
+export type Step = 'identity' | 'contact' | 'family' | 'payer' | 'consents' | 'review';
+export const steps: readonly Step[] = ['identity', 'contact', 'family', 'payer', 'consents', 'review'];
 
 /** Relationship values per country (RelationshipKind; the UAE adds Sponsor of a dependant). */
 export const relationships = {
@@ -132,6 +131,7 @@ const shape = z.object({
   payerName: text(), plan: text(100), memberNumber: text(50), validTo: z.string(), network: text(100),
   ecName: text(), ecRelationship: z.string(), ecPhone: z.string().max(25, 'format'),
   guardianName: text(), guardianRelationship: z.string(), guardianPhone: z.string().max(25, 'format'),
+  consentWhatsApp: z.boolean(), consentSms: z.boolean(), consentEmail: z.boolean(), consentExchange: z.boolean(), consentPortal: z.boolean(), consentMarketing: z.boolean(),
 });
 
 export type RegistrationForm = z.input<typeof shape>;
@@ -143,6 +143,8 @@ export const emptyForm: RegistrationForm = {
   mobile: '', alternatePhone: '', email: '', line1: '', line2: '', city: '', district: '', region: '', postalCode: '', makani: '', poBox: '',
   payerKind: '', payerName: '', plan: '', memberNumber: '', validTo: '', network: '',
   ecName: '', ecRelationship: '', ecPhone: '', guardianName: '', guardianRelationship: '', guardianPhone: '',
+  // Portal invite is on and everything else off until the patient says yes (docs/04-security-compliance: consent model).
+  consentWhatsApp: false, consentSms: false, consentEmail: false, consentExchange: false, consentPortal: true, consentMarketing: false,
 };
 
 /** Fields each full-mode step owns; "Continue" validates only these. */
@@ -152,6 +154,7 @@ export const stepFields: Record<Exclude<Step, 'review'>, readonly FormField[]> =
   contact: ['mobile', 'alternatePhone', 'email', 'line1', 'line2', 'city', 'district', 'region', 'postalCode', 'makani', 'poBox'],
   family: ['ecName', 'ecRelationship', 'ecPhone', 'guardianName', 'guardianRelationship', 'guardianPhone'],
   payer: ['payerKind', 'payerName', 'plan', 'memberNumber', 'validTo', 'network'],
+  consents: ['consentWhatsApp', 'consentSms', 'consentEmail', 'consentExchange', 'consentPortal', 'consentMarketing'],
 };
 
 /** The step that shows a field (for jumping to the first error). Quick mode shows mobile on its single screen. */
@@ -372,6 +375,7 @@ export type RegisterRequest = {
   mobile: string; alternatePhone: string | null; email: string | null;
   identifiers: IdentifierInput[]; address: AddressInput | null; payer: PayerInput | null;
   emergencyContact: ContactInput | null; guardian: ContactInput | null; duplicates: DuplicateResolution | null;
+  consents: ConsentSet;
 };
 
 export type ContactInput = { name: string; relationship: Relationship; phone: string };
@@ -403,6 +407,7 @@ export function toRegisterRequest(v: RegistrationForm, country: Country, quick: 
     emergencyContact: full ? contactInput(v, 'ec') : null,
     guardian: contactInput(v, 'guardian'),
     duplicates,
+    consents: consentSet(v, quick),
   };
 }
 
@@ -434,6 +439,28 @@ export type CompletionRequest = { address: AddressInput | null; payer: PayerInpu
 export function toCompletionRequest(v: Partial<RegistrationForm>, country: Country): CompletionRequest {
   const form = { ...emptyForm, ...v };
   return { address: addressInput(form, country), payer: payerInput(form, country), emergencyContact: contactInput(form, 'ec') };
+}
+
+/**
+ * The consent wording's version (ConsentPolicy.CurrentVersion on the server, which refuses any other).
+ * shortcut: DRAFT wording, not legally reviewed (MDV-P1-044); go-live needs the reviewed en/hi/ar text and a new version.
+ */
+export const consentPolicyVersion = '2026-11-draft';
+
+export type ConsentDecision = { type: 'Treatment' | 'Reminders' | 'InformationExchange' | 'Portal' | 'Marketing'; channel: 'WhatsApp' | 'Sms' | 'Email' | null; granted: boolean };
+export type ConsentSet = { policyVersion: string; decisions: ConsentDecision[] };
+
+/** Treatment is always granted (locked on); quick mode asks nothing else. Every other choice is recorded as its own decision, declined ones too. */
+export function consentSet(v: RegistrationForm, quick: boolean): ConsentSet {
+  const decisions: ConsentDecision[] = [{ type: 'Treatment', channel: null, granted: true }];
+  if (!quick) {
+    decisions.push(
+      { type: 'Reminders', channel: 'WhatsApp', granted: v.consentWhatsApp }, { type: 'Reminders', channel: 'Sms', granted: v.consentSms }, { type: 'Reminders', channel: 'Email', granted: v.consentEmail },
+      { type: 'InformationExchange', channel: null, granted: v.consentExchange }, { type: 'Portal', channel: null, granted: v.consentPortal },
+      { type: 'Marketing', channel: null, granted: v.consentMarketing },
+    );
+  }
+  return { policyVersion: consentPolicyVersion, decisions };
 }
 
 export type RegistrationResult = { patientId: string; mrn: string; registeredAt: string; status: RegistrationStatus; warnings: string[] };
@@ -492,6 +519,7 @@ export const dataMap = {
   contact: [{ entity: 'PATIENT', key: 'contact' }],
   family: [{ entity: 'PATIENT_RELATIONSHIP', key: 'family' }],
   payer: [{ entity: 'PAYER_COVERAGE', key: 'payer' }],
+  consents: [{ entity: 'CONSENT_RECEIPT', key: 'consents' }],
   review: [{ entity: 'AUDIT_EVENT', key: 'audit' }],
 } as const satisfies Record<Step | 'quick', readonly { entity: string; key: string }[]>;
 

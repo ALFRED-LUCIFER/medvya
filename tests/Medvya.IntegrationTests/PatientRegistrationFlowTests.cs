@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
+using static Medvya.IntegrationTests.PatientRulesTests;
 
 namespace Medvya.IntegrationTests;
 
@@ -61,7 +62,7 @@ public sealed class PatientRegistrationFlowTests(SqlServerFixture sql) : IClassF
         using var desk = Desk(clinic);
         var saved = await desk.PostAsJsonAsync(Patients, new
         {
-            quick = false, fullName = "Lakshmi Pillai (synthetic)", dateOfBirth = "1984-05-09", sexAtBirth = "Female", genderIdentity = "SameAsSexAtBirth",
+            consents = TreatmentConsentBody, quick = false, fullName = "Lakshmi Pillai (synthetic)", dateOfBirth = "1984-05-09", sexAtBirth = "Female", genderIdentity = "SameAsSexAtBirth",
             preferredLanguage = "ml", mobile = "+91 90000 00411", alternatePhone = "+91 90000 00412", email = "lakshmi.synthetic@example.in",
             identifiers = new object[]
             {
@@ -108,7 +109,7 @@ public sealed class PatientRegistrationFlowTests(SqlServerFixture sql) : IClassF
         using var desk = Desk(clinic);
         var saved = await desk.PostAsJsonAsync(Patients, new
         {
-            quick = false, fullName = "Fatima Al Mansoori (synthetic)", arabicName = "فاطمة المنصوري", dateOfBirth = "1988-02-03", sexAtBirth = "Female",
+            consents = TreatmentConsentBody, quick = false, fullName = "Fatima Al Mansoori (synthetic)", arabicName = "فاطمة المنصوري", dateOfBirth = "1988-02-03", sexAtBirth = "Female",
             nationality = "AE", preferredLanguage = "ar", mobile = "050 000 0458",
             identifiers = new object[] { new { scheme = "EmiratesId", value = "784-1988-1234567-1", expiresOn = "2020-11-30" } },
             address = new { line1 = "Villa 14", line2 = "Al Karamah", region = "AUH", makani = "1234567890", poBox = "4521" },
@@ -150,7 +151,7 @@ public sealed class PatientRegistrationFlowTests(SqlServerFixture sql) : IClassF
         using var desk = Desk(clinic);
         var child = new Dictionary<string, object?>
         {
-            ["quick"] = true, ["fullName"] = "Mariam Al Mansoori (synthetic)", ["dateOfBirth"] = "2019-06-01", ["sexAtBirth"] = "Female", ["mobile"] = "050 000 0460",
+            ["consents"] = TreatmentConsentBody, ["quick"] = true, ["fullName"] = "Mariam Al Mansoori (synthetic)", ["dateOfBirth"] = "2019-06-01", ["sexAtBirth"] = "Female", ["mobile"] = "050 000 0460",
             ["identifiers"] = new object[] { new { scheme = "EmiratesId", value = "784-2019-1234567-2" } },
         };
         var refused = await desk.PostAsJsonAsync(Patients, child);

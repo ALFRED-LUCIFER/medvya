@@ -158,7 +158,7 @@ public sealed class EndpointAuditTests(SqlServerFixture sql) : IClassFixture<Sql
         "POST /v1/appointments/walk-in" => System.Text.Json.JsonSerializer.Serialize(new { facilityId = facility, patientId = Guid.NewGuid(), visitType = "FollowUp", reasonCategory = "General" }),
         "POST /v1/patients/" => System.Text.Json.JsonSerializer.Serialize(new
         {
-            quick = true, fullName = $"{role} Audit Probe (synthetic)", dateOfBirth = $"{1950 + (int)role}-02-0{1 + (int)role % 9}",
+            consents = Medvya.IntegrationTests.PatientRulesTests.TreatmentConsentBody, quick = true, fullName = $"{role} Audit Probe (synthetic)", dateOfBirth = $"{1950 + (int)role}-02-0{1 + (int)role % 9}",
             sexAtBirth = "Female", mobile = $"+91 90000 09{(int)role:D3}",
         }),
         _ => "{}",

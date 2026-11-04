@@ -115,6 +115,7 @@ export function useRegistrationController(country: Country, quick: boolean) {
     onSubmit: submit,
     failure: failure && failure.status !== 400 ? (failure.status === 403 ? 'forbidden' as const : 'error' as const) : null,
     duplicateUnresolved: failure?.errors.some(e => e.field === 'duplicates') ?? false,
+    consentsStale: failure?.errors.some(e => e.field === 'consents.policyVersion') ?? false,
     result: save.data ?? null as RegistrationResult | null,
     registeredName: save.variables?.fullName ?? '',
     onRegisterAnother: () => { save.reset(); setResolution(null); form.reset(emptyForm); setStep('identity'); setReached(0); },

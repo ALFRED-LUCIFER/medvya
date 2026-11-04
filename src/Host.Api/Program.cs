@@ -59,6 +59,7 @@ if (builder.Configuration.GetConnectionString("Medvya") is { } sql)
 {
     builder.Services.AddAuditModule(sql).AddDeniedAccessAudit().AddTenancyModule(sql, builder.Configuration["Storage:ConnectionString"]).AddIdentityModule(sql).AddPatientsModule(sql).AddSchedulingModule(sql)
         .AddNotificationsModule(sql, smsSink: builder.Environment.IsDevelopment() && builder.Configuration["Notifications:Sms:Provider"] == "Sink")
+        .AddScoped<IReminderConsent, PatientReminderConsent>() // after the module: replaces its deny-all default (MDV-P1-019)
         .AddLeadsModule(sql, builder.Configuration.GetSection("Leads:Email").Get<LeadsEmailOptions>() ?? new()).AddCapabilityPolicies();
     // shortcut: only Development has a column master key (the same local file as `pnpm dev:db`); the Azure Key Vault provider
     // arrives with MDV-P0-006, and until then encrypted identifiers cannot be read anywhere else (fail closed).
@@ -67,7 +68,7 @@ if (builder.Configuration.GetConnectionString("Medvya") is { } sql)
             ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Medvya", "local-column-master-key.pem")));
 }
 builder.Services.Configure<NotificationOptions>(builder.Configuration.GetSection("Notifications"));
-// Until the consent module (MDV-P1-019) supplies IReminderConsent, nothing is sent. Local runs may switch that off explicitly; never outside Development.
+// Reminder consent comes from the patient's consent receipts. Local runs may switch the check off explicitly; never outside Development.
 if (builder.Environment.IsDevelopment() && builder.Configuration.GetValue("Notifications:DevAllowAllConsent", false))
     builder.Services.AddSingleton<IReminderConsent, DevAllowAllConsent>();
 builder.AddJobs(builder.Configuration.GetConnectionString("Medvya"));

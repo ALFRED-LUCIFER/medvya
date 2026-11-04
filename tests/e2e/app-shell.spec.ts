@@ -58,7 +58,8 @@ test('doctor sees Clinical and Practice items; flag-off items are not rendered',
 });
 
 test('signed in without an active facility goes to the facility slot', async ({ page }) => {
-  await signInAs(page, { user: { id: 'u-rao', displayName: 'Dr. Arjun Rao' } }); // today's server: user only
+  // A member of one clinic who has not chosen it yet. (A user with no clinic at all is sent to the setup wizard, MDV-P1-004.)
+  await signInAs(page, { user: { id: 'u-rao', displayName: 'Dr. Arjun Rao' }, memberships: [membership('SoloDoctor')] });
   await page.goto('/today');
   await expect(page).toHaveURL('/choose-facility');
   await expect(page.getByRole('heading', { name: 'Choose where you are working today' })).toBeVisible();

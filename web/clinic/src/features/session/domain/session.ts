@@ -15,6 +15,8 @@ export type ActiveMembership = {
   country?: Country;
   capabilities: Partial<Record<Capability, Access>>;
   flags: string[];
+  /** A doctor whose licence is not verified yet: recording and signing are off (the server already left them out of `capabilities`). */
+  licencePending?: boolean;
 };
 
 /** /v1/me/context (contract agreed with MDV-P0-012). Older servers send only `user`: that means "no active facility". */

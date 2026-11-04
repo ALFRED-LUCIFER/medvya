@@ -20,6 +20,8 @@ public sealed class TenancyDbContext(DbContextOptions<TenancyDbContext> options,
     public DbSet<OperatingHours> OperatingHours => Set<OperatingHours>();
     public DbSet<Closure> Closures => Set<Closure>();
     public DbSet<SettingsChange> SettingsChanges => Set<SettingsChange>();
+    public DbSet<PracticeDefaults> PracticeDefaultsSet => Set<PracticeDefaults>();
+    public DbSet<DoctorLicence> DoctorLicences => Set<DoctorLicence>();
 
     Guid? CurrentTenantId => tenant.TenantId;
 
@@ -105,6 +107,26 @@ public sealed class TenancyDbContext(DbContextOptions<TenancyDbContext> options,
             e.Property(x => x.Section).HasMaxLength(40);
             e.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
             e.HasIndex(x => new { x.TenantId, x.OccurredAt });
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<PracticeDefaults>(e =>
+        {
+            e.ToTable("PracticeDefaults");
+            e.HasKey(x => x.TenantId);
+            e.Property(x => x.Specialty).HasMaxLength(100);
+            e.Property(x => x.Qualifications).HasMaxLength(200);
+            e.Property(x => x.Languages).HasMaxLength(200);
+            e.Property(x => x.Currency).HasMaxLength(3).IsFixedLength();
+            e.HasOne<Tenant>().WithOne().HasForeignKey<PracticeDefaults>(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<DoctorLicence>(e =>
+        {
+            e.HasKey(x => x.MembershipId);
+            e.Property(x => x.Authority).HasMaxLength(20);
+            e.Property(x => x.Number).HasMaxLength(20);
+            e.Property(x => x.CertificateName).HasMaxLength(200);
+            e.HasOne<Membership>().WithOne().HasForeignKey<DoctorLicence>(x => x.MembershipId).OnDelete(DeleteBehavior.Restrict);
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
     }

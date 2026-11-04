@@ -51,7 +51,8 @@ progress:
 - Tenant.CountryCode and ResidencyRegion are init-only and EF throws on any later change (domain, EF and SQL Server tests, mutation-checked); copy translated (en/hi/ar); browser-verified (axe clean, keyboard, RTL); Lighthouse mobile 100 (local)
 - Review fixes ([PR #67](https://github.com/ALFRED-LUCIFER/medvya/pull/67)): waitlist refuses control characters in the name and has its own anti-forgery test; the form quota counts an IPv6 subscriber (/64), not each address
 - Privacy notice and consent ([PR #75](https://github.com/ALFRED-LUCIFER/medvya/pull/75)): the waitlist shows a notice above the submit button (who, itemised fields, purpose, no sharing or other use, 2 years then deleted, how to withdraw or ask for deletion, the Data Protection Board of India or UAE Data Office) and a required, unticked consent box; refused on the server without it (consent_required); stores ConsentedAt (UTC) and NoticeVersion; no form without PublicSite:PrivacyContact
-- Left: record the selection in the onboarding audit trail and check the new tenant's country against the deployment when the tenant is created (MDV-P1-004); configure the live country's sign-up address once onboarding and the launch deployment exist (MDV-P0-003, MDV-P0-007); the real privacy contact address and counsel-reviewed notice wording (MDV-P1-044)
+- Onboarding (MDV-P1-004): the selection is recorded in the audit trail when the tenant is created (action onboarding.complete.IN or .AE) and the new tenant's country is checked against the deployment (Onboarding:DeploymentCountry)
+- Left: configure the live country's sign-up address once onboarding and the launch deployment exist (MDV-P0-003, MDV-P0-007); the real privacy contact address and counsel-reviewed notice wording (MDV-P1-044)
 title: Country and data-residency selector that binds a new tenant to one data plane
 type: Story
 epic: MDV-P1-E01
@@ -104,6 +105,13 @@ ac:
 - Content is editable without redeploy (Markdown files or settings) and versioned.
 
 === MDV-P1-004
+status: Partly done
+progress:
+- PR_LINK: sign-up and the six-step wizard (/signup, /onboarding): sign-up creates the account only through the provider's MFA sign-in; the draft (identity.OnboardingDrafts) autosaves, resumes at the same step after signing in again, and a step is checked by the server (country rule classes: India council list + registration number, UAE DoH/DHA/MOHAP licence, GSTIN optional format, TRN 15 digits) with errors under the field and announced; an owner who is not a doctor skips the licence step
+- Finishing creates tenant (bound to the country), facility, owner membership, practice profile with hours and fee defaults (integer minor units) and the doctor's licence in one transaction under row-level security, writes the audit event in the new tenant, then sends step-6 invitations through the P0 invitation flow; a deployment serving one country refuses the other (Onboarding:DeploymentCountry)
+- Recording and signing capabilities (clinical notes, prescriptions, recording, AI drafts, result review) are None in IStaffAccess while the licence is unverified, so every capability policy refuses them; booking and registering stay; the shell shows the designed notice (gate mutation-checked)
+- Browser (mocked API, English and Arabic RTL, 768 px, keyboard, axe clean) and Testcontainers SQL Server tests; J1 step 1 implemented
+- Left: store the certificate file in Blob (only its name is kept; needs the Blob upload path, MDV-P0-006); back-office licence verification that sets VerifiedAt (MDV-P1-007); mobile/SMS invitations in step 6 (MDV-P1-033); claim the draft in the same transaction as the tenant so a double submit cannot create two practices (when drafts and tenants share a store); the live country's sign-up address (PublicSite:Deployments:SignUpUrls, MDV-P0-003); several doctors and locations (MDV-P1-005, MDV-P1-007)
 title: Solo doctor and clinic sign-up with the six-step onboarding wizard (autosave)
 type: Story
 epic: MDV-P1-E02
@@ -356,7 +364,8 @@ status: Partly done
 progress:
 - Merged [PR #40](https://github.com/ALFRED-LUCIFER/medvya/pull/40): UAE rules — Emirates ID format, expired EID warns, EID-or-passport minimum, Arabic name, emirate mapped to Malaffi/NABIDH/Riayati, Makani/P.O. Box, insurance member number Always Encrypted
 - Merged [PR #82](https://github.com/ALFRED-LUCIFER/medvya/pull/82): UAE full registration UI — name as on EID plus Arabic name typed right to left (preview card and Review), Emirates ID or passport, "Format 784-YYYY-NNNNNNN-N", expired EID warns while typing and on the success screen but never blocks, nationality and language named with Intl.DisplayNames, emirate → HIE label (Malaffi / NABIDH / Riayati) under the field, Makani and P.O. Box, insurance with member card, expiry, plan and network (eligibility marked M4); HTTP test with a UAE tenant (rules follow the tenant, not the body); browser-checked in Arabic against the real API
-- Left: the HIE label on the Consents step (MDV-P1-019); "UAE tenant cannot be created in the India deployment" belongs to tenant creation (MDV-P1-004); card reader and UAE PASS (P5)
+- Onboarding (MDV-P1-004): a UAE tenant cannot be created in an India deployment (Onboarding:DeploymentCountry, tested)
+- Left: the HIE label on the Consents step (MDV-P1-019); card reader and UAE PASS (P5)
 title: Patient registration — UAE flow (Emirates ID manual entry, Arabic name RTL, emirate, insurance card)
 type: Story
 epic: MDV-P1-E05

@@ -69,6 +69,7 @@ public static class SessionControl
             var memberships = await directory.ForCurrentUserAsync(ct);
             // Role comes from the live membership row, so a suspended membership is no longer offered as active.
             var active = memberships.FirstOrDefault(m => m.Id == Read(principal, MembershipClaim));
+            var licencePending = active is not null && await staff.LicencePendingAsync(ct);
             return Results.Ok(new
             {
                 user = new { user.Id, user.DisplayName },
@@ -81,7 +82,10 @@ public static class SessionControl
                     // The tenant's country picks the registration rules and formats on the client; never chosen by the client.
                     Country = await staff.TenantCountryAsync(ct),
                     Role = active.Role.ToString(),
-                    Capabilities = RoleMatrix.Grants(active.Role).ToDictionary(g => g.Capability.ToString(), g => g.Access.ToString()),
+                    // Recording and signing stay off until the doctor's licence is verified (MDV-P1-004), as the server enforces on each call.
+                    LicencePending = licencePending,
+                    Capabilities = RoleMatrix.Grants(active.Role).Select(g => (g.Capability, Access: LicenceRules.Apply(g.Access, g.Capability, licencePending)))
+                        .Where(g => g.Access != Access.None).ToDictionary(g => g.Capability.ToString(), g => g.Access.ToString()),
                     Flags = await flags.EnabledKeysAsync(ct),
                 },
             });

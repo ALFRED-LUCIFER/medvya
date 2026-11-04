@@ -91,6 +91,18 @@ Not clinic data, so no tenant. Of the app roles only `medvya_leads` reaches the 
 | leads.Waitlist: name, email, phone | Personal | Never in logs |
 | leads.Waitlist: consented_at, notice_version | Internal | Proof of consent, as for demo requests |
 
+### Onboarding (P1, MDV-P1-004)
+
+| Entity.field | Class | Control |
+|---|---|---|
+| identity.OnboardingDrafts: user_id, country, step, updated_at, completed_at | Internal | One row per person, never listed. Not in reporting (identity schema) |
+| identity.OnboardingDrafts: data (name, licence, clinic address and fees as typed) | Personal | Emptied when the practice is created. Never in logs |
+| tenancy.PracticeProfiles: tenant_id, slot_minutes, fees (minor units), currency, hours, note templates, registration number, GSTIN/TRN | Internal | Row-level security |
+| tenancy.PracticeProfiles: address | Personal | A solo doctor's clinic can be a home address. Row-level security |
+| tenancy.PracticeProfiles: specialty, qualifications, languages | Public | Shown to patients later (P5) |
+| tenancy.DoctorLicences: membership_id, tenant_id, authority, submitted_at, verified_at | Internal | Row-level security. Until verified_at is set, recording and signing capabilities are off |
+| tenancy.DoctorLicences: number, certificate_name | Personal | The certificate file itself is not stored yet (shortcut in the wizard) |
+
 ### Clinical (P2)
 
 | Entity.field | Class | Control |

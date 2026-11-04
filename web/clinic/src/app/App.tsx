@@ -6,6 +6,7 @@ import UiGallery from '../dev/UiGallery';
 import OfflineBanner from '../features/connectivity/components/OfflineBanner';
 import { useConnectivityController } from '../features/connectivity/hooks/useConnectivityController';
 import NotFoundPage from '../features/errors/components/NotFoundPage';
+import LicenceNotice from '../features/onboarding/components/LicenceNotice';
 import HomePage from '../features/home/components/HomePage';
 import LanguageSwitcher from '../features/locale/components/LanguageSwitcher';
 import FacilityPicker from '../features/session/components/FacilityPicker';
@@ -22,6 +23,8 @@ import ScheduleRoute from './ScheduleRoute';
 // Loaded on demand: invitations bring the form stack (React Hook Form, Zod) that most sessions never need.
 const InvitationRoute = lazy(() => import('./InvitationRoute'));
 const InviteColleagueRoute = lazy(() => import('./InviteColleagueRoute'));
+const SignUpRoute = lazy(() => import('./SignUpRoute'));
+const OnboardingRoute = lazy(() => import('./OnboardingRoute'));
 const DisplaysRoute = lazy(() => import('./DisplaysRoute'));
 const OverviewRoute = lazy(() => import('./OverviewRoute'));
 const SettingsRoute = lazy(() => import('./SettingsRoute'));
@@ -69,17 +72,23 @@ export default function App({ locale, onLocaleChange }: Props) {
     : shell.expired ? <Route path="*" element={<SessionExpiredPage onSignIn={shell.signIn} />} />
     : !shell.session ? <>
         <Route path="/" element={<HomePage languageSwitcher={switcher} session={<SessionPanel {...shell} onSignIn={shell.signIn} onSignOut={shell.signOut} />} />} />
+        <Route path="/signup" element={<SignUpRoute switcher={switcher} />} />
+        {/* A signed-out visit to the wizard (an old link) starts at sign-up. */}
+        <Route path="/onboarding" element={<Navigate to={`/signup${location.search}`} replace />} />
         <Route path="*" element={<NotFoundPage standalone onBackToToday={toHome} />} />
       </>
     : !active ? <>
         <Route path="/choose-facility" element={picker} />
-        <Route path="*" element={<Navigate to="/choose-facility" replace state={{ from: location.pathname }} />} />
+        {/* Signed in with no clinic yet: the setup wizard (F-04). It scopes the session to the new practice when it finishes. */}
+        <Route path="/onboarding" element={<OnboardingRoute switcher={switcher} onFinished={r => shell.chooseFacility(r.membershipId, () => navigate('/', { replace: true }))} />} />
+        <Route path="*" element={<Navigate to={shell.session.memberships.length === 0 ? '/onboarding' : '/choose-facility'} replace state={{ from: location.pathname }} />} />
       </>
     : <>
         <Route path="/choose-facility" element={picker} />
         <Route element={
           <AppShell {...account} role={active.role} facilityName={active.facilityName} groups={shell.groups} tabs={shell.tabs} searchPath={searchPath}
             languageSwitcher={<LanguageSwitcher inline value={locale} onChange={onLocaleChange} />}>
+            {active.licencePending && <LicenceNotice />}
             <Suspense fallback={<ShellMessage busy title={t('shell.loading')} />}><Outlet /></Suspense>
           </AppShell>}>
           <Route index element={first ? <Navigate to={first.path} replace /> : <ShellMessage title={t('shell.noScreens.title')} body={t('shell.noScreens.body')} />} />

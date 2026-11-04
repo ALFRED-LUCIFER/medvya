@@ -12,7 +12,8 @@ public static class IdentityModule
         services
             .AddDbContext<IdentityDbContext>(o => o.UseSqlServer(connectionString))
             .AddScoped<IStaffUsers, StaffUsers>()
-            .AddScoped<IStaffSessions, StaffSessions>();
+            .AddScoped<IStaffSessions, StaffSessions>()
+            .AddScoped<IOnboardingDrafts, OnboardingDrafts>();
 }
 
 sealed class StaffUsers(IdentityDbContext db) : IStaffUsers
@@ -31,6 +32,13 @@ sealed class StaffUsers(IdentityDbContext db) : IStaffUsers
         return await db.Users.AsNoTracking().Where(u => list.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.DisplayName, cancellationToken);
     }
 
+    public async Task SetDisplayNameAsync(Guid id, string displayName, CancellationToken cancellationToken = default)
+    {
+        var name = displayName.Trim();
+        name = name[..Math.Min(name.Length, 200)];
+        await db.Users.Where(u => u.Id == id).ExecuteUpdateAsync(s => s.SetProperty(u => u.DisplayName, name), cancellationToken);
+    }
+
     public async Task<StaffUser> FindOrCreateAsync(string issuer, string subject, string displayName, CancellationToken cancellationToken = default)
     {
         if (await FindAsync(issuer, subject, cancellationToken) is { } existing) return existing;
@@ -47,5 +55,41 @@ sealed class StaffUsers(IdentityDbContext db) : IStaffUsers
             db.Entry(user).State = EntityState.Detached;
             return await FindAsync(issuer, subject, cancellationToken) ?? throw new InvalidOperationException("Could not create the user.");
         }
+    }
+}
+
+sealed class OnboardingDrafts(IdentityDbContext db) : IOnboardingDrafts
+{
+    public Task<OnboardingDraft?> GetAsync(Guid userId, CancellationToken cancellationToken = default) =>
+        db.OnboardingDrafts.AsNoTracking().SingleOrDefaultAsync(d => d.UserId == userId && d.CompletedAt == null, cancellationToken);
+
+    public async Task<OnboardingDraft> StartAsync(Guid userId, string country, CancellationToken cancellationToken = default)
+    {
+        if (await GetAsync(userId, cancellationToken) is { } existing) return existing;
+        var now = DateTimeOffset.UtcNow;
+        // A finished draft's row is reused, so a person who already has a practice can start another.
+        var reused = await db.OnboardingDrafts.Where(d => d.UserId == userId).ExecuteUpdateAsync(s => s
+            .SetProperty(d => d.Country, country).SetProperty(d => d.Step, 1).SetProperty(d => d.Data, "{}")
+            .SetProperty(d => d.UpdatedAt, now).SetProperty(d => d.CompletedAt, (DateTimeOffset?)null), cancellationToken);
+        if (reused == 0)
+        {
+            db.OnboardingDrafts.Add(new OnboardingDraft { UserId = userId, Country = country, Data = "{}", UpdatedAt = now });
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        return await GetAsync(userId, cancellationToken) ?? throw new InvalidOperationException("Could not start the draft.");
+    }
+
+    public async Task<bool> SaveAsync(Guid userId, int resumeStep, string data, CancellationToken cancellationToken = default)
+    {
+        var now = DateTimeOffset.UtcNow;
+        return await db.OnboardingDrafts.Where(d => d.UserId == userId && d.CompletedAt == null)
+            .ExecuteUpdateAsync(s => s.SetProperty(d => d.Step, resumeStep).SetProperty(d => d.Data, data).SetProperty(d => d.UpdatedAt, now), cancellationToken) == 1;
+    }
+
+    public async Task<bool> CompleteAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        var now = DateTimeOffset.UtcNow;
+        return await db.OnboardingDrafts.Where(d => d.UserId == userId && d.CompletedAt == null)
+            .ExecuteUpdateAsync(s => s.SetProperty(d => d.Data, "{}").SetProperty(d => d.CompletedAt, now).SetProperty(d => d.UpdatedAt, now), cancellationToken) == 1;
     }
 }

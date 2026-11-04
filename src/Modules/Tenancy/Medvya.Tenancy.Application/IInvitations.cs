@@ -20,7 +20,13 @@ public interface IInvitations
     /// Creates an Invited membership and its invitation in the current tenant, invited by the current user, and emails the link.
     /// Null when the facility is not one of the tenant's. Throws ArgumentException for an invalid email or a role that cannot be invited.
     /// </summary>
-    Task<InvitationCreated?> CreateAsync(string email, Role role, Guid facilityId, CancellationToken cancellationToken = default);
+    Task<InvitationCreated?> CreateAsync(string email, Role role, Guid facilityId, Guid? customRoleId = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Replaces the newest, not yet accepted invitation of a membership with a fresh link (the old one is revoked) and emails it.
+    /// Null when there is no such invitation, it was accepted, or a newer one exists.
+    /// </summary>
+    Task<InvitationCreated?> ResendAsync(Guid invitationId, CancellationToken cancellationToken = default);
 
     /// <summary>Revokes a pending invitation of the current tenant. False when there is none (unknown, used, revoked).</summary>
     Task<bool> RevokeAsync(Guid invitationId, CancellationToken cancellationToken = default);

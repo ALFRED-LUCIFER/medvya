@@ -35,7 +35,7 @@ COLOURS = {"phase": "1D76DB", "type": "5319E7", "priority": "B60205", "status": 
 
 
 def gh(*args, data=None):
-    for attempt in range(4):  # network resets happen over ~500 calls; reruns are idempotent but retrying is cheaper
+    for attempt in range(1 if args[:3] == ("api", "-X", "POST") else 4):  # never retry a create: it may have succeeded, and a retry would duplicate it
         r = subprocess.run(["gh", *args], input=json.dumps(data) if data is not None else None,
                            capture_output=True, text=True)
         if not r.returncode or "HTTP 4" in r.stderr:
@@ -114,16 +114,24 @@ def main():
     made = {"epics": 0, "tickets": 0, "chunks": 0, "closed": 0}
     todo_t = [t for t in tickets if not ONLY or any(t["key"].startswith(o) for o in ONLY)]
 
+    seen_labels = {l["name"] for l in gh("label", "list", "--limit", "500", "--json", "name")} if APPLY else set()
+
     def label(name, kind):
-        if APPLY:
+        if APPLY and name not in seen_labels:
+            seen_labels.add(name)
             subprocess.run(["gh", "label", "create", name, "--color", COLOURS[kind], "--force"], capture_output=True)
 
     def ensure(key, title, body, labels, milestone, status, parent=None, close=False, comment=None):
         """Create or update one issue; returns its API object (dry run: a stub)."""
         i = existing.get(key)
+        if i and APPLY and "--refresh" not in sys.argv:
+            if parent and parent["number"] and not i.get("parent_issue_url"):  # repair a link lost to a network error
+                api("POST", f"issues/{parent['number']}/sub_issues", {"sub_issue_id": i["id"]})
+            return i  # already created; --refresh rewrites bodies
         if not APPLY:
             print(("UPDATE" if i else "CREATE"), f"[{key}] {title[:70]} · {status}")
             return i or {"id": 0, "number": 0}
+        print(("update" if i else "create"), key, flush=True)
         data = {"title": f"[{key}] {title}", "body": body, "labels": labels, "milestone": milestone}
         if i:
             i = api("PATCH", f"issues/{i['number']}", data)

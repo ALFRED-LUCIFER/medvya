@@ -11,6 +11,7 @@ import {
 import DuplicateReview from './DuplicateReview';
 import RegistrationSidePanel from './RegistrationSidePanel';
 import RegistrationSuccess from './RegistrationSuccess';
+import ConsentsStep, { TreatmentConsent } from './ConsentsStep';
 import { ContactStep, FamilyStep, IdentityStep, PayerStep, QuickFields, ReviewStep } from './RegistrationSteps';
 
 type Props = {
@@ -39,6 +40,8 @@ type Props = {
   onSubmit: () => void;
   failure: 'forbidden' | 'error' | null;
   duplicateUnresolved: boolean;
+  /** The server holds a newer consent wording than this page showed. */
+  consentsStale: boolean;
   result: RegistrationResult | null;
   registeredName: string;
   actorName: string;
@@ -100,7 +103,7 @@ export default function Registration(p: Props) {
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
         <form noValidate onSubmit={e => { e.preventDefault(); if (atReview) p.onSubmit(); else p.onContinue(); }} className="flex min-w-0 flex-col gap-5">
           {step && (
-            <ol aria-label={t('registration.steps.label')} className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+            <ol aria-label={t('registration.steps.label')} className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
               {steps.map((s, i) => {
                 const current = s === step;
                 const done = i < steps.indexOf(step);
@@ -127,10 +130,12 @@ export default function Registration(p: Props) {
               {step && <p className="text-sm text-muted-foreground">{t(`registration.step.${step}.intro.${p.country}`)}</p>}
             </div>
             {p.quick && <QuickFields f={f} country={p.country} ageInstead={p.ageInstead} minor={p.minor} />}
+            {p.quick && <TreatmentConsent f={f} />}
             {step === 'identity' && <IdentityStep f={f} country={p.country} ageInstead={p.ageInstead} values={p.values} today={today} />}
             {step === 'contact' && <ContactStep f={f} country={p.country} values={p.values} />}
             {step === 'family' && <FamilyStep f={f} country={p.country} minor={p.minor} />}
             {step === 'payer' && <PayerStep f={f} country={p.country} values={p.values} />}
+            {step === 'consents' && <ConsentsStep f={f} country={p.country} values={p.values} />}
             {step === 'review' && <ReviewStep country={p.country} values={p.values} ageInstead={p.ageInstead} onEdit={p.onGoTo} />}
           </section>
 
@@ -152,6 +157,7 @@ export default function Registration(p: Props) {
 
           <div className="flex flex-col gap-2">
             {p.failure === 'error' && <p role="alert" className="text-sm font-semibold text-danger-700">{t('registration.saveFailed')}</p>}
+            {p.consentsStale && <p role="alert" className="text-sm font-semibold text-danger-700">{t('registration.consents.stale')}</p>}
             {p.duplicateUnresolved && unresolved && <p role="alert" className="text-sm font-semibold text-danger-700">{t('registration.duplicates.serverRefused')}</p>}
             <div className="flex flex-wrap gap-2">
               {step && step !== 'identity' && <Button type="button" variant="outline" onClick={p.onBack}>{t('registration.back')}</Button>}

@@ -32,6 +32,7 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
         var now = clock.GetUtcNow();
         var rules = CountryRules.For(command.CountryCode);
         var (c, dob, estimated, warnings) = rules.Validate(command, await FacilityTodayAsync(command.FacilityId, now, cancellationToken));
+        var consents = ConsentRules.ForRegistration(c.Consents); // no consent, no registration
 
         // Checked here as well as while typing: the save is refused until the desk has decided about every possible match.
         var duplicates = await DuplicatesAsync(c.FacilityId, c.FullName, estimated ? null : dob, rules.MatchKeys(c.Identifiers), cancellationToken);
@@ -60,6 +61,7 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
         // Names to call, never users: no account, membership or portal access is created for a contact (MDV-P1-020).
         if (c.EmergencyContact is { } emergency) db.Relationships.Add(Relationship(tenantId, patient.Id, emergency, isEmergencyContact: true));
         if (c.Guardian is { } guardian) db.Relationships.Add(Relationship(tenantId, patient.Id, guardian, isEmergencyContact: false));
+        db.ConsentReceipts.AddRange(PatientConsents.Receipts(tenantId, patient.Id, consents, ConsentRules.Jurisdiction(c.CountryCode, c.Address?.Region), now, user.UserId));
         var decisions = duplicates.Select(d => new MergeRequest
         {
             Id = Guid.CreateVersion7(), TenantId = tenantId, PatientId = patient.Id, CandidatePatientId = d.PatientId,

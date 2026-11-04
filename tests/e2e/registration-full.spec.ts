@@ -76,6 +76,16 @@ test('India: full registration in steps, with Aadhaar last 4 only, the PIN rule 
   await page.getByLabel('Policy / member number').fill('SYN-23-000411-01');
   await next(page);
 
+  // Consents (MDV-P1-019): treatment is locked on, marketing starts off, reminders are chosen per channel.
+  await expect(page.getByRole('heading', { name: 'Consents', level: 2 })).toBeFocused();
+  await expect(page.getByRole('switch', { name: 'Treatment' })).toBeDisabled();
+  await expect(page.getByRole('switch', { name: 'Treatment' })).toBeChecked();
+  await expect(page.getByRole('switch', { name: 'Health tips and offers' })).not.toBeChecked();
+  await expect(page.getByRole('switch', { name: 'Link to ABHA' })).not.toBeChecked();
+  await page.getByRole('switch', { name: 'WhatsApp' }).click();
+  await expect(page.getByRole('switch', { name: 'SMS' })).not.toBeChecked();
+  await next(page);
+
   await expect(page.getByRole('heading', { name: 'Review & duplicate check' })).toBeFocused();
   await expect(page.getByText('Aadhaar (last 4 digits) 0411')).toBeVisible();
   await expect(page.getByText('Insurance · Synthetic Health · Synthetic TPA · SYN-23-000411-01')).toBeVisible();
@@ -95,6 +105,9 @@ test('India: full registration in steps, with Aadhaar last 4 only, the PIN rule 
     address: { line1: '12/402 Synthetic Apartments', city: 'Kochi', region: 'Kerala', postalCode: '682001', makani: null },
     payer: { kind: 'PrivateInsurance', payerName: 'Synthetic Health', network: 'Synthetic TPA', memberNumber: 'SYN-23-000411-01' },
     emergencyContact: { name: 'Suresh Pillai', relationship: 'Spouse', phone: '+91 90000 00412' }, guardian: null,
+    consents: { policyVersion: '2026-11-draft', decisions: [
+      { type: 'Treatment', channel: null, granted: true }, { type: 'Reminders', channel: 'WhatsApp', granted: true }, { type: 'Reminders', channel: 'Sms', granted: false }, { type: 'Reminders', channel: 'Email', granted: false },
+      { type: 'InformationExchange', channel: null, granted: false }, { type: 'Portal', channel: null, granted: true }, { type: 'Marketing', channel: null, granted: false }] },
   });
   expect(body).not.toHaveProperty('countryCode'); // the country is the tenant's, never sent
   expect(body).not.toHaveProperty('facilityId');
@@ -129,6 +142,9 @@ test('UAE: Arabic name typed right to left, an expired Emirates ID warns, the em
   await page.getByLabel('Emergency contact phone').fill('050 000 0459');
   await next(page);
   await next(page); // payer left for later
+  // The emirate chosen in the address names the HIE on the consent (MDV-P1-014, MDV-P1-019).
+  await expect(page.getByRole('switch', { name: 'Share with NABIDH' })).not.toBeChecked();
+  await next(page);
   await expect(page.getByText('فاطمة المنصوري', { exact: false }).first()).toBeVisible();
   await page.getByRole('button', { name: 'Register patient' }).click();
 

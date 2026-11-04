@@ -4,6 +4,8 @@ using Medvya.Identity.Infrastructure;
 using Medvya.Notifications.Application;
 using Medvya.Notifications.Domain;
 using Medvya.Notifications.Infrastructure;
+using Medvya.Patients.Application;
+using Medvya.Patients.Domain;
 using Medvya.Patients.Infrastructure;
 using Medvya.Scheduling.Application;
 using Medvya.Scheduling.Domain;
@@ -80,7 +82,7 @@ public sealed class NotificationsTests(SqlServerFixture sql) : IClassFixture<Sql
     }
 
     /// <summary>The module as the host builds it, with fakes in front of the providers. With <paramref name="denyAll"/> the module's own consent default applies.</summary>
-    void Rebuild(bool denyAll, Guid? inTenant = null, Guid? user = null)
+    void Rebuild(bool denyAll, Guid? inTenant = null, Guid? user = null, bool realConsent = false)
     {
         provider?.Dispose();
         var services = new ServiceCollection()
@@ -91,9 +93,10 @@ public sealed class NotificationsTests(SqlServerFixture sql) : IClassFixture<Sql
             .AddSingleton<Medvya.Tenancy.Application.ILogoStore>(h.Logos)
             .AddSingleton<IEmailSender>(email)
             .AddSingleton<ISmsGateway>(smsGateway);
-        if (!denyAll) services.AddSingleton<IReminderConsent>(consent);
+        if (!denyAll && !realConsent) services.AddSingleton<IReminderConsent>(consent);
         services.AddAuditModule(h.ConnectionString).AddTenancyModule(h.ConnectionString).AddIdentityModule(h.ConnectionString)
             .AddPatientsModule(h.ConnectionString).AddSchedulingModule(h.ConnectionString).AddNotificationsModule(h.ConnectionString, smsSink: false);
+        if (realConsent) services.AddScoped<IReminderConsent, Host.Api.Notifications.PatientReminderConsent>(); // as the host registers it
         services.Configure<NotificationOptions>(o =>
         {
             o.Sms.DefaultSender = "ADYCLN";
@@ -209,6 +212,37 @@ public sealed class NotificationsTests(SqlServerFixture sql) : IClassFixture<Sql
         await RunJobAsync();
         Assert.Empty(email.Sent);
         Assert.Contains(await RowsAsync(second.Id), r => r.Kind == NotificationKind.Reminder24h && r.Status == NotificationStatus.Suppressed);
+    }
+
+    /// <summary>MDV-P1-019 with the host's real consent: a reminder needs a grant for its channel; a withdrawal stops it. Mutation check: make the adapter return true and the first assertions fail.</summary>
+    [Fact]
+    public async Task ARemindersGoesOnlyToAChannelThePatientConsentedTo()
+    {
+        Rebuild(denyAll: false, realConsent: true);
+        async Task Decide(ConsentChannel channel, bool granted)
+        {
+            await using var db = sql.Patients(h.Tenant);
+            db.ConsentReceipts.Add(new() { Id = Guid.CreateVersion7(), TenantId = h.Tenant, PatientId = h.Patient, Type = ConsentType.Reminders, Channel = channel,
+                PolicyVersion = ConsentPolicy.CurrentVersion, Jurisdiction = "IN", Granted = granted, DecidedAt = h.Clock.GetUtcNow() });
+            await db.SaveChangesAsync();
+        }
+
+        await BookTuesdayAsync();
+        await RunJobAsync();
+        Assert.Empty(email.Sent); // no receipt: nothing goes out
+        Assert.Empty(smsGateway.Sent);
+
+        await Decide(ConsentChannel.Email, true);
+        await BookTuesdayAsync(11);
+        await RunJobAsync();
+        Assert.Single(email.Sent); // email consented...
+        Assert.Empty(smsGateway.Sent); // ...SMS was not
+
+        await Decide(ConsentChannel.Email, false);
+        email.Sent.Clear();
+        await BookTuesdayAsync(17);
+        await RunJobAsync();
+        Assert.Empty(email.Sent); // withdrawn: the newest receipt wins
     }
 
     [Fact]

@@ -20,6 +20,7 @@ public sealed class PatientsDbContext(DbContextOptions<PatientsDbContext> option
     public DbSet<PayerCoverage> PayerCoverages => Set<PayerCoverage>();
     public DbSet<MergeRequest> MergeRequests => Set<MergeRequest>();
     public DbSet<PatientRelationship> Relationships => Set<PatientRelationship>();
+    public DbSet<ConsentReceipt> ConsentReceipts => Set<ConsentReceipt>();
 
     Guid? CurrentTenantId => tenant.TenantId;
 
@@ -90,6 +91,17 @@ public sealed class PatientsDbContext(DbContextOptions<PatientsDbContext> option
             e.Property(x => x.Phone).HasMaxLength(20);
             e.HasOne<Patient>().WithMany().HasForeignKey(x => x.PatientId).OnDelete(DeleteBehavior.Restrict);
             e.HasIndex(x => new { x.TenantId, x.PatientId });
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<ConsentReceipt>(e =>
+        {
+            // A ledger table (ConsentReceipts migration): append-only.
+            e.Property(x => x.Type).HasConversion<string>().HasMaxLength(24);
+            e.Property(x => x.Channel).HasConversion<string>().HasMaxLength(12);
+            e.Property(x => x.PolicyVersion).HasMaxLength(32);
+            e.Property(x => x.Jurisdiction).HasMaxLength(8);
+            e.HasOne<Patient>().WithMany().HasForeignKey(x => x.PatientId).OnDelete(DeleteBehavior.Restrict);
+            e.HasIndex(x => new { x.TenantId, x.PatientId, x.Type, x.DecidedAt });
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         modelBuilder.Entity<MergeRequest>(e =>

@@ -33,6 +33,7 @@ public sealed class SmtpEmailSender(IOptions<SmtpOptions> options) : IEmailSende
         using var smtp = new SmtpClient(o.Host, o.Port) { EnableSsl = o.EnableSsl, DeliveryMethod = SmtpDeliveryMethod.Network };
         if (!string.IsNullOrEmpty(o.UserName)) smtp.Credentials = new NetworkCredential(o.UserName, o.Password);
         using var mail = new MailMessage(o.From, message.To, message.Subject, message.Body);
+        foreach (var (name, value) in message.Headers ?? new Dictionary<string, string>()) mail.Headers.Add(name, value);
         await smtp.SendMailAsync(mail, cancellationToken);
     }
 }

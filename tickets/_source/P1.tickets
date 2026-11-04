@@ -556,7 +556,8 @@ progress:
 - Merged [PR #59](https://github.com/ALFRED-LUCIFER/medvya/pull/59): slot holds (`POST /v1/slot-holds`, one per user, expire after `Scheduling:SlotHold`, default 2 min; others see "being booked"), booking from the hold (`POST /v1/appointments`) re-checking the template, appointment + first status event + AppointmentBooked.v1 (opaque ids) in one transaction, audited endpoints, patient confirmed by name and MRN; booking panel with React Hook Form + Zod; mutation-checked (expiry, holder check, RLS); browser-verified (en, ar RTL, keyboard, axe)
 - Merged [PR #60](https://github.com/ALFRED-LUCIFER/medvya/pull/60): concurrency guarantees (MDV-P1-022)
 - Open [PR #71](https://github.com/ALFRED-LUCIFER/medvya/pull/71): review fixes — patients of the booking facility only (lookup and booking), appointment (facility, start) covering index with bounded overlap queries, patient chosen with front-desk search (MDV-P1-018; initials, age, sex, MRN tail) and confirmed by name and MRN, field errors described; mutation-checked; browser-verified (en, ar RTL, keyboard, axe)
-- Left: confirmation message (MDV-P1-032); p95 < 300 ms under the P1 load profile (MDV-P1-037); returning from registration to the held slot (MDV-P1-013)
+- Confirmation message sent by MDV-P1-032 (email and SMS, within a minute of booking)
+- Left: p95 < 300 ms under the P1 load profile (MDV-P1-037); returning from registration to the held slot (MDV-P1-013)
 title: Create an appointment from the calendar with a short slot hold
 type: Story
 epic: MDV-P1-E06
@@ -641,7 +642,8 @@ status: Partly done
 progress:
 - Merged [PR #80](https://github.com/ALFRED-LUCIFER/medvya/pull/80): `POST /v1/appointments/{id}/reschedule|cancel|no-show` on the booking path (doctor-day locks, template and hold re-checks, old slot freed and new one taken in one transaction), audited by use case; reschedule history table (old slot, new slot, actor, time) and outbox events with opaque ids only; cancel reason list + note (Other needs one, note SensitiveHealth); no-show only from Booked after the start; cancel from Booked or Checked in (narrower than the design, recorded in state-machines.md); appointment panel with each action allowed or disabled with its reason, reschedule by click or drag always confirmed, same-kind calendars only, no-show offers rebook with the patient filled in; en/hi/ar, RTL
 - Tested on SQL Server (12 tests incl. 100-way reschedule race, reschedule vs hold race, lock waits on both days) and in the browser against a real API (two desks, drag, cancel, check-in, ar, axe); 23 mutations each caught
-- Left: patient notification of reschedule/cancel (MDV-P1-032, outbox events written); the no-show metric itself (MDV-P1-041, reads the NoShow events); reschedule history shown in the panel
+- Patient notification of reschedule/cancel sent by MDV-P1-032 from the outbox events
+- Left: the no-show metric itself (MDV-P1-041, reads the NoShow events); reschedule history shown in the panel
 title: Reschedule (incl. drag with confirm), cancel with reason, mark no-show with rebook offer
 type: Story
 epic: MDV-P1-E06
@@ -848,6 +850,14 @@ ac:
 - Layout is readable at 3 metres (minimum 48px token text) and in Arabic/English.
 
 === MDV-P1-032
+status: Partly done
+progress:
+- Notifications module (`src/Modules/Notifications`): NOTIFICATION / NOTIFICATION_ATTEMPT (status, attempts, backoff, provider reference, short failure code; no message text or address stored), EF filters + RLS, role `medvya_notifications`; Scheduling's outbox is published by `OutboxDispatcher` to `IAppointmentSubscriber`s (at least once, in order); a trigger keeps the tenants that wrote events so the job knows whose scope to enter
+- Hangfire on Azure SQL in schema `hangfire` (no Redis/Service Bus): one recurring job publishes each tenant's outbox then sends what is due (confirmation within about a minute); read-only dashboard at `/admin/jobs` only for users listed in `Jobs:DashboardUsers` (nobody by default); jobs off unless `Jobs:Enabled`
+- Booking queues a confirmation and the 24 h / 2 h reminders (facility time, quiet hours 21:00-08:00 moved to the end); reschedule/cancel cancels queued messages and sends the right message once (idempotent on the event id); walk-ins get nothing; consent checked at send time through `IReminderConsent` (default denies all until MDV-P1-019 supplies the real one); retries with backoff (1, 5, 30 min) up to 4 tries then Failed; templates en/hi/ar with clinic, date and time only
+- Reception sees each message's status on the appointment panel (`GET /v1/appointments/{id}/notifications`, audited, view membership at the facility) and `GET /v1/notifications/delivery` lists per-channel counts and every failure with its code
+- Tested on SQL Server (17 tests + signature/auth tests); mutation-checked: consent check removed, DLT template id check removed, cancel-on-change removed, address added to the body
+- Left: the real consent source (MDV-P1-019); the SendGrid event webhook parser and its ECDSA signature check (receipts take a normalised body signed with HMAC for now; email goes over SendGrid's SMTP relay); the Hangfire server in its own Worker.Jobs host and its own database user; failed messages on the board and in the notification centre (MDV-P1-034); the install of Hangfire's tables on deploy (MDV-P0-007); per-clinic quiet hours; Hindi and Arabic wording reviewed by a native speaker
 title: Email confirmations and 24 h / 2 h reminders via SendGrid and Hangfire
 type: Story
 epic: MDV-P1-E08
@@ -871,6 +881,12 @@ ac:
 - Hangfire dashboard is only reachable by Medvya operations through authenticated admin route; no Redis or Service Bus resources exist in P1 infrastructure.
 
 === MDV-P1-033
+status: Partly done
+progress:
+- SMS behind `ISmsGateway`: local sink to the mail sink (Development) and a gateway that fails closed (visible as failed) until the provider is chosen (Q-03, MDV-P1-045)
+- SMS uses only registered templates: the text must match a catalogue template (`{#var#}` slots, 30 characters each) and in India have its DLT template id from config (`Notifications:Sms:DltTemplateIds`, keys like `Confirmation.en`) and a sender (`Notifications:Sms:Senders` per tenant or `DefaultSender`); otherwise it is Failed at once and never handed to a provider; messages hold no clinical details
+- Delivery receipts: `POST /v1/notifications/receipts` (public, HMAC-SHA256 of the body with `Notifications:ReceiptSecret`, refused when unset), applied inside the tenant named by the reference; duplicate and out-of-order receipts are ignored; failures visible to reception (see MDV-P1-032)
+- Left: the SMS provider adapter and its own receipt format (Q-03); DLT sender and template registration with the operator (MDV-P1-045, a person task: put the ids in config); delivery-rate dashboard screen (the API returns per-channel counts and every failure; MDV-P1-041); SMS invitations in onboarding step 6
 title: SMS confirmations and reminders with India DLT templates and delivery receipts
 type: Story
 epic: MDV-P1-E08

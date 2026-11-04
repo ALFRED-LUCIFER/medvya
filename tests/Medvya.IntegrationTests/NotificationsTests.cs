@@ -1,0 +1,422 @@
+using Medvya.Audit.Infrastructure;
+using Medvya.BuildingBlocks.Domain;
+using Medvya.Identity.Infrastructure;
+using Medvya.Notifications.Application;
+using Medvya.Notifications.Domain;
+using Medvya.Notifications.Infrastructure;
+using Medvya.Patients.Infrastructure;
+using Medvya.Scheduling.Application;
+using Medvya.Scheduling.Domain;
+using Medvya.Scheduling.Infrastructure;
+using Medvya.Tenancy.Infrastructure;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using static Medvya.IntegrationTests.SchedulingHarness;
+
+namespace Medvya.IntegrationTests;
+
+/// <summary>
+/// MDV-P1-032/033 on real SQL Server: confirmations and 24 h / 2 h reminders from the outbox, consent checked at send time, change
+/// handling that cancels and never doubles, retries with backoff, DLT-registered SMS only, delivery receipts, tenant isolation.
+/// Synthetic data only.
+/// </summary>
+public sealed class NotificationsTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>, IAsyncLifetime
+{
+    readonly SchedulingHarness h = new(sql);
+    readonly FakeEmail email = new();
+    readonly FakeSms smsGateway = new();
+    readonly Consent consent = new();
+    ServiceProvider? provider;
+    Guid actingUser;
+    readonly Dictionary<string, string> dlt = [];
+
+    sealed class FakeEmail : IEmailSender
+    {
+        public List<EmailMessage> Sent { get; } = [];
+        public bool Fail { get; set; }
+        public Task SendAsync(EmailMessage message, CancellationToken cancellationToken = default)
+        {
+            if (Fail) throw new InvalidOperationException("smtp down for meera.iyer@example.test");
+            Sent.Add(message);
+            return Task.CompletedTask;
+        }
+    }
+
+    sealed class FakeSms : ISmsGateway
+    {
+        public List<SmsMessage> Sent { get; } = [];
+        public Task SendAsync(SmsMessage message, CancellationToken cancellationToken = default)
+        {
+            Sent.Add(message);
+            return Task.CompletedTask;
+        }
+    }
+
+    sealed class Consent : IReminderConsent
+    {
+        public bool Allow { get; set; } = true;
+        public Task<bool> AllowsAsync(Guid patientId, NotificationChannel channel, CancellationToken cancellationToken = default) => Task.FromResult(Allow);
+    }
+
+    sealed class FixedUser(Guid id) : ICurrentUser { public Guid? UserId => id; }
+
+    public async Task InitializeAsync()
+    {
+        await h.SeedAsync();
+        await h.DoctorTemplateAsync();
+        await using var patients = sql.Patients(h.Tenant);
+        foreach (var p in await patients.Patients.ToListAsync()) { p.Email = "meera.iyer@example.test"; p.PreferredLanguage = "hi"; }
+        await patients.SaveChangesAsync();
+        actingUser = h.Reception;
+        foreach (var group in new[] { "Confirmation", "Rescheduled", "Cancelled", "Reminder" })
+            foreach (var lang in new[] { "en", "hi", "ar" }) dlt[$"{group}.{lang}"] = $"1107{group.Length:D2}{lang.Length}0000001";
+        Rebuild(denyAll: false);
+    }
+
+    public async Task DisposeAsync()
+    {
+        if (provider is not null) await provider.DisposeAsync();
+        await h.CloseAsync();
+    }
+
+    /// <summary>The module as the host builds it, with fakes in front of the providers. With <paramref name="denyAll"/> the module's own consent default applies.</summary>
+    void Rebuild(bool denyAll, Guid? inTenant = null, Guid? user = null)
+    {
+        provider?.Dispose();
+        var services = new ServiceCollection()
+            .AddSingleton<ICurrentTenant>(new SqlServerFixture.FixedTenant(inTenant ?? h.Tenant))
+            .AddSingleton<ICurrentUser>(new FixedUser(user ?? actingUser))
+            .AddSingleton<TimeProvider>(h.Clock)
+            .AddSingleton<ICurrentFacility>(new PatientRegistryTests.FixedFacility(h.Facility))
+            .AddSingleton<Medvya.Tenancy.Application.ILogoStore>(h.Logos)
+            .AddSingleton<IEmailSender>(email)
+            .AddSingleton<ISmsGateway>(smsGateway);
+        if (!denyAll) services.AddSingleton<IReminderConsent>(consent);
+        services.AddAuditModule(h.ConnectionString).AddTenancyModule(h.ConnectionString).AddIdentityModule(h.ConnectionString)
+            .AddPatientsModule(h.ConnectionString).AddSchedulingModule(h.ConnectionString).AddNotificationsModule(h.ConnectionString, smsSink: false);
+        services.Configure<NotificationOptions>(o =>
+        {
+            o.Sms.DefaultSender = "ADYCLN";
+            foreach (var (k, v) in dlt) o.Sms.DltTemplateIds[k] = v;
+        });
+        provider = services.BuildServiceProvider();
+    }
+
+    async Task<T> InScope<T>(Func<IServiceProvider, Task<T>> action)
+    {
+        await using var scope = provider!.CreateAsyncScope();
+        return await action(scope.ServiceProvider);
+    }
+
+    /// <summary>What the host's job does for one tenant: publish the outbox, then send what is due.</summary>
+    async Task RunJobAsync()
+    {
+        await InScope(async sp =>
+        {
+            await sp.GetRequiredService<IOutboxDispatcher>().DispatchAsync();
+            await sp.GetRequiredService<INotificationSender>().SendDueAsync();
+            return 0;
+        });
+    }
+
+    async Task<List<Notification>> RowsAsync(Guid appointmentId)
+    {
+        await using var db = sql.Notifications(h.Tenant);
+        return (await db.Notifications.Where(n => n.AppointmentId == appointmentId).ToListAsync()).OrderBy(n => n.Kind).ThenBy(n => n.Channel).ToList();
+    }
+
+    static DateTimeOffset Tuesday(int hour) => At(hour).AddDays(1);
+
+    Task<AppointmentView> BookTuesdayAsync(int hour = 10) => h.BookAsync(0, start: Tuesday(hour));
+
+    [Fact]
+    public async Task BookingQueuesAConfirmationAndBothRemindersAndSendsTheConfirmationAtOnce()
+    {
+        var visit = await BookTuesdayAsync();
+        await RunJobAsync();
+
+        var rows = await RowsAsync(visit.Id);
+        Assert.Equal(6, rows.Count); // confirmation + 24 h + 2 h, on email and SMS
+        Assert.All(rows.Where(r => r.Kind == NotificationKind.Confirmation), r => Assert.Equal(NotificationStatus.Sent, r.Status));
+        Assert.Equal(Tuesday(10).AddHours(-24), rows.First(r => r.Kind == NotificationKind.Reminder24h).SendAt);
+        Assert.Equal(Tuesday(10).AddHours(-2), rows.First(r => r.Kind == NotificationKind.Reminder2h).SendAt);
+        Assert.All(rows.Where(r => r.Kind != NotificationKind.Confirmation), r => Assert.Equal(NotificationStatus.Queued, r.Status));
+        Assert.Single(email.Sent);
+    }
+
+    [Fact]
+    public async Task RemindersGoOutAtTheirTimeAndNeverEarly()
+    {
+        await BookTuesdayAsync();
+        await RunJobAsync();
+        email.Sent.Clear();
+
+        h.Clock.Advance(TimeSpan.FromHours(1)); // Monday 09:00 IST: the 24 h reminder is at Monday 10:00
+        await RunJobAsync();
+        Assert.Empty(email.Sent);
+
+        h.Clock.Advance(TimeSpan.FromHours(2)); // Monday 11:00
+        await RunJobAsync();
+        Assert.Single(email.Sent);
+        Assert.Equal("अपॉइंटमेंट की याद", email.Sent[0].Subject); // the patient's language
+    }
+
+    [Fact]
+    public async Task MessagesCarryTheClinicDateAndTimeAndNothingElse()
+    {
+        smsGateway.Sent.Clear();
+        dlt["Confirmation.hi"] = "1107000000000000001";
+        Rebuild(denyAll: false);
+        var visit = await BookTuesdayAsync();
+        await RunJobAsync();
+
+        var text = Assert.Single(email.Sent).Body;
+        Assert.Contains("Adyar (synthetic)", text);
+        Assert.Contains("बजे", text);
+        var sms = Assert.Single(smsGateway.Sent);
+        Assert.Equal("1107000000000000001", sms.TemplateId);
+        Assert.Equal("ADYCLN", sms.Sender);
+        foreach (var body in email.Sent.Select(m => m.Subject + m.Body).Append(sms.Text))
+        {
+            Assert.DoesNotContain("Meera", body); // patient name
+            Assert.DoesNotContain("000001", body); // MRN
+            Assert.DoesNotContain("chest", body); // the visit reason
+            Assert.DoesNotContain("Rao", body); // doctor
+            Assert.DoesNotContain("example.test", body); // address
+        }
+        Assert.NotEmpty(await RowsAsync(visit.Id));
+    }
+
+    [Fact]
+    public async Task NothingIsSentWithoutConsentAndWithdrawingStopsQueuedReminders()
+    {
+        consent.Allow = false;
+        var visit = await BookTuesdayAsync();
+        await RunJobAsync();
+
+        Assert.Empty(email.Sent);
+        Assert.Empty(smsGateway.Sent);
+        Assert.All((await RowsAsync(visit.Id)).Where(r => r.Kind == NotificationKind.Confirmation), r => Assert.Equal((NotificationStatus.Suppressed, "no_consent"), (r.Status, r.FailureCode)));
+
+        // Consent given, then withdrawn before a reminder is due: the check happens at send time.
+        consent.Allow = true;
+        var second = await h.BookAsync(0, patient: h.SecondPatient, start: Tuesday(11));
+        await RunJobAsync();
+        Assert.Single(email.Sent);
+        consent.Allow = false;
+        email.Sent.Clear();
+        h.Clock.Advance(TimeSpan.FromHours(4)); // Monday 12:00: the 24 h reminder of the 11:00 visit was due at 11:00
+        await RunJobAsync();
+        Assert.Empty(email.Sent);
+        Assert.Contains(await RowsAsync(second.Id), r => r.Kind == NotificationKind.Reminder24h && r.Status == NotificationStatus.Suppressed);
+    }
+
+    [Fact]
+    public async Task WithoutAConsentModuleNothingIsSent()
+    {
+        Rebuild(denyAll: true); // the module's default
+        await BookTuesdayAsync();
+        await RunJobAsync();
+        Assert.Empty(email.Sent);
+        Assert.Empty(smsGateway.Sent);
+    }
+
+    [Fact]
+    public async Task ReschedulingCancelsPendingRemindersAndSendsTheRightMessageOnce()
+    {
+        var visit = await BookTuesdayAsync();
+        await RunJobAsync();
+        email.Sent.Clear();
+
+        await h.Booking(h.Reception).RescheduleAsync(visit.Id, new RescheduleAppointment { CalendarId = h.Doctor, Start = Tuesday(18) });
+        await RunJobAsync();
+        await RunJobAsync(); // a second run publishes nothing new
+
+        var rows = await RowsAsync(visit.Id);
+        Assert.Equal(4, rows.Count(r => r.Status == NotificationStatus.Cancelled && r.FailureCode == "visit_changed")); // old 24 h and 2 h, both channels
+        var moved = Assert.Single(email.Sent);
+        Assert.Equal("अपॉइंटमेंट बदली गई", moved.Subject);
+        Assert.Equal(Tuesday(18).AddHours(-2), rows.Single(r => r.Kind == NotificationKind.Reminder2h && r.Status == NotificationStatus.Queued && r.Channel == NotificationChannel.Email).SendAt);
+
+        // The same event published again changes nothing (at-least-once delivery).
+        await using (var db = sql.Scheduling(h.Tenant))
+            await db.Outbox.Where(e => e.AggregateId == visit.Id).ExecuteUpdateAsync(s => s.SetProperty(e => e.PublishedAt, (DateTimeOffset?)null));
+        await RunJobAsync();
+        Assert.Equal(rows.Count, (await RowsAsync(visit.Id)).Count);
+        Assert.Single(email.Sent);
+    }
+
+    [Fact]
+    public async Task CancellingCancelsRemindersAndTellsThePatientOnce()
+    {
+        var visit = await BookTuesdayAsync();
+        await RunJobAsync();
+        email.Sent.Clear();
+
+        await h.Booking(h.Reception).CancelAsync(visit.Id, new CancelAppointment { Reason = CancelReason.PatientRequest });
+        await RunJobAsync();
+        await RunJobAsync();
+
+        var rows = await RowsAsync(visit.Id);
+        Assert.All(rows.Where(r => r.Kind is NotificationKind.Reminder24h or NotificationKind.Reminder2h), r => Assert.Equal(NotificationStatus.Cancelled, r.Status));
+        Assert.Equal("अपॉइंटमेंट रद्द", Assert.Single(email.Sent).Subject);
+    }
+
+    [Fact]
+    public async Task AWalkInGetsNoMessages()
+    {
+        h.Clock.Advance(TimeSpan.FromHours(1.5)); // 09:30, inside Dr. Rao's morning
+        var visit = await h.Booking(h.Reception).WalkInAsync(new WalkIn { FacilityId = h.Facility, PatientId = h.Patient, VisitType = VisitType.FollowUp, ReasonCategory = ReasonCategory.General, CalendarId = h.Doctor });
+        await RunJobAsync();
+        Assert.Empty(await RowsAsync(visit.Id));
+        Assert.Empty(email.Sent);
+    }
+
+    [Fact]
+    public async Task FailedSendsRetryWithBackoffThenShowAsFailedWithoutTheAddress()
+    {
+        email.Fail = true;
+        var visit = await BookTuesdayAsync();
+        async Task<Notification> Confirmation() => (await RowsAsync(visit.Id)).Single(r => r.Kind == NotificationKind.Confirmation && r.Channel == NotificationChannel.Email);
+
+        await RunJobAsync();
+        var row = await Confirmation();
+        Assert.Equal((NotificationStatus.Queued, 1), (row.Status, row.Attempts));
+        Assert.Equal(h.Clock.GetUtcNow().AddMinutes(1), row.NextAttemptAt);
+
+        await RunJobAsync(); // too early: backoff holds it
+        Assert.Equal(1, (await Confirmation()).Attempts);
+
+        foreach (var wait in new[] { 1, 5, 30 })
+        {
+            h.Clock.Advance(TimeSpan.FromMinutes(wait));
+            await RunJobAsync();
+        }
+        row = await Confirmation();
+        Assert.Equal((NotificationStatus.Failed, 4), (row.Status, row.Attempts)); // MaxAttempts
+        Assert.Equal("provider_invalidoperationexception", row.FailureCode);
+        Assert.DoesNotContain("example.test", row.FailureCode); // the exception text held the address
+
+        var report = await InScope(sp => sp.GetRequiredService<INotificationQueries>().DeliveryAsync(h.Facility, h.Clock.GetUtcNow().AddDays(-1)));
+        Assert.Contains(report.Failures, f => f.Id == row.Id && f.Status == NotificationStatus.Failed);
+        await using var db = sql.Notifications(h.Tenant);
+        Assert.Equal(4, await db.Attempts.CountAsync(a => a.NotificationId == row.Id));
+    }
+
+    [Fact]
+    public async Task SmsNeedsItsRegisteredDltTemplateIdInIndiaAndIsOtherwiseFailedAtOnce()
+    {
+        dlt.Clear();
+        Rebuild(denyAll: false); // no template ids registered
+        var visit = await BookTuesdayAsync();
+        await RunJobAsync();
+        var sms = (await RowsAsync(visit.Id)).Single(r => r.Kind == NotificationKind.Confirmation && r.Channel == NotificationChannel.Sms);
+        Assert.Equal((NotificationStatus.Failed, "dlt_template_id_missing"), (sms.Status, sms.FailureCode));
+        Assert.Empty(smsGateway.Sent);
+    }
+
+    [Fact]
+    public void OnlyRegisteredTemplatesAreSendable()
+    {
+        foreach (var lang in new[] { "en", "hi", "ar" })
+            foreach (var kind in Enum.GetValues<NotificationKind>())
+            {
+                var m = MessageCatalog.Render(kind, lang, new string('C', 80), new DateTimeOffset(2026, 10, 20, 10, 0, 0, TimeSpan.FromHours(5.5)));
+                Assert.Equal(m.TemplateKey, MessageCatalog.RegisteredTemplate(m.Body));
+            }
+        Assert.Null(MessageCatalog.RegisteredTemplate("Your appointment at X is confirmed for 20 Oct 2026 at 10:00 AM. Buy cheap pills now. Call 9999999999 for a deal today!!"));
+        Assert.Null(MessageCatalog.RegisteredTemplate("Your appointment at  is confirmed for  at ."));
+        Assert.Equal("en", MessageCatalog.Language("ml-IN")); // unsupported languages fall back
+    }
+
+    [Fact]
+    public void RemindersAvoidQuietHoursAndNeverFallAfterTheVisit()
+    {
+        var ist = TimeZoneInfo.FindSystemTimeZoneById("Asia/Kolkata");
+        var now = new DateTimeOffset(2026, 10, 19, 0, 0, 0, TimeSpan.Zero);
+        DateTimeOffset? At2h(DateTimeOffset start) => NotificationRules.ReminderTime(start, TimeSpan.FromHours(2), now, ist, new(21, 0), new(8, 0));
+        var ten = new DateTimeOffset(2026, 10, 20, 10, 0, 0, TimeSpan.FromHours(5.5));
+        Assert.Equal(ten.AddHours(-2), At2h(ten));
+        var early = new DateTimeOffset(2026, 10, 20, 8, 30, 0, TimeSpan.FromHours(5.5)); // 06:30 is quiet: moves to 08:00
+        Assert.Equal(new DateTimeOffset(2026, 10, 20, 8, 0, 0, TimeSpan.FromHours(5.5)), At2h(early));
+        Assert.Null(At2h(new DateTimeOffset(2026, 10, 20, 7, 30, 0, TimeSpan.FromHours(5.5)))); // would be after the visit starts
+        var late = new DateTimeOffset(2026, 10, 20, 23, 30, 0, TimeSpan.FromHours(5.5)); // 21:30 is quiet, 08:00 next day is after the visit
+        Assert.Null(At2h(late));
+        Assert.Null(NotificationRules.ReminderTime(now.AddHours(1), TimeSpan.FromHours(2), now, ist, new(21, 0), new(8, 0))); // booked inside the window
+    }
+
+    async Task<Notification> SentRowAsync()
+    {
+        var visit = await BookTuesdayAsync();
+        await RunJobAsync();
+        return (await RowsAsync(visit.Id)).First(r => r.Kind == NotificationKind.Confirmation && r.Channel == NotificationChannel.Email);
+    }
+
+    [Fact]
+    public async Task ReceiptsMoveASentMessageOnceAndNeverUndoAFinalState()
+    {
+        var row = await SentRowAsync();
+        Assert.Equal(NotificationStatus.Sent, row.Status);
+        var reference = row.ProviderRef!;
+        Task<bool> Apply(NotificationStatus state, string? reason = null) =>
+            InScope(sp => sp.GetRequiredService<IReceiptProcessor>().ApplyAsync(new DeliveryReceipt(reference, state, reason)));
+
+        Assert.True(await Apply(NotificationStatus.Delivered));
+        Assert.False(await Apply(NotificationStatus.Delivered)); // duplicate
+        Assert.False(await Apply(NotificationStatus.Bounced, "late")); // out of order
+        Assert.False(await Apply(NotificationStatus.Queued)); // not a receipt state
+
+        await using var db = sql.Notifications(h.Tenant);
+        Assert.Equal(NotificationStatus.Delivered, (await db.Notifications.SingleAsync(n => n.Id == row.Id)).Status);
+        Assert.Equal(2, await db.Attempts.CountAsync(a => a.NotificationId == row.Id)); // sent, delivered
+    }
+
+    [Fact]
+    public async Task ABounceIsStoredWithItsReasonCodeAndShownToReception()
+    {
+        var row = await SentRowAsync();
+        await InScope(sp => sp.GetRequiredService<IReceiptProcessor>().ApplyAsync(new DeliveryReceipt(row.ProviderRef!, NotificationStatus.Bounced, "mailbox full<script>")));
+        var views = await InScope(sp => sp.GetRequiredService<INotificationQueries>().ForAppointmentAsync(h.Facility, row.AppointmentId));
+        var view = views.Single(v => v.Id == row.Id);
+        Assert.Equal((NotificationStatus.Bounced, "mailboxfullscript"), (view.Status, view.FailureCode)); // a code, never free text
+    }
+
+    [Fact]
+    public async Task AnotherTenantCannotApplyReceiptsOrReadMessages()
+    {
+        var row = await SentRowAsync();
+        var other = Guid.NewGuid();
+        Rebuild(denyAll: false, inTenant: other);
+        Assert.False(await InScope(sp => sp.GetRequiredService<IReceiptProcessor>().ApplyAsync(new DeliveryReceipt(row.ProviderRef!, NotificationStatus.Delivered, null))));
+        await using var db = sql.Notifications(other);
+        Assert.Empty(await db.Notifications.ToListAsync());
+        Rebuild(denyAll: false);
+    }
+
+    [Fact]
+    public async Task OnlyStaffWhoMayViewTheCalendarAtTheFacilitySeeDelivery()
+    {
+        var row = await SentRowAsync();
+        foreach (var user in new[] { h.Reception, h.Nurse, h.Admin, h.Doctor })
+        {
+            Rebuild(denyAll: false, user: user);
+            Assert.NotEmpty(await InScope(sp => sp.GetRequiredService<INotificationQueries>().ForAppointmentAsync(h.Facility, row.AppointmentId)));
+        }
+        foreach (var user in new[] { h.PortalUser, h.Elsewhere, Guid.NewGuid() })
+        {
+            Rebuild(denyAll: false, user: user);
+            await Assert.ThrowsAsync<NotificationAccessDeniedException>(() => InScope(sp => sp.GetRequiredService<INotificationQueries>().ForAppointmentAsync(h.Facility, row.AppointmentId)));
+        }
+    }
+
+    [Fact]
+    public async Task TheJobFindsATenantOnlyOnceItHasWrittenAnEvent()
+    {
+        var before = await InScope(sp => sp.GetRequiredService<IOutboxDispatcher>().TenantsAsync());
+        Assert.DoesNotContain(h.Tenant, before);
+        await BookTuesdayAsync();
+        await BookTuesdayAsync(18);
+        var after = await InScope(sp => sp.GetRequiredService<IOutboxDispatcher>().TenantsAsync());
+        Assert.Single(after, h.Tenant);
+    }
+}

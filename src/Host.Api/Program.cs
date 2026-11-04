@@ -5,6 +5,8 @@ using Host.Api.Auth;
 using Host.Api.Context;
 using Host.Api.Invitations;
 using Host.Api.Middleware;
+using Host.Api.Onboarding;
+using Host.Api.Settings;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.SignalR;
 using Medvya.Audit.Api;
@@ -52,7 +54,7 @@ builder.Services.AddScoped<IRequestOrigin>(sp => sp.GetRequiredService<RequestCo
 // capability handler exists, so capability-guarded endpoints answer 403.
 if (builder.Configuration.GetConnectionString("Medvya") is { } sql)
 {
-    builder.Services.AddAuditModule(sql).AddDeniedAccessAudit().AddTenancyModule(sql).AddIdentityModule(sql).AddPatientsModule(sql).AddSchedulingModule(sql)
+    builder.Services.AddAuditModule(sql).AddDeniedAccessAudit().AddTenancyModule(sql, builder.Configuration["Storage:ConnectionString"]).AddIdentityModule(sql).AddPatientsModule(sql).AddSchedulingModule(sql)
         .AddLeadsModule(sql, builder.Configuration.GetSection("Leads:Email").Get<LeadsEmailOptions>() ?? new()).AddCapabilityPolicies();
     // shortcut: only Development has a column master key (the same local file as `pnpm dev:db`); the Azure Key Vault provider
     // arrives with MDV-P0-006, and until then encrypted identifiers cannot be read anywhere else (fail closed).
@@ -105,7 +107,7 @@ var app = builder.Build();
 
 app.UseForwardedHeaders(); // first, so every later step sees the client's address
 if (!app.Environment.IsDevelopment()) app.UseHsts();
-app.UseSecurityHeaders();
+app.UseSecurityHeaders(app.Configuration["Storage:ImageOrigin"]);
 app.UseRateLimiter();
 app.RunPublicSiteBeforeAuthentication(); // public pages never read the session cookie
 app.UseStaffAuthentication();
@@ -117,6 +119,8 @@ app.MapStaffSession();
 app.MapSchedulingEndpoints();
 app.MapPublicSite();
 app.MapInvitations();
+app.MapOnboarding();
+app.MapPracticeSettings();
 app.MapQueueDisplaySession();
 app.MapPatientEndpoints();
 if (app.Environment.IsDevelopment() && app.Configuration["Authentication:Oidc:Authority"]?.EndsWith(DevIdentityProvider.Path, StringComparison.Ordinal) == true)

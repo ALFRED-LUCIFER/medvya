@@ -8,12 +8,14 @@ public static class SecurityHeaders
         "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; " +
         "font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'";
 
-    public static IApplicationBuilder UseSecurityHeaders(this IApplicationBuilder app) => app.Use(async (ctx, next) =>
+    /// <param name="imageOrigin">Origin of the private Blob endpoint, so signed logo links load (img-src); null when no storage is configured.</param>
+    public static IApplicationBuilder UseSecurityHeaders(this IApplicationBuilder app, string? imageOrigin = null) => app.Use(async (ctx, next) =>
     {
+        var policy = imageOrigin is null ? ContentSecurityPolicy : ContentSecurityPolicy.Replace("img-src 'self' data: blob:", $"img-src 'self' data: blob: {imageOrigin}", StringComparison.Ordinal);
         ctx.Response.OnStarting(() =>
         {
             var h = ctx.Response.Headers;
-            h.ContentSecurityPolicy = ContentSecurityPolicy;
+            h.ContentSecurityPolicy = policy;
             h.XContentTypeOptions = "nosniff";
             h.XFrameOptions = "DENY";
             h["Referrer-Policy"] = "no-referrer";

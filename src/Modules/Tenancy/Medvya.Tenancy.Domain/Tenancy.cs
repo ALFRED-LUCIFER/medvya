@@ -19,6 +19,8 @@ public sealed class Facility
     [Classification(DataClass.Internal)] public Guid TenantId { get; init; }
     [Classification(DataClass.Public)] public required string Name { get; set; }
     [Classification(DataClass.Internal)] public required string TimeZone { get; set; }
+    /// <summary>Street address of the location, printed on invoices and prescriptions (MDV-P1-005).</summary>
+    [Classification(DataClass.Public)] public string? Address { get; set; }
 }
 
 public enum MembershipStatus { Invited, Active, Suspended, Offboarded }

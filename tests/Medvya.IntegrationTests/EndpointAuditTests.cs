@@ -32,9 +32,28 @@ public sealed class EndpointAuditTests(SqlServerFixture sql) : IClassFixture<Sql
         "GET /v1/me/sessions",
         "DELETE /v1/me/sessions/{id:guid}",
         "DELETE /v1/staff/{userId:guid}/sessions",
-        "GET /v1/invitations/facilities",   // facility ids and names of the admin's tenant (MDV-P0-013)
+        // Sign-up wizard (MDV-P1-004): the person's own draft, before any tenant or patient exists; creating the practice is audited in it.
+        "GET /v1/onboarding/",
+        "POST /v1/onboarding/",
+        "PUT /v1/onboarding/",
+        "POST /v1/onboarding/finish",   // audited as onboarding.complete.{country} inside the new tenant
+        "GET /v1/invitations/facilities",  // facility ids and names of the admin's tenant (MDV-P0-013)
         "POST /v1/invitations/",            // invites a staff member by email; audited as invitation.create inside the service
         "DELETE /v1/invitations/{id:guid}", // revokes a staff invitation; audited as invitation.revoke inside the service
+        // Practice settings (MDV-P1-005): business details only; every change is audited inside the service with before/after (PracticeSettingsTests).
+        "GET /v1/settings/profile",
+        "PUT /v1/settings/profile",
+        "GET /v1/settings/locations",
+        "POST /v1/settings/locations",
+        "PUT /v1/settings/locations/{id:guid}",
+        "GET /v1/settings/locations/{id:guid}/hours",
+        "PUT /v1/settings/locations/{id:guid}/hours",
+        "GET /v1/settings/locations/{id:guid}/closures", // visit references and times, no patient data
+        "POST /v1/settings/locations/{id:guid}/closures",
+        "DELETE /v1/settings/closures/{id:guid}",
+        "PUT /v1/settings/logo",
+        "DELETE /v1/settings/logo",
+        "GET /v1/settings/logo",
         // Live board hub (MDV-P1-029): opening the connection carries no patient data. A refused connect is audited Denied
         // (.AuditRefusals, front_desk.board.connect); every Watch call is audited Allowed or Denied by the hub (front_desk.board.watch);
         // messages are ids and state only, and the board itself is read through the audited GET /v1/front-desk/board (BoardHubTests).

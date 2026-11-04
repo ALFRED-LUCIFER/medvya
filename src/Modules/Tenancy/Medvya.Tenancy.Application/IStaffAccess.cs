@@ -14,6 +14,12 @@ public interface IStaffAccess
     /// </summary>
     Task<Access> AccessAsync(Capability capability, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// True while the active membership holds a submitted doctor licence that is not verified yet: recording and signing
+    /// capabilities are then <see cref="Access.None"/> in <see cref="AccessAsync"/> (MDV-P1-004, feature-level, not only the UI).
+    /// </summary>
+    Task<bool> LicencePendingAsync(CancellationToken cancellationToken = default);
+
     /// <summary>Country of the current tenant ("IN" or "AE"); selects the country rules. Null without a tenant.</summary>
     Task<string?> TenantCountryAsync(CancellationToken cancellationToken = default);
 }

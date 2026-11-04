@@ -19,6 +19,7 @@ public static partial class StaffAuthentication
     public const string CookieName = "__Host-medvya";
     /// <summary>State-changing requests must carry this header. Browsers cannot add it cross-site without a CORS preflight, which this API never grants.</summary>
     public const string CsrfHeader = "X-Medvya-Csrf";
+    const string SignUpItem = "medvya.signup";
 
     public static WebApplicationBuilder AddStaffAuthentication(this WebApplicationBuilder builder)
     {
@@ -96,6 +97,11 @@ public static partial class StaffAuthentication
                 return;
             }
         }
+        // Signing up (MDV-P1-004): "Start" on the sign-up page asks for an account to be created. It still needs the provider's MFA
+        // sign-in, and the new user has no membership, so no clinic data is reachable until the wizard creates their practice.
+        if (user is null && issuer is not null && subject is not null && ctx.Properties?.Items.ContainsKey(SignUpItem) == true)
+            user = await ctx.HttpContext.RequestServices.GetRequiredService<IStaffUsers>()
+                .FindOrCreateAsync(issuer, subject, principal.FindFirst("name")?.Value ?? "New user", ctx.HttpContext.RequestAborted);
         if (user is null)
         {
             SignInRefused(log, "unknown_account");
@@ -134,10 +140,11 @@ public static partial class StaffAuthentication
 
     public static WebApplication MapStaffSession(this WebApplication app)
     {
-        app.MapGet("/bff/login", (string? returnUrl, string? invitation) =>
+        app.MapGet("/bff/login", (string? returnUrl, string? invitation, bool? signup) =>
             {
                 var properties = new AuthenticationProperties { RedirectUri = returnUrl is not null && IsLocal(returnUrl) ? returnUrl : "/" };
                 if (InvitationToken.Read(invitation) is not null) properties.Items[InvitationSignIn.Item] = invitation;
+                if (signup == true) properties.Items[SignUpItem] = "1";
                 return Results.Challenge(properties, [OpenIdConnectDefaults.AuthenticationScheme]);
             })
             .AllowAnonymous()

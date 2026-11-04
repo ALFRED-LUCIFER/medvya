@@ -10,7 +10,7 @@
 
 **Tickets:** 29 · **Estimate:** 49.5 dev-days vs **15 working days** in the window (OVER by 34.5 days: needs scope trade-off or overlap) · **Average confidence:** 86%
 
-**Status:** To do 2 · Partly done 16 · Blocked 1 · Done 10
+**Status:** To do 2 · Partly done 17 · Done 10
 
 ## Epics
 
@@ -36,7 +36,7 @@
 | [MDV-P0-020](MDV-P0-020.md) | Done | Medvya design system in code: shadcn/ui + Tailwind tokens and clinical status primitives (packages/ui) | Story | MUST | P0-07 | — | 3 | 1–2 | 26 Oct → 06 Nov 2026 | 92% High |
 | [MDV-P0-024](MDV-P0-024.md) | Done | Threat model, data map, DPIA draft (DPDP) and record-retention map per country | Chore | MUST | P0-08 | — | 2.5 | 1–3 | 26 Oct → 13 Nov 2026 | 75% Medium |
 | [MDV-P0-025](MDV-P0-025.md) | Done | Secure development policies: SECURITY.md, code review rules, synthetic-only data, JIT access, offline break-glass account | Chore | MUST | P0-10 | — | 1 | 1–1 | 26 Oct → 30 Oct 2026 | 90% High |
-| [MDV-P0-007](MDV-P0-007.md) | Blocked | GitHub OIDC federation to Azure and tagged deploy to staging | Task | MUST | P0-01, P0-02 | — | 1.5 | 2–2 | 02 Nov → 06 Nov 2026 | 88% High |
+| [MDV-P0-007](MDV-P0-007.md) | Partly done | GitHub OIDC federation to Azure and tagged deploy to staging | Task | MUST | P0-01, P0-02 | — | 1.5 | 2–2 | 02 Nov → 06 Nov 2026 | 88% High |
 | [MDV-P0-008](MDV-P0-008.md) | Partly done | Database security baseline part 1: Entra-only auth, managed identity, least-privilege users per module and for migrations | Task | MUST | P0-09 | — | 1.5 | 2–2 | 02 Nov → 06 Nov 2026 | 85% High |
 | [MDV-P0-009](MDV-P0-009.md) | Partly done | Database security baseline part 2: Always Encrypted (national/insurance IDs), dynamic data masking, TDE with customer-managed key | Task | MUST | P0-09 | — | 2.5 | 2–3 | 02 Nov → 13 Nov 2026 | 72% Medium |
 | [MDV-P0-010](MDV-P0-010.md) | Done | Tenancy model with EF Core global filters and Azure SQL row-level security (cross-tenant test in CI) | Story | MUST | P0-04 | — | 3 | 2–2 | 02 Nov → 06 Nov 2026 | 88% High |

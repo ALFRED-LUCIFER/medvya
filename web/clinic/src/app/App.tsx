@@ -24,6 +24,7 @@ const InvitationRoute = lazy(() => import('./InvitationRoute'));
 const InviteColleagueRoute = lazy(() => import('./InviteColleagueRoute'));
 const DisplaysRoute = lazy(() => import('./DisplaysRoute'));
 const OverviewRoute = lazy(() => import('./OverviewRoute'));
+const SettingsRoute = lazy(() => import('./SettingsRoute'));
 // Patient screens load on first use, keeping them out of the first-paint bundle.
 const PatientDirectoryRoute = lazy(() => import('./PatientRoutes').then(m => ({ default: m.PatientDirectoryRoute })));
 const PatientRecordRoute = lazy(() => import('./PatientRoutes').then(m => ({ default: m.PatientRecordRoute })));
@@ -89,6 +90,7 @@ export default function App({ locale, onLocaleChange }: Props) {
             : i.id === 'frontDesk'
             ? <FrontDeskRoute facilityId={active.facilityId} online={online} canMove={active.capabilities.CheckInQueue === 'Full'}
                 registerPath={registerPath} walkInPath={walkInPath} billingPath={shell.items.find(b => b.id === 'billing')?.path ?? null} />
+            : i.id === 'settings' ? <SettingsRoute facilityId={active.facilityId} />
             : <ComingSoon title={t(`nav.${i.id}`)} phase={i.phase} />} />)}
           {walkInPath && registerPath &&
             <Route path={walkInPath} element={<WalkInRoute facilityId={active.facilityId} boardPath={pathOf('frontDesk')!} registerPath={`${registerPath}?mode=quick`} />} />}

@@ -35,6 +35,9 @@ public sealed record TemplateView(
     IReadOnlyList<WorkingHours> Hours, IReadOnlyList<ScheduleBreak> Breaks, IReadOnlyList<VisitLength> VisitLengths, DateTimeOffset? ChangedAt,
     IReadOnlyList<AppointmentChip> AppointmentsOutsideHours);
 
+/// <summary>A booked visit on a date the location is closed, for reception to move. A reference and a time: no patient data.</summary>
+public sealed record AppointmentToMove(Guid Id, string Reference, string CalendarName, VisitType VisitType, DateTimeOffset Start, DateTimeOffset End);
+
 /// <summary>A free slot. Held: someone else is booking it right now ("being booked"), so it cannot be held or booked.</summary>
 public sealed record SlotView(DateTimeOffset Start, DateTimeOffset End, bool Held);
 
@@ -74,6 +77,9 @@ public interface IScheduleService
 
     /// <exception cref="SchedulingValidationException">With field/code pairs only.</exception>
     Task<TemplateView> SaveTemplateAsync(SaveTemplate command, CancellationToken cancellationToken = default);
+
+    /// <summary>Visits that still occupy a slot on the facility-local date, by time (for a holiday's "needs moving" list). Needs configure access.</summary>
+    Task<IReadOnlyList<AppointmentToMove>> AppointmentsOnAsync(Guid facilityId, DateOnly day, CancellationToken cancellationToken = default);
 
     Task<ResourceView> AddResourceAsync(AddResource command, CancellationToken cancellationToken = default);
 }

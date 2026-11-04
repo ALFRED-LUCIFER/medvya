@@ -36,6 +36,7 @@ internal sealed class SchedulingHarness(SqlServerFixture sql)
     /// <summary>Patient and SecondPatient are registered at Facility (Adyar); OtherFacilityPatient at OtherFacility (Velachery).</summary>
     public readonly Guid Patient = Guid.NewGuid(), SecondPatient = Guid.NewGuid(), OtherFacilityPatient = Guid.NewGuid();
     public ManualClock Clock { get; } = new(MondayMorning);
+    public InMemoryLogos Logos { get; } = new();
     public SchedulingOptions Options { get; } = new();
     /// <summary>A pool big enough for a hundred desks booking at once (each request also opens Tenancy and Patients connections).</summary>
     public string ConnectionString => new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(sql.ConnectionString) { MaxPoolSize = 400 }.ConnectionString;
@@ -97,6 +98,8 @@ internal sealed class SchedulingHarness(SqlServerFixture sql)
             .AddSingleton<ICurrentTenant>(new SqlServerFixture.FixedTenant(inTenant ?? Tenant))
             .AddSingleton<ICurrentUser>(new FixedUser(user))
             .AddSingleton<TimeProvider>(Clock)
+            .AddSingleton<ICurrentFacility>(new PatientRegistryTests.FixedFacility(Facility))
+            .AddSingleton<Medvya.Tenancy.Application.ILogoStore>(Logos) // before the module, which only adds a store when none is registered
             .AddAuditModule(ConnectionString).AddTenancyModule(ConnectionString).AddIdentityModule(ConnectionString)
             .AddPatientsModule(ConnectionString).AddSchedulingModule(ConnectionString);
         services.Configure<SchedulingOptions>(o => (o.SlotHold, o.LockTimeout) = (Options.SlotHold, Options.LockTimeout));
@@ -106,6 +109,8 @@ internal sealed class SchedulingHarness(SqlServerFixture sql)
     }
 
     public IScheduleService Schedule(Guid user, Guid? inTenant = null) => Scope(user, inTenant).GetRequiredService<IScheduleService>();
+
+    public Medvya.Tenancy.Application.IPracticeSettings Settings(Guid user, Guid? inTenant = null) => Scope(user, inTenant).GetRequiredService<Medvya.Tenancy.Application.IPracticeSettings>();
 
     public IBookingService Booking(Guid user, Guid? inTenant = null) => Scope(user, inTenant).GetRequiredService<IBookingService>();
 
@@ -142,4 +147,21 @@ internal sealed class SchedulingHarness(SqlServerFixture sql)
     {
         foreach (var p in providers) await p.DisposeAsync();
     }
+}
+
+/// <summary>Logo storage for tests: what was stored, by key.</summary>
+internal sealed class InMemoryLogos : Medvya.Tenancy.Application.ILogoStore
+{
+    public Dictionary<string, (byte[] Content, string ContentType)> Stored { get; } = [];
+    public Task PutAsync(string key, byte[] content, string contentType, CancellationToken cancellationToken = default)
+    {
+        Stored[key] = (content, contentType);
+        return Task.CompletedTask;
+    }
+    public Task DeleteAsync(string key, CancellationToken cancellationToken = default)
+    {
+        Stored.Remove(key);
+        return Task.CompletedTask;
+    }
+    public Uri LinkFor(string key, TimeSpan lifetime) => new($"https://blob.test/{key}?se={lifetime.TotalSeconds}");
 }

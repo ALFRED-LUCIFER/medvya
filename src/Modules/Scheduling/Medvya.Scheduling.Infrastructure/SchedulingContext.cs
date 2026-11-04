@@ -60,6 +60,10 @@ public sealed class SchedulingContext(
         return (facility, TimeZoneInfo.FindSystemTimeZoneById(facility.TimeZone));
     }
 
+    /// <summary>Holidays of the facility between two facility-local dates (inclusive), by date (MDV-P1-005).</summary>
+    public Task<IReadOnlyDictionary<DateOnly, string>> ClosuresAsync(Guid facilityId, DateOnly first, DateOnly last, CancellationToken cancellationToken) =>
+        facilities.ClosuresAsync(facilityId, first, last, cancellationToken);
+
     /// <summary>Doctors first, then resources, each by name: the column order of the day view.</summary>
     public async Task<List<Calendar>> CalendarsAsync(Guid facilityId, CancellationToken cancellationToken)
     {

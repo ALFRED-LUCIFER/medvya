@@ -19,7 +19,7 @@ public sealed record CalendarDay(IReadOnlyList<WorkingWindow> Hours, IReadOnlyLi
 
 /// <summary>NotWorking: outside the template's hours (incl. closed days). Break: a template break. NoSchedule: no template yet.</summary>
 [JsonConverter(typeof(JsonStringEnumConverter<UnavailableReason>))]
-public enum UnavailableReason { NotWorking, Break, NoSchedule }
+public enum UnavailableReason { NotWorking, Break, NoSchedule, Closed }
 
 /// <summary>Time shown as unavailable (hatched) with its reason; never bookable.</summary>
 public sealed record UnavailableBlock(DateTimeOffset Start, DateTimeOffset End, UnavailableReason Reason, string? Label);

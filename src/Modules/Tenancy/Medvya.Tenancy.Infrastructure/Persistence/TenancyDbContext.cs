@@ -16,6 +16,10 @@ public sealed class TenancyDbContext(DbContextOptions<TenancyDbContext> options,
     public DbSet<Membership> Memberships => Set<Membership>();
     public DbSet<FeatureFlag> FeatureFlags => Set<FeatureFlag>();
     public DbSet<Invitation> Invitations => Set<Invitation>();
+    public DbSet<PracticeProfile> Profiles => Set<PracticeProfile>();
+    public DbSet<OperatingHours> OperatingHours => Set<OperatingHours>();
+    public DbSet<Closure> Closures => Set<Closure>();
+    public DbSet<SettingsChange> SettingsChanges => Set<SettingsChange>();
 
     Guid? CurrentTenantId => tenant.TenantId;
 
@@ -37,6 +41,7 @@ public sealed class TenancyDbContext(DbContextOptions<TenancyDbContext> options,
         {
             e.Property(x => x.Name).HasMaxLength(200);
             e.Property(x => x.TimeZone).HasMaxLength(64);
+            e.Property(x => x.Address).HasMaxLength(500);
             e.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
@@ -66,6 +71,40 @@ public sealed class TenancyDbContext(DbContextOptions<TenancyDbContext> options,
             e.Property(x => x.TokenHash).HasMaxLength(32).IsFixedLength();
             e.HasIndex(x => x.TokenHash).IsUnique();
             e.HasOne<Membership>().WithMany().HasForeignKey(x => x.MembershipId).OnDelete(DeleteBehavior.Restrict);
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<PracticeProfile>(e =>
+        {
+            e.Property(x => x.Address).HasMaxLength(500);
+            e.Property(x => x.RegistrationNumber).HasMaxLength(50);
+            e.Property(x => x.TaxNumber).HasMaxLength(30);
+            e.Property(x => x.Phone).HasMaxLength(30);
+            e.Property(x => x.Email).HasMaxLength(254);
+            e.Property(x => x.LogoKey).HasMaxLength(200);
+            e.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
+            e.HasIndex(x => x.TenantId).IsUnique();
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<OperatingHours>(e =>
+        {
+            e.Property(x => x.Weekday).HasConversion<int>();
+            e.HasOne<Facility>().WithMany().HasForeignKey(x => x.FacilityId).OnDelete(DeleteBehavior.Restrict);
+            e.HasIndex(x => new { x.FacilityId, x.Weekday }).IsUnique();
+            e.ToTable(t => t.HasCheckConstraint("CK_OperatingHours_OpensBeforeCloses", "[Opens] < [Closes]"));
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<Closure>(e =>
+        {
+            e.Property(x => x.Name).HasMaxLength(100);
+            e.HasOne<Facility>().WithMany().HasForeignKey(x => x.FacilityId).OnDelete(DeleteBehavior.Restrict);
+            e.HasIndex(x => new { x.FacilityId, x.Date }).IsUnique();
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<SettingsChange>(e =>
+        {
+            e.Property(x => x.Section).HasMaxLength(40);
+            e.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
+            e.HasIndex(x => new { x.TenantId, x.OccurredAt });
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
     }

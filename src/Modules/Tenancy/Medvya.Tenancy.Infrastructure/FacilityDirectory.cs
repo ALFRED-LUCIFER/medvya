@@ -22,4 +22,8 @@ public sealed class FacilityDirectory(TenancyDbContext db) : IFacilityDirectory
         await db.Memberships.AsNoTracking()
             .Where(m => m.FacilityId == facilityId && m.Status == MembershipStatus.Active && Doctors.Contains(m.Role))
             .Select(m => m.UserId!.Value).ToListAsync(cancellationToken); // Active memberships always have a user (CK_Memberships_UserUnlessInvited)
+
+    public async Task<IReadOnlyDictionary<DateOnly, string>> ClosuresAsync(Guid facilityId, DateOnly first, DateOnly last, CancellationToken cancellationToken = default) =>
+        await db.Closures.AsNoTracking().Where(c => c.FacilityId == facilityId && c.Date >= first && c.Date <= last)
+            .ToDictionaryAsync(c => c.Date, c => c.Name, cancellationToken);
 }

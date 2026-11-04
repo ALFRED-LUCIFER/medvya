@@ -25,44 +25,76 @@ public sealed class Invitations(TenancyDbContext db, ICurrentTenant tenant, ICur
     public async Task<IReadOnlyList<FacilityOption>> FacilitiesAsync(CancellationToken cancellationToken = default) =>
         await db.Facilities.OrderBy(f => f.Name).Select(f => new FacilityOption(f.Id, f.Name)).ToListAsync(cancellationToken);
 
-    public Task<InvitationCreated?> CreateAsync(string email, Role role, Guid facilityId, CancellationToken cancellationToken = default) =>
-        CreateAsync(email, role, facilityId, _ => { }, cancellationToken);
+    public Task<InvitationCreated?> CreateAsync(string email, Role role, Guid facilityId, Guid? customRoleId = null, CancellationToken cancellationToken = default) =>
+        CreateCoreAsync(email, role, facilityId, customRoleId, null, cancellationToken);
 
-    public async Task<InvitationCreated?> CreateAsync(string email, Role role, Guid facilityId, Action<Membership> stage, CancellationToken cancellationToken = default)
+    public Task<InvitationCreated?> CreateAsync(string email, Role role, Guid facilityId, Action<Membership> stage, CancellationToken cancellationToken = default) =>
+        CreateCoreAsync(email, role, facilityId, null, stage, cancellationToken);
+
+    async Task<InvitationCreated?> CreateCoreAsync(string email, Role role, Guid facilityId, Guid? customRoleId, Action<Membership>? stage, CancellationToken cancellationToken)
+    {
+        email = Valid(email);
+        if (!InvitationRules.CanInvite(role)) throw new ArgumentException("This role cannot be invited.", nameof(role));
+        var tenantId = tenant.TenantId ?? throw new InvalidOperationException("No tenant context.");
+
+        var facility = await db.Facilities.SingleOrDefaultAsync(f => f.Id == facilityId, cancellationToken);
+        if (facility is null) return null; // another tenant's facility is invisible here (query filter + RLS)
+        if (customRoleId is { } roleId)
+        {
+            if (await db.CustomRoles.SingleOrDefaultAsync(r => r.Id == roleId, cancellationToken) is not { } custom) return null;
+            role = custom.BaseRole; // the base role is what role-based checks elsewhere see
+        }
+        var membership = new Membership { Id = Guid.CreateVersion7(), TenantId = tenantId, FacilityId = facilityId, Role = role, Status = MembershipStatus.Invited, CustomRoleId = customRoleId };
+        db.Memberships.Add(membership);
+        stage?.Invoke(membership);
+        return await IssueAsync(membership, facility, email, null, cancellationToken);
+    }
+
+    public async Task<InvitationCreated?> ResendAsync(Guid invitationId, CancellationToken cancellationToken = default)
+    {
+        var old = await db.Invitations.SingleOrDefaultAsync(i => i.Id == invitationId && i.AcceptedAt == null, cancellationToken);
+        // Only the newest invitation of a membership can be resent, so a membership never has two live links.
+        if (old is null || await db.Invitations.AnyAsync(i => i.MembershipId == old.MembershipId && i.CreatedAt > old.CreatedAt, cancellationToken)) return null;
+        var membership = await db.Memberships.SingleAsync(m => m.Id == old.MembershipId, cancellationToken);
+        if (membership.Status != MembershipStatus.Invited) return null;
+        var facility = await db.Facilities.SingleAsync(f => f.Id == membership.FacilityId, cancellationToken);
+        return await IssueAsync(membership, facility, old.Email, old, cancellationToken);
+    }
+
+    static string Valid(string email)
     {
         email = email.Trim();
         // A bare address only: no display name, no list, at most 254 characters (RFC 5321).
         if (email.Length > 254 || !MailAddress.TryCreate(email, out var parsed) || parsed.Address != email)
             throw new ArgumentException("A single valid email address is required.", nameof(email));
-        if (!InvitationRules.CanInvite(role)) throw new ArgumentException("This role cannot be invited.", nameof(role));
-        var tenantId = tenant.TenantId ?? throw new InvalidOperationException("No tenant context.");
+        return email;
+    }
+
+    /// <summary>Saves a fresh invitation (and the membership when new) with its audit row and sends the email; a resend revokes the old link in the same transaction.</summary>
+    async Task<InvitationCreated> IssueAsync(Membership membership, Facility facility, string email, Invitation? superseded, CancellationToken cancellationToken)
+    {
+        var tenantId = membership.TenantId;
         var inviter = user.UserId ?? throw new InvalidOperationException("No signed-in user.");
         var baseUrl = options.Value.LinkBaseUrl ?? throw new InvalidOperationException("Invitations:LinkBaseUrl is not configured.");
-
-        var facility = await db.Facilities.SingleOrDefaultAsync(f => f.Id == facilityId, cancellationToken);
-        if (facility is null) return null; // another tenant's facility is invisible here (query filter + RLS)
         var clinic = await db.Tenants.Select(t => t.Name).SingleAsync(cancellationToken);
-
         var now = DateTimeOffset.UtcNow;
         var (token, hash) = InvitationToken.New(tenantId);
-        var membership = new Membership { Id = Guid.CreateVersion7(), TenantId = tenantId, FacilityId = facilityId, Role = role, Status = MembershipStatus.Invited };
         var invitation = new Invitation
         {
             Id = Guid.CreateVersion7(), TenantId = tenantId, MembershipId = membership.Id, Email = email, TokenHash = hash,
             InvitedBy = inviter, CreatedAt = now, ExpiresAt = now + options.Value.Lifetime,
         };
-        db.Memberships.Add(membership);
         db.Invitations.Add(invitation);
-        stage(membership);
+        if (superseded is not null) superseded.RevokedAt ??= now;
 
         // Saved, audited and emailed inside one transaction: a failed audit or email leaves no invitation behind.
         // A commit that fails after the email went out leaves a link that shows the expired state, which is harmless.
         await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
-        await Audit(tenantId, inviter, "invitation.create", invitation.Id, now, cancellationToken);
-        await mail.SendAsync(Email(email, clinic, role, facility, $"{baseUrl.TrimEnd('/')}/invite/{token}", invitation.ExpiresAt), cancellationToken);
+        await Audit(tenantId, inviter, superseded is null ? "invitation.create" : "invitation.resend", invitation.Id, now, cancellationToken);
+        await mail.SendAsync(Email(email, clinic, membership.Role, facility, $"{baseUrl.TrimEnd('/')}/invite/{token}", invitation.ExpiresAt), cancellationToken);
         await tx.CommitAsync(cancellationToken);
-        return new InvitationCreated(invitation.Id, invitation.ExpiresAt, InvitationRules.RequiresLicenceVerification(role));
+        return new InvitationCreated(invitation.Id, invitation.ExpiresAt, InvitationRules.RequiresLicenceVerification(membership.Role));
     }
 
     public async Task<bool> RevokeAsync(Guid invitationId, CancellationToken cancellationToken = default)

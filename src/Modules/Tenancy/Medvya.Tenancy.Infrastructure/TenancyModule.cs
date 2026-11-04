@@ -27,6 +27,7 @@ public static class TenancyModule
             .AddScoped<IStaffAccess, StaffAccess>()
             .AddScoped<IPracticeSettings, PracticeSettings>()
             .AddScoped<IDoctors, Doctors>()
-            .AddScoped<ILicenceReview, LicenceReview>();
+            .AddScoped<ILicenceReview, LicenceReview>()
+            .AddScoped<IStaffRoster, StaffRoster>();
     }
 }

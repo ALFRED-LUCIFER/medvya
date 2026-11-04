@@ -23,6 +23,7 @@ public sealed class TenancyDbContext(DbContextOptions<TenancyDbContext> options,
     public DbSet<PracticeDefaults> PracticeDefaultsSet => Set<PracticeDefaults>();
     public DbSet<DoctorLicence> DoctorLicences => Set<DoctorLicence>();
     public DbSet<DoctorProfile> DoctorProfiles => Set<DoctorProfile>();
+    public DbSet<CustomRole> CustomRoles => Set<CustomRole>();
 
     Guid? CurrentTenantId => tenant.TenantId;
 
@@ -54,6 +55,7 @@ public sealed class TenancyDbContext(DbContextOptions<TenancyDbContext> options,
             e.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
             e.HasOne<Facility>().WithMany().HasForeignKey(x => x.FacilityId).OnDelete(DeleteBehavior.Restrict);
             e.HasIndex(x => new { x.TenantId, x.UserId, x.FacilityId }).IsUnique();
+            e.HasOne<CustomRole>().WithMany().HasForeignKey(x => x.CustomRoleId).OnDelete(DeleteBehavior.Restrict);
             e.HasIndex(x => x.UserId); // the facility picker looks a user's memberships up across tenants
             // Only an Invited membership may lack its user.
             e.ToTable(t => t.HasCheckConstraint("CK_Memberships_UserUnlessInvited", "[Status] = 'Invited' OR [UserId] IS NOT NULL"));
@@ -119,6 +121,15 @@ public sealed class TenancyDbContext(DbContextOptions<TenancyDbContext> options,
             e.Property(x => x.Languages).HasMaxLength(200);
             e.Property(x => x.Currency).HasMaxLength(3).IsFixedLength();
             e.HasOne<Tenant>().WithOne().HasForeignKey<PracticeDefaults>(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<CustomRole>(e =>
+        {
+            e.Property(x => x.Name).HasMaxLength(60);
+            e.Property(x => x.BaseRole).HasConversion<string>().HasMaxLength(40);
+            e.Property(x => x.Capabilities).HasMaxLength(400);
+            e.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
+            e.HasIndex(x => new { x.TenantId, x.Name }).IsUnique();
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         modelBuilder.Entity<DoctorLicence>(e =>

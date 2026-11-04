@@ -13,7 +13,15 @@ public sealed class StaffAccess(TenancyDbContext db, IFacilityDirectory faciliti
     {
         if (user.UserId is not { } userId || facility.FacilityId is not { } facilityId) return Access.None;
         if (await facilities.ActiveRoleAsync(userId, facilityId, cancellationToken) is not { } role) return Access.None;
-        return LicenceRules.Apply(RoleMatrix.Of(role, capability), capability, await LicencePendingAsync(cancellationToken));
+        var access = RoleMatrix.Of(role, capability);
+        // A practice-defined role may add capabilities its base role lacks (MDV-P1-008); only then is the role row read.
+        if (access == Access.None && CustomRoleRules.Extras(role).Contains(capability))
+        {
+            var extras = await db.Memberships.Where(m => m.UserId == userId && m.FacilityId == facilityId && m.Status == MembershipStatus.Active)
+                .Select(m => db.CustomRoles.Where(r => r.Id == m.CustomRoleId).Select(r => r.Capabilities).FirstOrDefault()).SingleOrDefaultAsync(cancellationToken);
+            access = CustomRoleRules.Effective(role, extras, capability);
+        }
+        return LicenceRules.Apply(access, capability, await LicencePendingAsync(cancellationToken));
     }
 
     public Task<bool> LicencePendingAsync(CancellationToken cancellationToken = default) =>

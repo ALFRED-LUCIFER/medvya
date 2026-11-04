@@ -12,6 +12,10 @@ import { useOpeningHoursController, useSchedulesController } from '../features/s
 import { useLocationChoice } from '../features/settings/hooks/useLocationChoice';
 import { useLocationsController } from '../features/settings/hooks/useLocationsController';
 import { useProfileController } from '../features/settings/hooks/useProfileController';
+import CustomRolesPanel from '../features/staff/components/CustomRolesPanel';
+import StaffPanel from '../features/staff/components/StaffPanel';
+import { useCustomRolesController } from '../features/staff/hooks/useCustomRolesController';
+import { useStaffController } from '../features/staff/hooks/useStaffController';
 
 // Each panel is its own component so its controller runs (and fetches) only while its tab is open.
 const Profile = () => <ProfilePanel {...useProfileController()} />;
@@ -29,11 +33,22 @@ function Doctors({ facilityId }: { facilityId: string }) {
   return <DoctorsPanel {...useDoctorsController(facilityId)} locations={useLocationChoice(facilityId).locations} />;
 }
 
+function Staff({ facilityId }: { facilityId: string }) {
+  const staff = useStaffController(facilityId);
+  const roles = useCustomRolesController();
+  return (
+    <>
+      <StaffPanel {...staff} />
+      {!staff.loading && !staff.failed && <CustomRolesPanel catalogue={staff.catalogue} {...roles} />}
+    </>
+  );
+}
+
 /** Composition only: Settings (F-08) with its tab in the address (?tab=hours), so a tab can be linked and survives a reload. */
 export default function SettingsRoute({ facilityId }: { facilityId: string }) {
   const [params, setParams] = useSearchParams();
   const asked = params.get('tab');
   const tab: SettingsTab = (settingsTabs as readonly string[]).includes(asked ?? '') ? (asked as SettingsTab) : 'profile';
-  const panels = { profile: <Profile />, locations: <Locations facilityId={facilityId} />, hours: <Hours facilityId={facilityId} />, holidays: <Holidays facilityId={facilityId} />, doctors: <Doctors facilityId={facilityId} /> };
+  const panels = { profile: <Profile />, locations: <Locations facilityId={facilityId} />, hours: <Hours facilityId={facilityId} />, holidays: <Holidays facilityId={facilityId} />, staff: <Staff facilityId={facilityId} />, doctors: <Doctors facilityId={facilityId} /> };
   return <SettingsPage tab={tab} onTab={next => setParams({ tab: next }, { replace: true })} panels={panels} />;
 }

@@ -10,6 +10,7 @@ using Medvya.Notifications.Application;
 using Medvya.Notifications.Infrastructure;
 using Host.Api.Onboarding;
 using Host.Api.Settings;
+using Host.Api.Staff;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.SignalR;
 using Medvya.Audit.Api;
@@ -134,6 +135,7 @@ app.MapInvitations();
 app.MapOnboarding();
 app.MapPracticeSettings();
 app.MapDoctors();
+app.MapStaff();
 app.MapQueueDisplaySession();
 app.MapPatientEndpoints();
 if (app.Environment.IsDevelopment() && app.Configuration["Authentication:Oidc:Authority"]?.EndsWith(DevIdentityProvider.Path, StringComparison.Ordinal) == true)

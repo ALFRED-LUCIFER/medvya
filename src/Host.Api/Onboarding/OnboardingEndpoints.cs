@@ -74,7 +74,7 @@ public static class OnboardingEndpoints
             {
                 try
                 {
-                    if (await invitations.CreateAsync(member.Email!.Trim(), member.Role!.Value, practice.FacilityId, ct) is not null) sent++; else failed++;
+                    if (await invitations.CreateAsync(member.Email!.Trim(), member.Role!.Value, practice.FacilityId, cancellationToken: ct) is not null) sent++; else failed++;
                 }
                 // The practice exists already; an invitation that could not go out is repeated from the staff screen, so it is counted, not thrown.
                 catch (Exception ex) when (ex is SmtpException or InvalidOperationException or IOException or DbUpdateException) { failed++; }

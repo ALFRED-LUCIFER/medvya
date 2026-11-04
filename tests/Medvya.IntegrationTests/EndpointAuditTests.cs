@@ -40,6 +40,13 @@ public sealed class EndpointAuditTests(SqlServerFixture sql) : IClassFixture<Sql
         "GET /v1/invitations/facilities",  // facility ids and names of the admin's tenant (MDV-P0-013)
         "POST /v1/invitations/",            // invites a staff member by email; audited as invitation.create inside the service
         "DELETE /v1/invitations/{id:guid}", // revokes a staff invitation; audited as invitation.revoke inside the service
+        // Settings -> Staff (MDV-P1-008): staff names and roles, no patient data; invitations and role changes are audited inside the services.
+        "GET /v1/staff/",
+        "POST /v1/staff/",
+        "POST /v1/staff/invitations/{id:guid}/resend",
+        "GET /v1/staff/roles",
+        "POST /v1/staff/roles",
+        "PUT /v1/staff/roles/{id:guid}",
         // Practice settings (MDV-P1-005): business details only; every change is audited inside the service with before/after (PracticeSettingsTests).
         "GET /v1/settings/profile",
         "PUT /v1/settings/profile",

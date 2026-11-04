@@ -35,8 +35,12 @@ COLOURS = {"phase": "1D76DB", "type": "5319E7", "priority": "B60205", "status": 
 
 
 def gh(*args, data=None):
-    r = subprocess.run(["gh", *args], input=json.dumps(data) if data is not None else None,
-                       capture_output=True, text=True)
+    for attempt in range(4):  # network resets happen over ~500 calls; reruns are idempotent but retrying is cheaper
+        r = subprocess.run(["gh", *args], input=json.dumps(data) if data is not None else None,
+                           capture_output=True, text=True)
+        if not r.returncode or "HTTP 4" in r.stderr:
+            break
+        time.sleep(5 * (attempt + 1))
     if r.returncode:
         sys.exit(f"gh {' '.join(args[:3])} failed: {r.stderr.strip()}")
     return json.loads(r.stdout) if r.stdout.strip().startswith(("{", "[")) else r.stdout

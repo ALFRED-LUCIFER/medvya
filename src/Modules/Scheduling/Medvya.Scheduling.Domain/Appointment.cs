@@ -186,7 +186,7 @@ public sealed class AppointmentReschedule
 /// <summary>
 /// A domain event written in the same transaction as the change it describes (transactional outbox). Payloads carry opaque
 /// ids and times only, never PHI.
-/// shortcut: nothing dispatches these yet; the Service Bus / Hangfire dispatcher lands with notifications (MDV-P1-032).
+/// A Hangfire job publishes them to the module subscribers (OutboxDispatcher, MDV-P1-032); no Service Bus in P1.
 /// </summary>
 public sealed class OutboxEvent
 {
@@ -199,4 +199,13 @@ public sealed class OutboxEvent
     [Classification(DataClass.Internal)] public required string Payload { get; init; }
     [Classification(DataClass.Internal)] public DateTimeOffset OccurredAt { get; init; }
     [Classification(DataClass.Internal)] public DateTimeOffset? PublishedAt { get; set; }
+}
+
+/// <summary>
+/// A tenant that has written an outbox event, kept by a trigger on OutboxEvents. Not row-level secured on purpose: it holds
+/// tenant ids only, so a background job can find whose scope to enter without reading any tenant's rows.
+/// </summary>
+public sealed class OutboxTenant
+{
+    [Classification(DataClass.Internal)] public Guid TenantId { get; init; }
 }

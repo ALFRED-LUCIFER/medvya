@@ -187,6 +187,11 @@ ac:
 - Residency and country are displayed read-only with the trust-centre wording.
 
 === MDV-P1-007
+status: Partly done
+progress:
+- Open PR (branch feat/MDV-P1-007-add-doctor): Settings -> Doctors tab with the seven-step Add doctor wizard (details, licence, verification status, schedule hint, default fees, access, signature image). One transaction creates the Invited hospital-doctor membership, DoctorProfile, DoctorLicence (pending) and the P0-013 invitation (emailed); licence rules reuse OnboardingRules per country plus category and a future expiry date. `/v1/settings/doctors/*` needs practice configuration; licence verify/reject is NOT a practice capability: `POST /v1/operations/licences/{tenantId}/{doctorId}/decision` needs the Medvya operations capability (staff ids in `Operations:LicenceReviewers`), runs inside the licence's tenant, records verified_by/verified_at, audits licence.verify / licence.reject in the same transaction and, on rejection, needs a reason, emails the practice contact address and shows the reason on the Doctors tab (the owner can correct and resubmit). The server gate now also holds a doctor with no licence row (mutation-checked: practice admin cannot verify; pending, rejected and never-submitted doctors get no ClinicalNotes access). Signature image: PNG/JPEG by file signature, 512 KB, private Blob under a random key, no read endpoint (printed prescriptions only), UI states the passkey / MFA sentence. EN/HI/AR, RTL, axe clean at 768 px
+- DEFAULT DECISION (founder has not decided; change here when they do): verification is done by Medvya operations only, no owner attestation. Open question: who checks which register (NMC / state council, DoH / DHA / MOHAP) and the SLA ("usually within 1 working day" is shown to doctors but unmeasured)
+- Left: a back-office screen and cross-tenant pending queue (operations get tenant and doctor ids out of band; needs a reviewed read path inside row-level security); operations role from the identity provider instead of a configured id list (MDV-P0-011); certificate file upload (only its name is kept; Blob upload path); malware scan of the signature image (with MDV-P0-006); printing the signature on prescriptions (P2); one facility per doctor (multi-facility scope with MDV-P1-009); expiry reminders and blocking on an expired licence; category is free text (no per-authority list); the sign-up wizard still collects no category or expiry
 title: Add doctor (clinic mode): details, licence India/UAE, verification, schedule link, fees, access and signature image (F-09)
 type: Story
 epic: MDV-P1-E03
@@ -212,6 +217,10 @@ notes:
 - Define the licence verification process (who checks which register, SLA "usually within 1 working day") with the founder; this closes the P2 dependency.
 
 === MDV-P1-008
+status: Partly done
+progress:
+- Open PR (branch feat/MDV-P1-008-add-staff): Settings -> Staff tab: staff table (name, role, location, second-factor state, status invited/active/suspended/offboarded, invitation state) and the Add staff member steps (role picker with descriptions, location, locked permission rows, invite through the P0 flow); doctors are shown in the picker with the exact redirect message and nothing is created (server refuses with doctor_redirect); resend (revokes the old link) and revoke invitation; custom roles = a built-in base role plus extra rows at practice admin's level, server-capped (no clinical rows, no staff administration, never above practice admin, checked again when access is read); each role change keeps before/after (SettingsChange) and a staff.role.* audit event in one transaction; every /v1/staff endpoint needs Config on Staff, roles, integrations (403 otherwise); a receptionist added here has no clinical capabilities; mutation-checked (ceiling, 403 policy); EN/HI/AR, RTL, axe clean, browser-verified against the real API
+- Left: per-person working hours and one invitation for several locations (a person is added at one location; hours follow the location's opening hours), changing an existing member's role, deleting a custom role, and enforcing custom-role extras in endpoints that read the role claim directly (scheduling) - extras apply where access goes through IStaffAccess and in /v1/me/context
 title: Add staff with role, facility scope, permissions and invite; custom roles (F-10)
 type: Story
 epic: MDV-P1-E03
@@ -335,7 +344,8 @@ progress:
 - Merged [PR #61](https://github.com/ALFRED-LUCIFER/medvya/pull/61): `POST /v1/patients` (facility from the session, country from the tenant) with the duplicate check (MDV-P1-016); [PR #58](https://github.com/ALFRED-LUCIFER/medvya/pull/58) and [PR #70](https://github.com/ALFRED-LUCIFER/medvya/pull/70): record page with identifiers masked to the last 4
 - Merged [PR #82](https://github.com/ALFRED-LUCIFER/medvya/pull/82): full registration UI at /patients/new (quick mode at ?mode=quick): Identity & IDs → Contact & address → Payer → Review, per-step validation, focus to each step's heading, errors announced; ABHA optional, Aadhaar last 4 only (12 digits refused with the reason), state/UT from the official list (checked on the server), PIN 6 digits, payer kinds with their own fields (TPA kept as the network); preview card, data map and rules panel; success screen with MRN, time, actor and next actions; country from the tenant via /v1/me/context; record answer tested against an exact field allowlist (registration data only, no clinical fields); en/hi/ar, axe clean, 375/768/1366 px, 200 % zoom; real-API browser check
 - Merged [PR #86](https://github.com/ALFRED-LUCIFER/medvya/pull/86): Family & emergency step (MDV-P1-020)
-- Left: Consents step and CONSENT_RECEIPT in the same transaction (MDV-P1-019); "Verify with ABHA" (P8); PAN / Voter ID / driving licence as other ID types and "Save draft" (in the design, not in the ACs)
+- Open PR (MDV-P1-019): the Consents step and CONSENT_RECEIPT written in the registration transaction; registration without treatment consent is refused and saves nothing
+- Left: "Verify with ABHA" (P8); PAN / Voter ID / driving licence as other ID types and "Save draft" (in the design, not in the ACs)
 title: Patient registration — India full flow (identity, ABHA optional, Aadhaar last 4, Indian address, payer)
 type: Story
 epic: MDV-P1-E05
@@ -365,7 +375,8 @@ progress:
 - Merged [PR #40](https://github.com/ALFRED-LUCIFER/medvya/pull/40): UAE rules — Emirates ID format, expired EID warns, EID-or-passport minimum, Arabic name, emirate mapped to Malaffi/NABIDH/Riayati, Makani/P.O. Box, insurance member number Always Encrypted
 - Merged [PR #82](https://github.com/ALFRED-LUCIFER/medvya/pull/82): UAE full registration UI — name as on EID plus Arabic name typed right to left (preview card and Review), Emirates ID or passport, "Format 784-YYYY-NNNNNNN-N", expired EID warns while typing and on the success screen but never blocks, nationality and language named with Intl.DisplayNames, emirate → HIE label (Malaffi / NABIDH / Riayati) under the field, Makani and P.O. Box, insurance with member card, expiry, plan and network (eligibility marked M4); HTTP test with a UAE tenant (rules follow the tenant, not the body); browser-checked in Arabic against the real API
 - Onboarding (MDV-P1-004): a UAE tenant cannot be created in an India deployment (Onboarding:DeploymentCountry, tested)
-- Left: the HIE label on the Consents step (MDV-P1-019); card reader and UAE PASS (P5)
+- Open PR (MDV-P1-019): the HIE label (Malaffi / NABIDH / Riayati) on the Consents step, from the emirate in the address
+- Left: card reader and UAE PASS (P5)
 title: Patient registration — UAE flow (Emirates ID manual entry, Arabic name RTL, emirate, insurance card)
 type: Story
 epic: MDV-P1-E05
@@ -500,6 +511,12 @@ ac:
 - Search p95 < 300 ms with 50,000 synthetic patients; endpoint rate-limited.
 
 === MDV-P1-019
+status: Partly done
+progress:
+- Open PR: patient consents at registration. Consents step (full mode; quick mode shows treatment only): treatment locked on, reminders per channel (WhatsApp, SMS), link to ABHA (India) / HIE named from the emirate (UAE), portal (on, invite in P4), health tips & offers (off); each decision, declined ones too, is a CONSENT_RECEIPT (type, channel, policy version, jurisdiction `IN` / `AE-<emirate>`, decision, time, staff actor) in `patients.ConsentReceipts`, an append-only SQL ledger table (UPDATE and DELETE rejected, tested) with RLS, written in the registration's own transaction
+- Registration without treatment consent, or with a stale wording version, is refused (400) and saves nothing (SAFETY test, mutation-checked); `POST /v1/patients/{id}/consents` records a changed decision as a new receipt, history kept, audited, active facility only (another facility 404, nothing written)
+- Reminders (MDV-P1-032/033) ask `IPatientConsents.IsGrantedAsync(patientId, type, channel)` in `Medvya.Patients.Application` (channels WhatsApp, SMS, email): the newest receipt decides, a tie counts as withdrawn, no receipt means no consent. The host implements the Notifications module's `IReminderConsent` on it (`PatientReminderConsent`, tested: no receipt no send, a grant sends, a withdrawal stops it, mutation-checked); en/hi/ar, axe clean, 44 px rows, 768 px and Arabic RTL, real-API browser check
+- Left: legally reviewed wording and per-tenant published privacy notice versions (MDV-P1-044; wording is a marked DRAFT, `ConsentPolicy.CurrentVersion` / `consents` in registration.ts, shortcut recorded); tenant-level ToS and DPA acceptance and "owners cannot activate the production tenant before it" (no activation step exists yet, needs its own change in Tenancy); a screen to change a consent from the record (API ready; portal R-03 in P4)
 title: Legal terms and separate versioned consents at registration (treatment, reminders per channel, sharing, portal, marketing)
 type: Story
 epic: MDV-P1-E05
@@ -556,7 +573,8 @@ progress:
 - Merged [PR #59](https://github.com/ALFRED-LUCIFER/medvya/pull/59): slot holds (`POST /v1/slot-holds`, one per user, expire after `Scheduling:SlotHold`, default 2 min; others see "being booked"), booking from the hold (`POST /v1/appointments`) re-checking the template, appointment + first status event + AppointmentBooked.v1 (opaque ids) in one transaction, audited endpoints, patient confirmed by name and MRN; booking panel with React Hook Form + Zod; mutation-checked (expiry, holder check, RLS); browser-verified (en, ar RTL, keyboard, axe)
 - Merged [PR #60](https://github.com/ALFRED-LUCIFER/medvya/pull/60): concurrency guarantees (MDV-P1-022)
 - Open [PR #71](https://github.com/ALFRED-LUCIFER/medvya/pull/71): review fixes — patients of the booking facility only (lookup and booking), appointment (facility, start) covering index with bounded overlap queries, patient chosen with front-desk search (MDV-P1-018; initials, age, sex, MRN tail) and confirmed by name and MRN, field errors described; mutation-checked; browser-verified (en, ar RTL, keyboard, axe)
-- Left: confirmation message (MDV-P1-032); p95 < 300 ms under the P1 load profile (MDV-P1-037); returning from registration to the held slot (MDV-P1-013)
+- Confirmation message sent by MDV-P1-032 (email and SMS, within a minute of booking)
+- Left: p95 < 300 ms under the P1 load profile (MDV-P1-037); returning from registration to the held slot (MDV-P1-013)
 title: Create an appointment from the calendar with a short slot hold
 type: Story
 epic: MDV-P1-E06
@@ -641,7 +659,8 @@ status: Partly done
 progress:
 - Merged [PR #80](https://github.com/ALFRED-LUCIFER/medvya/pull/80): `POST /v1/appointments/{id}/reschedule|cancel|no-show` on the booking path (doctor-day locks, template and hold re-checks, old slot freed and new one taken in one transaction), audited by use case; reschedule history table (old slot, new slot, actor, time) and outbox events with opaque ids only; cancel reason list + note (Other needs one, note SensitiveHealth); no-show only from Booked after the start; cancel from Booked or Checked in (narrower than the design, recorded in state-machines.md); appointment panel with each action allowed or disabled with its reason, reschedule by click or drag always confirmed, same-kind calendars only, no-show offers rebook with the patient filled in; en/hi/ar, RTL
 - Tested on SQL Server (12 tests incl. 100-way reschedule race, reschedule vs hold race, lock waits on both days) and in the browser against a real API (two desks, drag, cancel, check-in, ar, axe); 23 mutations each caught
-- Left: patient notification of reschedule/cancel (MDV-P1-032, outbox events written); the no-show metric itself (MDV-P1-041, reads the NoShow events); reschedule history shown in the panel
+- Patient notification of reschedule/cancel sent by MDV-P1-032 from the outbox events
+- Left: the no-show metric itself (MDV-P1-041, reads the NoShow events); reschedule history shown in the panel
 title: Reschedule (incl. drag with confirm), cancel with reason, mark no-show with rebook offer
 type: Story
 epic: MDV-P1-E06
@@ -848,6 +867,14 @@ ac:
 - Layout is readable at 3 metres (minimum 48px token text) and in Arabic/English.
 
 === MDV-P1-032
+status: Partly done
+progress:
+- Notifications module (`src/Modules/Notifications`): NOTIFICATION / NOTIFICATION_ATTEMPT (status, attempts, backoff, provider reference, short failure code; no message text or address stored), EF filters + RLS, role `medvya_notifications`; Scheduling's outbox is published by `OutboxDispatcher` to `IAppointmentSubscriber`s (at least once, in order); a trigger keeps the tenants that wrote events so the job knows whose scope to enter
+- Hangfire on Azure SQL in schema `hangfire` (no Redis/Service Bus): one recurring job publishes each tenant's outbox then sends what is due (confirmation within about a minute); read-only dashboard at `/admin/jobs` only for users listed in `Jobs:DashboardUsers` (nobody by default); jobs off unless `Jobs:Enabled`
+- Booking queues a confirmation and the 24 h / 2 h reminders (facility time, quiet hours 21:00-08:00 moved to the end); reschedule/cancel cancels queued messages and sends the right message once (idempotent on the event id); walk-ins get nothing; consent checked at send time through `IReminderConsent` (default denies all until MDV-P1-019 supplies the real one); retries with backoff (1, 5, 30 min) up to 4 tries then Failed; templates en/hi/ar with clinic, date and time only
+- Reception sees each message's status on the appointment panel (`GET /v1/appointments/{id}/notifications`, audited, view membership at the facility) and `GET /v1/notifications/delivery` lists per-channel counts and every failure with its code
+- Tested on SQL Server (17 tests + signature/auth tests); mutation-checked: consent check removed, DLT template id check removed, cancel-on-change removed, address added to the body
+- Left: the real consent source (MDV-P1-019); the SendGrid event webhook parser and its ECDSA signature check (receipts take a normalised body signed with HMAC for now; email goes over SendGrid's SMTP relay); the Hangfire server in its own Worker.Jobs host and its own database user; failed messages on the board and in the notification centre (MDV-P1-034); the install of Hangfire's tables on deploy (MDV-P0-007); per-clinic quiet hours; Hindi and Arabic wording reviewed by a native speaker
 title: Email confirmations and 24 h / 2 h reminders via SendGrid and Hangfire
 type: Story
 epic: MDV-P1-E08
@@ -871,6 +898,12 @@ ac:
 - Hangfire dashboard is only reachable by Medvya operations through authenticated admin route; no Redis or Service Bus resources exist in P1 infrastructure.
 
 === MDV-P1-033
+status: Partly done
+progress:
+- SMS behind `ISmsGateway`: local sink to the mail sink (Development) and a gateway that fails closed (visible as failed) until the provider is chosen (Q-03, MDV-P1-045)
+- SMS uses only registered templates: the text must match a catalogue template (`{#var#}` slots, 30 characters each) and in India have its DLT template id from config (`Notifications:Sms:DltTemplateIds`, keys like `Confirmation.en`) and a sender (`Notifications:Sms:Senders` per tenant or `DefaultSender`); otherwise it is Failed at once and never handed to a provider; messages hold no clinical details
+- Delivery receipts: `POST /v1/notifications/receipts` (public, HMAC-SHA256 of the body with `Notifications:ReceiptSecret`, refused when unset), applied inside the tenant named by the reference; duplicate and out-of-order receipts are ignored; failures visible to reception (see MDV-P1-032)
+- Left: the SMS provider adapter and its own receipt format (Q-03); DLT sender and template registration with the operator (MDV-P1-045, a person task: put the ids in config); delivery-rate dashboard screen (the API returns per-channel counts and every failure; MDV-P1-041); SMS invitations in onboarding step 6
 title: SMS confirmations and reminders with India DLT templates and delivery receipts
 type: Story
 epic: MDV-P1-E08

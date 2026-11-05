@@ -2,6 +2,7 @@ import type { UseFormReturn } from 'react-hook-form';
 import { CircleAlert, CircleCheck, X } from 'lucide-react';
 import { useI18n, type MessageKey } from '@medvya/i18n';
 import { Button, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea } from '@medvya/ui';
+import { codeKey, needsAttention, type PatientMessage } from '../domain/messages';
 import { actions, cancelReasons, localDate, type Action, type CancelForm, type ChangeError, type Rule } from '../domain/changes';
 import type { Appointment } from '../domain/schedule';
 import { StateLabel } from './parts';
@@ -27,6 +28,8 @@ type Props = {
   onBack: () => void;
   /** After a no-show: book the same patient again (opens booking with the patient filled in). */
   onRebook?: () => void;
+  /** What the patient was told (MDV-P1-032/033). */
+  messages: PatientMessage[] | 'loading' | 'error';
 };
 
 const actionKeys: Record<Action, MessageKey> = {
@@ -118,6 +121,8 @@ export default function AppointmentPanel(p: Props) {
       )}
 
       {p.mode === 'cancel' && <CancelForm {...p} />}
+
+      <Messages messages={p.messages} timeZone={p.timeZone} />
     </aside>
   );
 }
@@ -152,5 +157,40 @@ function CancelForm(p: Props) {
         <Button type="button" variant="outline" disabled={p.working} onClick={p.onBack}>{t('appointment.back')}</Button>
       </div>
     </form>
+  );
+}
+
+/** The messages sent to the patient about this visit. A failed one says so in words and with an icon, never by colour alone. */
+function Messages({ messages, timeZone }: { messages: Props['messages']; timeZone: string }) {
+  const { t, formatShortDay, formatTime } = useI18n();
+  return (
+    <section aria-labelledby="appointment-messages" className="flex flex-col gap-2 border-t pt-3">
+      <h3 id="appointment-messages" className="text-sm font-extrabold">{t('appointment.messages.title')}</h3>
+      {messages === 'loading' && <p role="status" className="text-xs text-muted-foreground">{t('appointment.messages.loading')}</p>}
+      {messages === 'error' && <p role="alert" className="text-xs font-bold text-danger-700">{t('appointment.messages.error')}</p>}
+      {Array.isArray(messages) && messages.length === 0 && <p className="text-xs text-muted-foreground">{t('appointment.messages.empty')}</p>}
+      {Array.isArray(messages) && messages.length > 0 && (
+        <ul className="flex flex-col gap-1.5">
+          {messages.map(m => {
+            const code = codeKey(m.failureCode);
+            const when = new Date(m.sendAt);
+            return (
+              <li key={m.id} className="flex flex-col text-sm">
+                <span className="flex items-center gap-2">
+                  {needsAttention(m) && <CircleAlert aria-hidden className="size-4 shrink-0 text-danger-700" />}
+                  <span className={needsAttention(m) ? 'font-bold text-danger-700' : 'font-bold'}>
+                    {t('appointment.messages.line', { kind: t(`message.kind.${m.kind}`), channel: t(`message.channel.${m.channel}`), status: t(`message.status.${m.status}`) })}
+                  </span>
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {t(code ? 'appointment.messages.atWhy' : 'appointment.messages.at',
+                    { day: formatShortDay(localDate(m.sendAt, timeZone)), time: formatTime(when, timeZone), why: code ? t(`message.code.${code}`) : '' })}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
   );
 }

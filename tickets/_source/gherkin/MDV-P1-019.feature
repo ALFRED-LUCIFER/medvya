@@ -2,7 +2,7 @@ Feature: Legal terms and separate versioned consents at registration (treatment,
   As a receptionist, I want to record each patient consent separately, so that every decision is lawful and traceable.
 
   # chunk: Add separate consent toggles at registration
-  @todo
+  @done
   Scenario: Consents are separate toggles with safe defaults
     When the Consents step is shown
     Then every consent is a separate toggle
@@ -10,7 +10,7 @@ Feature: Legal terms and separate versioned consents at registration (treatment,
     And treatment is required and cannot be toggled off
 
   # chunk: Add immutable consent receipts
-  @todo
+  @done
   Scenario: Each decision creates an immutable receipt
     When a consent decision is made
     Then an immutable receipt is stored with policy version and jurisdiction
@@ -29,7 +29,7 @@ Feature: Legal terms and separate versioned consents at registration (treatment,
     When an owner tries to activate the production tenant
     Then activation is refused
 
-  @todo
+  @done
   Scenario: Reminders check channel consent before every send
     When a reminder is about to be sent
     Then the channel consent is checked first (test)

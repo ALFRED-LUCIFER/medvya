@@ -8,8 +8,15 @@ public class PatientRulesTests
 {
     static readonly DateOnly Today = new(2026, 10, 21);
 
+    /// <summary>Treatment granted, the one decision a registration cannot do without.</summary>
+    internal static readonly ConsentSet TreatmentConsent = new(ConsentPolicy.CurrentVersion, [new(ConsentType.Treatment, null, true)]);
+
+    /// <summary>The same consent as an HTTP body.</summary>
+    internal static readonly object TreatmentConsentBody = new { policyVersion = ConsentPolicy.CurrentVersion, decisions = new object[] { new { type = "Treatment", granted = true } } };
+
     internal static readonly RegisterPatient IndiaBase = new()
     {
+        Consents = TreatmentConsent,
         FacilityId = Guid.NewGuid(), CountryCode = "IN", FullName = "Test Patient (synthetic)", DateOfBirth = new DateOnly(1980, 1, 1),
         SexAtBirth = SexAtBirth.Female, Mobile = "+91 90000 00002",
         EmergencyContact = new("Lakshmi Nair (synthetic)", RelationshipKind.Spouse, "+91 90000 00009"),

@@ -38,6 +38,8 @@ public sealed record RegisterPatient
     public ContactInput? EmergencyContact { get; init; }
     /// <summary>Required whenever the patient is under 18 on the registration day, in quick mode too (MDV-P1-020).</summary>
     public ContactInput? Guardian { get; init; }
+    /// <summary>Required for every registration: treatment granted plus the other decisions as receipts (MDV-P1-019).</summary>
+    public ConsentSet? Consents { get; init; }
     /// <summary>The desk's decision about the possible matches it was shown (MDV-P1-016). Required while any exist.</summary>
     public DuplicateResolution? Duplicates { get; init; }
 }

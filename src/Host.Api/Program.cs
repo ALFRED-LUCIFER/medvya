@@ -5,8 +5,12 @@ using Host.Api.Auth;
 using Host.Api.Context;
 using Host.Api.Invitations;
 using Host.Api.Middleware;
+using Host.Api.Notifications;
+using Medvya.Notifications.Application;
+using Medvya.Notifications.Infrastructure;
 using Host.Api.Onboarding;
 using Host.Api.Settings;
+using Host.Api.Staff;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.SignalR;
 using Medvya.Audit.Api;
@@ -38,7 +42,7 @@ builder.WebHost.ConfigureKestrel(k =>
 builder.AddStaffAuthentication();
 // Waiting-room TVs sign in with a display token, never a staff session (MDV-P1-031).
 builder.Services.AddAuthentication().AddQueueDisplay();
-builder.Services.AddAuthorizationBuilder().AddStaffPolicies().AddStaffAdminPolicy().AddQueueDisplayPolicy();
+builder.Services.AddAuthorizationBuilder().AddStaffPolicies().AddStaffAdminPolicy().AddQueueDisplayPolicy().AddOperationsPolicies(builder.Configuration);
 // Enums travel as names ("Receptionist"), never as numbers that shift when an enum changes.
 builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.Configure<SmtpOptions>(builder.Configuration.GetSection("Email:Smtp")).AddSingleton<IEmailSender, SmtpEmailSender>();
@@ -55,6 +59,8 @@ builder.Services.AddScoped<IRequestOrigin>(sp => sp.GetRequiredService<RequestCo
 if (builder.Configuration.GetConnectionString("Medvya") is { } sql)
 {
     builder.Services.AddAuditModule(sql).AddDeniedAccessAudit().AddTenancyModule(sql, builder.Configuration["Storage:ConnectionString"]).AddIdentityModule(sql).AddPatientsModule(sql).AddSchedulingModule(sql)
+        .AddNotificationsModule(sql, smsSink: builder.Environment.IsDevelopment() && builder.Configuration["Notifications:Sms:Provider"] == "Sink")
+        .AddScoped<IReminderConsent, PatientReminderConsent>() // after the module: replaces its deny-all default (MDV-P1-019)
         .AddLeadsModule(sql, builder.Configuration.GetSection("Leads:Email").Get<LeadsEmailOptions>() ?? new()).AddCapabilityPolicies();
     // shortcut: only Development has a column master key (the same local file as `pnpm dev:db`); the Azure Key Vault provider
     // arrives with MDV-P0-006, and until then encrypted identifiers cannot be read anywhere else (fail closed).
@@ -62,6 +68,11 @@ if (builder.Configuration.GetConnectionString("Medvya") is { } sql)
         LocalKeyStoreProvider.Register(() => LocalKeyStoreProvider.LoadOrCreate(builder.Configuration["ColumnEncryption:LocalKeyFile"]
             ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Medvya", "local-column-master-key.pem")));
 }
+builder.Services.Configure<NotificationOptions>(builder.Configuration.GetSection("Notifications"));
+// Reminder consent comes from the patient's consent receipts. Local runs may switch the check off explicitly; never outside Development.
+if (builder.Environment.IsDevelopment() && builder.Configuration.GetValue("Notifications:DevAllowAllConsent", false))
+    builder.Services.AddSingleton<IReminderConsent, DevAllowAllConsent>();
+builder.AddJobs(builder.Configuration.GetConnectionString("Medvya"));
 builder.Services.Configure<SchedulingOptions>(builder.Configuration.GetSection("Scheduling"));
 // Live board (MDV-P1-029): every hub call runs as the connection's signed-in user, with its session checked again.
 builder.Services.AddSchedulingRealtime().AddHubOptions<BoardHub>(o => o.AddFilter<HubRequestContext>());
@@ -117,10 +128,14 @@ app.MapGet("/health", () => Results.Ok(new { status = "ok", version = typeof(Pro
     .AllowAnonymous(); // public: deploy smoke tests
 app.MapStaffSession();
 app.MapSchedulingEndpoints();
+app.MapNotifications();
+app.UseJobs();
 app.MapPublicSite();
 app.MapInvitations();
 app.MapOnboarding();
 app.MapPracticeSettings();
+app.MapDoctors();
+app.MapStaff();
 app.MapQueueDisplaySession();
 app.MapPatientEndpoints();
 if (app.Environment.IsDevelopment() && app.Configuration["Authentication:Oidc:Authority"]?.EndsWith(DevIdentityProvider.Path, StringComparison.Ordinal) == true)

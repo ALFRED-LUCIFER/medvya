@@ -65,13 +65,14 @@ public sealed record RegisterRequest
     public ContactInput? EmergencyContact { get; init; }
     public ContactInput? Guardian { get; init; }
     public DuplicateResolution? Duplicates { get; init; }
+    public ConsentSet? Consents { get; init; }
 
     internal RegisterPatient ToCommand(Guid facilityId, string countryCode) => new()
     {
         FacilityId = facilityId, CountryCode = countryCode, Quick = Quick, FullName = FullName, ArabicName = ArabicName,
         DateOfBirth = DateOfBirth, AgeYears = AgeYears, SexAtBirth = SexAtBirth, GenderIdentity = GenderIdentity,
         PreferredLanguage = PreferredLanguage, Nationality = Nationality, Mobile = Mobile, AlternatePhone = AlternatePhone, Email = Email,
-        Identifiers = Identifiers, Address = Address, Payer = Payer, EmergencyContact = EmergencyContact, Guardian = Guardian, Duplicates = Duplicates,
+        Identifiers = Identifiers, Address = Address, Payer = Payer, EmergencyContact = EmergencyContact, Guardian = Guardian, Duplicates = Duplicates, Consents = Consents,
     };
 }
 
@@ -122,7 +123,24 @@ public static class PatientEndpoints
         patients.MapPost("/{patientId:guid}/completion", Complete)
             .RequireCapability(Capability.RegisterBookPatients, Access.Full)
             .AuditedByUseCase("patient.update", "patient", Purpose, patientRouteKey: "patientId");
+
+        // A changed decision is a new receipt; the old ones stay. Same facility rule as completion: another facility's patient is 404.
+        patients.MapPost("/{patientId:guid}/consents", ChangeConsents)
+            .RequireCapability(Capability.RegisterBookPatients, Access.Full)
+            .AuditedByUseCase("patient.consent.record", "patient", Purpose, patientRouteKey: "patientId");
         return app;
+    }
+
+    static async Task<IResult> ChangeConsents(Guid patientId, [FromBody] ConsentSet? request, [FromServices] IPatientConsents consents, CancellationToken ct)
+    {
+        try
+        {
+            return await consents.ChangeAsync(patientId, request!, ct) is { } decisions ? Results.Ok(new { decisions }) : Results.NotFound();
+        }
+        catch (PatientValidationException e)
+        {
+            return Invalid(e);
+        }
     }
 
     static async Task<IResult> DuplicateCheck([FromBody] DuplicateCheckRequest? request, [FromServices] IStaffAccess staff, [FromServices] IPatientRegistry registry, CancellationToken ct)

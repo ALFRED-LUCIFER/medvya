@@ -6,6 +6,8 @@ export type VisitType = 'FollowUp' | 'NewConsultation' | 'Procedure' | 'Telecons
 export type AppointmentState = 'Booked' | 'CheckedIn' | 'WithNurse' | 'ReadyForDoctor' | 'InConsult' | 'Billing' | 'Done' | 'Cancelled' | 'NoShow';
 
 export type Span = { start: string; end: string };
+/** A slot that has started (compared as instants, so the facility zone cannot change the answer); the server refuses it, so the screens do not offer it. */
+export const hasStarted = (slot: Span, now: number) => Date.parse(slot.start) < now;
 /** A free slot; `held` means someone else is booking it right now. */
 export type Slot = Span & { held: boolean };
 export type WorkingWindow = Span & { room: string | null };

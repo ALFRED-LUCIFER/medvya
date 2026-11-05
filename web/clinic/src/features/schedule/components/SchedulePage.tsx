@@ -27,6 +27,8 @@ type Props = {
   week: WeekDay[] | null;
   weekName: string;
   weekCalendar: string | null;
+  /** Current instant (ms), ticking each minute: a free slot before it has started and is not offered. */
+  now: number;
   /** The previous data is still on screen while the asked-for one loads. */
   updating: boolean;
   loading: boolean;
@@ -124,6 +126,6 @@ function Body(p: Props) {
     return p.week && p.weekCalendar
       ? <WeekView name={p.weekName} calendarId={p.weekCalendar} days={p.week} timeZone={p.timeZone} updating={p.updating} onOpenDay={p.onOpenDay} onOpen={p.actions.onOpen} />
       : <ShellMessage heading="h2" busy title={t('schedule.loading')} />;
-  if (p.view === 'list') return <AgendaView sections={p.agenda} timeZone={p.timeZone} updating={p.updating} onSlot={p.actions.onSlot} onOpen={p.actions.onOpen} moving={p.actions.moving} />;
-  return <DayGrid day={p.day} updating={p.updating} {...p.actions} />;
+  if (p.view === 'list') return <AgendaView sections={p.agenda} timeZone={p.timeZone} updating={p.updating} now={p.now} onSlot={p.actions.onSlot} onOpen={p.actions.onOpen} moving={p.actions.moving} />;
+  return <DayGrid day={p.day} updating={p.updating} now={p.now} {...p.actions} />;
 }

@@ -367,6 +367,8 @@
   "session.switchFacility": "सुविधा बदलें",
   "schedule.slot.book": "{name} के साथ {time} पर बुक करें",
   "schedule.slot.held": "बुक हो रहा है · {time}",
+  "schedule.slot.passed": "बीत गया",
+  "schedule.slot.passedAt": "{time} का स्लॉट बीत चुका है",
   "schedule.state.held": "बुक हो रहा है",
   "schedule.state.Booked": "बुक",
   "schedule.state.CheckedIn": "चेक-इन हुआ",

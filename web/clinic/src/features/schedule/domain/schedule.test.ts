@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, layoutDay, minSlotPx, stepDate, type ScheduleDay } from './schedule';
+import { addDays, hasStarted, layoutDay, minSlotPx, stepDate, type ScheduleDay } from './schedule';
 
 // 09:00–13:00 and 17:00–20:00 IST with 20-minute slots (UTC+05:30), as the API sends it.
 const day: ScheduleDay = {
@@ -50,5 +50,23 @@ describe('day layout', () => {
     expect(addDays('2026-10-19', 1)).toBe('2026-10-20');
     expect(addDays('2026-03-01', -1)).toBe('2026-02-28');
     expect(addDays('2026-12-31', 1)).toBe('2027-01-01');
+  });
+});
+
+describe('a slot that has started', () => {
+  // 14:00 in Kolkata (UTC+05:30) is 08:30Z; 14:00 in Dubai (UTC+04) is 10:00Z. Instants, so each facility's own 14:00 passes at its own moment.
+  const kolkata = { start: '2026-10-19T08:30:00Z', end: '2026-10-19T08:50:00Z' };
+  const dubai = { start: '2026-10-19T10:00:00Z', end: '2026-10-19T10:20:00Z' };
+  const at = (iso: string) => Date.parse(iso);
+
+  it('is bookable until its start instant, then not', () => {
+    expect(hasStarted(kolkata, at('2026-10-19T08:29:59Z'))).toBe(false);
+    expect(hasStarted(kolkata, at('2026-10-19T08:30:01Z'))).toBe(true);
+  });
+
+  it('follows the facility zone, whatever zone the device is in', () => {
+    const now = at('2026-10-19T09:00:00Z'); // 14:30 in Kolkata, 13:00 in Dubai
+    expect(hasStarted(kolkata, now)).toBe(true);
+    expect(hasStarted(dubai, now)).toBe(false);
   });
 });

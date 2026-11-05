@@ -175,11 +175,12 @@ public class BillingNumberingTests(SqlServerFixture sql) : IClassFixture<SqlServ
     public async Task NoColumnIsFloatingPointOrDecimal()
     {
         // AGENTS.md 3.4, database half of FloatingPointMoneyTests: every module's migrations have run in the fixture.
+        // The hangfire schema is third-party job storage (its sorted-set Score is a float, not money); every Medvya schema is checked.
         await using var db = sql.Billing(null);
         var columns = await db.Database.SqlQuery<string>($"""
             SELECT SCHEMA_NAME(t.schema_id) + '.' + t.name + '.' + c.name AS Value
             FROM sys.columns c JOIN sys.tables t ON t.object_id = c.object_id JOIN sys.types ty ON ty.user_type_id = c.user_type_id
-            WHERE t.is_ms_shipped = 0 AND ty.name IN ('float', 'real', 'decimal', 'numeric', 'money', 'smallmoney')
+            WHERE t.is_ms_shipped = 0 AND SCHEMA_NAME(t.schema_id) <> 'hangfire' AND ty.name IN ('float', 'real', 'decimal', 'numeric', 'money', 'smallmoney')
             """).ToListAsync();
         Assert.Empty(columns);
         Assert.Contains("NextNumber", await db.Database.SqlQuery<string>($"SELECT name AS Value FROM sys.columns WHERE object_id = OBJECT_ID(N'billing.DocSequences')").ToListAsync());

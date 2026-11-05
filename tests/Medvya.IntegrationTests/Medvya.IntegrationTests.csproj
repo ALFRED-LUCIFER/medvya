@@ -32,6 +32,7 @@
     <ProjectReference Include="..\..\src\Modules\Notifications\Medvya.Notifications.Infrastructure\Medvya.Notifications.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\Modules\Audit\Medvya.Audit.Api\Medvya.Audit.Api.csproj" />
     <ProjectReference Include="..\..\src\Modules\Tenancy\Medvya.Tenancy.Api\Medvya.Tenancy.Api.csproj" />
+    <ProjectReference Include="..\..\tools\db-migrate\Medvya.DbMigrate.csproj" />
     <ProjectReference Include="..\..\tools\synthetic-data-generator\Medvya.SyntheticData.csproj" />
   </ItemGroup>
 

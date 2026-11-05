@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addressLines, asSearchError, pageCount, toQuery } from './directory';
+import { addressLines, asSearchError, missingParts, pageCount, toQuery } from './directory';
 
 describe('patient directory rules', () => {
   it('treats a blank search as the directory list and trims the rest', () => {
@@ -20,5 +20,13 @@ describe('patient directory rules', () => {
 
   it('drops empty address parts', () => {
     expect(addressLines({ line1: 'Villa 1 (synthetic)', line2: 'Al Reem', city: null, region: 'AUH' })).toEqual(['Villa 1 (synthetic)', 'Al Reem', 'AUH']);
+  });
+});
+
+describe('missing registration parts', () => {
+  it('lists only what was not entered, in the order address, payer, emergency contact', () => {
+    expect(missingParts({ address: null, payer: null, emergencyContact: null })).toEqual(['address', 'payer', 'emergencyContact']);
+    expect(missingParts({ address: { line1: 'x' }, payer: null, emergencyContact: { name: 'x' } })).toEqual(['payer']);
+    expect(missingParts({ address: {}, payer: {}, emergencyContact: {} })).toEqual([]);
   });
 });

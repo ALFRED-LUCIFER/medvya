@@ -25,7 +25,7 @@ function Record({ patientId, canReveal }: { patientId: string; canReveal: boolea
     completePath={canReveal ? completePath(patientId) : null} />;
 }
 
-type RegistrationLinks = { country: Country; actorName: string; bookPath: string | null; checkInPath: string | null };
+type RegistrationLinks = { country: Country; actorName: string; timeZone?: string; bookPath: string | null; checkInPath: string | null };
 
 /** ?mode=quick opens quick registration (the busy desk, walk-ins); without it, the full flow. The mode is not patient data. */
 export function RegistrationRoute(links: RegistrationLinks) {

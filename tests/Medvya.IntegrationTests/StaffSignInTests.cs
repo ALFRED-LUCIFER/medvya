@@ -54,6 +54,17 @@ public sealed class StaffSignInTests(SqlServerFixture sql) : IClassFixture<SqlSe
         return await browser.GetAsync(authorize.Headers.Location);
     }
 
+    // Behind App Service the app sees http; the provider must still be sent the registered https address.
+    [Fact]
+    public async Task SignInSendsTheHttpsRedirectAddressWhenTheProxyTerminatedTls()
+    {
+        using var browser = factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("http://localhost"), AllowAutoRedirect = false });
+        using var request = new HttpRequestMessage(HttpMethod.Get, new Uri("/bff/login", UriKind.Relative));
+        request.Headers.Add("X-Forwarded-Proto", "https");
+        var challenge = await browser.SendAsync(request);
+        Assert.Contains("redirect_uri=https%3A%2F%2Flocalhost%2Fsignin-oidc", challenge.Headers.Location!.Query, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task SignedInStaffGetAnHttpOnlySessionCookieAndNoTokens()
     {

@@ -48,8 +48,11 @@ public sealed class DoctorTests(SqlServerFixture sql) : IClassFixture<SqlServerF
     sealed class Outbox : IEmailSender
     {
         public List<EmailMessage> Sent { get; } = [];
+        /// <summary>Simulates the mail service refusing the message.</summary>
+        public bool Down { get; set; }
         public Task SendAsync(EmailMessage message, CancellationToken cancellationToken = default)
         {
+            if (Down) throw new InvalidOperationException("mail server down");
             lock (Sent) Sent.Add(message);
             return Task.CompletedTask;
         }
@@ -128,6 +131,27 @@ public sealed class DoctorTests(SqlServerFixture sql) : IClassFixture<SqlServerF
         Assert.Contains("/invite/", Assert.Single(mail.Sent, m => m.To == Email).Body);
         await using var audit = sql.Audit(h.Tenant);
         Assert.Single(await audit.Events.Where(e => e.Action == "invitation.create").ToListAsync());
+    }
+
+    /// <summary>Mutation check: audit before the email again, or let the failure through as a bare 500, and this fails.</summary>
+    [Fact]
+    public async Task WhenTheInvitationEmailCannotBeSentNothingIsSavedOrAuditedAndTheAnswerSaysSo()
+    {
+        mail.Down = true;
+        try
+        {
+            using var admin = Client(Role.PracticeAdmin);
+            var response = await admin.PostAsJsonAsync("/v1/settings/doctors", Body(email: "nobody@example.test"));
+            Assert.Equal(HttpStatusCode.BadGateway, response.StatusCode);
+            Assert.Equal("email_failed", (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString());
+        }
+        finally { mail.Down = false; }
+
+        await using var db = sql.Context(h.Tenant);
+        Assert.Empty(await db.Invitations.Where(i => i.Email == "nobody@example.test").ToListAsync());
+        Assert.Empty(await db.Memberships.Where(m => m.Role == Role.HospitalDoctor && m.Status == MembershipStatus.Invited).ToListAsync());
+        await using var audit = sql.Audit(h.Tenant);
+        Assert.Empty(await audit.Events.Where(e => e.Action == "invitation.create").ToListAsync()); // no row claiming something was created
     }
 
     [Theory]

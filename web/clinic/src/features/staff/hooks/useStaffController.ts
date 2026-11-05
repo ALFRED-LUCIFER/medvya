@@ -9,6 +9,9 @@ import { addStaff, fetchRoles, fetchStaff, offboardStaff, resendInvitation, revo
 
 
 /** Settings → Staff: the staff table and the "Add staff member" steps (role → location → permissions → invite). */
+/** The invitation email could not be sent; the server saved nothing (502 with this code). */
+const sendFailed = (e: unknown) => e instanceof ApiError && e.code === 'email_failed';
+
 export function useStaffController(defaultFacilityId: string) {
   const queryClient = useQueryClient();
   const staff = useQuery({ queryKey: ['staff', 'list'], queryFn: fetchStaff });
@@ -60,9 +63,10 @@ export function useStaffController(defaultFacilityId: string) {
     canContinue,
     notice,
     adding: add.isPending,
-    addFailed: add.isError,
+    addFailed: add.isError && !sendFailed(add.error),
+    emailFailed: sendFailed(add.error) || sendFailed(resend.error),
     working: resend.isPending || revoke.isPending,
-    rowFailed: resend.isError || revoke.isError,
+    rowFailed: (resend.isError && !sendFailed(resend.error)) || revoke.isError,
     onOpen: () => { setNotice(null); setStep('role'); },
     onChoice: setChoice,
     onNext: () => void next(),

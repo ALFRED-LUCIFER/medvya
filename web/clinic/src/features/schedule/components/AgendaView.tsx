@@ -1,15 +1,15 @@
 import { useI18n } from '@medvya/i18n';
 import { Button, cn, scheduleLooks } from '@medvya/ui';
-import type { CalendarKind, ScheduleColumn } from '../domain/schedule';
+import { hasStarted, type CalendarKind, type ScheduleColumn } from '../domain/schedule';
 import type { AgendaEntry } from '../domain/views';
 import type { GridActions } from './DayGrid';
 import { hatched } from './looks';
-import { AppointmentChip, OpenableChip } from './parts';
+import { AppointmentChip, OpenableChip, PastSlot } from './parts';
 
-type Props = { sections: { column: ScheduleColumn; entries: AgendaEntry[] }[]; timeZone: string; updating: boolean } & Pick<GridActions, 'onSlot' | 'onOpen' | 'moving'>;
+type Props = { sections: { column: ScheduleColumn; entries: AgendaEntry[] }[]; timeZone: string; updating: boolean; now: number } & Pick<GridActions, 'onSlot' | 'onOpen' | 'moving'>;
 
 /** List view (agenda): the day per doctor and resource in time order. The default on phones; also prints cleanly. */
-export default function AgendaView({ sections, timeZone, updating, ...actions }: Props) {
+export default function AgendaView({ sections, timeZone, updating, now, ...actions }: Props) {
   const { t, formatTime } = useI18n();
   const time = (iso: string) => formatTime(new Date(iso), timeZone);
   return (
@@ -24,7 +24,7 @@ export default function AgendaView({ sections, timeZone, updating, ...actions }:
               {entries.map(e => (
                 <li key={`${e.kind}-${e.start}`} className="flex items-center gap-3 px-4 py-1.5">
                   <span className="w-12 shrink-0 font-mono text-xs text-muted-foreground">{time(e.start)}</span>
-                  <Entry entry={e} name={name} calendarId={column.calendarId} kind={column.calendarKind} time={time} {...actions} />
+                  <Entry entry={e} name={name} calendarId={column.calendarId} kind={column.calendarKind} time={time} now={now} {...actions} />
                 </li>
               ))}
             </ul>
@@ -35,7 +35,7 @@ export default function AgendaView({ sections, timeZone, updating, ...actions }:
   );
 }
 
-function Entry({ entry: e, name, calendarId, kind, time, onSlot, onOpen, moving }: { entry: AgendaEntry; name: string; calendarId: string; kind: CalendarKind; time: (iso: string) => string } & Pick<GridActions, 'onSlot' | 'onOpen' | 'moving'>) {
+function Entry({ entry: e, name, calendarId, kind, time, now, onSlot, onOpen, moving }: { entry: AgendaEntry; name: string; calendarId: string; kind: CalendarKind; time: (iso: string) => string; now: number } & Pick<GridActions, 'onSlot' | 'onOpen' | 'moving'>) {
   const { t } = useI18n();
   if (e.kind === 'appointment')
     return onOpen
@@ -50,6 +50,8 @@ function Entry({ entry: e, name, calendarId, kind, time, onSlot, onOpen, moving 
       </span>
     );
   }
+  if (hasStarted(e, now))
+    return <PastSlot time={time(e.start)} className={cn('min-h-9 flex-1 rounded-md border px-2', hatched)} />;
   if (e.held) {
     const look = scheduleLooks.held, Icon = look.icon;
     return <span className="flex min-h-9 flex-1 items-center gap-1.5 rounded-md px-2 text-xs font-bold" style={{ backgroundColor: look.bg, color: look.fg }}><Icon aria-hidden className="size-3.5" />{t('schedule.slot.held', { time: time(e.start) })}</span>;

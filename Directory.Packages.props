@@ -7,7 +7,7 @@
   <ItemGroup>
     <!-- Every NuGet version lives here; project files reference packages without versions. -->
     <PackageVersion Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.10.0" />
-    <PackageVersion Include="Azure.Storage.Blobs" Version="12.27.0" />
+    <PackageVersion Include="Azure.Storage.Blobs" Version="12.30.1" />
     <!-- Always Encrypted column master key in Key Vault (MDV-P0-009). 7.x needs SqlClient 7. -->
     <PackageVersion Include="Microsoft.Data.SqlClient.AlwaysEncrypted.AzureKeyVaultProvider" Version="6.1.2" />
     <PackageVersion Include="Azure.Identity" Version="1.21.0" />
@@ -25,7 +25,7 @@
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.14" />
     <!-- Tests only: a real SignalR client against the test host (board hub authorisation and delivery, MDV-P1-029). -->
     <PackageVersion Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.14" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.13" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.14" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.14" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
     <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="1.20.1" />

@@ -1,4 +1,5 @@
 using Medvya.Audit.Api;
+using Medvya.Audit.Application;
 using Medvya.Scheduling.Application;
 using Medvya.Tenancy.Api;
 using Medvya.Tenancy.Domain;
@@ -83,7 +84,7 @@ public static class SchedulingEndpoints
         var frontDesk = app.MapGroup("/v1/front-desk").RequireAuthorization();
         frontDesk.MapGet("/board", (Guid? facilityId, [FromServices] IFrontDeskService service, CancellationToken ct) =>
                 service.GetBoardAsync(facilityId ?? Guid.Empty, ct))
-            .AuditedWithErrors("front_desk.board.read", "appointment");
+            .AuditedWithErrors("front_desk.board.read", "appointment", window: AuditWindow.Board); // a board refetches on every live update
         // Clinic overview (D-04, MDV-P1-030): doctors' load and delay, the shared waiting room.
         frontDesk.MapGet("/overview", (Guid? facilityId, [FromServices] IFrontDeskService service, CancellationToken ct) =>
                 service.GetOverviewAsync(facilityId ?? Guid.Empty, ct))
@@ -119,8 +120,8 @@ public static class SchedulingEndpoints
     /// the caller gets (a refused request is Denied, an unknown appointment NotFound). A group filter would run outside the
     /// audit filter, which would then see an exception and record a refused request as Allowed.
     /// </summary>
-    static RouteHandlerBuilder AuditedWithErrors(this RouteHandlerBuilder endpoint, string action, string resourceType, string purpose = "treatment", string? patientRouteKey = null) =>
-        endpoint.Audited(action, resourceType, purpose, patientRouteKey).AddEndpointFilter(MapErrors);
+    static RouteHandlerBuilder AuditedWithErrors(this RouteHandlerBuilder endpoint, string action, string resourceType, string purpose = "treatment", string? patientRouteKey = null, TimeSpan? window = null) =>
+        endpoint.Audited(action, resourceType, purpose, patientRouteKey, window).AddEndpointFilter(MapErrors);
 
     /// <summary>
     /// A write: the use case writes the allowed event in the transaction of its change (<see cref="SchedulingAudit"/> codes);

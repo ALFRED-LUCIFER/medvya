@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
+import type { Missing } from '../../patients/domain/directory';
 import { Link } from 'react-router';
 import { Check, Loader2, UserSearch } from 'lucide-react';
 import { useI18n, type Country } from '@medvya/i18n';
@@ -45,6 +46,10 @@ type Props = {
   result: RegistrationResult | null;
   registeredName: string;
   actorName: string;
+  /** Facility IANA zone for the confirmation time; undefined falls back to the browser's. */
+  timeZone?: string;
+  /** Address, payer and emergency contact not entered, as sent. */
+  missing: Missing[];
   onRegisterAnother: () => void;
   recordPath: (id: string) => string;
   bookPath: string | null;
@@ -70,7 +75,8 @@ export default function Registration(p: Props) {
 
   if (p.result)
     return <RegistrationSuccess result={p.result} name={p.registeredName} actorName={p.actorName} onRegisterAnother={p.onRegisterAnother}
-      recordPath={p.recordPath(p.result.patientId)} bookPath={p.bookPath} checkInPath={p.checkInPath} />;
+      recordPath={p.recordPath(p.result.patientId)} bookPath={p.bookPath} checkInPath={p.checkInPath}
+      quick={p.quick} missing={p.missing} timeZone={p.timeZone} />;
   if (p.failure === 'forbidden') return <PatientsMessage title={t('err.403')} body={t('registration.forbidden.body')} />;
 
   const { register, control, formState: { errors } } = p.form;

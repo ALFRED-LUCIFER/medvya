@@ -19,7 +19,7 @@ public sealed record CalendarDay(IReadOnlyList<WorkingWindow> Hours, IReadOnlyLi
 
 /// <summary>NotWorking: outside the template's hours (incl. closed days). Break: a template break. NoSchedule: no template yet.</summary>
 [JsonConverter(typeof(JsonStringEnumConverter<UnavailableReason>))]
-public enum UnavailableReason { NotWorking, Break, NoSchedule, Closed }
+public enum UnavailableReason { NotWorking, Break, NoSchedule, Closed, Leave }
 
 /// <summary>Time shown as unavailable (hatched) with its reason; never bookable.</summary>
 public sealed record UnavailableBlock(DateTimeOffset Start, DateTimeOffset End, UnavailableReason Reason, string? Label);
@@ -72,6 +72,27 @@ public static class ScheduleRules
         SchedulingValidationException.ThrowIfAny(errors);
     }
 
+    /// <summary>Checks an exception before it is saved: a leave range, or one date with a 5-minute window (an extra session must not overlap hours already worked).</summary>
+    public static void Validate(ScheduleAdjustment x, ScheduleTemplate? template)
+    {
+        var errors = new List<ValidationError>();
+        if (!Enum.IsDefined(x.Kind)) errors.Add(new("kind", "invalid"));
+        if (x.ToDate < x.FromDate) errors.Add(new("toDate", "range"));
+        if (x.ToDate.DayNumber - x.FromDate.DayNumber > MaxLeaveDays) errors.Add(new("toDate", "too_long"));
+        if (x.Reason?.Length > MaxLabel) errors.Add(new("reason", "too_long"));
+        if (x.Kind == ExceptionKind.Leave)
+        {
+            if (x.Start is not null || x.End is not null) errors.Add(new("start", "not_allowed"));
+        }
+        else if (x.FromDate != x.ToDate) errors.Add(new("toDate", "single_day"));
+        else if (x.Start is not { } s || x.End is not { } e || s >= e) errors.Add(new("start", "range"));
+        else if (!OnFiveMinutes(s) || !OnFiveMinutes(e)) errors.Add(new("start", "five_minutes"));
+        else if (x.Kind == ExceptionKind.ExtraSession && template?.Hours.Any(h => h.Weekday == x.FromDate.DayOfWeek && h.Start < e && s < h.End) == true) errors.Add(new("start", "overlap"));
+        SchedulingValidationException.ThrowIfAny(errors);
+    }
+
+    public const int MaxLeaveDays = 60; // shortcut: a longer leave is saved in parts, because each day is locked while visits move; raise with a set-based move
+
     static bool OnFiveMinutes(TimeOnly t) => t.Minute % 5 == 0 && t.Second == 0 && t.Millisecond == 0;
 
     /// <summary>Slots a visit of this type takes: its configured length in slots, else one slot.</summary>
@@ -82,12 +103,26 @@ public static class ScheduleRules
     /// The calendar's day in the facility time zone. Slots run from each session start in steps of the slot length and restart
     /// after a break, so a break never wastes part of a slot; a final partial slot is not offered.
     /// </summary>
-    public static CalendarDay Day(ScheduleTemplate t, DateOnly date, TimeZoneInfo zone)
+    public static CalendarDay Day(ScheduleTemplate t, DateOnly date, TimeZoneInfo zone, IEnumerable<ScheduleAdjustment>? exceptions = null)
     {
-        var hours = t.Hours.Where(h => h.Weekday == date.DayOfWeek).OrderBy(h => h.Start)
+        var today = (exceptions ?? []).Where(x => x.FromDate <= date && date <= x.ToDate).ToList();
+        var sessions = t.Hours.Where(h => h.Weekday == date.DayOfWeek).ToList();
+        var pauses = t.Breaks.Where(b => b.Weekday == date.DayOfWeek).ToList();
+        if (today.Exists(x => x.Kind == ExceptionKind.Leave)) (sessions, pauses) = ([], []);
+        foreach (var x in today.Where(x => x.Start is not null && x.End is not null))
+        {
+            var (from, to) = (x.Start!.Value, x.End!.Value);
+            if (x.Kind == ExceptionKind.ExtraSession) sessions.Add(new WorkingHours { Weekday = date.DayOfWeek, Start = from, End = to });
+            else // shortened day: keep only what falls inside the window
+            {
+                sessions = [.. sessions.Select(h => h with { Start = h.Start > from ? h.Start : from, End = h.End < to ? h.End : to }).Where(h => h.Start < h.End)];
+                pauses = [.. pauses.Select(b => b with { Start = b.Start > from ? b.Start : from, End = b.End < to ? b.End : to }).Where(b => b.Start < b.End)];
+            }
+        }
+        var hours = sessions.OrderBy(h => h.Start)
             .Select(h => new WorkingWindow(Instant(date, h.Start, zone), Instant(date, h.End, zone), h.Room))
             .Where(w => w.Start < w.End).ToList(); // a session entirely inside a DST gap has no time
-        var breaks = t.Breaks.Where(b => b.Weekday == date.DayOfWeek).OrderBy(b => b.Start)
+        var breaks = pauses.OrderBy(b => b.Start)
             .Select(b => new BreakWindow(Instant(date, b.Start, zone), Instant(date, b.End, zone), b.Label))
             .Where(b => b.Start < b.End).ToList();
 

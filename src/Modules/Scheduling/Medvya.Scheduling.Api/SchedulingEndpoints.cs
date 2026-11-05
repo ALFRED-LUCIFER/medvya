@@ -36,6 +36,14 @@ public static class SchedulingEndpoints
         schedule.MapPut("/templates", (SaveTemplate command, [FromServices] IScheduleService service, CancellationToken ct) => service.SaveTemplateAsync(command, ct))
             .AuditedWriteWithErrors(SchedulingAudit.TemplateUpdate, SchedulingAudit.TemplateResource, SchedulingAudit.Operations);
 
+        schedule.MapGet("/exceptions", (Guid? facilityId, Guid? calendarId, [FromServices] IScheduleExceptionService service, CancellationToken ct) =>
+                service.ListAsync(facilityId ?? Guid.Empty, calendarId, ct))
+            .AuditedWithErrors("schedule.exception.read", SchedulingAudit.ExceptionResource, SchedulingAudit.Operations);
+
+        // Leave and one-off sessions (MDV-P1-012): affected visits need an action each, else 409 "actions_required" with the list and nothing is saved.
+        schedule.MapPost("/exceptions", (SaveAdjustment command, [FromServices] IScheduleExceptionService service, CancellationToken ct) => service.SaveAsync(command, ct))
+            .AuditedWriteWithErrors(SchedulingAudit.ExceptionCreate, SchedulingAudit.ExceptionResource, SchedulingAudit.Operations);
+
         schedule.MapPost("/resources", (AddResource command, [FromServices] IScheduleService service, CancellationToken ct) => service.AddResourceAsync(command, ct))
             .AuditedWriteWithErrors(SchedulingAudit.ResourceCreate, SchedulingAudit.ResourceResource, SchedulingAudit.Operations);
 
@@ -144,6 +152,11 @@ public static class SchedulingEndpoints
         catch (SchedulingAccessDeniedException)
         {
             return Results.Problem(statusCode: StatusCodes.Status403Forbidden, title: "No access at this facility");
+        }
+        catch (ExceptionActionsRequiredException e)
+        {
+            return Results.Problem(statusCode: StatusCodes.Status409Conflict, title: "Affected appointments need an action",
+                extensions: new Dictionary<string, object?> { ["code"] = "actions_required", ["affected"] = e.Affected });
         }
         catch (SlotUnavailableException e)
         {

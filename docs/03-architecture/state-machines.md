@@ -8,7 +8,8 @@ Every clinically meaningful state is explicit, stored and shown with an icon and
 BOOKED ──check-in──▶ CHECKED_IN ──▶ WITH_NURSE ──▶ READY_FOR_DOCTOR ──▶ IN_CONSULT ──▶ BILLING ──▶ DONE
   │  ╰─reschedule─▶ BOOKED (new slot, history kept)
   ├─cancel(reason)─▶ CANCELLED
-  ╰─mark no-show──▶ NO_SHOW ──offer rebook──▶ (new BOOKED)
+  ├─mark no-show──▶ NO_SHOW ──offer rebook──▶ (new BOOKED)
+  ╰─leave / shortened day─▶ NEEDS_REBOOKING ──reschedule──▶ BOOKED   (or cancel)
 WALK_IN ──▶ CHECKED_IN
 ```
 - Check-in is only allowed from BOOKED, on the visit's facility-local day.
@@ -16,6 +17,7 @@ WALK_IN ──▶ CHECKED_IN
 - Reschedule is only allowed from BOOKED, to a free slot of a calendar of the same kind. History is kept: the old slot, the new slot, who and when.
 - Cancel needs a reason from a short list, and Other needs a note. It is allowed from BOOKED, or from CHECKED_IN when the patient leaves before being seen. From WITH_NURSE on, the visit is finished on the board, and a completed, cancelled or no-show visit cannot be cancelled. This is narrower than the design's "not when Completed" (MDV-P1-024).
 - Reschedule, cancel and no-show free the visit's slots in the same transaction, under the doctor-day lock of every day they touch (MDV-P1-022, MDV-P1-024).
+- Leave or a shortened day (MDV-P1-012) moves each affected BOOKED visit to NEEDS_REBOOKING, freeing its slots in the same transaction as the leave. Saving needs an action for every affected visit: offer (AppointmentNeedsRebooking.v1 makes the patient's rebooking message, clinic, date and time only) or manual (no message). Reschedule and cancel are allowed from NEEDS_REBOOKING; the visit shows in the board's "needs rebooking" section.
 - Statuses visible to reception are **nonclinical**.
 - Call in (READY_FOR_DOCTOR → IN_CONSULT) records the room of the doctor's session from the schedule template (MDV-P1-029).
 - Every committed move is pushed to the facility's open boards as ids and state only (SignalR, MDV-P1-029); boards refetch the board.

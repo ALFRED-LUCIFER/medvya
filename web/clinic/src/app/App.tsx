@@ -34,6 +34,7 @@ const PatientRecordRoute = lazy(() => import('./PatientRoutes').then(m => ({ def
 const RegistrationRoute = lazy(() => import('./PatientRoutes').then(m => ({ default: m.RegistrationRoute })));
 // Walk-in (MDV-P1-025) brings the patient picker and booking lists: loaded when opened, never at first paint.
 const WalkInRoute = lazy(() => import('./WalkInRoute'));
+const AdjustmentsRoute = lazy(() => import('./AdjustmentsRoute'));
 const CompleteRegistrationRoute = lazy(() => import('./PatientRoutes').then(m => ({ default: m.CompleteRegistrationRoute })));
 
 type Props = { locale: Locale; onLocaleChange: (l: Locale) => void };
@@ -65,6 +66,8 @@ export default function App({ locale, onLocaleChange }: Props) {
   // Walk-in (MDV-P1-025) books and checks in: Register / book patients and Check-in & queue, both at Full.
   const walkInPath = pathOf('frontDesk') && active?.capabilities.CheckInQueue === 'Full' && active.capabilities.RegisterBookPatients === 'Full'
     ? `${pathOf('frontDesk')}/walk-in` : null;
+  // Leave and schedule exceptions (MDV-P1-012) change who can be booked: Register / book patients at Full.
+  const leavePath = pathOf('schedule') && active?.capabilities.RegisterBookPatients === 'Full' ? `${pathOf('schedule')}/leave` : null;
   const registration = <RegistrationRoute country={country} actorName={shell.displayName ?? ''} timeZone={active?.timeZone} bookPath={pathOf('schedule')} checkInPath={walkInPath} />;
 
   // F-05a: an ended session replaces every screen; signing in again comes back to this route.
@@ -94,7 +97,7 @@ export default function App({ locale, onLocaleChange }: Props) {
           <Route index element={first ? <Navigate to={first.path} replace /> : <ShellMessage title={t('shell.noScreens.title')} body={t('shell.noScreens.body')} />} />
           {shell.items.map(i => <Route key={i.id} path={i.path} element={i.id === 'schedule'
             ? <ScheduleRoute facilityId={active.facilityId} userId={shell.session?.user.id ?? ''} canBook={active.capabilities.RegisterBookPatients === 'Full'}
-                canCheckIn={active.capabilities.CheckInQueue === 'Full'} registerPath={registerPath} />
+                canCheckIn={active.capabilities.CheckInQueue === 'Full'} registerPath={registerPath} leavePath={leavePath} />
             : i.id === 'register' ? registration
             : i.id === 'frontDesk'
             ? <FrontDeskRoute facilityId={active.facilityId} online={online} canMove={active.capabilities.CheckInQueue === 'Full'}
@@ -103,6 +106,7 @@ export default function App({ locale, onLocaleChange }: Props) {
             // Until the patient chart exists (phase 2) the Patients menu opens the patient directory instead of a placeholder.
             : i.id === 'patients' && searchPath ? <Navigate to={searchPath} replace />
             : <ComingSoon title={t(`nav.${i.id}`)} phase={i.phase} />} />)}
+          {leavePath && <Route path={leavePath} element={<AdjustmentsRoute facilityId={active.facilityId} schedulePath={pathOf('schedule')!} boardPath={pathOf('frontDesk')} />} />}
           {walkInPath && registerPath &&
             <Route path={walkInPath} element={<WalkInRoute facilityId={active.facilityId} boardPath={pathOf('frontDesk')!} registerPath={`${registerPath}?mode=quick`} />} />}
           {/* shortcut: reachable by URL only; the Staff screen and its navigation entry come with F-10 (MDV-P1-008). */}

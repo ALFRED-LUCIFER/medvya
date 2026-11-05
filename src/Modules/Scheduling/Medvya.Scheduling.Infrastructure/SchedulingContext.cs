@@ -64,6 +64,11 @@ public sealed class SchedulingContext(
     public Task<IReadOnlyDictionary<DateOnly, string>> ClosuresAsync(Guid facilityId, DateOnly first, DateOnly last, CancellationToken cancellationToken) =>
         facilities.ClosuresAsync(facilityId, first, last, cancellationToken);
 
+    /// <summary>Leave and one-off sessions whose dates meet [first, last], optionally of one calendar (MDV-P1-012).</summary>
+    public Task<List<ScheduleAdjustment>> ExceptionsAsync(Guid facilityId, DateOnly first, DateOnly last, Guid? calendarId, CancellationToken cancellationToken) =>
+        db.Exceptions.AsNoTracking().Where(x => x.FacilityId == facilityId && x.FromDate <= last && x.ToDate >= first && (calendarId == null || x.CalendarId == calendarId))
+            .ToListAsync(cancellationToken);
+
     /// <summary>Doctors first, then resources, each by name: the column order of the day view.</summary>
     public async Task<List<Calendar>> CalendarsAsync(Guid facilityId, CancellationToken cancellationToken)
     {

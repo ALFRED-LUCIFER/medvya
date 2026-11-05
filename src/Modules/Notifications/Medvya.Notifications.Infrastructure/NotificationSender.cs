@@ -50,7 +50,7 @@ public sealed partial class NotificationSender(
         var o = options.Value;
         try
         {
-            if (n.Kind != NotificationKind.Cancelled && now >= n.AppointmentStart) { await EndAsync(n, now, NotificationStatus.Suppressed, "visit_started", ct); return; }
+            if (n.Kind is not (NotificationKind.Cancelled or NotificationKind.NeedsRebooking) && now >= n.AppointmentStart) { await EndAsync(n, now, NotificationStatus.Suppressed, "visit_started", ct); return; }
             if (!await consent.AllowsAsync(n.PatientId, n.Channel, ct)) { await EndAsync(n, now, NotificationStatus.Suppressed, "no_consent", ct); return; }
             var contact = await contacts.FindAsync(n.PatientId, ct);
             var address = contact is null ? null : n.Channel == NotificationChannel.Email ? contact.Email : contact.Mobile;

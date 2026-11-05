@@ -114,6 +114,8 @@ internal sealed class SchedulingHarness(SqlServerFixture sql)
 
     public IBookingService Booking(Guid user, Guid? inTenant = null) => Scope(user, inTenant).GetRequiredService<IBookingService>();
 
+    public IScheduleExceptionService Adjustments(Guid user, Guid? inTenant = null) => Scope(user, inTenant).GetRequiredService<IScheduleExceptionService>();
+
     public IFrontDeskService FrontDesk(Guid user, Guid? inTenant = null) => Scope(user, inTenant).GetRequiredService<IFrontDeskService>();
 
     /// <summary>Reception books Dr. Rao for <paramref name="patient"/> at a Monday wall-clock time, or at <paramref name="start"/>.</summary>

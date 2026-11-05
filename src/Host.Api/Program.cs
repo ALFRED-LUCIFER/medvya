@@ -63,11 +63,13 @@ if (builder.Configuration.GetConnectionString("Medvya") is { } sql)
         .AddNotificationsModule(sql, smsSink: builder.Environment.IsDevelopment() && builder.Configuration["Notifications:Sms:Provider"] == "Sink")
         .AddScoped<IReminderConsent, PatientReminderConsent>() // after the module: replaces its deny-all default (MDV-P1-019)
         .AddLeadsModule(sql, builder.Configuration.GetSection("Leads:Email").Get<LeadsEmailOptions>() ?? new()).AddCapabilityPolicies();
-    // shortcut: only Development has a column master key (the same local file as `pnpm dev:db`); the Azure Key Vault provider
-    // arrives with MDV-P0-006, and until then encrypted identifiers cannot be read anywhere else (fail closed).
+    // Development: a local file key. Anywhere else the column master key is a Key Vault key read with the app's managed identity;
+    // without ColumnEncryption:KeyVaultKeyUrl encrypted identifiers cannot be read (fail closed).
     if (builder.Environment.IsDevelopment())
         LocalKeyStoreProvider.Register(() => LocalKeyStoreProvider.LoadOrCreate(builder.Configuration["ColumnEncryption:LocalKeyFile"]
             ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Medvya", "local-column-master-key.pem")));
+    else if (!string.IsNullOrEmpty(builder.Configuration["ColumnEncryption:KeyVaultKeyUrl"]))
+        ColumnEncryption.RegisterKeyVault(new Azure.Identity.ManagedIdentityCredential(Azure.Identity.ManagedIdentityId.SystemAssigned));
 }
 builder.Services.Configure<NotificationOptions>(builder.Configuration.GetSection("Notifications"));
 // Reminder consent comes from the patient's consent receipts. Local runs may switch the check off explicitly; never outside Development.

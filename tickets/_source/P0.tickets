@@ -211,7 +211,8 @@ status: Partly done
 progress:
 - Merged [PR #36](https://github.com/ALFRED-LUCIFER/medvya/pull/36): `infra/sql/roles.sql` (idempotent, run by the admin before migrations) defines `medvya_migrator` (DDL only), `medvya_app` (= module roles, no DDL), `medvya_tenancy` / `medvya_audit` (own schema only; audit INSERT+SELECT) and `medvya_reporting` (read-only)
 - Tested on SQL Server (Testcontainers): app cannot CREATE/ALTER/DROP, all migrations run as the migrator, module roles cannot read each other's schema, audit cannot UPDATE/DELETE, reporting cannot write; 7 mutations each caught. Documented in `docs/03-architecture/database-security.md`
-- Left: Entra-only auth, managed identities mapped to roles, passwordless `Encrypt=Strict` connection strings, deploy step running roles.sql then migrations (needs Azure, MDV-P0-006); JIT human access runbook (MDV-P0-025)
+- `tools/db-migrate`: `admin` (roles.sql + keys) and `migrate` (every module's migrations + Hangfire tables, as the migration role; the integration fixture runs the same code). Deploy workflow runs `migrate` through a per-run firewall rule. Bicep sets the passwordless `Encrypt=Strict` managed-identity connection string. Runbook in `docs/03-architecture/database-security.md`
+- Left: run the admin step and identity mapping in Azure (needs the Entra admin, in progress); verify Entra-only auth rejects a password login; JIT human access runbook (MDV-P0-025)
 title: Database security baseline part 1: Entra-only auth, managed identity, least-privilege users per module and for migrations
 type: Task
 epic: MDV-P0-E03
@@ -238,7 +239,8 @@ status: Partly done
 progress:
 - Merged [PR #40](https://github.com/ALFRED-LUCIFER/medvya/pull/40): Always Encrypted — deterministic for ABHA, ABHA address, Emirates ID and insurance member number (exact-match lookup through EF Core), randomized for Aadhaar last 4, passport and visa; key setup identical locally and in Azure (local RSA key store provider for dev/tests); tests prove the admin sees only ciphertext and LIKE is rejected
 - Dynamic data masking on names, DOB, phone, email and address; `medvya_patients` role has UNMASK, reporting sees masked values (tested); protected-column list in the data classification register; mutation-checked
-- Left (needs Azure, MDV-P0-006): Key Vault column master key, TDE with customer-managed key and rotation, deploy step that creates keys
+- Key Vault column master key (RSA 3072, Crypto User on the key only) in Bicep; the app registers the Key Vault provider with its managed identity; `db-migrate admin` creates the keys
+- Left: TDE with customer-managed key and rotation; CMK rotation procedure
 title: Database security baseline part 2: Always Encrypted (national/insurance IDs), dynamic data masking, TDE with customer-managed key
 type: Task
 epic: MDV-P0-E03

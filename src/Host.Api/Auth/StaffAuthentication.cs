@@ -78,7 +78,7 @@ public static partial class StaffAuthentication
         // shortcut: MFA is read from the standard amr claim; confirm Entra External ID emits it (or use its MFA claim) in the Entra spike (MDV-P0-011).
         if (!principal.FindAll("amr").Any(c => c.Value == "mfa"))
         {
-            SignInRefused(log, "mfa_missing");
+            SignInRefusedNoMfa(log);
             ctx.Fail("Multi-factor authentication is required.");
             return;
         }
@@ -92,7 +92,7 @@ public static partial class StaffAuthentication
             user = await InvitationSignIn.AcceptAsync(ctx.HttpContext, invitation, issuer, subject, principal.FindFirst("name")?.Value, user);
             if (user is null)
             {
-                SignInRefused(log, "invitation_unusable");
+                SignInRefusedInvitation(log);
                 ctx.Fail("The invitation cannot be used.");
                 return;
             }
@@ -104,7 +104,7 @@ public static partial class StaffAuthentication
                 .FindOrCreateAsync(issuer, subject, principal.FindFirst("name")?.Value ?? "New user", ctx.HttpContext.RequestAborted);
         if (user is null)
         {
-            SignInRefused(log, "unknown_account");
+            SignInRefusedUnknownAccount(log);
             ctx.Fail("No Medvya account for this sign-in.");
             return;
         }
@@ -115,9 +115,16 @@ public static partial class StaffAuthentication
             CookieAuthenticationDefaults.AuthenticationScheme));
     }
 
-    // Reason codes only; never the account, email or name.
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Sign-in refused: {Reason}")]
-    static partial void SignInRefused(ILogger logger, string reason);
+    // One fixed message per reason, no arguments: the telemetry scrubber redacts every logged value, so a {Reason} argument would be unreadable.
+    // Never the account, email or name.
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Sign-in refused: the provider did not report multi-factor authentication")]
+    static partial void SignInRefusedNoMfa(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Sign-in refused: the invitation cannot be used")]
+    static partial void SignInRefusedInvitation(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Sign-in refused: no Medvya account for this sign-in")]
+    static partial void SignInRefusedUnknownAccount(ILogger logger);
 
     public static WebApplication UseStaffAuthentication(this WebApplication app)
     {

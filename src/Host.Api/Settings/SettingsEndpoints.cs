@@ -65,6 +65,12 @@ public static class SettingsEndpoints
         g.MapGet("/logo", async ([FromServices] IPracticeSettings s, CancellationToken ct) =>
             await s.LogoLinkAsync(LogoLinkLifetime, ct) is { } url ? Results.Ok(new LogoLink(url, DateTimeOffset.UtcNow + LogoLinkLifetime)) : Results.NotFound());
 
+        // Terms of Service and DPA (MDV-P1-019): anyone who administers the practice can see the status; only an owner (practice admin or
+        // solo doctor) can accept, which the service checks. Until accepted, booking and sending are refused (RequireAcceptedTerms).
+        g.MapGet("/terms", async ([FromServices] ITermsAcceptance terms, CancellationToken ct) => Results.Ok(await terms.StatusAsync(ct)));
+        g.MapPost("/terms/accept", async ([FromServices] ITermsAcceptance terms, CancellationToken ct) =>
+            await terms.AcceptAsync(ct) ? Results.Ok(await terms.StatusAsync(ct)) : Results.Problem(statusCode: StatusCodes.Status403Forbidden, title: "Only the practice owner can accept"));
+
         return app;
     }
 

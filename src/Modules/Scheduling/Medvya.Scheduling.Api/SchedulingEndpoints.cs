@@ -71,15 +71,18 @@ public static class SchedulingEndpoints
         var appointments = app.MapGroup("/v1/appointments").RequireAuthorization();
         appointments.MapPost("/", ([FromBody] BookAppointment command, [FromHeader(Name = "Idempotency-Key")] string? key, [FromServices] IBookingService service, CancellationToken ct) =>
                 service.BookAsync(command, key, ct))
-            .AuditedWriteWithErrors(SchedulingAudit.Book, SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment);
+            .AuditedWriteWithErrors(SchedulingAudit.Book, SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment)
+            .RequireAcceptedTerms();
         // A walk-in (MDV-P1-025): the next free slot today on the booking path, or queued unscheduled; checked in after with check-in.
         appointments.MapPost("/walk-in", (WalkIn command, [FromServices] IBookingService service, CancellationToken ct) => service.WalkInAsync(command, ct))
-            .AuditedWriteWithErrors(SchedulingAudit.WalkIn, SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment);
+            .AuditedWriteWithErrors(SchedulingAudit.WalkIn, SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment)
+            .RequireAcceptedTerms();
         // Recurring appointments (MDV-P1-026): preview the occurrences and their conflicts, then book the ones the desk confirmed.
         appointments.MapPost("/series/preview", (SeriesPattern pattern, [FromServices] IBookingService service, CancellationToken ct) => service.PreviewSeriesAsync(pattern, ct))
             .AuditedWithErrors("appointment.series.preview", SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment);
         appointments.MapPost("/series", (BookSeries command, [FromServices] IBookingService service, CancellationToken ct) => service.BookSeriesAsync(command, ct))
-            .AuditedWriteWithErrors(SchedulingAudit.Book, SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment);
+            .AuditedWriteWithErrors(SchedulingAudit.Book, SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment)
+            .RequireAcceptedTerms();
         appointments.MapPost("/{appointmentId:guid}/cancel-following", (Guid appointmentId, CancelAppointment command, [FromServices] IBookingService service, CancellationToken ct) =>
                 service.CancelFollowingAsync(appointmentId, command, ct))
             .AuditedWriteWithErrors(SchedulingAudit.Cancel, SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment);

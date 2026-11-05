@@ -127,6 +127,11 @@ public static class PatientEndpoints
             .RequireCapability(Capability.RegisterBookPatients, Access.Full)
             .AuditedByUseCase("patient.update", "patient", Purpose, patientRouteKey: "patientId");
 
+        // The staff screen's current state per consent. A read of the record's consent data, so audited like opening the record.
+        patients.MapGet("/{patientId:guid}/consents", async (Guid patientId, [FromServices] IPatientConsents consents, CancellationToken ct) =>
+                await consents.CurrentAsync(patientId, ct) is { } decisions ? Results.Ok(new { policyVersion = ConsentPolicy.CurrentVersion, decisions }) : Results.NotFound())
+            .Audited("patient.consent.read", "patient", Purpose, patientRouteKey: "patientId");
+
         // A changed decision is a new receipt; the old ones stay. Same facility rule as completion: another facility's patient is 404.
         patients.MapPost("/{patientId:guid}/consents", ChangeConsents)
             .RequireCapability(Capability.RegisterBookPatients, Access.Full)

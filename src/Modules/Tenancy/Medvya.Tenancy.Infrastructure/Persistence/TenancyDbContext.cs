@@ -24,6 +24,7 @@ public sealed class TenancyDbContext(DbContextOptions<TenancyDbContext> options,
     public DbSet<DoctorLicence> DoctorLicences => Set<DoctorLicence>();
     public DbSet<DoctorProfile> DoctorProfiles => Set<DoctorProfile>();
     public DbSet<CustomRole> CustomRoles => Set<CustomRole>();
+    public DbSet<TermsAcceptance> TermsAcceptances => Set<TermsAcceptance>();
 
     Guid? CurrentTenantId => tenant.TenantId;
 
@@ -59,6 +60,14 @@ public sealed class TenancyDbContext(DbContextOptions<TenancyDbContext> options,
             e.HasIndex(x => x.UserId); // the facility picker looks a user's memberships up across tenants
             // Only an Invited membership may lack its user.
             e.ToTable(t => t.HasCheckConstraint("CK_Memberships_UserUnlessInvited", "[Status] = 'Invited' OR [UserId] IS NOT NULL"));
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<TermsAcceptance>(e =>
+        {
+            // A ledger table (TermsAcceptances migration): append-only.
+            e.Property(x => x.TermsVersion).HasMaxLength(32);
+            e.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
+            e.HasIndex(x => new { x.TenantId, x.TermsVersion });
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         modelBuilder.Entity<FeatureFlag>(e =>

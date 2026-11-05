@@ -60,3 +60,17 @@ public sealed class FeatureFlag
     [Classification(DataClass.Internal)] public Guid? ChangedBy { get; set; }
     [Classification(DataClass.Internal)] public DateTimeOffset ChangedAt { get; set; }
 }
+
+/// <summary>
+/// The practice owner's acceptance of the Medvya Terms of Service and the clinic Data Processing Agreement (MDV-P1-019), one
+/// immutable row (a ledger table: SQL Server rejects UPDATE and DELETE). A row for the current terms version activates the tenant.
+/// </summary>
+public sealed class TermsAcceptance
+{
+    [Classification(DataClass.Internal)] public Guid Id { get; init; }
+    [Classification(DataClass.Internal)] public Guid TenantId { get; init; }
+    /// <summary>The wording version accepted; booking and sending need the current one.</summary>
+    [Classification(DataClass.Internal)] public required string TermsVersion { get; init; }
+    [Classification(DataClass.Internal)] public DateTimeOffset AcceptedAt { get; init; }
+    [Classification(DataClass.Internal)] public Guid AcceptedBy { get; init; }
+}

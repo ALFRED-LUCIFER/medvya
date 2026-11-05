@@ -1,5 +1,5 @@
 import { ApiError, csrf, post, send } from '../../schedule/services/scheduleApi';
-import type { CalendarTemplate, Closure, ClosureForm, ClosureWithVisits, DayHours, Location, LocationForm, LogoLink, Profile, ProfileForm } from '../domain/settings';
+import type { CalendarTemplate, Closure, ClosureForm, ClosureWithVisits, DayHours, Location, LocationForm, LogoLink, Profile, ProfileForm, TermsStatus } from '../domain/settings';
 
 const json = (method: string, body: unknown) => ({ method, headers: { ...csrf, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 const blank = <T extends Record<string, string>>(form: T) => Object.fromEntries(Object.entries(form).map(([k, v]) => [k, v === '' ? null : v]));
@@ -36,3 +36,7 @@ export const removeClosure = (id: string) => send<void>(`/v1/settings/closures/$
 export const fetchTemplates = (facilityId: string) => send<CalendarTemplate[]>(`/v1/schedule/templates?${new URLSearchParams({ facilityId })}`);
 export const saveTemplate = (body: unknown) => send<CalendarTemplate>('/v1/schedule/templates', json('PUT', body));
 export const addResource = (facilityId: string, name: string) => post<{ id: string; facilityId: string; name: string }>('/v1/schedule/resources', { facilityId, name });
+
+export const fetchTerms = () => send<TermsStatus>('/v1/settings/terms');
+/** Only the practice owner may accept; the server answers 403 to anyone else. */
+export const acceptTerms = () => post<TermsStatus>('/v1/settings/terms/accept', {});

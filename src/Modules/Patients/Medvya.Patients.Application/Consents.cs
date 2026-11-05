@@ -8,6 +8,9 @@ public sealed record ConsentDecisionInput(ConsentType Type, ConsentChannel? Chan
 /// <summary>The decisions and the policy version the patient was shown (the screen reads it from the same wording).</summary>
 public sealed record ConsentSet(string PolicyVersion, IReadOnlyList<ConsentDecisionInput> Decisions);
 
+/// <summary>The current decision (newest receipt) for one type and channel, with when it was made and under which wording.</summary>
+public sealed record ConsentState(ConsentType Type, ConsentChannel? Channel, bool Granted, DateTimeOffset DecidedAt, string PolicyVersion);
+
 public static class ConsentPolicy
 {
     /// <summary>
@@ -62,6 +65,12 @@ public interface IPatientConsents
     /// send: a withdrawal takes effect on the next call.
     /// </summary>
     Task<bool> IsGrantedAsync(Guid patientId, ConsentType type, ConsentChannel? channel = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// The current decision per type and channel for a patient of the current facility (what the staff screen shows); a type with no
+    /// receipt is absent, which means no consent. Null when there is no such patient at this facility. Newest wins, a tie counts as withdrawn.
+    /// </summary>
+    Task<IReadOnlyList<ConsentState>?> CurrentAsync(Guid patientId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Records changed decisions as new receipts (history stays) for a patient of the current facility, audited in the same

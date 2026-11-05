@@ -27,7 +27,7 @@ public static class StaffEndpoints
             var names = await users.DisplayNamesAsync([.. rows.Where(r => r.UserId is not null).Select(r => r.UserId!.Value)], ct);
             return rows.Select(r => new
             {
-                r.MembershipId,
+                r.MembershipId, r.UserId,
                 Name = r.UserId is { } id && names.TryGetValue(id, out var name) ? name : null,
                 r.Email, r.Role, r.CustomRoleId, r.CustomRoleName, r.FacilityId, r.FacilityName,
                 Status = r.Status.ToString(),

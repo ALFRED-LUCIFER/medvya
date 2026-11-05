@@ -12,6 +12,7 @@ export type InvitationState = 'pending' | 'expired' | 'revoked';
 
 export type StaffMember = {
   membershipId: string;
+  userId: string | null;
   name: string | null;
   email: string | null;
   role: Role;

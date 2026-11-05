@@ -171,10 +171,12 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P2-022](P2-doctor-workspace/MDV-P2-022.md) | Legal review of clinical data processing before the first real note | P2 | wk 9–11 | 62% |
 | [MDV-P2-024](P2-doctor-workspace/MDV-P2-024.md) | Clinical authorisation: care relationship and purpose checks, request access for clinics | P2 | wk 9–10 | 84% |
 
-## Week 11 · 04 Jan 2027 – 08 Jan 2027 · load 12.9 dev-days ⚠ over capacity
+## Week 11 · 04 Jan 2027 – 08 Jan 2027 · load 23.9 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
+| [MDV-P1-047](P1-front-desk/MDV-P1-047.md) | Safe retries: idempotency keys, request timeouts and bounded retry (merges the proposed P1-047 and P1-048) | P1 | wk 11–11 | 80% |
+| [MDV-P1-052](P1-front-desk/MDV-P1-052.md) | Front-desk fixes from the live walk-through, round 2 (queue displays, cancelled slot, walk-in, schedule, log, reminders, invitations, polish) | P1 | wk 11–11 | 85% |
 | [MDV-P2-004](P2-doctor-workspace/MDV-P2-004.md) | Patient 360 (E-01): banner with identity and allergies always visible; problems, medicines, vitals trends | P2 | wk 10–11 | 85% |
 | [MDV-P2-005](P2-doctor-workspace/MDV-P2-005.md) | Longitudinal timeline and trends with source labels and filters (E-02) | P2 | wk 11–11 | 86% |
 | [MDV-P2-006](P2-doctor-workspace/MDV-P2-006.md) | Documents: upload, malware scan, secure viewer with time-limited links, scan to patient file (E-03) | P2 | wk 11–12 | 82% |
@@ -185,10 +187,12 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P2-022](P2-doctor-workspace/MDV-P2-022.md) | Legal review of clinical data processing before the first real note | P2 | wk 9–11 | 62% |
 | [MDV-P2-025](P2-doctor-workspace/MDV-P2-025.md) | Note template engine and specialty template pack for the partner clinics | P2 | wk 11–12 | 85% |
 
-## Week 12 · 11 Jan 2027 – 15 Jan 2027 · load 12.5 dev-days ⚠ over capacity
+## Week 12 · 11 Jan 2027 – 15 Jan 2027 · load 17.5 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
+| [MDV-P1-049](P1-front-desk/MDV-P1-049.md) | Service worker for static assets only (app shell loads with no network, no patient data) | P1 | wk 12–12 | 70% |
+| [MDV-P1-050](P1-front-desk/MDV-P1-050.md) | Printable day sheet for the desk (no phone numbers or national IDs) | P1 | wk 12–12 | 70% |
 | [MDV-P2-006](P2-doctor-workspace/MDV-P2-006.md) | Documents: upload, malware scan, secure viewer with time-limited links, scan to patient file (E-03) | P2 | wk 11–12 | 82% |
 | [MDV-P2-009](P2-doctor-workspace/MDV-P2-009.md) | Consultation note editor: chief complaint, SOAP, specialty templates, manual note when recording is declined (E-04) | P2 | wk 11–12 | 85% |
 | [MDV-P2-010](P2-doctor-workspace/MDV-P2-010.md) | Diagnosis coding with ICD-10 and problem verification states (E-07) | P2 | wk 12–12 | 82% |
@@ -198,10 +202,11 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P2-015](P2-doctor-workspace/MDV-P2-015.md) | Prescription composer with dose builder and add-medicine-while-prescribing (E-05, E-11) | P2 | wk 12–13 | 84% |
 | [MDV-P2-025](P2-doctor-workspace/MDV-P2-025.md) | Note template engine and specialty template pack for the partner clinics | P2 | wk 11–12 | 85% |
 
-## Week 13 · 18 Jan 2027 – 22 Jan 2027 · load 17.2 dev-days ⚠ over capacity
+## Week 13 · 18 Jan 2027 – 22 Jan 2027 · load 22.2 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
+| [MDV-P1-051](P1-front-desk/MDV-P1-051.md) | Encrypted read-only schedule cache for outages (needs an ADR first) | P1 | wk 13–13 | 55% |
 | [MDV-P2-012](P2-doctor-workspace/MDV-P2-012.md) | Sign and finalise: immutable signed note v1 with re-authentication (E-06) | P2 | wk 12–13 | 90% |
 | [MDV-P2-013](P2-doctor-workspace/MDV-P2-013.md) | Addenda, version history and print/PDF of the signed note (E-06) | P2 | wk 13–13 | 88% |
 | [MDV-P2-015](P2-doctor-workspace/MDV-P2-015.md) | Prescription composer with dose builder and add-medicine-while-prescribing (E-05, E-11) | P2 | wk 12–13 | 84% |

@@ -2,6 +2,18 @@
 
 @AGENTS.md
 
+## Current priority: a pilot-ready doctor clinic flow
+
+**Before anything else, the full doctor clinic flow must work end to end so a pilot customer can use it.** That means: sign up and set up the practice, add doctors and staff, book, check in, run the queue and board, see the patient, remind, and offboard. It must work on the real Azure India dev environment (real database, real Entra sign-in), not only locally.
+
+Rank every task by whether it moves a pilot clinic closer to using this flow safely. Prefer it over new features, polish or later phases. A change counts as done for this goal only when it has:
+
+1. **Tests.** Unit and integration tests against real SQL Server, plus a Playwright journey step (J1–J6 in `docs/02-design/journeys.md`) for the user-visible path.
+2. **A security check.** Server-side authorisation on each endpoint, tenant isolation (EF filter and row-level security), no PHI in logs or URLs, and `pnpm audit` clean. Anything touching auth, consent or tenancy gets `ponytail:ponytail-review` and a mutation check. The external review (P1-038) comes before the pilot.
+3. **A browser check** in English and Arabic, with axe clean.
+
+Work that needs a person (legal, DLT SMS, pilot agreements) is listed in `docs/05-delivery/session-handoff.md`. Say so early when one of those blocks the pilot.
+
 ## Claude-specific rules
 
 1. **Use the Ponytail skill (`ponytail:ponytail`, level `full`) for every development task.** That means writing, fixing, refactoring, reviewing and choosing dependencies. Invoke it at the start of the task, before reading or writing code. Its discipline is the smallest complete change: reuse first, no speculative code, tests for new logic, and `shortcut:` comments for known limits.

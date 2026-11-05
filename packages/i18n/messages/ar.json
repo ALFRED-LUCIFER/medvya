@@ -1296,6 +1296,7 @@
   "audit.col.outcome": "النتيجة",
   "audit.unknownStaff": "غير معروف",
   "audit.mrn": "رقم الملف {mrn}",
+  "audit.roleNotRecorded": "غير مسجّل",
   "audit.outcome.Allowed": "مسموح",
   "audit.outcome.Denied": "مرفوض",
   "audit.outcome.NotFound": "غير موجود",

@@ -12,7 +12,7 @@ public sealed class AuditTrail(AuditDbContext db) : IAuditTrail
     public async Task<AuditPage> QueryAsync(AuditQuery query, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(query);
-        var inRange = db.Events.AsNoTracking()
+        var inRange = db.Events.AsNoTracking().Where(e => query.FacilityId == null || e.FacilityId == query.FacilityId)
             .Where(e => (query.From == null || e.OccurredAt >= query.From) && (query.To == null || e.OccurredAt < query.To));
         var events = inRange
             .Where(e => (query.ActorUserId == null || e.ActorUserId == query.ActorUserId)

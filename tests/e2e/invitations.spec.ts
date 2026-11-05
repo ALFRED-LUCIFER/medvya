@@ -78,7 +78,7 @@ test('admin invites a colleague by email with role and facility', async ({ page 
 
   await page.getByLabel('Email').fill('joseph@example.test');
   await page.getByRole('combobox', { name: 'Role' }).click();
-  await page.getByRole('option', { name: 'Hospital doctor' }).click();
+  await page.getByRole('option', { name: 'Doctor', exact: true }).click();
   await page.getByRole('combobox', { name: 'Facility' }).click();
   await page.getByRole('option', { name: 'Adyar (synthetic)' }).click();
   await page.getByRole('button', { name: 'Send invitation' }).click();

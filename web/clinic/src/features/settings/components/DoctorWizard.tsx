@@ -58,6 +58,7 @@ type Props = {
   currency: string;
   submitting: boolean;
   submitFailed: boolean;
+  emailFailed: boolean;
   signature: File | null;
   signatureProblem: 'type' | 'size' | null;
   onPickSignature: (file: File | undefined) => void;
@@ -152,6 +153,7 @@ export default function DoctorWizard(p: Props) {
             : <Button key="next" type="button" className="min-h-11" onClick={p.onNext}>{t('doctors.next')}</Button>}
           <Button type="button" variant="ghost" className="min-h-11" onClick={p.onClose}>{t('settings.cancel')}</Button>
           {p.submitFailed && <span role="alert" className={fieldError}>{t('settings.saveFailed')}</span>}
+          {p.emailFailed && <span role="alert" className={fieldError}>{t('staff.error.email')}</span>}
         </div>
       </form>
     </Section>

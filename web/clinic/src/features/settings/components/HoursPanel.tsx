@@ -29,6 +29,7 @@ type Schedules = {
   dirty: boolean;
   saving: boolean;
   saveFailed: boolean;
+  saved: boolean;
   outside: { id: string; reference: string }[];
   onCalendar: (id: string) => void;
   onSlot: (minutes: number) => void;
@@ -118,6 +119,8 @@ export default function HoursPanel({ choice, hours, schedules }: Props) {
             <div className="flex flex-wrap items-center gap-3" aria-live="polite">
               <Button type="button" variant="outline" className="min-h-11" onClick={schedules.onAddSession}>{t('settings.schedules.addSession')}</Button>
               <Button type="button" className="min-h-11" loading={schedules.saving} disabled={!schedules.dirty || !!schedules.problem} onClick={schedules.onSave}>{t('settings.save')}</Button>
+              {/* With visits left outside the hours, the warning below already opens with "Saved." */}
+              {schedules.saved && schedules.outside.length === 0 && <span role="status" className="font-bold">{t('settings.saved')}</span>}
               {schedules.saveFailed && <span role="alert" className={fieldError}>{t('settings.saveFailed')}</span>}
             </div>
             {schedules.outside.length > 0 && (

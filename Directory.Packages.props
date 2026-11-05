@@ -7,7 +7,7 @@
   <ItemGroup>
     <!-- Every NuGet version lives here; project files reference packages without versions. -->
     <PackageVersion Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.10.0" />
-    <PackageVersion Include="Azure.Storage.Blobs" Version="12.27.0" />
+    <PackageVersion Include="Azure.Storage.Blobs" Version="12.30.1" />
     <!-- Always Encrypted column master key in Key Vault (MDV-P0-009). 7.x needs SqlClient 7. -->
     <PackageVersion Include="Microsoft.Data.SqlClient.AlwaysEncrypted.AzureKeyVaultProvider" Version="6.1.2" />
     <PackageVersion Include="Azure.Identity" Version="1.21.0" />

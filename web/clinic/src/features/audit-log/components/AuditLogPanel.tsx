@@ -4,7 +4,7 @@ import { Button, Input, Select, SelectContent, SelectItem, SelectTrigger, Select
 import { Field, Section } from '../../settings/components/parts';
 import { fieldError } from '../../settings/components/fieldStyles';
 import { PatientPicker, type PatientSearchView } from '../../schedule/components/BookingPanel';
-import { all, browserZone, type AuditFilters, type AuditRow } from '../domain/auditLog';
+import { all, type AuditFilters, type AuditRow } from '../domain/auditLog';
 
 type Props = {
   filters: AuditFilters;
@@ -28,7 +28,7 @@ type Props = {
 export default function AuditLogPanel(p: Props) {
   const { t, formatDate, formatTime } = useI18n();
   if (p.state === 'forbidden') return <p role="alert" className={fieldError}>{t('audit.forbidden')}</p>;
-  const zone = browserZone();
+  const zone = p.filters.zone;
   return (
     <Section title={t('audit.title')} intro={t('audit.intro')}>
       <div className="grid gap-4 sm:grid-cols-2">

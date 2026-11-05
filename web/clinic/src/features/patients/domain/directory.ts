@@ -40,7 +40,7 @@ export type ContactView = { name: string; relationship: Relationship; phone: str
 
 /** What the desk's completion task still waits for (MDV-P1-015/020); the server sets the status from the same three. */
 export type Missing = 'address' | 'payer' | 'emergencyContact';
-export const missingParts = (p: Pick<PatientDetails, 'address' | 'payer' | 'emergencyContact'>): Missing[] =>
+export const missingParts = (p: Record<Missing, unknown>): Missing[] =>
   [!p.address && 'address' as const, !p.payer && 'payer' as const, !p.emergencyContact && 'emergencyContact' as const].filter((m): m is Missing => !!m);
 
 export type RevealedIdentifiers = { identifiers: { scheme: IdentifierScheme; value: string }[]; memberNumber: string | null };

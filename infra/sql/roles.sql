@@ -51,6 +51,9 @@ GRANT CREATE TABLE, CREATE VIEW, CREATE FUNCTION, CREATE PROCEDURE, CREATE TYPE,
 GRANT SELECT, INSERT, DELETE ON SCHEMA::dbo TO medvya_migrator; -- dbo holds only __EFMigrationsHistory
 -- CREATE SECURITY POLICY needs SELECT on the predicate function. security holds only predicate functions.
 GRANT SELECT ON SCHEMA::security TO medvya_migrator;
+-- CREATE TABLE ... ENCRYPTED WITH needs to see the key metadata (never the keys). SQL Server grants this to public; Azure SQL does not
+-- (deploy run 41962207363 failed with 15247 on patients.Identifiers), so grant it explicitly.
+GRANT VIEW ANY COLUMN MASTER KEY DEFINITION, VIEW ANY COLUMN ENCRYPTION KEY DEFINITION TO medvya_migrator;
 -- shortcut: audit's predicate function lives in the audit schema (InitialAudit), so the migrator can SELECT audit rows;
 -- RLS still returns none without a tenant SESSION_CONTEXT. New modules put predicates in `security`; revoke this if audit's moves.
 GRANT SELECT ON SCHEMA::audit TO medvya_migrator;

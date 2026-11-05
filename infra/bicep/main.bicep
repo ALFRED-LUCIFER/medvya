@@ -10,6 +10,8 @@ param env string = 'dev'
 param sqlAdminObjectId string
 param sqlAdminLogin string
 param alertEmail string
+@description('Sender address of invitation and notification email (a sender verified in SendGrid).')
+param emailFrom string
 @description('Application (client) id of the Entra app registration the staff sign-in uses. Not a secret.')
 param oidcClientId string
 @description('Monthly budget in the billing currency (INR).')
@@ -166,6 +168,10 @@ resource app 'Microsoft.Web/sites@2023-12-01' = {
         { name: 'Onboarding__DeploymentCountry', value: 'IN' }
         { name: 'Storage__AccountName', value: storage.name }
         // The API serves the built web app under /app/ (MDV-P0-007); links the server creates must point there.
+        // Email through SendGrid's SMTP relay (smtp.sendgrid.net, user apikey, in appsettings.json); the API key is a Key Vault reference.
+        // Without these the mailer fails closed and invitations (add doctor, add staff) are refused (MDV-P1-032).
+        { name: 'Email__Smtp__From', value: emailFrom }
+        { name: 'Email__Smtp__Password', value: '@Microsoft.KeyVault(VaultName=${vault.name};SecretName=sendgrid-api-key)' }
         { name: 'Web__AppPath', value: '/app/' }
         { name: 'Invitations__LinkBaseUrl', value: 'https://${appHost}/app' }
         { name: 'PublicSite__Deployments__SignUpUrls__IN', value: 'https://${appHost}/app/signup' }

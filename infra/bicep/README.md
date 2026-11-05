@@ -4,7 +4,7 @@
 
 ```
 az group create -n rg-medvya-dev-in -l centralindia
-az deployment group what-if -g rg-medvya-dev-in -f infra/bicep/main.bicep -p sqlAdminObjectId=<entra object id> sqlAdminLogin=<upn> alertEmail=<email> oidcClientId=<app registration client id>
+az deployment group what-if -g rg-medvya-dev-in -f infra/bicep/main.bicep -p sqlAdminObjectId=<entra object id> sqlAdminLogin=<upn> alertEmail=<email> oidcClientId=<app registration client id> emailFrom=<verified sender>
 az deployment group create  -g rg-medvya-dev-in -f infra/bicep/main.bicep -p <same parameters>
 ```
 
@@ -22,4 +22,14 @@ Staff sign-in needs both, or the app refuses every sign-in with "the provider di
 
 1. **MFA enforced for the user.** Free tier: Security defaults off, then Per-user MFA = Enforced (Conditional Access needs a paid licence). Production moves staff sign-in to an Entra External ID tenant.
 2. **`amr` optional claim on the app registration** (Token configuration → Add optional claim → ID → `amr`). v2.0 ID tokens omit it otherwise. CLI: `az ad app update --id <client id> --optional-claims '{"idToken":[{"name":"amr","essential":false,"additionalProperties":[]}]}'`.
+
+## Email (MDV-P1-032)
+
+Invitations (add doctor, add staff, onboarding) go through SendGrid's SMTP relay. One-time setup, by the owner:
+
+1. SendGrid: verify a sender (a domain you own is best; a free-mail address often fails DMARC) and create an API key with only "Mail Send".
+2. Store the key without echoing it: `az keyvault secret set --vault-name <kv> --name sendgrid-api-key --value "<key>"`.
+3. Deploy with `emailFrom=<the verified sender>`.
+
+The mailer fails closed: no sender or key means the request fails and nothing is saved.
 

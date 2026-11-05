@@ -223,7 +223,7 @@ MDV-P1-008,Done,Story,"Add staff with role, facility scope, permissions and invi
 * The invite uses the P0 flow; the staff table shows invited/active/suspended/offboarded and MFA enrolment state.
 * Every permission change is written to the audit log (""Every change is written to the audit log"").
 * A receptionist created here cannot open clinical endpoints (security test reused from P0)."
-MDV-P1-009,To do,Story,Staff offboarding removes access immediately and ends all sessions,MDV-P1-E03,Highest,phase-P1 staff security lifecycle,1,2026-11-30,2026-12-04,R1 · Front Desk,P1-11,F-10,"MDV-P1-008, MDV-P0-012",90,High,"""Offboard"" on a staff member sets membership to offboarded, revokes all sessions and devices for that tenant, cancels pending invites, reassigns or flags their open items (none clinical yet in P1), and records reason and actor.","* After offboarding, the next request from any of the person's sessions in that tenant fails within 60 seconds and they cannot sign in to that tenant.
+MDV-P1-009,Partly done,Story,Staff offboarding removes access immediately and ends all sessions,MDV-P1-E03,Highest,phase-P1 staff security lifecycle,1,2026-11-30,2026-12-04,R1 · Front Desk,P1-11,F-10,"MDV-P1-008, MDV-P0-012",90,High,"""Offboard"" on a staff member sets membership to offboarded, revokes all sessions and devices for that tenant, cancels pending invites, reassigns or flags their open items (none clinical yet in P1), and records reason and actor.","* After offboarding, the next request from any of the person's sessions in that tenant fails within 60 seconds and they cannot sign in to that tenant.
 * Memberships in other tenants are unaffected.
 * The action requires confirmation, a reason, and is audited.
 * The last practice admin cannot offboard themselves (prevents lock-out)."
@@ -333,7 +333,7 @@ MDV-P1-034,To do,Story,"Notification centre for staff (D-03), push-safe content"
 * Push or browser notifications never include patient names or results; content is ""New update from {clinic}. Open Medvya to view."" (test on payload).
 * Mark all read and per-item read state persist across devices.
 * Overlay is keyboard accessible and screen-reader friendly."
-MDV-P1-035,To do,Story,Practice access log for owners (F-12): who opened which record and when,MDV-P1-E09,Highest,phase-P1 audit settings,1.5,2026-12-14,2026-12-18,R1 · Front Desk,P1-10,F-12,MDV-P0-017,84,Medium,"/settings/audit: filter by staff member, patient (search), action, date range; shows time, actor, role, action, patient (name visible to the owner after selecting), purpose and outcome (allowed/denied). Export to CSV (watermarked, audited).","* Only practice owners/admins can open the log (403 for others, audited).
+MDV-P1-035,Partly done,Story,Practice access log for owners (F-12): who opened which record and when,MDV-P1-E09,Highest,phase-P1 audit settings,1.5,2026-12-14,2026-12-18,R1 · Front Desk,P1-10,F-12,MDV-P0-017,84,Medium,"/settings/audit: filter by staff member, patient (search), action, date range; shows time, actor, role, action, patient (name visible to the owner after selecting), purpose and outcome (allowed/denied). Export to CSV (watermarked, audited).","* Only practice owners/admins can open the log (403 for others, audited).
 * Filtering by patient lists every read and write of that patient's record by anyone, with timestamps.
 * Denied attempts (e.g. receptionist opening a clinical note) appear with outcome ""Denied"".
 * Exports are audited and watermarked with exporter and time.

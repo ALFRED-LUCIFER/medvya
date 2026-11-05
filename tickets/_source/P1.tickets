@@ -138,7 +138,7 @@ ac:
 === MDV-P1-005
 status: Partly done
 progress:
-- Open PR (branch feat/MDV-P1-005-practice-settings): /settings with Profile, Locations (sites, rooms and resources), Hours (operating hours with weekday toggles, plus the bookable-schedule editor) and Holidays tabs; `/v1/settings/*` needs practice configuration (Config on Staff, roles, integrations), every other role gets 403 from the server (mutation-checked); a holiday refuses holds, bookings, reschedules and walk-in slots on that date through the booking path (mutation-checked), shows the day as Closed and lists booked visits to move; each change keeps before/after (SettingsChange) and a settings.* audit event in one transaction; logo checked by file signature (PNG/JPEG) and size 512 KB, stored in private Blob under a random key, shown through a 5-minute signed link; EN/HI/AR, RTL, axe clean, browser-verified against the real API and Azurite
+- Merged [PR #665](https://github.com/ALFRED-LUCIFER/medvya/pull/665): /settings with Profile, Locations (sites, rooms and resources), Hours (operating hours with weekday toggles, plus the bookable-schedule editor) and Holidays tabs; `/v1/settings/*` needs practice configuration (Config on Staff, roles, integrations), every other role gets 403 from the server (mutation-checked); a holiday refuses holds, bookings, reschedules and walk-in slots on that date through the booking path (mutation-checked), shows the day as Closed and lists booked visits to move; each change keeps before/after (SettingsChange) and a settings.* audit event in one transaction; logo checked by file signature (PNG/JPEG) and size 512 KB, stored in private Blob under a random key, shown through a 5-minute signed link; EN/HI/AR, RTL, axe clean, browser-verified against the real API and Azurite
 - Left: malware scan of the logo (no scanner in the repo; Defender for Storage with MDV-P0-006); settings are built on the seeded tenants, creating them is MDV-P1-004; Notifications/Data tabs MDV-P1-006, Doctors/Staff MDV-P1-007/008
 title: Practice settings: profile, locations, operating hours and holidays (F-08)
 type: Story
@@ -244,6 +244,10 @@ ac:
 - A receptionist created here cannot open clinical endpoints (security test reused from P0).
 
 === MDV-P1-009
+status: Partly done
+progress:
+- Merged [PR #687](https://github.com/ALFRED-LUCIFER/medvya/pull/687): Settings -> Staff -> Offboard on a joined (active or suspended) person: reason required (max 500), explicit confirm step. `POST /v1/staff/{membershipId}/offboard` (needs Config on Staff, roles, integrations) sets the membership Offboarded, revokes pending invitations, keeps reason and actor (SettingsChange `staff.offboard`) and audits `staff.offboard` in one serializable transaction, then ends the person's sessions in this tenant only (`RevokeInTenantAsync`). The next request fails (401), the facility picker no longer offers the membership (403), other tenants' sessions stay live; the last active staff administrator is refused (400 `last_admin`, also under concurrency). Mutation-checked (session revoke removed, last-admin check removed: tests fail). EN/HI/AR, RTL, axe clean
+- Left: re-activating an offboarded person (new invitation), reassigning or flagging open items (none exist in P1), revoking paired devices (device model is P4), an offboarding report; a never-joined invitee only has the invitation revoked (the membership stays Invited by a check constraint)
 title: Staff offboarding removes access immediately and ends all sessions
 type: Story
 epic: MDV-P1-E03
@@ -344,7 +348,7 @@ progress:
 - Merged [PR #61](https://github.com/ALFRED-LUCIFER/medvya/pull/61): `POST /v1/patients` (facility from the session, country from the tenant) with the duplicate check (MDV-P1-016); [PR #58](https://github.com/ALFRED-LUCIFER/medvya/pull/58) and [PR #70](https://github.com/ALFRED-LUCIFER/medvya/pull/70): record page with identifiers masked to the last 4
 - Merged [PR #82](https://github.com/ALFRED-LUCIFER/medvya/pull/82): full registration UI at /patients/new (quick mode at ?mode=quick): Identity & IDs → Contact & address → Payer → Review, per-step validation, focus to each step's heading, errors announced; ABHA optional, Aadhaar last 4 only (12 digits refused with the reason), state/UT from the official list (checked on the server), PIN 6 digits, payer kinds with their own fields (TPA kept as the network); preview card, data map and rules panel; success screen with MRN, time, actor and next actions; country from the tenant via /v1/me/context; record answer tested against an exact field allowlist (registration data only, no clinical fields); en/hi/ar, axe clean, 375/768/1366 px, 200 % zoom; real-API browser check
 - Merged [PR #86](https://github.com/ALFRED-LUCIFER/medvya/pull/86): Family & emergency step (MDV-P1-020)
-- Open PR (MDV-P1-019): the Consents step and CONSENT_RECEIPT written in the registration transaction; registration without treatment consent is refused and saves nothing
+- Merged [PR #678](https://github.com/ALFRED-LUCIFER/medvya/pull/678) (MDV-P1-019): the Consents step and CONSENT_RECEIPT written in the registration transaction; registration without treatment consent is refused and saves nothing
 - Left: "Verify with ABHA" (P8); PAN / Voter ID / driving licence as other ID types and "Save draft" (in the design, not in the ACs)
 title: Patient registration — India full flow (identity, ABHA optional, Aadhaar last 4, Indian address, payer)
 type: Story
@@ -375,7 +379,7 @@ progress:
 - Merged [PR #40](https://github.com/ALFRED-LUCIFER/medvya/pull/40): UAE rules — Emirates ID format, expired EID warns, EID-or-passport minimum, Arabic name, emirate mapped to Malaffi/NABIDH/Riayati, Makani/P.O. Box, insurance member number Always Encrypted
 - Merged [PR #82](https://github.com/ALFRED-LUCIFER/medvya/pull/82): UAE full registration UI — name as on EID plus Arabic name typed right to left (preview card and Review), Emirates ID or passport, "Format 784-YYYY-NNNNNNN-N", expired EID warns while typing and on the success screen but never blocks, nationality and language named with Intl.DisplayNames, emirate → HIE label (Malaffi / NABIDH / Riayati) under the field, Makani and P.O. Box, insurance with member card, expiry, plan and network (eligibility marked M4); HTTP test with a UAE tenant (rules follow the tenant, not the body); browser-checked in Arabic against the real API
 - Onboarding (MDV-P1-004): a UAE tenant cannot be created in an India deployment (Onboarding:DeploymentCountry, tested)
-- Open PR (MDV-P1-019): the HIE label (Malaffi / NABIDH / Riayati) on the Consents step, from the emirate in the address
+- Merged [PR #678](https://github.com/ALFRED-LUCIFER/medvya/pull/678) (MDV-P1-019): the HIE label (Malaffi / NABIDH / Riayati) on the Consents step, from the emirate in the address
 - Left: card reader and UAE PASS (P5)
 title: Patient registration — UAE flow (Emirates ID manual entry, Arabic name RTL, emirate, insurance card)
 type: Story
@@ -513,7 +517,7 @@ ac:
 === MDV-P1-019
 status: Partly done
 progress:
-- Open PR: patient consents at registration. Consents step (full mode; quick mode shows treatment only): treatment locked on, reminders per channel (WhatsApp, SMS), link to ABHA (India) / HIE named from the emirate (UAE), portal (on, invite in P4), health tips & offers (off); each decision, declined ones too, is a CONSENT_RECEIPT (type, channel, policy version, jurisdiction `IN` / `AE-<emirate>`, decision, time, staff actor) in `patients.ConsentReceipts`, an append-only SQL ledger table (UPDATE and DELETE rejected, tested) with RLS, written in the registration's own transaction
+- Merged [PR #678](https://github.com/ALFRED-LUCIFER/medvya/pull/678): patient consents at registration. Consents step (full mode; quick mode shows treatment only): treatment locked on, reminders per channel (WhatsApp, SMS), link to ABHA (India) / HIE named from the emirate (UAE), portal (on, invite in P4), health tips & offers (off); each decision, declined ones too, is a CONSENT_RECEIPT (type, channel, policy version, jurisdiction `IN` / `AE-<emirate>`, decision, time, staff actor) in `patients.ConsentReceipts`, an append-only SQL ledger table (UPDATE and DELETE rejected, tested) with RLS, written in the registration's own transaction
 - Registration without treatment consent, or with a stale wording version, is refused (400) and saves nothing (SAFETY test, mutation-checked); `POST /v1/patients/{id}/consents` records a changed decision as a new receipt, history kept, audited, active facility only (another facility 404, nothing written)
 - Reminders (MDV-P1-032/033) ask `IPatientConsents.IsGrantedAsync(patientId, type, channel)` in `Medvya.Patients.Application` (channels WhatsApp, SMS, email): the newest receipt decides, a tie counts as withdrawn, no receipt means no consent. The host implements the Notifications module's `IReminderConsent` on it (`PatientReminderConsent`, tested: no receipt no send, a grant sends, a withdrawal stops it, mutation-checked); en/hi/ar, axe clean, 44 px rows, 768 px and Arabic RTL, real-API browser check
 - Left: legally reviewed wording and per-tenant published privacy notice versions (MDV-P1-044; wording is a marked DRAFT, `ConsentPolicy.CurrentVersion` / `consents` in registration.ts, shortcut recorded); tenant-level ToS and DPA acceptance and "owners cannot activate the production tenant before it" (no activation step exists yet, needs its own change in Tenancy); a screen to change a consent from the record (API ready; portal R-03 in P4)
@@ -948,6 +952,10 @@ ac:
 - Overlay is keyboard accessible and screen-reader friendly.
 
 === MDV-P1-035
+status: Partly done
+progress:
+- Merged [PR #689](https://github.com/ALFRED-LUCIFER/medvya/pull/689): Settings -> Audit log tab (`/settings?tab=audit`). `GET /v1/audit/access-log` and `GET /v1/audit/access-log/patients/{patientId}` need the Audit log capability (practice admin, owner doctor, hospital IT; any other role 403 and an audit.read event with outcome Denied). Filters: staff member, patient (front-desk search reused), action, dates (default last 30 days); newest first with keyset paging. Rows show time, staff, current role, action, patient MRN, purpose and outcome written out (Allowed / Denied / Not found / Rejected); the patient's name appears only on the per-patient route, whose audit.read event carries that patient id. Denied attempts by other roles show with outcome Denied. `POST /v1/audit/access-log/export` returns a CSV watermarked first and last row with exporter and time, MRNs not names, formula cells neutralised, and writes audit.export. New index (TenantId, OccurredAt) on the ledger table. Mutation-checked (capability removed, name gate removed: tests fail). EN/HI/AR, RTL, axe clean
+- Left: role as held at event time (the log shows the person's current role), the filters used in the export event, a measured p95 on 30 days of pilot volume (indexed, not load-tested), read-volume alert on unusual patient reads (MDV-P1-018 follow-up), patient filter for hospital IT (the patient search needs Register / book patients), per-facility scoping inside a tenant
 title: Practice access log for owners (F-12): who opened which record and when
 type: Story
 epic: MDV-P1-E09

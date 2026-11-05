@@ -62,4 +62,9 @@ export const addableRows = (catalogue: RoleCatalogue, baseRole: AssignableRole) 
 export const canResend = (m: StaffMember) => m.status === 'Invited' && m.invitationId !== null;
 export const canRevoke = (m: StaffMember) => m.status === 'Invited' && m.invitationState === 'pending';
 
+/** Offboarding applies to someone who has joined; a pending invitation is revoked instead. */
+export const canOffboard = (m: StaffMember) => m.status === 'Active' || m.status === 'Suspended';
+export const offboardSchema = z.object({ reason: z.string().trim().min(1).max(500) });
+export type OffboardForm = z.infer<typeof offboardSchema>;
+
 export type Step = 'role' | 'scope' | 'permissions';

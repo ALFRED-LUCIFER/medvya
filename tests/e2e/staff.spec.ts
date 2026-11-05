@@ -103,3 +103,35 @@ test('a custom role offers only the rows the server allows, and Arabic lays the 
   await expect(page.getByRole('switch')).toHaveCount(1); // only the audit log row is addable
   expect(await axe(page)).toEqual([]);
 });
+
+test('offboarding asks for a reason, confirms, and says the last administrator cannot go', async ({ page }) => {
+  await setUp(page);
+  const desk = member({ membershipId: 'c', name: 'A. Joseph (synthetic)' });
+  await page.route('**/v1/staff', r => r.request().method() === 'GET' ? r.fulfill({ json: [staff[0], desk] }) : r.fallback());
+  let body = '';
+  await page.route('**/v1/staff/c/offboard', r => { body = r.request().postData() ?? ''; return r.fulfill({ status: 204 }); });
+  await page.route('**/v1/staff/a/offboard', r => r.fulfill({ status: 400, json: { errors: { membershipId: ['last_admin'] } } }));
+  await page.goto('/settings?tab=staff');
+  await page.getByRole('button', { name: 'Offboard A. Joseph (synthetic)' }).click();
+  await page.getByRole('button', { name: 'Offboard and sign out everywhere' }).click();
+  await expect(page.getByText('Enter a reason.')).toBeVisible();
+  await page.getByLabel('Reason (kept in the audit trail)').fill('Left the practice');
+  expect(await axe(page)).toEqual([]);
+  await page.getByRole('button', { name: 'Offboard and sign out everywhere' }).click();
+  await expect(page.getByText('Offboarded. Their access has ended and their sessions are signed out.')).toBeVisible();
+  expect(JSON.parse(body)).toEqual({ reason: 'Left the practice' });
+
+  await page.getByRole('button', { name: 'Offboard K. Lakshmi (synthetic)' }).click();
+  await page.getByLabel('Reason (kept in the audit trail)').fill('Testing');
+  await page.getByRole('button', { name: 'Offboard and sign out everywhere' }).click();
+  await expect(page.getByRole('alert')).toContainText('last administrator');
+});
+
+test('the offboarding form lays out right to left in Arabic', async ({ page }) => {
+  await setUp(page, 'ar');
+  await page.route('**/v1/staff', r => r.request().method() === 'GET' ? r.fulfill({ json: [member({ membershipId: 'c', name: 'A. Joseph (synthetic)' })] }) : r.fallback());
+  await page.goto('/settings?tab=staff');
+  await page.getByRole('button', { name: 'إنهاء الخدمة لـ A. Joseph (synthetic)' }).click();
+  await expect(page.getByLabel('السبب (يُحفظ في سجل التدقيق)')).toBeVisible();
+  expect(await axe(page)).toEqual([]);
+});

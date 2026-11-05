@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Host.Api.Auth;
 using Medvya.Identity.Application;
 using Medvya.Tenancy.Application;
@@ -14,6 +15,7 @@ namespace Host.Api.Staff;
 public static class StaffEndpoints
 {
     public sealed record AddStaff(string Email, Role Role, Guid? CustomRoleId, Guid FacilityId);
+    public sealed record Offboard(string? Reason);
     public sealed record Row(Capability Capability, Access Access, Access? Extra);
     public sealed record BuiltInRole(Role Role, IReadOnlyList<Row> Rows);
 
@@ -55,6 +57,18 @@ public static class StaffEndpoints
 
         g.MapPost("/invitations/{id:guid}/resend", async (Guid id, [FromServices] IInvitations invitations, CancellationToken ct) =>
             await invitations.ResendAsync(id, ct) is { } created ? Results.Ok(created) : Results.NotFound());
+
+        // Offboarding (MDV-P1-009): access ends in the roster transaction (the membership is no longer active, so every endpoint refuses it
+        // and the facility picker no longer offers it); the person's sessions in this tenant end right after. Other tenants are untouched.
+        g.MapPost("/{membershipId:guid}/offboard", async (Guid membershipId, Offboard body, ClaimsPrincipal principal, [FromServices] IStaffRoster roster,
+            [FromServices] IStaffSessions sessions, CancellationToken ct) =>
+        {
+            var result = await roster.OffboardAsync(membershipId, body.Reason, ct);
+            if (result.Outcome == OffboardOutcome.NotFound) return Results.NotFound();
+            if (result.Outcome == OffboardOutcome.LastAdmin) return Problem("membershipId", "last_admin");
+            if (result.UserId is { } userId) await sessions.RevokeInTenantAsync(userId, Guid.Parse(principal.FindFirstValue(StaffPolicies.TenantClaim)!), ct);
+            return Results.NoContent();
+        });
 
         // What each assignable role holds (locked: from the role-permission matrix) and which rows a custom role may add.
         g.MapGet("/roles", async ([FromServices] IStaffRoster roster, CancellationToken ct) => Results.Ok(new

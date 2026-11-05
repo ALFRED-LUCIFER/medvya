@@ -10,6 +10,8 @@ param env string = 'dev'
 param sqlAdminObjectId string
 param sqlAdminLogin string
 param alertEmail string
+@description('Application (client) id of the Entra app registration the staff sign-in uses. Not a secret.')
+param oidcClientId string
 @description('Monthly budget in the billing currency (INR).')
 param budgetAmount int = 1800
 param budgetStart string = utcNow('yyyy-MM-01')
@@ -18,6 +20,8 @@ param appServiceSku string = 'F1'
 
 var suffix = take(uniqueString(resourceGroup().id), 6)
 var name = 'medvya-${env}-${suffix}'
+// The app's own address; a site cannot reference its own property inside its own settings.
+var appHost = 'app-${name}.azurewebsites.net'
 var tags = { app: 'medvya', env: env, country: 'IN', data: 'synthetic-only' }
 
 resource logs 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
@@ -68,6 +72,30 @@ resource vault 'Microsoft.KeyVault/vaults@2023-07-01' = {
   }
 }
 
+// Always Encrypted column master key (MDV-P0-009). Stays in Key Vault: SQL Server stores only its path. RSA 3072, wrap/unwrap/sign/verify only.
+resource cmk 'Microsoft.KeyVault/vaults/keys@2023-07-01' = {
+  parent: vault
+  name: 'medvya-column-master'
+  properties: {
+    kty: 'RSA'
+    keySize: 3072
+    keyOps: ['wrapKey', 'unwrapKey', 'sign', 'verify']
+  }
+}
+
+// "Key Vault Crypto User" on this one key, never on the vault: the app reads encrypted columns; the administrator creates the column encryption key.
+var cryptoUser = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '12338af0-0e69-4776-bea7-57ae8d297424')
+resource cmkApp 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: cmk
+  name: guid(cmk.id, app.id, cryptoUser)
+  properties: { roleDefinitionId: cryptoUser, principalId: app.identity.principalId, principalType: 'ServicePrincipal' }
+}
+resource cmkAdmin 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: cmk
+  name: guid(cmk.id, sqlAdminObjectId, cryptoUser)
+  properties: { roleDefinitionId: cryptoUser, principalId: sqlAdminObjectId, principalType: 'User' }
+}
+
 resource sql 'Microsoft.Sql/servers@2023-08-01-preview' = {
   name: 'sql-${name}'
   location: location
@@ -86,11 +114,13 @@ resource sql 'Microsoft.Sql/servers@2023-08-01-preview' = {
   }
 }
 
-// 0.0.0.0 rule = "allow Azure services"; the app reaches SQL with its managed identity.
-resource sqlAzure 'Microsoft.Sql/servers/firewallRules@2023-08-01-preview' = {
-  parent: sql
-  name: 'AllowAzureServices'
-  properties: { startIpAddress: '0.0.0.0', endIpAddress: '0.0.0.0' }
+// Only this web app's outbound addresses may reach SQL (no "allow Azure services" rule, which admits every Azure customer).
+// Authentication is still Entra-only and Encrypt=Strict. possibleOutboundIpAddresses is the stable superset, so it survives scale-out.
+// Deploys and the administrator open their own address for the length of the work (deploy-dev.yml; tools/db-migrate runbook).
+// shortcut: IP rules on a shared App Service plan; a private endpoint with VNet integration (needs B1 or higher) replaces them before real patient data.
+module sqlApp 'sql-firewall.bicep' = {
+  name: 'sql-firewall-app'
+  params: { serverName: sql.name, addresses: split(app.properties.possibleOutboundIpAddresses, ',') }
 }
 
 // Free offer: 100k vCore-seconds/month, auto-pauses when used up (no overage charge).
@@ -135,6 +165,17 @@ resource app 'Microsoft.Web/sites@2023-12-01' = {
         { name: 'ASPNETCORE_ENVIRONMENT', value: 'Staging' }
         { name: 'Onboarding__DeploymentCountry', value: 'IN' }
         { name: 'Storage__AccountName', value: storage.name }
+        // The API serves the built web app under /app/ (MDV-P0-007); links the server creates must point there.
+        { name: 'Web__AppPath', value: '/app/' }
+        { name: 'Invitations__LinkBaseUrl', value: 'https://${appHost}/app' }
+        { name: 'PublicSite__Deployments__SignUpUrls__IN', value: 'https://${appHost}/app/signup' }
+        // No password anywhere: the app's managed identity signs in (mapped to medvya_app by the administrator).
+        { name: 'ConnectionStrings__Medvya', value: 'Server=tcp:${sql.properties.fullyQualifiedDomainName},1433;Database=${db.name};Authentication=Active Directory Managed Identity;Encrypt=Strict;' }
+        // Staff sign-in (MDV-P0-011): single-tenant Entra app; the client secret is a Key Vault reference, never a value here.
+        { name: 'Authentication__Oidc__Authority', value: '${environment().authentication.loginEndpoint}${tenant().tenantId}/v2.0' }
+        { name: 'Authentication__Oidc__ClientId', value: oidcClientId }
+        { name: 'Authentication__Oidc__ClientSecret', value: '@Microsoft.KeyVault(VaultName=${vault.name};SecretName=oidc-client-secret)' }
+        { name: 'ColumnEncryption__KeyVaultKeyUrl', value: cmk.properties.keyUriWithVersion }
       ]
     }
   }

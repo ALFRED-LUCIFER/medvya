@@ -10,7 +10,7 @@
 
 **Tickets:** 46 · **Estimate:** 86.5 dev-days vs **35 working days** in the window (OVER by 51.5 days: needs scope trade-off or overlap) · **Average confidence:** 81%
 
-**Status:** To do 20 · Partly done 16 · Done 10
+**Status:** To do 18 · Partly done 16 · Done 12
 
 ## Epics
 
@@ -39,12 +39,12 @@
 | [MDV-P1-045](MDV-P1-045.md) | To do | Register India DLT sender ID and SMS templates (and UAE SMS sender if applicable) | Chore | MUST | P1-09 | — | 0.5 | 4–6 | 16 Nov → 04 Dec 2026 | 62% Low |
 | [MDV-P1-003](MDV-P1-003.md) | Done | Trust centre and demo request (no PHI) | Story | SHOULD | P1-01 | F-07 | 1.5 | 5–5 | 23 Nov → 27 Nov 2026 | 82% Medium |
 | [MDV-P1-005](MDV-P1-005.md) | Partly done | Practice settings: profile, locations, operating hours and holidays (F-08) | Story | MUST | P1-02 | F-08 | 2.5 | 5–5 | 23 Nov → 27 Nov 2026 | 72% Medium |
-| [MDV-P1-007](MDV-P1-007.md) | Partly done | Add doctor (clinic mode): details, licence India/UAE, verification, schedule link, fees, access and signature image (F-09) | Story | MUST | P1-03 | F-09 | 3 | 5–6 | 23 Nov → 04 Dec 2026 | 70% Medium |
-| [MDV-P1-008](MDV-P1-008.md) | Partly done | Add staff with role, facility scope, permissions and invite; custom roles (F-10) | Story | MUST | P1-03 | F-10 | 2.5 | 5–5 | 23 Nov → 27 Nov 2026 | 78% Medium |
+| [MDV-P1-007](MDV-P1-007.md) | Done | Add doctor (clinic mode): details, licence India/UAE, verification, schedule link, fees, access and signature image (F-09) | Story | MUST | P1-03 | F-09 | 3 | 5–6 | 23 Nov → 04 Dec 2026 | 70% Medium |
+| [MDV-P1-008](MDV-P1-008.md) | Done | Add staff with role, facility scope, permissions and invite; custom roles (F-10) | Story | MUST | P1-03 | F-10 | 2.5 | 5–5 | 23 Nov → 27 Nov 2026 | 78% Medium |
 | [MDV-P1-011](MDV-P1-011.md) | Done | Schedule templates: working hours, breaks, slot length per service, per-location calendars, time zones | Story | MUST | P1-04 | P-04 | 3 | 5–6 | 23 Nov → 04 Dec 2026 | 80% Medium |
 | [MDV-P1-013](MDV-P1-013.md) | Partly done | Patient registration — India full flow (identity, ABHA optional, Aadhaar last 4, Indian address, payer) | Story | MUST | P1-05 | P-02 | 4 | 5–6 | 23 Nov → 04 Dec 2026 | 88% High |
 | [MDV-P1-006](MDV-P1-006.md) | To do | Practice settings: notification preferences and data tab | Story | MUST | P1-02 | F-08 | 1.5 | 6–6 | 30 Nov → 04 Dec 2026 | 72% Medium |
-| [MDV-P1-009](MDV-P1-009.md) | To do | Staff offboarding removes access immediately and ends all sessions | Story | MUST | P1-11 | F-10 | 1 | 6–6 | 30 Nov → 04 Dec 2026 | 90% High |
+| [MDV-P1-009](MDV-P1-009.md) | Partly done | Staff offboarding removes access immediately and ends all sessions | Story | MUST | P1-11 | F-10 | 1 | 6–6 | 30 Nov → 04 Dec 2026 | 90% High |
 | [MDV-P1-012](MDV-P1-012.md) | To do | Leave and schedule exceptions with re-offer of affected appointments | Story | MUST | P1-04 | P-04 | 1.5 | 6–6 | 30 Nov → 04 Dec 2026 | 82% Medium |
 | [MDV-P1-014](MDV-P1-014.md) | Partly done | Patient registration — UAE flow (Emirates ID manual entry, Arabic name RTL, emirate, insurance card) | Story | MUST | P1-05 | P-02 | 2.5 | 6–6 | 30 Nov → 04 Dec 2026 | 86% High |
 | [MDV-P1-015](MDV-P1-015.md) | Partly done | Quick registration for a busy desk with a completion task | Story | MUST | P1-05 | P-02 | 1.5 | 6–6 | 30 Nov → 04 Dec 2026 | 90% High |
@@ -69,7 +69,7 @@
 | [MDV-P1-031](MDV-P1-031.md) | Done | Queue TV display with tokens only, never names (P-05) | Story | MUST | P1-08 | P-05 | 1.5 | 8–8 | 14 Dec → 18 Dec 2026 | 90% High |
 | [MDV-P1-033](MDV-P1-033.md) | Partly done | SMS confirmations and reminders with India DLT templates and delivery receipts | Story | MUST | P1-09 | — | 2 | 8–8 | 14 Dec → 18 Dec 2026 | 68% Medium |
 | [MDV-P1-034](MDV-P1-034.md) | To do | Notification centre for staff (D-03), push-safe content | Story | MUST | P1-09 | D-03 | 1.5 | 8–8 | 14 Dec → 18 Dec 2026 | 85% High |
-| [MDV-P1-035](MDV-P1-035.md) | To do | Practice access log for owners (F-12): who opened which record and when | Story | MUST | P1-10 | F-12 | 1.5 | 8–8 | 14 Dec → 18 Dec 2026 | 84% Medium |
+| [MDV-P1-035](MDV-P1-035.md) | Partly done | Practice access log for owners (F-12): who opened which record and when | Story | MUST | P1-10 | F-12 | 1.5 | 8–8 | 14 Dec → 18 Dec 2026 | 84% Medium |
 | [MDV-P1-036](MDV-P1-036.md) | To do | Tablet-responsive reception views (desk tablet) | Task | MUST | P1-08 | — | 1 | 9–9 | 21 Dec → 25 Dec 2026 | 88% High |
 | [MDV-P1-037](MDV-P1-037.md) | To do | Performance budget and load test for booking and calendar | Task | MUST | P1-06, P1-07 | — | 1.5 | 9–9 | 21 Dec → 25 Dec 2026 | 86% High |
 | [MDV-P1-038](MDV-P1-038.md) | To do | P1 security review: threat-model update, ASVS checks, authorisation tests, dependency scan — no open high/critical | Gate | MUST | P1-05, P1-11 | — | 2 | 9–9 | 21 Dec → 25 Dec 2026 | 80% Medium |

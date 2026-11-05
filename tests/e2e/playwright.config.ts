@@ -16,7 +16,7 @@ export default defineConfig({
     {
       // The production build (`pnpm -r build` first), for the first-render budget (schedule-performance.spec.ts).
       command: 'pnpm --filter clinic exec vite preview --port 4174 --strictPort',
-      url: 'http://localhost:4174',
+      url: 'http://localhost:4174/app/', // the build's base path
       reuseExistingServer: !process.env.CI,
     },
   ],

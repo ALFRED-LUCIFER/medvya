@@ -2,6 +2,7 @@ using System.Net;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 using Host.Api.Auth;
+using Host.Api.AuditLog;
 using Host.Api.Context;
 using Host.Api.Invitations;
 using Host.Api.Middleware;
@@ -62,11 +63,13 @@ if (builder.Configuration.GetConnectionString("Medvya") is { } sql)
         .AddNotificationsModule(sql, smsSink: builder.Environment.IsDevelopment() && builder.Configuration["Notifications:Sms:Provider"] == "Sink")
         .AddScoped<IReminderConsent, PatientReminderConsent>() // after the module: replaces its deny-all default (MDV-P1-019)
         .AddLeadsModule(sql, builder.Configuration.GetSection("Leads:Email").Get<LeadsEmailOptions>() ?? new()).AddCapabilityPolicies();
-    // shortcut: only Development has a column master key (the same local file as `pnpm dev:db`); the Azure Key Vault provider
-    // arrives with MDV-P0-006, and until then encrypted identifiers cannot be read anywhere else (fail closed).
+    // Development: a local file key. Anywhere else the column master key is a Key Vault key read with the app's managed identity;
+    // without ColumnEncryption:KeyVaultKeyUrl encrypted identifiers cannot be read (fail closed).
     if (builder.Environment.IsDevelopment())
         LocalKeyStoreProvider.Register(() => LocalKeyStoreProvider.LoadOrCreate(builder.Configuration["ColumnEncryption:LocalKeyFile"]
             ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Medvya", "local-column-master-key.pem")));
+    else if (!string.IsNullOrEmpty(builder.Configuration["ColumnEncryption:KeyVaultKeyUrl"]))
+        ColumnEncryption.RegisterKeyVault(new Azure.Identity.ManagedIdentityCredential(Azure.Identity.ManagedIdentityId.SystemAssigned));
 }
 builder.Services.Configure<NotificationOptions>(builder.Configuration.GetSection("Notifications"));
 // Reminder consent comes from the patient's consent receipts. Local runs may switch the check off explicitly; never outside Development.
@@ -87,8 +90,10 @@ builder.Services.Configure<ForwardedHeadersOptions>(o =>
     o.KnownIPNetworks.Clear();
     o.KnownProxies.Clear();
     foreach (var proxy in proxies) o.KnownProxies.Add(IPAddress.Parse(proxy));
-    // With both lists empty the middleware would believe any sender, so no listed proxy means no forwarded headers at all.
-    o.ForwardedHeaders = proxies.Length > 0 ? ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto : ForwardedHeaders.None;
+    // The client address is believed only from listed proxies (a forged one would dodge limits and falsify the audit trail).
+    // The protocol is always believed: App Service ends TLS in front of the app, so without it sign-in sends Entra an http redirect
+    // address that is not registered. A forged protocol can only change generated links.
+    o.ForwardedHeaders = proxies.Length > 0 ? ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto : ForwardedHeaders.XForwardedProto;
 });
 
 var permitsPerMinute = builder.Configuration.GetValue("RateLimiting:PermitsPerMinute", 300);
@@ -120,6 +125,7 @@ app.UseForwardedHeaders(); // first, so every later step sees the client's addre
 if (!app.Environment.IsDevelopment()) app.UseHsts();
 app.UseSecurityHeaders(app.Configuration["Storage:ImageOrigin"]);
 app.UseRateLimiter();
+app.UseWebApp(); // static files only; reads no session cookie
 app.RunPublicSiteBeforeAuthentication(); // public pages never read the session cookie
 app.UseStaffAuthentication();
 
@@ -136,6 +142,7 @@ app.MapOnboarding();
 app.MapPracticeSettings();
 app.MapDoctors();
 app.MapStaff();
+app.MapAccessLog();
 app.MapQueueDisplaySession();
 app.MapPatientEndpoints();
 if (app.Environment.IsDevelopment() && app.Configuration["Authentication:Oidc:Authority"]?.EndsWith(DevIdentityProvider.Path, StringComparison.Ordinal) == true)

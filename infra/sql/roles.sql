@@ -51,6 +51,9 @@ GRANT CREATE TABLE, CREATE VIEW, CREATE FUNCTION, CREATE PROCEDURE, CREATE TYPE,
 GRANT SELECT, INSERT, DELETE ON SCHEMA::dbo TO medvya_migrator; -- dbo holds only __EFMigrationsHistory
 -- CREATE SECURITY POLICY needs SELECT on the predicate function. security holds only predicate functions.
 GRANT SELECT ON SCHEMA::security TO medvya_migrator;
+-- CREATE TABLE ... ENCRYPTED WITH needs to see the key metadata (never the keys). SQL Server grants this to public; Azure SQL does not
+-- (deploy run 41962207363 failed with 15247 on patients.Identifiers), so grant it explicitly.
+GRANT VIEW ANY COLUMN MASTER KEY DEFINITION, VIEW ANY COLUMN ENCRYPTION KEY DEFINITION TO medvya_migrator;
 -- shortcut: audit's predicate function lives in the audit schema (InitialAudit), so the migrator can SELECT audit rows;
 -- RLS still returns none without a tenant SESSION_CONTEXT. New modules put predicates in `security`; revoke this if audit's moves.
 GRANT SELECT ON SCHEMA::audit TO medvya_migrator;
@@ -87,6 +90,8 @@ GRANT SELECT, INSERT, UPDATE ON SCHEMA::notifications TO medvya_notifications;
 -- Development lets the app prepare the schema.
 -- shortcut: a role, not yet a separate database user; give the Worker its own identity when Worker.Jobs becomes a separate host.
 GRANT SELECT, INSERT, UPDATE, DELETE, EXECUTE ON SCHEMA::hangfire TO medvya_jobs;
+-- Hangfire's installer reads and writes its own version table (hangfire.Schema); job storage holds no module data.
+GRANT SELECT, INSERT, UPDATE, DELETE ON SCHEMA::hangfire TO medvya_migrator;
 
 ALTER ROLE medvya_tenancy ADD MEMBER medvya_app;
 ALTER ROLE medvya_audit ADD MEMBER medvya_app;

@@ -143,22 +143,7 @@ public sealed class SqlServerFixture : IAsyncLifetime
 
         // Every migration runs as the migration role, so a migration needing more than that role grants fails here.
         await using var migrator = await OpenAs("migrator_user");
-        await using var db = new TenancyDbContext(new DbContextOptionsBuilder<TenancyDbContext>().UseSqlServer(migrator).Options, new FixedTenant(null));
-        await db.Database.MigrateAsync();
-        await using var audit = new AuditDbContext(new DbContextOptionsBuilder<AuditDbContext>().UseSqlServer(migrator).Options, new FixedTenant(null));
-        await audit.Database.MigrateAsync();
-        await using var patients = new PatientsDbContext(new DbContextOptionsBuilder<PatientsDbContext>().UseSqlServer(migrator).Options, new FixedTenant(null));
-        await patients.Database.MigrateAsync();
-        await using var identity = new IdentityDbContext(new DbContextOptionsBuilder<IdentityDbContext>().UseSqlServer(migrator).Options);
-        await identity.Database.MigrateAsync();
-        await using var billing = new BillingDbContext(new DbContextOptionsBuilder<BillingDbContext>().UseSqlServer(migrator).Options, new FixedTenant(null));
-        await billing.Database.MigrateAsync();
-        await using var scheduling = new SchedulingDbContext(new DbContextOptionsBuilder<SchedulingDbContext>().UseSqlServer(migrator).Options, new FixedTenant(null));
-        await scheduling.Database.MigrateAsync();
-        await using var notifications = new NotificationsDbContext(new DbContextOptionsBuilder<NotificationsDbContext>().UseSqlServer(migrator).Options, new FixedTenant(null));
-        await notifications.Database.MigrateAsync();
-        await using var leads = new LeadsDbContext(new DbContextOptionsBuilder<LeadsDbContext>().UseSqlServer(migrator).Options);
-        await leads.Database.MigrateAsync();
+        await Medvya.DbMigrate.DatabaseMigrator.ApplyAsync(migrator);
     }
 
     public SchedulingDbContext Scheduling(Guid? tenantId)

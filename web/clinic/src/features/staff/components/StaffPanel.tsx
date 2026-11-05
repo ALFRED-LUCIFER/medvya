@@ -1,13 +1,13 @@
 import { Lock, Plus } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, Input } from '@medvya/ui';
+import { Button, Input, Textarea } from '@medvya/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
 import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { describedBy, fieldError } from '../../settings/components/fieldStyles';
 import type { Location } from '../../settings/domain/settings';
 import { Field, Section } from '../../settings/components/parts';
-import { assignableRoles, canResend, canRevoke, permissionRows, type AddStaffForm, type RoleCatalogue, type RoleChoice, type StaffMember, type Step } from '../domain/staff';
+import { assignableRoles, canOffboard, canResend, canRevoke, permissionRows, type AddStaffForm, type OffboardForm, type RoleCatalogue, type RoleChoice, type StaffMember, type Step } from '../domain/staff';
 
 type Props = {
   staff: StaffMember[];
@@ -19,7 +19,14 @@ type Props = {
   choice: RoleChoice | null;
   form: UseFormReturn<AddStaffForm>;
   canContinue: boolean;
-  notice: 'invited' | 'resent' | 'revoked' | null;
+  notice: 'invited' | 'resent' | 'revoked' | 'offboarded' | null;
+  offboarding: StaffMember | null;
+  offboardForm: UseFormReturn<OffboardForm>;
+  offboardWorking: boolean;
+  offboardError: 'lastAdmin' | 'failed' | null;
+  onOffboard: (member: StaffMember) => void;
+  onOffboardSubmit: FormEventHandler<HTMLFormElement>;
+  onOffboardCancel: () => void;
   adding: boolean;
   addFailed: boolean;
   working: boolean;
@@ -82,6 +89,7 @@ export default function StaffPanel(p: Props) {
                       <span className="flex flex-wrap gap-2">
                         {canResend(m) && <Button type="button" variant="outline" className="min-h-11 min-w-11" disabled={p.working} aria-label={t('staff.resendNamed', { name: who })} onClick={() => p.onResend(m.invitationId!)}>{t('staff.resend')}</Button>}
                         {canRevoke(m) && <Button type="button" variant="outline" className="min-h-11 min-w-11" disabled={p.working} aria-label={t('staff.revokeNamed', { name: who })} onClick={() => p.onRevoke(m.invitationId!)}>{t('staff.revoke')}</Button>}
+                        {canOffboard(m) && <Button type="button" variant="outline" className="min-h-11 min-w-11" disabled={p.working || !!p.offboarding} aria-label={t('staff.offboardNamed', { name: who })} onClick={() => p.onOffboard(m)}>{t('staff.offboard')}</Button>}
                       </span>
                     </td>
                   </tr>
@@ -92,6 +100,21 @@ export default function StaffPanel(p: Props) {
         </div>
         {!p.step && <Button type="button" className="self-start" onClick={p.onOpen}><Plus aria-hidden className="size-4" />{t('staff.add')}</Button>}
       </Section>
+
+      {p.offboarding && (
+        <Section title={t('staff.offboardTitle', { name: p.offboarding.name ?? p.offboarding.email ?? '' })} intro={t('staff.offboardIntro')}>
+          <form noValidate onSubmit={p.onOffboardSubmit} className="flex flex-col gap-4">
+            <Field id="staff-offboard-reason" label={t('staff.offboardReason')} error={p.offboardForm.formState.errors.reason && t('staff.offboardReasonRequired')}>
+              <Textarea id="staff-offboard-reason" rows={3} maxLength={500} {...describedBy('staff-offboard-reason', !!p.offboardForm.formState.errors.reason)} {...p.offboardForm.register('reason')} />
+            </Field>
+            {p.offboardError && <p role="alert" className={fieldError}>{t(`staff.offboardError.${p.offboardError}`)}</p>}
+            <div className="flex flex-wrap gap-2">
+              <Button type="submit" variant="destructive" loading={p.offboardWorking}>{t('staff.offboardConfirm')}</Button>
+              <Button type="button" variant="outline" onClick={p.onOffboardCancel}>{t('settings.cancel')}</Button>
+            </div>
+          </form>
+        </Section>
+      )}
 
       {p.step && (
         <Section title={t('staff.add')} intro={t('staff.stepOf', { n: stepIndex + 1, total: stepOrder.length, name: t(`staff.step.${p.step}`) })}>

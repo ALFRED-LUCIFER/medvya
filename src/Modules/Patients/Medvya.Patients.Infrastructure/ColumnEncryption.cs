@@ -1,5 +1,7 @@
 using System.Security.Cryptography;
+using Azure.Core;
 using Microsoft.Data.SqlClient;
+using Microsoft.Data.SqlClient.AlwaysEncrypted.AzureKeyVaultProvider;
 
 namespace Medvya.Patients.Infrastructure;
 
@@ -17,6 +19,21 @@ public static class ColumnEncryption
 {
     public const string MasterKeyName = "CMK_Medvya";
     public const string EncryptionKeyName = "CEK_Patients";
+
+    /// <summary>Provider name SQL Server stores in the CMK metadata for a Key Vault key (fixed by SqlClient).</summary>
+    public const string KeyVaultProviderName = SqlColumnEncryptionAzureKeyVaultProvider.ProviderName;
+
+    /// <summary>
+    /// Registers the Key Vault provider for every SqlConnection in this process. The credential needs wrap/unwrap/sign/verify on the key
+    /// only (role "Key Vault Crypto User" on the key, never on the vault). Call once at start-up, before the first connection.
+    /// </summary>
+    public static SqlColumnEncryptionAzureKeyVaultProvider RegisterKeyVault(TokenCredential credential)
+    {
+        ArgumentNullException.ThrowIfNull(credential);
+        var provider = new SqlColumnEncryptionAzureKeyVaultProvider(credential);
+        SqlConnection.RegisterColumnEncryptionKeyStoreProviders(new Dictionary<string, SqlColumnEncryptionKeyStoreProvider> { [KeyVaultProviderName] = provider });
+        return provider;
+    }
 
     /// <summary>Creates the CMK metadata and a fresh random CEK wrapped by the CMK, unless they exist. Idempotent.</summary>
     public static async Task EnsureKeysAsync(SqlConnection admin, string providerName, string keyPath, SqlColumnEncryptionKeyStoreProvider provider, CancellationToken cancellationToken = default)
@@ -48,8 +65,7 @@ public static class ColumnEncryption
 
 /// <summary>
 /// Column master key held as an RSA key by this process, for developer machines and tests only (the Windows certificate store
-/// provider does not exist on macOS/Linux). Production registers the Azure Key Vault provider instead.
-/// shortcut: production CMK in Key Vault (Microsoft.Data.SqlClient.AlwaysEncrypted.AzureKeyVaultProvider, API identity only) arrives with MDV-P0-006.
+/// provider does not exist on macOS/Linux). Anything deployed registers the Azure Key Vault provider instead (<see cref="ColumnEncryption.RegisterKeyVault"/>).
 /// </summary>
 public sealed class LocalKeyStoreProvider(RSA key) : SqlColumnEncryptionKeyStoreProvider
 {

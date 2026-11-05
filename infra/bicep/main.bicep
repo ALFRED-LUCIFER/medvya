@@ -110,11 +110,13 @@ resource sql 'Microsoft.Sql/servers@2023-08-01-preview' = {
   }
 }
 
-// 0.0.0.0 rule = "allow Azure services"; the app reaches SQL with its managed identity.
-resource sqlAzure 'Microsoft.Sql/servers/firewallRules@2023-08-01-preview' = {
-  parent: sql
-  name: 'AllowAzureServices'
-  properties: { startIpAddress: '0.0.0.0', endIpAddress: '0.0.0.0' }
+// Only this web app's outbound addresses may reach SQL (no "allow Azure services" rule, which admits every Azure customer).
+// Authentication is still Entra-only and Encrypt=Strict. possibleOutboundIpAddresses is the stable superset, so it survives scale-out.
+// Deploys and the administrator open their own address for the length of the work (deploy-dev.yml; tools/db-migrate runbook).
+// shortcut: IP rules on a shared App Service plan; a private endpoint with VNet integration (needs B1 or higher) replaces them before real patient data.
+module sqlApp 'sql-firewall.bicep' = {
+  name: 'sql-firewall-app'
+  params: { serverName: sql.name, addresses: split(app.properties.possibleOutboundIpAddresses, ',') }
 }
 
 // Free offer: 100k vCore-seconds/month, auto-pauses when used up (no overage charge).

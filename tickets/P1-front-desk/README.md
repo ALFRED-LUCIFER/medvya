@@ -8,9 +8,9 @@
 **Day one:** Register patients, book, reschedule and cancel appointments, check patients in, run the waiting room and send automatic confirmations and reminders.  
 **Goal:** A clinic can run its entire appointment day in Medvya. This is the workflow to validate with real clinics before anything clinical is built on top.
 
-**Tickets:** 46 · **Estimate:** 86.5 dev-days vs **35 working days** in the window (OVER by 51.5 days: needs scope trade-off or overlap) · **Average confidence:** 81%
+**Tickets:** 51 · **Estimate:** 107.5 dev-days vs **35 working days** in the window (OVER by 72.5 days: needs scope trade-off or overlap) · **Average confidence:** 80%
 
-**Status:** To do 18 · Partly done 16 · Done 12
+**Status:** To do 23 · Partly done 16 · Done 12
 
 ## Epics
 
@@ -26,6 +26,7 @@
 | MDV-P1-E08 | Confirmations, reminders and notification centre | P1-09 | Email/SMS confirmations and reminders with delivery status; in-app notification centre. |
 | MDV-P1-E09 | Practice access log | P1-10 | Owners see who opened which record and when. |
 | MDV-P1-E10 | Pilot readiness and R1 gate | P1-01, P1-12 | External dependencies, production tenants, training, baselines, security review and the R1 exit gate. |
+| MDV-P1-E11 | Connectivity and resilience | P1-06, P1-08 | The desk keeps working on flaky Indian connections: safe retries, timeouts, offline assets and a paper fallback; nothing with patient data is stored in the browser without a decision. |
 
 ## Tickets
 
@@ -77,6 +78,11 @@
 | [MDV-P1-040](MDV-P1-040.md) | To do | Reception training (30 min), one-page desk card and support channel with named contact | Chore | MUST | P1-08 | — | 1.5 | 9–9 | 21 Dec → 25 Dec 2026 | 88% High |
 | [MDV-P1-041](MDV-P1-041.md) | To do | Baseline metrics capture and in-product measurement (check-in time, no-shows, double bookings, reminder delivery) | Task | MUST | P1-08, P1-09 | — | 1.5 | 9–10 | 21 Dec → 01 Jan 2027 | 84% Medium |
 | [MDV-P1-042](MDV-P1-042.md) | To do | R1 pilot (2 consecutive weeks of real bookings), exit gate review and release notes | Gate | MUST | P1-06, P1-08 | — | 2 | 10–10 | 28 Dec → 01 Jan 2027 | 65% Medium |
+| [MDV-P1-047](MDV-P1-047.md) | To do | Safe retries: idempotency keys, request timeouts and bounded retry (merges the proposed P1-047 and P1-048) | Story | SHOULD | P1-06 | — | 5 | 11–11 | 04 Jan → 08 Jan 2027 | 80% Medium |
+| [MDV-P1-052](MDV-P1-052.md) | To do | Front-desk fixes from the live walk-through, round 2 (queue displays, cancelled slot, walk-in, schedule, log, reminders, invitations, polish) | Task | MUST | P1-08 | — | 6 | 11–11 | 04 Jan → 08 Jan 2027 | 85% High |
+| [MDV-P1-049](MDV-P1-049.md) | To do | Service worker for static assets only (app shell loads with no network, no patient data) | Task | COULD | P1-08 | — | 2 | 12–12 | 11 Jan → 15 Jan 2027 | 70% Medium |
+| [MDV-P1-050](MDV-P1-050.md) | To do | Printable day sheet for the desk (no phone numbers or national IDs) | Story | COULD | P1-08 | — | 3 | 12–12 | 11 Jan → 15 Jan 2027 | 70% Medium |
+| [MDV-P1-051](MDV-P1-051.md) | To do | Encrypted read-only schedule cache for outages (needs an ADR first) | Story | COULD | P1-08 | — | 5 | 13–13 | 18 Jan → 22 Jan 2027 | 55% Low |
 
 ## Exit criteria (release gate)
 

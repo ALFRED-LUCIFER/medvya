@@ -12,7 +12,7 @@ type Props = {
   opened: { appointment: Appointment; calendarName: string };
   mode: 'view' | 'pick' | 'confirmMove' | 'cancel';
   target: { calendarName: string; start: string } | null;
-  done: { kind: 'moved' | 'cancelled' | 'noShow' | 'checkedIn'; appointment: Appointment; calendarName: string } | null;
+  done: { kind: 'moved' | 'cancelled' | 'cancelledFollowing' | 'noShow' | 'checkedIn'; appointment: Appointment; calendarName: string; count: number } | null;
   rules: Record<Action, Rule>;
   working: boolean;
   error: ChangeError | null;
@@ -23,6 +23,8 @@ type Props = {
   onStartCancel: () => void;
   onReason: (reason: CancelForm['reason']) => void;
   onConfirmCancel: () => void;
+  /** MDV-P1-026: cancel this visit and the later ones of its series, one reason. */
+  onConfirmCancelFollowing: () => void;
   onNoShow: () => void;
   onCheckIn: () => void;
   onBack: () => void;
@@ -69,7 +71,7 @@ export default function AppointmentPanel(p: Props) {
 
       {p.done && (
         <div role="status" className="flex flex-col items-start gap-2">
-          <p className="flex items-center gap-2 text-sm font-bold text-success-700"><CircleCheck aria-hidden className="size-5" />{t(`appointment.done.${p.done.kind}`, { time: time(a.start) })}</p>
+          <p className="flex items-center gap-2 text-sm font-bold text-success-700"><CircleCheck aria-hidden className="size-5" />{t(`appointment.done.${p.done.kind}`, { time: time(a.start), count: p.done.count })}</p>
           {p.done.kind === 'noShow' && p.onRebook && <Button variant="navy" onClick={p.onRebook}>{t('appointment.rebook', { name: a.patientName })}</Button>}
         </div>
       )}
@@ -154,6 +156,9 @@ function CancelForm(p: Props) {
       </div>
       <div className="flex flex-wrap gap-2">
         <Button type="submit" variant="navy" disabled={p.working}>{t('appointment.cancel.confirm')}</Button>
+        {p.opened.appointment.seriesId && (
+          <Button type="button" variant="navy" disabled={p.working} onClick={p.onConfirmCancelFollowing}>{t('appointment.cancel.following')}</Button>
+        )}
         <Button type="button" variant="outline" disabled={p.working} onClick={p.onBack}>{t('appointment.back')}</Button>
       </div>
     </form>

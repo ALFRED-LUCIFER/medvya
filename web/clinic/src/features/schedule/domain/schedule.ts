@@ -13,7 +13,7 @@ export type Slot = Span & { held: boolean };
 export type WorkingWindow = Span & { room: string | null };
 export type Unavailable = Span & { reason: UnavailableReason; label: string | null };
 /** Never carries the free-text reason: reception sees name, type, time and state only. */
-export type Appointment = Span & { id: string; reference: string; patientId: string; patientName: string; visitType: VisitType; state: AppointmentState };
+export type Appointment = Span & { id: string; reference: string; patientId: string; patientName: string; visitType: VisitType; state: AppointmentState; seriesId?: string | null };
 export type VisitLength = { visitType: VisitType; minutes: number };
 
 export type ScheduleColumn = {

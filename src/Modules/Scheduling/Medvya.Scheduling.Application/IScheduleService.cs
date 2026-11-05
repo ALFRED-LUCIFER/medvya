@@ -24,7 +24,7 @@ public sealed record ResourceView(Guid Id, Guid FacilityId, string Name);
 
 /// <summary>An appointment on the schedule: name, type, time and state. Never the free-text reason.</summary>
 public sealed record AppointmentChip(
-    Guid Id, string Reference, Guid PatientId, string PatientName, VisitType VisitType, DateTimeOffset Start, DateTimeOffset End, AppointmentState State);
+    Guid Id, string Reference, Guid PatientId, string PatientName, VisitType VisitType, DateTimeOffset Start, DateTimeOffset End, AppointmentState State, Guid? SeriesId = null);
 
 /// <summary>
 /// A calendar of the facility (doctor or resource) with its template, or null fields when none is set yet. After a save,

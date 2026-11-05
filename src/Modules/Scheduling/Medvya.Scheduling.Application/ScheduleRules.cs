@@ -202,6 +202,23 @@ public static class ScheduleRules
         return [.. Enumerable.Range(0, 7).Select(monday.AddDays)];
     }
 
+    /// <summary>
+    /// Starts of a series: the same facility wall-clock time every <paramref name="intervalWeeks"/> weeks, so a visit keeps its
+    /// local hour across a daylight-saving change (IST and GST have none). A wall-clock time the zone skips moves an hour on.
+    /// </summary>
+    public static List<DateTimeOffset> SeriesStarts(DateTimeOffset first, int intervalWeeks, int count, TimeZoneInfo zone)
+    {
+        var local = TimeZoneInfo.ConvertTime(first, zone).DateTime;
+        var starts = new List<DateTimeOffset>(count);
+        for (var i = 0; i < count; i++)
+        {
+            var wall = DateTime.SpecifyKind(local.AddDays(7 * intervalWeeks * i), DateTimeKind.Unspecified);
+            if (zone.IsInvalidTime(wall)) wall = wall.AddHours(1);
+            starts.Add(new DateTimeOffset(TimeZoneInfo.ConvertTimeToUtc(wall, zone), TimeSpan.Zero));
+        }
+        return starts;
+    }
+
     /// <summary>The facility-local calendar date of an instant.</summary>
     public static DateOnly LocalDate(DateTimeOffset instant, TimeZoneInfo zone) =>
         DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(instant, zone).DateTime);

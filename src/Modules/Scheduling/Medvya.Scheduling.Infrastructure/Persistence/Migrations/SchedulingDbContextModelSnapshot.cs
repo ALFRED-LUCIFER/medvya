@@ -76,6 +76,9 @@ namespace Medvya.Scheduling.Infrastructure.Persistence.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<Guid?>("SeriesId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTimeOffset>("Start")
                         .HasColumnType("datetimeoffset");
 
@@ -101,6 +104,9 @@ namespace Medvya.Scheduling.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("TenantId", "PatientId");
+
+                    b.HasIndex("TenantId", "SeriesId")
+                        .HasFilter("[SeriesId] IS NOT NULL");
 
                     b.HasIndex("TenantId", "FacilityId", "Start");
 

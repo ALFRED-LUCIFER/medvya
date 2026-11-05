@@ -176,4 +176,28 @@ public class ScheduleRulesTests
     [Fact]
     public void TheLocalDateIsTheFacilitysNotUtcs() =>
         Assert.Equal(new DateOnly(2026, 10, 20), ScheduleRules.LocalDate(new DateTimeOffset(2026, 10, 19, 20, 0, 0, TimeSpan.Zero), Kolkata));
+
+    [Fact]
+    public void ASeriesKeepsItsLocalTimeAcrossDaylightSaving()
+    {
+        // Clocks go back in London on Sunday 25 Oct 2026: 10:00 local stays 10:00 local, so the UTC instant moves an hour.
+        var starts = ScheduleRules.SeriesStarts(new DateTimeOffset(2026, 10, 17, 9, 0, 0, TimeSpan.Zero), 1, 3, London);
+        Assert.Equal([new DateTimeOffset(2026, 10, 17, 9, 0, 0, TimeSpan.Zero), new DateTimeOffset(2026, 10, 24, 9, 0, 0, TimeSpan.Zero), new DateTimeOffset(2026, 10, 31, 10, 0, 0, TimeSpan.Zero)], starts);
+    }
+
+    [Fact]
+    public void ASeriesTimeTheZoneSkipsMovesAnHourOn()
+    {
+        // 01:30 does not exist in London on Sunday 29 Mar 2026 (01:00 becomes 02:00).
+        var starts = ScheduleRules.SeriesStarts(new DateTimeOffset(2026, 3, 22, 1, 30, 0, TimeSpan.Zero), 1, 2, London);
+        Assert.Equal(new DateTimeOffset(2026, 3, 29, 1, 30, 0, TimeSpan.Zero), starts[1]); // 02:30 BST
+    }
+
+    [Fact]
+    public void ASeriesInIstOrGstRepeatsAtTheSameUtcTime()
+    {
+        var first = new DateTimeOffset(2026, 10, 19, 4, 30, 0, TimeSpan.Zero);
+        Assert.Equal([first, first.AddDays(14), first.AddDays(28)], ScheduleRules.SeriesStarts(first, 2, 3, Kolkata));
+        Assert.Equal([first, first.AddDays(7)], ScheduleRules.SeriesStarts(first, 1, 2, Dubai));
+    }
 }

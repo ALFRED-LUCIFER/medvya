@@ -108,7 +108,11 @@ for (const [w, h] of [[768, 1024], [1024, 768]] as const)
     await page.getByRole('button', { name: 'Book Dr. d-1 (synthetic) at 09:20' }).click();
     const panel = page.getByRole('complementary', { name: 'Book appointment' });
     await expect(panel).toBeVisible();
-    await expect(panel).toBeInViewport({ ratio: 1 }); // reachable without scrolling the page back up
+    // The panel scrolls inside its own sticky frame when taller than the screen, so the frame must be fully on screen and the last control reachable.
+    await expect(panel.locator('..')).toBeInViewport({ ratio: 1 });
+    const last = panel.getByRole('button').last();
+    await last.scrollIntoViewIfNeeded();
+    await expect(last).toBeInViewport({ ratio: 1 });
     expect(await problems(page)).toEqual([]);
   });
 

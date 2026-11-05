@@ -68,6 +68,7 @@ public sealed class SchedulingDbContext(DbContextOptions<SchedulingDbContext> op
             // The day view and the board read a facility's time range: seek on Start and cover what the views need.
             e.HasIndex(x => new { x.TenantId, x.FacilityId, x.Start }).IncludeProperties(x => new { x.End, x.CalendarId, x.State, x.PatientId, x.VisitType });
             e.HasIndex(x => new { x.TenantId, x.PatientId });
+            e.HasIndex(x => new { x.TenantId, x.SeriesId }).HasFilter("[SeriesId] IS NOT NULL");
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         modelBuilder.Entity<ScheduleSlot>(e =>

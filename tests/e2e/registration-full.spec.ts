@@ -3,11 +3,14 @@ import { expect, test, type Page, type Request } from '@playwright/test';
 
 // MDV-P1-013 (India) and MDV-P1-014 (UAE) full registration in steps (P-02). CI has no API: /v1/me/context and /v1/patients/*
 // are mocked with the synthetic cast; the server rules are covered by PatientRulesTests and PatientRegistrationFlowTests.
+// A desk whose browser is in Dubai while the Kochi clinic's zone is Asia/Kolkata: times must follow the clinic.
+test.use({ timezoneId: 'Asia/Dubai' });
+
 const context = (country: 'IN' | 'AE') => ({
   user: { id: 'u-joseph', displayName: 'A. Joseph' },
   memberships: [{ id: 'm-1', tenantId: 't-1', tenantName: 'Synthetic Clinic', facilityId: 'f-1', facilityName: 'Synthetic Clinic · Front desk', role: 'Receptionist' }],
   active: {
-    membershipId: 'm-1', tenantId: 't-1', facilityId: 'f-1', role: 'Receptionist', flags: [], country,
+    membershipId: 'm-1', tenantId: 't-1', facilityId: 'f-1', role: 'Receptionist', flags: [], country, timeZone: country === 'IN' ? 'Asia/Kolkata' : 'Asia/Dubai',
     capabilities: { RegisterBookPatients: 'Full', CheckInQueue: 'Full', InvoicesPayments: 'Full', Patient360Chart: 'None', ClinicalNotes: 'None' },
   },
 });
@@ -19,7 +22,9 @@ async function desk(page: Page, country: 'IN' | 'AE', { locale = 'en', warnings 
   await page.route('**/v1/patients/duplicate-check', r => r.fulfill({ json: { candidates: [] } }));
   await page.route('**/v1/patients', r => {
     saves.push(r.request());
-    return r.fulfill({ json: { patientId: '5e1d0001-0004-4000-8000-000000000411', mrn: '001094', registeredAt: '2026-10-25T04:46:00Z', status: 'Complete', warnings } });
+    const sent = r.request().postDataJSON();
+    const complete = sent.address && sent.payer && sent.emergencyContact; // the server's rule: the three parts
+    return r.fulfill({ json: { patientId: '5e1d0001-0004-4000-8000-000000000411', mrn: '001094', registeredAt: '2026-10-25T04:46:00Z', status: complete ? 'Complete' : 'Incomplete', warnings } });
   });
   await page.goto('/patients/new');
   return saves;
@@ -93,7 +98,8 @@ test('India: full registration in steps, with Aadhaar last 4 only, the PIN rule 
   await page.getByRole('button', { name: 'Register patient' }).click();
 
   await expect(page.getByRole('heading', { name: 'Lakshmi Pillai is registered' })).toBeVisible();
-  await expect(page.getByText(/MRN 001094 · registered .* by A\. Joseph/)).toBeVisible();
+  await expect(page.getByText(/MRN 001094 · registered 25 Oct 2026, 10:16 by A\. Joseph/)).toBeVisible(); // 04:46 UTC in the clinic's zone, not the browser's
+  await expect(page.getByText('Attention')).toHaveCount(0);
   for (const action of ['Book appointment', 'Check in now (walk-in)']) await expect(page.getByRole('link', { name: action })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Register another' })).toBeVisible();
   expect(saves).toHaveLength(1);
@@ -149,6 +155,9 @@ test('UAE: Arabic name typed right to left, an expired Emirates ID warns, the em
   await page.getByRole('button', { name: 'Register patient' }).click();
 
   await expect(page.getByText('The Emirates ID has expired. The patient is registered; ask them to renew it.')).toBeVisible();
+  // Full mode, emergency contact entered, no payer: only the payer is missing, and the wording is not "quick registration".
+  await expect(page.getByText('Attention · registration incomplete.')).toBeVisible();
+  await expect(page.getByText('Missing: payer.')).toBeVisible();
   expect(saves[0]!.postDataJSON()).toMatchObject({
     quick: false, arabicName: 'فاطمة المنصوري', payer: null,
     identifiers: [{ scheme: 'EmiratesId', value: '784-1988-1234567-1', expiresOn: '2020-11-30' }],

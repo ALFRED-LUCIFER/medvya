@@ -1,3 +1,6 @@
+using System.Data;
+using System.Diagnostics;
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
 using System.Security.Claims;
@@ -11,6 +14,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Medvya.IntegrationTests;
@@ -207,4 +211,62 @@ public sealed class AccessLogTests(SqlServerFixture sql) : IClassFixture<SqlServ
     [InlineData(null, "")]
     public void CsvCellsNeutraliseFormulasAndQuoteSeparators(string? value, string expected) =>
         Assert.Equal(expected, AccessLogEndpoints.Cell(value));
+
+    /// <summary>
+    /// NFR: p95 under 600 ms for a 30-day range at pilot volume. Pilot = 20 staff reading ~250 records a day, 150,000 events in 30 days,
+    /// timed through the endpoint for the default list, the per-patient list, actor and action filters and a deep second page.
+    /// </summary>
+    [Fact]
+    public async Task ThirtyDayRangeP95StaysUnder600MillisecondsAtPilotVolume()
+    {
+        const int Events = 150_000, Staff = 20;
+        var staff = Enumerable.Range(0, Staff).Select(_ => Guid.NewGuid()).ToArray();
+        var patients = Enumerable.Range(0, 2_000).Select(_ => Guid.NewGuid()).ToArray();
+        var table = new DataTable();
+        foreach (var (name, type) in new (string, Type)[]
+        {
+            ("Id", typeof(Guid)), ("TenantId", typeof(Guid)), ("ActorUserId", typeof(Guid)), ("Action", typeof(string)), ("ResourceType", typeof(string)),
+            ("PatientId", typeof(Guid)), ("Purpose", typeof(string)), ("Outcome", typeof(string)), ("OccurredAt", typeof(DateTimeOffset)),
+        }) table.Columns.Add(name, type);
+        var start = DateTimeOffset.UtcNow.AddDays(-30);
+        for (var n = 0; n < Events; n++)
+            table.Rows.Add(Guid.CreateVersion7(), h.Tenant, staff[n % Staff], n % 10 == 0 ? "patient.update" : "patient.read", "patient",
+                patients[n % patients.Length], "treatment", n % 50 == 0 ? "Denied" : "Allowed", start.AddSeconds(n * 17.28));
+        await using (var conn = await sql.OpenAs("dbo", h.Tenant))
+        {
+            using var copy = new SqlBulkCopy(conn) { DestinationTableName = "audit.AuditEvents", BulkCopyTimeout = 600 };
+            foreach (DataColumn c in table.Columns) copy.ColumnMappings.Add(c.ColumnName, c.ColumnName);
+            await copy.WriteToServerAsync(table);
+            await using var stats = new SqlCommand("UPDATE STATISTICS audit.AuditEvents", conn);
+            await stats.ExecuteNonQueryAsync();
+        }
+        using var client = Client(Role.PracticeAdmin);
+        var from = Uri.EscapeDataString(start.ToString("o", CultureInfo.InvariantCulture));
+        string[] paths =
+        [
+            $"/v1/audit/access-log?from={from}",
+            $"/v1/audit/access-log/patients/{patients[7]}?from={from}",
+            $"/v1/audit/access-log?from={from}&actorUserId={staff[3]}",
+            $"/v1/audit/access-log?from={from}&action=patient.update",
+        ];
+        async Task<long> Get(string path)
+        {
+            var clock = Stopwatch.StartNew();
+            using var res = await client.GetAsync(new Uri(path, UriKind.Relative));
+            var ms = clock.ElapsedMilliseconds;
+            Assert.Equal(HttpStatusCode.OK, res.StatusCode);
+            return ms;
+        }
+        var next = (await client.GetFromJsonAsync<JsonElement>(paths[0])).GetProperty("next").GetString();
+        foreach (var p in paths) await Get(p); // warm the plan cache and the connection pool
+        var timings = new List<long>();
+        for (var round = 0; round < 10; round++)
+        {
+            foreach (var p in paths) timings.Add(await Get(p));
+            timings.Add(await Get($"{paths[0]}&after={next}"));
+        }
+        timings.Sort();
+        var p95 = timings[(int)Math.Ceiling(timings.Count * 0.95) - 1];
+        Assert.True(p95 < 600, string.Create(CultureInfo.InvariantCulture, $"p95 {p95} ms over {timings.Count} requests (max {timings[^1]} ms)"));
+    }
 }

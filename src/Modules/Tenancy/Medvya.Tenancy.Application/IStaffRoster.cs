@@ -19,6 +19,11 @@ public sealed record SaveCustomRole
     public IReadOnlyList<Capability>? Capabilities { get; init; }
 }
 
+/// <summary>How an offboarding ended. <see cref="UserId"/> is the person whose sessions the caller must now end (null for a never-accepted invitee).</summary>
+public sealed record OffboardResult(OffboardOutcome Outcome, Guid? UserId = null);
+
+public enum OffboardOutcome { Done, NotFound, LastAdmin }
+
 /// <summary>Staff list and practice-defined roles (MDV-P1-008). Each role change saves its before/after and audit event in one transaction.</summary>
 public interface IStaffRoster
 {
@@ -32,4 +37,12 @@ public interface IStaffRoster
     /// <summary>Same checks as create. Null when the role is not the tenant's.</summary>
     /// <exception cref="SettingsValidationException"/>
     Task<CustomRoleView?> UpdateRoleAsync(Guid id, SaveCustomRole command, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Offboards a membership of the current tenant (MDV-P1-009): status Offboarded, pending invitations revoked, reason and actor kept
+    /// (SettingsChange "staff.offboard") and audited, all in one transaction. Refuses the last active staff administrator. An already
+    /// offboarded membership is NotFound. The caller ends the person's sessions in this tenant.
+    /// </summary>
+    /// <exception cref="SettingsValidationException">No reason, or one over 500 characters.</exception>
+    Task<OffboardResult> OffboardAsync(Guid membershipId, string? reason, CancellationToken cancellationToken = default);
 }

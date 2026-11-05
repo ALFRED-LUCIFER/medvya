@@ -1,3 +1,4 @@
+import { apiFetch } from '../../api/services/apiClient';
 import type { Country } from '@medvya/i18n';
 import type { Draft, FinishResult, OnboardingData } from '../domain/onboarding';
 
@@ -24,26 +25,26 @@ async function check(res: Response, what: string) {
 
 /** The saved draft, or null when the person has not started (or has finished). */
 export async function fetchDraft(): Promise<Draft | null> {
-  const res = await fetch('/v1/onboarding', { credentials: 'same-origin' });
+  const res = await apiFetch('/v1/onboarding', { credentials: 'same-origin' });
   if (res.status === 204) return null;
   await check(res, 'onboarding');
   return res.json() as Promise<Draft>;
 }
 
 export async function startDraft(country: Country): Promise<Draft> {
-  const res = await fetch('/v1/onboarding', { method: 'POST', credentials: 'same-origin', headers: json, body: JSON.stringify({ country }) });
+  const res = await apiFetch('/v1/onboarding', { method: 'POST', credentials: 'same-origin', headers: json, body: JSON.stringify({ country }) });
   await check(res, 'onboarding start');
   return res.json() as Promise<Draft>;
 }
 
 /** Saves the draft and the step to resume at. With `validate` the server checks that step first and saves nothing if it fails. */
 export async function saveDraft(step: number, data: OnboardingData, validate?: number) {
-  const res = await fetch('/v1/onboarding', { method: 'PUT', credentials: 'same-origin', headers: json, body: JSON.stringify({ step, validate, data }) });
+  const res = await apiFetch('/v1/onboarding', { method: 'PUT', credentials: 'same-origin', headers: json, body: JSON.stringify({ step, validate, data }) });
   await check(res, 'onboarding save');
 }
 
 export async function finishOnboarding(): Promise<FinishResult> {
-  const res = await fetch('/v1/onboarding/finish', { method: 'POST', credentials: 'same-origin', headers: json });
+  const res = await apiFetch('/v1/onboarding/finish', { method: 'POST', credentials: 'same-origin', headers: json });
   await check(res, 'onboarding finish');
   return res.json() as Promise<FinishResult>;
 }

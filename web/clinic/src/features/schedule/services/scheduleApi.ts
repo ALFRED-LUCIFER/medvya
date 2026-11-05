@@ -1,3 +1,4 @@
+import { apiFetch } from '../../api/services/apiClient';
 import type { BookedAppointment, BookingForm, Hold, PatientMatch, SlotChoice } from '../domain/booking';
 import type { Occurrence, SeriesResult } from '../domain/series';
 import type { CancelReason } from '../domain/changes';
@@ -24,7 +25,7 @@ export class ApiError extends Error {
 export const csrf = { 'X-Medvya-Csrf': '1' };
 
 export async function send<T>(url: string, init: RequestInit = {}): Promise<T> {
-  const res = await fetch(url, { credentials: 'same-origin', ...init });
+  const res = await apiFetch(url, { credentials: 'same-origin', ...init });
   if (!res.ok) {
     const body = (await res.json().catch(() => null)) as { code?: string; errors?: Record<string, string[]> } | null;
     // A rejected field (400 problem details) is reported as "field:code" so a screen can name what was wrong.

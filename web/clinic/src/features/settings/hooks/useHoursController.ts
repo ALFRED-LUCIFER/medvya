@@ -65,6 +65,8 @@ export function useSchedulesController(locationId: string) {
     },
   });
 
+  const saved = save.isSuccess && active === null && save.data.calendarId === current?.calendarId;
+
   return {
     calendars: list,
     calendarId: current?.calendarId ?? '',
@@ -76,8 +78,10 @@ export function useSchedulesController(locationId: string) {
     dirty: active !== null,
     saving: save.isPending,
     saveFailed: save.isError,
+    /** The shown calendar was just saved and not edited since. */
+    saved,
     /** Visits left outside the hours just saved, until the next change. */
-    outside: save.isSuccess && active === null && save.data.calendarId === current?.calendarId ? save.data.appointmentsOutsideHours : [],
+    outside: saved ? save.data.appointmentsOutsideHours : [],
     onCalendar: setPickedId,
     onSlot: (minutes: number) => change({ slot: minutes }),
     onSession: (index: number, patch: Partial<SessionRow>) => change({ sessions: rows.map((r, i) => (i === index ? { ...r, ...patch } : r)) }),

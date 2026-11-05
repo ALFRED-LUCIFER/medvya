@@ -87,6 +87,8 @@ GRANT SELECT, INSERT, UPDATE ON SCHEMA::notifications TO medvya_notifications;
 -- Development lets the app prepare the schema.
 -- shortcut: a role, not yet a separate database user; give the Worker its own identity when Worker.Jobs becomes a separate host.
 GRANT SELECT, INSERT, UPDATE, DELETE, EXECUTE ON SCHEMA::hangfire TO medvya_jobs;
+-- Hangfire's installer reads and writes its own version table (hangfire.Schema); job storage holds no module data.
+GRANT SELECT, INSERT, UPDATE, DELETE ON SCHEMA::hangfire TO medvya_migrator;
 
 ALTER ROLE medvya_tenancy ADD MEMBER medvya_app;
 ALTER ROLE medvya_audit ADD MEMBER medvya_app;

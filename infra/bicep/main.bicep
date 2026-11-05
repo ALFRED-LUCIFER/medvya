@@ -68,6 +68,30 @@ resource vault 'Microsoft.KeyVault/vaults@2023-07-01' = {
   }
 }
 
+// Always Encrypted column master key (MDV-P0-009). Stays in Key Vault: SQL Server stores only its path. RSA 3072, wrap/unwrap/sign/verify only.
+resource cmk 'Microsoft.KeyVault/vaults/keys@2023-07-01' = {
+  parent: vault
+  name: 'medvya-column-master'
+  properties: {
+    kty: 'RSA'
+    keySize: 3072
+    keyOps: ['wrapKey', 'unwrapKey', 'sign', 'verify']
+  }
+}
+
+// "Key Vault Crypto User" on this one key, never on the vault: the app reads encrypted columns; the administrator creates the column encryption key.
+var cryptoUser = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '12338af0-0e69-4776-bea7-57ae8d297424')
+resource cmkApp 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: cmk
+  name: guid(cmk.id, app.id, cryptoUser)
+  properties: { roleDefinitionId: cryptoUser, principalId: app.identity.principalId, principalType: 'ServicePrincipal' }
+}
+resource cmkAdmin 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: cmk
+  name: guid(cmk.id, sqlAdminObjectId, cryptoUser)
+  properties: { roleDefinitionId: cryptoUser, principalId: sqlAdminObjectId, principalType: 'User' }
+}
+
 resource sql 'Microsoft.Sql/servers@2023-08-01-preview' = {
   name: 'sql-${name}'
   location: location
@@ -135,6 +159,9 @@ resource app 'Microsoft.Web/sites@2023-12-01' = {
         { name: 'ASPNETCORE_ENVIRONMENT', value: 'Staging' }
         { name: 'Onboarding__DeploymentCountry', value: 'IN' }
         { name: 'Storage__AccountName', value: storage.name }
+        // No password anywhere: the app's managed identity signs in (mapped to medvya_app by the administrator).
+        { name: 'ConnectionStrings__Medvya', value: 'Server=tcp:${sql.properties.fullyQualifiedDomainName},1433;Database=${db.name};Authentication=Active Directory Managed Identity;Encrypt=Strict;' }
+        { name: 'ColumnEncryption__KeyVaultKeyUrl', value: cmk.properties.keyUriWithVersion }
       ]
     }
   }

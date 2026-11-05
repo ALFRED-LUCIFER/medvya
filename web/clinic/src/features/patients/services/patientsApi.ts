@@ -1,3 +1,4 @@
+import { apiFetch } from '../../api/services/apiClient';
 import type { PatientDetails, RevealedIdentifiers, SearchRequest, SearchResult } from '../domain/directory';
 
 // Same-origin BFF calls (ADR-004): the session cookie rides along; state-changing calls carry the CSRF header.
@@ -27,7 +28,7 @@ export async function fail(res: Response): Promise<never> {
 
 /** Directory page or search. The search text travels in the body, never in the URL or query string. */
 export async function searchPatients(request: SearchRequest): Promise<SearchResult> {
-  const res = await fetch('/v1/patients/search', {
+  const res = await apiFetch('/v1/patients/search', {
     method: 'POST', credentials: 'same-origin', headers: jsonHeaders, body: JSON.stringify(request),
   });
   if (!res.ok) return fail(res);
@@ -36,14 +37,14 @@ export async function searchPatients(request: SearchRequest): Promise<SearchResu
 
 /** Opens one record; the server audits the read before returning it. The URL holds only the opaque id. */
 export async function fetchPatient(id: string): Promise<PatientDetails> {
-  const res = await fetch(`/v1/patients/${encodeURIComponent(id)}`, { credentials: 'same-origin' });
+  const res = await apiFetch(`/v1/patients/${encodeURIComponent(id)}`, { credentials: 'same-origin' });
   if (!res.ok) return fail(res);
   return res.json() as Promise<PatientDetails>;
 }
 
 /** The full identifier and member numbers of one record. A POST: each reveal is an audited action, never prefetched or cached. */
 export async function revealIdentifiers(id: string): Promise<RevealedIdentifiers> {
-  const res = await fetch(`/v1/patients/${encodeURIComponent(id)}/identifiers/reveal`, { method: 'POST', credentials: 'same-origin', headers: jsonHeaders });
+  const res = await apiFetch(`/v1/patients/${encodeURIComponent(id)}/identifiers/reveal`, { method: 'POST', credentials: 'same-origin', headers: jsonHeaders });
   if (!res.ok) return fail(res);
   return res.json() as Promise<RevealedIdentifiers>;
 }

@@ -1,3 +1,4 @@
+import { apiFetch } from '../../api/services/apiClient';
 import type { MeContext } from '../domain/session';
 
 // The server holds the tokens (BFF, ADR-004); the browser only sends its HTTP-only session cookie.
@@ -11,7 +12,7 @@ export class SessionEndedError extends Error {}
  * count as activity, or an unattended screen would never reach its idle timeout.
  */
 export async function fetchMeContext(): Promise<MeContext | null> {
-  const res = await fetch('/v1/me/context', { credentials: 'same-origin', headers: { 'X-Medvya-Passive': '1' } });
+  const res = await apiFetch('/v1/me/context', { credentials: 'same-origin', headers: { 'X-Medvya-Passive': '1' } });
   if (res.status === 401) return null;
   if (!res.ok) throw new Error(`me/context ${res.status}`);
   return res.json() as Promise<MeContext>;
@@ -19,7 +20,7 @@ export async function fetchMeContext(): Promise<MeContext | null> {
 
 /** Scopes the session to one of the user's memberships (facility picker, MDV-P0-012). */
 export async function chooseFacility(membershipId: string) {
-  const res = await fetch('/v1/me/facility', {
+  const res = await apiFetch('/v1/me/facility', {
     method: 'POST', credentials: 'same-origin', headers: { ...csrf, 'Content-Type': 'application/json' }, body: JSON.stringify({ membershipId }),
   });
   if (res.status === 401) throw new SessionEndedError();
@@ -32,7 +33,7 @@ export function startSignIn() {
 }
 
 export async function signOut() {
-  await fetch('/bff/logout', { method: 'POST', credentials: 'same-origin', headers: csrf });
+  await apiFetch('/bff/logout', { method: 'POST', credentials: 'same-origin', headers: csrf });
 }
 
 // Per tab and PHI-free: only "this tab had a session", so a reload after an idle timeout still shows F-05a.

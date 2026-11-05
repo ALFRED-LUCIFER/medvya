@@ -41,7 +41,12 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
         // Checked here as well as while typing: the save is refused until the desk has decided about every possible match.
         var duplicates = await DuplicatesAsync(c.FacilityId, c.FullName, estimated ? null : dob, rules.MatchKeys(c.Identifiers), cancellationToken);
         var resolved = c.Duplicates?.CandidateIds ?? [];
-        if (duplicates.Any(d => !resolved.Contains(d.PatientId))) throw new PatientValidationException([new("duplicates", "unresolved")]);
+        if (duplicates.Any(d => !resolved.Contains(d.PatientId)))
+        {
+            // An identical request that raced this one may have registered since the replay check above, and now shows up as a duplicate of itself.
+            if (key is not null && await ReplayAsync(key, now, warnings, cancellationToken) is { } raced) return raced;
+            throw new PatientValidationException([new("duplicates", "unresolved")]);
+        }
 
         try
         {

@@ -141,8 +141,19 @@ public sealed class ScheduleEndpointTests(SqlServerFixture sql) : IClassFixture<
         Assert.Contains("\"state\":\"Booked\"", body, StringComparison.Ordinal);
         Assert.DoesNotContain("dizzy", body, StringComparison.Ordinal); // the free-text reason never comes back
 
-        Assert.Equal(["schedule.template.update", "slot.hold", "slot.hold", "patient.lookup", "appointment.book"], await AuditActions());
+        // MDV-P1-050: the paper sheet carries time, first name, type and state only, and the print is audited with who printed it.
+        using var printed = await Client(reception).PostAsJsonAsync("/v1/schedule/print", new { facilityId = facility, date = DateOnly.FromDateTime(start.Date) });
+        Assert.Equal(HttpStatusCode.OK, printed.StatusCode);
+        var sheet = await printed.Content.ReadAsStringAsync();
+        Assert.Contains("\"firstName\":\"Meera\"", sheet, StringComparison.Ordinal);
+        foreach (var forbidden in new[] { "Iyer", "9000000101", "000001", "dizzy", patient.ToString() })
+            Assert.DoesNotContain(forbidden, sheet, StringComparison.Ordinal);
+        using var denied = await Client(null).PostAsJsonAsync("/v1/schedule/print", new { facilityId = facility });
+        Assert.Equal(HttpStatusCode.Unauthorized, denied.StatusCode);
+
+        Assert.Equal(["schedule.template.update", "slot.hold", "slot.hold", "patient.lookup", "appointment.book", "schedule.print"], await AuditActions());
         await using var audit = sql.Audit(tenant);
+        Assert.Equal(reception, (await audit.Events.SingleAsync(e => e.Action == "schedule.print")).ActorUserId);
         var lookupAudit = await audit.Events.SingleAsync(e => e.Action == "patient.lookup");
         Assert.Equal((patient, "registration"), (lookupAudit.PatientId!.Value, lookupAudit.Purpose)); // the purpose front-desk search (MDV-P1-018) uses
     }

@@ -27,7 +27,6 @@ export function useOverviewController(facilityId: string, online: boolean, userI
     queryKey: key,
     queryFn: () => fetchOverview(facilityId),
     refetchInterval: live === 'live' ? false : 30_000,
-    retry: (count, error) => !(error instanceof ApiError && error.status === 403) && count < 2,
   });
 
   const [movingId, setMovingId] = useState<string | null>(null);

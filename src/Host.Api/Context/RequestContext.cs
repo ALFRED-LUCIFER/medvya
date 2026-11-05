@@ -31,6 +31,7 @@ public sealed class RequestContext(IHttpContextAccessor accessor) : ICurrentTena
     public Guid? UserId => Read(ClaimTypes.NameIdentifier);
     public string? ClientIp => Http?.Connection.RemoteIpAddress?.ToString();
     public string? CorrelationId => Http?.TraceIdentifier;
+    public string? Role => Http?.User.FindFirst(Host.Api.Auth.StaffPolicies.RoleClaim)?.Value;
 
     Guid? Read(string claim) => Guid.TryParse(Http?.User.FindFirst(claim)?.Value, out var id) ? id : null;
 }

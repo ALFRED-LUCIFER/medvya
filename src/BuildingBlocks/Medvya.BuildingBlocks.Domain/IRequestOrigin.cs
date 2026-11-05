@@ -8,4 +8,8 @@ public interface IRequestOrigin
 {
     string? ClientIp { get; }
     string? CorrelationId { get; }
+    /// <summary>The role the signed-in person holds in this session (the session's role claim), kept on audit events so the log shows the authority held at the time.</summary>
+    string? Role { get; }
+    /// <summary>The facility the session works at.</summary>
+    Guid? FacilityId { get; }
 }

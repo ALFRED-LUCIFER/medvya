@@ -21,7 +21,6 @@ export function useAuditLogController() {
     queryFn: ({ pageParam }) => fetchAuditPage(filters, pageParam),
     initialPageParam: null as string | null,
     getNextPageParam: last => last.next,
-    retry: (count, e) => !(e instanceof ApiError && e.status === 403) && count < 2,
     staleTime: 0,
   });
   const exporting = useMutation({ mutationFn: () => downloadAuditCsv(filters) });

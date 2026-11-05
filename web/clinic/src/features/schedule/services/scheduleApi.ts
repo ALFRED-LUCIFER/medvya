@@ -6,6 +6,7 @@ import type { PatientMessage } from '../domain/messages';
 import type { SaveResult, SavedAdjustment } from '../domain/adjustments';
 import type { Appointment, ScheduleDay } from '../domain/schedule';
 import type { ScheduleWeek } from '../domain/views';
+import type { DaySheet } from '../domain/daySheet';
 
 /** An API answer other than 2xx. `status` tells 403 from other failures; `code` is the 409 reason (e.g. "being_booked"). */
 export class ApiError extends Error {
@@ -35,8 +36,9 @@ export async function send<T>(url: string, init: RequestInit = {}): Promise<T> {
   return (res.status === 204 ? undefined : await res.json()) as T;
 }
 
-export const post = <T>(url: string, body: unknown) =>
-  send<T>(url, { method: 'POST', headers: { ...csrf, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+/** With a `key` the call carries an Idempotency-Key, so the shared client may repeat it after a timeout without acting twice. */
+export const post = <T>(url: string, body: unknown, key?: string) =>
+  send<T>(url, { method: 'POST', headers: { ...csrf, 'Content-Type': 'application/json', ...(key ? { 'Idempotency-Key': key } : {}) }, body: JSON.stringify(body) });
 
 /** The facility's day view; without a date the server picks today in the facility's time zone. Ids and dates only in the URL. */
 export function fetchScheduleDay(facilityId: string, date: string | null): Promise<ScheduleDay> {
@@ -56,7 +58,7 @@ export const holdSlot = (facilityId: string, s: SlotChoice) =>
 export const releaseHold = (holdId: string) => send<void>(`/v1/slot-holds/${holdId}`, { method: 'DELETE', headers: csrf });
 
 /** The free-text reason goes in the body only, never in a URL. */
-export const bookAppointment = (holdId: string, form: BookingForm) => post<BookedAppointment>('/v1/appointments', { holdId, ...form });
+export const bookAppointment = (holdId: string, form: BookingForm, key: string) => post<BookedAppointment>('/v1/appointments', { holdId, ...form }, key);
 
 /** Name and MRN to confirm the patient before booking (audited by the server); null when there is no such patient. */
 export async function findPatient(facilityId: string, patientId: string): Promise<PatientMatch | null> {
@@ -96,3 +98,6 @@ export const fetchMessages = (facilityId: string, appointmentId: string) =>
 export const fetchAdjustments = (facilityId: string) => send<SavedAdjustment[]>(`/v1/schedule/exceptions?${new URLSearchParams({ facilityId })}`);
 
 export const saveAdjustment = (body: unknown) => post<SaveResult>('/v1/schedule/exceptions', body);
+
+/** MDV-P1-050: the server audits the print and answers with the only fields that may go on paper. */
+export const printDaySheet = (facilityId: string, date: string | null) => post<DaySheet>('/v1/schedule/print', { facilityId, date });

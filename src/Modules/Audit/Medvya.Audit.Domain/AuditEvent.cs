@@ -28,6 +28,11 @@ public sealed class AuditEvent
     [Classification(DataClass.Internal)] public required string Purpose { get; init; }
     [Classification(DataClass.Internal)] public AuditOutcome Outcome { get; init; }
     [Classification(DataClass.Internal)] public DateTimeOffset OccurredAt { get; init; }
+    /// <summary>Role code held in the session when the event happened (null on rows written before it was recorded). Never inferred later.</summary>
+    [Classification(DataClass.Internal)] public string? Role { get; init; }
+    [Classification(DataClass.Internal)] public Guid? FacilityId { get; init; }
+    /// <summary>Codes and opaque ids only, e.g. the filters of an export. Never names or free text.</summary>
+    [Classification(DataClass.Internal)] public string? Detail { get; init; }
     [Classification(DataClass.Personal)] public string? ClientIp { get; init; }
     [Classification(DataClass.Internal)] public string? CorrelationId { get; init; }
 }

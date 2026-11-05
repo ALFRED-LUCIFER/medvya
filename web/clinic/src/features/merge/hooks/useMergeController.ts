@@ -1,11 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { loadState, noRetryOnAnswers, patientDataGcTime } from '../../patients/hooks/usePatientDirectoryController';
+import { loadState, patientDataGcTime } from '../../patients/hooks/usePatientDirectoryController';
 import { ApiError } from '../../patients/services/patientsApi';
 import { refusalOf, type MergeAction } from '../domain/merge';
 import { decideMerge, fetchMergeHistory, fetchMergeQueue, fetchMergeReview } from '../services/mergeApi';
 
 // Each fetch is an audited read: reuse it until a decision changes it. Memory only.
-const options = { gcTime: patientDataGcTime, staleTime: Infinity, retry: noRetryOnAnswers };
+const options = { gcTime: patientDataGcTime, staleTime: Infinity };
 
 /** Merge review (P-03, MDV-P1-017): the open queue and, with a request id, the side-by-side comparison. */
 export function useMergeController(requestId: string | null) {

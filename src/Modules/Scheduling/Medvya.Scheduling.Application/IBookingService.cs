@@ -116,8 +116,12 @@ public interface IBookingService
     /// <summary>Releases the caller's hold; releasing a hold that is gone does nothing.</summary>
     Task ReleaseHoldAsync(Guid holdId, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// With an <paramref name="idempotencyKey"/> (MDV-P1-047), a repeat of the same request by the same user within 24 hours returns
+    /// the first appointment and books nothing; the same key with another request throws <see cref="IdempotencyKeyException"/>.
+    /// </summary>
     /// <exception cref="SlotUnavailableException">The hold expired, is not the caller's, or the slot is no longer bookable.</exception>
-    Task<AppointmentView> BookAsync(BookAppointment command, CancellationToken cancellationToken = default);
+    Task<AppointmentView> BookAsync(BookAppointment command, string? idempotencyKey = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// A walk-in (MDV-P1-025): books the earliest free slot from now today of the chosen doctor (or of any active doctor) on the

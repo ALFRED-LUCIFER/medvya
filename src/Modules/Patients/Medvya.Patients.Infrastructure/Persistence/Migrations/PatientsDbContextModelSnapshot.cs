@@ -174,6 +174,16 @@ namespace Medvya.Patients.Infrastructure.Persistence.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<string>("IdempotencyKeyHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("nchar(64)")
+                        .IsFixedLength();
+
+                    b.Property<string>("IdempotencyRequestHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("nchar(64)")
+                        .IsFixedLength();
+
                     b.Property<Guid?>("MergedIntoPatientId")
                         .HasColumnType("uniqueidentifier");
 
@@ -267,6 +277,10 @@ namespace Medvya.Patients.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.HasIndex("TenantId", "FacilityId", "RegisteredAt");
+
+                    b.HasIndex("TenantId", "RegisteredBy", "IdempotencyKeyHash")
+                        .IsUnique()
+                        .HasFilter("[IdempotencyKeyHash] IS NOT NULL");
 
                     b.ToTable("Patients", "patients");
                 });

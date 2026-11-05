@@ -19,7 +19,7 @@ namespace Host.Api.Onboarding;
 /// "finish", so these endpoints need a session but no facility. Server-side validation is the only validation that counts;
 /// the page repeats the required-field checks only to answer faster.
 /// </summary>
-public static class OnboardingEndpoints
+public static partial class OnboardingEndpoints
 {
     public sealed record StartRequest(string? Country);
     public sealed record SaveRequest(int Step, int? Validate, OnboardingData? Data);
@@ -81,8 +81,8 @@ public static class OnboardingEndpoints
                     await scope.ServiceProvider.GetRequiredService<IScheduleService>().SaveTemplateAsync(
                         new SaveTemplate { FacilityId = practice.FacilityId, CalendarId = userId, CalendarKind = CalendarKind.Doctor, SlotMinutes = data.Hours!.SlotMinutes!.Value, Hours = Sessions(data.Hours) }, ct);
                 }
-                // The practice exists already; hours the schedule rules reject are set again in Settings, Hours.
-                catch (SchedulingValidationException) { }
+                // The practice exists already; hours the schedule rules reject (e.g. a time off the 5-minute grid) are set again in Settings, Hours.
+                catch (SchedulingValidationException) { OwnerSessionsRejected(http.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger(nameof(OnboardingEndpoints))); }
             }
             var invitations = scope.ServiceProvider.GetRequiredService<IInvitations>();
             foreach (var member in data.Team ?? [])
@@ -99,6 +99,10 @@ public static class OnboardingEndpoints
 
         return app;
     }
+
+    // Fixed message, no arguments: nothing about the practice or the hours is logged.
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Onboarding finished without the owner's bookable sessions: the schedule rules rejected the hours")]
+    static partial void OwnerSessionsRejected(ILogger logger);
 
     static readonly DayOfWeek[] Weekdays = [DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday];
 

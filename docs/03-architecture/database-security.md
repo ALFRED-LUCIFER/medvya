@@ -92,6 +92,7 @@ Also in MDV-P0-006, not testable locally: Entra-only authentication on the logic
 ## Known limits
 
 - The audit module's RLS predicate lives in the `audit` schema (migration `InitialAudit`), so the migrator has `SELECT` on `audit`. RLS still hides rows from it. Moving the predicate to `security` lets that grant go.
+- Reception-board reads (`front_desk.board.read`) and live-update watches (`front_desk.board.watch`) are audited once per user, tenant and exact request (facility) per 5-minute window (`AuditWindow`, MDV-P1-035), because a board refetches on every change. Only Allowed answers are coalesced; Denied, NotFound and Rejected are always written, and the window starts only after its first row is written. The window is per API instance memory, so a restart or a second instance writes one extra row per window; move it into the database before running more than one instance.
 - One app principal holds every module role, as the app is one process. The module roles still make cross-schema access a deliberate grant, and they allow separate principals per worker later (for example a jobs worker with only the roles it needs).
 - `audit.AuditEvents.ClientIp` is not masked yet (ledger table), so reporting has no `audit` access.
 - TDE with a customer-managed key and the Key Vault CMK are Azure work (MDV-P0-006); locally SQL Server uses its default TDE-off setup.

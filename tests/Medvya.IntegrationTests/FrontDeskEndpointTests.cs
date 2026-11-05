@@ -2,6 +2,8 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Text.Json;
+using Medvya.Audit.Application;
+using Medvya.Audit.Domain;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -17,12 +19,13 @@ namespace Medvya.IntegrationTests;
 /// </summary>
 public sealed class FrontDeskEndpointTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>, IAsyncLifetime
 {
-    readonly SchedulingHarness h = new(sql);
+    readonly SchedulingHarness h = new(sql), other = new(sql);
     WebApplicationFactory<Program> factory = null!;
 
     public async Task InitializeAsync()
     {
         await h.SeedAsync();
+        await other.SeedAsync(); // a second clinic in its own tenant
         await h.DoctorTemplateAsync();
         factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b
             .UseSetting("ConnectionStrings:Medvya", sql.ConnectionString)
@@ -44,17 +47,24 @@ public sealed class FrontDeskEndpointTests(SqlServerFixture sql) : IClassFixture
             app.Use((ctx, nxt) =>
             {
                 if (ctx.Request.Headers["X-Test-User"].ToString() is { Length: > 0 } user)
-                    ctx.User = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, user), new Claim("tenant_id", tenant.ToString())], "synthetic"));
+                {
+                    List<Claim> claims = [new(ClaimTypes.NameIdentifier, user), new("tenant_id", ctx.Request.Headers["X-Test-Tenant"].ToString() is { Length: > 0 } t ? t : tenant.ToString())];
+                    // The access log is scoped by role and facility claims (as AccessLogTests signs in).
+                    if (ctx.Request.Headers["X-Test-Role"].ToString() is { Length: > 0 } role)
+                        claims.AddRange([new Claim("role", role), new Claim("facility_id", ctx.Request.Headers["X-Test-Facility"].ToString())]);
+                    ctx.User = new ClaimsPrincipal(new ClaimsIdentity(claims, "synthetic"));
+                }
                 return nxt(ctx);
             });
             next(app);
         };
     }
 
-    HttpClient Client(Guid user)
+    HttpClient Client(Guid user, Guid? tenant = null)
     {
         var client = factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost") });
         client.DefaultRequestHeaders.Add("X-Test-User", user.ToString());
+        if (tenant is { } t) client.DefaultRequestHeaders.Add("X-Test-Tenant", t.ToString());
         return client;
     }
 
@@ -62,6 +72,66 @@ public sealed class FrontDeskEndpointTests(SqlServerFixture sql) : IClassFixture
     {
         await using var db = sql.Audit(h.Tenant);
         return await db.Events.OrderBy(e => e.OccurredAt).Select(e => e.Action).ToListAsync();
+    }
+
+    async Task<List<(Guid? Actor, AuditOutcome Outcome)>> BoardReads()
+    {
+        await using var db = sql.Audit(h.Tenant);
+        return (await db.Events.Where(e => e.Action == "front_desk.board.read").OrderBy(e => e.OccurredAt).Select(e => new { e.ActorUserId, e.Outcome }).ToListAsync())
+            .Select(e => (e.ActorUserId, e.Outcome)).ToList();
+    }
+
+    [Fact]
+    public async Task RapidBoardReadsByOneUserAreAuditedOncePerWindowAndEachOtherUserAndRefusalIsAuditedAlways()
+    {
+        var url = $"/v1/front-desk/board?facilityId={h.Facility}";
+        var reception = Client(h.Reception);
+        for (var i = 0; i < 5; i++) Assert.Equal(HttpStatusCode.OK, (await reception.GetAsync(url)).StatusCode);
+        Assert.Equal([(h.Reception, AuditOutcome.Allowed)], (await BoardReads()).Select(r => ((Guid?)r.Actor, r.Outcome)).ToList());
+
+        // Another user is not covered by this user's window; a refusal is never covered, however often it repeats.
+        Assert.Equal(HttpStatusCode.OK, (await Client(h.Nurse).GetAsync(url)).StatusCode);
+        for (var i = 0; i < 2; i++) Assert.Equal(HttpStatusCode.Forbidden, (await Client(h.PortalUser).GetAsync(url)).StatusCode);
+        // Another facility's board is a different read, so it is not hidden either (refused here, and recorded).
+        Assert.Equal(HttpStatusCode.Forbidden, (await reception.GetAsync($"/v1/front-desk/board?facilityId={h.OtherFacility}")).StatusCode);
+        Assert.Equal(
+            [(h.Reception, AuditOutcome.Allowed), (h.Nurse, AuditOutcome.Allowed), (h.PortalUser, AuditOutcome.Denied), (h.PortalUser, AuditOutcome.Denied), (h.Reception, AuditOutcome.Denied)],
+            (await BoardReads()).Select(r => (r.Actor!.Value, r.Outcome)).ToList());
+
+        // Inside the window nothing more; after it, the first read writes again.
+        h.Clock.Advance(AuditWindow.Board - TimeSpan.FromSeconds(1));
+        await reception.GetAsync(url);
+        Assert.Equal(5, (await BoardReads()).Count);
+        h.Clock.Advance(TimeSpan.FromSeconds(2));
+        await reception.GetAsync(url);
+        Assert.Equal(6, (await BoardReads()).Count);
+
+        // The access log still lists the surviving rows: one Allowed read by reception per window, none for the coalesced calls.
+        var admin = Client(h.Admin);
+        admin.DefaultRequestHeaders.Add("X-Test-Role", "PracticeAdmin");
+        admin.DefaultRequestHeaders.Add("X-Test-Facility", h.Facility.ToString());
+        var log = await admin.GetFromJsonAsync<JsonElement>("/v1/audit/access-log?limit=200");
+        Assert.Equal(2, log.GetProperty("items").EnumerateArray().Count(i =>
+            i.GetProperty("action").GetString() == "front_desk.board.read" && i.GetProperty("actorUserId").GetGuid() == h.Reception && i.GetProperty("outcome").GetString() == "Allowed"));
+    }
+
+    [Fact]
+    public async Task AnotherTenantsBoardReadInsideThisTenantsWindowIsAuditedInItsOwnTenant()
+    {
+        Assert.Equal(HttpStatusCode.OK, (await Client(h.Reception).GetAsync($"/v1/front-desk/board?facilityId={h.Facility}")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await Client(other.Reception, other.Tenant).GetAsync($"/v1/front-desk/board?facilityId={other.Facility}")).StatusCode);
+        await using var db = sql.Audit(other.Tenant);
+        Assert.Equal([other.Reception], await db.Events.Where(e => e.Action == "front_desk.board.read").Select(e => e.ActorUserId!.Value).ToListAsync());
+    }
+
+    [Fact]
+    public void TheWindowKeyNamesTheTenantSoOneTenantsWindowNeverCoversAnother()
+    {
+        var window = new AuditWindow(h.Clock);
+        Guid tenantA = Guid.NewGuid(), tenantB = Guid.NewGuid(), user = Guid.NewGuid();
+        window.Record(AuditWindow.Key(tenantA, user, "front_desk.board.read", "/board?facilityId=1"), AuditWindow.Board);
+        Assert.True(window.Covered(AuditWindow.Key(tenantA, user, "front_desk.board.read", "/board?facilityId=1")));
+        Assert.False(window.Covered(AuditWindow.Key(tenantB, user, "front_desk.board.read", "/board?facilityId=1")));
     }
 
     [Fact]

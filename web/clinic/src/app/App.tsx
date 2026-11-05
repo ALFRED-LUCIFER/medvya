@@ -65,7 +65,7 @@ export default function App({ locale, onLocaleChange }: Props) {
   // Walk-in (MDV-P1-025) books and checks in: Register / book patients and Check-in & queue, both at Full.
   const walkInPath = pathOf('frontDesk') && active?.capabilities.CheckInQueue === 'Full' && active.capabilities.RegisterBookPatients === 'Full'
     ? `${pathOf('frontDesk')}/walk-in` : null;
-  const registration = <RegistrationRoute country={country} actorName={shell.displayName ?? ''} bookPath={pathOf('schedule')} checkInPath={walkInPath} />;
+  const registration = <RegistrationRoute country={country} actorName={shell.displayName ?? ''} timeZone={active?.timeZone} bookPath={pathOf('schedule')} checkInPath={walkInPath} />;
 
   // F-05a: an ended session replaces every screen; signing in again comes back to this route.
   const routes = shell.loading ? <Route path="*" element={<ShellMessage standalone busy title={t('shell.loading')} />} />

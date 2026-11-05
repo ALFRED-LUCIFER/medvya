@@ -1,9 +1,19 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { layoutDay, stepDate } from '../domain/schedule';
 import { agenda, filterColumns, firstFreeSlot, weekDays, weekSpan, type ScheduleView } from '../domain/views';
 import { ApiError, fetchScheduleDay, fetchScheduleWeek } from '../services/scheduleApi';
 import { isPhoneWidth } from '../services/viewport';
+
+/** The current instant, refreshed each minute so slots that start while the screen is open stop being offered without a reload. */
+const useNow = () => {
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+  return now;
+};
 
 const noRetryOn403 = (count: number, error: unknown) => !(error instanceof ApiError && error.status === 403) && count < 2;
 
@@ -14,6 +24,7 @@ const noRetryOn403 = (count: number, error: unknown) => !(error instanceof ApiEr
  * Offline is shown by the shell's banner, not here.
  */
 export function useScheduleController(facilityId: string, userId: string) {
+  const now = useNow();
   const [date, setDate] = useState<string | null>(null);
   const [view, setView] = useState<ScheduleView>(() => (isPhoneWidth() ? 'list' : 'day'));
   const [chosen, setChosen] = useState<string | null | undefined>(undefined); // undefined: nothing chosen yet
@@ -59,8 +70,8 @@ export function useScheduleController(facilityId: string, userId: string) {
     week: useMemo(() => (week.data ? weekDays(week.data) : null), [week.data]),
     weekName: columns.find(c => c.calendarId === weekCalendar)?.name ?? '',
     weekCalendar,
-    // "Now" is when this data arrived: pure during render, and a slot that started since is refused by the server anyway.
-    nextFree: filtered ? firstFreeSlot(filtered, new Date(query.dataUpdatedAt)) : null,
+    now,
+    nextFree: filtered ? firstFreeSlot(filtered, new Date(now)) : null,
     updating: current.isPlaceholderData,
     loading: query.isPending,
     forbidden,

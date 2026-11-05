@@ -45,6 +45,12 @@ describe('i18n', () => {
     const at = new Date('2026-10-19T03:30:00Z');
     expect(makeI18n('en', 'IN').formatTime(at, 'Asia/Kolkata')).toBe('09:00');
     expect(makeI18n('ar', 'AE').formatTime(at, 'Asia/Dubai')).toBe('07:30'); // Western digits in Arabic too
+    const late = new Date('2026-11-05T10:08:00Z'); // 03:38 pm in Kolkata, 02:08 pm in Dubai
+    expect(makeI18n('en', 'IN').formatTime(late, 'Asia/Kolkata')).toBe('15:38');
+    expect(makeI18n('en', 'IN').formatTime(late, 'Asia/Dubai')).toBe('14:08');
+    const nearMidnight = new Date('2026-11-05T19:00:00Z'); // already 6 Nov in Kolkata, still 5 Nov in Dubai
+    expect(makeI18n('en', 'IN').formatDate(nearMidnight, 'Asia/Kolkata')).toBe('06 Nov 2026');
+    expect(makeI18n('en', 'IN').formatDate(nearMidnight, 'Asia/Dubai')).toBe('05 Nov 2026');
     expect(makeI18n('en', 'IN').formatDay('2026-10-19')).toContain('Monday');
     expect(makeI18n('en', 'IN').formatShortDay('2026-10-19')).toBe('Mon, 19 Oct');
   });

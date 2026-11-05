@@ -33,7 +33,7 @@ public sealed class StaffTests(SqlServerFixture sql) : IClassFixture<SqlServerFi
         if (factory is not null) await factory.DisposeAsync();
     }
 
-    sealed class SignedIn(Guid tenant) : IStartupFilter
+    sealed class SignedIn(Guid tenant, Guid facility) : IStartupFilter
     {
         public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => app =>
         {
@@ -41,7 +41,7 @@ public sealed class StaffTests(SqlServerFixture sql) : IClassFixture<SqlServerFi
             {
                 if (ctx.Request.Headers["X-Test-User"].ToString() is { Length: > 0 } user)
                     ctx.User = new ClaimsPrincipal(new ClaimsIdentity(
-                        [new Claim(ClaimTypes.NameIdentifier, user), new Claim("tenant_id", tenant.ToString()), new Claim("role", ctx.Request.Headers["X-Test-Role"].ToString())], "synthetic"));
+                        [new Claim(ClaimTypes.NameIdentifier, user), new Claim("tenant_id", tenant.ToString()), new Claim("facility_id", facility.ToString()), new Claim("role", ctx.Request.Headers["X-Test-Claim-Role"].ToString())], "synthetic"));
                 return nxt(ctx);
             });
             next(app);
@@ -59,11 +59,10 @@ public sealed class StaffTests(SqlServerFixture sql) : IClassFixture<SqlServerFi
         factory ??= new WebApplicationFactory<Program>().WithWebHostBuilder(b => b
             .UseSetting("ConnectionStrings:Medvya", sql.ConnectionString)
             .UseSetting("Invitations:LinkBaseUrl", "https://clinic.test")
-            .ConfigureServices(s => s.AddSingleton<IStartupFilter>(new SignedIn(h.Tenant)))
+            .ConfigureServices(s => s.AddSingleton<IStartupFilter>(new SignedIn(h.Tenant, h.Facility)))
             .ConfigureTestServices(s => s.AddSingleton<IEmailSender>(outbox)));
         var client = factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost") });
-        client.DefaultRequestHeaders.Add("X-Test-User", (user ?? h.Admin).ToString());
-        client.DefaultRequestHeaders.Add("X-Test-Role", role.ToString());
+        client.DefaultRequestHeaders.Add("X-Test-User", (user ?? h.ByRole[role]).ToString());
         return client;
     }
 
@@ -87,7 +86,7 @@ public sealed class StaffTests(SqlServerFixture sql) : IClassFixture<SqlServerFi
     [InlineData(Role.Patient)]
     public async Task RolesWithoutStaffAdministrationGet403AndNothingChanges(Role role)
     {
-        using var client = Client(role, h.Reception);
+        using var client = Client(role);
         foreach (var request in Requests())
             Assert.Equal(HttpStatusCode.Forbidden, (await client.SendAsync(request)).StatusCode);
         await using var db = sql.Context(h.Tenant);
@@ -255,6 +254,15 @@ public sealed class StaffTests(SqlServerFixture sql) : IClassFixture<SqlServerFi
         Assert.Equal(Access.Read, await access(Capability.AuditLog)); // practice admin's level
         Assert.Equal(Access.None, await access(Capability.DevicePairingFleet)); // not chosen
         Assert.Equal(Access.None, await access(Capability.ClinicalNotes));
+    }
+
+    [Fact]
+    public async Task AForgedOrStaleRoleClaimGrantsNothingBecauseTheMembershipDecides()
+    {
+        // The reception membership is a receptionist; a cookie that still says PracticeAdmin must not open staff administration.
+        using var client = Client(Role.Receptionist);
+        client.DefaultRequestHeaders.Add("X-Test-Claim-Role", nameof(Role.PracticeAdmin));
+        Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync("/v1/staff")).StatusCode);
     }
 
     [Fact]

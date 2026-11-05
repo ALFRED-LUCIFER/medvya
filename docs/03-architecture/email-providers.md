@@ -9,4 +9,4 @@ Transactional email (invitations, confirmations) goes through `IEmailSender`. `E
 
 Both fail closed: missing settings mean nothing is sent and the caller's request fails (invitations roll back). An unknown provider name stops the app at start-up.
 
-Switching to Acs: create the Communication Services and Email Services resources with an Azure-managed domain (register the `Microsoft.Communication` provider first), give the app identity the role, then set `Email__Provider=Acs`, `Email__Acs__Endpoint`, `Email__Acs__From`. The Bicep for those resources is added when Acs is chosen.
+Switching to Acs: create the Communication Services and Email Services resources with an Azure-managed domain (register the `Microsoft.Communication` provider first), give the app identity the role, then set `Email__Provider=Acs`, `Email__Acs__Endpoint`, `Email__Acs__From`. The Bicep (`infra/bicep/main.bicep`) creates the Email Service, the Azure-managed domain, the Communication Service (data location parameter `emailDataLocation`, default India), the role for the app identity, and these three settings. Register the provider once: `az provider register -n Microsoft.Communication`.

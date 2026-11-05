@@ -1,9 +1,11 @@
 using System.Globalization;
 using System.Security.Claims;
 using System.Text;
+using Host.Api.Auth;
 using Medvya.Audit.Api;
 using Medvya.Audit.Application;
 using Medvya.Audit.Domain;
+using Medvya.BuildingBlocks.Domain;
 using Medvya.Identity.Application;
 using Medvya.Patients.Application;
 using Medvya.Tenancy.Api;
@@ -14,7 +16,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Host.Api.AuditLog;
 
 /// <summary>
-/// Practice access log (F-12, MDV-P1-035): who opened or changed which record, when, why and with what outcome. Needs the Audit log
+/// Practice access log (F-12, MDV-P1-035): who opened or changed which record, when, why and with what outcome. The role shown is the one held at event time; older rows show none. Needs the Audit log
 /// capability (practice admin, owner doctor, hospital IT; everyone else gets 403, which is itself audited as Denied). Events hold
 /// ids and codes only; names come from the modules that own them. A patient's name is shown only on the per-patient route, whose
 /// audit event carries that patient's id. The export is a CSV with exporter and time, without patient names.
@@ -27,36 +29,47 @@ public static class AccessLogEndpoints
     public sealed record ExportRequest(Guid? ActorUserId, Guid? PatientId, string? Action, DateTimeOffset? From, DateTimeOffset? To);
 
     sealed record Row(Guid Id, DateTimeOffset OccurredAt, Guid? ActorUserId, string? ActorName, string? Role, string Action, string ResourceType,
-        Guid? PatientId, string? PatientMrn, string? PatientName, string Purpose, string Outcome);
+        Guid? PatientId, string? PatientMrn, string? PatientName, string Purpose, string Outcome, string? Detail);
 
     public static WebApplication MapAccessLog(this WebApplication app)
     {
         var g = app.MapGroup("/v1/audit/access-log").RequireCapability(Capability.AuditLog, Access.Read, Access.Full);
 
-        g.MapGet("/", ([AsParameters] Filters f, IServiceProvider sp, CancellationToken ct) => List(null, f, sp, ct))
+        g.MapGet("/", ([AsParameters] Filters f, ClaimsPrincipal user, ICurrentFacility facility, IServiceProvider sp, CancellationToken ct) => List(null, f, user, facility, sp, ct))
             .Audited("audit.read", "audit_log", "audit");
-        g.MapGet("/patients/{patientId:guid}", (Guid patientId, [AsParameters] Filters f, IServiceProvider sp, CancellationToken ct) => List(patientId, f, sp, ct))
+        g.MapGet("/patients/{patientId:guid}", (Guid patientId, [AsParameters] Filters f, ClaimsPrincipal user, ICurrentFacility facility, IServiceProvider sp, CancellationToken ct) => List(patientId, f, user, facility, sp, ct))
             .Audited("audit.read", "audit_log", "audit", patientRouteKey: "patientId");
 
         // POST, not GET: an export is an action that is audited on its own and never prefetched or cached.
-        // shortcut: the export event does not record the filters used (they travel in the body); add them with an audit detail field.
         g.MapPost("/export", Export).Audited("audit.export", "audit_log", "audit");
         return app;
     }
 
-    static async Task<IResult> List(Guid? patientId, Filters f, IServiceProvider sp, CancellationToken ct)
+    /// <summary>
+    /// Hospital IT works at one facility and sees only that facility's events; practice admins and owner doctors see the whole practice.
+    /// Events from before the facility was recorded show to the whole-practice roles only.
+    /// shortcut: facility-limited means the hospital IT role; a per-membership facility limit needs a membership flag, add it when another role is limited.
+    /// </summary>
+    static Guid? ScopeOf(ClaimsPrincipal user, ICurrentFacility facility) =>
+        user.FindFirstValue(StaffPolicies.RoleClaim) == nameof(Role.HospitalIt) ? facility.FacilityId ?? Guid.Empty : null;
+
+    static async Task<IResult> List(Guid? patientId, Filters f, ClaimsPrincipal user, ICurrentFacility facility, IServiceProvider sp, CancellationToken ct)
     {
         var limit = Math.Clamp(f.Limit ?? DefaultPage, 1, MaxPage);
-        var page = await QueryAsync(sp, new AuditQuery(f.ActorUserId, patientId, Clean(f.Action), f.From, f.To, f.After, limit), ct);
+        var page = await QueryAsync(sp, new AuditQuery(f.ActorUserId, patientId, Clean(f.Action), f.From, f.To, f.After, limit) { FacilityId = ScopeOf(user, facility) }, ct);
         if (page is null) return Results.ValidationProblem(new Dictionary<string, string[]> { ["after"] = ["invalid"] });
         var rows = await Enrich(sp, page.Items, withPatientName: patientId is not null, ct);
         return Results.Ok(new { items = rows, next = page.Next, actions = page.Actions });
     }
 
-    static async Task<IResult> Export([FromBody] ExportRequest? body, ClaimsPrincipal principal, HttpContext http, IServiceProvider sp, CancellationToken ct)
+    static async Task<IResult> Export([FromBody] ExportRequest? body, ClaimsPrincipal principal, ICurrentFacility facility, HttpContext http, IServiceProvider sp, CancellationToken ct)
     {
         body ??= new(null, null, null, null, null);
-        var page = await QueryAsync(sp, new AuditQuery(body.ActorUserId, body.PatientId, Clean(body.Action), body.From, body.To, null, MaxExport), ct);
+        // The filters used travel with the export event: opaque ids, an action code and dates, nothing the log does not already show.
+        http.Items["audit.detail"] = string.Join("; ", new[] { ("staff", body.ActorUserId?.ToString()), ("patient", body.PatientId?.ToString()), ("action", Clean(body.Action)),
+            ("from", body.From?.UtcDateTime.ToString("u", CultureInfo.InvariantCulture)), ("to", body.To?.UtcDateTime.ToString("u", CultureInfo.InvariantCulture)) }
+            .Where(x => x.Item2 is not null).Select(x => $"{x.Item1}={x.Item2}").DefaultIfEmpty("none"));
+        var page = await QueryAsync(sp, new AuditQuery(body.ActorUserId, body.PatientId, Clean(body.Action), body.From, body.To, null, MaxExport) { FacilityId = ScopeOf(principal, facility) }, ct);
         var rows = await Enrich(sp, page!.Items, withPatientName: false, ct);
         var exporter = Guid.TryParse(principal.FindFirstValue(ClaimTypes.NameIdentifier), out var id)
             ? (await sp.GetRequiredService<IStaffUsers>().DisplayNamesAsync([id], ct)).GetValueOrDefault(id) ?? id.ToString() : "unknown";
@@ -76,16 +89,12 @@ public static class AccessLogEndpoints
     {
         var actors = events.Where(e => e.ActorUserId is not null).Select(e => e.ActorUserId!.Value).Distinct().ToList();
         var names = await sp.GetRequiredService<IStaffUsers>().DisplayNamesAsync(actors, ct);
-        // shortcut: the role shown is the person's current role at the practice, not the one they held when the event happened; add the role to the event.
-        var roles = (await sp.GetRequiredService<IStaffRoster>().ListAsync(ct)).Where(r => r.UserId is not null)
-            .GroupBy(r => r.UserId!.Value).ToDictionary(x => x.Key, x => x.First().Role);
         var patients = await sp.GetRequiredService<IPatientDirectory>().SummariesAsync([.. events.Where(e => e.PatientId is not null).Select(e => e.PatientId!.Value).Distinct()], ct);
         return [.. events.Select(e =>
         {
             var patient = e.PatientId is { } p && patients.TryGetValue(p, out var s) ? s : null;
             return new Row(e.Id, e.OccurredAt, e.ActorUserId, e.ActorUserId is { } a ? names.GetValueOrDefault(a) : null,
-                e.ActorUserId is { } r && roles.TryGetValue(r, out var role) ? role.ToString() : null, e.Action, e.ResourceType,
-                e.PatientId, patient?.Mrn, withPatientName ? patient?.FullName : null, e.Purpose, e.Outcome.ToString());
+                e.Role, e.Action, e.ResourceType, e.PatientId, patient?.Mrn, withPatientName ? patient?.FullName : null, e.Purpose, e.Outcome.ToString(), e.Detail);
         })];
     }
 
@@ -95,10 +104,10 @@ public static class AccessLogEndpoints
     {
         var mark = $"Medvya practice access log. Exported by {exporter} at {at.UtcDateTime.ToString("u", CultureInfo.InvariantCulture)}. Confidential: contains staff activity on patient records.";
         var sb = new StringBuilder().Append(Cell(mark)).Append("\r\n")
-            .Append("Time (UTC),Staff,Role,Action,Resource,Patient MRN,Purpose,Outcome\r\n");
+            .Append("Time (UTC),Staff,Role at the time,Action,Resource,Patient MRN,Purpose,Outcome,Details\r\n");
         foreach (var r in rows)
             sb.AppendJoin(',', Cell(r.OccurredAt.UtcDateTime.ToString("u", CultureInfo.InvariantCulture)), Cell(r.ActorName ?? r.ActorUserId?.ToString()), Cell(r.Role),
-                Cell(r.Action), Cell(r.ResourceType), Cell(r.PatientMrn), Cell(r.Purpose), Cell(r.Outcome)).Append("\r\n");
+                Cell(r.Action), Cell(r.ResourceType), Cell(r.PatientMrn), Cell(r.Purpose), Cell(r.Outcome), Cell(r.Detail)).Append("\r\n");
         if (truncated) sb.Append(Cell($"Only the newest {MaxExport} events are included. Narrow the filters to see the rest.")).Append("\r\n");
         return sb.Append(Cell(mark)).Append("\r\n").ToString();
     }

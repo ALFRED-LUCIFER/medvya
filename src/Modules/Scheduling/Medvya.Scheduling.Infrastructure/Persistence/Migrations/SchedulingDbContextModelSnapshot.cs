@@ -60,6 +60,16 @@ namespace Medvya.Scheduling.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("FacilityId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("IdempotencyKeyHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("nchar(64)")
+                        .IsFixedLength();
+
+                    b.Property<string>("IdempotencyRequestHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("nchar(64)")
+                        .IsFixedLength();
+
                     b.Property<Guid?>("MergedFromPatientId")
                         .HasColumnType("uniqueidentifier");
 
@@ -110,6 +120,10 @@ namespace Medvya.Scheduling.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("TenantId", "SeriesId")
                         .HasFilter("[SeriesId] IS NOT NULL");
+
+                    b.HasIndex("TenantId", "BookedBy", "IdempotencyKeyHash")
+                        .IsUnique()
+                        .HasFilter("[IdempotencyKeyHash] IS NOT NULL");
 
                     b.HasIndex("TenantId", "FacilityId", "Start");
 

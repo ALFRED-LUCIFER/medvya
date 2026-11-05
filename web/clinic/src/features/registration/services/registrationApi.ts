@@ -11,8 +11,8 @@ export async function checkDuplicates(query: DuplicateQuery): Promise<DuplicateC
 }
 
 /** Registers the patient at the active facility (the server takes facility and country from the session). */
-export async function registerPatient(request: RegisterRequest): Promise<RegistrationResult> {
-  const res = await apiFetch('/v1/patients', { method: 'POST', credentials: 'same-origin', headers: jsonHeaders, body: JSON.stringify(request) });
+export async function registerPatient(request: RegisterRequest, key: string): Promise<RegistrationResult> {
+  const res = await apiFetch('/v1/patients', { method: 'POST', credentials: 'same-origin', headers: { ...jsonHeaders, 'Idempotency-Key': key }, body: JSON.stringify(request) });
   if (!res.ok) return fail(res);
   return res.json() as Promise<RegistrationResult>;
 }

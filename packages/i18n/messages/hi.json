@@ -1297,6 +1297,7 @@
   "audit.col.outcome": "परिणाम",
   "audit.unknownStaff": "अज्ञात",
   "audit.mrn": "MRN {mrn}",
+  "audit.roleNotRecorded": "दर्ज नहीं",
   "audit.outcome.Allowed": "अनुमति मिली",
   "audit.outcome.Denied": "अस्वीकृत",
   "audit.outcome.NotFound": "नहीं मिला",

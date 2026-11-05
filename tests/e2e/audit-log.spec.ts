@@ -11,7 +11,7 @@ const admin = {
 };
 const row = (over: object) => ({
   id: 'e', occurredAt: '2026-11-04T05:30:00Z', actorUserId: 'u-rao', actorName: 'Dr. Arjun Rao (synthetic)', role: 'SoloDoctor', action: 'patient.read', resourceType: 'patient',
-  patientId: 'p-1', patientMrn: '000001', patientName: null, purpose: 'treatment', outcome: 'Allowed', ...over,
+  patientId: 'p-1', patientMrn: '000001', patientName: null, purpose: 'treatment', outcome: 'Allowed', detail: null, ...over,
 });
 const logPage = (items: object[], next: string | null = null) => ({ items, next, actions: ['patient.read', 'patient.update'] });
 const staff = [{ membershipId: 'a', userId: 'u-rao', name: 'Dr. Arjun Rao (synthetic)', email: null, role: 'SoloDoctor', customRoleId: null, customRoleName: null, facilityId: facility, facilityName: 'Adyar', status: 'Active', mfa: 'enrolled', invitationId: null, invitationState: null, invitationExpiresAt: null }];
@@ -39,7 +39,8 @@ test('the access log shows who did what, writes the outcome out, pages, and expo
     urls.push(new URL(url).pathname + new URL(url).search);
     return r.fulfill({ json: url.includes('after=c1')
       ? logPage([row({ id: 'e3', action: 'patient.update' })])
-      : logPage([row({ id: 'e1' }), row({ id: 'e2', actorName: 'S. Thomas RN (synthetic)', role: 'Nurse', outcome: 'Denied', action: 'patient.read' })], 'c1') });
+      : logPage([row({ id: 'e1' }), row({ id: 'e2', actorName: 'S. Thomas RN (synthetic)', role: 'Nurse', outcome: 'Denied', action: 'patient.read' }),
+        row({ id: 'e4', action: 'audit.export', role: null, detail: 'patient=p-1' })], 'c1') });
   });
   const exported = page.waitForRequest(r => r.url().endsWith('/v1/audit/access-log/export') && r.method() === 'POST');
   await page.goto('/settings?tab=audit');
@@ -47,6 +48,9 @@ test('the access log shows who did what, writes the outcome out, pages, and expo
   const denied = page.getByRole('row', { name: /S\. Thomas/ });
   await expect(denied).toContainText('Denied'); // written out, not colour alone
   await expect(denied).toContainText('MRN 000001');
+  const legacy = page.getByRole('row', { name: /audit\.export/ });
+  await expect(legacy).toContainText('Not recorded'); // a row from before roles were recorded never shows the current role
+  await expect(legacy).toContainText('patient=p-1');
   await expect(page.getByRole('cell', { name: /Meera/ })).toHaveCount(0); // no name until a patient is chosen
   expect(await axe(page)).toEqual([]);
 

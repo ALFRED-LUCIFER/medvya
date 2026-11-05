@@ -1297,6 +1297,7 @@
   "audit.col.outcome": "Outcome",
   "audit.unknownStaff": "Unknown",
   "audit.mrn": "MRN {mrn}",
+  "audit.roleNotRecorded": "Not recorded",
   "audit.outcome.Allowed": "Allowed",
   "audit.outcome.Denied": "Denied",
   "audit.outcome.NotFound": "Not found",

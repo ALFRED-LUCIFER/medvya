@@ -43,6 +43,8 @@ public sealed class Appointment
     [Classification(DataClass.Internal)] public CalendarKind CalendarKind { get; init; }
     /// <summary>Opaque id of the patient in the Patients module.</summary>
     [Classification(DataClass.Internal)] public Guid PatientId { get; init; }
+    /// <summary>Set while a patient merge (MDV-P1-017) holds this visit on the surviving record: the record it came from, so an undo moves it back.</summary>
+    [Classification(DataClass.Internal)] public Guid? MergedFromPatientId { get; init; }
     [Classification(DataClass.Internal)] public VisitType VisitType { get; set; }
     [Classification(DataClass.Internal)] public DateTimeOffset Start { get; set; }
     [Classification(DataClass.Internal)] public DateTimeOffset End { get; set; }

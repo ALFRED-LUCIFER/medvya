@@ -5,6 +5,7 @@ import { useI18n } from '@medvya/i18n';
 import { Button, buttonVariants, cn } from '@medvya/ui';
 import { addressLines, missingParts, type ContactView, type PatientDetails, type RevealedIdentifiers } from '../domain/directory';
 import { genderIdentities, regionKey } from '../../registration/domain/registration';
+import type { MergeHistoryEntry } from '../../merge/domain/merge';
 import PatientsMessage from './PatientsMessage';
 
 type Props = {
@@ -21,6 +22,8 @@ type Props = {
   onReveal: () => void;
   /** "Complete registration" for an incomplete record; null when this role may not register (Register / book at Full). */
   completePath: string | null;
+  /** Merges this record took part in (MDV-P1-017); empty for most records. */
+  merges: MergeHistoryEntry[];
 };
 
 // Keeps Latin IDs, phones and dates intact (order and line) inside Arabic text.
@@ -140,6 +143,20 @@ export default function PatientRecord(props: Props) {
           {p.payer.validTo && <Field label={t('patients.record.validTo')}>{date(p.payer.validTo)}</Field>}
         </> : <Field label={t('patients.record.payerKind')}>{t('patients.record.payerMissing')}</Field>}
       </Section>
+
+      {props.merges.length > 0 && (
+        <section aria-labelledby="merge-history" className="rounded-xl border bg-card p-4">
+          <h2 id="merge-history" className="mb-3 text-base font-extrabold">{t('merge.history')}</h2>
+          <ul className="flex flex-col gap-1">
+            {props.merges.map(m => (
+              <li key={m.id}>
+                {t(m.status === 'Merged' ? (m.thisIsSurvivor ? 'merge.history.survivor' : 'merge.history.merged') : 'merge.history.undone',
+                  { mrn: m.otherMrn, date: date(m.status === 'Unmerged' && m.unmergedAt ? m.unmergedAt : m.mergedAt ?? '') })}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {props.canReveal && hasNumbers && !props.revealed && (
         <div className="flex flex-col items-start gap-1">

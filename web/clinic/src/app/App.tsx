@@ -31,6 +31,7 @@ const SettingsRoute = lazy(() => import('./SettingsRoute'));
 // Patient screens load on first use, keeping them out of the first-paint bundle.
 const PatientDirectoryRoute = lazy(() => import('./PatientRoutes').then(m => ({ default: m.PatientDirectoryRoute })));
 const PatientRecordRoute = lazy(() => import('./PatientRoutes').then(m => ({ default: m.PatientRecordRoute })));
+const MergeReviewRoute = lazy(() => import('./PatientRoutes').then(m => ({ default: m.MergeReviewRoute })));
 const RegistrationRoute = lazy(() => import('./PatientRoutes').then(m => ({ default: m.RegistrationRoute })));
 // Walk-in (MDV-P1-025) brings the patient picker and booking lists: loaded when opened, never at first paint.
 const WalkInRoute = lazy(() => import('./WalkInRoute'));
@@ -114,7 +115,9 @@ export default function App({ locale, onLocaleChange }: Props) {
           {/* shortcut: reachable by URL only, like Staff; it moves to device management in Settings with MDV-P0-012. */}
           {active.capabilities.StaffRolesIntegrations === 'Config' && <Route path="/admin/displays" element={<DisplaysRoute facilityId={active.facilityId} />} />}
           {searchPath && <>
-            <Route path={searchPath} element={<PatientDirectoryRoute registerPath={registerPath} />} />
+            <Route path={searchPath} element={<PatientDirectoryRoute registerPath={registerPath} mergePath={`${searchPath}/merge`} />} />
+            <Route path={`${searchPath}/merge/:requestId?`} element={<MergeReviewRoute can={{ request: active.capabilities.RegisterBookPatients === 'Full',
+              approve: active.capabilities.ClinicalNotes === 'Sign', undo: active.capabilities.StaffRolesIntegrations === 'Config' }} />} />
             <Route path={`${searchPath}/:patientId`} element={<PatientRecordRoute canReveal={active.capabilities.RegisterBookPatients === 'Full'} />} />
             {active.capabilities.RegisterBookPatients === 'Full' &&
               <Route path={`${searchPath}/:patientId/complete`} element={<CompleteRegistrationRoute country={country} />} />}

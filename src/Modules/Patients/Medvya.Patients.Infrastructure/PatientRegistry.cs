@@ -94,7 +94,8 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
         {
             SearchKind.Name => patients.Where(p => EF.Functions.Like(p.FullName, like!, Escape) || (p.ArabicName != null && EF.Functions.Like(p.ArabicName, like!, Escape))),
             SearchKind.Phone => patients.Where(p => p.Mobile == term.Value || p.AlternatePhone == term.Value),
-            SearchKind.Mrn => patients.Where(p => p.Mrn == term.Value),
+            // Either MRN of a merged pair finds the survivor (MDV-P1-017); the merged record itself is hidden below.
+            SearchKind.Mrn => patients.Where(p => p.Mrn == term.Value || db.Patients.Any(m => m.MergedIntoPatientId == p.Id && m.Mrn == term.Value)),
             // Deterministic Always Encrypted: SqlClient encrypts the parameter and SQL Server compares ciphertexts (equality only).
             SearchKind.Identifier => patients.Where(p => db.Identifiers.Any(i => i.PatientId == p.Id && i.Scheme == term.Scheme && i.LookupValue == term.Value)),
             _ => patients,
@@ -132,7 +133,7 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
 
     Guid FacilityId() => facility.FacilityId ?? throw new InvalidOperationException("No facility context.");
 
-    IQueryable<Patient> FacilityPatients(Guid facilityId) => db.Patients.AsNoTracking().Where(p => p.FacilityId == facilityId);
+    IQueryable<Patient> FacilityPatients(Guid facilityId) => db.Patients.AsNoTracking().Where(p => p.FacilityId == facilityId && p.MergedIntoPatientId == null);
 
     /// <summary>At most this many possible matches are shown: enough to decide, too few to browse the register through this door.</summary>
     const int MaxCandidates = 5;

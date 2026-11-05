@@ -88,7 +88,16 @@ namespace Medvya.Patients.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("DecidedBy")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid?>("FirstApprovedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("MergedAt")
+                        .HasColumnType("datetimeoffset");
+
                     b.Property<Guid>("PatientId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("SecondApprovedBy")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Status")
@@ -97,6 +106,12 @@ namespace Medvya.Patients.Infrastructure.Persistence.Migrations
                         .HasColumnType("nvarchar(20)");
 
                     b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("UnmergedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("UnmergedBy")
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
@@ -158,6 +173,9 @@ namespace Medvya.Patients.Infrastructure.Persistence.Migrations
                     b.Property<string>("GenderIdentity")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
+
+                    b.Property<Guid?>("MergedIntoPatientId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Mobile")
                         .IsRequired()
@@ -235,6 +253,8 @@ namespace Medvya.Patients.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("TenantId", "MergedIntoPatientId");
+
                     b.HasIndex("TenantId", "FacilityId", "DateOfBirth");
 
                     b.HasIndex("TenantId", "FacilityId", "FullName");
@@ -269,6 +289,9 @@ namespace Medvya.Patients.Infrastructure.Persistence.Migrations
                         .HasColumnType("nvarchar(64)")
                         .UseCollation("Latin1_General_BIN2");
 
+                    b.Property<Guid?>("MovedFromPatientId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid>("PatientId")
                         .HasColumnType("uniqueidentifier");
 
@@ -283,6 +306,8 @@ namespace Medvya.Patients.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("PatientId");
+
+                    b.HasIndex("TenantId", "MovedFromPatientId");
 
                     b.HasIndex("TenantId", "Scheme", "LookupValue");
 

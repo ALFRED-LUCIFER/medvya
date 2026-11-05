@@ -60,6 +60,9 @@ namespace Medvya.Scheduling.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("FacilityId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid?>("MergedFromPatientId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid>("PatientId")
                         .HasColumnType("uniqueidentifier");
 

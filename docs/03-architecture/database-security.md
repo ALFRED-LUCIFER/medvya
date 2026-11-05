@@ -57,7 +57,7 @@ National and insurance identifiers are encrypted in the client (SqlClient) with 
 
 ## Mapping to Azure (MDV-P0-006)
 
-Azure provisioning is MDV-P0-006; until it exists, these steps are the plan, not code.
+Azure provisioning is MDV-P0-006 (built). The administrator step below is run by a person once per environment; the deploy workflow cannot, because the deploy identity may not grant rights.
 
 | Principal | Azure identity | Role membership |
 |---|---|---|
@@ -70,8 +70,8 @@ Azure provisioning is MDV-P0-006; until it exists, these steps are the plan, not
 
 1. **Infrastructure:** `infra/bicep/main.bicep` creates the Key Vault key `medvya-column-master` (RSA 3072) and gives "Key Vault Crypto User" on that key only to the web app identity and the SQL administrator.
 2. **Administrator, once and whenever a module is added** (needs the SQL firewall to allow your IP, and `az login` as the Entra admin):
-   `dotnet run --project tools/db-migrate -- admin "<connection>" "<key url>"` runs `roles.sql`, then creates `CMK_Medvya` and `CEK_Patients` wrapped by the Key Vault key.
-3. **Administrator, once per identity:** map the identities (below). The deploy identity is `Medvya CI deploy (dev, India)`.
+   `dotnet run --project tools/db-migrate -- admin "<connection>" "<key url>" "<app-identity>" "<migration-identity>"` runs `roles.sql`, creates `CMK_Medvya` and `CEK_Patients` wrapped by the Key Vault key, then maps the web app's managed identity (its name is the web app name) to `medvya_app` and the deploy identity (`Medvya CI deploy (dev, India)`) to `medvya_migrator`. Every part is idempotent, so re-run it whenever a module is added. The two identity arguments are optional; without them, map by hand with the SQL below.
+3. **Administrator, once per identity:** only if you left the identity arguments out above.
 4. **Every deploy:** the workflow opens a firewall rule for its own runner, runs `db-migrate migrate` as the migration identity (module migrations, then the Hangfire tables), and closes the rule.
 
 **SQL firewall:** only the web app's outbound addresses (`infra/bicep/sql-firewall.bicep`) are permanent. The deploy job and the administrator open their own address for the length of the work and delete it (`az sql server firewall-rule delete`). A Bicep deploy never deletes rules, so after moving to this layout delete the old `AllowAzureServices` rule once by hand.

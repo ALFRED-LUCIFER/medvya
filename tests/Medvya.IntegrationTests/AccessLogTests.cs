@@ -65,13 +65,13 @@ public sealed class AccessLogTests(SqlServerFixture sql) : IClassFixture<SqlServ
 
     static readonly DateTimeOffset Noon = new(2026, 10, 19, 6, 30, 0, TimeSpan.Zero);
 
-    async Task Seed(Guid tenant, string action, Guid? patient, Guid actor, DateTimeOffset at, AuditOutcome outcome = AuditOutcome.Allowed, string purpose = "treatment")
+    async Task Seed(Guid tenant, string action, Guid? patient, Guid actor, DateTimeOffset at, AuditOutcome outcome = AuditOutcome.Allowed, string purpose = "treatment", string? role = null, Guid? facility = null)
     {
         await using var db = sql.Audit(tenant);
         db.Events.Add(new AuditEvent
         {
             Id = Guid.CreateVersion7(), TenantId = tenant, ActorUserId = actor, Action = action, ResourceType = "patient", PatientId = patient,
-            Purpose = purpose, Outcome = outcome, OccurredAt = at,
+            Purpose = purpose, Outcome = outcome, OccurredAt = at, Role = role, FacilityId = facility,
         });
         await db.SaveChangesAsync();
     }
@@ -97,7 +97,7 @@ public sealed class AccessLogTests(SqlServerFixture sql) : IClassFixture<SqlServ
     [Fact]
     public async Task FilteringByPatientListsEveryReadAndWriteByAnyoneWithTimeNamesAndOutcomeAndOnlyThenTheName()
     {
-        await Seed(h.Tenant, "patient.read", h.Patient, h.Doctor, Noon.AddMinutes(-30), purpose: "treatment");
+        await Seed(h.Tenant, "patient.read", h.Patient, h.Doctor, Noon.AddMinutes(-30), purpose: "treatment", role: "SoloDoctor");
         await Seed(h.Tenant, "patient.update", h.Patient, h.Reception, Noon.AddMinutes(-20), purpose: "registration");
         await Seed(h.Tenant, "patient.read", h.Patient, h.Nurse, Noon.AddMinutes(-10), AuditOutcome.Denied, "treatment");
         await Seed(h.Tenant, "patient.read", h.SecondPatient, h.Doctor, Noon.AddMinutes(-5)); // another patient's record
@@ -179,6 +179,48 @@ public sealed class AccessLogTests(SqlServerFixture sql) : IClassFixture<SqlServ
     }
 
     [Fact]
+    public async Task TheRoleShownIsTheOneHeldAtEventTimeNotTheCurrentOneAndOlderRowsShowNone()
+    {
+        // The doctor's current role is SoloDoctor; on this event they acted as a hospital doctor. A row from before roles were recorded has none.
+        await Seed(h.Tenant, "patient.read", h.Patient, h.Doctor, Noon.AddMinutes(-2), role: "HospitalDoctor");
+        await Seed(h.Tenant, "patient.read", h.Patient, h.Doctor, Noon.AddMinutes(-1));
+        using var client = Client(Role.PracticeAdmin);
+
+        var list = await client.GetFromJsonAsync<JsonElement>("/v1/audit/access-log");
+        var roles = list.GetProperty("items").EnumerateArray().Where(i => i.GetProperty("actorUserId").GetGuid() == h.Doctor)
+            .Select(i => i.GetProperty("role").GetString()).ToList();
+        Assert.Equal([null, "HospitalDoctor"], roles); // newest first
+        // The session's own role and facility are written by the server when the event is audited, never by the caller.
+        await using var audit = sql.Audit(h.Tenant);
+        var own = await audit.Events.Where(e => e.ActorUserId == h.Admin && e.Action == "audit.read").ToListAsync();
+        Assert.All(own, e => Assert.Equal(("PracticeAdmin", h.Facility), (e.Role, e.FacilityId)));
+    }
+
+    [Fact]
+    public async Task HospitalItSeesOnlyItsOwnFacilitiesEventsWhilePracticeAdminsSeeTheWholePractice()
+    {
+        await Seed(h.Tenant, "patient.read", h.Patient, h.Doctor, Noon.AddMinutes(-3), facility: h.Facility);
+        await Seed(h.Tenant, "patient.update", h.Patient, h.Doctor, Noon.AddMinutes(-2), facility: h.OtherFacility);
+        await Seed(h.Tenant, "patient.search", null, h.Doctor, Noon.AddMinutes(-1)); // before the facility was recorded
+
+        async Task<List<string>> Actions(HttpClient c, string path = "/v1/audit/access-log") =>
+            [.. (await c.GetFromJsonAsync<JsonElement>(path)).GetProperty("items").EnumerateArray()
+                .Where(i => i.GetProperty("actorUserId").GetGuid() == h.Doctor).Select(i => i.GetProperty("action").GetString()!)];
+
+        using var it = Client(Role.HospitalIt);
+        Assert.Equal(["patient.read"], await Actions(it));
+        Assert.Equal(["patient.read"], await Actions(it, $"/v1/audit/access-log/patients/{h.Patient}"));
+        var hidden = await it.GetFromJsonAsync<JsonElement>("/v1/audit/access-log");
+        Assert.DoesNotContain("patient.update", hidden.GetProperty("actions").EnumerateArray().Select(a => a.GetString()));
+        var csv = Encoding.UTF8.GetString(await (await it.PostAsJsonAsync("/v1/audit/access-log/export", new { })).Content.ReadAsByteArrayAsync());
+        Assert.DoesNotContain("patient.update", csv, StringComparison.Ordinal);
+        Assert.DoesNotContain("patient.search", csv, StringComparison.Ordinal);
+
+        using var admin = Client(Role.PracticeAdmin);
+        Assert.Equal(["patient.search", "patient.update", "patient.read"], await Actions(admin));
+    }
+
+    [Fact]
     public async Task TheExportIsWatermarkedAuditedWithoutPatientNamesAndNeutralisesFormulas()
     {
         await Seed(h.Tenant, "patient.read", h.Patient, h.Doctor, Noon);
@@ -198,7 +240,9 @@ public sealed class AccessLogTests(SqlServerFixture sql) : IClassFixture<SqlServ
         Assert.DoesNotContain("Meera", csv, StringComparison.Ordinal);
 
         await using var audit = sql.Audit(h.Tenant);
-        Assert.Contains(await audit.Events.Where(e => e.ActorUserId == h.Admin).Select(e => e.Action).ToListAsync(), a => a == "audit.export");
+        var export = await audit.Events.SingleAsync(e => e.ActorUserId == h.Admin && e.Action == "audit.export");
+        Assert.Equal($"patient={h.Patient}", export.Detail); // the filters used, as opaque ids and codes
+        Assert.Contains("Details", lines[1], StringComparison.Ordinal);
     }
 
     [Theory]

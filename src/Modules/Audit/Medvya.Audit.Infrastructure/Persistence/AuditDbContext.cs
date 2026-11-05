@@ -24,6 +24,8 @@ public sealed class AuditDbContext(DbContextOptions<AuditDbContext> options, ICu
             e.Property(x => x.ResourceType).HasMaxLength(64);
             e.Property(x => x.Purpose).HasMaxLength(32);
             e.Property(x => x.Outcome).HasConversion<string>().HasMaxLength(16);
+            e.Property(x => x.Role).HasMaxLength(32);
+            e.Property(x => x.Detail).HasMaxLength(256);
             e.Property(x => x.ClientIp).HasMaxLength(45);
             e.Property(x => x.CorrelationId).HasMaxLength(64);
             e.HasIndex(x => new { x.TenantId, x.PatientId, x.OccurredAt });

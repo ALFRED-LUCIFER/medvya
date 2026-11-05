@@ -9,6 +9,7 @@ export type AuditRow = {
   occurredAt: string;
   actorUserId: string | null;
   actorName: string | null;
+  /** The role held when the event happened; null on rows from before it was recorded. */
   role: Role | null;
   action: string;
   resourceType: string;
@@ -17,6 +18,8 @@ export type AuditRow = {
   patientName: string | null;
   purpose: string;
   outcome: AuditOutcome;
+  /** Codes and ids only, e.g. the filters of an export. */
+  detail: string | null;
 };
 
 export type AuditPage = { items: AuditRow[]; next: string | null; actions: string[] };

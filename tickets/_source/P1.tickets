@@ -952,6 +952,10 @@ ac:
 - Overlay is keyboard accessible and screen-reader friendly.
 
 === MDV-P1-035
+status: Partly done
+progress:
+- Open PR (branch feat/MDV-P1-035-access-log): Settings -> Audit log tab (`/settings?tab=audit`). `GET /v1/audit/access-log` and `GET /v1/audit/access-log/patients/{patientId}` need the Audit log capability (practice admin, owner doctor, hospital IT; any other role 403 and an audit.read event with outcome Denied). Filters: staff member, patient (front-desk search reused), action, dates (default last 30 days); newest first with keyset paging. Rows show time, staff, current role, action, patient MRN, purpose and outcome written out (Allowed / Denied / Not found / Rejected); the patient's name appears only on the per-patient route, whose audit.read event carries that patient id. Denied attempts by other roles show with outcome Denied. `POST /v1/audit/access-log/export` returns a CSV watermarked first and last row with exporter and time, MRNs not names, formula cells neutralised, and writes audit.export. New index (TenantId, OccurredAt) on the ledger table. Mutation-checked (capability removed, name gate removed: tests fail). EN/HI/AR, RTL, axe clean
+- Left: role as held at event time (the log shows the person's current role), the filters used in the export event, a measured p95 on 30 days of pilot volume (indexed, not load-tested), read-volume alert on unusual patient reads (MDV-P1-018 follow-up), patient filter for hospital IT (the patient search needs Register / book patients), per-facility scoping inside a tenant
 title: Practice access log for owners (F-12): who opened which record and when
 type: Story
 epic: MDV-P1-E09

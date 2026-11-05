@@ -69,7 +69,7 @@
 | [MDV-P1-031](MDV-P1-031.md) | Done | Queue TV display with tokens only, never names (P-05) | Story | MUST | P1-08 | P-05 | 1.5 | 8–8 | 14 Dec → 18 Dec 2026 | 90% High |
 | [MDV-P1-033](MDV-P1-033.md) | Partly done | SMS confirmations and reminders with India DLT templates and delivery receipts | Story | MUST | P1-09 | — | 2 | 8–8 | 14 Dec → 18 Dec 2026 | 68% Medium |
 | [MDV-P1-034](MDV-P1-034.md) | To do | Notification centre for staff (D-03), push-safe content | Story | MUST | P1-09 | D-03 | 1.5 | 8–8 | 14 Dec → 18 Dec 2026 | 85% High |
-| [MDV-P1-035](MDV-P1-035.md) | To do | Practice access log for owners (F-12): who opened which record and when | Story | MUST | P1-10 | F-12 | 1.5 | 8–8 | 14 Dec → 18 Dec 2026 | 84% Medium |
+| [MDV-P1-035](MDV-P1-035.md) | Partly done | Practice access log for owners (F-12): who opened which record and when | Story | MUST | P1-10 | F-12 | 1.5 | 8–8 | 14 Dec → 18 Dec 2026 | 84% Medium |
 | [MDV-P1-036](MDV-P1-036.md) | To do | Tablet-responsive reception views (desk tablet) | Task | MUST | P1-08 | — | 1 | 9–9 | 21 Dec → 25 Dec 2026 | 88% High |
 | [MDV-P1-037](MDV-P1-037.md) | To do | Performance budget and load test for booking and calendar | Task | MUST | P1-06, P1-07 | — | 1.5 | 9–9 | 21 Dec → 25 Dec 2026 | 86% High |
 | [MDV-P1-038](MDV-P1-038.md) | To do | P1 security review: threat-model update, ASVS checks, authorisation tests, dependency scan — no open high/critical | Gate | MUST | P1-05, P1-11 | — | 2 | 9–9 | 21 Dec → 25 Dec 2026 | 80% Medium |

@@ -2,6 +2,7 @@ using System.Net;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 using Host.Api.Auth;
+using Host.Api.AuditLog;
 using Host.Api.Context;
 using Host.Api.Invitations;
 using Host.Api.Middleware;
@@ -138,6 +139,7 @@ app.MapOnboarding();
 app.MapPracticeSettings();
 app.MapDoctors();
 app.MapStaff();
+app.MapAccessLog();
 app.MapQueueDisplaySession();
 app.MapPatientEndpoints();
 if (app.Environment.IsDevelopment() && app.Configuration["Authentication:Oidc:Authority"]?.EndsWith(DevIdentityProvider.Path, StringComparison.Ordinal) == true)

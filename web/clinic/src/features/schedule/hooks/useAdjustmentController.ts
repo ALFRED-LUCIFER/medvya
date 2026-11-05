@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { adjustmentError, adjustmentSchema, allChosen, emptyAdjustment, toRequest, type AdjustmentForm, type RebookAction, type SaveResult } from '../domain/adjustments';
+import { adjustmentError, adjustmentSchema, allChosen, emptyAdjustment, toForm, toRequest, type AdjustmentForm, type RebookAction, type SaveResult, type SavedAdjustment } from '../domain/adjustments';
 import type { Appointment } from '../domain/schedule';
-import { ApiError, fetchAdjustments, fetchScheduleDay, saveAdjustment } from '../services/scheduleApi';
+import { ApiError, fetchAdjustments, deleteAdjustment, fetchScheduleDay, saveAdjustment, updateAdjustment } from '../services/scheduleApi';
 
 /**
  * Leave and schedule exceptions (MDV-P1-012). The first save of a change that overlaps booked visits is answered with the
@@ -15,6 +15,8 @@ export function useAdjustmentController(facilityId: string) {
   const queryClient = useQueryClient();
   // The list belongs to the form values it was worked out for: editing them drops it.
   const [listed, setListed] = useState<{ forValues: string; visits: Appointment[] } | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [chosen, setChosen] = useState<Record<string, RebookAction>>({});
 
   const day = useQuery({ queryKey: ['schedule', facilityId, 'calendars'], queryFn: () => fetchScheduleDay(facilityId, null) });
@@ -28,13 +30,26 @@ export function useAdjustmentController(facilityId: string) {
   const affected = listed?.forValues === edited ? listed.visits : null;
 
   const save = useMutation({
-    mutationFn: (values: AdjustmentForm) => saveAdjustment(toRequest(facilityId, values, Object.fromEntries(Object.entries(chosen).filter(([id]) => affected?.some(a => a.id === id))))),
+    mutationFn: (values: AdjustmentForm) => {
+      const body = toRequest(facilityId, values, Object.fromEntries(Object.entries(chosen).filter(([id]) => affected?.some(a => a.id === id))));
+      return editingId ? updateAdjustment(editingId, body) : saveAdjustment(body);
+    },
     onSuccess: () => {
       setListed(null);
+      setEditingId(null);
       setChosen({});
       void queryClient.invalidateQueries({ queryKey: ['schedule', facilityId] });
       void queryClient.invalidateQueries({ queryKey: ['adjustments', facilityId] });
       void queryClient.invalidateQueries({ queryKey: ['front-desk'] });
+    },
+  });
+  const remove = useMutation({
+    mutationFn: (id: string) => deleteAdjustment(facilityId, id),
+    onSuccess: (_, id) => {
+      setConfirmingId(null);
+      if (editingId === id) setEditingId(null);
+      void queryClient.invalidateQueries({ queryKey: ['schedule', facilityId] });
+      void queryClient.invalidateQueries({ queryKey: ['adjustments', facilityId] });
     },
   });
   const error = save.error && !(save.error instanceof ApiError && save.error.code === 'actions_required')
@@ -47,6 +62,14 @@ export function useAdjustmentController(facilityId: string) {
     timeZone: day.data?.timeZone ?? null,
     loading: day.isPending,
     saved: saved.data ?? [],
+    editingId,
+    onEdit: (row: SavedAdjustment) => { save.reset(); setListed(null); setChosen({}); setEditingId(row.id); form.reset(toForm(row)); },
+    onCancelEdit: () => { setEditingId(null); form.reset({ ...emptyAdjustment(today), calendarId: form.getValues('calendarId') }); },
+    confirmingId,
+    onAskDelete: (id: string | null) => { remove.reset(); setConfirmingId(id); },
+    onDelete: (id: string) => remove.mutate(id),
+    deleting: remove.isPending,
+    deleteError: remove.error ? adjustmentError(remove.error instanceof ApiError ? remove.error.code : undefined) : null,
     affected,
     chosen,
     onChoose: (appointmentId: string, action: RebookAction) => setChosen(c => ({ ...c, [appointmentId]: action })),

@@ -37,6 +37,10 @@ export type SavedAdjustment = {
 };
 export type SaveResult = { exception: SavedAdjustment; offered: number; manual: number };
 
+/** A saved exception back in the form, to edit it (times without seconds). */
+export const toForm = (r: SavedAdjustment): AdjustmentForm =>
+  ({ calendarId: r.calendarId, kind: r.kind, fromDate: r.fromDate, toDate: r.toDate, start: r.start?.slice(0, 5) ?? '', end: r.end?.slice(0, 5) ?? '', reason: r.reason ?? '' });
+
 /** The request body: leave drops the window; the other kinds are one day. Times go with seconds, as the API reads them. */
 export const toRequest = (facilityId: string, v: AdjustmentForm, actions: Record<string, RebookAction>) => ({
   facilityId, calendarId: v.calendarId, kind: v.kind, fromDate: v.fromDate, toDate: v.kind === 'Leave' ? v.toDate : v.fromDate,
@@ -48,7 +52,7 @@ export const toRequest = (facilityId: string, v: AdjustmentForm, actions: Record
 export const allChosen = (affected: Appointment[], chosen: Record<string, RebookAction>) => affected.every(a => chosen[a.id] !== undefined);
 
 /** Codes the screen has a sentence for: field errors arrive as "field:code", 409 visit changes as "changed". */
-const known = ['past', 'overlap', 'no_schedule', 'single_day', 'range', 'five_minutes', 'too_long', 'changed', 'unknown'] as const;
+const known = ['past', 'overlap', 'no_schedule', 'single_day', 'range', 'five_minutes', 'too_long', 'changed', 'unknown', 'has_bookings'] as const;
 export type AdjustmentError = (typeof known)[number] | 'failed' | 'forbidden';
 export const adjustmentError = (code: string | undefined): AdjustmentError => {
   const last = code?.split(':').pop() ?? '';

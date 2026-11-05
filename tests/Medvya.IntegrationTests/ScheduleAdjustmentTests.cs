@@ -14,6 +14,7 @@ namespace Medvya.IntegrationTests;
 public sealed class ScheduleAdjustmentTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>, IAsyncLifetime
 {
     static readonly DateOnly Saturday = new(2026, 10, 24);
+    static readonly DateTimeOffset Tuesday = new DateTimeOffset(2026, 10, 20, 9, 0, 0, TimeSpan.FromHours(5.5)).ToUniversalTime();
     readonly SchedulingHarness h = new(sql);
 
     public async Task InitializeAsync()
@@ -145,6 +146,77 @@ public sealed class ScheduleAdjustmentTests(SqlServerFixture sql) : IClassFixtur
 
         var overlap = await Assert.ThrowsAsync<SchedulingValidationException>(() => Desk.SaveAsync(extra with { Start = new(10, 30), End = new(11, 30) }));
         Assert.Equal([new ValidationError("start", "overlap")], overlap.Errors);
+    }
+
+    [Fact]
+    public async Task DeletingLeaveGivesTheSlotsBackAndLeavesVisitsAlreadyMovedToNeedsRebooking()
+    {
+        var (a, b) = await TwoVisitsAsync();
+        var saved = await Desk.SaveAsync(Leave([new(a.Id, RebookAction.Offer), new(b.Id, RebookAction.Manual)]));
+        var elsewhere = await h.BookAsync(10, start: Tuesday);
+        Assert.Empty(ColumnOf(await h.Schedule(h.Reception).GetDayAsync(h.Facility, Monday)).Slots);
+
+        await Desk.DeleteAsync(h.Facility, saved.Exception.Id);
+
+        Assert.Empty(await Desk.ListAsync(h.Facility, null));
+        Assert.NotEmpty(ColumnOf(await h.Schedule(h.Reception).GetDayAsync(h.Facility, Monday)).Slots); // bookable again
+        // Nobody is re-booked silently: the moved visits stay for reception, the other day's visit is untouched.
+        Assert.Equal([AppointmentState.NeedsRebooking, AppointmentState.NeedsRebooking, AppointmentState.Booked], [await StateAsync(a.Id), await StateAsync(b.Id), await StateAsync(elsewhere.Id)]);
+        await using var db = sql.Scheduling(h.Tenant);
+        Assert.Equal(0, await db.ScheduleSlots.CountAsync(s => s.AppointmentId == a.Id || s.AppointmentId == b.Id));
+        await using var audit = sql.Audit(h.Tenant);
+        Assert.Contains(SchedulingAudit.ExceptionDelete, await audit.Events.Select(e => e.Action).ToListAsync());
+        var gone = await Assert.ThrowsAsync<SchedulingValidationException>(() => Desk.DeleteAsync(h.Facility, saved.Exception.Id));
+        Assert.Equal([new ValidationError("id", "unknown")], gone.Errors);
+    }
+
+    [Fact]
+    public async Task EditingLeaveGivesDroppedDaysBackAndAsksAnActionForVisitsOnAddedDays()
+    {
+        var onTuesday = await h.BookAsync(10, start: Tuesday);
+        var saved = await Desk.SaveAsync(Leave());
+        var edit = Leave() with { ToDate = Monday.AddDays(1) };
+
+        var required = await Assert.ThrowsAsync<ExceptionActionsRequiredException>(() => Desk.SaveAsync(edit with { ReplacesId = saved.Exception.Id }));
+        Assert.Equal([onTuesday.Id], required.Affected.Select(x => x.Id));
+        Assert.Equal(AppointmentState.Booked, await StateAsync(onTuesday.Id));
+
+        var longer = await Desk.SaveAsync(edit with { ReplacesId = saved.Exception.Id, Actions = [new(onTuesday.Id, RebookAction.Manual)] });
+        Assert.Equal(saved.Exception.Id, longer.Exception.Id);
+        Assert.Equal(AppointmentState.NeedsRebooking, await StateAsync(onTuesday.Id));
+
+        await Desk.SaveAsync(Leave() with { FromDate = Monday.AddDays(1), ToDate = Monday.AddDays(1), ReplacesId = saved.Exception.Id }); // Monday is given back
+        var only = Assert.Single(await Desk.ListAsync(h.Facility, null));
+        Assert.Equal(Monday.AddDays(1), only.FromDate);
+        Assert.NotEmpty(ColumnOf(await h.Schedule(h.Reception).GetDayAsync(h.Facility, Monday)).Slots);
+        var unknown = await Assert.ThrowsAsync<SchedulingValidationException>(() => Desk.SaveAsync(Leave() with { ReplacesId = Guid.NewGuid() }));
+        Assert.Equal([new ValidationError("id", "unknown")], unknown.Errors);
+    }
+
+    [Fact]
+    public async Task ExtraSessionWithBookedVisitsCannotBeDeletedOrMovedOffThem()
+    {
+        var extra = new SaveAdjustment { FacilityId = h.Facility, CalendarId = h.Doctor, Kind = ExceptionKind.ExtraSession, FromDate = Saturday, ToDate = Saturday, Start = new(10, 0), End = new(11, 0) };
+        var saved = await Desk.SaveAsync(extra);
+        var slot = ColumnOf(await h.Schedule(h.Reception).GetDayAsync(h.Facility, Saturday)).Slots[0].Start;
+        var visit = await h.BookAsync(10, start: slot);
+
+        var refused = await Assert.ThrowsAsync<SchedulingValidationException>(() => Desk.DeleteAsync(h.Facility, saved.Exception.Id));
+        Assert.Equal([new ValidationError("id", "has_bookings")], refused.Errors);
+        Assert.Single(await Desk.ListAsync(h.Facility, null));
+        Assert.Equal(AppointmentState.Booked, await StateAsync(visit.Id));
+
+        var moved = await Assert.ThrowsAsync<ExceptionActionsRequiredException>(() => Desk.SaveAsync(extra with { Start = new(12, 0), End = new(13, 0), ReplacesId = saved.Exception.Id }));
+        Assert.Equal([visit.Id], moved.Affected.Select(x => x.Id));
+    }
+
+    [Fact]
+    public async Task OnlyStaffWhoCanBookDeleteAdjustmentsAndOnlyAtTheirOwnFacility()
+    {
+        var saved = await Desk.SaveAsync(Leave());
+        await Assert.ThrowsAsync<SchedulingAccessDeniedException>(() => h.Adjustments(h.Nurse).DeleteAsync(h.Facility, saved.Exception.Id));
+        await Assert.ThrowsAsync<SchedulingAccessDeniedException>(() => h.Adjustments(h.Elsewhere).DeleteAsync(h.Facility, saved.Exception.Id));
+        Assert.Single(await Desk.ListAsync(h.Facility, null));
     }
 
     static ScheduleColumn ColumnOf(ScheduleDay day) => day.Columns.Single(c => c.Name.StartsWith("Dr. Arjun", StringComparison.Ordinal));

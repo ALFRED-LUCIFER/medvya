@@ -74,7 +74,57 @@ test('an extra session asks for one date and a window', async ({ page }) => {
   await expect(page.getByText('Enter a start time before the end time.')).toBeVisible();
 });
 
+// Edit and delete a saved exception: the edit is a PUT with the same body as an add; delete asks first and says what stays.
+test('a saved leave is edited and deleted, with the note that moved visits stay for the desk', async ({ page }) => {
+  await open(page);
+  const row = { id: 'x1', calendarId: '5e1d0001-0001-4000-8000-000000000001', kind: 'Leave', fromDate: '2026-10-19', toDate: '2026-10-21', start: null, end: null, reason: 'Conference' };
+  let saved: unknown[] = [row];
+  const calls: string[] = [];
+  await page.route('**/v1/schedule/exceptions/x1**', r => {
+    const m = r.request().method();
+    calls.push(m === 'PUT' ? `PUT ${(r.request().postDataJSON() as { toDate: string }).toDate}` : m);
+    if (m === 'DELETE') { saved = []; return r.fulfill({ status: 204 }); }
+    saved = [{ ...row, toDate: '2026-10-20' }];
+    return r.fulfill({ json: { exception: saved[0], offered: 0, manual: 0 } });
+  });
+  await page.route('**/v1/schedule/exceptions?*', r => r.request().method() === 'GET' ? r.fulfill({ json: saved }) : r.fallback());
+  await page.goto('/schedule/leave');
+
+  await expect(page.getByText(/Visits already moved to needs rebooking stay as they are/)).toBeVisible();
+  await page.getByRole('button', { name: /^Edit leave or exception/ }).click();
+  await expect(page.getByText('Editing a saved exception')).toBeVisible();
+  await page.getByLabel('To', { exact: true }).fill('2026-10-20');
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect.poll(() => calls).toEqual(['PUT 2026-10-20']);
+
+  await page.getByRole('button', { name: /^Delete leave or exception/ }).click();
+  await expect(page.getByText('Visits already moved to needs rebooking are not booked again.')).toBeVisible();
+  await page.getByRole('button', { name: 'Yes, delete' }).click();
+  await expect.poll(() => calls).toEqual(['PUT 2026-10-20', 'DELETE']);
+  await expect(page.getByText('None yet.')).toBeVisible();
+});
+
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
+for (const locale of ['en', 'ar'])
+  test(`axe finds no violations on a saved leave being edited and on its delete question (${locale})`, async ({ page }) => {
+    await open(page, locale);
+    await page.route('**/v1/schedule/exceptions?*', r => r.fulfill({
+      json: [{ id: 'x1', calendarId: '5e1d0001-0001-4000-8000-000000000001', kind: 'Leave', fromDate: '2026-10-19', toDate: '2026-10-21', start: null, end: null, reason: 'Conference' }],
+    }));
+    await page.goto('/schedule/leave');
+    await page.locator('#adj-calendar').waitFor();
+    await page.locator('ul button').first().click(); // Edit
+    await expect(page.locator('#adj-reason')).toHaveValue('Conference');
+    await page.locator('ul button').nth(1).click(); // Delete: the question replaces the buttons
+    await expect(page.locator('ul button')).toHaveCount(2); // Yes / Keep it
+    expect(await page.evaluate(() => document.documentElement.dir)).toBe(locale === 'ar' ? 'rtl' : 'ltr');
+    await page.addScriptTag({ path: axePath });
+    const violations = await page.evaluate(async () =>
+      (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations
+        .map(v => `${v.id} (${v.nodes.length})`));
+    expect(violations).toEqual([]);
+  });
+
 for (const locale of ['en', 'ar'])
   test(`axe finds no violations on leave and exceptions with affected visits (${locale})`, async ({ page }) => {
     await open(page, locale);

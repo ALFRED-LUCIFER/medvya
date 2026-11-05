@@ -29,6 +29,7 @@ POST   /v1/patients/merge-requests                 # P-03
 GET    /v1/schedule?facilityId=&date=                # day of every doctor and resource (P-04 day and list views); the client filters a column
 GET    /v1/schedule/week?facilityId=&calendarId=&date= # Monday–Sunday of one doctor or resource, each day as in the day view plus capacity (P1-023)
 GET|POST /v1/schedule/exceptions  # P1-012: leave (from–to), extra session or shortened day (one date + window); affected booked visits need an action each (offer|manual) or 409 actions_required + the list, nothing saved
+PUT|DELETE /v1/schedule/exceptions/{id}  # P1-012: edit (same body and action rules) / cancel; deleted leave gives the slots back, visits already "needs rebooking" are never re-booked; an extra session with booked visits cannot be deleted (400 id:has_bookings). Leave stays capped at 60 days per save: each doctor-day is locked while visits move, so longer leave is saved in parts (lift with a set-based move)
 POST   /v1/slot-holds                              # short hold before confirm (P1-07)
 POST   /v1/appointments                            # serializable + app lock
 POST   /v1/appointments/walk-in                    # P1-025: next free slot today on the booking path, else queued unscheduled (no slot); then check-in

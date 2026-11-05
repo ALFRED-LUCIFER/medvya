@@ -74,7 +74,7 @@ function scheduleWeek(calendarId: string, date: string) {
   const days = [...Array(7).keys()].map(i => {
     const d = scheduleDay(new Date(monday + i * 86_400_000).toISOString().slice(0, 10));
     const column = d.columns.find(c => c.calendarId === calendarId)!;
-    return { ...d, columns: [i < 5 ? column : { ...column, hours: [], slots: [], appointments: [], capacity: 0, unavailable: [] }] };
+    return { ...d, columns: [i < 5 ? column : { ...column, hours: [], slots: [], appointments: [], capacity: 0, unavailable: i === 6 ? [{ start: column.hours[0]!.start, end: column.hours[0]!.end, reason: 'Leave', label: 'Conference' }] : [] }] };
   });
   return { facilityId: 'f-1', timeZone: 'Asia/Kolkata', calendarId, days };
 }
@@ -460,7 +460,8 @@ test('week and list views show the same appointments as the day view', async ({ 
   await expect(monday.getByRole('listitem')).toHaveCount(inDay.length); // allInnerTexts does not wait for the week to render
   expect(squash(await monday.getByRole('listitem').allInnerTexts())).toEqual(inDay);
   await expect(week.getByText('booked of 17')).toHaveCount(5); // Monday to Friday
-  await expect(week.getByText('Not working')).toHaveCount(2); // Saturday and Sunday
+  await expect(week.getByText('Not working')).toHaveCount(1); // Saturday
+  await expect(week.getByText('On leave · Conference')).toHaveCount(1); // Sunday: leave in words, not only hatching
   expect(calls.weeks).toEqual([{ calendarId: 'd-1', date: null }]); // all columns shown, so the first calendar's week
 
   await page.getByRole('combobox', { name: 'Doctor or resource' }).click();

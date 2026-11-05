@@ -39,14 +39,16 @@ export function agenda(day: ScheduleDay): { column: ScheduleColumn; entries: Age
   }));
 }
 
-export type WeekDay = { date: string; working: boolean; booked: number; capacity: number; appointments: Appointment[] };
+/** `leave` is set when the day is leave: its note (or '' when none), so the week says so in words. */
+export type WeekDay = { date: string; working: boolean; leave: string | null; booked: number; capacity: number; appointments: Appointment[] };
 
 /** Week view: per day the booked count against capacity and that day's appointments, from the same columns the day view shows. */
 export const weekDays = (week: ScheduleWeek): WeekDay[] =>
   week.days.map(d => {
     const c = d.columns[0];
     const appointments = c?.appointments ?? [];
-    return { date: d.date, working: (c?.hours.length ?? 0) > 0, booked: appointments.filter(a => occupies(a.state)).length, capacity: c?.capacity ?? 0, appointments };
+    const leave = c?.unavailable.find(u => u.reason === 'Leave');
+    return { date: d.date, working: (c?.hours.length ?? 0) > 0, leave: leave ? (leave.label ?? '') : null, booked: appointments.filter(a => occupies(a.state)).length, capacity: c?.capacity ?? 0, appointments };
   });
 
 /** The first free slot not being booked elsewhere and not yet started: where the pinned "+ Book" opens booking. */

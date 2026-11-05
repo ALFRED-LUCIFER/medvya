@@ -41,6 +41,19 @@ describe('schedule views', () => {
     expect(saturday).toMatchObject({ booked: 0, capacity: 0, working: false });
   });
 
+  it('marks a leave day in the week with its note, so it is not only hatching', () => {
+    const span = { start: '2026-10-19T03:30:00Z', end: '2026-10-19T12:30:00Z' };
+    const week: ScheduleWeek = {
+      facilityId: 'f', timeZone: 'Asia/Kolkata', calendarId: 'd-1',
+      days: [
+        day('2026-10-19', [column('d-1', { hours: [], capacity: 0, unavailable: [{ ...span, reason: 'Leave', label: 'Conference' }] })]),
+        day('2026-10-20', [column('d-1', { hours: [], capacity: 0, unavailable: [{ ...span, reason: 'Leave', label: null }] })]),
+        day('2026-10-21', [column('d-1')]),
+      ],
+    };
+    expect(weekDays(week).map(d => d.leave)).toEqual(['Conference', '', null]);
+  });
+
   it('heads the week Monday to Sunday, as the server answers it', () => {
     expect(weekSpan('2026-10-21')).toEqual({ from: '2026-10-19', to: '2026-10-25' }); // Wednesday
     expect(weekSpan('2026-10-19')).toEqual({ from: '2026-10-19', to: '2026-10-25' }); // Monday

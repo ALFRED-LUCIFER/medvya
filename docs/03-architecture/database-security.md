@@ -74,6 +74,8 @@ Azure provisioning is MDV-P0-006; until it exists, these steps are the plan, not
 3. **Administrator, once per identity:** map the identities (below). The deploy identity is `Medvya CI deploy (dev, India)`.
 4. **Every deploy:** the workflow opens a firewall rule for its own runner, runs `db-migrate migrate` as the migration identity (module migrations, then the Hangfire tables), and closes the rule.
 
+**SQL firewall:** only the web app's outbound addresses (`infra/bicep/sql-firewall.bicep`) are permanent. The deploy job and the administrator open their own address for the length of the work and delete it (`az sql server firewall-rule delete`). A Bicep deploy never deletes rules, so after moving to this layout delete the old `AllowAzureServices` rule once by hand.
+
 Connection string (an app setting, no password): `Server=tcp:<server>.database.windows.net,1433;Database=medvya;Authentication=Active Directory Managed Identity;Encrypt=Strict;`.
 
 Mapping, run by the administrator after `roles.sql`, per database:

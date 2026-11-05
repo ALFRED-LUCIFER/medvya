@@ -1481,5 +1481,16 @@
   "schedule.sheet.type": "نوع الزيارة",
   "schedule.sheet.status": "الحالة",
   "schedule.sheet.empty": "لا توجد زيارات محجوزة.",
-  "schedule.sheet.failed": "تعذر تجهيز جدول اليوم. تحقق من الاتصال وحاول مرة أخرى."
+  "schedule.sheet.failed": "تعذر تجهيز جدول اليوم. تحقق من الاتصال وحاول مرة أخرى.",
+  "adjustment.edit": "تعديل",
+  "adjustment.edit.named": "تعديل إجازة أو استثناء {name}",
+  "adjustment.delete": "حذف",
+  "adjustment.delete.named": "حذف إجازة أو استثناء {name}",
+  "adjustment.editing": "أنت تعدّل استثناءً محفوظًا. الحفظ يستبدله، وتُعرض أولًا الزيارات المحجوزة التي يشملها حديثًا.",
+  "adjustment.cancelEdit": "إلغاء التعديل",
+  "adjustment.deleteNote": "حذف الإجازة أو اليوم المقصّر يعيد المواعيد قابلة للحجز. الزيارات التي نُقلت أصلًا إلى إعادة الحجز تبقى كما هي: لا يُعاد حجزها، وعلى الاستقبال نقلها.",
+  "adjustment.delete.confirm": "حذف هذا؟ الزيارات التي نُقلت أصلًا إلى إعادة الحجز لا يُعاد حجزها.",
+  "adjustment.delete.yes": "نعم، احذف",
+  "adjustment.delete.no": "إبقاؤه",
+  "adjustment.error.has_bookings": "توجد زيارات محجوزة في هذه الجلسة الإضافية. انقلها أولًا ثم احذفها."
 }

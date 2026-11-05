@@ -32,7 +32,9 @@ export default function WeekView({ name, calendarId, days, timeZone, updating, o
                 </div>
               </>
             ) : (
-              <p className="text-xs font-bold text-muted-foreground">{t('schedule.reason.NotWorking')}</p>
+              <p className="text-xs font-bold text-muted-foreground">
+                {d.leave === null ? t('schedule.reason.NotWorking') : d.leave ? t('schedule.reasonWithLabel', { reason: t('schedule.reason.Leave'), label: d.leave }) : t('schedule.reason.Leave')}
+              </p>
             )}
             {d.appointments.length > 0 && (
               <ul aria-label={t('schedule.week.appointments', { day: formatDay(d.date) })} className="flex flex-col gap-1.5">

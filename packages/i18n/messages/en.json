@@ -1482,5 +1482,16 @@
   "schedule.sheet.type": "Visit type",
   "schedule.sheet.status": "Status",
   "schedule.sheet.empty": "No visits booked.",
-  "schedule.sheet.failed": "Could not prepare the day sheet. Check the connection and try again."
+  "schedule.sheet.failed": "Could not prepare the day sheet. Check the connection and try again.",
+  "adjustment.edit": "Edit",
+  "adjustment.edit.named": "Edit leave or exception of {name}",
+  "adjustment.delete": "Delete",
+  "adjustment.delete.named": "Delete leave or exception of {name}",
+  "adjustment.editing": "Editing a saved exception. Saving replaces it; any booked visits it newly affects are listed first.",
+  "adjustment.cancelEdit": "Cancel editing",
+  "adjustment.deleteNote": "Deleting leave or a shortened day makes the slots bookable again. Visits already moved to needs rebooking stay as they are: they are not booked again and reception still has to move them.",
+  "adjustment.delete.confirm": "Delete this? Visits already moved to needs rebooking are not booked again.",
+  "adjustment.delete.yes": "Yes, delete",
+  "adjustment.delete.no": "Keep it",
+  "adjustment.error.has_bookings": "Visits are booked in this extra session. Move them first, then delete it."
 }

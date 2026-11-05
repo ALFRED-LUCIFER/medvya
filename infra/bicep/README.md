@@ -4,7 +4,7 @@
 
 ```
 az group create -n rg-medvya-dev-in -l centralindia
-az deployment group what-if -g rg-medvya-dev-in -f infra/bicep/main.bicep -p sqlAdminObjectId=<entra object id> sqlAdminLogin=<upn> alertEmail=<email>
+az deployment group what-if -g rg-medvya-dev-in -f infra/bicep/main.bicep -p sqlAdminObjectId=<entra object id> sqlAdminLogin=<upn> alertEmail=<email> oidcClientId=<app registration client id>
 az deployment group create  -g rg-medvya-dev-in -f infra/bicep/main.bicep -p <same parameters>
 ```
 

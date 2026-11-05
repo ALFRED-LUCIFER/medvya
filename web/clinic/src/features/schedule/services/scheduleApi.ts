@@ -1,5 +1,6 @@
 import type { BookedAppointment, BookingForm, Hold, PatientMatch, SlotChoice } from '../domain/booking';
 import type { CancelReason } from '../domain/changes';
+import type { PatientMessage } from '../domain/messages';
 import type { Appointment, ScheduleDay } from '../domain/schedule';
 import type { ScheduleWeek } from '../domain/views';
 
@@ -69,3 +70,7 @@ export const cancelAppointment = (appointmentId: string, reason: CancelReason, n
   post<Appointment>(`/v1/appointments/${appointmentId}/cancel`, { reason, note: note || null });
 
 export const markNoShow = (appointmentId: string) => post<Appointment>(`/v1/appointments/${appointmentId}/no-show`, {});
+
+/** Messages sent to the patient about a visit (statuses only). Ids only in the URL. */
+export const fetchMessages = (facilityId: string, appointmentId: string) =>
+  send<PatientMessage[]>(`/v1/appointments/${appointmentId}/notifications?facilityId=${facilityId}`);

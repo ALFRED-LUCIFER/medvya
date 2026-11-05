@@ -1,0 +1,136 @@
+import { createRequire } from 'node:module';
+import { expect, test, type Page } from '@playwright/test';
+
+// MDV-P1-007 against a mocked API (CI has none; the real API is covered by DoctorTests and the browser check in the PR).
+// Synthetic cast only (docs/00-overview/personas.md).
+const admin = {
+  user: { id: 'u-lakshmi', displayName: 'K. Lakshmi (synthetic)' },
+  memberships: [{ id: 'm-1', tenantId: 't-1', tenantName: 'Iyer Family Clinic (synthetic)', facilityId: 'f-1', facilityName: 'Adyar (synthetic)', role: 'PracticeAdmin' }],
+  active: { membershipId: 'm-1', tenantId: 't-1', facilityId: 'f-1', country: 'IN', role: 'PracticeAdmin', flags: [], capabilities: { StaffRolesIntegrations: 'Config' } },
+};
+const existing = {
+  id: 'd-1', fullName: 'Dr. Arjun Rao (synthetic)', specialty: 'Family medicine', qualifications: null, languages: null, facilityId: 'f-1', facilityName: 'Adyar (synthetic)',
+  status: 'Active', authority: 'TNMC', number: '84213', category: null, expiresOn: null, licence: 'Rejected', rejectionReason: 'Number not found in the register', hasSignature: false,
+};
+const list = (doctors: object[]) => ({
+  doctors, defaults: { newVisitFee: 50000, followUpFee: 30000, currency: 'INR' },
+  authorities: [{ code: 'TNMC', name: 'Tamil Nadu Medical Council' }, { code: 'NMC', name: 'National Medical Commission' }],
+});
+
+async function setUp(page: Page, locale = 'en') {
+  const state = { doctors: [existing] as object[], added: null as unknown, resubmitted: null as unknown, signature: null as string | null };
+  await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
+  await page.route('**/v1/me/context', r => r.fulfill({ json: admin }));
+  await page.route('**/v1/settings/locations', r => r.fulfill({ json: [{ id: 'f-1', name: 'Adyar (synthetic)', address: null, timeZone: 'Asia/Kolkata' }] }));
+  await page.route('**/v1/settings/doctors', async r => {
+    if (r.request().method() === 'POST') {
+      state.added = r.request().postDataJSON();
+      const body = state.added as { fullName: string };
+      const doctor = { ...existing, id: 'd-2', fullName: body.fullName, status: 'Invited', licence: 'Pending', rejectionReason: null };
+      state.doctors = [...state.doctors, doctor];
+      return r.fulfill({ status: 201, json: doctor });
+    }
+    return r.fulfill({ json: list(state.doctors) });
+  });
+  await page.route('**/v1/settings/doctors/*/licence', async r => {
+    state.resubmitted = r.request().postDataJSON();
+    state.doctors = [{ ...existing, licence: 'Pending', rejectionReason: null }];
+    return r.fulfill({ json: state.doctors[0] });
+  });
+  await page.route('**/v1/settings/doctors/*/signature', async r => {
+    state.signature = r.request().headers()['content-type'] ?? null;
+    return r.fulfill({ status: 204 });
+  });
+  return state;
+}
+
+const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
+async function axe(page: Page) {
+  await page.addScriptTag({ path: axePath });
+  return page.evaluate(async () =>
+    (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations
+      .map(v => `${v.id} (${v.nodes.length})`));
+}
+
+test('the Doctors tab lists doctors with their licence state in words, and a rejected licence shows why and can be corrected', async ({ page }) => {
+  const state = await setUp(page);
+  await page.goto('/settings?tab=doctors');
+
+  await expect(page.getByRole('tab', { name: 'Doctors' })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('heading', { name: 'Dr. Arjun Rao (synthetic)' })).toBeVisible();
+  await expect(page.getByText('Not verified')).toBeVisible();
+  await expect(page.getByText('Medvya could not verify this licence: Number not found in the register')).toBeVisible();
+  await expect(page.getByText('Signing in Medvya is always an authenticated action by the doctor (passkey / MFA), never the image alone.')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Correct licence' }).click();
+  await page.getByLabel('Registration category').fill('Permanent');
+  await page.getByRole('button', { name: 'Send for verification again' }).click();
+  await expect(page.getByLabel('Expiry date')).toHaveAttribute('aria-invalid', 'true'); // expiry is required
+  await page.getByLabel('Expiry date').fill('2031-12-31');
+  await page.getByRole('button', { name: 'Send for verification again' }).click();
+  await expect(page.getByText('Verification pending')).toBeVisible();
+  expect(state.resubmitted).toMatchObject({ authority: 'TNMC', number: '84213', category: 'Permanent', expiresOn: '2031-12-31' });
+});
+
+test('Add doctor: seven steps, fees prefilled in whole currency units, then one request and the signature image', async ({ page }) => {
+  const state = await setUp(page);
+  await page.goto('/settings?tab=doctors');
+  await page.getByRole('button', { name: 'Add doctor' }).first().click();
+
+  await expect(page.getByText('Step 1 of 7: Details')).toBeVisible();
+  await page.getByRole('button', { name: 'Next' }).click(); // nothing typed: refused, still on step 1
+  await expect(page.getByText('Step 1 of 7: Details')).toBeVisible();
+  await expect(page.getByLabel('Full name')).toHaveAttribute('aria-invalid', 'true');
+
+  await page.getByLabel('Full name').fill('Dr. Sana Khan (synthetic)');
+  await page.getByLabel('Email for the invitation').fill('sana.khan@example.test');
+  await page.getByLabel('Specialty').fill('Paediatrics');
+  await page.getByRole('button', { name: 'Next' }).click();
+
+  await expect(page.getByText('Step 2 of 7: Licence')).toBeVisible();
+  await page.getByRole('combobox', { name: 'Medical council' }).click();
+  await page.getByRole('option', { name: 'Tamil Nadu Medical Council' }).click();
+  await page.getByLabel('Registration number').fill('84213');
+  await page.getByLabel('Registration category').fill('Permanent');
+  await page.getByLabel('Expiry date').fill('2031-12-31');
+  await page.getByRole('button', { name: 'Next' }).click();
+
+  await expect(page.getByText('Step 3 of 7: Verification')).toBeVisible();
+  await expect(page.getByText('usually within 1 working day')).toBeVisible();
+  await page.getByRole('button', { name: 'Next' }).click();
+  await expect(page.getByText('Step 4 of 7: Schedule')).toBeVisible();
+  await page.getByRole('button', { name: 'Next' }).click();
+
+  await expect(page.getByText('Step 5 of 7: Default fees')).toBeVisible();
+  await expect(page.getByLabel('New patient fee (INR)')).toHaveValue('500');
+  await expect(page.getByLabel('Follow-up fee (INR)')).toHaveValue('300');
+  await page.getByRole('button', { name: 'Next' }).click();
+  await expect(page.getByText('Step 6 of 7: Access')).toBeVisible();
+  await expect(page.getByLabel('Role')).toHaveValue('Doctor');
+  await page.getByRole('button', { name: 'Next' }).click();
+
+  await expect(page.getByText('Step 7 of 7: Signature image')).toBeVisible();
+  await expect(page.getByText('Signing in Medvya is always an authenticated action by the doctor (passkey / MFA), never the image alone.')).toBeVisible();
+  expect(await axe(page)).toEqual([]);
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+  await page.getByLabel('Signature image (optional)').setInputFiles({ name: 'signature.png', mimeType: 'image/png', buffer: png });
+  await page.getByRole('button', { name: 'Add doctor and send invitation' }).click();
+
+  await expect(page.getByText('Dr. Sana Khan (synthetic) was added and the invitation was sent.')).toBeVisible();
+  expect(state.added).toMatchObject({
+    fullName: 'Dr. Sana Khan (synthetic)', email: 'sana.khan@example.test', authority: 'TNMC', licenceNumber: '84213', category: 'Permanent', expiresOn: '2031-12-31',
+    newVisitFee: 50000, followUpFee: 30000, facilityId: 'f-1', qualifications: null,
+  });
+  expect(state.signature).toBe('image/png');
+});
+
+for (const locale of ['en', 'ar'])
+  test(`the Doctors tab is accessible at tablet width (${locale})`, async ({ page }) => {
+    await setUp(page, locale);
+    await page.setViewportSize({ width: 768, height: 1024 });
+    await page.goto('/settings?tab=doctors');
+    await expect(page.getByRole('heading', { level: 3 })).toHaveText('Dr. Arjun Rao (synthetic)');
+    expect(await page.evaluate(() => document.documentElement.dir)).toBe(locale === 'ar' ? 'rtl' : 'ltr');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+    expect(await axe(page)).toEqual([]);
+  });

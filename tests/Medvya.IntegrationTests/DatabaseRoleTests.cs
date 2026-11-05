@@ -42,6 +42,15 @@ public class DatabaseRoleTests(SqlServerFixture sql) : IClassFixture<SqlServerFi
     [InlineData("DROP TABLE scheduling.Templates")]
     public Task AppCannotChangeTheSchema(string ddl) => Denied("app_user", ddl);
 
+    // MDV-P0-008: the deploy creates the Hangfire tables as the migration role (the app may not); the app then works in them but cannot change them.
+    [Fact]
+    public async Task DeployCreatesJobTablesThatTheAppCanUseButNotAlter()
+    {
+        await Run("app_user", "INSERT INTO hangfire.[Set] ([Key], Score, Value) VALUES (N'probe', 0, N'probe'); DELETE FROM hangfire.[Set] WHERE [Key] = N'probe';");
+        await Denied("app_user", "ALTER TABLE hangfire.[Set] ADD Injected int NULL");
+        await Denied("reporting_user", "SELECT TOP 1 [Key] FROM hangfire.[Set]");
+    }
+
     [Fact]
     public async Task MigratorCanChangeTheSchemaButNotTouchModuleData()
     {
@@ -82,6 +91,11 @@ public class DatabaseRoleTests(SqlServerFixture sql) : IClassFixture<SqlServerFi
         await Denied("leads_user", "DELETE FROM leads.DemoRequests");
         await Denied("leads_user", "UPDATE leads.DemoRequests SET Name = N'x'");
         await Denied("patients_user", "SELECT TOP 1 Id FROM leads.DemoRequests");
+        await Run("notifications_user", "SELECT TOP 1 Id FROM notifications.Notifications");
+        await Denied("notifications_user", "SELECT TOP 1 Id FROM patients.Patients");
+        await Denied("notifications_user", "SELECT TOP 1 Id FROM scheduling.Appointments");
+        await Denied("notifications_user", "DELETE FROM notifications.Attempts"); // the attempts are the delivery history
+        await Denied("scheduling_user", "SELECT TOP 1 Id FROM notifications.Notifications");
     }
 
     [Fact]

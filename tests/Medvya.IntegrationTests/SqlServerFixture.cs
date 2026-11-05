@@ -5,6 +5,7 @@ using Medvya.BuildingBlocks.Domain;
 using Medvya.BuildingBlocks.Infrastructure;
 using Medvya.Patients.Infrastructure;
 using Medvya.Patients.Infrastructure.Persistence;
+using Medvya.Notifications.Infrastructure.Persistence;
 using Medvya.Scheduling.Infrastructure.Persistence;
 using Medvya.Identity.Infrastructure.Persistence;
 using Medvya.Leads.Infrastructure.Persistence;
@@ -85,7 +86,7 @@ public sealed class SqlServerFixture : IAsyncLifetime
         ["tenancy_user"] = "medvya_tenancy", ["audit_user"] = "medvya_audit", ["identity_user"] = "medvya_identity",
         ["patients_user"] = "medvya_patients", ["billing_user"] = "medvya_billing",
         ["scheduling_user"] = "medvya_scheduling",
-        ["leads_user"] = "medvya_leads",
+        ["leads_user"] = "medvya_leads", ["notifications_user"] = "medvya_notifications",
     };
 
     /// <summary>
@@ -142,26 +143,22 @@ public sealed class SqlServerFixture : IAsyncLifetime
 
         // Every migration runs as the migration role, so a migration needing more than that role grants fails here.
         await using var migrator = await OpenAs("migrator_user");
-        await using var db = new TenancyDbContext(new DbContextOptionsBuilder<TenancyDbContext>().UseSqlServer(migrator).Options, new FixedTenant(null));
-        await db.Database.MigrateAsync();
-        await using var audit = new AuditDbContext(new DbContextOptionsBuilder<AuditDbContext>().UseSqlServer(migrator).Options, new FixedTenant(null));
-        await audit.Database.MigrateAsync();
-        await using var patients = new PatientsDbContext(new DbContextOptionsBuilder<PatientsDbContext>().UseSqlServer(migrator).Options, new FixedTenant(null));
-        await patients.Database.MigrateAsync();
-        await using var identity = new IdentityDbContext(new DbContextOptionsBuilder<IdentityDbContext>().UseSqlServer(migrator).Options);
-        await identity.Database.MigrateAsync();
-        await using var billing = new BillingDbContext(new DbContextOptionsBuilder<BillingDbContext>().UseSqlServer(migrator).Options, new FixedTenant(null));
-        await billing.Database.MigrateAsync();
-        await using var scheduling = new SchedulingDbContext(new DbContextOptionsBuilder<SchedulingDbContext>().UseSqlServer(migrator).Options, new FixedTenant(null));
-        await scheduling.Database.MigrateAsync();
-        await using var leads = new LeadsDbContext(new DbContextOptionsBuilder<LeadsDbContext>().UseSqlServer(migrator).Options);
-        await leads.Database.MigrateAsync();
+        await Medvya.DbMigrate.DatabaseMigrator.ApplyAsync(migrator);
     }
 
     public SchedulingDbContext Scheduling(Guid? tenantId)
     {
         var tenant = new FixedTenant(tenantId);
         return new SchedulingDbContext(new DbContextOptionsBuilder<SchedulingDbContext>()
+            .UseSqlServer(ConnectionString)
+            .AddInterceptors(new TenantSessionInterceptor(tenant))
+            .Options, tenant);
+    }
+
+    public NotificationsDbContext Notifications(Guid? tenantId)
+    {
+        var tenant = new FixedTenant(tenantId);
+        return new NotificationsDbContext(new DbContextOptionsBuilder<NotificationsDbContext>()
             .UseSqlServer(ConnectionString)
             .AddInterceptors(new TenantSessionInterceptor(tenant))
             .Options, tenant);

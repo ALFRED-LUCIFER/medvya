@@ -24,7 +24,7 @@ public static class InvitationEndpoints
         {
             try
             {
-                var created = await invitations.CreateAsync(request.Email, request.Role, request.FacilityId, ct);
+                var created = await invitations.CreateAsync(request.Email, request.Role, request.FacilityId, cancellationToken: ct);
                 return created is null ? Results.NotFound() : Results.Created($"/v1/invitations/{created.Id}", created);
             }
             catch (ArgumentException ex) when (ex.ParamName is { } field)

@@ -25,6 +25,9 @@ public static class TenancyModule
             .AddScoped<IInvitations, Invitations>()
             .AddScoped<IPracticeProvisioning>(sp => ActivatorUtilities.CreateInstance<PracticeProvisioning>(sp, connectionString))
             .AddScoped<IStaffAccess, StaffAccess>()
-            .AddScoped<IPracticeSettings, PracticeSettings>();
+            .AddScoped<IPracticeSettings, PracticeSettings>()
+            .AddScoped<IDoctors, Doctors>()
+            .AddScoped<ILicenceReview, LicenceReview>()
+            .AddScoped<IStaffRoster, StaffRoster>();
     }
 }

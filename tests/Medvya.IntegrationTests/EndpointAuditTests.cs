@@ -40,6 +40,14 @@ public sealed class EndpointAuditTests(SqlServerFixture sql) : IClassFixture<Sql
         "GET /v1/invitations/facilities",  // facility ids and names of the admin's tenant (MDV-P0-013)
         "POST /v1/invitations/",            // invites a staff member by email; audited as invitation.create inside the service
         "DELETE /v1/invitations/{id:guid}", // revokes a staff invitation; audited as invitation.revoke inside the service
+        // Settings -> Staff (MDV-P1-008): staff names and roles, no patient data; invitations and role changes are audited inside the services.
+        "GET /v1/staff/",
+        "POST /v1/staff/",
+        "POST /v1/staff/invitations/{id:guid}/resend",
+        "GET /v1/staff/roles",
+        "POST /v1/staff/roles",
+        "PUT /v1/staff/roles/{id:guid}",
+        "POST /v1/staff/{membershipId:guid}/offboard", // MDV-P1-009: audited as staff.offboard in the same transaction (SessionControlTests)
         // Practice settings (MDV-P1-005): business details only; every change is audited inside the service with before/after (PracticeSettingsTests).
         "GET /v1/settings/profile",
         "PUT /v1/settings/profile",
@@ -54,6 +62,13 @@ public sealed class EndpointAuditTests(SqlServerFixture sql) : IClassFixture<Sql
         "PUT /v1/settings/logo",
         "DELETE /v1/settings/logo",
         "GET /v1/settings/logo",
+        // Add doctor (MDV-P1-007): clinician details, licence and fees, no patient data; changes are audited inside the services (DoctorTests).
+        "GET /v1/settings/doctors/",
+        "POST /v1/settings/doctors/",
+        "PUT /v1/settings/doctors/{id:guid}/licence",
+        "PUT /v1/settings/doctors/{id:guid}/signature",
+        "DELETE /v1/settings/doctors/{id:guid}/signature",
+        "POST /v1/operations/licences/{tenantId:guid}/{doctorId:guid}/decision", // Medvya operations only; audited as licence.verify / licence.reject
         // Live board hub (MDV-P1-029): opening the connection carries no patient data. A refused connect is audited Denied
         // (.AuditRefusals, front_desk.board.connect); every Watch call is audited Allowed or Denied by the hub (front_desk.board.watch);
         // messages are ids and state only, and the board itself is read through the audited GET /v1/front-desk/board (BoardHubTests).
@@ -158,7 +173,7 @@ public sealed class EndpointAuditTests(SqlServerFixture sql) : IClassFixture<Sql
         "POST /v1/appointments/walk-in" => System.Text.Json.JsonSerializer.Serialize(new { facilityId = facility, patientId = Guid.NewGuid(), visitType = "FollowUp", reasonCategory = "General" }),
         "POST /v1/patients/" => System.Text.Json.JsonSerializer.Serialize(new
         {
-            quick = true, fullName = $"{role} Audit Probe (synthetic)", dateOfBirth = $"{1950 + (int)role}-02-0{1 + (int)role % 9}",
+            consents = Medvya.IntegrationTests.PatientRulesTests.TreatmentConsentBody, quick = true, fullName = $"{role} Audit Probe (synthetic)", dateOfBirth = $"{1950 + (int)role}-02-0{1 + (int)role % 9}",
             sexAtBirth = "Female", mobile = $"+91 90000 09{(int)role:D3}",
         }),
         _ => "{}",

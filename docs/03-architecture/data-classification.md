@@ -100,8 +100,12 @@ Not clinic data, so no tenant. Of the app roles only `medvya_leads` reaches the 
 | tenancy.PracticeProfiles: tenant_id, slot_minutes, fees (minor units), currency, hours, note templates, registration number, GSTIN/TRN | Internal | Row-level security |
 | tenancy.PracticeProfiles: address | Personal | A solo doctor's clinic can be a home address. Row-level security |
 | tenancy.PracticeProfiles: specialty, qualifications, languages | Public | Shown to patients later (P5) |
-| tenancy.DoctorLicences: membership_id, tenant_id, authority, submitted_at, verified_at | Internal | Row-level security. Until verified_at is set, recording and signing capabilities are off |
+| tenancy.DoctorLicences: membership_id, tenant_id, authority, category, expires_on, submitted_at, verified_at, verified_by, rejected_at, rejection_reason | Internal | Row-level security. Until verified_at is set (by Medvya operations only), recording and signing capabilities are off. The rejection reason is operations' text shown to the practice; the screen tells them to keep personal details out |
 | tenancy.DoctorLicences: number, certificate_name | Personal | The certificate file itself is not stored yet (shortcut in the wizard) |
+| tenancy.DoctorProfiles: full_name | Personal | Row-level security. Added doctors and the owner doctor (MDV-P1-007) |
+| tenancy.DoctorProfiles: specialty, qualifications, languages | Public | Shown to patients later (P5) |
+| tenancy.DoctorProfiles: fees (minor units), changed_by, changed_at | Internal | Per-doctor fee defaults |
+| tenancy.DoctorProfiles: signature_key | Personal | Key of the private Blob object (random path, no names). The image is never served to the screen; only printed prescriptions read it. Not a way to sign |
 
 ### Clinical (P2)
 

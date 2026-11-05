@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { cancelSchema, changeError, emptyCancel, rulesFor, type CancelForm } from '../domain/changes';
 import type { Appointment } from '../domain/schedule';
-import { ApiError, cancelAppointment, markNoShow, rescheduleAppointment } from '../services/scheduleApi';
+import { ApiError, cancelAppointment, fetchMessages, markNoShow, rescheduleAppointment } from '../services/scheduleApi';
 import { checkIn } from '../../front-desk/services/frontDeskApi';
 
 /** The visit the desk opened, with the calendar it sits in; `openedAt` is "now" for the action rules. */
@@ -34,6 +34,13 @@ export function useAppointmentController(facilityId: string, access: { timeZone:
     form.reset(emptyCancel);
   };
   const id = () => opened!.appointment.id;
+  // What the patient was told and whether it arrived. Polled gently so a send or a receipt shows without reopening the panel.
+  const messages = useQuery({
+    queryKey: ['messages', facilityId, opened?.appointment.id],
+    queryFn: () => fetchMessages(facilityId, opened!.appointment.id),
+    enabled: opened !== null,
+    refetchInterval: 30_000,
+  });
 
   const move = useMutation({
     mutationFn: (t: Target) => rescheduleAppointment(id(), t.calendarId, t.start),
@@ -66,6 +73,7 @@ export function useAppointmentController(facilityId: string, access: { timeZone:
     target,
     done,
     rules: opened && access.timeZone ? rulesFor(opened.appointment, { now: opened.openedAt, timeZone: access.timeZone, canBook: access.canBook, canCheckIn: access.canCheckIn }) : null,
+    messages: messages.isError ? ('error' as const) : (messages.data ?? ('loading' as const)),
     working: mutations.some(m => m.isPending),
     error: failed ? changeError(failed.error instanceof ApiError ? failed.error.code : undefined) : null,
     form,

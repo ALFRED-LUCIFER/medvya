@@ -4,7 +4,7 @@
 
 ```
 az group create -n rg-medvya-dev-in -l centralindia
-az deployment group what-if -g rg-medvya-dev-in -f infra/bicep/main.bicep -p sqlAdminObjectId=<entra object id> sqlAdminLogin=<upn> alertEmail=<email> oidcClientId=<app registration client id> emailFrom=<verified sender>
+az deployment group what-if -g rg-medvya-dev-in -f infra/bicep/main.bicep -p sqlAdminObjectId=<entra object id> sqlAdminLogin=<upn> alertEmail=<email> oidcClientId=<app registration client id>
 az deployment group create  -g rg-medvya-dev-in -f infra/bicep/main.bicep -p <same parameters>
 ```
 
@@ -25,11 +25,7 @@ Staff sign-in needs both, or the app refuses every sign-in with "the provider di
 
 ## Email (MDV-P1-032)
 
-Invitations (add doctor, add staff, onboarding) go through SendGrid's SMTP relay. One-time setup, by the owner:
+Invitations (add doctor, add staff, onboarding) need a working sender; the app refuses to send without one. Two providers, chosen by the `emailProvider` parameter (see `docs/03-architecture/email-providers.md`):
 
-1. SendGrid: verify a sender (a domain you own is best; a free-mail address often fails DMARC) and create an API key with only "Mail Send".
-2. Store the key without echoing it: `az keyvault secret set --vault-name <kv> --name sendgrid-api-key --value "<key>"`.
-3. Deploy with `emailFrom=<the verified sender>`.
-
-The mailer fails closed: no sender or key means the request fails and nothing is saved.
-
+- **`Acs` (default): Azure Communication Services Email.** Created by this template (Azure-managed sender domain, data location `emailDataLocation`, default India). The app sends with its managed identity: no key or password. Register the provider once: `az provider register -n Microsoft.Communication`.
+- **`Smtp`: SendGrid's relay.** Verify a sender in SendGrid (a domain you own is best), create an API key with only "Mail Send", store it without echoing: `az keyvault secret set --vault-name <kv> --name sendgrid-api-key --value "<key>"`, then deploy with `emailProvider=Smtp emailFrom=<verified sender>`.

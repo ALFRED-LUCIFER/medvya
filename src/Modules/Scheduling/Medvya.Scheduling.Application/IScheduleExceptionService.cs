@@ -45,4 +45,10 @@ public interface IScheduleExceptionService
     /// <exception cref="ExceptionActionsRequiredException">Booked visits are affected and not every one has an action; nothing was saved.</exception>
     /// <exception cref="SchedulingValidationException">Invalid dates or window, an overlapping exception, or an action for a visit that is not affected.</exception>
     Task<SavedAdjustment> SaveAsync(SaveAdjustment command, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// A doctor left the practice (MDV-P1-009): their future booked visits become "needs rebooking" for reception to move (slots freed, audited,
+    /// no patient message). The caller has already authorised staff administration; nothing here is open to a doctor's own session.
+    /// </summary>
+    Task<int> ReleaseDoctorAsync(Guid doctorUserId, CancellationToken cancellationToken = default);
 }

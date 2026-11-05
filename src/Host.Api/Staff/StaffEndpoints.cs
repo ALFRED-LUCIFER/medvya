@@ -62,12 +62,18 @@ public static class StaffEndpoints
         // Offboarding (MDV-P1-009): access ends in the roster transaction (the membership is no longer active, so every endpoint refuses it
         // and the facility picker no longer offers it); the person's sessions in this tenant end right after. Other tenants are untouched.
         g.MapPost("/{membershipId:guid}/offboard", async (Guid membershipId, Offboard body, ClaimsPrincipal principal, [FromServices] IStaffRoster roster,
-            [FromServices] IStaffSessions sessions, CancellationToken ct) =>
+            [FromServices] IStaffSessions sessions, [FromServices] Medvya.Scheduling.Application.IScheduleExceptionService schedule, CancellationToken ct) =>
         {
             var result = await roster.OffboardAsync(membershipId, body.Reason, ct);
             if (result.Outcome == OffboardOutcome.NotFound) return Results.NotFound();
             if (result.Outcome == OffboardOutcome.LastAdmin) return Problem("membershipId", "last_admin");
-            if (result.UserId is { } userId) await sessions.RevokeInTenantAsync(userId, Guid.Parse(principal.FindFirstValue(StaffPolicies.TenantClaim)!), ct);
+            if (result.UserId is { } userId)
+            {
+                await sessions.RevokeInTenantAsync(userId, Guid.Parse(principal.FindFirstValue(StaffPolicies.TenantClaim)!), ct);
+                // The doctor's calendar disappears with the membership: their future visits go to reception's "needs rebooking" lane, never stranded.
+                // shortcut: runs after the offboarding commits (not one transaction); a failure needs the visits moved by hand, one transaction when Tenancy may call Scheduling.
+                await schedule.ReleaseDoctorAsync(userId, ct);
+            }
             return Results.NoContent();
         });
 

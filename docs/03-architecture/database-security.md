@@ -66,6 +66,16 @@ Azure provisioning is MDV-P0-006; until it exists, these steps are the plan, not
 | Application | App Service managed identity (one per country deployment) | `medvya_app` |
 | Reporting | Entra group for reporting users or a reporting service identity | `medvya_reporting` |
 
+### Deploy runbook (dev, India; same shape for every environment)
+
+1. **Infrastructure:** `infra/bicep/main.bicep` creates the Key Vault key `medvya-column-master` (RSA 3072) and gives "Key Vault Crypto User" on that key only to the web app identity and the SQL administrator.
+2. **Administrator, once and whenever a module is added** (needs the SQL firewall to allow your IP, and `az login` as the Entra admin):
+   `dotnet run --project tools/db-migrate -- admin "<connection>" "<key url>"` runs `roles.sql`, then creates `CMK_Medvya` and `CEK_Patients` wrapped by the Key Vault key.
+3. **Administrator, once per identity:** map the identities (below). The deploy identity is `Medvya CI deploy (dev, India)`.
+4. **Every deploy:** the workflow opens a firewall rule for its own runner, runs `db-migrate migrate` as the migration identity (module migrations, then the Hangfire tables), and closes the rule.
+
+Connection string (an app setting, no password): `Server=tcp:<server>.database.windows.net,1433;Database=medvya;Authentication=Active Directory Managed Identity;Encrypt=Strict;`.
+
 Mapping, run by the administrator after `roles.sql`, per database:
 
 ```sql

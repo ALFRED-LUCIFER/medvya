@@ -10,6 +10,15 @@ param env string = 'dev'
 param sqlAdminObjectId string
 param sqlAdminLogin string
 param alertEmail string
+@description('Point-in-time restore window in days (7 to 35). Production uses 35; dev keeps the 7-day default to stay cheap (MDV-P0-019).')
+@minValue(7)
+@maxValue(35)
+param pitrRetentionDays int = 7
+@description('Long-term retention of weekly full backups, ISO 8601 (for example P4W). PT0S turns it off. Set per country rule before real patient data.')
+param ltrWeeklyRetention string = 'P4W'
+@description('Where database backups are stored. Local or Zone only: both stay inside the region (data stays in country, AGENTS.md 1.6). Never Geo.')
+@allowed(['Local', 'Zone'])
+param backupRedundancy string = 'Local'
 @description('Which sender the app uses: Acs (Azure Communication Services, default) or Smtp (SendGrid relay).')
 @allowed(['Acs', 'Smtp'])
 param emailProvider string = 'Acs'
@@ -63,6 +72,17 @@ resource storage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
     allowBlobPublicAccess: false
     minimumTlsVersion: 'TLS1_2'
     supportsHttpsTrafficOnly: true
+  }
+}
+
+// A deleted or overwritten image can be recovered for a week (doctor signatures and logos live here).
+resource blobProtection 'Microsoft.Storage/storageAccounts/blobServices@2023-05-01' = {
+  parent: storage
+  name: 'default'
+  properties: {
+    deleteRetentionPolicy: { enabled: true, days: 7 }
+    containerDeleteRetentionPolicy: { enabled: true, days: 7 }
+    isVersioningEnabled: true
   }
 }
 
@@ -175,7 +195,21 @@ resource db 'Microsoft.Sql/servers/databases@2023-08-01-preview' = {
     autoPauseDelay: 60
     minCapacity: json('0.5')
     maxSizeBytes: 34359738368
+    requestedBackupStorageRedundancy: backupRedundancy
   }
+}
+
+// Backups are code (MDV-P0-019): point-in-time restore window and long-term retention.
+resource pitr 'Microsoft.Sql/servers/databases/backupShortTermRetentionPolicies@2023-08-01-preview' = {
+  parent: db
+  name: 'default'
+  properties: { retentionDays: pitrRetentionDays, diffBackupIntervalInHours: 12 }
+}
+
+resource ltr 'Microsoft.Sql/servers/databases/backupLongTermRetentionPolicies@2023-08-01-preview' = {
+  parent: db
+  name: 'default'
+  properties: { weeklyRetention: ltrWeeklyRetention }
 }
 
 resource plan 'Microsoft.Web/serverfarms@2023-12-01' = {

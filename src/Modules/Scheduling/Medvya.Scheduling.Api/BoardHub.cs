@@ -23,7 +23,7 @@ public sealed record BoardChanged(Guid AppointmentId, string State, DateTimeOffs
 /// are refused at once); end hub connections on revocation when sessions publish a revocation event (MDV-P0-012).
 /// </summary>
 public sealed class BoardHub(
-    IFrontDeskService frontDesk, IAuditLog audit, ICurrentTenant tenant, ICurrentUser user, ICurrentFacility session,
+    IFrontDeskService frontDesk, IAuditLog audit, AuditWindow windows, ICurrentTenant tenant, ICurrentUser user, ICurrentFacility session,
     [FromKeyedServices(BoardHub.WatchRateLimit)] PartitionedRateLimiter<string> limiter) : Hub
 {
     public const string Path = "/v1/hubs/board";
@@ -56,7 +56,13 @@ public sealed class BoardHub(
             await AuditAsync(AuditOutcome.Denied);
             throw new HubException(Refused);
         }
-        await AuditAsync(AuditOutcome.Allowed); // before joining: no audit row, no updates (fail closed)
+        // Before joining: no audit row, no updates (fail closed). One row per user and facility per window, not per reconnect.
+        var key = AuditWindow.Key(tenant.TenantId.Value, me, WatchAction, facilityId.ToString("N"));
+        if (!windows.Covered(key))
+        {
+            await AuditAsync(AuditOutcome.Allowed);
+            windows.Record(key, AuditWindow.Board);
+        }
         await Groups.AddToGroupAsync(Context.ConnectionId, group, Context.ConnectionAborted);
     }
 

@@ -28,7 +28,7 @@ public static class AuditedEndpoint
     /// with the change. A request the authorization policy refuses never reaches this filter; <see cref="AuditDeniedAccess"/>
     /// records it instead.
     /// </summary>
-    public static TBuilder Audited<TBuilder>(this TBuilder builder, string action, string resourceType, string purpose = "treatment", string? patientRouteKey = null)
+    public static TBuilder Audited<TBuilder>(this TBuilder builder, string action, string resourceType, string purpose = "treatment", string? patientRouteKey = null, TimeSpan? window = null)
         where TBuilder : IEndpointConventionBuilder
     {
         var metadata = new AuditedEndpointMetadata(action, resourceType, purpose, patientRouteKey);
@@ -49,7 +49,14 @@ public static class AuditedEndpoint
                 await WriteAsync(http, metadata, tenantId, AuditOutcome.Allowed); // not refused: it failed while running
                 throw;
             }
-            await WriteAsync(http, metadata, tenantId, OutcomeOf(result));
+            var outcome = OutcomeOf(result);
+            // With a window, the same user's identical Allowed read is written once per window; every other outcome is always written.
+            var windows = http.RequestServices.GetRequiredService<AuditWindow>();
+            var key = window is not null && outcome == AuditOutcome.Allowed && http.RequestServices.GetRequiredService<ICurrentUser>().UserId is { } me
+                ? AuditWindow.Key(tenantId, me, action, http.Request.Path + http.Request.QueryString.Value) : null;
+            if (key is not null && windows.Covered(key)) return result;
+            await WriteAsync(http, metadata, tenantId, outcome);
+            if (key is not null) windows.Record(key, window!.Value); // only after the row is written: a failed write must not cover later reads
             return result;
         });
         return builder;

@@ -3,13 +3,14 @@ using Medvya.DbMigrate;
 using Medvya.Patients.Infrastructure;
 using Microsoft.Data.SqlClient;
 
-// admin   <connection> <key-vault-key-url>  roles.sql, then the Always Encrypted keys wrapped by the Key Vault key. Entra administrator only.
+// admin   <connection> <key-vault-key-url> [<app-identity> <migration-identity>]  roles.sql, the Always Encrypted keys wrapped by the Key Vault
+//         key, then (when given) the Entra identities mapped to medvya_app / medvya_migrator, by display name. Entra administrator only.
 // migrate <connection>                      module migrations, then the Hangfire tables. The migration identity only.
 // counts  <connection>                      row count per table (metadata only, no data read), for the restore drill.
 // Connection strings carry no password: Authentication=Active Directory Default;Encrypt=Strict.
-if (args is not ([var command, var connection, ..] and var all) || command is not ("admin" or "migrate" or "counts") || (command == "admin") != (all.Length == 3))
+if (args is not ([var command, var connection, ..] and var all) || command is not ("admin" or "migrate" or "counts") || (command == "admin") != (all.Length is 3 or 5))
 {
-    await Console.Error.WriteLineAsync("usage: db-migrate admin <connection> <key-vault-key-url> | db-migrate migrate <connection> | db-migrate counts <connection>");
+    await Console.Error.WriteLineAsync("usage: db-migrate admin <connection> <key-vault-key-url> [<app-identity> <migration-identity>] | db-migrate migrate <connection> | db-migrate counts <connection>");
     return 2;
 }
 
@@ -26,6 +27,7 @@ if (command == "admin")
     // DefaultAzureCredential: az login on a workstation, the OIDC login in CI.
     var provider = ColumnEncryption.RegisterKeyVault(new DefaultAzureCredential());
     await ColumnEncryption.EnsureKeysAsync(db, ColumnEncryption.KeyVaultProviderName, all[2], provider);
+    if (all.Length == 5) await DatabaseMigrator.MapIdentitiesAsync(db, [(all[3], "medvya_app"), (all[4], "medvya_migrator")]);
 }
 else if (command == "counts")
 {

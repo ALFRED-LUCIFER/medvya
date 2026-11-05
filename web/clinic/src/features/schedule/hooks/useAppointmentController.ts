@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { cancelSchema, changeError, emptyCancel, rulesFor, type CancelForm } from '../domain/changes';
 import type { Appointment } from '../domain/schedule';
-import { ApiError, cancelAppointment, fetchMessages, markNoShow, rescheduleAppointment } from '../services/scheduleApi';
+import { ApiError, cancelAppointment, cancelFollowing, fetchMessages, markNoShow, rescheduleAppointment } from '../services/scheduleApi';
 import { checkIn } from '../../front-desk/services/frontDeskApi';
 
 /** The visit the desk opened, with the calendar it sits in; `openedAt` is "now" for the action rules. */
@@ -12,7 +12,7 @@ export type Opened = { appointment: Appointment; calendarId: string; calendarNam
 /** A new slot for the opened visit, picked by click or by drag, waiting for confirmation. */
 export type Target = { calendarId: string; calendarName: string; start: string };
 export type Mode = 'view' | 'pick' | 'confirmMove' | 'cancel';
-export type Done = { kind: 'moved' | 'cancelled' | 'noShow' | 'checkedIn'; appointment: Appointment; calendarName: string };
+export type Done = { kind: 'moved' | 'cancelled' | 'cancelledFollowing' | 'noShow' | 'checkedIn'; appointment: Appointment; calendarName: string; count: number };
 
 /**
  * MDV-P1-024: the appointment panel. Opening a visit shows its actions under the state rules; Reschedule picks a new slot
@@ -27,8 +27,8 @@ export function useAppointmentController(facilityId: string, access: { timeZone:
   const [done, setDone] = useState<Done | null>(null);
   const form = useForm<CancelForm>({ resolver: zodResolver(cancelSchema), defaultValues: emptyCancel });
   const refreshSchedule = () => queryClient.invalidateQueries({ queryKey: ['schedule', facilityId] });
-  const finish = (kind: Done['kind'], calendarName?: string) => (appointment: Appointment) => {
-    setDone({ kind, appointment, calendarName: calendarName ?? opened!.calendarName });
+  const finish = (kind: Done['kind'], calendarName?: string, count = 1) => (appointment: Appointment) => {
+    setDone({ kind, appointment, calendarName: calendarName ?? opened!.calendarName, count });
     setMode('view');
     setTarget(null);
     form.reset(emptyCancel);
@@ -48,13 +48,14 @@ export function useAppointmentController(facilityId: string, access: { timeZone:
     onSettled: refreshSchedule,
   });
   const cancel = useMutation({ mutationFn: (v: CancelForm) => cancelAppointment(id(), v.reason, v.note), onSuccess: finish('cancelled'), onSettled: refreshSchedule });
+  const cancelRest = useMutation({ mutationFn: (v: CancelForm) => cancelFollowing(id(), v.reason, v.note), onSuccess: list => finish('cancelledFollowing', undefined, list.length)({ ...opened!.appointment, state: 'Cancelled' }), onSettled: refreshSchedule });
   const noShow = useMutation({ mutationFn: () => markNoShow(id()), onSuccess: finish('noShow'), onSettled: refreshSchedule });
   const arrive = useMutation({
     mutationFn: () => checkIn(id(), 0), // 0: not timed here; the check-in time metric comes from the board (exit gate 3)
     onSuccess: () => finish('checkedIn')({ ...opened!.appointment, state: 'CheckedIn' }),
     onSettled: refreshSchedule,
   });
-  const mutations = [move, cancel, noShow, arrive];
+  const mutations = [move, cancel, cancelRest, noShow, arrive];
   const failed = mutations.find(m => m.isError);
   const reset = () => mutations.forEach(m => m.reset());
 
@@ -86,6 +87,7 @@ export function useAppointmentController(facilityId: string, access: { timeZone:
     onStartCancel: () => { reset(); setMode('cancel'); },
     onReason: (reason: CancelForm['reason']) => form.setValue('reason', reason, { shouldValidate: form.formState.isSubmitted }),
     onConfirmCancel: form.handleSubmit(values => cancel.mutate(values)),
+    onConfirmCancelFollowing: form.handleSubmit(values => cancelRest.mutate(values)),
     onNoShow: () => noShow.mutate(),
     onCheckIn: () => arrive.mutate(),
     onBack: () => { reset(); setTarget(null); setMode('view'); },

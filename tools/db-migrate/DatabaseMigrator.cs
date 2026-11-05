@@ -53,6 +53,31 @@ public static class DatabaseMigrator
     }
 
     /// <summary>
+    /// Maps Entra identities (by display name: the web app's managed identity, the deploy identity) to their database roles. Idempotent.
+    /// Administrator only. <paramref name="userSource"/> is "FROM EXTERNAL PROVIDER" in Azure; tests pass "WITHOUT LOGIN" (Entra does not exist locally).
+    /// </summary>
+    public static async Task MapIdentitiesAsync(SqlConnection admin, IEnumerable<(string Identity, string Role)> map, string userSource = "FROM EXTERNAL PROVIDER", CancellationToken ct = default)
+    {
+        foreach (var (identity, role) in map)
+        {
+            // QUOTENAME makes the names safe identifiers; userSource is a constant from this code, never input.
+            await using var cmd = new SqlCommand($"""
+                DECLARE @sql nvarchar(max);
+                IF DATABASE_PRINCIPAL_ID(@identity) IS NULL
+                BEGIN
+                    SET @sql = N'CREATE USER ' + QUOTENAME(@identity) + N' {userSource}';
+                    EXEC(@sql);
+                END
+                SET @sql = N'ALTER ROLE ' + QUOTENAME(@role) + N' ADD MEMBER ' + QUOTENAME(@identity);
+                EXEC(@sql);
+                """, admin);
+            cmd.Parameters.AddWithValue("@identity", identity);
+            cmd.Parameters.AddWithValue("@role", role);
+            await cmd.ExecuteNonQueryAsync(ct);
+        }
+    }
+
+    /// <summary>
     /// Rows per user table, from partition metadata only: no row is read, so row-level security and Always Encrypted do not matter and no
     /// patient data is exposed. Used by the restore drill (docs/runbooks/restore.md) to compare a restored database with its source.
     /// Ledger history tables are left out (their names carry the object id, which differs after a restore).

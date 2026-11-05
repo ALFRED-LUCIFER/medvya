@@ -14,6 +14,7 @@
 @epic MDV-P1-E08 | Confirmations, reminders and notification centre | P1-09 | Email/SMS confirmations and reminders with delivery status; in-app notification centre.
 @epic MDV-P1-E09 | Practice access log | P1-10 | Owners see who opened which record and when.
 @epic MDV-P1-E10 | Pilot readiness and R1 gate | P1-01, P1-12 | External dependencies, production tenants, training, baselines, security review and the R1 exit gate.
+@epic MDV-P1-E11 | Connectivity and resilience | P1-06, P1-08 | The desk keeps working on flaky Indian connections: safe retries, timeouts, offline assets and a paper fallback; nothing with patient data is stored in the browser without a decision.
 
 === MDV-P1-001
 status: Done
@@ -541,7 +542,7 @@ ac:
 - Every consent is a separate toggle; marketing defaults off; treatment is required and cannot be toggled off.
 - Each decision creates an immutable receipt (ledger) with policy version and jurisdiction; changing a decision creates a new receipt and keeps history.
 - The privacy notice version shown at registration is the currently published one; publishing a new version does not alter old receipts.
-- Owners cannot activate the production tenant until ToS and DPA acceptance is recorded.
+- Activation is one accepted-terms record on the tenant (terms version, timestamp, who accepted): until it exists, the production tenant cannot book appointments or send messages; accepting it records all three (decision 5 Nov 2026, built on the draft wording).
 - Reminder sending (MDV-P1-032/033) checks the channel consent before every send (test).
 - Final wording is the legally reviewed text from MDV-P1-044 in en/hi/ar.
 
@@ -1206,3 +1207,115 @@ Start the onboarding/vendor applications for the launch emirate HIE (Malaffi, NA
 ac:
 - Applications submitted (or blocked reasons recorded) for the launch emirate exchange and claims platform.
 - A tracker lists each programme's requirements, contacts and expected timeline; P5 tickets are updated with the findings.
+
+=== MDV-P1-047
+title: Safe retries: idempotency keys, request timeouts and bounded retry (merges the proposed P1-047 and P1-048)
+type: Story
+epic: MDV-P1-E11
+prd: P1-06
+covers: nfr:1
+priority: SHOULD
+roles: Receptionist
+labels: resilience, api, connectivity
+estimate: 5
+weeks: 11
+depends: MDV-P1-021, MDV-P1-013, MDV-P1-028
+confidence: 80 | Pattern is standard; the booking and check-in paths already exist; the idempotency table and client wrapper are new.
+sources: docs/03-architecture/india-connectivity-power.md section 6(a); owner decision 5 Nov 2026 (047 and 048 merge, two chunks)
+desc:
+On flaky connections a request can reach the server while its answer never reaches the desk, and a retry must not book, check in or register twice. Server chunk: an Idempotency-Key on the booking, check-in and registration POSTs with server-side dedupe (the key is stored with the outcome, scoped to tenant and user; a repeat returns the first outcome). Client chunk: one shared API client with a 15 second timeout and bounded retry with jitter for GETs and keyed POSTs, a clear failed state that keeps the form, and the same key reused across retries of one submission. No patient data is stored in the browser.
+ac:
+- A booking, check-in or registration POST that repeats with the same Idempotency-Key creates exactly one record and returns the first outcome (integration test on SQL Server, mutation-checked: remove the dedupe and it fails).
+- A retry that arrives after another user took the slot gets a conflict, the UI offers other slots, and no duplicate exists.
+- The client times out after 15 seconds, shows a retry message and does not clear the form; retries are bounded, jittered and reuse the key.
+- The key store holds no patient data, is scoped to tenant and user, and expired keys are removed.
+
+=== MDV-P1-049
+title: Service worker for static assets only (app shell loads with no network, no patient data)
+type: Task
+epic: MDV-P1-E11
+prd: P1-08
+covers: nfr:3
+priority: COULD
+roles: Receptionist
+labels: resilience, connectivity, security
+estimate: 2
+weeks: 12
+depends: MDV-P1-047
+confidence: 70 | Deferred until pilot interviews show outages matter; scope is deliberately static files only.
+sources: docs/03-architecture/india-connectivity-power.md section 6(a); deferred 5 Nov 2026
+desc:
+Cache the built app files (script, style, fonts) with a service worker so a reload with no network shows the app shell and an offline state instead of a browser error. Static assets only: no API response, no patient data and no identifier is cached or stored. Deferred until pilot interviews say outages are a real problem.
+ac:
+- With the network off, reloading a page opened earlier today loads the app shell with the offline state and shows no patient data.
+- Browser storage contains no patient identifiers (automated check that fails if one appears).
+- A new deploy replaces the cached files (no stale shell after a release).
+
+=== MDV-P1-050
+title: Printable day sheet for the desk (no phone numbers or national IDs)
+type: Story
+epic: MDV-P1-E11
+prd: P1-08
+covers: nfr:3
+priority: COULD
+roles: Receptionist
+labels: resilience, connectivity, privacy
+estimate: 3
+weeks: 12
+depends: MDV-P1-023
+confidence: 70 | Deferred until pilot interviews; print layout is simple, the privacy rules are the point.
+sources: docs/03-architecture/india-connectivity-power.md section 6(b); deferred 5 Nov 2026
+desc:
+A print view of today's schedule, one page per doctor, in the facility time zone: time, token, first name and age, doctor and a reason code. No phone number and no national or insurance ID. Printing is a read of patient data, so it is audited with who printed it. Deferred until pilot interviews say the desk needs a paper fallback.
+ac:
+- Choosing Print day sheet produces a one-page-per-doctor sheet in the facility time zone.
+- The sheet excludes phone numbers and national IDs (test).
+- An access-log entry records who printed it.
+
+=== MDV-P1-051
+title: Encrypted read-only schedule cache for outages (needs an ADR first)
+type: Story
+epic: MDV-P1-E11
+prd: P1-08
+covers: nfr:3
+priority: COULD
+roles: Receptionist
+labels: resilience, connectivity, security
+estimate: 5
+weeks: 13
+depends: MDV-P1-050
+confidence: 55 | Storing any patient data in the browser needs a recorded decision; build only if pilot clinics report outages long enough that a paper sheet is not enough.
+sources: docs/03-architecture/india-connectivity-power.md section 6(b); deferred 5 Nov 2026
+desc:
+Show today's schedule read-only, labelled "as of <time>", when the network drops, from a per-user encrypted cache that expires after 12 hours and is wiped on sign-out or deactivation. No search; create, edit and cancel stay disabled. Requires an ADR (what may be stored in the browser, key handling) before any code; not to be built unless pilots show the printed day sheet is not enough.
+ac:
+- An ADR records what is stored, how it is keyed and why, and is accepted before implementation.
+- During an outage the schedule is shown read-only with an "as of" label and create, edit and cancel are disabled.
+- The cache is deleted on sign-out, after 12 hours and when the account is deactivated.
+- Inspecting the browser store shows only ciphertext, and the test fails if the encryption is removed (mutation check).
+
+=== MDV-P1-052
+title: Front-desk fixes from the live walk-through, round 2 (queue displays, cancelled slot, walk-in, schedule, log, reminders, invitations, polish)
+type: Task
+epic: MDV-P1-E07
+prd: P1-08
+covers: nfr:3
+priority: MUST
+roles: Receptionist, Practice admin
+labels: bugfix, a11y, front-desk
+estimate: 6
+weeks: 11
+depends: MDV-P1-029, MDV-P1-031, MDV-P1-025, MDV-P1-023, MDV-P1-035, MDV-P1-032
+confidence: 85 | Each item was seen on the deployed app (QA walk-through, issue #125); fixes are small and local.
+sources: GitHub issue #125 QA comment, 5 Nov 2026
+desc:
+Fixes for problems found by walking walk-in, queue TV, clinic overview, calendar views, reschedule/cancel, reminders and invitations on the deployed app. Eight small chunks, one per finding group, each testable on its own. Items that need a decision are marked in the scenarios.
+ac:
+- The queue-display screen (/app/admin/displays) is reachable from Settings and the TV page tells staff where to find it; a display can be created, paired, shown and revoked.
+- A cancelled appointment never covers the slot it freed, in mouse or keyboard use, and leaves the tab order immediately.
+- Walk-in warns before checking the same patient in again, keeps the Next patients order consistent with token order, shows the token on success and validates the quick form as a whole.
+- The schedule ruler matches the slot length, the selected date is in the address, and a stale appointment panel closes when the day or view changes.
+- The access log does not drown in schedule and notification reads, and action names are translated.
+- A reminder consent can be added after quick registration, and the visit panel says when reminders are scheduled.
+- A revoked invitation reads clearly as revoked.
+- Page loads do not sit on "Loading..." for seconds, and developer-facing text and plural slips are gone.

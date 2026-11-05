@@ -45,6 +45,9 @@ export function groupByColumn(cards: BoardCard[]): Record<BoardColumn, BoardCard
   return groups;
 }
 
+/** Visits the doctor's leave left without a slot (MDV-P1-012): they wait for the desk to move or cancel them, and leave the columns. */
+export const needsRebooking = (cards: BoardCard[]) => cards.filter(c => c.state === 'NeedsRebooking').sort((a, c) => Date.parse(a.start) - Date.parse(c.start));
+
 /** Whole minutes since `since`, never negative (a device clock behind the server's). */
 export const minutesSince = (since: string, now: number) => Math.max(0, Math.floor((now - Date.parse(since)) / 60_000));
 

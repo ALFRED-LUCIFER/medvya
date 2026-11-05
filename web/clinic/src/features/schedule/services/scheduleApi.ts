@@ -1,6 +1,8 @@
 import type { BookedAppointment, BookingForm, Hold, PatientMatch, SlotChoice } from '../domain/booking';
+import type { Occurrence, SeriesResult } from '../domain/series';
 import type { CancelReason } from '../domain/changes';
 import type { PatientMessage } from '../domain/messages';
+import type { SaveResult, SavedAdjustment } from '../domain/adjustments';
 import type { Appointment, ScheduleDay } from '../domain/schedule';
 import type { ScheduleWeek } from '../domain/views';
 
@@ -8,10 +10,13 @@ import type { ScheduleWeek } from '../domain/views';
 export class ApiError extends Error {
   readonly status: number;
   readonly code: string | undefined;
-  constructor(status: number, code?: string) {
+  /** The problem-details body, for answers that carry data (e.g. the visits an "actions_required" leave affects). */
+  readonly body: unknown;
+  constructor(status: number, code?: string, body?: unknown) {
     super(`API ${status}`);
     this.status = status;
     this.code = code;
+    this.body = body;
   }
 }
 
@@ -24,7 +29,7 @@ export async function send<T>(url: string, init: RequestInit = {}): Promise<T> {
     const body = (await res.json().catch(() => null)) as { code?: string; errors?: Record<string, string[]> } | null;
     // A rejected field (400 problem details) is reported as "field:code" so a screen can name what was wrong.
     const rejected = Object.entries(body?.errors ?? {}).find(([, codes]) => codes.length > 0);
-    throw new ApiError(res.status, body?.code ?? (rejected ? `${rejected[0]}:${rejected[1][0]}` : undefined));
+    throw new ApiError(res.status, body?.code ?? (rejected ? `${rejected[0]}:${rejected[1][0]}` : undefined), body);
   }
   return (res.status === 204 ? undefined : await res.json()) as T;
 }
@@ -69,8 +74,24 @@ export const rescheduleAppointment = (appointmentId: string, calendarId: string,
 export const cancelAppointment = (appointmentId: string, reason: CancelReason, note: string) =>
   post<Appointment>(`/v1/appointments/${appointmentId}/cancel`, { reason, note: note || null });
 
+/** MDV-P1-026: "this and following" cancels the rest of the series with one reason. */
+export const cancelFollowing = (appointmentId: string, reason: CancelReason, note: string) =>
+  post<Appointment[]>(`/v1/appointments/${appointmentId}/cancel-following`, { reason, note: note || null });
+
+// MDV-P1-026: recurring appointments. The preview lists each occurrence with the conflict that would refuse it; booking takes the starts the desk confirmed.
+export const previewSeries = (facilityId: string, s: { calendarId: string; visitType: string }, firstStart: string, count: number) =>
+  post<Occurrence[]>('/v1/appointments/series/preview', { facilityId, calendarId: s.calendarId, visitType: s.visitType, firstStart, count, intervalWeeks: 1 });
+
+export const bookSeries = (facilityId: string, s: { calendarId: string; visitType: string }, form: BookingForm, starts: string[]) =>
+  post<SeriesResult>('/v1/appointments/series', { facilityId, calendarId: s.calendarId, visitType: s.visitType, starts, ...form });
+
 export const markNoShow = (appointmentId: string) => post<Appointment>(`/v1/appointments/${appointmentId}/no-show`, {});
 
 /** Messages sent to the patient about a visit (statuses only). Ids only in the URL. */
 export const fetchMessages = (facilityId: string, appointmentId: string) =>
   send<PatientMessage[]>(`/v1/appointments/${appointmentId}/notifications?facilityId=${facilityId}`);
+
+// MDV-P1-012: leave and one-off sessions. An answer of 409 "actions_required" carries the affected visits (ApiError.body.affected).
+export const fetchAdjustments = (facilityId: string) => send<SavedAdjustment[]>(`/v1/schedule/exceptions?${new URLSearchParams({ facilityId })}`);
+
+export const saveAdjustment = (body: unknown) => post<SaveResult>('/v1/schedule/exceptions', body);

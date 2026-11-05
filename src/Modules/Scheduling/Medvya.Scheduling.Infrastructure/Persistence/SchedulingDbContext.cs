@@ -12,6 +12,7 @@ public sealed class SchedulingDbContext(DbContextOptions<SchedulingDbContext> op
 {
     public DbSet<ScheduleResource> Resources => Set<ScheduleResource>();
     public DbSet<ScheduleTemplate> Templates => Set<ScheduleTemplate>();
+    public DbSet<ScheduleAdjustment> Exceptions => Set<ScheduleAdjustment>();
     public DbSet<Appointment> Appointments => Set<Appointment>();
     public DbSet<SlotHold> SlotHolds => Set<SlotHold>();
     public DbSet<ScheduleSlot> ScheduleSlots => Set<ScheduleSlot>();
@@ -46,6 +47,14 @@ public sealed class SchedulingDbContext(DbContextOptions<SchedulingDbContext> op
             e.HasIndex(x => new { x.TenantId, x.FacilityId, x.CalendarId }).IsUnique(); // one template per calendar and location
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
+        modelBuilder.Entity<ScheduleAdjustment>(e =>
+        {
+            e.ToTable("ScheduleExceptions");
+            e.Property(x => x.Kind).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.Reason).HasMaxLength(60);
+            e.HasIndex(x => new { x.TenantId, x.FacilityId, x.CalendarId, x.FromDate });
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
         modelBuilder.Entity<Appointment>(e =>
         {
             e.Property(x => x.CalendarKind).HasConversion<string>().HasMaxLength(20);
@@ -59,6 +68,7 @@ public sealed class SchedulingDbContext(DbContextOptions<SchedulingDbContext> op
             // The day view and the board read a facility's time range: seek on Start and cover what the views need.
             e.HasIndex(x => new { x.TenantId, x.FacilityId, x.Start }).IncludeProperties(x => new { x.End, x.CalendarId, x.State, x.PatientId, x.VisitType });
             e.HasIndex(x => new { x.TenantId, x.PatientId });
+            e.HasIndex(x => new { x.TenantId, x.SeriesId }).HasFilter("[SeriesId] IS NOT NULL");
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         modelBuilder.Entity<ScheduleSlot>(e =>

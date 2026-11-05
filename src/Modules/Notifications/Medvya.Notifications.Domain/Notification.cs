@@ -8,7 +8,7 @@ public enum NotificationChannel { Email, Sms }
 
 /// <summary>What the message is about. Reminders go out at a fixed time before the visit; the others as soon as the change is published.</summary>
 [JsonConverter(typeof(JsonStringEnumConverter<NotificationKind>))]
-public enum NotificationKind { Confirmation, Rescheduled, Cancelled, Reminder24h, Reminder2h }
+public enum NotificationKind { Confirmation, Rescheduled, Cancelled, Reminder24h, Reminder2h, NeedsRebooking }
 
 /// <summary>
 /// Queued: waiting for its time or for a retry. Sent: handed to the provider. Delivered / Bounced: the provider's receipt.

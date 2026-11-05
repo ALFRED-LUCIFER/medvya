@@ -166,9 +166,10 @@ public sealed class BookingService(
     {
         var ids = doctors.Select(d => d.CalendarId).ToList();
         var (from, to) = ScheduleRules.DayBounds(today, zone);
+        var exceptions = await context.ExceptionsAsync(command.FacilityId, today, today, null, cancellationToken);
         var taken = await db.Appointments.AsNoTracking()
             .Where(a => a.FacilityId == command.FacilityId && ids.Contains(a.CalendarId) && a.Start < to && a.End > from && !a.Unscheduled
-                && a.State != AppointmentState.Cancelled && a.State != AppointmentState.NoShow)
+                && a.State != AppointmentState.Cancelled && a.State != AppointmentState.NoShow && a.State != AppointmentState.NeedsRebooking)
             .Select(a => new { a.CalendarId, a.Start, a.End }).ToListAsync(cancellationToken);
         var held = await db.SlotHolds.AsNoTracking()
             .Where(h => h.FacilityId == command.FacilityId && ids.Contains(h.CalendarId) && h.ExpiresAt > now && h.HeldBy != me)
@@ -176,7 +177,7 @@ public sealed class BookingService(
         return [.. doctors
             .SelectMany(t =>
             {
-                var day = ScheduleRules.Day(t, today, zone);
+                var day = ScheduleRules.Day(t, today, zone, exceptions.Where(x => x.CalendarId == t.CalendarId));
                 var length = ScheduleRules.SlotsFor(t, command.VisitType);
                 return day.Slots.Where(s => s.Start >= now).Select(s => (Calendar: t.CalendarId, s.Start, End: ScheduleRules.SpanEnd(day, s.Start, length)));
             })
@@ -189,11 +190,11 @@ public sealed class BookingService(
     }
 
     static Appointment Draft(Guid facilityId, Guid calendarId, CalendarKind kind, Guid patientId, VisitType type, DateTimeOffset start, DateTimeOffset end,
-        ReasonCategory reason, string? reasonText, BookingChannel channel, DateTimeOffset now, bool walkIn = false, bool unscheduled = false) => new()
+        ReasonCategory reason, string? reasonText, BookingChannel channel, DateTimeOffset now, bool walkIn = false, bool unscheduled = false, Guid? seriesId = null) => new()
     {
         Id = Guid.CreateVersion7(), FacilityId = facilityId, CalendarId = calendarId, CalendarKind = kind, PatientId = patientId, VisitType = type,
         Start = start, End = end, State = AppointmentState.Booked, ReasonCategory = reason, ReasonText = reasonText, Channel = channel,
-        WalkIn = walkIn, Unscheduled = unscheduled, BookedAt = now, ChangedAt = now,
+        WalkIn = walkIn, Unscheduled = unscheduled, SeriesId = seriesId, BookedAt = now, ChangedAt = now,
     };
 
     /// <summary>
@@ -207,7 +208,7 @@ public sealed class BookingService(
         {
             Id = draft.Id, TenantId = context.TenantId, FacilityId = draft.FacilityId, CalendarId = draft.CalendarId, CalendarKind = draft.CalendarKind,
             PatientId = draft.PatientId, VisitType = draft.VisitType, Start = draft.Start, End = draft.End, State = AppointmentState.Booked,
-            ReasonCategory = draft.ReasonCategory, ReasonText = draft.ReasonText, Channel = draft.Channel, WalkIn = draft.WalkIn, Unscheduled = draft.Unscheduled,
+            ReasonCategory = draft.ReasonCategory, ReasonText = draft.ReasonText, Channel = draft.Channel, WalkIn = draft.WalkIn, Unscheduled = draft.Unscheduled, SeriesId = draft.SeriesId,
             BookedBy = context.UserId, BookedAt = draft.BookedAt, ChangedBy = context.UserId, ChangedAt = draft.ChangedAt,
         };
         db.Appointments.Add(booked);
@@ -248,11 +249,14 @@ public sealed class BookingService(
             if (await db.SlotHolds.AnyAsync(h => h.CalendarId == command.CalendarId && h.FacilityId == seen.FacilityId && h.Start < end && command.Start < h.End
                     && h.ExpiresAt > now && h.HeldBy != me, cancellationToken))
                 throw new SlotUnavailableException("being_booked");
-            if (await db.Appointments.Where(a => a.Id == seen.Id && a.State == AppointmentState.Booked && a.CalendarId == seen.CalendarId && a.Start == seen.Start)
-                    .ExecuteUpdateAsync(s => s.SetProperty(a => a.CalendarId, command.CalendarId).SetProperty(a => a.Start, command.Start).SetProperty(a => a.End, end).SetProperty(a => a.Unscheduled, false)
+            if (await db.Appointments.Where(a => a.Id == seen.Id && a.State == seen.State && a.CalendarId == seen.CalendarId && a.Start == seen.Start)
+                    .ExecuteUpdateAsync(s => s.SetProperty(a => a.State, AppointmentState.Booked).SetProperty(a => a.CalendarId, command.CalendarId).SetProperty(a => a.Start, command.Start).SetProperty(a => a.End, end).SetProperty(a => a.Unscheduled, false)
                         .SetProperty(a => a.ChangedBy, me).SetProperty(a => a.ChangedAt, now), cancellationToken) == 0)
                 throw new VisitTransitionException("changed"); // checked in, cancelled or moved by someone else since the desk looked
             var after = Moved(seen, command.CalendarId, command.Start, end, me, now);
+            after.State = AppointmentState.Booked;
+            if (seen.State == AppointmentState.NeedsRebooking) // back on the schedule: the board and the history show it
+                db.StatusEvents.Add(new VisitStatusEvent { Id = Guid.CreateVersion7(), TenantId = seen.TenantId, AppointmentId = seen.Id, State = AppointmentState.Booked, ActorUserId = me, OccurredAt = now });
             await db.ScheduleSlots.Where(s => s.AppointmentId == seen.Id).ExecuteDeleteAsync(cancellationToken); // the old slot is free
             db.ScheduleSlots.AddRange(ScheduleSlot.For(after)); // and the new one taken: the unique index refuses a double booking
             db.Reschedules.Add(new AppointmentReschedule
@@ -275,6 +279,15 @@ public sealed class BookingService(
 
     public async Task<AppointmentChip> CancelAsync(Guid appointmentId, CancelAppointment command, CancellationToken cancellationToken = default)
     {
+        var note = CleanCancel(command);
+        var seen = await FindAsync(appointmentId, cancellationToken);
+        if (!VisitFlow.CanCancel(seen.State)) throw new VisitTransitionException("invalid_transition");
+        return await EndAsync(seen, AppointmentState.Cancelled, SchedulingAudit.Cancel, "AppointmentCancelled.v1", command.Reason, note, cancellationToken);
+    }
+
+    /// <summary>Validates the reason and note of a cancellation and returns the cleaned note.</summary>
+    static string? CleanCancel(CancelAppointment command)
+    {
         ArgumentNullException.ThrowIfNull(command);
         var note = ScheduleService.Clean(command.Note);
         var errors = new List<ValidationError>();
@@ -282,10 +295,33 @@ public sealed class BookingService(
         else if (reason == CancelReason.Other && note is null) errors.Add(new("note", "required"));
         if (note?.Length > MaxReason) errors.Add(new("note", "too_long"));
         SchedulingValidationException.ThrowIfAny(errors);
+        return note;
+    }
 
+    public async Task<IReadOnlyList<AppointmentChip>> CancelFollowingAsync(Guid appointmentId, CancelAppointment command, CancellationToken cancellationToken = default)
+    {
+        var note = CleanCancel(command);
         var seen = await FindAsync(appointmentId, cancellationToken);
+        if (seen.SeriesId is not { } series) throw new SchedulingValidationException([new("seriesId", "not_in_series")]);
         if (!VisitFlow.CanCancel(seen.State)) throw new VisitTransitionException("invalid_transition");
-        return await EndAsync(seen, AppointmentState.Cancelled, SchedulingAudit.Cancel, "AppointmentCancelled.v1", command.Reason, note, cancellationToken);
+        var following = await db.Appointments.AsNoTracking()
+            .Where(a => a.SeriesId == series && a.Start > seen.Start && (a.State == AppointmentState.Booked || a.State == AppointmentState.CheckedIn))
+            .OrderBy(a => a.Start).ToListAsync(cancellationToken);
+
+        // Each visit ends in its own doctor-day transaction. The chosen one tells the patient; the rest are quiet.
+        var chips = new List<AppointmentChip> { await EndAsync(seen, AppointmentState.Cancelled, SchedulingAudit.Cancel, "AppointmentCancelled.v1", command.Reason, note, cancellationToken) };
+        foreach (var next in following)
+        {
+            try
+            {
+                chips.Add(await EndAsync(next, AppointmentState.Cancelled, SchedulingAudit.Cancel, "AppointmentCancelled.v1", command.Reason, note, cancellationToken, quiet: true));
+            }
+            catch (VisitTransitionException)
+            {
+                // Checked in, cancelled or moved by someone else meanwhile: it stays as it is.
+            }
+        }
+        return chips;
     }
 
     public async Task<AppointmentChip> MarkNoShowAsync(Guid appointmentId, CancellationToken cancellationToken = default)
@@ -301,7 +337,7 @@ public sealed class BookingService(
     /// "changed"), the visit's slots are freed for booking again, and the status event (with the reason) and the outbox event are
     /// written with the audit event, all under the doctor-day lock of the visit.
     /// </summary>
-    async Task<AppointmentChip> EndAsync(Appointment seen, AppointmentState to, string action, string eventType, CancelReason? reason, string? note, CancellationToken cancellationToken)
+    async Task<AppointmentChip> EndAsync(Appointment seen, AppointmentState to, string action, string eventType, CancelReason? reason, string? note, CancellationToken cancellationToken, bool quiet = false)
     {
         var (_, zone) = await context.FacilityAsync(seen.FacilityId, cancellationToken);
         var (now, me) = (context.Now, context.UserId);
@@ -315,7 +351,7 @@ public sealed class BookingService(
             {
                 Id = Guid.CreateVersion7(), TenantId = seen.TenantId, AppointmentId = seen.Id, State = to, ActorUserId = me, OccurredAt = now, CancelReason = reason, Note = note,
             });
-            db.Outbox.Add(Event(eventType, seen, now, new { appointmentId = seen.Id, facilityId = seen.FacilityId, calendarId = seen.CalendarId, patientId = seen.PatientId, start = seen.Start, reason }));
+            db.Outbox.Add(Event(eventType, seen, now, new { appointmentId = seen.Id, facilityId = seen.FacilityId, calendarId = seen.CalendarId, patientId = seen.PatientId, start = seen.Start, reason, quiet }));
             await db.SaveChangesAsync(cancellationToken);
             await context.AuditAsync(action, SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment, seen.Id, seen.PatientId, cancellationToken);
             var after = Moved(seen, seen.CalendarId, seen.Start, seen.End, me, now);
@@ -341,9 +377,91 @@ public sealed class BookingService(
     /// <summary>A copy of the visit in its new slot; the original stays as it was, so a retried attempt starts from the same picture.</summary>
     static Appointment Moved(Appointment a, Guid calendarId, DateTimeOffset start, DateTimeOffset end, Guid? by, DateTimeOffset at) => new()
     {
-        Id = a.Id, TenantId = a.TenantId, FacilityId = a.FacilityId, CalendarId = calendarId, CalendarKind = a.CalendarKind, PatientId = a.PatientId, VisitType = a.VisitType,
+        Id = a.Id, TenantId = a.TenantId, FacilityId = a.FacilityId, CalendarId = calendarId, CalendarKind = a.CalendarKind, PatientId = a.PatientId, VisitType = a.VisitType, SeriesId = a.SeriesId,
         Start = start, End = end, State = a.State, ReasonCategory = a.ReasonCategory, Channel = a.Channel, BookedBy = a.BookedBy, BookedAt = a.BookedAt, ChangedBy = by, ChangedAt = at,
     };
+
+    public async Task<IReadOnlyList<SeriesOccurrence>> PreviewSeriesAsync(SeriesPattern pattern, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(pattern);
+        await context.RequireAsync(pattern.FacilityId, SchedulingAccess.CanBook, cancellationToken);
+        var errors = new List<ValidationError>();
+        if (pattern.Count is < 2 or > SeriesPattern.MaxCount) errors.Add(new("count", "out_of_range"));
+        if (pattern.IntervalWeeks is < 1 or > SeriesPattern.MaxIntervalWeeks) errors.Add(new("intervalWeeks", "out_of_range"));
+        if (!Enum.IsDefined(pattern.VisitType)) errors.Add(new("visitType", "invalid"));
+        SchedulingValidationException.ThrowIfAny(errors);
+        var (_, zone) = await context.FacilityAsync(pattern.FacilityId, cancellationToken);
+        var (now, me) = (context.Now, context.UserId!.Value);
+
+        var result = new List<SeriesOccurrence>();
+        foreach (var (start, i) in ScheduleRules.SeriesStarts(pattern.FirstStart, pattern.IntervalWeeks, pattern.Count, zone).Select((s, i) => (s, i)))
+        {
+            // A read without the lock; booking re-checks under it. Same checks as a hold.
+            string? conflict = null;
+            try
+            {
+                if (start < now) throw new SlotUnavailableException("in_past");
+                var end = await BookableEndAsync(pattern.FacilityId, pattern.CalendarId, start, pattern.VisitType, zone, cancellationToken);
+                if (await db.SlotHolds.AnyAsync(h => h.CalendarId == pattern.CalendarId && h.FacilityId == pattern.FacilityId && h.Start < end && start < h.End
+                        && h.ExpiresAt > now && h.HeldBy != me, cancellationToken))
+                    conflict = "being_booked";
+            }
+            catch (SlotUnavailableException e)
+            {
+                conflict = e.Code;
+            }
+            result.Add(new(i, start, conflict));
+        }
+        return result;
+    }
+
+    public async Task<SeriesResult> BookSeriesAsync(BookSeries command, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        await context.RequireAsync(command.FacilityId, SchedulingAccess.CanBook, cancellationToken);
+        var errors = new List<ValidationError>();
+        if (command.PatientId == Guid.Empty) errors.Add(new("patientId", "required"));
+        if (!Enum.IsDefined(command.VisitType)) errors.Add(new("visitType", "invalid"));
+        if (!Enum.IsDefined(command.ReasonCategory)) errors.Add(new("reasonCategory", "invalid"));
+        if (!Enum.IsDefined(command.Channel)) errors.Add(new("channel", "invalid"));
+        var reason = ScheduleService.Clean(command.ReasonText);
+        if (reason?.Length > MaxReason) errors.Add(new("reasonText", "too_long"));
+        if (command.Starts.Count is < 1 or > SeriesPattern.MaxCount || command.Starts.Distinct().Count() != command.Starts.Count) errors.Add(new("starts", "out_of_range"));
+        SchedulingValidationException.ThrowIfAny(errors);
+        var patient = (await context.PatientsAsync([command.PatientId], cancellationToken)).GetValueOrDefault(command.PatientId) is { } p && p.FacilityId == command.FacilityId
+            ? p
+            : throw new SchedulingValidationException([new("patientId", "unknown")]);
+        var (_, zone) = await context.FacilityAsync(command.FacilityId, cancellationToken);
+        var (now, me) = (context.Now, context.UserId!.Value);
+
+        var seriesId = Guid.CreateVersion7();
+        var booked = new List<SeriesBooked>();
+        foreach (var start in command.Starts.Order())
+        {
+            try
+            {
+                if (start < now) throw new SlotUnavailableException("in_past");
+                // shortcut: each occurrence commits on its own, so a crash mid-series leaves the earlier ones booked; the desk re-opens
+                // the series and books the rest. Upgrade to one transaction if partial series prove a problem.
+                var visit = await transaction.RunAsync([(command.CalendarId, ScheduleRules.LocalDate(start, zone))], async () =>
+                {
+                    var end = await BookableEndAsync(command.FacilityId, command.CalendarId, start, command.VisitType, zone, cancellationToken);
+                    if (await db.SlotHolds.AnyAsync(h => h.CalendarId == command.CalendarId && h.FacilityId == command.FacilityId && h.Start < end && start < h.End
+                            && h.ExpiresAt > now && h.HeldBy != me, cancellationToken))
+                        throw new SlotUnavailableException("being_booked");
+                    var kind = await db.Templates.Where(t => t.FacilityId == command.FacilityId && t.CalendarId == command.CalendarId).Select(t => t.CalendarKind).SingleAsync(cancellationToken);
+                    return await CreateAsync(Draft(command.FacilityId, command.CalendarId, kind, patient.Id, command.VisitType, start, end, command.ReasonCategory, reason, command.Channel, now,
+                        seriesId: seriesId), SchedulingAudit.Book, cancellationToken);
+                }, cancellationToken);
+                booked.Add(new(start, await ViewAsync(visit, patient, now), null));
+            }
+            catch (SlotUnavailableException e)
+            {
+                booked.Add(new(start, null, e.Code));
+            }
+        }
+        return new(seriesId, booked);
+    }
 
     public async Task<PatientView?> FindPatientAsync(Guid facilityId, Guid patientId, CancellationToken cancellationToken = default)
     {
@@ -366,12 +484,13 @@ public sealed class BookingService(
             throw new SlotUnavailableException("not_bookable"); // e.g. the doctor is not working at this facility, or a room for a doctor's visit
         var date = ScheduleRules.LocalDate(start, zone);
         if ((await context.ClosuresAsync(facilityId, date, date, cancellationToken)).Count > 0) throw new SlotUnavailableException("closed"); // a holiday at the location (MDV-P1-005)
-        var end = ScheduleRules.SpanEnd(ScheduleRules.Day(template, ScheduleRules.LocalDate(start, zone), zone), start, ScheduleRules.SlotsFor(template, type))
+        var exceptions = await context.ExceptionsAsync(facilityId, date, date, calendarId, cancellationToken);
+        var end = ScheduleRules.SpanEnd(ScheduleRules.Day(template, date, zone, exceptions), start, ScheduleRules.SlotsFor(template, type))
             ?? throw new SlotUnavailableException("not_bookable"); // outside hours, in a break or too long for what is left
         var earliest = start.AddMinutes(-ScheduleRules.MaxVisitMinutes); // no visit is longer, so the index seek has a lower bound
         var self = moving?.Id;
         if (await db.Appointments.AnyAsync(a => a.FacilityId == facilityId && a.CalendarId == calendarId && a.Start < end && start < a.End && a.Start > earliest
-                && a.State != AppointmentState.Cancelled && a.State != AppointmentState.NoShow && a.Id != self && !a.Unscheduled, cancellationToken))
+                && a.State != AppointmentState.Cancelled && a.State != AppointmentState.NoShow && a.State != AppointmentState.NeedsRebooking && a.Id != self && !a.Unscheduled, cancellationToken))
             throw new SlotUnavailableException("slot_unavailable");
         return end;
     }

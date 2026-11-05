@@ -7,6 +7,9 @@ import PatientSummaryLine from '../../patients/components/PatientSummaryLine';
 import type { SearchErrorCode, SearchResult } from '../../patients/domain/directory';
 import { channels, reasonCategories, visitTypes, type BookedAppointment, type BookingForm, type Hold, type PatientMatch, type SlotChoice, type SlotError } from '../domain/booking';
 import type { VisitLength, VisitType } from '../domain/schedule';
+import { localTime, type PlanRow, type SeriesDone } from '../domain/series';
+import { slotError } from '../domain/booking';
+import { localDate } from '../domain/changes';
 
 type Props = {
   timeZone: string;
@@ -35,6 +38,16 @@ type Props = {
   bookError: SlotError | null;
   booked: BookedAppointment | null;
   onVisitType: (v: VisitType) => void;
+  /** MDV-P1-026: repeat weekly. `plan` is the reviewed series (null until previewed); the desk skips or moves conflicts before confirming. */
+  repeat: number;
+  maxRepeat: number;
+  onRepeat: (n: number) => void;
+  plan: PlanRow[] | null;
+  seriesDone: SeriesDone | null;
+  onToggleOccurrence: (index: number) => void;
+  onMoveOccurrence: (index: number, time: string) => void;
+  onBackToForm: () => void;
+  onDismissSeries: () => void;
   onConfirm: () => void;
   onClose: () => void;
   onDismissBooked: () => void;
@@ -47,13 +60,27 @@ const control = 'h-11 w-full';
 
 /** P-04 booking panel: confirm the patient, visit type, nonclinical reason category and channel for the held slot. */
 export default function BookingPanel(p: Props) {
-  const { t, formatTime } = useI18n();
+  const { t, formatTime, formatShortDay } = useI18n();
   const time = (iso: string) => formatTime(new Date(iso), p.timeZone);
+  const day = (iso: string) => formatShortDay(localDate(iso, p.timeZone));
 
   if (!p.choice)
     return (
       <aside aria-label={t('booking.title')} className="flex flex-col gap-3 rounded-xl border bg-card p-4">
-        {p.booked ? (
+        {p.seriesDone ? (
+          <div role="status" className="flex flex-col items-start gap-2">
+            <p className="flex items-center gap-2 font-bold text-success-700"><CircleCheck aria-hidden className="size-5" />{t('series.done.title', { count: p.seriesDone.booked })}</p>
+            {p.seriesDone.refused.length > 0 && (
+              <>
+                <p className="flex items-center gap-2 text-sm font-bold text-danger-700"><CircleAlert aria-hidden className="size-4 shrink-0" />{t('series.done.refused', { count: p.seriesDone.refused.length })}</p>
+                <ul className="text-sm">
+                  {p.seriesDone.refused.map(r => <li key={r.start}>{t('series.row.refused', { day: day(r.start), time: time(r.start), why: t(`booking.error.${slotError(r.conflict ?? undefined)}`) })}</li>)}
+                </ul>
+              </>
+            )}
+            <Button variant="outline" onClick={p.onDismissSeries}>{t('booking.done.dismiss')}</Button>
+          </div>
+        ) : p.booked ? (
           <div role="status" className="flex flex-col items-start gap-2">
             <p className="flex items-center gap-2 font-bold text-success-700"><CircleCheck aria-hidden className="size-5" />{t('booking.done.title')}</p>
             <p className="text-sm">{t('booking.done.body', { name: p.booked.patientName, time: time(p.booked.start), reference: p.booked.reference })}</p>
@@ -69,6 +96,45 @@ export default function BookingPanel(p: Props) {
     );
 
   const { register, formState: { errors } } = p.form;
+  if (p.plan)
+    return (
+      <aside aria-label={t('booking.title')} className="flex flex-col gap-4 rounded-xl border bg-card p-4">
+        <div>
+          <h2 className="text-lg font-extrabold">{t('series.review.title')}</h2>
+          <p className="text-sm text-muted-foreground">{t('series.review.body')}</p>
+        </div>
+        <ul className="flex flex-col divide-y rounded-md border">
+          {p.plan.map((row, i) => (
+            <li key={row.start} className="flex flex-col gap-2 p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-sm font-bold">{t('series.row.when', { day: day(row.start), time: time(row.start) })}</span>
+                <span className={cn('flex items-center gap-1.5 text-xs font-bold', row.conflict ? 'text-danger-700' : 'text-success-700')}>
+                  {row.conflict ? <CircleAlert aria-hidden className="size-4 shrink-0" /> : <CircleCheck aria-hidden className="size-4 shrink-0" />}
+                  {row.conflict ? t(`booking.error.${slotError(row.conflict)}`) : t(row.moved ? 'series.row.moved' : 'series.row.free')}
+                </span>
+              </div>
+              <div className="flex flex-wrap items-end gap-3">
+                <label className="flex min-h-11 items-center gap-2 text-sm">
+                  <input type="checkbox" className="size-5" checked={row.include} onChange={() => p.onToggleOccurrence(i)} />
+                  {t('series.row.include')}
+                </label>
+                {row.conflict && (
+                  <div className="flex flex-col gap-1">
+                    <Label htmlFor={`series-move-${i}`} className="text-xs">{t('series.row.moveTo')}</Label>
+                    <Input id={`series-move-${i}`} type="time" className="h-11 w-32" step={300} defaultValue={localTime(row.start, p.timeZone)} onBlur={e => { if (e.target.value && e.target.value !== localTime(row.start, p.timeZone)) p.onMoveOccurrence(i, e.target.value); }} />
+                  </div>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+        {p.bookError && <p role="alert" className="rounded-md border border-destructive p-3 text-sm font-bold text-destructive">{t(`booking.error.${p.bookError}`)}</p>}
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" loading={p.booking} disabled={!p.plan.some(r => r.include)} onClick={p.onConfirm}>{t('series.confirm', { count: p.plan.filter(r => r.include).length })}</Button>
+          <Button type="button" variant="outline" onClick={p.onBackToForm}>{t('series.back')}</Button>
+        </div>
+      </aside>
+    );
   const lengthOf = (v: VisitType) => p.visitLengths.find(l => l.visitType === v)?.minutes;
   const end = p.hold?.end;
   return (
@@ -127,9 +193,16 @@ export default function BookingPanel(p: Props) {
           </Select>
         </div>
 
+        <div className={field}>
+          <Label htmlFor="booking-repeat">{t('series.repeat')}</Label>
+          <Input id="booking-repeat" type="number" inputMode="numeric" min={1} max={p.maxRepeat} className={cn(control, 'w-28')} value={p.repeat}
+            aria-describedby="booking-repeat-hint" onChange={e => p.onRepeat(e.target.valueAsNumber)} />
+          <p id="booking-repeat-hint" className="text-xs text-muted-foreground">{t('series.repeatHint', { max: p.maxRepeat })}</p>
+        </div>
+
         {p.bookError && <p role="alert" className="rounded-md border border-destructive p-3 text-sm font-bold text-destructive">{t(`booking.error.${p.bookError}`)}</p>}
         <div className="flex flex-wrap gap-2">
-          <Button type="submit" loading={p.booking} disabled={!p.hold || p.holding || !p.patient?.match}>{t('booking.confirm')}</Button>
+          <Button type="submit" loading={p.booking} disabled={!p.hold || p.holding || !p.patient?.match}>{t(p.repeat > 1 ? 'series.review.action' : 'booking.confirm')}</Button>
           <Button type="button" variant="outline" onClick={p.onClose}>{t('booking.cancel')}</Button>
         </div>
       </form>

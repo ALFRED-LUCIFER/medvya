@@ -9,11 +9,11 @@ public static class SchedulingAudit
     public const string TemplateUpdate = "schedule.template.update", ResourceCreate = "schedule.resource.create",
         SlotHold = "slot.hold", SlotRelease = "slot.release", Book = "appointment.book", CheckIn = "appointment.check_in", Status = "appointment.status",
         Reschedule = "appointment.reschedule", Cancel = "appointment.cancel", NoShow = "appointment.no_show", WalkIn = "appointment.walk_in",
-        Reassign = "appointment.reassign",
+        Reassign = "appointment.reassign", ExceptionCreate = "schedule.exception.create", NeedsRebooking = "appointment.needs_rebooking",
         DisplayCreate = "queue_display.create", DisplayRevoke = "queue_display.revoke", DisplayPair = "queue_display.pair";
 
     public const string TemplateResource = "schedule_template", ResourceResource = "schedule_resource", HoldResource = "slot_hold", AppointmentResource = "appointment",
-        DisplayResource = "queue_display";
+        DisplayResource = "queue_display", ExceptionResource = "schedule_exception";
 
     /// <summary>Templates, resources and queue displays are practice configuration; holds, bookings and visit changes are care of a patient.</summary>
     public const string Operations = "operations", Treatment = "treatment";

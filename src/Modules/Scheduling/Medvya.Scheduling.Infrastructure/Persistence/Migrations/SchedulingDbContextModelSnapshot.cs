@@ -79,6 +79,9 @@ namespace Medvya.Scheduling.Infrastructure.Persistence.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<Guid?>("SeriesId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTimeOffset>("Start")
                         .HasColumnType("datetimeoffset");
 
@@ -104,6 +107,9 @@ namespace Medvya.Scheduling.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("TenantId", "PatientId");
+
+                    b.HasIndex("TenantId", "SeriesId")
+                        .HasFilter("[SeriesId] IS NOT NULL");
 
                     b.HasIndex("TenantId", "FacilityId", "Start");
 
@@ -296,6 +302,55 @@ namespace Medvya.Scheduling.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("QueueTokens", "scheduling");
+                });
+
+            modelBuilder.Entity("Medvya.Scheduling.Domain.ScheduleAdjustment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("CalendarId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<TimeOnly?>("End")
+                        .HasColumnType("time");
+
+                    b.Property<Guid>("FacilityId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateOnly>("FromDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)");
+
+                    b.Property<TimeOnly?>("Start")
+                        .HasColumnType("time");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateOnly>("ToDate")
+                        .HasColumnType("date");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "FacilityId", "CalendarId", "FromDate");
+
+                    b.ToTable("ScheduleExceptions", "scheduling");
                 });
 
             modelBuilder.Entity("Medvya.Scheduling.Domain.ScheduleResource", b =>

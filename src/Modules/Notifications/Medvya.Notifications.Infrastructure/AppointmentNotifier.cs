@@ -52,8 +52,11 @@ public sealed class AppointmentNotifier(NotificationsDbContext db, IFacilityDire
                 Add(NotificationKind.Rescheduled, e.OccurredAt);
                 AddReminders();
                 break;
-            case AppointmentEventKind.Cancelled:
+            case AppointmentEventKind.Cancelled when !e.Quiet:
                 Add(NotificationKind.Cancelled, e.OccurredAt);
+                break;
+            case AppointmentEventKind.NeedsRebooking: // the doctor is away: ask the patient to rebook, say nothing about why
+                Add(NotificationKind.NeedsRebooking, e.OccurredAt);
                 break;
         }
 

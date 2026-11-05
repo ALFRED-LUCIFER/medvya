@@ -36,6 +36,14 @@ public static class SchedulingEndpoints
         schedule.MapPut("/templates", (SaveTemplate command, [FromServices] IScheduleService service, CancellationToken ct) => service.SaveTemplateAsync(command, ct))
             .AuditedWriteWithErrors(SchedulingAudit.TemplateUpdate, SchedulingAudit.TemplateResource, SchedulingAudit.Operations);
 
+        schedule.MapGet("/exceptions", (Guid? facilityId, Guid? calendarId, [FromServices] IScheduleExceptionService service, CancellationToken ct) =>
+                service.ListAsync(facilityId ?? Guid.Empty, calendarId, ct))
+            .AuditedWithErrors("schedule.exception.read", SchedulingAudit.ExceptionResource, SchedulingAudit.Operations);
+
+        // Leave and one-off sessions (MDV-P1-012): affected visits need an action each, else 409 "actions_required" with the list and nothing is saved.
+        schedule.MapPost("/exceptions", (SaveAdjustment command, [FromServices] IScheduleExceptionService service, CancellationToken ct) => service.SaveAsync(command, ct))
+            .AuditedWriteWithErrors(SchedulingAudit.ExceptionCreate, SchedulingAudit.ExceptionResource, SchedulingAudit.Operations);
+
         schedule.MapPost("/resources", (AddResource command, [FromServices] IScheduleService service, CancellationToken ct) => service.AddResourceAsync(command, ct))
             .AuditedWriteWithErrors(SchedulingAudit.ResourceCreate, SchedulingAudit.ResourceResource, SchedulingAudit.Operations);
 
@@ -60,6 +68,14 @@ public static class SchedulingEndpoints
         // A walk-in (MDV-P1-025): the next free slot today on the booking path, or queued unscheduled; checked in after with check-in.
         appointments.MapPost("/walk-in", (WalkIn command, [FromServices] IBookingService service, CancellationToken ct) => service.WalkInAsync(command, ct))
             .AuditedWriteWithErrors(SchedulingAudit.WalkIn, SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment);
+        // Recurring appointments (MDV-P1-026): preview the occurrences and their conflicts, then book the ones the desk confirmed.
+        appointments.MapPost("/series/preview", (SeriesPattern pattern, [FromServices] IBookingService service, CancellationToken ct) => service.PreviewSeriesAsync(pattern, ct))
+            .AuditedWithErrors("appointment.series.preview", SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment);
+        appointments.MapPost("/series", (BookSeries command, [FromServices] IBookingService service, CancellationToken ct) => service.BookSeriesAsync(command, ct))
+            .AuditedWriteWithErrors(SchedulingAudit.Book, SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment);
+        appointments.MapPost("/{appointmentId:guid}/cancel-following", (Guid appointmentId, CancelAppointment command, [FromServices] IBookingService service, CancellationToken ct) =>
+                service.CancelFollowingAsync(appointmentId, command, ct))
+            .AuditedWriteWithErrors(SchedulingAudit.Cancel, SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment);
         // Changing a booking (MDV-P1-024): each frees the old slot in the same transaction; the use case writes the allowed event.
         appointments.MapPost("/{appointmentId:guid}/reschedule", (Guid appointmentId, RescheduleAppointment command, [FromServices] IBookingService service, CancellationToken ct) =>
                 service.RescheduleAsync(appointmentId, command, ct))
@@ -144,6 +160,11 @@ public static class SchedulingEndpoints
         catch (SchedulingAccessDeniedException)
         {
             return Results.Problem(statusCode: StatusCodes.Status403Forbidden, title: "No access at this facility");
+        }
+        catch (ExceptionActionsRequiredException e)
+        {
+            return Results.Problem(statusCode: StatusCodes.Status409Conflict, title: "Affected appointments need an action",
+                extensions: new Dictionary<string, object?> { ["code"] = "actions_required", ["affected"] = e.Affected });
         }
         catch (SlotUnavailableException e)
         {

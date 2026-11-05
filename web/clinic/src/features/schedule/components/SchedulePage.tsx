@@ -1,7 +1,8 @@
 import { useRef, type ReactNode } from 'react';
-import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { Link } from 'react-router';
+import { CalendarOff, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, cn, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
+import { Button, buttonVariants, cn, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
 import ShellMessage from '../../shell/components/ShellMessage';
 import type { DayLayout, ScheduleColumn } from '../domain/schedule';
 import { scheduleViews, type AgendaEntry, type ScheduleView, type WeekDay } from '../domain/views';
@@ -47,6 +48,8 @@ type Props = {
   onBookNext?: () => void;
   /** The booking panel (or its hint), beside the schedule on wide screens and above it on narrow ones. */
   panel?: ReactNode;
+  /** Leave and exceptions (MDV-P1-012); absent when the role may not book. */
+  leavePath?: string | null;
 };
 
 const all = '__all';
@@ -90,13 +93,14 @@ export default function SchedulePage(props: Props) {
               </SelectContent>
             </Select>
           )}
+          {props.leavePath && <Link to={props.leavePath} className={buttonVariants({ variant: 'outline' })}><CalendarOff aria-hidden />{t('schedule.leave')}</Link>}
         </div>
       </header>
       <Legend />
       {/* The schedule takes the full width when no booking panel sits beside it (the week view). */}
       <div className={cn('grid grid-cols-[minmax(0,1fr)] items-start gap-5', props.panel && 'lg:grid-cols-[minmax(0,1fr)_340px]')}>
         <Body {...props} />
-        {props.panel && <div ref={panelRef} className="scroll-mt-20 max-lg:order-first lg:sticky lg:top-20 print:hidden">{props.panel}</div>}
+        {props.panel && <div ref={panelRef} className="scroll-mt-20 max-lg:order-first md:max-lg:fixed md:max-lg:inset-y-0 md:max-lg:end-0 md:max-lg:z-30 md:max-lg:w-96 md:max-lg:overflow-y-auto md:max-lg:bg-background md:max-lg:p-3 md:max-lg:shadow-xl lg:sticky lg:top-20 lg:max-h-[calc(100dvh-6rem)] lg:overflow-y-auto print:hidden">{props.panel}</div>}
       </div>
       {props.onBookNext && (
         // Pinned above the phone's bottom tabs; the panel it opens sits above the list, so it is brought into view.

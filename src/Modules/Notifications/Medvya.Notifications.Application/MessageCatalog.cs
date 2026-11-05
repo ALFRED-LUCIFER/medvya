@@ -40,6 +40,12 @@ public static partial class MessageCatalog
             ["hi"] = ("अपॉइंटमेंट रद्द", "{#var#} में {#var#} को {#var#} बजे की आपकी अपॉइंटमेंट रद्द कर दी गई है। दोबारा बुक करने के लिए क्लिनिक से संपर्क करें।"),
             ["ar"] = ("تم إلغاء الموعد", "تم إلغاء موعدك في {#var#} بتاريخ {#var#} الساعة {#var#}. يرجى التواصل مع العيادة لإعادة الحجز."),
         },
+        ["NeedsRebooking"] = new()
+        {
+            ["en"] = ("Please rebook your appointment", "Your appointment at {#var#} on {#var#} at {#var#} cannot go ahead. Please contact the clinic to choose a new time."),
+            ["hi"] = ("कृपया अपॉइंटमेंट दोबारा बुक करें", "{#var#} में {#var#} को {#var#} बजे की आपकी अपॉइंटमेंट नहीं हो सकेगी। नया समय चुनने के लिए क्लिनिक से संपर्क करें।"),
+            ["ar"] = ("يرجى إعادة حجز الموعد", "تعذر إجراء موعدك في {#var#} بتاريخ {#var#} الساعة {#var#}. يرجى التواصل مع العيادة لاختيار موعد جديد."),
+        },
         ["Reminder"] = new()
         {
             ["en"] = ("Appointment reminder", "Reminder: your appointment at {#var#} is on {#var#} at {#var#}."),

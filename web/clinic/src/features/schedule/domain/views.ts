@@ -8,15 +8,15 @@ export const scheduleViews: readonly ScheduleView[] = ['day', 'week', 'list'];
 export type ScheduleWeek = { facilityId: string; timeZone: string; calendarId: string; days: ScheduleDay[] };
 
 /** The look of a state in @medvya/ui scheduleLooks; each look pairs an icon and words, and dashes or hatching mark the inactive ones. */
-export type StateLook = 'booked' | 'checkedIn' | 'inRoom' | 'completed' | 'noShow' | 'cancelled';
+export type StateLook = 'booked' | 'checkedIn' | 'inRoom' | 'completed' | 'noShow' | 'cancelled' | 'needsRebooking';
 const looks: Record<AppointmentState, StateLook> = {
   Booked: 'booked', CheckedIn: 'checkedIn', WithNurse: 'checkedIn', ReadyForDoctor: 'checkedIn', InConsult: 'inRoom',
-  Billing: 'completed', Done: 'completed', NoShow: 'noShow', Cancelled: 'cancelled',
+  Billing: 'completed', Done: 'completed', NoShow: 'noShow', Cancelled: 'cancelled', NeedsRebooking: 'needsRebooking',
 };
 export const lookOf = (state: AppointmentState): StateLook => looks[state];
 
-/** States that occupy time; a cancelled or no-show visit does not count as booked. */
-export const occupies = (state: AppointmentState) => state !== 'Cancelled' && state !== 'NoShow';
+/** States that occupy time; a cancelled, no-show or needs-rebooking visit does not count as booked. */
+export const occupies = (state: AppointmentState) => state !== 'Cancelled' && state !== 'NoShow' && state !== 'NeedsRebooking';
 
 /** The columns a filter shows: every doctor and resource, or one calendar. */
 export const filterColumns = (day: ScheduleDay, calendarId: string | null): ScheduleDay =>

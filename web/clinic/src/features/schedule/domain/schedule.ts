@@ -1,9 +1,9 @@
 // GET /v1/schedule (src/Modules/Scheduling/Medvya.Scheduling.Application/IScheduleService.cs). Instants are UTC ISO strings;
 // they are shown in the facility's IANA zone (`timeZone`), never the device's.
 export type CalendarKind = 'Doctor' | 'Resource';
-export type UnavailableReason = 'NotWorking' | 'Break' | 'NoSchedule' | 'Closed';
+export type UnavailableReason = 'NotWorking' | 'Break' | 'NoSchedule' | 'Closed' | 'Leave';
 export type VisitType = 'FollowUp' | 'NewConsultation' | 'Procedure' | 'Teleconsult';
-export type AppointmentState = 'Booked' | 'CheckedIn' | 'WithNurse' | 'ReadyForDoctor' | 'InConsult' | 'Billing' | 'Done' | 'Cancelled' | 'NoShow';
+export type AppointmentState = 'Booked' | 'CheckedIn' | 'WithNurse' | 'ReadyForDoctor' | 'InConsult' | 'Billing' | 'Done' | 'Cancelled' | 'NoShow' | 'NeedsRebooking';
 
 export type Span = { start: string; end: string };
 /** A slot that has started (compared as instants, so the facility zone cannot change the answer); the server refuses it, so the screens do not offer it. */
@@ -13,7 +13,7 @@ export type Slot = Span & { held: boolean };
 export type WorkingWindow = Span & { room: string | null };
 export type Unavailable = Span & { reason: UnavailableReason; label: string | null };
 /** Never carries the free-text reason: reception sees name, type, time and state only. */
-export type Appointment = Span & { id: string; reference: string; patientId: string; patientName: string; visitType: VisitType; state: AppointmentState };
+export type Appointment = Span & { id: string; reference: string; patientId: string; patientName: string; visitType: VisitType; state: AppointmentState; seriesId?: string | null };
 export type VisitLength = { visitType: VisitType; minutes: number };
 
 export type ScheduleColumn = {

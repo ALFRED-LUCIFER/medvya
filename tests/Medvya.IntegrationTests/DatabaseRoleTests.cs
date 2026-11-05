@@ -25,6 +25,28 @@ public class DatabaseRoleTests(SqlServerFixture sql) : IClassFixture<SqlServerFi
         Assert.True(PermissionDenied.Contains(ex.Number), $"{ex.Number}: {ex.Message}"); // refused by permission, not by some other rule (ledger, RLS, missing object)
     }
 
+    // MDV-P0-008: a deploy is repeatable. The second migrate finds nothing pending; identity mapping can be re-run and grants only the named role.
+    [Fact]
+    public async Task MigrateAndIdentityMappingAreRepeatable()
+    {
+        await using (var migrator = await sql.OpenAs("migrator_user"))
+            await Medvya.DbMigrate.DatabaseMigrator.ApplyAsync(migrator);
+
+        await using var admin = new SqlConnection(sql.ConnectionString);
+        await admin.OpenAsync();
+        for (var i = 0; i < 2; i++)
+            await Medvya.DbMigrate.DatabaseMigrator.MapIdentitiesAsync(admin, [("app-mapped", "medvya_app")], "WITHOUT LOGIN");
+        await using var cmd = new SqlCommand("""
+            SELECT COUNT(*) FROM sys.database_role_members m
+            JOIN sys.database_principals u ON u.principal_id = m.member_principal_id AND u.name = N'app-mapped'
+            JOIN sys.database_principals r ON r.principal_id = m.role_principal_id WHERE r.name = N'medvya_app'
+            """, admin);
+        Assert.Equal(1, await cmd.ExecuteScalarAsync());
+        await using var ddl = new SqlCommand("EXECUTE AS USER = N'app-mapped'; CREATE TABLE dbo.Injected (Id int);", admin);
+        var ex = await Assert.ThrowsAsync<SqlException>(() => ddl.ExecuteNonQueryAsync());
+        Assert.Contains(ex.Number, PermissionDenied);
+    }
+
     [Theory]
     [InlineData("CREATE TABLE tenancy.Injected (Id int)")]
     [InlineData("ALTER TABLE tenancy.Tenants ADD Injected int NULL")]

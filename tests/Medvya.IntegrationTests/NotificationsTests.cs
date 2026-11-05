@@ -297,6 +297,26 @@ public sealed class NotificationsTests(SqlServerFixture sql) : IClassFixture<Sql
     }
 
     [Fact]
+    public async Task CancellingThisAndFollowingTellsThePatientOnceAndClearsEveryReminder()
+    {
+        var series = await h.Booking(h.Reception).BookSeriesAsync(new BookSeries
+        {
+            FacilityId = h.Facility, CalendarId = h.Doctor, PatientId = h.Patient, ReasonCategory = ReasonCategory.General, Channel = BookingChannel.Phone,
+            Starts = [Tuesday(10), Tuesday(10).AddDays(7), Tuesday(10).AddDays(14)],
+        });
+        var ids = series.Occurrences.Select(o => o.Appointment!.Id).ToList();
+        await RunJobAsync();
+        email.Sent.Clear();
+
+        await h.Booking(h.Reception).CancelFollowingAsync(ids[0], new CancelAppointment { Reason = CancelReason.PatientRequest });
+        await RunJobAsync();
+
+        Assert.Equal("अपॉइंटमेंट रद्द", Assert.Single(email.Sent).Subject); // one message for the whole series
+        foreach (var id in ids)
+            Assert.All((await RowsAsync(id)).Where(r => r.Kind is NotificationKind.Reminder24h or NotificationKind.Reminder2h), r => Assert.Equal(NotificationStatus.Cancelled, r.Status));
+    }
+
+    [Fact]
     public async Task AWalkInGetsNoMessages()
     {
         h.Clock.Advance(TimeSpan.FromHours(1.5)); // 09:30, inside Dr. Rao's morning

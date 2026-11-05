@@ -74,3 +74,29 @@ public sealed record VisitLength
     [Classification(DataClass.Internal)] public VisitType VisitType { get; init; }
     [Classification(DataClass.Internal)] public int Minutes { get; init; }
 }
+
+/// <summary>Leave closes the calendar for the dates; an extra session adds hours on one date; a shortened day keeps only the window on one date.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter<ExceptionKind>))]
+public enum ExceptionKind { Leave, ExtraSession, ShortenedDay }
+
+/// <summary>
+/// A one-off change to a calendar's weekly template (MDV-P1-012): leave (From..To inclusive, facility-local dates) or an extra
+/// session / shortened day on a single date with its window. Applied on the fly by <c>ScheduleRules.Day</c>; never edited.
+/// </summary>
+public sealed class ScheduleAdjustment
+{
+    [Classification(DataClass.Internal)] public Guid Id { get; init; }
+    [Classification(DataClass.Internal)] public Guid TenantId { get; init; }
+    [Classification(DataClass.Internal)] public Guid FacilityId { get; init; }
+    [Classification(DataClass.Internal)] public Guid CalendarId { get; init; }
+    [Classification(DataClass.Internal)] public ExceptionKind Kind { get; init; }
+    [Classification(DataClass.Internal)] public DateOnly FromDate { get; init; }
+    [Classification(DataClass.Internal)] public DateOnly ToDate { get; init; }
+    /// <summary>Window of an extra session or shortened day; null for leave.</summary>
+    [Classification(DataClass.Internal)] public TimeOnly? Start { get; init; }
+    [Classification(DataClass.Internal)] public TimeOnly? End { get; init; }
+    /// <summary>Short staff note ("Conference"); a place for nothing about a patient.</summary>
+    [Classification(DataClass.Internal)] public string? Reason { get; init; }
+    [Classification(DataClass.Internal)] public Guid? CreatedBy { get; init; }
+    [Classification(DataClass.Internal)] public DateTimeOffset CreatedAt { get; init; }
+}

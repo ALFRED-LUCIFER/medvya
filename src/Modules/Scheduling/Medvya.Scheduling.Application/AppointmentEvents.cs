@@ -1,13 +1,14 @@
 namespace Medvya.Scheduling.Application;
 
-public enum AppointmentEventKind { Booked, Rescheduled, Cancelled, NoShow }
+public enum AppointmentEventKind { Booked, Rescheduled, Cancelled, NoShow, NeedsRebooking }
 
 /// <summary>
 /// An appointment change as other modules may see it (MDV-P1-032): opaque ids and instants only, never names or notes.
-/// <paramref name="Start"/> is the start after the change (for a cancellation: the start it had).
+/// <paramref name="Start"/> is the start after the change (for a cancellation: the start it had). <paramref name="Quiet"/>: the change
+/// is one of several made by one action (a series cancelled "this and following"), so only one of them tells the patient.
 /// </summary>
 public sealed record AppointmentEvent(
-    Guid EventId, AppointmentEventKind Kind, Guid TenantId, Guid AppointmentId, Guid FacilityId, Guid PatientId, DateTimeOffset Start, bool WalkIn, DateTimeOffset OccurredAt);
+    Guid EventId, AppointmentEventKind Kind, Guid TenantId, Guid AppointmentId, Guid FacilityId, Guid PatientId, DateTimeOffset Start, bool WalkIn, DateTimeOffset OccurredAt, bool Quiet = false);
 
 /// <summary>
 /// Subscribes to appointment events. Delivery is at least once and in order per tenant, so a subscriber must be idempotent on

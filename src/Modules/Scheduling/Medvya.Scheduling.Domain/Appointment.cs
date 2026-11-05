@@ -5,7 +5,7 @@ namespace Medvya.Scheduling.Domain;
 
 /// <summary>Appointment / visit states (docs/03-architecture/state-machines.md). Reception sees them as nonclinical statuses.</summary>
 [JsonConverter(typeof(JsonStringEnumConverter<AppointmentState>))]
-public enum AppointmentState { Booked, CheckedIn, WithNurse, ReadyForDoctor, InConsult, Billing, Done, Cancelled, NoShow }
+public enum AppointmentState { Booked, CheckedIn, WithNurse, ReadyForDoctor, InConsult, Billing, Done, Cancelled, NoShow, NeedsRebooking }
 
 /// <summary>How the booking reached the desk.</summary>
 [JsonConverter(typeof(JsonStringEnumConverter<BookingChannel>))]
@@ -62,13 +62,15 @@ public sealed class Appointment
     /// it never blocks or double-books the calendar, and it is not drawn on the schedule; it waits on the board.
     /// </summary>
     [Classification(DataClass.Internal)] public bool Unscheduled { get; set; }
+    /// <summary>The recurring series this visit belongs to (MDV-P1-026); each occurrence is still an independent appointment.</summary>
+    [Classification(DataClass.Internal)] public Guid? SeriesId { get; init; }
     [Classification(DataClass.Internal)] public Guid? BookedBy { get; init; }
     [Classification(DataClass.Internal)] public DateTimeOffset BookedAt { get; init; }
     [Classification(DataClass.Internal)] public Guid? ChangedBy { get; set; }
     [Classification(DataClass.Internal)] public DateTimeOffset ChangedAt { get; set; }
 
-    /// <summary>States that occupy their slots; a cancelled or no-show visit frees them.</summary>
-    public static bool Occupies(AppointmentState state) => state is not (AppointmentState.Cancelled or AppointmentState.NoShow);
+    /// <summary>States that occupy their slots; a cancelled, no-show or needs-rebooking visit frees them.</summary>
+    public static bool Occupies(AppointmentState state) => state is not (AppointmentState.Cancelled or AppointmentState.NoShow or AppointmentState.NeedsRebooking);
 }
 
 /// <summary>
@@ -95,14 +97,14 @@ public static class VisitFlow
     /// <summary>The board's columns in order.</summary>
     public static IReadOnlyList<AppointmentState> BoardStates => Order;
 
-    /// <summary>Only a visit that has not started moves to another slot (Booked → Booked, history kept).</summary>
-    public static bool CanReschedule(AppointmentState state) => state == AppointmentState.Booked;
+    /// <summary>Only a visit that has not started moves to another slot (Booked or Needs rebooking → Booked, history kept).</summary>
+    public static bool CanReschedule(AppointmentState state) => state is AppointmentState.Booked or AppointmentState.NeedsRebooking;
 
     /// <summary>
     /// Cancel before the clinical part of the visit: Booked, or Checked in when the patient leaves before being seen. From With
     /// nurse on the visit is finished on the board, and a completed, cancelled or no-show visit cannot be cancelled.
     /// </summary>
-    public static bool CanCancel(AppointmentState state) => state is AppointmentState.Booked or AppointmentState.CheckedIn;
+    public static bool CanCancel(AppointmentState state) => state is AppointmentState.Booked or AppointmentState.CheckedIn or AppointmentState.NeedsRebooking;
 
     /// <summary>Only a booked visit that never checked in is a no-show (and only once it has started: see the use case).</summary>
     public static bool CanMarkNoShow(AppointmentState state) => state == AppointmentState.Booked;

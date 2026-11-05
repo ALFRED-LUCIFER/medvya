@@ -54,7 +54,18 @@ public static class DatabaseMigrator
 
     static async Task Migrate(DbContext db, CancellationToken ct)
     {
-        await using (db) await db.Database.MigrateAsync(ct);
+        await using (db)
+        {
+            // Names only (never data): a failed deploy must say which module and migration it stopped at.
+            var pending = (await db.Database.GetPendingMigrationsAsync(ct)).ToList();
+            await Console.Out.WriteLineAsync($"{db.GetType().Name}: {pending.Count} pending {string.Join(", ", pending)}");
+            try { await db.Database.MigrateAsync(ct); }
+            catch (SqlException e)
+            {
+                await Console.Error.WriteLineAsync($"{db.GetType().Name} failed: SQL error {e.Number} at line {e.LineNumber}: {e.Message}");
+                throw;
+            }
+        }
     }
 
     static DbContextOptions<T> Options<T>(DbConnection connection) where T : DbContext =>

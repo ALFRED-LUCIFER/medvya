@@ -1,10 +1,12 @@
 import { useSearchParams } from 'react-router';
+import DoctorsPanel from '../features/settings/components/DoctorsPanel';
 import HolidaysPanel from '../features/settings/components/HolidaysPanel';
 import HoursPanel from '../features/settings/components/HoursPanel';
 import LocationsPanel from '../features/settings/components/LocationsPanel';
 import ProfilePanel from '../features/settings/components/ProfilePanel';
 import SettingsPage from '../features/settings/components/SettingsPage';
 import { settingsTabs, type SettingsTab } from '../features/settings/domain/settings';
+import { useDoctorsController } from '../features/settings/hooks/useDoctorsController';
 import { useHolidaysController } from '../features/settings/hooks/useHolidaysController';
 import { useOpeningHoursController, useSchedulesController } from '../features/settings/hooks/useHoursController';
 import { useLocationChoice } from '../features/settings/hooks/useLocationChoice';
@@ -27,6 +29,9 @@ function Holidays({ facilityId }: { facilityId: string }) {
   const zones = new Map(choice.locations.map(l => [l.id, l.timeZone]));
   return <HolidaysPanel choice={choice} holidays={useHolidaysController(choice.locationId)} zoneOf={id => zones.get(id) ?? 'UTC'} />;
 }
+function Doctors({ facilityId }: { facilityId: string }) {
+  return <DoctorsPanel {...useDoctorsController(facilityId)} locations={useLocationChoice(facilityId).locations} />;
+}
 
 function Staff({ facilityId }: { facilityId: string }) {
   const staff = useStaffController(facilityId);
@@ -44,6 +49,6 @@ export default function SettingsRoute({ facilityId }: { facilityId: string }) {
   const [params, setParams] = useSearchParams();
   const asked = params.get('tab');
   const tab: SettingsTab = (settingsTabs as readonly string[]).includes(asked ?? '') ? (asked as SettingsTab) : 'profile';
-  const panels = { profile: <Profile />, locations: <Locations facilityId={facilityId} />, hours: <Hours facilityId={facilityId} />, holidays: <Holidays facilityId={facilityId} />, staff: <Staff facilityId={facilityId} /> };
+  const panels = { profile: <Profile />, locations: <Locations facilityId={facilityId} />, hours: <Hours facilityId={facilityId} />, holidays: <Holidays facilityId={facilityId} />, staff: <Staff facilityId={facilityId} />, doctors: <Doctors facilityId={facilityId} /> };
   return <SettingsPage tab={tab} onTab={next => setParams({ tab: next }, { replace: true })} panels={panels} />;
 }

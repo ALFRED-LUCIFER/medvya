@@ -28,6 +28,9 @@ public interface IInvitations
     /// </summary>
     Task<InvitationCreated?> ResendAsync(Guid invitationId, CancellationToken cancellationToken = default);
 
+    /// <summary><paramref name="stage"/> may add more rows to the shared tenant context for the new membership; they save, and fail, with it (MDV-P1-007).</summary>
+    Task<InvitationCreated?> CreateAsync(string email, Role role, Guid facilityId, Action<Membership> stage, CancellationToken cancellationToken = default);
+
     /// <summary>Revokes a pending invitation of the current tenant. False when there is none (unknown, used, revoked).</summary>
     Task<bool> RevokeAsync(Guid invitationId, CancellationToken cancellationToken = default);
 

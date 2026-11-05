@@ -42,7 +42,7 @@ builder.WebHost.ConfigureKestrel(k =>
 builder.AddStaffAuthentication();
 // Waiting-room TVs sign in with a display token, never a staff session (MDV-P1-031).
 builder.Services.AddAuthentication().AddQueueDisplay();
-builder.Services.AddAuthorizationBuilder().AddStaffPolicies().AddStaffAdminPolicy().AddQueueDisplayPolicy();
+builder.Services.AddAuthorizationBuilder().AddStaffPolicies().AddStaffAdminPolicy().AddQueueDisplayPolicy().AddOperationsPolicies(builder.Configuration);
 // Enums travel as names ("Receptionist"), never as numbers that shift when an enum changes.
 builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.Configure<SmtpOptions>(builder.Configuration.GetSection("Email:Smtp")).AddSingleton<IEmailSender, SmtpEmailSender>();
@@ -134,6 +134,7 @@ app.MapPublicSite();
 app.MapInvitations();
 app.MapOnboarding();
 app.MapPracticeSettings();
+app.MapDoctors();
 app.MapStaff();
 app.MapQueueDisplaySession();
 app.MapPatientEndpoints();

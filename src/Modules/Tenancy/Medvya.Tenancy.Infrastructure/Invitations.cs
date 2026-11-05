@@ -25,7 +25,13 @@ public sealed class Invitations(TenancyDbContext db, ICurrentTenant tenant, ICur
     public async Task<IReadOnlyList<FacilityOption>> FacilitiesAsync(CancellationToken cancellationToken = default) =>
         await db.Facilities.OrderBy(f => f.Name).Select(f => new FacilityOption(f.Id, f.Name)).ToListAsync(cancellationToken);
 
-    public async Task<InvitationCreated?> CreateAsync(string email, Role role, Guid facilityId, Guid? customRoleId = null, CancellationToken cancellationToken = default)
+    public Task<InvitationCreated?> CreateAsync(string email, Role role, Guid facilityId, Guid? customRoleId = null, CancellationToken cancellationToken = default) =>
+        CreateCoreAsync(email, role, facilityId, customRoleId, null, cancellationToken);
+
+    public Task<InvitationCreated?> CreateAsync(string email, Role role, Guid facilityId, Action<Membership> stage, CancellationToken cancellationToken = default) =>
+        CreateCoreAsync(email, role, facilityId, null, stage, cancellationToken);
+
+    async Task<InvitationCreated?> CreateCoreAsync(string email, Role role, Guid facilityId, Guid? customRoleId, Action<Membership>? stage, CancellationToken cancellationToken)
     {
         email = Valid(email);
         if (!InvitationRules.CanInvite(role)) throw new ArgumentException("This role cannot be invited.", nameof(role));
@@ -40,6 +46,7 @@ public sealed class Invitations(TenancyDbContext db, ICurrentTenant tenant, ICur
         }
         var membership = new Membership { Id = Guid.CreateVersion7(), TenantId = tenantId, FacilityId = facilityId, Role = role, Status = MembershipStatus.Invited, CustomRoleId = customRoleId };
         db.Memberships.Add(membership);
+        stage?.Invoke(membership);
         return await IssueAsync(membership, facility, email, null, cancellationToken);
     }
 

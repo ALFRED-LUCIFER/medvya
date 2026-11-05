@@ -21,8 +21,6 @@ public sealed class PracticeSettings(
     TenancyDbContext db, ICurrentTenant tenant, ICurrentUser user, ICurrentFacility currentFacility, IFacilityDirectory facilities,
     IAuditLog audit, ILogoStore logos, TimeProvider clock) : IPracticeSettings
 {
-    const string Resource = "settings", Purpose = "operations";
-    static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
     Guid TenantId => tenant.TenantId ?? throw new InvalidOperationException("No tenant context.");
 
@@ -183,27 +181,8 @@ public sealed class PracticeSettings(
         await db.OperatingHours.AsNoTracking().Where(h => h.FacilityId == facilityId).OrderBy(h => h.Weekday)
             .Select(h => new DayHours(h.Weekday, h.Opens, h.Closes)).ToListAsync(cancellationToken);
 
-    /// <summary>
-    /// Saves the pending changes, the before/after and the audit event in one transaction (audit first-class: a failed audit write
-    /// rolls the change back).
-    /// </summary>
-    async Task SaveAuditedAsync(string action, string section, Guid resourceId, object? before, object? after, CancellationToken cancellationToken)
-    {
-        var now = clock.GetUtcNow();
-        db.SettingsChanges.Add(new SettingsChange
-        {
-            Id = Guid.CreateVersion7(), TenantId = TenantId, ActorUserId = user.UserId, Section = section, ResourceId = resourceId, OccurredAt = now,
-            Before = before is null ? null : JsonSerializer.Serialize(before, Json), After = after is null ? null : JsonSerializer.Serialize(after, Json),
-        });
-        await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
-        await db.SaveChangesAsync(cancellationToken);
-        await audit.WriteAsync(new AuditEvent
-        {
-            Id = Guid.CreateVersion7(), TenantId = TenantId, ActorUserId = user.UserId, Action = action, ResourceType = Resource, ResourceId = resourceId,
-            Purpose = Purpose, Outcome = AuditOutcome.Allowed, OccurredAt = now,
-        }, tx.GetDbTransaction(), cancellationToken);
-        await tx.CommitAsync(cancellationToken);
-    }
+    Task SaveAuditedAsync(string action, string section, Guid resourceId, object? before, object? after, CancellationToken cancellationToken) =>
+        SettingsAudit.SaveAsync(db, audit, TenantId, user.UserId, clock.GetUtcNow(), action, section, resourceId, before, after, cancellationToken);
 
     static (string Name, string? Address, string? Zone) ValidLocation(SaveLocation command, bool requireZone)
     {
@@ -228,4 +207,34 @@ public sealed class PracticeSettings(
     static bool PhoneFormat(string phone) => phone.Length is >= 6 and <= 30 && phone.All(c => char.IsAsciiDigit(c) || c is '+' or ' ' or '-' or '(' or ')');
 
     static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+}
+
+/// <summary>
+/// Saves the pending changes, the before/after and the audit event in one transaction (audit first-class: a failed audit write
+/// rolls the change back). Shared by settings, doctors and the licence review.
+/// </summary>
+internal static class SettingsAudit
+{
+    static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
+
+    /// <param name="beforeCommit">Runs inside the transaction after the audit write, so a failure (e.g. the notification email) undoes the change.</param>
+    public static async Task SaveAsync(
+        TenancyDbContext db, IAuditLog audit, Guid tenantId, Guid? actor, DateTimeOffset now, string action, string section, Guid resourceId,
+        object? before, object? after, CancellationToken cancellationToken, Func<CancellationToken, Task>? beforeCommit = null)
+    {
+        db.SettingsChanges.Add(new SettingsChange
+        {
+            Id = Guid.CreateVersion7(), TenantId = tenantId, ActorUserId = actor, Section = section, ResourceId = resourceId, OccurredAt = now,
+            Before = before is null ? null : JsonSerializer.Serialize(before, Json), After = after is null ? null : JsonSerializer.Serialize(after, Json),
+        });
+        await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
+        await db.SaveChangesAsync(cancellationToken);
+        await audit.WriteAsync(new AuditEvent
+        {
+            Id = Guid.CreateVersion7(), TenantId = tenantId, ActorUserId = actor, Action = action, ResourceType = "settings", ResourceId = resourceId,
+            Purpose = "operations", Outcome = AuditOutcome.Allowed, OccurredAt = now,
+        }, tx.GetDbTransaction(), cancellationToken);
+        if (beforeCommit is not null) await beforeCommit(cancellationToken);
+        await tx.CommitAsync(cancellationToken);
+    }
 }

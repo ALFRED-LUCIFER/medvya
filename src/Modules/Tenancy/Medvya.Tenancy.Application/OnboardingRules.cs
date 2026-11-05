@@ -60,6 +60,20 @@ public abstract partial class OnboardingRules
         return e;
     }
 
+    /// <summary>
+    /// The licence of the Add doctor wizard (MDV-P1-007): the sign-up rules for authority, number and certificate name, plus the
+    /// category and an expiry date that must still be ahead. Same field paths ("licence.number"); codes only, never the values.
+    /// </summary>
+    public List<OnboardingError> ValidateLicence(string? authority, string? number, string? category, DateOnly? expiresOn, string? certificateName, DateOnly today)
+    {
+        var e = new List<OnboardingError>();
+        Licence(new OnboardingLicence(authority, number, certificateName), e);
+        Text(category, "licence.category", 40, true, e);
+        if (expiresOn is not { } expiry) e.Add(new("licence.expiresOn", "required"));
+        else if (expiry <= today) e.Add(new("licence.expiresOn", "past"));
+        return e;
+    }
+
     static void Profile(OnboardingProfile? p, List<OnboardingError> e)
     {
         Text(p?.FullName, "profile.fullName", 200, true, e);

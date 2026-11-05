@@ -61,6 +61,13 @@ public sealed class EndpointAuditTests(SqlServerFixture sql) : IClassFixture<Sql
         "PUT /v1/settings/logo",
         "DELETE /v1/settings/logo",
         "GET /v1/settings/logo",
+        // Add doctor (MDV-P1-007): clinician details, licence and fees, no patient data; changes are audited inside the services (DoctorTests).
+        "GET /v1/settings/doctors/",
+        "POST /v1/settings/doctors/",
+        "PUT /v1/settings/doctors/{id:guid}/licence",
+        "PUT /v1/settings/doctors/{id:guid}/signature",
+        "DELETE /v1/settings/doctors/{id:guid}/signature",
+        "POST /v1/operations/licences/{tenantId:guid}/{doctorId:guid}/decision", // Medvya operations only; audited as licence.verify / licence.reject
         // Live board hub (MDV-P1-029): opening the connection carries no patient data. A refused connect is audited Denied
         // (.AuditRefusals, front_desk.board.connect); every Watch call is audited Allowed or Denied by the hub (front_desk.board.watch);
         // messages are ids and state only, and the board itself is read through the audited GET /v1/front-desk/board (BoardHubTests).

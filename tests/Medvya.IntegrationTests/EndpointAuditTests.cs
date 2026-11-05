@@ -210,6 +210,7 @@ public sealed class EndpointAuditTests(SqlServerFixture sql) : IClassFixture<Sql
     WebApplicationFactory<Program> Host(Action<IEndpointRouteBuilder>? extra = null) =>
         new WebApplicationFactory<Program>().WithWebHostBuilder(b => b
             .UseSetting("ConnectionStrings:Medvya", sql.ConnectionString)
+            .UseSetting("RateLimiting:PermitsPerMinute", "100000") // this test calls every endpoint once per role: more than the per-IP limit of production traffic
             .ConfigureServices(s => s.AddSingleton<IStartupFilter>(new SignedIn(tenant, facility, extra))));
 
     /// <summary>The synthetic staff user named by <see cref="UserHeader"/>, in the test tenant and facility, plus optional extra endpoints.</summary>

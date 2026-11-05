@@ -392,12 +392,14 @@ const squash = (texts: string[]) => texts.map(t => t.replace(/\s+/g, ' ').trim()
 
 test('week and list views show the same appointments as the day view', async ({ page }) => {
   const calls = await open(page);
-  const inDay = squash(await column(page, 'Dr. Arjun Rao (synthetic)').getByRole('listitem').filter({ hasText: visits }).allInnerTexts());
-  expect(inDay).toHaveLength(1);
+  const dayVisits = column(page, 'Dr. Arjun Rao (synthetic)').getByRole('listitem').filter({ hasText: visits });
+  await expect(dayVisits).toHaveCount(1); // allInnerTexts does not wait for the day to render
+  const inDay = squash(await dayVisits.allInnerTexts());
 
   await page.getByRole('button', { name: 'List', exact: true }).click();
   await expect(page.getByRole('button', { name: 'List', exact: true })).toHaveAttribute('aria-pressed', 'true');
   const raoList = page.getByRole('region', { name: 'Dr. Arjun Rao (synthetic)' });
+  await expect(raoList.getByRole('listitem').filter({ hasText: visits })).toHaveCount(inDay.length); // wait for the list before reading it
   expect(squash(await raoList.getByRole('listitem').filter({ hasText: visits }).allInnerTexts()).map(t => t.replace(/^\S+ /, ''))).toEqual(inDay); // after the time
   await expect(raoList.getByRole('button', { name: 'Book Dr. Arjun Rao (synthetic) at 10:00' })).toBeVisible(); // empty slots stay bookable
   await expect(raoList.getByRole('listitem').filter({ hasText: 'Unavailable 12:00–13:00 · Break · Lunch break' })).toHaveCount(1);

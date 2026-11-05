@@ -777,3 +777,39 @@ for (const locale of ['en', 'ar'] as const)
     await expect(visit.getByRole('button', { name: locale === 'ar' ? 'إلغاء هذه والتي بعدها' : 'Cancel this and following' })).toBeVisible();
     expect(await axe()).toEqual([]);
   });
+
+// MDV-P1-050: Print day sheet asks the server (which audits it) and prints only the fields it returns, in facility time, one page per doctor.
+for (const locale of ['en', 'ar'] as const) {
+  test(`prints the day sheet with the paper fields only, once per doctor page, axe clean (${locale})`, async ({ page }) => {
+    await page.addInitScript(() => { (window as unknown as { printed: number }).printed = 0; window.print = () => { (window as unknown as { printed: number }).printed++; }; });
+    const bodies: unknown[] = [];
+    await page.route('**/v1/schedule/print', r => {
+      bodies.push(r.request().postDataJSON());
+      return r.fulfill({ json: {
+        facilityId: 'f-1', timeZone: 'Asia/Kolkata', date: '2026-10-19', printedAt: ist('2026-10-19', '08:00'),
+        pages: [
+          { calendarId: 'd-1', doctorName: 'Dr. Arjun Rao (synthetic)', rows: [{ start: ist('2026-10-19', '09:00'), firstName: 'Meera', visitType: 'NewConsultation', state: 'Booked' }] },
+          { calendarId: 'd-2', doctorName: 'Dr. Priya Nair (synthetic)', rows: [] },
+        ],
+      } });
+    });
+    await open(page, { locale });
+    await page.getByRole('button', { name: locale === 'ar' ? 'طباعة جدول اليوم' : 'Print day sheet' }).click();
+    await expect.poll(() => page.evaluate(() => (window as unknown as { printed: number }).printed)).toBe(1);
+    expect(bodies).toEqual([{ facilityId: 'f-1', date: null }]);
+
+    await page.emulateMedia({ media: 'print' });
+    const sections = page.getByRole('region');
+    await expect(sections).toHaveCount(2);
+    await expect(sections.first()).toContainText('Meera');
+    await expect(sections.first()).toContainText('09:00'); // facility time, not New York
+    await expect(sections.first()).not.toContainText('Iyer');
+    await expect(sections.first()).toContainText(locale === 'ar' ? 'طبعه A. Joseph' : 'Printed by A. Joseph');
+    await expect(page.getByRole('button', { name: /Print day sheet|طباعة/ })).toBeHidden();
+    await page.addScriptTag({ path: axePath });
+    expect(await page.evaluate(async () => (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string }[] }> } }).axe.run()).violations.map(v => v.id))).toEqual([]);
+
+    await page.evaluate(() => window.dispatchEvent(new Event('afterprint')));
+    await expect(page.getByRole('heading', { name: 'Dr. Priya Nair (synthetic)' })).toHaveCount(0); // the sheet is dropped after printing
+  });
+}

@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery } from '@tanstack/react-query';
+import type { DaySheet } from '../domain/daySheet';
 import { layoutDay, stepDate } from '../domain/schedule';
 import { agenda, filterColumns, firstFreeSlot, weekDays, weekSpan, type ScheduleView } from '../domain/views';
-import { ApiError, fetchScheduleDay, fetchScheduleWeek } from '../services/scheduleApi';
-import { isPhoneWidth } from '../services/viewport';
+import { ApiError, fetchScheduleDay, fetchScheduleWeek, printDaySheet } from '../services/scheduleApi';
+import { isPhoneWidth, printPage } from '../services/viewport';
 
 /** The current instant, refreshed each minute so slots that start while the screen is open stop being offered without a reload. */
 const useNow = () => {
@@ -56,8 +57,17 @@ export function useScheduleController(facilityId: string, userId: string) {
   const error = query.error ?? (isWeek ? week.error : null);
   const forbidden = error instanceof ApiError && error.status === 403;
 
+  // MDV-P1-050: the server audits the print and returns the paper fields; the sheet is shown for printing only, then dropped.
+  const [sheet, setSheet] = useState<DaySheet | null>(null);
+  const printing = useMutation({ mutationFn: () => printDaySheet(facilityId, date), onSuccess: setSheet });
+  useEffect(() => { if (sheet) printPage(() => setSheet(null)); }, [sheet]);
+
   const shown = date ?? today;
   return {
+    sheet,
+    printing: printing.isPending,
+    printFailed: printing.isError,
+    onPrintSheet: () => printing.mutate(),
     view,
     // The date asked for, else today's answer: the heading never shows the stale date as if it were the new one.
     date: shown,

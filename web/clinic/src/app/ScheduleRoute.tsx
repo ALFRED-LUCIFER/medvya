@@ -5,14 +5,14 @@ import { useAppointmentController } from '../features/schedule/hooks/useAppointm
 import { useBookingController } from '../features/schedule/hooks/useBookingController';
 import { useScheduleController } from '../features/schedule/hooks/useScheduleController';
 
-type Props = { facilityId: string; userId: string; canBook: boolean; canCheckIn: boolean; registerPath: string | null; leavePath: string | null };
+type Props = { facilityId: string; userId: string; userName: string; canBook: boolean; canCheckIn: boolean; registerPath: string | null; leavePath: string | null };
 
 /**
  * Composition only: schedule, booking and appointment controllers for the active facility, fed to the presentational page and
  * panels. One panel at a time: an opened visit (MDV-P1-024) or booking (MDV-P1-021); a slot click books, or picks the new slot
  * while a visit is being rescheduled.
  */
-export default function ScheduleRoute({ facilityId, userId, canBook, canCheckIn, registerPath, leavePath }: Props) {
+export default function ScheduleRoute({ facilityId, userId, userName, canBook, canCheckIn, registerPath, leavePath }: Props) {
   const schedule = useScheduleController(facilityId, userId);
   const booking = useBookingController(facilityId, schedule.timeZone);
   const visit = useAppointmentController(facilityId, { timeZone: schedule.timeZone, canBook, canCheckIn });
@@ -43,7 +43,7 @@ export default function ScheduleRoute({ facilityId, userId, canBook, canCheckIn,
     : undefined;
   const next = schedule.nextFree;
   return (
-    <SchedulePage {...schedule} panel={panel} actions={actions} leavePath={leavePath}
+    <SchedulePage {...schedule} printedBy={userName} panel={panel} actions={actions} leavePath={leavePath}
       // Hidden while a booking or a change is under way, so it never covers the panel's fields.
       onBookNext={canBook && next && !booking.choice && !opened ? () => book(next.column.calendarId, next.column.name, next.slot.start) : undefined} />
   );

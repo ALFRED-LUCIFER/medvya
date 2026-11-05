@@ -25,6 +25,11 @@ public static class SchedulingEndpoints
                 service.GetDayAsync(facilityId ?? Guid.Empty, date, ct))
             .AuditedWithErrors("schedule.read", "schedule");
 
+        // Printing is a read of patient data that leaves the system: one audit row per print, with who printed it (MDV-P1-050).
+        schedule.MapPost("/print", async (PrintDaySheet command, [FromServices] IScheduleService service, TimeProvider clock, CancellationToken ct) =>
+                DaySheet.From(await service.GetDayAsync(command.FacilityId, command.Date, ct), clock.GetUtcNow()))
+            .AuditedWithErrors("schedule.print", "schedule");
+
         schedule.MapGet("/week", (Guid? facilityId, Guid? calendarId, DateOnly? date, [FromServices] IScheduleService service, CancellationToken ct) =>
                 service.GetWeekAsync(facilityId ?? Guid.Empty, calendarId ?? Guid.Empty, date, ct))
             .AuditedWithErrors("schedule.read", "schedule");

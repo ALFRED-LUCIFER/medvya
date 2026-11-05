@@ -3,10 +3,10 @@ import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 
 // https://vite.dev/config/
-export default defineConfig(({ command }) => ({
+export default defineConfig(({ command, isPreview }) => ({
   plugins: [react(), tailwindcss()],
-  // Built, the app is served by the API under /app/ (the public site owns /); the dev server stays at the root.
-  base: command === 'build' ? '/app/' : '/',
+  // Built (and previewed), the app is served by the API under /app/ (the public site owns /); the dev server stays at the root.
+  base: command === 'build' || isPreview ? '/app/' : '/',
   // Same origin as the API in production (BFF, ADR-004); in development the dev server forwards API and sign-in paths.
   server: {
     // changeOrigin off: the API must see the dev server's host so the sign-in redirect comes back here.

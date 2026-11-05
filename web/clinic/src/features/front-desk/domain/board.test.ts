@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { groupByColumn, minutesSince, moveError, nextState, serverNow, walkInError, type BoardCard } from './board';
+import { groupByColumn, needsRebooking, minutesSince, moveError, nextState, serverNow, walkInError, type BoardCard } from './board';
 
 describe('walk-in (MDV-P1-025)', () => {
   it('tells "no free slot" (choose a doctor to queue with) and "busy" from other failures', () => {
@@ -29,6 +29,12 @@ describe('reception board', () => {
     expect(groups.CheckedIn.map(c => c.id)).toEqual(['c']);
     expect(Object.values(groups).flat()).toHaveLength(3);
     expect(groups.Done).toEqual([]);
+  });
+
+  it('lists visits moved off a doctor on leave in time order, outside the columns (MDV-P1-012)', () => {
+    const cards = [card('b', 'NeedsRebooking', '2026-10-19T05:00:00Z'), card('a', 'NeedsRebooking', '2026-10-19T04:00:00Z'), card('c', 'Booked', '2026-10-19T03:00:00Z')];
+    expect(needsRebooking(cards).map(c => c.id)).toEqual(['a', 'b']);
+    expect(Object.values(groupByColumn(cards)).flat().map(c => c.id)).toEqual(['c']);
   });
 
   it('counts whole waiting minutes on the server clock, never below zero', () => {

@@ -1,7 +1,8 @@
 import { useRef, type ReactNode } from 'react';
-import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { Link } from 'react-router';
+import { CalendarOff, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, cn, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
+import { Button, buttonVariants, cn, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
 import ShellMessage from '../../shell/components/ShellMessage';
 import type { DayLayout, ScheduleColumn } from '../domain/schedule';
 import { scheduleViews, type AgendaEntry, type ScheduleView, type WeekDay } from '../domain/views';
@@ -47,6 +48,8 @@ type Props = {
   onBookNext?: () => void;
   /** The booking panel (or its hint), beside the schedule on wide screens and above it on narrow ones. */
   panel?: ReactNode;
+  /** Leave and exceptions (MDV-P1-012); absent when the role may not book. */
+  leavePath?: string | null;
 };
 
 const all = '__all';
@@ -90,6 +93,7 @@ export default function SchedulePage(props: Props) {
               </SelectContent>
             </Select>
           )}
+          {props.leavePath && <Link to={props.leavePath} className={buttonVariants({ variant: 'outline' })}><CalendarOff aria-hidden />{t('schedule.leave')}</Link>}
         </div>
       </header>
       <Legend />

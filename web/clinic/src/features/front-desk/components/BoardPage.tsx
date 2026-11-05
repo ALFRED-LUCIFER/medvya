@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react';
-import { CalendarCheck, CircleCheck, ClipboardCheck, DoorOpen, EyeOff, ReceiptText, Syringe, UserCheck, type LucideIcon } from 'lucide-react';
+import { CalendarCheck, CalendarClock, CircleCheck, ClipboardCheck, DoorOpen, EyeOff, ReceiptText, Syringe, UserCheck, type LucideIcon } from 'lucide-react';
 import { useI18n, type MessageKey } from '@medvya/i18n';
 import { Button, FrontDeskTag } from '@medvya/ui';
 import type { workload } from '../domain/overview';
-import { boardColumns, minutesSince, nextState, type Board, type BoardCard, type BoardColumn, type LiveStatus, type MoveError } from '../domain/board';
+import { boardColumns, minutesSince, needsRebooking, nextState, type Board, type BoardCard, type BoardColumn, type LiveStatus, type MoveError } from '../domain/board';
 
 // Every column is words and an icon (never colour alone), following the Clinician App board (P-01).
 const columnIcons: Record<BoardColumn, LucideIcon> = {
@@ -123,6 +123,22 @@ function Body(props: Props) {
       <div className="grid auto-cols-[minmax(200px,1fr)] grid-flow-col gap-3">
         {boardColumns.map(c => <Column key={c} state={c} {...props} board={board} />)}
       </div>
+      <Rebooking cards={needsRebooking(board.cards)} timeZone={board.timeZone} />
+    </section>
+  );
+}
+
+/** Visits the doctor's leave moved out of their slot: words and an icon, and where to fix them. */
+function Rebooking({ cards, timeZone }: { cards: BoardCard[]; timeZone: string }) {
+  const { t, formatTime } = useI18n();
+  if (cards.length === 0) return null;
+  return (
+    <section aria-labelledby="board-rebooking" className="mt-3 flex flex-col gap-2 rounded-xl border border-dashed bg-card p-3">
+      <h2 id="board-rebooking" className="flex items-center gap-1.5 text-[13px] font-extrabold"><CalendarClock aria-hidden className="size-4" />{t('board.rebooking.title')}</h2>
+      <p className="text-sm text-muted-foreground">{t('board.rebooking.body')}</p>
+      <ul className="flex flex-col gap-1">
+        {cards.map(c => <li key={c.id} className="text-[13.5px]"><strong>{c.patientName}</strong>{' · '}{c.calendarName}{' · '}{t('board.rebooking.was', { time: formatTime(new Date(c.start), timeZone) })}</li>)}
+      </ul>
     </section>
   );
 }

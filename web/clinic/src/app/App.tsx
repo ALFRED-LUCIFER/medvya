@@ -100,6 +100,8 @@ export default function App({ locale, onLocaleChange }: Props) {
             ? <FrontDeskRoute facilityId={active.facilityId} online={online} canMove={active.capabilities.CheckInQueue === 'Full'}
                 registerPath={registerPath} walkInPath={walkInPath} billingPath={shell.items.find(b => b.id === 'billing')?.path ?? null} />
             : i.id === 'settings' ? <SettingsRoute facilityId={active.facilityId} />
+            // Until the patient chart exists (phase 2) the Patients menu opens the patient directory instead of a placeholder.
+            : i.id === 'patients' && searchPath ? <Navigate to={searchPath} replace />
             : <ComingSoon title={t(`nav.${i.id}`)} phase={i.phase} />} />)}
           {walkInPath && registerPath &&
             <Route path={walkInPath} element={<WalkInRoute facilityId={active.facilityId} boardPath={pathOf('frontDesk')!} registerPath={`${registerPath}?mode=quick`} />} />}

@@ -13,6 +13,8 @@ export type ActiveMembership = {
   membershipId: string; tenantId: string; facilityId: string; role: Role;
   /** The tenant's country: picks registration rules and formats. Set by the server, never chosen in the client. */
   country?: Country;
+  /** The facility's IANA time zone (set by the server): screens that show instants use it, not the browser's. */
+  timeZone?: string;
   capabilities: Partial<Record<Capability, Access>>;
   flags: string[];
   /** A doctor whose licence is not verified yet: recording and signing are off (the server already left them out of `capabilities`). */

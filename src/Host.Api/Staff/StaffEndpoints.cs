@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Host.Api.Auth;
+using Host.Api.Settings;
 using Medvya.Identity.Application;
 using Medvya.Tenancy.Application;
 using Medvya.Tenancy.Domain;
@@ -96,6 +97,10 @@ public static class StaffEndpoints
         catch (SettingsValidationException e)
         {
             return Results.ValidationProblem(e.Errors.GroupBy(x => x.Field).ToDictionary(x => x.Key, x => x.Select(y => y.Code).ToArray()));
+        }
+        catch (InvitationEmailException)
+        {
+            return SettingsEndpoints.EmailFailed;
         }
     }
 }

@@ -42,7 +42,7 @@ export default function OnboardingWizard({ languageSwitcher, form, country, rule
       <Frame languageSwitcher={languageSwitcher}>
         <div role="status" className="flex flex-col items-start gap-3">
           <h1 className="text-2xl font-extrabold">{t('onboarding.done.title')}</h1>
-          <p>{t('onboarding.done.invitesFailed', { n: done.invitationsFailed })}</p>
+          {done.invitationsFailed > 0 && <p>{t('onboarding.done.invitesFailed', { n: done.invitationsFailed })}</p>}
           <Button onClick={onHome}>{t(`onboarding.finish.${homeLabel}`)}</Button>
         </div>
       </Frame>

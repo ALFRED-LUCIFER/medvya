@@ -87,12 +87,20 @@ public sealed class Invitations(TenancyDbContext db, ICurrentTenant tenant, ICur
         db.Invitations.Add(invitation);
         if (superseded is not null) superseded.RevokedAt ??= now;
 
-        // Saved, audited and emailed inside one transaction: a failed audit or email leaves no invitation behind.
+        // Saved, emailed, audited and committed as one unit: a failed email or audit leaves no invitation behind. The email goes before the
+        // audit row (which is written outside this transaction) so a send that fails leaves no row saying an invitation was created.
         // A commit that fails after the email went out leaves a link that shows the expired state, which is harmless.
         await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await mail.SendAsync(Email(email, clinic, membership.Role, facility, $"{baseUrl.TrimEnd('/')}/invite/{token}", invitation.ExpiresAt), cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            throw new InvitationEmailException(ex);
+        }
         await Audit(tenantId, inviter, superseded is null ? "invitation.create" : "invitation.resend", invitation.Id, now, cancellationToken);
-        await mail.SendAsync(Email(email, clinic, membership.Role, facility, $"{baseUrl.TrimEnd('/')}/invite/{token}", invitation.ExpiresAt), cancellationToken);
         await tx.CommitAsync(cancellationToken);
         return new InvitationCreated(invitation.Id, invitation.ExpiresAt, InvitationRules.RequiresLicenceVerification(membership.Role));
     }
@@ -174,7 +182,7 @@ public sealed class Invitations(TenancyDbContext db, ICurrentTenant tenant, ICur
 
     static string RoleName(Role role) => role switch
     {
-        Role.SoloDoctor => "Doctor", Role.HospitalDoctor => "Hospital doctor", Role.Receptionist => "Receptionist", Role.Nurse => "Nurse",
+        Role.SoloDoctor => "Doctor", Role.HospitalDoctor => "Doctor", Role.Receptionist => "Receptionist", Role.Nurse => "Nurse",
         Role.CareCoordinator => "Care coordinator", Role.PracticeAdmin => "Practice admin", Role.HospitalIt => "Hospital IT",
         _ => role.ToString(),
     };

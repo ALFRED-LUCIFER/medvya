@@ -12,6 +12,7 @@
     "load:desk": "MEDVYA_LOAD=1 dotnet test tests/Medvya.IntegrationTests --filter FullyQualifiedName~DeskLoadTests",
     "check:synthetic": "node tools/check-synthetic/check.mjs",
     "test": "pnpm -r test",
-    "e2e": "pnpm --filter e2e e2e"
+    "e2e": "pnpm --filter e2e e2e",
+    "e2e:fullstack": "pnpm --filter e2e e2e:fullstack"
   }
 }

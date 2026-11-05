@@ -3,6 +3,7 @@ import { defineConfig, devices } from '@playwright/test';
 // shortcut: runs against the clinic Vite dev server; switch baseURL to staging once it exists (MDV-P0-022).
 export default defineConfig({
   testDir: '.',
+  testIgnore: 'fullstack/**', // needs Docker and .NET: `pnpm e2e:fullstack`
   forbidOnly: !!process.env.CI,
   reporter: process.env.CI ? 'github' : 'list',
   use: { baseURL: 'http://localhost:4173', trace: 'retain-on-failure' },

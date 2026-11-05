@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "e2e": "playwright test",
+    "e2e:fullstack": "playwright test -c fullstack/playwright.config.ts",
     "lint": "tsc -p ."
   },
   "devDependencies": {

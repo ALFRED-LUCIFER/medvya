@@ -129,6 +129,7 @@ public sealed class SessionControlTests(SqlServerFixture sql) : IClassFixture<Sq
         Assert.Equal(facilityA, inA.GetProperty("facilityId").GetGuid());
         Assert.Equal("Receptionist", inA.GetProperty("role").GetString());
         Assert.Equal(["clinic.alpha"], inA.GetProperty("flags").EnumerateArray().Select(f => f.GetString()));
+        Assert.Equal("Asia/Kolkata", inA.GetProperty("timeZone").GetString()); // screens that show instants use the clinic's time zone
 
         // Switch: no provider round trip, just the facility endpoint on the same session.
         Assert.Equal(HttpStatusCode.NoContent, (await Choose(browser, atB)).StatusCode);

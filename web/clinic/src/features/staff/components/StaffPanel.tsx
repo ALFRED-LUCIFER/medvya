@@ -29,6 +29,7 @@ type Props = {
   onOffboardCancel: () => void;
   adding: boolean;
   addFailed: boolean;
+  emailFailed: boolean;
   working: boolean;
   rowFailed: boolean;
   onOpen: () => void;
@@ -55,7 +56,7 @@ export default function StaffPanel(p: Props) {
   const choices: { choice: RoleChoice; name: string; description: string }[] = [
     ...assignableRoles.map(role => ({ choice: { kind: 'builtIn', role } as RoleChoice, name: t(`role.${role}`), description: t(`staff.roleDesc.${role}`) })),
     ...p.catalogue.custom.map(c => ({ choice: { kind: 'custom', id: c.id } as RoleChoice, name: c.name, description: t('staff.roleDesc.custom', { base: t(`role.${c.baseRole}`) }) })),
-    { choice: { kind: 'doctor' }, name: t('role.SoloDoctor'), description: t('staff.roleDesc.Doctor') },
+    { choice: { kind: 'doctor' }, name: t('role.HospitalDoctor'), description: t('staff.roleDesc.Doctor') },
   ];
   const stepIndex = p.step ? stepOrder.indexOf(p.step) : -1;
 
@@ -64,6 +65,7 @@ export default function StaffPanel(p: Props) {
       <Section title={t('staff.title')} intro={t('staff.intro')}>
         <div aria-live="polite" className="text-sm font-semibold text-success-700">{p.notice && t(`staff.notice.${p.notice}`)}</div>
         {p.rowFailed && <p role="alert" className={fieldError}>{t('staff.rowFailed')}</p>}
+        {p.emailFailed && !p.adding && <p role="alert" className={fieldError}>{t('staff.error.email')}</p>}
         <div className="overflow-x-auto rounded-lg border" tabIndex={0} role="region" aria-label={t('staff.tableLabel')}>
           <table className="w-full min-w-[720px] text-start text-sm">
             <thead className="bg-muted text-start">
@@ -159,6 +161,7 @@ export default function StaffPanel(p: Props) {
               </div>
             )}
             {p.addFailed && <p role="alert" className={fieldError}>{t('staff.error.add')}</p>}
+            {p.emailFailed && <p role="alert" className={fieldError}>{t('staff.error.email')}</p>}
             <div className="flex flex-wrap gap-2">
               {p.step !== 'role' && <Button type="button" variant="outline" onClick={p.onBack}>{t('staff.back')}</Button>}
               {p.step !== 'permissions' && <Button type="button" disabled={!p.canContinue} onClick={p.onNext}>{t('staff.next')}</Button>}

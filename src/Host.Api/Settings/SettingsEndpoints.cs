@@ -83,5 +83,12 @@ public static class SettingsEndpoints
         {
             return Results.Problem(statusCode: StatusCodes.Status403Forbidden, title: "No access at this facility");
         }
+        catch (InvitationEmailException)
+        {
+            return EmailFailed;
+        }
     }
+
+    /// <summary>502 with a stable code: the screen says the invitation email could not be sent and nothing was saved, not a generic failure.</summary>
+    internal static IResult EmailFailed => Results.Problem(statusCode: StatusCodes.Status502BadGateway, title: "The invitation email could not be sent.", extensions: new Dictionary<string, object?> { ["code"] = "email_failed" });
 }

@@ -62,7 +62,7 @@ public static class SessionControl
     public static WebApplication MapSessionControl(this WebApplication app)
     {
         app.MapGet("/v1/me/context", async (ClaimsPrincipal principal, [FromServices] IStaffUsers users, [FromServices] IMembershipDirectory directory,
-            [FromServices] IFeatureFlags flags, [FromServices] IStaffAccess staff, CancellationToken ct) =>
+            [FromServices] IFeatureFlags flags, [FromServices] IStaffAccess staff, [FromServices] IFacilityDirectory facilities, CancellationToken ct) =>
         {
             var user = Read(principal, ClaimTypes.NameIdentifier) is { } id ? await users.GetAsync(id, ct) : null;
             if (user is null) return Results.Unauthorized();
@@ -87,6 +87,8 @@ public static class SessionControl
                     active.FacilityId,
                     // The tenant's country picks the registration rules and formats on the client; never chosen by the client.
                     Country = await staff.TenantCountryAsync(ct),
+                    // The facility's time zone: screens that show instants (the access log) show them in clinic time, not the browser's.
+                    TimeZone = (await facilities.FindAsync(active.FacilityId, ct))?.TimeZone,
                     Role = active.Role.ToString(),
                     // Recording and signing stay off until the doctor's licence is verified (MDV-P1-004), as the server enforces on each call.
                     LicencePending = licencePending,

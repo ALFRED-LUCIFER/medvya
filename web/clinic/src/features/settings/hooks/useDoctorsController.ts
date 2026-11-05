@@ -9,6 +9,8 @@ import {
 } from '../domain/doctors';
 import { addDoctor, fetchDoctors, removeSignature, resubmitLicence, uploadSignature } from '../services/doctorsApi';
 
+/** The invitation email could not be sent; the server saved nothing (502 with this code). */
+const emailFailed = 'email_failed';
 const noRetryOn403 = (n: number, e: unknown) => !(e instanceof ApiError && e.status === 403) && n < 2;
 
 /** What to say under a field: a code the screen translates ("invalid" for what the form itself rejects, else the server's code). */
@@ -105,7 +107,8 @@ export function useDoctorsController(defaultFacilityId: string) {
     onNext: next,
     onSubmit: form.handleSubmit(values => add.mutate(values)),
     submitting: add.isPending,
-    submitFailed: add.isError && !(add.error instanceof ApiError && add.error.status === 400),
+    submitFailed: add.isError && !(add.error instanceof ApiError && (add.error.status === 400 || add.error.code === emailFailed)),
+    emailFailed: add.error instanceof ApiError && add.error.code === emailFailed,
     signature,
     signatureProblem: signatureProblemKind,
     onPickSignature: (file: File | undefined) => {

@@ -23,3 +23,9 @@ Staff sign-in needs both, or the app refuses every sign-in with "the provider di
 1. **MFA enforced for the user.** Free tier: Security defaults off, then Per-user MFA = Enforced (Conditional Access needs a paid licence). Production moves staff sign-in to an Entra External ID tenant.
 2. **`amr` optional claim on the app registration** (Token configuration → Add optional claim → ID → `amr`). v2.0 ID tokens omit it otherwise. CLI: `az ad app update --id <client id> --optional-claims '{"idToken":[{"name":"amr","essential":false,"additionalProperties":[]}]}'`.
 
+## Email (MDV-P1-032)
+
+Invitations (add doctor, add staff, onboarding) need a working sender; the app refuses to send without one. Two providers, chosen by the `emailProvider` parameter (see `docs/03-architecture/email-providers.md`):
+
+- **`Acs` (default): Azure Communication Services Email.** Created by this template (Azure-managed sender domain, data location `emailDataLocation`, default India). The app sends with its managed identity: no key or password. Register the provider once: `az provider register -n Microsoft.Communication`.
+- **`Smtp`: SendGrid's relay.** Verify a sender in SendGrid (a domain you own is best), create an API key with only "Mail Send", store it without echoing: `az keyvault secret set --vault-name <kv> --name sendgrid-api-key --value "<key>"`, then deploy with `emailProvider=Smtp emailFrom=<verified sender>`.

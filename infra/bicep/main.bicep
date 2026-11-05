@@ -10,6 +10,13 @@ param env string = 'dev'
 param sqlAdminObjectId string
 param sqlAdminLogin string
 param alertEmail string
+@description('Which sender the app uses: Acs (Azure Communication Services, default) or Smtp (SendGrid relay).')
+@allowed(['Acs', 'Smtp'])
+param emailProvider string = 'Acs'
+@description('Smtp only: sender address verified in SendGrid.')
+param emailFrom string = ''
+@description('Where Azure Communication Services keeps email data (data residency). Must be a location the service offers.')
+param emailDataLocation string = 'India'
 @description('Application (client) id of the Entra app registration the staff sign-in uses. Not a secret.')
 param oidcClientId string
 @description('Monthly budget in the billing currency (INR).')
@@ -96,6 +103,38 @@ resource cmkAdmin 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   properties: { roleDefinitionId: cryptoUser, principalId: sqlAdminObjectId, principalType: 'User' }
 }
 
+// Transactional email (MDV-P1-032): Azure Communication Services Email with an Azure-managed sender domain (no domain to own or verify).
+// The app sends with its managed identity (role below): no key or password exists. Needs the Microsoft.Communication provider registered.
+resource emailService 'Microsoft.Communication/emailServices@2023-04-01' = {
+  name: 'email-${name}'
+  location: 'global' // the service is global; dataLocation is where its data lives
+  tags: tags
+  properties: { dataLocation: emailDataLocation }
+}
+
+resource emailDomain 'Microsoft.Communication/emailServices/domains@2023-04-01' = {
+  parent: emailService
+  name: 'AzureManagedDomain'
+  location: 'global'
+  tags: tags
+  properties: { domainManagement: 'AzureManaged' }
+}
+
+resource comms 'Microsoft.Communication/communicationServices@2023-04-01' = {
+  name: 'acs-${name}'
+  location: 'global'
+  tags: tags
+  properties: { dataLocation: emailDataLocation, linkedDomains: [emailDomain.id] }
+}
+
+// "Communication and Email Service Owner" on this one resource lets the app (and nothing else) send through it.
+var emailOwner = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '09976791-48a7-449e-bb21-39d1a415f350')
+resource commsApp 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: comms
+  name: guid(comms.id, app.id, emailOwner)
+  properties: { roleDefinitionId: emailOwner, principalId: app.identity.principalId, principalType: 'ServicePrincipal' }
+}
+
 resource sql 'Microsoft.Sql/servers@2023-08-01-preview' = {
   name: 'sql-${name}'
   location: location
@@ -148,6 +187,19 @@ resource plan 'Microsoft.Web/serverfarms@2023-12-01' = {
   properties: { reserved: true }
 }
 
+// Email app settings by provider (docs/03-architecture/email-providers.md). Without a working provider the mailer fails closed and
+// invitations (add doctor, add staff) are refused (MDV-P1-032).
+var emailSettings = emailProvider == 'Acs' ? [
+  { name: 'Email__Provider', value: 'Acs' }
+  { name: 'Email__Acs__Endpoint', value: 'https://${comms.properties.hostName}' }
+  { name: 'Email__Acs__From', value: 'DoNotReply@${emailDomain.properties.mailFromSenderDomain}' }
+] : [
+  // SendGrid's SMTP relay (smtp.sendgrid.net, user apikey, in appsettings.json); the API key is a Key Vault reference.
+  { name: 'Email__Provider', value: 'Smtp' }
+  { name: 'Email__Smtp__From', value: emailFrom }
+  { name: 'Email__Smtp__Password', value: '@Microsoft.KeyVault(VaultName=${vault.name};SecretName=sendgrid-api-key)' }
+]
+
 resource app 'Microsoft.Web/sites@2023-12-01' = {
   name: 'app-${name}'
   location: location
@@ -160,7 +212,7 @@ resource app 'Microsoft.Web/sites@2023-12-01' = {
       linuxFxVersion: 'DOTNETCORE|10.0'
       minTlsVersion: '1.2'
       ftpsState: 'Disabled'
-      appSettings: [
+      appSettings: concat(emailSettings, [
         { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: insights.properties.ConnectionString }
         { name: 'ASPNETCORE_ENVIRONMENT', value: 'Staging' }
         { name: 'Onboarding__DeploymentCountry', value: 'IN' }
@@ -176,7 +228,7 @@ resource app 'Microsoft.Web/sites@2023-12-01' = {
         { name: 'Authentication__Oidc__ClientId', value: oidcClientId }
         { name: 'Authentication__Oidc__ClientSecret', value: '@Microsoft.KeyVault(VaultName=${vault.name};SecretName=oidc-client-secret)' }
         { name: 'ColumnEncryption__KeyVaultKeyUrl', value: cmk.properties.keyUriWithVersion }
-      ]
+      ])
     }
   }
 }

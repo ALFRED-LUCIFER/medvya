@@ -8,8 +8,8 @@ public interface IRequestOrigin
 {
     string? ClientIp { get; }
     string? CorrelationId { get; }
-    /// <summary>The role the signed-in person holds in this session (the session's role claim), kept on audit events so the log shows the authority held at the time.</summary>
-    string? Role { get; }
+    /// <summary>The role of the signed-in person's active membership at the session's facility, read from the database (never a claim), kept on audit events so the log shows the authority held at the time.</summary>
+    Task<string?> RoleAsync(CancellationToken cancellationToken = default);
     /// <summary>The facility the session works at.</summary>
     Guid? FacilityId { get; }
 }

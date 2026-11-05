@@ -7,7 +7,7 @@ namespace Host.Api.Context;
 /// Tenant, facility and user of the current request, from the signed-in principal. The tenant and facility claims are set
 /// when the user picks a facility (SessionControl); before that they are null and tenant data stays unreachable.
 /// </summary>
-public sealed class RequestContext(IHttpContextAccessor accessor) : ICurrentTenant, ICurrentFacility, ICurrentUser, IRequestOrigin
+public sealed class RequestContext(IHttpContextAccessor accessor, IServiceProvider services) : ICurrentTenant, ICurrentFacility, ICurrentUser, IRequestOrigin
 {
     Guid? linkTenant;
     HttpContext? connection;
@@ -31,7 +31,17 @@ public sealed class RequestContext(IHttpContextAccessor accessor) : ICurrentTena
     public Guid? UserId => Read(ClaimTypes.NameIdentifier);
     public string? ClientIp => Http?.Connection.RemoteIpAddress?.ToString();
     public string? CorrelationId => Http?.TraceIdentifier;
-    public string? Role => Http?.User.FindFirst(Host.Api.Auth.StaffPolicies.RoleClaim)?.Value;
+    string? role;
+    bool roleRead;
+
+    // Resolved lazily: IStaffAccess itself depends on this context. One lookup per scope (request or hub call).
+    public async Task<string?> RoleAsync(CancellationToken cancellationToken = default)
+    {
+        if (roleRead) return role;
+        role = (await services.GetRequiredService<Medvya.Tenancy.Application.IStaffAccess>().CurrentRoleAsync(cancellationToken))?.ToString();
+        roleRead = true;
+        return role;
+    }
 
     Guid? Read(string claim) => Guid.TryParse(Http?.User.FindFirst(claim)?.Value, out var id) ? id : null;
 }

@@ -20,6 +20,9 @@ public interface IStaffAccess
     /// </summary>
     Task<Access> AccessAsync(Capability capability, Guid facilityId, CancellationToken cancellationToken = default);
 
+    /// <summary>The role of the user's active membership at the current facility (database), or null. For display and audit, not for access: use <see cref="AccessAsync(Capability, CancellationToken)"/>.</summary>
+    Task<Role?> CurrentRoleAsync(CancellationToken cancellationToken = default);
+
     /// <summary>
     /// True while the active membership is a doctor whose licence is not verified (pending, rejected or never submitted): recording and signing
     /// capabilities are then <see cref="Access.None"/> in <see cref="AccessAsync"/> (MDV-P1-004, feature-level, not only the UI).

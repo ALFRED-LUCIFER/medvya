@@ -10,6 +10,8 @@ param env string = 'dev'
 param sqlAdminObjectId string
 param sqlAdminLogin string
 param alertEmail string
+@description('Application (client) id of the Entra app registration the staff sign-in uses. Not a secret.')
+param oidcClientId string
 @description('Monthly budget in the billing currency (INR).')
 param budgetAmount int = 1800
 param budgetStart string = utcNow('yyyy-MM-01')
@@ -163,6 +165,10 @@ resource app 'Microsoft.Web/sites@2023-12-01' = {
         { name: 'Storage__AccountName', value: storage.name }
         // No password anywhere: the app's managed identity signs in (mapped to medvya_app by the administrator).
         { name: 'ConnectionStrings__Medvya', value: 'Server=tcp:${sql.properties.fullyQualifiedDomainName},1433;Database=${db.name};Authentication=Active Directory Managed Identity;Encrypt=Strict;' }
+        // Staff sign-in (MDV-P0-011): single-tenant Entra app; the client secret is a Key Vault reference, never a value here.
+        { name: 'Authentication__Oidc__Authority', value: '${environment().authentication.loginEndpoint}${tenant().tenantId}/v2.0' }
+        { name: 'Authentication__Oidc__ClientId', value: oidcClientId }
+        { name: 'Authentication__Oidc__ClientSecret', value: '@Microsoft.KeyVault(VaultName=${vault.name};SecretName=oidc-client-secret)' }
         { name: 'ColumnEncryption__KeyVaultKeyUrl', value: cmk.properties.keyUriWithVersion }
       ]
     }

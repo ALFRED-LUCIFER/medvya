@@ -130,5 +130,5 @@ export const settingsError = (code: string | undefined): SettingsError =>
 /** The tenant's locations and the one a tab is looking at. */
 export type LocationChoice = { locations: Location[]; locationId: string; onLocation: (id: string) => void; locationsLoading: boolean; locationsFailed: boolean };
 
-export const settingsTabs = ['profile', 'locations', 'hours', 'holidays'] as const;
+export const settingsTabs = ['profile', 'locations', 'hours', 'holidays', 'staff', 'doctors', 'audit'] as const;
 export type SettingsTab = (typeof settingsTabs)[number];

@@ -27,6 +27,7 @@ public sealed class AuditDbContext(DbContextOptions<AuditDbContext> options, ICu
             e.Property(x => x.ClientIp).HasMaxLength(45);
             e.Property(x => x.CorrelationId).HasMaxLength(64);
             e.HasIndex(x => new { x.TenantId, x.PatientId, x.OccurredAt });
+            e.HasIndex(x => new { x.TenantId, x.OccurredAt }); // the practice access log pages by time (MDV-P1-035)
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
     }

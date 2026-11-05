@@ -2,7 +2,7 @@ Feature: Solo doctor and clinic sign-up with the six-step onboarding wizard (aut
   As a solo doctor or practice owner, I want a guided six-step onboarding that saves my progress, so that I can set up my practice and resume at any time.
 
   # chunk: Add per-country validation to onboarding steps
-  @todo
+  @done
   Scenario Outline: Fields validate per country
     Given a user is in the onboarding wizard for <country>
     When they enter <field> incorrectly
@@ -15,14 +15,14 @@ Feature: Solo doctor and clinic sign-up with the six-step onboarding wizard (aut
       | UAE     | TRN not 15 digits                       |
 
   # chunk: Add autosave and resume to the wizard
-  @todo
+  @done
   Scenario: Leaving mid-wizard resumes at the same step
     Given a user has filled part of the wizard and left
     When they sign in again
     Then the wizard resumes at the same step with saved values
 
   # chunk: Add unverified licence restrictions
-  @todo
+  @done
   Scenario: Doctor with unverified licence can book but not record or sign
     Given a doctor's licence is not yet verified
     Then the doctor can book and register patients
@@ -30,12 +30,12 @@ Feature: Solo doctor and clinic sign-up with the six-step onboarding wizard (aut
     And the restriction is enforced by a feature-level check, not just the UI
 
   # chunk: Add team invitations and finish step
-  @todo
+  @done
   Scenario: Step 6 sends invitations through the P0 invitation flow
     When the user invites team members in step 6
     Then invitations are sent through the MDV-P0-013 invitation flow
 
-  @todo
+  @done
   Scenario Outline: Finishing lands on the role's home and creates the practice
     When a <role> finishes the wizard
     Then they land on <home>
@@ -46,7 +46,7 @@ Feature: Solo doctor and clinic sign-up with the six-step onboarding wizard (aut
       | owner or reception | Front desk |
 
   # chunk: Make wizard tablet and keyboard friendly
-  @todo
+  @done
   Scenario: Wizard works at tablet width and by keyboard
     Given a viewport of 768 px
     When a user completes every step using only the keyboard

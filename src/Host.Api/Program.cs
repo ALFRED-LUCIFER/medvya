@@ -2,11 +2,16 @@ using System.Net;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 using Host.Api.Auth;
+using Host.Api.AuditLog;
 using Host.Api.Context;
 using Host.Api.Invitations;
 using Host.Api.Middleware;
+using Host.Api.Notifications;
+using Medvya.Notifications.Application;
+using Medvya.Notifications.Infrastructure;
 using Host.Api.Onboarding;
 using Host.Api.Settings;
+using Host.Api.Staff;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.SignalR;
 using Medvya.Audit.Api;
@@ -38,7 +43,7 @@ builder.WebHost.ConfigureKestrel(k =>
 builder.AddStaffAuthentication();
 // Waiting-room TVs sign in with a display token, never a staff session (MDV-P1-031).
 builder.Services.AddAuthentication().AddQueueDisplay();
-builder.Services.AddAuthorizationBuilder().AddStaffPolicies().AddStaffAdminPolicy().AddQueueDisplayPolicy();
+builder.Services.AddAuthorizationBuilder().AddStaffPolicies().AddStaffAdminPolicy().AddQueueDisplayPolicy().AddOperationsPolicies(builder.Configuration);
 // Enums travel as names ("Receptionist"), never as numbers that shift when an enum changes.
 builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.Configure<SmtpOptions>(builder.Configuration.GetSection("Email:Smtp")).AddSingleton<IEmailSender, SmtpEmailSender>();
@@ -55,13 +60,22 @@ builder.Services.AddScoped<IRequestOrigin>(sp => sp.GetRequiredService<RequestCo
 if (builder.Configuration.GetConnectionString("Medvya") is { } sql)
 {
     builder.Services.AddAuditModule(sql).AddDeniedAccessAudit().AddTenancyModule(sql, builder.Configuration["Storage:ConnectionString"]).AddIdentityModule(sql).AddPatientsModule(sql).AddSchedulingModule(sql)
+        .AddNotificationsModule(sql, smsSink: builder.Environment.IsDevelopment() && builder.Configuration["Notifications:Sms:Provider"] == "Sink")
+        .AddScoped<IReminderConsent, PatientReminderConsent>() // after the module: replaces its deny-all default (MDV-P1-019)
         .AddLeadsModule(sql, builder.Configuration.GetSection("Leads:Email").Get<LeadsEmailOptions>() ?? new()).AddCapabilityPolicies();
-    // shortcut: only Development has a column master key (the same local file as `pnpm dev:db`); the Azure Key Vault provider
-    // arrives with MDV-P0-006, and until then encrypted identifiers cannot be read anywhere else (fail closed).
+    // Development: a local file key. Anywhere else the column master key is a Key Vault key read with the app's managed identity;
+    // without ColumnEncryption:KeyVaultKeyUrl encrypted identifiers cannot be read (fail closed).
     if (builder.Environment.IsDevelopment())
         LocalKeyStoreProvider.Register(() => LocalKeyStoreProvider.LoadOrCreate(builder.Configuration["ColumnEncryption:LocalKeyFile"]
             ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Medvya", "local-column-master-key.pem")));
+    else if (!string.IsNullOrEmpty(builder.Configuration["ColumnEncryption:KeyVaultKeyUrl"]))
+        ColumnEncryption.RegisterKeyVault(new Azure.Identity.ManagedIdentityCredential(Azure.Identity.ManagedIdentityId.SystemAssigned));
 }
+builder.Services.Configure<NotificationOptions>(builder.Configuration.GetSection("Notifications"));
+// Reminder consent comes from the patient's consent receipts. Local runs may switch the check off explicitly; never outside Development.
+if (builder.Environment.IsDevelopment() && builder.Configuration.GetValue("Notifications:DevAllowAllConsent", false))
+    builder.Services.AddSingleton<IReminderConsent, DevAllowAllConsent>();
+builder.AddJobs(builder.Configuration.GetConnectionString("Medvya"));
 builder.Services.Configure<SchedulingOptions>(builder.Configuration.GetSection("Scheduling"));
 // Live board (MDV-P1-029): every hub call runs as the connection's signed-in user, with its session checked again.
 builder.Services.AddSchedulingRealtime().AddHubOptions<BoardHub>(o => o.AddFilter<HubRequestContext>());
@@ -76,8 +90,10 @@ builder.Services.Configure<ForwardedHeadersOptions>(o =>
     o.KnownIPNetworks.Clear();
     o.KnownProxies.Clear();
     foreach (var proxy in proxies) o.KnownProxies.Add(IPAddress.Parse(proxy));
-    // With both lists empty the middleware would believe any sender, so no listed proxy means no forwarded headers at all.
-    o.ForwardedHeaders = proxies.Length > 0 ? ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto : ForwardedHeaders.None;
+    // The client address is believed only from listed proxies (a forged one would dodge limits and falsify the audit trail).
+    // The protocol is always believed: App Service ends TLS in front of the app, so without it sign-in sends Entra an http redirect
+    // address that is not registered. A forged protocol can only change generated links.
+    o.ForwardedHeaders = proxies.Length > 0 ? ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto : ForwardedHeaders.XForwardedProto;
 });
 
 var permitsPerMinute = builder.Configuration.GetValue("RateLimiting:PermitsPerMinute", 300);
@@ -109,6 +125,7 @@ app.UseForwardedHeaders(); // first, so every later step sees the client's addre
 if (!app.Environment.IsDevelopment()) app.UseHsts();
 app.UseSecurityHeaders(app.Configuration["Storage:ImageOrigin"]);
 app.UseRateLimiter();
+app.UseWebApp(); // static files only; reads no session cookie
 app.RunPublicSiteBeforeAuthentication(); // public pages never read the session cookie
 app.UseStaffAuthentication();
 
@@ -117,10 +134,15 @@ app.MapGet("/health", () => Results.Ok(new { status = "ok", version = typeof(Pro
     .AllowAnonymous(); // public: deploy smoke tests
 app.MapStaffSession();
 app.MapSchedulingEndpoints();
+app.MapNotifications();
+app.UseJobs();
 app.MapPublicSite();
 app.MapInvitations();
 app.MapOnboarding();
 app.MapPracticeSettings();
+app.MapDoctors();
+app.MapStaff();
+app.MapAccessLog();
 app.MapQueueDisplaySession();
 app.MapPatientEndpoints();
 if (app.Environment.IsDevelopment() && app.Configuration["Authentication:Oidc:Authority"]?.EndsWith(DevIdentityProvider.Path, StringComparison.Ordinal) == true)

@@ -122,13 +122,13 @@ ac:
 - Pipeline duration for the skeleton is under 10 minutes.
 
 === MDV-P0-005
-status: Partly done
+status: Done
 progress:
 - Merged [PR #3](https://github.com/ALFRED-LUCIFER/medvya/pull/3): docker-compose with SQL Server 2022 (healthcheck, runs under Rosetta on Apple silicon), Azurite, smtp4dev; `pnpm services:up`
 - Merged [PR #34](https://github.com/ALFRED-LUCIFER/medvya/pull/34): `pnpm dev:db` starts the services, applies the Tenancy and Audit migrations and seeds the synthetic tenant
 - Dev-only OIDC provider (Development only, refusal tested) arrived with [PR #39](https://github.com/ALFRED-LUCIFER/medvya/pull/39)
 - Merged [PR #64](https://github.com/ALFRED-LUCIFER/medvya/pull/64): docs corrected — API on :5080 (what the clinic proxy and dev sign-in expect), Colima and Docker Desktop sockets, Rosetta and exit-139 hint, settings for parallel worktrees, seeded modules
-- Left: SMS sink (MDV-P1-033)
+- SMS sink: SMS sent locally goes to the mail sink (smtp4dev) as a message to `<number>@sms.sink.local` with sender and DLT template id, never to a phone (MDV-P1-033, `Notifications:Sms:Provider=Sink`, Development only)
 title: Local development environment with Docker Compose (SQL Server, Azurite, mail and SMS sinks)
 type: Task
 epic: MDV-P0-E01
@@ -179,9 +179,11 @@ notes:
 - Private endpoints add cost; capture the monthly estimate in the PR description (Software Architecture §9.3).
 
 === MDV-P0-007
-status: Blocked
+status: Partly done
 progress:
-- Needs MDV-P0-006
+- Workflow `.github/workflows/deploy-dev.yml` (tag `v*` or manual) signs in with GitHub OIDC and deploys the API to the India dev web app; Entra app "Medvya CI deploy (dev, India)" has a federated credential for environment `dev`; repo environment `dev` holds the non-secret ids as variables
+- First tagged run `v0.0.1` succeeded on 2026-11-04 and `/health` answers 200 on the India dev web app
+- Left: staging slot, SQL migration step and web app deploy (shortcut in the workflow); Hangfire tables are created only in Development, so the deploy must create them (MDV-P1-032)
 title: GitHub OIDC federation to Azure and tagged deploy to staging
 type: Task
 epic: MDV-P0-E01
@@ -209,7 +211,8 @@ status: Partly done
 progress:
 - Merged [PR #36](https://github.com/ALFRED-LUCIFER/medvya/pull/36): `infra/sql/roles.sql` (idempotent, run by the admin before migrations) defines `medvya_migrator` (DDL only), `medvya_app` (= module roles, no DDL), `medvya_tenancy` / `medvya_audit` (own schema only; audit INSERT+SELECT) and `medvya_reporting` (read-only)
 - Tested on SQL Server (Testcontainers): app cannot CREATE/ALTER/DROP, all migrations run as the migrator, module roles cannot read each other's schema, audit cannot UPDATE/DELETE, reporting cannot write; 7 mutations each caught. Documented in `docs/03-architecture/database-security.md`
-- Left: Entra-only auth, managed identities mapped to roles, passwordless `Encrypt=Strict` connection strings, deploy step running roles.sql then migrations (needs Azure, MDV-P0-006); JIT human access runbook (MDV-P0-025)
+- `tools/db-migrate`: `admin` (roles.sql + keys) and `migrate` (every module's migrations + Hangfire tables, as the migration role; the integration fixture runs the same code). Deploy workflow runs `migrate` through a per-run firewall rule. Bicep sets the passwordless `Encrypt=Strict` managed-identity connection string. Runbook in `docs/03-architecture/database-security.md`
+- Left: run the admin step and identity mapping in Azure (needs the Entra admin, in progress); verify Entra-only auth rejects a password login; JIT human access runbook (MDV-P0-025)
 title: Database security baseline part 1: Entra-only auth, managed identity, least-privilege users per module and for migrations
 type: Task
 epic: MDV-P0-E03
@@ -236,7 +239,8 @@ status: Partly done
 progress:
 - Merged [PR #40](https://github.com/ALFRED-LUCIFER/medvya/pull/40): Always Encrypted — deterministic for ABHA, ABHA address, Emirates ID and insurance member number (exact-match lookup through EF Core), randomized for Aadhaar last 4, passport and visa; key setup identical locally and in Azure (local RSA key store provider for dev/tests); tests prove the admin sees only ciphertext and LIKE is rejected
 - Dynamic data masking on names, DOB, phone, email and address; `medvya_patients` role has UNMASK, reporting sees masked values (tested); protected-column list in the data classification register; mutation-checked
-- Left (needs Azure, MDV-P0-006): Key Vault column master key, TDE with customer-managed key and rotation, deploy step that creates keys
+- Key Vault column master key (RSA 3072, Crypto User on the key only) in Bicep; the app registers the Key Vault provider with its managed identity; `db-migrate admin` creates the keys
+- Left: TDE with customer-managed key and rotation; CMK rotation procedure
 title: Database security baseline part 2: Always Encrypted (national/insurance IDs), dynamic data masking, TDE with customer-managed key
 type: Task
 epic: MDV-P0-E03
@@ -350,7 +354,7 @@ ac:
 status: Partly done
 progress:
 - Merged [PR #49](https://github.com/ALFRED-LUCIFER/medvya/pull/49): `tenancy.Invitations` with RLS; 256-bit single-use tokens stored as SHA-256, 7-day expiry, revocable; invite/revoke need StaffRolesIntegrations at Config; public preview rate-limited, 404 for any unusable token; join through BFF sign-in creates the account if new and activates the membership once, atomically; email over SMTP (smtp4dev locally, SendGrid relay in the cloud), no patient data; audited; F-06 page and admin invite form in en/hi/ar; mutation-checked
-- Left: SMS invitations (MDV-P1-033), staff list with resend/revoke UI (MDV-P1-008), licence verification (MDV-P1-007), matching the provider's verified email to the invited address (Entra spike)
+- Left: SMS invitations (MDV-P1-033), licence verification (MDV-P1-007), matching the provider's verified email to the invited address (Entra spike)
 title: Invite a colleague and accept the invitation (membership invited → active)
 type: Story
 epic: MDV-P0-E02

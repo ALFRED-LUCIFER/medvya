@@ -29,6 +29,8 @@ IF SCHEMA_ID(N'patients') IS NULL EXEC(N'CREATE SCHEMA patients AUTHORIZATION db
 IF SCHEMA_ID(N'billing') IS NULL EXEC(N'CREATE SCHEMA billing AUTHORIZATION dbo');
 IF SCHEMA_ID(N'scheduling') IS NULL EXEC(N'CREATE SCHEMA scheduling AUTHORIZATION dbo');
 IF SCHEMA_ID(N'leads') IS NULL EXEC(N'CREATE SCHEMA leads AUTHORIZATION dbo');
+IF SCHEMA_ID(N'notifications') IS NULL EXEC(N'CREATE SCHEMA notifications AUTHORIZATION dbo');
+IF SCHEMA_ID(N'hangfire') IS NULL EXEC(N'CREATE SCHEMA hangfire AUTHORIZATION dbo');
 
 IF DATABASE_PRINCIPAL_ID(N'medvya_migrator') IS NULL CREATE ROLE medvya_migrator AUTHORIZATION dbo;
 IF DATABASE_PRINCIPAL_ID(N'medvya_app') IS NULL CREATE ROLE medvya_app AUTHORIZATION dbo;
@@ -40,6 +42,8 @@ IF DATABASE_PRINCIPAL_ID(N'medvya_patients') IS NULL CREATE ROLE medvya_patients
 IF DATABASE_PRINCIPAL_ID(N'medvya_billing') IS NULL CREATE ROLE medvya_billing AUTHORIZATION dbo;
 IF DATABASE_PRINCIPAL_ID(N'medvya_scheduling') IS NULL CREATE ROLE medvya_scheduling AUTHORIZATION dbo;
 IF DATABASE_PRINCIPAL_ID(N'medvya_leads') IS NULL CREATE ROLE medvya_leads AUTHORIZATION dbo;
+IF DATABASE_PRINCIPAL_ID(N'medvya_notifications') IS NULL CREATE ROLE medvya_notifications AUTHORIZATION dbo;
+IF DATABASE_PRINCIPAL_ID(N'medvya_jobs') IS NULL CREATE ROLE medvya_jobs AUTHORIZATION dbo;
 
 -- Migration principal: schema objects, security policies and ledger tables. No rights on module data.
 GRANT CREATE TABLE, CREATE VIEW, CREATE FUNCTION, CREATE PROCEDURE, CREATE TYPE, ALTER ANY SCHEMA, REFERENCES,
@@ -47,6 +51,9 @@ GRANT CREATE TABLE, CREATE VIEW, CREATE FUNCTION, CREATE PROCEDURE, CREATE TYPE,
 GRANT SELECT, INSERT, DELETE ON SCHEMA::dbo TO medvya_migrator; -- dbo holds only __EFMigrationsHistory
 -- CREATE SECURITY POLICY needs SELECT on the predicate function. security holds only predicate functions.
 GRANT SELECT ON SCHEMA::security TO medvya_migrator;
+-- CREATE TABLE ... ENCRYPTED WITH needs to see the key metadata (never the keys). SQL Server grants this to public; Azure SQL does not
+-- (deploy run 41962207363 failed with 15247 on patients.Identifiers), so grant it explicitly.
+GRANT VIEW ANY COLUMN MASTER KEY DEFINITION, VIEW ANY COLUMN ENCRYPTION KEY DEFINITION TO medvya_migrator;
 -- shortcut: audit's predicate function lives in the audit schema (InitialAudit), so the migrator can SELECT audit rows;
 -- RLS still returns none without a tenant SESSION_CONTEXT. New modules put predicates in `security`; revoke this if audit's moves.
 GRANT SELECT ON SCHEMA::audit TO medvya_migrator;
@@ -75,6 +82,17 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON SCHEMA::scheduling TO medvya_scheduling;
 -- Leads module (MDV-P1-003): demo requests from the public site. Add and read only; corrections and deletion are an administrator's job.
 GRANT SELECT, INSERT ON SCHEMA::leads TO medvya_leads;
 
+-- Notifications module (MDV-P1-032): messages and their attempts, no DELETE (attempts are the delivery history). No access to patients or
+-- scheduling: contacts and events come through the module contracts.
+GRANT SELECT, INSERT, UPDATE ON SCHEMA::notifications TO medvya_notifications;
+-- Hangfire (MDV-P1-032): job storage in its own schema, no access to any module's data. Hangfire creates its tables itself on first
+-- start, which needs more than this role has: the deploy step runs that install as the migration principal (MDV-P0-007); only
+-- Development lets the app prepare the schema.
+-- shortcut: a role, not yet a separate database user; give the Worker its own identity when Worker.Jobs becomes a separate host.
+GRANT SELECT, INSERT, UPDATE, DELETE, EXECUTE ON SCHEMA::hangfire TO medvya_jobs;
+-- Hangfire's installer reads and writes its own version table (hangfire.Schema); job storage holds no module data.
+GRANT SELECT, INSERT, UPDATE, DELETE ON SCHEMA::hangfire TO medvya_migrator;
+
 ALTER ROLE medvya_tenancy ADD MEMBER medvya_app;
 ALTER ROLE medvya_audit ADD MEMBER medvya_app;
 ALTER ROLE medvya_identity ADD MEMBER medvya_app;
@@ -82,6 +100,8 @@ ALTER ROLE medvya_patients ADD MEMBER medvya_app;
 ALTER ROLE medvya_billing ADD MEMBER medvya_app;
 ALTER ROLE medvya_scheduling ADD MEMBER medvya_app;
 ALTER ROLE medvya_leads ADD MEMBER medvya_app;
+ALTER ROLE medvya_notifications ADD MEMBER medvya_app;
+ALTER ROLE medvya_jobs ADD MEMBER medvya_app;
 
 -- Reporting and support read masked patient demographics and ciphertext identifiers (no UNMASK, no column master key).
 -- shortcut: audit stays out of reporting until AUDIT_EVENT.ClientIp is masked on the ledger table; add it with that migration.

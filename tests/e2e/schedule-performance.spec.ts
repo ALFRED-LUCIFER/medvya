@@ -55,7 +55,8 @@ test('the 3-doctor day renders within 2.5 s over throttled 4G', async ({ page })
   await cdp.send('Network.emulateNetworkConditions', { offline: false, latency: rttMs, downloadThroughput: (1.6 * 1024 * 1024) / 8, uploadThroughput: (750 * 1024) / 8 });
   await cdp.send('Network.setCacheDisabled', { cacheDisabled: true }); // a first visit: nothing cached
 
-  await page.goto('/schedule', { waitUntil: 'commit' });
+  // The production build is served under /app/ (the API hosts it there, MDV-P0-007).
+  await page.goto('/app/schedule', { waitUntil: 'commit' });
   const rendered = await page.waitForFunction(
     () => ['d-1', 'd-2', 'd-3'].every(d => document.getElementById(`schedule-col-${d}`)) && document.body.innerText.includes('Synthetic Patient 2-11') && performance.now(),
     null, { polling: 'raf', timeout: 10_000 });

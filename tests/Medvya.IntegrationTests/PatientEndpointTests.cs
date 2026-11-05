@@ -224,6 +224,25 @@ public sealed class PatientEndpointTests(SqlServerFixture sql) : IClassFixture<S
         Assert.Equal(Medvya.Audit.Domain.AuditOutcome.NotFound, reveal.Outcome);
     }
 
+    /// <summary>MDV-P1-019: a changed consent is a new receipt for the desk's own patient; another facility's is 404 with nothing written; a nurse is refused.</summary>
+    [Fact]
+    public async Task ConsentChangesAreFacilityScopedAndNeedFullRegistrationAccess()
+    {
+        using var host = Host();
+        using var desk = Client(host, "receptionist");
+        var body = new { policyVersion = ConsentPolicy.CurrentVersion, decisions = new object[] { new { type = "Reminders", channel = "Sms", granted = true } } };
+
+        Assert.Equal(HttpStatusCode.NotFound, (await desk.PostAsJsonAsync(new Uri($"/v1/patients/{elsewhere}/consents", UriKind.Relative), body)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await desk.PostAsJsonAsync(new Uri($"/v1/patients/{meera}/consents", UriKind.Relative), body)).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await desk.PostAsJsonAsync(new Uri($"/v1/patients/{meera}/consents", UriKind.Relative), body with { policyVersion = "old" })).StatusCode);
+        using var nurse = Client(host, "nurse");
+        Assert.Equal(HttpStatusCode.Forbidden, (await nurse.PostAsJsonAsync(new Uri($"/v1/patients/{meera}/consents", UriKind.Relative), body)).StatusCode);
+
+        await using var db = sql.Patients(tenant);
+        Assert.False(await db.ConsentReceipts.AnyAsync(r => r.PatientId == elsewhere && r.Type == Medvya.Patients.Domain.ConsentType.Reminders));
+        Assert.Equal(1, await db.ConsentReceipts.CountAsync(r => r.PatientId == meera && r.Type == Medvya.Patients.Domain.ConsentType.Reminders));
+    }
+
     /// <summary>
     /// MDV-P1-015: completing a quick registration is facility-scoped like opening the record. Another facility's patient is 404,
     /// is not changed, and leaves exactly one NotFound row; the desk's own patient becomes Complete with one Allowed row.
@@ -349,7 +368,7 @@ public sealed class PatientEndpointTests(SqlServerFixture sql) : IClassFixture<S
         using var desk = Client(host, "receptionist");
         var body = new Dictionary<string, object?>
         {
-            ["quick"] = true, ["fullName"] = "Meera Iyer (synthetic)", ["dateOfBirth"] = "1980-01-01", ["sexAtBirth"] = "Female",
+            ["consents"] = TreatmentConsentBody, ["quick"] = true, ["fullName"] = "Meera Iyer (synthetic)", ["dateOfBirth"] = "1980-01-01", ["sexAtBirth"] = "Female",
             ["mobile"] = "+91 90000 00105", ["facilityId"] = otherFacility, // ignored: the facility is the session's
         };
         var uri = new Uri("/v1/patients", UriKind.Relative);
@@ -377,7 +396,7 @@ public sealed class PatientEndpointTests(SqlServerFixture sql) : IClassFixture<S
         using var host = Host(services: s => s.AddScoped<Medvya.Audit.Application.IAuditLog, DownInTransaction>());
         using var desk = Client(host, "receptionist");
         var before = (await AuditTrail()).Count;
-        var body = new { quick = true, fullName = "Leela Raman (synthetic)", dateOfBirth = "1991-07-14", sexAtBirth = "Female", mobile = "+91 90000 00177" };
+        var body = new { consents = TreatmentConsentBody, quick = true, fullName = "Leela Raman (synthetic)", dateOfBirth = "1991-07-14", sexAtBirth = "Female", mobile = "+91 90000 00177" };
         try
         {
             using var response = await desk.PostAsJsonAsync(new Uri("/v1/patients", UriKind.Relative), body);
@@ -407,9 +426,9 @@ public sealed class PatientEndpointTests(SqlServerFixture sql) : IClassFixture<S
         await using var audit = sql.Audit(tenant);
         var seen = (await audit.Events.Select(e => e.Id).ToListAsync()).ToHashSet();
 
-        var duplicate = new { quick = true, fullName = "Meera Iyer (synthetic)", dateOfBirth = "1980-01-01", sexAtBirth = "Female", mobile = "+91 90000 00188" };
+        var duplicate = new { consents = TreatmentConsentBody, quick = true, fullName = "Meera Iyer (synthetic)", dateOfBirth = "1980-01-01", sexAtBirth = "Female", mobile = "+91 90000 00188" };
         Assert.Equal(HttpStatusCode.BadRequest, (await desk.PostAsJsonAsync(uri, duplicate)).StatusCode);
-        var invalid = new { quick = true, fullName = "Meera Iyer (synthetic)", dateOfBirth = "1980-01-01", sexAtBirth = "Female", mobile = "98470 213" };
+        var invalid = new { consents = TreatmentConsentBody, quick = true, fullName = "Meera Iyer (synthetic)", dateOfBirth = "1980-01-01", sexAtBirth = "Female", mobile = "98470 213" };
         Assert.Equal(HttpStatusCode.BadRequest, (await desk.PostAsJsonAsync(uri, invalid)).StatusCode);
 
         var rows = await audit.Events.Where(e => !seen.Contains(e.Id)).ToListAsync();

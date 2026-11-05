@@ -81,7 +81,8 @@ public static partial class OnboardingEndpoints
                     await scope.ServiceProvider.GetRequiredService<IScheduleService>().SaveTemplateAsync(
                         new SaveTemplate { FacilityId = practice.FacilityId, CalendarId = userId, CalendarKind = CalendarKind.Doctor, SlotMinutes = data.Hours!.SlotMinutes!.Value, Hours = Sessions(data.Hours) }, ct);
                 }
-                // The practice exists already; hours the schedule rules reject (e.g. a time off the 5-minute grid) are set again in Settings, Hours.
+                // Backstop only: reachable only if OnboardingRules and ScheduleRules ever drift apart (OnboardingRulesTests guards that); keep it.
+                // The practice exists already; hours the schedule rules reject are set again in Settings, Hours.
                 catch (SchedulingValidationException) { OwnerSessionsRejected(http.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger(nameof(OnboardingEndpoints))); }
             }
             var invitations = scope.ServiceProvider.GetRequiredService<IInvitations>();

@@ -1,3 +1,6 @@
+using System.Globalization;
+using Medvya.Scheduling.Application;
+using Medvya.Scheduling.Domain;
 using Medvya.Tenancy.Application;
 using Medvya.Tenancy.Domain;
 
@@ -65,6 +68,32 @@ public class OnboardingRulesTests
     [InlineData("09:05", true)]
     public void HoursStayOnTheSchedulesFiveMinuteGrid(string start, bool ok) =>
         Assert.Equal(ok, OnboardingRules.India.ValidateStep(4, Valid() with { Hours = Valid().Hours! with { Weekdays = [new(start, "13:00")] } }).Count == 0);
+
+    /// <summary>
+    /// Tenancy cannot reference Scheduling, so the 5-minute grid is written in both rules. If they drift, a wizard-valid draft could
+    /// finish with no bookable sessions. Mutation check: change one modulus and this fails.
+    /// </summary>
+    [Fact]
+    public void WizardAndScheduleRulesAgreeWhichTimesAreOnTheGrid()
+    {
+        var times = Enumerable.Range(0, 60).Select(m => $"08:{m:00}").Append("23:55").Append("00:00").ToList();
+        foreach (var time in times)
+        {
+            // The time under test is the start (end 12:00) and, where it is later than 07:00, also the end (start 07:00).
+            foreach (var (start, end) in new[] { (time, "12:00"), ("07:00", time) }.Where(w => string.CompareOrdinal(w.Item1, w.Item2) < 0))
+            {
+                var wizardOk = !OnboardingRules.India.ValidateStep(4, Valid() with { Hours = Valid().Hours! with { Weekdays = [new(start, end)] } }).Any(e => e.Code == "fiveMinutes");
+                var template = new ScheduleTemplate
+                {
+                    SlotMinutes = 20, Hours = [new WorkingHours { Weekday = DayOfWeek.Monday, Start = TimeOnly.Parse(start, CultureInfo.InvariantCulture), End = TimeOnly.Parse(end, CultureInfo.InvariantCulture) }],
+                };
+                var scheduleOk = true;
+                try { ScheduleRules.Validate(template); }
+                catch (SchedulingValidationException e) { scheduleOk = !e.Errors.Any(x => x.Code == "five_minutes"); }
+                Assert.True(wizardOk == scheduleOk, $"{start}-{end}: wizard says on-grid={wizardOk}, schedule says on-grid={scheduleOk}");
+            }
+        }
+    }
 
     [Fact]
     public void AnOwnerWhoIsNotADoctorSkipsTheLicenceStepAndNeedsNoSpecialty()

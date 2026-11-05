@@ -3,7 +3,7 @@ import {
   Send, Pipette, Inbox, Eye, Phone, MessageSquareCheck, CircleCheck,
   Sparkles, BadgeCheck, User, ArrowLeftRight, Upload, Lock,
   CircleAlert, TriangleAlert, Info, Pause, CircleMinus, Pill as PillIcon, CircleHelp,
-  Clock, Ban, SearchX, WifiOff, Hourglass, CalendarCheck, Tag, UserCheck, DoorOpen, CalendarX, CircleX, Radio, RefreshCw, Footprints, Ticket, type LucideIcon,
+  Clock, Ban, SearchX, WifiOff, Hourglass, CalendarCheck, Tag, UserCheck, DoorOpen, CalendarClock, CalendarX, CircleX, Radio, RefreshCw, Footprints, Ticket, type LucideIcon,
 } from 'lucide-react';
 import { useI18n, type MessageKey } from '@medvya/i18n';
 import { Button } from '#components/ui/button';
@@ -59,6 +59,7 @@ export const scheduleLooks = {
   completed: { label: 'schedule.state.Done', icon: CircleCheck, bg: '#F1F5F8', fg: '#506579', border: '1px solid #CBD6E0' },
   noShow: { label: 'schedule.state.NoShow', icon: CalendarX, bg: '#FFF7F8', fg: '#8A1626', border: '1px dashed #C83A4B' },
   cancelled: { label: 'schedule.state.Cancelled', icon: CircleX, bg: '#F7FAFC', fg: '#506579', border: '1px dashed #8296A8' },
+  needsRebooking: { label: 'schedule.state.NeedsRebooking', icon: CalendarClock, bg: '#FDF5E7', fg: '#7A4710', border: '1px dashed #B7791F' },
 } satisfies Record<string, Look>;
 
 // Reception board (P-01): nonclinical tags on visit cards. The reason is only ever its category.

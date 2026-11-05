@@ -2,6 +2,7 @@ import type { BookedAppointment, BookingForm, Hold, PatientMatch, SlotChoice } f
 import type { Occurrence, SeriesResult } from '../domain/series';
 import type { CancelReason } from '../domain/changes';
 import type { PatientMessage } from '../domain/messages';
+import type { SaveResult, SavedAdjustment } from '../domain/adjustments';
 import type { Appointment, ScheduleDay } from '../domain/schedule';
 import type { ScheduleWeek } from '../domain/views';
 
@@ -9,10 +10,13 @@ import type { ScheduleWeek } from '../domain/views';
 export class ApiError extends Error {
   readonly status: number;
   readonly code: string | undefined;
-  constructor(status: number, code?: string) {
+  /** The problem-details body, for answers that carry data (e.g. the visits an "actions_required" leave affects). */
+  readonly body: unknown;
+  constructor(status: number, code?: string, body?: unknown) {
     super(`API ${status}`);
     this.status = status;
     this.code = code;
+    this.body = body;
   }
 }
 
@@ -25,7 +29,7 @@ export async function send<T>(url: string, init: RequestInit = {}): Promise<T> {
     const body = (await res.json().catch(() => null)) as { code?: string; errors?: Record<string, string[]> } | null;
     // A rejected field (400 problem details) is reported as "field:code" so a screen can name what was wrong.
     const rejected = Object.entries(body?.errors ?? {}).find(([, codes]) => codes.length > 0);
-    throw new ApiError(res.status, body?.code ?? (rejected ? `${rejected[0]}:${rejected[1][0]}` : undefined));
+    throw new ApiError(res.status, body?.code ?? (rejected ? `${rejected[0]}:${rejected[1][0]}` : undefined), body);
   }
   return (res.status === 204 ? undefined : await res.json()) as T;
 }
@@ -86,3 +90,8 @@ export const markNoShow = (appointmentId: string) => post<Appointment>(`/v1/appo
 /** Messages sent to the patient about a visit (statuses only). Ids only in the URL. */
 export const fetchMessages = (facilityId: string, appointmentId: string) =>
   send<PatientMessage[]>(`/v1/appointments/${appointmentId}/notifications?facilityId=${facilityId}`);
+
+// MDV-P1-012: leave and one-off sessions. An answer of 409 "actions_required" carries the affected visits (ApiError.body.affected).
+export const fetchAdjustments = (facilityId: string) => send<SavedAdjustment[]>(`/v1/schedule/exceptions?${new URLSearchParams({ facilityId })}`);
+
+export const saveAdjustment = (body: unknown) => post<SaveResult>('/v1/schedule/exceptions', body);

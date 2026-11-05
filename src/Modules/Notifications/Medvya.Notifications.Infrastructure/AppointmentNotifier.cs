@@ -55,6 +55,9 @@ public sealed class AppointmentNotifier(NotificationsDbContext db, IFacilityDire
             case AppointmentEventKind.Cancelled when !e.Quiet:
                 Add(NotificationKind.Cancelled, e.OccurredAt);
                 break;
+            case AppointmentEventKind.NeedsRebooking: // the doctor is away: ask the patient to rebook, say nothing about why
+                Add(NotificationKind.NeedsRebooking, e.OccurredAt);
+                break;
         }
 
         // The visit changed: whatever older message is still waiting is wrong now. Messages already sent stay as they are.

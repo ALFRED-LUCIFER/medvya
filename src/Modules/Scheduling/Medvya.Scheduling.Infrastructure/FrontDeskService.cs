@@ -72,12 +72,13 @@ public sealed partial class FrontDeskService(
         var (from, to) = (ScheduleRules.Instant(date, TimeOnly.MinValue, zone), ScheduleRules.Instant(date.AddDays(1), TimeOnly.MinValue, zone));
         var visits = await db.Appointments.AsNoTracking()
             .Where(a => a.FacilityId == facilityId && a.CalendarKind == CalendarKind.Doctor && a.Start >= from && a.Start < to
-                && a.State != AppointmentState.Cancelled && a.State != AppointmentState.NoShow)
+                && a.State != AppointmentState.Cancelled && a.State != AppointmentState.NoShow && a.State != AppointmentState.NeedsRebooking)
             .OrderBy(a => a.Start).ThenBy(a => a.Id).ToListAsync(cancellationToken);
         var patients = await context.PatientsAsync(visits.Select(a => a.PatientId), cancellationToken);
         var tokens = await TokensAsync([.. visits.Select(a => a.Id)], cancellationToken);
         var templates = await db.Templates.AsNoTracking().Where(t => t.FacilityId == facilityId && t.CalendarKind == CalendarKind.Doctor).ToListAsync(cancellationToken);
-        var working = templates.Where(t => ScheduleRules.Day(t, date, zone).Hours.Count > 0).Select(t => t.CalendarId).ToHashSet();
+        var exceptions = await context.ExceptionsAsync(facilityId, date, date, null, cancellationToken);
+        var working = templates.Where(t => ScheduleRules.Day(t, date, zone, exceptions.Where(x => x.CalendarId == t.CalendarId)).Hours.Count > 0).Select(t => t.CalendarId).ToHashSet();
         string Name(Guid patientId) => patients.GetValueOrDefault(patientId)?.FullName ?? "";
 
         // Every doctor with hours today or a visit today, in the day view's order.
@@ -219,7 +220,8 @@ public sealed partial class FrontDeskService(
     {
         var template = await db.Templates.AsNoTracking().SingleOrDefaultAsync(t => t.FacilityId == visit.FacilityId && t.CalendarId == visit.CalendarId, cancellationToken);
         if (template is null) return visit.Room;
-        var hours = ScheduleRules.Day(template, ScheduleRules.LocalDate(now, zone), zone).Hours;
+        var today = ScheduleRules.LocalDate(now, zone);
+        var hours = ScheduleRules.Day(template, today, zone, await context.ExceptionsAsync(visit.FacilityId, today, today, visit.CalendarId, cancellationToken)).Hours;
         var session = hours.FirstOrDefault(w => w.Start <= now && now < w.End) ?? hours.FirstOrDefault(w => w.Start <= visit.Start && visit.Start < w.End);
         return session?.Room ?? visit.Room;
     }

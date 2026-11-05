@@ -35,12 +35,13 @@ export function rulesFor(a: Appointment, ctx: { now: number; timeZone: string; c
   const no = (why: Why): Rule => ({ allowed: false, why });
   const yes: Rule = { allowed: true };
   const booked = a.state === 'Booked';
+  const rebooking = a.state === 'NeedsRebooking'; // the doctor is away: the desk moves it or cancels it
   const over = ended(a);
   return {
     checkIn: !ctx.canCheckIn ? no('noCheckIn') : !booked ? no(over ?? 'onlyBooked')
       : localDate(a.start, ctx.timeZone) !== localDate(new Date(ctx.now).toISOString(), ctx.timeZone) ? no('notToday') : yes,
-    reschedule: !ctx.canBook ? no('noAccess') : booked ? yes : no(over ?? 'onlyBooked'),
-    cancel: !ctx.canBook ? no('noAccess') : booked || a.state === 'CheckedIn' ? yes : no(over ?? 'inVisit'),
+    reschedule: !ctx.canBook ? no('noAccess') : booked || rebooking ? yes : no(over ?? 'onlyBooked'),
+    cancel: !ctx.canBook ? no('noAccess') : booked || rebooking || a.state === 'CheckedIn' ? yes : no(over ?? 'inVisit'),
     noShow: !ctx.canBook ? no('noAccess') : !booked ? no(over ?? 'onlyBooked') : Date.parse(a.start) > ctx.now ? no('notStarted') : yes,
   };
 }

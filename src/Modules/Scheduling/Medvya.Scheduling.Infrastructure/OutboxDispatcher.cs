@@ -41,6 +41,7 @@ public sealed partial class OutboxDispatcher(SchedulingDbContext db, IEnumerable
             "AppointmentRescheduled.v1" => AppointmentEventKind.Rescheduled,
             "AppointmentCancelled.v1" => AppointmentEventKind.Cancelled,
             "AppointmentNoShow.v1" => AppointmentEventKind.NoShow,
+            "AppointmentNeedsRebooking.v1" => AppointmentEventKind.NeedsRebooking,
             _ => (AppointmentEventKind?)null,
         };
         if (kind is null) return null;

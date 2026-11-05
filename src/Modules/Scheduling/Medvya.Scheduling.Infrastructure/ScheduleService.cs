@@ -55,16 +55,17 @@ public sealed class ScheduleService(SchedulingDbContext db, SchedulingContext co
             .Where(h => h.FacilityId == facility.Id && ids.Contains(h.CalendarId) && h.Start < to && h.End > from && h.ExpiresAt > now && h.HeldBy != me).ToListAsync(cancellationToken);
         var names = await context.PatientsAsync(appointments.Select(a => a.PatientId), cancellationToken);
         var closures = await context.ClosuresAsync(facility.Id, dates.Min(), dates.Max(), cancellationToken);
-        return [.. dates.Select(date => Day(facility, zone, calendars, templates, appointments, holds, names, date, closures.GetValueOrDefault(date)))];
+        var exceptions = await context.ExceptionsAsync(facility.Id, dates.Min(), dates.Max(), null, cancellationToken);
+        return [.. dates.Select(date => Day(facility, zone, calendars, templates, appointments, holds, names, exceptions, date, closures.GetValueOrDefault(date)))];
     }
 
     static ScheduleDay Day(FacilityInfo facility, TimeZoneInfo zone, IReadOnlyList<Calendar> calendars, Dictionary<Guid, ScheduleTemplate> templates,
-        List<Appointment> appointments, List<SlotHold> holds, IReadOnlyDictionary<Guid, PatientSummary> names, DateOnly date, string? holiday)
+        List<Appointment> appointments, List<SlotHold> holds, IReadOnlyDictionary<Guid, PatientSummary> names, List<ScheduleAdjustment> exceptions, DateOnly date, string? holiday)
     {
         var (from, to) = ScheduleRules.DayBounds(date, zone);
         var days = calendars
             .Select(c => (Calendar: c, Template: templates.GetValueOrDefault(c.Id)))
-            .Select(x => (x.Calendar, x.Template, Day: x.Template is null ? CalendarDay.Closed : ScheduleRules.Day(x.Template, date, zone),
+            .Select(x => (x.Calendar, x.Template, Day: x.Template is null ? CalendarDay.Closed : ScheduleRules.Day(x.Template, date, zone, exceptions.Where(e => e.CalendarId == x.Calendar.Id)),
                 Booked: appointments.Where(a => a.CalendarId == x.Calendar.Id && a.Start < to && a.End > from).ToList()))
             .ToList();
 
@@ -82,8 +83,11 @@ public sealed class ScheduleService(SchedulingDbContext db, SchedulingContext co
                 .Where(s => !occupied.Exists(a => a.Start < s.End && s.Start < a.End))
                 .Select(s => new SlotView(s.Start, s.End, held.Exists(h => h.Start < s.End && s.Start < h.End)))
                 .ToList();
+            var leave = exceptions.FirstOrDefault(e => e.CalendarId == x.Calendar.Id && e.Kind == ExceptionKind.Leave && e.FromDate <= date && date <= e.ToDate);
             return new ScheduleColumn(x.Calendar.Id, x.Calendar.Kind, x.Calendar.Name, x.Template?.SlotMinutes, x.Day.Hours, slots,
-                holiday is not null ? [new UnavailableBlock(start, end, UnavailableReason.Closed, holiday)] : ScheduleRules.Unavailable(x.Day, start, end, x.Template is not null),
+                holiday is not null ? [new UnavailableBlock(start, end, UnavailableReason.Closed, holiday)]
+                : leave is not null ? [new UnavailableBlock(start, end, UnavailableReason.Leave, leave.Reason)]
+                : ScheduleRules.Unavailable(x.Day, start, end, x.Template is not null),
                 [.. x.Booked.Select(a => SchedulingContext.Chip(a, names))], x.Template is null ? [] : Lengths(x.Template), x.Day.Slots.Count);
         }).ToList();
         return new(facility.Id, facility.TimeZone, date, start, end, columns);
@@ -131,8 +135,9 @@ public sealed class ScheduleService(SchedulingDbContext db, SchedulingContext co
         var now = context.Now;
         var future = await db.Appointments.AsNoTracking()
             .Where(a => a.FacilityId == command.FacilityId && a.CalendarId == calendar.Id && a.Start >= now && !a.Unscheduled).OrderBy(a => a.Start).ToListAsync(cancellationToken);
+        var exceptions = await context.ExceptionsAsync(command.FacilityId, ScheduleRules.LocalDate(now, zone), DateOnly.MaxValue, calendar.Id, cancellationToken);
         var outside = future
-            .Where(a => Appointment.Occupies(a.State) && !ScheduleRules.Covers(ScheduleRules.Day(template, ScheduleRules.LocalDate(a.Start, zone), zone), a.Start, a.End))
+            .Where(a => Appointment.Occupies(a.State) && !ScheduleRules.Covers(ScheduleRules.Day(template, ScheduleRules.LocalDate(a.Start, zone), zone, exceptions), a.Start, a.End))
             .ToList();
         var names = await context.PatientsAsync(outside.Select(a => a.PatientId), cancellationToken);
         return View(calendar, template, [.. outside.Select(a => SchedulingContext.Chip(a, names))]);

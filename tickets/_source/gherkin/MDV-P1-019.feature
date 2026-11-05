@@ -24,10 +24,16 @@ Feature: Legal terms and separate versioned consents at registration (treatment,
 
   # chunk: Gate tenant activation and sending on consent
   @todo
-  Scenario: Production tenant needs ToS and DPA
-    Given ToS and DPA acceptance is not recorded
-    When an owner tries to activate the production tenant
-    Then activation is refused
+  Scenario: Production tenant needs an accepted-terms record
+    Given no accepted-terms record exists for the production tenant
+    When it tries to book an appointment or send a message
+    Then the request is refused
+
+  @todo
+  Scenario: Accepting the terms activates the tenant
+    When an owner accepts the ToS and DPA
+    Then one record stores the terms version, the time and who accepted
+    And booking and sending are allowed for that tenant
 
   @done
   Scenario: Reminders check channel consent before every send

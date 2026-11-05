@@ -4,7 +4,7 @@ For the next person or session. No secrets here. Passwords, keys and tokens live
 
 ## 0 · Start here (paste into the new session)
 
-> Read CLAUDE.md, AGENTS.md and docs/05-delivery/session-handoff.md. Then: (1) finish the restore drill in section 3 (the firewall rule `restore-me` is still open and must be removed), (2) apply the issue-label cleanup in section 4, (3) update the ticket source for the P1-047 merge and the P1-019 decision in section 5, then (4) start the P1 sequence in section 6, running independent items as parallel agents in worktrees. GitHub issues are the live record of ticket status (CLAUDE.md rule 6).
+> Read CLAUDE.md, AGENTS.md and docs/05-delivery/session-handoff.md. Then: (1) finish the restore drill in section 3 (the firewall rule `restore-me` is still open and must be removed), (2) start the P1 sequence in section 6 (the label cleanup in section 4 and the ticket-source update in section 5 are done), running independent items as parallel agents in worktrees. GitHub issues are the live record of ticket status (CLAUDE.md rule 6).
 
 ## 1 · State of `main` and Azure
 
@@ -27,9 +27,9 @@ Azure database made real; Entra sign-in with MFA works end to end; web app serve
 
 Runbook: `docs/runbooks/restore.md`. State: **not started successfully.** The database is quiet (the QA agent stopped writing around 11:55 UTC). Capturing the source counts failed twice with `TaskCanceledException` after ~2 minutes in Azure.Identity's `DefaultAzureCredential`, although `az account get-access-token --resource https://database.windows.net/` works. Untested ideas, try in this order: set `AZURE_TOKEN_CREDENTIALS=AzureCliCredential` for the command; or add `az login` freshness (`az account get-access-token` first); or give `db-migrate` an access-token path (small change, needs a test). Then: counts → wait 10 min with no app use → `az sql db restore … --dest-name medvya-restore-drill --time <T+1min>` timed → counts again → `diff` → delete `medvya-restore-drill` and the firewall rule `restore-me` → fill the drill table in the runbook and the R0 notes in one PR; comment on #141 and #143.
 
-## 4 · In flight: issue label cleanup (computed, not yet applied)
+## 4 · DONE (5 Nov, evening): issue label cleanup
 
-Computed from the Gherkin tags (`tickets/_source/gherkin`), chunk lists and merged PRs. **Do not run `gh_issues.py --refresh`** (it overwrites issues from source). Apply with `gh issue edit/close/comment` after re-checking each against the issue and merged PRs.
+Applied from the Gherkin tags, chunk lists and merged PRs. **Do not run `gh_issues.py --refresh`** (it overwrites issues from source). Kept here as a record of what was changed and why.
 
 - **Close as done (all acceptance scenarios delivered; leftovers stay in comments):** #201 (P1-004), #225 (P1-009; leftovers: re-activation, paired-device revocation, open-item reassignment), #232 (P1-013; its one `@todo` scenario, consent receipt, was delivered by #678), #270 (P1-032; all 5 scenarios done, 4 chunks closed; note Azure has jobs off and the provider is now ACS, not SendGrid).
 - **Keep open, labels already right:** #207 (logo upload #211 open), #233 (P1-014: HIE label by emirate, UAE tenant not creatable in India), #236, #244, #254 to #257, #275, #280 (p95 on pilot volume).
@@ -38,13 +38,13 @@ Computed from the Gherkin tags (`tickets/_source/gherkin`), chunk lists and merg
 - **Chunk issues** all say `status: to do`. Set closed chunks to `status: done`: #202–#206, #208, #209, #212, #215–#220, #222–#224, #245, #271–#274, #276, #277, #281; close duplicate chunks #210 (dup #211), #217 (dup #218). P1-019 has two chunk sets: keep #680–#682 (current) and close #246–#248 as duplicates; set #680, #681 and #282 to `status: partly done` (each has one delivered and one open scenario); #682 stays `to do`.
 - Parent `status: partly done` for P1-019 (#244), P1-035 (#280, p95 and CSV export pending) stay.
 
-## 5 · In flight: ticket source updates (edit scope only, then `python3 -I tools/tickets/build.py`)
+## 5 · DONE (5 Nov, evening): ticket source updates (PR with the source change; issues created once)
 
-Decided by the owner on 5 Nov:
-1. **P1-047 and P1-048 merge into one ticket P1-047** "Safe retries: idempotency keys, timeouts and bounded retry" with two chunks (server: `Idempotency-Key` on booking, check-in and registration POSTs; client: shared API client with 15 s timeout and bounded jittered retry), about 5 days. The id P1-048 is retired. Source text and scenarios: `docs/03-architecture/india-connectivity-power.md` section 6 and the earlier session notes; the ticket still needs epic, roles, dependencies, acceptance bullets, priority and confidence. Add a Gherkin file `MDV-P1-047.feature`, then create its issue with `gh_issues.py --apply --only MDV-P1-047` (dry run first; never retry create calls: it duplicated issues once).
+Decided by the owner on 5 Nov and now in the source, regenerated and created as GitHub issues (#717 epic E11 Connectivity and resilience; #718 P1-047 with chunks #719, #720; #721 P1-049; #722 P1-050; #723 P1-051 with chunks #724, #725; #726 P1-052 walk-through fixes with chunks #727 to #734):
+1. **P1-047 and P1-048 merge into one ticket P1-047** "Safe retries: idempotency keys, timeouts and bounded retry" with two chunks (server: `Idempotency-Key` on booking, check-in and registration POSTs; client: shared API client with 15 s timeout and bounded jittered retry), about 5 days. The id P1-048 is retired. Source text: `docs/03-architecture/india-connectivity-power.md` section 6; Gherkin in `tickets/_source/gherkin/MDV-P1-047.feature`. For any future ticket creation use `gh_issues.py --apply --only <keys>` after a dry run, and never retry a create call (it duplicated issues once).
 2. **P1-049 (service worker for static assets), P1-050 (printable day sheet), P1-051 (encrypted schedule cache, needs an ADR first)** are added as `COULD`, marked deferred until pilot interviews say outages are a real problem.
-3. **P1-019 "activation" = one accepted-terms timestamp** (`AcceptedAt`) on the tenant that gates booking and sending for the production tenant, built on the draft wording (`2026-11-draft`); final wording remains P1-044 (legal).
-4. Extensions noted in the research doc but not yet written into tickets: P1-036 offline banner and unsaved-changes warning (+2 d), P1-037 slow-4G budget and bundle limit (+2 d), P1-041 connectivity telemetry (+2 d), P1-040 internet-down desk card (+1 d).
+3. **P1-019 "activation" = one accepted-terms timestamp** (acceptance criteria and Gherkin updated in the source; comment on #244) (`AcceptedAt`) on the tenant that gates booking and sending for the production tenant, built on the draft wording (`2026-11-draft`); final wording remains P1-044 (legal).
+4. **Still to write into existing tickets (not done):** extensions noted in the research doc: P1-036 offline banner and unsaved-changes warning (+2 d), P1-037 slow-4G budget and bundle limit (+2 d), P1-041 connectivity telemetry (+2 d), P1-040 internet-down desk card (+1 d).
 
 ## 6 · P1 sequence (agreed order)
 
@@ -55,7 +55,7 @@ Status: 46 tickets, 12 done, 34 open. Owner-only items sit on the critical path:
 3. Then **P1-012** leave and exceptions (Scheduling + migration), then **P1-026** recurring (same booking files), then **P1-036** tablet views, **P1-019** accepted-terms gate, **P1-027** waitlist, **P1-041** metrics.
 4. Merge PRs one at a time (i18n JSON, migrations and `tickets/README.md` conflict).
 
-## 7 · QA findings to turn into tickets or fixes (live walk-through, comment on #125)
+## 7 · QA findings (live walk-through, comment on #125): now ticket **P1-052** (#726, chunks #727 to #734)
 
 - **Queue display screen exists at `/app/admin/displays` but nothing links to it** (requires the staff-config capability); `/app/queue/tv` tells staff to add a screen "under Queue displays" and shows a stuck "Connecting…" for an invalid token. Link it from Settings and fix the copy; then test tokens-only content, live updates and revocation (not yet tested).
 - **Cancelled card covers the freed slot in the Day view** (mouse clicks are intercepted; stays in the tab order after re-booking until reload). Major.

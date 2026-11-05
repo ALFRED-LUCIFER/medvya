@@ -23,9 +23,9 @@ Every requirement, screen, exit criterion, NFR, delivery-package item and depend
 | P1-03 | P1 | MUST | MDV-P1-007, MDV-P1-008 |
 | P1-04 | P1 | MUST | MDV-P1-011, MDV-P1-012 |
 | P1-05 | P1 | MUST | MDV-P1-013, MDV-P1-014, MDV-P1-015, MDV-P1-016, MDV-P1-017, MDV-P1-018, MDV-P1-020, MDV-P1-038 |
-| P1-06 | P1 | MUST | MDV-P1-021, MDV-P1-023, MDV-P1-024, MDV-P1-025, MDV-P1-026, MDV-P1-027, MDV-P1-037, MDV-P1-042 |
+| P1-06 | P1 | MUST | MDV-P1-021, MDV-P1-023, MDV-P1-024, MDV-P1-025, MDV-P1-026, MDV-P1-027, MDV-P1-037, MDV-P1-042, MDV-P1-047 |
 | P1-07 | P1 | MUST | MDV-P1-021, MDV-P1-022, MDV-P1-037 |
-| P1-08 | P1 | MUST | MDV-P1-028, MDV-P1-029, MDV-P1-030, MDV-P1-031, MDV-P1-036, MDV-P1-040, MDV-P1-041, MDV-P1-042 |
+| P1-08 | P1 | MUST | MDV-P1-028, MDV-P1-029, MDV-P1-030, MDV-P1-031, MDV-P1-036, MDV-P1-040, MDV-P1-041, MDV-P1-042, MDV-P1-049, MDV-P1-050, MDV-P1-051, MDV-P1-052 |
 | P1-09 | P1 | MUST | MDV-P1-032, MDV-P1-033, MDV-P1-034, MDV-P1-041, MDV-P1-045 |
 | P1-10 | P1 | MUST | MDV-P1-035 |
 | P1-11 | P1 | MUST | MDV-P1-009, MDV-P1-010, MDV-P1-038 |
@@ -231,9 +231,9 @@ Every requirement, screen, exit criterion, NFR, delivery-package item and depend
 | P0 | 1 | OWASP ASVS L2 used as the checklist from the first commit | MDV-P0-026 |
 | P0 | 2 | Structured logs with PHI redaction; telemetry processor drops request bodies and classified fields | MDV-P0-018 |
 | P0 | 3 | Daily encrypted backup + point-in-time restore enabled | MDV-P0-019 |
-| P1 | 1 | Booking API p95 < 300 ms; calendar first render < 2.5 s on a clinic PC over 4G | MDV-P1-023, MDV-P1-037 |
+| P1 | 1 | Booking API p95 < 300 ms; calendar first render < 2.5 s on a clinic PC over 4G | MDV-P1-023, MDV-P1-037, MDV-P1-047 |
 | P1 | 2 | Hangfire on Azure SQL for reminders; no Redis or Service Bus yet | MDV-P1-032 |
-| P1 | 3 | Mobile-responsive reception views (tablet at the desk) | MDV-P1-036 |
+| P1 | 3 | Mobile-responsive reception views (tablet at the desk) | MDV-P1-036, MDV-P1-049, MDV-P1-050, MDV-P1-051, MDV-P1-052 |
 | P2 | 1 | Clinical data legal review complete before first real note | MDV-P2-022 |
 | P2 | 2 | Print layouts: A4/A5 Rx, 200% zoom, screen-reader labels on clinical controls | MDV-P2-017, MDV-P2-027 |
 | P2 | 3 | Prescription PDF rendered server-side and stored with hash | MDV-P2-017 |

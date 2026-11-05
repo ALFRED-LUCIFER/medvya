@@ -309,7 +309,8 @@ public sealed class BoardHubTests(SqlServerFixture sql) : IClassFixture<SqlServe
         for (var i = 0; i < 3; i++) await board.InvokeAsync(nameof(BoardHub.Watch), h.Facility); // the test host allows 3 a minute
         var e = await Assert.ThrowsAsync<HubException>(() => board.InvokeAsync(nameof(BoardHub.Watch), h.Facility));
         Assert.Contains("Too many requests.", e.Message, StringComparison.Ordinal);
-        Assert.Equal(3, (await HubAudit(h.Tenant)).Count); // a limited call reads nothing and is not counted as an access
+        // The three allowed watches are one access window (one row); the limited call reads nothing and adds no row.
+        Assert.Equal([(BoardHub.WatchAction, AuditOutcome.Allowed, (Guid?)h.Reception)], await HubAudit(h.Tenant));
     }
 
     [Fact]

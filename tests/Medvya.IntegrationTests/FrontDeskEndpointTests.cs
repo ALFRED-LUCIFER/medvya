@@ -2,6 +2,8 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Text.Json;
+using Medvya.Audit.Application;
+using Medvya.Audit.Domain;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -62,6 +64,39 @@ public sealed class FrontDeskEndpointTests(SqlServerFixture sql) : IClassFixture
     {
         await using var db = sql.Audit(h.Tenant);
         return await db.Events.OrderBy(e => e.OccurredAt).Select(e => e.Action).ToListAsync();
+    }
+
+    async Task<List<(Guid? Actor, AuditOutcome Outcome)>> BoardReads()
+    {
+        await using var db = sql.Audit(h.Tenant);
+        return (await db.Events.Where(e => e.Action == "front_desk.board.read").OrderBy(e => e.OccurredAt).Select(e => new { e.ActorUserId, e.Outcome }).ToListAsync())
+            .Select(e => (e.ActorUserId, e.Outcome)).ToList();
+    }
+
+    [Fact]
+    public async Task RapidBoardReadsByOneUserAreAuditedOncePerWindowAndEachOtherUserAndRefusalIsAuditedAlways()
+    {
+        var url = $"/v1/front-desk/board?facilityId={h.Facility}";
+        var reception = Client(h.Reception);
+        for (var i = 0; i < 5; i++) Assert.Equal(HttpStatusCode.OK, (await reception.GetAsync(url)).StatusCode);
+        Assert.Equal([(h.Reception, AuditOutcome.Allowed)], (await BoardReads()).Select(r => ((Guid?)r.Actor, r.Outcome)).ToList());
+
+        // Another user is not covered by this user's window; a refusal is never covered, however often it repeats.
+        Assert.Equal(HttpStatusCode.OK, (await Client(h.Nurse).GetAsync(url)).StatusCode);
+        for (var i = 0; i < 2; i++) Assert.Equal(HttpStatusCode.Forbidden, (await Client(h.PortalUser).GetAsync(url)).StatusCode);
+        // Another facility's board is a different read, so it is not hidden either (refused here, and recorded).
+        Assert.Equal(HttpStatusCode.Forbidden, (await reception.GetAsync($"/v1/front-desk/board?facilityId={h.OtherFacility}")).StatusCode);
+        Assert.Equal(
+            [(h.Reception, AuditOutcome.Allowed), (h.Nurse, AuditOutcome.Allowed), (h.PortalUser, AuditOutcome.Denied), (h.PortalUser, AuditOutcome.Denied), (h.Reception, AuditOutcome.Denied)],
+            (await BoardReads()).Select(r => (r.Actor!.Value, r.Outcome)).ToList());
+
+        // Inside the window nothing more; after it, the first read writes again.
+        h.Clock.Advance(AuditWindow.Board - TimeSpan.FromSeconds(1));
+        await reception.GetAsync(url);
+        Assert.Equal(5, (await BoardReads()).Count);
+        h.Clock.Advance(TimeSpan.FromSeconds(2));
+        await reception.GetAsync(url);
+        Assert.Equal(6, (await BoardReads()).Count);
     }
 
     [Fact]

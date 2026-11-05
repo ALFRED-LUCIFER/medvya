@@ -10,6 +10,7 @@ public static class AuditModule
 {
     public static IServiceCollection AddAuditModule(this IServiceCollection services, string connectionString) =>
         services
+            .AddSingleton<AuditWindow>()
             .AddScoped<TenantSessionInterceptor>()
             .AddDbContext<AuditDbContext>((sp, o) => o.UseSqlServer(connectionString).AddInterceptors(sp.GetRequiredService<TenantSessionInterceptor>()))
             .AddScoped<IAuditLog, AuditLog>()

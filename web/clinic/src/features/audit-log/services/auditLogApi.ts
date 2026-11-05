@@ -1,3 +1,4 @@
+import { apiFetch } from '../../api/services/apiClient';
 import { ApiError, csrf, send } from '../../schedule/services/scheduleApi';
 import { exportBody, listQuery, type AuditFilters, type AuditPage } from '../domain/auditLog';
 
@@ -9,7 +10,7 @@ export const fetchAuditPage = (f: AuditFilters, after: string | null) => {
 
 /** Downloads the watermarked CSV. POST, so the export is its own audited action. */
 export async function downloadAuditCsv(f: AuditFilters): Promise<void> {
-  const res = await fetch('/v1/audit/access-log/export', {
+  const res = await apiFetch('/v1/audit/access-log/export', {
     method: 'POST', credentials: 'same-origin', headers: { ...csrf, 'Content-Type': 'application/json' }, body: JSON.stringify(exportBody(f)),
   });
   if (!res.ok) throw new ApiError(res.status);

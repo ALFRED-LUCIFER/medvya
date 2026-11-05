@@ -62,6 +62,10 @@ public sealed class PatientsDbContext(DbContextOptions<PatientsDbContext> option
             e.HasIndex(x => new { x.TenantId, x.FacilityId, x.FullName })
                 .IncludeProperties(x => new { x.ArabicName, x.DateOfBirth, x.DateOfBirthEstimated, x.SexAtBirth, x.Mrn, x.Status, x.CountryCode, x.RegisteredAt });
             e.HasIndex(x => new { x.TenantId, x.MergedIntoPatientId }); // merged records of a survivor (MDV-P1-017)
+            e.Property(x => x.IdempotencyKeyHash).HasMaxLength(64).IsFixedLength();
+            e.Property(x => x.IdempotencyRequestHash).HasMaxLength(64).IsFixedLength();
+            // One registration per Idempotency-Key and registrar (MDV-P1-047): the last line if two identical requests race.
+            e.HasIndex(x => new { x.TenantId, x.RegisteredBy, x.IdempotencyKeyHash }).IsUnique().HasFilter("[IdempotencyKeyHash] IS NOT NULL");
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         modelBuilder.Entity<PatientIdentifier>(e =>

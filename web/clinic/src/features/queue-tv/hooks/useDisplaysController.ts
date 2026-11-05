@@ -13,7 +13,7 @@ import { copyText, createDisplay, displayLink, fetchDisplays, revokeDisplay } fr
 export function useDisplaysController(facilityId: string) {
   const queryClient = useQueryClient();
   const key = ['queue-displays', facilityId];
-  const list = useQuery({ queryKey: key, queryFn: () => fetchDisplays(facilityId), retry: (n, e) => !(e instanceof ApiError && e.status === 403) && n < 2 });
+  const list = useQuery({ queryKey: key, queryFn: () => fetchDisplays(facilityId) });
   const form = useForm<DisplayInput>({ resolver: zodResolver(displaySchema), defaultValues: { name: '' } });
   const add = useMutation({
     mutationFn: (values: DisplayInput) => createDisplay(facilityId, values.name.trim()),

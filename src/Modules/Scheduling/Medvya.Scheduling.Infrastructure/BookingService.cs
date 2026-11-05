@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Medvya.BuildingBlocks.Domain;
 using Medvya.Scheduling.Application;
 using Medvya.Scheduling.Domain;
 using Medvya.Scheduling.Infrastructure.Persistence;
@@ -60,9 +61,12 @@ public sealed class BookingService(
         await tx.CommitAsync(cancellationToken);
     }
 
-    public async Task<AppointmentView> BookAsync(BookAppointment command, CancellationToken cancellationToken = default)
+    public async Task<AppointmentView> BookAsync(BookAppointment command, string? idempotencyKey = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
+        var key = IdempotencyHashes.Of(idempotencyKey, command);
+        // A repeat comes first: its hold is already gone, so the checks below would answer "hold_expired" instead of the first outcome.
+        if (key is not null && await ReplayAsync(key, cancellationToken) is { } first) return first;
         var hold = await db.SlotHolds.AsNoTracking().SingleOrDefaultAsync(h => h.Id == command.HoldId, cancellationToken)
             ?? throw new SlotUnavailableException("hold_expired"); // released, replaced or cleaned up after expiry
         await context.RequireAsync(hold.FacilityId, SchedulingAccess.CanBook, cancellationToken);
@@ -83,7 +87,10 @@ public sealed class BookingService(
             : throw new SchedulingValidationException([new("patientId", "unknown")]);
         var (_, zone) = await context.FacilityAsync(hold.FacilityId, cancellationToken);
 
-        var appointment = await transaction.RunAsync([(hold.CalendarId, ScheduleRules.LocalDate(hold.Start, zone))], async () =>
+        Appointment appointment;
+        try
+        {
+            appointment = await transaction.RunAsync([(hold.CalendarId, ScheduleRules.LocalDate(hold.Start, zone))], async () =>
         {
             // The hold proved the slot was free; the template or another booking may have changed since.
             if (await BookableEndAsync(hold.FacilityId, hold.CalendarId, hold.Start, hold.VisitType, zone, cancellationToken) != hold.End)
@@ -91,9 +98,36 @@ public sealed class BookingService(
             var kind = await db.Templates.Where(t => t.FacilityId == hold.FacilityId && t.CalendarId == hold.CalendarId).Select(t => t.CalendarKind).SingleAsync(cancellationToken);
             await db.SlotHolds.Where(h => h.Id == hold.Id).ExecuteDeleteAsync(cancellationToken);
             return await CreateAsync(Draft(hold.FacilityId, hold.CalendarId, kind, patient.Id, hold.VisitType, hold.Start, hold.End, command.ReasonCategory, reason, command.Channel, now),
-                SchedulingAudit.Book, cancellationToken);
+                SchedulingAudit.Book, cancellationToken, key);
         }, cancellationToken);
+        }
+        // An identical request that raced this one took the slot (the doctor-day lock made us wait for it): answer with its outcome.
+        catch (SlotUnavailableException) when (key is not null)
+        {
+            return await ReplayAsync(key, cancellationToken) ?? throw new SlotUnavailableException("slot_unavailable");
+        }
         return await ViewAsync(appointment, patient, now);
+    }
+
+    /// <summary>
+    /// The appointment this user already booked with this key, as the desk sees it now (nothing about the patient is kept with the key;
+    /// the view is built from the appointment). Clears expired keys of the tenant first. Another request under the same key is refused.
+    /// </summary>
+    async Task<AppointmentView?> ReplayAsync(IdempotencyHashes key, CancellationToken cancellationToken)
+    {
+        var me = context.UserId;
+        var now = context.Now;
+        // shortcut: expired keys are cleared by the next keyed booking of the tenant, not by a scheduled job; a quiet tenant keeps
+        // some stale hashes (no patient data) until then. Upgrade to a nightly sweep with the retention jobs.
+        await db.Appointments.Where(a => a.IdempotencyKeyHash != null && a.BookedAt < now - IdempotencyHashes.Lifetime)
+            .ExecuteUpdateAsync(s => s.SetProperty(a => a.IdempotencyKeyHash, (string?)null).SetProperty(a => a.IdempotencyRequestHash, (string?)null), cancellationToken);
+        var first = await db.Appointments.AsNoTracking().SingleOrDefaultAsync(a => a.BookedBy == me && a.IdempotencyKeyHash == key.Key, cancellationToken);
+        if (first is null) return null;
+        if (first.IdempotencyRequestHash != key.Request) throw new IdempotencyKeyException("reused");
+        await context.RequireAsync(first.FacilityId, SchedulingAccess.CanBook, cancellationToken);
+        var patient = (await context.PatientsAsync([first.PatientId], cancellationToken)).GetValueOrDefault(first.PatientId)
+            ?? throw new SchedulingValidationException([new("patientId", "unknown")]);
+        return await ViewAsync(first, patient, now);
     }
 
     public async Task<AppointmentView> WalkInAsync(WalkIn command, CancellationToken cancellationToken = default)
@@ -202,7 +236,7 @@ public sealed class BookingService(
     /// the unique index refuses a double booking of any 5-minute unit), the first status event, AppointmentBooked.v1 and the audit
     /// event of <paramref name="action"/>.
     /// </summary>
-    async Task<Appointment> CreateAsync(Appointment draft, string action, CancellationToken cancellationToken)
+    async Task<Appointment> CreateAsync(Appointment draft, string action, CancellationToken cancellationToken, IdempotencyHashes? key = null)
     {
         var booked = new Appointment
         {
@@ -210,6 +244,7 @@ public sealed class BookingService(
             PatientId = draft.PatientId, VisitType = draft.VisitType, Start = draft.Start, End = draft.End, State = AppointmentState.Booked,
             ReasonCategory = draft.ReasonCategory, ReasonText = draft.ReasonText, Channel = draft.Channel, WalkIn = draft.WalkIn, Unscheduled = draft.Unscheduled, SeriesId = draft.SeriesId,
             BookedBy = context.UserId, BookedAt = draft.BookedAt, ChangedBy = context.UserId, ChangedAt = draft.ChangedAt,
+            IdempotencyKeyHash = key?.Key, IdempotencyRequestHash = key?.Request,
         };
         db.Appointments.Add(booked);
         if (!booked.Unscheduled) db.ScheduleSlots.AddRange(ScheduleSlot.For(booked));

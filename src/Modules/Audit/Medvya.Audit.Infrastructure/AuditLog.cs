@@ -31,10 +31,12 @@ public sealed class AuditLog(AuditDbContext db, IRequestOrigin? origin = null) :
         await shared.SaveChangesAsync(cancellationToken); // committed (or rolled back) by the caller, with its change
     }
 
-    AuditEvent WithOrigin(AuditEvent e) => origin is null || (e.ClientIp is not null && e.CorrelationId is not null) ? e : new AuditEvent
+    // The role and facility come from the session, never from the caller's event, so a use case cannot record a different authority.
+    AuditEvent WithOrigin(AuditEvent e) => origin is null ? e : new AuditEvent
     {
         Id = e.Id, TenantId = e.TenantId, ActorUserId = e.ActorUserId, Action = e.Action, ResourceType = e.ResourceType, ResourceId = e.ResourceId,
-        PatientId = e.PatientId, Purpose = e.Purpose, Outcome = e.Outcome, OccurredAt = e.OccurredAt,
+        PatientId = e.PatientId, Purpose = e.Purpose, Outcome = e.Outcome, OccurredAt = e.OccurredAt, Detail = e.Detail,
+        Role = e.Role ?? origin.Role, FacilityId = e.FacilityId ?? origin.FacilityId,
         ClientIp = e.ClientIp ?? origin.ClientIp, CorrelationId = e.CorrelationId ?? origin.CorrelationId,
     };
 

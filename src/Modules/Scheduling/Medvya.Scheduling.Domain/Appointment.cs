@@ -66,6 +66,10 @@ public sealed class Appointment
     [Classification(DataClass.Internal)] public Guid? SeriesId { get; init; }
     [Classification(DataClass.Internal)] public Guid? BookedBy { get; init; }
     [Classification(DataClass.Internal)] public DateTimeOffset BookedAt { get; init; }
+    /// <summary>SHA-256 of the booking's Idempotency-Key (MDV-P1-047), unique per tenant and booker; cleared after 24 hours. Never the key itself.</summary>
+    [Classification(DataClass.Internal)] public string? IdempotencyKeyHash { get; set; }
+    /// <summary>Salted hash of the booking request, to refuse the same key with a different request. Cleared with the key.</summary>
+    [Classification(DataClass.Internal)] public string? IdempotencyRequestHash { get; set; }
     [Classification(DataClass.Internal)] public Guid? ChangedBy { get; set; }
     [Classification(DataClass.Internal)] public DateTimeOffset ChangedAt { get; set; }
 

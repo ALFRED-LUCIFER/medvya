@@ -1,13 +1,15 @@
 import { useRef, type ReactNode } from 'react';
 import { Link } from 'react-router';
-import { CalendarOff, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { CalendarOff, ChevronLeft, ChevronRight, Plus, Printer } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
 import { Button, buttonVariants, cn, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
 import ShellMessage from '../../shell/components/ShellMessage';
 import type { DayLayout, ScheduleColumn } from '../domain/schedule';
 import { scheduleViews, type AgendaEntry, type ScheduleView, type WeekDay } from '../domain/views';
 import AgendaView from './AgendaView';
+import type { DaySheet } from '../domain/daySheet';
 import DayGrid, { type GridActions } from './DayGrid';
+import DaySheetView from './DaySheetView';
 import { Legend } from './parts';
 import WeekView from './WeekView';
 
@@ -50,6 +52,12 @@ type Props = {
   panel?: ReactNode;
   /** Leave and exceptions (MDV-P1-012); absent when the role may not book. */
   leavePath?: string | null;
+  /** Day sheet (MDV-P1-050): the audited paper fields once fetched, shown for printing only. */
+  sheet: DaySheet | null;
+  printedBy: string;
+  printing: boolean;
+  printFailed: boolean;
+  onPrintSheet: () => void;
 };
 
 const all = '__all';
@@ -63,7 +71,10 @@ export default function SchedulePage(props: Props) {
   const title = isWeek && weekSpan ? t('schedule.weekRange', { from: formatShortDay(weekSpan.from), to: formatShortDay(weekSpan.to) })
     : date ? formatDay(date) : t('nav.schedule');
   return (
-    <div className="flex flex-col gap-4 max-md:pb-16">
+    <>
+    {props.sheet && <DaySheetView sheet={props.sheet} printedBy={props.printedBy} />}
+    {/* While a day sheet prints, the screen content stays off the paper. */}
+    <div className={cn('flex flex-col gap-4 max-md:pb-16', props.sheet && 'print:hidden')}>
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-sm font-bold text-action-600">{t('nav.schedule')}</p>
@@ -93,9 +104,11 @@ export default function SchedulePage(props: Props) {
               </SelectContent>
             </Select>
           )}
+          <Button variant="outline" disabled={!date || props.printing} onClick={props.onPrintSheet}><Printer aria-hidden />{t('schedule.sheet.print')}</Button>
           {props.leavePath && <Link to={props.leavePath} className={buttonVariants({ variant: 'outline' })}><CalendarOff aria-hidden />{t('schedule.leave')}</Link>}
         </div>
       </header>
+      {props.printFailed && <p role="alert" className="text-sm font-bold text-destructive print:hidden">{t('schedule.sheet.failed')}</p>}
       <Legend />
       {/* The schedule takes the full width when no booking panel sits beside it (the week view). */}
       <div className={cn('grid grid-cols-[minmax(0,1fr)] items-start gap-5', props.panel && 'lg:grid-cols-[minmax(0,1fr)_340px]')}>
@@ -110,6 +123,7 @@ export default function SchedulePage(props: Props) {
         </Button>
       )}
     </div>
+    </>
   );
 }
 

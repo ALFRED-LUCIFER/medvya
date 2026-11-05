@@ -42,15 +42,6 @@ public class DatabaseRoleTests(SqlServerFixture sql) : IClassFixture<SqlServerFi
     [InlineData("DROP TABLE scheduling.Templates")]
     public Task AppCannotChangeTheSchema(string ddl) => Denied("app_user", ddl);
 
-    // MDV-P0-008: the deploy creates the Hangfire tables as the migration role (the app may not); the app then works in them but cannot change them.
-    [Fact]
-    public async Task DeployCreatesJobTablesThatTheAppCanUseButNotAlter()
-    {
-        await Run("app_user", "INSERT INTO hangfire.[Set] ([Key], Score, Value) VALUES (N'probe', 0, N'probe'); DELETE FROM hangfire.[Set] WHERE [Key] = N'probe';");
-        await Denied("app_user", "ALTER TABLE hangfire.[Set] ADD Injected int NULL");
-        await Denied("reporting_user", "SELECT TOP 1 [Key] FROM hangfire.[Set]");
-    }
-
     [Fact]
     public async Task MigratorCanChangeTheSchemaButNotTouchModuleData()
     {

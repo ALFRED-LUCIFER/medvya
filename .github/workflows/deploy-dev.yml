@@ -27,7 +27,15 @@ jobs:
       - uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile && pnpm --filter clinic build
       - run: dotnet publish src/Host.Api -c Release -o publish
+      # The API serves the built web app under /app/ (same origin as the sign-in cookie).
+      - run: mkdir -p publish/wwwroot/app && cp -R web/clinic/dist/. publish/wwwroot/app/
       - uses: azure/login@v2
         with:
           client-id: ${{ vars.AZURE_CLIENT_ID }}

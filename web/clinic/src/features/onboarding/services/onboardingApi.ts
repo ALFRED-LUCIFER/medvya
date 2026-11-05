@@ -50,5 +50,5 @@ export async function finishOnboarding(): Promise<FinishResult> {
 
 /** Sign up: the provider's MFA sign-in, then back to the wizard. The server creates the account only on this path. */
 export function startSignUp(country: Country) {
-  window.location.assign(`/bff/login?signup=true&returnUrl=${encodeURIComponent(`/onboarding?country=${country}`)}`);
+  window.location.assign(`/bff/login?signup=true&returnUrl=${encodeURIComponent(`${import.meta.env.BASE_URL}onboarding?country=${country}`)}`);
 }

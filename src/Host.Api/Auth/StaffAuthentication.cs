@@ -61,7 +61,7 @@ public static partial class StaffAuthentication
                 // A refused or broken sign-in returns to the app with a generic error; the reason is only in the logs.
                 o.Events.OnRemoteFailure = ctx =>
                 {
-                    ctx.Response.Redirect("/?signin=failed");
+                    ctx.Response.Redirect($"{AppPath(ctx.HttpContext.RequestServices.GetRequiredService<IConfiguration>())}?signin=failed");
                     ctx.HandleResponse();
                     return Task.CompletedTask;
                 };
@@ -147,9 +147,9 @@ public static partial class StaffAuthentication
 
     public static WebApplication MapStaffSession(this WebApplication app)
     {
-        app.MapGet("/bff/login", (string? returnUrl, string? invitation, bool? signup) =>
+        app.MapGet("/bff/login", (string? returnUrl, string? invitation, bool? signup, IConfiguration config) =>
             {
-                var properties = new AuthenticationProperties { RedirectUri = returnUrl is not null && IsLocal(returnUrl) ? returnUrl : "/" };
+                var properties = new AuthenticationProperties { RedirectUri = returnUrl is not null && IsLocal(returnUrl) ? returnUrl : AppPath(config) };
                 if (InvitationToken.Read(invitation) is not null) properties.Items[InvitationSignIn.Item] = invitation;
                 if (signup == true) properties.Items[SignUpItem] = "1";
                 return Results.Challenge(properties, [OpenIdConnectDefaults.AuthenticationScheme]);
@@ -162,6 +162,9 @@ public static partial class StaffAuthentication
     }
 
     public const string SignInRateLimit = "sign-in";
+
+    /// <summary>Where the web app lives: "/app/" when the API serves the built app (the public site owns "/"), "/" in development.</summary>
+    public static string AppPath(IConfiguration config) => config["Web:AppPath"] ?? "/";
 
     // Only same-site paths: "/x" but never "//host" or "/\host", which browsers treat as another site.
     static bool IsLocal(string url) => url.StartsWith('/') && !url.StartsWith("//", StringComparison.Ordinal) && !url.StartsWith("/\\", StringComparison.Ordinal);

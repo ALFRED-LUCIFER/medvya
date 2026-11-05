@@ -20,6 +20,8 @@ param appServiceSku string = 'F1'
 
 var suffix = take(uniqueString(resourceGroup().id), 6)
 var name = 'medvya-${env}-${suffix}'
+// The app's own address; a site cannot reference its own property inside its own settings.
+var appHost = 'app-${name}.azurewebsites.net'
 var tags = { app: 'medvya', env: env, country: 'IN', data: 'synthetic-only' }
 
 resource logs 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
@@ -163,6 +165,10 @@ resource app 'Microsoft.Web/sites@2023-12-01' = {
         { name: 'ASPNETCORE_ENVIRONMENT', value: 'Staging' }
         { name: 'Onboarding__DeploymentCountry', value: 'IN' }
         { name: 'Storage__AccountName', value: storage.name }
+        // The API serves the built web app under /app/ (MDV-P0-007); links the server creates must point there.
+        { name: 'Web__AppPath', value: '/app/' }
+        { name: 'Invitations__LinkBaseUrl', value: 'https://${appHost}/app' }
+        { name: 'PublicSite__Deployments__SignUpUrls__IN', value: 'https://${appHost}/app/signup' }
         // No password anywhere: the app's managed identity signs in (mapped to medvya_app by the administrator).
         { name: 'ConnectionStrings__Medvya', value: 'Server=tcp:${sql.properties.fullyQualifiedDomainName},1433;Database=${db.name};Authentication=Active Directory Managed Identity;Encrypt=Strict;' }
         // Staff sign-in (MDV-P0-011): single-tenant Entra app; the client secret is a Key Vault reference, never a value here.

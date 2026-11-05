@@ -1,10 +1,14 @@
+using System.Globalization;
 using System.Net.Mail;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Host.Api.Context;
 using Medvya.Identity.Application;
+using Medvya.Scheduling.Application;
+using Medvya.Scheduling.Domain;
 using Medvya.Tenancy.Application;
+using Medvya.Tenancy.Domain;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -69,6 +73,17 @@ public static class OnboardingEndpoints
             // Step 6 goes through the invitation flow (MDV-P0-013), run inside the new tenant so its audit rows land there.
             int sent = 0, failed = 0;
             await using var scope = http.RequestServices.EnterLinkTenant(practice.TenantId);
+            // The owner doctor is bookable straight away: the hours and slot length of step 4 become their weekly sessions (an upsert, so a repeat adds none).
+            if (practice.Role == Role.SoloDoctor)
+            {
+                try
+                {
+                    await scope.ServiceProvider.GetRequiredService<IScheduleService>().SaveTemplateAsync(
+                        new SaveTemplate { FacilityId = practice.FacilityId, CalendarId = userId, CalendarKind = CalendarKind.Doctor, SlotMinutes = data.Hours!.SlotMinutes!.Value, Hours = Sessions(data.Hours) }, ct);
+                }
+                // The practice exists already; hours the schedule rules reject are set again in Settings, Hours.
+                catch (SchedulingValidationException) { }
+            }
             var invitations = scope.ServiceProvider.GetRequiredService<IInvitations>();
             foreach (var member in data.Team ?? [])
             {
@@ -84,6 +99,17 @@ public static class OnboardingEndpoints
 
         return app;
     }
+
+    static readonly DayOfWeek[] Weekdays = [DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday];
+
+    static List<WorkingHours> Sessions(OnboardingHours hours) =>
+    [
+        .. Weekdays.SelectMany(day => (hours.Weekdays ?? []).Select(w => Session(day, w))),
+        .. (hours.Saturday ?? []).Select(w => Session(DayOfWeek.Saturday, w)),
+    ];
+
+    static WorkingHours Session(DayOfWeek day, HoursWindow w) =>
+        new() { Weekday = day, Start = TimeOnly.ParseExact(w.Start!, "HH:mm", CultureInfo.InvariantCulture), End = TimeOnly.ParseExact(w.End!, "HH:mm", CultureInfo.InvariantCulture) };
 
     static Guid UserId(ClaimsPrincipal principal) => Guid.Parse(principal.FindFirstValue(ClaimTypes.NameIdentifier)!);
 

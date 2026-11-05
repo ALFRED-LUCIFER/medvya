@@ -165,6 +165,16 @@ public sealed class OnboardingTests(SqlServerFixture sql) : IClassFixture<SqlSer
             Assert.Empty(await other.DoctorLicences.IgnoreQueryFilters().ToListAsync());
         }
 
+        // The owner doctor is bookable straight away: step 4's windows are their Monday to Friday sessions at the chosen slot length, and they show in the day view.
+        Assert.Equal(HttpStatusCode.NoContent, (await browser.PostAsJsonAsync(new Uri("/v1/me/facility", UriKind.Relative), new { membershipId = membership.GetProperty("id").GetGuid() })).StatusCode);
+        var facilityId = (await Json(await browser.GetAsync(new Uri("/v1/me/context", UriKind.Relative)))).GetProperty("active").GetProperty("facilityId").GetGuid();
+        var templates = (await Json(await browser.GetAsync(new Uri($"/v1/schedule/templates?facilityId={facilityId}", UriKind.Relative)))).EnumerateArray().ToList();
+        var mine = Assert.Single(templates, t => t.GetProperty("calendarId").GetGuid() == userId);
+        Assert.Equal(20, mine.GetProperty("slotMinutes").GetInt32());
+        Assert.Equal(10, mine.GetProperty("hours").GetArrayLength()); // two windows on each of five weekdays; Saturday was left closed
+        var day = await Json(await browser.GetAsync(new Uri($"/v1/schedule?facilityId={facilityId}&date=2026-11-02", UriKind.Relative))); // a Monday
+        Assert.Equal(userId, Assert.Single(day.GetProperty("columns").EnumerateArray()).GetProperty("calendarId").GetGuid());
+
         // Until the licence is verified: booking stays, recording and signing are off (the server removes them from the session).
         Assert.Equal(HttpStatusCode.NoContent, (await browser.PostAsJsonAsync(new Uri("/v1/me/facility", UriKind.Relative), new { membershipId = membership.GetProperty("id").GetGuid() })).StatusCode);
         var pending = (await Json(await browser.GetAsync(new Uri("/v1/me/context", UriKind.Relative)))).GetProperty("active");
@@ -202,6 +212,8 @@ public sealed class OnboardingTests(SqlServerFixture sql) : IClassFixture<SqlSer
         Assert.Equal("AE", (await db.Tenants.SingleAsync()).CountryCode);
         Assert.Equal("AED", (await db.PracticeDefaultsSet.SingleAsync()).Currency);
         Assert.Empty(await db.DoctorLicences.ToListAsync());
+        await using var scheduling = sql.Scheduling(tenantId);
+        Assert.Empty(await scheduling.Templates.ToListAsync()); // not a doctor: no sessions
     }
 
     [Fact]

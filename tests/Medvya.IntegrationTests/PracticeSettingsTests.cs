@@ -35,8 +35,8 @@ public sealed class PracticeSettingsTests(SqlServerFixture sql) : IClassFixture<
 
     // ---- 403 from the server ----
 
-    /// <summary>The user in X-Test-User with the role in X-Test-Role, in the test tenant (sign-in sets these claims at the facility picker).</summary>
-    sealed class SignedIn(Guid tenant) : IStartupFilter
+    /// <summary>The user in X-Test-User, in the test tenant and facility (sign-in sets these claims at the facility picker).</summary>
+    sealed class SignedIn(Guid tenant, Guid facility) : IStartupFilter
     {
         public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => app =>
         {
@@ -44,7 +44,7 @@ public sealed class PracticeSettingsTests(SqlServerFixture sql) : IClassFixture<
             {
                 if (ctx.Request.Headers["X-Test-User"].ToString() is { Length: > 0 } user)
                     ctx.User = new ClaimsPrincipal(new ClaimsIdentity(
-                        [new Claim(ClaimTypes.NameIdentifier, user), new Claim("tenant_id", tenant.ToString()), new Claim("role", ctx.Request.Headers["X-Test-Role"].ToString())], "synthetic"));
+                        [new Claim(ClaimTypes.NameIdentifier, user), new Claim("tenant_id", tenant.ToString()), new Claim("facility_id", facility.ToString())], "synthetic"));
                 return nxt(ctx);
             });
             next(app);
@@ -55,13 +55,12 @@ public sealed class PracticeSettingsTests(SqlServerFixture sql) : IClassFixture<
     {
         factory ??= new WebApplicationFactory<Program>().WithWebHostBuilder(b => b
             .UseSetting("ConnectionStrings:Medvya", sql.ConnectionString)
-            .ConfigureServices(s => s.AddSingleton<IStartupFilter>(new SignedIn(h.Tenant)))
+            .ConfigureServices(s => s.AddSingleton<IStartupFilter>(new SignedIn(h.Tenant, h.Facility)))
             .ConfigureTestServices(s => s.Replace(ServiceDescriptor.Singleton<ILogoStore>(h.Logos))));
         var client = factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost") });
         if (role is { } r)
         {
-            client.DefaultRequestHeaders.Add("X-Test-User", (user ?? h.Admin).ToString());
-            client.DefaultRequestHeaders.Add("X-Test-Role", r.ToString());
+            client.DefaultRequestHeaders.Add("X-Test-User", (user ?? h.ByRole[role!.Value]).ToString());
         }
         return client;
     }
@@ -85,7 +84,7 @@ public sealed class PracticeSettingsTests(SqlServerFixture sql) : IClassFixture<
     [InlineData(Role.Patient)]
     public async Task RolesWithoutPracticeConfigurationGet403AndNothingChanges(Role role)
     {
-        using var client = Client(role, h.Reception);
+        using var client = Client(role);
         foreach (var request in Writes())
             Assert.Equal(HttpStatusCode.Forbidden, (await client.SendAsync(request)).StatusCode);
         await using var db = sql.Context(h.Tenant);

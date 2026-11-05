@@ -18,7 +18,7 @@ public sealed class NotificationAccessDeniedException : Exception
 /// Reception's view of messages (MDV-P1-032/033). Access is the membership at the facility, as for the calendar: read or full access
 /// to "Register / book patients". Returns statuses and codes only, never text or addresses.
 /// </summary>
-public sealed class NotificationQueries(NotificationsDbContext db, IFacilityDirectory facilities, ICurrentUser user) : INotificationQueries
+public sealed class NotificationQueries(NotificationsDbContext db, IStaffAccess access) : INotificationQueries
 {
     public async Task<IReadOnlyList<NotificationView>> ForAppointmentAsync(Guid facilityId, Guid appointmentId, CancellationToken cancellationToken = default)
     {
@@ -45,7 +45,6 @@ public sealed class NotificationQueries(NotificationsDbContext db, IFacilityDire
 
     async Task RequireAsync(Guid facilityId, CancellationToken ct)
     {
-        var role = user.UserId is { } id && facilityId != Guid.Empty ? await facilities.ActiveRoleAsync(id, facilityId, ct) : null;
-        if (role is not { } r || RoleMatrix.Of(r, Capability.RegisterBookPatients) is not (Access.Read or Access.Full)) throw new NotificationAccessDeniedException();
+        if (facilityId == Guid.Empty || await access.AccessAsync(Capability.RegisterBookPatients, facilityId, ct) is not (Access.Read or Access.Full)) throw new NotificationAccessDeniedException();
     }
 }

@@ -24,7 +24,7 @@ public sealed record Calendar(Guid Id, CalendarKind Kind, string Name);
 /// </summary>
 public sealed class SchedulingContext(
     SchedulingDbContext db, IFacilityDirectory facilities, IStaffUsers staff, IPatientDirectory patients,
-    ICurrentTenant tenant, ICurrentUser user, TimeProvider clock, IAuditLog audit)
+    ICurrentTenant tenant, ICurrentUser user, IStaffAccess access, TimeProvider clock, IAuditLog audit)
 {
     /// <summary>
     /// Writes the use case's audit event inside its open transaction, after its changes are saved and before the commit, so the
@@ -46,11 +46,11 @@ public sealed class SchedulingContext(
 
     public Guid? UserId => user.UserId;
 
-    public async Task RequireAsync(Guid facilityId, Func<Role, bool> allowed, CancellationToken cancellationToken)
+    public async Task RequireAsync(Guid facilityId, SchedulingAccess.Need need, CancellationToken cancellationToken)
     {
         if (facilityId == Guid.Empty) throw new SchedulingValidationException([new("facilityId", "required")]);
-        var role = user.UserId is { } id ? await facilities.ActiveRoleAsync(id, facilityId, cancellationToken) : null;
-        if (role is not { } r || !allowed(r)) throw new SchedulingAccessDeniedException();
+        var granted = await access.AccessAsync(need.Capability, facilityId, cancellationToken);
+        if (!need.Levels.Contains(granted)) throw new SchedulingAccessDeniedException();
     }
 
     public async Task<(FacilityInfo Facility, TimeZoneInfo Zone)> FacilityAsync(Guid facilityId, CancellationToken cancellationToken)

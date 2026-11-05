@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Medvya.Audit.Application;
 using Medvya.Audit.Domain;
 using Medvya.Identity.Application;
+using Medvya.Tenancy.Api;
 using Medvya.Tenancy.Application;
 using Medvya.Tenancy.Domain;
 using Microsoft.AspNetCore.Authentication;
@@ -22,7 +23,8 @@ public static class SessionControl
     public const string TenantClaim = "tenant_id";
     public const string MembershipClaim = "membership_id";
     public const string FacilityClaim = "facility_id";
-    public const string RoleClaim = "role";
+    /// <summary>Old cookies carried it. Never read for authorisation (CapabilityHandler reads the database) and no longer issued.</summary>
+    const string RoleClaim = "role";
     /// <summary>Background requests (status polls) send this so they do not count as activity and cannot keep an idle session alive.</summary>
     public const string PassiveHeader = "X-Medvya-Passive";
     /// <summary>Tenant administrators: Config on "Staff, roles, integrations" in the role matrix (Practice admin, solo-doctor owner, hospital IT).</summary>
@@ -31,10 +33,8 @@ public static class SessionControl
     public sealed record FacilityChoiceRequest(Guid MembershipId);
 
     public static AuthorizationBuilder AddStaffAdminPolicy(this AuthorizationBuilder builder) =>
-        builder.AddPolicy(StaffAdminPolicy, p => p.RequireAuthenticatedUser().RequireAssertion(c =>
-            c.User.FindFirst(TenantClaim) is not null
-            && Enum.TryParse<Role>(c.User.FindFirstValue(RoleClaim), out var role) && Enum.IsDefined(role)
-            && RoleMatrix.Of(role, Capability.StaffRolesIntegrations) == Access.Config));
+        builder.AddPolicy(StaffAdminPolicy, p => p.RequireAuthenticatedUser()
+            .AddRequirements(new CapabilityRequirement(Capability.StaffRolesIntegrations, [Access.Config])));
 
     /// <summary>Runs on every cookie-authenticated request: the session row must still be live and match the cookie.</summary>
     public static async Task ValidatePrincipalAsync(CookieValidatePrincipalContext ctx)
@@ -112,8 +112,7 @@ public static class SessionControl
                 CookieAuthenticationDefaults.AuthenticationScheme);
             identity.AddClaims([
                 new Claim(TenantClaim, choice.TenantId.ToString()), new Claim(MembershipClaim, choice.Id.ToString()),
-                new Claim(FacilityClaim, choice.FacilityId.ToString()), new Claim(RoleClaim, choice.Role.ToString()),
-            ]);
+                new Claim(FacilityClaim, choice.FacilityId.ToString()),            ]);
             // From here the request runs in the chosen tenant, so the audit row (row-level secured) lands there.
             http.User = new ClaimsPrincipal(identity);
             await WriteAuditAsync(http, firstChoice ? "auth.signin" : "auth.facility.switch", "session", sessionId);

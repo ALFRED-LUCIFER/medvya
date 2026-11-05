@@ -15,6 +15,12 @@ public interface IStaffAccess
     Task<Access> AccessAsync(Capability capability, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Same as <see cref="AccessAsync(Capability, CancellationToken)"/> for an explicit facility of the tenant (scheduling and messages take
+    /// the facility from the request). Includes custom-role extras and the licence gate; <see cref="Access.None"/> without an active membership there.
+    /// </summary>
+    Task<Access> AccessAsync(Capability capability, Guid facilityId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// True while the active membership is a doctor whose licence is not verified (pending, rejected or never submitted): recording and signing
     /// capabilities are then <see cref="Access.None"/> in <see cref="AccessAsync"/> (MDV-P1-004, feature-level, not only the UI).
     /// </summary>

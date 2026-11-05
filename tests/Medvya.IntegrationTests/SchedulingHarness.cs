@@ -34,6 +34,13 @@ internal sealed class SchedulingHarness(SqlServerFixture sql)
     public readonly Guid Doctor = Guid.NewGuid(), SecondDoctor = Guid.NewGuid(), Reception = Guid.NewGuid(), Admin = Guid.NewGuid(),
         Nurse = Guid.NewGuid(), PortalUser = Guid.NewGuid(), Elsewhere = Guid.NewGuid();
     /// <summary>Patient and SecondPatient are registered at Facility (Adyar); OtherFacilityPatient at OtherFacility (Velachery).</summary>
+    public readonly Guid CareCoordinator = Guid.NewGuid(), HospitalIt = Guid.NewGuid();
+    /// <summary>The seeded member of each role at Facility (access is read from the membership, never from a claim).</summary>
+    public Dictionary<Role, Guid> ByRole => new()
+    {
+        [Role.SoloDoctor] = Doctor, [Role.HospitalDoctor] = SecondDoctor, [Role.Receptionist] = Reception, [Role.PracticeAdmin] = Admin,
+        [Role.Nurse] = Nurse, [Role.Patient] = PortalUser, [Role.CareCoordinator] = CareCoordinator, [Role.HospitalIt] = HospitalIt,
+    };
     public readonly Guid Patient = Guid.NewGuid(), SecondPatient = Guid.NewGuid(), OtherFacilityPatient = Guid.NewGuid();
     public ManualClock Clock { get; } = new(MondayMorning);
     public InMemoryLogos Logos { get; } = new();
@@ -53,6 +60,7 @@ internal sealed class SchedulingHarness(SqlServerFixture sql)
             {
                 (Doctor, Role.SoloDoctor, Facility), (SecondDoctor, Role.HospitalDoctor, Facility), (Reception, Role.Receptionist, Facility),
                 (Admin, Role.PracticeAdmin, Facility), (Nurse, Role.Nurse, Facility), (PortalUser, Role.Patient, Facility), (Elsewhere, Role.PracticeAdmin, OtherFacility),
+                (CareCoordinator, Role.CareCoordinator, Facility), (HospitalIt, Role.HospitalIt, Facility),
             })
                 db.Memberships.Add(new Membership { Id = Guid.NewGuid(), TenantId = Tenant, UserId = user, FacilityId = at, Role = role, Status = MembershipStatus.Active });
             await db.SaveChangesAsync();

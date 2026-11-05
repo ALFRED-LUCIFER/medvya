@@ -28,6 +28,7 @@ public sealed partial class InvitationTests(SqlServerFixture sql) : IClassFixtur
 {
     readonly Guid tenantA = Guid.NewGuid(), tenantB = Guid.NewGuid(), admin = Guid.NewGuid();
     Guid facilityA, facilityB;
+    readonly Dictionary<Role, Guid> roleUsers = Enum.GetValues<Role>().Where(r => r != Role.PracticeAdmin).ToDictionary(r => r, _ => Guid.NewGuid());
     readonly Outbox outbox = new();
     WebApplicationFactory<Program> factory = null!;
 
@@ -35,6 +36,12 @@ public sealed partial class InvitationTests(SqlServerFixture sql) : IClassFixtur
     {
         facilityA = await Clinic(tenantA, "Iyer Family Clinic (synthetic)", "Adyar (synthetic)");
         facilityB = await Clinic(tenantB, "Al Noor Family Clinic (synthetic)", "Abu Dhabi (synthetic)");
+        await using (var members = sql.Context(tenantA)) // one member per other role: access comes from the membership, not a claim
+        {
+            foreach (var (role, user) in roleUsers)
+                members.Memberships.Add(new Membership { Id = Guid.NewGuid(), TenantId = tenantA, UserId = user, FacilityId = facilityA, Role = role, Status = MembershipStatus.Active });
+            await members.SaveChangesAsync();
+        }
         await using (var identity = sql.Identity())
         {
             identity.Users.Add(new StaffUser { Id = admin, Issuer = IdentityProviders.Development, Subject = admin.ToString(), DisplayName = "K. Lakshmi (synthetic)" });
@@ -83,9 +90,9 @@ public sealed partial class InvitationTests(SqlServerFixture sql) : IClassFixtur
     HttpClient Staff(Guid tenant, Role role)
     {
         var client = Browser();
-        client.DefaultRequestHeaders.Add(HeaderAuth.User, admin.ToString());
+        client.DefaultRequestHeaders.Add(HeaderAuth.User, (role == Role.PracticeAdmin || tenant != tenantA ? admin : roleUsers[role]).ToString());
         client.DefaultRequestHeaders.Add(StaffPolicies.TenantClaim, tenant.ToString());
-        client.DefaultRequestHeaders.Add(StaffPolicies.RoleClaim, role.ToString());
+        client.DefaultRequestHeaders.Add(HeaderAuth.Facility, (tenant == tenantA ? facilityA : facilityB).ToString());
         return client;
     }
 
@@ -253,7 +260,6 @@ public sealed partial class InvitationTests(SqlServerFixture sql) : IClassFixtur
         using (var noTenant = Browser())
         {
             noTenant.DefaultRequestHeaders.Add(HeaderAuth.User, admin.ToString());
-            noTenant.DefaultRequestHeaders.Add(StaffPolicies.RoleClaim, nameof(Role.PracticeAdmin));
             Assert.Equal(HttpStatusCode.Forbidden, (await Invite(noTenant, facilityA)).StatusCode); // admin role but no active tenant
         }
         using var staffAdmin = Staff(tenantA, Role.PracticeAdmin);
@@ -289,7 +295,8 @@ public sealed partial class InvitationTests(SqlServerFixture sql) : IClassFixtur
         })));
         Assert.Single(results, r => r);
         await using var db = sql.Context(tenantA);
-        Assert.Equal(1, await db.Memberships.CountAsync(m => m.Role == Role.Receptionist && m.Status == MembershipStatus.Active));
+        var seeded = roleUsers[Role.Receptionist]; // the seeded desk member is not the invitee
+        Assert.Equal(1, await db.Memberships.CountAsync(m => m.Role == Role.Receptionist && m.Status == MembershipStatus.Active && m.UserId != seeded));
     }
 
     [Fact]
@@ -315,16 +322,16 @@ public sealed partial class InvitationTests(SqlServerFixture sql) : IClassFixtur
         }
     }
 
-    /// <summary>A staff principal from request headers: user id, tenant_id and role, as the session will carry them.</summary>
+    /// <summary>A staff principal from request headers: user id, tenant_id and role, as the session will carry them (the role is read from the membership).</summary>
     sealed class HeaderAuth(IOptionsMonitor<AuthenticationSchemeOptions> options, ILoggerFactory logger, UrlEncoder encoder)
         : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
     {
-        public const string Name = "test-headers", User = "X-Test-User";
+        public const string Name = "test-headers", User = "X-Test-User", Facility = "facility_id";
 
         protected override Task<AuthenticateResult> HandleAuthenticateAsync()
         {
             var claims = new[] { new Claim(ClaimTypes.NameIdentifier, Request.Headers[User].ToString()) }
-                .Concat(new[] { StaffPolicies.TenantClaim, StaffPolicies.RoleClaim }.Select(c => new Claim(c, Request.Headers[c].ToString())));
+                .Concat(new[] { StaffPolicies.TenantClaim, Facility }.Where(Request.Headers.ContainsKey).Select(c => new Claim(c, Request.Headers[c].ToString())));
             return Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(new ClaimsPrincipal(new ClaimsIdentity(claims, Name)), Name)));
         }
     }

@@ -5,10 +5,11 @@ using Microsoft.Data.SqlClient;
 
 // admin   <connection> <key-vault-key-url>  roles.sql, then the Always Encrypted keys wrapped by the Key Vault key. Entra administrator only.
 // migrate <connection>                      module migrations, then the Hangfire tables. The migration identity only.
+// counts  <connection>                      row count per table (metadata only, no data read), for the restore drill.
 // Connection strings carry no password: Authentication=Active Directory Default;Encrypt=Strict.
-if (args is not ([var command, var connection, ..] and var all) || command is not ("admin" or "migrate") || (command == "admin") != (all.Length == 3))
+if (args is not ([var command, var connection, ..] and var all) || command is not ("admin" or "migrate" or "counts") || (command == "admin") != (all.Length == 3))
 {
-    await Console.Error.WriteLineAsync("usage: db-migrate admin <connection> <key-vault-key-url> | db-migrate migrate <connection>");
+    await Console.Error.WriteLineAsync("usage: db-migrate admin <connection> <key-vault-key-url> | db-migrate migrate <connection> | db-migrate counts <connection>");
     return 2;
 }
 
@@ -25,6 +26,11 @@ if (command == "admin")
     // DefaultAzureCredential: az login on a workstation, the OIDC login in CI.
     var provider = ColumnEncryption.RegisterKeyVault(new DefaultAzureCredential());
     await ColumnEncryption.EnsureKeysAsync(db, ColumnEncryption.KeyVaultProviderName, all[2], provider);
+}
+else if (command == "counts")
+{
+    foreach (var (table, rows) in await DatabaseMigrator.RowCountsAsync(db)) await Console.Out.WriteLineAsync($"{table}\t{rows}");
+    return 0;
 }
 else
 {

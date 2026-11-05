@@ -52,6 +52,28 @@ public static class DatabaseMigrator
         await cmd.ExecuteNonQueryAsync(ct);
     }
 
+    /// <summary>
+    /// Rows per user table, from partition metadata only: no row is read, so row-level security and Always Encrypted do not matter and no
+    /// patient data is exposed. Used by the restore drill (docs/runbooks/restore.md) to compare a restored database with its source.
+    /// Ledger history tables are left out (their names carry the object id, which differs after a restore).
+    /// </summary>
+    public static async Task<IReadOnlyList<(string Table, long Rows)>> RowCountsAsync(SqlConnection connection, CancellationToken ct = default)
+    {
+        await using var cmd = new SqlCommand("""
+            SELECT s.name + N'.' + t.name, SUM(p.row_count)
+            FROM sys.dm_db_partition_stats p
+            JOIN sys.tables t ON t.object_id = p.object_id
+            JOIN sys.schemas s ON s.schema_id = t.schema_id
+            WHERE p.index_id IN (0, 1) AND t.is_ms_shipped = 0 AND t.name NOT LIKE N'MSSQL[_]LedgerHistoryFor[_]%'
+            GROUP BY s.name, t.name
+            ORDER BY 1
+            """, connection);
+        var rows = new List<(string, long)>();
+        await using var reader = await cmd.ExecuteReaderAsync(ct);
+        while (await reader.ReadAsync(ct)) rows.Add((reader.GetString(0), reader.GetInt64(1)));
+        return rows;
+    }
+
     static async Task Migrate(DbContext db, CancellationToken ct)
     {
         await using (db)

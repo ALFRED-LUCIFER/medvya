@@ -14,8 +14,8 @@ param alertEmail string
 @minValue(7)
 @maxValue(35)
 param pitrRetentionDays int = 7
-@description('Long-term retention of weekly full backups, ISO 8601 (for example P4W). PT0S turns it off. Set per country rule before real patient data.')
-param ltrWeeklyRetention string = 'P4W'
+@description('Long-term retention of weekly full backups, ISO 8601 (for example P4W). PT0S turns it off. Azure refuses it on a serverless database that auto-pauses, so dev is off; set per country rule on an always-on tier before real patient data.')
+param ltrWeeklyRetention string = 'PT0S' // shortcut: no long-term retention on the free auto-pausing serverless database (LtrConfigPolicyUnsupportedIfAutoPauseEnabled); move to an always-on tier and set P4W or the country rule before real patient data (MDV-P0-019)
 @description('Where database backups are stored. Local or Zone only: both stay inside the region (data stays in country, AGENTS.md 1.6). Never Geo.')
 @allowed(['Local', 'Zone'])
 param backupRedundancy string = 'Local'

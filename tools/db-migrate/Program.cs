@@ -13,7 +13,12 @@ if (args is not ([var command, var connection, ..] and var all) || command is no
 }
 
 await using var db = new SqlConnection(connection);
-await db.OpenAsync();
+// The serverless database auto-pauses; the first connection wakes it and fails with 40613 until it is online (about a minute).
+for (var attempt = 1; ; attempt++)
+{
+    try { await db.OpenAsync(); break; }
+    catch (SqlException e) when (e.Number == 40613 && attempt < 8) { await Task.Delay(TimeSpan.FromSeconds(15)); }
+}
 if (command == "admin")
 {
     await DatabaseMigrator.EnsureRolesAsync(db);

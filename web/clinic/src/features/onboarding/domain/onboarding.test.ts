@@ -34,6 +34,8 @@ describe('onboarding wizard model', () => {
     expect(issues(3, emptyForm('IN'))).toEqual(['clinicName', 'address']);
     expect(issues(4, emptyForm('IN'))).toEqual([]); // the design defaults are complete
     expect(issues(4, { ...emptyForm('IN'), weekdayStart1: '', newVisitFee: ' ' })).toEqual(['weekdayStart1', 'newVisitFee']);
+    expect(issues(4, { ...emptyForm('IN'), weekdayStart1: '09:07' })).toEqual(['weekdayStart1']); // off the schedule's 5-minute grid
+    expect(issues(4, { ...emptyForm('IN'), weekdayStart1: '09:05' })).toEqual([]);
     expect(issues(5, emptyForm('IN'))).toEqual([]);
   });
 

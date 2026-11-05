@@ -236,6 +236,7 @@
   "onboarding.error.unknown": "اختر أحد الخيارات المدرجة.",
   "onboarding.error.range": "هذه القيمة خارج النطاق.",
   "onboarding.error.overlap": "فترتا الوقت متداخلتان.",
+  "onboarding.error.fiveMinutes": "يجب أن تكون هذه الأوقات بفواصل 5 دقائق، مثل 09:05.",
   "onboarding.error.duplicate": "يمكن دعوة كل شخص مرة واحدة فقط.",
   "site.nav.label": "الرئيسية",
   "site.nav.doctors": "للأطباء",

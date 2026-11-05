@@ -124,6 +124,9 @@ export const stepSchema = (step: number) => base.superRefine((f, ctx) => {
   if (step === 3) { need('clinicName', f.clinicName); need('address', f.address); }
   if (step === 4) {
     need('weekdayStart1', f.weekdayStart1 + f.saturdayStart); // at least one open window
+    // The schedule rules book on a 5-minute grid (server: OnboardingRules.Windows).
+    for (const field of ['weekdayStart1', 'weekdayEnd1', 'weekdayStart2', 'weekdayEnd2', 'saturdayStart', 'saturdayEnd'] as const)
+      if (/^\d\d:\d\d$/.test(f[field]) && Number(f[field].slice(3)) % 5 !== 0) ctx.addIssue({ code: 'custom', path: [field], message: 'fiveMinutes' });
     need('slotMinutes', f.slotMinutes); need('newVisitFee', f.newVisitFee); need('followUpFee', f.followUpFee);
   }
 });
@@ -153,7 +156,7 @@ export function stepOfPath(path: string): number {
 }
 
 /** The codes the server sends, each with a translated message. */
-export const errorCodes = ['required', 'tooLong', 'format', 'unknown', 'range', 'overlap', 'duplicate'] as const;
+export const errorCodes = ['required', 'tooLong', 'format', 'unknown', 'range', 'overlap', 'fiveMinutes', 'duplicate'] as const;
 export const errorCode = (code: string): (typeof errorCodes)[number] => errorCodes.find(c => c === code) ?? 'format';
 
 /** Note templates the server offers; ids we have no label for are not shown. */

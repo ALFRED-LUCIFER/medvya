@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using Microsoft.Extensions.Logging;
 using Host.Api.Auth;
 using Medvya.BuildingBlocks.Domain;
 using Medvya.Identity.Domain;
@@ -28,19 +27,6 @@ public sealed class OnboardingTests(SqlServerFixture sql) : IClassFixture<SqlSer
 
     public void Dispose() { foreach (var f in factories) f.Dispose(); }
 
-    readonly LogCapture logs = new();
-
-    sealed class LogCapture : ILoggerProvider, ILogger
-    {
-        public List<string> Messages { get; } = [];
-        public ILogger CreateLogger(string categoryName) => this;
-        public void Dispose() { }
-        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
-        public bool IsEnabled(LogLevel logLevel) => true;
-        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) =>
-            Messages.Add($"{logLevel}: {formatter(state, exception)}");
-    }
-
     sealed class Outbox : IEmailSender
     {
         public List<EmailMessage> Sent { get; } = [];
@@ -61,7 +47,6 @@ public sealed class OnboardingTests(SqlServerFixture sql) : IClassFixture<SqlSer
             {
                 s.Configure<OpenIdConnectOptions>(OpenIdConnectDefaults.AuthenticationScheme, o => o.BackchannelHttpHandler = f.Server.CreateHandler());
                 s.AddSingleton<IEmailSender>(outbox);
-                s.AddLogging(l => l.AddProvider(logs));
             });
         });
         factories.Add(f);
@@ -203,25 +188,6 @@ public sealed class OnboardingTests(SqlServerFixture sql) : IClassFixture<SqlSer
         var verified = (await Json(await browser.GetAsync(new Uri("/v1/me/context", UriKind.Relative)))).GetProperty("active");
         Assert.False(verified.GetProperty("licencePending").GetBoolean());
         Assert.Equal("Sign", verified.GetProperty("capabilities").GetProperty("ClinicalNotes").GetString());
-    }
-
-    /// <summary>Mutation check: remove the catch in /finish and this fails (500); remove the log call and the log assertion fails.</summary>
-    [Fact]
-    public async Task HoursTheScheduleRejectsStillFinishOnboardingAndLeaveAWarning()
-    {
-        using var browser = Browser();
-        await SignIn(browser, "new", signUp: true);
-        await browser.PostAsJsonAsync(Api(), new { country = "IN" });
-        // The wizard accepts 09:07; the schedule rules need the 5-minute grid.
-        var data = System.Text.Json.Nodes.JsonNode.Parse(JsonSerializer.Serialize(Data()))!;
-        data["hours"]!["weekdays"] = System.Text.Json.Nodes.JsonNode.Parse("""[{"start":"09:07","end":"13:00"}]""");
-        Assert.Equal(HttpStatusCode.NoContent, (await browser.PutAsJsonAsync(Api(), new { step = 6, validate = 6, data })).StatusCode);
-        Assert.Equal(HttpStatusCode.OK, (await browser.PostAsync(Api("/finish"), null)).StatusCode);
-
-        var tenantId = (await Json(await browser.GetAsync(new Uri("/v1/me/context", UriKind.Relative)))).GetProperty("memberships")[0].GetProperty("tenantId").GetGuid();
-        await using var scheduling = sql.Scheduling(tenantId);
-        Assert.Empty(await scheduling.Templates.ToListAsync());
-        Assert.Contains(logs.Messages, m => m.StartsWith("Warning: Onboarding finished without the owner's bookable sessions", StringComparison.Ordinal));
     }
 
     [Fact]

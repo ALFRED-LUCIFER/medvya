@@ -134,6 +134,8 @@ public abstract partial class OnboardingRules
                 || !TimeOnly.TryParseExact(w.End, "HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None, out var t))
             { e.Add(new(field, "format")); return; }
             if (s >= t) { e.Add(new(field, "range")); return; }
+            // The same 5-minute grid ScheduleRules.Validate enforces (a module may not reference Scheduling, so the number is repeated here).
+            if (s.Minute % 5 != 0 || t.Minute % 5 != 0) { e.Add(new(field, "fiveMinutes")); return; }
             parsed.Add((s, t));
         }
         if (parsed.OrderBy(p => p.Start).ToArray() is [var a, var b] && a.End > b.Start) e.Add(new(field, "overlap"));

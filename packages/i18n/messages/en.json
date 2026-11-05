@@ -237,6 +237,7 @@
   "onboarding.error.unknown": "Choose one of the listed options.",
   "onboarding.error.range": "This value is out of range.",
   "onboarding.error.overlap": "These time windows overlap.",
+  "onboarding.error.fiveMinutes": "These times must be on a 5-minute step, such as 09:05.",
   "onboarding.error.duplicate": "Each person can be invited once.",
   "site.nav.label": "Main",
   "site.nav.doctors": "For doctors",

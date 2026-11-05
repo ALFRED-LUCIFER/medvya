@@ -237,6 +237,7 @@
   "onboarding.error.unknown": "सूची में से कोई विकल्प चुनें।",
   "onboarding.error.range": "यह मान सीमा से बाहर है।",
   "onboarding.error.overlap": "ये समय-अवधियाँ एक-दूसरे से टकराती हैं।",
+  "onboarding.error.fiveMinutes": "ये समय 5 मिनट के अंतराल पर होने चाहिए, जैसे 09:05।",
   "onboarding.error.duplicate": "प्रत्येक व्यक्ति को एक बार ही आमंत्रित किया जा सकता है।",
   "site.nav.label": "मुख्य",
   "site.nav.doctors": "डॉक्टरों के लिए",

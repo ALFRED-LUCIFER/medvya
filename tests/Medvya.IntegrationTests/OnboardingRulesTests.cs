@@ -60,6 +60,12 @@ public class OnboardingRulesTests
             Fields(OnboardingRules.India, 4, bad));
     }
 
+    [Theory]
+    [InlineData("09:07", false)] // the schedule rules book on a 5-minute grid; a window off it would leave the owner with no sessions
+    [InlineData("09:05", true)]
+    public void HoursStayOnTheSchedulesFiveMinuteGrid(string start, bool ok) =>
+        Assert.Equal(ok, OnboardingRules.India.ValidateStep(4, Valid() with { Hours = Valid().Hours! with { Weekdays = [new(start, "13:00")] } }).Count == 0);
+
     [Fact]
     public void AnOwnerWhoIsNotADoctorSkipsTheLicenceStepAndNeedsNoSpecialty()
     {

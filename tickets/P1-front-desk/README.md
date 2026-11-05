@@ -10,7 +10,7 @@
 
 **Tickets:** 46 · **Estimate:** 86.5 dev-days vs **35 working days** in the window (OVER by 51.5 days: needs scope trade-off or overlap) · **Average confidence:** 81%
 
-**Status:** To do 19 · Partly done 15 · Done 12
+**Status:** To do 18 · Partly done 16 · Done 12
 
 ## Epics
 

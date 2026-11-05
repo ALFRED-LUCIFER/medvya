@@ -32,6 +32,9 @@ POST   /v1/slot-holds                              # short hold before confirm (
 POST   /v1/appointments                            # serializable + app lock
 POST   /v1/appointments/walk-in                    # P1-025: next free slot today on the booking path, else queued unscheduled (no slot); then check-in
 POST   /v1/appointments/{id}/reschedule|cancel|no-show   # P1-024: booking path (doctor-day locks, slot rows freed and taken); cancel body = reason + optional note
+POST   /v1/appointments/series/preview {facilityId, calendarId, firstStart, count, intervalWeeks}  # P1-026: occurrences (same facility wall-clock time) with the conflict code of each, read-only
+POST   /v1/appointments/series {…, patientId, starts[]}   # P1-026: each confirmed start booked on the booking path as its own appointment (one SeriesId); a start taken meanwhile is reported, not fatal
+POST   /v1/appointments/{id}/cancel-following      # P1-026: this and later Booked/Checked-in visits of the series, one reason; the first visit's event notifies, the rest are quiet
 POST   /v1/appointments/{id}/check-in              # P1-028; a repeat returns the visit unchanged
 POST   /v1/appointments/{id}/status                # next board column only (state machine), else 409
 POST   /v1/appointments/{id}/reassign  {calendarId, reason}   # P1-030: a waiting visit to another doctor today; reason is a code

@@ -71,6 +71,39 @@ public sealed record CancelAppointment
     public string? Note { get; init; }
 }
 
+/// <summary>A recurring series (MDV-P1-026): the same local time every <see cref="IntervalWeeks"/> weeks, <see cref="Count"/> visits.</summary>
+public sealed record SeriesPattern
+{
+    public const int MaxCount = 52, MaxIntervalWeeks = 12;
+    public Guid FacilityId { get; init; }
+    public Guid CalendarId { get; init; }
+    public DateTimeOffset FirstStart { get; init; }
+    public VisitType VisitType { get; init; } = VisitType.FollowUp;
+    public int IntervalWeeks { get; init; } = 1;
+    public int Count { get; init; }
+}
+
+/// <summary>One planned occurrence; <paramref name="Conflict"/> is null when it can be booked, else the code (e.g. slot_unavailable, closed).</summary>
+public sealed record SeriesOccurrence(int Index, DateTimeOffset Start, string? Conflict);
+
+/// <summary>Book the occurrences the desk confirmed after the preview: skipped ones are left out, moved ones carry their new start.</summary>
+public sealed record BookSeries
+{
+    public Guid FacilityId { get; init; }
+    public Guid CalendarId { get; init; }
+    public Guid PatientId { get; init; }
+    public VisitType VisitType { get; init; } = VisitType.FollowUp;
+    public ReasonCategory ReasonCategory { get; init; }
+    public string? ReasonText { get; init; }
+    public BookingChannel Channel { get; init; }
+    public IReadOnlyList<DateTimeOffset> Starts { get; init; } = [];
+}
+
+/// <summary>Each requested start, booked (<paramref name="Appointment"/>) or refused with <paramref name="Conflict"/>.</summary>
+public sealed record SeriesBooked(DateTimeOffset Start, AppointmentView? Appointment, string? Conflict);
+
+public sealed record SeriesResult(Guid SeriesId, IReadOnlyList<SeriesBooked> Occurrences);
+
 /// <summary>
 /// Holding slots and booking (MDV-P1-021). A hold belongs to one user, covers every slot of the visit type and expires after
 /// <see cref="SchedulingOptions.SlotHold"/>; booking needs an unexpired hold of the caller and re-checks the template.
@@ -112,6 +145,27 @@ public interface IBookingService
     /// <exception cref="SchedulingValidationException">Reason missing or invalid, note too long, or Other without a note.</exception>
     /// <exception cref="VisitTransitionException">Not Booked or Checked in ("invalid_transition"), or changed meanwhile ("changed").</exception>
     Task<AppointmentChip> CancelAsync(Guid appointmentId, CancelAppointment command, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Recurring appointments (MDV-P1-026): the occurrences of a pattern with the ones that cannot be booked, so the desk can skip or
+    /// move them before confirming. A read; nothing is held.
+    /// </summary>
+    /// <exception cref="SchedulingValidationException">Count or interval out of range, or an unknown visit type.</exception>
+    Task<IReadOnlyList<SeriesOccurrence>> PreviewSeriesAsync(SeriesPattern pattern, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Books each confirmed start as an independent appointment on the booking path (doctor-day lock, template and overlap re-check,
+    /// SCHEDULE_SLOT rows), all with one series id. A start taken meanwhile is reported, not fatal; the others stay booked.
+    /// </summary>
+    Task<SeriesResult> BookSeriesAsync(BookSeries command, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Cancels this visit and every later Booked or Checked-in visit of its series with one reason; the patient gets one
+    /// notification (the first visit's), the rest only clear their queued reminders. Returns the visits cancelled.
+    /// </summary>
+    /// <exception cref="SchedulingValidationException">Reason missing or invalid, or the visit is not in a series ("seriesId").</exception>
+    /// <exception cref="VisitTransitionException">This visit cannot be cancelled.</exception>
+    Task<IReadOnlyList<AppointmentChip>> CancelFollowingAsync(Guid appointmentId, CancelAppointment command, CancellationToken cancellationToken = default);
 
     /// <summary>Marks a Booked visit whose start has passed as a no-show and frees its slots; the desk is then offered a rebook.</summary>
     /// <exception cref="VisitTransitionException">Not Booked ("invalid_transition"), not started yet ("not_started"), or changed meanwhile ("changed").</exception>

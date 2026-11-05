@@ -14,7 +14,7 @@ type Props = { facilityId: string; userId: string; canBook: boolean; canCheckIn:
  */
 export default function ScheduleRoute({ facilityId, userId, canBook, canCheckIn, registerPath }: Props) {
   const schedule = useScheduleController(facilityId, userId);
-  const booking = useBookingController(facilityId);
+  const booking = useBookingController(facilityId, schedule.timeZone);
   const visit = useAppointmentController(facilityId, { timeZone: schedule.timeZone, canBook, canCheckIn });
   const picking = visit.mode === 'pick' || visit.mode === 'confirmMove';
   const column = schedule.day?.columns.find(c => c.calendarId === booking.choice?.calendarId);
@@ -38,7 +38,7 @@ export default function ScheduleRoute({ facilityId, userId, canBook, canCheckIn,
     ? <AppointmentPanel {...visit} opened={opened} rules={visit.rules} timeZone={schedule.timeZone}
         onRebook={canBook ? () => { booking.onRebook({ id: opened.appointment.patientId, name: opened.appointment.patientName }); visit.onClose(); } : undefined} />
     // The week has no slots to pick, so the booking panel shows there only while a booking is under way.
-    : canBook && schedule.timeZone && (schedule.view !== 'week' || booking.choice || booking.booked)
+    : canBook && schedule.timeZone && (schedule.view !== 'week' || booking.choice || booking.booked || booking.seriesDone)
     ? <BookingPanel {...booking} registerPath={registerPath} timeZone={schedule.timeZone} visitLengths={column?.visitLengths ?? []} />
     : undefined;
   const next = schedule.nextFree;

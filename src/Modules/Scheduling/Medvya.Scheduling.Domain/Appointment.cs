@@ -60,6 +60,8 @@ public sealed class Appointment
     /// it never blocks or double-books the calendar, and it is not drawn on the schedule; it waits on the board.
     /// </summary>
     [Classification(DataClass.Internal)] public bool Unscheduled { get; set; }
+    /// <summary>The recurring series this visit belongs to (MDV-P1-026); each occurrence is still an independent appointment.</summary>
+    [Classification(DataClass.Internal)] public Guid? SeriesId { get; init; }
     [Classification(DataClass.Internal)] public Guid? BookedBy { get; init; }
     [Classification(DataClass.Internal)] public DateTimeOffset BookedAt { get; init; }
     [Classification(DataClass.Internal)] public Guid? ChangedBy { get; set; }

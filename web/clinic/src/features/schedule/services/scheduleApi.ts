@@ -1,4 +1,5 @@
 import type { BookedAppointment, BookingForm, Hold, PatientMatch, SlotChoice } from '../domain/booking';
+import type { Occurrence, SeriesResult } from '../domain/series';
 import type { CancelReason } from '../domain/changes';
 import type { PatientMessage } from '../domain/messages';
 import type { Appointment, ScheduleDay } from '../domain/schedule';
@@ -68,6 +69,17 @@ export const rescheduleAppointment = (appointmentId: string, calendarId: string,
 
 export const cancelAppointment = (appointmentId: string, reason: CancelReason, note: string) =>
   post<Appointment>(`/v1/appointments/${appointmentId}/cancel`, { reason, note: note || null });
+
+/** MDV-P1-026: "this and following" cancels the rest of the series with one reason. */
+export const cancelFollowing = (appointmentId: string, reason: CancelReason, note: string) =>
+  post<Appointment[]>(`/v1/appointments/${appointmentId}/cancel-following`, { reason, note: note || null });
+
+// MDV-P1-026: recurring appointments. The preview lists each occurrence with the conflict that would refuse it; booking takes the starts the desk confirmed.
+export const previewSeries = (facilityId: string, s: { calendarId: string; visitType: string }, firstStart: string, count: number) =>
+  post<Occurrence[]>('/v1/appointments/series/preview', { facilityId, calendarId: s.calendarId, visitType: s.visitType, firstStart, count, intervalWeeks: 1 });
+
+export const bookSeries = (facilityId: string, s: { calendarId: string; visitType: string }, form: BookingForm, starts: string[]) =>
+  post<SeriesResult>('/v1/appointments/series', { facilityId, calendarId: s.calendarId, visitType: s.visitType, starts, ...form });
 
 export const markNoShow = (appointmentId: string) => post<Appointment>(`/v1/appointments/${appointmentId}/no-show`, {});
 

@@ -46,7 +46,7 @@ function scheduleDay(date: string) {
         hours: [{ start: at('09:00'), end: at('13:00'), room: 'Room 3' }, { start: at('17:00'), end: at('20:00'), room: 'Room 3' }],
         // 09:00–09:40 is a booked new consultation; 09:40 is being booked at another desk.
         slots: [...slots(date, '09:40', '11:55', 20, [at('09:40')]), ...slots(date, '17:00', '20:00', 20)],
-        appointments: [{ id: 'a-1', reference: 'APT-0A1B2C3D', patientId, patientName: 'Meera Iyer (synthetic)', visitType: 'NewConsultation', state: 'Booked', start: at('09:00'), end: at('09:40') }],
+        appointments: [{ id: 'a-1', reference: 'APT-0A1B2C3D', patientId, patientName: 'Meera Iyer (synthetic)', visitType: 'NewConsultation', state: 'Booked', start: at('09:00'), end: at('09:40'), seriesId: 's-1' }],
         unavailable: [
           { start: at('11:55'), end: at('12:00'), reason: 'Break', label: 'Tea' }, // too short for its words
           { start: at('12:00'), end: at('13:00'), reason: 'Break', label: 'Lunch break' },
@@ -81,6 +81,7 @@ function scheduleWeek(calendarId: string, date: string) {
 
 type Calls = {
   changes: { url: string; body: Record<string, unknown> }[];
+  series: { url: string; body: Record<string, unknown> }[];
   weeks: { calendarId: string | null; date: string | null }[];
   dates: (string | null)[]; holds: Record<string, unknown>[]; releases: string[]; searches: { body: Record<string, unknown>; url: string }[];
   bookings: { body: Record<string, unknown>; csrf: string | undefined }[];
@@ -91,7 +92,7 @@ const nair = { id: patientId, initials: 'DN', ageYears: 47, ageEstimated: false,
 
 /** Signs in and answers the scheduling API; returns what the page sent. `holdCode` makes holds fail with that 409 code. */
 async function open(page: Page, { locale = 'en', status = 200, as = reception, holdCode = '', delayMs = 0, changeCode = '' } = {}) {
-  const calls: Calls = { changes: [], weeks: [], dates: [], holds: [], releases: [], searches: [], bookings: [] };
+  const calls: Calls = { changes: [], series: [], weeks: [], dates: [], holds: [], releases: [], searches: [], bookings: [] };
   await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
   await page.route('**/v1/me/context', r => r.fulfill({ json: as }));
   await page.route('**/v1/schedule?*', async r => {
@@ -127,6 +128,22 @@ async function open(page: Page, { locale = 'en', status = 200, as = reception, h
   await page.route('**/v1/appointments', r => {
     calls.bookings.push({ body: r.request().postDataJSON() as Record<string, unknown>, csrf: r.request().headers()['x-medvya-csrf'] });
     return r.fulfill({ json: { id: 'a-2', reference: 'APT-9F8E7D6C', patientName: 'Deepak Nair (synthetic)', mrn: '000002', calendarId: 'd-1', start: ist('2026-10-19', '10:00'), end: ist('2026-10-19', '10:40'), state: 'Booked' } });
+  });
+  // MDV-P1-026: a weekly series. The second occurrence conflicts; booking answers each start with an appointment.
+  await page.route('**/v1/appointments/series/preview', r => {
+    const body = r.request().postDataJSON() as { firstStart: string; count: number };
+    calls.series.push({ url: r.request().url(), body });
+    return r.fulfill({ json: [...Array(body.count).keys()].map(i => ({ index: i, start: new Date(Date.parse(body.firstStart) + i * 7 * 86_400_000).toISOString(), conflict: i === 1 ? 'slot_unavailable' : null })) });
+  });
+  await page.route('**/v1/appointments/series', r => {
+    const body = r.request().postDataJSON() as { starts: string[] };
+    calls.series.push({ url: r.request().url(), body });
+    return r.fulfill({ json: { seriesId: 's-2', occurrences: body.starts.map(start => ({ start, appointment: { id: `n-${start}` }, conflict: null })) } });
+  });
+  await page.route(/\/v1\/appointments\/[^/]+\/cancel-following$/, r => {
+    calls.series.push({ url: r.request().url(), body: r.request().postDataJSON() as Record<string, unknown> });
+    const base = scheduleDay('2026-10-19').columns[0]!.appointments[0]!;
+    return r.fulfill({ json: [{ ...base, state: 'Cancelled' }, { ...base, id: 'a-5', state: 'Cancelled' }, { ...base, id: 'a-6', state: 'Cancelled' }] });
   });
   // MDV-P1-024: reschedule, cancel, no-show and check-in answer the changed visit (or a 409 code).
   await page.route(/\/v1\/appointments\/[^/]+\/(reschedule|cancel|no-show|check-in)$/, r => {
@@ -686,4 +703,77 @@ for (const locale of ['en', 'ar'] as const)
       (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations
         .map(v => `${v.id} (${v.nodes.length})`));
     expect(violations).toEqual([]);
+  });
+
+// MDV-P1-026: recurring appointments. Repeat weekly, review (conflicts shown), skip or move, confirm; cancel this and following.
+test('a weekly series shows its conflict, lets the desk move it, then books the confirmed starts', async ({ page }) => {
+  const calls = await open(page);
+  await bookButton(page, '10:00').click();
+  const panel = page.getByRole('complementary', { name: 'Book appointment' });
+  await panel.getByRole('searchbox', { name: 'Name, MRN, phone or ID' }).fill('Nair');
+  await panel.getByRole('button', { name: 'Search' }).click();
+  await panel.getByRole('button', { name: 'D N, 47 y, Male, MRN ending 0002. Choose for this booking' }).click();
+  await expect(panel).toContainText('Deepak Nair (synthetic) · MRN 000002');
+  await panel.getByLabel('Number of weekly visits').fill('3');
+  await panel.getByRole('button', { name: 'Review series' }).click();
+
+  expect(calls.series[0]!.body).toMatchObject({ facilityId: 'f-1', calendarId: 'd-1', firstStart: ist('2026-10-19', '10:00'), count: 3, intervalWeeks: 1 });
+  expect(calls.bookings).toEqual([]); // nothing booked before the review is confirmed
+  const rows = panel.getByRole('listitem');
+  await expect(rows).toHaveCount(3);
+  await expect(rows.nth(1)).toContainText('Mon, 26 Oct at 10:00'); // facility time, not New York
+  await expect(rows.nth(1)).toContainText('This slot is no longer available'); // words and an icon, not colour alone
+  await expect(rows.nth(1).getByRole('checkbox')).not.toBeChecked(); // a conflict starts skipped
+  const move = rows.nth(1).getByLabel('Move to (time)');
+  await move.fill('11:00');
+  await move.blur();
+  await expect(rows.nth(1).getByRole('checkbox')).toBeChecked();
+  await expect(rows.nth(1)).toContainText('Moved, checked when booked');
+  await rows.nth(2).getByRole('checkbox').uncheck(); // skip the third
+  await panel.getByRole('button', { name: 'Book visits (2)' }).click();
+
+  await expect(panel).toContainText('Visits booked: 2');
+  expect(calls.series[1]!.body).toMatchObject({ patientId, starts: [ist('2026-10-19', '10:00'), ist('2026-10-26', '11:00')], channel: 'InPerson' });
+  expect(calls.releases).toEqual(['h-1']); // the series did not use the hold
+});
+
+test('cancel this and following sends one reason for the rest of the series', async ({ page }) => {
+  await page.clock.setFixedTime(new Date(ist('2026-10-19', '08:30')));
+  const calls = await open(page);
+  await meera(page).click();
+  await visitPanel(page).getByRole('button', { name: 'Cancel appointment' }).click();
+  await visitPanel(page).getByRole('combobox', { name: 'Reason' }).click();
+  await page.getByRole('option', { name: 'Patient unwell' }).click();
+  await visitPanel(page).getByRole('button', { name: 'Cancel this and following' }).click();
+  await expect(visitPanel(page)).toContainText('Cancelled this and the following visits (3)');
+  expect(calls.series).toEqual([{ url: expect.stringMatching(/\/a-1\/cancel-following$/), body: { reason: 'PatientUnwell', note: null } }]);
+});
+
+for (const locale of ['en', 'ar'] as const)
+  test(`the series review and "this and following" are axe-clean with 44 px time fields (${locale})`, async ({ page }) => {
+    await page.clock.setFixedTime(new Date(ist('2026-10-19', '08:30')));
+    const calls = await open(page, { locale });
+    await column(page, 'Dr. Arjun Rao (synthetic)').getByRole('button').nth(1).click(); // the visit is first, then the 10:00 slot
+    const panel = page.getByRole('complementary').first();
+    await panel.getByRole('searchbox').fill('Nair');
+    await panel.getByRole('searchbox').press('Enter');
+    await panel.getByRole('list').last().getByRole('button').click();
+    await panel.locator('#booking-repeat').fill('3');
+    await expect(panel.locator('button[type=submit]')).toBeEnabled();
+    await panel.locator('button[type=submit]').click();
+    await expect(panel.getByRole('checkbox')).toHaveCount(3);
+    for (const b of [...(await panel.getByRole('button').all()), ...(await panel.getByRole('checkbox').all())]) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(20);
+    for (const input of await panel.locator('input[type=time]').all()) expect((await input.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    expect(calls.series.length).toBe(1);
+    const axe = async () => {
+      await page.addScriptTag({ path: axePath });
+      return page.evaluate(async () => (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations.map(v => `${v.id} (${v.nodes.length})`));
+    };
+    expect(await axe()).toEqual([]);
+
+    await meera(page).click();
+    const visit = page.getByRole('complementary').first();
+    await visit.getByRole('button').nth(3).click(); // close, check in, reschedule, cancel
+    await expect(visit.getByRole('button', { name: locale === 'ar' ? 'إلغاء هذه والتي بعدها' : 'Cancel this and following' })).toBeVisible();
+    expect(await axe()).toEqual([]);
   });

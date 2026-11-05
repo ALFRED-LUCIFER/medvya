@@ -52,7 +52,7 @@ public sealed class AppointmentNotifier(NotificationsDbContext db, IFacilityDire
                 Add(NotificationKind.Rescheduled, e.OccurredAt);
                 AddReminders();
                 break;
-            case AppointmentEventKind.Cancelled:
+            case AppointmentEventKind.Cancelled when !e.Quiet:
                 Add(NotificationKind.Cancelled, e.OccurredAt);
                 break;
         }

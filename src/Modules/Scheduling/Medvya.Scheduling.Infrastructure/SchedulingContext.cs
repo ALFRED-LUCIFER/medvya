@@ -85,5 +85,5 @@ public sealed class SchedulingContext(
         patients.SummariesAsync([.. ids.Distinct()], cancellationToken);
 
     public static AppointmentChip Chip(Appointment a, IReadOnlyDictionary<Guid, PatientSummary> names) =>
-        new(a.Id, AppointmentReference.Of(a.Id), a.PatientId, names.TryGetValue(a.PatientId, out var p) ? p.FullName : "", a.VisitType, a.Start, a.End, a.State);
+        new(a.Id, AppointmentReference.Of(a.Id), a.PatientId, names.TryGetValue(a.PatientId, out var p) ? p.FullName : "", a.VisitType, a.Start, a.End, a.State, a.SeriesId);
 }

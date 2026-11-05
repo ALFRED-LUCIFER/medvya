@@ -60,6 +60,14 @@ public static class SchedulingEndpoints
         // A walk-in (MDV-P1-025): the next free slot today on the booking path, or queued unscheduled; checked in after with check-in.
         appointments.MapPost("/walk-in", (WalkIn command, [FromServices] IBookingService service, CancellationToken ct) => service.WalkInAsync(command, ct))
             .AuditedWriteWithErrors(SchedulingAudit.WalkIn, SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment);
+        // Recurring appointments (MDV-P1-026): preview the occurrences and their conflicts, then book the ones the desk confirmed.
+        appointments.MapPost("/series/preview", (SeriesPattern pattern, [FromServices] IBookingService service, CancellationToken ct) => service.PreviewSeriesAsync(pattern, ct))
+            .AuditedWithErrors("appointment.series.preview", SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment);
+        appointments.MapPost("/series", (BookSeries command, [FromServices] IBookingService service, CancellationToken ct) => service.BookSeriesAsync(command, ct))
+            .AuditedWriteWithErrors(SchedulingAudit.Book, SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment);
+        appointments.MapPost("/{appointmentId:guid}/cancel-following", (Guid appointmentId, CancelAppointment command, [FromServices] IBookingService service, CancellationToken ct) =>
+                service.CancelFollowingAsync(appointmentId, command, ct))
+            .AuditedWriteWithErrors(SchedulingAudit.Cancel, SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment);
         // Changing a booking (MDV-P1-024): each frees the old slot in the same transaction; the use case writes the allowed event.
         appointments.MapPost("/{appointmentId:guid}/reschedule", (Guid appointmentId, RescheduleAppointment command, [FromServices] IBookingService service, CancellationToken ct) =>
                 service.RescheduleAsync(appointmentId, command, ct))

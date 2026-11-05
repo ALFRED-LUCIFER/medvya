@@ -115,6 +115,8 @@ Scenario: Reload with no network
   And browser storage contains no patient identifiers (automated check)
 ```
 
+**As built (MDV-P1-047).** `POST /v1/appointments`, `POST /v1/patients` and `POST /v1/appointments/{id}/check-in` accept an `Idempotency-Key` (8 to 64 letters, digits, `-`, `_`). The server stores no response and no separate key table: the booking or patient row carries two hashes (SHA-256 of the key; SHA-256 of the key plus the request, so patient fields cannot be guessed back), unique per tenant and user, cleared after 24 hours by the next keyed write of the tenant. A repeat with the same request rebuilds the first outcome from the record; the same key with another request is 422. Identical requests racing each other are serialised by the doctor-day lock (booking) or the unique index (registration). Check-in needs no stored key: it is idempotent by state. The client keeps one key per submission (reused on retry, new after an edit or an answer). `apiFetch` is the only retry layer: TanStack Query does not retry, so a failing GET is at most 3 requests, not 9.
+
 ### (b) By R1 pilot (decide after pilot interviews)
 
 | Item | Ticket | Size |

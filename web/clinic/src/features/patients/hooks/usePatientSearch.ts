@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { asSearchError, toQuery } from '../domain/directory';
 import { ApiError, searchPatients } from '../services/patientsApi';
-import { loadState, noRetryOnAnswers, patientDataGcTime } from './usePatientDirectoryController';
+import { loadState, patientDataGcTime } from './usePatientDirectoryController';
 
 /**
  * Choosing a patient with front-desk search (MDV-P1-018) inside another screen (booking, walk-in): runs on submit, not per
@@ -17,7 +17,6 @@ export function usePatientSearch(onPick: (id: string) => void) {
     enabled: query !== null,
     gcTime: patientDataGcTime,
     staleTime: Infinity, // as the directory: an audited search is reused, not refetched
-    retry: noRetryOnAnswers,
   });
   return {
     view: {

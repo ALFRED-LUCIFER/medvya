@@ -15,7 +15,6 @@ const useNow = () => {
   return now;
 };
 
-const noRetryOn403 = (count: number, error: unknown) => !(error instanceof ApiError && error.status === 403) && count < 2;
 
 /**
  * P-04 schedule of the active facility (MDV-P1-011, MDV-P1-023): day grid, week of one calendar and a list (agenda), all from
@@ -34,7 +33,6 @@ export function useScheduleController(facilityId: string, userId: string) {
     queryKey: ['schedule', facilityId, date],
     queryFn: () => fetchScheduleDay(facilityId, date),
     placeholderData: keepPreviousData,
-    retry: noRetryOn403,
   });
   const columns = query.data?.columns ?? [];
   const filter = chosen !== undefined ? chosen : columns.some(c => c.calendarId === userId) ? userId : null;
@@ -45,7 +43,6 @@ export function useScheduleController(facilityId: string, userId: string) {
     queryFn: () => fetchScheduleWeek(facilityId, weekCalendar!, date),
     enabled: view === 'week' && weekCalendar !== null,
     placeholderData: keepPreviousData,
-    retry: noRetryOn403,
   });
 
   const filtered = useMemo(() => (query.data ? filterColumns(query.data, filter) : null), [query.data, filter]);

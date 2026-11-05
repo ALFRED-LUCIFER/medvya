@@ -33,7 +33,6 @@ export function useBoardController(facilityId: string, online: boolean) {
     queryKey: key,
     queryFn: async (): Promise<Snapshot> => ({ board: await fetchBoard(facilityId), fetchedAt: Date.now() }),
     refetchInterval: live === 'live' ? false : 30_000,
-    retry: (count, error) => !(error instanceof ApiError && error.status === 403) && count < 2,
   });
 
   const [tick, setTick] = useState(() => Date.now());

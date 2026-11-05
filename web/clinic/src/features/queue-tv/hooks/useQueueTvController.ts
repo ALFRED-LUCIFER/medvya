@@ -26,7 +26,6 @@ export function useQueueTvController(online: boolean) {
     queryFn: fetchQueueTv,
     enabled: paired,
     refetchInterval: live === 'live' ? false : 30_000,
-    retry: (count, error) => !unauthorized(error) && count < 2,
   });
   const unpaired: Unpaired | null = token && pairing.isError ? 'invalid' : unauthorized(query.error) ? (token ? 'invalid' : 'notSetUp') : null;
 

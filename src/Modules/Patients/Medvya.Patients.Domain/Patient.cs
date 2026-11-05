@@ -41,6 +41,10 @@ public sealed class Patient
     [Classification(DataClass.Internal)] public RegistrationStatus Status { get; set; }
     [Classification(DataClass.Internal)] public Guid? RegisteredBy { get; init; }
     [Classification(DataClass.Internal)] public DateTimeOffset RegisteredAt { get; init; }
+    /// <summary>SHA-256 of the registration's Idempotency-Key (MDV-P1-047), unique per tenant and registrar; cleared after 24 hours. Never the key itself.</summary>
+    [Classification(DataClass.Internal)] public string? IdempotencyKeyHash { get; set; }
+    /// <summary>Salted hash of the registration request, to refuse the same key with a different request. Cleared with the key.</summary>
+    [Classification(DataClass.Internal)] public string? IdempotencyRequestHash { get; set; }
     [Classification(DataClass.Internal)] public Guid? ChangedBy { get; set; }
     [Classification(DataClass.Internal)] public DateTimeOffset ChangedAt { get; set; }
     /// <summary>Set when a merge (MDV-P1-017) mapped this record to its survivor; the record is kept, hidden from search, and cleared by an undo.</summary>

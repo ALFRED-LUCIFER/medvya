@@ -1472,5 +1472,15 @@
   "adjustment.error.changed": "A visit changed while you were working. Review the list and save again.",
   "adjustment.error.unknown": "Choose one of the listed options.",
   "adjustment.error.failed": "Could not save. Try again.",
-  "adjustment.error.forbidden": "You do not have access to change the schedule."
+  "adjustment.error.forbidden": "You do not have access to change the schedule.",
+  "schedule.sheet.print": "Print day sheet",
+  "schedule.sheet.title": "Day sheet",
+  "schedule.sheet.printedBy": "Printed by {name} on {when}",
+  "schedule.sheet.warning": "Contains patient names. Keep it at the desk and shred it when the day ends.",
+  "schedule.sheet.time": "Time",
+  "schedule.sheet.patient": "Patient",
+  "schedule.sheet.type": "Visit type",
+  "schedule.sheet.status": "Status",
+  "schedule.sheet.empty": "No visits booked.",
+  "schedule.sheet.failed": "Could not prepare the day sheet. Check the connection and try again."
 }

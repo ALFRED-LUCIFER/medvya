@@ -6,6 +6,7 @@ import type { PatientMessage } from '../domain/messages';
 import type { SaveResult, SavedAdjustment } from '../domain/adjustments';
 import type { Appointment, ScheduleDay } from '../domain/schedule';
 import type { ScheduleWeek } from '../domain/views';
+import type { DaySheet } from '../domain/daySheet';
 
 /** An API answer other than 2xx. `status` tells 403 from other failures; `code` is the 409 reason (e.g. "being_booked"). */
 export class ApiError extends Error {
@@ -97,3 +98,6 @@ export const fetchMessages = (facilityId: string, appointmentId: string) =>
 export const fetchAdjustments = (facilityId: string) => send<SavedAdjustment[]>(`/v1/schedule/exceptions?${new URLSearchParams({ facilityId })}`);
 
 export const saveAdjustment = (body: unknown) => post<SaveResult>('/v1/schedule/exceptions', body);
+
+/** MDV-P1-050: the server audits the print and answers with the only fields that may go on paper. */
+export const printDaySheet = (facilityId: string, date: string | null) => post<DaySheet>('/v1/schedule/print', { facilityId, date });

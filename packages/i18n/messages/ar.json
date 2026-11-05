@@ -1471,5 +1471,15 @@
   "adjustment.error.changed": "تغيّرت زيارة أثناء عملك. راجع القائمة واحفظ مرة أخرى.",
   "adjustment.error.unknown": "اختر أحد الخيارات المعروضة.",
   "adjustment.error.failed": "تعذر الحفظ. حاول مرة أخرى.",
-  "adjustment.error.forbidden": "ليست لديك صلاحية تغيير الجدول."
+  "adjustment.error.forbidden": "ليست لديك صلاحية تغيير الجدول.",
+  "schedule.sheet.print": "طباعة جدول اليوم",
+  "schedule.sheet.title": "جدول اليوم",
+  "schedule.sheet.printedBy": "طبعه {name} في {when}",
+  "schedule.sheet.warning": "يحتوي على أسماء المرضى. احتفظ به عند مكتب الاستقبال وأتلفه بنهاية اليوم.",
+  "schedule.sheet.time": "الوقت",
+  "schedule.sheet.patient": "المريض",
+  "schedule.sheet.type": "نوع الزيارة",
+  "schedule.sheet.status": "الحالة",
+  "schedule.sheet.empty": "لا توجد زيارات محجوزة.",
+  "schedule.sheet.failed": "تعذر تجهيز جدول اليوم. تحقق من الاتصال وحاول مرة أخرى."
 }

@@ -106,6 +106,8 @@ Scenario: Request times out
   Given the API does not answer within 15 seconds
   Then the UI shows a retry message without clearing the form
 ```
+Built (MDV-P1-049): `web/clinic/public/sw.js`, scope `/app/`, caches only `/app/assets/*` (cache-first) and the public shell page (network-first, one key). Never `/v1/` or `/bff/`. A changed worker activates at once (skipWaiting + claim: safe because the asset cache only adds hashed files). Switch off with `VITE_DISABLE_SW=true` at build; that build also unregisters installed workers.
+
 Gherkin, MDV-P1-049:
 ```
 Scenario: Reload with no network

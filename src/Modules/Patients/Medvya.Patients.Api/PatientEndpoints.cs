@@ -76,6 +76,9 @@ public sealed record RegisterRequest
     };
 }
 
+/// <summary>Two records of the active facility to review for a merge; the older one survives.</summary>
+public sealed record MergeRequestBody(Guid PatientId, Guid OtherPatientId);
+
 public static class PatientEndpoints
 {
     /// <summary>Per-user rate limit for search endpoints (registered by the host with <see cref="UserRateLimit.AddUserRateLimit"/>).</summary>
@@ -128,7 +131,59 @@ public static class PatientEndpoints
         patients.MapPost("/{patientId:guid}/consents", ChangeConsents)
             .RequireCapability(Capability.RegisterBookPatients, Access.Full)
             .AuditedByUseCase("patient.consent.record", "patient", Purpose, patientRouteKey: "patientId");
+
+        MapMergeEndpoints(patients);
         return app;
+    }
+
+    /// <summary>
+    /// Merge review (P-03, MDV-P1-017). Asking for a review and "not the same" are desk work (Register / book patients, Full); approving
+    /// is clinician work (Clinical notes, Sign); undoing is admin work (Staff, roles, integrations, Config). The rules that make a merge
+    /// impossible without its approvers live in the use case, not here.
+    /// </summary>
+    static void MapMergeEndpoints(RouteGroupBuilder patients)
+    {
+        patients.MapGet("/merge-requests", async ([FromServices] IPatientMerges merges, CancellationToken ct) => Results.Ok(new { requests = await merges.QueueAsync(ct) }))
+            .Audited("patient.merge.queue", "merge_request", Purpose);
+        patients.MapGet("/merge-requests/{requestId:guid}", async (Guid requestId, [FromServices] IPatientMerges merges, CancellationToken ct) =>
+                await merges.GetAsync(requestId, ct) is { } r ? Results.Ok(r) : Results.NotFound())
+            .Audited("patient.merge.read", "merge_request", Purpose);
+        patients.MapGet("/{patientId:guid}/merges", async (Guid patientId, [FromServices] IPatientMerges merges, CancellationToken ct) =>
+                await merges.HistoryAsync(patientId, ct) is { } h ? Results.Ok(new { merges = h }) : Results.NotFound())
+            .Audited("patient.merge.history", "patient", Purpose, patientRouteKey: "patientId");
+
+        patients.MapPost("/merge-requests", async ([FromBody] MergeRequestBody? body, [FromServices] IPatientMerges merges, CancellationToken ct) =>
+                body is null ? Invalid(new([new("merge", "required")])) : await Merge(async () => await merges.RequestAsync(body.PatientId, body.OtherPatientId, ct) is { } id ? Results.Ok(new { id }) : Results.NotFound()))
+            .RequireCapability(Capability.RegisterBookPatients, Access.Full)
+            .AuditedByUseCase("patient.merge.request", "merge_request", Purpose);
+        patients.MapPost("/merge-requests/{requestId:guid}/not-same", async (Guid requestId, [FromServices] IPatientMerges merges, CancellationToken ct) =>
+                await Merge(async () => await merges.NotSameAsync(requestId, ct) ? Results.NoContent() : Results.NotFound()))
+            .RequireCapability(Capability.RegisterBookPatients, Access.Full)
+            .AuditedByUseCase("patient.merge.not_same", "merge_request", Purpose);
+        patients.MapPost("/merge-requests/{requestId:guid}/request-approval", async (Guid requestId, [FromServices] IPatientMerges merges, CancellationToken ct) =>
+                await Merge(async () => await merges.RequestApprovalAsync(requestId, ct) ? Results.NoContent() : Results.NotFound()))
+            .RequireCapability(Capability.RegisterBookPatients, Access.Full)
+            .AuditedByUseCase("patient.merge.request_approval", "merge_request", Purpose);
+        patients.MapPost("/merge-requests/{requestId:guid}/approve", async (Guid requestId, [FromServices] IPatientMerges merges, CancellationToken ct) =>
+                await Merge(async () => await merges.ApproveAsync(requestId, ct) is { } status ? Results.Ok(new { status }) : Results.NotFound()))
+            .RequireCapability(Capability.ClinicalNotes, Access.Sign)
+            .AuditedByUseCase("patient.merge.approve", "merge_request", Purpose);
+        patients.MapPost("/merge-requests/{requestId:guid}/undo", async (Guid requestId, [FromServices] IPatientMerges merges, CancellationToken ct) =>
+                await Merge(async () => await merges.UndoAsync(requestId, ct) ? Results.NoContent() : Results.NotFound()))
+            .RequireCapability(Capability.StaffRolesIntegrations, Access.Config)
+            .AuditedByUseCase("patient.merge.undo", "merge_request", Purpose);
+    }
+
+    static async Task<IResult> Merge(Func<Task<IResult>> run)
+    {
+        try
+        {
+            return await run();
+        }
+        catch (PatientValidationException e)
+        {
+            return Invalid(e);
+        }
     }
 
     static async Task<IResult> ChangeConsents(Guid patientId, [FromBody] ConsentSet? request, [FromServices] IPatientConsents consents, CancellationToken ct)

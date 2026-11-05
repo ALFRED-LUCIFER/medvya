@@ -43,6 +43,8 @@ public sealed class Patient
     [Classification(DataClass.Internal)] public DateTimeOffset RegisteredAt { get; init; }
     [Classification(DataClass.Internal)] public Guid? ChangedBy { get; set; }
     [Classification(DataClass.Internal)] public DateTimeOffset ChangedAt { get; set; }
+    /// <summary>Set when a merge (MDV-P1-017) mapped this record to its survivor; the record is kept, hidden from search, and cleared by an undo.</summary>
+    [Classification(DataClass.Internal)] public Guid? MergedIntoPatientId { get; set; }
 }
 
 /// <summary>
@@ -73,12 +75,14 @@ public sealed class PatientIdentifier
 {
     [Classification(DataClass.Internal)] public Guid Id { get; init; }
     [Classification(DataClass.Internal)] public Guid TenantId { get; init; }
-    [Classification(DataClass.Internal)] public Guid PatientId { get; init; }
+    [Classification(DataClass.Internal)] public Guid PatientId { get; set; }
     [Classification(DataClass.Internal)] public IdentifierScheme Scheme { get; init; }
     [Classification(DataClass.NationalId)] public string? LookupValue { get; init; }
     [Classification(DataClass.NationalId)] public string? DisplayValue { get; init; }
     /// <summary>Document expiry (Emirates ID, passport, visa).</summary>
     [Classification(DataClass.Personal)] public DateOnly? ExpiresOn { get; init; }
+    /// <summary>Set while a merge (MDV-P1-017) holds this identifier on the survivor: the record it came from, so an undo moves it back.</summary>
+    [Classification(DataClass.Internal)] public Guid? MovedFromPatientId { get; set; }
 
     public static bool IsLookup(IdentifierScheme scheme) =>
         scheme is IdentifierScheme.Abha or IdentifierScheme.AbhaAddress or IdentifierScheme.EmiratesId or IdentifierScheme.Passport;
@@ -108,24 +112,34 @@ public sealed class PatientRelationship
     [Classification(DataClass.Internal)] public bool IsGuardian { get; init; }
 }
 
-/// <summary>Proposed: the desk asked for a merge review (P-03, MDV-P1-017). NotSame: the desk decided the two are different people.</summary>
-public enum MergeRequestStatus { Proposed, NotSame }
+/// <summary>
+/// State machine: docs/03-architecture/state-machines.md. Proposed (a review was asked for) goes to NotSame (closed, the pair is
+/// suppressed) or AwaitingApproval (clinician approval asked), then Merged (reversible) and Unmerged.
+/// </summary>
+public enum MergeRequestStatus { Proposed, NotSame, AwaitingApproval, Merged, Unmerged }
 
 /// <summary>
-/// A duplicate decision taken at registration (MDV-P1-016) about a new patient and an existing possible match. Records only the
-/// decision; merging and the second approver are MDV-P1-017 (state machine: docs/03-architecture/state-machines.md).
+/// A merge review about two records (MDV-P1-016 creates it at registration, MDV-P1-017 decides it). The survivor is the older record
+/// (<see cref="CandidatePatientId"/>); <see cref="PatientId"/> is mapped to it. Nothing is deleted, so a merge can be undone.
 /// </summary>
 public sealed class MergeRequest
 {
     [Classification(DataClass.Internal)] public Guid Id { get; init; }
     [Classification(DataClass.Internal)] public Guid TenantId { get; init; }
-    /// <summary>The record just registered.</summary>
+    /// <summary>The record that is mapped to the survivor when merged (at registration: the record just registered).</summary>
     [Classification(DataClass.Internal)] public Guid PatientId { get; init; }
-    /// <summary>The existing record it was matched with.</summary>
+    /// <summary>The surviving record (at registration: the existing record it was matched with).</summary>
     [Classification(DataClass.Internal)] public Guid CandidatePatientId { get; init; }
-    [Classification(DataClass.Internal)] public MergeRequestStatus Status { get; init; }
-    [Classification(DataClass.Internal)] public Guid? DecidedBy { get; init; }
-    [Classification(DataClass.Internal)] public DateTimeOffset DecidedAt { get; init; }
+    [Classification(DataClass.Internal)] public MergeRequestStatus Status { get; set; }
+    /// <summary>Who took the latest non-approval decision (asked for the review, or said not the same, or asked for approval).</summary>
+    [Classification(DataClass.Internal)] public Guid? DecidedBy { get; set; }
+    [Classification(DataClass.Internal)] public DateTimeOffset DecidedAt { get; set; }
+    [Classification(DataClass.Internal)] public Guid? FirstApprovedBy { get; set; }
+    /// <summary>Required, and a different clinician, when both records hold clinical data.</summary>
+    [Classification(DataClass.Internal)] public Guid? SecondApprovedBy { get; set; }
+    [Classification(DataClass.Internal)] public DateTimeOffset? MergedAt { get; set; }
+    [Classification(DataClass.Internal)] public Guid? UnmergedBy { get; set; }
+    [Classification(DataClass.Internal)] public DateTimeOffset? UnmergedAt { get; set; }
 }
 
 /// <summary>India: Self-pay, Corporate, Private insurance (TPA), Government scheme. UAE: Insurance (= PrivateInsurance), Self-pay, Corporate.</summary>

@@ -69,6 +69,8 @@ PROPOSED → PHYSICIAN_APPROVED → ASSIGNED → AWAITING_TEST/AWAITING_REPORT �
 
 `PROPOSED → NOT_SAME (closed)` or `PROPOSED → AWAITING_APPROVAL (second approver if both records have clinical data) → MERGED (reversible) → UNMERGED`.
 
+As built (MDV-P1-017): the older record survives and the other is mapped to it (`MergedIntoPatientId`); nothing is deleted. NOT_SAME suppresses the pair for good. A merge runs only from AWAITING_APPROVAL, after a verified clinician approves (Clinical notes: Sign); when both records hold clinical data a second, different clinician must approve too. Identifiers and visits move with a marker of where they came from, so an admin (Staff, roles, integrations: Config) can undo within the retention window (fixed 90 days until practice settings hold it). Each step is audited in the same transaction; a failing module rolls the whole merge back.
+
 ## Failure modes the UI must show (Foundations)
 
 No consent (E-04) · Clip disconnected (W-02) · Low audio (A-06d) · Uncertain speaker (A-10) · Wrong patient (A-09) · AI outage (A-06c) · Record conflict (H-04 / E-07) · Late result (C-04) · Emergency symptom (A-08).

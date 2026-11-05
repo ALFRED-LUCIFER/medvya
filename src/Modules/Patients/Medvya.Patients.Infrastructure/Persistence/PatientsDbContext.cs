@@ -61,6 +61,7 @@ public sealed class PatientsDbContext(DbContextOptions<PatientsDbContext> option
             // Name search scans this narrow covering index instead of the wide table rows (LIKE '%…%' cannot seek).
             e.HasIndex(x => new { x.TenantId, x.FacilityId, x.FullName })
                 .IncludeProperties(x => new { x.ArabicName, x.DateOfBirth, x.DateOfBirthEstimated, x.SexAtBirth, x.Mrn, x.Status, x.CountryCode, x.RegisteredAt });
+            e.HasIndex(x => new { x.TenantId, x.MergedIntoPatientId }); // merged records of a survivor (MDV-P1-017)
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         modelBuilder.Entity<PatientIdentifier>(e =>
@@ -70,6 +71,7 @@ public sealed class PatientsDbContext(DbContextOptions<PatientsDbContext> option
             e.Property(x => x.DisplayValue).HasMaxLength(64);
             e.HasOne<Patient>().WithMany().HasForeignKey(x => x.PatientId).OnDelete(DeleteBehavior.Restrict);
             e.HasIndex(x => new { x.TenantId, x.Scheme, x.LookupValue });
+            e.HasIndex(x => new { x.TenantId, x.MovedFromPatientId });
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         modelBuilder.Entity<PayerCoverage>(e =>

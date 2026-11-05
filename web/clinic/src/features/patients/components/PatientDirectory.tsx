@@ -23,6 +23,8 @@ type Props = {
   onRetry: () => void;
   /** Path of the registration screen, when this membership may register (empty state link). */
   registerPath: string | null;
+  /** Merge review (P-03); null when this role has no part in it. */
+  mergePath: string | null;
   recordPath: (id: string) => string;
 };
 
@@ -41,6 +43,7 @@ export default function PatientDirectory(p: Props) {
       <div className="flex flex-col gap-1">
         <h1 className="text-2xl font-extrabold">{t('patients.directory.title')}</h1>
         <p className="text-muted-foreground">{t('patients.directory.intro')}</p>
+        {p.mergePath && <Link to={p.mergePath} className={cn(buttonVariants({ variant: 'link' }), 'self-start px-0')}>{t('merge.open')}</Link>}
       </div>
 
       <form role="search" className="flex flex-col gap-2 rounded-xl border bg-card p-4" onSubmit={e => { e.preventDefault(); p.onSubmit(); }}>

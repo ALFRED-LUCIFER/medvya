@@ -21,6 +21,7 @@ public static class SchedulingModule
             .AddDbContext<SchedulingDbContext>((sp, o) => o.UseSqlServer(connectionString).AddInterceptors(sp.GetRequiredService<TenantSessionInterceptor>()))
             .AddScoped<SchedulingContext>()
             .AddScoped<DoctorDayTransaction>()
+            .AddScoped<Medvya.Patients.Application.IPatientMergeParticipant, PatientMergeParticipant>()
             .AddScoped<IScheduleService, ScheduleService>()
             .AddScoped<IScheduleExceptionService, ScheduleExceptionService>()
             .AddScoped<IBookingService, BookingService>()

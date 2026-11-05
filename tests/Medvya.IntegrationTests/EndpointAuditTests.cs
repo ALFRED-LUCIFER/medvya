@@ -91,7 +91,13 @@ public sealed class EndpointAuditTests(SqlServerFixture sql) : IClassFixture<Sql
         db.Tenants.Add(new Tenant { Id = tenant, Name = "Audit Enumeration Clinic (synthetic)", CountryCode = "IN", ResidencyRegion = "centralindia" });
         db.Facilities.Add(new Facility { Id = facility, TenantId = tenant, Name = "Adyar (synthetic)", TimeZone = "Asia/Kolkata" });
         foreach (var (role, user) in staff)
-            db.Memberships.Add(new Membership { Id = Guid.NewGuid(), TenantId = tenant, UserId = user, FacilityId = facility, Role = role, Status = MembershipStatus.Active });
+        {
+            var membership = new Membership { Id = Guid.NewGuid(), TenantId = tenant, UserId = user, FacilityId = facility, Role = role, Status = MembershipStatus.Active };
+            db.Memberships.Add(membership);
+            // A verified solo doctor: signing capabilities (merge approval) are off until the licence is verified, so the allowed path needs one.
+            if (role == Role.SoloDoctor)
+                db.DoctorLicences.Add(new DoctorLicence { MembershipId = membership.Id, TenantId = tenant, Authority = "TNMC", Number = "84213", SubmittedAt = DateTimeOffset.UtcNow, VerifiedAt = DateTimeOffset.UtcNow });
+        }
         await db.SaveChangesAsync();
     }
 

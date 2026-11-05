@@ -6,6 +6,8 @@ import { useCompletionController } from '../features/registration/hooks/useCompl
 import { useRegistrationController } from '../features/registration/hooks/useRegistrationController';
 import PatientDirectory from '../features/patients/components/PatientDirectory';
 import PatientRecord from '../features/patients/components/PatientRecord';
+import MergeReview from '../features/merge/components/MergeReview';
+import { useMergeController, useMergeHistory } from '../features/merge/hooks/useMergeController';
 import { usePatientDirectoryController } from '../features/patients/hooks/usePatientDirectoryController';
 import { usePatientRecordController } from '../features/patients/hooks/usePatientRecordController';
 import { patientDirectory } from '../features/shell/domain/navigation';
@@ -13,15 +15,23 @@ import { patientDirectory } from '../features/shell/domain/navigation';
 // Composition only: controller → component for the patient directory routes (MDV-P1-018).
 const recordPath = (id: string) => `${patientDirectory.path}/${id}`;
 
-export function PatientDirectoryRoute({ registerPath }: { registerPath: string | null }) {
-  return <PatientDirectory {...usePatientDirectoryController()} registerPath={registerPath} recordPath={recordPath} />;
+export function PatientDirectoryRoute({ registerPath, mergePath }: { registerPath: string | null; mergePath: string | null }) {
+  return <PatientDirectory {...usePatientDirectoryController()} registerPath={registerPath} mergePath={mergePath} recordPath={recordPath} />;
+}
+
+const mergePath = `${patientDirectory.path}/merge`;
+
+/** P-03: each step is gated by its own capability here and again by the server (Register/book Full, Clinical notes Sign, Staff Config). */
+export function MergeReviewRoute({ can }: { can: { request: boolean; approve: boolean; undo: boolean } }) {
+  const { requestId = null } = useParams();
+  return <MergeReview {...useMergeController(requestId)} can={can} backPath={patientDirectory.path} reviewPath={id => `${mergePath}/${id}`} />;
 }
 
 const completePath = (id: string) => `${recordPath(id)}/complete`;
 
 // Revealing numbers and completing a registration both need Register / book patients at Full (the server checks the same).
 function Record({ patientId, canReveal }: { patientId: string; canReveal: boolean }) {
-  return <PatientRecord {...usePatientRecordController(patientId)} backPath={patientDirectory.path} canReveal={canReveal}
+  return <PatientRecord {...usePatientRecordController(patientId)} merges={useMergeHistory(patientId)} backPath={patientDirectory.path} canReveal={canReveal}
     completePath={canReveal ? completePath(patientId) : null} />;
 }
 

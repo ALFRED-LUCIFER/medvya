@@ -8,7 +8,7 @@ Why this exists: P0 exit gate 2 needs a restore that was run, timed and checked,
 | What | Setting | Dev | Production |
 |---|---|---|---|
 | Point-in-time restore (PITR) of `medvya` | `pitrRetentionDays` | 7 days | **35 days** |
-| Long-term retention of weekly full backups | `ltrWeeklyRetention` | P4W | per country rule, set before real patient data |
+| Long-term retention of weekly full backups | `ltrWeeklyRetention` | **off** (Azure refuses it on a serverless database that auto-pauses) | per country rule, on an always-on tier, before real patient data |
 | Where backups are stored | `backupRedundancy` | `Local` | `Local` or `Zone`, **never `Geo`** (no copy outside the region, AGENTS.md 1.6) |
 | Blob images (doctor signatures, logos) | soft delete 7 days, container soft delete 7 days, versioning on | yes | yes |
 
@@ -48,7 +48,7 @@ Also open the restored database once with a read of the migration history and th
 
 - A deleted database: `az sql db restore … --deleted-time <t>` from the deleted-databases list (within the PITR window).
 - A deleted or overwritten blob (signature, logo): with soft delete, undelete it (`az storage blob undelete`); with versioning, copy the previous version back. Both keep 7 days.
-- Backups older than the PITR window: long-term retention weekly backups (`az sql db ltr-backup list`), restored the same way.
+- Backups older than the PITR window: long-term retention weekly backups (`az sql db ltr-backup list`), restored the same way. Not available in dev (see the table above).
 
 ## Drill record (P0 exit gate 2)
 

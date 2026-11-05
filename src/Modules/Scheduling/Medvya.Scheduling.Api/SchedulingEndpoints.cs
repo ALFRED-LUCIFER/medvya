@@ -1,5 +1,6 @@
 using Medvya.Audit.Api;
 using Medvya.Audit.Application;
+using Medvya.BuildingBlocks.Domain;
 using Medvya.Scheduling.Application;
 using Medvya.Tenancy.Api;
 using Medvya.Tenancy.Domain;
@@ -63,7 +64,8 @@ public static class SchedulingEndpoints
             .AuditedWriteWithErrors(SchedulingAudit.SlotRelease, SchedulingAudit.HoldResource, SchedulingAudit.Treatment);
 
         var appointments = app.MapGroup("/v1/appointments").RequireAuthorization();
-        appointments.MapPost("/", (BookAppointment command, [FromServices] IBookingService service, CancellationToken ct) => service.BookAsync(command, ct))
+        appointments.MapPost("/", ([FromBody] BookAppointment command, [FromHeader(Name = "Idempotency-Key")] string? key, [FromServices] IBookingService service, CancellationToken ct) =>
+                service.BookAsync(command, key, ct))
             .AuditedWriteWithErrors(SchedulingAudit.Book, SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment);
         // A walk-in (MDV-P1-025): the next free slot today on the booking path, or queued unscheduled; checked in after with check-in.
         appointments.MapPost("/walk-in", (WalkIn command, [FromServices] IBookingService service, CancellationToken ct) => service.WalkInAsync(command, ct))
@@ -152,6 +154,10 @@ public static class SchedulingEndpoints
         try
         {
             return await next(context);
+        }
+        catch (IdempotencyKeyException e)
+        {
+            return Results.Problem(statusCode: StatusCodes.Status422UnprocessableEntity, title: "Idempotency-Key refused", extensions: new Dictionary<string, object?> { ["code"] = e.Code });
         }
         catch (SchedulingValidationException e)
         {

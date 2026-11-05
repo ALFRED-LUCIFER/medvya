@@ -23,9 +23,10 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
 {
     const string Purpose = "registration";
 
-    public async Task<RegistrationResult> RegisterAsync(RegisterPatient command, CancellationToken cancellationToken = default)
+    public async Task<RegistrationResult> RegisterAsync(RegisterPatient command, string? idempotencyKey = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
+        var key = IdempotencyHashes.Of(idempotencyKey, command);
         var tenantId = TenantId();
         // Only at the facility the desk is working at: the use case never trusts a facility its caller did not sign in to.
         if (command.FacilityId != FacilityId()) throw new InvalidOperationException("A registration must be at the active facility.");
@@ -34,11 +35,16 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
         var (c, dob, estimated, warnings) = rules.Validate(command, await FacilityTodayAsync(command.FacilityId, now, cancellationToken));
         var consents = ConsentRules.ForRegistration(c.Consents); // no consent, no registration
 
+        // A repeat comes before the duplicate check: the first attempt's patient would otherwise show up as an unresolved duplicate of itself.
+        if (key is not null && await ReplayAsync(key, now, warnings, cancellationToken) is { } first) return first;
+
         // Checked here as well as while typing: the save is refused until the desk has decided about every possible match.
         var duplicates = await DuplicatesAsync(c.FacilityId, c.FullName, estimated ? null : dob, rules.MatchKeys(c.Identifiers), cancellationToken);
         var resolved = c.Duplicates?.CandidateIds ?? [];
         if (duplicates.Any(d => !resolved.Contains(d.PatientId))) throw new PatientValidationException([new("duplicates", "unresolved")]);
 
+        try
+        {
         await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
         var patient = new Patient
         {
@@ -49,6 +55,7 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
             Mobile = c.Mobile, AlternatePhone = c.AlternatePhone, Email = c.Email, Address = c.Address,
             Status = StatusFor(c.Address, c.Payer is not null, c.EmergencyContact is not null),
             RegisteredBy = user.UserId, RegisteredAt = now, ChangedBy = user.UserId, ChangedAt = now,
+            IdempotencyKeyHash = key?.Key, IdempotencyRequestHash = key?.Request,
         };
         db.Patients.Add(patient);
         db.Identifiers.AddRange(c.Identifiers.Select(i => new PatientIdentifier
@@ -77,6 +84,31 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
                 patient.Id, now, cancellationToken, "merge_request", d.Id);
         await tx.CommitAsync(cancellationToken);
         return new(patient.Id, patient.Mrn, now, user.UserId, patient.Status, warnings);
+        }
+        // An identical request that raced this one committed first (unique index on the key): answer with its outcome.
+        catch (DbUpdateException e) when (key is not null && e.InnerException is Microsoft.Data.SqlClient.SqlException { Number: 2601 or 2627 })
+        {
+            db.ChangeTracker.Clear();
+            if (await ReplayAsync(key, now, warnings, cancellationToken) is { } raced) return raced;
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// The patient this user already registered with this key. Keeps only hashes with the key (no patient data); the answer is built
+    /// from the patient record. Clears expired keys of the tenant first. Another request under the same key is refused.
+    /// </summary>
+    async Task<RegistrationResult?> ReplayAsync(IdempotencyHashes key, DateTimeOffset now, IReadOnlyList<string> warnings, CancellationToken cancellationToken)
+    {
+        // shortcut: expired keys are cleared by the next keyed registration of the tenant, not by a scheduled job; a quiet tenant keeps
+        // some stale hashes (no patient data) until then. Upgrade to a nightly sweep with the retention jobs.
+        await db.Patients.Where(p => p.IdempotencyKeyHash != null && p.RegisteredAt < now - IdempotencyHashes.Lifetime)
+            .ExecuteUpdateAsync(s => s.SetProperty(p => p.IdempotencyKeyHash, (string?)null).SetProperty(p => p.IdempotencyRequestHash, (string?)null), cancellationToken);
+        var me = user.UserId;
+        var first = await db.Patients.AsNoTracking().SingleOrDefaultAsync(p => p.RegisteredBy == me && p.IdempotencyKeyHash == key.Key, cancellationToken);
+        if (first is null) return null;
+        if (first.IdempotencyRequestHash != key.Request) throw new IdempotencyKeyException("reused");
+        return new(first.Id, first.Mrn, first.RegisteredAt, first.RegisteredBy, first.Status, warnings);
     }
 
     public Task<PatientRecord?> GetAsync(Guid patientId, CancellationToken cancellationToken = default) => LoadAsync(patientId, cancellationToken);

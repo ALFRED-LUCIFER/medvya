@@ -9,7 +9,6 @@ export type LoadState = 'loading' | 'ready' | 'invalid' | 'forbidden' | 'notFoun
 /** Memory only. Long enough that a remount (React strict mode, back navigation) reuses the request instead of auditing a second read. */
 export const patientDataGcTime = 60_000;
 
-export const noRetryOnAnswers = (failures: number, error: Error) => !(error instanceof ApiError && error.status < 500) && failures < 2;
 
 export function loadState(query: { isPending: boolean; error: Error | null }): LoadState {
   if (query.isPending) return 'loading';
@@ -31,7 +30,6 @@ export function usePatientDirectoryController() {
     queryFn: () => searchPatients(request),
     gcTime: patientDataGcTime,
     staleTime: Infinity, // each fetch is an audited read: reuse it until something changes it
-    retry: noRetryOnAnswers,
     // The previous page stays on screen while the next loads, so the list and its pagination never unmount (focus is kept).
     placeholderData: keepPreviousData,
   });

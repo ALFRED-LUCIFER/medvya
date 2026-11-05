@@ -6,12 +6,11 @@ import { ApiError } from '../../schedule/services/scheduleApi';
 import { logoProblem, profileSchema, settingsError, toProfileForm, type ProfileForm } from '../domain/settings';
 import { fetchLogoLink, fetchProfile, removeLogo, saveProfile, uploadLogo } from '../services/settingsApi';
 
-const noRetryOn403 = (n: number, e: unknown) => !(e instanceof ApiError && e.status === 403) && n < 2;
 
 /** Profile tab: clinic details and logo. The server decides who may change them; this only follows its answer. */
 export function useProfileController() {
   const queryClient = useQueryClient();
-  const profile = useQuery({ queryKey: ['settings', 'profile'], queryFn: fetchProfile, retry: noRetryOn403 });
+  const profile = useQuery({ queryKey: ['settings', 'profile'], queryFn: fetchProfile });
   const form = useForm<ProfileForm>({ resolver: zodResolver(profileSchema), defaultValues: toProfileForm({ name: '', address: null, registrationNumber: null, taxNumber: null, phone: null, email: null, hasLogo: false }) });
   const loaded = useRef<unknown>(null);
   useEffect(() => {

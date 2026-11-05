@@ -11,7 +11,6 @@ import { addDoctor, fetchDoctors, removeSignature, resubmitLicence, uploadSignat
 
 /** The invitation email could not be sent; the server saved nothing (502 with this code). */
 const emailFailed = 'email_failed';
-const noRetryOn403 = (n: number, e: unknown) => !(e instanceof ApiError && e.status === 403) && n < 2;
 
 /** What to say under a field: a code the screen translates ("invalid" for what the form itself rejects, else the server's code). */
 const codeOf = (e: FieldErrors<DoctorForm>[keyof DoctorForm]) => (e ? fieldProblem(e.type === 'server' ? String(e.message) : undefined) : undefined);
@@ -19,7 +18,7 @@ const codeOf = (e: FieldErrors<DoctorForm>[keyof DoctorForm]) => (e ? fieldProbl
 /** Doctors tab (F-09): the list, the Add doctor wizard, licence resubmission and the signature image. The server decides who may do what. */
 export function useDoctorsController(defaultFacilityId: string) {
   const queryClient = useQueryClient();
-  const list = useQuery({ queryKey: ['settings', 'doctors'], queryFn: fetchDoctors, retry: noRetryOn403 });
+  const list = useQuery({ queryKey: ['settings', 'doctors'], queryFn: fetchDoctors });
   const refresh = () => void queryClient.invalidateQueries({ queryKey: ['settings', 'doctors'] });
 
   // ---- Add doctor wizard ----

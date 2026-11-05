@@ -211,7 +211,7 @@ public static class PatientEndpoints
         return Results.Ok(new { candidates });
     }
 
-    static async Task<IResult> Register([FromBody] RegisterRequest request, [FromServices] IStaffAccess staff, [FromServices] ICurrentFacility facility,
+    static async Task<IResult> Register([FromBody] RegisterRequest request, [FromHeader(Name = "Idempotency-Key")] string? key, [FromServices] IStaffAccess staff, [FromServices] ICurrentFacility facility,
         [FromServices] IPatientRegistry registry, CancellationToken ct)
     {
         if (await staff.TenantCountryAsync(ct) is not { } country || facility.FacilityId is not { } facilityId)
@@ -219,11 +219,15 @@ public static class PatientEndpoints
         try
         {
             // Facility and country come from the session and the tenant, never from the request body.
-            return Results.Ok(await registry.RegisterAsync(request.ToCommand(facilityId, country), ct));
+            return Results.Ok(await registry.RegisterAsync(request.ToCommand(facilityId, country), key, ct));
         }
         catch (PatientValidationException e)
         {
             return Invalid(e);
+        }
+        catch (IdempotencyKeyException e)
+        {
+            return Results.Problem(statusCode: StatusCodes.Status422UnprocessableEntity, title: "Idempotency-Key refused", extensions: new Dictionary<string, object?> { ["code"] = e.Code });
         }
     }
 

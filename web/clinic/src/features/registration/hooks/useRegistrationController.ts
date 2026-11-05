@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useForm, useWatch, type FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery } from '@tanstack/react-query';
@@ -9,9 +9,10 @@ import {
   type RegistrationResult, type Step,
 } from '../domain/registration';
 import { missingParts } from '../../patients/domain/directory';
+import { forgetKey, type HeldKey, keyFor } from '../../api/services/idempotencyKey';
 import { ApiError } from '../../patients/services/patientsApi';
 import { checkDuplicates, registerPatient } from '../services/registrationApi';
-import { noRetryOnAnswers, patientDataGcTime } from '../../patients/hooks/usePatientDirectoryController';
+import { patientDataGcTime } from '../../patients/hooks/usePatientDirectoryController';
 
 /** Typing pauses this long before the duplicate check runs; each check is audited and rate-limited. */
 export const duplicateCheckDelayMs = 500;
@@ -49,7 +50,6 @@ export function useRegistrationController(country: Country, quick: boolean) {
     queryFn: () => checkDuplicates(debounced!),
     enabled: debounced !== null,
     gcTime: patientDataGcTime,
-    retry: noRetryOnAnswers,
   });
   // Only matches for what is on screen now count; while the check catches up, the previous answer is not trusted.
   const current = debounced !== null && debouncedKey === key ? duplicates.data ?? [] : [];
@@ -65,8 +65,10 @@ export function useRegistrationController(country: Country, quick: boolean) {
     return steps.find(s => fields.some(f => stepOf(f) === s)) ?? 'identity';
   };
 
+  const saveKey: HeldKey = useRef(null); // one key per submission, kept across retries and taps
   const save = useMutation({
-    mutationFn: (request: RegisterRequest) => registerPatient(request),
+    mutationFn: (request: RegisterRequest) => registerPatient(request, keyFor(saveKey, request)),
+    onSuccess: () => forgetKey(saveKey),
     onError: (error, request) => {
       if (!(error instanceof ApiError) || error.status !== 400) return;
       const fields: FormField[] = [];

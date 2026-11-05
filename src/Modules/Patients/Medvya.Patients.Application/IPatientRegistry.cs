@@ -116,7 +116,11 @@ public interface IPatientRegistry
     /// <see cref="MergeRequest"/> and audited with the actor, in the same transaction as the registration.
     /// </summary>
     /// <exception cref="PatientValidationException">With field/code pairs only; never the entered values.</exception>
-    Task<RegistrationResult> RegisterAsync(RegisterPatient command, CancellationToken cancellationToken = default);
+    /// <remarks>
+    /// With an <paramref name="idempotencyKey"/> (MDV-P1-047), a repeat of the same request by the same user within 24 hours returns
+    /// the first registration and creates nothing; the same key with another request throws <see cref="Medvya.BuildingBlocks.Domain.IdempotencyKeyException"/>.
+    /// </remarks>
+    Task<RegistrationResult> RegisterAsync(RegisterPatient command, string? idempotencyKey = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Possible existing records at the current facility: an exact identifier match (ABHA number or address, Emirates ID, passport;

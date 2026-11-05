@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { bookingSchema, emptyBooking, slotError, type BookedAppointment, type BookingForm, type SlotChoice } from '../domain/booking';
 import type { VisitType } from '../domain/schedule';
 import { includedStarts, maxRepeat, moveRow, planOf, summarise, toggleRow, type PlanRow, type SeriesDone } from '../domain/series';
+import { forgetKey, type HeldKey, keyFor } from '../../api/services/idempotencyKey';
 import { ApiError, bookAppointment, bookSeries, findPatient, holdSlot, previewSeries, releaseHold } from '../services/scheduleApi';
 import { usePatientSearch } from '../../patients/hooks/usePatientSearch';
 
@@ -31,9 +32,11 @@ export function useBookingController(facilityId: string, timeZone: string | null
 
   const hold = useMutation({ mutationFn: (s: SlotChoice) => holdSlot(facilityId, s), onSettled: refreshSchedule });
   const release = useMutation({ mutationFn: releaseHold, onSettled: refreshSchedule });
+  const bookKey: HeldKey = useRef(null); // one key per submission, kept across retries and taps
   const book = useMutation({
-    mutationFn: (values: BookingForm) => bookAppointment(hold.data!.id, values),
+    mutationFn: (values: BookingForm) => bookAppointment(hold.data!.id, values, keyFor(bookKey, { hold: hold.data!.id, ...values })),
     onSuccess: appointment => {
+      forgetKey(bookKey);
       setBooked(appointment);
       setRebook(null);
       setChoice(null);

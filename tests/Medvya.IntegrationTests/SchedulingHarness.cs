@@ -8,6 +8,8 @@ using Medvya.Scheduling.Application;
 using Medvya.Scheduling.Infrastructure;
 using Medvya.Tenancy.Domain;
 using Medvya.Tenancy.Infrastructure;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Medvya.IntegrationTests;
@@ -100,7 +102,7 @@ internal sealed class SchedulingHarness(SqlServerFixture sql)
 
     sealed class FixedUser(Guid id) : ICurrentUser { public Guid? UserId => id; }
 
-    IServiceProvider Scope(Guid user, Guid? inTenant)
+    IServiceProvider Scope(Guid user, Guid? inTenant, IInterceptor? interceptor = null)
     {
         var services = new ServiceCollection()
             .AddSingleton<ICurrentTenant>(new SqlServerFixture.FixedTenant(inTenant ?? Tenant))
@@ -110,6 +112,7 @@ internal sealed class SchedulingHarness(SqlServerFixture sql)
             .AddSingleton<Medvya.Tenancy.Application.ILogoStore>(Logos) // before the module, which only adds a store when none is registered
             .AddAuditModule(ConnectionString).AddTenancyModule(ConnectionString).AddIdentityModule(ConnectionString)
             .AddPatientsModule(ConnectionString).AddSchedulingModule(ConnectionString);
+        if (interceptor is not null) services.ConfigureDbContext<Medvya.Scheduling.Infrastructure.Persistence.SchedulingDbContext>(o => o.AddInterceptors(interceptor));
         services.Configure<SchedulingOptions>(o => (o.SlotHold, o.LockTimeout) = (Options.SlotHold, Options.LockTimeout));
         var provider = services.BuildServiceProvider();
         providers.Add(provider);
@@ -120,7 +123,7 @@ internal sealed class SchedulingHarness(SqlServerFixture sql)
 
     public Medvya.Tenancy.Application.IPracticeSettings Settings(Guid user, Guid? inTenant = null) => Scope(user, inTenant).GetRequiredService<Medvya.Tenancy.Application.IPracticeSettings>();
 
-    public IBookingService Booking(Guid user, Guid? inTenant = null) => Scope(user, inTenant).GetRequiredService<IBookingService>();
+    public IBookingService Booking(Guid user, Guid? inTenant = null, IInterceptor? interceptor = null) => Scope(user, inTenant, interceptor).GetRequiredService<IBookingService>();
 
     public IScheduleExceptionService Adjustments(Guid user, Guid? inTenant = null) => Scope(user, inTenant).GetRequiredService<IScheduleExceptionService>();
 

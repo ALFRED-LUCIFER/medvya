@@ -4,17 +4,40 @@ using Medvya.Patients.Application;
 using Medvya.Patients.Infrastructure;
 using Medvya.Scheduling.Application;
 using Medvya.Scheduling.Domain;
+using System.Data.Common;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using static Medvya.IntegrationTests.PatientRulesTests;
 using static Medvya.IntegrationTests.SchedulingHarness;
 
 namespace Medvya.IntegrationTests;
 
 /// <summary>
+/// Forces a lost race: once the request this is attached to has read its replay lookup (a SELECT on the key hash, or on <paramref name="after"/>) and found nothing,
+/// it runs <paramref name="winner"/> to completion before the request goes on. So the loser always passes its early replay check
+/// first and the winner always commits before its later checks, instead of hoping parallel requests interleave that way.
+/// </summary>
+sealed class LoseTheRace(Func<Task> winner, string after = "IdempotencyKeyHash") : DbCommandInterceptor
+{
+    int armed = 1;
+
+    public override async ValueTask<InterceptionResult> DataReaderClosingAsync(DbCommand command, DataReaderClosingEventData eventData, InterceptionResult result)
+    {
+        if (command.CommandText.StartsWith("SELECT", StringComparison.Ordinal) && command.CommandText.Contains(after, StringComparison.Ordinal)
+            && Interlocked.Exchange(ref armed, 0) == 1)
+            await winner();
+        return result;
+    }
+
+    public bool Fired => armed == 0;
+}
+
+/// <summary>
 /// MDV-P1-047 on real SQL Server: a booking repeated with the same Idempotency-Key creates one appointment and returns the first
 /// outcome, also when the repeats race; another request under the same key is refused; keys are per user and expire after 24 hours;
 /// only hashes are stored. SAFETY: mutation check: removing the ReplayAsync calls in BookingService.BookAsync makes the repeat
-/// fail with "hold_expired" and the race book once but answer the rest with 409, so these tests fail.
+/// fail with "hold_expired" and the race book once but answer the rest with 409, so these tests fail. The lost-race tests force the
+/// interleaving (LoseTheRace) instead of relying on parallel requests: each fails when its own replay line is removed.
 /// </summary>
 public sealed class BookingIdempotencyTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>, IAsyncLifetime
 {
@@ -55,6 +78,36 @@ public sealed class BookingIdempotencyTests(SqlServerFixture sql) : IClassFixtur
         var results = await Task.WhenAll(Enumerable.Range(0, 20).Select(_ => Task.Run(() => h.Booking(h.Reception).BookAsync(Book(hold.Id), Key))));
 
         Assert.Single(results.Select(r => r.Id).Distinct());
+        await using var db = sql.Scheduling(h.Tenant);
+        Assert.Single(await db.Appointments.ToListAsync());
+    }
+
+    [Fact]
+    public async Task ARequestThatLosesTheRaceAfterItsReplayCheckAnswersWithTheWinnersBooking()
+    {
+        var hold = await Hold(9);
+        AppointmentView? won = null;
+        var race = new LoseTheRace(async () => won = await h.Booking(h.Reception).BookAsync(Book(hold.Id), Key)); // the winner books and deletes the hold
+
+        var lost = await h.Booking(h.Reception, interceptor: race).BookAsync(Book(hold.Id), Key);
+
+        Assert.True(race.Fired);
+        Assert.Equal(won, lost);
+        await using var db = sql.Scheduling(h.Tenant);
+        Assert.Single(await db.Appointments.ToListAsync());
+    }
+
+    [Fact]
+    public async Task ARequestThatHasReadTheHoldBeforeTheWinnerBooksItAnswersWithTheWinnersBooking()
+    {
+        var hold = await Hold(9);
+        AppointmentView? won = null;
+        var race = new LoseTheRace(async () => won = await h.Booking(h.Reception).BookAsync(Book(hold.Id), Key), after: "SlotHolds"); // the hold is still there for the loser
+
+        var lost = await h.Booking(h.Reception, interceptor: race).BookAsync(Book(hold.Id), Key);
+
+        Assert.True(race.Fired);
+        Assert.Equal(won, lost);
         await using var db = sql.Scheduling(h.Tenant);
         Assert.Single(await db.Appointments.ToListAsync());
     }
@@ -130,8 +183,8 @@ public sealed class RegistrationIdempotencyTests(SqlServerFixture sql) : IClassF
     const string Key = "k-9f1c2a7e-register-01";
     readonly Guid tenant = Guid.NewGuid(), facility = Guid.NewGuid(), actor = Guid.NewGuid();
 
-    PatientRegistry Registry() =>
-        new(sql.Patients(tenant), new SqlServerFixture.FixedTenant(tenant), new PatientRegistryTests.FixedFacility(facility),
+    PatientRegistry Registry(IInterceptor? interceptor = null) =>
+        new(interceptor is null ? sql.Patients(tenant) : sql.Patients(tenant, interceptor), new SqlServerFixture.FixedTenant(tenant), new PatientRegistryTests.FixedFacility(facility),
             new User(actor), new AuditLog(sql.Audit(tenant)), TimeProvider.System, new PatientRegistryTests.FacilityZone("Asia/Kolkata"));
 
     sealed class User(Guid id) : ICurrentUser { public Guid? UserId => id; }
@@ -156,6 +209,21 @@ public sealed class RegistrationIdempotencyTests(SqlServerFixture sql) : IClassF
         var results = await Task.WhenAll(Enumerable.Range(0, 10).Select(_ => Task.Run(() => Registry().RegisterAsync(Meera, Key))));
 
         Assert.Single(results.Select(r => r.PatientId).Distinct());
+        await using var db = sql.Patients(tenant);
+        Assert.Single(await db.Patients.ToListAsync());
+    }
+
+    [Fact]
+    public async Task ARequestThatLosesTheRaceAfterItsReplayCheckAnswersWithTheWinnersPatient()
+    {
+        RegistrationResult? won = null;
+        var race = new LoseTheRace(async () => won = await Registry().RegisterAsync(Meera, Key)); // the winner registers before the loser's duplicate check
+
+        var lost = await Registry(race).RegisterAsync(Meera, Key);
+
+        Assert.True(race.Fired);
+        Assert.Equal(won!.PatientId, lost.PatientId);
+        Assert.Equal(won.Mrn, lost.Mrn);
         await using var db = sql.Patients(tenant);
         Assert.Single(await db.Patients.ToListAsync());
     }

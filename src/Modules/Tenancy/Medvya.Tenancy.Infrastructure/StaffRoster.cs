@@ -68,6 +68,40 @@ public sealed class StaffRoster(TenancyDbContext db, ICurrentTenant tenant, ICur
         return ViewOf(role);
     }
 
+    public async Task<OffboardResult> OffboardAsync(Guid membershipId, string? reason, CancellationToken cancellationToken = default)
+    {
+        reason = reason?.Trim();
+        SettingsValidationException.ThrowIfAny(string.IsNullOrEmpty(reason) ? [new("reason", "required")] : reason.Length > 500 ? [new("reason", "too_long")] : []);
+        // Serializable: two administrators offboarding each other at once must not both pass the last-administrator check.
+        await using var tx = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, cancellationToken);
+        var member = await db.Memberships.SingleOrDefaultAsync(m => m.Id == membershipId && m.Role != Role.Patient && m.Status != MembershipStatus.Offboarded, cancellationToken);
+        if (member is null) return new(OffboardOutcome.NotFound);
+        if (member.Status == MembershipStatus.Active && RoleMatrix.Of(member.Role, Capability.StaffRolesIntegrations) == Access.Config)
+        {
+            var others = await db.Memberships.Where(m => m.Status == MembershipStatus.Active && m.Id != membershipId).Select(m => m.Role).ToListAsync(cancellationToken);
+            if (!others.Any(r => RoleMatrix.Of(r, Capability.StaffRolesIntegrations) == Access.Config)) return new(OffboardOutcome.LastAdmin);
+        }
+        var before = member.Status;
+        var now = clock.GetUtcNow();
+        // A never-joined invitee has no user, and the check constraint keeps such a row Invited: offboarding only cancels the invitation.
+        if (member.UserId is not null) member.Status = MembershipStatus.Offboarded;
+        await db.Invitations.Where(i => i.MembershipId == membershipId && i.AcceptedAt == null && i.RevokedAt == null)
+            .ExecuteUpdateAsync(s => s.SetProperty(i => i.RevokedAt, now), cancellationToken);
+        db.SettingsChanges.Add(new SettingsChange
+        {
+            Id = Guid.CreateVersion7(), TenantId = TenantId, ActorUserId = user.UserId, Section = "staff.offboard", ResourceId = membershipId, OccurredAt = now,
+            Before = JsonSerializer.Serialize(new { status = before }, Json), After = JsonSerializer.Serialize(new { status = member.Status, reason }, Json),
+        });
+        await db.SaveChangesAsync(cancellationToken);
+        await audit.WriteAsync(new AuditEvent
+        {
+            Id = Guid.CreateVersion7(), TenantId = TenantId, ActorUserId = user.UserId, Action = "staff.offboard", ResourceType = "membership", ResourceId = membershipId,
+            Purpose = "operations", Outcome = AuditOutcome.Allowed, OccurredAt = now,
+        }, tx.GetDbTransaction(), cancellationToken);
+        await tx.CommitAsync(cancellationToken);
+        return new(OffboardOutcome.Done, member.UserId);
+    }
+
     async Task<(string Name, IReadOnlyList<Capability> Extras)> ValidAsync(SaveCustomRole command, Guid? self, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);

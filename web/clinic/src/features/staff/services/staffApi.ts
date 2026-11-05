@@ -15,3 +15,4 @@ type RoleBody = { name: string; baseRole: AssignableRole; capabilities: Capabili
 const json = (method: string, body: unknown) => ({ method, headers: { ...csrf, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 export const createRole = (body: RoleBody) => post<CustomRole>('/v1/staff/roles', body);
 export const updateRole = (id: string, body: RoleBody) => send<CustomRole>(`/v1/staff/roles/${id}`, json('PUT', body));
+export const offboardStaff = (membershipId: string, reason: string) => post<void>(`/v1/staff/${membershipId}/offboard`, { reason });

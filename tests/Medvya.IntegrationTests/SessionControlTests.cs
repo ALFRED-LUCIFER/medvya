@@ -333,4 +333,85 @@ public sealed class SessionControlTests(SqlServerFixture sql) : IClassFixture<Sq
         Assert.Equal(["auth.facility.switch", "auth.signout"], await AuditActions(tenantB, user.Id));
         Assert.NotNull((await SessionOf(user.Id)).RevokedAt);
     }
+
+    // ---- Offboarding (MDV-P1-009) ----
+
+    [Fact]
+    public async Task OffboardingEndsTheSessionsInThatTenantAtOnceKeepsOtherClinicsAndRecordsWhy()
+    {
+        await Clinics();
+        var admin = await Account("K. Lakshmi");
+        var staff = await Account("A. Joseph");
+        var adminMembership = await Member(admin, tenantA, facilityA, Role.PracticeAdmin);
+        var staffAtA = await Member(staff, tenantA, facilityA, Role.Receptionist);
+        var staffAtB = await Member(staff, tenantB, facilityB, Role.Receptionist);
+        using var staffInA = await SignedIn(staff);
+        await Choose(staffInA, staffAtA);
+        using var staffInB = await SignedIn(staff);
+        await Choose(staffInB, staffAtB);
+        using var adminBrowser = await SignedIn(admin);
+        await Choose(adminBrowser, adminMembership);
+
+        Assert.Equal(HttpStatusCode.Forbidden, (await Send(staffInA, HttpMethod.Post, $"/v1/staff/{adminMembership}/offboard", new { reason = "x" })).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await Send(adminBrowser, HttpMethod.Post, $"/v1/staff/{staffAtA}/offboard", new { reason = " " })).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, await ContextStatus(staffInA)); // nothing changed without a reason
+
+        Assert.Equal(HttpStatusCode.NoContent, (await Send(adminBrowser, HttpMethod.Post, $"/v1/staff/{staffAtA}/offboard", new { reason = "Left the practice" })).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, await ContextStatus(staffInA)); // the very next request
+        Assert.Equal(HttpStatusCode.OK, await ContextStatus(staffInB)); // another clinic is unaffected
+        using var again = await SignedIn(staff);
+        Assert.Equal(HttpStatusCode.Forbidden, (await Choose(again, staffAtA)).StatusCode); // cannot sign in to that tenant any more
+        Assert.Equal(HttpStatusCode.NotFound, (await Send(adminBrowser, HttpMethod.Post, $"/v1/staff/{staffAtA}/offboard", new { reason = "twice" })).StatusCode);
+
+        await using var db = sql.Context(tenantA);
+        Assert.Equal(MembershipStatus.Offboarded, (await db.Memberships.SingleAsync(m => m.Id == staffAtA)).Status);
+        var change = await db.SettingsChanges.SingleAsync(c => c.Section == "staff.offboard");
+        Assert.Equal((admin.Id, staffAtA), (change.ActorUserId, change.ResourceId));
+        Assert.Contains("Left the practice", change.After);
+        Assert.Contains("staff.offboard", await AuditActions(tenantA, admin.Id));
+    }
+
+    [Fact]
+    public async Task OffboardingAnInviteeRevokesTheirPendingInvitation()
+    {
+        await Clinics();
+        var admin = await Account("K. Lakshmi");
+        var adminMembership = await Member(admin, tenantA, facilityA, Role.PracticeAdmin);
+        var invited = Guid.NewGuid();
+        await using (var db = sql.Context(tenantA))
+        {
+            db.Memberships.Add(new Membership { Id = invited, TenantId = tenantA, FacilityId = facilityA, Role = Role.Nurse, Status = MembershipStatus.Invited });
+            db.Invitations.Add(new Invitation
+            {
+                Id = Guid.NewGuid(), TenantId = tenantA, MembershipId = invited, Email = "invitee@example.test", TokenHash = new byte[32], InvitedBy = admin.Id,
+                CreatedAt = DateTimeOffset.UtcNow, ExpiresAt = DateTimeOffset.UtcNow.AddDays(7),
+            });
+            await db.SaveChangesAsync();
+        }
+        using var adminBrowser = await SignedIn(admin);
+        await Choose(adminBrowser, adminMembership);
+        Assert.Equal(HttpStatusCode.NoContent, (await Send(adminBrowser, HttpMethod.Post, $"/v1/staff/{invited}/offboard", new { reason = "Offer withdrawn" })).StatusCode);
+        await using var check = sql.Context(tenantA);
+        Assert.NotNull((await check.Invitations.SingleAsync(i => i.MembershipId == invited)).RevokedAt);
+    }
+
+    [Fact]
+    public async Task TheLastPracticeAdminCannotBeOffboardedButOneOfTwoCan()
+    {
+        await Clinics();
+        var admin = await Account("K. Lakshmi");
+        var second = await Account("R. Menon");
+        var adminMembership = await Member(admin, tenantA, facilityA, Role.PracticeAdmin);
+        using var adminBrowser = await SignedIn(admin);
+        await Choose(adminBrowser, adminMembership);
+
+        var refused = await Send(adminBrowser, HttpMethod.Post, $"/v1/staff/{adminMembership}/offboard", new { reason = "Leaving" });
+        Assert.Equal(HttpStatusCode.BadRequest, refused.StatusCode);
+        Assert.Contains("last_admin", await refused.Content.ReadAsStringAsync());
+        Assert.Equal(HttpStatusCode.OK, await ContextStatus(adminBrowser));
+
+        await Member(second, tenantA, facilityA, Role.PracticeAdmin);
+        Assert.Equal(HttpStatusCode.NoContent, (await Send(adminBrowser, HttpMethod.Post, $"/v1/staff/{adminMembership}/offboard", new { reason = "Leaving" })).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, await ContextStatus(adminBrowser));
+    }
 }

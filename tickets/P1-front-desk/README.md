@@ -44,7 +44,7 @@
 | [MDV-P1-011](MDV-P1-011.md) | Done | Schedule templates: working hours, breaks, slot length per service, per-location calendars, time zones | Story | MUST | P1-04 | P-04 | 3 | 5–6 | 23 Nov → 04 Dec 2026 | 80% Medium |
 | [MDV-P1-013](MDV-P1-013.md) | Partly done | Patient registration — India full flow (identity, ABHA optional, Aadhaar last 4, Indian address, payer) | Story | MUST | P1-05 | P-02 | 4 | 5–6 | 23 Nov → 04 Dec 2026 | 88% High |
 | [MDV-P1-006](MDV-P1-006.md) | To do | Practice settings: notification preferences and data tab | Story | MUST | P1-02 | F-08 | 1.5 | 6–6 | 30 Nov → 04 Dec 2026 | 72% Medium |
-| [MDV-P1-009](MDV-P1-009.md) | To do | Staff offboarding removes access immediately and ends all sessions | Story | MUST | P1-11 | F-10 | 1 | 6–6 | 30 Nov → 04 Dec 2026 | 90% High |
+| [MDV-P1-009](MDV-P1-009.md) | Partly done | Staff offboarding removes access immediately and ends all sessions | Story | MUST | P1-11 | F-10 | 1 | 6–6 | 30 Nov → 04 Dec 2026 | 90% High |
 | [MDV-P1-012](MDV-P1-012.md) | To do | Leave and schedule exceptions with re-offer of affected appointments | Story | MUST | P1-04 | P-04 | 1.5 | 6–6 | 30 Nov → 04 Dec 2026 | 82% Medium |
 | [MDV-P1-014](MDV-P1-014.md) | Partly done | Patient registration — UAE flow (Emirates ID manual entry, Arabic name RTL, emirate, insurance card) | Story | MUST | P1-05 | P-02 | 2.5 | 6–6 | 30 Nov → 04 Dec 2026 | 86% High |
 | [MDV-P1-015](MDV-P1-015.md) | Partly done | Quick registration for a busy desk with a completion task | Story | MUST | P1-05 | P-02 | 1.5 | 6–6 | 30 Nov → 04 Dec 2026 | 90% High |

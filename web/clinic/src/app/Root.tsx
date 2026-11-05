@@ -21,7 +21,7 @@ export default function Root() {
   return (
     <QueryClientProvider client={queryClient}>
       <I18nProvider locale={locale} country="IN">
-        <BrowserRouter>
+        <BrowserRouter basename={import.meta.env.BASE_URL}>
           <Routes>
             {/* Display-token TV (MDV-P1-031): outside the staff app, so it never asks for a staff session or context. */}
             <Route path="/queue/tv" element={<Suspense><QueueTvRoute locale={locale} onLocaleChange={setLocale} /></Suspense>} />

@@ -18,7 +18,7 @@ export async function previewInvitation(token: string): Promise<InvitationPrevie
 
 /** Join: sign in with MFA; the server accepts the invitation during sign-in and returns to the app. */
 export function joinWithInvitation(token: string) {
-  window.location.assign(`/bff/login?returnUrl=%2F&invitation=${encodeURIComponent(token)}`);
+  window.location.assign(`/bff/login?returnUrl=${encodeURIComponent(import.meta.env.BASE_URL)}&invitation=${encodeURIComponent(token)}`);
 }
 
 export async function fetchFacilities(): Promise<Facility[]> {

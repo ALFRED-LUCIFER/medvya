@@ -71,6 +71,6 @@ export const createDisplay = (facilityId: string, name: string) => post<CreatedD
 export const revokeDisplay = (id: string) => send<void>(`/v1/queue/displays/${id}`, { method: 'DELETE', headers: csrf });
 
 /** The link to open once on the TV; the token rides in the fragment. */
-export const displayLink = (token: string) => `${window.location.origin}/queue/tv#${token}`;
+export const displayLink = (token: string) => `${window.location.origin}${import.meta.env.BASE_URL}queue/tv#${token}`;
 
 export const copyText = (text: string) => navigator.clipboard.writeText(text);

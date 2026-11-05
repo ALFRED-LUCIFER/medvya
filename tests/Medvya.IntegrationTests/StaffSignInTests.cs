@@ -15,16 +15,19 @@ public sealed class StaffSignInTests(SqlServerFixture sql) : IClassFixture<SqlSe
 {
     readonly WebApplicationFactory<Program> factory = CreateFactory(sql.ConnectionString);
 
-    internal static WebApplicationFactory<Program> CreateFactory(string connectionString)
+    internal static WebApplicationFactory<Program> CreateFactory(string connectionString, Action<IWebHostBuilder>? configure = null)
     {
         WebApplicationFactory<Program> factory = null!;
-        factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b
-            .UseEnvironment("Development")
+        factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b =>
+        {
+            configure?.Invoke(b);
+            b.UseEnvironment("Development")
             .UseSetting("ConnectionStrings:Medvya", connectionString)
             .UseSetting("Authentication:Oidc:Authority", "http://localhost/dev-idp")
             // The handler fetches discovery, keys and tokens from the in-process dev provider.
             .ConfigureServices(s => s.Configure<OpenIdConnectOptions>(OpenIdConnectDefaults.AuthenticationScheme,
-                o => o.BackchannelHttpHandler = factory.Server.CreateHandler())));
+                o => o.BackchannelHttpHandler = factory.Server.CreateHandler()));
+        });
         return factory;
     }
 

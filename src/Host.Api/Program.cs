@@ -125,6 +125,7 @@ app.UseForwardedHeaders(); // first, so every later step sees the client's addre
 if (!app.Environment.IsDevelopment()) app.UseHsts();
 app.UseSecurityHeaders(app.Configuration["Storage:ImageOrigin"]);
 app.UseRateLimiter();
+app.UseWebApp(); // static files only; reads no session cookie
 app.RunPublicSiteBeforeAuthentication(); // public pages never read the session cookie
 app.UseStaffAuthentication();
 

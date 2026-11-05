@@ -45,7 +45,7 @@ public sealed class AccessLogTests(SqlServerFixture sql) : IClassFixture<SqlServ
             {
                 if (ctx.Request.Headers["X-Test-User"].ToString() is { Length: > 0 } user)
                     ctx.User = new ClaimsPrincipal(new ClaimsIdentity(
-                        [new Claim(ClaimTypes.NameIdentifier, user), new Claim("tenant_id", tenant.ToString()), new Claim("facility_id", facility.ToString()), new Claim("role", ctx.Request.Headers["X-Test-Role"].ToString())], "synthetic"));
+                        [new Claim(ClaimTypes.NameIdentifier, user), new Claim("tenant_id", tenant.ToString()), new Claim("facility_id", facility.ToString())], "synthetic"));
                 return nxt(ctx);
             });
             next(app);
@@ -58,8 +58,7 @@ public sealed class AccessLogTests(SqlServerFixture sql) : IClassFixture<SqlServ
             .UseSetting("ConnectionStrings:Medvya", sql.ConnectionString)
             .ConfigureServices(s => s.AddSingleton<IStartupFilter>(new SignedIn(h.Tenant, h.Facility))));
         var client = factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost") });
-        client.DefaultRequestHeaders.Add("X-Test-User", (user ?? h.Admin).ToString());
-        client.DefaultRequestHeaders.Add("X-Test-Role", role.ToString());
+        client.DefaultRequestHeaders.Add("X-Test-User", (user ?? h.ByRole[role]).ToString());
         return client;
     }
 
@@ -84,12 +83,12 @@ public sealed class AccessLogTests(SqlServerFixture sql) : IClassFixture<SqlServ
     [InlineData(Role.Patient)]
     public async Task RolesWithoutTheAuditLogCapabilityGet403AndTheAttemptIsAuditedDenied(Role role)
     {
-        using var client = Client(role, h.Reception);
+        using var client = Client(role);
         Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync("/v1/audit/access-log")).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync($"/v1/audit/access-log/patients/{h.Patient}")).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await client.PostAsJsonAsync("/v1/audit/access-log/export", new { })).StatusCode);
         await using var db = sql.Audit(h.Tenant);
-        var events = await db.Events.Where(e => e.ActorUserId == h.Reception).ToListAsync();
+        var events = await db.Events.Where(e => e.ActorUserId == h.ByRole[role]).ToListAsync();
         Assert.Equal(["audit.export", "audit.read", "audit.read"], events.Select(e => e.Action).Order());
         Assert.All(events, e => Assert.Equal(AuditOutcome.Denied, e.Outcome));
     }

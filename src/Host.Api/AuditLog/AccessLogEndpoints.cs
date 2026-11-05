@@ -50,13 +50,13 @@ public static class AccessLogEndpoints
     /// Events from before the facility was recorded show to the whole-practice roles only.
     /// shortcut: facility-limited means the hospital IT role; a per-membership facility limit needs a membership flag, add it when another role is limited.
     /// </summary>
-    static Guid? ScopeOf(ClaimsPrincipal user, ICurrentFacility facility) =>
-        user.FindFirstValue(StaffPolicies.RoleClaim) == nameof(Role.HospitalIt) ? facility.FacilityId ?? Guid.Empty : null;
+    static async Task<Guid?> ScopeOf(IServiceProvider sp, ICurrentFacility facility, CancellationToken ct) =>
+        await sp.GetRequiredService<IStaffAccess>().CurrentRoleAsync(ct) == Role.HospitalIt ? facility.FacilityId ?? Guid.Empty : null;
 
     static async Task<IResult> List(Guid? patientId, Filters f, ClaimsPrincipal user, ICurrentFacility facility, IServiceProvider sp, CancellationToken ct)
     {
         var limit = Math.Clamp(f.Limit ?? DefaultPage, 1, MaxPage);
-        var page = await QueryAsync(sp, new AuditQuery(f.ActorUserId, patientId, Clean(f.Action), f.From, f.To, f.After, limit) { FacilityId = ScopeOf(user, facility) }, ct);
+        var page = await QueryAsync(sp, new AuditQuery(f.ActorUserId, patientId, Clean(f.Action), f.From, f.To, f.After, limit) { FacilityId = await ScopeOf(sp, facility, ct) }, ct);
         if (page is null) return Results.ValidationProblem(new Dictionary<string, string[]> { ["after"] = ["invalid"] });
         var rows = await Enrich(sp, page.Items, withPatientName: patientId is not null, ct);
         return Results.Ok(new { items = rows, next = page.Next, actions = page.Actions });
@@ -69,7 +69,7 @@ public static class AccessLogEndpoints
         http.Items["audit.detail"] = string.Join("; ", new[] { ("staff", body.ActorUserId?.ToString()), ("patient", body.PatientId?.ToString()), ("action", Clean(body.Action)),
             ("from", body.From?.UtcDateTime.ToString("u", CultureInfo.InvariantCulture)), ("to", body.To?.UtcDateTime.ToString("u", CultureInfo.InvariantCulture)) }
             .Where(x => x.Item2 is not null).Select(x => $"{x.Item1}={x.Item2}").DefaultIfEmpty("none"));
-        var page = await QueryAsync(sp, new AuditQuery(body.ActorUserId, body.PatientId, Clean(body.Action), body.From, body.To, null, MaxExport) { FacilityId = ScopeOf(principal, facility) }, ct);
+        var page = await QueryAsync(sp, new AuditQuery(body.ActorUserId, body.PatientId, Clean(body.Action), body.From, body.To, null, MaxExport) { FacilityId = await ScopeOf(sp, facility, ct) }, ct);
         var rows = await Enrich(sp, page!.Items, withPatientName: false, ct);
         var exporter = Guid.TryParse(principal.FindFirstValue(ClaimTypes.NameIdentifier), out var id)
             ? (await sp.GetRequiredService<IStaffUsers>().DisplayNamesAsync([id], ct)).GetValueOrDefault(id) ?? id.ToString() : "unknown";

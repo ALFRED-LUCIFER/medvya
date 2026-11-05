@@ -12,6 +12,9 @@ public sealed class StaffAccess(TenancyDbContext db, IFacilityDirectory faciliti
     public Task<Access> AccessAsync(Capability capability, CancellationToken cancellationToken = default) =>
         facility.FacilityId is { } facilityId ? AccessAsync(capability, facilityId, cancellationToken) : Task.FromResult(Access.None);
 
+    public async Task<Role?> CurrentRoleAsync(CancellationToken cancellationToken = default) =>
+        user.UserId is { } userId && facility.FacilityId is { } facilityId ? await facilities.ActiveRoleAsync(userId, facilityId, cancellationToken) : null;
+
     public async Task<Access> AccessAsync(Capability capability, Guid facilityId, CancellationToken cancellationToken = default)
     {
         if (user.UserId is not { } userId) return Access.None;

@@ -366,6 +366,8 @@
   "session.switchFacility": "تغيير المنشأة",
   "schedule.slot.book": "احجز مع {name} الساعة {time}",
   "schedule.slot.held": "قيد الحجز · {time}",
+  "schedule.slot.passed": "انقضى",
+  "schedule.slot.passedAt": "انقضى موعد الفترة الساعة {time}",
   "schedule.state.held": "قيد الحجز",
   "schedule.state.Booked": "محجوز",
   "schedule.state.CheckedIn": "تم تسجيل الوصول",

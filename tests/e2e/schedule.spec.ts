@@ -142,6 +142,10 @@ async function open(page: Page, { locale = 'en', status = 200, as = reception, h
   return calls;
 }
 
+// The fixtures are dated 2026-10-19 and the real clock is later, so every slot would read as started: the default "now" is 08:00 that day
+// (before the first slot). Specs that need another time set their own, which replaces this one.
+test.beforeEach(({ page }) => page.clock.setFixedTime(new Date(ist('2026-10-19', '08:00'))));
+
 const column = (page: Page, name: string) => page.getByRole('list', { name });
 const bookButton = (page: Page, time: string) => page.getByRole('button', { name: `Book Dr. Arjun Rao (synthetic) at ${time}` });
 
@@ -169,6 +173,34 @@ test('shows bookable slots exactly in the template windows, in facility time', a
   await expect(rao.getByRole('listitem').filter({ hasText: 'Being booked · 09:40' })).toHaveCount(1);
   await expect(page.getByRole('button', { name: /^Book / })).toHaveCount(0);
   await expect(page.getByRole('complementary', { name: 'Book appointment' })).toHaveCount(0);
+});
+
+test('a free slot that has started is unavailable, not a button; later slots stay bookable (day and list)', async ({ page }) => {
+  await page.clock.setFixedTime(new Date(ist('2026-10-19', '10:25'))); // 10:00 and 10:20 have started
+  await open(page);
+  const rao = column(page, 'Dr. Arjun Rao (synthetic)');
+  for (const time of ['10:00', '10:20']) {
+    await expect(bookButton(page, time)).toHaveCount(0);
+    await expect(rao.getByRole('listitem').filter({ hasText: `Slot at ${time} has already passed` })).toHaveCount(1);
+  }
+  await expect(rao.getByRole('listitem').filter({ hasText: 'Slot at 10:00 has already passed' })).toContainText('Passed'); // words, not colour alone
+  await expect(bookButton(page, '10:40')).toBeVisible();
+
+  await page.getByRole('button', { name: 'List', exact: true }).click();
+  const list = page.getByRole('region', { name: 'Dr. Arjun Rao (synthetic)' });
+  await expect(list.getByRole('button', { name: 'Book Dr. Arjun Rao (synthetic) at 10:40' })).toBeVisible();
+  await expect(list.getByRole('button', { name: 'Book Dr. Arjun Rao (synthetic) at 10:20' })).toHaveCount(0);
+  await expect(list.getByRole('listitem').filter({ hasText: 'Slot at 10:20 has already passed' })).toHaveCount(1);
+  await expect(list.getByRole('listitem').filter({ hasText: visits })).toHaveCount(1); // a booked visit in the past still shows
+});
+
+test('a slot stops being bookable when its start passes, without a reload', async ({ page }) => {
+  await page.clock.install({ time: new Date(ist('2026-10-19', '10:19:30')) });
+  await open(page);
+  await expect(bookButton(page, '10:20')).toBeVisible();
+  await page.clock.fastForward('01:00');
+  await expect(bookButton(page, '10:20')).toHaveCount(0);
+  await expect(page.getByText('Slot at 10:20 has already passed')).toHaveCount(1);
 });
 
 test('moves between days and back to today', async ({ page }) => {

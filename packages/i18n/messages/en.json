@@ -367,6 +367,8 @@
   "session.switchFacility": "Change facility",
   "schedule.slot.book": "Book {name} at {time}",
   "schedule.slot.held": "Being booked · {time}",
+  "schedule.slot.passed": "Passed",
+  "schedule.slot.passedAt": "Slot at {time} has already passed",
   "schedule.state.held": "Being booked",
   "schedule.state.Booked": "Booked",
   "schedule.state.CheckedIn": "Checked in",

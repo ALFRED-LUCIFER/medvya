@@ -1,9 +1,9 @@
 import type { DragEvent } from 'react';
 import { useI18n } from '@medvya/i18n';
 import { cn, scheduleLooks } from '@medvya/ui';
-import type { CalendarKind, ColumnItem, ColumnLayout, DayLayout } from '../domain/schedule';
+import { hasStarted, type CalendarKind, type ColumnItem, type ColumnLayout, type DayLayout } from '../domain/schedule';
 import { hatched } from './looks';
-import { AppointmentChip, dragType, OpenableChip, type DropHandler, type OpenHandler } from './parts';
+import { AppointmentChip, dragType, OpenableChip, PastSlot, type DropHandler, type OpenHandler } from './parts';
 
 /** Called when an empty slot is clicked; absent when the role may not book (the grid is then read-only). */
 export type SlotHandler = (calendarId: string, calendarName: string, start: string) => void;
@@ -21,7 +21,7 @@ export type GridActions = {
 };
 
 /** Day view: a column per doctor and resource on one time scale, so a 40-minute visit spans two 20-minute slots. */
-export default function DayGrid({ day, updating, ...actions }: { day: DayLayout; updating: boolean } & GridActions) {
+export default function DayGrid({ day, updating, now, ...actions }: { day: DayLayout; updating: boolean; now: number } & GridActions) {
   const { t, formatTime } = useI18n();
   const time = (iso: string) => formatTime(new Date(iso), day.timeZone);
   // The grid scrolls inside its own box so headers stick to its top and the time axis to its reading-start side.
@@ -39,7 +39,7 @@ export default function DayGrid({ day, updating, ...actions }: { day: DayLayout;
         </div>
         {day.columns.map(c => (
           <ul key={c.calendarId} aria-labelledby={`schedule-col-${c.calendarId}`} className="relative border-s" style={{ height: day.height }}>
-            {c.items.map(i => <Item key={`${i.kind}-${i.start}`} item={i} column={c} day={day} time={time} {...actions} />)}
+            {c.items.map(i => <Item key={`${i.kind}-${i.start}`} item={i} column={c} day={day} time={time} now={now} {...actions} />)}
           </ul>
         ))}
       </div>
@@ -63,7 +63,7 @@ function ColumnHeader({ column: c }: { column: ColumnLayout }) {
 /** Below this height the words do not fit; the block then shows its icon and names the reason as its tooltip. */
 const minLabelPx = 32;
 
-function Item({ item, column, day, time, onSlot, onOpen, onDrop, moving }: { item: ColumnItem; column: ColumnLayout; day: DayLayout; time: (iso: string) => string } & GridActions) {
+function Item({ item, column, day, time, now, onSlot, onOpen, onDrop, moving }: { item: ColumnItem; column: ColumnLayout; day: DayLayout; time: (iso: string) => string; now: number } & GridActions) {
   const { t } = useI18n();
   const box = { top: item.top, height: item.height };
   const name = column.name || t('schedule.doctor');
@@ -76,6 +76,13 @@ function Item({ item, column, day, time, onSlot, onOpen, onDrop, moving }: { ite
     if (from && visit?.kind === 'appointment' && from.calendarKind === column.calendarKind) onDrop?.(visit, { calendarId: from.calendarId, calendarName: from.name || t('schedule.doctor') }, { calendarId: column.calendarId, calendarName: name, start });
   };
 
+  if (item.kind === 'slot' && hasStarted(item, now))
+    return (
+      <li className={cn('absolute inset-x-0 flex items-start gap-2 overflow-hidden border-t px-2 pt-0.5', hatched)} style={box}>
+        <span aria-hidden className="font-mono text-xs text-muted-foreground">{time(item.start)}</span>
+        <PastSlot time={time(item.start)} />
+      </li>
+    );
   if (item.kind === 'slot' && item.held) {
     const look = scheduleLooks.held, Icon = look.icon;
     return (

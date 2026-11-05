@@ -92,8 +92,8 @@ export default function AuditLogPanel(p: Props) {
                   <tr key={r.id}>
                     <td className="p-3 whitespace-nowrap"><time dateTime={r.occurredAt}>{formatDate(at)} {formatTime(at, zone)}</time></td>
                     <td className="p-3">{r.actorName ?? t('audit.unknownStaff')}</td>
-                    <td className="p-3">{r.role ? t(`role.${r.role}`) : ''}</td>
-                    <td className="p-3">{r.action}</td>
+                    <td className="p-3">{r.role ? t(`role.${r.role}`) : t('audit.roleNotRecorded')}</td>
+                    <td className="p-3">{r.action}{r.detail && <span className="block text-xs text-muted-foreground">{r.detail}</span>}</td>
                     <td className="p-3">{r.patientName ?? (r.patientMrn ? t('audit.mrn', { mrn: r.patientMrn }) : '')}</td>
                     <td className="p-3">{r.purpose}</td>
                     <td className="p-3 font-semibold">{t(`audit.outcome.${r.outcome}`)}</td>

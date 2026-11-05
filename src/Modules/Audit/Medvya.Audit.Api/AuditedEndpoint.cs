@@ -139,6 +139,7 @@ public static class AuditedEndpoint
             OccurredAt = DateTimeOffset.UtcNow,
             ClientIp = http.Connection.RemoteIpAddress?.ToString(),
             CorrelationId = http.TraceIdentifier,
+            Detail = http.Items["audit.detail"] as string,
         }, http.RequestAborted);
     }
 }

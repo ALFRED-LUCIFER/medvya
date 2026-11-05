@@ -32,7 +32,7 @@ test('two memberships: choose a facility, then switch without signing in again',
   await page.goto('/schedule');
   await expect(page).toHaveURL('/choose-facility');
   await expect(page.getByRole('heading', { name: 'Choose where you are working today' })).toBeVisible();
-  await expect(page.getByRole('button', { name: /Besant Nagar/ })).toContainText('Hospital doctor');
+  await expect(page.getByRole('button', { name: /Besant Nagar/ })).toContainText('Doctor');
   await expect(page.getByRole('button', { name: 'Keep current facility' })).toHaveCount(0); // nothing to keep yet
 
   await page.getByRole('button', { name: /Adyar/ }).click();
@@ -42,7 +42,7 @@ test('two memberships: choose a facility, then switch without signing in again',
 
   await page.getByRole('link', { name: 'Change facility' }).click();
   await page.getByRole('button', { name: /Besant Nagar/ }).click();
-  await expect(page.getByRole('navigation').first()).toContainText('Hospital doctor');
+  await expect(page.getByRole('navigation').first()).toContainText('Doctor');
   await expect(page.getByRole('navigation').first()).not.toContainText('Practice settings');
 });
 

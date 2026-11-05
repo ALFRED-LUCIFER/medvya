@@ -90,8 +90,10 @@ builder.Services.Configure<ForwardedHeadersOptions>(o =>
     o.KnownIPNetworks.Clear();
     o.KnownProxies.Clear();
     foreach (var proxy in proxies) o.KnownProxies.Add(IPAddress.Parse(proxy));
-    // With both lists empty the middleware would believe any sender, so no listed proxy means no forwarded headers at all.
-    o.ForwardedHeaders = proxies.Length > 0 ? ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto : ForwardedHeaders.None;
+    // The client address is believed only from listed proxies (a forged one would dodge limits and falsify the audit trail).
+    // The protocol is always believed: App Service ends TLS in front of the app, so without it sign-in sends Entra an http redirect
+    // address that is not registered. A forged protocol can only change generated links.
+    o.ForwardedHeaders = proxies.Length > 0 ? ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto : ForwardedHeaders.XForwardedProto;
 });
 
 var permitsPerMinute = builder.Configuration.GetValue("RateLimiting:PermitsPerMinute", 300);

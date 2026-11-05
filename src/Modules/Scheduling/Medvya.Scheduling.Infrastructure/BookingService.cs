@@ -67,8 +67,10 @@ public sealed class BookingService(
         var key = IdempotencyHashes.Of(idempotencyKey, command);
         // A repeat comes first: its hold is already gone, so the checks below would answer "hold_expired" instead of the first outcome.
         if (key is not null && await ReplayAsync(key, cancellationToken) is { } first) return first;
-        var hold = await db.SlotHolds.AsNoTracking().SingleOrDefaultAsync(h => h.Id == command.HoldId, cancellationToken)
-            ?? throw new SlotUnavailableException("hold_expired"); // released, replaced or cleaned up after expiry
+        var hold = await db.SlotHolds.AsNoTracking().SingleOrDefaultAsync(h => h.Id == command.HoldId, cancellationToken);
+        // An identical request that raced this one may have booked and deleted the hold since the replay check above: answer with its outcome.
+        if (hold is null && key is not null && await ReplayAsync(key, cancellationToken) is { } raced) return raced;
+        if (hold is null) throw new SlotUnavailableException("hold_expired"); // released, replaced or cleaned up after expiry
         await context.RequireAsync(hold.FacilityId, SchedulingAccess.CanBook, cancellationToken);
         if (hold.HeldBy != context.UserId) throw new SlotUnavailableException("being_booked");
         var now = context.Now;

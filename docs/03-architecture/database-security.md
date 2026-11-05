@@ -13,6 +13,8 @@ Who can do what inside a Medvya database. The roles are defined in one idempoten
 | `medvya_patients` | `SELECT/INSERT/UPDATE/DELETE/UNMASK ON SCHEMA::patients`; `VIEW ANY COLUMN MASTER KEY DEFINITION`, `VIEW ANY COLUMN ENCRYPTION KEY DEFINITION` (key metadata only, for parameter encryption) | Any other schema; decrypting without the column master key |
 | `medvya_billing` | `SELECT/INSERT/UPDATE ON SCHEMA::billing` | `DELETE` (deleting a DOC_SEQUENCE row would restart a legal number series), `ALTER` (so it cannot disable the trigger that refuses an `UPDATE` rewinding, skipping or moving a series), any other schema |
 | `medvya_scheduling` | `SELECT/INSERT/UPDATE/DELETE ON SCHEMA::scheduling` (templates, resources; appointments from MDV-P1-021) | Any other schema; reporting has no access until a reason-free view exists (appointments hold the SensitiveHealth visit reason) |
+| `medvya_notifications` | `SELECT/INSERT/UPDATE ON SCHEMA::notifications` (messages and attempts, no text or addresses; MDV-P1-032) | `DELETE` (attempts are the delivery history), patients and scheduling data (contacts and events come through module contracts) |
+| `medvya_jobs` | `SELECT/INSERT/UPDATE/DELETE/EXECUTE ON SCHEMA::hangfire` (Hangfire job storage) | Any module's data. Hangfire's table install runs as the migration principal on deploy; only Development lets the app prepare the schema |
 | `medvya_audit` | `SELECT/INSERT ON SCHEMA::audit` | `UPDATE`/`DELETE` (the ledger table refuses them too), any other schema |
 | `medvya_reporting` | `SELECT ON SCHEMA::tenancy` and `SCHEMA::patients` (masked, identifiers as ciphertext). Support staff use this role | Any write, any DDL, `UNMASK`, `audit` (until `ClientIp` is masked), `identity` |
 
@@ -63,6 +65,18 @@ Azure provisioning is MDV-P0-006; until it exists, these steps are the plan, not
 | Migration | User-assigned managed identity used only by the GitHub Actions deploy job (OIDC federated credential) | `medvya_migrator` |
 | Application | App Service managed identity (one per country deployment) | `medvya_app` |
 | Reporting | Entra group for reporting users or a reporting service identity | `medvya_reporting` |
+
+### Deploy runbook (dev, India; same shape for every environment)
+
+1. **Infrastructure:** `infra/bicep/main.bicep` creates the Key Vault key `medvya-column-master` (RSA 3072) and gives "Key Vault Crypto User" on that key only to the web app identity and the SQL administrator.
+2. **Administrator, once and whenever a module is added** (needs the SQL firewall to allow your IP, and `az login` as the Entra admin):
+   `dotnet run --project tools/db-migrate -- admin "<connection>" "<key url>"` runs `roles.sql`, then creates `CMK_Medvya` and `CEK_Patients` wrapped by the Key Vault key.
+3. **Administrator, once per identity:** map the identities (below). The deploy identity is `Medvya CI deploy (dev, India)`.
+4. **Every deploy:** the workflow opens a firewall rule for its own runner, runs `db-migrate migrate` as the migration identity (module migrations, then the Hangfire tables), and closes the rule.
+
+**SQL firewall:** only the web app's outbound addresses (`infra/bicep/sql-firewall.bicep`) are permanent. The deploy job and the administrator open their own address for the length of the work and delete it (`az sql server firewall-rule delete`). A Bicep deploy never deletes rules, so after moving to this layout delete the old `AllowAzureServices` rule once by hand.
+
+Connection string (an app setting, no password): `Server=tcp:<server>.database.windows.net,1433;Database=medvya;Authentication=Active Directory Managed Identity;Encrypt=Strict;`.
 
 Mapping, run by the administrator after `roles.sql`, per database:
 

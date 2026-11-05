@@ -41,6 +41,7 @@ journey('J1', {
     await page.getByLabel('Emergency contact phone').fill('+91 90000 00502');
     await page.getByRole('button', { name: 'Continue' }).click();
     await page.getByRole('button', { name: 'Continue' }).click();
+    await page.getByRole('button', { name: 'Continue' }).click(); // consents: treatment only is required
     await page.getByRole('button', { name: 'Register patient' }).click();
     await expect(page.getByRole('heading', { name: 'Meera Iyer is registered' })).toBeVisible();
   },

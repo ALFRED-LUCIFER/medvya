@@ -1,0 +1,65 @@
+name: deploy-dev
+
+# Tagged deploy of the API to the India dev environment (MDV-P0-007). Signs in to Azure with GitHub OIDC; no secret is stored.
+# Migrations run first, as the migration identity (medvya_migrator, no data access), through a firewall rule that exists only for this run.
+# shortcut: API only, no staging slot, web app not deployed (needs a static host); add with staging.
+# shortcut: roles.sql and the Always Encrypted keys are the administrator's step (tools/db-migrate `admin`), not this job's: the deploy identity cannot grant rights.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: dev # the federated credential trusts this environment only
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile && pnpm --filter clinic build
+      - run: dotnet publish src/Host.Api -c Release -o publish
+      # The API serves the built web app under /app/ (same origin as the sign-in cookie).
+      - run: mkdir -p publish/wwwroot/app && cp -R web/clinic/dist/. publish/wwwroot/app/
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: Migrate database
+        env:
+          RG: ${{ vars.AZURE_RESOURCE_GROUP }}
+          SQL_SERVER: ${{ vars.AZURE_SQL_SERVER }}
+          RULE: gha-${{ github.run_id }}
+        run: |
+          ip=$(curl -fsS https://api.ipify.org)
+          az sql server firewall-rule create -g "$RG" -s "$SQL_SERVER" -n "$RULE" --start-ip-address "$ip" --end-ip-address "$ip" -o none
+          # Serverless SQL auto-pauses; the long connect timeout covers the resume.
+          dotnet run -c Release --project tools/db-migrate -- migrate \
+            "Server=tcp:$SQL_SERVER.database.windows.net,1433;Database=medvya;Authentication=Active Directory Default;Encrypt=Strict;Connect Timeout=120;"
+      - name: Close SQL firewall
+        if: always()
+        env:
+          RG: ${{ vars.AZURE_RESOURCE_GROUP }}
+          SQL_SERVER: ${{ vars.AZURE_SQL_SERVER }}
+          RULE: gha-${{ github.run_id }}
+        run: az sql server firewall-rule delete -g "$RG" -s "$SQL_SERVER" -n "$RULE" -o none || true
+      - uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ vars.AZURE_WEBAPP_NAME }}
+          package: publish

@@ -61,7 +61,7 @@ public static partial class StaffAuthentication
                 // A refused or broken sign-in returns to the app with a generic error; the reason is only in the logs.
                 o.Events.OnRemoteFailure = ctx =>
                 {
-                    ctx.Response.Redirect("/?signin=failed");
+                    ctx.Response.Redirect($"{AppPath(ctx.HttpContext.RequestServices.GetRequiredService<IConfiguration>())}?signin=failed");
                     ctx.HandleResponse();
                     return Task.CompletedTask;
                 };
@@ -78,7 +78,7 @@ public static partial class StaffAuthentication
         // shortcut: MFA is read from the standard amr claim; confirm Entra External ID emits it (or use its MFA claim) in the Entra spike (MDV-P0-011).
         if (!principal.FindAll("amr").Any(c => c.Value == "mfa"))
         {
-            SignInRefused(log, "mfa_missing");
+            SignInRefusedNoMfa(log);
             ctx.Fail("Multi-factor authentication is required.");
             return;
         }
@@ -92,7 +92,7 @@ public static partial class StaffAuthentication
             user = await InvitationSignIn.AcceptAsync(ctx.HttpContext, invitation, issuer, subject, principal.FindFirst("name")?.Value, user);
             if (user is null)
             {
-                SignInRefused(log, "invitation_unusable");
+                SignInRefusedInvitation(log);
                 ctx.Fail("The invitation cannot be used.");
                 return;
             }
@@ -104,7 +104,7 @@ public static partial class StaffAuthentication
                 .FindOrCreateAsync(issuer, subject, principal.FindFirst("name")?.Value ?? "New user", ctx.HttpContext.RequestAborted);
         if (user is null)
         {
-            SignInRefused(log, "unknown_account");
+            SignInRefusedUnknownAccount(log);
             ctx.Fail("No Medvya account for this sign-in.");
             return;
         }
@@ -115,9 +115,16 @@ public static partial class StaffAuthentication
             CookieAuthenticationDefaults.AuthenticationScheme));
     }
 
-    // Reason codes only; never the account, email or name.
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Sign-in refused: {Reason}")]
-    static partial void SignInRefused(ILogger logger, string reason);
+    // One fixed message per reason, no arguments: the telemetry scrubber redacts every logged value, so a {Reason} argument would be unreadable.
+    // Never the account, email or name.
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Sign-in refused: the provider did not report multi-factor authentication")]
+    static partial void SignInRefusedNoMfa(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Sign-in refused: the invitation cannot be used")]
+    static partial void SignInRefusedInvitation(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Sign-in refused: no Medvya account for this sign-in")]
+    static partial void SignInRefusedUnknownAccount(ILogger logger);
 
     public static WebApplication UseStaffAuthentication(this WebApplication app)
     {
@@ -140,9 +147,9 @@ public static partial class StaffAuthentication
 
     public static WebApplication MapStaffSession(this WebApplication app)
     {
-        app.MapGet("/bff/login", (string? returnUrl, string? invitation, bool? signup) =>
+        app.MapGet("/bff/login", (string? returnUrl, string? invitation, bool? signup, IConfiguration config) =>
             {
-                var properties = new AuthenticationProperties { RedirectUri = returnUrl is not null && IsLocal(returnUrl) ? returnUrl : "/" };
+                var properties = new AuthenticationProperties { RedirectUri = returnUrl is not null && IsLocal(returnUrl) ? returnUrl : AppPath(config) };
                 if (InvitationToken.Read(invitation) is not null) properties.Items[InvitationSignIn.Item] = invitation;
                 if (signup == true) properties.Items[SignUpItem] = "1";
                 return Results.Challenge(properties, [OpenIdConnectDefaults.AuthenticationScheme]);
@@ -155,6 +162,9 @@ public static partial class StaffAuthentication
     }
 
     public const string SignInRateLimit = "sign-in";
+
+    /// <summary>Where the web app lives: "/app/" when the API serves the built app (the public site owns "/"), "/" in development.</summary>
+    public static string AppPath(IConfiguration config) => config["Web:AppPath"] ?? "/";
 
     // Only same-site paths: "/x" but never "//host" or "/\host", which browsers treat as another site.
     static bool IsLocal(string url) => url.StartsWith('/') && !url.StartsWith("//", StringComparison.Ordinal) && !url.StartsWith("/\\", StringComparison.Ordinal);

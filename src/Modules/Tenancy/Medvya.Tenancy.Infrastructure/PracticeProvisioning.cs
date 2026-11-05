@@ -63,11 +63,20 @@ public sealed class PracticeProvisioning(string connectionString, ICurrentUser u
         }
         // Only a doctor submits a licence; their recording and signing stay off until it is verified (LicenceRules).
         if (role == Role.SoloDoctor)
+        {
             db.DoctorLicences.Add(new DoctorLicence
             {
                 MembershipId = membershipId, TenantId = tenantId, Authority = data.Licence!.Authority!, Number = data.Licence.Number!.Trim(),
                 CertificateName = Clean(data.Licence.CertificateName), SubmittedAt = now,
             });
+            // The owner doctor is listed on Settings, Doctors beside the doctors added later (MDV-P1-007).
+            db.DoctorProfiles.Add(new DoctorProfile
+            {
+                MembershipId = membershipId, TenantId = tenantId, FullName = data.Profile.FullName!.Trim(), Specialty = Clean(data.Profile.Specialty),
+                Qualifications = Clean(data.Profile.Qualifications), Languages = Clean(data.Profile.Languages),
+                NewVisitFeeMinor = hours.NewVisitFee!.Value, FollowUpFeeMinor = hours.FollowUpFee!.Value, ChangedBy = owner, ChangedAt = now,
+            });
+        }
 
         // The audit row commits with the practice (fail closed). The country choice is part of the action code: opaque, no free text.
         await using (var tx = await db.Database.BeginTransactionAsync(cancellationToken))

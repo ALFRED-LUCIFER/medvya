@@ -37,6 +37,8 @@ public sealed class Membership
     [Classification(DataClass.Internal)] public Guid FacilityId { get; init; }
     [Classification(DataClass.Internal)] public Role Role { get; set; }
     [Classification(DataClass.Internal)] public MembershipStatus Status { get; set; }
+    /// <summary>The practice-defined role this person holds (its base role is <see cref="Role"/>); null for a built-in role (MDV-P1-008).</summary>
+    [Classification(DataClass.Internal)] public Guid? CustomRoleId { get; set; }
 }
 
 /// <summary>

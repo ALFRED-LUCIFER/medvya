@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The deploy-time database tool (MDV-P0-008/009): roles and Always Encrypted keys as the administrator, migrations as the migration role. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Modules\Tenancy\Medvya.Tenancy.Infrastructure\Medvya.Tenancy.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Audit\Medvya.Audit.Infrastructure\Medvya.Audit.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Patients\Medvya.Patients.Infrastructure\Medvya.Patients.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Identity\Medvya.Identity.Infrastructure\Medvya.Identity.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Billing\Medvya.Billing.Infrastructure\Medvya.Billing.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Scheduling\Medvya.Scheduling.Infrastructure\Medvya.Scheduling.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Notifications\Medvya.Notifications.Infrastructure\Medvya.Notifications.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Leads\Medvya.Leads.Infrastructure\Medvya.Leads.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Azure.Identity" />
+    <PackageReference Include="Hangfire.SqlServer" />
+    <EmbeddedResource Include="..\..\infra\sql\roles.sql" LogicalName="roles.sql" />
+  </ItemGroup>
+
+</Project>

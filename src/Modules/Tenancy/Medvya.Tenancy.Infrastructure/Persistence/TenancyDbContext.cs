@@ -22,6 +22,8 @@ public sealed class TenancyDbContext(DbContextOptions<TenancyDbContext> options,
     public DbSet<SettingsChange> SettingsChanges => Set<SettingsChange>();
     public DbSet<PracticeDefaults> PracticeDefaultsSet => Set<PracticeDefaults>();
     public DbSet<DoctorLicence> DoctorLicences => Set<DoctorLicence>();
+    public DbSet<DoctorProfile> DoctorProfiles => Set<DoctorProfile>();
+    public DbSet<CustomRole> CustomRoles => Set<CustomRole>();
 
     Guid? CurrentTenantId => tenant.TenantId;
 
@@ -53,6 +55,7 @@ public sealed class TenancyDbContext(DbContextOptions<TenancyDbContext> options,
             e.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
             e.HasOne<Facility>().WithMany().HasForeignKey(x => x.FacilityId).OnDelete(DeleteBehavior.Restrict);
             e.HasIndex(x => new { x.TenantId, x.UserId, x.FacilityId }).IsUnique();
+            e.HasOne<CustomRole>().WithMany().HasForeignKey(x => x.CustomRoleId).OnDelete(DeleteBehavior.Restrict);
             e.HasIndex(x => x.UserId); // the facility picker looks a user's memberships up across tenants
             // Only an Invited membership may lack its user.
             e.ToTable(t => t.HasCheckConstraint("CK_Memberships_UserUnlessInvited", "[Status] = 'Invited' OR [UserId] IS NOT NULL"));
@@ -120,13 +123,35 @@ public sealed class TenancyDbContext(DbContextOptions<TenancyDbContext> options,
             e.HasOne<Tenant>().WithOne().HasForeignKey<PracticeDefaults>(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
+        modelBuilder.Entity<CustomRole>(e =>
+        {
+            e.Property(x => x.Name).HasMaxLength(60);
+            e.Property(x => x.BaseRole).HasConversion<string>().HasMaxLength(40);
+            e.Property(x => x.Capabilities).HasMaxLength(400);
+            e.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
+            e.HasIndex(x => new { x.TenantId, x.Name }).IsUnique();
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
         modelBuilder.Entity<DoctorLicence>(e =>
         {
             e.HasKey(x => x.MembershipId);
             e.Property(x => x.Authority).HasMaxLength(20);
             e.Property(x => x.Number).HasMaxLength(20);
+            e.Property(x => x.Category).HasMaxLength(40);
             e.Property(x => x.CertificateName).HasMaxLength(200);
+            e.Property(x => x.RejectionReason).HasMaxLength(500);
             e.HasOne<Membership>().WithOne().HasForeignKey<DoctorLicence>(x => x.MembershipId).OnDelete(DeleteBehavior.Restrict);
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<DoctorProfile>(e =>
+        {
+            e.HasKey(x => x.MembershipId);
+            e.Property(x => x.FullName).HasMaxLength(200);
+            e.Property(x => x.Specialty).HasMaxLength(100);
+            e.Property(x => x.Qualifications).HasMaxLength(200);
+            e.Property(x => x.Languages).HasMaxLength(200);
+            e.Property(x => x.SignatureKey).HasMaxLength(200);
+            e.HasOne<Membership>().WithOne().HasForeignKey<DoctorProfile>(x => x.MembershipId).OnDelete(DeleteBehavior.Restrict);
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
     }

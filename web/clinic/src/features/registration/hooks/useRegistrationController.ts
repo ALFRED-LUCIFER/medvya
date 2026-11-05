@@ -8,6 +8,7 @@ import {
   type DuplicateDecision, type DuplicateQuery, type DuplicateResolution, type FormField, type RegisterRequest, type RegistrationForm,
   type RegistrationResult, type Step,
 } from '../domain/registration';
+import { missingParts } from '../../patients/domain/directory';
 import { ApiError } from '../../patients/services/patientsApi';
 import { checkDuplicates, registerPatient } from '../services/registrationApi';
 import { noRetryOnAnswers, patientDataGcTime } from '../../patients/hooks/usePatientDirectoryController';
@@ -118,6 +119,7 @@ export function useRegistrationController(country: Country, quick: boolean) {
     consentsStale: failure?.errors.some(e => e.field === 'consents.policyVersion') ?? false,
     result: save.data ?? null as RegistrationResult | null,
     registeredName: save.variables?.fullName ?? '',
+    missing: save.variables ? missingParts(save.variables) : [],
     onRegisterAnother: () => { save.reset(); setResolution(null); form.reset(emptyForm); setStep('identity'); setReached(0); },
   };
 }

@@ -7,7 +7,7 @@ import type { Records } from '../features/records/domain/records';
 import type { Clinic, Person } from '../features/session/domain/session';
 import type { Visit } from '../features/visits/domain/visits';
 
-const clinic: Clinic = { name: 'Iyer Family Clinic', branch: 'Adyar', phone: '+914400000101', address: 'Iyer Family Clinic, Adyar, Chennai', country: 'IN', timeZone: 'Asia/Kolkata' };
+const clinic: Clinic = { name: 'Iyer Family Clinic', branch: 'Adyar', phone: '+914400000102', address: 'Iyer Family Clinic, Adyar, Chennai', country: 'IN', timeZone: 'Asia/Kolkata' };
 
 const people: Person[] = [
   { id: 'pt-meera', name: 'Meera Iyer', initials: 'MI', relation: 'self', clinic: 'Iyer Family Clinic', since: '2019', linked: true },

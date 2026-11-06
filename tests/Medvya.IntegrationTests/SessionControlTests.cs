@@ -337,6 +337,74 @@ public sealed class SessionControlTests(SqlServerFixture sql) : IClassFixture<Sq
 
     // ---- Offboarding (MDV-P1-009) ----
 
+    async Task<Guid> BookedVisitAsync(Guid doctor, Guid facility, DateTimeOffset start, bool slots = true)
+    {
+        var visit = new Medvya.Scheduling.Domain.Appointment
+        {
+            Id = Guid.NewGuid(), TenantId = tenantA, FacilityId = facility, CalendarId = doctor, CalendarKind = Medvya.Scheduling.Domain.CalendarKind.Doctor, PatientId = Guid.NewGuid(),
+            VisitType = Medvya.Scheduling.Domain.VisitType.FollowUp, Start = start, End = start.AddMinutes(15), State = Medvya.Scheduling.Domain.AppointmentState.Booked,
+            ReasonCategory = Medvya.Scheduling.Domain.ReasonCategory.General, Channel = Medvya.Scheduling.Domain.BookingChannel.Phone, BookedAt = DateTimeOffset.UtcNow, ChangedAt = DateTimeOffset.UtcNow,
+        };
+        await using var db = sql.Scheduling(tenantA);
+        db.Appointments.Add(visit);
+        if (slots) db.ScheduleSlots.AddRange(Medvya.Scheduling.Domain.ScheduleSlot.For(visit));
+        await db.SaveChangesAsync();
+        return visit.Id;
+    }
+
+    [Fact]
+    public async Task OffboardingADoctorMovesTheirFutureVisitsToNeedsRebookingInTheSameTransaction()
+    {
+        await Clinics();
+        var admin = await Account("K. Lakshmi");
+        var doctor = await Account("Dr. R. Menon");
+        var other = await Account("Dr. S. Rao");
+        var adminMembership = await Member(admin, tenantA, facilityA, Role.PracticeAdmin);
+        var doctorMembership = await Member(doctor, tenantA, facilityA, Role.HospitalDoctor);
+        var soon = DateTimeOffset.UtcNow.AddDays(3);
+        var future = await BookedVisitAsync(doctor.Id, facilityA, soon);
+        var past = await BookedVisitAsync(doctor.Id, facilityA, DateTimeOffset.UtcNow.AddDays(-3), slots: false);
+        var others = await BookedVisitAsync(other.Id, facilityA, soon);
+        using var adminBrowser = await SignedIn(admin);
+        await Choose(adminBrowser, adminMembership);
+
+        Assert.Equal(HttpStatusCode.NoContent, (await Send(adminBrowser, HttpMethod.Post, $"/v1/staff/{doctorMembership}/offboard", new { reason = "Left the practice" })).StatusCode);
+
+        await using var db = sql.Scheduling(tenantA);
+        Assert.Equal(Medvya.Scheduling.Domain.AppointmentState.NeedsRebooking, (await db.Appointments.SingleAsync(a => a.Id == future)).State);
+        Assert.Equal(0, await db.ScheduleSlots.CountAsync(s => s.AppointmentId == future)); // the slot is free again
+        Assert.Equal(Medvya.Scheduling.Domain.AppointmentState.Booked, (await db.Appointments.SingleAsync(a => a.Id == past)).State);
+        Assert.Equal(Medvya.Scheduling.Domain.AppointmentState.Booked, (await db.Appointments.SingleAsync(a => a.Id == others)).State);
+        Assert.Contains("appointment.needs_rebooking", await AuditActions(tenantA, admin.Id));
+    }
+
+    [Fact]
+    public async Task IfMovingTheVisitsFailsTheOffboardingRollsBackAndTheDoctorStaysActive()
+    {
+        await Clinics();
+        var admin = await Account("K. Lakshmi");
+        var doctor = await Account("Dr. R. Menon");
+        var adminMembership = await Member(admin, tenantA, facilityA, Role.PracticeAdmin);
+        var doctorMembership = await Member(doctor, tenantA, facilityA, Role.HospitalDoctor);
+        using var doctorBrowser = await SignedIn(doctor);
+        await Choose(doctorBrowser, doctorMembership);
+        // A visit whose facility is not in this tenant cannot be placed in a time zone: the release fails after the membership was changed.
+        var stuck = await BookedVisitAsync(doctor.Id, Guid.NewGuid(), DateTimeOffset.UtcNow.AddDays(3));
+        using var adminBrowser = await SignedIn(admin);
+        await Choose(adminBrowser, adminMembership);
+
+        using var failed = await Send(adminBrowser, HttpMethod.Post, $"/v1/staff/{doctorMembership}/offboard", new { reason = "Left the practice" });
+        Assert.True((int)failed.StatusCode >= 500);
+
+        await using var tenancy = sql.Context(tenantA);
+        Assert.Equal(MembershipStatus.Active, (await tenancy.Memberships.SingleAsync(m => m.Id == doctorMembership)).Status);
+        Assert.Empty(await tenancy.SettingsChanges.Where(c => c.Section == "staff.offboard").ToListAsync());
+        Assert.DoesNotContain("staff.offboard", await AuditActions(tenantA, admin.Id));
+        Assert.Equal(HttpStatusCode.OK, await ContextStatus(doctorBrowser)); // sessions were not ended
+        await using var db = sql.Scheduling(tenantA);
+        Assert.Equal(Medvya.Scheduling.Domain.AppointmentState.Booked, (await db.Appointments.SingleAsync(a => a.Id == stuck)).State);
+    }
+
     [Fact]
     public async Task OffboardingEndsTheSessionsInThatTenantAtOnceKeepsOtherClinicsAndRecordsWhy()
     {

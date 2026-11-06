@@ -70,8 +70,30 @@ Why it matters for Medvya:
 | Routing | **React Router** (SPA) | App shell (MDV-P0-022) |
 | API client | Generated from OpenAPI into `@medvya/api-client` | With the first endpoint used by the UI (MDV-P0-012) |
 | UI | shadcn/ui + Radix + Tailwind 4 + Lucide via `@medvya/ui` (ADR-010) | In place |
-| Tables, dates | TanStack Table, react-day-picker (shadcn calendar) | With the first table screen (P1) |
+| Tables | shadcn `Table` set in `@medvya/ui`, plain-TypeScript sort helper (`features/table/domain/tableSort.ts`). TanStack Table only when a screen needs column resizing, grouping or virtualised rows | In place (MDV-P0-030) |
+| Dates | react-day-picker (shadcn calendar) | With the first date-picker screen (P1) |
 | Schedule grid | Own CSS grid in `features/schedule` (FullCalendar's doctor and resource columns are a paid plugin, and we need our own slot buttons, states and RTL) | MDV-P1-011 |
+
+## Tables (MDV-P0-030)
+
+Never write `<table>`, `<tr>`, `<th>` or `<td>` in `features/` (lint rule `react/forbid-elements` fails the build). Use `Table`, `TableHeader`, `TableBody`, `TableRow`, `TableHead`, `TableCell` and `TableState` from `@medvya/ui`.
+
+- `domain/`: column definitions as plain data, and the sort values per column.
+- `hooks/useXxxTableController`: sort, filter and paging state; returns rows, `sortOf(key)` and `onSort(key)`. Server data stays in TanStack Query.
+- `components/`: render the rows they are given. `TableState` shows the one loading, error and empty message; `TableHead` with `onSort` renders a 44 px button and sets `aria-sort`.
+- Pass `label` to `Table` when it can scroll sideways, so the region is focusable and named. Use `numeric` for right-aligned (end-aligned, flips in Arabic) columns and `sticky` on `TableHeader` for long tables.
+
+```tsx
+const { rows, sortOf, onSort } = useStaffTableController(staff); // hook
+<TableState state={rows.length ? 'ready' : 'empty'} messages={{ loading, error, empty }}>
+  <Table label={t('staff.tableLabel')}>
+    <TableHeader><TableRow>
+      {staffColumns.map(c => <TableHead key={c.key} scope="col" sort={c.sortable ? sortOf(c.key) : undefined} onSort={c.sortable ? () => onSort(c.key) : undefined}>{t(`staff.col.${c.key}`)}</TableHead>)}
+    </TableRow></TableHeader>
+    <TableBody>{rows.map(m => <TableRow key={m.id}><TableCell>{m.name}</TableCell></TableRow>)}</TableBody>
+  </Table>
+</TableState>
+```
 
 ## Navigation and route guards (MDV-P0-022)
 

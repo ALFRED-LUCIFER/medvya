@@ -1260,6 +1260,7 @@
   "staff.roles.error.duplicate": "يوجد دور بهذا الاسم.",
   "staff.roles.error.failed": "لم يُحفظ الدور. لم يتغير شيء؛ حاول مرة أخرى.",
   "staff.tableLabel": "قائمة الموظفين",
+  "staff.empty": "لا يوجد موظفون بعد. أضف أول شخص أدناه.",
   "staff.offboard": "إنهاء الخدمة",
   "staff.offboardNamed": "إنهاء الخدمة لـ {name}",
   "staff.offboardTitle": "إنهاء خدمة {name}",

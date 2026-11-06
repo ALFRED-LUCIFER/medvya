@@ -1261,6 +1261,7 @@
   "staff.roles.error.duplicate": "A role with this name already exists.",
   "staff.roles.error.failed": "The role was not saved. Nothing was changed; try again.",
   "staff.tableLabel": "Staff list",
+  "staff.empty": "No staff yet. Add the first person below.",
   "staff.offboard": "Offboard",
   "staff.offboardNamed": "Offboard {name}",
   "staff.offboardTitle": "Offboard {name}",

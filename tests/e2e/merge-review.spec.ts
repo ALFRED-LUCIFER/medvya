@@ -78,6 +78,7 @@ test('the record page lists its merge history', async ({ page }) => {
     address: null, status: 'Complete', registeredOn: '2026-11-02', identifiers: [], payer: null, emergencyContact: null, guardian: null,
   } }));
   await page.route(`**/v1/patients/${survivorId}/merges`, r => r.fulfill({ json: { merges: [{ id: requestId, status: 'Merged', thisIsSurvivor: true, otherMrn: '000041', mergedAt: '2026-11-03T05:00:00Z', unmergedAt: null }] } }));
+  await page.route(`**/v1/patients/${survivorId}/consents`, r => r.fulfill({ json: { policyVersion: '2026-11-draft', decisions: [] } }));
   await page.goto(`/patients/directory/${survivorId}`);
   await expect(page.getByRole('heading', { name: 'Merge history' })).toBeVisible();
   await expect(page.getByText(/Record 000041 was merged into this record on/)).toBeVisible();

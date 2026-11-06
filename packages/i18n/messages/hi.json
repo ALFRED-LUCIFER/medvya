@@ -1478,6 +1478,8 @@
   "schedule.sheet.printedBy": "{name} द्वारा {when} को प्रिंट की गई",
   "schedule.sheet.warning": "इसमें मरीज़ों के नाम हैं। इसे डेस्क पर रखें और दिन ख़त्म होने पर नष्ट कर दें।",
   "schedule.sheet.time": "समय",
+  "schedule.sheet.token": "टोकन",
+  "schedule.sheet.age": "आयु",
   "schedule.sheet.patient": "मरीज़",
   "schedule.sheet.type": "विज़िट का प्रकार",
   "schedule.sheet.status": "स्थिति",

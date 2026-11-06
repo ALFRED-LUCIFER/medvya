@@ -37,6 +37,7 @@ async function deskWith(page: Page, search: (body: SearchBody) => { status?: num
     return r.fulfill({ status, json });
   });
   await page.route(`**/v1/patients/${meeraId}`, r => r.fulfill({ json: meera }));
+  await page.route(`**/v1/patients/${meeraId}/consents`, r => r.fulfill({ json: { policyVersion: '2026-11-draft', decisions: [] } }));
   return searches;
 }
 
@@ -170,6 +171,7 @@ test('a role with Read access only sees no reveal button', async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('medvya.locale', 'en'));
   await page.route('**/v1/me/context', r => r.fulfill({ json: { ...receptionist, active: { ...receptionist.active, role: 'Nurse', capabilities: { RegisterBookPatients: 'Read' } } } }));
   await page.route(`**/v1/patients/${meeraId}`, r => r.fulfill({ json: meera }));
+  await page.route(`**/v1/patients/${meeraId}/consents`, r => r.fulfill({ json: { policyVersion: '2026-11-draft', decisions: [] } }));
   await page.goto(`/patients/directory/${meeraId}`);
   await expect(page.getByText('••0101')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Show full numbers' })).toHaveCount(0);

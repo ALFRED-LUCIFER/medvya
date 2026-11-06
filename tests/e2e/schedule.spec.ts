@@ -789,7 +789,7 @@ for (const locale of ['en', 'ar'] as const) {
       return r.fulfill({ json: {
         facilityId: 'f-1', timeZone: 'Asia/Kolkata', date: '2026-10-19', printedAt: ist('2026-10-19', '08:00'),
         pages: [
-          { calendarId: 'd-1', doctorName: 'Dr. Arjun Rao (synthetic)', rows: [{ start: ist('2026-10-19', '09:00'), firstName: 'Meera', visitType: 'NewConsultation', state: 'Booked' }] },
+          { calendarId: 'd-1', doctorName: 'Dr. Arjun Rao (synthetic)', rows: [{ start: ist('2026-10-19', '09:00'), token: 'A-07', firstName: 'Meera', ageYears: 54, visitType: 'NewConsultation', state: 'Booked' }] },
           { calendarId: 'd-2', doctorName: 'Dr. Priya Nair (synthetic)', rows: [] },
         ],
       } });
@@ -804,6 +804,8 @@ for (const locale of ['en', 'ar'] as const) {
     await expect(sections).toHaveCount(2);
     await expect(sections.first()).toContainText('Meera');
     await expect(sections.first()).toContainText('09:00'); // facility time, not New York
+    await expect(sections.first()).toContainText('A-07');
+    await expect(sections.first()).toContainText('54');
     await expect(sections.first()).not.toContainText('Iyer');
     await expect(sections.first()).toContainText(locale === 'ar' ? 'طبعه A. Joseph' : 'Printed by A. Joseph');
     await expect(page.getByRole('button', { name: /Print day sheet|طباعة/ })).toBeHidden();

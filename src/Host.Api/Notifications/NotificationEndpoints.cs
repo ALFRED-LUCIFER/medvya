@@ -1,7 +1,9 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Host.Api.Auth;
 using Host.Api.Context;
+using Host.Api.Settings;
 using Medvya.Audit.Api;
 using Medvya.Notifications.Application;
 using Medvya.Notifications.Domain;
@@ -47,6 +49,12 @@ public static class NotificationEndpoints
             await n.MarkReadAsync(body.FacilityId, id, ct) ? Results.NoContent() : Results.NotFound());
         staff.MapGet("/notifications/failed-visits", async (Guid? facilityId, [FromServices] INotificationQueries q, CancellationToken ct) =>
             facilityId is not { } f || f == Guid.Empty ? NoFacility : Results.Ok(await q.FailedVisitsAsync(f, ct)));
+
+        // Settings -> Notifications (MDV-P1-006): practice configuration only (like the rest of /v1/settings). No patient data; a save is audited inside the service.
+        var settings = app.MapGroup("/v1/settings/notifications").RequireAuthorization(StaffPolicies.ManageStaff).AddEndpointFilter(SettingsEndpoints.MapErrors);
+        settings.MapGet("", ([FromServices] INotificationPreferences p, CancellationToken ct) => p.GetAsync(ct));
+        settings.MapPut("", ([FromBody] NotificationPreferencesView body, [FromServices] INotificationPreferences p, CancellationToken ct) => p.SaveAsync(body, ct));
+        settings.MapGet("/templates", (string? language) => MessageCatalog.Previews(language));
 
         // Public on purpose: the provider (or its adapter) cannot sign in. The HMAC of the raw body is the credential; without a configured
         // secret every call is refused. The reference names the tenant, so the receipt is applied inside that tenant's scope (RLS).

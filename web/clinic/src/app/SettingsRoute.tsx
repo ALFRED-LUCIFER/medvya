@@ -4,6 +4,8 @@ import HolidaysPanel from '../features/settings/components/HolidaysPanel';
 import HoursPanel from '../features/settings/components/HoursPanel';
 import LocationsPanel from '../features/settings/components/LocationsPanel';
 import ProfilePanel from '../features/settings/components/ProfilePanel';
+import DataPanel from '../features/settings/components/DataPanel';
+import NotificationsPanel from '../features/settings/components/NotificationsPanel';
 import TermsPanel from '../features/settings/components/TermsPanel';
 import SettingsPage from '../features/settings/components/SettingsPage';
 import { settingsTabs, type SettingsTab } from '../features/settings/domain/settings';
@@ -12,6 +14,7 @@ import { useHolidaysController } from '../features/settings/hooks/useHolidaysCon
 import { useOpeningHoursController, useSchedulesController } from '../features/settings/hooks/useHoursController';
 import { useLocationChoice } from '../features/settings/hooks/useLocationChoice';
 import { useLocationsController } from '../features/settings/hooks/useLocationsController';
+import { useNotificationSettingsController } from '../features/settings/hooks/useNotificationSettingsController';
 import { useTermsController } from '../features/settings/hooks/useTermsController';
 import { useProfileController } from '../features/settings/hooks/useProfileController';
 import CustomRolesPanel from '../features/staff/components/CustomRolesPanel';
@@ -38,6 +41,7 @@ function Doctors({ facilityId }: { facilityId: string }) {
 }
 
 const Terms = () => <TermsPanel {...useTermsController()} />;
+const Notifications = () => <NotificationsPanel {...useNotificationSettingsController()} />;
 const Audit = () => <AuditLogPanel {...useAuditLogController()} />;
 
 function Staff({ facilityId }: { facilityId: string }) {
@@ -52,10 +56,10 @@ function Staff({ facilityId }: { facilityId: string }) {
 }
 
 /** Composition only: Settings (F-08) with its tab in the address (?tab=hours), so a tab can be linked and survives a reload. */
-export default function SettingsRoute({ facilityId }: { facilityId: string }) {
+export default function SettingsRoute({ facilityId, country }: { facilityId: string; country: 'IN' | 'AE' | null }) {
   const [params, setParams] = useSearchParams();
   const asked = params.get('tab');
   const tab: SettingsTab = (settingsTabs as readonly string[]).includes(asked ?? '') ? (asked as SettingsTab) : 'profile';
-  const panels = { profile: <Profile />, locations: <Locations facilityId={facilityId} />, hours: <Hours facilityId={facilityId} />, holidays: <Holidays facilityId={facilityId} />, staff: <Staff facilityId={facilityId} />, doctors: <Doctors facilityId={facilityId} />, audit: <Audit />, terms: <Terms /> };
+  const panels = { profile: <Profile />, locations: <Locations facilityId={facilityId} />, hours: <Hours facilityId={facilityId} />, holidays: <Holidays facilityId={facilityId} />, staff: <Staff facilityId={facilityId} />, doctors: <Doctors facilityId={facilityId} />, audit: <Audit />, terms: <Terms />, notifications: <Notifications />, data: <DataPanel country={country} accessLogPath="/settings?tab=audit" /> };
   return <SettingsPage tab={tab} onTab={next => setParams({ tab: next }, { replace: true })} panels={panels} />;
 }

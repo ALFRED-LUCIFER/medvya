@@ -74,6 +74,10 @@ public sealed class PracticeSettingsTests(SqlServerFixture sql) : IClassFixture<
         new(HttpMethod.Post, $"/v1/settings/locations/{h.Facility}/closures") { Content = JsonContent.Create(new { date = "2026-11-01", name = "Diwali" }) },
         new(HttpMethod.Put, "/v1/settings/logo") { Content = new ByteArrayContent(Png) },
         new(HttpMethod.Get, "/v1/settings/profile"),
+        // MDV-P1-006
+        new(HttpMethod.Put, "/v1/settings/notifications") { Content = JsonContent.Create(new { confirmation = false, reminder24h = false, reminder2h = false, changes = false, email = false, sms = false, quietStart = "21:00:00", quietEnd = "08:00:00" }) },
+        new(HttpMethod.Get, "/v1/settings/notifications"),
+        new(HttpMethod.Get, "/v1/settings/notifications/templates?language=en"),
     ];
 
     [Theory]
@@ -103,6 +107,17 @@ public sealed class PracticeSettingsTests(SqlServerFixture sql) : IClassFixture<
             var profile = await client.GetFromJsonAsync<JsonElement>("/v1/settings/profile");
             Assert.Equal("Iyer Family Clinic (synthetic)", profile.GetProperty("name").GetString());
         }
+    }
+
+    [Fact]
+    public async Task PracticeAdminSavesNotificationPreferencesOverHttpAndSeesThemAgain()
+    {
+        using var client = Client(Role.PracticeAdmin);
+        var body = new { confirmation = true, reminder24h = false, reminder2h = true, changes = true, email = true, sms = false, quietStart = "20:00:00", quietEnd = "09:00:00" };
+        Assert.Equal(HttpStatusCode.OK, (await client.PutAsJsonAsync("/v1/settings/notifications", body)).StatusCode);
+        var saved = await client.GetFromJsonAsync<JsonElement>("/v1/settings/notifications");
+        Assert.Equal((false, false, "20:00:00"), (saved.GetProperty("reminder24h").GetBoolean(), saved.GetProperty("sms").GetBoolean(), saved.GetProperty("quietStart").GetString()));
+        Assert.Equal(5, (await client.GetFromJsonAsync<JsonElement>("/v1/settings/notifications/templates?language=hi")).GetArrayLength());
     }
 
     // ---- Profile, locations, hours ----

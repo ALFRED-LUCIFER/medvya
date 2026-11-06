@@ -13,7 +13,7 @@ namespace Medvya.Notifications.Infrastructure;
 /// reschedule or cancellation first cancels everything still queued for the visit, then queues its own message (and, after a
 /// reschedule, reminders for the new time). Walk-ins get nothing: the patient is at the desk. Idempotent on the event id.
 /// </summary>
-public sealed class AppointmentNotifier(NotificationsDbContext db, IFacilityDirectory facilities, IOptions<NotificationOptions> options, TimeProvider clock) : IAppointmentSubscriber
+public sealed class AppointmentNotifier(NotificationsDbContext db, IFacilityDirectory facilities, INotificationPreferences preferences, IOptions<NotificationOptions> options, TimeProvider clock) : IAppointmentSubscriber
 {
     public async Task HandleAsync(AppointmentEvent appointmentEvent, CancellationToken cancellationToken = default)
     {
@@ -23,12 +23,14 @@ public sealed class AppointmentNotifier(NotificationsDbContext db, IFacilityDire
 
         var now = clock.GetUtcNow();
         var o = options.Value;
+        var prefs = await preferences.GetAsync(cancellationToken); // what the practice turned off is never queued
         var facility = await facilities.FindAsync(e.FacilityId, cancellationToken);
         var zone = facility is null ? null : TimeZoneInfo.FindSystemTimeZoneById(facility.TimeZone);
         var rows = new List<Notification>();
         void Add(NotificationKind kind, DateTimeOffset sendAt)
         {
-            foreach (var channel in o.Channels.Distinct())
+            if (!prefs.Allows(kind)) return;
+            foreach (var channel in o.Channels.Distinct().Where(prefs.Allows))
                 rows.Add(new Notification
                 {
                     Id = Guid.CreateVersion7(), TenantId = e.TenantId, FacilityId = e.FacilityId, AppointmentId = e.AppointmentId, PatientId = e.PatientId, SourceEventId = e.EventId,
@@ -39,7 +41,7 @@ public sealed class AppointmentNotifier(NotificationsDbContext db, IFacilityDire
         {
             if (zone is null) return;
             foreach (var kind in new[] { NotificationKind.Reminder24h, NotificationKind.Reminder2h })
-                if (NotificationRules.ReminderTime(e.Start, NotificationRules.Lead(kind)!.Value, now, zone, o.QuietStart, o.QuietEnd) is { } at) Add(kind, at);
+                if (NotificationRules.ReminderTime(e.Start, NotificationRules.Lead(kind)!.Value, now, zone, prefs.QuietStart, prefs.QuietEnd) is { } at) Add(kind, at);
         }
 
         switch (e.Kind)

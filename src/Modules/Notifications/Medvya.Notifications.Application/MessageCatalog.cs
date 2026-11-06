@@ -78,6 +78,18 @@ public static partial class MessageCatalog
         return new RenderedMessage(subject, SlotPattern().Replace(text, _ => values[i++]), $"{group}.{lang}");
     }
 
+    /// <summary>Every template in one language with its slots named {clinic}, {date}, {time}: what the settings screen shows. No patient values.</summary>
+    public static IReadOnlyList<TemplatePreview> Previews(string? languageTag)
+    {
+        var lang = Language(languageTag);
+        string[] names = ["{clinic}", "{date}", "{time}"];
+        return [.. Texts.Select(g =>
+        {
+            var i = 0;
+            return new TemplatePreview(g.Key, g.Value[lang].Subject, SlotPattern().Replace(g.Value[lang].Text, _ => names[i++]));
+        })];
+    }
+
     /// <summary>The registered template a final SMS text matches, or null: a text that matches none is never sent (DLT).</summary>
     public static string? RegisteredTemplate(string text) => Matchers.FirstOrDefault(m => m.Value.IsMatch(text)).Key;
 

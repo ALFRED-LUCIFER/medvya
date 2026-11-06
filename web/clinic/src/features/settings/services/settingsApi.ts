@@ -1,4 +1,5 @@
 import { ApiError, csrf, post, send } from '../../schedule/services/scheduleApi';
+import type { NotificationPrefs, TemplatePreview } from '../domain/notifications';
 import type { CalendarTemplate, Closure, ClosureForm, ClosureWithVisits, DayHours, Location, LocationForm, LogoLink, Profile, ProfileForm, TermsStatus } from '../domain/settings';
 
 const json = (method: string, body: unknown) => ({ method, headers: { ...csrf, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -40,3 +41,8 @@ export const addResource = (facilityId: string, name: string) => post<{ id: stri
 export const fetchTerms = () => send<TermsStatus>('/v1/settings/terms');
 /** Only the practice owner may accept; the server answers 403 to anyone else. */
 export const acceptTerms = () => post<TermsStatus>('/v1/settings/terms/accept', {});
+
+// Notifications tab (MDV-P1-006). The preview is the catalogue text with placeholders; no patient values exist here.
+export const fetchNotificationPrefs = () => send<NotificationPrefs>('/v1/settings/notifications');
+export const saveNotificationPrefs = (prefs: NotificationPrefs) => send<NotificationPrefs>('/v1/settings/notifications', json('PUT', prefs));
+export const fetchTemplatePreviews = (language: string) => send<TemplatePreview[]>(`/v1/settings/notifications/templates?${new URLSearchParams({ language })}`);

@@ -18,16 +18,21 @@ public sealed class StaffNotifications(NotificationsDbContext db, IStaffAccess a
     static Capability NeededFor(StaffNotificationKind kind) => kind switch
     {
         StaffNotificationKind.MessageFailed => Capability.RegisterBookPatients,
+        // Practice administration (owner doctor, practice admin, hospital IT): the same people who manage staff and doctors.
+        StaffNotificationKind.LicenceExpiring or StaffNotificationKind.AccessReviewDue => Capability.StaffRolesIntegrations,
         _ => throw new ArgumentOutOfRangeException(nameof(kind)),
     };
 
     /// <summary>Queues the item for the same save as the change that caused it. Raising the same event again adds nothing.</summary>
-    public static void Raise(NotificationsDbContext db, Notification n, DateTimeOffset now, string dedupeKey)
+    public static void Raise(NotificationsDbContext db, Notification n, DateTimeOffset now, string dedupeKey) =>
+        Raise(db, n.TenantId, n.FacilityId, StaffNotificationKind.MessageFailed, n.AppointmentId, null, now, dedupeKey);
+
+    public static void Raise(NotificationsDbContext db, Guid tenantId, Guid facilityId, StaffNotificationKind kind, Guid? refId, int? detail, DateTimeOffset now, string dedupeKey)
     {
-        if (db.StaffNotifications.Local.Any(x => x.TenantId == n.TenantId && x.DedupeKey == dedupeKey)) return;
+        if (db.StaffNotifications.Local.Any(x => x.TenantId == tenantId && x.DedupeKey == dedupeKey)) return;
         db.StaffNotifications.Add(new StaffNotification
         {
-            Id = Guid.CreateVersion7(), TenantId = n.TenantId, FacilityId = n.FacilityId, Kind = StaffNotificationKind.MessageFailed, RefId = n.AppointmentId, DedupeKey = dedupeKey, CreatedAt = now,
+            Id = Guid.CreateVersion7(), TenantId = tenantId, FacilityId = facilityId, Kind = kind, RefId = refId, Detail = detail, DedupeKey = dedupeKey, CreatedAt = now,
         });
     }
 
@@ -49,7 +54,7 @@ public sealed class StaffNotifications(NotificationsDbContext db, IStaffAccess a
     {
         var (me, kinds) = await WhoAsync(facilityId, cancellationToken);
         var items = await Visible(facilityId, kinds).AsNoTracking().OrderByDescending(n => n.CreatedAt).Take(50)
-            .Select(n => new StaffNotificationView(n.Id, n.Kind, n.RefId, n.CreatedAt, db.StaffNotificationReads.Any(r => r.NotificationId == n.Id && r.UserId == me))).ToListAsync(cancellationToken);
+            .Select(n => new StaffNotificationView(n.Id, n.Kind, n.RefId, n.Detail, n.CreatedAt, db.StaffNotificationReads.Any(r => r.NotificationId == n.Id && r.UserId == me))).ToListAsync(cancellationToken);
         var unread = await Visible(facilityId, kinds).CountAsync(n => !db.StaffNotificationReads.Any(r => r.NotificationId == n.Id && r.UserId == me), cancellationToken);
         return new StaffNotificationList(unread, items);
     }

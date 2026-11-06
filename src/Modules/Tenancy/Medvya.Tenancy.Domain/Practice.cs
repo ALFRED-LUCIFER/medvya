@@ -49,7 +49,8 @@ public sealed class DoctorLicence
     [Classification(DataClass.Internal)] public string? RejectionReason { get; set; }
 }
 
-public enum LicenceStatus { Pending, Verified, Rejected }
+/// <summary>Expired: verified once, but past its expiry date; the doctor is gated again until a renewed licence is verified.</summary>
+public enum LicenceStatus { Pending, Verified, Rejected, Expired }
 
 /// <summary>
 /// A doctor added in clinic mode (MDV-P1-007), one per doctor membership: the profile shown on the doctor list, fee defaults and the
@@ -84,6 +85,43 @@ public static class LicenceRules
     public static Access Apply(Access access, Capability capability, bool licencePending) =>
         licencePending && Gated.Contains(capability) ? Access.None : access;
 
-    public static LicenceStatus StatusOf(DoctorLicence l) =>
-        l.VerifiedAt is not null ? LicenceStatus.Verified : l.RejectedAt is not null ? LicenceStatus.Rejected : LicenceStatus.Pending;
+    /// <summary>A licence is valid through its expiry date (inclusive) and expired from the day after (MDV-P1-010). No date means no expiry.</summary>
+    public static bool IsExpired(DoctorLicence l, DateOnly today) => l.ExpiresOn is { } expiry && expiry < today;
+
+    public static LicenceStatus StatusOf(DoctorLicence l, DateOnly today) =>
+        l.VerifiedAt is not null ? (IsExpired(l, today) ? LicenceStatus.Expired : LicenceStatus.Verified)
+        : l.RejectedAt is not null ? LicenceStatus.Rejected : LicenceStatus.Pending;
+}
+
+/// <summary>What the owner decided about one person at a quarterly access review (MDV-P1-010).</summary>
+public enum AccessDecision { Confirmed, Offboarded }
+
+/// <summary>
+/// ACCESS_REVIEW (MDV-P1-010): one per tenant and calendar quarter ("2026-Q4"), opened when the owner first looks at it. It is complete
+/// when every active member has a decision; the completion time is what Settings shows.
+/// </summary>
+public sealed class AccessReview
+{
+    [Classification(DataClass.Internal)] public Guid Id { get; init; }
+    [Classification(DataClass.Internal)] public Guid TenantId { get; init; }
+    [Classification(DataClass.Internal)] public required string Quarter { get; init; }
+    [Classification(DataClass.Internal)] public DateTimeOffset StartedAt { get; init; }
+    [Classification(DataClass.Internal)] public DateTimeOffset? CompletedAt { get; set; }
+}
+
+/// <summary>One decision about one membership in one review; the first one stands.</summary>
+public sealed class AccessReviewDecision
+{
+    [Classification(DataClass.Internal)] public Guid ReviewId { get; init; }
+    [Classification(DataClass.Internal)] public Guid MembershipId { get; init; }
+    [Classification(DataClass.Internal)] public Guid TenantId { get; init; }
+    [Classification(DataClass.Internal)] public AccessDecision Decision { get; init; }
+    [Classification(DataClass.Internal)] public Guid? DecidedBy { get; init; }
+    [Classification(DataClass.Internal)] public DateTimeOffset DecidedAt { get; init; }
+}
+
+/// <summary>Ids only: lets the background job find whose scope to enter without reading any tenant's rows (filled by a trigger on new tenants).</summary>
+public sealed class TenantIndexEntry
+{
+    [Classification(DataClass.Internal)] public Guid TenantId { get; init; }
 }

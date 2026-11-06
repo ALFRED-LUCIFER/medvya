@@ -65,7 +65,7 @@ public sealed class NotificationAttempt
 
 /// <summary>What a staff notification is about. The screen words each kind itself, so no text is stored.</summary>
 [JsonConverter(typeof(JsonStringEnumConverter<StaffNotificationKind>))]
-public enum StaffNotificationKind { MessageFailed }
+public enum StaffNotificationKind { MessageFailed, LicenceExpiring, AccessReviewDue }
 
 /// <summary>
 /// STAFF_NOTIFICATION (MDV-P1-034): one in-app item for the staff of a facility (the notification centre, D-03). It holds ids and a
@@ -79,6 +79,8 @@ public sealed class StaffNotification
     [Classification(DataClass.Internal)] public StaffNotificationKind Kind { get; init; }
     /// <summary>The appointment (or other record) it points at.</summary>
     [Classification(DataClass.Internal)] public Guid? RefId { get; init; }
+    /// <summary>A number the screen needs: days until a licence expires (0 = on its last valid day, below 0 = already expired). Null for other kinds.</summary>
+    [Classification(DataClass.Internal)] public int? Detail { get; init; }
     /// <summary>With the tenant it makes raising the same event twice harmless, e.g. "failed:" and the notification id.</summary>
     [Classification(DataClass.Internal)] public string DedupeKey { get; init; } = "";
     [Classification(DataClass.Internal)] public DateTimeOffset CreatedAt { get; init; }
@@ -91,4 +93,25 @@ public sealed class StaffNotificationRead
     [Classification(DataClass.Internal)] public Guid NotificationId { get; init; }
     [Classification(DataClass.Internal)] public Guid UserId { get; init; }
     [Classification(DataClass.Internal)] public DateTimeOffset ReadAt { get; init; }
+}
+
+/// <summary>
+/// NOTIFICATION_PREFERENCE (MDV-P1-006): which messages a practice sends, on which channels, and its quiet hours. One row per tenant;
+/// no row means everything on with the host's default quiet hours. Holds no patient data.
+/// </summary>
+public sealed class NotificationPreference
+{
+    [Classification(DataClass.Internal)] public Guid TenantId { get; init; }
+    [Classification(DataClass.Internal)] public bool Confirmation { get; set; }
+    [Classification(DataClass.Internal)] public bool Reminder24h { get; set; }
+    [Classification(DataClass.Internal)] public bool Reminder2h { get; set; }
+    /// <summary>Messages about a changed or cancelled visit (rescheduled, cancelled, needs rebooking).</summary>
+    [Classification(DataClass.Internal)] public bool Changes { get; set; }
+    [Classification(DataClass.Internal)] public bool Email { get; set; }
+    [Classification(DataClass.Internal)] public bool Sms { get; set; }
+    /// <summary>Facility-local window with no SMS; equal values mean no quiet hours.</summary>
+    [Classification(DataClass.Internal)] public TimeOnly QuietStart { get; set; }
+    [Classification(DataClass.Internal)] public TimeOnly QuietEnd { get; set; }
+    [Classification(DataClass.Internal)] public Guid? ChangedBy { get; set; }
+    [Classification(DataClass.Internal)] public DateTimeOffset ChangedAt { get; set; }
 }

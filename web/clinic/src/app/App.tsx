@@ -95,7 +95,7 @@ export default function App({ locale, onLocaleChange }: Props) {
         <Route path="/choose-facility" element={picker} />
         <Route element={
           <AppShell {...account} role={active.role} facilityName={active.facilityName} groups={shell.groups} tabs={shell.tabs} searchPath={searchPath}
-            notifications={allows(active, patientDirectory) ? <NotificationsRoute facilityId={active.facilityId} online={online} /> : undefined}
+            notifications={allows(active, patientDirectory) || allows(active, { capability: 'StaffRolesIntegrations', access: ['Config'] } as const) ? <NotificationsRoute facilityId={active.facilityId} online={online} /> : undefined}
             languageSwitcher={<LanguageSwitcher inline value={locale} onChange={onLocaleChange} />}>
             {active.licencePending && <LicenceNotice />}
             {termsPending && <TermsNotice />}
@@ -109,7 +109,7 @@ export default function App({ locale, onLocaleChange }: Props) {
             : i.id === 'frontDesk'
             ? <FrontDeskRoute facilityId={active.facilityId} online={online} canMove={active.capabilities.CheckInQueue === 'Full'}
                 registerPath={registerPath} walkInPath={walkInPath} billingPath={shell.items.find(b => b.id === 'billing')?.path ?? null} />
-            : i.id === 'settings' ? <SettingsRoute facilityId={active.facilityId} />
+            : i.id === 'settings' ? <SettingsRoute facilityId={active.facilityId} country={active.country ?? null} />
             // Until the patient chart exists (phase 2) the Patients menu opens the patient directory instead of a placeholder.
             : i.id === 'patients' && searchPath ? <Navigate to={searchPath} replace />
             : <ComingSoon title={t(`nav.${i.id}`)} phase={i.phase} />} />)}

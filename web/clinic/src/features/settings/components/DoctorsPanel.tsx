@@ -1,6 +1,6 @@
 import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
-import { BadgeCheck, CircleX, Clock, Info } from 'lucide-react';
+import { BadgeCheck, CalendarX, CircleX, Clock, Info } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
 import { Button, Input } from '@medvya/ui';
 import type { Authority, Doctor, DoctorForm, DoctorStep, FieldProblem, LicenceForm, LicenceStatus } from '../domain/doctors';
@@ -40,7 +40,7 @@ type Props = Wizard & {
   onRemoveSignature: (id: string) => void;
 };
 
-const statusIcon = { Verified: BadgeCheck, Pending: Clock, Rejected: CircleX } as const;
+const statusIcon = { Verified: BadgeCheck, Pending: Clock, Rejected: CircleX, Expired: CalendarX } as const;
 
 /** The licence state in words and an icon, never colour alone. */
 function LicenceBadge({ status }: { status: LicenceStatus }) {
@@ -100,7 +100,7 @@ function DoctorRow({ doctor: d, ...p }: Props & { doctor: Doctor }) {
       <p className="text-sm text-muted-foreground">{[d.specialty, d.facilityName].filter(Boolean).join(' · ')}</p>
       <p className="text-sm"><span dir="ltr">{d.authority} {d.number}</span>{d.expiresOn ? ` · ${t('doctors.licence.until', { date: d.expiresOn })}` : ''}</p>
       {d.licence === 'Rejected' && d.rejectionReason && <p role="note" className="text-sm font-semibold">{t('doctors.licence.rejectedBecause', { reason: d.rejectionReason })}</p>}
-      {d.licence !== 'Verified' && !editing && <div><Button type="button" variant="outline" className="min-h-11" onClick={() => p.onCorrect(d)}>{t('doctors.licence.correct')}</Button></div>}
+      {d.licence !== 'Verified' && !editing && <div><Button type="button" variant="outline" className="min-h-11" onClick={() => p.onCorrect(d)}>{t(d.licence === 'Expired' ? 'doctors.licence.renew' : 'doctors.licence.correct')}</Button></div>}
       {editing && (
         <form noValidate onSubmit={p.onSubmitLicence} className="grid gap-4 sm:grid-cols-2" aria-label={t('doctors.licence.correct')}>
           <LicenceFields form={p.licenceForm} errors={p.licenceErrors} authorities={p.authorities} prefix={`c-${d.id}`} />

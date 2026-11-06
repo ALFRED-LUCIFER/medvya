@@ -22,7 +22,7 @@ namespace Medvya.IntegrationTests;
 /// handling that cancels and never doubles, retries with backoff, DLT-registered SMS only, delivery receipts, tenant isolation.
 /// Synthetic data only.
 /// </summary>
-public sealed class NotificationsTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>, IAsyncLifetime
+public sealed partial class NotificationsTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>, IAsyncLifetime
 {
     readonly SchedulingHarness h = new(sql);
     readonly FakeEmail email = new();
@@ -504,12 +504,16 @@ public sealed class NotificationsTests(SqlServerFixture sql) : IClassFixture<Sql
     {
         await FailedConfirmationAsync();
         var id = (await As(h.Reception, sp => sp.GetRequiredService<IStaffNotifications>().ListAsync(h.Facility))).Items.Single().Id;
-        foreach (var user in new[] { h.PortalUser, h.Elsewhere, h.HospitalIt, Guid.NewGuid() })
+        foreach (var user in new[] { h.PortalUser, h.Elsewhere, Guid.NewGuid() })
         {
             await Assert.ThrowsAsync<NotificationAccessDeniedException>(() => As(user, sp => sp.GetRequiredService<IStaffNotifications>().ListAsync(h.Facility)));
             await Assert.ThrowsAsync<NotificationAccessDeniedException>(() => As(user, sp => sp.GetRequiredService<IStaffNotifications>().MarkReadAsync(h.Facility, id)));
             await Assert.ThrowsAsync<NotificationAccessDeniedException>(() => As(user, sp => sp.GetRequiredService<INotificationQueries>().FailedVisitsAsync(h.Facility)));
         }
+        // Hospital IT administers the practice but has no desk access: it sees owner reminders only, never a message failure.
+        Assert.Empty((await As(h.HospitalIt, sp => sp.GetRequiredService<IStaffNotifications>().ListAsync(h.Facility))).Items);
+        Assert.False(await As(h.HospitalIt, sp => sp.GetRequiredService<IStaffNotifications>().MarkReadAsync(h.Facility, id)));
+        await Assert.ThrowsAsync<NotificationAccessDeniedException>(() => As(h.HospitalIt, sp => sp.GetRequiredService<INotificationQueries>().FailedVisitsAsync(h.Facility)));
         // Another tenant sees nothing at all (EF filter and row-level security).
         var other = Guid.NewGuid();
         await using var db = sql.Notifications(other);
@@ -546,6 +550,109 @@ public sealed class NotificationsTests(SqlServerFixture sql) : IClassFixture<Sql
         await BookTuesdayAsync();
         await RunJobAsync();
         Assert.Empty((await As(h.Reception, sp => sp.GetRequiredService<IStaffNotifications>().ListAsync(h.Facility))).Items);
+    }
+
+    // MDV-P1-006: the practice's notification preferences.
+
+    Task<NotificationPreferencesView> Prefs() => InScope(sp => sp.GetRequiredService<INotificationPreferences>().GetAsync());
+
+    Task<int> Save(Func<NotificationPreferencesView, NotificationPreferencesView> change) =>
+        InScope(async sp => { var p = sp.GetRequiredService<INotificationPreferences>(); await p.SaveAsync(change(await p.GetAsync())); return 0; });
+
+    [Fact]
+    public async Task TurningOffAReminderCancelsTheQueuedOnesAndStopsSchedulingMore()
+    {
+        var first = await BookTuesdayAsync();
+        await RunJobAsync();
+        Assert.Equal(4, (await RowsAsync(first.Id)).Count(r => r.Kind is NotificationKind.Reminder24h or NotificationKind.Reminder2h && r.Status == NotificationStatus.Queued));
+
+        await Save(p => p with { Reminder24h = false });
+        var rows = await RowsAsync(first.Id);
+        Assert.All(rows.Where(r => r.Kind == NotificationKind.Reminder24h), r => Assert.Equal((NotificationStatus.Cancelled, "turned_off"), (r.Status, r.FailureCode)));
+        Assert.All(rows.Where(r => r.Kind == NotificationKind.Reminder2h), r => Assert.Equal(NotificationStatus.Queued, r.Status)); // the other reminder is untouched
+        Assert.All(rows.Where(r => r.Kind == NotificationKind.Confirmation), r => Assert.Equal(NotificationStatus.Sent, r.Status)); // already sent stays sent
+
+        var second = await BookTuesdayAsync(11);
+        await RunJobAsync();
+        var later = await RowsAsync(second.Id);
+        Assert.DoesNotContain(later, r => r.Kind == NotificationKind.Reminder24h);
+        Assert.Contains(later, r => r.Kind == NotificationKind.Reminder2h);
+
+        await using var audit = sql.Audit(h.Tenant);
+        Assert.Contains(await audit.Events.Select(e => e.Action).ToListAsync(), a => a == "settings.notifications.update");
+    }
+
+    [Fact]
+    public async Task TurningOffAChannelCancelsItsQueuedMessagesAndNothingNewIsMadeForIt()
+    {
+        var first = await BookTuesdayAsync();
+        await RunJobAsync();
+        await Save(p => p with { Sms = false });
+        Assert.All((await RowsAsync(first.Id)).Where(r => r.Channel == NotificationChannel.Sms && r.Status != NotificationStatus.Sent), r => Assert.Equal(NotificationStatus.Cancelled, r.Status));
+        Assert.Contains(await RowsAsync(first.Id), r => r.Channel == NotificationChannel.Email && r.Status == NotificationStatus.Queued);
+
+        var second = await BookTuesdayAsync(11);
+        Assert.DoesNotContain(await RowsAsync(second.Id), r => r.Channel == NotificationChannel.Sms);
+    }
+
+    [Fact]
+    public async Task TurningOffConfirmationsAndChangesQueuesNone()
+    {
+        await Save(p => p with { Confirmation = false, Changes = false });
+        var visit = await BookTuesdayAsync();
+        await h.Booking(h.Reception).CancelAsync(visit.Id, new CancelAppointment { Reason = CancelReason.PatientRequest });
+        await RunJobAsync();
+        Assert.DoesNotContain(await RowsAsync(visit.Id), r => r.Kind is NotificationKind.Confirmation or NotificationKind.Cancelled);
+        Assert.Empty(email.Sent);
+    }
+
+    /// <summary>Mutation check: remove the quiet-window branch in NotificationSender and the SMS goes out at once, failing this test.</summary>
+    [Fact]
+    public async Task SmsWaitsForTheEndOfTheQuietHoursAndEmailDoesNot()
+    {
+        await Save(p => p with { QuietStart = new(7, 0), QuietEnd = new(9, 30) }); // the clock is Monday 08:00 in the facility
+        var visit = await BookTuesdayAsync();
+        await RunJobAsync();
+        var rows = await RowsAsync(visit.Id);
+        var sms = rows.Single(r => r.Kind == NotificationKind.Confirmation && r.Channel == NotificationChannel.Sms);
+        Assert.Equal((NotificationStatus.Queued, 0, At(9, 30)), (sms.Status, sms.Attempts, sms.NextAttemptAt));
+        Assert.Empty(smsGateway.Sent);
+        Assert.Single(email.Sent); // email is not held
+
+        await RunJobAsync(); // still inside the window and before NextAttemptAt: nothing happens
+        Assert.Empty(smsGateway.Sent);
+
+        h.Clock.Advance(TimeSpan.FromMinutes(100)); // 09:40
+        await RunJobAsync();
+        Assert.Single(smsGateway.Sent);
+    }
+
+    [Fact]
+    public async Task WithoutSavedPreferencesTheDefaultsApplyAndOnlyTheOwnTenantSeesItsRow()
+    {
+        var defaults = await Prefs();
+        Assert.Equal((true, true, true, true, true, true), (defaults.Confirmation, defaults.Reminder24h, defaults.Reminder2h, defaults.Changes, defaults.Email, defaults.Sms));
+        await Save(p => p with { Reminder2h = false });
+        Assert.False((await Prefs()).Reminder2h);
+        Rebuild(denyAll: false, inTenant: Guid.NewGuid());
+        Assert.True((await Prefs()).Reminder2h); // another practice is unaffected
+        Rebuild(denyAll: false);
+    }
+
+    [Fact]
+    public void PreviewsShowPlaceholdersOnlyInEveryLanguage()
+    {
+        foreach (var lang in new[] { "en", "hi", "ar" })
+        {
+            var previews = MessageCatalog.Previews(lang);
+            Assert.Equal(5, previews.Count);
+            foreach (var p in previews)
+            {
+                Assert.DoesNotContain(MessageCatalog.Slot, p.Text); // slots are named, never raw
+                Assert.Equal(["{clinic}", "{date}", "{time}"], System.Text.RegularExpressions.Regex.Matches(p.Text, @"\{[a-z]+\}").Select(m => m.Value).ToArray()); // no clinical merge field exists
+                if (lang == "en") Assert.DoesNotMatch("(?i)doctor|diagnos|reason|medic|result", p.Text);
+            }
+        }
     }
 
     [Fact]

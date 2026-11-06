@@ -10,6 +10,7 @@ public sealed class NotificationsDbContext(DbContextOptions<NotificationsDbConte
 {
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<NotificationAttempt> Attempts => Set<NotificationAttempt>();
+    public DbSet<NotificationPreference> Preferences => Set<NotificationPreference>();
     public DbSet<StaffNotification> StaffNotifications => Set<StaffNotification>();
     public DbSet<StaffNotificationRead> StaffNotificationReads => Set<StaffNotificationRead>();
 
@@ -37,6 +38,11 @@ public sealed class NotificationsDbContext(DbContextOptions<NotificationsDbConte
             e.Property(x => x.Outcome).HasConversion<string>().HasMaxLength(20);
             e.Property(x => x.Code).HasMaxLength(60);
             e.HasIndex(x => x.NotificationId);
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<NotificationPreference>(e =>
+        {
+            e.HasKey(x => x.TenantId);
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         modelBuilder.Entity<StaffNotification>(e =>

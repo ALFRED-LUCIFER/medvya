@@ -7,7 +7,7 @@ import { settingsTabs, type SettingsTab } from '../domain/settings';
 type Props = { tab: SettingsTab; onTab: (tab: SettingsTab) => void; panels: Record<SettingsTab, ReactNode> };
 
 /**
- * Practice settings (F-08, MDV-P1-005). Notifications and Data arrive with MDV-P1-006, Doctors and Staff with MDV-P1-007/008.
+ * Practice settings (F-08, MDV-P1-005). Services arrive in P4.
  * Panels mount only while their tab is open, so a tab loads its data when it is first shown.
  */
 export default function SettingsPage({ tab, onTab, panels }: Props) {

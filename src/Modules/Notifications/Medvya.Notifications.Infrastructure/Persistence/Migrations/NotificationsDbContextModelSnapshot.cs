@@ -130,6 +130,47 @@ namespace Medvya.Notifications.Infrastructure.Persistence.Migrations
                     b.ToTable("Attempts", "notifications");
                 });
 
+            modelBuilder.Entity("Medvya.Notifications.Domain.NotificationPreference", b =>
+                {
+                    b.Property<Guid>("TenantId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("ChangedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("ChangedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("Changes")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("Confirmation")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("Email")
+                        .HasColumnType("bit");
+
+                    b.Property<TimeOnly>("QuietEnd")
+                        .HasColumnType("time");
+
+                    b.Property<TimeOnly>("QuietStart")
+                        .HasColumnType("time");
+
+                    b.Property<bool>("Reminder24h")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("Reminder2h")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("Sms")
+                        .HasColumnType("bit");
+
+                    b.HasKey("TenantId");
+
+                    b.ToTable("Preferences", "notifications");
+                });
+
             modelBuilder.Entity("Medvya.Notifications.Domain.StaffNotification", b =>
                 {
                     b.Property<Guid>("Id")
@@ -143,6 +184,9 @@ namespace Medvya.Notifications.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(80)
                         .HasColumnType("nvarchar(80)");
+
+                    b.Property<int?>("Detail")
+                        .HasColumnType("int");
 
                     b.Property<Guid>("FacilityId")
                         .HasColumnType("uniqueidentifier");

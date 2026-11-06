@@ -47,6 +47,8 @@ public sealed class EndpointAuditTests(SqlServerFixture sql) : IClassFixture<Sql
         "GET /v1/staff/roles",
         "POST /v1/staff/roles",
         "PUT /v1/staff/roles/{id:guid}",
+        "GET /v1/staff/access-review", // MDV-P1-010: staff names, roles, last sign-in; decisions are audited in the service
+        "POST /v1/staff/access-review/{membershipId:guid}/confirm",
         "POST /v1/staff/{membershipId:guid}/offboard", // MDV-P1-009: audited as staff.offboard in the same transaction (SessionControlTests)
         // Practice settings (MDV-P1-005): business details only; every change is audited inside the service with before/after (PracticeSettingsTests).
         "GET /v1/settings/profile",
@@ -81,6 +83,10 @@ public sealed class EndpointAuditTests(SqlServerFixture sql) : IClassFixture<Sql
         "POST /v1/notifications/inbox/read-all",
         "POST /v1/notifications/inbox/{id:guid}/read",
         "GET /v1/notifications/failed-visits",
+        // Settings -> Notifications (MDV-P1-006): practice preferences and template previews with placeholders only; a save is audited as settings.notifications.update (NotificationsTests).
+        "GET /v1/settings/notifications/",
+        "PUT /v1/settings/notifications/",
+        "GET /v1/settings/notifications/templates",
         // Queue TV (MDV-P1-031): display sessions only, never staff. Tokens, rooms, doctor display names and waits, no patient
         // data (QueueTvTests pins the fields); the hub's message is empty. Pairing a display is audited (queue_display.pair).
         "GET /v1/queue/tv",

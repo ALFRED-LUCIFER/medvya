@@ -13,11 +13,11 @@ namespace Medvya.Notifications.Infrastructure;
 /// <summary>
 /// Sends what is due (MDV-P1-032/033). Per message, in order: the visit has not started, the patient consents to the channel
 /// (checked now, not when it was queued), an address exists, the text is made and, for SMS, matches a registered DLT template.
-/// A failed try is retried with backoff up to MaxAttempts and then shown as Failed; a message that can never be sent is Failed at
+/// SMS waits out the practice's quiet hours. A failed try is retried with backoff up to MaxAttempts and then shown as Failed; a message that can never be sent is Failed at
 /// once. Nothing personal is logged or stored: only ids, status and short codes.
 /// </summary>
 public sealed partial class NotificationSender(
-    NotificationsDbContext db, IReminderConsent consent, IPatientContacts contacts, IFacilityDirectory facilities, IEmailSender email, ISmsGateway sms,
+    NotificationsDbContext db, IReminderConsent consent, IPatientContacts contacts, IFacilityDirectory facilities, INotificationPreferences preferences, IEmailSender email, ISmsGateway sms,
     IOptions<NotificationOptions> options, TimeProvider clock, ILogger<NotificationSender> log) : INotificationSender
 {
     /// <summary>How long a claimed message is left alone; a run that died mid-send is retried after this.</summary>
@@ -57,7 +57,19 @@ public sealed partial class NotificationSender(
             if (contact is null || string.IsNullOrWhiteSpace(address)) { await EndAsync(n, now, NotificationStatus.Suppressed, "no_address", ct); return; }
             var facility = await facilities.FindAsync(n.FacilityId, ct) ?? throw new PermanentFailure("facility_missing");
 
-            var message = MessageCatalog.Render(n.Kind, contact.PreferredLanguage, facility.Name, TimeZoneInfo.ConvertTime(n.AppointmentStart, TimeZoneInfo.FindSystemTimeZoneById(facility.TimeZone)));
+            var zone = TimeZoneInfo.FindSystemTimeZoneById(facility.TimeZone);
+            if (n.Channel == NotificationChannel.Sms)
+            {
+                // Quiet hours: no SMS inside the window; wait for its end (the visit-started check above then drops it if the visit came first).
+                var prefs = await preferences.GetAsync(ct);
+                if (NotificationRules.QuietEnd(now, zone, prefs.QuietStart, prefs.QuietEnd) is { } end)
+                {
+                    n.NextAttemptAt = end;
+                    await db.SaveChangesAsync(ct);
+                    return;
+                }
+            }
+            var message = MessageCatalog.Render(n.Kind, contact.PreferredLanguage, facility.Name, TimeZoneInfo.ConvertTime(n.AppointmentStart, zone));
             var reference = NotificationReference.Make(n.TenantId, n.Id);
             if (n.Channel == NotificationChannel.Email)
                 await email.SendAsync(new EmailMessage(address, message.Subject, message.Body, new Dictionary<string, string> { ["X-SMTPAPI"] = $$$"""{"unique_args":{"ref":"{{{reference}}}"}}""" }), ct);

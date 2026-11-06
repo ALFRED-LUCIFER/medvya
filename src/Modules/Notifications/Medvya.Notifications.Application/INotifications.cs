@@ -62,7 +62,7 @@ public static class NotificationReference
 }
 
 /// <summary>One item of the notification centre (D-03): a kind and a pointer, worded by the screen.</summary>
-public sealed record StaffNotificationView(Guid Id, StaffNotificationKind Kind, Guid? RefId, DateTimeOffset CreatedAt, bool Read);
+public sealed record StaffNotificationView(Guid Id, StaffNotificationKind Kind, Guid? RefId, int? Detail, DateTimeOffset CreatedAt, bool Read);
 
 public sealed record StaffNotificationList(int Unread, IReadOnlyList<StaffNotificationView> Items);
 
@@ -76,4 +76,42 @@ public interface IStaffNotifications
     Task<bool> MarkReadAsync(Guid facilityId, Guid id, CancellationToken cancellationToken = default);
 
     Task MarkAllReadAsync(Guid facilityId, CancellationToken cancellationToken = default);
+}
+
+/// <summary>Owner reminders about licences and the quarterly access review, run per tenant by the host's job (MDV-P1-010).</summary>
+public interface IComplianceReminders
+{
+    /// <summary>Raises what is due for the current tenant and returns how many new reminders it wrote. Safe to run any number of times.</summary>
+    Task<int> RunAsync(CancellationToken cancellationToken = default);
+}
+
+/// <summary>A practice's notification settings (MDV-P1-006).</summary>
+public sealed record NotificationPreferencesView(
+    bool Confirmation, bool Reminder24h, bool Reminder2h, bool Changes, bool Email, bool Sms, TimeOnly QuietStart, TimeOnly QuietEnd)
+{
+    public bool Allows(NotificationKind kind) => kind switch
+    {
+        NotificationKind.Confirmation => Confirmation,
+        NotificationKind.Reminder24h => Reminder24h,
+        NotificationKind.Reminder2h => Reminder2h,
+        _ => Changes,
+    };
+
+    public bool Allows(NotificationChannel channel) => channel == NotificationChannel.Email ? Email : Sms;
+}
+
+/// <summary>A message template shown with placeholders only, never a patient's values.</summary>
+public sealed record TemplatePreview(string Group, string Subject, string Text);
+
+/// <summary>
+/// Reads and changes the practice's preferences. The host allows the endpoints to practice configuration only; background jobs read
+/// the same settings for the tenant they run in.
+/// </summary>
+public interface INotificationPreferences
+{
+    /// <summary>The saved preferences, or the defaults when none were saved.</summary>
+    Task<NotificationPreferencesView> GetAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Saves, audits, and cancels what is still queued for anything just turned off.</summary>
+    Task<NotificationPreferencesView> SaveAsync(NotificationPreferencesView changes, CancellationToken cancellationToken = default);
 }

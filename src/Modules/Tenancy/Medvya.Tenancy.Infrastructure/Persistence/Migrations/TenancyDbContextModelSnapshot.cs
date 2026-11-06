@@ -23,6 +23,61 @@ namespace Medvya.Tenancy.Infrastructure.Persistence.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("Medvya.Tenancy.Domain.AccessReview", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Quarter")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("nvarchar(8)");
+
+                    b.Property<DateTimeOffset>("StartedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "Quarter")
+                        .IsUnique();
+
+                    b.ToTable("AccessReviews", "tenancy");
+                });
+
+            modelBuilder.Entity("Medvya.Tenancy.Domain.AccessReviewDecision", b =>
+                {
+                    b.Property<Guid>("ReviewId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("MembershipId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("DecidedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("DecidedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Decision")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("ReviewId", "MembershipId");
+
+                    b.ToTable("AccessReviewDecisions", "tenancy");
+                });
+
             modelBuilder.Entity("Medvya.Tenancy.Domain.Closure", b =>
                 {
                     b.Property<Guid>("Id")
@@ -548,8 +603,23 @@ namespace Medvya.Tenancy.Infrastructure.Persistence.Migrations
 
                     b.ToTable("Tenants", "tenancy", t =>
                         {
+                            t.HasTrigger("TR_Tenants_Index");
+
                             t.HasCheckConstraint("CK_Tenants_IdleTimeoutMinutes", "IdleTimeoutMinutes BETWEEN 1 AND 480");
                         });
+
+                    b.HasAnnotation("SqlServer:UseSqlOutputClause", false);
+                });
+
+            modelBuilder.Entity("Medvya.Tenancy.Domain.TenantIndexEntry", b =>
+                {
+                    b.Property<Guid>("TenantId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("TenantId");
+
+                    b.ToTable("TenantIndex", "tenancy");
                 });
 
             modelBuilder.Entity("Medvya.Tenancy.Domain.TermsAcceptance", b =>
@@ -577,6 +647,15 @@ namespace Medvya.Tenancy.Infrastructure.Persistence.Migrations
                     b.HasIndex("TenantId", "TermsVersion");
 
                     b.ToTable("TermsAcceptances", "tenancy");
+                });
+
+            modelBuilder.Entity("Medvya.Tenancy.Domain.AccessReview", b =>
+                {
+                    b.HasOne("Medvya.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Medvya.Tenancy.Domain.Closure", b =>

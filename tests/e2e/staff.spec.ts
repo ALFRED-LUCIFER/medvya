@@ -26,6 +26,7 @@ const member = (over: object) => ({
 const staff = [
   member({ membershipId: 'a', name: 'K. Lakshmi (synthetic)', role: 'PracticeAdmin' }),
   member({ membershipId: 'b', email: 'joseph@example.test', status: 'Invited', mfa: 'pending', invitationId: 'i-1', invitationState: 'pending', invitationExpiresAt: '2026-11-12T10:00:00Z' }),
+  member({ membershipId: 'c', email: 'revoked@example.test', status: 'Invited', mfa: 'pending', invitationId: 'i-3', invitationState: 'revoked', invitationExpiresAt: '2026-11-12T10:00:00Z' }),
 ];
 
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
@@ -54,6 +55,10 @@ test('staff table shows role, location, second factor and status, with resend an
   await expect(page.getByRole('row', { name: /K\. Lakshmi/ })).toContainText('Set up');
   await expect(row.getByRole('button', { name: 'Resend invitation to joseph@example.test' })).toBeVisible();
   await expect(row.getByRole('button', { name: 'Revoke invitation to joseph@example.test' })).toBeVisible();
+  // MDV-P1-052: a revoked invitation reads as revoked in the status column, not as Invited, and cannot be revoked again.
+  const gone = page.getByRole('row', { name: /revoked@example\.test/ });
+  await expect(gone.getByRole('cell').nth(3)).toHaveText('Invitation revoked');
+  await expect(gone.getByRole('button', { name: /Revoke/ })).toHaveCount(0);
 
   let revoked = false;
   await page.route('**/v1/invitations/i-1', r => { revoked = r.request().method() === 'DELETE'; return r.fulfill({ status: 204 }); });

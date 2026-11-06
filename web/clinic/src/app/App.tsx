@@ -28,7 +28,6 @@ const InvitationRoute = lazy(() => import('./InvitationRoute'));
 const InviteColleagueRoute = lazy(() => import('./InviteColleagueRoute'));
 const SignUpRoute = lazy(() => import('./SignUpRoute'));
 const OnboardingRoute = lazy(() => import('./OnboardingRoute'));
-const DisplaysRoute = lazy(() => import('./DisplaysRoute'));
 const OverviewRoute = lazy(() => import('./OverviewRoute'));
 const SettingsRoute = lazy(() => import('./SettingsRoute'));
 // Patient screens load on first use, keeping them out of the first-paint bundle.
@@ -122,8 +121,8 @@ export default function App({ locale, onLocaleChange }: Props) {
           {pathOf('frontDesk') && <Route path="/front-desk/overview" element={
             <OverviewRoute facilityId={active.facilityId} online={online} canMove={active.capabilities.CheckInQueue === 'Full'}
               userId={shell.session?.user.id ?? ''} boardPath={pathOf('frontDesk')!} />} />}
-          {/* shortcut: reachable by URL only, like Staff; it moves to device management in Settings with MDV-P0-012. */}
-          {active.capabilities.StaffRolesIntegrations === 'Config' && <Route path="/admin/displays" element={<DisplaysRoute facilityId={active.facilityId} />} />}
+          {/* Queue displays live in Settings (MDV-P1-052); the old address still works for links already shared. */}
+          <Route path="/admin/displays" element={<Navigate to="/settings?tab=displays" replace />} />
           {searchPath && <>
             <Route path={searchPath} element={<PatientDirectoryRoute registerPath={registerPath} mergePath={`${searchPath}/merge`} />} />
             <Route path={`${searchPath}/merge/:requestId?`} element={<MergeReviewRoute can={{ request: active.capabilities.RegisterBookPatients === 'Full',

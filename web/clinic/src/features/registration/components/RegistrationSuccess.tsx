@@ -36,6 +36,8 @@ export default function RegistrationSuccess({ result, name, actorName, onRegiste
             {t('registration.done.incompleteBody', { items: new Intl.ListFormat([locale], { type: 'conjunction' }).format(missing.map(m => t(`patients.completion.item.${m}`))) })}</span>
         </p>
       )}
+      {/* Quick mode asks no reminder consent: say where it is added, so reminders are not silently never sent (MDV-P1-052). */}
+      {quick && <p className="text-sm">{t('registration.done.quickConsents')}</p>}
       <div className="flex flex-wrap gap-2">
         {bookPath && <Link to={bookPath} className={buttonVariants()}>{t('registration.done.book')}</Link>}
         {/* Walk-in with this patient chosen: the id is opaque, never patient data. */}

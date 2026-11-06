@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Medvya.Patients.Application;
+using Medvya.Patients.Infrastructure.Persistence;
 using Medvya.Tenancy.Domain;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -69,7 +70,8 @@ public sealed class PatientSearchPerformanceTests(PostgresFixture sql) : IClassF
             patients.Rows.Add(id, tenant, facility, Mrn.Format(n), "IN",
                 $"{Given[n % Given.Length]} {Family[n / Given.Length % Family.Length]} {n} (synthetic)", new DateTime(1940 + n % 80, 1 + n % 12, 1 + n % 28),
                 false, n % 2 == 0 ? "Female" : "Male", $"+9190{n:D8}", n % 10 == 0 ? "Incomplete" : "Complete", start.AddMinutes(n), start.AddMinutes(n));
-            identifiers.Rows.Add(Guid.CreateVersion7(), tenant, id, "Abha", sql.NationalIds.Encrypt(tenant, Abha(n)), sql.NationalIds.Index(tenant, Abha(n)));
+            var identifierId = Guid.CreateVersion7();
+            identifiers.Rows.Add(identifierId, tenant, id, "Abha", sql.NationalIds.Encrypt(tenant, NationalIdColumns.IdentifierLookup, identifierId, Abha(n)), sql.NationalIds.Index(tenant, Abha(n)));
         }
 
         await using var conn = await sql.OpenAs("dbo", tenant);

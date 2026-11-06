@@ -48,14 +48,15 @@ test('the access log shows who did what, writes the outcome out, pages, and expo
   const denied = page.getByRole('row', { name: /S\. Thomas/ });
   await expect(denied).toContainText('Denied'); // written out, not colour alone
   await expect(denied).toContainText('MRN 000001');
-  const legacy = page.getByRole('row', { name: /audit\.export/ });
+  const legacy = page.getByRole('row', { name: /Access log exported/ }); // MDV-P1-052: the action in words, not its code
   await expect(legacy).toContainText('Not recorded'); // a row from before roles were recorded never shows the current role
   await expect(legacy).toContainText('patient=p-1');
   await expect(page.getByRole('cell', { name: /Meera/ })).toHaveCount(0); // no name until a patient is chosen
+  await expect(page.getByRole('cell', { name: /audit\.|patient\./ })).toHaveCount(0); // no raw action codes
   expect(await axe(page)).toEqual([]);
 
   await page.getByRole('button', { name: 'Load more' }).click();
-  await expect(page.getByRole('row', { name: /patient\.update/ })).toBeVisible();
+  await expect(page.getByRole('row', { name: /Patient record updated/ })).toBeVisible();
   expect(urls.some(u => u.includes('after=c1'))).toBe(true);
 
   await page.getByRole('button', { name: 'Export CSV' }).click();

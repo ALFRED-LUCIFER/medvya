@@ -60,6 +60,13 @@ export function permissionRows(catalogue: RoleCatalogue, choice: RoleChoice): { 
 export const addableRows = (catalogue: RoleCatalogue, baseRole: AssignableRole) =>
   (catalogue.builtIn.find(b => b.role === baseRole)?.rows ?? []).filter(r => r.extra !== null);
 
+/**
+ * The status column's word: an invitation that was revoked or ran out reads as such, not as "Invited" (MDV-P1-052); the
+ * pending one keeps "Invited" with its expiry date underneath.
+ */
+export const statusLabel = (m: StaffMember): MembershipStatus | 'Revoked' | 'Expired' =>
+  m.status === 'Invited' && m.invitationState === 'revoked' ? 'Revoked' : m.status === 'Invited' && m.invitationState === 'expired' ? 'Expired' : m.status;
+
 export const canResend = (m: StaffMember) => m.status === 'Invited' && m.invitationId !== null;
 export const canRevoke = (m: StaffMember) => m.status === 'Invited' && m.invitationState === 'pending';
 

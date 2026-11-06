@@ -93,6 +93,17 @@ public sealed class ScheduleEndpointTests(PostgresFixture sql) : IClassFixture<P
         Assert.Equal(["schedule.template.update", "schedule.read"], await AuditActions());
     }
 
+    /// <summary>MDV-P1-052: the desk refetches the schedule after every change; the same read by the same user is written once per window.</summary>
+    [Fact]
+    public async Task RepeatedScheduleReadsAreAuditedOncePerWindowAndADifferentDayAlways()
+    {
+        Assert.Equal(HttpStatusCode.OK, (await Client(admin).PutAsJsonAsync("/v1/schedule/templates", Template(20))).StatusCode);
+        var desk = Client(reception);
+        for (var i = 0; i < 4; i++) Assert.Equal(HttpStatusCode.OK, (await desk.GetAsync($"/v1/schedule?facilityId={facility}&date=2026-10-19")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await desk.GetAsync($"/v1/schedule?facilityId={facility}&date=2026-10-20")).StatusCode);
+        Assert.Equal(["schedule.template.update", "schedule.read", "schedule.read"], await AuditActions());
+    }
+
     [Fact]
     public async Task ReceptionCannotChangeTemplatesAndTheAttemptIsAudited()
     {

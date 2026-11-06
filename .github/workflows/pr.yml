@@ -15,7 +15,7 @@ concurrency:
 jobs:
   dotnet:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20  # the .NET suite runs about 6.5 min and is growing
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-dotnet@v6
@@ -31,7 +31,7 @@ jobs:
 
   web:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20  # e2e passed 10 min once it grew past ~250 specs; a timeout is a cap, not a threshold
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6

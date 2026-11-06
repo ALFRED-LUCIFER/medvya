@@ -68,13 +68,19 @@ medvya/
 │       ├── Worker.Ai/              # P3: Service Bus consumer, Microsoft.Extensions.AI, Azure AI Speech/OpenAI; NO DB credentials
 │       └── Worker.Integration/     # P5/P7: HL7 v2 / FHIR adapters, HIE push/pull, write-back with retry/dead-letter
 │
+├── mobile/                         # P5 (ADR-011, MDV-P5-031/032): Expo workspace, two store apps sharing tokens, i18n and contracts with web/
+│   ├── apps/clinic/                # Medvya Clinic: doctors and front desk (teal)
+│   ├── apps/patient/               # Medvya for patients (indigo)
+│   └── packages/                   # shared domain/ + services/, theme from the one tokens file
+│
 ├── web/
 │   ├── clinic/                     # staff SPA: React 19 + TS + Vite + shadcn/ui + Tailwind 4 (ADR-010), TanStack Query, RHF + Zod, React Router
 │   │   └── src/
 │   │       ├── app/                # composition: providers, router, controllers → components
 │   │       ├── features/<feature>/{domain,services,hooks,components}/   # hard rule, see frontend-architecture.md (ADR-009)
 │   │       └── dev/                # UI gallery and other developer-only pages
-│   └── portal/                     # patient PWA (P4): same stack, 17px min type, 48px targets, RTL
+│   ├── portal/                     # patient PWA (P4): same stack, 17px min type, 48px targets, RTL
+│   └── admin/                      # Medvya platform console (P5, MDV-P5-040): separate host, company SSO + security key, control plane only, no PHI
 │
 ├── packages/                       # shared TS packages (pnpm workspaces)
 │   ├── ui/                         # design system: shadcn/ui components, Tailwind tokens, clinical primitives (IdentityBanner, StatusChip, ProvenanceTag, RecordingPill, Alert)

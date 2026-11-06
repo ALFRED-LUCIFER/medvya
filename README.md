@@ -36,14 +36,57 @@ export DOCKER_HOST="unix://$HOME/.colima/default/docker.sock" TESTCONTAINERS_DOC
 export DOCKER_HOST="unix://$HOME/.docker/run/docker.sock" TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock
 ```
 
-| Folder | Content |
+## Repository structure
+
+Decided in [ADR-013](docs/adr/ADR-013-repository-layout.md), built by ticket [MDV-P0-040](tickets/P0-foundation/MDV-P0-040.md). One monorepo for backend, web, mobile, shared packages, infrastructure and docs. A folder marked *planned* is created by the ticket that builds it, never before.
+
+```text
+medvya/
+├── AGENTS.md · CLAUDE.md · README.md · SECURITY.md
+├── Medvya.sln · global.json · Directory.Build.props · Directory.Packages.props
+├── package.json · pnpm-workspace.yaml     # web/*, mobile/*, packages/*
+├── docker-compose.yml                     # PostgreSQL, Azurite, email sink (MDV-P0-032)
+├── src/
+│   ├── Host.Api/            # composition only: Program, auth/BFF, context, middleware, observability, public site
+│   │                        #   today also holds feature endpoints (moved to modules by P0-040)
+│   ├── BuildingBlocks/      # Domain, Application, Infrastructure, Security, Contracts, Country
+│   ├── Modules/             # exist: Identity, Tenancy, Audit, Patients, Scheduling, Billing, Notifications, Leads
+│   │                        # planned: Practice, Encounters, Prescribing, Documents, Scribe, Care, Portal,
+│   │                        #   Insurance, Inventory, Laboratory, Migration, Platform, Devices, Integrations
+│   └── Workers/             # planned: Worker.Jobs, Worker.Ai, Worker.Integration (P3+; jobs run in Host today)
+├── web/
+│   ├── clinic/              # exists: clinic app with clinic-admin routes
+│   ├── platform-admin/      # planned (P5-040): Medvya team console
+│   └── portal/              # planned (P4): patient PWA
+├── mobile/
+│   ├── clinician/           # planned (P5-034/035): Expo staff app
+│   └── patient/             # planned (P5-036/037): Expo patient app
+├── packages/
+│   ├── ui/ · i18n/          # exist (ui is web only)
+│   └── tokens · api-client · domain · auth-client · ui-native · config · test-fixtures   # planned
+├── tests/
+│   ├── Medvya.ArchitectureTests/ · Medvya.IntegrationTests/ · e2e/     # exist
+│   └── Medvya.SecurityTests · Medvya.ContractTests · mobile-e2e · ai-evals   # planned
+├── infra/
+│   ├── bicep/               # exists; PostgreSQL replaces Azure SQL (MDV-P0-038)
+│   └── postgres · monitoring     # planned (roles and RLS policies, alerts); runbooks stay in docs/runbooks
+├── tools/                   # tickets, prd-extract, erd, synthetic data, db scripts
+├── docs/                    # 01-prd · 02-design · 03-architecture · 04-security-compliance · 05-delivery · adr · compliance · runbooks
+│   ├── 02-design/source/    #   imported design files        (today: design/ at the root, moves in P0-040)
+│   └── 05-delivery/tickets/ #   ticket sources and pages     (today: tickets/ at the root, moves in P0-040)
+└── .github/                 # workflows with path filters, CODEOWNERS, dependabot
+```
+
+| Folder today | Status |
 |---|---|
-| [docs/](docs/README.md) | Everything from the design project and PRD v2: product, requirements, design system, architecture, security/compliance, delivery rules, gap analysis, ADRs |
-| [tickets/](tickets/README.md) | 223 Jira-style tickets for phases P0–P8, each with acceptance criteria, traceability, dates and a confidence level; date-wise [schedule](tickets/schedule.md); [Jira CSV](tickets/jira-import.csv); [coverage report](tickets/coverage-report.md) |
-| [src/](src) | .NET 10 modular monolith: `Host.Api` and modules (`Identity`, `Tenancy`, `Audit`), each split into Domain / Application / Infrastructure / Api |
-| [web/](web) · [packages/](packages) | React 19 + Vite clinic app; `@medvya/ui` (shadcn/ui + Tailwind 4 design system, ADR-010) |
-| [design/](design/README.md) | Imported Claude Design source files (read-only) |
-| [tools/](tools) | `prd-extract` (design data → docs), `tickets/build.py` (ticket sources → files + coverage check), `synthetic-data-generator` (migrate + seed, `pnpm dev:db`), `check-synthetic` |
+| [docs/](docs/README.md) | Matches the target; gains `tickets/` and the design sources |
+| [tickets/](tickets/README.md) | Moves to `docs/05-delivery/tickets/` (P0-040 chunk 3) |
+| [design/](design/README.md) | Moves to `docs/02-design/source/` (P0-040 chunk 3) |
+| [src/](src) | Matches; Host.Api feature endpoints move into modules (P0-040 chunk 1) |
+| [web/](web) · [packages/](packages) | Match; `tokens` and `api-client` added (P0-040 chunk 2) |
+| [tests/](tests) · [infra/](infra) · [tools/](tools) | Match; `infra/sql` is replaced by PostgreSQL scripts (MDV-P0-034, MDV-P0-038) |
+
+The run commands above describe today's layout and SQL Server; MDV-P0-032 (PostgreSQL) and MDV-P0-040 update them.
 
 Regenerate after editing sources:
 

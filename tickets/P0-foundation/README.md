@@ -8,9 +8,9 @@
 **Day one:** Sign in with MFA, invite a colleague, see role-based navigation and walk the six end-to-end journeys on staging.  
 **Goal:** A secure, deployable base that every later phase builds on, and clinical sign-off that the core flows are right before code depends on them.
 
-**Tickets:** 29 · **Estimate:** 49.5 dev-days vs **15 working days** in the window (OVER by 34.5 days: needs scope trade-off or overlap) · **Average confidence:** 86%
+**Tickets:** 40 · **Estimate:** 77 dev-days vs **15 working days** in the window (OVER by 62 days: needs scope trade-off or overlap) · **Average confidence:** 82%
 
-**Status:** To do 2 · Partly done 16 · Done 11
+**Status:** To do 13 · Partly done 16 · Done 11
 
 ## Epics
 
@@ -36,6 +36,9 @@
 | [MDV-P0-020](MDV-P0-020.md) | Done | Medvya design system in code: shadcn/ui + Tailwind tokens and clinical status primitives (packages/ui) | Story | MUST | P0-07 | — | 3 | 1–2 | 26 Oct → 06 Nov 2026 | 92% High |
 | [MDV-P0-024](MDV-P0-024.md) | Done | Threat model, data map, DPIA draft (DPDP) and record-retention map per country | Chore | MUST | P0-08 | — | 2.5 | 1–3 | 26 Oct → 13 Nov 2026 | 75% Medium |
 | [MDV-P0-025](MDV-P0-025.md) | Done | Secure development policies: SECURITY.md, code review rules, synthetic-only data, JIT access, offline break-glass account | Chore | MUST | P0-10 | — | 1 | 1–1 | 26 Oct → 30 Oct 2026 | 90% High |
+| [MDV-P0-030](MDV-P0-030.md) | To do | Shared Table component (shadcn) and table controller pattern; replace the four raw tables | Story | MUST | P0-07 | — | 1.5 | 1–2 | 26 Oct → 06 Nov 2026 | 85% High |
+| [MDV-P0-031](MDV-P0-031.md) | To do | Accept ADR-012: PostgreSQL with EF Core, application-level national-ID encryption, hash-chained audit | Chore | MUST | P0-08 | — | 0.5 | 1–1 | 26 Oct → 30 Oct 2026 | 90% High |
+| [MDV-P0-032](MDV-P0-032.md) | To do | Swap the platform to PostgreSQL: Npgsql provider, Testcontainers.PostgreSql, Hangfire.PostgreSql, local services and CI | Story | MUST | P0-01 | — | 3 | 1–2 | 26 Oct → 06 Nov 2026 | 75% Medium |
 | [MDV-P0-007](MDV-P0-007.md) | Partly done | GitHub OIDC federation to Azure and tagged deploy to staging | Task | MUST | P0-01, P0-02 | — | 1.5 | 2–2 | 02 Nov → 06 Nov 2026 | 88% High |
 | [MDV-P0-008](MDV-P0-008.md) | Partly done | Database security baseline part 1: Entra-only auth, managed identity, least-privilege users per module and for migrations | Task | MUST | P0-09 | — | 1.5 | 2–2 | 02 Nov → 06 Nov 2026 | 85% High |
 | [MDV-P0-009](MDV-P0-009.md) | Partly done | Database security baseline part 2: Always Encrypted (national/insurance IDs), dynamic data masking, TDE with customer-managed key | Task | MUST | P0-09 | — | 2.5 | 2–3 | 02 Nov → 13 Nov 2026 | 72% Medium |
@@ -47,6 +50,10 @@
 | [MDV-P0-018](MDV-P0-018.md) | Partly done | Observability with OpenTelemetry and PHI redaction (structured logs, telemetry processor) | Task | MUST | P0-10 | — | 1.5 | 2–2 | 02 Nov → 06 Nov 2026 | 88% High |
 | [MDV-P0-021](MDV-P0-021.md) | Done | Internationalisation pipeline: English, Hindi, Arabic with full RTL | Task | MUST | P0-07 | — | 1.5 | 2–2 | 02 Nov → 06 Nov 2026 | 88% High |
 | [MDV-P0-026](MDV-P0-026.md) | Done | OWASP ASVS L2 baseline: security headers, CSP, HSTS, rate limiting, input validation | Task | MUST | P0-10, P0-03 | — | 1.5 | 2–2 | 02 Nov → 06 Nov 2026 | 88% High |
+| [MDV-P0-033](MDV-P0-033.md) | To do | One baseline migration per module on Postgres, regenerated seeder and ERD, forward-only after that | Story | MUST | P0-02 | — | 2.5 | 2–2 | 02 Nov → 06 Nov 2026 | 70% Medium |
+| [MDV-P0-034](MDV-P0-034.md) | To do | Tenant isolation on Postgres: FORCE row-level security, per-module roles, EF filter kept as layer one | Story | MUST | P0-09 | — | 4 | 2–3 | 02 Nov → 13 Nov 2026 | 65% Medium |
+| [MDV-P0-038](MDV-P0-038.md) | To do | Azure Database for PostgreSQL Flexible Server in Bicep: private endpoint, Entra-only auth, customer-managed key, in-country HA and point-in-time restore | Story | MUST | P0-01 | — | 2.5 | 2–3 | 02 Nov → 13 Nov 2026 | 65% Medium |
+| [MDV-P0-040](MDV-P0-040.md) | To do | Repository structure: Host.Api to composition only, mobile and shared packages in the workspace, tickets and design into docs, link check, CI path filters | Task | MUST | P0-01 | — | 4 | 2–2 | 02 Nov → 06 Nov 2026 | 70% Medium |
 | [MDV-P0-013](MDV-P0-013.md) | Partly done | Invite a colleague and accept the invitation (membership invited → active) | Story | MUST | P0-03 | F-06 | 2 | 3–3 | 09 Nov → 13 Nov 2026 | 88% High |
 | [MDV-P0-015](MDV-P0-015.md) | Partly done | System state screens: session expired, 403 no facility access, 404, offline | Story | MUST | P0-05 | F-05 | 1 | 3–3 | 09 Nov → 13 Nov 2026 | 92% High |
 | [MDV-P0-019](MDV-P0-019.md) | To do | Backups, point-in-time restore and a timed restore drill | Task | MUST | P0-02 | — | 1 | 3–3 | 09 Nov → 13 Nov 2026 | 90% High |
@@ -55,6 +62,10 @@
 | [MDV-P0-027](MDV-P0-027.md) | Partly done | Synthetic data generator and seeded staging tenant | Task | MUST | P0-10 | — | 1 | 3–3 | 09 Nov → 13 Nov 2026 | 90% High |
 | [MDV-P0-028](MDV-P0-028.md) | Partly done | Per-tenant feature flags with owner and kill switch | Task | MUST | P0-04 | — | 1 | 3–3 | 09 Nov → 13 Nov 2026 | 85% High |
 | [MDV-P0-029](MDV-P0-029.md) | To do | R0 exit gate review and release notes (internal platform) | Gate | MUST | P0-01 | — | 0.5 | 3–3 | 09 Nov → 13 Nov 2026 | 85% High |
+| [MDV-P0-035](MDV-P0-035.md) | To do | National IDs unreadable to database admins: envelope encryption with Key Vault keys and an HMAC blind index | Story | MUST | P0-09 | — | 3.5 | 3–3 | 09 Nov → 13 Nov 2026 | 60% Low |
+| [MDV-P0-036](MDV-P0-036.md) | To do | Tamper-evident audit and signed records without SQL ledger: hash chain, append-only triggers, daily digest to immutable Blob | Story | MUST | P0-06 | — | 3.5 | 3–4 | 09 Nov → 20 Nov 2026 | 60% Low |
+| [MDV-P0-037](MDV-P0-037.md) | To do | Support and reporting access without dynamic masking: reporting role, masked views, no decrypt right | Task | MUST | P0-09 | — | 1.5 | 4–4 | 16 Nov → 20 Nov 2026 | 70% Medium |
+| [MDV-P0-039](MDV-P0-039.md) | To do | Re-baseline load and desk tests on Postgres | Task | SHOULD | P0-02 | — | 1 | 4–4 | 16 Nov → 20 Nov 2026 | 75% Medium |
 
 ## Exit criteria (release gate)
 

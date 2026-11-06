@@ -128,20 +128,21 @@ ac:
 - Inbound letters are matched with the same identity-match rules as results.
 
 === MDV-P8-007
-title: Platform: public FHIR APIs, native mobile apps (Expo), saved migration templates per vendor, specialty templates
+title: Platform: public FHIR APIs, saved migration templates per vendor, specialty templates
 type: Story
 epic: MDV-P8-E01
 prd: P8-06
 priority: COULD
 roles: Developer, Partners
 labels: platform, mobile, api
-estimate: 8
+estimate: 5
 weeks: 60-64
 depends: MDV-P8-001, MDV-P5-019
 confidence: 45 | Broad bucket; each item needs its own intake.
 sources: PRD v2 P8-06; design/Medvya Build Plan (mobile phase 2 with Expo)
 desc:
-Public FHIR APIs with SMART-on-FHIR auth, native apps (Expo) sharing contracts and i18n, a library of saved migration templates per legacy vendor, and additional specialty note templates.
+Native mobile apps moved to P5 (MDV-P5-031 to P5-039) after the 6 Nov 2026 design approved two Expo store apps for launch.
+Public FHIR APIs with SMART-on-FHIR auth, a library of saved migration templates per legacy vendor, and additional specialty note templates.
 ac:
 - Each item passes its own intake record before work starts.
 - Public APIs enforce the same tenant/relationship/purpose authorisation and audit.

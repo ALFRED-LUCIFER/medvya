@@ -1,6 +1,6 @@
 # ADR-005 · Tenant isolation: EF Core filters + Azure SQL RLS
 
-- **Status:** Proposed (P0)
+- **Status:** Accepted 6 Nov 2026 (founder). (P0). **Mechanism amended 6 Nov 2026:** row-level security is PostgreSQL `FORCE ROW LEVEL SECURITY` with `current_setting`, see [ADR-012](ADR-012-postgres.md); the two-layer rule is unchanged.
 
 ## Decision
 

@@ -1,6 +1,6 @@
 # ADR-001 · Stack: .NET 10 modular monolith, React/MUI, Azure SQL
 
-- **Status:** Proposed. To be accepted in P0 week 1 (ticket MDV-P0-002).
+- **Status:** Proposed. To be accepted in P0 week 1 (ticket MDV-P0-002). **Amended 6 Nov 2026:** the database is PostgreSQL, see [ADR-012](ADR-012-postgres.md); every "Azure SQL" statement below is superseded.
 - **Date:** 2026-10-20
 
 ## Context

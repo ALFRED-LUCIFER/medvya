@@ -1,6 +1,6 @@
 # ADR-004 · BFF session: no tokens in the browser
 
-- **Status:** Proposed (P0); local half implemented (MDV-P0-011)
+- **Status:** Accepted 6 Nov 2026 (founder). (P0); local half implemented (MDV-P0-011)
 
 ## Decision
 

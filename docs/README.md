@@ -36,6 +36,9 @@ Delivery tickets live in [`../tickets/`](../tickets): Jira-style, one folder per
 | `Medvya Access and Onboarding.dc.html` | F-01–F-07 landing, region, sign-in/MFA, onboarding, invite, trust centre, error states |
 | `Medvya Enterprise Admin.dc.html` / `Enterprise Pages.dc.html` | H-01–H-10 hospital admin |
 | `Medvya Mobile and Tablet.dc.html` | X-01 mobile and tablet, X-02 dark mode, responsive rules |
+| `Medvya Admin.dc.html` (6 Nov 2026) | Platform admin console for the Medvya team: 16 pages (overview, analytics, reports, service requests, tenants, verifications, billing, features, plans, releases, legal, integrations, status, data requests, team, audit log). Tickets MDV-P5-040 to P5-050 |
+| `Medvya Mobile.dc.html` (6 Nov 2026) | Two Expo store apps: staff (Medvya Clinic) and patient (Medvya for patients). Tickets MDV-P5-031 to P5-039 |
+| `Medvya Web.dc.html` (6 Nov 2026) | One-flow web design incl. pricing (approved 6 Nov 2026), owner billing, service requests, UPI AutoPay |
 | `Medvya Journeys.dc.html` | J1–J6 end-to-end journeys (X-03) |
 | `Medvya Wireframes.dc.html` | Lo-fi frames for every screen and system state |
 | `Medvya Build Plan.dc.html` | 32-week plan and security baseline. **Its stack (NestJS/Postgres/AKS) is superseded by PRD v2** |

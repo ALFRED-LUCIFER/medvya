@@ -1,6 +1,6 @@
 # ADR-003 · Country isolation: separate data planes
 
-- **Status:** Proposed (P0)
+- **Status:** Accepted 6 Nov 2026 (founder). (P0)
 
 ## Decision
 

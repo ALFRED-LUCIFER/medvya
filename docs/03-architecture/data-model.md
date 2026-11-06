@@ -1,5 +1,7 @@
 # Data model (ERD) for Azure SQL
 
+> The built schema, as diagrams generated from the EF Core model, is in [erd.md](erd.md). This file is the plan for the whole product (areas A to D below) and the conventions.
+
 Sources: Software Architecture §6–8 (written for PostgreSQL), Foundations ERD coverage, Handoff ERD additions, PRD v2 §07b. The ERD → Azure SQL type mapping is an **open item that must be closed before the end of P0** (PRD v2 completeness check). Ticket MDV-P0-016 delivers it. This page is the starting point.
 
 ## Conventions

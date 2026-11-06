@@ -18,6 +18,9 @@ jobs:
     timeout-minutes: 20  # the .NET suite runs about 6.5 min and is growing
     steps:
       - uses: actions/checkout@v7
+      - name: ERD is current
+        # a model or migration change must regenerate docs/03-architecture/erd.md in the same PR (AGENTS.md 3.6)
+        run: python3 -I tools/erd/generate.py --check
       - uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json

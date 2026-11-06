@@ -77,3 +77,34 @@ public interface IStaffNotifications
 
     Task MarkAllReadAsync(Guid facilityId, CancellationToken cancellationToken = default);
 }
+
+/// <summary>A practice's notification settings (MDV-P1-006).</summary>
+public sealed record NotificationPreferencesView(
+    bool Confirmation, bool Reminder24h, bool Reminder2h, bool Changes, bool Email, bool Sms, TimeOnly QuietStart, TimeOnly QuietEnd)
+{
+    public bool Allows(NotificationKind kind) => kind switch
+    {
+        NotificationKind.Confirmation => Confirmation,
+        NotificationKind.Reminder24h => Reminder24h,
+        NotificationKind.Reminder2h => Reminder2h,
+        _ => Changes,
+    };
+
+    public bool Allows(NotificationChannel channel) => channel == NotificationChannel.Email ? Email : Sms;
+}
+
+/// <summary>A message template shown with placeholders only, never a patient's values.</summary>
+public sealed record TemplatePreview(string Group, string Subject, string Text);
+
+/// <summary>
+/// Reads and changes the practice's preferences. The host allows the endpoints to practice configuration only; background jobs read
+/// the same settings for the tenant they run in.
+/// </summary>
+public interface INotificationPreferences
+{
+    /// <summary>The saved preferences, or the defaults when none were saved.</summary>
+    Task<NotificationPreferencesView> GetAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Saves, audits, and cancels what is still queued for anything just turned off.</summary>
+    Task<NotificationPreferencesView> SaveAsync(NotificationPreferencesView changes, CancellationToken cancellationToken = default);
+}

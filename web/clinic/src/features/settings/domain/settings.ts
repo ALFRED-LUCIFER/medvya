@@ -130,7 +130,7 @@ export const settingsError = (code: string | undefined): SettingsError =>
 /** The tenant's locations and the one a tab is looking at. */
 export type LocationChoice = { locations: Location[]; locationId: string; onLocation: (id: string) => void; locationsLoading: boolean; locationsFailed: boolean };
 
-export const settingsTabs = ['profile', 'locations', 'hours', 'holidays', 'staff', 'doctors', 'audit', 'terms'] as const;
+export const settingsTabs = ['profile', 'locations', 'hours', 'holidays', 'staff', 'doctors', 'audit', 'terms', 'notifications', 'data'] as const;
 export type SettingsTab = (typeof settingsTabs)[number];
 
 /** The practice's acceptance of the Terms of Service and DPA (MDV-P1-019). Until accepted, booking and sending are refused by the server. */

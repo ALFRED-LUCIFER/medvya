@@ -73,13 +73,19 @@ public static class NotificationRules
     {
         var at = start - lead;
         if (at < now) return null;
+        var moved = QuietEnd(at, zone, quietStart, quietEnd);
+        return moved is null ? at : moved < start ? moved : null;
+    }
+
+    /// <summary>The end of the facility-local quiet window that <paramref name="at"/> falls in, or null when it is outside (or the window is empty).</summary>
+    public static DateTimeOffset? QuietEnd(DateTimeOffset at, TimeZoneInfo zone, TimeOnly quietStart, TimeOnly quietEnd)
+    {
         var local = TimeZoneInfo.ConvertTime(at, zone);
         var time = TimeOnly.FromDateTime(local.DateTime);
         var quiet = quietStart <= quietEnd ? time >= quietStart && time < quietEnd : time >= quietStart || time < quietEnd;
-        if (!quiet) return at;
+        if (!quiet) return null;
         var endDay = quietStart > quietEnd && time >= quietStart ? local.Date.AddDays(1) : local.Date;
-        var moved = new DateTimeOffset(endDay + quietEnd.ToTimeSpan(), zone.GetUtcOffset(endDay + quietEnd.ToTimeSpan())).ToUniversalTime();
-        return moved < start ? moved : null;
+        return new DateTimeOffset(endDay + quietEnd.ToTimeSpan(), zone.GetUtcOffset(endDay + quietEnd.ToTimeSpan())).ToUniversalTime();
     }
 
     /// <summary>When try number <paramref name="attempts"/> + 1 may run after <paramref name="attempts"/> failures.</summary>

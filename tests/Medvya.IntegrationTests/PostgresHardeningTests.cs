@@ -65,7 +65,7 @@ public class PostgresHardeningTests(PostgresFixture sql) : IClassFixture<Postgre
         // A fresh key ring (no cached key), exactly as a restarted API would build it.
         var restarted = PatientsModule.NationalIdColumnsFor(sql.ConnectionString, "Development");
         // SAFETY: mutation check: removing the NOT EXISTS guard in PatientsDataKeyStore.Add makes this fail (MDV-P0-041 PR).
-        var ex = Assert.Throws<KeyProtectionException>(() => restarted.Encrypt(tenant, NationalIdColumns.IdentifierLookup, Guid.NewGuid(), "91-2345-6789-0124"));
+        var ex = Assert.Throws<KeyProtectionException>(() => restarted.Encrypt(tenant, NationalIdColumns.IdentifierLookup, Guid.NewGuid(), "91-2345-6789-0128"));
         Assert.Equal(KeyProtectionException.KeyMissing, ex.Message);
         Assert.Throws<KeyProtectionException>(() => restarted.Index(tenant, "X"));
 
@@ -139,6 +139,8 @@ public class PostgresHardeningTests(PostgresFixture sql) : IClassFixture<Postgre
             """UPDATE tenancy."TenantIndex" SET "TenantId" = gen_random_uuid()""",
             """INSERT INTO ledger."Tables" ("Name", "Columns") VALUES ('patients.Patients', '{Id}')""",
             """DELETE FROM ledger."Tables" """,
+            """DELETE FROM ledger."Digests" """,
+            """UPDATE ledger."Digests" SET "At" = now()""",
         })
             Assert.Equal(PostgresErrorCodes.InsufficientPrivilege, (await Refused(conn, statement)).SqlState);
     }

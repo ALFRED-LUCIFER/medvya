@@ -23,7 +23,7 @@ Every role is `NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE NOREPLICATION` an
 | `medvya_audit` | `SELECT/INSERT` on `audit` | `UPDATE`, `DELETE` (the append-only triggers refuse them for every role too, MDV-P0-036) |
 | `medvya_jobs` | `SELECT/INSERT/UPDATE/DELETE` on `hangfire` (job storage) | Any module's data. Hangfire's tables are created by the deploy (as the owner); the app only works in them |
 | `medvya_reporting` | `SELECT` on the tenancy tables listed in `table-rights.sql` (none with personal data) and on the masked views in schema `reporting` (MDV-P0-037) | Any write, any DDL, any `patients` table, `audit`, `identity`, `scheduling` (no masked views for them yet); `tenancy.Invitations`, `DoctorLicences`, `DoctorProfiles`, `Profiles`, `SettingsChanges` (MDV-P0-041) |
-| Ledger (`tenancy`, `patients`, `audit` roles) | `SELECT` on `ledger.Tables` and `ledger.Chains`, `INSERT` on `ledger.Chains` (the chain trigger lists a tenant's first row) | Writing `ledger.Tables` (only migrations do), `UPDATE`/`DELETE` on either |
+| Ledger (`tenancy`, `patients`, `audit` roles) | `SELECT` on `ledger.Tables`, `ledger.Chains` and `ledger.Digests`; `INSERT` on `ledger.Chains` (the chain trigger lists a tenant's first row) and, for `audit` only, on `ledger.Digests` (each published digest, MDV-P0-042) | Writing `ledger.Tables` (only migrations do), `UPDATE`/`DELETE` on any ledger table (`Digests` also refuses them by trigger) |
 
 Default privileges (`ALTER DEFAULT PRIVILEGES FOR ROLE medvya_owner IN SCHEMA …`) give every module role its rights on tables and sequences the owner creates later, so a new table never needs a grant. Two exceptions: a new `tenancy` table is not readable by reporting until it is added to the list in `table-rights.sql` (`EveryTenancyTableReportingReadsHoldsNoPersonalData` checks the list against the data classification), and a table that needs narrower rights than its schema gets them in `table-rights.sql`.
 
@@ -56,9 +56,14 @@ The integration fixture does exactly this: `roles.sql` and `table-rights.sql` as
 
 Support and reporting read schema `reporting` only: `reporting."Patients"` (MRN, country, initials, a ten-year age band, sex at birth, status, registration time) and `reporting."Identifiers"` (scheme and value length). No name, date of birth, contact, address or identifier value is in any view, and every `patients` table is denied to the role (`ReportingSeesMaskedDemographicsWhileTheAppSeesClearValues`, `ReportingRoleIsReadOnly`). The views are owned by `medvya_owner` and the base tables `FORCE` row-level security, so a reporting session still needs a tenant and sees only that tenant. A new view goes into schema `reporting` in its module's migration; the default privileges grant it.
 
-## Mapping to Azure (MDV-P0-038, not built yet)
+## Mapping to Azure (MDV-P0-038, MDV-P0-042)
 
-Azure Database for PostgreSQL provisioning, Entra-only authentication and the deploy workflow are MDV-P0-038. The shape is: the administrator (Entra admin group, just-in-time) runs `roles.sql`; the App Service managed identity is created as a role `IN ROLE medvya_app`; the deploy identity `IN ROLE medvya_migrator`; reporting users `IN ROLE medvya_reporting`. No password exists anywhere.
+No password exists anywhere: the server is Entra-only, and every connection to an Azure host without a password signs in with an Entra access token (`PostgresDataSources`, refreshed in the background). The server is private, so nothing outside the VNet connects to it.
+
+- **Deploy job** (`job-db-<env>-<suffix>`, Container Apps in `snet-jobs`, started by `.github/workflows/deploy-dev.yml`). It holds two managed identities. `id-dbadmin-*` is a second Entra administrator of the server. It runs `roles.sql` (`db-migrate admin`) and makes the logins (`db-migrate entra`: `pgaadauth_create_principal_with_oid`, then `GRANT medvya_<role>`). `id-migrate-*` is a login `IN ROLE medvya_migrator` and runs `db-migrate migrate`. The job is manual-trigger only and never retries a failed run.
+- **App:** the App Service managed identity is a login named after the app (`app-medvya-<env>-<suffix>`) `IN ROLE medvya_app` (`ConnectionStrings__Medvya` names it as the user, `SslMode=VerifyFull`).
+- **Reporting** users are mapped `IN ROLE medvya_reporting` with the same `entra` command, run by an administrator.
+- **Human administrator** (`dbAdminObjectId`): for break-glass and the restore drill only. It is not used by any deploy.
 
 ## Known limits
 

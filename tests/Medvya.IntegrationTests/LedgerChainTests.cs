@@ -144,9 +144,51 @@ public class LedgerDigestTests(PostgresFixture sql) : IClassFixture<PostgresFixt
     }
 }
 
+/// <summary>A missing digest (MDV-P0-042): a warning in a new environment, an alert once the database records that one was published.</summary>
+public class LedgerDigestMissingTests(PostgresFixture sql) : IClassFixture<PostgresFixture>
+{
+    [Fact]
+    public async Task NoDigestEverIsAWarningButALostOneIsAnAlert()
+    {
+        await LedgerChainTests.WriteEvent(sql, Guid.NewGuid());
+        var log = new CapturingLogger<LedgerDigests>();
+        Assert.Equal(0, await new LedgerDigests(sql.ConnectionString, LedgerChainTests.Key, new MemoryDigestStore(), TimeProvider.System, log).VerifyAsync());
+        Assert.Contains(log.Entries, e => e.Level == LogLevel.Warning);
+        Assert.DoesNotContain(log.Entries, e => e.Level == LogLevel.Critical);
+
+        var store = new MemoryDigestStore();
+        var digests = new LedgerDigests(sql.ConnectionString, LedgerChainTests.Key, store, TimeProvider.System, log);
+        await digests.PublishAsync();
+        var first = store.Blobs.Single();
+        await Task.Delay(TimeSpan.FromSeconds(1.1)); // digest names have one-second resolution
+        await digests.PublishAsync();
+
+        store.Blobs.Remove(store.Blobs.Keys.Last()); // the newest digest is gone; an older one is still there
+        Assert.True(await digests.VerifyAsync() > 0);
+        Assert.Contains(log.Entries, e => e.Level == LogLevel.Critical && e.Message.Contains("is missing from the digest store"));
+
+        log.Entries.Clear();
+        store.Blobs.Remove(first.Key); // every digest is gone
+        Assert.True(await digests.VerifyAsync() > 0);
+        Assert.Contains(log.Entries, e => e.Level == LogLevel.Critical && e.Message.Contains("is missing from the digest store"));
+    }
+}
+
 /// <summary>Tampering: each case leaves this class's database broken, so assertions look for the specific alert.</summary>
 public class LedgerTamperTests(PostgresFixture sql) : IClassFixture<PostgresFixture>
 {
+    [Fact]
+    public async Task TheDigestRecordIsAppendOnly()
+    {
+        // The superuser holds every right, so only the trigger can refuse.
+        await using var conn = new NpgsqlConnection(sql.AdminConnectionString);
+        await conn.OpenAsync();
+        await new NpgsqlCommand("""INSERT INTO ledger."Digests" VALUES ('test.json', now()) ON CONFLICT DO NOTHING""", conn).ExecuteNonQueryAsync();
+        await Assert.ThrowsAsync<PostgresException>(() => new NpgsqlCommand("""DELETE FROM ledger."Digests" """, conn).ExecuteNonQueryAsync());
+        await Assert.ThrowsAsync<PostgresException>(() => new NpgsqlCommand("""UPDATE ledger."Digests" SET "At" = now() """, conn).ExecuteNonQueryAsync());
+        await Assert.ThrowsAsync<PostgresException>(() => new NpgsqlCommand("""TRUNCATE ledger."Digests" """, conn).ExecuteNonQueryAsync());
+    }
+
     [Fact]
     public async Task AnAlteredDigestRaisesTheAlert()
     {

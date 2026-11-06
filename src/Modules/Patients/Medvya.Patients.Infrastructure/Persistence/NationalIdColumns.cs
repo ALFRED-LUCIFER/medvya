@@ -1,3 +1,4 @@
+using Medvya.BuildingBlocks.Infrastructure;
 using System.Reflection;
 using Medvya.BuildingBlocks.Domain;
 using Medvya.BuildingBlocks.Security;
@@ -25,8 +26,7 @@ public sealed class PatientsDataKeyStore(string connectionString) : IWrappedKeyS
 {
     NpgsqlConnection Open(Guid tenantId)
     {
-        var conn = new NpgsqlConnection(connectionString);
-        conn.Open();
+        var conn = PostgresDataSources.For(connectionString).OpenConnection();
         using var set = new NpgsqlCommand("SELECT set_config('medvya.tenant_id', @t, false)", conn);
         set.Parameters.AddWithValue("t", tenantId.ToString());
         set.ExecuteNonQuery();

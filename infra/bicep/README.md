@@ -4,7 +4,7 @@
 
 ```
 az group create -n rg-medvya-dev-in -l centralindia
-az deployment group what-if -g rg-medvya-dev-in -f infra/bicep/main.bicep -p dbAdminObjectId=<entra object id> dbAdminLogin=<upn> alertEmail=<email> oidcClientId=<app registration client id>
+az deployment group what-if -g rg-medvya-dev-in -f infra/bicep/main.bicep -p dbAdminObjectId=<entra object id> dbAdminLogin=<upn> alertEmail=<email> oidcClientId=<app registration client id> deployPrincipalId=<object id of the deploy service principal>
 az deployment group create  -g rg-medvya-dev-in -f infra/bicep/main.bicep -p <same parameters>
 ```
 
@@ -24,7 +24,25 @@ az deployment group create  -g rg-medvya-dev-in -f infra/bicep/main.bicep -p <sa
 - **Server parameters:** TLS 1.2+, `log_connections`, `log_disconnections`, pgaudit (`read, write, ddl, role`), extensions allow-list `pgcrypto`, `pg_stat_statements`, `pgaudit`. After the first deployment restart the server once so `shared_preload_libraries` takes effect.
 - Restore drill: `docs/runbooks/postgres-restore-drill.md`.
 
-Not yet moved: `.github/workflows/deploy-dev.yml` still opens a SQL firewall rule and reads the `sqlServer` output, and the app reads `Postgres__Host` / `Postgres__Database` (final names come with the application code). A private database is not reachable from a laptop or a GitHub-hosted runner: migrations need a runner or jump host inside the VNet (follow-up).
+## App settings and the deploy job (MDV-P0-042)
+
+The app reads exactly what the template sets: `ConnectionStrings__Medvya` (host, database, the app's name as the user, `SslMode=VerifyFull`, **no password**: the app signs in with an Entra token for its managed identity), `NationalIdProtection__KeyVaultKeyId` (the **versionless** id of key `medvya-national-id`, so a new key version needs no deployment), `Audit__DigestKey` (Key Vault reference to secret `audit-digest-key`), `Storage__BlobEndpoint` (ledger digests with the managed identity) and `Jobs__Enabled`.
+
+The database is private, so a laptop or a GitHub runner cannot reach it. `job-db-<env>-<suffix>` (Container Apps job in `snet-jobs`) does every database step of a deploy. The workflow uploads a self-contained `db-migrate` to container `deploy` and starts the job. The job then runs `roles.sql` and maps the app and migrator logins as `id-dbadmin-*` (a second Entra administrator, used only by this job), and migrates as `id-migrate-*` (a login `IN ROLE medvya_migrator`). The workflow ships the app only after the job succeeds. Its console log is in Log Analytics (`ContainerAppConsoleLogs_CL`). See `docs/03-architecture/database-security.md`.
+
+**Ledger digests:** container `ledger-digests` has version-level immutability with a time-based retention policy (`ledgerDigestRetentionDays`: 7 in dev, 3650 in prod). Nobody can overwrite or delete a digest inside that window. The app holds the custom role "Medvya ledger digest writer" on that container: read and add, no delete. Bicep creates the policy **unlocked**, because locking is an action, not a property. Lock it once per environment, after the first deployment. Locking is **irreversible**: the period can then only grow, and the storage account cannot be deleted while it holds digests under retention.
+
+```
+etag=$(az storage container immutability-policy show --account-name <storage> -c ledger-digests --query etag -o tsv)
+az storage container immutability-policy lock --account-name <storage> -c ledger-digests --if-match "$etag"
+```
+
+**First deployment of an environment, once** (values never echoed or committed):
+
+1. `openssl rand -base64 32 | tr -d '\n' > /tmp/k && az keyvault secret set --vault-name <kv> --name audit-digest-key --file /tmp/k -o none && rm /tmp/k`
+2. The app's identity needs **Key Vault Secrets User** on the vault for the two Key Vault references (`oidc-client-secret`, `audit-digest-key`). In dev it was granted by hand; it is not in the template because a second assignment with the same role and scope would fail the deployment.
+3. Deploy the template, then restart the PostgreSQL server once (`shared_preload_libraries`).
+4. Set the `dev` environment variables `AZURE_STORAGE_ACCOUNT` and `AZURE_DB_JOB` (outputs `storageAccount`, `dbJob`) and delete `AZURE_SQL_SERVER`. Then run `deploy-dev`.
 
 ## Web app (MDV-P0-007)
 

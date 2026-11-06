@@ -1,3 +1,4 @@
+using Medvya.BuildingBlocks.Infrastructure;
 using Medvya.Identity.Application;
 using Medvya.Identity.Domain;
 using Medvya.Identity.Infrastructure.Persistence;
@@ -10,7 +11,7 @@ public static class IdentityModule
 {
     public static IServiceCollection AddIdentityModule(this IServiceCollection services, string connectionString) =>
         services
-            .AddDbContext<IdentityDbContext>(o => o.UseNpgsql(connectionString))
+            .AddDbContext<IdentityDbContext>(o => o.UseNpgsql(PostgresDataSources.For(connectionString)))
             .AddScoped<IStaffUsers, StaffUsers>()
             .AddScoped<IStaffSessions, StaffSessions>()
             .AddScoped<IOnboardingDrafts, OnboardingDrafts>();

@@ -23,6 +23,10 @@ BEGIN
     IF to_regclass('ledger."Chains"') IS NOT NULL THEN
         GRANT INSERT ON ledger."Chains" TO medvya_tenancy, medvya_patients, medvya_audit;
     END IF;
+    -- The digest job records each published digest (MDV-P0-042); append-only (its triggers refuse UPDATE/DELETE for every role too).
+    IF to_regclass('ledger."Digests"') IS NOT NULL THEN
+        GRANT INSERT ON ledger."Digests" TO medvya_audit;
+    END IF;
 END $$;
 
 -- Tenancy tables reporting may read: no personal data (a test checks every listed table's classified columns). Not listed on purpose:

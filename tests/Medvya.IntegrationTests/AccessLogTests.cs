@@ -278,10 +278,49 @@ public sealed class AccessLogTests(PostgresFixture sql) : IClassFixture<Postgres
         for (var n = 0; n < Events; n++)
             table.Rows.Add(Guid.CreateVersion7(), h.Tenant, staff[n % Staff], n % 10 == 0 ? "patient.update" : "patient.read", "patient",
                 patients[n % patients.Length], "treatment", n % 50 == 0 ? "Denied" : "Allowed", start.AddSeconds(n * 17.28));
-        await using (var conn = await sql.OpenAs("dbo", h.Tenant))
+        // DIAGNOSTIC ONLY (MDV-P0-039, not for merge): sample server activity while the ledgered COPY runs.
+        var samples = new System.Text.StringBuilder();
+        using var stop = new CancellationTokenSource();
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        var sampler = Task.Run(async () =>
         {
-            await PostgresFixture.BulkCopyAsync(conn, "audit.AuditEvents", table);
+            await using var mon = new NpgsqlConnection(sql.AdminConnectionString);
+            await mon.OpenAsync();
+            while (!stop.IsCancellationRequested)
+            {
+                await using (var cmd = new NpgsqlCommand("""
+                    SELECT a.pid, a.usename, a.state, a.wait_event_type, a.wait_event, round(extract(epoch FROM now() - a.xact_start))::int AS xact_s,
+                           left(regexp_replace(a.query, '\s+', ' ', 'g'), 90) AS q,
+                           (SELECT string_agg(l.locktype || ':' || l.mode, ',') FROM pg_locks l WHERE l.pid = a.pid AND NOT l.granted) AS waiting_for,
+                           pg_blocking_pids(a.pid) AS blocked_by
+                    FROM pg_stat_activity a WHERE a.datname = current_database() AND a.pid <> pg_backend_pid() AND a.state <> 'idle'
+                    """, mon))
+                await using (var r = await cmd.ExecuteReaderAsync())
+                {
+                    samples.AppendLine(CultureInfo.InvariantCulture, $"t={watch.Elapsed.TotalSeconds:F0}s");
+                    while (await r.ReadAsync())
+                        samples.AppendLine(CultureInfo.InvariantCulture, $"  pid={r[0]} user={r[1]} state={r[2]} wait={r[3]}/{r[4]} xact={r[5]}s blockedBy={string.Join(",", (int[])r[8])} waitingFor={r[7]} q={r[6]}");
+                }
+                await using (var cmd = new NpgsqlCommand("""SELECT n_live_tup, n_mod_since_analyze, last_autoanalyze, last_autovacuum FROM pg_stat_all_tables WHERE schemaname='audit' AND relname='AuditEvents'""", mon))
+                await using (var r = await cmd.ExecuteReaderAsync())
+                    if (await r.ReadAsync()) samples.AppendLine(CultureInfo.InvariantCulture, $"  stats live={r[0]} modSinceAnalyze={r[1]} autoanalyze={r[2]} autovacuum={r[3]}");
+                try { await Task.Delay(10_000, stop.Token); } catch (OperationCanceledException) { }
+            }
+        });
+        try
+        {
+            await using (var conn = await sql.OpenAs("dbo", h.Tenant))
+            {
+                await PostgresFixture.BulkCopyAsync(conn, "audit.AuditEvents", table);
+            }
         }
+        catch (Exception e)
+        {
+            stop.Cancel(); await sampler;
+            throw new InvalidOperationException($"COPY failed after {watch.Elapsed.TotalSeconds:F0}s. Server samples:\n{samples}", e);
+        }
+        stop.Cancel(); await sampler;
+        Assert.True(watch.Elapsed < TimeSpan.FromSeconds(45), $"DIAG: COPY took {watch.Elapsed.TotalSeconds:F0}s. Server samples:\n{samples}");
         using var client = Client(Role.PracticeAdmin);
         var from = Uri.EscapeDataString(start.ToString("o", CultureInfo.InvariantCulture));
         string[] paths =

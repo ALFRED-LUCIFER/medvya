@@ -9,7 +9,7 @@ az deployment group create  -g rg-medvya-dev-in -f infra/bicep/main.bicep -p <sa
 ```
 
 - Sign-in is a single-tenant Entra app registration. Its client secret lives only in Key Vault (`oidc-client-secret`); the web app reads it through a Key Vault reference.
-- Cost guard: a monthly budget (default 1,800 INR) mails alerts at 50/80/100 %; Log Analytics is capped at 0.1 GB/day.
+- Cost guard: a monthly budget (default 3,500 INR: the B1 plan and the B1ms PostgreSQL server need it) mails alerts at 50/80/100 %; Log Analytics is capped at 0.1 GB/day.
 - No secret value belongs in this folder.
 
 ## Database (MDV-P0-038)

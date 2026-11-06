@@ -50,7 +50,7 @@ async function desk(page: Page, { locale = 'en', walkInAnswer = (_: { calendarId
   });
   await page.route('**/v1/appointments/*/check-in', r => {
     calls.checkIns.push(r.request());
-    Object.assign(board[0] as object, { state: 'CheckedIn', since: ist('10:32') });
+    Object.assign(board[0] as object, { state: 'CheckedIn', since: ist('10:32'), token: 'A-02' });
     return r.fulfill({ json: board[0] });
   });
   await page.route('**/v1/front-desk/board?*', r => r.fulfill({ json: { facilityId: 'f-1', timeZone: 'Asia/Kolkata', date: '2026-10-19', now: ist('10:44'), cards: board } }));
@@ -76,10 +76,12 @@ test('a new walk-in is quick-registered and checked in within a minute, then wai
   await page.getByRole('button', { name: 'Check in now' }).click();
   await expect(page.getByRole('heading', { name: 'Arjun Nair (synthetic) is checked in' })).toBeVisible();
   await expect(page.getByText('Walk-in with Dr. Arjun Rao (synthetic) at 10:40.', { exact: false })).toBeVisible();
+  await expect(page.getByText('Token A-02')).toBeVisible(); // MDV-P1-052: the token is on the success screen, not only on the board
   expect(Date.now() - started).toBeLessThan(60_000);
 
   // The walk-in, then the board's own check-in with the time taken (exit gate 3).
-  expect(calls.walkIns[0]!.postDataJSON()).toEqual({ facilityId: 'f-1', patientId, calendarId: null, visitType: 'FollowUp', reasonCategory: 'General' });
+  // Just registered: a new consultation by default (MDV-P1-052); the duplicate check stays on.
+  expect(calls.walkIns[0]!.postDataJSON()).toEqual({ facilityId: 'f-1', patientId, calendarId: null, visitType: 'NewConsultation', reasonCategory: 'General', allowRepeat: false });
   expect(new URL(calls.walkIns[0]!.url()).search).toBe('');
   expect(calls.checkIns[0]!.url()).toContain('/v1/appointments/a-9/check-in');
   expect((calls.checkIns[0]!.postDataJSON() as { elapsedMs: number }).elapsedMs).toBeGreaterThan(0);
@@ -108,6 +110,22 @@ test('with no free slot today the desk chooses a doctor and the patient is queue
   await page.getByRole('button', { name: 'Check in now' }).click();
   await expect(page.getByText('No free slot today: queued for Dr. Arjun Rao (synthetic) without taking a slot.', { exact: false })).toBeVisible();
   expect(calls.walkIns.at(-1)!.postDataJSON()).toMatchObject({ calendarId: 'd-1' });
+  expect(calls.checkIns).toHaveLength(1);
+});
+
+// MDV-P1-052: a second walk-in for a patient who already has an open visit today is a warning first, then a deliberate choice.
+test('the same patient checked in again is warned before a second visit is made', async ({ page }) => {
+  const calls = await desk(page, {
+    walkInAnswer: b => (b as { allowRepeat?: boolean }).allowRepeat ? { status: 200, json: {} } : { status: 409, json: { title: 'Slot no longer available', code: 'already_today' } },
+  });
+  await page.goto(`/front-desk/walk-in?patient=${patientId}`);
+  await expect(page.getByText('Patient: Arjun Nair (synthetic) · MRN 000777')).toBeVisible();
+  await page.getByRole('button', { name: 'Check in now' }).click();
+  await expect(page.getByRole('alert')).toHaveText(/already has a visit today/);
+  expect(calls.checkIns).toHaveLength(0); // nothing made yet
+  await page.getByRole('button', { name: 'Make a second visit anyway' }).click();
+  await expect(page.getByRole('heading', { name: 'Arjun Nair (synthetic) is checked in' })).toBeVisible();
+  expect(calls.walkIns.map(r => (r.postDataJSON() as { allowRepeat: boolean }).allowRepeat)).toEqual([false, true]);
   expect(calls.checkIns).toHaveLength(1);
 });
 

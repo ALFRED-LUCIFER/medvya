@@ -4491,6 +4491,7 @@ export interface components {
             patientId?: string;
             visitType?: components["schemas"]["VisitType"];
             reasonCategory?: components["schemas"]["ReasonCategory"];
+            allowRepeat?: boolean;
         };
         WorkingHours: {
             weekday?: components["schemas"]["DayOfWeek"];

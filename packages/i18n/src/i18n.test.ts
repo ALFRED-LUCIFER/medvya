@@ -29,6 +29,11 @@ describe('i18n', () => {
     expect(translate('hi', 'push.generic', { clinic: 'Iyer Family Clinic' })).toContain('Iyer Family Clinic');
   });
 
+  it('words a count by the plural rules of the locale, Arabic dual included (MDV-P1-052)', () => {
+    expect([1, 2].map(n => makeI18n('en', 'IN').tCount('board.count', n))).toEqual(['1 visit', '2 visits']);
+    expect([1, 2, 3, 11].map(n => makeI18n('ar', 'AE').tCount('board.count', n))).toEqual(['زيارة واحدة', 'زيارتان', '3 زيارات', '11 زيارة']);
+  });
+
   it('has no keys in other locales that English lacks', () => {
     for (const cat of [catalogs.hi!, catalogs.ar!])
       for (const k of Object.keys(cat)) if (!k.startsWith('_')) expect(k in catalogs.en, k).toBe(true);

@@ -15,6 +15,20 @@ const farhan = {
 };
 
 journey('J3', {
+  // MDV-P1-025 / MDV-P1-052: a walk-in is checked in and the desk reads the token from the success screen.
+  1: async ({ page }) => {
+    await page.route('**/v1/me/context', r => r.fulfill({ json: reception }));
+    await page.route('**/v1/schedule?*', r => r.fulfill({ json: { facilityId: 'f-1', timeZone: 'Asia/Kolkata', date: '2026-10-19', start: '2026-10-19T02:30:00Z', end: '2026-10-19T15:30:00Z',
+      columns: [{ calendarId: 'd-1', calendarKind: 'Doctor', name: 'Dr. Arjun Rao (synthetic)', slotMinutes: 20, hours: [], slots: [], unavailable: [], appointments: [], visitLengths: [], capacity: 0 }] } }));
+    await page.route('**/v1/schedule/patients/p-1?*', r => r.fulfill({ json: { id: 'p-1', fullName: 'Farhan Qureshi (synthetic)', mrn: '000101' } }));
+    await page.route('**/v1/appointments/walk-in', r => r.fulfill({ json: { id: 'a-1', calendarId: 'd-1', start: farhan.start, end: farhan.end, walkIn: true, unscheduled: false, patientName: farhan.patientName } }));
+    await page.route('**/v1/appointments/a-1/check-in', r => r.fulfill({ json: { ...farhan, room: null, token: 'A-07', walkIn: true } }));
+    await page.goto('/front-desk/walk-in?patient=p-1');
+    await expect(page.getByText('Patient: Farhan Qureshi (synthetic) · MRN 000101')).toBeVisible();
+    await page.getByRole('button', { name: 'Check in now' }).click();
+    await expect(page.getByRole('heading', { name: 'Farhan Qureshi (synthetic) is checked in' })).toBeVisible();
+    await expect(page.getByText('Token A-07')).toBeVisible();
+  },
   // MDV-P1-028: reception sends a checked-in patient to the nurse; the card moves to "With nurse".
   4: async ({ page }) => {
     await page.route('**/v1/me/context', r => r.fulfill({ json: reception }));

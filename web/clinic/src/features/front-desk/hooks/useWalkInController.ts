@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { emptyWalkIn, walkInError, type WalkInChoice, type WalkInVisit } from '../domain/board';
+import { emptyWalkIn, newPatientWalkIn, walkInError, type WalkInChoice, type WalkInVisit } from '../domain/board';
 import { checkIn, monotonicNow, walkIn } from '../services/frontDeskApi';
 import { ApiError, fetchScheduleDay, findPatient } from '../../schedule/services/scheduleApi';
 import { usePatientSearch } from '../../patients/hooks/usePatientSearch';
@@ -14,8 +14,8 @@ export function useWalkInController(facilityId: string, initialPatientId: string
   const queryClient = useQueryClient();
   const opened = useRef(monotonicNow());
   const [patientId, setPatientId] = useState(initialPatientId ?? '');
-  const [choice, setChoice] = useState<WalkInChoice>(emptyWalkIn);
-  const search = usePatientSearch(setPatientId);
+  // Arriving from quick registration means a new patient: a new consultation by default.
+  const [choice, setChoice] = useState<WalkInChoice>(initialPatientId ? newPatientWalkIn : emptyWalkIn);
 
   // Name and MRN of the chosen patient (an audited lookup), as booking confirms them.
   const patient = useQuery({ queryKey: ['booking-patient', facilityId, patientId], queryFn: () => findPatient(facilityId, patientId), enabled: patientId !== '', staleTime: Infinity });
@@ -24,13 +24,15 @@ export function useWalkInController(facilityId: string, initialPatientId: string
   const doctors = (day.data?.columns ?? []).filter(c => c.calendarKind === 'Doctor').map(c => ({ id: c.calendarId, name: c.name }));
 
   const done = useMutation({
-    mutationFn: async (): Promise<WalkInVisit> => {
-      const visit = await walkIn(facilityId, patientId, choice);
-      await checkIn(visit.id, monotonicNow() - opened.current); // the board's own check-in: the same state machine
-      return visit;
+    mutationFn: async (allowRepeat: boolean): Promise<WalkInVisit & { token: string | null }> => {
+      const visit = await walkIn(facilityId, patientId, choice, allowRepeat);
+      const card = await checkIn(visit.id, monotonicNow() - opened.current); // the board's own check-in: the same state machine
+      return { ...visit, token: card.token };
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['front-desk'] }),
   });
+  // Another patient clears the last answer: a "visit today" warning must never carry over to them.
+  const search = usePatientSearch(id => { setPatientId(id); done.reset(); });
   const error = done.error ? (done.error instanceof ApiError && done.error.status === 403 && done.error.code !== 'terms_not_accepted' ? 'forbidden' as const : walkInError(done.error instanceof ApiError ? done.error.code : undefined)) : null;
 
   return {
@@ -44,7 +46,9 @@ export function useWalkInController(facilityId: string, initialPatientId: string
     onChoice: (next: Partial<WalkInChoice>) => { setChoice(c => ({ ...c, ...next })); done.reset(); },
     canConfirm: patientId !== '' && !!patient.data && !done.isPending,
     saving: done.isPending,
-    onConfirm: () => done.mutate(),
+    onConfirm: () => done.mutate(false),
+    /** After the "already has a visit today" warning: make the second visit anyway. */
+    onConfirmRepeat: () => done.mutate(true),
     result: done.data ?? null,
     error,
   };

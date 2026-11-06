@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { catalogs, loadCatalog, type Country } from '@medvya/i18n';
 import {
-  ageOn, completionSchema, consentPolicyVersion, dataMap, duplicateQuery, isMinor, eidExpired, emirates, emptyForm, errorCode, formField, hieFor, indiaStates, knownErrors, messageFor, payerFields,
+  ageOn, completionSchema, consentPolicyVersion, duplicateQuery, isMinor, eidExpired, emirates, emptyForm, errorCode, formField, hieFor, indiaStates, knownErrors, messageFor, payerFields,
   payerKinds, payerLabel, regionKey, registrationSchema, resolves, rules, stepOf, toCompletionRequest, toRegisterRequest, type DuplicateCandidate, type RegistrationForm,
 } from './registration';
 
@@ -56,6 +56,16 @@ describe('quick registration', () => {
     expect(errors('IN', true, emptyForm)).toEqual({ fullName: 'required', mobile: 'required', dateOfBirth: 'required', sexAtBirth: 'required' });
     expect(errors('IN', true, { ...deepak, ageInstead: true, ageYears: '131' })).toEqual({ ageYears: 'out_of_range' });
     expect(errors('IN', true, deepak)).toEqual({});
+  });
+
+  it('shows every error at once, a malformed mobile included, before anything reaches the server (MDV-P1-052)', () => {
+    expect(errors('IN', true, { ...deepak, abha: '91-0000', mobile: '12345' })).toEqual({ abha: 'format.Abha', mobile: 'format.phone' });
+    expect(errors('IN', true, { ...deepak, mobile: '5000000201' })).toEqual({ mobile: 'format.phone' }); // Indian mobiles start 6–9
+    expect(errors('IN', true, { ...deepak, mobile: '(+91) 90000-00201' })).toEqual({}); // separators as people type them
+    expect(errors('AE', true, { ...fatima, mobile: '+971 50 000 0458' })).toEqual({});
+    expect(errors('AE', true, { ...fatima, mobile: '04 000 0458' })).toEqual({ mobile: 'format.phone' }); // a landline
+    expect(errors('IN', false, { ...deepak, ecPhone: '123', alternatePhone: '99' })).toEqual({ ecPhone: 'format.phone', alternatePhone: 'format.phone' });
+    expect(messageFor('mobile', 'format')).toBe('format.phone'); // the server's code gets the same wording, not a bare "Check the format"
   });
 
   it('asks the UAE desk for the Emirates ID in its printed format', () => {
@@ -134,7 +144,7 @@ describe('server errors and display', () => {
     expect([formField('identifiers[1]', request, 'IN'), formField('identifiers[1]', request, 'AE'), formField('identifiers', request, 'AE'),
       formField('address.postalCode', request, 'IN'), formField('payer.memberNumber', request, 'IN'), formField('duplicates', request, 'IN')])
       .toEqual(['otherIdValue', 'passport', 'emiratesId', 'postalCode', 'memberNumber', null]);
-    expect([messageFor('postalCode', 'format'), messageFor('mobile', 'format'), messageFor('region', 'not_allowed')]).toEqual(['format.pin', 'format', 'not_allowed']);
+    expect([messageFor('postalCode', 'format'), messageFor('fullName', 'format'), messageFor('region', 'not_allowed')]).toEqual(['format.pin', 'format', 'not_allowed']);
     expect([errorCode('format.Abha'), errorCode('something_new')]).toEqual(['format.Abha', 'generic']);
     expect([stepOf('postalCode'), stepOf('memberNumber'), stepOf('abha')]).toEqual(['contact', 'payer', 'identity']);
   });
@@ -150,7 +160,6 @@ describe('server errors and display', () => {
       ...(['IN', 'AE'] as const).flatMap(c => payerKinds[c].flatMap(k => payerFields(c, k).map(f => payerLabel(c, k, f)))),
       ...indiaStates.map(s => regionKey('IN', s)), ...emirates.map(e => regionKey('AE', e)),
       ...[...rules.IN, ...rules.AE].map(r => `registration.rules.${r}`),
-      ...Object.values(dataMap).flat().map(d => `registration.map.${d.key}`),
     ];
     for (const locale of ['en', 'hi', 'ar'] as const)
       expect(keys.filter(k => !k || !(k in catalogs[locale]!)), locale).toEqual([]);

@@ -176,7 +176,7 @@ export default function Registration(p: Props) {
           </div>
         </form>
 
-        <RegistrationSidePanel country={p.country} values={p.values} ageInstead={p.ageInstead} step={step} today={today} />
+        <RegistrationSidePanel country={p.country} values={p.values} ageInstead={p.ageInstead} today={today} />
       </div>
     </div>
   );

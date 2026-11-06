@@ -5,6 +5,9 @@ export type UnavailableReason = 'NotWorking' | 'Break' | 'NoSchedule' | 'Closed'
 export type VisitType = 'FollowUp' | 'NewConsultation' | 'Procedure' | 'Teleconsult';
 export type AppointmentState = 'Booked' | 'CheckedIn' | 'WithNurse' | 'ReadyForDoctor' | 'InConsult' | 'Billing' | 'Done' | 'Cancelled' | 'NoShow' | 'NeedsRebooking';
 
+/** States that occupy time; a cancelled, no-show or needs-rebooking visit does not count as booked. */
+export const occupies = (state: AppointmentState) => state !== 'Cancelled' && state !== 'NoShow' && state !== 'NeedsRebooking';
+
 export type Span = { start: string; end: string };
 /** A slot that has started (compared as instants, so the facility zone cannot change the answer); the server refuses it, so the screens do not offer it. */
 export const hasStarted = (slot: Span, now: number) => Date.parse(slot.start) < now;
@@ -26,8 +29,12 @@ export type ScheduleColumn = {
 /** One facility day. `date` is the facility-local date (YYYY-MM-DD); start and end frame the day for every column. */
 export type ScheduleDay = { facilityId: string; timeZone: string; date: string; start: string; end: string; columns: ScheduleColumn[] };
 
-/** Where a block sits in its column: offset and height in px from the top of the day frame. */
-export type Placement = { top: number; height: number };
+/**
+ * Where a block sits in its column: offset and height in px from the top of the day frame. `lane` splits the width when a visit
+ * that no longer occupies time (cancelled, no-show) shares its time with a slot or another visit: it moves to the `side` lane and
+ * the other block keeps the `main` lane, so a freed slot is never under a card (MDV-P1-052).
+ */
+export type Placement = { top: number; height: number; lane: 'full' | 'main' | 'side' };
 
 export type ColumnItem =
   | ({ kind: 'slot' } & Slot & Placement)
@@ -53,11 +60,14 @@ const minutes = (from: string, to: string) => (Date.parse(to) - Date.parse(from)
 export function layoutDay(day: ScheduleDay): DayLayout {
   const shortest = Math.min(30, ...day.columns.flatMap(c => (c.slotMinutes ? [c.slotMinutes] : [])));
   const ppm = minSlotPx / shortest;
-  const place = (s: Span): Placement => ({ top: minutes(day.start, s.start) * ppm, height: minutes(s.start, s.end) * ppm });
+  const place = (s: Span) => ({ top: minutes(day.start, s.start) * ppm, height: minutes(s.start, s.end) * ppm });
 
-  // Time marks every 30 minutes; IST (+05:30) and GST (+04:00) keep UTC half hours on local half hours.
+  // A time mark per slot of the shortest length, on that column's slot starts, so ruler labels sit on slot rows (MDV-P1-052).
+  const step = shortest * minute, from = Date.parse(day.start);
+  const firstSlot = day.columns.find(c => c.slotMinutes === shortest && c.hours.length > 0)?.hours[0]?.start;
+  const anchor = firstSlot ? Date.parse(firstSlot) : from;
   const marks: DayLayout['marks'] = [];
-  for (let t = Math.ceil(Date.parse(day.start) / (30 * minute)) * 30 * minute; t < Date.parse(day.end); t += 30 * minute) {
+  for (let t = anchor - Math.floor((anchor - from) / step) * step; t < Date.parse(day.end); t += step) {
     const at = new Date(t).toISOString();
     marks.push({ at, top: minutes(day.start, at) * ppm });
   }
@@ -68,13 +78,26 @@ export function layoutDay(day: ScheduleDay): DayLayout {
       calendarId: c.calendarId, calendarKind: c.calendarKind, name: c.name, slotMinutes: c.slotMinutes, visitLengths: c.visitLengths,
       rooms: [...new Set(c.hours.flatMap(h => (h.room ? [h.room] : [])))],
       working: c.hours.length > 0,
-      items: [
+      items: lanes([
         ...c.slots.map(s => ({ kind: 'slot' as const, ...s, ...place(s) })),
         ...c.appointments.map(a => ({ kind: 'appointment' as const, ...a, ...place(a) })),
         ...c.unavailable.map(u => ({ kind: 'unavailable' as const, ...u, ...place(u) })),
-      ].sort((a, b) => Date.parse(a.start) - Date.parse(b.start)),
+      ]),
     })),
   };
+}
+
+type Unlaned = (({ kind: 'slot' } & Slot) | ({ kind: 'appointment' } & Appointment) | ({ kind: 'unavailable' } & Unavailable)) & { top: number; height: number };
+const overlaps = (a: Span, b: Span) => Date.parse(a.start) < Date.parse(b.end) && Date.parse(b.start) < Date.parse(a.end);
+const aside = (i: Unlaned) => i.kind === 'appointment' && !occupies(i.state);
+
+/** Time order, with the live block first on a tie, so the free slot comes before the cancelled visit in the reading order too. */
+function lanes(items: Unlaned[]): ColumnItem[] {
+  return items
+    .map(i => ({ ...i, lane: aside(i)
+      ? (items.some(o => !aside(o) && overlaps(o, i)) ? 'side' : 'full')
+      : (items.some(o => aside(o) && overlaps(o, i)) ? 'main' : 'full') }) as ColumnItem)
+    .sort((a, b) => Date.parse(a.start) - Date.parse(b.start) || Number(aside(a)) - Number(aside(b)));
 }
 
 /**

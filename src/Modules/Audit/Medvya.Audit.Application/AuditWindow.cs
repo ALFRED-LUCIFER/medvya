@@ -11,8 +11,11 @@ namespace Medvya.Audit.Application;
 // the database (or a shared cache) before running more than one instance (MDV-P0-007).
 public sealed class AuditWindow(TimeProvider clock)
 {
-    /// <summary>Window for the reception board's reads and live-update watches.</summary>
-    public static readonly TimeSpan Board = TimeSpan.FromMinutes(5);
+    /// <summary>
+    /// Window for reads a screen repeats on its own: the board's refetch on every live update and its watch, the schedule's
+    /// refresh and the visit panel's message poll (MDV-P1-052). The first read in the window is always written.
+    /// </summary>
+    public static readonly TimeSpan Repeated = TimeSpan.FromMinutes(5);
 
     readonly ConcurrentDictionary<string, DateTimeOffset> until = new();
 

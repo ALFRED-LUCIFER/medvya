@@ -54,10 +54,4 @@ public interface IScheduleExceptionService
     /// </summary>
     /// <exception cref="SchedulingValidationException">Unknown exception, or an extra session with booked visits (<c>id:has_bookings</c>).</exception>
     Task DeleteAsync(Guid facilityId, Guid exceptionId, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// A doctor left the practice (MDV-P1-009): their future booked visits become "needs rebooking" for reception to move (slots freed, audited,
-    /// no patient message). The caller has already authorised staff administration; nothing here is open to a doctor's own session.
-    /// </summary>
-    Task<int> ReleaseDoctorAsync(Guid doctorUserId, CancellationToken cancellationToken = default);
 }

@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import type { Appointment, ScheduleColumn, ScheduleDay } from './schedule';
-import { agenda, filterColumns, firstFreeSlot, lookOf, weekDays, weekSpan, type ScheduleWeek } from './views';
+import { agenda, filterColumns, firstFreeSlot, lookOf, readAddress, weekDays, weekSpan, type ScheduleWeek } from './views';
+
+describe('the schedule address (MDV-P1-052)', () => {
+  it('reads a real date and a known view, and ignores anything else', () => {
+    expect(readAddress(new URLSearchParams('date=2026-11-09&view=week'))).toEqual({ date: '2026-11-09', view: 'week' });
+    expect(readAddress(new URLSearchParams('date=2026-02-30&view=month'))).toEqual({ date: null, view: null }); // no 30 Feb, no month view
+    expect(readAddress(new URLSearchParams('date=9 Nov'))).toEqual({ date: null, view: null });
+  });
+});
 
 const appt = (id: string, start: string, state: Appointment['state'] = 'Booked'): Appointment =>
   ({ id, reference: `APT-${id}`, patientId: 'p', patientName: `Patient ${id}`, visitType: 'FollowUp', state, start, end: start });

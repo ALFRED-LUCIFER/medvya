@@ -47,11 +47,14 @@ describe('day layout', () => {
     ]);
   });
 
-  it('marks every half hour of the frame', () => {
+  it('marks every slot of the shortest length, on the slot starts (MDV-P1-052)', () => {
     const marks = layoutDay(day).marks;
-    expect(marks).toHaveLength(22);
+    expect(marks).toHaveLength(33); // 11 hours of 20-minute slots
     expect(marks[0]).toEqual({ at: '2026-10-19T03:30:00.000Z', top: 0 });
-    expect(marks[1]!.top).toBe(72);
+    expect(marks[1]).toEqual({ at: '2026-10-19T03:50:00.000Z', top: minSlotPx }); // one label per slot row
+    // Hours that start off the frame's start (09:10) put the marks on 09:10, 09:30 …
+    const late = { ...day, columns: [{ ...day.columns[0]!, hours: [{ start: '2026-10-19T03:40:00Z', end: '2026-10-19T07:30:00Z', room: null }] }] };
+    expect(layoutDay(late).marks.slice(0, 2).map(m => m.at)).toEqual(['2026-10-19T03:40:00.000Z', '2026-10-19T04:00:00.000Z']);
   });
 
   it('steps from the date asked for, so a fast double click moves two days', () => {

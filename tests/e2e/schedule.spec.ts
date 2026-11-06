@@ -233,6 +233,32 @@ test('moves between days and back to today', async ({ page }) => {
   expect(calls.dates.slice(0, 4)).toEqual([null, '2026-10-20', '2026-10-19', '2026-10-18']); // the server decides "today"
 });
 
+// MDV-P1-052: the day and the view are in the address; an opened visit closes when the day or view changes.
+test('the selected date and view survive a reload, and a stale visit panel closes', async ({ page }) => {
+  const calls = await open(page);
+  await expect(page).toHaveURL(/\/schedule$/); // today: nothing to remember
+  await page.getByRole('button', { name: 'Next day' }).click();
+  await expect(page).toHaveURL(/\/schedule\?date=2026-10-20$/);
+  await page.getByRole('button', { name: 'List', exact: true }).click();
+  await expect(page).toHaveURL(/\/schedule\?date=2026-10-20&view=list$/);
+  await page.reload();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Tuesday, 20 October 2026');
+  await expect(page.getByRole('button', { name: 'List', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  expect(calls.dates.at(-1)).toBe('2026-10-20');
+
+  await page.goto('/schedule?date=2026-10-19&view=day');
+  await meera(page).click();
+  await expect(visitPanel(page)).toBeVisible();
+  await page.getByRole('button', { name: 'Next day' }).click();
+  await expect(page.getByRole('complementary', { name: 'Appointment', exact: true })).toHaveCount(0); // Meera's 19 Oct visit is not shown over 20 Oct
+  await page.getByRole('button', { name: 'Previous day' }).click();
+  await meera(page).click();
+  await page.getByRole('button', { name: 'Week', exact: true }).click();
+  await expect(page.getByRole('complementary', { name: 'Appointment', exact: true })).toHaveCount(0);
+  await page.goto('/schedule?date=not-a-date&view=month'); // a broken link falls back to today and the day view
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Monday, 19 October 2026');
+});
+
 test('reception books an empty slot: hold, longer visit type, confirm the patient, book', async ({ page }) => {
   const calls = await open(page);
   await expect(bookButton(page, '09:40')).toHaveCount(0); // being booked elsewhere

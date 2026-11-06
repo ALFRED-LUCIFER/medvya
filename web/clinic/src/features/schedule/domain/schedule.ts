@@ -62,9 +62,12 @@ export function layoutDay(day: ScheduleDay): DayLayout {
   const ppm = minSlotPx / shortest;
   const place = (s: Span) => ({ top: minutes(day.start, s.start) * ppm, height: minutes(s.start, s.end) * ppm });
 
-  // Time marks every 30 minutes; IST (+05:30) and GST (+04:00) keep UTC half hours on local half hours.
+  // A time mark per slot of the shortest length, on that column's slot starts, so ruler labels sit on slot rows (MDV-P1-052).
+  const step = shortest * minute, from = Date.parse(day.start);
+  const firstSlot = day.columns.find(c => c.slotMinutes === shortest && c.hours.length > 0)?.hours[0]?.start;
+  const anchor = firstSlot ? Date.parse(firstSlot) : from;
   const marks: DayLayout['marks'] = [];
-  for (let t = Math.ceil(Date.parse(day.start) / (30 * minute)) * 30 * minute; t < Date.parse(day.end); t += 30 * minute) {
+  for (let t = anchor - Math.floor((anchor - from) / step) * step; t < Date.parse(day.end); t += step) {
     const at = new Date(t).toISOString();
     marks.push({ at, top: minutes(day.start, at) * ppm });
   }

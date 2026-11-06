@@ -4,6 +4,17 @@ import { addDays, occupies, type Appointment, type AppointmentState, type Schedu
 export type ScheduleView = 'day' | 'week' | 'list';
 export const scheduleViews: readonly ScheduleView[] = ['day', 'week', 'list'];
 
+/** The schedule's place in the address (?date=2026-10-19&view=week, MDV-P1-052): a reload or a shared link opens the same day. */
+export type ScheduleAddress = { date: string | null; view: ScheduleView | null };
+/** Anything else in the address (a typo, an old link) means "not given": today, the default view. */
+export function readAddress(params: URLSearchParams): ScheduleAddress {
+  const date = params.get('date'), view = params.get('view');
+  const noon = date !== null && /^\d{4}-\d{2}-\d{2}$/.test(date) ? Date.parse(`${date}T12:00:00Z`) : NaN;
+  // A real calendar day: 2026-02-30 either fails to parse or rolls over to March, never kept.
+  const real = !Number.isNaN(noon) && new Date(noon).toISOString().startsWith(date!);
+  return { date: real ? date : null, view: (scheduleViews as readonly string[]).includes(view ?? '') ? (view as ScheduleView) : null };
+}
+
 /** GET /v1/schedule/week: Monday to Sunday of one calendar; each day holds only that calendar's column. */
 export type ScheduleWeek = { facilityId: string; timeZone: string; calendarId: string; days: ScheduleDay[] };
 

@@ -5,6 +5,7 @@ using Hangfire.SqlServer;
 using Host.Api.Context;
 using Medvya.Notifications.Application;
 using Medvya.Scheduling.Application;
+using Medvya.Tenancy.Application;
 using Microsoft.AspNetCore.Authorization;
 
 namespace Host.Api.Notifications;
@@ -35,7 +36,9 @@ public sealed partial class NotificationJobs(IServiceProvider services, ILogger<
                 await using var scope = services.EnterLinkTenant(tenant);
                 var dispatcher = scope.ServiceProvider.GetRequiredService<IOutboxDispatcher>();
                 while (await dispatcher.DispatchAsync(Batch, cancellationToken) == Batch) { }
-                await scope.ServiceProvider.GetRequiredService<INotificationSender>().SendDueAsync(Batch, cancellationToken);
+                // Messages wait queued until the owner accepts the terms (MDV-P1-019); they go out after, unless the visit has started.
+                if (await scope.ServiceProvider.GetRequiredService<ITermsAcceptance>().IsSatisfiedAsync(cancellationToken))
+                    await scope.ServiceProvider.GetRequiredService<INotificationSender>().SendDueAsync(Batch, cancellationToken);
             }
             catch (Exception e) when (e is not OperationCanceledException)
             {

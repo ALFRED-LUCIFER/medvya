@@ -29,6 +29,17 @@ public sealed class PatientConsents(PatientsDbContext db, ICurrentTenant tenant,
         return newest == true;
     }
 
+    public async Task<IReadOnlyList<ConsentState>?> CurrentAsync(Guid patientId, CancellationToken cancellationToken = default)
+    {
+        var facilityId = facility.FacilityId ?? throw new InvalidOperationException("No facility context.");
+        if (!await db.Patients.AsNoTracking().AnyAsync(p => p.Id == patientId && p.FacilityId == facilityId, cancellationToken)) return null;
+        var all = await db.ConsentReceipts.AsNoTracking().Where(r => r.PatientId == patientId).ToListAsync(cancellationToken);
+        return all.GroupBy(r => (r.Type, r.Channel))
+            .Select(g => g.OrderByDescending(r => r.DecidedAt).ThenBy(r => r.Granted).First())
+            .OrderBy(r => r.Type).ThenBy(r => r.Channel)
+            .Select(r => new ConsentState(r.Type, r.Channel, r.Granted, r.DecidedAt, r.PolicyVersion)).ToList();
+    }
+
     public async Task<IReadOnlyList<ConsentDecisionInput>?> ChangeAsync(Guid patientId, ConsentSet consents, CancellationToken cancellationToken = default)
     {
         var tenantId = tenant.TenantId ?? throw new InvalidOperationException("No tenant context.");

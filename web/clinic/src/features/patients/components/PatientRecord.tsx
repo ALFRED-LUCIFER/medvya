@@ -4,8 +4,9 @@ import { ArrowLeft, ClipboardList, Eye, TriangleAlert } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
 import { Button, buttonVariants, cn } from '@medvya/ui';
 import { addressLines, missingParts, type ContactView, type PatientDetails, type RevealedIdentifiers } from '../domain/directory';
-import { genderIdentities, regionKey } from '../../registration/domain/registration';
+import { consentPolicyVersion, genderIdentities, regionKey } from '../../registration/domain/registration';
 import type { MergeHistoryEntry } from '../../merge/domain/merge';
+import { consentRows, stateOf, type PatientConsents } from '../domain/consents';
 import PatientsMessage from './PatientsMessage';
 
 type Props = {
@@ -24,6 +25,8 @@ type Props = {
   completePath: string | null;
   /** Merges this record took part in (MDV-P1-017); empty for most records. */
   merges: MergeHistoryEntry[];
+  /** Current consents and the change action (MDV-P1-019). Changing needs Register / book at Full, as the server checks. */
+  consents: PatientConsents;
 };
 
 // Keeps Latin IDs, phones and dates intact (order and line) inside Arabic text.
@@ -143,6 +146,39 @@ export default function PatientRecord(props: Props) {
           {p.payer.validTo && <Field label={t('patients.record.validTo')}>{date(p.payer.validTo)}</Field>}
         </> : <Field label={t('patients.record.payerKind')}>{t('patients.record.payerMissing')}</Field>}
       </Section>
+
+      <section aria-labelledby="consents-title" className="rounded-xl border bg-card p-4">
+        <h2 id="consents-title" className="text-base font-extrabold">{t('patients.consents.title')}</h2>
+        <p className="mb-3 text-xs text-muted-foreground">{t('patients.consents.note')} <bdi dir="ltr">{t('registration.consents.version', { version: consentPolicyVersion })}</bdi></p>
+        {props.consents.failed ? <p role="alert" className="text-sm font-semibold text-danger-700">{t('patients.consents.failed')}</p> : (
+          <ul className="flex flex-col divide-y">
+            <li className="flex min-h-11 items-center justify-between gap-3 py-1">
+              <span className="font-bold">{t('registration.consents.treatment.title')}</span>
+              <span className="text-sm font-bold">{t('registration.consents.required')}</span>
+            </li>
+            {consentRows.map(row => {
+              const state = stateOf(props.consents.states, row);
+              const label = row.type === 'Reminders' ? `${t('registration.consents.reminders.title')}: ${t(row.title)}` : t(row.title);
+              const action = t(state?.granted ? 'patients.consents.withdraw' : 'patients.consents.grant');
+              return (
+                <li key={row.id} className="flex min-h-11 items-center justify-between gap-3 py-1">
+                  <span className="min-w-0 font-bold">{label}</span>
+                  <span className="flex items-center gap-3">
+                    <span className="text-sm font-bold">{state ? t(state.granted ? 'registration.consents.on' : 'registration.consents.off') : t('patients.consents.notRecorded')}</span>
+                    {props.canReveal && (
+                      <Button variant="outline" className="min-h-11" disabled={props.consents.loading} loading={props.consents.changing === row.id}
+                        aria-label={`${action}: ${label}`} onClick={() => props.consents.onChange(row, !state?.granted)}>
+                        {action}
+                      </Button>
+                    )}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        {props.consents.changeFailed && <p role="alert" className="mt-2 text-sm font-semibold text-danger-700">{t('patients.consents.changeFailed')}</p>}
+      </section>
 
       {props.merges.length > 0 && (
         <section aria-labelledby="merge-history" className="rounded-xl border bg-card p-4">

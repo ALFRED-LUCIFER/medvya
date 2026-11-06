@@ -552,6 +552,33 @@ namespace Medvya.Tenancy.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Medvya.Tenancy.Domain.TermsAcceptance", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("AcceptedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("AcceptedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("TermsVersion")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "TermsVersion");
+
+                    b.ToTable("TermsAcceptances", "tenancy");
+                });
+
             modelBuilder.Entity("Medvya.Tenancy.Domain.Closure", b =>
                 {
                     b.HasOne("Medvya.Tenancy.Domain.Facility", null)
@@ -657,6 +684,15 @@ namespace Medvya.Tenancy.Infrastructure.Persistence.Migrations
                 });
 
             modelBuilder.Entity("Medvya.Tenancy.Domain.SettingsChange", b =>
+                {
+                    b.HasOne("Medvya.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Medvya.Tenancy.Domain.TermsAcceptance", b =>
                 {
                     b.HasOne("Medvya.Tenancy.Domain.Tenant", null)
                         .WithMany()

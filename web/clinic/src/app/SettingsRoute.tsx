@@ -4,6 +4,7 @@ import HolidaysPanel from '../features/settings/components/HolidaysPanel';
 import HoursPanel from '../features/settings/components/HoursPanel';
 import LocationsPanel from '../features/settings/components/LocationsPanel';
 import ProfilePanel from '../features/settings/components/ProfilePanel';
+import TermsPanel from '../features/settings/components/TermsPanel';
 import SettingsPage from '../features/settings/components/SettingsPage';
 import { settingsTabs, type SettingsTab } from '../features/settings/domain/settings';
 import { useDoctorsController } from '../features/settings/hooks/useDoctorsController';
@@ -11,6 +12,7 @@ import { useHolidaysController } from '../features/settings/hooks/useHolidaysCon
 import { useOpeningHoursController, useSchedulesController } from '../features/settings/hooks/useHoursController';
 import { useLocationChoice } from '../features/settings/hooks/useLocationChoice';
 import { useLocationsController } from '../features/settings/hooks/useLocationsController';
+import { useTermsController } from '../features/settings/hooks/useTermsController';
 import { useProfileController } from '../features/settings/hooks/useProfileController';
 import CustomRolesPanel from '../features/staff/components/CustomRolesPanel';
 import AuditLogPanel from '../features/audit-log/components/AuditLogPanel';
@@ -35,6 +37,7 @@ function Doctors({ facilityId }: { facilityId: string }) {
   return <DoctorsPanel {...useDoctorsController(facilityId)} locations={useLocationChoice(facilityId).locations} />;
 }
 
+const Terms = () => <TermsPanel {...useTermsController()} />;
 const Audit = () => <AuditLogPanel {...useAuditLogController()} />;
 
 function Staff({ facilityId }: { facilityId: string }) {
@@ -53,6 +56,6 @@ export default function SettingsRoute({ facilityId }: { facilityId: string }) {
   const [params, setParams] = useSearchParams();
   const asked = params.get('tab');
   const tab: SettingsTab = (settingsTabs as readonly string[]).includes(asked ?? '') ? (asked as SettingsTab) : 'profile';
-  const panels = { profile: <Profile />, locations: <Locations facilityId={facilityId} />, hours: <Hours facilityId={facilityId} />, holidays: <Holidays facilityId={facilityId} />, staff: <Staff facilityId={facilityId} />, doctors: <Doctors facilityId={facilityId} />, audit: <Audit /> };
+  const panels = { profile: <Profile />, locations: <Locations facilityId={facilityId} />, hours: <Hours facilityId={facilityId} />, holidays: <Holidays facilityId={facilityId} />, staff: <Staff facilityId={facilityId} />, doctors: <Doctors facilityId={facilityId} />, audit: <Audit />, terms: <Terms /> };
   return <SettingsPage tab={tab} onTab={next => setParams({ tab: next }, { replace: true })} panels={panels} />;
 }

@@ -9,6 +9,7 @@ import PatientRecord from '../features/patients/components/PatientRecord';
 import MergeReview from '../features/merge/components/MergeReview';
 import { useMergeController, useMergeHistory } from '../features/merge/hooks/useMergeController';
 import { usePatientDirectoryController } from '../features/patients/hooks/usePatientDirectoryController';
+import { usePatientConsentsController } from '../features/patients/hooks/usePatientConsentsController';
 import { usePatientRecordController } from '../features/patients/hooks/usePatientRecordController';
 import { patientDirectory } from '../features/shell/domain/navigation';
 
@@ -31,7 +32,7 @@ const completePath = (id: string) => `${recordPath(id)}/complete`;
 
 // Revealing numbers and completing a registration both need Register / book patients at Full (the server checks the same).
 function Record({ patientId, canReveal }: { patientId: string; canReveal: boolean }) {
-  return <PatientRecord {...usePatientRecordController(patientId)} merges={useMergeHistory(patientId)} backPath={patientDirectory.path} canReveal={canReveal}
+  return <PatientRecord {...usePatientRecordController(patientId)} merges={useMergeHistory(patientId)} consents={usePatientConsentsController(patientId)} backPath={patientDirectory.path} canReveal={canReveal}
     completePath={canReveal ? completePath(patientId) : null} />;
 }
 

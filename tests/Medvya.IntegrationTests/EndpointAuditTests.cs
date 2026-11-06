@@ -62,6 +62,8 @@ public sealed class EndpointAuditTests(SqlServerFixture sql) : IClassFixture<Sql
         "PUT /v1/settings/logo",
         "DELETE /v1/settings/logo",
         "GET /v1/settings/logo",
+        "GET /v1/settings/terms", // tenant terms status, no patient data
+        "POST /v1/settings/terms/accept", // audited in its own transaction (tenant.terms.accept), no patient data
         // Add doctor (MDV-P1-007): clinician details, licence and fees, no patient data; changes are audited inside the services (DoctorTests).
         "GET /v1/settings/doctors/",
         "POST /v1/settings/doctors/",

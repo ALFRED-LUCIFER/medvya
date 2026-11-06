@@ -8,7 +8,7 @@ export default defineConfig({
   reporter: process.env.CI ? [['github'], ['html', { open: 'never' }]] : 'list',
   use: { baseURL: 'http://localhost:4173', trace: 'retain-on-failure' },
   projects: [
-    { name: 'chromium', testIgnore: /-performance\.spec\.ts/, use: { ...devices['Desktop Chrome'] } },
+    { name: 'chromium', testIgnore: ['fullstack/**', /-performance\.spec\.ts/], use: { ...devices['Desktop Chrome'] } },
     // Time budgets run alone, after every other spec has finished: measured beside 250 parallel specs they test the runner, not the page.
     { name: 'performance', testMatch: /-performance\.spec\.ts/, dependencies: ['chromium'], use: { ...devices['Desktop Chrome'] } },
   ],

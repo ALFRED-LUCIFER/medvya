@@ -8,9 +8,9 @@
 **Day one:** Sign in with MFA, invite a colleague, see role-based navigation and walk the six end-to-end journeys on staging.  
 **Goal:** A secure, deployable base that every later phase builds on, and clinical sign-off that the core flows are right before code depends on them.
 
-**Tickets:** 40 · **Estimate:** 77 dev-days vs **15 working days** in the window (OVER by 62 days: needs scope trade-off or overlap) · **Average confidence:** 82%
+**Tickets:** 42 · **Estimate:** 84 dev-days vs **15 working days** in the window (OVER by 69 days: needs scope trade-off or overlap) · **Average confidence:** 81%
 
-**Status:** To do 13 · Partly done 16 · Done 11
+**Status:** To do 15 · Partly done 16 · Done 11
 
 ## Epics
 
@@ -64,6 +64,8 @@
 | [MDV-P0-029](MDV-P0-029.md) | To do | R0 exit gate review and release notes (internal platform) | Gate | MUST | P0-01 | — | 0.5 | 3–3 | 09 Nov → 13 Nov 2026 | 85% High |
 | [MDV-P0-035](MDV-P0-035.md) | To do | National IDs unreadable to database admins: envelope encryption with Key Vault keys and an HMAC blind index | Story | MUST | P0-09 | — | 3.5 | 3–3 | 09 Nov → 13 Nov 2026 | 60% Low |
 | [MDV-P0-036](MDV-P0-036.md) | To do | Tamper-evident audit and signed records without SQL ledger: hash chain, append-only triggers, daily digest to immutable Blob | Story | MUST | P0-06 | — | 3.5 | 3–4 | 09 Nov → 20 Nov 2026 | 60% Low |
+| [MDV-P0-041](MDV-P0-041.md) | To do | Postgres hardening from the security review: narrower grants, DataKeys protection, stable ledger hash, destructive-migration gate | Story | MUST | P0-09 | — | 3 | 3–3 | 09 Nov → 13 Nov 2026 | 75% Medium |
+| [MDV-P0-042](MDV-P0-042.md) | To do | Make the Azure dev environment actually run on PostgreSQL: app settings, Entra token connection, migration runner in the deploy workflow, immutable ledger-digests container | Story | MUST | P0-01 | — | 4 | 3–4 | 09 Nov → 20 Nov 2026 | 60% Low |
 | [MDV-P0-037](MDV-P0-037.md) | To do | Support and reporting access without dynamic masking: reporting role, masked views, no decrypt right | Task | MUST | P0-09 | — | 1.5 | 4–4 | 16 Nov → 20 Nov 2026 | 70% Medium |
 | [MDV-P0-039](MDV-P0-039.md) | To do | Re-baseline load and desk tests on Postgres | Task | SHOULD | P0-02 | — | 1 | 4–4 | 16 Nov → 20 Nov 2026 | 75% Medium |
 

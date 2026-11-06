@@ -26,6 +26,19 @@ public sealed class ScheduleService(SchedulingDbContext db, SchedulingContext co
         return (await DaysAsync(facility, zone, calendars, [date], cancellationToken)).Single();
     }
 
+    public async Task<DaySheet> GetDaySheetAsync(Guid facilityId, DateOnly? day, CancellationToken cancellationToken = default)
+    {
+        var sheetDay = await GetDayAsync(facilityId, day, cancellationToken);
+        var visits = sheetDay.Columns.SelectMany(c => c.Appointments).ToList();
+        var ids = visits.Select(a => a.Id).ToList();
+        var tokens = (await db.QueueTokens.AsNoTracking().Where(t => ids.Contains(t.AppointmentId))
+            .Select(t => new { t.AppointmentId, t.Prefix, t.Number }).ToListAsync(cancellationToken))
+            .ToDictionary(t => t.AppointmentId, t => QueueToken.Format(t.Prefix, t.Number));
+        var ages = (await context.PatientsAsync(visits.Select(a => a.PatientId), cancellationToken))
+            .ToDictionary(p => p.Key, p => CountryRules.AgeOn(sheetDay.Date, p.Value.DateOfBirth));
+        return DaySheet.From(sheetDay, context.Now, tokens, ages);
+    }
+
     public async Task<ScheduleWeek> GetWeekAsync(Guid facilityId, Guid calendarId, DateOnly? day, CancellationToken cancellationToken = default)
     {
         await context.RequireAsync(facilityId, SchedulingAccess.CanView, cancellationToken);

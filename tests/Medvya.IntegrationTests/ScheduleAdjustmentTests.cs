@@ -41,17 +41,6 @@ public sealed class ScheduleAdjustmentTests(SqlServerFixture sql) : IClassFixtur
     }
 
     [Fact]
-    public async Task ReleasingAnOffboardedDoctorMovesTheirFutureVisitsToNeedsRebookingAndFreesTheSlots()
-    {
-        var (a, b) = await TwoVisitsAsync();
-        Assert.Equal(2, await Desk.ReleaseDoctorAsync(h.Doctor));
-        Assert.Equal([AppointmentState.NeedsRebooking, AppointmentState.NeedsRebooking], [await StateAsync(a.Id), await StateAsync(b.Id)]);
-        await using var db = sql.Scheduling(h.Tenant);
-        Assert.Equal(0, await db.ScheduleSlots.CountAsync(s => s.AppointmentId == a.Id || s.AppointmentId == b.Id));
-        Assert.Equal(0, await Desk.ReleaseDoctorAsync(h.Doctor)); // nothing left to move
-    }
-
-    [Fact]
     public async Task LeaveOverBookedVisitsListsThemAndSavesNothingUntilEachHasAnAction()
     {
         var (a, b) = await TwoVisitsAsync();

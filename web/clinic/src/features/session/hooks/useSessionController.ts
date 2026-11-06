@@ -3,14 +3,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { nextSession, toSession, type SessionStatus } from '../domain/session';
 import { chooseFacility, fetchMeContext, hadSession, rememberSession, SessionEndedError, signInFailed, signOut, startSignIn } from '../services/sessionApi';
 
-const key = ['me'];
+export const sessionQueryKey = ['me'];
 // The server-side idle timeout is at least a minute, so polling each minute shows "Session expired" within a minute of it.
 const pollMs = 60_000;
 
 export function useSessionController() {
   const queryClient = useQueryClient();
   const me = useQuery({
-    queryKey: key,
+    queryKey: sessionQueryKey,
     queryFn: async () => {
       const status = nextSession(hadSession(), await fetchMeContext());
       rememberSession(status.kind !== 'signedOut');
@@ -20,12 +20,12 @@ export function useSessionController() {
   });
   const logout = useMutation({
     mutationFn: signOut,
-    onSuccess: () => { rememberSession(false); queryClient.setQueryData<SessionStatus>(key, { kind: 'signedOut' }); },
+    onSuccess: () => { rememberSession(false); queryClient.setQueryData<SessionStatus>(sessionQueryKey, { kind: 'signedOut' }); },
   });
   const choose = useMutation({
     mutationFn: chooseFacility,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: key }),
-    onError: e => { if (e instanceof SessionEndedError) queryClient.setQueryData<SessionStatus>(key, { kind: 'expired' }); },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: sessionQueryKey }),
+    onError: e => { if (e instanceof SessionEndedError) queryClient.setQueryData<SessionStatus>(sessionQueryKey, { kind: 'expired' }); },
   });
   const data = me.data;
   const session = useMemo(() => (data?.kind === 'signedIn' ? toSession(data.me) : null), [data]);

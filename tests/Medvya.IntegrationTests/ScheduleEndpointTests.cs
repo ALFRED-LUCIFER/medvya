@@ -141,11 +141,22 @@ public sealed class ScheduleEndpointTests(SqlServerFixture sql) : IClassFixture<
         Assert.Contains("\"state\":\"Booked\"", body, StringComparison.Ordinal);
         Assert.DoesNotContain("dizzy", body, StringComparison.Ordinal); // the free-text reason never comes back
 
-        // MDV-P1-050: the paper sheet carries time, first name, type and state only, and the print is audited with who printed it.
+        // MDV-P1-050: the paper sheet carries time, token, first name, age, type and state only, and the print is audited with who printed it.
+        var visit = JsonDocument.Parse(body).RootElement.GetProperty("id").GetGuid();
+        await using (var queue = sql.Scheduling(tenant))
+        {
+            queue.QueueTokens.Add(new Scheduling.Domain.QueueToken { Id = Guid.NewGuid(), TenantId = tenant, FacilityId = facility, Date = DateOnly.FromDateTime(start.Date), CalendarId = doctor, Prefix = "A", Number = 7, AppointmentId = visit, IssuedAt = DateTimeOffset.UtcNow });
+            await queue.SaveChangesAsync();
+        }
         using var printed = await Client(reception).PostAsJsonAsync("/v1/schedule/print", new { facilityId = facility, date = DateOnly.FromDateTime(start.Date) });
         Assert.Equal(HttpStatusCode.OK, printed.StatusCode);
         var sheet = await printed.Content.ReadAsStringAsync();
         Assert.Contains("\"firstName\":\"Meera\"", sheet, StringComparison.Ordinal);
+        Assert.Contains("\"token\":\"A-07\"", sheet, StringComparison.Ordinal);
+        var born = new DateOnly(1972, 3, 12);
+        var age = monday.Year - born.Year - (monday < born.AddYears(monday.Year - born.Year) ? 1 : 0);
+        Assert.Contains($"\"ageYears\":{age}", sheet, StringComparison.Ordinal);
+        Assert.DoesNotContain("1972", sheet, StringComparison.Ordinal); // the age, never the date of birth
         foreach (var forbidden in new[] { "Iyer", "9000000101", "000001", "dizzy", patient.ToString() })
             Assert.DoesNotContain(forbidden, sheet, StringComparison.Ordinal);
         using var denied = await Client(null).PostAsJsonAsync("/v1/schedule/print", new { facilityId = facility });

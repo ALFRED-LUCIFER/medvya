@@ -121,38 +121,6 @@ public sealed class ScheduleExceptionService(
         }, cancellationToken);
     }
 
-    public async Task<int> ReleaseDoctorAsync(Guid doctorUserId, CancellationToken cancellationToken = default)
-    {
-        var (now, me) = (context.Now, context.UserId);
-        var zones = new Dictionary<Guid, TimeZoneInfo>();
-        async Task<List<Appointment>> FutureAsync() => await db.Appointments.AsNoTracking()
-            .Where(a => a.CalendarId == doctorUserId && a.Start >= now && a.State == AppointmentState.Booked && !a.Unscheduled).ToListAsync(cancellationToken);
-        var days = new List<(Guid, DateOnly)>();
-        foreach (var a in await FutureAsync())
-        {
-            if (!zones.TryGetValue(a.FacilityId, out var zone)) zones[a.FacilityId] = zone = (await context.FacilityAsync(a.FacilityId, cancellationToken)).Zone;
-            days.Add((doctorUserId, ScheduleRules.LocalDate(a.Start, zone)));
-        }
-        var moved = await transaction.RunAsync(days, async () =>
-        {
-            var affected = await FutureAsync();
-            foreach (var a in affected)
-            {
-                if (await db.Appointments.Where(x => x.Id == a.Id && x.State == AppointmentState.Booked)
-                        .ExecuteUpdateAsync(s => s.SetProperty(x => x.State, AppointmentState.NeedsRebooking).SetProperty(x => x.ChangedBy, me).SetProperty(x => x.ChangedAt, now), cancellationToken) == 0)
-                    throw new VisitTransitionException("changed");
-                await db.ScheduleSlots.Where(s => s.AppointmentId == a.Id).ExecuteDeleteAsync(cancellationToken);
-                db.StatusEvents.Add(new VisitStatusEvent { Id = Guid.CreateVersion7(), TenantId = a.TenantId, AppointmentId = a.Id, State = AppointmentState.NeedsRebooking, ActorUserId = me, OccurredAt = now });
-            }
-            await db.SaveChangesAsync(cancellationToken);
-            foreach (var a in affected)
-                await context.AuditAsync(SchedulingAudit.NeedsRebooking, SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment, a.Id, a.PatientId, cancellationToken);
-            return affected;
-        }, cancellationToken);
-        foreach (var a in moved) await FrontDeskService.NotifyAsync(notifier, log, new(a.TenantId, a.FacilityId, a.Id, AppointmentState.NeedsRebooking, now));
-        return moved.Count;
-    }
-
     /// <summary>Booked visits of the calendar in the range that the exception leaves outside its working hours (all of them, for leave).</summary>
     async Task<List<Appointment>> AffectedAsync(ScheduleAdjustment x, ScheduleTemplate? template, List<ScheduleAdjustment> all, TimeZoneInfo zone, CancellationToken cancellationToken)
     {

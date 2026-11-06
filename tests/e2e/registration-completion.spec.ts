@@ -22,6 +22,7 @@ async function open(page: Page, { capabilities = full as Record<string, string>,
   await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
   await page.route('**/v1/me/context', r => r.fulfill({ json: desk(capabilities) }));
   await page.route(`**/v1/patients/${id}`, r => r.fulfill({ json: leela }));
+  await page.route(`**/v1/patients/${id}/consents`, r => r.fulfill({ json: { policyVersion: '2026-11-draft', decisions: [] } })); // the record page's Consents section (MDV-P1-019): unmocked, it fails and the retry reshapes the page after networkidle
   await page.route(`**/v1/patients/${id}/completion`, r => { saves.push(r.request()); return r.fulfill({ json: { status: 'Complete' } }); });
   await page.goto(`/patients/directory/${id}`);
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
@@ -95,8 +96,11 @@ for (const locale of ['en', 'hi', 'ar'])
         await page.waitForLoadState('networkidle'); // the loaded page, not its loading state, is what this test checks
         await expect(page.locator('main h1')).toBeVisible();
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-        for (const b of await page.locator('main button, main a, main input').all())
-          if (await b.isVisible()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+        // One pass in the page: a locator list measured one by one goes stale (and hangs) if the page re-renders in between.
+        const small = await page.locator('main button, main a, main input').evaluateAll(els => els
+          .filter(e => e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden' && e.getBoundingClientRect().height < 44)
+          .map(e => `${e.tagName.toLowerCase()} "${(e.textContent || e.getAttribute('aria-label') || '').trim().slice(0, 30)}" ${Math.round(e.getBoundingClientRect().height)}px`));
+        expect(small).toEqual([]);
         await page.addScriptTag({ path: axePath });
         const violations = await page.evaluate(async () =>
           (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations

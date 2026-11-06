@@ -1,4 +1,4 @@
-import { useParams, useSearchParams } from 'react-router';
+import { useNavigate, useParams, useSearchParams } from 'react-router';
 import type { Country } from '@medvya/i18n';
 import CompleteRegistration from '../features/registration/components/CompleteRegistration';
 import Registration from '../features/registration/components/Registration';
@@ -7,7 +7,7 @@ import { useRegistrationController } from '../features/registration/hooks/useReg
 import PatientDirectory from '../features/patients/components/PatientDirectory';
 import PatientRecord from '../features/patients/components/PatientRecord';
 import MergeReview from '../features/merge/components/MergeReview';
-import { useMergeController, useMergeHistory } from '../features/merge/hooks/useMergeController';
+import { useMergeController, useMergeHistory, useMergeRequest } from '../features/merge/hooks/useMergeController';
 import { usePatientDirectoryController } from '../features/patients/hooks/usePatientDirectoryController';
 import { usePatientConsentsController } from '../features/patients/hooks/usePatientConsentsController';
 import { usePatientRecordController } from '../features/patients/hooks/usePatientRecordController';
@@ -32,8 +32,10 @@ const completePath = (id: string) => `${recordPath(id)}/complete`;
 
 // Revealing numbers and completing a registration both need Register / book patients at Full (the server checks the same).
 function Record({ patientId, canReveal }: { patientId: string; canReveal: boolean }) {
+  const navigate = useNavigate();
+  const mergeRequest = useMergeRequest(patientId, id => void navigate(`${mergePath}/${id}`));
   return <PatientRecord {...usePatientRecordController(patientId)} merges={useMergeHistory(patientId)} consents={usePatientConsentsController(patientId)} backPath={patientDirectory.path} canReveal={canReveal}
-    completePath={canReveal ? completePath(patientId) : null} />;
+    completePath={canReveal ? completePath(patientId) : null} mergeRequest={canReveal ? mergeRequest : null} />;
 }
 
 type RegistrationLinks = { country: Country; actorName: string; timeZone?: string; bookPath: string | null; checkInPath: string | null };

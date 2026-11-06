@@ -43,15 +43,12 @@ booked visits today for the check-in step. Not run against Azure yet; the extern
 
 ## Bottlenecks found
 
-1. **Many desks booking at the same instant queue on SERIALIZABLE range locks.** When 20 desks started in lockstep (an earlier run of this
-   profile, before desks were staggered), 15 % of holds failed with `busy` (three lock-timeout or deadlock retries) and one booking lost its slot.
-   Stress at 0.5 s think time makes it worse (see the stress report). The sampled waits point at two statements in `BookingService.HoldAsync`:
-   the `DELETE ... WHERE HeldBy = me OR (CalendarId = x AND ExpiresAt <= now)` and the overlap check `AnyAsync` on `SlotHolds`, both inside the
-   SERIALIZABLE doctor-day transaction. On a tiny table SQL Server scans, so the range locks span rows of other doctors. The book transaction's
-   insert also deadlocks on an index end-of-range key (deadlock graph captured with trace flag 1222).
-2. **A first attempt to fix it was not kept.** Running holds at READ COMMITTED (the doctor-day app lock already orders them) removed the `busy`
-   errors on holds in a stress run, but 20 concurrent hold-and-book flows on five doctor-days still returned `busy`, so no regression test could
-   be shown to fail without the change and pass with it. It needs a closer look (index hints or splitting the delete, and the Appointments insert
-   deadlock) with the staging numbers in hand, not a change in this PR.
+1. **Fixed (MDV-P1-037): the doctor-day transaction ran SERIALIZABLE.** Its range locks made unrelated doctors and days queue on each other's
+   index ranges in `SlotHolds` and `ScheduleSlots`: in the stress run 93.8 % of holds answered `busy` (hold p95 13,010 ms, p50 3,209 ms, a full
+   run completed 2 flows). The doctor-day app lock already makes each check-then-write exclusive and the unique index on `ScheduleSlots` stops a
+   double booking if it is bypassed, so `DoctorDayTransaction` now runs READ COMMITTED. Stress after: 0 errors, hold p95 106 ms, book p95 140 ms,
+   1,502 complete flows in 61 s. Regression test: `NoDoubleBookingTests.DesksHoldingAndBookingDifferentSlotsAtOnceAllSucceedWithoutBusy`.
+2. The earlier note that holds at READ COMMITTED left `busy` on book is superseded: the whole transaction (hold, book, walk-in, change) now runs
+   at READ COMMITTED, and the test above fails on SERIALIZABLE and passes on READ COMMITTED.
 3. The pilot's real rate (200 bookings an hour, about one every 18 s over two clinics) is far below where this appears; it matters for bursts
    (a clinic opening, a campaign) and for the "100 parallel bookings on staging" test of MDV-P1-022.

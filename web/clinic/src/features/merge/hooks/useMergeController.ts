@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { loadState, patientDataGcTime } from '../../patients/hooks/usePatientDirectoryController';
+import { usePatientSearch } from '../../patients/hooks/usePatientSearch';
 import { ApiError } from '../../patients/services/patientsApi';
 import { refusalOf, type MergeAction } from '../domain/merge';
-import { decideMerge, fetchMergeHistory, fetchMergeQueue, fetchMergeReview } from '../services/mergeApi';
+import { decideMerge, fetchMergeHistory, fetchMergeQueue, fetchMergeReview, requestMerge } from '../services/mergeApi';
 
 // Each fetch is an audited read: reuse it until a decision changes it. Memory only.
 const options = { gcTime: patientDataGcTime, staleTime: Infinity };
@@ -31,4 +33,23 @@ export function useMergeController(requestId: string | null) {
 export function useMergeHistory(patientId: string) {
   const history = useQuery({ queryKey: ['merge', 'history', patientId], queryFn: () => fetchMergeHistory(patientId), ...options });
   return history.data ?? [];
+}
+
+/** "Request merge review" on a record: pick the other record with front-desk search, then ask. `onRequested` gets the new request's id. */
+export function useMergeRequest(patientId: string, onRequested: (requestId: string) => void) {
+  const client = useQueryClient();
+  const [other, setOther] = useState('');
+  const search = usePatientSearch(setOther);
+  const request = useMutation({
+    mutationFn: () => requestMerge(patientId, other),
+    onSuccess: async id => {
+      await client.invalidateQueries({ queryKey: ['merge'] });
+      onRequested(id);
+    },
+  });
+  return {
+    search: search.view, chosen: other, busy: request.isPending,
+    refusal: !request.isError ? null : request.error instanceof ApiError ? refusalOf(request.error.code, request.error.status) : refusalOf(undefined, 0),
+    onRequest: () => request.mutate(),
+  };
 }

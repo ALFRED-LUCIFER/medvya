@@ -715,10 +715,10 @@ test('a weekly series shows its conflict, lets the desk move it, then books the 
   await panel.getByRole('button', { name: 'Search' }).click();
   await panel.getByRole('button', { name: 'D N, 47 y, Male, MRN ending 0002. Choose for this booking' }).click();
   await expect(panel).toContainText('Deepak Nair (synthetic) · MRN 000002');
-  await panel.getByLabel('Number of weekly visits').fill('3');
+  await panel.getByLabel('Number of visits').fill('3');
   await panel.getByRole('button', { name: 'Review series' }).click();
 
-  expect(calls.series[0]!.body).toMatchObject({ facilityId: 'f-1', calendarId: 'd-1', firstStart: ist('2026-10-19', '10:00'), count: 3, intervalWeeks: 1 });
+  expect(calls.series[0]!.body).toMatchObject({ facilityId: 'f-1', calendarId: 'd-1', firstStart: ist('2026-10-19', '10:00'), count: 3, intervalWeeks: 1, monthly: false });
   expect(calls.bookings).toEqual([]); // nothing booked before the review is confirmed
   const rows = panel.getByRole('listitem');
   await expect(rows).toHaveCount(3);
@@ -760,9 +760,12 @@ for (const locale of ['en', 'ar'] as const)
     await panel.getByRole('searchbox').press('Enter');
     await panel.getByRole('list').last().getByRole('button').click();
     await panel.locator('#booking-repeat').fill('3');
+    await panel.locator('#booking-unit').click(); // MDV-P1-026: monthly repeat
+    await page.getByRole('option', { name: locale === 'ar' ? 'كل شهر' : 'Every month' }).click();
     await expect(panel.locator('button[type=submit]')).toBeEnabled();
     await panel.locator('button[type=submit]').click();
     await expect(panel.getByRole('checkbox')).toHaveCount(3);
+    expect(calls.series[0]!.body).toMatchObject({ count: 3, monthly: true });
     for (const b of [...(await panel.getByRole('button').all()), ...(await panel.getByRole('checkbox').all())]) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(20);
     for (const input of await panel.locator('input[type=time]').all()) expect((await input.boundingBox())!.height).toBeGreaterThanOrEqual(44);
     expect(calls.series.length).toBe(1);
@@ -789,7 +792,7 @@ for (const locale of ['en', 'ar'] as const) {
       return r.fulfill({ json: {
         facilityId: 'f-1', timeZone: 'Asia/Kolkata', date: '2026-10-19', printedAt: ist('2026-10-19', '08:00'),
         pages: [
-          { calendarId: 'd-1', doctorName: 'Dr. Arjun Rao (synthetic)', rows: [{ start: ist('2026-10-19', '09:00'), firstName: 'Meera', visitType: 'NewConsultation', state: 'Booked' }] },
+          { calendarId: 'd-1', doctorName: 'Dr. Arjun Rao (synthetic)', rows: [{ start: ist('2026-10-19', '09:00'), token: 'A-07', firstName: 'Meera', ageYears: 54, visitType: 'NewConsultation', state: 'Booked' }] },
           { calendarId: 'd-2', doctorName: 'Dr. Priya Nair (synthetic)', rows: [] },
         ],
       } });
@@ -804,6 +807,8 @@ for (const locale of ['en', 'ar'] as const) {
     await expect(sections).toHaveCount(2);
     await expect(sections.first()).toContainText('Meera');
     await expect(sections.first()).toContainText('09:00'); // facility time, not New York
+    await expect(sections.first()).toContainText('A-07');
+    await expect(sections.first()).toContainText('54');
     await expect(sections.first()).not.toContainText('Iyer');
     await expect(sections.first()).toContainText(locale === 'ar' ? 'طبعه A. Joseph' : 'Printed by A. Joseph');
     await expect(page.getByRole('button', { name: /Print day sheet|طباعة/ })).toBeHidden();

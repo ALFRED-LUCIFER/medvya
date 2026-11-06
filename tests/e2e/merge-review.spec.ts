@@ -78,6 +78,7 @@ test('the record page lists its merge history', async ({ page }) => {
     address: null, status: 'Complete', registeredOn: '2026-11-02', identifiers: [], payer: null, emergencyContact: null, guardian: null,
   } }));
   await page.route(`**/v1/patients/${survivorId}/merges`, r => r.fulfill({ json: { merges: [{ id: requestId, status: 'Merged', thisIsSurvivor: true, otherMrn: '000041', mergedAt: '2026-11-03T05:00:00Z', unmergedAt: null }] } }));
+  await page.route(`**/v1/patients/${survivorId}/consents`, r => r.fulfill({ json: { policyVersion: '2026-11-draft', decisions: [] } }));
   await page.goto(`/patients/directory/${survivorId}`);
   await expect(page.getByRole('heading', { name: 'Merge history' })).toBeVisible();
   await expect(page.getByText(/Record 000041 was merged into this record on/)).toBeVisible();
@@ -103,3 +104,59 @@ for (const locale of ['en', 'ar'])
       for (const button of await page.getByRole('main').getByRole('button').all()) expect((await button.boundingBox())!.height).toBeGreaterThanOrEqual(44);
       expect(await axe(page)).toEqual([]);
     });
+
+// MDV-P1-017: "Request merge review" on a record. Pick the other record with front-desk search, ask, land on the new review.
+const otherId = '5e1d0001-0017-4000-8000-0000000000a2';
+async function recordWithRequestSection(page: Page, locale = 'en') {
+  const posts: unknown[] = [];
+  await clinicWith(page, locale);
+  await page.route(`**/v1/patients/${survivorId}`, r => r.fulfill({ json: {
+    id: survivorId, mrn: '000012', fullName: 'Ravi Menon (synthetic)', arabicName: null, dateOfBirth: '1971-03-09', dateOfBirthEstimated: false, ageYears: 55,
+    sexAtBirth: 'Male', genderIdentity: null, preferredLanguage: null, nationality: 'IN', mobile: '+919000000301', alternatePhone: null, email: null,
+    address: null, status: 'Complete', registeredOn: '2026-11-02', identifiers: [], payer: null, emergencyContact: null, guardian: null,
+  } }));
+  await page.route(`**/v1/patients/${survivorId}/merges`, r => r.fulfill({ json: { merges: [] } }));
+  await page.route(`**/v1/patients/${survivorId}/consents`, r => r.fulfill({ json: { policyVersion: '2026-11-draft', decisions: [] } }));
+  await page.route('**/v1/patients/search**', r => r.fulfill({ json: { matchedOn: 'Directory', page: 1, pageSize: 20, total: 1,
+    items: [{ id: otherId, initials: 'RK', ageYears: 55, ageEstimated: false, sexAtBirth: 'Male', mrnTail: '0041', status: 'Complete' }] } }));
+  await page.route('**/v1/patients/merge-requests', r => {
+    if (r.request().method() !== 'POST') return r.fulfill({ json: { requests: [] } });
+    posts.push(r.request().postDataJSON());
+    return r.fulfill({ json: { id: requestId } });
+  });
+  await page.goto(`/patients/directory/${survivorId}`);
+  return posts;
+}
+
+test('a record asks for a merge review of another record and opens that review', async ({ page }) => {
+  const posts = await recordWithRequestSection(page);
+  const section = page.getByRole('region', { name: 'Possible duplicate' });
+  const ask = section.getByRole('button', { name: 'Request merge review' });
+  await expect(ask).toBeDisabled(); // nothing chosen yet
+  await section.getByRole('searchbox').fill('Menon');
+  await section.getByRole('button', { name: 'Search' }).click();
+  await section.getByRole('listitem').getByRole('button').click();
+  await ask.click();
+  await expect(page).toHaveURL(`/patients/directory/merge/${requestId}`);
+  expect(posts).toEqual([{ patientId: survivorId, otherPatientId: otherId }]);
+});
+
+test('a refused request names the reason and stays on the record', async ({ page }) => {
+  await recordWithRequestSection(page);
+  await page.route('**/v1/patients/merge-requests', r => r.request().method() === 'POST'
+    ? r.fulfill({ status: 400, json: { errors: [{ field: 'merge', code: 'pair_decided' }] } }) : r.fulfill({ json: { requests: [] } }));
+  const section = page.getByRole('region', { name: 'Possible duplicate' });
+  await section.getByRole('searchbox').fill('Menon');
+  await section.getByRole('button', { name: 'Search' }).click();
+  await section.getByRole('listitem').getByRole('button').click();
+  await section.getByRole('button', { name: 'Request merge review' }).click();
+  await expect(section.getByRole('alert')).toHaveText('These two records already have a decision.');
+  await expect(page).toHaveURL(`/patients/directory/${survivorId}`);
+});
+
+for (const locale of ['en', 'ar'])
+  test(`the request-review section is axe clean (${locale})`, async ({ page }) => {
+    await recordWithRequestSection(page, locale);
+    await expect(page.getByRole('region', { name: locale === 'ar' ? 'تكرار محتمل' : 'Possible duplicate' })).toBeVisible();
+    expect(await axe(page)).toEqual([]);
+  });

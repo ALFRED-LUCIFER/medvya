@@ -14,7 +14,8 @@ namespace Medvya.Tenancy.Infrastructure;
 /// Staff list and practice-defined roles (MDV-P1-008). A role change saves, records its before/after (SettingsChange, section
 /// "staff.role") and writes its audit event in one transaction, so an unaudited permission change never commits.
 /// </summary>
-public sealed class StaffRoster(TenancyDbContext db, ICurrentTenant tenant, ICurrentUser user, IAuditLog audit, TimeProvider clock) : IStaffRoster
+public sealed class StaffRoster(TenancyDbContext db, ICurrentTenant tenant, ICurrentUser user, IAuditLog audit, TimeProvider clock,
+    IEnumerable<IStaffOffboardingParticipant> offboarding) : IStaffRoster
 {
     const string Section = "staff.role";
     static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() } };
@@ -98,7 +99,12 @@ public sealed class StaffRoster(TenancyDbContext db, ICurrentTenant tenant, ICur
             Id = Guid.CreateVersion7(), TenantId = TenantId, ActorUserId = user.UserId, Action = "staff.offboard", ResourceType = "membership", ResourceId = membershipId,
             Purpose = "operations", Outcome = AuditOutcome.Allowed, OccurredAt = now,
         }, tx.GetDbTransaction(), cancellationToken);
+        // Other modules' share (a doctor's future visits to "needs rebooking") joins this transaction: all of it commits, or none.
+        var afterCommit = new List<Func<Task>>();
+        if (member.UserId is { } leaving)
+            foreach (var part in offboarding) if (await part.OffboardedAsync(leaving, tx.GetDbTransaction(), cancellationToken) is { } after) afterCommit.Add(after);
         await tx.CommitAsync(cancellationToken);
+        foreach (var after in afterCommit) await after();
         return new(OffboardOutcome.Done, member.UserId);
     }
 

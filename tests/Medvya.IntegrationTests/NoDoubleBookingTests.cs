@@ -87,6 +87,38 @@ public sealed class NoDoubleBookingTests(SqlServerFixture sql) : IClassFixture<S
     }
 
     [Fact]
+    public async Task DesksHoldingAndBookingDifferentSlotsAtOnceAllSucceedWithoutBusy()
+    {
+        // MDV-P1-037: unrelated slots must not queue on each other's range locks (the load test saw about 94 % "busy" on holds).
+        await h.Schedule(h.Admin).SaveTemplateAsync(h.DoctorTemplate() with { CalendarId = h.SecondDoctor });
+        await using (var admin = new SqlConnection(sql.ConnectionString)) // Azure SQL's default; the load test runs with it
+        {
+            await admin.OpenAsync();
+            await using var alter = new SqlCommand("ALTER DATABASE CURRENT SET READ_COMMITTED_SNAPSHOT ON WITH ROLLBACK IMMEDIATE", admin);
+            await alter.ExecuteNonQueryAsync();
+        }
+        var desks = await h.AddReceptionistsAsync(40);
+        var codes = new List<string>();
+        var booked = 0;
+        for (var round = 0; round < 3; round++) // two doctors, four days, a week a round, five desks on each doctor-day
+        {
+            var (ok, failed) = await Race(desks.Select((d, i) => (Func<Task>)(async () =>
+            {
+                var booking = h.Booking(d);
+                var start = At(9).AddDays(round * 7 + i / 2 % 4).AddMinutes(i / 8 * 20);
+                var hold = await booking.HoldAsync(new HoldSlot { FacilityId = h.Facility, CalendarId = i % 2 == 0 ? h.Doctor : h.SecondDoctor, Start = start, VisitType = VisitType.FollowUp });
+                await booking.BookAsync(Book(hold.Id));
+            })));
+            (booked, codes) = (booked + ok, [.. codes, .. failed]);
+        }
+
+        Assert.Equal([], codes);
+        await using var db = sql.Scheduling(h.Tenant);
+        Assert.Equal(booked, await db.Appointments.CountAsync());
+        Assert.Equal(120, booked);
+    }
+
+    [Fact]
     public async Task OverlappingMultiSlotBookingsAtOnceGiveExactlyOne()
     {
         var desks = await h.AddReceptionistsAsync(Desks);

@@ -1,5 +1,5 @@
-import { locales, ltr, useI18n, type Locale } from '@medvya/i18n';
-import { AppHeader, Avatar, Button, Card, Chip, Icon, ListRow, Screen, Section, Text } from '@medvya/ui-native';
+import { locales, ltr, useI18n, type Locale, type MessageKey } from '@medvya/i18n';
+import { AppHeader, Avatar, Button, Card, Chip, Icon, ListRow, Loading, Screen, Section, StateMessage, Text } from '@medvya/ui-native';
 import { theme } from '@medvya/tokens';
 import { StyleSheet, View } from 'react-native';
 import type { Person, Session } from '../../session/domain/session';
@@ -23,7 +23,10 @@ export function ProfileScreen(vm: Props) {
         <Text variant="caption">{ltr(vm.phone)}</Text>
       </View>
 
-      <Section title={t('mobile.profile.family')}>
+      {vm.loading ? <Loading label={t('mobile.common.loading')} /> : null}
+      {vm.error ? <StateMessage icon="cloud-off" title={t('mobile.common.unavailable')} body={t(vm.error as MessageKey)} /> : null}
+
+      {vm.family.length > 0 ? <Section title={t('mobile.profile.family')}>
         <Card style={styles.list}>
           {vm.family.map((p, i) => (
             <View key={p.id} style={divider(i)}>
@@ -34,7 +37,7 @@ export function ProfileScreen(vm: Props) {
             </View>
           ))}
         </Card>
-      </Section>
+      </Section> : null}
 
       {vm.profile ? (
         <Section title={t('mobile.profile.choices')}>

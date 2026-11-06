@@ -2,7 +2,7 @@ import { ltr, useI18n, type MessageKey } from '@medvya/i18n';
 import { Avatar, Banner, Button, Chip, Emblem, ListRow, Screen, Segmented, Text, TextField, type IconName } from '@medvya/ui-native';
 import { theme } from '@medvya/tokens';
 import { Controller, type UseFormReturn } from 'react-hook-form';
-import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { dialCode, type CodeForm, type Person, type PhoneForm, type SignInStep } from '../domain/session';
 
 type Props = {
@@ -19,37 +19,33 @@ const pages: { icon: IconName; title: MessageKey; body: MessageKey }[] = [
   { icon: 'family-restroom', title: 'mobile.welcome.title3', body: 'mobile.welcome.body3' },
 ];
 
+/** Three onboarding pages, one at a time (Next and Skip), so it works the same on iOS, Android and in RTL. */
 function Welcome({ page, onPage, onStart }: Pick<Props, 'page' | 'onPage' | 'onStart'>) {
   const { t } = useI18n();
-  const { width } = useWindowDimensions();
   const last = page === pages.length - 1;
+  const p = pages[page] ?? pages[0]!;
   return (
-    <Screen scroll={false} padded={false} footer={<>
+    <Screen footer={<>
       <View style={styles.dots} accessible accessibilityLabel={t('mobile.welcome.pageOf', { n: page + 1, total: pages.length })}>
-        {pages.map((p, i) => <View key={p.title} style={[styles.dot, i === page && styles.dotOn]} />)}
+        {pages.map((d, i) => <View key={d.title} style={[styles.dot, i === page && styles.dotOn]} />)}
       </View>
       <Button label={last ? t('mobile.welcome.start') : t('mobile.welcome.next')} icon={last ? 'smartphone' : undefined}
         onPress={last ? onStart : () => onPage(page + 1)} />
       {last ? null : <Button label={t('mobile.welcome.skip')} variant="ghost" onPress={onStart} />}
     </>}>
-      <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} contentOffset={{ x: page * width, y: 0 }}
-        onMomentumScrollEnd={e => onPage(Math.round(e.nativeEvent.contentOffset.x / width))}>
-        {pages.map((p, i) => (
-          <View key={p.title} style={[styles.page, { width }]}>
-            <View style={styles.mark}>{i === 0 ? <Avatar initials={t('mobile.monogram')} solid size={72} /> : <Emblem icon={p.icon} size={72} />}</View>
-            <Text variant="display" accessibilityRole="header">{t(p.title)}</Text>
-            <Text>{t(p.body)}</Text>
-            {i === 0 ? (
-              <View style={styles.chips}>
-                <Chip label={t('mobile.patient.tab.book')} icon="event" tone="brand" />
-                <Chip label={t('mobile.welcome.results')} icon="science" tone="brand" />
-                <Chip label={t('mobile.welcome.medicines')} icon="medication" tone="brand" />
-                <Chip label={t('mobile.patient.tab.messages')} icon="chat-bubble-outline" tone="brand" />
-              </View>
-            ) : null}
+      <View style={styles.page}>
+        <View style={styles.mark}>{page === 0 ? <Avatar initials={t('mobile.monogram')} solid size={72} /> : <Emblem icon={p.icon} size={72} />}</View>
+        <Text variant="display" accessibilityRole="header">{t(p.title)}</Text>
+        <Text>{t(p.body)}</Text>
+        {page === 0 ? (
+          <View style={styles.chips}>
+            <Chip label={t('mobile.patient.tab.book')} icon="event" tone="brand" />
+            <Chip label={t('mobile.welcome.results')} icon="science" tone="brand" />
+            <Chip label={t('mobile.welcome.medicines')} icon="medication" tone="brand" />
+            <Chip label={t('mobile.patient.tab.messages')} icon="chat-bubble-outline" tone="brand" />
           </View>
-        ))}
-      </ScrollView>
+        ) : null}
+      </View>
     </Screen>
   );
 }
@@ -132,7 +128,7 @@ export function SignInScreen(vm: Props) {
 }
 
 const styles = StyleSheet.create({
-  page: { paddingHorizontal: 28, paddingTop: 72, gap: 16 },
+  page: { paddingHorizontal: 8, paddingTop: 52, gap: 16 },
   mark: { alignSelf: 'flex-start' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
   dots: { flexDirection: 'row', justifyContent: 'center', gap: 8, paddingBottom: 8 },

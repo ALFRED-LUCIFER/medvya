@@ -3,6 +3,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState, type R
 import { shouldLock, type Session } from '../domain/session';
 import { onForeground } from '../services/appState';
 
+// shortcut: duplicated in mobile/clinician; both move to packages/auth-client with native tokens (MDV-P5-033).
 type SessionState = {
   session: Session | null;
   locked: boolean;
@@ -47,9 +48,14 @@ export function useSession() {
   return s;
 }
 
-/** For screens behind the sign-in guard, where a session always exists. */
+/**
+ * For screens behind the sign-in guard. On sign-out these screens render once more before the router removes them,
+ * so they keep the last session for that render instead of crashing.
+ */
 export function useSignedIn() {
   const s = useSession();
-  if (!s.session) throw new Error('useSignedIn without a session');
-  return { ...s, session: s.session };
+  const last = useRef(s.session);
+  if (s.session) last.current = s.session;
+  if (!last.current) throw new Error('useSignedIn outside the signed-in screens');
+  return { ...s, session: last.current };
 }

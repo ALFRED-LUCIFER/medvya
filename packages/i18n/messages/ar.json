@@ -1666,7 +1666,7 @@
   "mobile.patients.flag.critical": "حرج",
   "mobile.record.title": "المريض",
   "mobile.record.nameLine": "{name} · {age} {sex}",
-  "mobile.record.idLine": "رقم الملف ••{mrn} · الميلاد {dob}",
+  "mobile.record.idLine": "رقم الملف {mrn} · الميلاد {dob}",
   "mobile.record.allergy": "حساسية: {substance} ({reaction})",
   "mobile.record.noAllergies": "لا توجد حساسية معروفة مسجّلة",
   "mobile.record.verified": "موثّق",

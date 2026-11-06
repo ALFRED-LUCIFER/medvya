@@ -1667,7 +1667,7 @@
   "mobile.patients.flag.critical": "Critical",
   "mobile.record.title": "Patient",
   "mobile.record.nameLine": "{name} · {age} {sex}",
-  "mobile.record.idLine": "MRN ••{mrn} · DOB {dob}",
+  "mobile.record.idLine": "MRN {mrn} · DOB {dob}",
   "mobile.record.allergy": "Allergy: {substance} ({reaction})",
   "mobile.record.noAllergies": "No known allergies recorded",
   "mobile.record.verified": "Verified",

@@ -1667,7 +1667,7 @@
   "mobile.patients.flag.critical": "गंभीर",
   "mobile.record.title": "मरीज़",
   "mobile.record.nameLine": "{name} · {age} {sex}",
-  "mobile.record.idLine": "MRN ••{mrn} · जन्म {dob}",
+  "mobile.record.idLine": "MRN {mrn} · जन्म {dob}",
   "mobile.record.allergy": "एलर्जी: {substance} ({reaction})",
   "mobile.record.noAllergies": "कोई ज्ञात एलर्जी दर्ज नहीं",
   "mobile.record.verified": "सत्यापित",

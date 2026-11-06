@@ -2,6 +2,7 @@ import { useI18n } from '@medvya/i18n';
 import { useMutation } from '@tanstack/react-query';
 import { unlockWithBiometrics } from '../services/session';
 import { useSignedIn } from './session';
+// shortcut: duplicated in mobile/patient; both move to packages/auth-client with native tokens (MDV-P5-033).
 
 /** The lock screen shows nothing of the record: just who is signed in and how to unlock. */
 export function useLockController() {

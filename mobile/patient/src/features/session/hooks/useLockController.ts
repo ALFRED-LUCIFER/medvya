@@ -2,6 +2,7 @@ import { useI18n } from '@medvya/i18n';
 import { useMutation } from '@tanstack/react-query';
 import { unlockWithBiometrics } from '../services/session';
 import { useSignedIn } from './session';
+// shortcut: duplicated in mobile/clinician; both move to packages/auth-client with native tokens (MDV-P5-033).
 
 export function useLockController() {
   const { t } = useI18n();

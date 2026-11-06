@@ -1,4 +1,5 @@
 import { AppState } from 'react-native';
+// shortcut: duplicated in mobile/patient; both move to packages/auth-client with native tokens (MDV-P5-033).
 
 /** Calls back when the app goes to the background (false) or comes back (true). Returns the unsubscribe. */
 export function onForeground(cb: (active: boolean) => void) {

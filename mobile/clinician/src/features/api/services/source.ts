@@ -1,4 +1,5 @@
 import type { Cast } from '../../../dev/cast';
+// shortcut: duplicated in mobile/patient; both move to packages/auth-client with native tokens (MDV-P5-033).
 
 /** Release builds have no data until the API's native sign-in exists; screens show this as "not connected". */
 export class NotConnectedError extends Error {

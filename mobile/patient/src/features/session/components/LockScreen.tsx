@@ -1,6 +1,7 @@
 import { useI18n } from '@medvya/i18n';
 import { Avatar, Banner, Button, Screen, Text } from '@medvya/ui-native';
 import { StyleSheet, View } from 'react-native';
+// shortcut: duplicated in mobile/clinician; both move to packages/auth-client with native tokens (MDV-P5-033).
 type Props = { name: string; initials: string; biometric: boolean; failed: boolean; busy: boolean; onUnlock: () => void; onSignInAgain: () => void };
 
 /** Shown after 15 minutes away. Nothing from a record is visible here. */

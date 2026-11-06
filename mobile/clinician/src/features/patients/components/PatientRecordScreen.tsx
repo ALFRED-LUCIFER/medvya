@@ -1,4 +1,4 @@
-import { useI18n, type MessageKey } from '@medvya/i18n';
+import { ltr, useI18n, type MessageKey } from '@medvya/i18n';
 import { Avatar, Banner, Card, Chip, Icon, IconButton, ListRow, Loading, Screen, Section, Stat, StateMessage, Text } from '@medvya/ui-native';
 import { theme } from '@medvya/tokens';
 import { I18nManager, StyleSheet, View } from 'react-native';
@@ -27,7 +27,7 @@ export function PatientRecordScreen(vm: Props) {
         <Avatar initials={r.initials} size={56} />
         <View style={styles.flex}>
           <Text variant="title">{t('mobile.record.nameLine', { name: r.name, age: r.age, sex: t(`mobile.sex.${r.sex}`) })}</Text>
-          <Text variant="caption">{t('mobile.record.idLine', { mrn: r.mrnLast4, dob: formatDate(new Date(`${r.dateOfBirth}T12:00:00Z`), 'UTC') })}</Text>
+          <Text variant="caption">{t('mobile.record.idLine', { mrn: ltr(`••${r.mrnLast4}`), dob: formatDate(new Date(`${r.dateOfBirth}T12:00:00Z`), 'UTC') })}</Text>
         </View>
       </View>
 

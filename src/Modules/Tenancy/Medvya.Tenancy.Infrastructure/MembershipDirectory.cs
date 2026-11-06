@@ -1,3 +1,4 @@
+using Medvya.BuildingBlocks.Infrastructure;
 using Medvya.BuildingBlocks.Domain;
 using Medvya.Tenancy.Application;
 using Medvya.Tenancy.Domain;
@@ -19,8 +20,7 @@ public sealed class MembershipDirectory(string connectionString, ICurrentUser us
     public async Task<IReadOnlyList<MembershipChoice>> ForCurrentUserAsync(CancellationToken cancellationToken = default)
     {
         if (user.UserId is not { } userId) return [];
-        await using var connection = new NpgsqlConnection(connectionString);
-        await connection.OpenAsync(cancellationToken);
+        await using var connection = await PostgresDataSources.For(connectionString).OpenConnectionAsync(cancellationToken);
         await using (var cmd = new NpgsqlCommand("SELECT set_config('medvya.user_id', @user, false)", connection))
         {
             cmd.Parameters.AddWithValue("user", userId.ToString());

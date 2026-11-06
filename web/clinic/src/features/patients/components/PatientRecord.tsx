@@ -5,7 +5,8 @@ import { useI18n } from '@medvya/i18n';
 import { Button, buttonVariants, cn } from '@medvya/ui';
 import { addressLines, missingParts, type ContactView, type PatientDetails, type RevealedIdentifiers } from '../domain/directory';
 import { consentPolicyVersion, genderIdentities, regionKey } from '../../registration/domain/registration';
-import type { MergeHistoryEntry } from '../../merge/domain/merge';
+import type { MergeHistoryEntry, Refusal } from '../../merge/domain/merge';
+import { PatientPicker, type PatientSearchView } from '../../schedule/components/BookingPanel';
 import { consentRows, stateOf, type PatientConsents } from '../domain/consents';
 import PatientsMessage from './PatientsMessage';
 
@@ -27,6 +28,8 @@ type Props = {
   merges: MergeHistoryEntry[];
   /** Current consents and the change action (MDV-P1-019). Changing needs Register / book at Full, as the server checks. */
   consents: PatientConsents;
+  /** "Request merge review" with another record (MDV-P1-017); null when this role may not ask (Register / book at Full, as the server checks). */
+  mergeRequest: { search: PatientSearchView; chosen: string; busy: boolean; refusal: Refusal | null; onRequest: () => void } | null;
 };
 
 // Keeps Latin IDs, phones and dates intact (order and line) inside Arabic text.
@@ -191,6 +194,18 @@ export default function PatientRecord(props: Props) {
               </li>
             ))}
           </ul>
+        </section>
+      )}
+
+      {props.mergeRequest && (
+        <section aria-labelledby="merge-request" className="flex flex-col gap-3 rounded-xl border bg-card p-4">
+          <h2 id="merge-request" className="text-base font-extrabold">{t('merge.request.title')}</h2>
+          <p className="text-sm text-muted-foreground">{t('merge.request.body')}</p>
+          <PatientPicker search={props.mergeRequest.search} chosen={props.mergeRequest.chosen} registerPath={null} invalid={false} />
+          <div className="flex flex-col items-start gap-1">
+            <Button variant="outline" loading={props.mergeRequest.busy} disabled={!props.mergeRequest.chosen} onClick={props.mergeRequest.onRequest}>{t('merge.request.action')}</Button>
+            {props.mergeRequest.refusal && <p role="alert" className="text-sm font-semibold text-danger-700">{t(`merge.refused.${props.mergeRequest.refusal}`)}</p>}
+          </div>
         </section>
       )}
 

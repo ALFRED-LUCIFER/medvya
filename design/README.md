@@ -15,3 +15,7 @@ All other files were imported complete (`truncated: false`).
 ## Contents
 
 See [../docs/README.md](../docs/README.md#source-files-design-project) for what each file contains and how it was used.
+
+## Revamp import, 6 Nov 2026
+
+Added `Medvya Admin.dc.html` (platform console) and `Medvya Mobile.dc.html` (two Expo apps), and `Medvya Web.dc.html` (one-flow web design with the approved pricing). The design project now also holds a newer `Medvya Foundations.dc.html`; the older copy here is unchanged and a fresh import is still to do. Planned in tickets MDV-P5-031 to P5-050 and MDV-P4-034.

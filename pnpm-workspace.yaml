@@ -1,5 +1,6 @@
 packages:
   - web/*
+  - mobile/*
   - packages/*
   - tests/e2e
 allowBuilds:

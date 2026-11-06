@@ -2,7 +2,7 @@ import { CircleCheck, Clock } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
 import { Button } from '@medvya/ui';
 import { fieldError } from '../../settings/components/fieldStyles';
-import { Section } from '../../settings/components/parts';
+import { Section } from '../../settings/components/Section';
 import { remaining, type AccessReview } from '../domain/accessReview';
 
 type Props = { review: AccessReview | null; loading: boolean; failed: boolean; confirmingId: string | null; confirmFailed: boolean; onConfirm: (membershipId: string) => void };

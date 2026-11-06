@@ -5,7 +5,7 @@ import { Button, Label, Select, SelectContent, SelectItem, SelectTrigger, Select
 import { codeKey, needsAttention, type PatientMessage } from '../domain/messages';
 import { actions, cancelReasons, localDate, type Action, type CancelForm, type ChangeError, type Rule } from '../domain/changes';
 import type { Appointment } from '../domain/schedule';
-import { StateLabel } from './parts';
+import { StateLabel } from './StateLabel';
 
 type Props = {
   timeZone: string;

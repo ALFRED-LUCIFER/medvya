@@ -1,6 +1,6 @@
 # ADR-006 · Immutable signed records and tamper evidence
 
-- **Status:** Proposed (P0 foundation, P2 notes)
+- **Status:** Accepted 6 Nov 2026 (founder). (P0 foundation, P2 notes). **Mechanism amended 6 Nov 2026:** SQL ledger tables are replaced by a hash chain, append-only triggers and daily Blob digests, see [ADR-012](ADR-012-postgres.md).
 
 ## Decision
 

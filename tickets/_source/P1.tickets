@@ -1020,6 +1020,8 @@ ac:
 - Booking API p95 < 300 ms and reads p95 < 300 ms / writes < 600 ms under the profile on staging.
 - Calendar first render < 2.5 s on a typical clinic PC profile over 4G throttling.
 - Nightly performance job fails and alerts on > 20 % regression.
+notes:
+- Budgets were measured on SQL Server; re-baselined on PostgreSQL in MDV-P0-039.
 
 === MDV-P1-038
 title: P1 security review: threat-model update, ASVS checks, authorisation tests, dependency scan — no open high/critical

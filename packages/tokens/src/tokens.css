@@ -1,0 +1,65 @@
+/* Generated from tokens.json by generate.mjs. Do not edit. */
+@theme static {
+  --color-brand-950: #102a43; /* sidebar, headings, navy actions */
+  --color-brand-900: #0b1622;
+  --color-brand-700: #0f766e; /* primary actions (was #0e9384: 3.8:1 with white, fails AA) */
+  --color-brand-800: #0b5c55; /* primary hover */
+  --color-brand-500: #0e9384; /* non-text accents only (e.g. banner rail) */
+  --color-action-600: #2563eb; /* links, focus ring */
+  --color-ai-600: #7155d8; /* AI-provisional only */
+  --color-ai-700: #5b3fc4;
+  --color-ai-50: #f2effc;
+  --color-ink-900: #142536;
+  --color-ink-700: #334e68;
+  --color-ink-600: #506579;
+  --color-ink-400: #8296a8;
+  --color-surface: #f7fafc;
+  --color-line: #dfe7ed; /* decorative dividers and rules only, never a control's boundary */
+  --color-line-strong: #76899c; /* control boundary (public site inputs); same as --color-input, ≥ 3:1 (WCAG 1.4.11; was #cbd6e0, 1.5:1) */
+  --color-danger-700: #b42333; /* critical only */
+  --color-warning-700: #975a16; /* uncertainty / attention */
+  --color-success-700: #087f5b; /* confirmed, never inferred */
+  --color-nav-hover: #1b3a57; /* hover and current item */
+  --color-nav-ink: #c9d6e2;
+  --color-nav-muted: #8fa6bd; /* group headings, role (design #6f88a1 lifted for AA) */
+  --color-nav-line: #1e3a55;
+  --color-tv-bg: #0b1f33;
+  --color-tv-panel: #12304d;
+  --color-tv-heading: #8fe3d6;
+  --color-tv-muted: #b6c6d6;
+  --color-tv-note: #9fb3c8; /* design #8fa6bd lifted for AA on the panel */
+  --color-rail-clinical: #2bb3a3;
+  --color-rail-practice: #6b9bff;
+  --color-rail-assistant: #e9b15f;
+  --color-rail-admin: #8fa6bd;
+  --color-background: #f7fafc;
+  --color-foreground: #142536;
+  --color-card: #ffffff;
+  --color-card-foreground: #142536;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #142536;
+  --color-primary: #0f766e;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #ffffff;
+  --color-secondary-foreground: #142536;
+  --color-muted: #f1f5f8;
+  --color-muted-foreground: #506579;
+  --color-accent: #eff4ff;
+  --color-accent-foreground: #142536;
+  --color-destructive: #b42333;
+  --color-destructive-foreground: #ffffff;
+  --color-border: #dfe7ed;
+  --color-input: #76899c; /* boundary of inputs, selects, textareas, outline buttons: ≥ 3:1 on every surface (tested) */
+  --color-ring: #2563eb;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --font-sans: "Manrope Variable", Manrope, "Noto Sans Arabic", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --breakpoint-sm: 360px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1280px;
+  --breakpoint-xl: 1600px;
+}

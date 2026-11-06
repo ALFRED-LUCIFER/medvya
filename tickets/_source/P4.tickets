@@ -746,3 +746,24 @@ ac:
 - Clinical safety reviewer signs the release (results loop and portal release rules).
 - R4 release notes list P4-01…P4-10 status and exclusions (insurance claims, teleconsultation).
 - Playwright J1 billing step and J5 delayed-result journey pass.
+
+=== MDV-P4-034
+title: UPI AutoPay for packages, secure pay link by WhatsApp, Apple Pay and Google Pay in the UAE
+type: Story
+epic: MDV-P4-E02
+prd: P4-03
+screens: P-10
+priority: SHOULD
+roles: Receptionist, Patient
+labels: payments, upi
+estimate: 3
+weeks: 20-21
+depends: MDV-P4-007, MDV-P4-008
+confidence: 55 | Design exists (6 Nov 2026); build estimate not yet calibrated.
+sources: design/Medvya Web.dc.html (6 Nov 2026 revamp) (UPI AutoPay, pay link); design/Medvya Mobile.dc.html (6 Nov 2026 revamp) (pay sheet)
+desc:
+Extends the gateway tickets: UPI AutoPay mandate for packages (the patient approves once in their UPI app, 24 h pre-debit notice, cancel any time), a secure pay link sent by WhatsApp with the amount filled and no health details in the message, Apple Pay and Google Pay in the UAE. Marked paid only on the gateway's confirmed webhook. Needed by the patient app payment sheet (MDV-P5-037).
+ac:
+- Given a pay link is sent, when the WhatsApp message is read, then it shows only the clinic name and amount.
+- Given an AutoPay charge is due, when 24 hours before, then the patient is reminded.
+- Given the gateway has not confirmed, when the desk looks at the invoice, then it is not marked paid.

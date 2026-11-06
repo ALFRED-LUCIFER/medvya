@@ -11,6 +11,8 @@
 @epic MDV-P5-E05 | SaaS operations | P5-07, P5-08, P5-09 | Subscriptions, platform console with audited support access, guides, status page and full data export.
 @epic MDV-P5-E06 | Hardening, security operations and data rights | P5-10, P5-11, P5-12 | Pen test, DR drill, a11y audit, load test, dark/high-contrast, incident response, retention and data rights.
 @epic MDV-P5-E07 | Go-live and v1.0 GA | P5-01 | First paying clinic cut-over, availability evidence and the GA gate.
+@epic MDV-P5-E08 | Mobile apps (Expo) | P8-06, P4-07 | Two store apps from one repo: Medvya Clinic for staff and Medvya for patients, sharing contracts, tokens and i18n with the web app.
+@epic MDV-P5-E09 | Platform admin console | P5-07, P5-08, P5-09 | The Medvya team runs tenants, plans, rollouts, licence checks, legal versions, support and data requests without ever seeing patient records.
 
 === MDV-P5-001
 title: Design the 11 new P5 screens (N-04 … N-14) before build
@@ -26,6 +28,7 @@ weeks: 22-24
 confidence: 60 | These screens have no designs; gap analysis gives behaviour but no layouts (PRD finding MISSING).
 sources: PRD v2 findings MISSING (N-04…N-14); design/Medvya Gap Analysis
 desc:
+Update 6 Nov 2026: the Platform Admin console (16 pages) and the two mobile apps are now designed (design/Medvya Admin, design/Medvya Mobile in the design project). Remaining screens to design here are the ones without a design yet; the console and mobile build tickets are MDV-P5-031 to P5-050.
 Produce lo-fi then hi-fi designs in the design project for: migration connect/mapping/dry-run (N-04), data-quality queue & bulk merge (N-05), EID reader check-in (N-06), exchange pull/push status (N-07), patient upload extraction review (N-08), letters/certificates/e-sick leave (N-09), voice assistant console & owner settings (N-10), plans/trial/subscription (N-11), platform ops console (N-12), in-app guides/help/feedback/status (N-13), clinic export (N-14). Re-import designs into design/.
 ac:
 - Each N-screen has an approved design with states (empty, loading, error, 403, offline) and IN/AE variants where relevant.
@@ -370,10 +373,11 @@ roles: Medvya operations, Practice owner
 labels: platform, support, audit
 estimate: 4
 weeks: 26-28
-depends: MDV-P5-001, MDV-P0-028
+depends: MDV-P5-001, MDV-P0-028, MDV-P5-040
 confidence: 65 | Requirements clear; design needed; support-access model must satisfy DPDP/ADHICS.
 sources: PRD v2 P5-08; design/Medvya Azure Architecture (global control plane)
 desc:
+Scope after the 6 Nov 2026 design: this ticket is the tenant catalogue, 'New tenant' sales-led onboarding (organisation, country fixes the region, owner invite, start with 30-day pilot or invoice, features on) and tenant detail with feature overrides and audited support access. The console shell, rollouts, plans, billing, licence checks, releases, legal, support, analytics and data requests are MDV-P5-040 to P5-049.
 Ops console (separate app/role, no PHI in the control plane): tenant list per country with plan, status, flags; onboarding automation (create tenant, seed config, invite owner); support access requests that the clinic approves, time-boxed (e.g. 2 h), scoped, fully audited and visible to the clinic in its access log.
 ac:
 - Support staff cannot see tenant data without an approved, time-limited grant; access ends automatically.
@@ -651,3 +655,423 @@ ac:
 - All four exit criteria evidenced and confirmed.
 - v1.0 release notes published; version tagged v1.0.0 from main.
 - Journeys J1–J5 pass end-to-end on staging with the GA build.
+
+=== MDV-P5-031
+title: Mobile ADR and threat model: two Expo store apps (Medvya Clinic, Medvya for patients) from one repo
+type: Spike
+epic: MDV-P5-E08
+prd: P8-06
+priority: MUST
+roles: Founder, Developer
+labels: mobile, adr, security
+estimate: 1.5
+weeks: 26-27
+
+confidence: 80 | Design exists (6 Nov 2026); build estimate not yet calibrated.
+sources: design/Medvya Mobile.dc.html (6 Nov 2026 revamp); docs/03-architecture/frontend-architecture.md (portability)
+desc:
+Record ADR-011: native apps with Expo, two store apps (staff app for doctors and front desk; patient app in indigo) in a `mobile/` pnpm workspace sharing tokens, i18n messages, API contracts and `domain/` + `services/` code with `web/`. Decide token auth for native clients (OIDC code + PKCE with secure-store; the web BFF cookie is not reused), what may be stored on the device (nothing but tokens, device key and an encrypted offline queue), push payload rule, EAS Update scope, and the store-account owner. Update the data map and threat model for devices.
+ac:
+- Given the ADR, when it is accepted, then it names the two apps, the repo folders, the auth flow and the on-device storage rule.
+- Given the threat model, when it is reviewed, then lost phone, shared phone, screenshot, push preview and offline queue each have a control.
+- Given the data map, when it is updated, then device storage and push payloads are listed with their classification.
+
+=== MDV-P5-032
+title: Mobile foundation: `mobile/` Expo workspace, shared tokens and i18n, RTL, CI and EAS builds
+type: Story
+epic: MDV-P5-E08
+prd: P8-06
+priority: MUST
+roles: Developer
+labels: mobile, platform
+estimate: 4
+weeks: 28-29
+depends: MDV-P5-031
+confidence: 70 | Design exists (6 Nov 2026); build estimate not yet calibrated.
+sources: design/Medvya Mobile.dc.html (6 Nov 2026 revamp); packages/ui tokens; packages/i18n
+desc:
+Create `mobile/clinician` and `mobile/patient` (expo-router, bottom sheets, secure-store, encrypted expo-sqlite, expo-localization with forceRTL for Arabic, Dynamic Type to 200 %). One tokens file feeds web CSS variables and the native theme (clinic teal, patient indigo). Reuse `packages/i18n/messages` (en, hi, ar). Lint layer rules as ADR-009 (`domain`, `services`, `hooks`, `components`). CI: type-check, unit tests, EAS preview builds, `pnpm audit`.
+ac:
+- Given the workspace, when CI runs, then both apps type-check, lint, test and produce an EAS preview build.
+- Given Arabic is selected, when the app restarts, then layout is right-to-left while dates and phone numbers stay left-to-right.
+- Given a string is hard-coded in a component, when lint runs, then the build fails.
+- Given the tokens file changes, when web and native build, then both pick up the same colours and spacing.
+
+=== MDV-P5-033
+title: Mobile backend: native token sign-in, device registry, push registry and remote revoke
+type: Story
+epic: MDV-P5-E08
+prd: P8-06
+priority: MUST
+roles: Developer, Security
+labels: mobile, auth, security
+estimate: 3.5
+weeks: 28-30
+depends: MDV-P5-031, MDV-P0-011
+confidence: 70 | Design exists (6 Nov 2026); build estimate not yet calibrated.
+sources: design/Medvya Mobile.dc.html (6 Nov 2026 revamp); MDV-P0-011/012/013
+desc:
+Server side for native clients: OIDC code + PKCE token endpoints, refresh rotation, patient sign-in by mobile number + SMS code, device registration (device key, platform, app version), push token registry, per-device and all-device revoke (feeds the 'My devices' screen and staff offboarding MDV-P1-009), rate limits and audit. Every endpoint declares a policy; tenant isolation unchanged.
+ac:
+- Given a staff member is offboarded, when the owner confirms, then every mobile session and push token of that person is revoked at once.
+- Given a refresh token is replayed, when the server sees it twice, then the whole token family is revoked and the event is audited.
+- Given a wrong SMS code is entered five times, when the limit is reached, then the number is locked for a period and the patient is told in plain words.
+- Given a lost phone is reported, when the user revokes it in My devices, then the next request from that device is refused.
+
+=== MDV-P5-034
+title: Staff app: sign-in, 15-minute biometric lock, Today, queue, patient search and patient summary
+type: Story
+epic: MDV-P5-E08
+prd: P8-06
+priority: MUST
+roles: Doctor, Receptionist, Nurse
+labels: mobile, staff-app
+estimate: 4
+weeks: 29-31
+depends: MDV-P5-032, MDV-P5-033, MDV-P2-001
+confidence: 65 | Design exists (6 Nov 2026); build estimate not yet calibrated.
+sources: design/Medvya Mobile.dc.html (6 Nov 2026 revamp) (staff app); MDV-P2-001 Today; MDV-P1-001 queue
+desc:
+Staff app: work email + passkey or code, choose facility, Face ID / fingerprint unlock after a 15-minute lock with PIN fallback and switch user, Today with next patient hero, queue with tokens and 'via app' marks, privacy-safe patient search, patient summary (allergy never by colour alone), offline banner with read-only last copy, role-based tabs (5 maximum). Same capabilities and care-relationship rules as the web app, enforced by the API.
+ac:
+- Given the app is idle for 15 minutes, when it is opened again, then it asks for Face ID, fingerprint or PIN before showing anything.
+- Given a receptionist signs in, when the tabs load, then clinical-only tabs are absent and their API calls return 403.
+- Given the phone is offline, when the doctor opens Today, then the last copy shows with an offline banner and no edit action.
+- Given a patient has an allergy, when the summary opens, then the allergy shows as text and icon, not colour alone.
+
+=== MDV-P5-035
+title: Staff app: consent script, background recording with offline queue, AI note review and sign
+type: Story
+epic: MDV-P5-E08
+prd: P8-06
+priority: MUST
+roles: Doctor
+labels: mobile, staff-app, ai-scribe
+estimate: 5
+weeks: 31-33
+depends: MDV-P5-034, MDV-P3-001
+confidence: 50 | Design exists (6 Nov 2026); build estimate not yet calibrated.
+sources: design/Medvya Mobile.dc.html (6 Nov 2026 revamp) (consultation); MDV-P3 AI scribe tickets
+desc:
+Consult flow on the phone: ask-first consent script (agree / decline to manual note), recording with a visible indicator and background audio, chunk upload with retry and an encrypted offline queue, draft note with per-field accept, sign with biometrics. AI output stays a draft until the licensed doctor accepts each field and signs. Prescribing stays on the web app at launch (the design says so).
+ac:
+- Given the doctor declines recording, when the patient says no, then the app opens the manual note and records nothing.
+- Given the network drops mid-recording, when it returns, then queued chunks upload in order and none is lost or duplicated.
+- Given an AI draft field, when the doctor has not accepted it, then the note cannot be signed.
+- Given the phone is lost, when the queue held audio, then it is encrypted and removed on remote revoke.
+
+=== MDV-P5-036
+title: Patient app: SMS sign-in, family profiles, home, booking, check-in and reschedule
+type: Story
+epic: MDV-P5-E08
+prd: P8-06, P4-07
+screens: R-01, R-02
+priority: MUST
+roles: Patient, Caregiver
+labels: mobile, patient-app
+estimate: 5
+weeks: 29-32
+depends: MDV-P5-032, MDV-P5-033, MDV-P4-020, MDV-P4-023
+confidence: 65 | Design exists (6 Nov 2026); build estimate not yet calibrated.
+sources: design/Medvya Mobile.dc.html (6 Nov 2026 revamp) (patient app); R-01, R-02, R-04
+desc:
+Patient app (indigo): mobile number + SMS code (iOS one-time-code autofill, Android SMS Retriever), then biometric or PIN; 'who is this for' with family profiles and proxy access that is explicit, time-limited and visible; home with next visit, to-do list and emergency line; book (doctor, visit type, date, time, fee line), confirmation with add-to-calendar, check-in and reschedule; last copy offline, bookings queued. Same booking service and no-double-booking rule as reception.
+ac:
+- Given a patient books from the app, when a reception booking takes the same slot, then only one succeeds and the other sees the next free slots.
+- Given a family member is viewed, when the proxy has expired, then access ends and the patient sees why.
+- Given the phone is offline, when the patient books, then the booking is queued and shown as not yet confirmed.
+- Given the SMS code arrives, when the patient opens the app, then the code is filled in automatically on iOS and Android.
+
+=== MDV-P5-037
+title: Patient app: results, prescriptions, messages, consents, payments and video visit
+type: Story
+epic: MDV-P5-E08
+prd: P8-06, P4-07
+screens: R-01, R-03
+priority: MUST
+roles: Patient
+labels: mobile, patient-app, payments
+estimate: 5
+weeks: 31-34
+depends: MDV-P5-036, MDV-P4-007
+confidence: 55 | Design exists (6 Nov 2026); build estimate not yet calibrated.
+sources: design/Medvya Mobile.dc.html (6 Nov 2026 revamp) (patient app, pay, video visit)
+desc:
+Records the patient may see (signed summaries and reviewed results only, plain words, never AI drafts), prescriptions with QR, clinic messages (with the 'not for emergencies' rule), consents and family access, payment sheet (UPI, cards; Apple Pay in UAE) marked paid only when the bank or gateway confirms, receipts to Records and WhatsApp, and the video-visit join screen (camera and microphone check). Video joins only when teleconsultation (MDV-P8-002) is switched on for the clinic; until then the entry is hidden by flag.
+ac:
+- Given a result is not reviewed, when the patient opens Records, then it shows as pending, not as a value.
+- Given a payment, when the bank has not confirmed, then the invoice is not marked paid.
+- Given a draft AI note exists, when the patient opens Records, then nothing of it is visible.
+- Given video visits are not enabled for the clinic, when the patient opens the app, then no video entry is shown.
+
+=== MDV-P5-038
+title: Private push notifications for both apps (IDs only, no health text on the lock screen)
+type: Story
+epic: MDV-P5-E08
+prd: P8-06
+priority: MUST
+roles: Developer, Privacy officer
+labels: mobile, push, privacy
+estimate: 2
+weeks: 30-32
+depends: MDV-P5-033
+confidence: 70 | Design exists (6 Nov 2026); build estimate not yet calibrated.
+sources: design/Medvya Mobile.dc.html (6 Nov 2026 revamp) (mobile rules)
+desc:
+APNs and FCM through Azure Notification Hubs in the tenant's country. Payloads carry an opaque ID and the fixed text 'You have an update from your clinic'; the app fetches the detail after unlock. Per-user opt-in and quiet hours; failures visible in the staff notification centre (MDV-P1-034).
+ac:
+- Given a result is ready, when a push is sent, then the payload holds an ID and the fixed text and no test, doctor speciality or result.
+- Given the user turns notifications off, when an event happens, then no push is sent and the in-app list still shows it.
+- Given a push token is revoked, when an event happens, then no push goes to that device.
+
+=== MDV-P5-039
+title: Store release: accounts, privacy labels, MASVS test, accessibility and RTL checks, EAS Update policy
+type: Gate
+epic: MDV-P5-E08
+prd: P8-06
+priority: MUST
+roles: Founder, Developer, Security
+labels: mobile, release, security
+estimate: 3
+weeks: 34-36
+depends: MDV-P5-035, MDV-P5-037, MDV-P5-038
+confidence: 55 | Design exists (6 Nov 2026); build estimate not yet calibrated.
+sources: design/Medvya Mobile.dc.html (6 Nov 2026 revamp) (Building it in Expo); OWASP MASVS
+desc:
+Apple and Google developer accounts under the company; privacy labels and data-safety forms matching the data map; MASVS L1 review plus root/jailbreak and screenshot rules; TestFlight and closed testing with a pilot clinic; accessibility (screen reader labels, 200 % text) and en/hi/ar checks; EAS Update limited to UI fixes while clinical logic ships with store builds and release notes.
+ac:
+- Given a build, when it is submitted, then privacy labels match the data map.
+- Given the MASVS review, when it finishes, then no open high or critical finding.
+- Given an OTA update, when it contains clinical logic, then the pipeline refuses it.
+
+=== MDV-P5-040
+title: Platform console shell (`web/platform-admin`): company sign-on plus security key, platform roles, reason on every action, no PHI
+type: Story
+epic: MDV-P5-E09
+prd: P5-08
+screens: N-12
+priority: MUST
+roles: Medvya operations, Founder
+labels: platform, admin, security
+estimate: 4
+weeks: 26-28
+depends: MDV-P0-011
+confidence: 65 | Design exists (6 Nov 2026); build estimate not yet calibrated.
+sources: design/Medvya Admin.dc.html (6 Nov 2026 revamp) (sign-in, overview, team access, audit log)
+desc:
+Separate app and host for the Medvya team: company SSO then a security key (no passwords, no shared accounts), lost-key recovery by a second owner with a one-hour link, roles (owner, operations, support, finance, reviewer), quarterly access review, nav of 16 pages, every action needs a reason and is logged to an append-only platform audit log that can be exported. The console reads only the control plane: tenant catalogue, plan, routing and counts; it never shows patient records (data map and architecture test).
+ac:
+- Given a Medvya user, when signs in without a security key, then access is refused.
+- Given a platform action, when is taken without a reason, then it is rejected.
+- Given any console endpoint, when returns data, then it holds no patient field (architecture test).
+- Given a key is lost, when another owner verifies on a video call, then a one-hour link is issued, the old key is revoked and both steps are logged.
+
+=== MDV-P5-041
+title: Feature rollouts: staged release (internal, beta tenants, percentage, everyone), kill switch and clinical sign-off gate
+type: Story
+epic: MDV-P5-E09
+prd: P5-08
+screens: N-12
+priority: MUST
+roles: Medvya operations
+labels: platform, flags
+estimate: 3
+weeks: 27-29
+depends: MDV-P5-040, MDV-P0-028
+confidence: 70 | Design exists (6 Nov 2026); build estimate not yet calibrated.
+sources: design/Medvya Admin.dc.html (6 Nov 2026 revamp) (Features and rollouts); MDV-P0-028
+desc:
+Extends the per-tenant flags (MDV-P0-028) with stages and a percentage, owner and description, and a one-click 'turn off for all' that hides a feature without deleting data. A clinical feature (recording, AI notes, e-prescriptions) cannot reach 'everyone' until clinical sign-off is recorded. Plans decide who is entitled; flags decide what is on.
+ac:
+- Given a clinical flag, when is moved to everyone without sign-off, then the change is refused.
+- Given the kill switch, when is used, then the feature disappears for all tenants and no data is deleted.
+- Given a flag change, when is made, then it is audited with a reason.
+
+=== MDV-P5-042
+title: Plans and entitlements: versioned plans, India and UAE prices, seats, trial days, 30 days' notice
+type: Story
+epic: MDV-P5-E09
+prd: P5-07
+screens: N-11
+priority: MUST
+roles: Medvya operations, Finance
+labels: platform, billing
+estimate: 2.5
+weeks: 26-28
+depends: MDV-P5-016, MDV-P5-040
+confidence: 70 | Design exists (6 Nov 2026); build estimate not yet calibrated.
+sources: design/Medvya Admin.dc.html (6 Nov 2026 revamp) (Plans); design/Medvya Web.dc.html (6 Nov 2026 revamp) (pricing 06 Nov 2026)
+desc:
+Plans (Solo ₹1,999 per month; Clinic ₹3,499 per doctor per month; Hospital custom) with separate INR and AED prices, seats, trial days and the feature list. An edit creates a new plan version: new subscriptions use it now, existing ones at renewal with 30 days' notice. Removing a feature never deletes data. Entitlements are read by the feature gate.
+ac:
+- Given a plan is edited, when it is saved, then a new version exists and current subscribers keep the old one until renewal.
+- Given a price changes, when a subscriber exists, then they are notified 30 days before it applies.
+- Given a feature is removed from a plan, when data exists, then the data stays.
+
+=== MDV-P5-043
+title: Subscription billing in the console and for owners: invoices, payment method, add seats, dunning ladder, close practice
+type: Story
+epic: MDV-P5-E09
+prd: P5-07
+screens: N-11
+priority: MUST
+roles: Practice owner, Medvya operations
+labels: platform, billing
+estimate: 3.5
+weeks: 27-29
+depends: MDV-P5-016, MDV-P5-040
+confidence: 60 | Design exists (6 Nov 2026); build estimate not yet calibrated.
+sources: design/Medvya Admin.dc.html (6 Nov 2026 revamp) (Subscription billing); design/Medvya Web.dc.html (6 Nov 2026 revamp) (owner Billing, Close this practice)
+desc:
+Owner screens: plan and seats, invoices from Medvya, update payment method, add seats, close the practice (full export first). Console: INR and AED reported separately, never summed. Dunning: retries day 3 and 7, reminder day 14, limited mode day 30 (online bookings pause), read-only day 60, suspended day 90; patients and clinical records are never locked for non-payment. Only the owner sees plan and billing.
+ac:
+- Given a payment fails, when day 30 is reached, then online bookings pause and clinicians can still read and treat.
+- Given a non-owner, when opens billing, then the API returns 403.
+- Given a practice is closed, when the owner confirms, then a full export is offered first and the plan stops at the end of the paid period.
+
+=== MDV-P5-044
+title: Licence verification console: reviewer queue, certificate view, approve or ask for changes
+type: Story
+epic: MDV-P5-E09
+prd: P5-08
+screens: N-12
+priority: MUST
+roles: Reviewer, Medvya operations
+labels: platform, licence, clinical-safety
+estimate: 2.5
+weeks: 27-29
+depends: MDV-P5-040, MDV-P1-007, MDV-P2-023
+confidence: 65 | Design exists (6 Nov 2026); build estimate not yet calibrated.
+sources: design/Medvya Admin.dc.html (6 Nov 2026 revamp) (Doctor licence verification); MDV-P2 licence process
+desc:
+Reviewer queue of doctors with register, number, expiry and uploaded certificate. Recording, signing notes and e-prescriptions stay locked for the doctor until a reviewer checks the official register. Approve records reviewer, register checked and time; reject or ask for changes sends the owner a plain reason and leaves the rest of the practice working.
+ac:
+- Given a doctor is unverified, when they try to sign a note, then the API refuses.
+- Given a reviewer approves, when it is saved, then name, register and time are recorded.
+- Given a licence is rejected, when the owner is told, then the reason is in plain words and other staff keep working.
+
+=== MDV-P5-045
+title: Releases and What's new, maintenance and incident banners, integrations register
+type: Story
+epic: MDV-P5-E09
+prd: P5-09
+screens: N-13
+priority: SHOULD
+roles: Medvya operations
+labels: platform, status, comms
+estimate: 2.5
+weeks: 29-31
+depends: MDV-P5-040, MDV-P5-041
+confidence: 65 | Design exists (6 Nov 2026); build estimate not yet calibrated.
+sources: design/Medvya Admin.dc.html (6 Nov 2026 revamp) (Releases, Status and maintenance, Integrations)
+desc:
+Announcements linked to a flag and shown when the flag reaches the tenant (in-app What's new, owner email, never to patients). Planned maintenance and incident messages per region as banners in the clinic app and on the public status page (MDV-P5-018). Integrations register per country (NHCX, DHA eClaimLink, Shafafiya, Riayati, payment gateways, ABDM, WhatsApp) with status, read-only.
+ac:
+- Given a flag reaches a tenant, when an announcement is linked, then it shows in What's new only then.
+- Given maintenance is scheduled for India, when the time comes, then only India practices see the banner.
+- Given the register, when is opened, then it shows each integration's status and country.
+
+=== MDV-P5-046
+title: Legal documents: versioned terms, privacy notice and DPA, re-acceptance gate that pauses booking only
+type: Story
+epic: MDV-P5-E09
+prd: P5-08
+screens: N-12
+priority: MUST
+roles: Medvya operations, Counsel, Practice owner
+labels: platform, legal, consent
+estimate: 2
+weeks: 27-29
+depends: MDV-P5-040, MDV-P1-044
+confidence: 65 | Design exists (6 Nov 2026); build estimate not yet calibrated.
+sources: design/Medvya Admin.dc.html (6 Nov 2026 revamp) (Legal documents and acceptance)
+desc:
+Counsel writes the wording and uploads it; staff can only publish an approved version, never edit text. A new version can require every owner to accept again; until they do only online booking pauses, nothing clinical stops (the existing terms gate is reused). Acceptance is recorded with who, version and time.
+ac:
+- Given a new version requires acceptance, when an owner has not accepted, then online booking pauses and clinical work continues.
+- Given platform staff, when try to edit wording, then the console offers no edit, only publish.
+- Given an owner accepts, when it is saved, then user, version and time are recorded.
+
+=== MDV-P5-047
+title: Service requests: Help in the clinic app, support inbox with SLA, internal notes, diagnostics
+type: Story
+epic: MDV-P5-E09
+prd: P5-09
+screens: N-13
+priority: MUST
+roles: Practice owner, Medvya support
+labels: platform, support
+estimate: 3.5
+weeks: 28-30
+depends: MDV-P5-040, MDV-P5-018
+confidence: 65 | Design exists (6 Nov 2026); build estimate not yet calibrated.
+sources: design/Medvya Admin.dc.html (6 Nov 2026 revamp) (Service requests); design/Medvya Web.dc.html (6 Nov 2026 revamp) (Raise a service request)
+desc:
+Clinic side: search help first, raise a request with category and description, warning not to include patient details, screenshots blurred where patient data appears, app version and recent errors attached. Console side: inbox with SLA timer, assignee, public replies and internal notes, 'request support access' that needs the owner's approval, lasts 60 minutes and shows no patient records. Support hours and urgent-outage line shown.
+ac:
+- Given a screenshot shows patient data, when it is attached, then the patient data is blurred before storage.
+- Given support, when asks for access, then nothing is visible until the owner approves and it ends after 60 minutes.
+- Given a request breaches its SLA, when time passes, then it is flagged to the team lead.
+
+=== MDV-P5-048
+title: Platform analytics, practice health score and scheduled reports with small-count hiding
+type: Story
+epic: MDV-P5-E09
+prd: P5-08
+screens: N-12
+priority: SHOULD
+roles: Medvya operations, Founder
+labels: platform, analytics
+estimate: 3.5
+weeks: 30-32
+depends: MDV-P5-040, MDV-P4-029
+confidence: 55 | Design exists (6 Nov 2026); build estimate not yet calibrated.
+sources: design/Medvya Admin.dc.html (6 Nov 2026 revamp) (Analytics, Practices at risk, Reports)
+desc:
+Aggregated adoption and usage by practice, staff and patients with no patient data; any count under 5 is hidden. Health score from usage, payments, support tickets and errors, with a reason and a next step. Reports (metrics, daily/weekly/monthly, PDF or CSV) sent to named people only. Reuses the PHI-free reporting store decided in MDV-P4-029.
+ac:
+- Given a count is 4, when the chart renders, then it shows as hidden.
+- Given a report, when is scheduled, then only the named recipients get it and it holds no patient data.
+- Given a practice's health score falls, when it is shown, then the reasons are listed.
+
+=== MDV-P5-049
+title: Data requests and offboarding runs from the console without opening records
+type: Story
+epic: MDV-P5-E09
+prd: P5-09
+screens: N-14
+priority: MUST
+roles: Medvya operations, Practice owner
+labels: platform, privacy, offboarding
+estimate: 2.5
+weeks: 29-31
+depends: MDV-P5-040, MDV-P5-019, MDV-P5-025
+confidence: 65 | Design exists (6 Nov 2026); build estimate not yet calibrated.
+sources: design/Medvya Admin.dc.html (6 Nov 2026 revamp) (Data requests and offboarding)
+desc:
+Queue of export, correction, erasure and practice-closure requests from owners. Closure: full export first, records kept under a hold for the legal retention period, then deleted with a certificate; region never changes. Operations run the jobs and see counts and status only, never records.
+ac:
+- Given a closure is requested, when it is approved, then a full export is delivered before any retention clock starts.
+- Given retention ends, when the job runs, then records are deleted and a certificate is stored.
+- Given an operator, when opens a request, then no record content is shown.
+
+=== MDV-P5-050
+title: Public pricing page with 14-day trial, monthly and yearly toggle and country currency
+type: Story
+epic: MDV-P5-E09
+prd: P5-07
+screens: F-01
+priority: SHOULD
+roles: Public, Practice owner
+labels: public-site, billing
+estimate: 1.5
+weeks: 26-27
+depends: MDV-P5-042, MDV-P1-027
+confidence: 75 | Design exists (6 Nov 2026); build estimate not yet calibrated.
+sources: design/Medvya Web.dc.html (6 Nov 2026 revamp) (Simple plans, 14-day free trial)
+desc:
+Pricing page on the public site reading the approved plans (MDV-P5-042): Solo, Clinic (most popular), Hospital (talk to us), monthly and yearly toggle with the yearly saving, ₹ or AED by region, 'prices approved' line, payment methods by country. 'Start free trial' goes to sign-up (MDV-P1-004) with the plan chosen. No card needed to start unless the pricing decision says otherwise.
+ac:
+- Given a visitor in the UAE, when opens pricing, then prices show in AED with Apple Pay and cards listed.
+- Given a visitor, when chooses Clinic and starts a trial, then sign-up opens with that plan.
+- Given a price changes in the console, when the page reloads, then the new price shows.

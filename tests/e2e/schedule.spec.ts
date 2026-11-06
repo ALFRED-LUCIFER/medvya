@@ -296,7 +296,7 @@ test('closing the panel releases the hold, and a slot taken meanwhile says so', 
   await page.unrouteAll({ behavior: 'ignoreErrors' });
   await open(page, { holdCode: 'being_booked' });
   await bookButton(page, '10:20').click();
-  await expect(page.getByRole('alert')).toContainText('Someone else is booking this slot right now. Choose another slot.');
+  await expect(page.getByRole('alert').filter({ hasText: 'Someone else is booking this slot right now. Choose another slot.' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Confirm booking' })).toBeDisabled();
 });
 
@@ -682,7 +682,7 @@ test('a refused change says why and refreshes the schedule', async ({ page }) =>
   const before = calls.dates.length;
   await meera(page).click();
   await visitPanel(page).getByRole('button', { name: 'Check in' }).click();
-  await expect(page.getByRole('alert')).toContainText('Someone changed this appointment meanwhile.');
+  await expect(page.getByRole('alert').filter({ hasText: 'Someone changed this appointment meanwhile.' })).toBeVisible();
   await expect.poll(() => calls.dates.length).toBeGreaterThan(before);
 });
 

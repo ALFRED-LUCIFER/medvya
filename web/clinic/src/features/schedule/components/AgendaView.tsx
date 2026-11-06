@@ -4,7 +4,9 @@ import { hasStarted, type CalendarKind, type ScheduleColumn } from '../domain/sc
 import type { AgendaEntry } from '../domain/views';
 import type { GridActions } from './DayGrid';
 import { hatched } from './looks';
-import { AppointmentChip, OpenableChip, PastSlot } from './parts';
+import { AppointmentChip } from './AppointmentChip';
+import { OpenableChip } from './OpenableChip';
+import { PastSlot } from './PastSlot';
 
 type Props = { sections: { column: ScheduleColumn; entries: AgendaEntry[] }[]; timeZone: string; updating: boolean; now: number } & Pick<GridActions, 'onSlot' | 'onOpen' | 'moving'>;
 

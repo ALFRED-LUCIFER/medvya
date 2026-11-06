@@ -1,7 +1,7 @@
 import { Link } from 'react-router';
 import { useI18n } from '@medvya/i18n';
 import { buttonVariants } from '@medvya/ui';
-import { Section } from './parts';
+import { Section } from './Section';
 
 type Props = {
   /** The practice's country, from the server (null before sign-in finishes). */

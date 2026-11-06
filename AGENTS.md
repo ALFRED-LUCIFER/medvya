@@ -9,7 +9,7 @@ Medvya handles patient health data in India and the UAE. **Production quality is
 1. **Synthetic data only.** Never put real patient data in code, tests, fixtures, logs, screenshots, CI output, issues or AI evaluation sets. Use the synthetic cast (`docs/00-overview/personas.md`). National IDs in fixtures must fail their checksum (`pnpm check:synthetic` enforces this).
 2. **No PHI anywhere but the database and Blob.** Never in logs, telemetry, URLs, query strings, browser storage, push or SMS/WhatsApp/email previews, error messages or exception text. Telemetry is allowlist-scrubbed (`src/Host.Api/Observability`). Do not weaken it.
 3. **Authorisation is server-side, on every endpoint:** tenant, facility, role/capability, care relationship, purpose. Hiding something in the UI is never the control. Every endpoint declares a policy or is explicitly public (test-enforced).
-4. **Tenant isolation is two layers:** EF query filters **and** SQL row-level security on `SESSION_CONTEXT`. Never bypass, disable or "temporarily" switch off either.
+4. **Tenant isolation is two layers:** EF query filters **and** database row-level security on the tenant setting (PostgreSQL, ADR-012). Never bypass, disable or "temporarily" switch off either.
 5. **Clinical safety:** AI output is a draft until a licensed clinician accepts each field and signs. Unknowns stay blank, never guessed. Signed records are never edited, only amended by addendum. Allergy and status are never conveyed by colour alone.
 6. **Country data stays in country.** No cross-region resources, replication, AI inference or support access.
 7. **Secrets** live only in Key Vault (cloud) or local user secrets. `.env.example` holds names, never values. Never commit a secret, even a test one that looks real.
@@ -20,7 +20,7 @@ Medvya handles patient health data in India and the UAE. **Production quality is
 2. **Smallest complete change** (Ponytail discipline): solve the whole ticket with the least new code. Reuse what exists (house component, existing service, standard library, installed package) before adding anything. No speculative abstractions, options or "for later" code. Finish every part the change touches: callers, tests, docs, translations.
 3. **Read before you write.** Find every caller, test and config your change reaches. Fix root causes in shared code, not symptoms at call sites.
 4. **Tests prove behaviour.** New logic (branch, parser, money, security, consent, clinical rule) ships with a test. A safety-critical test must be shown to **fail when the protection is removed** (mutation check) before the PR. A test that cannot fail proves nothing.
-5. **Verify for real.** UI changes: run the app and check in a browser (layout, keyboard, axe, Arabic RTL). Database changes: run against real SQL Server (Testcontainers). Never claim "done" from a passing build alone.
+5. **Verify for real.** UI changes: run the app and check in a browser (layout, keyboard, axe, Arabic RTL). Database changes: run against real PostgreSQL (Testcontainers). Never claim "done" from a passing build alone.
 6. **Shortcuts are written down.** A known limit gets a code comment `shortcut: <the limit>, <when to upgrade>`. Untracked shortcuts are bugs.
 7. **Never weaken a guard to get green.** Do not disable lint rules, analyzers, tests, audit or CI checks, or lower thresholds, to make a change pass. Fix the code. A justified, narrow suppression needs a comment with the reason (see `TelemetryRedactionTests` for the pattern).
 8. **Comments explain why**, in one line, only where the code cannot.
@@ -28,7 +28,7 @@ Medvya handles patient health data in India and the UAE. **Production quality is
 ## 3 · Back end (.NET 10, `src/`)
 
 1. **Modular monolith.** A module (`src/Modules/<M>/{Domain,Application,Infrastructure,Api}`) never touches another module's tables or DbContext. Talk through application services, contracts or domain events.
-2. **Every domain property carries `[Classification(DataClass.X)]`** (architecture test). National/insurance IDs are `NationalId` → Always Encrypted.
+2. **Every domain property carries `[Classification(DataClass.X)]`** (architecture test). National/insurance IDs are `NationalId` → application-level envelope encryption with a blind index (ADR-012).
 3. Country rules live in country rule classes, never in scattered `if (country == …)`.
 4. Money is integer minor units (`long`) plus ISO currency. Never `decimal`/`double` for stored money.
 5. Time is `DateTimeOffset` in UTC. Display in the facility time zone.
@@ -49,6 +49,7 @@ src/features/<feature>/components/ presentational: props in, events out (no serv
 - Lint enforces the layers (`web/clinic/.oxlintrc.json`). Full guide: `docs/03-architecture/frontend-architecture.md`.
 - Server state → TanStack Query. Forms → React Hook Form + Zod (schemas in `domain/`). Routing → React Router. No other state library without an ADR.
 - UI is **shadcn/ui + Radix + Tailwind 4** (ADR-010) from `@medvya/ui`. Never add MUI or another component library. New shadcn components go into `packages/ui` via the shadcn CLI. Colours and spacing come from the tokens in `packages/ui/src/styles.css`. No ad-hoc colours: they must meet WCAG 2.2 AA (contrast is tested). Use Tailwind logical utilities (`ms-*`, `ps-*`, `start-*`) so right-to-left works.
+- **Tables use the `Table` components from `@medvya/ui`** (shadcn). Never write raw `<table>`, `<tr>`, `<td>` or `<th>` in a feature. Sorting, filtering and paging state lives in a `useXxxTableController` hook; column definitions are pure data in `domain/`; the component only renders rows it is given.
 - **No hard-coded user-facing text** (`react/jsx-no-literals`). Every string is a key in `packages/i18n/messages/{en,hi,ar}.json`. Arabic must work right-to-left.
 - Accessibility: keyboard path, visible focus ring, screen-reader labels, 44px targets (48px in the patient portal), 200% zoom, reduced motion.
 

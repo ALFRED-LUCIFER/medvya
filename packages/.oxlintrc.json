@@ -1,0 +1,38 @@
+{
+  "$schema": "../web/clinic/node_modules/oxlint/configuration_schema.json",
+  "rules": {
+    "no-restricted-imports": [
+      "error",
+      {
+        "patterns": [
+          {
+            "group": ["**/web/**", "**/mobile/**", "clinic", "@medvya/clinic*", "@medvya/mobile-*"],
+            "message": "A shared package never imports an app (ADR-013): apps depend on packages, not the other way round."
+          }
+        ]
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": ["ui-native/**", "tokens/**", "api-client/**", "domain/**", "auth-client/**", "i18n/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["**/web/**", "**/mobile/**", "clinic", "@medvya/clinic*", "@medvya/mobile-*"],
+                "message": "A shared package never imports an app (ADR-013): apps depend on packages, not the other way round."
+              },
+              {
+                "group": ["@medvya/ui", "@medvya/ui/*", "react-dom", "radix-ui", "@radix-ui/*"],
+                "message": "Packages that native apps use (ui-native, tokens, api-client, domain, auth-client, i18n) must not import web UI; @medvya/ui is web only (ADR-013)."
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

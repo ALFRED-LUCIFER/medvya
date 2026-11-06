@@ -8,7 +8,7 @@
 **Day one:** Features released individually as minor versions.  
 **Goal:** Add features where customer demand and clinical evidence justify them.
 
-**Tickets:** 7 · **Estimate:** 36 dev-days vs **65 working days** in the window (fits) · **Average confidence:** 56%
+**Tickets:** 7 · **Estimate:** 33 dev-days vs **65 working days** in the window (fits) · **Average confidence:** 56%
 
 **Status:** To do 7
 
@@ -28,7 +28,7 @@
 | [MDV-P8-004](MDV-P8-004.md) | To do | India ABDM: ABHA consent requests and linked records from other facilities | Story | SHOULD | P8-03 | — | 6 | 56–60 | 15 Nov → 17 Dec 2027 | 45% Low |
 | [MDV-P8-005](MDV-P8-005.md) | To do | Remaining UAE health exchanges (the two not used at launch) (N-07) | Story | SHOULD | P8-04 | N-07 | 5 | 56–62 | 15 Nov → 31 Dec 2027 | 45% Low |
 | [MDV-P8-006](MDV-P8-006.md) | To do | Front-desk extras: kiosk/QR self check-in, clinic letter inbox, offline read and draft (N-16) | Story | COULD | P8-05 | N-16 | 6 | 58–62 | 29 Nov → 31 Dec 2027 | 45% Low |
-| [MDV-P8-007](MDV-P8-007.md) | To do | Platform: public FHIR APIs, native mobile apps (Expo), saved migration templates per vendor, specialty templates | Story | COULD | P8-06 | — | 8 | 60–64 | 13 Dec → 14 Jan 2028 | 45% Low |
+| [MDV-P8-007](MDV-P8-007.md) | To do | Platform: public FHIR APIs, saved migration templates per vendor, specialty templates | Story | COULD | P8-06 | — | 5 | 60–64 | 13 Dec → 14 Jan 2028 | 45% Low |
 
 ## Exit criteria (release gate)
 

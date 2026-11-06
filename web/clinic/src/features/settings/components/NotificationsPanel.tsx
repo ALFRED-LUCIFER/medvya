@@ -4,7 +4,8 @@ import { useI18n } from '@medvya/i18n';
 import { Button, Input, Switch } from '@medvya/ui';
 import { channelToggles, messageToggles, previewGroups, type NotificationPrefsForm, type TemplatePreview } from '../domain/notifications';
 import { describedBy, fieldError } from './fieldStyles';
-import { Field, Section } from './parts';
+import { Field } from './Field';
+import { Section } from './Section';
 
 type Props = {
   form: UseFormReturn<NotificationPrefsForm>;

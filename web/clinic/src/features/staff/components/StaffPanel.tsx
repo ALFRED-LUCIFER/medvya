@@ -6,7 +6,8 @@ import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { describedBy, fieldError } from '../../settings/components/fieldStyles';
 import type { Location } from '../../settings/domain/settings';
-import { Field, Section } from '../../settings/components/parts';
+import { Field } from '../../settings/components/Field';
+import { Section } from '../../settings/components/Section';
 import { assignableRoles, canOffboard, canResend, canRevoke, permissionRows, type AddStaffForm, type OffboardForm, type RoleCatalogue, type RoleChoice, type StaffMember, type Step } from '../domain/staff';
 
 type Props = {

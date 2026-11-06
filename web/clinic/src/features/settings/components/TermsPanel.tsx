@@ -3,7 +3,7 @@ import { useI18n } from '@medvya/i18n';
 import { Button } from '@medvya/ui';
 import type { TermsStatus } from '../domain/settings';
 import { fieldError } from './fieldStyles';
-import { Section } from './parts';
+import { Section } from './Section';
 
 type Props = { terms: TermsStatus | null; loading: boolean; loadFailed: boolean; accepting: boolean; notOwner: boolean; acceptFailed: boolean; onAccept: () => void };
 

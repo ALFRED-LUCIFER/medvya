@@ -10,7 +10,7 @@ import AgendaView from './AgendaView';
 import type { DaySheet } from '../domain/daySheet';
 import DayGrid, { type GridActions } from './DayGrid';
 import DaySheetView from './DaySheetView';
-import { Legend } from './parts';
+import { Legend } from './Legend';
 import WeekView from './WeekView';
 
 export type { GridActions, SlotHandler } from './DayGrid';

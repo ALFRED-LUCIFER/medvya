@@ -31,7 +31,7 @@ export function useWalkInController(facilityId: string, initialPatientId: string
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['front-desk'] }),
   });
-  const error = done.error ? (done.error instanceof ApiError && done.error.status === 403 ? 'forbidden' as const : walkInError(done.error instanceof ApiError ? done.error.code : undefined)) : null;
+  const error = done.error ? (done.error instanceof ApiError && done.error.status === 403 && done.error.code !== 'terms_not_accepted' ? 'forbidden' as const : walkInError(done.error instanceof ApiError ? done.error.code : undefined)) : null;
 
   return {
     patientSearch: search.view,

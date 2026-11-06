@@ -10,6 +10,7 @@ import type { VisitLength, VisitType } from '../domain/schedule';
 import { localTime, type PlanRow, type SeriesDone } from '../domain/series';
 import { slotError } from '../domain/booking';
 import { localDate } from '../domain/changes';
+import { termsPath } from '../../settings/domain/settings';
 
 type Props = {
   timeZone: string;
@@ -128,7 +129,7 @@ export default function BookingPanel(p: Props) {
             </li>
           ))}
         </ul>
-        {p.bookError && <p role="alert" className="rounded-md border border-destructive p-3 text-sm font-bold text-destructive">{t(`booking.error.${p.bookError}`)}</p>}
+        {p.bookError && <BookError code={p.bookError} />}
         <div className="flex flex-wrap gap-2">
           <Button type="button" loading={p.booking} disabled={!p.plan.some(r => r.include)} onClick={p.onConfirm}>{t('series.confirm', { count: p.plan.filter(r => r.include).length })}</Button>
           <Button type="button" variant="outline" onClick={p.onBackToForm}>{t('series.back')}</Button>
@@ -200,7 +201,7 @@ export default function BookingPanel(p: Props) {
           <p id="booking-repeat-hint" className="text-xs text-muted-foreground">{t('series.repeatHint', { max: p.maxRepeat })}</p>
         </div>
 
-        {p.bookError && <p role="alert" className="rounded-md border border-destructive p-3 text-sm font-bold text-destructive">{t(`booking.error.${p.bookError}`)}</p>}
+        {p.bookError && <BookError code={p.bookError} />}
         <div className="flex flex-wrap gap-2">
           <Button type="submit" loading={p.booking} disabled={!p.hold || p.holding || !p.patient?.match}>{t(p.repeat > 1 ? 'series.review.action' : 'booking.confirm')}</Button>
           <Button type="button" variant="outline" onClick={p.onClose}>{t('booking.cancel')}</Button>
@@ -267,5 +268,16 @@ export function PatientPicker({ search: s, chosen, registerPath, invalid }: Pick
         <Link to={registerPath} className={cn(buttonVariants({ variant: 'link' }), 'self-start px-0')}>{t('patients.empty.register')}</Link>
       )}
     </fieldset>
+  );
+}
+
+/** A refused booking; when the practice has not accepted the terms, the way to fix it is one tap away (MDV-P1-019). */
+function BookError({ code }: { code: SlotError }) {
+  const { t } = useI18n();
+  return (
+    <div role="alert" className="flex flex-col items-start gap-1 rounded-md border border-destructive p-3 text-sm font-bold text-destructive">
+      {t(`booking.error.${code}`)}
+      {code === 'terms_not_accepted' && <Link to={termsPath} className={cn(buttonVariants({ variant: 'link' }), 'px-0')}>{t('terms.open')}</Link>}
+    </div>
   );
 }

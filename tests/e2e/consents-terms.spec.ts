@@ -98,3 +98,23 @@ test('a non-owner who tries to accept is told only the owner can', async ({ page
   await page.getByRole('button', { name: 'Accept the terms for this practice' }).click();
   await expect(page.getByRole('alert')).toHaveText('Only the practice owner can accept the terms.');
 });
+
+// The onboarding prompt: an owner sees it on any page until the terms are accepted; a desk role never asks the endpoint.
+test('the owner sees the terms prompt on every page until accepted; a desk role does not', async ({ page }) => {
+  let asked = 0;
+  await page.addInitScript(() => localStorage.setItem('medvya.locale', 'en'));
+  await page.route('**/v1/settings/terms', r => { asked++; return r.fulfill({ json: { version: '2026-11-draft', accepted: false, acceptedAt: null, required: true } }); });
+  await page.route('**/v1/me/context', r => r.fulfill({ json: context('PracticeAdmin', { StaffRolesIntegrations: 'Config' }) }));
+  await page.goto('/settings?tab=profile');
+  const notice = page.getByRole('note').filter({ hasText: 'Booking and messages are paused' });
+  await expect(notice.getByRole('link', { name: 'Open Settings → Terms' })).toHaveAttribute('href', '/settings?tab=terms');
+  expect(await axe(page)).toEqual([]);
+
+  await page.unroute('**/v1/me/context');
+  await page.route('**/v1/me/context', r => r.fulfill({ json: context('Receptionist', { RegisterBookPatients: 'Full', CheckInQueue: 'Full' }) }));
+  asked = 0;
+  await page.goto('/front-desk');
+  await expect(page.getByRole('main')).toBeVisible();
+  await expect(page.getByRole('note').filter({ hasText: 'Booking and messages are paused' })).toHaveCount(0);
+  expect(asked).toBe(0);
+});

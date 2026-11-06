@@ -12,6 +12,7 @@ describe('booking form', () => {
   it('turns API 409 codes into known errors and anything else into a generic failure', () => {
     expect(slotError('being_booked')).toBe('being_booked');
     expect(slotError('hold_expired')).toBe('hold_expired');
+    expect(slotError('terms_not_accepted')).toBe('terms_not_accepted');
     expect(slotError('surprise')).toBe('failed');
     expect(slotError(undefined)).toBe('failed');
   });

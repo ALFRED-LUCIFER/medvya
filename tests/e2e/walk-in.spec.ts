@@ -132,3 +132,17 @@ for (const locale of ['en', 'hi', 'ar'])
           .map(v => `${v.id} (${v.nodes.length}) ${JSON.stringify((v.nodes as { target: unknown }[]).map(n => n.target))}`));
       expect(violations).toEqual([]);
     });
+
+// MDV-P1-019: until the owner accepts the terms the server refuses with 403 terms_not_accepted; the desk is told why and where it is fixed.
+for (const [locale, message] of [['en', /Check-in is paused: the practice has not accepted the Terms of Service/], ['ar', /تسجيل الوصول متوقف/]] as const)
+  test(`a walk-in refused for unaccepted terms names Settings → Terms, not a broken button, axe clean (${locale})`, async ({ page }) => {
+    await desk(page, { locale, walkInAnswer: () => ({ status: 403, json: { title: 'Terms not accepted', code: 'terms_not_accepted' } }) });
+    await page.goto(`/front-desk/walk-in?patient=${patientId}`);
+    await page.locator('form button[type=submit]').click();
+    const alert = page.getByRole('alert').filter({ hasText: message });
+    await expect(alert).toBeVisible();
+    await expect(alert.getByRole('link')).toHaveAttribute('href', '/settings?tab=terms');
+    expect(await page.evaluate(() => document.documentElement.dir)).toBe(locale === 'ar' ? 'rtl' : 'ltr');
+    await page.addScriptTag({ path: createRequire(import.meta.url).resolve('axe-core/axe.min.js') });
+    expect(await page.evaluate(async () => (await (window as unknown as { axe: { run: () => Promise<{ violations: unknown[] }> } }).axe.run()).violations)).toEqual([]);
+  });

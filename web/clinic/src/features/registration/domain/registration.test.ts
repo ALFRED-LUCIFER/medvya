@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { catalogs, loadCatalog, type Country } from '@medvya/i18n';
 import {
-  ageOn, completionSchema, consentPolicyVersion, dataMap, duplicateQuery, isMinor, eidExpired, emirates, emptyForm, errorCode, formField, hieFor, indiaStates, knownErrors, messageFor, payerFields,
+  ageOn, completionSchema, consentPolicyVersion, duplicateQuery, isMinor, eidExpired, emirates, emptyForm, errorCode, formField, hieFor, indiaStates, knownErrors, messageFor, payerFields,
   payerKinds, payerLabel, regionKey, registrationSchema, resolves, rules, stepOf, toCompletionRequest, toRegisterRequest, type DuplicateCandidate, type RegistrationForm,
 } from './registration';
 
@@ -160,7 +160,6 @@ describe('server errors and display', () => {
       ...(['IN', 'AE'] as const).flatMap(c => payerKinds[c].flatMap(k => payerFields(c, k).map(f => payerLabel(c, k, f)))),
       ...indiaStates.map(s => regionKey('IN', s)), ...emirates.map(e => regionKey('AE', e)),
       ...[...rules.IN, ...rules.AE].map(r => `registration.rules.${r}`),
-      ...Object.values(dataMap).flat().map(d => `registration.map.${d.key}`),
     ];
     for (const locale of ['en', 'hi', 'ar'] as const)
       expect(keys.filter(k => !k || !(k in catalogs[locale]!)), locale).toEqual([]);

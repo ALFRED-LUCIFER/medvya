@@ -82,7 +82,8 @@ export default function QueueTvPage(props: Props) {
             {props.chime ? <Bell aria-hidden className="size-5" /> : <BellOff aria-hidden className="size-5" />}
             {t(props.chime ? 'queueTv.chime.on' : 'queueTv.chime.off')}
           </button>
-          <div className="rounded-lg bg-card p-2 text-foreground">{props.languageSwitcher}</div>
+          {/* On the dark TV theme, not a white box (MDV-P1-052). */}
+          <div className="rounded-lg border border-tv-muted bg-tv-panel p-2 text-white">{props.languageSwitcher}</div>
         </div>
       </footer>
     </main>

@@ -520,16 +520,6 @@ const formatCode: Partial<Record<FormField, KnownError>> = {
 /** A server code shown under a field: a format error gets the field's own wording (e.g. "PIN code must be 6 digits"). */
 export const messageFor = (field: FormField, code: string): string => (code === 'format' && formatCode[field]) || code;
 
-/** Side panel "Data map · this step writes" (P-02): which records a step fills. Entity names are the data model's. */
-export const dataMap = {
-  quick: [{ entity: 'PATIENT', key: 'quick' }, { entity: 'PATIENT_IDENTIFIER', key: 'identifier' }],
-  identity: [{ entity: 'PATIENT', key: 'identity' }, { entity: 'PATIENT_IDENTIFIER', key: 'identifier' }],
-  contact: [{ entity: 'PATIENT', key: 'contact' }],
-  family: [{ entity: 'PATIENT_RELATIONSHIP', key: 'family' }],
-  payer: [{ entity: 'PAYER_COVERAGE', key: 'payer' }],
-  consents: [{ entity: 'CONSENT_RECEIPT', key: 'consents' }],
-  review: [{ entity: 'AUDIT_EVENT', key: 'audit' }],
-} as const satisfies Record<Step | 'quick', readonly { entity: string; key: string }[]>;
 
 /** Side panel rules, per country (keys under registration.rules.). */
 export const rules = {

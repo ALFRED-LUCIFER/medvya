@@ -146,7 +146,7 @@ function Rebooking({ cards, timeZone }: { cards: BoardCard[]; timeZone: string }
 }
 
 function Column(props: Props & { state: BoardColumn; board: Board }) {
-  const { t } = useI18n();
+  const { t, tCount } = useI18n();
   const { state, columns } = props;
   const cards = columns[state], Icon = columnIcons[state];
   const id = `board-col-${state}`;
@@ -155,7 +155,7 @@ function Column(props: Props & { state: BoardColumn; board: Board }) {
       <h2 id={id} className="flex items-center justify-between gap-2 px-1 pb-1 text-[13px] font-extrabold">
         <span className="flex items-center gap-1.5"><Icon aria-hidden className="size-4" />{t(`board.column.${state}`)}</span>
         <span className="font-mono text-xs font-semibold text-muted-foreground">
-          <span aria-hidden>{cards.length}</span><span className="sr-only">{t('board.count', { count: cards.length })}</span>
+          <span aria-hidden>{cards.length}</span><span className="sr-only">{tCount('board.count', cards.length)}</span>
         </span>
       </h2>
       {cards.length === 0 ? <p className="px-1 text-xs text-muted-foreground">{t('board.column.none')}</p> : (

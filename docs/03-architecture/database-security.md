@@ -6,7 +6,7 @@ Who can do what inside a Medvya database. The roles are defined in one idempoten
 
 | Role | Rights | Never |
 |---|---|---|
-| `medvya_migrator` | `CREATE TABLE/VIEW/FUNCTION/PROCEDURE/TYPE`, `ALTER ANY SCHEMA`, `REFERENCES`, `ALTER ANY SECURITY POLICY`, `ENABLE LEDGER`, `ALTER ANY MASK`; `SELECT/INSERT/DELETE` on `dbo` (EF migrations history only); `SELECT` on `security` (predicate functions) and `audit` (see Known limits) | Read or write tenancy or patient data, write audit data, create column master/encryption keys, `ALTER DATABASE`, create roles or users, grant rights |
+| `medvya_migrator` | `CREATE TABLE/VIEW/FUNCTION/PROCEDURE/TYPE`, `ALTER ANY SCHEMA`, `REFERENCES`, `ALTER ANY SECURITY POLICY`, `ALTER ANY MASK`; `SELECT/INSERT/DELETE` on `dbo` (EF migrations history only); `SELECT` on `security` (predicate functions) and `audit` (see Known limits) | Read or write tenancy or patient data, write audit data, create column master/encryption keys, `ALTER DATABASE`, create roles or users, grant rights |
 | `medvya_app` | Membership of every module role, nothing else | Any DDL: `CREATE`, `ALTER`, `DROP`, security policies |
 | `medvya_tenancy` | `SELECT/INSERT/UPDATE/DELETE ON SCHEMA::tenancy` | Any other schema |
 | `medvya_identity` | `SELECT/INSERT/UPDATE ON SCHEMA::identity` (staff accounts) | `DELETE` (offboarding is a membership status), any other schema |
@@ -15,14 +15,14 @@ Who can do what inside a Medvya database. The roles are defined in one idempoten
 | `medvya_scheduling` | `SELECT/INSERT/UPDATE/DELETE ON SCHEMA::scheduling` (templates, resources; appointments from MDV-P1-021) | Any other schema; reporting has no access until a reason-free view exists (appointments hold the SensitiveHealth visit reason) |
 | `medvya_notifications` | `SELECT/INSERT/UPDATE ON SCHEMA::notifications` (messages and attempts, no text or addresses; MDV-P1-032) | `DELETE` (attempts are the delivery history), patients and scheduling data (contacts and events come through module contracts) |
 | `medvya_jobs` | `SELECT/INSERT/UPDATE/DELETE/EXECUTE ON SCHEMA::hangfire` (Hangfire job storage) | Any module's data. Hangfire's table install runs as the migration principal on deploy; only Development lets the app prepare the schema |
-| `medvya_audit` | `SELECT/INSERT ON SCHEMA::audit` | `UPDATE`/`DELETE` (the ledger table refuses them too), any other schema |
+| `medvya_audit` | `SELECT/INSERT ON SCHEMA::audit` | `UPDATE`/`DELETE` (the append-only triggers refuse them for every role too), any other schema |
 | `medvya_reporting` | `SELECT ON SCHEMA::tenancy` and `SCHEMA::patients` (masked, identifiers as ciphertext). Support staff use this role | Any write, any DDL, `UNMASK`, `audit` (until `ClientIp` is masked), `identity` |
 
 Rules:
 
 - **Row-level security applies to every role.** A principal without a tenant `SESSION_CONTEXT` sees no clinic rows, reporting included. The RLS predicate functions need no grant for the app: SQL Server evaluates security predicates without checking the querying user's rights (`AppRoleWorksThroughRowLevelSecurity`).
 - **The one cross-tenant read (facility picker, MDV-P0-012).** A connection that sets `SESSION_CONTEXT('user_id')` and **no** tenant (only `MembershipDirectory` does) sees that user's `Active` memberships and the tenants and facilities they belong to, nothing else; `FeatureFlags` and every other table stay tenant-only, and block predicates stay tenant-only, so such a connection writes nothing. Tenant-scoped connections never set `user_id`, and the predicates require the tenant to be absent, so they see exactly what they did before (`MembershipDirectoryTests`).
-- **Database settings are the administrator's.** `roles.sql` turns on snapshot isolation (needed for ledger verification), so the migrator needs no `ALTER DATABASE`, which would also let it create users and change role membership.
+- **Database settings are the administrator's.** `roles.sql` turns on snapshot isolation, so the migrator needs no `ALTER DATABASE`, which would also let it create users and change role membership.
 - **Adding a module:** add its schema and `medvya_<module>` role to `roles.sql`, grant only `ON SCHEMA::<module>`, add the role to `medvya_app`, and add a cross-schema test to `DatabaseRoleTests`. Put RLS predicate functions in the `security` schema, so the migrator needs no `SELECT` on the module schema.
 
 ## Order of operations
@@ -94,6 +94,6 @@ Also in MDV-P0-006, not testable locally: Entra-only authentication on the logic
 - The audit module's RLS predicate lives in the `audit` schema (migration `InitialAudit`), so the migrator has `SELECT` on `audit`. RLS still hides rows from it. Moving the predicate to `security` lets that grant go.
 - Reception-board reads (`front_desk.board.read`) and live-update watches (`front_desk.board.watch`) are audited once per user, tenant and exact request (facility) per 5-minute window (`AuditWindow`, MDV-P1-035), because a board refetches on every change. Only Allowed answers are coalesced; Denied, NotFound and Rejected are always written, and the window starts only after its first row is written. The window is per API instance memory, so a restart or a second instance writes one extra row per window; move it into the database before running more than one instance.
 - One app principal holds every module role, as the app is one process. The module roles still make cross-schema access a deliberate grant, and they allow separate principals per worker later (for example a jobs worker with only the roles it needs).
-- `audit.AuditEvents.ClientIp` is not masked yet (ledger table), so reporting has no `audit` access.
+- `audit.AuditEvents.ClientIp` is not masked yet (append-only table), so reporting has no `audit` access.
 - TDE with a customer-managed key and the Key Vault CMK are Azure work (MDV-P0-006); locally SQL Server uses its default TDE-off setup.
 - The deploy pipeline step that runs `EnsureKeysAsync` with the Key Vault provider is not built (MDV-P0-006).

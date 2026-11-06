@@ -25,7 +25,13 @@
           ]
         }
       ],
-      "expo-status-bar"
+      "expo-status-bar",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Medvya uses Face ID to unlock the app and keep records private."
+        }
+      ]
     ]
   }
 }

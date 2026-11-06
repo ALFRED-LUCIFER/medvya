@@ -5,6 +5,7 @@
   --color-brand-700: #0f766e; /* primary actions (was #0e9384: 3.8:1 with white, fails AA) */
   --color-brand-800: #0b5c55; /* primary hover */
   --color-brand-500: #0e9384; /* non-text accents only (e.g. banner rail) */
+  --color-brand-50: #e7f6f4;
   --color-action-600: #2563eb; /* links, focus ring */
   --color-ai-600: #7155d8; /* AI-provisional only */
   --color-ai-700: #5b3fc4;
@@ -19,8 +20,11 @@
   --color-line: #dfe7ed; /* decorative dividers and rules only, never a control's boundary */
   --color-line-strong: #76899c; /* control boundary (public site inputs); same as --color-input, ≥ 3:1 (WCAG 1.4.11; was #cbd6e0, 1.5:1) */
   --color-danger-700: #b42333; /* critical only */
+  --color-danger-50: #fdecee; /* chip and banner tints (Medvya Mobile design); each -700 on its -50 is ≥ 4.5:1 */
   --color-warning-700: #975a16; /* uncertainty / attention */
+  --color-warning-50: #fdf5e7;
   --color-success-700: #087f5b; /* confirmed, never inferred */
+  --color-success-50: #edf7f2;
   --color-nav-hover: #1b3a57; /* hover and current item */
   --color-nav-ink: #c9d6e2;
   --color-nav-muted: #8fa6bd; /* group headings, role (design #6f88a1 lifted for AA) */

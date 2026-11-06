@@ -23,6 +23,9 @@ export const locales: { code: Locale; label: string }[] = [
   { code: 'en', label: 'English' }, { code: 'hi', label: 'हिन्दी' }, { code: 'ar', label: 'العربية' },
 ];
 
+/** Keeps a phone number, code or email left-to-right inside right-to-left text (Unicode isolate), so +971 never shows as 971+. */
+export const ltr = (s: string) => `\u2066${s}\u2069`;
+
 /** A device or browser language code ("ar", "hi") as a supported locale; anything else is English. */
 export const localeFor = (code: string | null | undefined): Locale =>
   locales.find(l => l.code === code)?.code ?? 'en';

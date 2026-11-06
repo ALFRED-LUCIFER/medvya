@@ -16,6 +16,8 @@ pnpm install && pnpm build                    # web, mobile and packages workspa
 pnpm dev                                      # clinic app on http://localhost:5173
 pnpm --filter @medvya/mobile-clinician ios    # staff app on the iOS simulator (needs Xcode; `android` needs Android Studio)
 pnpm dev:clinician                            # or dev:patient: Metro only; open in Expo Go or an installed build
+# Mobile Development builds sign in with the synthetic cast (any 6-digit code): arjun.rao@example.com (doctor),
+# reception.desk@example.com (front desk), patient +91 90000 00101. Release builds have no data until MDV-P5-033.
 dotnet test Medvya.sln                        # includes tenant-isolation tests on a throwaway PostgreSQL (Testcontainers)
 ```
 
@@ -62,11 +64,11 @@ medvya/
 │   └── portal/              # planned (P4): patient PWA
 ├── mobile/
 │   ├── .oxlintrc.json       # layer rules (ADR-009), no literals, no web UI
-│   ├── clinician/           # exists (P5-032 foundation, Expo SDK 58): staff app; screens in P5-034/035
-│   └── patient/             # exists (P5-032 foundation, Expo SDK 58): patient app; screens in P5-036/037
+│   ├── clinician/           # exists (Expo SDK 58): sign-in, 15-min lock, Today, Patients, record, Consult, Inbox, Account (P5-034, dev data)
+│   └── patient/             # exists (Expo SDK 58): onboarding, SMS sign-in, Home, Book, Records, Messages, Profile (P5-036, dev data)
 ├── packages/
-│   ├── ui/ · i18n/          # exist (ui is web only)
-│   └── tokens · api-client · domain · auth-client · ui-native · config · test-fixtures   # planned
+│   ├── ui/ · i18n/ · ui-native/   # exist (ui is web only; ui-native is the shared Expo components)
+│   └── tokens · api-client exist; domain · auth-client · config · test-fixtures   # planned
 ├── tests/
 │   ├── Medvya.ArchitectureTests/ · Medvya.IntegrationTests/ · e2e/     # exist
 │   └── Medvya.SecurityTests · Medvya.ContractTests · mobile-e2e · ai-evals   # planned

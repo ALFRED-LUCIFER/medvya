@@ -143,24 +143,14 @@ public static class SyntheticSeed
     }
 
     /// <summary>
-    /// Applies every module's migrations, then adds any missing cast rows. Existing rows are left as they are.
+    /// Adds any missing cast rows as the application role, so row-level security applies. Existing rows are left as they are.
+    /// The database must already have its roles and migrations (tools/db-migrate admin, then migrate): the app role cannot change the schema.
     /// </summary>
     public static async Task SeedAsync(string connectionString, string? environment, bool includeUae, CancellationToken ct = default)
     {
         EnsureNonProduction(environment);
 
-        await using (var tenancy = Tenancy(connectionString, null)) await tenancy.Database.MigrateAsync(ct);
-        await using (var audit = new AuditDbContext(Options<AuditDbContext>(connectionString, null), new FixedTenant(null)))
-            await audit.Database.MigrateAsync(ct);
         await using var identity = new IdentityDbContext(new DbContextOptionsBuilder<IdentityDbContext>().UseNpgsql(connectionString).Options);
-        await identity.Database.MigrateAsync(ct);
-        await using (var leads = new LeadsDbContext(new DbContextOptionsBuilder<LeadsDbContext>().UseNpgsql(connectionString).Options))
-            await leads.Database.MigrateAsync(ct);
-        await using (var patients = Patients(connectionString, null)) await patients.Database.MigrateAsync(ct);
-        await using (var scheduling = Scheduling(connectionString, null)) await scheduling.Database.MigrateAsync(ct);
-        // The API's board and jobs read these tables; the real migrator (tools/db-migrate) already applies them.
-        await using (var notifications = new NotificationsDbContext(Options<NotificationsDbContext>(connectionString, null), new FixedTenant(null))) await notifications.Database.MigrateAsync(ct);
-
         foreach (var c in Tenants(includeUae))
         {
             // Writes run inside the tenant, so the RLS block predicates apply exactly as they do for the API.

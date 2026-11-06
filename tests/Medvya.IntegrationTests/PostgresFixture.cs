@@ -67,6 +67,10 @@ public sealed class PostgresFixture : IAsyncLifetime
 
     public BillingDbContext Billing(Guid? tenantId) => new(Options<BillingDbContext>(tenantId).Options, new FixedTenant(tenantId));
 
+    /// <summary>Billing as the superuser, for seeds that must do what the app role may not (bypasses row-level security too).</summary>
+    public BillingDbContext BillingAsAdmin(Guid tenantId) =>
+        new(new DbContextOptionsBuilder<BillingDbContext>().UseNpgsql(AdminConnectionString).Options, new FixedTenant(tenantId));
+
     public SchedulingDbContext Scheduling(Guid? tenantId) => new(Options<SchedulingDbContext>(tenantId).Options, new FixedTenant(tenantId));
 
     public NotificationsDbContext Notifications(Guid? tenantId) => new(Options<NotificationsDbContext>(tenantId).Options, new FixedTenant(tenantId));

@@ -287,7 +287,7 @@ def render() -> str:
     w('## 6. Rules the model follows\n')
     scoped = sorted(f'{s}.{t}' for (s, t), (_, e) in tables.items() if 'TenantId' in e['cols'])
     unscoped = sorted(f'{s}.{t}' for (s, t), (_, e) in tables.items() if 'TenantId' not in e['cols'])
-    w(f'- **Tenant isolation:** {len(scoped)} of {len(tables)} tables carry `TenantId` (EF query filter plus SQL row-level security on `SESSION_CONTEXT`). Without `TenantId`: ' + ', '.join(f'`{x}`' for x in unscoped) + '. (`TenantId` present is not proof the row-level-security policy covers the table; see `docs/03-architecture/database-security.md`.)')
+    w(f'- **Tenant isolation:** {len(scoped)} of {len(tables)} tables carry `TenantId` (EF query filter plus PostgreSQL forced row-level security on `medvya.tenant_id`). Without `TenantId`: ' + ', '.join(f'`{x}`' for x in unscoped) + '. (`TenantId` present is not proof the row-level-security policy covers the table; see `docs/03-architecture/database-security.md`.)')
     w('- **Append-only ledgers:** ' + ', '.join(f'`{x}`' for x in sorted(LEDGER)) + ' (hash-chain tamper evidence arrives with MDV-P0-036).')
     w('- **No cross-module foreign keys:** modules link by id and through application services (AGENTS.md 3.1).')
     w('- **Country data plane:** one deployment and one database per country (ADR-003); this diagram is the same in each.')

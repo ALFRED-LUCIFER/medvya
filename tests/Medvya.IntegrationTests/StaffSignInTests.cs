@@ -105,8 +105,10 @@ public sealed class StaffSignInTests(PostgresFixture sql) : IClassFixture<Postgr
         using var browser = Browser();
         var callback = await SignIn(browser, user.Subject, beforeCallback: async () =>
         {
-            await using var db = sql.Identity(); // the account goes away between provider sign-in and callback
-            await db.Users.Where(u => u.Id == user.Id).ExecuteDeleteAsync();
+            await using var admin = await sql.OpenAs("dbo"); // the account goes away between provider sign-in and callback; the app role may not delete users
+            await using var delete = new Npgsql.NpgsqlCommand("DELETE FROM identity.\"Users\" WHERE \"Id\" = @id", admin);
+            delete.Parameters.AddWithValue("id", user.Id);
+            await delete.ExecuteNonQueryAsync();
         });
         Assert.Equal("/?signin=failed", callback.Headers.Location!.OriginalString);
         Assert.Equal(HttpStatusCode.Unauthorized, (await browser.GetAsync(new Uri("/v1/me/context", UriKind.Relative))).StatusCode);

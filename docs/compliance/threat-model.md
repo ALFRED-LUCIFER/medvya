@@ -35,7 +35,7 @@ Status column: **Done** = implemented and tested; otherwise the ticket that deli
 |---|---|---|---|
 | S | Stolen DB password | Entra-only auth, managed identity, no SQL logins | MDV-P0-008 |
 | T | Tampering with audit, signed notes, consents, invoices | Ledger tables; digests to immutable Blob, verified on schedule | MDV-P0-017, MDV-P2-012 |
-| I | Cross-tenant leakage through a missing filter | EF global filter **and** SQL RLS on `SESSION_CONTEXT`; CI test proves RLS blocks even with filters off | MDV-P0-010 (P0 exit gate) |
+| I | Cross-tenant leakage through a missing filter | EF global filter **and** PostgreSQL FORCE row-level security on `medvya.tenant_id`; CI test proves RLS blocks even with filters off | MDV-P0-010 (P0 exit gate) |
 | I | DBA or Medvya staff reading national IDs | Always Encrypted (CMK usable only by the API identity); DDM for support roles | MDV-P0-009 |
 | I | Public network exposure | Private endpoints, public access disabled, deny-cross-region policy | MDV-P0-006 |
 | E | Module reading another module's tables | Per-module DB users; architecture tests | MDV-P0-008 |

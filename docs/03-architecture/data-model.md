@@ -23,7 +23,7 @@ Sources: Software Architecture §6–8 (written for PostgreSQL), Foundations ERD
 | `jsonb` | `json` / `nvarchar(max)` + `ISJSON` check. Index computed columns if queried |
 | `timestamptz` | `datetimeoffset(3)` |
 | `text` | `nvarchar(n)` / `nvarchar(max)` (Unicode needed for Arabic, Hindi, Tamil) |
-| RLS policies | `CREATE SECURITY POLICY` with an inline TVF predicate on `SESSION_CONTEXT(N'tenant_id')`, FILTER + BLOCK predicates |
+| RLS policies | `ALTER TABLE ... FORCE ROW LEVEL SECURITY` with SELECT, INSERT, UPDATE and DELETE policies on `current_setting('medvya.tenant_id', true)` (ADR-005, MDV-P0-034) |
 | Exclusion constraint (no overlapping slots) | Unique index `(doctor_id, location_id, slot_start)` on SCHEDULE_SLOT (one row per 5-minute unit an appointment occupies) + serializable transaction + `sp_getapplock` per doctor-day (P1-07, MDV-P1-022) |
 | `pgaudit` | Azure SQL auditing → Log Analytics + immutable storage. App audit in **ledger tables** |
 | `pgcrypto` / app encryption | **Always Encrypted** (deterministic for exact lookups on IDs; randomized + VBS enclave for range/LIKE) |

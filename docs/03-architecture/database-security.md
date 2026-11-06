@@ -1,99 +1,56 @@
-# Database roles, principals, encryption and masking (MDV-P0-008, MDV-P0-009)
+# Database roles and row-level security (MDV-P0-008, rebuilt on PostgreSQL in MDV-P0-034)
 
-Who can do what inside a Medvya database. The roles are defined in one idempotent script, [`infra/sql/roles.sql`](../../infra/sql/roles.sql), which is the single source of truth. Tests: `tests/Medvya.IntegrationTests/DatabaseRoleTests.cs`.
+Who can do what inside a Medvya database. The roles are defined in one idempotent script, [`infra/postgres/roles.sql`](../../infra/postgres/roles.sql), which is the single source of truth. Row-level security is written by one helper, `RowLevelSecurity.Tenant` (`src/BuildingBlocks/Medvya.BuildingBlocks.Infrastructure`), from a forward-only `TenantRls` migration in each module. Tests: `DatabaseRoleTests`, `TenantIsolationTests`, `MembershipDirectoryTests`, `RowLevelSecurityTests` in `tests/Medvya.IntegrationTests`. Decisions: [ADR-005](../adr/ADR-005-tenant-isolation-rls.md), [ADR-012](../adr/ADR-012-postgres.md).
+
+National-ID encryption (MDV-P0-035), masked reporting views (MDV-P0-037) and the audit hash chain (MDV-P0-036) are separate tickets and are not described here until built.
 
 ## Roles
 
+Every role is `NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE NOREPLICATION` and `NOLOGIN`. A login (an Entra identity in Azure, a password role in development and tests) is created `IN ROLE` one of them.
+
 | Role | Rights | Never |
 |---|---|---|
-| `medvya_migrator` | `CREATE TABLE/VIEW/FUNCTION/PROCEDURE/TYPE`, `ALTER ANY SCHEMA`, `REFERENCES`, `ALTER ANY SECURITY POLICY`, `ENABLE LEDGER`, `ALTER ANY MASK`; `SELECT/INSERT/DELETE` on `dbo` (EF migrations history only); `SELECT` on `security` (predicate functions) and `audit` (see Known limits) | Read or write tenancy or patient data, write audit data, create column master/encryption keys, `ALTER DATABASE`, create roles or users, grant rights |
-| `medvya_app` | Membership of every module role, nothing else | Any DDL: `CREATE`, `ALTER`, `DROP`, security policies |
-| `medvya_tenancy` | `SELECT/INSERT/UPDATE/DELETE ON SCHEMA::tenancy` | Any other schema |
-| `medvya_identity` | `SELECT/INSERT/UPDATE ON SCHEMA::identity` (staff accounts) | `DELETE` (offboarding is a membership status), any other schema |
-| `medvya_patients` | `SELECT/INSERT/UPDATE/DELETE/UNMASK ON SCHEMA::patients`; `VIEW ANY COLUMN MASTER KEY DEFINITION`, `VIEW ANY COLUMN ENCRYPTION KEY DEFINITION` (key metadata only, for parameter encryption) | Any other schema; decrypting without the column master key |
-| `medvya_billing` | `SELECT/INSERT/UPDATE ON SCHEMA::billing` | `DELETE` (deleting a DOC_SEQUENCE row would restart a legal number series), `ALTER` (so it cannot disable the trigger that refuses an `UPDATE` rewinding, skipping or moving a series), any other schema |
-| `medvya_scheduling` | `SELECT/INSERT/UPDATE/DELETE ON SCHEMA::scheduling` (templates, resources; appointments from MDV-P1-021) | Any other schema; reporting has no access until a reason-free view exists (appointments hold the SensitiveHealth visit reason) |
-| `medvya_notifications` | `SELECT/INSERT/UPDATE ON SCHEMA::notifications` (messages and attempts, no text or addresses; MDV-P1-032) | `DELETE` (attempts are the delivery history), patients and scheduling data (contacts and events come through module contracts) |
-| `medvya_jobs` | `SELECT/INSERT/UPDATE/DELETE/EXECUTE ON SCHEMA::hangfire` (Hangfire job storage) | Any module's data. Hangfire's table install runs as the migration principal on deploy; only Development lets the app prepare the schema |
-| `medvya_audit` | `SELECT/INSERT ON SCHEMA::audit` | `UPDATE`/`DELETE` (the ledger table refuses them too), any other schema |
-| `medvya_reporting` | `SELECT ON SCHEMA::tenancy` and `SCHEMA::patients` (masked, identifiers as ciphertext). Support staff use this role | Any write, any DDL, `UNMASK`, `audit` (until `ClientIp` is masked), `identity` |
+| `medvya_owner` | Owns every module schema and table; runs DDL. Foreign-key checks run as the owner, so it keeps its data rights | Logins. Nobody connects as it |
+| `medvya_migrator` | `USAGE, CREATE` on the module schemas; member of `medvya_owner` with `SET` but not `INHERIT`, so `db-migrate` does `SET ROLE medvya_owner` for the length of a migration | Read or write module data in a plain session (`MigratorCanChangeTheSchemaButNotTouchModuleData`) |
+| `medvya_app` | Member of every module role below, nothing else | Any DDL, ownership of any object, disabling a policy or trigger |
+| `medvya_tenancy` | `SELECT/INSERT/UPDATE/DELETE` on schema `tenancy` | Any other schema |
+| `medvya_identity` | `SELECT/INSERT/UPDATE` on `identity` | `DELETE` (offboarding is a membership status, a session is revoked not removed) |
+| `medvya_patients` | `SELECT/INSERT/UPDATE/DELETE` on `patients` | Any other schema |
+| `medvya_billing` | `SELECT/INSERT/UPDATE` on `billing` | `DELETE` (it would restart a legal number series); changing `TR_DocSequences_OnlyMoveForward` (only the owner can) |
+| `medvya_scheduling` | `SELECT/INSERT/UPDATE/DELETE` on `scheduling` | Any other schema; reporting has no access (appointments hold the SensitiveHealth visit reason) |
+| `medvya_notifications` | `SELECT/INSERT/UPDATE` on `notifications` | `DELETE` (attempts are the delivery history); patients and scheduling data |
+| `medvya_leads` | `SELECT/INSERT` on `leads` | `UPDATE`, `DELETE` |
+| `medvya_audit` | `SELECT/INSERT` on `audit` | `UPDATE`, `DELETE`; the append-only trigger and hash chain are MDV-P0-036 |
+| `medvya_jobs` | `SELECT/INSERT/UPDATE/DELETE` on `hangfire` (job storage) | Any module's data. Hangfire's tables are created by the deploy (as the owner); the app only works in them |
+| `medvya_reporting` | `SELECT` on `tenancy` | Any write, any DDL, `patients`, `audit`, `identity` (until MDV-P0-037 adds masked views) |
 
-Rules:
+Default privileges (`ALTER DEFAULT PRIVILEGES FOR ROLE medvya_owner IN SCHEMA …`) give every module role its rights on tables and sequences the owner creates later, so a new table never needs a grant.
 
-- **Row-level security applies to every role.** A principal without a tenant `SESSION_CONTEXT` sees no clinic rows, reporting included. The RLS predicate functions need no grant for the app: SQL Server evaluates security predicates without checking the querying user's rights (`AppRoleWorksThroughRowLevelSecurity`).
-- **The one cross-tenant read (facility picker, MDV-P0-012).** A connection that sets `SESSION_CONTEXT('user_id')` and **no** tenant (only `MembershipDirectory` does) sees that user's `Active` memberships and the tenants and facilities they belong to, nothing else; `FeatureFlags` and every other table stay tenant-only, and block predicates stay tenant-only, so such a connection writes nothing. Tenant-scoped connections never set `user_id`, and the predicates require the tenant to be absent, so they see exactly what they did before (`MembershipDirectoryTests`).
-- **Database settings are the administrator's.** `roles.sql` turns on snapshot isolation (needed for ledger verification), so the migrator needs no `ALTER DATABASE`, which would also let it create users and change role membership.
-- **Adding a module:** add its schema and `medvya_<module>` role to `roles.sql`, grant only `ON SCHEMA::<module>`, add the role to `medvya_app`, and add a cross-schema test to `DatabaseRoleTests`. Put RLS predicate functions in the `security` schema, so the migrator needs no `SELECT` on the module schema.
+## Row-level security
+
+- **Every clinic-owned table** (a `TenantId` column; `tenancy.Tenants` uses `Id`) is `ENABLE`d and `FORCE`d, with four policies (`tenant_select`, `tenant_insert`, `tenant_update`, `tenant_delete`) comparing the tenant column with `nullif(current_setting('medvya.tenant_id', true), '')::uuid`. `FORCE` binds the owner as well. A connection with no tenant matches no row, for reads and writes alike.
+- **The tenant is set per connection** by `TenantSessionInterceptor` (`set_config('medvya.tenant_id', …, false)`). Npgsql resets a connection (`DISCARD ALL`) when it returns to the pool, so a pooled connection never carries another tenant (`PooledConnectionsNeverLeakTenantContext`).
+- **The one cross-tenant read (facility picker, MDV-P0-012).** A connection that sets `medvya.user_id` and **no** tenant (only `MembershipDirectory` does) sees that user's `Active` memberships and the tenants and facilities they belong to. Only the SELECT and the UPDATE-visibility conditions have this branch, and it applies only while no tenant is set. Every `WITH CHECK` and the DELETE policy are tenant-only, so such a connection writes nothing (`MembershipDirectoryTests`).
+- **Tables with a `TenantId` but no policy** are listed in `RowLevelSecurityTests.IdsOnly`: `tenancy.TenantIndex` and `scheduling.OutboxTenants` (tenant ids only, read by jobs that run with no tenant) and `identity.Sessions` (looked up by token before a tenant is known). The test fails for any other table, so a new table cannot be forgotten.
+- **Adding a table** with a tenant column: call `migrationBuilder.Tenant("schema", "Table")` in its migration. **Adding a module:** add its schema and a row to `module_grants` in `roles.sql`, a `TenantRls` migration, and a cross-schema test in `DatabaseRoleTests`.
+- **EF query filters stay as layer one**; RLS is layer two. `TheQueryFilterAloneStillHidesOtherTenants` (RLS out of the way) and `RowLevelSecurityHidesOtherTenantsEvenWithQueryFiltersOff` (filter out of the way) prove each alone.
 
 ## Order of operations
 
-1. The administrator runs `roles.sql` (on every deploy; it is idempotent and also covers new modules).
-2. The administrator runs `ColumnEncryption.EnsureKeysAsync` (Always Encrypted key metadata, idempotent; see below).
-3. The migration principal runs EF migrations (`dotnet ef database update`, one per module context).
-4. The application starts as the app principal.
+1. The administrator runs `roles.sql` (`dotnet run --project tools/db-migrate -- admin "<admin connection>"`; every deploy, idempotent, also covers new modules). For development add `medvya_app=<password> medvya_migrator=<password>` to create password logins.
+2. The migrator login runs `db-migrate migrate "<migrator connection>"` (module migrations, then the Hangfire tables, all after `SET ROLE medvya_owner`).
+3. The application starts as a login that is a member of `medvya_app`. Never as a superuser or the owner.
 
-The integration test fixture does exactly this: `roles.sql` and the keys as `sa`, then every migration impersonating a `medvya_migrator` member. A migration that needs more than the migrator role fails the whole suite.
+The integration fixture does exactly this: `roles.sql` as the container superuser, migrations as `medvya_migrator`, every context as `medvya_app`. A migration that needs more than the owner role fails the whole suite; an application query that needs more than the module roles fails the test that runs it.
 
-## Always Encrypted (MDV-P0-009)
+## Mapping to Azure (MDV-P0-038, not built yet)
 
-National and insurance identifiers are encrypted in the client (SqlClient) with a column encryption key (CEK) that SQL Server stores only wrapped by a column master key (CMK). The CMK never reaches the database, so a DBA or `sa` sees ciphertext (`varbinary`) and cannot decrypt. Protected columns (kept deliberately small, see [data-classification.md](data-classification.md#protected-column-sets)):
-
-| Column | Encryption | Holds |
-|---|---|---|
-| `patients.Identifiers.LookupValue` | Deterministic, `Latin1_General_BIN2` | ABHA number, ABHA address, Emirates ID (exact-match search), passport (exact-match duplicate check, MDV-P1-016) |
-| `patients.Identifiers.DisplayValue` | Randomized | Aadhaar last 4, visa file number |
-| `patients.PayerCoverages.MemberNumber` | Deterministic, `Latin1_General_BIN2` | Insurance member / policy number (exact match for eligibility and claims) |
-
-- **Keys, same shape everywhere.** `ColumnEncryption.EnsureKeysAsync(adminConnection, providerName, keyPath, provider)` (Patients.Infrastructure) creates `CMK_Medvya` (metadata: provider name + key path) and a random 256-bit `CEK_Patients` wrapped by the CMK, unless they exist. Migrations then create the encrypted columns on `CEK_Patients` (raw SQL in `InitialPatients`, as EF Core cannot express `ENCRYPTED WITH`). Only the key store provider differs:
-  - **Azure (MDV-P0-006, not built yet):** the Azure Key Vault provider (`Microsoft.Data.SqlClient.AlwaysEncrypted.AzureKeyVaultProvider`), CMK an RSA key in the country Key Vault; only the API managed identity gets unwrap, the deploy identity gets wrap for key creation.
-  - **Developer machines and tests:** `LocalKeyStoreProvider` (`MEDVYA_LOCAL_RSA`), an RSA key held by the process, because the Windows certificate store provider does not exist on macOS/Linux. Tests generate a key per test run; `pnpm dev:db` keeps one at `~/.config/Medvya/local-column-master-key.pem` (macOS/Linux application data folder, owner-only permissions), outside the repository like user secrets. It protects synthetic data only.
-- **Connections.** Only the Patients module's connection sets `Column Encryption Setting=Enabled` (`PatientsModule.WithColumnEncryption`), so other modules skip the parameter-encryption round trip. The host registers the key store provider once per process before the first query.
-- **Queries.** Deterministic columns support equality only (`=`, joins, grouping); `LIKE`, ranges and sorting on encrypted columns are rejected by SQL Server ("Encryption scheme mismatch"). Lookup input is normalised by the country rules exactly as it was on write, or the ciphertexts would not match. No secure enclave is used.
-- Tests: `PatientRegistryTests` (ciphertext for the administrator, exact EID and ABHA lookups through EF Core as `medvya_app`, `LIKE` rejected, protected-column list).
-
-## Dynamic data masking (MDV-P0-009)
-
-`patients.Patients` masks full and Arabic name, date of birth, gender identity, mobile, alternate phone, email (`email()`) and every address column (`default()`). `medvya_patients` holds `UNMASK` on the `patients` schema only (SQL Server 2022 granular UNMASK), so the app reads clear values; `medvya_reporting` (reporting and support) sees `xxxx`, `1900-01-01` and `aXXX@XXXX.com`. Masking limits casual exposure only: it is not a control against a principal that can run arbitrary queries, which is why reporting stays read-only and inside RLS. A later `ALTER COLUMN` on a masked column must restate the mask. Test: `ReportingSeesMaskedDemographicsWhileTheAppSeesClearValues`.
-
-## Mapping to Azure (MDV-P0-006)
-
-Azure provisioning is MDV-P0-006 (built). The administrator step below is run by a person once per environment; the deploy workflow cannot, because the deploy identity may not grant rights.
-
-| Principal | Azure identity | Role membership |
-|---|---|---|
-| Administrator | Entra group set as the logical server's Entra admin; members gain it only through just-in-time elevation (PIM, runbook MDV-P0-025) | `db_owner` via Entra admin; runs `roles.sql` |
-| Migration | User-assigned managed identity used only by the GitHub Actions deploy job (OIDC federated credential) | `medvya_migrator` |
-| Application | App Service managed identity (one per country deployment) | `medvya_app` |
-| Reporting | Entra group for reporting users or a reporting service identity | `medvya_reporting` |
-
-### Deploy runbook (dev, India; same shape for every environment)
-
-1. **Infrastructure:** `infra/bicep/main.bicep` creates the Key Vault key `medvya-column-master` (RSA 3072) and gives "Key Vault Crypto User" on that key only to the web app identity and the SQL administrator.
-2. **Administrator, once and whenever a module is added** (needs the SQL firewall to allow your IP, and `az login` as the Entra admin):
-   `dotnet run --project tools/db-migrate -- admin "<connection>" "<key url>" "<app-identity>" "<migration-identity>"` runs `roles.sql`, creates `CMK_Medvya` and `CEK_Patients` wrapped by the Key Vault key, then maps the web app's managed identity (its name is the web app name) to `medvya_app` and the deploy identity (`Medvya CI deploy (dev, India)`) to `medvya_migrator`. Every part is idempotent, so re-run it whenever a module is added. The two identity arguments are optional; without them, map by hand with the SQL below.
-3. **Administrator, once per identity:** only if you left the identity arguments out above.
-4. **Every deploy:** the workflow opens a firewall rule for its own runner, runs `db-migrate migrate` as the migration identity (module migrations, then the Hangfire tables), and closes the rule.
-
-**SQL firewall:** only the web app's outbound addresses (`infra/bicep/sql-firewall.bicep`) are permanent. The deploy job and the administrator open their own address for the length of the work and delete it (`az sql server firewall-rule delete`). A Bicep deploy never deletes rules, so after moving to this layout delete the old `AllowAzureServices` rule once by hand.
-
-Connection string (an app setting, no password): `Server=tcp:<server>.database.windows.net,1433;Database=medvya;Authentication=Active Directory Managed Identity;Encrypt=Strict;`.
-
-Mapping, run by the administrator after `roles.sql`, per database:
-
-```sql
-CREATE USER [<app-service-identity-name>] FROM EXTERNAL PROVIDER;
-ALTER ROLE medvya_app ADD MEMBER [<app-service-identity-name>];
-CREATE USER [<migration-identity-name>] FROM EXTERNAL PROVIDER;
-ALTER ROLE medvya_migrator ADD MEMBER [<migration-identity-name>];
-```
-
-Also in MDV-P0-006, not testable locally: Entra-only authentication on the logical server (no SQL logins or passwords exist), and connection strings of the form `Server=tcp:<server>.database.windows.net;Database=<db>;Authentication=Active Directory Managed Identity;Encrypt=Strict` with no password. Locally, tests stand in for each identity with a database user `WITHOUT LOGIN` (no password) impersonated through `EXECUTE AS USER`.
+Azure Database for PostgreSQL provisioning, Entra-only authentication and the deploy workflow are MDV-P0-038. The shape is: the administrator (Entra admin group, just-in-time) runs `roles.sql`; the App Service managed identity is created as a role `IN ROLE medvya_app`; the deploy identity `IN ROLE medvya_migrator`; reporting users `IN ROLE medvya_reporting`. No password exists anywhere.
 
 ## Known limits
 
-- The audit module's RLS predicate lives in the `audit` schema (migration `InitialAudit`), so the migrator has `SELECT` on `audit`. RLS still hides rows from it. Moving the predicate to `security` lets that grant go.
-- Reception-board reads (`front_desk.board.read`) and live-update watches (`front_desk.board.watch`) are audited once per user, tenant and exact request (facility) per 5-minute window (`AuditWindow`, MDV-P1-035), because a board refetches on every change. Only Allowed answers are coalesced; Denied, NotFound and Rejected are always written, and the window starts only after its first row is written. The window is per API instance memory, so a restart or a second instance writes one extra row per window; move it into the database before running more than one instance.
-- One app principal holds every module role, as the app is one process. The module roles still make cross-schema access a deliberate grant, and they allow separate principals per worker later (for example a jobs worker with only the roles it needs).
-- `audit.AuditEvents.ClientIp` is not masked yet (ledger table), so reporting has no `audit` access.
-- TDE with a customer-managed key and the Key Vault CMK are Azure work (MDV-P0-006); locally SQL Server uses its default TDE-off setup.
-- The deploy pipeline step that runs `EnsureKeysAsync` with the Key Vault provider is not built (MDV-P0-006).
+- The tenant is a session setting any connection can set (`set_config`), so RLS protects against application bugs and injected queries that stay inside the app's statements, not against someone who can run arbitrary SQL as the app role. The app login is therefore held only by the application identity.
+- The migrator can `SET ROLE medvya_owner` and then read data; the split removes standing access, not the ability. The deploy identity is used only by the deploy job.
+- One app login holds every module role, as the app is one process. The module roles still make cross-schema access a deliberate grant, and allow separate logins per worker later.
+- Reception-board reads (`front_desk.board.read`) and live-update watches (`front_desk.board.watch`) are audited once per user, tenant and exact request (facility) per 5-minute window (`AuditWindow`, MDV-P1-035). The window is per API instance memory, so a restart or a second instance writes one extra row per window; move it into the database before running more than one instance.
+- `reporting` has no patients or audit access until MDV-P0-037 (masked views).

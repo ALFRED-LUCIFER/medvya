@@ -17,11 +17,11 @@ pnpm dev                                      # clinic app on http://localhost:5
 dotnet test Medvya.sln                        # includes tenant-isolation tests on a throwaway PostgreSQL (Testcontainers)
 ```
 
-One command starts the services, applies the EF Core migrations of every module the app runs (Tenancy, Audit, Identity, Leads, Patients, Scheduling) and seeds the synthetic cast (MDV-P0-027): the India tenant "Iyer Family Clinic (synthetic)", facility Adyar, with one membership per role. Add `--uae` for "Al Noor Family Clinic (synthetic)". Re-running is safe (fixed ids, existing rows are kept). The seeder refuses any environment other than Development, Staging or Test.
+One command starts the services, creates the database roles (`infra/postgres/roles.sql`, as the container superuser), applies the EF Core migrations as `medvya_migrator` of every module the app runs (Tenancy, Audit, Identity, Leads, Patients, Scheduling) and seeds the synthetic cast (MDV-P0-027): the India tenant "Iyer Family Clinic (synthetic)", facility Adyar, with one membership per role. Add `--uae` for "Al Noor Family Clinic (synthetic)". Re-running is safe (fixed ids, existing rows are kept). The seeder refuses any environment other than Development, Staging or Test.
 
 ```bash
 pnpm dev:db                                   # or: pnpm dev:db --uae
-ConnectionStrings__Medvya="Host=localhost;Port=5432;Database=medvya;Username=medvya;Password=Local_dev_only_1" \
+ConnectionStrings__Medvya="Host=localhost;Port=5432;Database=medvya;Username=medvya_app;Password=Local_dev_only_1" \
   dotnet run --project src/Host.Api           # API on http://localhost:5080, the port the clinic proxy and dev sign-in expect
 ```
 
@@ -82,7 +82,7 @@ medvya/
 | [docs/](docs/README.md) | Matches the target; holds the tickets (`docs/05-delivery/tickets/`) and the design sources (`docs/02-design/source/`) |
 | [src/](src) | Matches; Host.Api feature endpoints move into modules (P0-040 chunk 1) |
 | [web/](web) · [packages/](packages) | Match; `tokens` and `api-client` added (P0-040 chunk 2) |
-| [tests/](tests) · [infra/](infra) · [tools/](tools) | Match; `infra/sql` is replaced by PostgreSQL scripts (MDV-P0-034, MDV-P0-038) |
+| [tests/](tests) · [infra/](infra) · [tools/](tools) | Match; `infra/postgres` holds the roles script (MDV-P0-034); Azure scripts follow in MDV-P0-038 |
 
 The run commands above are for PostgreSQL (MDV-P0-032); the Azure deployment still targets Azure SQL until MDV-P0-038.
 

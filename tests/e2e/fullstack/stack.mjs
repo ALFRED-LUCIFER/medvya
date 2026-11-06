@@ -39,13 +39,14 @@ try {
   log(`PostgreSQL on 127.0.0.1:${sqlPort}`);
   execFileSync('docker', ['run', '-d', '--rm', '--name', container, '-p', `127.0.0.1:${sqlPort}:5432`,
     '-e', 'POSTGRES_DB=medvya', '-e', 'POSTGRES_USER=medvya', '-e', `POSTGRES_PASSWORD=${password}`, 'postgres:16'], { stdio: 'ignore' });
-  const connection = `Host=127.0.0.1;Port=${sqlPort};Database=medvya;Username=medvya;Password=${password}`;
+  const as = user => `Host=127.0.0.1;Port=${sqlPort};Database=medvya;Username=${user};Password=${password}`;
+  const connection = as('medvya_app'); // the API and the seeder run as the application role, so row-level security applies
 
   log('building the web app and the API while PostgreSQL starts');
   run('pnpm', ['--filter', 'clinic', 'build']);
   mkdirSync(join(work, 'wwwroot'));
   cpSync(join(repo, 'web/clinic/dist'), join(work, 'wwwroot/app'), { recursive: true });
-  for (const project of ['src/Host.Api', 'tools/synthetic-data-generator']) run('dotnet', ['build', project, '--nologo', '-v', 'q']);
+  for (const project of ['src/Host.Api', 'tools/synthetic-data-generator', 'tools/db-migrate']) run('dotnet', ['build', project, '--nologo', '-v', 'q']);
 
   for (let i = 0; ; i++) {
     const ready = spawnSync('docker', ['exec', container, 'pg_isready', '-h', '127.0.0.1', '-U', 'medvya', '-d', 'medvya'], { stdio: 'ignore' });
@@ -53,6 +54,10 @@ try {
     if (i > 90) throw new Error('PostgreSQL did not become ready in 3 minutes.');
     await new Promise(r => setTimeout(r, 2000));
   }
+
+  log('creating roles and migrating (admin, then the migrator login)');
+  run('dotnet', ['run', '--no-build', '--project', 'tools/db-migrate', '--', 'admin', as('medvya'), `medvya_app=${password}`, `medvya_migrator=${password}`]);
+  run('dotnet', ['run', '--no-build', '--project', 'tools/db-migrate', '--', 'migrate', as('medvya_migrator')]);
 
   log('seeding the synthetic cast (two tenants)');
   run('dotnet', ['run', '--no-build', '--project', 'tools/synthetic-data-generator', '--', '--uae'],

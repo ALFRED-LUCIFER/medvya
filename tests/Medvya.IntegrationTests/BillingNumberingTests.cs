@@ -117,7 +117,7 @@ public class BillingNumberingTests(PostgresFixture sql) : IClassFixture<Postgres
         var tenant = Guid.NewGuid();
         // 999,998 numbers already issued. The trigger only lets a series start at 1, so the seed switches it off inside its own
         // transaction (DDL is transactional: other sessions never see the trigger off).
-        await using (var seed = sql.Billing(tenant))
+        await using (var seed = sql.BillingAsAdmin(tenant)) // the app role may not alter a trigger: that is the protection
         {
             await using var seedTx = await seed.Database.BeginTransactionAsync();
             await seed.Database.ExecuteSqlAsync($"""ALTER TABLE billing."DocSequences" DISABLE TRIGGER "TR_DocSequences_OnlyMoveForward" """);

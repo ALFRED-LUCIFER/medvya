@@ -31,6 +31,12 @@ describe('reception board', () => {
     expect(groups.Done).toEqual([]);
   });
 
+  it('orders arrived columns by arrival, so a slotless walk-in does not jump ahead of earlier check-ins (MDV-P1-052)', () => {
+    const early = { ...card('early', 'CheckedIn', '2026-10-19T11:20:00Z'), since: '2026-10-19T10:50:00Z' }; // later slot, arrived first
+    const queued = { ...card('queued', 'CheckedIn', '2026-10-19T11:13:00Z'), since: '2026-10-19T11:13:00Z', unscheduled: true };
+    expect(groupByColumn([queued, early]).CheckedIn.map(c => c.id)).toEqual(['early', 'queued']);
+  });
+
   it('lists visits moved off a doctor on leave in time order, outside the columns (MDV-P1-012)', () => {
     const cards = [card('b', 'NeedsRebooking', '2026-10-19T05:00:00Z'), card('a', 'NeedsRebooking', '2026-10-19T04:00:00Z'), card('c', 'Booked', '2026-10-19T03:00:00Z')];
     expect(needsRebooking(cards).map(c => c.id)).toEqual(['a', 'b']);

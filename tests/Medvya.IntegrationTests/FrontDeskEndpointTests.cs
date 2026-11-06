@@ -99,7 +99,7 @@ public sealed class FrontDeskEndpointTests(PostgresFixture sql) : IClassFixture<
             (await BoardReads()).Select(r => (r.Actor!.Value, r.Outcome)).ToList());
 
         // Inside the window nothing more; after it, the first read writes again.
-        h.Clock.Advance(AuditWindow.Board - TimeSpan.FromSeconds(1));
+        h.Clock.Advance(AuditWindow.Repeated - TimeSpan.FromSeconds(1));
         await reception.GetAsync(url);
         Assert.Equal(5, (await BoardReads()).Count);
         h.Clock.Advance(TimeSpan.FromSeconds(2));
@@ -129,7 +129,7 @@ public sealed class FrontDeskEndpointTests(PostgresFixture sql) : IClassFixture<
     {
         var window = new AuditWindow(h.Clock);
         Guid tenantA = Guid.NewGuid(), tenantB = Guid.NewGuid(), user = Guid.NewGuid();
-        window.Record(AuditWindow.Key(tenantA, user, "front_desk.board.read", "/board?facilityId=1"), AuditWindow.Board);
+        window.Record(AuditWindow.Key(tenantA, user, "front_desk.board.read", "/board?facilityId=1"), AuditWindow.Repeated);
         Assert.True(window.Covered(AuditWindow.Key(tenantA, user, "front_desk.board.read", "/board?facilityId=1")));
         Assert.False(window.Covered(AuditWindow.Key(tenantB, user, "front_desk.board.read", "/board?facilityId=1")));
     }

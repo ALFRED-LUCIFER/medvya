@@ -5,7 +5,7 @@ import { Field } from '../../settings/components/Field';
 import { Section } from '../../settings/components/Section';
 import { fieldError } from '../../settings/components/fieldStyles';
 import { PatientPicker, type PatientSearchView } from '../../schedule/components/BookingPanel';
-import { all, type AuditFilters, type AuditRow } from '../domain/auditLog';
+import { actionKey, all, type AuditFilters, type AuditRow } from '../domain/auditLog';
 
 type Props = {
   filters: AuditFilters;
@@ -28,6 +28,7 @@ type Props = {
 /** Practice access log (F-12): who did what to which record, when, why, and whether it was allowed. Outcome is always written out, never colour alone. */
 export default function AuditLogPanel(p: Props) {
   const { t, formatDate, formatTime } = useI18n();
+  const actionName = (code: string) => { const key = actionKey(code); return key ? t(key) : code; };
   if (p.state === 'forbidden') return <p role="alert" className={fieldError}>{t('audit.forbidden')}</p>;
   const zone = p.filters.zone;
   return (
@@ -47,7 +48,7 @@ export default function AuditLogPanel(p: Props) {
             <SelectTrigger id="audit-action" className="h-11 w-full"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value={all}>{t('audit.anyAction')}</SelectItem>
-              {p.actions.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+              {p.actions.map(a => <SelectItem key={a} value={a}>{actionName(a)}</SelectItem>)}
             </SelectContent>
           </Select>
         </Field>
@@ -87,7 +88,7 @@ export default function AuditLogPanel(p: Props) {
                   <TableCell className="whitespace-nowrap"><time dateTime={r.occurredAt}>{formatDate(at)} {formatTime(at, zone)}</time></TableCell>
                   <TableCell>{r.actorName ?? t('audit.unknownStaff')}</TableCell>
                   <TableCell>{r.role ? t(`role.${r.role}`) : t('audit.roleNotRecorded')}</TableCell>
-                  <TableCell>{r.action}{r.detail && <span className="block text-xs text-muted-foreground">{r.detail}</span>}</TableCell>
+                  <TableCell>{actionName(r.action)}{r.detail && <span className="block text-xs text-muted-foreground">{r.detail}</span>}</TableCell>
                   <TableCell>{r.patientName ?? (r.patientMrn ? t('audit.mrn', { mrn: r.patientMrn }) : '')}</TableCell>
                   <TableCell>{r.purpose}</TableCell>
                   <TableCell className="font-semibold">{t(`audit.outcome.${r.outcome}`)}</TableCell>

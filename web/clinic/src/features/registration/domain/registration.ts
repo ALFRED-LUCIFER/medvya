@@ -101,6 +101,9 @@ const poBox = /^\d{1,10}$/;
 const memberNumber = /^[A-Z0-9/-]{1,50}$/i;
 const email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const isoDate = /^\d{4}-\d{2}-\d{2}$/;
+/** A mobile number of the country, after removing spaces, dashes, dots and brackets (IndiaRules / UaeRules on the server). */
+const mobiles: Record<Country, RegExp> = { IN: /^(?:\+91|0091|91|0)?[6-9]\d{9}$/, AE: /^(?:\+971|00971|971|0)?5\d{8}$/ };
+export const isMobile = (value: string, country: Country) => mobiles[country].test(value.replace(/[\s\-().]/g, ''));
 
 const text = (max = 200) => z.string().max(max, 'too_long');
 
@@ -192,6 +195,7 @@ function checkContact(v: RegistrationForm, country: Country, c: Contact, require
   if (!filled(v[f.name])) issue(f.name, 'required');
   if (!(relationships[country] as readonly string[]).includes(v[f.relationship])) issue(f.relationship, 'required');
   if (!filled(v[f.phone])) issue(f.phone, 'required');
+  else if (!isMobile(v[f.phone], country)) issue(f.phone, 'format.phone');
 }
 
 /** <today>: yyyy-mm-dd on the desk's calendar, for the under-18 guardian rule; the server decides with the facility's day. */
@@ -205,6 +209,8 @@ export function registrationSchema(country: Country, quick: boolean, today: stri
       else if (!Number.isInteger(age) || age < 0 || age > 130) issue('ageYears', 'out_of_range');
     } else if (!isoDate.test(v.dateOfBirth)) issue('dateOfBirth', 'required');
     if (!isSex(v.sexAtBirth)) issue('sexAtBirth', 'required');
+    // Caught here, with every other error at once, instead of by the server after the rest is fixed (MDV-P1-052).
+    if (filled(v.mobile) && !isMobile(v.mobile, country)) issue('mobile', 'format.phone');
 
     if (country === 'IN') {
       if (filled(v.abha) && !abha.test(v.abha.trim())) issue('abha', 'format.Abha');
@@ -232,6 +238,7 @@ export function registrationSchema(country: Country, quick: boolean, today: stri
     }
 
     if (filled(v.email) && !email.test(v.email.trim())) issue('email', 'format.email');
+    if (filled(v.alternatePhone) && !isMobile(v.alternatePhone, country)) issue('alternatePhone', 'format.phone');
     checkAddressAndPayer(v, country, issue);
   });
 }
@@ -470,7 +477,7 @@ export const knownErrors = [
   'required', 'too_long', 'format', 'out_of_range', 'scheme_not_allowed', 'duplicate_scheme', 'not_allowed', 'not_applicable',
   'emirates_id_required', 'emirates_id_or_passport_required', 'emirate_required', 'aadhaar_full_number_not_allowed',
   'format.Abha', 'format.AbhaAddress', 'format.AadhaarLast4', 'format.EmiratesId', 'format.Passport', 'format.pin', 'format.makani', 'format.poBox',
-  'format.email', 'nothing_to_complete', 'required_for_minor',
+  'format.email', 'format.phone', 'nothing_to_complete', 'required_for_minor',
 ] as const;
 export type KnownError = (typeof knownErrors)[number] | 'generic';
 export const errorCode = (code: string | undefined): KnownError =>
@@ -507,21 +514,12 @@ export function formField(serverField: string, request: Pick<RegisterRequest, 'i
 const formatCode: Partial<Record<FormField, KnownError>> = {
   abha: 'format.Abha', abhaAddress: 'format.AbhaAddress', emiratesId: 'format.EmiratesId', passport: 'format.Passport', postalCode: 'format.pin',
   makani: 'format.makani', poBox: 'format.poBox', email: 'format.email',
+  mobile: 'format.phone', alternatePhone: 'format.phone', ecPhone: 'format.phone', guardianPhone: 'format.phone',
 };
 
 /** A server code shown under a field: a format error gets the field's own wording (e.g. "PIN code must be 6 digits"). */
 export const messageFor = (field: FormField, code: string): string => (code === 'format' && formatCode[field]) || code;
 
-/** Side panel "Data map · this step writes" (P-02): which records a step fills. Entity names are the data model's. */
-export const dataMap = {
-  quick: [{ entity: 'PATIENT', key: 'quick' }, { entity: 'PATIENT_IDENTIFIER', key: 'identifier' }],
-  identity: [{ entity: 'PATIENT', key: 'identity' }, { entity: 'PATIENT_IDENTIFIER', key: 'identifier' }],
-  contact: [{ entity: 'PATIENT', key: 'contact' }],
-  family: [{ entity: 'PATIENT_RELATIONSHIP', key: 'family' }],
-  payer: [{ entity: 'PAYER_COVERAGE', key: 'payer' }],
-  consents: [{ entity: 'CONSENT_RECEIPT', key: 'consents' }],
-  review: [{ entity: 'AUDIT_EVENT', key: 'audit' }],
-} as const satisfies Record<Step | 'quick', readonly { entity: string; key: string }[]>;
 
 /** Side panel rules, per country (keys under registration.rules.). */
 export const rules = {

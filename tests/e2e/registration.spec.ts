@@ -72,6 +72,7 @@ test('a possible match appears while typing, blocks save until resolved, and the
   await expect(page.getByRole('heading', { name: 'Deepak Nair is registered' })).toBeVisible();
   await expect(page.getByText(/MRN 001093 · registered .* by A\. Joseph/)).toBeVisible();
   await expect(page.getByText('Attention · quick registration.')).toBeVisible();
+  await expect(page.getByText('turn on reminders under Consents')).toBeVisible(); // MDV-P1-052: where a reminder consent is added later
   expect(saves).toHaveLength(1);
   expect(saves[0]!.postDataJSON()).toMatchObject({ quick: true, fullName: 'Deepak Nair', duplicates: { decision: 'NotSamePerson', candidateIds: [existingId] } });
 });

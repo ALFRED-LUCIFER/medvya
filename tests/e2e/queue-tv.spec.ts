@@ -78,7 +78,9 @@ test('an unknown or revoked link, and a screen never set up, say so', async ({ p
   await expect(page.getByRole('alert').filter({ hasText: 'This screen link is not valid' })).toBeVisible();
   await page.unrouteAll({ behavior: 'ignoreErrors' });
   await openTv(page, { paired: false, link: false });
-  await expect(page.getByRole('alert').filter({ hasText: 'This screen is not set up' })).toBeVisible();
+  await expect(page.getByRole('alert').filter({ hasText: 'This screen is not set up' })).toContainText('Settings, Queue displays');
+  // MDV-P1-052: an unpaired screen does not claim to be connecting.
+  await expect(page.getByRole('status').filter({ hasText: /Connecting|Live updates/ })).toHaveCount(0);
 });
 
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
@@ -127,8 +129,14 @@ test('a practice admin adds a display, gets its link once and revokes it', async
     displays[0]!.revokedAt = '2026-10-19T05:00:00Z';
     return r.fulfill({ status: 204, body: '' });
   });
+  // MDV-P1-052: reached from Settings; the old address redirects there.
+  await page.goto('/settings');
+  await page.getByRole('tab', { name: 'Queue displays' }).click();
+  await expect(page).toHaveURL(/\/settings\?tab=displays$/);
+  await expect(page.getByRole('heading', { level: 2, name: 'Queue displays' })).toBeVisible();
   await page.goto('/admin/displays');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Queue displays');
+  await expect(page).toHaveURL(/\/settings\?tab=displays$/);
+  await expect(page.getByRole('heading', { level: 2, name: 'Queue displays' })).toBeVisible();
 
   await page.getByRole('button', { name: 'Add display' }).click();
   await expect(page.getByText('Name the screen (up to 60 characters).')).toBeVisible();

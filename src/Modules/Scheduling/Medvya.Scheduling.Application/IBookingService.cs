@@ -46,6 +46,11 @@ public sealed record WalkIn
     public Guid PatientId { get; init; }
     public VisitType VisitType { get; init; } = VisitType.FollowUp;
     public ReasonCategory ReasonCategory { get; init; }
+    /// <summary>
+    /// False (the default): refused with "already_today" when the patient already has an open visit today at this facility (booked or
+    /// not yet finished), so the desk is warned before a second visit is made (MDV-P1-052). True once the desk confirms it.
+    /// </summary>
+    public bool AllowRepeat { get; init; }
 }
 
 /// <summary>An appointment as reception sees it: no free-text reason.</summary>

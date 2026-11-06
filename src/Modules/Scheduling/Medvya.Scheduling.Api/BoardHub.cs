@@ -61,7 +61,7 @@ public sealed class BoardHub(
         if (!windows.Covered(key))
         {
             await AuditAsync(AuditOutcome.Allowed);
-            windows.Record(key, AuditWindow.Board);
+            windows.Record(key, AuditWindow.Repeated);
         }
         await Groups.AddToGroupAsync(Context.ConnectionId, group, Context.ConnectionAborted);
     }

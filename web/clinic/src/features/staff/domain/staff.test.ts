@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addableRows, canOffboard, permissionRows, type RoleCatalogue } from './staff';
+import { addableRows, canOffboard, permissionRows, statusLabel, type RoleCatalogue } from './staff';
 
 const catalogue: RoleCatalogue = {
   builtIn: [
@@ -31,6 +31,11 @@ describe('canOffboard', () => {
   const base = { membershipId: 'm', userId: null, name: null, email: null, role: 'Nurse', customRoleId: null, customRoleName: null, facilityId: 'f', facilityName: 'F', mfa: 'enrolled', invitationId: null, invitationState: null, invitationExpiresAt: null } as const;
   it('is offered for people who joined, not invitees or the already offboarded', () => {
     expect((['Active', 'Suspended', 'Invited', 'Offboarded'] as const).map(status => canOffboard({ ...base, status }))).toEqual([true, true, false, false]);
+  });
+
+  it('labels a revoked or expired invitation as such, not as Invited (MDV-P1-052)', () => {
+    expect((['pending', 'revoked', 'expired'] as const).map(invitationState => statusLabel({ ...base, status: 'Invited', invitationState }))).toEqual(['Invited', 'Revoked', 'Expired']);
+    expect(statusLabel({ ...base, status: 'Active' })).toBe('Active');
   });
 });
 

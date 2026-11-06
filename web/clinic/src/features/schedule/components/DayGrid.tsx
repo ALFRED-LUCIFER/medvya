@@ -42,7 +42,8 @@ export default function DayGrid({ day, updating, now, ...actions }: { day: DayLa
         </div>
         {day.columns.map(c => (
           <ul key={c.calendarId} aria-labelledby={`schedule-col-${c.calendarId}`} className="relative border-s" style={{ height: day.height }}>
-            {c.items.map(i => <Item key={`${i.kind}-${i.start}`} item={i} column={c} day={day} time={time} now={now} {...actions} />)}
+            {/* Visits key by id: a rebooked slot holds the cancelled and the new visit at the same start. */}
+            {c.items.map(i => <Item key={i.kind === 'appointment' ? i.id : `${i.kind}-${i.start}`} item={i} column={c} day={day} time={time} now={now} {...actions} />)}
           </ul>
         ))}
       </div>
@@ -66,6 +67,9 @@ function ColumnHeader({ column: c }: { column: ColumnLayout }) {
 /** Below this height the words do not fit; the block then shows its icon and names the reason as its tooltip. */
 const minLabelPx = 32;
 
+/** Horizontal place by lane: a side card (cancelled, no-show) takes the end third, the block it shares time with the rest. */
+const lane = (item: ColumnItem, full: string) => item.lane === 'full' ? full : item.lane === 'main' ? 'start-0 end-[34%]' : 'start-[66%] end-1';
+
 function Item({ item, column, day, time, now, onSlot, onOpen, onDrop, moving }: { item: ColumnItem; column: ColumnLayout; day: DayLayout; time: (iso: string) => string; now: number } & GridActions) {
   const { t } = useI18n();
   const box = { top: item.top, height: item.height };
@@ -81,7 +85,7 @@ function Item({ item, column, day, time, now, onSlot, onOpen, onDrop, moving }: 
 
   if (item.kind === 'slot' && hasStarted(item, now))
     return (
-      <li className={cn('absolute inset-x-0 flex items-start gap-2 overflow-hidden border-t px-2 pt-0.5', hatched)} style={box}>
+      <li className={cn('absolute flex items-start gap-2 overflow-hidden border-t px-2 pt-0.5', lane(item, 'inset-x-0'), hatched)} style={box}>
         <span aria-hidden className="font-mono text-xs text-muted-foreground">{time(item.start)}</span>
         <PastSlot time={time(item.start)} />
       </li>
@@ -89,14 +93,14 @@ function Item({ item, column, day, time, now, onSlot, onOpen, onDrop, moving }: 
   if (item.kind === 'slot' && item.held) {
     const look = scheduleLooks.held, Icon = look.icon;
     return (
-      <li className="absolute inset-x-1 my-0.5 flex items-start gap-1 overflow-hidden rounded-md px-2 py-1 text-xs font-bold" style={{ ...box, backgroundColor: look.bg, color: look.fg }}>
+      <li className={cn('absolute my-0.5 flex items-start gap-1 overflow-hidden rounded-md px-2 py-1 text-xs font-bold', lane(item, 'inset-x-1'))} style={{ ...box, backgroundColor: look.bg, color: look.fg }}>
         <Icon aria-hidden className="mt-px size-3.5 shrink-0" />{t('schedule.slot.held', { time: time(item.start) })}
       </li>
     );
   }
   if (item.kind === 'slot')
     return (
-      <li className="absolute inset-x-0 border-t" style={box}>
+      <li className={cn('absolute border-t', lane(item, 'inset-x-0'))} style={box}>
         {onSlot && (!moving || moving.kind === column.calendarKind) ? (
           <button type="button" aria-label={moving ? t('schedule.slot.moveTo', { patient: moving.patient, name, time: time(item.start) }) : t('schedule.slot.book', { name, time: time(item.start) })}
             onClick={() => onSlot(column.calendarId, name, item.start)}
@@ -114,9 +118,11 @@ function Item({ item, column, day, time, now, onSlot, onOpen, onDrop, moving }: 
     );
   if (item.kind === 'appointment')
     return (
-      <li className="absolute inset-x-1 z-[1] my-0.5" style={box}>
+      <li className={cn('absolute z-[1] my-0.5', lane(item, 'inset-x-1'))} style={box}>
         {onOpen
-          ? <OpenableChip appointment={item} time={time} className="h-full" onOpen={() => onOpen(item, column.calendarId, name)} draggable={!!onDrop && item.state === 'Booked'} />
+          ? <OpenableChip appointment={item} time={time} className="h-full" onOpen={() => onOpen(item, column.calendarId, name)} draggable={!!onDrop && item.state === 'Booked'}
+            // A side card is history: the mouse can still open it; the keyboard path goes to the freed slot (List view lists it in order).
+            skipTab={item.lane === 'side'} />
           : <AppointmentChip appointment={item} time={time} className="h-full" />}
       </li>
     );
@@ -125,7 +131,7 @@ function Item({ item, column, day, time, now, onSlot, onOpen, onDrop, moving }: 
   const words = t('schedule.unavailableBlock', { reason });
   const compact = item.height < minLabelPx;
   return (
-    <li title={compact ? words : undefined} className={cn('absolute inset-x-1 my-0.5 overflow-hidden rounded-md border', hatched, compact ? 'grid place-items-center' : 'px-2 py-1')}
+    <li title={compact ? words : undefined} className={cn('absolute my-0.5 overflow-hidden rounded-md border', lane(item, 'inset-x-1'), hatched, compact ? 'grid place-items-center' : 'px-2 py-1')}
       style={{ ...box, color: look.fg }}>
       <span aria-hidden className="flex items-center gap-1 text-xs font-bold">
         <Icon className="size-3.5 shrink-0" />{!compact && words}

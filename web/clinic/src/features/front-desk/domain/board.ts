@@ -37,11 +37,14 @@ export const nextState = (state: BoardColumn): BoardColumn | null => boardColumn
 
 export const isBoardColumn = (state: AppointmentState): state is BoardColumn => (boardColumns as readonly string[]).includes(state);
 
-/** Cards per column, each column in time order. */
+/**
+ * Cards per column: Booked by appointment time; every later column in the order patients entered it, so Checked in follows the
+ * token order and a walk-in queued "now" with no slot does not jump ahead of patients who arrived earlier (MDV-P1-052).
+ */
 export function groupByColumn(cards: BoardCard[]): Record<BoardColumn, BoardCard[]> {
   const groups = Object.fromEntries(boardColumns.map(c => [c, [] as BoardCard[]])) as Record<BoardColumn, BoardCard[]>;
   for (const card of cards) if (isBoardColumn(card.state)) groups[card.state].push(card);
-  for (const c of boardColumns) groups[c].sort((a, b) => Date.parse(a.start) - Date.parse(b.start));
+  for (const c of boardColumns) groups[c].sort((a, b) => c === 'Booked' ? Date.parse(a.start) - Date.parse(b.start) : Date.parse(a.since) - Date.parse(b.since));
   return groups;
 }
 
@@ -68,9 +71,12 @@ export const moveError = (code: string | undefined): MoveError =>
 export type WalkInChoice = { calendarId: string; visitType: VisitType; reasonCategory: ReasonCategory };
 export type WalkInVisit = { id: string; calendarId: string; start: string; end: string; walkIn: boolean; unscheduled: boolean; patientName: string };
 export const emptyWalkIn: WalkInChoice = { calendarId: '', visitType: 'FollowUp', reasonCategory: 'General' };
+/** Just registered at the desk: a first visit, not a follow-up. */
+export const newPatientWalkIn: WalkInChoice = { ...emptyWalkIn, visitType: 'NewConsultation' };
 
 /** 409 codes of a walk-in: nothing free today (the desk then chooses a doctor to queue with), or the calendar is busy. */
-export const walkInErrors = ['no_free_slot', 'busy', 'terms_not_accepted'] as const;
+// already_today: the patient has an open visit today; the desk confirms before a second one is made (MDV-P1-052).
+export const walkInErrors = ['no_free_slot', 'busy', 'terms_not_accepted', 'already_today'] as const;
 export type WalkInError = (typeof walkInErrors)[number] | 'failed';
 export const walkInError = (code: string | undefined): WalkInError =>
   (walkInErrors as readonly string[]).includes(code ?? '') ? (code as WalkInError) : 'failed';

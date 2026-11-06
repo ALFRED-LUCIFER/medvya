@@ -92,3 +92,24 @@ public sealed class StaffNotificationRead
     [Classification(DataClass.Internal)] public Guid UserId { get; init; }
     [Classification(DataClass.Internal)] public DateTimeOffset ReadAt { get; init; }
 }
+
+/// <summary>
+/// NOTIFICATION_PREFERENCE (MDV-P1-006): which messages a practice sends, on which channels, and its quiet hours. One row per tenant;
+/// no row means everything on with the host's default quiet hours. Holds no patient data.
+/// </summary>
+public sealed class NotificationPreference
+{
+    [Classification(DataClass.Internal)] public Guid TenantId { get; init; }
+    [Classification(DataClass.Internal)] public bool Confirmation { get; set; }
+    [Classification(DataClass.Internal)] public bool Reminder24h { get; set; }
+    [Classification(DataClass.Internal)] public bool Reminder2h { get; set; }
+    /// <summary>Messages about a changed or cancelled visit (rescheduled, cancelled, needs rebooking).</summary>
+    [Classification(DataClass.Internal)] public bool Changes { get; set; }
+    [Classification(DataClass.Internal)] public bool Email { get; set; }
+    [Classification(DataClass.Internal)] public bool Sms { get; set; }
+    /// <summary>Facility-local window with no SMS; equal values mean no quiet hours.</summary>
+    [Classification(DataClass.Internal)] public TimeOnly QuietStart { get; set; }
+    [Classification(DataClass.Internal)] public TimeOnly QuietEnd { get; set; }
+    [Classification(DataClass.Internal)] public Guid? ChangedBy { get; set; }
+    [Classification(DataClass.Internal)] public DateTimeOffset ChangedAt { get; set; }
+}

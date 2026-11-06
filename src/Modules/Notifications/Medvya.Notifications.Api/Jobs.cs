@@ -42,9 +42,8 @@ public sealed partial class NotificationJobs(IServiceProvider services, ILogger<
                 {
                     var dispatcher = scope.ServiceProvider.GetRequiredService<IOutboxDispatcher>();
                     while (await dispatcher.DispatchAsync(Batch, cancellationToken) == Batch) { }
-                    // Messages wait queued until the owner accepts the terms (MDV-P1-019); they go out after, unless the visit has started.
-                    if (await scope.ServiceProvider.GetRequiredService<ITermsAcceptance>().IsSatisfiedAsync(cancellationToken))
-                        await scope.ServiceProvider.GetRequiredService<INotificationSender>().SendDueAsync(Batch, cancellationToken);
+                    // The sender holds back all but cancellations until the owner accepts the terms (MDV-P1-019).
+                    await scope.ServiceProvider.GetRequiredService<INotificationSender>().SendDueAsync(Batch, cancellationToken);
                 }
                 // Licence expiry and access review reminders for the owners (MDV-P1-010); idempotent, so every minute is fine.
                 await scope.ServiceProvider.GetRequiredService<IComplianceReminders>().RunAsync(cancellationToken);

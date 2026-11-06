@@ -641,7 +641,8 @@ namespace Medvya.Tenancy.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("TenantId", "TermsVersion");
+                    b.HasIndex("TenantId", "TermsVersion")
+                        .IsUnique();
 
                     b.ToTable("TermsAcceptances", "tenancy");
                 });

@@ -8,6 +8,7 @@ using Medvya.Tenancy.Application;
 using Medvya.Tenancy.Domain;
 using Medvya.Tenancy.Infrastructure;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
 using Npgsql;
 using Microsoft.EntityFrameworkCore;
@@ -77,9 +78,10 @@ public sealed class TermsAcceptanceTests(PostgresFixture sql) : IClassFixture<Po
 
     Task<HttpResponseMessage> WalkIn(HttpClient c) => c.PostAsJsonAsync(Url("/v1/appointments/walk-in"), new { facilityId = facility, patientId = meera, reasonCategory = "ChronicReview" });
 
-    // SAFETY: mutation check: removing .RequireAcceptedTerms() from the walk-in or booking endpoint makes this fail (the first call is no longer refused).
+    // SAFETY: mutation check: removing .RequireAcceptedTerms() from the walk-in, booking, hold or reschedule endpoint makes this fail (that call is
+    // no longer refused); moving the gate back outside the audit filter (FilterFactories.Insert(0)) leaves the refusals unaudited.
     [Fact]
-    public async Task BookingIsRefusedUntilTheOwnerAcceptsTheCurrentTermsThenAllowed()
+    public async Task BookingHoldingAndReschedulingAreRefusedAndAuditedUntilTheOwnerAcceptsTheCurrentTermsThenAllowed()
     {
         using var host = Host();
         using var desk = Client(host, "receptionist");
@@ -88,6 +90,12 @@ public sealed class TermsAcceptanceTests(PostgresFixture sql) : IClassFixture<Po
         Assert.Equal("terms_not_accepted", await Code(await WalkIn(desk)));
         Assert.Equal("terms_not_accepted", await Code(await desk.PostAsJsonAsync(Url("/v1/appointments/"), new { holdId = Guid.NewGuid(), patientId = meera, reasonCategory = "ChronicReview" })));
         Assert.Equal("terms_not_accepted", await Code(await desk.PostAsJsonAsync(Url("/v1/appointments/series"), new { })));
+        Assert.Equal("terms_not_accepted", await Code(await desk.PostAsJsonAsync(Url("/v1/slot-holds/"), new { })));
+        Assert.Equal("terms_not_accepted", await Code(await desk.PostAsJsonAsync(Url($"/v1/appointments/{Guid.NewGuid()}/reschedule"), new { })));
+        await using (var audit = sql.Audit(tenant))
+            Assert.Equal(["appointment.book", "appointment.reschedule", "appointment.walk_in", "slot.hold"],
+                (await audit.Events.Where(e => e.Outcome == Medvya.Audit.Domain.AuditOutcome.Denied && e.Detail == "terms_not_accepted" && e.ActorUserId == users["receptionist"])
+                    .Select(e => e.Action).Distinct().ToListAsync()).Order());
 
         Assert.Equal(HttpStatusCode.OK, (await admin.PostAsync(Url("/v1/settings/terms/accept"), null)).StatusCode);
 
@@ -141,6 +149,32 @@ public sealed class TermsAcceptanceTests(PostgresFixture sql) : IClassFixture<Po
         var terms = new TermsAcceptances(otherDb, new PostgresFixture.FixedTenant(other), new SignedInUser(Guid.NewGuid()), null!, null!, TimeProvider.System, config);
         Assert.False(await terms.IsSatisfiedAsync());
         Assert.False((await terms.StatusAsync()).Accepted);
+    }
+
+    // SAFETY: mutation check: removing the unique index (UniqueTermsAcceptance migration) lets the second row in.
+    [Fact]
+    public async Task OneAcceptancePerVersionEvenWhenTwoArriveAtOnce()
+    {
+        using (var host = Host())
+        {
+            var clicks = Enumerable.Range(0, 4).Select(_ => Client(host, "admin")).ToList();
+            var answers = await Task.WhenAll(clicks.Select(c => c.PostAsync(Url("/v1/settings/terms/accept"), null)));
+            Assert.All(answers, a => Assert.Equal(HttpStatusCode.OK, a.StatusCode));
+            clicks.ForEach(c => c.Dispose());
+        }
+        await using var db = sql.Context(tenant);
+        Assert.Equal(1, await db.TermsAcceptances.CountAsync());
+        db.TermsAcceptances.Add(new TermsAcceptance { Id = Guid.NewGuid(), TenantId = tenant, TermsVersion = TermsPolicy.CurrentVersion, AcceptedAt = DateTimeOffset.UtcNow, AcceptedBy = users["admin"] });
+        var e = await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
+        Assert.Equal(PostgresErrorCodes.UniqueViolation, Assert.IsType<PostgresException>(e.InnerException).SqlState);
+    }
+
+    // SAFETY: mutation check: removing the startup check in Program.cs lets a Production host start with the gate off.
+    [Fact]
+    public void SwitchingTheGateOffOutsideDevelopmentStopsTheHostFromStarting()
+    {
+        using var host = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b.UseEnvironment("Production").UseSetting("Terms:RequireAcceptance", "false"));
+        Assert.Contains("Development only", Assert.Throws<InvalidOperationException>(() => host.CreateClient()).Message);
     }
 
     [Fact]

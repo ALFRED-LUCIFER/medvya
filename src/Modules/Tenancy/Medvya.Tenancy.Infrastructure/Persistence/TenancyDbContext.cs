@@ -92,7 +92,7 @@ public sealed class TenancyDbContext(DbContextOptions<TenancyDbContext> options,
             // A ledger table (TermsAcceptances migration): append-only.
             e.Property(x => x.TermsVersion).HasMaxLength(32);
             e.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
-            e.HasIndex(x => new { x.TenantId, x.TermsVersion });
+            e.HasIndex(x => new { x.TenantId, x.TermsVersion }).IsUnique(); // one acceptance per version, even for two simultaneous clicks
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         modelBuilder.Entity<FeatureFlag>(e =>

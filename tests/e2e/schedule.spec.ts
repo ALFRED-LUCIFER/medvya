@@ -91,7 +91,7 @@ type Calls = {
 const nair = { id: patientId, initials: 'DN', ageYears: 47, ageEstimated: false, sexAtBirth: 'Male', mrnTail: '0002', status: 'Complete' };
 
 /** Signs in and answers the scheduling API; returns what the page sent. `holdCode` makes holds fail with that 409 code. */
-async function open(page: Page, { locale = 'en', status = 200, as = reception, holdCode = '', delayMs = 0, changeCode = '' } = {}) {
+async function open(page: Page, { locale = 'en', status = 200, as = reception, holdCode = '', delayMs = 0, changeCode = '', refusal = 409 } = {}) {
   const calls: Calls = { changes: [], series: [], weeks: [], dates: [], holds: [], releases: [], searches: [], bookings: [] };
   await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
   await page.route('**/v1/me/context', r => r.fulfill({ json: as }));
@@ -112,7 +112,7 @@ async function open(page: Page, { locale = 'en', status = 200, as = reception, h
   await page.route('**/v1/slot-holds', r => {
     const body = r.request().postDataJSON() as { calendarId: string; start: string; visitType: string };
     calls.holds.push(body);
-    if (holdCode) return r.fulfill({ status: 409, json: { title: 'Slot no longer available', code: holdCode } });
+    if (holdCode) return r.fulfill({ status: refusal, json: { title: 'Slot no longer available', code: holdCode } });
     const end = new Date(Date.parse(body.start) + (body.visitType === 'NewConsultation' ? 40 : 20) * 60_000).toISOString();
     return r.fulfill({ json: { id: `h-${calls.holds.length}`, facilityId: 'f-1', ...body, end, expiresAt: ist('2026-10-19', '08:02') } });
   });
@@ -149,7 +149,7 @@ async function open(page: Page, { locale = 'en', status = 200, as = reception, h
   await page.route(/\/v1\/appointments\/[^/]+\/(reschedule|cancel|no-show|check-in)$/, r => {
     const url = r.request().url(), body = (r.request().postDataJSON() ?? {}) as Record<string, unknown>;
     calls.changes.push({ url, body });
-    if (changeCode) return r.fulfill({ status: 409, json: { title: 'Visit cannot make this move', code: changeCode } });
+    if (changeCode) return r.fulfill({ status: refusal, json: { title: 'Visit cannot make this move', code: changeCode } });
     const base = scheduleDay('2026-10-19').columns[0]!.appointments[0]!;
     const state = url.endsWith('/cancel') ? 'Cancelled' : url.endsWith('/no-show') ? 'NoShow' : url.endsWith('/check-in') ? 'CheckedIn' : 'Booked';
     const start = (body.start as string | undefined) ?? base.start;
@@ -685,6 +685,29 @@ test('a refused change says why and refreshes the schedule', async ({ page }) =>
   await expect(page.getByRole('alert').filter({ hasText: 'Someone changed this appointment meanwhile.' })).toBeVisible();
   await expect.poll(() => calls.dates.length).toBeGreaterThan(before);
 });
+
+// MDV-P1-019: holding a slot and moving a visit are refused (403 terms_not_accepted) until the owner accepts the terms; both say where to fix it.
+for (const [locale, book, hold, move] of [
+  ['en', 'Book Dr. Arjun Rao (synthetic) at 10:20', /Booking is paused/, /Moving is paused/],
+  ['ar', 'احجز مع Dr. Arjun Rao (synthetic) الساعة 10:20', /الحجز متوقف/, /تغيير الموعد متوقف/],
+] as const)
+  test(`a hold or a move refused for unaccepted terms names Settings → Terms, axe clean (${locale})`, async ({ page }) => {
+    await page.clock.setFixedTime(new Date(ist('2026-10-19', '08:30')));
+    await open(page, { locale, holdCode: 'terms_not_accepted', changeCode: 'terms_not_accepted', refusal: 403 });
+    await page.getByRole('button', { name: book }).click();
+    await expect(page.getByRole('alert').filter({ hasText: hold }).getByRole('link')).toHaveAttribute('href', '/settings?tab=terms');
+    await page.goto('/schedule');
+    await column(page, 'Dr. Arjun Rao (synthetic)').getByRole('button', { name: /Meera Iyer/ }).click();
+    const panel = page.getByRole('complementary', { name: locale === 'ar' ? 'الموعد' : 'Appointment' });
+    const ar = locale === 'ar';
+    await panel.getByRole('button', { name: ar ? 'تغيير الموعد' : 'Reschedule', exact: true }).click();
+    await page.getByRole('button', { name: ar ? 'نقل Meera Iyer (synthetic) إلى Dr. Arjun Rao (synthetic) الساعة 10:20' : 'Move Meera Iyer (synthetic) to Dr. Arjun Rao (synthetic) at 10:20' }).click();
+    await page.getByRole('button', { name: ar ? 'نقل الموعد' : 'Move appointment', exact: true }).click();
+    await expect(page.getByRole('alert').filter({ hasText: move }).getByRole('link')).toHaveAttribute('href', '/settings?tab=terms');
+    expect(await page.evaluate(() => document.documentElement.dir)).toBe(locale === 'ar' ? 'rtl' : 'ltr');
+    await page.addScriptTag({ path: axePath });
+    expect(await page.evaluate(async () => (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string }[] }> } }).axe.run()).violations.map(v => v.id))).toEqual([]);
+  });
 
 for (const locale of ['en', 'ar'] as const)
   test(`the appointment panel is keyboard-operable with 44 px targets and axe-clean (${locale})`, async ({ page }) => {

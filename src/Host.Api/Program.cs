@@ -71,6 +71,9 @@ builder.Services.Configure<NotificationOptions>(builder.Configuration.GetSection
 // Reminder consent comes from the patient's consent receipts. Local runs may switch the check off explicitly; never outside Development.
 if (builder.Environment.IsDevelopment() && builder.Configuration.GetValue("Notifications:DevAllowAllConsent", false))
     builder.Services.AddSingleton<IReminderConsent, DevAllowAllConsent>();
+// The terms gate (MDV-P1-019) may be switched off for local runs only; anywhere else that setting is a startup error, never a silent bypass.
+if (!builder.Environment.IsDevelopment() && !builder.Configuration.GetValue("Terms:RequireAcceptance", true))
+    throw new InvalidOperationException("Terms:RequireAcceptance=false is allowed in Development only.");
 builder.AddJobs(builder.Configuration.GetConnectionString("Medvya"));
 builder.Services.Configure<SchedulingOptions>(builder.Configuration.GetSection("Scheduling"));
 // Live board (MDV-P1-029): every hub call runs as the connection's signed-in user, with its session checked again.

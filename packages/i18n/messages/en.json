@@ -713,6 +713,7 @@
   "appointment.error.in_past": "That slot has already started. Choose a later slot.",
   "appointment.error.busy": "This calendar is busy with other changes right now. Nothing was saved; try again.",
   "appointment.error.failed": "That did not work. Nothing was changed; try again.",
+  "appointment.error.terms_not_accepted": "Moving is paused: the practice has not accepted the Terms of Service yet. The practice owner accepts them in Settings → Terms.",
   "schedule.slot.moveTo": "Move {patient} to {name} at {time}",
   "schedule.slot.moveShort": "Move",
   "booking.rebook.title": "Rebook {name}",

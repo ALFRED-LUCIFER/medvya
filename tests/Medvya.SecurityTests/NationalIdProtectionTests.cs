@@ -19,6 +19,11 @@ public sealed class NationalIdProtectionTests
     private static readonly Guid TenantA = Guid.Parse("00000000-0000-0000-0000-00000000000a");
     private static readonly Guid TenantB = Guid.Parse("00000000-0000-0000-0000-00000000000b");
 
+    // A value is bound to its column and row (MDV-P0-041), as NationalIdColumns binds it.
+    private const string Row1 = "patients.Identifiers.LookupValue:0000000000000000000000000000000a";
+    private const string Row2 = "patients.Identifiers.LookupValue:0000000000000000000000000000000b";
+    private const string OtherColumn = "patients.Identifiers.DisplayValue:0000000000000000000000000000000a";
+
     private sealed class Env(string name) : IHostEnvironment
     {
         public string EnvironmentName { get; set; } = name;
@@ -49,8 +54,8 @@ public sealed class NationalIdProtectionTests
     public void RoundTripsAndIsNotPlaintext()
     {
         var r = new Rig();
-        var value = r.Protector.Protect(TenantA, Aadhaar);
-        Assert.Equal(Aadhaar, r.Protector.Unprotect(TenantA, value));
+        var value = r.Protector.Protect(TenantA, Aadhaar, Row1);
+        Assert.Equal(Aadhaar, r.Protector.Unprotect(TenantA, value, Row1));
         Assert.False(value.AsSpan().IndexOf("2345"u8) >= 0);
     }
 
@@ -58,12 +63,12 @@ public sealed class NationalIdProtectionTests
     public void TamperingWithAnyByteFails()
     {
         var r = new Rig();
-        var value = r.Protector.Protect(TenantA, EmiratesId);
+        var value = r.Protector.Protect(TenantA, EmiratesId, Row1);
         for (var i = 0; i < value.Length; i++)
         {
             var bad = (byte[])value.Clone();
             bad[i] ^= 0x01;
-            Assert.Throws<KeyProtectionException>(() => r.Protector.Unprotect(TenantA, bad));
+            Assert.Throws<KeyProtectionException>(() => r.Protector.Unprotect(TenantA, bad, Row1));
         }
     }
 
@@ -71,8 +76,19 @@ public sealed class NationalIdProtectionTests
     public void ValueFromOneTenantDoesNotDecryptUnderAnother()
     {
         var r = new Rig();
-        var value = r.Protector.Protect(TenantA, EmiratesId);
-        Assert.Throws<KeyProtectionException>(() => r.Protector.Unprotect(TenantB, value));
+        var value = r.Protector.Protect(TenantA, EmiratesId, Row1);
+        Assert.Throws<KeyProtectionException>(() => r.Protector.Unprotect(TenantB, value, Row1));
+    }
+
+    [Fact]
+    public void AValueCopiedToAnotherRowOrColumnDoesNotDecrypt()
+    {
+        // SAFETY: mutation check: dropping the binding from AssociatedData makes this fail (MDV-P0-041 PR).
+        var r = new Rig();
+        var value = r.Protector.Protect(TenantA, EmiratesId, Row1);
+        Assert.Throws<KeyProtectionException>(() => r.Protector.Unprotect(TenantA, value, Row2));
+        Assert.Throws<KeyProtectionException>(() => r.Protector.Unprotect(TenantA, value, OtherColumn));
+        Assert.Throws<ArgumentException>(() => r.Protector.Protect(TenantA, EmiratesId, ""));
     }
 
     [Fact]
@@ -81,8 +97,8 @@ public sealed class NationalIdProtectionTests
         // Same data key for both tenants: only the tenant id in the associated data can stop the read.
         var shared = new SharedKeyStore();
         var a = new Rig(store: shared);
-        var value = a.Protector.Protect(TenantA, EmiratesId);
-        Assert.Throws<KeyProtectionException>(() => a.Protector.Unprotect(TenantB, value));
+        var value = a.Protector.Protect(TenantA, EmiratesId, Row1);
+        Assert.Throws<KeyProtectionException>(() => a.Protector.Unprotect(TenantB, value, Row1));
     }
 
     private sealed class SharedKeyStore : IWrappedKeyStore
@@ -97,7 +113,7 @@ public sealed class NationalIdProtectionTests
     public void NonceIsUniqueOver10000Calls()
     {
         var r = new Rig();
-        var nonces = Enumerable.Range(0, 10_000).Select(_ => Convert.ToHexString(r.Protector.Protect(TenantA, Aadhaar).AsSpan(1, 12))).ToHashSet();
+        var nonces = Enumerable.Range(0, 10_000).Select(_ => Convert.ToHexString(r.Protector.Protect(TenantA, Aadhaar, Row1).AsSpan(1, 12))).ToHashSet();
         Assert.Equal(10_000, nonces.Count);
     }
 
@@ -105,7 +121,7 @@ public sealed class NationalIdProtectionTests
     public void SamePlaintextGivesDifferentCiphertextButTheSameBlindIndexWhichDiffersPerTenant()
     {
         var r = new Rig();
-        Assert.NotEqual(r.Protector.Protect(TenantA, Aadhaar), r.Protector.Protect(TenantA, Aadhaar));
+        Assert.NotEqual(r.Protector.Protect(TenantA, Aadhaar, Row1), r.Protector.Protect(TenantA, Aadhaar, Row1));
         var n = BlindIndex.Normalise(Aadhaar);
         Assert.Equal(r.Index.Compute(TenantA, n), r.Index.Compute(TenantA, n));
         Assert.NotEqual(r.Index.Compute(TenantA, n), r.Index.Compute(TenantB, n));
@@ -127,7 +143,7 @@ public sealed class NationalIdProtectionTests
         var masters = Masters("v1", "v2");
         var env = new Env("Development");
         var before = new Rig(new LocalKeyWrapper(env, masters, "v1"), store);
-        var value = before.Protector.Protect(TenantA, EmiratesId);
+        var value = before.Protector.Protect(TenantA, EmiratesId, Row1);
         var index = before.Index.Compute(TenantA, "X");
         Assert.Equal("v1", store.Find(TenantA, TenantKeyRing.DataPurpose)!.WrapKeyId);
 
@@ -136,11 +152,11 @@ public sealed class NationalIdProtectionTests
 
         Assert.Equal("v2", store.Find(TenantA, TenantKeyRing.DataPurpose)!.WrapKeyId);
         Assert.Equal("v2", store.Find(TenantA, TenantKeyRing.BlindIndexPurpose)!.WrapKeyId);
-        Assert.Equal(EmiratesId, after.Protector.Unprotect(TenantA, value));
+        Assert.Equal(EmiratesId, after.Protector.Unprotect(TenantA, value, Row1));
         Assert.Equal(index, after.Index.Compute(TenantA, "X"));
         // Retiring v1 now breaks nothing, which proves the stored keys no longer depend on it.
         var onlyV2 = new Rig(new LocalKeyWrapper(env, new Dictionary<string, byte[]> { ["v2"] = masters["v2"] }, "v2"), store);
-        Assert.Equal(EmiratesId, onlyV2.Protector.Unprotect(TenantA, value));
+        Assert.Equal(EmiratesId, onlyV2.Protector.Unprotect(TenantA, value, Row1));
     }
 
     [Fact]
@@ -149,11 +165,11 @@ public sealed class NationalIdProtectionTests
         var clock = new FakeClock();
         var counting = new CountingWrapper();
         var r = new Rig(counting, clock: clock);
-        r.Protector.Protect(TenantA, Aadhaar);
-        r.Protector.Protect(TenantA, Aadhaar);
+        r.Protector.Protect(TenantA, Aadhaar, Row1);
+        r.Protector.Protect(TenantA, Aadhaar, Row1);
         Assert.Equal(1, counting.Unwraps);
         clock.Now = clock.Now.AddSeconds(61);
-        r.Protector.Protect(TenantA, Aadhaar);
+        r.Protector.Protect(TenantA, Aadhaar, Row1);
         Assert.Equal(2, counting.Unwraps);
     }
 
@@ -213,7 +229,7 @@ public sealed class NationalIdProtectionTests
         services.AddNationalIdProtection();
         using var sp = services.BuildServiceProvider();
         var p = sp.GetRequiredService<INationalIdProtector>();
-        Assert.Equal(Aadhaar, p.Unprotect(TenantA, p.Protect(TenantA, Aadhaar)));
+        Assert.Equal(Aadhaar, p.Unprotect(TenantA, p.Protect(TenantA, Aadhaar, Row1), Row1));
     }
 
     // Key Vault seam: a CryptographyClient subclass, no network.
@@ -236,14 +252,14 @@ public sealed class NationalIdProtectionTests
         Assert.Equal("https://vault.test/keys/k/v7", wrapped.KeyId);
         Assert.Equal(new byte[] { 1, 2, 3, 4 }, w.Unwrap(wrapped.KeyId, wrapped.Bytes));
         var r = new Rig(w);
-        Assert.Equal(Aadhaar, r.Protector.Unprotect(TenantA, r.Protector.Protect(TenantA, Aadhaar)));
+        Assert.Equal(Aadhaar, r.Protector.Unprotect(TenantA, r.Protector.Protect(TenantA, Aadhaar, Row1), Row1));
     }
 
     [Fact]
     public void KeyVaultOutageFailsClosedWithATypedExceptionThatLeaksNothing()
     {
         var r = new Rig(new AzureKeyVaultKeyWrapper(_ => new FakeCryptographyClient("k", fail: true)));
-        var ex = Assert.Throws<KeyProtectionException>(() => r.Protector.Protect(TenantA, Aadhaar));
+        var ex = Assert.Throws<KeyProtectionException>(() => r.Protector.Protect(TenantA, Aadhaar, Row1));
         Assert.Equal(KeyProtectionException.KeysUnavailable, ex.Message);
         Assert.DoesNotContain("2345", ex.Message);
         Assert.DoesNotContain(TenantA.ToString(), ex.Message);
@@ -253,16 +269,15 @@ public sealed class NationalIdProtectionTests
     public void ExceptionsNeverContainTheValueOrTenant()
     {
         var r = new Rig();
-        var good = r.Protector.Protect(TenantA, EmiratesId);
+        var good = r.Protector.Protect(TenantA, EmiratesId, Row1);
         var bad = (byte[])good.Clone();
         bad[^1] ^= 1;
         var texts = new[]
         {
-            Assert.Throws<KeyProtectionException>(() => r.Protector.Unprotect(TenantA, bad)).ToString(),
-            Assert.Throws<KeyProtectionException>(() => r.Protector.Unprotect(TenantB, good)).ToString(),
-            Assert.Throws<KeyProtectionException>(() => r.Protector.Unprotect(TenantA, [1, 2, 3])).ToString(),
-            Assert.Throws<ArgumentException>(() => r.Protector.Protect(TenantA, "")).ToString(),
-            Assert.Throws<KeyProtectionException>(() => NationalIdValueConverter.RequireTenant(() => null)).ToString(),
+            Assert.Throws<KeyProtectionException>(() => r.Protector.Unprotect(TenantA, bad, Row1)).ToString(),
+            Assert.Throws<KeyProtectionException>(() => r.Protector.Unprotect(TenantB, good, Row1)).ToString(),
+            Assert.Throws<KeyProtectionException>(() => r.Protector.Unprotect(TenantA, [1, 2, 3], Row1)).ToString(),
+            Assert.Throws<ArgumentException>(() => r.Protector.Protect(TenantA, "", Row1)).ToString(),
         };
         foreach (var t in texts)
         {
@@ -271,19 +286,5 @@ public sealed class NationalIdProtectionTests
             Assert.DoesNotContain(TenantB.ToString(), t);
             Assert.DoesNotContain(Convert.ToHexString(good), t, StringComparison.OrdinalIgnoreCase);
         }
-    }
-
-    [Fact]
-    public void EfConverterUsesTheTenantAccessor()
-    {
-        var r = new Rig();
-        Guid? tenant = TenantA;
-        var c = NationalIdValueConverter.Create(r.Protector, () => tenant);
-        var stored = (byte[])c.ConvertToProvider(Aadhaar)!;
-        Assert.Equal(Aadhaar, c.ConvertFromProvider(stored));
-        tenant = TenantB;
-        Assert.Throws<KeyProtectionException>(() => c.ConvertFromProvider(stored));
-        tenant = null;
-        Assert.Throws<KeyProtectionException>(() => c.ConvertToProvider(Aadhaar));
     }
 }

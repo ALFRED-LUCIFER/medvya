@@ -2,6 +2,8 @@
 -- Run by the database administrator (a superuser locally; the Azure PostgreSQL administrator in the cloud) BEFORE migrations, and
 -- again whenever a module is added. Idempotent: safe to re-run. None of the roles below can log in; a login is created IN ROLE one
 -- of them (docs/03-architecture/database-security.md).
+-- Rights on single tables that are narrower than their schema's (DataKeys, the ids-only lists, the ledger, what reporting may read) live in
+-- table-rights.sql, which db-migrate applies after this script and again after every migration run, once the tables exist.
 --
 --   medvya_owner      Owns every schema and table, so it can run DDL and keeps the owner's data rights (foreign-key checks run as the
 --                     owner and need them). Nobody logs in as it.
@@ -86,26 +88,31 @@ BEGIN
 END $$;
 
 -- Ledger (MDV-P0-036): the shared hash-chain functions and their ids-only bookkeeping (ledger."Tables", ledger."Chains"). Every role that
--- inserts into a hash-chained table runs the chain trigger, which records a new chain; audit also runs the daily digest and verification.
--- No UPDATE or DELETE: a chain is never unlisted. Add a module role here when its first table is ledgered.
+-- inserts into a hash-chained table runs the chain trigger, which reads the table's column list and records a new chain; audit also runs
+-- the daily digest and verification. Read only here: the one INSERT right (on "Chains") is in table-rights.sql, so "Tables" is written by
+-- migrations alone (MDV-P0-041). No UPDATE or DELETE: a chain is never unlisted. Add a module role here when its first table is ledgered.
 DO $$
 DECLARE r text;
 BEGIN
     FOREACH r IN ARRAY ARRAY['medvya_tenancy', 'medvya_patients', 'medvya_audit']
     LOOP
         EXECUTE format('GRANT USAGE ON SCHEMA ledger TO %I', r);
-        EXECUTE format('GRANT SELECT, INSERT ON ALL TABLES IN SCHEMA ledger TO %I', r);
-        EXECUTE format('ALTER DEFAULT PRIVILEGES FOR ROLE medvya_owner IN SCHEMA ledger GRANT SELECT, INSERT ON TABLES TO %I', r);
+        EXECUTE format('REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON ALL TABLES IN SCHEMA ledger FROM %I', r);
+        EXECUTE format('GRANT SELECT ON ALL TABLES IN SCHEMA ledger TO %I', r);
+        EXECUTE format('ALTER DEFAULT PRIVILEGES FOR ROLE medvya_owner IN SCHEMA ledger REVOKE INSERT ON TABLES FROM %I', r);
+        EXECUTE format('ALTER DEFAULT PRIVILEGES FOR ROLE medvya_owner IN SCHEMA ledger GRANT SELECT ON TABLES TO %I', r);
     END LOOP;
 END $$;
 
--- Reporting reads the tenancy schema (still inside RLS) and the masked views in schema reporting (MDV-P0-037: initials, age band, identifier
--- scheme and length; never a name, date of birth, contact, address or identifier value). It has no right on patients, audit, identity or
--- scheduling tables, so a base-table query is denied. The views are owned by medvya_owner, and FORCE ROW LEVEL SECURITY on the base tables
--- binds the owner, so a reporting session still sees only its tenant.
+-- Reporting reads the tenancy tables listed in table-rights.sql (no personal data; still inside RLS) and the masked views in schema reporting
+-- (MDV-P0-037: initials, age band, identifier scheme and length; never a name, date of birth, contact, address or identifier value). It has
+-- no right on patients, audit, identity or scheduling tables, so a base-table query is denied. The views are owned by medvya_owner, and FORCE
+-- ROW LEVEL SECURITY on the base tables binds the owner, so a reporting session still sees only its tenant. A new tenancy table is not
+-- readable until it is added to the list (MDV-P0-041: no schema-wide or default right on tenancy).
 GRANT USAGE ON SCHEMA tenancy, reporting TO medvya_reporting;
-GRANT SELECT ON ALL TABLES IN SCHEMA tenancy, reporting TO medvya_reporting;
-ALTER DEFAULT PRIVILEGES FOR ROLE medvya_owner IN SCHEMA tenancy GRANT SELECT ON TABLES TO medvya_reporting;
+REVOKE ALL ON ALL TABLES IN SCHEMA tenancy FROM medvya_reporting;
+ALTER DEFAULT PRIVILEGES FOR ROLE medvya_owner IN SCHEMA tenancy REVOKE SELECT ON TABLES FROM medvya_reporting;
+GRANT SELECT ON ALL TABLES IN SCHEMA reporting TO medvya_reporting;
 ALTER DEFAULT PRIVILEGES FOR ROLE medvya_owner IN SCHEMA reporting GRANT SELECT ON TABLES TO medvya_reporting;
 -- shortcut: audit, identity and scheduling have no masked views yet (audit ClientIp, staff contacts, the visit reason), so reporting cannot
 -- read them at all; add a view in schema reporting when a report needs one.

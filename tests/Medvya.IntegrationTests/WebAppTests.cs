@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 namespace Medvya.IntegrationTests;
 
 /// <summary>MDV-P0-007: the API serves the built web app under /app/ (the public site keeps /), and sign-in returns there.</summary>
-public sealed class WebAppTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>, IDisposable
+public sealed class WebAppTests(PostgresFixture sql) : IClassFixture<PostgresFixture>, IDisposable
 {
     readonly string webRoot = Directory.CreateTempSubdirectory("medvya-webroot").FullName;
     WebApplicationFactory<Program>? factory;

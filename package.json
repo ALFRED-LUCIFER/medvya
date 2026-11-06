@@ -10,7 +10,7 @@
     "dev:patient": "pnpm --filter @medvya/mobile-patient start",
     "services:up": "docker compose up -d --wait",
     "services:down": "docker compose down",
-    "dev:db": "pnpm services:up && DOTNET_ENVIRONMENT=Development ConnectionStrings__Medvya=\"Server=localhost,1433;Database=medvya;User Id=sa;Password=${MSSQL_SA_PASSWORD:-Local_dev_only_1};TrustServerCertificate=True\" dotnet run --project tools/synthetic-data-generator --",
+    "dev:db": "pnpm services:up && P=${POSTGRES_PASSWORD:-Local_dev_only_1} && dotnet run --project tools/db-migrate -- admin \"Host=localhost;Port=5432;Database=medvya;Username=medvya;Password=$P\" medvya_app=$P medvya_migrator=$P && dotnet run --project tools/db-migrate -- migrate \"Host=localhost;Port=5432;Database=medvya;Username=medvya_migrator;Password=$P\" && DOTNET_ENVIRONMENT=Development ConnectionStrings__Medvya=\"Host=localhost;Port=5432;Database=medvya;Username=medvya_app;Password=$P\" dotnet run --project tools/synthetic-data-generator --",
     "load:desk": "MEDVYA_LOAD=1 dotnet test tests/Medvya.IntegrationTests --filter FullyQualifiedName~DeskLoadTests",
     "check:contract": "tools/check-contract.sh",
     "check:synthetic": "node tools/check-synthetic/check.mjs",

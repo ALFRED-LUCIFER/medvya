@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Medvya.IntegrationTests;
 
 /// <summary>MDV-P0-012: facility picker, /v1/me/context, server-side idle timeout and session revocation, with audit.</summary>
-public sealed class SessionControlTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>, IDisposable
+public sealed class SessionControlTests(PostgresFixture sql) : IClassFixture<PostgresFixture>, IDisposable
 {
     readonly WebApplicationFactory<Program> factory = StaffSignInTests.CreateFactory(sql.ConnectionString);
     readonly Guid tenantA = Guid.NewGuid(), tenantB = Guid.NewGuid();

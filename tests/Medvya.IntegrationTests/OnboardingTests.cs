@@ -21,7 +21,7 @@ namespace Medvya.IntegrationTests;
 /// MDV-P1-004: sign up, fill the wizard, leave and resume, finish. Real SQL Server, real OIDC code + PKCE against the in-process
 /// development provider. Synthetic people only.
 /// </summary>
-public sealed class OnboardingTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>, IDisposable
+public sealed class OnboardingTests(PostgresFixture sql) : IClassFixture<PostgresFixture>, IDisposable
 {
     readonly Outbox outbox = new();
     readonly List<WebApplicationFactory<Program>> factories = [];

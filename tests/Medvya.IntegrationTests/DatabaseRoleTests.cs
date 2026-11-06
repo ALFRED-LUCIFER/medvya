@@ -1,4 +1,4 @@
-using Microsoft.Data.SqlClient;
+using Npgsql;
 
 namespace Medvya.IntegrationTests;
 
@@ -7,121 +7,107 @@ namespace Medvya.IntegrationTests;
 /// the local equivalent of the Entra managed identity mapped to that role in Azure. The fixture already proves the
 /// migration role can run every migration.
 /// </summary>
-public class DatabaseRoleTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>
+public class DatabaseRoleTests(PostgresFixture sql) : IClassFixture<PostgresFixture>
 {
-    // Errors SQL Server raises when a permission is missing (229 object, 262 statement; 1088/3701/15151/33268 "does not exist or no permission").
-    static readonly int[] PermissionDenied = [229, 262, 1088, 3701, 15151, 33268];
+    // SQLSTATE 42501: insufficient_privilege.
 
     async Task Run(string user, string statement, Guid? tenant = null)
     {
         await using var conn = await sql.OpenAs(user, tenant);
-        await using var cmd = new SqlCommand(statement, conn);
+        await using var cmd = new NpgsqlCommand(statement, conn);
         await cmd.ExecuteNonQueryAsync();
     }
 
     async Task Denied(string user, string statement)
     {
-        var ex = await Assert.ThrowsAsync<SqlException>(() => Run(user, statement));
-        Assert.True(PermissionDenied.Contains(ex.Number), $"{ex.Number}: {ex.Message}"); // refused by permission, not by some other rule (ledger, RLS, missing object)
+        var ex = await Assert.ThrowsAsync<PostgresException>(() => Run(user, statement));
+        Assert.True(ex.SqlState == PostgresErrorCodes.InsufficientPrivilege, $"{ex.SqlState}: {ex.Message}"); // refused by permission, not by some other rule (trigger, RLS, missing object)
     }
 
-    // MDV-P0-008: a deploy is repeatable. The second migrate finds nothing pending; identity mapping can be re-run and grants only the named role.
+    // MDV-P0-008: a deploy is repeatable. The second migrate finds nothing pending.
+    // shortcut: the Entra identity-mapping half of this test returns with the Postgres roles script (MDV-P0-034).
     [Fact]
-    public async Task MigrateAndIdentityMappingAreRepeatable()
+    public async Task MigrateIsRepeatable()
     {
-        await using (var migrator = await sql.OpenAs("migrator_user"))
-            await Medvya.DbMigrate.DatabaseMigrator.ApplyAsync(migrator);
-
-        await using var admin = new SqlConnection(sql.ConnectionString);
-        await admin.OpenAsync();
-        for (var i = 0; i < 2; i++)
-            await Medvya.DbMigrate.DatabaseMigrator.MapIdentitiesAsync(admin, [("app-mapped", "medvya_app")], "WITHOUT LOGIN");
-        await using var cmd = new SqlCommand("""
-            SELECT COUNT(*) FROM sys.database_role_members m
-            JOIN sys.database_principals u ON u.principal_id = m.member_principal_id AND u.name = N'app-mapped'
-            JOIN sys.database_principals r ON r.principal_id = m.role_principal_id WHERE r.name = N'medvya_app'
-            """, admin);
-        Assert.Equal(1, await cmd.ExecuteScalarAsync());
-        await using var ddl = new SqlCommand("EXECUTE AS USER = N'app-mapped'; CREATE TABLE dbo.Injected (Id int);", admin);
-        var ex = await Assert.ThrowsAsync<SqlException>(() => ddl.ExecuteNonQueryAsync());
-        Assert.Contains(ex.Number, PermissionDenied);
+        await using var migrator = await sql.OpenAs("migrator_user");
+        await Medvya.DbMigrate.DatabaseMigrator.ApplyAsync(migrator);
     }
 
     [Theory]
-    [InlineData("CREATE TABLE tenancy.Injected (Id int)")]
-    [InlineData("ALTER TABLE tenancy.Tenants ADD Injected int NULL")]
-    [InlineData("DROP TABLE tenancy.Memberships")]
-    [InlineData("CREATE TABLE audit.Injected (Id int)")]
-    [InlineData("DROP SECURITY POLICY security.tenant_isolation")]
-    [InlineData("ALTER SECURITY POLICY audit.tenant_isolation WITH (STATE = OFF)")]
-    [InlineData("ALTER SECURITY POLICY security.patients_tenant_isolation WITH (STATE = OFF)")]
-    [InlineData("ALTER TABLE patients.Patients ALTER COLUMN Mobile DROP MASKED")]
-    [InlineData("DROP TABLE patients.Identifiers")]
-    [InlineData("ALTER SECURITY POLICY security.billing_tenant_isolation WITH (STATE = OFF)")]
-    [InlineData("DROP TABLE billing.DocSequences")]
-    [InlineData("DISABLE TRIGGER billing.TR_DocSequences_OnlyMoveForward ON billing.DocSequences")]
-    [InlineData("ALTER SECURITY POLICY security.scheduling_tenant_isolation WITH (STATE = OFF)")]
-    [InlineData("DROP TABLE scheduling.Templates")]
+    [InlineData("CREATE TABLE tenancy.\"Injected\" (\"Id\" int)")]
+    [InlineData("ALTER TABLE tenancy.\"Tenants\" ADD COLUMN \"Injected\" int")]
+    [InlineData("DROP TABLE tenancy.\"Memberships\"")]
+    [InlineData("CREATE TABLE audit.\"Injected\" (\"Id\" int)")]
+    [InlineData("ALTER TABLE tenancy.\"Tenants\" DISABLE ROW LEVEL SECURITY")]
+    [InlineData("ALTER TABLE audit.\"AuditEvents\" DISABLE ROW LEVEL SECURITY")]
+    [InlineData("ALTER TABLE patients.\"Patients\" DISABLE ROW LEVEL SECURITY")]
+    [InlineData("ALTER TABLE patients.\"Patients\" ALTER COLUMN \"Mobile\" TYPE text")]
+    [InlineData("DROP TABLE patients.\"Identifiers\"")]
+    [InlineData("ALTER TABLE billing.\"DocSequences\" DISABLE ROW LEVEL SECURITY")]
+    [InlineData("DROP TABLE billing.\"DocSequences\"")]
+    [InlineData("ALTER TABLE billing.\"DocSequences\" DISABLE TRIGGER \"TR_DocSequences_OnlyMoveForward\"")]
+    [InlineData("ALTER TABLE scheduling.\"Appointments\" DISABLE ROW LEVEL SECURITY")]
+    [InlineData("DROP TABLE scheduling.\"Templates\"")]
     public Task AppCannotChangeTheSchema(string ddl) => Denied("app_user", ddl);
 
     // MDV-P0-008: the deploy creates the Hangfire tables as the migration role (the app may not); the app then works in them but cannot change them.
     [Fact]
     public async Task DeployCreatesJobTablesThatTheAppCanUseButNotAlter()
     {
-        await Run("app_user", "INSERT INTO hangfire.[Set] ([Key], Score, Value) VALUES (N'probe', 0, N'probe'); DELETE FROM hangfire.[Set] WHERE [Key] = N'probe';");
-        await Denied("app_user", "ALTER TABLE hangfire.[Set] ADD Injected int NULL");
-        await Denied("reporting_user", "SELECT TOP 1 [Key] FROM hangfire.[Set]");
+        await Run("app_user", "INSERT INTO hangfire.set (key, score, value) VALUES ('probe', 0, 'probe'); DELETE FROM hangfire.set WHERE key = 'probe';");
+        await Denied("app_user", "ALTER TABLE hangfire.set ADD COLUMN \"Injected\" int");
+        await Denied("reporting_user", "SELECT key FROM hangfire.set LIMIT 1");
     }
 
     [Fact]
     public async Task MigratorCanChangeTheSchemaButNotTouchModuleData()
     {
-        await Run("migrator_user", "CREATE TABLE tenancy.MigratorProbe (Id int); ALTER TABLE tenancy.MigratorProbe ADD Name nvarchar(10) NULL; DROP TABLE tenancy.MigratorProbe;");
-        await Denied("migrator_user", "SELECT TOP 1 Id FROM tenancy.Tenants");
-        await Denied("migrator_user", "DELETE FROM tenancy.Tenants");
-        await Denied("migrator_user", "SELECT TOP 1 Id FROM patients.Patients");
-        await Denied("migrator_user", "INSERT INTO audit.AuditEvents (Id, TenantId, Action, ResourceType, Purpose, Outcome, OccurredAt) VALUES (NEWID(), NEWID(), N'x', N'x', N'x', N'x', SYSDATETIMEOFFSET())");
+        await Run("migrator_user", "CREATE TABLE tenancy.\"MigratorProbe\" (\"Id\" int); ALTER TABLE tenancy.\"MigratorProbe\" ADD COLUMN \"Name\" varchar(10); DROP TABLE tenancy.\"MigratorProbe\";");
+        await Denied("migrator_user", "SELECT \"Id\" FROM tenancy.\"Tenants\" LIMIT 1");
+        await Denied("migrator_user", "DELETE FROM tenancy.\"Tenants\"");
+        await Denied("migrator_user", "SELECT \"Id\" FROM patients.\"Patients\" LIMIT 1");
+        await Denied("migrator_user", "INSERT INTO audit.\"AuditEvents\" (\"Id\", \"TenantId\", \"Action\", \"ResourceType\", \"Purpose\", \"Outcome\", \"OccurredAt\") VALUES (gen_random_uuid(), gen_random_uuid(), 'x', 'x', 'x', 'x', now())");
     }
 
     [Fact]
     public async Task ModuleRolesCannotReadEachOthersSchema()
     {
-        await Run("tenancy_user", "SELECT TOP 1 Id FROM tenancy.Tenants");
-        await Run("audit_user", "SELECT TOP 1 Id FROM audit.AuditEvents");
-        await Denied("tenancy_user", "SELECT TOP 1 Id FROM audit.AuditEvents");
-        await Denied("audit_user", "SELECT TOP 1 Id FROM tenancy.Tenants");
-        await Run("identity_user", "SELECT TOP 1 Id FROM [identity].Users");
-        await Denied("identity_user", "SELECT TOP 1 Id FROM tenancy.Tenants");
-        await Denied("tenancy_user", "SELECT TOP 1 Id FROM [identity].Users");
-        await Denied("identity_user", "DELETE FROM [identity].Users");
-        await Run("patients_user", "SELECT TOP 1 Id FROM patients.Patients");
-        await Denied("patients_user", "SELECT TOP 1 Id FROM tenancy.Tenants");
-        await Denied("patients_user", "SELECT TOP 1 Id FROM audit.AuditEvents");
-        await Denied("tenancy_user", "SELECT TOP 1 Id FROM patients.Patients");
-        await Run("billing_user", "SELECT TOP 1 Id FROM billing.DocSequences");
-        await Denied("billing_user", "SELECT TOP 1 Id FROM patients.Patients");
-        await Denied("billing_user", "SELECT TOP 1 Id FROM tenancy.Tenants");
-        await Denied("patients_user", "SELECT TOP 1 Id FROM billing.DocSequences");
-        await Denied("migrator_user", "SELECT TOP 1 Id FROM billing.DocSequences");
-        await Run("scheduling_user", "SELECT TOP 1 Id FROM scheduling.Templates");
-        await Denied("scheduling_user", "SELECT TOP 1 Id FROM tenancy.Memberships");
-        await Denied("scheduling_user", "SELECT TOP 1 Id FROM patients.Patients");
-        await Denied("patients_user", "SELECT TOP 1 Id FROM scheduling.Templates");
-        await Denied("reporting_user", "SELECT TOP 1 Id FROM scheduling.Templates");
-        await Run("leads_user", "SELECT TOP 1 Id FROM leads.DemoRequests");
-        await Denied("leads_user", "SELECT TOP 1 Id FROM patients.Patients");
-        await Denied("leads_user", "DELETE FROM leads.DemoRequests");
-        await Denied("leads_user", "UPDATE leads.DemoRequests SET Name = N'x'");
-        await Denied("patients_user", "SELECT TOP 1 Id FROM leads.DemoRequests");
-        await Run("notifications_user", "SELECT TOP 1 Id FROM notifications.Notifications");
-        await Denied("notifications_user", "SELECT TOP 1 Id FROM patients.Patients");
-        await Denied("notifications_user", "SELECT TOP 1 Id FROM scheduling.Appointments");
-        await Denied("notifications_user", "DELETE FROM notifications.Attempts"); // the attempts are the delivery history
-        await Denied("scheduling_user", "SELECT TOP 1 Id FROM notifications.Notifications");
+        await Run("tenancy_user", "SELECT \"Id\" FROM tenancy.\"Tenants\" LIMIT 1");
+        await Run("audit_user", "SELECT \"Id\" FROM audit.\"AuditEvents\" LIMIT 1");
+        await Denied("tenancy_user", "SELECT \"Id\" FROM audit.\"AuditEvents\" LIMIT 1");
+        await Denied("audit_user", "SELECT \"Id\" FROM tenancy.\"Tenants\" LIMIT 1");
+        await Run("identity_user", "SELECT \"Id\" FROM identity.\"Users\" LIMIT 1");
+        await Denied("identity_user", "SELECT \"Id\" FROM tenancy.\"Tenants\" LIMIT 1");
+        await Denied("tenancy_user", "SELECT \"Id\" FROM identity.\"Users\" LIMIT 1");
+        await Denied("identity_user", "DELETE FROM identity.\"Users\"");
+        await Run("patients_user", "SELECT \"Id\" FROM patients.\"Patients\" LIMIT 1");
+        await Denied("patients_user", "SELECT \"Id\" FROM tenancy.\"Tenants\" LIMIT 1");
+        await Denied("patients_user", "SELECT \"Id\" FROM audit.\"AuditEvents\" LIMIT 1");
+        await Denied("tenancy_user", "SELECT \"Id\" FROM patients.\"Patients\" LIMIT 1");
+        await Run("billing_user", "SELECT \"Id\" FROM billing.\"DocSequences\" LIMIT 1");
+        await Denied("billing_user", "SELECT \"Id\" FROM patients.\"Patients\" LIMIT 1");
+        await Denied("billing_user", "SELECT \"Id\" FROM tenancy.\"Tenants\" LIMIT 1");
+        await Denied("patients_user", "SELECT \"Id\" FROM billing.\"DocSequences\" LIMIT 1");
+        await Denied("migrator_user", "SELECT \"Id\" FROM billing.\"DocSequences\" LIMIT 1");
+        await Run("scheduling_user", "SELECT \"Id\" FROM scheduling.\"Templates\" LIMIT 1");
+        await Denied("scheduling_user", "SELECT \"Id\" FROM tenancy.\"Memberships\" LIMIT 1");
+        await Denied("scheduling_user", "SELECT \"Id\" FROM patients.\"Patients\" LIMIT 1");
+        await Denied("patients_user", "SELECT \"Id\" FROM scheduling.\"Templates\" LIMIT 1");
+        await Denied("reporting_user", "SELECT \"Id\" FROM scheduling.\"Templates\" LIMIT 1");
+        await Run("leads_user", "SELECT \"Id\" FROM leads.\"DemoRequests\" LIMIT 1");
+        await Denied("leads_user", "SELECT \"Id\" FROM patients.\"Patients\" LIMIT 1");
+        await Denied("leads_user", "DELETE FROM leads.\"DemoRequests\"");
+        await Denied("leads_user", "UPDATE leads.\"DemoRequests\" SET \"Name\" = 'x'");
+        await Denied("patients_user", "SELECT \"Id\" FROM leads.\"DemoRequests\" LIMIT 1");
+        await Run("notifications_user", "SELECT \"Id\" FROM notifications.\"Notifications\" LIMIT 1");
+        await Denied("notifications_user", "SELECT \"Id\" FROM patients.\"Patients\" LIMIT 1");
+        await Denied("notifications_user", "SELECT \"Id\" FROM scheduling.\"Appointments\" LIMIT 1");
+        await Denied("notifications_user", "DELETE FROM notifications.\"Attempts\""); // the attempts are the delivery history
+        await Denied("scheduling_user", "SELECT \"Id\" FROM notifications.\"Notifications\" LIMIT 1");
     }
 
     [Fact]
-    public Task BillingRoleCannotDeleteANumberSeries() => Denied("billing_user", "DELETE FROM billing.DocSequences"); // would restart legal numbering
+    public Task BillingRoleCannotDeleteANumberSeries() => Denied("billing_user", "DELETE FROM billing.\"DocSequences\""); // would restart legal numbering
 
     [Fact]
     public async Task AuditRoleCanAppendButNeverChangeOrDelete()
@@ -129,25 +115,27 @@ public class DatabaseRoleTests(SqlServerFixture sql) : IClassFixture<SqlServerFi
         var tenant = Guid.NewGuid();
         await Run("audit_user", Insert, tenant);
 
-        // The ledger rejects UPDATE/DELETE before the permission check (AuditLedgerTests), so ask SQL Server for the permission itself.
+        // Triggers refuse UPDATE/DELETE before the permission check (AuditLedgerTests), so ask Postgres for the privileges themselves.
         await using var conn = await sql.OpenAs("audit_user");
-        await using var cmd = new SqlCommand("SELECT HAS_PERMS_BY_NAME(N'audit.AuditEvents', N'OBJECT', N'UPDATE') + HAS_PERMS_BY_NAME(N'audit.AuditEvents', N'OBJECT', N'DELETE') + HAS_PERMS_BY_NAME(N'audit.AuditEvents', N'OBJECT', N'INSERT')", conn);
+        await using var cmd = new NpgsqlCommand("SELECT has_table_privilege('audit.\"AuditEvents\"', 'UPDATE')::int + has_table_privilege('audit.\"AuditEvents\"', 'DELETE')::int + has_table_privilege('audit.\"AuditEvents\"', 'INSERT')::int", conn);
         Assert.Equal(1, (int)(await cmd.ExecuteScalarAsync())!); // INSERT only
     }
 
     [Fact]
     public async Task ReportingRoleIsReadOnly()
     {
-        await Run("reporting_user", "SELECT TOP 1 Id FROM tenancy.Facilities");
-        await Denied("reporting_user", "INSERT INTO tenancy.Tenants (Id, Name, CountryCode, ResidencyRegion) VALUES (NEWID(), N'x', N'IN', N'centralindia')");
-        await Denied("reporting_user", "UPDATE tenancy.Tenants SET Name = N'x'");
-        await Denied("reporting_user", "DELETE FROM tenancy.Tenants");
-        await Denied("reporting_user", "SELECT TOP 1 Id FROM audit.AuditEvents");
-        await Denied("reporting_user", "SELECT TOP 1 DisplayName FROM [identity].Users");
-        await Denied("reporting_user", "CREATE TABLE tenancy.Injected (Id int)");
-        await Run("reporting_user", "SELECT TOP 1 Id, FullName FROM patients.Patients"); // masked: PatientRegistryTests
-        await Denied("reporting_user", "UPDATE patients.Patients SET Mobile = N'x'");
-        await Denied("reporting_user", "DELETE FROM patients.Identifiers");
+        await Run("reporting_user", "SELECT \"Id\" FROM tenancy.\"Facilities\" LIMIT 1");
+        await Denied("reporting_user", "INSERT INTO tenancy.\"Tenants\" (\"Id\", \"Name\", \"CountryCode\", \"ResidencyRegion\") VALUES (gen_random_uuid(), 'x', 'IN', 'centralindia')");
+        await Denied("reporting_user", "UPDATE tenancy.\"Tenants\" SET \"Name\" = 'x'");
+        await Denied("reporting_user", "DELETE FROM tenancy.\"Tenants\"");
+        await Denied("reporting_user", "SELECT \"Id\" FROM audit.\"AuditEvents\" LIMIT 1");
+        await Denied("reporting_user", "SELECT \"DisplayName\" FROM identity.\"Users\" LIMIT 1");
+        await Denied("reporting_user", "CREATE TABLE tenancy.\"Injected\" (\"Id\" int)");
+        await Run("reporting_user", "SELECT \"Id\", \"Initials\", \"AgeBand\" FROM reporting.\"Patients\" LIMIT 1"); // the masked view (MDV-P0-037)
+        await Denied("reporting_user", "SELECT \"Id\", \"FullName\" FROM patients.\"Patients\" LIMIT 1"); // never the base table
+        await Denied("reporting_user", "UPDATE reporting.\"Patients\" SET \"Mrn\" = 'x'");
+        await Denied("reporting_user", "UPDATE patients.\"Patients\" SET \"Mobile\" = 'x'");
+        await Denied("reporting_user", "DELETE FROM patients.\"Identifiers\"");
     }
 
     [Fact]
@@ -155,19 +143,19 @@ public class DatabaseRoleTests(SqlServerFixture sql) : IClassFixture<SqlServerFi
     {
         // The RLS predicate functions need no EXECUTE/SELECT grant: the app writes and reads its tenant's rows, and only those.
         var tenant = Guid.NewGuid();
-        await Run("app_user", "INSERT INTO tenancy.Tenants (Id, Name, CountryCode, ResidencyRegion) VALUES (CAST(SESSION_CONTEXT(N'tenant_id') AS uniqueidentifier), N'Iyer Family Clinic (synthetic)', N'IN', N'centralindia');" + Insert, tenant);
+        await Run("app_user", "INSERT INTO tenancy.\"Tenants\" (\"Id\", \"Name\", \"CountryCode\", \"ResidencyRegion\") VALUES (current_setting('medvya.tenant_id')::uuid, 'Iyer Family Clinic (synthetic)', 'IN', 'centralindia');" + Insert, tenant);
 
         await using var conn = await sql.OpenAs("app_user", tenant);
-        await using var count = new SqlCommand("SELECT (SELECT COUNT(*) FROM tenancy.Tenants WHERE Id = @t) + (SELECT COUNT(*) FROM audit.AuditEvents WHERE TenantId = @t)", conn);
-        count.Parameters.AddWithValue("@t", tenant);
-        Assert.Equal(2, (int)(await count.ExecuteScalarAsync())!);
+        await using var count = new NpgsqlCommand("SELECT (SELECT COUNT(*) FROM tenancy.\"Tenants\" WHERE \"Id\" = @t) + (SELECT COUNT(*) FROM audit.\"AuditEvents\" WHERE \"TenantId\" = @t)", conn);
+        count.Parameters.AddWithValue("t", tenant);
+        Assert.Equal(2L, await count.ExecuteScalarAsync());
 
-        var blocked = await Assert.ThrowsAsync<SqlException>(() => Run("app_user", "INSERT INTO tenancy.Tenants (Id, Name, CountryCode, ResidencyRegion) VALUES (NEWID(), N'x', N'AE', N'uaenorth')", tenant));
-        Assert.Contains("block predicate", blocked.Message, StringComparison.Ordinal);
+        var blocked = await Assert.ThrowsAsync<PostgresException>(() => Run("app_user", "INSERT INTO tenancy.\"Tenants\" (\"Id\", \"Name\", \"CountryCode\", \"ResidencyRegion\") VALUES (gen_random_uuid(), 'x', 'AE', 'uaenorth')", tenant));
+        Assert.Equal(PostgresErrorCodes.InsufficientPrivilege, blocked.SqlState); // row-level security refuses the row (42501)
     }
 
     const string Insert = """
-        INSERT INTO audit.AuditEvents (Id, TenantId, Action, ResourceType, Purpose, Outcome, OccurredAt)
-        VALUES (NEWID(), CAST(SESSION_CONTEXT(N'tenant_id') AS uniqueidentifier), N'patient.read', N'patient', N'treatment', N'Allowed', SYSDATETIMEOFFSET());
+        INSERT INTO audit."AuditEvents" ("Id", "TenantId", "Action", "ResourceType", "Purpose", "Outcome", "OccurredAt")
+        VALUES (gen_random_uuid(), current_setting('medvya.tenant_id')::uuid, 'patient.read', 'patient', 'treatment', 'Allowed', now());
         """;
 }

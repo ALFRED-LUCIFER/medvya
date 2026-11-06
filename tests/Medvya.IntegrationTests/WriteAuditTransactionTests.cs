@@ -22,7 +22,7 @@ namespace Medvya.IntegrationTests;
 /// change. With the audit store down, the request fails and nothing it would have changed is in the database; with it up, each
 /// write leaves exactly one Allowed event, and a rejected write one Rejected event without the values that were sent.
 /// </summary>
-public sealed class WriteAuditTransactionTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>, IAsyncLifetime
+public sealed class WriteAuditTransactionTests(PostgresFixture sql) : IClassFixture<PostgresFixture>, IAsyncLifetime
 {
     readonly SchedulingHarness h = new(sql);
     readonly AuditSwitch audit = new();

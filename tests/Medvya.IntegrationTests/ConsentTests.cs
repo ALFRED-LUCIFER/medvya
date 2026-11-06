@@ -3,7 +3,7 @@ using Medvya.BuildingBlocks.Domain;
 using Medvya.Patients.Application;
 using Medvya.Patients.Domain;
 using Medvya.Patients.Infrastructure;
-using Microsoft.Data.SqlClient;
+using Npgsql;
 using Microsoft.EntityFrameworkCore;
 using static Medvya.IntegrationTests.PatientRegistryTests;
 using static Medvya.IntegrationTests.PatientRulesTests;
@@ -11,7 +11,7 @@ using static Medvya.IntegrationTests.PatientRulesTests;
 namespace Medvya.IntegrationTests;
 
 /// <summary>MDV-P1-019 against real SQL Server: separate versioned receipts written with the registration, an append-only ledger, and the reader contract. Synthetic data only.</summary>
-public class ConsentTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>
+public class ConsentTests(PostgresFixture sql) : IClassFixture<PostgresFixture>
 {
     readonly Guid tenant = Guid.NewGuid(), actor = Guid.NewGuid(), facility = Guid.NewGuid();
     static int born;
@@ -23,11 +23,11 @@ public class ConsentTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture
     static ConsentDecisionInput Reminders(ConsentChannel c, bool granted) => new(ConsentType.Reminders, c, granted);
 
     PatientRegistry Registry(Guid? t = null, Guid? at = null) =>
-        new(sql.Patients(t ?? tenant), new SqlServerFixture.FixedTenant(t ?? tenant), new FixedFacility(at ?? facility), new User(actor),
+        new(sql.Patients(t ?? tenant), new PostgresFixture.FixedTenant(t ?? tenant), new FixedFacility(at ?? facility), new User(actor),
             new AuditLog(sql.Audit(t ?? tenant)), TimeProvider.System, new FacilityZone("Asia/Kolkata"));
 
     PatientConsents Consents(Guid? t = null, Guid? at = null) =>
-        new(sql.Patients(t ?? tenant), new SqlServerFixture.FixedTenant(t ?? tenant), new FixedFacility(at ?? facility), new User(actor),
+        new(sql.Patients(t ?? tenant), new PostgresFixture.FixedTenant(t ?? tenant), new FixedFacility(at ?? facility), new User(actor),
             new AuditLog(sql.Audit(t ?? tenant)), TimeProvider.System);
 
     Task<RegistrationResult> Register(ConsentSet? consents, string country = "IN", string? region = null) =>
@@ -108,8 +108,8 @@ public class ConsentTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture
     {
         var saved = await Register(Set(Treatment, Reminders(ConsentChannel.Sms, true)));
         await using var db = sql.Patients(tenant);
-        await Assert.ThrowsAsync<SqlException>(() => db.Database.ExecuteSqlAsync($"UPDATE patients.ConsentReceipts SET Granted = 0 WHERE PatientId = {saved.PatientId}"));
-        await Assert.ThrowsAsync<SqlException>(() => db.Database.ExecuteSqlAsync($"DELETE FROM patients.ConsentReceipts WHERE PatientId = {saved.PatientId}"));
+        await Assert.ThrowsAsync<PostgresException>(() => db.Database.ExecuteSqlAsync($"""UPDATE patients."ConsentReceipts" SET "Granted" = false WHERE "PatientId" = {saved.PatientId}"""));
+        await Assert.ThrowsAsync<PostgresException>(() => db.Database.ExecuteSqlAsync($"""DELETE FROM patients."ConsentReceipts" WHERE "PatientId" = {saved.PatientId}"""));
 
         Assert.False(await Consents(Guid.NewGuid()).IsGrantedAsync(saved.PatientId, ConsentType.Treatment)); // another tenant
         Assert.Null(await Consents(at: Guid.NewGuid()).ChangeAsync(saved.PatientId, Set(Reminders(ConsentChannel.Sms, false)))); // another facility

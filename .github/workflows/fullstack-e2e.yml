@@ -1,6 +1,6 @@
 name: fullstack-e2e
 
-# MDV-P0-029: the browser against the real Host.Api and a real SQL Server in Docker, no mocked APIs (tests/e2e/fullstack).
+# MDV-P0-029: the browser against the real Host.Api and a real PostgreSQL in Docker, no mocked APIs (tests/e2e/fullstack).
 # Not a required check yet: it runs nightly, on demand, and on PRs that touch it, until it has a record of being stable on the
 # runners. Then move the job into pr.yml (the timeout below is its budget). Synthetic data only; nothing here touches Azure.
 on:
@@ -35,7 +35,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter e2e exec playwright install --with-deps chromium
-      - run: pnpm e2e:fullstack # stack.mjs builds the web app and the API, starts SQL Server in Docker, seeds, serves; removed on exit
+      - run: pnpm e2e:fullstack # stack.mjs builds the web app and the API, starts PostgreSQL in Docker, seeds, serves; removed on exit
       - uses: actions/upload-artifact@v7
         if: failure()
         with:

@@ -8,7 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Medvya.IntegrationTests;
 
 /// <summary>Demo requests on SQL Server (MDV-P1-003): stored, founder emailed, free text never emailed.</summary>
-public class DemoRequestTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>
+public class DemoRequestTests(PostgresFixture sql) : IClassFixture<PostgresFixture>
 {
     static DemoRequest Request(string? email = "kavya.menon@example.com", string? phone = null, string? message = null, string name = "Kavya Menon") =>
         DemoRequestRulesTests.Request(email, phone, message, name);
@@ -24,7 +24,7 @@ public class DemoRequestTests(SqlServerFixture sql) : IClassFixture<SqlServerFix
         await using (var scope = services.CreateAsyncScope())
             await scope.ServiceProvider.GetRequiredService<IDemoRequests>().SubmitAsync(request);
 
-        await using var db = new LeadsDbContext(new DbContextOptionsBuilder<LeadsDbContext>().UseSqlServer(sql.ConnectionString).Options);
+        await using var db = new LeadsDbContext(new DbContextOptionsBuilder<LeadsDbContext>().UseNpgsql(sql.ConnectionString).Options);
         var stored = await db.DemoRequests.SingleAsync(r => r.Id == request.Id);
         Assert.Equal(("Kavya Menon", "Synthetic note: please call after 4 pm."), (stored.Name, stored.Message));
         Assert.Equal((request.ConsentedAt, LeadRules.NoticeVersion), (stored.ConsentedAt, stored.NoticeVersion)); // proof of consent round-trips
@@ -44,7 +44,7 @@ public class DemoRequestTests(SqlServerFixture sql) : IClassFixture<SqlServerFix
         await using (var scope = services.CreateAsyncScope())
             await scope.ServiceProvider.GetRequiredService<IWaitlist>().JoinAsync(entry);
 
-        await using var db = new LeadsDbContext(new DbContextOptionsBuilder<LeadsDbContext>().UseSqlServer(sql.ConnectionString).Options);
+        await using var db = new LeadsDbContext(new DbContextOptionsBuilder<LeadsDbContext>().UseNpgsql(sql.ConnectionString).Options);
         var stored = await db.Waitlist.SingleAsync(w => w.Id == entry.Id);
         Assert.Equal(("AE", (DateTimeOffset?)DemoRequestRulesTests.Consented, LeadRules.NoticeVersion), (stored.Country, stored.ConsentedAt, stored.NoticeVersion));
     }
@@ -59,7 +59,7 @@ public class DemoRequestTests(SqlServerFixture sql) : IClassFixture<SqlServerFix
         await using (var scope = services.CreateAsyncScope())
             await scope.ServiceProvider.GetRequiredService<IDemoRequests>().SubmitAsync(request);
 
-        await using var db = new LeadsDbContext(new DbContextOptionsBuilder<LeadsDbContext>().UseSqlServer(sql.ConnectionString).Options);
+        await using var db = new LeadsDbContext(new DbContextOptionsBuilder<LeadsDbContext>().UseNpgsql(sql.ConnectionString).Options);
         Assert.True(await db.DemoRequests.AnyAsync(r => r.Id == request.Id));
     }
 }

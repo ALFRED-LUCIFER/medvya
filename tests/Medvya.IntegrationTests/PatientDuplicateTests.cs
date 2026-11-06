@@ -13,13 +13,13 @@ namespace Medvya.IntegrationTests;
 /// Synthetic data only (names from the cast, without the "(synthetic)" seed marker, which would be a shared word); IDs fail their
 /// checksums by construction.
 /// </summary>
-public sealed class PatientDuplicateTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>
+public sealed class PatientDuplicateTests(PostgresFixture sql) : IClassFixture<PostgresFixture>
 {
     readonly Guid tenant = Guid.NewGuid(), facility = Guid.NewGuid(), actor = Guid.NewGuid();
     static readonly DateOnly Dob = new(1979, 8, 14);
 
     PatientRegistry Registry(Guid? at = null) =>
-        new(sql.Patients(tenant), new SqlServerFixture.FixedTenant(tenant), new PatientRegistryTests.FixedFacility(at ?? facility),
+        new(sql.Patients(tenant), new PostgresFixture.FixedTenant(tenant), new PatientRegistryTests.FixedFacility(at ?? facility),
             new User(actor), new AuditLog(sql.Audit(tenant)), TimeProvider.System, new PatientRegistryTests.FacilityZone("Asia/Kolkata"));
 
     sealed class User(Guid id) : Medvya.BuildingBlocks.Domain.ICurrentUser { public Guid? UserId => id; }

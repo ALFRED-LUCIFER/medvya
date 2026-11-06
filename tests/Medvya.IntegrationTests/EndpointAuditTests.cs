@@ -19,7 +19,7 @@ namespace Medvya.IntegrationTests;
 /// Each audited endpoint is then called against real SQL Server once per staff role, so both the allowed path (the endpoint
 /// filter, then the handler) and the refused path (denied-attempt audit) run, and every request must write exactly one audit row.
 /// </summary>
-public sealed class EndpointAuditTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>, IAsyncLifetime
+public sealed class EndpointAuditTests(PostgresFixture sql) : IClassFixture<PostgresFixture>, IAsyncLifetime
 {
     /// <summary>Signed-in endpoints reviewed as never reading or writing patient data. Adding one here is a reviewed decision.</summary>
     // shortcut: kept in the test, not as metadata on the endpoints, while StaffAuthentication.cs is reworked (MDV-P0-012); move to endpoint metadata if the list grows.

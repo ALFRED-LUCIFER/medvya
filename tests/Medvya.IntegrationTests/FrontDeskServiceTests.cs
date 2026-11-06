@@ -11,7 +11,7 @@ namespace Medvya.IntegrationTests;
 /// MDV-P1-028 on real SQL Server: today's board in facility time, one-tap check-in that a double tap or a second desk cannot
 /// repeat, moves only along the visit state machine with a status event each, and the role check at the facility.
 /// </summary>
-public sealed class FrontDeskServiceTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>, IAsyncLifetime
+public sealed class FrontDeskServiceTests(PostgresFixture sql) : IClassFixture<PostgresFixture>, IAsyncLifetime
 {
     readonly SchedulingHarness h = new(sql);
 

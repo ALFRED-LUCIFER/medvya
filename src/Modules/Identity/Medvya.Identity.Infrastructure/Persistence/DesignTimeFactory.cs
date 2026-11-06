@@ -7,5 +7,5 @@ namespace Medvya.Identity.Infrastructure.Persistence;
 public sealed class DesignTimeFactory : IDesignTimeDbContextFactory<IdentityDbContext>
 {
     public IdentityDbContext CreateDbContext(string[] args) =>
-        new(new DbContextOptionsBuilder<IdentityDbContext>().UseSqlServer("Server=design-time-only").Options);
+        new(new DbContextOptionsBuilder<IdentityDbContext>().UseNpgsql("Server=design-time-only").Options);
 }

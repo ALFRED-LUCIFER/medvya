@@ -25,6 +25,9 @@ public sealed class SchedulingDbContext(DbContextOptions<SchedulingDbContext> op
 
     Guid? CurrentTenantId => tenant.TenantId;
 
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder) =>
+        Medvya.BuildingBlocks.Infrastructure.UtcDateTimeOffset.Apply(configurationBuilder);
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasDefaultSchema("scheduling");
@@ -68,11 +71,11 @@ public sealed class SchedulingDbContext(DbContextOptions<SchedulingDbContext> op
             // The day view and the board read a facility's time range: seek on Start and cover what the views need.
             e.HasIndex(x => new { x.TenantId, x.FacilityId, x.Start }).IncludeProperties(x => new { x.End, x.CalendarId, x.State, x.PatientId, x.VisitType });
             e.HasIndex(x => new { x.TenantId, x.PatientId });
-            e.HasIndex(x => new { x.TenantId, x.SeriesId }).HasFilter("[SeriesId] IS NOT NULL");
+            e.HasIndex(x => new { x.TenantId, x.SeriesId }).HasFilter("\"SeriesId\" IS NOT NULL");
             e.Property(x => x.IdempotencyKeyHash).HasMaxLength(64).IsFixedLength();
             e.Property(x => x.IdempotencyRequestHash).HasMaxLength(64).IsFixedLength();
             // One booking per Idempotency-Key and booker (MDV-P1-047): the last line if two identical requests race.
-            e.HasIndex(x => new { x.TenantId, x.BookedBy, x.IdempotencyKeyHash }).IsUnique().HasFilter("[IdempotencyKeyHash] IS NOT NULL");
+            e.HasIndex(x => new { x.TenantId, x.BookedBy, x.IdempotencyKeyHash }).IsUnique().HasFilter("\"IdempotencyKeyHash\" IS NOT NULL");
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         modelBuilder.Entity<ScheduleSlot>(e =>

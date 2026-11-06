@@ -10,7 +10,7 @@ namespace Medvya.IntegrationTests;
 /// SCHEDULE_SLOT rows), or is queued unscheduled without taking a slot; it is checked in with the board's check-in and shows on
 /// the board as a walk-in. Dr. Rao works Mon 09:00–12:00 and 17:00–20:00 IST in 20-minute slots. Synthetic data only.
 /// </summary>
-public sealed class WalkInTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>, IAsyncLifetime
+public sealed class WalkInTests(PostgresFixture sql) : IClassFixture<PostgresFixture>, IAsyncLifetime
 {
     readonly SchedulingHarness h = new(sql);
 

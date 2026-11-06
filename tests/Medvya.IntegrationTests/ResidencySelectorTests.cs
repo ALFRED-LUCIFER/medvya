@@ -163,7 +163,7 @@ public sealed partial class ResidencySelectorTests(WebApplicationFactory<Program
 }
 
 /// <summary>AC: a tenant's country and residency region cannot change after it is created (ADR-003, MDV-P1-002).</summary>
-public class TenantResidencyTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>
+public class TenantResidencyTests(PostgresFixture sql) : IClassFixture<PostgresFixture>
 {
     [Theory]
     [InlineData(nameof(Tenant.CountryCode))]

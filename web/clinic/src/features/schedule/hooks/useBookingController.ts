@@ -23,8 +23,9 @@ export function useBookingController(facilityId: string, timeZone: string | null
   const [booked, setBooked] = useState<BookedAppointment | null>(null);
   // A no-show's rebook (MDV-P1-024): the next slot chosen is booked for this patient, already filled in.
   const [rebook, setRebook] = useState<{ id: string; name: string } | null>(null);
-  // MDV-P1-026: repeat weekly. 1 books one visit; more previews the series so the desk can skip or move conflicts before confirming.
+  // MDV-P1-026: repeat weekly or monthly. 1 books one visit; more previews the series so the desk can skip or move conflicts before confirming.
   const [repeat, setRepeat] = useState(1);
+  const [monthly, setMonthly] = useState(false);
   const [plan, setPlan] = useState<PlanRow[] | null>(null);
   const [seriesDone, setSeriesDone] = useState<SeriesDone | null>(null);
   const form = useForm<BookingForm>({ resolver: zodResolver(bookingSchema), defaultValues: emptyBooking });
@@ -50,13 +51,14 @@ export function useBookingController(facilityId: string, timeZone: string | null
   const endBooking = () => {
     setPlan(null);
     setRepeat(1);
+    setMonthly(false);
     setChoice(null);
     hold.reset();
     form.reset(emptyBooking);
     clearSearch();
   };
   const preview = useMutation({
-    mutationFn: () => previewSeries(facilityId, choice!, hold.data!.start, repeat),
+    mutationFn: () => previewSeries(facilityId, choice!, hold.data!.start, repeat, monthly),
     onSuccess: occurrences => setPlan(planOf(occurrences)),
   });
   const bookMany = useMutation({
@@ -104,6 +106,8 @@ export function useBookingController(facilityId: string, timeZone: string | null
     bookError: book.isError ? errorOf(book.error) : preview.isError ? errorOf(preview.error) : bookMany.isError ? errorOf(bookMany.error) : null,
     repeat,
     maxRepeat,
+    monthly,
+    onMonthly: setMonthly,
     onRepeat: (n: number) => setRepeat(Math.min(maxRepeat, Math.max(1, Math.trunc(n) || 1))),
     plan,
     seriesDone,
@@ -123,6 +127,7 @@ export function useBookingController(facilityId: string, timeZone: string | null
       book.reset();
       setPlan(null);
       setRepeat(1);
+      setMonthly(false);
       form.reset(emptyBooking);
       clearSearch();
     },

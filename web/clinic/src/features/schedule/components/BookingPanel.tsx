@@ -43,6 +43,8 @@ type Props = {
   repeat: number;
   maxRepeat: number;
   onRepeat: (n: number) => void;
+  monthly: boolean;
+  onMonthly: (monthly: boolean) => void;
   plan: PlanRow[] | null;
   seriesDone: SeriesDone | null;
   onToggleOccurrence: (index: number) => void;
@@ -191,6 +193,14 @@ export default function BookingPanel(p: Props) {
           <Select value={p.channel} onValueChange={v => p.onChannel(v as BookingForm['channel'])}>
             <SelectTrigger id="booking-channel" className={`${control} data-[size=default]:h-11`}><SelectValue /></SelectTrigger>
             <SelectContent>{channels.map(c => <SelectItem key={c} value={c}>{t(`channel.${c}`)}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+
+        <div className={field}>
+          <Label htmlFor="booking-unit">{t('series.unit')}</Label>
+          <Select value={p.monthly ? 'monthly' : 'weekly'} onValueChange={v => p.onMonthly(v === 'monthly')}>
+            <SelectTrigger id="booking-unit" className={`${control} data-[size=default]:h-11`}><SelectValue /></SelectTrigger>
+            <SelectContent>{(['weekly', 'monthly'] as const).map(u => <SelectItem key={u} value={u}>{t(`series.unit.${u}`)}</SelectItem>)}</SelectContent>
           </Select>
         </div>
 

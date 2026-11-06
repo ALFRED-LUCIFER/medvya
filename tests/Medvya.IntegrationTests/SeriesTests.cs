@@ -45,6 +45,15 @@ public sealed class SeriesTests(SqlServerFixture sql) : IClassFixture<SqlServerF
     }
 
     [Fact]
+    public async Task AMonthlyPreviewKeepsTheDateAndTimeAndIgnoresTheWeekInterval()
+    {
+        var preview = await Desk.PreviewSeriesAsync(Weekly(10, 3) with { Monthly = true, IntervalWeeks = 99 }); // 99 weeks would be refused if it counted
+        Assert.Equal([At(10), At(10).AddMonths(1), At(10).AddMonths(2)], preview.Select(o => o.Start));
+        Assert.Null(preview[0].Conflict);
+        Assert.Equal([new ValidationError("intervalWeeks", "out_of_range")], (await Assert.ThrowsAsync<SchedulingValidationException>(() => Desk.PreviewSeriesAsync(Weekly(10, 3) with { IntervalWeeks = 99 }))).Errors);
+    }
+
+    [Fact]
     public async Task PreviewReportsBreaksAndThePast()
     {
         // Monday lunch 12:00-13:00 is a break; the clock is Monday 08:00 IST so 07:00 is in the past.

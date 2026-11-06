@@ -32,7 +32,8 @@ public sealed class PostgresFixture : IAsyncLifetime
         "medvya_patients", "medvya_billing", "medvya_scheduling", "medvya_leads", "medvya_notifications", "medvya_jobs"];
 
     /// <summary>The container superuser: the administrator's step, bulk loads and the restore-drill counts. Bypasses row-level security.</summary>
-    public string AdminConnectionString => container.GetConnectionString();
+    // Command Timeout 300: the 150,000-row audit seed runs the per-row hash-chain trigger and took longer than Npgsql's 30 s default on a shared CI runner.
+    public string AdminConnectionString => new NpgsqlConnectionStringBuilder(container.GetConnectionString()) { CommandTimeout = 300 }.ConnectionString;
 
     /// <summary>The running application: login medvya_app.</summary>
     public string ConnectionString => As("medvya_app");

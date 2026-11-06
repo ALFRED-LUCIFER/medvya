@@ -9,7 +9,7 @@ public sealed class RestoreDrillCountsTests(PostgresFixture sql) : IClassFixture
 {
     async Task<IReadOnlyList<(string Table, long Rows)>> Counts()
     {
-        await using var admin = new NpgsqlConnection(sql.ConnectionString);
+        await using var admin = new NpgsqlConnection(sql.AdminConnectionString);
         await admin.OpenAsync();
         return await DatabaseMigrator.RowCountsAsync(admin);
     }
@@ -18,7 +18,7 @@ public sealed class RestoreDrillCountsTests(PostgresFixture sql) : IClassFixture
     public async Task ATableWithSecondaryIndexesIsCountedOncePerRow()
     {
         // Every index has its own partition row count; counting them all would report each row once per index.
-        await using (var admin = new NpgsqlConnection(sql.ConnectionString))
+        await using (var admin = new NpgsqlConnection(sql.AdminConnectionString))
         {
             await admin.OpenAsync();
             await using var cmd = new NpgsqlCommand("""
@@ -35,7 +35,7 @@ public sealed class RestoreDrillCountsTests(PostgresFixture sql) : IClassFixture
         }
         finally
         {
-            await using var admin = new NpgsqlConnection(sql.ConnectionString);
+            await using var admin = new NpgsqlConnection(sql.AdminConnectionString);
             await admin.OpenAsync();
             await using var cmd = new NpgsqlCommand("DROP TABLE public.\"DrillProbe\"", admin);
             await cmd.ExecuteNonQueryAsync();

@@ -98,7 +98,7 @@ public class MembershipDirectoryTests(PostgresFixture sql) : IClassFixture<Postg
         insert.Parameters.AddWithValue("u", user);
         insert.Parameters.AddWithValue("f", otherFacilityA);
         var ex = await Assert.ThrowsAsync<PostgresException>(() => insert.ExecuteNonQueryAsync());
-        Assert.Contains("block predicate", ex.Message, StringComparison.Ordinal);
+        Assert.Equal(PostgresErrorCodes.InsufficientPrivilege, ex.SqlState); // row-level security refuses the row (42501)
 
         await using var promote = new NpgsqlCommand("UPDATE tenancy.\"Memberships\" SET \"Role\" = 'PracticeAdmin' WHERE \"UserId\" = @u", conn);
         promote.Parameters.AddWithValue("u", user);

@@ -1,0 +1,93 @@
+-- Medvya database roles (MDV-P0-008, ported to PostgreSQL in MDV-P0-034). Single source of truth for who may do what.
+-- Run by the database administrator (a superuser locally; the Azure PostgreSQL administrator in the cloud) BEFORE migrations, and
+-- again whenever a module is added. Idempotent: safe to re-run. None of the roles below can log in; a login is created IN ROLE one
+-- of them (docs/03-architecture/database-security.md).
+--
+--   medvya_owner      Owns every schema and table, so it can run DDL and keeps the owner's data rights (foreign-key checks run as the
+--                     owner and need them). Nobody logs in as it.
+--   medvya_migrator   The deploy login. Holds NO rights on module data. db-migrate does SET ROLE medvya_owner (a membership without
+--                     INHERIT) for the length of a migration; a plain session as the migrator can create objects but read nothing.
+--   medvya_app        The running application = membership of the module roles. Not an owner: no DDL.
+--   medvya_reporting  Read-only. Row-level security still applies: without a tenant setting it sees no clinic rows.
+--   medvya_<module>   Rights on that module's own schema only.
+--
+-- Every role is NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE, so FORCE ROW LEVEL SECURITY binds all of them, owner included.
+-- Adding a module: add its schema to the schema list and a row to module_grants.
+
+BEGIN;
+
+DO $$
+DECLARE r text;
+BEGIN
+    FOREACH r IN ARRAY ARRAY['medvya_owner', 'medvya_migrator', 'medvya_app', 'medvya_reporting', 'medvya_tenancy', 'medvya_audit',
+                             'medvya_identity', 'medvya_patients', 'medvya_billing', 'medvya_scheduling', 'medvya_leads',
+                             'medvya_notifications', 'medvya_jobs']
+    LOOP
+        IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = r) THEN EXECUTE format('CREATE ROLE %I NOLOGIN', r); END IF;
+        EXECUTE format('ALTER ROLE %I NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE NOREPLICATION', r);
+    END LOOP;
+END $$;
+
+-- SET only: the migrator can become the owner on purpose, but never holds the owner's rights by default.
+GRANT medvya_owner TO medvya_migrator WITH INHERIT FALSE, SET TRUE;
+
+-- Schemas exist before migrations so rights can be granted on them; EF's EnsureSchema then finds them and skips.
+-- The migrator may also create objects in them directly (it owns what it creates, which the owner can then drop).
+DO $$
+DECLARE s text;
+BEGIN
+    FOREACH s IN ARRAY ARRAY['tenancy', 'audit', 'identity', 'patients', 'billing', 'scheduling', 'leads', 'notifications', 'hangfire']
+    LOOP
+        EXECUTE format('CREATE SCHEMA IF NOT EXISTS %I', s);
+        EXECUTE format('ALTER SCHEMA %I OWNER TO medvya_owner', s);
+        EXECUTE format('GRANT USAGE, CREATE ON SCHEMA %I TO medvya_migrator', s);
+    END LOOP;
+END $$;
+
+-- public holds only __EFMigrationsHistory; nobody else may create there.
+REVOKE CREATE ON SCHEMA public FROM PUBLIC;
+GRANT USAGE, CREATE ON SCHEMA public TO medvya_owner;
+
+-- One row per module: its role gets USAGE on its schema and the listed table rights on everything the owner creates there
+-- (and on what exists already), plus sequences, and joins medvya_app.
+CREATE TEMP TABLE module_grants (schema_name text, role_name text, table_rights text) ON COMMIT DROP;
+INSERT INTO module_grants VALUES
+    -- Tenancy: row access to its own schema (RLS still limits rows to the session's tenant).
+    ('tenancy',       'medvya_tenancy',       'SELECT, INSERT, UPDATE, DELETE'),
+    -- Audit: append and read only. The ledger refuses UPDATE/DELETE by trigger as well (MDV-P0-036); this refuses them first, by permission.
+    ('audit',         'medvya_audit',         'SELECT, INSERT'),
+    -- Identity: staff accounts and sessions. Never deleted (offboarding is a membership status; a session is revoked, not removed).
+    ('identity',      'medvya_identity',      'SELECT, INSERT, UPDATE'),
+    ('patients',      'medvya_patients',      'SELECT, INSERT, UPDATE, DELETE'),
+    -- Billing: no DELETE, because deleting a DocSequences row would restart a legal number series. Only an owner can alter its trigger.
+    ('billing',       'medvya_billing',       'SELECT, INSERT, UPDATE'),
+    -- Scheduling: not in reporting, because appointments hold the free-text visit reason (SensitiveHealth).
+    ('scheduling',    'medvya_scheduling',    'SELECT, INSERT, UPDATE, DELETE'),
+    -- Leads: demo requests from the public site. Add and read only; corrections and deletion are an administrator's job.
+    ('leads',         'medvya_leads',         'SELECT, INSERT'),
+    -- Notifications: messages and attempts; no DELETE (attempts are the delivery history). No access to patients or scheduling.
+    ('notifications', 'medvya_notifications', 'SELECT, INSERT, UPDATE'),
+    -- Hangfire job storage in its own schema, no module data. Its tables are created by the owner on deploy (the app may not).
+    -- shortcut: a role, not yet a separate database login; give the Worker its own identity when Worker.Jobs becomes a separate host.
+    ('hangfire',      'medvya_jobs',          'SELECT, INSERT, UPDATE, DELETE');
+
+DO $$
+DECLARE g record;
+BEGIN
+    FOR g IN SELECT * FROM module_grants LOOP
+        EXECUTE format('GRANT USAGE ON SCHEMA %I TO %I', g.schema_name, g.role_name);
+        EXECUTE format('GRANT %s ON ALL TABLES IN SCHEMA %I TO %I', g.table_rights, g.schema_name, g.role_name);
+        EXECUTE format('GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA %I TO %I', g.schema_name, g.role_name);
+        EXECUTE format('ALTER DEFAULT PRIVILEGES FOR ROLE medvya_owner IN SCHEMA %I GRANT %s ON TABLES TO %I', g.schema_name, g.table_rights, g.role_name);
+        EXECUTE format('ALTER DEFAULT PRIVILEGES FOR ROLE medvya_owner IN SCHEMA %I GRANT USAGE, SELECT, UPDATE ON SEQUENCES TO %I', g.schema_name, g.role_name);
+        EXECUTE format('GRANT %I TO medvya_app', g.role_name);
+    END LOOP;
+END $$;
+
+-- Reporting reads the tenancy schema (still inside RLS). MDV-P0-037 adds masked views for patients; until then it has no patients access.
+-- shortcut: audit and identity stay out of reporting until MDV-P0-036/037 give them masked views.
+GRANT USAGE ON SCHEMA tenancy TO medvya_reporting;
+GRANT SELECT ON ALL TABLES IN SCHEMA tenancy TO medvya_reporting;
+ALTER DEFAULT PRIVILEGES FOR ROLE medvya_owner IN SCHEMA tenancy GRANT SELECT ON TABLES TO medvya_reporting;
+
+COMMIT;

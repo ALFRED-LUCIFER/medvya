@@ -16,8 +16,8 @@ using Testcontainers.PostgreSql;
 namespace Medvya.IntegrationTests;
 
 /// <summary>
-/// One real PostgreSQL 16 per test class, migrated once with the baseline migrations. Every context connects as the container
-/// superuser until the per-module roles arrive (MDV-P0-034). Synthetic data only.
+/// One real PostgreSQL 16 per test class: infra/postgres/roles.sql as the superuser, migrations as medvya_migrator, and every context
+/// runs as medvya_app (NOSUPERUSER NOBYPASSRLS, no DDL), so tests meet the real privileges and row-level security. Synthetic data only.
 /// </summary>
 public sealed class PostgresFixture : IAsyncLifetime
 {
@@ -25,7 +25,29 @@ public sealed class PostgresFixture : IAsyncLifetime
         .WithCommand("-c", "max_connections=600") // the pooled app connections plus unpooled OpenAs ones; the load tests raise the pool to 400
         .Build();
 
-    public string ConnectionString => container.GetConnectionString();
+    const string LoginPassword = "Fixture_only_1"; // synthetic: a throwaway container, never reachable from outside
+
+    // Every role becomes a login in the fixture, standing in for the Entra identity mapped to it in Azure.
+    static readonly string[] Roles = ["medvya_app", "medvya_migrator", "medvya_reporting", "medvya_tenancy", "medvya_audit", "medvya_identity",
+        "medvya_patients", "medvya_billing", "medvya_scheduling", "medvya_leads", "medvya_notifications", "medvya_jobs"];
+
+    /// <summary>The container superuser: the administrator's step, bulk loads and the restore-drill counts. Bypasses row-level security.</summary>
+    public string AdminConnectionString => container.GetConnectionString();
+
+    /// <summary>The running application: login medvya_app.</summary>
+    public string ConnectionString => As("medvya_app");
+
+    string As(string role) => new NpgsqlConnectionStringBuilder(AdminConnectionString) { Username = role, Password = LoginPassword }.ConnectionString;
+
+    /// <summary>"app_user" is medvya_app, "migrator_user" medvya_migrator, "x_user" medvya_x, and "dbo" the superuser.</summary>
+    string RoleConnection(string user) => user switch
+    {
+        "dbo" => AdminConnectionString,
+        "app_user" => As("medvya_app"),
+        "migrator_user" => As("medvya_migrator"),
+        _ when user.EndsWith("_user", StringComparison.Ordinal) => As("medvya_" + user[..^"_user".Length]),
+        _ => throw new ArgumentException($"Unknown test user {user}", nameof(user)),
+    };
 
     public sealed class FixedTenant(Guid? id) : ICurrentTenant { public Guid? TenantId => id; }
 
@@ -39,12 +61,9 @@ public sealed class PostgresFixture : IAsyncLifetime
     public PatientsDbContext Patients(Guid? tenantId, params Microsoft.EntityFrameworkCore.Diagnostics.IInterceptor[] more) =>
         new(Options<PatientsDbContext>(tenantId).AddInterceptors(more).Options, new FixedTenant(tenantId));
 
-    /// <summary>shortcut: no app role yet (MDV-P0-034), so this is the plain tenant context.</summary>
-    public Task<PatientsDbContext> PatientsAs(string user, Guid tenantId)
-    {
-        ArgumentException.ThrowIfNullOrEmpty(user);
-        return Task.FromResult(Patients(tenantId));
-    }
+    /// <summary>The Patients context as the application role (every context is); kept for the tests that name the role.</summary>
+    public Task<PatientsDbContext> PatientsAs(string user, Guid tenantId) =>
+        user == "app_user" ? Task.FromResult(Patients(tenantId)) : throw new ArgumentException($"Only app_user, not {user}", nameof(user));
 
     public BillingDbContext Billing(Guid? tenantId) => new(Options<BillingDbContext>(tenantId).Options, new FixedTenant(tenantId));
 
@@ -57,13 +76,10 @@ public sealed class PostgresFixture : IAsyncLifetime
     /// <summary>
     /// Opens an unpooled connection (its session settings die with it) in a tenant and/or for a signed-in Medvya user (medvya.user_id,
     /// as MembershipDirectory sets it).
-    /// shortcut: <paramref name="user"/> names a role of the old SQL Server role set and is not impersonated; MDV-P0-034 adds the
-    /// Postgres roles and switches to SET ROLE here.
     /// </summary>
     public async Task<NpgsqlConnection> OpenAs(string user, Guid? tenantId = null, Guid? userId = null)
     {
-        ArgumentException.ThrowIfNullOrEmpty(user);
-        var conn = new NpgsqlConnection(new NpgsqlConnectionStringBuilder(ConnectionString) { Pooling = false }.ConnectionString);
+        var conn = new NpgsqlConnection(new NpgsqlConnectionStringBuilder(RoleConnection(user)) { Pooling = false }.ConnectionString);
         await conn.OpenAsync();
         if (tenantId is { } t) await Set(conn, "medvya.tenant_id", t);
         if (userId is { } u) await Set(conn, "medvya.user_id", u);
@@ -105,7 +121,12 @@ public sealed class PostgresFixture : IAsyncLifetime
     public async Task InitializeAsync()
     {
         await container.StartAsync();
-        await using var conn = new NpgsqlConnection(ConnectionString);
+        await using (var admin = new NpgsqlConnection(AdminConnectionString))
+        {
+            await admin.OpenAsync();
+            await Medvya.DbMigrate.DatabaseMigrator.ApplyRolesAsync(admin, Roles.Select(r => (r, LoginPassword)));
+        }
+        await using var conn = new NpgsqlConnection(As("medvya_migrator"));
         await conn.OpenAsync();
         await Medvya.DbMigrate.DatabaseMigrator.ApplyAsync(conn);
     }

@@ -142,8 +142,8 @@ public sealed class ScheduleServiceTests(PostgresFixture sql) : IClassFixture<Po
 
         other.Resources.Add(new ScheduleResource { Id = Guid.NewGuid(), TenantId = h.Tenant, FacilityId = h.Facility, Name = "Injected" });
         var blocked = await Assert.ThrowsAsync<DbUpdateException>(() => other.SaveChangesAsync());
-        Assert.Contains("block predicate", Assert.IsType<PostgresException>(blocked.InnerException).Message, StringComparison.Ordinal);
+        Assert.Equal(PostgresErrorCodes.InsufficientPrivilege, Assert.IsType<PostgresException>(blocked.InnerException).SqlState); // row-level security refuses the row (42501)
         var move = await Assert.ThrowsAsync<PostgresException>(() => mine.Database.ExecuteSqlAsync($"""UPDATE scheduling."Appointments" SET "TenantId" = {Guid.NewGuid()}"""));
-        Assert.Contains("block predicate", move.Message, StringComparison.Ordinal);
+        Assert.Equal(PostgresErrorCodes.InsufficientPrivilege, move.SqlState); // row-level security refuses the row (42501)
     }
 }

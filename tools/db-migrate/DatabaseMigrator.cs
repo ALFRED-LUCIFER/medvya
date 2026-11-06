@@ -22,9 +22,34 @@ public static class DatabaseMigrator
 
     static readonly NoTenant None = new();
 
+    /// <summary>
+    /// The administrator's step (infra/postgres/roles.sql, idempotent): roles, schemas and privileges. Run it as a superuser or role administrator
+    /// before <see cref="ApplyAsync"/>. <paramref name="logins"/> turns the named roles into password logins for development and tests;
+    /// in Azure an Entra identity is created IN ROLE medvya_app / medvya_migrator by hand instead.
+    /// </summary>
+    public static async Task ApplyRolesAsync(NpgsqlConnection connection, IEnumerable<(string Role, string Password)>? logins = null, CancellationToken ct = default)
+    {
+        await using var stream = typeof(DatabaseMigrator).Assembly.GetManifestResourceStream("roles.sql")!;
+        using var reader = new StreamReader(stream);
+        await using (var script = new NpgsqlCommand(await reader.ReadToEndAsync(ct), connection)) await script.ExecuteNonQueryAsync(ct);
+        foreach (var (role, password) in logins ?? [])
+        {
+            if (!role.StartsWith("medvya_", StringComparison.Ordinal)) throw new ArgumentException("Only Medvya roles can become logins.", nameof(logins));
+            await using var cmd = new NpgsqlCommand("SELECT format('ALTER ROLE %I LOGIN PASSWORD %L', @role::text, @password::text)", connection);
+            cmd.Parameters.AddWithValue("role", role);
+            cmd.Parameters.AddWithValue("password", password);
+            var alter = (string)(await cmd.ExecuteScalarAsync(ct))!;
+            await using var run = new NpgsqlCommand(alter, connection);
+            await run.ExecuteNonQueryAsync(ct);
+        }
+    }
+
     /// <summary>Migrations of every module (forward-only, idempotent), then the Hangfire tables. Run as the migration principal.</summary>
     public static async Task ApplyAsync(NpgsqlConnection connection, CancellationToken ct = default)
     {
+        // The migrator login holds no data rights; objects must be owned by medvya_owner (roles.sql) so default privileges reach the module roles.
+        await using (var role = new NpgsqlCommand("SET ROLE medvya_owner", connection)) await role.ExecuteNonQueryAsync(ct);
+
         // New module = new line here, in dependency order.
         await Migrate(new TenancyDbContext(Options<TenancyDbContext>(connection), None), ct);
         await Migrate(new AuditDbContext(Options<AuditDbContext>(connection), None), ct);

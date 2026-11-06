@@ -98,10 +98,10 @@ public class BillingNumberingTests(PostgresFixture sql) : IClassFixture<Postgres
         // Tenant A can neither plant a row in B's name nor move its own series to B.
         inA.DocSequences.Add(new DocSequence { Id = Guid.NewGuid(), TenantId = tenantB, CountryCode = "IN", DocumentType = DocumentType.Receipt, FinancialYear = "26-27", Prefix = "RCT", NextNumber = 1 });
         var insert = await Assert.ThrowsAsync<DbUpdateException>(() => inA.SaveChangesAsync());
-        Assert.Contains("block predicate", Assert.IsType<PostgresException>(insert.InnerException).Message, StringComparison.Ordinal);
+        Assert.Equal(PostgresErrorCodes.InsufficientPrivilege, Assert.IsType<PostgresException>(insert.InnerException).SqlState); // row-level security refuses the row (42501)
         await using var inA2 = sql.Billing(tenantA);
         var move = await Assert.ThrowsAsync<PostgresException>(() => inA2.Database.ExecuteSqlAsync($"""UPDATE billing."DocSequences" SET "TenantId" = {tenantB}, "Prefix" = 'MOVE'"""));
-        Assert.Contains("block predicate", move.Message, StringComparison.Ordinal);
+        Assert.Equal(PostgresErrorCodes.InsufficientPrivilege, move.SqlState); // row-level security refuses the row (42501)
 
         // Without a tenant there are no rows and no numbers.
         await using var none = sql.Billing(null);

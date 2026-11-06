@@ -19,7 +19,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="..\..\infra\sql\roles.sql" Link="roles.sql" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

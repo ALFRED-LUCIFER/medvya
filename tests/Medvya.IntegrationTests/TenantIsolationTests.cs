@@ -55,7 +55,7 @@ public class TenantIsolationTests(PostgresFixture sql) : IClassFixture<PostgresF
         await using var db2 = sql.Context(tenantA);
         var move = await Assert.ThrowsAsync<PostgresException>(() =>
             db2.Database.ExecuteSqlAsync($"""UPDATE tenancy."Facilities" SET "TenantId" = {tenantB} WHERE "Id" = {facilityA}"""));
-        Assert.Contains("block predicate", move.Message, StringComparison.Ordinal);
+        Assert.Equal(PostgresErrorCodes.InsufficientPrivilege, move.SqlState); // row-level security refuses the row (42501)
     }
 
     [Fact]

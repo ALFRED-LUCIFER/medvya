@@ -131,7 +131,7 @@ public class DatabaseRoleTests(PostgresFixture sql) : IClassFixture<PostgresFixt
         await Denied("reporting_user", "SELECT \"Id\" FROM audit.\"AuditEvents\" LIMIT 1");
         await Denied("reporting_user", "SELECT \"DisplayName\" FROM identity.\"Users\" LIMIT 1");
         await Denied("reporting_user", "CREATE TABLE tenancy.\"Injected\" (\"Id\" int)");
-        await Run("reporting_user", "SELECT \"Id\", \"FullName\" FROM patients.\"Patients\" LIMIT 1"); // masked: PatientRegistryTests
+        await Denied("reporting_user", "SELECT \"Id\", \"FullName\" FROM patients.\"Patients\" LIMIT 1"); // shortcut: no patients access until MDV-P0-037 adds the masked views; then this becomes Run
         await Denied("reporting_user", "UPDATE patients.\"Patients\" SET \"Mobile\" = 'x'");
         await Denied("reporting_user", "DELETE FROM patients.\"Identifiers\"");
     }
@@ -149,7 +149,7 @@ public class DatabaseRoleTests(PostgresFixture sql) : IClassFixture<PostgresFixt
         Assert.Equal(2L, await count.ExecuteScalarAsync());
 
         var blocked = await Assert.ThrowsAsync<PostgresException>(() => Run("app_user", "INSERT INTO tenancy.\"Tenants\" (\"Id\", \"Name\", \"CountryCode\", \"ResidencyRegion\") VALUES (gen_random_uuid(), 'x', 'AE', 'uaenorth')", tenant));
-        Assert.Contains("block predicate", blocked.Message, StringComparison.Ordinal);
+        Assert.Equal(PostgresErrorCodes.InsufficientPrivilege, blocked.SqlState); // row-level security refuses the row (42501)
     }
 
     const string Insert = """

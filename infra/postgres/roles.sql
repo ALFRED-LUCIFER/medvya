@@ -36,7 +36,7 @@ GRANT medvya_owner TO medvya_migrator WITH INHERIT FALSE, SET TRUE;
 DO $$
 DECLARE s text;
 BEGIN
-    FOREACH s IN ARRAY ARRAY['tenancy', 'audit', 'identity', 'patients', 'billing', 'scheduling', 'leads', 'notifications', 'hangfire']
+    FOREACH s IN ARRAY ARRAY['tenancy', 'audit', 'identity', 'patients', 'billing', 'scheduling', 'leads', 'notifications', 'hangfire', 'ledger']
     LOOP
         EXECUTE format('CREATE SCHEMA IF NOT EXISTS %I', s);
         EXECUTE format('ALTER SCHEMA %I OWNER TO medvya_owner', s);
@@ -54,7 +54,7 @@ CREATE TEMP TABLE module_grants (schema_name text, role_name text, table_rights 
 INSERT INTO module_grants VALUES
     -- Tenancy: row access to its own schema (RLS still limits rows to the session's tenant).
     ('tenancy',       'medvya_tenancy',       'SELECT, INSERT, UPDATE, DELETE'),
-    -- Audit: append and read only. The ledger refuses UPDATE/DELETE by trigger as well (MDV-P0-036); this refuses them first, by permission.
+    -- Audit: append and read only. The append-only trigger refuses UPDATE/DELETE for every role as well (MDV-P0-036); this refuses them first.
     ('audit',         'medvya_audit',         'SELECT, INSERT'),
     -- Identity: staff accounts and sessions. Never deleted (offboarding is a membership status; a session is revoked, not removed).
     ('identity',      'medvya_identity',      'SELECT, INSERT, UPDATE'),
@@ -81,6 +81,20 @@ BEGIN
         EXECUTE format('ALTER DEFAULT PRIVILEGES FOR ROLE medvya_owner IN SCHEMA %I GRANT %s ON TABLES TO %I', g.schema_name, g.table_rights, g.role_name);
         EXECUTE format('ALTER DEFAULT PRIVILEGES FOR ROLE medvya_owner IN SCHEMA %I GRANT USAGE, SELECT, UPDATE ON SEQUENCES TO %I', g.schema_name, g.role_name);
         EXECUTE format('GRANT %I TO medvya_app', g.role_name);
+    END LOOP;
+END $$;
+
+-- Ledger (MDV-P0-036): the shared hash-chain functions and their ids-only bookkeeping (ledger."Tables", ledger."Chains"). Every role that
+-- inserts into a hash-chained table runs the chain trigger, which records a new chain; audit also runs the daily digest and verification.
+-- No UPDATE or DELETE: a chain is never unlisted. Add a module role here when its first table is ledgered.
+DO $$
+DECLARE r text;
+BEGIN
+    FOREACH r IN ARRAY ARRAY['medvya_tenancy', 'medvya_patients', 'medvya_audit']
+    LOOP
+        EXECUTE format('GRANT USAGE ON SCHEMA ledger TO %I', r);
+        EXECUTE format('GRANT SELECT, INSERT ON ALL TABLES IN SCHEMA ledger TO %I', r);
+        EXECUTE format('ALTER DEFAULT PRIVILEGES FOR ROLE medvya_owner IN SCHEMA ledger GRANT SELECT, INSERT ON TABLES TO %I', r);
     END LOOP;
 END $$;
 

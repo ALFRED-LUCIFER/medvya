@@ -40,8 +40,9 @@ public sealed class BlobDigestStore(string connectionString, string container = 
 /// Daily signed digest of every ledger chain head (MDV-P0-036) and the check against it. The digest is JSON {payload, hmac}: payload lists
 /// (table, tenant, last sequence, last hash) and hmac is HMAC-SHA256 of the payload text with the digest key (Key Vault in the cloud, a local key
 /// in Development). Hashes are integrity evidence, not a legally qualified signature. Ids and hashes only, no PHI.
-/// shortcut: runs as the connecting role and reads every tenant, so once row-level security is forced (MDV-P0-034) it needs the audit role that
-/// bypasses it; heads are a full group-by per table, move to a per-tenant head table when tables are large.
+/// Row-level security is never bypassed: the tenants come from the ids-only ledger."Chains" list, and each tenant's chains are read with
+/// medvya.tenant_id set to that tenant. shortcut: heads are a group-by per table and a round trip per tenant; keep a head row per chain
+/// when tables or tenant counts are large.
 /// </summary>
 public sealed partial class LedgerDigests(string connectionString, byte[] key, IDigestStore store, TimeProvider clock, ILogger<LedgerDigests> log)
 {
@@ -58,12 +59,28 @@ public sealed partial class LedgerDigests(string connectionString, byte[] key, I
         return conn;
     }
 
+    static async Task InTenantAsync(NpgsqlConnection conn, Guid tenant, CancellationToken ct)
+    {
+        await using var cmd = new NpgsqlCommand("SELECT set_config('medvya.tenant_id', @t, false)", conn);
+        cmd.Parameters.AddWithValue("t", tenant.ToString());
+        await cmd.ExecuteNonQueryAsync(ct);
+    }
+
     static async Task<List<Head>> HeadsAsync(NpgsqlConnection conn, CancellationToken ct)
     {
+        var tenants = new List<Guid>();
+        await using (var list = new NpgsqlCommand("""SELECT DISTINCT "TenantId" FROM ledger."Chains" ORDER BY 1""", conn))
+        await using (var r = await list.ExecuteReaderAsync(ct))
+            while (await r.ReadAsync(ct)) tenants.Add(r.GetGuid(0));
+
         var heads = new List<Head>();
-        await using var cmd = new NpgsqlCommand("SELECT tbl, tenant, seq, hash FROM ledger.heads() ORDER BY 1, 2", conn);
-        await using var r = await cmd.ExecuteReaderAsync(ct);
-        while (await r.ReadAsync(ct)) heads.Add(new Head(r.GetString(0), r.GetGuid(1), r.GetInt64(2), Convert.ToHexStringLower((byte[])r[3])));
+        foreach (var tenant in tenants)
+        {
+            await InTenantAsync(conn, tenant, ct);
+            await using var cmd = new NpgsqlCommand("SELECT tbl, tenant, seq, hash FROM ledger.heads() ORDER BY 1, 2", conn);
+            await using var r = await cmd.ExecuteReaderAsync(ct);
+            while (await r.ReadAsync(ct)) heads.Add(new Head(r.GetString(0), r.GetGuid(1), r.GetInt64(2), Convert.ToHexStringLower((byte[])r[3])));
+        }
         return heads;
     }
 
@@ -108,6 +125,7 @@ public sealed partial class LedgerDigests(string connectionString, byte[] key, I
                 foreach (var h in digest.Heads)
                 {
                     chains.Add((h.Table, h.Tenant));
+                    await InTenantAsync(conn, h.Tenant, ct);
                     await using var cmd = new NpgsqlCommand("SELECT ledger.hash_at(@t, @tenant, @seq)", conn);
                     cmd.Parameters.AddWithValue("t", h.Table);
                     cmd.Parameters.AddWithValue("tenant", h.Tenant);
@@ -122,6 +140,7 @@ public sealed partial class LedgerDigests(string connectionString, byte[] key, I
 
         foreach (var (table, tenant) in chains)
         {
+            await InTenantAsync(conn, tenant, ct);
             await using var cmd = new NpgsqlCommand("SELECT ledger.verify_chain(@t, @tenant)", conn);
             cmd.Parameters.AddWithValue("t", table);
             cmd.Parameters.AddWithValue("tenant", tenant);

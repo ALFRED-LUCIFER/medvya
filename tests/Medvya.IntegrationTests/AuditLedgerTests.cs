@@ -73,11 +73,15 @@ public class AuditLedgerTests(PostgresFixture sql) : IClassFixture<PostgresFixtu
     public async Task EventsCannotBeChangedOrDeleted()
     {
         var a = await Write(tenantA);
+        // Layer one: the app role has no UPDATE or DELETE right on audit.
         await using var db = sql.Audit(tenantA);
-        var update = await Assert.ThrowsAsync<PostgresException>(() => db.Database.ExecuteSqlAsync($"""UPDATE audit."AuditEvents" SET "Action" = 'x' WHERE "Id" = {a.Id}"""));
-        var delete = await Assert.ThrowsAsync<PostgresException>(() => db.Database.ExecuteSqlAsync($"""DELETE FROM audit."AuditEvents" WHERE "Id" = {a.Id}"""));
-        Assert.Contains("append only", update.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("append only", delete.Message, StringComparison.OrdinalIgnoreCase);
+        foreach (var statement in new[] { $"""UPDATE audit."AuditEvents" SET "Action" = 'x' WHERE "Id" = '{a.Id}'""", $"""DELETE FROM audit."AuditEvents" WHERE "Id" = '{a.Id}'""" })
+            Assert.Equal(PostgresErrorCodes.InsufficientPrivilege, (await Assert.ThrowsAsync<PostgresException>(() => db.Database.ExecuteSqlRawAsync(statement))).SqlState);
+
+        // Layer two: the append-only trigger refuses even a role that holds every right (the superuser).
+        await using var admin = await sql.OpenAs("dbo");
+        foreach (var statement in new[] { $"""UPDATE audit."AuditEvents" SET "Action" = 'x' WHERE "Id" = '{a.Id}'""", $"""DELETE FROM audit."AuditEvents" WHERE "Id" = '{a.Id}'""" })
+            Assert.Contains("append only", (await Assert.ThrowsAsync<PostgresException>(() => new NpgsqlCommand(statement, admin).ExecuteNonQueryAsync())).Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -92,8 +96,7 @@ public class AuditLedgerTests(PostgresFixture sql) : IClassFixture<PostgresFixtu
     public async Task LedgerDigestVerifies()
     {
         await Write(tenantA);
-        await using var conn = new NpgsqlConnection(sql.ConnectionString);
-        await conn.OpenAsync();
+        await using var conn = await sql.OpenAs("app_user", tenantA); // inside the tenant: without one, RLS hides every row and an empty chain verifies
         // MDV-P0-036: audit.verify_chain returns the id of the first broken row, NULL when the chain is intact.
         await using var verify = new NpgsqlCommand("SELECT audit.verify_chain(@tenant)", conn);
         verify.Parameters.AddWithValue("tenant", tenantA);

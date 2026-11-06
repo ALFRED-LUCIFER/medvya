@@ -25,8 +25,11 @@ public static class LedgerSql
     const string Zero = "decode(repeat('00', 32), 'hex')";
 
     const string Install = $$"""
-        CREATE SCHEMA IF NOT EXISTS ledger;
+        -- Schema ledger comes from infra/postgres/roles.sql (the owner may not create schemas; Postgres checks that even for IF NOT EXISTS).
         CREATE TABLE IF NOT EXISTS ledger."Tables" ("Name" text PRIMARY KEY);
+        -- Which tenant has a chain in which table: ids only, no row-level security, so the digest job can list chains and then read each
+        -- one inside its own tenant (it never bypasses RLS).
+        CREATE TABLE IF NOT EXISTS ledger."Chains" ("Table" text NOT NULL REFERENCES ledger."Tables", "TenantId" uuid NOT NULL, PRIMARY KEY ("Table", "TenantId"));
 
         CREATE OR REPLACE FUNCTION ledger.row_hash(row_json jsonb, prev bytea) RETURNS bytea LANGUAGE sql IMMUTABLE AS $$
             SELECT sha256(convert_to(encode(prev, 'hex') || '|' || (row_json - 'PrevHash' - 'RowHash')::text, 'UTF8'))
@@ -41,6 +44,9 @@ public static class LedgerSql
             NEW."ChainSeq" := coalesce(head_seq, 0) + 1;
             NEW."PrevHash" := coalesce(head_hash, {{Zero}});
             NEW."RowHash" := ledger.row_hash(to_jsonb(NEW), NEW."PrevHash");
+            IF head_seq IS NULL THEN
+                INSERT INTO ledger."Chains" VALUES (TG_TABLE_SCHEMA || '.' || TG_TABLE_NAME, NEW."TenantId") ON CONFLICT DO NOTHING;
+            END IF;
             RETURN NEW;
         END $$;
 
@@ -63,7 +69,7 @@ public static class LedgerSql
             RETURN NULL;
         END $$;
 
-        -- The head (last sequence and hash) of every tenant's chain in every ledger table, for the daily digest.
+        -- The head (last sequence and hash) of every chain the session can see (row-level security: the session's tenant), for the daily digest.
         CREATE OR REPLACE FUNCTION ledger.heads() RETURNS TABLE (tbl text, tenant uuid, seq bigint, hash bytea) LANGUAGE plpgsql AS $$
         DECLARE t text;
         BEGIN

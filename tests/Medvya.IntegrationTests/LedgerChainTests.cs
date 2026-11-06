@@ -24,16 +24,16 @@ public class LedgerChainTests(PostgresFixture sql) : IClassFixture<PostgresFixtu
     /// <summary>Runs SQL as the container superuser with the named trigger switched off, the way an attacker with database admin rights would; the trigger is always switched back on.</summary>
     internal static async Task AsSuperuserWithoutTrigger(PostgresFixture sql, string table, string trigger, string statement)
     {
-        await using var conn = new NpgsqlConnection(sql.ConnectionString);
+        await using var conn = new NpgsqlConnection(sql.AdminConnectionString);
         await conn.OpenAsync();
         foreach (var command in new[] { $"ALTER TABLE {table} DISABLE TRIGGER \"{trigger}\"", statement, $"ALTER TABLE {table} ENABLE ALWAYS TRIGGER \"{trigger}\"" })
             await new NpgsqlCommand(command, conn).ExecuteNonQueryAsync();
     }
 
+    /// <summary>Verifies as the app, inside the tenant: row-level security is never bypassed to check a chain.</summary>
     internal static async Task<Guid?> Verify(PostgresFixture sql, Guid tenant)
     {
-        await using var conn = new NpgsqlConnection(sql.ConnectionString);
-        await conn.OpenAsync();
+        await using var conn = await sql.OpenAs("app_user", tenant);
         await using var cmd = new NpgsqlCommand("SELECT audit.verify_chain(@t)", conn);
         cmd.Parameters.AddWithValue("t", tenant);
         return await cmd.ExecuteScalarAsync() as Guid?;
@@ -47,7 +47,7 @@ public class LedgerChainTests(PostgresFixture sql) : IClassFixture<PostgresFixtu
         for (var i = 0; i < 3; i++) ids.Add(await WriteEvent(sql, tenant));
         Assert.Null(await Verify(sql, tenant));
 
-        await using (var conn = new NpgsqlConnection(sql.ConnectionString))
+        await using (var conn = new NpgsqlConnection(sql.AdminConnectionString))
         {
             await conn.OpenAsync();
             var rows = new List<(long Seq, string Prev, string Hash)>();
@@ -86,7 +86,7 @@ public class LedgerChainTests(PostgresFixture sql) : IClassFixture<PostgresFixtu
 
     async Task<List<long>> Seqs(Guid tenant)
     {
-        await using var conn = new NpgsqlConnection(sql.ConnectionString);
+        await using var conn = new NpgsqlConnection(sql.AdminConnectionString);
         await conn.OpenAsync();
         var seqs = new List<long>();
         await using var r = await new NpgsqlCommand($"""SELECT "ChainSeq" FROM audit."AuditEvents" WHERE "TenantId" = '{tenant}'""", conn).ExecuteReaderAsync();
@@ -99,7 +99,8 @@ public class LedgerChainTests(PostgresFixture sql) : IClassFixture<PostgresFixtu
     {
         var tenant = Guid.NewGuid();
         var id = await WriteEvent(sql, tenant);
-        await using var conn = new NpgsqlConnection(sql.ConnectionString);
+        // The superuser: it holds DELETE and TRUNCATE rights and may set the replication role, so only the triggers can refuse.
+        await using var conn = new NpgsqlConnection(sql.AdminConnectionString);
         await conn.OpenAsync();
         await new NpgsqlCommand("SET session_replication_role = replica", conn).ExecuteNonQueryAsync();
         await Assert.ThrowsAsync<PostgresException>(() => new NpgsqlCommand($"""DELETE FROM audit."AuditEvents" WHERE "Id" = '{id}'""", conn).ExecuteNonQueryAsync());

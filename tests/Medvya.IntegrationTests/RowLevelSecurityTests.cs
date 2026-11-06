@@ -10,7 +10,8 @@ namespace Medvya.IntegrationTests;
 public class RowLevelSecurityTests(PostgresFixture sql) : IClassFixture<PostgresFixture>
 {
     // Tables that hold a TenantId yet are read with no tenant on purpose: ids only, no clinic data.
-    static readonly string[] IdsOnly = ["tenancy.TenantIndex", "scheduling.OutboxTenants", "identity.Sessions"]; // sessions are looked up by token before a tenant is known
+    // Sessions are looked up by token before a tenant is known; ledger.Chains lists which tenant has a hash chain, for the digest job (MDV-P0-036).
+    static readonly string[] IdsOnly = ["tenancy.TenantIndex", "scheduling.OutboxTenants", "identity.Sessions", "ledger.Chains"];
 
     async Task<List<string>> Rows(string query)
     {

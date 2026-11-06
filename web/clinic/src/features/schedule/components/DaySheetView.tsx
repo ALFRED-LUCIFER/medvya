@@ -16,14 +16,16 @@ export default function DaySheetView({ sheet, printedBy }: { sheet: DaySheet; pr
             <table className="w-full border-collapse text-base">
               <thead>
                 <tr className="border-b-2 border-black">
-                  {(['time', 'patient', 'type', 'status'] as const).map(c => <th key={c} scope="col" className="py-1 pe-3 text-start">{t(`schedule.sheet.${c}`)}</th>)}
+                  {(['time', 'token', 'patient', 'age', 'type', 'status'] as const).map(c => <th key={c} scope="col" className="py-1 pe-3 text-start">{t(`schedule.sheet.${c}`)}</th>)}
                 </tr>
               </thead>
               <tbody>
                 {page.rows.map(r => (
                   <tr key={`${r.start}-${r.firstName}`} className="border-b border-black/60">
                     <td className="py-1.5 pe-3 font-mono">{formatTime(new Date(r.start), sheet.timeZone)}</td>
+                    <td className="py-1.5 pe-3 font-mono">{r.token ?? ''}</td>
                     <td className="py-1.5 pe-3 font-bold">{r.firstName}</td>
+                    <td className="py-1.5 pe-3">{r.ageYears ?? ''}</td>
                     <td className="py-1.5 pe-3">{t(`visitType.${r.visitType}`)}</td>
                     <td className="py-1.5 pe-3">{t(`schedule.state.${r.state}`)}</td>
                   </tr>

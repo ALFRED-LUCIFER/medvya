@@ -69,6 +69,9 @@ public interface IScheduleService
     /// <exception cref="SchedulingAccessDeniedException">No calendar access at this facility.</exception>
     Task<ScheduleDay> GetDayAsync(Guid facilityId, DateOnly? day, CancellationToken cancellationToken = default);
 
+    /// <summary>The printable day sheet (MDV-P1-050): the day view cut to the paper fields, with queue tokens and ages. Needs view access.</summary>
+    Task<DaySheet> GetDaySheetAsync(Guid facilityId, DateOnly? day, CancellationToken cancellationToken = default);
+
     /// <summary>The Monday-to-Sunday week containing the facility-local date (this week when null) for one doctor or resource.</summary>
     /// <exception cref="SchedulingValidationException">The calendar is not a doctor or resource of the facility.</exception>
     Task<ScheduleWeek> GetWeekAsync(Guid facilityId, Guid calendarId, DateOnly? day, CancellationToken cancellationToken = default);

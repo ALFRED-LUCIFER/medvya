@@ -1477,6 +1477,8 @@
   "schedule.sheet.printedBy": "طبعه {name} في {when}",
   "schedule.sheet.warning": "يحتوي على أسماء المرضى. احتفظ به عند مكتب الاستقبال وأتلفه بنهاية اليوم.",
   "schedule.sheet.time": "الوقت",
+  "schedule.sheet.token": "الرمز",
+  "schedule.sheet.age": "العمر",
   "schedule.sheet.patient": "المريض",
   "schedule.sheet.type": "نوع الزيارة",
   "schedule.sheet.status": "الحالة",

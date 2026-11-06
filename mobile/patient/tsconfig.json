@@ -1,5 +1,14 @@
 {
   "extends": "expo/tsconfig.base",
-  "compilerOptions": { "strict": true, "noEmit": true, "types": ["jest"] },
-  "include": ["src", "*.ts", "expo-env.d.ts"]
+  "compilerOptions": {
+    "strict": true,
+    "noEmit": true,
+    "types": [
+      "jest"
+    ]
+  },
+  "include": [
+    "src",
+    "*.ts"
+  ]
 }

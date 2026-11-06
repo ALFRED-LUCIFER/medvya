@@ -31,11 +31,30 @@ describe('day layout', () => {
     expect(room!.items).toHaveLength(1);
   });
 
-  it('marks every half hour of the frame', () => {
+  it('moves a cancelled visit beside the slot it freed and beside the visit rebooked into it, never over them (MDV-P1-052)', () => {
+    const at = (h: string) => `2026-10-19T${h}:00Z`;
+    const visit = (id: string, state: 'Booked' | 'Cancelled', start: string, end: string) =>
+      ({ id, reference: id, patientId: 'p-1', patientName: 'Synthetic', visitType: 'FollowUp' as const, state, start: at(start), end: at(end) });
+    const col = day.columns[0]!;
+    const items = layoutDay({ ...day, columns: [{ ...col, unavailable: [],
+      slots: [{ start: at('03:30'), end: at('03:50'), held: false }, { start: at('05:30'), end: at('05:50'), held: false }],
+      appointments: [visit('c-1', 'Cancelled', '03:30', '03:50'), visit('c-2', 'Cancelled', '04:10', '04:30'), visit('b-1', 'Booked', '04:10', '04:30'), visit('c-3', 'Cancelled', '06:30', '06:50')] }] })
+      .columns[0]!.items.map(i => [i.kind === 'appointment' ? i.id : i.kind, i.lane]);
+    expect(items).toEqual([
+      ['slot', 'main'], ['c-1', 'side'], // the freed slot first, so it is also first in the tab order
+      ['b-1', 'main'], ['c-2', 'side'], // rebooked: the new visit and the cancelled one side by side
+      ['slot', 'full'], ['c-3', 'full'], // nothing to share with: full width
+    ]);
+  });
+
+  it('marks every slot of the shortest length, on the slot starts (MDV-P1-052)', () => {
     const marks = layoutDay(day).marks;
-    expect(marks).toHaveLength(22);
+    expect(marks).toHaveLength(33); // 11 hours of 20-minute slots
     expect(marks[0]).toEqual({ at: '2026-10-19T03:30:00.000Z', top: 0 });
-    expect(marks[1]!.top).toBe(72);
+    expect(marks[1]).toEqual({ at: '2026-10-19T03:50:00.000Z', top: minSlotPx }); // one label per slot row
+    // Hours that start off the frame's start (09:10) put the marks on 09:10, 09:30 …
+    const late = { ...day, columns: [{ ...day.columns[0]!, hours: [{ start: '2026-10-19T03:40:00Z', end: '2026-10-19T07:30:00Z', room: null }] }] };
+    expect(layoutDay(late).marks.slice(0, 2).map(m => m.at)).toEqual(['2026-10-19T03:40:00.000Z', '2026-10-19T04:00:00.000Z']);
   });
 
   it('steps from the date asked for, so a fast double click moves two days', () => {

@@ -9,7 +9,7 @@ import type { Location } from '../../settings/domain/settings';
 import { Field } from '../../settings/components/Field';
 import { Section } from '../../settings/components/Section';
 import { staffColumns, type StaffColumn } from '../domain/staffTable';
-import { assignableRoles, canOffboard, canResend, canRevoke, permissionRows, type AddStaffForm, type OffboardForm, type RoleCatalogue, type RoleChoice, type StaffMember, type Step } from '../domain/staff';
+import { assignableRoles, canOffboard, canResend, canRevoke, permissionRows, statusLabel, type AddStaffForm, type OffboardForm, type RoleCatalogue, type RoleChoice, type StaffMember, type Step } from '../domain/staff';
 
 type Props = {
   rows: StaffMember[];
@@ -89,8 +89,8 @@ export default function StaffPanel(p: Props) {
                     <TableCell>{m.facilityName}</TableCell>
                     <TableCell>{t(`staff.mfa.${m.mfa}`)}</TableCell>
                     <TableCell>
-                      {t(`staff.status.${m.status}`)}
-                      {m.invitationState && <span className="block text-muted-foreground">{t(`staff.invitation.${m.invitationState}`, { date: m.invitationExpiresAt ? formatDate(new Date(m.invitationExpiresAt)) : '' })}</span>}
+                      {t(`staff.status.${statusLabel(m)}`)}
+                      {m.invitationState === 'pending' && <span className="block text-muted-foreground">{t(`staff.invitation.${m.invitationState}`, { date: m.invitationExpiresAt ? formatDate(new Date(m.invitationExpiresAt)) : '' })}</span>}
                     </TableCell>
                     <TableCell>
                       <span className="flex flex-wrap gap-2">

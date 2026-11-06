@@ -1,5 +1,6 @@
 using Hangfire;
 using System.Net;
+using System.Reflection;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 using Host.Api.Auth;
@@ -129,8 +130,9 @@ app.UseWebApp(); // static files only; reads no session cookie
 app.RunPublicSiteBeforeAuthentication(); // public pages never read the session cookie
 app.UseStaffAuthentication();
 
-// Deploy smoke tests (MDV-P0-007) read the version from here.
-app.MapGet("/health", () => Results.Ok(new { status = "ok", version = typeof(Program).Assembly.GetName().Version?.ToString() }))
+// Deploy smoke tests (MDV-P0-007) read the version from here: the tag the deploy published with, plus the commit.
+var version = typeof(Program).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+app.MapGet("/health", () => Results.Ok(new { status = "ok", version }))
     .AllowAnonymous(); // public: deploy smoke tests
 app.MapStaffSession();
 app.MapSchedulingEndpoints();

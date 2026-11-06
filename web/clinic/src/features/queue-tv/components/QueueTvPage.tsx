@@ -70,16 +70,20 @@ export default function QueueTvPage(props: Props) {
         <p className="text-[22px] text-tv-note">{t('queueTv.emergency')}</p>
         <div className="flex flex-wrap items-center gap-4">
           {/* Words and an icon, not colour alone; announced when it changes. */}
-          <p role="status" className="flex items-center gap-2 text-lg font-bold text-tv-muted">
-            {props.live === 'live' ? <Radio aria-hidden className="size-5" /> : <WifiOff aria-hidden className="size-5" />}
-            {t(`board.live.${props.live}`)}
-          </p>
+          {/* An unpaired screen never connects: "Connecting..." under the refusal would mislead. */}
+          {!props.unpaired && (
+            <p role="status" className="flex items-center gap-2 text-lg font-bold text-tv-muted">
+              {props.live === 'live' ? <Radio aria-hidden className="size-5" /> : <WifiOff aria-hidden className="size-5" />}
+              {t(`board.live.${props.live}`)}
+            </p>
+          )}
           <button type="button" aria-pressed={props.chime} onClick={props.onToggleChime}
             className="flex min-h-12 items-center gap-2 rounded-lg border border-tv-muted px-4 text-lg font-bold text-white focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-white">
             {props.chime ? <Bell aria-hidden className="size-5" /> : <BellOff aria-hidden className="size-5" />}
             {t(props.chime ? 'queueTv.chime.on' : 'queueTv.chime.off')}
           </button>
-          <div className="rounded-lg bg-card p-2 text-foreground">{props.languageSwitcher}</div>
+          {/* On the dark TV theme, not a white box (MDV-P1-052). */}
+          <div className="rounded-lg border border-tv-muted bg-tv-panel p-2 text-white">{props.languageSwitcher}</div>
         </div>
       </footer>
     </main>

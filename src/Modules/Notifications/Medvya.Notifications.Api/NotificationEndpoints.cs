@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Medvya.Audit.Api;
+using Medvya.Audit.Application;
 using Medvya.Notifications.Application;
 using Medvya.Notifications.Domain;
 using Medvya.Notifications.Infrastructure;
@@ -28,7 +29,7 @@ public static class NotificationEndpoints
 
         staff.MapGet("/appointments/{appointmentId:guid}/notifications", async (Guid appointmentId, Guid? facilityId, [FromServices] INotificationQueries q, CancellationToken ct) =>
                 facilityId is not { } f || f == Guid.Empty ? NoFacility : Results.Ok(await q.ForAppointmentAsync(f, appointmentId, ct)))
-            .Audited("notification.read", "notification");
+            .Audited("notification.read", "notification", window: AuditWindow.Repeated); // the visit panel polls it every 30 s
 
         // Delivery rate per channel and every failure with its reason code (exit gate 4). Default window: the last 14 days.
         staff.MapGet("/notifications/delivery", async (Guid? facilityId, int? days, [FromServices] INotificationQueries q, [FromServices] TimeProvider clock, CancellationToken ct) =>

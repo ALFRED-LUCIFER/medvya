@@ -1,3 +1,4 @@
+import { catalogs, type MessageKey } from '@medvya/i18n';
 import type { Role } from '../../session/domain/session';
 // Mirrors src/Host.Api/AuditLog/AccessLogEndpoints.cs (the server is the authority). Rows hold ids and codes; the patient's name arrives only
 // on the per-patient request, so a list without a chosen patient shows the MRN alone.
@@ -28,6 +29,15 @@ export type AuditPage = { items: AuditRow[]; next: string | null; actions: strin
 export type AuditFilters = { actor: string; action: string; from: string; to: string; patientId: string | null; zone: string };
 
 export const all = 'all';
+
+/**
+ * The words for an action code (MDV-P1-052), or null for a code the catalog does not know yet: the screen then shows the code
+ * itself rather than nothing. Codes stay codes in the CSV export and the filter's value.
+ */
+export function actionKey(code: string): MessageKey | null {
+  const key = `audit.actionName.${code}`;
+  return key in catalogs.en ? (key as MessageKey) : null;
+}
 
 const DAY_MS = 86_400_000;
 

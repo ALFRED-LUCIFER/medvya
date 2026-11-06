@@ -1,6 +1,9 @@
 {
   "_review": "Machine-drafted. Needs native-speaker and clinical review before real patients (MDV-P0-021). The privacy notice (site.notice.*, site.form.consent) also needs legal review (MDV-P1-044).",
   "app.tagline": "क्लिनिक ऐप · आधार संस्करण",
+  "mobile.clinician.name": "मेडव्या क्लिनिक",
+  "mobile.patient.name": "मरीज़ों के लिए मेडव्या",
+  "mobile.home.ready": "ऐप तैयार है। सुविधाएँ अगले रिलीज़ में आएँगी।",
   "app.language": "भाषा",
   "ai.badge": "AI ड्राफ्ट · समीक्षा नहीं हुई",
   "note.signBlocked": "नोट पर हस्ताक्षर करें ({n} अनसुलझे)",

@@ -6,6 +6,8 @@
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",
     "dev": "pnpm --filter clinic dev",
+    "dev:clinician": "pnpm --filter @medvya/mobile-clinician start",
+    "dev:patient": "pnpm --filter @medvya/mobile-patient start",
     "services:up": "docker compose up -d --wait",
     "services:down": "docker compose down",
     "dev:db": "pnpm services:up && DOTNET_ENVIRONMENT=Development ConnectionStrings__Medvya=\"Server=localhost,1433;Database=medvya;User Id=sa;Password=${MSSQL_SA_PASSWORD:-Local_dev_only_1};TrustServerCertificate=True\" dotnet run --project tools/synthetic-data-generator --",

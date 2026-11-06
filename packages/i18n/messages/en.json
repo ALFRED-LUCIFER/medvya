@@ -1,6 +1,9 @@
 {
   "app.name": "Medvya",
   "app.tagline": "Clinic app · foundation build",
+  "mobile.clinician.name": "Medvya Clinic",
+  "mobile.patient.name": "Medvya for patients",
+  "mobile.home.ready": "The app is set up. Features arrive in the next releases.",
   "app.language": "Language",
   "ai.badge": "AI draft · not reviewed",
   "note.signBlocked": "Sign note ({n} unresolved)",

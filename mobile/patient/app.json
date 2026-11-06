@@ -1,0 +1,30 @@
+{
+  "expo": {
+    "name": "Medvya for patients",
+    "slug": "medvya-patient",
+    "scheme": "medvya-patient",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "bundleIdentifier": "com.medvya.patient",
+      "supportsTablet": false
+    },
+    "android": {
+      "package": "com.medvya.patient"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-localization",
+        {
+          "supportedLocales": [
+            "en",
+            "hi",
+            "ar"
+          ]
+        }
+      ]
+    ]
+  }
+}

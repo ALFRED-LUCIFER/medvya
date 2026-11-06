@@ -26,9 +26,24 @@ BEGIN
                              'medvya_identity', 'medvya_patients', 'medvya_billing', 'medvya_scheduling', 'medvya_leads',
                              'medvya_notifications', 'medvya_jobs']
     LOOP
-        IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = r) THEN EXECUTE format('CREATE ROLE %I NOLOGIN', r); END IF;
-        EXECUTE format('ALTER ROLE %I NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE NOREPLICATION', r);
+        IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = r) THEN
+            EXECUTE format('CREATE ROLE %I NOLOGIN NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE NOREPLICATION', r);
+        END IF;
     END LOOP;
+    -- Checked, not ALTERed: on Azure the administrator is not a superuser, and PostgreSQL 16 lets only a superuser touch these attributes
+    -- (even to switch them off). A role that has gained one is a security fault for a person to look at, so the script stops.
+    SELECT string_agg(rolname, ', ') INTO r FROM pg_roles
+    WHERE rolname LIKE 'medvya\_%' AND (rolsuper OR rolbypassrls OR rolcreatedb OR rolcreaterole OR rolreplication);
+    IF r IS NOT NULL THEN RAISE EXCEPTION 'Medvya roles must not be superuser, bypass RLS, create databases or roles, or replicate: %', r; END IF;
+END $$;
+
+-- The administrator hands schemas to medvya_owner, which PostgreSQL 16 allows only to a role that can SET ROLE to it. A superuser can; the
+-- Azure administrator is not one, but it created the role and holds ADMIN on it, so it grants itself SET (no INHERIT: no data rights).
+DO $$
+BEGIN
+    IF NOT (SELECT rolsuper FROM pg_roles WHERE rolname = current_user) THEN
+        EXECUTE format('GRANT medvya_owner TO %I WITH INHERIT FALSE, SET TRUE', current_user);
+    END IF;
 END $$;
 
 -- SET only: the migrator can become the owner on purpose, but never holds the owner's rights by default.
@@ -43,13 +58,36 @@ BEGIN
     LOOP
         EXECUTE format('CREATE SCHEMA IF NOT EXISTS %I', s);
         EXECUTE format('ALTER SCHEMA %I OWNER TO medvya_owner', s);
-        EXECUTE format('GRANT USAGE, CREATE ON SCHEMA %I TO medvya_migrator', s);
     END LOOP;
 END $$;
 
 -- public holds only __EFMigrationsHistory; nobody else may create there.
 REVOKE CREATE ON SCHEMA public FROM PUBLIC;
 GRANT USAGE, CREATE ON SCHEMA public TO medvya_owner;
+
+-- Role memberships need ADMIN on the module roles, which the administrator holds and the owner does not.
+DO $$
+DECLARE r text;
+BEGIN
+    FOREACH r IN ARRAY ARRAY['medvya_tenancy', 'medvya_audit', 'medvya_identity', 'medvya_patients', 'medvya_billing', 'medvya_scheduling',
+                             'medvya_leads', 'medvya_notifications', 'medvya_jobs']
+    LOOP
+        EXECUTE format('GRANT %I TO medvya_app', r);
+    END LOOP;
+END $$;
+
+-- Everything below is a right on objects medvya_owner owns, so it is granted as the owner: on Azure the administrator is not a superuser and
+-- no longer owns the schemas it just handed over.
+SET ROLE medvya_owner;
+
+DO $$
+DECLARE s text;
+BEGIN
+    FOREACH s IN ARRAY ARRAY['tenancy', 'audit', 'identity', 'patients', 'billing', 'scheduling', 'leads', 'notifications', 'hangfire', 'ledger', 'reporting']
+    LOOP
+        EXECUTE format('GRANT USAGE, CREATE ON SCHEMA %I TO medvya_migrator', s);
+    END LOOP;
+END $$;
 
 -- One row per module: its role gets USAGE on its schema and the listed table rights on everything the owner creates there
 -- (and on what exists already), plus sequences, and joins medvya_app.
@@ -83,7 +121,6 @@ BEGIN
         EXECUTE format('GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA %I TO %I', g.schema_name, g.role_name);
         EXECUTE format('ALTER DEFAULT PRIVILEGES FOR ROLE medvya_owner IN SCHEMA %I GRANT %s ON TABLES TO %I', g.schema_name, g.table_rights, g.role_name);
         EXECUTE format('ALTER DEFAULT PRIVILEGES FOR ROLE medvya_owner IN SCHEMA %I GRANT USAGE, SELECT, UPDATE ON SEQUENCES TO %I', g.schema_name, g.role_name);
-        EXECUTE format('GRANT %I TO medvya_app', g.role_name);
     END LOOP;
 END $$;
 
@@ -116,4 +153,5 @@ ALTER DEFAULT PRIVILEGES FOR ROLE medvya_owner IN SCHEMA reporting GRANT SELECT 
 -- shortcut: audit, identity and scheduling have no masked views yet (audit ClientIp, staff contacts, the visit reason), so reporting cannot
 -- read them at all; add a view in schema reporting when a report needs one.
 
+RESET ROLE;
 COMMIT;

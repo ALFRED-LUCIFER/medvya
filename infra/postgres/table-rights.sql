@@ -1,6 +1,6 @@
 -- Rights on single tables that are narrower than the schema-wide grants in roles.sql (MDV-P0-041). db-migrate applies this file twice:
--- right after roles.sql (as the administrator, which re-grants schema-wide rights) and at the end of every migration run (as medvya_owner,
--- once the tables exist). Idempotent; a table that does not exist yet is skipped and picked up by the next run.
+-- right after roles.sql (which re-grants schema-wide rights) and at the end of every migration run, both times as medvya_owner (once the
+-- tables exist). Idempotent; a table that does not exist yet is skipped and picked up by the next run.
 
 DO $$
 BEGIN

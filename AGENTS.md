@@ -32,7 +32,7 @@ Medvya handles patient health data in India and the UAE. **Production quality is
 3. Country rules live in country rule classes, never in scattered `if (country == …)`.
 4. Money is integer minor units (`long`) plus ISO currency. Never `decimal`/`double` for stored money.
 5. Time is `DateTimeOffset` in UTC. Display in the facility time zone.
-6. EF Core migrations are forward-only and reviewed. Raw SQL is parameterised (`ExecuteSqlAsync($"…{value}")`), never string-built.
+6. EF Core migrations are forward-only and reviewed. Raw SQL is parameterised (`ExecuteSqlAsync($"…{value}")`), never string-built. **Any change to a table, column, key or foreign key regenerates the ERD in the same PR:** `python3 -I tools/erd/generate.py` rewrites `docs/03-architecture/erd.md`; CI fails when it is stale. A new cross-module link by id is added to `SOFT_REFS` in that script, and a newly built planned entity to `PLANNED_TO_BUILT`.
 7. Logging uses message templates (`LoggerMessage` source generator in production code). Never log patient values; the scrubber is a safety net, not a licence.
 8. Warnings are errors. NuGet versions live only in `Directory.Packages.props` (central management with transitive pinning).
 
@@ -60,6 +60,7 @@ src/features/<feature>/components/ presentational: props in, events out (no serv
 - [ ] UI verified in a browser (English and Arabic), axe clean
 - [ ] Cross-cutting X1–X8 (`docs/05-delivery/README.md`) considered: security, privacy, clinical safety, states (empty/loading/error/403/offline), a11y and language, performance, reliability, observability
 - [ ] Docs, tickets and ADRs updated in the same PR when behaviour or decisions change
+- [ ] Database change: `python3 -I tools/erd/generate.py` run and `docs/03-architecture/erd.md` committed
 - [ ] CI green. **Never merge red CI.** Never bypass hooks (`--no-verify`) or force-push `main`
 
 ## 6 · Dependencies

@@ -28,7 +28,7 @@ namespace Medvya.IntegrationTests;
 /// call is checked again (live session, live membership, only the session's own facility) and audited Allowed or Denied; and
 /// no connection ever hears another facility's or another tenant's board.
 /// </summary>
-public sealed class BoardHubTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>, IAsyncLifetime
+public sealed class BoardHubTests(PostgresFixture sql) : IClassFixture<PostgresFixture>, IAsyncLifetime
 {
     readonly SchedulingHarness h = new(sql), other = new(sql);
     readonly SignedInDesks desks = new();
@@ -79,7 +79,7 @@ public sealed class BoardHubTests(SqlServerFixture sql) : IClassFixture<SqlServe
         readonly Dictionary<Guid, Claim[]> claims = [];
         public readonly Dictionary<Guid, Guid> Sessions = [], Memberships = [];
 
-        public async Task SignInAsync(SqlServerFixture sql, Guid tenant, Guid user, Guid facility)
+        public async Task SignInAsync(PostgresFixture sql, Guid tenant, Guid user, Guid facility)
         {
             await using var tenancy = sql.Context(tenant);
             var membership = await tenancy.Memberships.Where(m => m.UserId == user && m.FacilityId == facility).Select(m => m.Id).SingleAsync();

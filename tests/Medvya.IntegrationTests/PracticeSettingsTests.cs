@@ -19,7 +19,7 @@ namespace Medvya.IntegrationTests;
 /// MDV-P1-005 on real SQL Server: profile, locations, hours, holidays and the logo; the server refuses roles without practice
 /// configuration; a holiday stops new bookings on the booking path; every change keeps its before/after and an audit event.
 /// </summary>
-public sealed class PracticeSettingsTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>, IAsyncLifetime
+public sealed class PracticeSettingsTests(PostgresFixture sql) : IClassFixture<PostgresFixture>, IAsyncLifetime
 {
     static readonly byte[] Png = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 0];
     readonly SchedulingHarness h = new(sql);

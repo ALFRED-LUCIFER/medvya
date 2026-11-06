@@ -1,5 +1,7 @@
 # Restore runbook: database and blob (MDV-P0-019)
 
+> The database is moving from Azure SQL to PostgreSQL (ADR-012). The database steps below apply until the Azure SQL server is retired; the PostgreSQL drill is `postgres-restore-drill.md` (MDV-P0-038). The blob steps still apply.
+
 Who: the Entra SQL administrator (a human, with just-in-time elevation in production, MDV-P0-025). The app and the deploy identity cannot restore.
 Why this exists: P0 exit gate 2 needs a restore that was run, timed and checked, not a belief that backups work.
 

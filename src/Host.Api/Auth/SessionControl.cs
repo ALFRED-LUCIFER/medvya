@@ -19,7 +19,7 @@ namespace Host.Api.Auth;
 public static class SessionControl
 {
     public const string SessionIdClaim = "sid";
-    /// <summary>Read by RequestContext → ICurrentTenant, which sets SESSION_CONTEXT for row-level security.</summary>
+    /// <summary>Read by RequestContext → ICurrentTenant, which sets the session tenant setting for row-level security.</summary>
     public const string TenantClaim = "tenant_id";
     public const string MembershipClaim = "membership_id";
     public const string FacilityClaim = "facility_id";

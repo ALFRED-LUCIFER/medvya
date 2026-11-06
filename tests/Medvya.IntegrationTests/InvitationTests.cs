@@ -25,7 +25,7 @@ using Microsoft.Extensions.Options;
 namespace Medvya.IntegrationTests;
 
 /// <summary>MDV-P0-013: invite a colleague by email; the link is single-use, expires, can be revoked, and joining activates the membership once.</summary>
-public sealed partial class InvitationTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>, IAsyncLifetime, IDisposable
+public sealed partial class InvitationTests(PostgresFixture sql) : IClassFixture<PostgresFixture>, IAsyncLifetime, IDisposable
 {
     readonly Guid tenantA = Guid.NewGuid(), tenantB = Guid.NewGuid(), admin = Guid.NewGuid();
     Guid facilityA, facilityB;
@@ -289,7 +289,7 @@ public sealed partial class InvitationTests(SqlServerFixture sql) : IClassFixtur
         var (_, token) = await InviteReceptionist();
         var results = await Task.WhenAll(Enumerable.Range(0, 4).Select(_ => Task.Run(async () =>
         {
-            var tenant = new SqlServerFixture.FixedTenant(tenantA);
+            var tenant = new PostgresFixture.FixedTenant(tenantA);
             var invitations = new Invitations(sql.Context(tenantA), tenant, new FixedUser(null), new AuditLog(sql.Audit(tenantA)), outbox,
                 Options.Create(new InvitationOptions()));
             return await invitations.AcceptAsync(token, Guid.NewGuid());

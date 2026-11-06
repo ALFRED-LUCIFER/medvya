@@ -17,7 +17,7 @@
 | HIS / EMR / PMS | Hospital Information System / Electronic Medical Record / Practice Management System |
 | FHIR R4 / HL7 v2 | Interoperability standards (resources / pipe-delimited messages, e.g. ORU results, ORM orders) |
 | BFF | Backend-for-frontend: the ASP.NET Core host that keeps tokens server-side and gives the SPA an HTTP-only cookie |
-| RLS | Row-level security (Azure SQL security predicates keyed on tenant via `SESSION_CONTEXT`) |
+| RLS | Row-level security (PostgreSQL FORCE ROW LEVEL SECURITY policies keyed on the `medvya.tenant_id` session setting) |
 | Always Encrypted | Azure SQL client-side column encryption. Admins only see ciphertext |
 | Ledger tables | Azure SQL tamper-evident tables with cryptographic digests |
 | CMK | Customer-managed key (Key Vault / Managed HSM) |

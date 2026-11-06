@@ -10,5 +10,5 @@ public sealed class DesignTimeFactory : IDesignTimeDbContextFactory<SchedulingDb
     sealed class NoTenant : ICurrentTenant { public Guid? TenantId => null; }
 
     public SchedulingDbContext CreateDbContext(string[] args) =>
-        new(new DbContextOptionsBuilder<SchedulingDbContext>().UseSqlServer("Server=design-time-only").Options, new NoTenant());
+        new(new DbContextOptionsBuilder<SchedulingDbContext>().UseNpgsql("Server=design-time-only").Options, new NoTenant());
 }

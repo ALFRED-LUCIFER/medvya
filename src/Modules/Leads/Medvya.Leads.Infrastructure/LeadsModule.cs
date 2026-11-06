@@ -25,7 +25,7 @@ public static class LeadsModule
 {
     public static IServiceCollection AddLeadsModule(this IServiceCollection services, string connectionString, LeadsEmailOptions email) =>
         services
-            .AddDbContext<LeadsDbContext>(o => o.UseSqlServer(connectionString))
+            .AddDbContext<LeadsDbContext>(o => o.UseNpgsql(connectionString))
             .AddSingleton(email)
             .AddScoped<IDemoRequests, DemoRequests>()
             .AddScoped<IWaitlist, Waitlist>();

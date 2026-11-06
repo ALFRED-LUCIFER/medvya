@@ -1,24 +1,33 @@
 // MDV-P0-006: India dev environment, cheapest viable. Resource-group scope.
-// shortcut: dev only. No private endpoints, no Defender plans, no staging slot, no VNet integration (all cost money).
-// SQL and Storage are reachable over public endpoints, SQL limited to Azure services + Entra-only auth.
+// MDV-P0-038: the database is PostgreSQL Flexible Server, private (VNet-integrated), Entra-only login, customer-managed key.
+// shortcut: dev only. No Defender plans, no staging slot, Storage keeps a public endpoint (private endpoints cost money).
 // Add them before any real patient data or a staging/prod environment.
 targetScope = 'resourceGroup'
 
 param location string = 'centralindia'
 param env string = 'dev'
-@description('Entra object id of the user or group that administers Azure SQL (Entra-only auth).')
-param sqlAdminObjectId string
-param sqlAdminLogin string
+@description('Entra object id of the user or group that administers PostgreSQL (Entra-only auth, no password administrator).')
+param dbAdminObjectId string
+@description('Sign-in name (UPN or group name) of that administrator.')
+param dbAdminLogin string
+@allowed(['User', 'Group', 'ServicePrincipal'])
+param dbAdminType string = 'User'
 param alertEmail string
-@description('Point-in-time restore window in days (7 to 35). Production uses 35; dev keeps the 7-day default to stay cheap (MDV-P0-019).')
+@description('Country of this deployment. Backups and restore stay inside it; the Postgres module rejects a region or backup pair outside it.')
+@allowed(['IN', 'AE'])
+param country string = 'IN'
+param databaseName string = 'medvya'
+@description('Zone-redundant HA (needs a General Purpose or Memory Optimized SKU). On for production.')
+param postgresHaEnabled bool = env == 'prod'
+@description('Point-in-time restore window in days (7 to 35). Production 14; dev 7.')
 @minValue(7)
 @maxValue(35)
-param pitrRetentionDays int = 7
-@description('Long-term retention of weekly full backups, ISO 8601 (for example P4W). PT0S turns it off. Azure refuses it on a serverless database that auto-pauses, so dev is off; set per country rule on an always-on tier before real patient data.')
-param ltrWeeklyRetention string = 'PT0S' // shortcut: no long-term retention on the free auto-pausing serverless database (LtrConfigPolicyUnsupportedIfAutoPauseEnabled); move to an always-on tier and set P4W or the country rule before real patient data (MDV-P0-019)
-@description('Where database backups are stored. Local or Zone only: both stay inside the region (data stays in country, AGENTS.md 1.6). Never Geo.')
-@allowed(['Local', 'Zone'])
-param backupRedundancy string = 'Local'
+param pitrRetentionDays int = env == 'prod' ? 14 : 7
+@description('Copy backups to the Azure paired region. Only valid when the pair is in the same country; the module checks.')
+param geoRedundantBackup bool = false
+param postgresSkuName string = env == 'prod' ? 'Standard_D2ds_v5' : 'Standard_B1ms'
+@allowed(['Burstable', 'GeneralPurpose', 'MemoryOptimized'])
+param postgresSkuTier string = env == 'prod' ? 'GeneralPurpose' : 'Burstable'
 @description('Which sender the app uses: Acs (Azure Communication Services, default) or Smtp (SendGrid relay).')
 @allowed(['Acs', 'Smtp'])
 param emailProvider string = 'Acs'
@@ -31,14 +40,14 @@ param oidcClientId string
 @description('Monthly budget in the billing currency (INR).')
 param budgetAmount int = 1800
 param budgetStart string = utcNow('yyyy-MM-01')
-@description('F1 is free (no always-on); use B1 for a pilot.')
-param appServiceSku string = 'F1'
+@description('B1 or higher: VNet integration (the app reaching the private database) is not available on F1.')
+param appServiceSku string = 'B1'
 
 var suffix = take(uniqueString(resourceGroup().id), 6)
 var name = 'medvya-${env}-${suffix}'
 // The app's own address; a site cannot reference its own property inside its own settings.
 var appHost = 'app-${name}.azurewebsites.net'
-var tags = { app: 'medvya', env: env, country: 'IN', data: 'synthetic-only' }
+var tags = { app: 'medvya', env: env, country: country, data: 'synthetic-only' }
 
 resource logs 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
   name: 'log-${name}'
@@ -99,7 +108,8 @@ resource vault 'Microsoft.KeyVault/vaults@2023-07-01' = {
   }
 }
 
-// Always Encrypted column master key (MDV-P0-009). Stays in Key Vault: SQL Server stores only its path. RSA 3072, wrap/unwrap/sign/verify only.
+// Always Encrypted column master key (MDV-P0-009).
+// shortcut: kept until application-level encryption of national IDs replaces it (ADR-012, MDV-P0-035); remove it then. RSA 3072, wrap/unwrap/sign/verify only.
 resource cmk 'Microsoft.KeyVault/vaults/keys@2023-07-01' = {
   parent: vault
   name: 'medvya-column-master'
@@ -119,8 +129,8 @@ resource cmkApp 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
 }
 resource cmkAdmin 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   scope: cmk
-  name: guid(cmk.id, sqlAdminObjectId, cryptoUser)
-  properties: { roleDefinitionId: cryptoUser, principalId: sqlAdminObjectId, principalType: 'User' }
+  name: guid(cmk.id, dbAdminObjectId, cryptoUser)
+  properties: { roleDefinitionId: cryptoUser, principalId: dbAdminObjectId, principalType: 'User' }
 }
 
 // Transactional email (MDV-P1-032): Azure Communication Services Email with an Azure-managed sender domain (no domain to own or verify).
@@ -155,61 +165,94 @@ resource commsApp 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   properties: { roleDefinitionId: emailOwner, principalId: app.identity.principalId, principalType: 'ServicePrincipal' }
 }
 
-resource sql 'Microsoft.Sql/servers@2023-08-01-preview' = {
-  name: 'sql-${name}'
+// Network for the private database (MDV-P0-038): the server sits in a delegated subnet; the app reaches it through VNet integration.
+// The private DNS zone resolves the server name to its private address inside the VNet only.
+resource vnet 'Microsoft.Network/virtualNetworks@2024-05-01' = {
+  name: 'vnet-${name}'
   location: location
   tags: tags
   properties: {
-    minimalTlsVersion: '1.2'
-    publicNetworkAccess: 'Enabled'
-    administrators: {
-      administratorType: 'ActiveDirectory'
-      azureADOnlyAuthentication: true
-      login: sqlAdminLogin
-      sid: sqlAdminObjectId
-      tenantId: tenant().tenantId
-      principalType: 'User'
-    }
+    addressSpace: { addressPrefixes: ['10.20.0.0/16'] }
+    subnets: [
+      {
+        name: 'snet-postgres'
+        properties: {
+          addressPrefix: '10.20.1.0/24'
+          delegations: [{ name: 'postgres', properties: { serviceName: 'Microsoft.DBforPostgreSQL/flexibleServers' } }]
+        }
+      }
+      {
+        name: 'snet-app'
+        properties: {
+          addressPrefix: '10.20.2.0/24'
+          delegations: [{ name: 'app', properties: { serviceName: 'Microsoft.Web/serverFarms' } }]
+        }
+      }
+    ]
   }
 }
 
-// Only this web app's outbound addresses may reach SQL (no "allow Azure services" rule, which admits every Azure customer).
-// Authentication is still Entra-only and Encrypt=Strict. possibleOutboundIpAddresses is the stable superset, so it survives scale-out.
-// Deploys and the administrator open their own address for the length of the work (deploy-dev.yml; tools/db-migrate runbook).
-// shortcut: IP rules on a shared App Service plan; a private endpoint with VNet integration (needs B1 or higher) replaces them before real patient data.
-module sqlApp 'sql-firewall.bicep' = {
-  name: 'sql-firewall-app'
-  params: { serverName: sql.name, addresses: split(app.properties.possibleOutboundIpAddresses, ',') }
+resource pgDns 'Microsoft.Network/privateDnsZones@2020-06-01' = {
+  name: '${name}.private.postgres.database.azure.com'
+  location: 'global'
+  tags: tags
 }
 
-// Free offer: 100k vCore-seconds/month, auto-pauses when used up (no overage charge).
-resource db 'Microsoft.Sql/servers/databases@2023-08-01-preview' = {
-  parent: sql
-  name: 'medvya'
+resource pgDnsLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = {
+  parent: pgDns
+  name: 'vnet'
+  location: 'global'
+  properties: { virtualNetwork: { id: vnet.id }, registrationEnabled: false }
+}
+
+// Storage encryption key (customer-managed). The server's identity may only wrap and unwrap with this one key.
+resource pgKey 'Microsoft.KeyVault/vaults/keys@2023-07-01' = {
+  parent: vault
+  name: 'medvya-postgres-storage'
+  properties: {
+    kty: 'RSA'
+    keySize: 3072
+    keyOps: ['wrapKey', 'unwrapKey']
+  }
+}
+
+resource pgIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
+  name: 'id-psql-${name}'
   location: location
   tags: tags
-  sku: { name: 'GP_S_Gen5_1', tier: 'GeneralPurpose' }
-  properties: {
-    useFreeLimit: true
-    freeLimitExhaustionBehavior: 'AutoPause'
-    autoPauseDelay: 60
-    minCapacity: json('0.5')
-    maxSizeBytes: 34359738368
-    requestedBackupStorageRedundancy: backupRedundancy
+}
+
+// "Key Vault Crypto Service Encryption User" on the key only.
+var cryptoServiceUser = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'e147488a-f6f5-4113-8e2d-b22465e65bf6')
+resource pgKeyAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: pgKey
+  name: guid(pgKey.id, pgIdentity.id, cryptoServiceUser)
+  properties: { roleDefinitionId: cryptoServiceUser, principalId: pgIdentity.properties.principalId, principalType: 'ServicePrincipal' }
+}
+
+module postgres 'postgres.bicep' = {
+  name: 'postgres'
+  dependsOn: [pgKeyAccess, pgDnsLink]
+  params: {
+    name: name
+    location: location
+    tags: tags
+    country: country
+    databaseName: databaseName
+    delegatedSubnetId: vnet.properties.subnets[0].id
+    privateDnsZoneId: pgDns.id
+    entraAdminObjectId: dbAdminObjectId
+    entraAdminLogin: dbAdminLogin
+    entraAdminType: dbAdminType
+    cmkIdentityId: pgIdentity.id
+    cmkKeyUri: pgKey.properties.keyUri
+    haEnabled: postgresHaEnabled
+    pitrRetentionDays: pitrRetentionDays
+    geoRedundantBackup: geoRedundantBackup
+    skuName: postgresSkuName
+    skuTier: postgresSkuTier
+    logAnalyticsId: logs.id
   }
-}
-
-// Backups are code (MDV-P0-019): point-in-time restore window and long-term retention.
-resource pitr 'Microsoft.Sql/servers/databases/backupShortTermRetentionPolicies@2023-08-01-preview' = {
-  parent: db
-  name: 'default'
-  properties: { retentionDays: pitrRetentionDays, diffBackupIntervalInHours: 12 }
-}
-
-resource ltr 'Microsoft.Sql/servers/databases/backupLongTermRetentionPolicies@2023-08-01-preview' = {
-  parent: db
-  name: 'default'
-  properties: { weeklyRetention: ltrWeeklyRetention }
 }
 
 resource plan 'Microsoft.Web/serverfarms@2023-12-01' = {
@@ -242,6 +285,7 @@ resource app 'Microsoft.Web/sites@2023-12-01' = {
   properties: {
     serverFarmId: plan.id
     httpsOnly: true
+    virtualNetworkSubnetId: vnet.properties.subnets[1].id // outbound traffic to the private database
     siteConfig: {
       linuxFxVersion: 'DOTNETCORE|10.0'
       minTlsVersion: '1.2'
@@ -255,8 +299,10 @@ resource app 'Microsoft.Web/sites@2023-12-01' = {
         { name: 'Web__AppPath', value: '/app/' }
         { name: 'Invitations__LinkBaseUrl', value: 'https://${appHost}/app' }
         { name: 'PublicSite__Deployments__SignUpUrls__IN', value: 'https://${appHost}/app/signup' }
-        // No password anywhere: the app's managed identity signs in (mapped to medvya_app by the administrator).
-        { name: 'ConnectionStrings__Medvya', value: 'Server=tcp:${sql.properties.fullyQualifiedDomainName},1433;Database=${db.name};Authentication=Active Directory Managed Identity;Encrypt=Strict;' }
+        // No password anywhere: the app signs in with an Entra token for its managed identity (mapped to the app role by the administrator).
+        // shortcut: host and database only; the app code (MDV-P0-033/034) decides the final setting names. Align when it lands.
+        { name: 'Postgres__Host', value: postgres.outputs.fqdn }
+        { name: 'Postgres__Database', value: postgres.outputs.databaseName }
         // Staff sign-in (MDV-P0-011): single-tenant Entra app; the client secret is a Key Vault reference, never a value here.
         { name: 'Authentication__Oidc__Authority', value: '${environment().authentication.loginEndpoint}${tenant().tenantId}/v2.0' }
         { name: 'Authentication__Oidc__ClientId', value: oidcClientId }
@@ -282,7 +328,8 @@ resource budget 'Microsoft.Consumption/budgets@2023-11-01' = {
   }
 }
 
-// Built-in "Allowed locations": data stays in India (AGENTS.md 1.6).
+// Built-in "Allowed locations": data stays in India (AGENTS.md 1.6). It evaluates every resource type that has a location,
+// including Microsoft.DBforPostgreSQL/flexibleServers, so the database is covered by this one assignment (MDV-P0-038).
 resource region 'Microsoft.Authorization/policyAssignments@2024-04-01' = {
   name: 'allowed-locations-in'
   properties: {
@@ -294,6 +341,7 @@ resource region 'Microsoft.Authorization/policyAssignments@2024-04-01' = {
 
 output appName string = app.name
 output appHost string = app.properties.defaultHostName
-output sqlServer string = sql.properties.fullyQualifiedDomainName
+output postgresServer string = postgres.outputs.serverName
+output postgresHost string = postgres.outputs.fqdn
 output appPrincipalId string = app.identity.principalId
 output keyVault string = vault.name

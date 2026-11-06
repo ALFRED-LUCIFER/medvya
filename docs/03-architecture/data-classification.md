@@ -8,15 +8,15 @@ Every stored field has one class. In code, each domain property carries `[Classi
 |---|---|---|---|
 | Public | `Public` | Clinic display name, doctor public profile | None beyond integrity |
 | Internal | `Internal` | Ids, status codes, timestamps, configuration, service catalogue | Tenant RLS. May appear in logs as opaque values |
-| Personal | `Personal` | Patient/staff name, phone, email, address, date of birth | RLS. **Dynamic data masking** for support and reporting roles. Never in logs or telemetry |
+| Personal | `Personal` | Patient/staff name, phone, email, address, date of birth | RLS. Support and reporting see only the masked views (MDV-P0-037). Never in logs or telemetry |
 | Sensitive health | `SensitiveHealth` | Notes, problems, allergies, medicines, vitals, results, transcripts, documents, free-text visit reason | RLS + relationship/purpose authorisation. **Audit on every read.** Never in logs. Blob under CMK |
-| National / financial ID | `NationalId` | Aadhaar last 4, ABHA number and address, Emirates ID, passport, visa file, insurance member number | **Always Encrypted** (only the API identity can decrypt). Exact-match lookups use deterministic encryption. Never in logs. Masked in UI except where needed |
+| National / financial ID | `NationalId` | Aadhaar last 4, ABHA number and address, Emirates ID, passport, visa file, insurance member number | **Encrypted in the application** (AES-256-GCM, per-tenant key wrapped by Key Vault; only the API identity can unwrap, MDV-P0-035). Exact-match lookups use an HMAC blind index. Never in logs. Masked in UI except where needed |
 
 **Rule for logs and telemetry:** only `Internal` and `Public` values may be emitted. Everything else is dropped by the telemetry processor (MDV-P0-018).
 
 ## Register: planned fields, P0–P2
 
-`AE` = Always Encrypted (D = deterministic, R = randomized + enclave). `DDM` = dynamic data masking. `Audit` = read is audited.
+`AE` = encrypted in the application, MDV-P0-035 (the short name is kept from Always Encrypted; D = exact match through the blind index, R = display only). `DDM` = left out of, or masked in, the reporting views, MDV-P0-037 (a table with no view is not readable by reporting at all). `Audit` = read is audited.
 
 ### Identity / Tenancy (P0)
 
@@ -133,17 +133,17 @@ Not clinic data, so no tenant. Of the app roles only `medvya_leads` reaches the 
 
 ## Protected column sets
 
-**Always Encrypted (MDV-P0-009).** Keep this set small (PRD risk: Always Encrypted limits queries):
+**Encrypted in the application (MDV-P0-035, replaces Always Encrypted from MDV-P0-009).** Keep this set small: an encrypted value can only be matched exactly.
 
-| Column | Encryption | Why |
+| Column | Stored as | Why |
 |---|---|---|
-| PATIENT_IDENTIFIER.value (ABHA number, ABHA address, Emirates ID, passport) | Deterministic | Exact-match search at the desk; passport for the duplicate check only (MDV-P1-016) |
-| PATIENT_IDENTIFIER.value (Aadhaar last 4, visa file) | Randomized | Display only, no lookup |
-| PAYER_COVERAGE.member_no | Deterministic | Exact match for eligibility and claims |
+| PATIENT_IDENTIFIER.value (ABHA number, ABHA address, Emirates ID, passport) | `LookupValue` ciphertext + `LookupIndex` blind index | Exact-match search at the desk; passport for the duplicate check only (MDV-P1-016) |
+| PATIENT_IDENTIFIER.value (Aadhaar last 4, visa file) | `DisplayValue` ciphertext | Display only, no lookup |
+| PAYER_COVERAGE.member_no | `MemberNumber` ciphertext | Shown to the desk; no lookup yet (add a blind index when eligibility needs exact match) |
 
-Decision (MDV-P0-009): PATIENT_IDENTIFIER holds several schemes, so it has two encrypted columns and each row uses exactly one, chosen by scheme: `LookupValue` (deterministic, BIN2) for ABHA number, ABHA address, Emirates ID and passport (passport moved here in MDV-P1-016 so the duplicate check can match it exactly; rows written earlier stay randomized and are not matched), and `DisplayValue` (randomized) for Aadhaar last 4 and visa file number. PAYER_COVERAGE.MemberNumber is deterministic. Nothing else is encrypted: names, phone and DOB are protected by RLS, masking and audit instead, so they stay searchable for duplicate checks. Physical columns, keys and the local/Azure key providers: [database-security.md](database-security.md#always-encrypted-mdv-p0-009). The architecture test cannot see encryption; `PatientRegistryTests.AnAdministratorWithoutTheKeySeesOnlyCiphertext` pins the list.
+PATIENT_IDENTIFIER keeps two value columns and each row uses exactly one, chosen by scheme (`PatientIdentifier.IsLookup`); only lookup schemes get a blind index. Nothing else is encrypted: names, phone and DOB are protected by RLS, the masked views and audit instead, so they stay searchable for duplicate checks. Keys and the code: [database-security.md](database-security.md#national-id-encryption-mdv-p0-035). The architecture test cannot see encryption; `PatientRegistryTests.AnAdministratorWithoutTheKeySeesOnlyCiphertext` pins the list.
 
-**Dynamic data masking (support and reporting roles):** USER.email, USER.mobile, PATIENT names, date_of_birth, gender_identity, mobile, alternate_phone, email, address fields (done for PATIENT in MDV-P0-009; the rest land with their tables), PATIENT_RELATIONSHIP.phone, NOTIFICATION.recipient, AUDIT_EVENT.ip.
+**Masked views (support and reporting roles, MDV-P0-037):** the role reads only schema `reporting`. `reporting."Patients"` shows initials and an age band instead of names and date of birth and has no gender identity, phone, email or address; `reporting."Identifiers"` shows the scheme and length only. Staff USER fields, PATIENT_RELATIONSHIP.phone, NOTIFICATION.recipient and AUDIT_EVENT.ip have no view yet, so reporting cannot read those tables at all.
 
 ## ERD → Azure SQL type mapping
 

@@ -88,7 +88,7 @@ public sealed class DeskLoadTests(ITestOutputHelper output)
         var desks = int.Parse(Env("MEDVYA_LOAD_DESKS_COUNT", "20"), CultureInfo.InvariantCulture);
         var think = TimeSpan.FromMilliseconds(int.Parse(Env("MEDVYA_LOAD_THINK_MS", "30000"), CultureInfo.InvariantCulture));
 
-        SqlServerFixture? sql = null;
+        PostgresFixture? sql = null;
         WebApplicationFactory<Program>? host = null;
         try
         {
@@ -109,7 +109,7 @@ public sealed class DeskLoadTests(ITestOutputHelper output)
             }
             else
             {
-                sql = new SqlServerFixture();
+                sql = new PostgresFixture();
                 await sql.InitializeAsync();
                 var h = new SchedulingHarness(sql);
                 await h.SeedAsync();
@@ -133,16 +133,6 @@ public sealed class DeskLoadTests(ITestOutputHelper output)
                 await ScheduleReadPerformanceTests.SeedVisitsAsync(sql, h.Tenant, h.Facility, doctors, patients, monday);
                 await ScheduleReadPerformanceTests.SeedVisitsAsync(sql, h.Tenant, h.OtherFacility, [Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid()], patients, monday);
                 var receptionists = await h.AddReceptionistsAsync(desks);
-                // Azure SQL Database runs with READ_COMMITTED_SNAPSHOT on (readers do not wait for writers); SQL Server in Docker does not. Match Azure
-                // unless MEDVYA_LOAD_RCSI=0 asks for the Docker default.
-                if (Env("MEDVYA_LOAD_RCSI", "1") == "1")
-                {
-                    await using var admin = new Microsoft.Data.SqlClient.SqlConnection(sql.ConnectionString);
-                    await admin.OpenAsync();
-                    await using var alter = new Microsoft.Data.SqlClient.SqlCommand("ALTER DATABASE CURRENT SET READ_COMMITTED_SNAPSHOT ON WITH ROLLBACK IMMEDIATE", admin);
-                    await alter.ExecuteNonQueryAsync();
-                }
-
                 // The rate-limit settings are raised here only: the load comes from 20 desks behind one address, which production limits would refuse.
                 host = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b
                     .UseSetting("ConnectionStrings:Medvya", h.ConnectionString)
@@ -274,12 +264,12 @@ public sealed class DeskLoadTests(ITestOutputHelper output)
     /// <summary>Counts what waiting requests wait on, so a slow step points at a lock, the log or the CPU. Statement text carries parameter markers only.</summary>
     static async Task SampleWaitsAsync(string connectionString, Dictionary<string, int> waits, CancellationToken stop)
     {
-        await using var conn = new Microsoft.Data.SqlClient.SqlConnection(connectionString);
+        await using var conn = new Npgsql.NpgsqlConnection(connectionString);
         await conn.OpenAsync(CancellationToken.None);
-        await using var cmd = new Microsoft.Data.SqlClient.SqlCommand("""
-            SELECT r.wait_type, LEFT(REPLACE(REPLACE(t.text, CHAR(10), ' '), CHAR(13), ' '), 90)
-            FROM sys.dm_exec_requests r CROSS APPLY sys.dm_exec_sql_text(r.sql_handle) t
-            WHERE r.session_id <> @@SPID AND r.session_id > 50 AND r.wait_type IS NOT NULL AND r.wait_type NOT LIKE 'SLEEP%' AND r.wait_type NOT LIKE 'BROKER%'
+        await using var cmd = new Npgsql.NpgsqlCommand("""
+            SELECT wait_event_type || ':' || wait_event, left(regexp_replace(query, '\s+', ' ', 'g'), 90)
+            FROM pg_stat_activity
+            WHERE pid <> pg_backend_pid() AND state = 'active' AND wait_event IS NOT NULL AND wait_event_type NOT IN ('Activity', 'Client')
             """, conn);
         while (!stop.IsCancellationRequested)
         {

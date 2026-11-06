@@ -17,7 +17,7 @@ namespace Medvya.IntegrationTests;
 /// MDV-P1-028 through HTTP on real SQL Server: the board payload is nonclinical (security test on the exact fields), moves
 /// answer 409 with a code, unknown visits 404, and every request writes one audit row.
 /// </summary>
-public sealed class FrontDeskEndpointTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>, IAsyncLifetime
+public sealed class FrontDeskEndpointTests(PostgresFixture sql) : IClassFixture<PostgresFixture>, IAsyncLifetime
 {
     readonly SchedulingHarness h = new(sql), other = new(sql);
     WebApplicationFactory<Program> factory = null!;

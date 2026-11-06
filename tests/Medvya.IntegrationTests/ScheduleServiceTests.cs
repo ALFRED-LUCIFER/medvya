@@ -1,6 +1,6 @@
 using Medvya.Scheduling.Application;
 using Medvya.Scheduling.Domain;
-using Microsoft.Data.SqlClient;
+using Npgsql;
 using Medvya.Identity.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,7 +11,7 @@ namespace Medvya.IntegrationTests;
 /// MDV-P1-011 on real SQL Server: templates per doctor and resource, the day view in facility time, role checks against the
 /// membership at the facility, and both tenant isolation layers. Wired through the real module registrations. Synthetic data only.
 /// </summary>
-public sealed class ScheduleServiceTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>, IAsyncLifetime
+public sealed class ScheduleServiceTests(PostgresFixture sql) : IClassFixture<PostgresFixture>, IAsyncLifetime
 {
     static readonly DateOnly Monday = SchedulingHarness.Monday;
     readonly SchedulingHarness h = new(sql);
@@ -132,7 +132,7 @@ public sealed class ScheduleServiceTests(SqlServerFixture sql) : IClassFixture<S
         Assert.Empty(await other.SlotHolds.IgnoreQueryFilters().Where(x => x.TenantId == h.Tenant).ToListAsync());
         Assert.Empty(await other.StatusEvents.IgnoreQueryFilters().Where(x => x.TenantId == h.Tenant).ToListAsync());
         Assert.Empty(await other.Outbox.IgnoreQueryFilters().Where(x => x.TenantId == h.Tenant).ToListAsync());
-        Assert.Empty(await other.Database.SqlQuery<Guid>($"SELECT TenantId AS Value FROM scheduling.Appointments").ToListAsync());
+        Assert.Empty(await other.Database.SqlQuery<Guid>($"""SELECT "TenantId" AS "Value" FROM scheduling."Appointments" """).ToListAsync());
         await using var none = sql.Scheduling(null);
         Assert.Empty(await none.Templates.IgnoreQueryFilters().ToListAsync());
         Assert.Empty(await none.Appointments.IgnoreQueryFilters().ToListAsync());
@@ -142,8 +142,8 @@ public sealed class ScheduleServiceTests(SqlServerFixture sql) : IClassFixture<S
 
         other.Resources.Add(new ScheduleResource { Id = Guid.NewGuid(), TenantId = h.Tenant, FacilityId = h.Facility, Name = "Injected" });
         var blocked = await Assert.ThrowsAsync<DbUpdateException>(() => other.SaveChangesAsync());
-        Assert.Contains("block predicate", Assert.IsType<SqlException>(blocked.InnerException).Message, StringComparison.Ordinal);
-        var move = await Assert.ThrowsAsync<SqlException>(() => mine.Database.ExecuteSqlAsync($"UPDATE scheduling.Appointments SET TenantId = {Guid.NewGuid()}"));
-        Assert.Contains("block predicate", move.Message, StringComparison.Ordinal);
+        Assert.Equal(PostgresErrorCodes.InsufficientPrivilege, Assert.IsType<PostgresException>(blocked.InnerException).SqlState); // row-level security refuses the row (42501)
+        var move = await Assert.ThrowsAsync<PostgresException>(() => mine.Database.ExecuteSqlAsync($"""UPDATE scheduling."Appointments" SET "TenantId" = {Guid.NewGuid()}"""));
+        Assert.Equal(PostgresErrorCodes.InsufficientPrivilege, move.SqlState); // row-level security refuses the row (42501)
     }
 }

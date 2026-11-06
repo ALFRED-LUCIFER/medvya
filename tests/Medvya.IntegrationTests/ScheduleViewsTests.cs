@@ -8,7 +8,7 @@ namespace Medvya.IntegrationTests;
 /// MDV-P1-023 on real SQL Server: the week view of one calendar shows exactly what the day views show (appointments, free and
 /// held slots, capacity), days are the facility's local days, and only a calendar of the facility has a week.
 /// </summary>
-public sealed class ScheduleViewsTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>, IAsyncLifetime
+public sealed class ScheduleViewsTests(PostgresFixture sql) : IClassFixture<PostgresFixture>, IAsyncLifetime
 {
     readonly SchedulingHarness h = new(sql);
 

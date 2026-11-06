@@ -15,7 +15,7 @@ namespace Medvya.IntegrationTests;
 /// event in one transaction, the country from the tenant (never the request), and only registration data in the answers.
 /// Synthetic data only (IDs fail their checksums).
 /// </summary>
-public sealed class PatientRegistrationFlowTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>
+public sealed class PatientRegistrationFlowTests(PostgresFixture sql) : IClassFixture<PostgresFixture>
 {
     sealed record Clinic(Guid Tenant, Guid Facility, Guid Receptionist, WebApplicationFactory<Program> Host) : IDisposable
     {

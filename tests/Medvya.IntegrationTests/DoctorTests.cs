@@ -23,7 +23,7 @@ namespace Medvya.IntegrationTests;
 /// invitation, private signature image), the back-office licence decision that only Medvya operations may make, and the gate that keeps
 /// an unverified doctor from recording or signing.
 /// </summary>
-public sealed class DoctorTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>, IAsyncLifetime
+public sealed class DoctorTests(PostgresFixture sql) : IClassFixture<PostgresFixture>, IAsyncLifetime
 {
     static readonly byte[] Png = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 0];
     const string Email = "sana.khan@example.test", Contact = "desk@clinic.example";
@@ -256,7 +256,7 @@ public sealed class DoctorTests(SqlServerFixture sql) : IClassFixture<SqlServerF
         var id = await AddDoctor();
         await using (var scope = sql.Context(h.Tenant))
         {
-            var review = new LicenceReview(scope, new SqlServerFixture.FixedTenant(h.Tenant), new Who(ops), new Medvya.Audit.Infrastructure.AuditLog(sql.Audit(h.Tenant)), new FailingMail(), TimeProvider.System);
+            var review = new LicenceReview(scope, new PostgresFixture.FixedTenant(h.Tenant), new Who(ops), new Medvya.Audit.Infrastructure.AuditLog(sql.Audit(h.Tenant)), new FailingMail(), TimeProvider.System);
             await Assert.ThrowsAsync<InvalidOperationException>(() => review.DecideAsync(id, false, "Not in the register"));
         }
         await using var db = sql.Context(h.Tenant);

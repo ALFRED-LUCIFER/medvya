@@ -15,7 +15,7 @@ namespace Medvya.IntegrationTests;
 /// MDV-P1-011 through HTTP on real SQL Server: sign-in required, the role check at the facility, field/code errors, the JSON
 /// contract the clinic app reads, and one audit row per request.
 /// </summary>
-public sealed class ScheduleEndpointTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>, IAsyncLifetime
+public sealed class ScheduleEndpointTests(PostgresFixture sql) : IClassFixture<PostgresFixture>, IAsyncLifetime
 {
     readonly Guid tenant = Guid.NewGuid(), facility = Guid.NewGuid(), doctor = Guid.NewGuid(), reception = Guid.NewGuid(), admin = Guid.NewGuid();
     WebApplicationFactory<Program> factory = null!;

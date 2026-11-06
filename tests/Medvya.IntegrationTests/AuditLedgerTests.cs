@@ -7,14 +7,14 @@ using Medvya.BuildingBlocks.Domain;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
-using Microsoft.Data.SqlClient;
+using Npgsql;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Medvya.IntegrationTests;
 
 /// <summary>MDV-P0-017: every patient-data access leaves one append-only, tenant-scoped, tamper-evident audit row.</summary>
-public class AuditLedgerTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>
+public class AuditLedgerTests(PostgresFixture sql) : IClassFixture<PostgresFixture>
 {
     readonly Guid tenantA = Guid.NewGuid(), tenantB = Guid.NewGuid();
 
@@ -73,11 +73,15 @@ public class AuditLedgerTests(SqlServerFixture sql) : IClassFixture<SqlServerFix
     public async Task EventsCannotBeChangedOrDeleted()
     {
         var a = await Write(tenantA);
+        // Layer one: the app role has no UPDATE or DELETE right on audit.
         await using var db = sql.Audit(tenantA);
-        var update = await Assert.ThrowsAsync<SqlException>(() => db.Database.ExecuteSqlAsync($"UPDATE audit.AuditEvents SET Action = 'x' WHERE Id = {a.Id}"));
-        var delete = await Assert.ThrowsAsync<SqlException>(() => db.Database.ExecuteSqlAsync($"DELETE FROM audit.AuditEvents WHERE Id = {a.Id}"));
-        Assert.Contains("append only", update.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("append only", delete.Message, StringComparison.OrdinalIgnoreCase);
+        foreach (var statement in new[] { $"""UPDATE audit."AuditEvents" SET "Action" = 'x' WHERE "Id" = '{a.Id}'""", $"""DELETE FROM audit."AuditEvents" WHERE "Id" = '{a.Id}'""" })
+            Assert.Equal(PostgresErrorCodes.InsufficientPrivilege, (await Assert.ThrowsAsync<PostgresException>(() => db.Database.ExecuteSqlRawAsync(statement))).SqlState);
+
+        // Layer two: the append-only trigger refuses even a role that holds every right (the superuser).
+        await using var admin = await sql.OpenAs("dbo");
+        foreach (var statement in new[] { $"""UPDATE audit."AuditEvents" SET "Action" = 'x' WHERE "Id" = '{a.Id}'""", $"""DELETE FROM audit."AuditEvents" WHERE "Id" = '{a.Id}'""" })
+            Assert.Contains("append only", (await Assert.ThrowsAsync<PostgresException>(() => new NpgsqlCommand(statement, admin).ExecuteNonQueryAsync())).Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -85,20 +89,18 @@ public class AuditLedgerTests(SqlServerFixture sql) : IClassFixture<SqlServerFix
     {
         await using var db = sql.Audit(tenantA);
         var ex = await Assert.ThrowsAsync<DbUpdateException>(() => new AuditLog(db).WriteAsync(Event(tenantB), default));
-        Assert.IsType<SqlException>(ex.InnerException);
+        Assert.IsType<PostgresException>(ex.InnerException);
     }
 
     [Fact]
     public async Task LedgerDigestVerifies()
     {
         await Write(tenantA);
-        await using var conn = new SqlConnection(sql.ConnectionString);
-        await conn.OpenAsync();
-        await using var gen = new SqlCommand("EXEC sys.sp_generate_database_ledger_digest", conn);
-        var digest = (string)(await gen.ExecuteScalarAsync())!;
-        await using var verify = new SqlCommand("EXEC sys.sp_verify_database_ledger @digests", conn);
-        verify.Parameters.AddWithValue("@digests", $"[{digest}]");
-        await verify.ExecuteNonQueryAsync(); // throws if any ledger row was tampered with
+        await using var conn = await sql.OpenAs("app_user", tenantA); // inside the tenant: without one, RLS hides every row and an empty chain verifies
+        // MDV-P0-036: audit.verify_chain returns the id of the first broken row, NULL when the chain is intact.
+        await using var verify = new NpgsqlCommand("SELECT audit.verify_chain(@tenant)", conn);
+        verify.Parameters.AddWithValue("tenant", tenantA);
+        Assert.True(await verify.ExecuteScalarAsync() is DBNull);
     }
 
     [Fact]
@@ -141,7 +143,7 @@ public class AuditLedgerTests(SqlServerFixture sql) : IClassFixture<SqlServerFix
     {
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
-        builder.Services.AddSingleton<ICurrentTenant>(new SqlServerFixture.FixedTenant(tenant));
+        builder.Services.AddSingleton<ICurrentTenant>(new PostgresFixture.FixedTenant(tenant));
         builder.Services.AddSingleton<ICurrentUser>(new FixedUser());
         audit(builder.Services);
         var app = builder.Build();

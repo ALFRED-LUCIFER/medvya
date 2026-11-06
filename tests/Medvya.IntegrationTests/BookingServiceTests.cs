@@ -11,7 +11,7 @@ namespace Medvya.IntegrationTests;
 /// MDV-P1-021 on real SQL Server: a short slot hold, booking from it, expiry on a controllable clock, no booking outside the
 /// template, multi-slot visits, the free-text reason kept away from reception, and AppointmentBooked.v1 without PHI.
 /// </summary>
-public sealed class BookingServiceTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>, IAsyncLifetime
+public sealed class BookingServiceTests(PostgresFixture sql) : IClassFixture<PostgresFixture>, IAsyncLifetime
 {
     readonly SchedulingHarness h = new(sql);
 
@@ -155,12 +155,13 @@ public sealed class BookingServiceTests(SqlServerFixture sql) : IClassFixture<Sq
     public async Task TheDayViewReadsAppointmentsThroughAFacilityAndStartIndex()
     {
         await using var conn = await sql.OpenAs("dbo");
-        await using var cmd = new Microsoft.Data.SqlClient.SqlCommand("""
-            SELECT c.name, ic.is_included_column FROM sys.indexes i
-            JOIN sys.index_columns ic ON ic.object_id = i.object_id AND ic.index_id = i.index_id
-            JOIN sys.columns c ON c.object_id = ic.object_id AND c.column_id = ic.column_id
-            WHERE i.name = N'IX_Appointments_TenantId_FacilityId_Start' AND i.object_id = OBJECT_ID(N'scheduling.Appointments')
-            ORDER BY ic.is_included_column, ic.key_ordinal, c.name
+        await using var cmd = new Npgsql.NpgsqlCommand("""
+            SELECT a.attname, k.ord > i.indnkeyatts
+            FROM pg_index i JOIN pg_class ic ON ic.oid = i.indexrelid
+            CROSS JOIN LATERAL unnest(i.indkey::int2[]) WITH ORDINALITY AS k(attnum, ord)
+            JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = k.attnum
+            WHERE ic.relname = 'IX_Appointments_TenantId_FacilityId_Start'
+            ORDER BY k.ord > i.indnkeyatts, CASE WHEN k.ord <= i.indnkeyatts THEN k.ord END, a.attname
             """, conn);
         var columns = new List<string>();
         await using (var reader = await cmd.ExecuteReaderAsync())

@@ -10,6 +10,9 @@ public sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> option
     public DbSet<StaffSession> Sessions => Set<StaffSession>();
     public DbSet<OnboardingDraft> OnboardingDrafts => Set<OnboardingDraft>();
 
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder) =>
+        Medvya.BuildingBlocks.Infrastructure.UtcDateTimeOffset.Apply(configurationBuilder);
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasDefaultSchema("identity");
@@ -24,7 +27,7 @@ public sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> option
         // Not row-level secured: a session belongs to a person, not a clinic. Every query filters by user (and tenant for admin revoke).
         modelBuilder.Entity<StaffSession>(e =>
         {
-            e.ToTable("Sessions", t => t.HasCheckConstraint("CK_Sessions_IdleTimeoutMinutes", "IdleTimeoutMinutes BETWEEN 1 AND 480"));
+            e.ToTable("Sessions", t => t.HasCheckConstraint("CK_Sessions_IdleTimeoutMinutes", "\"IdleTimeoutMinutes\" BETWEEN 1 AND 480"));
             e.Property(x => x.Device).HasMaxLength(64);
             e.HasOne<StaffUser>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
             e.HasIndex(x => new { x.UserId, x.CreatedAt });

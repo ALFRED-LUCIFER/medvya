@@ -9,12 +9,12 @@ using Microsoft.Extensions.Options;
 namespace Medvya.Scheduling.Infrastructure;
 
 /// <summary>
-/// The only way to change what a calendar holds or has booked (MDV-P1-022, PRD v2 P1-07). Each attempt runs in a SERIALIZABLE
-/// transaction that first takes sp_getapplock "doctor:{calendar}:{date}" (facility-local date) for every doctor-day it touches,
+/// The only way to change what a calendar holds or has booked (MDV-P1-022, PRD v2 P1-07). Each attempt runs in a READ COMMITTED
+/// transaction (not SERIALIZABLE: its range locks made unrelated doctor-days queue on each other's index ranges, MDV-P1-037) that first takes sp_getapplock "doctor:{calendar}:{date}" (facility-local date) for every doctor-day it touches,
 /// in a fixed order so two attempts never wait on each other in a circle. Deadlocks, lock timeouts and an ungranted app lock roll
 /// back and are retried (nothing was written, so a retry cannot duplicate); after the last attempt the caller gets "busy".
-/// A unique-index violation on SCHEDULE_SLOT means another booking won: "slot_unavailable". The unique index is the last line:
-/// it holds even if the lock or the checks are bypassed.
+/// A unique-index violation on SCHEDULE_SLOT means another booking won: "slot_unavailable". The app lock keeps every check-then-write of a
+/// doctor-day exclusive, and the unique index is the last line: it holds even if the lock or the checks are bypassed.
 /// </summary>
 public sealed class DoctorDayTransaction(SchedulingDbContext db, IOptions<SchedulingOptions> options)
 {
@@ -28,7 +28,7 @@ public sealed class DoctorDayTransaction(SchedulingDbContext db, IOptions<Schedu
         {
             try
             {
-                await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
+                await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken);
                 foreach (var (calendarId, date) in locks)
                     await LockAsync(db, string.Create(CultureInfo.InvariantCulture, $"doctor:{calendarId}:{date:yyyy-MM-dd}"), options.Value.LockTimeout, cancellationToken);
                 var result = await work();

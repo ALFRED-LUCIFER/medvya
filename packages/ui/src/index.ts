@@ -7,3 +7,4 @@ export { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '#
 export { Textarea } from '#components/ui/textarea';
 export { Tabs, TabsContent, TabsList, TabsTrigger } from '#components/ui/tabs';
 export { Switch } from '#components/ui/switch';
+export { Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TableRow, TableState, type SortDirection } from '#components/ui/table';

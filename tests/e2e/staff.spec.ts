@@ -136,3 +136,26 @@ test('the offboarding form lays out right to left in Arabic', async ({ page }) =
   await expect(page.getByLabel('السبب (يُحفظ في سجل التدقيق)')).toBeVisible();
   expect(await axe(page)).toEqual([]);
 });
+
+// MDV-P0-030: the shared Table. Sorting is keyboard-operable, sets aria-sort and reorders the rows; the name column starts at the reading edge in Arabic.
+for (const locale of ['en', 'ar'])
+  test(`sorting the staff table by keyboard sets aria-sort and reorders the rows (${locale})`, async ({ page }) => {
+    await setUp(page, locale);
+    await page.goto('/settings?tab=staff');
+    const table = page.getByRole('table');
+    const nameSort = table.locator('th[aria-sort]').first().getByRole('button');
+    const firstRow = () => table.locator('tbody tr').first().locator('th').innerText();
+    await expect(table.locator('th[aria-sort="none"]')).toHaveCount(2);
+    expect((await nameSort.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    await nameSort.focus();
+    await page.keyboard.press('Enter');
+    await expect(table.locator('th[aria-sort="ascending"]')).toHaveCount(1);
+    const ascending = await firstRow();
+    await page.keyboard.press('Enter');
+    await expect(table.locator('th[aria-sort="descending"]')).toHaveCount(1);
+    expect(await firstRow()).not.toBe(ascending);
+    const [header, box] = [await table.locator('th').first().boundingBox(), await table.boundingBox()];
+    if (locale === 'ar') expect(header!.x + header!.width).toBeGreaterThan(box!.x + box!.width - 60);
+    else expect(header!.x).toBeLessThan(box!.x + 60);
+    expect(await axe(page)).toEqual([]);
+  });

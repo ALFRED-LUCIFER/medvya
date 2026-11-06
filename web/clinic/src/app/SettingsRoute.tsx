@@ -25,6 +25,7 @@ import { useAccessReviewController } from '../features/staff/hooks/useAccessRevi
 import StaffPanel from '../features/staff/components/StaffPanel';
 import { useCustomRolesController } from '../features/staff/hooks/useCustomRolesController';
 import { useStaffController } from '../features/staff/hooks/useStaffController';
+import { useStaffTableController } from '../features/staff/hooks/useStaffTableController';
 
 // Each panel is its own component so its controller runs (and fetches) only while its tab is open.
 const Profile = () => <ProfilePanel {...useProfileController()} />;
@@ -50,10 +51,11 @@ const Review = () => <AccessReviewPanel {...useAccessReviewController()} />;
 
 function Staff({ facilityId }: { facilityId: string }) {
   const staff = useStaffController(facilityId);
+  const table = useStaffTableController(staff.staff);
   const roles = useCustomRolesController();
   return (
     <>
-      <StaffPanel {...staff} />
+      <StaffPanel {...staff} {...table} />
       {!staff.loading && !staff.failed && <CustomRolesPanel catalogue={staff.catalogue} {...roles} />}
       <Review />
     </>

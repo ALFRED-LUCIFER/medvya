@@ -1,6 +1,6 @@
 import { Lock, Plus } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, Input, Textarea } from '@medvya/ui';
+import { Button, Input, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState, Textarea, type SortDirection } from '@medvya/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
 import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
@@ -8,10 +8,13 @@ import { describedBy, fieldError } from '../../settings/components/fieldStyles';
 import type { Location } from '../../settings/domain/settings';
 import { Field } from '../../settings/components/Field';
 import { Section } from '../../settings/components/Section';
+import { staffColumns, type StaffColumn } from '../domain/staffTable';
 import { assignableRoles, canOffboard, canResend, canRevoke, permissionRows, type AddStaffForm, type OffboardForm, type RoleCatalogue, type RoleChoice, type StaffMember, type Step } from '../domain/staff';
 
 type Props = {
-  staff: StaffMember[];
+  rows: StaffMember[];
+  sortOf: (key: StaffColumn) => SortDirection;
+  onSort: (key: StaffColumn) => void;
   loading: boolean;
   failed: boolean;
   catalogue: RoleCatalogue;
@@ -50,8 +53,7 @@ const same = (a: RoleChoice | null, b: RoleChoice) => !!a && a.kind === b.kind &
 export default function StaffPanel(p: Props) {
   const { t, formatDate } = useI18n();
   const { errors } = p.form.formState;
-  if (p.loading) return <p role="status">{t('settings.loading')}</p>;
-  if (p.failed) return <p role="alert" className={fieldError}>{t('settings.loadFailed')}</p>;
+  const tableState = p.loading ? 'loading' : p.failed ? 'error' : p.rows.length === 0 ? 'empty' : 'ready';
 
   const roleName = (m: StaffMember) => m.customRoleName ?? t(`role.${m.role}`);
   const choices: { choice: RoleChoice; name: string; description: string }[] = [
@@ -67,41 +69,43 @@ export default function StaffPanel(p: Props) {
         <div aria-live="polite" className="text-sm font-semibold text-success-700">{p.notice && t(`staff.notice.${p.notice}`)}</div>
         {p.rowFailed && <p role="alert" className={fieldError}>{t('staff.rowFailed')}</p>}
         {p.emailFailed && !p.adding && <p role="alert" className={fieldError}>{t('staff.error.email')}</p>}
-        <div className="overflow-x-auto rounded-lg border" tabIndex={0} role="region" aria-label={t('staff.tableLabel')}>
-          <table className="w-full min-w-[720px] text-start text-sm">
-            <thead className="bg-muted text-start">
-              <tr>
-                {(['name', 'role', 'access', 'mfa', 'status'] as const).map(c => <th key={c} scope="col" className="p-3 text-start font-bold">{t(`staff.col.${c}`)}</th>)}
-                <th scope="col" className="p-3 text-start font-bold"><span className="sr-only">{t('staff.col.actions')}</span></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {p.staff.map(m => {
+        <TableState state={tableState} messages={{ loading: t('settings.loading'), error: t('settings.loadFailed'), empty: t('staff.empty') }}>
+          <Table label={t('staff.tableLabel')} className="min-w-[720px]">
+            <TableHeader>
+              <TableRow>
+                {staffColumns.map(c => (
+                  <TableHead key={c.key} scope="col" sort={c.sortable ? p.sortOf(c.key) : undefined} onSort={c.sortable ? () => p.onSort(c.key) : undefined}>{t(`staff.col.${c.key}`)}</TableHead>
+                ))}
+                <TableHead scope="col"><span className="sr-only">{t('staff.col.actions')}</span></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {p.rows.map(m => {
                 const who = m.name ?? m.email ?? '';
                 return (
-                  <tr key={m.membershipId}>
-                    <th scope="row" className="p-3 text-start font-bold">{who}</th>
-                    <td className="p-3">{roleName(m)}</td>
-                    <td className="p-3">{m.facilityName}</td>
-                    <td className="p-3">{t(`staff.mfa.${m.mfa}`)}</td>
-                    <td className="p-3">
+                  <TableRow key={m.membershipId}>
+                    <TableHead scope="row">{who}</TableHead>
+                    <TableCell>{roleName(m)}</TableCell>
+                    <TableCell>{m.facilityName}</TableCell>
+                    <TableCell>{t(`staff.mfa.${m.mfa}`)}</TableCell>
+                    <TableCell>
                       {t(`staff.status.${m.status}`)}
                       {m.invitationState && <span className="block text-muted-foreground">{t(`staff.invitation.${m.invitationState}`, { date: m.invitationExpiresAt ? formatDate(new Date(m.invitationExpiresAt)) : '' })}</span>}
-                    </td>
-                    <td className="p-3">
+                    </TableCell>
+                    <TableCell>
                       <span className="flex flex-wrap gap-2">
                         {canResend(m) && <Button type="button" variant="outline" className="min-h-11 min-w-11" disabled={p.working} aria-label={t('staff.resendNamed', { name: who })} onClick={() => p.onResend(m.invitationId!)}>{t('staff.resend')}</Button>}
                         {canRevoke(m) && <Button type="button" variant="outline" className="min-h-11 min-w-11" disabled={p.working} aria-label={t('staff.revokeNamed', { name: who })} onClick={() => p.onRevoke(m.invitationId!)}>{t('staff.revoke')}</Button>}
                         {canOffboard(m) && <Button type="button" variant="outline" className="min-h-11 min-w-11" disabled={p.working || !!p.offboarding} aria-label={t('staff.offboardNamed', { name: who })} onClick={() => p.onOffboard(m)}>{t('staff.offboard')}</Button>}
                       </span>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 );
               })}
-            </tbody>
-          </table>
-        </div>
-        {!p.step && <Button type="button" className="self-start" onClick={p.onOpen}><Plus aria-hidden className="size-4" />{t('staff.add')}</Button>}
+            </TableBody>
+          </Table>
+        </TableState>
+        {!p.step && !p.loading && !p.failed && <Button type="button" className="self-start" onClick={p.onOpen}><Plus aria-hidden className="size-4" />{t('staff.add')}</Button>}
       </Section>
 
       {p.offboarding && (

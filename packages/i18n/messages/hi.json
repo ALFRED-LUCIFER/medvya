@@ -1261,6 +1261,7 @@
   "staff.roles.error.duplicate": "इस नाम की भूमिका पहले से है।",
   "staff.roles.error.failed": "भूमिका सहेजी नहीं गई। कुछ नहीं बदला; फिर कोशिश करें।",
   "staff.tableLabel": "स्टाफ़ सूची",
+  "staff.empty": "अभी कोई स्टाफ़ नहीं है। नीचे पहले व्यक्ति को जोड़ें।",
   "staff.offboard": "ऑफ़बोर्ड करें",
   "staff.offboardNamed": "{name} को ऑफ़बोर्ड करें",
   "staff.offboardTitle": "{name} को ऑफ़बोर्ड करें",

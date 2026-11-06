@@ -1,6 +1,6 @@
 import { Download, X } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
+import { Button, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState } from '@medvya/ui';
 import { Field } from '../../settings/components/Field';
 import { Section } from '../../settings/components/Section';
 import { fieldError } from '../../settings/components/fieldStyles';
@@ -74,37 +74,29 @@ export default function AuditLogPanel(p: Props) {
         {p.exportFailed && <p role="alert" className={fieldError}>{t('audit.exportFailed')}</p>}
       </div>
 
-      <div aria-live="polite">
-        {p.state === 'loading' && <p role="status">{t('settings.loading')}</p>}
-        {p.state === 'error' && <p role="alert" className={fieldError}>{t('audit.loadFailed')}</p>}
-        {p.state === 'ready' && p.rows.length === 0 && <p className="font-bold">{t('audit.empty')}</p>}
-      </div>
-
-      {p.state === 'ready' && p.rows.length > 0 && (
-        <div className="overflow-x-auto rounded-lg border" tabIndex={0} role="region" aria-label={t('audit.tableLabel')}>
-          <table className="w-full min-w-[800px] text-start text-sm">
-            <thead className="bg-muted text-start">
-              <tr>{(['time', 'staff', 'role', 'action', 'patient', 'purpose', 'outcome'] as const).map(c => <th key={c} scope="col" className="p-3 text-start font-bold">{t(`audit.col.${c}`)}</th>)}</tr>
-            </thead>
-            <tbody className="divide-y">
-              {p.rows.map(r => {
-                const at = new Date(r.occurredAt);
-                return (
-                  <tr key={r.id}>
-                    <td className="p-3 whitespace-nowrap"><time dateTime={r.occurredAt}>{formatDate(at)} {formatTime(at, zone)}</time></td>
-                    <td className="p-3">{r.actorName ?? t('audit.unknownStaff')}</td>
-                    <td className="p-3">{r.role ? t(`role.${r.role}`) : t('audit.roleNotRecorded')}</td>
-                    <td className="p-3">{r.action}{r.detail && <span className="block text-xs text-muted-foreground">{r.detail}</span>}</td>
-                    <td className="p-3">{r.patientName ?? (r.patientMrn ? t('audit.mrn', { mrn: r.patientMrn }) : '')}</td>
-                    <td className="p-3">{r.purpose}</td>
-                    <td className="p-3 font-semibold">{t(`audit.outcome.${r.outcome}`)}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+      <TableState state={p.state === 'loading' || p.state === 'error' ? p.state : p.rows.length === 0 ? 'empty' : 'ready'} messages={{ loading: t('settings.loading'), error: t('audit.loadFailed'), empty: t('audit.empty') }}>
+        <Table label={t('audit.tableLabel')} className="min-w-[800px]">
+          <TableHeader>
+            <TableRow>{(['time', 'staff', 'role', 'action', 'patient', 'purpose', 'outcome'] as const).map(c => <TableHead key={c} scope="col">{t(`audit.col.${c}`)}</TableHead>)}</TableRow>
+          </TableHeader>
+          <TableBody>
+            {p.rows.map(r => {
+              const at = new Date(r.occurredAt);
+              return (
+                <TableRow key={r.id}>
+                  <TableCell className="whitespace-nowrap"><time dateTime={r.occurredAt}>{formatDate(at)} {formatTime(at, zone)}</time></TableCell>
+                  <TableCell>{r.actorName ?? t('audit.unknownStaff')}</TableCell>
+                  <TableCell>{r.role ? t(`role.${r.role}`) : t('audit.roleNotRecorded')}</TableCell>
+                  <TableCell>{r.action}{r.detail && <span className="block text-xs text-muted-foreground">{r.detail}</span>}</TableCell>
+                  <TableCell>{r.patientName ?? (r.patientMrn ? t('audit.mrn', { mrn: r.patientMrn }) : '')}</TableCell>
+                  <TableCell>{r.purpose}</TableCell>
+                  <TableCell className="font-semibold">{t(`audit.outcome.${r.outcome}`)}</TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </TableState>
       {p.canLoadMore && <Button type="button" variant="outline" className="self-start" loading={p.loadingMore} onClick={p.onMore}>{t('audit.more')}</Button>}
     </Section>
   );

@@ -43,10 +43,17 @@ public sealed class PatientsDataKeyStore(string connectionString) : IWrappedKeyS
         return r.Read() ? new WrappedKey(tenantId, purpose, r.GetString(0), (byte[])r[1]) : null;
     }
 
+    /// <summary>Creates the tenant's first key, never a replacement: refused while the tenant has encrypted values (a lost key row).</summary>
     public WrappedKey Add(WrappedKey key)
     {
         using (var conn = Open(key.TenantId))
-        using (var cmd = new NpgsqlCommand("""INSERT INTO patients."DataKeys" ("TenantId", "Purpose", "WrapKeyId", "Wrapped") VALUES (@t, @p, @k, @w) ON CONFLICT DO NOTHING""", conn))
+        using (var cmd = new NpgsqlCommand("""
+            INSERT INTO patients."DataKeys" ("TenantId", "Purpose", "WrapKeyId", "Wrapped")
+            SELECT @t, @p, @k, @w
+            WHERE NOT EXISTS (SELECT 1 FROM patients."Identifiers" WHERE "TenantId" = @t AND ("LookupValue" IS NOT NULL OR "DisplayValue" IS NOT NULL))
+              AND NOT EXISTS (SELECT 1 FROM patients."PayerCoverages" WHERE "TenantId" = @t AND "MemberNumber" IS NOT NULL)
+            ON CONFLICT DO NOTHING
+            """, conn))
         {
             cmd.Parameters.AddWithValue("t", key.TenantId);
             cmd.Parameters.AddWithValue("p", key.Purpose);
@@ -54,7 +61,8 @@ public sealed class PatientsDataKeyStore(string connectionString) : IWrappedKeyS
             cmd.Parameters.AddWithValue("w", key.Wrapped);
             cmd.ExecuteNonQuery();
         }
-        return Find(key.TenantId, key.Purpose)!; // a parallel first use may have won; everyone uses the winner
+        // A parallel first use may have won; everyone uses the winner. Nothing stored means the insert was refused above.
+        return Find(key.TenantId, key.Purpose) ?? throw new KeyProtectionException(KeyProtectionException.KeyMissing);
     }
 
     public void Replace(WrappedKey key)
@@ -113,12 +121,12 @@ public sealed class NationalIdColumns(INationalIdProtector protector, IBlindInde
         foreach (var e in db.ChangeTracker.Entries<PatientIdentifier>().Where(e => e.State == EntityState.Added))
         {
             var i = e.Entity;
-            e.Property(LookupCipher).CurrentValue = Encrypt(i.TenantId, i.LookupValue);
+            e.Property(LookupCipher).CurrentValue = Encrypt(i.TenantId, IdentifierLookup, i.Id, i.LookupValue);
             e.Property(LookupIndex).CurrentValue = i.LookupValue is null ? null : Index(i.TenantId, i.LookupValue);
-            e.Property(DisplayCipher).CurrentValue = Encrypt(i.TenantId, i.DisplayValue);
+            e.Property(DisplayCipher).CurrentValue = Encrypt(i.TenantId, IdentifierDisplay, i.Id, i.DisplayValue);
         }
         foreach (var e in db.ChangeTracker.Entries<PayerCoverage>().Where(e => e.State == EntityState.Added))
-            e.Property(MemberNumberCipher).CurrentValue = Encrypt(e.Entity.TenantId, e.Entity.MemberNumber);
+            e.Property(MemberNumberCipher).CurrentValue = Encrypt(e.Entity.TenantId, CoverageMemberNumber, e.Entity.Id, e.Entity.MemberNumber);
     }
 
     sealed class Materializer : IMaterializationInterceptor
@@ -132,25 +140,30 @@ public sealed class NationalIdColumns(INationalIdProtector protector, IBlindInde
         switch (entity)
         {
             case PatientIdentifier i:
-                Lookup.SetValue(i, Decrypt(i.TenantId, materializationData.GetPropertyValue<byte[]?>(LookupCipher)));
-                Display.SetValue(i, Decrypt(i.TenantId, materializationData.GetPropertyValue<byte[]?>(DisplayCipher)));
+                Lookup.SetValue(i, Decrypt(i.TenantId, IdentifierLookup, i.Id, materializationData.GetPropertyValue<byte[]?>(LookupCipher)));
+                Display.SetValue(i, Decrypt(i.TenantId, IdentifierDisplay, i.Id, materializationData.GetPropertyValue<byte[]?>(DisplayCipher)));
                 break;
             case PayerCoverage p:
-                Member.SetValue(p, Decrypt(p.TenantId, materializationData.GetPropertyValue<byte[]?>(MemberNumberCipher)));
+                Member.SetValue(p, Decrypt(p.TenantId, CoverageMemberNumber, p.Id, materializationData.GetPropertyValue<byte[]?>(MemberNumberCipher)));
                 break;
         }
         return entity;
     }
 
-    /// <summary>The ciphertext EF would store for this tenant; the app always writes through EF, this is for bulk loads (tests).</summary>
-    public byte[]? Encrypt(Guid tenantId, string? value) => value is null ? null : protector.Protect(tenantId, value);
+    /// <summary>Columns a value is bound to (with its row id), so ciphertext copied to another row or column does not decrypt (MDV-P0-041).</summary>
+    public const string IdentifierLookup = "patients.Identifiers.LookupValue", IdentifierDisplay = "patients.Identifiers.DisplayValue", CoverageMemberNumber = "patients.PayerCoverages.MemberNumber";
 
-    string? Decrypt(Guid tenantId, byte[]? value) => value is null ? null : protector.Unprotect(tenantId, value);
+    /// <summary>The ciphertext EF would store in <paramref name="column"/> of row <paramref name="rowId"/>; the app always writes through EF, this is for bulk loads (tests).</summary>
+    public byte[]? Encrypt(Guid tenantId, string column, Guid rowId, string? value) => value is null ? null : protector.Protect(tenantId, value, Binding(column, rowId));
+
+    string? Decrypt(Guid tenantId, string column, Guid rowId, byte[]? value) => value is null ? null : protector.Unprotect(tenantId, value, Binding(column, rowId));
+
+    static string Binding(string column, Guid rowId) => $"{column}:{rowId:N}";
 
     sealed class Refused : INationalIdProtector, IBlindIndex
     {
-        public byte[] Protect(Guid tenantId, string plaintext) => throw new KeyProtectionException(KeyProtectionException.KeysUnavailable);
-        public string Unprotect(Guid tenantId, byte[] protectedValue) => throw new KeyProtectionException(KeyProtectionException.KeysUnavailable);
+        public byte[] Protect(Guid tenantId, string plaintext, string binding) => throw new KeyProtectionException(KeyProtectionException.KeysUnavailable);
+        public string Unprotect(Guid tenantId, byte[] protectedValue, string binding) => throw new KeyProtectionException(KeyProtectionException.KeysUnavailable);
         public byte[] Compute(Guid tenantId, string normalisedValue) => throw new KeyProtectionException(KeyProtectionException.KeysUnavailable);
     }
 }

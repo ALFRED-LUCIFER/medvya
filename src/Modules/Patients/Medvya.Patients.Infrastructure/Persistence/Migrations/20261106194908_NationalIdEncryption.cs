@@ -15,6 +15,17 @@ namespace Medvya.Patients.Infrastructure.Persistence.Migrations
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            // MDV-P0-041: dropping the plaintext columns destroys any identifier in them, so refuse unless both tables are still empty.
+            // The size check sees every tenant's rows (a row count would see none: forced row-level security binds the migrator too). It
+            // also refuses a table that once held rows; that is deliberate, an empty database is the only safe place to run this.
+            migrationBuilder.Sql("""
+                DO $$
+                BEGIN
+                    IF pg_relation_size('patients."Identifiers"') > 0 OR pg_relation_size('patients."PayerCoverages"') > 0 THEN
+                        RAISE EXCEPTION 'NationalIdEncryption refused: patients.Identifiers or patients.PayerCoverages already holds data, and this migration drops the plaintext identifier columns. Export the identifiers and re-enter them through the application on an empty database instead.';
+                    END IF;
+                END $$;
+                """);
             migrationBuilder.DropIndex(name: "IX_Identifiers_TenantId_Scheme_LookupValue", schema: "patients", table: "Identifiers");
             foreach (var (table, column) in new[] { ("Identifiers", "LookupValue"), ("Identifiers", "DisplayValue"), ("PayerCoverages", "MemberNumber") })
             {

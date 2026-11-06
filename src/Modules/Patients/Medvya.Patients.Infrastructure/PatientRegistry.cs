@@ -118,6 +118,12 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
 
     public Task<PatientRecord?> GetAsync(Guid patientId, CancellationToken cancellationToken = default) => LoadAsync(patientId, cancellationToken);
 
+    IQueryable<Patient> IdentifierMatch(IQueryable<Patient> patients, IdentifierScheme scheme, string value)
+    {
+        var index = db.LookupIndexFor(value);
+        return patients.Where(p => db.Identifiers.Any(i => i.PatientId == p.Id && i.Scheme == scheme && EF.Property<byte[]>(i, NationalIdColumns.LookupIndex) == index));
+    }
+
     public async Task<PatientSearchResult> SearchAsync(PatientSearch search, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(search);
@@ -133,8 +139,8 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
             SearchKind.Phone => patients.Where(p => p.Mobile == term.Value || p.AlternatePhone == term.Value),
             // Either MRN of a merged pair finds the survivor (MDV-P1-017); the merged record itself is hidden below.
             SearchKind.Mrn => patients.Where(p => p.Mrn == term.Value || db.Patients.Any(m => m.MergedIntoPatientId == p.Id && m.Mrn == term.Value)),
-            // Exact match on the stored value; MDV-P0-035 moves this to an HMAC blind index.
-            SearchKind.Identifier => patients.Where(p => db.Identifiers.Any(i => i.PatientId == p.Id && i.Scheme == term.Scheme && i.LookupValue == term.Value)),
+            // Exact match on the HMAC blind index (MDV-P0-035); the value itself is ciphertext and never compared in SQL.
+            SearchKind.Identifier => IdentifierMatch(patients, term.Scheme!.Value, term.Value!),
             _ => patients,
         };
         patients = search.Filter switch
@@ -188,8 +194,9 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
         var byIdentifier = new Dictionary<Guid, List<IdentifierScheme>>();
         foreach (var key in keys)
         {
-            // Deterministic Always Encrypted: equality on ciphertext, never a decrypting scan.
-            var ids = await db.Identifiers.Where(i => i.Scheme == key.Scheme && i.LookupValue == key.Value).Select(i => i.PatientId).ToListAsync(cancellationToken);
+            // Blind index equality (MDV-P0-035), never a decrypting scan.
+            var index = db.LookupIndexFor(key.Value);
+            var ids = await db.Identifiers.Where(i => i.Scheme == key.Scheme && EF.Property<byte[]>(i, NationalIdColumns.LookupIndex) == index).Select(i => i.PatientId).ToListAsync(cancellationToken);
             foreach (var id in ids) (byIdentifier.TryGetValue(id, out var schemes) ? schemes : byIdentifier[id] = []).Add(key.Scheme);
         }
 

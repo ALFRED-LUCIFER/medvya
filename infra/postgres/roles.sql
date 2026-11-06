@@ -8,7 +8,8 @@
 --   medvya_migrator   The deploy login. Holds NO rights on module data. db-migrate does SET ROLE medvya_owner (a membership without
 --                     INHERIT) for the length of a migration; a plain session as the migrator can create objects but read nothing.
 --   medvya_app        The running application = membership of the module roles. Not an owner: no DDL.
---   medvya_reporting  Read-only. Row-level security still applies: without a tenant setting it sees no clinic rows.
+--   medvya_reporting  Read-only: tenancy and the masked views in schema reporting. Row-level security still applies: without a tenant
+--                     setting it sees no clinic rows.
 --   medvya_<module>   Rights on that module's own schema only.
 --
 -- Every role is NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE, so FORCE ROW LEVEL SECURITY binds all of them, owner included.
@@ -36,7 +37,7 @@ GRANT medvya_owner TO medvya_migrator WITH INHERIT FALSE, SET TRUE;
 DO $$
 DECLARE s text;
 BEGIN
-    FOREACH s IN ARRAY ARRAY['tenancy', 'audit', 'identity', 'patients', 'billing', 'scheduling', 'leads', 'notifications', 'hangfire', 'ledger']
+    FOREACH s IN ARRAY ARRAY['tenancy', 'audit', 'identity', 'patients', 'billing', 'scheduling', 'leads', 'notifications', 'hangfire', 'ledger', 'reporting']
     LOOP
         EXECUTE format('CREATE SCHEMA IF NOT EXISTS %I', s);
         EXECUTE format('ALTER SCHEMA %I OWNER TO medvya_owner', s);
@@ -98,10 +99,15 @@ BEGIN
     END LOOP;
 END $$;
 
--- Reporting reads the tenancy schema (still inside RLS). MDV-P0-037 adds masked views for patients; until then it has no patients access.
--- shortcut: audit and identity stay out of reporting until MDV-P0-036/037 give them masked views.
-GRANT USAGE ON SCHEMA tenancy TO medvya_reporting;
-GRANT SELECT ON ALL TABLES IN SCHEMA tenancy TO medvya_reporting;
+-- Reporting reads the tenancy schema (still inside RLS) and the masked views in schema reporting (MDV-P0-037: initials, age band, identifier
+-- scheme and length; never a name, date of birth, contact, address or identifier value). It has no right on patients, audit, identity or
+-- scheduling tables, so a base-table query is denied. The views are owned by medvya_owner, and FORCE ROW LEVEL SECURITY on the base tables
+-- binds the owner, so a reporting session still sees only its tenant.
+GRANT USAGE ON SCHEMA tenancy, reporting TO medvya_reporting;
+GRANT SELECT ON ALL TABLES IN SCHEMA tenancy, reporting TO medvya_reporting;
 ALTER DEFAULT PRIVILEGES FOR ROLE medvya_owner IN SCHEMA tenancy GRANT SELECT ON TABLES TO medvya_reporting;
+ALTER DEFAULT PRIVILEGES FOR ROLE medvya_owner IN SCHEMA reporting GRANT SELECT ON TABLES TO medvya_reporting;
+-- shortcut: audit, identity and scheduling have no masked views yet (audit ClientIp, staff contacts, the visit reason), so reporting cannot
+-- read them at all; add a view in schema reporting when a report needs one.
 
 COMMIT;

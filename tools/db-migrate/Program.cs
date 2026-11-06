@@ -26,3 +26,6 @@ else
     await DatabaseMigrator.ApplyAsync(db);
 await Console.Out.WriteLineAsync($"db-migrate {command}: done");
 return 0;
+
+// Internal on purpose: the ASP.NET Core framework (via Medvya.BuildingBlocks.Security) would otherwise make Program public and clash with Host.Api in the tests.
+internal partial class Program;

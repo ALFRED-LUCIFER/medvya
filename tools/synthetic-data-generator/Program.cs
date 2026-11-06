@@ -16,3 +16,6 @@ var includeUae = args.Contains("--uae");
 await SyntheticSeed.SeedAsync(connectionString, environment, includeUae);
 await Console.Out.WriteLineAsync($"Migrated and seeded {SyntheticSeed.Tenants(includeUae).Count} synthetic tenant(s).");
 return 0;
+
+// Internal on purpose: the ASP.NET Core framework (via Medvya.BuildingBlocks.Security) would otherwise make Program public and clash with Host.Api in the tests.
+internal partial class Program;

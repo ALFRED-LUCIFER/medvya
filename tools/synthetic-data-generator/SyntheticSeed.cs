@@ -149,6 +149,7 @@ public static class SyntheticSeed
     public static async Task SeedAsync(string connectionString, string? environment, bool includeUae, CancellationToken ct = default)
     {
         EnsureNonProduction(environment);
+        var nationalIds = Medvya.Patients.Infrastructure.PatientsModule.NationalIdColumnsFor(connectionString, environment!); // identifiers are encrypted as the API does it
 
         await using var identity = new IdentityDbContext(new DbContextOptionsBuilder<IdentityDbContext>().UseNpgsql(connectionString).Options);
         foreach (var c in Tenants(includeUae))
@@ -169,7 +170,7 @@ public static class SyntheticSeed
             }));
             await identity.SaveChangesAsync(ct);
 
-            await using var pdb = Patients(connectionString, c.Tenant.Id);
+            await using var pdb = Patients(connectionString, c.Tenant.Id, nationalIds);
             var seeded = await pdb.Patients.Select(p => p.Id).ToListAsync(ct);
             foreach (var p in c.Patients.Where(p => !seeded.Contains(p.Patient.Id)))
             {
@@ -188,8 +189,8 @@ public static class SyntheticSeed
         }
     }
 
-    static PatientsDbContext Patients(string connectionString, Guid? tenantId) =>
-        new(Options<PatientsDbContext>(connectionString, tenantId), new FixedTenant(tenantId));
+    static PatientsDbContext Patients(string connectionString, Guid? tenantId, NationalIdColumns nationalIds) =>
+        new(Options<PatientsDbContext>(connectionString, tenantId), new FixedTenant(tenantId), nationalIds);
 
     static SchedulingDbContext Scheduling(string connectionString, Guid? tenantId) =>
         new(Options<SchedulingDbContext>(connectionString, tenantId), new FixedTenant(tenantId));

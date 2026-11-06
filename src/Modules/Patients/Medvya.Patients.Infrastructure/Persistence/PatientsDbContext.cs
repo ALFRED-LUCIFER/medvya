@@ -1,15 +1,15 @@
 using Medvya.BuildingBlocks.Domain;
+using Medvya.BuildingBlocks.Security;
 using Medvya.Patients.Domain;
 using Microsoft.EntityFrameworkCore;
 
 namespace Medvya.Patients.Infrastructure.Persistence;
 
 /// <summary>
-/// Tenant isolation layer 1 of 2: EF query filters; layer 2 is row-level security (MDV-P0-034).
-/// shortcut: identifier values and member numbers are plain columns until application-level encryption lands (MDV-P0-035);
-/// synthetic data only until then.
+/// Tenant isolation layer 1 of 2: EF query filters; layer 2 is row-level security (MDV-P0-034). Identifier values and member numbers are
+/// encrypted by <see cref="NationalIdColumns"/> (MDV-P0-035), which every instance must be given.
 /// </summary>
-public sealed class PatientsDbContext(DbContextOptions<PatientsDbContext> options, ICurrentTenant tenant) : DbContext(options)
+public sealed class PatientsDbContext(DbContextOptions<PatientsDbContext> options, ICurrentTenant tenant, NationalIdColumns nationalIds) : DbContext(options)
 {
     public DbSet<Patient> Patients => Set<Patient>();
     public DbSet<PatientIdentifier> Identifiers => Set<PatientIdentifier>();
@@ -18,7 +18,17 @@ public sealed class PatientsDbContext(DbContextOptions<PatientsDbContext> option
     public DbSet<PatientRelationship> Relationships => Set<PatientRelationship>();
     public DbSet<ConsentReceipt> ConsentReceipts => Set<ConsentReceipt>();
 
+    public DbSet<DataKey> DataKeys => Set<DataKey>();
+
     Guid? CurrentTenantId => tenant.TenantId;
+
+    /// <summary>The blind-index value to compare with <c>EF.Property&lt;byte[]&gt;(i, NationalIdColumns.LookupIndex)</c> in the current tenant.</summary>
+    public byte[] LookupIndexFor(string value) =>
+        nationalIds.Index(tenant.TenantId ?? throw new KeyProtectionException(KeyProtectionException.NoTenant), value);
+
+    internal NationalIdColumns NationalIds => nationalIds;
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder) => optionsBuilder.AddInterceptors(nationalIds, NationalIdColumns.DecryptOnLoad);
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder) =>
         Medvya.BuildingBlocks.Infrastructure.UtcDateTimeOffset.Apply(configurationBuilder);
@@ -70,10 +80,14 @@ public sealed class PatientsDbContext(DbContextOptions<PatientsDbContext> option
         modelBuilder.Entity<PatientIdentifier>(e =>
         {
             e.Property(x => x.Scheme).HasConversion<string>().HasMaxLength(20);
-            e.Property(x => x.LookupValue).HasMaxLength(64);
-            e.Property(x => x.DisplayValue).HasMaxLength(64);
+            // Ciphertext and blind index only (MDV-P0-035); the string properties are filled by NationalIdColumns.
+            e.Ignore(x => x.LookupValue);
+            e.Ignore(x => x.DisplayValue);
+            e.Property<byte[]?>(NationalIdColumns.LookupCipher).HasColumnName("LookupValue");
+            e.Property<byte[]?>(NationalIdColumns.DisplayCipher).HasColumnName("DisplayValue");
+            e.Property<byte[]?>(NationalIdColumns.LookupIndex);
             e.HasOne<Patient>().WithMany().HasForeignKey(x => x.PatientId).OnDelete(DeleteBehavior.Restrict);
-            e.HasIndex(x => new { x.TenantId, x.Scheme, x.LookupValue });
+            e.HasIndex("TenantId", "Scheme", NationalIdColumns.LookupIndex);
             e.HasIndex(x => new { x.TenantId, x.MovedFromPatientId });
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
@@ -82,10 +96,18 @@ public sealed class PatientsDbContext(DbContextOptions<PatientsDbContext> option
             e.Property(x => x.Kind).HasConversion<string>().HasMaxLength(20);
             e.Property(x => x.PayerName).HasMaxLength(200);
             e.Property(x => x.Plan).HasMaxLength(100);
-            e.Property(x => x.MemberNumber).HasMaxLength(50);
+            e.Ignore(x => x.MemberNumber);
+            e.Property<byte[]?>(NationalIdColumns.MemberNumberCipher).HasColumnName("MemberNumber");
             e.Property(x => x.Network).HasMaxLength(100);
             e.HasOne<Patient>().WithMany().HasForeignKey(x => x.PatientId).OnDelete(DeleteBehavior.Restrict);
             e.HasIndex(x => x.PatientId).IsUnique(); // one current payer per patient in P1
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<DataKey>(e =>
+        {
+            e.HasKey(x => new { x.TenantId, x.Purpose });
+            e.Property(x => x.Purpose).HasMaxLength(20);
+            e.Property(x => x.WrapKeyId).HasMaxLength(300);
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         modelBuilder.Entity<PatientRelationship>(e =>

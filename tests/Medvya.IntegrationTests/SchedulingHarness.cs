@@ -48,6 +48,8 @@ internal sealed class SchedulingHarness(PostgresFixture sql)
     public InMemoryLogos Logos { get; } = new();
     public SchedulingOptions Options { get; } = new();
     /// <summary>A pool big enough for a hundred desks booking at once (each request also opens Tenancy and Patients connections).</summary>
+    public Medvya.Patients.Infrastructure.Persistence.NationalIdColumns NationalIds => sql.NationalIds;
+
     public string ConnectionString => new Npgsql.NpgsqlConnectionStringBuilder(sql.ConnectionString) { MaxPoolSize = 400 }.ConnectionString;
     readonly List<ServiceProvider> providers = [];
 
@@ -110,6 +112,7 @@ internal sealed class SchedulingHarness(PostgresFixture sql)
             .AddSingleton<TimeProvider>(Clock)
             .AddSingleton<ICurrentFacility>(new PatientRegistryTests.FixedFacility(Facility))
             .AddSingleton<Medvya.Tenancy.Application.ILogoStore>(Logos) // before the module, which only adds a store when none is registered
+            .AddSingleton(sql.NationalIds) // the fixture's national-ID setup (this harness has no host configuration)
             .AddAuditModule(ConnectionString).AddTenancyModule(ConnectionString).AddIdentityModule(ConnectionString)
             .AddPatientsModule(ConnectionString).AddSchedulingModule(ConnectionString);
         if (interceptor is not null) services.ConfigureDbContext<Medvya.Scheduling.Infrastructure.Persistence.SchedulingDbContext>(o => o.AddInterceptors(interceptor));

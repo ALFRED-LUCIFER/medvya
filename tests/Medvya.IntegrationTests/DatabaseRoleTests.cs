@@ -131,7 +131,9 @@ public class DatabaseRoleTests(PostgresFixture sql) : IClassFixture<PostgresFixt
         await Denied("reporting_user", "SELECT \"Id\" FROM audit.\"AuditEvents\" LIMIT 1");
         await Denied("reporting_user", "SELECT \"DisplayName\" FROM identity.\"Users\" LIMIT 1");
         await Denied("reporting_user", "CREATE TABLE tenancy.\"Injected\" (\"Id\" int)");
-        await Denied("reporting_user", "SELECT \"Id\", \"FullName\" FROM patients.\"Patients\" LIMIT 1"); // shortcut: no patients access until MDV-P0-037 adds the masked views; then this becomes Run
+        await Run("reporting_user", "SELECT \"Id\", \"Initials\", \"AgeBand\" FROM reporting.\"Patients\" LIMIT 1"); // the masked view (MDV-P0-037)
+        await Denied("reporting_user", "SELECT \"Id\", \"FullName\" FROM patients.\"Patients\" LIMIT 1"); // never the base table
+        await Denied("reporting_user", "UPDATE reporting.\"Patients\" SET \"Mrn\" = 'x'");
         await Denied("reporting_user", "UPDATE patients.\"Patients\" SET \"Mobile\" = 'x'");
         await Denied("reporting_user", "DELETE FROM patients.\"Identifiers\"");
     }

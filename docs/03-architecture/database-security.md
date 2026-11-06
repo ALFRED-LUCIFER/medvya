@@ -2,7 +2,7 @@
 
 Who can do what inside a Medvya database. The roles are defined in one idempotent script, [`infra/postgres/roles.sql`](../../infra/postgres/roles.sql), which is the single source of truth. Row-level security is written by one helper, `RowLevelSecurity.Tenant` (`src/BuildingBlocks/Medvya.BuildingBlocks.Infrastructure`), from a forward-only `TenantRls` migration in each module. Tests: `DatabaseRoleTests`, `TenantIsolationTests`, `MembershipDirectoryTests`, `RowLevelSecurityTests` in `tests/Medvya.IntegrationTests`. Decisions: [ADR-005](../adr/ADR-005-tenant-isolation-rls.md), [ADR-012](../adr/ADR-012-postgres.md).
 
-National-ID encryption (MDV-P0-035) and masked reporting views (MDV-P0-037) are separate tickets and are not described here until built. The hash chain on append-only tables (MDV-P0-036) is described in ADR-006.
+National-ID encryption (MDV-P0-035) and the masked reporting views (MDV-P0-037) are described below. The hash chain on append-only tables (MDV-P0-036) is described in ADR-006.
 
 ## Roles
 
@@ -22,7 +22,7 @@ Every role is `NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE NOREPLICATION` an
 | `medvya_leads` | `SELECT/INSERT` on `leads` | `UPDATE`, `DELETE` |
 | `medvya_audit` | `SELECT/INSERT` on `audit` | `UPDATE`, `DELETE` (the append-only triggers refuse them for every role too, MDV-P0-036) |
 | `medvya_jobs` | `SELECT/INSERT/UPDATE/DELETE` on `hangfire` (job storage) | Any module's data. Hangfire's tables are created by the deploy (as the owner); the app only works in them |
-| `medvya_reporting` | `SELECT` on `tenancy` | Any write, any DDL, `patients`, `audit`, `identity` (until MDV-P0-037 adds masked views) |
+| `medvya_reporting` | `SELECT` on `tenancy` and on the masked views in schema `reporting` (MDV-P0-037) | Any write, any DDL, any `patients` table, `audit`, `identity`, `scheduling` (no masked views for them yet) |
 
 Default privileges (`ALTER DEFAULT PRIVILEGES FOR ROLE medvya_owner IN SCHEMA â€¦`) give every module role its rights on tables and sequences the owner creates later, so a new table never needs a grant.
 
@@ -43,6 +43,17 @@ Default privileges (`ALTER DEFAULT PRIVILEGES FOR ROLE medvya_owner IN SCHEMA â€
 
 The integration fixture does exactly this: `roles.sql` as the container superuser, migrations as `medvya_migrator`, every context as `medvya_app`. A migration that needs more than the owner role fails the whole suite; an application query that needs more than the module roles fails the test that runs it.
 
+## National-ID encryption (MDV-P0-035)
+
+- **What:** `patients.Identifiers.LookupValue` and `DisplayValue` and `patients.PayerCoverages.MemberNumber` hold AES-256-GCM ciphertext (`bytea`), with the tenant id as associated data. `Identifiers.LookupIndex` is an HMAC-SHA-256 blind index (separate per-tenant secret) used for exact-match search and the duplicate check. A database administrator sees bytes only (`AnAdministratorWithoutTheKeySeesOnlyCiphertext`); a pattern search finds nothing (`ALikeSearchOnAnEncryptedColumnIsRejected`).
+- **Keys:** each tenant has a data key and a blind-index key, stored only wrapped, in `patients.DataKeys` (forced RLS). The wrapping key is a Key Vault key (`NationalIdProtection:KeyVaultKeyId`), usable only by the API identity; Development uses a per-machine key in local application data instead (never in the repository), and no other environment starts without Key Vault. Unwrapped keys stay in memory for five minutes. Library and tests: `src/BuildingBlocks/Medvya.BuildingBlocks.Security`, `tests/Medvya.SecurityTests`.
+- **Where:** `NationalIdColumns` (Patients.Infrastructure) encrypts on insert and decrypts on load, with each row's own `TenantId`. It is not an EF value converter, because EF caches one model per context type and a converter would keep the first context's tenant. `PatientsDbContext` cannot be built without it.
+- **Limits:** a value is never searchable except by exact match. Seeding outside Development needs Key Vault. shortcut: there is no scheduled re-wrap job yet (`TenantKeyRing.Rewrap` exists and is tested); add it with the Key Vault rotation policy (MDV-P0-038).
+
+## Masked reporting views (MDV-P0-037)
+
+Support and reporting read schema `reporting` only: `reporting."Patients"` (MRN, country, initials, a ten-year age band, sex at birth, status, registration time) and `reporting."Identifiers"` (scheme and value length). No name, date of birth, contact, address or identifier value is in any view, and every `patients` table is denied to the role (`ReportingSeesMaskedDemographicsWhileTheAppSeesClearValues`, `ReportingRoleIsReadOnly`). The views are owned by `medvya_owner` and the base tables `FORCE` row-level security, so a reporting session still needs a tenant and sees only that tenant. A new view goes into schema `reporting` in its module's migration; the default privileges grant it.
+
 ## Mapping to Azure (MDV-P0-038, not built yet)
 
 Azure Database for PostgreSQL provisioning, Entra-only authentication and the deploy workflow are MDV-P0-038. The shape is: the administrator (Entra admin group, just-in-time) runs `roles.sql`; the App Service managed identity is created as a role `IN ROLE medvya_app`; the deploy identity `IN ROLE medvya_migrator`; reporting users `IN ROLE medvya_reporting`. No password exists anywhere.
@@ -53,4 +64,4 @@ Azure Database for PostgreSQL provisioning, Entra-only authentication and the de
 - The migrator can `SET ROLE medvya_owner` and then read data; the split removes standing access, not the ability. The deploy identity is used only by the deploy job.
 - One app login holds every module role, as the app is one process. The module roles still make cross-schema access a deliberate grant, and allow separate logins per worker later.
 - Reception-board reads (`front_desk.board.read`) and live-update watches (`front_desk.board.watch`) are audited once per user, tenant and exact request (facility) per 5-minute window (`AuditWindow`, MDV-P1-035). The window is per API instance memory, so a restart or a second instance writes one extra row per window; move it into the database before running more than one instance.
-- `reporting` has no patients or audit access until MDV-P0-037 (masked views).
+- `reporting` has no audit, identity or scheduling access: they have no masked views yet (audit `ClientIp`, staff contacts, the visit reason).

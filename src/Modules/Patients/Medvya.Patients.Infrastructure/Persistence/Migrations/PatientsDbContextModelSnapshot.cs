@@ -291,16 +291,19 @@ namespace Medvya.Patients.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("DisplayValue")
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                    b.Property<byte[]>("DisplayCipher")
+                        .HasColumnType("bytea")
+                        .HasColumnName("DisplayValue");
 
                     b.Property<DateOnly?>("ExpiresOn")
                         .HasColumnType("date");
 
-                    b.Property<string>("LookupValue")
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                    b.Property<byte[]>("LookupCipher")
+                        .HasColumnType("bytea")
+                        .HasColumnName("LookupValue");
+
+                    b.Property<byte[]>("LookupIndex")
+                        .HasColumnType("bytea");
 
                     b.Property<Guid?>("MovedFromPatientId")
                         .HasColumnType("uuid");
@@ -322,7 +325,7 @@ namespace Medvya.Patients.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("TenantId", "MovedFromPatientId");
 
-                    b.HasIndex("TenantId", "Scheme", "LookupValue");
+                    b.HasIndex("TenantId", "Scheme", "LookupIndex");
 
                     b.ToTable("Identifiers", "patients");
                 });
@@ -380,9 +383,9 @@ namespace Medvya.Patients.Infrastructure.Persistence.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
-                    b.Property<string>("MemberNumber")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                    b.Property<byte[]>("MemberNumberCipher")
+                        .HasColumnType("bytea")
+                        .HasColumnName("MemberNumber");
 
                     b.Property<string>("Network")
                         .HasMaxLength(100)
@@ -411,6 +414,29 @@ namespace Medvya.Patients.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("PayerCoverages", "patients");
+                });
+
+            modelBuilder.Entity("Medvya.Patients.Infrastructure.Persistence.DataKey", b =>
+                {
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Purpose")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("WrapKeyId")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<byte[]>("Wrapped")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.HasKey("TenantId", "Purpose");
+
+                    b.ToTable("DataKeys", "patients");
                 });
 
             modelBuilder.Entity("Medvya.Patients.Domain.ConsentReceipt", b =>

@@ -18,11 +18,11 @@ public class SyntheticSeedTests(PostgresFixture sql) : IClassFixture<PostgresFix
     [Fact]
     public async Task SeedingTwiceGivesTheSameRowsWithEveryRoleMarkedSynthetic()
     {
-        await SyntheticSeed.SeedAsync(sql.ConnectionString, "Test", includeUae: true);
+        await SyntheticSeed.SeedAsync(sql.ConnectionString, "Development", includeUae: true);
         var india = await Counts(SyntheticSeed.India.Tenant.Id);
         var uae = await Counts(SyntheticSeed.Uae.Tenant.Id);
 
-        await SyntheticSeed.SeedAsync(sql.ConnectionString, "Test", includeUae: true);
+        await SyntheticSeed.SeedAsync(sql.ConnectionString, "Development", includeUae: true);
         Assert.Equal(india, await Counts(SyntheticSeed.India.Tenant.Id));
         Assert.Equal(uae, await Counts(SyntheticSeed.Uae.Tenant.Id));
         Assert.Equal((1, 1, Enum.GetValues<Role>().Length), india);
@@ -45,6 +45,25 @@ public class SyntheticSeedTests(PostgresFixture sql) : IClassFixture<PostgresFix
         Assert.Equal((SyntheticSeed.India.Templates.Count, 1), (await scheduling.Templates.CountAsync(), await scheduling.Resources.CountAsync()));
         Assert.All(SyntheticSeed.Tenants(includeUae: true).SelectMany(t => t.Templates), ScheduleRules.Validate);
         Assert.All(SyntheticSeed.India.Resources, r => Assert.EndsWith(SyntheticSeed.Marker, r.Name, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task SeededIdentifiersAreEncryptedAndReadBackByTheApp()
+    {
+        await SyntheticSeed.SeedAsync(sql.ConnectionString, "Development", includeUae: true);
+        await using var db = sql.Patients(SyntheticSeed.Uae.Tenant.Id);
+        Assert.Contains("784-1988-1234567-1", await db.Identifiers.Select(i => i.LookupValue).ToListAsync());
+    }
+
+    [Theory]
+    [InlineData("Staging")]
+    [InlineData("Test")]
+    public async Task OutsideDevelopmentSeedingNeedsKeyVaultAndWritesNothingWithoutIt(string environment)
+    {
+        var tenant = SyntheticSeed.India.Tenant.Id;
+        var before = await Counts(tenant);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => SyntheticSeed.SeedAsync(sql.ConnectionString, environment, includeUae: true));
+        Assert.Equal(before, await Counts(tenant));
     }
 
     [Theory]

@@ -246,29 +246,51 @@ public class PatientRegistryTests(PostgresFixture sql) : IClassFixture<PostgresF
     public async Task AnAdministratorWithoutTheKeySeesOnlyCiphertext()
     {
         var other = Guid.NewGuid();
-        await Registry(tenantA, at: other).RegisterAsync(UaeQuick(other));
+        var registered = await Registry(tenantA, at: other).RegisterAsync(UaeQuick(other));
 
-        // What a DBA without access to the data key gets. Fails until national IDs are encrypted in the application (MDV-P0-035).
+        // What a DBA without the data key gets (MDV-P0-035): ciphertext and an HMAC, never the Emirates ID in any encoding.
         await using var conn = await sql.OpenAs("dbo", tenantA);
-        await using var cmd = new NpgsqlCommand("SELECT \"LookupValue\" FROM patients.\"Identifiers\" WHERE \"Scheme\" = 'EmiratesId' LIMIT 1", conn);
-        var value = await cmd.ExecuteScalarAsync();
-        Assert.DoesNotContain("784", Assert.IsType<string>(value), StringComparison.Ordinal);
+        await using var cmd = new NpgsqlCommand("""SELECT "LookupValue", "LookupIndex" FROM patients."Identifiers" WHERE "Scheme" = 'EmiratesId' AND "PatientId" = @p""", conn);
+        cmd.Parameters.AddWithValue("p", registered.PatientId);
+        await using (var r = await cmd.ExecuteReaderAsync())
+        {
+            Assert.True(await r.ReadAsync());
+            foreach (var stored in new[] { Assert.IsType<byte[]>(r[0]), Assert.IsType<byte[]>(r[1]) })
+                foreach (var plain in new[] { "784199012345671", "784-1990-1234567-1" })
+                {
+                    Assert.DoesNotContain(plain, System.Text.Encoding.Latin1.GetString(stored), StringComparison.Ordinal);
+                    Assert.DoesNotContain(plain, Convert.ToHexString(stored), StringComparison.Ordinal);
+                }
+        }
 
-        // The protected-column list (data-classification.md), kept deliberately small: stored as ciphertext (bytea).
+        // The application, with the key, reads the value back.
+        await using var db = sql.Patients(tenantA);
+        Assert.Equal("784-1990-1234567-1", (await db.Identifiers.SingleAsync(i => i.PatientId == registered.PatientId && i.Scheme == IdentifierScheme.EmiratesId)).LookupValue);
+
+        // The protected-column list (data-classification.md), kept deliberately small: ciphertext, the blind index and the wrapped data keys
+        // (the hash-chain columns of ConsentReceipts are integrity hashes, MDV-P0-036, not protected values).
         await using var columns = new NpgsqlCommand("""
             SELECT string_agg(table_name || '.' || column_name, ',' ORDER BY table_name, column_name)
-            FROM information_schema.columns WHERE table_schema = 'patients' AND data_type = 'bytea'
+            FROM information_schema.columns WHERE table_schema = 'patients' AND data_type = 'bytea' AND column_name NOT IN ('PrevHash', 'RowHash')
             """, conn);
-        Assert.Equal("Identifiers.DisplayValue,Identifiers.LookupValue,PayerCoverages.MemberNumber", await columns.ExecuteScalarAsync());
+        Assert.Equal("DataKeys.Wrapped,Identifiers.DisplayValue,Identifiers.LookupIndex,Identifiers.LookupValue,PayerCoverages.MemberNumber", await columns.ExecuteScalarAsync());
     }
 
     [Fact]
     public async Task ALikeSearchOnAnEncryptedColumnIsRejected()
     {
+        var other = Guid.NewGuid();
+        await Registry(tenantA, at: other).RegisterAsync(UaeQuick(other));
+
+        // Only the blind index can match (equality). EF refuses a pattern search on the value, and SQL sees ciphertext, so a prefix finds nothing.
         await using var db = sql.Patients(tenantA);
         var prefix = "784%";
-        var ex = await Assert.ThrowsAsync<PostgresException>(() => db.Identifiers.Where(i => EF.Functions.Like(i.LookupValue, prefix)).ToListAsync());
-        Assert.Contains("Encryption scheme mismatch", ex.Message, StringComparison.Ordinal); // deterministic encryption supports equality only
+        await Assert.ThrowsAsync<InvalidOperationException>(() => db.Identifiers.Where(i => EF.Functions.Like(i.LookupValue, prefix)).ToListAsync());
+        await using var conn = await sql.OpenAs("app_user", tenantA);
+        // Anywhere in the stored bytes, not just at the start (random ciphertext holds a given 3-byte run with odds of about 1 in 400,000).
+        await using var cmd = new NpgsqlCommand("""SELECT count(*) FROM patients."Identifiers" WHERE encode("LookupValue", 'escape') LIKE '%' || @prefix""", conn);
+        cmd.Parameters.AddWithValue("prefix", prefix);
+        Assert.Equal(0L, await cmd.ExecuteScalarAsync());
     }
 
     [Fact]
@@ -276,25 +298,50 @@ public class PatientRegistryTests(PostgresFixture sql) : IClassFixture<PostgresF
     {
         var other = Guid.NewGuid();
         var registered = await Registry(tenantA, at: other).RegisterAsync(IndiaFull(other) with { DateOfBirth = new DateOnly(1980, 1, 1) });
-        const string Query = "SELECT \"FullName\", \"Mobile\", \"Email\", \"DateOfBirth\", \"Address_PostalCode\" FROM patients.\"Patients\" WHERE \"Id\" = @id";
 
-        async Task<object[]> Row(string user)
+        async Task<Dictionary<string, object>> Row(string user, string query)
         {
             await using var conn = await sql.OpenAs(user, tenantA);
-            await using var cmd = new NpgsqlCommand(Query, conn);
+            await using var cmd = new NpgsqlCommand(query, conn);
             cmd.Parameters.AddWithValue("id", registered.PatientId);
             await using var reader = await cmd.ExecuteReaderAsync();
             Assert.True(await reader.ReadAsync());
-            var values = new object[reader.FieldCount];
-            reader.GetValues(values);
-            return values;
+            return Enumerable.Range(0, reader.FieldCount).ToDictionary(reader.GetName, reader.GetValue);
         }
 
-        var masked = await Row("reporting_user");
-        Assert.Equal(["xxxx", "xxxx", "pXXX@XXXX.com", new DateOnly(1900, 1, 1), "xxxx"], masked);
+        // MDV-P0-037: the masked view gives initials and an age band, and has no name, date of birth, contact or address column at all.
+        var masked = await Row("reporting_user", """SELECT * FROM reporting."Patients" WHERE "Id" = @id""");
+        Assert.Equal(("TP", $"{(DateTime.UtcNow.Year - 1980) / 10 * 10}-{(DateTime.UtcNow.Year - 1980) / 10 * 10 + 9}"), ((string)masked["Initials"], (string)masked["AgeBand"]));
+        Assert.DoesNotContain(masked.Keys, k => k is "FullName" or "ArabicName" or "DateOfBirth" or "Mobile" or "AlternatePhone" or "Email" or "GenderIdentity" || k.StartsWith("Address", StringComparison.Ordinal));
+        Assert.DoesNotContain(masked.Values.OfType<string>(), v => v.Contains("Test Patient", StringComparison.Ordinal) || v.Contains("9000000002", StringComparison.Ordinal) || v.Contains('@'));
 
-        var clear = await Row("app_user");
-        Assert.Equal(["Test Patient (synthetic)", "+919000000002", "patient@example.test", new DateOnly(1980, 1, 1), "682001"], clear);
+        // An identifier shows its scheme and length only (the ABHA is stored as its 14 digits).
+        await using (var conn = await sql.OpenAs("reporting_user", tenantA))
+        {
+            await using var ids = new NpgsqlCommand("""SELECT * FROM reporting."Identifiers" WHERE "PatientId" = @id AND "Scheme" = 'Abha'""", conn);
+            ids.Parameters.AddWithValue("id", registered.PatientId);
+            await using var r = await ids.ExecuteReaderAsync();
+            Assert.True(await r.ReadAsync());
+            Assert.Equal(["Id", "TenantId", "PatientId", "Scheme", "ValueLength"], Enumerable.Range(0, r.FieldCount).Select(r.GetName));
+            Assert.Equal(14, r.GetInt32(4));
+        }
+
+        // The base tables are denied to reporting outright, and another tenant's session sees nothing in the views.
+        foreach (var table in new[] { "Patients", "Identifiers", "PayerCoverages", "Relationships", "DataKeys" })
+        {
+            await using var conn = await sql.OpenAs("reporting_user", tenantA);
+            var denied = await Assert.ThrowsAsync<PostgresException>(() => new NpgsqlCommand($"""SELECT 1 FROM patients."{table}" LIMIT 1""", conn).ExecuteScalarAsync());
+            Assert.Equal(PostgresErrorCodes.InsufficientPrivilege, denied.SqlState);
+        }
+        await using (var conn = await sql.OpenAs("reporting_user", tenantB))
+        await using (var count = new NpgsqlCommand("""SELECT count(*) FROM reporting."Patients" WHERE "Id" = @id""", conn))
+        {
+            count.Parameters.AddWithValue("id", registered.PatientId);
+            Assert.Equal(0L, await count.ExecuteScalarAsync());
+        }
+
+        var clear = await Row("app_user", "SELECT \"FullName\", \"Mobile\", \"Email\", \"DateOfBirth\", \"Address_PostalCode\" FROM patients.\"Patients\" WHERE \"Id\" = @id");
+        Assert.Equal(["Test Patient (synthetic)", "+919000000002", "patient@example.test", new DateOnly(1980, 1, 1), "682001"], clear.Values);
     }
 
     sealed class FixedUser(Guid id) : ICurrentUser { public Guid? UserId => id; }

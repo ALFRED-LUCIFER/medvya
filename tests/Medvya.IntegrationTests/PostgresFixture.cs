@@ -58,8 +58,12 @@ public sealed class PostgresFixture : IAsyncLifetime
 
     public AuditDbContext Audit(Guid? tenantId) => new(Options<AuditDbContext>(tenantId).Options, new FixedTenant(tenantId));
 
+    /// <summary>National-ID encryption exactly as the Development API sets it up (this machine's key, data keys in patients."DataKeys").</summary>
+    public NationalIdColumns NationalIds => nationalIds ??= Medvya.Patients.Infrastructure.PatientsModule.NationalIdColumnsFor(ConnectionString, "Development");
+    NationalIdColumns? nationalIds;
+
     public PatientsDbContext Patients(Guid? tenantId, params Microsoft.EntityFrameworkCore.Diagnostics.IInterceptor[] more) =>
-        new(Options<PatientsDbContext>(tenantId).AddInterceptors(more).Options, new FixedTenant(tenantId));
+        new(Options<PatientsDbContext>(tenantId).AddInterceptors(more).Options, new FixedTenant(tenantId), NationalIds);
 
     /// <summary>The Patients context as the application role (every context is); kept for the tests that name the role.</summary>
     public Task<PatientsDbContext> PatientsAs(string user, Guid tenantId) =>

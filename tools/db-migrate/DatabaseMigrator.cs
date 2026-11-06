@@ -53,7 +53,7 @@ public static class DatabaseMigrator
         // New module = new line here, in dependency order.
         await Migrate(new TenancyDbContext(Options<TenancyDbContext>(connection), None), ct);
         await Migrate(new AuditDbContext(Options<AuditDbContext>(connection), None), ct);
-        await Migrate(new PatientsDbContext(Options<PatientsDbContext>(connection), None), ct);
+        await Migrate(new PatientsDbContext(Options<PatientsDbContext>(connection), None, Medvya.Patients.Infrastructure.Persistence.NationalIdColumns.MigrationsOnly), ct);
         await Migrate(new IdentityDbContext(Options<IdentityDbContext>(connection)), ct);
         await Migrate(new BillingDbContext(Options<BillingDbContext>(connection), None), ct);
         await Migrate(new SchedulingDbContext(Options<SchedulingDbContext>(connection), None), ct);

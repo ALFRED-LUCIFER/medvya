@@ -106,6 +106,7 @@ public sealed partial class NotificationSender(
         if (status is NotificationStatus.Suppressed or NotificationStatus.Failed) n.Attempts = Math.Max(n.Attempts, 1);
         else if (status == NotificationStatus.Sent) n.Attempts++;
         db.Attempts.Add(new NotificationAttempt { Id = Guid.CreateVersion7(), TenantId = n.TenantId, NotificationId = n.Id, At = now, Outcome = status, Code = code });
+        if (status == NotificationStatus.Failed) StaffNotifications.Raise(db, n, now, $"failed:{n.Id:N}"); // reception sees it in the notification centre
         await db.SaveChangesAsync(ct);
         Ended(log, n.Id, status, code);
     }

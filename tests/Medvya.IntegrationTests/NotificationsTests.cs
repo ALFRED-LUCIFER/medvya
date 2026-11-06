@@ -463,6 +463,91 @@ public sealed class NotificationsTests(SqlServerFixture sql) : IClassFixture<Sql
         }
     }
 
+    // MDV-P1-034: the notification centre and the board's failed-message marks.
+
+    /// <summary>A booking whose email confirmation fails for good (the provider is down), as the desk would see it.</summary>
+    async Task<Notification> FailedConfirmationAsync()
+    {
+        email.Fail = true;
+        var visit = await BookTuesdayAsync();
+        await RunJobAsync();
+        foreach (var wait in new[] { 1, 5, 30 }) { h.Clock.Advance(TimeSpan.FromMinutes(wait)); await RunJobAsync(); }
+        return (await RowsAsync(visit.Id)).Single(r => r.Kind == NotificationKind.Confirmation && r.Channel == NotificationChannel.Email);
+    }
+
+    Task<T> As<T>(Guid user, Func<IServiceProvider, Task<T>> action) { Rebuild(denyAll: false, user: user); return InScope(action); }
+
+    [Fact]
+    public async Task AFailedMessageReachesTheDeskOnceAndIsReadPerPerson()
+    {
+        var failed = await FailedConfirmationAsync();
+        await RunJobAsync(); // another run changes nothing
+        Task<StaffNotificationList> List(Guid user) => As(user, sp => sp.GetRequiredService<IStaffNotifications>().ListAsync(h.Facility));
+
+        var desk = await List(h.Reception);
+        var item = Assert.Single(desk.Items);
+        Assert.Equal((StaffNotificationKind.MessageFailed, failed.AppointmentId, false, 1), (item.Kind, item.RefId, item.Read, desk.Unread));
+        Assert.Equal(1, (await List(h.Nurse)).Unread); // views the calendar, so sees it too
+
+        // One person's read state is theirs only, and a new scope (another device) still has it.
+        Assert.True(await As(h.Reception, async sp => { var n = sp.GetRequiredService<IStaffNotifications>(); return await n.MarkReadAsync(h.Facility, item.Id) && await n.MarkReadAsync(h.Facility, item.Id); })); // twice is harmless
+        Assert.Equal(0, (await List(h.Reception)).Unread);
+        Assert.True((await List(h.Reception)).Items[0].Read);
+        Assert.Equal(1, (await List(h.Nurse)).Unread);
+        await As(h.Nurse, async sp => { await sp.GetRequiredService<IStaffNotifications>().MarkAllReadAsync(h.Facility); return 0; });
+        Assert.Equal(0, (await List(h.Nurse)).Unread);
+    }
+
+    /// <summary>Mutation check: drop the capability check in StaffNotifications.WhoAsync and the denied cases below fail.</summary>
+    [Fact]
+    public async Task OnlyStaffWhoMayViewTheDeskSeeTheirFacilitysNotifications()
+    {
+        await FailedConfirmationAsync();
+        var id = (await As(h.Reception, sp => sp.GetRequiredService<IStaffNotifications>().ListAsync(h.Facility))).Items.Single().Id;
+        foreach (var user in new[] { h.PortalUser, h.Elsewhere, h.HospitalIt, Guid.NewGuid() })
+        {
+            await Assert.ThrowsAsync<NotificationAccessDeniedException>(() => As(user, sp => sp.GetRequiredService<IStaffNotifications>().ListAsync(h.Facility)));
+            await Assert.ThrowsAsync<NotificationAccessDeniedException>(() => As(user, sp => sp.GetRequiredService<IStaffNotifications>().MarkReadAsync(h.Facility, id)));
+            await Assert.ThrowsAsync<NotificationAccessDeniedException>(() => As(user, sp => sp.GetRequiredService<INotificationQueries>().FailedVisitsAsync(h.Facility)));
+        }
+        // Another tenant sees nothing at all (EF filter and row-level security).
+        var other = Guid.NewGuid();
+        await using var db = sql.Notifications(other);
+        Assert.Empty(await db.StaffNotifications.ToListAsync());
+        Assert.Empty(await db.StaffNotificationReads.ToListAsync());
+    }
+
+    [Fact]
+    public async Task TheItemHoldsOnlyIdsAKindAndATime()
+    {
+        await FailedConfirmationAsync();
+        await using var db = sql.Notifications(h.Tenant);
+        var row = await db.StaffNotifications.SingleAsync();
+        Assert.StartsWith("failed:", row.DedupeKey);
+        Assert.Equal(typeof(string), typeof(StaffNotification).GetProperty(nameof(StaffNotification.DedupeKey))!.PropertyType);
+        Assert.DoesNotContain(typeof(StaffNotification).GetProperties(), p => p.PropertyType == typeof(string) && p.Name != nameof(StaffNotification.DedupeKey)); // no free text field
+    }
+
+    [Fact]
+    public async Task ABounceReceiptAlsoRaisesOneItemAndMarksTheVisitOnTheBoard()
+    {
+        var row = await SentRowAsync();
+        Assert.Empty(await As(h.Reception, sp => sp.GetRequiredService<INotificationQueries>().FailedVisitsAsync(h.Facility)));
+        for (var i = 0; i < 2; i++)
+            await InScope(sp => sp.GetRequiredService<IReceiptProcessor>().ApplyAsync(new DeliveryReceipt(row.ProviderRef!, NotificationStatus.Bounced, "mailbox_full")));
+        Assert.Equal(row.AppointmentId, Assert.Single(await As(h.Reception, sp => sp.GetRequiredService<INotificationQueries>().FailedVisitsAsync(h.Facility))));
+        Assert.Single((await As(h.Reception, sp => sp.GetRequiredService<IStaffNotifications>().ListAsync(h.Facility))).Items);
+    }
+
+    [Fact]
+    public async Task ASuppressedMessageIsNotAFailure()
+    {
+        consent.Allow = false;
+        await BookTuesdayAsync();
+        await RunJobAsync();
+        Assert.Empty((await As(h.Reception, sp => sp.GetRequiredService<IStaffNotifications>().ListAsync(h.Facility))).Items);
+    }
+
     [Fact]
     public async Task TheJobFindsATenantOnlyOnceItHasWrittenAnEvent()
     {

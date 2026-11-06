@@ -57,7 +57,7 @@
   "session.failed": "لم يكتمل تسجيل الدخول. حاول مرة أخرى، أو اسأل مسؤول العيادة إذا تكرر ذلك.",
   "shell.skip": "انتقل إلى المحتوى الرئيسي",
   "shell.mainNav": "التنقل الرئيسي",
-  "shell.notifications": "الإشعارات (قريبًا)",
+  "shell.notifications": "الإشعارات",
   "shell.loading": "جارٍ التحميل…",
   "shell.comingInPhase": "تصل هذه الشاشة في المرحلة {phase}. لا يوجد ما تفعله هنا بعد.",
   "shell.noScreens.title": "لا يوجد ما يُعرض بعد",
@@ -1514,5 +1514,14 @@
   "terms.open": "افتح الإعدادات ← الشروط",
   "terms.notice": "الحجز والرسائل متوقفان إلى أن يوافق مالك العيادة على شروط الخدمة.",
   "booking.error.terms_not_accepted": "الحجز متوقف: لم توافق العيادة بعد على شروط الخدمة. يوافق مالك العيادة عليها من الإعدادات ← الشروط.",
-  "walkIn.error.terms_not_accepted": "تسجيل الوصول متوقف: لم توافق العيادة بعد على شروط الخدمة. يوافق مالك العيادة عليها من الإعدادات ← الشروط."
+  "walkIn.error.terms_not_accepted": "تسجيل الوصول متوقف: لم توافق العيادة بعد على شروط الخدمة. يوافق مالك العيادة عليها من الإعدادات ← الشروط.",
+  "notifications.openUnread": "الإشعارات، {count} غير مقروءة",
+  "notifications.markAllRead": "تعليم الكل كمقروء",
+  "notifications.loading": "جارٍ تحميل الإشعارات…",
+  "notifications.error": "تعذّر تحميل الإشعارات.",
+  "notifications.empty": "لا جديد.",
+  "notifications.read": "مقروء",
+  "notifications.unread": "غير مقروء",
+  "notifications.kind.MessageFailed": "لم تصل رسالة موجّهة إلى مريض. افتح اللوحة لمعرفة الزيارة.",
+  "board.tag.messageFailed": "لم تصل الرسالة"
 }

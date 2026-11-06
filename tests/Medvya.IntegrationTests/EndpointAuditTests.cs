@@ -76,6 +76,11 @@ public sealed class EndpointAuditTests(SqlServerFixture sql) : IClassFixture<Sql
         // messages are ids and state only, and the board itself is read through the audited GET /v1/front-desk/board (BoardHubTests).
         "GET /v1/hubs/board/negotiate", // SignalR maps negotiate without method metadata; it answers POST only
         "GET /v1/hubs/board",
+        // Notification centre (MDV-P1-034): kinds, appointment ids and read marks only, no names or message text (NotificationCentreTests).
+        "GET /v1/notifications/inbox",
+        "POST /v1/notifications/inbox/read-all",
+        "POST /v1/notifications/inbox/{id:guid}/read",
+        "GET /v1/notifications/failed-visits",
         // Queue TV (MDV-P1-031): display sessions only, never staff. Tokens, rooms, doctor display names and waits, no patient
         // data (QueueTvTests pins the fields); the hub's message is empty. Pairing a display is audited (queue_display.pair).
         "GET /v1/queue/tv",

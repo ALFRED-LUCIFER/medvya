@@ -19,6 +19,8 @@ const actionKeys: Record<Exclude<BoardColumn, 'Done'>, MessageKey> = {
 type Props = {
   board: Board | null;
   columns: Record<BoardColumn, BoardCard[]>;
+  /** Visits with a message to the patient that failed or bounced (MDV-P1-034). */
+  failedVisitIds: ReadonlySet<string>;
   /** Server-clock milliseconds, for wait timers. */
   now: number;
   loading: boolean;
@@ -165,7 +167,7 @@ function Column(props: Props & { state: BoardColumn; board: Board }) {
   );
 }
 
-function Card({ card, board, now, canMove, online, confirmingId, pendingId, failure, paymentAction, onStartCheckIn, onConfirmCheckIn, onCancelCheckIn, onMove }: Props & { card: BoardCard; board: Board }) {
+function Card({ card, board, now, failedVisitIds, canMove, online, confirmingId, pendingId, failure, paymentAction, onStartCheckIn, onConfirmCheckIn, onCancelCheckIn, onMove }: Props & { card: BoardCard; board: Board }) {
   const { t, formatTime, formatDate } = useI18n();
   const state = card.state as BoardColumn;
   const next = nextState(state);
@@ -184,6 +186,7 @@ function Card({ card, board, now, canMove, online, confirmingId, pendingId, fail
       <p className="text-xs text-muted-foreground">{t('board.meta', { doctor: card.calendarName || t('schedule.doctor'), type: t(`visitType.${card.visitType}`) })}</p>
       <div className="flex flex-wrap gap-1">
         <FrontDeskTag kind="reason" text={t(`reasonCategory.${card.reasonCategory}`)} />
+        {failedVisitIds.has(card.id) && <FrontDeskTag kind="messageFailed" />}
         {card.walkIn && <FrontDeskTag kind="walkIn" />}
         {card.registrationIncomplete && <FrontDeskTag kind="incomplete" />}
         {card.token && <FrontDeskTag kind="token" text={t('board.token', { token: card.token })} />}

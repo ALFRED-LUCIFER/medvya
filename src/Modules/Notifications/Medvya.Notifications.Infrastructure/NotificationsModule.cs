@@ -28,6 +28,7 @@ public static class NotificationsModule
             .AddScoped<IAppointmentSubscriber, AppointmentNotifier>()
             .AddScoped<INotificationSender, NotificationSender>()
             .AddScoped<IReceiptProcessor, ReceiptProcessor>()
-            .AddScoped<INotificationQueries, NotificationQueries>();
+            .AddScoped<INotificationQueries, NotificationQueries>()
+            .AddScoped<IStaffNotifications, StaffNotifications>();
     }
 }

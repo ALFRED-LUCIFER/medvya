@@ -10,6 +10,8 @@ public sealed class NotificationsDbContext(DbContextOptions<NotificationsDbConte
 {
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<NotificationAttempt> Attempts => Set<NotificationAttempt>();
+    public DbSet<StaffNotification> StaffNotifications => Set<StaffNotification>();
+    public DbSet<StaffNotificationRead> StaffNotificationReads => Set<StaffNotificationRead>();
 
     Guid? CurrentTenantId => tenant.TenantId;
 
@@ -35,6 +37,19 @@ public sealed class NotificationsDbContext(DbContextOptions<NotificationsDbConte
             e.Property(x => x.Outcome).HasConversion<string>().HasMaxLength(20);
             e.Property(x => x.Code).HasMaxLength(60);
             e.HasIndex(x => x.NotificationId);
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<StaffNotification>(e =>
+        {
+            e.Property(x => x.Kind).HasConversion<string>().HasMaxLength(30);
+            e.Property(x => x.DedupeKey).HasMaxLength(80);
+            e.HasIndex(x => new { x.TenantId, x.DedupeKey }).IsUnique();
+            e.HasIndex(x => new { x.TenantId, x.FacilityId, x.CreatedAt });
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<StaffNotificationRead>(e =>
+        {
+            e.HasKey(x => new { x.NotificationId, x.UserId });
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
     }

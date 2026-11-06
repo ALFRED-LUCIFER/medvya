@@ -26,6 +26,9 @@ public interface INotificationQueries
     /// <summary>Every message of the appointment, oldest first.</summary>
     Task<IReadOnlyList<NotificationView>> ForAppointmentAsync(Guid facilityId, Guid appointmentId, CancellationToken cancellationToken = default);
 
+    /// <summary>Appointments starting within two days of now that have a failed or bounced message (ids only), for the board.</summary>
+    Task<IReadOnlyList<Guid>> FailedVisitsAsync(Guid facilityId, CancellationToken cancellationToken = default);
+
     /// <summary>Per-channel counts since <paramref name="since"/> and every failed or bounced message (newest first, at most <paramref name="maxFailures"/>), with its reason code.</summary>
     Task<DeliveryReport> DeliveryAsync(Guid facilityId, DateTimeOffset since, int maxFailures = 100, CancellationToken cancellationToken = default);
 }
@@ -56,4 +59,21 @@ public static class NotificationReference
         var parts = reference?.Split('.');
         return parts is [var t, var n] && Guid.TryParseExact(t, "N", out tenantId) && Guid.TryParseExact(n, "N", out notificationId);
     }
+}
+
+/// <summary>One item of the notification centre (D-03): a kind and a pointer, worded by the screen.</summary>
+public sealed record StaffNotificationView(Guid Id, StaffNotificationKind Kind, Guid? RefId, DateTimeOffset CreatedAt, bool Read);
+
+public sealed record StaffNotificationList(int Unread, IReadOnlyList<StaffNotificationView> Items);
+
+/// <summary>The signed-in staff member's notifications at a facility. Needs an active membership there and the capability each kind needs.</summary>
+public interface IStaffNotifications
+{
+    /// <summary>The newest items this user may see, with their own read state.</summary>
+    Task<StaffNotificationList> ListAsync(Guid facilityId, CancellationToken cancellationToken = default);
+
+    /// <summary>False when the item is not one this user may see.</summary>
+    Task<bool> MarkReadAsync(Guid facilityId, Guid id, CancellationToken cancellationToken = default);
+
+    Task MarkAllReadAsync(Guid facilityId, CancellationToken cancellationToken = default);
 }

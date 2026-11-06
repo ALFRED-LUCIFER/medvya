@@ -129,6 +129,63 @@ namespace Medvya.Notifications.Infrastructure.Persistence.Migrations
 
                     b.ToTable("Attempts", "notifications");
                 });
+
+            modelBuilder.Entity("Medvya.Notifications.Domain.StaffNotification", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("DedupeKey")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<Guid>("FacilityId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<Guid?>("RefId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "DedupeKey")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "FacilityId", "CreatedAt");
+
+                    b.ToTable("StaffNotifications", "notifications");
+                });
+
+            modelBuilder.Entity("Medvya.Notifications.Domain.StaffNotificationRead", b =>
+                {
+                    b.Property<Guid>("NotificationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("ReadAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("NotificationId", "UserId");
+
+                    b.ToTable("StaffNotificationReads", "notifications");
+                });
 #pragma warning restore 612, 618
         }
     }

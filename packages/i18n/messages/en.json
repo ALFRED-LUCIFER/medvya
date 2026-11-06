@@ -58,7 +58,7 @@
   "session.failed": "Sign-in did not complete. Try again, or ask your clinic admin if it keeps happening.",
   "shell.skip": "Skip to main content",
   "shell.mainNav": "Main navigation",
-  "shell.notifications": "Notifications (coming soon)",
+  "shell.notifications": "Notifications",
   "shell.loading": "Loading…",
   "shell.comingInPhase": "This screen arrives in phase {phase}. There is nothing to do here yet.",
   "shell.noScreens.title": "Nothing to show yet",
@@ -1515,5 +1515,14 @@
   "terms.open": "Open Settings → Terms",
   "terms.notice": "Booking and messages are paused until the practice owner accepts the Terms of Service.",
   "booking.error.terms_not_accepted": "Booking is paused: the practice has not accepted the Terms of Service yet. The practice owner accepts them in Settings → Terms.",
-  "walkIn.error.terms_not_accepted": "Check-in is paused: the practice has not accepted the Terms of Service yet. The practice owner accepts them in Settings → Terms."
+  "walkIn.error.terms_not_accepted": "Check-in is paused: the practice has not accepted the Terms of Service yet. The practice owner accepts them in Settings → Terms.",
+  "notifications.openUnread": "Notifications, {count} unread",
+  "notifications.markAllRead": "Mark all read",
+  "notifications.loading": "Loading notifications…",
+  "notifications.error": "Notifications could not be loaded.",
+  "notifications.empty": "Nothing new.",
+  "notifications.read": "Read",
+  "notifications.unread": "Unread",
+  "notifications.kind.MessageFailed": "A message to a patient was not delivered. Open the board to see which visit.",
+  "board.tag.messageFailed": "Message not delivered"
 }

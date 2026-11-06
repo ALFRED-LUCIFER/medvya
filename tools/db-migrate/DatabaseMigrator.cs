@@ -25,7 +25,7 @@ public static class DatabaseMigrator
     /// <summary>
     /// The administrator's step (infra/postgres/roles.sql, idempotent): roles, schemas and privileges. Run it as a superuser or role administrator
     /// before <see cref="ApplyAsync"/>. <paramref name="logins"/> turns the named roles into password logins for development and tests;
-    /// in Azure an Entra identity is created IN ROLE medvya_app / medvya_migrator by hand instead.
+    /// in Azure an Entra identity is made a login IN ROLE medvya_app / medvya_migrator with <see cref="MapEntraPrincipalAsync"/> instead.
     /// </summary>
     public static async Task ApplyRolesAsync(NpgsqlConnection connection, IEnumerable<(string Role, string Password)>? logins = null, CancellationToken ct = default)
     {
@@ -42,6 +42,32 @@ public static class DatabaseMigrator
             await using var run = new NpgsqlCommand(alter, connection);
             await run.ExecuteNonQueryAsync(ct);
         }
+    }
+
+    /// <summary>
+    /// Azure only (MDV-P0-042): makes an Entra identity (a managed identity) a login IN ROLE <paramref name="role"/>. Run it as an Entra
+    /// administrator connected to database postgres (pgaadauth_create_principal_with_oid lives there), after <see cref="ApplyRolesAsync"/>.
+    /// Idempotent: an existing login is only granted the role. Only the three login roles are allowed, never the owner or a module role.
+    /// </summary>
+    public static async Task MapEntraPrincipalAsync(NpgsqlConnection connection, string role, string principal, Guid objectId, CancellationToken ct = default)
+    {
+        if (role is not ("medvya_app" or "medvya_migrator" or "medvya_reporting")) throw new ArgumentException("Only medvya_app, medvya_migrator or medvya_reporting can be mapped.", nameof(role));
+        await using (var exists = new NpgsqlCommand("SELECT 1 FROM pg_roles WHERE rolname = @p", connection))
+        {
+            exists.Parameters.AddWithValue("p", principal);
+            if (await exists.ExecuteScalarAsync(ct) is null)
+            {
+                await using var create = new NpgsqlCommand("SELECT pgaadauth_create_principal_with_oid(@p, @oid, 'service', false, false)", connection);
+                create.Parameters.AddWithValue("p", principal);
+                create.Parameters.AddWithValue("oid", objectId.ToString());
+                await create.ExecuteNonQueryAsync(ct);
+            }
+        }
+        await using var grant = new NpgsqlCommand("SELECT format('GRANT %I TO %I', @r::text, @p::text)", connection);
+        grant.Parameters.AddWithValue("r", role);
+        grant.Parameters.AddWithValue("p", principal);
+        await using var run = new NpgsqlCommand((string)(await grant.ExecuteScalarAsync(ct))!, connection);
+        await run.ExecuteNonQueryAsync(ct);
     }
 
     /// <summary>Migrations of every module (forward-only, idempotent), then the Hangfire tables. Run as the migration principal.</summary>

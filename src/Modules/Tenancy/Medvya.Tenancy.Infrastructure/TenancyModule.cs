@@ -18,7 +18,7 @@ public static class TenancyModule
         // Without a storage connection the logo store refuses every call (fail closed); nothing else needs it.
         services.TryAddSingleton<ILogoStore>(blobConnectionString is null ? new NoLogoStore() : new BlobLogoStore(blobConnectionString));
         return services
-            .AddDbContext<TenancyDbContext>((sp, o) => o.UseNpgsql(connectionString).AddInterceptors(sp.GetRequiredService<TenantSessionInterceptor>()))
+            .AddDbContext<TenancyDbContext>((sp, o) => o.UseNpgsql(PostgresDataSources.For(connectionString)).AddInterceptors(sp.GetRequiredService<TenantSessionInterceptor>()))
             .AddScoped<IFeatureFlags, FeatureFlags>()
             .AddScoped<ITermsAcceptance, TermsAcceptances>()
             .AddScoped<IFacilityDirectory, FacilityDirectory>()

@@ -716,6 +716,7 @@
   "appointment.error.in_past": "वह स्लॉट शुरू हो चुका है। बाद का स्लॉट चुनें।",
   "appointment.error.busy": "यह कैलेंडर अभी दूसरे बदलावों में व्यस्त है। कुछ भी सहेजा नहीं गया; फिर से कोशिश करें।",
   "appointment.error.failed": "यह नहीं हो सका। कुछ भी नहीं बदला; फिर से कोशिश करें।",
+  "appointment.error.terms_not_accepted": "बदलाव रुका हुआ है: प्रैक्टिस ने अभी सेवा की शर्तें स्वीकार नहीं की हैं। प्रैक्टिस के मालिक इन्हें सेटिंग्स → शर्तें में स्वीकार करते हैं।",
   "schedule.slot.moveTo": "{patient} को {name} के साथ {time} पर ले जाएँ",
   "schedule.slot.moveShort": "ले जाएँ",
   "booking.rebook.title": "{name} के लिए फिर से बुक करें",

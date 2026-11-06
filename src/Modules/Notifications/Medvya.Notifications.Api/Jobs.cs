@@ -1,3 +1,5 @@
+using Medvya.BuildingBlocks.Infrastructure;
+using Npgsql;
 using System.Security.Claims;
 using System.Threading.RateLimiting;
 using Hangfire;
@@ -42,9 +44,8 @@ public sealed partial class NotificationJobs(IServiceProvider services, ILogger<
                 {
                     var dispatcher = scope.ServiceProvider.GetRequiredService<IOutboxDispatcher>();
                     while (await dispatcher.DispatchAsync(Batch, cancellationToken) == Batch) { }
-                    // Messages wait queued until the owner accepts the terms (MDV-P1-019); they go out after, unless the visit has started.
-                    if (await scope.ServiceProvider.GetRequiredService<ITermsAcceptance>().IsSatisfiedAsync(cancellationToken))
-                        await scope.ServiceProvider.GetRequiredService<INotificationSender>().SendDueAsync(Batch, cancellationToken);
+                    // The sender holds back all but cancellations until the owner accepts the terms (MDV-P1-019).
+                    await scope.ServiceProvider.GetRequiredService<INotificationSender>().SendDueAsync(Batch, cancellationToken);
                 }
                 // Licence expiry and access review reminders for the owners (MDV-P1-010); idempotent, so every minute is fine.
                 await scope.ServiceProvider.GetRequiredService<IComplianceReminders>().RunAsync(cancellationToken);
@@ -78,7 +79,7 @@ public static class JobsSetup
         if (connectionString is null || !builder.Configuration.GetValue("Jobs:Enabled", false)) return builder;
         builder.Services.AddScoped<NotificationJobs>();
         builder.Services.AddHangfire(c => c.SetDataCompatibilityLevel(CompatibilityLevel.Version_180).UseSimpleAssemblyNameTypeSerializer().UseRecommendedSerializerSettings()
-            .UsePostgreSqlStorage(o => o.UseNpgsqlConnection(connectionString), new PostgreSqlStorageOptions { SchemaName = "hangfire", PrepareSchemaIfNecessary = false }));
+            .UsePostgreSqlStorage(o => o.UseConnectionFactory(new DataSourceConnectionFactory(PostgresDataSources.For(connectionString))), new PostgreSqlStorageOptions { SchemaName = "hangfire", PrepareSchemaIfNecessary = false }));
         builder.Services.AddHangfireServer(o => o.WorkerCount = 2);
         return builder;
     }
@@ -98,4 +99,10 @@ public static class JobsSetup
 public sealed class DevAllowAllConsent : IReminderConsent
 {
     public Task<bool> AllowsAsync(Guid patientId, Medvya.Notifications.Domain.NotificationChannel channel, CancellationToken cancellationToken = default) => Task.FromResult(true);
+}
+
+/// <summary>Hangfire's connections come from the shared data source, so they sign in the same way as the modules (Entra token in Azure).</summary>
+sealed class DataSourceConnectionFactory(NpgsqlDataSource source) : IConnectionFactory
+{
+    public NpgsqlConnection GetOrCreateConnection() => source.CreateConnection();
 }

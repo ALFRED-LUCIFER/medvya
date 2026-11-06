@@ -715,6 +715,7 @@
   "appointment.error.in_past": "بدأ هذا الموعد بالفعل. اختر موعدًا لاحقًا.",
   "appointment.error.busy": "هذا التقويم مشغول بتغييرات أخرى الآن. لم يُحفظ شيء؛ حاول مرة أخرى.",
   "appointment.error.failed": "لم ينجح ذلك. لم يتغير شيء؛ حاول مرة أخرى.",
+  "appointment.error.terms_not_accepted": "تغيير الموعد متوقف: لم توافق العيادة بعد على شروط الخدمة. يوافق مالك العيادة عليها من الإعدادات ← الشروط.",
   "schedule.slot.moveTo": "نقل {patient} إلى {name} الساعة {time}",
   "schedule.slot.moveShort": "نقل",
   "booking.rebook.title": "إعادة حجز {name}",

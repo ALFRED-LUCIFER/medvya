@@ -20,10 +20,13 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Medvya.IntegrationTests;
 
 /// <summary>
-/// MDV-P1-035 on real SQL Server: the practice access log. Only roles with the Audit log capability can open it (others get 403,
+/// MDV-P1-035 on real PostgreSQL: the practice access log. Only roles with the Audit log capability can open it (others get 403,
 /// audited Denied); filtering by patient lists every event on that record by anyone, denied attempts included; paging is stable;
 /// another tenant's events never appear; the export is watermarked, audited and carries no patient names.
 /// </summary>
+// RunsAlone: the 150,000-row seed goes through the per-row hash-chain trigger, and next to the parallel classes' containers on a CI
+// runner it starved past the 300 s command timeout (MDV-P0-039 measures the trigger cost).
+[Collection(nameof(RunsAlone))]
 public sealed class AccessLogTests(PostgresFixture sql) : IClassFixture<PostgresFixture>, IAsyncLifetime
 {
     readonly SchedulingHarness h = new(sql);

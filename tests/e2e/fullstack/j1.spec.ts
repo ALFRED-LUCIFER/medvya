@@ -49,6 +49,9 @@ test('J1: a new solo doctor sets up the practice, registers a patient, books and
     await page.reload(); // the server, not the screen, holds the practice
     await expect(page.getByRole('navigation').first()).toBeVisible();
     await expect(page).not.toHaveURL(/onboarding/);
+    // The owner of a solo practice administers it (Staff, roles, integrations = Config): the staff list opens before the licence is verified.
+    const staff = await page.request.get('/v1/staff');
+    expect(staff.status(), await staff.text()).toBe(200);
   });
 
   await test.step('J1.3 register the first patient with the India minimum, ABHA left empty', async () => {

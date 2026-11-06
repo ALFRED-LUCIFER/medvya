@@ -4,6 +4,7 @@ using Medvya.BuildingBlocks.Infrastructure;
 using Medvya.Identity.Domain;
 using Medvya.Identity.Infrastructure.Persistence;
 using Medvya.Leads.Infrastructure.Persistence;
+using Medvya.Notifications.Infrastructure.Persistence;
 using Medvya.Patients.Domain;
 using Medvya.Patients.Infrastructure;
 using Medvya.Patients.Infrastructure.Persistence;
@@ -165,6 +166,8 @@ public static class SyntheticSeed
         }
         await using (var patients = Patients(connectionString, null)) await patients.Database.MigrateAsync(ct);
         await using (var scheduling = Scheduling(connectionString, null)) await scheduling.Database.MigrateAsync(ct);
+        // The API's board and jobs read these tables; the real migrator (tools/db-migrate) already applies them.
+        await using (var notifications = new NotificationsDbContext(Options<NotificationsDbContext>(connectionString, null), new FixedTenant(null))) await notifications.Database.MigrateAsync(ct);
 
         foreach (var c in Tenants(includeUae))
         {

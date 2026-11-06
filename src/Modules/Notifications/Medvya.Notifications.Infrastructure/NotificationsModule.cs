@@ -30,6 +30,7 @@ public static class NotificationsModule
             .AddScoped<IReceiptProcessor, ReceiptProcessor>()
             .AddScoped<INotificationQueries, NotificationQueries>()
             .AddScoped<IStaffNotifications, StaffNotifications>()
-            .AddScoped<INotificationPreferences, NotificationPreferences>();
+            .AddScoped<INotificationPreferences, NotificationPreferences>()
+            .AddScoped<IComplianceReminders, ComplianceReminders>();
     }
 }

@@ -25,6 +25,9 @@ public sealed class TenancyDbContext(DbContextOptions<TenancyDbContext> options,
     public DbSet<DoctorProfile> DoctorProfiles => Set<DoctorProfile>();
     public DbSet<CustomRole> CustomRoles => Set<CustomRole>();
     public DbSet<TermsAcceptance> TermsAcceptances => Set<TermsAcceptance>();
+    public DbSet<AccessReview> AccessReviews => Set<AccessReview>();
+    public DbSet<AccessReviewDecision> AccessReviewDecisions => Set<AccessReviewDecision>();
+    public DbSet<TenantIndexEntry> TenantIndex => Set<TenantIndexEntry>();
 
     Guid? CurrentTenantId => tenant.TenantId;
 
@@ -39,7 +42,7 @@ public sealed class TenancyDbContext(DbContextOptions<TenancyDbContext> options,
             e.Property(x => x.CountryCode).HasMaxLength(2).IsFixedLength().Metadata.SetAfterSaveBehavior(PropertySaveBehavior.Throw);
             e.Property(x => x.ResidencyRegion).HasMaxLength(40).Metadata.SetAfterSaveBehavior(PropertySaveBehavior.Throw);
             e.Property(x => x.IdleTimeoutMinutes).HasDefaultValue(15);
-            e.ToTable(t => t.HasCheckConstraint("CK_Tenants_IdleTimeoutMinutes", "IdleTimeoutMinutes BETWEEN 1 AND 480"));
+            e.ToTable(t => { t.HasCheckConstraint("CK_Tenants_IdleTimeoutMinutes", "IdleTimeoutMinutes BETWEEN 1 AND 480"); t.HasTrigger("TR_Tenants_Index"); });
             e.HasQueryFilter(x => x.Id == CurrentTenantId);
         });
         modelBuilder.Entity<Facility>(e =>
@@ -61,6 +64,25 @@ public sealed class TenancyDbContext(DbContextOptions<TenancyDbContext> options,
             // Only an Invited membership may lack its user.
             e.ToTable(t => t.HasCheckConstraint("CK_Memberships_UserUnlessInvited", "[Status] = 'Invited' OR [UserId] IS NOT NULL"));
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<AccessReview>(e =>
+        {
+            e.Property(x => x.Quarter).HasMaxLength(8);
+            e.HasIndex(x => new { x.TenantId, x.Quarter }).IsUnique(); // one review per tenant and quarter
+            e.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<AccessReviewDecision>(e =>
+        {
+            e.HasKey(x => new { x.ReviewId, x.MembershipId });
+            e.Property(x => x.Decision).HasConversion<string>().HasMaxLength(20);
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<TenantIndexEntry>(e =>
+        {
+            // Not under row-level security (tenant ids only); a trigger on Tenants fills it (AccessReviews migration).
+            e.ToTable("TenantIndex");
+            e.HasKey(x => x.TenantId);
         });
         modelBuilder.Entity<TermsAcceptance>(e =>
         {

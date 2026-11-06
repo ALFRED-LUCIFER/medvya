@@ -47,6 +47,8 @@ public sealed class EndpointAuditTests(SqlServerFixture sql) : IClassFixture<Sql
         "GET /v1/staff/roles",
         "POST /v1/staff/roles",
         "PUT /v1/staff/roles/{id:guid}",
+        "GET /v1/staff/access-review", // MDV-P1-010: staff names, roles, last sign-in; decisions are audited in the service
+        "POST /v1/staff/access-review/{membershipId:guid}/confirm",
         "POST /v1/staff/{membershipId:guid}/offboard", // MDV-P1-009: audited as staff.offboard in the same transaction (SessionControlTests)
         // Practice settings (MDV-P1-005): business details only; every change is audited inside the service with before/after (PracticeSettingsTests).
         "GET /v1/settings/profile",

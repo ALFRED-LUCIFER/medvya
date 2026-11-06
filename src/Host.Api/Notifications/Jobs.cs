@@ -25,20 +25,28 @@ public sealed partial class NotificationJobs(IServiceProvider services, ILogger<
     [DisableConcurrentExecution(300), AutomaticRetry(Attempts = 0)]
     public async Task RunAsync(CancellationToken cancellationToken)
     {
-        IReadOnlyList<Guid> tenants;
+        IReadOnlyList<Guid> withEvents, indexed;
         await using (var scope = services.CreateAsyncScope())
-            tenants = await scope.ServiceProvider.GetRequiredService<IOutboxDispatcher>().TenantsAsync(cancellationToken);
+        {
+            withEvents = await scope.ServiceProvider.GetRequiredService<IOutboxDispatcher>().TenantsAsync(cancellationToken);
+            indexed = await scope.ServiceProvider.GetRequiredService<IComplianceFacts>().TenantsAsync(cancellationToken);
+        }
         var failed = 0;
-        foreach (var tenant in tenants)
+        foreach (var tenant in withEvents.Union(indexed))
         {
             try
             {
                 await using var scope = services.EnterLinkTenant(tenant);
-                var dispatcher = scope.ServiceProvider.GetRequiredService<IOutboxDispatcher>();
-                while (await dispatcher.DispatchAsync(Batch, cancellationToken) == Batch) { }
-                // Messages wait queued until the owner accepts the terms (MDV-P1-019); they go out after, unless the visit has started.
-                if (await scope.ServiceProvider.GetRequiredService<ITermsAcceptance>().IsSatisfiedAsync(cancellationToken))
-                    await scope.ServiceProvider.GetRequiredService<INotificationSender>().SendDueAsync(Batch, cancellationToken);
+                if (withEvents.Contains(tenant))
+                {
+                    var dispatcher = scope.ServiceProvider.GetRequiredService<IOutboxDispatcher>();
+                    while (await dispatcher.DispatchAsync(Batch, cancellationToken) == Batch) { }
+                    // Messages wait queued until the owner accepts the terms (MDV-P1-019); they go out after, unless the visit has started.
+                    if (await scope.ServiceProvider.GetRequiredService<ITermsAcceptance>().IsSatisfiedAsync(cancellationToken))
+                        await scope.ServiceProvider.GetRequiredService<INotificationSender>().SendDueAsync(Batch, cancellationToken);
+                }
+                // Licence expiry and access review reminders for the owners (MDV-P1-010); idempotent, so every minute is fine.
+                await scope.ServiceProvider.GetRequiredService<IComplianceReminders>().RunAsync(cancellationToken);
             }
             catch (Exception e) when (e is not OperationCanceledException)
             {

@@ -23,7 +23,7 @@ public sealed class LicenceReview(TenancyDbContext db, ICurrentTenant tenant, IC
         var licence = await db.DoctorLicences.SingleOrDefaultAsync(l => l.MembershipId == doctorId, cancellationToken);
         if (licence is null) return false;
         var now = clock.GetUtcNow();
-        var before = new { licence = LicenceRules.StatusOf(licence).ToString() };
+        var before = new { licence = LicenceRules.StatusOf(licence, DateOnly.FromDateTime(clock.GetUtcNow().UtcDateTime)).ToString() };
         licence.VerifiedAt = verified ? now : null;
         licence.VerifiedBy = verified ? reviewer : null;
         licence.RejectedAt = verified ? null : now;

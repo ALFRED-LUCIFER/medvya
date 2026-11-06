@@ -19,6 +19,9 @@ public interface IStaffSessions
     /// <summary>Revokes one of the user's sessions; returns the revoked session (for its tenant), or null if it is not theirs or already over.</summary>
     Task<StaffSession?> RevokeAsync(Guid userId, Guid sessionId, CancellationToken cancellationToken = default);
 
+    /// <summary>When each of these users last signed in (the newest session start, live or ended); users who never did are left out.</summary>
+    Task<IReadOnlyDictionary<Guid, DateTimeOffset>> LastSignInAsync(IReadOnlyCollection<Guid> userIds, CancellationToken cancellationToken = default);
+
     /// <summary>Revokes every live session of the user that is scoped to the tenant (admin action); returns how many.</summary>
     Task<int> RevokeInTenantAsync(Guid userId, Guid tenantId, CancellationToken cancellationToken = default);
 }

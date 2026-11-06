@@ -20,6 +20,8 @@ import { useProfileController } from '../features/settings/hooks/useProfileContr
 import CustomRolesPanel from '../features/staff/components/CustomRolesPanel';
 import AuditLogPanel from '../features/audit-log/components/AuditLogPanel';
 import { useAuditLogController } from '../features/audit-log/hooks/useAuditLogController';
+import AccessReviewPanel from '../features/staff/components/AccessReviewPanel';
+import { useAccessReviewController } from '../features/staff/hooks/useAccessReviewController';
 import StaffPanel from '../features/staff/components/StaffPanel';
 import { useCustomRolesController } from '../features/staff/hooks/useCustomRolesController';
 import { useStaffController } from '../features/staff/hooks/useStaffController';
@@ -44,6 +46,8 @@ const Terms = () => <TermsPanel {...useTermsController()} />;
 const Notifications = () => <NotificationsPanel {...useNotificationSettingsController()} />;
 const Audit = () => <AuditLogPanel {...useAuditLogController()} />;
 
+const Review = () => <AccessReviewPanel {...useAccessReviewController()} />;
+
 function Staff({ facilityId }: { facilityId: string }) {
   const staff = useStaffController(facilityId);
   const roles = useCustomRolesController();
@@ -51,6 +55,7 @@ function Staff({ facilityId }: { facilityId: string }) {
     <>
       <StaffPanel {...staff} />
       {!staff.loading && !staff.failed && <CustomRolesPanel catalogue={staff.catalogue} {...roles} />}
+      <Review />
     </>
   );
 }

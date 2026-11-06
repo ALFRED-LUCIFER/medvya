@@ -72,6 +72,8 @@ public sealed class StaffTests(SqlServerFixture sql) : IClassFixture<SqlServerFi
     [
         new(HttpMethod.Get, "/v1/staff"),
         new(HttpMethod.Get, "/v1/staff/roles"),
+        new(HttpMethod.Get, "/v1/staff/access-review"), // MDV-P1-010
+        new(HttpMethod.Post, $"/v1/staff/access-review/{Guid.NewGuid()}/confirm"),
         new(HttpMethod.Post, "/v1/staff") { Content = JsonContent.Create(new { email = "new@example.test", role = "Receptionist", facilityId = h.Facility }) },
         new(HttpMethod.Post, $"/v1/staff/invitations/{Guid.NewGuid()}/resend"),
         new(HttpMethod.Post, "/v1/staff/roles") { Content = JsonContent.Create(new { name = "Front desk plus", baseRole = "Receptionist", capabilities = Array.Empty<string>() }) },

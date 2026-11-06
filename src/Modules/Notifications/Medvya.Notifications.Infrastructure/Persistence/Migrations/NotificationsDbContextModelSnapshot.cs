@@ -185,6 +185,9 @@ namespace Medvya.Notifications.Infrastructure.Persistence.Migrations
                         .HasMaxLength(80)
                         .HasColumnType("nvarchar(80)");
 
+                    b.Property<int?>("Detail")
+                        .HasColumnType("int");
+
                     b.Property<Guid>("FacilityId")
                         .HasColumnType("uniqueidentifier");
 

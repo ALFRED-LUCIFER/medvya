@@ -22,6 +22,10 @@ sealed class StaffSessions(IdentityDbContext db) : IStaffSessions
         return session;
     }
 
+    public async Task<IReadOnlyDictionary<Guid, DateTimeOffset>> LastSignInAsync(IReadOnlyCollection<Guid> userIds, CancellationToken cancellationToken = default) =>
+        await db.Sessions.AsNoTracking().Where(s => userIds.Contains(s.UserId)).GroupBy(s => s.UserId)
+            .Select(g => new { UserId = g.Key, At = g.Max(s => s.CreatedAt) }).ToDictionaryAsync(x => x.UserId, x => x.At, cancellationToken);
+
     public async Task<StaffSession?> ValidateAsync(Guid sessionId, Guid userId, bool activity, CancellationToken cancellationToken = default)
     {
         var now = DateTimeOffset.UtcNow;

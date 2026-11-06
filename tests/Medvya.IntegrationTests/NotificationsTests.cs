@@ -22,7 +22,7 @@ namespace Medvya.IntegrationTests;
 /// handling that cancels and never doubles, retries with backoff, DLT-registered SMS only, delivery receipts, tenant isolation.
 /// Synthetic data only.
 /// </summary>
-public sealed class NotificationsTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>, IAsyncLifetime
+public sealed partial class NotificationsTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>, IAsyncLifetime
 {
     readonly SchedulingHarness h = new(sql);
     readonly FakeEmail email = new();
@@ -504,12 +504,16 @@ public sealed class NotificationsTests(SqlServerFixture sql) : IClassFixture<Sql
     {
         await FailedConfirmationAsync();
         var id = (await As(h.Reception, sp => sp.GetRequiredService<IStaffNotifications>().ListAsync(h.Facility))).Items.Single().Id;
-        foreach (var user in new[] { h.PortalUser, h.Elsewhere, h.HospitalIt, Guid.NewGuid() })
+        foreach (var user in new[] { h.PortalUser, h.Elsewhere, Guid.NewGuid() })
         {
             await Assert.ThrowsAsync<NotificationAccessDeniedException>(() => As(user, sp => sp.GetRequiredService<IStaffNotifications>().ListAsync(h.Facility)));
             await Assert.ThrowsAsync<NotificationAccessDeniedException>(() => As(user, sp => sp.GetRequiredService<IStaffNotifications>().MarkReadAsync(h.Facility, id)));
             await Assert.ThrowsAsync<NotificationAccessDeniedException>(() => As(user, sp => sp.GetRequiredService<INotificationQueries>().FailedVisitsAsync(h.Facility)));
         }
+        // Hospital IT administers the practice but has no desk access: it sees owner reminders only, never a message failure.
+        Assert.Empty((await As(h.HospitalIt, sp => sp.GetRequiredService<IStaffNotifications>().ListAsync(h.Facility))).Items);
+        Assert.False(await As(h.HospitalIt, sp => sp.GetRequiredService<IStaffNotifications>().MarkReadAsync(h.Facility, id)));
+        await Assert.ThrowsAsync<NotificationAccessDeniedException>(() => As(h.HospitalIt, sp => sp.GetRequiredService<INotificationQueries>().FailedVisitsAsync(h.Facility)));
         // Another tenant sees nothing at all (EF filter and row-level security).
         var other = Guid.NewGuid();
         await using var db = sql.Notifications(other);

@@ -10,6 +10,8 @@ export const theme = {
     "ai600": "#7155d8",
     "ai700": "#5b3fc4",
     "ai50": "#f2effc",
+    "patient700": "#2f4ac0",
+    "patient50": "#eef2ff",
     "ink900": "#142536",
     "ink700": "#334e68",
     "ink600": "#506579",

@@ -4,4 +4,5 @@ packages:
   - packages/*
   - tests/e2e
 allowBuilds:
+  '@parcel/watcher': false
   esbuild: true

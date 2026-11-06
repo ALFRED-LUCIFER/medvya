@@ -2,16 +2,12 @@ using System.Net;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 using Host.Api.Auth;
-using Host.Api.AuditLog;
 using Host.Api.Context;
-using Host.Api.Invitations;
 using Host.Api.Middleware;
-using Host.Api.Notifications;
+using Medvya.Identity.Api;
+using Medvya.Notifications.Api;
 using Medvya.Notifications.Application;
 using Medvya.Notifications.Infrastructure;
-using Host.Api.Onboarding;
-using Host.Api.Settings;
-using Host.Api.Staff;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.SignalR;
 using Medvya.Audit.Api;
@@ -55,6 +51,7 @@ builder.Services.AddScoped<RequestContext>();
 builder.Services.AddScoped<ICurrentTenant>(sp => sp.GetRequiredService<RequestContext>());
 builder.Services.AddScoped<ICurrentUser>(sp => sp.GetRequiredService<RequestContext>());
 builder.Services.AddScoped<ICurrentFacility>(sp => sp.GetRequiredService<RequestContext>());
+builder.Services.AddScoped<ILinkTenant>(sp => sp.GetRequiredService<RequestContext>());
 builder.Services.AddScoped<IRequestOrigin>(sp => sp.GetRequiredService<RequestContext>());
 // Without a database, audited and flag-gated endpoints cannot resolve IAuditLog / IFeatureFlags and fail closed (500), and no
 // capability handler exists, so capability-guarded endpoints answer 403.

@@ -75,10 +75,10 @@ test('a call-in updates the screen without reloading and chimes once the chime i
 
 test('an unknown or revoked link, and a screen never set up, say so', async ({ page }) => {
   await openTv(page, { paired: false });
-  await expect(page.getByRole('alert')).toContainText('This screen link is not valid');
+  await expect(page.getByRole('alert').filter({ hasText: 'This screen link is not valid' })).toBeVisible();
   await page.unrouteAll({ behavior: 'ignoreErrors' });
   await openTv(page, { paired: false, link: false });
-  await expect(page.getByRole('alert')).toContainText('This screen is not set up');
+  await expect(page.getByRole('alert').filter({ hasText: 'This screen is not set up' })).toBeVisible();
 });
 
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');

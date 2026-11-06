@@ -5,9 +5,13 @@ export default defineConfig({
   testDir: '.',
   testIgnore: 'fullstack/**', // needs Docker and .NET: `pnpm e2e:fullstack`
   forbidOnly: !!process.env.CI,
-  reporter: process.env.CI ? 'github' : 'list',
+  reporter: process.env.CI ? [['github'], ['html', { open: 'never' }]] : 'list',
   use: { baseURL: 'http://localhost:4173', trace: 'retain-on-failure' },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    { name: 'chromium', testIgnore: ['fullstack/**', /-performance\.spec\.ts/], use: { ...devices['Desktop Chrome'] } },
+    // Time budgets run alone, after every other spec has finished: measured beside 250 parallel specs they test the runner, not the page.
+    { name: 'performance', testMatch: /-performance\.spec\.ts/, dependencies: ['chromium'], use: { ...devices['Desktop Chrome'] } },
+  ],
   webServer: [
     {
       command: 'pnpm --filter clinic exec vite --port 4173 --strictPort',

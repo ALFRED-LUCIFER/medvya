@@ -22,8 +22,8 @@ public partial class RoleAuthorisationTests
         ["Medvya.Tenancy.Infrastructure/StaffRoster.cs"] = "last-admin check on stored memberships when offboarding, not a caller check",
         ["Medvya.Tenancy.Infrastructure/PracticeSettings.cs"] = "copies the creator's membership role to a new location, not a check",
         ["Host.Api/Auth/SessionControl.cs"] = "drops the legacy role claim from old cookies",
-        ["Host.Api/Staff/StaffEndpoints.cs"] = "displays the built-in role table behind ManageStaff",
-        ["Host.Api/Invitations/InvitationEndpoints.cs"] = "previews the invited role's table to the invitee",
+        ["Medvya.Identity.Api/StaffEndpoints.cs"] = "displays the built-in role table behind ManageStaff",
+        ["Medvya.Identity.Api/InvitationEndpoints.cs"] = "previews the invited role's table to the invitee",
     };
 
     static string Src()

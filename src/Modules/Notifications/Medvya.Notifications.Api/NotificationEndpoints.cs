@@ -1,9 +1,7 @@
+using Medvya.Tenancy.Api;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using Host.Api.Auth;
-using Host.Api.Context;
-using Host.Api.Settings;
 using Medvya.Audit.Api;
 using Medvya.Notifications.Application;
 using Medvya.Notifications.Domain;
@@ -11,7 +9,7 @@ using Medvya.Notifications.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 
-namespace Host.Api.Notifications;
+namespace Medvya.Notifications.Api;
 
 /// <summary>
 /// What reception sees of patient messages (MDV-P1-032/033) and the provider receipt webhook. Staff endpoints need sign-in and a view

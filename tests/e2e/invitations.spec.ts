@@ -58,7 +58,7 @@ test('invitee sees the clinic, role, capabilities and facility, and Join starts 
 test('an expired, revoked or used link shows the expired state and nothing to join', async ({ page }) => {
   await setUp(page, null);
   await page.goto(`/invite/${token}`);
-  await expect(page.getByRole('alert')).toContainText('Ask your admin to resend the invitation.');
+  await expect(page.getByRole('alert').filter({ hasText: 'Ask your admin to resend the invitation.' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Sign in & join' })).toHaveCount(0);
 });
 

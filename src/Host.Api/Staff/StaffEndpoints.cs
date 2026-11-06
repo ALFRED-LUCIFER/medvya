@@ -59,16 +59,39 @@ public static class StaffEndpoints
         g.MapPost("/invitations/{id:guid}/resend", async (Guid id, [FromServices] IInvitations invitations, CancellationToken ct) =>
             await invitations.ResendAsync(id, ct) is { } created ? Results.Ok(created) : Results.NotFound());
 
+        // Quarterly access review (MDV-P1-010): every active member with role and last sign-in; confirm each, or offboard (the endpoint below).
+        g.MapGet("/access-review", async ([FromServices] IAccessReviews reviews, [FromServices] IStaffUsers users, [FromServices] IStaffSessions sessions, CancellationToken ct) =>
+        {
+            var review = await reviews.CurrentAsync(ct);
+            var ids = review.Members.Select(m => m.UserId).Distinct().ToList();
+            var names = await users.DisplayNamesAsync(ids, ct);
+            var signIns = await sessions.LastSignInAsync(ids, ct);
+            return new
+            {
+                review.Quarter, review.CompletedAt, review.LastCompletedAt,
+                Members = review.Members.Select(m => new
+                {
+                    m.MembershipId, Name = names.GetValueOrDefault(m.UserId), m.Role, m.FacilityName,
+                    LastSignIn = signIns.TryGetValue(m.UserId, out var at) ? at : (DateTimeOffset?)null,
+                    Decision = m.Decision?.ToString(),
+                }),
+            };
+        });
+        g.MapPost("/access-review/{membershipId:guid}/confirm", async (Guid membershipId, [FromServices] IAccessReviews reviews, CancellationToken ct) =>
+            await reviews.ConfirmAsync(membershipId, ct) ? Results.NoContent() : Results.NotFound());
+
         // Offboarding (MDV-P1-009): access ends in the roster transaction (the membership is no longer active, so every endpoint refuses it
         // and the facility picker no longer offers it); the person's sessions in this tenant end right after. Other tenants are untouched.
         g.MapPost("/{membershipId:guid}/offboard", async (Guid membershipId, Offboard body, ClaimsPrincipal principal, [FromServices] IStaffRoster roster,
-            [FromServices] IStaffSessions sessions, [FromServices] Medvya.Scheduling.Application.IScheduleExceptionService schedule, CancellationToken ct) =>
+            [FromServices] IStaffSessions sessions, [FromServices] Medvya.Scheduling.Application.IScheduleExceptionService schedule, [FromServices] IAccessReviews reviews, CancellationToken ct) =>
         {
             var result = await roster.OffboardAsync(membershipId, body.Reason, ct);
+            // shortcut: recorded after the offboarding commits (not one transaction); if it fails the offboarding stands and the owner is asked about that person only if they were still active.
             if (result.Outcome == OffboardOutcome.NotFound) return Results.NotFound();
             if (result.Outcome == OffboardOutcome.LastAdmin) return Problem("membershipId", "last_admin");
             if (result.UserId is { } userId)
             {
+                await reviews.RecordOffboardedAsync(membershipId, ct); // part of this quarter's access review (MDV-P1-010)
                 await sessions.RevokeInTenantAsync(userId, Guid.Parse(principal.FindFirstValue(StaffPolicies.TenantClaim)!), ct);
                 // The doctor's calendar disappears with the membership: their future visits go to reception's "needs rebooking" lane, never stranded.
                 // shortcut: runs after the offboarding commits (not one transaction); a failure needs the visits moved by hand, one transaction when Tenancy may call Scheduling.

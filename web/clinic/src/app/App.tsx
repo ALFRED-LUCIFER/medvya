@@ -95,7 +95,7 @@ export default function App({ locale, onLocaleChange }: Props) {
         <Route path="/choose-facility" element={picker} />
         <Route element={
           <AppShell {...account} role={active.role} facilityName={active.facilityName} groups={shell.groups} tabs={shell.tabs} searchPath={searchPath}
-            notifications={allows(active, patientDirectory) ? <NotificationsRoute facilityId={active.facilityId} online={online} /> : undefined}
+            notifications={allows(active, patientDirectory) || allows(active, { capability: 'StaffRolesIntegrations', access: ['Config'] } as const) ? <NotificationsRoute facilityId={active.facilityId} online={online} /> : undefined}
             languageSwitcher={<LanguageSwitcher inline value={locale} onChange={onLocaleChange} />}>
             {active.licencePending && <LicenceNotice />}
             {termsPending && <TermsNotice />}

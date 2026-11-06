@@ -1,7 +1,8 @@
 import { z } from 'zod';
 
 // Mirrors src/Modules/Tenancy/Medvya.Tenancy.Application/IDoctors.cs (the server is the authority; these checks only save a round trip).
-export type LicenceStatus = 'Pending' | 'Verified' | 'Rejected';
+/** Expired: verified once but past its expiry date; the doctor cannot record or sign until a renewed licence is verified (MDV-P1-010). */
+export type LicenceStatus = 'Pending' | 'Verified' | 'Rejected' | 'Expired';
 export type Authority = { code: string; name: string };
 export type Doctor = {
   id: string;

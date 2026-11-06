@@ -11,6 +11,9 @@ public sealed class BillingDbContext(DbContextOptions<BillingDbContext> options,
 
     Guid? CurrentTenantId => tenant.TenantId;
 
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder) =>
+        Medvya.BuildingBlocks.Infrastructure.UtcDateTimeOffset.Apply(configurationBuilder);
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasDefaultSchema("billing");

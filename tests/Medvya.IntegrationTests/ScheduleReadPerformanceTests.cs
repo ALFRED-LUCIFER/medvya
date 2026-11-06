@@ -124,6 +124,7 @@ public sealed class ScheduleReadPerformanceTests(PostgresFixture sql, ITestOutpu
             ("Id", typeof(Guid)), ("TenantId", typeof(Guid)), ("FacilityId", typeof(Guid)), ("CalendarId", typeof(Guid)), ("CalendarKind", typeof(string)),
             ("PatientId", typeof(Guid)), ("VisitType", typeof(string)), ("Start", typeof(DateTimeOffset)), ("End", typeof(DateTimeOffset)),
             ("State", typeof(string)), ("ReasonCategory", typeof(string)), ("Channel", typeof(string)), ("BookedAt", typeof(DateTimeOffset)), ("ChangedAt", typeof(DateTimeOffset)),
+            ("WalkIn", typeof(bool)), ("Unscheduled", typeof(bool)),
         }) table.Columns.Add(name, type);
         var times = Enumerable.Range(0, 12).Select(i => new TimeOnly(9, 0).AddMinutes(20 * i)).Concat(Enumerable.Range(0, 9).Select(i => new TimeOnly(17, 0).AddMinutes(20 * i))).ToList();
         var n = 0;
@@ -136,7 +137,7 @@ public sealed class ScheduleReadPerformanceTests(PostgresFixture sql, ITestOutpu
                     var start = new DateTimeOffset(day.ToDateTime(t), TimeSpan.FromHours(5.5)).ToUniversalTime();
                     var state = n % 17 == 0 ? "Cancelled" : n % 23 == 0 ? "NoShow" : "Booked";
                     table.Rows.Add(Guid.CreateVersion7(), tenant, facility, calendar, "Doctor", patients[n++ % patients.Length], "FollowUp", start, start.AddMinutes(20),
-                        state, "General", "Phone", MondayMorning, MondayMorning);
+                        state, "General", "Phone", MondayMorning, MondayMorning, false, false);
                 }
         }
         await using var conn = await sql.OpenAs("dbo", tenant);

@@ -129,7 +129,7 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
         var like = term.Kind == SearchKind.Name ? LikeContaining(term.Value!) : null;
         patients = term.Kind switch
         {
-            SearchKind.Name => patients.Where(p => EF.Functions.Like(p.FullName, like!, Escape) || (p.ArabicName != null && EF.Functions.Like(p.ArabicName, like!, Escape))),
+            SearchKind.Name => patients.Where(p => EF.Functions.ILike(p.FullName, like!, Escape) || (p.ArabicName != null && EF.Functions.ILike(p.ArabicName, like!, Escape))),
             SearchKind.Phone => patients.Where(p => p.Mobile == term.Value || p.AlternatePhone == term.Value),
             // Either MRN of a merged pair finds the survivor (MDV-P1-017); the merged record itself is hidden below.
             SearchKind.Mrn => patients.Where(p => p.Mrn == term.Value || db.Patients.Any(m => m.MergedIntoPatientId == p.Id && m.Mrn == term.Value)),

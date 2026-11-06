@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Medvya.Identity.Application\Medvya.Identity.Application.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\Medvya.BuildingBlocks.Infrastructure\Medvya.BuildingBlocks.Infrastructure.csproj" />
     <ProjectReference Include="..\Medvya.Identity.Domain\Medvya.Identity.Domain.csproj" />
   </ItemGroup>
 

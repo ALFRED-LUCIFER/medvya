@@ -153,7 +153,7 @@ public class DatabaseRoleTests(PostgresFixture sql) : IClassFixture<PostgresFixt
     }
 
     const string Insert = """
-        INSERT INTO audit.\"AuditEvents\" (\"Id\", \"TenantId\", \"Action\", \"ResourceType\", \"Purpose\", \"Outcome\", \"OccurredAt\")
+        INSERT INTO audit."AuditEvents" ("Id", "TenantId", "Action", "ResourceType", "Purpose", "Outcome", "OccurredAt")
         VALUES (gen_random_uuid(), current_setting('medvya.tenant_id')::uuid, 'patient.read', 'patient', 'treatment', 'Allowed', now());
         """;
 }

@@ -20,6 +20,9 @@ public sealed class PatientsDbContext(DbContextOptions<PatientsDbContext> option
 
     Guid? CurrentTenantId => tenant.TenantId;
 
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder) =>
+        Medvya.BuildingBlocks.Infrastructure.UtcDateTimeOffset.Apply(configurationBuilder);
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasDefaultSchema("patients");

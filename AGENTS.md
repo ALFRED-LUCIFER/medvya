@@ -89,3 +89,13 @@ src/features/<feature>/components/ presentational: props in, events out (no serv
 | Security, compliance, threat model | `docs/04-security-compliance/`, `docs/compliance/` |
 | Decisions | `docs/adr/` |
 | End-to-end journeys J1–J6 (Playwright, steps read from `docs/02-design/journeys.md`) | `tests/e2e/`: turn a step green by passing its implementation to `journey('Jn', { step: … })` |
+
+## 9 · Repository layout (ADR-013)
+
+1. **Keep the folders:** `src/` (.NET), `web/`, `mobile/`, `packages/`, `tests/`, `infra/`, `tools/`, `docs/`. The tree and what is built versus planned are in the README ("Repository structure"); update it in the same PR when you add a folder.
+2. **No empty scaffolding.** A planned module, app or package is created by the ticket that builds it.
+3. **`Host.Api` is composition only** (`Program.cs`, auth/BFF, context, middleware, observability, public site, module registration). A feature endpoint lives in its module's Api project (`HostCompositionTests` enforces it).
+4. **No package imports an app** (`web/*`, `mobile/*`); native code never imports `@medvya/ui` (lint enforces both). Tokens, i18n and the API client are shared; screens are not.
+5. **The API client is generated** from Host.Api's OpenAPI document (`packages/api-client`); `bash tools/check-contract.sh` regenerates it and CI fails on drift.
+6. **Tickets and design sources live under `docs/`** (`docs/05-delivery/tickets/`, `docs/02-design/source/`). Relative Markdown links must resolve (`python3 -I tools/check-links/check.py`).
+

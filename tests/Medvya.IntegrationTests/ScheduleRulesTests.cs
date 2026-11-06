@@ -194,6 +194,16 @@ public class ScheduleRulesTests
     }
 
     [Fact]
+    public void AMonthlySeriesKeepsTheDateAndUsesTheLastDayOfShorterMonths()
+    {
+        var jan31 = new DateTimeOffset(2026, 1, 31, 4, 30, 0, TimeSpan.Zero); // 10:00 IST
+        Assert.Equal([jan31, new DateTimeOffset(2026, 2, 28, 4, 30, 0, TimeSpan.Zero), new DateTimeOffset(2026, 3, 31, 4, 30, 0, TimeSpan.Zero), new DateTimeOffset(2026, 4, 30, 4, 30, 0, TimeSpan.Zero)],
+            ScheduleRules.SeriesStarts(jan31, 1, 4, Kolkata, monthly: true)); // not 28 Feb then 28 Mar: each is counted from the first
+        // Local 09:00 stays 09:00 across London's clock change on 25 Oct 2026.
+        Assert.Equal(new DateTimeOffset(2026, 11, 17, 9, 0, 0, TimeSpan.Zero), ScheduleRules.SeriesStarts(new DateTimeOffset(2026, 10, 17, 8, 0, 0, TimeSpan.Zero), 1, 2, London, monthly: true)[1]);
+    }
+
+    [Fact]
     public void ASeriesInIstOrGstRepeatsAtTheSameUtcTime()
     {
         var first = new DateTimeOffset(2026, 10, 19, 4, 30, 0, TimeSpan.Zero);

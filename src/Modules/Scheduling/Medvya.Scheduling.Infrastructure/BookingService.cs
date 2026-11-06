@@ -424,14 +424,14 @@ public sealed class BookingService(
         await context.RequireAsync(pattern.FacilityId, SchedulingAccess.CanBook, cancellationToken);
         var errors = new List<ValidationError>();
         if (pattern.Count is < 2 or > SeriesPattern.MaxCount) errors.Add(new("count", "out_of_range"));
-        if (pattern.IntervalWeeks is < 1 or > SeriesPattern.MaxIntervalWeeks) errors.Add(new("intervalWeeks", "out_of_range"));
+        if (!pattern.Monthly && pattern.IntervalWeeks is < 1 or > SeriesPattern.MaxIntervalWeeks) errors.Add(new("intervalWeeks", "out_of_range"));
         if (!Enum.IsDefined(pattern.VisitType)) errors.Add(new("visitType", "invalid"));
         SchedulingValidationException.ThrowIfAny(errors);
         var (_, zone) = await context.FacilityAsync(pattern.FacilityId, cancellationToken);
         var (now, me) = (context.Now, context.UserId!.Value);
 
         var result = new List<SeriesOccurrence>();
-        foreach (var (start, i) in ScheduleRules.SeriesStarts(pattern.FirstStart, pattern.IntervalWeeks, pattern.Count, zone).Select((s, i) => (s, i)))
+        foreach (var (start, i) in ScheduleRules.SeriesStarts(pattern.FirstStart, pattern.IntervalWeeks, pattern.Count, zone, pattern.Monthly).Select((s, i) => (s, i)))
         {
             // A read without the lock; booking re-checks under it. Same checks as a hold.
             string? conflict = null;

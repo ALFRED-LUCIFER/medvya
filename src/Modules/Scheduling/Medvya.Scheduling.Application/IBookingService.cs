@@ -71,7 +71,10 @@ public sealed record CancelAppointment
     public string? Note { get; init; }
 }
 
-/// <summary>A recurring series (MDV-P1-026): the same local time every <see cref="IntervalWeeks"/> weeks, <see cref="Count"/> visits.</summary>
+/// <summary>
+/// A recurring series (MDV-P1-026): the same local time every <see cref="IntervalWeeks"/> weeks, or on the same date each month when
+/// <see cref="Monthly"/> (then <see cref="IntervalWeeks"/> is ignored), <see cref="Count"/> visits.
+/// </summary>
 public sealed record SeriesPattern
 {
     public const int MaxCount = 52, MaxIntervalWeeks = 12;
@@ -80,6 +83,7 @@ public sealed record SeriesPattern
     public DateTimeOffset FirstStart { get; init; }
     public VisitType VisitType { get; init; } = VisitType.FollowUp;
     public int IntervalWeeks { get; init; } = 1;
+    public bool Monthly { get; init; }
     public int Count { get; init; }
 }
 

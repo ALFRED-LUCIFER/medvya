@@ -5,6 +5,7 @@ import { Button, buttonVariants, cn, Label, Select, SelectContent, SelectItem, S
 import PatientsMessage from '../../patients/components/PatientsMessage';
 import { PatientPicker, type PatientSearchView } from '../../schedule/components/BookingPanel';
 import { reasonCategories, visitTypes, type PatientMatch } from '../../schedule/domain/booking';
+import { termsPath } from '../../settings/domain/settings';
 import type { WalkInChoice, WalkInError, WalkInVisit } from '../domain/board';
 
 type Props = {
@@ -98,6 +99,7 @@ export default function WalkInPage(p: Props) {
           {p.error && (
             <p role="alert" className="flex items-start gap-1.5 text-sm font-semibold text-danger-700">
               <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />{t(`walkIn.error.${p.error}`)}
+              {p.error === 'terms_not_accepted' && <Link to={termsPath} className={cn(buttonVariants({ variant: 'link' }), 'h-auto px-0')}>{t('terms.open')}</Link>}
             </p>
           )}
         </div>

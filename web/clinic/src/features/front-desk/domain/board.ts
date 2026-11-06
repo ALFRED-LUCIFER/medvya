@@ -70,7 +70,7 @@ export type WalkInVisit = { id: string; calendarId: string; start: string; end: 
 export const emptyWalkIn: WalkInChoice = { calendarId: '', visitType: 'FollowUp', reasonCategory: 'General' };
 
 /** 409 codes of a walk-in: nothing free today (the desk then chooses a doctor to queue with), or the calendar is busy. */
-export const walkInErrors = ['no_free_slot', 'busy'] as const;
+export const walkInErrors = ['no_free_slot', 'busy', 'terms_not_accepted'] as const;
 export type WalkInError = (typeof walkInErrors)[number] | 'failed';
 export const walkInError = (code: string | undefined): WalkInError =>
   (walkInErrors as readonly string[]).includes(code ?? '') ? (code as WalkInError) : 'failed';

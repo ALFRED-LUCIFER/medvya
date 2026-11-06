@@ -26,7 +26,7 @@ internal sealed class ManualClock(DateTimeOffset start) : TimeProvider
 /// One synthetic clinic for scheduling tests: an Adyar facility in IST with a doctor, a second doctor without a template, reception,
 /// a practice admin, a nurse, a portal user and two patients, plus the scheduling services built as the host builds them.
 /// </summary>
-internal sealed class SchedulingHarness(SqlServerFixture sql)
+internal sealed class SchedulingHarness(PostgresFixture sql)
 {
     /// <summary>Monday 19 Oct 2026, 08:00 IST: before the first slot of the day.</summary>
     public static readonly DateTimeOffset MondayMorning = new(2026, 10, 19, 2, 30, 0, TimeSpan.Zero);
@@ -48,7 +48,9 @@ internal sealed class SchedulingHarness(SqlServerFixture sql)
     public InMemoryLogos Logos { get; } = new();
     public SchedulingOptions Options { get; } = new();
     /// <summary>A pool big enough for a hundred desks booking at once (each request also opens Tenancy and Patients connections).</summary>
-    public string ConnectionString => new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(sql.ConnectionString) { MaxPoolSize = 400 }.ConnectionString;
+    public Medvya.Patients.Infrastructure.Persistence.NationalIdColumns NationalIds => sql.NationalIds;
+
+    public string ConnectionString => new Npgsql.NpgsqlConnectionStringBuilder(sql.ConnectionString) { MaxPoolSize = 400 }.ConnectionString;
     readonly List<ServiceProvider> providers = [];
 
     public async Task SeedAsync()
@@ -105,11 +107,12 @@ internal sealed class SchedulingHarness(SqlServerFixture sql)
     IServiceProvider Scope(Guid user, Guid? inTenant, IInterceptor? interceptor = null)
     {
         var services = new ServiceCollection()
-            .AddSingleton<ICurrentTenant>(new SqlServerFixture.FixedTenant(inTenant ?? Tenant))
+            .AddSingleton<ICurrentTenant>(new PostgresFixture.FixedTenant(inTenant ?? Tenant))
             .AddSingleton<ICurrentUser>(new FixedUser(user))
             .AddSingleton<TimeProvider>(Clock)
             .AddSingleton<ICurrentFacility>(new PatientRegistryTests.FixedFacility(Facility))
             .AddSingleton<Medvya.Tenancy.Application.ILogoStore>(Logos) // before the module, which only adds a store when none is registered
+            .AddSingleton(sql.NationalIds) // the fixture's national-ID setup (this harness has no host configuration)
             .AddAuditModule(ConnectionString).AddTenancyModule(ConnectionString).AddIdentityModule(ConnectionString)
             .AddPatientsModule(ConnectionString).AddSchedulingModule(ConnectionString);
         if (interceptor is not null) services.ConfigureDbContext<Medvya.Scheduling.Infrastructure.Persistence.SchedulingDbContext>(o => o.AddInterceptors(interceptor));

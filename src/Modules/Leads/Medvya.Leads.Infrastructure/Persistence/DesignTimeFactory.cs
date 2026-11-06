@@ -7,5 +7,5 @@ namespace Medvya.Leads.Infrastructure.Persistence;
 public sealed class DesignTimeFactory : IDesignTimeDbContextFactory<LeadsDbContext>
 {
     public LeadsDbContext CreateDbContext(string[] args) =>
-        new(new DbContextOptionsBuilder<LeadsDbContext>().UseSqlServer("Server=design-time-only").Options);
+        new(new DbContextOptionsBuilder<LeadsDbContext>().UseNpgsql("Server=design-time-only").Options);
 }

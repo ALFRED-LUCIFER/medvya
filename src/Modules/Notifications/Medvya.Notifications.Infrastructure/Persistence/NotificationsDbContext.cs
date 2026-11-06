@@ -16,6 +16,9 @@ public sealed class NotificationsDbContext(DbContextOptions<NotificationsDbConte
 
     Guid? CurrentTenantId => tenant.TenantId;
 
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder) =>
+        Medvya.BuildingBlocks.Infrastructure.UtcDateTimeOffset.Apply(configurationBuilder);
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasDefaultSchema("notifications");
@@ -67,5 +70,5 @@ public sealed class DesignTimeFactory : IDesignTimeDbContextFactory<Notification
     sealed class NoTenant : ICurrentTenant { public Guid? TenantId => null; }
 
     public NotificationsDbContext CreateDbContext(string[] args) =>
-        new(new DbContextOptionsBuilder<NotificationsDbContext>().UseSqlServer("Server=design-time-only").Options, new NoTenant());
+        new(new DbContextOptionsBuilder<NotificationsDbContext>().UseNpgsql("Server=design-time-only").Options, new NoTenant());
 }

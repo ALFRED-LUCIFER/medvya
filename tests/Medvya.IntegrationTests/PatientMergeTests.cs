@@ -16,7 +16,7 @@ namespace Medvya.IntegrationTests;
 /// clinician when both records hold clinical data), either MRN then finds the survivor, visits and identifiers move, the merge is
 /// undone exactly, and a failing participant rolls everything back. Synthetic data only; IDs fail their checksums by construction.
 /// </summary>
-public sealed class PatientMergeTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>
+public sealed class PatientMergeTests(PostgresFixture sql) : IClassFixture<PostgresFixture>
 {
     readonly Guid tenant = Guid.NewGuid(), facility = Guid.NewGuid(), reception = Guid.NewGuid(), clinicianA = Guid.NewGuid(), clinicianB = Guid.NewGuid(), admin = Guid.NewGuid();
     readonly ManualClock clock = new(new DateTimeOffset(2026, 11, 2, 4, 0, 0, TimeSpan.Zero));
@@ -41,13 +41,13 @@ public sealed class PatientMergeTests(SqlServerFixture sql) : IClassFixture<SqlS
     }
 
     PatientRegistry Registry(Guid user, Guid? at = null) =>
-        new(sql.Patients(tenant), new SqlServerFixture.FixedTenant(tenant), new PatientRegistryTests.FixedFacility(at ?? facility), new User(user),
+        new(sql.Patients(tenant), new PostgresFixture.FixedTenant(tenant), new PatientRegistryTests.FixedFacility(at ?? facility), new User(user),
             new AuditLog(sql.Audit(tenant)), clock, new PatientRegistryTests.FacilityZone("Asia/Kolkata"));
 
     PatientMerges Merges(Guid user, bool clinical = false, Guid? at = null, IPatientMergeParticipant? extra = null)
     {
         var db = sql.Patients(tenant);
-        var who = new SqlServerFixture.FixedTenant(tenant);
+        var who = new PostgresFixture.FixedTenant(tenant);
         IPatientMergeParticipant[] parts = [new PatientMergeParticipant(sql.Scheduling(tenant), who), new Clinical(clinical), .. extra is null ? [] : new[] { extra }];
         return new(db, who, new PatientRegistryTests.FixedFacility(at ?? facility), new User(user), new AuditLog(sql.Audit(tenant)), clock, parts);
     }
@@ -240,7 +240,7 @@ public sealed class PatientMergeTests(SqlServerFixture sql) : IClassFixture<SqlS
         var (_, _, request) = await PairAsync();
         var other = Guid.NewGuid();
         var db = sql.Patients(other);
-        var stranger = new PatientMerges(db, new SqlServerFixture.FixedTenant(other), new PatientRegistryTests.FixedFacility(facility), new User(clinicianA),
+        var stranger = new PatientMerges(db, new PostgresFixture.FixedTenant(other), new PatientRegistryTests.FixedFacility(facility), new User(clinicianA),
             new AuditLog(sql.Audit(other)), clock, []);
 
         Assert.Null(await stranger.GetAsync(request));

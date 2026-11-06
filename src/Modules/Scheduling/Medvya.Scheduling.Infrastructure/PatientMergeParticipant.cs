@@ -34,7 +34,7 @@ public sealed class PatientMergeParticipant(SchedulingDbContext db, ICurrentTena
 
     async Task<SchedulingDbContext> SharedAsync(DbTransaction transaction, CancellationToken cancellationToken)
     {
-        var shared = new SchedulingDbContext(new DbContextOptionsBuilder<SchedulingDbContext>().UseSqlServer(transaction.Connection!).Options, tenant);
+        var shared = new SchedulingDbContext(new DbContextOptionsBuilder<SchedulingDbContext>().UseNpgsql(transaction.Connection!).Options, tenant);
         await shared.Database.UseTransactionAsync(transaction, cancellationToken);
         return shared;
     }

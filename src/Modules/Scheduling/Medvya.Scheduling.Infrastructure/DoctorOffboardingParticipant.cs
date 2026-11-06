@@ -26,7 +26,7 @@ public sealed class DoctorOffboardingParticipant(
     public async Task<Func<Task>?> OffboardedAsync(Guid doctorUserId, DbTransaction transaction, CancellationToken cancellationToken)
     {
         var (now, me, tenantId) = (clock.GetUtcNow(), user.UserId, tenant.TenantId ?? throw new InvalidOperationException("No tenant context."));
-        await using var db = new SchedulingDbContext(new DbContextOptionsBuilder<SchedulingDbContext>().UseSqlServer(transaction.Connection!).Options, tenant);
+        await using var db = new SchedulingDbContext(new DbContextOptionsBuilder<SchedulingDbContext>().UseNpgsql(transaction.Connection!).Options, tenant);
         await db.Database.UseTransactionAsync(transaction, cancellationToken);
         Task<List<Appointment>> FutureAsync() => db.Appointments.AsNoTracking()
             .Where(a => a.CalendarId == doctorUserId && a.Start >= now && a.State == AppointmentState.Booked && !a.Unscheduled).ToListAsync(cancellationToken);

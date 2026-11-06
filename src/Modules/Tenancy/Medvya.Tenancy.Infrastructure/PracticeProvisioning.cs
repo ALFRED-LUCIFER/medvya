@@ -14,7 +14,7 @@ namespace Medvya.Tenancy.Infrastructure;
 
 /// <summary>
 /// Creates a practice (MDV-P1-004). The new tenant's rows are written on a connection that already carries the new tenant's
-/// SESSION_CONTEXT, so row-level security (layer 2) accepts them exactly as it does for any tenant's own writes; it is never switched off.
+/// session tenant setting, so row-level security (layer 2) accepts them exactly as it does for any tenant's own writes; it is never switched off.
 /// </summary>
 public sealed class PracticeProvisioning(string connectionString, ICurrentUser user, IAuditLog audit)
     : IPracticeProvisioning
@@ -33,7 +33,7 @@ public sealed class PracticeProvisioning(string connectionString, ICurrentUser u
         var tenantId = Guid.CreateVersion7();
         var tenant = new NewTenant(tenantId);
         await using var db = new TenancyDbContext(
-            new DbContextOptionsBuilder<TenancyDbContext>().UseSqlServer(connectionString).AddInterceptors(new TenantSessionInterceptor(tenant)).Options, tenant);
+            new DbContextOptionsBuilder<TenancyDbContext>().UseNpgsql(connectionString).AddInterceptors(new TenantSessionInterceptor(tenant)).Options, tenant);
 
         var facilityId = Guid.CreateVersion7();
         var membershipId = Guid.CreateVersion7();

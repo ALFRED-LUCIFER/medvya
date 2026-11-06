@@ -16,7 +16,7 @@ namespace Medvya.IntegrationTests;
 /// MDV-P1-017 over HTTP: who may ask for a review (desk, Full), approve (clinician, Sign) and undo (admin, Config) is enforced by the
 /// capability policy on the server, and a refused call changes nothing. Synthetic data only.
 /// </summary>
-public sealed class PatientMergeEndpointTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>, IAsyncLifetime
+public sealed class PatientMergeEndpointTests(PostgresFixture sql) : IClassFixture<PostgresFixture>, IAsyncLifetime
 {
     readonly Guid tenant = Guid.NewGuid(), facility = Guid.NewGuid();
     readonly Dictionary<string, Guid> users = [];
@@ -38,7 +38,7 @@ public sealed class PatientMergeEndpointTests(SqlServerFixture sql) : IClassFixt
             }
             await db.SaveChangesAsync();
         }
-        var registry = new PatientRegistry(sql.Patients(tenant), new SqlServerFixture.FixedTenant(tenant), new PatientRegistryTests.FixedFacility(facility),
+        var registry = new PatientRegistry(sql.Patients(tenant), new PostgresFixture.FixedTenant(tenant), new PatientRegistryTests.FixedFacility(facility),
             new User(users["receptionist"]), new AuditLog(sql.Audit(tenant)), TimeProvider.System, new PatientRegistryTests.FacilityZone("Asia/Kolkata"));
         var one = await registry.RegisterAsync(IndiaBase with { FacilityId = facility, FullName = "Meera Iyer (synthetic)", Mobile = "+91 90000 00301" });
         var two = await registry.RegisterAsync(IndiaBase with { FacilityId = facility, FullName = "Anita Rao (synthetic)", Mobile = "+91 90000 00302", DateOfBirth = new DateOnly(1990, 5, 5) });

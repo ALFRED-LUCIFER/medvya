@@ -6,8 +6,8 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 namespace Medvya.BuildingBlocks.Infrastructure;
 
 /// <summary>
-/// Sets SESSION_CONTEXT('tenant_id') read-only on every connection open, so SQL row-level security filters every query.
-/// Pooled connections are reset (sp_reset_connection) on reuse, which clears it, so a pooled connection never carries another tenant.
+/// Sets the session setting medvya.tenant_id on every connection open, so row-level security (MDV-P0-034) filters every query.
+/// Npgsql resets a connection (DISCARD ALL) when it returns to the pool, which clears the setting, so a pooled connection never carries another tenant.
 /// Shared by every module DbContext (Tenancy, Audit, …).
 /// </summary>
 public sealed class TenantSessionInterceptor(ICurrentTenant tenant) : DbConnectionInterceptor
@@ -28,11 +28,11 @@ public sealed class TenantSessionInterceptor(ICurrentTenant tenant) : DbConnecti
     {
         if (tenant.TenantId is not { } id) return null; // no tenant → RLS returns no tenant rows
         var cmd = connection.CreateCommand();
-        cmd.CommandText = "EXEC sys.sp_set_session_context @key = N'tenant_id', @value = @tenant, @read_only = 1;";
+        cmd.CommandText = "SELECT set_config('medvya.tenant_id', @tenant, false)";
         var p = cmd.CreateParameter();
         p.ParameterName = "@tenant";
-        p.DbType = DbType.Guid;
-        p.Value = id;
+        p.DbType = DbType.String; // settings are text; policies cast it back to uuid
+        p.Value = id.ToString();
         cmd.Parameters.Add(p);
         return cmd;
     }

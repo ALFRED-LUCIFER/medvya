@@ -14,7 +14,7 @@ public static class BillingModule
     {
         services.TryAddScoped<TenantSessionInterceptor>();
         return services
-            .AddDbContext<BillingDbContext>((sp, o) => o.UseSqlServer(connectionString).AddInterceptors(sp.GetRequiredService<TenantSessionInterceptor>()))
+            .AddDbContext<BillingDbContext>((sp, o) => o.UseNpgsql(connectionString).AddInterceptors(sp.GetRequiredService<TenantSessionInterceptor>()))
             .AddScoped<IDocumentNumbering, DocumentNumbering>();
     }
 }

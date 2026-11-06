@@ -9,7 +9,7 @@ using Medvya.Tenancy.Domain;
 using Medvya.Tenancy.Infrastructure;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
-using Microsoft.Data.SqlClient;
+using Npgsql;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,7 +21,7 @@ namespace Medvya.IntegrationTests;
 /// MDV-P1-019 against real SQL Server and over HTTP: no booking or sending until the practice owner accepts the current terms, one
 /// append-only record of who/when/version, and the staff consent screen's reads. Synthetic data only.
 /// </summary>
-public sealed class TermsAcceptanceTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>, IAsyncLifetime
+public sealed class TermsAcceptanceTests(PostgresFixture sql) : IClassFixture<PostgresFixture>, IAsyncLifetime
 {
     readonly Guid tenant = Guid.NewGuid(), facility = Guid.NewGuid(), otherFacility = Guid.NewGuid();
     readonly Dictionary<string, Guid> users = [];
@@ -51,7 +51,7 @@ public sealed class TermsAcceptanceTests(SqlServerFixture sql) : IClassFixture<S
 
     async Task<Guid> Register(Guid at, string name, string mobile)
     {
-        var registry = new PatientRegistry(sql.Patients(tenant), new SqlServerFixture.FixedTenant(tenant), new PatientRegistryTests.FixedFacility(at),
+        var registry = new PatientRegistry(sql.Patients(tenant), new PostgresFixture.FixedTenant(tenant), new PatientRegistryTests.FixedFacility(at),
             new SignedInUser(Guid.NewGuid()), new AuditLog(sql.Audit(tenant)), TimeProvider.System, new PatientRegistryTests.FacilityZone("Asia/Kolkata"));
         return (await registry.RegisterAsync(IndiaBase with { FacilityId = at, FullName = name, Mobile = mobile })).PatientId;
     }
@@ -127,8 +127,8 @@ public sealed class TermsAcceptanceTests(SqlServerFixture sql) : IClassFixture<S
         using (var host = Host()) using (var admin = Client(host, "admin"))
             Assert.Equal(HttpStatusCode.OK, (await admin.PostAsync(Url("/v1/settings/terms/accept"), null)).StatusCode);
         await using var db = sql.Context(tenant);
-        await Assert.ThrowsAsync<SqlException>(() => db.Database.ExecuteSqlAsync($"UPDATE tenancy.TermsAcceptances SET TermsVersion = 'x' WHERE TenantId = {tenant}"));
-        await Assert.ThrowsAsync<SqlException>(() => db.Database.ExecuteSqlAsync($"DELETE FROM tenancy.TermsAcceptances WHERE TenantId = {tenant}"));
+        await Assert.ThrowsAsync<PostgresException>(() => db.Database.ExecuteSqlAsync($"""UPDATE tenancy."TermsAcceptances" SET "TermsVersion" = 'x' WHERE "TenantId" = {tenant}"""));
+        await Assert.ThrowsAsync<PostgresException>(() => db.Database.ExecuteSqlAsync($"""DELETE FROM tenancy."TermsAcceptances" WHERE "TenantId" = {tenant}"""));
 
         var other = Guid.NewGuid();
         await using (var o = sql.Context(other))
@@ -138,7 +138,7 @@ public sealed class TermsAcceptanceTests(SqlServerFixture sql) : IClassFixture<S
         }
         var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> { ["Terms:RequireAcceptance"] = "true" }).Build();
         await using var otherDb = sql.Context(other);
-        var terms = new TermsAcceptances(otherDb, new SqlServerFixture.FixedTenant(other), new SignedInUser(Guid.NewGuid()), null!, null!, TimeProvider.System, config);
+        var terms = new TermsAcceptances(otherDb, new PostgresFixture.FixedTenant(other), new SignedInUser(Guid.NewGuid()), null!, null!, TimeProvider.System, config);
         Assert.False(await terms.IsSatisfiedAsync());
         Assert.False((await terms.StatusAsync()).Accepted);
     }
@@ -149,8 +149,8 @@ public sealed class TermsAcceptanceTests(SqlServerFixture sql) : IClassFixture<S
         var off = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> { ["Terms:RequireAcceptance"] = "false" }).Build();
         var unset = new ConfigurationBuilder().Build();
         await using var db = sql.Context(tenant);
-        Assert.True(await new TermsAcceptances(db, new SqlServerFixture.FixedTenant(tenant), new SignedInUser(Guid.NewGuid()), null!, null!, TimeProvider.System, off).IsSatisfiedAsync());
-        Assert.False(await new TermsAcceptances(db, new SqlServerFixture.FixedTenant(tenant), new SignedInUser(Guid.NewGuid()), null!, null!, TimeProvider.System, unset).IsSatisfiedAsync());
+        Assert.True(await new TermsAcceptances(db, new PostgresFixture.FixedTenant(tenant), new SignedInUser(Guid.NewGuid()), null!, null!, TimeProvider.System, off).IsSatisfiedAsync());
+        Assert.False(await new TermsAcceptances(db, new PostgresFixture.FixedTenant(tenant), new SignedInUser(Guid.NewGuid()), null!, null!, TimeProvider.System, unset).IsSatisfiedAsync());
     }
 
     // SAFETY: mutation check: dropping the facility condition in PatientConsents.CurrentAsync makes the other facility's patient readable (200).

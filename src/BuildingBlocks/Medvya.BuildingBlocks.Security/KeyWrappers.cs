@@ -33,6 +33,30 @@ public sealed class LocalKeyWrapper : IKeyWrapper
     {
     }
 
+    public const string MachineKeyId = "machine";
+
+    /// <summary>
+    /// Development with no configured keys: one random 256-bit master per machine and user, created on first use in local application
+    /// data (never in the repository), so the API, the seeder and the tests on one machine read each other's data across restarts.
+    /// </summary>
+    public static LocalKeyWrapper ForThisMachine(IHostEnvironment env)
+    {
+        if (!env.IsDevelopment()) throw new InvalidOperationException("LocalKeyWrapper is for Development only; configure Key Vault.");
+        var folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData, Environment.SpecialFolderOption.Create), "medvya");
+        var path = Path.Combine(folder, "national-id-development.key");
+        if (!File.Exists(path))
+        {
+            Directory.CreateDirectory(folder);
+            var temp = Path.Combine(folder, $"{Guid.NewGuid():N}.tmp");
+            var create = new FileStreamOptions { Mode = FileMode.CreateNew, Access = FileAccess.Write };
+            if (!OperatingSystem.IsWindows()) create.UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite; // readable by this user only
+            using (var f = new FileStream(temp, create)) f.Write(RandomNumberGenerator.GetBytes(32));
+            try { File.Move(temp, path, overwrite: false); } // atomic: a parallel first run keeps whichever key landed first
+            catch (IOException) when (File.Exists(path)) { File.Delete(temp); }
+        }
+        return new LocalKeyWrapper(env, new Dictionary<string, byte[]> { [MachineKeyId] = File.ReadAllBytes(path) }, MachineKeyId);
+    }
+
     public WrappedBytes Wrap(byte[] key)
     {
         var nonce = RandomNumberGenerator.GetBytes(12);

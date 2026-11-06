@@ -3,7 +3,7 @@ name: deploy-dev
 # Tagged deploy of the API to the India dev environment (MDV-P0-007). Signs in to Azure with GitHub OIDC; no secret is stored.
 # Migrations run first, as the migration identity (medvya_migrator, no data access), through a firewall rule that exists only for this run.
 # shortcut: API only, no staging slot, web app not deployed (needs a static host); add with staging.
-# shortcut: roles.sql and the Always Encrypted keys are the administrator's step (tools/db-migrate `admin`), not this job's: the deploy identity cannot grant rights.
+# shortcut: infra/postgres/roles.sql is the administrator's step (tools/db-migrate `admin`), not this job's: the deploy identity cannot grant rights.
 on:
   push:
     tags: ['v*']

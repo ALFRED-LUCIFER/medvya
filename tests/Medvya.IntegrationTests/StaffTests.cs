@@ -19,7 +19,7 @@ namespace Medvya.IntegrationTests;
 /// uses the P0 invitation flow (resend and revoke included); custom roles never exceed practice admin; every role change keeps
 /// its before/after and an audit event; a receptionist added here still cannot reach clinical capabilities.
 /// </summary>
-public sealed class StaffTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>, IAsyncLifetime
+public sealed class StaffTests(PostgresFixture sql) : IClassFixture<PostgresFixture>, IAsyncLifetime
 {
     readonly SchedulingHarness h = new(sql);
     readonly Outbox outbox = new();

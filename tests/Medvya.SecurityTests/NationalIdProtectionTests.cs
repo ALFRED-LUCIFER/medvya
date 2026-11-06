@@ -183,9 +183,19 @@ public sealed class NationalIdProtectionTests
         var services = new ServiceCollection();
         services.AddSingleton<IHostEnvironment>(new Env("Production"));
         services.AddSingleton<IWrappedKeyStore, InMemoryWrappedKeyStore>();
-        services.AddNationalIdProtection(new ConfigurationBuilder().Build());
+        services.AddSingleton<IConfiguration>(new ConfigurationBuilder().Build());
+        services.AddNationalIdProtection();
         using var sp = services.BuildServiceProvider();
         Assert.Throws<InvalidOperationException>(() => sp.GetRequiredService<INationalIdProtector>());
+    }
+
+    [Fact]
+    public void TheMachineKeyIsTheSameAcrossRestartsAndRefusedOutsideDevelopment()
+    {
+        var wrapped = LocalKeyWrapper.ForThisMachine(new Env("Development")).Wrap(new byte[32]);
+        Assert.Equal(LocalKeyWrapper.MachineKeyId, wrapped.KeyId);
+        Assert.Equal(new byte[32], LocalKeyWrapper.ForThisMachine(new Env("Development")).Unwrap(wrapped.KeyId, wrapped.Bytes)); // a second process
+        Assert.Throws<InvalidOperationException>(() => LocalKeyWrapper.ForThisMachine(new Env("Production")));
     }
 
     [Fact]
@@ -199,7 +209,8 @@ public sealed class NationalIdProtectionTests
         var services = new ServiceCollection();
         services.AddSingleton<IHostEnvironment>(new Env("Development"));
         services.AddSingleton<IWrappedKeyStore, InMemoryWrappedKeyStore>();
-        services.AddNationalIdProtection(config);
+        services.AddSingleton<IConfiguration>(config);
+        services.AddNationalIdProtection();
         using var sp = services.BuildServiceProvider();
         var p = sp.GetRequiredService<INationalIdProtector>();
         Assert.Equal(Aadhaar, p.Unprotect(TenantA, p.Protect(TenantA, Aadhaar)));

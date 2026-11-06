@@ -4,7 +4,6 @@ using System.Text;
 using Azure.Identity;
 using Azure.Security.KeyVault.Keys.Cryptography;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
@@ -80,16 +79,22 @@ public sealed class BlindIndex(TenantKeyRing keys) : IBlindIndex
 
 public static class NationalIdProtectionExtensions
 {
-    /// <summary>Registers the protector and blind index. The caller registers an <see cref="IWrappedKeyStore"/> (a table, from part 2).</summary>
-    public static IServiceCollection AddNationalIdProtection(this IServiceCollection services, IConfiguration configuration)
+    /// <summary>
+    /// Registers the protector and blind index, configured from the NationalIdProtection section. The caller registers an
+    /// <see cref="IWrappedKeyStore"/> (the Patients module keeps it in patients."DataKeys"). Development without Key Vault uses the configured
+    /// local keys, or else this machine's key (<see cref="LocalKeyWrapper.ForThisMachine"/>); anywhere else without Key Vault it fails closed.
+    /// </summary>
+    public static IServiceCollection AddNationalIdProtection(this IServiceCollection services)
     {
-        services.AddOptions<NationalIdProtectionOptions>().Bind(configuration.GetSection(NationalIdProtectionOptions.Section));
+        services.AddOptions<NationalIdProtectionOptions>().BindConfiguration(NationalIdProtectionOptions.Section);
         services.TryAddSingleton(TimeProvider.System);
         services.AddSingleton<IKeyWrapper>(sp =>
         {
             var options = sp.GetRequiredService<IOptions<NationalIdProtectionOptions>>();
             if (string.IsNullOrEmpty(options.Value.KeyVaultKeyId))
-                return new LocalKeyWrapper(sp.GetRequiredService<IHostEnvironment>(), options);
+                return options.Value.LocalKeys.Count == 0
+                    ? LocalKeyWrapper.ForThisMachine(sp.GetRequiredService<IHostEnvironment>())
+                    : new LocalKeyWrapper(sp.GetRequiredService<IHostEnvironment>(), options);
             var credential = new DefaultAzureCredential();
             var clients = new ConcurrentDictionary<string, CryptographyClient>();
             return new AzureKeyVaultKeyWrapper(id => clients.GetOrAdd(id ?? options.Value.KeyVaultKeyId, k => new CryptographyClient(new Uri(k), credential)));
@@ -103,7 +108,10 @@ public static class NationalIdProtectionExtensions
 
 public static class NationalIdValueConverter
 {
-    /// <summary>EF converter for a NationalId-class string column. Not applied to any entity yet (part 2).</summary>
+    /// <summary>
+    /// EF converter for a NationalId-class string column, for a context whose tenant never changes. The Patients module does not use it:
+    /// EF caches one model per context type, so a converter cannot follow a per-request tenant; it encrypts with each row's own TenantId instead.
+    /// </summary>
     public static ValueConverter<string, byte[]> Create(INationalIdProtector protector, Func<Guid?> tenantId) =>
         new(v => protector.Protect(RequireTenant(tenantId), v), b => protector.Unprotect(RequireTenant(tenantId), b));
 

@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Medvya.Identity.Application\Medvya.Identity.Application.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\Medvya.BuildingBlocks.Infrastructure\Medvya.BuildingBlocks.Infrastructure.csproj" />
     <ProjectReference Include="..\Medvya.Identity.Domain\Medvya.Identity.Domain.csproj" />
   </ItemGroup>
 
@@ -11,7 +12,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
   </ItemGroup>
 
 </Project>

@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using Medvya.Scheduling.Application;
 using Medvya.Scheduling.Domain;
-using Microsoft.Data.SqlClient;
+using Npgsql;
 using Microsoft.EntityFrameworkCore;
 using static Medvya.IntegrationTests.SchedulingHarness;
 
@@ -11,7 +11,7 @@ namespace Medvya.IntegrationTests;
 /// MDV-P1-022 / P1 exit gate 2 on real SQL Server: no double booking under concurrency. A hundred desks at once get exactly one
 /// booking; each guard is also tested on its own, so removing the unique index or the doctor-day lock fails a test.
 /// </summary>
-public sealed class NoDoubleBookingTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>, IAsyncLifetime
+public sealed class NoDoubleBookingTests(PostgresFixture sql) : IClassFixture<PostgresFixture>, IAsyncLifetime
 {
     const int Desks = 100;
     readonly SchedulingHarness h = new(sql);
@@ -91,12 +91,6 @@ public sealed class NoDoubleBookingTests(SqlServerFixture sql) : IClassFixture<S
     {
         // MDV-P1-037: unrelated slots must not queue on each other's range locks (the load test saw about 94 % "busy" on holds).
         await h.Schedule(h.Admin).SaveTemplateAsync(h.DoctorTemplate() with { CalendarId = h.SecondDoctor });
-        await using (var admin = new SqlConnection(sql.ConnectionString)) // Azure SQL's default; the load test runs with it
-        {
-            await admin.OpenAsync();
-            await using var alter = new SqlCommand("ALTER DATABASE CURRENT SET READ_COMMITTED_SNAPSHOT ON WITH ROLLBACK IMMEDIATE", admin);
-            await alter.ExecuteNonQueryAsync();
-        }
         var desks = await h.AddReceptionistsAsync(40);
         var codes = new List<string>();
         var booked = 0;
@@ -155,17 +149,17 @@ public sealed class NoDoubleBookingTests(SqlServerFixture sql) : IClassFixture<S
         db.Appointments.Add(overlapping);
         db.ScheduleSlots.AddRange(ScheduleSlot.For(overlapping));
         var refused = await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
-        Assert.True(Assert.IsType<SqlException>(refused.InnerException).Number is 2601 or 2627); // unique index violation
+        Assert.Equal(PostgresErrorCodes.UniqueViolation, Assert.IsType<PostgresException>(refused.InnerException).SqlState);
     }
 
     /// <summary>Takes the doctor-day lock on another connection, as a second desk in mid-booking would.</summary>
-    async Task<(SqlConnection, SqlTransaction)> HoldDoctorDayLockAsync()
+    async Task<(NpgsqlConnection, NpgsqlTransaction)> HoldDoctorDayLockAsync()
     {
-        var conn = new SqlConnection(sql.ConnectionString);
+        var conn = new NpgsqlConnection(sql.ConnectionString);
         await conn.OpenAsync();
         var tx = conn.BeginTransaction();
-        await using var cmd = new SqlCommand("EXEC sys.sp_getapplock @Resource = @r, @LockMode = 'Exclusive', @LockOwner = 'Transaction';", conn, tx);
-        cmd.Parameters.AddWithValue("@r", $"doctor:{h.Doctor}:2026-10-19");
+        await using var cmd = new NpgsqlCommand("SELECT pg_advisory_xact_lock(hashtextextended(@r, 0))", conn, tx);
+        cmd.Parameters.AddWithValue("r", $"doctor:{h.Doctor}:2026-10-19");
         await cmd.ExecuteNonQueryAsync();
         return (conn, tx);
     }

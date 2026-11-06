@@ -23,7 +23,7 @@ namespace Medvya.IntegrationTests;
 /// display token of one facility (never a staff session), sees tokens, rooms, doctor names and waits only, and hears a call-in
 /// within 2 seconds through an empty push.
 /// </summary>
-public sealed class QueueTvTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>, IAsyncLifetime
+public sealed class QueueTvTests(PostgresFixture sql) : IClassFixture<PostgresFixture>, IAsyncLifetime
 {
     readonly SchedulingHarness h = new(sql), other = new(sql);
     readonly BoardHubTests.SignedInDesks desks = new();

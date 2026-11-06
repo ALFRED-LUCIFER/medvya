@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Medvya.IntegrationTests;
 
 /// <summary>MDV-P0-027: the synthetic seed is idempotent, covers every role, is visibly synthetic and never runs in production.</summary>
-public class SyntheticSeedTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>
+public class SyntheticSeedTests(PostgresFixture sql) : IClassFixture<PostgresFixture>
 {
     async Task<(int Tenants, int Facilities, int Memberships)> Counts(Guid tenantId)
     {
@@ -18,11 +18,11 @@ public class SyntheticSeedTests(SqlServerFixture sql) : IClassFixture<SqlServerF
     [Fact]
     public async Task SeedingTwiceGivesTheSameRowsWithEveryRoleMarkedSynthetic()
     {
-        await SyntheticSeed.SeedAsync(sql.ConnectionString, "Test", includeUae: true, SqlServerFixture.Keys);
+        await SyntheticSeed.SeedAsync(sql.ConnectionString, "Development", includeUae: true);
         var india = await Counts(SyntheticSeed.India.Tenant.Id);
         var uae = await Counts(SyntheticSeed.Uae.Tenant.Id);
 
-        await SyntheticSeed.SeedAsync(sql.ConnectionString, "Test", includeUae: true, SqlServerFixture.Keys);
+        await SyntheticSeed.SeedAsync(sql.ConnectionString, "Development", includeUae: true);
         Assert.Equal(india, await Counts(SyntheticSeed.India.Tenant.Id));
         Assert.Equal(uae, await Counts(SyntheticSeed.Uae.Tenant.Id));
         Assert.Equal((1, 1, Enum.GetValues<Role>().Length), india);
@@ -47,6 +47,25 @@ public class SyntheticSeedTests(SqlServerFixture sql) : IClassFixture<SqlServerF
         Assert.All(SyntheticSeed.India.Resources, r => Assert.EndsWith(SyntheticSeed.Marker, r.Name, StringComparison.Ordinal));
     }
 
+    [Fact]
+    public async Task SeededIdentifiersAreEncryptedAndReadBackByTheApp()
+    {
+        await SyntheticSeed.SeedAsync(sql.ConnectionString, "Development", includeUae: true);
+        await using var db = sql.Patients(SyntheticSeed.Uae.Tenant.Id);
+        Assert.Contains("784-1988-1234567-1", await db.Identifiers.Select(i => i.LookupValue).ToListAsync());
+    }
+
+    [Theory]
+    [InlineData("Staging")]
+    [InlineData("Test")]
+    public async Task OutsideDevelopmentSeedingNeedsKeyVaultAndWritesNothingWithoutIt(string environment)
+    {
+        var tenant = SyntheticSeed.India.Tenant.Id;
+        var before = await Counts(tenant);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => SyntheticSeed.SeedAsync(sql.ConnectionString, environment, includeUae: true));
+        Assert.Equal(before, await Counts(tenant));
+    }
+
     [Theory]
     [InlineData("Production")]
     [InlineData("production")]
@@ -55,7 +74,7 @@ public class SyntheticSeedTests(SqlServerFixture sql) : IClassFixture<SqlServerF
     [InlineData(null)]
     public async Task RefusesToRunOutsideDevelopmentStagingOrTest(string? environment)
     {
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => SyntheticSeed.SeedAsync(sql.ConnectionString, environment, includeUae: true, SqlServerFixture.Keys));
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => SyntheticSeed.SeedAsync(sql.ConnectionString, environment, includeUae: true));
         Assert.Contains("refused", ex.Message, StringComparison.Ordinal);
     }
 }

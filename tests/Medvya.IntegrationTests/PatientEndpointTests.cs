@@ -23,7 +23,7 @@ namespace Medvya.IntegrationTests;
 /// MDV-P1-018 over HTTP against real SQL Server: capability policy from the active membership, search text only in the POST body,
 /// privacy-safe rows, one audit event per request, facility scope and rate limiting. Synthetic data only.
 /// </summary>
-public sealed class PatientEndpointTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>, IAsyncLifetime
+public sealed class PatientEndpointTests(PostgresFixture sql) : IClassFixture<PostgresFixture>, IAsyncLifetime
 {
     readonly Guid tenant = Guid.NewGuid(), facility = Guid.NewGuid(), otherFacility = Guid.NewGuid();
     readonly Dictionary<string, Guid> users = [];
@@ -57,7 +57,7 @@ public sealed class PatientEndpointTests(SqlServerFixture sql) : IClassFixture<S
 
     async Task<Guid> Register(Guid at, string name, string mobile, Func<RegisterPatient, RegisterPatient>? more = null)
     {
-        var registry = new PatientRegistry(sql.Patients(tenant), new SqlServerFixture.FixedTenant(tenant), new PatientRegistryTests.FixedFacility(at),
+        var registry = new PatientRegistry(sql.Patients(tenant), new PostgresFixture.FixedTenant(tenant), new PatientRegistryTests.FixedFacility(at),
             new SignedInUser(Guid.NewGuid()), new AuditLog(sql.Audit(tenant)), TimeProvider.System, new PatientRegistryTests.FacilityZone("Asia/Kolkata"));
         var command = IndiaBase with { FacilityId = at, FullName = name, Mobile = mobile };
         return (await registry.RegisterAsync(more is null ? command : more(command))).PatientId;

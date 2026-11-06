@@ -11,7 +11,7 @@ namespace Medvya.IntegrationTests;
 /// MDV-P1-012 on real SQL Server: leave and one-off sessions, the action required for every affected booking before anything is
 /// saved, the rebooking message without clinical details, slots for an extra session on its day only, and the audit trail.
 /// </summary>
-public sealed class ScheduleAdjustmentTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>, IAsyncLifetime
+public sealed class ScheduleAdjustmentTests(PostgresFixture sql) : IClassFixture<PostgresFixture>, IAsyncLifetime
 {
     static readonly DateOnly Saturday = new(2026, 10, 24);
     static readonly DateTimeOffset Tuesday = new DateTimeOffset(2026, 10, 20, 9, 0, 0, TimeSpan.FromHours(5.5)).ToUniversalTime();

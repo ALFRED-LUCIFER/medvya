@@ -24,7 +24,7 @@ public static class NotificationsModule
         if (smsSink) services.TryAddScoped<ISmsGateway, SinkSmsGateway>();
         else services.TryAddScoped<ISmsGateway, UnconfiguredSmsGateway>();
         return services
-            .AddDbContext<NotificationsDbContext>((sp, o) => o.UseSqlServer(connectionString).AddInterceptors(sp.GetRequiredService<TenantSessionInterceptor>()))
+            .AddDbContext<NotificationsDbContext>((sp, o) => o.UseNpgsql(connectionString).AddInterceptors(sp.GetRequiredService<TenantSessionInterceptor>()))
             .AddScoped<IAppointmentSubscriber, AppointmentNotifier>()
             .AddScoped<INotificationSender, NotificationSender>()
             .AddScoped<IReceiptProcessor, ReceiptProcessor>()

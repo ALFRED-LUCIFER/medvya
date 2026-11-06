@@ -9,7 +9,7 @@ using Medvya.Tenancy.Domain;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
-using Microsoft.Data.SqlClient;
+using Npgsql;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Medvya.IntegrationTests;
@@ -24,7 +24,7 @@ public sealed class RunsAlone;
 /// identifier lookup are all inside the timing.
 /// </summary>
 [Collection(nameof(RunsAlone))]
-public sealed class PatientSearchPerformanceTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>
+public sealed class PatientSearchPerformanceTests(PostgresFixture sql) : IClassFixture<PostgresFixture>
 {
     const int Patients = 50_000;
     readonly Guid tenant = Guid.NewGuid(), facility = Guid.NewGuid(), receptionist = Guid.NewGuid();
@@ -37,7 +37,7 @@ public sealed class PatientSearchPerformanceTests(SqlServerFixture sql) : IClass
 
     /// <summary>
     /// Bulk-loads synthetic patients and one ABHA each inside the tenant (row-level security block predicates apply as for the API).
-    /// The identifiers go through an Always Encrypted connection, so SqlClient encrypts them as the API would.
+    /// The identifiers are encrypted and blind-indexed with the fixture's keys, exactly as the API stores them (MDV-P0-035).
     /// </summary>
     async Task SeedAsync()
     {
@@ -59,7 +59,7 @@ public sealed class PatientSearchPerformanceTests(SqlServerFixture sql) : IClass
         var identifiers = new DataTable();
         foreach (var (name, type) in new (string, Type)[]
         {
-            ("Id", typeof(Guid)), ("TenantId", typeof(Guid)), ("PatientId", typeof(Guid)), ("Scheme", typeof(string)), ("LookupValue", typeof(string)),
+            ("Id", typeof(Guid)), ("TenantId", typeof(Guid)), ("PatientId", typeof(Guid)), ("Scheme", typeof(string)), ("LookupValue", typeof(byte[])), ("LookupIndex", typeof(byte[])),
         }) identifiers.Columns.Add(name, type);
 
         var start = DateTimeOffset.UtcNow.AddMinutes(-Patients); // about one registration a minute, the last week "recent"
@@ -69,25 +69,12 @@ public sealed class PatientSearchPerformanceTests(SqlServerFixture sql) : IClass
             patients.Rows.Add(id, tenant, facility, Mrn.Format(n), "IN",
                 $"{Given[n % Given.Length]} {Family[n / Given.Length % Family.Length]} {n} (synthetic)", new DateTime(1940 + n % 80, 1 + n % 12, 1 + n % 28),
                 false, n % 2 == 0 ? "Female" : "Male", $"+9190{n:D8}", n % 10 == 0 ? "Incomplete" : "Complete", start.AddMinutes(n), start.AddMinutes(n));
-            identifiers.Rows.Add(Guid.CreateVersion7(), tenant, id, "Abha", Abha(n));
+            identifiers.Rows.Add(Guid.CreateVersion7(), tenant, id, "Abha", sql.NationalIds.Encrypt(tenant, Abha(n)), sql.NationalIds.Index(tenant, Abha(n)));
         }
 
-        await using (var conn = await sql.OpenAs("dbo", tenant))
-        {
-            using var copy = new SqlBulkCopy(conn) { DestinationTableName = "patients.Patients", BulkCopyTimeout = 600 };
-            foreach (DataColumn c in patients.Columns) copy.ColumnMappings.Add(c.ColumnName, c.ColumnName);
-            await copy.WriteToServerAsync(patients);
-            await using var stats = new SqlCommand("UPDATE STATISTICS patients.Patients", conn);
-            await stats.ExecuteNonQueryAsync();
-        }
-        await using (var encrypted = await sql.OpenAs("dbo", tenant, columnEncryption: true))
-        {
-            using var copy = new SqlBulkCopy(encrypted) { DestinationTableName = "patients.Identifiers", BulkCopyTimeout = 600 };
-            foreach (DataColumn c in identifiers.Columns) copy.ColumnMappings.Add(c.ColumnName, c.ColumnName);
-            await copy.WriteToServerAsync(identifiers);
-            await using var stats = new SqlCommand("UPDATE STATISTICS patients.Identifiers", encrypted);
-            await stats.ExecuteNonQueryAsync();
-        }
+        await using var conn = await sql.OpenAs("dbo", tenant);
+        await PostgresFixture.BulkCopyAsync(conn, "patients.Patients", patients);
+        await PostgresFixture.BulkCopyAsync(conn, "patients.Identifiers", identifiers);
     }
 
     [Fact]

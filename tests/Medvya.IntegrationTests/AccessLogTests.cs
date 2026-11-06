@@ -14,7 +14,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Data.SqlClient;
+using Npgsql;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Medvya.IntegrationTests;
@@ -24,7 +24,7 @@ namespace Medvya.IntegrationTests;
 /// audited Denied); filtering by patient lists every event on that record by anyone, denied attempts included; paging is stable;
 /// another tenant's events never appear; the export is watermarked, audited and carries no patient names.
 /// </summary>
-public sealed class AccessLogTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>, IAsyncLifetime
+public sealed class AccessLogTests(PostgresFixture sql) : IClassFixture<PostgresFixture>, IAsyncLifetime
 {
     readonly SchedulingHarness h = new(sql);
     WebApplicationFactory<Program>? factory;
@@ -277,11 +277,7 @@ public sealed class AccessLogTests(SqlServerFixture sql) : IClassFixture<SqlServ
                 patients[n % patients.Length], "treatment", n % 50 == 0 ? "Denied" : "Allowed", start.AddSeconds(n * 17.28));
         await using (var conn = await sql.OpenAs("dbo", h.Tenant))
         {
-            using var copy = new SqlBulkCopy(conn) { DestinationTableName = "audit.AuditEvents", BulkCopyTimeout = 600 };
-            foreach (DataColumn c in table.Columns) copy.ColumnMappings.Add(c.ColumnName, c.ColumnName);
-            await copy.WriteToServerAsync(table);
-            await using var stats = new SqlCommand("UPDATE STATISTICS audit.AuditEvents", conn);
-            await stats.ExecuteNonQueryAsync();
+            await PostgresFixture.BulkCopyAsync(conn, "audit.AuditEvents", table);
         }
         using var client = Client(Role.PracticeAdmin);
         var from = Uri.EscapeDataString(start.ToString("o", CultureInfo.InvariantCulture));

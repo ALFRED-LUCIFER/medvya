@@ -9,6 +9,9 @@ public sealed class LeadsDbContext(DbContextOptions<LeadsDbContext> options) : D
     public DbSet<DemoRequest> DemoRequests => Set<DemoRequest>();
     public DbSet<WaitlistEntry> Waitlist => Set<WaitlistEntry>();
 
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder) =>
+        Medvya.BuildingBlocks.Infrastructure.UtcDateTimeOffset.Apply(configurationBuilder);
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasDefaultSchema("leads");

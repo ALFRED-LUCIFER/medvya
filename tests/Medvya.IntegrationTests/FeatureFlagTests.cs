@@ -16,7 +16,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Medvya.IntegrationTests;
 
 /// <summary>MDV-P0-028: per-tenant flags, default off, audited, gated endpoints answer 404 when off.</summary>
-public class FeatureFlagTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>, IAsyncLifetime
+public class FeatureFlagTests(PostgresFixture sql) : IClassFixture<PostgresFixture>, IAsyncLifetime
 {
     const string Key = "scheduling.waitlist";
     readonly Guid tenantA = Guid.NewGuid(), tenantB = Guid.NewGuid(), actor = Guid.NewGuid();
@@ -34,7 +34,7 @@ public class FeatureFlagTests(SqlServerFixture sql) : IClassFixture<SqlServerFix
     public Task DisposeAsync() => Task.CompletedTask;
 
     FeatureFlags Flags(Guid? tenant, IAuditLog? audit = null) =>
-        new(sql.Context(tenant), new SqlServerFixture.FixedTenant(tenant), new FixedUser(actor), audit ?? new AuditLog(sql.Audit(tenant)));
+        new(sql.Context(tenant), new PostgresFixture.FixedTenant(tenant), new FixedUser(actor), audit ?? new AuditLog(sql.Audit(tenant)));
 
     [Fact]
     public async Task FlagsDefaultToOff()
@@ -125,7 +125,7 @@ public class FeatureFlagTests(SqlServerFixture sql) : IClassFixture<SqlServerFix
     {
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
-        builder.Services.AddSingleton<ICurrentTenant>(new SqlServerFixture.FixedTenant(tenant));
+        builder.Services.AddSingleton<ICurrentTenant>(new PostgresFixture.FixedTenant(tenant));
         builder.Services.AddSingleton<ICurrentUser>(new FixedUser(actor));
         builder.Services.AddAuditModule(sql.ConnectionString).AddTenancyModule(sql.ConnectionString);
         overrides(builder.Services);

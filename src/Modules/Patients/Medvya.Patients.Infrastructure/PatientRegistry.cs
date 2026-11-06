@@ -91,7 +91,7 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
         return new(patient.Id, patient.Mrn, now, user.UserId, patient.Status, warnings);
         }
         // An identical request that raced this one committed first (unique index on the key): answer with its outcome.
-        catch (DbUpdateException e) when (key is not null && e.InnerException is Microsoft.Data.SqlClient.SqlException { Number: 2601 or 2627 })
+        catch (DbUpdateException e) when (key is not null && e.InnerException is Npgsql.PostgresException { SqlState: Npgsql.PostgresErrorCodes.UniqueViolation })
         {
             db.ChangeTracker.Clear();
             if (await ReplayAsync(key, now, warnings, cancellationToken) is { } raced) return raced;
@@ -118,6 +118,12 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
 
     public Task<PatientRecord?> GetAsync(Guid patientId, CancellationToken cancellationToken = default) => LoadAsync(patientId, cancellationToken);
 
+    IQueryable<Patient> IdentifierMatch(IQueryable<Patient> patients, IdentifierScheme scheme, string value)
+    {
+        var index = db.LookupIndexFor(value);
+        return patients.Where(p => db.Identifiers.Any(i => i.PatientId == p.Id && i.Scheme == scheme && EF.Property<byte[]>(i, NationalIdColumns.LookupIndex) == index));
+    }
+
     public async Task<PatientSearchResult> SearchAsync(PatientSearch search, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(search);
@@ -129,12 +135,12 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
         var like = term.Kind == SearchKind.Name ? LikeContaining(term.Value!) : null;
         patients = term.Kind switch
         {
-            SearchKind.Name => patients.Where(p => EF.Functions.Like(p.FullName, like!, Escape) || (p.ArabicName != null && EF.Functions.Like(p.ArabicName, like!, Escape))),
+            SearchKind.Name => patients.Where(p => EF.Functions.ILike(p.FullName, like!, Escape) || (p.ArabicName != null && EF.Functions.ILike(p.ArabicName, like!, Escape))),
             SearchKind.Phone => patients.Where(p => p.Mobile == term.Value || p.AlternatePhone == term.Value),
             // Either MRN of a merged pair finds the survivor (MDV-P1-017); the merged record itself is hidden below.
             SearchKind.Mrn => patients.Where(p => p.Mrn == term.Value || db.Patients.Any(m => m.MergedIntoPatientId == p.Id && m.Mrn == term.Value)),
-            // Deterministic Always Encrypted: SqlClient encrypts the parameter and SQL Server compares ciphertexts (equality only).
-            SearchKind.Identifier => patients.Where(p => db.Identifiers.Any(i => i.PatientId == p.Id && i.Scheme == term.Scheme && i.LookupValue == term.Value)),
+            // Exact match on the HMAC blind index (MDV-P0-035); the value itself is ciphertext and never compared in SQL.
+            SearchKind.Identifier => IdentifierMatch(patients, term.Scheme!.Value, term.Value!),
             _ => patients,
         };
         patients = search.Filter switch
@@ -188,8 +194,9 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
         var byIdentifier = new Dictionary<Guid, List<IdentifierScheme>>();
         foreach (var key in keys)
         {
-            // Deterministic Always Encrypted: equality on ciphertext, never a decrypting scan.
-            var ids = await db.Identifiers.Where(i => i.Scheme == key.Scheme && i.LookupValue == key.Value).Select(i => i.PatientId).ToListAsync(cancellationToken);
+            // Blind index equality (MDV-P0-035), never a decrypting scan.
+            var index = db.LookupIndexFor(key.Value);
+            var ids = await db.Identifiers.Where(i => i.Scheme == key.Scheme && EF.Property<byte[]>(i, NationalIdColumns.LookupIndex) == index).Select(i => i.PatientId).ToListAsync(cancellationToken);
             foreach (var id in ids) (byIdentifier.TryGetValue(id, out var schemes) ? schemes : byIdentifier[id] = []).Add(key.Scheme);
         }
 
@@ -294,15 +301,13 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
         return new(patient, identifiers, payer, relationships);
     }
 
-    /// <summary>Next facility-scoped MRN, allocated inside the caller's transaction (HOLDLOCK serialises concurrent desks).</summary>
+    /// <summary>Next facility-scoped MRN, allocated inside the caller's transaction (the upsert's row lock serialises concurrent desks).</summary>
     async Task<string> NextMrnAsync(Guid tenantId, Guid facilityId, CancellationToken cancellationToken)
     {
         var next = (await db.Database.SqlQuery<int>($"""
-            MERGE patients.MrnCounters WITH (HOLDLOCK) AS c
-            USING (SELECT {tenantId} AS TenantId, {facilityId} AS FacilityId) AS s ON c.TenantId = s.TenantId AND c.FacilityId = s.FacilityId
-            WHEN MATCHED THEN UPDATE SET LastNumber = c.LastNumber + 1
-            WHEN NOT MATCHED THEN INSERT (TenantId, FacilityId, LastNumber) VALUES (s.TenantId, s.FacilityId, 1)
-            OUTPUT inserted.LastNumber AS Value;
+            INSERT INTO patients."MrnCounters" ("TenantId", "FacilityId", "LastNumber") VALUES ({tenantId}, {facilityId}, 1)
+            ON CONFLICT ("TenantId", "FacilityId") DO UPDATE SET "LastNumber" = patients."MrnCounters"."LastNumber" + 1
+            RETURNING "LastNumber" AS "Value"
             """).ToListAsync(cancellationToken)).Single();
         return Mrn.Format(next);
     }

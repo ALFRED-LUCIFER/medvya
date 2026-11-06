@@ -1,20 +1,16 @@
 using Medvya.BuildingBlocks.Domain;
+using Medvya.BuildingBlocks.Security;
 using Medvya.Patients.Domain;
 using Microsoft.EntityFrameworkCore;
 
 namespace Medvya.Patients.Infrastructure.Persistence;
 
 /// <summary>
-/// Tenant isolation layer 1 of 2: EF query filters; layer 2 is row-level security (InitialPatients migration).
-/// Identifier values and member numbers are Always Encrypted and personal columns carry dynamic data masks; both are created
-/// by raw SQL in the migration because EF Core cannot express them. Needs a connection with Column Encryption Setting=Enabled
-/// (<see cref="PatientsModule.WithColumnEncryption"/>).
+/// Tenant isolation layer 1 of 2: EF query filters; layer 2 is row-level security (MDV-P0-034). Identifier values and member numbers are
+/// encrypted by <see cref="NationalIdColumns"/> (MDV-P0-035), which every instance must be given.
 /// </summary>
-public sealed class PatientsDbContext(DbContextOptions<PatientsDbContext> options, ICurrentTenant tenant) : DbContext(options)
+public sealed class PatientsDbContext(DbContextOptions<PatientsDbContext> options, ICurrentTenant tenant, NationalIdColumns nationalIds) : DbContext(options)
 {
-    /// <summary>Deterministic Always Encrypted string columns need a BIN2 collation; the model must match so parameters do.</summary>
-    public const string Bin2 = "Latin1_General_BIN2";
-
     public DbSet<Patient> Patients => Set<Patient>();
     public DbSet<PatientIdentifier> Identifiers => Set<PatientIdentifier>();
     public DbSet<PayerCoverage> PayerCoverages => Set<PayerCoverage>();
@@ -22,7 +18,20 @@ public sealed class PatientsDbContext(DbContextOptions<PatientsDbContext> option
     public DbSet<PatientRelationship> Relationships => Set<PatientRelationship>();
     public DbSet<ConsentReceipt> ConsentReceipts => Set<ConsentReceipt>();
 
+    public DbSet<DataKey> DataKeys => Set<DataKey>();
+
     Guid? CurrentTenantId => tenant.TenantId;
+
+    /// <summary>The blind-index value to compare with <c>EF.Property&lt;byte[]&gt;(i, NationalIdColumns.LookupIndex)</c> in the current tenant.</summary>
+    public byte[] LookupIndexFor(string value) =>
+        nationalIds.Index(tenant.TenantId ?? throw new KeyProtectionException(KeyProtectionException.NoTenant), value);
+
+    internal NationalIdColumns NationalIds => nationalIds;
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder) => optionsBuilder.AddInterceptors(nationalIds, NationalIdColumns.DecryptOnLoad);
+
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder) =>
+        Medvya.BuildingBlocks.Infrastructure.UtcDateTimeOffset.Apply(configurationBuilder);
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -65,16 +74,20 @@ public sealed class PatientsDbContext(DbContextOptions<PatientsDbContext> option
             e.Property(x => x.IdempotencyKeyHash).HasMaxLength(64).IsFixedLength();
             e.Property(x => x.IdempotencyRequestHash).HasMaxLength(64).IsFixedLength();
             // One registration per Idempotency-Key and registrar (MDV-P1-047): the last line if two identical requests race.
-            e.HasIndex(x => new { x.TenantId, x.RegisteredBy, x.IdempotencyKeyHash }).IsUnique().HasFilter("[IdempotencyKeyHash] IS NOT NULL");
+            e.HasIndex(x => new { x.TenantId, x.RegisteredBy, x.IdempotencyKeyHash }).IsUnique().HasFilter("\"IdempotencyKeyHash\" IS NOT NULL");
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         modelBuilder.Entity<PatientIdentifier>(e =>
         {
             e.Property(x => x.Scheme).HasConversion<string>().HasMaxLength(20);
-            e.Property(x => x.LookupValue).HasMaxLength(64).UseCollation(Bin2);
-            e.Property(x => x.DisplayValue).HasMaxLength(64);
+            // Ciphertext and blind index only (MDV-P0-035); the string properties are filled by NationalIdColumns.
+            e.Ignore(x => x.LookupValue);
+            e.Ignore(x => x.DisplayValue);
+            e.Property<byte[]?>(NationalIdColumns.LookupCipher).HasColumnName("LookupValue");
+            e.Property<byte[]?>(NationalIdColumns.DisplayCipher).HasColumnName("DisplayValue");
+            e.Property<byte[]?>(NationalIdColumns.LookupIndex);
             e.HasOne<Patient>().WithMany().HasForeignKey(x => x.PatientId).OnDelete(DeleteBehavior.Restrict);
-            e.HasIndex(x => new { x.TenantId, x.Scheme, x.LookupValue });
+            e.HasIndex("TenantId", "Scheme", NationalIdColumns.LookupIndex);
             e.HasIndex(x => new { x.TenantId, x.MovedFromPatientId });
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
@@ -83,10 +96,18 @@ public sealed class PatientsDbContext(DbContextOptions<PatientsDbContext> option
             e.Property(x => x.Kind).HasConversion<string>().HasMaxLength(20);
             e.Property(x => x.PayerName).HasMaxLength(200);
             e.Property(x => x.Plan).HasMaxLength(100);
-            e.Property(x => x.MemberNumber).HasMaxLength(50).UseCollation(Bin2);
+            e.Ignore(x => x.MemberNumber);
+            e.Property<byte[]?>(NationalIdColumns.MemberNumberCipher).HasColumnName("MemberNumber");
             e.Property(x => x.Network).HasMaxLength(100);
             e.HasOne<Patient>().WithMany().HasForeignKey(x => x.PatientId).OnDelete(DeleteBehavior.Restrict);
             e.HasIndex(x => x.PatientId).IsUnique(); // one current payer per patient in P1
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<DataKey>(e =>
+        {
+            e.HasKey(x => new { x.TenantId, x.Purpose });
+            e.Property(x => x.Purpose).HasMaxLength(20);
+            e.Property(x => x.WrapKeyId).HasMaxLength(300);
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         modelBuilder.Entity<PatientRelationship>(e =>
@@ -101,7 +122,7 @@ public sealed class PatientsDbContext(DbContextOptions<PatientsDbContext> option
         });
         modelBuilder.Entity<ConsentReceipt>(e =>
         {
-            // A ledger table (ConsentReceipts migration): append-only.
+            // Append-only (tamper evidence returns with MDV-P0-036).
             e.Property(x => x.Type).HasConversion<string>().HasMaxLength(24);
             e.Property(x => x.Channel).HasConversion<string>().HasMaxLength(12);
             e.Property(x => x.PolicyVersion).HasMaxLength(32);

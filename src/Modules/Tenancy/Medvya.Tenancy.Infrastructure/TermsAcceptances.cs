@@ -33,13 +33,22 @@ public sealed class TermsAcceptances(TenancyDbContext db, ICurrentTenant tenant,
     {
         var tenantId = tenant.TenantId ?? throw new InvalidOperationException("No tenant context.");
         // The owner of a practice: its admin, or the solo doctor running it. Not hospital IT, not a hospital's clinicians.
+        // A solo doctor whose licence is still pending may accept: the DPA binds the account holder as data controller, and a pending doctor may book
+        // (DoctorLicence); the licence gates recording and signing only.
         if (user.UserId is not { } userId || await staff.CurrentRoleAsync(cancellationToken) is not (Role.PracticeAdmin or Role.SoloDoctor)) return false;
         if (await AcceptedAtAsync(cancellationToken) is not null) return true;
 
         var now = clock.GetUtcNow();
         await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
         db.TermsAcceptances.Add(new TermsAcceptance { Id = Guid.CreateVersion7(), TenantId = tenantId, TermsVersion = TermsPolicy.CurrentVersion, AcceptedAt = now, AcceptedBy = userId });
-        await db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException e) when (e.InnerException is Npgsql.PostgresException { SqlState: Npgsql.PostgresErrorCodes.UniqueViolation })
+        {
+            return true; // a second, simultaneous accept: the first one's row and audit event stand
+        }
         await audit.WriteAsync(new AuditEvent
         {
             Id = Guid.CreateVersion7(), TenantId = tenantId, ActorUserId = userId, Action = "tenant.terms.accept", ResourceType = "tenant",

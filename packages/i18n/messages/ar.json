@@ -1,6 +1,9 @@
 {
   "_review": "Machine-drafted. Needs native-speaker and clinical review before real patients (MDV-P0-021). consent.script is intentionally missing until legal review (MDV-P3-023). The privacy notice (site.notice.*, site.form.consent) also needs legal review (MDV-P1-044).",
   "app.tagline": "تطبيق العيادة · الإصدار الأساسي",
+  "mobile.clinician.name": "ميدفيا للعيادات",
+  "mobile.patient.name": "ميدفيا للمرضى",
+  "mobile.home.ready": "التطبيق جاهز. ستتوفر الميزات في الإصدارات القادمة.",
   "app.language": "اللغة",
   "ai.badge": "مسودة ذكاء اصطناعي · غير مراجَعة",
   "note.signBlocked": "توقيع الملاحظة ({n} غير محلولة)",
@@ -712,6 +715,7 @@
   "appointment.error.in_past": "بدأ هذا الموعد بالفعل. اختر موعدًا لاحقًا.",
   "appointment.error.busy": "هذا التقويم مشغول بتغييرات أخرى الآن. لم يُحفظ شيء؛ حاول مرة أخرى.",
   "appointment.error.failed": "لم ينجح ذلك. لم يتغير شيء؛ حاول مرة أخرى.",
+  "appointment.error.terms_not_accepted": "تغيير الموعد متوقف: لم توافق العيادة بعد على شروط الخدمة. يوافق مالك العيادة عليها من الإعدادات ← الشروط.",
   "schedule.slot.moveTo": "نقل {patient} إلى {name} الساعة {time}",
   "schedule.slot.moveShort": "نقل",
   "booking.rebook.title": "إعادة حجز {name}",

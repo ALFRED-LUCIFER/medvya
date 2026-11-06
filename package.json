@@ -6,6 +6,8 @@
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",
     "dev": "pnpm --filter clinic dev",
+    "dev:clinician": "pnpm --filter @medvya/mobile-clinician start",
+    "dev:patient": "pnpm --filter @medvya/mobile-patient start",
     "services:up": "docker compose up -d --wait",
     "services:down": "docker compose down",
     "dev:db": "pnpm services:up && P=${POSTGRES_PASSWORD:-Local_dev_only_1} && dotnet run --project tools/db-migrate -- admin \"Host=localhost;Port=5432;Database=medvya;Username=medvya;Password=$P\" medvya_app=$P medvya_migrator=$P && dotnet run --project tools/db-migrate -- migrate \"Host=localhost;Port=5432;Database=medvya;Username=medvya_migrator;Password=$P\" && DOTNET_ENVIRONMENT=Development ConnectionStrings__Medvya=\"Host=localhost;Port=5432;Database=medvya;Username=medvya_app;Password=$P\" dotnet run --project tools/synthetic-data-generator --",

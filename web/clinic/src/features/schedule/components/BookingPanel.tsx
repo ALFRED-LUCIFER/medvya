@@ -151,7 +151,7 @@ export default function BookingPanel(p: Props) {
             {p.holding ? t('booking.holding') : p.hold ? t('booking.heldUntil', { time: time(p.hold.expiresAt) }) : ''}
           </p>
         </div>
-        {p.holdError && <p role="alert" className="rounded-md border border-destructive p-3 text-sm font-bold text-destructive">{t(`booking.error.${p.holdError}`)}</p>}
+        {p.holdError && <BookError code={p.holdError} />}
 
         <div className={field}>
           <Label htmlFor="booking-visit-type">{t('booking.visitType')}</Label>

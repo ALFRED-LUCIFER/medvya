@@ -62,6 +62,16 @@ public sealed partial class NotificationsTests(PostgresFixture sql) : IClassFixt
 
     sealed class FixedUser(Guid id) : ICurrentUser { public Guid? UserId => id; }
 
+    sealed class Terms : Medvya.Tenancy.Application.ITermsAcceptance
+    {
+        public bool Accepted { get; set; } = true;
+        public Task<bool> IsSatisfiedAsync(CancellationToken cancellationToken = default) => Task.FromResult(Accepted);
+        public Task<Medvya.Tenancy.Application.TermsStatus> StatusAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<bool> AcceptAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();
+    }
+
+    readonly Terms terms = new();
+
     public async Task InitializeAsync()
     {
         await h.SeedAsync();
@@ -98,6 +108,7 @@ public sealed partial class NotificationsTests(PostgresFixture sql) : IClassFixt
         services.AddAuditModule(h.ConnectionString).AddTenancyModule(h.ConnectionString).AddIdentityModule(h.ConnectionString)
             .AddPatientsModule(h.ConnectionString).AddSchedulingModule(h.ConnectionString).AddNotificationsModule(h.ConnectionString, smsSink: false);
         if (realConsent) services.AddScoped<IReminderConsent, Medvya.Notifications.Api.PatientReminderConsent>(); // as the host registers it
+        services.AddSingleton<Medvya.Tenancy.Application.ITermsAcceptance>(terms); // the real one is tested in TermsAcceptanceTests
         services.Configure<NotificationOptions>(o =>
         {
             o.Sms.DefaultSender = "ADYCLN";
@@ -594,6 +605,22 @@ public sealed partial class NotificationsTests(PostgresFixture sql) : IClassFixt
 
         var second = await BookTuesdayAsync(11);
         Assert.DoesNotContain(await RowsAsync(second.Id), r => r.Channel == NotificationChannel.Sms);
+    }
+
+    // SAFETY: mutation check: dropping the terms filter in NotificationSender.SendDueAsync sends the confirmation (first assert fails);
+    // filtering every kind keeps the cancellation queued (second assert fails).
+    [Fact]
+    public async Task UntilTheTermsAreAcceptedOnlyACancellationGoesOutAndTheRestWaits()
+    {
+        terms.Accepted = false;
+        var visit = await BookTuesdayAsync();
+        await RunJobAsync();
+        Assert.Empty(email.Sent);
+        Assert.All((await RowsAsync(visit.Id)).Where(r => r.Kind == NotificationKind.Confirmation), r => Assert.Equal(NotificationStatus.Queued, r.Status)); // waits, not dropped
+
+        await h.Booking(h.Reception).CancelAsync(visit.Id, new CancelAppointment { Reason = CancelReason.PatientRequest });
+        await RunJobAsync();
+        Assert.Equal("अपॉइंटमेंट रद्द", Assert.Single(email.Sent).Subject);
     }
 
     [Fact]

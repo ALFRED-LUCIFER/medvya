@@ -124,7 +124,8 @@ test('offboarding asks for a reason, confirms, and says the last administrator c
   await page.getByRole('button', { name: 'Offboard K. Lakshmi (synthetic)' }).click();
   await page.getByLabel('Reason (kept in the audit trail)').fill('Testing');
   await page.getByRole('button', { name: 'Offboard and sign out everywhere' }).click();
-  await expect(page.getByRole('alert')).toContainText('last administrator');
+  // scoped: the page can also show an unrelated 'settings could not be loaded' alert while its request fails
+  await expect(page.getByRole('alert').filter({ hasText: 'last administrator' })).toBeVisible();
 });
 
 test('the offboarding form lays out right to left in Arabic', async ({ page }) => {

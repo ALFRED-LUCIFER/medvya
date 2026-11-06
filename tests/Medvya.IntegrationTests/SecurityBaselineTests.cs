@@ -1,4 +1,7 @@
 using System.Net;
+using System.Net.Http.Json;
+using System.Reflection;
+using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -28,6 +31,15 @@ public class SecurityBaselineTests
         Assert.Contains("camera=()", Assert.Single(res.Headers.GetValues("Permissions-Policy")), StringComparison.Ordinal);
         Assert.StartsWith("max-age=31536000", Assert.Single(res.Headers.GetValues("Strict-Transport-Security")), StringComparison.Ordinal);
         Assert.False(res.Headers.Contains("Server"));
+    }
+
+    [Fact]
+    public async Task HealthReportsTheBuildVersion()
+    {
+        // The deploy smoke test compares this with the tag it published (MDV-P0-007).
+        var health = await Client().GetFromJsonAsync<JsonElement>(new Uri("/health", UriKind.Relative));
+        var expected = typeof(Program).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()!.InformationalVersion;
+        Assert.Equal(expected, health.GetProperty("version").GetString());
     }
 
     [Fact]

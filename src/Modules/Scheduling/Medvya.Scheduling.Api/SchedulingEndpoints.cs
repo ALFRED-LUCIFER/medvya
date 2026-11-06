@@ -24,7 +24,7 @@ public static class SchedulingEndpoints
 
         schedule.MapGet("/", (Guid? facilityId, DateOnly? date, [FromServices] IScheduleService service, CancellationToken ct) =>
                 service.GetDayAsync(facilityId ?? Guid.Empty, date, ct))
-            .AuditedWithErrors("schedule.read", "schedule");
+            .AuditedWithErrors("schedule.read", "schedule", window: AuditWindow.Repeated); // refetched after every change at the desk
 
         // Printing is a read of patient data that leaves the system: one audit row per print, with who printed it (MDV-P1-050).
         schedule.MapPost("/print", (PrintDaySheet command, [FromServices] IScheduleService service, CancellationToken ct) =>
@@ -33,7 +33,7 @@ public static class SchedulingEndpoints
 
         schedule.MapGet("/week", (Guid? facilityId, Guid? calendarId, DateOnly? date, [FromServices] IScheduleService service, CancellationToken ct) =>
                 service.GetWeekAsync(facilityId ?? Guid.Empty, calendarId ?? Guid.Empty, date, ct))
-            .AuditedWithErrors("schedule.read", "schedule");
+            .AuditedWithErrors("schedule.read", "schedule", window: AuditWindow.Repeated);
 
         schedule.MapGet("/templates", (Guid? facilityId, [FromServices] IScheduleService service, CancellationToken ct) =>
                 service.ListTemplatesAsync(facilityId ?? Guid.Empty, ct))
@@ -123,7 +123,7 @@ public static class SchedulingEndpoints
         var frontDesk = app.MapGroup("/v1/front-desk").RequireAuthorization();
         frontDesk.MapGet("/board", (Guid? facilityId, [FromServices] IFrontDeskService service, CancellationToken ct) =>
                 service.GetBoardAsync(facilityId ?? Guid.Empty, ct))
-            .AuditedWithErrors("front_desk.board.read", "appointment", window: AuditWindow.Board); // a board refetches on every live update
+            .AuditedWithErrors("front_desk.board.read", "appointment", window: AuditWindow.Repeated); // a board refetches on every live update
         // Clinic overview (D-04, MDV-P1-030): doctors' load and delay, the shared waiting room.
         frontDesk.MapGet("/overview", (Guid? facilityId, [FromServices] IFrontDeskService service, CancellationToken ct) =>
                 service.GetOverviewAsync(facilityId ?? Guid.Empty, ct))

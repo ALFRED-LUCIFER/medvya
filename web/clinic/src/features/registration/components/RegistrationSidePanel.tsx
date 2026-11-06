@@ -1,11 +1,11 @@
 import { Check, UserRound } from 'lucide-react';
 import { useI18n, type Country } from '@medvya/i18n';
-import { ageOn, dataMap, isSex, rules, type RegistrationForm, type Step } from '../domain/registration';
+import { ageOn, isSex, rules, type RegistrationForm } from '../domain/registration';
 
-type Props = { country: Country; values: RegistrationForm; ageInstead: boolean; step: Step | null; today: string };
+type Props = { country: Country; values: RegistrationForm; ageInstead: boolean; today: string };
 
-/** P-02 side panel: preview card, "Data map · this step writes" and the country's rules. Shows only what the desk typed. */
-export default function RegistrationSidePanel({ country, values, ageInstead, step, today }: Props) {
+/** P-02 side panel: preview card and the country's rules (the developer-facing data map is gone, MDV-P1-052). Shows only what the desk typed. */
+export default function RegistrationSidePanel({ country, values, ageInstead, today }: Props) {
   const { t } = useI18n();
   const age = ageInstead ? (values.ageYears.trim() === '' ? null : Number(values.ageYears)) : ageOn(values.dateOfBirth, today);
   const meta = [age !== null && !Number.isNaN(age) ? t(ageInstead ? 'patients.ageEstimated' : 'patients.age', { age }) : '',
@@ -25,17 +25,6 @@ export default function RegistrationSidePanel({ country, values, ageInstead, ste
         <p className="text-xs text-muted-foreground">{t('registration.preview.mrn')}</p>
       </section>
 
-      <section aria-labelledby="registration-map" className="flex flex-col gap-2 rounded-xl border bg-card p-4">
-        <h2 id="registration-map" className="text-sm font-bold text-muted-foreground">{t('registration.map.title')}</h2>
-        <ul className="flex flex-col gap-2">
-          {dataMap[step ?? 'quick'].map(d => (
-            <li key={d.entity + d.key} className="text-sm">
-              <span className="font-mono text-xs font-bold" dir="ltr">{d.entity}</span>
-              <span className="block text-muted-foreground">{t(`registration.map.${d.key}`)}</span>
-            </li>
-          ))}
-        </ul>
-      </section>
 
       <section aria-labelledby="registration-rules" className="flex flex-col gap-2 rounded-xl border bg-card p-4">
         <h2 id="registration-rules" className="text-sm font-bold text-muted-foreground">{t('registration.rules.title')}</h2>

@@ -78,6 +78,46 @@ resource insights 'Microsoft.Insights/components@2020-02-02' = {
   }
 }
 
+resource alertOwner 'Microsoft.Insights/actionGroups@2023-01-01' = {
+  name: 'ag-${name}'
+  location: 'global'
+  tags: tags
+  properties: {
+    groupShortName: 'medvya-${env}'
+    enabled: true
+    emailReceivers: [{ name: 'owner', emailAddress: alertEmail, useCommonAlertSchema: true }]
+  }
+}
+
+// MDV-P0-018: server errors above 2 % of requests in 5 minutes. Below 10 requests a single error is not a rate, so it does not fire.
+// shortcut: blind while the workspace's daily cap (0.1 GB) is reached; raise the cap before real clinic traffic.
+resource serverErrors 'Microsoft.Insights/scheduledQueryRules@2023-12-01' = {
+  name: 'alert-5xx-${name}'
+  location: location
+  tags: tags
+  properties: {
+    displayName: 'Medvya ${env}: 5xx rate above 2 %'
+    severity: 1
+    enabled: true
+    scopes: [insights.id]
+    evaluationFrequency: 'PT5M'
+    windowSize: 'PT5M'
+    criteria: {
+      allOf: [
+        {
+          query: 'requests | summarize total = count(), failed = countif(toint(resultCode) >= 500) | where total >= 10 and 100.0 * failed / total > 2'
+          timeAggregation: 'Count'
+          operator: 'GreaterThan'
+          threshold: 0
+          failingPeriods: { numberOfEvaluationPeriods: 1, minFailingPeriodsToAlert: 1 }
+        }
+      ]
+    }
+    autoMitigate: true
+    actions: { actionGroups: [alertOwner.id] }
+  }
+}
+
 resource storage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   name: take('st${replace(name, '-', '')}', 24)
   location: location
@@ -423,13 +463,14 @@ var dbJobScript = '''
 set -euo pipefail
 az login --identity --client-id "$MIGRATOR_CLIENT_ID" --allow-no-subscriptions -o none
 az storage blob download --auth-mode login --account-name "$STORAGE" -c deploy -n db-migrate.tar.gz -f /tmp/db-migrate.tar.gz -o none
-mkdir -p /tmp/db-migrate && tar -xzf /tmp/db-migrate.tar.gz -C /tmp/db-migrate
+# The Azure Linux azure-cli image has no tar; its Python's tarfile extracts (data filter: no absolute paths, links out or device files).
+mkdir -p /tmp/db-migrate && python3 -m tarfile --filter data -e /tmp/db-migrate.tar.gz /tmp/db-migrate
 cd /tmp/db-migrate
 db="Host=$PGHOST;SslMode=VerifyFull"
-AZURE_CLIENT_ID="$ADMIN_CLIENT_ID" ./db-migrate admin "$db;Database=$PGDATABASE;Username=$ADMIN_NAME"
-AZURE_CLIENT_ID="$ADMIN_CLIENT_ID" ./db-migrate entra "$db;Database=postgres;Username=$ADMIN_NAME" medvya_migrator "$MIGRATOR_NAME" "$MIGRATOR_OBJECT_ID"
-AZURE_CLIENT_ID="$ADMIN_CLIENT_ID" ./db-migrate entra "$db;Database=postgres;Username=$ADMIN_NAME" medvya_app "$APP_NAME" "$APP_OBJECT_ID"
-AZURE_CLIENT_ID="$MIGRATOR_CLIENT_ID" ./db-migrate migrate "$db;Database=$PGDATABASE;Username=$MIGRATOR_NAME"
+AZURE_CLIENT_ID="$ADMIN_CLIENT_ID" ./Medvya.DbMigrate admin "$db;Database=$PGDATABASE;Username=$ADMIN_NAME"
+AZURE_CLIENT_ID="$ADMIN_CLIENT_ID" ./Medvya.DbMigrate entra "$db;Database=postgres;Username=$ADMIN_NAME" medvya_migrator "$MIGRATOR_NAME" "$MIGRATOR_OBJECT_ID"
+AZURE_CLIENT_ID="$ADMIN_CLIENT_ID" ./Medvya.DbMigrate entra "$db;Database=postgres;Username=$ADMIN_NAME" medvya_app "$APP_NAME" "$APP_OBJECT_ID"
+AZURE_CLIENT_ID="$MIGRATOR_CLIENT_ID" ./Medvya.DbMigrate migrate "$db;Database=$PGDATABASE;Username=$MIGRATOR_NAME"
 '''
 
 resource dbJob 'Microsoft.App/jobs@2024-03-01' = {

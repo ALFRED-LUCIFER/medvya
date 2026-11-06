@@ -233,6 +233,32 @@ test('moves between days and back to today', async ({ page }) => {
   expect(calls.dates.slice(0, 4)).toEqual([null, '2026-10-20', '2026-10-19', '2026-10-18']); // the server decides "today"
 });
 
+// MDV-P1-052: the day and the view are in the address; an opened visit closes when the day or view changes.
+test('the selected date and view survive a reload, and a stale visit panel closes', async ({ page }) => {
+  const calls = await open(page);
+  await expect(page).toHaveURL(/\/schedule$/); // today: nothing to remember
+  await page.getByRole('button', { name: 'Next day' }).click();
+  await expect(page).toHaveURL(/\/schedule\?date=2026-10-20$/);
+  await page.getByRole('button', { name: 'List', exact: true }).click();
+  await expect(page).toHaveURL(/\/schedule\?date=2026-10-20&view=list$/);
+  await page.reload();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Tuesday, 20 October 2026');
+  await expect(page.getByRole('button', { name: 'List', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  expect(calls.dates.at(-1)).toBe('2026-10-20');
+
+  await page.goto('/schedule?date=2026-10-19&view=day');
+  await meera(page).click();
+  await expect(visitPanel(page)).toBeVisible();
+  await page.getByRole('button', { name: 'Next day' }).click();
+  await expect(page.getByRole('complementary', { name: 'Appointment', exact: true })).toHaveCount(0); // Meera's 19 Oct visit is not shown over 20 Oct
+  await page.getByRole('button', { name: 'Previous day' }).click();
+  await meera(page).click();
+  await page.getByRole('button', { name: 'Week', exact: true }).click();
+  await expect(page.getByRole('complementary', { name: 'Appointment', exact: true })).toHaveCount(0);
+  await page.goto('/schedule?date=not-a-date&view=month'); // a broken link falls back to today and the day view
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Monday, 19 October 2026');
+});
+
 test('reception books an empty slot: hold, longer visit type, confirm the patient, book', async ({ page }) => {
   const calls = await open(page);
   await expect(bookButton(page, '09:40')).toHaveCount(0); // being booked elsewhere
@@ -659,6 +685,39 @@ test('cancel needs a reason, and a note for Other; the note never goes in a URL'
   await expect(visitPanel(page)).toContainText('Appointment cancelled. The slot is free again.');
   expect(calls.changes).toEqual([{ url: expect.stringMatching(/\/a-1\/cancel$/), body: { reason: 'Other', note: 'Synthetic: moving to another city' } }]);
   expect(calls.changes[0]!.url).not.toContain('Synthetic');
+});
+
+// MDV-P1-052: the visit panel says when reminders go out, and why there are none when there are none.
+test('the visit panel shows when reminders are scheduled, or says why nothing is', async ({ page }) => {
+  let messages: object[] = [{ id: 'n-1', kind: 'Reminder24h', channel: 'Sms', status: 'Queued', attempts: 0, failureCode: null, sendAt: ist('2026-10-18', '09:00') }];
+  await open(page);
+  await page.route('**/v1/appointments/a-1/notifications?*', r => r.fulfill({ json: messages }));
+  await meera(page).click();
+  const section = visitPanel(page).getByRole('region', { name: 'Messages to the patient' });
+  await expect(section).toContainText('Reminder 24 h (SMS): scheduled');
+  await expect(section).toContainText('Sun, 18 Oct 09:00'); // facility time
+  messages = [];
+  await visitPanel(page).getByRole('button', { name: 'Close' }).click();
+  await meera(page).click();
+  await expect(visitPanel(page).getByRole('region', { name: 'Messages to the patient' })).toContainText('No messages are scheduled for this visit. Walk-ins get none');
+});
+
+// MDV-P1-052: the cancelled 12:30 procedure freed its slot; the card sits beside it, so mouse and keyboard reach the slot.
+test('a cancelled visit never covers the slot it freed, and keyboard focus skips it', async ({ page }) => {
+  await open(page);
+  const room = column(page, 'Procedure room (synthetic)');
+  const slot = room.getByRole('button', { name: 'Book Procedure room (synthetic) at 12:30' });
+  const card = room.getByRole('button', { name: /Kavya Rao \(synthetic\)/ });
+  const [s, c] = [(await slot.boundingBox())!, (await card.boundingBox())!];
+  expect(s.x + s.width <= c.x + 1 || c.x + c.width <= s.x + 1).toBe(true); // side by side (sub-pixel rounding aside), never on top
+  await slot.click(); // a real mouse click: nothing intercepts it
+  await expect(page.getByRole('complementary', { name: 'Book appointment' })).toContainText('12:30');
+  await expect(card).toHaveAttribute('tabindex', '-1');
+  await room.getByRole('button', { name: 'Book Procedure room (synthetic) at 12:00' }).focus();
+  await page.keyboard.press('Tab');
+  await expect(slot).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(card).not.toBeFocused();
 });
 
 test('a no-show offers a rebook that fills in the patient', async ({ page }) => {

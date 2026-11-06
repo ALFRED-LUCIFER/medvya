@@ -135,9 +135,16 @@ public sealed class PostgresFixture : IAsyncLifetime
             await admin.OpenAsync();
             await Medvya.DbMigrate.DatabaseMigrator.ApplyRolesAsync(admin, Roles.Select(r => (r, LoginPassword)));
         }
-        await using var conn = new NpgsqlConnection(As("medvya_migrator"));
-        await conn.OpenAsync();
-        await Medvya.DbMigrate.DatabaseMigrator.ApplyAsync(conn);
+        await using (var conn = new NpgsqlConnection(As("medvya_migrator")))
+        {
+            await conn.OpenAsync();
+            await Medvya.DbMigrate.DatabaseMigrator.ApplyAsync(conn);
+        }
+        // The next deploy's administrator step, on a database that now has every table: its schema-wide grants must not undo the
+        // single-table rights (MDV-P0-041), so tests see the rights a long-lived database has, not only a fresh one.
+        await using var again = new NpgsqlConnection(AdminConnectionString);
+        await again.OpenAsync();
+        await Medvya.DbMigrate.DatabaseMigrator.ApplyRolesAsync(again);
     }
 
     public Task DisposeAsync() => container.DisposeAsync().AsTask();

@@ -10,6 +10,7 @@ public sealed class KeyProtectionException : Exception
     public const string KeysUnavailable = "The key service is unavailable; the operation was refused.";
     public const string UnreadableValue = "The protected value is invalid or belongs to another tenant.";
     public const string NoTenant = "No tenant is set; the operation was refused.";
+    public const string KeyMissing = "The tenant's key is missing although protected values exist; no new key was created.";
 
     public KeyProtectionException(string message, Exception? inner = null) : base(message, inner) { }
 }
@@ -32,7 +33,11 @@ public sealed class NationalIdProtectionOptions
 /// <summary>A data key as stored: only ever wrapped. <paramref name="WrapKeyId"/> names the wrapping key version used.</summary>
 public sealed record WrappedKey(Guid TenantId, string Purpose, string WrapKeyId, byte[] Wrapped);
 
-/// <summary>Where wrapped keys live (a table in part 2 of MDV-P0-035). Add is insert-if-absent and returns the winner.</summary>
+/// <summary>
+/// Where wrapped keys live (a table in part 2 of MDV-P0-035). Add is insert-if-absent and returns the winner. A durable store's Add throws
+/// <see cref="KeyProtectionException.KeyMissing"/> when the tenant already holds values protected under the missing key (MDV-P0-041): a
+/// fresh key could never read them, and silently replacing it would hide the loss.
+/// </summary>
 public interface IWrappedKeyStore
 {
     WrappedKey? Find(Guid tenantId, string purpose);

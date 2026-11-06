@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="..\..\infra\postgres\roles.sql" LogicalName="roles.sql" />
+    <EmbeddedResource Include="..\..\infra\postgres\table-rights.sql" LogicalName="table-rights.sql" />
     <PackageReference Include="Hangfire.PostgreSql" />
   </ItemGroup>
 

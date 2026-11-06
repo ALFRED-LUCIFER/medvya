@@ -19,6 +19,28 @@
   "overrides": [
     {
       "files": [
+        "src/features/**"
+      ],
+      "rules": {
+        "react/forbid-elements": [
+          "error",
+          {
+            "forbid": [
+              { "element": "table", "message": "Use Table from @medvya/ui (MDV-P0-030; docs/03-architecture/frontend-architecture.md, Tables)." },
+              { "element": "thead", "message": "Use TableHeader from @medvya/ui." },
+              { "element": "tbody", "message": "Use TableBody from @medvya/ui." },
+              { "element": "tfoot", "message": "Use TableFooter from @medvya/ui." },
+              { "element": "tr", "message": "Use TableRow from @medvya/ui." },
+              { "element": "th", "message": "Use TableHead from @medvya/ui." },
+              { "element": "td", "message": "Use TableCell from @medvya/ui." },
+              { "element": "caption", "message": "Use TableCaption from @medvya/ui." }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
         "src/features/*/components/**"
       ],
       "rules": {

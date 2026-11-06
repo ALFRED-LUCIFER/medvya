@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { ArrowLeft, Check, GitMerge, Undo2, X } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, cn } from '@medvya/ui';
+import { Button, buttonVariants, cn, Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@medvya/ui';
 import { availableActions, type MergeAction, type MergeQueueRow, type Refusal, type MergeReview as Review, type MergeSide } from '../domain/merge';
 
 type LoadState = 'loading' | 'ready' | 'invalid' | 'forbidden' | 'notFound' | 'error';
@@ -78,27 +78,25 @@ export default function MergeReview(props: Props) {
         <section aria-labelledby="merge-compare" className="flex flex-col gap-3 rounded-xl border bg-card p-4">
           <h2 id="merge-compare" className="text-base font-extrabold">{t('merge.compare')} <span className="text-sm font-bold text-muted-foreground">{t(`merge.status.${review.status}`)}</span></h2>
           <p className="text-sm text-muted-foreground">{t('merge.explain')}</p>
-          <div>
-            <table className="w-full table-fixed text-start">
-              <caption className="sr-only">{t('merge.compare')}</caption>
-              <thead>
-                <tr>
-                  <th scope="col" className="p-2 text-start"><span className="sr-only">{t('merge.field.name')}</span></th>
-                  <th scope="col" className="p-2 text-start">{t('merge.survivor')}</th>
-                  <th scope="col" className="p-2 text-start">{t('merge.merged')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map(([label, cell]) => (
-                  <tr key={label} className="border-t">
-                    <th scope="row" className="w-[28%] break-words p-2 text-start text-xs font-bold text-muted-foreground">{label}</th>
-                    <td className="break-words p-2 align-top">{cell(review.survivor)}</td>
-                    <td className="break-words p-2 align-top">{cell(review.merged)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Table className="table-fixed" containerClassName="border-0">
+            <TableCaption className="sr-only">{t('merge.compare')}</TableCaption>
+            <TableHeader className="bg-transparent">
+              <TableRow className="border-b-0">
+                <TableHead scope="col" className="p-2"><span className="sr-only">{t('merge.field.name')}</span></TableHead>
+                <TableHead scope="col" className="p-2">{t('merge.survivor')}</TableHead>
+                <TableHead scope="col" className="p-2">{t('merge.merged')}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rows.map(([label, cell]) => (
+                <TableRow key={label} className="border-t border-b-0">
+                  <TableHead scope="row" className="h-auto w-[28%] p-2 text-xs font-bold break-words whitespace-normal text-muted-foreground">{label}</TableHead>
+                  <TableCell className="p-2 align-top break-words">{cell(review.survivor)}</TableCell>
+                  <TableCell className="p-2 align-top break-words">{cell(review.merged)}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
           <p className="text-sm">{t('merge.approvals', { done: review.approvals, needed: review.approvalsRequired })}</p>
           {review.approvalsRequired > 1 && <p className="text-sm text-muted-foreground">{t('merge.secondApprover')}</p>}
           {actions.length === 0 ? <p className="text-sm text-muted-foreground">{t(`merge.closed.${review.status}`)}</p> : (

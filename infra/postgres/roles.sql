@@ -110,7 +110,6 @@ END $$;
 -- ROW LEVEL SECURITY on the base tables binds the owner, so a reporting session still sees only its tenant. A new tenancy table is not
 -- readable until it is added to the list (MDV-P0-041: no schema-wide or default right on tenancy).
 GRANT USAGE ON SCHEMA tenancy, reporting TO medvya_reporting;
-REVOKE ALL ON ALL TABLES IN SCHEMA tenancy FROM medvya_reporting;
 ALTER DEFAULT PRIVILEGES FOR ROLE medvya_owner IN SCHEMA tenancy REVOKE SELECT ON TABLES FROM medvya_reporting;
 GRANT SELECT ON ALL TABLES IN SCHEMA reporting TO medvya_reporting;
 ALTER DEFAULT PRIVILEGES FOR ROLE medvya_owner IN SCHEMA reporting GRANT SELECT ON TABLES TO medvya_reporting;

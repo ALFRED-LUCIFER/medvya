@@ -87,7 +87,8 @@ public class PostgresHardeningTests(PostgresFixture sql) : IClassFixture<Postgre
 
         // SAFETY: mutation check: binding every value to one constant in NationalIdColumns makes this fail (MDV-P0-041 PR).
         await using var after = sql.Patients(tenant);
-        await Assert.ThrowsAnyAsync<Exception>(() => after.Identifiers.AsNoTracking().SingleAsync(i => i.Id == target));
+        var ex = await Assert.ThrowsAnyAsync<Exception>(() => after.Identifiers.AsNoTracking().SingleAsync(i => i.Id == target));
+        Assert.Equal(KeyProtectionException.UnreadableValue, (ex as KeyProtectionException ?? ex.InnerException as KeyProtectionException)?.Message);
         Assert.Equal("91-2345-6789-0125", (await after.Identifiers.AsNoTracking().SingleAsync(i => i.Id == source)).LookupValue);
     }
 

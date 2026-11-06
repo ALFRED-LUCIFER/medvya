@@ -28,6 +28,8 @@ END $$;
 -- Tenancy tables reporting may read: no personal data (a test checks every listed table's classified columns). Not listed on purpose:
 -- Invitations (invitee email), DoctorLicences (licence number, certificate name), DoctorProfiles (doctor's name, signature key),
 -- Profiles (practice contact details), SettingsChanges (before and after values), TenantIndex (no reporting use).
+-- Revoked first, so whatever granted more (a default privilege, a schema-wide grant) is undone each run.
+REVOKE ALL ON ALL TABLES IN SCHEMA tenancy FROM medvya_reporting;
 DO $$
 DECLARE t text;
 BEGIN

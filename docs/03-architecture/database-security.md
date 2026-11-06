@@ -42,7 +42,7 @@ Default privileges (`ALTER DEFAULT PRIVILEGES FOR ROLE medvya_owner IN SCHEMA â€
 2. The migrator login runs `db-migrate migrate "<migrator connection>"` (module migrations, the Hangfire tables, then `table-rights.sql` again now that every table exists, all after `SET ROLE medvya_owner`). `roles.sql` re-grants schema-wide rights, so `table-rights.sql` always runs after it; on a fresh database the single-table rights exist from the end of step 2.
 3. The application starts as a login that is a member of `medvya_app`. Never as a superuser or the owner.
 
-The integration fixture does exactly this: `roles.sql` as the container superuser, migrations as `medvya_migrator`, every context as `medvya_app`. A migration that needs more than the owner role fails the whole suite; an application query that needs more than the module roles fails the test that runs it.
+The integration fixture does exactly this: `roles.sql` and `table-rights.sql` as the container superuser, migrations as `medvya_migrator`, the administrator step once more (as the next deploy would, so a re-run cannot widen single-table rights), and every context as `medvya_app`. A migration that needs more than the owner role fails the whole suite; an application query that needs more than the module roles fails the test that runs it.
 
 ## National-ID encryption (MDV-P0-035)
 

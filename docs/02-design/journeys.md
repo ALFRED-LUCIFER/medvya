@@ -1,4 +1,4 @@
-<!-- GENERATED from design/Medvya Journeys.dc.html via tools/prd-extract/extract.mjs. -->
+<!-- GENERATED from docs/02-design/source/Medvya Journeys.dc.html via tools/prd-extract/extract.mjs. -->
 
 # End-to-end journeys (X-03)
 

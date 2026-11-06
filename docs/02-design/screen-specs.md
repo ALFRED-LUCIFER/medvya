@@ -1,6 +1,6 @@
 # Screen behaviour specs (from the hi-fi designs)
 
-These rules were collected from the interactive logic and copy in the design files. They are the concrete source for ticket acceptance criteria. Each section names its design file. **Rules marked ⚠ were inferred from labels only**, because the Clinician App data script was truncated on import (see [design/README.md](../../design/README.md)).
+These rules were collected from the interactive logic and copy in the design files. They are the concrete source for ticket acceptance criteria. Each section names its design file. **Rules marked ⚠ were inferred from labels only**, because the Clinician App data script was truncated on import (see [docs/02-design/source/README.md](source/README.md)).
 
 ---
 

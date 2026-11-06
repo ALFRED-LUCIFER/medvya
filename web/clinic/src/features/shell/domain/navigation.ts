@@ -15,7 +15,7 @@ export type NavItem = {
   phase: number;
 };
 
-// Clinician App sidebar (design/Medvya Clinician App) and the role sitemap (docs/02-design/sitemap-and-permissions.md).
+// Clinician App sidebar (docs/02-design/source/Medvya Clinician App) and the role sitemap (docs/02-design/sitemap-and-permissions.md).
 export const navItems: readonly NavItem[] = [
   { id: 'today', path: '/today', group: 'clinical', capability: 'Patient360Chart', flag: 'clinical.today', phase: 2 },
   { id: 'patients', path: '/patients', group: 'clinical', capability: 'Patient360Chart', phase: 1 },

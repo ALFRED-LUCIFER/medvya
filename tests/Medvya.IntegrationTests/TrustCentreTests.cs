@@ -67,7 +67,7 @@ public sealed partial class TrustCentreTests(WebApplicationFactory<Program> fact
     public async Task TrustCentreShowsTheSixDesignedBlocksAndTheFooter()
     {
         var html = await Html(await Site().Client.GetAsync(new Uri("/trust", UriKind.Relative)));
-        // Exact copy from design/Medvya Access and Onboarding (F-07).
+        // Exact copy from docs/02-design/source/Medvya Access and Onboarding (F-07).
         foreach (var (title, body) in new[]
         {
             ("Data residency", "India and UAE run as separate deployments with separate keys, logs and backups."),

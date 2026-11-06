@@ -2,7 +2,7 @@
 
 Medvya is a clinic and doctor platform for India and the UAE: front desk, EMR, AI-drafted notes under clinician sign-off, billing, care follow-up and a patient portal, with hospital integration later.
 
-This repository holds the product knowledge base, the delivery plan and the application code (from ticket [MDV-P0-001](tickets/P0-foundation/MDV-P0-001.md)). Read [AGENTS.md](AGENTS.md), [SECURITY.md](SECURITY.md) and the [secure development policy](docs/compliance/secure-development.md) before changing code.
+This repository holds the product knowledge base, the delivery plan and the application code (from ticket [MDV-P0-001](docs/05-delivery/tickets/P0-foundation/MDV-P0-001.md)). Read [AGENTS.md](AGENTS.md), [SECURITY.md](SECURITY.md) and the [secure development policy](docs/compliance/secure-development.md) before changing code.
 
 ## Run locally
 
@@ -38,7 +38,7 @@ export DOCKER_HOST="unix://$HOME/.docker/run/docker.sock" TESTCONTAINERS_DOCKER_
 
 ## Repository structure
 
-Decided in [ADR-013](docs/adr/ADR-013-repository-layout.md), built by ticket [MDV-P0-040](tickets/P0-foundation/MDV-P0-040.md). One monorepo for backend, web, mobile, shared packages, infrastructure and docs. A folder marked *planned* is created by the ticket that builds it, never before.
+Decided in [ADR-013](docs/adr/ADR-013-repository-layout.md), built by ticket [MDV-P0-040](docs/05-delivery/tickets/P0-foundation/MDV-P0-040.md). One monorepo for backend, web, mobile, shared packages, infrastructure and docs. A folder marked *planned* is created by the ticket that builds it, never before.
 
 ```text
 medvya/
@@ -72,16 +72,14 @@ medvya/
 │   └── postgres · monitoring     # planned (roles and RLS policies, alerts); runbooks stay in docs/runbooks
 ├── tools/                   # tickets, prd-extract, erd, synthetic data, db scripts
 ├── docs/                    # 01-prd · 02-design · 03-architecture · 04-security-compliance · 05-delivery · adr · compliance · runbooks
-│   ├── 02-design/source/    #   imported design files        (today: design/ at the root, moves in P0-040)
-│   └── 05-delivery/tickets/ #   ticket sources and pages     (today: tickets/ at the root, moves in P0-040)
+│   ├── 02-design/source/    #   imported design files
+│   └── 05-delivery/tickets/ #   ticket sources, generated pages, schedule
 └── .github/                 # workflows with path filters, CODEOWNERS, dependabot
 ```
 
 | Folder today | Status |
 |---|---|
-| [docs/](docs/README.md) | Matches the target; gains `tickets/` and the design sources |
-| [tickets/](tickets/README.md) | Moves to `docs/05-delivery/tickets/` (P0-040 chunk 3) |
-| [design/](design/README.md) | Moves to `docs/02-design/source/` (P0-040 chunk 3) |
+| [docs/](docs/README.md) | Matches the target; holds the tickets (`docs/05-delivery/tickets/`) and the design sources (`docs/02-design/source/`) |
 | [src/](src) | Matches; Host.Api feature endpoints move into modules (P0-040 chunk 1) |
 | [web/](web) · [packages/](packages) | Match; `tokens` and `api-client` added (P0-040 chunk 2) |
 | [tests/](tests) · [infra/](infra) · [tools/](tools) | Match; `infra/sql` is replaced by PostgreSQL scripts (MDV-P0-034, MDV-P0-038) |
@@ -93,7 +91,7 @@ Regenerate after editing sources:
 ```bash
 python3 -I tools/prd-extract/render_docs.py      # docs/01-prd from PRD v2 data
 python3 -I tools/prd-extract/render_design.py    # docs/02-design from Foundations/Handoff data
-python3 -I tools/tickets/build.py                # tickets/* + coverage check (exit 1 on any gap)
+python3 -I tools/tickets/build.py                # docs/05-delivery/tickets/* + coverage check (exit 1 on any gap)
 ```
 
 All patient data in this repository is **synthetic**.

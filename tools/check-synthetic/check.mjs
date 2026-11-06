@@ -42,7 +42,7 @@ if (process.argv.includes('--self-test')) {
 const files = execFileSync('git', ['ls-files'], { encoding: 'utf8' }).split('\n')
   // existsSync: skip files still tracked but already deleted in the working tree.
   // lstat: tracked symlinks (.claude/skills/* -> .agents/skills/*) point at directories; their targets are checked as real files.
-  .filter(f => f && existsSync(f) && !lstatSync(f).isSymbolicLink() && !f.startsWith('design/') && !/\.(png|jpe?g|gif|ico|woff2?|lock)$/.test(f) && f !== 'pnpm-lock.yaml');
+  .filter(f => f && existsSync(f) && !lstatSync(f).isSymbolicLink() && !f.startsWith('docs/02-design/source/') && !/\.(png|jpe?g|gif|ico|woff2?|lock)$/.test(f) && f !== 'pnpm-lock.yaml');
 let bad = 0;
 for (const f of files) {
   for (const hit of findRealLooking(readFileSync(f, 'utf8'))) { console.error(`${f}: ${hit}`); bad++; }

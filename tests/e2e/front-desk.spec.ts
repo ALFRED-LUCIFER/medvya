@@ -140,11 +140,11 @@ test('a read-only role sees the board without actions', async ({ page }) => {
 
 test('empty, no access, failure and offline each say so', async ({ page, context }) => {
   await open(page, { empty: true });
-  await expect(page.getByRole('alert')).toContainText('No visits today yet');
+  await expect(page.getByRole('alert').filter({ hasText: 'No visits today yet' })).toBeVisible();
 
   await page.unrouteAll({ behavior: 'ignoreErrors' });
   const forbidden = await open(page, { status: 403 });
-  await expect(page.getByRole('alert')).toContainText('You don’t have access to this facility.');
+  await expect(page.getByRole('alert').filter({ hasText: 'You don’t have access to this facility.' })).toBeVisible();
   expect(forbidden.boards).toBe(1); // not retried
 
   await page.unrouteAll({ behavior: 'ignoreErrors' });

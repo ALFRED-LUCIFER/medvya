@@ -205,14 +205,15 @@ public static class ScheduleRules
     /// <summary>
     /// Starts of a series: the same facility wall-clock time every <paramref name="intervalWeeks"/> weeks, so a visit keeps its
     /// local hour across a daylight-saving change (IST and GST have none). A wall-clock time the zone skips moves an hour on.
+    /// Monthly: the same date each month (<paramref name="intervalWeeks"/> is ignored); a month without that date uses its last day.
     /// </summary>
-    public static List<DateTimeOffset> SeriesStarts(DateTimeOffset first, int intervalWeeks, int count, TimeZoneInfo zone)
+    public static List<DateTimeOffset> SeriesStarts(DateTimeOffset first, int intervalWeeks, int count, TimeZoneInfo zone, bool monthly = false)
     {
         var local = TimeZoneInfo.ConvertTime(first, zone).DateTime;
         var starts = new List<DateTimeOffset>(count);
         for (var i = 0; i < count; i++)
         {
-            var wall = DateTime.SpecifyKind(local.AddDays(7 * intervalWeeks * i), DateTimeKind.Unspecified);
+            var wall = DateTime.SpecifyKind(monthly ? local.AddMonths(i) : local.AddDays(7 * intervalWeeks * i), DateTimeKind.Unspecified);
             if (zone.IsInvalidTime(wall)) wall = wall.AddHours(1);
             starts.Add(new DateTimeOffset(TimeZoneInfo.ConvertTimeToUtc(wall, zone), TimeSpan.Zero));
         }

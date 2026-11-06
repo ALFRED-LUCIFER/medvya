@@ -46,3 +46,12 @@ public interface IStaffRoster
     /// <exception cref="SettingsValidationException">No reason, or one over 500 characters.</exception>
     Task<OffboardResult> OffboardAsync(Guid membershipId, string? reason, CancellationToken cancellationToken = default);
 }
+
+/// <summary>
+/// Another module's part of offboarding (MDV-P1-009), run inside the roster's transaction on its connection so it commits or rolls back
+/// with the membership change. Returns what to do after the commit (live notifications), or null.
+/// </summary>
+public interface IStaffOffboardingParticipant
+{
+    Task<Func<Task>?> OffboardedAsync(Guid doctorUserId, System.Data.Common.DbTransaction transaction, CancellationToken cancellationToken);
+}

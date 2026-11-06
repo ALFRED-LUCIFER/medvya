@@ -52,10 +52,14 @@ An arrow means the project of the first module references the application, domai
 
 ```mermaid
 flowchart LR
-  Notifications -->|"Application"| Audit
-  Notifications -->|"Application"| Patients
+  Audit -->|"Application"| Identity
+  Audit -->|"Application"| Patients
+  Audit -->|"Api"| Tenancy
+  Identity -->|"Api"| Tenancy
+  Notifications -->|"Api, Application"| Audit
+  Notifications -->|"Application, Domain"| Patients
   Notifications -->|"Application"| Scheduling
-  Notifications -->|"Application, Domain"| Tenancy
+  Notifications -->|"Api, Application, Domain"| Tenancy
   Patients -->|"Api, Application"| Audit
   Patients -->|"Api, Application"| Tenancy
   Scheduling -->|"Api, Application"| Audit
@@ -63,6 +67,8 @@ flowchart LR
   Scheduling -->|"Application"| Patients
   Scheduling -->|"Api, Application, Domain"| Tenancy
   Tenancy -->|"Application"| Audit
+  Tenancy -->|"Application"| Identity
+  Tenancy -->|"Application, Domain"| Scheduling
 ```
 
 `Host.Api` references: Audit, Identity, Leads, Notifications, Patients, Scheduling, Tenancy. Modules with no incoming arrow from another module: Billing, Leads, Notifications.

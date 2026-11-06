@@ -7,7 +7,7 @@ namespace Host.Api.Context;
 /// Tenant, facility and user of the current request, from the signed-in principal. The tenant and facility claims are set
 /// when the user picks a facility (SessionControl); before that they are null and tenant data stays unreachable.
 /// </summary>
-public sealed class RequestContext(IHttpContextAccessor accessor, IServiceProvider services) : ICurrentTenant, ICurrentFacility, ICurrentUser, IRequestOrigin
+public sealed class RequestContext(IHttpContextAccessor accessor, IServiceProvider services) : ICurrentTenant, ICurrentFacility, ICurrentUser, IRequestOrigin, ILinkTenant
 {
     Guid? linkTenant;
     HttpContext? connection;
@@ -19,7 +19,7 @@ public sealed class RequestContext(IHttpContextAccessor accessor, IServiceProvid
     /// Scopes this context to the tenant named by a tenant-bound link (an invitation token) instead of the session.
     /// Only on a fresh DI scope created for that link (<see cref="LinkTenantScope"/>), so the request's own tenant never changes.
     /// </summary>
-    internal void UseLinkTenant(Guid tenantId) => linkTenant = tenantId;
+    public void UseLinkTenant(Guid tenantId) => linkTenant = tenantId;
 
     /// <summary>
     /// Reads a SignalR connection's own HttpContext (the principal it was opened with) instead of the ambient request: hub calls
@@ -44,15 +44,4 @@ public sealed class RequestContext(IHttpContextAccessor accessor, IServiceProvid
     }
 
     Guid? Read(string claim) => Guid.TryParse(Http?.User.FindFirst(claim)?.Value, out var id) ? id : null;
-}
-
-public static class LinkTenantScope
-{
-    /// <summary>A DI scope whose services (DbContexts, audit, RLS session context) run in <paramref name="tenantId"/>.</summary>
-    public static AsyncServiceScope EnterLinkTenant(this IServiceProvider services, Guid tenantId)
-    {
-        var scope = services.GetRequiredService<IServiceScopeFactory>().CreateAsyncScope();
-        scope.ServiceProvider.GetRequiredService<RequestContext>().UseLinkTenant(tenantId);
-        return scope;
-    }
 }

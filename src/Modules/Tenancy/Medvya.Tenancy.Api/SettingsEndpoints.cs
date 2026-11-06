@@ -1,9 +1,8 @@
-using Host.Api.Auth;
 using Medvya.Scheduling.Application;
 using Medvya.Tenancy.Application;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Host.Api.Settings;
+namespace Medvya.Tenancy.Api;
 
 /// <summary>
 /// Practice settings (F-08, MDV-P1-005): profile, locations, opening hours, holidays and the logo. Every endpoint needs the
@@ -75,7 +74,7 @@ public static class SettingsEndpoints
     }
 
     /// <summary>Use-case errors as problem details: field/code pairs for 400, a generic 403 that never says why.</summary>
-    internal static async ValueTask<object?> MapErrors(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
+    public static async ValueTask<object?> MapErrors(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
     {
         try
         {
@@ -96,5 +95,5 @@ public static class SettingsEndpoints
     }
 
     /// <summary>502 with a stable code: the screen says the invitation email could not be sent and nothing was saved, not a generic failure.</summary>
-    internal static IResult EmailFailed => Results.Problem(statusCode: StatusCodes.Status502BadGateway, title: "The invitation email could not be sent.", extensions: new Dictionary<string, object?> { ["code"] = "email_failed" });
+    public static IResult EmailFailed => Results.Problem(statusCode: StatusCodes.Status502BadGateway, title: "The invitation email could not be sent.", extensions: new Dictionary<string, object?> { ["code"] = "email_failed" });
 }

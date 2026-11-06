@@ -96,7 +96,7 @@ public sealed partial class NotificationsTests(SqlServerFixture sql) : IClassFix
         if (!denyAll && !realConsent) services.AddSingleton<IReminderConsent>(consent);
         services.AddAuditModule(h.ConnectionString).AddTenancyModule(h.ConnectionString).AddIdentityModule(h.ConnectionString)
             .AddPatientsModule(h.ConnectionString).AddSchedulingModule(h.ConnectionString).AddNotificationsModule(h.ConnectionString, smsSink: false);
-        if (realConsent) services.AddScoped<IReminderConsent, Host.Api.Notifications.PatientReminderConsent>(); // as the host registers it
+        if (realConsent) services.AddScoped<IReminderConsent, Medvya.Notifications.Api.PatientReminderConsent>(); // as the host registers it
         services.Configure<NotificationOptions>(o =>
         {
             o.Sms.DefaultSender = "ADYCLN";

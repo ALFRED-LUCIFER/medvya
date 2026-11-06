@@ -1,10 +1,8 @@
-using Host.Api.Auth;
-using Host.Api.Context;
 using Medvya.Tenancy.Application;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Host.Api.Settings;
+namespace Medvya.Tenancy.Api;
 
 /// <summary>
 /// Settings, Doctors (F-09, MDV-P1-007). The practice side needs the practice-configuration capability like every settings

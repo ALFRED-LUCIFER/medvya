@@ -1,7 +1,7 @@
+using Medvya.Tenancy.Api;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using System.Threading.RateLimiting;
-using Host.Api.Context;
 using Medvya.Scheduling.Api;
 using Medvya.Scheduling.Application;
 using Medvya.Tenancy.Domain;

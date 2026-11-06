@@ -3,7 +3,7 @@ using Medvya.Notifications.Domain;
 using Medvya.Patients.Application;
 using Medvya.Patients.Domain;
 
-namespace Host.Api.Notifications;
+namespace Medvya.Notifications.Api;
 
 /// <summary>
 /// The patient's reminder consent for a channel (MDV-P1-019), asked through the Patients contract before every send. Lives in the

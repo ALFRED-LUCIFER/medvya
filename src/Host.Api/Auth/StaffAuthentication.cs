@@ -161,7 +161,7 @@ public static partial class StaffAuthentication
         return app.MapSessionControl();
     }
 
-    public const string SignInRateLimit = "sign-in";
+    public const string SignInRateLimit = Medvya.Identity.Api.InvitationEndpoints.SignInRateLimit;
 
     /// <summary>Where the web app lives: "/app/" when the API serves the built app (the public site owns "/"), "/" in development.</summary>
     public static string AppPath(IConfiguration config) => config["Web:AppPath"] ?? "/";

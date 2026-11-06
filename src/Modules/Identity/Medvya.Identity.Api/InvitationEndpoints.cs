@@ -1,15 +1,17 @@
-using Host.Api.Auth;
-using Host.Api.Context;
+using Medvya.Tenancy.Api;
 using Medvya.Identity.Application;
 using Medvya.Tenancy.Application;
 using Medvya.Tenancy.Domain;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Host.Api.Invitations;
+namespace Medvya.Identity.Api;
 
 /// <summary>Invite a colleague (admin) and preview an invitation from its link (public, token-based). MDV-P0-013.</summary>
 public static class InvitationEndpoints
 {
+    /// <summary>Named policy configured in Host (shared with sign-in).</summary>
+    public const string SignInRateLimit = "sign-in";
+
     public sealed record InviteRequest(string Email, Role Role, Guid FacilityId);
     public sealed record PreviewRequest(string Token);
     public sealed record CapabilityAccess(Capability Capability, Access Access);
@@ -56,7 +58,7 @@ public static class InvitationEndpoints
                 // Exactly the role's column of the role-permission matrix.
                 capabilities = RoleMatrix.Rows.Select(r => new CapabilityAccess(r.Capability, RoleMatrix.Of(preview.Role, r.Capability))),
             });
-        }).AllowAnonymous().RequireRateLimiting(StaffAuthentication.SignInRateLimit);
+        }).AllowAnonymous().RequireRateLimiting(SignInRateLimit);
 
         return app;
     }

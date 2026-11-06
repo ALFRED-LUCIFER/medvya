@@ -1,19 +1,17 @@
+using Medvya.Tenancy.Api;
 using System.Globalization;
 using System.Security.Claims;
 using System.Text;
-using Host.Api.Auth;
-using Medvya.Audit.Api;
 using Medvya.Audit.Application;
 using Medvya.Audit.Domain;
 using Medvya.BuildingBlocks.Domain;
 using Medvya.Identity.Application;
 using Medvya.Patients.Application;
-using Medvya.Tenancy.Api;
 using Medvya.Tenancy.Application;
 using Medvya.Tenancy.Domain;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Host.Api.AuditLog;
+namespace Medvya.Audit.Api;
 
 /// <summary>
 /// Practice access log (F-12, MDV-P1-035): who opened or changed which record, when, why and with what outcome. The role shown is the one held at event time; older rows show none. Needs the Audit log

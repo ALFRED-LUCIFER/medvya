@@ -103,6 +103,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "db-migrate", "db-migrate", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Medvya.DbMigrate", "tools\db-migrate\Medvya.DbMigrate.csproj", "{2481E53F-9C61-4F1B-8F00-DE0C21BED96A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Medvya.Notifications.Api", "src\Modules\Notifications\Medvya.Notifications.Api\Medvya.Notifications.Api.csproj", "{841EB349-6141-42B1-A1B6-7D4C4F020666}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -545,6 +547,18 @@ Global
 		{2481E53F-9C61-4F1B-8F00-DE0C21BED96A}.Release|x64.Build.0 = Release|Any CPU
 		{2481E53F-9C61-4F1B-8F00-DE0C21BED96A}.Release|x86.ActiveCfg = Release|Any CPU
 		{2481E53F-9C61-4F1B-8F00-DE0C21BED96A}.Release|x86.Build.0 = Release|Any CPU
+		{841EB349-6141-42B1-A1B6-7D4C4F020666}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{841EB349-6141-42B1-A1B6-7D4C4F020666}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{841EB349-6141-42B1-A1B6-7D4C4F020666}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{841EB349-6141-42B1-A1B6-7D4C4F020666}.Debug|x64.Build.0 = Debug|Any CPU
+		{841EB349-6141-42B1-A1B6-7D4C4F020666}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{841EB349-6141-42B1-A1B6-7D4C4F020666}.Debug|x86.Build.0 = Debug|Any CPU
+		{841EB349-6141-42B1-A1B6-7D4C4F020666}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{841EB349-6141-42B1-A1B6-7D4C4F020666}.Release|Any CPU.Build.0 = Release|Any CPU
+		{841EB349-6141-42B1-A1B6-7D4C4F020666}.Release|x64.ActiveCfg = Release|Any CPU
+		{841EB349-6141-42B1-A1B6-7D4C4F020666}.Release|x64.Build.0 = Release|Any CPU
+		{841EB349-6141-42B1-A1B6-7D4C4F020666}.Release|x86.ActiveCfg = Release|Any CPU
+		{841EB349-6141-42B1-A1B6-7D4C4F020666}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -597,5 +611,6 @@ Global
 		{90E39473-AEAF-4924-B1F6-BB77BA3F4560} = {DE9DAF8A-E684-0FD3-FFDC-40D3E3158533}
 		{D61B7384-2590-1CD5-4854-61CDD37FD1C4} = {07C2787E-EAC7-C090-1BA3-A61EC2A24D84}
 		{2481E53F-9C61-4F1B-8F00-DE0C21BED96A} = {D61B7384-2590-1CD5-4854-61CDD37FD1C4}
+		{841EB349-6141-42B1-A1B6-7D4C4F020666} = {DE9DAF8A-E684-0FD3-FFDC-40D3E3158533}
 	EndGlobalSection
 EndGlobal

@@ -1,7 +1,7 @@
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
-using Host.Api.Notifications;
+using Medvya.Notifications.Api;
 using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Medvya.IntegrationTests;

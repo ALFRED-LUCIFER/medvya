@@ -13,7 +13,35 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    # Decides which heavy jobs run. A skipped job counts as passed for the required checks, so a docs-only change
+    # does not wait for the .NET and browser suites. Pushes to main always run everything.
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      backend: ${{ steps.f.outputs.backend }}
+      web: ${{ steps.f.outputs.web }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - id: f
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" != "pull_request" ]; then
+            echo "backend=true" >> "$GITHUB_OUTPUT"; echo "web=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          files=$(git diff --name-only HEAD^1 HEAD)   # HEAD is the PR merge commit: first parent is the base tip
+          echo "$files"
+          has() { echo "$files" | grep -Eq "$1" && echo true || echo false; }
+          echo "backend=$(has '^(src/|tests/Medvya\.|Directory\.|global\.json|Medvya\.sln|dotnet-tools\.json|infra/|tools/erd/|docs/03-architecture/erd\.md|packages/api-client/|\.github/)')" >> "$GITHUB_OUTPUT"
+          echo "web=$(has '^(web/|mobile/|packages/|tests/e2e/|package\.json|pnpm-|tools/check-synthetic/|\.github/)')" >> "$GITHUB_OUTPUT"
+
   dotnet:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20  # the .NET suite runs about 6.5 min and is growing
     steps:
@@ -33,6 +61,8 @@ jobs:
           ! grep -q "has the following vulnerable packages" vuln.txt
 
   web:
+    needs: changes
+    if: needs.changes.outputs.web == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20  # e2e ran past 10 min once it grew beyond ~250 specs; a timeout caps a hung run, it is not a test threshold
     steps:
@@ -58,11 +88,32 @@ jobs:
       - run: pnpm audit --audit-level high
       - run: node tools/check-synthetic/check.mjs --self-test && node tools/check-synthetic/check.mjs
 
+  contract:
+    # The generated TypeScript client must match what Host.Api exports (packages/api-client). Not a required check yet.
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.web == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: bash tools/check-contract.sh
+
   docs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
+      - name: Synthetic data only (runs here too so a docs-only change is still scanned)
+        run: node tools/check-synthetic/check.mjs --self-test && node tools/check-synthetic/check.mjs
       - name: Relative Markdown links resolve
         run: python3 -I tools/check-links/check.py --self-test && python3 -I tools/check-links/check.py
       - name: Generated ticket pages are current

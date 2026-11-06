@@ -661,6 +661,24 @@ test('cancel needs a reason, and a note for Other; the note never goes in a URL'
   expect(calls.changes[0]!.url).not.toContain('Synthetic');
 });
 
+// MDV-P1-052: the cancelled 12:30 procedure freed its slot; the card sits beside it, so mouse and keyboard reach the slot.
+test('a cancelled visit never covers the slot it freed, and keyboard focus skips it', async ({ page }) => {
+  await open(page);
+  const room = column(page, 'Procedure room (synthetic)');
+  const slot = room.getByRole('button', { name: 'Book Procedure room (synthetic) at 12:30' });
+  const card = room.getByRole('button', { name: /Kavya Rao \(synthetic\)/ });
+  const [s, c] = [(await slot.boundingBox())!, (await card.boundingBox())!];
+  expect(s.x + s.width <= c.x + 1 || c.x + c.width <= s.x + 1).toBe(true); // side by side (sub-pixel rounding aside), never on top
+  await slot.click(); // a real mouse click: nothing intercepts it
+  await expect(page.getByRole('complementary', { name: 'Book appointment' })).toContainText('12:30');
+  await expect(card).toHaveAttribute('tabindex', '-1');
+  await room.getByRole('button', { name: 'Book Procedure room (synthetic) at 12:00' }).focus();
+  await page.keyboard.press('Tab');
+  await expect(slot).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(card).not.toBeFocused();
+});
+
 test('a no-show offers a rebook that fills in the patient', async ({ page }) => {
   await page.clock.setFixedTime(new Date(ist('2026-10-19', '09:10'))); // the 09:00 visit has started
   const calls = await open(page);

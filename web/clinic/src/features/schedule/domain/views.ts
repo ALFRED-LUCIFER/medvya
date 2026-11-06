@@ -1,4 +1,4 @@
-import { addDays, type Appointment, type AppointmentState, type ScheduleColumn, type ScheduleDay, type Slot, type Unavailable } from './schedule';
+import { addDays, occupies, type Appointment, type AppointmentState, type ScheduleColumn, type ScheduleDay, type Slot, type Unavailable } from './schedule';
 
 // MDV-P1-023: day, week and list views of the same data. Pure, so the consistency rules are tested without a browser.
 export type ScheduleView = 'day' | 'week' | 'list';
@@ -15,8 +15,6 @@ const looks: Record<AppointmentState, StateLook> = {
 };
 export const lookOf = (state: AppointmentState): StateLook => looks[state];
 
-/** States that occupy time; a cancelled, no-show or needs-rebooking visit does not count as booked. */
-export const occupies = (state: AppointmentState) => state !== 'Cancelled' && state !== 'NoShow' && state !== 'NeedsRebooking';
 
 /** The columns a filter shows: every doctor and resource, or one calendar. */
 export const filterColumns = (day: ScheduleDay, calendarId: string | null): ScheduleDay =>

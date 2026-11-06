@@ -31,6 +31,22 @@ describe('day layout', () => {
     expect(room!.items).toHaveLength(1);
   });
 
+  it('moves a cancelled visit beside the slot it freed and beside the visit rebooked into it, never over them (MDV-P1-052)', () => {
+    const at = (h: string) => `2026-10-19T${h}:00Z`;
+    const visit = (id: string, state: 'Booked' | 'Cancelled', start: string, end: string) =>
+      ({ id, reference: id, patientId: 'p-1', patientName: 'Synthetic', visitType: 'FollowUp' as const, state, start: at(start), end: at(end) });
+    const col = day.columns[0]!;
+    const items = layoutDay({ ...day, columns: [{ ...col, unavailable: [],
+      slots: [{ start: at('03:30'), end: at('03:50'), held: false }, { start: at('05:30'), end: at('05:50'), held: false }],
+      appointments: [visit('c-1', 'Cancelled', '03:30', '03:50'), visit('c-2', 'Cancelled', '04:10', '04:30'), visit('b-1', 'Booked', '04:10', '04:30'), visit('c-3', 'Cancelled', '06:30', '06:50')] }] })
+      .columns[0]!.items.map(i => [i.kind === 'appointment' ? i.id : i.kind, i.lane]);
+    expect(items).toEqual([
+      ['slot', 'main'], ['c-1', 'side'], // the freed slot first, so it is also first in the tab order
+      ['b-1', 'main'], ['c-2', 'side'], // rebooked: the new visit and the cancelled one side by side
+      ['slot', 'full'], ['c-3', 'full'], // nothing to share with: full width
+    ]);
+  });
+
   it('marks every half hour of the frame', () => {
     const marks = layoutDay(day).marks;
     expect(marks).toHaveLength(22);

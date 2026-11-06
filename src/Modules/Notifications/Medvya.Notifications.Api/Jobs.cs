@@ -66,7 +66,7 @@ public static class JobsSetup
 {
     /// <summary>
     /// Jobs are off unless Jobs:Enabled (Development turns them on; deployments set it): tests and tools never start a server.
-    /// Storage is the Medvya database in its own hangfire schema; only Development may create the tables (roles.sql explains the deploy step).
+    /// Storage is the Medvya database in its own hangfire schema; the tables are created by db-migrate (as the owner role) in every environment, never by the app (roles.sql).
     /// </summary>
     public static WebApplicationBuilder AddJobs(this WebApplicationBuilder builder, string? connectionString)
     {
@@ -78,7 +78,7 @@ public static class JobsSetup
         if (connectionString is null || !builder.Configuration.GetValue("Jobs:Enabled", false)) return builder;
         builder.Services.AddScoped<NotificationJobs>();
         builder.Services.AddHangfire(c => c.SetDataCompatibilityLevel(CompatibilityLevel.Version_180).UseSimpleAssemblyNameTypeSerializer().UseRecommendedSerializerSettings()
-            .UsePostgreSqlStorage(o => o.UseNpgsqlConnection(connectionString), new PostgreSqlStorageOptions { SchemaName = "hangfire", PrepareSchemaIfNecessary = builder.Environment.IsDevelopment() }));
+            .UsePostgreSqlStorage(o => o.UseNpgsqlConnection(connectionString), new PostgreSqlStorageOptions { SchemaName = "hangfire", PrepareSchemaIfNecessary = false }));
         builder.Services.AddHangfireServer(o => o.WorkerCount = 2);
         return builder;
     }

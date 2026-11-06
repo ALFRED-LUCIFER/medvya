@@ -22,7 +22,8 @@ namespace Medvya.IntegrationTests;
 [Collection(nameof(RunsAlone))]
 public sealed class ScheduleReadPerformanceTests(SqlServerFixture sql, ITestOutputHelper output) : IClassFixture<SqlServerFixture>
 {
-    const int Weeks = 26, PatientCount = 2_000;
+    internal const int Weeks = 26;
+    const int PatientCount = 2_000;
     static readonly TimeZoneInfo Ist = TimeZoneInfo.FindSystemTimeZoneById("Asia/Kolkata");
 
     [Fact]
@@ -46,9 +47,9 @@ public sealed class ScheduleReadPerformanceTests(SqlServerFixture sql, ITestOutp
 
         var today = ScheduleRulesLocalToday();
         var monday = today.AddDays(-(((int)today.DayOfWeek + 6) % 7));
-        var patients = await SeedPatientsAsync(h.Tenant, h.Facility);
-        await SeedVisitsAsync(h.Tenant, h.Facility, doctors, patients, monday);
-        await SeedVisitsAsync(h.Tenant, h.OtherFacility, [Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid()], patients, monday); // another facility's load
+        var patients = await SeedPatientsAsync(sql, h.Tenant, h.Facility, PatientCount);
+        await SeedVisitsAsync(sql, h.Tenant, h.Facility, doctors, patients, monday);
+        await SeedVisitsAsync(sql, h.Tenant, h.OtherFacility, [Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid()], patients, monday); // another facility's load
 
         using var host = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b
             .UseSetting("ConnectionStrings:Medvya", sql.ConnectionString)
@@ -93,7 +94,7 @@ public sealed class ScheduleReadPerformanceTests(SqlServerFixture sql, ITestOutp
         Assert.True(p95 < 300, string.Create(CultureInfo.InvariantCulture, $"p95 {p95} ms over {timings.Count} {what} (max {timings[^1]} ms)"));
     }
 
-    async Task<Guid[]> SeedPatientsAsync(Guid tenant, Guid facility)
+    internal static async Task<Guid[]> SeedPatientsAsync(SqlServerFixture sql, Guid tenant, Guid facility, int count)
     {
         var table = new DataTable();
         foreach (var (name, type) in new (string, Type)[]
@@ -102,21 +103,21 @@ public sealed class ScheduleReadPerformanceTests(SqlServerFixture sql, ITestOutp
             ("FullName", typeof(string)), ("DateOfBirth", typeof(DateTime)), ("DateOfBirthEstimated", typeof(bool)), ("SexAtBirth", typeof(string)),
             ("Mobile", typeof(string)), ("Status", typeof(string)), ("RegisteredAt", typeof(DateTimeOffset)), ("ChangedAt", typeof(DateTimeOffset)),
         }) table.Columns.Add(name, type);
-        var ids = new Guid[PatientCount];
-        for (var n = 0; n < PatientCount; n++)
+        var ids = new Guid[count];
+        for (var n = 0; n < count; n++)
         {
             ids[n] = Guid.CreateVersion7();
             table.Rows.Add(ids[n], tenant, facility, (100_000 + n).ToString(CultureInfo.InvariantCulture), "IN", $"Synthetic Patient {n}", new DateTime(1950 + n % 60, 1 + n % 12, 1 + n % 28),
                 false, n % 2 == 0 ? "Female" : "Male", $"+9191{n:D8}", "Complete", MondayMorning, MondayMorning);
         }
-        await using var conn = await BulkAsync(tenant, "patients.Patients", table);
+        await using var conn = await BulkAsync(sql, tenant, "patients.Patients", table);
         await using var stats = new SqlCommand("UPDATE STATISTICS patients.Patients", conn);
         await stats.ExecuteNonQueryAsync();
         return ids;
     }
 
     /// <summary>Every 20-minute slot of 09:00–13:00 and 17:00–20:00 IST, Monday to Friday, booked for each calendar.</summary>
-    async Task SeedVisitsAsync(Guid tenant, Guid facility, Guid[] calendars, Guid[] patients, DateOnly monday)
+    internal static async Task SeedVisitsAsync(SqlServerFixture sql, Guid tenant, Guid facility, Guid[] calendars, Guid[] patients, DateOnly monday)
     {
         var table = new DataTable();
         foreach (var (name, type) in new (string, Type)[]
@@ -139,13 +140,13 @@ public sealed class ScheduleReadPerformanceTests(SqlServerFixture sql, ITestOutp
                         state, "General", "Phone", MondayMorning, MondayMorning);
                 }
         }
-        await using var conn = await BulkAsync(tenant, "scheduling.Appointments", table);
+        await using var conn = await BulkAsync(sql, tenant, "scheduling.Appointments", table);
         await using var stats = new SqlCommand("UPDATE STATISTICS scheduling.Appointments", conn);
         await stats.ExecuteNonQueryAsync();
     }
 
     /// <summary>Bulk-loads the rows inside the tenant (row-level security applies) and returns the open connection for statistics.</summary>
-    async Task<SqlConnection> BulkAsync(Guid tenant, string destination, DataTable table)
+    static async Task<SqlConnection> BulkAsync(SqlServerFixture sql, Guid tenant, string destination, DataTable table)
     {
         var conn = await sql.OpenAs("dbo", tenant);
         using var copy = new SqlBulkCopy(conn) { DestinationTableName = destination, BulkCopyTimeout = 600 };

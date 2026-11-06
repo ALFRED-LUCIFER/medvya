@@ -35,6 +35,8 @@ param emailProvider string = 'Acs'
 param emailFrom string = ''
 @description('Where Azure Communication Services keeps email data (data residency). Must be a location the service offers.')
 param emailDataLocation string = 'India'
+@description('Object id of the deploy workflow\'s service principal (GitHub OIDC). It uploads db-migrate for the database job.')
+param deployPrincipalId string
 @description('Application (client) id of the Entra app registration the staff sign-in uses. Not a secret.')
 param oidcClientId string
 @description('Monthly budget in the billing currency (INR).')
@@ -42,11 +44,16 @@ param budgetAmount int = 1800
 param budgetStart string = utcNow('yyyy-MM-01')
 @description('B1 or higher: VNet integration (the app reaching the private database) is not available on F1.')
 param appServiceSku string = 'B1'
+@description('Days a ledger digest cannot be changed or deleted (time-based immutability on ledger-digests). Once the policy is locked it can only grow.')
+param ledgerDigestRetentionDays int = env == 'prod' ? 3650 : 7
+@description('Image of the database deploy job (migrations and roles inside the VNet). Pinned; the job downloads db-migrate from Blob.')
+param dbJobImage string = 'mcr.microsoft.com/azure-cli:2.92.0'
 
 var suffix = take(uniqueString(resourceGroup().id), 6)
 var name = 'medvya-${env}-${suffix}'
 // The app's own address; a site cannot reference its own property inside its own settings.
-var appHost = 'app-${name}.azurewebsites.net'
+var appName = 'app-${name}'
+var appHost = '${appName}.azurewebsites.net'
 var tags = { app: 'medvya', env: env, country: country, data: 'synthetic-only' }
 
 resource logs 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
@@ -95,6 +102,66 @@ resource blobProtection 'Microsoft.Storage/storageAccounts/blobServices@2023-05-
   }
 }
 
+// Signed daily digests of the ledger chains (MDV-P0-036/042). Version-level WORM (the account keeps blob versions): a digest cannot be
+// overwritten or deleted for ledgerDigestRetentionDays, by anyone. The policy is created unlocked; lock it once per environment
+// (README, irreversible), after which not even an account owner can shorten or remove it.
+resource digests 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
+  parent: blobProtection
+  name: 'ledger-digests'
+  properties: { publicAccess: 'None', immutableStorageWithVersioning: { enabled: true } }
+}
+
+resource digestsRetention 'Microsoft.Storage/storageAccounts/blobServices/containers/immutabilityPolicies@2023-05-01' = {
+  parent: digests
+  name: 'default'
+  properties: { immutabilityPeriodSinceCreationInDays: ledgerDigestRetentionDays, allowProtectedAppendWrites: false }
+}
+
+// Append only for the app: read and add blobs, no delete and no container or policy change (the WORM policy refuses an overwrite).
+resource digestWriter 'Microsoft.Authorization/roleDefinitions@2022-04-01' = {
+  name: guid(resourceGroup().id, 'medvya-ledger-digest-writer')
+  properties: {
+    roleName: 'Medvya ledger digest writer (${name})'
+    description: 'Write new ledger digests and read them. No delete.'
+    assignableScopes: [resourceGroup().id]
+    permissions: [{
+      actions: []
+      dataActions: [
+        'Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read'
+        'Microsoft.Storage/storageAccounts/blobServices/containers/blobs/write'
+        'Microsoft.Storage/storageAccounts/blobServices/containers/blobs/add/action'
+      ]
+    }]
+  }
+}
+
+resource digestsApp 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: digests
+  name: guid(digests.id, app.id, digestWriter.id)
+  properties: { roleDefinitionId: digestWriter.id, principalId: app.identity.principalId, principalType: 'ServicePrincipal' }
+}
+
+// The deploy workflow uploads the db-migrate build here; the database job downloads and runs it.
+resource deployArtifacts 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
+  parent: blobProtection
+  name: 'deploy'
+  properties: { publicAccess: 'None' }
+}
+
+var blobReader = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '2a2b9908-6ea1-4ae2-8e65-a410df84e7d1')
+resource deployArtifactsJob 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: deployArtifacts
+  name: guid(deployArtifacts.id, dbMigrator.id, blobReader)
+  properties: { roleDefinitionId: blobReader, principalId: dbMigrator.properties.principalId, principalType: 'ServicePrincipal' }
+}
+
+var blobContributor = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')
+resource deployArtifactsUpload 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: deployArtifacts
+  name: guid(deployArtifacts.id, deployPrincipalId, blobContributor)
+  properties: { roleDefinitionId: blobContributor, principalId: deployPrincipalId, principalType: 'ServicePrincipal' }
+}
+
 resource vault 'Microsoft.KeyVault/vaults@2023-07-01' = {
   name: 'kv-${name}'
   location: location
@@ -108,29 +175,25 @@ resource vault 'Microsoft.KeyVault/vaults@2023-07-01' = {
   }
 }
 
-// Always Encrypted column master key (MDV-P0-009).
-// shortcut: kept until application-level encryption of national IDs replaces it (ADR-012, MDV-P0-035); remove it then. RSA 3072, wrap/unwrap/sign/verify only.
-resource cmk 'Microsoft.KeyVault/vaults/keys@2023-07-01' = {
+// National-ID envelope encryption (MDV-P0-035): this key wraps each tenant's data keys. RSA 3072, wrap and unwrap only.
+// The app gets the versionless id, so a new key version rotates in without a deployment (each data key names the version that wrapped it).
+// The Always Encrypted key medvya-column-master (MDV-P0-009) is no longer used; it stays in the vault until it is deleted by hand.
+resource nationalIdKey 'Microsoft.KeyVault/vaults/keys@2023-07-01' = {
   parent: vault
-  name: 'medvya-column-master'
+  name: 'medvya-national-id'
   properties: {
     kty: 'RSA'
     keySize: 3072
-    keyOps: ['wrapKey', 'unwrapKey', 'sign', 'verify']
+    keyOps: ['wrapKey', 'unwrapKey']
   }
 }
 
-// "Key Vault Crypto User" on this one key, never on the vault: the app reads encrypted columns; the administrator creates the column encryption key.
+// "Key Vault Crypto User" on this one key, never on the vault.
 var cryptoUser = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '12338af0-0e69-4776-bea7-57ae8d297424')
-resource cmkApp 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  scope: cmk
-  name: guid(cmk.id, app.id, cryptoUser)
+resource nationalIdKeyApp 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: nationalIdKey
+  name: guid(nationalIdKey.id, app.id, cryptoUser)
   properties: { roleDefinitionId: cryptoUser, principalId: app.identity.principalId, principalType: 'ServicePrincipal' }
-}
-resource cmkAdmin 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  scope: cmk
-  name: guid(cmk.id, dbAdminObjectId, cryptoUser)
-  properties: { roleDefinitionId: cryptoUser, principalId: dbAdminObjectId, principalType: 'User' }
 }
 
 // Transactional email (MDV-P1-032): Azure Communication Services Email with an Azure-managed sender domain (no domain to own or verify).
@@ -186,6 +249,14 @@ resource vnet 'Microsoft.Network/virtualNetworks@2024-05-01' = {
         properties: {
           addressPrefix: '10.20.2.0/24'
           delegations: [{ name: 'app', properties: { serviceName: 'Microsoft.Web/serverFarms' } }]
+        }
+      }
+      {
+        // The database deploy job (Container Apps, workload-profiles environment: /27 minimum).
+        name: 'snet-jobs'
+        properties: {
+          addressPrefix: '10.20.4.0/27'
+          delegations: [{ name: 'jobs', properties: { serviceName: 'Microsoft.App/environments' } }]
         }
       }
     ]
@@ -244,6 +315,8 @@ module postgres 'postgres.bicep' = {
     entraAdminObjectId: dbAdminObjectId
     entraAdminLogin: dbAdminLogin
     entraAdminType: dbAdminType
+    jobAdminObjectId: dbAdmin.properties.principalId
+    jobAdminName: dbAdmin.name
     cmkIdentityId: pgIdentity.id
     cmkKeyUri: pgKey.properties.keyUri
     haEnabled: postgresHaEnabled
@@ -278,7 +351,7 @@ var emailSettings = emailProvider == 'Acs' ? [
 ]
 
 resource app 'Microsoft.Web/sites@2023-12-01' = {
-  name: 'app-${name}'
+  name: appName
   location: location
   tags: tags
   identity: { type: 'SystemAssigned' }
@@ -294,21 +367,105 @@ resource app 'Microsoft.Web/sites@2023-12-01' = {
         { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: insights.properties.ConnectionString }
         { name: 'ASPNETCORE_ENVIRONMENT', value: 'Staging' }
         { name: 'Onboarding__DeploymentCountry', value: 'IN' }
-        { name: 'Storage__AccountName', value: storage.name }
+        // Ledger digests go to Blob with the managed identity (no account key, no connection string).
+        { name: 'Storage__BlobEndpoint', value: storage.properties.primaryEndpoints.blob }
+        { name: 'Audit__DigestKey', value: '@Microsoft.KeyVault(VaultName=${vault.name};SecretName=audit-digest-key)' }
+        // Hangfire runs the reminders and the daily ledger digest and verification.
+        { name: 'Jobs__Enabled', value: 'true' }
         // The API serves the built web app under /app/ (MDV-P0-007); links the server creates must point there.
         { name: 'Web__AppPath', value: '/app/' }
         { name: 'Invitations__LinkBaseUrl', value: 'https://${appHost}/app' }
         { name: 'PublicSite__Deployments__SignUpUrls__IN', value: 'https://${appHost}/app/signup' }
-        // No password anywhere: the app signs in with an Entra token for its managed identity (mapped to the app role by the administrator).
-        // shortcut: host and database only; the app code (MDV-P0-033/034) decides the final setting names. Align when it lands.
-        { name: 'Postgres__Host', value: postgres.outputs.fqdn }
-        { name: 'Postgres__Database', value: postgres.outputs.databaseName }
+        // No password anywhere: the app signs in with an Entra token for its managed identity, a login IN ROLE medvya_app made by the
+        // database job (PostgresDataSources). The login name is the app's name. The server certificate is checked.
+        { name: 'ConnectionStrings__Medvya', value: 'Host=${postgres.outputs.fqdn};Database=${postgres.outputs.databaseName};Username=${appName};SslMode=VerifyFull' }
+        { name: 'NationalIdProtection__KeyVaultKeyId', value: nationalIdKey.properties.keyUri }
         // Staff sign-in (MDV-P0-011): single-tenant Entra app; the client secret is a Key Vault reference, never a value here.
         { name: 'Authentication__Oidc__Authority', value: '${environment().authentication.loginEndpoint}${tenant().tenantId}/v2.0' }
         { name: 'Authentication__Oidc__ClientId', value: oidcClientId }
         { name: 'Authentication__Oidc__ClientSecret', value: '@Microsoft.KeyVault(VaultName=${vault.name};SecretName=oidc-client-secret)' }
-        { name: 'ColumnEncryption__KeyVaultKeyUrl', value: cmk.properties.keyUriWithVersion }
       ])
+    }
+  }
+}
+
+// Database deploy job (MDV-P0-042). The server is private, so migrations run inside the VNet, never from a GitHub runner. Two identities:
+// dbAdmin is a second Entra administrator of the server (roles.sql, and the app and migrator logins); dbMigrator is a login IN ROLE
+// medvya_migrator that runs the migrations. The deploy workflow uploads db-migrate to the deploy container and starts the job.
+resource dbAdmin 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
+  name: 'id-dbadmin-${name}'
+  location: location
+  tags: tags
+}
+
+resource dbMigrator 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
+  name: 'id-migrate-${name}'
+  location: location
+  tags: tags
+}
+
+resource jobsEnv 'Microsoft.App/managedEnvironments@2024-03-01' = {
+  name: 'cae-${name}'
+  location: location
+  tags: tags
+  properties: {
+    vnetConfiguration: { infrastructureSubnetId: vnet.properties.subnets[2].id, internal: true }
+    workloadProfiles: [{ name: 'Consumption', workloadProfileType: 'Consumption' }]
+    appLogsConfiguration: {
+      destination: 'log-analytics'
+      logAnalyticsConfiguration: { customerId: logs.properties.customerId, sharedKey: logs.listKeys().primarySharedKey }
+    }
+  }
+}
+
+// Each step signs in as its own identity (AZURE_CLIENT_ID picks it). Ids and names only; no secret exists.
+var dbJobScript = '''
+set -euo pipefail
+az login --identity --client-id "$MIGRATOR_CLIENT_ID" --allow-no-subscriptions -o none
+az storage blob download --auth-mode login --account-name "$STORAGE" -c deploy -n db-migrate.tar.gz -f /tmp/db-migrate.tar.gz -o none
+mkdir -p /tmp/db-migrate && tar -xzf /tmp/db-migrate.tar.gz -C /tmp/db-migrate
+cd /tmp/db-migrate
+db="Host=$PGHOST;SslMode=VerifyFull"
+AZURE_CLIENT_ID="$ADMIN_CLIENT_ID" ./db-migrate admin "$db;Database=$PGDATABASE;Username=$ADMIN_NAME"
+AZURE_CLIENT_ID="$ADMIN_CLIENT_ID" ./db-migrate entra "$db;Database=postgres;Username=$ADMIN_NAME" medvya_migrator "$MIGRATOR_NAME" "$MIGRATOR_OBJECT_ID"
+AZURE_CLIENT_ID="$ADMIN_CLIENT_ID" ./db-migrate entra "$db;Database=postgres;Username=$ADMIN_NAME" medvya_app "$APP_NAME" "$APP_OBJECT_ID"
+AZURE_CLIENT_ID="$MIGRATOR_CLIENT_ID" ./db-migrate migrate "$db;Database=$PGDATABASE;Username=$MIGRATOR_NAME"
+'''
+
+resource dbJob 'Microsoft.App/jobs@2024-03-01' = {
+  name: 'job-db-${env}-${suffix}' // job names are at most 32 characters
+  location: location
+  tags: tags
+  identity: { type: 'UserAssigned', userAssignedIdentities: { '${dbAdmin.id}': {}, '${dbMigrator.id}': {} } }
+  properties: {
+    environmentId: jobsEnv.id
+    workloadProfileName: 'Consumption'
+    configuration: {
+      triggerType: 'Manual'
+      replicaTimeout: 1200
+      replicaRetryLimit: 0 // a failed migration is looked at, never retried blindly
+      manualTriggerConfig: { parallelism: 1, replicaCompletionCount: 1 }
+    }
+    template: {
+      containers: [{
+        name: 'db'
+        image: dbJobImage
+        command: ['bash', '-c', dbJobScript]
+        resources: { cpu: json('0.5'), memory: '1Gi' }
+        env: [
+          { name: 'PGHOST', value: postgres.outputs.fqdn }
+          { name: 'PGDATABASE', value: databaseName }
+          { name: 'STORAGE', value: storage.name }
+          { name: 'ADMIN_CLIENT_ID', value: dbAdmin.properties.clientId }
+          { name: 'ADMIN_NAME', value: dbAdmin.name }
+          { name: 'MIGRATOR_CLIENT_ID', value: dbMigrator.properties.clientId }
+          { name: 'MIGRATOR_NAME', value: dbMigrator.name }
+          { name: 'MIGRATOR_OBJECT_ID', value: dbMigrator.properties.principalId }
+          { name: 'APP_NAME', value: appName }
+          { name: 'APP_OBJECT_ID', value: app.identity.principalId }
+          { name: 'DOTNET_SYSTEM_GLOBALIZATION_INVARIANT', value: '1' }
+        ]
+      }]
     }
   }
 }
@@ -345,3 +502,5 @@ output postgresServer string = postgres.outputs.serverName
 output postgresHost string = postgres.outputs.fqdn
 output appPrincipalId string = app.identity.principalId
 output keyVault string = vault.name
+output storageAccount string = storage.name
+output dbJob string = dbJob.name

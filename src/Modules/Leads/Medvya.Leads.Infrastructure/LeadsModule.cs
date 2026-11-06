@@ -1,3 +1,4 @@
+using Medvya.BuildingBlocks.Infrastructure;
 using System.Net;
 using System.Net.Mail;
 using Medvya.Leads.Application;
@@ -25,7 +26,7 @@ public static class LeadsModule
 {
     public static IServiceCollection AddLeadsModule(this IServiceCollection services, string connectionString, LeadsEmailOptions email) =>
         services
-            .AddDbContext<LeadsDbContext>(o => o.UseNpgsql(connectionString))
+            .AddDbContext<LeadsDbContext>(o => o.UseNpgsql(PostgresDataSources.For(connectionString)))
             .AddSingleton(email)
             .AddScoped<IDemoRequests, DemoRequests>()
             .AddScoped<IWaitlist, Waitlist>();

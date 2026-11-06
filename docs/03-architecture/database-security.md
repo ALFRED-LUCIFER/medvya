@@ -54,9 +54,14 @@ The integration fixture does exactly this: `roles.sql` as the container superuse
 
 Support and reporting read schema `reporting` only: `reporting."Patients"` (MRN, country, initials, a ten-year age band, sex at birth, status, registration time) and `reporting."Identifiers"` (scheme and value length). No name, date of birth, contact, address or identifier value is in any view, and every `patients` table is denied to the role (`ReportingSeesMaskedDemographicsWhileTheAppSeesClearValues`, `ReportingRoleIsReadOnly`). The views are owned by `medvya_owner` and the base tables `FORCE` row-level security, so a reporting session still needs a tenant and sees only that tenant. A new view goes into schema `reporting` in its module's migration; the default privileges grant it.
 
-## Mapping to Azure (MDV-P0-038, not built yet)
+## Mapping to Azure (MDV-P0-038, MDV-P0-042)
 
-Azure Database for PostgreSQL provisioning, Entra-only authentication and the deploy workflow are MDV-P0-038. The shape is: the administrator (Entra admin group, just-in-time) runs `roles.sql`; the App Service managed identity is created as a role `IN ROLE medvya_app`; the deploy identity `IN ROLE medvya_migrator`; reporting users `IN ROLE medvya_reporting`. No password exists anywhere.
+No password exists anywhere: the server is Entra-only, and every connection to an Azure host without a password signs in with an Entra access token (`PostgresDataSources`, refreshed in the background). The server is private, so nothing outside the VNet connects to it.
+
+- **Deploy job** (`job-db-<env>-<suffix>`, Container Apps in `snet-jobs`, started by `.github/workflows/deploy-dev.yml`). It holds two managed identities. `id-dbadmin-*` is a second Entra administrator of the server. It runs `roles.sql` (`db-migrate admin`) and makes the logins (`db-migrate entra`: `pgaadauth_create_principal_with_oid`, then `GRANT medvya_<role>`). `id-migrate-*` is a login `IN ROLE medvya_migrator` and runs `db-migrate migrate`. The job is manual-trigger only and never retries a failed run.
+- **App:** the App Service managed identity is a login named after the app (`app-medvya-<env>-<suffix>`) `IN ROLE medvya_app` (`ConnectionStrings__Medvya` names it as the user, `SslMode=VerifyFull`).
+- **Reporting** users are mapped `IN ROLE medvya_reporting` with the same `entra` command, run by an administrator.
+- **Human administrator** (`dbAdminObjectId`): for break-glass and the restore drill only. It is not used by any deploy.
 
 ## Known limits
 

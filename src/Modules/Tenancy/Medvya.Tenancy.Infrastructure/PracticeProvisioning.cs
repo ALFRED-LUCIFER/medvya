@@ -33,7 +33,7 @@ public sealed class PracticeProvisioning(string connectionString, ICurrentUser u
         var tenantId = Guid.CreateVersion7();
         var tenant = new NewTenant(tenantId);
         await using var db = new TenancyDbContext(
-            new DbContextOptionsBuilder<TenancyDbContext>().UseNpgsql(connectionString).AddInterceptors(new TenantSessionInterceptor(tenant)).Options, tenant);
+            new DbContextOptionsBuilder<TenancyDbContext>().UseNpgsql(PostgresDataSources.For(connectionString)).AddInterceptors(new TenantSessionInterceptor(tenant)).Options, tenant);
 
         var facilityId = Guid.CreateVersion7();
         var membershipId = Guid.CreateVersion7();

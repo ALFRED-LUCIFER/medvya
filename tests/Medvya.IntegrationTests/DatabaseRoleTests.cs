@@ -25,12 +25,27 @@ public class DatabaseRoleTests(PostgresFixture sql) : IClassFixture<PostgresFixt
     }
 
     // MDV-P0-008: a deploy is repeatable. The second migrate finds nothing pending.
-    // shortcut: the Entra identity-mapping half of this test returns with the Postgres roles script (MDV-P0-034).
     [Fact]
     public async Task MigrateIsRepeatable()
     {
         await using var migrator = await sql.OpenAs("migrator_user");
         await Medvya.DbMigrate.DatabaseMigrator.ApplyAsync(migrator);
+    }
+
+    // MDV-P0-042: the deploy job maps the app's managed identity IN ROLE medvya_app. Locally the Entra login already exists (Azure creates it
+    // with pgaadauth_create_principal_with_oid), so this proves the grant, that a re-run changes nothing, and that no other role can be handed out.
+    [Fact]
+    public async Task AnEntraLoginIsMappedToTheAppRoleOnlyAndRepeatably()
+    {
+        await using var admin = new NpgsqlConnection(sql.AdminConnectionString);
+        await admin.OpenAsync();
+        await new NpgsqlCommand("""CREATE ROLE "app-medvya-test" LOGIN""", admin).ExecuteNonQueryAsync();
+        var oid = Guid.NewGuid();
+        await Medvya.DbMigrate.DatabaseMigrator.MapEntraPrincipalAsync(admin, "medvya_app", "app-medvya-test", oid);
+        await Medvya.DbMigrate.DatabaseMigrator.MapEntraPrincipalAsync(admin, "medvya_app", "app-medvya-test", oid);
+        Assert.Equal(true, await new NpgsqlCommand("SELECT pg_has_role('app-medvya-test', 'medvya_app', 'MEMBER')", admin).ExecuteScalarAsync());
+        Assert.Equal(false, await new NpgsqlCommand("SELECT pg_has_role('app-medvya-test', 'medvya_owner', 'MEMBER')", admin).ExecuteScalarAsync());
+        await Assert.ThrowsAsync<ArgumentException>(() => Medvya.DbMigrate.DatabaseMigrator.MapEntraPrincipalAsync(admin, "medvya_owner", "app-medvya-test", oid));
     }
 
     [Theory]

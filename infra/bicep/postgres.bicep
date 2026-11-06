@@ -16,6 +16,9 @@ param entraAdminObjectId string
 param entraAdminLogin string
 @allowed(['User', 'Group', 'ServicePrincipal'])
 param entraAdminType string = 'User'
+@description('Object id and name of the database deploy job identity: a second Entra administrator, used only by that job (roles.sql and logins).')
+param jobAdminObjectId string
+param jobAdminName string
 @description('Resource id of the user-assigned identity that wraps and unwraps the storage key (needs Key Vault Crypto Service Encryption User on the key).')
 param cmkIdentityId string
 @description('Versionless Key Vault key URI: new key versions rotate in without a deployment.')
@@ -77,12 +80,20 @@ resource server 'Microsoft.DBforPostgreSQL/flexibleServers@2024-08-01' = {
   }
 }
 
-// The only login the server has. The app's managed identity is mapped to a least-privilege role by this administrator
-// (pgaadauth_create_principal), never made an administrator.
+// The human administrator. No password login exists. The app's managed identity is mapped to a least-privilege role by the deploy job
+// (pgaadauth_create_principal_with_oid), never made an administrator.
 resource admin 'Microsoft.DBforPostgreSQL/flexibleServers/administrators@2024-08-01' = {
   parent: server
   name: entraAdminObjectId
   properties: { principalType: entraAdminType, principalName: entraAdminLogin, tenantId: tenant().tenantId }
+}
+
+// The database deploy job's identity (main.bicep). Created after the first: Azure rejects parallel administrator changes.
+resource jobAdmin 'Microsoft.DBforPostgreSQL/flexibleServers/administrators@2024-08-01' = {
+  parent: server
+  name: jobAdminObjectId
+  properties: { principalType: 'ServicePrincipal', principalName: jobAdminName, tenantId: tenant().tenantId }
+  dependsOn: [admin]
 }
 
 // Server parameters are applied one at a time (Azure rejects parallel changes) and after the administrator exists.
@@ -91,7 +102,7 @@ resource settings 'Microsoft.DBforPostgreSQL/flexibleServers/configurations@2024
   parent: server
   name: s.name
   properties: { value: s.value, source: 'user-override' }
-  dependsOn: [admin]
+  dependsOn: [admin, jobAdmin]
 }]
 
 resource db 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2024-08-01' = {

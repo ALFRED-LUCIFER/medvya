@@ -21,7 +21,7 @@ public static class PatientsModule
         services.TryAddScoped<TenantSessionInterceptor>();
         services.TryAddSingleton(TimeProvider.System);
         return services
-            .AddDbContext<PatientsDbContext>((sp, o) => o.UseNpgsql(connectionString).AddInterceptors(sp.GetRequiredService<TenantSessionInterceptor>()))
+            .AddDbContext<PatientsDbContext>((sp, o) => o.UseNpgsql(PostgresDataSources.For(connectionString)).AddInterceptors(sp.GetRequiredService<TenantSessionInterceptor>()))
             .AddScoped<IPatientRegistry, PatientRegistry>()
             .AddScoped<IPatientMerges, PatientMerges>()
             .AddScoped<IPatientConsents, PatientConsents>()

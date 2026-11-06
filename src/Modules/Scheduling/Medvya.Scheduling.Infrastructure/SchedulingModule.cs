@@ -18,7 +18,7 @@ public static class SchedulingModule
         services.AddLogging();
         services.TryAddSingleton<IBoardNotifier, NoBoardNotifier>(); // the host replaces it with SignalR (Medvya.Scheduling.Api)
         return services
-            .AddDbContext<SchedulingDbContext>((sp, o) => o.UseNpgsql(connectionString).AddInterceptors(sp.GetRequiredService<TenantSessionInterceptor>()))
+            .AddDbContext<SchedulingDbContext>((sp, o) => o.UseNpgsql(PostgresDataSources.For(connectionString)).AddInterceptors(sp.GetRequiredService<TenantSessionInterceptor>()))
             .AddScoped<SchedulingContext>()
             .AddScoped<DoctorDayTransaction>()
             .AddScoped<Medvya.Patients.Application.IPatientMergeParticipant, PatientMergeParticipant>()

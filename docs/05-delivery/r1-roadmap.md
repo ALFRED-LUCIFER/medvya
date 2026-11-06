@@ -1,8 +1,8 @@
 # Road to R1 (front desk MVP): sequence and distance
 
-As of 26 Oct 2026, `main` at `9243809`. Statuses come from `tickets/_source`. Update this page when a wave finishes.
+As of 26 Oct 2026, `main` at `9243809`. Statuses come from `docs/05-delivery/tickets/_source`. Update this page when a wave finishes.
 
-**R1 is done when the P1 exit gate passes** (`tickets/_source/P1.tickets`):
+**R1 is done when the P1 exit gate passes** (`docs/05-delivery/tickets/_source/P1.tickets`):
 1. Two clinics take real bookings for 2 consecutive weeks, with no paper.
 2. 0 double bookings with 100 parallel bookings.
 3. Median check-in takes 60 s or less.

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3 -I
-"""Create or update GitHub issues from tickets/_source (+ tickets/_source/gherkin/*.feature).
+"""Create or update GitHub issues from docs/05-delivery/tickets/_source (+ docs/05-delivery/tickets/_source/gherkin/*.feature).
 
 One milestone per phase release, one parent issue per epic, one issue per ticket (sub-issue of its epic),
 and one sub-issue per open Gherkin chunk of a ticket that still has more than one chunk to do.
@@ -98,7 +98,7 @@ def ticket_body(t, head, chunks, child_titles):
         out += ["## Tests", *(f"- {x}" for x in t["tests"]), ""]
     if t["progress"]:
         out += ["## Progress so far", *(f"- {x}" for x in t["progress"]), ""]
-    out += ["---", f"Source of truth: `tickets/_source/{t['phase']}.tickets` · Sources: {t.get('sources', '—')}. "
+    out += ["---", f"Source of truth: `docs/05-delivery/tickets/_source/{t['phase']}.tickets` · Sources: {t.get('sources', '—')}. "
             "Edit the source, not this issue's criteria."]
     return "\n".join(out)
 

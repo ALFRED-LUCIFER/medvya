@@ -2,7 +2,7 @@
 
 Medvya is a clinic and doctor platform for India and the UAE. It covers front desk, EMR, AI-drafted notes under clinician sign-off, billing, care follow-up and a patient portal, with hospital integration later.
 
-These docs were built from the Claude Design project **"DOQVI UI mockups and foundations"**. The raw design files are kept unchanged in [`../design/`](../design). Each document below names the design file it came from. Where two sources disagree, **PRD v2 (20 Oct 2026) wins**, and the conflict is recorded in [01-prd/source-conflicts.md](01-prd/source-conflicts.md).
+These docs were built from the Claude Design project **"DOQVI UI mockups and foundations"**. The raw design files are kept unchanged in [`../design/`](02-design/source). Each document below names the design file it came from. Where two sources disagree, **PRD v2 (20 Oct 2026) wins**, and the conflict is recorded in [01-prd/source-conflicts.md](01-prd/source-conflicts.md).
 
 > All patient data in the designs and in these docs is **synthetic**. Hosting on Azure does not make Medvya compliant by itself. Real patient data needs qualified legal and clinical review in each market first: P1 for demographics, P2 for clinical data, P3 for audio.
 
@@ -19,7 +19,7 @@ These docs were built from the Claude Design project **"DOQVI UI mockups and fou
 | [06-gap-analysis](06-gap-analysis) | What a clinic would still miss (outside history, legacy migration, doctor/reception gaps, voice assistant), with priorities and phases |
 | [adr](adr) | Architecture decision records (ADR-001 stack, ADR-002 launch market, and others proposed by the PRD) |
 
-Delivery tickets live in [`../tickets/`](../tickets): Jira-style, one folder per phase. Each ticket has acceptance criteria, source traceability and a confidence level.
+Delivery tickets live in [`../tickets/`](05-delivery/tickets): Jira-style, one folder per phase. Each ticket has acceptance criteria, source traceability and a confidence level.
 
 ## Source files (design project)
 

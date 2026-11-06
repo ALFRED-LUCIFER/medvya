@@ -16,7 +16,7 @@ Medvya handles patient health data in India and the UAE. **Production quality is
 
 ## 2 · How to work
 
-1. **Work from a ticket.** Every change references its key (`MDV-P1-013`) in the branch name, commit and PR. Read the ticket's acceptance criteria and the linked docs before coding. If the ticket is wrong or incomplete, update the ticket source (`tickets/_source/*.tickets`, then `python3 -I tools/tickets/build.py`).
+1. **Work from a ticket.** Every change references its key (`MDV-P1-013`) in the branch name, commit and PR. Read the ticket's acceptance criteria and the linked docs before coding. If the ticket is wrong or incomplete, update the ticket source (`docs/05-delivery/tickets/_source/*.tickets`, then `python3 -I tools/tickets/build.py`).
 2. **Smallest complete change** (Ponytail discipline): solve the whole ticket with the least new code. Reuse what exists (house component, existing service, standard library, installed package) before adding anything. No speculative abstractions, options or "for later" code. Finish every part the change touches: callers, tests, docs, translations.
 3. **Read before you write.** Find every caller, test and config your change reaches. Fix root causes in shared code, not symptoms at call sites.
 4. **Tests prove behaviour.** New logic (branch, parser, money, security, consent, clinical rule) ships with a test. A safety-critical test must be shown to **fail when the protection is removed** (mutation check) before the PR. A test that cannot fail proves nothing.
@@ -82,7 +82,7 @@ src/features/<feature>/components/ presentational: props in, events out (no serv
 
 | Need | Look in |
 |---|---|
-| What to build, acceptance criteria | `tickets/` (source: `tickets/_source`) |
+| What to build, acceptance criteria | `tickets/` (source: `docs/05-delivery/tickets/_source`) |
 | Requirements, phases, exit gates | `docs/01-prd/` |
 | Screens, tokens, copy, permissions | `docs/02-design/`, `design/` (read-only imports) |
 | Architecture, data model, classification | `docs/03-architecture/` |

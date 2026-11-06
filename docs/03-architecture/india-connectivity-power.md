@@ -196,4 +196,4 @@ Only build P1-051 if pilot clinics report outages long enough to need it; the pa
 - [india-hmis] https://india-hmis-site.pages.dev/
 - [bahmni] https://medium.com/bahmni-blog/offline-patient-search-and-registration-in-remote-sub-centres-of-jss-using-bahmni-connect-88987b040df8
 - [dpdp] https://www.mondaq.com/india/privacy-protection/1707558/digital-personal-data-protection-rules-2025-highlights ; https://dpdpa.com/dpdparules/rule7.html ; https://static.pib.gov.in/WriteReadData/specificdocs/documents/2025/nov/doc20251117695301.pdf
-- Repo: AGENTS.md; docs/01-prd/requirements-catalogue.md; docs/01-prd/cross-cutting-metrics-process.md; docs/03-architecture/api-sketch.md; tickets/_source/P8.tickets (MDV-P8-006); web/clinic/src/features/connectivity.
+- Repo: AGENTS.md; docs/01-prd/requirements-catalogue.md; docs/01-prd/cross-cutting-metrics-process.md; docs/03-architecture/api-sketch.md; docs/05-delivery/tickets/_source/P8.tickets (MDV-P8-006); web/clinic/src/features/connectivity.

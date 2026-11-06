@@ -14,7 +14,7 @@ PRD v2 (20 Oct 2026) consolidates every design in the project, Architecture v2, 
 | [source-conflicts.md](source-conflicts.md) | Every conflict between source documents and how it is resolved, plus open questions |
 | [data/prd-v2.json](data/prd-v2.json) | Machine-readable PRD data extracted from the design file. `tools/tickets/build.py` uses it to verify ticket coverage |
 
-The generated files are rebuilt with `python3 -I tools/prd-extract/render_docs.py`. The data is re-extracted with `node tools/prd-extract/extract.mjs "design/Medvya PRD v2.dc.html" > docs/01-prd/data/prd-v2.json`.
+The generated files are rebuilt with `python3 -I tools/prd-extract/render_docs.py`. The data is re-extracted with `node tools/prd-extract/extract.mjs "docs/02-design/source/Medvya PRD v2.dc.html" > docs/01-prd/data/prd-v2.json`.
 
 ## Phase overview
 

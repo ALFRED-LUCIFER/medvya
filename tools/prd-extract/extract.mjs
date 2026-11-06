@@ -1,5 +1,5 @@
 // Runs the data script embedded in a Claude Design .dc.html file and dumps renderVals() as JSON.
-// Usage: node tools/prd-extract/extract.mjs "design/Medvya PRD v2.dc.html" > out.json
+// Usage: node tools/prd-extract/extract.mjs "docs/02-design/source/Medvya PRD v2.dc.html" > out.json
 import { readFileSync } from 'node:fs';
 const src = readFileSync(process.argv[2], 'utf8');
 // data-props values may contain '>', so locate the tag end as the first '>' followed by a newline.

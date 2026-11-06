@@ -68,7 +68,7 @@ jobs:
       - name: Generated ticket pages are current
         run: |
           python3 -I tools/tickets/build.py
-          test -z "$(git status --porcelain tickets)" || { git status --short tickets; echo "run python3 -I tools/tickets/build.py and commit"; exit 1; }
+          test -z "$(git status --porcelain docs/05-delivery/tickets)" || { git status --short docs/05-delivery/tickets; echo "run python3 -I tools/tickets/build.py and commit"; exit 1; }
 
   secrets:
     runs-on: ubuntu-latest

@@ -84,6 +84,31 @@ public class LedgerChainTests(PostgresFixture sql) : IClassFixture<PostgresFixtu
         Assert.Equal(Enumerable.Range(1, 24).Select(i => (long)i), (await Seqs(tenant)).Order());
     }
 
+    /// <summary>
+    /// MDV-P0-039: the trigger reads the chain head from the (TenantId, ChainSeq) index whatever the planner's costs say. A seq scan plus
+    /// sort reads every earlier row per insert, so a bulk insert turns quadratic (the 150,000-row CI seed stalled past 300 s). Index
+    /// scans are priced out here to force that plan; the count is exact, so the test does not depend on timing.
+    /// </summary>
+    [Fact]
+    public async Task TheChainHeadIsReadFromTheIndexEvenWhenThePlannerPrefersAScan()
+    {
+        var tenant = Guid.NewGuid();
+        await using var conn = await sql.OpenAs("dbo", tenant);
+        await using var tx = await conn.BeginTransactionAsync();
+        await new NpgsqlCommand("SET LOCAL random_page_cost = 1000", conn, tx).ExecuteNonQueryAsync();
+        await using (var insert = new NpgsqlCommand("""
+            INSERT INTO audit."AuditEvents" ("Id", "TenantId", "Action", "ResourceType", "Purpose", "Outcome", "OccurredAt")
+            SELECT gen_random_uuid(), @t, 'patient.read', 'patient', 'treatment', 'Allowed', now() FROM generate_series(1, 500)
+            """, conn, tx))
+        {
+            insert.Parameters.AddWithValue("t", tenant);
+            Assert.Equal(500, await insert.ExecuteNonQueryAsync());
+        }
+        // SAFETY: mutation check: without "SET enable_sort = off" on ledger.chain() this reads ~125,000 rows (see PR).
+        var seqRead = await new NpgsqlCommand("""SELECT seq_tup_read FROM pg_stat_xact_user_tables WHERE schemaname = 'audit' AND relname = 'AuditEvents'""", conn, tx).ExecuteScalarAsync();
+        Assert.Equal(0L, seqRead);
+    }
+
     async Task<List<long>> Seqs(Guid tenant)
     {
         await using var conn = new NpgsqlConnection(sql.AdminConnectionString);

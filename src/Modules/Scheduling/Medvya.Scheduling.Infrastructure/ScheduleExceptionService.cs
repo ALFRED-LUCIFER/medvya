@@ -37,27 +37,32 @@ public sealed class ScheduleExceptionService(
         var (now, me) = (context.Now, context.UserId);
         var template = await db.Templates.AsNoTracking().SingleOrDefaultAsync(t => t.FacilityId == command.FacilityId && t.CalendarId == calendar.Id, cancellationToken);
 
+        var old = command.ReplacesId is not { } oldId ? null
+            : await db.Exceptions.AsNoTracking().SingleOrDefaultAsync(x => x.Id == oldId && x.FacilityId == command.FacilityId && x.CalendarId == calendar.Id, cancellationToken)
+                ?? throw new SchedulingValidationException([new("id", "unknown")]);
         var exception = new ScheduleAdjustment
         {
-            Id = Guid.CreateVersion7(), TenantId = context.TenantId, FacilityId = command.FacilityId, CalendarId = calendar.Id, Kind = command.Kind,
-            FromDate = command.FromDate, ToDate = command.ToDate, Start = command.Start, End = command.End, Reason = ScheduleService.Clean(command.Reason), CreatedBy = me, CreatedAt = now,
+            Id = old?.Id ?? Guid.CreateVersion7(), TenantId = context.TenantId, FacilityId = command.FacilityId, CalendarId = calendar.Id, Kind = command.Kind,
+            FromDate = command.FromDate, ToDate = command.ToDate, Start = command.Start, End = command.End, Reason = ScheduleService.Clean(command.Reason), CreatedBy = old?.CreatedBy ?? me, CreatedAt = old?.CreatedAt ?? now,
         };
         ScheduleRules.Validate(exception, template);
         var errors = new List<ValidationError>();
-        if (exception.FromDate < ScheduleRules.LocalDate(now, zone)) errors.Add(new("fromDate", "past"));
+        if (exception.FromDate < ScheduleRules.LocalDate(now, zone) && exception.FromDate != old?.FromDate) errors.Add(new("fromDate", "past")); // leave already under way can still be ended or shortened
         if (exception.Kind != ExceptionKind.Leave && template is null) errors.Add(new("calendarId", "no_schedule")); // nothing to extend or shorten
         SchedulingValidationException.ThrowIfAny(errors);
 
-        var days = Enumerable.Range(0, exception.ToDate.DayNumber - exception.FromDate.DayNumber + 1).Select(i => exception.FromDate.AddDays(i)).ToList();
+        var days = Days(exception).Concat(old is null ? [] : Days(old)).ToList(); // an edit also locks the days it gives back
         var (offered, manual, moved) = await transaction.RunAsync(days.Select(d => (calendar.Id, d)), async () =>
         {
             var existing = await db.Exceptions.AsNoTracking()
-                .Where(x => x.FacilityId == exception.FacilityId && x.CalendarId == calendar.Id && x.FromDate <= exception.ToDate && x.ToDate >= exception.FromDate).ToListAsync(cancellationToken);
+                .Where(x => x.Id != exception.Id && x.FacilityId == exception.FacilityId && x.CalendarId == calendar.Id && x.FromDate <= exception.ToDate && x.ToDate >= exception.FromDate).ToListAsync(cancellationToken);
             if (exception.Kind != ExceptionKind.Leave && existing.Exists(x => x.Kind == exception.Kind
                     && (exception.Kind == ExceptionKind.ShortenedDay || (x.Start < exception.End && exception.Start < x.End))))
                 throw new SchedulingValidationException([new("start", "overlap")]);
 
             var affected = await AffectedAsync(exception, template, [.. existing, exception], zone, cancellationToken);
+            if (old is { Kind: ExceptionKind.ExtraSession }) // the hours it added are gone or moved: visits booked into them are stranded too
+                affected = [.. affected.Concat(await StrandedAsync(old, template, [.. existing, exception], zone, cancellationToken)).DistinctBy(a => a.Id)];
             var byId = (command.Actions ?? []).GroupBy(a => a.AppointmentId).ToDictionary(g => g.Key, g => g.First().Action);
             if (byId.Keys.Any(id => affected.TrueForAll(a => a.Id != id)) || (command.Actions ?? []).Any(a => !Enum.IsDefined(a.Action)))
                 throw new SchedulingValidationException([new("actions", "unknown")]);
@@ -67,6 +72,8 @@ public sealed class ScheduleExceptionService(
                 throw new ExceptionActionsRequiredException([.. affected.Select(a => SchedulingContext.Chip(a, names))]);
             }
 
+            if (old is not null && await db.Exceptions.Where(x => x.Id == old.Id).ExecuteDeleteAsync(cancellationToken) == 0)
+                throw new SchedulingValidationException([new("id", "unknown")]); // deleted by someone else since it was read
             db.Exceptions.Add(exception);
             foreach (var a in affected)
             {
@@ -83,7 +90,7 @@ public sealed class ScheduleExceptionService(
                     });
             }
             await db.SaveChangesAsync(cancellationToken);
-            await context.AuditAsync(SchedulingAudit.ExceptionCreate, SchedulingAudit.ExceptionResource, SchedulingAudit.Operations, exception.Id, null, cancellationToken);
+            await context.AuditAsync(old is null ? SchedulingAudit.ExceptionCreate : SchedulingAudit.ExceptionUpdate, SchedulingAudit.ExceptionResource, SchedulingAudit.Operations, exception.Id, null, cancellationToken);
             foreach (var a in affected)
                 await context.AuditAsync(SchedulingAudit.NeedsRebooking, SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment, a.Id, a.PatientId, cancellationToken);
             return (byId.Count(p => p.Value == RebookAction.Offer), byId.Count(p => p.Value == RebookAction.Manual), affected);
@@ -92,6 +99,26 @@ public sealed class ScheduleExceptionService(
         foreach (var a in moved) // the cards appear in the board's "needs rebooking" lane
             await FrontDeskService.NotifyAsync(notifier, log, new(a.TenantId, a.FacilityId, a.Id, AppointmentState.NeedsRebooking, now));
         return new(View(exception), offered, manual);
+    }
+
+    public async Task DeleteAsync(Guid facilityId, Guid exceptionId, CancellationToken cancellationToken = default)
+    {
+        await context.RequireAsync(facilityId, SchedulingAccess.CanBook, cancellationToken);
+        var x = await db.Exceptions.AsNoTracking().SingleOrDefaultAsync(e => e.Id == exceptionId && e.FacilityId == facilityId, cancellationToken)
+            ?? throw new SchedulingValidationException([new("id", "unknown")]);
+        var (_, zone) = await context.FacilityAsync(facilityId, cancellationToken);
+        var template = await db.Templates.AsNoTracking().SingleOrDefaultAsync(t => t.FacilityId == facilityId && t.CalendarId == x.CalendarId, cancellationToken);
+        await transaction.RunAsync(Days(x).Select(d => (x.CalendarId, d)), async () =>
+        {
+            if (x.Kind == ExceptionKind.ExtraSession)
+            {
+                var others = await db.Exceptions.AsNoTracking().Where(e => e.Id != x.Id && e.FacilityId == facilityId && e.CalendarId == x.CalendarId && e.FromDate <= x.ToDate && e.ToDate >= x.FromDate).ToListAsync(cancellationToken);
+                if ((await StrandedAsync(x, template, others, zone, cancellationToken)).Count > 0) throw new SchedulingValidationException([new("id", "has_bookings")]);
+            }
+            if (await db.Exceptions.Where(e => e.Id == x.Id).ExecuteDeleteAsync(cancellationToken) == 0) throw new SchedulingValidationException([new("id", "unknown")]);
+            await context.AuditAsync(SchedulingAudit.ExceptionDelete, SchedulingAudit.ExceptionResource, SchedulingAudit.Operations, x.Id, null, cancellationToken);
+            return true;
+        }, cancellationToken);
     }
 
     public async Task<int> ReleaseDoctorAsync(Guid doctorUserId, CancellationToken cancellationToken = default)
@@ -133,12 +160,25 @@ public sealed class ScheduleExceptionService(
         var from = ScheduleRules.DayBounds(x.FromDate, zone).From;
         var to = ScheduleRules.DayBounds(x.ToDate, zone).To;
         var booked = await db.Appointments.AsNoTracking()
-            .Where(a => a.FacilityId == x.FacilityId && a.CalendarId == x.CalendarId && a.Start >= from && a.Start < to && a.State == AppointmentState.Booked && !a.Unscheduled)
+            .Where(a => a.FacilityId == x.FacilityId && a.CalendarId == x.CalendarId && a.Start >= from && a.Start < to && a.Start >= context.Now && a.State == AppointmentState.Booked && !a.Unscheduled)
             .OrderBy(a => a.Start).ToListAsync(cancellationToken);
         return x.Kind == ExceptionKind.Leave || template is null
             ? booked
             : [.. booked.Where(a => !ScheduleRules.Covers(ScheduleRules.Day(template, ScheduleRules.LocalDate(a.Start, zone), zone, all), a.Start, a.End))];
     }
+
+    /// <summary>Booked visits inside an extra session's window that the calendar's remaining hours do not cover.</summary>
+    async Task<List<Appointment>> StrandedAsync(ScheduleAdjustment extra, ScheduleTemplate? template, List<ScheduleAdjustment> remaining, TimeZoneInfo zone, CancellationToken cancellationToken)
+    {
+        if (template is null) return [];
+        var (from, to) = ScheduleRules.DayBounds(extra.FromDate, zone);
+        var booked = await db.Appointments.AsNoTracking()
+            .Where(a => a.FacilityId == extra.FacilityId && a.CalendarId == extra.CalendarId && a.Start >= from && a.Start < to && a.Start >= context.Now && a.State == AppointmentState.Booked && !a.Unscheduled)
+            .OrderBy(a => a.Start).ToListAsync(cancellationToken);
+        return [.. booked.Where(a => !ScheduleRules.Covers(ScheduleRules.Day(template, extra.FromDate, zone, remaining), a.Start, a.End))];
+    }
+
+    static IEnumerable<DateOnly> Days(ScheduleAdjustment x) => Enumerable.Range(0, x.ToDate.DayNumber - x.FromDate.DayNumber + 1).Select(i => x.FromDate.AddDays(i));
 
     static ExceptionView View(ScheduleAdjustment x) => new(x.Id, x.CalendarId, x.Kind, x.FromDate, x.ToDate, x.Start, x.End, x.Reason);
 }

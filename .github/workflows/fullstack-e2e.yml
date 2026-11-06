@@ -1,0 +1,44 @@
+name: fullstack-e2e
+
+# MDV-P0-029: the browser against the real Host.Api and a real SQL Server in Docker, no mocked APIs (tests/e2e/fullstack).
+# Not a required check yet: it runs nightly, on demand, and on PRs that touch it, until it has a record of being stable on the
+# runners. Then move the job into pr.yml (the timeout below is its budget). Synthetic data only; nothing here touches Azure.
+on:
+  schedule:
+    - cron: '17 21 * * *'
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'tests/e2e/fullstack/**'
+      - '.github/workflows/fullstack-e2e.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fullstack-e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  fullstack:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter e2e exec playwright install --with-deps chromium
+      - run: pnpm e2e:fullstack # stack.mjs builds the web app and the API, starts SQL Server in Docker, seeds, serves; removed on exit
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: fullstack-traces
+          path: tests/e2e/test-results
+          retention-days: 7

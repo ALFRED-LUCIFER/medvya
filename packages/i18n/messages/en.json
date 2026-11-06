@@ -1500,5 +1500,16 @@
   "patients.consents.grant": "Turn on",
   "patients.consents.withdraw": "Turn off",
   "patients.consents.failed": "Could not load the consents. Reload the page to try again.",
-  "patients.consents.changeFailed": "Could not save the change. Nothing was changed. Try again."
+  "patients.consents.changeFailed": "Could not save the change. Nothing was changed. Try again.",
+  "adjustment.edit": "Edit",
+  "adjustment.edit.named": "Edit leave or exception of {name}",
+  "adjustment.delete": "Delete",
+  "adjustment.delete.named": "Delete leave or exception of {name}",
+  "adjustment.editing": "Editing a saved exception. Saving replaces it; any booked visits it newly affects are listed first.",
+  "adjustment.cancelEdit": "Cancel editing",
+  "adjustment.deleteNote": "Deleting leave or a shortened day makes the slots bookable again. Visits already moved to needs rebooking stay as they are: they are not booked again and reception still has to move them.",
+  "adjustment.delete.confirm": "Delete this? Visits already moved to needs rebooking are not booked again.",
+  "adjustment.delete.yes": "Yes, delete",
+  "adjustment.delete.no": "Keep it",
+  "adjustment.error.has_bookings": "Visits are booked in this extra session. Move them first, then delete it."
 }

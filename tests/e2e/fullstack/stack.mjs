@@ -1,0 +1,80 @@
+// Starts the real stack for the full-stack browser journeys (MDV-P0-029) and keeps it up until it is signalled:
+// a throwaway SQL Server 2022 in Docker, the synthetic cast seeded by the real generator, the production web build,
+// and the real Host.Api (Development, dev sign-in provider) serving that build at /app/ on E2E_API_PORT.
+// Everything is removed on exit. Synthetic data only; the SQL password is random per run and never leaves this machine.
+import { execFileSync, spawn, spawnSync } from 'node:child_process';
+import { randomBytes } from 'node:crypto';
+import { cpSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import net from 'node:net';
+import { tmpdir } from 'node:os';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const repo = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
+const apiPort = process.env.E2E_API_PORT ?? '5391';
+const clockStart = process.env.E2E_CLOCK_START ?? '2026-11-03T04:00:00Z'; // Tuesday 09:30 in Asia/Kolkata
+const password = `Pw_${randomBytes(12).toString('hex')}_1A`;
+const container = `medvya-e2e-sql-${process.pid}`;
+const work = mkdtempSync(join(tmpdir(), 'medvya-e2e-'));
+const log = m => console.log(`[stack] ${m}`);
+let api;
+
+const freePort = () => new Promise((ok, fail) => {
+  const s = net.createServer().listen(0, '127.0.0.1', () => { const { port } = s.address(); s.close(() => ok(port)); });
+  s.on('error', fail);
+});
+
+function cleanup() {
+  if (api?.pid) try { process.kill(-api.pid, 'SIGTERM'); } catch { /* already gone */ }
+  spawnSync('docker', ['rm', '-f', container], { stdio: 'ignore' });
+  rmSync(work, { recursive: true, force: true });
+}
+for (const sig of ['SIGTERM', 'SIGINT', 'SIGHUP']) process.on(sig, () => { cleanup(); process.exit(0); });
+process.on('exit', cleanup);
+
+const run = (cmd, args, env = {}) => execFileSync(cmd, args, { cwd: repo, stdio: 'inherit', env: { ...process.env, ...env } });
+
+try {
+  const sqlPort = await freePort();
+  log(`SQL Server on 127.0.0.1:${sqlPort}`);
+  // amd64-only image; on Apple silicon it runs under Rosetta (see CLAUDE.md).
+  execFileSync('docker', ['run', '-d', '--rm', '--name', container, '--platform', 'linux/amd64', '-p', `127.0.0.1:${sqlPort}:1433`,
+    '-e', 'ACCEPT_EULA=Y', '-e', `MSSQL_SA_PASSWORD=${password}`, 'mcr.microsoft.com/mssql/server:2022-latest'], { stdio: 'ignore' });
+  const connection = `Server=127.0.0.1,${sqlPort};Database=medvya;User Id=sa;Password=${password};TrustServerCertificate=True`;
+
+  log('building the web app and the API while SQL Server starts');
+  run('pnpm', ['--filter', 'clinic', 'build']);
+  mkdirSync(join(work, 'wwwroot'));
+  cpSync(join(repo, 'web/clinic/dist'), join(work, 'wwwroot/app'), { recursive: true });
+  for (const project of ['src/Host.Api', 'tools/synthetic-data-generator']) run('dotnet', ['build', project, '--nologo', '-v', 'q']);
+
+  for (let i = 0; ; i++) {
+    const ready = spawnSync('docker', ['exec', container, '/opt/mssql-tools18/bin/sqlcmd', '-C', '-S', 'localhost', '-U', 'sa', '-P', password, '-Q', 'SELECT 1', '-b'], { stdio: 'ignore' });
+    if (ready.status === 0) break;
+    if (i > 90) throw new Error('SQL Server did not become ready in 3 minutes.');
+    await new Promise(r => setTimeout(r, 2000));
+  }
+
+  log('seeding the synthetic cast (two tenants)');
+  run('dotnet', ['run', '--no-build', '--project', 'tools/synthetic-data-generator', '--', '--uae'],
+    { DOTNET_ENVIRONMENT: 'Development', ConnectionStrings__Medvya: connection });
+
+  log(`starting Host.Api on http://localhost:${apiPort}`);
+  api = spawn('dotnet', ['run', '--no-build', '--no-launch-profile', '--project', 'src/Host.Api'], {
+    cwd: repo, detached: true, stdio: ['ignore', 'inherit', 'inherit'],
+    env: {
+      ...process.env,
+      ASPNETCORE_ENVIRONMENT: 'Development',
+      ASPNETCORE_URLS: `http://localhost:${apiPort}`,
+      ASPNETCORE_WEBROOT: join(work, 'wwwroot'),
+      Authentication__Oidc__Authority: `http://localhost:${apiPort}/dev-idp`,
+      ConnectionStrings__Medvya: connection,
+      Testing__ClockStartUtc: clockStart,
+    },
+  });
+  api.on('exit', code => { log(`Host.Api exited (${code})`); process.exit(1); });
+  await new Promise(() => {}); // Playwright polls /health, runs the tests, then signals this process
+} catch (e) {
+  console.error(e);
+  process.exit(1);
+}

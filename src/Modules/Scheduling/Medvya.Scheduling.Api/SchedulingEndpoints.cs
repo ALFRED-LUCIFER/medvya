@@ -47,8 +47,19 @@ public static class SchedulingEndpoints
             .AuditedWithErrors("schedule.exception.read", SchedulingAudit.ExceptionResource, SchedulingAudit.Operations);
 
         // Leave and one-off sessions (MDV-P1-012): affected visits need an action each, else 409 "actions_required" with the list and nothing is saved.
-        schedule.MapPost("/exceptions", (SaveAdjustment command, [FromServices] IScheduleExceptionService service, CancellationToken ct) => service.SaveAsync(command, ct))
+        schedule.MapPost("/exceptions", (SaveAdjustment command, [FromServices] IScheduleExceptionService service, CancellationToken ct) => service.SaveAsync(command with { ReplacesId = null }, ct))
             .AuditedWriteWithErrors(SchedulingAudit.ExceptionCreate, SchedulingAudit.ExceptionResource, SchedulingAudit.Operations);
+
+        // Edit takes the same body and the same action rules as add (a longer leave can strand more visits); delete gives the slots back.
+        schedule.MapPut("/exceptions/{id:guid}", (Guid id, SaveAdjustment command, [FromServices] IScheduleExceptionService service, CancellationToken ct) =>
+                service.SaveAsync(command with { ReplacesId = id }, ct))
+            .AuditedWriteWithErrors(SchedulingAudit.ExceptionUpdate, SchedulingAudit.ExceptionResource, SchedulingAudit.Operations);
+        schedule.MapDelete("/exceptions/{id:guid}", async (Guid id, Guid? facilityId, [FromServices] IScheduleExceptionService service, CancellationToken ct) =>
+            {
+                await service.DeleteAsync(facilityId ?? Guid.Empty, id, ct);
+                return Results.NoContent();
+            })
+            .AuditedWriteWithErrors(SchedulingAudit.ExceptionDelete, SchedulingAudit.ExceptionResource, SchedulingAudit.Operations);
 
         schedule.MapPost("/resources", (AddResource command, [FromServices] IScheduleService service, CancellationToken ct) => service.AddResourceAsync(command, ct))
             .AuditedWriteWithErrors(SchedulingAudit.ResourceCreate, SchedulingAudit.ResourceResource, SchedulingAudit.Operations);

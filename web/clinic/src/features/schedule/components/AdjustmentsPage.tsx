@@ -13,6 +13,15 @@ type Props = {
   timeZone: string | null;
   loading: boolean;
   saved: SavedAdjustment[];
+  editingId: string | null;
+  onEdit: (row: SavedAdjustment) => void;
+  onCancelEdit: () => void;
+  /** The saved row waiting for the desk to confirm its deletion. */
+  confirmingId: string | null;
+  onAskDelete: (id: string | null) => void;
+  onDelete: (id: string) => void;
+  deleting: boolean;
+  deleteError: AdjustmentError | null;
   /** The booked visits the change leaves without a doctor, once the server has listed them; null before. */
   affected: Appointment[] | null;
   chosen: Record<string, RebookAction>;
@@ -60,7 +69,7 @@ export default function AdjustmentsPage(p: Props) {
         <div className="grid gap-4 md:grid-cols-2">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="adj-calendar">{t('adjustment.calendar')}</Label>
-            <Select value={calendarId ?? ''} onValueChange={v => setValue('calendarId', v, { shouldValidate: true })} disabled={p.loading}>
+            <Select value={calendarId ?? ''} onValueChange={v => setValue('calendarId', v, { shouldValidate: true })} disabled={p.loading || !!p.editingId}>
               <SelectTrigger id="adj-calendar" className={cn(control, 'w-full')} aria-invalid={!!errors.calendarId}><SelectValue placeholder={t('adjustment.calendar.choose')} /></SelectTrigger>
               <SelectContent>{p.calendars.map(c => <SelectItem key={c.id} value={c.id}>{c.name || t('schedule.doctor')}</SelectItem>)}</SelectContent>
             </Select>
@@ -120,14 +129,43 @@ export default function AdjustmentsPage(p: Props) {
             </p>
           )}
         </div>
-        <Button type="submit" className="self-start" disabled={!p.canSave} loading={p.saving}>{t('adjustment.save')}</Button>
+        {p.editingId && <p className="text-sm font-bold">{t('adjustment.editing')}</p>}
+        <div className="flex flex-wrap gap-2">
+          <Button type="submit" disabled={!p.canSave} loading={p.saving}>{t('adjustment.save')}</Button>
+          {p.editingId && <Button type="button" variant="outline" onClick={p.onCancelEdit}>{t('adjustment.cancelEdit')}</Button>}
+        </div>
       </form>
 
       <section aria-labelledby="adj-saved" className="flex flex-col gap-2">
         <h2 id="adj-saved" className="text-lg font-extrabold">{t('adjustment.upcoming')}</h2>
+        <p className="text-sm text-muted-foreground">{t('adjustment.deleteNote')}</p>
+        <div aria-live="polite">
+          {p.deleteError && <p role="alert" className="text-sm font-semibold text-danger-700">{t(`adjustment.error.${p.deleteError}`)}</p>}
+        </div>
         {p.saved.length === 0 ? <p className="text-muted-foreground">{t('adjustment.none')}</p> : (
           <ul className="flex flex-col gap-2">
-            {p.saved.map(s => <li key={s.id} className="rounded-lg border bg-card p-3"><Saved row={s} name={p.calendars.find(c => c.id === s.calendarId)?.name ?? ''} formatDay={formatDay} /></li>)}
+            {p.saved.map(s => {
+              const name = p.calendars.find(c => c.id === s.calendarId)?.name ?? '';
+              return (
+                <li key={s.id} className="flex flex-col gap-2 rounded-lg border bg-card p-3">
+                  <Saved row={s} name={name} formatDay={formatDay} />
+                  {p.confirmingId === s.id ? (
+                    <div className="flex flex-col items-start gap-2">
+                      <p className="text-sm font-bold">{t('adjustment.delete.confirm')}</p>
+                      <div className="flex flex-wrap gap-2">
+                        <Button type="button" variant="destructive" loading={p.deleting} onClick={() => p.onDelete(s.id)}>{t('adjustment.delete.yes')}</Button>
+                        <Button type="button" variant="outline" onClick={() => p.onAskDelete(null)}>{t('adjustment.delete.no')}</Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      <Button type="button" variant="outline" onClick={() => p.onEdit(s)} aria-label={t('adjustment.edit.named', { name })}>{t('adjustment.edit')}</Button>
+                      <Button type="button" variant="outline" onClick={() => p.onAskDelete(s.id)} aria-label={t('adjustment.delete.named', { name })}>{t('adjustment.delete')}</Button>
+                    </div>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>

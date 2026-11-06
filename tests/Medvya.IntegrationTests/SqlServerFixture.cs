@@ -54,12 +54,12 @@ public sealed class SqlServerFixture : IAsyncLifetime
     }
 
     /// <summary>Patients context as administrator, with Always Encrypted on (the test CMK is registered).</summary>
-    public PatientsDbContext Patients(Guid? tenantId)
+    public PatientsDbContext Patients(Guid? tenantId, params Microsoft.EntityFrameworkCore.Diagnostics.IInterceptor[] more)
     {
         var tenant = new FixedTenant(tenantId);
         return new PatientsDbContext(new DbContextOptionsBuilder<PatientsDbContext>()
             .UseSqlServer(PatientsModule.WithColumnEncryption(ConnectionString))
-            .AddInterceptors(new TenantSessionInterceptor(tenant))
+            .AddInterceptors(new TenantSessionInterceptor(tenant)).AddInterceptors(more)
             .Options, tenant);
     }
 

@@ -23,6 +23,8 @@ public sealed record SaveAdjustment
     public TimeOnly? Start { get; init; }
     public TimeOnly? End { get; init; }
     public string? Reason { get; init; }
+    /// <summary>Set (by PUT) to edit this saved exception of the same calendar instead of adding one.</summary>
+    public Guid? ReplacesId { get; init; }
     public IReadOnlyList<AppointmentAction> Actions { get; init; } = [];
 }
 
@@ -45,6 +47,13 @@ public interface IScheduleExceptionService
     /// <exception cref="ExceptionActionsRequiredException">Booked visits are affected and not every one has an action; nothing was saved.</exception>
     /// <exception cref="SchedulingValidationException">Invalid dates or window, an overlapping exception, or an action for a visit that is not affected.</exception>
     Task<SavedAdjustment> SaveAsync(SaveAdjustment command, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Cancels a saved exception: deleted leave or a shortened day gives the bookable slots back. Visits already moved to "needs rebooking"
+    /// stay as they are (nobody is re-booked silently). An extra session that still has booked visits in it cannot be deleted.
+    /// </summary>
+    /// <exception cref="SchedulingValidationException">Unknown exception, or an extra session with booked visits (<c>id:has_bookings</c>).</exception>
+    Task DeleteAsync(Guid facilityId, Guid exceptionId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// A doctor left the practice (MDV-P1-009): their future booked visits become "needs rebooking" for reception to move (slots freed, audited,

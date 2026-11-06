@@ -7,11 +7,11 @@ Sources: PRD v2 §07/§07b (authoritative), Azure Architecture (stages, residenc
 | Resource | Setting |
 |---|---|
 | App Service plan (Linux) + Web App | .NET 10. Hosts Host.Api + static SPA assets. VNet integration. Staging slot for swap. Managed identity |
-| Azure SQL logical server + database | **Entra-only auth.** Private endpoint, public access **disabled**. TDE with CMK. Auditing to Log Analytics + immutable storage. Defender for SQL. PITR (up to 35 days) + LTR per country. Serverless for dev/staging; General Purpose provisioned, zone-redundant for prod |
+| Azure Database for PostgreSQL Flexible Server (ADR-012, MDV-P0-038) | **Entra-only auth** (password login off). VNet-integrated with a private DNS zone, public access **disabled**. Storage encrypted with a customer-managed key. pgaudit and connection logs to Log Analytics. PITR 14 days (prod) / 7 (dev), backups kept in country (geo-redundant only to a paired region in the same country). Burstable for dev/staging; General Purpose with zone-redundant HA for prod. Timed restore drill: `docs/runbooks/postgres-restore-drill.md` |
 | Storage account (Blob) | Private endpoint, no public access, CMK, user-delegation SAS only, lifecycle rules (audio purge, cool/archive), immutable container for ledger digests |
 | Key Vault | RBAC, soft delete + **purge protection**, private endpoint. Holds CMKs, the Always Encrypted column master key, and remaining secrets |
 | Application Insights + Log Analytics | OpenTelemetry. **PHI-scrubbing telemetry processor.** Retention by data class |
-| Defender for Cloud | All plans relevant to App Service, SQL, Storage, Key Vault |
+| Defender for Cloud | All plans relevant to App Service, PostgreSQL, Storage, Key Vault |
 | Azure Communication Services | Email and SMS (P1). Region- and DLT-aware |
 | Service Bus (P3+) | AI and integration queues, dead-letter, private endpoint |
 | Azure OpenAI + AI Speech (P3+) | In-region deployment only. Quota alerts |
@@ -41,7 +41,7 @@ Azure Front Door Premium + WAF, Container Apps/AKS, Fleet Manager, Flux GitOps, 
 
 ## Cost guidance (Build Plan, Software Architecture)
 
-- Start with dev + prod. Add staging before the pilot. Serverless SQL outside production.
+- Start with dev + prod. Add staging before the pilot. Burstable PostgreSQL outside production.
 - Pay-as-you-go Azure OpenAI and Speech. Switch to provisioned throughput only when usage is steady.
 - Apply for Microsoft for Startups (Founders Hub) credits.
 - Private networking adds material cost, so get a regional quote before the first patient.

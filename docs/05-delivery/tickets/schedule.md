@@ -50,7 +50,7 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P0-038](P0-foundation/MDV-P0-038.md) | Azure Database for PostgreSQL Flexible Server in Bicep: private endpoint, Entra-only auth, customer-managed key, in-country HA and point-in-time restore | P0 | wk 2–3 | 65% |
 | [MDV-P0-040](P0-foundation/MDV-P0-040.md) | Repository structure: Host.Api to composition only, mobile and shared packages in the workspace, tickets and design into docs, link check, CI path filters | P0 | wk 2–2 | 70% |
 
-## Week 3 · 09 Nov 2026 – 13 Nov 2026 · load 24.8 dev-days ⚠ over capacity
+## Week 3 · 09 Nov 2026 – 13 Nov 2026 · load 29.8 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -71,14 +71,17 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P0-035](P0-foundation/MDV-P0-035.md) | National IDs unreadable to database admins: envelope encryption with Key Vault keys and an HMAC blind index | P0 | wk 3–3 | 60% |
 | [MDV-P0-036](P0-foundation/MDV-P0-036.md) | Tamper-evident audit and signed records without SQL ledger: hash chain, append-only triggers, daily digest to immutable Blob | P0 | wk 3–4 | 60% |
 | [MDV-P0-038](P0-foundation/MDV-P0-038.md) | Azure Database for PostgreSQL Flexible Server in Bicep: private endpoint, Entra-only auth, customer-managed key, in-country HA and point-in-time restore | P0 | wk 2–3 | 65% |
+| [MDV-P0-041](P0-foundation/MDV-P0-041.md) | Postgres hardening from the security review: narrower grants, DataKeys protection, stable ledger hash, destructive-migration gate | P0 | wk 3–3 | 75% |
+| [MDV-P0-042](P0-foundation/MDV-P0-042.md) | Make the Azure dev environment actually run on PostgreSQL: app settings, Entra token connection, migration runner in the deploy workflow, immutable ledger-digests container | P0 | wk 3–4 | 60% |
 
-## Week 4 · 16 Nov 2026 – 20 Nov 2026 · load 10.1 dev-days ⚠ over capacity
+## Week 4 · 16 Nov 2026 – 20 Nov 2026 · load 12.1 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
 | [MDV-P0-036](P0-foundation/MDV-P0-036.md) | Tamper-evident audit and signed records without SQL ledger: hash chain, append-only triggers, daily digest to immutable Blob | P0 | wk 3–4 | 60% |
 | [MDV-P0-037](P0-foundation/MDV-P0-037.md) | Support and reporting access without dynamic masking: reporting role, masked views, no decrypt right | P0 | wk 4–4 | 70% |
 | [MDV-P0-039](P0-foundation/MDV-P0-039.md) | Re-baseline load and desk tests on Postgres | P0 | wk 4–4 | 75% |
+| [MDV-P0-042](P0-foundation/MDV-P0-042.md) | Make the Azure dev environment actually run on PostgreSQL: app settings, Entra token connection, migration runner in the deploy workflow, immutable ledger-digests container | P0 | wk 3–4 | 60% |
 | [MDV-P1-001](P1-front-desk/MDV-P1-001.md) | Public site on Razor Pages and landing page (solo doctor / hospital CTAs, region-aware copy) | P1 | wk 4–4 | 88% |
 | [MDV-P1-002](P1-front-desk/MDV-P1-002.md) | Country and data-residency selector that binds a new tenant to one data plane | P1 | wk 4–4 | 85% |
 | [MDV-P1-004](P1-front-desk/MDV-P1-004.md) | Solo doctor and clinic sign-up with the six-step onboarding wizard (autosave) | P1 | wk 4–5 | 85% |

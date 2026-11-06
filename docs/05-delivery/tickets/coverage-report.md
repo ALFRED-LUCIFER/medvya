@@ -8,7 +8,7 @@ Every requirement, screen, exit criterion, NFR, delivery-package item and depend
 
 | Req | Phase | Priority | Tickets |
 |---|---|---|---|
-| P0-01 | P0 | MUST | MDV-P0-001, MDV-P0-004, MDV-P0-005, MDV-P0-007, MDV-P0-029, MDV-P0-032, MDV-P0-038, MDV-P0-040 |
+| P0-01 | P0 | MUST | MDV-P0-001, MDV-P0-004, MDV-P0-005, MDV-P0-007, MDV-P0-029, MDV-P0-032, MDV-P0-038, MDV-P0-040, MDV-P0-042 |
 | P0-02 | P0 | MUST | MDV-P0-006, MDV-P0-007, MDV-P0-019, MDV-P0-033, MDV-P0-039 |
 | P0-03 | P0 | MUST | MDV-P0-011, MDV-P0-012, MDV-P0-013, MDV-P0-026 |
 | P0-04 | P0 | MUST | MDV-P0-010, MDV-P0-028 |
@@ -16,7 +16,7 @@ Every requirement, screen, exit criterion, NFR, delivery-package item and depend
 | P0-06 | P0 | MUST | MDV-P0-017, MDV-P0-036 |
 | P0-07 | P0 | MUST | MDV-P0-020, MDV-P0-021, MDV-P0-022, MDV-P0-023, MDV-P0-030 |
 | P0-08 | P0 | MUST | MDV-P0-002, MDV-P0-003, MDV-P0-016, MDV-P0-024, MDV-P0-031 |
-| P0-09 | P0 | MUST | MDV-P0-008, MDV-P0-009, MDV-P0-034, MDV-P0-035, MDV-P0-037 |
+| P0-09 | P0 | MUST | MDV-P0-008, MDV-P0-009, MDV-P0-034, MDV-P0-035, MDV-P0-037, MDV-P0-041 |
 | P0-10 | P0 | MUST | MDV-P0-016, MDV-P0-018, MDV-P0-025, MDV-P0-026, MDV-P0-027 |
 | P1-01 | P1 | SHOULD | MDV-P1-001, MDV-P1-002, MDV-P1-003 |
 | P1-02 | P1 | MUST | MDV-P1-004, MDV-P1-005, MDV-P1-006, MDV-P1-039, MDV-P1-043 |

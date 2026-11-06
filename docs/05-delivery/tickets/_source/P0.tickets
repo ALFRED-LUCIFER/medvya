@@ -1028,3 +1028,48 @@ ac:
 - Given the repository root, when listed, then `tickets/` and `design/` are gone and everything they held is under docs.
 - Given a change to one area, when CI runs, then only the affected jobs run and the required checks still gate the merge.
 - Given the new tree, when `dotnet build`, `dotnet test`, `pnpm -r build`, `pnpm -r lint`, `pnpm -r test`, `pnpm e2e` and `python3 -I tools/tickets/build.py` run, then all pass.
+
+=== MDV-P0-041
+title: Postgres hardening from the security review: narrower grants, DataKeys protection, stable ledger hash, destructive-migration gate
+type: Story
+epic: MDV-P0-E03
+prd: P0-09
+priority: MUST
+roles: Developer, Security
+labels: database, security, hardening
+estimate: 3
+weeks: 3
+depends: MDV-P0-034, MDV-P0-035, MDV-P0-036, MDV-P0-037
+confidence: 75 | Findings confirmed by code review; fixes are small but the dev deployment needs the Azure subscription.
+sources: Security review of the PostgreSQL migration, 7 Nov 2026 (PR #823); docs/adr/ADR-012-postgres.md
+desc:
+Fix the confirmed findings that are not Azure wiring. (a) `patients.DataKeys`: REVOKE DELETE for the module role and allow UPDATE only through the re-wrap path; `TenantKeyRing.Get` must throw, not silently create a new key, when the tenant already has encrypted identifier rows but no key row (otherwise a deleted key row makes every identifier unreadable). (b) `medvya_reporting` gets per-table SELECT on `tenancy` (or masked views for Invitations, DoctorLicences, Profiles, SettingsChanges) instead of SELECT on all tables. (c) Ledger hash: hash an explicit column list stored per table in `ledger.Tables`, not `to_jsonb(row)`, so adding a column later does not break every old chain; a test adds a column and verifies the chain still passes. (d) Exempt tables (`ledger.Tables`, `ledger.Chains`, `TenantIndex`, `OutboxTenants`): revoke DELETE, insert into `ledger.Tables` only from migrations, and have the ledger functions ignore unknown table names. (e) Gate the destructive national-ID migration with a data-present check that fails loudly outside an empty database. (f) Document in database-security.md that the tenant and user settings are user-settable and who may hold app or reporting logins (accepted limit, for the external review). (g) Bind each ciphertext to its row (add the row id to the associated data) or record why not.
+ac:
+- Given a module role, when it tries to DELETE a DataKeys row, then the database refuses it.
+- Given a tenant with identifier rows and no key row, when the key is requested, then the call throws and no new key is created.
+- Given the reporting role, when it reads Invitations, DoctorLicences or Profiles, then it is refused or sees only masked columns.
+- Given a column is added to a ledger table, when verify_chain runs, then every old chain still verifies.
+- Given an app role, when it deletes from ledger.Chains or TenantIndex, then the database refuses it.
+- Given a database that already holds identifier rows, when the national-ID migration runs, then it stops with a clear error instead of dropping data.
+
+=== MDV-P0-042
+title: Make the Azure dev environment actually run on PostgreSQL: app settings, Entra token connection, migration runner in the deploy workflow, immutable ledger-digests container
+type: Story
+epic: MDV-P0-E01
+prd: P0-01
+priority: MUST
+roles: Developer
+labels: azure, deploy, postgres
+estimate: 4
+weeks: 3-4
+depends: MDV-P0-038, MDV-P0-006, MDV-P0-007
+confidence: 60 | Findings confirmed by code review; fixes are small but the dev deployment needs the Azure subscription.
+sources: Security review of the PostgreSQL migration, 7 Nov 2026 (PR #823); docs/adr/ADR-012-postgres.md
+desc:
+The review found the deployed environment cannot work yet. (1) `infra/bicep/main.bicep` sets `Postgres__Host`, `Postgres__Database` and `ColumnEncryption__KeyVaultKeyUrl`, but the code reads `ConnectionStrings:Medvya`, `NationalIdProtection:KeyVaultKeyId`, `Audit:DigestKey` and `Storage:ConnectionString`. Align the names, add `Audit__DigestKey` as a Key Vault reference, and connect with an Entra access token (Npgsql with the managed identity; no password). (2) `.github/workflows/deploy-dev.yml` still runs SQL firewall rules and an SQL connection; migrations must run from inside the private network (self-hosted runner, a Container Apps job or a deploy-time job in the VNet) as `medvya_migrator` then apply `infra/postgres/roles.sql`. (3) Create the `ledger-digests` container in Bicep with a locked time-based immutability policy, give the app identity append-only access, and make a missing digest Critical once any digest has existed. (4) Use the versionless Key Vault key URI everywhere so rotation needs no redeploy. Prove it with a real dev deployment and a smoke test: sign in, create a patient, see the audit chain verify.
+ac:
+- Given the Bicep app settings, when the app starts in Azure, then it finds a database connection, the national-ID key id and the digest key and registers every module.
+- Given the deploy workflow, when a tag is pushed, then migrations and roles run inside the private network and the deploy succeeds with no SQL firewall step.
+- Given the ledger-digests container, when anyone with the app identity tries to delete or overwrite a digest, then the storage account refuses it.
+- Given a tenant chain that has had a digest, when the digest is missing at verification, then a Critical alert is raised, not a warning.
+- Given the dev environment, when the smoke test runs, then sign-in, patient create and chain verification all pass.

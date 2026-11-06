@@ -13,6 +13,8 @@ function Tabs({
       data-slot="tabs"
       data-orientation={orientation}
       orientation={orientation}
+      // Radix defaults to ltr, which flipped everything inside a tab (tables included) back to left-to-right in Arabic.
+      dir={document.documentElement.dir === 'rtl' ? 'rtl' : 'ltr'}
       className={cn(
         "group/tabs flex gap-2 data-[orientation=horizontal]:flex-col",
         className

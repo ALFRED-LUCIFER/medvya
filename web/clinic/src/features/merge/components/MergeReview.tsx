@@ -78,13 +78,13 @@ export default function MergeReview(props: Props) {
         <section aria-labelledby="merge-compare" className="flex flex-col gap-3 rounded-xl border bg-card p-4">
           <h2 id="merge-compare" className="text-base font-extrabold">{t('merge.compare')} <span className="text-sm font-bold text-muted-foreground">{t(`merge.status.${review.status}`)}</span></h2>
           <p className="text-sm text-muted-foreground">{t('merge.explain')}</p>
-          <Table className="table-fixed" containerClassName="border-0">
+          <Table className="table-fixed" containerClassName="overflow-visible rounded-none border-0">
             <TableCaption className="sr-only">{t('merge.compare')}</TableCaption>
             <TableHeader className="bg-transparent">
               <TableRow className="border-b-0">
-                <TableHead scope="col" className="p-2"><span className="sr-only">{t('merge.field.name')}</span></TableHead>
-                <TableHead scope="col" className="p-2">{t('merge.survivor')}</TableHead>
-                <TableHead scope="col" className="p-2">{t('merge.merged')}</TableHead>
+                <TableHead scope="col" className="p-2 whitespace-normal"><span className="sr-only">{t('merge.field.name')}</span></TableHead>
+                <TableHead scope="col" className="p-2 whitespace-normal">{t('merge.survivor')}</TableHead>
+                <TableHead scope="col" className="p-2 whitespace-normal">{t('merge.merged')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

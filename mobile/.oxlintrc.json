@@ -47,7 +47,7 @@
       "rules": {
         "no-restricted-imports": [
           "error",
-          { "patterns": [{ "group": ["react", "react-native", "**/hooks/*", "**/components/*", "@medvya/ui", "@medvya/ui-native"], "message": "Services are plain TypeScript I/O: no React, no UI." }] }
+          { "patterns": [{ "group": ["react", "**/hooks/*", "**/components/*", "@medvya/ui", "@medvya/ui-native"], "message": "Services are plain TypeScript I/O: no React, no UI (React Native platform APIs such as AppState and Linking are fine)." }] }
         ]
       }
     },

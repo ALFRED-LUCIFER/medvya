@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import handoff from '../../../docs/02-design/data/handoff.json';
-import { catalogs, loadCatalog, localeFor, makeI18n, translate, type MessageKey } from './index';
+import { catalogs, loadCatalog, localeFor, ltr, makeI18n, translate, type MessageKey } from './index';
 
 describe('i18n catalogs', () => {
   it('ships English only; Hindi and Arabic load on demand (first paint carries one catalog)', async () => {
@@ -65,5 +65,10 @@ describe('i18n', () => {
     expect(localeFor('hi')).toBe('hi');
     expect(localeFor('fr')).toBe('en');
     expect(localeFor(null)).toBe('en');
+  });
+
+  it('isolates left-to-right values inside Arabic text', () => {
+    expect(ltr('+971')).toBe('\u2066+971\u2069');
+    expect(translate('ar', 'mobile.patientSignIn.uae', { code: ltr('+971') })).toContain('\u2066+971\u2069');
   });
 });

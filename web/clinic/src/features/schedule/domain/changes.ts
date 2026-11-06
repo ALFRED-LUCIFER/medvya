@@ -47,7 +47,7 @@ export function rulesFor(a: Appointment, ctx: { now: number; timeZone: string; c
 }
 
 /** 409 codes of the change endpoints: visit moves (VisitTransitionException) and slot answers (SlotUnavailableException). */
-export const changeErrors = ['changed', 'invalid_transition', 'not_started', 'not_today', 'slot_unavailable', 'being_booked', 'not_bookable', 'in_past', 'busy', 'closed'] as const;
+export const changeErrors = ['changed', 'invalid_transition', 'not_started', 'not_today', 'slot_unavailable', 'being_booked', 'not_bookable', 'in_past', 'busy', 'closed', 'terms_not_accepted'] as const;
 export type ChangeError = (typeof changeErrors)[number] | 'failed';
 export const changeError = (code: string | undefined): ChangeError =>
   (changeErrors as readonly string[]).includes(code ?? '') ? (code as ChangeError) : 'failed';

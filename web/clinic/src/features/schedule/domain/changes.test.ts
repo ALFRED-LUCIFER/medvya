@@ -51,6 +51,6 @@ describe('appointment actions', () => {
   });
 
   it('maps unknown error codes to a generic failure', () => {
-    expect([changeError('changed'), changeError('being_booked'), changeError('nope'), changeError(undefined)]).toEqual(['changed', 'being_booked', 'failed', 'failed']);
+    expect([changeError('changed'), changeError('being_booked'), changeError('terms_not_accepted'), changeError('nope'), changeError(undefined)]).toEqual(['changed', 'being_booked', 'terms_not_accepted', 'failed', 'failed']);
   });
 });

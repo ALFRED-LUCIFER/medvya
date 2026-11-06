@@ -18,7 +18,7 @@ namespace Medvya.Notifications.Infrastructure;
 /// </summary>
 public sealed partial class NotificationSender(
     NotificationsDbContext db, IReminderConsent consent, IPatientContacts contacts, IFacilityDirectory facilities, INotificationPreferences preferences, IEmailSender email, ISmsGateway sms,
-    IOptions<NotificationOptions> options, TimeProvider clock, ILogger<NotificationSender> log) : INotificationSender
+    ITermsAcceptance terms, IOptions<NotificationOptions> options, TimeProvider clock, ILogger<NotificationSender> log) : INotificationSender
 {
     /// <summary>How long a claimed message is left alone; a run that died mid-send is retried after this.</summary>
     static readonly TimeSpan ClaimWindow = TimeSpan.FromMinutes(5);
@@ -29,8 +29,11 @@ public sealed partial class NotificationSender(
     public async Task<int> SendDueAsync(int batch = 50, CancellationToken cancellationToken = default)
     {
         var now = clock.GetUtcNow();
+        // Until the owner accepts the terms (MDV-P1-019) only what the patient must hear goes out; the rest waits queued.
+        var mustTellOnly = !await terms.IsSatisfiedAsync(cancellationToken);
         var due = await db.Notifications.AsNoTracking()
             .Where(n => n.Status == NotificationStatus.Queued && n.SendAt <= now && (n.NextAttemptAt == null || n.NextAttemptAt <= now))
+            .Where(n => !mustTellOnly || n.Kind == NotificationKind.Cancelled || n.Kind == NotificationKind.NeedsRebooking)
             .OrderBy(n => n.SendAt).Select(n => n.Id).Take(batch).ToListAsync(cancellationToken);
         var handled = 0;
         foreach (var id in due)

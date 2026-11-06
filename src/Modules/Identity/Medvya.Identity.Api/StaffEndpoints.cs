@@ -1,12 +1,11 @@
+using Medvya.Tenancy.Api;
 using System.Security.Claims;
-using Host.Api.Auth;
-using Host.Api.Settings;
 using Medvya.Identity.Application;
 using Medvya.Tenancy.Application;
 using Medvya.Tenancy.Domain;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Host.Api.Staff;
+namespace Medvya.Identity.Api;
 
 /// <summary>
 /// Settings → Staff (F-10, MDV-P1-008): the staff list, adding staff through the P0 invitation flow, resending an invitation,

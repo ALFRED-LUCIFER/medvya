@@ -3,7 +3,6 @@ using System.Net.Mail;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Host.Api.Context;
 using Medvya.Identity.Application;
 using Medvya.Scheduling.Application;
 using Medvya.Scheduling.Domain;
@@ -12,7 +11,7 @@ using Medvya.Tenancy.Domain;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-namespace Host.Api.Onboarding;
+namespace Medvya.Tenancy.Api;
 
 /// <summary>
 /// The sign-up wizard (F-04, MDV-P1-004). Everything here is for the signed-in person's own draft: no tenant exists until

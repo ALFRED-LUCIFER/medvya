@@ -2,13 +2,14 @@ using System.Security.Claims;
 using System.Threading.RateLimiting;
 using Hangfire;
 using Hangfire.SqlServer;
-using Host.Api.Context;
+using Microsoft.Extensions.Hosting;
 using Medvya.Notifications.Application;
 using Medvya.Scheduling.Application;
+using Medvya.Tenancy.Api;
 using Medvya.Tenancy.Application;
 using Microsoft.AspNetCore.Authorization;
 
-namespace Host.Api.Notifications;
+namespace Medvya.Notifications.Api;
 
 /// <summary>
 /// Hangfire on Azure SQL (ADR-001, MDV-P1-032): one recurring job publishes each tenant's outbox and then sends what is due, so a
@@ -94,7 +95,7 @@ public static class JobsSetup
 }
 
 /// <summary>Development only, and only with Notifications:DevAllowAllConsent: lets a local run send without any consent receipt.</summary>
-internal sealed class DevAllowAllConsent : IReminderConsent
+public sealed class DevAllowAllConsent : IReminderConsent
 {
     public Task<bool> AllowsAsync(Guid patientId, Medvya.Notifications.Domain.NotificationChannel channel, CancellationToken cancellationToken = default) => Task.FromResult(true);
 }

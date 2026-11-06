@@ -23,6 +23,10 @@ export const locales: { code: Locale; label: string }[] = [
   { code: 'en', label: 'English' }, { code: 'hi', label: 'हिन्दी' }, { code: 'ar', label: 'العربية' },
 ];
 
+/** A device or browser language code ("ar", "hi") as a supported locale; anything else is English. */
+export const localeFor = (code: string | null | undefined): Locale =>
+  locales.find(l => l.code === code)?.code ?? 'en';
+
 export function translate(locale: Locale, key: MessageKey, vars: Record<string, string | number> = {}) {
   const text = catalogs[locale]?.[key] ?? en[key]; // missing translations (or a catalog not loaded) fall back to English
   return text.replace(/\{(\w+)\}/g, (m, name: string) => (name in vars ? String(vars[name]) : m));

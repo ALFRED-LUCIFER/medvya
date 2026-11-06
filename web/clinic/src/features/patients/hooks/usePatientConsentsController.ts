@@ -7,10 +7,11 @@ import { patientDataGcTime } from './usePatientDirectoryController';
 export function usePatientConsentsController(patientId: string): PatientConsents {
   const queryClient = useQueryClient();
   const key = ['patients', 'consents', patientId];
-  const states = useQuery({ queryKey: key, queryFn: () => fetchConsents(patientId), gcTime: patientDataGcTime, staleTime: Infinity });
+  // Not Infinity like the record: another desk may change a consent, so it is read again after a minute (each read is audited).
+  const states = useQuery({ queryKey: key, queryFn: () => fetchConsents(patientId), gcTime: patientDataGcTime, staleTime: 60_000 });
   const change = useMutation({
     mutationFn: ({ row, granted }: { row: ConsentRow; granted: boolean }) => changeConsent(patientId, changeBody(row, granted)),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: key }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: key }), // a refused change (e.g. a newer decision elsewhere) shows the truth too
   });
   return {
     states: states.data ?? [], loading: states.isPending, failed: states.isError,

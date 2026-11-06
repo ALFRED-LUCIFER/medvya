@@ -71,7 +71,8 @@ public static class SchedulingEndpoints
 
         var holds = app.MapGroup("/v1/slot-holds").RequireAuthorization();
         holds.MapPost("/", (HoldSlot command, [FromServices] IBookingService service, CancellationToken ct) => service.HoldAsync(command, ct))
-            .AuditedWriteWithErrors(SchedulingAudit.SlotHold, SchedulingAudit.HoldResource, SchedulingAudit.Treatment);
+            .AuditedWriteWithErrors(SchedulingAudit.SlotHold, SchedulingAudit.HoldResource, SchedulingAudit.Treatment)
+            .RequireAcceptedTerms(); // a hold reserves a slot, the first step of booking
         holds.MapDelete("/{holdId:guid}", async (Guid holdId, [FromServices] IBookingService service, CancellationToken ct) =>
             {
                 await service.ReleaseHoldAsync(holdId, ct);
@@ -100,7 +101,8 @@ public static class SchedulingEndpoints
         // Changing a booking (MDV-P1-024): each frees the old slot in the same transaction; the use case writes the allowed event.
         appointments.MapPost("/{appointmentId:guid}/reschedule", (Guid appointmentId, RescheduleAppointment command, [FromServices] IBookingService service, CancellationToken ct) =>
                 service.RescheduleAsync(appointmentId, command, ct))
-            .AuditedWriteWithErrors(SchedulingAudit.Reschedule, SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment);
+            .AuditedWriteWithErrors(SchedulingAudit.Reschedule, SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment)
+            .RequireAcceptedTerms(); // books the new slot; cancel and no-show stay open so a practice can still unwind
         appointments.MapPost("/{appointmentId:guid}/cancel", (Guid appointmentId, CancelAppointment command, [FromServices] IBookingService service, CancellationToken ct) =>
                 service.CancelAsync(appointmentId, command, ct))
             .AuditedWriteWithErrors(SchedulingAudit.Cancel, SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment);

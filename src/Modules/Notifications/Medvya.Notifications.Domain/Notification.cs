@@ -62,3 +62,33 @@ public sealed class NotificationAttempt
     [Classification(DataClass.Internal)] public NotificationStatus Outcome { get; init; }
     [Classification(DataClass.Internal)] public string? Code { get; init; }
 }
+
+/// <summary>What a staff notification is about. The screen words each kind itself, so no text is stored.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter<StaffNotificationKind>))]
+public enum StaffNotificationKind { MessageFailed }
+
+/// <summary>
+/// STAFF_NOTIFICATION (MDV-P1-034): one in-app item for the staff of a facility (the notification centre, D-03). It holds ids and a
+/// kind only, never a patient's name or the message text. Who may see it follows from the kind's capability, checked on every read.
+/// </summary>
+public sealed class StaffNotification
+{
+    [Classification(DataClass.Internal)] public Guid Id { get; init; }
+    [Classification(DataClass.Internal)] public Guid TenantId { get; init; }
+    [Classification(DataClass.Internal)] public Guid FacilityId { get; init; }
+    [Classification(DataClass.Internal)] public StaffNotificationKind Kind { get; init; }
+    /// <summary>The appointment (or other record) it points at.</summary>
+    [Classification(DataClass.Internal)] public Guid? RefId { get; init; }
+    /// <summary>With the tenant it makes raising the same event twice harmless, e.g. "failed:" and the notification id.</summary>
+    [Classification(DataClass.Internal)] public string DedupeKey { get; init; } = "";
+    [Classification(DataClass.Internal)] public DateTimeOffset CreatedAt { get; init; }
+}
+
+/// <summary>One staff member has read one staff notification; this is what makes the read state follow them across devices.</summary>
+public sealed class StaffNotificationRead
+{
+    [Classification(DataClass.Internal)] public Guid TenantId { get; init; }
+    [Classification(DataClass.Internal)] public Guid NotificationId { get; init; }
+    [Classification(DataClass.Internal)] public Guid UserId { get; init; }
+    [Classification(DataClass.Internal)] public DateTimeOffset ReadAt { get; init; }
+}

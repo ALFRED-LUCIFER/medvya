@@ -20,6 +20,7 @@ import ShellMessage, { ComingSoon } from '../features/shell/components/ShellMess
 import { allows, patientDirectory } from '../features/shell/domain/navigation';
 import { useShellController } from '../features/shell/hooks/useShellController';
 import FrontDeskRoute from './FrontDeskRoute';
+import NotificationsRoute from './NotificationsRoute';
 import ScheduleRoute from './ScheduleRoute';
 
 // Loaded on demand: invitations bring the form stack (React Hook Form, Zod) that most sessions never need.
@@ -94,6 +95,7 @@ export default function App({ locale, onLocaleChange }: Props) {
         <Route path="/choose-facility" element={picker} />
         <Route element={
           <AppShell {...account} role={active.role} facilityName={active.facilityName} groups={shell.groups} tabs={shell.tabs} searchPath={searchPath}
+            notifications={allows(active, patientDirectory) ? <NotificationsRoute facilityId={active.facilityId} online={online} /> : undefined}
             languageSwitcher={<LanguageSwitcher inline value={locale} onChange={onLocaleChange} />}>
             {active.licencePending && <LicenceNotice />}
             {termsPending && <TermsNotice />}

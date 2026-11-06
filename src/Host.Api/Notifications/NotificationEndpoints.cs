@@ -19,6 +19,7 @@ public static class NotificationEndpoints
 {
     public const string SignatureHeader = "X-Medvya-Signature";
     static readonly IResult NoFacility = Results.ValidationProblem(new Dictionary<string, string[]> { ["facilityId"] = ["required"] });
+    public sealed record FacilityBody(Guid FacilityId);
     public sealed record ReceiptBody(string? Ref, string? State, string? ReasonCode);
 
     public static WebApplication MapNotifications(this WebApplication app)
@@ -33,6 +34,19 @@ public static class NotificationEndpoints
         staff.MapGet("/notifications/delivery", async (Guid? facilityId, int? days, [FromServices] INotificationQueries q, [FromServices] TimeProvider clock, CancellationToken ct) =>
                 facilityId is not { } f || f == Guid.Empty ? NoFacility : Results.Ok(await q.DeliveryAsync(f, clock.GetUtcNow().AddDays(-Math.Clamp(days ?? 14, 1, 90)), 100, ct)))
             .Audited("notification.delivery.read", "notification", "operations");
+
+        // The notification centre (D-03) and the board's failed-message marks: ids and kinds only, no patient data, so no purpose-bound audit row.
+        staff.MapGet("/notifications/inbox", async (Guid? facilityId, [FromServices] IStaffNotifications n, CancellationToken ct) =>
+            facilityId is not { } f || f == Guid.Empty ? NoFacility : Results.Ok(await n.ListAsync(f, ct)));
+        staff.MapPost("/notifications/inbox/read-all", async ([FromBody] FacilityBody body, [FromServices] IStaffNotifications n, CancellationToken ct) =>
+        {
+            await n.MarkAllReadAsync(body.FacilityId, ct);
+            return Results.NoContent();
+        });
+        staff.MapPost("/notifications/inbox/{id:guid}/read", async (Guid id, [FromBody] FacilityBody body, [FromServices] IStaffNotifications n, CancellationToken ct) =>
+            await n.MarkReadAsync(body.FacilityId, id, ct) ? Results.NoContent() : Results.NotFound());
+        staff.MapGet("/notifications/failed-visits", async (Guid? facilityId, [FromServices] INotificationQueries q, CancellationToken ct) =>
+            facilityId is not { } f || f == Guid.Empty ? NoFacility : Results.Ok(await q.FailedVisitsAsync(f, ct)));
 
         // Public on purpose: the provider (or its adapter) cannot sign in. The HMAC of the raw body is the credential; without a configured
         // secret every call is refused. The reference names the tenant, so the receipt is applied inside that tenant's scope (RLS).

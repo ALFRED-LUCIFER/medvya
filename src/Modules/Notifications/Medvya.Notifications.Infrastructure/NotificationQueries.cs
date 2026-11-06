@@ -18,13 +18,23 @@ public sealed class NotificationAccessDeniedException : Exception
 /// Reception's view of messages (MDV-P1-032/033). Access is the membership at the facility, as for the calendar: read or full access
 /// to "Register / book patients". Returns statuses and codes only, never text or addresses.
 /// </summary>
-public sealed class NotificationQueries(NotificationsDbContext db, IStaffAccess access) : INotificationQueries
+public sealed class NotificationQueries(NotificationsDbContext db, IStaffAccess access, TimeProvider clock) : INotificationQueries
 {
     public async Task<IReadOnlyList<NotificationView>> ForAppointmentAsync(Guid facilityId, Guid appointmentId, CancellationToken cancellationToken = default)
     {
         await RequireAsync(facilityId, cancellationToken);
         return await db.Notifications.AsNoTracking().Where(n => n.FacilityId == facilityId && n.AppointmentId == appointmentId)
             .OrderBy(n => n.CreatedAt).ThenBy(n => n.SendAt).Select(n => View(n)).ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<Guid>> FailedVisitsAsync(Guid facilityId, CancellationToken cancellationToken = default)
+    {
+        await RequireAsync(facilityId, cancellationToken);
+        var now = clock.GetUtcNow();
+        return await db.Notifications.AsNoTracking()
+            .Where(n => n.FacilityId == facilityId && (n.Status == NotificationStatus.Failed || n.Status == NotificationStatus.Bounced)
+                && n.AppointmentStart >= now.AddDays(-2) && n.AppointmentStart <= now.AddDays(2))
+            .Select(n => n.AppointmentId).Distinct().ToListAsync(cancellationToken);
     }
 
     public async Task<DeliveryReport> DeliveryAsync(Guid facilityId, DateTimeOffset since, int maxFailures = 100, CancellationToken cancellationToken = default)

@@ -23,8 +23,9 @@ public sealed class ReceiptProcessor(NotificationsDbContext db, TimeProvider clo
         var changed = await db.Notifications.Where(n => n.Id == id && n.Status == NotificationStatus.Sent)
             .ExecuteUpdateAsync(s => s.SetProperty(n => n.Status, receipt.State).SetProperty(n => n.FailureCode, code).SetProperty(n => n.UpdatedAt, now), cancellationToken);
         if (changed == 0) return false;
-        var tenant = await db.Notifications.Where(n => n.Id == id).Select(n => n.TenantId).SingleAsync(cancellationToken);
-        db.Attempts.Add(new NotificationAttempt { Id = Guid.CreateVersion7(), TenantId = tenant, NotificationId = id, At = now, Outcome = receipt.State, Code = code });
+        var n = await db.Notifications.AsNoTracking().SingleAsync(x => x.Id == id, cancellationToken);
+        db.Attempts.Add(new NotificationAttempt { Id = Guid.CreateVersion7(), TenantId = n.TenantId, NotificationId = id, At = now, Outcome = receipt.State, Code = code });
+        if (receipt.State is NotificationStatus.Failed or NotificationStatus.Bounced) StaffNotifications.Raise(db, n, now, $"failed:{id:N}");
         await db.SaveChangesAsync(cancellationToken);
         await tx.CommitAsync(cancellationToken);
         return true;

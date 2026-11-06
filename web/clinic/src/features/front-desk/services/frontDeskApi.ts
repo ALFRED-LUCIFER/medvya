@@ -10,6 +10,9 @@ export const walkIn = (facilityId: string, patientId: string, c: WalkInChoice) =
 /** Today's board of the facility, in the facility's time zone (the server decides "today"). Ids only in the URL. */
 export const fetchBoard = (facilityId: string) => send<Board>(`/v1/front-desk/board?${new URLSearchParams({ facilityId })}`);
 
+/** Appointments with a failed or bounced message to the patient (MDV-P1-034): ids only. Roles that may not see messages get 403, and the board then shows no marks. */
+export const fetchFailedVisits = (facilityId: string) => send<string[]>(`/v1/notifications/failed-visits?${new URLSearchParams({ facilityId })}`);
+
 /** Check-in; `elapsedMs` is how long the desk took from tapping "Check in" to confirming (a number, never patient data). */
 export const checkIn = (appointmentId: string, elapsedMs: number) =>
   post<BoardCard>(`/v1/appointments/${appointmentId}/check-in`, { elapsedMs: Math.round(elapsedMs) }, newIdempotencyKey()); // idempotent by state; the key lets the client retry it

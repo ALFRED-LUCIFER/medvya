@@ -4,7 +4,7 @@ import { workload } from '../domain/overview';
 import { groupByColumn, moveError, serverNow, type Board, type BoardCard, type BoardColumn, type LiveStatus, type MoveError } from '../domain/board';
 import { ApiError } from '../../schedule/services/scheduleApi';
 import { watchBoard } from '../services/boardLive';
-import { checkIn, fetchBoard, monotonicNow, moveVisit } from '../services/frontDeskApi';
+import { checkIn, fetchBoard, fetchFailedVisits, monotonicNow, moveVisit } from '../services/frontDeskApi';
 
 type Snapshot = { board: Board; fetchedAt: number };
 type Move = { id: string; state: BoardColumn };
@@ -34,6 +34,10 @@ export function useBoardController(facilityId: string, online: boolean) {
     queryFn: async (): Promise<Snapshot> => ({ board: await fetchBoard(facilityId), fetchedAt: Date.now() }),
     refetchInterval: live === 'live' ? false : 30_000,
   });
+
+  // Marks for visits whose message failed; refreshed with the board. A refusal (403) or any failure just means no marks.
+  const failedQuery = useQuery({ queryKey: ['front-desk-failed', facilityId], queryFn: () => fetchFailedVisits(facilityId), refetchInterval: 30_000, retry: false, enabled: online });
+  const failedVisitIds = useMemo(() => new Set(failedQuery.data ?? []), [failedQuery.data]);
 
   const [tick, setTick] = useState(() => Date.now());
   useEffect(() => {
@@ -74,6 +78,7 @@ export function useBoardController(facilityId: string, online: boolean) {
   return {
     board: snapshot?.board ?? null,
     columns,
+    failedVisitIds,
     now,
     /** Doctor workload panel (MDV-P1-030): per doctor, how many wait and how late they run. */
     workload: snapshot ? workload(snapshot.board.cards, now) : [],

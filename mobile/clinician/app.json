@@ -24,7 +24,8 @@
             "ar"
           ]
         }
-      ]
+      ],
+      "expo-status-bar"
     ]
   }
 }

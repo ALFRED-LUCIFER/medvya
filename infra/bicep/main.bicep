@@ -78,6 +78,46 @@ resource insights 'Microsoft.Insights/components@2020-02-02' = {
   }
 }
 
+resource alertOwner 'Microsoft.Insights/actionGroups@2023-01-01' = {
+  name: 'ag-${name}'
+  location: 'global'
+  tags: tags
+  properties: {
+    groupShortName: 'medvya-${env}'
+    enabled: true
+    emailReceivers: [{ name: 'owner', emailAddress: alertEmail, useCommonAlertSchema: true }]
+  }
+}
+
+// MDV-P0-018: server errors above 2 % of requests in 5 minutes. Below 10 requests a single error is not a rate, so it does not fire.
+// shortcut: blind while the workspace's daily cap (0.1 GB) is reached; raise the cap before real clinic traffic.
+resource serverErrors 'Microsoft.Insights/scheduledQueryRules@2023-12-01' = {
+  name: 'alert-5xx-${name}'
+  location: location
+  tags: tags
+  properties: {
+    displayName: 'Medvya ${env}: 5xx rate above 2 %'
+    severity: 1
+    enabled: true
+    scopes: [insights.id]
+    evaluationFrequency: 'PT5M'
+    windowSize: 'PT5M'
+    criteria: {
+      allOf: [
+        {
+          query: 'requests | summarize total = count(), failed = countif(toint(resultCode) >= 500) | where total >= 10 and 100.0 * failed / total > 2'
+          timeAggregation: 'Count'
+          operator: 'GreaterThan'
+          threshold: 0
+          failingPeriods: { numberOfEvaluationPeriods: 1, minFailingPeriodsToAlert: 1 }
+        }
+      ]
+    }
+    autoMitigate: true
+    actions: { actionGroups: [alertOwner.id] }
+  }
+}
+
 resource storage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   name: take('st${replace(name, '-', '')}', 24)
   location: location

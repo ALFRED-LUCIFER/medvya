@@ -2,6 +2,8 @@
   <ItemGroup>
     <PackageReference Include="Azure.Communication.Email" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <PackageReference Include="Azure.Identity" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Medvya.BuildingBlocks.Domain\Medvya.BuildingBlocks.Domain.csproj" />

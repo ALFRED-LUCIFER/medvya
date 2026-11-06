@@ -1,3 +1,4 @@
+using Medvya.BuildingBlocks.Infrastructure;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -18,13 +19,17 @@ public interface IDigestStore
     Task<byte[]?> LatestAsync(CancellationToken ct);
 }
 
-public sealed class BlobDigestStore(string connectionString, string container = "ledger-digests") : IDigestStore
+/// <summary>
+/// <paramref name="createContainer"/> is for local Azurite only. In Azure the container and its locked retention policy come from Bicep, and the
+/// app's identity may write blobs into it but not create or change containers.
+/// </summary>
+public sealed class BlobDigestStore(BlobContainerClient client, bool createContainer) : IDigestStore
 {
-    readonly BlobContainerClient client = new(connectionString, container);
+    public const string Container = "ledger-digests";
 
     public async Task PutAsync(string name, byte[] content, CancellationToken ct)
     {
-        await client.CreateIfNotExistsAsync(PublicAccessType.None, cancellationToken: ct);
+        if (createContainer) await client.CreateIfNotExistsAsync(PublicAccessType.None, cancellationToken: ct);
         await client.GetBlobClient(name).UploadAsync(new BinaryData(content), new BlobUploadOptions { Conditions = new BlobRequestConditions { IfNoneMatch = ETag.All } }, ct);
     }
 
@@ -52,12 +57,7 @@ public sealed partial class LedgerDigests(string connectionString, byte[] key, I
 
     string Sign(string payload) => Convert.ToHexStringLower(HMACSHA256.HashData(key, Encoding.UTF8.GetBytes(payload)));
 
-    async Task<NpgsqlConnection> OpenAsync(CancellationToken ct)
-    {
-        var conn = new NpgsqlConnection(connectionString);
-        await conn.OpenAsync(ct);
-        return conn;
-    }
+    async Task<NpgsqlConnection> OpenAsync(CancellationToken ct) => await PostgresDataSources.For(connectionString).OpenConnectionAsync(ct);
 
     static async Task InTenantAsync(NpgsqlConnection conn, Guid tenant, CancellationToken ct)
     {
@@ -90,13 +90,19 @@ public sealed partial class LedgerDigests(string connectionString, byte[] key, I
         await using var conn = await OpenAsync(ct);
         var now = clock.GetUtcNow();
         var payload = JsonSerializer.Serialize(new Payload(now, await HeadsAsync(conn, ct)));
-        await store.PutAsync($"{now:yyyy/MM/dd/HHmmss}.json", JsonSerializer.SerializeToUtf8Bytes(new Signed(payload, Sign(payload))), ct);
+        var name = $"{now:yyyy/MM/dd/HHmmss}.json";
+        await store.PutAsync(name, JsonSerializer.SerializeToUtf8Bytes(new Signed(payload, Sign(payload))), ct);
+        // Recorded after the write: a failed write leaves no record, so it cannot raise a false "digest missing" alert.
+        await using var record = new NpgsqlCommand("""INSERT INTO ledger."Digests" ("Name", "At") VALUES (@n, @at) ON CONFLICT DO NOTHING""", conn);
+        record.Parameters.AddWithValue("n", name);
+        record.Parameters.AddWithValue("at", now);
+        await record.ExecuteNonQueryAsync(ct);
     }
 
     /// <summary>
     /// Re-reads every chain and compares with the latest digest. Returns the number of problems found; each one is logged at Critical
-    /// (the alert) with table and tenant ids only. A digest that is unreadable or altered is a problem; no digest at all yet is only a
-    /// warning (a new environment).
+    /// (the alert) with table and tenant ids only. A digest that is unreadable or altered is a problem, and so is a missing one once the
+    /// database records that a digest was published (ledger."Digests"); no digest ever is only a warning (a new environment).
     /// </summary>
     public async Task<int> VerifyAsync(CancellationToken ct = default)
     {
@@ -104,8 +110,17 @@ public sealed partial class LedgerDigests(string connectionString, byte[] key, I
         await using var conn = await OpenAsync(ct);
         var chains = (await HeadsAsync(conn, ct)).Select(h => (h.Table, h.Tenant)).ToHashSet();
 
+        DateTimeOffset? published;
+        await using (var last = new NpgsqlCommand("""SELECT max("At") FROM ledger."Digests" """, conn))
+            published = await last.ExecuteScalarAsync(ct) is DateTime at ? new DateTimeOffset(at, TimeSpan.Zero) : null;
+
         var raw = await store.LatestAsync(ct);
-        if (raw is null) NoDigest(log);
+        if (raw is null && published is null) NoDigest(log);
+        else if (raw is null)
+        {
+            problems++;
+            DigestMissing(log, published!.Value);
+        }
         else
         {
             Signed? signed = null;
@@ -122,6 +137,12 @@ public sealed partial class LedgerDigests(string connectionString, byte[] key, I
                 DigestInvalid(log);
             }
             else
+            {
+                if (published > digest.At)
+                {
+                    problems++; // newer digests than the one the store returned were published and are gone
+                    DigestMissing(log, published.Value);
+                }
                 foreach (var h in digest.Heads)
                 {
                     chains.Add((h.Table, h.Tenant));
@@ -136,6 +157,7 @@ public sealed partial class LedgerDigests(string connectionString, byte[] key, I
                         HeadChanged(log, h.Table, h.Tenant, h.Seq);
                     }
                 }
+            }
         }
 
         foreach (var (table, tenant) in chains)
@@ -155,6 +177,9 @@ public sealed partial class LedgerDigests(string connectionString, byte[] key, I
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "No ledger digest has been written yet; chains were verified without one.")]
     static partial void NoDigest(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Critical, Message = "LEDGER ALERT: the digest published at {PublishedAt} is missing from the digest store.")]
+    static partial void DigestMissing(ILogger logger, DateTimeOffset publishedAt);
 
     [LoggerMessage(Level = LogLevel.Critical, Message = "LEDGER ALERT: the latest digest is unreadable or its signature does not match.")]
     static partial void DigestInvalid(ILogger logger);

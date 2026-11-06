@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { all, defaultFilters, exportBody, listQuery, rangeOf } from './auditLog';
+import { catalogs, loadCatalog } from '@medvya/i18n';
+import { actionKey, all, defaultFilters, exportBody, listQuery, rangeOf } from './auditLog';
+
+describe('action names (MDV-P1-052)', () => {
+  it('names a known action in every language and shows an unknown code as it is', async () => {
+    await loadCatalog('hi'); await loadCatalog('ar');
+    for (const code of ['appointment.walk_in', 'front_desk.board.watch', 'invitation.revoke', 'patient.identifiers.reveal'])
+      for (const locale of ['en', 'hi', 'ar'] as const) expect(catalogs[locale]![actionKey(code)!], `${locale} ${code}`).toBeTruthy();
+    expect(actionKey('something.new')).toBeNull();
+  });
+});
 
 describe('access log filters', () => {
   it('defaults to the last 30 days, counted in the clinic time zone', () => {

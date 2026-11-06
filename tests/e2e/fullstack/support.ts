@@ -20,7 +20,7 @@ export async function signIn(page: Page, user: RegExp, locale: 'en' | 'ar' = 'en
 }
 
 export async function expectNoAxeViolations(page: Page) {
-  await page.evaluate(() => Promise.all(document.getAnimations().map(a => a.finished))); // axe must not sample a colour mid-transition
+  await page.evaluate(() => Promise.all(document.getAnimations().map(a => a.finished.catch(() => undefined)))); // a cancelled animation rejects: it is over, which is all we wait for // axe must not sample a colour mid-transition
   const violations = await page.evaluate(async () =>
     (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations
       .map(v => `${v.id} (${v.nodes.length})`));

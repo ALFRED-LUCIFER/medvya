@@ -82,7 +82,7 @@ test('another facility\'s patient is not found here, and nothing is shown to com
   await page.getByRole('option', { name: 'Tamil Nadu', exact: true }).click();
   await page.getByLabel('PIN code').fill('600020');
   await page.getByRole('button', { name: 'Save' }).click();
-  await expect(page.getByRole('alert')).toContainText('This record is not available here');
+  await expect(page.getByRole('alert').filter({ hasText: 'This record is not available here' })).toBeVisible();
 });
 
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');

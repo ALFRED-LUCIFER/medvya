@@ -32,6 +32,7 @@ using Host.Api.PublicSite;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddMedvyaTelemetry();
+DevClock.AddIfDevelopment(builder); // before the modules: they add the system clock only when none is registered
 
 builder.WebHost.ConfigureKestrel(k =>
 {

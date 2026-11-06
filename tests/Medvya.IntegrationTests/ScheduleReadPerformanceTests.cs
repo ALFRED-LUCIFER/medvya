@@ -7,7 +7,7 @@ using Medvya.Tenancy.Domain;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
-using Microsoft.Data.SqlClient;
+using Npgsql;
 using Xunit.Abstractions;
 using static Medvya.IntegrationTests.SchedulingHarness;
 
@@ -20,7 +20,7 @@ namespace Medvya.IntegrationTests;
 /// the (facility, start) index seek and the batched patient-name lookup are all inside the timing.
 /// </summary>
 [Collection(nameof(RunsAlone))]
-public sealed class ScheduleReadPerformanceTests(SqlServerFixture sql, ITestOutputHelper output) : IClassFixture<SqlServerFixture>
+public sealed class ScheduleReadPerformanceTests(PostgresFixture sql, ITestOutputHelper output) : IClassFixture<PostgresFixture>
 {
     internal const int Weeks = 26;
     const int PatientCount = 2_000;
@@ -94,7 +94,7 @@ public sealed class ScheduleReadPerformanceTests(SqlServerFixture sql, ITestOutp
         Assert.True(p95 < 300, string.Create(CultureInfo.InvariantCulture, $"p95 {p95} ms over {timings.Count} {what} (max {timings[^1]} ms)"));
     }
 
-    internal static async Task<Guid[]> SeedPatientsAsync(SqlServerFixture sql, Guid tenant, Guid facility, int count)
+    internal static async Task<Guid[]> SeedPatientsAsync(PostgresFixture sql, Guid tenant, Guid facility, int count)
     {
         var table = new DataTable();
         foreach (var (name, type) in new (string, Type)[]
@@ -110,14 +110,13 @@ public sealed class ScheduleReadPerformanceTests(SqlServerFixture sql, ITestOutp
             table.Rows.Add(ids[n], tenant, facility, (100_000 + n).ToString(CultureInfo.InvariantCulture), "IN", $"Synthetic Patient {n}", new DateTime(1950 + n % 60, 1 + n % 12, 1 + n % 28),
                 false, n % 2 == 0 ? "Female" : "Male", $"+9191{n:D8}", "Complete", MondayMorning, MondayMorning);
         }
-        await using var conn = await BulkAsync(sql, tenant, "patients.Patients", table);
-        await using var stats = new SqlCommand("UPDATE STATISTICS patients.Patients", conn);
-        await stats.ExecuteNonQueryAsync();
+        await using var conn = await sql.OpenAs("dbo", tenant);
+        await PostgresFixture.BulkCopyAsync(conn, "patients.Patients", table);
         return ids;
     }
 
     /// <summary>Every 20-minute slot of 09:00–13:00 and 17:00–20:00 IST, Monday to Friday, booked for each calendar.</summary>
-    internal static async Task SeedVisitsAsync(SqlServerFixture sql, Guid tenant, Guid facility, Guid[] calendars, Guid[] patients, DateOnly monday)
+    internal static async Task SeedVisitsAsync(PostgresFixture sql, Guid tenant, Guid facility, Guid[] calendars, Guid[] patients, DateOnly monday)
     {
         var table = new DataTable();
         foreach (var (name, type) in new (string, Type)[]
@@ -140,18 +139,7 @@ public sealed class ScheduleReadPerformanceTests(SqlServerFixture sql, ITestOutp
                         state, "General", "Phone", MondayMorning, MondayMorning);
                 }
         }
-        await using var conn = await BulkAsync(sql, tenant, "scheduling.Appointments", table);
-        await using var stats = new SqlCommand("UPDATE STATISTICS scheduling.Appointments", conn);
-        await stats.ExecuteNonQueryAsync();
-    }
-
-    /// <summary>Bulk-loads the rows inside the tenant (row-level security applies) and returns the open connection for statistics.</summary>
-    static async Task<SqlConnection> BulkAsync(SqlServerFixture sql, Guid tenant, string destination, DataTable table)
-    {
-        var conn = await sql.OpenAs("dbo", tenant);
-        using var copy = new SqlBulkCopy(conn) { DestinationTableName = destination, BulkCopyTimeout = 600 };
-        foreach (DataColumn c in table.Columns) copy.ColumnMappings.Add(c.ColumnName, c.ColumnName);
-        await copy.WriteToServerAsync(table);
-        return conn;
+        await using var conn = await sql.OpenAs("dbo", tenant);
+        await PostgresFixture.BulkCopyAsync(conn, "scheduling.Appointments", table);
     }
 }

@@ -91,7 +91,7 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
         return new(patient.Id, patient.Mrn, now, user.UserId, patient.Status, warnings);
         }
         // An identical request that raced this one committed first (unique index on the key): answer with its outcome.
-        catch (DbUpdateException e) when (key is not null && e.InnerException is Microsoft.Data.SqlClient.SqlException { Number: 2601 or 2627 })
+        catch (DbUpdateException e) when (key is not null && e.InnerException is Npgsql.PostgresException { SqlState: Npgsql.PostgresErrorCodes.UniqueViolation })
         {
             db.ChangeTracker.Clear();
             if (await ReplayAsync(key, now, warnings, cancellationToken) is { } raced) return raced;
@@ -133,7 +133,7 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
             SearchKind.Phone => patients.Where(p => p.Mobile == term.Value || p.AlternatePhone == term.Value),
             // Either MRN of a merged pair finds the survivor (MDV-P1-017); the merged record itself is hidden below.
             SearchKind.Mrn => patients.Where(p => p.Mrn == term.Value || db.Patients.Any(m => m.MergedIntoPatientId == p.Id && m.Mrn == term.Value)),
-            // Deterministic Always Encrypted: SqlClient encrypts the parameter and SQL Server compares ciphertexts (equality only).
+            // Exact match on the stored value; MDV-P0-035 moves this to an HMAC blind index.
             SearchKind.Identifier => patients.Where(p => db.Identifiers.Any(i => i.PatientId == p.Id && i.Scheme == term.Scheme && i.LookupValue == term.Value)),
             _ => patients,
         };
@@ -294,15 +294,13 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
         return new(patient, identifiers, payer, relationships);
     }
 
-    /// <summary>Next facility-scoped MRN, allocated inside the caller's transaction (HOLDLOCK serialises concurrent desks).</summary>
+    /// <summary>Next facility-scoped MRN, allocated inside the caller's transaction (the upsert's row lock serialises concurrent desks).</summary>
     async Task<string> NextMrnAsync(Guid tenantId, Guid facilityId, CancellationToken cancellationToken)
     {
         var next = (await db.Database.SqlQuery<int>($"""
-            MERGE patients.MrnCounters WITH (HOLDLOCK) AS c
-            USING (SELECT {tenantId} AS TenantId, {facilityId} AS FacilityId) AS s ON c.TenantId = s.TenantId AND c.FacilityId = s.FacilityId
-            WHEN MATCHED THEN UPDATE SET LastNumber = c.LastNumber + 1
-            WHEN NOT MATCHED THEN INSERT (TenantId, FacilityId, LastNumber) VALUES (s.TenantId, s.FacilityId, 1)
-            OUTPUT inserted.LastNumber AS Value;
+            INSERT INTO patients."MrnCounters" ("TenantId", "FacilityId", "LastNumber") VALUES ({tenantId}, {facilityId}, 1)
+            ON CONFLICT ("TenantId", "FacilityId") DO UPDATE SET "LastNumber" = patients."MrnCounters"."LastNumber" + 1
+            RETURNING "LastNumber" AS "Value"
             """).ToListAsync(cancellationToken)).Single();
         return Mrn.Format(next);
     }

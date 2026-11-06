@@ -3,13 +3,13 @@ using Medvya.Billing.Application;
 using Medvya.Billing.Domain;
 using Medvya.Billing.Infrastructure;
 using Medvya.Billing.Infrastructure.Persistence;
-using Microsoft.Data.SqlClient;
+using Npgsql;
 using Microsoft.EntityFrameworkCore;
 
 namespace Medvya.IntegrationTests;
 
 /// <summary>MDV-P4-001 on SQL Server 2022: gap-free legal numbers under concurrency, rollover, tenant isolation, no floating-point columns.</summary>
-public class BillingNumberingTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>
+public class BillingNumberingTests(PostgresFixture sql) : IClassFixture<PostgresFixture>
 {
     static readonly DateTimeOffset October = new(2026, 10, 21, 5, 0, 0, TimeSpan.Zero);
 
@@ -18,7 +18,7 @@ public class BillingNumberingTests(SqlServerFixture sql) : IClassFixture<SqlServ
     {
         await using var db = sql.Billing(tenant);
         await using var tx = await db.Database.BeginTransactionAsync();
-        var number = await new DocumentNumbering(db, new SqlServerFixture.FixedTenant(tenant)).IssueAsync(country, type, prefix, at);
+        var number = await new DocumentNumbering(db, new PostgresFixture.FixedTenant(tenant)).IssueAsync(country, type, prefix, at);
         await Task.Delay(2); // the rest of the issuing work, while the series is held
         if (commit) await tx.CommitAsync();
         return number;
@@ -58,7 +58,7 @@ public class BillingNumberingTests(SqlServerFixture sql) : IClassFixture<SqlServ
     {
         var tenant = Guid.NewGuid();
         await using var db = sql.Billing(tenant);
-        var numbering = new DocumentNumbering(db, new SqlServerFixture.FixedTenant(tenant));
+        var numbering = new DocumentNumbering(db, new PostgresFixture.FixedTenant(tenant));
         await Assert.ThrowsAsync<InvalidOperationException>(() => numbering.IssueAsync("IN", DocumentType.Invoice, "INV", October));
         Assert.Empty(await db.DocSequences.ToListAsync());
     }
@@ -93,14 +93,14 @@ public class BillingNumberingTests(SqlServerFixture sql) : IClassFixture<SqlServ
         // Row-level security holds with the EF query filter off and for hand-written SQL.
         await using var inA = sql.Billing(tenantA);
         Assert.All(await inA.DocSequences.IgnoreQueryFilters().ToListAsync(), s => Assert.Equal(tenantA, s.TenantId));
-        Assert.All(await inA.Database.SqlQuery<Guid>($"SELECT TenantId AS Value FROM billing.DocSequences").ToListAsync(), id => Assert.Equal(tenantA, id));
+        Assert.All(await inA.Database.SqlQuery<Guid>($"""SELECT "TenantId" AS "Value" FROM billing."DocSequences" """).ToListAsync(), id => Assert.Equal(tenantA, id));
 
         // Tenant A can neither plant a row in B's name nor move its own series to B.
         inA.DocSequences.Add(new DocSequence { Id = Guid.NewGuid(), TenantId = tenantB, CountryCode = "IN", DocumentType = DocumentType.Receipt, FinancialYear = "26-27", Prefix = "RCT", NextNumber = 1 });
         var insert = await Assert.ThrowsAsync<DbUpdateException>(() => inA.SaveChangesAsync());
-        Assert.Contains("block predicate", Assert.IsType<SqlException>(insert.InnerException).Message, StringComparison.Ordinal);
+        Assert.Contains("block predicate", Assert.IsType<PostgresException>(insert.InnerException).Message, StringComparison.Ordinal);
         await using var inA2 = sql.Billing(tenantA);
-        var move = await Assert.ThrowsAsync<SqlException>(() => inA2.Database.ExecuteSqlAsync($"UPDATE billing.DocSequences SET TenantId = {tenantB}, Prefix = N'MOVE'"));
+        var move = await Assert.ThrowsAsync<PostgresException>(() => inA2.Database.ExecuteSqlAsync($"""UPDATE billing."DocSequences" SET "TenantId" = {tenantB}, "Prefix" = 'MOVE'"""));
         Assert.Contains("block predicate", move.Message, StringComparison.Ordinal);
 
         // Without a tenant there are no rows and no numbers.
@@ -108,7 +108,7 @@ public class BillingNumberingTests(SqlServerFixture sql) : IClassFixture<SqlServ
         Assert.Empty(await none.DocSequences.IgnoreQueryFilters().ToListAsync());
         await using var tx = await none.Database.BeginTransactionAsync();
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            new DocumentNumbering(none, new SqlServerFixture.FixedTenant(null)).IssueAsync("IN", DocumentType.Invoice, "INV", October));
+            new DocumentNumbering(none, new PostgresFixture.FixedTenant(null)).IssueAsync("IN", DocumentType.Invoice, "INV", October));
     }
 
     [Fact]
@@ -120,10 +120,10 @@ public class BillingNumberingTests(SqlServerFixture sql) : IClassFixture<SqlServ
         await using (var seed = sql.Billing(tenant))
         {
             await using var seedTx = await seed.Database.BeginTransactionAsync();
-            await seed.Database.ExecuteSqlAsync($"DISABLE TRIGGER billing.TR_DocSequences_OnlyMoveForward ON billing.DocSequences");
+            await seed.Database.ExecuteSqlAsync($"""ALTER TABLE billing."DocSequences" DISABLE TRIGGER "TR_DocSequences_OnlyMoveForward" """);
             seed.DocSequences.Add(new DocSequence { Id = Guid.NewGuid(), TenantId = tenant, CountryCode = "IN", DocumentType = DocumentType.Invoice, FinancialYear = "26-27", Prefix = "INV", NextNumber = 999_999 });
             await seed.SaveChangesAsync();
-            await seed.Database.ExecuteSqlAsync($"ENABLE TRIGGER billing.TR_DocSequences_OnlyMoveForward ON billing.DocSequences");
+            await seed.Database.ExecuteSqlAsync($"""ALTER TABLE billing."DocSequences" ENABLE TRIGGER "TR_DocSequences_OnlyMoveForward" """);
             await seedTx.CommitAsync();
         }
 
@@ -131,7 +131,7 @@ public class BillingNumberingTests(SqlServerFixture sql) : IClassFixture<SqlServ
 
         await using var db = sql.Billing(tenant);
         await using var tx = await db.Database.BeginTransactionAsync();
-        var numbering = new DocumentNumbering(db, new SqlServerFixture.FixedTenant(tenant));
+        var numbering = new DocumentNumbering(db, new PostgresFixture.FixedTenant(tenant));
         var refused = await Assert.ThrowsAsync<DocumentNumberingException>(() => numbering.IssueAsync("IN", DocumentType.Invoice, "INV", October));
         Assert.Equal("series_exhausted", refused.Code);
         Assert.Equal(1_000_000, await NextNumber(db, "INV")); // not taken, even inside the issuing transaction
@@ -151,21 +151,21 @@ public class BillingNumberingTests(SqlServerFixture sql) : IClassFixture<SqlServ
         await Issue(tenant, "IN", DocumentType.Invoice, "INV", October);
         await Issue(tenant, "IN", DocumentType.Invoice, "INV", October);
 
-        // The billing role has UPDATE (the MERGE needs it), so the trigger is what keeps the series legal.
+        // The billing role has UPDATE (the upsert needs it), so the trigger is what keeps the series legal.
         foreach (var statement in new[]
         {
-            "UPDATE billing.DocSequences SET NextNumber = 1",                // rewind: numbers 1 and 2 would be issued again
-            "UPDATE billing.DocSequences SET NextNumber = NextNumber + 5",   // skip: a gap
-            "UPDATE billing.DocSequences SET FinancialYear = N'27-28'",      // move the series to another year
-            "UPDATE billing.DocSequences SET Prefix = N'INVB', NextNumber = NextNumber + 1",
-            "INSERT INTO billing.DocSequences (Id, TenantId, CountryCode, DocumentType, FinancialYear, Prefix, NextNumber) " +
-                "VALUES (NEWID(), CAST(SESSION_CONTEXT(N'tenant_id') AS uniqueidentifier), N'IN', N'Receipt', N'26-27', N'RCT', 50)", // starts with a gap
+            "UPDATE billing.\"DocSequences\" SET \"NextNumber\" = 1",             // rewind: numbers 1 and 2 would be issued again
+            "UPDATE billing.\"DocSequences\" SET \"NextNumber\" = \"NextNumber\" + 5", // skip: a gap
+            "UPDATE billing.\"DocSequences\" SET \"FinancialYear\" = '27-28'", // move the series to another year
+            "UPDATE billing.\"DocSequences\" SET \"Prefix\" = 'INVB', \"NextNumber\" = \"NextNumber\" + 1",
+            "INSERT INTO billing.\"DocSequences\" (\"Id\", \"TenantId\", \"CountryCode\", \"DocumentType\", \"FinancialYear\", \"Prefix\", \"NextNumber\") " +
+                "VALUES (gen_random_uuid(), current_setting('medvya.tenant_id')::uuid, 'IN', 'Receipt', '26-27', 'RCT', 50)", // starts with a gap
         })
         {
             await using var conn = await sql.OpenAs("billing_user", tenant);
-            await using var cmd = new SqlCommand(statement, conn);
-            var refused = await Assert.ThrowsAsync<SqlException>(() => cmd.ExecuteNonQueryAsync());
-            Assert.True(refused.Number == 51000, $"{statement}: {refused.Number} {refused.Message}");
+            await using var cmd = new NpgsqlCommand(statement, conn);
+            var refused = await Assert.ThrowsAsync<PostgresException>(() => cmd.ExecuteNonQueryAsync());
+            Assert.True(refused.SqlState == PostgresErrorCodes.RaiseException, $"{statement}: {refused.SqlState} {refused.Message}");
         }
 
         Assert.Equal("INV/26-27/00003", (await Issue(tenant, "IN", DocumentType.Invoice, "INV", October)).Value);
@@ -178,11 +178,11 @@ public class BillingNumberingTests(SqlServerFixture sql) : IClassFixture<SqlServ
         // The hangfire schema is third-party job storage (its sorted-set Score is a float, not money); every Medvya schema is checked.
         await using var db = sql.Billing(null);
         var columns = await db.Database.SqlQuery<string>($"""
-            SELECT SCHEMA_NAME(t.schema_id) + '.' + t.name + '.' + c.name AS Value
-            FROM sys.columns c JOIN sys.tables t ON t.object_id = c.object_id JOIN sys.types ty ON ty.user_type_id = c.user_type_id
-            WHERE t.is_ms_shipped = 0 AND SCHEMA_NAME(t.schema_id) <> 'hangfire' AND ty.name IN ('float', 'real', 'decimal', 'numeric', 'money', 'smallmoney')
+            SELECT table_schema || '.' || table_name || '.' || column_name AS "Value"
+            FROM information_schema.columns
+            WHERE table_schema NOT IN ('hangfire', 'pg_catalog', 'information_schema') AND data_type IN ('double precision', 'real', 'numeric', 'money')
             """).ToListAsync();
         Assert.Empty(columns);
-        Assert.Contains("NextNumber", await db.Database.SqlQuery<string>($"SELECT name AS Value FROM sys.columns WHERE object_id = OBJECT_ID(N'billing.DocSequences')").ToListAsync());
+        Assert.Contains("NextNumber", await db.Database.SqlQuery<string>($"""SELECT column_name AS "Value" FROM information_schema.columns WHERE table_schema = 'billing' AND table_name = 'DocSequences'""").ToListAsync());
     }
 }

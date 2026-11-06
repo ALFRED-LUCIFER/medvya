@@ -6,13 +6,11 @@ using Medvya.Identity.Infrastructure.Persistence;
 using Medvya.Leads.Infrastructure.Persistence;
 using Medvya.Notifications.Infrastructure.Persistence;
 using Medvya.Patients.Domain;
-using Medvya.Patients.Infrastructure;
 using Medvya.Patients.Infrastructure.Persistence;
 using Medvya.Scheduling.Domain;
 using Medvya.Scheduling.Infrastructure.Persistence;
 using Medvya.Tenancy.Domain;
 using Medvya.Tenancy.Infrastructure.Persistence;
-using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 
 namespace Medvya.SyntheticData;
@@ -145,25 +143,19 @@ public static class SyntheticSeed
     }
 
     /// <summary>
-    /// Creates the Always Encrypted keys (wrapped by <paramref name="keys"/>, which must be registered), applies every module's
-    /// migrations, then adds any missing cast rows. Existing rows are left as they are.
+    /// Applies every module's migrations, then adds any missing cast rows. Existing rows are left as they are.
     /// </summary>
-    public static async Task SeedAsync(string connectionString, string? environment, bool includeUae, LocalKeyStoreProvider keys, CancellationToken ct = default)
+    public static async Task SeedAsync(string connectionString, string? environment, bool includeUae, CancellationToken ct = default)
     {
         EnsureNonProduction(environment);
 
         await using (var tenancy = Tenancy(connectionString, null)) await tenancy.Database.MigrateAsync(ct);
         await using (var audit = new AuditDbContext(Options<AuditDbContext>(connectionString, null), new FixedTenant(null)))
             await audit.Database.MigrateAsync(ct);
-        await using var identity = new IdentityDbContext(new DbContextOptionsBuilder<IdentityDbContext>().UseSqlServer(connectionString).Options);
+        await using var identity = new IdentityDbContext(new DbContextOptionsBuilder<IdentityDbContext>().UseNpgsql(connectionString).Options);
         await identity.Database.MigrateAsync(ct);
-        await using (var leads = new LeadsDbContext(new DbContextOptionsBuilder<LeadsDbContext>().UseSqlServer(connectionString).Options))
+        await using (var leads = new LeadsDbContext(new DbContextOptionsBuilder<LeadsDbContext>().UseNpgsql(connectionString).Options))
             await leads.Database.MigrateAsync(ct);
-        await using (var admin = new SqlConnection(connectionString))
-        {
-            await admin.OpenAsync(ct);
-            await ColumnEncryption.EnsureKeysAsync(admin, LocalKeyStoreProvider.ProviderName, LocalKeyStoreProvider.KeyPath, keys, ct);
-        }
         await using (var patients = Patients(connectionString, null)) await patients.Database.MigrateAsync(ct);
         await using (var scheduling = Scheduling(connectionString, null)) await scheduling.Database.MigrateAsync(ct);
         // The API's board and jobs read these tables; the real migrator (tools/db-migrate) already applies them.
@@ -207,7 +199,7 @@ public static class SyntheticSeed
     }
 
     static PatientsDbContext Patients(string connectionString, Guid? tenantId) =>
-        new(Options<PatientsDbContext>(PatientsModule.WithColumnEncryption(connectionString), tenantId), new FixedTenant(tenantId));
+        new(Options<PatientsDbContext>(connectionString, tenantId), new FixedTenant(tenantId));
 
     static SchedulingDbContext Scheduling(string connectionString, Guid? tenantId) =>
         new(Options<SchedulingDbContext>(connectionString, tenantId), new FixedTenant(tenantId));
@@ -218,6 +210,6 @@ public static class SyntheticSeed
         new(Options<TenancyDbContext>(connectionString, tenantId), new FixedTenant(tenantId));
 
     static DbContextOptions<T> Options<T>(string connectionString, Guid? tenantId) where T : DbContext =>
-        new DbContextOptionsBuilder<T>().UseSqlServer(connectionString)
+        new DbContextOptionsBuilder<T>().UseNpgsql(connectionString)
             .AddInterceptors(new TenantSessionInterceptor(new FixedTenant(tenantId))).Options;
 }

@@ -221,9 +221,9 @@ erDiagram
 | Column | Type | Null | Links to |
 |---|---|---|---|
 | `Id` | guid |  |  |
-| `CompletedAt` | datetimeoffset | yes |  |
-| `Quarter` | nvarchar(8) |  |  |
-| `StartedAt` | datetimeoffset |  |  |
+| `CompletedAt` | timestamptz | yes |  |
+| `Quarter` | character varying(8) |  |  |
+| `StartedAt` | timestamptz |  |  |
 | `TenantId` | guid |  | FK to `Tenant` |
 
 </details>
@@ -234,9 +234,9 @@ erDiagram
 |---|---|---|---|
 | `ReviewId` | guid |  |  |
 | `MembershipId` | guid |  |  |
-| `DecidedAt` | datetimeoffset |  |  |
+| `DecidedAt` | timestamptz |  |  |
 | `DecidedBy` | guid | yes | id of `identity.Users` |
-| `Decision` | nvarchar(20) |  |  |
+| `Decision` | character varying(20) |  |  |
 | `TenantId` | guid |  | `tenancy.Tenants` |
 
 </details>
@@ -248,7 +248,7 @@ erDiagram
 | `Id` | guid |  |  |
 | `Date` | date |  |  |
 | `FacilityId` | guid |  | FK to `Facility` |
-| `Name` | nvarchar(100) |  |  |
+| `Name` | character varying(100) |  |  |
 | `TenantId` | guid |  | `tenancy.Tenants` |
 
 </details>
@@ -258,10 +258,10 @@ erDiagram
 | Column | Type | Null | Links to |
 |---|---|---|---|
 | `Id` | guid |  |  |
-| `BaseRole` | nvarchar(40) |  |  |
-| `Capabilities` | nvarchar(400) |  |  |
-| `CreatedAt` | datetimeoffset |  |  |
-| `Name` | nvarchar(60) |  |  |
+| `BaseRole` | character varying(40) |  |  |
+| `Capabilities` | character varying(400) |  |  |
+| `CreatedAt` | timestamptz |  |  |
+| `Name` | character varying(60) |  |  |
 | `TenantId` | guid |  | FK to `Tenant` |
 
 </details>
@@ -271,16 +271,16 @@ erDiagram
 | Column | Type | Null | Links to |
 |---|---|---|---|
 | `MembershipId` | guid |  | FK to `Membership` |
-| `Authority` | nvarchar(20) |  |  |
-| `Category` | nvarchar(40) |  |  |
-| `CertificateName` | nvarchar(200) |  |  |
+| `Authority` | character varying(20) |  |  |
+| `Category` | character varying(40) |  |  |
+| `CertificateName` | character varying(200) |  |  |
 | `ExpiresOn` | date | yes |  |
-| `Number` | nvarchar(20) |  |  |
-| `RejectedAt` | datetimeoffset | yes |  |
-| `RejectionReason` | nvarchar(500) |  |  |
-| `SubmittedAt` | datetimeoffset |  |  |
+| `Number` | character varying(20) |  |  |
+| `RejectedAt` | timestamptz | yes |  |
+| `RejectionReason` | character varying(500) |  |  |
+| `SubmittedAt` | timestamptz |  |  |
 | `TenantId` | guid |  | `tenancy.Tenants` |
-| `VerifiedAt` | datetimeoffset | yes |  |
+| `VerifiedAt` | timestamptz | yes |  |
 | `VerifiedBy` | guid | yes | id of `identity.Users` |
 
 </details>
@@ -290,15 +290,15 @@ erDiagram
 | Column | Type | Null | Links to |
 |---|---|---|---|
 | `MembershipId` | guid |  | FK to `Membership` |
-| `ChangedAt` | datetimeoffset |  |  |
+| `ChangedAt` | timestamptz |  |  |
 | `ChangedBy` | guid | yes | id of `identity.Users` |
 | `FollowUpFeeMinor` | bigint |  |  |
-| `FullName` | nvarchar(200) |  |  |
-| `Languages` | nvarchar(200) |  |  |
+| `FullName` | character varying(200) |  |  |
+| `Languages` | character varying(200) |  |  |
 | `NewVisitFeeMinor` | bigint |  |  |
-| `Qualifications` | nvarchar(200) |  |  |
-| `SignatureKey` | nvarchar(200) |  |  |
-| `Specialty` | nvarchar(100) |  |  |
+| `Qualifications` | character varying(200) |  |  |
+| `SignatureKey` | character varying(200) |  |  |
+| `Specialty` | character varying(100) |  |  |
 | `TenantId` | guid |  | `tenancy.Tenants` |
 
 </details>
@@ -308,10 +308,10 @@ erDiagram
 | Column | Type | Null | Links to |
 |---|---|---|---|
 | `Id` | guid |  |  |
-| `Address` | nvarchar(500) |  |  |
-| `Name` | nvarchar(200) |  |  |
+| `Address` | character varying(500) |  |  |
+| `Name` | character varying(200) |  |  |
 | `TenantId` | guid |  | FK to `Tenant` |
-| `TimeZone` | nvarchar(64) |  |  |
+| `TimeZone` | character varying(64) |  |  |
 
 </details>
 
@@ -320,14 +320,14 @@ erDiagram
 | Column | Type | Null | Links to |
 |---|---|---|---|
 | `Id` | guid |  |  |
-| `ChangedAt` | datetimeoffset |  |  |
+| `ChangedAt` | timestamptz |  |  |
 | `ChangedBy` | guid | yes | id of `identity.Users` |
-| `CreatedAt` | datetimeoffset |  |  |
+| `CreatedAt` | timestamptz |  |  |
 | `CreatedBy` | guid | yes |  |
-| `Description` | nvarchar(500) |  |  |
+| `Description` | character varying(500) |  |  |
 | `Enabled` | bool |  |  |
-| `Key` | nvarchar(100) |  |  |
-| `Owner` | nvarchar(100) |  |  |
+| `Key` | character varying(100) |  |  |
+| `Owner` | character varying(100) |  |  |
 | `TenantId` | guid |  | FK to `Tenant` |
 
 </details>
@@ -337,15 +337,15 @@ erDiagram
 | Column | Type | Null | Links to |
 |---|---|---|---|
 | `Id` | guid |  |  |
-| `AcceptedAt` | datetimeoffset | yes |  |
-| `CreatedAt` | datetimeoffset |  |  |
-| `Email` | nvarchar(254) |  |  |
-| `ExpiresAt` | datetimeoffset |  |  |
+| `AcceptedAt` | timestamptz | yes |  |
+| `CreatedAt` | timestamptz |  |  |
+| `Email` | character varying(254) |  |  |
+| `ExpiresAt` | timestamptz |  |  |
 | `InvitedBy` | guid |  |  |
 | `MembershipId` | guid |  | FK to `Membership` |
-| `RevokedAt` | datetimeoffset | yes |  |
+| `RevokedAt` | timestamptz | yes |  |
 | `TenantId` | guid |  | `tenancy.Tenants` |
-| `TokenHash` | binary(32) |  |  |
+| `TokenHash` | bytes |  |  |
 
 </details>
 
@@ -356,8 +356,8 @@ erDiagram
 | `Id` | guid |  |  |
 | `CustomRoleId` | guid | yes | FK to `CustomRole` |
 | `FacilityId` | guid |  | FK to `Facility` |
-| `Role` | nvarchar(40) |  |  |
-| `Status` | nvarchar(20) |  |  |
+| `Role` | character varying(40) |  |  |
+| `Status` | character varying(20) |  |  |
 | `TenantId` | guid |  | `tenancy.Tenants` |
 | `UserId` | guid | yes | id of `identity.Users` |
 
@@ -381,16 +381,16 @@ erDiagram
 | Column | Type | Null | Links to |
 |---|---|---|---|
 | `TenantId` | guid |  | FK to `Tenant` |
-| `Currency` | nchar(3) |  |  |
+| `Currency` | character(3) |  |  |
 | `FollowUpFeeMinor` | bigint |  |  |
-| `Languages` | nvarchar(200) |  |  |
+| `Languages` | character varying(200) |  |  |
 | `NewVisitFeeMinor` | bigint |  |  |
-| `NoteTemplates` | nvarchar(max) |  |  |
-| `Qualifications` | nvarchar(200) |  |  |
-| `SaturdayHours` | nvarchar(max) |  |  |
+| `NoteTemplates` | text |  |  |
+| `Qualifications` | character varying(200) |  |  |
+| `SaturdayHours` | text |  |  |
 | `SlotMinutes` | int |  |  |
-| `Specialty` | nvarchar(100) |  |  |
-| `WeekdayHours` | nvarchar(max) |  |  |
+| `Specialty` | character varying(100) |  |  |
+| `WeekdayHours` | text |  |  |
 
 </details>
 
@@ -399,14 +399,14 @@ erDiagram
 | Column | Type | Null | Links to |
 |---|---|---|---|
 | `Id` | guid |  |  |
-| `Address` | nvarchar(500) |  |  |
-| `ChangedAt` | datetimeoffset |  |  |
+| `Address` | character varying(500) |  |  |
+| `ChangedAt` | timestamptz |  |  |
 | `ChangedBy` | guid | yes | id of `identity.Users` |
-| `Email` | nvarchar(254) |  |  |
-| `LogoKey` | nvarchar(200) |  |  |
-| `Phone` | nvarchar(30) |  |  |
-| `RegistrationNumber` | nvarchar(50) |  |  |
-| `TaxNumber` | nvarchar(30) |  |  |
+| `Email` | character varying(254) |  |  |
+| `LogoKey` | character varying(200) |  |  |
+| `Phone` | character varying(30) |  |  |
+| `RegistrationNumber` | character varying(50) |  |  |
+| `TaxNumber` | character varying(30) |  |  |
 | `TenantId` | guid |  | FK to `Tenant` |
 
 </details>
@@ -417,11 +417,11 @@ erDiagram
 |---|---|---|---|
 | `Id` | guid |  |  |
 | `ActorUserId` | guid | yes | id of `identity.Users` |
-| `After` | nvarchar(max) |  |  |
-| `Before` | nvarchar(max) |  |  |
-| `OccurredAt` | datetimeoffset |  |  |
+| `After` | text |  |  |
+| `Before` | text |  |  |
+| `OccurredAt` | timestamptz |  |  |
 | `ResourceId` | guid | yes |  |
-| `Section` | nvarchar(40) |  |  |
+| `Section` | character varying(40) |  |  |
 | `TenantId` | guid |  | FK to `Tenant` |
 
 </details>
@@ -431,10 +431,10 @@ erDiagram
 | Column | Type | Null | Links to |
 |---|---|---|---|
 | `Id` | guid |  |  |
-| `CountryCode` | nchar(2) |  |  |
+| `CountryCode` | character(2) |  |  |
 | `IdleTimeoutMinutes` | int |  |  |
-| `Name` | nvarchar(200) |  |  |
-| `ResidencyRegion` | nvarchar(40) |  |  |
+| `Name` | character varying(200) |  |  |
+| `ResidencyRegion` | character varying(40) |  |  |
 
 </details>
 
@@ -451,10 +451,10 @@ erDiagram
 | Column | Type | Null | Links to |
 |---|---|---|---|
 | `Id` | guid |  |  |
-| `AcceptedAt` | datetimeoffset |  |  |
+| `AcceptedAt` | timestamptz |  |  |
 | `AcceptedBy` | guid |  |  |
 | `TenantId` | guid |  | FK to `Tenant` |
-| `TermsVersion` | nvarchar(32) |  |  |
+| `TermsVersion` | character varying(32) |  |  |
 
 </details>
 
@@ -492,11 +492,11 @@ erDiagram
 | Column | Type | Null | Links to |
 |---|---|---|---|
 | `UserId` | guid |  | FK to `StaffUser` |
-| `CompletedAt` | datetimeoffset | yes |  |
-| `Country` | nchar(2) |  |  |
-| `Data` | nvarchar(max) |  |  |
+| `CompletedAt` | timestamptz | yes |  |
+| `Country` | character(2) |  |  |
+| `Data` | text |  |  |
 | `Step` | int |  |  |
-| `UpdatedAt` | datetimeoffset |  |  |
+| `UpdatedAt` | timestamptz |  |  |
 
 </details>
 
@@ -505,12 +505,12 @@ erDiagram
 | Column | Type | Null | Links to |
 |---|---|---|---|
 | `Id` | guid |  |  |
-| `CreatedAt` | datetimeoffset |  |  |
-| `Device` | nvarchar(64) |  |  |
+| `CreatedAt` | timestamptz |  |  |
+| `Device` | character varying(64) |  |  |
 | `IdleTimeoutMinutes` | int |  |  |
-| `LastSeenAt` | datetimeoffset |  |  |
+| `LastSeenAt` | timestamptz |  |  |
 | `MembershipId` | guid | yes | id of `tenancy.Memberships` |
-| `RevokedAt` | datetimeoffset | yes |  |
+| `RevokedAt` | timestamptz | yes |  |
 | `TenantId` | guid | yes | `tenancy.Tenants` |
 | `UserId` | guid |  | FK to `StaffUser` |
 
@@ -521,9 +521,9 @@ erDiagram
 | Column | Type | Null | Links to |
 |---|---|---|---|
 | `Id` | guid |  |  |
-| `DisplayName` | nvarchar(200) |  |  |
-| `Issuer` | nvarchar(256) |  |  |
-| `Subject` | nvarchar(256) |  |  |
+| `DisplayName` | character varying(200) |  |  |
+| `Issuer` | character varying(256) |  |  |
+| `Subject` | character varying(256) |  |  |
 
 </details>
 
@@ -597,15 +597,15 @@ erDiagram
 | Column | Type | Null | Links to |
 |---|---|---|---|
 | `Id` | guid |  |  |
-| `Channel` | nvarchar(12) |  |  |
-| `DecidedAt` | datetimeoffset |  |  |
+| `Channel` | character varying(12) |  |  |
+| `DecidedAt` | timestamptz |  |  |
 | `DecidedBy` | guid | yes | id of `identity.Users` |
 | `Granted` | bool |  |  |
-| `Jurisdiction` | nvarchar(8) |  |  |
+| `Jurisdiction` | character varying(8) |  |  |
 | `PatientId` | guid |  | FK to `Patient` |
-| `PolicyVersion` | nvarchar(32) |  |  |
+| `PolicyVersion` | character varying(32) |  |  |
 | `TenantId` | guid |  | `tenancy.Tenants` |
-| `Type` | nvarchar(24) |  |  |
+| `Type` | character varying(24) |  |  |
 
 </details>
 
@@ -615,15 +615,15 @@ erDiagram
 |---|---|---|---|
 | `Id` | guid |  |  |
 | `CandidatePatientId` | guid |  | FK to `Patient` |
-| `DecidedAt` | datetimeoffset |  |  |
+| `DecidedAt` | timestamptz |  |  |
 | `DecidedBy` | guid | yes | id of `identity.Users` |
 | `FirstApprovedBy` | guid | yes |  |
-| `MergedAt` | datetimeoffset | yes |  |
+| `MergedAt` | timestamptz | yes |  |
 | `PatientId` | guid |  | FK to `Patient` |
 | `SecondApprovedBy` | guid | yes |  |
-| `Status` | nvarchar(20) |  |  |
+| `Status` | character varying(20) |  |  |
 | `TenantId` | guid |  | `tenancy.Tenants` |
-| `UnmergedAt` | datetimeoffset | yes |  |
+| `UnmergedAt` | timestamptz | yes |  |
 | `UnmergedBy` | guid | yes |  |
 
 </details>
@@ -633,28 +633,28 @@ erDiagram
 | Column | Type | Null | Links to |
 |---|---|---|---|
 | `Id` | guid |  |  |
-| `AlternatePhone` | nvarchar(20) |  |  |
-| `ArabicName` | nvarchar(200) |  |  |
-| `ChangedAt` | datetimeoffset |  |  |
+| `AlternatePhone` | character varying(20) |  |  |
+| `ArabicName` | character varying(200) |  |  |
+| `ChangedAt` | timestamptz |  |  |
 | `ChangedBy` | guid | yes | id of `identity.Users` |
-| `CountryCode` | nchar(2) |  |  |
+| `CountryCode` | character(2) |  |  |
 | `DateOfBirth` | date |  |  |
 | `DateOfBirthEstimated` | bool |  |  |
-| `Email` | nvarchar(254) |  |  |
+| `Email` | character varying(254) |  |  |
 | `FacilityId` | guid |  | id of `tenancy.Facilities` |
-| `FullName` | nvarchar(200) |  |  |
-| `GenderIdentity` | nvarchar(50) |  |  |
-| `IdempotencyKeyHash` | nchar(64) |  |  |
-| `IdempotencyRequestHash` | nchar(64) |  |  |
+| `FullName` | character varying(200) |  |  |
+| `GenderIdentity` | character varying(50) |  |  |
+| `IdempotencyKeyHash` | character(64) |  |  |
+| `IdempotencyRequestHash` | character(64) |  |  |
 | `MergedIntoPatientId` | guid | yes | id of `patients.Patients` |
-| `Mobile` | nvarchar(20) |  |  |
-| `Mrn` | nvarchar(32) |  |  |
-| `Nationality` | nchar(2) |  |  |
-| `PreferredLanguage` | nvarchar(35) |  |  |
-| `RegisteredAt` | datetimeoffset |  |  |
+| `Mobile` | character varying(20) |  |  |
+| `Mrn` | character varying(32) |  |  |
+| `Nationality` | character(2) |  |  |
+| `PreferredLanguage` | character varying(35) |  |  |
+| `RegisteredAt` | timestamptz |  |  |
 | `RegisteredBy` | guid | yes | id of `identity.Users` |
-| `SexAtBirth` | nvarchar(20) |  |  |
-| `Status` | nvarchar(20) |  |  |
+| `SexAtBirth` | character varying(20) |  |  |
+| `Status` | character varying(20) |  |  |
 | `TenantId` | guid |  | `tenancy.Tenants` |
 
 </details>
@@ -664,12 +664,12 @@ erDiagram
 | Column | Type | Null | Links to |
 |---|---|---|---|
 | `Id` | guid |  |  |
-| `DisplayValue` | nvarchar(64) |  |  |
+| `DisplayValue` | character varying(64) |  |  |
 | `ExpiresOn` | date | yes |  |
-| `LookupValue` | nvarchar(64) |  |  |
+| `LookupValue` | character varying(64) |  |  |
 | `MovedFromPatientId` | guid | yes | id of `patients.Patients` |
 | `PatientId` | guid |  | FK to `Patient` |
-| `Scheme` | nvarchar(20) |  |  |
+| `Scheme` | character varying(20) |  |  |
 | `TenantId` | guid |  | `tenancy.Tenants` |
 
 </details>
@@ -681,10 +681,10 @@ erDiagram
 | `Id` | guid |  |  |
 | `IsEmergencyContact` | bool |  |  |
 | `IsGuardian` | bool |  |  |
-| `Name` | nvarchar(200) |  |  |
+| `Name` | character varying(200) |  |  |
 | `PatientId` | guid |  | FK to `Patient` |
-| `Phone` | nvarchar(20) |  |  |
-| `Relationship` | nvarchar(20) |  |  |
+| `Phone` | character varying(20) |  |  |
+| `Relationship` | character varying(20) |  |  |
 | `TenantId` | guid |  | `tenancy.Tenants` |
 
 </details>
@@ -694,12 +694,12 @@ erDiagram
 | Column | Type | Null | Links to |
 |---|---|---|---|
 | `Id` | guid |  |  |
-| `Kind` | nvarchar(20) |  |  |
-| `MemberNumber` | nvarchar(50) |  |  |
-| `Network` | nvarchar(100) |  |  |
+| `Kind` | character varying(20) |  |  |
+| `MemberNumber` | character varying(50) |  |  |
+| `Network` | character varying(100) |  |  |
 | `PatientId` | guid |  | FK to `Patient` |
-| `PayerName` | nvarchar(200) |  |  |
-| `Plan` | nvarchar(100) |  |  |
+| `PayerName` | character varying(200) |  |  |
+| `Plan` | character varying(100) |  |  |
 | `TenantId` | guid |  | `tenancy.Tenants` |
 | `ValidTo` | date | yes |  |
 
@@ -843,28 +843,28 @@ erDiagram
 | Column | Type | Null | Links to |
 |---|---|---|---|
 | `Id` | guid |  |  |
-| `BookedAt` | datetimeoffset |  |  |
+| `BookedAt` | timestamptz |  |  |
 | `BookedBy` | guid | yes | id of `identity.Users` |
 | `CalendarId` | guid |  | doctor or room (`CalendarKind`) |
-| `CalendarKind` | nvarchar(20) |  |  |
-| `ChangedAt` | datetimeoffset |  |  |
+| `CalendarKind` | character varying(20) |  |  |
+| `ChangedAt` | timestamptz |  |  |
 | `ChangedBy` | guid | yes | id of `identity.Users` |
-| `Channel` | nvarchar(20) |  |  |
-| `End` | datetimeoffset |  |  |
+| `Channel` | character varying(20) |  |  |
+| `End` | timestamptz |  |  |
 | `FacilityId` | guid |  | id of `tenancy.Facilities` |
-| `IdempotencyKeyHash` | nchar(64) |  |  |
-| `IdempotencyRequestHash` | nchar(64) |  |  |
+| `IdempotencyKeyHash` | character(64) |  |  |
+| `IdempotencyRequestHash` | character(64) |  |  |
 | `MergedFromPatientId` | guid | yes | id of `patients.Patients` |
 | `PatientId` | guid |  | id of `patients.Patients` |
-| `ReasonCategory` | nvarchar(30) |  |  |
-| `ReasonText` | nvarchar(500) |  |  |
-| `Room` | nvarchar(50) |  |  |
+| `ReasonCategory` | character varying(30) |  |  |
+| `ReasonText` | character varying(500) |  |  |
+| `Room` | character varying(50) |  |  |
 | `SeriesId` | guid | yes |  |
-| `Start` | datetimeoffset |  |  |
-| `State` | nvarchar(20) |  |  |
+| `Start` | timestamptz |  |  |
+| `State` | character varying(20) |  |  |
 | `TenantId` | guid |  | `tenancy.Tenants` |
 | `Unscheduled` | bool |  |  |
-| `VisitType` | nvarchar(30) |  |  |
+| `VisitType` | character varying(30) |  |  |
 | `WalkIn` | bool |  |  |
 
 </details>
@@ -877,14 +877,14 @@ erDiagram
 | `ActorUserId` | guid | yes | id of `identity.Users` |
 | `AppointmentId` | guid |  | FK to `Appointment` |
 | `FromCalendarId` | guid |  | doctor or room (`CalendarKind`) |
-| `FromEnd` | datetimeoffset |  |  |
-| `FromStart` | datetimeoffset |  |  |
-| `OccurredAt` | datetimeoffset |  |  |
-| `ReassignReason` | nvarchar(30) |  |  |
+| `FromEnd` | timestamptz |  |  |
+| `FromStart` | timestamptz |  |  |
+| `OccurredAt` | timestamptz |  |  |
+| `ReassignReason` | character varying(30) |  |  |
 | `TenantId` | guid |  | `tenancy.Tenants` |
 | `ToCalendarId` | guid |  | doctor or room (`CalendarKind`) |
-| `ToEnd` | datetimeoffset |  |  |
-| `ToStart` | datetimeoffset |  |  |
+| `ToEnd` | timestamptz |  |  |
+| `ToStart` | timestamptz |  |  |
 
 </details>
 
@@ -894,11 +894,11 @@ erDiagram
 |---|---|---|---|
 | `Id` | guid |  |  |
 | `AggregateId` | guid |  |  |
-| `OccurredAt` | datetimeoffset |  |  |
-| `Payload` | nvarchar(max) |  |  |
-| `PublishedAt` | datetimeoffset | yes |  |
+| `OccurredAt` | timestamptz |  |  |
+| `Payload` | text |  |  |
+| `PublishedAt` | timestamptz | yes |  |
 | `TenantId` | guid |  | `tenancy.Tenants` |
-| `Type` | nvarchar(100) |  |  |
+| `Type` | character varying(100) |  |  |
 
 </details>
 
@@ -915,14 +915,14 @@ erDiagram
 | Column | Type | Null | Links to |
 |---|---|---|---|
 | `Id` | guid |  |  |
-| `CreatedAt` | datetimeoffset |  |  |
+| `CreatedAt` | timestamptz |  |  |
 | `CreatedBy` | guid | yes |  |
 | `FacilityId` | guid |  | id of `tenancy.Facilities` |
-| `Name` | nvarchar(60) |  |  |
-| `RevokedAt` | datetimeoffset | yes |  |
+| `Name` | character varying(60) |  |  |
+| `RevokedAt` | timestamptz | yes |  |
 | `RevokedBy` | guid | yes |  |
 | `TenantId` | guid |  | `tenancy.Tenants` |
-| `TokenHash` | varbinary(32) |  |  |
+| `TokenHash` | bytes |  |  |
 
 </details>
 
@@ -935,9 +935,9 @@ erDiagram
 | `CalendarId` | guid |  | doctor or room (`CalendarKind`) |
 | `Date` | date |  |  |
 | `FacilityId` | guid |  | id of `tenancy.Facilities` |
-| `IssuedAt` | datetimeoffset |  |  |
+| `IssuedAt` | timestamptz |  |  |
 | `Number` | int |  |  |
-| `Prefix` | nvarchar(4) |  |  |
+| `Prefix` | character varying(4) |  |  |
 | `TenantId` | guid |  | `tenancy.Tenants` |
 
 </details>
@@ -948,13 +948,13 @@ erDiagram
 |---|---|---|---|
 | `Id` | guid |  |  |
 | `CalendarId` | guid |  | doctor or room (`CalendarKind`) |
-| `CreatedAt` | datetimeoffset |  |  |
+| `CreatedAt` | timestamptz |  |  |
 | `CreatedBy` | guid | yes |  |
 | `End` | time | yes |  |
 | `FacilityId` | guid |  | id of `tenancy.Facilities` |
 | `FromDate` | date |  |  |
-| `Kind` | nvarchar(20) |  |  |
-| `Reason` | nvarchar(60) |  |  |
+| `Kind` | character varying(20) |  |  |
+| `Reason` | character varying(60) |  |  |
 | `Start` | time | yes |  |
 | `TenantId` | guid |  | `tenancy.Tenants` |
 | `ToDate` | date |  |  |
@@ -966,10 +966,10 @@ erDiagram
 | Column | Type | Null | Links to |
 |---|---|---|---|
 | `Id` | guid |  |  |
-| `CreatedAt` | datetimeoffset |  |  |
+| `CreatedAt` | timestamptz |  |  |
 | `CreatedBy` | guid | yes |  |
 | `FacilityId` | guid |  | id of `tenancy.Facilities` |
-| `Name` | nvarchar(100) |  |  |
+| `Name` | character varying(100) |  |  |
 | `TenantId` | guid |  | `tenancy.Tenants` |
 
 </details>
@@ -982,7 +982,7 @@ erDiagram
 | `AppointmentId` | guid |  | FK to `Appointment` |
 | `CalendarId` | guid |  | doctor or room (`CalendarKind`) |
 | `FacilityId` | guid |  | id of `tenancy.Facilities` |
-| `SlotStart` | datetimeoffset |  |  |
+| `SlotStart` | timestamptz |  |  |
 | `TenantId` | guid |  | `tenancy.Tenants` |
 
 </details>
@@ -993,8 +993,8 @@ erDiagram
 |---|---|---|---|
 | `Id` | guid |  |  |
 | `CalendarId` | guid |  | doctor or room (`CalendarKind`) |
-| `CalendarKind` | nvarchar(20) |  |  |
-| `ChangedAt` | datetimeoffset |  |  |
+| `CalendarKind` | character varying(20) |  |  |
+| `ChangedAt` | timestamptz |  |  |
 | `ChangedBy` | guid | yes | id of `identity.Users` |
 | `FacilityId` | guid |  | id of `tenancy.Facilities` |
 | `SlotMinutes` | int |  |  |
@@ -1008,13 +1008,13 @@ erDiagram
 |---|---|---|---|
 | `Id` | guid |  |  |
 | `CalendarId` | guid |  | doctor or room (`CalendarKind`) |
-| `End` | datetimeoffset |  |  |
-| `ExpiresAt` | datetimeoffset |  |  |
+| `End` | timestamptz |  |  |
+| `ExpiresAt` | timestamptz |  |  |
 | `FacilityId` | guid |  | id of `tenancy.Facilities` |
 | `HeldBy` | guid |  | id of `identity.Users` |
-| `Start` | datetimeoffset |  |  |
+| `Start` | timestamptz |  |  |
 | `TenantId` | guid |  | `tenancy.Tenants` |
-| `VisitType` | nvarchar(30) |  |  |
+| `VisitType` | character varying(30) |  |  |
 
 </details>
 
@@ -1025,10 +1025,10 @@ erDiagram
 | `Id` | guid |  |  |
 | `ActorUserId` | guid | yes | id of `identity.Users` |
 | `AppointmentId` | guid |  | FK to `Appointment` |
-| `CancelReason` | nvarchar(30) |  |  |
-| `Note` | nvarchar(500) |  |  |
-| `OccurredAt` | datetimeoffset |  |  |
-| `State` | nvarchar(20) |  |  |
+| `CancelReason` | character varying(30) |  |  |
+| `Note` | character varying(500) |  |  |
+| `OccurredAt` | timestamptz |  |  |
+| `State` | character varying(20) |  |  |
 | `TenantId` | guid |  | `tenancy.Tenants` |
 
 </details>
@@ -1095,21 +1095,21 @@ erDiagram
 |---|---|---|---|
 | `Id` | guid |  |  |
 | `AppointmentId` | guid |  | id of `scheduling.Appointments` |
-| `AppointmentStart` | datetimeoffset |  |  |
+| `AppointmentStart` | timestamptz |  |  |
 | `Attempts` | int |  |  |
-| `Channel` | nvarchar(10) |  |  |
-| `CreatedAt` | datetimeoffset |  |  |
+| `Channel` | character varying(10) |  |  |
+| `CreatedAt` | timestamptz |  |  |
 | `FacilityId` | guid |  | id of `tenancy.Facilities` |
-| `FailureCode` | nvarchar(60) |  |  |
-| `Kind` | nvarchar(20) |  |  |
-| `NextAttemptAt` | datetimeoffset | yes |  |
+| `FailureCode` | character varying(60) |  |  |
+| `Kind` | character varying(20) |  |  |
+| `NextAttemptAt` | timestamptz | yes |  |
 | `PatientId` | guid |  | id of `patients.Patients` |
-| `ProviderRef` | nvarchar(80) |  |  |
-| `SendAt` | datetimeoffset |  |  |
+| `ProviderRef` | character varying(80) |  |  |
+| `SendAt` | timestamptz |  |  |
 | `SourceEventId` | guid |  |  |
-| `Status` | nvarchar(20) |  |  |
+| `Status` | character varying(20) |  |  |
 | `TenantId` | guid |  | `tenancy.Tenants` |
-| `UpdatedAt` | datetimeoffset |  |  |
+| `UpdatedAt` | timestamptz |  |  |
 
 </details>
 
@@ -1118,10 +1118,10 @@ erDiagram
 | Column | Type | Null | Links to |
 |---|---|---|---|
 | `Id` | guid |  |  |
-| `At` | datetimeoffset |  |  |
-| `Code` | nvarchar(60) |  |  |
+| `At` | timestamptz |  |  |
+| `Code` | character varying(60) |  |  |
 | `NotificationId` | guid |  | id of `notifications.Notifications` |
-| `Outcome` | nvarchar(20) |  |  |
+| `Outcome` | character varying(20) |  |  |
 | `TenantId` | guid |  | `tenancy.Tenants` |
 
 </details>
@@ -1131,7 +1131,7 @@ erDiagram
 | Column | Type | Null | Links to |
 |---|---|---|---|
 | `TenantId` | guid |  | `tenancy.Tenants` |
-| `ChangedAt` | datetimeoffset |  |  |
+| `ChangedAt` | timestamptz |  |  |
 | `ChangedBy` | guid | yes | id of `identity.Users` |
 | `Changes` | bool |  |  |
 | `Confirmation` | bool |  |  |
@@ -1149,11 +1149,11 @@ erDiagram
 | Column | Type | Null | Links to |
 |---|---|---|---|
 | `Id` | guid |  |  |
-| `CreatedAt` | datetimeoffset |  |  |
-| `DedupeKey` | nvarchar(80) |  |  |
+| `CreatedAt` | timestamptz |  |  |
+| `DedupeKey` | character varying(80) |  |  |
 | `Detail` | int | yes |  |
 | `FacilityId` | guid |  | id of `tenancy.Facilities` |
-| `Kind` | nvarchar(30) |  |  |
+| `Kind` | character varying(30) |  |  |
 | `RefId` | guid | yes |  |
 | `TenantId` | guid |  | `tenancy.Tenants` |
 
@@ -1165,7 +1165,7 @@ erDiagram
 |---|---|---|---|
 | `NotificationId` | guid |  |  |
 | `UserId` | guid |  |  |
-| `ReadAt` | datetimeoffset |  |  |
+| `ReadAt` | timestamptz |  |  |
 | `TenantId` | guid |  | `tenancy.Tenants` |
 
 </details>
@@ -1203,19 +1203,19 @@ erDiagram
 | Column | Type | Null | Links to |
 |---|---|---|---|
 | `Id` | guid |  |  |
-| `Action` | nvarchar(64) |  |  |
+| `Action` | character varying(64) |  |  |
 | `ActorUserId` | guid | yes | id of `identity.Users` |
-| `ClientIp` | nvarchar(45) |  |  |
-| `CorrelationId` | nvarchar(64) |  |  |
-| `Detail` | nvarchar(256) |  |  |
+| `ClientIp` | character varying(45) |  |  |
+| `CorrelationId` | character varying(64) |  |  |
+| `Detail` | character varying(256) |  |  |
 | `FacilityId` | guid | yes | id of `tenancy.Facilities` |
-| `OccurredAt` | datetimeoffset |  |  |
-| `Outcome` | nvarchar(16) |  |  |
+| `OccurredAt` | timestamptz |  |  |
+| `Outcome` | character varying(16) |  |  |
 | `PatientId` | guid | yes | id of `patients.Patients` |
-| `Purpose` | nvarchar(32) |  |  |
+| `Purpose` | character varying(32) |  |  |
 | `ResourceId` | guid | yes |  |
-| `ResourceType` | nvarchar(64) |  |  |
-| `Role` | nvarchar(32) |  |  |
+| `ResourceType` | character varying(64) |  |  |
+| `Role` | character varying(32) |  |  |
 | `TenantId` | guid |  | `tenancy.Tenants` |
 
 </details>
@@ -1242,16 +1242,16 @@ erDiagram
 | Column | Type | Null | Links to |
 |---|---|---|---|
 | `Id` | guid |  |  |
-| `ConsentedAt` | datetimeoffset | yes |  |
-| `Country` | varchar(5) |  |  |
-| `Email` | nvarchar(254) |  |  |
-| `Message` | nvarchar(1000) |  |  |
-| `Name` | nvarchar(100) |  |  |
-| `NoticeVersion` | varchar(20) |  |  |
-| `Organisation` | nvarchar(150) |  |  |
-| `Phone` | varchar(20) |  |  |
-| `ReceivedAt` | datetimeoffset |  |  |
-| `Role` | nvarchar(100) |  |  |
+| `ConsentedAt` | timestamptz | yes |  |
+| `Country` | character varying(5) |  |  |
+| `Email` | character varying(254) |  |  |
+| `Message` | character varying(1000) |  |  |
+| `Name` | character varying(100) |  |  |
+| `NoticeVersion` | character varying(20) |  |  |
+| `Organisation` | character varying(150) |  |  |
+| `Phone` | character varying(20) |  |  |
+| `ReceivedAt` | timestamptz |  |  |
+| `Role` | character varying(100) |  |  |
 
 </details>
 
@@ -1260,13 +1260,13 @@ erDiagram
 | Column | Type | Null | Links to |
 |---|---|---|---|
 | `Id` | guid |  |  |
-| `ConsentedAt` | datetimeoffset | yes |  |
-| `Country` | varchar(2) |  |  |
-| `Email` | nvarchar(254) |  |  |
-| `Name` | nvarchar(100) |  |  |
-| `NoticeVersion` | varchar(20) |  |  |
-| `Phone` | varchar(20) |  |  |
-| `ReceivedAt` | datetimeoffset |  |  |
+| `ConsentedAt` | timestamptz | yes |  |
+| `Country` | character varying(2) |  |  |
+| `Email` | character varying(254) |  |  |
+| `Name` | character varying(100) |  |  |
+| `NoticeVersion` | character varying(20) |  |  |
+| `Phone` | character varying(20) |  |  |
+| `ReceivedAt` | timestamptz |  |  |
 
 </details>
 
@@ -1288,11 +1288,11 @@ erDiagram
 | Column | Type | Null | Links to |
 |---|---|---|---|
 | `Id` | guid |  |  |
-| `CountryCode` | nchar(2) |  |  |
-| `DocumentType` | nvarchar(20) |  |  |
-| `FinancialYear` | nvarchar(5) |  |  |
+| `CountryCode` | character(2) |  |  |
+| `DocumentType` | character varying(20) |  |  |
+| `FinancialYear` | character varying(5) |  |  |
 | `NextNumber` | bigint |  |  |
-| `Prefix` | nvarchar(16) |  |  |
+| `Prefix` | character varying(16) |  |  |
 | `TenantId` | guid |  | `tenancy.Tenants` |
 
 </details>
@@ -1401,7 +1401,7 @@ Tables that exist but were added while building (not named in the plan): `identi
 ## 6. Rules the model follows
 
 - **Tenant isolation:** 42 of 47 tables carry `TenantId` (EF query filter plus SQL row-level security on `SESSION_CONTEXT`). Without `TenantId`: `identity.OnboardingDrafts`, `identity.Users`, `leads.DemoRequests`, `leads.Waitlist`, `tenancy.Tenants`. (`TenantId` present is not proof the row-level-security policy covers the table; see `docs/03-architecture/database-security.md`.)
-- **Append-only ledgers:** `audit.AuditEvents`, `patients.ConsentReceipts`, `tenancy.TermsAcceptances` (`LEDGER = ON` in their migrations).
+- **Append-only ledgers:** `audit.AuditEvents`, `patients.ConsentReceipts`, `tenancy.TermsAcceptances` (hash-chain tamper evidence arrives with MDV-P0-036).
 - **No cross-module foreign keys:** modules link by id and through application services (AGENTS.md 3.1).
 - **Country data plane:** one deployment and one database per country (ADR-003); this diagram is the same in each.
-- **Money** is integer minor units plus an ISO currency; **time** is `datetimeoffset` in UTC (AGENTS.md 3.4, 3.5).
+- **Money** is integer minor units plus an ISO currency; **time** is `timestamptz` in UTC (AGENTS.md 3.4, 3.5).

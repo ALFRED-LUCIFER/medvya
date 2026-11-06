@@ -1,11 +1,11 @@
 using Medvya.Tenancy.Domain;
-using Microsoft.Data.SqlClient;
+using Npgsql;
 using Microsoft.EntityFrameworkCore;
 
 namespace Medvya.IntegrationTests;
 
 /// <summary>MDV-P0-010 / P0 exit gate 3: one clinic can never read or write another clinic's rows.</summary>
-public class TenantIsolationTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>, IAsyncLifetime
+public class TenantIsolationTests(PostgresFixture sql) : IClassFixture<PostgresFixture>, IAsyncLifetime
 {
     readonly Guid tenantA = Guid.NewGuid(), tenantB = Guid.NewGuid(), sharedUser = Guid.NewGuid();
     Guid facilityA, facilityB;
@@ -35,7 +35,7 @@ public class TenantIsolationTests(SqlServerFixture sql) : IClassFixture<SqlServe
         await using var db = sql.Context(tenantA);
         var facilities = await db.Facilities.IgnoreQueryFilters().ToListAsync();
         var tenants = await db.Tenants.IgnoreQueryFilters().ToListAsync();
-        var raw = await db.Database.SqlQuery<Guid>($"SELECT TenantId AS Value FROM tenancy.Facilities").ToListAsync();
+        var raw = await db.Database.SqlQuery<Guid>($"""SELECT "TenantId" AS "Value" FROM tenancy."Facilities" """).ToListAsync();
 
         Assert.All(facilities, f => Assert.Equal(tenantA, f.TenantId));
         Assert.Contains(facilities, f => f.Id == facilityA);
@@ -50,11 +50,11 @@ public class TenantIsolationTests(SqlServerFixture sql) : IClassFixture<SqlServe
         await using var db = sql.Context(tenantA);
         db.Facilities.Add(new Facility { Id = Guid.NewGuid(), TenantId = tenantB, Name = "Injected", TimeZone = "UTC" });
         var ex = await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
-        Assert.IsType<SqlException>(ex.InnerException);
+        Assert.IsType<PostgresException>(ex.InnerException);
 
         await using var db2 = sql.Context(tenantA);
-        var move = await Assert.ThrowsAsync<SqlException>(() =>
-            db2.Database.ExecuteSqlAsync($"UPDATE tenancy.Facilities SET TenantId = {tenantB} WHERE Id = {facilityA}"));
+        var move = await Assert.ThrowsAsync<PostgresException>(() =>
+            db2.Database.ExecuteSqlAsync($"""UPDATE tenancy."Facilities" SET "TenantId" = {tenantB} WHERE "Id" = {facilityA}"""));
         Assert.Contains("block predicate", move.Message, StringComparison.Ordinal);
     }
 

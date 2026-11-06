@@ -23,8 +23,8 @@ public sealed class AuditLog(AuditDbContext db, IRequestOrigin? origin = null) :
     {
         ArgumentNullException.ThrowIfNull(auditEvent);
         ArgumentNullException.ThrowIfNull(transaction);
-        // The caller's connection already carries the tenant's SESSION_CONTEXT, so row-level security applies to this insert too.
-        var options = new DbContextOptionsBuilder<AuditDbContext>().UseSqlServer(transaction.Connection!).Options;
+        // The caller's connection already carries the tenant setting, so row-level security applies to this insert too.
+        var options = new DbContextOptionsBuilder<AuditDbContext>().UseNpgsql(transaction.Connection!).Options;
         await using var shared = new AuditDbContext(options, new EventTenant(auditEvent.TenantId));
         await shared.Database.UseTransactionAsync(transaction, cancellationToken);
         shared.Events.Add(await WithOriginAsync(auditEvent, cancellationToken));

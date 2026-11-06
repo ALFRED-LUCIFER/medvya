@@ -17,7 +17,7 @@ namespace Medvya.IntegrationTests;
 /// patients, plus the shared waiting room; reassigning a waiting patient moves the visit to the other doctor's queue
 /// atomically (one of two racing desks wins), keeps its token, frees its booked slot and is audited in the same transaction.
 /// </summary>
-public sealed class ClinicOverviewTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>, IAsyncLifetime
+public sealed class ClinicOverviewTests(PostgresFixture sql) : IClassFixture<PostgresFixture>, IAsyncLifetime
 {
     readonly SchedulingHarness h = new(sql);
     readonly BoardHubTests.SignedInDesks desks = new();

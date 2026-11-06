@@ -1,7 +1,7 @@
 using System.Security.Claims;
 using System.Threading.RateLimiting;
 using Hangfire;
-using Hangfire.SqlServer;
+using Hangfire.PostgreSql;
 using Microsoft.Extensions.Hosting;
 using Medvya.Notifications.Application;
 using Medvya.Scheduling.Application;
@@ -78,7 +78,7 @@ public static class JobsSetup
         if (connectionString is null || !builder.Configuration.GetValue("Jobs:Enabled", false)) return builder;
         builder.Services.AddScoped<NotificationJobs>();
         builder.Services.AddHangfire(c => c.SetDataCompatibilityLevel(CompatibilityLevel.Version_180).UseSimpleAssemblyNameTypeSerializer().UseRecommendedSerializerSettings()
-            .UseSqlServerStorage(connectionString, new SqlServerStorageOptions { SchemaName = "hangfire", PrepareSchemaIfNecessary = builder.Environment.IsDevelopment() }));
+            .UsePostgreSqlStorage(o => o.UseNpgsqlConnection(connectionString), new PostgreSqlStorageOptions { SchemaName = "hangfire", PrepareSchemaIfNecessary = builder.Environment.IsDevelopment() }));
         builder.Services.AddHangfireServer(o => o.WorkerCount = 2);
         return builder;
     }

@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Medvya.IntegrationTests;
 
 /// <summary>MDV-P0-027: the synthetic seed is idempotent, covers every role, is visibly synthetic and never runs in production.</summary>
-public class SyntheticSeedTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>
+public class SyntheticSeedTests(PostgresFixture sql) : IClassFixture<PostgresFixture>
 {
     async Task<(int Tenants, int Facilities, int Memberships)> Counts(Guid tenantId)
     {
@@ -18,11 +18,11 @@ public class SyntheticSeedTests(SqlServerFixture sql) : IClassFixture<SqlServerF
     [Fact]
     public async Task SeedingTwiceGivesTheSameRowsWithEveryRoleMarkedSynthetic()
     {
-        await SyntheticSeed.SeedAsync(sql.ConnectionString, "Test", includeUae: true, SqlServerFixture.Keys);
+        await SyntheticSeed.SeedAsync(sql.ConnectionString, "Test", includeUae: true);
         var india = await Counts(SyntheticSeed.India.Tenant.Id);
         var uae = await Counts(SyntheticSeed.Uae.Tenant.Id);
 
-        await SyntheticSeed.SeedAsync(sql.ConnectionString, "Test", includeUae: true, SqlServerFixture.Keys);
+        await SyntheticSeed.SeedAsync(sql.ConnectionString, "Test", includeUae: true);
         Assert.Equal(india, await Counts(SyntheticSeed.India.Tenant.Id));
         Assert.Equal(uae, await Counts(SyntheticSeed.Uae.Tenant.Id));
         Assert.Equal((1, 1, Enum.GetValues<Role>().Length), india);
@@ -55,7 +55,7 @@ public class SyntheticSeedTests(SqlServerFixture sql) : IClassFixture<SqlServerF
     [InlineData(null)]
     public async Task RefusesToRunOutsideDevelopmentStagingOrTest(string? environment)
     {
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => SyntheticSeed.SeedAsync(sql.ConnectionString, environment, includeUae: true, SqlServerFixture.Keys));
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => SyntheticSeed.SeedAsync(sql.ConnectionString, environment, includeUae: true));
         Assert.Contains("refused", ex.Message, StringComparison.Ordinal);
     }
 }

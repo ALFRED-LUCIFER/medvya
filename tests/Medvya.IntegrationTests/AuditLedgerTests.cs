@@ -7,14 +7,14 @@ using Medvya.BuildingBlocks.Domain;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
-using Microsoft.Data.SqlClient;
+using Npgsql;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Medvya.IntegrationTests;
 
 /// <summary>MDV-P0-017: every patient-data access leaves one append-only, tenant-scoped, tamper-evident audit row.</summary>
-public class AuditLedgerTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>
+public class AuditLedgerTests(PostgresFixture sql) : IClassFixture<PostgresFixture>
 {
     readonly Guid tenantA = Guid.NewGuid(), tenantB = Guid.NewGuid();
 
@@ -74,8 +74,8 @@ public class AuditLedgerTests(SqlServerFixture sql) : IClassFixture<SqlServerFix
     {
         var a = await Write(tenantA);
         await using var db = sql.Audit(tenantA);
-        var update = await Assert.ThrowsAsync<SqlException>(() => db.Database.ExecuteSqlAsync($"UPDATE audit.AuditEvents SET Action = 'x' WHERE Id = {a.Id}"));
-        var delete = await Assert.ThrowsAsync<SqlException>(() => db.Database.ExecuteSqlAsync($"DELETE FROM audit.AuditEvents WHERE Id = {a.Id}"));
+        var update = await Assert.ThrowsAsync<PostgresException>(() => db.Database.ExecuteSqlAsync($"""UPDATE audit."AuditEvents" SET "Action" = 'x' WHERE "Id" = {a.Id}"""));
+        var delete = await Assert.ThrowsAsync<PostgresException>(() => db.Database.ExecuteSqlAsync($"""DELETE FROM audit."AuditEvents" WHERE "Id" = {a.Id}"""));
         Assert.Contains("append only", update.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("append only", delete.Message, StringComparison.OrdinalIgnoreCase);
     }
@@ -85,20 +85,19 @@ public class AuditLedgerTests(SqlServerFixture sql) : IClassFixture<SqlServerFix
     {
         await using var db = sql.Audit(tenantA);
         var ex = await Assert.ThrowsAsync<DbUpdateException>(() => new AuditLog(db).WriteAsync(Event(tenantB), default));
-        Assert.IsType<SqlException>(ex.InnerException);
+        Assert.IsType<PostgresException>(ex.InnerException);
     }
 
     [Fact]
     public async Task LedgerDigestVerifies()
     {
         await Write(tenantA);
-        await using var conn = new SqlConnection(sql.ConnectionString);
+        await using var conn = new NpgsqlConnection(sql.ConnectionString);
         await conn.OpenAsync();
-        await using var gen = new SqlCommand("EXEC sys.sp_generate_database_ledger_digest", conn);
-        var digest = (string)(await gen.ExecuteScalarAsync())!;
-        await using var verify = new SqlCommand("EXEC sys.sp_verify_database_ledger @digests", conn);
-        verify.Parameters.AddWithValue("@digests", $"[{digest}]");
-        await verify.ExecuteNonQueryAsync(); // throws if any ledger row was tampered with
+        // The hash-chain verifier arrives with MDV-P0-036; until then this fails because the function does not exist.
+        await using var verify = new NpgsqlCommand("SELECT audit.verify_chain(@tenant)", conn);
+        verify.Parameters.AddWithValue("tenant", tenantA);
+        await verify.ExecuteNonQueryAsync(); // throws if any chained row was tampered with
     }
 
     [Fact]
@@ -141,7 +140,7 @@ public class AuditLedgerTests(SqlServerFixture sql) : IClassFixture<SqlServerFix
     {
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
-        builder.Services.AddSingleton<ICurrentTenant>(new SqlServerFixture.FixedTenant(tenant));
+        builder.Services.AddSingleton<ICurrentTenant>(new PostgresFixture.FixedTenant(tenant));
         builder.Services.AddSingleton<ICurrentUser>(new FixedUser());
         audit(builder.Services);
         var app = builder.Build();

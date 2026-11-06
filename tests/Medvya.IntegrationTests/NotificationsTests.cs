@@ -22,7 +22,7 @@ namespace Medvya.IntegrationTests;
 /// handling that cancels and never doubles, retries with backoff, DLT-registered SMS only, delivery receipts, tenant isolation.
 /// Synthetic data only.
 /// </summary>
-public sealed partial class NotificationsTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>, IAsyncLifetime
+public sealed partial class NotificationsTests(PostgresFixture sql) : IClassFixture<PostgresFixture>, IAsyncLifetime
 {
     readonly SchedulingHarness h = new(sql);
     readonly FakeEmail email = new();
@@ -86,7 +86,7 @@ public sealed partial class NotificationsTests(SqlServerFixture sql) : IClassFix
     {
         provider?.Dispose();
         var services = new ServiceCollection()
-            .AddSingleton<ICurrentTenant>(new SqlServerFixture.FixedTenant(inTenant ?? h.Tenant))
+            .AddSingleton<ICurrentTenant>(new PostgresFixture.FixedTenant(inTenant ?? h.Tenant))
             .AddSingleton<ICurrentUser>(new FixedUser(user ?? actingUser))
             .AddSingleton<TimeProvider>(h.Clock)
             .AddSingleton<ICurrentFacility>(new PatientRegistryTests.FixedFacility(h.Facility))

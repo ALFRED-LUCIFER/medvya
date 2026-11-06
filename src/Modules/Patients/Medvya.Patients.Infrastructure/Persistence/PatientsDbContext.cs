@@ -5,16 +5,12 @@ using Microsoft.EntityFrameworkCore;
 namespace Medvya.Patients.Infrastructure.Persistence;
 
 /// <summary>
-/// Tenant isolation layer 1 of 2: EF query filters; layer 2 is row-level security (InitialPatients migration).
-/// Identifier values and member numbers are Always Encrypted and personal columns carry dynamic data masks; both are created
-/// by raw SQL in the migration because EF Core cannot express them. Needs a connection with Column Encryption Setting=Enabled
-/// (<see cref="PatientsModule.WithColumnEncryption"/>).
+/// Tenant isolation layer 1 of 2: EF query filters; layer 2 is row-level security (MDV-P0-034).
+/// shortcut: identifier values and member numbers are plain columns until application-level encryption lands (MDV-P0-035);
+/// synthetic data only until then.
 /// </summary>
 public sealed class PatientsDbContext(DbContextOptions<PatientsDbContext> options, ICurrentTenant tenant) : DbContext(options)
 {
-    /// <summary>Deterministic Always Encrypted string columns need a BIN2 collation; the model must match so parameters do.</summary>
-    public const string Bin2 = "Latin1_General_BIN2";
-
     public DbSet<Patient> Patients => Set<Patient>();
     public DbSet<PatientIdentifier> Identifiers => Set<PatientIdentifier>();
     public DbSet<PayerCoverage> PayerCoverages => Set<PayerCoverage>();
@@ -65,13 +61,13 @@ public sealed class PatientsDbContext(DbContextOptions<PatientsDbContext> option
             e.Property(x => x.IdempotencyKeyHash).HasMaxLength(64).IsFixedLength();
             e.Property(x => x.IdempotencyRequestHash).HasMaxLength(64).IsFixedLength();
             // One registration per Idempotency-Key and registrar (MDV-P1-047): the last line if two identical requests race.
-            e.HasIndex(x => new { x.TenantId, x.RegisteredBy, x.IdempotencyKeyHash }).IsUnique().HasFilter("[IdempotencyKeyHash] IS NOT NULL");
+            e.HasIndex(x => new { x.TenantId, x.RegisteredBy, x.IdempotencyKeyHash }).IsUnique().HasFilter("\"IdempotencyKeyHash\" IS NOT NULL");
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         modelBuilder.Entity<PatientIdentifier>(e =>
         {
             e.Property(x => x.Scheme).HasConversion<string>().HasMaxLength(20);
-            e.Property(x => x.LookupValue).HasMaxLength(64).UseCollation(Bin2);
+            e.Property(x => x.LookupValue).HasMaxLength(64);
             e.Property(x => x.DisplayValue).HasMaxLength(64);
             e.HasOne<Patient>().WithMany().HasForeignKey(x => x.PatientId).OnDelete(DeleteBehavior.Restrict);
             e.HasIndex(x => new { x.TenantId, x.Scheme, x.LookupValue });
@@ -83,7 +79,7 @@ public sealed class PatientsDbContext(DbContextOptions<PatientsDbContext> option
             e.Property(x => x.Kind).HasConversion<string>().HasMaxLength(20);
             e.Property(x => x.PayerName).HasMaxLength(200);
             e.Property(x => x.Plan).HasMaxLength(100);
-            e.Property(x => x.MemberNumber).HasMaxLength(50).UseCollation(Bin2);
+            e.Property(x => x.MemberNumber).HasMaxLength(50);
             e.Property(x => x.Network).HasMaxLength(100);
             e.HasOne<Patient>().WithMany().HasForeignKey(x => x.PatientId).OnDelete(DeleteBehavior.Restrict);
             e.HasIndex(x => x.PatientId).IsUnique(); // one current payer per patient in P1
@@ -101,7 +97,7 @@ public sealed class PatientsDbContext(DbContextOptions<PatientsDbContext> option
         });
         modelBuilder.Entity<ConsentReceipt>(e =>
         {
-            // A ledger table (ConsentReceipts migration): append-only.
+            // Append-only (tamper evidence returns with MDV-P0-036).
             e.Property(x => x.Type).HasConversion<string>().HasMaxLength(24);
             e.Property(x => x.Channel).HasConversion<string>().HasMaxLength(12);
             e.Property(x => x.PolicyVersion).HasMaxLength(32);

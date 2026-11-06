@@ -9,7 +9,7 @@ namespace Medvya.IntegrationTests;
 /// MDV-P1-026 on real SQL Server: a series previews its conflicts, books each occurrence on the booking path as an independent
 /// appointment, and "this and following" cancels the rest with one reason and one notification.
 /// </summary>
-public sealed class SeriesTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>, IAsyncLifetime
+public sealed class SeriesTests(PostgresFixture sql) : IClassFixture<PostgresFixture>, IAsyncLifetime
 {
     readonly SchedulingHarness h = new(sql);
 

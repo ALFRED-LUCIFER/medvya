@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <!-- The deploy-time database tool (MDV-P0-008/009): roles and Always Encrypted keys as the administrator, migrations as the migration role. -->
+  <!-- The deploy-time database tool (MDV-P0-008/009): migrations and job tables. -->
   <PropertyGroup>
     <OutputType>Exe</OutputType>
   </PropertyGroup>
@@ -17,9 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Azure.Identity" />
-    <PackageReference Include="Hangfire.SqlServer" />
-    <EmbeddedResource Include="..\..\infra\sql\roles.sql" LogicalName="roles.sql" />
+    <PackageReference Include="Hangfire.PostgreSql" />
   </ItemGroup>
 
 </Project>

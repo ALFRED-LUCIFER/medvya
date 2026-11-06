@@ -24,8 +24,8 @@ public sealed class BillingDbContext(DbContextOptions<BillingDbContext> options,
             e.HasIndex(x => new { x.TenantId, x.CountryCode, x.DocumentType, x.FinancialYear, x.Prefix }).IsUnique();
             e.ToTable(t =>
             {
-                t.HasCheckConstraint("CK_DocSequences_NextNumber", "[NextNumber] >= 1");
-                // A series only moves forward one number at a time (DocSequencesOnlyMoveForward); EF must not use a bare OUTPUT clause.
+                t.HasCheckConstraint("CK_DocSequences_NextNumber", "\"NextNumber\" >= 1");
+                // A series only moves forward one number at a time (DocSequencesOnlyMoveForward).
                 t.HasTrigger("TR_DocSequences_OnlyMoveForward");
             });
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);

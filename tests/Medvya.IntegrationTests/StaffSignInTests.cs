@@ -11,7 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Medvya.IntegrationTests;
 
 /// <summary>MDV-P0-011: OIDC code + PKCE through the BFF, MFA required, Medvya accounts only, tokens never reach the browser.</summary>
-public sealed class StaffSignInTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>, IDisposable
+public sealed class StaffSignInTests(PostgresFixture sql) : IClassFixture<PostgresFixture>, IDisposable
 {
     readonly WebApplicationFactory<Program> factory = CreateFactory(sql.ConnectionString);
 

@@ -39,7 +39,7 @@ sealed class LoseTheRace(Func<Task> winner, string after = "IdempotencyKeyHash")
 /// fail with "hold_expired" and the race book once but answer the rest with 409, so these tests fail. The lost-race tests force the
 /// interleaving (LoseTheRace) instead of relying on parallel requests: each fails when its own replay line is removed.
 /// </summary>
-public sealed class BookingIdempotencyTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>, IAsyncLifetime
+public sealed class BookingIdempotencyTests(PostgresFixture sql) : IClassFixture<PostgresFixture>, IAsyncLifetime
 {
     const string Key = "k-9f1c2a7e-booking-0001";
     readonly SchedulingHarness h = new(sql);
@@ -178,13 +178,13 @@ public sealed class BookingIdempotencyTests(SqlServerFixture sql) : IClassFixtur
 /// MDV-P1-047 for registration. SAFETY: mutation check: removing the ReplayAsync calls in PatientRegistry.RegisterAsync makes the
 /// repeat fail as an unresolved duplicate of its own first record and the race fail on the unique index.
 /// </summary>
-public sealed class RegistrationIdempotencyTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>
+public sealed class RegistrationIdempotencyTests(PostgresFixture sql) : IClassFixture<PostgresFixture>
 {
     const string Key = "k-9f1c2a7e-register-01";
     readonly Guid tenant = Guid.NewGuid(), facility = Guid.NewGuid(), actor = Guid.NewGuid();
 
     PatientRegistry Registry(IInterceptor? interceptor = null) =>
-        new(interceptor is null ? sql.Patients(tenant) : sql.Patients(tenant, interceptor), new SqlServerFixture.FixedTenant(tenant), new PatientRegistryTests.FixedFacility(facility),
+        new(interceptor is null ? sql.Patients(tenant) : sql.Patients(tenant, interceptor), new PostgresFixture.FixedTenant(tenant), new PatientRegistryTests.FixedFacility(facility),
             new User(actor), new AuditLog(sql.Audit(tenant)), TimeProvider.System, new PatientRegistryTests.FacilityZone("Asia/Kolkata"));
 
     sealed class User(Guid id) : ICurrentUser { public Guid? UserId => id; }

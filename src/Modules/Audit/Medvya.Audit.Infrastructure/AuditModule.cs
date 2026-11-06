@@ -15,7 +15,7 @@ public static class AuditModule
         return services
             .AddSingleton<AuditWindow>()
             .AddScoped<TenantSessionInterceptor>()
-            .AddDbContext<AuditDbContext>((sp, o) => o.UseSqlServer(connectionString).AddInterceptors(sp.GetRequiredService<TenantSessionInterceptor>()))
+            .AddDbContext<AuditDbContext>((sp, o) => o.UseNpgsql(connectionString).AddInterceptors(sp.GetRequiredService<TenantSessionInterceptor>()))
             .AddScoped<IAuditLog, AuditLog>()
             .AddScoped<IAuditTrail, AuditTrail>();
     }

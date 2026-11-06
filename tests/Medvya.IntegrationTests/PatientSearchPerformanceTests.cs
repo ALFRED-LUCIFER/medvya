@@ -9,7 +9,7 @@ using Medvya.Tenancy.Domain;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
-using Microsoft.Data.SqlClient;
+using Npgsql;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Medvya.IntegrationTests;
@@ -24,7 +24,7 @@ public sealed class RunsAlone;
 /// identifier lookup are all inside the timing.
 /// </summary>
 [Collection(nameof(RunsAlone))]
-public sealed class PatientSearchPerformanceTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>
+public sealed class PatientSearchPerformanceTests(PostgresFixture sql) : IClassFixture<PostgresFixture>
 {
     const int Patients = 50_000;
     readonly Guid tenant = Guid.NewGuid(), facility = Guid.NewGuid(), receptionist = Guid.NewGuid();
@@ -72,22 +72,9 @@ public sealed class PatientSearchPerformanceTests(SqlServerFixture sql) : IClass
             identifiers.Rows.Add(Guid.CreateVersion7(), tenant, id, "Abha", Abha(n));
         }
 
-        await using (var conn = await sql.OpenAs("dbo", tenant))
-        {
-            using var copy = new SqlBulkCopy(conn) { DestinationTableName = "patients.Patients", BulkCopyTimeout = 600 };
-            foreach (DataColumn c in patients.Columns) copy.ColumnMappings.Add(c.ColumnName, c.ColumnName);
-            await copy.WriteToServerAsync(patients);
-            await using var stats = new SqlCommand("UPDATE STATISTICS patients.Patients", conn);
-            await stats.ExecuteNonQueryAsync();
-        }
-        await using (var encrypted = await sql.OpenAs("dbo", tenant, columnEncryption: true))
-        {
-            using var copy = new SqlBulkCopy(encrypted) { DestinationTableName = "patients.Identifiers", BulkCopyTimeout = 600 };
-            foreach (DataColumn c in identifiers.Columns) copy.ColumnMappings.Add(c.ColumnName, c.ColumnName);
-            await copy.WriteToServerAsync(identifiers);
-            await using var stats = new SqlCommand("UPDATE STATISTICS patients.Identifiers", encrypted);
-            await stats.ExecuteNonQueryAsync();
-        }
+        await using var conn = await sql.OpenAs("dbo", tenant);
+        await PostgresFixture.BulkCopyAsync(conn, "patients.Patients", patients);
+        await PostgresFixture.BulkCopyAsync(conn, "patients.Identifiers", identifiers);
     }
 
     [Fact]

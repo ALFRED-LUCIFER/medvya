@@ -1,5 +1,5 @@
 using System.Text.Json;
-using Microsoft.Data.SqlClient;
+using Npgsql;
 using Medvya.Scheduling.Application;
 using Medvya.Scheduling.Domain;
 using Microsoft.EntityFrameworkCore;
@@ -11,7 +11,7 @@ namespace Medvya.IntegrationTests;
 /// MDV-P1-024 on real SQL Server: reschedule, cancel with a reason and no-show follow the state machine, keep their history,
 /// free the old slot in the same transaction (the MDV-P1-022 follow-up) and never double-book, also under concurrency.
 /// </summary>
-public sealed class AppointmentChangesTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>, IAsyncLifetime
+public sealed class AppointmentChangesTests(PostgresFixture sql) : IClassFixture<PostgresFixture>, IAsyncLifetime
 {
     const int Desks = 100;
     readonly SchedulingHarness h = new(sql);
@@ -250,13 +250,13 @@ public sealed class AppointmentChangesTests(SqlServerFixture sql) : IClassFixtur
     }
 
     /// <summary>Takes a doctor-day lock on another connection, as a desk in mid-booking of that day would.</summary>
-    async Task<(SqlConnection, SqlTransaction)> HoldDoctorDayLockAsync(DateOnly day)
+    async Task<(NpgsqlConnection, NpgsqlTransaction)> HoldDoctorDayLockAsync(DateOnly day)
     {
-        var conn = new SqlConnection(sql.ConnectionString);
+        var conn = new NpgsqlConnection(sql.ConnectionString);
         await conn.OpenAsync();
         var tx = conn.BeginTransaction();
-        await using var cmd = new SqlCommand("EXEC sys.sp_getapplock @Resource = @r, @LockMode = 'Exclusive', @LockOwner = 'Transaction';", conn, tx);
-        cmd.Parameters.AddWithValue("@r", $"doctor:{h.Doctor}:{day:yyyy-MM-dd}");
+        await using var cmd = new NpgsqlCommand("SELECT pg_advisory_xact_lock(hashtextextended(@r, 0))", conn, tx);
+        cmd.Parameters.AddWithValue("r", $"doctor:{h.Doctor}:{day:yyyy-MM-dd}");
         await cmd.ExecuteNonQueryAsync();
         return (conn, tx);
     }

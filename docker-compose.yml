@@ -2,21 +2,20 @@
 name: medvya
 
 services:
-  sql:
-    image: mcr.microsoft.com/mssql/server:2022-latest
-    platform: linux/amd64 # no arm64 image; runs under emulation on Apple silicon
+  db:
+    image: postgres:16
     environment:
-      ACCEPT_EULA: "Y"
-      MSSQL_PID: Developer
-      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:-Local_dev_only_1}
-    ports: ["1433:1433"]
-    volumes: [sql-data:/var/opt/mssql]
+      POSTGRES_DB: medvya
+      POSTGRES_USER: medvya
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-Local_dev_only_1}
+    ports: ["5432:5432"]
+    volumes: [pg-data:/var/lib/postgresql/data]
     healthcheck:
-      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q 'SELECT 1' -b -o /dev/null"]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U medvya -d medvya"]
       interval: 5s
       timeout: 5s
       retries: 30
-      start_period: 20s
+      start_period: 5s
 
   azurite:
     image: mcr.microsoft.com/azure-storage/azurite:latest
@@ -29,5 +28,5 @@ services:
     ports: ["2525:25", "5025:80"]
 
 volumes:
-  sql-data:
+  pg-data:
   azurite-data:

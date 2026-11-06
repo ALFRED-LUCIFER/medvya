@@ -10,5 +10,5 @@ public sealed class DesignTimeFactory : IDesignTimeDbContextFactory<BillingDbCon
     sealed class NoTenant : ICurrentTenant { public Guid? TenantId => null; }
 
     public BillingDbContext CreateDbContext(string[] args) =>
-        new(new DbContextOptionsBuilder<BillingDbContext>().UseSqlServer("Server=design-time-only").Options, new NoTenant());
+        new(new DbContextOptionsBuilder<BillingDbContext>().UseNpgsql("Server=design-time-only").Options, new NoTenant());
 }

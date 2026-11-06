@@ -7,7 +7,7 @@ namespace Medvya.Tenancy.Infrastructure.Persistence;
 
 /// <summary>
 /// Tenant isolation layer 1 of 2: EF global query filters on the current tenant.
-/// Layer 2 is Azure SQL row-level security on SESSION_CONTEXT (see the InitialTenancy migration), which holds even if a filter is bypassed.
+/// Layer 2 is PostgreSQL row-level security on the medvya.tenant_id setting (MDV-P0-034), which holds even if a filter is bypassed.
 /// </summary>
 public sealed class TenancyDbContext(DbContextOptions<TenancyDbContext> options, ICurrentTenant tenant) : DbContext(options)
 {
@@ -42,7 +42,7 @@ public sealed class TenancyDbContext(DbContextOptions<TenancyDbContext> options,
             e.Property(x => x.CountryCode).HasMaxLength(2).IsFixedLength().Metadata.SetAfterSaveBehavior(PropertySaveBehavior.Throw);
             e.Property(x => x.ResidencyRegion).HasMaxLength(40).Metadata.SetAfterSaveBehavior(PropertySaveBehavior.Throw);
             e.Property(x => x.IdleTimeoutMinutes).HasDefaultValue(15);
-            e.ToTable(t => { t.HasCheckConstraint("CK_Tenants_IdleTimeoutMinutes", "IdleTimeoutMinutes BETWEEN 1 AND 480"); t.HasTrigger("TR_Tenants_Index"); });
+            e.ToTable(t => { t.HasCheckConstraint("CK_Tenants_IdleTimeoutMinutes", "\"IdleTimeoutMinutes\" BETWEEN 1 AND 480"); t.HasTrigger("TR_Tenants_Index"); });
             e.HasQueryFilter(x => x.Id == CurrentTenantId);
         });
         modelBuilder.Entity<Facility>(e =>
@@ -62,7 +62,7 @@ public sealed class TenancyDbContext(DbContextOptions<TenancyDbContext> options,
             e.HasOne<CustomRole>().WithMany().HasForeignKey(x => x.CustomRoleId).OnDelete(DeleteBehavior.Restrict);
             e.HasIndex(x => x.UserId); // the facility picker looks a user's memberships up across tenants
             // Only an Invited membership may lack its user.
-            e.ToTable(t => t.HasCheckConstraint("CK_Memberships_UserUnlessInvited", "[Status] = 'Invited' OR [UserId] IS NOT NULL"));
+            e.ToTable(t => t.HasCheckConstraint("CK_Memberships_UserUnlessInvited", "\"Status\" = 'Invited' OR \"UserId\" IS NOT NULL"));
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         modelBuilder.Entity<AccessReview>(e =>
@@ -126,7 +126,7 @@ public sealed class TenancyDbContext(DbContextOptions<TenancyDbContext> options,
             e.Property(x => x.Weekday).HasConversion<int>();
             e.HasOne<Facility>().WithMany().HasForeignKey(x => x.FacilityId).OnDelete(DeleteBehavior.Restrict);
             e.HasIndex(x => new { x.FacilityId, x.Weekday }).IsUnique();
-            e.ToTable(t => t.HasCheckConstraint("CK_OperatingHours_OpensBeforeCloses", "[Opens] < [Closes]"));
+            e.ToTable(t => t.HasCheckConstraint("CK_OperatingHours_OpensBeforeCloses", "\"Opens\" < \"Closes\""));
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         modelBuilder.Entity<Closure>(e =>

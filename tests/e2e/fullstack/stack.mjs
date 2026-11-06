@@ -1,5 +1,5 @@
 // Starts the real stack for the full-stack browser journeys (MDV-P0-029) and keeps it up until it is signalled:
-// a throwaway SQL Server 2022 in Docker, the synthetic cast seeded by the real generator, the production web build,
+// a throwaway PostgreSQL 16 in Docker, the synthetic cast seeded by the real generator, the production web build,
 // and the real Host.Api (Development, dev sign-in provider) serving that build at /app/ on E2E_API_PORT.
 // Everything is removed on exit. Synthetic data only; the SQL password is random per run and never leaves this machine.
 import { execFileSync, spawn, spawnSync } from 'node:child_process';
@@ -36,22 +36,21 @@ const run = (cmd, args, env = {}) => execFileSync(cmd, args, { cwd: repo, stdio:
 
 try {
   const sqlPort = await freePort();
-  log(`SQL Server on 127.0.0.1:${sqlPort}`);
-  // amd64-only image; on Apple silicon it runs under Rosetta (see CLAUDE.md).
-  execFileSync('docker', ['run', '-d', '--rm', '--name', container, '--platform', 'linux/amd64', '-p', `127.0.0.1:${sqlPort}:1433`,
-    '-e', 'ACCEPT_EULA=Y', '-e', `MSSQL_SA_PASSWORD=${password}`, 'mcr.microsoft.com/mssql/server:2022-latest'], { stdio: 'ignore' });
-  const connection = `Server=127.0.0.1,${sqlPort};Database=medvya;User Id=sa;Password=${password};TrustServerCertificate=True`;
+  log(`PostgreSQL on 127.0.0.1:${sqlPort}`);
+  execFileSync('docker', ['run', '-d', '--rm', '--name', container, '-p', `127.0.0.1:${sqlPort}:5432`,
+    '-e', 'POSTGRES_DB=medvya', '-e', 'POSTGRES_USER=medvya', '-e', `POSTGRES_PASSWORD=${password}`, 'postgres:16'], { stdio: 'ignore' });
+  const connection = `Host=127.0.0.1;Port=${sqlPort};Database=medvya;Username=medvya;Password=${password}`;
 
-  log('building the web app and the API while SQL Server starts');
+  log('building the web app and the API while PostgreSQL starts');
   run('pnpm', ['--filter', 'clinic', 'build']);
   mkdirSync(join(work, 'wwwroot'));
   cpSync(join(repo, 'web/clinic/dist'), join(work, 'wwwroot/app'), { recursive: true });
   for (const project of ['src/Host.Api', 'tools/synthetic-data-generator']) run('dotnet', ['build', project, '--nologo', '-v', 'q']);
 
   for (let i = 0; ; i++) {
-    const ready = spawnSync('docker', ['exec', container, '/opt/mssql-tools18/bin/sqlcmd', '-C', '-S', 'localhost', '-U', 'sa', '-P', password, '-Q', 'SELECT 1', '-b'], { stdio: 'ignore' });
+    const ready = spawnSync('docker', ['exec', container, 'pg_isready', '-h', '127.0.0.1', '-U', 'medvya', '-d', 'medvya'], { stdio: 'ignore' });
     if (ready.status === 0) break;
-    if (i > 90) throw new Error('SQL Server did not become ready in 3 minutes.');
+    if (i > 90) throw new Error('PostgreSQL did not become ready in 3 minutes.');
     await new Promise(r => setTimeout(r, 2000));
   }
 

@@ -8,8 +8,8 @@ OWNS = re.compile(r'b\.OwnsMany\("[^"]+", "(\w+)", b1 =>(.*?)\n {20}\}\);', re.S
 FK = re.compile(r'b\.HasOne\("([^"]+)",[^)]*\)\s*\.With(?:Many|One)\([^)]*\)\s*\.HasForeignKey\((?:"[^"]+", )?"(\w+)"\)', re.S)
 KEY = re.compile(r'b\.HasKey\(([^)]*)\)')
 TABLE = re.compile(r'b\.ToTable\("(\w+)", "(\w+)"')
-SQLTYPE = {'uniqueidentifier': 'guid', 'datetimeoffset': 'datetimeoffset', 'bit': 'bool', 'int': 'int', 'bigint': 'bigint',
-           'date': 'date', 'time': 'time', 'varbinary(max)': 'bytes'}
+SQLTYPE = {'uuid': 'guid', 'timestamp with time zone': 'timestamptz', 'boolean': 'bool', 'integer': 'int', 'bigint': 'bigint',
+           'date': 'date', 'time without time zone': 'time', 'bytea': 'bytes'}
 
 
 def short(fqn: str) -> str:

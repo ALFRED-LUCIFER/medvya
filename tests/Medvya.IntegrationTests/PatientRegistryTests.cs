@@ -6,7 +6,7 @@ using Medvya.Patients.Application;
 using Medvya.Patients.Domain;
 using Medvya.Patients.Infrastructure;
 using Medvya.Patients.Infrastructure.Persistence;
-using Microsoft.Data.SqlClient;
+using Npgsql;
 using Microsoft.EntityFrameworkCore;
 using static Medvya.IntegrationTests.PatientRulesTests;
 
@@ -17,7 +17,7 @@ namespace Medvya.IntegrationTests;
 /// Always Encrypted, dynamic data masking, facility scope and tenant isolation. Synthetic data only; IDs fail their checksums by construction.
 /// Read auditing is the endpoint's job (one event per request): PatientEndpointTests.
 /// </summary>
-public class PatientRegistryTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>
+public class PatientRegistryTests(PostgresFixture sql) : IClassFixture<PostgresFixture>
 {
     readonly Guid tenantA = Guid.NewGuid(), tenantB = Guid.NewGuid(), actor = Guid.NewGuid(), facility = Guid.NewGuid();
 
@@ -25,7 +25,7 @@ public class PatientRegistryTests(SqlServerFixture sql) : IClassFixture<SqlServe
     const string Abha = "91000000000002";
 
     PatientRegistry Registry(Guid tenant, PatientsDbContext? db = null, IAuditLog? audit = null, Guid? at = null, TimeProvider? clock = null, string zone = "Asia/Kolkata") =>
-        new(db ?? sql.Patients(tenant), new SqlServerFixture.FixedTenant(tenant), new FixedFacility(at ?? facility), new FixedUser(actor),
+        new(db ?? sql.Patients(tenant), new PostgresFixture.FixedTenant(tenant), new FixedFacility(at ?? facility), new FixedUser(actor),
             audit ?? new AuditLog(sql.Audit(tenant)), clock ?? TimeProvider.System, new FacilityZone(zone));
 
     Task<PatientSearchResult> Search(Guid tenant, string country, string? query, PatientsDbContext? db = null, DirectoryFilter filter = DirectoryFilter.All, int page = 1) =>
@@ -248,19 +248,18 @@ public class PatientRegistryTests(SqlServerFixture sql) : IClassFixture<SqlServe
         var other = Guid.NewGuid();
         await Registry(tenantA, at: other).RegisterAsync(UaeQuick(other));
 
-        // Column Encryption Setting off: what SSMS or a DBA without access to the column master key gets.
+        // What a DBA without access to the data key gets. Fails until national IDs are encrypted in the application (MDV-P0-035).
         await using var conn = await sql.OpenAs("dbo", tenantA);
-        await using var cmd = new SqlCommand("SELECT TOP 1 LookupValue FROM patients.Identifiers WHERE Scheme = N'EmiratesId'", conn);
+        await using var cmd = new NpgsqlCommand("SELECT \"LookupValue\" FROM patients.\"Identifiers\" WHERE \"Scheme\" = 'EmiratesId' LIMIT 1", conn);
         var value = await cmd.ExecuteScalarAsync();
-        var bytes = Assert.IsType<byte[]>(value);
-        Assert.DoesNotContain("784", System.Text.Encoding.Unicode.GetString(bytes), StringComparison.Ordinal);
+        Assert.DoesNotContain("784", Assert.IsType<string>(value), StringComparison.Ordinal);
 
-        // The protected-column list (data-classification.md), kept deliberately small.
-        await using var columns = new SqlCommand("""
-            SELECT STRING_AGG(OBJECT_NAME(object_id) COLLATE DATABASE_DEFAULT + '.' + name COLLATE DATABASE_DEFAULT + ':' + encryption_type_desc COLLATE DATABASE_DEFAULT, ',') WITHIN GROUP (ORDER BY OBJECT_NAME(object_id), name)
-            FROM sys.columns WHERE encryption_type IS NOT NULL
+        // The protected-column list (data-classification.md), kept deliberately small: stored as ciphertext (bytea).
+        await using var columns = new NpgsqlCommand("""
+            SELECT string_agg(table_name || '.' || column_name, ',' ORDER BY table_name, column_name)
+            FROM information_schema.columns WHERE table_schema = 'patients' AND data_type = 'bytea'
             """, conn);
-        Assert.Equal("Identifiers.DisplayValue:RANDOMIZED,Identifiers.LookupValue:DETERMINISTIC,PayerCoverages.MemberNumber:DETERMINISTIC", await columns.ExecuteScalarAsync());
+        Assert.Equal("Identifiers.DisplayValue,Identifiers.LookupValue,PayerCoverages.MemberNumber", await columns.ExecuteScalarAsync());
     }
 
     [Fact]
@@ -268,7 +267,7 @@ public class PatientRegistryTests(SqlServerFixture sql) : IClassFixture<SqlServe
     {
         await using var db = sql.Patients(tenantA);
         var prefix = "784%";
-        var ex = await Assert.ThrowsAsync<SqlException>(() => db.Identifiers.Where(i => EF.Functions.Like(i.LookupValue, prefix)).ToListAsync());
+        var ex = await Assert.ThrowsAsync<PostgresException>(() => db.Identifiers.Where(i => EF.Functions.Like(i.LookupValue, prefix)).ToListAsync());
         Assert.Contains("Encryption scheme mismatch", ex.Message, StringComparison.Ordinal); // deterministic encryption supports equality only
     }
 
@@ -277,13 +276,13 @@ public class PatientRegistryTests(SqlServerFixture sql) : IClassFixture<SqlServe
     {
         var other = Guid.NewGuid();
         var registered = await Registry(tenantA, at: other).RegisterAsync(IndiaFull(other) with { DateOfBirth = new DateOnly(1980, 1, 1) });
-        const string Query = "SELECT FullName, Mobile, Email, DateOfBirth, Address_PostalCode FROM patients.Patients WHERE Id = @id";
+        const string Query = "SELECT \"FullName\", \"Mobile\", \"Email\", \"DateOfBirth\", \"Address_PostalCode\" FROM patients.\"Patients\" WHERE \"Id\" = @id";
 
         async Task<object[]> Row(string user)
         {
             await using var conn = await sql.OpenAs(user, tenantA);
-            await using var cmd = new SqlCommand(Query, conn);
-            cmd.Parameters.AddWithValue("@id", registered.PatientId);
+            await using var cmd = new NpgsqlCommand(Query, conn);
+            cmd.Parameters.AddWithValue("id", registered.PatientId);
             await using var reader = await cmd.ExecuteReaderAsync();
             Assert.True(await reader.ReadAsync());
             var values = new object[reader.FieldCount];
@@ -292,10 +291,10 @@ public class PatientRegistryTests(SqlServerFixture sql) : IClassFixture<SqlServe
         }
 
         var masked = await Row("reporting_user");
-        Assert.Equal(["xxxx", "xxxx", "pXXX@XXXX.com", new DateTime(1900, 1, 1), "xxxx"], masked);
+        Assert.Equal(["xxxx", "xxxx", "pXXX@XXXX.com", new DateOnly(1900, 1, 1), "xxxx"], masked);
 
         var clear = await Row("app_user");
-        Assert.Equal(["Test Patient (synthetic)", "+919000000002", "patient@example.test", new DateTime(1980, 1, 1), "682001"], clear);
+        Assert.Equal(["Test Patient (synthetic)", "+919000000002", "patient@example.test", new DateOnly(1980, 1, 1), "682001"], clear);
     }
 
     sealed class FixedUser(Guid id) : ICurrentUser { public Guid? UserId => id; }

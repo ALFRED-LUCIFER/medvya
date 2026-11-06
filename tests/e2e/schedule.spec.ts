@@ -687,6 +687,21 @@ test('cancel needs a reason, and a note for Other; the note never goes in a URL'
   expect(calls.changes[0]!.url).not.toContain('Synthetic');
 });
 
+// MDV-P1-052: the visit panel says when reminders go out, and why there are none when there are none.
+test('the visit panel shows when reminders are scheduled, or says why nothing is', async ({ page }) => {
+  let messages: object[] = [{ id: 'n-1', kind: 'Reminder24h', channel: 'Sms', status: 'Queued', attempts: 0, failureCode: null, sendAt: ist('2026-10-18', '09:00') }];
+  await open(page);
+  await page.route('**/v1/appointments/a-1/notifications?*', r => r.fulfill({ json: messages }));
+  await meera(page).click();
+  const section = visitPanel(page).getByRole('region', { name: 'Messages to the patient' });
+  await expect(section).toContainText('Reminder 24 h (SMS): scheduled');
+  await expect(section).toContainText('Sun, 18 Oct 09:00'); // facility time
+  messages = [];
+  await visitPanel(page).getByRole('button', { name: 'Close' }).click();
+  await meera(page).click();
+  await expect(visitPanel(page).getByRole('region', { name: 'Messages to the patient' })).toContainText('No messages are scheduled for this visit. Walk-ins get none');
+});
+
 // MDV-P1-052: the cancelled 12:30 procedure freed its slot; the card sits beside it, so mouse and keyboard reach the slot.
 test('a cancelled visit never covers the slot it freed, and keyboard focus skips it', async ({ page }) => {
   await open(page);

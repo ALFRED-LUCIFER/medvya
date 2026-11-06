@@ -751,9 +751,10 @@ depends: MDV-P0-010, MDV-P0-014
 confidence: 90 | Synthetic cast is defined in the designs.
 sources: docs/00-overview/personas.md#synthetic-cast-used-across-the-designs
 desc:
-tools/synthetic-data-generator and packages/test-fixtures produce the synthetic cast (Iyer Family Clinic, Dr. Arjun Rao, A. Joseph, S. Thomas RN, Priya N., Meera Iyer, Deepak Nair; a UAE tenant Al Noor Family Clinic with Dr. Omar Haddad and Fatima Al Mansoori) with users for every role. Staging is seeded on deploy; data is visibly marked SYNTHETIC.
+tools/synthetic-data-generator and packages/test-fixtures produce the synthetic cast (Iyer Family Clinic, Dr. Arjun Rao, A. Joseph, S. Thomas RN, Priya N., Meera Iyer, Deepak Nair; a UAE tenant Al Noor Family Clinic with Dr. Omar Haddad and Fatima Al Mansoori) with users for every role. Data is visibly marked SYNTHETIC.
+The generator seeds local and CI databases. In Azure it cannot: the database is private (MDV-P0-038) and seeded users carry the development identity provider, so they could never sign in through Entra. The Azure synthetic tenant is therefore created through the product itself, as the pilot clinic will be: the founder signs up and runs onboarding as Dr. Arjun Rao (J1 step 1), then invites one persona per role, and each accepts with their own Entra account and MFA (MDV-P0-013). The steps and the synthetic values to type are in `docs/runbooks/dev-synthetic-tenant.md`.
 ac:
-- Staging has a seeded India tenant with one user per role (and a UAE tenant if parameters enabled) able to sign in with MFA.
+- The Azure dev environment has the India synthetic tenant "Iyer Family Clinic (synthetic)", created through sign-up, onboarding and invitations, with one user per role able to sign in with MFA (UAE tenant only when UAE parameters are deployed).
 - All seeded records carry a synthetic marker and use invalid-by-construction identifiers (e.g. ABHA/EID numbers that fail real checksums).
 - Re-seeding is idempotent and never runs against production (guarded by environment check + test).
 - The staging URL and seed accounts are listed in the R0 delivery package (secrets shared out of band).

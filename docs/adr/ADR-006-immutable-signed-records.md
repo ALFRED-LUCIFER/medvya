@@ -4,8 +4,8 @@
 
 ## Decision
 
-- Audit events, signed note versions, consent receipts and issued invoices are stored in **Azure SQL ledger tables** (append-only where applicable).
-- Ledger digests are exported to immutable Blob storage and verified on a schedule.
+- Audit events, signed note versions, consent receipts and issued invoices are stored in **hash-chained, append-only PostgreSQL tables** (per-tenant `PrevHash`/`RowHash` filled by a trigger under an advisory lock; UPDATE, DELETE and TRUNCATE refused for every role; `LedgerSql.AddLedger` in a migration opts a table in).
+- A daily job writes an HMAC-signed digest of every chain head to an immutable Blob container, and a scheduled job re-reads the chains and alerts on mismatch (`LedgerDigests`). A superuser can disable triggers; the chain check and the digest are what detect it.
 - A signed note is never updated. Corrections are signed **addenda** (new versions with `amends_version_id` and a reason).
 - The Rx PDF is rendered server-side and stored with its hash.
 - Signing is an authenticated action (passkey/MFA re-check). A signature image only appears on print.

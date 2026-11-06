@@ -2,7 +2,7 @@
 
 Who can do what inside a Medvya database. The roles are defined in one idempotent script, [`infra/postgres/roles.sql`](../../infra/postgres/roles.sql), which is the single source of truth. Row-level security is written by one helper, `RowLevelSecurity.Tenant` (`src/BuildingBlocks/Medvya.BuildingBlocks.Infrastructure`), from a forward-only `TenantRls` migration in each module. Tests: `DatabaseRoleTests`, `TenantIsolationTests`, `MembershipDirectoryTests`, `RowLevelSecurityTests` in `tests/Medvya.IntegrationTests`. Decisions: [ADR-005](../adr/ADR-005-tenant-isolation-rls.md), [ADR-012](../adr/ADR-012-postgres.md).
 
-National-ID encryption (MDV-P0-035), masked reporting views (MDV-P0-037) and the audit hash chain (MDV-P0-036) are separate tickets and are not described here until built.
+National-ID encryption (MDV-P0-035) and masked reporting views (MDV-P0-037) are separate tickets and are not described here until built. The hash chain on append-only tables (MDV-P0-036) is described in ADR-006.
 
 ## Roles
 
@@ -20,7 +20,7 @@ Every role is `NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE NOREPLICATION` an
 | `medvya_scheduling` | `SELECT/INSERT/UPDATE/DELETE` on `scheduling` | Any other schema; reporting has no access (appointments hold the SensitiveHealth visit reason) |
 | `medvya_notifications` | `SELECT/INSERT/UPDATE` on `notifications` | `DELETE` (attempts are the delivery history); patients and scheduling data |
 | `medvya_leads` | `SELECT/INSERT` on `leads` | `UPDATE`, `DELETE` |
-| `medvya_audit` | `SELECT/INSERT` on `audit` | `UPDATE`, `DELETE`; the append-only trigger and hash chain are MDV-P0-036 |
+| `medvya_audit` | `SELECT/INSERT` on `audit` | `UPDATE`, `DELETE` (the append-only triggers refuse them for every role too, MDV-P0-036) |
 | `medvya_jobs` | `SELECT/INSERT/UPDATE/DELETE` on `hangfire` (job storage) | Any module's data. Hangfire's tables are created by the deploy (as the owner); the app only works in them |
 | `medvya_reporting` | `SELECT` on `tenancy` | Any write, any DDL, `patients`, `audit`, `identity` (until MDV-P0-037 adds masked views) |
 

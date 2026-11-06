@@ -1,3 +1,4 @@
+using Hangfire;
 using System.Net;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
@@ -62,6 +63,10 @@ if (builder.Configuration.GetConnectionString("Medvya") is { } sql)
         .AddScoped<IReminderConsent, PatientReminderConsent>() // after the module: replaces its deny-all default (MDV-P1-019)
         .AddLeadsModule(sql, builder.Configuration.GetSection("Leads:Email").Get<LeadsEmailOptions>() ?? new()).AddCapabilityPolicies();
 }
+// Ledger digests (MDV-P0-036). Development signs them only when a key is set outside the repository (environment Audit__DigestKey);
+// everywhere else a missing key is a startup error.
+if (builder.Configuration.GetConnectionString("Medvya") is { } ledgerSql && (!builder.Environment.IsDevelopment() || builder.Configuration["Audit:DigestKey"] is { Length: > 0 }))
+    builder.Services.AddLedgerDigests(ledgerSql, builder.Configuration);
 builder.Services.Configure<NotificationOptions>(builder.Configuration.GetSection("Notifications"));
 // Reminder consent comes from the patient's consent receipts. Local runs may switch the check off explicitly; never outside Development.
 if (builder.Environment.IsDevelopment() && builder.Configuration.GetValue("Notifications:DevAllowAllConsent", false))
@@ -128,6 +133,11 @@ app.MapStaffSession();
 app.MapSchedulingEndpoints();
 app.MapNotifications();
 app.UseJobs();
+if (app.Services.GetService<IRecurringJobManager>() is { } recurring && app.Services.GetService<Medvya.Audit.Infrastructure.LedgerDigests>() is not null)
+{
+    recurring.AddOrUpdate<Medvya.Audit.Infrastructure.LedgerJobs>(Medvya.Audit.Infrastructure.LedgerJobs.PublishJobId, j => j.PublishAsync(CancellationToken.None), Cron.Daily(1));
+    recurring.AddOrUpdate<Medvya.Audit.Infrastructure.LedgerJobs>(Medvya.Audit.Infrastructure.LedgerJobs.VerifyJobId, j => j.VerifyAsync(CancellationToken.None), Cron.Daily(2));
+}
 app.MapPublicSite();
 app.MapInvitations();
 app.MapOnboarding();

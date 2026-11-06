@@ -94,10 +94,10 @@ public class AuditLedgerTests(PostgresFixture sql) : IClassFixture<PostgresFixtu
         await Write(tenantA);
         await using var conn = new NpgsqlConnection(sql.ConnectionString);
         await conn.OpenAsync();
-        // The hash-chain verifier arrives with MDV-P0-036; until then this fails because the function does not exist.
+        // MDV-P0-036: audit.verify_chain returns the id of the first broken row, NULL when the chain is intact.
         await using var verify = new NpgsqlCommand("SELECT audit.verify_chain(@tenant)", conn);
         verify.Parameters.AddWithValue("tenant", tenantA);
-        await verify.ExecuteNonQueryAsync(); // throws if any chained row was tampered with
+        Assert.True(await verify.ExecuteScalarAsync() is DBNull);
     }
 
     [Fact]

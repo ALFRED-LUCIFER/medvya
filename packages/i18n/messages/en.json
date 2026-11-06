@@ -1478,6 +1478,8 @@
   "schedule.sheet.printedBy": "Printed by {name} on {when}",
   "schedule.sheet.warning": "Contains patient names. Keep it at the desk and shred it when the day ends.",
   "schedule.sheet.time": "Time",
+  "schedule.sheet.token": "Token",
+  "schedule.sheet.age": "Age",
   "schedule.sheet.patient": "Patient",
   "schedule.sheet.type": "Visit type",
   "schedule.sheet.status": "Status",

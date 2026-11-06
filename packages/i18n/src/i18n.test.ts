@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import handoff from '../../../docs/02-design/data/handoff.json';
-import { catalogs, loadCatalog, makeI18n, translate, type MessageKey } from './index';
+import { catalogs, loadCatalog, localeFor, makeI18n, translate, type MessageKey } from './index';
 
 describe('i18n catalogs', () => {
   it('ships English only; Hindi and Arabic load on demand (first paint carries one catalog)', async () => {
@@ -53,5 +53,12 @@ describe('i18n', () => {
     expect(makeI18n('en', 'IN').formatDate(nearMidnight, 'Asia/Dubai')).toBe('05 Nov 2026');
     expect(makeI18n('en', 'IN').formatDay('2026-10-19')).toContain('Monday');
     expect(makeI18n('en', 'IN').formatShortDay('2026-10-19')).toBe('Mon, 19 Oct');
+  });
+
+  it('maps a device language to a supported locale, else English', () => {
+    expect(localeFor('ar')).toBe('ar');
+    expect(localeFor('hi')).toBe('hi');
+    expect(localeFor('fr')).toBe('en');
+    expect(localeFor(null)).toBe('en');
   });
 });

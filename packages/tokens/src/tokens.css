@@ -9,6 +9,8 @@
   --color-ai-600: #7155d8; /* AI-provisional only */
   --color-ai-700: #5b3fc4;
   --color-ai-50: #f2effc;
+  --color-patient-700: #2f4ac0; /* patient app accent (indigo, Medvya Mobile design 6 Nov 2026); 7.3:1 with white */
+  --color-patient-50: #eef2ff;
   --color-ink-900: #142536;
   --color-ink-700: #334e68;
   --color-ink-600: #506579;

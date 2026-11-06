@@ -40,7 +40,7 @@ param deployPrincipalId string
 @description('Application (client) id of the Entra app registration the staff sign-in uses. Not a secret.')
 param oidcClientId string
 @description('Monthly budget in the billing currency (INR).')
-param budgetAmount int = 1800
+param budgetAmount int = 3500
 param budgetStart string = utcNow('yyyy-MM-01')
 @description('B1 or higher: VNet integration (the app reaching the private database) is not available on F1.')
 param appServiceSku string = 'B1'

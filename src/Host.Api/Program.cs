@@ -98,6 +98,7 @@ builder.Services.Configure<ForwardedHeadersOptions>(o =>
 });
 
 var permitsPerMinute = builder.Configuration.GetValue("RateLimiting:PermitsPerMinute", 300);
+builder.Services.AddOpenApi(); // document only, exported at build time; no endpoint serves it
 builder.Services.AddRateLimiter(o =>
 {
     o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;

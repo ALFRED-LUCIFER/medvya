@@ -1,0 +1,19 @@
+{
+  "name": "@medvya/api-client",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "main": "src/schema.ts",
+  "types": "src/schema.ts",
+  "scripts": {
+    "generate": "openapi-typescript openapi.json -o src/schema.ts",
+    "build": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "openapi-typescript": "^7.13.0",
+    "typescript": "~5.9.3"
+  },
+  "exports": {
+    ".": "./src/schema.ts"
+  }
+}

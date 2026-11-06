@@ -4,7 +4,9 @@ import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import type { ClosureForm, ClosureWithVisits, LocationChoice } from '../domain/settings';
 import { describedBy, fieldError } from './fieldStyles';
-import { Field, LocationSelect, Section } from './parts';
+import { Field } from './Field';
+import { LocationSelect } from './LocationSelect';
+import { Section } from './Section';
 
 type Holidays = {
   form: UseFormReturn<ClosureForm>;

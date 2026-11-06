@@ -18,7 +18,7 @@
 
   <!-- Public site reuses the shared design tokens and message catalogues instead of copying them (MDV-P1-001). -->
   <ItemGroup>
-    <EmbeddedResource Include="..\..\packages\ui\src\styles.css" LogicalName="PublicSite.tokens.css" />
+    <EmbeddedResource Include="..\..\packages\tokens\src\tokens.css" LogicalName="PublicSite.tokens.css" />
     <EmbeddedResource Include="..\..\packages\i18n\messages\*.json" LogicalName="PublicSite.messages.%(Filename).json" />
     <EmbeddedResource Include="PublicSite\site.css" LogicalName="PublicSite.site.css" />
     <!-- Trust centre lists: content read at runtime so they can change without a redeploy (MDV-P1-003). -->
@@ -31,9 +31,18 @@
     <PackageReference Include="Hangfire.AspNetCore" />
     <PackageReference Include="Hangfire.SqlServer" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Microsoft.Extensions.ApiDescription.Server" PrivateAssets="all" />
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
     <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
     <PackageReference Include="OpenTelemetry.Instrumentation.Http" />
   </ItemGroup>
+
+  <!-- `pnpm export:openapi` builds with ExportOpenApi=true: the document is written to packages/api-client/openapi.json (MDV-P0-040). -->
+  <PropertyGroup Condition="'$(ExportOpenApi)' == 'true'">
+    <OpenApiGenerateDocuments>true</OpenApiGenerateDocuments>
+    <OpenApiDocumentsDirectory>$(MSBuildThisFileDirectory)..\..\packages\api-client</OpenApiDocumentsDirectory>
+    <OpenApiGenerateDocumentsOptions>--file-name openapi</OpenApiGenerateDocumentsOptions>
+  </PropertyGroup>
 
 </Project>

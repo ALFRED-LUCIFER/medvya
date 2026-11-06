@@ -4,7 +4,8 @@ import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import type { ProfileForm } from '../domain/settings';
 import { describedBy, fieldError } from './fieldStyles';
-import { Field, Section } from './parts';
+import { Field } from './Field';
+import { Section } from './Section';
 
 type Props = {
   form: UseFormReturn<ProfileForm>;

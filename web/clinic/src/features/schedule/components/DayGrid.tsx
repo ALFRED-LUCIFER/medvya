@@ -3,7 +3,10 @@ import { useI18n } from '@medvya/i18n';
 import { cn, scheduleLooks } from '@medvya/ui';
 import { hasStarted, type CalendarKind, type ColumnItem, type ColumnLayout, type DayLayout } from '../domain/schedule';
 import { hatched } from './looks';
-import { AppointmentChip, dragType, OpenableChip, PastSlot, type DropHandler, type OpenHandler } from './parts';
+import { AppointmentChip } from './AppointmentChip';
+import { dragType, type DropHandler, type OpenHandler } from './dragDrop';
+import { OpenableChip } from './OpenableChip';
+import { PastSlot } from './PastSlot';
 
 /** Called when an empty slot is clicked; absent when the role may not book (the grid is then read-only). */
 export type SlotHandler = (calendarId: string, calendarName: string, start: string) => void;

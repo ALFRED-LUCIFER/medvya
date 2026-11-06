@@ -148,6 +148,16 @@ public sealed class BookingService(
         var (_, zone) = await context.FacilityAsync(command.FacilityId, cancellationToken);
         var (now, me) = (context.Now, context.UserId!.Value);
         var today = ScheduleRules.LocalDate(now, zone);
+        // shortcut: a read without a lock, so two desks checking the same patient in at the same instant both pass; it is a warning
+        // for the desk, not an integrity rule (each visit still takes its own slot). Upgrade to the doctor-day lock if that is seen.
+        if (!command.AllowRepeat)
+        {
+            var (dayStart, dayEnd) = ScheduleRules.DayBounds(today, zone);
+            if (await db.Appointments.AsNoTracking().AnyAsync(a => a.FacilityId == command.FacilityId && a.PatientId == patient.Id && a.Start >= dayStart && a.Start < dayEnd
+                    && a.State != AppointmentState.Done && a.State != AppointmentState.Cancelled && a.State != AppointmentState.NoShow && a.State != AppointmentState.NeedsRebooking,
+                    cancellationToken))
+                throw new SlotUnavailableException("already_today");
+        }
 
         // Doctors only; a chosen one must be an active doctor of this facility.
         var templates = await db.Templates.AsNoTracking()

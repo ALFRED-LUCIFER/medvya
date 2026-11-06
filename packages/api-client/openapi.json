@@ -6293,6 +6293,9 @@
           },
           "reasonCategory": {
             "$ref": "#/components/schemas/ReasonCategory"
+          },
+          "allowRepeat": {
+            "type": "boolean"
           }
         }
       },

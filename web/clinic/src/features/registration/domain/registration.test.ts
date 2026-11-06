@@ -58,6 +58,16 @@ describe('quick registration', () => {
     expect(errors('IN', true, deepak)).toEqual({});
   });
 
+  it('shows every error at once, a malformed mobile included, before anything reaches the server (MDV-P1-052)', () => {
+    expect(errors('IN', true, { ...deepak, abha: '91-0000', mobile: '12345' })).toEqual({ abha: 'format.Abha', mobile: 'format.phone' });
+    expect(errors('IN', true, { ...deepak, mobile: '5000000201' })).toEqual({ mobile: 'format.phone' }); // Indian mobiles start 6–9
+    expect(errors('IN', true, { ...deepak, mobile: '(+91) 90000-00201' })).toEqual({}); // separators as people type them
+    expect(errors('AE', true, { ...fatima, mobile: '+971 50 000 0458' })).toEqual({});
+    expect(errors('AE', true, { ...fatima, mobile: '04 000 0458' })).toEqual({ mobile: 'format.phone' }); // a landline
+    expect(errors('IN', false, { ...deepak, ecPhone: '123', alternatePhone: '99' })).toEqual({ ecPhone: 'format.phone', alternatePhone: 'format.phone' });
+    expect(messageFor('mobile', 'format')).toBe('format.phone'); // the server's code gets the same wording, not a bare "Check the format"
+  });
+
   it('asks the UAE desk for the Emirates ID in its printed format', () => {
     expect(errors('AE', true, { ...fatima, emiratesId: '' })).toEqual({ emiratesId: 'required' });
     expect(errors('AE', true, { ...fatima, emiratesId: '784-1988-123' })).toEqual({ emiratesId: 'format.EmiratesId' });
@@ -134,7 +144,7 @@ describe('server errors and display', () => {
     expect([formField('identifiers[1]', request, 'IN'), formField('identifiers[1]', request, 'AE'), formField('identifiers', request, 'AE'),
       formField('address.postalCode', request, 'IN'), formField('payer.memberNumber', request, 'IN'), formField('duplicates', request, 'IN')])
       .toEqual(['otherIdValue', 'passport', 'emiratesId', 'postalCode', 'memberNumber', null]);
-    expect([messageFor('postalCode', 'format'), messageFor('mobile', 'format'), messageFor('region', 'not_allowed')]).toEqual(['format.pin', 'format', 'not_allowed']);
+    expect([messageFor('postalCode', 'format'), messageFor('fullName', 'format'), messageFor('region', 'not_allowed')]).toEqual(['format.pin', 'format', 'not_allowed']);
     expect([errorCode('format.Abha'), errorCode('something_new')]).toEqual(['format.Abha', 'generic']);
     expect([stepOf('postalCode'), stepOf('memberNumber'), stepOf('abha')]).toEqual(['contact', 'payer', 'identity']);
   });

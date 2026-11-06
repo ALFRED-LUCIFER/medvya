@@ -177,6 +177,8 @@ ac:
 - No secret value appears in any Bicep or parameter file.
 notes:
 - Private endpoints add cost; capture the monthly estimate in the PR description (Software Architecture §9.3).
+notes:
+- Superseded in part (6 Nov 2026): the SQL Server resources become the PostgreSQL Flexible Server in MDV-P0-038.
 
 === MDV-P0-007
 status: Partly done
@@ -222,7 +224,7 @@ roles: Developer
 labels: database, security
 estimate: 1.5
 weeks: 2
-depends: MDV-P0-006
+depends: MDV-P0-006, MDV-P0-038
 confidence: 85 | Azure SQL features are well documented; per-module schema permissions need care with EF Core.
 sources: PRD v2 P0-09, §07b layers 01–02; docs/03-architecture/data-model.md
 desc:
@@ -233,6 +235,8 @@ ac:
 - A module's database role cannot SELECT from another module's schema (architecture/integration test).
 - Connection strings in App Service settings contain no password; `Encrypt=Strict` is enforced.
 - Human access to production data is only via just-in-time elevation (documented runbook, links MDV-P0-025).
+notes:
+- Superseded in part: roles and Entra-only auth move to PostgreSQL (MDV-P0-034, MDV-P0-038).
 
 === MDV-P0-009
 status: Partly done
@@ -250,7 +254,7 @@ roles: Developer
 labels: database, encryption
 estimate: 2.5
 weeks: 2-3
-depends: MDV-P0-008
+depends: MDV-P0-008, MDV-P0-035
 confidence: 72 | Always Encrypted with EF Core and VBS enclaves has query limitations (PRD risk: MED); design of deterministic vs randomized columns needs a short spike.
 sources: PRD v2 P0-09, §07b layers 03–07, risk "Always Encrypted limits queries"
 desc:
@@ -263,6 +267,8 @@ ac:
 - The protected-column list is documented in the data classification register (MDV-P0-016) and kept deliberately small.
 tests:
 - Integration test proves an exact-match lookup on deterministic EID works and a LIKE query is rejected without enclave.
+notes:
+- Superseded: Always Encrypted is replaced by application-level envelope encryption (MDV-P0-035) and masked views (MDV-P0-037).
 
 === MDV-P0-010
 status: Done
@@ -487,6 +493,8 @@ ac:
 - Audit events contain opaque patient ids only; a test scans payloads for names, phone numbers and identifiers and fails if found.
 - Daily digest export to an immutable (time-based retention) container succeeds and verification runs on schedule with an alert on mismatch.
 - Denied authorization attempts are audited with outcome "denied".
+notes:
+- Superseded in part: SQL ledger tables are replaced by the hash chain and digests in MDV-P0-036.
 
 === MDV-P0-018
 status: Partly done
@@ -535,6 +543,8 @@ ac:
 - A restore drill of staging completes and the elapsed time is recorded in the runbook (P0 exit gate 2).
 - Restored database passes a smoke test (row counts per table match the point in time).
 - Backup storage redundancy keeps data in-country (no geo-replication outside the country).
+notes:
+- Restore drill now runs on PostgreSQL PITR (MDV-P0-038).
 
 === MDV-P0-020
 status: Done
@@ -791,3 +801,230 @@ ac:
 - R0 release notes list delivered requirement IDs (P0-01…P0-10), known issues and what is not included (no real patient data, no public website, no booking).
 - Delivery package is handed to the founder and clinical advisor.
 - Open high/critical security findings: none (or explicitly accepted with a dated plan).
+
+=== MDV-P0-030
+title: Shared Table component (shadcn) and table controller pattern; replace the four raw tables
+type: Story
+epic: MDV-P0-E04
+prd: P0-07
+priority: MUST
+roles: Developer
+labels: design-system, frontend, a11y
+estimate: 1.5
+weeks: 1-2
+confidence: 85 | Small and local; four feature files use raw table markup today.
+sources: AGENTS.md section 4; docs/03-architecture/frontend-architecture.md; ADR-009; ADR-010
+desc:
+Add the shadcn `Table` set (Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableCaption, scroll wrapper) to `packages/ui` through the shadcn CLI, with tokens, logical utilities for right-to-left, sticky header, numeric columns and 44 px row targets. Sorting, filtering and paging state goes in a `useXxxTableController` hook (TanStack Query for server data; add a table helper library only with a reason in the PR), column definitions are plain data in `domain/`, and components only render the rows they are given. Replace the raw tables in DaySheetView, MergeReview, AuditLogPanel and StaffPanel. Add a lint rule that rejects raw table elements in features.
+ac:
+- Given a feature file, when it contains a raw table, tr, td or th element, then lint fails.
+- Given the four existing screens, when they render, then they use the shared Table and look and behave as before (keyboard, focus ring, axe clean, Arabic right-to-left).
+- Given a sortable column, when a user sorts it, then aria-sort is set and the state lives in the controller hook, not the component.
+- Given an empty, loading or error result, when the table renders, then each state is shown through the shared pattern.
+
+=== MDV-P0-031
+title: Accept ADR-012: PostgreSQL with EF Core, application-level national-ID encryption, hash-chained audit
+type: Chore
+epic: MDV-P0-E05
+prd: P0-08
+priority: MUST
+roles: Founder, Developer
+labels: adr, database
+estimate: 0.5
+weeks: 1
+confidence: 90 | Decision taken 6 Nov 2026 (Postgres with EF Core); estimate not yet calibrated.
+sources: docs/adr/ADR-012-postgres.md; docs/adr/ADR-005-tenant-isolation-rls.md; docs/03-architecture/database-security.md
+desc:
+Review and accept ADR-012 (Azure Database for PostgreSQL Flexible Server per country, EF Core on Npgsql, row-level security with `current_setting`, envelope encryption of national IDs with Key Vault keys and an HMAC blind index, hash-chained audit and signed records, masked views). Mark the SQL Server statements in ADR-001, 005 and 006 as superseded.
+ac:
+- Given ADR-012, when it is reviewed, then it is Accepted with date and decider and lists the alternatives rejected (Azure SQL, Cosmos DB, an ORM change).
+- Given ADR-001, ADR-005 and ADR-006, when they are read, then each points to ADR-012 for what changed.
+
+=== MDV-P0-032
+title: Swap the platform to PostgreSQL: Npgsql provider, Testcontainers.PostgreSql, Hangfire.PostgreSql, local services and CI
+type: Story
+epic: MDV-P0-E01
+prd: P0-01
+priority: MUST
+roles: Developer
+labels: database, ci, platform
+estimate: 3
+weeks: 1-2
+depends: MDV-P0-031
+confidence: 75 | Decision taken 6 Nov 2026 (Postgres with EF Core); estimate not yet calibrated.
+sources: docs/adr/ADR-012-postgres.md; docs/adr/ADR-005-tenant-isolation-rls.md; docs/03-architecture/database-security.md
+desc:
+Replace Microsoft.EntityFrameworkCore.SqlServer with Npgsql.EntityFrameworkCore.PostgreSQL, Hangfire.SqlServer with Hangfire.PostgreSql and Testcontainers.MsSql with Testcontainers.PostgreSql in `Directory.Packages.props`. docker-compose runs PostgreSQL 17 instead of SQL Server. CI runs the integration tests on Postgres. Replace SQL Server types and functions in the code (rowversion, datetimeoffset, NEWSEQUENTIALID, OPENJSON, HASHBYTES) with Postgres equivalents and keep time in UTC timestamptz and money in integer minor units.
+ac:
+- Given the solution, when it builds, then no SqlServer package or type remains and warnings stay at zero.
+- Given CI, when it runs, then the integration tests run against PostgreSQL in Testcontainers.
+- Given local services, when they start, then PostgreSQL, Azurite and the email sink come up with one command.
+
+=== MDV-P0-033
+title: One baseline migration per module on Postgres, regenerated seeder and ERD, forward-only after that
+type: Story
+epic: MDV-P0-E01
+prd: P0-02
+priority: MUST
+roles: Developer
+labels: database, migrations
+estimate: 2.5
+weeks: 2
+depends: MDV-P0-032, MDV-P0-040
+confidence: 70 | Decision taken 6 Nov 2026 (Postgres with EF Core); estimate not yet calibrated.
+sources: docs/adr/ADR-012-postgres.md; docs/adr/ADR-005-tenant-isolation-rls.md; docs/03-architecture/database-security.md; AGENTS.md section 3.6
+desc:
+No real data exists yet, so delete the 46 SQL Server migrations and create one baseline migration per module on Postgres (schemas per module kept). From then on migrations are forward-only and reviewed. Regenerate the ERD (`python3 -I tools/erd/generate.py`), update the seeder and the dev database. Merge freeze on schema-changing PRs from the moment this starts until it merges.
+ac:
+- Given an empty Postgres database, when migrations run, then every module schema exists from its single baseline.
+- Given the ERD, when the baseline merges, then `docs/03-architecture/erd.md` is regenerated and CI is green.
+- Given a schema-changing PR, when is open during the freeze, then it is rebased onto the baseline before merge.
+
+=== MDV-P0-034
+title: Tenant isolation on Postgres: FORCE row-level security, per-module roles, EF filter kept as layer one
+type: Story
+epic: MDV-P0-E03
+prd: P0-09
+priority: MUST
+roles: Developer, Security
+labels: database, security, tenancy
+estimate: 4
+weeks: 2-3
+depends: MDV-P0-033
+confidence: 65 | Decision taken 6 Nov 2026 (Postgres with EF Core); estimate not yet calibrated.
+sources: docs/adr/ADR-012-postgres.md; docs/adr/ADR-005-tenant-isolation-rls.md; docs/03-architecture/database-security.md; ADR-005
+desc:
+Rewrite ADR-005's mechanism for Postgres: every clinic table has `tenant_id`, `ALTER TABLE ... FORCE ROW LEVEL SECURITY` with policies reading `current_setting('medvya.tenant_id', true)`, set per connection through the existing interceptor with `set_config(..., false)` reset on return to the pool, and the facility-picker `user_id` branch kept. Replace `infra/sql/roles.sql` with an idempotent Postgres roles script (migrator, app, one role per module, jobs, audit, reporting) with no BYPASSRLS and no superuser for the app. Keep EF global query filters as layer one.
+ac:
+- Given a cross-tenant read or write, when the EF filter is bypassed, then row-level security still blocks it (test fails when the policy is removed).
+- Given the app role, when it connects, then it has no DDL, no BYPASSRLS and only its module schema.
+- Given a pooled connection, when it is reused for another tenant, then the tenant setting is reset first.
+- Given the facility picker, when it runs with only a user id, then it sees that user's memberships and nothing else.
+
+=== MDV-P0-035
+title: National IDs unreadable to database admins: envelope encryption with Key Vault keys and an HMAC blind index
+type: Story
+epic: MDV-P0-E03
+prd: P0-09
+priority: MUST
+roles: Developer, Security
+labels: database, security, encryption
+estimate: 3.5
+weeks: 3
+depends: MDV-P0-033
+confidence: 60 | Decision taken 6 Nov 2026 (Postgres with EF Core); estimate not yet calibrated.
+sources: docs/adr/ADR-012-postgres.md; docs/adr/ADR-005-tenant-isolation-rls.md; docs/03-architecture/database-security.md; ADR-012
+desc:
+Replace Always Encrypted. National and insurance IDs are encrypted in the application with AES-256-GCM using a per-tenant data key that is wrapped by an Azure Key Vault key (the database never holds an unwrapped key). Exact-match lookup uses an HMAC-SHA-256 blind index with a separate Key Vault key. An EF value converter keeps the `NationalId` type and the `[Classification]` rule. Key rotation re-wraps data keys without rewriting rows. Only the app identity may unwrap; admins and support roles cannot.
+ac:
+- Given a database admin, when reads the column with raw SQL, then only ciphertext is visible.
+- Given a lookup by national ID, when it runs, then it uses the blind index and finds exactly one patient.
+- Given a key is rotated, when the job runs, then data keys are re-wrapped and existing rows still decrypt.
+- Given Key Vault, when is unreachable, then the app fails closed and logs no identifier.
+
+=== MDV-P0-036
+title: Tamper-evident audit and signed records without SQL ledger: hash chain, append-only triggers, daily digest to immutable Blob
+type: Story
+epic: MDV-P0-E03
+prd: P0-06
+priority: MUST
+roles: Developer, Security
+labels: database, audit, security
+estimate: 3.5
+weeks: 3-4
+depends: MDV-P0-034
+confidence: 60 | Decision taken 6 Nov 2026 (Postgres with EF Core); estimate not yet calibrated.
+sources: docs/adr/ADR-012-postgres.md; docs/adr/ADR-005-tenant-isolation-rls.md; docs/03-architecture/database-security.md; ADR-006
+desc:
+Replace ledger tables for audit events, signed note versions, consent receipts and issued invoices: each row stores the hash of the previous row (per tenant chain), triggers refuse UPDATE and DELETE for the app roles, and a daily job writes a signed digest to an immutable (time-based retention) Blob container and a scheduled job verifies the chain and alerts on mismatch. Hashes are integrity evidence, not a legally qualified signature.
+ac:
+- Given an audit row, when an UPDATE or DELETE is attempted, then the database refuses it (test fails when the trigger is removed).
+- Given a row is altered by a superuser, when verification runs, then the chain mismatch is found and an alert is raised.
+- Given the daily digest, when it is written, then it lands in the immutable container and can be verified later.
+
+=== MDV-P0-037
+title: Support and reporting access without dynamic masking: reporting role, masked views, no decrypt right
+type: Task
+epic: MDV-P0-E03
+prd: P0-09
+priority: MUST
+roles: Developer, Security
+labels: database, security, privacy
+estimate: 1.5
+weeks: 4
+depends: MDV-P0-034, MDV-P0-035
+confidence: 70 | Decision taken 6 Nov 2026 (Postgres with EF Core); estimate not yet calibrated.
+sources: docs/adr/ADR-012-postgres.md; docs/adr/ADR-005-tenant-isolation-rls.md; docs/03-architecture/database-security.md
+desc:
+Replace SQL Server dynamic data masking: the reporting and support role reads only masked views (initials, age band, last four of identifiers as ciphertext length only), has no unwrap right and no write. Tests prove the role sees no clear name, date of birth, contact or identifier.
+ac:
+- Given the reporting role, when it queries a patient view, then identifiers and contact fields are masked.
+- Given the reporting role, when it tries a base table, then the database denies it.
+
+=== MDV-P0-038
+title: Azure Database for PostgreSQL Flexible Server in Bicep: private endpoint, Entra-only auth, customer-managed key, in-country HA and point-in-time restore
+type: Story
+epic: MDV-P0-E01
+prd: P0-01
+priority: MUST
+roles: Developer
+labels: azure, infra, database
+estimate: 2.5
+weeks: 2-3
+depends: MDV-P0-003, MDV-P0-006, MDV-P0-032
+confidence: 65 | Decision taken 6 Nov 2026 (Postgres with EF Core); estimate not yet calibrated.
+sources: docs/adr/ADR-012-postgres.md; docs/adr/ADR-005-tenant-isolation-rls.md; docs/03-architecture/database-security.md; docs/03-architecture/azure-deployment.md
+desc:
+Supersedes the SQL parts of MDV-P0-006, 008, 009 and 019. One Flexible Server per country (Central or South India first), private endpoint only, Entra-only authentication with managed identities, customer-managed key for storage, zone-redundant HA and PITR kept in-country, logs to the country workspace, Azure Policy denying other regions, and a timed restore drill.
+ac:
+- Given the Bicep, when it deploys, then the server has no public endpoint and password login is off.
+- Given a restore drill, when it runs, then point-in-time restore completes within the agreed time and is timed in the runbook.
+- Given a resource, when is created outside the allowed regions, then policy denies it.
+
+=== MDV-P0-039
+title: Re-baseline load and desk tests on Postgres
+type: Task
+epic: MDV-P0-E01
+prd: P0-02
+priority: SHOULD
+roles: Developer
+labels: performance, database
+estimate: 1
+weeks: 4
+depends: MDV-P0-033
+confidence: 75 | Decision taken 6 Nov 2026 (Postgres with EF Core); estimate not yet calibrated.
+sources: docs/05-delivery/load-testing.md
+desc:
+The P1-037 budgets were measured on SQL Server. Re-run the booking, check-in and calendar load tests on Postgres, confirm 0 double bookings in 100 parallel bookings, and update the budgets and docs.
+ac:
+- Given 100 parallel bookings for one slot, when they run, then exactly one succeeds.
+- Given the desk load profile, when it runs, then the p95 budgets in load-testing.md still hold or are updated with evidence.
+
+=== MDV-P0-040
+title: Repository structure: Host.Api to composition only, mobile and shared packages in the workspace, tickets and design into docs, link check, CI path filters
+type: Task
+epic: MDV-P0-E01
+prd: P0-01
+priority: MUST
+roles: Developer
+labels: repo, structure, ci
+estimate: 4
+weeks: 2
+depends: MDV-P0-032
+confidence: 70 | Moves and link rewrites across 284 files that reference tickets/ and 202 that reference design/; the Host.Api feature move touches module boundaries. Layout decided in ADR-013.
+sources: docs/adr/ADR-013-repository-layout.md; README.md (Repository structure); docs/03-architecture/repository-structure.md
+desc:
+Apply ADR-013. Keep `src/`, `web/`, `tests/`, `infra/`, `tools/` and `packages/` where they are (renaming them for taste costs hundreds of reference edits for no benefit). Add what the roadmap needs, and create a folder only when the ticket that builds it starts (no empty scaffolding). Do it inside the schema-change freeze that MDV-P0-033 needs: this ticket merges first, then MDV-P0-033 builds the baseline migration. Use `git mv`; one PR per chunk; CI green after each; chunk 3 goes last because it rewrites paths the others touch.
+Chunk 1, Host.Api to composition only: the feature endpoints in `src/Host.Api` (AuditLog, Invitations, Notifications, Onboarding, Settings, Staff) move into module Api projects (AuditLog to Audit, Invitations and Staff to Identity, Notifications to a new Notifications.Api, Settings and Onboarding to Tenancy or a new Practice module if they span modules). Host keeps Program.cs, Auth/BFF, Context, Middleware, Observability, PublicSite and module registration. An architecture test fails when Host holds endpoints, services or entities of a feature.
+Chunk 2, workspace and shared packages: `mobile/*` added to pnpm-workspace.yaml with the rules in ADR-013; `packages/tokens` split out of `packages/ui` (CSS variables for web, a theme object for native); `packages/api-client` generated from the OpenAPI document that Host.Api exports at build time, with a CI drift check; the two `parts.tsx` files split into named components; lint import boundaries for packages (no package imports an app, native packages never import web UI).
+Chunk 3, docs consolidation: `tickets/` becomes `docs/05-delivery/tickets/` and `design/` becomes `docs/02-design/source/`; every reference in tools (tickets build, gh_issues footer, prd-extract, ERD), CLAUDE.md, AGENTS.md, README and docs is rewritten; CI gains a relative-link check.
+Chunk 4, CI and docs: path filters per area (backend, web, mobile, packages, infra, docs), CODEOWNERS and dependabot paths, `docs/03-architecture/repository-structure.md` and README updated to the real tree, layout rules added to AGENTS.md.
+ac:
+- Given `src/Host.Api`, when the architecture test runs, then it fails if endpoints, services or entities of a feature are present, and passes with only composition, auth/BFF, middleware, observability and the public site.
+- Given each moved endpoint group, when its existing tests run, then they pass unchanged and every endpoint still declares a policy or is explicitly public.
+- Given `packages/api-client` or the exported OpenAPI document, when either drifts from the API, then CI fails.
+- Given `pnpm-workspace.yaml`, when `pnpm install` runs, then `web/*`, `mobile/*` and `packages/*` resolve and no package imports an app.
+- Given the whole repo, when the link checker runs, then there are zero broken relative links and CI runs it.
+- Given the repository root, when listed, then `tickets/` and `design/` are gone and everything they held is under docs.
+- Given a change to one area, when CI runs, then only the affected jobs run and the required checks still gate the merge.
+- Given the new tree, when `dotnet build`, `dotnet test`, `pnpm -r build`, `pnpm -r lint`, `pnpm -r test`, `pnpm e2e` and `python3 -I tools/tickets/build.py` run, then all pass.

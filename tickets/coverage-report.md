@@ -8,15 +8,15 @@ Every requirement, screen, exit criterion, NFR, delivery-package item and depend
 
 | Req | Phase | Priority | Tickets |
 |---|---|---|---|
-| P0-01 | P0 | MUST | MDV-P0-001, MDV-P0-004, MDV-P0-005, MDV-P0-007, MDV-P0-029 |
-| P0-02 | P0 | MUST | MDV-P0-006, MDV-P0-007, MDV-P0-019 |
+| P0-01 | P0 | MUST | MDV-P0-001, MDV-P0-004, MDV-P0-005, MDV-P0-007, MDV-P0-029, MDV-P0-032, MDV-P0-038, MDV-P0-040 |
+| P0-02 | P0 | MUST | MDV-P0-006, MDV-P0-007, MDV-P0-019, MDV-P0-033, MDV-P0-039 |
 | P0-03 | P0 | MUST | MDV-P0-011, MDV-P0-012, MDV-P0-013, MDV-P0-026 |
 | P0-04 | P0 | MUST | MDV-P0-010, MDV-P0-028 |
 | P0-05 | P0 | MUST | MDV-P0-014, MDV-P0-015, MDV-P0-022 |
-| P0-06 | P0 | MUST | MDV-P0-017 |
-| P0-07 | P0 | MUST | MDV-P0-020, MDV-P0-021, MDV-P0-022, MDV-P0-023 |
-| P0-08 | P0 | MUST | MDV-P0-002, MDV-P0-003, MDV-P0-016, MDV-P0-024 |
-| P0-09 | P0 | MUST | MDV-P0-008, MDV-P0-009 |
+| P0-06 | P0 | MUST | MDV-P0-017, MDV-P0-036 |
+| P0-07 | P0 | MUST | MDV-P0-020, MDV-P0-021, MDV-P0-022, MDV-P0-023, MDV-P0-030 |
+| P0-08 | P0 | MUST | MDV-P0-002, MDV-P0-003, MDV-P0-016, MDV-P0-024, MDV-P0-031 |
+| P0-09 | P0 | MUST | MDV-P0-008, MDV-P0-009, MDV-P0-034, MDV-P0-035, MDV-P0-037 |
 | P0-10 | P0 | MUST | MDV-P0-016, MDV-P0-018, MDV-P0-025, MDV-P0-026, MDV-P0-027 |
 | P1-01 | P1 | SHOULD | MDV-P1-001, MDV-P1-002, MDV-P1-003 |
 | P1-02 | P1 | MUST | MDV-P1-004, MDV-P1-005, MDV-P1-006, MDV-P1-039, MDV-P1-043 |
@@ -48,11 +48,11 @@ Every requirement, screen, exit criterion, NFR, delivery-package item and depend
 | P3-08 | P3 | SHOULD | MDV-P3-020 |
 | P4-01 | P4 | MUST | MDV-P4-002, MDV-P4-003 |
 | P4-02 | P4 | MUST | MDV-P4-001, MDV-P4-004, MDV-P4-005, MDV-P4-006, MDV-P4-031 |
-| P4-03 | P4 | MUST | MDV-P4-007, MDV-P4-008, MDV-P4-009, MDV-P4-032 |
+| P4-03 | P4 | MUST | MDV-P4-007, MDV-P4-008, MDV-P4-009, MDV-P4-032, MDV-P4-034 |
 | P4-04 | P4 | MUST | MDV-P4-010, MDV-P4-011, MDV-P4-012, MDV-P4-013, MDV-P4-033 |
 | P4-05 | P4 | MUST | MDV-P4-014, MDV-P4-015, MDV-P4-016, MDV-P4-017, MDV-P4-018, MDV-P4-033 |
 | P4-06 | P4 | SHOULD | MDV-P4-019 |
-| P4-07 | P4 | MUST | MDV-P4-020, MDV-P4-021, MDV-P4-022, MDV-P4-023, MDV-P4-024, MDV-P4-025, MDV-P4-026 |
+| P4-07 | P4 | MUST | MDV-P4-020, MDV-P4-021, MDV-P4-022, MDV-P4-023, MDV-P4-024, MDV-P4-025, MDV-P4-026, MDV-P5-036, MDV-P5-037 |
 | P4-08 | P4 | SHOULD | MDV-P4-027 |
 | P4-09 | P4 | MUST | MDV-P4-028, MDV-P4-032 |
 | P4-10 | P4 | MUST | MDV-P4-029, MDV-P4-030 |
@@ -62,9 +62,9 @@ Every requirement, screen, exit criterion, NFR, delivery-package item and depend
 | P5-04 | P5 | MUST | MDV-P5-001, MDV-P5-011, MDV-P5-012, MDV-P5-013 |
 | P5-05 | P5 | SHOULD | MDV-P5-001, MDV-P5-014 |
 | P5-06 | P5 | SHOULD | MDV-P5-001, MDV-P5-015 |
-| P5-07 | P5 | MUST | MDV-P5-001, MDV-P5-016, MDV-P5-028 |
-| P5-08 | P5 | MUST | MDV-P5-001, MDV-P5-017, MDV-P5-026 |
-| P5-09 | P5 | MUST | MDV-P5-001, MDV-P5-018, MDV-P5-019 |
+| P5-07 | P5 | MUST | MDV-P5-001, MDV-P5-016, MDV-P5-028, MDV-P5-042, MDV-P5-043, MDV-P5-050 |
+| P5-08 | P5 | MUST | MDV-P5-001, MDV-P5-017, MDV-P5-026, MDV-P5-040, MDV-P5-041, MDV-P5-044, MDV-P5-046, MDV-P5-048 |
+| P5-09 | P5 | MUST | MDV-P5-001, MDV-P5-018, MDV-P5-019, MDV-P5-045, MDV-P5-047, MDV-P5-049 |
 | P5-10 | P5 | MUST | MDV-P5-020, MDV-P5-021, MDV-P5-022, MDV-P5-023, MDV-P5-027, MDV-P5-030 |
 | P5-11 | P5 | MUST | MDV-P5-024 |
 | P5-12 | P5 | MUST | MDV-P5-025 |
@@ -84,7 +84,7 @@ Every requirement, screen, exit criterion, NFR, delivery-package item and depend
 | P8-03 | P8 | SHOULD | MDV-P8-001, MDV-P8-004 |
 | P8-04 | P8 | SHOULD | MDV-P8-001, MDV-P8-005 |
 | P8-05 | P8 | COULD | MDV-P8-001, MDV-P8-006 |
-| P8-06 | P8 | COULD | MDV-P8-001, MDV-P8-007 |
+| P8-06 | P8 | COULD | MDV-P5-031, MDV-P5-032, MDV-P5-033, MDV-P5-034, MDV-P5-035, MDV-P5-036, MDV-P5-037, MDV-P5-038, MDV-P5-039, MDV-P8-001, MDV-P8-007 |
 
 ## Screens (PRD v2 traceability matrix)
 
@@ -96,7 +96,7 @@ Every requirement, screen, exit criterion, NFR, delivery-package item and depend
 | X-03 Six end-to-end journeys (storyboard) | P0 | DESIGNED | MDV-P0-023 |
 | D-03 Notification centre | P1 | DESIGNED | MDV-P1-034 |
 | D-04 Clinic overview (multi-doctor Today, shared waiting room) | P1 | DESIGNED | MDV-P1-030 |
-| F-01 Landing (solo doctor / hospital) | P1 | DESIGNED | MDV-P1-001 |
+| F-01 Landing (solo doctor / hospital) | P1 | DESIGNED | MDV-P1-001, MDV-P5-050 |
 | F-02 Country & data residency selector | P1 | DESIGNED | MDV-P1-002 |
 | F-04 Solo doctor onboarding (licence, schedule, invite) | P1 | DESIGNED | MDV-P1-004 |
 | F-07 Trust centre & demo request | P1 | DESIGNED | MDV-P1-003 |
@@ -147,14 +147,14 @@ Every requirement, screen, exit criterion, NFR, delivery-package item and depend
 | P-06 Charge capture · invoice · payment · refund | P4 | DESIGNED | MDV-P4-004, MDV-P4-006 |
 | P-07 Cash reconciliation | P4 | DESIGNED | MDV-P4-012 |
 | P-09 Doctor revenue & payout report | P4 | DESIGNED | MDV-P4-013 |
-| P-10 Split & partial payment (cash + UPI + card + advance) | P4 | DESIGNED | MDV-P4-007, MDV-P4-008, MDV-P4-009 |
+| P-10 Split & partial payment (cash + UPI + card + advance) | P4 | DESIGNED | MDV-P4-007, MDV-P4-008, MDV-P4-009, MDV-P4-034 |
 | P-11 Packages & advances · session redemption | P4 | DESIGNED | MDV-P4-010 |
 | P-12 Dues, ageing & patient statement | P4 | DESIGNED | MDV-P4-011 |
 | P-13 Day-end cash close · denominations · shift report | P4 | DESIGNED | MDV-P4-012 |
 | P-15 Receipt, tax invoice, credit note, advance receipt · GST / V | P4 | DESIGNED | MDV-P4-005 |
-| R-01 Patient portal home, visit summaries, records & labs | P4 | DESIGNED | MDV-P4-020, MDV-P4-021, MDV-P4-026 |
-| R-02 Portal booking & reschedule | P4 | DESIGNED | MDV-P4-023 |
-| R-03 Portal consent & privacy | P4 | DESIGNED | MDV-P4-024 |
+| R-01 Patient portal home, visit summaries, records & labs | P4 | DESIGNED | MDV-P4-020, MDV-P4-021, MDV-P4-026, MDV-P5-036, MDV-P5-037 |
+| R-02 Portal booking & reschedule | P4 | DESIGNED | MDV-P4-023, MDV-P5-036 |
+| R-03 Portal consent & privacy | P4 | DESIGNED | MDV-P4-024, MDV-P5-037 |
 | R-04 Caregiver proxy authorisation | P4 | DESIGNED | MDV-P4-025 |
 | N-04 Migration: connect, mapping approval, dry-run report | P5 | DESIGN NEEDED | MDV-P5-001, MDV-P5-002, MDV-P5-003, MDV-P5-004, MDV-P5-005 |
 | N-05 Data-quality queue (fix by rule) & bulk duplicate merge | P5 | DESIGN NEEDED | MDV-P5-001, MDV-P5-006, MDV-P5-007 |
@@ -163,10 +163,10 @@ Every requirement, screen, exit criterion, NFR, delivery-package item and depend
 | N-08 Patient report upload & AI extraction review | P5 | DESIGN NEEDED | MDV-P5-001, MDV-P5-014 |
 | N-09 Letters, certificates & e-sick leave | P5 | DESIGN NEEDED | MDV-P5-001, MDV-P5-013 |
 | N-10 Voice appointment assistant: live calls console & owner sett | P5 | DESIGN NEEDED | MDV-P5-001, MDV-P5-015, MDV-P6-009 |
-| N-11 Medvya plans, trial, subscription billing for clinics | P5 | DESIGN NEEDED | MDV-P5-001, MDV-P5-016 |
-| N-12 Platform admin console: tenants, onboarding, support access  | P5 | DESIGN NEEDED | MDV-P5-001, MDV-P5-017 |
-| N-13 In-app guides, help centre, feedback & status page | P5 | DESIGN NEEDED | MDV-P5-001, MDV-P5-018 |
-| N-14 Clinic data export (FHIR + CSV) | P5 | DESIGN NEEDED | MDV-P5-001, MDV-P5-019 |
+| N-11 Medvya plans, trial, subscription billing for clinics | P5 | DESIGN NEEDED | MDV-P5-001, MDV-P5-016, MDV-P5-042, MDV-P5-043 |
+| N-12 Platform admin console: tenants, onboarding, support access  | P5 | DESIGN NEEDED | MDV-P5-001, MDV-P5-017, MDV-P5-040, MDV-P5-041, MDV-P5-044, MDV-P5-046, MDV-P5-048 |
+| N-13 In-app guides, help centre, feedback & status page | P5 | DESIGN NEEDED | MDV-P5-001, MDV-P5-018, MDV-P5-045, MDV-P5-047 |
+| N-14 Clinic data export (FHIR + CSV) | P5 | DESIGN NEEDED | MDV-P5-001, MDV-P5-019, MDV-P5-049 |
 | P-08 Insurance eligibility & claims handoff | P5 | DESIGNED | MDV-P5-008 |
 | P-14 Pre-authorisation, resubmission, remittance · India TPA/PMJA | P5 | DESIGNED | MDV-P5-009, MDV-P5-010 |
 | X-02 Dark mode & high-contrast variants | P5 | DESIGNED | MDV-P5-023 |

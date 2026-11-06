@@ -8,9 +8,9 @@
 **Day one:** Bill and collect payment, close the cash drawer, track every result and follow-up to closure, and let patients book and see their records.  
 **Goal:** The clinic runs its money and its follow-ups in Medvya, and patients can serve themselves.
 
-**Tickets:** 33 · **Estimate:** 72.5 dev-days vs **50 working days** in the window (OVER by 22.5 days: needs scope trade-off or overlap) · **Average confidence:** 79%
+**Tickets:** 34 · **Estimate:** 75.5 dev-days vs **50 working days** in the window (OVER by 25.5 days: needs scope trade-off or overlap) · **Average confidence:** 78%
 
-**Status:** To do 32 · Done 1
+**Status:** To do 33 · Done 1
 
 ## Epics
 
@@ -41,6 +41,7 @@
 | [MDV-P4-015](MDV-P4-015.md) | To do | Clinical results inbox: severity in words, review/acknowledge, assign follow-up, release to patient (C-01) | Story | MUST | P4-05 | C-01 | 3 | 20–21 | 08 Mar → 19 Mar 2027 | 82% Medium |
 | [MDV-P4-021](MDV-P4-021.md) | To do | Portal home, released visit summaries (with checked translations), prescriptions, records and labs (R-01) | Story | MUST | P4-07 | R-01 | 3 | 20–22 | 08 Mar → 26 Mar 2027 | 80% Medium |
 | [MDV-P4-022](MDV-P4-022.md) | To do | Release rules: the doctor controls what patients see and when | Story | MUST | P4-07 | — | 1.5 | 20–20 | 08 Mar → 12 Mar 2027 | 85% High |
+| [MDV-P4-034](MDV-P4-034.md) | To do | UPI AutoPay for packages, secure pay link by WhatsApp, Apple Pay and Google Pay in the UAE | Story | SHOULD | P4-03 | P-10 | 3 | 20–21 | 08 Mar → 19 Mar 2027 | 55% Low |
 | [MDV-P4-009](MDV-P4-009.md) | To do | Split and partial payments with advance usage; balance moves to dues (P-10) | Story | MUST | P4-03 | P-10 | 2 | 21–21 | 15 Mar → 19 Mar 2027 | 88% High |
 | [MDV-P4-010](MDV-P4-010.md) | To do | Packages and advances with session redemption (P-11) | Story | MUST | P4-04 | P-11 | 2 | 21–22 | 15 Mar → 26 Mar 2027 | 86% High |
 | [MDV-P4-016](MDV-P4-016.md) | To do | Care plans and tasks with owners, due dates, stage tracks and evidence to close (C-02) | Story | MUST | P4-05 | C-02 | 3 | 21–22 | 15 Mar → 26 Mar 2027 | 82% Medium |

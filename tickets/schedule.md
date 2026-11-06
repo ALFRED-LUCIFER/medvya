@@ -6,7 +6,7 @@
 Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load is the estimate spread evenly across the window, for one developer; flags show weeks over 5 dev-days.
 
 
-## Week 1 · 26 Oct 2026 – 30 Oct 2026 · load 10.1 dev-days ⚠ over capacity
+## Week 1 · 26 Oct 2026 – 30 Oct 2026 · load 12.8 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -20,8 +20,11 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P0-020](P0-foundation/MDV-P0-020.md) | Medvya design system in code: shadcn/ui + Tailwind tokens and clinical status primitives (packages/ui) | P0 | wk 1–2 | 92% |
 | [MDV-P0-024](P0-foundation/MDV-P0-024.md) | Threat model, data map, DPIA draft (DPDP) and record-retention map per country | P0 | wk 1–3 | 75% |
 | [MDV-P0-025](P0-foundation/MDV-P0-025.md) | Secure development policies: SECURITY.md, code review rules, synthetic-only data, JIT access, offline break-glass account | P0 | wk 1–1 | 90% |
+| [MDV-P0-030](P0-foundation/MDV-P0-030.md) | Shared Table component (shadcn) and table controller pattern; replace the four raw tables | P0 | wk 1–2 | 85% |
+| [MDV-P0-031](P0-foundation/MDV-P0-031.md) | Accept ADR-012: PostgreSQL with EF Core, application-level national-ID encryption, hash-chained audit | P0 | wk 1–1 | 90% |
+| [MDV-P0-032](P0-foundation/MDV-P0-032.md) | Swap the platform to PostgreSQL: Npgsql provider, Testcontainers.PostgreSql, Hangfire.PostgreSql, local services and CI | P0 | wk 1–2 | 75% |
 
-## Week 2 · 02 Nov 2026 – 06 Nov 2026 · load 23.1 dev-days ⚠ over capacity
+## Week 2 · 02 Nov 2026 – 06 Nov 2026 · load 35.1 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -40,8 +43,14 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P0-021](P0-foundation/MDV-P0-021.md) | Internationalisation pipeline: English, Hindi, Arabic with full RTL | P0 | wk 2–2 | 88% |
 | [MDV-P0-024](P0-foundation/MDV-P0-024.md) | Threat model, data map, DPIA draft (DPDP) and record-retention map per country | P0 | wk 1–3 | 75% |
 | [MDV-P0-026](P0-foundation/MDV-P0-026.md) | OWASP ASVS L2 baseline: security headers, CSP, HSTS, rate limiting, input validation | P0 | wk 2–2 | 88% |
+| [MDV-P0-030](P0-foundation/MDV-P0-030.md) | Shared Table component (shadcn) and table controller pattern; replace the four raw tables | P0 | wk 1–2 | 85% |
+| [MDV-P0-032](P0-foundation/MDV-P0-032.md) | Swap the platform to PostgreSQL: Npgsql provider, Testcontainers.PostgreSql, Hangfire.PostgreSql, local services and CI | P0 | wk 1–2 | 75% |
+| [MDV-P0-033](P0-foundation/MDV-P0-033.md) | One baseline migration per module on Postgres, regenerated seeder and ERD, forward-only after that | P0 | wk 2–2 | 70% |
+| [MDV-P0-034](P0-foundation/MDV-P0-034.md) | Tenant isolation on Postgres: FORCE row-level security, per-module roles, EF filter kept as layer one | P0 | wk 2–3 | 65% |
+| [MDV-P0-038](P0-foundation/MDV-P0-038.md) | Azure Database for PostgreSQL Flexible Server in Bicep: private endpoint, Entra-only auth, customer-managed key, in-country HA and point-in-time restore | P0 | wk 2–3 | 65% |
+| [MDV-P0-040](P0-foundation/MDV-P0-040.md) | Repository structure: Host.Api to composition only, mobile and shared packages in the workspace, tickets and design into docs, link check, CI path filters | P0 | wk 2–2 | 70% |
 
-## Week 3 · 09 Nov 2026 – 13 Nov 2026 · load 16.3 dev-days ⚠ over capacity
+## Week 3 · 09 Nov 2026 – 13 Nov 2026 · load 24.8 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -58,11 +67,18 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P0-027](P0-foundation/MDV-P0-027.md) | Synthetic data generator and seeded staging tenant | P0 | wk 3–3 | 90% |
 | [MDV-P0-028](P0-foundation/MDV-P0-028.md) | Per-tenant feature flags with owner and kill switch | P0 | wk 3–3 | 85% |
 | [MDV-P0-029](P0-foundation/MDV-P0-029.md) | R0 exit gate review and release notes (internal platform) | P0 | wk 3–3 | 85% |
+| [MDV-P0-034](P0-foundation/MDV-P0-034.md) | Tenant isolation on Postgres: FORCE row-level security, per-module roles, EF filter kept as layer one | P0 | wk 2–3 | 65% |
+| [MDV-P0-035](P0-foundation/MDV-P0-035.md) | National IDs unreadable to database admins: envelope encryption with Key Vault keys and an HMAC blind index | P0 | wk 3–3 | 60% |
+| [MDV-P0-036](P0-foundation/MDV-P0-036.md) | Tamper-evident audit and signed records without SQL ledger: hash chain, append-only triggers, daily digest to immutable Blob | P0 | wk 3–4 | 60% |
+| [MDV-P0-038](P0-foundation/MDV-P0-038.md) | Azure Database for PostgreSQL Flexible Server in Bicep: private endpoint, Entra-only auth, customer-managed key, in-country HA and point-in-time restore | P0 | wk 2–3 | 65% |
 
-## Week 4 · 16 Nov 2026 – 20 Nov 2026 · load 5.8 dev-days ⚠ over capacity
+## Week 4 · 16 Nov 2026 – 20 Nov 2026 · load 10.1 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
+| [MDV-P0-036](P0-foundation/MDV-P0-036.md) | Tamper-evident audit and signed records without SQL ledger: hash chain, append-only triggers, daily digest to immutable Blob | P0 | wk 3–4 | 60% |
+| [MDV-P0-037](P0-foundation/MDV-P0-037.md) | Support and reporting access without dynamic masking: reporting role, masked views, no decrypt right | P0 | wk 4–4 | 70% |
+| [MDV-P0-039](P0-foundation/MDV-P0-039.md) | Re-baseline load and desk tests on Postgres | P0 | wk 4–4 | 75% |
 | [MDV-P1-001](P1-front-desk/MDV-P1-001.md) | Public site on Razor Pages and landing page (solo doctor / hospital CTAs, region-aware copy) | P1 | wk 4–4 | 88% |
 | [MDV-P1-002](P1-front-desk/MDV-P1-002.md) | Country and data-residency selector that binds a new tenant to one data plane | P1 | wk 4–4 | 85% |
 | [MDV-P1-004](P1-front-desk/MDV-P1-004.md) | Solo doctor and clinic sign-up with the six-step onboarding wizard (autosave) | P1 | wk 4–5 | 85% |
@@ -303,7 +319,7 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P4-014](P4-clinic-operations/MDV-P4-014.md) | Results intake and inbound report identity match (manual upload/entry; low-confidence needs a human) (C-05) | P4 | wk 19–20 | 82% |
 | [MDV-P4-020](P4-clinic-operations/MDV-P4-020.md) | Patient portal authentication: OTP sign-in, portal invitations, patient session (BFF) | P4 | wk 19–20 | 82% |
 
-## Week 20 · 08 Mar 2027 – 12 Mar 2027 · load 14.5 dev-days ⚠ over capacity
+## Week 20 · 08 Mar 2027 – 12 Mar 2027 · load 16.0 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -318,8 +334,9 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P4-020](P4-clinic-operations/MDV-P4-020.md) | Patient portal authentication: OTP sign-in, portal invitations, patient session (BFF) | P4 | wk 19–20 | 82% |
 | [MDV-P4-021](P4-clinic-operations/MDV-P4-021.md) | Portal home, released visit summaries (with checked translations), prescriptions, records and labs (R-01) | P4 | wk 20–22 | 80% |
 | [MDV-P4-022](P4-clinic-operations/MDV-P4-022.md) | Release rules: the doctor controls what patients see and when | P4 | wk 20–20 | 85% |
+| [MDV-P4-034](P4-clinic-operations/MDV-P4-034.md) | UPI AutoPay for packages, secure pay link by WhatsApp, Apple Pay and Google Pay in the UAE | P4 | wk 20–21 | 55% |
 
-## Week 21 · 15 Mar 2027 – 19 Mar 2027 · load 9.2 dev-days ⚠ over capacity
+## Week 21 · 15 Mar 2027 – 19 Mar 2027 · load 10.7 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -331,6 +348,7 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P4-021](P4-clinic-operations/MDV-P4-021.md) | Portal home, released visit summaries (with checked translations), prescriptions, records and labs (R-01) | P4 | wk 20–22 | 80% |
 | [MDV-P4-028](P4-clinic-operations/MDV-P4-028.md) | WhatsApp reminders and confirmations (EN/AR/HI), opt-in records, delivery status, one-tap reschedule, "doctor running late" broadcast (N-03, design needed) | P4 | wk 21–23 | 62% |
 | [MDV-P4-031](P4-clinic-operations/MDV-P4-031.md) | Invoice and receipt formats reviewed by a chartered accountant (India) and tax adviser (UAE) | P4 | wk 21–23 | 65% |
+| [MDV-P4-034](P4-clinic-operations/MDV-P4-034.md) | UPI AutoPay for packages, secure pay link by WhatsApp, Apple Pay and Google Pay in the UAE | P4 | wk 20–21 | 55% |
 
 ## Week 22 · 22 Mar 2027 – 26 Mar 2027 · load 14.5 dev-days ⚠ over capacity
 
@@ -387,7 +405,7 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P5-006](P5-commercial-launch/MDV-P5-006.md) | Data-quality queue: problems grouped by type and fixed by rule; reversible (N-05) | P5 | wk 25–26 | 65% |
 | [MDV-P5-016](P5-commercial-launch/MDV-P5-016.md) | Medvya subscription: plans, trial, subscription invoices with GST/VAT, seat counts, dunning (N-11) | P5 | wk 25–27 | 60% |
 
-## Week 26 · 19 Apr 2027 – 23 Apr 2027 · load 11.7 dev-days ⚠ over capacity
+## Week 26 · 19 Apr 2027 – 23 Apr 2027 · load 15.3 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -398,8 +416,12 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P5-007](P5-commercial-launch/MDV-P5-007.md) | Duplicate scoring incl. Arabic–English name spellings, bulk merge for high confidence, desk confirmation for borderline (N-05) | P5 | wk 26–27 | 68% |
 | [MDV-P5-016](P5-commercial-launch/MDV-P5-016.md) | Medvya subscription: plans, trial, subscription invoices with GST/VAT, seat counts, dunning (N-11) | P5 | wk 25–27 | 60% |
 | [MDV-P5-017](P5-commercial-launch/MDV-P5-017.md) | Platform operations console: tenant catalogue, onboarding automation, per-tenant flags, time-boxed audited support access visible to the clinic (N-12) | P5 | wk 26–28 | 65% |
+| [MDV-P5-031](P5-commercial-launch/MDV-P5-031.md) | Mobile ADR and threat model: two Expo store apps (Medvya Clinic, Medvya for patients) from one repo | P5 | wk 26–27 | 80% |
+| [MDV-P5-040](P5-commercial-launch/MDV-P5-040.md) | Platform console shell (`web/platform-admin`): company sign-on plus security key, platform roles, reason on every action, no PHI | P5 | wk 26–28 | 65% |
+| [MDV-P5-042](P5-commercial-launch/MDV-P5-042.md) | Plans and entitlements: versioned plans, India and UAE prices, seats, trial days, 30 days' notice | P5 | wk 26–28 | 70% |
+| [MDV-P5-050](P5-commercial-launch/MDV-P5-050.md) | Public pricing page with 14-day trial, monthly and yearly toggle and country currency | P5 | wk 26–27 | 75% |
 
-## Week 27 · 26 Apr 2027 – 30 Apr 2027 · load 8.8 dev-days ⚠ over capacity
+## Week 27 · 26 Apr 2027 – 30 Apr 2027 · load 16.1 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -410,8 +432,16 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P5-017](P5-commercial-launch/MDV-P5-017.md) | Platform operations console: tenant catalogue, onboarding automation, per-tenant flags, time-boxed audited support access visible to the clinic (N-12) | P5 | wk 26–28 | 65% |
 | [MDV-P5-024](P5-commercial-launch/MDV-P5-024.md) | Security operations: incident response with DPDP/UAE breach notification, Defender + Sentinel alerts to on-call, Customer Lockbox, VDP, ADHICS evidence, ISO 27001 gap assessment | P5 | wk 27–30 | 70% |
 | [MDV-P5-028](P5-commercial-launch/MDV-P5-028.md) | Commercial readiness: order form and SLA signed with the first paying clinic | P5 | wk 27–27 | 65% |
+| [MDV-P5-031](P5-commercial-launch/MDV-P5-031.md) | Mobile ADR and threat model: two Expo store apps (Medvya Clinic, Medvya for patients) from one repo | P5 | wk 26–27 | 80% |
+| [MDV-P5-040](P5-commercial-launch/MDV-P5-040.md) | Platform console shell (`web/platform-admin`): company sign-on plus security key, platform roles, reason on every action, no PHI | P5 | wk 26–28 | 65% |
+| [MDV-P5-041](P5-commercial-launch/MDV-P5-041.md) | Feature rollouts: staged release (internal, beta tenants, percentage, everyone), kill switch and clinical sign-off gate | P5 | wk 27–29 | 70% |
+| [MDV-P5-042](P5-commercial-launch/MDV-P5-042.md) | Plans and entitlements: versioned plans, India and UAE prices, seats, trial days, 30 days' notice | P5 | wk 26–28 | 70% |
+| [MDV-P5-043](P5-commercial-launch/MDV-P5-043.md) | Subscription billing in the console and for owners: invoices, payment method, add seats, dunning ladder, close practice | P5 | wk 27–29 | 60% |
+| [MDV-P5-044](P5-commercial-launch/MDV-P5-044.md) | Licence verification console: reviewer queue, certificate view, approve or ask for changes | P5 | wk 27–29 | 65% |
+| [MDV-P5-046](P5-commercial-launch/MDV-P5-046.md) | Legal documents: versioned terms, privacy notice and DPA, re-acceptance gate that pauses booking only | P5 | wk 27–29 | 65% |
+| [MDV-P5-050](P5-commercial-launch/MDV-P5-050.md) | Public pricing page with 14-day trial, monthly and yearly toggle and country currency | P5 | wk 26–27 | 75% |
 
-## Week 28 · 03 May 2027 – 07 May 2027 · load 12.4 dev-days ⚠ over capacity
+## Week 28 · 03 May 2027 – 07 May 2027 · load 22.5 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -425,8 +455,17 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P5-018](P5-commercial-launch/MDV-P5-018.md) | In-app role guides, help centre, feedback and public status page (N-13) | P5 | wk 28–30 | 72% |
 | [MDV-P5-024](P5-commercial-launch/MDV-P5-024.md) | Security operations: incident response with DPDP/UAE breach notification, Defender + Sentinel alerts to on-call, Customer Lockbox, VDP, ADHICS evidence, ISO 27001 gap assessment | P5 | wk 27–30 | 70% |
 | [MDV-P5-027](P5-commercial-launch/MDV-P5-027.md) | Availability monitoring: 30 days at ≥ 99.5 % before GA | P5 | wk 28–32 | 75% |
+| [MDV-P5-032](P5-commercial-launch/MDV-P5-032.md) | Mobile foundation: `mobile/` Expo workspace, shared tokens and i18n, RTL, CI and EAS builds | P5 | wk 28–29 | 70% |
+| [MDV-P5-033](P5-commercial-launch/MDV-P5-033.md) | Mobile backend: native token sign-in, device registry, push registry and remote revoke | P5 | wk 28–30 | 70% |
+| [MDV-P5-040](P5-commercial-launch/MDV-P5-040.md) | Platform console shell (`web/platform-admin`): company sign-on plus security key, platform roles, reason on every action, no PHI | P5 | wk 26–28 | 65% |
+| [MDV-P5-041](P5-commercial-launch/MDV-P5-041.md) | Feature rollouts: staged release (internal, beta tenants, percentage, everyone), kill switch and clinical sign-off gate | P5 | wk 27–29 | 70% |
+| [MDV-P5-042](P5-commercial-launch/MDV-P5-042.md) | Plans and entitlements: versioned plans, India and UAE prices, seats, trial days, 30 days' notice | P5 | wk 26–28 | 70% |
+| [MDV-P5-043](P5-commercial-launch/MDV-P5-043.md) | Subscription billing in the console and for owners: invoices, payment method, add seats, dunning ladder, close practice | P5 | wk 27–29 | 60% |
+| [MDV-P5-044](P5-commercial-launch/MDV-P5-044.md) | Licence verification console: reviewer queue, certificate view, approve or ask for changes | P5 | wk 27–29 | 65% |
+| [MDV-P5-046](P5-commercial-launch/MDV-P5-046.md) | Legal documents: versioned terms, privacy notice and DPA, re-acceptance gate that pauses booking only | P5 | wk 27–29 | 65% |
+| [MDV-P5-047](P5-commercial-launch/MDV-P5-047.md) | Service requests: Help in the clinic app, support inbox with SLA, internal notes, diagnostics | P5 | wk 28–30 | 65% |
 
-## Week 29 · 10 May 2027 – 14 May 2027 · load 20.4 dev-days ⚠ over capacity
+## Week 29 · 10 May 2027 – 14 May 2027 · load 32.6 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -445,8 +484,19 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P5-025](P5-commercial-launch/MDV-P5-025.md) | Retention and deletion jobs per country; patient access/correction/erasure requests for clinics | P5 | wk 29–30 | 68% |
 | [MDV-P5-027](P5-commercial-launch/MDV-P5-027.md) | Availability monitoring: 30 days at ≥ 99.5 % before GA | P5 | wk 28–32 | 75% |
 | [MDV-P5-029](P5-commercial-launch/MDV-P5-029.md) | First paying clinic cut-over without closing (week 29) with go-live runbook | P5 | wk 29–29 | 55% |
+| [MDV-P5-032](P5-commercial-launch/MDV-P5-032.md) | Mobile foundation: `mobile/` Expo workspace, shared tokens and i18n, RTL, CI and EAS builds | P5 | wk 28–29 | 70% |
+| [MDV-P5-033](P5-commercial-launch/MDV-P5-033.md) | Mobile backend: native token sign-in, device registry, push registry and remote revoke | P5 | wk 28–30 | 70% |
+| [MDV-P5-034](P5-commercial-launch/MDV-P5-034.md) | Staff app: sign-in, 15-minute biometric lock, Today, queue, patient search and patient summary | P5 | wk 29–31 | 65% |
+| [MDV-P5-036](P5-commercial-launch/MDV-P5-036.md) | Patient app: SMS sign-in, family profiles, home, booking, check-in and reschedule | P5 | wk 29–32 | 65% |
+| [MDV-P5-041](P5-commercial-launch/MDV-P5-041.md) | Feature rollouts: staged release (internal, beta tenants, percentage, everyone), kill switch and clinical sign-off gate | P5 | wk 27–29 | 70% |
+| [MDV-P5-043](P5-commercial-launch/MDV-P5-043.md) | Subscription billing in the console and for owners: invoices, payment method, add seats, dunning ladder, close practice | P5 | wk 27–29 | 60% |
+| [MDV-P5-044](P5-commercial-launch/MDV-P5-044.md) | Licence verification console: reviewer queue, certificate view, approve or ask for changes | P5 | wk 27–29 | 65% |
+| [MDV-P5-045](P5-commercial-launch/MDV-P5-045.md) | Releases and What's new, maintenance and incident banners, integrations register | P5 | wk 29–31 | 65% |
+| [MDV-P5-046](P5-commercial-launch/MDV-P5-046.md) | Legal documents: versioned terms, privacy notice and DPA, re-acceptance gate that pauses booking only | P5 | wk 27–29 | 65% |
+| [MDV-P5-047](P5-commercial-launch/MDV-P5-047.md) | Service requests: Help in the clinic app, support inbox with SLA, internal notes, diagnostics | P5 | wk 28–30 | 65% |
+| [MDV-P5-049](P5-commercial-launch/MDV-P5-049.md) | Data requests and offboarding runs from the console without opening records | P5 | wk 29–31 | 65% |
 
-## Week 30 · 17 May 2027 – 21 May 2027 · load 16.5 dev-days ⚠ over capacity
+## Week 30 · 17 May 2027 – 21 May 2027 · load 24.9 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -464,8 +514,16 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P5-025](P5-commercial-launch/MDV-P5-025.md) | Retention and deletion jobs per country; patient access/correction/erasure requests for clinics | P5 | wk 29–30 | 68% |
 | [MDV-P5-026](P5-commercial-launch/MDV-P5-026.md) | Support model: first response under 4 business hours, on-call rota and runbooks | P5 | wk 30–30 | 75% |
 | [MDV-P5-027](P5-commercial-launch/MDV-P5-027.md) | Availability monitoring: 30 days at ≥ 99.5 % before GA | P5 | wk 28–32 | 75% |
+| [MDV-P5-033](P5-commercial-launch/MDV-P5-033.md) | Mobile backend: native token sign-in, device registry, push registry and remote revoke | P5 | wk 28–30 | 70% |
+| [MDV-P5-034](P5-commercial-launch/MDV-P5-034.md) | Staff app: sign-in, 15-minute biometric lock, Today, queue, patient search and patient summary | P5 | wk 29–31 | 65% |
+| [MDV-P5-036](P5-commercial-launch/MDV-P5-036.md) | Patient app: SMS sign-in, family profiles, home, booking, check-in and reschedule | P5 | wk 29–32 | 65% |
+| [MDV-P5-038](P5-commercial-launch/MDV-P5-038.md) | Private push notifications for both apps (IDs only, no health text on the lock screen) | P5 | wk 30–32 | 70% |
+| [MDV-P5-045](P5-commercial-launch/MDV-P5-045.md) | Releases and What's new, maintenance and incident banners, integrations register | P5 | wk 29–31 | 65% |
+| [MDV-P5-047](P5-commercial-launch/MDV-P5-047.md) | Service requests: Help in the clinic app, support inbox with SLA, internal notes, diagnostics | P5 | wk 28–30 | 65% |
+| [MDV-P5-048](P5-commercial-launch/MDV-P5-048.md) | Platform analytics, practice health score and scheduled reports with small-count hiding | P5 | wk 30–32 | 55% |
+| [MDV-P5-049](P5-commercial-launch/MDV-P5-049.md) | Data requests and offboarding runs from the console without opening records | P5 | wk 29–31 | 65% |
 
-## Week 31 · 24 May 2027 – 28 May 2027 · load 6.8 dev-days ⚠ over capacity
+## Week 31 · 24 May 2027 – 28 May 2027 · load 15.8 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -475,38 +533,57 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P5-022](P5-commercial-launch/MDV-P5-022.md) | Accessibility audit and load test before GA | P5 | wk 30–31 | 78% |
 | [MDV-P5-023](P5-commercial-launch/MDV-P5-023.md) | Dark mode and high-contrast themes (X-02) | P5 | wk 30–31 | 88% |
 | [MDV-P5-027](P5-commercial-launch/MDV-P5-027.md) | Availability monitoring: 30 days at ≥ 99.5 % before GA | P5 | wk 28–32 | 75% |
+| [MDV-P5-034](P5-commercial-launch/MDV-P5-034.md) | Staff app: sign-in, 15-minute biometric lock, Today, queue, patient search and patient summary | P5 | wk 29–31 | 65% |
+| [MDV-P5-035](P5-commercial-launch/MDV-P5-035.md) | Staff app: consent script, background recording with offline queue, AI note review and sign | P5 | wk 31–33 | 50% |
+| [MDV-P5-036](P5-commercial-launch/MDV-P5-036.md) | Patient app: SMS sign-in, family profiles, home, booking, check-in and reschedule | P5 | wk 29–32 | 65% |
+| [MDV-P5-037](P5-commercial-launch/MDV-P5-037.md) | Patient app: results, prescriptions, messages, consents, payments and video visit | P5 | wk 31–34 | 55% |
+| [MDV-P5-038](P5-commercial-launch/MDV-P5-038.md) | Private push notifications for both apps (IDs only, no health text on the lock screen) | P5 | wk 30–32 | 70% |
+| [MDV-P5-045](P5-commercial-launch/MDV-P5-045.md) | Releases and What's new, maintenance and incident banners, integrations register | P5 | wk 29–31 | 65% |
+| [MDV-P5-048](P5-commercial-launch/MDV-P5-048.md) | Platform analytics, practice health score and scheduled reports with small-count hiding | P5 | wk 30–32 | 55% |
+| [MDV-P5-049](P5-commercial-launch/MDV-P5-049.md) | Data requests and offboarding runs from the console without opening records | P5 | wk 29–31 | 65% |
 
-## Week 32 · 31 May 2027 – 04 Jun 2027 · load 1.2 dev-days
+## Week 32 · 31 May 2027 – 04 Jun 2027 · load 7.2 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
 | [MDV-P5-027](P5-commercial-launch/MDV-P5-027.md) | Availability monitoring: 30 days at ≥ 99.5 % before GA | P5 | wk 28–32 | 75% |
 | [MDV-P5-030](P5-commercial-launch/MDV-P5-030.md) | v1.0 general availability gate and release notes | P5 | wk 32–32 | 62% |
+| [MDV-P5-035](P5-commercial-launch/MDV-P5-035.md) | Staff app: consent script, background recording with offline queue, AI note review and sign | P5 | wk 31–33 | 50% |
+| [MDV-P5-036](P5-commercial-launch/MDV-P5-036.md) | Patient app: SMS sign-in, family profiles, home, booking, check-in and reschedule | P5 | wk 29–32 | 65% |
+| [MDV-P5-037](P5-commercial-launch/MDV-P5-037.md) | Patient app: results, prescriptions, messages, consents, payments and video visit | P5 | wk 31–34 | 55% |
+| [MDV-P5-038](P5-commercial-launch/MDV-P5-038.md) | Private push notifications for both apps (IDs only, no health text on the lock screen) | P5 | wk 30–32 | 70% |
+| [MDV-P5-048](P5-commercial-launch/MDV-P5-048.md) | Platform analytics, practice health score and scheduled reports with small-count hiding | P5 | wk 30–32 | 55% |
 
-## Week 33 · 07 Jun 2027 – 11 Jun 2027 · load 1.0 dev-days
+## Week 33 · 07 Jun 2027 – 11 Jun 2027 · load 3.9 dev-days
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
+| [MDV-P5-035](P5-commercial-launch/MDV-P5-035.md) | Staff app: consent script, background recording with offline queue, AI note review and sign | P5 | wk 31–33 | 50% |
+| [MDV-P5-037](P5-commercial-launch/MDV-P5-037.md) | Patient app: results, prescriptions, messages, consents, payments and video visit | P5 | wk 31–34 | 55% |
 | [MDV-P6-001](P6-clip-advanced-ai/MDV-P6-001.md) | Hardware partner, device certification and regulated-device classification advice | P6 | wk 33–34 | 45% |
 
-## Week 34 · 14 Jun 2027 – 18 Jun 2027 · load 2.3 dev-days
+## Week 34 · 14 Jun 2027 – 18 Jun 2027 · load 4.6 dev-days
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
+| [MDV-P5-037](P5-commercial-launch/MDV-P5-037.md) | Patient app: results, prescriptions, messages, consents, payments and video visit | P5 | wk 31–34 | 55% |
+| [MDV-P5-039](P5-commercial-launch/MDV-P5-039.md) | Store release: accounts, privacy labels, MASVS test, accessibility and RTL checks, EAS Update policy | P5 | wk 34–36 | 55% |
 | [MDV-P6-001](P6-clip-advanced-ai/MDV-P6-001.md) | Hardware partner, device certification and regulated-device classification advice | P6 | wk 33–34 | 45% |
 | [MDV-P6-002](P6-clip-advanced-ai/MDV-P6-002.md) | Clip pairing with code match and microphone self-test (W-01) | P6 | wk 34–36 | 60% |
 
-## Week 35 · 21 Jun 2027 – 25 Jun 2027 · load 2.3 dev-days
+## Week 35 · 21 Jun 2027 – 25 Jun 2027 · load 3.3 dev-days
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
+| [MDV-P5-039](P5-commercial-launch/MDV-P5-039.md) | Store release: accounts, privacy labels, MASVS test, accessibility and RTL checks, EAS Update policy | P5 | wk 34–36 | 55% |
 | [MDV-P6-002](P6-clip-advanced-ai/MDV-P6-002.md) | Clip pairing with code match and microphone self-test (W-01) | P6 | wk 34–36 | 60% |
 | [MDV-P6-007](P6-clip-advanced-ai/MDV-P6-007.md) | Multilingual notes: Arabic, English, Hindi and Malayalam incl. mixed-language consultations | P6 | wk 35–38 | 55% |
 
-## Week 36 · 28 Jun 2027 – 02 Jul 2027 · load 5.5 dev-days ⚠ over capacity
+## Week 36 · 28 Jun 2027 – 02 Jul 2027 · load 6.5 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
+| [MDV-P5-039](P5-commercial-launch/MDV-P5-039.md) | Store release: accounts, privacy labels, MASVS test, accessibility and RTL checks, EAS Update policy | P5 | wk 34–36 | 55% |
 | [MDV-P6-002](P6-clip-advanced-ai/MDV-P6-002.md) | Clip pairing with code match and microphone self-test (W-01) | P6 | wk 34–36 | 60% |
 | [MDV-P6-003](P6-clip-advanced-ai/MDV-P6-003.md) | Clip capture bound to encounter and consent with visible recording light (capture FSM) | P6 | wk 36–37 | 60% |
 | [MDV-P6-007](P6-clip-advanced-ai/MDV-P6-007.md) | Multilingual notes: Arabic, English, Hindi and Malayalam incl. mixed-language consultations | P6 | wk 35–38 | 55% |
@@ -716,7 +793,7 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P8-005](P8-scale-specialty/MDV-P8-005.md) | Remaining UAE health exchanges (the two not used at launch) (N-07) | P8 | wk 56–62 | 45% |
 | [MDV-P8-006](P8-scale-specialty/MDV-P8-006.md) | Front-desk extras: kiosk/QR self check-in, clinic letter inbox, offline read and draft (N-16) | P8 | wk 58–62 | 45% |
 
-## Week 60 · 13 Dec 2027 – 17 Dec 2027 · load 5.4 dev-days ⚠ over capacity
+## Week 60 · 13 Dec 2027 – 17 Dec 2027 · load 4.8 dev-days
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -724,32 +801,32 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P8-004](P8-scale-specialty/MDV-P8-004.md) | India ABDM: ABHA consent requests and linked records from other facilities | P8 | wk 56–60 | 45% |
 | [MDV-P8-005](P8-scale-specialty/MDV-P8-005.md) | Remaining UAE health exchanges (the two not used at launch) (N-07) | P8 | wk 56–62 | 45% |
 | [MDV-P8-006](P8-scale-specialty/MDV-P8-006.md) | Front-desk extras: kiosk/QR self check-in, clinic letter inbox, offline read and draft (N-16) | P8 | wk 58–62 | 45% |
-| [MDV-P8-007](P8-scale-specialty/MDV-P8-007.md) | Platform: public FHIR APIs, native mobile apps (Expo), saved migration templates per vendor, specialty templates | P8 | wk 60–64 | 45% |
+| [MDV-P8-007](P8-scale-specialty/MDV-P8-007.md) | Platform: public FHIR APIs, saved migration templates per vendor, specialty templates | P8 | wk 60–64 | 45% |
 
-## Week 61 · 20 Dec 2027 – 24 Dec 2027 · load 3.5 dev-days
-
-| Key | Title | Phase | Window | Confidence |
-|---|---|---|---|---|
-| [MDV-P8-005](P8-scale-specialty/MDV-P8-005.md) | Remaining UAE health exchanges (the two not used at launch) (N-07) | P8 | wk 56–62 | 45% |
-| [MDV-P8-006](P8-scale-specialty/MDV-P8-006.md) | Front-desk extras: kiosk/QR self check-in, clinic letter inbox, offline read and draft (N-16) | P8 | wk 58–62 | 45% |
-| [MDV-P8-007](P8-scale-specialty/MDV-P8-007.md) | Platform: public FHIR APIs, native mobile apps (Expo), saved migration templates per vendor, specialty templates | P8 | wk 60–64 | 45% |
-
-## Week 62 · 27 Dec 2027 – 31 Dec 2027 · load 3.5 dev-days
+## Week 61 · 20 Dec 2027 – 24 Dec 2027 · load 2.9 dev-days
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
 | [MDV-P8-005](P8-scale-specialty/MDV-P8-005.md) | Remaining UAE health exchanges (the two not used at launch) (N-07) | P8 | wk 56–62 | 45% |
 | [MDV-P8-006](P8-scale-specialty/MDV-P8-006.md) | Front-desk extras: kiosk/QR self check-in, clinic letter inbox, offline read and draft (N-16) | P8 | wk 58–62 | 45% |
-| [MDV-P8-007](P8-scale-specialty/MDV-P8-007.md) | Platform: public FHIR APIs, native mobile apps (Expo), saved migration templates per vendor, specialty templates | P8 | wk 60–64 | 45% |
+| [MDV-P8-007](P8-scale-specialty/MDV-P8-007.md) | Platform: public FHIR APIs, saved migration templates per vendor, specialty templates | P8 | wk 60–64 | 45% |
 
-## Week 63 · 03 Jan 2028 – 07 Jan 2028 · load 1.6 dev-days
-
-| Key | Title | Phase | Window | Confidence |
-|---|---|---|---|---|
-| [MDV-P8-007](P8-scale-specialty/MDV-P8-007.md) | Platform: public FHIR APIs, native mobile apps (Expo), saved migration templates per vendor, specialty templates | P8 | wk 60–64 | 45% |
-
-## Week 64 · 10 Jan 2028 – 14 Jan 2028 · load 1.6 dev-days
+## Week 62 · 27 Dec 2027 – 31 Dec 2027 · load 2.9 dev-days
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
-| [MDV-P8-007](P8-scale-specialty/MDV-P8-007.md) | Platform: public FHIR APIs, native mobile apps (Expo), saved migration templates per vendor, specialty templates | P8 | wk 60–64 | 45% |
+| [MDV-P8-005](P8-scale-specialty/MDV-P8-005.md) | Remaining UAE health exchanges (the two not used at launch) (N-07) | P8 | wk 56–62 | 45% |
+| [MDV-P8-006](P8-scale-specialty/MDV-P8-006.md) | Front-desk extras: kiosk/QR self check-in, clinic letter inbox, offline read and draft (N-16) | P8 | wk 58–62 | 45% |
+| [MDV-P8-007](P8-scale-specialty/MDV-P8-007.md) | Platform: public FHIR APIs, saved migration templates per vendor, specialty templates | P8 | wk 60–64 | 45% |
+
+## Week 63 · 03 Jan 2028 – 07 Jan 2028 · load 1.0 dev-days
+
+| Key | Title | Phase | Window | Confidence |
+|---|---|---|---|---|
+| [MDV-P8-007](P8-scale-specialty/MDV-P8-007.md) | Platform: public FHIR APIs, saved migration templates per vendor, specialty templates | P8 | wk 60–64 | 45% |
+
+## Week 64 · 10 Jan 2028 – 14 Jan 2028 · load 1.0 dev-days
+
+| Key | Title | Phase | Window | Confidence |
+|---|---|---|---|---|
+| [MDV-P8-007](P8-scale-specialty/MDV-P8-007.md) | Platform: public FHIR APIs, saved migration templates per vendor, specialty templates | P8 | wk 60–64 | 45% |

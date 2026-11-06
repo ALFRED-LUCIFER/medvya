@@ -4,7 +4,8 @@ import { Button, Input, Select, SelectContent, SelectItem, SelectTrigger, Select
 import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { describedBy, fieldError } from '../../settings/components/fieldStyles';
-import { Field, Section } from '../../settings/components/parts';
+import { Field } from '../../settings/components/Field';
+import { Section } from '../../settings/components/Section';
 import type { Capability } from '../../session/domain/session';
 import { addableRows, assignableRoles, type CustomRole, type RoleCatalogue, type RoleForm } from '../domain/staff';
 

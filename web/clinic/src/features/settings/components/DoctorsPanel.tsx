@@ -7,7 +7,8 @@ import type { Authority, Doctor, DoctorForm, DoctorStep, FieldProblem, LicenceFo
 import type { Location } from '../domain/settings';
 import DoctorWizard, { LicenceFields } from './DoctorWizard';
 import { describedBy, fieldError } from './fieldStyles';
-import { Field, Section } from './parts';
+import { Field } from './Field';
+import { Section } from './Section';
 
 type Wizard = {
   adding: boolean; step: DoctorStep; stepIndex: number; lastStep: boolean; form: UseFormReturn<DoctorForm>; fieldErrors: Record<string, FieldProblem | undefined>;

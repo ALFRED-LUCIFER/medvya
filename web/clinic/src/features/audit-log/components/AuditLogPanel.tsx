@@ -1,7 +1,8 @@
 import { Download, X } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
 import { Button, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
-import { Field, Section } from '../../settings/components/parts';
+import { Field } from '../../settings/components/Field';
+import { Section } from '../../settings/components/Section';
 import { fieldError } from '../../settings/components/fieldStyles';
 import { PatientPicker, type PatientSearchView } from '../../schedule/components/BookingPanel';
 import { all, type AuditFilters, type AuditRow } from '../domain/auditLog';

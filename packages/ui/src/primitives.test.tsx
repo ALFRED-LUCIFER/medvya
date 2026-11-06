@@ -15,8 +15,8 @@ import { Select, SelectTrigger, SelectValue } from './components/ui/select';
 import { Textarea } from './components/ui/textarea';
 
 const ui = (n: React.ReactNode) => render(<>{n}</>);
-// Design tokens are defined once, in styles.css; read them so the test checks what ships.
-const tokens = Object.fromEntries([...readFileSync(join(process.cwd(), 'src/styles.css'), 'utf8').matchAll(/--color-([\w-]+):\s*(#[0-9a-fA-F]{6})/g)].map(m => [m[1], m[2]]));
+// Design tokens are defined once, in packages/tokens; read them so the test checks what ships.
+const tokens = Object.fromEntries([...readFileSync(join(process.cwd(), '../tokens/src/tokens.css'), 'utf8').matchAll(/--color-([\w-]+):\s*(#[0-9a-fA-F]{6})/g)].map(m => [m[1], m[2]]));
 // Visible text without the invisible Unicode isolates used around embedded IDs.
 const visible = (e: HTMLElement) => (e.textContent ?? '').replace(/[\u2068\u2069]/g, '').replaceAll('\u00A0', ' ');
 

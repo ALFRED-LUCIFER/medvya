@@ -1,0 +1,23 @@
+{
+  "name": "@medvya/tokens",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "main": "src/theme.ts",
+  "scripts": {
+    "generate": "node generate.mjs",
+    "build": "tsc --noEmit",
+    "lint": "oxlint -c ../.oxlintrc.json src",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "oxlint": "^1.90.0",
+    "typescript": "~7.0.2",
+    "vitest": "^5.0.5"
+  },
+  "exports": {
+    ".": "./src/theme.ts",
+    "./tokens.css": "./src/tokens.css"
+  }
+}

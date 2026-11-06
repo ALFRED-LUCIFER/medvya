@@ -2,7 +2,9 @@ import { useI18n } from '@medvya/i18n';
 import { Button, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Switch } from '@medvya/ui';
 import { slotLengths, weekdays, type CalendarTemplate, type HoursRow, type LocationChoice, type SessionRow, type Weekday } from '../domain/settings';
 import { fieldError } from './fieldStyles';
-import { Field, LocationSelect, Section } from './parts';
+import { Field } from './Field';
+import { LocationSelect } from './LocationSelect';
+import { Section } from './Section';
 
 type OpeningHours = {
   rows: HoursRow[];

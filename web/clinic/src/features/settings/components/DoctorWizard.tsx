@@ -6,7 +6,8 @@ import { Button, Input, Select, SelectContent, SelectItem, SelectTrigger, Select
 import { doctorSteps, type Authority, type FieldProblem, type DoctorForm, type DoctorStep, type LicenceForm } from '../domain/doctors';
 import type { Location } from '../domain/settings';
 import { describedBy, fieldError } from './fieldStyles';
-import { Field, Section } from './parts';
+import { Field } from './Field';
+import { Section } from './Section';
 
 type Errors = Record<string, FieldProblem | undefined>;
 

@@ -1,7 +1,9 @@
 import { useI18n } from '@medvya/i18n';
 import { cn } from '@medvya/ui';
 import type { WeekDay } from '../domain/views';
-import { AppointmentChip, OpenableChip, type OpenHandler } from './parts';
+import { AppointmentChip } from './AppointmentChip';
+import { OpenableChip } from './OpenableChip';
+import { type OpenHandler } from './dragDrop';
 
 type Props = { name: string; calendarId: string; days: WeekDay[]; timeZone: string; updating: boolean; onOpenDay: (date: string) => void; onOpen?: OpenHandler };
 

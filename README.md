@@ -12,8 +12,10 @@ Prerequisites: .NET SDK 10 (pinned in `global.json`), Node.js 22+, pnpm 11, and 
 pnpm services:up                              # PostgreSQL 16 :5432, Azurite blob :10000, email sink UI http://localhost:5025
 dotnet build Medvya.sln                       # API + modules, warnings are errors
 dotnet run --project src/Host.Api             # API, health check at /health
-pnpm install && pnpm build                    # web workspaces (web/*, packages/*)
+pnpm install && pnpm build                    # web, mobile and packages workspaces (type-check)
 pnpm dev                                      # clinic app on http://localhost:5173
+pnpm --filter @medvya/mobile-clinician ios    # staff app on the iOS simulator (needs Xcode; `android` needs Android Studio)
+pnpm dev:clinician                            # or dev:patient: Metro only; open in Expo Go or an installed build
 dotnet test Medvya.sln                        # includes tenant-isolation tests on a throwaway PostgreSQL (Testcontainers)
 ```
 
@@ -59,8 +61,9 @@ medvya/
 │   ├── platform-admin/      # planned (P5-040): Medvya team console
 │   └── portal/              # planned (P4): patient PWA
 ├── mobile/
-│   ├── clinician/           # planned (P5-034/035): Expo staff app
-│   └── patient/             # planned (P5-036/037): Expo patient app
+│   ├── .oxlintrc.json       # layer rules (ADR-009), no literals, no web UI
+│   ├── clinician/           # exists (P5-032 foundation, Expo SDK 58): staff app; screens in P5-034/035
+│   └── patient/             # exists (P5-032 foundation, Expo SDK 58): patient app; screens in P5-036/037
 ├── packages/
 │   ├── ui/ · i18n/          # exist (ui is web only)
 │   └── tokens · api-client · domain · auth-client · ui-native · config · test-fixtures   # planned

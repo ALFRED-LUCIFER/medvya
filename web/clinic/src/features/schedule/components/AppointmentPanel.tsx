@@ -1,10 +1,12 @@
 import type { UseFormReturn } from 'react-hook-form';
+import { Link } from 'react-router';
 import { CircleAlert, CircleCheck, X } from 'lucide-react';
 import { useI18n, type MessageKey } from '@medvya/i18n';
-import { Button, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea } from '@medvya/ui';
+import { Button, buttonVariants, cn, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea } from '@medvya/ui';
 import { codeKey, needsAttention, type PatientMessage } from '../domain/messages';
 import { actions, cancelReasons, localDate, type Action, type CancelForm, type ChangeError, type Rule } from '../domain/changes';
 import type { Appointment } from '../domain/schedule';
+import { termsPath } from '../../settings/domain/settings';
 import { StateLabel } from './StateLabel';
 
 type Props = {
@@ -77,9 +79,10 @@ export default function AppointmentPanel(p: Props) {
       )}
 
       {p.error && (
-        <p role="alert" className="flex items-start gap-2 text-sm font-bold text-danger-700">
-          <CircleAlert aria-hidden className="mt-0.5 size-4 shrink-0" />{t(`appointment.error.${p.error}`)}
-        </p>
+        <div role="alert" className="flex flex-col items-start gap-1 text-sm font-bold text-danger-700">
+          <p className="flex items-start gap-2"><CircleAlert aria-hidden className="mt-0.5 size-4 shrink-0" />{t(`appointment.error.${p.error}`)}</p>
+          {p.error === 'terms_not_accepted' && <Link to={termsPath} className={cn(buttonVariants({ variant: 'link' }), 'px-0')}>{t('terms.open')}</Link>}
+        </div>
       )}
 
       {!p.done && p.mode === 'view' && (

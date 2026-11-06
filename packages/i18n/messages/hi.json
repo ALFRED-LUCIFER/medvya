@@ -1,6 +1,9 @@
 {
   "_review": "Machine-drafted. Needs native-speaker and clinical review before real patients (MDV-P0-021). The privacy notice (site.notice.*, site.form.consent) also needs legal review (MDV-P1-044).",
   "app.tagline": "क्लिनिक ऐप · आधार संस्करण",
+  "mobile.clinician.name": "मेडव्या क्लिनिक",
+  "mobile.patient.name": "मरीज़ों के लिए मेडव्या",
+  "mobile.home.ready": "ऐप तैयार है। सुविधाएँ अगले रिलीज़ में आएँगी।",
   "app.language": "भाषा",
   "ai.badge": "AI ड्राफ्ट · समीक्षा नहीं हुई",
   "note.signBlocked": "नोट पर हस्ताक्षर करें ({n} अनसुलझे)",
@@ -715,6 +718,7 @@
   "appointment.error.in_past": "वह स्लॉट शुरू हो चुका है। बाद का स्लॉट चुनें।",
   "appointment.error.busy": "यह कैलेंडर अभी दूसरे बदलावों में व्यस्त है। कुछ भी सहेजा नहीं गया; फिर से कोशिश करें।",
   "appointment.error.failed": "यह नहीं हो सका। कुछ भी नहीं बदला; फिर से कोशिश करें।",
+  "appointment.error.terms_not_accepted": "बदलाव रुका हुआ है: प्रैक्टिस ने अभी सेवा की शर्तें स्वीकार नहीं की हैं। प्रैक्टिस के मालिक इन्हें सेटिंग्स → शर्तें में स्वीकार करते हैं।",
   "schedule.slot.moveTo": "{patient} को {name} के साथ {time} पर ले जाएँ",
   "schedule.slot.moveShort": "ले जाएँ",
   "booking.rebook.title": "{name} के लिए फिर से बुक करें",

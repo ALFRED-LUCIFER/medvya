@@ -3,7 +3,6 @@ using System.Security.Cryptography;
 using System.Text;
 using Azure.Identity;
 using Azure.Security.KeyVault.Keys.Cryptography;
-using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
@@ -14,8 +13,9 @@ namespace Medvya.BuildingBlocks.Security;
 /// <summary>Application-level encryption of national and insurance IDs (the NationalId data class).</summary>
 public interface INationalIdProtector
 {
-    byte[] Protect(Guid tenantId, string plaintext);
-    string Unprotect(Guid tenantId, byte[] protectedValue);
+    /// <summary><paramref name="binding"/> names the one place the value may live (column and row id): a copy pasted into another row or column does not decrypt.</summary>
+    byte[] Protect(Guid tenantId, string plaintext, string binding);
+    string Unprotect(Guid tenantId, byte[] protectedValue, string binding);
 }
 
 public interface IBlindIndex
@@ -24,27 +24,29 @@ public interface IBlindIndex
     byte[] Compute(Guid tenantId, string normalisedValue);
 }
 
-/// <summary>Value layout: version(1) | nonce(12) | ciphertext | tag(16), AES-256-GCM, associated data = tenant id + purpose.</summary>
+/// <summary>Value layout: version(1) | nonce(12) | ciphertext | tag(16), AES-256-GCM, associated data = tenant id + purpose + binding.</summary>
 public sealed class NationalIdProtector(TenantKeyRing keys) : INationalIdProtector
 {
-    private const byte Version = 1;
+    // Version 2 binds each value to its column and row (MDV-P0-041). Version 1 (tenant only) is refused: it only ever held synthetic data.
+    private const byte Version = 2;
     private const int NonceSize = 12, TagSize = 16;
-    private static readonly byte[] Purpose = Encoding.ASCII.GetBytes("national-id:v1");
+    private static readonly byte[] Purpose = Encoding.ASCII.GetBytes("national-id:v2|");
 
     // shortcut: one data key per tenant (re-wrapped, never re-keyed); add a key generation after the version byte when data must be re-keyed.
-    public byte[] Protect(Guid tenantId, string plaintext)
+    public byte[] Protect(Guid tenantId, string plaintext, string binding)
     {
         ArgumentException.ThrowIfNullOrEmpty(plaintext);
+        ArgumentException.ThrowIfNullOrEmpty(binding);
         var pt = Encoding.UTF8.GetBytes(plaintext);
         var output = new byte[1 + NonceSize + pt.Length + TagSize];
         output[0] = Version;
         RandomNumberGenerator.Fill(output.AsSpan(1, NonceSize));
         using var aes = new AesGcm(keys.Get(tenantId, TenantKeyRing.DataPurpose), TagSize);
-        aes.Encrypt(output.AsSpan(1, NonceSize), pt, output.AsSpan(1 + NonceSize, pt.Length), output.AsSpan(1 + NonceSize + pt.Length), AssociatedData(tenantId));
+        aes.Encrypt(output.AsSpan(1, NonceSize), pt, output.AsSpan(1 + NonceSize, pt.Length), output.AsSpan(1 + NonceSize + pt.Length), AssociatedData(tenantId, binding));
         return output;
     }
 
-    public string Unprotect(Guid tenantId, byte[] protectedValue)
+    public string Unprotect(Guid tenantId, byte[] protectedValue, string binding)
     {
         if (protectedValue is not { Length: > 1 + NonceSize + TagSize } || protectedValue[0] != Version)
             throw new KeyProtectionException(KeyProtectionException.UnreadableValue);
@@ -52,13 +54,14 @@ public sealed class NationalIdProtector(TenantKeyRing keys) : INationalIdProtect
         try
         {
             using var aes = new AesGcm(keys.Get(tenantId, TenantKeyRing.DataPurpose), TagSize);
-            aes.Decrypt(protectedValue.AsSpan(1, NonceSize), protectedValue.AsSpan(1 + NonceSize, pt.Length), protectedValue.AsSpan(1 + NonceSize + pt.Length), pt, AssociatedData(tenantId));
+            aes.Decrypt(protectedValue.AsSpan(1, NonceSize), protectedValue.AsSpan(1 + NonceSize, pt.Length), protectedValue.AsSpan(1 + NonceSize + pt.Length), pt, AssociatedData(tenantId, binding));
         }
         catch (CryptographicException) { throw new KeyProtectionException(KeyProtectionException.UnreadableValue); }
         return Encoding.UTF8.GetString(pt);
     }
 
-    private static byte[] AssociatedData(Guid tenantId) => [.. tenantId.ToByteArray(), .. Purpose];
+    // The tenant id is fixed-length and the purpose ends in a separator, so the concatenation is unambiguous.
+    private static byte[] AssociatedData(Guid tenantId, string binding) => [.. tenantId.ToByteArray(), .. Purpose, .. Encoding.UTF8.GetBytes(binding)];
 }
 
 /// <summary>HMAC-SHA-256 under a per-tenant secret kept separate from the data key, so equal IDs in two tenants never match.</summary>
@@ -104,16 +107,4 @@ public static class NationalIdProtectionExtensions
         services.AddSingleton<IBlindIndex, BlindIndex>();
         return services;
     }
-}
-
-public static class NationalIdValueConverter
-{
-    /// <summary>
-    /// EF converter for a NationalId-class string column, for a context whose tenant never changes. The Patients module does not use it:
-    /// EF caches one model per context type, so a converter cannot follow a per-request tenant; it encrypts with each row's own TenantId instead.
-    /// </summary>
-    public static ValueConverter<string, byte[]> Create(INationalIdProtector protector, Func<Guid?> tenantId) =>
-        new(v => protector.Protect(RequireTenant(tenantId), v), b => protector.Unprotect(RequireTenant(tenantId), b));
-
-    public static Guid RequireTenant(Func<Guid?> tenantId) => tenantId() ?? throw new KeyProtectionException(KeyProtectionException.NoTenant);
 }

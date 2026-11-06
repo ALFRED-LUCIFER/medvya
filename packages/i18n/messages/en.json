@@ -1511,5 +1511,9 @@
   "adjustment.delete.confirm": "Delete this? Visits already moved to needs rebooking are not booked again.",
   "adjustment.delete.yes": "Yes, delete",
   "adjustment.delete.no": "Keep it",
-  "adjustment.error.has_bookings": "Visits are booked in this extra session. Move them first, then delete it."
+  "adjustment.error.has_bookings": "Visits are booked in this extra session. Move them first, then delete it.",
+  "terms.open": "Open Settings → Terms",
+  "terms.notice": "Booking and messages are paused until the practice owner accepts the Terms of Service.",
+  "booking.error.terms_not_accepted": "Booking is paused: the practice has not accepted the Terms of Service yet. The practice owner accepts them in Settings → Terms.",
+  "walkIn.error.terms_not_accepted": "Check-in is paused: the practice has not accepted the Terms of Service yet. The practice owner accepts them in Settings → Terms."
 }

@@ -6,6 +6,8 @@ import UiGallery from '../dev/UiGallery';
 import OfflineBanner from '../features/connectivity/components/OfflineBanner';
 import { useConnectivityController } from '../features/connectivity/hooks/useConnectivityController';
 import NotFoundPage from '../features/errors/components/NotFoundPage';
+import TermsNotice from '../features/settings/components/TermsNotice';
+import { useTermsNotice } from '../features/settings/hooks/useTermsNotice';
 import LicenceNotice from '../features/onboarding/components/LicenceNotice';
 import HomePage from '../features/home/components/HomePage';
 import LanguageSwitcher from '../features/locale/components/LanguageSwitcher';
@@ -47,6 +49,7 @@ export default function App({ locale, onLocaleChange }: Props) {
   const location = useLocation();
   const { online, retry } = useConnectivityController();
   const shell = useShellController();
+  const termsPending = useTermsNotice(shell.items.some(i => i.id === 'settings'));
   const switcher = <LanguageSwitcher value={locale} onChange={onLocaleChange} />;
   const account = { displayName: shell.displayName ?? '', languageSwitcher: switcher, signingOut: shell.signingOut, onSignOut: shell.signOut,
     canSwitchFacility: (shell.session?.memberships.length ?? 0) > 1 };
@@ -93,6 +96,7 @@ export default function App({ locale, onLocaleChange }: Props) {
           <AppShell {...account} role={active.role} facilityName={active.facilityName} groups={shell.groups} tabs={shell.tabs} searchPath={searchPath}
             languageSwitcher={<LanguageSwitcher inline value={locale} onChange={onLocaleChange} />}>
             {active.licencePending && <LicenceNotice />}
+            {termsPending && <TermsNotice />}
             <Suspense fallback={<ShellMessage busy title={t('shell.loading')} />}><Outlet /></Suspense>
           </AppShell>}>
           <Route index element={first ? <Navigate to={first.path} replace /> : <ShellMessage title={t('shell.noScreens.title')} body={t('shell.noScreens.body')} />} />

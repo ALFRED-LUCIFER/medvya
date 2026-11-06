@@ -3,7 +3,7 @@ import { groupByColumn, needsRebooking, minutesSince, moveError, nextState, serv
 
 describe('walk-in (MDV-P1-025)', () => {
   it('tells "no free slot" (choose a doctor to queue with) and "busy" from other failures', () => {
-    expect([walkInError('no_free_slot'), walkInError('busy'), walkInError('slot_unavailable'), walkInError(undefined)]).toEqual(['no_free_slot', 'busy', 'failed', 'failed']);
+    expect([walkInError('no_free_slot'), walkInError('busy'), walkInError('terms_not_accepted'), walkInError('slot_unavailable'), walkInError(undefined)]).toEqual(['no_free_slot', 'busy', 'terms_not_accepted', 'failed', 'failed']);
   });
 });
 

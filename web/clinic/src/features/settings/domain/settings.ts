@@ -134,4 +134,6 @@ export const settingsTabs = ['profile', 'locations', 'hours', 'holidays', 'staff
 export type SettingsTab = (typeof settingsTabs)[number];
 
 /** The practice's acceptance of the Terms of Service and DPA (MDV-P1-019). Until accepted, booking and sending are refused by the server. */
+/** Where the owner accepts the terms; booking errors and the owner's banner link here. */
+export const termsPath = '/settings?tab=terms';
 export type TermsStatus = { version: string; accepted: boolean; acceptedAt: string | null; required: boolean };

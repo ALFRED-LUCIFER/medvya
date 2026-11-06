@@ -123,7 +123,7 @@ public sealed class DoctorTests(SqlServerFixture sql) : IClassFixture<SqlServerF
         // Hospital doctor, never the solo-doctor role: that one carries practice configuration rights.
         Assert.Equal((Role.HospitalDoctor, MembershipStatus.Invited, h.Facility), (membership.Role, membership.Status, membership.FacilityId));
         var licence = await db.DoctorLicences.SingleAsync(l => l.MembershipId == id);
-        Assert.Equal((LicenceStatus.Pending, "TNMC", "Permanent", new DateOnly(2031, 12, 31)), (LicenceRules.StatusOf(licence), licence.Authority, licence.Category, licence.ExpiresOn));
+        Assert.Equal((LicenceStatus.Pending, "TNMC", "Permanent", new DateOnly(2031, 12, 31)), (LicenceRules.StatusOf(licence, new DateOnly(2026, 10, 19)), licence.Authority, licence.Category, licence.ExpiresOn));
         var profile = await db.DoctorProfiles.SingleAsync(p => p.MembershipId == id);
         Assert.Equal((50000L, 30000L, null), (profile.NewVisitFeeMinor, profile.FollowUpFeeMinor, profile.SignatureKey));
         Assert.Single(await db.Invitations.Where(i => i.MembershipId == id).ToListAsync());
@@ -300,6 +300,43 @@ public sealed class DoctorTests(SqlServerFixture sql) : IClassFixture<SqlServerF
         Assert.Equal(HttpStatusCode.NoContent, (await Decide(operations, h.Tenant, id, true)).StatusCode);
         Assert.Equal(Access.Sign, await Own()); // verified
         Assert.Equal(Access.None, await Notes(h.SecondDoctor)); // the doctor without a licence stays gated
+    }
+
+    /// <summary>MDV-P1-010. Mutation check: drop the expiry clause from StaffAccess.LicencePendingAsync and the expired step fails.</summary>
+    [Fact]
+    public async Task AnExpiredLicenceGatesTheDoctorAgainUntilRenewedAndVerifiedAgain()
+    {
+        var id = await AddDoctor();
+        await using (var db = sql.Context(h.Tenant))
+            await db.Memberships.Where(m => m.Id == id).ExecuteUpdateAsync(s => s.SetProperty(m => m.UserId, h.Doctor).SetProperty(m => m.FacilityId, h.OtherFacility).SetProperty(m => m.Status, MembershipStatus.Active));
+        async Task<Access> Own()
+        {
+            await using var db = sql.Context(h.Tenant);
+            return await new StaffAccess(db, new FacilityDirectory(db), new Who(h.Doctor), new At(h.OtherFacility)).AccessAsync(Capability.ClinicalNotes);
+        }
+        using var operations = Client(null, ops);
+        Assert.Equal(HttpStatusCode.NoContent, (await Decide(operations, h.Tenant, id, true)).StatusCode);
+        Assert.Equal(Access.Sign, await Own());
+
+        // The expiry date is today: still valid. The day after: gated.
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        await using (var db = sql.Context(h.Tenant))
+            await db.DoctorLicences.ExecuteUpdateAsync(s => s.SetProperty(l => l.ExpiresOn, today));
+        Assert.Equal(Access.Sign, await Own());
+        await using (var db = sql.Context(h.Tenant))
+            await db.DoctorLicences.ExecuteUpdateAsync(s => s.SetProperty(l => l.ExpiresOn, today.AddDays(-1)));
+        Assert.Equal(Access.None, await Own());
+
+        // Renewing sends it back to verification (an expired licence may be resubmitted; a valid verified one may not).
+        using var admin = Client(Role.PracticeAdmin);
+        var listed = (await admin.GetFromJsonAsync<JsonElement>("/v1/settings/doctors")).GetProperty("doctors").EnumerateArray().Single();
+        Assert.Equal("Expired", listed.GetProperty("licence").GetString());
+        var renewed = await admin.PutAsJsonAsync($"/v1/settings/doctors/{id}/licence", new { authority = "TNMC", number = "84213", category = "Permanent", expiresOn = today.AddYears(5).ToString("O", System.Globalization.CultureInfo.InvariantCulture) });
+        Assert.Equal(HttpStatusCode.OK, renewed.StatusCode);
+        Assert.Equal(Access.None, await Own()); // pending again
+        Assert.Equal(HttpStatusCode.NoContent, (await Decide(operations, h.Tenant, id, true)).StatusCode);
+        Assert.Equal(Access.Sign, await Own());
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PutAsJsonAsync($"/v1/settings/doctors/{id}/licence", new { authority = "TNMC", number = "99999", category = "Permanent", expiresOn = today.AddYears(6).ToString("O", System.Globalization.CultureInfo.InvariantCulture) })).StatusCode); // verified and valid: not editable
     }
 
     // ---- Signature image ----

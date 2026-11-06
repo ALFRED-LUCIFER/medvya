@@ -80,14 +80,17 @@ public sealed class Doctors(TenancyDbContext db, ICurrentTenant tenant, ICurrent
         if (licence is null) return null;
         var rules = await RulesAsync(cancellationToken);
         var errors = new List<ValidationError>();
-        if (licence.VerifiedAt is not null) errors.Add(new("licence", "verified")); // changing a verified licence would keep the old decision
+        var today = DateOnly.FromDateTime(clock.GetUtcNow().UtcDateTime);
+        // Changing a verified licence would keep the old decision; an expired one is renewed here and verified again.
+        if (licence.VerifiedAt is not null && !LicenceRules.IsExpired(licence, today)) errors.Add(new("licence", "verified"));
         Licence(errors, rules, command.Authority, command.Number, command.Category, command.ExpiresOn, command.CertificateName);
         SettingsValidationException.ThrowIfAny(errors);
 
-        var before = new { licence = LicenceRules.StatusOf(licence).ToString(), authority = licence.Authority };
+        var before = new { licence = LicenceRules.StatusOf(licence, today).ToString(), authority = licence.Authority };
         (licence.Authority, licence.Number, licence.Category, licence.ExpiresOn, licence.CertificateName) =
             (command.Authority!, command.Number!.Trim(), Clean(command.Category), command.ExpiresOn, Clean(command.CertificateName));
         (licence.SubmittedAt, licence.RejectedAt, licence.RejectionReason) = (clock.GetUtcNow(), null, null);
+        (licence.VerifiedAt, licence.VerifiedBy) = (null, null); // a renewed licence is checked again by Medvya operations
         await SettingsAudit.SaveAsync(db, audit, TenantId, user.UserId, licence.SubmittedAt, "settings.doctor.licence.update", "doctor", doctorId,
             before, new { licence = "Pending", authority = licence.Authority }, cancellationToken);
         return (await QueryAsync(doctorId, rules.Currency, cancellationToken))[0];
@@ -141,7 +144,7 @@ public sealed class Doctors(TenancyDbContext db, ICurrentTenant tenant, ICurrent
             select new { m.Id, p, m.FacilityId, Facility = f.Name, m.Status, Licence = l }).ToListAsync(ct);
         return [.. rows.Select(r => new DoctorView(
             r.Id, r.p.FullName, r.p.Specialty, r.p.Qualifications, r.p.Languages, r.FacilityId, r.Facility, r.Status,
-            r.Licence.Authority, r.Licence.Number, r.Licence.Category, r.Licence.ExpiresOn, LicenceRules.StatusOf(r.Licence), r.Licence.RejectionReason,
+            r.Licence.Authority, r.Licence.Number, r.Licence.Category, r.Licence.ExpiresOn, LicenceRules.StatusOf(r.Licence, DateOnly.FromDateTime(clock.GetUtcNow().UtcDateTime)), r.Licence.RejectionReason,
             r.p.SignatureKey is not null, r.p.NewVisitFeeMinor, r.p.FollowUpFeeMinor, currency))];
     }
 

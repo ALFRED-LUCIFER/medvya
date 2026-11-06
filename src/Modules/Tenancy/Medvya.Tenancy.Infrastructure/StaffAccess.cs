@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Medvya.Tenancy.Infrastructure;
 
 /// <summary>The active membership's role at the session's facility, through the facility directory; tenant from filters and RLS.</summary>
-public sealed class StaffAccess(TenancyDbContext db, IFacilityDirectory facilities, ICurrentUser user, ICurrentFacility facility) : IStaffAccess
+public sealed class StaffAccess(TenancyDbContext db, IFacilityDirectory facilities, ICurrentUser user, ICurrentFacility facility, TimeProvider? clock = null) : IStaffAccess
 {
     public Task<Access> AccessAsync(Capability capability, CancellationToken cancellationToken = default) =>
         facility.FacilityId is { } facilityId ? AccessAsync(capability, facilityId, cancellationToken) : Task.FromResult(Access.None);
@@ -35,10 +35,12 @@ public sealed class StaffAccess(TenancyDbContext db, IFacilityDirectory faciliti
 
     Task<bool> LicencePendingAsync(Guid userId, Guid facilityId, CancellationToken cancellationToken) =>
         // A doctor with no verified licence is gated, including one with no licence row at all (invited by another route), so the gate
-        // cannot be skipped by not submitting a licence.
+        // cannot be skipped by not submitting a licence. A verified licence past its expiry date no longer counts (MDV-P1-010).
         db.Memberships.AnyAsync(m => m.UserId == userId && m.FacilityId == facilityId && m.Status == MembershipStatus.Active
             && (m.Role == Role.SoloDoctor || m.Role == Role.HospitalDoctor)
-            && !db.DoctorLicences.Any(l => l.MembershipId == m.Id && l.VerifiedAt != null), cancellationToken);
+            && !db.DoctorLicences.Any(l => l.MembershipId == m.Id && l.VerifiedAt != null && (l.ExpiresOn == null || l.ExpiresOn >= Today)), cancellationToken);
+
+    DateOnly Today => DateOnly.FromDateTime((clock ?? TimeProvider.System).GetUtcNow().UtcDateTime);
 
     public Task<string?> TenantCountryAsync(CancellationToken cancellationToken = default) =>
         db.Tenants.Select(t => t.CountryCode).SingleOrDefaultAsync(cancellationToken);

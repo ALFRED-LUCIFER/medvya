@@ -177,6 +177,19 @@ public sealed class PracticeSettings(
     public async Task<Uri?> LogoLinkAsync(TimeSpan lifetime, CancellationToken cancellationToken = default) =>
         await db.Profiles.AsNoTracking().Select(p => p.LogoKey).SingleOrDefaultAsync(cancellationToken) is { } key ? logos.LinkFor(key, lifetime) : null;
 
+    public Task<ClinicalAccessPolicy> GetClinicalAccessAsync(CancellationToken cancellationToken = default) =>
+        db.Tenants.AsNoTracking().Select(t => t.ClinicalAccess).SingleAsync(cancellationToken);
+
+    public async Task<ClinicalAccessPolicy> SaveClinicalAccessAsync(ClinicalAccessPolicy policy, CancellationToken cancellationToken = default)
+    {
+        if (!Enum.IsDefined(policy)) throw new SettingsValidationException([new("policy", "invalid")]);
+        var clinic = await db.Tenants.SingleAsync(cancellationToken);
+        var before = clinic.ClinicalAccess;
+        clinic.ClinicalAccess = policy;
+        await SaveAuditedAsync("settings.clinical_access.update", "clinical_access", TenantId, new { policy = before.ToString() }, new { policy = policy.ToString() }, cancellationToken);
+        return policy;
+    }
+
     async Task<List<DayHours>> HoursAsync(Guid facilityId, CancellationToken cancellationToken) =>
         await db.OperatingHours.AsNoTracking().Where(h => h.FacilityId == facilityId).OrderBy(h => h.Weekday)
             .Select(h => new DayHours(h.Weekday, h.Opens, h.Closes)).ToListAsync(cancellationToken);

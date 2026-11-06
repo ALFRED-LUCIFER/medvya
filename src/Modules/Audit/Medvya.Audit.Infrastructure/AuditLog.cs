@@ -32,7 +32,14 @@ public sealed class AuditLog(AuditDbContext db, IRequestOrigin? origin = null) :
     }
 
     // The role and facility come from the session, never from the caller's event, so a use case cannot record a different authority.
-    async Task<AuditEvent> WithOriginAsync(AuditEvent e, CancellationToken cancellationToken) => origin is null ? e : new AuditEvent
+    // Every row goes through here, so an unknown purpose of use is refused before anything is written (MDV-P2-024).
+    async Task<AuditEvent> WithOriginAsync(AuditEvent e, CancellationToken cancellationToken)
+    {
+        AuditPurpose.Require(e.Purpose);
+        return origin is null ? e : await WithSessionAsync(e, origin, cancellationToken);
+    }
+
+    static async Task<AuditEvent> WithSessionAsync(AuditEvent e, IRequestOrigin origin, CancellationToken cancellationToken) => new()
     {
         Id = e.Id, TenantId = e.TenantId, ActorUserId = e.ActorUserId, Action = e.Action, ResourceType = e.ResourceType, ResourceId = e.ResourceId,
         PatientId = e.PatientId, Purpose = e.Purpose, Outcome = e.Outcome, OccurredAt = e.OccurredAt, Detail = e.Detail,

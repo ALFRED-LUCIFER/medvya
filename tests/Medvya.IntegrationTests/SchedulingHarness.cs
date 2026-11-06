@@ -104,7 +104,7 @@ internal sealed class SchedulingHarness(PostgresFixture sql)
 
     sealed class FixedUser(Guid id) : ICurrentUser { public Guid? UserId => id; }
 
-    IServiceProvider Scope(Guid user, Guid? inTenant, IInterceptor? interceptor = null)
+    IServiceProvider Scope(Guid user, Guid? inTenant, IInterceptor? interceptor = null, Action<IServiceCollection>? configure = null)
     {
         var services = new ServiceCollection()
             .AddSingleton<ICurrentTenant>(new PostgresFixture.FixedTenant(inTenant ?? Tenant))
@@ -117,10 +117,14 @@ internal sealed class SchedulingHarness(PostgresFixture sql)
             .AddPatientsModule(ConnectionString).AddSchedulingModule(ConnectionString);
         if (interceptor is not null) services.ConfigureDbContext<Medvya.Scheduling.Infrastructure.Persistence.SchedulingDbContext>(o => o.AddInterceptors(interceptor));
         services.Configure<SchedulingOptions>(o => (o.SlotHold, o.LockTimeout) = (Options.SlotHold, Options.LockTimeout));
+        configure?.Invoke(services);
         var provider = services.BuildServiceProvider();
         providers.Add(provider);
         return provider.CreateScope().ServiceProvider;
     }
+
+    /// <summary>Any service of the modules above as <paramref name="user"/> at Facility, with extra registrations if a test needs them.</summary>
+    public T Get<T>(Guid user, Action<IServiceCollection>? configure = null) where T : notnull => Scope(user, null, configure: configure).GetRequiredService<T>();
 
     public IScheduleService Schedule(Guid user, Guid? inTenant = null) => Scope(user, inTenant).GetRequiredService<IScheduleService>();
 

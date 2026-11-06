@@ -23,6 +23,62 @@ namespace Medvya.Tenancy.Infrastructure.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Medvya.Tenancy.Domain.AccessRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("DecidedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DecidedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("FacilityId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PatientId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<DateTimeOffset>("RequestedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("RequestedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PatientId", "RequestedBy");
+
+                    b.HasIndex("FacilityId", "Status", "RequestedAt");
+
+                    b.HasIndex("TenantId", "FacilityId", "PatientId", "RequestedBy")
+                        .IsUnique()
+                        .HasFilter("\"Status\" = 'Pending'");
+
+                    b.ToTable("AccessRequests", "tenancy", t =>
+                        {
+                            t.HasCheckConstraint("CK_AccessRequests_GrantExpires", "\"Status\" <> 'Granted' OR \"ExpiresAt\" IS NOT NULL");
+                        });
+                });
+
             modelBuilder.Entity("Medvya.Tenancy.Domain.AccessReview", b =>
                 {
                     b.Property<Guid>("Id")
@@ -577,6 +633,13 @@ namespace Medvya.Tenancy.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("ClinicalAccess")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasDefaultValue("AllFacilityClinicians");
+
                     b.Property<string>("CountryCode")
                         .IsRequired()
                         .HasMaxLength(2)
@@ -645,6 +708,15 @@ namespace Medvya.Tenancy.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("TermsAcceptances", "tenancy");
+                });
+
+            modelBuilder.Entity("Medvya.Tenancy.Domain.AccessRequest", b =>
+                {
+                    b.HasOne("Medvya.Tenancy.Domain.Facility", null)
+                        .WithMany()
+                        .HasForeignKey("FacilityId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Medvya.Tenancy.Domain.AccessReview", b =>

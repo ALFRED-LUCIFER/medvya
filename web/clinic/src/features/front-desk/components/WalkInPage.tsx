@@ -19,7 +19,8 @@ type Props = {
   canConfirm: boolean;
   saving: boolean;
   onConfirm: () => void;
-  result: WalkInVisit | null;
+  onConfirmRepeat: () => void;
+  result: (WalkInVisit & { token: string | null }) | null;
   error: WalkInError | 'forbidden' | null;
   boardPath: string;
   /** Quick registration, which comes back here with the new patient chosen. */
@@ -46,6 +47,8 @@ export default function WalkInPage(p: Props) {
         <div role="status" className="flex flex-col items-start gap-3 rounded-xl border bg-card p-6">
           <CircleCheck className="size-8 text-success-700" aria-hidden />
           <h1 className="text-2xl font-extrabold">{t('walkIn.done.title', { name: p.result.patientName })}</h1>
+          {/* The token the waiting room is called by: read out to the patient now, not looked up on the board later. */}
+          {p.result.token && <p className="text-3xl font-extrabold">{t('walkIn.done.token')} <bdi dir="ltr" className="font-mono">{p.result.token}</bdi></p>}
           <p>{p.result.unscheduled ? t('walkIn.done.queued', { doctor }) : t('walkIn.done.slot', { doctor, time: formatTime(new Date(p.result.start), p.timeZone ?? 'UTC') })}</p>
           <Link to={p.boardPath} className={buttonVariants()}>{t('walkIn.back')}</Link>
         </div>
@@ -101,6 +104,12 @@ export default function WalkInPage(p: Props) {
               <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />{t(`walkIn.error.${p.error}`)}
               {p.error === 'terms_not_accepted' && <Link to={termsPath} className={cn(buttonVariants({ variant: 'link' }), 'h-auto px-0')}>{t('terms.open')}</Link>}
             </p>
+          )}
+          {p.error === 'already_today' && (
+            <div className="mt-3 flex flex-wrap gap-3">
+              <Link to={p.boardPath} className={buttonVariants({ variant: 'outline' })}>{t('walkIn.back')}</Link>
+              <Button type="button" variant="outline" loading={p.saving} onClick={p.onConfirmRepeat}>{t('walkIn.repeat')}</Button>
+            </div>
           )}
         </div>
         <Button type="submit" className="self-start" disabled={!p.canConfirm} loading={p.saving}>{t('walkIn.confirm')}</Button>

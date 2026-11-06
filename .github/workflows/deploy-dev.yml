@@ -25,6 +25,13 @@ jobs:
     environment: dev # the federated credential trusts this environment only
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # the guard below needs main's history
+      # Only code that is on main ships: a tag on another commit, or a manual run from a branch, stops here before any Azure sign-in.
+      - name: Refuse commits that are not on main
+        run: |
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main || { echo "::error::$GITHUB_SHA is not on main; tag a commit on main"; exit 1; }
+          if [ "$GITHUB_REF_TYPE" = tag ]; then echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"; else echo "VERSION=0.0.0-main" >> "$GITHUB_ENV"; fi
       - uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
@@ -34,7 +41,8 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile && pnpm --filter clinic build
-      - run: dotnet publish src/Host.Api -c Release -o publish
+      # /health reports this version plus the commit (+sha), which the smoke test checks.
+      - run: dotnet publish src/Host.Api -c Release -o publish -p:Version="$VERSION"
       # The API serves the built web app under /app/ (same origin as the sign-in cookie).
       - run: mkdir -p publish/wwwroot/app && cp -R web/clinic/dist/. publish/wwwroot/app/
       # Self-contained, so the job's image needs no .NET.
@@ -68,3 +76,21 @@ jobs:
         with:
           app-name: ${{ vars.AZURE_WEBAPP_NAME }}
           package: publish
+      # The app restarts after the deploy; give it up to 5 minutes to answer with the new build before failing.
+      # shortcut: no signed-in check (MFA needs a person); this proves the build, the web app and the identity provider config, not a sign-in.
+      - name: Smoke test
+        env:
+          RG: ${{ vars.AZURE_RESOURCE_GROUP }}
+          APP: ${{ vars.AZURE_WEBAPP_NAME }}
+        run: |
+          base="https://$(az webapp show -g "$RG" -n "$APP" --query defaultHostName -o tsv)"
+          expected="$VERSION+$GITHUB_SHA"
+          for _ in $(seq 1 30); do
+            got=$(curl -fsS "$base/health" | jq -r .version) && [ "$got" = "$expected" ] && break
+            sleep 10
+          done
+          [ "$got" = "$expected" ] || { echo "::error::/health reports '$got', expected '$expected'"; exit 1; }
+          curl -fsS -o /dev/null "$base/app/" || { echo "::error::the web app is not served at /app/"; exit 1; }
+          # A challenge redirect proves the OpenID Connect settings load and the provider's metadata is reachable.
+          location=$(curl -sS -o /dev/null -w '%{redirect_url}' "$base/bff/login")
+          case "$location" in *"/oauth2/v2.0/authorize"*) echo "Smoke test passed: $got" ;; *) echo "::error::/bff/login did not redirect to the identity provider (got '$location')"; exit 1 ;; esac

@@ -85,6 +85,16 @@ public class ConsentTests(PostgresFixture sql) : IClassFixture<PostgresFixture>
         Assert.Equal("IN", ConsentRules.Jurisdiction("IN", "Kerala"));
     }
 
+    /// <summary>MDV-P1-052: quick registration records treatment only; the desk adds a reminder consent from the record later.</summary>
+    [Fact]
+    public async Task AQuickRegisteredPatientGetsAReminderConsentLater()
+    {
+        var saved = await Register(Set(Treatment));
+        Assert.False(await Consents().IsGrantedAsync(saved.PatientId, ConsentType.Reminders, ConsentChannel.Sms));
+        Assert.NotNull(await Consents().ChangeAsync(saved.PatientId, Set(Reminders(ConsentChannel.Sms, true))));
+        Assert.True(await Consents().IsGrantedAsync(saved.PatientId, ConsentType.Reminders, ConsentChannel.Sms));
+    }
+
     [Fact]
     public async Task ChangingADecisionAddsAReceiptKeepsHistoryAndTheReaderFollowsTheNewest()
     {

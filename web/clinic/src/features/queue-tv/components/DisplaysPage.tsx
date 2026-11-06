@@ -29,8 +29,8 @@ export default function DisplaysPage(p: Props) {
   const { t, formatDate } = useI18n();
   const { errors } = p.form.formState;
   return (
-    <div className="flex max-w-[720px] flex-col gap-4 rounded-xl border bg-card p-6">
-      <h1 className="flex items-center gap-2 text-xl font-extrabold"><MonitorPlay aria-hidden className="size-6" />{t('displays.title')}</h1>
+    <section aria-labelledby="displays-title" className="flex max-w-[720px] flex-col gap-4 rounded-xl border bg-card p-6">
+      <h2 id="displays-title" className="flex items-center gap-2 text-lg font-extrabold"><MonitorPlay aria-hidden className="size-6" />{t('displays.title')}</h2>
       <p className="text-muted-foreground">{t('displays.intro')}</p>
       {p.loading ? <p role="status">{t('displays.loading')}</p>
         : p.loadFailed ? <p role="alert" className={fieldError}>{t(p.forbidden ? 'displays.forbidden' : 'displays.loadFailed')}</p>
@@ -78,6 +78,6 @@ export default function DisplaysPage(p: Props) {
           )}
           {p.revokeFailed && <p role="alert" className={fieldError}>{t('displays.revokeFailed')}</p>}
         </>}
-    </div>
+    </section>
   );
 }

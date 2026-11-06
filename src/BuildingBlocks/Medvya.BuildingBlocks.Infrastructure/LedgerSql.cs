@@ -51,8 +51,9 @@ public static class LedgerSql
             SELECT sha256(convert_to(encode(prev, 'hex') || '|' || coalesce((SELECT jsonb_object_agg(c, row_json -> c) FROM unnest(cols) AS c), '{}'::jsonb)::text, 'UTF8'))
         $$;
 
-        -- enable_sort = off (MDV-P0-039): with statistics from a small table the planner reads the head by sorting every tenant row, so a
-        -- bulk insert turns quadratic; without a sort the only plan left is the (TenantId, ChainSeq) index, backwards, one row.
+        -- enable_sort = off pins the head lookup to a backward scan of UX_<table>_Chain (MDV-P0-039). Once autoanalyze has seen only a few
+        -- rows, a new tenant is estimated at one row, the planner may pick another TenantId index plus a sort, and every insert then
+        -- rescans the tenant's whole chain (quadratic: a 150,000-row load passed 300 s on CI). Only the chain index needs no sort.
         CREATE OR REPLACE FUNCTION ledger.chain() RETURNS trigger LANGUAGE plpgsql SET timezone = 'UTC' SET enable_sort = off AS $$
         DECLARE head_seq bigint; head_hash bytea; cols text[];
         BEGIN

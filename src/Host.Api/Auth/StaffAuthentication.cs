@@ -67,10 +67,12 @@ public static partial class StaffAuthentication
                     if (ctx.Properties.GetParameter<string>(LoginHintParameter) is { } hint) ctx.ProtocolMessage.LoginHint = hint;
                     return Task.CompletedTask;
                 };
-                // A refused or broken sign-in returns to the app with a generic error; the reason is only in the logs.
+                // A refused or broken sign-in returns to the app with a generic error; the reason is only in the logs. The one exception is a
+                // missing second factor (#912): the person can fix that themselves, and it says nothing about their Medvya account.
                 o.Events.OnRemoteFailure = ctx =>
                 {
-                    ctx.Response.Redirect($"{AppPath(ctx.HttpContext.RequestServices.GetRequiredService<IConfiguration>())}?signin=failed");
+                    var reason = ctx.Failure?.Message == MfaRequired ? "mfa" : "failed";
+                    ctx.Response.Redirect($"{AppPath(ctx.HttpContext.RequestServices.GetRequiredService<IConfiguration>())}?signin={reason}");
                     ctx.HandleResponse();
                     return Task.CompletedTask;
                 };
@@ -78,6 +80,8 @@ public static partial class StaffAuthentication
         }
         return builder;
     }
+
+    const string MfaRequired = "Multi-factor authentication is required.";
 
     // Accept only accounts that exist in Medvya and signed in with MFA; replace the provider's claims with ours.
     static async Task OnTokenValidated(TokenValidatedContext ctx)
@@ -88,7 +92,7 @@ public static partial class StaffAuthentication
         if (!principal.FindAll("amr").Any(c => c.Value == "mfa"))
         {
             SignInRefusedNoMfa(log);
-            ctx.Fail("Multi-factor authentication is required.");
+            ctx.Fail(MfaRequired);
             return;
         }
         var issuer = principal.FindFirst("iss")?.Value;
@@ -213,6 +217,6 @@ public static partial class StaffAuthentication
     /// <summary>Starting sign-in with the work email (MDV-P1-059). The email is a hint for the provider only: never stored or logged.</summary>
     public sealed record SignInStart(string? LoginHint = null, string? ReturnUrl = null, string? Invitation = null, bool? Signup = null);
 
-    /// <summary>The identity provider's address; the page navigates there.</summary>
+    /// <summary>The identity provider's address (sign-in or sign-out); the page navigates there.</summary>
     public sealed record SignInRedirect(string Location);
 }

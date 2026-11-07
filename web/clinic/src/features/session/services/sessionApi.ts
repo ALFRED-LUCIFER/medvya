@@ -1,5 +1,6 @@
 import { apiFetch } from '../../api/services/apiClient';
 import type { MeContext } from '../domain/session';
+import type { SignInFailure } from '../domain/signIn';
 
 // The server holds the tokens (BFF, ADR-004); the browser only sends its HTTP-only session cookie.
 const csrf = { 'X-Medvya-Csrf': '1' };
@@ -58,8 +59,13 @@ export async function startSignInWithHint(start: { loginHint: string; returnUrl:
   window.location.assign(`${import.meta.env.BASE_URL}?signin=failed`);
 }
 
+/**
+ * Ends the Medvya session, then the provider's (#912): the server answers with the provider's sign-out address, and the page goes there,
+ * so on a shared PC the provider cannot sign the last account straight back in. It comes back to the app signed out.
+ */
 export async function signOut() {
-  await apiFetch('/bff/logout', { method: 'POST', credentials: 'same-origin', headers: csrf });
+  const res = await apiFetch('/bff/logout', { method: 'POST', credentials: 'same-origin', headers: csrf });
+  if (res.status === 200) window.location.assign(((await res.json()) as { location: string }).location);
 }
 
 // Per tab and PHI-free: only "this tab had a session", so a reload after an idle timeout still shows F-05a.
@@ -73,5 +79,8 @@ export function rememberSession(had: boolean) {
   try { if (had) sessionStorage.setItem(marker, '1'); else sessionStorage.removeItem(marker); } catch { /* storage blocked: F-05a then shows only within the page's lifetime */ }
 }
 
-/** True when the server sent the user back with ?signin=failed (reason stays server-side). */
-export const signInFailed = () => new URLSearchParams(window.location.search).get('signin') === 'failed';
+/** Why the server sent the user back: ?signin=mfa (no second factor, #912) or ?signin=failed (any other reason, which stays server-side). */
+export function signInFailure(): SignInFailure | null {
+  const reason = new URLSearchParams(window.location.search).get('signin');
+  return reason === 'mfa' || reason === 'failed' ? reason : null;
+}

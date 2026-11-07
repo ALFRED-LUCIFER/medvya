@@ -354,7 +354,7 @@ public sealed class SessionControlTests(PostgresFixture sql) : IClassFixture<Pos
         await Choose(browser, atB); // the copy still names tenant A
         Assert.Equal(HttpStatusCode.Unauthorized, await ContextStatus(thief));
 
-        Assert.Equal(HttpStatusCode.NoContent, (await Send(browser, HttpMethod.Post, "/bff/logout")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await Send(browser, HttpMethod.Post, "/bff/logout")).StatusCode);
         Assert.Equal(["auth.signin"], await AuditActions(tenantA, user.Id));
         Assert.Equal(["auth.facility.switch", "auth.signout"], await AuditActions(tenantB, user.Id));
         Assert.NotNull((await SessionOf(user.Id)).RevokedAt);

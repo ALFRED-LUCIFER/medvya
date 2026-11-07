@@ -50,10 +50,12 @@ The API serves the built clinic app from `wwwroot/app` under `/app/` (the public
 
 ## Manual Entra settings (not in Bicep)
 
-Staff sign-in needs both, or the app refuses every sign-in with "the provider did not report multi-factor authentication" (MDV-P0-011):
+Staff sign-in needs the first two, or the app refuses every sign-in with "the provider did not report multi-factor authentication" (MDV-P0-011):
 
 1. **MFA enforced for the user.** Free tier: Security defaults off, then Per-user MFA = Enforced (Conditional Access needs a paid licence). Production moves staff sign-in to an Entra External ID tenant.
 2. **`amr` optional claim on the app registration** (Token configuration → Add optional claim → ID → `amr`). v2.0 ID tokens omit it otherwise. CLI: `az ad app update --id <client id> --optional-claims '{"idToken":[{"name":"amr","essential":false,"additionalProperties":[]}]}'`.
+
+3. **Sign-out redirect URI on the app registration** (#912). Authentication → Web → Redirect URIs: add `https://<web app host>/signout-callback-oidc` next to `https://<web app host>/signin-oidc`. Sign-out sends it as `post_logout_redirect_uri`; without it Entra still signs the browser out but stays on its own "You signed out" page instead of returning to Medvya. CLI (the list is replaced, so pass every URI): `az ad app update --id <client id> --web-redirect-uris https://<host>/signin-oidc https://<host>/signout-callback-oidc`.
 
 Branding of the hosted sign-in pages (email code, MFA set-up, recovery) is set by `infra/entra/branding.sh` (MDV-P1-060): logo, colour and text from `infra/entra/branding/`, per country. A tenant administrator runs it; it is idempotent and holds no secret.
 

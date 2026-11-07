@@ -106,5 +106,19 @@ test('J1: a new solo doctor sets up the practice, registers a patient, books and
     await expectNoAxeViolations(page);
   });
 
+  await test.step('J1.4 the owner sees the timed check-in in the pilot metrics and records a baseline (MDV-P1-041)', async () => {
+    await page.goto('/app/settings?tab=metrics');
+    const report = page.getByRole('region', { name: 'Pilot metrics' });
+    // The first visit of a new patient: timed, but not a returning patient's check-in (exit gate 3 counts those).
+    await expect(report).toContainText('0 returning of 1 timed check-ins');
+    await page.getByLabel('Value').fill('22');
+    await page.getByLabel('How it was measured').fill('Paper register, every visit');
+    await page.getByLabel('Measured from').fill('2026-10-19');
+    await page.getByLabel('Measured to').fill('2026-11-01');
+    await page.getByRole('button', { name: 'Record baseline' }).click();
+    await expect(report).toContainText('Before Medvya: 22% (');
+    await expectNoAxeViolations(page);
+  });
+
   expect(watch.leaks(['Latha', 'Iyengar', 'Gopal', patient.dob, `0${n}`])).toEqual([]);
 });

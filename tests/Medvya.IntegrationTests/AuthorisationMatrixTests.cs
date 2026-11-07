@@ -273,6 +273,8 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.Receptionist, new("POST", "/v1/staff/{membership}/reactivate", """{"reason":"Synthetic"}""")),
         (Role.Receptionist, new("GET", "/v1/settings/profile")),
         (Role.SoloDoctor, new("GET", "/v1/settings/profile")), // solo doctor holds Config: control row below
+        (Role.Receptionist, new("GET", "/v1/schedule/metrics?facilityId={facility}")), // pilot metrics: Staff, roles, integrations at Config
+        (Role.SoloDoctor, new("GET", "/v1/schedule/metrics?facilityId={facility}")),
         (Role.Nurse, new("PUT", "/v1/settings/clinical-access", """{"policy":"AllFacilityClinicians"}""")),
         (Role.Receptionist, new("GET", "/v1/settings/doctors")),
         (Role.Receptionist, new("GET", "/v1/access-requests")),
@@ -323,7 +325,8 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
 
         // A practice admin of Velachery only, whose session claims Adyar: the membership is read from the database, never the claim.
         using (var elsewhere = Client(h.Elsewhere, h.Facility))
-            foreach (var path in new[] { "/v1/staff", "/v1/settings/profile", $"/v1/patients/{h.Patient}", $"/v1/front-desk/board?facilityId={h.Facility}", "/v1/audit/access-log" })
+            foreach (var path in new[] { "/v1/staff", "/v1/settings/profile", $"/v1/patients/{h.Patient}", $"/v1/front-desk/board?facilityId={h.Facility}", "/v1/audit/access-log",
+                $"/v1/schedule/metrics?facilityId={h.Facility}" })
                 Expect($"Velachery admin at Adyar GET {path}", (await elsewhere.GetAsync(new Uri(path, UriKind.Relative))).StatusCode, HttpStatusCode.Forbidden);
 
         // Adyar reception asking for Velachery's rows by naming the facility.

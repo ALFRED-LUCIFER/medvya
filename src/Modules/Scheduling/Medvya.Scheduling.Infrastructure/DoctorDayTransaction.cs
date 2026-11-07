@@ -2,6 +2,7 @@ using System.Data;
 using System.Globalization;
 using Medvya.BuildingBlocks.Domain;
 using Medvya.Scheduling.Application;
+using Medvya.Scheduling.Domain;
 using Medvya.Scheduling.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -17,9 +18,11 @@ namespace Medvya.Scheduling.Infrastructure;
 /// A unique-index violation on SCHEDULE_SLOT means another booking won: "slot_unavailable". The app lock keeps every check-then-write of a
 /// doctor-day exclusive, and the unique index is the last line: it holds even if the lock or the checks are bypassed.
 /// </summary>
-public sealed class DoctorDayTransaction(SchedulingDbContext db, ICurrentTenant tenant, IOptions<SchedulingOptions> options)
+public sealed class DoctorDayTransaction(SchedulingDbContext db, ICurrentTenant tenant, IOptions<SchedulingOptions> options, TimeProvider clock)
 {
     const int Attempts = 3;
+    /// <summary>The no-double-booking index on SCHEDULE_SLOT (calendar, location, 5-minute unit).</summary>
+    internal const string SlotIndex = "IX_ScheduleSlots_CalendarId_FacilityId_SlotStart";
 
     public async Task<T> RunAsync<T>(IEnumerable<(Guid CalendarId, DateOnly Date)> doctorDays, Func<Task<T>> work, CancellationToken cancellationToken)
     {
@@ -39,7 +42,20 @@ public sealed class DoctorDayTransaction(SchedulingDbContext db, ICurrentTenant 
             }
             catch (Exception e) when (IsUniqueViolation(e))
             {
+                // The refused slot rows are still tracked: they say where the database stopped a double booking (pilot metric).
+                var refused = Pg(e)!.ConstraintName == SlotIndex
+                    ? db.ChangeTracker.Entries<ScheduleSlot>().Where(x => x.State == EntityState.Added).Select(x => x.Entity).FirstOrDefault() : null;
                 db.ChangeTracker.Clear();
+                if (refused is not null)
+                {
+                    // Written after the rollback, on its own: the refusal itself must be counted even though nothing else was saved.
+                    db.BookingConflicts.Add(new BookingConflict
+                    {
+                        Id = Guid.CreateVersion7(), TenantId = tenantId, FacilityId = refused.FacilityId, CalendarId = refused.CalendarId, OccurredAt = clock.GetUtcNow(),
+                    });
+                    await db.SaveChangesAsync(cancellationToken);
+                    db.ChangeTracker.Clear();
+                }
                 throw new SlotUnavailableException("slot_unavailable");
             }
             catch (Exception e) when (IsTransient(e))

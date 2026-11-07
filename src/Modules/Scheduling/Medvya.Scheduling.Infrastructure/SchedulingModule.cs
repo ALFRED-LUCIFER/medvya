@@ -30,6 +30,7 @@ public static class SchedulingModule
             .AddScoped<IFrontDeskService, FrontDeskService>()
             .AddScoped<IConsultVisits, ConsultVisits>()
             .AddScoped<IQueueService, QueueService>()
+            .AddScoped<IPilotMetrics, PilotMetricsService>()
             .AddScoped<IOutboxDispatcher, OutboxDispatcher>();
     }
 }

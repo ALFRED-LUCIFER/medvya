@@ -133,6 +133,13 @@ public static class SchedulingEndpoints
             .RequireCapability(Capability.CheckInQueue, Access.Read, Access.Full)
             .AuditRefusals(BoardHub.ConnectAction, SchedulingAudit.AppointmentResource);
 
+        // Pilot metrics for the owner (MDV-P1-041): aggregates only; the use case checks practice configuration at the facility.
+        schedule.MapGet("/metrics", (Guid? facilityId, int? days, [FromServices] IPilotMetrics metrics, CancellationToken ct) =>
+                metrics.GetAsync(facilityId ?? Guid.Empty, days ?? 14, ct))
+            .AuditedWithErrors("pilot_metrics.read", SchedulingAudit.MetricsResource, SchedulingAudit.Operations);
+        schedule.MapPost("/metrics/baselines", (RecordBaseline command, [FromServices] IPilotMetrics metrics, CancellationToken ct) => metrics.RecordBaselineAsync(command, ct))
+            .AuditedWriteWithErrors(SchedulingAudit.BaselineRecord, SchedulingAudit.MetricsResource, SchedulingAudit.Operations);
+
         // Waiting-room TVs (MDV-P1-031). The TV signs in as a display (QueueDisplayAuth), never as staff, and reads tokens only.
         var queue = app.MapGroup("/v1/queue");
         queue.MapGet("/tv", ([FromServices] IQueueService service, CancellationToken ct) => service.TvAsync(ct))

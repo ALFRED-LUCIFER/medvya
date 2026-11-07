@@ -181,6 +181,75 @@ namespace Medvya.Scheduling.Infrastructure.Persistence.Migrations
                     b.ToTable("AppointmentReschedules", "scheduling");
                 });
 
+            modelBuilder.Entity("Medvya.Scheduling.Domain.BookingConflict", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CalendarId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("FacilityId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("OccurredAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "FacilityId", "OccurredAt");
+
+                    b.ToTable("BookingConflicts", "scheduling");
+                });
+
+            modelBuilder.Entity("Medvya.Scheduling.Domain.MetricBaseline", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("FacilityId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("FromDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Method")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Metric")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<DateTimeOffset>("RecordedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("RecordedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("ToDate")
+                        .HasColumnType("date");
+
+                    b.Property<int>("Value")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "FacilityId", "Metric");
+
+                    b.ToTable("MetricBaselines", "scheduling");
+                });
+
             modelBuilder.Entity("Medvya.Scheduling.Domain.OutboxEvent", b =>
                 {
                     b.Property<Guid>("Id")
@@ -520,6 +589,9 @@ namespace Medvya.Scheduling.Infrastructure.Persistence.Migrations
                     b.Property<string>("CancelReason")
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)");
+
+                    b.Property<int?>("CheckInMs")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Note")
                         .HasMaxLength(500)

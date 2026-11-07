@@ -33,7 +33,7 @@ flowchart LR
   api --> Tenancy["Tenancy<br/>schema tenancy<br/>18 tables"]
   api --> Identity["Identity<br/>schema identity<br/>3 tables"]
   api --> Patients["Patients<br/>schema patients<br/>7 tables"]
-  api --> Scheduling["Scheduling<br/>schema scheduling<br/>12 tables"]
+  api --> Scheduling["Scheduling<br/>schema scheduling<br/>14 tables"]
   api --> Encounters["Encounters<br/>schema encounters<br/>1 table"]
   api --> Notifications["Notifications<br/>schema notifications<br/>5 tables"]
   api --> Audit["Audit<br/>schema audit<br/>1 table"]
@@ -774,7 +774,7 @@ erDiagram
 
 </details>
 
-### Scheduling (schema `scheduling`, 12 tables)
+### Scheduling (schema `scheduling`, 14 tables)
 
 ```mermaid
 erDiagram
@@ -793,6 +793,15 @@ erDiagram
     guid AppointmentId FK "FK to Appointments"
     guid FromCalendarId "doctor or room"
     guid ToCalendarId "doctor or room"
+  }
+  BookingConflicts {
+    guid Id PK
+    guid CalendarId "doctor or room"
+    guid FacilityId "id of tenancy.Facilities"
+  }
+  MetricBaselines {
+    guid Id PK
+    guid FacilityId "id of tenancy.Facilities"
   }
   OutboxEvents {
     guid Id PK
@@ -867,6 +876,10 @@ erDiagram
   Resources ||..o{ AppointmentReschedules : "FromCalendarId (room calendar)"
   tenancy_Memberships ||..o{ AppointmentReschedules : "ToCalendarId (doctor calendar)"
   Resources ||..o{ AppointmentReschedules : "ToCalendarId (room calendar)"
+  tenancy_Memberships ||..o{ BookingConflicts : "CalendarId (doctor calendar)"
+  Resources ||..o{ BookingConflicts : "CalendarId (room calendar)"
+  tenancy_Facilities ||..o{ BookingConflicts : "FacilityId"
+  tenancy_Facilities ||..o{ MetricBaselines : "FacilityId"
   tenancy_Facilities ||..o{ QueueDisplays : "FacilityId"
   Appointments ||--o{ QueueTokens : "AppointmentId"
   tenancy_Memberships ||..o{ QueueTokens : "CalendarId (doctor calendar)"
@@ -896,6 +909,8 @@ erDiagram
 |---|---|---|---|
 | `Appointments` | 24 | Id | tenant-scoped |
 | `AppointmentReschedules` | 12 | Id | tenant-scoped |
+| `BookingConflicts` | 5 | Id | tenant-scoped |
+| `MetricBaselines` | 10 | Id | tenant-scoped |
 | `OutboxEvents` | 7 | Id | tenant-scoped |
 | `OutboxTenants` | 1 | TenantId | tenant-scoped |
 | `QueueDisplays` | 9 | Id | tenant-scoped |
@@ -905,7 +920,7 @@ erDiagram
 | `ScheduleSlots` | 6 | Id | tenant-scoped |
 | `Templates` | 8 | Id | tenant-scoped |
 | `SlotHolds` | 9 | Id | tenant-scoped |
-| `VisitStatusEvents` | 8 | Id | tenant-scoped |
+| `VisitStatusEvents` | 9 | Id | tenant-scoped |
 
 <details><summary><code>scheduling.Appointments</code> columns</summary>
 
@@ -954,6 +969,35 @@ erDiagram
 | `ToCalendarId` | guid |  | doctor or room (`CalendarKind`) |
 | `ToEnd` | timestamptz |  |  |
 | `ToStart` | timestamptz |  |  |
+
+</details>
+
+<details><summary><code>scheduling.BookingConflicts</code> columns</summary>
+
+| Column | Type | Null | Links to |
+|---|---|---|---|
+| `Id` | guid |  |  |
+| `CalendarId` | guid |  | doctor or room (`CalendarKind`) |
+| `FacilityId` | guid |  | id of `tenancy.Facilities` |
+| `OccurredAt` | timestamptz |  |  |
+| `TenantId` | guid |  | `tenancy.Tenants` |
+
+</details>
+
+<details><summary><code>scheduling.MetricBaselines</code> columns</summary>
+
+| Column | Type | Null | Links to |
+|---|---|---|---|
+| `Id` | guid |  |  |
+| `FacilityId` | guid |  | id of `tenancy.Facilities` |
+| `FromDate` | date |  |  |
+| `Method` | character varying(200) |  |  |
+| `Metric` | character varying(30) |  |  |
+| `RecordedAt` | timestamptz |  |  |
+| `RecordedBy` | guid | yes |  |
+| `TenantId` | guid |  | `tenancy.Tenants` |
+| `ToDate` | date |  |  |
+| `Value` | int |  |  |
 
 </details>
 
@@ -1095,6 +1139,7 @@ erDiagram
 | `ActorUserId` | guid | yes | id of `identity.Users` |
 | `AppointmentId` | guid |  | FK to `Appointment` |
 | `CancelReason` | character varying(30) |  |  |
+| `CheckInMs` | int | yes |  |
 | `Note` | character varying(500) |  |  |
 | `OccurredAt` | timestamptz |  |  |
 | `State` | character varying(20) |  |  |
@@ -1636,13 +1681,13 @@ From `docs/03-architecture/data-model.md` (areas A to D). "Built" means a table 
 | D · Care, portal, integration, audit | `AUDIT_EVENT` | built | `audit.AuditEvents` |
 | D · Care, portal, integration, audit | `OUTBOX_EVENT` | built | `scheduling.OutboxEvents` |
 
-Tables that exist but were added while building (not named in the plan): `identity.OnboardingDrafts`, `identity.Sessions`, `leads.DemoRequests`, `leads.Waitlist`, `notifications.Preferences`, `notifications.StaffNotificationReads`, `notifications.StaffNotifications`, `patients.DataKeys`, `patients.MergeRequests`, `platform.AuditEntries`, `platform.KeyLinks`, `platform.Members`, `platform.SecurityKeys`, `platform.Sessions`, `scheduling.AppointmentReschedules`, `scheduling.OutboxTenants`, `scheduling.QueueDisplays`, `scheduling.Resources`, `scheduling.SlotHolds`, `scheduling.VisitStatusEvents`, `tenancy.AccessRequests`, `tenancy.AccessReviewDecisions`, `tenancy.AccessReviews`, `tenancy.FeatureFlags`, `tenancy.Invitations`, `tenancy.OperatingHours`, `tenancy.PracticeDefaults`, `tenancy.Profiles`, `tenancy.SettingsChanges`, `tenancy.TenantIndex`, `tenancy.TermsAcceptances`.
+Tables that exist but were added while building (not named in the plan): `identity.OnboardingDrafts`, `identity.Sessions`, `leads.DemoRequests`, `leads.Waitlist`, `notifications.Preferences`, `notifications.StaffNotificationReads`, `notifications.StaffNotifications`, `patients.DataKeys`, `patients.MergeRequests`, `platform.AuditEntries`, `platform.KeyLinks`, `platform.Members`, `platform.SecurityKeys`, `platform.Sessions`, `scheduling.AppointmentReschedules`, `scheduling.BookingConflicts`, `scheduling.MetricBaselines`, `scheduling.OutboxTenants`, `scheduling.QueueDisplays`, `scheduling.Resources`, `scheduling.SlotHolds`, `scheduling.VisitStatusEvents`, `tenancy.AccessRequests`, `tenancy.AccessReviewDecisions`, `tenancy.AccessReviews`, `tenancy.FeatureFlags`, `tenancy.Invitations`, `tenancy.OperatingHours`, `tenancy.PracticeDefaults`, `tenancy.Profiles`, `tenancy.SettingsChanges`, `tenancy.TenantIndex`, `tenancy.TermsAcceptances`.
 
-**Counts:** 55 tables across 10 schemas; 24 of 90 planned entities are built; 31 tables were added during the build.
+**Counts:** 57 tables across 10 schemas; 24 of 90 planned entities are built; 33 tables were added during the build.
 
 ## 6. Rules the model follows
 
-- **Tenant isolation:** 45 of 55 tables carry `TenantId` (EF query filter plus PostgreSQL forced row-level security on `medvya.tenant_id`). Without `TenantId`: `identity.OnboardingDrafts`, `identity.Users`, `leads.DemoRequests`, `leads.Waitlist`, `platform.AuditEntries`, `platform.KeyLinks`, `platform.Members`, `platform.SecurityKeys`, `platform.Sessions`, `tenancy.Tenants`. (`TenantId` present is not proof the row-level-security policy covers the table; see `docs/03-architecture/database-security.md`.)
+- **Tenant isolation:** 47 of 57 tables carry `TenantId` (EF query filter plus PostgreSQL forced row-level security on `medvya.tenant_id`). Without `TenantId`: `identity.OnboardingDrafts`, `identity.Users`, `leads.DemoRequests`, `leads.Waitlist`, `platform.AuditEntries`, `platform.KeyLinks`, `platform.Members`, `platform.SecurityKeys`, `platform.Sessions`, `tenancy.Tenants`. (`TenantId` present is not proof the row-level-security policy covers the table; see `docs/03-architecture/database-security.md`.)
 - **Append-only ledgers:** `audit.AuditEvents`, `patients.ConsentReceipts`, `tenancy.TermsAcceptances` (hash-chained, MDV-P0-036; each also has ChainSeq, PrevHash and RowHash added by `LedgerSql`, outside the EF model).
 - **No cross-module foreign keys:** modules link by id and through application services (AGENTS.md 3.1).
 - **Country data plane:** one deployment and one database per country (ADR-003); this diagram is the same in each.

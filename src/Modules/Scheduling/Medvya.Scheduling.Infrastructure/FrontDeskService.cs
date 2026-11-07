@@ -49,9 +49,9 @@ public sealed partial class FrontDeskService(
     public async Task<BoardCard> CheckInAsync(Guid appointmentId, CheckIn command, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
-        var (visit, moved) = await MoveAsync(appointmentId, AppointmentState.CheckedIn, SchedulingAudit.CheckIn, cancellationToken);
-        if (moved && command.ElapsedMs is long ms && ms > 0 && TimeSpan.FromMilliseconds(ms) <= MaxCheckIn)
-            CheckInSeconds.Record(ms / 1000d, new KeyValuePair<string, object?>("tenant_id", visit.TenantId));
+        int? timed = command.ElapsedMs is long ms && ms > 0 && TimeSpan.FromMilliseconds(ms) <= MaxCheckIn ? (int)ms : null;
+        var (visit, moved) = await MoveAsync(appointmentId, AppointmentState.CheckedIn, SchedulingAudit.CheckIn, cancellationToken, timed);
+        if (moved && timed is int t) CheckInSeconds.Record(t / 1000d, new KeyValuePair<string, object?>("tenant_id", visit.TenantId));
         return await CardAsync(visit, cancellationToken);
     }
 
@@ -157,7 +157,7 @@ public sealed partial class FrontDeskService(
     /// Moves the visit to <paramref name="to"/>; Moved is false when it was already there (an idempotent repeat). Either way the
     /// attempt is audited as <paramref name="action"/> in the transaction of what it wrote.
     /// </summary>
-    async Task<(Appointment Visit, bool Moved)> MoveAsync(Guid appointmentId, AppointmentState to, string action, CancellationToken cancellationToken)
+    async Task<(Appointment Visit, bool Moved)> MoveAsync(Guid appointmentId, AppointmentState to, string action, CancellationToken cancellationToken, int? checkInMs = null)
     {
         var visit = await db.Appointments.AsNoTracking().SingleOrDefaultAsync(a => a.Id == appointmentId, cancellationToken)
             ?? throw new AppointmentNotFoundException();
@@ -187,7 +187,7 @@ public sealed partial class FrontDeskService(
         }
         db.StatusEvents.Add(new VisitStatusEvent
         {
-            Id = Guid.CreateVersion7(), TenantId = visit.TenantId, AppointmentId = visit.Id, State = to, ActorUserId = me, OccurredAt = now,
+            Id = Guid.CreateVersion7(), TenantId = visit.TenantId, AppointmentId = visit.Id, State = to, ActorUserId = me, OccurredAt = now, CheckInMs = checkInMs,
         });
         if (to == AppointmentState.CheckedIn) await IssueTokenAsync(visit, ScheduleRules.LocalDate(now, zone), now, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);

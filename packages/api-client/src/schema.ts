@@ -999,6 +999,83 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/schedule/metrics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    facilityId?: string;
+                    days?: number | string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PilotMetrics"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/schedule/metrics/baselines": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["RecordBaseline"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BaselineView"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/slot-holds": {
         parameters: {
             query?: never;
@@ -4225,6 +4302,18 @@ export interface components {
             /** @default false */
             unscheduled: boolean;
         };
+        BaselineView: {
+            metric: components["schemas"]["PilotMetric"];
+            /** Format: int32 */
+            value: number | string;
+            method: string;
+            /** Format: date */
+            fromDate: string;
+            /** Format: date */
+            toDate: string;
+            /** Format: date-time */
+            recordedAt: string;
+        };
         BoardCard: {
             /** Format: uuid */
             id: string;
@@ -4291,6 +4380,18 @@ export interface components {
         CheckIn: {
             /** Format: int64 */
             elapsedMs?: null | number | string;
+        };
+        CheckInMetric: {
+            /** Format: double */
+            returningMedianSeconds: null | number | string;
+            /** Format: int32 */
+            returningCount: number | string;
+            /** Format: double */
+            medianSeconds: null | number | string;
+            /** Format: int32 */
+            count: number | string;
+            /** Format: int32 */
+            targetSeconds: number | string;
         };
         ClinicalAccessBody: {
             policy: components["schemas"]["ClinicalAccessPolicy"];
@@ -4592,6 +4693,14 @@ export interface components {
             patientName: string;
             token: null | string;
         };
+        NoShowMetric: {
+            /** Format: int32 */
+            noShows: number | string;
+            /** Format: int32 */
+            attended: number | string;
+            /** Format: double */
+            percent: null | number | string;
+        };
         NotificationPreferencesView: {
             confirmation: boolean;
             reminder24h: boolean;
@@ -4677,6 +4786,19 @@ export interface components {
         };
         /** @enum {unknown} */
         PayerKind: "SelfPay" | "Corporate" | "PrivateInsurance" | "GovernmentScheme";
+        /** @enum {unknown} */
+        PilotMetric: "CheckInSeconds" | "NoShowPercent" | "DoubleBookings" | "ReminderDeliveryPercent";
+        PilotMetrics: {
+            /** Format: date-time */
+            from: string;
+            /** Format: date-time */
+            to: string;
+            checkIn: components["schemas"]["CheckInMetric"];
+            noShows: components["schemas"]["NoShowMetric"];
+            /** Format: int32 */
+            doubleBookingRefusals: number | string;
+            baselines: components["schemas"]["BaselineView"][];
+        };
         PreviewRequest: {
             token: string;
         };
@@ -4725,6 +4847,18 @@ export interface components {
         };
         /** @enum {unknown} */
         RebookAction: "Offer" | "Manual";
+        RecordBaseline: {
+            /** Format: uuid */
+            facilityId?: string;
+            metric?: null | components["schemas"]["PilotMetric"];
+            /** Format: int32 */
+            value?: null | number | string;
+            method?: null | string;
+            /** Format: date */
+            fromDate?: null | string;
+            /** Format: date */
+            toDate?: null | string;
+        };
         RegisterRequest: {
             quick?: boolean;
             fullName?: string;

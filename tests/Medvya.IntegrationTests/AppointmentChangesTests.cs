@@ -256,7 +256,7 @@ public sealed class AppointmentChangesTests(PostgresFixture sql) : IClassFixture
         await conn.OpenAsync();
         var tx = conn.BeginTransaction();
         await using var cmd = new NpgsqlCommand("SELECT pg_advisory_xact_lock(hashtextextended(@r, 0))", conn, tx);
-        cmd.Parameters.AddWithValue("r", $"doctor:{h.Doctor}:{day:yyyy-MM-dd}");
+        cmd.Parameters.AddWithValue("r", $"doctor:{h.Tenant}:{h.Doctor}:{day:yyyy-MM-dd}");
         await cmd.ExecuteNonQueryAsync();
         return (conn, tx);
     }

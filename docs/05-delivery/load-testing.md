@@ -17,11 +17,12 @@ Budgets (PRD cross-cutting NFR, ticket MDV-P1-037): reads p95 < 300 ms, booking 
 
 ## How to run
 
-Local (needs Docker; starts SQL Server 2022 with Testcontainers, seeds synthetic data, starts the API on a loopback port):
+Local (needs Docker; starts PostgreSQL 16 with Testcontainers, seeds synthetic data, starts the API on a loopback port):
 
 ```
 pnpm load:desk
 MEDVYA_LOAD_THINK_MS=500 MEDVYA_LOAD_SECONDS=60 MEDVYA_LOAD_REPORT=/tmp/stress.md pnpm load:desk   # stress
+MEDVYA_LOAD_HOT_DAY=1 MEDVYA_LOAD_THINK_MS=500 MEDVYA_LOAD_SECONDS=60 MEDVYA_LOAD_REPORT=/tmp/hot.md pnpm load:desk   # stress, every desk on one doctor-day
 ```
 
 The test is skipped unless `MEDVYA_LOAD=1` (the script sets it), so `dotnet test` stays fast. The per-IP and per-user rate limits are raised
@@ -34,12 +35,12 @@ booked visits today for the check-in step. Not run against Azure yet; the extern
 
 ## What the numbers mean
 
-- A local run is Docker and Rosetta on a laptop with other processes: SQL Server, Kestrel and the load generator share the CPU, and fsync on the
+- A local run is Docker and Rosetta on a laptop with other processes: PostgreSQL, Kestrel and the load generator share the CPU, and fsync on the
   Colima volume is slower than Azure's log disk. It shows regressions and lock contention, not Azure latency. Treat it as a relative baseline.
-- It runs with `READ_COMMITTED_SNAPSHOT` on, as Azure SQL Database does by default (Docker SQL Server has it off; `MEDVYA_LOAD_RCSI=0` turns it off).
 - Not covered yet: SignalR board subscriptions (board refetch is measured, not the socket), the nightly job with the 20 % regression alert, and the
   calendar first-render budget (that is the Playwright test `tests/e2e/schedule-performance.spec.ts`).
-- The check-in step only runs when the board has booked visits today, so it has fewer calls than the others.
+- The check-in step only runs when the board has booked visits today, so it has fewer calls than the others. The seed books weekdays only, so on a
+  Saturday or Sunday it has no calls and the run fails on that step alone.
 
 ## Bottlenecks found
 
@@ -48,6 +49,12 @@ booked visits today for the check-in step. Not run against Azure yet; the extern
    run completed 2 flows). The doctor-day app lock already makes each check-then-write exclusive and the unique index on `ScheduleSlots` stops a
    double booking if it is bypassed, so `DoctorDayTransaction` now runs READ COMMITTED. Stress after: 0 errors, hold p95 106 ms, book p95 140 ms,
    1,502 complete flows in 61 s. Regression test: `NoDoubleBookingTests.DesksHoldingAndBookingDifferentSlotsAtOnceAllSucceedWithoutBusy`.
+   Re-measured on PostgreSQL 16 (MDV-P1-022, after ADR-012; stress profile, 60 s, a quiet laptop). SERIALIZABLE put back as a check:
+   58.1 % of holds and 34.7 % of bookings fail (62.9 % and 36.0 % with every desk on one doctor-day). READ COMMITTED: 0 errors and no
+   `busy`, hold p95 88 ms and book p95 101 ms spread over doctors; hold p95 50 ms and book p95 64 ms with every desk on one doctor-day
+   (`MEDVYA_LOAD_HOT_DAY=1`). The advisory-lock waits are on that doctor-day lock; no deadlock was seen. Regression test for the hot case:
+   `NoDoubleBookingTests.AHundredDesksOnOneDoctorDayBookEveryFreeSlotOnceAndNeverAnswerBusy` (100 desks, 84 distinct slots all booked).
+   The lock name carries the tenant (`doctor:{tenant}:{calendar}:{date}`), so one practice's load never queues another's.
 2. The earlier note that holds at READ COMMITTED left `busy` on book is superseded: the whole transaction (hold, book, walk-in, change) now runs
    at READ COMMITTED, and the test above fails on SERIALIZABLE and passes on READ COMMITTED.
 3. The pilot's real rate (200 bookings an hour, about one every 18 s over two clinics) is far below where this appears; it matters for bursts

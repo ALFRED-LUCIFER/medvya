@@ -98,6 +98,30 @@ public sealed class EncounterTests(PostgresFixture sql) : IClassFixture<Postgres
         Assert.Equal(6, await audit.Events.CountAsync(e => e.Action == "encounter.start"));
     }
 
+    /// <summary>
+    /// Forces each lost race of a double start (LoseTheRace): the other start commits right after this one has read the visit's encounter
+    /// (<c>"AppointmentId" =</c>), or after it has also looked for the doctor's open consultation (<c>"Status" =</c>, so its insert hits the
+    /// unique index). Either way it answers with the winner's encounter. SAFETY: mutation check: without the <c>AppointmentId != visit.Id</c>
+    /// in the open-consultation check, the first loser is refused with OpenEncounterException.
+    /// </summary>
+    [Theory]
+    [InlineData("\"AppointmentId\" = ")]
+    [InlineData("\"Status\" = ")]
+    public async Task AStartThatLosesTheRaceAnswersWithTheWinner(string after)
+    {
+        var visit = await ArrivedAsync();
+        EncounterView? winner = null;
+        var race = new LoseTheRace(async () => winner = await Encounters(h.Doctor).StartAsync(new StartEncounter(visit)), after);
+        var loser = await h.Get<IEncounters>(h.Doctor, s => s.AddSingleton<IBoardNotifier>(pushes)
+            .ConfigureDbContext<EncountersDbContext>(o => o.AddInterceptors(race))).StartAsync(new StartEncounter(visit));
+
+        Assert.True(race.Fired);
+        Assert.Equal((winner!.Id, EncounterStatus.Active, "Room 3"), (loser!.Id, loser.Status, loser.Room));
+        Assert.Equal(1, await EncounterRowsAsync());
+        Assert.Equal(AppointmentState.InConsult, (await VisitAsync(visit)).State);
+        Assert.Single(pushes.Changes); // only the winner moved the visit
+    }
+
     [Fact]
     public async Task APatientWhoHasNotArrivedCannotBeSeenAndNothingIsKept()
     {

@@ -1,5 +1,6 @@
 using Medvya.Scheduling.Application;
 using Medvya.Tenancy.Application;
+using Medvya.Tenancy.Domain;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Medvya.Tenancy.Api;
@@ -18,6 +19,7 @@ public static class SettingsEndpoints
     public sealed record ClosureBody(DateOnly Date, string? Name);
     public sealed record ClosureWithVisits(ClosureView Closure, IReadOnlyList<AppointmentToMove> AppointmentsToMove);
     public sealed record LogoLink(Uri Url, DateTimeOffset ExpiresAt);
+    public sealed record ClinicalAccessBody(ClinicalAccessPolicy Policy);
 
     public static WebApplication MapPracticeSettings(this WebApplication app)
     {
@@ -63,6 +65,11 @@ public static class SettingsEndpoints
         g.MapDelete("/logo", async ([FromServices] IPracticeSettings s, CancellationToken ct) => await s.RemoveLogoAsync(ct) ? Results.NoContent() : Results.NotFound());
         g.MapGet("/logo", async ([FromServices] IPracticeSettings s, CancellationToken ct) =>
             await s.LogoLinkAsync(LogoLinkLifetime, ct) is { } url ? Results.Ok(new LogoLink(url, DateTimeOffset.UtcNow + LogoLinkLifetime)) : Results.NotFound());
+
+        // Which clinicians treat the facility's patients (MDV-P2-024): every clinician of it (default) or only those assigned.
+        g.MapGet("/clinical-access", async ([FromServices] IPracticeSettings s, CancellationToken ct) => Results.Ok(new ClinicalAccessBody(await s.GetClinicalAccessAsync(ct))));
+        g.MapPut("/clinical-access", async ([FromBody] ClinicalAccessBody body, [FromServices] IPracticeSettings s, CancellationToken ct) =>
+            Results.Ok(new ClinicalAccessBody(await s.SaveClinicalAccessAsync(body.Policy, ct))));
 
         // Terms of Service and DPA (MDV-P1-019): anyone who administers the practice can see the status; only an owner (practice admin or
         // solo doctor) can accept, which the service checks. Until accepted, booking and sending are refused (RequireAcceptedTerms).

@@ -65,7 +65,7 @@ public sealed class NotificationAttempt
 
 /// <summary>What a staff notification is about. The screen words each kind itself, so no text is stored.</summary>
 [JsonConverter(typeof(JsonStringEnumConverter<StaffNotificationKind>))]
-public enum StaffNotificationKind { MessageFailed, LicenceExpiring, AccessReviewDue }
+public enum StaffNotificationKind { MessageFailed, LicenceExpiring, AccessReviewDue, AccessRequested }
 
 /// <summary>
 /// STAFF_NOTIFICATION (MDV-P1-034): one in-app item for the staff of a facility (the notification centre, D-03). It holds ids and a

@@ -30,10 +30,11 @@ flowchart LR
   web -.-> hub
   tv --> api
   site --> api
-  api --> Tenancy["Tenancy<br/>schema tenancy<br/>17 tables"]
+  api --> Tenancy["Tenancy<br/>schema tenancy<br/>18 tables"]
   api --> Identity["Identity<br/>schema identity<br/>3 tables"]
   api --> Patients["Patients<br/>schema patients<br/>7 tables"]
   api --> Scheduling["Scheduling<br/>schema scheduling<br/>12 tables"]
+  api --> Encounters["Encounters<br/>schema encounters<br/>1 table"]
   api --> Notifications["Notifications<br/>schema notifications<br/>5 tables"]
   api --> Audit["Audit<br/>schema audit<br/>1 table"]
   api --> Leads["Leads<br/>schema leads<br/>2 tables"]
@@ -55,6 +56,10 @@ flowchart LR
   Audit -->|"Application"| Identity
   Audit -->|"Application"| Patients
   Audit -->|"Api"| Tenancy
+  Encounters -->|"Api, Application"| Audit
+  Encounters -->|"Application"| Patients
+  Encounters -->|"Application"| Scheduling
+  Encounters -->|"Api, Application"| Tenancy
   Identity -->|"Api"| Tenancy
   Notifications -->|"Api, Application"| Audit
   Notifications -->|"Application, Domain"| Patients
@@ -71,7 +76,7 @@ flowchart LR
   Tenancy -->|"Application, Domain"| Scheduling
 ```
 
-`Host.Api` references: Audit, Identity, Leads, Notifications, Patients, Scheduling, Tenancy. Modules with no incoming arrow from another module: Billing, Leads, Notifications.
+`Host.Api` references: Audit, Encounters, Identity, Leads, Notifications, Patients, Scheduling, Tenancy. Modules with no incoming arrow from another module: Billing, Encounters, Leads, Notifications.
 
 ## 3. How the data links across modules
 
@@ -82,6 +87,10 @@ flowchart LR
   audit -.->|"ActorUserId"| identity
   audit -.->|"PatientId"| patients
   audit -.->|"FacilityId"| tenancy
+  encounters -.->|"EndedBy, LeadClinicianId"| identity
+  encounters -.->|"MergedFromPatientId, PatientId"| patients
+  encounters -.->|"AppointmentId"| scheduling
+  encounters -.->|"FacilityId"| tenancy
   identity -.->|"MembershipId"| tenancy
   notifications -.->|"ChangedBy, UserId"| identity
   notifications -.->|"PatientId"| patients
@@ -93,16 +102,24 @@ flowchart LR
   scheduling -.->|"MergedFromPatientId, PatientId"| patients
   scheduling -.->|"CalendarId, FacilityId, FromCalendarId, ..."| tenancy
   tenancy -.->|"ActorUserId, ChangedBy, DecidedBy, ..."| identity
+  tenancy -.->|"PatientId"| patients
 ```
 
 Every tenant-scoped table also carries `TenantId`; it is left out of the picture because it links all modules to `tenancy.Tenants`.
 
 ## 4. Tables by module
 
-### Tenancy (schema `tenancy`, 17 tables)
+### Tenancy (schema `tenancy`, 18 tables)
 
 ```mermaid
 erDiagram
+  AccessRequests {
+    guid Id PK
+    guid DecidedBy "id of identity.Users"
+    guid FacilityId FK "FK to Facilities"
+    guid PatientId "id of patients.Patients"
+    guid RequestedBy "id of identity.Users"
+  }
   AccessReviews {
     guid Id PK
   }
@@ -170,6 +187,13 @@ erDiagram
   identity_Users {
     guid Id PK "other module"
   }
+  patients_Patients {
+    guid Id PK "other module"
+  }
+  Facilities ||--o{ AccessRequests : "FacilityId"
+  identity_Users |o..o{ AccessRequests : "DecidedBy"
+  patients_Patients ||..o{ AccessRequests : "PatientId"
+  identity_Users ||..o{ AccessRequests : "RequestedBy"
   Tenants ||--o{ AccessReviews : "TenantId"
   AccessReviews ||..o{ AccessReviewDecisions : "ReviewId, no FK"
   Memberships ||..o{ AccessReviewDecisions : "MembershipId, no FK"
@@ -198,6 +222,7 @@ erDiagram
 
 | Table | Columns | Primary key | Notes |
 |---|---|---|---|
+| `AccessRequests` | 11 | Id | tenant-scoped |
 | `AccessReviews` | 5 | Id | tenant-scoped |
 | `AccessReviewDecisions` | 6 | ReviewId, MembershipId | tenant-scoped |
 | `Closures` | 5 | Id | tenant-scoped |
@@ -212,9 +237,27 @@ erDiagram
 | `PracticeDefaults` | 11 | TenantId | tenant-scoped |
 | `Profiles` | 10 | Id | tenant-scoped |
 | `SettingsChanges` | 8 | Id | tenant-scoped |
-| `Tenants` | 5 | Id |  |
+| `Tenants` | 6 | Id |  |
 | `TenantIndex` | 1 | TenantId | tenant-scoped |
 | `TermsAcceptances` | 5 | Id | append-only ledger; tenant-scoped |
+
+<details><summary><code>tenancy.AccessRequests</code> columns</summary>
+
+| Column | Type | Null | Links to |
+|---|---|---|---|
+| `Id` | guid |  |  |
+| `DecidedAt` | timestamptz | yes |  |
+| `DecidedBy` | guid | yes | id of `identity.Users` |
+| `ExpiresAt` | timestamptz | yes |  |
+| `FacilityId` | guid |  | FK to `Facility` |
+| `PatientId` | guid |  | id of `patients.Patients` |
+| `Reason` | character varying(30) |  |  |
+| `RequestedAt` | timestamptz |  |  |
+| `RequestedBy` | guid |  | id of `identity.Users` |
+| `Status` | character varying(20) |  |  |
+| `TenantId` | guid |  | `tenancy.Tenants` |
+
+</details>
 
 <details><summary><code>tenancy.AccessReviews</code> columns</summary>
 
@@ -431,6 +474,7 @@ erDiagram
 | Column | Type | Null | Links to |
 |---|---|---|---|
 | `Id` | guid |  |  |
+| `ClinicalAccess` | character varying(30) |  |  |
 | `CountryCode` | character(2) |  |  |
 | `IdleTimeoutMinutes` | int |  |  |
 | `Name` | character varying(200) |  |  |
@@ -1051,6 +1095,62 @@ erDiagram
 
 </details>
 
+### Encounters (schema `encounters`, 1 table)
+
+```mermaid
+erDiagram
+  Encounters {
+    guid Id PK
+    guid AppointmentId "id of scheduling.Appointments"
+    guid EndedBy "id of identity.Users"
+    guid FacilityId "id of tenancy.Facilities"
+    guid LeadClinicianId "id of identity.Users"
+    guid MergedFromPatientId "id of patients.Patients"
+    guid PatientId "id of patients.Patients"
+  }
+  identity_Users {
+    guid Id PK "other module"
+  }
+  patients_Patients {
+    guid Id PK "other module"
+  }
+  scheduling_Appointments {
+    guid Id PK "other module"
+  }
+  tenancy_Facilities {
+    guid Id PK "other module"
+  }
+  scheduling_Appointments ||..o{ Encounters : "AppointmentId"
+  identity_Users |o..o{ Encounters : "EndedBy"
+  tenancy_Facilities ||..o{ Encounters : "FacilityId"
+  identity_Users ||..o{ Encounters : "LeadClinicianId"
+  patients_Patients |o..o{ Encounters : "MergedFromPatientId"
+  patients_Patients ||..o{ Encounters : "PatientId"
+```
+
+| Table | Columns | Primary key | Notes |
+|---|---|---|---|
+| `Encounters` | 12 | Id | tenant-scoped |
+
+<details><summary><code>encounters.Encounters</code> columns</summary>
+
+| Column | Type | Null | Links to |
+|---|---|---|---|
+| `Id` | guid |  |  |
+| `AppointmentId` | guid |  | id of `scheduling.Appointments` |
+| `AuthorityMode` | character varying(20) |  |  |
+| `EndedAt` | timestamptz | yes |  |
+| `EndedBy` | guid | yes | id of `identity.Users` |
+| `FacilityId` | guid |  | id of `tenancy.Facilities` |
+| `LeadClinicianId` | guid |  | id of `identity.Users` |
+| `MergedFromPatientId` | guid | yes | id of `patients.Patients` |
+| `PatientId` | guid |  | id of `patients.Patients` |
+| `StartedAt` | timestamptz |  |  |
+| `Status` | character varying(20) |  |  |
+| `TenantId` | guid |  | `tenancy.Tenants` |
+
+</details>
+
 ### Notifications (schema `notifications`, 5 tables)
 
 ```mermaid
@@ -1360,7 +1460,7 @@ From `docs/03-architecture/data-model.md` (areas A to D). "Built" means a table 
 | A · Tenant, practice, PMS, billing | `PRIOR_AUTH` | not built | |
 | A · Tenant, practice, PMS, billing | `REMITTANCE` | not built | |
 | A · Tenant, practice, PMS, billing | `CLAIM_RESUBMISSION` | not built | |
-| B · EMR, clinical authority | `ENCOUNTER` | not built | |
+| B · EMR, clinical authority | `ENCOUNTER` | built | `encounters.Encounters` |
 | B · EMR, clinical authority | `OBSERVATION` | not built | |
 | B · EMR, clinical authority | `PROBLEM` | not built | |
 | B · EMR, clinical authority | `ALLERGY` | not built | |
@@ -1412,13 +1512,13 @@ From `docs/03-architecture/data-model.md` (areas A to D). "Built" means a table 
 | D · Care, portal, integration, audit | `AUDIT_EVENT` | built | `audit.AuditEvents` |
 | D · Care, portal, integration, audit | `OUTBOX_EVENT` | built | `scheduling.OutboxEvents` |
 
-Tables that exist but were added while building (not named in the plan): `identity.OnboardingDrafts`, `identity.Sessions`, `leads.DemoRequests`, `leads.Waitlist`, `notifications.Preferences`, `notifications.StaffNotificationReads`, `notifications.StaffNotifications`, `patients.DataKeys`, `patients.MergeRequests`, `scheduling.AppointmentReschedules`, `scheduling.OutboxTenants`, `scheduling.QueueDisplays`, `scheduling.Resources`, `scheduling.SlotHolds`, `scheduling.VisitStatusEvents`, `tenancy.AccessReviewDecisions`, `tenancy.AccessReviews`, `tenancy.FeatureFlags`, `tenancy.Invitations`, `tenancy.OperatingHours`, `tenancy.PracticeDefaults`, `tenancy.Profiles`, `tenancy.SettingsChanges`, `tenancy.TenantIndex`, `tenancy.TermsAcceptances`.
+Tables that exist but were added while building (not named in the plan): `identity.OnboardingDrafts`, `identity.Sessions`, `leads.DemoRequests`, `leads.Waitlist`, `notifications.Preferences`, `notifications.StaffNotificationReads`, `notifications.StaffNotifications`, `patients.DataKeys`, `patients.MergeRequests`, `scheduling.AppointmentReschedules`, `scheduling.OutboxTenants`, `scheduling.QueueDisplays`, `scheduling.Resources`, `scheduling.SlotHolds`, `scheduling.VisitStatusEvents`, `tenancy.AccessRequests`, `tenancy.AccessReviewDecisions`, `tenancy.AccessReviews`, `tenancy.FeatureFlags`, `tenancy.Invitations`, `tenancy.OperatingHours`, `tenancy.PracticeDefaults`, `tenancy.Profiles`, `tenancy.SettingsChanges`, `tenancy.TenantIndex`, `tenancy.TermsAcceptances`.
 
-**Counts:** 48 tables across 8 schemas; 23 of 90 planned entities are built; 25 tables were added during the build.
+**Counts:** 50 tables across 9 schemas; 24 of 90 planned entities are built; 26 tables were added during the build.
 
 ## 6. Rules the model follows
 
-- **Tenant isolation:** 43 of 48 tables carry `TenantId` (EF query filter plus PostgreSQL forced row-level security on `medvya.tenant_id`). Without `TenantId`: `identity.OnboardingDrafts`, `identity.Users`, `leads.DemoRequests`, `leads.Waitlist`, `tenancy.Tenants`. (`TenantId` present is not proof the row-level-security policy covers the table; see `docs/03-architecture/database-security.md`.)
+- **Tenant isolation:** 45 of 50 tables carry `TenantId` (EF query filter plus PostgreSQL forced row-level security on `medvya.tenant_id`). Without `TenantId`: `identity.OnboardingDrafts`, `identity.Users`, `leads.DemoRequests`, `leads.Waitlist`, `tenancy.Tenants`. (`TenantId` present is not proof the row-level-security policy covers the table; see `docs/03-architecture/database-security.md`.)
 - **Append-only ledgers:** `audit.AuditEvents`, `patients.ConsentReceipts`, `tenancy.TermsAcceptances` (hash-chained, MDV-P0-036; each also has ChainSeq, PrevHash and RowHash added by `LedgerSql`, outside the EF model).
 - **No cross-module foreign keys:** modules link by id and through application services (AGENTS.md 3.1).
 - **Country data plane:** one deployment and one database per country (ADR-003); this diagram is the same in each.

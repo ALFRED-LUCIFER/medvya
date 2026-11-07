@@ -1,3 +1,5 @@
+using Medvya.Tenancy.Domain;
+
 namespace Medvya.Tenancy.Application;
 
 /// <summary>The clinic profile. Name is the tenant's name; HasLogo says whether a logo link can be requested.</summary>
@@ -94,4 +96,10 @@ public interface IPracticeSettings
 
     /// <summary>A link to the logo that stops working after <paramref name="lifetime"/>; null without a logo.</summary>
     Task<Uri?> LogoLinkAsync(TimeSpan lifetime, CancellationToken cancellationToken = default);
+
+    /// <summary>Which clinicians treat the facility's patients (MDV-P2-024).</summary>
+    Task<ClinicalAccessPolicy> GetClinicalAccessAsync(CancellationToken cancellationToken = default);
+
+    /// <exception cref="SettingsValidationException">Not a known policy.</exception>
+    Task<ClinicalAccessPolicy> SaveClinicalAccessAsync(ClinicalAccessPolicy policy, CancellationToken cancellationToken = default);
 }

@@ -31,7 +31,7 @@ public static class AuditedEndpoint
     public static TBuilder Audited<TBuilder>(this TBuilder builder, string action, string resourceType, string purpose = "treatment", string? patientRouteKey = null, TimeSpan? window = null)
         where TBuilder : IEndpointConventionBuilder
     {
-        var metadata = new AuditedEndpointMetadata(action, resourceType, purpose, patientRouteKey);
+        var metadata = new AuditedEndpointMetadata(action, resourceType, AuditPurpose.Require(purpose), patientRouteKey);
         builder.WithMetadata(metadata);
         builder.AddEndpointFilter(async (ctx, next) =>
         {
@@ -96,7 +96,7 @@ public static class AuditedEndpoint
     public static TBuilder AuditedByUseCase<TBuilder>(this TBuilder builder, string action, string resourceType, string purpose, string? patientRouteKey = null)
         where TBuilder : IEndpointConventionBuilder
     {
-        var metadata = new AuditedEndpointMetadata(action, resourceType, purpose, patientRouteKey);
+        var metadata = new AuditedEndpointMetadata(action, resourceType, AuditPurpose.Require(purpose), patientRouteKey);
         builder.WithMetadata(metadata);
         builder.AddEndpointFilter(async (ctx, next) =>
         {
@@ -117,7 +117,7 @@ public static class AuditedEndpoint
     /// <summary>Audits refusals by the authorization policy only (<see cref="AuditedRefusalMetadata"/>), e.g. on a SignalR hub's routes.</summary>
     public static TBuilder AuditRefusals<TBuilder>(this TBuilder builder, string action, string resourceType, string purpose = "treatment")
         where TBuilder : IEndpointConventionBuilder =>
-        builder.WithMetadata(new AuditedRefusalMetadata(action, resourceType, purpose));
+        builder.WithMetadata(new AuditedRefusalMetadata(action, resourceType, AuditPurpose.Require(purpose)));
 
     public static IServiceCollection AddDeniedAccessAudit(this IServiceCollection services) =>
         services.AddSingleton<IAuthorizationMiddlewareResultHandler, AuditDeniedAccess>();

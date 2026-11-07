@@ -113,6 +113,9 @@ public static class VisitFlow
     /// <summary>Only a booked visit that never checked in is a no-show (and only once it has started: see the use case).</summary>
     public static bool CanMarkNoShow(AppointmentState state) => state == AppointmentState.Booked;
 
+    /// <summary>The doctor may call the patient in from any waiting state, or reopen one already in consult (MDV-P2-001).</summary>
+    public static bool CanStartConsult(AppointmentState state) => CanReassign(state) || state == AppointmentState.InConsult;
+
     /// <summary>Waiting for a doctor (checked in, with the nurse or ready): may move to another doctor's queue (MDV-P1-030).</summary>
     public static bool CanReassign(AppointmentState state) => state is AppointmentState.CheckedIn or AppointmentState.WithNurse or AppointmentState.ReadyForDoctor;
 }

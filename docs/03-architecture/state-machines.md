@@ -27,6 +27,19 @@ WALK_IN ──▶ CHECKED_IN
 
 `INVITED → ACTIVE → SUSPENDED → OFFBOARDED`, plus `EXPIRED` for an unaccepted invite. Offboarding revokes sessions immediately (P1-11). Licence expiry generates reminders.
 
+## Encounter (P2, MDV-P2-001)
+
+`ACTIVE → ENDED`. There is one encounter per visit, led by the doctor who started it, and authority is Medvya (a hospital HIS comes in P7).
+- **Start** is allowed from a waiting visit (CHECKED_IN, WITH_NURSE, READY_FOR_DOCTOR) on the visit's facility-local day. It moves the visit to IN_CONSULT with the room of the doctor's session, in the same transaction as the encounter. Starting a visit already IN_CONSULT just creates the encounter. A second start, or one at the same moment, returns the same encounter.
+- **One open consultation per doctor.** To start another, the doctor ends the open one or explicitly leaves it open (`leaveOpen`).
+- **End** moves the visit IN_CONSULT → BILLING. A visit the desk already moved on stays where it is. An ended encounter is never reopened.
+- Start and end are pushed to the facility's open boards after the commit, as ids and state only (as in MDV-P1-029).
+- Every call needs clinical access (MDV-P2-024): Patient 360 at Full to start or end, any treating level to read. Leading an encounter is a care relationship under "assigned only".
+
+## Access request (P2, MDV-P2-024)
+
+`PENDING → GRANTED (1, 7 or 30 days, then expired) | DECLINED`. There is one PENDING request per clinician, patient and facility; asking again returns it. Only an owner of that facility (Staff, roles, integrations: Config) decides, never the requester, and the first decision wins. A grant is a care relationship until it expires. After an expiry or a decline, the clinician asks again.
+
 ## Capture FSM (P3, P6)
 
 ```

@@ -17,7 +17,7 @@ import SessionPanel from '../features/session/components/SessionPanel';
 import AppShell from '../features/shell/components/AppShell';
 import MorePage from '../features/shell/components/MorePage';
 import ShellMessage, { ComingSoon } from '../features/shell/components/ShellMessage';
-import { allows, patientDirectory } from '../features/shell/domain/navigation';
+import { allows, navItems, patientDirectory } from '../features/shell/domain/navigation';
 import { useShellController } from '../features/shell/hooks/useShellController';
 import FrontDeskRoute from './FrontDeskRoute';
 import NotificationsRoute from './NotificationsRoute';
@@ -88,7 +88,8 @@ export default function App({ locale, onLocaleChange }: Props) {
     : !active ? <>
         <Route path="/choose-facility" element={picker} />
         {/* Signed in with no clinic yet: the setup wizard (F-04). It scopes the session to the new practice when it finishes. */}
-        <Route path="/onboarding" element={<OnboardingRoute switcher={switcher} onFinished={r => shell.chooseFacility(r.membershipId, () => navigate('/', { replace: true }))} />} />
+        <Route path="/onboarding" element={<OnboardingRoute switcher={switcher} schedulePath={navItems.find(i => i.id === 'schedule')!.path} onLater={shell.signOut}
+          onFinished={(r, to = '/') => shell.chooseFacility(r.membershipId, () => navigate(to, { replace: true }))} />} />
         <Route path="*" element={<Navigate to={shell.session.memberships.length === 0 ? '/onboarding' : '/choose-facility'} replace state={{ from: location.pathname }} />} />
       </>
     : <>

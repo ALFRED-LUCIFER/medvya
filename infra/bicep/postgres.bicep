@@ -51,9 +51,9 @@ var region = regions[?toLower(location)]
 var regionOk = region != null && region!.country == country && (!geoRedundantBackup || region!.pairCountry == country)
 var checkedLocation = regionOk ? location : fail('Region ${location} (or its backup pair) is not in country ${country}: backups must stay in country.')
 
-// pgcrypto for application hashing, pg_stat_statements for query stats, pgaudit for the audit trail. uuid-ossp is not needed.
+// pgcrypto for application hashing, pg_stat_statements for query stats, pgaudit for the audit trail, pg_trgm for forgiving patient search (functions only). uuid-ossp is not needed.
 var serverSettings = [
-  { name: 'azure.extensions', value: 'PGCRYPTO,PG_STAT_STATEMENTS,PGAUDIT' }
+  { name: 'azure.extensions', value: 'PGCRYPTO,PG_STAT_STATEMENTS,PGAUDIT,PG_TRGM' }
   { name: 'shared_preload_libraries', value: 'pgaudit,pg_stat_statements' } // takes effect at the next restart; restart the server once after the first deployment
   { name: 'pgaudit.log', value: pgauditLog }
   { name: 'require_secure_transport', value: 'on' }

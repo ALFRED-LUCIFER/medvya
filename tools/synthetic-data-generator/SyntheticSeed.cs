@@ -210,10 +210,10 @@ public static class SyntheticSeed
 
     sealed class FixedTenant(Guid? id) : ICurrentTenant { public Guid? TenantId => id; }
 
-    static TenancyDbContext Tenancy(string connectionString, Guid? tenantId) =>
+    internal static TenancyDbContext Tenancy(string connectionString, Guid? tenantId) =>
         new(Options<TenancyDbContext>(connectionString, tenantId), new FixedTenant(tenantId));
 
     static DbContextOptions<T> Options<T>(string connectionString, Guid? tenantId) where T : DbContext =>
-        new DbContextOptionsBuilder<T>().UseNpgsql(connectionString)
+        new DbContextOptionsBuilder<T>().UseNpgsql(PostgresDataSources.For(connectionString))
             .AddInterceptors(new TenantSessionInterceptor(new FixedTenant(tenantId))).Options;
 }

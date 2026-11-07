@@ -212,6 +212,11 @@ namespace Medvya.Patients.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("RegisteredBy")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("SearchKey")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("text")
+                        .HasComputedColumnSql("patients.search_key(\"FullName\", \"ArabicName\")", true);
+
                     b.Property<string>("SexAtBirth")
                         .IsRequired()
                         .HasMaxLength(20)

@@ -65,6 +65,11 @@ END $$;
 REVOKE CREATE ON SCHEMA public FROM PUBLIC;
 GRANT USAGE, CREATE ON SCHEMA public TO medvya_owner;
 
+-- Forgiving patient search (word similarity) needs pg_trgm's functions. Created here, by the administrator, because the owner role cannot
+-- CREATE EXTENSION; on Azure the server parameter azure.extensions must list PG_TRGM first (infra/bicep/postgres.bicep). No index uses it
+-- (row-level security keeps it out of them), so this is functions only.
+CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public;
+
 -- Role memberships need ADMIN on the module roles, which the administrator holds and the owner does not.
 -- medvya_platform is NOT here: the platform console (Host.Platform, MDV-P5-040) signs in with its own login IN ROLE medvya_platform alone,
 -- so it cannot read any clinic schema, and the clinic application cannot read the console's tables.

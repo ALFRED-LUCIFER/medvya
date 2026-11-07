@@ -10,6 +10,7 @@
 | [modules.md](modules.md) | Module ownership, invariants, endpoints, domain events |
 | [data-classification.md](data-classification.md) | Classification register: every planned P0–P2 field with its class and controls; Always Encrypted and masking sets |
 | [database-security.md](database-security.md) | Database roles (migrator, app, per-module, reporting), `infra/postgres/roles.sql`, forced row-level security, mapping to Entra managed identities |
+| [patient-search.md](patient-search.md) | Desk patient search: stored search key, forgiving name matching, why no trigram index under row-level security, measurements at 40,000 to 1,000,000 patients |
 | [erd.md](erd.md) | **Generated** ERD of every built table, the application map, module links and built-versus-planned; CI keeps it current |
 | [data-model.md](data-model.md) | ERD for Azure SQL: conventions, Postgres → Azure SQL mapping, data classification, constraints |
 | [state-machines.md](state-machines.md) | Capture FSM, care-task lifecycle, appointment/visit, invoice, write-back, membership |

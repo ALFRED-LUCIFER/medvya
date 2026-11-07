@@ -5064,6 +5064,12 @@
             "items": {
               "$ref": "#/components/schemas/OnboardingTeamMember"
             }
+          },
+          "patients": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -5121,6 +5127,15 @@
               "string"
             ],
             "format": "int64"
+          },
+          "days": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/DayOfWeek"
+            }
           }
         }
       },
@@ -5191,6 +5206,15 @@
               "null",
               "string"
             ]
+          },
+          "specialties": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
           }
         }
       },

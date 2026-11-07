@@ -11,3 +11,5 @@ export function onConnectivityChange(handler: (online: boolean) => void): () => 
 }
 
 export const isOnlineNow = () => navigator.onLine;
+
+export const reloadPage = () => window.location.reload();

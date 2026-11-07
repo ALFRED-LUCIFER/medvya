@@ -5,6 +5,8 @@ export type Profile = {
   name: string;
   address: string | null;
   registrationNumber: string | null;
+  /** ISO date (yyyy-mm-dd), the registration's last valid day. */
+  registrationExpiresOn?: string | null;
   taxNumber: string | null;
   phone: string | null;
   email: string | null;
@@ -32,6 +34,7 @@ export const profileSchema = z.object({
   name: z.string().trim().min(1).max(200),
   address: optional(500),
   registrationNumber: optional(50),
+  registrationExpiresOn: z.union([z.literal(''), z.iso.date()]),
   taxNumber: optional(30),
   phone: optional(30).refine(v => v === '' || /^[0-9+() -]{6,30}$/.test(v)),
   email: optional(254).refine(v => v === '' || /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(v)),
@@ -39,7 +42,7 @@ export const profileSchema = z.object({
 export type ProfileForm = z.infer<typeof profileSchema>;
 
 export const toProfileForm = (p: Profile): ProfileForm => ({
-  name: p.name, address: p.address ?? '', registrationNumber: p.registrationNumber ?? '', taxNumber: p.taxNumber ?? '', phone: p.phone ?? '', email: p.email ?? '',
+  name: p.name, address: p.address ?? '', registrationNumber: p.registrationNumber ?? '', registrationExpiresOn: p.registrationExpiresOn ?? '', taxNumber: p.taxNumber ?? '', phone: p.phone ?? '', email: p.email ?? '',
 });
 
 export const locationSchema = z.object({ name: z.string().trim().min(1).max(200), address: optional(500), timeZone: z.string().min(1) });

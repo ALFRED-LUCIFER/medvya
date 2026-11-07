@@ -95,8 +95,9 @@ public sealed class ComplianceFactsReader(TenancyDbContext db) : IComplianceFact
         var done = await db.AccessReviews.AnyAsync(r => r.Quarter == quarter && r.CompletedAt != null, cancellationToken);
         var facilities = await db.Facilities.AsNoTracking().Select(f => f.Id).ToListAsync(cancellationToken);
         var clinic = await db.Tenants.AsNoTracking().Select(t => t.Name).SingleAsync(cancellationToken);
-        var contact = await db.Profiles.AsNoTracking().Select(p => p.Email).SingleOrDefaultAsync(cancellationToken);
-        return new ComplianceFacts(clinic, contact, licences, done ? null : quarter, facilities);
+        var profile = await db.Profiles.AsNoTracking().Select(p => new { p.Email, p.RegistrationExpiresOn }).SingleOrDefaultAsync(cancellationToken);
+        var registration = profile?.RegistrationExpiresOn is { } on && on <= horizon ? on : (DateOnly?)null;
+        return new ComplianceFacts(clinic, profile?.Email, licences, done ? null : quarter, facilities, registration);
     }
 
     public async Task<IReadOnlyList<Guid>> TenantsAsync(CancellationToken cancellationToken = default) =>

@@ -186,7 +186,7 @@ test('the wizard works from the keyboard at 768 px', async ({ page }) => {
   }
 });
 
-for (const locale of ['en', 'ar'])
+for (const locale of ['en', 'hi', 'ar'])
   for (const step of [1, 2, 3, 4, 5]) {
     test(`axe finds no violations on wizard step ${step} (${locale})`, async ({ page }) => {
       await page.setViewportSize({ width: 1280, height: 900 });
@@ -194,7 +194,8 @@ for (const locale of ['en', 'ar'])
       await mockOnboarding(page, { step, data: { ...practice, team: [{ email: 'joseph@example.test', role: 'Receptionist' }], patients: 'Upload' } });
       await page.goto('/onboarding');
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-      if (locale === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+      await expect(page.locator('html')).toHaveAttribute('dir', locale === 'ar' ? 'rtl' : 'ltr');
+      if (locale === 'hi') await expect(page.locator('html')).toHaveAttribute('lang', /^hi/);
       expect(await axe(page)).toEqual([]);
     });
   }

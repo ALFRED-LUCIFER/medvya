@@ -2643,5 +2643,10 @@
   "platform.audit.action.team_invite": "Team member invited",
   "platform.audit.action.team_remove": "Team member removed",
   "platform.audit.action.team_access_review": "Access review recorded",
-  "platform.audit.action.audit_export": "Audit log exported"
+  "platform.audit.action.audit_export": "Audit log exported",
+  "audit.actionName.compliance.registration_expiry.notify": "Registration expiry notice sent",
+  "notifications.kind.RegistrationExpiring": "The clinic registration expires in {days} days or less. Renew it, then enter the new date in Settings, Profile.",
+  "notifications.kind.RegistrationExpired": "The clinic registration expires today or has expired. Renew it, then enter the new date in Settings, Profile.",
+  "settings.profile.registrationExpires": "Registration valid until",
+  "settings.profile.registrationExpiresHint": "Owners are reminded 60, 30 and 7 days before, and on the day."
 }

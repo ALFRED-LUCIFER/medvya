@@ -26,8 +26,9 @@ public interface IAccessReviews
 
 public sealed record ExpiringLicence(Guid MembershipId, Guid FacilityId, DateOnly ExpiresOn);
 
-/// <summary>What the compliance reminders need from one tenant: the practice's name and contact address, licences expiring within 60 days (or already expired), and whether a review is due.</summary>
-public sealed record ComplianceFacts(string ClinicName, string? ContactEmail, IReadOnlyList<ExpiringLicence> Licences, string? ReviewDueQuarter, IReadOnlyList<Guid> FacilityIds);
+/// <summary>What the compliance reminders need from one tenant: the practice's name and contact address, licences expiring within 60 days (or already expired), and whether a review is due.
+/// <paramref name="RegistrationExpiresOn"/>: the practice's own registration, only when it expires within 60 days (or already has).</summary>
+public sealed record ComplianceFacts(string ClinicName, string? ContactEmail, IReadOnlyList<ExpiringLicence> Licences, string? ReviewDueQuarter, IReadOnlyList<Guid> FacilityIds, DateOnly? RegistrationExpiresOn = null);
 
 public interface IComplianceFacts
 {

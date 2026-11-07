@@ -528,7 +528,7 @@ erDiagram
 | Table | Columns | Primary key | Notes |
 |---|---|---|---|
 | `OnboardingDrafts` | 6 | UserId |  |
-| `Sessions` | 9 | Id | tenant-scoped |
+| `Sessions` | 10 | Id | tenant-scoped |
 | `Users` | 4 | Id |  |
 
 <details><summary><code>identity.OnboardingDrafts</code> columns</summary>
@@ -554,6 +554,7 @@ erDiagram
 | `IdleTimeoutMinutes` | int |  |  |
 | `LastSeenAt` | timestamptz |  |  |
 | `MembershipId` | guid | yes | id of `tenancy.Memberships` |
+| `RefreshTokenHash` | bytes |  |  |
 | `RevokedAt` | timestamptz | yes |  |
 | `TenantId` | guid | yes | `tenancy.Tenants` |
 | `UserId` | guid |  | FK to `StaffUser` |

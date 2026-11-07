@@ -267,7 +267,7 @@ public sealed class DeskLoadTests(ITestOutputHelper output)
 
                 - Target: {target}{(hotDay ? "; every desk on one doctor-day (MEDVYA_LOAD_HOT_DAY=1)" : "")}
                 - Profile: {desks} concurrent receptionists, {think.TotalMilliseconds:0} ms think time between flows, {elapsed.TotalSeconds:0} s, {flows} complete flows ({rate:0} bookings/hour, the ticket asks for 200)
-                - Flow per desk: search, confirm patient, hold, book, check in, board read, day schedule read
+                - Flow per desk: search, confirm patient, hold, book, check in, board read, day schedule read; every desk subscribed to the live board throughout
                 - Data (local run): {PatientCount} patients; 3 doctors fully booked for a year at each of 2 facilities (about 32,000 visits)
                 - Budgets: reads p95 < 300 ms, booking p95 < 300 ms, writes p95 < 600 ms, no errors
 

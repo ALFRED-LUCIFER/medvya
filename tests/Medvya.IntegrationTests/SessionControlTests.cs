@@ -401,6 +401,10 @@ public sealed class SessionControlTests(PostgresFixture sql) : IClassFixture<Pos
         Assert.Equal(Medvya.Scheduling.Domain.AppointmentState.Booked, (await db.Appointments.SingleAsync(a => a.Id == past)).State);
         Assert.Equal(Medvya.Scheduling.Domain.AppointmentState.Booked, (await db.Appointments.SingleAsync(a => a.Id == others)).State);
         Assert.Contains("appointment.needs_rebooking", await AuditActions(tenantA, admin.Id));
+        // A quiet event cancels the released visit's queued reminders without messaging the patient (NotificationsTests covers the notifier).
+        var released = Assert.Single(await db.Outbox.Where(e => e.Type == "AppointmentNeedsRebooking.v1").ToListAsync());
+        Assert.Equal(future, released.AggregateId);
+        Assert.Contains("\"quiet\":true", released.Payload, StringComparison.Ordinal);
     }
 
     [Fact]

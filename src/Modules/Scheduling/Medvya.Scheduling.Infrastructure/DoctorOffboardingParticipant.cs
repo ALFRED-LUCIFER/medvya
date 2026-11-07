@@ -1,4 +1,5 @@
 using System.Data.Common;
+using System.Text.Json;
 using Medvya.Audit.Application;
 using Medvya.Audit.Domain;
 using Medvya.BuildingBlocks.Domain;
@@ -50,6 +51,12 @@ public sealed class DoctorOffboardingParticipant(
                 throw new VisitTransitionException("changed");
             await db.ScheduleSlots.Where(s => s.AppointmentId == a.Id).ExecuteDeleteAsync(cancellationToken);
             db.StatusEvents.Add(new VisitStatusEvent { Id = Guid.CreateVersion7(), TenantId = a.TenantId, AppointmentId = a.Id, State = AppointmentState.NeedsRebooking, ActorUserId = me, OccurredAt = now });
+            // Quiet: cancels the visit's queued reminders without messaging the patient (reception rebooks them).
+            db.Outbox.Add(new OutboxEvent
+            {
+                Id = Guid.CreateVersion7(), TenantId = a.TenantId, Type = "AppointmentNeedsRebooking.v1", AggregateId = a.Id, OccurredAt = now,
+                Payload = JsonSerializer.Serialize(new { appointmentId = a.Id, facilityId = a.FacilityId, calendarId = a.CalendarId, patientId = a.PatientId, start = a.Start, quiet = true }),
+            });
         }
         await db.SaveChangesAsync(cancellationToken);
         foreach (var a in affected)

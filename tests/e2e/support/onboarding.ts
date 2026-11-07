@@ -25,8 +25,9 @@ export type Saved = { step: number; validate?: number; data: Record<string, unkn
  * A fake onboarding API. `draft` is what the server holds (null = not started). Saves are recorded; a licence number of "1" fails the
  * practice step's check, as the real server does.
  */
-export async function mockOnboarding(page: Page, draft: { step: number; data: Record<string, unknown> } | null = null) {
-  const state = { draft, saves: [] as Saved[], finished: false, chose: '', signedOut: false };
+/** With `loseFirstFinish` the first finish completes on the server but its answer never reaches the page (#205: a slow finish on Azure). */
+export async function mockOnboarding(page: Page, draft: { step: number; data: Record<string, unknown> } | null = null, { loseFirstFinish = false } = {}) {
+  const state = { draft, saves: [] as Saved[], finished: false, finishes: 0, chose: '', signedOut: false };
   const view = () => ({ country: 'IN', step: state.draft!.step, data: state.draft!.data, rules });
   await page.route('**/v1/me/context', r => state.signedOut ? r.fulfill({ status: 401 }) : r.fulfill({ json: state.finished && state.chose ? doctor : newUser }));
   await page.route('**/bff/logout', r => { state.signedOut = true; return r.fulfill({ status: 204 }); });
@@ -35,6 +36,7 @@ export async function mockOnboarding(page: Page, draft: { step: number; data: Re
     const method = r.request().method();
     if (method === 'GET') return state.draft ? r.fulfill({ json: view() }) : r.fulfill({ status: 204 });
     if (method === 'POST') { state.draft = { step: 1, data: {} }; return r.fulfill({ json: view() }); }
+    if (state.finished) return r.fulfill({ status: 404 }); // a completed draft cannot be saved
     const body = r.request().postDataJSON() as Saved;
     if (body.validate === 1 && (body.data.licence as { number?: string } | undefined)?.number === '1')
       return r.fulfill({ status: 400, json: { errors: { 'licence.number': ['format'] } } });
@@ -44,13 +46,14 @@ export async function mockOnboarding(page: Page, draft: { step: number; data: Re
   });
   await page.route('**/v1/onboarding/finish', r => {
     state.finished = true;
+    if (loseFirstFinish && state.finishes++ === 0) return r.abort('timedout');
     return r.fulfill({ json: { membershipId: 'm-1', role: 'SoloDoctor', invitationsSent: 1, invitationsFailed: 0 } });
   });
   return state;
 }
 
 /** Fills the five steps for a solo doctor in India, invites the front desk, finishes and opens Today from the ready screen. */
-export async function completeWizard(page: Page) {
+export async function completeWizard(page: Page, { lost = false } = {}) {
   await page.getByRole('button', { name: 'Start setup' }).click();
   await page.getByLabel('Full name').fill('Arjun Rao (synthetic)');
   await page.getByLabel('Practice name').fill('Rao Clinic (synthetic)');
@@ -73,6 +76,10 @@ export async function completeWizard(page: Page) {
   await page.getByRole('button', { name: 'Continue' }).click();
 
   await page.getByRole('button', { name: 'Finish setup' }).click();
+  if (lost) { // the first answer never came back: the page says so, and trying again finds the practice the server made
+    await expect(page.getByText(/could not finish/i)).toBeVisible();
+    await page.getByRole('button', { name: 'Finish setup' }).click();
+  }
   await expect(page.getByRole('heading', { level: 1, name: 'Rao Clinic (synthetic) is ready.' })).toBeVisible();
   await page.getByRole('button', { name: 'Open Today' }).click();
 }

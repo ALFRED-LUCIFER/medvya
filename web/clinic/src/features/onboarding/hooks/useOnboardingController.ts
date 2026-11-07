@@ -7,7 +7,7 @@ import {
   addMember, emptyForm, formFieldOf, stepFields, stepOfPath, steps, stepSchema, toData, toForm,
   type Draft, type FinishResult, type WizardForm,
 } from '../domain/onboarding';
-import { fetchDraft, finishOnboarding, saveDraft, startDraft, ValidationError } from '../services/onboardingApi';
+import { ApiError, fetchDraft, finishOnboarding, saveDraft, startDraft, ValidationError } from '../services/onboardingApi';
 
 const key = ['onboarding'];
 const autosaveMs = 1200;
@@ -88,7 +88,10 @@ export function useOnboardingController(initialCountry: Country, onFinished: (re
     if (!(await form.trigger(stepFields[step]))) { setProblem('check'); return; }
     try {
       const at = last ? step : steps[index + 1]!;
-      await save.mutateAsync({ step: at, form: form.getValues(), validate: step });
+      // An earlier finish may have completed on the server after the page gave up (#205): the draft is gone, so finish again directly.
+      await save.mutateAsync({ step: at, form: form.getValues(), validate: step }).catch((e: unknown) => {
+        if (!(last && e instanceof ApiError && e.status === 404)) throw e;
+      });
       saved.current = snapshot(at, form.getValues());
       if (!last) { setStep(at); return; }
       setDone(await finishOnboarding());

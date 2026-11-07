@@ -14,6 +14,9 @@ public interface IOnboardingDrafts
     /// <summary>Replaces the draft's data and resume step. False when there is no unfinished draft.</summary>
     Task<bool> SaveAsync(Guid userId, int resumeStep, string data, CancellationToken cancellationToken = default);
 
-    /// <summary>Marks the draft finished and empties its data. False when there is no unfinished draft.</summary>
-    Task<bool> CompleteAsync(Guid userId, CancellationToken cancellationToken = default);
+    /// <summary>Marks the draft finished and replaces its data with <paramref name="result"/> (ids only). False when there is no unfinished draft.</summary>
+    Task<bool> CompleteAsync(Guid userId, string result, CancellationToken cancellationToken = default);
+
+    /// <summary>The result stored by <see cref="CompleteAsync"/> for the user's finished draft, or null when it is unfinished or there is none.</summary>
+    Task<string?> CompletedResultAsync(Guid userId, CancellationToken cancellationToken = default);
 }

@@ -22,6 +22,7 @@ public static partial class OnboardingEndpoints
 {
     public sealed record StartRequest(string? Country);
     public sealed record SaveRequest(int Step, int? Validate, OnboardingData? Data);
+    public sealed record FinishResult(Guid? MembershipId, string? Role, int InvitationsSent, int InvitationsFailed);
 
     static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { Converters = { new JsonStringEnumConverter() } };
 
@@ -59,14 +60,21 @@ public static partial class OnboardingEndpoints
             [FromServices] IStaffUsers users, CancellationToken ct) =>
         {
             var userId = UserId(principal);
-            if (await drafts.GetAsync(userId, ct) is not { } draft) return Results.NotFound();
+            if (await drafts.GetAsync(userId, ct) is not { } draft)
+            {
+                // A finish the browser gave up on (#205) still completed here: a repeat answers with the practice it made, never a second one.
+                var done = await drafts.CompletedResultAsync(userId, ct) is { } stored ? JsonSerializer.Deserialize<FinishResult>(stored, Json) : null;
+                return done is { MembershipId: not null } ? Results.Ok(done with { InvitationsSent = 0, InvitationsFailed = 0 }) : Results.NotFound();
+            }
             var data = JsonSerializer.Deserialize<OnboardingData>(draft.Data, Json) ?? new OnboardingData(null, null, null, null, null, null);
             if (OnboardingRules.For(draft.Country)!.ValidateAll(data) is { Count: > 0 } errors) return Results.ValidationProblem(Errors(errors));
 
+            // From here the request's token is not used: a browser that stops waiting must not leave a practice half set up (#205).
+            ct = CancellationToken.None;
             // shortcut: two finishes at the same moment would create two practices (the page disables the button while saving);
             // claim the draft in the same transaction as the tenant once the drafts move into one store with it.
             var practice = await provisioning.CreateAsync(draft.Country, data, ct);
-            await drafts.CompleteAsync(userId, ct);
+            await drafts.CompleteAsync(userId, JsonSerializer.Serialize(new FinishResult(practice.MembershipId, practice.Role.ToString(), 0, 0), Json), ct);
             await users.SetDisplayNameAsync(userId, data.Profile!.FullName!, ct);
 
             // The team step goes through the invitation flow (MDV-P0-013), run inside the new tenant so its audit rows land there.
@@ -93,7 +101,7 @@ public static partial class OnboardingEndpoints
                 // The practice exists already; an invitation that could not go out is repeated from the staff screen, so it is counted, not thrown.
                 catch (Exception ex) when (ex is SmtpException or InvalidOperationException or IOException or DbUpdateException) { failed++; }
             }
-            return Results.Ok(new { practice.MembershipId, Role = practice.Role.ToString(), InvitationsSent = sent, InvitationsFailed = failed });
+            return Results.Ok(new FinishResult(practice.MembershipId, practice.Role.ToString(), sent, failed));
         });
 
         return app;

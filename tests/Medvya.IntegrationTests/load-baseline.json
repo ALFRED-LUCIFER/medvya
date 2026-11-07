@@ -1,0 +1,58 @@
+{
+  "Patient search": {
+    "Calls": 401,
+    "Errors": 0,
+    "P50": 35,
+    "P95": 42,
+    "P99": 64
+  },
+  "Confirm patient": {
+    "Calls": 401,
+    "Errors": 0,
+    "P50": 5,
+    "P95": 6,
+    "P99": 7
+  },
+  "Hold slot": {
+    "Calls": 401,
+    "Errors": 0,
+    "P50": 10,
+    "P95": 12,
+    "P99": 17
+  },
+  "Book": {
+    "Calls": 401,
+    "Errors": 0,
+    "P50": 13,
+    "P95": 16,
+    "P99": 20
+  },
+  "Check in": {
+    "Calls": 55,
+    "Errors": 0,
+    "P50": 13,
+    "P95": 16,
+    "P99": 97
+  },
+  "Board read": {
+    "Calls": 401,
+    "Errors": 0,
+    "P50": 7,
+    "P95": 10,
+    "P99": 11
+  },
+  "Day schedule read": {
+    "Calls": 401,
+    "Errors": 0,
+    "P50": 9,
+    "P95": 11,
+    "P99": 14
+  },
+  "Board push": {
+    "Calls": 9120,
+    "Errors": 0,
+    "P50": 9,
+    "P95": 11,
+    "P99": 15
+  }
+}

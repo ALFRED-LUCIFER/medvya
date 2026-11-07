@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addableRows, canOffboard, permissionRows, statusLabel, type RoleCatalogue } from './staff';
+import { addableRows, canOffboard, canReactivate, permissionRows, rebookingMissing, statusLabel, type RoleCatalogue, type StaffMember } from './staff';
 
 const catalogue: RoleCatalogue = {
   builtIn: [
@@ -42,5 +42,22 @@ describe('canOffboard', () => {
 describe('addableRows', () => {
   it('lists only rows the server marked addable', () => {
     expect(addableRows(catalogue, 'Receptionist').map(r => r.capability)).toEqual(['AuditLog']);
+  });
+});
+
+describe('offboarding and re-activation (#225)', () => {
+  const m = (over: Partial<StaffMember>): StaffMember => ({
+    membershipId: 'm', userId: 'u', name: null, email: null, role: 'Receptionist', customRoleId: null, customRoleName: null, facilityId: 'f', facilityName: 'Adyar',
+    status: 'Active', mfa: 'enrolled', invitationId: null, invitationState: null, invitationExpiresAt: null, ...over,
+  });
+  it('asks a doctor\'s offboarding what happens to their patients, and nobody else\'s', () => {
+    expect(rebookingMissing(m({ role: 'HospitalDoctor' }), { reason: 'x', rebooking: null })).toBe(true);
+    expect(rebookingMissing(m({ role: 'SoloDoctor' }), { reason: 'x', rebooking: 'call' })).toBe(false);
+    expect(rebookingMissing(m({ role: 'Receptionist' }), { reason: 'x', rebooking: null })).toBe(false);
+  });
+  it('brings back only someone offboarded who had joined', () => {
+    expect(canReactivate(m({ status: 'Offboarded' }))).toBe(true);
+    expect(canReactivate(m({ status: 'Offboarded', userId: null }))).toBe(false);
+    expect(canReactivate(m({ status: 'Active' }))).toBe(false);
   });
 });

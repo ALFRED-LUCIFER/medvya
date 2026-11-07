@@ -29,7 +29,7 @@ MEDVYA_LOAD_HOT_DAY=1 MEDVYA_LOAD_THINK_MS=500 MEDVYA_LOAD_SECONDS=60 MEDVYA_LOA
 ```
 
 Other outputs: `MEDVYA_LOAD_RESULTS=<path>` writes the numbers as JSON; `MEDVYA_LOAD_BASELINE=<path>` (a results file) also fails the run when a
-step's p95 is more than 20 % over the baseline's.
+step's p95 is more than 20 % (and at least 25 ms) over the baseline's.
 
 The test is skipped unless `MEDVYA_LOAD=1` (the script sets it), so `dotnet test` stays fast. The per-IP and per-user rate limits are raised
 (`RateLimiting:PermitsPerMinute` and two more) only inside this harness; production configuration is untouched.
@@ -40,7 +40,9 @@ The test is skipped unless `MEDVYA_LOAD=1` (the script sets it), so `dotnet test
 build of `Host.Api` on Kestrel against PostgreSQL 16 in Docker, the P1 profile for 600 s, compared with
 [`load-baseline.json`](../../tests/Medvya.IntegrationTests/load-baseline.json). That baseline comes from a CI run (the `load-results`
 artifact), not a laptop; refresh it in a PR when a change makes the flow faster or deliberately slower, and say why. The run fails when a step is
-over budget, has an error, or its p95 is more than 20 % over the baseline. A failing nightly or manual run opens an issue titled
+over budget, has an error, or its p95 is more than 20 % over the baseline (and at least 25 ms over it: two CI runs of the same commit
+differed by 14 ms on search, and most steps take 5 to 20 ms, so smaller moves are runner noise). The committed baseline is the slower of the
+first two CI runs per step (runs 42405506360 and 42406606403). A failing nightly or manual run opens an issue titled
 "Nightly load test failed (MDV-P1-037)" labelled `performance`, or comments on it while it is open. The report is in the run summary.
 
 ## Azure dev (by hand, with the owner)

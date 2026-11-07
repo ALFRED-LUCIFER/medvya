@@ -10,7 +10,10 @@ using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.AspNetCore.TestHost;
+using Medvya.Scheduling.Api;
 using Xunit.Abstractions;
 using static Medvya.IntegrationTests.SchedulingHarness;
 
@@ -57,7 +60,8 @@ internal sealed class StepStats(string name, int budgetMs)
 /// the same flow at another environment (staging), with MEDVYA_LOAD_DESKS (JSON array of request-header objects, one per desk, the
 /// credentials), MEDVYA_LOAD_FACILITY, MEDVYA_LOAD_DOCTORS (comma-separated calendar ids), MEDVYA_LOAD_BOOK_FROM (a Monday, yyyy-MM-dd,
 /// from which every doctor has free slots). Other knobs: MEDVYA_LOAD_SECONDS (180), MEDVYA_LOAD_DESKS_COUNT (20), MEDVYA_LOAD_THINK_MS (30000: 20 desks then book about 2,400 an hour, 12 times the pilot's 200),
-/// MEDVYA_LOAD_REPORT (report path). Never run it against production.
+/// MEDVYA_LOAD_REPORT (report path), MEDVYA_LOAD_RESULTS (JSON results path), MEDVYA_LOAD_BASELINE (a results file: the run fails when a
+/// step's p95 is more than 20 % over it, the nightly regression check). Never run it against production.
 /// </summary>
 [Collection(nameof(RunsAlone))]
 public sealed class DeskLoadTests(ITestOutputHelper output)
@@ -65,6 +69,8 @@ public sealed class DeskLoadTests(ITestOutputHelper output)
     const int PatientCount = 20_000;
     static readonly TimeZoneInfo Ist = TimeZoneInfo.FindSystemTimeZoneById("Asia/Kolkata");
     static readonly string[] Times = [.. Enumerable.Range(0, 9).Select(i => $"{9 + i / 3:D2}:{i % 3 * 20:D2}"), .. Enumerable.Range(0, 9).Select(i => $"{17 + i / 3:D2}:{i % 3 * 20:D2}")];
+
+    static readonly JsonSerializerOptions Indented = new() { WriteIndented = true };
 
     static string Env(string name, string fallback) => Environment.GetEnvironmentVariable(name) is { Length: > 0 } v ? v : fallback;
 
@@ -130,21 +136,27 @@ public sealed class DeskLoadTests(ITestOutputHelper output)
                 var monday = today.AddDays(-(((int)today.DayOfWeek + 6) % 7));
                 // The data volume of a busy year for two clinics: a fully booked year for 3 doctors at each facility and 20,000 patients.
                 var patients = await ScheduleReadPerformanceTests.SeedPatientsAsync(sql, h.Tenant, h.Facility, PatientCount);
-                await ScheduleReadPerformanceTests.SeedVisitsAsync(sql, h.Tenant, h.Facility, doctors, patients, monday);
-                await ScheduleReadPerformanceTests.SeedVisitsAsync(sql, h.Tenant, h.OtherFacility, [Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid()], patients, monday);
+                // Weekends too, so the check-in step has visits booked today on any day the run happens.
+                await ScheduleReadPerformanceTests.SeedVisitsAsync(sql, h.Tenant, h.Facility, doctors, patients, monday, weekends: true);
+                await ScheduleReadPerformanceTests.SeedVisitsAsync(sql, h.Tenant, h.OtherFacility, [Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid()], patients, monday, weekends: true);
                 var receptionists = await h.AddReceptionistsAsync(desks);
+                // Real server-side sessions, as after sign-in and the facility picker: every call and hub invocation checks one, as in production.
+                var sessions = new BoardHubTests.SignedInDesks();
+                foreach (var r in receptionists) await sessions.SignInAsync(sql, h.Tenant, r, h.Facility);
                 // The rate-limit settings are raised here only: the load comes from 20 desks behind one address, which production limits would refuse.
                 host = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b
                     .UseSetting("ConnectionStrings:Medvya", h.ConnectionString)
                     .UseSetting("RateLimiting:PermitsPerMinute", "10000000")
                     .UseSetting("RateLimiting:PatientSearchPerMinute", "10000000")
                     .UseSetting("RateLimiting:PatientRecordsPerMinute", "10000000")
-                    .ConfigureTestServices(s => PatientEndpointTests.SignInFromHeaders(s, h.Tenant)));
+                    .UseSetting("RateLimiting:BoardWatchPerMinute", "10000000")
+                    .UseSetting("Logging:LogLevel:Default", "Warning") // closer to production, where the host keeps no console logging
+                    .ConfigureTestServices(s => s.AddSingleton<IStartupFilter>(sessions)));
                 host.UseKestrel(0); // a real socket, so the numbers include HTTP and not only the pipeline
                 host.StartServer();
                 url = new Uri(host.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses.First());
                 target = $"local: Docker PostgreSQL 16 + Kestrel on loopback ({url})";
-                deskHeaders = [.. receptionists.Select(r => new Dictionary<string, string> { ["X-Test-User"] = r.ToString(), ["X-Test-Facility"] = h.Facility.ToString() })];
+                deskHeaders = [.. receptionists.Select(r => new Dictionary<string, string> { ["X-Test-User"] = r.ToString() })];
                 (facility, bookFrom) = (h.Facility, monday.AddDays(7 * (ScheduleReadPerformanceTests.Weeks + 1)));
             }
 
@@ -152,6 +164,7 @@ public sealed class DeskLoadTests(ITestOutputHelper output)
             [
                 new("Patient search", 300), new("Confirm patient", 300), new("Hold slot", 300), new("Book", 300),
                 new("Check in", 600), new("Board read", 300), new("Day schedule read", 300),
+                new("Board push", 2000), // a change reaching every subscribed board, from the change to receipt; MDV-P1-029 asks for 2 s
             ];
 
             using var http = new HttpClient(new SocketsHttpHandler { MaxConnectionsPerServer = 200 }) { BaseAddress = url, Timeout = TimeSpan.FromSeconds(30) };
@@ -180,9 +193,24 @@ public sealed class DeskLoadTests(ITestOutputHelper output)
 
             async Task Desk(int n, StepStats[] steps, DateTimeOffset until)
             {
-                var (search, confirm, hold, book, checkIn, board, day) = (steps[0], steps[1], steps[2], steps[3], steps[4], steps[5], steps[6]);
+                var (search, confirm, hold, book, checkIn, board, day, push) = (steps[0], steps[1], steps[2], steps[3], steps[4], steps[5], steps[6], steps[7]);
                 var headers = deskHeaders[n % deskHeaders.Count];
                 var rnd = new Random(n);
+                // Every desk keeps the live board open, as the reception screen does: subscribed for the run, timing each change it hears.
+                await using var live = new HubConnectionBuilder()
+                    .WithUrl(new Uri(url, BoardHub.Path), Microsoft.AspNetCore.Http.Connections.HttpTransportType.WebSockets, o => { foreach (var (k, v) in headers) o.Headers[k] = v; })
+                    .Build();
+                live.On<JsonElement>(nameof(BoardChanged), m => push.Add((long)(DateTimeOffset.UtcNow - m.GetProperty("changedAt").GetDateTimeOffset()).TotalMilliseconds, true));
+                try
+                {
+                    await live.StartAsync();
+                    await live.InvokeAsync(nameof(BoardHub.Watch), facility);
+                }
+                catch (Exception e) when (e is HttpRequestException or HubException or System.Net.WebSockets.WebSocketException)
+                {
+                    push.FirstError ??= $"subscribe: {e.GetType().Name}";
+                    push.Add(0, false);
+                }
                 // Desks start at random moments and pause 0.5 to 1.5 times the think time, so they do not move in lockstep (a real front desk does not).
                 TimeSpan Pause() => think * (0.5 + rnd.NextDouble());
                 await Task.Delay(think * rnd.NextDouble() / 2);
@@ -251,14 +279,40 @@ public sealed class DeskLoadTests(ITestOutputHelper output)
             output.WriteLine(report);
             var path = Env("MEDVYA_LOAD_REPORT", Path.Combine(RepoRoot(), "docs", "05-delivery", "load-test-desk.md"));
             await File.WriteAllTextAsync(path, report);
+            var results = steps.ToDictionary(s => s.Name, s => new StepResult(s.Count, s.Errors, s.Percentile(0.5), s.Percentile(0.95), s.Percentile(0.99)));
+            if (Environment.GetEnvironmentVariable("MEDVYA_LOAD_RESULTS") is { Length: > 0 } resultsPath)
+                await File.WriteAllTextAsync(resultsPath, JsonSerializer.Serialize(results, Indented));
 
             Assert.All(steps, s => Assert.True(s.WithinBudget, s.Row));
+            if (Environment.GetEnvironmentVariable("MEDVYA_LOAD_BASELINE") is { Length: > 0 } baselinePath)
+            {
+                var regressions = Regressions(results, JsonSerializer.Deserialize<Dictionary<string, StepResult>>(await File.ReadAllTextAsync(baselinePath))!);
+                Assert.True(regressions.Count == 0, "p95 regressed more than 20 % against " + baselinePath + ":\n" + string.Join("\n", regressions));
+            }
         }
         finally
         {
             host?.Dispose();
             if (sql is not null) await sql.DisposeAsync();
         }
+    }
+
+    /// <summary>One step's numbers in the results and baseline files.</summary>
+    internal sealed record StepResult(int Calls, int Errors, long P50, long P95, long P99);
+
+    /// <summary>
+    /// Steps whose p95 is more than 20 % over the baseline's (MDV-P1-037 nightly check). A step the baseline lacks is new and has nothing to regress from.
+    /// </summary>
+    internal static List<string> Regressions(Dictionary<string, StepResult> now, Dictionary<string, StepResult> baseline) =>
+        [.. now.Where(s => baseline.TryGetValue(s.Key, out var b) && s.Value.P95 * 5 > b.P95 * 6)
+            .Select(s => FormattableString.Invariant($"{s.Key}: p95 {s.Value.P95} ms, baseline {baseline[s.Key].P95} ms (+{100.0 * (s.Value.P95 - baseline[s.Key].P95) / Math.Max(1, baseline[s.Key].P95):0} %)"))];
+
+    [Fact]
+    public void AStepRegressesWhenItsP95IsMoreThanTwentyPercentOverTheBaseline()
+    {
+        var baseline = new Dictionary<string, StepResult> { ["Book"] = new(100, 0, 10, 100, 150), ["Hold slot"] = new(100, 0, 10, 100, 150) };
+        var now = new Dictionary<string, StepResult> { ["Book"] = new(100, 0, 10, 120, 150), ["Hold slot"] = new(100, 0, 10, 121, 150), ["Board push"] = new(9, 0, 1, 900, 900) };
+        Assert.Equal(["Hold slot: p95 121 ms, baseline 100 ms (+21 %)"], Regressions(now, baseline)); // exactly 20 % is allowed; a new step is not compared
     }
 
     /// <summary>Counts what waiting requests wait on, so a slow step points at a lock, the log or the CPU. Statement text carries parameter markers only.</summary>

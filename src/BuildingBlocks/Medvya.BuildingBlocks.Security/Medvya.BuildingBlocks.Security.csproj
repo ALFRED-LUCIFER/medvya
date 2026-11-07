@@ -3,6 +3,8 @@
     <!-- Hosting, options, DI and configuration abstractions come with the shared framework. -->
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Azure.Identity" />
+    <!-- Token signing for the development sign-in provider (DevIdentityProvider). -->
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" />
     <PackageReference Include="Azure.Security.KeyVault.Keys" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
   </ItemGroup>

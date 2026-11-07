@@ -33,11 +33,12 @@ public sealed class EncounterService(
 
         if (await db.Encounters.AsNoTracking().SingleOrDefaultAsync(e => e.AppointmentId == visit.Id, cancellationToken) is { } existing)
             return await RepeatAsync(existing, visit.Room, cancellationToken);
-        // Switching patient needs a decision: end the open consultation, or say to leave it open (AC2).
+        // Switching patient needs a decision: end the open consultation, or say to leave it open (AC2). This visit's own encounter, from a
+        // start that won the race since the read above, is not another consultation: the insert below meets it and answers with it.
         // shortcut: a check, then a write; the same doctor starting two patients in the same instant (two tabs) gets two open consultations
         // without choosing. No database rule fits (leaving one open is allowed); revisit if Today (MDV-P2-002) starts consultations in bulk.
         if (!command.LeaveOpen && await db.Encounters.AsNoTracking()
-                .Where(e => e.LeadClinicianId == me && e.Status == EncounterStatus.Active).Select(e => (Guid?)e.Id).FirstOrDefaultAsync(cancellationToken) is { } open)
+                .Where(e => e.LeadClinicianId == me && e.Status == EncounterStatus.Active && e.AppointmentId != visit.Id).Select(e => (Guid?)e.Id).FirstOrDefaultAsync(cancellationToken) is { } open)
             throw new OpenEncounterException(open);
 
         var encounter = new Encounter

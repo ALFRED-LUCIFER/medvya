@@ -159,7 +159,7 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P1-035](P1-front-desk/MDV-P1-035.md) | Practice access log for owners (F-12): who opened which record and when | P1 | wk 8–8 | 84% |
 | [MDV-P1-046](P1-front-desk/MDV-P1-046.md) | Start UAE regulator onboarding applications early (risk mitigation) | P1 | wk 6–8 | 55% |
 
-## Week 9 · 21 Dec 2026 – 25 Dec 2026 · load 14.4 dev-days ⚠ over capacity
+## Week 9 · 21 Dec 2026 – 25 Dec 2026 · load 14.9 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -175,6 +175,7 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P2-022](P2-doctor-workspace/MDV-P2-022.md) | Legal review of clinical data processing before the first real note | P2 | wk 9–11 | 62% |
 | [MDV-P2-023](P2-doctor-workspace/MDV-P2-023.md) | Define and operate the doctor licence verification process | P2 | wk 9–9 | 75% |
 | [MDV-P2-024](P2-doctor-workspace/MDV-P2-024.md) | Clinical authorisation: care relationship and purpose checks, request access for clinics | P2 | wk 9–10 | 84% |
+| [MDV-P2-029](P2-doctor-workspace/MDV-P2-029.md) | Encounters start race: a second start that loses the race answers with the winner's encounter | P2 | wk 9–9 | 95% |
 
 ## Week 10 · 28 Dec 2026 – 01 Jan 2027 · load 11.4 dev-days ⚠ over capacity
 

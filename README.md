@@ -53,14 +53,15 @@ medvya/
 ├── src/
 │   ├── Host.Api/            # composition only: Program, auth/BFF, context, middleware, observability, public site
 │   │                        #   today also holds feature endpoints (moved to modules by P0-040)
+│   ├── Host.Platform/       # exists (P5-040): platform console host, composition only; no clinic module (ADR-014)
 │   ├── BuildingBlocks/      # Domain, Application, Infrastructure, Security, Contracts, Country
-│   ├── Modules/             # exist: Identity, Tenancy, Audit, Patients, Scheduling, Encounters, Billing, Notifications, Leads
-│   │                        # planned: Practice, Encounters, Prescribing, Documents, Scribe, Care, Portal,
-│   │                        #   Insurance, Inventory, Laboratory, Migration, Platform, Devices, Integrations
+│   ├── Modules/             # exist: Identity, Tenancy, Audit, Patients, Scheduling, Encounters, Billing, Notifications, Leads, Platform
+│   │                        # planned: Practice, Prescribing, Documents, Scribe, Care, Portal,
+│   │                        #   Insurance, Inventory, Laboratory, Migration, Devices, Integrations
 │   └── Workers/             # planned: Worker.Jobs, Worker.Ai, Worker.Integration (P3+; jobs run in Host today)
 ├── web/
 │   ├── clinic/              # exists: clinic app with clinic-admin routes
-│   ├── platform-admin/      # planned (P5-040): Medvya team console
+│   ├── platform-admin/      # exists (P5-040): Medvya team console: sign-in with a security key, team access, audit log
 │   └── portal/              # planned (P4): patient PWA
 ├── mobile/
 │   ├── .oxlintrc.json       # layer rules (ADR-009), no literals, no web UI

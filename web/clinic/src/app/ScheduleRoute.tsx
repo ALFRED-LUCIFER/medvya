@@ -48,6 +48,8 @@ export default function ScheduleRoute({ facilityId, userId, userName, canBook, c
   const next = schedule.nextFree;
   return (
     <SchedulePage {...schedule} printedBy={userName} panel={panel} actions={actions} leavePath={leavePath}
+      // While a reschedule picks its new slot the schedule must stay in view, so that panel is not a drawer.
+      onClosePanel={opened && visit.rules ? (visit.mode === 'pick' ? undefined : visit.onClose) : booking.choice ? booking.onClose : undefined}
       onPrevious={leaving(schedule.onPrevious)} onNext={leaving(schedule.onNext)} onToday={leaving(schedule.onToday)}
       onOpenDay={leaving(schedule.onOpenDay)} onView={leaving(schedule.onView)}
       // Hidden while a booking or a change is under way, so it never covers the panel's fields.

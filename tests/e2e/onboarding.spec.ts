@@ -89,6 +89,14 @@ test('leaving mid-wizard and signing in again resumes at the same step with the 
   await expect(page.getByLabel('Registration number')).toHaveValue('1234');
 });
 
+test('a finish whose answer was lost succeeds on the second try with the same practice (#205)', async ({ page }) => {
+  const api = await mockOnboarding(page, null, { loseFirstFinish: true });
+  await page.goto('/onboarding?country=IN');
+  await completeWizard(page, { lost: true });
+  expect(api.finishes).toBe(2);
+  await expect.poll(() => api.chose).toBe('m-1');
+});
+
 test('errors appear under the field and are announced; a server error keeps the person on the step', async ({ page }) => {
   await mockOnboarding(page, { step: 1, data: {} });
   await page.goto('/onboarding');

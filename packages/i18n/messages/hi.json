@@ -2076,7 +2076,7 @@
   "settings.notifications.channel.sms": "एसएमएस",
   "settings.notifications.channel.whatsapp": "व्हाट्सऐप",
   "settings.notifications.whatsappLater": "बाद के चरण में आएगा।",
-  "settings.notifications.senderNote": "संदेशों में आपके क्लिनिक का नाम होता है। एसएमएस भेजने वाले का नाम टेलीफ़ोन ऑपरेटर के पास पंजीकृत है और यहाँ बदला नहीं जा सकता।",
+  "settings.notifications.senderNote": "एसएमएस भेजने वाले का नाम टेलीफ़ोन ऑपरेटर के पास पंजीकृत है और यहाँ बदला नहीं जा सकता।",
   "settings.notifications.quiet": "शांत घंटे",
   "settings.notifications.quietIntro": "इस समय (क्लिनिक के समय में) कोई एसएमएस नहीं जाता; वह समय खत्म होने तक रुकता है। ईमेल नहीं रोका जाता। शांत घंटे न चाहें तो दोनों में एक ही समय भरें।",
   "settings.notifications.quietStart": "शांत समय शुरू",
@@ -2660,5 +2660,7 @@
   "staff.reactivateError.aboveGranter": "आप यह भूमिका नहीं दे सकते: इसमें ऐसी पहुँच है जो आपके पास नहीं है। प्रैक्टिस मालिक से कहें।",
   "staff.reactivateError.failed": "यह नहीं हुआ। कुछ नहीं बदला; फिर से कोशिश करें।",
   "staff.notice.reactivated": "वापस लाया गया। वे उसी भूमिका के साथ फिर से साइन इन कर सकते हैं।",
-  "audit.actionName.staff.reactivate": "स्टाफ़ सदस्य को वापस लाया गया"
+  "audit.actionName.staff.reactivate": "स्टाफ़ सदस्य को वापस लाया गया",
+  "settings.notifications.senderName": "ईमेल में भेजने वाले का नाम",
+  "settings.notifications.senderNameHint": "हर ईमेल के विषय की शुरुआत में आता है, जैसे “Iyer Family Clinic: अपॉइंटमेंट की पुष्टि”। स्थान का नाम इस्तेमाल करने के लिए खाली छोड़ें।"
 }

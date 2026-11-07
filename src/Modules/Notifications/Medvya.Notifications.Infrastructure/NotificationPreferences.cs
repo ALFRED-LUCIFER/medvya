@@ -5,6 +5,7 @@ using Medvya.Notifications.Application;
 using Medvya.Notifications.Domain;
 using Medvya.Notifications.Infrastructure.Persistence;
 using Medvya.Tenancy.Application;
+using Medvya.Tenancy.Domain;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Options;
@@ -28,16 +29,21 @@ public sealed class NotificationPreferences(
     static NotificationPreferencesView Defaults(NotificationOptions o) =>
         new(true, true, true, true, o.Channels.Contains(NotificationChannel.Email), o.Channels.Contains(NotificationChannel.Sms), o.QuietStart, o.QuietEnd);
 
-    static NotificationPreferencesView ViewOf(NotificationPreference p) => new(p.Confirmation, p.Reminder24h, p.Reminder2h, p.Changes, p.Email, p.Sms, p.QuietStart, p.QuietEnd);
+    static NotificationPreferencesView ViewOf(NotificationPreference p) => new(p.Confirmation, p.Reminder24h, p.Reminder2h, p.Changes, p.Email, p.Sms, p.QuietStart, p.QuietEnd, p.SenderName);
 
     public async Task<NotificationPreferencesView> SaveAsync(NotificationPreferencesView changes, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(changes);
+        // The sender name goes out to patients: short, and never a web address (a phishing link in our emails, #886).
+        var sender = string.IsNullOrWhiteSpace(changes.SenderName) ? null : changes.SenderName.Trim();
+        SettingsValidationException.ThrowIfAny(sender is null ? [] : sender.Length > NotificationPreferencesView.SenderNameMax ? [new("senderName", "too_long")]
+            : OutboundText.HasLink(sender) ? [new("senderName", "link")] : []);
+        changes = changes with { SenderName = sender };
         var before = await GetAsync(cancellationToken);
         var row = await db.Preferences.SingleOrDefaultAsync(cancellationToken);
         if (row is null) db.Preferences.Add(row = new NotificationPreference { TenantId = TenantId });
-        (row.Confirmation, row.Reminder24h, row.Reminder2h, row.Changes, row.Email, row.Sms, row.QuietStart, row.QuietEnd) =
-            (changes.Confirmation, changes.Reminder24h, changes.Reminder2h, changes.Changes, changes.Email, changes.Sms, changes.QuietStart, changes.QuietEnd);
+        (row.Confirmation, row.Reminder24h, row.Reminder2h, row.Changes, row.Email, row.Sms, row.QuietStart, row.QuietEnd, row.SenderName) =
+            (changes.Confirmation, changes.Reminder24h, changes.Reminder2h, changes.Changes, changes.Email, changes.Sms, changes.QuietStart, changes.QuietEnd, changes.SenderName);
         var now = clock.GetUtcNow();
         (row.ChangedBy, row.ChangedAt) = (user.UserId, now);
 
@@ -69,6 +75,7 @@ public sealed class NotificationPreferences(
             ("quietStart", At(before.QuietStart), At(after.QuietStart)), ("quietEnd", At(before.QuietEnd), At(after.QuietEnd)),
         };
         var changed = all.Where(c => c.Before != c.After).Select(c => $"{c.Name}:{c.Before}>{c.After}").ToList();
+        if (before.SenderName != after.SenderName) changed.Add("senderName:changed"); // free text stays out of the audit trail (codes only)
         return changed.Count == 0 ? null : string.Join(';', changed);
     }
 

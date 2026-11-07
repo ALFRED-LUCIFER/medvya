@@ -173,7 +173,7 @@ public sealed partial class NotificationsTests(PostgresFixture sql) : IClassFixt
         h.Clock.Advance(TimeSpan.FromHours(2)); // Monday 11:00
         await RunJobAsync();
         Assert.Single(email.Sent);
-        Assert.Equal("अपॉइंटमेंट की याद", email.Sent[0].Subject); // the patient's language
+        Assert.Equal("Adyar (synthetic): अपॉइंटमेंट की याद", email.Sent[0].Subject); // the patient's language
     }
 
     [Fact]
@@ -281,7 +281,7 @@ public sealed partial class NotificationsTests(PostgresFixture sql) : IClassFixt
         var rows = await RowsAsync(visit.Id);
         Assert.Equal(4, rows.Count(r => r.Status == NotificationStatus.Cancelled && r.FailureCode == "visit_changed")); // old 24 h and 2 h, both channels
         var moved = Assert.Single(email.Sent);
-        Assert.Equal("अपॉइंटमेंट बदली गई", moved.Subject);
+        Assert.Equal("Adyar (synthetic): अपॉइंटमेंट बदली गई", moved.Subject);
         Assert.Equal(Tuesday(18).AddHours(-2), rows.Single(r => r.Kind == NotificationKind.Reminder2h && r.Status == NotificationStatus.Queued && r.Channel == NotificationChannel.Email).SendAt);
 
         // The same event published again changes nothing (at-least-once delivery).
@@ -305,7 +305,7 @@ public sealed partial class NotificationsTests(PostgresFixture sql) : IClassFixt
 
         var rows = await RowsAsync(visit.Id);
         Assert.All(rows.Where(r => r.Kind is NotificationKind.Reminder24h or NotificationKind.Reminder2h), r => Assert.Equal(NotificationStatus.Cancelled, r.Status));
-        Assert.Equal("अपॉइंटमेंट रद्द", Assert.Single(email.Sent).Subject);
+        Assert.Equal("Adyar (synthetic): अपॉइंटमेंट रद्द", Assert.Single(email.Sent).Subject);
     }
 
     [Fact]
@@ -323,7 +323,7 @@ public sealed partial class NotificationsTests(PostgresFixture sql) : IClassFixt
         await h.Booking(h.Reception).CancelFollowingAsync(ids[0], new CancelAppointment { Reason = CancelReason.PatientRequest });
         await RunJobAsync();
 
-        Assert.Equal("अपॉइंटमेंट रद्द", Assert.Single(email.Sent).Subject); // one message for the whole series
+        Assert.Equal("Adyar (synthetic): अपॉइंटमेंट रद्द", Assert.Single(email.Sent).Subject); // one message for the whole series
         foreach (var id in ids)
             Assert.All((await RowsAsync(id)).Where(r => r.Kind is NotificationKind.Reminder24h or NotificationKind.Reminder2h), r => Assert.Equal(NotificationStatus.Cancelled, r.Status));
     }
@@ -595,6 +595,27 @@ public sealed partial class NotificationsTests(PostgresFixture sql) : IClassFixt
         InScope(async sp => { var p = sp.GetRequiredService<INotificationPreferences>(); await p.SaveAsync(change(await p.GetAsync())); return 0; });
 
     [Fact]
+    public async Task EmailsOpenWithThePracticesSenderNameWhichIsValidatedAndKeptOutOfTheAudit()
+    {
+        // #213, owner decision 7 Nov: until DLT, the clinic is named at the start of every email subject (and as the From name where possible).
+        await Save(p => p with { SenderName = "  Iyer Family Clinic  " });
+        Assert.Equal("Iyer Family Clinic", (await InScope(sp => sp.GetRequiredService<INotificationPreferences>().GetAsync())).SenderName);
+        await BookTuesdayAsync();
+        await RunJobAsync();
+        var sent = Assert.Single(email.Sent);
+        Assert.StartsWith("Iyer Family Clinic: ", sent.Subject, StringComparison.Ordinal);
+        Assert.Equal("Iyer Family Clinic", sent.FromName);
+
+        foreach (var (bad, code) in new[] { (new string('x', 61), "too_long"), ("Visit iyer-clinic.example.com", "link") })
+        {
+            var refused = await Assert.ThrowsAsync<Medvya.Tenancy.Application.SettingsValidationException>(() => Save(p => p with { SenderName = bad }));
+            Assert.Contains(refused.Errors, e => e.Field == "senderName" && e.Code == code);
+        }
+        await using var audit = sql.Audit(h.Tenant);
+        Assert.Contains(await audit.Events.Where(e => e.Action == "settings.notifications.update").Select(e => e.Detail).ToListAsync(), d => d == "senderName:changed");
+    }
+
+    [Fact]
     public async Task TurningOffAReminderCancelsTheQueuedOnesAndStopsSchedulingMore()
     {
         var first = await BookTuesdayAsync();
@@ -655,7 +676,7 @@ public sealed partial class NotificationsTests(PostgresFixture sql) : IClassFixt
 
         await h.Booking(h.Reception).CancelAsync(visit.Id, new CancelAppointment { Reason = CancelReason.PatientRequest });
         await RunJobAsync();
-        Assert.Equal("अपॉइंटमेंट रद्द", Assert.Single(email.Sent).Subject);
+        Assert.Equal("Adyar (synthetic): अपॉइंटमेंट रद्द", Assert.Single(email.Sent).Subject);
     }
 
     [Fact]

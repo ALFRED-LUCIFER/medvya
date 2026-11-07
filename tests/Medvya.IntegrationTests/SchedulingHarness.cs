@@ -52,7 +52,7 @@ internal sealed class SchedulingHarness(PostgresFixture sql)
     public Medvya.Patients.Infrastructure.Persistence.NationalIdColumns NationalIds => sql.NationalIds;
 
     public string ConnectionString => new Npgsql.NpgsqlConnectionStringBuilder(sql.ConnectionString) { MaxPoolSize = 400 }.ConnectionString;
-    readonly List<ServiceProvider> providers = [];
+    readonly System.Collections.Concurrent.ConcurrentBag<ServiceProvider> providers = []; // race tests build services from many threads at once
 
     public async Task SeedAsync()
     {

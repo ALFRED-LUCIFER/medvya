@@ -24,5 +24,11 @@ export default defineConfig({
       url: 'http://localhost:4174/app/', // the build's base path
       reuseExistingServer: !process.env.CI,
     },
+    {
+      // The platform console (MDV-P5-040): platform-console.spec.ts sets this baseURL.
+      command: 'pnpm --filter platform-admin exec vite --port 4175 --strictPort',
+      url: 'http://localhost:4175',
+      reuseExistingServer: !process.env.CI,
+    },
   ],
 });

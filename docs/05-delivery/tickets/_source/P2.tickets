@@ -624,3 +624,24 @@ ac:
 - Clinical safety reviewer sign-off recorded for R2.
 - R2 release notes list P2-01…P2-08 status and exclusions (AI drafting, billing, results inbox, regulator e-prescription).
 - Playwright journeys J2/J3 pass for the non-AI path (consent declined/manual note).
+
+=== MDV-P2-029
+title: Encounters start race: a second start that loses the race answers with the winner's encounter
+type: Task
+epic: MDV-P2-E04
+prd: P2-04
+priority: MUST
+roles: Doctor
+labels: encounters, domain
+estimate: 0.5
+weeks: 9
+depends: MDV-P2-001
+confidence: 95 | Cause reproduced by a forced-interleaving test on real PostgreSQL.
+sources: src/Modules/Encounters/Medvya.Encounters.Infrastructure/EncounterService.cs; tests/Medvya.IntegrationTests/EncounterTests.cs
+desc:
+Two starts of the same visit at the same moment (double click, two tabs) could fail: the losing start read no encounter for the visit, then the winner committed, then the loser's open-consultation check found the winner's encounter for this same visit and refused with "another consultation is open". The open-consultation check now ignores this visit's own encounter, so the loser goes on to the insert, meets the unique index and answers with the winner.
+ac:
+- A start that reads no encounter for the visit and then loses the race to another start of the same visit answers with the winner's encounter, not "another consultation is open".
+- A start whose insert meets the unique index answers with the winner's encounter (row-level security still applies to the re-read).
+- The visit moves to In consult once and the board is told once.
+- The lost-race interleavings are forced in the test (not left to parallel timing) and the test fails when the fix is removed.

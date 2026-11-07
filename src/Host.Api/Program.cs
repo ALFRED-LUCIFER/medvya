@@ -30,6 +30,8 @@ using Medvya.Tenancy.Application;
 using Medvya.Tenancy.Infrastructure;
 using Host.Api.Observability;
 using Host.Api.PublicSite;
+using Medvya.BuildingBlocks.Security;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddMedvyaTelemetry();
@@ -169,6 +171,9 @@ app.MapPatientEndpoints();
 app.MapAccessRequestEndpoints();
 app.MapEncounterEndpoints();
 if (app.Environment.IsDevelopment() && app.Configuration["Authentication:Oidc:Authority"]?.EndsWith(DevIdentityProvider.Path, StringComparison.Ordinal) == true)
-    app.MapDevIdentityProvider();
+    app.MapDevIdentityProvider(Medvya.Identity.Domain.IdentityProviders.Development, async http =>
+        await http.RequestServices.GetRequiredService<Medvya.Identity.Infrastructure.Persistence.IdentityDbContext>().Users.AsNoTracking()
+            .Where(u => u.Issuer == Medvya.Identity.Domain.IdentityProviders.Development).OrderBy(u => u.DisplayName)
+            .Select(u => new DevAccount(u.Subject, u.DisplayName)).ToListAsync(http.RequestAborted));
 
 app.Run();

@@ -8,9 +8,9 @@
 **Day one:** Open Doctor Today, see the patient chart, record vitals, write and sign a note, and print a prescription, without AI.  
 **Goal:** A doctor completes a full visit, from chart to signed note and prescription, in Medvya. This is also the fallback that AI must never break.
 
-**Tickets:** 28 · **Estimate:** 60 dev-days vs **35 working days** in the window (OVER by 25 days: needs scope trade-off or overlap) · **Average confidence:** 82%
+**Tickets:** 29 · **Estimate:** 60.5 dev-days vs **35 working days** in the window (OVER by 25.5 days: needs scope trade-off or overlap) · **Average confidence:** 82%
 
-**Status:** To do 28
+**Status:** To do 29
 
 ## Epics
 
@@ -33,6 +33,7 @@
 | [MDV-P2-022](MDV-P2-022.md) | To do | Legal review of clinical data processing before the first real note | Chore | MUST | P2-08 | — | 0.5 | 9–11 | 21 Dec → 08 Jan 2027 | 62% Low |
 | [MDV-P2-023](MDV-P2-023.md) | To do | Define and operate the doctor licence verification process | Chore | MUST | P2-05 | — | 0.5 | 9–9 | 21 Dec → 25 Dec 2026 | 75% Medium |
 | [MDV-P2-024](MDV-P2-024.md) | To do | Clinical authorisation: care relationship and purpose checks, request access for clinics | Task | MUST | P2-02 | — | 2 | 9–10 | 21 Dec → 01 Jan 2027 | 84% Medium |
+| [MDV-P2-029](MDV-P2-029.md) | To do | Encounters start race: a second start that loses the race answers with the winner's encounter | Task | MUST | P2-04 | — | 0.5 | 9–9 | 21 Dec → 25 Dec 2026 | 95% High |
 | [MDV-P2-003](MDV-P2-003.md) | To do | Privacy-safe global search (⌘K) with care-relationship check and "Request access" | Story | MUST | P2-01 | D-02 | 2 | 10–10 | 28 Dec → 01 Jan 2027 | 88% High |
 | [MDV-P2-004](MDV-P2-004.md) | To do | Patient 360 (E-01): banner with identity and allergies always visible; problems, medicines, vitals trends | Story | MUST | P2-02 | E-01 | 3 | 10–11 | 28 Dec → 08 Jan 2027 | 85% High |
 | [MDV-P2-007](MDV-P2-007.md) | To do | Nurse intake queue and vitals with out-of-range re-measure and escalation (N-01) | Story | MUST | P2-03 | N-01 | 3 | 10–11 | 28 Dec → 08 Jan 2027 | 88% High |

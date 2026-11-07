@@ -157,7 +157,7 @@ public sealed partial class OnboardingTests(PostgresFixture sql) : IClassFixture
         var result = await Json(finished);
         Assert.Equal("SoloDoctor", result.GetProperty("role").GetString());
         Assert.Equal(1, result.GetProperty("invitationsSent").GetInt32());
-        Assert.Contains(outbox.Sent, m => m.To == "joseph@example.test");
+        await WaitFor(() => Task.FromResult(outbox.Has("joseph@example.test"))); // emailed after the response (#205)
         Assert.Equal(HttpStatusCode.NoContent, (await browser.GetAsync(Api())).StatusCode); // the draft is done
 
         var context = await Json(await browser.GetAsync(new Uri("/v1/me/context", UriKind.Relative)));

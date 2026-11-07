@@ -414,6 +414,8 @@ resource app 'Microsoft.Web/sites@2023-12-01' = {
         { name: 'Audit__DigestKey', value: '@Microsoft.KeyVault(VaultName=${vault.name};SecretName=audit-digest-key)' }
         // Hangfire runs the reminders and the daily ledger digest and verification.
         { name: 'Jobs__Enabled', value: 'true' }
+        // No SMS provider until DLT (MDV-P1-045): email only, or every confirmation and reminder logs a failed SMS (#912).
+        { name: 'Notifications__Channels__0', value: 'Email' }
         // The API serves the built web app under /app/ (MDV-P0-007); links the server creates must point there.
         { name: 'Web__AppPath', value: '/app/' }
         { name: 'Invitations__LinkBaseUrl', value: 'https://${appHost}/app' }

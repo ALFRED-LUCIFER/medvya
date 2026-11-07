@@ -67,7 +67,8 @@ export const addableRows = (catalogue: RoleCatalogue, baseRole: AssignableRole) 
 export const statusLabel = (m: StaffMember): MembershipStatus | 'Revoked' | 'Expired' =>
   m.status === 'Invited' && m.invitationState === 'revoked' ? 'Revoked' : m.status === 'Invited' && m.invitationState === 'expired' ? 'Expired' : m.status;
 
-export const canResend = (m: StaffMember) => m.status === 'Invited' && m.invitationId !== null;
+/** A revoked invitation is not resent (#912; the server refuses it too): the row stays as the record, and the person is added again. */
+export const canResend = (m: StaffMember) => m.status === 'Invited' && m.invitationId !== null && m.invitationState !== 'revoked';
 export const canRevoke = (m: StaffMember) => m.status === 'Invited' && m.invitationState === 'pending';
 
 /** Offboarding applies to someone who has joined; a pending invitation is revoked instead. */

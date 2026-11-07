@@ -54,7 +54,8 @@ test('doctor sees Clinical and Practice items; flag-off items are not rendered',
   await expect(nav.getByRole('heading')).toHaveText(['Clinical', 'Practice', 'Admin']);
   await expect(nav.getByRole('link')).toHaveText(['Today', 'Patients', 'Front desk', 'Schedule', 'Register patient', 'Practice settings']);
   await expect(nav.getByRole('link', { name: 'Today' })).toHaveAttribute('aria-current', 'page');
-  await expect(page.getByRole('main').getByRole('heading', { name: 'Today' })).toBeVisible();
+  // #912: until the clinician Today screen (MDV-P2-002), Today shows the day's board.
+  await expect(page.getByRole('main').getByRole('heading', { name: /^Reception board/ })).toBeVisible();
 });
 
 test('signed in without an active facility goes to the facility slot', async ({ page }) => {
@@ -119,7 +120,7 @@ for (const [name, width] of [['desktop', 1366], ['tablet', 900], ['mobile', 375]
       await signInAs(page, doctor, locale);
       await page.setViewportSize({ width, height: 800 });
       await page.goto('/today');
-      await expect(page.getByRole('main').getByRole('heading')).toBeVisible();
+      await expect(page.getByRole('main').getByRole('heading', { level: 1 })).toBeVisible();
       await page.addScriptTag({ path: axePath });
       const violations = await page.evaluate(async () =>
         (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations

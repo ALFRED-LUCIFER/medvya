@@ -17,7 +17,8 @@ export type NavItem = {
 
 // Clinician App sidebar (docs/02-design/source/Medvya Clinician App) and the role sitemap (docs/02-design/sitemap-and-permissions.md).
 export const navItems: readonly NavItem[] = [
-  { id: 'today', path: '/today', group: 'clinical', capability: 'Patient360Chart', flag: 'clinical.today', phase: 2 },
+  // Until the clinician Today screen (MDV-P2-002), Today opens the day's board, as journey J2 starts there (#912).
+  { id: 'today', path: '/today', group: 'clinical', capability: 'Patient360Chart', phase: 1 },
   { id: 'patients', path: '/patients', group: 'clinical', capability: 'Patient360Chart', phase: 1 },
   { id: 'messages', path: '/messages', group: 'clinical', capability: 'CareTasksPatientContact', flag: 'care.messages', phase: 4 },
   { id: 'video', path: '/video', group: 'clinical', capability: 'ClinicalNotes', flag: 'clinical.video', phase: 8 },

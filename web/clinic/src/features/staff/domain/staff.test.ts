@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addableRows, canOffboard, canReactivate, permissionRows, rebookingMissing, statusLabel, type RoleCatalogue, type StaffMember } from './staff';
+import { addableRows, canOffboard, canResend, canReactivate, permissionRows, rebookingMissing, statusLabel, type RoleCatalogue, type StaffMember } from './staff';
 
 const catalogue: RoleCatalogue = {
   builtIn: [
@@ -36,6 +36,10 @@ describe('canOffboard', () => {
   it('labels a revoked or expired invitation as such, not as Invited (MDV-P1-052)', () => {
     expect((['pending', 'revoked', 'expired'] as const).map(invitationState => statusLabel({ ...base, status: 'Invited', invitationState }))).toEqual(['Invited', 'Revoked', 'Expired']);
     expect(statusLabel({ ...base, status: 'Active' })).toBe('Active');
+  });
+
+  it('offers Resend on a pending or expired invitation, never a revoked one (#912)', () => {
+    expect((['pending', 'expired', 'revoked'] as const).map(invitationState => canResend({ ...base, status: 'Invited', invitationId: 'i', invitationState }))).toEqual([true, true, false]);
   });
 });
 

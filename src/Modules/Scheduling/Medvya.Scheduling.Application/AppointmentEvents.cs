@@ -27,4 +27,7 @@ public interface IOutboxDispatcher
 
     /// <summary>Hands up to <paramref name="batch"/> unpublished events of the current tenant to the subscribers, oldest first; returns how many were published.</summary>
     Task<int> DispatchAsync(int batch = 100, CancellationToken cancellationToken = default);
+
+    /// <summary>True while a change to this appointment at this facility waits to be published, so its patient messages are not queued yet (#912).</summary>
+    Task<bool> PendingAsync(Guid facilityId, Guid appointmentId, CancellationToken cancellationToken = default);
 }

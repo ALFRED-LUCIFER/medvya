@@ -67,7 +67,8 @@ public sealed partial class Invitations(TenancyDbContext db, ICurrentTenant tena
 
     public async Task<InvitationCreated?> ResendAsync(Guid invitationId, CancellationToken cancellationToken = default)
     {
-        var old = await db.Invitations.SingleOrDefaultAsync(i => i.Id == invitationId && i.AcceptedAt == null, cancellationToken);
+        // A revoked invitation stays revoked (#912): the admin adds the person again instead.
+        var old = await db.Invitations.SingleOrDefaultAsync(i => i.Id == invitationId && i.AcceptedAt == null && i.RevokedAt == null, cancellationToken);
         // Only the newest invitation of a membership can be resent, so a membership never has two live links.
         if (old is null || await db.Invitations.AnyAsync(i => i.MembershipId == old.MembershipId && i.CreatedAt > old.CreatedAt, cancellationToken)) return null;
         var membership = await db.Memberships.SingleAsync(m => m.Id == old.MembershipId, cancellationToken);

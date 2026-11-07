@@ -20,6 +20,9 @@ journey('J1', {
     await page.goto('/onboarding?country=IN');
     await completeWizard(page);
     await expect.poll(() => api.chose).toBe('m-1');
+    // #912: "Open Today" opens Today (the day's board until MDV-P2-002), and Today is in the menu.
+    await expect(page).toHaveURL(/\/today$/);
+    await expect(page.getByRole('link', { name: 'Today' }).first()).toHaveAttribute('aria-current', 'page');
   },
   // P-02: full registration with only the India minimum; ABHA left empty (optional, care never depends on it).
   3: async ({ page }) => {

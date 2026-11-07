@@ -1676,6 +1676,7 @@
   "appointment.messages.loading": "جارٍ تحميل الرسائل…",
   "appointment.messages.error": "تعذّر تحميل الرسائل.",
   "appointment.messages.empty": "لا توجد رسائل مجدولة لهذه الزيارة. لا تُرسل رسائل للزيارات بدون موعد؛ وإلا فقد تكون الرسائل متوقفة في الإعدادات، الإشعارات.",
+  "appointment.messages.preparing": "يجري تجهيز الرسائل. ستظهر هنا خلال دقيقة أو دقيقتين.",
   "appointment.messages.at": "{day} {time}",
   "message.kind.Confirmation": "تأكيد",
   "message.kind.Rescheduled": "تم النقل",

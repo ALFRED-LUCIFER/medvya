@@ -117,6 +117,19 @@ public sealed partial class NotificationsTests
         Assert.Equal(4, await audit.Events.CountAsync(e => e.Action == "compliance.access_review.due"));
     }
 
+    [Fact]
+    public async Task ANewPracticeHasNoReviewDueUntilAQuarterAfterItWasCreated()
+    {
+        await using (var db = sql.Context(h.Tenant))
+            await db.Tenants.ExecuteUpdateAsync(s => s.SetProperty(t => t.CreatedAt, h.Clock.GetUtcNow()));
+        var firstDue = Day(h.Clock.GetUtcNow()).AddMonths(3);
+        Assert.Equal(0, await RunCompliance());
+        h.Clock.Advance(TimeSpan.FromDays(firstDue.DayNumber - Day(h.Clock.GetUtcNow()).DayNumber - 1)); // the day before, in the next quarter
+        Assert.Equal(0, await RunCompliance());
+        h.Clock.Advance(TimeSpan.FromDays(1));
+        Assert.Equal(2, await RunCompliance()); // two facilities
+    }
+
     async Task ConfirmEveryoneAsync()
     {
         var view = await InScope(sp => sp.GetRequiredService<IAccessReviews>().CurrentAsync());

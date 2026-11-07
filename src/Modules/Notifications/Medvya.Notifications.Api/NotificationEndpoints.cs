@@ -7,6 +7,7 @@ using Medvya.Audit.Application;
 using Medvya.Notifications.Application;
 using Medvya.Notifications.Domain;
 using Medvya.Notifications.Infrastructure;
+using Medvya.Scheduling.Application;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 
@@ -22,13 +23,16 @@ public static class NotificationEndpoints
     static readonly IResult NoFacility = Results.ValidationProblem(new Dictionary<string, string[]> { ["facilityId"] = ["required"] });
     public sealed record FacilityBody(Guid FacilityId);
     public sealed record ReceiptBody(string? Ref, string? State, string? ReasonCode);
+    public sealed record AppointmentMessages(IReadOnlyList<NotificationView> Messages, bool Preparing);
 
     public static WebApplication MapNotifications(this WebApplication app)
     {
         var staff = app.MapGroup("/v1").RequireAuthorization().AddEndpointFilter(MapErrors);
 
-        staff.MapGet("/appointments/{appointmentId:guid}/notifications", async (Guid appointmentId, Guid? facilityId, [FromServices] INotificationQueries q, CancellationToken ct) =>
-                facilityId is not { } f || f == Guid.Empty ? NoFacility : Results.Ok(await q.ForAppointmentAsync(f, appointmentId, ct)))
+        // Preparing: the booking's outbox event is not published yet, so no message is queued *yet* (#912). Access is checked by the query first.
+        staff.MapGet("/appointments/{appointmentId:guid}/notifications", async (Guid appointmentId, Guid? facilityId, [FromServices] INotificationQueries q, [FromServices] IOutboxDispatcher outbox, CancellationToken ct) =>
+                facilityId is not { } f || f == Guid.Empty ? NoFacility
+                : Results.Ok(new AppointmentMessages(await q.ForAppointmentAsync(f, appointmentId, ct), await outbox.PendingAsync(f, appointmentId, ct))))
             .Audited("notification.read", "notification", window: AuditWindow.Repeated); // the visit panel polls it every 30 s
 
         // Delivery rate per channel and every failure with its reason code (exit gate 4). Default window: the last 14 days.

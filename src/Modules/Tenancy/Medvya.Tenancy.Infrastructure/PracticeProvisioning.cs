@@ -38,7 +38,7 @@ public sealed class PracticeProvisioning(IServiceScopeFactory scopes, ICurrentUs
         var membershipId = Guid.CreateVersion7();
         var hours = data.Hours!;
         var specialty = OnboardingRules.SpecialtyText(data.Profile);
-        db.Tenants.Add(new Tenant { Id = tenantId, Name = clinic.Name!.Trim(), CountryCode = country, ResidencyRegion = ResidencyRegion(country) });
+        db.Tenants.Add(new Tenant { Id = tenantId, Name = clinic.Name!.Trim(), CountryCode = country, ResidencyRegion = ResidencyRegion(country), CreatedAt = now });
         db.Facilities.Add(new Facility { Id = facilityId, TenantId = tenantId, Name = clinic.Name!.Trim(), TimeZone = rules.TimeZone });
         db.Memberships.Add(new Membership { Id = membershipId, TenantId = tenantId, UserId = owner, FacilityId = facilityId, Role = role, Status = MembershipStatus.Active });
         db.Profiles.Add(new PracticeProfile

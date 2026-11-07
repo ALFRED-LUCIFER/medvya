@@ -53,6 +53,8 @@ type Props = {
   onRegisterAnother: () => void;
   recordPath: (id: string) => string;
   bookPath: string | null;
+  /** The slot the booking panel sent the desk from (an address query of opaque ids and a time), to go back to it. */
+  slot: string | null;
   checkInPath: string | null;
   /** Links to the two modes ("Quick (busy desk)" / "Full registration"); the mode is in the URL, never patient data. */
   quickPath: string;
@@ -75,7 +77,7 @@ export default function Registration(p: Props) {
 
   if (p.result)
     return <RegistrationSuccess result={p.result} name={p.registeredName} actorName={p.actorName} onRegisterAnother={p.onRegisterAnother}
-      recordPath={p.recordPath(p.result.patientId)} bookPath={p.bookPath} checkInPath={p.checkInPath}
+      recordPath={p.recordPath(p.result.patientId)} bookPath={p.bookPath} slot={p.slot} checkInPath={p.checkInPath}
       quick={p.quick} missing={p.missing} timeZone={p.timeZone} />;
   if (p.failure === 'forbidden') return <PatientsMessage title={t('err.403')} body={t('registration.forbidden.body')} />;
 

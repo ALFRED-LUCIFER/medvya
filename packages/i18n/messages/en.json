@@ -1153,6 +1153,7 @@
   "registration.done.incompleteBody": "Missing: {items}. The record stays marked Incomplete registration until they are added.",
   "registration.done.quickConsents": "Reminders were not asked about. If the patient wants them, open the record and turn on reminders under Consents.",
   "registration.done.book": "Book appointment",
+  "registration.done.backToBooking": "Back to the booking",
   "registration.done.checkIn": "Check in now (walk-in)",
   "registration.done.open": "Open record",
   "registration.done.another": "Register another",

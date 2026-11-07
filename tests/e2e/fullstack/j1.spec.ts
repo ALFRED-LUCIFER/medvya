@@ -64,8 +64,15 @@ test('J1: a new solo doctor sets up the practice, registers a patient, books and
     expect(await staff.json()).toContainEqual(expect.objectContaining({ email: `reception${n}@example.test`, status: 'Invited' }));
   });
 
-  await test.step('J1.3 register the first patient with the India minimum, ABHA left empty', async () => {
-    await page.goto('/app/patients/new');
+  await test.step('J1.3 from an empty slot, register the first patient with the India minimum, ABHA left empty', async () => {
+    // MDV-P1-021: the patient is not on file yet, so the desk registers them from the booking panel, which holds the slot meanwhile.
+    await page.getByRole('link', { name: 'Schedule' }).first().click();
+    const slots = page.getByRole('list', { name: /Arjun Menon/ });
+    await expect(slots).toBeVisible();
+    await slots.getByRole('button', { name: /^Book / }).first().click();
+    const panel = page.getByRole('complementary', { name: 'Book appointment' });
+    await expect(panel).toContainText('Held for you until');
+    await panel.getByRole('link', { name: 'Register a new patient' }).click();
     await page.getByLabel('Full name').fill(patient.name);
     await page.getByRole('textbox', { name: 'Date of birth', exact: true }).fill(patient.dob);
     await page.getByRole('radio', { name: 'Female', exact: true }).check();
@@ -81,15 +88,12 @@ test('J1: a new solo doctor sets up the practice, registers a patient, books and
     await expect(page.getByRole('heading', { name: `${patient.name} is registered` })).toBeVisible();
   });
 
-  await test.step('J1.4 book the first free slot and check in on the board', async () => {
-    await page.getByRole('link', { name: 'Schedule' }).first().click();
-    const slots = page.getByRole('list', { name: /Arjun Menon/ });
-    await expect(slots).toBeVisible();
-    await slots.getByRole('button', { name: /^Book / }).first().click();
+  await test.step('J1.4 back to the held slot with the new patient chosen, book, and check in on the board', async () => {
+    await page.getByRole('link', { name: 'Back to the booking' }).click();
     const panel = page.getByRole('complementary', { name: 'Book appointment' });
-    await panel.getByRole('searchbox', { name: 'Name, MRN, phone or ID' }).fill(patient.mobile);
-    await panel.getByRole('button', { name: 'Search' }).click();
-    await panel.getByRole('button', { name: /^L I, \d+ y, Female/ }).click();
+    await expect(panel).toContainText('Held for you until'); // held again for this desk
+    await expect(panel).toContainText(`${patient.name} · MRN`); // the new patient is chosen
+    await expectNoAxeViolations(page);
     await panel.getByRole('combobox', { name: 'Reason category' }).click();
     await page.getByRole('option').first().click();
     await panel.getByRole('button', { name: 'Confirm booking' }).click();

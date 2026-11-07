@@ -8,13 +8,15 @@ import type { RegistrationResult } from '../domain/registration';
 type Props = {
   result: RegistrationResult; name: string; actorName: string; onRegisterAnother: () => void;
   recordPath: string; bookPath: string | null; checkInPath: string | null;
+  /** Opened from the booking panel: the held slot's address, to go back to it with this patient chosen (MDV-P1-021). */
+  slot?: string | null;
   quick: boolean; missing: Missing[];
   /** The facility's IANA zone (session.active.timeZone); the browser's zone only when the server sent none. */
   timeZone?: string;
 };
 
 /** "{name} is registered" with MRN, time and actor, then the next desk actions (P-02 success). */
-export default function RegistrationSuccess({ result, name, actorName, onRegisterAnother, recordPath, bookPath, checkInPath, quick, missing, timeZone }: Props) {
+export default function RegistrationSuccess({ result, name, actorName, onRegisterAnother, recordPath, bookPath, slot, checkInPath, quick, missing, timeZone }: Props) {
   const { t, formatDate, formatTime, locale } = useI18n();
   const at = new Date(result.registeredAt);
   return (
@@ -39,7 +41,9 @@ export default function RegistrationSuccess({ result, name, actorName, onRegiste
       {/* Quick mode asks no reminder consent: say where it is added, so reminders are not silently never sent (MDV-P1-052). */}
       {quick && <p className="text-sm">{t('registration.done.quickConsents')}</p>}
       <div className="flex flex-wrap gap-2">
-        {bookPath && <Link to={bookPath} className={buttonVariants()}>{t('registration.done.book')}</Link>}
+        {bookPath && (slot
+          ? <Link to={`${bookPath}?${slot}&${new URLSearchParams({ patient: result.patientId })}`} className={buttonVariants()}>{t('registration.done.backToBooking')}</Link>
+          : <Link to={bookPath} className={buttonVariants()}>{t('registration.done.book')}</Link>)}
         {/* Walk-in with this patient chosen: the id is opaque, never patient data. */}
         {checkInPath && <Link to={`${checkInPath}?${new URLSearchParams({ patient: result.patientId })}`} className={buttonVariants({ variant: 'outline' })}>{t('registration.done.checkIn')}</Link>}
         <Link to={recordPath} className={buttonVariants({ variant: 'outline' })}>{t('registration.done.open')}</Link>

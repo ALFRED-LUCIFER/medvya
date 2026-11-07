@@ -1149,6 +1149,7 @@
   "registration.done.incompleteBody": "नहीं हैं: {items}। इन्हें जोड़े जाने तक रिकॉर्ड पर \"अधूरा पंजीकरण\" लगा रहता है।",
   "registration.done.quickConsents": "रिमाइंडर के बारे में नहीं पूछा गया। अगर मरीज़ चाहें, तो रिकॉर्ड खोलें और सहमतियाँ में रिमाइंडर चालू करें।",
   "registration.done.book": "अपॉइंटमेंट बुक करें",
+  "registration.done.backToBooking": "बुकिंग पर वापस जाएँ",
   "registration.done.checkIn": "अभी चेक-इन करें (वॉक-इन)",
   "registration.done.open": "रिकॉर्ड खोलें",
   "registration.done.another": "एक और पंजीकृत करें",

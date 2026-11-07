@@ -1,10 +1,11 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
-import { bookingSchema, emptyBooking, slotError, type BookedAppointment, type BookingForm, type SlotChoice } from '../domain/booking';
-import type { VisitType } from '../domain/schedule';
+import { bookingSchema, emptyBooking, readSlotReturn, slotError, withoutSlotReturn, type BookedAppointment, type BookingForm, type SlotChoice } from '../domain/booking';
+import type { ScheduleColumn, VisitType } from '../domain/schedule';
 import { includedStarts, maxRepeat, moveRow, planOf, summarise, toggleRow, type PlanRow, type SeriesDone } from '../domain/series';
 import { forgetKey, type HeldKey, keyFor } from '../../api/services/idempotencyKey';
 import { ApiError, bookAppointment, bookSeries, findPatient, holdSlot, previewSeries, releaseHold } from '../services/scheduleApi';
@@ -15,11 +16,15 @@ const errorOf = (e: unknown) => slotError(e instanceof ApiError ? e.code : undef
 /**
  * Booking from an empty slot (MDV-P1-021): clicking holds the slot (and the slots a longer visit type needs) for this user,
  * the panel finds the patient with front-desk search (MDV-P1-018: initials, age, sex and MRN tail until one is chosen), then
- * collects reason and channel, and confirming books from the hold. Closing releases the hold.
+ * collects reason and channel, and confirming books from the hold. Closing releases the hold. Back from registering a new patient,
+ * the address names the slot and the patient: the slot is held again with the patient chosen.
  */
-export function useBookingController(facilityId: string, timeZone: string | null = null) {
+export function useBookingController(facilityId: string, timeZone: string | null = null, columns: Pick<ScheduleColumn, 'calendarId' | 'name'>[] | undefined = undefined) {
   const queryClient = useQueryClient();
-  const [choice, setChoice] = useState<SlotChoice | null>(null);
+  const [params, setParams] = useSearchParams();
+  // Back from registering a new patient: the slot to hold again and the patient to choose (read once, at mount).
+  const [resumed] = useState(() => { const back = readSlotReturn(params); return back && { choice: { ...back, calendarName: '' }, patientId: back.patientId }; });
+  const [choice, setChoice] = useState<SlotChoice | null>(resumed?.choice ?? null);
   const [booked, setBooked] = useState<BookedAppointment | null>(null);
   // A no-show's rebook (MDV-P1-024): the next slot chosen is booked for this patient, already filled in.
   const [rebook, setRebook] = useState<{ id: string; name: string } | null>(null);
@@ -28,7 +33,7 @@ export function useBookingController(facilityId: string, timeZone: string | null
   const [monthly, setMonthly] = useState(false);
   const [plan, setPlan] = useState<PlanRow[] | null>(null);
   const [seriesDone, setSeriesDone] = useState<SeriesDone | null>(null);
-  const form = useForm<BookingForm>({ resolver: zodResolver(bookingSchema), defaultValues: emptyBooking });
+  const form = useForm<BookingForm>({ resolver: zodResolver(bookingSchema), defaultValues: { ...emptyBooking, patientId: resumed?.patientId ?? '' } });
   const refreshSchedule = () => queryClient.invalidateQueries({ queryKey: ['schedule', facilityId] });
 
   const hold = useMutation({ mutationFn: (s: SlotChoice) => holdSlot(facilityId, s), onSettled: refreshSchedule });
@@ -89,8 +94,17 @@ export function useBookingController(facilityId: string, timeZone: string | null
     hold.mutate(next); // the server replaces this user's previous hold
   };
 
+  const holdNow = hold.mutate;
+  useEffect(() => {
+    if (!resumed || !readSlotReturn(params)) return; // only while the address still names the slot
+    // A still-valid hold is replaced, an expired one re-acquired; a taken slot answers with its error in the panel.
+    holdNow(resumed.choice);
+    setParams(withoutSlotReturn(params), { replace: true }); // a reload does not resume again
+  }, [resumed, params, setParams, holdNow]);
+
   return {
-    choice,
+    // The calendar's name comes from the day once loaded (a resumed booking knows only its id).
+    choice: choice && { ...choice, calendarName: choice.calendarName || columns?.find(c => c.calendarId === choice.calendarId)?.name || '' },
     holding: hold.isPending,
     hold: hold.data ?? null,
     holdError: hold.isError ? errorOf(hold.error) : null,

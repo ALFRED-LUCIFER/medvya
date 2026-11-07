@@ -87,10 +87,13 @@ sealed class OnboardingDrafts(IdentityDbContext db) : IOnboardingDrafts
             .ExecuteUpdateAsync(s => s.SetProperty(d => d.Step, resumeStep).SetProperty(d => d.Data, data).SetProperty(d => d.UpdatedAt, now), cancellationToken) == 1;
     }
 
-    public async Task<bool> CompleteAsync(Guid userId, CancellationToken cancellationToken = default)
+    public async Task<bool> CompleteAsync(Guid userId, string result, CancellationToken cancellationToken = default)
     {
         var now = DateTimeOffset.UtcNow;
         return await db.OnboardingDrafts.Where(d => d.UserId == userId && d.CompletedAt == null)
-            .ExecuteUpdateAsync(s => s.SetProperty(d => d.Data, "{}").SetProperty(d => d.CompletedAt, now).SetProperty(d => d.UpdatedAt, now), cancellationToken) == 1;
+            .ExecuteUpdateAsync(s => s.SetProperty(d => d.Data, result).SetProperty(d => d.CompletedAt, now).SetProperty(d => d.UpdatedAt, now), cancellationToken) == 1;
     }
+
+    public Task<string?> CompletedResultAsync(Guid userId, CancellationToken cancellationToken = default) =>
+        db.OnboardingDrafts.Where(d => d.UserId == userId && d.CompletedAt != null).Select(d => d.Data).SingleOrDefaultAsync(cancellationToken);
 }

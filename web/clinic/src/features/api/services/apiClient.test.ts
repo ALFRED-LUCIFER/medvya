@@ -70,6 +70,17 @@ describe('apiFetch', () => {
     expect(timeoutMs).toBe(15_000);
   });
 
+  it('waits longer for a call that names its own timeout, and does not send the option to fetch', async () => {
+    const f = vi.fn(never);
+    vi.stubGlobal('fetch', f);
+    const p = apiFetch('/v1/onboarding/finish', { method: 'POST', timeout: 60_000 }).then((v) => v, (e: unknown) => e);
+    await vi.advanceTimersByTimeAsync(timeoutMs + 1);
+    expect(f.mock.calls[0]![1].signal!.aborted).toBe(false);
+    expect(f.mock.calls[0]![1]).not.toHaveProperty('timeout');
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(await p).toBeInstanceOf(RequestTimeoutError);
+  });
+
   it('does not retry when the caller aborts', async () => {
     const f = vi.fn(never);
     vi.stubGlobal('fetch', f);

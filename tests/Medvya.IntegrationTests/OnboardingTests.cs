@@ -46,7 +46,13 @@ public sealed partial class OnboardingTests(PostgresFixture sql) : IClassFixture
     sealed class Outbox : IEmailSender
     {
         public List<EmailMessage> Sent { get; } = [];
-        public Task SendAsync(EmailMessage message, CancellationToken cancellationToken = default) { lock (Sent) Sent.Add(message); return Task.CompletedTask; }
+        /// <summary>A slow provider (a cold managed-identity token on Azure took 6 s, #205).</summary>
+        public TimeSpan Delay { get; set; }
+        public async Task SendAsync(EmailMessage message, CancellationToken cancellationToken = default)
+        {
+            await Task.Delay(Delay, cancellationToken);
+            lock (Sent) Sent.Add(message);
+        }
     }
 
     HttpClient Browser(string? deploymentCountry = null)
@@ -232,6 +238,33 @@ public sealed partial class OnboardingTests(PostgresFixture sql) : IClassFixture
 
     [GeneratedRegex(@"https://clinic\.test/invite/([A-Za-z0-9_-]+)")]
     private static partial Regex LinkToken();
+
+    /// <summary>
+    /// #205: on Azure the browser gave up on a slow finish, the server cancelled, the invitation was lost and every retry got 404.
+    /// Mutation check: keep the request's token after validation and the invitation is never sent; drop the stored result and the repeat is 404.
+    /// </summary>
+    [Fact]
+    public async Task AFinishTheBrowserGivesUpOnStillCompletesAndARepeatAnswersWithTheSamePractice()
+    {
+        using var browser = Browser();
+        await SignIn(browser, "new", signUp: true);
+        await browser.PostAsJsonAsync(Api(), new { country = "IN" });
+        var team = new[] { new { email = "joseph@example.test", role = "Receptionist" } };
+        Assert.Equal(HttpStatusCode.NoContent, (await browser.PutAsJsonAsync(Api(), new { step = 5, validate = 3, data = Data(team: team) })).StatusCode);
+        outbox.Delay = TimeSpan.FromSeconds(2);
+
+        using (var gaveUp = new CancellationTokenSource(TimeSpan.FromMilliseconds(300)))
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => browser.PostAsync(Api("/finish"), null, gaveUp.Token));
+        for (var i = 0; i < 100 && !outbox.Sent.Exists(m => m.To == "joseph@example.test"); i++) await Task.Delay(100);
+        Assert.Contains(outbox.Sent, m => m.To == "joseph@example.test"); // the server finished the work, invitation included
+
+        var repeat = await browser.PostAsync(Api("/finish"), null);
+        Assert.Equal(HttpStatusCode.OK, repeat.StatusCode);
+        var result = await Json(repeat);
+        var membership = Assert.Single((await Json(await browser.GetAsync(new Uri("/v1/me/context", UriKind.Relative)))).GetProperty("memberships").EnumerateArray());
+        Assert.Equal(membership.GetProperty("id").GetGuid(), result.GetProperty("membershipId").GetGuid()); // one practice, not two
+        Assert.Equal("SoloDoctor", result.GetProperty("role").GetString());
+    }
 
     /// <summary>Mutation check: remove the catch in /finish and this fails (500); remove the log call and the log assertion fails.</summary>
     [Fact]

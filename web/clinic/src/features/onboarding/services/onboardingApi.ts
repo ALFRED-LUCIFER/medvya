@@ -63,7 +63,9 @@ export async function saveDraft(step: number, data: OnboardingData, validate?: n
 }
 
 export async function finishOnboarding(): Promise<FinishResult> {
-  const res = await apiFetch('/v1/onboarding/finish', { method: 'POST', credentials: 'same-origin', headers: json });
+  // Creating the practice and sending the invitations can take longer than the shared 15 s on a cold server (#205). A repeat is safe:
+  // the server answers with the practice it already made.
+  const res = await apiFetch('/v1/onboarding/finish', { method: 'POST', credentials: 'same-origin', headers: json, timeout: 60_000 });
   await check(res, 'onboarding finish');
   return res.json() as Promise<FinishResult>;
 }

@@ -109,6 +109,10 @@ public static class SchedulingEndpoints
         appointments.MapPost("/{appointmentId:guid}/no-show", (Guid appointmentId, [FromServices] IBookingService service, CancellationToken ct) =>
                 service.MarkNoShowAsync(appointmentId, ct))
             .AuditedWriteWithErrors(SchedulingAudit.NoShow, SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment);
+        // The visit's moves for the appointment panel (MDV-P1-024): names, slots and times, no patient data.
+        appointments.MapGet("/{appointmentId:guid}/history", (Guid appointmentId, [FromServices] IBookingService service, CancellationToken ct) =>
+                service.HistoryAsync(appointmentId, ct))
+            .AuditedWithErrors("appointment.history.read", SchedulingAudit.AppointmentResource);
         // The reception board (MDV-P1-028). A repeated check-in or move returns the visit unchanged; any other move is a 409.
         appointments.MapPost("/{appointmentId:guid}/check-in", (Guid appointmentId, CheckIn? command, [FromServices] IFrontDeskService service, CancellationToken ct) =>
                 service.CheckInAsync(appointmentId, command ?? new CheckIn(), ct))

@@ -183,7 +183,20 @@ public interface IBookingService
     /// <summary>Marks a Booked visit whose start has passed as a no-show and frees its slots; the desk is then offered a rebook.</summary>
     /// <exception cref="VisitTransitionException">Not Booked ("invalid_transition"), not started yet ("not_started"), or changed meanwhile ("changed").</exception>
     Task<AppointmentChip> MarkNoShowAsync(Guid appointmentId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// The visit's moves, oldest first (MDV-P1-024): each reschedule and each same-day move to another doctor's queue (MDV-P1-030),
+    /// with the old and new slot, who moved it and when. Calendar and staff display names, times and a reason code only.
+    /// </summary>
+    /// <exception cref="AppointmentNotFoundException">No such appointment in this tenant.</exception>
+    /// <exception cref="SchedulingAccessDeniedException">No calendar access at the visit's facility.</exception>
+    Task<IReadOnlyList<RescheduleView>> HistoryAsync(Guid appointmentId, CancellationToken cancellationToken = default);
 }
+
+/// <summary>One move of a visit. Names are empty for a calendar or person no longer known; ReassignReason is set for a queue move.</summary>
+public sealed record RescheduleView(
+    string FromCalendarName, DateTimeOffset FromStart, DateTimeOffset FromEnd, string ToCalendarName, DateTimeOffset ToStart, DateTimeOffset ToEnd,
+    string ActorName, DateTimeOffset OccurredAt, ReassignReason? ReassignReason);
 
 public static class AppointmentReference
 {

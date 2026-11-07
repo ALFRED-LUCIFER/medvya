@@ -1,7 +1,7 @@
 import { apiFetch } from '../../api/services/apiClient';
 import type { BookedAppointment, BookingForm, Hold, PatientMatch, SlotChoice } from '../domain/booking';
 import type { Occurrence, SeriesResult } from '../domain/series';
-import type { CancelReason } from '../domain/changes';
+import type { CancelReason, VisitMove } from '../domain/changes';
 import type { PatientMessage } from '../domain/messages';
 import type { SaveResult, SavedAdjustment } from '../domain/adjustments';
 import type { Appointment, ScheduleDay } from '../domain/schedule';
@@ -91,6 +91,9 @@ export const bookSeries = (facilityId: string, s: { calendarId: string; visitTyp
 export const markNoShow = (appointmentId: string) => post<Appointment>(`/v1/appointments/${appointmentId}/no-show`, {});
 
 /** Messages sent to the patient about a visit (statuses only). Ids only in the URL. */
+/** The visit's moves, oldest first (MDV-P1-024). */
+export const fetchHistory = (appointmentId: string) => send<VisitMove[]>(`/v1/appointments/${appointmentId}/history`);
+
 export const fetchMessages = (facilityId: string, appointmentId: string) =>
   send<PatientMessage[]>(`/v1/appointments/${appointmentId}/notifications?facilityId=${facilityId}`);
 

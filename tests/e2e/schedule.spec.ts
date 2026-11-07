@@ -145,6 +145,7 @@ async function open(page: Page, { locale = 'en', status = 200, as = reception, h
     const base = scheduleDay('2026-10-19').columns[0]!.appointments[0]!;
     return r.fulfill({ json: [{ ...base, state: 'Cancelled' }, { ...base, id: 'a-5', state: 'Cancelled' }, { ...base, id: 'a-6', state: 'Cancelled' }] });
   });
+  await page.route(/\/v1\/appointments\/[^/]+\/history$/, r => r.fulfill({ json: [] })); // never moved, unless a spec says otherwise
   // MDV-P1-024: reschedule, cancel, no-show and check-in answer the changed visit (or a 409 code).
   await page.route(/\/v1\/appointments\/[^/]+\/(reschedule|cancel|no-show|check-in)$/, r => {
     const url = r.request().url(), body = (r.request().postDataJSON() ?? {}) as Record<string, unknown>;
@@ -695,6 +696,29 @@ test('reschedule picks a new slot, asks first, then moves; the old slot frees on
   await confirm.getByRole('button', { name: 'Move appointment' }).click();
   await expect(visitPanel(page)).toContainText('Moved. The old slot is free again.');
   expect(calls.changes).toEqual([{ url: expect.stringMatching(/\/v1\/appointments\/a-1\/reschedule$/), body: { calendarId: 'd-1', start: ist('2026-10-19', '10:20') } }]);
+});
+
+for (const locale of ['en', 'ar'])
+  test(`the panel shows where a moved visit was, who moved it and when, axe clean (${locale})`, async ({ page }) => {
+  await page.clock.setFixedTime(new Date(ist('2026-10-19', '08:30')));
+  await open(page, { locale });
+  await page.route('**/v1/appointments/a-1/history', r => r.fulfill({ json: [
+    { fromCalendarName: 'Dr. S. Menon (synthetic)', fromStart: ist('2026-10-16', '17:00'), fromEnd: ist('2026-10-16', '17:40'), toCalendarName: 'Dr. Arjun Rao (synthetic)',
+      toStart: ist('2026-10-19', '09:00'), toEnd: ist('2026-10-19', '09:40'), actorName: 'K. Lakshmi (synthetic)', occurredAt: ist('2026-10-15', '11:05'), reassignReason: null },
+  ] }));
+  await meera(page).click();
+  const moves = page.getByRole('region', { name: locale === 'ar' ? 'التغييرات' : 'Moves' });
+  if (locale === 'en') {
+    await expect(moves).toContainText('From Dr. S. Menon (synthetic), Fri, 16 Oct at 17:00 to Dr. Arjun Rao (synthetic), Mon, 19 Oct at 09:00');
+    await expect(moves).toContainText('By K. Lakshmi (synthetic), Thu, 15 Oct 11:05');
+  } else {
+    await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+    await expect(moves).toContainText('Dr. S. Menon (synthetic)');
+  }
+  await page.addScriptTag({ path: axePath });
+  expect(await page.evaluate(async () =>
+    (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations
+      .map(v => `${v.id} (${v.nodes.length})`))).toEqual([]);
 });
 
 test('dragging a visit onto an empty slot asks before moving it', async ({ page }) => {

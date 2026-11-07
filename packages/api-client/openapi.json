@@ -1160,6 +1160,39 @@
         }
       }
     },
+    "/v1/appointments/{appointmentId}/history": {
+      "get": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "appointmentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RescheduleView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/appointments/{appointmentId}/check-in": {
       "post": {
         "tags": [
@@ -6165,6 +6198,61 @@
           "start": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "RescheduleView": {
+        "required": [
+          "fromCalendarName",
+          "fromStart",
+          "fromEnd",
+          "toCalendarName",
+          "toStart",
+          "toEnd",
+          "actorName",
+          "occurredAt",
+          "reassignReason"
+        ],
+        "type": "object",
+        "properties": {
+          "fromCalendarName": {
+            "type": "string"
+          },
+          "fromStart": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "fromEnd": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "toCalendarName": {
+            "type": "string"
+          },
+          "toStart": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "toEnd": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actorName": {
+            "type": "string"
+          },
+          "occurredAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reassignReason": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ReassignReason"
+              }
+            ]
           }
         }
       },

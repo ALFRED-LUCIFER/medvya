@@ -2714,5 +2714,12 @@
   "pilotMetrics.error.method": "बताएं कि कैसे मापा गया (200 अक्षरों तक)।",
   "pilotMetrics.error.date": "एक तारीख चुनें।",
   "pilotMetrics.error.toDate": "शुरुआत की तारीख या उसके बाद की अंतिम तारीख चुनें।",
-  "pilotMetrics.deliveryForbidden": "डिलीवरी आंकड़ों के लिए बुकिंग एक्सेस चाहिए; प्रैक्टिस के मालिक से पूछें।"
+  "pilotMetrics.deliveryForbidden": "डिलीवरी आंकड़ों के लिए बुकिंग एक्सेस चाहिए; प्रैक्टिस के मालिक से पूछें।",
+  "appointment.history.title": "बदलाव",
+  "appointment.history.loading": "बदलाव लोड हो रहे हैं…",
+  "appointment.history.error": "बदलाव लोड नहीं हो सके।",
+  "appointment.history.move": "{from} से {to}",
+  "appointment.history.by": "{name} द्वारा, {day} {time}",
+  "appointment.history.unknown": "अज्ञात",
+  "appointment.history.byWhy": "{name} द्वारा, {day} {time} · {why}"
 }

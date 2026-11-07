@@ -110,6 +110,10 @@ public sealed class SchedulingContext(
             ? (await facilities.ActiveDoctorsAsync(facilityId, cancellationToken)).Contains(calendarId)
             : await db.Resources.AnyAsync(r => r.FacilityId == facilityId && r.Id == calendarId, cancellationToken);
 
+    /// <summary>Staff display names by user id (doctors' calendars are their user ids).</summary>
+    public Task<IReadOnlyDictionary<Guid, string>> DisplayNamesAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken) =>
+        staff.DisplayNamesAsync(ids, cancellationToken);
+
     public Task<IReadOnlyDictionary<Guid, PatientSummary>> PatientsAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken) =>
         patients.SummariesAsync([.. ids.Distinct()], cancellationToken);
 

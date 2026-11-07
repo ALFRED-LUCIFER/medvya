@@ -2720,5 +2720,12 @@
   "pilotMetrics.error.method": "Say how it was measured (up to 200 characters).",
   "pilotMetrics.error.date": "Choose a date.",
   "pilotMetrics.error.toDate": "Choose an end date on or after the start date.",
-  "pilotMetrics.deliveryForbidden": "Delivery numbers need booking access; ask the practice owner."
+  "pilotMetrics.deliveryForbidden": "Delivery numbers need booking access; ask the practice owner.",
+  "appointment.history.title": "Moves",
+  "appointment.history.loading": "Loading moves…",
+  "appointment.history.error": "The moves could not be loaded.",
+  "appointment.history.move": "From {from} to {to}",
+  "appointment.history.by": "By {name}, {day} {time}",
+  "appointment.history.unknown": "Unknown",
+  "appointment.history.byWhy": "By {name}, {day} {time} · {why}"
 }

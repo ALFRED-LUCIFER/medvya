@@ -79,9 +79,10 @@ function TabsContent({
   ...props
 }: React.ComponentProps<typeof TabsPrimitive.Content>) {
   return (
+    // Radix makes the panel a tab stop; it keeps the global focus ring (styles.css) so a keyboard user sees where focus went.
     <TabsPrimitive.Content
       data-slot="tabs-content"
-      className={cn("flex-1 outline-none", className)}
+      className={cn("flex-1", className)}
       {...props}
     />
   )

@@ -69,10 +69,16 @@ public sealed class StaffRoster(TenancyDbContext db, ICurrentTenant tenant, ICur
         return ViewOf(role);
     }
 
-    public async Task<OffboardResult> OffboardAsync(Guid membershipId, string? reason, CancellationToken cancellationToken = default)
+    static string ValidReason(string? reason)
     {
         reason = reason?.Trim();
         SettingsValidationException.ThrowIfAny(string.IsNullOrEmpty(reason) ? [new("reason", "required")] : reason.Length > 500 ? [new("reason", "too_long")] : []);
+        return reason!;
+    }
+
+    public async Task<OffboardResult> OffboardAsync(Guid membershipId, string? reason, bool offerRebooking = false, CancellationToken cancellationToken = default)
+    {
+        reason = ValidReason(reason);
         // Serializable: two administrators offboarding each other at once must not both pass the last-administrator check.
         await using var tx = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, cancellationToken);
         var member = await db.Memberships.SingleOrDefaultAsync(m => m.Id == membershipId && m.Role != Role.Patient && m.Status != MembershipStatus.Offboarded, cancellationToken);
@@ -90,6 +96,10 @@ public sealed class StaffRoster(TenancyDbContext db, ICurrentTenant tenant, ICur
         if (member.UserId is not null) member.Status = MembershipStatus.Offboarded;
         await db.Invitations.Where(i => i.MembershipId == membershipId && i.AcceptedAt == null && i.RevokedAt == null)
             .ExecuteUpdateAsync(s => s.SetProperty(i => i.RevokedAt, now), cancellationToken);
+        // Their open requests for patient access at that site go off the owner's queue: nobody is left to use a grant.
+        if (member.UserId is { } asker)
+            await db.AccessRequests.Where(r => r.RequestedBy == asker && r.FacilityId == member.FacilityId && r.Status == AccessRequestStatus.Pending)
+                .ExecuteUpdateAsync(s => s.SetProperty(r => r.Status, AccessRequestStatus.Withdrawn).SetProperty(r => r.DecidedBy, user.UserId).SetProperty(r => r.DecidedAt, now), cancellationToken);
         db.SettingsChanges.Add(new SettingsChange
         {
             Id = Guid.CreateVersion7(), TenantId = TenantId, ActorUserId = user.UserId, Section = "staff.offboard", ResourceId = membershipId, OccurredAt = now,
@@ -103,11 +113,45 @@ public sealed class StaffRoster(TenancyDbContext db, ICurrentTenant tenant, ICur
         }, tx.GetDbTransaction(), cancellationToken);
         // Other modules' share (a doctor's future visits to "needs rebooking") joins this transaction: all of it commits, or none.
         var afterCommit = new List<Func<Task>>();
+        var open = 0;
         if (member.UserId is { } leaving)
-            foreach (var part in offboarding) if (await part.OffboardedAsync(leaving, member.FacilityId, tx.GetDbTransaction(), cancellationToken) is { } after) afterCommit.Add(after);
+            foreach (var part in offboarding)
+            {
+                var share = await part.OffboardedAsync(leaving, member.FacilityId, offerRebooking, tx.GetDbTransaction(), cancellationToken);
+                if (share.AfterCommit is { } after) afterCommit.Add(after);
+                open += share.OpenItems;
+            }
         await tx.CommitAsync(cancellationToken);
         foreach (var after in afterCommit) await after();
-        return new(OffboardOutcome.Done, member.UserId);
+        return new(OffboardOutcome.Done, member.UserId, open);
+    }
+
+    public async Task<ReactivateOutcome> ReactivateAsync(Guid membershipId, string? reason, CancellationToken cancellationToken = default)
+    {
+        reason = ValidReason(reason);
+        var member = await db.Memberships.SingleOrDefaultAsync(m => m.Id == membershipId && m.Role != Role.Patient && m.Status == MembershipStatus.Offboarded, cancellationToken);
+        if (member is null || await access.AccessAsync(Capability.StaffRolesIntegrations, member.FacilityId, cancellationToken) != Access.Config)
+            return ReactivateOutcome.NotFound;
+        // Bringing someone back grants their role again: the same ceiling as inviting them (#875).
+        var extras = member.CustomRoleId is { } id ? await db.CustomRoles.Where(r => r.Id == id).Select(r => r.Capabilities).SingleOrDefaultAsync(cancellationToken) : null;
+        if (await GranterAsync(cancellationToken) is not { } granter || !InvitationRules.CanGrant(granter, c => CustomRoleRules.Effective(member.Role, extras, c)))
+            return ReactivateOutcome.AboveGranter;
+        var now = clock.GetUtcNow();
+        member.Status = MembershipStatus.Active;
+        db.SettingsChanges.Add(new SettingsChange
+        {
+            Id = Guid.CreateVersion7(), TenantId = TenantId, ActorUserId = user.UserId, Section = "staff.reactivate", ResourceId = membershipId, OccurredAt = now,
+            Before = JsonSerializer.Serialize(new { status = MembershipStatus.Offboarded }, Json), After = JsonSerializer.Serialize(new { status = member.Status, reason }, Json),
+        });
+        await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
+        await db.SaveChangesAsync(cancellationToken);
+        await audit.WriteAsync(new AuditEvent
+        {
+            Id = Guid.CreateVersion7(), TenantId = TenantId, ActorUserId = user.UserId, Action = "staff.reactivate", ResourceType = "membership", ResourceId = membershipId,
+            Purpose = "operations", Outcome = AuditOutcome.Allowed, OccurredAt = now,
+        }, tx.GetDbTransaction(), cancellationToken);
+        await tx.CommitAsync(cancellationToken);
+        return ReactivateOutcome.Done;
     }
 
     async Task<(string Name, IReadOnlyList<Capability> Extras)> ValidAsync(SaveCustomRole command, Guid? self, CancellationToken cancellationToken)

@@ -72,7 +72,16 @@ export const canRevoke = (m: StaffMember) => m.status === 'Invited' && m.invitat
 
 /** Offboarding applies to someone who has joined; a pending invitation is revoked instead. */
 export const canOffboard = (m: StaffMember) => m.status === 'Active' || m.status === 'Suspended';
-export const offboardSchema = z.object({ reason: z.string().trim().min(1).max(500) });
+/** A doctor's future visits move to "needs rebooking": the admin says whether patients are offered new slots or called (#225). */
+export const isDoctor = (m: StaffMember) => m.role === 'SoloDoctor' || m.role === 'HospitalDoctor';
+export const offboardSchema = z.object({ reason: z.string().trim().min(1).max(500), rebooking: z.enum(['offer', 'call']).nullable() });
 export type OffboardForm = z.infer<typeof offboardSchema>;
+/** For a doctor the rebooking choice is required; for anyone else it does not apply. */
+export const rebookingMissing = (m: StaffMember, v: OffboardForm) => isDoctor(m) && v.rebooking === null;
+
+/** An offboarded person who had joined can be brought back with the same role (#225). */
+export const canReactivate = (m: StaffMember) => m.status === 'Offboarded' && m.userId !== null;
+export const reactivateSchema = z.object({ reason: z.string().trim().min(1).max(500) });
+export type ReactivateForm = z.infer<typeof reactivateSchema>;
 
 export type Step = 'role' | 'scope' | 'permissions';

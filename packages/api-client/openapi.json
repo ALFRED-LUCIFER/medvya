@@ -681,6 +681,13 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -2327,6 +2334,39 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/Offboard"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/staff/{membershipId}/reactivate": {
+      "post": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "membershipId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Reactivate"
               }
             }
           },
@@ -4562,6 +4602,16 @@
               "null",
               "string"
             ]
+          },
+          "canEdit": {
+            "type": "boolean",
+            "default": false
+          },
+          "version": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -5037,6 +5087,10 @@
               "null",
               "string"
             ]
+          },
+          "offerRebooking": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -5590,6 +5644,20 @@
           }
         }
       },
+      "Reactivate": {
+        "required": [
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "ReasonCategory": {
         "enum": [
           "General",
@@ -5916,6 +5984,12 @@
               "string"
             ],
             "format": "uuid"
+          },
+          "version": {
+            "type": [
+              "null",
+              "string"
+            ]
           },
           "actions": {
             "type": "array",

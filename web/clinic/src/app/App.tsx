@@ -83,7 +83,8 @@ export default function App({ locale, onLocaleChange }: Props) {
         <Route path="/signup" element={<SignUpRoute switcher={switcher} />} />
         {/* A signed-out visit to the wizard (an old link) starts at sign-up. */}
         <Route path="/onboarding" element={<Navigate to={`/signup${location.search}`} replace />} />
-        <Route path="*" element={<NotFoundPage standalone onBackToToday={toHome} />} />
+        {/* Signed out (offboarded, cookie gone, a shared link): sign in here, and the provider returns to this address. */}
+        <Route path="*" element={<SignInRoute switcher={switcher} />} />
       </>
     : !active ? <>
         <Route path="/choose-facility" element={picker} />

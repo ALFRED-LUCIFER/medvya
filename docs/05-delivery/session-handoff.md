@@ -50,18 +50,25 @@ Decided by the owner on 5 Nov and now in the source, regenerated and created as 
 3. **P1-019 "activation" = one accepted-terms timestamp** (acceptance criteria and Gherkin updated in the source; comment on #244) (`AcceptedAt`) on the tenant that gates booking and sending for the production tenant, built on the draft wording (`2026-11-draft`); final wording remains P1-044 (legal).
 4. **Still to write into existing tickets (not done):** extensions noted in the research doc: P1-036 offline banner and unsaved-changes warning (+2 d), P1-037 slow-4G budget and bundle limit (+2 d), P1-041 connectivity telemetry (+2 d), P1-040 internet-down desk card (+1 d).
 
-## 6 · Next, in this order
+## 6 · Next, in this order (rewritten 7 Nov evening)
 
-Owner-only items sit on the critical path: P1-043 pilot agreements → P1-039 production deploy → P1-040 pilot → P1-042 two-clinic pilot; P1-045 DLT SMS has weeks of lead time.
+State: Azure dev runs **v0.0.12** (b6a16e3). Merged after it, not deployed: #915 (Key Vault warm-up, #907). The 7 Nov pilot walk (#912, on v0.0.11) confirmed on Azure: onboarding finish, invite and join, MFA sign-in, registration, walk-in, board, booking with confirmation email, offboarding (401 within 9 s). Closed today: P1-004 (#201), P1-005 (#207), P1-009 (#225), P1-010 (#227), P1-012 (#231), P1-061 (#855). Owner decisions of 7 Nov are on those issues.
 
-1. **Database connection retry** (section 1): retry transient Azure SQL errors, log the error number, test with a forced transient failure. Small.
-2. **Section 6b findings, reminder bug first** (patient safety).
-3. **P0-011 on Azure:** confirm `amr` contains `mfa` on a fresh sign-in (not yet seen end to end), then close the `shortcut:` in `StaffAuthentication`; decide the synthetic test account.
-4. **Full-stack journeys** (`pnpm e2e:fullstack`, MDV-P0-023 #147): every built step of J1 to J6 runs on the real stack; the rest are pending with their tickets (build status in `docs/02-design/journeys.md`). Turn a step green when its ticket lands.
-5. **Desk hold contention** (load test, #284): fixed. The doctor-day transaction runs READ COMMITTED since #765; re-measured on PostgreSQL in MDV-P1-022 (0 `busy`, 0 errors at 20 desks, `NoDoubleBookingTests` covers 100 desks on one doctor-day). Left: the 100-parallel run on Azure staging (needs MDV-P0-006 and approval).
-6. **Notifications:** P1-034 → P1-006 → P1-010, then the SMS provider and SendGrid receipt parser (SMS waits on P1-045).
-7. **Smaller:** P1-002 (#199): add a test for the `onboarding.complete.{IN|AE}` audit row and make `Onboarding:DeploymentCountry` fail closed outside Development; P1-012 gaps; P1-027 waitlist; P1-041 metrics; P1-037 staging run (needs approval); P1-051 needs an ADR first.
-8. **Housekeeping:** about 12 e2e specs still measure tap targets with `.all()` then `boundingBox()` one by one (it hung once on CI; fixed in `registration-completion` only); stale "Left:" lines in `docs/05-delivery/tickets/_source/P1.tickets`; merge PRs one at a time.
+**Owner, start now (long lead, in parallel):** P1-045 DLT sender and templates (#295; blocks every SMS, #213 and #275), P1-043 pilot agreements (#293), P1-044 legal review of the wording (#294), booking the external security review (P1-038, #286), P1-046 UAE applications (#296, SHOULD).
+
+**Engineering:**
+1. **#912 pilot-walk findings**, security first: sign-out must also end the Entra session (`end_session_endpoint`; shared desk PCs), and a sign-in without MFA must say a second factor is needed and how to add one. Then: "Open Today" lands on Patients; a new practice shows "quarterly access review due" on day 1 (due one quarter after creation); the message panel says "none scheduled" before the outbox runs ("being prepared"); dev queues SMS with no provider (drop `Sms` from dev `Notifications:Channels` or add a sink); the first walk-in "Check in now" returned 409 once (reproduce with a new patient, log the problem code); the offboard form should scroll into view and focus the reason; decide how revoked invitations show.
+2. **Deploy v0.0.13** (adds #915), then one **signed-in walk-through on Azure** (needs the owner's MFA): offboarding choice and Bring back (#225), leave access and private reason (#231), logo upload (#211), email sender name (#213), and **#718** (double-submit with one Idempotency-Key, the slot-taken path); close #718. Ask the owner to set `Jobs__Enabled=true` on Azure so confirmations and reminders actually send.
+3. **#252** back to the held slot with the new patient chosen after registering them (recorded shortcut in `BookingPanel.tsx`).
+4. **#289** P1-041 pilot metrics (the R1 exit gate needs it), then **#256** no-show metric and reschedule history in the appointment panel.
+5. **#279** a "visits need rebooking" staff notification after leave or offboarding.
+6. **#283** tablet desk: 200% zoom and keyboard pass, drawer scrim and Escape to close.
+7. **#280** access log: the read-volume alert.
+8. **#284 / #874** schedule first-render headroom over slow 4G (CI measures about 2460 ms against 2500 ms): the shared chunk is mostly `zod` and `tailwind-merge`.
+9. **#259** recurring leftovers (weekday patterns, move one occurrence, one-transaction series) and **#262** waitlist: MUST in the plan but not needed for the first pilot week; confirm with the owner.
+10. **#286** P1-038: external review before the pilot, then **#287** P1-039 production deployment → **#288** P1-040 training and desk card → **#290** P1-042 pilot.
+
+**Not for the India pilot:** #233 UAE flow leftovers, #236 care-task queue (P4), #239 merge leftovers (need P2 clinical data), #723 (COULD, needs an ADR), #851 and #854 (SHOULD). **Waiting on DLT:** #213 (SMS sender), #275 (SMS templates).
 
 ## 6b · Review findings not yet fixed (read-only reviews, 6 Nov; "confirmed" = read end to end)
 

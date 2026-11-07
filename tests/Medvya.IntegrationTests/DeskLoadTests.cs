@@ -61,7 +61,7 @@ internal sealed class StepStats(string name, int budgetMs)
 /// credentials), MEDVYA_LOAD_FACILITY, MEDVYA_LOAD_DOCTORS (comma-separated calendar ids), MEDVYA_LOAD_BOOK_FROM (a Monday, yyyy-MM-dd,
 /// from which every doctor has free slots). Other knobs: MEDVYA_LOAD_SECONDS (180), MEDVYA_LOAD_DESKS_COUNT (20), MEDVYA_LOAD_THINK_MS (30000: 20 desks then book about 2,400 an hour, 12 times the pilot's 200),
 /// MEDVYA_LOAD_REPORT (report path), MEDVYA_LOAD_RESULTS (JSON results path), MEDVYA_LOAD_BASELINE (a results file: the run fails when a
-/// step's p95 is more than 20 % over it, the nightly regression check). Never run it against production.
+/// step's p95 is more than 20 % and 25 ms over it, the nightly regression check). Never run it against production.
 /// </summary>
 [Collection(nameof(RunsAlone))]
 public sealed class DeskLoadTests(ITestOutputHelper output)
@@ -301,18 +301,31 @@ public sealed class DeskLoadTests(ITestOutputHelper output)
     internal sealed record StepResult(int Calls, int Errors, long P50, long P95, long P99);
 
     /// <summary>
-    /// Steps whose p95 is more than 20 % over the baseline's (MDV-P1-037 nightly check). A step the baseline lacks is new and has nothing to regress from.
+    /// Steps whose p95 is more than 20 % and at least <see cref="NoiseFloorMs"/> over the baseline's (MDV-P1-037 nightly check).
+    /// A step the baseline lacks is new and has nothing to regress from.
     /// </summary>
     internal static List<string> Regressions(Dictionary<string, StepResult> now, Dictionary<string, StepResult> baseline) =>
-        [.. now.Where(s => baseline.TryGetValue(s.Key, out var b) && s.Value.P95 * 5 > b.P95 * 6)
+        [.. now.Where(s => baseline.TryGetValue(s.Key, out var b) && s.Value.P95 * 5 > b.P95 * 6 && s.Value.P95 - b.P95 >= NoiseFloorMs)
             .Select(s => FormattableString.Invariant($"{s.Key}: p95 {s.Value.P95} ms, baseline {baseline[s.Key].P95} ms (+{100.0 * (s.Value.P95 - baseline[s.Key].P95) / Math.Max(1, baseline[s.Key].P95):0} %)"))];
 
+    /// <summary>
+    /// Two CI runs of the same commit differed by 14 ms (+33 %) on search p95 (42 and 56 ms): runners vary, and most steps take 5 to 20 ms.
+    /// shortcut: a fixed floor stands in for runner noise; drop it when the nightly runs on a dedicated runner or against staging.
+    /// </summary>
+    internal const int NoiseFloorMs = 25;
+
     [Fact]
-    public void AStepRegressesWhenItsP95IsMoreThanTwentyPercentOverTheBaseline()
+    public void AStepRegressesWhenItsP95IsMoreThanTwentyPercentAndTheNoiseFloorOverTheBaseline()
     {
-        var baseline = new Dictionary<string, StepResult> { ["Book"] = new(100, 0, 10, 100, 150), ["Hold slot"] = new(100, 0, 10, 100, 150) };
-        var now = new Dictionary<string, StepResult> { ["Book"] = new(100, 0, 10, 120, 150), ["Hold slot"] = new(100, 0, 10, 121, 150), ["Board push"] = new(9, 0, 1, 900, 900) };
-        Assert.Equal(["Hold slot: p95 121 ms, baseline 100 ms (+21 %)"], Regressions(now, baseline)); // exactly 20 % is allowed; a new step is not compared
+        var baseline = new Dictionary<string, StepResult> { ["Book"] = new(100, 0, 10, 200, 250), ["Hold slot"] = new(100, 0, 10, 200, 250), ["Board read"] = new(100, 0, 5, 10, 12) };
+        var now = new Dictionary<string, StepResult>
+        {
+            ["Book"] = new(100, 0, 10, 240, 250), ["Hold slot"] = new(100, 0, 10, 241, 250), ["Board read"] = new(100, 0, 5, 34, 40), ["Board push"] = new(9, 0, 1, 900, 900),
+        };
+        // Exactly 20 % is allowed; +240 % but 24 ms is runner noise; a new step is not compared.
+        Assert.Equal(["Hold slot: p95 241 ms, baseline 200 ms (+21 %)"], Regressions(now, baseline));
+        now["Board read"] = new(100, 0, 5, 35, 40);
+        Assert.Equal(2, Regressions(now, baseline).Count);
     }
 
     /// <summary>Counts what waiting requests wait on, so a slow step points at a lock, the log or the CPU. Statement text carries parameter markers only.</summary>

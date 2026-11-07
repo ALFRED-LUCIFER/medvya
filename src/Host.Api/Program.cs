@@ -69,6 +69,7 @@ if (builder.Configuration.GetConnectionString("Medvya") is { } sql)
         .AddNotificationsModule(sql, smsSink: builder.Environment.IsDevelopment() && builder.Configuration["Notifications:Sms:Provider"] == "Sink")
         .AddScoped<IReminderConsent, PatientReminderConsent>() // after the module: replaces its deny-all default (MDV-P1-019)
         .AddLeadsModule(sql, builder.Configuration.GetSection("Leads:Email").Get<LeadsEmailOptions>() ?? new()).AddCapabilityPolicies();
+    DatabaseWarmup.AddTo(builder.Services); // after the modules: it warms the DbContexts they registered (#912)
 }
 // Ledger digests (MDV-P0-036). Development signs them only when a key is set outside the repository (environment Audit__DigestKey);
 // everywhere else a missing key or digest storage is a startup error.

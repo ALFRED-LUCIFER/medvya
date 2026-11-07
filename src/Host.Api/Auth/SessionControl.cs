@@ -56,7 +56,9 @@ public static class SessionControl
             ? await services.GetRequiredService<IStaffSessions>().ValidateAsync(sid, uid, activity, cancellationToken)
             : null;
         // A copy of the cookie from before a facility switch names another membership than the session: refuse it.
-        return session is not null && session.TenantId == Read(principal, TenantClaim) && session.MembershipId == Read(principal, MembershipClaim);
+        // A native app session is reachable by bearer token only, a browser session by cookie only (MDV-P5-033).
+        return session is not null && session.TenantId == Read(principal, TenantClaim) && session.MembershipId == Read(principal, MembershipClaim)
+            && session.IsNative == NativeAuthentication.IsNative(principal);
     }
 
     public static WebApplication MapSessionControl(this WebApplication app)
@@ -117,6 +119,8 @@ public static class SessionControl
             http.User = new ClaimsPrincipal(identity);
             await WriteAuditAsync(http, firstChoice ? "auth.signin" : "auth.facility.switch", "session", sessionId);
             await sessions.ScopeAsync(sessionId, choice.TenantId, choice.Id, choice.IdleTimeoutMinutes, ct);
+            // A native app has no cookie to re-issue: its access token now names the old membership and is refused, so it refreshes.
+            if (NativeAuthentication.IsNative(auth.Principal!)) return Results.NoContent();
             await http.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, http.User, auth.Properties);
             return Results.NoContent();
         }).RequireAuthorization();
@@ -130,7 +134,8 @@ public static class SessionControl
                 await sessions.RevokeAsync(userId, sessionId, http.RequestAborted);
             }
             // shortcut: ends the Medvya session only; add provider sign-out (end_session_endpoint) with Entra (MDV-P0-011).
-            await http.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            // A native app holds no cookie to clear (and the bearer scheme cannot sign out); revoking the row is the whole logout.
+            if (!NativeAuthentication.IsNative(http.User)) await http.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
             return Results.NoContent();
         }).RequireAuthorization();
 
@@ -161,7 +166,7 @@ public static class SessionControl
     }
 
     // Written before the change it records: if the audit write fails, the request fails (fail closed), as .Audited() does.
-    static Task WriteAuditAsync(HttpContext http, string action, string resourceType, Guid resourceId) =>
+    internal static Task WriteAuditAsync(HttpContext http, string action, string resourceType, Guid resourceId) =>
         http.RequestServices.GetRequiredService<IAuditLog>().WriteAsync(new AuditEvent
         {
             Id = Guid.CreateVersion7(),

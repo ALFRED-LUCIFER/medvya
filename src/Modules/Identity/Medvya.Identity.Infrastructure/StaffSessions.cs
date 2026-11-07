@@ -52,7 +52,7 @@ sealed class StaffSessions(IdentityDbContext db) : IStaffSessions
     public async Task<IReadOnlyList<StaffSession>> ListAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         var now = DateTimeOffset.UtcNow;
-        var cutoff = now - StaffSession.MaxLifetime;
+        var cutoff = now - StaffSession.NativeMaxLifetime; // the longest lifetime; IsActive below applies each session's own
         var sessions = await db.Sessions.AsNoTracking()
             .Where(s => s.UserId == userId && s.RevokedAt == null && s.CreatedAt > cutoff)
             .OrderByDescending(s => s.CreatedAt).ToListAsync(cancellationToken);
@@ -67,6 +67,20 @@ sealed class StaffSessions(IdentityDbContext db) : IStaffSessions
         session.RevokedAt = now;
         await db.SaveChangesAsync(cancellationToken);
         return session;
+    }
+
+    public async Task<bool> RotateRefreshAsync(Guid sessionId, byte[]? current, byte[] replacement, CancellationToken cancellationToken = default)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var session = await db.Sessions.AsNoTracking().SingleOrDefaultAsync(s => s.Id == sessionId, cancellationToken);
+        if (session is null || !session.IsActive(now)) return false;
+        // Compared in SQL on the stored value, so two concurrent uses of one token cannot both succeed.
+        var updated = current is null
+            ? await db.Sessions.Where(s => s.Id == sessionId && s.RevokedAt == null && s.RefreshTokenHash == null)
+                .ExecuteUpdateAsync(u => u.SetProperty(s => s.RefreshTokenHash, replacement).SetProperty(s => s.LastSeenAt, now), cancellationToken)
+            : await db.Sessions.Where(s => s.Id == sessionId && s.RevokedAt == null && s.RefreshTokenHash == current)
+                .ExecuteUpdateAsync(u => u.SetProperty(s => s.RefreshTokenHash, replacement).SetProperty(s => s.LastSeenAt, now), cancellationToken);
+        return updated == 1;
     }
 
     public Task<int> RevokeInTenantAsync(Guid userId, Guid tenantId, CancellationToken cancellationToken = default)

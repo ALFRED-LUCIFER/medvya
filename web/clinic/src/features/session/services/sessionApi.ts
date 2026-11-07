@@ -4,6 +4,10 @@ import type { MeContext } from '../domain/session';
 // The server holds the tokens (BFF, ADR-004); the browser only sends its HTTP-only session cookie.
 const csrf = { 'X-Medvya-Csrf': '1' };
 
+declare global {
+  interface Window { medvyaMeContext?: Promise<Response | undefined> }
+}
+
 /** The server answered 401: the session ended (idle timeout, revoked, signed out elsewhere). */
 export class SessionEndedError extends Error {}
 
@@ -12,7 +16,12 @@ export class SessionEndedError extends Error {}
  * count as activity, or an unattended screen would never reach its idle timeout.
  */
 export async function fetchMeContext(): Promise<MeContext | null> {
-  const res = await apiFetch('/v1/me/context', { credentials: 'same-origin', headers: { 'X-Medvya-Passive': '1' } });
+  // The first read was started by public/prefetch.js while the bundle downloaded; a failed or 5xx one is read again with retries.
+  const pending = window.medvyaMeContext;
+  window.medvyaMeContext = undefined; // taken once, before awaiting, so a second caller never reads the same body
+  const early = await pending;
+  const res = early && early.status < 500 ? early
+    : await apiFetch('/v1/me/context', { credentials: 'same-origin', headers: { 'X-Medvya-Passive': '1' } });
   if (res.status === 401) return null;
   if (!res.ok) throw new Error(`me/context ${res.status}`);
   return res.json() as Promise<MeContext>;

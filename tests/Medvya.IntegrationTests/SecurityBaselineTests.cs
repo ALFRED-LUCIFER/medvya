@@ -59,6 +59,48 @@ public class SecurityBaselineTests
         Assert.Equal([HttpStatusCode.OK, HttpStatusCode.OK, HttpStatusCode.TooManyRequests], codes);
     }
 
+    // MDV-P1-038: the public site has no sign-in, so the per-IP limit is its only brake on scraping and floods.
+    [Theory]
+    [InlineData("/")]
+    [InlineData("/assist")]
+    [InlineData("/hospitals")]
+    [InlineData("/pricing")]
+    [InlineData("/demo")]
+    [InlineData("/trust")]
+    [InlineData("/region")]
+    [InlineData("/ar/pricing")]
+    public async Task PublicPagesAreRateLimitedPerClient(string path)
+    {
+        var client = Client(permitsPerMinute: 1);
+        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync(new Uri(path, UriKind.Relative))).StatusCode);
+        Assert.Equal(HttpStatusCode.TooManyRequests, (await client.GetAsync(new Uri(path, UriKind.Relative))).StatusCode);
+    }
+
+    [Fact]
+    public async Task TvPairingHasItsOwnTighterLimit()
+    {
+        using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b.UseSetting("RateLimiting:DisplayPairingPerMinute", "1"));
+        using var client = factory.CreateClient(new() { BaseAddress = new Uri("https://clinic.medvya.test") });
+        var codes = new List<HttpStatusCode>();
+        for (var i = 0; i < 2; i++) codes.Add((await client.PostAsJsonAsync(new Uri("/v1/queue/tv/session", UriKind.Relative), new { token = "not-a-display" })).StatusCode);
+        Assert.Equal([HttpStatusCode.Unauthorized, HttpStatusCode.TooManyRequests], codes);
+    }
+
+    [Fact]
+    public async Task TheDeliveryReceiptWebhookIsRateLimitedPerClient()
+    {
+        // Its own 600 a minute (a provider sends bursts), under a global limit raised out of the way.
+        using var client = Client(permitsPerMinute: 10_000);
+        var codes = new List<HttpStatusCode>();
+        for (var i = 0; i < 601; i++)
+        {
+            using var unsigned = new StringContent("{}", System.Text.Encoding.UTF8, "application/json");
+            codes.Add((await client.PostAsync(new Uri("/v1/notifications/receipts", UriKind.Relative), unsigned)).StatusCode);
+        }
+        Assert.All(codes[..600], c => Assert.Equal(HttpStatusCode.Unauthorized, c));
+        Assert.Equal(HttpStatusCode.TooManyRequests, codes[600]);
+    }
+
     [Fact]
     public async Task OversizedBodiesAreRejected()
     {

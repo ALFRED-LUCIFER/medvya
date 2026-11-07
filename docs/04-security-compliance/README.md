@@ -24,7 +24,7 @@ Network (private endpoint only) · Who can connect (Entra-only, managed identity
 | Supply chain | Dependency compromise | Pinned deps, SAST/SCA/secret scanning, SBOM, signed artifacts, OIDC (no long-lived keys) |
 | Operations | Ransomware, unrecoverable DB | Environment separation, protected backups, restore drills, incident playbooks, breach notification matrix |
 
-**Checklist:** OWASP ASVS Level 2 from the first commit (P0 NFR).
+**Checklist:** OWASP ASVS Level 2 from the first commit (P0 NFR): [asvs-l2.md](../compliance/asvs-l2.md). Threat model: [threat-model.md](../compliance/threat-model.md). P1 security review (MDV-P1-038): [p1-security-review.md](../compliance/p1-security-review.md).
 
 ## Data residency
 

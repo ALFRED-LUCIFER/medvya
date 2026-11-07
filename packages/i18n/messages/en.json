@@ -246,6 +246,8 @@
   "site.region.label": "Region",
   "site.region.IN": "India",
   "site.region.AE": "UAE",
+  "site.residency.IN": "Data stays in India · Azure Central India",
+  "site.residency.AE": "Data stays in the UAE · Azure UAE North",
   "site.shell.announce.label": "What is new",
   "site.shell.announce.new": "New",
   "site.shell.announce.text": "Medvya Assist drafts your visit notes in English, Hindi or Arabic. You approve every line.",

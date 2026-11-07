@@ -245,6 +245,8 @@
   "site.region.label": "المنطقة",
   "site.region.IN": "الهند",
   "site.region.AE": "الإمارات",
+  "site.residency.IN": "تبقى البيانات في الهند · Azure Central India",
+  "site.residency.AE": "تبقى البيانات في الإمارات · Azure UAE North",
   "site.shell.announce.label": "ما الجديد",
   "site.shell.announce.new": "جديد",
   "site.shell.announce.text": "يصيغ Medvya Assist ملاحظات الزيارة بالعربية أو الإنجليزية أو الهندية، وأنت توافق على كل سطر.",

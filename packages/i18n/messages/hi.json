@@ -246,6 +246,8 @@
   "site.region.label": "क्षेत्र",
   "site.region.IN": "भारत",
   "site.region.AE": "यूएई",
+  "site.residency.IN": "डेटा भारत में ही रहता है · Azure Central India",
+  "site.residency.AE": "डेटा यूएई में ही रहता है · Azure UAE North",
   "site.shell.announce.label": "नया क्या है",
   "site.shell.announce.new": "नया",
   "site.shell.announce.text": "Medvya Assist आपके विज़िट नोट अंग्रेज़ी, हिंदी या अरबी में ड्राफ़्ट करता है। हर पंक्ति आप मंज़ूर करते हैं।",

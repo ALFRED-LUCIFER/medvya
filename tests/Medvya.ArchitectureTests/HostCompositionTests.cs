@@ -24,6 +24,14 @@ public class HostCompositionTests
     public void HostApiHoldsOnlyCompositionCode() =>
         Assert.Empty(Offenders(HostDir(), Directory.EnumerateFiles(HostDir(), "*.cs", SearchOption.AllDirectories)));
 
+    /// <summary>MDV-P5-040: the platform console host is composition only too; its endpoints live in Medvya.Platform.Api.</summary>
+    [Fact]
+    public void HostPlatformHoldsOnlyCompositionCode()
+    {
+        var host = Path.Combine(Path.GetDirectoryName(HostDir())!, "Host.Platform");
+        Assert.Empty(Offenders(host, Directory.EnumerateFiles(host, "*.cs", SearchOption.AllDirectories)));
+    }
+
     [Fact]
     public void TheCheckerCatchesAFeatureEndpointInTheHost()
     {

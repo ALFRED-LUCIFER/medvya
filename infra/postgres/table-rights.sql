@@ -19,6 +19,11 @@ BEGIN
         REVOKE UPDATE, DELETE, TRUNCATE ON scheduling."OutboxTenants" FROM medvya_scheduling;
     END IF;
 
+    -- The platform audit log is append-only (MDV-P5-040): read and add, never change.
+    IF to_regclass('platform."AuditEntries"') IS NOT NULL THEN
+        REVOKE UPDATE, DELETE, TRUNCATE ON platform."AuditEntries" FROM medvya_platform;
+    END IF;
+
     -- The chain trigger lists a tenant's first row in ledger."Chains"; ledger."Tables" stays read-only (roles.sql).
     IF to_regclass('ledger."Chains"') IS NOT NULL THEN
         GRANT INSERT ON ledger."Chains" TO medvya_tenancy, medvya_patients, medvya_audit;

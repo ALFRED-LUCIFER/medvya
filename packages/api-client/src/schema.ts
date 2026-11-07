@@ -50,6 +50,7 @@ export interface paths {
                     returnUrl?: string;
                     invitation?: string;
                     signup?: boolean;
+                    loginHint?: string;
                 };
                 header?: never;
                 path?: never;

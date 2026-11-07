@@ -43,6 +43,13 @@
             "schema": {
               "type": "boolean"
             }
+          },
+          {
+            "name": "loginHint",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {

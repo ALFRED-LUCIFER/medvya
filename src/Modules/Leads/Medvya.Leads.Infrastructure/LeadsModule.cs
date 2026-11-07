@@ -76,6 +76,7 @@ sealed partial class DemoRequests(LeadsDbContext db, LeadsEmailOptions email, IL
         Organisation: {r.Organisation}
         Role: {r.Role}
         Country: {r.Country}
+        Preferred time (a request, confirm it by email): {r.PreferredAt:u}
         Email: {r.Email ?? "-"}
         Phone: {r.Phone ?? "-"}
         Message: {(string.IsNullOrEmpty(r.Message) ? "none" : "stored with the request, not emailed")}

@@ -1,0 +1,103 @@
+@page
+@model DemoModel
+@using Medvya.Leads.Domain
+@{
+    var p = Model;
+    ViewData["Title"] = $"{p.T("site.demo.title")} · {p.T("app.name")}";
+    ViewData["Description"] = p.T("site.demo.lead");
+    var country = p.Form.Country ?? p.Region;
+    var slot = 0;
+}
+<section class="demo-page" aria-labelledby="demo-title">
+    <div class="demo-intro">
+        <p class="eyebrow">@p.T("site.demo.title")</p>
+        <h1 id="demo-title">@p.T("site.demo.heading")</h1>
+        <p class="lede">@p.T("site.demo.lead")</p>
+        <h2 class="steps-title">@p.T("site.demo.steps.title")</h2>
+        <ol class="demo-steps">
+            @for (var i = 1; i <= 3; i++)
+            {
+                <li>
+                    <span class="step-number" aria-hidden="true">@i</span>
+                    <span><strong>@p.T($"site.demo.step{i}.title")</strong> <span>@p.T($"site.demo.step{i}.body")</span></span>
+                </li>
+            }
+        </ol>
+    </div>
+
+    <div id="demo" class="demo-card">
+        @if (p.Sent)
+        {
+            <div class="demo-sent" role="status">
+                <svg viewBox="0 0 24 24" width="36" height="36" aria-hidden="true" focusable="false"><path d="M4 6h16v14H4zM4 10h16M8 3v4M16 3v4M9 15l2 2 4-4" /></svg>
+                <h2>@(p.Requested is { } at ? p.T("site.demo.sent.title", new Dictionary<string, string> { ["time"] = p.Full(at) }) : p.T("site.demo.sent"))</h2>
+                <p>@p.T("site.demo.sent.body")</p>
+                <a class="button button-primary" href="@p.Href(PublicSite.DoctorStart)">@p.T("site.demo.sent.start")</a>
+            </div>
+        }
+        else if (p.PrivacyContact is null)
+        {
+            <p class="note">@p.T("site.form.closed")</p>
+        }
+        else
+        {
+            <p>@p.T("site.demo.intro")</p>
+            <p class="warning"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path d="M12 3l10 18H2zM12 10v5M12 18v.5" /></svg>@p.T("site.form.noPatientData")</p>
+            <partial name="_FormErrors" />
+            <form method="post" novalidate>
+                <partial name="_NameField" />
+                <div class="field">
+                    <label for="demo-organisation">@p.T("site.demo.organisation")</label>
+                    <input id="demo-organisation" name="Form.Organisation" value="@p.Form.Organisation" maxlength="150" autocomplete="organization" aria-invalid="@p.Invalid("Organisation")" aria-describedby="@p.Described("demo-organisation", "Organisation")" autofocus="@p.Focus("demo-organisation")">
+                    @if (p.Errors.ContainsKey("Organisation")) { <p id="demo-organisation-error" class="field-error">@p.FieldError("Organisation")</p> }
+                </div>
+                <div class="field">
+                    <label for="demo-role">@p.T("site.demo.role")</label>
+                    <input id="demo-role" name="Form.Role" value="@p.Form.Role" maxlength="100" autocomplete="organization-title" aria-invalid="@p.Invalid("Role")" aria-describedby="@p.Described("demo-role", "Role")" autofocus="@p.Focus("demo-role")">
+                    @if (p.Errors.ContainsKey("Role")) { <p id="demo-role-error" class="field-error">@p.FieldError("Role")</p> }
+                </div>
+                <div class="field">
+                    <label for="demo-country">@p.T("site.demo.country")</label>
+                    <select id="demo-country" name="Form.Country" aria-invalid="@p.Invalid("Country")" aria-describedby="@p.Described("demo-country", "Country")" autofocus="@p.Focus("demo-country")">
+                        @foreach (var c in DemoRequest.Countries)
+                        {
+                            <option value="@c" selected="@(c == country ? "selected" : null)">@p.T(c == "OTHER" ? "site.demo.country.OTHER" : $"site.region.{c}")</option>
+                        }
+                    </select>
+                    @if (p.Errors.ContainsKey("Country")) { <p id="demo-country-error" class="field-error">@p.FieldError("Country")</p> }
+                </div>
+                <partial name="_ContactFields" />
+                @* Server-rendered slots in the region's time: works without JavaScript, and the value is a UTC minute. *@
+                <fieldset class="field demo-time">
+                    <legend>@p.T("site.demo.time", new Dictionary<string, string> { ["zone"] = p.ZoneName })</legend>
+                    <p id="demo-time-hint" class="hint">@p.T("site.demo.time.hint")</p>
+                    @if (p.Errors.ContainsKey("PreferredAt")) { <p id="demo-time-error" class="field-error">@p.FieldError("PreferredAt")</p> }
+                    @foreach (var (day, times) in p.Slots())
+                    {
+                        <fieldset class="slot-day">
+                            <legend>@p.Day(day)</legend>
+                            <div class="slots">
+                                @foreach (var at in times)
+                                {
+                                    var value = DemoModel.Value(at);
+                                    var id = $"demo-time-{slot++}";
+                                    <label class="slot" for="@id">
+                                        <input id="@id" name="Form.PreferredAt" type="radio" value="@value" checked="@(p.Form.PreferredAt == value ? "checked" : null)" aria-invalid="@p.Invalid("PreferredAt")" aria-describedby="demo-time-hint @p.Described("demo-time", "PreferredAt")" autofocus="@p.Focus(id)">
+                                        <span dir="ltr">@p.Time(at)</span>
+                                    </label>
+                                }
+                            </div>
+                        </fieldset>
+                    }
+                </fieldset>
+                <div class="field">
+                    <label for="demo-message">@p.T("site.demo.message")</label>
+                    <textarea id="demo-message" name="Form.Message" rows="4" maxlength="1000" aria-invalid="@p.Invalid("Message")" aria-describedby="@p.Described("demo-message", "Message")" autofocus="@p.Focus("demo-message")">@p.Form.Message</textarea>
+                    @if (p.Errors.ContainsKey("Message")) { <p id="demo-message-error" class="field-error">@p.FieldError("Message")</p> }
+                </div>
+                <partial name="_PrivacyNotice" />
+                <button class="button button-primary" type="submit">@p.T("site.demo.submit")</button>
+            </form>
+        }
+    </div>
+</section>

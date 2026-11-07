@@ -66,6 +66,9 @@ namespace Medvya.Leads.Infrastructure.Persistence.Migrations
                         .IsUnicode(false)
                         .HasColumnType("character varying(20)");
 
+                    b.Property<DateTimeOffset?>("PreferredAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTimeOffset>("ReceivedAt")
                         .HasColumnType("timestamp with time zone");
 

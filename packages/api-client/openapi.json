@@ -2346,6 +2346,39 @@
         }
       }
     },
+    "/v1/staff/{membershipId}/reactivate": {
+      "post": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "membershipId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Reactivate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/v1/staff/roles": {
       "get": {
         "tags": [
@@ -5060,6 +5093,10 @@
               "null",
               "string"
             ]
+          },
+          "offerRebooking": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -5610,6 +5647,20 @@
           },
           "doctor": {
             "type": "string"
+          }
+        }
+      },
+      "Reactivate": {
+        "required": [
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

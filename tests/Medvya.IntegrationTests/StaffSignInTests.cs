@@ -94,7 +94,8 @@ public sealed class StaffSignInTests(PostgresFixture sql) : IClassFixture<Postgr
         var user = await Account("Joseph");
         using var browser = Browser();
         var callback = await SignIn(browser, user.Subject, extra: "&no_mfa=true");
-        Assert.Equal("/?signin=failed", callback.Headers.Location!.OriginalString);
+        // The one refusal the page names (#912): the person can add a second factor; other refusals stay generic (next test).
+        Assert.Equal("/?signin=mfa", callback.Headers.Location!.OriginalString);
         Assert.Equal(HttpStatusCode.Unauthorized, (await browser.GetAsync(new Uri("/v1/me/context", UriKind.Relative))).StatusCode);
     }
 
@@ -228,8 +229,30 @@ public sealed class StaffSignInTests(PostgresFixture sql) : IClassFixture<Postgr
 
         using var logout = new HttpRequestMessage(HttpMethod.Post, new Uri("/bff/logout", UriKind.Relative));
         logout.Headers.Add(StaffAuthentication.CsrfHeader, "1");
-        Assert.Equal(HttpStatusCode.NoContent, (await browser.SendAsync(logout)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await browser.SendAsync(logout)).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, (await browser.GetAsync(new Uri("/v1/me/context", UriKind.Relative))).StatusCode);
+    }
+
+    // #912: on a shared front-desk PC the provider must not sign the last account straight back in, so sign-out ends its session too.
+    [Fact]
+    public async Task SignOutEndsTheProviderSessionAndComesBackToTheApp()
+    {
+        var user = await Account("Meera");
+        using var browser = Browser();
+        await SignIn(browser, user.Subject);
+
+        using var logout = new HttpRequestMessage(HttpMethod.Post, new Uri("/bff/logout", UriKind.Relative));
+        logout.Headers.Add(StaffAuthentication.CsrfHeader, "1");
+        var res = await browser.SendAsync(logout);
+        Assert.Equal(HttpStatusCode.OK, res.StatusCode);
+        Assert.Null(res.Headers.Location); // the page navigates; a fetch must not follow the redirect itself
+        var provider = new Uri((await res.Content.ReadFromJsonAsync<StaffAuthentication.SignInRedirect>())!.Location);
+        Assert.Equal("/dev-idp/logout", provider.AbsolutePath);
+        Assert.Contains("post_logout_redirect_uri=https%3A%2F%2Flocalhost%2Fsignout-callback-oidc", provider.Query, StringComparison.Ordinal);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await browser.GetAsync(new Uri("/v1/me/context", UriKind.Relative))).StatusCode);
+
+        var callback = await browser.GetAsync((await browser.GetAsync(provider)).Headers.Location);
+        Assert.Equal("/", callback.Headers.Location!.OriginalString);
     }
 
     [Fact]

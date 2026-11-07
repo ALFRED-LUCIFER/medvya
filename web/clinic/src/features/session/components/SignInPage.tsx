@@ -4,19 +4,19 @@ import { Link } from 'react-router';
 import { useI18n } from '@medvya/i18n';
 import { Button, buttonVariants, Input, Label } from '@medvya/ui';
 import { Building2, CircleAlert, KeyRound } from 'lucide-react';
-import type { SignInForm } from '../domain/signIn';
+import { securityInfoUrl, type SignInFailure, type SignInForm } from '../domain/signIn';
 import AuthFrame from './AuthFrame';
 
 type Props = {
   languageSwitcher: ReactNode;
   form: UseFormReturn<SignInForm>;
-  failed: boolean;
+  failure: SignInFailure | null;
   onSubmit: FormEventHandler<HTMLFormElement>;
   onWithoutEmail: () => void;
 };
 
 /** F-03 sign-in start (6 Nov design). Everything after Continue (email code, passkey, MFA) is the provider's page. */
-export default function SignInPage({ languageSwitcher, form, failed, onSubmit, onWithoutEmail }: Props) {
+export default function SignInPage({ languageSwitcher, form, failure, onSubmit, onWithoutEmail }: Props) {
   const { t } = useI18n();
   const error = form.formState.errors.email;
   return (
@@ -25,10 +25,21 @@ export default function SignInPage({ languageSwitcher, form, failed, onSubmit, o
         <h1 className="text-[28px] font-bold text-brand-950">{t('signin.title')}</h1>
         <p className="text-[15px] text-muted-foreground">{t('signin.body')}</p>
       </div>
-      {failed && (
+      {failure === 'failed' && (
         <p role="alert" className="flex items-start gap-2 rounded-lg border border-danger-700 bg-danger-50 p-3 text-sm font-semibold text-danger-700">
           <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />{t('session.failed')}
         </p>
+      )}
+      {failure === 'mfa' && (
+        <div role="alert" className="flex items-start gap-2 rounded-lg border border-danger-700 bg-danger-50 p-3 text-sm text-danger-700">
+          <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
+          <div className="flex flex-col gap-1">
+            <p className="font-semibold">{t('session.failedMfa')}</p>
+            <p>{t('session.failedMfa.how')}</p>
+            <a href={securityInfoUrl} target="_blank" rel="noreferrer" className="min-h-11 content-center font-semibold underline">{t('session.failedMfa.link')}</a>
+            <p>{t('session.failedMfa.admin')}</p>
+          </div>
+        </div>
       )}
       <form noValidate onSubmit={onSubmit} className="flex flex-col gap-[18px]">
         <div className="flex flex-col gap-1.5">

@@ -318,8 +318,6 @@ namespace Medvya.Tenancy.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("TenantId");
-
                     b.ToTable("Facilities", "tenancy");
                 });
 
@@ -450,9 +448,9 @@ namespace Medvya.Tenancy.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("CustomRoleId");
 
-                    b.HasIndex("FacilityId");
-
                     b.HasIndex("UserId");
+
+                    b.HasIndex("TenantId", "FacilityId");
 
                     b.HasIndex("TenantId", "UserId", "FacilityId")
                         .IsUnique();
@@ -543,6 +541,12 @@ namespace Medvya.Tenancy.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("TenantId");
 
                     b.ToTable("PracticeDefaults", "tenancy");
@@ -586,6 +590,12 @@ namespace Medvya.Tenancy.Infrastructure.Persistence.Migrations
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.HasKey("Id");
 
@@ -804,7 +814,8 @@ namespace Medvya.Tenancy.Infrastructure.Persistence.Migrations
 
                     b.HasOne("Medvya.Tenancy.Domain.Facility", null)
                         .WithMany()
-                        .HasForeignKey("FacilityId")
+                        .HasForeignKey("TenantId", "FacilityId")
+                        .HasPrincipalKey("TenantId", "Id")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

@@ -131,6 +131,19 @@ public class DatabaseRoleTests(PostgresFixture sql) : IClassFixture<PostgresFixt
     public Task BillingRoleCannotDeleteANumberSeries() => Denied("billing_user", "DELETE FROM billing.\"DocSequences\""); // would restart legal numbering
 
     [Fact]
+    public async Task TheAppDeletesOnlyFromTheTablesItDeletesFrom()
+    {
+        // #879: patients, memberships, settings history, access reviews, MRN counters and visit history are never deleted.
+        await using var conn = await sql.OpenAs("app_user");
+        await using var cmd = new NpgsqlCommand("""
+            SELECT string_agg(schemaname || '.' || tablename, ',' ORDER BY schemaname COLLATE "C", tablename COLLATE "C") FROM pg_tables
+            WHERE schemaname IN ('tenancy', 'patients', 'scheduling') AND has_table_privilege(format('%I.%I', schemaname, tablename), 'DELETE')
+            """, conn);
+        Assert.Equal("patients.PayerCoverages,patients.Relationships,scheduling.ScheduleExceptions,scheduling.ScheduleSlots,scheduling.SlotHolds,"
+            + "tenancy.Closures,tenancy.OperatingHours", await cmd.ExecuteScalarAsync());
+    }
+
+    [Fact]
     public async Task AuditRoleCanAppendButNeverChangeOrDelete()
     {
         var tenant = Guid.NewGuid();

@@ -13,11 +13,11 @@ Every role is `NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE NOREPLICATION` an
 | `medvya_owner` | Owns every module schema and table; runs DDL. Foreign-key checks run as the owner, so it keeps its data rights | Logins. Nobody connects as it |
 | `medvya_migrator` | `USAGE, CREATE` on the module schemas; member of `medvya_owner` with `SET` but not `INHERIT`, so `db-migrate` does `SET ROLE medvya_owner` for the length of a migration | Read or write module data in a plain session (`MigratorCanChangeTheSchemaButNotTouchModuleData`) |
 | `medvya_app` | Member of every module role below, nothing else | Any DDL, ownership of any object, disabling a policy or trigger |
-| `medvya_tenancy` | `SELECT/INSERT/UPDATE/DELETE` on schema `tenancy` | Any other schema; `UPDATE`/`DELETE` on `TenantIndex` |
+| `medvya_tenancy` | `SELECT/INSERT/UPDATE` on schema `tenancy`; `DELETE` only on `OperatingHours` and `Closures` (table-rights.sql) | Any other schema; `UPDATE`/`DELETE` on `TenantIndex`; deleting any other tenancy row (memberships, settings history, access reviews) |
 | `medvya_identity` | `SELECT/INSERT/UPDATE` on `identity` | `DELETE` (offboarding is a membership status, a session is revoked not removed) |
-| `medvya_patients` | `SELECT/INSERT/UPDATE/DELETE` on `patients`; on `DataKeys` only `SELECT`, `INSERT` and `UPDATE` of the wrapping (`WrapKeyId`, `Wrapped`) | Any other schema; deleting a data key or moving it to another tenant or purpose |
+| `medvya_patients` | `SELECT/INSERT/UPDATE` on `patients`; `DELETE` only on `PayerCoverages` and `Relationships` (a replaced payer or emergency contact); on `DataKeys` only `SELECT`, `INSERT` and `UPDATE` of the wrapping (`WrapKeyId`, `Wrapped`) | Any other schema; deleting a patient, identifier, merge request or MRN counter; deleting a data key or moving it to another tenant or purpose |
 | `medvya_billing` | `SELECT/INSERT/UPDATE` on `billing` | `DELETE` (it would restart a legal number series); changing `TR_DocSequences_OnlyMoveForward` (only the owner can) |
-| `medvya_scheduling` | `SELECT/INSERT/UPDATE/DELETE` on `scheduling` | Any other schema; `UPDATE`/`DELETE` on `OutboxTenants`; reporting has no access (appointments hold the SensitiveHealth visit reason) |
+| `medvya_scheduling` | `SELECT/INSERT/UPDATE` on `scheduling`; `DELETE` only on `ScheduleSlots`, `SlotHolds` and `ScheduleExceptions` | Any other schema; deleting appointments or visit history; `UPDATE`/`DELETE` on `OutboxTenants`; reporting has no access (appointments hold the SensitiveHealth visit reason) |
 | `medvya_notifications` | `SELECT/INSERT/UPDATE` on `notifications` | `DELETE` (attempts are the delivery history); patients and scheduling data |
 | `medvya_leads` | `SELECT/INSERT` on `leads` | `UPDATE`, `DELETE` |
 | `medvya_audit` | `SELECT/INSERT` on `audit` | `UPDATE`, `DELETE` (the append-only triggers refuse them for every role too, MDV-P0-036) |

@@ -1,3 +1,5 @@
+using Medvya.Tenancy.Infrastructure.Persistence;
+using Medvya.BuildingBlocks.Infrastructure;
 using Medvya.Tenancy.Domain;
 using Npgsql;
 using Microsoft.EntityFrameworkCore;
@@ -88,4 +90,55 @@ public class TenantIsolationTests(PostgresFixture sql) : IClassFixture<PostgresF
             Assert.Equal([tenant], seen);
         }
     }
+
+    [Fact]
+    public async Task TwoSavesOfTheSameSettingsRowConflictInsteadOfOverwriting()
+    {
+        // #889: xmin is the concurrency token, so the save that read the older row loses loudly.
+        var id = Guid.NewGuid();
+        await using (var seed = sql.Context(tenantA))
+        {
+            seed.Profiles.Add(new PracticeProfile { Id = id, TenantId = tenantA, Phone = "+91 90000 00001" });
+            await seed.SaveChangesAsync();
+        }
+        await using var first = sql.Context(tenantA);
+        await using var second = sql.Context(tenantA);
+        var a = await first.Profiles.SingleAsync(p => p.Id == id);
+        var b = await second.Profiles.SingleAsync(p => p.Id == id);
+        a.Phone = "+91 90000 00002";
+        await first.SaveChangesAsync();
+        b.Email = "desk@example.test";
+        await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => second.SaveChangesAsync());
+    }
+
+    [Fact]
+    public async Task TheDatabaseRefusesAMembershipAtAnotherTenantsFacility()
+    {
+        // #890: foreign-key checks bypass RLS, so the key itself carries the tenant.
+        await using var db = sql.Context(tenantA);
+        db.Memberships.Add(new Membership { Id = Guid.NewGuid(), TenantId = tenantA, UserId = Guid.NewGuid(), FacilityId = facilityB, Role = Role.Receptionist, Status = MembershipStatus.Active });
+        var refused = await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
+        Assert.Equal(PostgresErrorCodes.ForeignKeyViolation, Assert.IsType<PostgresException>(refused.InnerException).SqlState);
+    }
+
+    [Fact]
+    public async Task AContextWithoutATenantClearsSettingsAConnectionKept()
+    {
+        // #887: even on a connection that skipped the pool reset (deliberately built past the startup guard), no tenant means no rows.
+        var cs = new NpgsqlConnectionStringBuilder(sql.ConnectionString) { NoResetOnClose = true, MaxPoolSize = 1, ApplicationName = $"no-reset-{Guid.NewGuid():N}" };
+        await using var source = NpgsqlDataSource.Create(cs.ConnectionString);
+        await using (var conn = await source.OpenConnectionAsync())
+        await using (var set = new NpgsqlCommand("SELECT set_config('medvya.tenant_id', $1, false)", conn) { Parameters = { new() { Value = tenantA.ToString() } } })
+            await set.ExecuteNonQueryAsync();
+        var none = new PostgresFixture.FixedTenant(null);
+        await using var db = new TenancyDbContext(new DbContextOptionsBuilder<TenancyDbContext>().UseNpgsql(source).AddInterceptors(new TenantSessionInterceptor(none)).Options, none);
+        Assert.Empty(await db.Facilities.IgnoreQueryFilters().ToListAsync());
+    }
+
+    [Theory]
+    [InlineData("No Reset On Close=true")]
+    [InlineData("Multiplexing=true")]
+    [InlineData("Port=6432")]
+    public void AConnectionStringThatSharesSessionsIsRefused(string setting) =>
+        Assert.Throws<InvalidOperationException>(() => PostgresDataSources.Create($"Host=localhost;Database=medvya;Username=x;Password=y;{setting}", new Azure.Identity.DefaultAzureCredential()));
 }

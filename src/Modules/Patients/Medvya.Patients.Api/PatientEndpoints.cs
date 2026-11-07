@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.EntityFrameworkCore;
 
 namespace Medvya.Patients.Api;
 
@@ -249,7 +250,14 @@ public static class PatientEndpoints
         {
             return Invalid(e);
         }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict(); // #889: someone else changed this record meanwhile; nothing was saved
+        }
     }
+
+    static IResult Conflict() => Results.Problem(statusCode: StatusCodes.Status409Conflict, title: "The record was changed by someone else. Reload and try again.",
+        extensions: new Dictionary<string, object?> { ["code"] = "changed" });
 
     static async Task<IResult> Search([FromBody] SearchRequest? request, [FromServices] IStaffAccess staff, [FromServices] IPatientRegistry registry, CancellationToken ct)
     {

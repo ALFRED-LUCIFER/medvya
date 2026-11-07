@@ -38,6 +38,11 @@ public sealed class PatientsDbContext(DbContextOptions<PatientsDbContext> option
         modelBuilder.HasDefaultSchema("patients");
         modelBuilder.Entity<Patient>(e =>
         {
+            // PostgreSQL's xmin as a concurrency token (#889): of two completions racing on one record, the second gets a conflict
+            // instead of saving a status worked out from what it read before the first committed.
+            // shortcut: checked within one request only; the client does not send back the version it loaded. Add a version round trip
+            // to the completion form if two people editing the same field minutes apart becomes a real case.
+            e.Property<uint>("xmin").IsRowVersion();
             e.Property(x => x.Mrn).HasMaxLength(32);
             e.Property(x => x.CountryCode).HasMaxLength(2).IsFixedLength();
             e.Property(x => x.FullName).HasMaxLength(200);

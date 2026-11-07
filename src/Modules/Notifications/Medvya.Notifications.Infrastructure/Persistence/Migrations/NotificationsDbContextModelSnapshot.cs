@@ -163,6 +163,10 @@ namespace Medvya.Notifications.Infrastructure.Persistence.Migrations
                     b.Property<bool>("Reminder2h")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("SenderName")
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)");
+
                     b.Property<bool>("Sms")
                         .HasColumnType("boolean");
 

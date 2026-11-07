@@ -1210,7 +1210,7 @@ erDiagram
 |---|---|---|---|
 | `Notifications` | 17 | Id | tenant-scoped |
 | `Attempts` | 6 | Id | tenant-scoped |
-| `Preferences` | 11 | TenantId | tenant-scoped |
+| `Preferences` | 12 | TenantId | tenant-scoped |
 | `StaffNotifications` | 8 | Id | tenant-scoped |
 | `StaffNotificationReads` | 4 | NotificationId, UserId | tenant-scoped |
 
@@ -1265,6 +1265,7 @@ erDiagram
 | `QuietStart` | time |  |  |
 | `Reminder24h` | bool |  |  |
 | `Reminder2h` | bool |  |  |
+| `SenderName` | character varying(60) |  |  |
 | `Sms` | bool |  |  |
 
 </details>

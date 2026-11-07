@@ -106,6 +106,8 @@ public sealed class Doctors(TenancyDbContext db, ICurrentTenant tenant, ICurrent
         if (content.Length == 0 || content.Length > LogoImage.MaxBytes) errors.Add(new("signature", "too_large"));
         else if (type is null) errors.Add(new("signature", "type"));
         SettingsValidationException.ThrowIfAny(errors);
+        content = CleanImage.ToPng(content) ?? throw new SettingsValidationException([new("signature", "type")]); // only the pixels are kept (#211)
+        type = "image/png";
 
         var old = profile.SignatureKey;
         profile.SignatureKey = $"{TenantId}/signature/{Guid.NewGuid()}"; // random, no names in blob paths

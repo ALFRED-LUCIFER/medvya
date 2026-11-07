@@ -21,7 +21,7 @@ namespace Medvya.IntegrationTests;
 /// </summary>
 public sealed class PracticeSettingsTests(PostgresFixture sql) : IClassFixture<PostgresFixture>, IAsyncLifetime
 {
-    static readonly byte[] Png = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 0];
+    static readonly byte[] Png = TestImages.Png;
     readonly SchedulingHarness h = new(sql);
     WebApplicationFactory<Program>? factory;
 
@@ -209,10 +209,28 @@ public sealed class PracticeSettingsTests(PostgresFixture sql) : IClassFixture<P
         Assert.Contains("se=300", link!.Query);
         Assert.True((await settings.GetProfileAsync()).HasLogo);
 
-        await settings.SetLogoAsync([0xFF, 0xD8, 0xFF, 0xE0, 0, 0]); // replacing deletes the old object
-        Assert.Equal("image/jpeg", Assert.Single(h.Logos.Stored).Value.ContentType);
+        await settings.SetLogoAsync(TestImages.Jpeg); // replacing deletes the old object
+        Assert.Equal("image/png", Assert.Single(h.Logos.Stored).Value.ContentType); // stored as a re-encoded PNG
         Assert.True(await settings.RemoveLogoAsync());
         Assert.Empty(h.Logos.Stored);
+    }
+
+    [Fact]
+    public async Task OnlyThePixelsOfALogoAreStoredAndAFakeOrHugeImageIsRefused()
+    {
+        // #211, owner decision 7 Nov: re-encoding instead of a malware scan. A payload appended to a valid image never reaches storage.
+        var settings = h.Settings(h.Admin);
+        var payload = "<script>alert('x')</script>MZ-not-a-picture"u8.ToArray();
+        await settings.SetLogoAsync([.. Png, .. payload]);
+        var stored = Assert.Single(h.Logos.Stored).Value;
+        Assert.Equal("image/png", stored.ContentType);
+        Assert.Equal(-1, stored.Content.AsSpan().IndexOf(payload.AsSpan(0, 8)));
+        using (var decoded = SkiaSharp.SKBitmap.Decode(stored.Content)) Assert.Equal((4, 4), (decoded.Width, decoded.Height));
+
+        // A PNG signature with nothing decodable behind it, and an image wider than the limit, are refused and nothing changes.
+        foreach (var bad in new[] { [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 0], TestImages.Make(Medvya.Tenancy.Infrastructure.CleanImage.MaxSide + 1, 1, SkiaSharp.SKEncodedImageFormat.Png) })
+            Assert.Equal("logo:type", (await Assert.ThrowsAsync<SettingsValidationException>(() => settings.SetLogoAsync(bad))).Errors.Select(e => $"{e.Field}:{e.Code}").Single());
+        Assert.Single(h.Logos.Stored);
     }
 
     // ---- Holidays ----

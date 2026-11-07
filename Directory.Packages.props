@@ -8,6 +8,9 @@
     <!-- Every NuGet version lives here; project files reference packages without versions. -->
     <PackageVersion Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.10.0" />
     <PackageVersion Include="Azure.Storage.Blobs" Version="12.30.1" />
+    <!-- MDV-P1-005 (#211): decode and re-encode uploaded images so hidden payloads never reach storage. MIT; native assets for Linux App Service and CI. -->
+    <PackageVersion Include="SkiaSharp" Version="3.119.0" />
+    <PackageVersion Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="3.119.0" />
     <PackageVersion Include="Azure.Identity" Version="1.21.0" />
     <!-- Wraps per-tenant data keys with a Key Vault key (MDV-P0-035); already a transitive of the Always Encrypted provider. -->
     <PackageVersion Include="Azure.Security.KeyVault.Keys" Version="4.7.0" />

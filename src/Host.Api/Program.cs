@@ -40,6 +40,7 @@ builder.WebHost.ConfigureKestrel(k =>
 });
 
 builder.AddStaffAuthentication();
+builder.AddNativeAuthentication(); // the staff app's bearer tokens, on the same server-side sessions (MDV-P5-033)
 // Waiting-room TVs sign in with a display token, never a staff session (MDV-P1-031).
 builder.Services.AddAuthentication().AddQueueDisplay();
 builder.Services.AddAuthorizationBuilder().AddStaffPolicies().AddStaffAdminPolicy().AddQueueDisplayPolicy().AddOperationsPolicies(builder.Configuration);
@@ -135,6 +136,7 @@ var version = typeof(Program).Assembly.GetCustomAttribute<AssemblyInformationalV
 app.MapGet("/health", () => Results.Ok(new { status = "ok", version }))
     .AllowAnonymous(); // public: deploy smoke tests
 app.MapStaffSession();
+app.MapNativeSignIn();
 app.MapSchedulingEndpoints();
 app.MapNotifications();
 app.UseJobs();

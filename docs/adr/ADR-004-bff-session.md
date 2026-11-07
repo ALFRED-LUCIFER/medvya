@@ -34,6 +34,24 @@ The SPA and API share one origin. Host.Api acts as the backend-for-frontend:
 - **Email:** `IEmailSender` (BuildingBlocks) uses System.Net.Mail over SMTP: smtp4dev locally (`localhost:2525`), SendGrid's SMTP relay in the cloud (`smtp.sendgrid.net:587`, STARTTLS, user `apikey`, the API key in Key Vault as `Email__Smtp__Password`). The email holds the clinic, role, facility, link and expiry only, never patient data. Links use the configured `Invitations:LinkBaseUrl`, never the request's Host header.
 - Known limits: the link is a bearer credential (the provider's verified email is not yet matched to the invited address; revisit with Entra), invitations go by email only (SMS: MDV-P1-033), and the email is in English only (MDV-P1-032).
 
+## Implementation notes (MDV-P5-033, native staff app)
+
+The staff app has no browser to hold a cookie, so it gets bearer tokens. They are backed by the **same server-side session row**. As a result revocation, "My devices", the facility picker and offboarding (`RevokeInTenantAsync`) apply unchanged, and the next request after a revoke is refused. The code is in `Host.Api/Auth/NativeAuthentication.cs`.
+
+- **Sign-in:** the app opens the system browser at `GET /native/login?redirect_uri=&code_challenge=&code_challenge_method=S256`. The redirect URI must be listed in `Native:RedirectUris` (`medvya-clinician://auth`), and only S256 is accepted. The normal OIDC sign-in then runs with `prompt=login`, so a browser that is still signed in never hands a phone a session silently. MFA, the account check and invitations stay as above. `/native/complete` marks the session native, clears the cookie, and redirects to the app with a one-time code. The code is data-protected, lasts 2 minutes, and is bound to the challenge and redirect URI.
+- **Tokens:** `POST /native/token` takes OAuth form fields: `authorization_code` with `code_verifier` and `redirect_uri`, or `refresh_token`. It answers `{access_token, token_type, expires_in: 900, refresh_token}` with `Cache-Control: no-store`.
+  - The access token is data-protected, lasts 15 minutes, and carries the same claims as the cookie.
+  - The refresh token is base64url(session id ‖ user id ‖ 32 random bytes). Only its SHA-256 is stored, in `identity.Sessions.RefreshTokenHash`, so it survives restarts and key rotation. A session with that hash is native.
+  - The bearer scheme is selected through the cookie's `ForwardDefaultSelector`, so every staff endpoint accepts it without per-endpoint changes. Bearer requests carry no cookie, so no CSRF header is needed.
+- **Rotation and replay:** each refresh swaps the stored hash with a conditional update, so of two uses of one token only one wins. Presenting an old refresh token, or a used code, ends the whole session (RFC 9700) and audits `session.refresh.replay` when the session has a tenant. The app must therefore run one refresh at a time; two parallel refreshes with the same token end the session.
+- **One kind per session:** a native session is refused by cookie and a browser session by bearer. A cookie copied during sign-in is therefore useless.
+- **Lifetimes (proposed, founder to confirm):** native sessions last at most 30 days and end after 7 days unused. The app's own 15-minute biometric/PIN lock (MDV-P5-034) covers the shared or lost phone in between. Browser sessions keep 8 h and the tenant's idle timeout.
+- **Facility switch:** `POST /v1/me/facility` with a bearer re-scopes the row and returns 204. The old access token then names the wrong membership and is refused, so the app refreshes. A refresh whose membership is no longer active fails.
+- Known limits:
+  - Custom-scheme redirects can be claimed by another app (PKCE keeps the code useless to it). Move to Universal Links and App Links before store release (MDV-P5-039).
+  - Patient SMS sign-in, the device key and the push-token registry are later slices of MDV-P5-033, because no patient accounts exist yet.
+  - SignalR from the app is not wired (the board is web only).
+
 ## Consequences
 
 Removes token theft through XSS. CSP can be strict. The portal uses the same pattern with patient OTP / UAE PASS.

@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Medvya.Encounters.Application\Medvya.Encounters.Application.csproj" />
+    <ProjectReference Include="..\..\Audit\Medvya.Audit.Api\Medvya.Audit.Api.csproj" />
+    <ProjectReference Include="..\..\Tenancy\Medvya.Tenancy.Api\Medvya.Tenancy.Api.csproj" />
+    <ProjectReference Include="..\..\Scheduling\Medvya.Scheduling.Application\Medvya.Scheduling.Application.csproj" />
+    <ProjectReference Include="..\..\Patients\Medvya.Patients.Application\Medvya.Patients.Application.csproj" />
+  </ItemGroup>
+
+</Project>

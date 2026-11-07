@@ -1,4 +1,5 @@
 using Medvya.Audit.Infrastructure;
+using Medvya.Encounters.Infrastructure;
 using Medvya.BuildingBlocks.Domain;
 using Medvya.Identity.Domain;
 using Medvya.Identity.Infrastructure;
@@ -114,7 +115,7 @@ internal sealed class SchedulingHarness(PostgresFixture sql)
             .AddSingleton<Medvya.Tenancy.Application.ILogoStore>(Logos) // before the module, which only adds a store when none is registered
             .AddSingleton(sql.NationalIds) // the fixture's national-ID setup (this harness has no host configuration)
             .AddAuditModule(ConnectionString).AddTenancyModule(ConnectionString).AddIdentityModule(ConnectionString)
-            .AddPatientsModule(ConnectionString).AddSchedulingModule(ConnectionString);
+            .AddPatientsModule(ConnectionString).AddSchedulingModule(ConnectionString).AddEncountersModule(ConnectionString);
         if (interceptor is not null) services.ConfigureDbContext<Medvya.Scheduling.Infrastructure.Persistence.SchedulingDbContext>(o => o.AddInterceptors(interceptor));
         services.Configure<SchedulingOptions>(o => (o.SlotHold, o.LockTimeout) = (Options.SlotHold, Options.LockTimeout));
         configure?.Invoke(services);

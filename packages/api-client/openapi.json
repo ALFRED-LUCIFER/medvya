@@ -757,6 +757,76 @@
         }
       }
     },
+    "/v1/schedule/metrics": {
+      "get": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "facilityId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PilotMetrics"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/schedule/metrics/baselines": {
+      "post": {
+        "tags": [
+          "Host.Api"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecordBaseline"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaselineView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/slot-holds": {
       "post": {
         "tags": [
@@ -3658,6 +3728,45 @@
           }
         }
       },
+      "BaselineView": {
+        "required": [
+          "metric",
+          "value",
+          "method",
+          "fromDate",
+          "toDate",
+          "recordedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "metric": {
+            "$ref": "#/components/schemas/PilotMetric"
+          },
+          "value": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "method": {
+            "type": "string"
+          },
+          "fromDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "toDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "recordedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "BoardCard": {
         "required": [
           "id",
@@ -3892,6 +4001,60 @@
               "string"
             ],
             "format": "int64"
+          }
+        }
+      },
+      "CheckInMetric": {
+        "required": [
+          "returningMedianSeconds",
+          "returningCount",
+          "medianSeconds",
+          "count",
+          "targetSeconds"
+        ],
+        "type": "object",
+        "properties": {
+          "returningMedianSeconds": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "returningCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "medianSeconds": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "targetSeconds": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -5035,6 +5198,41 @@
           }
         }
       },
+      "NoShowMetric": {
+        "required": [
+          "noShows",
+          "attended",
+          "percent"
+        ],
+        "type": "object",
+        "properties": {
+          "noShows": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "attended": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "percent": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          }
+        }
+      },
       "NotificationPreferencesView": {
         "required": [
           "confirmation",
@@ -5499,6 +5697,55 @@
           "GovernmentScheme"
         ]
       },
+      "PilotMetric": {
+        "enum": [
+          "CheckInSeconds",
+          "NoShowPercent",
+          "DoubleBookings",
+          "ReminderDeliveryPercent"
+        ]
+      },
+      "PilotMetrics": {
+        "required": [
+          "from",
+          "to",
+          "checkIn",
+          "noShows",
+          "doubleBookingRefusals",
+          "baselines"
+        ],
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "to": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "checkIn": {
+            "$ref": "#/components/schemas/CheckInMetric"
+          },
+          "noShows": {
+            "$ref": "#/components/schemas/NoShowMetric"
+          },
+          "doubleBookingRefusals": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "baselines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BaselineView"
+            }
+          }
+        }
+      },
       "PreviewRequest": {
         "required": [
           "token"
@@ -5712,6 +5959,54 @@
           "Offer",
           "Manual"
         ]
+      },
+      "RecordBaseline": {
+        "type": "object",
+        "properties": {
+          "facilityId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "metric": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PilotMetric"
+              }
+            ]
+          },
+          "value": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "method": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "fromDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "toDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          }
+        }
       },
       "RegisterRequest": {
         "type": "object",

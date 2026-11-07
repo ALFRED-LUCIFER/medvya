@@ -174,7 +174,7 @@ public sealed class EndpointAuditTests(PostgresFixture sql) : IClassFixture<Post
     /// allowed path, where the use case must write its event, would never run. One distinct synthetic person per role, so no
     /// call stops at a duplicate warning.
     /// </summary>
-    static readonly string[] WritesWithSampleBodies = ["PUT /v1/schedule/templates", "POST /v1/schedule/resources", "POST /v1/slot-holds/", "POST /v1/patients/", "POST /v1/queue/displays/"];
+    static readonly string[] WritesWithSampleBodies = ["PUT /v1/schedule/templates", "POST /v1/schedule/resources", "POST /v1/slot-holds/", "POST /v1/patients/", "POST /v1/queue/displays/", "POST /v1/schedule/metrics/baselines"];
 
     string SampleBody(string endpoint, Role role) => endpoint switch
     {
@@ -187,6 +187,7 @@ public sealed class EndpointAuditTests(PostgresFixture sql) : IClassFixture<Post
         }),
         "POST /v1/schedule/resources" => System.Text.Json.JsonSerializer.Serialize(new { facilityId = facility, name = $"{role} room (synthetic)" }),
         "POST /v1/queue/displays/" => System.Text.Json.JsonSerializer.Serialize(new { facilityId = facility, name = $"{role} waiting room TV (synthetic)" }),
+        "POST /v1/schedule/metrics/baselines" => System.Text.Json.JsonSerializer.Serialize(new { facilityId = facility, metric = "NoShowPercent", value = 15, method = "Paper register (synthetic)", fromDate = "2026-10-05", toDate = "2026-10-18" }),
         "POST /v1/slot-holds/" => System.Text.Json.JsonSerializer.Serialize(new
         {
             facilityId = facility, calendarId = staff[Role.SoloDoctor], visitType = "FollowUp", start = NextMondayIst(9).AddMinutes(20 * (int)role),

@@ -1,5 +1,4 @@
 using System.Data.Common;
-using System.Globalization;
 using Medvya.Audit.Application;
 using Medvya.Audit.Domain;
 using Medvya.BuildingBlocks.Domain;
@@ -41,7 +40,7 @@ public sealed class DoctorOffboardingParticipant(
             days.Add((a.FacilityId, ScheduleRules.LocalDate(a.Start, zone)));
         }
         foreach (var date in days.Select(d => d.Date).Distinct().Order())
-            await DoctorDayTransaction.LockAsync(db, string.Create(CultureInfo.InvariantCulture, $"doctor:{doctorUserId}:{date:yyyy-MM-dd}"), options.Value.LockTimeout, cancellationToken);
+            await DoctorDayTransaction.LockAsync(db, DoctorDayTransaction.DoctorDayKey(tenantId, doctorUserId, date), options.Value.LockTimeout, cancellationToken);
 
         var affected = await FutureAsync(); // read again under the locks
         foreach (var a in affected)

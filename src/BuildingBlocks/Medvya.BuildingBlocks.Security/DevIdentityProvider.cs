@@ -3,23 +3,25 @@ using System.Globalization;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
-using Medvya.Identity.Domain;
-using Medvya.Identity.Infrastructure.Persistence;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 
-namespace Host.Api.Auth;
+namespace Medvya.BuildingBlocks.Security;
+
+/// <summary>A synthetic account the development provider offers.</summary>
+public sealed record DevAccount(string Subject, string DisplayName);
 
 /// <summary>
 /// A minimal OIDC provider for local development and tests only (MDV-P0-005, MDV-P0-011): pick a seeded synthetic user,
 /// get an MFA-marked ID token. It lets the real OIDC handler, PKCE and cookie run end to end without Entra.
-/// Refuses to exist outside Development; production config points at Entra External ID over https.
+/// Refuses to exist outside Development; production config points at Entra over https. Each host passes its issuer and the accounts
+/// to offer: the clinic API its seeded staff, the platform console its team (MDV-P5-040).
 /// </summary>
 public static class DevIdentityProvider
 {
-    public const string Issuer = IdentityProviders.Development;
     public const string Path = "/dev-idp";
 
     static readonly string[] Code = ["code"], Public = ["public"], Rs256 = ["RS256"], S256 = ["S256"], MfaMethods = ["pwd", "mfa"], PasswordOnly = ["pwd"];
@@ -29,7 +31,7 @@ public static class DevIdentityProvider
 
     sealed record Grant(string Subject, string? Name, string ClientId, string RedirectUri, string? Nonce, string Challenge, bool Mfa, DateTimeOffset Expires);
 
-    public static WebApplication MapDevIdentityProvider(this WebApplication app)
+    public static WebApplication MapDevIdentityProvider(this WebApplication app, string issuer, Func<HttpContext, Task<IReadOnlyList<DevAccount>>> accounts)
     {
         if (!app.Environment.IsDevelopment())
             throw new InvalidOperationException("The development identity provider can only run in the Development environment.");
@@ -43,7 +45,7 @@ public static class DevIdentityProvider
             var self = $"{r.Scheme}://{r.Host}{Path}";
             return Results.Json(new Dictionary<string, object>
             {
-                ["issuer"] = Issuer,
+                ["issuer"] = issuer,
                 ["authorization_endpoint"] = $"{self}/authorize",
                 ["token_endpoint"] = $"{self}/token",
                 ["jwks_uri"] = $"{self}/jwks",
@@ -58,12 +60,12 @@ public static class DevIdentityProvider
 
         // Without login_hint: a list of seeded users plus "new account". With it: issue a one-time code and return to the app.
         // no_mfa=true signs in without MFA, so tests can prove the app refuses that.
-        dev.MapGet("/authorize", async (HttpRequest r, [FromServices] IdentityDbContext db, string client_id, string redirect_uri, string state,
+        dev.MapGet("/authorize", async (HttpRequest r, string client_id, string redirect_uri, string state,
             string code_challenge, string? code_challenge_method, string? nonce, string? login_hint, bool? no_mfa) =>
         {
             if (code_challenge_method != "S256" || !Uri.TryCreate(redirect_uri, UriKind.Absolute, out var back) || !back.IsLoopback)
                 return Results.BadRequest("PKCE S256 and a loopback redirect_uri are required.");
-            var users = await db.Users.AsNoTracking().Where(u => u.Issuer == Issuer).OrderBy(u => u.DisplayName).ToListAsync();
+            var users = await accounts(r.HttpContext);
             // An email hint comes from the app's sign-in page (MDV-P1-059); this provider has no emails, so it still shows the list.
             if (login_hint is null || login_hint.Contains('@', StringComparison.Ordinal))
             {
@@ -94,7 +96,7 @@ public static class DevIdentityProvider
             var now = DateTime.UtcNow;
             var idToken = new JsonWebTokenHandler().CreateToken(new SecurityTokenDescriptor
             {
-                Issuer = Issuer,
+                Issuer = issuer,
                 Audience = g.ClientId,
                 IssuedAt = now,
                 NotBefore = now,

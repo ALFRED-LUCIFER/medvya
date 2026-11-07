@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!--
+    The platform console host (MDV-P5-040): composition only, like Host.Api. It references the Platform module and shared building blocks,
+    never a clinic module, so no patient type can reach a console endpoint (PlatformConsoleTests checks the references).
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\Modules\Platform\Medvya.Platform.Api\Medvya.Platform.Api.csproj" />
+    <ProjectReference Include="..\Modules\Platform\Medvya.Platform.Infrastructure\Medvya.Platform.Infrastructure.csproj" />
+    <ProjectReference Include="..\BuildingBlocks\Medvya.BuildingBlocks.Security\Medvya.BuildingBlocks.Security.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" />
+  </ItemGroup>
+
+</Project>

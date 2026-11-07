@@ -149,6 +149,7 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.Receptionist, new("POST", "/v1/appointments/{appointment}/reassign", """{"calendarId":"{doctorCalendar}","reason":"PatientRequest"}""")),
         (Role.Receptionist, new("POST", "/v1/appointments/{appointment}/status", """{"state":"Done"}""")),
         (Role.Receptionist, new("GET", "/v1/appointments/{appointment}/notifications?facilityId={facility}")),
+        (Role.Receptionist, new("GET", "/v1/appointments/{appointment}/history")),
         (Role.SoloDoctor, new("GET", "/v1/encounters/{encounter}")),
         (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/end")),
         (Role.SoloDoctor, new("POST", "/v1/encounters", """{"appointmentId":"{appointment}","leaveOpen":true}""")),

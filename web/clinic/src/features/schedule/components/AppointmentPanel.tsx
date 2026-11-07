@@ -4,7 +4,7 @@ import { CircleAlert, CircleCheck, X } from 'lucide-react';
 import { useI18n, type MessageKey } from '@medvya/i18n';
 import { Button, buttonVariants, cn, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea } from '@medvya/ui';
 import { codeKey, needsAttention, type PatientMessage } from '../domain/messages';
-import { actions, cancelReasons, localDate, type Action, type CancelForm, type ChangeError, type Rule } from '../domain/changes';
+import { actions, cancelReasons, localDate, type Action, type CancelForm, type ChangeError, type Rule, type VisitMove } from '../domain/changes';
 import type { Appointment } from '../domain/schedule';
 import { termsPath } from '../../settings/domain/settings';
 import { StateLabel } from './StateLabel';
@@ -34,6 +34,8 @@ type Props = {
   onRebook?: () => void;
   /** What the patient was told (MDV-P1-032/033). */
   messages: PatientMessage[] | 'loading' | 'error';
+  /** Where the visit was before: every reschedule and queue move (MDV-P1-024). */
+  history: VisitMove[] | 'loading' | 'error';
 };
 
 const actionKeys: Record<Action, MessageKey> = {
@@ -127,6 +129,7 @@ export default function AppointmentPanel(p: Props) {
 
       {p.mode === 'cancel' && <CancelForm {...p} />}
 
+      <History history={p.history} timeZone={p.timeZone} />
       <Messages messages={p.messages} timeZone={p.timeZone} />
     </aside>
   );
@@ -165,6 +168,34 @@ function CancelForm(p: Props) {
         <Button type="button" variant="outline" disabled={p.working} onClick={p.onBack}>{t('appointment.back')}</Button>
       </div>
     </form>
+  );
+}
+
+/** The visit's moves, oldest first: from which slot to which, who moved it and when. Shown only when it has moved. */
+function History({ history, timeZone }: { history: Props['history']; timeZone: string }) {
+  const { t, formatShortDay, formatTime } = useI18n();
+  if (Array.isArray(history) && history.length === 0) return null;
+  const slot = (name: string, iso: string) =>
+    t('appointment.slot', { name: name || t('appointment.history.unknown'), day: formatShortDay(localDate(iso, timeZone)), time: formatTime(new Date(iso), timeZone) });
+  return (
+    <section aria-labelledby="appointment-history" className="flex flex-col gap-2 border-t pt-3">
+      <h3 id="appointment-history" className="text-sm font-extrabold">{t('appointment.history.title')}</h3>
+      {history === 'loading' && <p role="status" className="text-xs text-muted-foreground">{t('appointment.history.loading')}</p>}
+      {history === 'error' && <p role="alert" className="text-xs font-bold text-danger-700">{t('appointment.history.error')}</p>}
+      {Array.isArray(history) && (
+        <ol className="flex flex-col gap-1.5">
+          {history.map(m => (
+            <li key={m.occurredAt + m.toStart} className="flex flex-col text-sm">
+              <span>{t('appointment.history.move', { from: slot(m.fromCalendarName, m.fromStart), to: slot(m.toCalendarName, m.toStart) })}</span>
+              <span className="text-xs text-muted-foreground">
+                {t(m.reassignReason ? 'appointment.history.byWhy' : 'appointment.history.by', { name: m.actorName || t('appointment.history.unknown'),
+                  day: formatShortDay(localDate(m.occurredAt, timeZone)), time: formatTime(new Date(m.occurredAt), timeZone), why: m.reassignReason ? t(`overview.reason.${m.reassignReason}`) : '' })}
+              </span>
+            </li>
+          ))}
+        </ol>
+      )}
+    </section>
   );
 }
 

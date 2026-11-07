@@ -103,6 +103,9 @@ public sealed class AppointmentChangesTests(PostgresFixture sql) : IClassFixture
         Assert.Equal("invalid_transition", await TransitionRefused(() => Desk.MarkNoShowAsync(arrived.Id))); // checked in: not a no-show
 
         Assert.Equal(AppointmentState.NoShow, (await Desk.MarkNoShowAsync(visit.Id)).State);
+        h.Clock.Advance(TimeSpan.FromMinutes(1));
+        // Counted in the owner's no-show metric (MDV-P1-041): one no-show against the one visit attended.
+        Assert.Equal(new NoShowMetric(1, 1, 50), (await h.Get<IPilotMetrics>(h.Admin).GetAsync(h.Facility, 14)).NoShows);
         Assert.Equal(0, await SlotRowsAsync(visit.Id));
         Assert.Equal("AppointmentNoShow.v1", (await LastOutboxAsync(visit.Id)).Type); // with the status event, what the no-show metric (MDV-P1-041) counts
         await using (var db = sql.Scheduling(h.Tenant))
@@ -144,8 +147,15 @@ public sealed class AppointmentChangesTests(PostgresFixture sql) : IClassFixture
         Assert.Equal((At(10, 20), At(11)), (later.Start, later.End));
 
         await h.Schedule(h.Admin).SaveTemplateAsync(h.DoctorTemplate() with { CalendarId = h.SecondDoctor });
-        var other = await Desk.RescheduleAsync(visit.Id, To(h.SecondDoctor, At(17)));
+        h.Clock.Advance(TimeSpan.FromMinutes(1));
+        var other = await h.Booking(h.Doctor).RescheduleAsync(visit.Id, To(h.SecondDoctor, At(17)));
         Assert.Equal((At(17), At(17, 40)), (other.Start, other.End));
+        // The panel's history (MDV-P1-024): both moves, oldest first, by name; reception's user has no display name in this harness.
+        var history = await h.Booking(h.Nurse).HistoryAsync(visit.Id); // calendar read access is enough to see it
+        Assert.Equal(
+            [new RescheduleView("Dr. Arjun Rao (synthetic)", At(10), At(10, 40), "Dr. Arjun Rao (synthetic)", At(10, 20), At(11), "", MondayMorning, null),
+             new RescheduleView("Dr. Arjun Rao (synthetic)", At(10, 20), At(11), "Dr. S. Menon (synthetic)", At(17), At(17, 40), "Dr. Arjun Rao (synthetic)", MondayMorning.AddMinutes(1), null)],
+            history);
         var day = await h.Schedule(h.Reception).GetDayAsync(h.Facility, Monday);
         Assert.Contains(day.Columns.Single(c => c.CalendarId == h.SecondDoctor).Appointments, a => a.Id == visit.Id);
         Assert.DoesNotContain(day.Columns.Single(c => c.CalendarId == h.Doctor).Appointments, a => a.Id == visit.Id);
@@ -193,6 +203,11 @@ public sealed class AppointmentChangesTests(PostgresFixture sql) : IClassFixture
         }
         await Assert.ThrowsAsync<AppointmentNotFoundException>(() => h.Booking(h.Reception, Guid.NewGuid()).CancelAsync(visit.Id, Because(CancelReason.PatientRequest)));
         Assert.Equal(4, await SlotRowsAsync(visit.Id));
+        // The history needs calendar access at the visit's facility and is invisible from another tenant.
+        foreach (var user in new[] { h.PortalUser, h.Elsewhere, h.HospitalIt })
+            await Assert.ThrowsAsync<SchedulingAccessDeniedException>(() => h.Booking(user).HistoryAsync(visit.Id));
+        await Assert.ThrowsAsync<AppointmentNotFoundException>(() => h.Booking(h.Reception, Guid.NewGuid()).HistoryAsync(visit.Id));
+        Assert.Empty(await Desk.HistoryAsync(visit.Id));
     }
 
     /// <summary>Appointments written straight to the table at distinct times from Tuesday on, each with its slot rows, as if booked earlier.</summary>

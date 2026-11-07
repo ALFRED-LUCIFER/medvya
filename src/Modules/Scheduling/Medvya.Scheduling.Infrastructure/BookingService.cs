@@ -430,6 +430,23 @@ public sealed class BookingService(
     }
 
     /// <summary>The visit as the desk saw it, after checking the caller may book at its facility.</summary>
+    public async Task<IReadOnlyList<RescheduleView>> HistoryAsync(Guid appointmentId, CancellationToken cancellationToken = default)
+    {
+        var visit = await db.Appointments.AsNoTracking().SingleOrDefaultAsync(a => a.Id == appointmentId, cancellationToken)
+            ?? throw new AppointmentNotFoundException();
+        await context.RequireAsync(visit.FacilityId, SchedulingAccess.CanView, cancellationToken);
+        var moves = await db.Reschedules.AsNoTracking().Where(r => r.AppointmentId == appointmentId).OrderBy(r => r.OccurredAt).ThenBy(r => r.Id).ToListAsync(cancellationToken);
+        if (moves.Count == 0) return [];
+        // Doctors and staff by display name (an offboarded doctor keeps theirs), rooms by resource name.
+        var ids = moves.SelectMany(m => new[] { m.FromCalendarId, m.ToCalendarId, m.ActorUserId ?? Guid.Empty }).Distinct().ToList();
+        var names = new Dictionary<Guid, string>(await context.DisplayNamesAsync(ids, cancellationToken));
+        foreach (var r in await db.Resources.AsNoTracking().Where(r => ids.Contains(r.Id)).Select(r => new { r.Id, r.Name }).ToListAsync(cancellationToken))
+            names[r.Id] = r.Name;
+        string Name(Guid? id) => id is { } g ? names.GetValueOrDefault(g) ?? "" : "";
+        return [.. moves.Select(m => new RescheduleView(Name(m.FromCalendarId), m.FromStart, m.FromEnd, Name(m.ToCalendarId), m.ToStart, m.ToEnd,
+            Name(m.ActorUserId), m.OccurredAt, m.ReassignReason))];
+    }
+
     async Task<Appointment> FindAsync(Guid appointmentId, CancellationToken cancellationToken)
     {
         var visit = await db.Appointments.AsNoTracking().SingleOrDefaultAsync(a => a.Id == appointmentId, cancellationToken)

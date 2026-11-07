@@ -1468,6 +1468,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/appointments/{appointmentId}/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    appointmentId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RescheduleView"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/appointments/{appointmentId}/check-in": {
         parameters: {
             query?: never;
@@ -4889,6 +4926,22 @@ export interface components {
             calendarId?: string;
             /** Format: date-time */
             start?: string;
+        };
+        RescheduleView: {
+            fromCalendarName: string;
+            /** Format: date-time */
+            fromStart: string;
+            /** Format: date-time */
+            fromEnd: string;
+            toCalendarName: string;
+            /** Format: date-time */
+            toStart: string;
+            /** Format: date-time */
+            toEnd: string;
+            actorName: string;
+            /** Format: date-time */
+            occurredAt: string;
+            reassignReason: null | components["schemas"]["ReassignReason"];
         };
         ResourceView: {
             /** Format: uuid */

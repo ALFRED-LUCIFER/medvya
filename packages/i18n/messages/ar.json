@@ -2717,5 +2717,12 @@
   "pilotMetrics.error.method": "اذكر طريقة القياس (حتى 200 حرف).",
   "pilotMetrics.error.date": "اختر تاريخًا.",
   "pilotMetrics.error.toDate": "اختر تاريخ نهاية في يوم البداية أو بعده.",
-  "pilotMetrics.deliveryForbidden": "أرقام التوصيل تحتاج صلاحية الحجز؛ اسأل مالك العيادة."
+  "pilotMetrics.deliveryForbidden": "أرقام التوصيل تحتاج صلاحية الحجز؛ اسأل مالك العيادة.",
+  "appointment.history.title": "التغييرات",
+  "appointment.history.loading": "جارٍ تحميل التغييرات…",
+  "appointment.history.error": "تعذّر تحميل التغييرات.",
+  "appointment.history.move": "من {from} إلى {to}",
+  "appointment.history.by": "بواسطة {name}، {day} {time}",
+  "appointment.history.unknown": "غير معروف",
+  "appointment.history.byWhy": "بواسطة {name}، {day} {time} · {why}"
 }

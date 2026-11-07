@@ -1,6 +1,8 @@
 using System.Security.Cryptography;
 using Azure.Security.KeyVault.Keys.Cryptography;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Medvya.BuildingBlocks.Security;
@@ -87,4 +89,31 @@ public sealed class AzureKeyVaultKeyWrapper(Func<string?, CryptographyClient> cl
     }
 
     public byte[] Unwrap(string keyId, byte[] wrapped) => client(keyId).UnwrapKey(KeyWrapAlgorithm.RsaOaep256, wrapped).Key;
+}
+
+/// <summary>
+/// Pays Key Vault's first-call cost (managed identity token, auth challenge, TLS) at startup, not inside the first patient save:
+/// on Azure that save waited 18-35 s with its transaction open (#907). One throwaway wrap, in the background, so startup does not wait.
+/// </summary>
+// Resolves the wrapper only with Key Vault set: without it, outside Development, building the wrapper fails closed and must stay lazy.
+public sealed partial class KeyVaultWarmup(IServiceProvider services, IOptions<NationalIdProtectionOptions> options, ILogger<KeyVaultWarmup> log) : IHostedService
+{
+    /// <summary>The warm-up in flight, or null when there is no Key Vault (local keys need none).</summary>
+    public Task? Running { get; private set; }
+
+    public Task StartAsync(CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(options.Value.KeyVaultKeyId)) return Task.CompletedTask;
+        Running = Task.Run(() =>
+        {
+            try { services.GetRequiredService<IKeyWrapper>().Wrap(RandomNumberGenerator.GetBytes(32)); }
+            catch (Exception e) { Failed(log, e.GetType().Name); } // the first save then pays the cost, as before
+        }, CancellationToken.None);
+        return Task.CompletedTask;
+    }
+
+    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Key Vault warm-up failed: {ErrorType}. The first national ID save will be slow.")]
+    static partial void Failed(ILogger logger, string errorType);
 }

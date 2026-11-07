@@ -185,12 +185,13 @@ public sealed class StaffSignInTests(PostgresFixture sql) : IClassFixture<Postgr
     {
         using var production = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b
             .UseEnvironment("Production")
+            .UseSetting("Onboarding:DeploymentCountry", "IN")
             .UseSetting("Authentication:Oidc:Authority", "http://localhost/dev-idp"));
         using var browser = production.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false });
         // Production refuses a provider over plain http on every request (fail closed), and the dev provider is not mapped.
         var ex = await Assert.ThrowsAnyAsync<InvalidOperationException>(() => browser.GetAsync(new Uri("/dev-idp/.well-known/openid-configuration", UriKind.Relative)));
         Assert.Contains("HTTPS", ex.Message, StringComparison.Ordinal);
-        using var noProvider = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b.UseEnvironment("Production"));
+        using var noProvider = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b.UseEnvironment("Production").UseSetting("Onboarding:DeploymentCountry", "IN"));
         Assert.Equal(HttpStatusCode.NotFound, (await noProvider.CreateClient().GetAsync(new Uri("/dev-idp/.well-known/openid-configuration", UriKind.Relative))).StatusCode);
     }
 }

@@ -12,7 +12,7 @@ public sealed class DevClockTests
 
     static TimeProvider ClockOf(string environment)
     {
-        using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b.UseEnvironment(environment).UseSetting(DevClock.Setting, Morning));
+        using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b.UseEnvironment(environment).UseSetting("Onboarding:DeploymentCountry", "IN").UseSetting(DevClock.Setting, Morning));
         return factory.Services.GetRequiredService<TimeProvider>();
     }
 

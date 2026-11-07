@@ -13,7 +13,7 @@ public class SecurityBaselineTests
 {
     static HttpClient Client(string environment = "Production", int permitsPerMinute = 300) =>
         new WebApplicationFactory<Program>()
-            .WithWebHostBuilder(b => b.UseEnvironment(environment).UseSetting("RateLimiting:PermitsPerMinute", permitsPerMinute.ToString(System.Globalization.CultureInfo.InvariantCulture)))
+            .WithWebHostBuilder(b => b.UseEnvironment(environment).UseSetting("Onboarding:DeploymentCountry", "IN").UseSetting("RateLimiting:PermitsPerMinute", permitsPerMinute.ToString(System.Globalization.CultureInfo.InvariantCulture)))
             .CreateClient(new() { BaseAddress = new Uri("https://clinic.medvya.test") /* HSTS is skipped for localhost by design */ });
 
     [Fact]

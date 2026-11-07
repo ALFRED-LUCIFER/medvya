@@ -236,7 +236,7 @@ erDiagram
 | `Memberships` | 7 | Id | tenant-scoped |
 | `OperatingHours` | 6 | Id | tenant-scoped |
 | `PracticeDefaults` | 13 | TenantId | tenant-scoped |
-| `Profiles` | 11 | Id | tenant-scoped |
+| `Profiles` | 12 | Id | tenant-scoped |
 | `SettingsChanges` | 8 | Id | tenant-scoped |
 | `Tenants` | 6 | Id |  |
 | `TenantIndex` | 1 | TenantId | tenant-scoped |
@@ -451,6 +451,7 @@ erDiagram
 | `Email` | character varying(254) |  |  |
 | `LogoKey` | character varying(200) |  |  |
 | `Phone` | character varying(30) |  |  |
+| `RegistrationExpiresOn` | date | yes |  |
 | `RegistrationNumber` | character varying(50) |  |  |
 | `TaxNumber` | character varying(30) |  |  |
 | `TenantId` | guid |  | FK to `Tenant` |

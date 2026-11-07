@@ -13,7 +13,7 @@ namespace Medvya.Notifications.Infrastructure;
 
 /// <summary>
 /// Compliance reminders for the practice's owners (MDV-P1-010), run by the host's job inside each tenant's scope:
-/// a licence 60 / 30 / 7 days before it expires, on its last valid day (0) and, if the job missed that, once after; and "quarterly access
+/// a doctor's licence or the practice's registration 60 / 30 / 7 days before it expires, on its last valid day (0) and, if the job missed that, once after; and "quarterly access
 /// review due" at the start of each calendar quarter until the review is complete. Each reminder is an in-app notification (and, for a
 /// licence, an email to the practice contact address) written once: the dedupe key makes a second run, or a second instance, add nothing.
 /// Every reminder is audited (system actor) in the same transaction. Messages name no doctor and no patient.
@@ -43,6 +43,14 @@ public sealed partial class ComplianceReminders(
                     read.ContactEmail is { } to ? ct => email.SendAsync(LicenceMail(to, read.ClinicName, step), ct) : null, cancellationToken); }
             catch (Exception e) when (e is not OperationCanceledException) { failed++; Failed(log, tenantId, e.GetType().Name); } // the type only: messages can carry addresses
         }
+        // The practice's own registration: one item per location (each location's admins see it), the email once.
+        if (read.RegistrationExpiresOn is { } expires && StepFor(expires.DayNumber - today.DayNumber) is { } regStep)
+            foreach (var (facility, i) in read.FacilityIds.Select((f, i) => (f, i)))
+            {
+                try { raised += await RaiseAsync(tenantId, facility, StaffNotificationKind.RegistrationExpiring, null, regStep, $"registration:{facility:N}:{expires:yyyyMMdd}:{regStep}", "compliance.registration_expiry.notify", now,
+                        i == 0 && read.ContactEmail is { } to ? ct => email.SendAsync(RegistrationMail(to, read.ClinicName, regStep), ct) : null, cancellationToken); }
+                catch (Exception e) when (e is not OperationCanceledException) { failed++; Failed(log, tenantId, e.GetType().Name); }
+            }
         if (read.ReviewDueQuarter is { } quarter)
             foreach (var facility in read.FacilityIds)
                 raised += await RaiseAsync(tenantId, facility, StaffNotificationKind.AccessReviewDue, null, null, $"review:{quarter}:{facility:N}", "compliance.access_review.due", now, null, cancellationToken);
@@ -75,6 +83,14 @@ public sealed partial class ComplianceReminders(
 
         After it expires the doctor can no longer record or sign in Medvya until the renewed licence is added and verified.
         Open Settings, Doctors in Medvya, choose the doctor and add the renewed licence.
+        """);
+
+    static EmailMessage RegistrationMail(string to, string clinic, int step) => new(to,
+        step <= 0 ? $"The registration of {clinic} expires today or has expired" : $"The registration of {clinic} expires in {step} days or less",
+        $"""
+        The clinic registration of {clinic} {(step <= 0 ? "expires today or has already expired" : $"expires within {step} days")}.
+
+        Renew it with the issuing authority, then enter the new expiry date in Medvya under Settings, Profile.
         """);
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Compliance reminder failed for tenant {TenantId}: {ErrorType}.")]

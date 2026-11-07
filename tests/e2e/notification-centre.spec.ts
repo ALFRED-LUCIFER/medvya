@@ -15,8 +15,9 @@ const card = {
   start: '2026-10-19T04:50:00Z', end: '2026-10-19T05:10:00Z', state: 'Booked', since: '2026-10-19T04:50:00Z', room: null, token: null,
 };
 
-async function open(page: Page, { locale = 'en', as = reception, path = '/front-desk' } = {}) {
-  const items = [
+type Item = { id: string; kind: string; refId: string | null; detail?: number; createdAt: string; read: boolean };
+async function open(page: Page, { locale = 'en', as = reception, path = '/front-desk', extra = [] as Item[] } = {}) {
+  const items: Item[] = [...extra,
     { id: 'n-1', kind: 'MessageFailed', refId: 'a-1', createdAt: '2026-10-19T04:00:00Z', read: false },
     { id: 'n-2', kind: 'MessageFailed', refId: 'a-9', createdAt: '2026-10-18T04:00:00Z', read: true },
   ];
@@ -63,6 +64,24 @@ test('Escape closes the overlay and returns focus to the bell; an item marks its
   await expect(page).toHaveURL(/\/front-desk$/);
   expect(calls.marked.map(m => m.url)).toEqual([expect.stringContaining('/v1/notifications/inbox/n-1/read')]);
 });
+
+for (const [locale, soon, today] of [
+  ['en', 'The clinic registration expires in 30 days or less', 'The clinic registration expires today or has expired'],
+  ['ar', 'ينتهي تسجيل العيادة خلال 30 يومًا أو أقل', 'ينتهي تسجيل العيادة اليوم أو انتهى'],
+] as const)
+  test(`the practice registration reminder reads in words and opens the profile (${locale}, MDV-P1-010)`, async ({ page }) => {
+    const owner = persona('PracticeAdmin', { RegisterBookPatients: 'Full', CheckInQueue: 'Full', StaffRolesIntegrations: 'Full' });
+    await open(page, { locale, as: owner, extra: [
+      { id: 'r-1', kind: 'RegistrationExpiring', refId: null, detail: 30, createdAt: '2026-10-19T03:00:00Z', read: false },
+      { id: 'r-2', kind: 'RegistrationExpiring', refId: null, detail: 0, createdAt: '2026-10-19T03:30:00Z', read: false },
+    ] });
+    await page.locator('header').getByRole('button', { name: /^(Notifications|الإشعارات)/ }).click();
+    const panel = page.getByRole('dialog');
+    await expect(panel).toContainText(soon);
+    await expect(panel).toContainText(today);
+    await panel.getByText(soon).click();
+    await expect(page).toHaveURL(/\/settings\?tab=profile/);
+  });
 
 test('the board marks the visit whose message failed, in words', async ({ page }) => {
   await open(page);

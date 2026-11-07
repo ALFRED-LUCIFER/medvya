@@ -8,7 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Medvya.IntegrationTests;
 
-/// <summary>MDV-P1-010 on real SQL Server: licence expiry reminders at 60/30/7/0 days and the quarterly access review. Synthetic data only.</summary>
+/// <summary>MDV-P1-010 on real PostgreSQL: licence and practice registration expiry reminders at 60/30/7/0 days and the quarterly access review. Synthetic data only.</summary>
 public sealed partial class NotificationsTests
 {
     async Task<Guid> DoctorMembershipAsync()
@@ -58,6 +58,34 @@ public sealed partial class NotificationsTests
         Assert.DoesNotContain((await As(h.Reception, sp => sp.GetRequiredService<IStaffNotifications>().ListAsync(h.Facility))).Items, i => i.Kind == StaffNotificationKind.LicenceExpiring);
         await using var audit = sql.Audit(h.Tenant);
         Assert.Equal(4, await audit.Events.CountAsync(e => e.Action == "compliance.licence_expiry.notify"));
+    }
+
+    [Fact]
+    public async Task ThePracticeRegistrationSetInSettingsIsRemindedAtEachStepOnceAtEveryLocationWithOneEmail()
+    {
+        await ConfirmEveryoneAsync();
+        var expires = Day(h.Clock.GetUtcNow()).AddDays(45);
+        var saved = await As(h.Admin, sp => sp.GetRequiredService<IPracticeSettings>().SaveProfileAsync(new SaveProfile
+        {
+            Name = "Adyar Clinic (synthetic)", RegistrationNumber = "CE-0001", RegistrationExpiresOn = expires, Email = "desk@clinic.example",
+        }));
+        Assert.Equal(expires, saved.RegistrationExpiresOn);
+
+        var steps = new List<int>();
+        foreach (var daysLeft in new[] { 45, 30, 7, 0 })
+        {
+            h.Clock.Advance(TimeSpan.FromDays(expires.DayNumber - daysLeft - Day(h.Clock.GetUtcNow()).DayNumber));
+            Assert.Equal(2, await RunCompliance()); // one item per location
+            Assert.Equal(0, await RunCompliance()); // idempotent
+            steps.Add(daysLeft);
+        }
+        Assert.Equal(4, email.Sent.Count(m => m.To == "desk@clinic.example")); // one email per step, not per location
+        Assert.Contains(email.Sent, m => m.Subject.Contains("expires today", StringComparison.Ordinal));
+        var items = (await As(h.Admin, sp => sp.GetRequiredService<IStaffNotifications>().ListAsync(h.Facility))).Items.Where(i => i.Kind == StaffNotificationKind.RegistrationExpiring).ToList();
+        Assert.Equal([0, 7, 30, 60], items.Select(i => i.Detail).Order().ToArray());
+        Assert.DoesNotContain((await As(h.Reception, sp => sp.GetRequiredService<IStaffNotifications>().ListAsync(h.Facility))).Items, i => i.Kind == StaffNotificationKind.RegistrationExpiring);
+        await using var audit = sql.Audit(h.Tenant);
+        Assert.Equal(8, await audit.Events.CountAsync(e => e.Action == "compliance.registration_expiry.notify"));
     }
 
     [Fact]

@@ -48,6 +48,7 @@ public sealed class PracticeSettings(
         var before = ViewOf(clinic, profile);
         if (profile is null) db.Profiles.Add(profile = new PracticeProfile { Id = Guid.CreateVersion7(), TenantId = TenantId });
         (clinic.Name, profile.Address, profile.RegistrationNumber, profile.TaxNumber, profile.Phone, profile.Email) = (name!, address, registration, taxNumber, phone, email);
+        profile.RegistrationExpiresOn = command.RegistrationExpiresOn;
         (profile.ChangedBy, profile.ChangedAt) = (user.UserId, clock.GetUtcNow());
         var after = ViewOf(clinic, profile);
         await SaveAuditedAsync("settings.profile.update", "profile", profile.Id, before, after, cancellationToken);
@@ -212,7 +213,7 @@ public sealed class PracticeSettings(
     }
 
     static ProfileView ViewOf(Tenant clinic, PracticeProfile? p) =>
-        new(clinic.Name, p?.Address, p?.RegistrationNumber, p?.TaxNumber, p?.Phone, p?.Email, p?.LogoKey is not null);
+        new(clinic.Name, p?.Address, p?.RegistrationNumber, p?.TaxNumber, p?.Phone, p?.Email, p?.LogoKey is not null, p?.RegistrationExpiresOn);
 
     static void Max(List<ValidationError> errors, string field, string? value, int max)
     {

@@ -2640,5 +2640,10 @@
   "platform.audit.action.team_invite": "دُعي عضو في الفريق",
   "platform.audit.action.team_remove": "أُزيل عضو من الفريق",
   "platform.audit.action.team_access_review": "سُجّلت مراجعة الوصول",
-  "platform.audit.action.audit_export": "صُدّر سجل التدقيق"
+  "platform.audit.action.audit_export": "صُدّر سجل التدقيق",
+  "audit.actionName.compliance.registration_expiry.notify": "إرسال إشعار انتهاء تسجيل العيادة",
+  "notifications.kind.RegistrationExpiring": "ينتهي تسجيل العيادة خلال {days} يومًا أو أقل. جدّده، ثم أدخل التاريخ الجديد في الإعدادات، الملف التعريفي.",
+  "notifications.kind.RegistrationExpired": "ينتهي تسجيل العيادة اليوم أو انتهى. جدّده، ثم أدخل التاريخ الجديد في الإعدادات، الملف التعريفي.",
+  "settings.profile.registrationExpires": "التسجيل صالح حتى",
+  "settings.profile.registrationExpiresHint": "يُذكَّر المالكون قبل 60 و30 و7 أيام، وفي يوم الانتهاء."
 }

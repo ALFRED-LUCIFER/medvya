@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Net.Mail;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -96,10 +95,11 @@ public static partial class OnboardingEndpoints
             {
                 try
                 {
-                    if (await invitations.CreateAsync(member.Email!.Trim(), member.Role!.Value, practice.FacilityId, cancellationToken: ct) is not null) sent++; else failed++;
+                    // Saved now, emailed after the response: a cold mail credential or a slow mail server no longer holds up finish (#205).
+                    if (await invitations.CreateAndEmailLaterAsync(member.Email!.Trim(), member.Role!.Value, practice.FacilityId, ct) is not null) sent++; else failed++;
                 }
-                // The practice exists already; an invitation that could not go out is repeated from the staff screen, so it is counted, not thrown.
-                catch (Exception ex) when (ex is SmtpException or InvalidOperationException or IOException or DbUpdateException) { failed++; }
+                // The practice exists already; an invitation that could not be saved is repeated from the staff screen, so it is counted, not thrown.
+                catch (Exception ex) when (ex is InvalidOperationException or IOException or DbUpdateException) { failed++; }
             }
             return Results.Ok(new FinishResult(practice.MembershipId, practice.Role.ToString(), sent, failed));
         });

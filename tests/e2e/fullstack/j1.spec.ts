@@ -47,10 +47,10 @@ test('J1: a new solo doctor sets up the practice, registers a patient, books and
     await page.getByRole('button', { name: 'Continue' }).click();
     const finished = page.waitForResponse(r => new URL(r.url()).pathname === '/v1/onboarding/finish');
     await page.getByRole('button', { name: 'Finish setup' }).click();
-    expect(await (await finished).json()).toMatchObject({ role: 'SoloDoctor' });
+    // The invitation is saved with the practice and emailed after the response (#205), so the stack's missing mail server does not fail it.
+    expect(await (await finished).json()).toMatchObject({ role: 'SoloDoctor', invitationsSent: 1, invitationsFailed: 0 });
     await expect(page.getByRole('heading', { level: 1, name: `Menon Clinic ${n} (synthetic) is ready.` })).toBeVisible();
-    // shortcut: the stack has no SMTP sink (that is `pnpm services:up`), so the invitation mail fails and the screen says so; add a sink to assert delivery.
-    await expect(page.getByText('1 invitation(s) could not be sent. You can send them again from Staff.')).toBeVisible();
+    await expect(page.getByText(/could not be sent/)).toHaveCount(0);
     await expectNoAxeViolations(page);
     await page.getByRole('button', { name: 'Open Today' }).click();
     await expect(page.getByText('Verification pending · usually within 1 working day.')).toBeVisible();
@@ -60,6 +60,8 @@ test('J1: a new solo doctor sets up the practice, registers a patient, books and
     // The owner of a solo practice administers it (Staff, roles, integrations = Config): the staff list opens before the licence is verified.
     const staff = await page.request.get('/v1/staff');
     expect(staff.status(), await staff.text()).toBe(200);
+    // shortcut: the stack has no SMTP sink (that is `pnpm services:up`), so delivery is not asserted here; the integration tests check the email.
+    expect(await staff.json()).toContainEqual(expect.objectContaining({ email: `reception${n}@example.test`, status: 'Invited' }));
   });
 
   await test.step('J1.3 register the first patient with the India minimum, ABHA left empty', async () => {

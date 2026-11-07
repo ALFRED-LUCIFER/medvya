@@ -24,7 +24,7 @@ public static class TenancyModule
             .AddScoped<IFacilityDirectory, FacilityDirectory>()
             .AddScoped<IMembershipDirectory>(sp => new MembershipDirectory(connectionString, sp.GetRequiredService<ICurrentUser>()))
             .AddScoped<IInvitations, Invitations>()
-            .AddScoped<IPracticeProvisioning>(sp => ActivatorUtilities.CreateInstance<PracticeProvisioning>(sp, connectionString))
+            .AddScoped<IPracticeProvisioning, PracticeProvisioning>()
             .AddScoped<IStaffAccess, StaffAccess>()
             .AddScoped<IClinicalAccess, ClinicalAccess>()
             .AddScoped<IAccessRequests, AccessRequests>()

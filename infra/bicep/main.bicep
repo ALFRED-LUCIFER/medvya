@@ -401,6 +401,8 @@ resource app 'Microsoft.Web/sites@2023-12-01' = {
     virtualNetworkSubnetId: vnet.properties.subnets[1].id // outbound traffic to the private database
     siteConfig: {
       linuxFxVersion: 'DOTNETCORE|10.0'
+      // Without it the worker unloads when idle: Hangfire's reminders stop, and the next request pays JIT and every EF model build (#205).
+      alwaysOn: true
       minTlsVersion: '1.2'
       ftpsState: 'Disabled'
       appSettings: concat(emailSettings, [

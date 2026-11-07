@@ -13,15 +13,18 @@ export default function PatientSummaryLine({ row }: { row: PatientSummary }) {
   return (
     <>
       <span aria-hidden className="grid size-9 shrink-0 place-items-center rounded-full bg-muted font-extrabold text-brand-700">{row.initials}</span>
-      <span aria-hidden className="flex min-w-0 flex-1 flex-col">
-        <span className="font-bold">{t('patients.row.ageSex', { age, sex })}</span>
-        <span className="font-mono text-xs text-muted-foreground"><bdi dir="ltr">{t('patients.mrnTail', { mrn: row.mrnTail })}</bdi></span>
-      </span>
-      {row.status === 'Incomplete' && (
-        <span aria-hidden className="inline-flex shrink-0 items-center gap-1 rounded-sm border bg-card px-2 py-1 text-xs font-bold text-warning-700">
-          <TriangleAlert className="size-3.5" aria-hidden />{t('patients.status.Incomplete')}
+      {/* Wraps so a narrow column (the booking panel) puts the badge on its own line instead of squeezing the details. */}
+      <span aria-hidden className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-x-3 gap-y-1">
+        <span className="flex flex-col">
+          <span className="font-bold">{t('patients.row.ageSex', { age, sex })}</span>
+          <span className="font-mono text-xs text-muted-foreground"><bdi dir="ltr">{t('patients.mrnTail', { mrn: row.mrnTail })}</bdi></span>
         </span>
-      )}
+        {row.status === 'Incomplete' && (
+          <span className="inline-flex items-center gap-1 rounded-sm border bg-card px-2 py-1 text-xs font-bold text-warning-700">
+            <TriangleAlert className="size-3.5" aria-hidden />{t('patients.status.Incomplete')}
+          </span>
+        )}
+      </span>
     </>
   );
 }

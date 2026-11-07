@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { adjustmentError, adjustmentSchema, allChosen, toForm, toRequest, type AdjustmentForm } from './adjustments';
+import { adjustmentError, adjustmentSchema, allChosen, toForm, toRequest, type AdjustmentForm, manageableCalendars } from './adjustments';
 import type { Appointment } from './schedule';
 
 const id = '0198a1b2-0000-7000-8000-000000000001';
@@ -24,7 +24,7 @@ describe('adjustment form', () => {
   });
 
   it('turns a saved exception back into the form, times without seconds', () => {
-    const saved = { id: 'x', calendarId: id, kind: 'ShortenedDay' as const, fromDate: '2026-10-19', toDate: '2026-10-19', start: '09:00:00', end: '11:00:00', reason: null };
+    const saved = { id: 'x', calendarId: id, kind: 'ShortenedDay' as const, fromDate: '2026-10-19', toDate: '2026-10-19', start: '09:00:00', end: '11:00:00', reason: null, canEdit: true, version: 'v1' };
     expect(toForm(saved)).toEqual({ calendarId: id, kind: 'ShortenedDay', fromDate: '2026-10-19', toDate: '2026-10-19', start: '09:00', end: '11:00', reason: '' });
     expect(adjustmentSchema.safeParse(toForm(saved)).success).toBe(true);
   });
@@ -33,6 +33,14 @@ describe('adjustment form', () => {
     expect(allChosen([visit('a'), visit('b')], { a: 'Offer' })).toBe(false);
     expect(allChosen([visit('a'), visit('b')], { a: 'Offer', b: 'Manual' })).toBe(true);
     expect(allChosen([], {})).toBe(true);
+  });
+
+  it('offers every calendar to the practice admin and only their own to a doctor (#231)', () => {
+    const calendars = [{ id: 'd-1' }, { id: 'd-2' }, { id: 'room-1' }];
+    expect(manageableCalendars(calendars, true, 'd-1')).toEqual(calendars);
+    expect(manageableCalendars(calendars, false, 'd-2')).toEqual([{ id: 'd-2' }]);
+    expect(manageableCalendars(calendars, false, 'u-reception')).toEqual([]);
+    expect(adjustmentError('id:stale')).toBe('stale');
   });
 
   it('names a field error by its code', () => {

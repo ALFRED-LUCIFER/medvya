@@ -899,6 +899,7 @@ export interface paths {
             parameters: {
                 query?: {
                     facilityId?: string;
+                    version?: string;
                 };
                 header?: never;
                 path: {
@@ -4428,6 +4429,9 @@ export interface components {
             /** Format: time */
             end: null | string;
             reason: null | string;
+            /** @default false */
+            canEdit: boolean;
+            version?: null | string;
         };
         ExportRequest: {
             /** Format: uuid */
@@ -4742,6 +4746,7 @@ export interface components {
             reason?: null | string;
             /** Format: uuid */
             replacesId?: null | string;
+            version?: null | string;
             actions?: components["schemas"]["AppointmentAction"][];
         };
         SaveCustomRole: {

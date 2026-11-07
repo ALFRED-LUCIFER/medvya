@@ -46,6 +46,19 @@ public sealed class SchedulingContext(
 
     public Guid? UserId => user.UserId;
 
+    /// <summary>
+    /// Leave and exceptions of a calendar (MDV-P1-012, owner decision of 7 Nov, #231): practice configuration manages every calendar,
+    /// a doctor with booking access only their own. Only they see the free-text leave reason; everyone else sees "On leave".
+    /// </summary>
+    public async Task<bool> CanManageCalendarAsync(Guid facilityId, Guid calendarId, CancellationToken cancellationToken)
+    {
+        var configure = await access.AccessAsync(SchedulingAccess.CanConfigure.Capability, facilityId, cancellationToken);
+        if (Array.IndexOf(SchedulingAccess.CanConfigure.Levels, configure) >= 0) return true;
+        if (calendarId != UserId) return false;
+        var book = await access.AccessAsync(SchedulingAccess.CanBook.Capability, facilityId, cancellationToken);
+        return Array.IndexOf(SchedulingAccess.CanBook.Levels, book) >= 0;
+    }
+
     public async Task RequireAsync(Guid facilityId, SchedulingAccess.Need need, CancellationToken cancellationToken)
     {
         if (facilityId == Guid.Empty) throw new SchedulingValidationException([new("facilityId", "required")]);

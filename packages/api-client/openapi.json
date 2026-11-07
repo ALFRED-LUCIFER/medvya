@@ -681,6 +681,13 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -4562,6 +4569,16 @@
               "null",
               "string"
             ]
+          },
+          "canEdit": {
+            "type": "boolean",
+            "default": false
+          },
+          "version": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -5922,6 +5939,12 @@
               "string"
             ],
             "format": "uuid"
+          },
+          "version": {
+            "type": [
+              "null",
+              "string"
+            ]
           },
           "actions": {
             "type": "array",

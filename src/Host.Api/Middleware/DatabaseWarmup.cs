@@ -51,8 +51,9 @@ public sealed partial class DatabaseWarmup(IServiceProvider services, IReadOnlyL
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Database warm-up finished: {Contexts} contexts in {ElapsedMs} ms.")]
-    static partial void Finished(ILogger logger, int contexts, long elapsedMs);
+    // Count and ElapsedMilliseconds are names the telemetry scrubber keeps, so the time shows in Application Insights.
+    [LoggerMessage(Level = LogLevel.Information, Message = "Database warm-up finished: {Count} contexts in {ElapsedMilliseconds} ms.")]
+    static partial void Finished(ILogger logger, int count, long elapsedMilliseconds);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Database warm-up failed: {ErrorType}. The first requests after this start will be slow.")]
     static partial void Failed(ILogger logger, string errorType);

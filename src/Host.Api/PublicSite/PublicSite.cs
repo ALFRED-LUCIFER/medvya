@@ -28,6 +28,10 @@ public static partial class PublicSite
     public const string TrustCentre = "/trust";
     public const string DemoForm = "/trust#demo";
     public const string Pricing = "/pricing";
+    // Fixed by MDV-P1-053 so every page can link them; each page is built by its own ticket.
+    public const string Assist = "/assist";
+    public const string Hospitals = "/hospitals";
+    public const string Demo = "/demo";
 
     sealed class PublicSiteEndpoint;
 

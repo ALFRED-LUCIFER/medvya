@@ -33,8 +33,16 @@ export const emptyAdjustment = (today: string): Partial<AdjustmentForm> =>
 
 /** An exception as GET /v1/schedule/exceptions lists it. */
 export type SavedAdjustment = {
-  id: string; calendarId: string; kind: AdjustmentKind; fromDate: string; toDate: string; start: string | null; end: string | null; reason: string | null;
+  id: string; calendarId: string; kind: AdjustmentKind; fromDate: string; toDate: string; start: string | null; end: string | null;
+  /** Null for staff who may not manage the calendar: they see "On leave" only (#231). */
+  reason: string | null;
+  /** Whether the caller may edit or delete it; sent back as `version` so a change made meanwhile is not overwritten. */
+  canEdit: boolean; version: string;
 };
+
+/** Who may add leave (#231): the practice admin for every calendar, a doctor with booking access for their own only. */
+export const manageableCalendars = <C extends { id: string }>(calendars: C[], canConfigure: boolean, userId: string) =>
+  canConfigure ? calendars : calendars.filter(c => c.id === userId);
 export type SaveResult = { exception: SavedAdjustment; offered: number; manual: number };
 
 /** A saved exception back in the form, to edit it (times without seconds). */
@@ -52,7 +60,7 @@ export const toRequest = (facilityId: string, v: AdjustmentForm, actions: Record
 export const allChosen = (affected: Appointment[], chosen: Record<string, RebookAction>) => affected.every(a => chosen[a.id] !== undefined);
 
 /** Codes the screen has a sentence for: field errors arrive as "field:code", 409 visit changes as "changed". */
-const known = ['past', 'overlap', 'no_schedule', 'single_day', 'range', 'five_minutes', 'too_long', 'changed', 'unknown', 'has_bookings'] as const;
+const known = ['past', 'overlap', 'no_schedule', 'single_day', 'range', 'five_minutes', 'too_long', 'changed', 'unknown', 'has_bookings', 'stale'] as const;
 export type AdjustmentError = (typeof known)[number] | 'failed' | 'forbidden';
 export const adjustmentError = (code: string | undefined): AdjustmentError => {
   const last = code?.split(':').pop() ?? '';

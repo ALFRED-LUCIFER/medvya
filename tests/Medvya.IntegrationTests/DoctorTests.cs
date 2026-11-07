@@ -25,7 +25,7 @@ namespace Medvya.IntegrationTests;
 /// </summary>
 public sealed class DoctorTests(PostgresFixture sql) : IClassFixture<PostgresFixture>, IAsyncLifetime
 {
-    static readonly byte[] Png = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 0];
+    static readonly byte[] Png = TestImages.Png;
     const string Email = "sana.khan@example.test", Contact = "desk@clinic.example";
 
     readonly SchedulingHarness h = new(sql);

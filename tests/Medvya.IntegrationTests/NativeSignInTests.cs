@@ -227,6 +227,22 @@ public sealed class NativeSignInTests(PostgresFixture sql) : IClassFixture<Postg
     }
 
     [Fact]
+    public async Task OffboardingTheMembershipRevokesThePairedPhoneToo()
+    {
+        // #225 "paired devices": the offboard endpoint ends sessions per membership; a phone's refresh token is such a session.
+        var (user, membership) = await Doctor();
+        var first = await SignIn(user);
+        await Api(first.Access, HttpMethod.Post, "/v1/me/facility", new { membershipId = membership });
+        var tokens = await Read(await Refresh(first.Refresh));
+
+        await using (var scope = factory.Services.CreateAsyncScope())
+            await scope.ServiceProvider.GetRequiredService<Medvya.Identity.Application.IStaffSessions>().RevokeForMembershipAsync(user.Id, tenant, membership);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, (await Api(tokens.Access, HttpMethod.Get, "/v1/me/context")).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await Refresh(tokens.Refresh)).StatusCode);
+    }
+
+    [Fact]
     public async Task APhoneOutlivesTheBrowserIdleTimeoutButNotAWeekUnused()
     {
         var (user, _) = await Doctor();

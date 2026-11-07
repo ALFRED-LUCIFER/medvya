@@ -14,8 +14,8 @@ namespace Medvya.Tenancy.Infrastructure;
 /// <summary>
 /// Practice settings (MDV-P1-005). Every change saves, records its before/after (SettingsChange) and writes its audit event in one
 /// transaction (<c>settings.*</c>, resource <c>settings</c>, purpose operations), so an unaudited change never commits.
-/// shortcut: the logo is checked by type (file signature) and size only; no malware scanner exists in the repo yet, so wire
-/// Defender for Storage / a scan step before the logo is served, with MDV-P0-006 (Azure environments).
+/// The logo is checked by file signature and size, then decoded and saved again as PNG (CleanImage) instead of a malware scan
+/// (owner decision of 7 Nov, #211): only pixels are stored.
 /// </summary>
 public sealed class PracticeSettings(
     TenancyDbContext db, ICurrentTenant tenant, ICurrentUser user, ICurrentFacility currentFacility, IFacilityDirectory facilities,
@@ -154,6 +154,9 @@ public sealed class PracticeSettings(
         if (content.Length == 0 || content.Length > LogoImage.MaxBytes) errors.Add(new("logo", "too_large"));
         else if (type is null) errors.Add(new("logo", "type"));
         SettingsValidationException.ThrowIfAny(errors);
+        // Only the pixels are kept (#211): anything hidden in the file is dropped, and a file that does not decode is refused.
+        content = CleanImage.ToPng(content) ?? throw new SettingsValidationException([new("logo", "type")]);
+        type = "image/png";
 
         var profile = await db.Profiles.SingleOrDefaultAsync(cancellationToken);
         if (profile is null) db.Profiles.Add(profile = new PracticeProfile { Id = Guid.CreateVersion7(), TenantId = TenantId });

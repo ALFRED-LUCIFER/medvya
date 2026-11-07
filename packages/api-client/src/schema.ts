@@ -899,6 +899,7 @@ export interface paths {
             parameters: {
                 query?: {
                     facilityId?: string;
+                    version?: string;
                 };
                 header?: never;
                 path: {
@@ -3086,6 +3087,45 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/staff/{membershipId}/reactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    membershipId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["Reactivate"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/staff/roles": {
         parameters: {
             query?: never;
@@ -4428,6 +4468,9 @@ export interface components {
             /** Format: time */
             end: null | string;
             reason: null | string;
+            /** @default false */
+            canEdit: boolean;
+            version?: null | string;
         };
         ExportRequest: {
             /** Format: uuid */
@@ -4563,6 +4606,8 @@ export interface components {
         };
         Offboard: {
             reason: null | string;
+            /** @default false */
+            offerRebooking: boolean;
         };
         OnboardingClinic: {
             name: null | string;
@@ -4665,6 +4710,9 @@ export interface components {
             room: null | string;
             doctor: string;
         };
+        Reactivate: {
+            reason: null | string;
+        };
         /** @enum {unknown} */
         ReasonCategory: "General" | "ChronicReview" | "Results" | "PostDischarge" | "Screening" | "Vaccination" | "Paperwork" | "Other";
         /** @enum {unknown} */
@@ -4741,6 +4789,7 @@ export interface components {
             reason?: null | string;
             /** Format: uuid */
             replacesId?: null | string;
+            version?: null | string;
             actions?: components["schemas"]["AppointmentAction"][];
         };
         SaveCustomRole: {

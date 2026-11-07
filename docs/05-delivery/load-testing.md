@@ -1,12 +1,15 @@
 # Desk-flow load test (MDV-P1-037)
 
-The local part of MDV-P1-037. The run on Azure staging is a later, human-approved step.
+MDV-P1-037. Runs nightly in CI ([`load-nightly.yml`](../../.github/workflows/load-nightly.yml)) and on demand locally. A run on Azure dev
+needs a staff session from the owner (see below).
 
 ## What it does
 
 `tests/Medvya.IntegrationTests/DeskLoadTests.cs` drives 20 simulated receptionists over real HTTP against `Host.Api`. Each flow:
-patient search, confirm patient, hold slot, book (with `Idempotency-Key`), check in, board read, day schedule read. It prints p50/p95/p99 and the
-error rate per step, fails the run when any step is over budget or has an error, and writes a report:
+patient search, confirm patient, hold slot, book (with `Idempotency-Key`), check in, board read, day schedule read. Every desk also keeps the
+live board open (a SignalR subscription to `/v1/hubs/board`, as the reception screen does) and times each change it hears ("Board push": from
+the change to receipt, budget 2 s from MDV-P1-029). Each desk is a receptionist with a real server-side session, so every call and hub call checks
+it as production does. The run prints p50/p95/p99 and the error rate per step, fails when any step is over budget or has an error, and writes a report:
 
 | Report | Profile |
 |---|---|
@@ -25,22 +28,43 @@ MEDVYA_LOAD_THINK_MS=500 MEDVYA_LOAD_SECONDS=60 MEDVYA_LOAD_REPORT=/tmp/stress.m
 MEDVYA_LOAD_HOT_DAY=1 MEDVYA_LOAD_THINK_MS=500 MEDVYA_LOAD_SECONDS=60 MEDVYA_LOAD_REPORT=/tmp/hot.md pnpm load:desk   # stress, every desk on one doctor-day
 ```
 
+Other outputs: `MEDVYA_LOAD_RESULTS=<path>` writes the numbers as JSON; `MEDVYA_LOAD_BASELINE=<path>` (a results file) also fails the run when a
+step's p95 is more than 20 % (and at least 25 ms) over the baseline's.
+
 The test is skipped unless `MEDVYA_LOAD=1` (the script sets it), so `dotnet test` stays fast. The per-IP and per-user rate limits are raised
 (`RateLimiting:PermitsPerMinute` and two more) only inside this harness; production configuration is untouched.
 
-Another environment (staging): set `MEDVYA_LOAD_URL`, `MEDVYA_LOAD_DESKS` (JSON array of request-header objects, one per desk: the
+## Nightly regression check
+
+[`load-nightly.yml`](../../.github/workflows/load-nightly.yml) runs every night (and on PRs that touch the load test or its baseline): a Release
+build of `Host.Api` on Kestrel against PostgreSQL 16 in Docker, the P1 profile for 600 s, compared with
+[`load-baseline.json`](../../tests/Medvya.IntegrationTests/load-baseline.json). That baseline comes from a CI run (the `load-results`
+artifact), not a laptop; refresh it in a PR when a change makes the flow faster or deliberately slower, and say why. The run fails when a step is
+over budget, has an error, or its p95 is more than 20 % over the baseline (and at least 25 ms over it: two CI runs of the same commit
+differed by 14 ms on search, and most steps take 5 to 20 ms, so smaller moves are runner noise). The committed baseline is the slower of the
+first two CI runs per step (runs 42405506360 and 42406606403). A failing nightly or manual run opens an issue titled
+"Nightly load test failed (MDV-P1-037)" labelled `performance`, or comments on it while it is open. The report is in the run summary.
+
+## Azure dev (by hand, with the owner)
+
+Staff sign-in on Azure dev is Entra with MFA, so the run cannot sign in by itself. The owner signs in, picks the load-test facility, and hands over
+the session cookie; never bypass sign-in. Jobs run on Azure dev and booking confirmations really send email and SMS, so use a dedicated synthetic
+practice whose patients have no email and no phone (or only `@example.test`), and cancel what the run booked afterwards.
+
+Set `MEDVYA_LOAD_URL`, `MEDVYA_LOAD_DESKS` (JSON array of request-header objects, one per desk: the
 credentials), `MEDVYA_LOAD_FACILITY`, `MEDVYA_LOAD_DOCTORS` (comma-separated calendar ids) and `MEDVYA_LOAD_BOOK_FROM` (a Monday with free
-slots for those doctors, e.g. 27 weeks ahead). The target needs at least 20,000 synthetic patients with MRNs 100000 to 119999 (the run searches by MRN) and
-booked visits today for the check-in step. Not run against Azure yet; the external path only differs from the local one in where the URL and headers come from.
+slots for those doctors, e.g. 27 weeks ahead). One cookie for every desk: `MEDVYA_LOAD_DESKS='[{"Cookie":"<name>=<value>"}]'`. The per-user
+limits (30 searches a minute) then cap one session at about 15 desks at 30 s think time; use `MEDVYA_LOAD_THINK_MS=60000` with 20 desks (about
+1,000 bookings an hour, 5 times the pilot) or one cookie per desk. The target needs at least 20,000 synthetic patients with MRNs 100000 to 119999
+(the run searches by MRN) and booked visits today for the check-in step. Write the report outside `docs/` (`MEDVYA_LOAD_REPORT=/tmp/azure.md`).
+"Board push" compares the server's change time with the load machine's clock, so clock skew shows up in it. Not run against Azure yet.
 
 ## What the numbers mean
 
 - A local run is Docker and Rosetta on a laptop with other processes: PostgreSQL, Kestrel and the load generator share the CPU, and fsync on the
   Colima volume is slower than Azure's log disk. It shows regressions and lock contention, not Azure latency. Treat it as a relative baseline.
-- Not covered yet: SignalR board subscriptions (board refetch is measured, not the socket), the nightly job with the 20 % regression alert, and the
-  calendar first-render budget (that is the Playwright test `tests/e2e/schedule-performance.spec.ts`).
-- The check-in step only runs when the board has booked visits today, so it has fewer calls than the others. The seed books weekdays only, so on a
-  Saturday or Sunday it has no calls and the run fails on that step alone.
+- The calendar first-render budget (2.5 s over throttled 4G) is the Playwright test `tests/e2e/schedule-performance.spec.ts`, in CI on every PR (#918).
+- The local seed books every day, weekends included, so the check-in step has visits today whenever the run happens.
 
 ## Bottlenecks found
 

@@ -115,8 +115,8 @@ public sealed class ScheduleReadPerformanceTests(PostgresFixture sql, ITestOutpu
         return ids;
     }
 
-    /// <summary>Every 20-minute slot of 09:00–13:00 and 17:00–20:00 IST, Monday to Friday, booked for each calendar.</summary>
-    internal static async Task SeedVisitsAsync(PostgresFixture sql, Guid tenant, Guid facility, Guid[] calendars, Guid[] patients, DateOnly monday)
+    /// <summary>Every 20-minute slot of 09:00–13:00 and 17:00–20:00 IST, Monday to Friday (every day with <paramref name="weekends"/>), booked for each calendar.</summary>
+    internal static async Task SeedVisitsAsync(PostgresFixture sql, Guid tenant, Guid facility, Guid[] calendars, Guid[] patients, DateOnly monday, bool weekends = false)
     {
         var table = new DataTable();
         foreach (var (name, type) in new (string, Type)[]
@@ -130,7 +130,7 @@ public sealed class ScheduleReadPerformanceTests(PostgresFixture sql, ITestOutpu
         var n = 0;
         for (var day = monday.AddDays(-7 * Weeks); day < monday.AddDays(7 * Weeks); day = day.AddDays(1))
         {
-            if (day.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday) continue;
+            if (!weekends && day.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday) continue;
             foreach (var calendar in calendars)
                 foreach (var t in times)
                 {

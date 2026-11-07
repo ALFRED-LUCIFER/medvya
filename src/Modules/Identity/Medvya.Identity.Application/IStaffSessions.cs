@@ -26,11 +26,17 @@ public interface IStaffSessions
     Task<bool> RotateRefreshAsync(Guid sessionId, byte[]? current, byte[] replacement, CancellationToken cancellationToken = default);
 
     /// <summary>When each of these users last signed in (the newest session start, live or ended); users who never did are left out.</summary>
-    Task<IReadOnlyDictionary<Guid, DateTimeOffset>> LastSignInAsync(IReadOnlyCollection<Guid> userIds, CancellationToken cancellationToken = default);
+    Task<IReadOnlyDictionary<Guid, DateTimeOffset>> LastSignInAsync(IReadOnlyCollection<Guid> userIds, Guid tenantId, CancellationToken cancellationToken = default);
 
     /// <summary>The membership the user's newest scoped session was scoped to (live or ended), for "last used" on the facility picker.</summary>
     Task<Guid?> LastMembershipAsync(Guid userId, CancellationToken cancellationToken = default);
 
     /// <summary>Revokes every live session of the user that is scoped to the tenant (admin action); returns how many.</summary>
     Task<int> RevokeInTenantAsync(Guid userId, Guid tenantId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Ends the user's sessions in the tenant that are on <paramref name="membershipId"/> or on no membership yet (offboarding one facility,
+    /// #877): a session at the person's other facility of the same practice keeps working.
+    /// </summary>
+    Task<int> RevokeForMembershipAsync(Guid userId, Guid tenantId, Guid membershipId, CancellationToken cancellationToken = default);
 }

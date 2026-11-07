@@ -404,6 +404,62 @@ public sealed class SessionControlTests(PostgresFixture sql) : IClassFixture<Pos
     }
 
     [Fact]
+    public async Task TheAccessReviewShowsOnlySignInsAtThisPractice()
+    {
+        // #878: sessions have no row-level security, so a doctor's sign-in at another practice must not appear in this practice's review.
+        await Clinics();
+        var admin = await Account("K. Lakshmi");
+        var doctor = await Account("Dr. R. Menon");
+        var adminMembership = await Member(admin, tenantA, facilityA, Role.PracticeAdmin);
+        await Member(doctor, tenantA, facilityA, Role.HospitalDoctor);
+        var elsewhere = await Member(doctor, tenantB, facilityB, Role.HospitalDoctor);
+        using (var doctorBrowser = await SignedIn(doctor)) await Choose(doctorBrowser, elsewhere); // signs in at the other practice only
+        using var adminBrowser = await SignedIn(admin);
+        await Choose(adminBrowser, adminMembership);
+
+        var review = await adminBrowser.GetFromJsonAsync<JsonElement>(new Uri("/v1/staff/access-review", UriKind.Relative));
+        var row = review.GetProperty("members").EnumerateArray().Single(m => m.GetProperty("name").GetString() == "Dr. R. Menon (synthetic)");
+        Assert.Equal(JsonValueKind.Null, row.GetProperty("lastSignIn").ValueKind);
+    }
+
+    [Fact]
+    public async Task StaffAreAdministeredPerFacilityAndOffboardingOneSiteLeavesTheOthers()
+    {
+        // #877: an admin of facility A does not offboard staff of the practice's other facility, and offboarding a doctor at A leaves
+        // their visits and their session at the other facility alone.
+        await Clinics();
+        Guid velachery;
+        await using (var db = sql.Context(tenantA))
+        {
+            velachery = Guid.NewGuid();
+            db.Facilities.Add(new Facility { Id = velachery, TenantId = tenantA, Name = "Velachery (synthetic)", TimeZone = "Asia/Kolkata" });
+            await db.SaveChangesAsync();
+        }
+        var admin = await Account("K. Lakshmi");
+        var doctor = await Account("Dr. R. Menon");
+        var adminMembership = await Member(admin, tenantA, facilityA, Role.PracticeAdmin);
+        var atAdyar = await Member(doctor, tenantA, facilityA, Role.HospitalDoctor);
+        var atVelachery = await Member(doctor, tenantA, velachery, Role.HospitalDoctor);
+        var soon = DateTimeOffset.UtcNow.AddDays(3);
+        var adyarVisit = await BookedVisitAsync(doctor.Id, facilityA, soon);
+        var velacheryVisit = await BookedVisitAsync(doctor.Id, velachery, soon.AddHours(2));
+        using var doctorBrowser = await SignedIn(doctor);
+        await Choose(doctorBrowser, atVelachery);
+        using var adminBrowser = await SignedIn(admin);
+        await Choose(adminBrowser, adminMembership);
+
+        Assert.Equal(HttpStatusCode.NotFound, (await Send(adminBrowser, HttpMethod.Post, $"/v1/staff/{atVelachery}/offboard", new { reason = "Left the practice" })).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await Send(adminBrowser, HttpMethod.Post, $"/v1/staff/{atAdyar}/offboard", new { reason = "Left the practice" })).StatusCode);
+
+        await using var tenancy = sql.Context(tenantA);
+        Assert.Equal(MembershipStatus.Active, (await tenancy.Memberships.SingleAsync(m => m.Id == atVelachery)).Status);
+        await using var scheduling = sql.Scheduling(tenantA);
+        Assert.Equal(Medvya.Scheduling.Domain.AppointmentState.NeedsRebooking, (await scheduling.Appointments.SingleAsync(a => a.Id == adyarVisit)).State);
+        Assert.Equal(Medvya.Scheduling.Domain.AppointmentState.Booked, (await scheduling.Appointments.SingleAsync(a => a.Id == velacheryVisit)).State);
+        Assert.Equal(HttpStatusCode.OK, await ContextStatus(doctorBrowser)); // still working at Velachery
+    }
+
+    [Fact]
     public async Task IfMovingTheVisitsFailsTheOffboardingRollsBackAndTheDoctorStaysActive()
     {
         await Clinics();
@@ -413,13 +469,17 @@ public sealed class SessionControlTests(PostgresFixture sql) : IClassFixture<Pos
         var doctorMembership = await Member(doctor, tenantA, facilityA, Role.HospitalDoctor);
         using var doctorBrowser = await SignedIn(doctor);
         await Choose(doctorBrowser, doctorMembership);
-        // A visit whose facility is not in this tenant cannot be placed in a time zone: the release fails after the membership was changed.
-        var stuck = await BookedVisitAsync(doctor.Id, Guid.NewGuid(), DateTimeOffset.UtcNow.AddDays(3));
+        // A facility whose time zone cannot be resolved: the release fails after the membership was changed.
+        var stuck = await BookedVisitAsync(doctor.Id, facilityA, DateTimeOffset.UtcNow.AddDays(3));
+        await using (var broken = sql.Context(tenantA))
+            await broken.Facilities.Where(f => f.Id == facilityA).ExecuteUpdateAsync(u => u.SetProperty(f => f.TimeZone, "Not/A_Zone"));
         using var adminBrowser = await SignedIn(admin);
         await Choose(adminBrowser, adminMembership);
 
         using var failed = await Send(adminBrowser, HttpMethod.Post, $"/v1/staff/{doctorMembership}/offboard", new { reason = "Left the practice" });
         Assert.True((int)failed.StatusCode >= 500);
+        await using (var repaired = sql.Context(tenantA))
+            await repaired.Facilities.Where(f => f.Id == facilityA).ExecuteUpdateAsync(u => u.SetProperty(f => f.TimeZone, "Asia/Kolkata"));
 
         await using var tenancy = sql.Context(tenantA);
         Assert.Equal(MembershipStatus.Active, (await tenancy.Memberships.SingleAsync(m => m.Id == doctorMembership)).Status);

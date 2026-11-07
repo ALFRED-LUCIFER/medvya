@@ -53,5 +53,6 @@ public interface IStaffRoster
 /// </summary>
 public interface IStaffOffboardingParticipant
 {
-    Task<Func<Task>?> OffboardedAsync(Guid doctorUserId, System.Data.Common.DbTransaction transaction, CancellationToken cancellationToken);
+    /// <summary><paramref name="facilityId"/> is the offboarded membership's facility: the person may still work at the practice's other sites (#877).</summary>
+    Task<Func<Task>?> OffboardedAsync(Guid doctorUserId, Guid facilityId, System.Data.Common.DbTransaction transaction, CancellationToken cancellationToken);
 }

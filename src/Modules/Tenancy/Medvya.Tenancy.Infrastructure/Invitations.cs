@@ -19,7 +19,8 @@ public sealed class InvitationOptions
     public string? LinkBaseUrl { get; set; }
 }
 
-public sealed class Invitations(TenancyDbContext db, ICurrentTenant tenant, ICurrentUser user, IAuditLog audit, IEmailSender mail, IOptions<InvitationOptions> options)
+public sealed class Invitations(TenancyDbContext db, ICurrentTenant tenant, ICurrentUser user, IAuditLog audit, IEmailSender mail, IOptions<InvitationOptions> options,
+    IStaffAccess access)
     : IInvitations
 {
     public async Task<IReadOnlyList<FacilityOption>> FacilitiesAsync(CancellationToken cancellationToken = default) =>
@@ -34,16 +35,26 @@ public sealed class Invitations(TenancyDbContext db, ICurrentTenant tenant, ICur
     async Task<InvitationCreated?> CreateCoreAsync(string email, Role role, Guid facilityId, Guid? customRoleId, Action<Membership>? stage, CancellationToken cancellationToken)
     {
         email = Valid(email);
-        if (!InvitationRules.CanInvite(role)) throw new ArgumentException("This role cannot be invited.", nameof(role));
+        // Every route gets the same role rule (#875): staff roles only here; a doctor only through Settings → Doctors, which stages the
+        // licence and profile rows with the membership.
+        if (stage is null ? !CustomRoleRules.Assignable.Contains(role) : !InvitationRules.RequiresLicenceVerification(role))
+            throw new ArgumentException("This role cannot be invited.", nameof(role));
         var tenantId = tenant.TenantId ?? throw new InvalidOperationException("No tenant context.");
 
         var facility = await db.Facilities.SingleOrDefaultAsync(f => f.Id == facilityId, cancellationToken);
         if (facility is null) return null; // another tenant's facility is invisible here (query filter + RLS)
+        string? extras = null;
         if (customRoleId is { } roleId)
         {
             if (await db.CustomRoles.SingleOrDefaultAsync(r => r.Id == roleId, cancellationToken) is not { } custom) return null;
             role = custom.BaseRole; // the base role is what role-based checks elsewhere see
+            extras = custom.Capabilities;
         }
+        // Staff are administered where the inviter administers staff (#877), and never with more patient access than the inviter has (#875).
+        if (await GranterAsync(facilityId, cancellationToken) is not { } granter) return null;
+        var grantedRole = role;
+        if (!InvitationRules.CanGrant(granter, c => CustomRoleRules.Effective(grantedRole, extras, c)))
+            throw new ArgumentException("This role gives access the inviter does not have.", nameof(role));
         var membership = new Membership { Id = Guid.CreateVersion7(), TenantId = tenantId, FacilityId = facilityId, Role = role, Status = MembershipStatus.Invited, CustomRoleId = customRoleId };
         db.Memberships.Add(membership);
         stage?.Invoke(membership);
@@ -56,9 +67,17 @@ public sealed class Invitations(TenancyDbContext db, ICurrentTenant tenant, ICur
         // Only the newest invitation of a membership can be resent, so a membership never has two live links.
         if (old is null || await db.Invitations.AnyAsync(i => i.MembershipId == old.MembershipId && i.CreatedAt > old.CreatedAt, cancellationToken)) return null;
         var membership = await db.Memberships.SingleAsync(m => m.Id == old.MembershipId, cancellationToken);
-        if (membership.Status != MembershipStatus.Invited) return null;
+        if (membership.Status != MembershipStatus.Invited || await GranterAsync(membership.FacilityId, cancellationToken) is null) return null;
         var facility = await db.Facilities.SingleAsync(f => f.Id == membership.FacilityId, cancellationToken);
         return await IssueAsync(membership, facility, old.Email, old, cancellationToken);
+    }
+
+    /// <summary>The inviter's access at <paramref name="facilityId"/>, or null when they do not administer staff there.</summary>
+    async Task<Func<Capability, Access>?> GranterAsync(Guid facilityId, CancellationToken cancellationToken)
+    {
+        var capabilities = Enum.GetValues<Capability>();
+        var held = (await access.AccessAsync(capabilities, facilityId, cancellationToken)).Zip(capabilities).ToDictionary(x => x.Second, x => x.First);
+        return held[Capability.StaffRolesIntegrations] == Access.Config ? c => held[c] : null;
     }
 
     static string Valid(string email)
@@ -78,6 +97,8 @@ public sealed class Invitations(TenancyDbContext db, ICurrentTenant tenant, ICur
         var baseUrl = options.Value.LinkBaseUrl ?? throw new InvalidOperationException("Invitations:LinkBaseUrl is not configured.");
         var clinic = await db.Tenants.Select(t => t.Name).SingleAsync(cancellationToken);
         var now = DateTimeOffset.UtcNow;
+        if (await db.Invitations.CountAsync(i => i.CreatedAt > now.AddHours(-1), cancellationToken) >= InvitationRules.MaxPerHour)
+            throw new InvitationLimitException();
         var (token, hash) = InvitationToken.New(tenantId);
         var invitation = new Invitation
         {
@@ -110,6 +131,9 @@ public sealed class Invitations(TenancyDbContext db, ICurrentTenant tenant, ICur
         var tenantId = tenant.TenantId ?? throw new InvalidOperationException("No tenant context.");
         var now = DateTimeOffset.UtcNow;
         await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
+        var facilityId = await db.Invitations.Where(i => i.Id == invitationId).Join(db.Memberships, i => i.MembershipId, m => m.Id, (_, m) => (Guid?)m.FacilityId)
+            .SingleOrDefaultAsync(cancellationToken);
+        if (facilityId is null || await GranterAsync(facilityId.Value, cancellationToken) is null) return false;
         var revoked = await db.Invitations.Where(i => i.Id == invitationId && i.AcceptedAt == null && i.RevokedAt == null)
             .ExecuteUpdateAsync(s => s.SetProperty(i => i.RevokedAt, now), cancellationToken);
         if (revoked == 0) return false;

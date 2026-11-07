@@ -22,8 +22,9 @@ sealed class StaffSessions(IdentityDbContext db) : IStaffSessions
         return session;
     }
 
-    public async Task<IReadOnlyDictionary<Guid, DateTimeOffset>> LastSignInAsync(IReadOnlyCollection<Guid> userIds, CancellationToken cancellationToken = default) =>
-        await db.Sessions.AsNoTracking().Where(s => userIds.Contains(s.UserId)).GroupBy(s => s.UserId)
+    // Sessions have no row-level security (looked up before a tenant is known), so the tenant is filtered here: another practice's sign-ins are not this one's business (#878).
+    public async Task<IReadOnlyDictionary<Guid, DateTimeOffset>> LastSignInAsync(IReadOnlyCollection<Guid> userIds, Guid tenantId, CancellationToken cancellationToken = default) =>
+        await db.Sessions.AsNoTracking().Where(s => userIds.Contains(s.UserId) && s.TenantId == tenantId).GroupBy(s => s.UserId)
             .Select(g => new { UserId = g.Key, At = g.Max(s => s.CreatedAt) }).ToDictionaryAsync(x => x.UserId, x => x.At, cancellationToken);
 
     public Task<Guid?> LastMembershipAsync(Guid userId, CancellationToken cancellationToken = default) =>
@@ -85,6 +86,13 @@ sealed class StaffSessions(IdentityDbContext db) : IStaffSessions
             : await db.Sessions.Where(s => s.Id == sessionId && s.RevokedAt == null && s.RefreshTokenHash == current)
                 .ExecuteUpdateAsync(u => u.SetProperty(s => s.RefreshTokenHash, replacement).SetProperty(s => s.LastSeenAt, now), cancellationToken);
         return updated == 1;
+    }
+
+    public Task<int> RevokeForMembershipAsync(Guid userId, Guid tenantId, Guid membershipId, CancellationToken cancellationToken = default)
+    {
+        var now = DateTimeOffset.UtcNow;
+        return db.Sessions.Where(s => s.UserId == userId && s.TenantId == tenantId && (s.MembershipId == membershipId || s.MembershipId == null) && s.RevokedAt == null)
+            .ExecuteUpdateAsync(u => u.SetProperty(s => s.RevokedAt, now), cancellationToken);
     }
 
     public Task<int> RevokeInTenantAsync(Guid userId, Guid tenantId, CancellationToken cancellationToken = default)

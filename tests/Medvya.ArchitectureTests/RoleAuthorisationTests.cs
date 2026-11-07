@@ -20,6 +20,7 @@ public partial class RoleAuthorisationTests
         ["Medvya.Tenancy.Infrastructure/FacilityDirectory.cs"] = "reads the membership for StaffAccess",
         ["Medvya.Tenancy.Application/IFacilityDirectory.cs"] = "contract of the above",
         ["Medvya.Tenancy.Infrastructure/StaffRoster.cs"] = "last-admin check on stored memberships when offboarding, not a caller check",
+        ["Medvya.Tenancy.Infrastructure/Invitations.cs"] = "the invited role's access, compared with the inviter's from IStaffAccess (#875); not a caller check",
         ["Medvya.Tenancy.Infrastructure/PracticeSettings.cs"] = "copies the creator's membership role to a new location, not a check",
         ["Host.Api/Auth/SessionControl.cs"] = "drops the legacy role claim from old cookies",
         ["Medvya.Identity.Api/StaffEndpoints.cs"] = "displays the built-in role table behind ManageStaff",

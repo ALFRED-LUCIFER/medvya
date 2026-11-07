@@ -45,13 +45,26 @@ public class InvitationRulesTests
     public void OverlongTokensAreRejected() =>
         Assert.Null(InvitationToken.Read(Base64Url.EncodeToString(new byte[60])));
 
-    [Fact]
-    public void PatientsCannotBeInvitedAsStaff()
-    {
-        Assert.False(InvitationRules.CanInvite(Role.Patient));
-        Assert.False(InvitationRules.CanInvite((Role)99));
-        Assert.All(Enum.GetValues<Role>().Where(r => r != Role.Patient), r => Assert.True(InvitationRules.CanInvite(r)));
-    }
+    [Theory]
+    // #875: an inviter cannot create an account that reaches patient data they cannot reach themselves.
+    [InlineData(Role.HospitalIt, Role.PracticeAdmin, false)]
+    [InlineData(Role.HospitalIt, Role.Receptionist, false)]
+    [InlineData(Role.HospitalIt, Role.HospitalIt, true)]
+    [InlineData(Role.PracticeAdmin, Role.Receptionist, true)]
+    [InlineData(Role.PracticeAdmin, Role.Nurse, true)]
+    [InlineData(Role.PracticeAdmin, Role.HospitalDoctor, true)]
+    [InlineData(Role.SoloDoctor, Role.PracticeAdmin, true)]
+    public void NobodyGrantsPatientAccessTheyLack(Role granter, Role grantee, bool allowed) =>
+        Assert.Equal(allowed, InvitationRules.CanGrant(c => RoleMatrix.Of(granter, c), c => RoleMatrix.Of(grantee, c)));
+
+    [Theory]
+    [InlineData("Iyer Family Clinic (synthetic)", false)]
+    [InlineData("Dr. Mehta's Clinic", false)]
+    [InlineData("Sharma & Co. Clinic", false)]
+    [InlineData("Visit www.example-clinic.test now", true)]
+    [InlineData("Clinic https://x.test", true)]
+    [InlineData("Reset at secure-login.com", true)]
+    public void NamesSentInEmailsCarryNoLinks(string name, bool hasLink) => Assert.Equal(hasLink, OutboundText.HasLink(name));
 
     [Fact]
     public void DoctorsAreFlaggedForLicenceVerification() =>

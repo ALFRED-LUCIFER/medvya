@@ -185,11 +185,11 @@ public sealed partial class InvitationTests(PostgresFixture sql) : IClassFixture
     public async Task AnExistingMedvyaUserJoinsAnotherClinicWithTheirOwnAccount()
     {
         using var client = Staff(tenantB, Role.PracticeAdmin);
-        Assert.Equal(HttpStatusCode.Created, (await Invite(client, facilityB, "SoloDoctor")).StatusCode);
+        Assert.Equal(HttpStatusCode.Created, (await Invite(client, facilityB, "Nurse")).StatusCode); // doctors join through Settings → Doctors (#875)
         var token = LinkToken().Match(outbox.Sent[^1].Body).Groups[1].Value;
         using var browser = Browser();
         var preview = await (await Preview(browser, token)).Content.ReadFromJsonAsync<JsonElement>();
-        Assert.True(preview.GetProperty("licenceVerificationRequired").GetBoolean());
+        Assert.False(preview.GetProperty("licenceVerificationRequired").GetBoolean());
 
         var doctor = Guid.NewGuid();
         await using (var identity = sql.Identity())
@@ -201,7 +201,7 @@ public sealed partial class InvitationTests(PostgresFixture sql) : IClassFixture
         Assert.Equal("/", (await Join(browser, token, loginHint: doctor.ToString())).Headers.Location!.OriginalString);
         Assert.Equal(users, await UserCount());
         await using var db = sql.Context(tenantB);
-        Assert.Contains(await db.Memberships.ToListAsync(), m => m.UserId == doctor && m.Role == Role.SoloDoctor && m.Status == MembershipStatus.Active);
+        Assert.Contains(await db.Memberships.ToListAsync(), m => m.UserId == doctor && m.Role == Role.Nurse && m.Status == MembershipStatus.Active);
     }
 
     [Fact]
@@ -272,12 +272,52 @@ public sealed partial class InvitationTests(PostgresFixture sql) : IClassFixture
         Assert.Empty(outbox.Sent);
     }
 
+    [Theory]
+    // #875: no invitation route creates a doctor (they need the licence path) or hospital IT; /v1/staff already refused them.
+    [InlineData("/v1/invitations", "SoloDoctor")]
+    [InlineData("/v1/invitations", "HospitalDoctor")]
+    [InlineData("/v1/invitations", "HospitalIt")]
+    [InlineData("/v1/staff", "HospitalIt")]
+    public async Task NoInvitationRouteCreatesADoctorOrHospitalIt(string route, string role)
+    {
+        using var client = Staff(tenantA, Role.PracticeAdmin);
+        var response = await client.PostAsJsonAsync(new Uri(route, UriKind.Relative), new { email = "alt@example.test", role, facilityId = facilityA });
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Empty(outbox.Sent);
+        await using var db = sql.Context(tenantA);
+        Assert.Equal(0, await db.Memberships.CountAsync(m => m.Status == MembershipStatus.Invited));
+    }
+
+    [Theory]
+    // #875: hospital IT (patient access only by break-glass) cannot create a second account that reads patient records.
+    [InlineData("PracticeAdmin")]
+    [InlineData("Receptionist")]
+    public async Task HospitalItCannotInviteAnAccountThatReadsPatients(string role)
+    {
+        using var it = Staff(tenantA, Role.HospitalIt);
+        foreach (var route in new[] { "/v1/invitations", "/v1/staff" })
+            Assert.Equal(HttpStatusCode.BadRequest,
+                (await it.PostAsJsonAsync(new Uri(route, UriKind.Relative), new { email = "alt@example.test", role, facilityId = facilityA })).StatusCode);
+        Assert.Empty(outbox.Sent);
+    }
+
+    [Fact]
+    public async Task APracticeSendsAtMostItsHourlyAllowanceOfInvitations()
+    {
+        using var client = Staff(tenantA, Role.PracticeAdmin);
+        for (var i = 0; i < InvitationRules.MaxPerHour; i++)
+            Assert.Equal(HttpStatusCode.Created, (await Invite(client, facilityA, email: $"desk{i}@example.test")).StatusCode);
+        var refused = await Invite(client, facilityA, email: "one-more@example.test");
+        Assert.Equal((HttpStatusCode)429, refused.StatusCode); // #886
+        Assert.Equal(InvitationRules.MaxPerHour, outbox.Sent.Count);
+    }
+
     [Fact]
     public async Task AnInvitationThatCannotBeEmailedIsNotCreated()
     {
         outbox.Fail = true;
         using var client = Staff(tenantA, Role.PracticeAdmin);
-        Assert.Equal(HttpStatusCode.InternalServerError, (await Invite(client, facilityA)).StatusCode);
+        Assert.Equal(HttpStatusCode.BadGateway, (await Invite(client, facilityA)).StatusCode); // the 502 problem /v1/staff answers (#893)
         await using var db = sql.Context(tenantA);
         Assert.Equal(0, await db.Invitations.CountAsync());
         Assert.Equal(0, await db.Memberships.CountAsync(m => m.Status == MembershipStatus.Invited));
@@ -291,7 +331,7 @@ public sealed partial class InvitationTests(PostgresFixture sql) : IClassFixture
         {
             var tenant = new PostgresFixture.FixedTenant(tenantA);
             var invitations = new Invitations(sql.Context(tenantA), tenant, new FixedUser(null), new AuditLog(sql.Audit(tenantA)), outbox,
-                Options.Create(new InvitationOptions()));
+                Options.Create(new InvitationOptions()), null!); // accepting needs no inviter access
             return await invitations.AcceptAsync(token, Guid.NewGuid());
         })));
         Assert.Single(results, r => r);

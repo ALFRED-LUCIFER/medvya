@@ -150,6 +150,7 @@ public abstract partial class OnboardingRules
     void ClinicStep(OnboardingClinic? c, List<OnboardingError> e)
     {
         Text(c?.Name, "clinic.name", 200, true, e);
+        if (OutboundText.HasLink(c?.Name)) e.Add(new("clinic.name", "link")); // the practice name goes into invitation emails (#886)
         Text(c?.Address, "clinic.address", 500, true, e);
         Text(c?.RegistrationNumber, "clinic.registrationNumber", 50, false, e);
         var tax = c?.TaxId?.Trim();

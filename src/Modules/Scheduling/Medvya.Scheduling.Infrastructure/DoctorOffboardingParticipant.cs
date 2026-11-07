@@ -13,7 +13,7 @@ using Microsoft.Extensions.Options;
 namespace Medvya.Scheduling.Infrastructure;
 
 /// <summary>
-/// A doctor left the practice (MDV-P1-009): their future booked visits become "needs rebooking" for reception to move (slots freed, audited,
+/// A doctor left a facility of the practice (MDV-P1-009): their future booked visits there (not at the practice's other sites, #877) become "needs rebooking" for reception to move (slots freed, audited,
 /// board told after the commit). It runs inside the offboarding transaction on its connection, so the tenant's row-level security applies and
 /// the move commits or rolls back with the membership change. The caller has already authorised staff administration. Takes the same
 /// per-doctor-day app locks as every booking change, so a booking cannot slip in between.
@@ -22,13 +22,13 @@ public sealed class DoctorOffboardingParticipant(
     ICurrentTenant tenant, ICurrentUser user, IFacilityDirectory facilities, IAuditLog audit, IOptions<SchedulingOptions> options,
     TimeProvider clock, IBoardNotifier notifier, ILogger<DoctorOffboardingParticipant> log) : IStaffOffboardingParticipant
 {
-    public async Task<Func<Task>?> OffboardedAsync(Guid doctorUserId, DbTransaction transaction, CancellationToken cancellationToken)
+    public async Task<Func<Task>?> OffboardedAsync(Guid doctorUserId, Guid facilityId, DbTransaction transaction, CancellationToken cancellationToken)
     {
         var (now, me, tenantId) = (clock.GetUtcNow(), user.UserId, tenant.TenantId ?? throw new InvalidOperationException("No tenant context."));
         await using var db = new SchedulingDbContext(new DbContextOptionsBuilder<SchedulingDbContext>().UseNpgsql(transaction.Connection!).Options, tenant);
         await db.Database.UseTransactionAsync(transaction, cancellationToken);
         Task<List<Appointment>> FutureAsync() => db.Appointments.AsNoTracking()
-            .Where(a => a.CalendarId == doctorUserId && a.Start >= now && a.State == AppointmentState.Booked && !a.Unscheduled).ToListAsync(cancellationToken);
+            .Where(a => a.CalendarId == doctorUserId && a.FacilityId == facilityId && a.Start >= now && a.State == AppointmentState.Booked && !a.Unscheduled).ToListAsync(cancellationToken);
 
         var zones = new Dictionary<Guid, TimeZoneInfo>();
         var days = new SortedSet<(Guid FacilityId, DateOnly Date)>();

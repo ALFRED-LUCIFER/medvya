@@ -26,11 +26,34 @@ public static class InvitationRules
 {
     public static readonly TimeSpan DefaultLifetime = TimeSpan.FromDays(7);
 
-    /// <summary>Staff roles only: patients join through the portal, never through a staff invitation.</summary>
-    public static bool CanInvite(Role role) => role != Role.Patient && Enum.IsDefined(role);
-
     /// <summary>Doctors cannot record or sign until their licence is verified (verification ships in MDV-P1-007).</summary>
     public static bool RequiresLicenceVerification(Role role) => role is Role.SoloDoctor or Role.HospitalDoctor;
+
+    /// <summary>Invitations one tenant may send in an hour (new and resent), so the invite email cannot be used to mass-mail strangers.</summary>
+    public const int MaxPerHour = 30;
+
+    // Capabilities that do not open patient data in routine work. Break-glass is an audited emergency read, not routine access.
+    static readonly Capability[] Administrative = [Capability.DevicePairingFleet, Capability.StaffRolesIntegrations, Capability.AuditLog];
+
+    static bool ReachesPatientData(Func<Capability, Access> access) =>
+        Enum.GetValues<Capability>().Except(Administrative).Any(c => access(c) is not (Access.None or Access.BreakGlass));
+
+    /// <summary>
+    /// Nobody creates an account that reaches patient data they cannot reach themselves (#875): hospital IT, whose only patient access is
+    /// break-glass, cannot invite a receptionist or practice admin and then use that second account to read records.
+    /// </summary>
+    public static bool CanGrant(Func<Capability, Access> granter, Func<Capability, Access> grantee) =>
+        !ReachesPatientData(grantee) || ReachesPatientData(granter);
+}
+
+/// <summary>Free-text rules for names that are sent to people outside the practice (invitation emails, slips).</summary>
+public static partial class OutboundText
+{
+    /// <summary>True when the text holds a web address, so a practice or location name cannot carry a phishing link into Medvya's emails (#886).</summary>
+    public static bool HasLink(string? text) => text is not null && Link().IsMatch(text);
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"(?i)(https?:|www\.|://|\b[a-z0-9-]+\.(com|net|org|info|io|co|in|ae|xyz|link|ly|me|app|site|online|top|ru|cn)\b)")]
+    private static partial System.Text.RegularExpressions.Regex Link();
 }
 
 /// <summary>

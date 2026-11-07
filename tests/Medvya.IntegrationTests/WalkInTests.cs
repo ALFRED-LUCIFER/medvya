@@ -71,8 +71,6 @@ public sealed class WalkInTests(PostgresFixture sql) : IClassFixture<PostgresFix
     public async Task WithNoFreeSlotTheWalkInIsQueuedWithoutTakingASlot()
     {
         At(19, 45); // the last slot (19:40) has started: nothing left today
-        Assert.Equal("no_free_slot", (await Assert.ThrowsAsync<SlotUnavailableException>(() => h.Booking(h.Reception).WalkInAsync(For(doctor: null)))).Code);
-
         var queued = await h.Booking(h.Reception).WalkInAsync(For(h.Doctor));
         Assert.Equal((true, true, h.Clock.GetUtcNow(), h.Clock.GetUtcNow()), (queued.WalkIn, queued.Unscheduled, queued.Start, queued.End));
         await using (var db = sql.Scheduling(h.Tenant))
@@ -83,6 +81,41 @@ public sealed class WalkInTests(PostgresFixture sql) : IClassFixture<PostgresFix
         Assert.DoesNotContain(column.Appointments, a => a.Id == queued.Id);
         var card = await h.FrontDesk(h.Reception).CheckInAsync(queued.Id, new CheckIn());
         Assert.Equal((AppointmentState.CheckedIn, true, true), (card.State, card.WalkIn, card.Unscheduled));
+    }
+
+    /// <summary>
+    /// #912: a just-registered patient's first walk-in, "Next available doctor" (the screen's default) after the last slot of the
+    /// day, was refused 409 no_free_slot on Azure dev. It is queued like a chosen doctor's walk-in, under the only doctor working today.
+    /// </summary>
+    [Fact]
+    public async Task NextAvailableWithNoFreeSlotIsQueuedUnderTheDoctorWorkingToday()
+    {
+        At(19, 45);
+        var queued = await h.Booking(h.Reception).WalkInAsync(For(doctor: null) with { VisitType = VisitType.NewConsultation });
+        Assert.Equal((h.Doctor, true, true), (queued.CalendarId, queued.WalkIn, queued.Unscheduled));
+        Assert.Equal(AppointmentState.CheckedIn, (await h.FrontDesk(h.Reception).CheckInAsync(queued.Id, new CheckIn())).State);
+    }
+
+    /// <summary>With several doctors working today and none free, the one with the fewest open visits today takes the walk-in.</summary>
+    [Fact]
+    public async Task NextAvailableWithNoFreeSlotGoesToTheLeastBusyDoctor()
+    {
+        await h.Schedule(h.Admin).SaveTemplateAsync(h.DoctorTemplate() with { CalendarId = h.SecondDoctor });
+        At(19, 5);
+        await h.BookAsync(19, 20, h.SecondPatient); // Dr. Rao: two open visits today; Dr. Menon: one
+        await h.BookAsync(19, 40, h.SecondPatient);
+        await h.Booking(h.Reception).WalkInAsync(For(h.SecondDoctor));
+        At(19, 45);
+        var queued = await h.Booking(h.Reception).WalkInAsync(For(doctor: null) with { AllowRepeat = true });
+        Assert.Equal((h.SecondDoctor, true), (queued.CalendarId, queued.Unscheduled));
+    }
+
+    /// <summary>Nobody works today (Sunday): there is no doctor to queue with, so the desk is still asked to choose one.</summary>
+    [Fact]
+    public async Task NextAvailableOnADayNobodyWorksStillAsksForADoctor()
+    {
+        h.Clock.Advance(SchedulingHarness.At(10, 0).AddDays(6) - h.Clock.GetUtcNow());
+        Assert.Equal("no_free_slot", (await Assert.ThrowsAsync<SlotUnavailableException>(() => h.Booking(h.Reception).WalkInAsync(For(doctor: null)))).Code);
     }
 
     /// <summary>No double booking (MDV-P1-022) holds for walk-ins: six desks at once for two free slots get two distinct slots and four queued.</summary>

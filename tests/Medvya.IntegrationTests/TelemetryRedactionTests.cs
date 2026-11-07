@@ -70,6 +70,42 @@ public class TelemetryRedactionTests
         if (!consoleAllowed) Assert.Single(providers);
     }
 
+    // Two 409 answers: one with a stable reason code, one whose "code" a developer filled with patient data by mistake.
+    sealed class ConflictEndpoints : IStartupFilter
+    {
+        public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => app =>
+        {
+            app.Use(async (HttpContext ctx, RequestDelegate n) =>
+            {
+                var code = ctx.Request.Path == "/conflict/coded" ? "no_free_slot" : ctx.Request.Path == "/conflict/leaky" ? Name : null;
+                if (code is null) await n(ctx);
+                else await Results.Problem(statusCode: 409, extensions: new Dictionary<string, object?> { ["code"] = code }).ExecuteAsync(ctx);
+            });
+            next(app);
+        };
+    }
+
+    /// <summary>#912: a 409 logs its reason code (an allowlisted identifier), so the next refusal is diagnosable; anything else stays redacted.</summary>
+    [Fact]
+    public async Task AConflictLogsItsReasonCodeAndNothingElse()
+    {
+        var logs = new List<string>();
+        await using (var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b
+            .ConfigureLogging(l => l.AddOpenTelemetry(o => o.AddProcessor(new Snapshot(logs))))
+            .ConfigureServices(s => s.AddSingleton<IStartupFilter, ConflictEndpoints>())))
+        {
+            var client = factory.CreateClient();
+            Assert.Equal(System.Net.HttpStatusCode.Conflict, (await client.GetAsync(new Uri("/conflict/coded", UriKind.Relative))).StatusCode);
+            Assert.Equal(System.Net.HttpStatusCode.Conflict, (await client.GetAsync(new Uri("/conflict/leaky", UriKind.Relative))).StatusCode);
+        }
+
+        var conflicts = logs.Where(l => l.Contains("ConflictCode=", StringComparison.Ordinal)).ToList();
+        Assert.Equal(2, conflicts.Count);
+        Assert.Contains(conflicts, l => l.Contains("ConflictCode=no_free_slot;", StringComparison.Ordinal));
+        Assert.Contains(conflicts, l => l.Contains("ConflictCode=[redacted];", StringComparison.Ordinal));
+        Assert.DoesNotContain("Meera", string.Join('\n', logs), StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task PatientDataNeverReachesExportedLogsOrTraces()
     {

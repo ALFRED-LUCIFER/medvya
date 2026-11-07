@@ -191,8 +191,10 @@ public sealed class BookingService(
         }
 
         // No free slot today: queue the walk-in under the chosen doctor without taking any slot (zero length at arrival, no
-        // SCHEDULE_SLOT rows), so the calendar is never double-booked. Without a chosen doctor the desk is asked to choose one.
-        if (command.CalendarId is not { } doctor) throw new SlotUnavailableException("no_free_slot");
+        // SCHEDULE_SLOT rows), so the calendar is never double-booked. "Next available" queues with a doctor working today (#912);
+        // only when nobody works today is the desk asked to choose one.
+        if ((command.CalendarId ?? await LeastBusyDoctorTodayAsync(command.FacilityId, doctors, today, zone, cancellationToken)) is not { } doctor)
+            throw new SlotUnavailableException("no_free_slot");
         await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
         var queued = await CreateAsync(Draft(command.FacilityId, doctor, CalendarKind.Doctor, patient.Id, command.VisitType, now, now, command.ReasonCategory, null,
             BookingChannel.InPerson, now, walkIn: true, unscheduled: true), SchedulingAudit.WalkIn, cancellationToken);
@@ -202,6 +204,24 @@ public sealed class BookingService(
 
     /// <summary>Free slots a walk-in tries, earliest first, before it is queued unscheduled (each may be taken by another desk meanwhile).</summary>
     const int MaxWalkInAttempts = 5;
+
+    /// <summary>
+    /// The doctor a "next available" walk-in with no free slot waits for: of the doctors with a session today (template less leave),
+    /// the one with the fewest open visits today, then by id so two desks agree. Null when nobody works today.
+    /// </summary>
+    async Task<Guid?> LeastBusyDoctorTodayAsync(Guid facilityId, List<ScheduleTemplate> doctors, DateOnly today, TimeZoneInfo zone, CancellationToken cancellationToken)
+    {
+        var exceptions = await context.ExceptionsAsync(facilityId, today, today, null, cancellationToken);
+        var working = doctors.Where(t => ScheduleRules.Day(t, today, zone, exceptions.Where(x => x.CalendarId == t.CalendarId)).Slots.Count > 0)
+            .Select(t => t.CalendarId).ToList();
+        if (working.Count == 0) return null;
+        var (dayStart, dayEnd) = ScheduleRules.DayBounds(today, zone);
+        var open = await db.Appointments.AsNoTracking()
+            .Where(a => a.FacilityId == facilityId && working.Contains(a.CalendarId) && a.Start >= dayStart && a.Start < dayEnd
+                && a.State != AppointmentState.Done && a.State != AppointmentState.Cancelled && a.State != AppointmentState.NoShow && a.State != AppointmentState.NeedsRebooking)
+            .GroupBy(a => a.CalendarId).Select(g => new { g.Key, Count = g.Count() }).ToDictionaryAsync(g => g.Key, g => g.Count, cancellationToken);
+        return working.OrderBy(id => open.GetValueOrDefault(id)).ThenBy(id => id).First();
+    }
 
     /// <summary>
     /// Slot starts from now on today that fit the visit type, free of appointments and of other users' holds, earliest first

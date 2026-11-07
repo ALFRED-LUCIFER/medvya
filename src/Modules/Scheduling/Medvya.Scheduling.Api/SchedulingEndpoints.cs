@@ -54,9 +54,9 @@ public static class SchedulingEndpoints
         schedule.MapPut("/exceptions/{id:guid}", (Guid id, SaveAdjustment command, [FromServices] IScheduleExceptionService service, CancellationToken ct) =>
                 service.SaveAsync(command with { ReplacesId = id }, ct))
             .AuditedWriteWithErrors(SchedulingAudit.ExceptionUpdate, SchedulingAudit.ExceptionResource, SchedulingAudit.Operations);
-        schedule.MapDelete("/exceptions/{id:guid}", async (Guid id, Guid? facilityId, [FromServices] IScheduleExceptionService service, CancellationToken ct) =>
+        schedule.MapDelete("/exceptions/{id:guid}", async (Guid id, Guid? facilityId, string? version, [FromServices] IScheduleExceptionService service, CancellationToken ct) =>
             {
-                await service.DeleteAsync(facilityId ?? Guid.Empty, id, ct);
+                await service.DeleteAsync(facilityId ?? Guid.Empty, id, version, ct);
                 return Results.NoContent();
             })
             .AuditedWriteWithErrors(SchedulingAudit.ExceptionDelete, SchedulingAudit.ExceptionResource, SchedulingAudit.Operations);

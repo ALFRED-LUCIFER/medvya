@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { adjustmentError, adjustmentSchema, allChosen, emptyAdjustment, toForm, toRequest, type AdjustmentForm, type RebookAction, type SaveResult, type SavedAdjustment } from '../domain/adjustments';
+import { adjustmentError, adjustmentSchema, allChosen, emptyAdjustment, manageableCalendars, toForm, toRequest, type AdjustmentForm, type RebookAction, type SaveResult, type SavedAdjustment } from '../domain/adjustments';
 import type { Appointment } from '../domain/schedule';
 import { ApiError, fetchAdjustments, deleteAdjustment, fetchScheduleDay, saveAdjustment, updateAdjustment } from '../services/scheduleApi';
 
@@ -11,11 +11,12 @@ import { ApiError, fetchAdjustments, deleteAdjustment, fetchScheduleDay, saveAdj
  * list of those visits and nothing is saved; the desk picks an action for each and saves again. Editing the form drops the list,
  * because it was worked out for the earlier dates.
  */
-export function useAdjustmentController(facilityId: string) {
+export function useAdjustmentController(facilityId: string, canConfigure: boolean, userId: string) {
   const queryClient = useQueryClient();
   // The list belongs to the form values it was worked out for: editing them drops it.
   const [listed, setListed] = useState<{ forValues: string; visits: Appointment[] } | null>(null);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editing, setEditing] = useState<{ id: string; version: string } | null>(null);
+  const editingId = editing?.id ?? null;
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [chosen, setChosen] = useState<Record<string, RebookAction>>({});
 
@@ -29,14 +30,21 @@ export function useAdjustmentController(facilityId: string) {
   const edited = JSON.stringify(useWatch({ control: form.control }));
   const affected = listed?.forValues === edited ? listed.visits : null;
 
+  // Someone else changed the row meanwhile: show the current list, and edit or delete again from it.
+  const onStale = (e: Error) => {
+    if (!(e instanceof ApiError && adjustmentError(e.code) === 'stale')) return;
+    setEditing(null);
+    void queryClient.invalidateQueries({ queryKey: ['adjustments', facilityId] });
+  };
   const save = useMutation({
+    onError: onStale,
     mutationFn: (values: AdjustmentForm) => {
       const body = toRequest(facilityId, values, Object.fromEntries(Object.entries(chosen).filter(([id]) => affected?.some(a => a.id === id))));
-      return editingId ? updateAdjustment(editingId, body) : saveAdjustment(body);
+      return editing ? updateAdjustment(editing.id, { ...body, version: editing.version }) : saveAdjustment(body);
     },
     onSuccess: () => {
       setListed(null);
-      setEditingId(null);
+      setEditing(null);
       setChosen({});
       void queryClient.invalidateQueries({ queryKey: ['schedule', facilityId] });
       void queryClient.invalidateQueries({ queryKey: ['adjustments', facilityId] });
@@ -44,10 +52,11 @@ export function useAdjustmentController(facilityId: string) {
     },
   });
   const remove = useMutation({
-    mutationFn: (id: string) => deleteAdjustment(facilityId, id),
-    onSuccess: (_, id) => {
+    onError: onStale,
+    mutationFn: (row: { id: string; version: string }) => deleteAdjustment(facilityId, row.id, row.version),
+    onSuccess: (_, row) => {
       setConfirmingId(null);
-      if (editingId === id) setEditingId(null);
+      if (editingId === row.id) setEditing(null);
       void queryClient.invalidateQueries({ queryKey: ['schedule', facilityId] });
       void queryClient.invalidateQueries({ queryKey: ['adjustments', facilityId] });
     },
@@ -59,15 +68,17 @@ export function useAdjustmentController(facilityId: string) {
   return {
     form,
     calendars: (day.data?.columns ?? []).map(c => ({ id: c.calendarId, name: c.name, kind: c.calendarKind })),
+    /** The calendars this person may add leave to; empty for the front desk, who only see and rebook. */
+    manageable: manageableCalendars((day.data?.columns ?? []).map(c => ({ id: c.calendarId, name: c.name })), canConfigure, userId),
     timeZone: day.data?.timeZone ?? null,
     loading: day.isPending,
     saved: saved.data ?? [],
     editingId,
-    onEdit: (row: SavedAdjustment) => { save.reset(); setListed(null); setChosen({}); setEditingId(row.id); form.reset(toForm(row)); },
-    onCancelEdit: () => { setEditingId(null); form.reset({ ...emptyAdjustment(today), calendarId: form.getValues('calendarId') }); },
+    onEdit: (row: SavedAdjustment) => { save.reset(); setListed(null); setChosen({}); setEditing({ id: row.id, version: row.version }); form.reset(toForm(row)); },
+    onCancelEdit: () => { setEditing(null); form.reset({ ...emptyAdjustment(today), calendarId: form.getValues('calendarId') }); },
     confirmingId,
     onAskDelete: (id: string | null) => { remove.reset(); setConfirmingId(id); },
-    onDelete: (id: string) => remove.mutate(id),
+    onDelete: (row: SavedAdjustment) => remove.mutate(row),
     deleting: remove.isPending,
     deleteError: remove.error ? adjustmentError(remove.error instanceof ApiError ? remove.error.code : undefined) : null,
     affected,

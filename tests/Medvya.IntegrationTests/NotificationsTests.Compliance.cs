@@ -146,7 +146,7 @@ public sealed partial class NotificationsTests
         // Offboarding one person is their decision; confirming the rest completes it.
         var nurse = first.Members.Single(m => m.Role == Role.Nurse).MembershipId;
         Assert.False(await InScope(sp => sp.GetRequiredService<IAccessReviews>().ConfirmAsync(nurse))); // reception does not administer staff (#877)
-        await AsAdminOf(h.Facility, async sp => { await sp.GetRequiredService<IStaffRoster>().OffboardAsync(nurse, "Left the practice"); await sp.GetRequiredService<IAccessReviews>().RecordOffboardedAsync(nurse); return 0; });
+        await AsAdminOf(h.Facility, async sp => { await sp.GetRequiredService<IStaffRoster>().OffboardAsync(nurse, "Left the practice", cancellationToken: default); await sp.GetRequiredService<IAccessReviews>().RecordOffboardedAsync(nurse); return 0; });
         Assert.False(await AsAdminOf(h.Facility, sp => sp.GetRequiredService<IAccessReviews>().ConfirmAsync(nurse))); // no longer active
         Assert.False(await AsAdminOf(h.Facility, sp => sp.GetRequiredService<IAccessReviews>().ConfirmAsync(Guid.NewGuid())));
         var rest = (await InScope(sp => sp.GetRequiredService<IAccessReviews>().CurrentAsync())).Members;

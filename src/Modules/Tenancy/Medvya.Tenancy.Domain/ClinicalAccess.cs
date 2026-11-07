@@ -21,7 +21,8 @@ public enum CareScope { Facility, FacilityToday, Assigned }
 public enum AccessRequestReason { CoveringColleague, SeeingPatientToday, ReviewingResults, Referral }
 
 [JsonConverter(typeof(JsonStringEnumConverter<AccessRequestStatus>))]
-public enum AccessRequestStatus { Pending, Granted, Declined }
+/// <summary>Withdrawn: the clinician who asked was offboarded before an owner decided (MDV-P1-009).</summary>
+public enum AccessRequestStatus { Pending, Granted, Declined, Withdrawn }
 
 /// <summary>
 /// ACCESS_REQUEST (MDV-P2-024): a clinician without a care relationship asks for one patient at one facility; an owner grants it for

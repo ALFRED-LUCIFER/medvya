@@ -9,7 +9,7 @@ import type { Location } from '../../settings/domain/settings';
 import { Field } from '../../settings/components/Field';
 import { Section } from '../../settings/components/Section';
 import { staffColumns, type StaffColumn } from '../domain/staffTable';
-import { assignableRoles, canOffboard, canResend, canRevoke, permissionRows, statusLabel, type AddStaffForm, type OffboardForm, type RoleCatalogue, type RoleChoice, type StaffMember, type Step } from '../domain/staff';
+import { assignableRoles, canOffboard, canReactivate, canResend, canRevoke, isDoctor, permissionRows, statusLabel, type AddStaffForm, type OffboardForm, type ReactivateForm, type RoleCatalogue, type RoleChoice, type StaffMember, type Step } from '../domain/staff';
 
 type Props = {
   rows: StaffMember[];
@@ -23,7 +23,8 @@ type Props = {
   choice: RoleChoice | null;
   form: UseFormReturn<AddStaffForm>;
   canContinue: boolean;
-  notice: 'invited' | 'resent' | 'revoked' | 'offboarded' | null;
+  notice: 'invited' | 'resent' | 'revoked' | 'offboarded' | 'reactivated' | null;
+  openVisits: number;
   offboarding: StaffMember | null;
   offboardForm: UseFormReturn<OffboardForm>;
   offboardWorking: boolean;
@@ -31,6 +32,13 @@ type Props = {
   onOffboard: (member: StaffMember) => void;
   onOffboardSubmit: FormEventHandler<HTMLFormElement>;
   onOffboardCancel: () => void;
+  reactivating: StaffMember | null;
+  reactivateForm: UseFormReturn<ReactivateForm>;
+  reactivateWorking: boolean;
+  reactivateError: 'aboveGranter' | 'failed' | null;
+  onReactivate: (member: StaffMember) => void;
+  onReactivateSubmit: FormEventHandler<HTMLFormElement>;
+  onReactivateCancel: () => void;
   adding: boolean;
   addFailed: boolean;
   emailFailed: boolean;
@@ -66,7 +74,10 @@ export default function StaffPanel(p: Props) {
   return (
     <div className="flex flex-col gap-4">
       <Section title={t('staff.title')} intro={t('staff.intro')}>
-        <div aria-live="polite" className="text-sm font-semibold text-success-700">{p.notice && t(`staff.notice.${p.notice}`)}</div>
+        <div aria-live="polite" className="text-sm font-semibold text-success-700">
+          {p.notice && t(`staff.notice.${p.notice}`)}
+          {p.notice === 'offboarded' && p.openVisits > 0 && <span className="block text-foreground">{t('staff.notice.openVisits', { count: p.openVisits })}</span>}
+        </div>
         {p.rowFailed && <p role="alert" className={fieldError}>{t('staff.rowFailed')}</p>}
         {p.emailFailed && !p.adding && <p role="alert" className={fieldError}>{t('staff.error.email')}</p>}
         <TableState state={tableState} messages={{ loading: t('settings.loading'), error: t('settings.loadFailed'), empty: t('staff.empty') }}>
@@ -96,6 +107,7 @@ export default function StaffPanel(p: Props) {
                       <span className="flex flex-wrap gap-2">
                         {canResend(m) && <Button type="button" variant="outline" className="min-h-11 min-w-11" disabled={p.working} aria-label={t('staff.resendNamed', { name: who })} onClick={() => p.onResend(m.invitationId!)}>{t('staff.resend')}</Button>}
                         {canRevoke(m) && <Button type="button" variant="outline" className="min-h-11 min-w-11" disabled={p.working} aria-label={t('staff.revokeNamed', { name: who })} onClick={() => p.onRevoke(m.invitationId!)}>{t('staff.revoke')}</Button>}
+                        {canReactivate(m) && <Button type="button" variant="outline" className="min-h-11 min-w-11" disabled={p.working || !!p.reactivating} aria-label={t('staff.reactivateNamed', { name: who })} onClick={() => p.onReactivate(m)}>{t('staff.reactivate')}</Button>}
                         {canOffboard(m) && <Button type="button" variant="outline" className="min-h-11 min-w-11" disabled={p.working || !!p.offboarding} aria-label={t('staff.offboardNamed', { name: who })} onClick={() => p.onOffboard(m)}>{t('staff.offboard')}</Button>}
                       </span>
                     </TableCell>
@@ -114,10 +126,37 @@ export default function StaffPanel(p: Props) {
             <Field id="staff-offboard-reason" label={t('staff.offboardReason')} error={p.offboardForm.formState.errors.reason && t('staff.offboardReasonRequired')}>
               <Textarea id="staff-offboard-reason" rows={3} maxLength={500} {...describedBy('staff-offboard-reason', !!p.offboardForm.formState.errors.reason)} {...p.offboardForm.register('reason')} />
             </Field>
+            {isDoctor(p.offboarding) && (
+              <fieldset className="flex flex-col gap-2" aria-describedby={p.offboardForm.formState.errors.rebooking ? 'staff-offboard-rebooking-error' : undefined}>
+                <legend className="mb-1 font-bold">{t('staff.offboardRebooking')}</legend>
+                {(['offer', 'call'] as const).map(choice => (
+                  <label key={choice} className="flex min-h-11 cursor-pointer items-start gap-3 rounded-lg border p-3 has-[:checked]:border-primary has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring/50">
+                    <input type="radio" value={choice} className="mt-1 size-4" {...p.offboardForm.register('rebooking')} />
+                    <span className="flex flex-col"><span className="font-bold">{t(`staff.offboardRebooking.${choice}`)}</span><span className="text-sm text-muted-foreground">{t(`staff.offboardRebooking.${choice}.hint`)}</span></span>
+                  </label>
+                ))}
+                {p.offboardForm.formState.errors.rebooking && <p id="staff-offboard-rebooking-error" role="alert" className={fieldError}>{t('staff.offboardRebooking.required')}</p>}
+              </fieldset>
+            )}
             {p.offboardError && <p role="alert" className={fieldError}>{t(`staff.offboardError.${p.offboardError}`)}</p>}
             <div className="flex flex-wrap gap-2">
               <Button type="submit" variant="destructive" loading={p.offboardWorking}>{t('staff.offboardConfirm')}</Button>
               <Button type="button" variant="outline" onClick={p.onOffboardCancel}>{t('settings.cancel')}</Button>
+            </div>
+          </form>
+        </Section>
+      )}
+
+      {p.reactivating && (
+        <Section title={t('staff.reactivateTitle', { name: p.reactivating.name ?? p.reactivating.email ?? '' })} intro={t('staff.reactivateIntro')}>
+          <form noValidate onSubmit={p.onReactivateSubmit} className="flex flex-col gap-4">
+            <Field id="staff-reactivate-reason" label={t('staff.offboardReason')} error={p.reactivateForm.formState.errors.reason && t('staff.offboardReasonRequired')}>
+              <Textarea id="staff-reactivate-reason" rows={3} maxLength={500} {...describedBy('staff-reactivate-reason', !!p.reactivateForm.formState.errors.reason)} {...p.reactivateForm.register('reason')} />
+            </Field>
+            {p.reactivateError && <p role="alert" className={fieldError}>{t(`staff.reactivateError.${p.reactivateError}`)}</p>}
+            <div className="flex flex-wrap gap-2">
+              <Button type="submit" loading={p.reactivateWorking}>{t('staff.reactivateConfirm')}</Button>
+              <Button type="button" variant="outline" onClick={p.onReactivateCancel}>{t('settings.cancel')}</Button>
             </div>
           </form>
         </Section>

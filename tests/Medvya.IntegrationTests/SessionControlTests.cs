@@ -390,10 +390,26 @@ public sealed class SessionControlTests(PostgresFixture sql) : IClassFixture<Pos
         var future = await BookedVisitAsync(doctor.Id, facilityA, soon);
         var past = await BookedVisitAsync(doctor.Id, facilityA, DateTimeOffset.UtcNow.AddDays(-3), slots: false);
         var others = await BookedVisitAsync(other.Id, facilityA, soon);
+        var waiting = await BookedVisitAsync(doctor.Id, facilityA, DateTimeOffset.UtcNow.AddMinutes(-10), slots: false);
+        await using (var scheduling = sql.Scheduling(tenantA))
+            await scheduling.Appointments.Where(a => a.Id == waiting).ExecuteUpdateAsync(u => u.SetProperty(a => a.State, Medvya.Scheduling.Domain.AppointmentState.CheckedIn));
+        Guid request;
+        await using (var tenancy = sql.Context(tenantA))
+        {
+            var row = new AccessRequest { Id = Guid.NewGuid(), TenantId = tenantA, FacilityId = facilityA, PatientId = Guid.NewGuid(), RequestedBy = doctor.Id, Reason = AccessRequestReason.CoveringColleague, RequestedAt = DateTimeOffset.UtcNow, Status = AccessRequestStatus.Pending };
+            tenancy.AccessRequests.Add(row);
+            await tenancy.SaveChangesAsync();
+            request = row.Id;
+        }
         using var adminBrowser = await SignedIn(admin);
         await Choose(adminBrowser, adminMembership);
 
-        Assert.Equal(HttpStatusCode.NoContent, (await Send(adminBrowser, HttpMethod.Post, $"/v1/staff/{doctorMembership}/offboard", new { reason = "Left the practice" })).StatusCode);
+        // #225: the admin chose "offer new slots"; the answer names the patients already checked in, for reception to reassign.
+        using var offboarded = await Send(adminBrowser, HttpMethod.Post, $"/v1/staff/{doctorMembership}/offboard", new { reason = "Left the practice", offerRebooking = true });
+        Assert.Equal(HttpStatusCode.OK, offboarded.StatusCode);
+        Assert.Equal(1, (await offboarded.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("openVisits").GetInt32());
+        await using (var tenancy = sql.Context(tenantA))
+            Assert.Equal(AccessRequestStatus.Withdrawn, (await tenancy.AccessRequests.SingleAsync(r => r.Id == request)).Status); // off the owner's queue
 
         await using var db = sql.Scheduling(tenantA);
         Assert.Equal(Medvya.Scheduling.Domain.AppointmentState.NeedsRebooking, (await db.Appointments.SingleAsync(a => a.Id == future)).State);
@@ -404,7 +420,85 @@ public sealed class SessionControlTests(PostgresFixture sql) : IClassFixture<Pos
         // A quiet event cancels the released visit's queued reminders without messaging the patient (NotificationsTests covers the notifier).
         var released = Assert.Single(await db.Outbox.Where(e => e.Type == "AppointmentNeedsRebooking.v1").ToListAsync());
         Assert.Equal(future, released.AggregateId);
+        Assert.Contains("\"quiet\":false", released.Payload, StringComparison.Ordinal); // offered: the patient is asked to rebook
+        Assert.Equal(Medvya.Scheduling.Domain.AppointmentState.CheckedIn, (await db.Appointments.SingleAsync(a => a.Id == waiting)).State); // stays for reassignment
+    }
+
+    [Fact]
+    public async Task ReceptionWillCallMovesTheVisitsQuietly()
+    {
+        // #225: without "offer new slots" the patients get no message; their reminders are still cancelled by the event.
+        await Clinics();
+        var admin = await Account("K. Lakshmi");
+        var doctor = await Account("Dr. R. Menon");
+        var adminMembership = await Member(admin, tenantA, facilityA, Role.PracticeAdmin);
+        var doctorMembership = await Member(doctor, tenantA, facilityA, Role.HospitalDoctor);
+        var future = await BookedVisitAsync(doctor.Id, facilityA, DateTimeOffset.UtcNow.AddDays(3));
+        using var adminBrowser = await SignedIn(admin);
+        await Choose(adminBrowser, adminMembership);
+
+        using var offboarded = await Send(adminBrowser, HttpMethod.Post, $"/v1/staff/{doctorMembership}/offboard", new { reason = "Left the practice", offerRebooking = false });
+        Assert.Equal(0, (await offboarded.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("openVisits").GetInt32());
+        await using var db = sql.Scheduling(tenantA);
+        var released = Assert.Single(await db.Outbox.Where(e => e.Type == "AppointmentNeedsRebooking.v1").ToListAsync());
+        Assert.Equal(future, released.AggregateId);
         Assert.Contains("\"quiet\":true", released.Payload, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task AnOffboardedMemberIsReactivatedWithTheSameRoleAuditedAndSignsInAgain()
+    {
+        // #225: re-activation. Only an administrator of that facility, never above what they could grant; the old sessions stay ended.
+        await Clinics();
+        var admin = await Account("K. Lakshmi");
+        var staff = await Account("A. Joseph");
+        var adminMembership = await Member(admin, tenantA, facilityA, Role.PracticeAdmin);
+        var staffMembership = await Member(staff, tenantA, facilityA, Role.Receptionist);
+        var colleague = await Account("R. Priya");
+        var colleagueMembership = await Member(colleague, tenantA, facilityA, Role.Receptionist);
+        using var colleagueBrowser = await SignedIn(colleague);
+        await Choose(colleagueBrowser, colleagueMembership);
+        using var adminBrowser = await SignedIn(admin);
+        await Choose(adminBrowser, adminMembership);
+        using var staffBrowser = await SignedIn(staff);
+        await Choose(staffBrowser, staffMembership);
+        Assert.Equal(HttpStatusCode.OK, (await Send(adminBrowser, HttpMethod.Post, $"/v1/staff/{staffMembership}/offboard", new { reason = "Left the practice" })).StatusCode);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, (await Send(staffBrowser, HttpMethod.Post, $"/v1/staff/{staffMembership}/reactivate", new { reason = "Back" })).StatusCode); // their session ended
+        Assert.Equal(HttpStatusCode.Forbidden, (await Send(colleagueBrowser, HttpMethod.Post, $"/v1/staff/{staffMembership}/reactivate", new { reason = "Back" })).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await Send(adminBrowser, HttpMethod.Post, $"/v1/staff/{staffMembership}/reactivate", new { reason = " " })).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await Send(adminBrowser, HttpMethod.Post, $"/v1/staff/{adminMembership}/reactivate", new { reason = "Not offboarded" })).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await Send(adminBrowser, HttpMethod.Post, $"/v1/staff/{staffMembership}/reactivate", new { reason = "Returned from leave" })).StatusCode);
+
+        await using (var db = sql.Context(tenantA))
+        {
+            var member = await db.Memberships.SingleAsync(m => m.Id == staffMembership);
+            Assert.Equal((MembershipStatus.Active, Role.Receptionist), (member.Status, member.Role));
+            var change = await db.SettingsChanges.SingleAsync(c => c.Section == "staff.reactivate");
+            Assert.Contains("Returned from leave", change.After, StringComparison.Ordinal);
+        }
+        Assert.Contains("staff.reactivate", await AuditActions(tenantA, admin.Id));
+        Assert.Equal(HttpStatusCode.Unauthorized, (await staffBrowser.GetAsync(new Uri("/v1/me/context", UriKind.Relative))).StatusCode); // signs in again
+        Assert.Equal(HttpStatusCode.NotFound, (await Send(adminBrowser, HttpMethod.Post, $"/v1/staff/{staffMembership}/reactivate", new { reason = "Twice" })).StatusCode);
+    }
+
+    [Fact]
+    public async Task HospitalItCannotBringBackADoctorItCouldNotHaveInvited()
+    {
+        // #225: re-activation grants the role again, so it has the invitation ceiling (#875): hospital IT administers staff but holds no clinical access.
+        await Clinics();
+        var it = await Account("S. Varghese");
+        var doctor = await Account("Dr. R. Menon");
+        var itMembership = await Member(it, tenantA, facilityA, Role.HospitalIt);
+        var doctorMembership = await Member(doctor, tenantA, facilityA, Role.HospitalDoctor, MembershipStatus.Offboarded);
+        using var itBrowser = await SignedIn(it);
+        await Choose(itBrowser, itMembership);
+
+        using var refused = await Send(itBrowser, HttpMethod.Post, $"/v1/staff/{doctorMembership}/reactivate", new { reason = "Back" });
+        Assert.Equal(HttpStatusCode.BadRequest, refused.StatusCode);
+        Assert.Contains("above_granter", await refused.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+        await using var db = sql.Context(tenantA);
+        Assert.Equal(MembershipStatus.Offboarded, (await db.Memberships.SingleAsync(m => m.Id == doctorMembership)).Status);
     }
 
     [Fact]
@@ -453,7 +547,7 @@ public sealed class SessionControlTests(PostgresFixture sql) : IClassFixture<Pos
         await Choose(adminBrowser, adminMembership);
 
         Assert.Equal(HttpStatusCode.NotFound, (await Send(adminBrowser, HttpMethod.Post, $"/v1/staff/{atVelachery}/offboard", new { reason = "Left the practice" })).StatusCode);
-        Assert.Equal(HttpStatusCode.NoContent, (await Send(adminBrowser, HttpMethod.Post, $"/v1/staff/{atAdyar}/offboard", new { reason = "Left the practice" })).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await Send(adminBrowser, HttpMethod.Post, $"/v1/staff/{atAdyar}/offboard", new { reason = "Left the practice" })).StatusCode);
 
         await using var tenancy = sql.Context(tenantA);
         Assert.Equal(MembershipStatus.Active, (await tenancy.Memberships.SingleAsync(m => m.Id == atVelachery)).Status);
@@ -514,7 +608,7 @@ public sealed class SessionControlTests(PostgresFixture sql) : IClassFixture<Pos
         Assert.Equal(HttpStatusCode.BadRequest, (await Send(adminBrowser, HttpMethod.Post, $"/v1/staff/{staffAtA}/offboard", new { reason = " " })).StatusCode);
         Assert.Equal(HttpStatusCode.OK, await ContextStatus(staffInA)); // nothing changed without a reason
 
-        Assert.Equal(HttpStatusCode.NoContent, (await Send(adminBrowser, HttpMethod.Post, $"/v1/staff/{staffAtA}/offboard", new { reason = "Left the practice" })).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await Send(adminBrowser, HttpMethod.Post, $"/v1/staff/{staffAtA}/offboard", new { reason = "Left the practice" })).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, await ContextStatus(staffInA)); // the very next request
         Assert.Equal(HttpStatusCode.OK, await ContextStatus(staffInB)); // another clinic is unaffected
         using var again = await SignedIn(staff);
@@ -548,7 +642,7 @@ public sealed class SessionControlTests(PostgresFixture sql) : IClassFixture<Pos
         }
         using var adminBrowser = await SignedIn(admin);
         await Choose(adminBrowser, adminMembership);
-        Assert.Equal(HttpStatusCode.NoContent, (await Send(adminBrowser, HttpMethod.Post, $"/v1/staff/{invited}/offboard", new { reason = "Offer withdrawn" })).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await Send(adminBrowser, HttpMethod.Post, $"/v1/staff/{invited}/offboard", new { reason = "Offer withdrawn" })).StatusCode);
         await using var check = sql.Context(tenantA);
         Assert.NotNull((await check.Invitations.SingleAsync(i => i.MembershipId == invited)).RevokedAt);
     }
@@ -569,7 +663,7 @@ public sealed class SessionControlTests(PostgresFixture sql) : IClassFixture<Pos
         Assert.Equal(HttpStatusCode.OK, await ContextStatus(adminBrowser));
 
         await Member(second, tenantA, facilityA, Role.PracticeAdmin);
-        Assert.Equal(HttpStatusCode.NoContent, (await Send(adminBrowser, HttpMethod.Post, $"/v1/staff/{adminMembership}/offboard", new { reason = "Leaving" })).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await Send(adminBrowser, HttpMethod.Post, $"/v1/staff/{adminMembership}/offboard", new { reason = "Leaving" })).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, await ContextStatus(adminBrowser));
     }
 }

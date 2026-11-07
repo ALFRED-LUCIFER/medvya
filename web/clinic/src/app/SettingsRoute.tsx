@@ -23,6 +23,10 @@ import DisplaysPage from '../features/queue-tv/components/DisplaysPage';
 import { useDisplaysController } from '../features/queue-tv/hooks/useDisplaysController';
 import { useAuditLogController } from '../features/audit-log/hooks/useAuditLogController';
 import AccessReviewPanel from '../features/staff/components/AccessReviewPanel';
+import AccessRequestsPanel from '../features/clinical-access/components/AccessRequestsPanel';
+import ClinicalPolicyPanel from '../features/clinical-access/components/ClinicalPolicyPanel';
+import { useAccessRequestsController } from '../features/clinical-access/hooks/useAccessRequestsController';
+import { useClinicalPolicyController } from '../features/clinical-access/hooks/useClinicalPolicyController';
 import { useAccessReviewController } from '../features/staff/hooks/useAccessReviewController';
 import StaffPanel from '../features/staff/components/StaffPanel';
 import { useCustomRolesController } from '../features/staff/hooks/useCustomRolesController';
@@ -51,6 +55,8 @@ const Audit = () => <AuditLogPanel {...useAuditLogController()} />;
 const Displays = ({ facilityId }: { facilityId: string }) => <DisplaysPage {...useDisplaysController(facilityId)} />;
 
 const Review = () => <AccessReviewPanel {...useAccessReviewController()} />;
+const AccessRequests = () => <AccessRequestsPanel {...useAccessRequestsController()} />;
+const ClinicalPolicy = () => <ClinicalPolicyPanel {...useClinicalPolicyController()} />;
 
 function Staff({ facilityId }: { facilityId: string }) {
   const staff = useStaffController(facilityId);
@@ -60,6 +66,8 @@ function Staff({ facilityId }: { facilityId: string }) {
     <>
       <StaffPanel {...staff} {...table} />
       {!staff.loading && !staff.failed && <CustomRolesPanel catalogue={staff.catalogue} {...roles} />}
+      <AccessRequests />
+      <ClinicalPolicy />
       <Review />
     </>
   );

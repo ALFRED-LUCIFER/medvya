@@ -15,19 +15,31 @@ public sealed class StaffAccess(TenancyDbContext db, IFacilityDirectory faciliti
     public async Task<Role?> CurrentRoleAsync(CancellationToken cancellationToken = default) =>
         user.UserId is { } userId && facility.FacilityId is { } facilityId ? await facilities.ActiveRoleAsync(userId, facilityId, cancellationToken) : null;
 
-    public async Task<Access> AccessAsync(Capability capability, Guid facilityId, CancellationToken cancellationToken = default)
+    public async Task<Access> AccessAsync(Capability capability, Guid facilityId, CancellationToken cancellationToken = default) =>
+        (await AccessAsync([capability], facilityId, cancellationToken))[0];
+
+    public async Task<IReadOnlyList<Access>> AccessAsync(IReadOnlyList<Capability> capabilities, Guid facilityId, CancellationToken cancellationToken = default)
     {
-        if (user.UserId is not { } userId) return Access.None;
-        if (await facilities.ActiveRoleAsync(userId, facilityId, cancellationToken) is not { } role) return Access.None;
-        var access = RoleMatrix.Of(role, capability);
-        // A practice-defined role may add capabilities its base role lacks (MDV-P1-008); only then is the role row read.
-        if (access == Access.None && CustomRoleRules.Extras(role).Contains(capability))
+        ArgumentNullException.ThrowIfNull(capabilities);
+        if (user.UserId is not { } userId || await facilities.ActiveRoleAsync(userId, facilityId, cancellationToken) is not { } role)
+            return [.. capabilities.Select(_ => Access.None)];
+        var pending = await LicencePendingAsync(userId, facilityId, cancellationToken);
+        (bool Read, string? Value) extras = (false, null);
+        var result = new List<Access>(capabilities.Count);
+        foreach (var capability in capabilities)
         {
-            var extras = await db.Memberships.Where(m => m.UserId == userId && m.FacilityId == facilityId && m.Status == MembershipStatus.Active)
-                .Select(m => db.CustomRoles.Where(r => r.Id == m.CustomRoleId).Select(r => r.Capabilities).FirstOrDefault()).SingleOrDefaultAsync(cancellationToken);
-            access = CustomRoleRules.Effective(role, extras, capability);
+            var access = RoleMatrix.Of(role, capability);
+            // A practice-defined role may add capabilities its base role lacks (MDV-P1-008); only then is the role row read, once.
+            if (access == Access.None && CustomRoleRules.Extras(role).Contains(capability))
+            {
+                if (!extras.Read)
+                    extras = (true, await db.Memberships.Where(m => m.UserId == userId && m.FacilityId == facilityId && m.Status == MembershipStatus.Active)
+                        .Select(m => db.CustomRoles.Where(r => r.Id == m.CustomRoleId).Select(r => r.Capabilities).FirstOrDefault()).SingleOrDefaultAsync(cancellationToken));
+                access = CustomRoleRules.Effective(role, extras.Value, capability);
+            }
+            result.Add(LicenceRules.Apply(access, capability, pending));
         }
-        return LicenceRules.Apply(access, capability, await LicencePendingAsync(userId, facilityId, cancellationToken));
+        return result;
     }
 
     public Task<bool> LicencePendingAsync(CancellationToken cancellationToken = default) =>

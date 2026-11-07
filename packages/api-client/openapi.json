@@ -266,6 +266,45 @@
         }
       }
     },
+    "/v1/patients/{patientId}/access-requests": {
+      "post": {
+        "tags": [
+          "AccessRequestEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "patientId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AccessRequestBody"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/v1/schedule": {
       "get": {
         "tags": [
@@ -1909,6 +1948,38 @@
         }
       }
     },
+    "/v1/settings/clinical-access": {
+      "get": {
+        "tags": [
+          "Host.Api"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Host.Api"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClinicalAccessBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/v1/settings/terms": {
       "get": {
         "tags": [
@@ -2826,10 +2897,103 @@
           }
         }
       }
+    },
+    "/v1/access-requests": {
+      "get": {
+        "tags": [
+          "AccessRequestEndpoints"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/access-requests/{requestId}/grant": {
+      "post": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "requestId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/GrantBody"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/access-requests/{requestId}/decline": {
+      "post": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "requestId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "AccessRequestBody": {
+        "required": [
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "reason": {
+            "$ref": "#/components/schemas/AccessRequestReason"
+          }
+        }
+      },
+      "AccessRequestReason": {
+        "enum": [
+          "CoveringColleague",
+          "SeeingPatientToday",
+          "ReviewingResults",
+          "Referral"
+        ]
+      },
       "AddDoctor": {
         "type": "object",
         "properties": {
@@ -3537,6 +3701,23 @@
             "format": "int64"
           }
         }
+      },
+      "ClinicalAccessBody": {
+        "required": [
+          "policy"
+        ],
+        "type": "object",
+        "properties": {
+          "policy": {
+            "$ref": "#/components/schemas/ClinicalAccessPolicy"
+          }
+        }
+      },
+      "ClinicalAccessPolicy": {
+        "enum": [
+          "AllFacilityClinicians",
+          "AssignedOnly"
+        ]
       },
       "ClinicOverview": {
         "required": [
@@ -4376,6 +4557,22 @@
             "items": {
               "$ref": "#/components/schemas/BoardCard"
             }
+          }
+        }
+      },
+      "GrantBody": {
+        "required": [
+          "days"
+        ],
+        "type": "object",
+        "properties": {
+          "days": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -6350,6 +6547,9 @@
   "tags": [
     {
       "name": "Host.Api"
+    },
+    {
+      "name": "AccessRequestEndpoints"
     },
     {
       "name": "AccessLogEndpoints"

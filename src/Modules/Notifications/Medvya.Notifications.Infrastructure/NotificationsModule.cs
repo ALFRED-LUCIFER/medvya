@@ -30,6 +30,7 @@ public static class NotificationsModule
             .AddScoped<IReceiptProcessor, ReceiptProcessor>()
             .AddScoped<INotificationQueries, NotificationQueries>()
             .AddScoped<IStaffNotifications, StaffNotifications>()
+            .AddScoped<Medvya.Tenancy.Application.IAccessRequestParticipant, AccessRequestNotifier>()
             .AddScoped<INotificationPreferences, NotificationPreferences>()
             .AddScoped<IComplianceReminders, ComplianceReminders>();
     }

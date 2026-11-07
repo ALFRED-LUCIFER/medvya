@@ -27,6 +27,10 @@ WALK_IN ──▶ CHECKED_IN
 
 `INVITED → ACTIVE → SUSPENDED → OFFBOARDED`, plus `EXPIRED` for an unaccepted invite. Offboarding revokes sessions immediately (P1-11). Licence expiry generates reminders.
 
+## Access request (P2, MDV-P2-024)
+
+`PENDING → GRANTED (1, 7 or 30 days, then expired) | DECLINED`. There is one PENDING request per clinician, patient and facility; asking again returns it. Only an owner of that facility (Staff, roles, integrations: Config) decides, never the requester, and the first decision wins. A grant is a care relationship until it expires. After an expiry or a decline, the clinician asks again.
+
 ## Capture FSM (P3, P6)
 
 ```

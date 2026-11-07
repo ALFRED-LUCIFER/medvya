@@ -152,6 +152,7 @@ app.MapStaff();
 app.MapAccessLog();
 app.MapQueueDisplaySession();
 app.MapPatientEndpoints();
+app.MapAccessRequestEndpoints();
 if (app.Environment.IsDevelopment() && app.Configuration["Authentication:Oidc:Authority"]?.EndsWith(DevIdentityProvider.Path, StringComparison.Ordinal) == true)
     app.MapDevIdentityProvider();
 

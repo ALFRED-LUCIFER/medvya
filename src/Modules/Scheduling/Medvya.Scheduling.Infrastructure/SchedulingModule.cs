@@ -23,6 +23,7 @@ public static class SchedulingModule
             .AddScoped<DoctorDayTransaction>()
             .AddScoped<Medvya.Patients.Application.IPatientMergeParticipant, PatientMergeParticipant>()
             .AddScoped<Medvya.Tenancy.Application.IStaffOffboardingParticipant, DoctorOffboardingParticipant>()
+            .AddScoped<Medvya.Tenancy.Application.ICareRelationshipSource, VisitCareRelationship>()
             .AddScoped<IScheduleService, ScheduleService>()
             .AddScoped<IScheduleExceptionService, ScheduleExceptionService>()
             .AddScoped<IBookingService, BookingService>()

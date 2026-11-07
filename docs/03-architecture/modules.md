@@ -5,7 +5,7 @@ Sources: Software Architecture §4, PRD v2 §07 repository, Foundations ERD cove
 | Module | Owns (entities) | Critical invariant | First phase | Representative endpoints |
 |---|---|---|---|---|
 | Identity | USER, SESSION, PASSKEY/MFA factor, INVITATION | No password storage in Medvya (Entra External ID). Session revocation is immediate. Offboarding ends all sessions | P0 | `GET /v1/me/context`, `POST /v1/invitations/{token}/accept` |
-| Tenancy | TENANT (organisation), FACILITY, DEPARTMENT, MEMBERSHIP, ROLE, ROLE_PERMISSION, FEATURE_FLAG | Tenant/facility/role/relationship/purpose checked on **every** read and write. Role alone never grants another facility | P0 | `GET /v1/facilities`, `POST /v1/memberships` |
+| Tenancy | TENANT (organisation), FACILITY, DEPARTMENT, MEMBERSHIP, ROLE, ROLE_PERMISSION, FEATURE_FLAG, ACCESS_REQUEST | Tenant/facility/role/relationship/purpose checked on **every** read and write. Role alone never grants another facility. Clinical reads also need a care relationship (`IClinicalAccess`, below) | P0 | `GET /v1/facilities`, `POST /v1/memberships`, `POST /v1/patients/{id}/access-requests` |
 | Audit | AUDIT_EVENT (ledger), ACCESS_REVIEW, BREAK_GLASS_GRANT | Append-only. Every patient-data read/write, sign-in, export and permission change is recorded. No PHI in the payload, only opaque refs | P0 | `GET /v1/admin/audit?scope=authorized` |
 | Practice | PRACTICE_PROFILE, LOCATION, OPERATING_HOURS, HOLIDAY, CLINICIAN_PROFILE, CLINICIAN_LICENCE, LEAVE, SERVICE_CATALOGUE, PRICE_VERSION, PACKAGE, FORMULARY_ITEM, ORDER_SET | A licence is not verified just because a user typed it. Issued invoices keep their price version | P1 | `POST /v1/practice/doctors`, `PUT /v1/practice/hours` |
 | Patients | PATIENT, PATIENT_IDENTIFIER, PATIENT_RELATIONSHIP, PAYER_COVERAGE, CONSENT_RECEIPT, MERGE_REQUEST, EXTERNAL_PATIENT_MAP | No unreviewed dedup. Phone alone never matches. National IDs are Always Encrypted (Aadhaar last 4 only). MRN is facility-scoped | P1 | `POST /v1/patients`, `POST /v1/patients/search`, `GET /v1/patients/{id}`, `POST /v1/patients/merge-requests` |
@@ -36,3 +36,15 @@ Cross-cutting backend-only tables: `OUTBOX_EVENT` (domain events → Service Bus
 ## Domain events (examples)
 
 `PatientRegistered.v1`, `AppointmentBooked.v1`, `AppointmentCheckedIn.v1`, `EncounterStarted.v1`, `NoteSigned.v1`, `PrescriptionAuthorised.v1`, `ResultReceived.v1`, `ResultAcknowledged.v1`, `InvoiceIssued.v1`, `PaymentConfirmed.v1`, `ConsentRecorded.v1`, `ConsentRevoked.v1`. Payloads carry **opaque IDs only, no PHI**.
+
+## Clinical authorisation (MDV-P2-024)
+
+A clinical endpoint calls `IClinicalAccess.RequireAsync(patient, facility, capability, levels)` in its use case. It passes when:
+
+1. **The role reaches it.** The role-permission matrix at that facility (`IStaffAccess`: active membership, custom-role extras, licence gate) gives one of the levels asked for, and the role treats patients (Patient 360 at Read, Limited, Full or Sign). Break-glass opens nothing until P7.
+2. **There is a care relationship.** Either an owner granted this clinician this patient at this facility and the grant has not expired, or a module that knows one says so (`ICareRelationshipSource`; each module reads only its own tables):
+   - Under **all facility clinicians** (the default), the patient belongs to the facility: registered there (Patients) or with a visit there (Scheduling).
+   - Under **assigned only**, a doctor needs a visit in their own calendar (Scheduling) or an encounter they lead (Encounters, MDV-P2-001). A role with Limited Patient 360 (nurse, care coordinator) needs a visit at the facility today.
+
+A refusal is a 403 with code `no_care_relationship` (the clinician may **Request access**; `requestPending` says whether they already did) or `no_access` (the role; asking cannot help). Purpose of use is recorded on every audit row and is one of `AuditPurpose.All`: treatment, registration, billing, audit, operations, support. Any other value is refused at startup (endpoint metadata) and at write time (`AuditLog`).
+

@@ -66,6 +66,8 @@ public sealed class EndpointAuditTests(PostgresFixture sql) : IClassFixture<Post
         "GET /v1/settings/logo",
         "GET /v1/settings/terms", // tenant terms status, no patient data
         "POST /v1/settings/terms/accept", // audited in its own transaction (tenant.terms.accept), no patient data
+        "GET /v1/settings/clinical-access", // the clinic's policy (MDV-P2-024), no patient data
+        "PUT /v1/settings/clinical-access", // audited with before/after (settings.clinical_access.update), no patient data
         // Add doctor (MDV-P1-007): clinician details, licence and fees, no patient data; changes are audited inside the services (DoctorTests).
         "GET /v1/settings/doctors/",
         "POST /v1/settings/doctors/",

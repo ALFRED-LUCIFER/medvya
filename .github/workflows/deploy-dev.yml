@@ -42,7 +42,9 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile && pnpm --filter clinic build
       # /health reports this version plus the commit (+sha), which the smoke test checks.
-      - run: dotnet publish src/Host.Api -c Release -o publish -p:Version="$VERSION"
+      # ReadyToRun (precompiled, needs the runtime id): a restart on the one-core B1 JITs less before the first requests answer (#912).
+      # The build-time OpenAPI export is skipped: nothing serves it, PR CI checks it, and it fails on a runtime-specific publish off Linux x64.
+      - run: dotnet publish src/Host.Api -c Release -r linux-x64 --self-contained false -p:PublishReadyToRun=true -p:OpenApiGenerateDocuments=false -o publish -p:Version="$VERSION"
       # The API serves the built web app under /app/ (same origin as the sign-in cookie).
       - run: mkdir -p publish/wwwroot/app && cp -R web/clinic/dist/. publish/wwwroot/app/
       # Self-contained, so the job's image needs no .NET.

@@ -74,8 +74,9 @@ export default function ProfilePanel(p: Props) {
         </div>
         <div className="flex flex-wrap items-end gap-3">
           <Field id="logo-file" label={t('settings.logo.choose')} hint={t('settings.logo.hint')} error={logoError} className="min-w-60">
-            {/* #896: the browser's own file button is in the browser's language, not the app's; a translated button stands in for it. */}
-            <Input id="logo-file" type="file" accept="image/png,image/jpeg" className="peer sr-only" disabled={p.uploading}
+            {/* #896: the browser's own file button is in the browser's language, not the app's; a translated button stands in for it.
+                A bare input: the house Input's full width outlasts sr-only, which made the page scroll sideways. */}
+            <input id="logo-file" type="file" accept="image/png,image/jpeg" className="peer sr-only" disabled={p.uploading}
               {...describedBy('logo-file', !!logoError, true)} onChange={e => { p.onLogo(e.currentTarget.files?.[0]); e.currentTarget.value = ''; }} />
             <label htmlFor="logo-file" className={buttonVariants({ variant: 'outline', className: 'min-h-11 w-fit cursor-pointer peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ring peer-disabled:pointer-events-none peer-disabled:opacity-50' })}>
               {t('settings.logo.pick')}

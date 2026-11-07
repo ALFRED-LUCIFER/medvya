@@ -50,6 +50,8 @@ type Props = {
   onBookNext?: () => void;
   /** The booking panel (or its hint), beside the schedule on wide screens and above it on narrow ones. */
   panel?: ReactNode;
+  /** A booking or visit is open: on a tablet (768-1279 px) the panel is a drawer over the schedule, closed by its scrim or Escape. */
+  onClosePanel?: () => void;
   /** Leave and exceptions (MDV-P1-012); absent when the role may not book. */
   leavePath?: string | null;
   /** Day sheet (MDV-P1-050): the audited paper fields once fetched, shown for printing only. */
@@ -66,7 +68,7 @@ const all = '__all';
 export default function SchedulePage(props: Props) {
   const { t, formatDay, formatShortDay } = useI18n();
   const panelRef = useRef<HTMLDivElement>(null);
-  const { date, view, weekSpan } = props;
+  const { date, view, weekSpan, onClosePanel } = props;
   const isWeek = view === 'week';
   const title = isWeek && weekSpan ? t('schedule.weekRange', { from: formatShortDay(weekSpan.from), to: formatShortDay(weekSpan.to) })
     : date ? formatDay(date) : t('nav.schedule');
@@ -97,7 +99,7 @@ export default function SchedulePage(props: Props) {
           </div>
           {props.calendars.length > 1 && (
             <Select value={props.filter ?? all} onValueChange={v => props.onFilter(v === all ? null : v)}>
-              <SelectTrigger aria-label={t('schedule.filter')} className="w-56 data-[size=default]:h-11"><SelectValue /></SelectTrigger>
+              <SelectTrigger aria-label={t('schedule.filter')} className="w-56"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {!isWeek && <SelectItem value={all}>{t('schedule.filter.all')}</SelectItem>}
                 {props.calendars.map(c => <SelectItem key={c.id} value={c.id}>{c.name || t('schedule.doctor')}</SelectItem>)}
@@ -113,7 +115,14 @@ export default function SchedulePage(props: Props) {
       {/* The schedule takes the full width when no booking panel sits beside it (the week view). */}
       <div className={cn('grid grid-cols-[minmax(0,1fr)] items-start gap-5', props.panel && 'lg:grid-cols-[minmax(0,1fr)_340px]')}>
         <Body {...props} />
-        {props.panel && <div ref={panelRef} className="scroll-mt-20 max-lg:order-first md:max-lg:fixed md:max-lg:inset-y-0 md:max-lg:end-0 md:max-lg:z-30 md:max-lg:w-96 md:max-lg:overflow-y-auto md:max-lg:bg-background md:max-lg:p-3 md:max-lg:shadow-xl lg:sticky lg:top-20 lg:max-h-[calc(100dvh-6rem)] lg:overflow-y-auto print:hidden">{props.panel}</div>}
+        {/* Only an open booking or visit is a drawer on a tablet; the hint and the "booked" note sit above the schedule, as on phones. */}
+        {props.panel && onClosePanel && <div aria-hidden className="fixed inset-0 z-30 hidden bg-black/40 md:max-lg:block print:hidden" onClick={onClosePanel} />}
+        {props.panel && <div ref={panelRef} className={cn('scroll-mt-20 max-lg:order-first lg:sticky lg:top-20 lg:max-h-[calc(100dvh-6rem)] lg:overflow-y-auto print:hidden',
+          onClosePanel && 'md:max-lg:fixed md:max-lg:inset-y-0 md:max-lg:end-0 md:max-lg:z-30 md:max-lg:w-96 md:max-lg:overflow-y-auto md:max-lg:bg-background md:max-lg:p-3 md:max-lg:shadow-xl')}
+          // Escape closes the drawer, not the side column on a wide screen; a portalled menu inside (a Select) is not in this element and closes itself.
+          onKeyDown={e => { if (e.key === 'Escape' && onClosePanel && getComputedStyle(e.currentTarget).position === 'fixed' && e.currentTarget.contains(e.target as Node)) onClosePanel(); }}>
+          {props.panel}
+        </div>}
       </div>
       {props.onBookNext && (
         // Pinned above the phone's bottom tabs; the panel it opens sits above the list, so it is brought into view.

@@ -156,7 +156,7 @@ export default function BookingPanel(p: Props) {
         <div className={field}>
           <Label htmlFor="booking-visit-type">{t('booking.visitType')}</Label>
           <Select value={p.choice.visitType} onValueChange={v => p.onVisitType(v as VisitType)}>
-            <SelectTrigger id="booking-visit-type" className={`${control} data-[size=default]:h-11`}><SelectValue /></SelectTrigger>
+            <SelectTrigger id="booking-visit-type" className={control}><SelectValue /></SelectTrigger>
             <SelectContent>
               {visitTypes.map(v => (
                 <SelectItem key={v} value={v}>{t('booking.visitTypeLength', { type: t(`visitType.${v}`), minutes: lengthOf(v) ?? 0 })}</SelectItem>
@@ -175,7 +175,7 @@ export default function BookingPanel(p: Props) {
         <div className={field}>
           <Label htmlFor="booking-reason">{t('booking.reasonCategory')}</Label>
           <Select value={p.reasonCategory} onValueChange={v => p.onReasonCategory(v as BookingForm['reasonCategory'])}>
-            <SelectTrigger id="booking-reason" className={`${control} data-[size=default]:h-11`}><SelectValue /></SelectTrigger>
+            <SelectTrigger id="booking-reason" className={control}><SelectValue /></SelectTrigger>
             <SelectContent>{reasonCategories.map(r => <SelectItem key={r} value={r}>{t(`reasonCategory.${r}`)}</SelectItem>)}</SelectContent>
           </Select>
         </div>
@@ -191,7 +191,7 @@ export default function BookingPanel(p: Props) {
         <div className={field}>
           <Label htmlFor="booking-channel">{t('booking.channel')}</Label>
           <Select value={p.channel} onValueChange={v => p.onChannel(v as BookingForm['channel'])}>
-            <SelectTrigger id="booking-channel" className={`${control} data-[size=default]:h-11`}><SelectValue /></SelectTrigger>
+            <SelectTrigger id="booking-channel" className={control}><SelectValue /></SelectTrigger>
             <SelectContent>{channels.map(c => <SelectItem key={c} value={c}>{t(`channel.${c}`)}</SelectItem>)}</SelectContent>
           </Select>
         </div>
@@ -199,7 +199,7 @@ export default function BookingPanel(p: Props) {
         <div className={field}>
           <Label htmlFor="booking-unit">{t('series.unit')}</Label>
           <Select value={p.monthly ? 'monthly' : 'weekly'} onValueChange={v => p.onMonthly(v === 'monthly')}>
-            <SelectTrigger id="booking-unit" className={`${control} data-[size=default]:h-11`}><SelectValue /></SelectTrigger>
+            <SelectTrigger id="booking-unit" className={control}><SelectValue /></SelectTrigger>
             <SelectContent>{(['weekly', 'monthly'] as const).map(u => <SelectItem key={u} value={u}>{t(`series.unit.${u}`)}</SelectItem>)}</SelectContent>
           </Select>
         </div>

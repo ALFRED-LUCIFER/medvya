@@ -2649,6 +2649,8 @@
   "notifications.kind.RegistrationExpired": "The clinic registration expires today or has expired. Renew it, then enter the new date in Settings, Profile.",
   "settings.profile.registrationExpires": "Registration valid until",
   "settings.profile.registrationExpiresHint": "Owners are reminded 60, 30 and 7 days before, and on the day.",
+  "adjustment.viewOnly": "Leave is added by the practice admin or by the doctor for their own calendar. You can see it here and rebook the visits it moves.",
+  "adjustment.error.stale": "Someone else changed this while you were working. The list is up to date now; check it and try again.",
   "staff.offboardRebooking": "Their booked patients",
   "staff.offboardRebooking.offer": "Offer new slots",
   "staff.offboardRebooking.offer.hint": "Each patient gets a message asking them to book again. It names no doctor and no reason.",

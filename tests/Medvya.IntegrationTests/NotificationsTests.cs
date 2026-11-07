@@ -337,7 +337,7 @@ public sealed partial class NotificationsTests(PostgresFixture sql) : IClassFixt
         await RunJobAsync();
         email.Sent.Clear();
 
-        await h.Adjustments(h.Reception).SaveAsync(new SaveAdjustment
+        await h.Adjustments(h.Admin).SaveAsync(new SaveAdjustment
         {
             FacilityId = h.Facility, CalendarId = h.Doctor, Kind = ExceptionKind.Leave, FromDate = Monday.AddDays(1), ToDate = Monday.AddDays(1), Reason = "Conference",
             Actions = [new(offered.Id, RebookAction.Offer), new(manual.Id, RebookAction.Manual)],

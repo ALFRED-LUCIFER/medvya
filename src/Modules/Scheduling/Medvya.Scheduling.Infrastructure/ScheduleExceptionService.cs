@@ -24,7 +24,9 @@ public sealed class ScheduleExceptionService(
         var (_, zone) = await context.FacilityAsync(facilityId, cancellationToken);
         var today = ScheduleRules.LocalDate(context.Now, zone);
         var rows = await context.ExceptionsAsync(facilityId, today, DateOnly.MaxValue, calendarId, cancellationToken);
-        return [.. rows.OrderBy(x => x.FromDate).ThenBy(x => x.Start).Select(View)];
+        var manages = new Dictionary<Guid, bool>();
+        foreach (var id in rows.Select(r => r.CalendarId).Distinct()) manages[id] = await context.CanManageCalendarAsync(facilityId, id, cancellationToken);
+        return [.. rows.OrderBy(x => x.FromDate).ThenBy(x => x.Start).Select(x => View(x, manages[x.CalendarId]))];
     }
 
     public async Task<SavedAdjustment> SaveAsync(SaveAdjustment command, CancellationToken cancellationToken = default)
@@ -33,6 +35,7 @@ public sealed class ScheduleExceptionService(
         await context.RequireAsync(command.FacilityId, SchedulingAccess.CanBook, cancellationToken);
         var calendar = (await context.CalendarsAsync(command.FacilityId, cancellationToken)).SingleOrDefault(c => c.Id == command.CalendarId)
             ?? throw new SchedulingValidationException([new("calendarId", "unknown")]);
+        if (!await context.CanManageCalendarAsync(command.FacilityId, calendar.Id, cancellationToken)) throw new SchedulingAccessDeniedException();
         var (_, zone) = await context.FacilityAsync(command.FacilityId, cancellationToken);
         var (now, me) = (context.Now, context.UserId);
         var template = await db.Templates.AsNoTracking().SingleOrDefaultAsync(t => t.FacilityId == command.FacilityId && t.CalendarId == calendar.Id, cancellationToken);
@@ -40,6 +43,7 @@ public sealed class ScheduleExceptionService(
         var old = command.ReplacesId is not { } oldId ? null
             : await db.Exceptions.AsNoTracking().SingleOrDefaultAsync(x => x.Id == oldId && x.FacilityId == command.FacilityId && x.CalendarId == calendar.Id, cancellationToken)
                 ?? throw new SchedulingValidationException([new("id", "unknown")]);
+        if (old is not null && command.Version != Version(old)) throw new SchedulingValidationException([new("id", "stale")]);
         var exception = new ScheduleAdjustment
         {
             Id = old?.Id ?? Guid.CreateVersion7(), TenantId = context.TenantId, FacilityId = command.FacilityId, CalendarId = calendar.Id, Kind = command.Kind,
@@ -72,8 +76,14 @@ public sealed class ScheduleExceptionService(
                 throw new ExceptionActionsRequiredException([.. affected.Select(a => SchedulingContext.Chip(a, names))]);
             }
 
-            if (old is not null && await db.Exceptions.Where(x => x.Id == old.Id).ExecuteDeleteAsync(cancellationToken) == 0)
-                throw new SchedulingValidationException([new("id", "unknown")]); // deleted by someone else since it was read
+            if (old is not null)
+            {
+                // Read again under the locks: deleted or edited by someone else since it was read is refused, never overwritten.
+                var current = await db.Exceptions.AsNoTracking().SingleOrDefaultAsync(x => x.Id == old.Id, cancellationToken)
+                    ?? throw new SchedulingValidationException([new("id", "unknown")]);
+                if (Version(current) != Version(old)) throw new SchedulingValidationException([new("id", "stale")]);
+                await db.Exceptions.Where(x => x.Id == old.Id).ExecuteDeleteAsync(cancellationToken);
+            }
             db.Exceptions.Add(exception);
             foreach (var a in affected)
             {
@@ -98,14 +108,16 @@ public sealed class ScheduleExceptionService(
 
         foreach (var a in moved) // the cards appear in the board's "needs rebooking" lane
             await FrontDeskService.NotifyAsync(notifier, log, new(a.TenantId, a.FacilityId, a.Id, AppointmentState.NeedsRebooking, now));
-        return new(View(exception), offered, manual);
+        return new(View(exception, true), offered, manual); // saving needed the right to manage it
     }
 
-    public async Task DeleteAsync(Guid facilityId, Guid exceptionId, CancellationToken cancellationToken = default)
+    public async Task DeleteAsync(Guid facilityId, Guid exceptionId, string? version, CancellationToken cancellationToken = default)
     {
         await context.RequireAsync(facilityId, SchedulingAccess.CanBook, cancellationToken);
         var x = await db.Exceptions.AsNoTracking().SingleOrDefaultAsync(e => e.Id == exceptionId && e.FacilityId == facilityId, cancellationToken)
             ?? throw new SchedulingValidationException([new("id", "unknown")]);
+        if (!await context.CanManageCalendarAsync(facilityId, x.CalendarId, cancellationToken)) throw new SchedulingAccessDeniedException();
+        if (version != Version(x)) throw new SchedulingValidationException([new("id", "stale")]);
         var (_, zone) = await context.FacilityAsync(facilityId, cancellationToken);
         var template = await db.Templates.AsNoTracking().SingleOrDefaultAsync(t => t.FacilityId == facilityId && t.CalendarId == x.CalendarId, cancellationToken);
         await transaction.RunAsync(Days(x).Select(d => (x.CalendarId, d)), async () =>
@@ -115,7 +127,9 @@ public sealed class ScheduleExceptionService(
                 var others = await db.Exceptions.AsNoTracking().Where(e => e.Id != x.Id && e.FacilityId == facilityId && e.CalendarId == x.CalendarId && e.FromDate <= x.ToDate && e.ToDate >= x.FromDate).ToListAsync(cancellationToken);
                 if ((await StrandedAsync(x, template, others, zone, cancellationToken)).Count > 0) throw new SchedulingValidationException([new("id", "has_bookings")]);
             }
-            if (await db.Exceptions.Where(e => e.Id == x.Id).ExecuteDeleteAsync(cancellationToken) == 0) throw new SchedulingValidationException([new("id", "unknown")]);
+            var current = await db.Exceptions.AsNoTracking().SingleOrDefaultAsync(e => e.Id == x.Id, cancellationToken) ?? throw new SchedulingValidationException([new("id", "unknown")]);
+            if (Version(current) != Version(x)) throw new SchedulingValidationException([new("id", "stale")]); // edited meanwhile: deleting would lose that edit
+            await db.Exceptions.Where(e => e.Id == x.Id).ExecuteDeleteAsync(cancellationToken);
             await context.AuditAsync(SchedulingAudit.ExceptionDelete, SchedulingAudit.ExceptionResource, SchedulingAudit.Operations, x.Id, null, cancellationToken);
             return true;
         }, cancellationToken);
@@ -148,5 +162,10 @@ public sealed class ScheduleExceptionService(
 
     static IEnumerable<DateOnly> Days(ScheduleAdjustment x) => Enumerable.Range(0, x.ToDate.DayNumber - x.FromDate.DayNumber + 1).Select(i => x.FromDate.AddDays(i));
 
-    static ExceptionView View(ScheduleAdjustment x) => new(x.Id, x.CalendarId, x.Kind, x.FromDate, x.ToDate, x.Start, x.End, x.Reason);
+    static ExceptionView View(ScheduleAdjustment x, bool manages) =>
+        new(x.Id, x.CalendarId, x.Kind, x.FromDate, x.ToDate, x.Start, x.End, manages ? x.Reason : null, manages, Version(x));
+
+    /// <summary>A short digest of what the exception says (an edit replaces the row under the same id, so no row version survives it).</summary>
+    static string Version(ScheduleAdjustment x) => Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(
+        string.Join('|', x.Kind, x.FromDate.DayNumber, x.ToDate.DayNumber, x.Start?.Ticks, x.End?.Ticks, x.Reason))))[..16];
 }

@@ -2646,6 +2646,8 @@
   "notifications.kind.RegistrationExpired": "ينتهي تسجيل العيادة اليوم أو انتهى. جدّده، ثم أدخل التاريخ الجديد في الإعدادات، الملف التعريفي.",
   "settings.profile.registrationExpires": "التسجيل صالح حتى",
   "settings.profile.registrationExpiresHint": "يُذكَّر المالكون قبل 60 و30 و7 أيام، وفي يوم الانتهاء.",
+  "adjustment.viewOnly": "يضيف مدير العيادة الإجازة، أو يضيفها الطبيب لتقويمه فقط. يمكنك رؤيتها هنا وإعادة حجز الزيارات التي تنقلها.",
+  "adjustment.error.stale": "غيّر شخص آخر هذا أثناء عملك. القائمة محدّثة الآن؛ راجعها وحاول مرة أخرى.",
   "staff.offboardRebooking": "مرضاهم المحجوزون",
   "staff.offboardRebooking.offer": "عرض مواعيد جديدة",
   "staff.offboardRebooking.offer.hint": "يتلقى كل مريض رسالة تطلب منه الحجز مرة أخرى، دون ذكر الطبيب أو السبب.",

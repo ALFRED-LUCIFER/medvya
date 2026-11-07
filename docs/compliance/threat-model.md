@@ -13,6 +13,7 @@ Status column: **Done** = implemented and tested; otherwise the ticket that deli
      │                    └──▶ [Service Bus] ──▶ [AI worker] ──▶ [Azure OpenAI / Speech, in region]   (P3)
 [Phone/clip] ──TLS + scoped SAS──▶ [Blob]                                       (P3/P6)
 [Queue TV] ──display token──▶ [Host.Api]                                        (P1)
+[Staff / patient app] ──TLS + bearer (native session)──▶ [Host.Api]            (P5, ADR-011)
 ```
 
 ## B1 · Browser → Host.Api (BFF)
@@ -76,8 +77,24 @@ Status column: **Done** = implemented and tested; otherwise the ticket that deli
 | E | A display session used on staff endpoints, or a staff session on the TV | Separate authentication scheme and policy: staff endpoints take only the staff cookie, display endpoints only the display (tests both ways) | **Done** (MDV-P1-031) |
 | I | A revoked TV still connected over WebSockets | It gets only empty pings until it reconnects; every refetch and reconnect is refused at once | Accepted (MDV-P1-031) |
 
+## B7 · Staff and patient phone apps (ADR-011)
+
+| STRIDE | Threat | Mitigation | Status |
+|---|---|---|---|
+| S | Stolen or replayed tokens | Native session on the server-side row; 15-min access token in memory only; refresh token in secure-store, rotated on each use, a replay ends the session (audited); bearer-only native sessions, cookie-only browser sessions | **Done** for staff (MDV-P5-033, PR #844); patients MDV-P5-033 |
+| S | Another app catching the sign-in redirect | PKCE S256 (a caught code is useless); allow-listed redirect URIs; verified https links before release | PKCE **Done** (PR #844); links MDV-P5-039 |
+| I | **Lost phone** | Remote revoke refused on the next request; app wipes the encrypted store (including unsent audio) on the first 401; visit flagged "recording incomplete" | Server **Done** (PR #844); wipe MDV-P5-034/035 |
+| I | **Shared phone** | 15-min biometric/PIN lock; one person per install; switch user = sign-out + wipe | Lock done locally (MDV-P5-034); switch user MDV-P5-034 |
+| I | **Screenshot** or app-switcher preview | Staff: `FLAG_SECURE` on Android, blurred switcher and audited screenshot detection on iOS. Patient: blurred switcher | MDV-P5-034, MDV-P5-036 |
+| I | **Push preview** on the lock screen | Payload = opaque id + fixed text; detail fetched after unlock; token removed on revoke | MDV-P5-038 |
+| I | **Offline queue** read off the device | Encrypted SQLite, key in secure-store; staff cache today only, deleted after 24 h and at sign-out/revoke; nothing in AsyncStorage, logs or crash reports | MDV-P5-034, MDV-P5-035 |
+| E | Rooted or jailbroken phone reading the store | Staff app refuses to sign in; patient app warns. Best effort, not relied on | MDV-P5-039 |
+| T | Over-the-air update changing clinical logic | EAS Update for UI only; pipeline refuses clinical changes | MDV-P5-039 |
+| D | Phones sharing one rate-limit bucket behind App Service | Client address from the last X-Forwarded-For entry on App Service | MDV-P0-007 (PR #845) |
+
 ## Residual risks accepted for now
 
 - `style-src 'unsafe-inline'` in the CSP, for inline state-colour style attributes only (ADR-010). Remove by moving those colours to classes.
 - Branch protection is enabled only once CI can be pushed (`workflow` scope); until then, review discipline only.
+- Phone apps: rooted-device and iOS screenshot detection can be bypassed; unsent audio on a revoked phone is lost by design (ADR-011).
 - Solo founder: limited separation of duties for privileged access. Mitigated by PIM activation logs and the break-glass procedure (`secure-development.md`).

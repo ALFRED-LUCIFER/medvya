@@ -119,6 +119,12 @@ public class DatabaseRoleTests(PostgresFixture sql) : IClassFixture<PostgresFixt
         await Denied("notifications_user", "SELECT \"Id\" FROM scheduling.\"Appointments\" LIMIT 1");
         await Denied("notifications_user", "DELETE FROM notifications.\"Attempts\""); // the attempts are the delivery history
         await Denied("scheduling_user", "SELECT \"Id\" FROM notifications.\"Notifications\" LIMIT 1");
+        await Run("encounters_user", "SELECT \"Id\" FROM encounters.\"Encounters\" LIMIT 1");
+        await Denied("encounters_user", "SELECT \"Id\" FROM patients.\"Patients\" LIMIT 1");
+        await Denied("encounters_user", "SELECT \"Id\" FROM scheduling.\"Appointments\" LIMIT 1");
+        await Denied("encounters_user", "DELETE FROM encounters.\"Encounters\""); // clinical records are never deleted
+        await Denied("scheduling_user", "SELECT \"Id\" FROM encounters.\"Encounters\" LIMIT 1");
+        await Denied("reporting_user", "SELECT \"Id\" FROM encounters.\"Encounters\" LIMIT 1");
     }
 
     [Fact]

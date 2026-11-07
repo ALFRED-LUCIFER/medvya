@@ -132,10 +132,12 @@ test('with billing switched on (flag billing.invoices), Billing cards lead to pa
   await expect(billing.getByRole('button', { name: 'Close visit' })).toBeEnabled();
 });
 
-test('a read-only role sees the board without actions', async ({ page }) => {
+test('a read-only role sees the board without queue actions; as a doctor it only starts consultations (MDV-P2-001)', async ({ page }) => {
   await open(page, { as: hospitalDoctor });
   await expect(cardOf(page, 'Meera Iyer (synthetic)')).toBeVisible();
-  await expect(page.getByRole('region', { name: 'Visits by status' }).getByRole('button')).toHaveCount(0);
+  const buttons = await page.getByRole('region', { name: 'Visits by status' }).getByRole('button').allTextContents();
+  // Checked in, with the nurse and in consult; never booked or billing, and no check-in or move.
+  expect(buttons).toEqual(['Start consultation', 'Start consultation', 'Open consultation']);
 });
 
 test('empty, no access, failure and offline each say so', async ({ page, context }) => {

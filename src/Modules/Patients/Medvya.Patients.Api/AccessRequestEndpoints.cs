@@ -71,17 +71,6 @@ public static class AccessRequestEndpoints
         });
     }
 
-    /// <summary>
-    /// The 403 a clinical endpoint answers when <see cref="IClinicalAccess"/> refuses: code <c>no_care_relationship</c> when asking for
-    /// access can help (and whether a request is already waiting), else <c>no_access</c>. Never says anything about the patient.
-    /// </summary>
-    public static IResult Refused(ClinicalAccessDeniedException e)
-    {
-        ArgumentNullException.ThrowIfNull(e);
-        return Results.Problem(statusCode: StatusCodes.Status403Forbidden, title: "No access to this patient",
-            extensions: new Dictionary<string, object?> { ["code"] = e.CanRequest ? "no_care_relationship" : "no_access", ["requestPending"] = e.RequestPending });
-    }
-
     // Inside the audit filter (added after it), so the row records the answer the caller gets.
     static async ValueTask<object?> MapErrors(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
     {
@@ -91,7 +80,7 @@ public static class AccessRequestEndpoints
         }
         catch (ClinicalAccessDeniedException e)
         {
-            return Refused(e);
+            return ClinicalAccessProblem.For(e);
         }
         catch (SettingsValidationException e)
         {

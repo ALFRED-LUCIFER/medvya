@@ -47,6 +47,8 @@ type Props = {
   workload: ReturnType<typeof workload>;
   /** Payment for Billing cards: present when billing is on (flag billing.invoices, P4); until then a disabled placeholder. */
   paymentAction?: ReactNode;
+  /** "Start consultation" for a card (MDV-P2-001), for doctors; null for a card it does not apply to. */
+  consultAction?: (card: BoardCard) => ReactNode;
 };
 
 /** P-01 Reception board: today's visits by state, one tap per step, nonclinical information only. */
@@ -167,7 +169,7 @@ function Column(props: Props & { state: BoardColumn; board: Board }) {
   );
 }
 
-function Card({ card, board, now, failedVisitIds, canMove, online, confirmingId, pendingId, failure, paymentAction, onStartCheckIn, onConfirmCheckIn, onCancelCheckIn, onMove }: Props & { card: BoardCard; board: Board }) {
+function Card({ card, board, now, failedVisitIds, canMove, online, confirmingId, pendingId, failure, paymentAction, consultAction, onStartCheckIn, onConfirmCheckIn, onCancelCheckIn, onMove }: Props & { card: BoardCard; board: Board }) {
   const { t, formatTime, formatDate } = useI18n();
   const state = card.state as BoardColumn;
   const next = nextState(state);
@@ -215,6 +217,7 @@ function Card({ card, board, now, failedVisitIds, canMove, online, confirmingId,
           <p id={`${nameId}-pay`} className="text-xs text-muted-foreground">{t('board.paymentLater')}</p>
         </>
       ))}
+      {consultAction?.(card)}
       {error && <p role="alert" className="text-xs font-bold text-danger-700">{t(`board.error.${error}`)}</p>}
     </article>
   );

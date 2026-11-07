@@ -75,3 +75,18 @@ Each step: who acts, on which screen, and what changes. 🔒 = clinician approva
 | 4 | H-01 | Hospital IT | Retry | Delivered with receipt. |  |
 | 5 | H-04 | Doctor | Conflict to clinician | HIS med active vs Medvya stopped. | 🔒 ↪ |
 | 6 | H-05 | Hospital IT | Inspect audit event | Append-only trail. |  |
+
+## Build status (not generated)
+
+Which steps run in the browser against the real stack (`pnpm e2e:fullstack`: real Host.Api, PostgreSQL, sign-in; `tests/e2e/fullstack/j1.spec.ts` to `j6.spec.ts`, `front-desk.spec.ts`), and which ticket builds the rest. A pending step is `fixme` in the full-stack spec, tagged with that ticket (`--grep @MDV-P2-007`). The mocked specs (`tests/e2e/journeys`) cover the same built steps without an API. Updated 7 Nov 2026 (MDV-P0-023).
+
+| Journey | Green on the real stack | Pending (ticket that builds it) |
+|---|---|---|
+| J1 | 1, 3, 4 (one story test, `fullstack/j1.spec.ts`) | 2 MDV-P4-002 · 5 MDV-P3-003 · 6 MDV-P2-009 · 7 MDV-P3-012 · 8 MDV-P4-004 |
+| J2 | 1 (started from the shared board; Today is MDV-P2-002) | 2 MDV-P2-004 · 3 MDV-P3-005 · 4 MDV-P3-009 · 5 MDV-P3-012 · 6 MDV-P2-017 · 7 MDV-P2-020 · 8 MDV-P4-016 |
+| J3 | 1, 2, 3, 4, 6 (doctor sees it on the board, not Today), 7 | 5 MDV-P2-007, MDV-P2-008 |
+| J4 | none | 1 MDV-P6-002 · 2 MDV-P6-003 · 3 MDV-P6-004 · 4 MDV-P3-010 · 5 MDV-P3-009 · 6 MDV-P7-006 |
+| J5 | none | 1 MDV-P2-018 · 2 MDV-P4-014 · 3, 5 MDV-P4-015 · 4 MDV-P4-018 · 6 MDV-P4-019 · 7 MDV-P4-016 |
+| J6 | none | 1 MDV-P7-002 · 2 to 5 MDV-P7-006 · 6 MDV-P7-008 |
+
+Clinical advisor sign-off (MDV-P0-023, R0 exit criterion 1): not recorded yet.

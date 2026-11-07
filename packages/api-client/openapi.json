@@ -43,15 +43,28 @@
             "schema": {
               "type": "boolean"
             }
-          },
-          {
-            "name": "loginHint",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
           }
         ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Host.Api"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignInStart"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "description": "OK"
@@ -6407,6 +6420,35 @@
           "Male",
           "Other"
         ]
+      },
+      "SignInStart": {
+        "type": "object",
+        "properties": {
+          "loginHint": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "returnUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "invitation": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "signup": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          }
+        }
       },
       "SlotView": {
         "required": [

@@ -1,5 +1,6 @@
 import { createRequire } from 'node:module';
 import { expect, test, type Page } from '@playwright/test';
+import { mockSignInStart } from './support/signIn';
 
 // MDV-P1-059 against a mocked API: the Medvya-owned screens of the 6 Nov sign-in flow. The provider's pages (code, passkey, MFA) are not ours.
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
@@ -13,16 +14,18 @@ async function axe(page: Page) {
 const signedOut = async (page: Page, locale = 'en') => {
   await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
   await page.route('**/v1/me/context', r => r.fulfill({ status: 401 }));
-  await page.route('**/bff/login**', r => r.fulfill({ body: 'signing in' }));
+  return mockSignInStart(page);
 };
 
 test('the work email goes to the provider as a login hint, and nothing else is kept', async ({ page }) => {
-  await signedOut(page);
+  const start = await signedOut(page);
   await page.goto('/');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Sign in to Medvya');
   await page.getByLabel('Work email').fill('reception.desk@example.test');
   await page.getByLabel('Work email').press('Enter');
-  await expect(page).toHaveURL('/bff/login?returnUrl=%2F&loginHint=reception.desk%40example.test');
+  await expect(page).toHaveURL(start.providerUrl);
+  expect(start.bodies).toEqual([{ loginHint: 'reception.desk@example.test', returnUrl: '/' }]);
+  expect(start.leaks('example.test')).toEqual([]); // in the POST body only, never in a Medvya URL
   expect(await page.evaluate(() => JSON.stringify({ ...localStorage, ...sessionStorage }))).not.toContain('example.test');
 });
 
@@ -44,6 +47,16 @@ test('passkey and organisation sign-in start the provider sign-in without a hint
   await expect(page).toHaveURL('/bff/login?returnUrl=%2F');
 });
 
+test('a refused sign-in start comes back with the generic message', async ({ page }) => {
+  await signedOut(page);
+  await page.route('**/bff/login', r => r.fulfill({ status: 429 }));
+  await page.goto('/');
+  await page.getByLabel('Work email').fill('reception.desk@example.test');
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await expect(page).toHaveURL('/?signin=failed');
+  await expect(page.getByRole('alert')).toContainText('Sign-in did not complete');
+});
+
 test('a refused sign-in says so without the reason', async ({ page }) => {
   await signedOut(page);
   await page.goto('/?signin=failed');
@@ -51,10 +64,12 @@ test('a refused sign-in says so without the reason', async ({ page }) => {
 });
 
 test('create account: two steps feed the setup, the email becomes the login hint', async ({ page }) => {
-  await signedOut(page);
+  const start = await signedOut(page);
   await page.goto('/');
   await page.getByRole('link', { name: 'Create a practice' }).click();
   await expect(page).toHaveURL('/signup');
+  // The sign-in page also has a Continue button: wait for the sign-up step before pressing it.
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Your practice');
   await page.getByRole('button', { name: 'Continue' }).click();
   await expect(page.getByText('Fill this in to continue.')).toHaveCount(2); // practice name and city
   await page.getByRole('radio', { name: /United Arab Emirates/ }).check();
@@ -67,7 +82,9 @@ test('create account: two steps feed the setup, the email becomes the login hint
   await page.getByLabel('Work email').fill('owner@example.test');
   await page.getByRole('radio', { name: 'A clinic manager' }).check();
   await page.getByRole('button', { name: 'Continue' }).click();
-  await expect(page).toHaveURL('/bff/login?signup=true&returnUrl=%2Fonboarding%3Fcountry%3DAE&loginHint=owner%40example.test');
+  await expect(page).toHaveURL(start.providerUrl);
+  expect(start.bodies).toEqual([{ loginHint: 'owner@example.test', returnUrl: '/onboarding?country=AE', signup: true }]);
+  expect(start.leaks('example.test')).toEqual([]);
 });
 
 test('choose location: the last used facility is first and marked in words; "Not you?" signs out', async ({ page }) => {

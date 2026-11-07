@@ -155,15 +155,29 @@ public static partial class StaffAuthentication
 
     public static WebApplication MapStaffSession(this WebApplication app)
     {
-        app.MapGet("/bff/login", (string? returnUrl, string? invitation, bool? signup, string? loginHint, IConfiguration config) =>
+        // No-hint start: deploy smoke test, invitation links, passkey and organisation buttons. The work email never rides in a Medvya
+        // URL (App Service logs, browser history and proxies keep URLs, AGENTS.md 1.2), so a query-string hint is refused, not read.
+        app.MapGet("/bff/login", (string? returnUrl, string? invitation, bool? signup, HttpRequest request, IConfiguration config) =>
+                request.Query.ContainsKey("loginHint")
+                    ? Results.Problem(statusCode: StatusCodes.Status400BadRequest, title: "Send the login hint in the request body")
+                    : Results.Challenge(SignInProperties(returnUrl, invitation, signup, config), [OpenIdConnectDefaults.AuthenticationScheme]))
+            .AllowAnonymous()
+            .RequireRateLimiting(SignInRateLimit);
+
+        // Start with the work email (MDV-P1-059): the hint comes in the body and the browser follows the returned provider address itself.
+        app.MapPost("/bff/login", async (SignInStart start, HttpContext ctx, IConfiguration config) =>
             {
+                // The house anti-forgery header: a cross-site page cannot add it without a CORS preflight, which this API never grants.
+                if (!ctx.Request.Headers.ContainsKey(CsrfHeader)) return Results.Problem(statusCode: StatusCodes.Status400BadRequest, title: "Missing anti-forgery header");
                 // A hint is only a convenience for the provider's page, so a malformed one is refused rather than passed on.
-                if (loginHint is not null && !IsLoginHint(loginHint)) return Results.Problem(statusCode: StatusCodes.Status400BadRequest, title: "Invalid login hint");
-                var properties = new AuthenticationProperties { RedirectUri = returnUrl is not null && IsLocal(returnUrl) ? returnUrl : AppPath(config) };
-                if (InvitationToken.Read(invitation) is not null) properties.Items[InvitationSignIn.Item] = invitation;
-                if (signup == true) properties.Items[SignUpItem] = "1";
-                if (loginHint is not null) properties.SetParameter(LoginHintParameter, loginHint);
-                return Results.Challenge(properties, [OpenIdConnectDefaults.AuthenticationScheme]);
+                if (start.LoginHint is not null && !IsLoginHint(start.LoginHint)) return Results.Problem(statusCode: StatusCodes.Status400BadRequest, title: "Invalid login hint");
+                var properties = SignInProperties(start.ReturnUrl, start.Invitation, start.Signup, config);
+                if (start.LoginHint is not null) properties.SetParameter(LoginHintParameter, start.LoginHint);
+                await ctx.ChallengeAsync(OpenIdConnectDefaults.AuthenticationScheme, properties);
+                // The handler answered with a redirect; hand its address (and its correlation cookies) to the page instead.
+                var location = ctx.Response.Headers.Location.ToString();
+                ctx.Response.Headers.Remove(Microsoft.Net.Http.Headers.HeaderNames.Location);
+                return Results.Ok(new SignInRedirect(location));
             })
             .AllowAnonymous()
             .RequireRateLimiting(SignInRateLimit);
@@ -179,6 +193,14 @@ public static partial class StaffAuthentication
 
     const string LoginHintParameter = "login_hint";
 
+    static AuthenticationProperties SignInProperties(string? returnUrl, string? invitation, bool? signup, IConfiguration config)
+    {
+        var properties = new AuthenticationProperties { RedirectUri = returnUrl is not null && IsLocal(returnUrl) ? returnUrl : AppPath(config) };
+        if (InvitationToken.Read(invitation) is not null) properties.Items[InvitationSignIn.Item] = invitation;
+        if (signup == true) properties.Items[SignUpItem] = "1";
+        return properties;
+    }
+
     /// <summary>An email address as typed on the sign-in page: one address, no display name, no control characters, at most 254 characters.</summary>
     internal static bool IsLoginHint(string value) =>
         value.Length <= 254 && !value.Any(char.IsControl) && !value.Contains(' ', StringComparison.Ordinal)
@@ -186,4 +208,10 @@ public static partial class StaffAuthentication
 
     // Only same-site paths: "/x" but never "//host" or "/\host", which browsers treat as another site.
     static bool IsLocal(string url) => url.StartsWith('/') && !url.StartsWith("//", StringComparison.Ordinal) && !url.StartsWith("/\\", StringComparison.Ordinal);
+
+    /// <summary>Starting sign-in with the work email (MDV-P1-059). The email is a hint for the provider only: never stored or logged.</summary>
+    public sealed record SignInStart(string? LoginHint = null, string? ReturnUrl = null, string? Invitation = null, bool? Signup = null);
+
+    /// <summary>The identity provider's address; the page navigates there.</summary>
+    public sealed record SignInRedirect(string Location);
 }

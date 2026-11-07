@@ -74,7 +74,13 @@ if (builder.Configuration.GetConnectionString("Medvya") is { } sql)
 // everywhere else a missing key or digest storage is a startup error.
 if (builder.Configuration.GetConnectionString("Medvya") is { } ledgerSql && (!builder.Environment.IsDevelopment() || builder.Configuration["Audit:DigestKey"] is { Length: > 0 }))
     builder.Services.AddLedgerDigests(ledgerSql, builder.Configuration, requireStorage: !builder.Environment.IsDevelopment());
-builder.Services.Configure<NotificationOptions>(builder.Configuration.GetSection("Notifications"));
+var notificationSettings = builder.Configuration.GetSection("Notifications");
+builder.Services.Configure<NotificationOptions>(notificationSettings).PostConfigure<NotificationOptions>(o =>
+{
+    // The binder appends to a list's defaults; a configured list must replace them (dev sets Channels to Email only, #912).
+    if (notificationSettings.GetSection("Channels").Get<List<Medvya.Notifications.Domain.NotificationChannel>>() is { Count: > 0 } channels) o.Channels = channels;
+    if (notificationSettings.GetSection("BackoffMinutes").Get<List<int>>() is { Count: > 0 } backoff) o.BackoffMinutes = backoff;
+});
 // Reminder consent comes from the patient's consent receipts. Local runs may switch the check off explicitly; never outside Development.
 if (builder.Environment.IsDevelopment() && builder.Configuration.GetValue("Notifications:DevAllowAllConsent", false))
     builder.Services.AddSingleton<IReminderConsent, DevAllowAllConsent>();

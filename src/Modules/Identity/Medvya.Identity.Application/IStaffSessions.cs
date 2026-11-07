@@ -19,6 +19,12 @@ public interface IStaffSessions
     /// <summary>Revokes one of the user's sessions; returns the revoked session (for its tenant), or null if it is not theirs or already over.</summary>
     Task<StaffSession?> RevokeAsync(Guid userId, Guid sessionId, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Swaps the native refresh-token hash from <paramref name="current"/> (null: the browser session becomes native) to
+    /// <paramref name="replacement"/> on a live session. Conditional, so of two uses of the same token only one wins; false otherwise.
+    /// </summary>
+    Task<bool> RotateRefreshAsync(Guid sessionId, byte[]? current, byte[] replacement, CancellationToken cancellationToken = default);
+
     /// <summary>When each of these users last signed in (the newest session start, live or ended); users who never did are left out.</summary>
     Task<IReadOnlyDictionary<Guid, DateTimeOffset>> LastSignInAsync(IReadOnlyCollection<Guid> userIds, CancellationToken cancellationToken = default);
 

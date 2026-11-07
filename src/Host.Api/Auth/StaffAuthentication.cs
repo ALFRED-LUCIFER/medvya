@@ -37,6 +37,8 @@ public static partial class StaffAuthentication
             o.ExpireTimeSpan = StaffSession.MaxLifetime;
             o.SlidingExpiration = false;
             o.Events.OnValidatePrincipal = SessionControl.ValidatePrincipalAsync;
+            // The native apps send a bearer token instead of the cookie (MDV-P5-033); every staff endpoint then authenticates that way.
+            o.ForwardDefaultSelector = NativeAuthentication.SelectScheme;
             // An API answers 401/403; the SPA decides where to send the user.
             o.Events.OnRedirectToLogin = ctx => { ctx.Response.StatusCode = StatusCodes.Status401Unauthorized; return Task.CompletedTask; };
             o.Events.OnRedirectToAccessDenied = ctx => { ctx.Response.StatusCode = StatusCodes.Status403Forbidden; return Task.CompletedTask; };

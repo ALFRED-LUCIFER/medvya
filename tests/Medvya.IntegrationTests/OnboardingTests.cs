@@ -46,13 +46,14 @@ public sealed partial class OnboardingTests(PostgresFixture sql) : IClassFixture
     sealed class Outbox : IEmailSender
     {
         public List<EmailMessage> Sent { get; } = [];
-        /// <summary>A slow provider (a cold managed-identity token on Azure took 6 s, #205).</summary>
-        public TimeSpan Delay { get; set; }
+        /// <summary>Runs before each send: a slow or failing provider (a cold managed-identity token on Azure took 6 s, #205).</summary>
+        public Func<Task>? Before { get; set; }
         public async Task SendAsync(EmailMessage message, CancellationToken cancellationToken = default)
         {
-            await Task.Delay(Delay, cancellationToken);
+            if (Before is { } before) await before();
             lock (Sent) Sent.Add(message);
         }
+        public bool Has(string to) { lock (Sent) return Sent.Exists(m => m.To == to); }
     }
 
     HttpClient Browser(string? deploymentCountry = null)
@@ -239,31 +240,94 @@ public sealed partial class OnboardingTests(PostgresFixture sql) : IClassFixture
     [GeneratedRegex(@"https://clinic\.test/invite/([A-Za-z0-9_-]+)")]
     private static partial Regex LinkToken();
 
+    /// <summary>A new person with a valid draft that invites <paramref name="invitee"/>, one click from finishing.</summary>
+    async Task<(HttpClient Browser, Guid UserId)> ReadyToFinish(string invitee)
+    {
+        var browser = Browser();
+        await SignIn(browser, "new", signUp: true);
+        var userId = (await Json(await browser.GetAsync(new Uri("/v1/me/context", UriKind.Relative)))).GetProperty("user").GetProperty("id").GetGuid();
+        await browser.PostAsJsonAsync(Api(), new { country = "IN" });
+        var team = new[] { new { email = invitee, role = "Receptionist" } };
+        Assert.Equal(HttpStatusCode.NoContent, (await browser.PutAsJsonAsync(Api(), new { step = 5, validate = 3, data = Data(team: team) })).StatusCode);
+        return (browser, userId);
+    }
+
+    static async Task<JsonElement> OwnMembership(HttpClient browser) =>
+        Assert.Single((await Json(await browser.GetAsync(new Uri("/v1/me/context", UriKind.Relative)))).GetProperty("memberships").EnumerateArray());
+
     /// <summary>
-    /// #205: on Azure the browser gave up on a slow finish, the server cancelled, the invitation was lost and every retry got 404.
-    /// Mutation check: keep the request's token after validation and the invitation is never sent; drop the stored result and the repeat is 404.
+    /// #205: on Azure the browser gave up on a slow finish, the server cancelled, the invitation was lost and every retry got 404. Here the
+    /// request is cancelled while finish waits on a row lock after the practice exists. Mutation check: keep the request's token after
+    /// validation and the invitation is never saved; drop the stored result and the repeat is 404.
     /// </summary>
     [Fact]
     public async Task AFinishTheBrowserGivesUpOnStillCompletesAndARepeatAnswersWithTheSamePractice()
     {
-        using var browser = Browser();
-        await SignIn(browser, "new", signUp: true);
-        await browser.PostAsJsonAsync(Api(), new { country = "IN" });
-        var team = new[] { new { email = "joseph@example.test", role = "Receptionist" } };
-        Assert.Equal(HttpStatusCode.NoContent, (await browser.PutAsJsonAsync(Api(), new { step = 5, validate = 3, data = Data(team: team) })).StatusCode);
-        outbox.Delay = TimeSpan.FromSeconds(2);
-
-        using (var gaveUp = new CancellationTokenSource(TimeSpan.FromMilliseconds(300)))
-            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => browser.PostAsync(Api("/finish"), null, gaveUp.Token));
-        for (var i = 0; i < 100 && !outbox.Sent.Exists(m => m.To == "joseph@example.test"); i++) await Task.Delay(100);
-        Assert.Contains(outbox.Sent, m => m.To == "joseph@example.test"); // the server finished the work, invitation included
+        var (browser, userId) = await ReadyToFinish("joseph@example.test");
+        using var _ = browser;
+        await using (var locker = sql.Identity())
+        {
+            // Hold the owner's user row: finish blocks on it when it sets the display name, after the practice is created.
+            await using var tx = await locker.Database.BeginTransactionAsync();
+            await locker.Users.Where(u => u.Id == userId).ExecuteUpdateAsync(x => x.SetProperty(u => u.DisplayName, "locked by the test"));
+            using var gaveUp = new CancellationTokenSource();
+            var finish = browser.PostAsync(Api("/finish"), null, gaveUp.Token);
+            await using (var watch = sql.Identity())
+                await WaitFor(async () => await watch.Database.SqlQuery<int>($"SELECT count(*)::int AS \"Value\" FROM pg_locks WHERE NOT granted").SingleAsync() > 0);
+            await gaveUp.CancelAsync(); // the browser gives up (RequestAborted fires)
+            await tx.RollbackAsync();
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => finish);
+        }
+        await WaitFor(() => Task.FromResult(outbox.Has("joseph@example.test"))); // the server finished the work, invitation included
 
         var repeat = await browser.PostAsync(Api("/finish"), null);
         Assert.Equal(HttpStatusCode.OK, repeat.StatusCode);
         var result = await Json(repeat);
-        var membership = Assert.Single((await Json(await browser.GetAsync(new Uri("/v1/me/context", UriKind.Relative)))).GetProperty("memberships").EnumerateArray());
-        Assert.Equal(membership.GetProperty("id").GetGuid(), result.GetProperty("membershipId").GetGuid()); // one practice, not two
+        Assert.Equal((await OwnMembership(browser)).GetProperty("id").GetGuid(), result.GetProperty("membershipId").GetGuid()); // one practice, not two
         Assert.Equal("SoloDoctor", result.GetProperty("role").GetString());
+    }
+
+    /// <summary>#205: the email goes out after the response. Mutation check: send it inside the request again (CreateAsync in /finish) and the slow case times out, the failing one counts a failure.</summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ASlowOrFailingMailServerDoesNotHoldUpFinish(bool fails)
+    {
+        var release = new TaskCompletionSource();
+        outbox.Before = fails ? () => throw new System.Net.Mail.SmtpException("synthetic: the mail server refused") : () => release.Task;
+        var (browser, _) = await ReadyToFinish("desk.mail@example.test");
+        using var _ = browser;
+
+        using var quick = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var giveUp = quick.Token.Register(() => release.TrySetResult()); // a send left in the request fails this test instead of hanging it
+        var finished = await browser.PostAsync(Api("/finish"), null, quick.Token); // answers while the mail server still hangs
+        Assert.Equal(HttpStatusCode.OK, finished.StatusCode);
+        var result = await Json(finished);
+        Assert.Equal((1, 0), (result.GetProperty("invitationsSent").GetInt32(), result.GetProperty("invitationsFailed").GetInt32()));
+        await using (var db = sql.Context((await OwnMembership(browser)).GetProperty("tenantId").GetGuid()))
+        {
+            var invitation = await db.Invitations.SingleAsync();
+            Assert.Equal(("desk.mail@example.test", null), (invitation.Email, invitation.RevokedAt)); // pending: Staff can resend it
+        }
+
+        if (fails)
+            await WaitFor(() => Task.FromResult(logs.Messages.ToArray().Any(m => m.StartsWith("Warning: An invitation email sent after its commit failed: SmtpException", StringComparison.Ordinal))));
+        else
+        {
+            Assert.False(outbox.Has("desk.mail@example.test"));
+            release.TrySetResult();
+            await WaitFor(() => Task.FromResult(outbox.Has("desk.mail@example.test")));
+        }
+    }
+
+    static async Task WaitFor(Func<Task<bool>> condition)
+    {
+        for (var i = 0; i < 200; i++)
+        {
+            if (await condition()) return;
+            await Task.Delay(50);
+        }
+        Assert.Fail("The condition did not hold within 10 s.");
     }
 
     /// <summary>Mutation check: remove the catch in /finish and this fails (500); remove the log call and the log assertion fails.</summary>

@@ -7,6 +7,7 @@ using Medvya.Tenancy.Application;
 using Medvya.Tenancy.Domain;
 using Medvya.Tenancy.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Medvya.Tenancy.Infrastructure;
@@ -19,20 +20,23 @@ public sealed class InvitationOptions
     public string? LinkBaseUrl { get; set; }
 }
 
-public sealed class Invitations(TenancyDbContext db, ICurrentTenant tenant, ICurrentUser user, IAuditLog audit, IEmailSender mail, IOptions<InvitationOptions> options,
-    IStaffAccess access)
+public sealed partial class Invitations(TenancyDbContext db, ICurrentTenant tenant, ICurrentUser user, IAuditLog audit, IEmailSender mail, IOptions<InvitationOptions> options,
+    IStaffAccess access, ILogger<Invitations>? log = null)
     : IInvitations
 {
     public async Task<IReadOnlyList<FacilityOption>> FacilitiesAsync(CancellationToken cancellationToken = default) =>
         await db.Facilities.OrderBy(f => f.Name).Select(f => new FacilityOption(f.Id, f.Name)).ToListAsync(cancellationToken);
 
     public Task<InvitationCreated?> CreateAsync(string email, Role role, Guid facilityId, Guid? customRoleId = null, CancellationToken cancellationToken = default) =>
-        CreateCoreAsync(email, role, facilityId, customRoleId, null, cancellationToken);
+        CreateCoreAsync(email, role, facilityId, customRoleId, null, false, cancellationToken);
 
     public Task<InvitationCreated?> CreateAsync(string email, Role role, Guid facilityId, Action<Membership> stage, CancellationToken cancellationToken = default) =>
-        CreateCoreAsync(email, role, facilityId, null, stage, cancellationToken);
+        CreateCoreAsync(email, role, facilityId, null, stage, false, cancellationToken);
 
-    async Task<InvitationCreated?> CreateCoreAsync(string email, Role role, Guid facilityId, Guid? customRoleId, Action<Membership>? stage, CancellationToken cancellationToken)
+    public Task<InvitationCreated?> CreateAndEmailLaterAsync(string email, Role role, Guid facilityId, CancellationToken cancellationToken = default) =>
+        CreateCoreAsync(email, role, facilityId, null, null, true, cancellationToken);
+
+    async Task<InvitationCreated?> CreateCoreAsync(string email, Role role, Guid facilityId, Guid? customRoleId, Action<Membership>? stage, bool emailLater, CancellationToken cancellationToken)
     {
         email = Valid(email);
         // Every route gets the same role rule (#875): staff roles only here; a doctor only through Settings → Doctors, which stages the
@@ -58,7 +62,7 @@ public sealed class Invitations(TenancyDbContext db, ICurrentTenant tenant, ICur
         var membership = new Membership { Id = Guid.CreateVersion7(), TenantId = tenantId, FacilityId = facilityId, Role = role, Status = MembershipStatus.Invited, CustomRoleId = customRoleId };
         db.Memberships.Add(membership);
         stage?.Invoke(membership);
-        return await IssueAsync(membership, facility, email, null, cancellationToken);
+        return await IssueAsync(membership, facility, email, null, emailLater, cancellationToken);
     }
 
     public async Task<InvitationCreated?> ResendAsync(Guid invitationId, CancellationToken cancellationToken = default)
@@ -69,7 +73,7 @@ public sealed class Invitations(TenancyDbContext db, ICurrentTenant tenant, ICur
         var membership = await db.Memberships.SingleAsync(m => m.Id == old.MembershipId, cancellationToken);
         if (membership.Status != MembershipStatus.Invited || await GranterAsync(membership.FacilityId, cancellationToken) is null) return null;
         var facility = await db.Facilities.SingleAsync(f => f.Id == membership.FacilityId, cancellationToken);
-        return await IssueAsync(membership, facility, old.Email, old, cancellationToken);
+        return await IssueAsync(membership, facility, old.Email, old, false, cancellationToken);
     }
 
     /// <summary>The inviter's access at <paramref name="facilityId"/>, or null when they do not administer staff there.</summary>
@@ -90,7 +94,7 @@ public sealed class Invitations(TenancyDbContext db, ICurrentTenant tenant, ICur
     }
 
     /// <summary>Saves a fresh invitation (and the membership when new) with its audit row and sends the email; a resend revokes the old link in the same transaction.</summary>
-    async Task<InvitationCreated> IssueAsync(Membership membership, Facility facility, string email, Invitation? superseded, CancellationToken cancellationToken)
+    async Task<InvitationCreated> IssueAsync(Membership membership, Facility facility, string email, Invitation? superseded, bool emailLater, CancellationToken cancellationToken)
     {
         var tenantId = membership.TenantId;
         var inviter = user.UserId ?? throw new InvalidOperationException("No signed-in user.");
@@ -111,11 +115,21 @@ public sealed class Invitations(TenancyDbContext db, ICurrentTenant tenant, ICur
         // Saved, emailed, audited and committed as one unit: a failed email or audit leaves no invitation behind. The email goes before the
         // audit row (which is written outside this transaction) so a send that fails leaves no row saying an invitation was created.
         // A commit that fails after the email went out leaves a link that shows the expired state, which is harmless.
+        var message = Email(email, clinic, membership.Role, facility, $"{baseUrl.TrimEnd('/')}/invite/{token}", invitation.ExpiresAt);
         await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
+        if (emailLater)
+        {
+            await Audit(tenantId, inviter, "invitation.create", invitation.Id, now, cancellationToken);
+            await tx.CommitAsync(cancellationToken);
+            // shortcut: in memory, so an instance restart before the send loses the email (the invitation stays and is resent from Staff);
+            // a durable queue must store the message, link token included, so it waits for the jobs host and encrypted job data.
+            _ = Task.Run(() => SendLaterAsync(message), CancellationToken.None);
+            return new InvitationCreated(invitation.Id, invitation.ExpiresAt, InvitationRules.RequiresLicenceVerification(membership.Role));
+        }
         try
         {
-            await mail.SendAsync(Email(email, clinic, membership.Role, facility, $"{baseUrl.TrimEnd('/')}/invite/{token}", invitation.ExpiresAt), cancellationToken);
+            await mail.SendAsync(message, cancellationToken);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -125,6 +139,16 @@ public sealed class Invitations(TenancyDbContext db, ICurrentTenant tenant, ICur
         await tx.CommitAsync(cancellationToken);
         return new InvitationCreated(invitation.Id, invitation.ExpiresAt, InvitationRules.RequiresLicenceVerification(membership.Role));
     }
+
+    // Off the request: a cold managed-identity token or a slow mail server delays the email, never the caller (#205).
+    async Task SendLaterAsync(EmailMessage message)
+    {
+        try { await mail.SendAsync(message, CancellationToken.None); }
+        catch (Exception ex) { if (log is not null) EmailLaterFailed(log, ex.GetType().Name); } // the type only: messages can carry the address
+    }
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "An invitation email sent after its commit failed: {ErrorType}. The invitation is pending; resend it from Staff.")]
+    static partial void EmailLaterFailed(ILogger logger, string errorType);
 
     public async Task<bool> RevokeAsync(Guid invitationId, CancellationToken cancellationToken = default)
     {

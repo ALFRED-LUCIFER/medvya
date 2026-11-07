@@ -3,24 +3,23 @@ using System.Text.Json;
 using Medvya.Audit.Application;
 using Medvya.Audit.Domain;
 using Medvya.BuildingBlocks.Domain;
-using Medvya.BuildingBlocks.Infrastructure;
 using Medvya.Tenancy.Application;
 using Medvya.Tenancy.Domain;
 using Medvya.Tenancy.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Medvya.Tenancy.Infrastructure;
 
 /// <summary>
-/// Creates a practice (MDV-P1-004). The new tenant's rows are written on a connection that already carries the new tenant's
-/// session tenant setting, so row-level security (layer 2) accepts them exactly as it does for any tenant's own writes; it is never switched off.
+/// Creates a practice (MDV-P1-004). The new tenant's rows are written in a DI scope entered for the new tenant, so its connection carries
+/// that tenant's session setting and row-level security (layer 2) accepts them exactly as it does for any tenant's own writes; it is never switched off.
+/// The scope's context shares the app's EF model: a context built by hand here cost the first finish on each instance seconds (#205).
 /// </summary>
-public sealed class PracticeProvisioning(string connectionString, ICurrentUser user, IAuditLog audit)
+public sealed class PracticeProvisioning(IServiceScopeFactory scopes, ICurrentUser user, IAuditLog audit)
     : IPracticeProvisioning
 {
-    sealed class NewTenant(Guid id) : ICurrentTenant { public Guid? TenantId => id; }
-
     public async Task<ProvisionedPractice> CreateAsync(string country, OnboardingData data, CancellationToken cancellationToken = default)
     {
         var rules = OnboardingRules.For(country) ?? throw new ArgumentException("Unsupported country.", nameof(country));
@@ -31,9 +30,9 @@ public sealed class PracticeProvisioning(string connectionString, ICurrentUser u
         var now = DateTimeOffset.UtcNow;
 
         var tenantId = Guid.CreateVersion7();
-        var tenant = new NewTenant(tenantId);
-        await using var db = new TenancyDbContext(
-            new DbContextOptionsBuilder<TenancyDbContext>().UseNpgsql(PostgresDataSources.For(connectionString)).AddInterceptors(new TenantSessionInterceptor(tenant)).Options, tenant);
+        await using var scope = scopes.CreateAsyncScope();
+        scope.ServiceProvider.GetRequiredService<ILinkTenant>().UseLinkTenant(tenantId);
+        var db = scope.ServiceProvider.GetRequiredService<TenancyDbContext>();
 
         var facilityId = Guid.CreateVersion7();
         var membershipId = Guid.CreateVersion7();

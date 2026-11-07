@@ -4,5 +4,5 @@ import { useSignInController } from '../features/session/hooks/useSignInControll
 
 export default function SignInRoute({ switcher }: { switcher: ReactNode }) {
   const vm = useSignInController();
-  return <SignInPage languageSwitcher={switcher} form={vm.form} failed={vm.failed} onSubmit={e => void vm.submit(e)} onWithoutEmail={vm.startWithoutEmail} />;
+  return <SignInPage languageSwitcher={switcher} form={vm.form} failure={vm.failure} onSubmit={e => void vm.submit(e)} onWithoutEmail={vm.startWithoutEmail} />;
 }

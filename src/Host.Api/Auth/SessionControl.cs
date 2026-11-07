@@ -7,6 +7,7 @@ using Medvya.Tenancy.Application;
 using Medvya.Tenancy.Domain;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -128,7 +129,7 @@ public static class SessionControl
             return Results.NoContent();
         }).RequireAuthorization();
 
-        app.MapPost("/bff/logout", async (HttpContext http, [FromServices] IStaffSessions sessions) =>
+        app.MapPost("/bff/logout", async (HttpContext http, [FromServices] IStaffSessions sessions, IConfiguration config) =>
         {
             if (Read(http.User, SessionIdClaim) is { } sessionId && Read(http.User, ClaimTypes.NameIdentifier) is { } userId)
             {
@@ -136,10 +137,17 @@ public static class SessionControl
                 if (http.User.FindFirst(TenantClaim) is not null) await WriteAuditAsync(http, "auth.signout", "session", sessionId);
                 await sessions.RevokeAsync(userId, sessionId, http.RequestAborted);
             }
-            // shortcut: ends the Medvya session only; add provider sign-out (end_session_endpoint) with Entra (MDV-P0-011).
             // A native app holds no cookie to clear (and the bearer scheme cannot sign out); revoking the row is the whole logout.
-            if (!NativeAuthentication.IsNative(http.User)) await http.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-            return Results.NoContent();
+            if (NativeAuthentication.IsNative(http.User)) return Results.NoContent();
+            await http.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            // #912: also end the provider session (OIDC RP-initiated logout), or on a shared PC it signs the last account straight back in.
+            // The provider returns to /signout-callback-oidc, which sends the browser on to the app. Its address goes to the page, as on sign-in.
+            // shortcut: a session that already idled out or was revoked gets 401 here and never reaches the provider sign-out; add a provider
+            // sign-out to the "You were signed out" screen if pilot desks hit it (#912 follow-up).
+            await http.SignOutAsync(OpenIdConnectDefaults.AuthenticationScheme, new AuthenticationProperties { RedirectUri = StaffAuthentication.AppPath(config) });
+            var location = http.Response.Headers.Location.ToString();
+            http.Response.Headers.Remove(Microsoft.Net.Http.Headers.HeaderNames.Location);
+            return Results.Ok(new StaffAuthentication.SignInRedirect(location));
         }).RequireAuthorization();
 
         // "My devices": the caller's live sessions.

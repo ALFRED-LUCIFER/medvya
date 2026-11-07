@@ -63,6 +63,19 @@ test('a refused sign-in says so without the reason', async ({ page }) => {
   await expect(page.getByRole('alert')).toContainText('Sign-in did not complete');
 });
 
+// #912: the provider signed the person in without a second factor; the page says what is missing and where to add it.
+for (const locale of ['en', 'ar'])
+  test(`a sign-in without a second factor says how to add one (${locale})`, async ({ page }) => {
+    await signedOut(page, locale);
+    await page.goto('/?signin=mfa');
+    const alert = page.getByRole('alert');
+    await expect(alert).toContainText(locale === 'ar' ? 'خطوة ثانية' : 'second sign-in step');
+    await expect(alert.getByRole('link')).toHaveAttribute('href', 'https://aka.ms/mysecurityinfo');
+    await expect(alert).not.toContainText(locale === 'ar' ? 'لم يكتمل تسجيل الدخول' : 'Sign-in did not complete');
+    if (locale === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+    expect(await axe(page)).toEqual([]);
+  });
+
 test('create account: two steps feed the setup, the email becomes the login hint', async ({ page }) => {
   const start = await signedOut(page);
   await page.goto('/');
@@ -105,6 +118,16 @@ test('choose location: the last used facility is first and marked in words; "Not
   await page.getByRole('button', { name: 'Not you? Sign out' }).click();
   await expect(page).toHaveURL('/');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Sign in to Medvya');
+});
+
+// #912: sign-out also ends the provider session, so a shared front-desk PC does not sign the last account straight back in.
+test('sign out goes on to the provider sign-out address the server returns', async ({ page }) => {
+  await page.route('**/v1/me/context', r => r.fulfill({ json: { user: { id: 'u-1', displayName: 'A. Joseph (synthetic)' }, memberships: [{ id: 'm-1', tenantId: 't-1', tenantName: 'Iyer Family Clinic', facilityId: 'f-1', facilityName: 'Adyar', role: 'Receptionist' }], active: null } }));
+  await page.route('**/bff/logout', r => r.fulfill({ json: { location: '/provider/logout' } }));
+  await page.route('**/provider/logout', r => r.fulfill({ body: 'provider signed out' }));
+  await page.goto('/choose-facility');
+  await page.getByRole('button', { name: 'Not you? Sign out' }).click();
+  await expect(page).toHaveURL('/provider/logout');
 });
 
 test('signed out: "Not you?" leads to the sign-in start instead of signing the old account in again', async ({ page }) => {

@@ -91,6 +91,6 @@ public sealed class WebAppTests(PostgresFixture sql) : IClassFixture<PostgresFix
         var challenge = await browser.GetAsync(new Uri("/bff/login", UriKind.Relative));
         var authorize = await browser.GetAsync(new Uri($"{challenge.Headers.Location}&login_hint={id}&no_mfa=true"));
         var callback = await browser.GetAsync(authorize.Headers.Location);
-        Assert.Equal("/app/?signin=failed", callback.Headers.Location!.OriginalString);
+        Assert.Equal("/app/?signin=mfa", callback.Headers.Location!.OriginalString);
     }
 }

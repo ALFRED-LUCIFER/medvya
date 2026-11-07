@@ -48,6 +48,7 @@ public static class DevIdentityProvider
                 ["issuer"] = issuer,
                 ["authorization_endpoint"] = $"{self}/authorize",
                 ["token_endpoint"] = $"{self}/token",
+                ["end_session_endpoint"] = $"{self}/logout",
                 ["jwks_uri"] = $"{self}/jwks",
                 ["response_types_supported"] = Code,
                 ["subject_types_supported"] = Public,
@@ -85,6 +86,12 @@ public static class DevIdentityProvider
             grants[code] = new Grant(subject, name, client_id, redirect_uri, nonce, code_challenge, no_mfa != true, DateTimeOffset.UtcNow.AddMinutes(2));
             return Results.Redirect($"{redirect_uri}?code={code}&state={Uri.EscapeDataString(state)}");
         });
+
+        // RP-initiated sign-out (#912): this provider keeps no browser session, so it only sends the browser back, as Entra does once done.
+        dev.MapGet("/logout", (string post_logout_redirect_uri, string? state) =>
+            Uri.TryCreate(post_logout_redirect_uri, UriKind.Absolute, out var back) && back.IsLoopback
+                ? Results.Redirect(state is null ? back.AbsoluteUri : $"{back.AbsoluteUri}?state={Uri.EscapeDataString(state)}")
+                : Results.BadRequest("A loopback post_logout_redirect_uri is required."));
 
         dev.MapPost("/token", async (HttpRequest r) =>
         {

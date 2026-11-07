@@ -12,6 +12,7 @@ import { usePatientDirectoryController } from '../features/patients/hooks/usePat
 import { usePatientConsentsController } from '../features/patients/hooks/usePatientConsentsController';
 import { usePatientRecordController } from '../features/patients/hooks/usePatientRecordController';
 import { patientDirectory } from '../features/shell/domain/navigation';
+import { pickSlot } from '../features/schedule/domain/booking';
 
 // Composition only: controller → component for the patient directory routes (MDV-P1-018).
 const recordPath = (id: string) => `${patientDirectory.path}/${id}`;
@@ -40,11 +41,17 @@ function Record({ patientId, canReveal }: { patientId: string; canReveal: boolea
 
 type RegistrationLinks = { country: Country; actorName: string; timeZone?: string; bookPath: string | null; checkInPath: string | null };
 
-/** ?mode=quick opens quick registration (the busy desk, walk-ins); without it, the full flow. The mode is not patient data. */
+/**
+ * ?mode=quick opens quick registration (the busy desk, walk-ins); without it, the full flow. The mode is not patient data.
+ * Opened from the booking panel, the address also names the slot (MDV-P1-021); switching mode keeps it, and success goes back to it.
+ */
 export function RegistrationRoute(links: RegistrationLinks) {
   const [params] = useSearchParams();
   const quick = params.get('mode') === 'quick';
-  return <Registration {...useRegistrationController(links.country, quick)} {...links} recordPath={recordPath} quickPath="?mode=quick" fullPath="?mode=full" />;
+  const slot = pickSlot(params);
+  const withMode = (mode: string) => `?${new URLSearchParams([...(slot ?? []), ['mode', mode]])}`;
+  return <Registration {...useRegistrationController(links.country, quick)} {...links} recordPath={recordPath} quickPath={withMode('quick')} fullPath={withMode('full')}
+    slot={slot?.toString() ?? null} />;
 }
 
 export function PatientRecordRoute({ canReveal }: { canReveal: boolean }) {

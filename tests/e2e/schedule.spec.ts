@@ -281,7 +281,9 @@ test('reception books an empty slot: hold, longer visit type, confirm the patien
   await search.fill('Nobody Synthetic');
   await search.press('Enter'); // searches; does not submit the booking
   await expect(panel).toContainText('No patients match.');
-  await expect(panel.getByRole('link', { name: 'Register a new patient' })).toHaveAttribute('href', '/patients/new');
+  // The slot goes along to registration (opaque ids and a time), so the desk comes back to it: see the MDV-P1-021 tests below.
+  await expect(panel.getByRole('link', { name: 'Register a new patient' })).toHaveAttribute('href',
+    `/patients/new?date=2026-10-19&view=day&calendar=d-1&start=${encodeURIComponent(ist('2026-10-19', '10:00'))}&visitType=NewConsultation`);
   await search.fill('Nair');
   await panel.getByRole('button', { name: 'Search' }).click();
   const row = panel.getByRole('button', { name: 'D N, 47 y, Male, MRN ending 0002. Choose for this booking' });
@@ -325,6 +327,53 @@ test('closing the panel releases the hold, and a slot taken meanwhile says so', 
   await expect(page.getByRole('alert').filter({ hasText: 'Someone else is booking this slot right now. Choose another slot.' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Confirm booking' })).toBeDisabled();
 });
+
+// MDV-P1-021: patient not found → register them → back to the same slot, held again, with the new patient chosen.
+test('registering a new patient from the booking panel comes back to the held slot with the patient chosen', async ({ page }) => {
+  const calls = await open(page);
+  await page.route('**/v1/patients/duplicate-check', r => r.fulfill({ json: { candidates: [] } }));
+  await page.route('**/v1/patients', r => r.fulfill({ json: { patientId, mrn: '000002', registeredAt: '2026-10-19T02:31:00Z', status: 'Incomplete', warnings: [] } }));
+  await bookButton(page, '10:20').click();
+  const panel = page.getByRole('complementary', { name: 'Book appointment' });
+  await expect(panel).toContainText('Held for you until');
+  await panel.getByRole('link', { name: 'Register a new patient' }).click();
+
+  await page.getByRole('link', { name: 'Quick (busy desk)' }).click(); // switching mode keeps the slot
+  await expect(page).toHaveURL(/calendar=d-1.*mode=quick/);
+  await page.getByLabel('Full name').fill('Deepak Nair');
+  await page.getByLabel('Mobile').fill('+91 90000 00201');
+  await page.getByRole('textbox', { name: 'Date of birth', exact: true }).fill('1979-08-14');
+  await page.getByRole('radio', { name: 'Male', exact: true }).check();
+  await page.getByRole('button', { name: 'Register patient' }).click();
+  await expect(page.getByRole('heading', { name: 'Deepak Nair is registered' })).toBeVisible();
+  await page.getByRole('link', { name: 'Back to the booking' }).click();
+
+  await expect(panel).toContainText('Dr. Arjun Rao (synthetic) · 10:20–10:40');
+  await expect(panel).toContainText('Held for you until');
+  await expect(panel).toContainText('Deepak Nair (synthetic) · MRN 000002'); // chosen, confirmed by the audited lookup
+  expect(calls.holds.at(-1)).toEqual({ facilityId: 'f-1', calendarId: 'd-1', start: ist('2026-10-19', '10:20'), visitType: 'FollowUp' }); // held again
+  await expect(page).toHaveURL(/\/schedule\?date=2026-10-19&view=day$/); // the slot and patient leave the address once resumed
+  await panel.getByRole('button', { name: 'Confirm booking' }).click();
+  await expect(panel).toContainText('Appointment booked');
+  expect(calls.bookings[0]!.body).toMatchObject({ holdId: `h-${calls.holds.length}`, patientId });
+});
+
+for (const [locale, message] of [
+  ['en', 'This slot is no longer available. Choose another slot.'],
+  ['ar', 'هذه الفترة لم تعد متاحة. اختر فترة أخرى.'],
+] as const)
+  test(`back from registration to a slot taken meanwhile says so and keeps the patient, axe clean (${locale})`, async ({ page }) => {
+    await open(page, { locale, holdCode: 'slot_unavailable' });
+    await page.goto(`/schedule?date=2026-10-19&view=day&calendar=d-1&start=${encodeURIComponent(ist('2026-10-19', '10:20'))}&visitType=FollowUp&patient=${patientId}`);
+    const panel = page.getByRole('complementary').first();
+    await expect(panel.getByRole('alert')).toHaveText(message);
+    await expect(panel).toContainText('Deepak Nair (synthetic)'); // still chosen for the next slot the desk picks
+    await page.addScriptTag({ path: axePath });
+    const violations = await page.evaluate(async () =>
+      (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations
+        .map(v => `${v.id} (${v.nodes.length})`));
+    expect(violations).toEqual([]);
+  });
 
 // MDV-P1-022: when the doctor-day lock stays taken through every retry, the desk is told plainly that nothing was saved.
 for (const [locale, book, message] of [

@@ -4,6 +4,7 @@ import SchedulePage, { type GridActions } from '../features/schedule/components/
 import { useAppointmentController } from '../features/schedule/hooks/useAppointmentController';
 import { useBookingController } from '../features/schedule/hooks/useBookingController';
 import { useScheduleController } from '../features/schedule/hooks/useScheduleController';
+import { slotAddress } from '../features/schedule/domain/booking';
 
 type Props = { facilityId: string; userId: string; userName: string; canBook: boolean; canCheckIn: boolean; registerPath: string | null; leavePath: string | null };
 
@@ -14,7 +15,7 @@ type Props = { facilityId: string; userId: string; userName: string; canBook: bo
  */
 export default function ScheduleRoute({ facilityId, userId, userName, canBook, canCheckIn, registerPath, leavePath }: Props) {
   const schedule = useScheduleController(facilityId, userId);
-  const booking = useBookingController(facilityId, schedule.timeZone);
+  const booking = useBookingController(facilityId, schedule.timeZone, schedule.day?.columns);
   const visit = useAppointmentController(facilityId, { timeZone: schedule.timeZone, canBook, canCheckIn });
   const picking = visit.mode === 'pick' || visit.mode === 'confirmMove';
   // An opened visit belongs to the day and view it was opened on; a reschedule keeps it while the desk looks for the new slot.
@@ -41,7 +42,8 @@ export default function ScheduleRoute({ facilityId, userId, userName, canBook, c
         onRebook={canBook ? () => { booking.onRebook({ id: opened.appointment.patientId, name: opened.appointment.patientName }); visit.onClose(); } : undefined} />
     // The week has no slots to pick, so the booking panel shows there only while a booking is under way.
     : canBook && schedule.timeZone && (schedule.view !== 'week' || booking.choice || booking.booked || booking.seriesDone)
-    ? <BookingPanel {...booking} registerPath={registerPath} timeZone={schedule.timeZone} visitLengths={column?.visitLengths ?? []} />
+    // Registering a new patient takes the slot along, so registration can bring the desk back to it with the patient chosen.
+    ? <BookingPanel {...booking} registerPath={registerPath && booking.choice ? `${registerPath}?${slotAddress(booking.choice, schedule.timeZone)}` : registerPath} timeZone={schedule.timeZone} visitLengths={column?.visitLengths ?? []} />
     : undefined;
   const next = schedule.nextFree;
   return (

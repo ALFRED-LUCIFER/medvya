@@ -134,6 +134,26 @@ public sealed class BookingServiceTests(PostgresFixture sql) : IClassFixture<Pos
     }
 
     [Fact]
+    public async Task BackFromRegisteringAPatientTheDeskHoldsTheSameSlotAgain()
+    {
+        // MDV-P1-021: the desk leaves its hold to register a new patient, then holds the same slot again on return.
+        var first = await h.Booking(h.Reception).HoldAsync(Slot(9));
+        var again = await h.Booking(h.Reception).HoldAsync(Slot(9)); // still valid: replaced by a fresh hold, not refused as "being booked"
+        Assert.NotEqual(first.Id, again.Id);
+        Assert.Equal("hold_expired", await Code(h.Booking(h.Reception).BookAsync(Book(first.Id))));
+
+        h.Clock.Advance(TimeSpan.FromMinutes(3));
+        var reacquired = await h.Booking(h.Reception).HoldAsync(Slot(9)); // expired while registering: held again
+        Assert.Equal(h.Clock.GetUtcNow() + TimeSpan.FromMinutes(2), reacquired.ExpiresAt);
+        Assert.Equal(At(9), (await h.Booking(h.Reception).BookAsync(Book(reacquired.Id))).Start);
+
+        var other = await h.Booking(h.Doctor).HoldAsync(Slot(9, 20)); // taken meanwhile: held elsewhere, then booked
+        Assert.Equal("being_booked", await Code(h.Booking(h.Reception).HoldAsync(Slot(9, 20))));
+        await h.Booking(h.Doctor).BookAsync(Book(other.Id));
+        Assert.Equal("slot_unavailable", await Code(h.Booking(h.Reception).HoldAsync(Slot(9, 20))));
+    }
+
+    [Fact]
     public async Task TheLongestVisitStillBlocksTheSlotsNearItsEnd()
     {
         // An 8-hour visit (the longest a template allows) from 09:00: the overlap check looks back that far, no further.

@@ -1156,6 +1156,7 @@
   "registration.done.incompleteBody": "غير موجود: {items}. يبقى السجل معلَّمًا \"تسجيل غير مكتمل\" حتى تُضاف.",
   "registration.done.quickConsents": "لم يُسأل المريض عن التذكيرات. إذا رغب فيها، افتح السجل وفعّل التذكيرات ضمن الموافقات.",
   "registration.done.book": "حجز موعد",
+  "registration.done.backToBooking": "العودة إلى الحجز",
   "registration.done.checkIn": "تسجيل الحضور الآن (بدون موعد)",
   "registration.done.open": "فتح السجل",
   "registration.done.another": "تسجيل مريض آخر",

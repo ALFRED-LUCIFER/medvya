@@ -74,6 +74,8 @@ try {
       Authentication__Oidc__Authority: `http://localhost:${apiPort}/dev-idp`,
       ConnectionStrings__Medvya: connection,
       Testing__ClockStartUtc: clockStart,
+      // Every browser here is one client IP, and Host.Api also serves the app's scripts: the per-IP budget (300/min) is for a real desk.
+      RateLimiting__PermitsPerMinute: '3000',
     },
   });
   api.on('exit', code => { log(`Host.Api exited (${code})`); process.exit(1); });

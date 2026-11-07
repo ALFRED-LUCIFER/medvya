@@ -10,6 +10,8 @@ on:
   pull_request:
     paths:
       - 'tests/e2e/fullstack/**'
+      - 'tests/e2e/journeys/storyboard.ts' # the full-stack J2 to J6 specs read their steps through it
+      - 'docs/02-design/journeys.md'
       - '.github/workflows/fullstack-e2e.yml'
 
 permissions:

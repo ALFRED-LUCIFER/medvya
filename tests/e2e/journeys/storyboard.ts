@@ -20,16 +20,17 @@ export function storyboard(id: string): { title: string; milestone: string; step
 /**
  * One test per storyboard step. Steps without an implementation are `fixme`, tagged with screen and milestone,
  * so each phase turns its own steps green by passing an implementation for that step number.
+ * A ticket key instead of an implementation ('MDV-P2-007') keeps the step pending and tags it with the ticket that builds it.
  */
-export function journey(id: string, implemented: Record<number, Parameters<typeof test>[2]> = {}) {
+export function journey(id: string, implemented: Record<number, Parameters<typeof test>[2] | `MDV-${string}`> = {}) {
   const { title, milestone, steps } = storyboard(id);
   test.describe(title, () => {
     for (const s of steps) {
       const name = `${id}.${s.n} ${s.screen} · ${s.role}: ${s.step}`;
       const tag = [`@${s.screen}`, `@${milestone.replace('–', '-')}`];
       const body = implemented[s.n];
-      if (body) test(name, { tag }, body);
-      else test.fixme(name, { tag }, () => {});
+      if (typeof body === 'function') test(name, { tag }, body);
+      else test.fixme(name, { tag: body ? [...tag, `@${body}`] : tag }, () => {});
     }
   });
 }

@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using Host.Api.Auth;
+using Medvya.Audit.Domain;
 using Medvya.BuildingBlocks.Domain;
 using Medvya.Identity.Domain;
 using Medvya.Tenancy.Application;
@@ -162,6 +163,7 @@ public sealed partial class OnboardingTests(PostgresFixture sql) : IClassFixture
         {
             var tenant = await db.Tenants.SingleAsync();
             Assert.Equal(("IN", "Rao Clinic (synthetic)"), (tenant.CountryCode, tenant.Name));
+            await AssertCountryAudited(tenantId, userId, "IN");
             Assert.Equal("Asia/Kolkata", (await db.Facilities.SingleAsync()).TimeZone);
             var owner = await db.Memberships.SingleAsync(m => m.UserId == userId);
             Assert.Equal((Role.SoloDoctor, MembershipStatus.Active), (owner.Role, owner.Status));
@@ -270,10 +272,39 @@ public sealed partial class OnboardingTests(PostgresFixture sql) : IClassFixture
         var tenantId = (await Json(await browser.GetAsync(new Uri("/v1/me/context", UriKind.Relative)))).GetProperty("memberships")[0].GetProperty("tenantId").GetGuid();
         await using var db = sql.Context(tenantId);
         Assert.Equal("AE", (await db.Tenants.SingleAsync()).CountryCode);
+        await AssertCountryAudited(tenantId, (await Json(await browser.GetAsync(new Uri("/v1/me/context", UriKind.Relative)))).GetProperty("user").GetProperty("id").GetGuid(), "AE");
         Assert.Equal("AED", (await db.PracticeDefaultsSet.SingleAsync()).Currency);
         Assert.Empty(await db.DoctorLicences.ToListAsync());
         await using var scheduling = sql.Scheduling(tenantId);
         Assert.Empty(await scheduling.Templates.ToListAsync()); // not a doctor: no sessions
+    }
+
+    /// <summary>MDV-P1-002: the country choice is in the new tenant's audit trail, once, by the owner. Mutation check: drop the audit write
+    /// in PracticeProvisioning, or hard-code the country in its action, and the IN or AE finish test fails.</summary>
+    async Task AssertCountryAudited(Guid tenantId, Guid owner, string country)
+    {
+        await using var audit = sql.Audit(tenantId);
+        var row = Assert.Single(await audit.Events.Where(e => e.Action.StartsWith("onboarding.complete")).ToListAsync());
+        Assert.Equal(($"onboarding.complete.{country}", "tenant", tenantId, owner, AuditOutcome.Allowed), (row.Action, row.ResourceType, row.ResourceId, row.ActorUserId, row.Outcome));
+    }
+
+    // MDV-P1-002: one deployment serves one country, so outside Development an unset or unknown country stops the host instead of
+    // accepting every country. Mutation check: remove the startup check in Program.cs and the refusing rows start.
+    [Theory]
+    [InlineData("Production", null, false)]
+    [InlineData("Staging", "XX", false)]
+    [InlineData("Development", "XX", false)]
+    [InlineData("Production", "IN", true)]
+    [InlineData("Development", null, true)]
+    public void TheDeploymentCountryFailsClosedOutsideDevelopment(string environment, string? country, bool starts)
+    {
+        using var host = new WebApplicationFactory<Program>().WithWebHostBuilder(b =>
+        {
+            b.UseEnvironment(environment);
+            if (country is not null) b.UseSetting("Onboarding:DeploymentCountry", country);
+        });
+        if (starts) host.CreateClient().Dispose();
+        else Assert.Contains("Onboarding:DeploymentCountry", Assert.Throws<InvalidOperationException>(() => host.CreateClient()).Message, StringComparison.Ordinal);
     }
 
     [Fact]

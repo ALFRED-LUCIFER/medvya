@@ -17,6 +17,9 @@ public static class Telemetry
     {
         var appInsights = builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"];
 
+        // Outside Development the scrubbed OpenTelemetry pipeline is the only log provider (#885): the default Console, Debug and EventSource
+        // providers would write rendered messages and exception text to the container logs past the allowlist.
+        if (!builder.Environment.IsDevelopment()) builder.Logging.ClearProviders();
         // The hosting "Request starting …" line prints the full URL including the query string.
         builder.Logging.AddFilter("Microsoft.AspNetCore.Hosting.Diagnostics", LogLevel.Warning);
         builder.Logging.AddOpenTelemetry(o =>

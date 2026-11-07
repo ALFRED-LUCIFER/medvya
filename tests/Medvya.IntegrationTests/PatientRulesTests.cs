@@ -43,6 +43,21 @@ public class PatientRulesTests
     }
 
     [Theory]
+    // #880: nothing visible is empty; NUL and bidi overrides are refused, not saved (NUL used to fail as a 500 in PostgreSQL).
+    [InlineData("\u200b\u200b", "required")]
+    [InlineData("Qa\u0000Tester", "format")]
+    [InlineData("Qa \u202eTester", "format")]
+    [InlineData("Qa \u2067Tester", "format")]
+    [InlineData("1234567", "format")]
+    public void ANameMustHaveVisibleLettersAndNoHiddenControls(string name, string code) =>
+        Assert.Contains(new ValidationError("fullName", code), Errors(IndiaBase with { FullName = name }));
+
+    [Fact]
+    public void ZeroWidthJoinersInsideAnIndicNameAreKept() => // Malayalam chillu forms are written with ZWJ
+        Assert.Equal("Lakshmi \u0d2e\u0d4d\u200d (synthetic)",
+            CountryRules.India.Validate(IndiaBase with { FullName = "Lakshmi \u0d2e\u0d4d\u200d (synthetic)" }, Today).Command.FullName);
+
+    [Theory]
     [InlineData("12345")]
     [InlineData("1234567")]
     [InlineData("ABCDEF")]

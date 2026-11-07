@@ -122,7 +122,7 @@ export const logoProblem = (file: { type: string; size: number }): LogoProblem |
   !['image/png', 'image/jpeg'].includes(file.type) ? 'type' : file.size === 0 || file.size > logoMaxBytes ? 'size' : null;
 
 /** Problem codes from the API ("field:code" for a rejected field, as the shared client reports them). */
-export const knownErrors = ['logo:type', 'logo:too_large', 'date:duplicate', 'name:duplicate'] as const;
+export const knownErrors = ['logo:type', 'logo:too_large', 'date:duplicate', 'name:duplicate', 'name:link'] as const;
 export type SettingsError = (typeof knownErrors)[number] | 'failed';
 export const settingsError = (code: string | undefined): SettingsError =>
   (knownErrors as readonly string[]).includes(code ?? '') ? (code as SettingsError) : 'failed';

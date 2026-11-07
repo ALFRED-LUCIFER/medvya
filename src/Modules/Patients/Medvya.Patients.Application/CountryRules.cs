@@ -80,6 +80,7 @@ public abstract partial class CountryRules
         var warnings = new List<string>();
 
         var fullName = Text(c.FullName, "fullName", required: true, errors);
+        if (fullName is not null && !fullName.Any(char.IsLetter)) errors.Add(new("fullName", "format")); // "1234567" is a slip, not a name (#880)
         var arabicName = Text(c.ArabicName, "arabicName", required: false, errors);
         if (!Enum.IsDefined(c.SexAtBirth)) errors.Add(new("sexAtBirth", "required"));
 
@@ -253,10 +254,17 @@ public abstract partial class CountryRules
     protected static string? Text(string? value, string field, bool required, List<ValidationError> errors, int max = MaxText)
     {
         var trimmed = string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+        // #880: text with nothing visible (only zero-width or other format characters) is empty. Format characters stay allowed inside
+        // visible text: Indic scripts need the zero-width joiners.
+        if (trimmed is not null && trimmed.All(ch => char.IsWhiteSpace(ch) || char.GetUnicodeCategory(ch) == UnicodeCategory.Format)) trimmed = null;
         if (trimmed is null && required) errors.Add(new(field, "required"));
+        // Control characters (NUL fails in PostgreSQL) and bidi overrides (a name shown reversed on the board or a slip) are refused.
+        else if (trimmed?.Any(Hidden) == true) errors.Add(new(field, "format"));
         if (trimmed?.Length > max) errors.Add(new(field, "too_long"));
         return trimmed;
     }
+
+    static bool Hidden(char ch) => (char.IsControl(ch) && ch is not ('\n' or '\r')) || ch is (>= '\u202A' and <= '\u202E') or (>= '\u2066' and <= '\u2069');
 
     protected static void NotApplicable(string? value, string field, List<ValidationError> errors)
     {

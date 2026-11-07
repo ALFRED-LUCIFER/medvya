@@ -160,6 +160,19 @@ public static class SyntheticSeed
             if (await db.Facilities.FindAsync([c.Facility.Id], ct) is null) db.Facilities.Add(c.Facility);
             var existing = await db.Memberships.Select(m => m.Id).ToListAsync(ct);
             db.Memberships.AddRange(c.Members.Where(m => !existing.Contains(m.Membership.Id)).Select(m => m.Membership));
+            // Every doctor has the licence and profile rows the app creates with them, so Settings, Doctors lists them (#892). The licence
+            // stays unverified, as for a new doctor: recording and signing stay gated until Medvya operations verify it.
+            var listed = await db.DoctorLicences.Select(l => l.MembershipId).ToListAsync(ct);
+            foreach (var d in c.Members.Where(m => m.Membership.Role is Role.SoloDoctor or Role.HospitalDoctor && !listed.Contains(m.Membership.Id)))
+            {
+                var at = new DateTimeOffset(2026, 11, 1, 4, 0, 0, TimeSpan.Zero);
+                db.DoctorLicences.Add(new DoctorLicence
+                {
+                    MembershipId = d.Membership.Id, TenantId = c.Tenant.Id, Authority = c.Tenant.CountryCode == "IN" ? "NMC" : "DHA",
+                    Number = $"SYN-{d.Membership.Id.ToString()[^4..]}", SubmittedAt = at,
+                });
+                db.DoctorProfiles.Add(new DoctorProfile { MembershipId = d.Membership.Id, TenantId = c.Tenant.Id, FullName = d.Name, ChangedAt = at });
+            }
             await db.SaveChangesAsync(ct);
 
             // Accounts for the development sign-in provider (Development only); the subject is the Medvya user id.

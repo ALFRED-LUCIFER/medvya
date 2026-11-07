@@ -23,6 +23,9 @@ public sealed class PracticeDefaults
     [Classification(DataClass.Internal)] public required string SaturdayHours { get; set; }
     /// <summary>JSON list of note template ids (used from P2/P3).</summary>
     [Classification(DataClass.Internal)] public required string NoteTemplates { get; set; }
+    /// <summary>How the practice chose to bring its patients in set-up: "Upload", "Move" or "Fresh"; null when skipped (MDV-P1-061).</summary>
+    // shortcut: only the choice is kept; there is no spreadsheet import or migration request queue yet. Build them with the patient import ticket.
+    [Classification(DataClass.Internal)] public string? PatientStart { get; set; }
 }
 
 /// <summary>

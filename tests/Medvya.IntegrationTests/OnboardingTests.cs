@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using Host.Api.Auth;
 using Medvya.BuildingBlocks.Domain;
@@ -21,7 +22,7 @@ namespace Medvya.IntegrationTests;
 /// MDV-P1-004: sign up, fill the wizard, leave and resume, finish. Real SQL Server, real OIDC code + PKCE against the in-process
 /// development provider. Synthetic people only.
 /// </summary>
-public sealed class OnboardingTests(PostgresFixture sql) : IClassFixture<PostgresFixture>, IDisposable
+public sealed partial class OnboardingTests(PostgresFixture sql) : IClassFixture<PostgresFixture>, IDisposable
 {
     readonly Outbox outbox = new();
     readonly List<WebApplicationFactory<Program>> factories = [];
@@ -88,16 +89,18 @@ public sealed class OnboardingTests(PostgresFixture sql) : IClassFixture<Postgre
 
     static object Data(string number = "84213", string authority = "TNMC", string gstin = "", object? team = null) => new
     {
-        profile = new { fullName = "Arjun Rao (synthetic)", mode = "Solo", specialty = "General medicine", qualifications = "MBBS", languages = "English, Tamil" },
+        profile = new { fullName = "Arjun Rao (synthetic)", mode = "Solo", specialties = new[] { "general-practice", "diabetes" }, qualifications = "MBBS", languages = "English, Tamil" },
         licence = new { authority, number, certificateName = "council-certificate.pdf" },
         clinic = new { name = "Rao Clinic (synthetic)", address = "12 Test Street, Chennai", registrationNumber = "CE-0001", taxId = gstin },
         hours = new
         {
             weekdays = new[] { new { start = "09:00", end = "13:00" }, new { start = "17:00", end = "20:00" } },
-            saturday = Array.Empty<object>(), slotMinutes = 20, newVisitFee = 100_000, followUpFee = 60_000,
+            saturday = new[] { new { start = "09:00", end = "14:00" } }, slotMinutes = 20, newVisitFee = 100_000, followUpFee = 60_000,
+            days = new[] { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday" },
         },
         templates = new[] { "general-opd", "diabetes-review" },
         team = team ?? Array.Empty<object>(),
+        patients = "Move",
     };
 
     static async Task<JsonElement> Json(HttpResponseMessage r) => await r.Content.ReadFromJsonAsync<JsonElement>();
@@ -119,13 +122,13 @@ public sealed class OnboardingTests(PostgresFixture sql) : IClassFixture<Postgre
         Assert.Contains(started.GetProperty("rules").GetProperty("authorities").EnumerateArray(), a => a.GetProperty("code").GetString() == "TNMC");
 
         // A failed check saves nothing and names the field, not the value.
-        var bad = await browser.PutAsJsonAsync(Api(), new { step = 3, validate = 2, data = Data(number: "1") });
+        var bad = await browser.PutAsJsonAsync(Api(), new { step = 3, validate = 1, data = Data(number: "1") });
         Assert.Equal(HttpStatusCode.BadRequest, bad.StatusCode);
         var errors = (await Json(bad)).GetProperty("errors");
         Assert.Equal("format", errors.GetProperty("licence.number")[0].GetString());
         Assert.Equal("{}", (await Json(await browser.GetAsync(Api()))).GetProperty("data").GetRawText());
 
-        Assert.Equal(HttpStatusCode.NoContent, (await browser.PutAsJsonAsync(Api(), new { step = 3, validate = 2, data = Data() })).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await browser.PutAsJsonAsync(Api(), new { step = 3, validate = 1, data = Data() })).StatusCode);
 
         // Leave, sign in again as the same person: same step, same values.
         await using (var identity = sql.Identity())
@@ -138,9 +141,9 @@ public sealed class OnboardingTests(PostgresFixture sql) : IClassFixture<Postgre
             Assert.Equal("84213", resumed.GetProperty("data").GetProperty("licence").GetProperty("number").GetString());
         }
 
-        // Step 6 sends an invitation through the P0 flow; finishing creates everything.
+        // The team step sends an invitation through the P0 flow; finishing creates everything.
         var team = new[] { new { email = "joseph@example.test", role = "Receptionist" } };
-        Assert.Equal(HttpStatusCode.NoContent, (await browser.PutAsJsonAsync(Api(), new { step = 6, validate = 6, data = Data(team: team) })).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await browser.PutAsJsonAsync(Api(), new { step = 5, validate = 3, data = Data(team: team) })).StatusCode);
         var finished = await browser.PostAsync(Api("/finish"), null);
         Assert.Equal(HttpStatusCode.OK, finished.StatusCode);
         var result = await Json(finished);
@@ -167,8 +170,11 @@ public sealed class OnboardingTests(PostgresFixture sql) : IClassFixture<Postgre
             var address = await db.Profiles.SingleAsync();
             Assert.Equal(("12 Test Street, Chennai", "CE-0001"), (address.Address, address.RegistrationNumber));
             var open = await db.OperatingHours.Where(h => h.Weekday == DayOfWeek.Monday).SingleAsync();
-            Assert.Equal((new TimeOnly(9, 0), new TimeOnly(20, 0)), (open.Opens, open.Closes)); // first start to last end; Saturday was left closed
-            Assert.Equal(5, await db.OperatingHours.CountAsync());
+            Assert.Equal((new TimeOnly(9, 0), new TimeOnly(20, 0)), (open.Opens, open.Closes)); // first start to last end
+            var saturday = await db.OperatingHours.SingleAsync(h => h.Weekday == DayOfWeek.Saturday);
+            Assert.Equal((new TimeOnly(9, 0), new TimeOnly(14, 0)), (saturday.Opens, saturday.Closes)); // Saturday keeps its own hours
+            Assert.Equal(6, await db.OperatingHours.CountAsync()); // the six days switched on; Sunday stays closed
+            Assert.Equal(("General practice, Diabetes", "Move"), (profile.Specialty, profile.PatientStart));
             Assert.Contains("17:00", profile.WeekdayHours, StringComparison.Ordinal);
             var licence = await db.DoctorLicences.SingleAsync();
             Assert.Null(licence.VerifiedAt);
@@ -180,13 +186,13 @@ public sealed class OnboardingTests(PostgresFixture sql) : IClassFixture<Postgre
             Assert.Empty(await other.DoctorLicences.IgnoreQueryFilters().ToListAsync());
         }
 
-        // The owner doctor is bookable straight away: step 4's windows are their Monday to Friday sessions at the chosen slot length, and they show in the day view.
+        // The owner doctor is bookable straight away: step 2's windows are their sessions on the open days at the chosen slot length, and they show in the day view.
         Assert.Equal(HttpStatusCode.NoContent, (await browser.PostAsJsonAsync(new Uri("/v1/me/facility", UriKind.Relative), new { membershipId = membership.GetProperty("id").GetGuid() })).StatusCode);
         var facilityId = (await Json(await browser.GetAsync(new Uri("/v1/me/context", UriKind.Relative)))).GetProperty("active").GetProperty("facilityId").GetGuid();
         var templates = (await Json(await browser.GetAsync(new Uri($"/v1/schedule/templates?facilityId={facilityId}", UriKind.Relative)))).EnumerateArray().ToList();
         var mine = Assert.Single(templates, t => t.GetProperty("calendarId").GetGuid() == userId);
         Assert.Equal(20, mine.GetProperty("slotMinutes").GetInt32());
-        Assert.Equal(10, mine.GetProperty("hours").GetArrayLength()); // two windows on each of five weekdays; Saturday was left closed
+        Assert.Equal(11, mine.GetProperty("hours").GetArrayLength()); // two windows on each of five weekdays, one on Saturday
         var day = await Json(await browser.GetAsync(new Uri($"/v1/schedule?facilityId={facilityId}&date=2026-11-02", UriKind.Relative))); // a Monday
         Assert.Equal(userId, Assert.Single(day.GetProperty("columns").EnumerateArray()).GetProperty("calendarId").GetGuid());
 
@@ -203,7 +209,27 @@ public sealed class OnboardingTests(PostgresFixture sql) : IClassFixture<Postgre
         var verified = (await Json(await browser.GetAsync(new Uri("/v1/me/context", UriKind.Relative)))).GetProperty("active");
         Assert.False(verified.GetProperty("licencePending").GetBoolean());
         Assert.Equal("Sign", verified.GetProperty("capabilities").GetProperty("ClinicalNotes").GetString());
+
+        // The front desk member invited in the team step joins with the front-desk role and the server keeps them out of clinical notes
+        // and consultations (MDV-P1-061). Mutation check: invite with another role in /finish and this fails.
+        var token = LinkToken().Match(outbox.Sent.Single(m => m.To == "joseph@example.test").Body).Groups[1].Value;
+        using var desk = Browser();
+        var challenge = await desk.GetAsync(new Uri($"/bff/login?returnUrl=%2F&invitation={token}", UriKind.Relative));
+        var authorize = await desk.GetAsync(new Uri($"{challenge.Headers.Location}&login_hint=new"));
+        Assert.Equal("/", (await desk.GetAsync(authorize.Headers.Location)).Headers.Location?.OriginalString);
+        var deskMembership = Assert.Single((await Json(await desk.GetAsync(new Uri("/v1/me/context", UriKind.Relative)))).GetProperty("memberships").EnumerateArray());
+        Assert.Equal("Receptionist", deskMembership.GetProperty("role").GetString());
+        Assert.Equal(HttpStatusCode.NoContent, (await desk.PostAsJsonAsync(new Uri("/v1/me/facility", UriKind.Relative), new { membershipId = deskMembership.GetProperty("id").GetGuid() })).StatusCode);
+        var deskAccess = (await Json(await desk.GetAsync(new Uri("/v1/me/context", UriKind.Relative)))).GetProperty("active").GetProperty("capabilities");
+        Assert.False(deskAccess.TryGetProperty("ClinicalNotes", out _));
+        Assert.False(deskAccess.TryGetProperty("Patient360Chart", out _));
+        var visit = new Uri($"/v1/encounters/{Guid.NewGuid()}", UriKind.Relative);
+        Assert.Equal(HttpStatusCode.Forbidden, (await desk.GetAsync(visit)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await browser.GetAsync(visit)).StatusCode); // the doctor gets past the policy: the refusal is the role's
     }
+
+    [GeneratedRegex(@"https://clinic\.test/invite/([A-Za-z0-9_-]+)")]
+    private static partial Regex LinkToken();
 
     /// <summary>Mutation check: remove the catch in /finish and this fails (500); remove the log call and the log assertion fails.</summary>
     [Fact]
@@ -215,7 +241,7 @@ public sealed class OnboardingTests(PostgresFixture sql) : IClassFixture<Postgre
         // The wizard accepts 09:07; the schedule rules need the 5-minute grid.
         var data = System.Text.Json.Nodes.JsonNode.Parse(JsonSerializer.Serialize(Data()))!;
         data["hours"]!["weekdays"] = System.Text.Json.Nodes.JsonNode.Parse("""[{"start":"09:07","end":"13:00"}]""");
-        Assert.Equal(HttpStatusCode.NoContent, (await browser.PutAsJsonAsync(Api(), new { step = 6, validate = 6, data })).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await browser.PutAsJsonAsync(Api(), new { step = 5, validate = 3, data })).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await browser.PostAsync(Api("/finish"), null)).StatusCode);
 
         var tenantId = (await Json(await browser.GetAsync(new Uri("/v1/me/context", UriKind.Relative)))).GetProperty("memberships")[0].GetProperty("tenantId").GetGuid();
@@ -237,7 +263,7 @@ public sealed class OnboardingTests(PostgresFixture sql) : IClassFixture<Postgre
             hours = new { weekdays = new[] { new { start = "08:00", end = "16:00" } }, saturday = Array.Empty<object>(), slotMinutes = 15, newVisitFee = 35_000, followUpFee = 25_000 },
             templates = Array.Empty<string>(), team = Array.Empty<object>(),
         };
-        Assert.Equal(HttpStatusCode.NoContent, (await browser.PutAsJsonAsync(Api(), new { step = 6, data })).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await browser.PutAsJsonAsync(Api(), new { step = 5, data })).StatusCode);
         var finished = await Json(await browser.PostAsync(Api("/finish"), null));
         Assert.Equal("PracticeAdmin", finished.GetProperty("role").GetString());
 

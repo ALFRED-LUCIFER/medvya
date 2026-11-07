@@ -19,7 +19,8 @@ public sealed class DeploymentOptions
 /// F-02 "Where do you practise?" (MDV-P1-002). Choosing a country picks the deployment, and so the data plane, a new practice is
 /// created in; a country that is not live yet takes waitlist details (no patient data) instead.
 /// </summary>
-public sealed class RegionModel(SiteText text, IOptionsSnapshot<DeploymentOptions> deployments, PublicFormGuard guard) : PublicFormPage(text, guard)
+public sealed class RegionModel(SiteText text, IOptionsSnapshot<DeploymentOptions> deployments, IOptionsSnapshot<PricingContent> pricing, PublicFormGuard guard)
+    : PublicFormPage(text, guard)
 {
     public sealed class WaitlistForm : ContactForm
     {
@@ -38,12 +39,14 @@ public sealed class RegionModel(SiteText text, IOptionsSnapshot<DeploymentOption
     /// <summary>The not-yet-live country whose waitlist is shown, if any.</summary>
     public string? WaitlistCountry { get; private set; }
 
-    public IActionResult OnGet(string? go)
+    public IActionResult OnGet(string? go, string? plan)
     {
         NewForm();
         if (go is null || !PublicSite.Regions.Contains(go)) return Page();
         // shortcut: the choice is recorded in the onboarding audit trail when the tenant is created (MDV-P1-004); before that no tenant exists to audit against.
-        if (deployments.Value.SignUpUrls.TryGetValue(go, out var signUp)) return Redirect($"{signUp}{(signUp.Contains('?', StringComparison.Ordinal) ? '&' : '?')}country={go}");
+        // The plan chosen on /pricing goes on to sign-up only when it is a trial plan from the price list (a code, never visitor text).
+        var chosen = pricing.Value.Plans.FirstOrDefault(p => p.Code == plan && !p.Custom) is { } trial ? $"&plan={Uri.EscapeDataString(trial.Code)}" : "";
+        if (deployments.Value.SignUpUrls.TryGetValue(go, out var signUp)) return Redirect($"{signUp}{(signUp.Contains('?', StringComparison.Ordinal) ? '&' : '?')}country={go}{chosen}");
         WaitlistCountry = go;
         return Page();
     }

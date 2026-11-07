@@ -77,7 +77,7 @@ Every stored field has one class. In code, each domain property carries `[Classi
 | NOTIFICATION.template_id, channel, state, provider_ref | Internal | Templates carry no clinical data |
 | NOTIFICATION.recipient (phone/email) | Personal | DDM |
 
-### Leads: public-site contacts (P1, MDV-P1-002/003)
+### Leads: public-site contacts (P1, MDV-P1-002/003/057)
 
 Not clinic data, so no tenant. Of the app roles only `medvya_leads` reaches the `leads` schema (select and insert); reporting does not.
 
@@ -87,6 +87,7 @@ Not clinic data, so no tenant. Of the app roles only `medvya_leads` reaches the 
 | leads.DemoRequests: name, email, phone | Personal | Never in logs. Sent to the founder by email (data map) |
 | leads.DemoRequests: message (free text) | Personal | Never in logs and never emailed: a visitor could type patient details despite the warning |
 | leads.DemoRequests: consented_at, notice_version | Internal | Proof of consent to the privacy notice shown above the form (UTC time, notice version). Null only on rows stored before the notice |
+| leads.DemoRequests: preferred_at | Internal | The visitor's preferred demo time (UTC), a request the team confirms (MDV-P1-057). Sent to the founder by email |
 | leads.Waitlist: id, country, received_at | Internal | — |
 | leads.Waitlist: name, email, phone | Personal | Never in logs |
 | leads.Waitlist: consented_at, notice_version | Internal | Proof of consent, as for demo requests |

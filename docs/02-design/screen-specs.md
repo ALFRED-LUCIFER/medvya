@@ -7,17 +7,11 @@ These rules were collected from the interactive logic and copy in the design fil
 ## Access & onboarding (F-01 … F-07) — `Medvya Access and Onboarding`
 
 ### F-01 Landing
-- Nav: Medvya · For doctors · For hospitals · Trust centre · Pricing · region switch (India/UAE) · Sign in.
-- Hero headline: "Talk to your patient. Medvya writes the note. You approve it." **Two CTAs only:** "I'm a doctor · start free trial" and "For hospitals · book a demo".
-- Region-dependent copy:
-
-  | | India | UAE |
-  |---|---|---|
-  | Hero tag | "Built for Indian OPD · ABDM-ready" | "Built for UAE clinics · DoH / DHA aware" |
-  | Languages | English, Hindi, Tamil and more | Arabic and English |
-  | Residency line | "Data stays in India · Azure Central India" | "Data stays in the UAE · Azure UAE North" |
-
-- Three pillars: Know the patient in 60 seconds · Consent before every recording · Nothing falls through.
+Rebuilt to the 6 Nov 2026 design (`Medvya Web`, area web) by MDV-P1-053 (shell) and MDV-P1-054 (home).
+- Shell: announcement bar · Medvya · Product and Solutions menus (with "By specialty") · Medvya Assist · Pricing · Security · region switch (India/UAE) · Sign in · Book a demo · Start free. On phones a Menu button holds the same links. Menus are `<details>`, so they work without JavaScript. Footer with Product, Solutions and Company links, the region switch and the language switch. App Store and Google Play links appear only when `PublicSite:AppLinks:AppStore` / `:GooglePlay` are configured.
+- Home: hero ("Run your whole clinic from one calm screen.", two CTAs: Start your free trial, Book a demo) with an HTML product picture · a clinic day timeline · feature grid with "Compare plans" · Medvya Assist · Who it's for (solo, clinic, hospital) · patient app · "Live in a day. We move your data for you." · trust strip linking /trust · pricing teaser without prices linking /pricing · FAQ (`<details>`).
+- Region-dependent copy (`.IN` / `.AE` keys): payment method (UPI or card), residency line, billing and insurance names, the payment FAQ answer.
+- Product pictures use only the synthetic cast. No customer quotes until real, permitted ones exist.
 - **No fake metrics.** The pricing page is a placeholder.
 
 ### F-02 Region and residency

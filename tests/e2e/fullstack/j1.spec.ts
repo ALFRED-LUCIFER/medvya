@@ -28,29 +28,31 @@ test('J1: a new solo doctor sets up the practice, registers a patient, books and
     await page.getByRole('link', { name: /New synthetic person/ }).click();
     await page.waitForURL(/\/app\/onboarding/);
     await page.getByRole('button', { name: 'Start setup' }).click();
-    // The create-account answers (MDV-P1-059) are already in the draft.
+    // The create-account answers (MDV-P1-059) are already in the draft: practice type, name, practice name, and the city as the address start.
     await expect(page.getByLabel('Full name')).toHaveValue('Arjun Menon (synthetic)');
-    await page.getByLabel('Specialty').fill('General medicine');
-    await page.getByRole('button', { name: 'Continue' }).click();
+    await expect(page.getByLabel('Practice name')).toHaveValue(`Menon Clinic ${n} (synthetic)`);
+    await page.getByLabel(/^Address/).fill('12 Test Street, Chennai');
+    await page.getByLabel('General practice').check();
     await page.getByRole('combobox', { name: 'Medical council' }).click();
     await page.getByRole('option', { name: /TNMC/ }).click();
     await page.getByLabel('Registration number').fill('84213');
     await page.getByRole('button', { name: 'Continue' }).click();
-    await page.getByLabel('Clinic name').fill(`Menon Clinic ${n} (synthetic)`);
-    await page.getByLabel('Address').fill('12 Test Street, Chennai');
-    await page.getByRole('button', { name: 'Continue' }).click();
     await page.getByRole('button', { name: 'Continue' }).click(); // hours and fees: the design defaults
-    await page.getByLabel('General OPD').check();
-    await page.getByRole('button', { name: 'Continue' }).click();
-    await page.getByLabel('Receptionist email').fill(`reception${n}@example.test`);
+    await page.getByLabel('Email address').fill(`reception${n}@example.test`);
+    await page.getByRole('button', { name: 'Invite', exact: true }).click(); // front desk is the default role
     await page.waitForLoadState('networkidle'); // the draft autosave must settle before axe reads the page
     await expectNoAxeViolations(page);
+    await page.getByRole('button', { name: 'Continue' }).click();
+    await page.getByLabel('Start fresh').check();
+    await page.getByRole('button', { name: 'Continue' }).click();
     const finished = page.waitForResponse(r => new URL(r.url()).pathname === '/v1/onboarding/finish');
-    await page.getByRole('button', { name: 'Finish · go to Today' }).click();
+    await page.getByRole('button', { name: 'Finish setup' }).click();
     expect(await (await finished).json()).toMatchObject({ role: 'SoloDoctor' });
+    await expect(page.getByRole('heading', { level: 1, name: `Menon Clinic ${n} (synthetic) is ready.` })).toBeVisible();
     // shortcut: the stack has no SMTP sink (that is `pnpm services:up`), so the invitation mail fails and the screen says so; add a sink to assert delivery.
     await expect(page.getByText('1 invitation(s) could not be sent. You can send them again from Staff.')).toBeVisible();
-    await page.getByRole('button', { name: 'Finish · go to Today' }).click();
+    await expectNoAxeViolations(page);
+    await page.getByRole('button', { name: 'Open Today' }).click();
     await expect(page.getByText('Verification pending · usually within 1 working day.')).toBeVisible();
     await page.reload(); // the server, not the screen, holds the practice
     await expect(page.getByRole('navigation').first()).toBeVisible();

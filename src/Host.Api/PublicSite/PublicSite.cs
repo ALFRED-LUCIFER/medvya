@@ -19,6 +19,11 @@ public static partial class PublicSite
     public static readonly string[] Regions = ["IN", "AE"];
     // The proposed launch market (ADR-002); only the copy a first-time visitor sees depends on it.
     public const string DefaultRegion = "IN";
+    // Demo times are offered and confirmed in the visitor's region time (MDV-P1-057), as the clinics' own rules name them.
+    public static readonly Dictionary<string, TimeZoneInfo> RegionTimeZones = new()
+    {
+        ["IN"] = TimeZoneInfo.FindSystemTimeZoneById("Asia/Kolkata"), ["AE"] = TimeZoneInfo.FindSystemTimeZoneById("Asia/Dubai"),
+    };
     public static readonly string[] Languages = ["en", "hi", "ar"];
     // Each language in its own script, as in the clinic app's language picker.
     public static readonly Dictionary<string, string> LanguageNames = new() { ["en"] = "English", ["hi"] = "हिन्दी", ["ar"] = "العربية" };
@@ -26,20 +31,28 @@ public static partial class PublicSite
     // Page addresses without the language prefix.
     public const string DoctorStart = "/region";
     public const string TrustCentre = "/trust";
-    public const string DemoForm = "/trust#demo";
     public const string Pricing = "/pricing";
+    // Fixed by MDV-P1-053 so every page can link them; each page is built by its own ticket.
+    public const string Assist = "/assist";
+    public const string Hospitals = "/hospitals";
+    public const string Demo = "/demo";
 
     sealed class PublicSiteEndpoint;
 
     public static WebApplicationBuilder AddPublicSite(this WebApplicationBuilder builder)
     {
-        // Trust centre lists are content, not code: editable on the server without a redeploy (MDV-P1-003). Lowest precedence,
+        // Trust centre lists and the price list are content, not code: editable on the server without a redeploy (MDV-P1-003). Lowest precedence,
         // so an app setting or environment variable can still override one value.
         builder.Configuration.Sources.Insert(0, new JsonConfigurationSource
         {
             FileProvider = builder.Environment.ContentRootFileProvider, Path = "PublicSite/trust-centre.json", Optional = false, ReloadOnChange = true,
         });
+        builder.Configuration.Sources.Insert(0, new JsonConfigurationSource
+        {
+            FileProvider = builder.Environment.ContentRootFileProvider, Path = "PublicSite/pricing.json", Optional = false, ReloadOnChange = true,
+        });
         builder.Services.Configure<TrustCentreContent>(builder.Configuration.GetSection("TrustCentre"));
+        builder.Services.Configure<PricingContent>(builder.Configuration.GetSection("Pricing"));
         builder.Services.AddSingleton<PublicFormGuard>();
         builder.Services.Configure<DeploymentOptions>(builder.Configuration.GetSection("PublicSite:Deployments"));
         builder.Services.AddPublicSitePages();

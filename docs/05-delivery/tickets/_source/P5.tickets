@@ -1074,8 +1074,9 @@ depends: MDV-P5-042, MDV-P1-027
 confidence: 75 | Design exists (6 Nov 2026); build estimate not yet calibrated.
 sources: docs/02-design/source/Medvya Web.dc.html (6 Nov 2026 revamp) (Simple plans, 14-day free trial)
 desc:
-Pricing page on the public site reading the approved plans (MDV-P5-042): Solo, Clinic (most popular), Hospital (talk to us), monthly and yearly toggle with the yearly saving, ₹ or AED by region, 'prices approved' line, payment methods by country. 'Start free trial' goes to sign-up (MDV-P1-004) with the plan chosen. No card needed to start unless the pricing decision says otherwise.
+Pricing page on the public site reading the approved plans (MDV-P5-042): Solo, Clinic (most popular), Hospital (talk to us), monthly and yearly toggle with the yearly saving, ₹ or AED by region, 'prices approved' line, payment methods by country. 'Start free trial' goes to sign-up (MDV-P1-004) with the plan chosen. No card needed to start unless the pricing decision says otherwise. Also the 6 Nov blocks: Compare plans table (Solo, Clinic, Hospital), the Medvya Assist add-on per doctor, "If a payment fails" (nothing locks for 30 days; records are never locked and can always be exported) and free migration. Until the console plans exist (MDV-P5-042), the approved plans are read from a versioned file in PublicSite (like trust-centre.json), recorded as a shortcut.
 ac:
 - Given a visitor in the UAE, when opens pricing, then prices show in AED with Apple Pay and cards listed.
 - Given a visitor, when chooses Clinic and starts a trial, then sign-up opens with that plan.
 - Given a price changes in the console, when the page reloads, then the new price shows.
+- Given JavaScript is off, when the monthly or yearly choice is made, then the prices switch (plain links or a form, no script); axe is clean in en, hi and ar.

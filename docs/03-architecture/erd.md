@@ -234,7 +234,7 @@ erDiagram
 | `Invitations` | 10 | Id | tenant-scoped |
 | `Memberships` | 7 | Id | tenant-scoped |
 | `OperatingHours` | 6 | Id | tenant-scoped |
-| `PracticeDefaults` | 11 | TenantId | tenant-scoped |
+| `PracticeDefaults` | 12 | TenantId | tenant-scoped |
 | `Profiles` | 10 | Id | tenant-scoped |
 | `SettingsChanges` | 8 | Id | tenant-scoped |
 | `Tenants` | 6 | Id |  |
@@ -429,6 +429,7 @@ erDiagram
 | `Languages` | character varying(200) |  |  |
 | `NewVisitFeeMinor` | bigint |  |  |
 | `NoteTemplates` | text |  |  |
+| `PatientStart` | character varying(10) |  |  |
 | `Qualifications` | character varying(200) |  |  |
 | `SaturdayHours` | text |  |  |
 | `SlotMinutes` | int |  |  |
@@ -1352,7 +1353,7 @@ erDiagram
 
 | Table | Columns | Primary key | Notes |
 |---|---|---|---|
-| `DemoRequests` | 11 | Id |  |
+| `DemoRequests` | 12 | Id |  |
 | `Waitlist` | 8 | Id |  |
 
 <details><summary><code>leads.DemoRequests</code> columns</summary>
@@ -1368,6 +1369,7 @@ erDiagram
 | `NoticeVersion` | character varying(20) |  |  |
 | `Organisation` | character varying(150) |  |  |
 | `Phone` | character varying(20) |  |  |
+| `PreferredAt` | timestamptz | yes |  |
 | `ReceivedAt` | timestamptz |  |  |
 | `Role` | character varying(100) |  |  |
 

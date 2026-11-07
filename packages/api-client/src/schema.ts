@@ -4557,6 +4557,7 @@ export interface components {
             hours: null | components["schemas"]["OnboardingHours"];
             templates: null | string[];
             team: null | components["schemas"]["OnboardingTeamMember"][];
+            patients?: null | string;
         };
         OnboardingHours: {
             weekdays: null | components["schemas"]["HoursWindow"][];
@@ -4567,6 +4568,7 @@ export interface components {
             newVisitFee: null | number | string;
             /** Format: int64 */
             followUpFee: null | number | string;
+            days?: null | components["schemas"]["DayOfWeek"][];
         };
         OnboardingLicence: {
             authority: null | string;
@@ -4579,6 +4581,7 @@ export interface components {
             specialty: null | string;
             qualifications: null | string;
             languages: null | string;
+            specialties?: null | string[];
         };
         OnboardingTeamMember: {
             email: null | string;

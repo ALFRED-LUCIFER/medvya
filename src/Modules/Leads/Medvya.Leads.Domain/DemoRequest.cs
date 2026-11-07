@@ -5,11 +5,13 @@ using Medvya.BuildingBlocks.Domain;
 namespace Medvya.Leads.Domain;
 
 /// <summary>
-/// A hospital or clinic asking for a demo from the public trust centre (MDV-P1-003). Contact details of a buyer, never patient data:
+/// A hospital or clinic asking for a demo from the public site's /demo page (MDV-P1-003, MDV-P1-057). Contact details of a buyer, never patient data:
 /// the form has no patient fields and warns against typing any into the message.
 /// </summary>
 public sealed class DemoRequest
 {
+    /// <summary>How far ahead a preferred time may be; the page offers the next few working days.</summary>
+    public static readonly TimeSpan PreferredHorizon = TimeSpan.FromDays(60);
     public const int NameMax = 100, OrganisationMax = 150, RoleMax = 100, EmailMax = LeadRules.EmailMax, PhoneMax = 20, MessageMax = 1000;
     public static readonly string[] Countries = ["IN", "AE", "OTHER"];
 
@@ -24,6 +26,8 @@ public sealed class DemoRequest
     /// <summary>Free text. Never logged or emailed, because a visitor could ignore the warning and type patient details.</summary>
     [Classification(DataClass.Personal)] public string? Message { get; init; }
     [Classification(DataClass.Internal)] public DateTimeOffset ReceivedAt { get; init; } = DateTimeOffset.UtcNow;
+    /// <summary>The visitor's preferred demo time, in UTC. A request, not a booking: the team confirms it by email. Null only on rows stored before MDV-P1-057.</summary>
+    [Classification(DataClass.Internal)] public DateTimeOffset? PreferredAt { get; init; }
     /// <summary>Proof of consent: when the visitor ticked the box under the privacy notice. Null only on rows stored before the notice existed.</summary>
     [Classification(DataClass.Internal)] public DateTimeOffset? ConsentedAt { get; init; }
     /// <summary>The <see cref="LeadRules.NoticeVersion"/> the visitor agreed to.</summary>
@@ -33,7 +37,7 @@ public sealed class DemoRequest
 /// <summary>Validation of a submitted demo request. Returns field → error code, never the entered values.</summary>
 public static class DemoRequestRules
 {
-    public static IReadOnlyDictionary<string, string> Validate(DemoRequest r)
+    public static IReadOnlyDictionary<string, string> Validate(DemoRequest r, DateTimeOffset now)
     {
         var errors = new Dictionary<string, string>(StringComparer.Ordinal);
         LeadRules.Required(errors, nameof(r.Name), r.Name, DemoRequest.NameMax);
@@ -42,6 +46,9 @@ public static class DemoRequestRules
         if (!DemoRequest.Countries.Contains(r.Country)) errors[nameof(r.Country)] = "required";
         LeadRules.Contact(errors, r.Email, r.Phone);
         if (r.Message?.Length > DemoRequest.MessageMax) errors[nameof(r.Message)] = "tooLong";
+        if (r.PreferredAt is not { } at) errors[nameof(r.PreferredAt)] = "required";
+        else if (at <= now) errors[nameof(r.PreferredAt)] = "past";
+        else if (at > now + DemoRequest.PreferredHorizon) errors[nameof(r.PreferredAt)] = "invalid";
         LeadRules.Consent(errors, r.ConsentedAt, r.NoticeVersion);
         return errors;
     }

@@ -34,7 +34,8 @@ public sealed partial class PublicSiteTests : IClassFixture<WebApplicationFactor
     }
 
     internal static readonly string[] PagePaths =
-        ["/", "/pricing", "/trust", "/region", "/hi", "/hi/pricing", "/hi/trust", "/hi/region", "/ar", "/ar/pricing", "/ar/trust", "/ar/region"];
+        ["/", "/pricing", "/trust", "/demo", "/region", "/assist", "/hospitals", "/hi", "/hi/pricing", "/hi/trust", "/hi/demo", "/hi/region", "/hi/assist", "/hi/hospitals",
+         "/ar", "/ar/pricing", "/ar/trust", "/ar/demo", "/ar/region", "/ar/assist", "/ar/hospitals"];
     public static TheoryData<string> Pages => new(PagePaths);
 
     [Theory, MemberData(nameof(Pages))]
@@ -54,30 +55,86 @@ public sealed partial class PublicSiteTests : IClassFixture<WebApplicationFactor
     }
 
     [Fact]
-    public async Task LandingHasTheDesignedCopyAndOnlyTheTwoCtas()
+    public async Task HomeHasEveryDesignedSectionAndTheTwoHeroCtas()
     {
         var html = await Get("/");
-        Assert.Contains("<h1 id=\"hero-title\">Talk to your patient. Medvya writes the note. You approve it.</h1>", html, StringComparison.Ordinal);
-        var ctas = Assert.Single(Ctas().Matches(html)).Groups[1].Value;
-        Assert.Equal(["I'm a doctor · start free trial", "For hospitals · book a demo"], LinkText().Matches(ctas).Select(m => m.Groups[1].Value));
-        foreach (var pillar in new[] { "Know the patient in 60 seconds", "Consent before every recording", "Nothing falls through" })
-            Assert.Contains($"<h2>{pillar}</h2>", html, StringComparison.Ordinal);
-        foreach (var nav in new[] { "For doctors", "For hospitals", "Trust centre", "Pricing", "Sign in" })
-            Assert.Contains($">{nav}</a>", html, StringComparison.Ordinal);
+        Assert.Contains("<h1 id=\"hero-title\">Run your whole clinic from <span class=\"grad\">one calm screen.</span></h1>", html, StringComparison.Ordinal);
+        var ctas = Ctas().Match(html).Groups[1].Value;
+        Assert.Equal(["/region", "/demo"], Href().Matches(ctas).Select(m => m.Groups[1].Value));
+        Assert.Equal(["Start your free trial", "Book a demo"], LinkText().Matches(ctas).Select(m => m.Groups[1].Value));
+        foreach (var heading in new[]
+        {
+            "From the first token to the last receipt.", "Replace five tools with one that your whole team likes.", "From a one-doctor clinic to a hospital group.",
+            "Your patients get an app too. Free for them, branded for you.", "Live in a day. We move your data for you.",
+            "Built for patient records from day one", "Simple plans with a free trial.", "Questions doctors ask us",
+        })
+            Assert.Contains($">{heading}</h2>", html, StringComparison.Ordinal);
+        Assert.Contains("href=\"/pricing\">Compare plans</a>", html, StringComparison.Ordinal);
+        Assert.Contains("href=\"/trust\">Visit the trust centre</a>", html, StringComparison.Ordinal);
+        Assert.Contains("href=\"/pricing\">See plans</a>", html, StringComparison.Ordinal);
+        // The FAQ opens without script: seven <details>, the first open.
+        Assert.Equal(7, FaqItem().Count(html));
+        Assert.Contains("<details open=\"open\"><summary>Is there a free trial?</summary>", html, StringComparison.Ordinal);
     }
 
-    // Exact strings from docs/02-design/screen-specs.md F-01.
     [Theory]
-    [InlineData(null, "Built for Indian OPD · ABDM-ready", "English, Hindi, Tamil and more", "Data stays in India · Azure Central India")]
-    [InlineData("IN", "Built for Indian OPD · ABDM-ready", "English, Hindi, Tamil and more", "Data stays in India · Azure Central India")]
-    [InlineData("AE", "Built for UAE clinics · DoH / DHA aware", "Arabic and English", "Data stays in the UAE · Azure UAE North")]
-    [InlineData("XX", "Built for Indian OPD · ABDM-ready", "English, Hindi, Tamil and more", "Data stays in India · Azure Central India")]
-    public async Task RegionCookieChoosesTheRegionCopy(string? region, string tag, string languages, string residency)
+    [InlineData("/"), InlineData("/hi"), InlineData("/ar")]
+    public async Task HomeShowsNoPricesQuotesOrNamesOutsideTheSyntheticCast(string path)
+    {
+        var html = await Get(path);
+        Assert.DoesNotMatch(Price(), html);
+        Assert.DoesNotContain("<blockquote", html, StringComparison.OrdinalIgnoreCase); // no customer stories until real, permitted quotes exist
+        // Product pictures name only people from docs/00-overview/personas.md.
+        var names = PictureName().Matches(html).Select(m => m.Groups[1].Value).ToList();
+        Assert.NotEmpty(names);
+        Assert.All(names, n => Assert.Contains(n, SyntheticCast));
+    }
+
+    static readonly string[] SyntheticCast = ["Deepak Nair", "Rahul Menon", "Meera Iyer", "Fatima Al Mansoori", "Kavya Iyer"];
+
+    [Fact]
+    public async Task HeaderMenusAndPhoneMenuWorkWithoutScript()
+    {
+        var html = await Get("/");
+        foreach (var menu in new[] { "Product", "Solutions" })
+            Assert.Matches($"<details class=\"menu\" name=\"site-menu\">\\s*<summary>{menu}</summary>", html);
+        Assert.Contains("<details class=\"menu phone-menu\" name=\"site-menu\">", html, StringComparison.Ordinal);
+        foreach (var (href, text) in new[]
+        {
+            ("/assist", "Medvya Assist"), ("/pricing", "Pricing"), ("/trust", "Security"), ("/hospitals", "Hospitals"), ("/demo", "Book a demo"),
+            ("/region", "Start free"), ("/demo", "Contact sales"), ("/trust", "Trust centre"),
+        })
+            Assert.Contains($"href=\"{href}\">{text}</a>", html, StringComparison.Ordinal);
+        Assert.Contains(">Sign in</a>", html, StringComparison.Ordinal);
+        Assert.Contains("<aside class=\"announce\" aria-label=\"What is new\">", html, StringComparison.Ordinal);
+        // Hindi and Arabic links keep their language prefix.
+        Assert.Contains("href=\"/ar/assist\">", await Get("/ar"), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task StoreLinksAppearOnlyWhenTheirAddressesAreConfigured()
+    {
+        Assert.DoesNotContain("class=\"app-links\"", await Get("/"), StringComparison.Ordinal);
+
+        using var configured = factory.WithWebHostBuilder(b => b
+            .UseSetting("PublicSite:AppLinks:AppStore", "https://apps.apple.com/app/id0000000000")
+            .UseSetting("PublicSite:AppLinks:GooglePlay", "https://play.google.com/store/apps/details?id=example.medvya"));
+        var html = await Html(await configured.CreateClient(new() { AllowAutoRedirect = false, HandleCookies = false }).GetAsync(new Uri("/trust", UriKind.Relative)));
+        Assert.Contains("<a class=\"store\" href=\"https://apps.apple.com/app/id0000000000\" rel=\"noopener\">Download on the App Store</a>", html, StringComparison.Ordinal);
+        Assert.Contains(">Get it on Google Play</a>", html, StringComparison.Ordinal);
+    }
+
+    // Region-dependent copy (MDV-P1-054 home).
+    [Theory]
+    [InlineData(null, "UPI payments", "Data stays in India")]
+    [InlineData("IN", "UPI payments", "Data stays in India")]
+    [InlineData("AE", "card payments", "Data stays in the UAE")]
+    [InlineData("XX", "UPI payments", "Data stays in India")]
+    public async Task RegionCookieChoosesTheRegionCopy(string? region, string payments, string residency)
     {
         var html = await Get("/", region);
-        Assert.Contains($"<p class=\"tag\">{tag}</p>", html, StringComparison.Ordinal);
-        Assert.Contains($"ambient notes in {languages}, and", html, StringComparison.Ordinal);
-        Assert.Contains($"<p class=\"residency\">{residency}</p>", html, StringComparison.Ordinal);
+        Assert.Contains($"AI-drafted notes, {payments} and insurance claims", html, StringComparison.Ordinal);
+        Assert.Contains($"<li>{residency}</li>", html, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -100,7 +157,7 @@ public sealed partial class PublicSiteTests : IClassFixture<WebApplicationFactor
     public async Task OverHttpsEveryCookieIsSecureAndNoSharedCacheKeepsAPage()
     {
         var https = factory.CreateClient(new() { AllowAutoRedirect = false, HandleCookies = false, BaseAddress = new Uri("https://localhost") });
-        foreach (var path in new[] { "/?region=AE", "/trust", "/region?go=AE" })
+        foreach (var path in new[] { "/?region=AE", "/demo", "/region?go=AE" })
         {
             var res = await https.GetAsync(new Uri(path, UriKind.Relative));
             var cookie = Assert.Single(res.Headers.GetValues("Set-Cookie")); // the region preference, or the form's anti-forgery token
@@ -122,7 +179,7 @@ public sealed partial class PublicSiteTests : IClassFixture<WebApplicationFactor
         Assert.Contains($"<html lang=\"{lang}\" dir=\"{dir}\">", html, StringComparison.Ordinal);
         foreach (var (l, href) in new[] { ("en", "/"), ("hi", "/hi"), ("ar", "/ar") })
             Assert.Contains($"hreflang=\"{l}\" href=\"http://localhost{href}\"", html, StringComparison.Ordinal);
-        Assert.Contains($"<h1 id=\"hero-title\">{Catalog(lang)["site.hero.title"]}</h1>", html, StringComparison.Ordinal);
+        Assert.Contains($"<h1 id=\"hero-title\">{Catalog(lang)["site.home.hero.titleStart"]} ", html, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -137,11 +194,6 @@ public sealed partial class PublicSiteTests : IClassFixture<WebApplicationFactor
         foreach (var lang in new[] { "hi", "ar" })
             Assert.Empty(keys.Except(Catalog(lang).Keys));
     }
-
-    [Theory]
-    [InlineData("/pricing"), InlineData("/hi/pricing"), InlineData("/ar/pricing")]
-    public async Task PricingIsAPlaceholderWithoutPrices(string path) =>
-        Assert.DoesNotMatch(Price(), await Get(path));
 
     [Fact]
     public async Task StylesheetCarriesTheSharedDesignTokens()
@@ -171,7 +223,7 @@ public sealed partial class PublicSiteTests : IClassFixture<WebApplicationFactor
             Assert.True((int)(await client.SendAsync(req)).StatusCode < 400, path);
         }
         // A form post too (refused for its missing token, but never by reading the session).
-        using (var post = new HttpRequestMessage(HttpMethod.Post, new Uri("/trust", UriKind.Relative)) { Content = new FormUrlEncodedContent([]) })
+        using (var post = new HttpRequestMessage(HttpMethod.Post, new Uri("/demo", UriKind.Relative)) { Content = new FormUrlEncodedContent([]) })
         {
             post.Headers.Add("Cookie", "__Host-medvya=session-cookie-value");
             Assert.Equal(HttpStatusCode.BadRequest, (await client.SendAsync(post)).StatusCode);
@@ -210,6 +262,10 @@ public sealed partial class PublicSiteTests : IClassFixture<WebApplicationFactor
     private static partial Regex Ctas();
     [GeneratedRegex("""<a [^>]*>([^<]*)</a>""")]
     private static partial Regex LinkText();
+    [GeneratedRegex("""<details( open="open")?><summary>""")]
+    private static partial Regex FaqItem();
+    [GeneratedRegex("""<span class="token">[^<]*</span><span>([^<]+)</span>""")]
+    private static partial Regex PictureName();
     [GeneratedRegex(@"[₹$€]|\bAED\b|\bINR\b|\d+\s*(/|per)\s*(month|mo|year)", RegexOptions.IgnoreCase)]
     private static partial Regex Price();
 }

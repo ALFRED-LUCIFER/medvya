@@ -38,6 +38,7 @@ public sealed class PracticeProvisioning(string connectionString, ICurrentUser u
         var facilityId = Guid.CreateVersion7();
         var membershipId = Guid.CreateVersion7();
         var hours = data.Hours!;
+        var specialty = OnboardingRules.SpecialtyText(data.Profile);
         db.Tenants.Add(new Tenant { Id = tenantId, Name = clinic.Name!.Trim(), CountryCode = country, ResidencyRegion = ResidencyRegion(country) });
         db.Facilities.Add(new Facility { Id = facilityId, TenantId = tenantId, Name = clinic.Name!.Trim(), TimeZone = rules.TimeZone });
         db.Memberships.Add(new Membership { Id = membershipId, TenantId = tenantId, UserId = owner, FacilityId = facilityId, Role = role, Status = MembershipStatus.Active });
@@ -48,18 +49,17 @@ public sealed class PracticeProvisioning(string connectionString, ICurrentUser u
         });
         db.PracticeDefaultsSet.Add(new PracticeDefaults
         {
-            TenantId = tenantId, Specialty = Clean(data.Profile.Specialty), Qualifications = Clean(data.Profile.Qualifications), Languages = Clean(data.Profile.Languages),
+            TenantId = tenantId, Specialty = specialty, Qualifications = Clean(data.Profile.Qualifications), Languages = Clean(data.Profile.Languages),
             SlotMinutes = hours.SlotMinutes!.Value, NewVisitFeeMinor = hours.NewVisitFee!.Value, FollowUpFeeMinor = hours.FollowUpFee!.Value, Currency = rules.Currency,
             WeekdayHours = Windows(hours.Weekdays), SaturdayHours = Windows(hours.Saturday), NoteTemplates = JsonSerializer.Serialize(data.Templates ?? []),
+            PatientStart = data.Patients,
         });
         // Opening hours of settings are one span a day: from the first window's start to the last window's end (the split stays in the defaults).
-        foreach (var (days, windows) in new[] { (new[] { DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday }, hours.Weekdays), ([DayOfWeek.Saturday], hours.Saturday) })
+        foreach (var (day, windows) in OnboardingRules.OpenDays(hours))
         {
-            if (windows is not { Count: > 0 }) continue;
             var opens = windows.Min(w => TimeOnly.ParseExact(w.Start!, "HH:mm", CultureInfo.InvariantCulture));
             var closes = windows.Max(w => TimeOnly.ParseExact(w.End!, "HH:mm", CultureInfo.InvariantCulture));
-            foreach (var day in days)
-                db.OperatingHours.Add(new OperatingHours { Id = Guid.CreateVersion7(), TenantId = tenantId, FacilityId = facilityId, Weekday = day, Opens = opens, Closes = closes });
+            db.OperatingHours.Add(new OperatingHours { Id = Guid.CreateVersion7(), TenantId = tenantId, FacilityId = facilityId, Weekday = day, Opens = opens, Closes = closes });
         }
         // Only a doctor submits a licence; their recording and signing stay off until it is verified (LicenceRules).
         if (role == Role.SoloDoctor)
@@ -72,7 +72,7 @@ public sealed class PracticeProvisioning(string connectionString, ICurrentUser u
             // The owner doctor is listed on Settings, Doctors beside the doctors added later (MDV-P1-007).
             db.DoctorProfiles.Add(new DoctorProfile
             {
-                MembershipId = membershipId, TenantId = tenantId, FullName = data.Profile.FullName!.Trim(), Specialty = Clean(data.Profile.Specialty),
+                MembershipId = membershipId, TenantId = tenantId, FullName = data.Profile.FullName!.Trim(), Specialty = specialty,
                 Qualifications = Clean(data.Profile.Qualifications), Languages = Clean(data.Profile.Languages),
                 NewVisitFeeMinor = hours.NewVisitFee!.Value, FollowUpFeeMinor = hours.FollowUpFee!.Value, ChangedBy = owner, ChangedAt = now,
             });

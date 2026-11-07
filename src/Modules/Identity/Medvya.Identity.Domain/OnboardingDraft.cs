@@ -12,7 +12,7 @@ public sealed class OnboardingDraft
     [Classification(DataClass.Internal)] public Guid UserId { get; init; }
     /// <summary>"IN" or "AE": the country deployment the practice will be bound to.</summary>
     [Classification(DataClass.Internal)] public required string Country { get; set; }
-    /// <summary>The step to resume at (1-6).</summary>
+    /// <summary>The step to resume at (1-5).</summary>
     [Classification(DataClass.Internal)] public int Step { get; set; } = 1;
     /// <summary>JSON of what the person typed so far (names, licence and clinic details).</summary>
     [Classification(DataClass.Personal)] public required string Data { get; set; }

@@ -520,6 +520,10 @@ namespace Medvya.Tenancy.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("PatientStart")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
                     b.Property<string>("Qualifications")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");

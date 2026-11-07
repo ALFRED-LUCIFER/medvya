@@ -47,7 +47,7 @@ public static partial class OnboardingEndpoints
         group.MapPut("/", async (SaveRequest request, ClaimsPrincipal principal, [FromServices] IOnboardingDrafts drafts, CancellationToken ct) =>
         {
             var userId = UserId(principal);
-            if (request.Data is null || request.Step is < 1 or > 6) return Results.ValidationProblem(Errors([new("step", "unknown")]));
+            if (request.Data is null || !OnboardingRules.Steps.Contains(request.Step)) return Results.ValidationProblem(Errors([new("step", "unknown")]));
             var draft = await drafts.GetAsync(userId, ct);
             if (draft is null) return Results.NotFound();
             if (request.Validate is { } step && OnboardingRules.For(draft.Country)!.ValidateStep(step, request.Data) is { Count: > 0 } errors)
@@ -69,10 +69,10 @@ public static partial class OnboardingEndpoints
             await drafts.CompleteAsync(userId, ct);
             await users.SetDisplayNameAsync(userId, data.Profile!.FullName!, ct);
 
-            // Step 6 goes through the invitation flow (MDV-P0-013), run inside the new tenant so its audit rows land there.
+            // The team step goes through the invitation flow (MDV-P0-013), run inside the new tenant so its audit rows land there.
             int sent = 0, failed = 0;
             await using var scope = http.RequestServices.EnterLinkTenant(practice.TenantId);
-            // The owner doctor is bookable straight away: the hours and slot length of step 4 become their weekly sessions (an upsert, so a repeat adds none).
+            // The owner doctor is bookable straight away: the hours and slot length of step 2 become their weekly sessions (an upsert, so a repeat adds none).
             if (practice.Role == Role.SoloDoctor)
             {
                 try
@@ -103,13 +103,8 @@ public static partial class OnboardingEndpoints
     [LoggerMessage(Level = LogLevel.Warning, Message = "Onboarding finished without the owner's bookable sessions: the schedule rules rejected the hours")]
     static partial void OwnerSessionsRejected(ILogger logger);
 
-    static readonly DayOfWeek[] Weekdays = [DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday];
-
     static List<WorkingHours> Sessions(OnboardingHours hours) =>
-    [
-        .. Weekdays.SelectMany(day => (hours.Weekdays ?? []).Select(w => Session(day, w))),
-        .. (hours.Saturday ?? []).Select(w => Session(DayOfWeek.Saturday, w)),
-    ];
+        [.. OnboardingRules.OpenDays(hours).SelectMany(open => open.Windows.Select(w => Session(open.Day, w)))];
 
     static WorkingHours Session(DayOfWeek day, HoursWindow w) =>
         new() { Weekday = day, Start = TimeOnly.ParseExact(w.Start!, "HH:mm", CultureInfo.InvariantCulture), End = TimeOnly.ParseExact(w.End!, "HH:mm", CultureInfo.InvariantCulture) };
@@ -119,14 +114,14 @@ public static partial class OnboardingEndpoints
     static Dictionary<string, string[]> Errors(IEnumerable<OnboardingError> errors) =>
         errors.GroupBy(e => e.Field).ToDictionary(g => g.Key, g => g.Select(e => e.Code).ToArray());
 
-    // The draft plus what the page needs to render the country's step 2/4/5 choices; the server stays the authority on them.
+    // The draft plus what the page needs to render the country's choices; the server stays the authority on them.
     static object View(string country, int step, string data)
     {
         var rules = OnboardingRules.For(country)!;
         return new
         {
             country, step, data = JsonSerializer.Deserialize<JsonElement>(data),
-            rules = new { rules.Currency, authorities = rules.Authorities, slotMinutes = OnboardingRules.SlotMinutes, templates = OnboardingRules.TemplateIds },
+            rules = new { rules.Currency, authorities = rules.Authorities, slotMinutes = OnboardingRules.SlotMinutes, templates = OnboardingRules.TemplateIds, specialties = OnboardingRules.Specialties },
         };
     }
 }

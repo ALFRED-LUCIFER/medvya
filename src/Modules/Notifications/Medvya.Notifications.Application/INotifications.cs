@@ -86,9 +86,15 @@ public interface IComplianceReminders
 }
 
 /// <summary>A practice's notification settings (MDV-P1-006).</summary>
+/// <param name="SenderName">Shown at the start of email subjects; null uses the location's name. The SMS sender is the DLT-registered header (MDV-P1-045).</param>
 public sealed record NotificationPreferencesView(
-    bool Confirmation, bool Reminder24h, bool Reminder2h, bool Changes, bool Email, bool Sms, TimeOnly QuietStart, TimeOnly QuietEnd)
+    bool Confirmation, bool Reminder24h, bool Reminder2h, bool Changes, bool Email, bool Sms, TimeOnly QuietStart, TimeOnly QuietEnd, string? SenderName = null)
 {
+    public const int SenderNameMax = 60;
+
+    /// <summary>The name an email to a patient of <paramref name="locationName"/> opens with.</summary>
+    public string SenderFor(string locationName) => SenderName ?? locationName;
+
     public bool Allows(NotificationKind kind) => kind switch
     {
         NotificationKind.Confirmation => Confirmation,

@@ -2079,7 +2079,7 @@
   "settings.notifications.channel.sms": "الرسائل النصية",
   "settings.notifications.channel.whatsapp": "واتساب",
   "settings.notifications.whatsappLater": "مخطط له في مرحلة لاحقة.",
-  "settings.notifications.senderNote": "تذكر الرسائل اسم عيادتك. اسم مرسل الرسائل النصية مسجّل لدى مشغّل الهاتف ولا يمكن تعديله هنا.",
+  "settings.notifications.senderNote": "اسم مرسل الرسائل النصية مسجّل لدى مشغّل الهاتف ولا يمكن تعديله هنا.",
   "settings.notifications.quiet": "ساعات الهدوء",
   "settings.notifications.quietIntro": "لا تُرسل رسائل نصية في هذه الفترة (بتوقيت العيادة)، بل تنتظر حتى تنتهي. البريد الإلكتروني لا يُحجز. أدخل الوقت نفسه مرتين إن لم تكن هناك ساعات هدوء.",
   "settings.notifications.quietStart": "الهدوء من",
@@ -2645,5 +2645,7 @@
   "notifications.kind.RegistrationExpiring": "ينتهي تسجيل العيادة خلال {days} يومًا أو أقل. جدّده، ثم أدخل التاريخ الجديد في الإعدادات، الملف التعريفي.",
   "notifications.kind.RegistrationExpired": "ينتهي تسجيل العيادة اليوم أو انتهى. جدّده، ثم أدخل التاريخ الجديد في الإعدادات، الملف التعريفي.",
   "settings.profile.registrationExpires": "التسجيل صالح حتى",
-  "settings.profile.registrationExpiresHint": "يُذكَّر المالكون قبل 60 و30 و7 أيام، وفي يوم الانتهاء."
+  "settings.profile.registrationExpiresHint": "يُذكَّر المالكون قبل 60 و30 و7 أيام، وفي يوم الانتهاء.",
+  "settings.notifications.senderName": "اسم المرسل في رسائل البريد",
+  "settings.notifications.senderNameHint": "يأتي في بداية عنوان كل رسالة بريد، مثل “Iyer Family Clinic: تأكيد الموعد”. اتركه فارغًا لاستخدام اسم الموقع."
 }

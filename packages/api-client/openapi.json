@@ -5023,6 +5023,12 @@
           "quietEnd": {
             "type": "string",
             "format": "time"
+          },
+          "senderName": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

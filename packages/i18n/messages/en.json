@@ -2080,7 +2080,7 @@
   "settings.notifications.channel.sms": "SMS",
   "settings.notifications.channel.whatsapp": "WhatsApp",
   "settings.notifications.whatsappLater": "Planned for a later phase.",
-  "settings.notifications.senderNote": "Messages name your clinic. The SMS sender name is registered with the telephone operator and cannot be edited here.",
+  "settings.notifications.senderNote": "The SMS sender name is registered with the telephone operator and cannot be edited here.",
   "settings.notifications.quiet": "Quiet hours",
   "settings.notifications.quietIntro": "No SMS is sent in this window (clinic time); it waits until the window ends. Email is not held. Use the same time twice for no quiet hours.",
   "settings.notifications.quietStart": "Quiet from",
@@ -2648,5 +2648,7 @@
   "notifications.kind.RegistrationExpiring": "The clinic registration expires in {days} days or less. Renew it, then enter the new date in Settings, Profile.",
   "notifications.kind.RegistrationExpired": "The clinic registration expires today or has expired. Renew it, then enter the new date in Settings, Profile.",
   "settings.profile.registrationExpires": "Registration valid until",
-  "settings.profile.registrationExpiresHint": "Owners are reminded 60, 30 and 7 days before, and on the day."
+  "settings.profile.registrationExpiresHint": "Owners are reminded 60, 30 and 7 days before, and on the day.",
+  "settings.notifications.senderName": "Sender name in emails",
+  "settings.notifications.senderNameHint": "Starts every email subject, for example “Iyer Family Clinic: Appointment confirmed”. Leave empty to use the location’s name."
 }

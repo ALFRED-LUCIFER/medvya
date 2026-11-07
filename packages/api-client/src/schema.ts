@@ -4560,6 +4560,7 @@ export interface components {
             quietStart: string;
             /** Format: time */
             quietEnd: string;
+            senderName?: null | string;
         };
         Offboard: {
             reason: null | string;

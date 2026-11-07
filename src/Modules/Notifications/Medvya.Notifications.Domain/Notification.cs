@@ -112,6 +112,8 @@ public sealed class NotificationPreference
     /// <summary>Facility-local window with no SMS; equal values mean no quiet hours.</summary>
     [Classification(DataClass.Internal)] public TimeOnly QuietStart { get; set; }
     [Classification(DataClass.Internal)] public TimeOnly QuietEnd { get; set; }
+    /// <summary>Name at the start of every email subject (and the From name where the provider allows it); null means the location's name (#213).</summary>
+    [Classification(DataClass.Public)] public string? SenderName { get; set; }
     [Classification(DataClass.Internal)] public Guid? ChangedBy { get; set; }
     [Classification(DataClass.Internal)] public DateTimeOffset ChangedAt { get; set; }
 }

@@ -6,6 +6,8 @@ export type NotificationPrefs = {
   confirmation: boolean; reminder24h: boolean; reminder2h: boolean; changes: boolean;
   email: boolean; sms: boolean;
   quietStart: string; quietEnd: string;
+  /** Opens every email subject; null uses the location's name (#213). */
+  senderName?: string | null;
 };
 export type TemplatePreview = { group: string; subject: string; text: string };
 
@@ -18,12 +20,14 @@ export const notificationPrefsSchema = z.object({
   confirmation: z.boolean(), reminder24h: z.boolean(), reminder2h: z.boolean(), changes: z.boolean(),
   email: z.boolean(), sms: z.boolean(),
   quietStart: time, quietEnd: time,
+  senderName: z.string().trim().max(60),
 });
 export type NotificationPrefsForm = z.infer<typeof notificationPrefsSchema>;
 
 const hhmm = (t: string) => t.slice(0, 5);
-export const toPrefsForm = (p: NotificationPrefs): NotificationPrefsForm => ({ ...p, quietStart: hhmm(p.quietStart), quietEnd: hhmm(p.quietEnd) });
-export const toPrefsPayload = (f: NotificationPrefsForm): NotificationPrefs => ({ ...f, quietStart: `${f.quietStart}:00`, quietEnd: `${f.quietEnd}:00` });
+export const toPrefsForm = (p: NotificationPrefs): NotificationPrefsForm => ({ ...p, quietStart: hhmm(p.quietStart), quietEnd: hhmm(p.quietEnd), senderName: p.senderName ?? '' });
+export const toPrefsPayload = (f: NotificationPrefsForm): NotificationPrefs =>
+  ({ ...f, quietStart: `${f.quietStart}:00`, quietEnd: `${f.quietEnd}:00`, senderName: f.senderName.trim() || null });
 
 /** The preview groups in the catalogue map to these screen labels (message keys settings.notifications.group.*). */
 export const previewGroups = ['Confirmation', 'Reminder', 'Rescheduled', 'Cancelled', 'NeedsRebooking'] as const;

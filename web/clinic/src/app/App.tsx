@@ -1,10 +1,12 @@
 import { lazy, Suspense } from 'react';
 import type { Locale } from '@medvya/i18n';
 import { I18nProvider, useI18n } from '@medvya/i18n';
+import { SystemState } from '@medvya/ui';
 import { Navigate, Outlet, Route, Routes, useLocation, useNavigate } from 'react-router';
 import UiGallery from '../dev/UiGallery';
 import OfflineBanner from '../features/connectivity/components/OfflineBanner';
 import { useConnectivityController } from '../features/connectivity/hooks/useConnectivityController';
+import LoadErrorBoundary from '../features/errors/components/LoadErrorBoundary';
 import NotFoundPage from '../features/errors/components/NotFoundPage';
 import TermsNotice from '../features/settings/components/TermsNotice';
 import { useTermsNotice } from '../features/settings/hooks/useTermsNotice';
@@ -47,7 +49,7 @@ export default function App({ locale, onLocaleChange }: Props) {
   const { t, country: signedOutCountry } = useI18n();
   const navigate = useNavigate();
   const location = useLocation();
-  const { online, retry } = useConnectivityController();
+  const { online, retry, reload } = useConnectivityController();
   const shell = useShellController();
   const termsPending = useTermsNotice(shell.items.some(i => i.id === 'settings'));
   const switcher = <LanguageSwitcher value={locale} onChange={onLocaleChange} />;
@@ -146,14 +148,17 @@ export default function App({ locale, onLocaleChange }: Props) {
   return (
     <I18nProvider locale={locale} country={country}>
       {!online && <OfflineBanner onRetry={retry} />}
-      <Suspense fallback={<ShellMessage standalone busy title={t('shell.loading')} />}>
-        <Routes>
-          <Route path="/__ui" element={<UiGallery switcher={switcher} />} />
-          {/* Public and token-based (F-06): the same page whether or not someone is signed in. */}
-          <Route path="/invite/:token" element={<InvitationRoute switcher={switcher} />} />
-          {routes}
-        </Routes>
-      </Suspense>
+      {/* Offline, the banner already says why the screen is missing; back online, a reload fetches it. */}
+      <LoadErrorBoundary fallback={online && <main className="grid min-h-screen place-items-center p-4"><SystemState state="offline" onAction={reload} /></main>}>
+        <Suspense fallback={<ShellMessage standalone busy title={t('shell.loading')} />}>
+          <Routes>
+            <Route path="/__ui" element={<UiGallery switcher={switcher} />} />
+            {/* Public and token-based (F-06): the same page whether or not someone is signed in. */}
+            <Route path="/invite/:token" element={<InvitationRoute switcher={switcher} />} />
+            {routes}
+          </Routes>
+        </Suspense>
+      </LoadErrorBoundary>
     </I18nProvider>
   );
 }

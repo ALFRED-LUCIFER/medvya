@@ -31,3 +31,17 @@ test('going offline shows the offline banner', async ({ page, context }) => {
   await context.setOffline(true);
   await expect(page.getByRole('status').or(page.getByRole('alert')).first()).toBeVisible();
 });
+
+// A screen's code that fails to download (connection lost before it arrived) must not blank the app and take the banner with it.
+test('going offline before the sign-in screen has downloaded still shows the offline banner', async ({ page, context }) => {
+  let lose!: () => void;
+  const lost = new Promise<void>(r => { lose = r; });
+  await page.route('**/src/app/SignInRoute.tsx*', async r => { await lost; await r.abort('internetdisconnected'); });
+  await page.goto('/');
+  await context.setOffline(true);
+  const failed = page.waitForEvent('requestfailed', r => r.url().includes('SignInRoute'));
+  lose();
+  await failed;
+  await expect(page.getByRole('heading', { name: 'Loading…' })).toBeHidden(); // the app has dealt with the failed download
+  await expect(page.getByRole('heading', { name: 'You are offline' })).toBeVisible();
+});

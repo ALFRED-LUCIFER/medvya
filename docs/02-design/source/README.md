@@ -19,3 +19,7 @@ See [../docs/README.md](../../README.md#source-files-design-project) for what ea
 ## Revamp import, 6 Nov 2026
 
 Added `Medvya Admin.dc.html` (platform console) and `Medvya Mobile.dc.html` (two Expo apps), and `Medvya Web.dc.html` (one-flow web design with the approved pricing). The design project now also holds a newer `Medvya Foundations.dc.html`; the older copy here is unchanged and a fresh import is still to do. Planned in tickets MDV-P5-031 to P5-050 and MDV-P4-034.
+
+## Web re-import, 7 Nov 2026
+
+`Medvya Web.dc.html` was replaced with the current version from the design project: it adds the public site pages (home, Medvya Assist, for hospitals, pricing, trust centre, book a demo), the sign-in and create-account screens and the six-step set-up wizard. Planned in MDV-P1-053 to P1-061 and MDV-P5-050.

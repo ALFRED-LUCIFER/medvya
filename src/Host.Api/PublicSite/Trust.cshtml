@@ -1,6 +1,5 @@
 @page
 @model TrustModel
-@using Medvya.Leads.Domain
 @{
     var p = Model;
     ViewData["Title"] = $"{p.T("site.trust.title")} · {p.T("app.name")}";
@@ -16,23 +15,50 @@
         ("subProcessors", "M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM17 11a3 3 0 1 0 0-6M3 20a6 6 0 0 1 12 0M15 14a6 6 0 0 1 6 6"),
     };
     var notInEffect = p.T("site.trust.notYetInEffect");
-    var country = p.Form.Country ?? p.Region;
 }
-<section class="page trust" aria-labelledby="trust-title">
-    <h1 id="trust-title">@p.T("site.trust.title")</h1>
-    <ul class="trust-blocks">
-        @foreach (var (key, icon) in blocks)
-        {
-            <li>
-                <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false"><path d="@icon" /></svg>
-                <div>
-                    <h2>@p.T($"site.trust.{key}.title")</h2>
+<section class="trust-hero" aria-labelledby="trust-title">
+    <div>
+        <p class="eyebrow">@p.T("site.nav.trust")</p>
+        <h1 id="trust-title">@p.T("site.trust.heading")</h1>
+        <p class="lede">@p.T("site.trust.lead")</p>
+    </div>
+    <span class="trust-mark" aria-hidden="true"><svg viewBox="0 0 24 24" width="52" height="52" focusable="false"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6zM9 12h6v5H9zM10.5 12v-2a1.5 1.5 0 0 1 3 0v2" /></svg></span>
+</section>
+<div class="trust">
+    <section aria-labelledby="controls-title">
+        <h2 id="controls-title">@p.T("site.trust.controls.title")</h2>
+        <ul class="trust-cards">
+            @foreach (var (key, icon) in blocks)
+            {
+                <li>
+                    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false"><path d="@icon" /></svg>
+                    <h3>@p.T($"site.trust.{key}.title")</h3>
                     <p>@p.T($"site.trust.{key}.body")</p>
-                </div>
-            </li>
-        }
-    </ul>
-    <p class="note">@p.T("site.trust.footer")</p>
+                </li>
+            }
+        </ul>
+        <p class="note">@p.T("site.trust.footer")</p>
+    </section>
+
+    @* Statuses come only from trust-centre.json; the header says plainly that none is a certification (MDV-P1-058). *@
+    <section class="compliance" aria-labelledby="compliance-title">
+        <div class="compliance-head">
+            <h2 id="compliance-title">@p.T("site.trust.compliance.title")</h2>
+            <p>@p.T("site.trust.compliance.note")</p>
+        </div>
+        <ul>
+            @foreach (var item in p.Lists.Compliance)
+            {
+                // A typo in the editable file must not take the page down; it shows the weaker claim instead.
+                var status = item.Status == "inProgress" ? "inProgress" : "planned";
+                <li>
+                    <strong>@p.Localized(item.Name)</strong>
+                    <span>@p.Localized(item.Detail)</span>
+                    <span class="status status-@status">@p.T($"site.trust.status.{status}")</span>
+                </li>
+            }
+        </ul>
+    </section>
 
     <section aria-labelledby="policies-title">
         <h2 id="policies-title">@p.T("site.trust.policies.title")</h2>
@@ -71,52 +97,10 @@
         }
     </section>
 
-    <section id="demo" class="demo" aria-labelledby="demo-title">
-        <h2 id="demo-title">@p.T("site.demo.title")</h2>
-        <p>@p.T("site.demo.intro")</p>
-        <p class="warning"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path d="M12 3l10 18H2zM12 10v5M12 18v.5" /></svg>@p.T("site.form.noPatientData")</p>
-        @if (p.Sent)
-        {
-            <p class="success" role="status">@p.T("site.demo.sent")</p>
-        }
-        else if (p.PrivacyContact is null)
-        {
-            <p class="note">@p.T("site.form.closed")</p>
-        }
-        else
-        {
-            <partial name="_FormErrors" />
-            <form method="post" novalidate>
-                <partial name="_NameField" />
-                <div class="field">
-                    <label for="demo-organisation">@p.T("site.demo.organisation")</label>
-                    <input id="demo-organisation" name="Form.Organisation" value="@p.Form.Organisation" maxlength="150" autocomplete="organization" aria-invalid="@p.Invalid("Organisation")" aria-describedby="@p.Described("demo-organisation", "Organisation")" autofocus="@p.Focus("demo-organisation")">
-                    @if (p.Errors.ContainsKey("Organisation")) { <p id="demo-organisation-error" class="field-error">@p.FieldError("Organisation")</p> }
-                </div>
-                <div class="field">
-                    <label for="demo-role">@p.T("site.demo.role")</label>
-                    <input id="demo-role" name="Form.Role" value="@p.Form.Role" maxlength="100" autocomplete="organization-title" aria-invalid="@p.Invalid("Role")" aria-describedby="@p.Described("demo-role", "Role")" autofocus="@p.Focus("demo-role")">
-                    @if (p.Errors.ContainsKey("Role")) { <p id="demo-role-error" class="field-error">@p.FieldError("Role")</p> }
-                </div>
-                <div class="field">
-                    <label for="demo-country">@p.T("site.demo.country")</label>
-                    <select id="demo-country" name="Form.Country" aria-invalid="@p.Invalid("Country")" aria-describedby="@p.Described("demo-country", "Country")" autofocus="@p.Focus("demo-country")">
-                        @foreach (var c in DemoRequest.Countries)
-                        {
-                            <option value="@c" selected="@(c == country ? "selected" : null)">@p.T(c == "OTHER" ? "site.demo.country.OTHER" : $"site.region.{c}")</option>
-                        }
-                    </select>
-                    @if (p.Errors.ContainsKey("Country")) { <p id="demo-country-error" class="field-error">@p.FieldError("Country")</p> }
-                </div>
-                <partial name="_ContactFields" />
-                <div class="field">
-                    <label for="demo-message">@p.T("site.demo.message")</label>
-                    <textarea id="demo-message" name="Form.Message" rows="4" maxlength="1000" aria-invalid="@p.Invalid("Message")" aria-describedby="@p.Described("demo-message", "Message")" autofocus="@p.Focus("demo-message")">@p.Form.Message</textarea>
-                    @if (p.Errors.ContainsKey("Message")) { <p id="demo-message-error" class="field-error">@p.FieldError("Message")</p> }
-                </div>
-                <partial name="_PrivacyNotice" />
-                <button class="button button-primary" type="submit">@p.T("site.demo.submit")</button>
-            </form>
-        }
+    @* The form moved to /demo (MDV-P1-057); old /trust#demo links land here, one link away from it. *@
+    <section id="demo" class="trust-demo" aria-labelledby="demo-title">
+        <h2 id="demo-title">@p.T("site.trust.demo.title")</h2>
+        <p>@p.T("site.trust.demo.body")</p>
+        <a class="button button-primary" href="@p.Href(PublicSite.Demo)">@p.T("site.trust.demo.link")</a>
     </section>
-</section>
+</div>

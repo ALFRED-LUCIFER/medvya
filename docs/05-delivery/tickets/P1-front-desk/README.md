@@ -8,9 +8,9 @@
 **Day one:** Register patients, book, reschedule and cancel appointments, check patients in, run the waiting room and send automatic confirmations and reminders.  
 **Goal:** A clinic can run its entire appointment day in Medvya. This is the workflow to validate with real clinics before anything clinical is built on top.
 
-**Tickets:** 51 · **Estimate:** 107.5 dev-days vs **35 working days** in the window (OVER by 72.5 days: needs scope trade-off or overlap) · **Average confidence:** 80%
+**Tickets:** 60 · **Estimate:** 127.5 dev-days vs **35 working days** in the window (OVER by 92.5 days: needs scope trade-off or overlap) · **Average confidence:** 79%
 
-**Status:** To do 23 · Partly done 16 · Done 12
+**Status:** To do 32 · Partly done 16 · Done 12
 
 ## Epics
 
@@ -82,6 +82,15 @@
 | [MDV-P1-052](MDV-P1-052.md) | To do | Front-desk fixes from the live walk-through, round 2 (queue displays, cancelled slot, walk-in, schedule, log, reminders, invitations, polish) | Task | MUST | P1-08 | — | 6 | 11–11 | 04 Jan → 08 Jan 2027 | 85% High |
 | [MDV-P1-049](MDV-P1-049.md) | To do | Service worker for static assets only (app shell loads with no network, no patient data) | Task | COULD | P1-08 | — | 2 | 12–12 | 11 Jan → 15 Jan 2027 | 70% Medium |
 | [MDV-P1-050](MDV-P1-050.md) | To do | Printable day sheet for the desk (no phone numbers or national IDs) | Story | COULD | P1-08 | — | 3 | 12–12 | 11 Jan → 15 Jan 2027 | 70% Medium |
+| [MDV-P1-053](MDV-P1-053.md) | To do | Public site shell to the 6 Nov design: announcement bar, Product and Solutions menus, mobile menu, footer, app links | Story | SHOULD | P1-01 | F-01 | 2 | 12–12 | 11 Jan → 15 Jan 2027 | 80% Medium |
+| [MDV-P1-054](MDV-P1-054.md) | To do | Home page to the 6 Nov design (hero, clinic day, features, Assist, who it's for, patient app, switching, trust, FAQ) | Story | SHOULD | P1-01 | F-01 | 3 | 12–12 | 11 Jan → 15 Jan 2027 | 75% Medium |
+| [MDV-P1-055](MDV-P1-055.md) | To do | Medvya Assist page (how AI notes work, safety, add-on) | Story | SHOULD | P1-01 | F-01 | 1.5 | 12–12 | 11 Jan → 15 Jan 2027 | 80% Medium |
+| [MDV-P1-056](MDV-P1-056.md) | To do | For hospitals page (sites and departments on one system, SSO, reporting, e-claims, branded app) | Story | SHOULD | P1-01 | F-01 | 1.5 | 12–12 | 11 Jan → 15 Jan 2027 | 80% Medium |
+| [MDV-P1-057](MDV-P1-057.md) | To do | Book a demo page with a preferred time, confirmation and "create your practice now" | Story | SHOULD | P1-01 | F-07 | 2 | 12–12 | 11 Jan → 15 Jan 2027 | 70% Medium |
+| [MDV-P1-058](MDV-P1-058.md) | To do | Trust centre (/trust) to the 6 Nov security design | Story | SHOULD | P1-01 | F-07 | 1 | 12–12 | 11 Jan → 15 Jan 2027 | 80% Medium |
+| [MDV-P1-059](MDV-P1-059.md) | To do | Staff sign-in, sign-up, invitation, location and signed-out screens to the 6 Nov design | Story | MUST | P1-02 | F-03, F-04, F-06 | 3 | 12–12 | 11 Jan → 15 Jan 2027 | 70% Medium |
+| [MDV-P1-060](MDV-P1-060.md) | To do | Entra External ID branding for the email code, MFA set-up and recovery pages | Task | SHOULD | P1-02 | F-03 | 1 | 12–12 | 11 Jan → 15 Jan 2027 | 60% Low |
+| [MDV-P1-061](MDV-P1-061.md) | To do | Practice set-up wizard to the 6 Nov design (practice, hours and services, team, patients, payments and messages, ready) | Story | MUST | P1-02 | F-04 | 5 | 12–13 | 11 Jan → 22 Jan 2027 | 60% Low |
 | [MDV-P1-051](MDV-P1-051.md) | To do | Encrypted read-only schedule cache for outages (needs an ADR first) | Story | COULD | P1-08 | — | 5 | 13–13 | 18 Jan → 22 Jan 2027 | 55% Low |
 
 ## Exit criteria (release gate)

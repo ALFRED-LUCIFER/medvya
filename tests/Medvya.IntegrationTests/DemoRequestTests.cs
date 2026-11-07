@@ -7,7 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Medvya.IntegrationTests;
 
-/// <summary>Demo requests on SQL Server (MDV-P1-003): stored, founder emailed, free text never emailed.</summary>
+/// <summary>Demo requests on PostgreSQL (MDV-P1-003, MDV-P1-057): stored with the preferred time in UTC, founder emailed, free text never emailed.</summary>
 public class DemoRequestTests(PostgresFixture sql) : IClassFixture<PostgresFixture>
 {
     static DemoRequest Request(string? email = "kavya.menon@example.com", string? phone = null, string? message = null, string name = "Kavya Menon") =>
@@ -28,10 +28,12 @@ public class DemoRequestTests(PostgresFixture sql) : IClassFixture<PostgresFixtu
         var stored = await db.DemoRequests.SingleAsync(r => r.Id == request.Id);
         Assert.Equal(("Kavya Menon", "Synthetic note: please call after 4 pm."), (stored.Name, stored.Message));
         Assert.Equal((request.ConsentedAt, LeadRules.NoticeVersion), (stored.ConsentedAt, stored.NoticeVersion)); // proof of consent round-trips
+        Assert.Equal((new DateTimeOffset(2026, 11, 9, 4, 30, 0, TimeSpan.Zero), TimeSpan.Zero), (stored.PreferredAt, stored.PreferredAt!.Value.Offset)); // MDV-P1-057: UTC
 
         var mail = File.ReadAllText(Assert.Single(pickup.GetFiles("*.eml")).FullName);
         Assert.Contains("To: founder@medvya.example", mail, StringComparison.Ordinal);
         Assert.Contains("kavya.menon@example.com", mail, StringComparison.Ordinal);
+        Assert.Contains("Preferred time (a request, confirm it by email): 2026-11-09 04:30:00Z", mail.Replace("=\r\n", "", StringComparison.Ordinal), StringComparison.Ordinal); // UTC; quoted-printable soft breaks removed
         Assert.DoesNotContain("4 pm", mail, StringComparison.Ordinal); // free text could hold patient details, so it is never emailed
         pickup.Delete(recursive: true);
     }
@@ -68,11 +70,14 @@ public class DemoRequestTests(PostgresFixture sql) : IClassFixture<PostgresFixtu
 public class DemoRequestRulesTests
 {
     internal static readonly DateTimeOffset Consented = new(2026, 10, 23, 9, 30, 0, TimeSpan.Zero);
+    static readonly DateTimeOffset Now = new(2026, 11, 7, 6, 0, 0, TimeSpan.Zero);
+    // 10:00 India time on Monday 9 November: sent with its offset, it must be stored as 04:30 UTC.
+    internal static readonly DateTimeOffset Preferred = new(2026, 11, 9, 10, 0, 0, TimeSpan.FromHours(5.5));
 
     internal static DemoRequest Request(string? email = "kavya.menon@example.com", string? phone = null, string? message = null, string name = "Kavya Menon") => new()
     {
         Name = name, Organisation = "Synthetic General Hospital", Role = "Chief medical officer", Country = "IN", Email = email, Phone = phone, Message = message,
-        ConsentedAt = Consented, NoticeVersion = LeadRules.NoticeVersion,
+        ConsentedAt = Consented, NoticeVersion = LeadRules.NoticeVersion, PreferredAt = Preferred,
     };
 
     [Fact]
@@ -81,12 +86,12 @@ public class DemoRequestRulesTests
         var valid = Request();
         Assert.Equal(new Dictionary<string, string> { ["Consent"] = "consent_required" }, DemoRequestRules.Validate(new DemoRequest
         {
-            Name = valid.Name, Organisation = valid.Organisation, Role = valid.Role, Country = valid.Country, Email = valid.Email,
-        }));
+            Name = valid.Name, Organisation = valid.Organisation, Role = valid.Role, Country = valid.Country, Email = valid.Email, PreferredAt = valid.PreferredAt,
+        }, Now));
         Assert.Equal(new Dictionary<string, string> { ["Consent"] = "consent_required" }, DemoRequestRules.Validate(new DemoRequest
         {
-            Name = valid.Name, Organisation = valid.Organisation, Role = valid.Role, Country = valid.Country, Email = valid.Email, ConsentedAt = Consented,
-        })); // a time without the notice it was given for proves nothing
+            Name = valid.Name, Organisation = valid.Organisation, Role = valid.Role, Country = valid.Country, Email = valid.Email, ConsentedAt = Consented, PreferredAt = valid.PreferredAt,
+        }, Now)); // a time without the notice it was given for proves nothing
         Assert.Equal(new Dictionary<string, string> { ["Consent"] = "consent_required" },
             WaitlistRules.Validate(new WaitlistEntry { Name = "Fatima Al Hashimi", Country = "AE", Email = "fatima@example.com" }));
     }
@@ -101,7 +106,7 @@ public class DemoRequestRulesTests
     [InlineData(null, "12", "Phone")]
     public void ContactNeedsAValidEmailOrPhone(string? email, string? phone, string? error)
     {
-        var errors = DemoRequestRules.Validate(Request(email, phone));
+        var errors = DemoRequestRules.Validate(Request(email, phone), Now);
         if (error is null) Assert.Empty(errors);
         else Assert.Equal(error, Assert.Single(errors).Key);
     }
@@ -112,9 +117,30 @@ public class DemoRequestRulesTests
         var errors = DemoRequestRules.Validate(new DemoRequest
         {
             Name = new string('a', DemoRequest.NameMax + 1), Organisation = "", Role = "x", Country = "US", Email = "a@example.com",
-            Message = new string('m', DemoRequest.MessageMax + 1), ConsentedAt = Consented, NoticeVersion = LeadRules.NoticeVersion,
-        });
+            Message = new string('m', DemoRequest.MessageMax + 1), ConsentedAt = Consented, NoticeVersion = LeadRules.NoticeVersion, PreferredAt = Preferred,
+        }, Now);
         Assert.Equal(new Dictionary<string, string> { ["Name"] = "tooLong", ["Organisation"] = "required", ["Country"] = "required", ["Message"] = "tooLong" }, errors);
+    }
+
+    // MDV-P1-057: a preferred time is required, in the future, and within the horizon the page offers.
+    [Fact]
+    public void ThePreferredTimeMustBeAFutureTimeWithinTheHorizon()
+    {
+        static string? Error(DateTimeOffset? at)
+        {
+            var r = Request();
+            return DemoRequestRules.Validate(new DemoRequest
+            {
+                Name = r.Name, Organisation = r.Organisation, Role = r.Role, Country = r.Country, Email = r.Email,
+                ConsentedAt = r.ConsentedAt, NoticeVersion = r.NoticeVersion, PreferredAt = at,
+            }, Now).GetValueOrDefault("PreferredAt");
+        }
+        Assert.Null(Error(Now.AddMinutes(1)));
+        Assert.Null(Error(Now + DemoRequest.PreferredHorizon));
+        Assert.Equal("required", Error(null));
+        Assert.Equal("past", Error(Now));
+        Assert.Equal("past", Error(Now.AddDays(-1)));
+        Assert.Equal("invalid", Error(Now + DemoRequest.PreferredHorizon + TimeSpan.FromMinutes(1)));
     }
 
     // A crafted post with a line break in the organisation used to be stored and then fail the founder email with a 500.
@@ -124,8 +150,8 @@ public class DemoRequestRulesTests
         var errors = DemoRequestRules.Validate(new DemoRequest
         {
             Name = "Kavya\nMenon", Organisation = "Synthetic General Hospital\r\nBcc: someone@example.com", Role = "Chief\u0000medical officer",
-            Country = "IN", Email = "a@example.com", Message = "Two lines\nare fine here.", ConsentedAt = Consented, NoticeVersion = LeadRules.NoticeVersion,
-        });
+            Country = "IN", Email = "a@example.com", Message = "Two lines\nare fine here.", ConsentedAt = Consented, NoticeVersion = LeadRules.NoticeVersion, PreferredAt = Preferred,
+        }, Now);
         Assert.Equal(new Dictionary<string, string> { ["Name"] = "invalid", ["Organisation"] = "invalid", ["Role"] = "invalid" }, errors);
         Assert.Equal("invalid", Assert.Single(WaitlistRules.Validate(new WaitlistEntry { Name = "Fatima\rAl Hashimi", Country = "AE", Email = "a@example.com", ConsentedAt = Consented, NoticeVersion = LeadRules.NoticeVersion })).Value);
     }

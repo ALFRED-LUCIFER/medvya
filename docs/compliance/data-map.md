@@ -19,6 +19,10 @@ What personal data Medvya holds, why, where it lives and who processes it. Field
 | Consultation audio and transcripts | Patients, companions, clinicians | Audio, transcript segments, speaker labels | Documentation (AI draft) | **Separate per-encounter recording consent** | Blob (CMK, 30-day default) + Azure SQL | P3 |
 | Billing | Patients, payers | Invoices, payments, provider refs | Billing, tax | Contract / legal obligation (tax) | Azure SQL ledger | P4 |
 | Portal | Patients, caregivers | Portal account, proxy scopes | Patient access | Consent | Entra External ID + Azure SQL | P4 |
+| Native sessions | Staff (patients later) | Session row, device label ("Safari on iOS"), SHA-256 of the refresh token. **No IP, no raw User-Agent** | Sign-in, remote revoke | Contract / legitimate use | Azure SQL (`identity.Sessions`) | P5 |
+| On-device store, staff app (ADR-011 §3) | Patients, staff | Refresh token, device key (secure-store); today's list, patient summaries opened today, unsent recording chunks (encrypted SQLite). Class: Clinical / Restricted | Offline work, no lost recordings | Healthcare | The staff member's phone only; deleted after 24 h, at sign-out and on revoke | P5 |
+| On-device store, patient app (ADR-011 §3) | Patient, proxied family | Refresh token, device key; own last copy; bookings waiting to sync. Class: Clinical | Offline access to one's own record | Consent | The patient's phone only; deleted at sign-out and on revoke | P5 |
+| Push payloads | Staff, patients | Opaque id + fixed text "You have an update from your clinic". Class: Internal. **No clinical text** | Tell the user to open the app | Legitimate use / consent (opt-in) | Apple APNs / Google FCM via Azure Notification Hubs in country | P5 |
 
 ## Processors and sub-processors
 
@@ -30,11 +34,12 @@ What personal data Medvya holds, why, where it lives and who processes it. Field
 | SMS provider (DLT-registered, TBD) | SMS delivery | Mobile, template variables. No clinical data | India / UAE | DPA (MDV-P1-045) |
 | Azure OpenAI + AI Speech | AI drafting (P3) | Audio, transcripts | In-region only | Microsoft DPA + no-training terms (MDV-P3-022) |
 | Payment gateways (Razorpay; Network International or Stripe) | Payments (P4) | Amount, reference, payer contact | Per provider | Provider DPA |
+| Apple APNs, Google FCM (via Azure Notification Hubs, in country) | Push delivery (P5) | Device push token, opaque id, fixed text. No clinical data | Notification Hubs in country; APNs/FCM global | Apple / Google developer terms; Microsoft DPA |
 | WhatsApp Business (P4) | Messaging | Mobile, template variables | Per provider | Meta terms + DPA |
 
 ## Flows that must never happen
 
-- PHI in logs, telemetry, analytics, crash reports, URLs or browser storage (enforced by P0-018 tests and the API rules).
+- PHI in logs, telemetry, analytics, crash reports, URLs or browser storage (enforced by P0-018 tests and the API rules). On phones, PHI only in the encrypted store ADR-011 §3 allows, never in AsyncStorage or files.
 - Patient data across India ↔ UAE (deny-cross-region policy, separate deployments).
 - Real patient data in dev, staging, CI or AI evaluation sets (`tools/check-synthetic`, secure development policy).
 - Clinical details in SMS, WhatsApp, email or push previews.

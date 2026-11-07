@@ -1,0 +1,59 @@
+@page
+@model AssistModel
+@{
+    var p = Model;
+    ViewData["Title"] = $"{p.T("site.assist.tag")} · {p.T("app.name")}";
+    ViewData["Description"] = p.T("site.assist.lede");
+    // The sample note uses the synthetic cast (docs/00-overview/personas.md); A and P still wait for the doctor.
+    var lines = new (string Key, bool Accepted)[] { ("s", true), ("o", true), ("a", false), ("p", false) };
+}
+<section class="page wide" aria-labelledby="assist-title">
+    <div class="hero-copy">
+        <p class="eyebrow">@p.T("site.assist.tag")</p>
+        <h1 id="assist-title">@p.T("site.assist.title")</h1>
+        <p class="lede">@p.T("site.assist.lede")</p>
+        <div class="ctas">
+            <a class="button button-primary" href="@p.Href(PublicSite.DoctorStart)">@p.T("site.assist.trial")</a>
+            <a class="button button-outline" href="@p.Href(PublicSite.Demo)">@p.T("site.assist.demo")</a>
+        </div>
+    </div>
+
+    <section aria-labelledby="assist-how">
+        <h2 id="assist-how">@p.T("site.assist.how.title")</h2>
+        <ol class="steps">
+            @for (var i = 1; i <= 4; i++)
+            {
+                <li><h3>@p.T($"site.assist.how.{i}.title")</h3><p>@p.T($"site.assist.how.{i}.body")</p></li>
+            }
+        </ol>
+    </section>
+
+    <figure class="sample-note" aria-labelledby="assist-sample">
+        <figcaption id="assist-sample"><strong>@p.T("site.assist.sample.title")</strong> <span class="note">@p.T("site.assist.sample.synthetic")</span></figcaption>
+        <dl>
+            @foreach (var (key, accepted) in lines)
+            {
+                <div>
+                    <dt>@p.T($"site.assist.sample.{key}.label")</dt>
+                    <dd>@p.T($"site.assist.sample.{key}")</dd>
+                    <dd class="@(accepted ? "chip chip-ok" : "chip chip-review")">@p.T(accepted ? "site.assist.sample.accepted" : "site.assist.sample.review")</dd>
+                </div>
+            }
+        </dl>
+        <p class="warning"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path d="M12 3l10 18H2zM12 10v5M12 18v.5" /></svg>@p.T("site.assist.sample.interaction")</p>
+    </figure>
+
+    <section aria-labelledby="assist-safety">
+        <p class="eyebrow">@p.T("site.assist.safety.tag")</p>
+        <h2 id="assist-safety">@p.T("site.assist.safety.title")</h2>
+        <p class="lede">@p.T("site.assist.safety.body")</p>
+        <ul class="cards">
+            @foreach (var key in new[] { "consent", "approve", "traceable", "interactions", "audio", "off" })
+            {
+                <li><h3>@p.T($"site.assist.safety.{key}.title")</h3><p>@p.T($"site.assist.safety.{key}.body")</p></li>
+            }
+        </ul>
+    </section>
+
+    <p class="addon">@(p.AddOnPrice is { } price ? p.T("site.assist.addon", new Dictionary<string, string> { ["price"] = price }) : p.T("site.assist.addonNoPrice"))</p>
+</section>

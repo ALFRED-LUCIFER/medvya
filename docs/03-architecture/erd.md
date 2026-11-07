@@ -529,7 +529,7 @@ erDiagram
 | Table | Columns | Primary key | Notes |
 |---|---|---|---|
 | `OnboardingDrafts` | 6 | UserId |  |
-| `Sessions` | 9 | Id | tenant-scoped |
+| `Sessions` | 10 | Id | tenant-scoped |
 | `Users` | 4 | Id |  |
 
 <details><summary><code>identity.OnboardingDrafts</code> columns</summary>
@@ -555,6 +555,7 @@ erDiagram
 | `IdleTimeoutMinutes` | int |  |  |
 | `LastSeenAt` | timestamptz |  |  |
 | `MembershipId` | guid | yes | id of `tenancy.Memberships` |
+| `RefreshTokenHash` | bytes |  |  |
 | `RevokedAt` | timestamptz | yes |  |
 | `TenantId` | guid | yes | `tenancy.Tenants` |
 | `UserId` | guid |  | FK to `StaffUser` |
@@ -1352,7 +1353,7 @@ erDiagram
 
 | Table | Columns | Primary key | Notes |
 |---|---|---|---|
-| `DemoRequests` | 11 | Id |  |
+| `DemoRequests` | 12 | Id |  |
 | `Waitlist` | 8 | Id |  |
 
 <details><summary><code>leads.DemoRequests</code> columns</summary>
@@ -1368,6 +1369,7 @@ erDiagram
 | `NoticeVersion` | character varying(20) |  |  |
 | `Organisation` | character varying(150) |  |  |
 | `Phone` | character varying(20) |  |  |
+| `PreferredAt` | timestamptz | yes |  |
 | `ReceivedAt` | timestamptz |  |  |
 | `Role` | character varying(100) |  |  |
 

@@ -32,8 +32,21 @@ export async function chooseFacility(membershipId: string) {
  * the provider as a hint only (MDV-P1-059): the server validates it, never stores or logs it.
  */
 export function startSignIn(loginHint?: string) {
-  const hint = loginHint ? `&loginHint=${encodeURIComponent(loginHint)}` : '';
-  window.location.assign(`/bff/login?returnUrl=${encodeURIComponent(window.location.pathname)}${hint}`);
+  const returnUrl = window.location.pathname;
+  if (loginHint) void startSignInWithHint({ loginHint, returnUrl });
+  else window.location.assign(`/bff/login?returnUrl=${encodeURIComponent(returnUrl)}`);
+}
+
+/**
+ * The work email travels in a POST body and the page then navigates to the provider itself, so the email never sits in a Medvya URL
+ * (server logs, browser history, proxies). A refused or failed start shows the generic "sign-in did not complete" message.
+ */
+export async function startSignInWithHint(start: { loginHint: string; returnUrl: string; signup?: boolean }) {
+  try {
+    const res = await apiFetch('/bff/login', { method: 'POST', headers: { ...csrf, 'Content-Type': 'application/json' }, body: JSON.stringify(start) });
+    if (res.ok) { window.location.assign(((await res.json()) as { location: string }).location); return; }
+  } catch { /* offline or timed out: same message as a refusal */ }
+  window.location.assign(`${import.meta.env.BASE_URL}?signin=failed`);
 }
 
 export async function signOut() {

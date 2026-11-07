@@ -1,4 +1,5 @@
 import { apiFetch } from '../../api/services/apiClient';
+import { startSignInWithHint } from '../../session/services/sessionApi';
 import type { Country } from '@medvya/i18n';
 import type { Draft, FinishResult, OnboardingData } from '../domain/onboarding';
 
@@ -69,10 +70,11 @@ export async function finishOnboarding(): Promise<FinishResult> {
 
 /**
  * Sign up: the provider's MFA sign-in, then back to the wizard. The server creates the account only on this path. The email goes to the
- * provider as a login hint; the other answers wait in this tab for the draft (startDraft).
+ * provider as a login hint, in a POST body (startSignInWithHint); the other answers wait in this tab for the draft (startDraft).
  */
 export function startSignUp(country: Country, email?: string, prefill?: OnboardingData) {
   if (prefill) try { sessionStorage.setItem(prefillKey, JSON.stringify(prefill)); } catch { /* storage blocked: the wizard asks again */ }
-  const hint = email ? `&loginHint=${encodeURIComponent(email)}` : '';
-  window.location.assign(`/bff/login?signup=true&returnUrl=${encodeURIComponent(`${import.meta.env.BASE_URL}onboarding?country=${country}`)}${hint}`);
+  const returnUrl = `${import.meta.env.BASE_URL}onboarding?country=${country}`;
+  if (email) void startSignInWithHint({ loginHint: email, returnUrl, signup: true });
+  else window.location.assign(`/bff/login?signup=true&returnUrl=${encodeURIComponent(returnUrl)}`);
 }

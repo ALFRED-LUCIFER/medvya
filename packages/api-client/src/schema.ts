@@ -50,7 +50,6 @@ export interface paths {
                     returnUrl?: string;
                     invitation?: string;
                     signup?: boolean;
-                    loginHint?: string;
                 };
                 header?: never;
                 path?: never;
@@ -68,7 +67,28 @@ export interface paths {
             };
         };
         put?: never;
-        post?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SignInStart"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -4851,6 +4871,12 @@ export interface components {
         };
         /** @enum {unknown} */
         SexAtBirth: "Female" | "Male" | "Other";
+        SignInStart: {
+            loginHint?: null | string;
+            returnUrl?: null | string;
+            invitation?: null | string;
+            signup?: null | boolean;
+        };
         SlotView: {
             /** Format: date-time */
             start: string;

@@ -1,6 +1,7 @@
 import { createRequire } from 'node:module';
 import { expect, test, type Page } from '@playwright/test';
 import { completeWizard, mockOnboarding } from './support/onboarding';
+import { mockSignInStart } from './support/signIn';
 
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
 async function axe(page: Page) {
@@ -15,7 +16,7 @@ const practice = { profile: { fullName: 'Arjun Rao (synthetic)', mode: 'Solo', s
 
 test('a visitor from the region selector signs up: the country is carried into multi-factor sign-in', async ({ page }) => {
   await page.route('**/v1/me/context', r => r.fulfill({ status: 401 }));
-  await page.route('**/bff/login**', r => r.fulfill({ body: 'signing in' }));
+  const start = await mockSignInStart(page);
   await page.goto('/signup?country=AE');
   await expect(page.getByRole('radio', { name: /United Arab Emirates/ })).toBeChecked();
   await page.getByLabel('Practice name').fill('Lakeside Clinic (synthetic)');
@@ -24,7 +25,8 @@ test('a visitor from the region selector signs up: the country is carried into m
   await page.getByLabel('Full name').fill('Omar Haddad (synthetic)');
   await page.getByLabel('Work email').fill('owner@example.test');
   await page.getByRole('button', { name: 'Continue' }).click();
-  await expect(page).toHaveURL('/bff/login?signup=true&returnUrl=%2Fonboarding%3Fcountry%3DAE&loginHint=owner%40example.test');
+  await expect(page).toHaveURL(start.providerUrl);
+  expect(start.bodies).toEqual([{ loginHint: 'owner@example.test', returnUrl: '/onboarding?country=AE', signup: true }]);
 });
 
 test('the create-account answers fill the new draft once, then leave the browser (MDV-P1-059)', async ({ page }) => {

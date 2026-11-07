@@ -171,7 +171,7 @@ public sealed partial class FrontDeskService(
 
         var (from, me) = (visit.State, context.UserId);
         // Call-in takes the room of the doctor's session now (or at the visit's time) from the schedule template.
-        var room = to == AppointmentState.InConsult ? await RoomAsync(visit, zone, now, cancellationToken) : visit.Room;
+        var room = to == AppointmentState.InConsult ? await context.RoomAsync(visit, zone, now, cancellationToken) : visit.Room;
         await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
         var changed = await db.Appointments.Where(a => a.Id == appointmentId && a.State == from)
             .ExecuteUpdateAsync(s => s.SetProperty(a => a.State, to).SetProperty(a => a.Room, room)
@@ -219,17 +219,6 @@ public sealed partial class FrontDeskService(
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Board update for facility {FacilityId} not pushed")]
     static partial void BoardPushFailed(ILogger logger, Exception exception, Guid facilityId);
-
-    /// <summary>The room of the calendar's session running now, else of the session the visit was booked in; else unchanged.</summary>
-    async Task<string?> RoomAsync(Appointment visit, TimeZoneInfo zone, DateTimeOffset now, CancellationToken cancellationToken)
-    {
-        var template = await db.Templates.AsNoTracking().SingleOrDefaultAsync(t => t.FacilityId == visit.FacilityId && t.CalendarId == visit.CalendarId, cancellationToken);
-        if (template is null) return visit.Room;
-        var today = ScheduleRules.LocalDate(now, zone);
-        var hours = ScheduleRules.Day(template, today, zone, await context.ExceptionsAsync(visit.FacilityId, today, today, visit.CalendarId, cancellationToken)).Hours;
-        var session = hours.FirstOrDefault(w => w.Start <= now && now < w.End) ?? hours.FirstOrDefault(w => w.Start <= visit.Start && visit.Start < w.End);
-        return session?.Room ?? visit.Room;
-    }
 
     /// <summary>
     /// The next token of the visit's calendar for the facility's day ("A-07"), added to the open check-in transaction. A per

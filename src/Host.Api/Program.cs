@@ -7,6 +7,8 @@ using Host.Api.Auth;
 using Host.Api.Context;
 using Host.Api.Middleware;
 using Medvya.Identity.Api;
+using Medvya.Encounters.Api;
+using Medvya.Encounters.Infrastructure;
 using Medvya.Notifications.Api;
 using Medvya.Notifications.Application;
 using Medvya.Notifications.Infrastructure;
@@ -59,7 +61,7 @@ builder.Services.AddScoped<IRequestOrigin>(sp => sp.GetRequiredService<RequestCo
 // capability handler exists, so capability-guarded endpoints answer 403.
 if (builder.Configuration.GetConnectionString("Medvya") is { } sql)
 {
-    builder.Services.AddAuditModule(sql).AddDeniedAccessAudit().AddTenancyModule(sql, builder.Configuration["Storage:ConnectionString"]).AddIdentityModule(sql).AddPatientsModule(sql).AddSchedulingModule(sql)
+    builder.Services.AddAuditModule(sql).AddDeniedAccessAudit().AddTenancyModule(sql, builder.Configuration["Storage:ConnectionString"]).AddIdentityModule(sql).AddPatientsModule(sql).AddSchedulingModule(sql).AddEncountersModule(sql)
         .AddNotificationsModule(sql, smsSink: builder.Environment.IsDevelopment() && builder.Configuration["Notifications:Sms:Provider"] == "Sink")
         .AddScoped<IReminderConsent, PatientReminderConsent>() // after the module: replaces its deny-all default (MDV-P1-019)
         .AddLeadsModule(sql, builder.Configuration.GetSection("Leads:Email").Get<LeadsEmailOptions>() ?? new()).AddCapabilityPolicies();
@@ -153,6 +155,7 @@ app.MapAccessLog();
 app.MapQueueDisplaySession();
 app.MapPatientEndpoints();
 app.MapAccessRequestEndpoints();
+app.MapEncounterEndpoints();
 if (app.Environment.IsDevelopment() && app.Configuration["Authentication:Oidc:Authority"]?.EndsWith(DevIdentityProvider.Path, StringComparison.Ordinal) == true)
     app.MapDevIdentityProvider();
 

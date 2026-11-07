@@ -580,6 +580,9 @@ namespace Medvya.Tenancy.Infrastructure.Persistence.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)");
 
+                    b.Property<DateOnly?>("RegistrationExpiresOn")
+                        .HasColumnType("date");
+
                     b.Property<string>("RegistrationNumber")
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");

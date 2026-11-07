@@ -2637,5 +2637,10 @@
   "platform.audit.action.team_invite": "टीम सदस्य आमंत्रित",
   "platform.audit.action.team_remove": "टीम सदस्य हटाया गया",
   "platform.audit.action.team_access_review": "एक्सेस समीक्षा दर्ज",
-  "platform.audit.action.audit_export": "ऑडिट लॉग एक्सपोर्ट हुआ"
+  "platform.audit.action.audit_export": "ऑडिट लॉग एक्सपोर्ट हुआ",
+  "audit.actionName.compliance.registration_expiry.notify": "पंजीकरण समाप्ति सूचना भेजी",
+  "notifications.kind.RegistrationExpiring": "क्लिनिक का पंजीकरण {days} दिन या उससे कम में समाप्त हो रहा है। इसे नवीनीकृत करें, फिर सेटिंग्स, प्रोफ़ाइल में नई तारीख दर्ज करें।",
+  "notifications.kind.RegistrationExpired": "क्लिनिक का पंजीकरण आज समाप्त हो रहा है या समाप्त हो चुका है। इसे नवीनीकृत करें, फिर सेटिंग्स, प्रोफ़ाइल में नई तारीख दर्ज करें।",
+  "settings.profile.registrationExpires": "पंजीकरण की वैधता तक",
+  "settings.profile.registrationExpiresHint": "मालिकों को 60, 30 और 7 दिन पहले, और उसी दिन याद दिलाया जाता है।"
 }

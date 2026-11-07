@@ -21,11 +21,13 @@ type Props = {
 };
 
 /** Where each kind sends the reader (the board marks the visit whose message failed). */
-const targets: Record<NotificationKind, string> = { MessageFailed: '/front-desk', LicenceExpiring: '/settings?tab=doctors', AccessReviewDue: '/settings?tab=staff', AccessRequested: '/settings?tab=staff' };
+const targets: Record<NotificationKind, string> = { MessageFailed: '/front-desk', LicenceExpiring: '/settings?tab=doctors', AccessReviewDue: '/settings?tab=staff', AccessRequested: '/settings?tab=staff', RegistrationExpiring: '/settings?tab=profile' };
 
 /** The words of one item; a licence says how many days are left, or that it has expired. */
 const words = (t: ReturnType<typeof useI18n>['t'], n: StaffNotification) =>
-  n.kind === 'LicenceExpiring' ? ((n.detail ?? 0) <= 0 ? t('notifications.kind.LicenceExpired') : t('notifications.kind.LicenceExpiring', { days: n.detail! })) : t(`notifications.kind.${n.kind}`);
+  n.kind === 'LicenceExpiring' ? ((n.detail ?? 0) <= 0 ? t('notifications.kind.LicenceExpired') : t('notifications.kind.LicenceExpiring', { days: n.detail! }))
+    : n.kind === 'RegistrationExpiring' ? ((n.detail ?? 0) <= 0 ? t('notifications.kind.RegistrationExpired') : t('notifications.kind.RegistrationExpiring', { days: n.detail! }))
+    : t(`notifications.kind.${n.kind}`);
 
 /** D-03: the bell with its unread count and an overlay listing staff notifications, newest first, with "Mark all read". */
 export default function NotificationCentre(props: Props) {

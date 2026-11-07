@@ -34,8 +34,8 @@ public sealed partial class PublicSiteTests : IClassFixture<WebApplicationFactor
     }
 
     internal static readonly string[] PagePaths =
-        ["/", "/pricing", "/trust", "/region", "/assist", "/hospitals", "/hi", "/hi/pricing", "/hi/trust", "/hi/region", "/hi/assist", "/hi/hospitals",
-         "/ar", "/ar/pricing", "/ar/trust", "/ar/region", "/ar/assist", "/ar/hospitals"];
+        ["/", "/pricing", "/trust", "/demo", "/region", "/assist", "/hospitals", "/hi", "/hi/pricing", "/hi/trust", "/hi/demo", "/hi/region", "/hi/assist", "/hi/hospitals",
+         "/ar", "/ar/pricing", "/ar/trust", "/ar/demo", "/ar/region", "/ar/assist", "/ar/hospitals"];
     public static TheoryData<string> Pages => new(PagePaths);
 
     [Theory, MemberData(nameof(Pages))]
@@ -157,7 +157,7 @@ public sealed partial class PublicSiteTests : IClassFixture<WebApplicationFactor
     public async Task OverHttpsEveryCookieIsSecureAndNoSharedCacheKeepsAPage()
     {
         var https = factory.CreateClient(new() { AllowAutoRedirect = false, HandleCookies = false, BaseAddress = new Uri("https://localhost") });
-        foreach (var path in new[] { "/?region=AE", "/trust", "/region?go=AE" })
+        foreach (var path in new[] { "/?region=AE", "/demo", "/region?go=AE" })
         {
             var res = await https.GetAsync(new Uri(path, UriKind.Relative));
             var cookie = Assert.Single(res.Headers.GetValues("Set-Cookie")); // the region preference, or the form's anti-forgery token
@@ -223,7 +223,7 @@ public sealed partial class PublicSiteTests : IClassFixture<WebApplicationFactor
             Assert.True((int)(await client.SendAsync(req)).StatusCode < 400, path);
         }
         // A form post too (refused for its missing token, but never by reading the session).
-        using (var post = new HttpRequestMessage(HttpMethod.Post, new Uri("/trust", UriKind.Relative)) { Content = new FormUrlEncodedContent([]) })
+        using (var post = new HttpRequestMessage(HttpMethod.Post, new Uri("/demo", UriKind.Relative)) { Content = new FormUrlEncodedContent([]) })
         {
             post.Headers.Add("Cookie", "__Host-medvya=session-cookie-value");
             Assert.Equal(HttpStatusCode.BadRequest, (await client.SendAsync(post)).StatusCode);

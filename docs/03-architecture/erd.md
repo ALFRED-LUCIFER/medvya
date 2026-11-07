@@ -1352,7 +1352,7 @@ erDiagram
 
 | Table | Columns | Primary key | Notes |
 |---|---|---|---|
-| `DemoRequests` | 11 | Id |  |
+| `DemoRequests` | 12 | Id |  |
 | `Waitlist` | 8 | Id |  |
 
 <details><summary><code>leads.DemoRequests</code> columns</summary>
@@ -1368,6 +1368,7 @@ erDiagram
 | `NoticeVersion` | character varying(20) |  |  |
 | `Organisation` | character varying(150) |  |  |
 | `Phone` | character varying(20) |  |  |
+| `PreferredAt` | timestamptz | yes |  |
 | `ReceivedAt` | timestamptz |  |  |
 | `Role` | character varying(100) |  |  |
 

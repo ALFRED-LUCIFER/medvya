@@ -146,7 +146,7 @@ public sealed partial class MarketingPagesTests(WebApplicationFactory<Program> f
         foreach (var notBuilt in new[] { "Single sign-on", "Central reporting", "Insurance e-claims", "Patient app under your brand" })
             Assert.Equal("Planned", blocks[notBuilt]);
         Assert.Equal(["Outpatient (OPD)", "Access log"], blocks.Where(b => b.Value == "Available").Select(b => b.Key));
-        Assert.Contains("href=\"/trust#demo\">Talk to our hospital team", html, StringComparison.Ordinal);
+        Assert.Contains("href=\"/demo\">Talk to our hospital team", html, StringComparison.Ordinal);
         Assert.Contains("Records stay in your country.", html, StringComparison.Ordinal);
     }
 

@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { nextSession, toSession, type SessionStatus } from '../domain/session';
-import { chooseFacility, fetchMeContext, hadSession, rememberSession, SessionEndedError, signInFailed, signOut, startSignIn } from '../services/sessionApi';
+import { chooseFacility, fetchMeContext, hadSession, rememberSession, SessionEndedError, signOut, startSignIn } from '../services/sessionApi';
 
 export const sessionQueryKey = ['me'];
 // The server-side idle timeout is at least a minute, so polling each minute shows "Session expired" within a minute of it.
@@ -34,9 +34,11 @@ export function useSessionController() {
     expired: data?.kind === 'expired',
     session,
     displayName: session?.user.displayName ?? null,
-    failed: signInFailed(),
-    signIn: startSignIn,
-    signOut: () => logout.mutate(),
+    signIn: () => startSignIn(),
+    /** "Not you?" on the signed-out screen: forget this tab's ended session and show the sign-in start, where another email can be typed. */
+    forgetEndedSession: () => { rememberSession(false); queryClient.setQueryData<SessionStatus>(sessionQueryKey, { kind: 'signedOut' }); },
+    /** Ends the session; onDone runs once the app shows signed out (e.g. go to the sign-in start). */
+    signOut: (onDone?: () => void) => logout.mutate(undefined, { onSuccess: onDone }),
     signingOut: logout.isPending,
     choosingId: choose.isPending ? choose.variables : null,
     chooseFailed: choose.isError && !(choose.error instanceof SessionEndedError),

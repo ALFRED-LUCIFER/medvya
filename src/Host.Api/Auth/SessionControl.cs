@@ -64,7 +64,8 @@ public static class SessionControl
     public static WebApplication MapSessionControl(this WebApplication app)
     {
         app.MapGet("/v1/me/context", async (ClaimsPrincipal principal, [FromServices] IStaffUsers users, [FromServices] IMembershipDirectory directory,
-            [FromServices] IFeatureFlags flags, [FromServices] IStaffAccess staff, [FromServices] IFacilityDirectory facilities, CancellationToken ct) =>
+            [FromServices] IFeatureFlags flags, [FromServices] IStaffAccess staff, [FromServices] IFacilityDirectory facilities,
+            [FromServices] IStaffSessions sessions, CancellationToken ct) =>
         {
             var user = Read(principal, ClaimTypes.NameIdentifier) is { } id ? await users.GetAsync(id, ct) : null;
             if (user is null) return Results.Unauthorized();
@@ -82,6 +83,8 @@ public static class SessionControl
             {
                 user = new { user.Id, user.DisplayName },
                 memberships = memberships.Select(m => new { m.Id, m.TenantId, m.TenantName, m.FacilityId, m.FacilityName, Role = m.Role.ToString() }),
+                // The picker lists the last used facility first (MDV-P1-059); only ever one of the memberships above.
+                lastMembershipId = await sessions.LastMembershipAsync(user.Id, ct) is { } last && memberships.Any(m => m.Id == last) ? last : (Guid?)null,
                 active = active is null ? null : new
                 {
                     MembershipId = active.Id,

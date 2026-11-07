@@ -9,11 +9,9 @@ import NotFoundPage from '../features/errors/components/NotFoundPage';
 import TermsNotice from '../features/settings/components/TermsNotice';
 import { useTermsNotice } from '../features/settings/hooks/useTermsNotice';
 import LicenceNotice from '../features/onboarding/components/LicenceNotice';
-import HomePage from '../features/home/components/HomePage';
 import LanguageSwitcher from '../features/locale/components/LanguageSwitcher';
 import FacilityPicker from '../features/session/components/FacilityPicker';
 import SessionExpiredPage from '../features/session/components/SessionExpiredPage';
-import SessionPanel from '../features/session/components/SessionPanel';
 import AppShell from '../features/shell/components/AppShell';
 import MorePage from '../features/shell/components/MorePage';
 import ShellMessage, { ComingSoon } from '../features/shell/components/ShellMessage';
@@ -27,6 +25,7 @@ import ScheduleRoute from './ScheduleRoute';
 const InvitationRoute = lazy(() => import('./InvitationRoute'));
 const InviteColleagueRoute = lazy(() => import('./InviteColleagueRoute'));
 const SignUpRoute = lazy(() => import('./SignUpRoute'));
+const SignInRoute = lazy(() => import('./SignInRoute'));
 const OnboardingRoute = lazy(() => import('./OnboardingRoute'));
 const OverviewRoute = lazy(() => import('./OverviewRoute'));
 const SettingsRoute = lazy(() => import('./SettingsRoute'));
@@ -52,7 +51,7 @@ export default function App({ locale, onLocaleChange }: Props) {
   const shell = useShellController();
   const termsPending = useTermsNotice(shell.items.some(i => i.id === 'settings'));
   const switcher = <LanguageSwitcher value={locale} onChange={onLocaleChange} />;
-  const account = { displayName: shell.displayName ?? '', languageSwitcher: switcher, signingOut: shell.signingOut, onSignOut: shell.signOut,
+  const account = { displayName: shell.displayName ?? '', languageSwitcher: switcher, signingOut: shell.signingOut, onSignOut: () => shell.signOut(() => navigate('/', { replace: true })),
     canSwitchFacility: (shell.session?.memberships.length ?? 0) > 1 };
   const toHome = () => navigate('/');
   const active = shell.session?.active;
@@ -62,7 +61,7 @@ export default function App({ locale, onLocaleChange }: Props) {
   // After choosing, continue to the page that sent the user to the picker (F-05a: back to the previous route after re-sign-in).
   const from = (location.state as { from?: string } | null)?.from;
   const picker = (
-    <FacilityPicker {...account} memberships={shell.session?.memberships ?? []} choosingId={shell.choosingId} failed={shell.chooseFailed}
+    <FacilityPicker {...account} memberships={shell.session?.memberships ?? []} lastMembershipId={shell.session?.lastMembershipId ?? null} choosingId={shell.choosingId} failed={shell.chooseFailed}
       onChoose={id => shell.chooseFacility(id, () => navigate(from ?? '/', { replace: true }))} onCancel={active ? () => navigate(-1) : undefined} />
   );
   const searchPath = allows(active ?? null, patientDirectory) ? patientDirectory.path : null;
@@ -77,9 +76,10 @@ export default function App({ locale, onLocaleChange }: Props) {
 
   // F-05a: an ended session replaces every screen; signing in again comes back to this route.
   const routes = shell.loading ? <Route path="*" element={<ShellMessage standalone busy title={t('shell.loading')} />} />
-    : shell.expired ? <Route path="*" element={<SessionExpiredPage onSignIn={shell.signIn} />} />
+    : shell.expired ? <Route path="*" element={<SessionExpiredPage languageSwitcher={switcher} onSignIn={shell.signIn}
+        onOtherAccount={() => { shell.forgetEndedSession(); navigate('/', { replace: true }); }} />} />
     : !shell.session ? <>
-        <Route path="/" element={<HomePage languageSwitcher={switcher} session={<SessionPanel {...shell} onSignIn={shell.signIn} onSignOut={shell.signOut} />} />} />
+        <Route path="/" element={<SignInRoute switcher={switcher} />} />
         <Route path="/signup" element={<SignUpRoute switcher={switcher} />} />
         {/* A signed-out visit to the wizard (an old link) starts at sign-up. */}
         <Route path="/onboarding" element={<Navigate to={`/signup${location.search}`} replace />} />
@@ -88,7 +88,7 @@ export default function App({ locale, onLocaleChange }: Props) {
     : !active ? <>
         <Route path="/choose-facility" element={picker} />
         {/* Signed in with no clinic yet: the setup wizard (F-04). It scopes the session to the new practice when it finishes. */}
-        <Route path="/onboarding" element={<OnboardingRoute switcher={switcher} schedulePath={navItems.find(i => i.id === 'schedule')!.path} onLater={shell.signOut}
+        <Route path="/onboarding" element={<OnboardingRoute switcher={switcher} schedulePath={navItems.find(i => i.id === 'schedule')!.path} onLater={() => shell.signOut()}
           onFinished={(r, to = '/') => shell.chooseFacility(r.membershipId, () => navigate(to, { replace: true }))} />} />
         <Route path="*" element={<Navigate to={shell.session.memberships.length === 0 ? '/onboarding' : '/choose-facility'} replace state={{ from: location.pathname }} />} />
       </>

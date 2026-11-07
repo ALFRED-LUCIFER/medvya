@@ -62,7 +62,7 @@ test('signed in without an active facility goes to the facility slot', async ({ 
   await signInAs(page, { user: { id: 'u-rao', displayName: 'Dr. Arjun Rao' }, memberships: [membership('SoloDoctor')] });
   await page.goto('/today');
   await expect(page).toHaveURL('/choose-facility');
-  await expect(page.getByRole('heading', { name: 'Choose where you are working today' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Where are you working today?' })).toBeVisible();
 });
 
 for (const locale of ['en', 'ar']) {

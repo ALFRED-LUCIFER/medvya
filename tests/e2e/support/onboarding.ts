@@ -28,7 +28,7 @@ export type Saved = { step: number; validate?: number; data: Record<string, unkn
 export async function mockOnboarding(page: Page, draft: { step: number; data: Record<string, unknown> } | null = null) {
   const state = { draft, saves: [] as Saved[], finished: false, chose: '', signedOut: false };
   const view = () => ({ country: 'IN', step: state.draft!.step, data: state.draft!.data, rules });
-  await page.route('**/v1/me/context', r => r.fulfill({ json: state.finished && state.chose ? doctor : newUser }));
+  await page.route('**/v1/me/context', r => state.signedOut ? r.fulfill({ status: 401 }) : r.fulfill({ json: state.finished && state.chose ? doctor : newUser }));
   await page.route('**/bff/logout', r => { state.signedOut = true; return r.fulfill({ status: 204 }); });
   await page.route('**/v1/me/facility', r => { state.chose = (r.request().postDataJSON() as { membershipId: string }).membershipId; return r.fulfill({ status: 204 }); });
   await page.route('**/v1/onboarding', r => {

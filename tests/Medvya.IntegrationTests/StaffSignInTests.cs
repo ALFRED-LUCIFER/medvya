@@ -125,6 +125,45 @@ public sealed class StaffSignInTests(PostgresFixture sql) : IClassFixture<Postgr
         Assert.Equal("/", (await SignIn(browser, user.Subject, returnUrl: returnUrl)).Headers.Location!.OriginalString);
     }
 
+    // MDV-P1-059: the work email typed on the sign-in page reaches the provider as login_hint, and only a well-formed address does.
+    [Fact]
+    public async Task TheWorkEmailIsPassedToTheProviderAsALoginHint()
+    {
+        using var browser = Browser();
+        var challenge = await browser.GetAsync(new Uri("/bff/login?returnUrl=%2Fschedule&loginHint=reception.desk%40example.test", UriKind.Relative));
+        Assert.Equal(HttpStatusCode.Redirect, challenge.StatusCode);
+        Assert.Equal("reception.desk@example.test", Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(challenge.Headers.Location!.Query)["login_hint"]);
+
+        // The development provider has no emails: it still lists its synthetic users, and its links carry only the chosen one.
+        var page = await browser.GetStringAsync(challenge.Headers.Location);
+        Assert.Contains("New synthetic person", page, StringComparison.Ordinal);
+        Assert.DoesNotContain("example.test", page, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task WithoutALoginHintTheProviderIsSentNone()
+    {
+        using var browser = Browser();
+        var challenge = await browser.GetAsync(new Uri("/bff/login", UriKind.Relative));
+        Assert.DoesNotContain("login_hint", challenge.Headers.Location!.Query, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("not-an-email")]
+    [InlineData("Priya <priya@example.test>")]
+    [InlineData("priya@example.test\r\nX-Injected: 1")]
+    [InlineData("pri ya@example.test")]
+    [InlineData("")]
+    [InlineData("LONG")]
+    public async Task AMalformedLoginHintIsRefusedBeforeTheProvider(string hint)
+    {
+        if (hint == "LONG") hint = new string('a', 250) + "@example.test";
+        using var browser = Browser();
+        var res = await browser.GetAsync(new Uri($"/bff/login?loginHint={Uri.EscapeDataString(hint)}", UriKind.Relative));
+        Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
+        Assert.Null(res.Headers.Location);
+    }
+
     [Fact]
     public async Task StateChangingRequestsNeedTheCsrfHeader()
     {

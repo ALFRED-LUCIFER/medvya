@@ -60,6 +60,12 @@ public static partial class StaffAuthentication
                 // Only the local dev provider may use plain http, and it exists only in Development.
                 o.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
                 o.Events.OnTokenValidated = OnTokenValidated;
+                // The work email typed on the sign-in page (MDV-P1-059) rides in the challenge parameters, which are never stored in the state.
+                o.Events.OnRedirectToIdentityProvider = ctx =>
+                {
+                    if (ctx.Properties.GetParameter<string>(LoginHintParameter) is { } hint) ctx.ProtocolMessage.LoginHint = hint;
+                    return Task.CompletedTask;
+                };
                 // A refused or broken sign-in returns to the app with a generic error; the reason is only in the logs.
                 o.Events.OnRemoteFailure = ctx =>
                 {
@@ -149,11 +155,14 @@ public static partial class StaffAuthentication
 
     public static WebApplication MapStaffSession(this WebApplication app)
     {
-        app.MapGet("/bff/login", (string? returnUrl, string? invitation, bool? signup, IConfiguration config) =>
+        app.MapGet("/bff/login", (string? returnUrl, string? invitation, bool? signup, string? loginHint, IConfiguration config) =>
             {
+                // A hint is only a convenience for the provider's page, so a malformed one is refused rather than passed on.
+                if (loginHint is not null && !IsLoginHint(loginHint)) return Results.Problem(statusCode: StatusCodes.Status400BadRequest, title: "Invalid login hint");
                 var properties = new AuthenticationProperties { RedirectUri = returnUrl is not null && IsLocal(returnUrl) ? returnUrl : AppPath(config) };
                 if (InvitationToken.Read(invitation) is not null) properties.Items[InvitationSignIn.Item] = invitation;
                 if (signup == true) properties.Items[SignUpItem] = "1";
+                if (loginHint is not null) properties.SetParameter(LoginHintParameter, loginHint);
                 return Results.Challenge(properties, [OpenIdConnectDefaults.AuthenticationScheme]);
             })
             .AllowAnonymous()
@@ -167,6 +176,13 @@ public static partial class StaffAuthentication
 
     /// <summary>Where the web app lives: "/app/" when the API serves the built app (the public site owns "/"), "/" in development.</summary>
     public static string AppPath(IConfiguration config) => config["Web:AppPath"] ?? "/";
+
+    const string LoginHintParameter = "login_hint";
+
+    /// <summary>An email address as typed on the sign-in page: one address, no display name, no control characters, at most 254 characters.</summary>
+    internal static bool IsLoginHint(string value) =>
+        value.Length <= 254 && !value.Any(char.IsControl) && !value.Contains(' ', StringComparison.Ordinal)
+        && System.Net.Mail.MailAddress.TryCreate(value, out var address) && address.Address == value && address.DisplayName.Length == 0;
 
     // Only same-site paths: "/x" but never "//host" or "/\host", which browsers treat as another site.
     static bool IsLocal(string url) => url.StartsWith('/') && !url.StartsWith("//", StringComparison.Ordinal) && !url.StartsWith("/\\", StringComparison.Ordinal);

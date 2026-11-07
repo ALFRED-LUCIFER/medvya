@@ -12,7 +12,9 @@ export async function signIn(page: Page, user: RegExp, locale: 'en' | 'ar' = 'en
   await page.addInitScript({ path: axePath }); // an init script is not subject to the page's strict CSP, which stays on
   await page.clock.setFixedTime(browserNow());
   await page.goto('/app/');
-  await page.getByRole('main').getByRole('button').first().click(); // the only button on the signed-out home screen
+  // The sign-in start (MDV-P1-059): the email is only a hint, and the development provider still lists its synthetic users.
+  await page.getByRole('main').getByRole('textbox').fill('staff@example.test');
+  await page.getByRole('main').getByRole('textbox').press('Enter');
   await page.getByRole('link', { name: user }).click();
   await page.waitForURL(/\/app\/(choose-facility|front-desk|schedule)/);
   if (page.url().includes('choose-facility')) await page.getByText(/\(synthetic\) · /).first().click();

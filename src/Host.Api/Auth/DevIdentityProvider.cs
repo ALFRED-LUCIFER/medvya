@@ -64,12 +64,14 @@ public static class DevIdentityProvider
             if (code_challenge_method != "S256" || !Uri.TryCreate(redirect_uri, UriKind.Absolute, out var back) || !back.IsLoopback)
                 return Results.BadRequest("PKCE S256 and a loopback redirect_uri are required.");
             var users = await db.Users.AsNoTracking().Where(u => u.Issuer == Issuer).OrderBy(u => u.DisplayName).ToListAsync();
-            if (login_hint is null)
+            // An email hint comes from the app's sign-in page (MDV-P1-059); this provider has no emails, so it still shows the list.
+            if (login_hint is null || login_hint.Contains('@', StringComparison.Ordinal))
             {
+                var query = QueryString.Create(r.Query.Where(q => q.Key != "login_hint"));
                 var html = new StringBuilder("<!doctype html><title>Dev sign-in</title><h1>Development sign-in (synthetic users)</h1><ul>");
                 foreach (var u in users)
-                    html.Append(CultureInfo.InvariantCulture, $"<li><a href=\"{WebUtility.HtmlEncode($"{r.Path}{r.QueryString}&login_hint={Uri.EscapeDataString(u.Subject)}")}\">{WebUtility.HtmlEncode(u.DisplayName)}</a></li>");
-                html.Append(CultureInfo.InvariantCulture, $"<li><a href=\"{WebUtility.HtmlEncode($"{r.Path}{r.QueryString}&login_hint={NewAccount}")}\">New synthetic person (not yet a Medvya user)</a></li>");
+                    html.Append(CultureInfo.InvariantCulture, $"<li><a href=\"{WebUtility.HtmlEncode($"{r.Path}{query}&login_hint={Uri.EscapeDataString(u.Subject)}")}\">{WebUtility.HtmlEncode(u.DisplayName)}</a></li>");
+                html.Append(CultureInfo.InvariantCulture, $"<li><a href=\"{WebUtility.HtmlEncode($"{r.Path}{query}&login_hint={NewAccount}")}\">New synthetic person (not yet a Medvya user)</a></li>");
                 return Results.Content(html.Append("</ul>").ToString(), "text/html");
             }
             // A fresh provider account each time: Medvya refuses it unless the sign-in carries a valid invitation.

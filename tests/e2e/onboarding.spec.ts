@@ -17,9 +17,25 @@ test('a visitor from the region selector signs up: the country is carried into m
   await page.route('**/v1/me/context', r => r.fulfill({ status: 401 }));
   await page.route('**/bff/login**', r => r.fulfill({ body: 'signing in' }));
   await page.goto('/signup?country=AE');
-  await expect(page.getByRole('radio', { name: 'United Arab Emirates' })).toBeChecked();
-  await page.getByRole('button', { name: 'Create account' }).click();
-  await expect(page).toHaveURL('/bff/login?signup=true&returnUrl=%2Fonboarding%3Fcountry%3DAE');
+  await expect(page.getByRole('radio', { name: /United Arab Emirates/ })).toBeChecked();
+  await page.getByLabel('Practice name').fill('Lakeside Clinic (synthetic)');
+  await page.getByRole('textbox', { name: 'Emirate' }).fill('Abu Dhabi');
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await page.getByLabel('Full name').fill('Omar Haddad (synthetic)');
+  await page.getByLabel('Work email').fill('owner@example.test');
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await expect(page).toHaveURL('/bff/login?signup=true&returnUrl=%2Fonboarding%3Fcountry%3DAE&loginHint=owner%40example.test');
+});
+
+test('the create-account answers fill the new draft once, then leave the browser (MDV-P1-059)', async ({ page }) => {
+  const api = await mockOnboarding(page);
+  const prefill = { profile: { fullName: 'Omar Haddad (synthetic)', mode: 'Clinic' }, clinic: { name: 'Lakeside Clinic (synthetic)', address: 'Abu Dhabi' } };
+  await page.addInitScript(p => { if (!sessionStorage.getItem('seeded')) { sessionStorage.setItem('seeded', '1'); sessionStorage.setItem('medvya.signUp', p); } }, JSON.stringify(prefill));
+  await page.goto('/onboarding?country=AE');
+  await page.getByRole('button', { name: 'Start setup' }).click();
+  await expect(page.getByLabel('Full name')).toHaveValue('Omar Haddad (synthetic)');
+  expect(api.saves[0]).toMatchObject({ step: 1, data: prefill });
+  expect(await page.evaluate(() => sessionStorage.getItem('medvya.signUp'))).toBeNull();
 });
 
 test('a solo doctor completes the five steps, sees the ready screen and lands on the app with the licence notice', async ({ page }) => {

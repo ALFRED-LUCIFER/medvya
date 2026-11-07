@@ -37,13 +37,18 @@ public static partial class PublicSite
 
     public static WebApplicationBuilder AddPublicSite(this WebApplicationBuilder builder)
     {
-        // Trust centre lists are content, not code: editable on the server without a redeploy (MDV-P1-003). Lowest precedence,
+        // Trust centre lists and the price list are content, not code: editable on the server without a redeploy (MDV-P1-003). Lowest precedence,
         // so an app setting or environment variable can still override one value.
         builder.Configuration.Sources.Insert(0, new JsonConfigurationSource
         {
             FileProvider = builder.Environment.ContentRootFileProvider, Path = "PublicSite/trust-centre.json", Optional = false, ReloadOnChange = true,
         });
+        builder.Configuration.Sources.Insert(0, new JsonConfigurationSource
+        {
+            FileProvider = builder.Environment.ContentRootFileProvider, Path = "PublicSite/pricing.json", Optional = false, ReloadOnChange = true,
+        });
         builder.Services.Configure<TrustCentreContent>(builder.Configuration.GetSection("TrustCentre"));
+        builder.Services.Configure<PricingContent>(builder.Configuration.GetSection("Pricing"));
         builder.Services.AddSingleton<PublicFormGuard>();
         builder.Services.Configure<DeploymentOptions>(builder.Configuration.GetSection("PublicSite:Deployments"));
         builder.Services.AddPublicSitePages();

@@ -1,4 +1,3 @@
-using System.Globalization;
 using Medvya.Leads.Application;
 using Medvya.Leads.Domain;
 using Microsoft.AspNetCore.Mvc;
@@ -45,8 +44,6 @@ public sealed class TrustModel(SiteText text, IOptionsSnapshot<TrustCentreConten
         return SubmitAsync(DemoRequestRules.Validate(request), () => requests.SubmitAsync(request, cancellationToken),
             $"{Href(PublicSite.TrustCentre)}?sent=1#demo");
     }
-
-    public string Date(DateOnly date) => date.ToString("d MMM yyyy", CultureInfo.GetCultureInfo(Lang switch { "hi" => "hi-IN", "ar" => "ar-AE", _ => "en-IN" }));
 
     public string Localized(IDictionary<string, string> values) => values.TryGetValue(Lang, out var v) ? v : values.TryGetValue("en", out var en) ? en : "";
 }

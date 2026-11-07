@@ -26,6 +26,7 @@
     <EmbeddedResource Include="PublicSite\site.css" LogicalName="PublicSite.site.css" />
     <!-- Trust centre lists: content read at runtime so they can change without a redeploy (MDV-P1-003). -->
     <Content Update="PublicSite\trust-centre.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Update="PublicSite\pricing.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

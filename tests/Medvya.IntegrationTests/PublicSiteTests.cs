@@ -34,7 +34,8 @@ public sealed partial class PublicSiteTests : IClassFixture<WebApplicationFactor
     }
 
     internal static readonly string[] PagePaths =
-        ["/", "/pricing", "/trust", "/region", "/hi", "/hi/pricing", "/hi/trust", "/hi/region", "/ar", "/ar/pricing", "/ar/trust", "/ar/region"];
+        ["/", "/pricing", "/trust", "/region", "/assist", "/hospitals", "/hi", "/hi/pricing", "/hi/trust", "/hi/region", "/hi/assist", "/hi/hospitals",
+         "/ar", "/ar/pricing", "/ar/trust", "/ar/region", "/ar/assist", "/ar/hospitals"];
     public static TheoryData<string> Pages => new(PagePaths);
 
     [Theory, MemberData(nameof(Pages))]
@@ -193,11 +194,6 @@ public sealed partial class PublicSiteTests : IClassFixture<WebApplicationFactor
         foreach (var lang in new[] { "hi", "ar" })
             Assert.Empty(keys.Except(Catalog(lang).Keys));
     }
-
-    [Theory]
-    [InlineData("/pricing"), InlineData("/hi/pricing"), InlineData("/ar/pricing")]
-    public async Task PricingIsAPlaceholderWithoutPrices(string path) =>
-        Assert.DoesNotMatch(Price(), await Get(path));
 
     [Fact]
     public async Task StylesheetCarriesTheSharedDesignTokens()

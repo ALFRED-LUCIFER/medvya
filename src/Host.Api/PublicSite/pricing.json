@@ -1,0 +1,43 @@
+// Approved price list on /pricing and /assist (MDV-P5-050). Editable without a redeploy: edit this file on the server (it reloads
+// on save) or override one value with an app setting, e.g. Pricing__Plans__1__Prices__IN__Monthly=349900. Keep it in git and raise
+// Version on every change so each published list is on record.
+// Rules: amounts are integer minor units (paise, fils) with the ISO currency, by country deployment (IN, AE). Only prices that are
+// approved go here; leave an amount out and the page shows no price for it. Plan names and features are copy in packages/i18n
+// (site.pricing.plan.<Code>.*).
+// Source: decision record "Approved 06 Nov 2026" in the Medvya Web design (docs/02-design/source), matching the Admin design's Plans.
+{
+  "Pricing": {
+    "Version": "2026.11",
+    "Approved": "2026-11-06",
+    "Plans": [
+      {
+        "Code": "solo",
+        "Prices": {
+          "IN": { "Currency": "INR", "Monthly": 199900, "Yearly": 1999000 },
+          "AE": { "Currency": "AED", "Monthly": 34900, "Yearly": 349000 }
+        }
+      },
+      {
+        "Code": "clinic",
+        "PerDoctor": true,
+        "Popular": true,
+        "Prices": {
+          "IN": { "Currency": "INR", "Monthly": 349900, "Yearly": 3499000 },
+          "AE": { "Currency": "AED", "Monthly": 59900, "Yearly": 599000 }
+        }
+      },
+      {
+        "Code": "hospital",
+        "Custom": true,
+        "Prices": {
+          "IN": { "Currency": "INR", "Yearly": 25000000 },
+          "AE": { "Currency": "AED", "Yearly": 4000000 }
+        }
+      }
+    ],
+    "Assist": {
+      "IN": { "Currency": "INR", "Monthly": 99900 },
+      "AE": { "Currency": "AED", "Monthly": 14900 }
+    }
+  }
+}

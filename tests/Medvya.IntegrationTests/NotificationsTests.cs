@@ -614,7 +614,19 @@ public sealed partial class NotificationsTests(PostgresFixture sql) : IClassFixt
         Assert.Contains(later, r => r.Kind == NotificationKind.Reminder2h);
 
         await using var audit = sql.Audit(h.Tenant);
-        Assert.Contains(await audit.Events.Select(e => e.Action).ToListAsync(), a => a == "settings.notifications.update");
+        var saved = await audit.Events.SingleAsync(e => e.Action == "settings.notifications.update");
+        Assert.Equal("reminder24h:on>off", saved.Detail); // the before and after of what changed, nothing else
+    }
+
+    [Fact]
+    public void TheAuditDetailListsEveryChangedSettingAndFitsTheColumn()
+    {
+        var before = new NotificationPreferencesView(true, true, true, true, true, true, new TimeOnly(21, 0), new TimeOnly(8, 0));
+        Assert.Null(NotificationPreferences.Diff(before, before));
+        var everything = new NotificationPreferencesView(false, false, false, false, false, false, new TimeOnly(22, 30), new TimeOnly(7, 0));
+        var detail = NotificationPreferences.Diff(before, everything)!;
+        Assert.Equal("confirmation:on>off;reminder24h:on>off;reminder2h:on>off;changes:on>off;email:on>off;sms:on>off;quietStart:21:00>22:30;quietEnd:08:00>07:00", detail);
+        Assert.True(detail.Length <= 256);
     }
 
     [Fact]

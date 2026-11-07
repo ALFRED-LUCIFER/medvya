@@ -30,7 +30,10 @@ public static class DatabaseMigrator
     public static async Task ApplyRolesAsync(NpgsqlConnection connection, IEnumerable<(string Role, string Password)>? logins = null, CancellationToken ct = default)
     {
         await RunScriptAsync(connection, "roles.sql", ct);
-        await RunScriptAsync(connection, "table-rights.sql", ct); // roles.sql re-grants schema-wide; narrow the single tables again
+        // roles.sql re-grants schema-wide; narrow the single tables again, as their owner (on Azure the administrator is not a superuser).
+        await using (var role = new NpgsqlCommand("SET ROLE medvya_owner", connection)) await role.ExecuteNonQueryAsync(ct);
+        await RunScriptAsync(connection, "table-rights.sql", ct);
+        await using (var reset = new NpgsqlCommand("RESET ROLE", connection)) await reset.ExecuteNonQueryAsync(ct);
         foreach (var (role, password) in logins ?? [])
         {
             if (!role.StartsWith("medvya_", StringComparison.Ordinal)) throw new ArgumentException("Only Medvya roles can become logins.", nameof(logins));

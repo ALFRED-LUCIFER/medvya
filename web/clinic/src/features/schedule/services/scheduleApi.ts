@@ -102,7 +102,8 @@ export const saveAdjustment = (body: unknown) => post<SaveResult>('/v1/schedule/
 /** Edit takes the body of an add (same action rules); delete cancels the exception and gives the slots back. */
 export const updateAdjustment = (id: string, body: unknown) => send<SaveResult>(`/v1/schedule/exceptions/${id}`, { method: 'PUT', headers: { ...csrf, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 
-export const deleteAdjustment = (facilityId: string, id: string) => send<void>(`/v1/schedule/exceptions/${id}?${new URLSearchParams({ facilityId })}`, { method: 'DELETE', headers: csrf });
+export const deleteAdjustment = (facilityId: string, id: string, version: string) =>
+  send<void>(`/v1/schedule/exceptions/${id}?${new URLSearchParams({ facilityId, version })}`, { method: 'DELETE', headers: csrf });
 
 /** MDV-P1-050: the server audits the print and answers with the only fields that may go on paper. */
 export const printDaySheet = (facilityId: string, date: string | null) => post<DaySheet>('/v1/schedule/print', { facilityId, date });

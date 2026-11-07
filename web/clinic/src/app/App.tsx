@@ -115,7 +115,7 @@ export default function App({ locale, onLocaleChange }: Props) {
             // Until the patient chart exists (phase 2) the Patients menu opens the patient directory instead of a placeholder.
             : i.id === 'patients' && searchPath ? <Navigate to={searchPath} replace />
             : <ComingSoon title={t(`nav.${i.id}`)} phase={i.phase} />} />)}
-          {leavePath && <Route path={leavePath} element={<AdjustmentsRoute facilityId={active.facilityId} schedulePath={pathOf('schedule')!} boardPath={pathOf('frontDesk')} />} />}
+          {leavePath && <Route path={leavePath} element={<AdjustmentsRoute facilityId={active.facilityId} canConfigure={active.capabilities.StaffRolesIntegrations === 'Config'} userId={shell.session?.user.id ?? ''} schedulePath={pathOf('schedule')!} boardPath={pathOf('frontDesk')} />} />}
           {walkInPath && registerPath &&
             <Route path={walkInPath} element={<WalkInRoute facilityId={active.facilityId} boardPath={pathOf('frontDesk')!} registerPath={`${registerPath}?mode=quick`} />} />}
           {/* shortcut: reachable by URL only; the Staff screen and its navigation entry come with F-10 (MDV-P1-008). */}

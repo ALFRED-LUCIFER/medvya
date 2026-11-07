@@ -9,10 +9,13 @@ test('home page renders', async ({ page }) => {
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 });
 
-test('unknown address shows the not-found state and leads back home', async ({ page }) => {
-  await page.goto('/no-such-page');
-  await page.getByRole('button').click();
-  await expect(page).toHaveURL('/');
+test('signed out, an app address offers sign-in and comes back to it (not "Page not found")', async ({ page }) => {
+  const record = '/patients/directory/01a1b691-cb4e-7111-93a8-65b798132ce1';
+  await page.goto(record);
+  await expect(page.getByRole('heading', { name: 'Sign in to Medvya' })).toBeVisible();
+  const login = page.waitForRequest(r => r.url().includes('/bff/login'));
+  await page.getByRole('button', { name: 'Sign in with a passkey' }).click();
+  expect((await login).url()).toContain(`returnUrl=${encodeURIComponent(record)}`);
 });
 
 test('switching to Arabic lays the page out right-to-left', async ({ page }) => {

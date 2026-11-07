@@ -145,6 +145,31 @@ public sealed class SessionControlTests(PostgresFixture sql) : IClassFixture<Pos
         Assert.Equal((tenantB, atB, 15), (session.TenantId, session.MembershipId, session.IdleTimeoutMinutes));
     }
 
+    // MDV-P1-059: the picker puts the facility the user last worked at first; the server says which, from the user's own sessions.
+    [Fact]
+    public async Task ContextNamesTheLastUsedMembershipFromThePreviousSession()
+    {
+        await Clinics();
+        var user = await Account("A. Joseph");
+        var atA = await Member(user, tenantA, facilityA, Role.Receptionist);
+        var atB = await Member(user, tenantB, facilityB, Role.Receptionist);
+
+        using (var first = await SignedIn(user))
+        {
+            Assert.Equal(JsonValueKind.Null, (await Context(first)).GetProperty("lastMembershipId").ValueKind); // never chose one
+            Assert.Equal(HttpStatusCode.NoContent, (await Choose(first, atB)).StatusCode);
+        }
+        using var second = await SignedIn(user);
+        Assert.Equal(atB, (await Context(second)).GetProperty("lastMembershipId").GetGuid());
+
+        // A membership that is no longer active is never named, even when it was used last.
+        await using (var db = sql.Context(tenantB))
+            await db.Memberships.Where(m => m.Id == atB).ExecuteUpdateAsync(u => u.SetProperty(m => m.Status, MembershipStatus.Suspended));
+        Assert.Equal(JsonValueKind.Null, (await Context(second)).GetProperty("lastMembershipId").ValueKind);
+        Assert.Equal(HttpStatusCode.NoContent, (await Choose(second, atA)).StatusCode);
+        Assert.Equal(atA, (await Context(second)).GetProperty("lastMembershipId").GetGuid());
+    }
+
     [Fact]
     public async Task ContextJsonUsesTheAgreedShapeWithEnumNamesAsStrings()
     {

@@ -28,6 +28,9 @@ public interface IStaffSessions
     /// <summary>When each of these users last signed in (the newest session start, live or ended); users who never did are left out.</summary>
     Task<IReadOnlyDictionary<Guid, DateTimeOffset>> LastSignInAsync(IReadOnlyCollection<Guid> userIds, CancellationToken cancellationToken = default);
 
+    /// <summary>The membership the user's newest scoped session was scoped to (live or ended), for "last used" on the facility picker.</summary>
+    Task<Guid?> LastMembershipAsync(Guid userId, CancellationToken cancellationToken = default);
+
     /// <summary>Revokes every live session of the user that is scoped to the tenant (admin action); returns how many.</summary>
     Task<int> RevokeInTenantAsync(Guid userId, Guid tenantId, CancellationToken cancellationToken = default);
 }

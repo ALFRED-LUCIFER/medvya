@@ -32,6 +32,7 @@ These rules were collected from the interactive logic and copy in the design fil
 2. Six-digit code: "Sent to +91 •••• ••3146. Expires in 4:52." A wrong code shows "Incorrect code. 2 attempts left before a 15-minute lock."
 3. "Signed in. Choose where you are working today." Facility picker lists each membership with its role, e.g. "Doctor · owner" or "Visiting consultant · hospital SSO".
 - Required states (wireframe): wrong code, locked (15 min), passkey unsupported, SSO-enforced tenant.
+- **6 Nov 2026 revision (MDV-P1-059, MDV-P1-060):** Medvya renders the sign-in start (work email, passed to Entra as a login hint; passkey and organisation sign-in start the same Entra flow), create account steps 1-2 (country, practice name, city; full name, email, doctor or clinic manager: they pre-fill the F-04 draft), invitation acceptance (F-06), choose location ("Where are you working today?", last used first, "Not you? Sign out") and signed out (F-05a, "You were signed out"). The code, passkey, MFA set-up, recovery and the states above are Entra pages, branded by `infra/entra/branding.sh`. Not built: "This is a shared computer" (no shared-device session policy on the server yet), the mobile number (recovery is Entra's), Help link and legal line (no pages yet).
 
 ### F-04 Solo doctor onboarding (6 steps, autosave)
 | Step | Fields |

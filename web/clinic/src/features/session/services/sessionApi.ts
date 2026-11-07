@@ -27,9 +27,13 @@ export async function chooseFacility(membershipId: string) {
   if (!res.ok) throw new Error(`me/facility ${res.status}`);
 }
 
-/** Starts sign-in and comes back to the page the user was on (F-05a: return to the previous route). */
-export function startSignIn() {
-  window.location.assign(`/bff/login?returnUrl=${encodeURIComponent(window.location.pathname)}`);
+/**
+ * Starts sign-in and comes back to the page the user was on (F-05a: return to the previous route). The work email, when typed, goes to
+ * the provider as a hint only (MDV-P1-059): the server validates it, never stores or logs it.
+ */
+export function startSignIn(loginHint?: string) {
+  const hint = loginHint ? `&loginHint=${encodeURIComponent(loginHint)}` : '';
+  window.location.assign(`/bff/login?returnUrl=${encodeURIComponent(window.location.pathname)}${hint}`);
 }
 
 export async function signOut() {

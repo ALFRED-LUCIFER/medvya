@@ -55,6 +55,8 @@ Staff sign-in needs both, or the app refuses every sign-in with "the provider di
 1. **MFA enforced for the user.** Free tier: Security defaults off, then Per-user MFA = Enforced (Conditional Access needs a paid licence). Production moves staff sign-in to an Entra External ID tenant.
 2. **`amr` optional claim on the app registration** (Token configuration → Add optional claim → ID → `amr`). v2.0 ID tokens omit it otherwise. CLI: `az ad app update --id <client id> --optional-claims '{"idToken":[{"name":"amr","essential":false,"additionalProperties":[]}]}'`.
 
+Branding of the hosted sign-in pages (email code, MFA set-up, recovery) is set by `infra/entra/branding.sh` (MDV-P1-060): logo, colour and text from `infra/entra/branding/`, per country. A tenant administrator runs it; it is idempotent and holds no secret.
+
 ## Email (MDV-P1-032)
 
 Invitations (add doctor, add staff, onboarding) need a working sender; the app refuses to send without one. Two providers, chosen by the `emailProvider` parameter (see `docs/03-architecture/email-providers.md`):

@@ -19,11 +19,17 @@ test('J1: a new solo doctor sets up the practice, registers a patient, books and
 
   await test.step('J1.1 sign up with multi-factor sign-in and set up the practice (licence, clinic, hours, receptionist invited)', async () => {
     await page.goto('/app/signup?country=IN');
-    await page.getByRole('button', { name: 'Create account' }).click();
+    await page.getByLabel('Practice name').fill(`Menon Clinic ${n} (synthetic)`);
+    await page.getByLabel('City').fill('Chennai');
+    await page.getByRole('button', { name: 'Continue' }).click();
+    await page.getByLabel('Full name').fill('Arjun Menon (synthetic)');
+    await page.getByLabel('Work email').fill(`owner${n}@example.test`);
+    await page.getByRole('button', { name: 'Continue' }).click();
     await page.getByRole('link', { name: /New synthetic person/ }).click();
     await page.waitForURL(/\/app\/onboarding/);
     await page.getByRole('button', { name: 'Start setup' }).click();
-    await page.getByLabel('Full name').fill('Arjun Menon (synthetic)');
+    // The create-account answers (MDV-P1-059) are already in the draft.
+    await expect(page.getByLabel('Full name')).toHaveValue('Arjun Menon (synthetic)');
     await page.getByLabel('Specialty').fill('General medicine');
     await page.getByRole('button', { name: 'Continue' }).click();
     await page.getByRole('combobox', { name: 'Medical council' }).click();

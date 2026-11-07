@@ -44,7 +44,7 @@ test('invitee sees the clinic, role, capabilities and facility, and Join starts 
 
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Join Iyer Family Clinic (synthetic)');
   await expect(page.getByText('Dr. Arjun Rao (synthetic) invited you as Receptionist.')).toBeVisible();
-  const items = page.getByRole('listitem');
+  const items = page.getByRole('region', { name: 'What this role can do' }).getByRole('listitem');
   await expect(items).toHaveCount(15);
   await expect(items.first()).toHaveText('Allowed: Register / book patients');
   await expect(items.filter({ hasText: 'Clinical notes' })).toHaveText('Not allowed: Clinical notes');

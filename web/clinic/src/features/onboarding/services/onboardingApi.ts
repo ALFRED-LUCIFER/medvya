@@ -34,7 +34,25 @@ export async function fetchDraft(): Promise<Draft | null> {
 export async function startDraft(country: Country): Promise<Draft> {
   const res = await apiFetch('/v1/onboarding', { method: 'POST', credentials: 'same-origin', headers: json, body: JSON.stringify({ country }) });
   await check(res, 'onboarding start');
-  return res.json() as Promise<Draft>;
+  const draft = (await res.json()) as Draft;
+  // The create-account answers (MDV-P1-059) become the new draft's first values, once.
+  const prefill = takePrefill();
+  if (!prefill) return draft;
+  try {
+    await saveDraft(1, prefill);
+    return { ...draft, data: prefill };
+  } catch { return draft; } // only a convenience: the draft exists, so the wizard opens empty rather than failing to start
+}
+
+// Per tab, the owner's own answers only (practice name, city, their name and role): no patient data, removed as soon as it is read.
+const prefillKey = 'medvya.signUp';
+
+function takePrefill(): OnboardingData | null {
+  try {
+    const raw = sessionStorage.getItem(prefillKey);
+    sessionStorage.removeItem(prefillKey);
+    return raw ? (JSON.parse(raw) as OnboardingData) : null;
+  } catch { return null; } // storage blocked or unreadable: the wizard simply starts empty
 }
 
 /** Saves the draft and the step to resume at. With `validate` the server checks that step first and saves nothing if it fails. */
@@ -49,7 +67,12 @@ export async function finishOnboarding(): Promise<FinishResult> {
   return res.json() as Promise<FinishResult>;
 }
 
-/** Sign up: the provider's MFA sign-in, then back to the wizard. The server creates the account only on this path. */
-export function startSignUp(country: Country) {
-  window.location.assign(`/bff/login?signup=true&returnUrl=${encodeURIComponent(`${import.meta.env.BASE_URL}onboarding?country=${country}`)}`);
+/**
+ * Sign up: the provider's MFA sign-in, then back to the wizard. The server creates the account only on this path. The email goes to the
+ * provider as a login hint; the other answers wait in this tab for the draft (startDraft).
+ */
+export function startSignUp(country: Country, email?: string, prefill?: OnboardingData) {
+  if (prefill) try { sessionStorage.setItem(prefillKey, JSON.stringify(prefill)); } catch { /* storage blocked: the wizard asks again */ }
+  const hint = email ? `&loginHint=${encodeURIComponent(email)}` : '';
+  window.location.assign(`/bff/login?signup=true&returnUrl=${encodeURIComponent(`${import.meta.env.BASE_URL}onboarding?country=${country}`)}${hint}`);
 }

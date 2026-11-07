@@ -1,0 +1,16 @@
+{
+  "default": {
+    "signInPageText": "Medvya staff sign-in. Every sign-in is logged. Medvya never asks for your code by phone, SMS or email.",
+    "usernameHintText": "name@clinic.in",
+    "customPrivacyAndCookiesText": "Privacy",
+    "customTermsOfUseText": "Terms"
+  },
+  "localizations": {
+    "hi-IN": {
+      "signInPageText": "Medvya स्टाफ़ साइन-इन। हर साइन-इन दर्ज होता है। Medvya कभी फ़ोन, SMS या ईमेल से आपका कोड नहीं माँगता।",
+      "usernameHintText": "name@clinic.in",
+      "customPrivacyAndCookiesText": "गोपनीयता",
+      "customTermsOfUseText": "शर्तें"
+    }
+  }
+}

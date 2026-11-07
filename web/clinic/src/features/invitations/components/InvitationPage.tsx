@@ -1,12 +1,13 @@
 import type { ReactNode } from 'react';
-import { Check, Link2Off, X } from 'lucide-react';
+import { Check, Link2Off, Mail, X } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
 import { Button } from '@medvya/ui';
+import AuthFrame from '../../session/components/AuthFrame';
 import { isAllowed, type InvitationPreview } from '../domain/invitation';
 
 type Props = { languageSwitcher: ReactNode; loading: boolean; failed: boolean; invitation: InvitationPreview | null; onJoin: () => void; onRetry: () => void };
 
-/** F-06 Invite acceptance. Allowed and not-allowed capabilities differ by icon and words, never colour alone. */
+/** F-06 Invite acceptance in the sign-in frame (6 Nov design). Allowed and not-allowed capabilities differ by icon and words, never colour alone. */
 export default function InvitationPage({ languageSwitcher, loading, failed, invitation, onJoin, onRetry }: Props) {
   const { t, formatDate } = useI18n();
   let body;
@@ -30,7 +31,10 @@ export default function InvitationPage({ languageSwitcher, loading, failed, invi
     const role = t(`role.${invitation.role}`);
     body = (
       <>
-        <h1 className="text-2xl font-extrabold">{t('invite.title', { clinic: invitation.clinic })}</h1>
+        <span className="inline-flex items-center gap-1.5 self-start rounded-full bg-brand-50 px-2.5 py-1 text-xs font-bold text-brand-700">
+          <Mail className="size-4" aria-hidden />{t('signin.invite.tag')}
+        </span>
+        <h1 className="text-[28px] font-bold text-brand-950">{t('invite.title', { clinic: invitation.clinic })}</h1>
         <p className="text-muted-foreground">
           {invitation.inviter ? t('invite.invitedBy', { name: invitation.inviter, role }) : t('invite.invited', { role })}
         </p>
@@ -56,14 +60,12 @@ export default function InvitationPage({ languageSwitcher, loading, failed, invi
           <p className="font-semibold">{t('invite.facility', { facility: invitation.facility })}</p>
         </section>
         {invitation.licenceVerificationRequired && <p className="text-sm">{t('invite.licence')}</p>}
-        <Button onClick={onJoin}>{t('invite.cta')}</Button>
+        <Button className="min-h-12" onClick={onJoin}>{t('invite.cta')}</Button>
         <p className="text-xs text-muted-foreground">{t('invite.expires', { date: formatDate(new Date(invitation.expiresAt)) })}</p>
       </>
     );
   }
   return (
-    <main className="grid min-h-screen place-items-center p-4">
-      <div className="flex w-full max-w-[440px] flex-col gap-4 rounded-lg border bg-card p-7">{body}{languageSwitcher}</div>
-    </main>
+    <AuthFrame languageSwitcher={languageSwitcher}>{body}</AuthFrame>
   );
 }

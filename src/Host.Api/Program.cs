@@ -26,9 +26,12 @@ using Medvya.Scheduling.Application;
 using Medvya.Scheduling.Infrastructure;
 using Medvya.Leads.Infrastructure;
 using Medvya.Tenancy.Api;
+using Medvya.Tenancy.Application;
 using Medvya.Tenancy.Infrastructure;
 using Host.Api.Observability;
 using Host.Api.PublicSite;
+using Medvya.BuildingBlocks.Security;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddMedvyaTelemetry();
@@ -78,6 +81,11 @@ if (builder.Environment.IsDevelopment() && builder.Configuration.GetValue("Notif
 // The terms gate (MDV-P1-019) may be switched off for local runs only; anywhere else that setting is a startup error, never a silent bypass.
 if (!builder.Environment.IsDevelopment() && !builder.Configuration.GetValue("Terms:RequireAcceptance", true))
     throw new InvalidOperationException("Terms:RequireAcceptance=false is allowed in Development only.");
+// One deployment serves one country (ADR-003, MDV-P1-002). Unset, onboarding would accept every country: allowed in Development only.
+// The build-time OpenAPI export (GetDocument.Insider) runs this file as Production with no settings and serves no requests.
+if (Assembly.GetEntryAssembly()?.GetName().Name != "GetDocument.Insider" && builder.Configuration["Onboarding:DeploymentCountry"] is var deploymentCountry
+    && (string.IsNullOrEmpty(deploymentCountry) ? !builder.Environment.IsDevelopment() : OnboardingRules.For(deploymentCountry) is null))
+    throw new InvalidOperationException("Onboarding:DeploymentCountry must be IN or AE; it may be unset in Development only.");
 builder.AddJobs(builder.Configuration.GetConnectionString("Medvya"));
 builder.Services.Configure<SchedulingOptions>(builder.Configuration.GetSection("Scheduling"));
 // Live board (MDV-P1-029): every hub call runs as the connection's signed-in user, with its session checked again.
@@ -163,6 +171,9 @@ app.MapPatientEndpoints();
 app.MapAccessRequestEndpoints();
 app.MapEncounterEndpoints();
 if (app.Environment.IsDevelopment() && app.Configuration["Authentication:Oidc:Authority"]?.EndsWith(DevIdentityProvider.Path, StringComparison.Ordinal) == true)
-    app.MapDevIdentityProvider();
+    app.MapDevIdentityProvider(Medvya.Identity.Domain.IdentityProviders.Development, async http =>
+        await http.RequestServices.GetRequiredService<Medvya.Identity.Infrastructure.Persistence.IdentityDbContext>().Users.AsNoTracking()
+            .Where(u => u.Issuer == Medvya.Identity.Domain.IdentityProviders.Development).OrderBy(u => u.DisplayName)
+            .Select(u => new DevAccount(u.Subject, u.DisplayName)).ToListAsync(http.RequestAborted));
 
 app.Run();

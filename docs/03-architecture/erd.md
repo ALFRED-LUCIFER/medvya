@@ -39,6 +39,7 @@ flowchart LR
   api --> Audit["Audit<br/>schema audit<br/>1 table"]
   api --> Leads["Leads<br/>schema leads<br/>2 tables"]
   Billing["Billing<br/>schema billing<br/>1 table (not wired into the host)"]
+  Platform["Platform<br/>schema platform<br/>5 tables (not wired into the host)"]
   jobs --> Notifications
   bff -->|"sign-in"| entra["Microsoft Entra"]
   Notifications -->|"email"| mail["Azure Communication Services Email<br/>or SMTP"]
@@ -76,7 +77,7 @@ flowchart LR
   Tenancy -->|"Application, Domain"| Scheduling
 ```
 
-`Host.Api` references: Audit, Encounters, Identity, Leads, Notifications, Patients, Scheduling, Tenancy. Modules with no incoming arrow from another module: Billing, Encounters, Leads, Notifications.
+`Host.Api` references: Audit, Encounters, Identity, Leads, Notifications, Patients, Scheduling, Tenancy. Modules with no incoming arrow from another module: Billing, Encounters, Leads, Notifications, Platform.
 
 ## 3. How the data links across modules
 
@@ -1417,6 +1418,121 @@ erDiagram
 
 </details>
 
+### Platform (schema `platform`, 5 tables)
+
+```mermaid
+erDiagram
+  KeyLinks {
+    guid Id PK
+    guid MemberId FK "FK to Members"
+  }
+  AuditEntries {
+    guid Id PK
+  }
+  Members {
+    guid Id PK
+  }
+  Sessions {
+    guid Id PK
+    guid MemberId FK "FK to Members"
+  }
+  SecurityKeys {
+    guid Id PK
+    guid MemberId FK "FK to Members"
+  }
+  Members ||--o{ KeyLinks : "MemberId"
+  Members ||--o{ Sessions : "MemberId"
+  Members ||--o{ SecurityKeys : "MemberId"
+```
+
+| Table | Columns | Primary key | Notes |
+|---|---|---|---|
+| `KeyLinks` | 8 | Id |  |
+| `AuditEntries` | 10 | Id |  |
+| `Members` | 11 | Id |  |
+| `Sessions` | 8 | Id |  |
+| `SecurityKeys` | 8 | Id |  |
+
+<details><summary><code>platform.KeyLinks</code> columns</summary>
+
+| Column | Type | Null | Links to |
+|---|---|---|---|
+| `Id` | guid |  |  |
+| `ExpiresAt` | timestamptz |  |  |
+| `IssuedAt` | timestamptz |  |  |
+| `IssuedBy` | guid |  |  |
+| `MemberId` | guid |  | FK to `PlatformMember` |
+| `Purpose` | character varying(16) |  |  |
+| `TokenHash` | bytes |  |  |
+| `UsedAt` | timestamptz | yes |  |
+
+</details>
+
+<details><summary><code>platform.AuditEntries</code> columns</summary>
+
+| Column | Type | Null | Links to |
+|---|---|---|---|
+| `Id` | guid |  |  |
+| `Action` | character varying(64) |  |  |
+| `ActorMemberId` | guid | yes |  |
+| `ClientIp` | character varying(45) |  |  |
+| `CorrelationId` | character varying(64) |  |  |
+| `OccurredAt` | timestamptz |  |  |
+| `Reason` | character varying(500) |  |  |
+| `ResourceId` | guid | yes |  |
+| `ResourceType` | character varying(64) |  |  |
+| `SubjectTenantId` | guid | yes |  |
+
+</details>
+
+<details><summary><code>platform.Members</code> columns</summary>
+
+| Column | Type | Null | Links to |
+|---|---|---|---|
+| `Id` | guid |  |  |
+| `AccessEndsOn` | date | yes |  |
+| `DisplayName` | character varying(100) |  |  |
+| `Email` | character varying(254) |  |  |
+| `InvitedAt` | timestamptz |  |  |
+| `InvitedBy` | guid | yes |  |
+| `Issuer` | character varying(256) |  |  |
+| `LastActiveAt` | timestamptz | yes |  |
+| `RemovedAt` | timestamptz | yes |  |
+| `Role` | character varying(16) |  |  |
+| `Subject` | character varying(256) |  |  |
+
+</details>
+
+<details><summary><code>platform.Sessions</code> columns</summary>
+
+| Column | Type | Null | Links to |
+|---|---|---|---|
+| `Id` | guid |  |  |
+| `CreatedAt` | timestamptz |  |  |
+| `KeyLinkId` | guid | yes |  |
+| `KeyVerifiedAt` | timestamptz | yes |  |
+| `LastSeenAt` | timestamptz |  |  |
+| `MemberId` | guid |  | FK to `PlatformMember` |
+| `PendingCeremony` | character varying(8000) |  |  |
+| `RevokedAt` | timestamptz | yes |  |
+
+</details>
+
+<details><summary><code>platform.SecurityKeys</code> columns</summary>
+
+| Column | Type | Null | Links to |
+|---|---|---|---|
+| `Id` | guid |  |  |
+| `CreatedAt` | timestamptz |  |  |
+| `CredentialId` | bytes |  |  |
+| `LastUsedAt` | timestamptz | yes |  |
+| `MemberId` | guid |  | FK to `PlatformMember` |
+| `PublicKey` | bytes |  |  |
+| `RevokedAt` | timestamptz | yes |  |
+| `SignCount` | bigint |  |  |
+
+</details>
+
 ## 5. Whole application: built and planned
 
 From `docs/03-architecture/data-model.md` (areas A to D). "Built" means a table exists in the snapshots; some are narrower than the plan.
@@ -1514,13 +1630,13 @@ From `docs/03-architecture/data-model.md` (areas A to D). "Built" means a table 
 | D · Care, portal, integration, audit | `AUDIT_EVENT` | built | `audit.AuditEvents` |
 | D · Care, portal, integration, audit | `OUTBOX_EVENT` | built | `scheduling.OutboxEvents` |
 
-Tables that exist but were added while building (not named in the plan): `identity.OnboardingDrafts`, `identity.Sessions`, `leads.DemoRequests`, `leads.Waitlist`, `notifications.Preferences`, `notifications.StaffNotificationReads`, `notifications.StaffNotifications`, `patients.DataKeys`, `patients.MergeRequests`, `scheduling.AppointmentReschedules`, `scheduling.OutboxTenants`, `scheduling.QueueDisplays`, `scheduling.Resources`, `scheduling.SlotHolds`, `scheduling.VisitStatusEvents`, `tenancy.AccessRequests`, `tenancy.AccessReviewDecisions`, `tenancy.AccessReviews`, `tenancy.FeatureFlags`, `tenancy.Invitations`, `tenancy.OperatingHours`, `tenancy.PracticeDefaults`, `tenancy.Profiles`, `tenancy.SettingsChanges`, `tenancy.TenantIndex`, `tenancy.TermsAcceptances`.
+Tables that exist but were added while building (not named in the plan): `identity.OnboardingDrafts`, `identity.Sessions`, `leads.DemoRequests`, `leads.Waitlist`, `notifications.Preferences`, `notifications.StaffNotificationReads`, `notifications.StaffNotifications`, `patients.DataKeys`, `patients.MergeRequests`, `platform.AuditEntries`, `platform.KeyLinks`, `platform.Members`, `platform.SecurityKeys`, `platform.Sessions`, `scheduling.AppointmentReschedules`, `scheduling.OutboxTenants`, `scheduling.QueueDisplays`, `scheduling.Resources`, `scheduling.SlotHolds`, `scheduling.VisitStatusEvents`, `tenancy.AccessRequests`, `tenancy.AccessReviewDecisions`, `tenancy.AccessReviews`, `tenancy.FeatureFlags`, `tenancy.Invitations`, `tenancy.OperatingHours`, `tenancy.PracticeDefaults`, `tenancy.Profiles`, `tenancy.SettingsChanges`, `tenancy.TenantIndex`, `tenancy.TermsAcceptances`.
 
-**Counts:** 50 tables across 9 schemas; 24 of 90 planned entities are built; 26 tables were added during the build.
+**Counts:** 55 tables across 10 schemas; 24 of 90 planned entities are built; 31 tables were added during the build.
 
 ## 6. Rules the model follows
 
-- **Tenant isolation:** 45 of 50 tables carry `TenantId` (EF query filter plus PostgreSQL forced row-level security on `medvya.tenant_id`). Without `TenantId`: `identity.OnboardingDrafts`, `identity.Users`, `leads.DemoRequests`, `leads.Waitlist`, `tenancy.Tenants`. (`TenantId` present is not proof the row-level-security policy covers the table; see `docs/03-architecture/database-security.md`.)
+- **Tenant isolation:** 45 of 55 tables carry `TenantId` (EF query filter plus PostgreSQL forced row-level security on `medvya.tenant_id`). Without `TenantId`: `identity.OnboardingDrafts`, `identity.Users`, `leads.DemoRequests`, `leads.Waitlist`, `platform.AuditEntries`, `platform.KeyLinks`, `platform.Members`, `platform.SecurityKeys`, `platform.Sessions`, `tenancy.Tenants`. (`TenantId` present is not proof the row-level-security policy covers the table; see `docs/03-architecture/database-security.md`.)
 - **Append-only ledgers:** `audit.AuditEvents`, `patients.ConsentReceipts`, `tenancy.TermsAcceptances` (hash-chained, MDV-P0-036; each also has ChainSeq, PrevHash and RowHash added by `LedgerSql`, outside the EF model).
 - **No cross-module foreign keys:** modules link by id and through application services (AGENTS.md 3.1).
 - **Country data plane:** one deployment and one database per country (ADR-003); this diagram is the same in each.

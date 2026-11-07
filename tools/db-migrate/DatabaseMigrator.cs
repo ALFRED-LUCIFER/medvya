@@ -4,6 +4,7 @@ using Medvya.Billing.Infrastructure.Persistence;
 using Medvya.BuildingBlocks.Domain;
 using Medvya.Identity.Infrastructure.Persistence;
 using Medvya.Leads.Infrastructure.Persistence;
+using Medvya.Platform.Infrastructure.Persistence;
 using Medvya.Encounters.Infrastructure.Persistence;
 using Medvya.Notifications.Infrastructure.Persistence;
 using Medvya.Patients.Infrastructure.Persistence;
@@ -89,6 +90,7 @@ public static class DatabaseMigrator
         await Migrate(new NotificationsDbContext(Options<NotificationsDbContext>(connection), None), ct);
         await Migrate(new EncountersDbContext(Options<EncountersDbContext>(connection), None), ct);
         await Migrate(new LeadsDbContext(Options<LeadsDbContext>(connection)), ct);
+        await Migrate(new PlatformDbContext(Options<PlatformDbContext>(connection)), ct);
 
         // The app may not create its job tables (Jobs.cs), so a deploy does it here. Idempotent: Hangfire versions its own schema.
         PostgreSqlObjectsInstaller.Install(connection, "hangfire");

@@ -1,6 +1,8 @@
-namespace Host.Api.Middleware;
+using Microsoft.AspNetCore.Builder;
 
-/// <summary>OWASP ASVS V14.4 response headers on every response (MDV-P0-026).</summary>
+namespace Medvya.BuildingBlocks.Security;
+
+/// <summary>OWASP ASVS V14.4 response headers on every response (MDV-P0-026); shared by the API and the platform console host.</summary>
 public static class SecurityHeaders
 {
     // style-src needs 'unsafe-inline' because MUI/Emotion injects <style> tags; scripts stay strict.

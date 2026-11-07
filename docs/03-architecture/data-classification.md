@@ -77,6 +77,20 @@ Every stored field has one class. In code, each domain property carries `[Classi
 | NOTIFICATION.template_id, channel, state, provider_ref | Internal | Templates carry no clinical data |
 | NOTIFICATION.recipient (phone/email) | Personal | DDM |
 
+### Platform console: the Medvya team (P5, MDV-P5-040, ADR-014)
+
+Not clinic data, so no tenant. Only `medvya_platform` reaches the `platform` schema; the clinic app role and reporting do not, and the console login reaches no clinic schema. No field is SensitiveHealth or NationalId (`TheConsoleDomainHoldsNoHealthOrNationalIdField`).
+
+| Entity.field | Class | Control |
+|---|---|---|
+| platform.Members: name, email | Personal | Medvya staff, not patients. Never in logs |
+| platform.Members: role, issuer, subject, invited, access end, last active, removed | Internal | Removed by date, never deleted, so the audit log can name them |
+| platform.SecurityKeys: credential id, public key, counter, revoked | Internal | Public key material only; revoked, never deleted |
+| platform.KeyLinks: token hash, purpose, issued, expires, used | Internal | Only the SHA-256 of the one-hour token is stored; the token is shown once to the issuing owner |
+| platform.Sessions: times, key verified, pending ceremony | Internal | Server-side session behind the console cookie |
+| platform.AuditEntries: action, resource, actor, subject practice id, reason, time, correlation id | Internal | Append-only. The reason is typed by Medvya staff; the form says never to enter patient details |
+| platform.AuditEntries: client IP | Personal | As in the clinic audit log |
+
 ### Leads: public-site contacts (P1, MDV-P1-002/003/057)
 
 Not clinic data, so no tenant. Of the app roles only `medvya_leads` reaches the `leads` schema (select and insert); reporting does not.

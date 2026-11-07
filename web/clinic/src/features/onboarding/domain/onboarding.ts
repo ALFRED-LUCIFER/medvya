@@ -5,57 +5,65 @@ import type { Country } from '@medvya/i18n';
 // the schema below only answers "required" at once, without a round trip.
 export type Mode = 'Solo' | 'Clinic';
 export type Window = { start: string; end: string };
+export const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] as const;
+export type Day = (typeof weekDays)[number];
+export type TeamRole = 'Receptionist' | 'Nurse';
+export type Member = { email: string; role: TeamRole };
+export const patientStarts = ['Upload', 'Move', 'Fresh'] as const;
+export type PatientStart = (typeof patientStarts)[number];
 export type OnboardingData = {
-  profile?: { fullName?: string; mode?: Mode; specialty?: string; qualifications?: string; languages?: string };
+  profile?: { fullName?: string; mode?: Mode; specialty?: string; specialties?: string[]; qualifications?: string; languages?: string };
   licence?: { authority?: string; number?: string; certificateName?: string };
   clinic?: { name?: string; address?: string; registrationNumber?: string; taxId?: string };
-  hours?: { weekdays?: Window[]; saturday?: Window[]; slotMinutes?: number; newVisitFee?: number; followUpFee?: number };
+  hours?: { weekdays?: Window[]; saturday?: Window[]; slotMinutes?: number; newVisitFee?: number; followUpFee?: number; days?: Day[] };
   templates?: string[];
-  team?: { email: string; role: 'Receptionist' | 'Nurse' }[];
+  team?: Member[];
+  patients?: PatientStart;
 };
-export type Authority = { code: string; name: string };
-export type Rules = { currency: 'INR' | 'AED'; authorities: Authority[]; slotMinutes: number[]; templates: string[] };
+export type Option = { code: string; name: string };
+export type Rules = { currency: 'INR' | 'AED'; authorities: Option[]; slotMinutes: number[]; templates: string[]; specialties: Option[] };
 export type Draft = { country: Country; step: number; data: OnboardingData; rules: Rules };
 export type FinishResult = { membershipId: string; role: 'SoloDoctor' | 'PracticeAdmin'; invitationsSent: number; invitationsFailed: number };
 
-export const stepIds = ['profile', 'licence', 'clinic', 'hours', 'templates', 'team'] as const;
-export type StepId = (typeof stepIds)[number];
-
-/** Step numbers (1-6) a mode goes through: an owner who is not a doctor skips the licence step. */
-export const stepsFor = (mode: Mode): number[] => (mode === 'Clinic' ? [1, 3, 4, 5, 6] : [1, 2, 3, 4, 5, 6]);
+/** The 6 Nov steps; the ready screen follows finishing and is not a step the server checks. */
+export const stepIds = ['practice', 'hours', 'team', 'patients', 'payments'] as const;
+export const steps = [1, 2, 3, 4, 5];
+/** Steps that may be left for later (the design's "Skip for now"): team, patients, payments. */
+export const skippable = (step: number) => step >= 3;
 
 /** The form: flat strings, as typed. Fees are whole currency units here and minor units (x100) on the wire. */
 export type WizardForm = {
-  mode: Mode; fullName: string; specialty: string; qualifications: string; languages: string;
-  authority: string; number: string; certificateName: string;
-  clinicName: string; address: string; registrationNumber: string; taxId: string;
-  weekdayStart1: string; weekdayEnd1: string; weekdayStart2: string; weekdayEnd2: string; saturdayStart: string; saturdayEnd: string;
+  mode: Mode; fullName: string; clinicName: string; address: string; specialties: string[];
+  authority: string; number: string; qualifications: string; languages: string; registrationNumber: string; taxId: string;
+  days: Day[]; weekdayStart1: string; weekdayEnd1: string; weekdayStart2: string; weekdayEnd2: string; saturdayStart: string; saturdayEnd: string;
   slotMinutes: string; newVisitFee: string; followUpFee: string;
-  templates: string[]; receptionistEmail: string; nurseEmail: string;
+  team: Member[]; inviteEmail: string; inviteRole: TeamRole; patients: PatientStart | '';
+  // Kept as saved, not shown: the free-text specialty and certificate name of earlier drafts, and note templates (used from P2/P3).
+  specialty: string; certificateName: string; templates: string[];
 };
 export type FormField = keyof WizardForm;
 
 export const stepFields: Record<number, FormField[]> = {
-  1: ['mode', 'fullName', 'specialty', 'qualifications', 'languages'],
-  2: ['authority', 'number', 'certificateName'],
-  3: ['clinicName', 'address', 'registrationNumber', 'taxId'],
-  4: ['weekdayStart1', 'weekdayEnd1', 'weekdayStart2', 'weekdayEnd2', 'saturdayStart', 'saturdayEnd', 'slotMinutes', 'newVisitFee', 'followUpFee'],
-  5: ['templates'],
-  6: ['receptionistEmail', 'nurseEmail'],
+  1: ['mode', 'fullName', 'clinicName', 'address', 'specialties', 'authority', 'number', 'qualifications', 'languages', 'registrationNumber', 'taxId'],
+  2: ['days', 'weekdayStart1', 'weekdayEnd1', 'weekdayStart2', 'weekdayEnd2', 'saturdayStart', 'saturdayEnd', 'slotMinutes', 'newVisitFee', 'followUpFee'],
+  3: ['team', 'inviteEmail'],
+  4: ['patients'],
+  5: [],
 };
 
-/** Design defaults (F-04): weekdays 09:00-13:00 and 17:00-20:00, 20-minute slots, fees per country. */
-const defaults: Record<Country, Pick<WizardForm, 'newVisitFee' | 'followUpFee'>> = {
-  IN: { newVisitFee: '1000', followUpFee: '600' },
-  AE: { newVisitFee: '350', followUpFee: '250' },
+/** Design defaults (6 Nov): open Monday to Saturday, the country's usual split day, 15-minute appointments, fees per country. */
+const defaults: Record<Country, Pick<WizardForm, 'weekdayStart1' | 'weekdayEnd1' | 'weekdayStart2' | 'weekdayEnd2' | 'saturdayStart' | 'saturdayEnd' | 'newVisitFee' | 'followUpFee'>> = {
+  IN: { weekdayStart1: '09:00', weekdayEnd1: '13:00', weekdayStart2: '17:00', weekdayEnd2: '20:00', saturdayStart: '09:00', saturdayEnd: '14:00', newVisitFee: '800', followUpFee: '600' },
+  AE: { weekdayStart1: '08:00', weekdayEnd1: '14:00', weekdayStart2: '16:00', weekdayEnd2: '21:00', saturdayStart: '09:00', saturdayEnd: '15:00', newVisitFee: '350', followUpFee: '250' },
 };
+const openByDefault: Day[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 export const emptyForm = (country: Country): WizardForm => ({
-  mode: 'Solo', fullName: '', specialty: '', qualifications: '', languages: '',
-  authority: '', number: '', certificateName: '',
-  clinicName: '', address: '', registrationNumber: '', taxId: '',
-  weekdayStart1: '09:00', weekdayEnd1: '13:00', weekdayStart2: '17:00', weekdayEnd2: '20:00', saturdayStart: '', saturdayEnd: '',
-  slotMinutes: '20', ...defaults[country], templates: [], receptionistEmail: '', nurseEmail: '',
+  mode: 'Solo', fullName: '', clinicName: '', address: '', specialties: [],
+  authority: '', number: '', qualifications: '', languages: '', registrationNumber: '', taxId: '',
+  days: openByDefault, ...defaults[country], slotMinutes: '15',
+  team: [], inviteEmail: '', inviteRole: 'Receptionist', patients: '',
+  specialty: '', certificateName: '', templates: [],
 });
 
 const windows = (start1: string, end1: string, start2 = '', end2 = ''): Window[] =>
@@ -65,20 +73,19 @@ const minor = (major: string) => (major.trim() === '' ? undefined : Math.round(N
 
 /** Wizard values to the draft the server stores. Blank optional values are omitted: unknowns stay blank, never guessed. */
 export function toData(f: WizardForm): OnboardingData {
-  const team = [
-    ...(f.receptionistEmail.trim() ? [{ email: f.receptionistEmail.trim(), role: 'Receptionist' as const }] : []),
-    ...(f.nurseEmail.trim() ? [{ email: f.nurseEmail.trim(), role: 'Nurse' as const }] : []),
-  ];
   return {
-    profile: { fullName: f.fullName, mode: f.mode, specialty: f.specialty, qualifications: f.qualifications, languages: f.languages },
+    profile: { fullName: f.fullName, mode: f.mode, specialty: f.specialty, specialties: f.specialties, qualifications: f.qualifications, languages: f.languages },
     licence: f.mode === 'Solo' ? { authority: f.authority, number: f.number, certificateName: f.certificateName } : undefined,
     clinic: { name: f.clinicName, address: f.address, registrationNumber: f.registrationNumber, taxId: f.taxId },
     hours: {
-      weekdays: windows(f.weekdayStart1, f.weekdayEnd1, f.weekdayStart2, f.weekdayEnd2), saturday: windows(f.saturdayStart, f.saturdayEnd),
+      weekdays: windows(f.weekdayStart1, f.weekdayEnd1, f.weekdayStart2, f.weekdayEnd2),
+      // Saturday's own hours count only when Saturday is open; otherwise it would open with them.
+      saturday: f.days.includes('Saturday') ? windows(f.saturdayStart, f.saturdayEnd) : [], days: weekDays.filter(d => f.days.includes(d)),
       slotMinutes: f.slotMinutes ? Number(f.slotMinutes) : undefined, newVisitFee: minor(f.newVisitFee), followUpFee: minor(f.followUpFee),
     },
     templates: f.templates,
-    team,
+    team: f.team,
+    patients: f.patients || undefined,
   };
 }
 
@@ -87,75 +94,111 @@ const major = (minorUnits: number | undefined, fallback: string) => (minorUnits 
 /** The saved draft back into the form; sections never saved keep the design defaults. */
 export function toForm(data: OnboardingData, country: Country): WizardForm {
   const base = emptyForm(country);
-  const w = data.hours?.weekdays ?? [], s = data.hours?.saturday?.[0];
-  const hasHours = data.hours !== undefined;
+  const h = data.hours;
+  const w = h?.weekdays ?? [], s = h?.saturday?.[0];
+  // Drafts saved before the day switches: Monday to Friday, plus Saturday when it had hours (the server reads them the same way).
+  const legacyDays: Day[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', ...(s ? ['Saturday' as const] : [])];
   return {
     ...base,
     mode: data.profile?.mode ?? base.mode, fullName: data.profile?.fullName ?? '', specialty: data.profile?.specialty ?? '',
-    qualifications: data.profile?.qualifications ?? '', languages: data.profile?.languages ?? '',
+    specialties: data.profile?.specialties ?? [], qualifications: data.profile?.qualifications ?? '', languages: data.profile?.languages ?? '',
     authority: data.licence?.authority ?? '', number: data.licence?.number ?? '', certificateName: data.licence?.certificateName ?? '',
     clinicName: data.clinic?.name ?? '', address: data.clinic?.address ?? '', registrationNumber: data.clinic?.registrationNumber ?? '', taxId: data.clinic?.taxId ?? '',
-    weekdayStart1: hasHours ? w[0]?.start ?? '' : base.weekdayStart1, weekdayEnd1: hasHours ? w[0]?.end ?? '' : base.weekdayEnd1,
-    weekdayStart2: hasHours ? w[1]?.start ?? '' : base.weekdayStart2, weekdayEnd2: hasHours ? w[1]?.end ?? '' : base.weekdayEnd2,
-    saturdayStart: s?.start ?? '', saturdayEnd: s?.end ?? '',
-    slotMinutes: data.hours?.slotMinutes ? String(data.hours.slotMinutes) : base.slotMinutes,
-    newVisitFee: major(data.hours?.newVisitFee, base.newVisitFee), followUpFee: major(data.hours?.followUpFee, base.followUpFee),
-    templates: data.templates ?? [],
-    receptionistEmail: data.team?.find(m => m.role === 'Receptionist')?.email ?? '', nurseEmail: data.team?.find(m => m.role === 'Nurse')?.email ?? '',
+    ...(h && {
+      days: h.days ?? legacyDays,
+      weekdayStart1: w[0]?.start ?? '', weekdayEnd1: w[0]?.end ?? '', weekdayStart2: w[1]?.start ?? '', weekdayEnd2: w[1]?.end ?? '',
+      saturdayStart: s?.start ?? base.saturdayStart, saturdayEnd: s?.end ?? base.saturdayEnd,
+    }),
+    slotMinutes: h?.slotMinutes ? String(h.slotMinutes) : base.slotMinutes,
+    newVisitFee: major(h?.newVisitFee, base.newVisitFee), followUpFee: major(h?.followUpFee, base.followUpFee),
+    templates: data.templates ?? [], team: data.team ?? [], patients: data.patients ?? '',
   };
 }
 
+/** Adds a colleague to the team step, or says why not (the same codes the server uses; it checks again). */
+export function addMember(team: Member[], email: string, role: TeamRole): { team: Member[] } | { error: 'required' | 'format' | 'duplicate' | 'range' } {
+  const e = email.trim();
+  if (!e) return { error: 'required' };
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) return { error: 'format' };
+  if (team.some(m => m.email.toLowerCase() === e.toLowerCase())) return { error: 'duplicate' };
+  if (team.length >= maxTeam) return { error: 'range' };
+  return { team: [...team, { email: e, role }] };
+}
+export const maxTeam = 5;
+
 const anyText = z.string();
 const base = z.object({
-  mode: z.enum(['Solo', 'Clinic']), templates: z.array(z.string()),
-  fullName: anyText, specialty: anyText, qualifications: anyText, languages: anyText, authority: anyText, number: anyText, certificateName: anyText,
-  clinicName: anyText, address: anyText, registrationNumber: anyText, taxId: anyText, weekdayStart1: anyText, weekdayEnd1: anyText,
-  weekdayStart2: anyText, weekdayEnd2: anyText, saturdayStart: anyText, saturdayEnd: anyText, slotMinutes: anyText, newVisitFee: anyText,
-  followUpFee: anyText, receptionistEmail: anyText, nurseEmail: anyText,
+  mode: z.enum(['Solo', 'Clinic']), specialties: z.array(z.string()), days: z.array(z.enum(weekDays)), templates: z.array(z.string()),
+  team: z.array(z.object({ email: z.string(), role: z.enum(['Receptionist', 'Nurse']) })), inviteRole: z.enum(['Receptionist', 'Nurse']),
+  patients: z.enum(['', ...patientStarts]),
+  fullName: anyText, clinicName: anyText, address: anyText, authority: anyText, number: anyText, qualifications: anyText, languages: anyText,
+  registrationNumber: anyText, taxId: anyText, weekdayStart1: anyText, weekdayEnd1: anyText, weekdayStart2: anyText, weekdayEnd2: anyText,
+  saturdayStart: anyText, saturdayEnd: anyText, slotMinutes: anyText, newVisitFee: anyText, followUpFee: anyText, inviteEmail: anyText,
+  specialty: anyText, certificateName: anyText,
 });
 
 /** What one step requires, answered at once without a round trip. The server checks formats, ranges and the country's rules. */
 export const stepSchema = (step: number) => base.superRefine((f, ctx) => {
-  const need = (field: FormField, value: string, when = true) => {
-    if (when && value.trim() === '') ctx.addIssue({ code: 'custom', path: [field], message: 'required' });
-  };
-  if (step === 1) { need('fullName', f.fullName); need('specialty', f.specialty, f.mode === 'Solo'); }
-  if (step === 2) { need('authority', f.authority); need('number', f.number); }
-  if (step === 3) { need('clinicName', f.clinicName); need('address', f.address); }
-  if (step === 4) {
-    need('weekdayStart1', f.weekdayStart1 + f.saturdayStart); // at least one open window
-    need('slotMinutes', f.slotMinutes); need('newVisitFee', f.newVisitFee); need('followUpFee', f.followUpFee);
+  const need = (field: FormField, ok: boolean, message = 'required') => { if (!ok) ctx.addIssue({ code: 'custom', path: [field], message }); };
+  const filled = (v: string) => v.trim() !== '';
+  if (step === 1) {
+    need('fullName', filled(f.fullName)); need('clinicName', filled(f.clinicName)); need('address', filled(f.address));
+    if (f.mode === 'Solo') { need('specialties', f.specialties.length > 0 || filled(f.specialty)); need('authority', filled(f.authority)); need('number', filled(f.number)); }
   }
+  if (step === 2) {
+    need('days', f.days.length > 0);
+    need('weekdayStart1', filled(f.weekdayStart1 + f.weekdayEnd1) || f.days.every(d => d === 'Saturday')); // the usual hours open every day but Saturday
+    need('slotMinutes', filled(f.slotMinutes)); need('newVisitFee', filled(f.newVisitFee)); need('followUpFee', filled(f.followUpFee));
+  }
+  // An address typed but not added with Invite would be lost silently.
+  if (step === 3) need('inviteEmail', !filled(f.inviteEmail), 'pending');
 });
 
 /** Server error path (e.g. "licence.number", "team.0.email") to the form field it belongs under. */
-export function formFieldOf(path: string, form: WizardForm): FormField | null {
+export function formFieldOf(path: string): FormField | `team.${number}.email` | null {
   const direct: Record<string, FormField> = {
-    'profile.mode': 'mode', 'profile.fullName': 'fullName', 'profile.specialty': 'specialty', 'profile.qualifications': 'qualifications',
-    'profile.languages': 'languages', 'licence.authority': 'authority', 'licence.number': 'number', 'licence.certificate': 'certificateName',
-    'clinic.name': 'clinicName', 'clinic.address': 'address', 'clinic.registrationNumber': 'registrationNumber', 'clinic.taxId': 'taxId',
-    'hours.weekdays': 'weekdayStart1', 'hours.saturday': 'saturdayStart', 'hours.slotMinutes': 'slotMinutes',
-    'hours.newVisitFee': 'newVisitFee', 'hours.followUpFee': 'followUpFee', templates: 'templates', team: 'receptionistEmail',
+    'profile.mode': 'mode', 'profile.fullName': 'fullName', 'profile.specialty': 'specialties', 'profile.specialties': 'specialties',
+    'profile.qualifications': 'qualifications', 'profile.languages': 'languages', 'licence.authority': 'authority', 'licence.number': 'number',
+    'licence.certificate': 'number', 'clinic.name': 'clinicName', 'clinic.address': 'address', 'clinic.registrationNumber': 'registrationNumber',
+    'clinic.taxId': 'taxId', 'hours.days': 'days', 'hours.weekdays': 'weekdayStart1', 'hours.saturday': 'saturdayStart', 'hours.slotMinutes': 'slotMinutes',
+    'hours.newVisitFee': 'newVisitFee', 'hours.followUpFee': 'followUpFee', templates: 'slotMinutes', team: 'inviteEmail', patients: 'patients',
   };
   if (path in direct) return direct[path]!;
   const m = /^team\.(\d+)\.(email|role)$/.exec(path);
-  if (!m) return null;
-  // The server numbers team members as sent: the receptionist first when both are filled in.
-  const slots: FormField[] = [form.receptionistEmail.trim() ? 'receptionistEmail' : null, form.nurseEmail.trim() ? 'nurseEmail' : null]
-    .filter((x): x is FormField => x !== null);
-  return slots[Number(m[1])] ?? null;
+  return m ? `team.${Number(m[1])}.email` : null;
 }
 
-/** The first step (in wizard order) that owns a server error path; used when finishing finds a problem in an earlier step. */
+/** The step that owns a server error path; used when finishing finds a problem in an earlier step. */
 export function stepOfPath(path: string): number {
   const area = path.split('.')[0];
-  return area === 'profile' ? 1 : area === 'licence' ? 2 : area === 'clinic' ? 3 : area === 'hours' ? 4 : area === 'templates' ? 5 : 6;
+  return area === 'hours' || area === 'templates' ? 2 : area === 'team' ? 3 : area === 'patients' ? 4 : 1;
 }
 
 /** The codes the server sends, each with a translated message. */
-export const errorCodes = ['required', 'tooLong', 'format', 'unknown', 'range', 'overlap', 'duplicate'] as const;
+export const errorCodes = ['required', 'tooLong', 'format', 'unknown', 'range', 'overlap', 'duplicate', 'pending'] as const;
 export const errorCode = (code: string): (typeof errorCodes)[number] => errorCodes.find(c => c === code) ?? 'format';
 
-/** Note templates the server offers; ids we have no label for are not shown. */
-export const templateIds = ['general-opd', 'diabetes-review', 'hypertension', 'paediatrics', 'antenatal', 'teleconsult'] as const;
-export const templateIdOf = (id: string) => templateIds.find(t => t === id);
+/** Specialty codes we have a label for; others are not shown. */
+export const specialtyIds = ['general-practice', 'paediatrics', 'gynaecology', 'dermatology', 'dental', 'ent', 'orthopaedics', 'physiotherapy', 'diabetes', 'cardiology'] as const;
+export const specialtyIdOf = (code: string) => specialtyIds.find(s => s === code);
+
+/** Step 5: what a practice connects in each country. shortcut: none has a back end yet, so each one is "later, from Settings". */
+export const connections: Record<Country, readonly string[]> = { IN: ['upi', 'whatsapp', 'abha', 'nhcx'], AE: ['card', 'whatsapp', 'eclaimlink', 'riayati'] };
+
+/** The live booking-page preview (6 Nov design): what patients would see from what has been typed so far. */
+export function preview(f: WizardForm) {
+  const open = weekDays.filter(d => f.days.includes(d));
+  const usual = open.some(d => d !== 'Saturday') ? windows(f.weekdayStart1, f.weekdayEnd1, f.weekdayStart2, f.weekdayEnd2) : windows(f.saturdayStart, f.saturdayEnd);
+  const shown = usual.filter(w => w.start && w.end);
+  const len = Number(f.slotMinutes) || 0;
+  const [h = 0, m = 0] = (shown[0]?.start ?? '').split(':').map(Number);
+  const slots = len && shown[0] ? [0, 1, 2, 4, 5, 8].map(k => h * 60 + m + k * len).filter(t => t < 24 * 60)
+    .map(t => `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`) : [];
+  return {
+    initials: f.clinicName.trim().split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]!.toUpperCase()).join(''),
+    name: f.clinicName.trim(), city: f.address.split(',').at(-1)?.trim() ?? '',
+    specialties: f.specialties.slice(0, 3),
+    firstDay: open[0] ?? null, lastDay: open.at(-1) ?? null, hours: shown.map(w => `${w.start}–${w.end}`).join(' · '),
+    fee: minor(f.newVisitFee) ?? null, slotMinutes: len, slots,
+  };
+}

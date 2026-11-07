@@ -24,7 +24,7 @@ DECLARE r text;
 BEGIN
     FOREACH r IN ARRAY ARRAY['medvya_owner', 'medvya_migrator', 'medvya_app', 'medvya_reporting', 'medvya_tenancy', 'medvya_audit',
                              'medvya_identity', 'medvya_patients', 'medvya_billing', 'medvya_scheduling', 'medvya_leads',
-                             'medvya_notifications', 'medvya_encounters', 'medvya_jobs']
+                             'medvya_notifications', 'medvya_encounters', 'medvya_jobs', 'medvya_platform']
     LOOP
         IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = r) THEN
             EXECUTE format('CREATE ROLE %I NOLOGIN NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE NOREPLICATION', r);
@@ -54,7 +54,7 @@ GRANT medvya_owner TO medvya_migrator WITH INHERIT FALSE, SET TRUE;
 DO $$
 DECLARE s text;
 BEGIN
-    FOREACH s IN ARRAY ARRAY['tenancy', 'audit', 'identity', 'patients', 'billing', 'scheduling', 'leads', 'notifications', 'encounters', 'hangfire', 'ledger', 'reporting']
+    FOREACH s IN ARRAY ARRAY['tenancy', 'audit', 'identity', 'patients', 'billing', 'scheduling', 'leads', 'notifications', 'encounters', 'hangfire', 'ledger', 'reporting', 'platform']
     LOOP
         EXECUTE format('CREATE SCHEMA IF NOT EXISTS %I', s);
         EXECUTE format('ALTER SCHEMA %I OWNER TO medvya_owner', s);
@@ -66,6 +66,8 @@ REVOKE CREATE ON SCHEMA public FROM PUBLIC;
 GRANT USAGE, CREATE ON SCHEMA public TO medvya_owner;
 
 -- Role memberships need ADMIN on the module roles, which the administrator holds and the owner does not.
+-- medvya_platform is NOT here: the platform console (Host.Platform, MDV-P5-040) signs in with its own login IN ROLE medvya_platform alone,
+-- so it cannot read any clinic schema, and the clinic application cannot read the console's tables.
 DO $$
 DECLARE r text;
 BEGIN
@@ -83,7 +85,7 @@ SET ROLE medvya_owner;
 DO $$
 DECLARE s text;
 BEGIN
-    FOREACH s IN ARRAY ARRAY['tenancy', 'audit', 'identity', 'patients', 'billing', 'scheduling', 'leads', 'notifications', 'encounters', 'hangfire', 'ledger', 'reporting']
+    FOREACH s IN ARRAY ARRAY['tenancy', 'audit', 'identity', 'patients', 'billing', 'scheduling', 'leads', 'notifications', 'encounters', 'hangfire', 'ledger', 'reporting', 'platform']
     LOOP
         EXECUTE format('GRANT USAGE, CREATE ON SCHEMA %I TO medvya_migrator', s);
     END LOOP;
@@ -112,7 +114,10 @@ INSERT INTO module_grants VALUES
     ('encounters',    'medvya_encounters',    'SELECT, INSERT, UPDATE'),
     -- Hangfire job storage in its own schema, no module data. Its tables are created by the owner on deploy (the app may not).
     -- shortcut: a role, not yet a separate database login; give the Worker its own identity when Worker.Jobs becomes a separate host.
-    ('hangfire',      'medvya_jobs',          'SELECT, INSERT, UPDATE, DELETE');
+    ('hangfire',      'medvya_jobs',          'SELECT, INSERT, UPDATE, DELETE'),
+    -- Platform console (MDV-P5-040): the Medvya team, keys, links, sessions and its audit log. Nothing is deleted (members are removed by
+    -- date, keys revoked); its audit log is insert and read only (table-rights.sql), and its trigger refuses changes for every role.
+    ('platform',      'medvya_platform',      'SELECT, INSERT, UPDATE');
 
 DO $$
 DECLARE g record;

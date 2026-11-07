@@ -5517,6 +5517,13 @@
           },
           "hasLogo": {
             "type": "boolean"
+          },
+          "registrationExpiresOn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
           }
         }
       },
@@ -6013,6 +6020,13 @@
               "null",
               "string"
             ]
+          },
+          "registrationExpiresOn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
           },
           "taxNumber": {
             "type": [

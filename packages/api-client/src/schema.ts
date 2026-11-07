@@ -4648,6 +4648,8 @@ export interface components {
             phone: null | string;
             email: null | string;
             hasLogo: boolean;
+            /** Format: date */
+            registrationExpiresOn?: null | string;
         };
         QueueTv: {
             now: components["schemas"]["QueueTvNow"][];
@@ -4762,6 +4764,8 @@ export interface components {
             name?: null | string;
             address?: null | string;
             registrationNumber?: null | string;
+            /** Format: date */
+            registrationExpiresOn?: null | string;
             taxNumber?: null | string;
             phone?: null | string;
             email?: null | string;

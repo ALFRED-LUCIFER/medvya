@@ -24,12 +24,14 @@ describe('practice settings rules', () => {
   });
 
   it('validates the profile and treats empty optional fields as fine', () => {
-    const ok = { name: ' Iyer Family Clinic (synthetic) ', address: '', registrationNumber: '', taxNumber: '', phone: '', email: '' };
+    const ok = { name: ' Iyer Family Clinic (synthetic) ', address: '', registrationNumber: '', registrationExpiresOn: '', taxNumber: '', phone: '', email: '' };
     expect(profileSchema.safeParse(ok).success).toBe(true);
     expect(profileSchema.safeParse({ ...ok, name: '  ' }).success).toBe(false);
     expect(profileSchema.safeParse({ ...ok, phone: '+91 90000 00101', email: 'desk@clinic.example' }).success).toBe(true);
     expect(profileSchema.safeParse({ ...ok, phone: 'call me' }).success).toBe(false);
     expect(profileSchema.safeParse({ ...ok, email: 'Joseph <j@example.test>' }).success).toBe(false);
+    expect(profileSchema.safeParse({ ...ok, registrationExpiresOn: '2027-03-31' }).success).toBe(true);
+    expect(profileSchema.safeParse({ ...ok, registrationExpiresOn: '31/03/2027' }).success).toBe(false);
   });
 
   it('a closure needs a real date and a name', () => {

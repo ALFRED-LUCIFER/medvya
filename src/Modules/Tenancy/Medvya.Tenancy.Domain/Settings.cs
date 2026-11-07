@@ -13,6 +13,8 @@ public sealed class PracticeProfile
     [Classification(DataClass.Public)] public string? Address { get; set; }
     /// <summary>Clinic registration (e.g. clinical establishment or DoH facility number). A business number, not a person's identifier.</summary>
     [Classification(DataClass.Public)] public string? RegistrationNumber { get; set; }
+    /// <summary>The last valid day of that registration; owners are reminded 60/30/7/0 days before (MDV-P1-010). Null when it does not expire or is not entered.</summary>
+    [Classification(DataClass.Internal)] public DateOnly? RegistrationExpiresOn { get; set; }
     /// <summary>GSTIN (India) or TRN (UAE) of the business.</summary>
     [Classification(DataClass.Public)] public string? TaxNumber { get; set; }
     [Classification(DataClass.Public)] public string? Phone { get; set; }

@@ -47,6 +47,9 @@ export default function ProfilePanel(p: Props) {
           <Field id="profile-registration" label={t('settings.profile.registration')} hint={t('settings.profile.registrationHint')} error={errors.registrationNumber && t('settings.error.tooLong')}>
             <Input id="profile-registration" className="h-11" autoComplete="off" {...describedBy('profile-registration', !!errors.registrationNumber, true)} {...p.form.register('registrationNumber')} />
           </Field>
+          <Field id="profile-registration-expires" label={t('settings.profile.registrationExpires')} hint={t('settings.profile.registrationExpiresHint')}>
+            <Input id="profile-registration-expires" type="date" dir="ltr" className="h-11" {...describedBy('profile-registration-expires', false, true)} {...p.form.register('registrationExpiresOn')} />
+          </Field>
           <Field id="profile-tax" label={t('settings.profile.tax')} hint={t('settings.profile.taxHint')} error={errors.taxNumber && t('settings.error.tooLong')}>
             <Input id="profile-tax" className="h-11" autoComplete="off" {...describedBy('profile-tax', !!errors.taxNumber, true)} {...p.form.register('taxNumber')} />
           </Field>

@@ -71,6 +71,6 @@ describe('set-up wizard model (6 Nov steps)', () => {
     expect(p).toMatchObject({ initials: 'IF', city: 'Chennai', specialties: ['ent', 'dental', 'diabetes'], firstDay: 'Monday', lastDay: 'Saturday',
       hours: '09:00–13:00 · 17:00–20:00', fee: 80000, slotMinutes: 15, slots: ['09:00', '09:15', '09:30', '10:00', '10:15', '11:00'] });
     expect(preview({ ...emptyForm('IN'), days: ['Saturday'] }).hours).toBe('09:00–14:00'); // only Saturday open: its own hours
-    expect(preview({ ...emptyForm('IN'), days: [], slotMinutes: '' })).toMatchObject({ firstDay: null, slots: [], initials: '' });
+    expect(preview({ ...emptyForm('IN'), days: [], slotMinutes: '', newVisitFee: 'abc' })).toMatchObject({ firstDay: null, slots: [], initials: '', fee: null });
   });
 });

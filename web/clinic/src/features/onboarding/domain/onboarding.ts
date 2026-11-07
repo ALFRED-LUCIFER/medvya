@@ -199,6 +199,6 @@ export function preview(f: WizardForm) {
     name: f.clinicName.trim(), city: f.address.split(',').at(-1)?.trim() ?? '',
     specialties: f.specialties.slice(0, 3),
     firstDay: open[0] ?? null, lastDay: open.at(-1) ?? null, hours: shown.map(w => `${w.start}–${w.end}`).join(' · '),
-    fee: minor(f.newVisitFee) ?? null, slotMinutes: len, slots,
+    fee: Number.isFinite(minor(f.newVisitFee)) ? minor(f.newVisitFee)! : null, slotMinutes: len, slots, // half-typed or not a number: no fee line
   };
 }

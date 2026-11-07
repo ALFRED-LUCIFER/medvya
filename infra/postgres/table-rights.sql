@@ -34,6 +34,27 @@ BEGIN
     END IF;
 END $$;
 
+-- DELETE only on the tables the application deletes from (#879): replaced opening hours, a removed closure, a replaced payer or
+-- emergency contact, freed slots, released holds and removed schedule exceptions. Everything else (patients, memberships, settings
+-- history, access reviews, the MRN counters, visit history) is never deleted, so a buggy or injected delete cannot remove it either.
+-- Revoked schema-wide first, so a new table (granted DELETE by its schema's default privilege) is covered from its first run.
+REVOKE DELETE, TRUNCATE ON ALL TABLES IN SCHEMA tenancy FROM medvya_tenancy;
+REVOKE DELETE, TRUNCATE ON ALL TABLES IN SCHEMA patients FROM medvya_patients;
+REVOKE DELETE, TRUNCATE ON ALL TABLES IN SCHEMA scheduling FROM medvya_scheduling;
+DO $$
+DECLARE t text[];
+BEGIN
+    FOREACH t SLICE 1 IN ARRAY ARRAY[['tenancy', 'OperatingHours', 'medvya_tenancy'], ['tenancy', 'Closures', 'medvya_tenancy'],
+                                    ['patients', 'PayerCoverages', 'medvya_patients'], ['patients', 'Relationships', 'medvya_patients'],
+                                    ['scheduling', 'ScheduleSlots', 'medvya_scheduling'], ['scheduling', 'SlotHolds', 'medvya_scheduling'],
+                                    ['scheduling', 'ScheduleExceptions', 'medvya_scheduling']]
+    LOOP
+        IF to_regclass(format('%I.%I', t[1], t[2])) IS NOT NULL THEN
+            EXECUTE format('GRANT DELETE ON %I.%I TO %I', t[1], t[2], t[3]);
+        END IF;
+    END LOOP;
+END $$;
+
 -- Tenancy tables reporting may read: no personal data (a test checks every listed table's classified columns). Not listed on purpose:
 -- Invitations (invitee email), DoctorLicences (licence number, certificate name), DoctorProfiles (doctor's name, signature key),
 -- Profiles (practice contact details), SettingsChanges (before and after values), TenantIndex (no reporting use).

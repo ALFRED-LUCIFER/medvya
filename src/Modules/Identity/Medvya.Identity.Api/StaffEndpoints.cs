@@ -59,12 +59,12 @@ public static class StaffEndpoints
             await invitations.ResendAsync(id, ct) is { } created ? Results.Ok(created) : Results.NotFound());
 
         // Quarterly access review (MDV-P1-010): every active member with role and last sign-in; confirm each, or offboard (the endpoint below).
-        g.MapGet("/access-review", async ([FromServices] IAccessReviews reviews, [FromServices] IStaffUsers users, [FromServices] IStaffSessions sessions, CancellationToken ct) =>
+        g.MapGet("/access-review", async (ClaimsPrincipal principal, [FromServices] IAccessReviews reviews, [FromServices] IStaffUsers users, [FromServices] IStaffSessions sessions, CancellationToken ct) =>
         {
             var review = await reviews.CurrentAsync(ct);
             var ids = review.Members.Select(m => m.UserId).Distinct().ToList();
             var names = await users.DisplayNamesAsync(ids, ct);
-            var signIns = await sessions.LastSignInAsync(ids, ct);
+            var signIns = await sessions.LastSignInAsync(ids, Guid.Parse(principal.FindFirstValue(StaffPolicies.TenantClaim)!), ct);
             return new
             {
                 review.Quarter, review.CompletedAt, review.LastCompletedAt,
@@ -80,7 +80,8 @@ public static class StaffEndpoints
             await reviews.ConfirmAsync(membershipId, ct) ? Results.NoContent() : Results.NotFound());
 
         // Offboarding (MDV-P1-009): access ends in the roster transaction (the membership is no longer active, so every endpoint refuses it
-        // and the facility picker no longer offers it); the person's sessions in this tenant end right after. Other tenants are untouched.
+        // and the facility picker no longer offers it); the person's sessions on that membership end right after. Their other facilities and
+        // other tenants are untouched (#877).
         g.MapPost("/{membershipId:guid}/offboard", async (Guid membershipId, Offboard body, ClaimsPrincipal principal, [FromServices] IStaffRoster roster,
             [FromServices] IStaffSessions sessions, [FromServices] IAccessReviews reviews, CancellationToken ct) =>
         {
@@ -92,7 +93,7 @@ public static class StaffEndpoints
             if (result.UserId is { } userId)
             {
                 await reviews.RecordOffboardedAsync(membershipId, ct); // part of this quarter's access review (MDV-P1-010)
-                await sessions.RevokeInTenantAsync(userId, Guid.Parse(principal.FindFirstValue(StaffPolicies.TenantClaim)!), ct);
+                await sessions.RevokeForMembershipAsync(userId, Guid.Parse(principal.FindFirstValue(StaffPolicies.TenantClaim)!), membershipId, ct);
             }
             return Results.NoContent();
         });
@@ -127,6 +128,10 @@ public static class StaffEndpoints
         catch (InvitationEmailException)
         {
             return SettingsEndpoints.EmailFailed;
+        }
+        catch (InvitationLimitException)
+        {
+            return SettingsEndpoints.TooManyInvitations;
         }
     }
 }

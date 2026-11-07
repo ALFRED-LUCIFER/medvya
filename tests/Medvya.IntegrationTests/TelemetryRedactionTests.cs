@@ -54,6 +54,22 @@ public class TelemetryRedactionTests
         }
     }
 
+    [Theory]
+    // #885: outside Development the scrubbed OpenTelemetry provider is the only one; Console would print rendered messages.
+    [InlineData("Production", false)]
+    [InlineData("Staging", false)]
+    [InlineData("Development", true)]
+    public void OnlyTheScrubbedLogProviderRunsOutsideDevelopment(string environment, bool consoleAllowed)
+    {
+        var builder = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = environment });
+        Host.Api.Observability.Telemetry.AddMedvyaTelemetry(builder);
+        using var services = builder.Services.BuildServiceProvider();
+        var providers = services.GetServices<Microsoft.Extensions.Logging.ILoggerProvider>().Select(p => p.GetType().Name).ToList();
+        Assert.Contains("OpenTelemetryLoggerProvider", providers);
+        Assert.Equal(consoleAllowed, providers.Contains("ConsoleLoggerProvider"));
+        if (!consoleAllowed) Assert.Single(providers);
+    }
+
     [Fact]
     public async Task PatientDataNeverReachesExportedLogsOrTraces()
     {

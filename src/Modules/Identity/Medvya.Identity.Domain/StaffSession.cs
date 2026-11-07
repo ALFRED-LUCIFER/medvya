@@ -30,6 +30,8 @@ public sealed class StaffSession
     [Classification(DataClass.Internal)] public DateTimeOffset? RevokedAt { get; set; }
     /// <summary>SHA-256 of the native app's current refresh token (or of its one-time sign-in code); null for a browser session.</summary>
     [Classification(DataClass.Internal)] public byte[]? RefreshTokenHash { get; set; }
+    /// <summary>SHA-256 of the token the last rotation replaced: only that one coming back is a replay; any other mismatch is a forgery (#883).</summary>
+    [Classification(DataClass.Internal)] public byte[]? PreviousRefreshTokenHash { get; set; }
 
     /// <summary>A native app session: reachable only by bearer token, never by cookie (and the reverse).</summary>
     [Classification(DataClass.Internal)] public bool IsNative => RefreshTokenHash is not null;

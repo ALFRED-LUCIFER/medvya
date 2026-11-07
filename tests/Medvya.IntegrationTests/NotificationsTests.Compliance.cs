@@ -92,7 +92,17 @@ public sealed partial class NotificationsTests
     async Task ConfirmEveryoneAsync()
     {
         var view = await InScope(sp => sp.GetRequiredService<IAccessReviews>().CurrentAsync());
-        foreach (var m in view.Members) Assert.True(await InScope(sp => sp.GetRequiredService<IAccessReviews>().ConfirmAsync(m.MembershipId)));
+        foreach (var m in view.Members) Assert.True(await AsAdminOf(m.FacilityId, sp => sp.GetRequiredService<IAccessReviews>().ConfirmAsync(m.MembershipId)));
+    }
+
+    /// <summary>Staff administration is per facility (#877): acts as the practice admin of <paramref name="facilityId"/>.</summary>
+    async Task<T> AsAdminOf<T>(Guid facilityId, Func<IServiceProvider, Task<T>> action)
+    {
+        var previous = actingUser;
+        actingUser = facilityId == h.Facility ? h.Admin : h.Elsewhere;
+        Rebuild(denyAll: false);
+        try { return await InScope(action); }
+        finally { actingUser = previous; Rebuild(denyAll: false); }
     }
 
     [Fact]
@@ -107,14 +117,15 @@ public sealed partial class NotificationsTests
 
         // Offboarding one person is their decision; confirming the rest completes it.
         var nurse = first.Members.Single(m => m.Role == Role.Nurse).MembershipId;
-        await InScope(async sp => { await sp.GetRequiredService<IStaffRoster>().OffboardAsync(nurse, "Left the practice"); await sp.GetRequiredService<IAccessReviews>().RecordOffboardedAsync(nurse); return 0; });
-        Assert.False(await InScope(sp => sp.GetRequiredService<IAccessReviews>().ConfirmAsync(nurse))); // no longer active
-        Assert.False(await InScope(sp => sp.GetRequiredService<IAccessReviews>().ConfirmAsync(Guid.NewGuid())));
+        Assert.False(await InScope(sp => sp.GetRequiredService<IAccessReviews>().ConfirmAsync(nurse))); // reception does not administer staff (#877)
+        await AsAdminOf(h.Facility, async sp => { await sp.GetRequiredService<IStaffRoster>().OffboardAsync(nurse, "Left the practice"); await sp.GetRequiredService<IAccessReviews>().RecordOffboardedAsync(nurse); return 0; });
+        Assert.False(await AsAdminOf(h.Facility, sp => sp.GetRequiredService<IAccessReviews>().ConfirmAsync(nurse))); // no longer active
+        Assert.False(await AsAdminOf(h.Facility, sp => sp.GetRequiredService<IAccessReviews>().ConfirmAsync(Guid.NewGuid())));
         var rest = (await InScope(sp => sp.GetRequiredService<IAccessReviews>().CurrentAsync())).Members;
         Assert.Equal(7, rest.Count);
-        foreach (var m in rest.Take(rest.Count - 1)) await InScope(sp => sp.GetRequiredService<IAccessReviews>().ConfirmAsync(m.MembershipId));
+        foreach (var m in rest.Take(rest.Count - 1)) Assert.True(await AsAdminOf(m.FacilityId, sp => sp.GetRequiredService<IAccessReviews>().ConfirmAsync(m.MembershipId)));
         Assert.Null((await InScope(sp => sp.GetRequiredService<IAccessReviews>().CurrentAsync())).CompletedAt);
-        await InScope(sp => sp.GetRequiredService<IAccessReviews>().ConfirmAsync(rest[^1].MembershipId));
+        Assert.True(await AsAdminOf(rest[^1].FacilityId, sp => sp.GetRequiredService<IAccessReviews>().ConfirmAsync(rest[^1].MembershipId)));
         var done = await InScope(sp => sp.GetRequiredService<IAccessReviews>().CurrentAsync());
         Assert.Equal((h.Clock.GetUtcNow(), h.Clock.GetUtcNow()), (done.CompletedAt, done.LastCompletedAt));
 

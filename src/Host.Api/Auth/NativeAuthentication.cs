@@ -88,7 +88,7 @@ public static partial class NativeAuthentication
                     || Read(principal, SessionControl.SessionIdClaim) is not { } sessionId || Read(principal, ClaimTypes.NameIdentifier) is not { } userId)
                     return Results.BadRequest();
                 var secret = RandomNumberGenerator.GetBytes(32);
-                if (!await http.RequestServices.GetRequiredService<IStaffSessions>().RotateRefreshAsync(sessionId, null, SHA256.HashData(secret), http.RequestAborted))
+                if (await http.RequestServices.GetRequiredService<IStaffSessions>().RotateRefreshAsync(sessionId, null, SHA256.HashData(secret), http.RequestAborted) != RefreshRotation.Rotated)
                     return Results.BadRequest();
                 var code = new AuthenticationProperties { ExpiresUtc = DateTimeOffset.UtcNow + CodeLifetime };
                 code.Items["sid"] = sessionId.ToString();
@@ -138,13 +138,16 @@ public static partial class NativeAuthentication
     static async Task<IResult> IssueAsync(HttpContext http, Guid sessionId, Guid userId, byte[] presented)
     {
         var sessions = http.RequestServices.GetRequiredService<IStaffSessions>();
-        var session = await sessions.ValidateAsync(sessionId, userId, activity: true, http.RequestAborted);
+        // No activity yet: a forged token (session and user ids are not secret) must neither keep the session alive nor end it (#883).
+        var session = await sessions.ValidateAsync(sessionId, userId, activity: false, http.RequestAborted);
         if (session is null || !session.IsNative) return InvalidGrant();
         // From here the request runs as that user (and tenant), so membership lookups and the audit row are theirs.
         var principal = await PrincipalAsync(http, session.Id, userId, session.TenantId, session.MembershipId);
         if (principal is null) return InvalidGrant();
         var (refresh, next) = RefreshToken.New(sessionId, userId);
-        if (!await sessions.RotateRefreshAsync(sessionId, presented, next, http.RequestAborted))
+        var rotation = await sessions.RotateRefreshAsync(sessionId, presented, next, http.RequestAborted);
+        if (rotation == RefreshRotation.Refused) return InvalidGrant();
+        if (rotation == RefreshRotation.Replayed)
         {
             // An old token (or a used code) came back: someone holds a copy. End the whole session (RFC 9700 §4.14.2) first, so a
             // failing audit write cannot leave it alive.

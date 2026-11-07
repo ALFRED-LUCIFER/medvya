@@ -33,6 +33,14 @@ public static class InvitationEndpoints
             {
                 return Results.ValidationProblem(new Dictionary<string, string[]> { [field] = [ex.Message] });
             }
+            catch (InvitationEmailException)
+            {
+                return SettingsEndpoints.EmailFailed; // #893: the same 502 as /v1/staff, not an unhandled 500
+            }
+            catch (InvitationLimitException)
+            {
+                return SettingsEndpoints.TooManyInvitations;
+            }
         });
 
         admin.MapDelete("/{id:guid}", async (Guid id, [FromServices] IInvitations invitations, CancellationToken ct) =>

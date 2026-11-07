@@ -15,7 +15,7 @@ namespace Medvya.Tenancy.Infrastructure;
 /// "staff.role") and writes its audit event in one transaction, so an unaudited permission change never commits.
 /// </summary>
 public sealed class StaffRoster(TenancyDbContext db, ICurrentTenant tenant, ICurrentUser user, IAuditLog audit, TimeProvider clock,
-    IEnumerable<IStaffOffboardingParticipant> offboarding) : IStaffRoster
+    IEnumerable<IStaffOffboardingParticipant> offboarding, IStaffAccess access, ICurrentFacility facility) : IStaffRoster
 {
     const string Section = "staff.role";
     static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() } };
@@ -76,7 +76,9 @@ public sealed class StaffRoster(TenancyDbContext db, ICurrentTenant tenant, ICur
         // Serializable: two administrators offboarding each other at once must not both pass the last-administrator check.
         await using var tx = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, cancellationToken);
         var member = await db.Memberships.SingleOrDefaultAsync(m => m.Id == membershipId && m.Role != Role.Patient && m.Status != MembershipStatus.Offboarded, cancellationToken);
-        if (member is null) return new(OffboardOutcome.NotFound);
+        // Only someone who administers staff at that member's facility offboards them (#877); elsewhere the member does not exist for them.
+        if (member is null || await access.AccessAsync(Capability.StaffRolesIntegrations, member.FacilityId, cancellationToken) != Access.Config)
+            return new(OffboardOutcome.NotFound);
         if (member.Status == MembershipStatus.Active && RoleMatrix.Of(member.Role, Capability.StaffRolesIntegrations) == Access.Config)
         {
             var others = await db.Memberships.Where(m => m.Status == MembershipStatus.Active && m.Id != membershipId).Select(m => m.Role).ToListAsync(cancellationToken);
@@ -102,7 +104,7 @@ public sealed class StaffRoster(TenancyDbContext db, ICurrentTenant tenant, ICur
         // Other modules' share (a doctor's future visits to "needs rebooking") joins this transaction: all of it commits, or none.
         var afterCommit = new List<Func<Task>>();
         if (member.UserId is { } leaving)
-            foreach (var part in offboarding) if (await part.OffboardedAsync(leaving, tx.GetDbTransaction(), cancellationToken) is { } after) afterCommit.Add(after);
+            foreach (var part in offboarding) if (await part.OffboardedAsync(leaving, member.FacilityId, tx.GetDbTransaction(), cancellationToken) is { } after) afterCommit.Add(after);
         await tx.CommitAsync(cancellationToken);
         foreach (var after in afterCommit) await after();
         return new(OffboardOutcome.Done, member.UserId);
@@ -120,8 +122,20 @@ public sealed class StaffRoster(TenancyDbContext db, ICurrentTenant tenant, ICur
         if (!CustomRoleRules.Assignable.Contains(command.BaseRole)) errors.Add(new("baseRole", "invalid"));
         // The ceiling: a custom role never exceeds practice admin, and never gains a capability its base role holds or staff administration.
         else if (!CustomRoleRules.IsValid(command.BaseRole, extras)) errors.Add(new("capabilities", "exceeds_admin"));
+        // A role definition reaches every member who holds it, so it may not give patient access its author lacks (#875).
+        else if (await GranterAsync(cancellationToken) is not { } granter
+            || !InvitationRules.CanGrant(granter, c => CustomRoleRules.Effective(command.BaseRole, CustomRoleRules.Join(extras), c)))
+            errors.Add(new("baseRole", "above_granter"));
         SettingsValidationException.ThrowIfAny(errors);
         return (name!, extras);
+    }
+
+    async Task<Func<Capability, Access>?> GranterAsync(CancellationToken cancellationToken)
+    {
+        if (facility.FacilityId is not { } facilityId) return null;
+        var capabilities = Enum.GetValues<Capability>();
+        var held = (await access.AccessAsync(capabilities, facilityId, cancellationToken)).Zip(capabilities).ToDictionary(x => x.Second, x => x.First);
+        return c => held[c];
     }
 
     static CustomRoleView ViewOf(CustomRole r) => new(r.Id, r.Name, r.BaseRole, CustomRoleRules.Split(r.Capabilities));

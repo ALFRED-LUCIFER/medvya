@@ -2,6 +2,7 @@ using Medvya.Scheduling.Application;
 using Medvya.Tenancy.Application;
 using Medvya.Tenancy.Domain;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace Medvya.Tenancy.Api;
 
@@ -99,8 +100,21 @@ public static class SettingsEndpoints
         {
             return EmailFailed;
         }
+        catch (InvitationLimitException)
+        {
+            return TooManyInvitations;
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // #889: another administrator saved the same settings meanwhile; nothing was saved.
+            return Results.Problem(statusCode: StatusCodes.Status409Conflict, title: "These settings were changed by someone else. Reload and try again.",
+                extensions: new Dictionary<string, object?> { ["code"] = "changed" });
+        }
     }
 
     /// <summary>502 with a stable code: the screen says the invitation email could not be sent and nothing was saved, not a generic failure.</summary>
+    /// <summary>429 with a stable code when the practice has sent its hourly allowance of invitations (#886).</summary>
+    public static IResult TooManyInvitations => Results.Problem(statusCode: StatusCodes.Status429TooManyRequests, title: "Too many invitations in the last hour.", extensions: new Dictionary<string, object?> { ["code"] = "invitation_limit" });
+
     public static IResult EmailFailed => Results.Problem(statusCode: StatusCodes.Status502BadGateway, title: "The invitation email could not be sent.", extensions: new Dictionary<string, object?> { ["code"] = "email_failed" });
 }

@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using Medvya.Identity.Application;
 using Medvya.Identity.Domain;
 using Medvya.Identity.Infrastructure.Persistence;
@@ -22,8 +23,9 @@ sealed class StaffSessions(IdentityDbContext db) : IStaffSessions
         return session;
     }
 
-    public async Task<IReadOnlyDictionary<Guid, DateTimeOffset>> LastSignInAsync(IReadOnlyCollection<Guid> userIds, CancellationToken cancellationToken = default) =>
-        await db.Sessions.AsNoTracking().Where(s => userIds.Contains(s.UserId)).GroupBy(s => s.UserId)
+    // Sessions have no row-level security (looked up before a tenant is known), so the tenant is filtered here: another practice's sign-ins are not this one's business (#878).
+    public async Task<IReadOnlyDictionary<Guid, DateTimeOffset>> LastSignInAsync(IReadOnlyCollection<Guid> userIds, Guid tenantId, CancellationToken cancellationToken = default) =>
+        await db.Sessions.AsNoTracking().Where(s => userIds.Contains(s.UserId) && s.TenantId == tenantId).GroupBy(s => s.UserId)
             .Select(g => new { UserId = g.Key, At = g.Max(s => s.CreatedAt) }).ToDictionaryAsync(x => x.UserId, x => x.At, cancellationToken);
 
     public Task<Guid?> LastMembershipAsync(Guid userId, CancellationToken cancellationToken = default) =>
@@ -73,18 +75,29 @@ sealed class StaffSessions(IdentityDbContext db) : IStaffSessions
         return session;
     }
 
-    public async Task<bool> RotateRefreshAsync(Guid sessionId, byte[]? current, byte[] replacement, CancellationToken cancellationToken = default)
+    public async Task<RefreshRotation> RotateRefreshAsync(Guid sessionId, byte[]? current, byte[] replacement, CancellationToken cancellationToken = default)
     {
         var now = DateTimeOffset.UtcNow;
         var session = await db.Sessions.AsNoTracking().SingleOrDefaultAsync(s => s.Id == sessionId, cancellationToken);
-        if (session is null || !session.IsActive(now)) return false;
+        if (session is null || !session.IsActive(now)) return RefreshRotation.Refused;
         // Compared in SQL on the stored value, so two concurrent uses of one token cannot both succeed.
         var updated = current is null
             ? await db.Sessions.Where(s => s.Id == sessionId && s.RevokedAt == null && s.RefreshTokenHash == null)
                 .ExecuteUpdateAsync(u => u.SetProperty(s => s.RefreshTokenHash, replacement).SetProperty(s => s.LastSeenAt, now), cancellationToken)
             : await db.Sessions.Where(s => s.Id == sessionId && s.RevokedAt == null && s.RefreshTokenHash == current)
-                .ExecuteUpdateAsync(u => u.SetProperty(s => s.RefreshTokenHash, replacement).SetProperty(s => s.LastSeenAt, now), cancellationToken);
-        return updated == 1;
+                .ExecuteUpdateAsync(u => u.SetProperty(s => s.PreviousRefreshTokenHash, current).SetProperty(s => s.RefreshTokenHash, replacement)
+                    .SetProperty(s => s.LastSeenAt, now), cancellationToken);
+        if (updated == 1) return RefreshRotation.Rotated;
+        // The token the last rotation replaced came back: someone holds a copy. Anything else was never issued (a forgery or garbage).
+        var previous = await db.Sessions.AsNoTracking().Where(s => s.Id == sessionId).Select(s => s.PreviousRefreshTokenHash).SingleOrDefaultAsync(cancellationToken);
+        return current is not null && previous is not null && CryptographicOperations.FixedTimeEquals(previous, current) ? RefreshRotation.Replayed : RefreshRotation.Refused;
+    }
+
+    public Task<int> RevokeForMembershipAsync(Guid userId, Guid tenantId, Guid membershipId, CancellationToken cancellationToken = default)
+    {
+        var now = DateTimeOffset.UtcNow;
+        return db.Sessions.Where(s => s.UserId == userId && s.TenantId == tenantId && (s.MembershipId == membershipId || s.MembershipId == null) && s.RevokedAt == null)
+            .ExecuteUpdateAsync(u => u.SetProperty(s => s.RevokedAt, now), cancellationToken);
     }
 
     public Task<int> RevokeInTenantAsync(Guid userId, Guid tenantId, CancellationToken cancellationToken = default)

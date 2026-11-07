@@ -13,7 +13,7 @@ namespace Medvya.Tenancy.Infrastructure;
 /// audit event in one transaction (action access_review.confirm / .offboard / .complete).
 /// shortcut: a member added after the review completed is not asked about until next quarter; reopen the review when a new membership is created if the owner needs that.
 /// </summary>
-public sealed class AccessReviews(TenancyDbContext db, ICurrentTenant tenant, ICurrentUser user, IAuditLog audit, TimeProvider clock) : IAccessReviews
+public sealed class AccessReviews(TenancyDbContext db, ICurrentTenant tenant, ICurrentUser user, IAuditLog audit, TimeProvider clock, IStaffAccess access) : IAccessReviews
 {
     Guid TenantId => tenant.TenantId ?? throw new InvalidOperationException("No tenant context.");
 
@@ -35,7 +35,10 @@ public sealed class AccessReviews(TenancyDbContext db, ICurrentTenant tenant, IC
 
     public async Task<bool> ConfirmAsync(Guid membershipId, CancellationToken cancellationToken = default)
     {
-        if (!await db.Memberships.AnyAsync(m => m.Id == membershipId && m.Status == MembershipStatus.Active && m.UserId != null && m.Role != Role.Patient, cancellationToken)) return false;
+        var facilityId = await db.Memberships.Where(m => m.Id == membershipId && m.Status == MembershipStatus.Active && m.UserId != null && m.Role != Role.Patient)
+            .Select(m => (Guid?)m.FacilityId).SingleOrDefaultAsync(cancellationToken);
+        // Confirmed only by someone who administers staff at that member's facility (#877).
+        if (facilityId is null || await access.AccessAsync(Capability.StaffRolesIntegrations, facilityId.Value, cancellationToken) != Access.Config) return false;
         await DecideAsync(membershipId, AccessDecision.Confirmed, cancellationToken);
         return true;
     }

@@ -235,8 +235,8 @@ erDiagram
 | `Invitations` | 10 | Id | tenant-scoped |
 | `Memberships` | 7 | Id | tenant-scoped |
 | `OperatingHours` | 6 | Id | tenant-scoped |
-| `PracticeDefaults` | 12 | TenantId | tenant-scoped |
-| `Profiles` | 10 | Id | tenant-scoped |
+| `PracticeDefaults` | 13 | TenantId | tenant-scoped |
+| `Profiles` | 11 | Id | tenant-scoped |
 | `SettingsChanges` | 8 | Id | tenant-scoped |
 | `Tenants` | 6 | Id |  |
 | `TenantIndex` | 1 | TenantId | tenant-scoped |
@@ -436,6 +436,7 @@ erDiagram
 | `SlotMinutes` | int |  |  |
 | `Specialty` | character varying(100) |  |  |
 | `WeekdayHours` | text |  |  |
+| `xmin` | xid |  |  |
 
 </details>
 
@@ -453,6 +454,7 @@ erDiagram
 | `RegistrationNumber` | character varying(50) |  |  |
 | `TaxNumber` | character varying(30) |  |  |
 | `TenantId` | guid |  | FK to `Tenant` |
+| `xmin` | xid |  |  |
 
 </details>
 
@@ -530,7 +532,7 @@ erDiagram
 | Table | Columns | Primary key | Notes |
 |---|---|---|---|
 | `OnboardingDrafts` | 6 | UserId |  |
-| `Sessions` | 10 | Id | tenant-scoped |
+| `Sessions` | 11 | Id | tenant-scoped |
 | `Users` | 4 | Id |  |
 
 <details><summary><code>identity.OnboardingDrafts</code> columns</summary>
@@ -556,6 +558,7 @@ erDiagram
 | `IdleTimeoutMinutes` | int |  |  |
 | `LastSeenAt` | timestamptz |  |  |
 | `MembershipId` | guid | yes | id of `tenancy.Memberships` |
+| `PreviousRefreshTokenHash` | bytes |  |  |
 | `RefreshTokenHash` | bytes |  |  |
 | `RevokedAt` | timestamptz | yes |  |
 | `TenantId` | guid | yes | `tenancy.Tenants` |
@@ -638,7 +641,7 @@ erDiagram
 |---|---|---|---|
 | `ConsentReceipts` | 10 | Id | append-only ledger; tenant-scoped |
 | `MergeRequests` | 12 | Id | tenant-scoped |
-| `Patients` | 24 | Id | tenant-scoped |
+| `Patients` | 25 | Id | tenant-scoped |
 | `Identifiers` | 9 | Id | tenant-scoped |
 | `Relationships` | 8 | Id | tenant-scoped |
 | `PayerCoverages` | 9 | Id | tenant-scoped |
@@ -708,6 +711,7 @@ erDiagram
 | `SexAtBirth` | character varying(20) |  |  |
 | `Status` | character varying(20) |  |  |
 | `TenantId` | guid |  | `tenancy.Tenants` |
+| `xmin` | xid |  |  |
 
 </details>
 

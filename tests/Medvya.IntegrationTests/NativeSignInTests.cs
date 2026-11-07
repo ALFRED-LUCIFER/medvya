@@ -195,6 +195,22 @@ public sealed class NativeSignInTests(PostgresFixture sql) : IClassFixture<Postg
     }
 
     [Fact]
+    public async Task AForgedRefreshTokenWithKnownIdsNeitherEndsNorExtendsTheSession()
+    {
+        // #883: session and user ids are not secret (audit rows carry them); only the replaced token coming back is a replay.
+        var (user, _) = await Doctor();
+        var tokens = await SignIn(user);
+        var before = await SessionOf(user.Id);
+        var (forged, _) = RefreshToken.New(before.Id, user.Id); // the right ids, a secret that was never issued
+
+        Assert.Equal(HttpStatusCode.BadRequest, (await Refresh(forged)).StatusCode);
+        var after = await SessionOf(user.Id);
+        Assert.Null(after.RevokedAt);
+        Assert.Equal(before.LastSeenAt, after.LastSeenAt);
+        Assert.Equal(HttpStatusCode.OK, (await Refresh(tokens.Refresh)).StatusCode); // the phone keeps working
+    }
+
+    [Fact]
     public async Task OffboardingRevokesThePhoneOnItsNextRequestAndRefresh()
     {
         var (user, membership) = await Doctor();

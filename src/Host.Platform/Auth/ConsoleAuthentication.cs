@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text.Json;
+using Medvya.BuildingBlocks.Security;
 using Medvya.Platform.Api;
 using Medvya.Platform.Application;
 using Microsoft.AspNetCore.Authentication;
@@ -176,5 +177,5 @@ public static partial class ConsoleAuthentication
 
     static Guid? Read(ClaimsPrincipal principal, string claim) => Guid.TryParse(principal.FindFirstValue(claim), out var id) ? id : null;
 
-    static bool IsLocal(string url) => url.StartsWith('/') && !url.StartsWith("//", StringComparison.Ordinal) && !url.StartsWith("/\\", StringComparison.Ordinal);
+    static bool IsLocal(string url) => LocalUrl.IsLocal(url); // #876: control characters and backslashes refused anywhere
 }

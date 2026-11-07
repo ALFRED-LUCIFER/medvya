@@ -175,7 +175,7 @@ export function stepOfPath(path: string): number {
 }
 
 /** The codes the server sends, each with a translated message. */
-export const errorCodes = ['required', 'tooLong', 'format', 'unknown', 'range', 'overlap', 'duplicate', 'pending'] as const;
+export const errorCodes = ['required', 'tooLong', 'format', 'unknown', 'range', 'overlap', 'duplicate', 'pending', 'link'] as const;
 export const errorCode = (code: string): (typeof errorCodes)[number] => errorCodes.find(c => c === code) ?? 'format';
 
 /** Specialty codes we have a label for; others are not shown. */

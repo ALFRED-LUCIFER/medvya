@@ -225,6 +225,12 @@ namespace Medvya.Patients.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid");
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.ComplexProperty(typeof(Dictionary<string, object>), "Address", "Medvya.Patients.Domain.Patient.Address#PatientAddress", b1 =>
                         {
                             b1.Property<string>("City")

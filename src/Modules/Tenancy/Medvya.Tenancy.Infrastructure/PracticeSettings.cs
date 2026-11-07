@@ -34,6 +34,7 @@ public sealed class PracticeSettings(
         var errors = new List<ValidationError>();
         if (name is null) errors.Add(new("name", "required"));
         else if (name.Length > 200) errors.Add(new("name", "too_long"));
+        else if (OutboundText.HasLink(name)) errors.Add(new("name", "link"));
         var (address, registration, taxNumber, phone, email) = (Clean(command.Address), Clean(command.RegistrationNumber), Clean(command.TaxNumber), Clean(command.Phone), Clean(command.Email));
         Max(errors, "address", address, 500);
         Max(errors, "registrationNumber", registration, 50);
@@ -203,6 +204,7 @@ public sealed class PracticeSettings(
         var errors = new List<ValidationError>();
         if (name is null) errors.Add(new("name", "required"));
         else if (name.Length > 200) errors.Add(new("name", "too_long"));
+        else if (OutboundText.HasLink(name)) errors.Add(new("name", "link"));
         Max(errors, "address", address, 500);
         if (zone is null ? requireZone : !TimeZoneInfo.TryFindSystemTimeZoneById(zone, out _)) errors.Add(new("timeZone", zone is null ? "required" : "invalid"));
         SettingsValidationException.ThrowIfAny(errors);

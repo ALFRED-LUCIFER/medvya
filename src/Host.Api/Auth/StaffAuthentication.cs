@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Medvya.BuildingBlocks.Security;
 using Medvya.Identity.Application;
 using Medvya.Identity.Domain;
 using Medvya.Tenancy.Domain;
@@ -207,7 +208,7 @@ public static partial class StaffAuthentication
         && System.Net.Mail.MailAddress.TryCreate(value, out var address) && address.Address == value && address.DisplayName.Length == 0;
 
     // Only same-site paths: "/x" but never "//host" or "/\host", which browsers treat as another site.
-    static bool IsLocal(string url) => url.StartsWith('/') && !url.StartsWith("//", StringComparison.Ordinal) && !url.StartsWith("/\\", StringComparison.Ordinal);
+    static bool IsLocal(string url) => LocalUrl.IsLocal(url); // #876: control characters and backslashes refused anywhere
 
     /// <summary>Starting sign-in with the work email (MDV-P1-059). The email is a hint for the provider only: never stored or logged.</summary>
     public sealed record SignInStart(string? LoginHint = null, string? ReturnUrl = null, string? Invitation = null, bool? Signup = null);

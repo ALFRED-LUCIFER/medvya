@@ -21,9 +21,10 @@ public interface IStaffSessions
 
     /// <summary>
     /// Swaps the native refresh-token hash from <paramref name="current"/> (null: the browser session becomes native) to
-    /// <paramref name="replacement"/> on a live session. Conditional, so of two uses of the same token only one wins; false otherwise.
+    /// <paramref name="replacement"/> on a live session, and counts it as activity. Conditional, so of two uses of the same token only one
+    /// wins. <see cref="RefreshRotation.Replayed"/> only when <paramref name="current"/> is the token the last rotation replaced.
     /// </summary>
-    Task<bool> RotateRefreshAsync(Guid sessionId, byte[]? current, byte[] replacement, CancellationToken cancellationToken = default);
+    Task<RefreshRotation> RotateRefreshAsync(Guid sessionId, byte[]? current, byte[] replacement, CancellationToken cancellationToken = default);
 
     /// <summary>When each of these users last signed in (the newest session start, live or ended); users who never did are left out.</summary>
     Task<IReadOnlyDictionary<Guid, DateTimeOffset>> LastSignInAsync(IReadOnlyCollection<Guid> userIds, Guid tenantId, CancellationToken cancellationToken = default);
@@ -40,3 +41,6 @@ public interface IStaffSessions
     /// </summary>
     Task<int> RevokeForMembershipAsync(Guid userId, Guid tenantId, Guid membershipId, CancellationToken cancellationToken = default);
 }
+
+/// <summary>The outcome of a refresh-token rotation (#883): a replay ends the session; a token that was never issued changes nothing.</summary>
+public enum RefreshRotation { Rotated, Replayed, Refused }

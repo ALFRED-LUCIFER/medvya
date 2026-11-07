@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using Medvya.Identity.Application;
 using Medvya.Identity.Domain;
 using Medvya.Identity.Infrastructure.Persistence;
@@ -74,18 +75,22 @@ sealed class StaffSessions(IdentityDbContext db) : IStaffSessions
         return session;
     }
 
-    public async Task<bool> RotateRefreshAsync(Guid sessionId, byte[]? current, byte[] replacement, CancellationToken cancellationToken = default)
+    public async Task<RefreshRotation> RotateRefreshAsync(Guid sessionId, byte[]? current, byte[] replacement, CancellationToken cancellationToken = default)
     {
         var now = DateTimeOffset.UtcNow;
         var session = await db.Sessions.AsNoTracking().SingleOrDefaultAsync(s => s.Id == sessionId, cancellationToken);
-        if (session is null || !session.IsActive(now)) return false;
+        if (session is null || !session.IsActive(now)) return RefreshRotation.Refused;
         // Compared in SQL on the stored value, so two concurrent uses of one token cannot both succeed.
         var updated = current is null
             ? await db.Sessions.Where(s => s.Id == sessionId && s.RevokedAt == null && s.RefreshTokenHash == null)
                 .ExecuteUpdateAsync(u => u.SetProperty(s => s.RefreshTokenHash, replacement).SetProperty(s => s.LastSeenAt, now), cancellationToken)
             : await db.Sessions.Where(s => s.Id == sessionId && s.RevokedAt == null && s.RefreshTokenHash == current)
-                .ExecuteUpdateAsync(u => u.SetProperty(s => s.RefreshTokenHash, replacement).SetProperty(s => s.LastSeenAt, now), cancellationToken);
-        return updated == 1;
+                .ExecuteUpdateAsync(u => u.SetProperty(s => s.PreviousRefreshTokenHash, current).SetProperty(s => s.RefreshTokenHash, replacement)
+                    .SetProperty(s => s.LastSeenAt, now), cancellationToken);
+        if (updated == 1) return RefreshRotation.Rotated;
+        // The token the last rotation replaced came back: someone holds a copy. Anything else was never issued (a forgery or garbage).
+        var previous = await db.Sessions.AsNoTracking().Where(s => s.Id == sessionId).Select(s => s.PreviousRefreshTokenHash).SingleOrDefaultAsync(cancellationToken);
+        return current is not null && previous is not null && CryptographicOperations.FixedTimeEquals(previous, current) ? RefreshRotation.Replayed : RefreshRotation.Refused;
     }
 
     public Task<int> RevokeForMembershipAsync(Guid userId, Guid tenantId, Guid membershipId, CancellationToken cancellationToken = default)

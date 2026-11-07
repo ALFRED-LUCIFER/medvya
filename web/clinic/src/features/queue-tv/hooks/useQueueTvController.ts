@@ -17,7 +17,8 @@ export function useQueueTvController(online: boolean) {
   const queryClient = useQueryClient();
   const [token] = useState(takePairingToken);
   const pairing = useQuery({ queryKey: ['queue-tv-pair', token], queryFn: () => pairDisplay(token!).then(() => true), enabled: !!token, retry: false, staleTime: Infinity });
-  const paired = !token || pairing.isSuccess;
+  // A link pairs one screen (#884). Opened again on a TV that is already paired, the refused link falls back to that TV's own cookie.
+  const paired = !token || pairing.isSuccess || pairing.isError;
 
   const [connection, setLive] = useState<LiveStatus>('connecting');
   const live: LiveStatus = online ? connection : 'paused';
@@ -27,7 +28,7 @@ export function useQueueTvController(online: boolean) {
     enabled: paired,
     refetchInterval: live === 'live' ? false : 30_000,
   });
-  const unpaired: Unpaired | null = token && pairing.isError ? 'invalid' : unauthorized(query.error) ? (token ? 'invalid' : 'notSetUp') : null;
+  const unpaired: Unpaired | null = unauthorized(query.error) ? (token ? 'invalid' : 'notSetUp') : null;
 
   useEffect(() => {
     if (!paired || !online || unpaired) return undefined;

@@ -1673,6 +1673,7 @@
   "appointment.messages.loading": "संदेश लोड हो रहे हैं…",
   "appointment.messages.error": "संदेश लोड नहीं हो सके।",
   "appointment.messages.empty": "इस विज़िट के लिए कोई संदेश निर्धारित नहीं है। वॉक-इन को कोई संदेश नहीं जाता; वरना सेटिंग्स, सूचनाएँ में संदेश बंद हो सकते हैं।",
+  "appointment.messages.preparing": "संदेश तैयार किए जा रहे हैं। वे एक-दो मिनट में यहाँ दिखेंगे।",
   "appointment.messages.at": "{day} {time}",
   "message.kind.Confirmation": "पुष्टि",
   "message.kind.Rescheduled": "बदली गई",

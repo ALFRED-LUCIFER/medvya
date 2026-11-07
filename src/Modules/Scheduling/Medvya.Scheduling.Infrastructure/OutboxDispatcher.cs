@@ -32,6 +32,9 @@ public sealed partial class OutboxDispatcher(SchedulingDbContext db, IEnumerable
         return pending.Count;
     }
 
+    public Task<bool> PendingAsync(Guid facilityId, Guid appointmentId, CancellationToken cancellationToken = default) =>
+        db.Outbox.AnyAsync(e => e.AggregateId == appointmentId && e.PublishedAt == null && db.Appointments.Any(a => a.Id == appointmentId && a.FacilityId == facilityId), cancellationToken);
+
     /// <summary>Null for events nobody outside Scheduling acts on (reassignments keep the time) and for payloads that cannot be read (logged by id).</summary>
     AppointmentEvent? Map(OutboxEvent row)
     {

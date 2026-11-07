@@ -59,6 +59,7 @@ test('staff table shows role, location, second factor and status, with resend an
   const gone = page.getByRole('row', { name: /revoked@example\.test/ });
   await expect(gone.getByRole('cell').nth(3)).toHaveText('Invitation revoked');
   await expect(gone.getByRole('button', { name: /Revoke/ })).toHaveCount(0);
+  await expect(gone.getByRole('button', { name: /Resend/ })).toHaveCount(0); // #912: revoked stays revoked
 
   let revoked = false;
   await page.route('**/v1/invitations/i-1', r => { revoked = r.request().method() === 'DELETE'; return r.fulfill({ status: 204 }); });
@@ -118,6 +119,9 @@ test('offboarding asks for a reason, confirms, and says the last administrator c
   await page.route('**/v1/staff/a/offboard', r => r.fulfill({ status: 400, json: { errors: { membershipId: ['last_admin'] } } }));
   await page.goto('/settings?tab=staff');
   await page.getByRole('button', { name: 'Offboard A. Joseph (synthetic)' }).click();
+  // #912: the form opens below the table; it is brought into view with the reason field focused.
+  await expect(page.getByLabel('Reason (kept in the audit trail)')).toBeFocused();
+  await expect(page.getByLabel('Reason (kept in the audit trail)')).toBeInViewport();
   await page.getByRole('button', { name: 'Offboard and sign out everywhere' }).click();
   await expect(page.getByText('Enter a reason.')).toBeVisible();
   await page.getByLabel('Reason (kept in the audit trail)').fill('Left the practice');

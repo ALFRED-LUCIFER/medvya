@@ -36,6 +36,8 @@ type Props = {
   messages: PatientMessage[] | 'loading' | 'error';
   /** Where the visit was before: every reschedule and queue move (MDV-P1-024). */
   history: VisitMove[] | 'loading' | 'error';
+  /** The booking is saved but the job has not queued its messages yet (#912). */
+  messagesPreparing: boolean;
 };
 
 const actionKeys: Record<Action, MessageKey> = {
@@ -130,7 +132,7 @@ export default function AppointmentPanel(p: Props) {
       {p.mode === 'cancel' && <CancelForm {...p} />}
 
       <History history={p.history} timeZone={p.timeZone} />
-      <Messages messages={p.messages} timeZone={p.timeZone} />
+      <Messages messages={p.messages} preparing={p.messagesPreparing} timeZone={p.timeZone} />
     </aside>
   );
 }
@@ -200,14 +202,15 @@ function History({ history, timeZone }: { history: Props['history']; timeZone: s
 }
 
 /** The messages sent to the patient about this visit. A failed one says so in words and with an icon, never by colour alone. */
-function Messages({ messages, timeZone }: { messages: Props['messages']; timeZone: string }) {
+function Messages({ messages, preparing, timeZone }: { messages: Props['messages']; preparing: boolean; timeZone: string }) {
   const { t, formatShortDay, formatTime } = useI18n();
   return (
     <section aria-labelledby="appointment-messages" className="flex flex-col gap-2 border-t pt-3">
       <h3 id="appointment-messages" className="text-sm font-extrabold">{t('appointment.messages.title')}</h3>
       {messages === 'loading' && <p role="status" className="text-xs text-muted-foreground">{t('appointment.messages.loading')}</p>}
       {messages === 'error' && <p role="alert" className="text-xs font-bold text-danger-700">{t('appointment.messages.error')}</p>}
-      {Array.isArray(messages) && messages.length === 0 && <p className="text-xs text-muted-foreground">{t('appointment.messages.empty')}</p>}
+      {preparing && <p role="status" className="text-xs text-muted-foreground">{t('appointment.messages.preparing')}</p>}
+      {Array.isArray(messages) && messages.length === 0 && !preparing && <p className="text-xs text-muted-foreground">{t('appointment.messages.empty')}</p>}
       {Array.isArray(messages) && messages.length > 0 && (
         <ul className="flex flex-col gap-1.5">
           {messages.map(m => {

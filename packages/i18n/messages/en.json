@@ -1677,6 +1677,7 @@
   "appointment.messages.loading": "Loading messages…",
   "appointment.messages.error": "Messages could not be loaded.",
   "appointment.messages.empty": "No messages are scheduled for this visit. Walk-ins get none; otherwise messages may be turned off in Settings, Notifications.",
+  "appointment.messages.preparing": "Messages are being prepared. They appear here within a minute or two.",
   "appointment.messages.at": "{day} {time}",
   "message.kind.Confirmation": "Confirmation",
   "message.kind.Rescheduled": "Moved",

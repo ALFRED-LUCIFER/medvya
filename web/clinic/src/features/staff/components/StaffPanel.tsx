@@ -124,7 +124,7 @@ export default function StaffPanel(p: Props) {
         <Section title={t('staff.offboardTitle', { name: p.offboarding.name ?? p.offboarding.email ?? '' })} intro={t('staff.offboardIntro')}>
           <form noValidate onSubmit={p.onOffboardSubmit} className="flex flex-col gap-4">
             <Field id="staff-offboard-reason" label={t('staff.offboardReason')} error={p.offboardForm.formState.errors.reason && t('staff.offboardReasonRequired')}>
-              <Textarea id="staff-offboard-reason" rows={3} maxLength={500} {...describedBy('staff-offboard-reason', !!p.offboardForm.formState.errors.reason)} {...p.offboardForm.register('reason')} />
+              <Textarea id="staff-offboard-reason" autoFocus rows={3} maxLength={500} {...describedBy('staff-offboard-reason', !!p.offboardForm.formState.errors.reason)} {...p.offboardForm.register('reason')} />
             </Field>
             {isDoctor(p.offboarding) && (
               <fieldset className="flex flex-col gap-2" aria-describedby={p.offboardForm.formState.errors.rebooking ? 'staff-offboard-rebooking-error' : undefined}>

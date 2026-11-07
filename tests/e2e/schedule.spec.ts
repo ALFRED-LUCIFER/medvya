@@ -763,8 +763,9 @@ test('cancel needs a reason, and a note for Other; the note never goes in a URL'
 // MDV-P1-052: the visit panel says when reminders go out, and why there are none when there are none.
 test('the visit panel shows when reminders are scheduled, or says why nothing is', async ({ page }) => {
   let messages: object[] = [{ id: 'n-1', kind: 'Reminder24h', channel: 'Sms', status: 'Queued', attempts: 0, failureCode: null, sendAt: ist('2026-10-18', '09:00') }];
+  let preparing = false;
   await open(page);
-  await page.route('**/v1/appointments/a-1/notifications?*', r => r.fulfill({ json: messages }));
+  await page.route('**/v1/appointments/a-1/notifications?*', r => r.fulfill({ json: { messages, preparing } }));
   await meera(page).click();
   const section = visitPanel(page).getByRole('region', { name: 'Messages to the patient' });
   await expect(section).toContainText('Reminder 24 h (SMS): scheduled');
@@ -773,6 +774,13 @@ test('the visit panel shows when reminders are scheduled, or says why nothing is
   await visitPanel(page).getByRole('button', { name: 'Close' }).click();
   await meera(page).click();
   await expect(visitPanel(page).getByRole('region', { name: 'Messages to the patient' })).toContainText('No messages are scheduled for this visit. Walk-ins get none');
+  // #912: just booked, the job has not queued them yet: say so instead of "none".
+  preparing = true;
+  await visitPanel(page).getByRole('button', { name: 'Close' }).click();
+  await meera(page).click();
+  const fresh = visitPanel(page).getByRole('region', { name: 'Messages to the patient' });
+  await expect(fresh).toContainText('Messages are being prepared');
+  await expect(fresh).not.toContainText('No messages are scheduled');
 });
 
 // MDV-P1-052: the cancelled 12:30 procedure freed its slot; the card sits beside it, so mouse and keyboard reach the slot.
@@ -845,11 +853,13 @@ for (const locale of ['en', 'ar'] as const)
   test(`the appointment panel is keyboard-operable with 44 px targets and axe-clean (${locale})`, async ({ page }) => {
     await page.clock.setFixedTime(new Date(ist('2026-10-19', '08:30')));
     await open(page, { locale });
+    await page.route('**/v1/appointments/*/notifications?*', r => r.fulfill({ json: { messages: [], preparing: true } }));
     const chip = column(page, 'Dr. Arjun Rao (synthetic)').getByRole('button', { name: /Meera Iyer/ });
     await chip.focus();
     await page.keyboard.press('Enter');
     const panel = page.getByRole('complementary', { name: locale === 'ar' ? 'الموعد' : 'Appointment' });
     await expect(panel).toBeVisible();
+    await expect(panel.getByRole('status').filter({ hasText: locale === 'ar' ? /يجري تجهيز الرسائل/ : /Messages are being prepared/ })).toBeVisible(); // #912
     for (const b of await panel.getByRole('button').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(44);
     await panel.getByRole('button', { name: locale === 'ar' ? 'إلغاء الموعد' : 'Cancel appointment' }).focus();
     await page.keyboard.press('Enter');

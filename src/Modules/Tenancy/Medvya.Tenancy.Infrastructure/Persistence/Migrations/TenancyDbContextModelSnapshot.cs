@@ -663,6 +663,9 @@ namespace Medvya.Tenancy.Infrastructure.Persistence.Migrations
                         .HasColumnType("character(2)")
                         .IsFixedLength();
 
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<int>("IdleTimeoutMinutes")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")

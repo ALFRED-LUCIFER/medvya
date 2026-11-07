@@ -108,7 +108,7 @@ export default function App({ locale, onLocaleChange }: Props) {
             ? <ScheduleRoute facilityId={active.facilityId} userId={shell.session?.user.id ?? ''} userName={shell.session?.user.displayName ?? ''} canBook={active.capabilities.RegisterBookPatients === 'Full'}
                 canCheckIn={active.capabilities.CheckInQueue === 'Full'} registerPath={registerPath} leavePath={leavePath} />
             : i.id === 'register' ? registration
-            : i.id === 'frontDesk'
+            : i.id === 'frontDesk' || (i.id === 'today' && pathOf('frontDesk'))
             ? <FrontDeskRoute facilityId={active.facilityId} online={online} canMove={active.capabilities.CheckInQueue === 'Full'}
                 registerPath={registerPath} walkInPath={walkInPath} billingPath={shell.items.find(b => b.id === 'billing')?.path ?? null}
                 canConsult={active.capabilities.Patient360Chart === 'Full'} />

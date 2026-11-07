@@ -434,6 +434,19 @@ public sealed partial class NotificationsTests(PostgresFixture sql) : IClassFixt
         Assert.Null(NotificationRules.ReminderTime(now.AddHours(1), TimeSpan.FromHours(2), now, ist, new(21, 0), new(8, 0))); // booked inside the window
     }
 
+    [Fact]
+    public async Task ABookingIsPreparingUntilTheJobPublishesItThenItsMessagesShow()
+    {
+        var visit = await BookTuesdayAsync();
+        Task<bool> Pending(Guid facility) => InScope(sp => sp.GetRequiredService<IOutboxDispatcher>().PendingAsync(facility, visit.Id));
+        Assert.True(await Pending(h.Facility));
+        Assert.False(await Pending(h.OtherFacility)); // another location's view never learns about it
+        Assert.Empty(await InScope(sp => sp.GetRequiredService<INotificationQueries>().ForAppointmentAsync(h.Facility, visit.Id)));
+        await RunJobAsync();
+        Assert.False(await Pending(h.Facility));
+        Assert.NotEmpty(await InScope(sp => sp.GetRequiredService<INotificationQueries>().ForAppointmentAsync(h.Facility, visit.Id)));
+    }
+
     async Task<Notification> SentRowAsync()
     {
         var visit = await BookTuesdayAsync();

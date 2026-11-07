@@ -238,7 +238,7 @@ erDiagram
 | `PracticeDefaults` | 13 | TenantId | tenant-scoped |
 | `Profiles` | 12 | Id | tenant-scoped |
 | `SettingsChanges` | 8 | Id | tenant-scoped |
-| `Tenants` | 6 | Id |  |
+| `Tenants` | 7 | Id |  |
 | `TenantIndex` | 1 | TenantId | tenant-scoped |
 | `TermsAcceptances` | 5 | Id | append-only ledger; tenant-scoped |
 
@@ -481,6 +481,7 @@ erDiagram
 | `Id` | guid |  |  |
 | `ClinicalAccess` | character varying(30) |  |  |
 | `CountryCode` | character(2) |  |  |
+| `CreatedAt` | timestamptz |  |  |
 | `IdleTimeoutMinutes` | int |  |  |
 | `Name` | character varying(200) |  |  |
 | `ResidencyRegion` | character varying(40) |  |  |

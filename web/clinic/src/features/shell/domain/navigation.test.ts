@@ -25,15 +25,21 @@ describe('role-based navigation', () => {
   });
 
   it('shows a doctor Clinical and Practice items allowed by the matrix', () => {
-    expect(ids('SoloDoctor')).toEqual(['patients', 'frontDesk', 'schedule', 'register', 'settings']);
+    expect(ids('SoloDoctor')).toEqual(['today', 'patients', 'frontDesk', 'schedule', 'register', 'settings']);
     expect(ids('SoloDoctor', allFlags)).toEqual(navItems.map(i => i.id));
     expect(ids('HospitalDoctor', allFlags)).not.toContain('billing'); // hospital doctors have no invoices access
   });
 
   it('hides items whose tenant flag is off', () => {
-    expect(ids('SoloDoctor', ['clinical.today'])).toContain('today');
-    expect(ids('SoloDoctor', [])).not.toContain('today');
+    expect(ids('SoloDoctor', ['care.messages'])).toContain('messages');
+    expect(ids('SoloDoctor', [])).not.toContain('messages');
     for (const i of navItems) if (i.phase > 1) expect(i.flag, i.id).toBeTruthy();
+  });
+
+  it('shows Today (the day board until MDV-P2-002) to clinicians, who all see the board, and never to reception (#912)', () => {
+    const clinicians = roles.filter(r => ids(r).includes('today'));
+    expect(clinicians).toEqual(['SoloDoctor', 'HospitalDoctor', 'Nurse', 'CareCoordinator']);
+    for (const r of clinicians) expect(ids(r)).toContain('frontDesk');
   });
 
   it('needs write access to register, and never treats break-glass or patient access as everyday navigation', () => {

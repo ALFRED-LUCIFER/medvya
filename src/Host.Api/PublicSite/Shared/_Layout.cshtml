@@ -7,6 +7,43 @@
     // shortcut: the public site and the clinic app both want "/" on one host; give the site its own host name when App Service hosting lands (MDV-P0-007).
     var signIn = Config["PublicSite:SignInUrl"] ?? "/bff/login";
     string? Current(string path) => p.PagePath == path ? "page" : null;
+    // Product and Solutions menus (MDV-P1-053): title key, description key, address.
+    var product = new (string Title, string Body, string Href)[]
+    {
+        ("site.shell.product.frontDesk.title", p.T("site.shell.product.frontDesk.body"), "/#features"),
+        ("site.shell.product.scheduling.title", p.T("site.shell.product.scheduling.body"), "/#features"),
+        ("site.shell.product.records.title", p.T("site.shell.product.records.body"), "/#features"),
+        ("site.shell.assist", p.T("site.shell.product.assist.body"), PublicSite.Assist),
+        ("site.shell.product.billing.title", p.TRegion("site.shell.product.billing.body"), PublicSite.Pricing),
+        ("site.shell.product.insurance.title", p.TRegion("site.shell.product.insurance.body"), PublicSite.Hospitals),
+    };
+    var solutions = new (string Title, string Body, string Href)[]
+    {
+        ("site.shell.solutions.solo.title", "site.shell.solutions.solo.body", "/#who"),
+        ("site.shell.solutions.clinics.title", "site.shell.solutions.clinics.body", "/#who"),
+        ("site.shell.solutions.hospitals.title", "site.shell.solutions.hospitals.body", PublicSite.Hospitals),
+    };
+    string[] specialties = ["gp", "paediatrics", "gynaecology", "dermatology", "dental", "ent", "orthopaedics", "physiotherapy", "diabetes", "cardiology"];
+    var footer = new (string Heading, (string Text, string Href)[] Links)[]
+    {
+        ("site.shell.product", [("site.shell.footer.frontDesk", "/#features"), ("site.shell.assist", PublicSite.Assist), ("site.shell.footer.patientApp", "/#patient-app"), ("site.nav.pricing", PublicSite.Pricing)]),
+        ("site.shell.solutions", [("site.shell.solutions.solo.title", "/#who"), ("site.shell.footer.clinics", "/#who"), ("site.shell.hospitals", PublicSite.Hospitals)]),
+        ("site.shell.footer.company", [("site.shell.footer.contact", PublicSite.Demo), ("site.nav.trust", PublicSite.TrustCentre)]),
+    };
+
+    void RegionSwitch()
+    {
+        <ul class="region-switch" aria-label="@p.T("site.region.label")">
+            @foreach (var region in PublicSite.Regions)
+            {
+                <li><a href="?region=@region" aria-current="@(p.Region == region ? "true" : null)">@p.T($"site.region.{region}")</a></li>
+            }
+        </ul>
+    }
+    void Logo()
+    {
+        <svg class="brand-mark" viewBox="0 0 32 32" width="32" height="32" aria-hidden="true" focusable="false"><rect width="32" height="32" rx="9" /><path d="M6.5 19.5h4l2.6-8 3.6 11 2.7-8.2 1.6 5.2h4.5" /></svg>
+    }
 }
 <!doctype html>
 <html lang="@p.Lang" dir="@p.Dir">
@@ -34,38 +71,134 @@
 </head>
 <body>
     <a class="skip" href="#main">@p.T("shell.skip")</a>
+    <aside class="announce" aria-label="@p.T("site.shell.announce.label")">
+        <span class="announce-new">@p.T("site.shell.announce.new")</span>
+        <span>@p.T("site.shell.announce.text")</span>
+        <a href="@p.Href(PublicSite.Assist)">@p.T("site.shell.announce.link") <span aria-hidden="true">@(p.Dir == "rtl" ? "←" : "→")</span></a>
+    </aside>
+    @* Menus are <details>: they open and close without JavaScript; name= keeps only one open at a time. *@
     <header class="site-header">
-        <a class="brand" href="@p.Href("/")"><span class="brand-mark" aria-hidden="true">M</span>@p.T("app.name")</a>
-        <nav class="site-nav" aria-label="@p.T("site.nav.label")">
-            <ul>
-                <li><a href="@p.Href(PublicSite.DoctorStart)">@p.T("site.nav.doctors")</a></li>
-                <li><a href="@p.Href(PublicSite.DemoForm)">@p.T("site.nav.hospitals")</a></li>
-                <li><a href="@p.Href(PublicSite.TrustCentre)" aria-current="@Current(PublicSite.TrustCentre)">@p.T("site.nav.trust")</a></li>
-                <li><a href="@p.Href(PublicSite.Pricing)" aria-current="@Current(PublicSite.Pricing)">@p.T("site.nav.pricing")</a></li>
-            </ul>
-        </nav>
-        <div class="header-actions">
-            <ul class="region-switch" aria-label="@p.T("site.region.label")">
-                @foreach (var region in PublicSite.Regions)
-                {
-                    <li><a href="?region=@region" aria-current="@(p.Region == region ? "true" : null)">@p.T($"site.region.{region}")</a></li>
-                }
-            </ul>
-            <a class="button button-outline" href="@signIn">@p.T("session.signIn")</a>
+        <div class="header-bar">
+            <a class="brand" href="@p.Href("/")" aria-label="@p.T("site.shell.home")">@{ Logo(); }<span aria-hidden="true">@p.T("app.name")</span></a>
+            <nav class="site-nav" aria-label="@p.T("site.nav.label")">
+                <ul>
+                    <li>
+                        <details class="menu" name="site-menu">
+                            <summary>@p.T("site.shell.product")</summary>
+                            <div class="menu-panel menu-product">
+                                <ul class="menu-items">
+                                    @foreach (var (key, body, href) in product)
+                                    {
+                                        <li><a href="@p.Href(href)"><strong>@p.T(key)</strong><span>@body</span></a></li>
+                                    }
+                                </ul>
+                                <div class="menu-promo">
+                                    <span class="chip-ai">@p.T("site.shell.assist")</span>
+                                    <strong>@p.T("site.shell.promo.title")</strong>
+                                    <a class="button button-outline" href="@p.Href(PublicSite.Assist)">@p.T("site.shell.promo.cta")</a>
+                                </div>
+                            </div>
+                        </details>
+                    </li>
+                    <li>
+                        <details class="menu" name="site-menu">
+                            <summary>@p.T("site.shell.solutions")</summary>
+                            <div class="menu-panel menu-solutions">
+                                <ul class="menu-items">
+                                    @foreach (var (key, body, href) in solutions)
+                                    {
+                                        <li><a href="@p.Href(href)"><strong>@p.T(key)</strong><span>@p.T(body)</span></a></li>
+                                    }
+                                </ul>
+                                <div class="specialties">
+                                    <p class="cap">@p.T("site.shell.specialty.label")</p>
+                                    <ul>
+                                        @foreach (var s in specialties)
+                                        {
+                                            <li>@p.T($"site.shell.specialty.{s}")</li>
+                                        }
+                                    </ul>
+                                </div>
+                            </div>
+                        </details>
+                    </li>
+                    <li><a href="@p.Href(PublicSite.Assist)" aria-current="@Current(PublicSite.Assist)">@p.T("site.shell.assist")</a></li>
+                    <li><a href="@p.Href(PublicSite.Pricing)" aria-current="@Current(PublicSite.Pricing)">@p.T("site.nav.pricing")</a></li>
+                    <li><a href="@p.Href(PublicSite.TrustCentre)" aria-current="@Current(PublicSite.TrustCentre)">@p.T("site.shell.security")</a></li>
+                </ul>
+            </nav>
+            <div class="header-actions">
+                <div class="wide-only">@{ RegionSwitch(); }</div>
+                <a class="button button-ghost" href="@signIn">@p.T("session.signIn")</a>
+                <a class="button button-outline not-phone" href="@p.Href(PublicSite.Demo)">@p.T("site.shell.demo")</a>
+                <a class="button button-primary not-phone" href="@p.Href(PublicSite.DoctorStart)">@p.T("site.shell.trial")</a>
+                <details class="menu phone-menu" name="site-menu">
+                    <summary>@p.T("site.shell.menu")</summary>
+                    <div class="menu-panel">
+                        <nav aria-label="@p.T("site.shell.menu")">
+                            <ul class="phone-links">
+                                <li><a href="@p.Href("/#features")">@p.T("site.shell.product")</a></li>
+                                <li><a href="@p.Href(PublicSite.Assist)" aria-current="@Current(PublicSite.Assist)">@p.T("site.shell.assist")</a></li>
+                                <li><a href="@p.Href(PublicSite.Hospitals)" aria-current="@Current(PublicSite.Hospitals)">@p.T("site.shell.hospitals")</a></li>
+                                <li><a href="@p.Href(PublicSite.Pricing)" aria-current="@Current(PublicSite.Pricing)">@p.T("site.nav.pricing")</a></li>
+                                <li><a href="@p.Href(PublicSite.TrustCentre)" aria-current="@Current(PublicSite.TrustCentre)">@p.T("site.shell.security")</a></li>
+                            </ul>
+                        </nav>
+                        @{ RegionSwitch(); }
+                        <div class="phone-ctas">
+                            <a class="button button-outline" href="@p.Href(PublicSite.Demo)">@p.T("site.shell.demo")</a>
+                            <a class="button button-primary" href="@p.Href(PublicSite.DoctorStart)">@p.T("site.shell.trial")</a>
+                        </div>
+                    </div>
+                </details>
+            </div>
         </div>
     </header>
     <main id="main" tabindex="-1">
         @RenderBody()
     </main>
+    <section class="final-cta" aria-labelledby="final-cta-title">
+        <div>
+            <h2 id="final-cta-title">@p.T("site.shell.cta.title")</h2>
+            <p>@p.T("site.shell.cta.body")</p>
+        </div>
+        <div class="final-cta-actions">
+            <a class="button button-light" href="@p.Href(PublicSite.DoctorStart)">@p.T("site.shell.cta.trial")</a>
+            <a class="button button-on-dark" href="@p.Href(PublicSite.Demo)">@p.T("site.shell.demo")</a>
+        </div>
+    </section>
     <footer class="site-footer">
-        <nav aria-label="@p.T("app.language")">
-            <ul class="language-switch">
-                @foreach (var lang in PublicSite.Languages)
-                {
-                    <li><a href="@p.Href(p.PagePath, lang)" lang="@lang" hreflang="@lang" aria-current="@(p.Lang == lang ? "true" : null)">@PublicSite.LanguageNames[lang]</a></li>
-                }
-            </ul>
-        </nav>
+        <div class="footer-grid">
+            <div class="footer-brand">
+                <span class="brand">@{ Logo(); }@p.T("app.name")</span>
+                <p>@p.T("site.shell.footer.tagline")</p>
+                @{ RegionSwitch(); }
+                <partial name="_AppLinks" model="p" />
+            </div>
+            @foreach (var (heading, links) in footer)
+            {
+                <nav class="footer-col" aria-label="@p.T(heading)">
+                    <h2>@p.T(heading)</h2>
+                    <ul>
+                        @foreach (var (text, href) in links)
+                        {
+                            <li><a href="@p.Href(href)">@p.T(text)</a></li>
+                        }
+                    </ul>
+                </nav>
+            }
+        </div>
+        <div class="footer-bottom">
+            <p>© @DateTimeOffset.UtcNow.Year @p.T("app.name") · @p.TRegion("site.shell.footer.region")</p>
+            <nav aria-label="@p.T("app.language")">
+                <ul class="language-switch">
+                    @foreach (var lang in PublicSite.Languages)
+                    {
+                        <li><a href="@p.Href(p.PagePath, lang)" lang="@lang" hreflang="@lang" aria-current="@(p.Lang == lang ? "true" : null)">@PublicSite.LanguageNames[lang]</a></li>
+                    }
+                </ul>
+            </nav>
+        </div>
     </footer>
 </body>
 </html>

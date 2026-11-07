@@ -2,38 +2,297 @@
 @model IndexModel
 @{
     var p = Model;
-    ViewData["Title"] = $"{p.T("app.name")} · {p.T("site.hero.title")}";
-    var lede = p.T("site.hero.lede", new Dictionary<string, string> { ["languages"] = p.TRegion("site.hero.languages") });
-    ViewData["Description"] = lede;
-    // Decorative line icons (stand-ins for the design's Material Symbols, which would need a third-party font).
-    var pillars = new (string Key, string Icon)[]
+    ViewData["Title"] = $"{p.T("app.name")} · {p.T("site.home.title")}";
+    ViewData["Description"] = p.TRegion("site.home.hero.body");
+    // Product pictures (aria-hidden) use only the synthetic cast, docs/00-overview/personas.md.
+    var board = new (string Column, (string Token, string Name)[] Patients)[]
     {
-        ("brief", "M7 3h7l5 5v13H7zM14 3v5h5M10 12h6M10 16h6"),
-        ("consent", "M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21a7 7 0 0 1 12-5M15 18l2 2 5-5"),
-        ("followUp", "M9 4h6v3H9zM9 5H6v16h12V5h-3M9 14l2 2 4-4"),
+        ("waiting", [("A-08", "Deepak Nair"), ("W-02", "Rahul Menon")]),
+        ("nurse", [("A-07", "Meera Iyer")]),
+        ("doctor", [("A-05", "Fatima Al Mansoori")]),
+        ("pay", [("A-03", "Kavya Iyer")]),
+    };
+    var day = new (string Time, string Title, string Body)[]
+    {
+        ("09:00", p.T("site.home.day.checkIn.title"), p.T("site.home.day.checkIn.body")),
+        ("09:12", p.T("site.home.day.consult.title"), p.T("site.home.day.consult.body")),
+        ("09:24", p.T("site.home.day.orders.title"), p.T("site.home.day.orders.body")),
+        ("09:26", p.TRegion("site.home.day.pay.title"), p.TRegion("site.home.day.pay.body")),
+        ("18:00", p.T("site.home.day.close.title"), p.T("site.home.day.close.body")),
+    };
+    // Wide cards span two columns on a desktop, as in the design's grid.
+    var features = new (string Title, string Body, string Style)[]
+    {
+        (p.T("site.home.features.frontDesk.title"), p.T("site.home.features.frontDesk.body"), "wide"),
+        (p.T("site.home.features.notes.title"), p.T("site.home.features.notes.body"), "ai"),
+        (p.T("site.home.features.booking.title"), p.T("site.home.features.booking.body"), ""),
+        (p.T("site.home.features.record.title"), p.T("site.home.features.record.body"), ""),
+        (p.TRegion("site.home.features.billing.title"), p.TRegion("site.home.features.billing.body"), ""),
+        (p.T("site.home.features.insurance.title"), p.TRegion("site.home.features.insurance.body"), ""),
+        (p.T("site.home.features.app.title"), p.T("site.home.features.app.body"), ""),
+        (p.T("site.home.features.reports.title"), p.T("site.home.features.reports.body"), "wide dark"),
+        (p.T("site.home.features.access.title"), p.T("site.home.features.access.body"), ""),
+        (p.T("site.home.features.video.title"), p.T("site.home.features.video.body"), ""),
+    };
+    string[] assistPoints = ["consent", "approve", "linked", "interactions", "audio", "neverSigns"];
+    var noteLines = new (string Letter, string Key, bool Accepted)[] { ("S", "lineS", true), ("O", "lineO", true), ("A", "lineA", false), ("P", "lineP", false) };
+    var who = new (string Key, string Tag, string Cta, string Href)[]
+    {
+        ("solo", p.T("site.shell.solutions.solo.title"), p.T("site.shell.cta.trial"), PublicSite.DoctorStart),
+        ("clinic", p.T("site.shell.solutions.clinics.title"), p.T("site.shell.cta.trial"), PublicSite.DoctorStart),
+        ("hospital", p.T("site.shell.solutions.hospitals.title"), p.T("site.home.who.sales"), PublicSite.Hospitals),
+    };
+    var appPoints = new (string Title, string Body)[]
+    {
+        (p.T("site.home.app.signIn.title"), p.T("site.home.app.signIn.body")),
+        (p.T("site.home.app.book.title"), p.T("site.home.app.book.body")),
+        (p.TRegion("site.home.app.pay.title"), p.T("site.home.app.pay.body")),
+        (p.T("site.home.app.video.title"), p.T("site.home.app.video.body")),
+        (p.T("site.home.app.results.title"), p.T("site.home.app.results.body")),
+        (p.T("site.home.app.family.title"), p.T("site.home.app.family.body")),
+    };
+    string[] switching = ["create", "setup", "move", "train"];
+    string[] trust = ["country", "consents", "ai", "logged", "roles", "retention"];
+    var faq = new (string Q, string A)[]
+    {
+        (p.T("site.home.faq.trial.q"), p.T("site.home.faq.trial.a")),
+        (p.T("site.home.faq.setup.q"), p.T("site.home.faq.setup.a")),
+        (p.T("site.home.faq.data.q"), p.T("site.home.faq.data.a")),
+        (p.T("site.home.faq.where.q"), p.T("site.home.faq.where.a")),
+        (p.T("site.home.faq.ai.q"), p.T("site.home.faq.ai.a")),
+        (p.T("site.home.faq.phone.q"), p.T("site.home.faq.phone.a")),
+        (p.T("site.home.faq.payments.q"), p.TRegion("site.home.faq.payments.a")),
     };
 }
-<section class="hero" aria-labelledby="hero-title">
-    <div class="hero-copy">
-        <p class="tag">@p.TRegion("site.hero.tag")</p>
-        <h1 id="hero-title">@p.T("site.hero.title")</h1>
-        <p class="lede">@lede</p>
-        <div class="ctas">
-            <a class="button button-primary" href="@p.Href(PublicSite.DoctorStart)">@p.T("site.cta.doctor")</a>
-            <a class="button button-outline" href="@p.Href(PublicSite.DemoForm)">@p.T("site.cta.hospital")</a>
+<section class="home-hero" aria-labelledby="hero-title">
+    <div class="home-wrap home-hero-grid">
+        <div class="home-hero-copy">
+            <p class="eyebrow-pill"><span class="live-dot" aria-hidden="true"></span>@p.T("site.home.hero.eyebrow")</p>
+            <h1 id="hero-title">@p.T("site.home.hero.titleStart") <span class="grad">@p.T("site.home.hero.titleEnd")</span></h1>
+            <p class="home-lead">@p.TRegion("site.home.hero.body")</p>
+            <div class="ctas">
+                <a class="button button-primary" href="@p.Href(PublicSite.DoctorStart)">@p.T("site.shell.cta.trial")</a>
+                <a class="button button-outline" href="@p.Href(PublicSite.Demo)">@p.T("site.shell.demo")</a>
+            </div>
+            <ul class="checks" aria-label="@p.T("site.home.hero.checks")">
+                <li>@p.T("site.home.hero.noCard")</li>
+                <li>@p.T("site.home.hero.sameDay")</li>
+                <li>@p.TRegion("site.home.hero.residency")</li>
+            </ul>
+            <partial name="_AppLinks" model="p" />
         </div>
-        <p class="residency">@p.TRegion("site.residency")</p>
+        <div class="shot" aria-hidden="true">
+            <div class="shot-window">
+                <div class="shot-bar"><i></i><i></i><i></i></div>
+                <div class="shot-body">
+                    <div class="shot-head">
+                        <strong>@p.T("site.home.shot.greeting")</strong>
+                        <span>@p.T("site.home.shot.today")</span>
+                    </div>
+                    <div class="shot-board">
+                        @foreach (var (column, patients) in board)
+                        {
+                            <div class="shot-col">
+                                <span class="shot-col-head">@p.T($"site.home.shot.{column}")<b>@patients.Length</b></span>
+                                @foreach (var (token, name) in patients)
+                                {
+                                    <span class="shot-card"><span class="token">@token</span><span>@name</span></span>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+            <div class="float float-assist">
+                <span class="chip-ai">@p.T("site.home.shot.listening")</span>
+                <span><b>S</b> @p.T("site.home.shot.subjective")</span>
+                <span><b>P</b> @p.T("site.home.shot.plan")</span>
+                <small>@p.T("site.home.shot.draft")</small>
+            </div>
+            <div class="float float-pay"><strong>@p.TRegion("site.home.shot.paid")</strong><small>@p.T("site.home.shot.paidSub")</small></div>
+            <div class="float float-remind"><strong>@p.T("site.home.shot.reminder")</strong><small>@p.T("site.home.shot.reminderSub")</small></div>
+        </div>
     </div>
-    @* shortcut: striped placeholder until the product shot (consultation note review) exists, per the design. *@
-    <div class="product-shot" aria-hidden="true"></div>
 </section>
-<ul class="pillars">
-    @foreach (var (key, icon) in pillars)
-    {
-        <li>
-            <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" focusable="false"><path d="@icon" /></svg>
-            <h2>@p.T($"site.pillar.{key}.title")</h2>
-            <p>@p.T($"site.pillar.{key}.body")</p>
-        </li>
-    }
-</ul>
+
+<section class="home-section" aria-labelledby="day-title">
+    <div class="home-wrap">
+        <div class="home-head">
+            <p class="eyebrow">@p.T("site.home.day.eyebrow")</p>
+            <h2 id="day-title">@p.T("site.home.day.title")</h2>
+            <p class="home-lead">@p.T("site.home.day.body")</p>
+        </div>
+        <ol class="timeline">
+            @foreach (var (time, title, body) in day)
+            {
+                <li><time>@time</time><span><strong>@title</strong><span>@body</span></span></li>
+            }
+        </ol>
+    </div>
+</section>
+
+<section class="home-section home-band" id="features" aria-labelledby="features-title">
+    <div class="home-wrap">
+        <div class="home-head home-head-row">
+            <div>
+                <p class="eyebrow">@p.T("site.home.features.eyebrow")</p>
+                <h2 id="features-title">@p.T("site.home.features.title")</h2>
+            </div>
+            <a class="button button-outline" href="@p.Href(PublicSite.Pricing)">@p.T("site.home.features.compare")</a>
+        </div>
+        <ul class="bento">
+            @foreach (var (title, body, style) in features)
+            {
+                <li class="@style"><h3>@title</h3><p>@body</p></li>
+            }
+        </ul>
+    </div>
+</section>
+
+<section class="home-section home-dark" aria-labelledby="assist-title">
+    <div class="home-wrap home-split">
+        <div class="home-head">
+            <p class="chip-ai">@p.T("site.home.assist.eyebrow")</p>
+            <h2 id="assist-title"><span>@p.T("site.home.assist.title1")</span> <span>@p.T("site.home.assist.title2")</span> <span class="accent">@p.T("site.home.assist.title3")</span></h2>
+            <p class="home-lead">@p.T("site.home.assist.body")</p>
+            <ul class="checks checks-grid">
+                @foreach (var point in assistPoints)
+                {
+                    <li>@p.T($"site.home.assist.{point}")</li>
+                }
+            </ul>
+            <a class="button button-light" href="@p.Href(PublicSite.Assist)">@p.T("site.home.assist.cta")</a>
+        </div>
+        <div class="assist-shot" aria-hidden="true">
+            <ol class="assist-steps">
+                <li>@p.T("site.home.assist.step.consent")</li>
+                <li>@p.T("site.home.assist.step.listen")</li>
+                <li>@p.T("site.home.assist.step.draft")</li>
+                <li>@p.T("site.home.assist.step.approve")</li>
+            </ol>
+            <div class="assist-note">
+                <strong>@p.T("site.home.assist.note")</strong>
+                @foreach (var (letter, key, accepted) in noteLines)
+                {
+                    <div class="@(accepted ? "line" : "line line-review")"><b>@letter</b><span>@p.T($"site.home.assist.{key}")</span><em>@p.T(accepted ? "site.home.assist.accepted" : "site.home.assist.review")</em></div>
+                }
+                <p class="assist-warning">@p.T("site.home.assist.warning")</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="home-section" id="who" aria-labelledby="who-title">
+    <div class="home-wrap">
+        <div class="home-head">
+            <p class="eyebrow">@p.T("site.home.who.eyebrow")</p>
+            <h2 id="who-title">@p.T("site.home.who.title")</h2>
+        </div>
+        <ul class="who">
+            @foreach (var (key, tag, cta, href) in who)
+            {
+                <li>
+                    <p class="tag-info">@tag</p>
+                    <h3>@p.T($"site.home.who.{key}.title")</h3>
+                    <p>@p.T($"site.home.who.{key}.body")</p>
+                    <ul class="checks">
+                        @for (var i = 1; i <= 3; i++)
+                        {
+                            <li>@p.T($"site.home.who.{key}.point{i}")</li>
+                        }
+                    </ul>
+                    <a class="button button-primary" href="@p.Href(href)">@cta</a>
+                </li>
+            }
+        </ul>
+    </div>
+</section>
+
+<section class="home-section home-patient" id="patient-app" aria-labelledby="app-title">
+    <div class="home-wrap home-split">
+        <div class="phone" aria-hidden="true">
+            <div class="phone-top"><span>@p.T("site.home.app.hi")</span><b>@p.T("site.home.app.familyChip")</b></div>
+            <div class="phone-next">
+                <small>@p.T("site.home.app.next")</small>
+                <strong>@p.T("site.home.app.when")</strong>
+                <small>Dr. Arjun Rao · Iyer Family Clinic</small>
+                <span><b>@p.T("site.home.app.directions")</b><b>@p.T("site.home.app.reschedule")</b></span>
+            </div>
+            <div class="phone-row"><span><strong>@p.T("site.home.app.invoice")</strong></span><b class="pay">@p.T("site.home.app.payNow")</b></div>
+            <div class="phone-row"><span><strong>@p.T("site.home.app.result")</strong><small>@p.T("site.home.app.reviewed")</small></span></div>
+            <div class="phone-row"><span><strong>@p.T("site.home.app.video.title")</strong><small>@p.T("site.home.app.bookVideo")</small></span></div>
+        </div>
+        <div class="home-head">
+            <p class="eyebrow eyebrow-patient">@p.T("site.home.app.eyebrow")</p>
+            <h2 id="app-title">@p.T("site.home.app.title")</h2>
+            <p class="home-lead">@p.T("site.home.app.body")</p>
+            <ul class="points">
+                @foreach (var (title, body) in appPoints)
+                {
+                    <li><strong>@title</strong><span>@body</span></li>
+                }
+            </ul>
+        </div>
+    </div>
+</section>
+
+<section class="home-section" aria-labelledby="switch-title">
+    <div class="home-wrap">
+        <div class="home-head">
+            <p class="eyebrow">@p.T("site.home.switch.eyebrow")</p>
+            <h2 id="switch-title">@p.T("site.home.switch.title")</h2>
+        </div>
+        <ol class="steps">
+            @foreach (var step in switching)
+            {
+                <li><h3>@p.T($"site.home.switch.{step}.title")</h3><p>@p.T($"site.home.switch.{step}.body")</p></li>
+            }
+        </ol>
+        @* Customer stories stay hidden until real quotes exist with the clinic's written permission (MDV-P1-054). *@
+    </div>
+</section>
+
+<section class="home-section home-band" aria-labelledby="trust-title">
+    <div class="home-wrap home-split home-split-trust">
+        <div class="home-head">
+            <p class="eyebrow">@p.T("site.home.trust.eyebrow")</p>
+            <h2 id="trust-title">@p.T("site.home.trust.title")</h2>
+            <p class="home-lead">@p.T("site.home.trust.body")</p>
+            <a class="button button-outline" href="@p.Href(PublicSite.TrustCentre)">@p.T("site.home.trust.cta")</a>
+        </div>
+        <ul class="trust-grid">
+            @foreach (var item in trust)
+            {
+                <li><h3>@p.T($"site.home.trust.{item}.title")</h3><p>@p.T($"site.home.trust.{item}.body")</p></li>
+            }
+        </ul>
+    </div>
+</section>
+
+<section class="home-section" aria-labelledby="pricing-teaser-title">
+    @* No prices until the approved plan list behind /pricing exists (MDV-P5-050). *@
+    <div class="home-wrap pricing-teaser">
+        <div class="home-head">
+            <p class="eyebrow">@p.T("site.nav.pricing")</p>
+            <h2 id="pricing-teaser-title">@p.T("site.home.pricing.title")</h2>
+            <p class="home-lead">@p.T("site.home.pricing.body")</p>
+        </div>
+        <a class="button button-primary" href="@p.Href(PublicSite.Pricing)">@p.T("site.home.pricing.cta")</a>
+    </div>
+</section>
+
+<section class="home-section home-band" aria-labelledby="faq-title">
+    <div class="home-wrap home-split home-split-faq">
+        <div class="home-head">
+            <p class="eyebrow">@p.T("site.home.faq.eyebrow")</p>
+            <h2 id="faq-title">@p.T("site.home.faq.title")</h2>
+            <p>@p.T("site.home.faq.more") <a href="@p.Href(PublicSite.Demo)">@p.T("site.home.faq.talk")</a></p>
+        </div>
+        <div class="faq">
+            @for (var i = 0; i < faq.Length; i++)
+            {
+                <details open="@(i == 0)"><summary>@faq[i].Q</summary><p>@faq[i].A</p></details>
+            }
+        </div>
+    </div>
+</section>

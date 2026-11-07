@@ -1,0 +1,18 @@
+@model PublicPage
+@inject IConfiguration Config
+@{
+    // Store links appear only once the store addresses are configured (MDV-P1-053); until the apps are listed nothing shows.
+    var links = new[] { ("AppStore", "site.shell.apps.appStore"), ("GooglePlay", "site.shell.apps.googlePlay") }
+        .Select(l => (Href: Config[$"PublicSite:AppLinks:{l.Item1}"], Text: Model.T(l.Item2)))
+        .Where(l => !string.IsNullOrWhiteSpace(l.Href))
+        .ToList();
+}
+@if (links.Count > 0)
+{
+    <ul class="app-links" aria-label="@Model.T("site.shell.apps.label")">
+        @foreach (var (href, text) in links)
+        {
+            <li><a class="store" href="@href" rel="noopener">@text</a></li>
+        }
+    </ul>
+}

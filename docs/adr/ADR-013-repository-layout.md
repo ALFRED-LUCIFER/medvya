@@ -1,7 +1,7 @@
 # ADR-013 · Repository layout: one monorepo, existing folder names kept
 
 - **Status:** Accepted, 6 Nov 2026 (founder). Ticket: MDV-P0-040.
-- **Note:** ADR-011 is reserved for the mobile token-auth decision (MDV-P5-031); the PostgreSQL decision is ADR-012.
+- **Note:** ADR-011 is the mobile apps decision ([ADR-011](ADR-011-mobile-apps.md), MDV-P5-031); the PostgreSQL decision is ADR-012.
 
 ## Decision
 

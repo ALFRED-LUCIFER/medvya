@@ -54,7 +54,7 @@ medvya/
 │   ├── Host.Api/            # composition only: Program, auth/BFF, context, middleware, observability, public site
 │   │                        #   today also holds feature endpoints (moved to modules by P0-040)
 │   ├── BuildingBlocks/      # Domain, Application, Infrastructure, Security, Contracts, Country
-│   ├── Modules/             # exist: Identity, Tenancy, Audit, Patients, Scheduling, Billing, Notifications, Leads
+│   ├── Modules/             # exist: Identity, Tenancy, Audit, Patients, Scheduling, Encounters, Billing, Notifications, Leads
 │   │                        # planned: Practice, Encounters, Prescribing, Documents, Scribe, Care, Portal,
 │   │                        #   Insurance, Inventory, Laboratory, Migration, Platform, Devices, Integrations
 │   └── Workers/             # planned: Worker.Jobs, Worker.Ai, Worker.Integration (P3+; jobs run in Host today)

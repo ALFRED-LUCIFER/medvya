@@ -37,6 +37,7 @@ const MergeReviewRoute = lazy(() => import('./PatientRoutes').then(m => ({ defau
 const RegistrationRoute = lazy(() => import('./PatientRoutes').then(m => ({ default: m.RegistrationRoute })));
 // Walk-in (MDV-P1-025) brings the patient picker and booking lists: loaded when opened, never at first paint.
 const WalkInRoute = lazy(() => import('./WalkInRoute'));
+const ConsultRoute = lazy(() => import('./ConsultRoute'));
 const AdjustmentsRoute = lazy(() => import('./AdjustmentsRoute'));
 const CompleteRegistrationRoute = lazy(() => import('./PatientRoutes').then(m => ({ default: m.CompleteRegistrationRoute })));
 
@@ -107,7 +108,8 @@ export default function App({ locale, onLocaleChange }: Props) {
             : i.id === 'register' ? registration
             : i.id === 'frontDesk'
             ? <FrontDeskRoute facilityId={active.facilityId} online={online} canMove={active.capabilities.CheckInQueue === 'Full'}
-                registerPath={registerPath} walkInPath={walkInPath} billingPath={shell.items.find(b => b.id === 'billing')?.path ?? null} />
+                registerPath={registerPath} walkInPath={walkInPath} billingPath={shell.items.find(b => b.id === 'billing')?.path ?? null}
+                canConsult={active.capabilities.Patient360Chart === 'Full'} />
             : i.id === 'settings' ? <SettingsRoute facilityId={active.facilityId} country={active.country ?? null} />
             // Until the patient chart exists (phase 2) the Patients menu opens the patient directory instead of a placeholder.
             : i.id === 'patients' && searchPath ? <Navigate to={searchPath} replace />
@@ -121,6 +123,9 @@ export default function App({ locale, onLocaleChange }: Props) {
           {pathOf('frontDesk') && <Route path="/front-desk/overview" element={
             <OverviewRoute facilityId={active.facilityId} online={online} canMove={active.capabilities.CheckInQueue === 'Full'}
               userId={shell.session?.user.id ?? ''} boardPath={pathOf('frontDesk')!} />} />}
+          {/* A consultation (MDV-P2-001) for any role that treats patients; the server checks the care relationship on every call. */}
+          {['Read', 'Limited', 'Full', 'Sign'].includes(active.capabilities.Patient360Chart ?? 'None') &&
+            <Route path="/consult/:encounterId" element={<ConsultRoute boardPath={pathOf('frontDesk') ?? '/'} />} />}
           {/* Queue displays live in Settings (MDV-P1-052); the old address still works for links already shared. */}
           <Route path="/admin/displays" element={<Navigate to="/settings?tab=displays" replace />} />
           {searchPath && <>

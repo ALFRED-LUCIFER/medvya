@@ -28,6 +28,7 @@ public static class SchedulingModule
             .AddScoped<IScheduleExceptionService, ScheduleExceptionService>()
             .AddScoped<IBookingService, BookingService>()
             .AddScoped<IFrontDeskService, FrontDeskService>()
+            .AddScoped<IConsultVisits, ConsultVisits>()
             .AddScoped<IQueueService, QueueService>()
             .AddScoped<IOutboxDispatcher, OutboxDispatcher>();
     }

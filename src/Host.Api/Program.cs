@@ -7,6 +7,8 @@ using Host.Api.Auth;
 using Host.Api.Context;
 using Host.Api.Middleware;
 using Medvya.Identity.Api;
+using Medvya.Encounters.Api;
+using Medvya.Encounters.Infrastructure;
 using Medvya.Notifications.Api;
 using Medvya.Notifications.Application;
 using Medvya.Notifications.Infrastructure;
@@ -40,6 +42,7 @@ builder.WebHost.ConfigureKestrel(k =>
 });
 
 builder.AddStaffAuthentication();
+builder.AddNativeAuthentication(); // the staff app's bearer tokens, on the same server-side sessions (MDV-P5-033)
 // Waiting-room TVs sign in with a display token, never a staff session (MDV-P1-031).
 builder.Services.AddAuthentication().AddQueueDisplay();
 builder.Services.AddAuthorizationBuilder().AddStaffPolicies().AddStaffAdminPolicy().AddQueueDisplayPolicy().AddOperationsPolicies(builder.Configuration);
@@ -59,7 +62,7 @@ builder.Services.AddScoped<IRequestOrigin>(sp => sp.GetRequiredService<RequestCo
 // capability handler exists, so capability-guarded endpoints answer 403.
 if (builder.Configuration.GetConnectionString("Medvya") is { } sql)
 {
-    builder.Services.AddAuditModule(sql).AddDeniedAccessAudit().AddTenancyModule(sql, builder.Configuration["Storage:ConnectionString"]).AddIdentityModule(sql).AddPatientsModule(sql).AddSchedulingModule(sql)
+    builder.Services.AddAuditModule(sql).AddDeniedAccessAudit().AddTenancyModule(sql, builder.Configuration["Storage:ConnectionString"]).AddIdentityModule(sql).AddPatientsModule(sql).AddSchedulingModule(sql).AddEncountersModule(sql)
         .AddNotificationsModule(sql, smsSink: builder.Environment.IsDevelopment() && builder.Configuration["Notifications:Sms:Provider"] == "Sink")
         .AddScoped<IReminderConsent, PatientReminderConsent>() // after the module: replaces its deny-all default (MDV-P1-019)
         .AddLeadsModule(sql, builder.Configuration.GetSection("Leads:Email").Get<LeadsEmailOptions>() ?? new()).AddCapabilityPolicies();
@@ -81,19 +84,23 @@ builder.Services.Configure<SchedulingOptions>(builder.Configuration.GetSection("
 builder.Services.AddSchedulingRealtime().AddHubOptions<BoardHub>(o => o.AddFilter<HubRequestContext>());
 builder.Services.AddHsts(o => { o.MaxAge = TimeSpan.FromDays(365); o.IncludeSubDomains = true; });
 
-// Behind the App Service front end the client is in X-Forwarded-For. Only listed proxies are believed, so a client cannot
-// pick its own address for the per-IP limits or the audit trail; with none listed (the default, as in Development) the header
-// is ignored. shortcut: no proxy is listed until the App Service network is known; set ForwardedHeaders:KnownProxies (MDV-P0-007).
+// The client address for the per-IP limits and the audit trail. A forged one would dodge limits and falsify the trail, so
+// X-Forwarded-For is believed only where we know a proxy is in front (MDV-P0-007):
+// - On App Service (it sets WEBSITE_INSTANCE_ID; a client cannot): every request arrives through the platform front end, whose
+//   addresses are not fixed, and the app cannot be reached around it. Only the last entry is read (ForwardLimit 1), the one the
+//   front end added; anything a client wrote into the header itself sits further left and is ignored.
+// - Elsewhere: only from proxies listed in ForwardedHeaders:KnownProxies; none listed (Development) means the header is ignored.
 builder.Services.Configure<ForwardedHeadersOptions>(o =>
 {
     var proxies = builder.Configuration.GetSection("ForwardedHeaders:KnownProxies").Get<string[]>() ?? [];
+    var appService = !string.IsNullOrEmpty(builder.Configuration["WEBSITE_INSTANCE_ID"]);
     o.KnownIPNetworks.Clear();
-    o.KnownProxies.Clear();
+    o.KnownProxies.Clear(); // both lists empty = every peer is believed, which only App Service's own front end can be
     foreach (var proxy in proxies) o.KnownProxies.Add(IPAddress.Parse(proxy));
-    // The client address is believed only from listed proxies (a forged one would dodge limits and falsify the audit trail).
+    o.ForwardLimit = 1;
     // The protocol is always believed: App Service ends TLS in front of the app, so without it sign-in sends Entra an http redirect
     // address that is not registered. A forged protocol can only change generated links.
-    o.ForwardedHeaders = proxies.Length > 0 ? ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto : ForwardedHeaders.XForwardedProto;
+    o.ForwardedHeaders = appService || proxies.Length > 0 ? ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto : ForwardedHeaders.XForwardedProto;
 });
 
 var permitsPerMinute = builder.Configuration.GetValue("RateLimiting:PermitsPerMinute", 300);
@@ -135,6 +142,7 @@ var version = typeof(Program).Assembly.GetCustomAttribute<AssemblyInformationalV
 app.MapGet("/health", () => Results.Ok(new { status = "ok", version }))
     .AllowAnonymous(); // public: deploy smoke tests
 app.MapStaffSession();
+app.MapNativeSignIn();
 app.MapSchedulingEndpoints();
 app.MapNotifications();
 app.UseJobs();
@@ -153,6 +161,7 @@ app.MapAccessLog();
 app.MapQueueDisplaySession();
 app.MapPatientEndpoints();
 app.MapAccessRequestEndpoints();
+app.MapEncounterEndpoints();
 if (app.Environment.IsDevelopment() && app.Configuration["Authentication:Oidc:Authority"]?.EndsWith(DevIdentityProvider.Path, StringComparison.Ordinal) == true)
     app.MapDevIdentityProvider();
 

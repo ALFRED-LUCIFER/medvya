@@ -738,6 +738,8 @@ ac:
 - Given a receptionist signs in, when the tabs load, then clinical-only tabs are absent and their API calls return 403.
 - Given the phone is offline, when the doctor opens Today, then the last copy shows with an offline banner and no edit action.
 - Given a patient has an allergy, when the summary opens, then the allergy shows as text and icon, not colour alone.
+- Given the staff app is open, when someone takes a screenshot, then Android blocks it and iOS blurs the app switcher and audits the screenshot (ADR-011 §6).
+- Given the phone is revoked or the user switches, when the app next talks to the server, then the encrypted store is wiped and nothing of the previous user remains (ADR-011 §3, §5).
 
 === MDV-P5-035
 title: Staff app: consent script, background recording with offline queue, AI note review and sign
@@ -759,6 +761,7 @@ ac:
 - Given the network drops mid-recording, when it returns, then queued chunks upload in order and none is lost or duplicated.
 - Given an AI draft field, when the doctor has not accepted it, then the note cannot be signed.
 - Given the phone is lost, when the queue held audio, then it is encrypted and removed on remote revoke.
+- Given unsent audio was wiped by a revoke, when the visit is opened on the web, then it is flagged 'recording incomplete: write the note by hand' (ADR-011 §4).
 
 === MDV-P5-036
 title: Patient app: SMS sign-in, family profiles, home, booking, check-in and reschedule
@@ -781,6 +784,7 @@ ac:
 - Given a family member is viewed, when the proxy has expired, then access ends and the patient sees why.
 - Given the phone is offline, when the patient books, then the booking is queued and shown as not yet confirmed.
 - Given the SMS code arrives, when the patient opens the app, then the code is filled in automatically on iOS and Android.
+- Given a rooted or jailbroken phone, when the patient app starts, then it warns and keeps working; the staff app refuses to sign in (ADR-011 §7).
 
 === MDV-P5-037
 title: Patient app: results, prescriptions, messages, consents, payments and video visit

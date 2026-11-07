@@ -77,12 +77,16 @@ public class SecurityBaselineTests
         };
     }
 
-    static async Task<List<HttpStatusCode>> FromClients(string? knownProxy, params string[] clients)
+    static Task<List<HttpStatusCode>> FromClients(string? knownProxy, params string[] clients) => FromClients(knownProxy, appService: false, clients);
+
+    static async Task<List<HttpStatusCode>> FromClients(string? knownProxy, bool appService, params string[] clients)
     {
         using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b =>
         {
             b.UseSetting("RateLimiting:PermitsPerMinute", "1").ConfigureServices(s => s.AddSingleton<IStartupFilter, FromProxy>());
             if (knownProxy is not null) b.UseSetting("ForwardedHeaders:KnownProxies:0", knownProxy);
+            // App Service sets this environment variable on every instance; clients cannot set it.
+            if (appService) b.UseSetting("WEBSITE_INSTANCE_ID", "synthetic-instance");
         });
         using var client = factory.CreateClient(new() { BaseAddress = new Uri("https://clinic.medvya.test") });
         var codes = new List<HttpStatusCode>();
@@ -104,4 +108,23 @@ public class SecurityBaselineTests
     public async Task ForwardedAddressesFromAnUnlistedProxyAreIgnored() =>
         // No proxy listed (the default): a caller cannot pick a fresh address per request to dodge the limit.
         Assert.Equal([HttpStatusCode.OK, HttpStatusCode.TooManyRequests], await FromClients(null, "203.0.113.1", "203.0.113.2"));
+
+    // MDV-P0-007: on App Service no proxy address is listed (the front end's addresses are not fixed), yet each phone and
+    // browser must get its own sign-in and API limit.
+    [Fact]
+    public async Task OnAppServiceEachClientHasItsOwnLimit() =>
+        Assert.Equal([HttpStatusCode.OK, HttpStatusCode.OK, HttpStatusCode.TooManyRequests],
+            await FromClients(null, appService: true, "203.0.113.1", "203.0.113.2", "203.0.113.1"));
+
+    [Fact]
+    public async Task OnAppServiceTheAddressCountsWithoutItsPort() =>
+        // The front end writes "address:port"; a new source port is the same client.
+        Assert.Equal([HttpStatusCode.OK, HttpStatusCode.TooManyRequests],
+            await FromClients(null, appService: true, "203.0.113.1:50432", "203.0.113.1:50999"));
+
+    [Fact]
+    public async Task OnAppServiceAnAddressTheClientWroteItselfIsIgnored() =>
+        // The client sends its own X-Forwarded-For; the front end appends the real address. Only that last entry counts.
+        Assert.Equal([HttpStatusCode.OK, HttpStatusCode.TooManyRequests],
+            await FromClients(null, appService: true, "198.51.100.9, 203.0.113.1", "198.51.100.10, 203.0.113.1"));
 }

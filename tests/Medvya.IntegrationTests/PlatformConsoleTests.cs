@@ -454,7 +454,11 @@ public sealed class PlatformLastOwnerTests(PostgresFixture sql) : IClassFixture<
             await using var db = PlatformConsoleTests.Db(sql);
             var owners = await db.Members.Where(m => m.Role == PlatformRole.Owner && m.RemovedAt == null).ToListAsync();
             var left = Assert.Single(owners);
-            Assert.Equal([HttpStatusCode.NoContent, HttpStatusCode.Conflict], answers.Select(r => r.StatusCode).Order());
+            // Exactly one removal succeeds. The other is refused: 409 when it reaches the last-owner check, or 401 when the winner's removal
+            // committed before the loser's request was authenticated (the loser is no longer a member). Both leave one owner, asserted above.
+            var codes = answers.Select(r => r.StatusCode).Order().ToList();
+            Assert.Equal(HttpStatusCode.NoContent, codes[0]);
+            Assert.Contains(codes[1], new[] { HttpStatusCode.Conflict, HttpStatusCode.Unauthorized });
             (survivor, survivorKey) = left.Id == survivor.Id ? (survivor, survivorKey) : (other, otherKey);
         }
     }

@@ -68,8 +68,10 @@ public sealed class ScheduleAdjustmentTests(PostgresFixture sql) : IClassFixture
         {
             Assert.Equal(0, await db.ScheduleSlots.CountAsync(s => s.AppointmentId == a.Id || s.AppointmentId == b.Id));
             var events = await db.Outbox.Where(e => e.Type == "AppointmentNeedsRebooking.v1").ToListAsync();
-            var offered = Assert.Single(events); // the manual one sends nothing
-            Assert.Equal(a.Id, offered.AggregateId);
+            Assert.Equal(2, events.Count); // both cancel queued reminders; only the offered one messages the patient
+            var offered = events.Single(e => e.AggregateId == a.Id);
+            Assert.Contains("\"quiet\":false", offered.Payload, StringComparison.Ordinal);
+            Assert.Contains("\"quiet\":true", events.Single(e => e.AggregateId == b.Id).Payload, StringComparison.Ordinal);
             Assert.DoesNotContain("Meera", offered.Payload, StringComparison.Ordinal);
             Assert.DoesNotContain("chest", offered.Payload, StringComparison.Ordinal);
             Assert.Equal(2, await db.StatusEvents.CountAsync(e => e.State == AppointmentState.NeedsRebooking && e.ActorUserId == h.Reception));

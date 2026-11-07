@@ -1,6 +1,6 @@
 // Mirrors src/Modules/Patients (Medvya.Patients.Application / Medvya.Patients.Api); the server is the authority.
 export type DirectoryFilter = 'All' | 'Incomplete' | 'Recent';
-export type SearchKind = 'Directory' | 'Name' | 'Phone' | 'Mrn' | 'Identifier';
+export type SearchKind = 'Directory' | 'Name' | 'Phone' | 'Mrn' | 'Identifier' | 'Number';
 export type SexAtBirth = 'Female' | 'Male' | 'Other';
 export type RegistrationStatus = 'Complete' | 'Incomplete';
 export type IdentifierScheme = 'Abha' | 'AbhaAddress' | 'AadhaarLast4' | 'EmiratesId' | 'Passport' | 'Visa';

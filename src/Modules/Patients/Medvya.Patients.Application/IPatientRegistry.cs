@@ -77,7 +77,7 @@ public static class Mrn
 }
 
 /// <summary>What a desk search box was read as (<see cref="CountryRules.ParseSearch"/>). Directory = no search text.</summary>
-public enum SearchKind { Directory, Name, Phone, Mrn, Identifier }
+public enum SearchKind { Directory, Name, Phone, Mrn, Identifier, Number }
 
 public sealed record SearchTerm(SearchKind Kind, string? Value = null, IdentifierScheme? Scheme = null);
 

@@ -49,6 +49,8 @@ public sealed partial class IndiaRules : CountryRules
         return normalized;
     }
 
+    protected override string? AadhaarLastFour(string compact) => FullAadhaar().IsMatch(compact) ? compact[^4..] : null;
+
     protected override PatientAddress CheckAddress(PatientAddress a, List<ValidationError> errors)
     {
         if (a.City is null) errors.Add(new("address.city", "required"));

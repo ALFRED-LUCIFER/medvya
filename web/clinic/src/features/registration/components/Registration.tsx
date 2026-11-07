@@ -75,6 +75,14 @@ export default function Registration(p: Props) {
     shownStep.current = p.step;
   }, [p.step]);
 
+  // "Register another" puts the cursor in the first field, so a busy desk can type the next patient without touching the mouse.
+  const hadResult = useRef(false);
+  const { setFocus } = p.form;
+  useEffect(() => {
+    if (hadResult.current && !p.result) setFocus('fullName');
+    hadResult.current = p.result !== null;
+  }, [p.result, setFocus]);
+
   if (p.result)
     return <RegistrationSuccess result={p.result} name={p.registeredName} actorName={p.actorName} onRegisterAnother={p.onRegisterAnother}
       recordPath={p.recordPath(p.result.patientId)} bookPath={p.bookPath} slot={p.slot} checkInPath={p.checkInPath}

@@ -160,8 +160,16 @@ public abstract partial class CountryRules
     /// <summary>
     /// Reads one desk search box (MDV-P1-018): a full ABHA / Emirates ID, a full mobile number, an MRN, or a name. Identifiers and
     /// phones are normalised exactly as registration stored them, so deterministic encryption and equality match.
-    /// Numbers only ever match exactly; a number that is none of these is refused ("full_number_required"), never partially matched.
+    /// A full ABHA / Emirates ID or mobile number matches exactly. Any other run of 4 to 15 digits (a part of a phone number, an MRN, the
+    /// last 4 of an Aadhaar) is a <see cref="SearchKind.Number"/>; a typed 12-digit Aadhaar is cut to its last 4 here and the rest is
+    /// dropped (only the last 4 are ever stored). Fewer than 4 digits is an MRN number; more than 15 is refused ("full_number_required").
     /// </summary>
+    /// <summary>Fewest digits searched as part of a number: fewer would list a large share of the register.</summary>
+    public const int MinNumberDigits = 4, MaxNumberDigits = 15;
+
+    /// <summary>The last 4 digits of a typed full Aadhaar number, or null when the country has none or the text is not one.</summary>
+    protected virtual string? AadhaarLastFour(string compact) => null;
+
     public SearchTerm ParseSearch(string? query)
     {
         var q = query?.Trim() ?? "";
@@ -181,8 +189,10 @@ public abstract partial class CountryRules
 
         if (numberLike)
         {
-            if (compact.Length <= Mrn.Digits && compact.All(char.IsAsciiDigit)) return new(SearchKind.Mrn, Mrn.Format(int.Parse(compact, CultureInfo.InvariantCulture)));
-            throw new PatientValidationException([new("query", "full_number_required")]);
+            if (AadhaarLastFour(compact) is { } last4) return new(SearchKind.Identifier, last4, IdentifierScheme.AadhaarLast4);
+            if (!compact.All(char.IsAsciiDigit) || compact.Length > MaxNumberDigits) throw new PatientValidationException([new("query", "full_number_required")]);
+            if (compact.Length >= MinNumberDigits) return new(SearchKind.Number, compact);
+            return new(SearchKind.Mrn, Mrn.Format(int.Parse(compact, CultureInfo.InvariantCulture)));
         }
         if (q.Any(char.IsDigit)) return new(SearchKind.Mrn, q.ToUpperInvariant()); // e.g. DQ-10-4482
         if (q.Count(char.IsLetter) < 2) throw new PatientValidationException([new("query", "too_short")]);

@@ -122,7 +122,10 @@ public sealed class NationalIdColumns(INationalIdProtector protector, IBlindInde
         {
             var i = e.Entity;
             e.Property(LookupCipher).CurrentValue = Encrypt(i.TenantId, IdentifierLookup, i.Id, i.LookupValue);
-            e.Property(LookupIndex).CurrentValue = i.LookupValue is null ? null : Index(i.TenantId, i.LookupValue);
+            // The Aadhaar last 4 is searched at the desk too: only its blind index is added; the value stays in the randomized column.
+            // shortcut: rows registered before this change have no index and are not found by their Aadhaar last 4; backfill if a pilot needs it.
+            e.Property(LookupIndex).CurrentValue = i.LookupValue is not null ? Index(i.TenantId, i.LookupValue)
+                : i is { Scheme: IdentifierScheme.AadhaarLast4, DisplayValue: { } last4 } ? Index(i.TenantId, last4) : null;
             e.Property(DisplayCipher).CurrentValue = Encrypt(i.TenantId, IdentifierDisplay, i.Id, i.DisplayValue);
         }
         foreach (var e in db.ChangeTracker.Entries<PayerCoverage>().Where(e => e.State == EntityState.Added))

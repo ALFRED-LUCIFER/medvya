@@ -132,15 +132,20 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
         var now = clock.GetUtcNow();
 
         var patients = FacilityPatients();
-        var like = term.Kind == SearchKind.Name ? LikeContaining(term.Value!) : null;
         patients = term.Kind switch
         {
-            SearchKind.Name => patients.Where(p => EF.Functions.ILike(p.FullName, like!, Escape) || (p.ArabicName != null && EF.Functions.ILike(p.ArabicName, like!, Escape))),
+            // Every word must appear, in any order ("nair meera" finds "Meera Nair"), in either script.
+            SearchKind.Name => NameWords(term.Value!).Aggregate(patients, (q, word) =>
+            {
+                var like = LikeContaining(word);
+                return q.Where(p => EF.Functions.ILike(p.FullName, like, Escape) || (p.ArabicName != null && EF.Functions.ILike(p.ArabicName, like, Escape)));
+            }),
             SearchKind.Phone => patients.Where(p => p.Mobile == term.Value || p.AlternatePhone == term.Value),
             // Either MRN of a merged pair finds the survivor (MDV-P1-017); the merged record itself is hidden below.
             SearchKind.Mrn => patients.Where(p => p.Mrn == term.Value || db.Patients.Any(m => m.MergedIntoPatientId == p.Id && m.Mrn == term.Value)),
             // Exact match on the HMAC blind index (MDV-P0-035); the value itself is ciphertext and never compared in SQL.
             SearchKind.Identifier => IdentifierMatch(patients, term.Scheme!.Value, term.Value!),
+            SearchKind.Number => NumberMatch(patients, term.Value!),
             _ => patients,
         };
         patients = search.Filter switch
@@ -159,6 +164,21 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
             p.DateOfBirthEstimated, p.SexAtBirth, Tail(p.Mrn), p.Status)).ToList();
         return new(term.Kind, items, search.Page, PatientSearch.PageSize, total);
     }
+
+    /// <summary>Digits (4 to 15) found inside a mobile or alternate number, or as an MRN or the Aadhaar last 4, whichever the desk meant.</summary>
+    IQueryable<Patient> NumberMatch(IQueryable<Patient> patients, string digits)
+    {
+        var like = LikeContaining(digits);
+        var mrn = digits.Length <= Mrn.Digits ? Mrn.Format(int.Parse(digits, System.Globalization.CultureInfo.InvariantCulture)) : "";
+        // Only the 4-digit form can be an Aadhaar last 4; an empty array equals no stored index, and no key is touched for other lengths.
+        var aadhaar = digits.Length == 4 ? db.LookupIndexFor(digits) : Array.Empty<byte>();
+        return patients.Where(p => EF.Functions.ILike(p.Mobile, like, Escape) || (p.AlternatePhone != null && EF.Functions.ILike(p.AlternatePhone, like, Escape))
+            || p.Mrn == mrn
+            || db.Identifiers.Any(i => i.PatientId == p.Id && i.Scheme == IdentifierScheme.AadhaarLast4 && EF.Property<byte[]>(i, NationalIdColumns.LookupIndex) == aadhaar));
+    }
+
+    /// <summary>At most 5 words, so a long pasted text cannot build a long query.</summary>
+    static IEnumerable<string> NameWords(string text) => text.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Take(5);
 
     const string Escape = "\\";
     static string LikeContaining(string text) => "%" + text.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("%", "\\%", StringComparison.Ordinal)

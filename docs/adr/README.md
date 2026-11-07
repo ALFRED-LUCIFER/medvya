@@ -10,7 +10,7 @@ Format: Context · Decision · Consequences · Status. One decision per file. Ne
 | [ADR-004](ADR-004-bff-session.md) | BFF with HTTP-only cookies, no tokens in the browser | Proposed | P0 |
 | [ADR-005](ADR-005-tenant-isolation-rls.md) | Tenant isolation: EF query filters + Azure SQL RLS | Proposed | P0 |
 | [ADR-006](ADR-006-immutable-signed-records.md) | Immutable signed records, ledger tables, addenda | Proposed | P0/P2 |
-| [ADR-011](ADR-011-mobile-apps.md) | Mobile: two Expo store apps, native token sign-in, what a phone may keep | **Accepted** (open: session lifetime, store owner, https links) | P5 |
+| [ADR-011](ADR-011-mobile-apps.md) | Mobile: two Expo store apps, native token sign-in, what a phone may keep | **Accepted** (deferred: store accounts, https links) | P5 |
 | [ADR-010](ADR-010-ui-shadcn-tailwind.md) | UI: shadcn/ui + Radix + Tailwind 4, replaces MUI | **Accepted** | Now |
 | [ADR-009](ADR-009-frontend-architecture.md) | Front-end: domain-driven features, controller hooks, presentational components (lint-enforced) | **Accepted** | Now |
 

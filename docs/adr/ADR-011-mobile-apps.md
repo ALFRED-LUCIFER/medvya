@@ -1,6 +1,6 @@
 # ADR-011 · Mobile: two Expo store apps, native token sign-in, what a phone may keep
 
-- **Status:** Accepted 7 Nov 2026 (founder), except the items under "Open". Ticket: MDV-P5-031.
+- **Status:** Accepted 7 Nov 2026 (founder). Two items are deferred to before store release (see "Deferred"). Ticket: MDV-P5-031.
 - **Builds on:** ADR-004 (sessions), ADR-009 (front-end layers), ADR-013 (repository layout).
 
 ## Context
@@ -15,6 +15,7 @@ Doctors want the queue, the patient summary and recording on their phone. Patien
    - **Staff:** OIDC code + PKCE in the system browser through Host.Api, then bearer tokens backed by the same server-side session row as the web cookie (ADR-004, "native staff app"). Revoke, "My devices" and offboarding apply unchanged. Refresh tokens rotate, and a replay ends the session.
    - **Patients:** mobile number + SMS code, then Face ID, fingerprint or PIN. This waits for patient accounts and DLT-registered SMS (MDV-P5-033, later slice).
    - **Lock and refresh:** the app locks after 15 idle minutes (biometric, PIN fallback) and refreshes one request at a time.
+   - **Session length:** a native session lasts at most 30 days and ends after 7 days unused. Browser sessions keep 8 h and the tenant's idle timeout.
 
 3. **What a phone may keep.** This is the one exception to AGENTS.md 1.2, and nothing beyond it is allowed:
    - **Secure-store** (Keychain / Android Keystore): the refresh token, the device key and the PIN check value. The access token stays in memory only.
@@ -38,9 +39,8 @@ Doctors want the queue, the patient summary and recording on their phone. Patien
 
 9. **Over-the-air updates.** EAS Update ships UI fixes only. Clinical logic (consent, signing, allergy display, dosing, the offline rules above) ships only with store builds and release notes, and the pipeline refuses an update that touches it (MDV-P5-039).
 
-## Open (founder)
+## Deferred (founder, 7 Nov 2026: not now, before store release)
 
-- **Native session lifetime:** proposed 30 days at most, ending after 7 days unused (PR #844).
 - **Store and Expo account owner:** Apple and Google developer accounts under the company. Apple needs a D-U-N-S number, and the Expo organisation has to be created. This blocks EAS preview builds (MDV-P5-032) and TestFlight.
 - **Verified https links:** Universal Links and App Links replace the custom schemes before store release. They need the production domain to host `apple-app-site-association` and `assetlinks.json` (MDV-P5-039).
 

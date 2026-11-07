@@ -1,0 +1,45 @@
+@page
+@model HospitalsModel
+@{
+    var p = Model;
+    ViewData["Title"] = $"{p.T("site.hospitals.tag")} · {p.T("app.name")}";
+    ViewData["Description"] = p.T("site.hospitals.lede");
+}
+<section class="page wide" aria-labelledby="hospitals-title">
+    <div class="hero-copy">
+        <p class="eyebrow">@p.T("site.hospitals.tag")</p>
+        <h1 id="hospitals-title">@p.T("site.hospitals.title")</h1>
+        <p class="lede">@p.T("site.hospitals.lede")</p>
+        <div class="ctas">
+            <a class="button button-primary" href="@p.Href(PublicSite.DemoForm)">@p.T("site.hospitals.talk")</a>
+            <a class="button button-outline" href="@p.Href(PublicSite.TrustCentre)">@p.T("site.hospitals.security")</a>
+        </div>
+        <p class="note">@p.TRegion("site.residency")</p>
+    </div>
+
+    <section aria-labelledby="hospitals-get">
+        <h2 id="hospitals-get">@p.T("site.hospitals.get.title")</h2>
+        <ul class="cards">
+            @foreach (var (key, available) in HospitalsModel.Modules)
+            {
+                <li>
+                    <p class="@(available ? "chip chip-ok" : "chip chip-planned")">@p.T(available ? "site.hospitals.available" : "site.hospitals.planned")</p>
+                    <h3>@p.T($"site.hospitals.module.{key}.title")</h3>
+                    <p>@(key == "insurance" ? p.TRegion("site.hospitals.module.insurance.body") : p.T($"site.hospitals.module.{key}.body"))</p>
+                </li>
+            }
+        </ul>
+    </section>
+
+    <section aria-labelledby="hospitals-trust">
+        <h2 id="hospitals-trust">@p.T("site.hospitals.trust.title")</h2>
+        @* The trust centre's own wording, so the two pages cannot disagree. *@
+        <ul class="cards">
+            @foreach (var key in new[] { "residency", "audit", "ai" })
+            {
+                <li><h3>@p.T($"site.trust.{key}.title")</h3><p>@p.T($"site.trust.{key}.body")</p></li>
+            }
+        </ul>
+        <p><a href="@p.Href(PublicSite.TrustCentre)">@p.T("site.hospitals.trust.link")</a></p>
+    </section>
+</section>

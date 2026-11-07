@@ -2,15 +2,139 @@
 @model PricingModel
 @{
     var p = Model;
-    ViewData["Title"] = $"{p.T("site.pricing.title")} · {p.T("app.name")}";
-    ViewData["Description"] = p.T("site.pricing.body");
+    ViewData["Title"] = $"{p.T("site.pricing.tag")} · {p.T("app.name")}";
+    ViewData["Description"] = p.T("site.pricing.title");
+    string Money(long minor, PlanPrice price) => p.Isolate(PricingContent.Money(minor, price.Currency));
+    Dictionary<string, string> With(string name, string value) => new() { [name] = value };
+    // Compare plans (Solo, Clinic, Hospital): "yes" and "no" are marks, anything else a copy key under the row. A null row starts a group.
+    var compare = new (string Row, string[]? Cells)[]
+    {
+        ("daily", null), ("board", ["yes", "yes", "yes"]), ("booking", ["yes", "yes", "yes"]), ("record", ["yes", "yes", "yes"]), ("app", ["yes", "yes", "hospital"]),
+        ("money", null), ("payments", ["yes", "yes", "yes"]), ("packages", ["no", "yes", "yes"]), ("claims", ["no", "yes", "yes"]),
+        ("team", null), ("doctors", ["solo", "clinic", "hospital"]), ("staff", ["solo", "clinic", "hospital"]), ("locations", ["solo", "clinic", "hospital"]),
+        ("sso", ["no", "no", "yes"]), ("support", ["solo", "clinic", "hospital"]), ("assist", ["solo", "clinic", "hospital"]),
+    };
+    var assist = p.List.AssistMonthly(p.Region) is { } addOn ? p.Isolate(addOn) : null;
 }
-<section class="page" aria-labelledby="pricing-title">
-    <h1 id="pricing-title">@p.T("site.pricing.title")</h1>
-    @* Placeholder by design (F-01): no prices or metrics until they are decided. *@
-    <p class="lede">@p.T("site.pricing.body")</p>
-    <div class="ctas">
-        <a class="button button-primary" href="@p.Href(PublicSite.DoctorStart)">@p.T("site.cta.doctor")</a>
-        <a class="button button-outline" href="@p.Href(PublicSite.DemoForm)">@p.T("site.cta.hospital")</a>
+<section class="page wide" aria-labelledby="pricing-title">
+    <div class="hero-copy">
+        <p class="eyebrow">@p.T("site.pricing.tag")</p>
+        <h1 id="pricing-title">@p.T("site.pricing.title")</h1>
+        <p class="lede">@p.T("site.pricing.trial") @p.TRegion("site.pricing.note")</p>
     </div>
+
+    <div class="switches">
+        <ul class="segmented" aria-label="@p.T("site.pricing.cycle")">
+            <li><a href="?cycle=monthly" aria-current="@(p.Yearly ? null : "true")">@p.T("site.pricing.monthly")</a></li>
+            <li><a href="?cycle=yearly" aria-current="@(p.Yearly ? "true" : null)">@p.T("site.pricing.yearly")</a></li>
+        </ul>
+        <ul class="segmented" aria-label="@p.T("site.region.label")">
+            @foreach (var region in PublicSite.Regions)
+            {
+                <li><a href="?region=@region" aria-current="@(p.Region == region ? "true" : null)">@p.T($"site.pricing.region.{region}")</a></li>
+            }
+        </ul>
+    </div>
+
+    <ul class="plans">
+        @foreach (var plan in p.List.Plans)
+        {
+            var price = p.PriceOf(plan);
+            var amount = p.Yearly ? price?.Yearly : price?.Monthly;
+            var name = $"site.pricing.plan.{plan.Code}";
+            <li class="@(plan.Popular ? "plan plan-popular" : "plan")">
+                <h2 id="plan-@plan.Code">@p.T($"{name}.name")</h2>
+                @if (plan.Popular) { <p class="chip chip-ok">@p.T("site.pricing.popular")</p> }
+                <p>@p.T($"{name}.who")</p>
+                <p class="price">
+                    @if (plan.Custom)
+                    {
+                        <strong>@p.T("site.pricing.custom")</strong>
+                        @if (price?.Yearly is { } from) { <span>@p.T("site.pricing.from", With("price", Money(from, price)))</span> }
+                    }
+                    else if (amount is { } a && price is not null)
+                    {
+                        <strong><bdi>@PricingContent.Money(a, price.Currency)</bdi></strong>
+                        <span>@p.T($"site.pricing.unit.{(plan.PerDoctor ? "doctor" : "practice")}.{(p.Yearly ? "year" : "month")}")</span>
+                    }
+                    else
+                    {
+                        <strong>@p.T("site.pricing.noPrice")</strong>
+                    }
+                </p>
+                @if (p.Yearly && !plan.Custom && price is { Monthly: { } m, Yearly: { } y } && m * 12 > y)
+                {
+                    <p class="saving">@p.T("site.pricing.saving", With("price", Money(m * 12 - y, price)))</p>
+                }
+                <ul class="ticks">
+                    @for (var i = 1; i <= 5; i++) { <li>@p.T($"{name}.f{i}")</li> }
+                </ul>
+                @if (plan.Custom)
+                {
+                    <a class="button button-outline" href="@p.Href(PublicSite.DemoForm)">@p.T("site.pricing.talk")<span class="visually-hidden"> · @p.T($"{name}.name")</span></a>
+                }
+                else
+                {
+                    <a class="@(plan.Popular ? "button button-primary" : "button button-outline")" href="@p.TrialHref(plan)">@p.T("site.pricing.start")<span class="visually-hidden"> · @p.T($"{name}.name")</span></a>
+                }
+            </li>
+        }
+    </ul>
+    @if (p.List.Approved is { } approved)
+    {
+        <p class="note">@p.T("site.pricing.approved", new Dictionary<string, string> { ["version"] = p.List.Version, ["date"] = p.Date(approved) })</p>
+    }
+
+    <section>
+        <h2 id="compare-title">@p.T("site.pricing.compare.title")</h2>
+        <div class="table-scroll" role="region" aria-labelledby="compare-title" tabindex="0">
+            <table class="compare">
+                <thead>
+                    <tr>
+                        <th scope="col">@p.T("site.pricing.compare.feature")</th>
+                        @foreach (var code in new[] { "solo", "clinic", "hospital" }) { <th scope="col">@p.T($"site.pricing.plan.{code}.name")</th> }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var (row, cells) in compare)
+                    {
+                        if (cells is null)
+                        {
+                            <tr class="group"><th scope="colgroup" colspan="4">@p.T($"site.pricing.cmp.{row}")</th></tr>
+                            continue;
+                        }
+                        <tr>
+                            <th scope="row">@(row == "payments" ? p.TRegion("site.pricing.cmp.payments") : p.T($"site.pricing.cmp.{row}"))</th>
+                            @foreach (var cell in cells)
+                            {
+                                <td>@switch (cell)
+                                {
+                                    case "yes": <span aria-hidden="true">✓</span><span class="visually-hidden">@p.T("site.pricing.included")</span> break;
+                                    case "no": <span aria-hidden="true">—</span><span class="visually-hidden">@p.T("site.pricing.notIncluded")</span> break;
+                                    default: @p.T($"site.pricing.cmp.{row}.{cell}") break;
+                                }</td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <ul class="cards">
+        <li><h3>@p.T("site.pricing.assist.title")</h3><p>@(assist is null ? p.T("site.pricing.assist.bodyNoPrice") : p.T("site.pricing.assist.body", With("price", assist)))</p></li>
+        <li><h3>@p.T("site.pricing.failed.title")</h3><p>@p.T("site.pricing.failed.body")</p></li>
+        <li><h3>@p.T("site.pricing.migration.title")</h3><p>@p.T("site.pricing.migration.body")</p></li>
+    </ul>
+
+    <section aria-labelledby="faq-title">
+        <h2 id="faq-title">@p.T("site.pricing.faq.title")</h2>
+        <div class="faq">
+            @* The home page's answers, so the two pages cannot disagree. *@
+            @foreach (var key in new[] { "trial", "data", "where", "ai" })
+            {
+                <details><summary>@p.T($"site.home.faq.{key}.q")</summary><p>@p.T($"site.home.faq.{key}.a")</p></details>
+            }
+        </div>
+    </section>
 </section>

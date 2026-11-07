@@ -57,7 +57,7 @@ public sealed class AppointmentNotifier(NotificationsDbContext db, IFacilityDire
             case AppointmentEventKind.Cancelled when !e.Quiet:
                 Add(NotificationKind.Cancelled, e.OccurredAt);
                 break;
-            case AppointmentEventKind.NeedsRebooking: // the doctor is away: ask the patient to rebook, say nothing about why
+            case AppointmentEventKind.NeedsRebooking when !e.Quiet: // the doctor is away: ask the patient to rebook, say nothing about why
                 Add(NotificationKind.NeedsRebooking, e.OccurredAt);
                 break;
         }

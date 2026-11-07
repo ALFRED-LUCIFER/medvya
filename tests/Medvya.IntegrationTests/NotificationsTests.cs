@@ -329,6 +329,29 @@ public sealed partial class NotificationsTests(PostgresFixture sql) : IClassFixt
     }
 
     [Fact]
+    public async Task LeaveCancelsTheQueuedRemindersOfEveryMovedVisitAndMessagesOnlyTheOffered()
+    {
+        // #231: a visit moved with "Manual" kept its 24 h and 2 h reminders, so the patient was reminded of a visit with no doctor.
+        var offered = await BookTuesdayAsync(10);
+        var manual = await BookTuesdayAsync(11);
+        await RunJobAsync();
+        email.Sent.Clear();
+
+        await h.Adjustments(h.Reception).SaveAsync(new SaveAdjustment
+        {
+            FacilityId = h.Facility, CalendarId = h.Doctor, Kind = ExceptionKind.Leave, FromDate = Monday.AddDays(1), ToDate = Monday.AddDays(1), Reason = "Conference",
+            Actions = [new(offered.Id, RebookAction.Offer), new(manual.Id, RebookAction.Manual)],
+        });
+        await RunJobAsync();
+
+        foreach (var id in new[] { offered.Id, manual.Id })
+            Assert.DoesNotContain(await RowsAsync(id), r => r.Status == NotificationStatus.Queued);
+        Assert.DoesNotContain(await RowsAsync(manual.Id), r => r.Kind == NotificationKind.NeedsRebooking);
+        Assert.Contains(await RowsAsync(offered.Id), r => r.Kind == NotificationKind.NeedsRebooking);
+        Assert.Single(email.Sent); // the offered patient's rebooking message only
+    }
+
+    [Fact]
     public async Task AWalkInGetsNoMessages()
     {
         h.Clock.Advance(TimeSpan.FromHours(1.5)); // 09:30, inside Dr. Rao's morning

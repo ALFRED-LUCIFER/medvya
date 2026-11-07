@@ -11,7 +11,7 @@ namespace Medvya.Scheduling.Infrastructure;
 /// Leave and one-off exceptions (MDV-P1-012). Saving runs on the booking path: every doctor-day of the range is locked, the booked
 /// visits it leaves without a doctor are found inside the lock, and each must have an action or nothing is saved. A moved visit
 /// becomes "needs rebooking" (its slots are freed, so nobody is booked into the gap), with a status event, an audit event and, for
-/// "offer", AppointmentNeedsRebooking.v1 that makes the patient's rebooking message. All in one transaction with the exception.
+/// AppointmentNeedsRebooking.v1, which cancels its queued reminders and, for "offer" only, makes the patient's rebooking message. All in one transaction with the exception.
 /// shortcut: only Booked visits are affected (a visit already checked in is in progress); a dedicated rebooking list and link
 /// for the patient come with the patient portal (P2).
 /// </summary>
@@ -82,12 +82,12 @@ public sealed class ScheduleExceptionService(
                     throw new VisitTransitionException("changed"); // checked in or moved by someone else since the list was read
                 await db.ScheduleSlots.Where(s => s.AppointmentId == a.Id).ExecuteDeleteAsync(cancellationToken); // the gap cannot be booked into
                 db.StatusEvents.Add(new VisitStatusEvent { Id = Guid.CreateVersion7(), TenantId = a.TenantId, AppointmentId = a.Id, State = AppointmentState.NeedsRebooking, ActorUserId = me, OccurredAt = now });
-                if (byId[a.Id] == RebookAction.Offer)
-                    db.Outbox.Add(new OutboxEvent
-                    {
-                        Id = Guid.CreateVersion7(), TenantId = a.TenantId, Type = "AppointmentNeedsRebooking.v1", AggregateId = a.Id, OccurredAt = now,
-                        Payload = JsonSerializer.Serialize(new { appointmentId = a.Id, facilityId = a.FacilityId, calendarId = a.CalendarId, patientId = a.PatientId, start = a.Start }),
-                    });
+                // Always written: it cancels the visit's queued reminders. "Manual" is quiet, so the patient gets no rebooking message.
+                db.Outbox.Add(new OutboxEvent
+                {
+                    Id = Guid.CreateVersion7(), TenantId = a.TenantId, Type = "AppointmentNeedsRebooking.v1", AggregateId = a.Id, OccurredAt = now,
+                    Payload = JsonSerializer.Serialize(new { appointmentId = a.Id, facilityId = a.FacilityId, calendarId = a.CalendarId, patientId = a.PatientId, start = a.Start, quiet = byId[a.Id] != RebookAction.Offer }),
+                });
             }
             await db.SaveChangesAsync(cancellationToken);
             await context.AuditAsync(old is null ? SchedulingAudit.ExceptionCreate : SchedulingAudit.ExceptionUpdate, SchedulingAudit.ExceptionResource, SchedulingAudit.Operations, exception.Id, null, cancellationToken);

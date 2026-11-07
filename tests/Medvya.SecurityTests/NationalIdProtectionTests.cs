@@ -287,4 +287,54 @@ public sealed class NationalIdProtectionTests
             Assert.DoesNotContain(Convert.ToHexString(good), t, StringComparison.OrdinalIgnoreCase);
         }
     }
+
+    // #907: Key Vault's first call (token, challenge, TLS) is paid at startup in the background, not by the first patient save.
+    private sealed class SlowWrapper(Func<byte[], WrappedBytes> wrap) : IKeyWrapper
+    {
+        public int Wraps;
+        public WrappedBytes Wrap(byte[] key) { Interlocked.Increment(ref Wraps); return wrap(key); }
+        public byte[] Unwrap(string keyId, byte[] wrapped) => throw new NotSupportedException();
+    }
+
+    private static KeyVaultWarmup Warmup(IKeyWrapper wrapper, string? keyVaultKeyId) =>
+        new(new ServiceCollection().AddSingleton(wrapper).BuildServiceProvider(),
+            Options.Create(new NationalIdProtectionOptions { KeyVaultKeyId = keyVaultKeyId }),
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<KeyVaultWarmup>.Instance);
+
+    [Fact]
+    public async Task KeyVaultWarmupWrapsOnceInTheBackgroundWithoutHoldingUpStartup()
+    {
+        using var gate = new ManualResetEventSlim();
+        var wrapper = new SlowWrapper(_ => { gate.Wait(TimeSpan.FromSeconds(10)); return new("k", [1]); });
+        var warmup = Warmup(wrapper, "https://kv.example/keys/k");
+
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        await warmup.StartAsync(CancellationToken.None);
+        Assert.True(clock.Elapsed < TimeSpan.FromSeconds(2), "startup must not wait for Key Vault");
+        gate.Set();
+        await warmup.Running!.WaitAsync(TimeSpan.FromSeconds(10));
+        Assert.Equal(1, wrapper.Wraps);
+    }
+
+    [Fact]
+    public async Task AFailingKeyVaultWarmupIsLoggedNotThrown()
+    {
+        var warmup = Warmup(new SlowWrapper(_ => throw new InvalidOperationException("vault down")), "https://kv.example/keys/k");
+        await warmup.StartAsync(CancellationToken.None);
+        await warmup.Running!.WaitAsync(TimeSpan.FromSeconds(10)); // completes: the error is logged, startup carries on
+    }
+
+    [Fact]
+    public void TheWarmupRunsWithTheHost() =>
+        Assert.Contains(new ServiceCollection().AddNationalIdProtection(), d => d.ServiceType == typeof(IHostedService) && d.ImplementationType == typeof(KeyVaultWarmup));
+
+    [Fact]
+    public async Task WithoutKeyVaultThereIsNoWarmup()
+    {
+        var wrapper = new SlowWrapper(_ => new("k", [1]));
+        var warmup = Warmup(wrapper, null);
+        await warmup.StartAsync(CancellationToken.None);
+        Assert.Null(warmup.Running);
+        Assert.Equal(0, wrapper.Wraps);
+    }
 }

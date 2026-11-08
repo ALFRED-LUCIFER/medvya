@@ -2803,5 +2803,16 @@
   "audit.actionName.waitlist.offer": "تم عرض موعد من قائمة الانتظار",
   "audit.actionName.waitlist.decline": "تم تحرير عرض قائمة الانتظار",
   "audit.actionName.waitlist.accept": "تم قبول عرض قائمة الانتظار وحجزه",
-  "audit.actionName.waitlist.remove": "تمت إزالة مريض من قائمة الانتظار"
+  "audit.actionName.waitlist.remove": "تمت إزالة مريض من قائمة الانتظار",
+  "today.title": "اليوم · {day}",
+  "today.scope": "زيارات من",
+  "today.scope.mine": "مرضاي",
+  "today.scope.clinic": "العيادة كلها",
+  "today.hero.next": "المريض التالي",
+  "today.hero.current": "المريض الحالي",
+  "today.list": "زيارات اليوم",
+  "today.age": "{years} سنة",
+  "today.empty.title": "لا زيارات اليوم",
+  "today.empty.mine": "ليس لديك زيارات اليوم. انتقل إلى العيادة كلها لرؤية زيارات زملائك.",
+  "today.empty.clinic": "لا توجد زيارات محجوزة في العيادة اليوم."
 }

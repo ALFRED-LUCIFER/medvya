@@ -23,7 +23,7 @@ type Props = {
   canConsult: boolean;
 };
 
-function Consult({ card, online }: { card: BoardCard; online: boolean }) {
+export function Consult({ card, online }: { card: BoardCard; online: boolean }) {
   const navigate = useNavigate();
   const consult = useStartConsultController(card.id, card.patientId, id => void navigate(`/consult/${id}`));
   return <StartConsult {...consult} patientName={card.patientName} inConsult={card.state === 'InConsult'} online={online} />;

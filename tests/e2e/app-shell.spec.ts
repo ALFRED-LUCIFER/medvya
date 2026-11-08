@@ -54,8 +54,8 @@ test('doctor sees Clinical and Practice items; flag-off items are not rendered',
   await expect(nav.getByRole('heading')).toHaveText(['Clinical', 'Practice', 'Admin']);
   await expect(nav.getByRole('link')).toHaveText(['Today', 'Patients', 'Front desk', 'Schedule', 'Register patient', 'Practice settings']);
   await expect(nav.getByRole('link', { name: 'Today' })).toHaveAttribute('aria-current', 'page');
-  // #912: until the clinician Today screen (MDV-P2-002), Today shows the day's board.
-  await expect(page.getByRole('main').getByRole('heading', { name: /^Reception board/ })).toBeVisible();
+  // MDV-P2-002: a doctor's Today is their own screen, not the reception board.
+  await expect(page.getByRole('main').getByRole('heading', { name: /^Today/ })).toBeVisible();
 });
 
 test('signed in without an active facility goes to the facility slot', async ({ page }) => {

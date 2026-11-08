@@ -5102,6 +5102,7 @@ export interface components {
             /** Format: int32 */
             intervalWeeks?: number | string;
             monthly?: boolean;
+            weekdays?: components["schemas"]["DayOfWeek"][];
             /** Format: int32 */
             count?: number | string;
         };

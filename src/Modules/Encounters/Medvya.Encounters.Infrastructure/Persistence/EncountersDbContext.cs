@@ -10,6 +10,10 @@ public sealed class EncountersDbContext(DbContextOptions<EncountersDbContext> op
 {
     public DbSet<Encounter> Encounters => Set<Encounter>();
 
+    public DbSet<Intake> Intakes => Set<Intake>();
+    public DbSet<Observation> Observations => Set<Observation>();
+    public DbSet<IntakeEscalation> IntakeEscalations => Set<IntakeEscalation>();
+
     Guid? CurrentTenantId => tenant.TenantId;
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder) =>
@@ -26,6 +30,29 @@ public sealed class EncountersDbContext(DbContextOptions<EncountersDbContext> op
             e.HasIndex(x => new { x.TenantId, x.LeadClinicianId, x.Status }); // the doctor's open consultation
             e.HasIndex(x => new { x.TenantId, x.PatientId }); // care relationship and merges
             e.ToTable(t => t.HasCheckConstraint("CK_Encounters_EndedHasTime", "(\"Status\" = 'Ended') = (\"EndedAt\" IS NOT NULL)"));
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<Intake>(e =>
+        {
+            e.Property(x => x.ChiefComplaint).HasMaxLength(500);
+            e.HasIndex(x => new { x.TenantId, x.AppointmentId }).IsUnique(); // one intake per visit, even for two simultaneous first saves
+            e.HasIndex(x => new { x.TenantId, x.PatientId });
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<Observation>(e =>
+        {
+            e.Property(x => x.Kind).HasConversion<string>().HasMaxLength(30);
+            e.Property(x => x.Flag).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.Source).HasConversion<string>().HasMaxLength(20);
+            e.HasIndex(x => new { x.TenantId, x.AppointmentId, x.Kind });
+            e.HasIndex(x => new { x.TenantId, x.PatientId, x.Kind, x.RecordedAt }); // the previous reading, and the chart's trends
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<IntakeEscalation>(e =>
+        {
+            e.Property(x => x.Reason).HasMaxLength(500);
+            e.HasIndex(x => new { x.TenantId, x.FacilityId, x.EscalatedAt });
+            e.HasIndex(x => new { x.TenantId, x.AppointmentId });
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
     }

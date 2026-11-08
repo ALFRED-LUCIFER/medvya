@@ -1,0 +1,51 @@
+import { describe, expect, it } from 'vitest';
+import { formOf, intakeFormSchema, intakeProblem, invalidKind, toRecord, undecided, weightChange, type VitalView } from './intake';
+
+const blank = { chiefComplaint: '', SystolicBp: '', DiastolicBp: '', Pulse: '', Temperature: '', OxygenSaturation: '', Weight: '' };
+const view = (o: Partial<VitalView>): VitalView => ({ kind: 'Weight', value: 72.4, flag: null, previousValue: null, previousAt: null, flagKept: false, recordedAt: '2026-10-19T04:30:00Z', ...o });
+
+describe('intake form', () => {
+  it('leaves blanks out of the save: not taken is unknown, never zero', () => {
+    expect(toRecord({ ...blank, chiefComplaint: ' chest tight ', SystolicBp: '128', Temperature: '36,8' }))
+      .toEqual({ chiefComplaint: 'chest tight', vitals: [{ kind: 'SystolicBp', value: 128 }, { kind: 'Temperature', value: 36.8 }] });
+    expect(toRecord(blank).vitals).toEqual([]);
+  });
+
+  it.each(['abc', '12.34', '-5', '1e3', '1000'])('refuses %s as a reading', v => expect(intakeFormSchema.safeParse({ ...blank, Pulse: v }).success).toBe(false));
+  it.each(['', '72', '36.8', ' 98 '])('accepts %j as a reading', v => expect(intakeFormSchema.safeParse({ ...blank, Pulse: v }).success).toBe(true));
+
+  it('fills the form from a saved intake and leaves untaken readings blank', () => {
+    expect(formOf(null)).toEqual(blank);
+    const saved = formOf({ chiefComplaint: 'cough', vitals: [view({ kind: 'Pulse', value: 72 })] } as never);
+    expect([saved.chiefComplaint, saved.Pulse, saved.Weight]).toEqual(['cough', '72', '']);
+  });
+});
+
+describe('flags', () => {
+  it('needs a decision for a flagged reading until it is kept', () => {
+    expect(undecided(view({}))).toBe(false);
+    expect(undecided(view({ flag: 'High' }))).toBe(true);
+    expect(undecided(view({ flag: 'High', flagKept: true }))).toBe(false);
+  });
+
+  it('says the weight change with its sign', () => {
+    expect(weightChange(view({ flag: 'Changed', previousValue: 70.2 }))).toBe('+2.2');
+    expect(weightChange(view({ flag: 'Changed', value: 68, previousValue: 70.2 }))).toBe('-2.2');
+    expect(weightChange(view({ flag: 'High', previousValue: 70 }))).toBeNull();
+  });
+});
+
+describe('server answers', () => {
+  it('reads a refused field, a conflict, a refusal, or anything else', () => {
+    expect(intakeProblem(400, 'vitals[2].value:implausible')).toEqual({ kind: 'invalid', field: 'vitals[2].value', code: 'implausible' });
+    expect(intakeProblem(409, 'handoff_blocked')).toEqual({ kind: 'conflict', code: 'handoff_blocked' });
+    expect(intakeProblem(403, undefined)).toEqual({ kind: 'refused' });
+    expect(intakeProblem(500, undefined)).toEqual({ kind: 'failed' });
+  });
+
+  it('names the reading a refused field belongs to by its place in what was sent', () => {
+    const sent = [{ kind: 'Pulse' as const }, { kind: 'OxygenSaturation' as const }];
+    expect(invalidKind('vitals[1].value', sent)).toBe('OxygenSaturation');
+    expect(invalidKind('chiefComplaint', sent)).toBeNull();
+  });
+});

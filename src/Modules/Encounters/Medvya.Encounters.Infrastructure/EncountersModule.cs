@@ -9,7 +9,7 @@ namespace Medvya.Encounters.Infrastructure;
 
 public static class EncountersModule
 {
-    /// <summary>Needs Tenancy (clinical access), Scheduling (the visit), Patients (merges) and Audit.</summary>
+    /// <summary>Needs Tenancy (feature flags too) (clinical access), Scheduling (the visit), Patients (merges) and Audit.</summary>
     public static IServiceCollection AddEncountersModule(this IServiceCollection services, string connectionString)
     {
         services.TryAddScoped<TenantSessionInterceptor>();
@@ -17,6 +17,8 @@ public static class EncountersModule
         return services
             .AddDbContext<EncountersDbContext>((sp, o) => o.UseNpgsql(PostgresDataSources.For(connectionString)).AddInterceptors(sp.GetRequiredService<TenantSessionInterceptor>()))
             .AddScoped<IEncounters, EncounterService>()
+            .AddScoped<IIntake, IntakeService>()
+            .AddScoped<Medvya.Scheduling.Application.IHandoffGate, IntakeHandoffGate>()
             .AddScoped<Medvya.Tenancy.Application.ICareRelationshipSource, EncounterCareRelationship>()
             .AddScoped<Medvya.Patients.Application.IPatientMergeParticipant, EncounterMergeParticipant>();
     }

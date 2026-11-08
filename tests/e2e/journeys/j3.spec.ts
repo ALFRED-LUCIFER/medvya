@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test';
+import { mockNurse } from '../support/nurse';
 import { journey } from './storyboard';
 
 // Storyboard: docs/02-design/journeys.md. Implement steps as their screens ship.
@@ -41,5 +42,18 @@ journey('J3', {
     await page.goto('/front-desk');
     await page.getByRole('article', { name: 'Farhan Qureshi (synthetic)' }).getByRole('button', { name: 'Send to nurse' }).click();
     await expect(page.getByRole('region', { name: /^With nurse/ }).getByRole('article', { name: 'Farhan Qureshi (synthetic)' })).toBeVisible();
+  },
+  // MDV-P2-007: the nurse opens the intake from the With nurse card, records vitals and hands off; the card leaves the nurse's queue.
+  // shortcut: step 6 (the doctor sees it on Today) waits for the doctor's Today list, MDV-P2-002.
+  5: async ({ page }) => {
+    const { calls } = await mockNurse(page);
+    await page.goto('/front-desk');
+    await page.getByRole('article', { name: 'Meera Iyer (synthetic)' }).getByRole('link', { name: 'Open intake for Meera Iyer (synthetic)' }).click();
+    await page.getByRole('textbox', { name: 'Pulse' }).fill('72');
+    await page.getByRole('button', { name: 'Save vitals' }).click();
+    await page.getByRole('button', { name: 'Hand off · Ready for doctor' }).click();
+    await expect(page).toHaveURL(/\/nurse$/);
+    await expect(page.getByRole('heading', { name: 'No one is with the nurse' })).toBeVisible();
+    expect(calls.handoffs).toBe(1);
   },
 });

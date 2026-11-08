@@ -22,7 +22,7 @@ SOFT_REFS = {
     'CustomRoleId': ('tenancy', 'CustomRoles'), 'PatientId': ('patients', 'Patients'), 'CandidatePatientId': ('patients', 'Patients'),
     'MergedIntoPatientId': ('patients', 'Patients'), 'MergedFromPatientId': ('patients', 'Patients'), 'MovedFromPatientId': ('patients', 'Patients'),
     'UserId': ('identity', 'Users'), 'ActorUserId': ('identity', 'Users'), 'RegisteredBy': ('identity', 'Users'), 'ChangedBy': ('identity', 'Users'),
-    'BookedBy': ('identity', 'Users'), 'DecidedBy': ('identity', 'Users'), 'RequestedBy': ('identity', 'Users'), 'LeadClinicianId': ('identity', 'Users'), 'EndedBy': ('identity', 'Users'), 'HeldBy': ('identity', 'Users'), 'VerifiedBy': ('identity', 'Users'),
+    'BookedBy': ('identity', 'Users'), 'DecidedBy': ('identity', 'Users'), 'RequestedBy': ('identity', 'Users'), 'LeadClinicianId': ('identity', 'Users'), 'EndedBy': ('identity', 'Users'), 'HeldBy': ('identity', 'Users'), 'VerifiedBy': ('identity', 'Users'), 'RecordedBy': ('identity', 'Users'), 'EscalatedBy': ('identity', 'Users'), 'HandedOffBy': ('identity', 'Users'),
     'AppointmentId': ('scheduling', 'Appointments'),
     'NotificationId': ('notifications', 'Notifications'), 'ReviewId': ('tenancy', 'AccessReviews'),
 }
@@ -38,7 +38,7 @@ PLANNED_TO_BUILT = {
     'PAYER_COVERAGE': 'patients.PayerCoverages', 'CONSENT_RECEIPT': 'patients.ConsentReceipts', 'SCHEDULE_SLOT': 'scheduling.ScheduleSlots',
     'APPOINTMENT': 'scheduling.Appointments', 'WAITLIST_ENTRY': 'scheduling.Waitlist', 'QUEUE_TOKEN': 'scheduling.QueueTokens', 'DOC_SEQUENCE': 'billing.DocSequences',
     'AUDIT_EVENT': 'audit.AuditEvents', 'OUTBOX_EVENT': 'scheduling.OutboxEvents', 'NOTIFICATION': 'notifications.Notifications',
-    'NOTIFICATION_ATTEMPT': 'notifications.Attempts', 'ENCOUNTER': 'encounters.Encounters',
+    'NOTIFICATION_ATTEMPT': 'notifications.Attempts', 'ENCOUNTER': 'encounters.Encounters', 'OBSERVATION': 'encounters.Observations',
 }
 # where the built table covers only part of the planned entity
 PARTIAL = {

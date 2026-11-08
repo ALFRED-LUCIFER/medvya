@@ -153,6 +153,10 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.SoloDoctor, new("GET", "/v1/encounters/{encounter}")),
         (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/end")),
         (Role.SoloDoctor, new("POST", "/v1/encounters", """{"appointmentId":"{appointment}","leaveOpen":true}""")),
+        (Role.Nurse, new("GET", "/v1/intake/{appointment}")),
+        (Role.Nurse, new("PUT", "/v1/intake/{appointment}", """{"chiefComplaint":"Synthetic","vitals":[]}""")),
+        (Role.Nurse, new("POST", "/v1/intake/{appointment}/escalate", """{"reason":"Synthetic"}""")),
+        (Role.Nurse, new("POST", "/v1/intake/{appointment}/handoff")),
         (Role.Receptionist, new("DELETE", "/v1/slot-holds/{hold}")),
         (Role.PracticeAdmin, new("DELETE", "/v1/queue/displays/{display}")),
         (Role.PracticeAdmin, new("PUT", "/v1/schedule/exceptions/{exception}", """{"facilityId":"{facility}","calendarId":"{doctorCalendar}","kind":"Leave","fromDate":"2026-12-29","toDate":"2026-12-29"}""")),
@@ -187,7 +191,8 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         ["/v1/notifications/inbox/{id:guid}/read"] = "the inbox row is keyed by tenant and user; another user's id is a no-op (NotificationsTests)",
         ["/v1/me/sessions/{id:guid}"] = "own sessions only: the session row is matched on the caller's user id (SessionControlTests)",
         ["/v1/settings/doctors/{id:guid}/signature"] = "PUT takes an image body; the DELETE on the same route is in the matrix",
-        ["/v1/waitlist/{id:guid}"] = "waitlist: another practice's id is 404 and another location's is 403, in WaitlistEndpointTests and WaitlistTests (RLS)",
+        ["/v1/intake/{appointmentId:guid}/vitals/{kind}/keep"] = "same visit lookup and clinical access as the other intake routes, which are in the matrix; the reading is a route value (IntakeTests, IntakeEndpointTests)",
+        ["/v1/waitlist/{id:guid}"] ="waitlist: another practice's id is 404 and another location's is 403, in WaitlistEndpointTests and WaitlistTests (RLS)",
         ["/v1/waitlist/{id:guid}/offer"] = "as above",
         ["/v1/waitlist/{id:guid}/accept"] = "as above",
         ["/v1/waitlist/{id:guid}/decline"] = "as above",
@@ -286,6 +291,9 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.Receptionist, new("GET", "/v1/encounters/{encounter}")), // Patient 360: X
         (Role.PracticeAdmin, new("GET", "/v1/encounters/{encounter}")),
         (Role.Receptionist, new("POST", "/v1/encounters", """{"appointmentId":"{appointment}","leaveOpen":true}""")),
+        (Role.Receptionist, new("GET", "/v1/intake/{appointment}")), // Vitals & allergies entry: X
+        (Role.PracticeAdmin, new("POST", "/v1/intake/{appointment}/handoff")),
+        (Role.CareCoordinator, new("PUT", "/v1/intake/{appointment}", """{"chiefComplaint":"Synthetic","vitals":[]}""")),
         (Role.Receptionist, new("GET", "/v1/audit/access-log")), // Audit log: X
         (Role.Nurse, new("GET", "/v1/audit/access-log/patients/{patient}")),
         (Role.HospitalIt, new("GET", "/v1/patients/{patient}")), // Register / book: X

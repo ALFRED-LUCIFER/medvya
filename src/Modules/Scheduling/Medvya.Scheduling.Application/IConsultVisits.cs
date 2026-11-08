@@ -26,6 +26,23 @@ public interface IConsultVisits
     /// <summary>The consultation is over: In consult moves on to Billing. A visit someone already moved on is left as it is.</summary>
     Task<ConsultVisit> FinishAsync(Guid appointmentId, DbTransaction transaction, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// The nurse hands the patient to the doctor (MDV-P2-007): With nurse moves to Ready for doctor; a visit already there is left as it is.
+    /// The one way past <see cref="IHandoffGate"/>: the intake use case has checked its own blockers first.
+    /// </summary>
+    /// <exception cref="VisitTransitionException">"invalid_transition" from any other state.</exception>
+    Task<ConsultVisit> HandOffAsync(Guid appointmentId, DbTransaction transaction, CancellationToken cancellationToken = default);
+
     /// <summary>Tells the facility's open boards about the visit's current state (after the commit; a failed push loses nothing).</summary>
     Task NotifyAsync(ConsultVisit visit, CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// Another module's say over the board's With nurse to Ready for doctor step (MDV-P2-007). When any gate refuses, the generic move
+/// (status endpoint, overview) is refused with "intake_required", so the handoff cannot be done around the nurse intake.
+/// </summary>
+public interface IHandoffGate
+{
+    /// <summary>True when the visit may move on from the nurse without the nurse handing it off (the gate is off for this tenant, or it was handed off).</summary>
+    Task<bool> MayMoveOnAsync(Guid appointmentId, CancellationToken cancellationToken = default);
 }

@@ -18,13 +18,21 @@ public sealed class NotificationAccessDeniedException : Exception
 /// Reception's view of messages (MDV-P1-032/033). Access is the membership at the facility, as for the calendar: read or full access
 /// to "Register / book patients". Returns statuses and codes only, never text or addresses.
 /// </summary>
-public sealed class NotificationQueries(NotificationsDbContext db, IStaffAccess access, TimeProvider clock) : INotificationQueries
+public sealed class NotificationQueries(NotificationsDbContext db, IStaffAccess access, IReminderConsent consent, TimeProvider clock) : INotificationQueries
 {
     public async Task<IReadOnlyList<NotificationView>> ForAppointmentAsync(Guid facilityId, Guid appointmentId, CancellationToken cancellationToken = default)
     {
         await RequireAsync(facilityId, cancellationToken);
-        return await db.Notifications.AsNoTracking().Where(n => n.FacilityId == facilityId && n.AppointmentId == appointmentId)
-            .OrderBy(n => n.CreatedAt).ThenBy(n => n.SendAt).Select(n => View(n)).ToListAsync(cancellationToken);
+        var rows = await db.Notifications.AsNoTracking().Where(n => n.FacilityId == facilityId && n.AppointmentId == appointmentId)
+            .OrderBy(n => n.CreatedAt).ThenBy(n => n.SendAt).ToListAsync(cancellationToken);
+        var views = new List<NotificationView>(rows.Count);
+        foreach (var n in rows)
+        {
+            // Consent is checked again at send time, so a queued row without it will not go out: say so instead of "scheduled".
+            var blocked = n.Status == NotificationStatus.Queued && !await consent.AllowsAsync(n.PatientId, n.Channel, cancellationToken);
+            views.Add(blocked ? View(n) with { Status = NotificationStatus.Suppressed, FailureCode = "no_consent" } : View(n));
+        }
+        return views;
     }
 
     public async Task<IReadOnlyList<Guid>> FailedVisitsAsync(Guid facilityId, CancellationToken cancellationToken = default)

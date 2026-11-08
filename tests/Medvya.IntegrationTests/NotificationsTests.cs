@@ -80,7 +80,7 @@ public sealed partial class NotificationsTests(PostgresFixture sql) : IClassFixt
         foreach (var p in await patients.Patients.ToListAsync()) { p.Email = "meera.iyer@example.test"; p.PreferredLanguage = "hi"; }
         await patients.SaveChangesAsync();
         actingUser = h.Reception;
-        foreach (var group in new[] { "Confirmation", "Rescheduled", "Cancelled", "Reminder" })
+        foreach (var group in new[] { "Confirmation", "Rescheduled", "Cancelled", "SeriesCancelled", "Reminder" })
             foreach (var lang in new[] { "en", "hi", "ar" }) dlt[$"{group}.{lang}"] = $"1107{group.Length:D2}{lang.Length}0000001";
         Rebuild(denyAll: false);
     }
@@ -323,7 +323,7 @@ public sealed partial class NotificationsTests(PostgresFixture sql) : IClassFixt
         await h.Booking(h.Reception).CancelFollowingAsync(ids[0], new CancelAppointment { Reason = CancelReason.PatientRequest });
         await RunJobAsync();
 
-        Assert.Equal("Adyar (synthetic): अपॉइंटमेंट रद्द", Assert.Single(email.Sent).Subject); // one message for the whole series
+        Assert.Equal("Adyar (synthetic): अपॉइंटमेंट्स रद्द", Assert.Single(email.Sent).Subject); // one message for the whole series, worded for the series
         foreach (var id in ids)
             Assert.All((await RowsAsync(id)).Where(r => r.Kind is NotificationKind.Reminder24h or NotificationKind.Reminder2h), r => Assert.Equal(NotificationStatus.Cancelled, r.Status));
     }
@@ -742,7 +742,7 @@ public sealed partial class NotificationsTests(PostgresFixture sql) : IClassFixt
         foreach (var lang in new[] { "en", "hi", "ar" })
         {
             var previews = MessageCatalog.Previews(lang);
-            Assert.Equal(5, previews.Count);
+            Assert.Equal(6, previews.Count);
             foreach (var p in previews)
             {
                 Assert.DoesNotContain(MessageCatalog.Slot, p.Text); // slots are named, never raw

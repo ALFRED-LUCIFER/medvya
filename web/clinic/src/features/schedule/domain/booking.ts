@@ -29,7 +29,7 @@ export type BookingForm = z.infer<typeof bookingSchema>;
 export const emptyBooking: BookingForm = { patientId: '', reasonCategory: 'General', reasonText: '', channel: 'InPerson' };
 
 /** 409 codes from the API (SlotUnavailableException); anything else is a generic failure. */
-export const slotErrors = ['being_booked', 'slot_unavailable', 'not_bookable', 'in_past', 'hold_expired', 'busy', 'closed', 'terms_not_accepted'] as const;
+export const slotErrors = ['being_booked', 'slot_unavailable', 'not_bookable', 'in_past', 'hold_expired', 'busy', 'closed', 'terms_not_accepted', 'series_not_booked'] as const;
 export type SlotError = (typeof slotErrors)[number] | 'failed';
 export const slotError = (code: string | undefined): SlotError =>
   (slotErrors as readonly string[]).includes(code ?? '') ? (code as SlotError) : 'failed';

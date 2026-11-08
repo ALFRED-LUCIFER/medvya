@@ -6,7 +6,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { bookingSchema, emptyBooking, readSlotReturn, slotError, withoutSlotReturn, type BookedAppointment, type BookingForm, type SlotChoice } from '../domain/booking';
 import type { ScheduleColumn, VisitType } from '../domain/schedule';
-import { includedStarts, maxRepeat, moveRow, planOf, summarise, toggleRow, type PlanRow, type SeriesDone } from '../domain/series';
+import { includedStarts, maxRepeat, moveRow, planOf, replanOf, summarise, toggleRow, type PlanRow, type SeriesDone } from '../domain/series';
 import { forgetKey, type HeldKey, keyFor } from '../../api/services/idempotencyKey';
 import { ApiError, bookAppointment, bookSeries, findPatient, holdSlot, previewSeries, releaseHold } from '../services/scheduleApi';
 import { usePatientSearch } from '../../patients/hooks/usePatientSearch';
@@ -30,7 +30,8 @@ export function useBookingController(facilityId: string, timeZone: string | null
   const [rebook, setRebook] = useState<{ id: string; name: string } | null>(null);
   // MDV-P1-026: repeat weekly or monthly. 1 books one visit; more previews the series so the desk can skip or move conflicts before confirming.
   const [repeat, setRepeat] = useState(1);
-  const [monthly, setMonthly] = useState(false);
+  const [unit, setUnit] = useState<'weekly' | 'monthly' | 'weekdays'>('weekly');
+  const [days, setDays] = useState<number[]>([]); // for 'weekdays': 0 = Sunday, as the server numbers them
   const [plan, setPlan] = useState<PlanRow[] | null>(null);
   const [seriesDone, setSeriesDone] = useState<SeriesDone | null>(null);
   const form = useForm<BookingForm>({ resolver: zodResolver(bookingSchema), defaultValues: { ...emptyBooking, patientId: resumed?.patientId ?? '' } });
@@ -56,19 +57,22 @@ export function useBookingController(facilityId: string, timeZone: string | null
   const endBooking = () => {
     setPlan(null);
     setRepeat(1);
-    setMonthly(false);
+    setUnit('weekly');
+    setDays([]);
     setChoice(null);
     hold.reset();
     form.reset(emptyBooking);
     clearSearch();
   };
   const preview = useMutation({
-    mutationFn: () => previewSeries(facilityId, choice!, hold.data!.start, repeat, monthly),
+    mutationFn: () => previewSeries(facilityId, choice!, hold.data!.start, repeat, unit === 'monthly', unit === 'weekdays' ? days : []),
     onSuccess: occurrences => setPlan(planOf(occurrences)),
   });
   const bookMany = useMutation({
     mutationFn: (values: BookingForm) => bookSeries(facilityId, choice!, values, includedStarts(plan!)),
     onSuccess: result => {
+      // All or nothing: a refused series saved nothing, so the desk fixes the conflicts in the review and confirms again.
+      if (result.occurrences.some(o => !o.appointment)) { setPlan(replanOf(result)); return; }
       setSeriesDone(summarise(patient.data?.fullName ?? '', result));
       if (hold.data) release.mutate(hold.data.id); // the series did not use the hold
       endBooking();
@@ -122,13 +126,15 @@ export function useBookingController(facilityId: string, timeZone: string | null
     bookError: book.isError ? errorOf(book.error) : preview.isError ? errorOf(preview.error) : bookMany.isError ? errorOf(bookMany.error) : null,
     repeat,
     maxRepeat,
-    monthly,
-    onMonthly: setMonthly,
+    unit,
+    days,
+    onUnit: setUnit,
+    onToggleDay: (d: number) => setDays(c => (c.includes(d) ? c.filter(x => x !== d) : [...c, d])),
     onRepeat: (n: number) => setRepeat(Math.min(maxRepeat, Math.max(1, Math.trunc(n) || 1))),
     plan,
     seriesDone,
     onToggleOccurrence: (i: number) => setPlan(p => (p ? toggleRow(p, i) : p)),
-    onMoveOccurrence: (i: number, time: string) => { if (timeZone && time) setPlan(p => (p ? moveRow(p, i, time, timeZone) : p)); },
+    onMoveOccurrence: (i: number, to: { date?: string; time?: string }) => { if (timeZone && (to.date || to.time)) setPlan(p => (p ? moveRow(p, i, to, timeZone) : p)); },
     onBackToForm: () => { setPlan(null); bookMany.reset(); },
     onDismissSeries: () => setSeriesDone(null),
     booked,
@@ -143,7 +149,8 @@ export function useBookingController(facilityId: string, timeZone: string | null
       book.reset();
       setPlan(null);
       setRepeat(1);
-      setMonthly(false);
+      setUnit('weekly');
+      setDays([]);
       form.reset(emptyBooking);
       clearSearch();
     },

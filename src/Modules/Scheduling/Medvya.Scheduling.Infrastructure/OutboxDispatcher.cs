@@ -54,7 +54,7 @@ public sealed partial class OutboxDispatcher(SchedulingDbContext db, IEnumerable
             var p = doc.RootElement;
             return new AppointmentEvent(row.Id, kind.Value, row.TenantId, row.AggregateId, p.GetProperty("facilityId").GetGuid(), p.GetProperty("patientId").GetGuid(),
                 p.GetProperty("start").GetDateTimeOffset(), p.TryGetProperty("walkIn", out var w) && w.GetBoolean(), row.OccurredAt,
-                p.TryGetProperty("quiet", out var q) && q.GetBoolean());
+                p.TryGetProperty("quiet", out var q) && q.GetBoolean(), p.TryGetProperty("series", out var sr) && sr.GetBoolean());
         }
         catch (Exception e) when (e is JsonException or KeyNotFoundException or InvalidOperationException or FormatException)
         {

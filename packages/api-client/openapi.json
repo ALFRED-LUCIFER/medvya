@@ -6862,6 +6862,12 @@
           "monthly": {
             "type": "boolean"
           },
+          "weekdays": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DayOfWeek"
+            }
+          },
           "count": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [

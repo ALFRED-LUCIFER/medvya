@@ -80,7 +80,7 @@ export function useBookingController(facilityId: string, timeZone: string | null
     },
   });
 
-  const [patientId, reasonCategory, channel] = useWatch({ control: form.control, name: ['patientId', 'reasonCategory', 'channel'] });
+  const [patientId, reasonCategory, channel, reasonText] = useWatch({ control: form.control, name: ['patientId', 'reasonCategory', 'channel', 'reasonText'] });
   const validId = z.uuid().safeParse(patientId).success;
   // An audited read (patient.lookup): fetched once per id, never again on focus or remount while cached.
   const patient = useQuery({ queryKey: ['booking-patient', facilityId, patientId], queryFn: () => findPatient(facilityId, patientId), enabled: validId, staleTime: Infinity });
@@ -113,6 +113,8 @@ export function useBookingController(facilityId: string, timeZone: string | null
     hold: hold.data ?? null,
     holdError: hold.isError ? errorOf(hold.error) : null,
     form,
+    // A patient chosen or a reason typed in an open booking: closing it by accident would lose them.
+    dirty: !!choice && (patientId !== '' || reasonText !== ''),
     reasonCategory,
     channel,
     onReasonCategory: (v: BookingForm['reasonCategory']) => form.setValue('reasonCategory', v),

@@ -1196,6 +1196,8 @@
   "schedule.filter.all": "All doctors and resources",
   "schedule.bookNext": "Book appointment",
   "schedule.legend": "What the colours and shapes mean",
+  "schedule.drawer": "Appointment panel",
+  "schedule.discard": "Discard this booking? The patient and reason you entered will be lost.",
   "schedule.weekOf": "Week of {name}",
   "schedule.week.bookedOf": "booked of {capacity}",
   "schedule.week.appointments": "Appointments on {day}",

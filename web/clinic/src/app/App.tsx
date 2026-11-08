@@ -43,6 +43,7 @@ const WaitlistRoute = lazy(() => import('./WaitlistRoute'));
 const TodayRoute = lazy(() => import('./TodayRoute'));
 const ConsultRoute = lazy(() => import('./ConsultRoute'));
 const Patient360Route = lazy(() => import('./Patient360Route'));
+const TimelineRoute = lazy(() => import('./TimelineRoute'));
 const AdjustmentsRoute = lazy(() => import('./AdjustmentsRoute'));
 const CompleteRegistrationRoute = lazy(() => import('./PatientRoutes').then(m => ({ default: m.CompleteRegistrationRoute })));
 
@@ -144,7 +145,10 @@ export default function App({ locale, onLocaleChange }: Props) {
             <Route path="/consult/:encounterId" element={<ConsultRoute boardPath={pathOf('frontDesk') ?? '/'} />} />}
           {/* Patient 360 (MDV-P2-004, E-01): same roles; /patients/new and /patients/directory are more specific and win. */}
           {['Read', 'Limited', 'Full', 'Sign'].includes(active.capabilities.Patient360Chart ?? 'None') &&
-            <Route path="/patients/:patientId" element={<Patient360Route backPath={searchPath ?? '/'} />} />}
+            <>
+              <Route path="/patients/:patientId" element={<Patient360Route backPath={searchPath ?? '/'} />} />
+              <Route path="/patients/:patientId/timeline" element={<TimelineRoute />} />
+            </>}
           {/* Queue displays live in Settings (MDV-P1-052); the old address still works for links already shared. */}
           <Route path="/admin/displays" element={<Navigate to="/settings?tab=displays" replace />} />
           {searchPath && <>

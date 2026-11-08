@@ -18,6 +18,7 @@ public static class EncountersModule
             .AddDbContext<EncountersDbContext>((sp, o) => o.UseNpgsql(PostgresDataSources.For(connectionString)).AddInterceptors(sp.GetRequiredService<TenantSessionInterceptor>()))
             .AddScoped<IEncounters, EncounterService>()
             .AddScoped<IPatientChart, PatientChartService>()
+            .AddScoped<IPatientTimeline, PatientTimelineService>()
             .AddScoped<Medvya.Tenancy.Application.ICareRelationshipSource, EncounterCareRelationship>()
             .AddScoped<Medvya.Patients.Application.IPatientMergeParticipant, EncounterMergeParticipant>();
     }

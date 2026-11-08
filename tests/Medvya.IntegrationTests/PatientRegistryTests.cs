@@ -193,7 +193,7 @@ public class PatientRegistryTests(PostgresFixture sql) : IClassFixture<PostgresF
         // The MRN still matches, by its digits.
         Assert.Contains(sara.PatientId, (await Search(tenantA, "IN", sara.Mrn)).Items.Select(i => i.Id));
         // Names: each word must appear, in any order.
-        Assert.Equal(meera.PatientId, (await Search(tenantA, "IN", "iyer meera")).Items.First().Id);
+        Assert.Equal(meera.PatientId, (await Search(tenantA, "IN", "iyer meera")).Items[0].Id);
     }
 
     [Fact]

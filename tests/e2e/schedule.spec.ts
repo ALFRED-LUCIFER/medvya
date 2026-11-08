@@ -353,6 +353,8 @@ test('registering a new patient from the booking panel comes back to the held sl
 
   await page.getByRole('link', { name: 'Quick (busy desk)' }).click(); // switching mode keeps the slot
   await expect(page).toHaveURL(/calendar=d-1.*mode=quick/);
+  // The address changes before the screen does: fill only once the quick form is what is shown, or the typed name goes into the form being replaced.
+  await expect(page.getByText('Quick (busy desk): the minimum safe fields')).toBeVisible();
   await page.getByLabel('Full name').fill('Deepak Nair');
   await page.getByLabel('Mobile').fill('+91 90000 00201');
   await page.getByRole('textbox', { name: 'Date of birth', exact: true }).fill('1979-08-14');

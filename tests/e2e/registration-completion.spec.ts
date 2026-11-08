@@ -93,7 +93,9 @@ for (const locale of ['en', 'hi', 'ar'])
       await open(page, { locale });
       for (const path of [`/patients/directory/${id}`, `/patients/directory/${id}/complete`]) {
         await page.goto(path);
-        await page.waitForLoadState('networkidle'); // the loaded page, not its loading state, is what this test checks
+        // The loaded page, not its loading state, is what this test checks: the record's h1 is the patient's name only once loaded, and the form has inputs.
+        // Not networkidle: the shell's unmocked calls (the notification list, the board hub) keep retrying here, so the network is never idle for long.
+        await expect(path.endsWith('/complete') ? page.locator('main input').first() : page.getByRole('heading', { level: 1, name: leela.fullName })).toBeVisible();
         await expect(page.locator('main h1')).toBeVisible();
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
         // One pass in the page: a locator list measured one by one goes stale (and hangs) if the page re-renders in between.

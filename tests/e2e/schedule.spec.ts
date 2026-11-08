@@ -145,6 +145,7 @@ async function open(page: Page, { locale = 'en', status = 200, as = reception, h
     const base = scheduleDay('2026-10-19').columns[0]!.appointments[0]!;
     return r.fulfill({ json: [{ ...base, state: 'Cancelled' }, { ...base, id: 'a-5', state: 'Cancelled' }, { ...base, id: 'a-6', state: 'Cancelled' }] });
   });
+  await page.route(/\/v1\/appointments\/[^/]+\/history$/, r => r.fulfill({ json: [] })); // never moved, unless a spec says otherwise
   // MDV-P1-024: reschedule, cancel, no-show and check-in answer the changed visit (or a 409 code).
   await page.route(/\/v1\/appointments\/[^/]+\/(reschedule|cancel|no-show|check-in)$/, r => {
     const url = r.request().url(), body = (r.request().postDataJSON() ?? {}) as Record<string, unknown>;
@@ -226,11 +227,38 @@ test('moves between days and back to today', async ({ page }) => {
   await page.getByRole('button', { name: 'Next day' }).click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Tuesday, 20 October 2026');
   await page.getByRole('button', { name: 'Previous day' }).click();
+  await expect.poll(() => calls.dates).toContain('2026-10-19'); // two clicks before a render step the address twice but fetch only the last day
   await page.getByRole('button', { name: 'Previous day' }).click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Sunday, 18 October 2026');
   await page.getByRole('button', { name: 'Today' }).click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Monday, 19 October 2026');
   expect(calls.dates.slice(0, 4)).toEqual([null, '2026-10-20', '2026-10-19', '2026-10-18']); // the server decides "today"
+});
+
+// MDV-P1-052: the day and the view are in the address; an opened visit closes when the day or view changes.
+test('the selected date and view survive a reload, and a stale visit panel closes', async ({ page }) => {
+  const calls = await open(page);
+  await expect(page).toHaveURL(/\/schedule$/); // today: nothing to remember
+  await page.getByRole('button', { name: 'Next day' }).click();
+  await expect(page).toHaveURL(/\/schedule\?date=2026-10-20$/);
+  await page.getByRole('button', { name: 'List', exact: true }).click();
+  await expect(page).toHaveURL(/\/schedule\?date=2026-10-20&view=list$/);
+  await page.reload();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Tuesday, 20 October 2026');
+  await expect(page.getByRole('button', { name: 'List', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  expect(calls.dates.at(-1)).toBe('2026-10-20');
+
+  await page.goto('/schedule?date=2026-10-19&view=day');
+  await meera(page).click();
+  await expect(visitPanel(page)).toBeVisible();
+  await page.getByRole('button', { name: 'Next day' }).click();
+  await expect(page.getByRole('complementary', { name: 'Appointment', exact: true })).toHaveCount(0); // Meera's 19 Oct visit is not shown over 20 Oct
+  await page.getByRole('button', { name: 'Previous day' }).click();
+  await meera(page).click();
+  await page.getByRole('button', { name: 'Week', exact: true }).click();
+  await expect(page.getByRole('complementary', { name: 'Appointment', exact: true })).toHaveCount(0);
+  await page.goto('/schedule?date=not-a-date&view=month'); // a broken link falls back to today and the day view
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Monday, 19 October 2026');
 });
 
 test('reception books an empty slot: hold, longer visit type, confirm the patient, book', async ({ page }) => {
@@ -255,7 +283,9 @@ test('reception books an empty slot: hold, longer visit type, confirm the patien
   await search.fill('Nobody Synthetic');
   await search.press('Enter'); // searches; does not submit the booking
   await expect(panel).toContainText('No patients match.');
-  await expect(panel.getByRole('link', { name: 'Register a new patient' })).toHaveAttribute('href', '/patients/new');
+  // The slot goes along to registration (opaque ids and a time), so the desk comes back to it: see the MDV-P1-021 tests below.
+  await expect(panel.getByRole('link', { name: 'Register a new patient' })).toHaveAttribute('href',
+    `/patients/new?date=2026-10-19&view=day&calendar=d-1&start=${encodeURIComponent(ist('2026-10-19', '10:00'))}&visitType=NewConsultation`);
   await search.fill('Nair');
   await panel.getByRole('button', { name: 'Search' }).click();
   const row = panel.getByRole('button', { name: 'D N, 47 y, Male, MRN ending 0002. Choose for this booking' });
@@ -299,6 +329,53 @@ test('closing the panel releases the hold, and a slot taken meanwhile says so', 
   await expect(page.getByRole('alert').filter({ hasText: 'Someone else is booking this slot right now. Choose another slot.' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Confirm booking' })).toBeDisabled();
 });
+
+// MDV-P1-021: patient not found → register them → back to the same slot, held again, with the new patient chosen.
+test('registering a new patient from the booking panel comes back to the held slot with the patient chosen', async ({ page }) => {
+  const calls = await open(page);
+  await page.route('**/v1/patients/duplicate-check', r => r.fulfill({ json: { candidates: [] } }));
+  await page.route('**/v1/patients', r => r.fulfill({ json: { patientId, mrn: '000002', registeredAt: '2026-10-19T02:31:00Z', status: 'Incomplete', warnings: [] } }));
+  await bookButton(page, '10:20').click();
+  const panel = page.getByRole('complementary', { name: 'Book appointment' });
+  await expect(panel).toContainText('Held for you until');
+  await panel.getByRole('link', { name: 'Register a new patient' }).click();
+
+  await page.getByRole('link', { name: 'Quick (busy desk)' }).click(); // switching mode keeps the slot
+  await expect(page).toHaveURL(/calendar=d-1.*mode=quick/);
+  await page.getByLabel('Full name').fill('Deepak Nair');
+  await page.getByLabel('Mobile').fill('+91 90000 00201');
+  await page.getByRole('textbox', { name: 'Date of birth', exact: true }).fill('1979-08-14');
+  await page.getByRole('radio', { name: 'Male', exact: true }).check();
+  await page.getByRole('button', { name: 'Register patient' }).click();
+  await expect(page.getByRole('heading', { name: 'Deepak Nair is registered' })).toBeVisible();
+  await page.getByRole('link', { name: 'Back to the booking' }).click();
+
+  await expect(panel).toContainText('Dr. Arjun Rao (synthetic) · 10:20–10:40');
+  await expect(panel).toContainText('Held for you until');
+  await expect(panel).toContainText('Deepak Nair (synthetic) · MRN 000002'); // chosen, confirmed by the audited lookup
+  expect(calls.holds.at(-1)).toEqual({ facilityId: 'f-1', calendarId: 'd-1', start: ist('2026-10-19', '10:20'), visitType: 'FollowUp' }); // held again
+  await expect(page).toHaveURL(/\/schedule\?date=2026-10-19&view=day$/); // the slot and patient leave the address once resumed
+  await panel.getByRole('button', { name: 'Confirm booking' }).click();
+  await expect(panel).toContainText('Appointment booked');
+  expect(calls.bookings[0]!.body).toMatchObject({ holdId: `h-${calls.holds.length}`, patientId });
+});
+
+for (const [locale, message] of [
+  ['en', 'This slot is no longer available. Choose another slot.'],
+  ['ar', 'هذه الفترة لم تعد متاحة. اختر فترة أخرى.'],
+] as const)
+  test(`back from registration to a slot taken meanwhile says so and keeps the patient, axe clean (${locale})`, async ({ page }) => {
+    await open(page, { locale, holdCode: 'slot_unavailable' });
+    await page.goto(`/schedule?date=2026-10-19&view=day&calendar=d-1&start=${encodeURIComponent(ist('2026-10-19', '10:20'))}&visitType=FollowUp&patient=${patientId}`);
+    const panel = page.getByRole('complementary').first();
+    await expect(panel.getByRole('alert')).toHaveText(message);
+    await expect(panel).toContainText('Deepak Nair (synthetic)'); // still chosen for the next slot the desk picks
+    await page.addScriptTag({ path: axePath });
+    const violations = await page.evaluate(async () =>
+      (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations
+        .map(v => `${v.id} (${v.nodes.length})`));
+    expect(violations).toEqual([]);
+  });
 
 // MDV-P1-022: when the doctor-day lock stays taken through every retry, the desk is told plainly that nothing was saved.
 for (const [locale, book, message] of [
@@ -622,6 +699,29 @@ test('reschedule picks a new slot, asks first, then moves; the old slot frees on
   expect(calls.changes).toEqual([{ url: expect.stringMatching(/\/v1\/appointments\/a-1\/reschedule$/), body: { calendarId: 'd-1', start: ist('2026-10-19', '10:20') } }]);
 });
 
+for (const locale of ['en', 'ar'])
+  test(`the panel shows where a moved visit was, who moved it and when, axe clean (${locale})`, async ({ page }) => {
+  await page.clock.setFixedTime(new Date(ist('2026-10-19', '08:30')));
+  await open(page, { locale });
+  await page.route('**/v1/appointments/a-1/history', r => r.fulfill({ json: [
+    { fromCalendarName: 'Dr. S. Menon (synthetic)', fromStart: ist('2026-10-16', '17:00'), fromEnd: ist('2026-10-16', '17:40'), toCalendarName: 'Dr. Arjun Rao (synthetic)',
+      toStart: ist('2026-10-19', '09:00'), toEnd: ist('2026-10-19', '09:40'), actorName: 'K. Lakshmi (synthetic)', occurredAt: ist('2026-10-15', '11:05'), reassignReason: null },
+  ] }));
+  await meera(page).click();
+  const moves = page.getByRole('region', { name: locale === 'ar' ? 'التغييرات' : 'Moves' });
+  if (locale === 'en') {
+    await expect(moves).toContainText('From Dr. S. Menon (synthetic), Fri, 16 Oct at 17:00 to Dr. Arjun Rao (synthetic), Mon, 19 Oct at 09:00');
+    await expect(moves).toContainText('By K. Lakshmi (synthetic), Thu, 15 Oct 11:05');
+  } else {
+    await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+    await expect(moves).toContainText('Dr. S. Menon (synthetic)');
+  }
+  await page.addScriptTag({ path: axePath });
+  expect(await page.evaluate(async () =>
+    (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations
+      .map(v => `${v.id} (${v.nodes.length})`))).toEqual([]);
+});
+
 test('dragging a visit onto an empty slot asks before moving it', async ({ page }) => {
   await page.clock.setFixedTime(new Date(ist('2026-10-19', '08:30')));
   const calls = await open(page);
@@ -659,6 +759,47 @@ test('cancel needs a reason, and a note for Other; the note never goes in a URL'
   await expect(visitPanel(page)).toContainText('Appointment cancelled. The slot is free again.');
   expect(calls.changes).toEqual([{ url: expect.stringMatching(/\/a-1\/cancel$/), body: { reason: 'Other', note: 'Synthetic: moving to another city' } }]);
   expect(calls.changes[0]!.url).not.toContain('Synthetic');
+});
+
+// MDV-P1-052: the visit panel says when reminders go out, and why there are none when there are none.
+test('the visit panel shows when reminders are scheduled, or says why nothing is', async ({ page }) => {
+  let messages: object[] = [{ id: 'n-1', kind: 'Reminder24h', channel: 'Sms', status: 'Queued', attempts: 0, failureCode: null, sendAt: ist('2026-10-18', '09:00') }];
+  let preparing = false;
+  await open(page);
+  await page.route('**/v1/appointments/a-1/notifications?*', r => r.fulfill({ json: { messages, preparing } }));
+  await meera(page).click();
+  const section = visitPanel(page).getByRole('region', { name: 'Messages to the patient' });
+  await expect(section).toContainText('Reminder 24 h (SMS): scheduled');
+  await expect(section).toContainText('Sun, 18 Oct 09:00'); // facility time
+  messages = [];
+  await visitPanel(page).getByRole('button', { name: 'Close' }).click();
+  await meera(page).click();
+  await expect(visitPanel(page).getByRole('region', { name: 'Messages to the patient' })).toContainText('No messages are scheduled for this visit. Walk-ins get none');
+  // #912: just booked, the job has not queued them yet: say so instead of "none".
+  preparing = true;
+  await visitPanel(page).getByRole('button', { name: 'Close' }).click();
+  await meera(page).click();
+  const fresh = visitPanel(page).getByRole('region', { name: 'Messages to the patient' });
+  await expect(fresh).toContainText('Messages are being prepared');
+  await expect(fresh).not.toContainText('No messages are scheduled');
+});
+
+// MDV-P1-052: the cancelled 12:30 procedure freed its slot; the card sits beside it, so mouse and keyboard reach the slot.
+test('a cancelled visit never covers the slot it freed, and keyboard focus skips it', async ({ page }) => {
+  await open(page);
+  const room = column(page, 'Procedure room (synthetic)');
+  const slot = room.getByRole('button', { name: 'Book Procedure room (synthetic) at 12:30' });
+  const card = room.getByRole('button', { name: /Kavya Rao \(synthetic\)/ });
+  const [s, c] = [(await slot.boundingBox())!, (await card.boundingBox())!];
+  expect(s.x + s.width <= c.x + 1 || c.x + c.width <= s.x + 1).toBe(true); // side by side (sub-pixel rounding aside), never on top
+  await slot.click(); // a real mouse click: nothing intercepts it
+  await expect(page.getByRole('complementary', { name: 'Book appointment' })).toContainText('12:30');
+  await expect(card).toHaveAttribute('tabindex', '-1');
+  await room.getByRole('button', { name: 'Book Procedure room (synthetic) at 12:00' }).focus();
+  await page.keyboard.press('Tab');
+  await expect(slot).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(card).not.toBeFocused();
 });
 
 test('a no-show offers a rebook that fills in the patient', async ({ page }) => {
@@ -713,11 +854,13 @@ for (const locale of ['en', 'ar'] as const)
   test(`the appointment panel is keyboard-operable with 44 px targets and axe-clean (${locale})`, async ({ page }) => {
     await page.clock.setFixedTime(new Date(ist('2026-10-19', '08:30')));
     await open(page, { locale });
+    await page.route('**/v1/appointments/*/notifications?*', r => r.fulfill({ json: { messages: [], preparing: true } }));
     const chip = column(page, 'Dr. Arjun Rao (synthetic)').getByRole('button', { name: /Meera Iyer/ });
     await chip.focus();
     await page.keyboard.press('Enter');
     const panel = page.getByRole('complementary', { name: locale === 'ar' ? 'الموعد' : 'Appointment' });
     await expect(panel).toBeVisible();
+    await expect(panel.getByRole('status').filter({ hasText: locale === 'ar' ? /يجري تجهيز الرسائل/ : /Messages are being prepared/ })).toBeVisible(); // #912
     for (const b of await panel.getByRole('button').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(44);
     await panel.getByRole('button', { name: locale === 'ar' ? 'إلغاء الموعد' : 'Cancel appointment' }).focus();
     await page.keyboard.press('Enter');
@@ -748,6 +891,10 @@ test('a weekly series shows its conflict, lets the desk move it, then books the 
   await expect(rows.nth(1)).toContainText('Mon, 26 Oct at 10:00'); // facility time, not New York
   await expect(rows.nth(1)).toContainText('This slot is no longer available'); // words and an icon, not colour alone
   await expect(rows.nth(1).getByRole('checkbox')).not.toBeChecked(); // a conflict starts skipped
+  const day = rows.nth(1).getByLabel('Move to (day)'); // MDV-P1-026: another day, not only another time
+  await day.fill('2026-10-27');
+  await day.blur();
+  await expect(rows.nth(1)).toContainText('Tue, 27 Oct at 10:00');
   const move = rows.nth(1).getByLabel('Move to (time)');
   await move.fill('11:00');
   await move.blur();
@@ -757,8 +904,51 @@ test('a weekly series shows its conflict, lets the desk move it, then books the 
   await panel.getByRole('button', { name: 'Book visits (2)' }).click();
 
   await expect(panel).toContainText('Visits booked: 2');
-  expect(calls.series[1]!.body).toMatchObject({ patientId, starts: [ist('2026-10-19', '10:00'), ist('2026-10-26', '11:00')], channel: 'InPerson' });
+  expect(calls.series[1]!.body).toMatchObject({ patientId, starts: [ist('2026-10-19', '10:00'), ist('2026-10-27', '11:00')], channel: 'InPerson' });
   expect(calls.releases).toEqual(['h-1']); // the series did not use the hold
+});
+
+async function chooseNair(page: Page) {
+  await bookButton(page, '10:00').click();
+  const panel = page.getByRole('complementary', { name: 'Book appointment' });
+  await panel.getByRole('searchbox', { name: 'Name, MRN, phone or ID' }).fill('Nair');
+  await panel.getByRole('button', { name: 'Search' }).click();
+  await panel.getByRole('button', { name: 'D N, 47 y, Male, MRN ending 0002. Choose for this booking' }).click();
+  await expect(panel).toContainText('Deepak Nair (synthetic) · MRN 000002');
+  return panel;
+}
+
+test('a weekday pattern sends the chosen days and needs at least one', async ({ page }) => {
+  const calls = await open(page);
+  const panel = await chooseNair(page);
+  await panel.getByLabel('Number of visits').fill('4');
+  await panel.locator('#booking-unit').click();
+  await page.getByRole('option', { name: 'Only on chosen days' }).click();
+  await expect(panel.getByRole('button', { name: 'Review series' })).toBeDisabled(); // no day chosen yet
+  await panel.getByRole('checkbox', { name: 'Mon' }).check();
+  await panel.getByRole('checkbox', { name: 'Wed' }).check();
+  await panel.getByRole('button', { name: 'Review series' }).click();
+  expect(calls.series[0]!.body).toMatchObject({ count: 4, monthly: false, weekdays: [1, 3] });
+});
+
+test('a series the server refuses saves nothing and returns to the review with the conflict', async ({ page }) => {
+  const calls = await open(page);
+  await page.route('**/v1/appointments/series', r => {
+    const body = r.request().postDataJSON() as { starts: string[] };
+    calls.series.push({ url: r.request().url(), body });
+    return r.fulfill({ json: { seriesId: 's-3', occurrences: body.starts.map((start, i) => ({ start, appointment: null, conflict: i === 1 ? 'slot_unavailable' : 'series_not_booked' })) } });
+  });
+  const panel = await chooseNair(page);
+  await panel.getByLabel('Number of visits').fill('3');
+  await panel.getByRole('button', { name: 'Review series' }).click();
+  await panel.getByRole('listitem').nth(1).getByRole('checkbox').check();
+  await panel.getByRole('button', { name: 'Book visits (3)' }).click();
+
+  const rows = panel.getByRole('listitem');
+  await expect(rows.nth(1)).toContainText('This slot is no longer available');
+  await expect(rows.nth(1).getByRole('checkbox')).not.toBeChecked();
+  await expect(rows.nth(0).getByRole('checkbox')).toBeChecked(); // the free visits stay ready
+  await expect(panel).not.toContainText('Visits booked');
 });
 
 test('cancel this and following sends one reason for the rest of the series', async ({ page }) => {

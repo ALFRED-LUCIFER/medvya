@@ -102,6 +102,7 @@ public static class NationalIdProtectionExtensions
             var clients = new ConcurrentDictionary<string, CryptographyClient>();
             return new AzureKeyVaultKeyWrapper(id => clients.GetOrAdd(id ?? options.Value.KeyVaultKeyId, k => new CryptographyClient(new Uri(k), credential)));
         });
+        services.AddHostedService<KeyVaultWarmup>();
         services.AddSingleton<TenantKeyRing>();
         services.AddSingleton<INationalIdProtector, NationalIdProtector>();
         services.AddSingleton<IBlindIndex, BlindIndex>();

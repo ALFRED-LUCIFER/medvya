@@ -365,7 +365,7 @@ depends: MDV-P0-009, MDV-P0-017
 confidence: 88 | Hi-fi P-02 with interactive validation rules and data map; ABHA verification via ABDM is manual entry in P1 (API in P8).
 sources: docs/02-design/source/Medvya Patient Registration; docs/02-design/screen-specs.md#patient-registration-p-02--medvya-patient-registration
 desc:
-/patients/new full mode, India: steps Identity & IDs → Contact & address → Family & emergency (MDV-P1-020) → Payer → Consents (MDV-P1-019) → Review (MDV-P1-016). Identity: first/last name, DOB or age ("estimated"), sex at birth, optional gender identity, preferred language, ABHA number (14 digits) and address (optional, manual entry; "Verify with ABHA" banner shows the P8 path as disabled/coming later), other ID type with Aadhaar last 4 only. Contact: mobile (required), alternate, email, house/flat, street, city, district, state/UT, PIN (6 digits), country. Payer: self-pay / corporate / private insurance (TPA) / government scheme (reference only). Side panel shows preview card and "Data map · this step writes".
+/patients/new full mode, India: steps Identity & IDs → Contact & address → Family & emergency (MDV-P1-020) → Payer → Consents (MDV-P1-019) → Review (MDV-P1-016). Identity: first/last name, DOB or age ("estimated"), sex at birth, optional gender identity, preferred language, ABHA number (14 digits) and address (optional, manual entry; "Verify with ABHA" banner shows the P8 path as disabled/coming later), other ID type with Aadhaar last 4 only. Contact: mobile (required), alternate, email, house/flat, street, city, district, state/UT, PIN (6 digits), country. Payer: self-pay / corporate / private insurance (TPA) / government scheme (reference only). Side panel shows preview card and the country rules (the "Data map · this step writes" panel was removed by MDV-P1-052 as developer-facing text).
 ac:
 - Minimum to register (India): name, DOB or age, sex, mobile; other fields optional; validation messages match the design (e.g. "PIN code must be 6 digits").
 - Aadhaar can only be stored as last 4 digits; entering 12 digits is rejected with an explanation; ABHA is stored via Always Encrypted and is never required for care.
@@ -1321,3 +1321,196 @@ ac:
 - A reminder consent can be added after quick registration, and the visit panel says when reminders are scheduled.
 - A revoked invitation reads clearly as revoked.
 - Page loads do not sit on "Loading..." for seconds, and developer-facing text and plural slips are gone.
+
+=== MDV-P1-053
+title: Public site shell to the 6 Nov design: announcement bar, Product and Solutions menus, mobile menu, footer, app links
+type: Story
+epic: MDV-P1-E01
+prd: P1-01
+screens: F-01
+priority: SHOULD
+roles: Public
+labels: public-site, marketing
+estimate: 2
+weeks: 12
+depends: MDV-P1-001
+confidence: 80 | Designed in Medvya Web (6 Nov 2026, area web); menus must work without JavaScript.
+sources: docs/02-design/source/Medvya Web.dc.html (6 Nov 2026 revamp) (public site header, menus, footer)
+desc:
+Replace the public-site layout (src/Host.Api/PublicSite/Shared/_Layout.cshtml) with the 6 Nov header: announcement bar, logo, Product and Solutions menus (with "By specialty"), Medvya Assist, Pricing, Security, region switch, Sign in, "Book a demo" and "Start free trial". On phones a menu button opens the same links. Footer as designed. Links to the App Store and Google Play show only when their store addresses are configured (PublicSite:AppLinks); until then they are hidden. Routes for the new pages are fixed here so other tickets can link them: /assist, /hospitals, /pricing, /trust, /demo.
+ac:
+- Given JavaScript is off, when a visitor opens the Product or Solutions menu or the phone menu, then it opens and closes and every link works (details/summary, no script).
+- Given a keyboard user, when they tab through the header, then focus is visible, order follows reading order and every target is at least 44 px.
+- Given Arabic, when the page renders, then the header and menus mirror right to left.
+- Given no store addresses are configured, when the footer renders, then no App Store or Google Play links appear.
+- No third-party scripts, fonts or trackers are added; axe is clean in en, hi and ar at 360, 768 and 1280 px.
+
+=== MDV-P1-054
+title: Home page to the 6 Nov design (hero, clinic day, features, Assist, who it's for, patient app, switching, trust, FAQ)
+type: Story
+epic: MDV-P1-E01
+prd: P1-01
+screens: F-01
+priority: SHOULD
+roles: Public
+labels: public-site, marketing
+estimate: 3
+weeks: 12
+depends: MDV-P1-053
+confidence: 75 | Designed in Medvya Web (6 Nov 2026, site home); product pictures are drawn in HTML with synthetic cast data.
+sources: docs/02-design/source/Medvya Web.dc.html (6 Nov 2026 revamp) (site home)
+desc:
+Rebuild / (src/Host.Api/PublicSite/Index.cshtml) to the 6 Nov home: hero with the two CTAs and the product picture (today screen, Assist draft, payment and WhatsApp reminder cards), a clinic day timeline, the feature grid with "Compare plans", the Medvya Assist section, "Who it's for" by practice size, "Your patients get an app too", "Live in a day. We move your data for you.", the trust strip linking /trust, a short pricing teaser linking /pricing and the FAQ. Product pictures use only the synthetic cast (docs/00-overview/personas.md). The customer-stories block is not shown until real, permitted quotes exist. Prices appear only from the approved plan list used by /pricing (MDV-P5-050).
+ac:
+- Given JavaScript is off, when the home page loads, then every section renders and the FAQ opens with details/summary.
+- Given the home page, when it is checked, then it shows no invented customer quote, metric or certification claim.
+- Lighthouse mobile performance and accessibility stay at 90 or more; axe is clean in en, hi and ar.
+- Every string comes from packages/i18n in en, hi and ar; Arabic is right to left.
+
+=== MDV-P1-055
+title: Medvya Assist page (how AI notes work, safety, add-on)
+type: Story
+epic: MDV-P1-E01
+prd: P1-01
+screens: F-01
+priority: SHOULD
+roles: Public
+labels: public-site, marketing, ai
+estimate: 1.5
+weeks: 12
+depends: MDV-P1-053
+confidence: 80 | Designed in Medvya Web (6 Nov 2026, site ai).
+sources: docs/02-design/source/Medvya Web.dc.html (6 Nov 2026 revamp) (Medvya Assist page)
+desc:
+New page /assist: "Spend the visit with your patient, not the keyboard.", how it works step by step, the sample visit note with the interaction warning (synthetic cast), "Safety first: built so a doctor is always in charge" (AI does not diagnose, prescribe or sign; every suggestion is labelled, linked to what was said and needs approval), and the add-on line. CTAs: start free trial, see a live demo.
+ac:
+- Given the page, when it renders, then it states that nothing is saved until the doctor signs and makes no diagnostic or accuracy claim.
+- Given JavaScript is off, when the page loads, then it renders fully; axe is clean in en, hi and ar; Arabic is right to left.
+- The add-on price shows only from the approved plan list; without it the line shows no price.
+
+=== MDV-P1-056
+title: For hospitals page (sites and departments on one system, SSO, reporting, e-claims, branded app)
+type: Story
+epic: MDV-P1-E01
+prd: P1-01
+screens: F-01
+priority: SHOULD
+roles: Public
+labels: public-site, marketing
+estimate: 1.5
+weeks: 12
+depends: MDV-P1-053
+confidence: 80 | Designed in Medvya Web (6 Nov 2026, site hospitals).
+sources: docs/02-design/source/Medvya Web.dc.html (6 Nov 2026 revamp) (For hospitals page)
+desc:
+New page /hospitals: "Every site, department and doctor on one system." with single sign-on, central reporting, insurance e-claims and a patient app under the hospital's brand, records kept in country; the security and compliance blocks and "What hospitals get". Main CTA "Talk to our hospital team" goes to /demo. Features that are not built yet are described as planned, never as available.
+ac:
+- Given the page, when it renders, then no feature is presented as available that the product does not have (each block says "planned" where it is not built).
+- Given JavaScript is off, when the page loads, then it renders fully; axe is clean in en, hi and ar; Arabic is right to left.
+
+=== MDV-P1-057
+title: Book a demo page with a preferred time, confirmation and "create your practice now"
+type: Story
+epic: MDV-P1-E01
+prd: P1-01
+screens: F-07
+priority: SHOULD
+roles: Public
+labels: public-site, leads, privacy
+estimate: 2
+weeks: 12
+depends: MDV-P1-003, MDV-P1-053
+confidence: 70 | Designed in Medvya Web (6 Nov 2026, site demo); no sales calendar exists, so the chosen time is a request.
+sources: docs/02-design/source/Medvya Web.dc.html (6 Nov 2026 revamp) (Book a demo); MDV-P1-003
+desc:
+Move the demo request from /trust#demo to its own page /demo: "See Medvya with your own clinic's day", the three steps, the contact fields and a preferred day and time. The request is stored in the Leads module with the existing privacy notice and consent (MDV-P1-003). The confirmation says the time is requested and the team will confirm by email, and offers "create your practice now" (sign-up). /trust#demo redirects to /demo. No calendar provider is added.
+ac:
+- Given JavaScript is off, when a visitor picks a time and sends the form, then the request is stored with the time in UTC and the confirmation page shows it in the visitor's region time zone.
+- Given the consent box is not ticked, when the form is sent, then the server refuses it (consent_required) and nothing is stored.
+- Given a past or malformed time, when the form is sent, then the server refuses it with an error under the field.
+- Public form endpoints are rate-limited and anti-forgery protected; no contact value appears in logs or the URL.
+
+=== MDV-P1-058
+title: Trust centre (/trust) to the 6 Nov security design
+type: Story
+epic: MDV-P1-E01
+prd: P1-01
+screens: F-07
+priority: SHOULD
+roles: Public
+labels: public-site, trust
+estimate: 1
+weeks: 12
+depends: MDV-P1-003, MDV-P1-053
+confidence: 80 | Designed in Medvya Web (6 Nov 2026, site security); content source stays trust-centre.json.
+sources: docs/02-design/source/Medvya Web.dc.html (6 Nov 2026 revamp) (Trust centre)
+desc:
+Restyle /trust to the 6 Nov design: "Patient data is the most personal data there is. We treat it that way.", the control cards and "Compliance status · updated by Medvya · not a certification". Policy versions and sub-processors keep coming from PublicSite/trust-centre.json. The demo form moves to /demo (MDV-P1-057).
+ac:
+- Given the trust centre, when it renders, then the compliance block says it is not a certification and every status comes from trust-centre.json.
+- Given JavaScript is off, when the page loads, then it renders fully; axe is clean in en, hi and ar; Arabic is right to left.
+
+=== MDV-P1-059
+title: Staff sign-in, sign-up, invitation, location and signed-out screens to the 6 Nov design
+type: Story
+epic: MDV-P1-E02
+prd: P1-02
+screens: F-03, F-04, F-06
+priority: MUST
+roles: Solo doctor, Practice owner, Receptionist, Doctor
+labels: identity, onboarding, a11y
+estimate: 3
+weeks: 12
+depends: MDV-P1-004
+confidence: 70 | Designed in Medvya Web (6 Nov 2026, area auth). Email code, passkey, MFA and recovery run on the Entra pages; this ticket owns the Medvya screens around them.
+sources: docs/02-design/source/Medvya Web.dc.html (6 Nov 2026 revamp) (sign in, create account, invitation, choose location, signed out)
+desc:
+The Medvya-owned screens of the 6 Nov sign-in flow in web/clinic, in the designed two-panel frame (brand panel, help, language, region line): Sign in (work email, "This is a shared computer", continue, passkey and single sign-on entry), which starts the Entra sign-in with the email as a login hint; Create account step 1 (practice type, name, city) and step 2 (name, email, mobile, "I'm the doctor" / "I manage the clinic"), which feed the existing sign-up (MDV-P1-004) before the Entra account is made; invitation acceptance (what the role can and cannot see, full name, expiry); choose location (last used first, signed in as, not you); and signed out / session ended. The email code, MFA set-up and recovery codes are Entra pages and are branded in MDV-P1-060. No password, code or factor is ever handled by Medvya.
+ac:
+- Given a staff member enters their email, when they continue, then the browser goes to the Entra sign-in with the email as login hint and Medvya stores nothing about it.
+- Given "This is a shared computer" is chosen, when the session starts, then it uses the shared-device idle lock and maximum session the server already enforces, decided on the server.
+- Given an expired or revoked invitation, when it is opened, then the screen says so and offers to ask the practice for a new one; no account is created.
+- Given a user with several locations, when they sign in, then the last used location is listed first and choosing one sets the server-side facility.
+- Every screen is keyboard-complete with visible focus, announced errors and 44 px targets; axe is clean in en, hi and ar; Arabic is right to left.
+
+=== MDV-P1-060
+title: Entra External ID branding for the email code, MFA set-up and recovery pages
+type: Task
+epic: MDV-P1-E02
+prd: P1-02
+screens: F-03
+priority: SHOULD
+roles: Solo doctor, Practice owner, Receptionist, Doctor
+labels: identity, infra, needs-person
+estimate: 1
+weeks: 12
+depends: MDV-P1-059
+confidence: 60 | Entra hosted pages can take a logo, colours, background and text only; applying it to the tenant needs an administrator.
+sources: docs/02-design/source/Medvya Web.dc.html (6 Nov 2026 revamp) (code, authenticator set-up, recovery codes)
+desc:
+A script in infra/ that sets the Entra External ID company branding (logo, background, colours, sign-in page text, privacy and terms links) per country from files in the repo, so the hosted email-code, MFA and recovery pages look like the 6 Nov design as far as Entra allows. An administrator runs it against the dev and later production tenants; the run is recorded in docs/05-delivery/session-handoff.md.
+ac:
+- Given the script runs against a tenant, when a user signs in, then the hosted pages show the Medvya logo, colours and privacy and terms links for that country.
+- The script holds no secret and reads the tenant from arguments; it is idempotent.
+
+=== MDV-P1-061
+title: Practice set-up wizard to the 6 Nov design (practice, hours and services, team, patients, payments and messages, ready)
+type: Story
+epic: MDV-P1-E02
+prd: P1-02
+screens: F-04
+priority: MUST
+roles: Solo doctor, Practice owner
+labels: onboarding, a11y
+estimate: 5
+weeks: 12-13
+depends: MDV-P1-004, MDV-P1-005, MDV-P1-007
+confidence: 60 | Designed in Medvya Web (6 Nov 2026, area onb); patient import and payment connections reuse or wait for their own tickets.
+sources: docs/02-design/source/Medvya Web.dc.html (6 Nov 2026 revamp) (Set up your clinic)
+desc:
+Rework the onboarding wizard (web/clinic/src/features/onboarding) to the 6 Nov steps with the live booking-page preview: 1 your practice (type, specialties, registration number by country rules), 2 hours and services (prefilled from the specialty, appointment length, services and fees in minor units), 3 your team (invite nurse, doctor, front desk with the "front desk never sees clinical notes" line), 4 your patients (upload a spreadsheet, ask us to move data, or start fresh), 5 payments and messages (connect now or later), and the ready screen (book your first patient). "Try a sample day" (3 deletable synthetic patients) moves to after the pilot (owner decision, 7 Nov 2026): it needs a sample flag and bulk delete in Patients. Keeps autosave, resume, "Finish later", skip and server-side checks from MDV-P1-004. Steps whose back end is not built yet (spreadsheet import, payment connections) record the choice and link to Settings; each such limit is a recorded shortcut.
+ac:
+- Given an owner leaves at any step, when they sign in again, then the wizard resumes at that step with their answers (autosave).
+- Given a step, when it is submitted, then the server validates it with the country rules and shows errors under the field, announced to screen readers.
+- Given the team step, when an owner invites a front-desk member, then the invitation is sent with the front-desk role and that role cannot open clinical notes (server-side test).
+- Every step is keyboard-complete, 44 px targets, axe clean in en, hi and ar; Arabic is right to left.

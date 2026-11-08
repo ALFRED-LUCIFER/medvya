@@ -10,6 +10,8 @@ public sealed class SchedulingOptions
 {
     public TimeSpan SlotHold { get; set; } = TimeSpan.FromMinutes(2);
     public TimeSpan LockTimeout { get; set; } = TimeSpan.FromSeconds(10);
+    /// <summary>How long a slot offered to a waitlisted patient (MDV-P1-027) stays reserved before the next candidate can be offered.</summary>
+    public TimeSpan OfferHold { get; set; } = TimeSpan.FromMinutes(30);
 }
 
 /// <summary>Reserve a slot (and the slots a longer visit type needs) while the booking form is open.</summary>
@@ -46,6 +48,11 @@ public sealed record WalkIn
     public Guid PatientId { get; init; }
     public VisitType VisitType { get; init; } = VisitType.FollowUp;
     public ReasonCategory ReasonCategory { get; init; }
+    /// <summary>
+    /// False (the default): refused with "already_today" when the patient already has an open visit today at this facility (booked or
+    /// not yet finished), so the desk is warned before a second visit is made (MDV-P1-052). True once the desk confirms it.
+    /// </summary>
+    public bool AllowRepeat { get; init; }
 }
 
 /// <summary>An appointment as reception sees it: no free-text reason.</summary>
@@ -84,6 +91,8 @@ public sealed record SeriesPattern
     public VisitType VisitType { get; init; } = VisitType.FollowUp;
     public int IntervalWeeks { get; init; } = 1;
     public bool Monthly { get; init; }
+    /// <summary>When not empty: the visits fall on these days of the week (every <see cref="IntervalWeeks"/>-th week) instead; not with <see cref="Monthly"/>.</summary>
+    public IReadOnlyList<DayOfWeek> Weekdays { get; init; } = [];
     public int Count { get; init; }
 }
 
@@ -130,10 +139,10 @@ public interface IBookingService
     /// <summary>
     /// A walk-in (MDV-P1-025): books the earliest free slot from now today of the chosen doctor (or of any active doctor) on the
     /// same path as <see cref="BookAsync"/> (doctor-day lock, template and overlap re-check, SCHEDULE_SLOT rows); with no free
-    /// slot and a chosen doctor, queues it unscheduled (no slot taken, so no double booking). The visit is Booked and tagged
-    /// walk-in; the desk then checks it in through the board's check-in.
+    /// slot, queues it unscheduled under the chosen doctor, or for "next available" the least busy doctor working today (no slot
+    /// taken, so no double booking). The visit is Booked and tagged walk-in; the desk then checks it in through the board's check-in.
     /// </summary>
-    /// <exception cref="SlotUnavailableException">"no_free_slot": nothing free today and no doctor chosen to queue with; or "busy".</exception>
+    /// <exception cref="SlotUnavailableException">"no_free_slot": nothing free today, no doctor chosen and nobody working today; or "busy".</exception>
     Task<AppointmentView> WalkInAsync(WalkIn command, CancellationToken cancellationToken = default);
 
     /// <summary>Name and MRN of a patient of this tenant, to confirm the patient before booking; null when unknown.</summary>
@@ -158,12 +167,13 @@ public interface IBookingService
     /// Recurring appointments (MDV-P1-026): the occurrences of a pattern with the ones that cannot be booked, so the desk can skip or
     /// move them before confirming. A read; nothing is held.
     /// </summary>
-    /// <exception cref="SchedulingValidationException">Count or interval out of range, or an unknown visit type.</exception>
+    /// <exception cref="SchedulingValidationException">Count or interval out of range, an unknown visit type, or invalid weekdays.</exception>
     Task<IReadOnlyList<SeriesOccurrence>> PreviewSeriesAsync(SeriesPattern pattern, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Books each confirmed start as an independent appointment on the booking path (doctor-day lock, template and overlap re-check,
-    /// SCHEDULE_SLOT rows), all with one series id. A start taken meanwhile is reported, not fatal; the others stay booked.
+    /// SCHEDULE_SLOT rows), all with one series id, in one transaction: all are booked or none. When any start is unavailable (taken meanwhile, past, closed, busy)
+    /// nothing is saved and every start is returned with its conflict ("series_not_booked" for a free one held back by the others).
     /// </summary>
     Task<SeriesResult> BookSeriesAsync(BookSeries command, CancellationToken cancellationToken = default);
 
@@ -178,7 +188,20 @@ public interface IBookingService
     /// <summary>Marks a Booked visit whose start has passed as a no-show and frees its slots; the desk is then offered a rebook.</summary>
     /// <exception cref="VisitTransitionException">Not Booked ("invalid_transition"), not started yet ("not_started"), or changed meanwhile ("changed").</exception>
     Task<AppointmentChip> MarkNoShowAsync(Guid appointmentId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// The visit's moves, oldest first (MDV-P1-024): each reschedule and each same-day move to another doctor's queue (MDV-P1-030),
+    /// with the old and new slot, who moved it and when. Calendar and staff display names, times and a reason code only.
+    /// </summary>
+    /// <exception cref="AppointmentNotFoundException">No such appointment in this tenant.</exception>
+    /// <exception cref="SchedulingAccessDeniedException">No calendar access at the visit's facility.</exception>
+    Task<IReadOnlyList<RescheduleView>> HistoryAsync(Guid appointmentId, CancellationToken cancellationToken = default);
 }
+
+/// <summary>One move of a visit. Names are empty for a calendar or person no longer known; ReassignReason is set for a queue move.</summary>
+public sealed record RescheduleView(
+    string FromCalendarName, DateTimeOffset FromStart, DateTimeOffset FromEnd, string ToCalendarName, DateTimeOffset ToStart, DateTimeOffset ToEnd,
+    string ActorName, DateTimeOffset OccurredAt, ReassignReason? ReassignReason);
 
 public static class AppointmentReference
 {

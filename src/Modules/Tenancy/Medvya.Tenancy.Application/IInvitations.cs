@@ -28,6 +28,12 @@ public interface IInvitations
     /// </summary>
     Task<InvitationCreated?> ResendAsync(Guid invitationId, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Like <see cref="CreateAsync(string, Role, Guid, Guid?, CancellationToken)"/>, but the invitation commits first and the email goes out afterwards,
+    /// off the caller: a slow or failing send leaves a pending invitation to resend instead of failing the caller (onboarding finish, #205).
+    /// </summary>
+    Task<InvitationCreated?> CreateAndEmailLaterAsync(string email, Role role, Guid facilityId, CancellationToken cancellationToken = default);
+
     /// <summary><paramref name="stage"/> may add more rows to the shared tenant context for the new membership; they save, and fail, with it (MDV-P1-007).</summary>
     Task<InvitationCreated?> CreateAsync(string email, Role role, Guid facilityId, Action<Membership> stage, CancellationToken cancellationToken = default);
 

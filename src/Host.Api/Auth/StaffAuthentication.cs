@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Medvya.BuildingBlocks.Security;
 using Medvya.Identity.Application;
 using Medvya.Identity.Domain;
 using Medvya.Tenancy.Domain;
@@ -37,6 +38,8 @@ public static partial class StaffAuthentication
             o.ExpireTimeSpan = StaffSession.MaxLifetime;
             o.SlidingExpiration = false;
             o.Events.OnValidatePrincipal = SessionControl.ValidatePrincipalAsync;
+            // The native apps send a bearer token instead of the cookie (MDV-P5-033); every staff endpoint then authenticates that way.
+            o.ForwardDefaultSelector = NativeAuthentication.SelectScheme;
             // An API answers 401/403; the SPA decides where to send the user.
             o.Events.OnRedirectToLogin = ctx => { ctx.Response.StatusCode = StatusCodes.Status401Unauthorized; return Task.CompletedTask; };
             o.Events.OnRedirectToAccessDenied = ctx => { ctx.Response.StatusCode = StatusCodes.Status403Forbidden; return Task.CompletedTask; };
@@ -58,10 +61,18 @@ public static partial class StaffAuthentication
                 // Only the local dev provider may use plain http, and it exists only in Development.
                 o.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
                 o.Events.OnTokenValidated = OnTokenValidated;
-                // A refused or broken sign-in returns to the app with a generic error; the reason is only in the logs.
+                // The work email typed on the sign-in page (MDV-P1-059) rides in the challenge parameters, which are never stored in the state.
+                o.Events.OnRedirectToIdentityProvider = ctx =>
+                {
+                    if (ctx.Properties.GetParameter<string>(LoginHintParameter) is { } hint) ctx.ProtocolMessage.LoginHint = hint;
+                    return Task.CompletedTask;
+                };
+                // A refused or broken sign-in returns to the app with a generic error; the reason is only in the logs. The one exception is a
+                // missing second factor (#912): the person can fix that themselves, and it says nothing about their Medvya account.
                 o.Events.OnRemoteFailure = ctx =>
                 {
-                    ctx.Response.Redirect($"{AppPath(ctx.HttpContext.RequestServices.GetRequiredService<IConfiguration>())}?signin=failed");
+                    var reason = ctx.Failure?.Message == MfaRequired ? "mfa" : "failed";
+                    ctx.Response.Redirect($"{AppPath(ctx.HttpContext.RequestServices.GetRequiredService<IConfiguration>())}?signin={reason}");
                     ctx.HandleResponse();
                     return Task.CompletedTask;
                 };
@@ -69,6 +80,8 @@ public static partial class StaffAuthentication
         }
         return builder;
     }
+
+    const string MfaRequired = "Multi-factor authentication is required.";
 
     // Accept only accounts that exist in Medvya and signed in with MFA; replace the provider's claims with ours.
     static async Task OnTokenValidated(TokenValidatedContext ctx)
@@ -79,7 +92,7 @@ public static partial class StaffAuthentication
         if (!principal.FindAll("amr").Any(c => c.Value == "mfa"))
         {
             SignInRefusedNoMfa(log);
-            ctx.Fail("Multi-factor authentication is required.");
+            ctx.Fail(MfaRequired);
             return;
         }
         var issuer = principal.FindFirst("iss")?.Value;
@@ -147,12 +160,29 @@ public static partial class StaffAuthentication
 
     public static WebApplication MapStaffSession(this WebApplication app)
     {
-        app.MapGet("/bff/login", (string? returnUrl, string? invitation, bool? signup, IConfiguration config) =>
+        // No-hint start: deploy smoke test, invitation links, passkey and organisation buttons. The work email never rides in a Medvya
+        // URL (App Service logs, browser history and proxies keep URLs, AGENTS.md 1.2), so a query-string hint is refused, not read.
+        app.MapGet("/bff/login", (string? returnUrl, string? invitation, bool? signup, HttpRequest request, IConfiguration config) =>
+                request.Query.ContainsKey("loginHint")
+                    ? Results.Problem(statusCode: StatusCodes.Status400BadRequest, title: "Send the login hint in the request body")
+                    : Results.Challenge(SignInProperties(returnUrl, invitation, signup, config), [OpenIdConnectDefaults.AuthenticationScheme]))
+            .AllowAnonymous()
+            .RequireRateLimiting(SignInRateLimit);
+
+        // Start with the work email (MDV-P1-059): the hint comes in the body and the browser follows the returned provider address itself.
+        app.MapPost("/bff/login", async (SignInStart start, HttpContext ctx, IConfiguration config) =>
             {
-                var properties = new AuthenticationProperties { RedirectUri = returnUrl is not null && IsLocal(returnUrl) ? returnUrl : AppPath(config) };
-                if (InvitationToken.Read(invitation) is not null) properties.Items[InvitationSignIn.Item] = invitation;
-                if (signup == true) properties.Items[SignUpItem] = "1";
-                return Results.Challenge(properties, [OpenIdConnectDefaults.AuthenticationScheme]);
+                // The house anti-forgery header: a cross-site page cannot add it without a CORS preflight, which this API never grants.
+                if (!ctx.Request.Headers.ContainsKey(CsrfHeader)) return Results.Problem(statusCode: StatusCodes.Status400BadRequest, title: "Missing anti-forgery header");
+                // A hint is only a convenience for the provider's page, so a malformed one is refused rather than passed on.
+                if (start.LoginHint is not null && !IsLoginHint(start.LoginHint)) return Results.Problem(statusCode: StatusCodes.Status400BadRequest, title: "Invalid login hint");
+                var properties = SignInProperties(start.ReturnUrl, start.Invitation, start.Signup, config);
+                if (start.LoginHint is not null) properties.SetParameter(LoginHintParameter, start.LoginHint);
+                await ctx.ChallengeAsync(OpenIdConnectDefaults.AuthenticationScheme, properties);
+                // The handler answered with a redirect; hand its address (and its correlation cookies) to the page instead.
+                var location = ctx.Response.Headers.Location.ToString();
+                ctx.Response.Headers.Remove(Microsoft.Net.Http.Headers.HeaderNames.Location);
+                return Results.Ok(new SignInRedirect(location));
             })
             .AllowAnonymous()
             .RequireRateLimiting(SignInRateLimit);
@@ -166,6 +196,27 @@ public static partial class StaffAuthentication
     /// <summary>Where the web app lives: "/app/" when the API serves the built app (the public site owns "/"), "/" in development.</summary>
     public static string AppPath(IConfiguration config) => config["Web:AppPath"] ?? "/";
 
+    const string LoginHintParameter = "login_hint";
+
+    static AuthenticationProperties SignInProperties(string? returnUrl, string? invitation, bool? signup, IConfiguration config)
+    {
+        var properties = new AuthenticationProperties { RedirectUri = returnUrl is not null && IsLocal(returnUrl) ? returnUrl : AppPath(config) };
+        if (InvitationToken.Read(invitation) is not null) properties.Items[InvitationSignIn.Item] = invitation;
+        if (signup == true) properties.Items[SignUpItem] = "1";
+        return properties;
+    }
+
+    /// <summary>An email address as typed on the sign-in page: one address, no display name, no control characters, at most 254 characters.</summary>
+    internal static bool IsLoginHint(string value) =>
+        value.Length <= 254 && !value.Any(char.IsControl) && !value.Contains(' ', StringComparison.Ordinal)
+        && System.Net.Mail.MailAddress.TryCreate(value, out var address) && address.Address == value && address.DisplayName.Length == 0;
+
     // Only same-site paths: "/x" but never "//host" or "/\host", which browsers treat as another site.
-    static bool IsLocal(string url) => url.StartsWith('/') && !url.StartsWith("//", StringComparison.Ordinal) && !url.StartsWith("/\\", StringComparison.Ordinal);
+    static bool IsLocal(string url) => LocalUrl.IsLocal(url); // #876: control characters and backslashes refused anywhere
+
+    /// <summary>Starting sign-in with the work email (MDV-P1-059). The email is a hint for the provider only: never stored or logged.</summary>
+    public sealed record SignInStart(string? LoginHint = null, string? ReturnUrl = null, string? Invitation = null, bool? Signup = null);
+
+    /// <summary>The identity provider's address (sign-in or sign-out); the page navigates there.</summary>
+    public sealed record SignInRedirect(string Location);
 }

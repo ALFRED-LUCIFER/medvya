@@ -46,6 +46,7 @@ public sealed class NotificationsDbContext(DbContextOptions<NotificationsDbConte
         modelBuilder.Entity<NotificationPreference>(e =>
         {
             e.HasKey(x => x.TenantId);
+            e.Property(x => x.SenderName).HasMaxLength(60);
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         modelBuilder.Entity<StaffNotification>(e =>

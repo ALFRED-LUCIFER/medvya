@@ -284,11 +284,11 @@ public sealed class PatientEndpointTests(PostgresFixture sql) : IClassFixture<Po
     {
         using var host = Host();
         using var desk = Client(host, "receptionist");
-        var res = await Search(desk, new { query = "98470 213" });
+        var res = await Search(desk, new { query = "1234 5678 9012 3456" });
         Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
         var body = await res.Content.ReadAsStringAsync();
         Assert.Contains("full_number_required", body, StringComparison.Ordinal);
-        Assert.DoesNotContain("98470", body, StringComparison.Ordinal);
+        Assert.DoesNotContain("1234", body, StringComparison.Ordinal);
     }
 
     /// <summary>Per user, not per server: one desk using up its searches must not stop another desk (the limit runs after sign-in).</summary>

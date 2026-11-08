@@ -23,12 +23,15 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Host.Api\Host.Api.csproj" />
+    <!-- Both hosts define Program; the console host is reached as platform::Program (MDV-P5-040). -->
+    <ProjectReference Include="..\..\src\Host.Platform\Host.Platform.csproj" Aliases="platform" />
     <ProjectReference Include="..\..\src\Modules\Tenancy\Medvya.Tenancy.Infrastructure\Medvya.Tenancy.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\Modules\Audit\Medvya.Audit.Infrastructure\Medvya.Audit.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\Modules\Patients\Medvya.Patients.Infrastructure\Medvya.Patients.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\Modules\Billing\Medvya.Billing.Infrastructure\Medvya.Billing.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\Modules\Scheduling\Medvya.Scheduling.Infrastructure\Medvya.Scheduling.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\Modules\Notifications\Medvya.Notifications.Infrastructure\Medvya.Notifications.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Encounters\Medvya.Encounters.Infrastructure\Medvya.Encounters.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\Modules\Audit\Medvya.Audit.Api\Medvya.Audit.Api.csproj" />
     <ProjectReference Include="..\..\src\Modules\Tenancy\Medvya.Tenancy.Api\Medvya.Tenancy.Api.csproj" />
     <ProjectReference Include="..\..\tools\db-migrate\Medvya.DbMigrate.csproj" />

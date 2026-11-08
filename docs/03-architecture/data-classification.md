@@ -77,7 +77,21 @@ Every stored field has one class. In code, each domain property carries `[Classi
 | NOTIFICATION.template_id, channel, state, provider_ref | Internal | Templates carry no clinical data |
 | NOTIFICATION.recipient (phone/email) | Personal | DDM |
 
-### Leads: public-site contacts (P1, MDV-P1-002/003)
+### Platform console: the Medvya team (P5, MDV-P5-040, ADR-014)
+
+Not clinic data, so no tenant. Only `medvya_platform` reaches the `platform` schema; the clinic app role and reporting do not, and the console login reaches no clinic schema. No field is SensitiveHealth or NationalId (`TheConsoleDomainHoldsNoHealthOrNationalIdField`).
+
+| Entity.field | Class | Control |
+|---|---|---|
+| platform.Members: name, email | Personal | Medvya staff, not patients. Never in logs |
+| platform.Members: role, issuer, subject, invited, access end, last active, removed | Internal | Removed by date, never deleted, so the audit log can name them |
+| platform.SecurityKeys: credential id, public key, counter, revoked | Internal | Public key material only; revoked, never deleted |
+| platform.KeyLinks: token hash, purpose, issued, expires, used | Internal | Only the SHA-256 of the one-hour token is stored; the token is shown once to the issuing owner |
+| platform.Sessions: times, key verified, pending ceremony | Internal | Server-side session behind the console cookie |
+| platform.AuditEntries: action, resource, actor, subject practice id, reason, time, correlation id | Internal | Append-only. The reason is typed by Medvya staff; the form says never to enter patient details |
+| platform.AuditEntries: client IP | Personal | As in the clinic audit log |
+
+### Leads: public-site contacts (P1, MDV-P1-002/003/057)
 
 Not clinic data, so no tenant. Of the app roles only `medvya_leads` reaches the `leads` schema (select and insert); reporting does not.
 
@@ -87,6 +101,7 @@ Not clinic data, so no tenant. Of the app roles only `medvya_leads` reaches the 
 | leads.DemoRequests: name, email, phone | Personal | Never in logs. Sent to the founder by email (data map) |
 | leads.DemoRequests: message (free text) | Personal | Never in logs and never emailed: a visitor could type patient details despite the warning |
 | leads.DemoRequests: consented_at, notice_version | Internal | Proof of consent to the privacy notice shown above the form (UTC time, notice version). Null only on rows stored before the notice |
+| leads.DemoRequests: preferred_at | Internal | The visitor's preferred demo time (UTC), a request the team confirms (MDV-P1-057). Sent to the founder by email |
 | leads.Waitlist: id, country, received_at | Internal | — |
 | leads.Waitlist: name, email, phone | Personal | Never in logs |
 | leads.Waitlist: consented_at, notice_version | Internal | Proof of consent, as for demo requests |
@@ -138,6 +153,7 @@ Not clinic data, so no tenant. Of the app roles only `medvya_leads` reaches the 
 | Column | Stored as | Why |
 |---|---|---|
 | PATIENT_IDENTIFIER.value (ABHA number, ABHA address, Emirates ID, passport) | `LookupValue` ciphertext + `LookupIndex` blind index | Exact-match search at the desk; passport for the duplicate check only (MDV-P1-016) |
+| PATIENT_IDENTIFIER.value (Aadhaar last 4) | randomized `DisplayValue` ciphertext + `LookupIndex` blind index (MED-FEAT-001, #931) | Desk search by the last 4 (a typed 12-digit Aadhaar is cut to its last 4 on the server and dropped); rows registered earlier have no index |
 | PATIENT_IDENTIFIER.value (Aadhaar last 4, visa file) | `DisplayValue` ciphertext | Display only, no lookup |
 | PAYER_COVERAGE.member_no | `MemberNumber` ciphertext | Shown to the desk; no lookup yet (add a blind index when eligibility needs exact match) |
 

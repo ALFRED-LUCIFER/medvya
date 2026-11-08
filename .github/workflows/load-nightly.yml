@@ -1,0 +1,72 @@
+name: load-nightly
+
+# MDV-P1-037: the desk-flow load test (20 receptionists with the live board open, 10 times the pilot's 200 bookings an hour) on a
+# Release build of Host.Api over real HTTP against PostgreSQL in Docker. Fails when a step is over its budget or its p95 is more
+# than 20 % (and 25 ms) over the committed CI baseline; a failing nightly run opens or updates an issue labelled `performance`.
+# Synthetic data only; nothing here touches Azure (docs/05-delivery/load-testing.md says how to point it at Azure dev by hand).
+on:
+  schedule:
+    - cron: '43 21 * * *'
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'tests/Medvya.IntegrationTests/DeskLoadTests.cs'
+      - 'tests/Medvya.IntegrationTests/load-baseline.json'
+      - '.github/workflows/load-nightly.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: load-nightly-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  load:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+      - run: dotnet build tests/Medvya.IntegrationTests -c Release
+      - name: Desk load test
+        env:
+          MEDVYA_LOAD: '1'
+          MEDVYA_LOAD_SECONDS: '600'
+          MEDVYA_LOAD_REPORT: ${{ runner.temp }}/load-test-desk.md
+          MEDVYA_LOAD_RESULTS: ${{ runner.temp }}/load-results.json
+          MEDVYA_LOAD_BASELINE: ${{ github.workspace }}/tests/Medvya.IntegrationTests/load-baseline.json
+        run: >
+          dotnet test tests/Medvya.IntegrationTests -c Release --no-build
+          --filter "FullyQualifiedName~DeskLoadTests.DesksStayInsideTheLatencyBudgets" --logger "console;verbosity=detailed"
+      - name: Report
+        if: always()
+        run: cat "$RUNNER_TEMP/load-test-desk.md" >> "$GITHUB_STEP_SUMMARY" || true
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: load-results
+          path: |
+            ${{ runner.temp }}/load-test-desk.md
+            ${{ runner.temp }}/load-results.json
+          retention-days: 30
+
+  alert:
+    needs: load
+    if: failure() && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Open or update the regression issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          title="Nightly load test failed (MDV-P1-037)"
+          body="The nightly desk load test failed on $(date -u +%F): a step is over its budget or its p95 regressed more than 20 % (and 25 ms) against tests/Medvya.IntegrationTests/load-baseline.json. Run, report and results: $RUN"
+          issue=$(gh issue list --state open --label performance --search "\"$title\" in:title" --json number --jq '.[0].number')
+          if [ -n "$issue" ]; then gh issue comment "$issue" --body "$body"; else gh issue create --title "$title" --label performance --body "$body"; fi

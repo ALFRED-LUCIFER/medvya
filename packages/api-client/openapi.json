@@ -50,6 +50,26 @@
             "description": "OK"
           }
         }
+      },
+      "post": {
+        "tags": [
+          "Host.Api"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignInStart"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
       }
     },
     "/v1/me/context": {
@@ -148,6 +168,65 @@
               "format": "uuid"
             }
           }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/native/login": {
+      "get": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "redirect_uri",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "code_challenge",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "code_challenge_method",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/native/complete": {
+      "get": {
+        "tags": [
+          "Host.Api"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/native/token": {
+      "post": {
+        "tags": [
+          "Host.Api"
         ],
         "responses": {
           "200": {
@@ -258,6 +337,45 @@
             }
           },
           "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/patients/{patientId}/access-requests": {
+      "post": {
+        "tags": [
+          "AccessRequestEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "patientId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AccessRequestBody"
+                  }
+                ]
+              }
+            }
+          }
         },
         "responses": {
           "200": {
@@ -563,6 +681,13 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -628,6 +753,76 @@
         "responses": {
           "200": {
             "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/schedule/metrics": {
+      "get": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "facilityId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PilotMetrics"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/schedule/metrics/baselines": {
+      "post": {
+        "tags": [
+          "Host.Api"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecordBaseline"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaselineView"
+                }
+              }
+            }
           }
         }
       }
@@ -965,6 +1160,39 @@
         }
       }
     },
+    "/v1/appointments/{appointmentId}/history": {
+      "get": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "appointmentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RescheduleView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/appointments/{appointmentId}/check-in": {
       "post": {
         "tags": [
@@ -1087,6 +1315,185 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/v1/waitlist": {
+      "get": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "facilityId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WaitlistList"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Host.Api"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddToWaitlist"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WaitlistView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/waitlist/{id}/offer": {
+      "post": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OfferSlot"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WaitlistView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/waitlist/{id}/decline": {
+      "post": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WaitlistView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/waitlist/{id}/accept": {
+      "post": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppointmentView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/waitlist/{id}": {
+      "delete": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
           }
         }
       }
@@ -1909,6 +2316,38 @@
         }
       }
     },
+    "/v1/settings/clinical-access": {
+      "get": {
+        "tags": [
+          "Host.Api"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Host.Api"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClinicalAccessBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/v1/settings/terms": {
       "get": {
         "tags": [
@@ -2177,6 +2616,39 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/Offboard"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/staff/{membershipId}/reactivate": {
+      "post": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "membershipId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Reactivate"
               }
             }
           },
@@ -2826,10 +3298,177 @@
           }
         }
       }
+    },
+    "/v1/access-requests": {
+      "get": {
+        "tags": [
+          "AccessRequestEndpoints"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/access-requests/{requestId}/grant": {
+      "post": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "requestId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/GrantBody"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/access-requests/{requestId}/decline": {
+      "post": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "requestId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/encounters": {
+      "post": {
+        "tags": [
+          "Host.Api"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/StartEncounter"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/encounters/{encounterId}": {
+      "get": {
+        "tags": [
+          "EncounterEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "encounterId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/encounters/{encounterId}/end": {
+      "post": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "encounterId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "AccessRequestBody": {
+        "required": [
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "reason": {
+            "$ref": "#/components/schemas/AccessRequestReason"
+          }
+        }
+      },
+      "AccessRequestReason": {
+        "enum": [
+          "CoveringColleague",
+          "SeeingPatientToday",
+          "ReviewingResults",
+          "Referral"
+        ]
+      },
       "AddDoctor": {
         "type": "object",
         "properties": {
@@ -2958,6 +3597,52 @@
           "facilityId": {
             "type": "string",
             "format": "uuid"
+          }
+        }
+      },
+      "AddToWaitlist": {
+        "type": "object",
+        "properties": {
+          "facilityId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "patientId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "calendarId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "visitType": {
+            "$ref": "#/components/schemas/VisitType"
+          },
+          "reasonCategory": {
+            "$ref": "#/components/schemas/ReasonCategory"
+          },
+          "days": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DayOfWeek"
+            }
+          },
+          "from": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "time"
+          },
+          "until": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "time"
           }
         }
       },
@@ -3301,6 +3986,45 @@
           }
         }
       },
+      "BaselineView": {
+        "required": [
+          "metric",
+          "value",
+          "method",
+          "fromDate",
+          "toDate",
+          "recordedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "metric": {
+            "$ref": "#/components/schemas/PilotMetric"
+          },
+          "value": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "method": {
+            "type": "string"
+          },
+          "fromDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "toDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "recordedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "BoardCard": {
         "required": [
           "id",
@@ -3537,6 +4261,77 @@
             "format": "int64"
           }
         }
+      },
+      "CheckInMetric": {
+        "required": [
+          "returningMedianSeconds",
+          "returningCount",
+          "medianSeconds",
+          "count",
+          "targetSeconds"
+        ],
+        "type": "object",
+        "properties": {
+          "returningMedianSeconds": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "returningCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "medianSeconds": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "targetSeconds": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "ClinicalAccessBody": {
+        "required": [
+          "policy"
+        ],
+        "type": "object",
+        "properties": {
+          "policy": {
+            "$ref": "#/components/schemas/ClinicalAccessPolicy"
+          }
+        }
+      },
+      "ClinicalAccessPolicy": {
+        "enum": [
+          "AllFacilityClinicians",
+          "AssignedOnly"
+        ]
       },
       "ClinicOverview": {
         "required": [
@@ -4228,6 +5023,16 @@
               "null",
               "string"
             ]
+          },
+          "canEdit": {
+            "type": "boolean",
+            "default": false
+          },
+          "version": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -4376,6 +5181,22 @@
             "items": {
               "$ref": "#/components/schemas/BoardCard"
             }
+          }
+        }
+      },
+      "GrantBody": {
+        "required": [
+          "days"
+        ],
+        "type": "object",
+        "properties": {
+          "days": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -4635,6 +5456,41 @@
           }
         }
       },
+      "NoShowMetric": {
+        "required": [
+          "noShows",
+          "attended",
+          "percent"
+        ],
+        "type": "object",
+        "properties": {
+          "noShows": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "attended": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "percent": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          }
+        }
+      },
       "NotificationPreferencesView": {
         "required": [
           "confirmation",
@@ -4673,6 +5529,12 @@
           "quietEnd": {
             "type": "string",
             "format": "time"
+          },
+          "senderName": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -4687,6 +5549,23 @@
               "null",
               "string"
             ]
+          },
+          "offerRebooking": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "OfferSlot": {
+        "type": "object",
+        "properties": {
+          "calendarId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "start": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },
@@ -4793,6 +5672,12 @@
             "items": {
               "$ref": "#/components/schemas/OnboardingTeamMember"
             }
+          },
+          "patients": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -4850,6 +5735,15 @@
               "string"
             ],
             "format": "int64"
+          },
+          "days": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/DayOfWeek"
+            }
           }
         }
       },
@@ -4920,6 +5814,15 @@
               "null",
               "string"
             ]
+          },
+          "specialties": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
           }
         }
       },
@@ -5065,6 +5968,55 @@
           "GovernmentScheme"
         ]
       },
+      "PilotMetric": {
+        "enum": [
+          "CheckInSeconds",
+          "NoShowPercent",
+          "DoubleBookings",
+          "ReminderDeliveryPercent"
+        ]
+      },
+      "PilotMetrics": {
+        "required": [
+          "from",
+          "to",
+          "checkIn",
+          "noShows",
+          "doubleBookingRefusals",
+          "baselines"
+        ],
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "to": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "checkIn": {
+            "$ref": "#/components/schemas/CheckInMetric"
+          },
+          "noShows": {
+            "$ref": "#/components/schemas/NoShowMetric"
+          },
+          "doubleBookingRefusals": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "baselines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BaselineView"
+            }
+          }
+        }
+      },
       "PreviewRequest": {
         "required": [
           "token"
@@ -5143,6 +6095,13 @@
           },
           "hasLogo": {
             "type": "boolean"
+          },
+          "registrationExpiresOn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
           }
         }
       },
@@ -5209,6 +6168,20 @@
           }
         }
       },
+      "Reactivate": {
+        "required": [
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "ReasonCategory": {
         "enum": [
           "General",
@@ -5257,6 +6230,54 @@
           "Offer",
           "Manual"
         ]
+      },
+      "RecordBaseline": {
+        "type": "object",
+        "properties": {
+          "facilityId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "metric": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PilotMetric"
+              }
+            ]
+          },
+          "value": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "method": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "fromDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "toDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          }
+        }
       },
       "RegisterRequest": {
         "type": "object",
@@ -5418,6 +6439,61 @@
           }
         }
       },
+      "RescheduleView": {
+        "required": [
+          "fromCalendarName",
+          "fromStart",
+          "fromEnd",
+          "toCalendarName",
+          "toStart",
+          "toEnd",
+          "actorName",
+          "occurredAt",
+          "reassignReason"
+        ],
+        "type": "object",
+        "properties": {
+          "fromCalendarName": {
+            "type": "string"
+          },
+          "fromStart": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "fromEnd": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "toCalendarName": {
+            "type": "string"
+          },
+          "toStart": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "toEnd": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actorName": {
+            "type": "string"
+          },
+          "occurredAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reassignReason": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ReassignReason"
+              }
+            ]
+          }
+        }
+      },
       "ResourceView": {
         "required": [
           "id",
@@ -5536,6 +6612,12 @@
             ],
             "format": "uuid"
           },
+          "version": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
           "actions": {
             "type": "array",
             "items": {
@@ -5639,6 +6721,13 @@
               "null",
               "string"
             ]
+          },
+          "registrationExpiresOn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
           },
           "taxNumber": {
             "type": [
@@ -6011,6 +7100,12 @@
           "monthly": {
             "type": "boolean"
           },
+          "weekdays": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DayOfWeek"
+            }
+          },
           "count": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
@@ -6047,6 +7142,56 @@
           "Other"
         ]
       },
+      "SignInStart": {
+        "type": "object",
+        "properties": {
+          "loginHint": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "returnUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "invitation": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "signup": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          }
+        }
+      },
+      "SlotMatch": {
+        "required": [
+          "calendarId",
+          "calendarName",
+          "start"
+        ],
+        "type": "object",
+        "properties": {
+          "calendarId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "calendarName": {
+            "type": "string"
+          },
+          "start": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "SlotView": {
         "required": [
           "start",
@@ -6065,6 +7210,22 @@
           },
           "held": {
             "type": "boolean"
+          }
+        }
+      },
+      "StartEncounter": {
+        "required": [
+          "appointmentId"
+        ],
+        "type": "object",
+        "properties": {
+          "appointmentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "leaveOpen": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -6270,6 +7431,152 @@
           }
         }
       },
+      "WaitlistList": {
+        "required": [
+          "facilityId",
+          "timeZone",
+          "now",
+          "entries"
+        ],
+        "type": "object",
+        "properties": {
+          "facilityId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "timeZone": {
+            "type": "string"
+          },
+          "now": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WaitlistView"
+            }
+          }
+        }
+      },
+      "WaitlistState": {
+        "enum": [
+          "Waiting",
+          "Offered",
+          "Booked",
+          "Removed"
+        ]
+      },
+      "WaitlistView": {
+        "required": [
+          "id",
+          "patientId",
+          "patientName",
+          "mrn",
+          "calendarId",
+          "calendarName",
+          "visitType",
+          "reasonCategory",
+          "days",
+          "from",
+          "until",
+          "state",
+          "requestedAt",
+          "offered",
+          "offerExpiresAt",
+          "match"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "patientId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "patientName": {
+            "type": "string"
+          },
+          "mrn": {
+            "type": "string"
+          },
+          "calendarId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "calendarName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "visitType": {
+            "$ref": "#/components/schemas/VisitType"
+          },
+          "reasonCategory": {
+            "$ref": "#/components/schemas/ReasonCategory"
+          },
+          "days": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DayOfWeek"
+            }
+          },
+          "from": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "time"
+          },
+          "until": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "time"
+          },
+          "state": {
+            "$ref": "#/components/schemas/WaitlistState"
+          },
+          "requestedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "offered": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SlotMatch"
+              }
+            ]
+          },
+          "offerExpiresAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "match": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SlotMatch"
+              }
+            ]
+          }
+        }
+      },
       "WalkIn": {
         "type": "object",
         "properties": {
@@ -6293,6 +7600,9 @@
           },
           "reasonCategory": {
             "$ref": "#/components/schemas/ReasonCategory"
+          },
+          "allowRepeat": {
+            "type": "boolean"
           }
         }
       },
@@ -6349,10 +7659,16 @@
       "name": "Host.Api"
     },
     {
+      "name": "AccessRequestEndpoints"
+    },
+    {
       "name": "AccessLogEndpoints"
     },
     {
       "name": "PatientEndpoints"
+    },
+    {
+      "name": "EncounterEndpoints"
     }
   ]
 }

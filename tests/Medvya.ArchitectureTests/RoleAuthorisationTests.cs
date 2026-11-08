@@ -20,10 +20,15 @@ public partial class RoleAuthorisationTests
         ["Medvya.Tenancy.Infrastructure/FacilityDirectory.cs"] = "reads the membership for StaffAccess",
         ["Medvya.Tenancy.Application/IFacilityDirectory.cs"] = "contract of the above",
         ["Medvya.Tenancy.Infrastructure/StaffRoster.cs"] = "last-admin check on stored memberships when offboarding, not a caller check",
+        ["Medvya.Tenancy.Infrastructure/Invitations.cs"] = "the invited role's access, compared with the inviter's from IStaffAccess (#875); not a caller check",
         ["Medvya.Tenancy.Infrastructure/PracticeSettings.cs"] = "copies the creator's membership role to a new location, not a check",
         ["Host.Api/Auth/SessionControl.cs"] = "drops the legacy role claim from old cookies",
         ["Medvya.Identity.Api/StaffEndpoints.cs"] = "displays the built-in role table behind ManageStaff",
         ["Medvya.Identity.Api/InvitationEndpoints.cs"] = "previews the invited role's table to the invitee",
+        // Platform console (MDV-P5-040): not a practice role. The claim is never read from the cookie: the host replaces it on every
+        // request from the live member row, so the console policies below decide on the database's current role.
+        ["Host.Platform/Auth/ConsoleAuthentication.cs"] = "sets the platform role claim from the live member row on each request",
+        ["Medvya.Platform.Api/PlatformEndpoints.cs"] = "console policies on that per-request platform role claim",
     };
 
     static string Src()

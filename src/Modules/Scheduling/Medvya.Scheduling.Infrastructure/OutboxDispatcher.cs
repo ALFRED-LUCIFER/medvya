@@ -32,6 +32,9 @@ public sealed partial class OutboxDispatcher(SchedulingDbContext db, IEnumerable
         return pending.Count;
     }
 
+    public Task<bool> PendingAsync(Guid facilityId, Guid appointmentId, CancellationToken cancellationToken = default) =>
+        db.Outbox.AnyAsync(e => e.AggregateId == appointmentId && e.PublishedAt == null && db.Appointments.Any(a => a.Id == appointmentId && a.FacilityId == facilityId), cancellationToken);
+
     /// <summary>Null for events nobody outside Scheduling acts on (reassignments keep the time) and for payloads that cannot be read (logged by id).</summary>
     AppointmentEvent? Map(OutboxEvent row)
     {
@@ -42,6 +45,7 @@ public sealed partial class OutboxDispatcher(SchedulingDbContext db, IEnumerable
             "AppointmentCancelled.v1" => AppointmentEventKind.Cancelled,
             "AppointmentNoShow.v1" => AppointmentEventKind.NoShow,
             "AppointmentNeedsRebooking.v1" => AppointmentEventKind.NeedsRebooking,
+            "WaitlistOffered.v1" => AppointmentEventKind.SlotOffered, // AppointmentId carries the waitlist entry id
             _ => (AppointmentEventKind?)null,
         };
         if (kind is null) return null;
@@ -51,7 +55,7 @@ public sealed partial class OutboxDispatcher(SchedulingDbContext db, IEnumerable
             var p = doc.RootElement;
             return new AppointmentEvent(row.Id, kind.Value, row.TenantId, row.AggregateId, p.GetProperty("facilityId").GetGuid(), p.GetProperty("patientId").GetGuid(),
                 p.GetProperty("start").GetDateTimeOffset(), p.TryGetProperty("walkIn", out var w) && w.GetBoolean(), row.OccurredAt,
-                p.TryGetProperty("quiet", out var q) && q.GetBoolean());
+                p.TryGetProperty("quiet", out var q) && q.GetBoolean(), p.TryGetProperty("series", out var sr) && sr.GetBoolean());
         }
         catch (Exception e) when (e is JsonException or KeyNotFoundException or InvalidOperationException or FormatException)
         {

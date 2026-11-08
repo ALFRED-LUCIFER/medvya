@@ -212,6 +212,11 @@ namespace Medvya.Patients.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("RegisteredBy")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("SearchKey")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("text")
+                        .HasComputedColumnSql("patients.search_key(\"FullName\", \"ArabicName\")", true);
+
                     b.Property<string>("SexAtBirth")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -224,6 +229,12 @@ namespace Medvya.Patients.Infrastructure.Persistence.Migrations
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.ComplexProperty(typeof(Dictionary<string, object>), "Address", "Medvya.Patients.Domain.Patient.Address#PatientAddress", b1 =>
                         {

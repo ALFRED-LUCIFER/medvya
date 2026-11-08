@@ -60,12 +60,29 @@ export function permissionRows(catalogue: RoleCatalogue, choice: RoleChoice): { 
 export const addableRows = (catalogue: RoleCatalogue, baseRole: AssignableRole) =>
   (catalogue.builtIn.find(b => b.role === baseRole)?.rows ?? []).filter(r => r.extra !== null);
 
-export const canResend = (m: StaffMember) => m.status === 'Invited' && m.invitationId !== null;
+/**
+ * The status column's word: an invitation that was revoked or ran out reads as such, not as "Invited" (MDV-P1-052); the
+ * pending one keeps "Invited" with its expiry date underneath.
+ */
+export const statusLabel = (m: StaffMember): MembershipStatus | 'Revoked' | 'Expired' =>
+  m.status === 'Invited' && m.invitationState === 'revoked' ? 'Revoked' : m.status === 'Invited' && m.invitationState === 'expired' ? 'Expired' : m.status;
+
+/** A revoked invitation is not resent (#912; the server refuses it too): the row stays as the record, and the person is added again. */
+export const canResend = (m: StaffMember) => m.status === 'Invited' && m.invitationId !== null && m.invitationState !== 'revoked';
 export const canRevoke = (m: StaffMember) => m.status === 'Invited' && m.invitationState === 'pending';
 
 /** Offboarding applies to someone who has joined; a pending invitation is revoked instead. */
 export const canOffboard = (m: StaffMember) => m.status === 'Active' || m.status === 'Suspended';
-export const offboardSchema = z.object({ reason: z.string().trim().min(1).max(500) });
+/** A doctor's future visits move to "needs rebooking": the admin says whether patients are offered new slots or called (#225). */
+export const isDoctor = (m: StaffMember) => m.role === 'SoloDoctor' || m.role === 'HospitalDoctor';
+export const offboardSchema = z.object({ reason: z.string().trim().min(1).max(500), rebooking: z.enum(['offer', 'call']).nullable() });
 export type OffboardForm = z.infer<typeof offboardSchema>;
+/** For a doctor the rebooking choice is required; for anyone else it does not apply. */
+export const rebookingMissing = (m: StaffMember, v: OffboardForm) => isDoctor(m) && v.rebooking === null;
+
+/** An offboarded person who had joined can be brought back with the same role (#225). */
+export const canReactivate = (m: StaffMember) => m.status === 'Offboarded' && m.userId !== null;
+export const reactivateSchema = z.object({ reason: z.string().trim().min(1).max(500) });
+export type ReactivateForm = z.infer<typeof reactivateSchema>;
 
 export type Step = 'role' | 'scope' | 'permissions';

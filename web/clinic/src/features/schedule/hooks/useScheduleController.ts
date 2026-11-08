@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useSearchParams } from 'react-router';
 import { keepPreviousData, useMutation, useQuery } from '@tanstack/react-query';
 import type { DaySheet } from '../domain/daySheet';
 import { layoutDay, stepDate } from '../domain/schedule';
-import { agenda, filterColumns, firstFreeSlot, weekDays, weekSpan, type ScheduleView } from '../domain/views';
+import { agenda, filterColumns, firstFreeSlot, readAddress, weekDays, weekSpan, type ScheduleAddress, type ScheduleView } from '../domain/views';
 import { ApiError, fetchScheduleDay, fetchScheduleWeek, printDaySheet } from '../services/scheduleApi';
-import { isPhoneWidth, printPage } from '../services/viewport';
+import { isPhoneWidth, isTabletWidth, onTabletWidthChange, printPage } from '../services/viewport';
 
 /** The current instant, refreshed each minute so slots that start while the screen is open stop being offered without a reload. */
 const useNow = () => {
@@ -21,12 +22,26 @@ const useNow = () => {
  * P-04 schedule of the active facility (MDV-P1-011, MDV-P1-023): day grid, week of one calendar and a list (agenda), all from
  * the same API data. `date` null means "today in the facility", which the server decides. While the next date loads, the
  * previous one stays on screen marked as updating. A doctor starts on their own column; phones start on the list.
- * Offline is shown by the shell's banner, not here.
+ * Offline is shown by the shell's banner, not here. Date and view live only in the address (?date=…&view=…), so a reload or a
+ * shared link opens the same day and view.
  */
 export function useScheduleController(facilityId: string, userId: string) {
   const now = useNow();
-  const [date, setDate] = useState<string | null>(null);
-  const [view, setView] = useState<ScheduleView>(() => (isPhoneWidth() ? 'list' : 'day'));
+  const [defaultView] = useState<ScheduleView>(() => (isPhoneWidth() ? 'list' : 'day'));
+  const [params, setParams] = useSearchParams();
+  const { date, view: asked } = readAddress(params), view = asked ?? defaultView;
+  // The address as last written. React Router hands a functional update the params of the last render, so two clicks before
+  // the next render would both step from the same date; each change builds on this instead (MDV-P1-052).
+  const written = useRef(params);
+  useEffect(() => { written.current = params; }, [params]); // back/forward or a link: the address wins
+  const change = (next: (current: ScheduleAddress) => Partial<ScheduleAddress>) => {
+    const current = readAddress(written.current), merged = { ...current, ...next(current) }, out = new URLSearchParams(written.current);
+    for (const key of ['date', 'view'] as const) { const value = merged[key]; if (value) out.set(key, value); else out.delete(key); }
+    written.current = out;
+    setParams(out, { replace: true }); // replace: stepping through days does not fill the back button
+  };
+  const setDate = (next: (requested: string | null) => string | null) => change(a => ({ date: next(a.date) }));
+  const setView = (next: ScheduleView) => change(() => ({ view: next }));
   const [chosen, setChosen] = useState<string | null | undefined>(undefined); // undefined: nothing chosen yet
 
   // The day answers the calendar list, the zone and "today" in every view; the week view reads its week beside it.
@@ -61,6 +76,7 @@ export function useScheduleController(facilityId: string, userId: string) {
 
   const shown = date ?? today;
   return {
+    tablet: useSyncExternalStore(onTabletWidthChange, isTabletWidth),
     sheet,
     printing: printing.isPending,
     printFailed: printing.isError,
@@ -85,10 +101,10 @@ export function useScheduleController(facilityId: string, userId: string) {
     failed: !!error && !forbidden && !current.data,
     onView: setView,
     onFilter: (calendarId: string | null) => setChosen(calendarId),
-    onOpenDay: (d: string) => { setDate(d); setView('day'); },
+    onOpenDay: (d: string) => change(() => ({ date: d, view: 'day' })),
     onPrevious: () => step(isWeek ? -7 : -1),
     onNext: () => step(isWeek ? 7 : 1),
-    onToday: () => setDate(null),
+    onToday: () => setDate(() => null),
     onRetry: () => void (isWeek && week.error ? week.refetch() : query.refetch()),
   };
 }

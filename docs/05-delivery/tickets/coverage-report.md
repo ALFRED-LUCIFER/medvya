@@ -18,8 +18,8 @@ Every requirement, screen, exit criterion, NFR, delivery-package item and depend
 | P0-08 | P0 | MUST | MDV-P0-002, MDV-P0-003, MDV-P0-016, MDV-P0-024, MDV-P0-031 |
 | P0-09 | P0 | MUST | MDV-P0-008, MDV-P0-009, MDV-P0-034, MDV-P0-035, MDV-P0-037, MDV-P0-041 |
 | P0-10 | P0 | MUST | MDV-P0-016, MDV-P0-018, MDV-P0-025, MDV-P0-026, MDV-P0-027 |
-| P1-01 | P1 | SHOULD | MDV-P1-001, MDV-P1-002, MDV-P1-003 |
-| P1-02 | P1 | MUST | MDV-P1-004, MDV-P1-005, MDV-P1-006, MDV-P1-039, MDV-P1-043 |
+| P1-01 | P1 | SHOULD | MDV-P1-001, MDV-P1-002, MDV-P1-003, MDV-P1-053, MDV-P1-054, MDV-P1-055, MDV-P1-056, MDV-P1-057, MDV-P1-058 |
+| P1-02 | P1 | MUST | MDV-P1-004, MDV-P1-005, MDV-P1-006, MDV-P1-039, MDV-P1-043, MDV-P1-059, MDV-P1-060, MDV-P1-061 |
 | P1-03 | P1 | MUST | MDV-P1-007, MDV-P1-008 |
 | P1-04 | P1 | MUST | MDV-P1-011, MDV-P1-012 |
 | P1-05 | P1 | MUST | MDV-P1-013, MDV-P1-014, MDV-P1-015, MDV-P1-016, MDV-P1-017, MDV-P1-018, MDV-P1-020, MDV-P1-038 |
@@ -33,7 +33,7 @@ Every requirement, screen, exit criterion, NFR, delivery-package item and depend
 | P2-01 | P2 | MUST | MDV-P2-002, MDV-P2-003 |
 | P2-02 | P2 | MUST | MDV-P2-004, MDV-P2-005, MDV-P2-006, MDV-P2-024 |
 | P2-03 | P2 | MUST | MDV-P2-007, MDV-P2-008, MDV-P2-026 |
-| P2-04 | P2 | MUST | MDV-P2-001, MDV-P2-009, MDV-P2-010, MDV-P2-011, MDV-P2-025 |
+| P2-04 | P2 | MUST | MDV-P2-001, MDV-P2-009, MDV-P2-010, MDV-P2-011, MDV-P2-025, MDV-P2-029 |
 | P2-05 | P2 | MUST | MDV-P2-012, MDV-P2-013, MDV-P2-023, MDV-P2-026, MDV-P2-027, MDV-P2-028 |
 | P2-06 | P2 | MUST | MDV-P2-014, MDV-P2-015, MDV-P2-016, MDV-P2-017, MDV-P2-018, MDV-P2-019, MDV-P2-020, MDV-P2-027 |
 | P2-07 | P2 | MUST | MDV-P2-006 |
@@ -90,16 +90,16 @@ Every requirement, screen, exit criterion, NFR, delivery-package item and depend
 
 | Screen | PRD phase | Status | Tickets |
 |---|---|---|---|
-| F-03 Sign up · MFA / passkey · recovery | P0 | DESIGNED | MDV-P0-011, MDV-P0-012 |
+| F-03 Sign up · MFA / passkey · recovery | P0 | DESIGNED | MDV-P0-011, MDV-P0-012, MDV-P1-059, MDV-P1-060 |
 | F-05 Session expired · 403 · 404 · offline | P0 | DESIGNED | MDV-P0-015 |
-| F-06 Invite acceptance | P0 | DESIGNED | MDV-P0-013 |
+| F-06 Invite acceptance | P0 | DESIGNED | MDV-P0-013, MDV-P1-059 |
 | X-03 Six end-to-end journeys (storyboard) | P0 | DESIGNED | MDV-P0-023 |
 | D-03 Notification centre | P1 | DESIGNED | MDV-P1-034 |
 | D-04 Clinic overview (multi-doctor Today, shared waiting room) | P1 | DESIGNED | MDV-P1-030 |
-| F-01 Landing (solo doctor / hospital) | P1 | DESIGNED | MDV-P1-001, MDV-P5-050 |
+| F-01 Landing (solo doctor / hospital) | P1 | DESIGNED | MDV-P1-001, MDV-P1-053, MDV-P1-054, MDV-P1-055, MDV-P1-056, MDV-P5-050 |
 | F-02 Country & data residency selector | P1 | DESIGNED | MDV-P1-002 |
-| F-04 Solo doctor onboarding (licence, schedule, invite) | P1 | DESIGNED | MDV-P1-004 |
-| F-07 Trust centre & demo request | P1 | DESIGNED | MDV-P1-003 |
+| F-04 Solo doctor onboarding (licence, schedule, invite) | P1 | DESIGNED | MDV-P1-004, MDV-P1-059, MDV-P1-061 |
+| F-07 Trust centre & demo request | P1 | DESIGNED | MDV-P1-003, MDV-P1-057, MDV-P1-058 |
 | F-08 Practice settings (profile, availability, staff, services, n | P1 | DESIGNED | MDV-P1-005, MDV-P1-006, MDV-P1-019 |
 | F-09 Add doctor (clinic mode): licence, schedule, fees, access, s | P1 | DESIGNED | MDV-P1-007 |
 | F-10 Add staff & roles (scope, permissions, invite, custom roles) | P1 | DESIGNED | MDV-P1-008, MDV-P1-009 |

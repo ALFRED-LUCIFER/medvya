@@ -159,7 +159,7 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P1-035](P1-front-desk/MDV-P1-035.md) | Practice access log for owners (F-12): who opened which record and when | P1 | wk 8–8 | 84% |
 | [MDV-P1-046](P1-front-desk/MDV-P1-046.md) | Start UAE regulator onboarding applications early (risk mitigation) | P1 | wk 6–8 | 55% |
 
-## Week 9 · 21 Dec 2026 – 25 Dec 2026 · load 14.4 dev-days ⚠ over capacity
+## Week 9 · 21 Dec 2026 – 25 Dec 2026 · load 14.9 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -175,6 +175,7 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P2-022](P2-doctor-workspace/MDV-P2-022.md) | Legal review of clinical data processing before the first real note | P2 | wk 9–11 | 62% |
 | [MDV-P2-023](P2-doctor-workspace/MDV-P2-023.md) | Define and operate the doctor licence verification process | P2 | wk 9–9 | 75% |
 | [MDV-P2-024](P2-doctor-workspace/MDV-P2-024.md) | Clinical authorisation: care relationship and purpose checks, request access for clinics | P2 | wk 9–10 | 84% |
+| [MDV-P2-029](P2-doctor-workspace/MDV-P2-029.md) | Encounters start race: a second start that loses the race answers with the winner's encounter | P2 | wk 9–9 | 95% |
 
 ## Week 10 · 28 Dec 2026 – 01 Jan 2027 · load 11.4 dev-days ⚠ over capacity
 
@@ -206,12 +207,21 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P2-022](P2-doctor-workspace/MDV-P2-022.md) | Legal review of clinical data processing before the first real note | P2 | wk 9–11 | 62% |
 | [MDV-P2-025](P2-doctor-workspace/MDV-P2-025.md) | Note template engine and specialty template pack for the partner clinics | P2 | wk 11–12 | 85% |
 
-## Week 12 · 11 Jan 2027 – 15 Jan 2027 · load 17.5 dev-days ⚠ over capacity
+## Week 12 · 11 Jan 2027 – 15 Jan 2027 · load 35.0 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
 | [MDV-P1-049](P1-front-desk/MDV-P1-049.md) | Service worker for static assets only (app shell loads with no network, no patient data) | P1 | wk 12–12 | 70% |
 | [MDV-P1-050](P1-front-desk/MDV-P1-050.md) | Printable day sheet for the desk (no phone numbers or national IDs) | P1 | wk 12–12 | 70% |
+| [MDV-P1-053](P1-front-desk/MDV-P1-053.md) | Public site shell to the 6 Nov design: announcement bar, Product and Solutions menus, mobile menu, footer, app links | P1 | wk 12–12 | 80% |
+| [MDV-P1-054](P1-front-desk/MDV-P1-054.md) | Home page to the 6 Nov design (hero, clinic day, features, Assist, who it's for, patient app, switching, trust, FAQ) | P1 | wk 12–12 | 75% |
+| [MDV-P1-055](P1-front-desk/MDV-P1-055.md) | Medvya Assist page (how AI notes work, safety, add-on) | P1 | wk 12–12 | 80% |
+| [MDV-P1-056](P1-front-desk/MDV-P1-056.md) | For hospitals page (sites and departments on one system, SSO, reporting, e-claims, branded app) | P1 | wk 12–12 | 80% |
+| [MDV-P1-057](P1-front-desk/MDV-P1-057.md) | Book a demo page with a preferred time, confirmation and "create your practice now" | P1 | wk 12–12 | 70% |
+| [MDV-P1-058](P1-front-desk/MDV-P1-058.md) | Trust centre (/trust) to the 6 Nov security design | P1 | wk 12–12 | 80% |
+| [MDV-P1-059](P1-front-desk/MDV-P1-059.md) | Staff sign-in, sign-up, invitation, location and signed-out screens to the 6 Nov design | P1 | wk 12–12 | 70% |
+| [MDV-P1-060](P1-front-desk/MDV-P1-060.md) | Entra External ID branding for the email code, MFA set-up and recovery pages | P1 | wk 12–12 | 60% |
+| [MDV-P1-061](P1-front-desk/MDV-P1-061.md) | Practice set-up wizard to the 6 Nov design (practice, hours and services, team, patients, payments and messages, ready) | P1 | wk 12–13 | 60% |
 | [MDV-P2-006](P2-doctor-workspace/MDV-P2-006.md) | Documents: upload, malware scan, secure viewer with time-limited links, scan to patient file (E-03) | P2 | wk 11–12 | 82% |
 | [MDV-P2-009](P2-doctor-workspace/MDV-P2-009.md) | Consultation note editor: chief complaint, SOAP, specialty templates, manual note when recording is declined (E-04) | P2 | wk 11–12 | 85% |
 | [MDV-P2-010](P2-doctor-workspace/MDV-P2-010.md) | Diagnosis coding with ICD-10 and problem verification states (E-07) | P2 | wk 12–12 | 82% |
@@ -221,11 +231,12 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P2-015](P2-doctor-workspace/MDV-P2-015.md) | Prescription composer with dose builder and add-medicine-while-prescribing (E-05, E-11) | P2 | wk 12–13 | 84% |
 | [MDV-P2-025](P2-doctor-workspace/MDV-P2-025.md) | Note template engine and specialty template pack for the partner clinics | P2 | wk 11–12 | 85% |
 
-## Week 13 · 18 Jan 2027 – 22 Jan 2027 · load 22.2 dev-days ⚠ over capacity
+## Week 13 · 18 Jan 2027 – 22 Jan 2027 · load 24.7 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
 | [MDV-P1-051](P1-front-desk/MDV-P1-051.md) | Encrypted read-only schedule cache for outages (needs an ADR first) | P1 | wk 13–13 | 55% |
+| [MDV-P1-061](P1-front-desk/MDV-P1-061.md) | Practice set-up wizard to the 6 Nov design (practice, hours and services, team, patients, payments and messages, ready) | P1 | wk 12–13 | 60% |
 | [MDV-P2-012](P2-doctor-workspace/MDV-P2-012.md) | Sign and finalise: immutable signed note v1 with re-authentication (E-06) | P2 | wk 12–13 | 90% |
 | [MDV-P2-013](P2-doctor-workspace/MDV-P2-013.md) | Addenda, version history and print/PDF of the signed note (E-06) | P2 | wk 13–13 | 88% |
 | [MDV-P2-015](P2-doctor-workspace/MDV-P2-015.md) | Prescription composer with dose builder and add-medicine-while-prescribing (E-05, E-11) | P2 | wk 12–13 | 84% |

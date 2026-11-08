@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import handoff from '../../../docs/02-design/data/handoff.json';
-import { catalogs, loadCatalog, localeFor, makeI18n, translate, type MessageKey } from './index';
+import { catalogs, loadCatalog, localeFor, ltr, makeI18n, translate, type MessageKey } from './index';
 
 describe('i18n catalogs', () => {
   it('ships English only; Hindi and Arabic load on demand (first paint carries one catalog)', async () => {
@@ -27,6 +27,11 @@ describe('i18n', () => {
     expect(translate('ar', 'consent.script')).toBe(translate('en', 'consent.script'));
     expect(translate('en', 'note.signBlocked', { n: 2 })).toBe('Sign note (2 unresolved)');
     expect(translate('hi', 'push.generic', { clinic: 'Iyer Family Clinic' })).toContain('Iyer Family Clinic');
+  });
+
+  it('words a count by the plural rules of the locale, Arabic dual included (MDV-P1-052)', () => {
+    expect([1, 2].map(n => makeI18n('en', 'IN').tCount('board.count', n))).toEqual(['1 visit', '2 visits']);
+    expect([1, 2, 3, 11].map(n => makeI18n('ar', 'AE').tCount('board.count', n))).toEqual(['زيارة واحدة', 'زيارتان', '3 زيارات', '11 زيارة']);
   });
 
   it('has no keys in other locales that English lacks', () => {
@@ -60,5 +65,10 @@ describe('i18n', () => {
     expect(localeFor('hi')).toBe('hi');
     expect(localeFor('fr')).toBe('en');
     expect(localeFor(null)).toBe('en');
+  });
+
+  it('isolates left-to-right values inside Arabic text', () => {
+    expect(ltr('+971')).toBe('\u2066+971\u2069');
+    expect(translate('ar', 'mobile.patientSignIn.uae', { code: ltr('+971') })).toContain('\u2066+971\u2069');
   });
 });

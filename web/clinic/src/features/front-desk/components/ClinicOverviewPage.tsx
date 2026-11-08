@@ -93,16 +93,18 @@ function Body(props: Props) {
 function Doctor({ doctor, timeZone, mine = false }: { doctor: DoctorLoad; timeZone: string; mine?: boolean }) {
   const { t, formatTime } = useI18n();
   const id = `overview-doctor-${mine ? 'mine' : doctor.calendarId}`;
+  // The doctor's own card stands alone under the page title, so its headings sit one level higher than the list cards' (#894).
+  const [Title, Sub] = mine ? (['h2', 'h3'] as const) : (['h3', 'h4'] as const);
   return (
     <article aria-labelledby={id} className={`flex h-full flex-col gap-2 rounded-xl border bg-card p-4 ${mine ? 'border-action-600' : ''}`}>
-      <h3 id={id} className="font-extrabold">{mine ? t('overview.mine', { name: doctor.name }) : doctor.name}</h3>
+      <Title id={id} className="font-extrabold">{mine ? t('overview.mine', { name: doctor.name }) : doctor.name}</Title>
       <p className="flex items-center gap-1.5 text-sm font-bold">
         <Clock aria-hidden className="size-4" />{doctor.delayMinutes > 0 ? t('overview.late', { minutes: doctor.delayMinutes }) : t('overview.onTime')}
       </p>
       <ul aria-label={t('overview.byState')} className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-muted-foreground">
         {countsInOrder(doctor.counts).map(c => <li key={c.state}>{t('overview.count', { state: t(`board.column.${c.state}`), count: c.count })}</li>)}
       </ul>
-      <h4 className="text-sm font-bold">{t('overview.next')}</h4>
+      <Sub className="text-sm font-bold">{t('overview.next')}</Sub>
       {doctor.next.length === 0 ? <p className="text-sm text-muted-foreground">{t('overview.nextNone')}</p> : (
         <ol className="flex flex-col gap-1 text-sm">
           {doctor.next.map(n => (

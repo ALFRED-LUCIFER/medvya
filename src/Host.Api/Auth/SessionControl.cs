@@ -7,6 +7,7 @@ using Medvya.Tenancy.Application;
 using Medvya.Tenancy.Domain;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -56,13 +57,16 @@ public static class SessionControl
             ? await services.GetRequiredService<IStaffSessions>().ValidateAsync(sid, uid, activity, cancellationToken)
             : null;
         // A copy of the cookie from before a facility switch names another membership than the session: refuse it.
-        return session is not null && session.TenantId == Read(principal, TenantClaim) && session.MembershipId == Read(principal, MembershipClaim);
+        // A native app session is reachable by bearer token only, a browser session by cookie only (MDV-P5-033).
+        return session is not null && session.TenantId == Read(principal, TenantClaim) && session.MembershipId == Read(principal, MembershipClaim)
+            && session.IsNative == NativeAuthentication.IsNative(principal);
     }
 
     public static WebApplication MapSessionControl(this WebApplication app)
     {
         app.MapGet("/v1/me/context", async (ClaimsPrincipal principal, [FromServices] IStaffUsers users, [FromServices] IMembershipDirectory directory,
-            [FromServices] IFeatureFlags flags, [FromServices] IStaffAccess staff, [FromServices] IFacilityDirectory facilities, CancellationToken ct) =>
+            [FromServices] IFeatureFlags flags, [FromServices] IStaffAccess staff, [FromServices] IFacilityDirectory facilities,
+            [FromServices] IStaffSessions sessions, CancellationToken ct) =>
         {
             var user = Read(principal, ClaimTypes.NameIdentifier) is { } id ? await users.GetAsync(id, ct) : null;
             if (user is null) return Results.Unauthorized();
@@ -80,6 +84,8 @@ public static class SessionControl
             {
                 user = new { user.Id, user.DisplayName },
                 memberships = memberships.Select(m => new { m.Id, m.TenantId, m.TenantName, m.FacilityId, m.FacilityName, Role = m.Role.ToString() }),
+                // The picker lists the last used facility first (MDV-P1-059); only ever one of the memberships above.
+                lastMembershipId = await sessions.LastMembershipAsync(user.Id, ct) is { } last && memberships.Any(m => m.Id == last) ? last : (Guid?)null,
                 active = active is null ? null : new
                 {
                     MembershipId = active.Id,
@@ -117,11 +123,13 @@ public static class SessionControl
             http.User = new ClaimsPrincipal(identity);
             await WriteAuditAsync(http, firstChoice ? "auth.signin" : "auth.facility.switch", "session", sessionId);
             await sessions.ScopeAsync(sessionId, choice.TenantId, choice.Id, choice.IdleTimeoutMinutes, ct);
+            // A native app has no cookie to re-issue: its access token now names the old membership and is refused, so it refreshes.
+            if (NativeAuthentication.IsNative(auth.Principal!)) return Results.NoContent();
             await http.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, http.User, auth.Properties);
             return Results.NoContent();
         }).RequireAuthorization();
 
-        app.MapPost("/bff/logout", async (HttpContext http, [FromServices] IStaffSessions sessions) =>
+        app.MapPost("/bff/logout", async (HttpContext http, [FromServices] IStaffSessions sessions, IConfiguration config) =>
         {
             if (Read(http.User, SessionIdClaim) is { } sessionId && Read(http.User, ClaimTypes.NameIdentifier) is { } userId)
             {
@@ -129,9 +137,17 @@ public static class SessionControl
                 if (http.User.FindFirst(TenantClaim) is not null) await WriteAuditAsync(http, "auth.signout", "session", sessionId);
                 await sessions.RevokeAsync(userId, sessionId, http.RequestAborted);
             }
-            // shortcut: ends the Medvya session only; add provider sign-out (end_session_endpoint) with Entra (MDV-P0-011).
+            // A native app holds no cookie to clear (and the bearer scheme cannot sign out); revoking the row is the whole logout.
+            if (NativeAuthentication.IsNative(http.User)) return Results.NoContent();
             await http.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-            return Results.NoContent();
+            // #912: also end the provider session (OIDC RP-initiated logout), or on a shared PC it signs the last account straight back in.
+            // The provider returns to /signout-callback-oidc, which sends the browser on to the app. Its address goes to the page, as on sign-in.
+            // shortcut: a session that already idled out or was revoked gets 401 here and never reaches the provider sign-out; add a provider
+            // sign-out to the "You were signed out" screen if pilot desks hit it (#912 follow-up).
+            await http.SignOutAsync(OpenIdConnectDefaults.AuthenticationScheme, new AuthenticationProperties { RedirectUri = StaffAuthentication.AppPath(config) });
+            var location = http.Response.Headers.Location.ToString();
+            http.Response.Headers.Remove(Microsoft.Net.Http.Headers.HeaderNames.Location);
+            return Results.Ok(new StaffAuthentication.SignInRedirect(location));
         }).RequireAuthorization();
 
         // "My devices": the caller's live sessions.
@@ -161,7 +177,7 @@ public static class SessionControl
     }
 
     // Written before the change it records: if the audit write fails, the request fails (fail closed), as .Audited() does.
-    static Task WriteAuditAsync(HttpContext http, string action, string resourceType, Guid resourceId) =>
+    internal static Task WriteAuditAsync(HttpContext http, string action, string resourceType, Guid resourceId) =>
         http.RequestServices.GetRequiredService<IAuditLog>().WriteAsync(new AuditEvent
         {
             Id = Guid.CreateVersion7(),

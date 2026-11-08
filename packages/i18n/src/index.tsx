@@ -23,6 +23,9 @@ export const locales: { code: Locale; label: string }[] = [
   { code: 'en', label: 'English' }, { code: 'hi', label: 'हिन्दी' }, { code: 'ar', label: 'العربية' },
 ];
 
+/** Keeps a phone number, code or email left-to-right inside right-to-left text (Unicode isolate), so +971 never shows as 971+. */
+export const ltr = (s: string) => `\u2066${s}\u2069`;
+
 /** A device or browser language code ("ar", "hi") as a supported locale; anything else is English. */
 export const localeFor = (code: string | null | undefined): Locale =>
   locales.find(l => l.code === code)?.code ?? 'en';
@@ -39,6 +42,11 @@ export function makeI18n(locale: Locale, country: Country) {
     locale, country,
     dir: (locale === 'ar' ? 'rtl' : 'ltr') as 'rtl' | 'ltr',
     t: (key: MessageKey, vars?: Record<string, string | number>) => translate(locale, key, vars),
+    /** A count in words: `${base}.${plural category}` (Intl.PluralRules; Arabic has zero, one, two, few, many), else `${base}.other`. */
+    tCount: (base: string, count: number) => {
+      const key = `${base}.${new Intl.PluralRules(locale).select(count)}`;
+      return translate(locale, (key in en ? key : `${base}.other`) as MessageKey, { count });
+    },
     formatNumber: (n: number) => new Intl.NumberFormat(tag).format(n),
     /** A day; pass the facility's zone for an instant, omit it for a calendar date built in local time. */
     formatDate: (d: Date, timeZone?: string) => new Intl.DateTimeFormat(tag, { day: '2-digit', month: 'short', year: 'numeric', timeZone }).format(d),

@@ -1,12 +1,48 @@
-// Trust centre lists (MDV-P1-003). Editable without a redeploy: edit this file on the server (it reloads on save) or override
+// Trust centre lists (MDV-P1-003, MDV-P1-058). Editable without a redeploy: edit this file on the server (it reloads on save) or override
 // one value with an app setting, e.g. TrustCentre__Policies__0__Effective=2026-12-01. Keep it in git and raise Version on
 // every change so each published list is on record.
 // Rules: an entry gets an Effective date only once it is signed off (legal review MDV-P1-044, contract signed). Sub-processor
 // changes are announced 30 days ahead. Never add certifications or compliance claims (PublicSiteTests checks the copy).
+// Compliance Status is "planned" or "inProgress" (site.trust.status.*); it says what we are working on and is never a certification.
 {
   "TrustCentre": {
-    "Version": "2026.10-draft",
-    "Updated": "2026-10-21",
+    "Version": "2026.11-draft",
+    "Updated": "2026-11-07",
+    "Compliance": [
+      {
+        "Name": { "en": "India · DPDP Act 2023", "hi": "भारत · DPDP अधिनियम 2023", "ar": "الهند · قانون DPDP لعام 2023" },
+        "Detail": {
+          "en": "Consent, purpose limits and data-principal rights built into the product.",
+          "hi": "सहमति, उद्देश्य की सीमा और डेटा प्रिंसिपल के अधिकार उत्पाद में बने हुए हैं।",
+          "ar": "الموافقة وحدود الغرض وحقوق صاحب البيانات مدمجة في المنتج."
+        },
+        "Status": "inProgress"
+      },
+      {
+        "Name": { "en": "India · ABDM", "hi": "भारत · ABDM", "ar": "الهند · ABDM" },
+        "Detail": { "en": "ABHA linking and health records exchange.", "hi": "ABHA लिंकिंग और स्वास्थ्य रिकॉर्ड का आदान-प्रदान।", "ar": "ربط ABHA وتبادل السجلات الصحية." },
+        "Status": "planned"
+      },
+      {
+        "Name": { "en": "India · NHCX", "hi": "भारत · NHCX", "ar": "الهند · NHCX" },
+        "Detail": { "en": "Cashless insurance claims exchange.", "hi": "कैशलेस बीमा दावों का आदान-प्रदान।", "ar": "تبادل مطالبات التأمين دون دفع نقدي." },
+        "Status": "planned"
+      },
+      {
+        "Name": { "en": "UAE · PDPL and DoH / DHA / MOHAP", "hi": "यूएई · PDPL और DoH / DHA / MOHAP", "ar": "الإمارات · PDPL ودائرة الصحة / هيئة الصحة بدبي / وزارة الصحة" },
+        "Detail": {
+          "en": "Personal data protection and the health data standards of each emirate.",
+          "hi": "व्यक्तिगत डेटा सुरक्षा और हर अमीरात के स्वास्थ्य डेटा मानक।",
+          "ar": "حماية البيانات الشخصية ومعايير البيانات الصحية في كل إمارة."
+        },
+        "Status": "inProgress"
+      },
+      {
+        "Name": { "en": "Independent penetration test", "hi": "स्वतंत्र पेनिट्रेशन टेस्ट", "ar": "اختبار اختراق مستقل" },
+        "Detail": { "en": "Before launch, then every year.", "hi": "लॉन्च से पहले, फिर हर साल।", "ar": "قبل الإطلاق، ثم كل عام." },
+        "Status": "planned"
+      }
+    ],
     "Policies": [
       {
         "Name": { "en": "Privacy notice", "hi": "गोपनीयता सूचना", "ar": "إشعار الخصوصية" },

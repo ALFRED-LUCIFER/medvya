@@ -67,7 +67,28 @@ export interface paths {
             };
         };
         put?: never;
-        post?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SignInStart"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -280,6 +301,109 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/native/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    redirect_uri?: string;
+                    code_challenge?: string;
+                    code_challenge_method?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/native/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/native/token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/notifications/receipts": {
         parameters: {
             query?: never;
@@ -442,6 +566,45 @@ export interface paths {
             requestBody: {
                 content: {
                     "application/json": components["schemas"]["PairDisplay"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/patients/{patientId}/access-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    patientId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["AccessRequestBody"];
                 };
             };
             responses: {
@@ -736,6 +899,7 @@ export interface paths {
             parameters: {
                 query?: {
                     facilityId?: string;
+                    version?: string;
                 };
                 header?: never;
                 path: {
@@ -829,6 +993,83 @@ export interface paths {
         };
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/schedule/metrics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    facilityId?: string;
+                    days?: number | string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PilotMetrics"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/schedule/metrics/baselines": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["RecordBaseline"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BaselineView"];
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -1227,6 +1468,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/appointments/{appointmentId}/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    appointmentId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RescheduleView"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/appointments/{appointmentId}/check-in": {
         parameters: {
             query?: never;
@@ -1345,6 +1623,216 @@ export interface paths {
             };
         };
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/waitlist": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    facilityId?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["WaitlistList"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AddToWaitlist"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["WaitlistView"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/waitlist/{id}/offer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["OfferSlot"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["WaitlistView"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/waitlist/{id}/decline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["WaitlistView"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/waitlist/{id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AppointmentView"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/waitlist/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
         options?: never;
         head?: never;
         patch?: never;
@@ -2454,6 +2942,60 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/settings/clinical-access": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ClinicalAccessBody"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/settings/terms": {
         parameters: {
             query?: never;
@@ -2851,6 +3393,45 @@ export interface paths {
             requestBody: {
                 content: {
                     "application/json": components["schemas"]["Offboard"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/staff/{membershipId}/reactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    membershipId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["Reactivate"];
                 };
             };
             responses: {
@@ -3625,10 +4206,229 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/access-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/access-requests/{requestId}/grant": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    requestId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["GrantBody"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/access-requests/{requestId}/decline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    requestId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/encounters": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["StartEncounter"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/encounters/{encounterId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    encounterId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/encounters/{encounterId}/end": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    encounterId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AccessRequestBody: {
+            reason: components["schemas"]["AccessRequestReason"];
+        };
+        /** @enum {unknown} */
+        AccessRequestReason: "CoveringColleague" | "SeeingPatientToday" | "ReviewingResults" | "Referral";
         AddDoctor: {
             fullName?: null | string;
             email?: null | string;
@@ -3660,6 +4460,21 @@ export interface components {
             customRoleId: null | string;
             /** Format: uuid */
             facilityId: string;
+        };
+        AddToWaitlist: {
+            /** Format: uuid */
+            facilityId?: string;
+            /** Format: uuid */
+            patientId?: string;
+            /** Format: uuid */
+            calendarId?: null | string;
+            visitType?: components["schemas"]["VisitType"];
+            reasonCategory?: components["schemas"]["ReasonCategory"];
+            days?: components["schemas"]["DayOfWeek"][];
+            /** Format: time */
+            from?: null | string;
+            /** Format: time */
+            until?: null | string;
         };
         AnonymousTypeOfGuidAndGuidAndstringAndstringAndRoleAndGuidAndstringAndGuidAndstringAndstringAndstringAndGuidAndstringAndDateTimeOffset: {
             /** Format: uuid */
@@ -3749,6 +4564,18 @@ export interface components {
             /** @default false */
             unscheduled: boolean;
         };
+        BaselineView: {
+            metric: components["schemas"]["PilotMetric"];
+            /** Format: int32 */
+            value: number | string;
+            method: string;
+            /** Format: date */
+            fromDate: string;
+            /** Format: date */
+            toDate: string;
+            /** Format: date-time */
+            recordedAt: string;
+        };
         BoardCard: {
             /** Format: uuid */
             id: string;
@@ -3816,6 +4643,23 @@ export interface components {
             /** Format: int64 */
             elapsedMs?: null | number | string;
         };
+        CheckInMetric: {
+            /** Format: double */
+            returningMedianSeconds: null | number | string;
+            /** Format: int32 */
+            returningCount: number | string;
+            /** Format: double */
+            medianSeconds: null | number | string;
+            /** Format: int32 */
+            count: number | string;
+            /** Format: int32 */
+            targetSeconds: number | string;
+        };
+        ClinicalAccessBody: {
+            policy: components["schemas"]["ClinicalAccessPolicy"];
+        };
+        /** @enum {unknown} */
+        ClinicalAccessPolicy: "AllFacilityClinicians" | "AssignedOnly";
         ClinicOverview: {
             /** Format: uuid */
             facilityId: string;
@@ -3987,6 +4831,9 @@ export interface components {
             /** Format: time */
             end: null | string;
             reason: null | string;
+            /** @default false */
+            canEdit: boolean;
+            version?: null | string;
         };
         ExportRequest: {
             /** Format: uuid */
@@ -4028,6 +4875,10 @@ export interface components {
             /** Format: date-time */
             now: string;
             cards: components["schemas"]["BoardCard"][];
+        };
+        GrantBody: {
+            /** Format: int32 */
+            days: number | string;
         };
         HoldSlot: {
             /** Format: uuid */
@@ -4104,6 +4955,14 @@ export interface components {
             patientName: string;
             token: null | string;
         };
+        NoShowMetric: {
+            /** Format: int32 */
+            noShows: number | string;
+            /** Format: int32 */
+            attended: number | string;
+            /** Format: double */
+            percent: null | number | string;
+        };
         NotificationPreferencesView: {
             confirmation: boolean;
             reminder24h: boolean;
@@ -4115,9 +4974,18 @@ export interface components {
             quietStart: string;
             /** Format: time */
             quietEnd: string;
+            senderName?: null | string;
         };
         Offboard: {
             reason: null | string;
+            /** @default false */
+            offerRebooking: boolean;
+        };
+        OfferSlot: {
+            /** Format: uuid */
+            calendarId?: string;
+            /** Format: date-time */
+            start?: string;
         };
         OnboardingClinic: {
             name: null | string;
@@ -4132,6 +5000,7 @@ export interface components {
             hours: null | components["schemas"]["OnboardingHours"];
             templates: null | string[];
             team: null | components["schemas"]["OnboardingTeamMember"][];
+            patients?: null | string;
         };
         OnboardingHours: {
             weekdays: null | components["schemas"]["HoursWindow"][];
@@ -4142,6 +5011,7 @@ export interface components {
             newVisitFee: null | number | string;
             /** Format: int64 */
             followUpFee: null | number | string;
+            days?: null | components["schemas"]["DayOfWeek"][];
         };
         OnboardingLicence: {
             authority: null | string;
@@ -4154,6 +5024,7 @@ export interface components {
             specialty: null | string;
             qualifications: null | string;
             languages: null | string;
+            specialties?: null | string[];
         };
         OnboardingTeamMember: {
             email: null | string;
@@ -4183,6 +5054,19 @@ export interface components {
         };
         /** @enum {unknown} */
         PayerKind: "SelfPay" | "Corporate" | "PrivateInsurance" | "GovernmentScheme";
+        /** @enum {unknown} */
+        PilotMetric: "CheckInSeconds" | "NoShowPercent" | "DoubleBookings" | "ReminderDeliveryPercent";
+        PilotMetrics: {
+            /** Format: date-time */
+            from: string;
+            /** Format: date-time */
+            to: string;
+            checkIn: components["schemas"]["CheckInMetric"];
+            noShows: components["schemas"]["NoShowMetric"];
+            /** Format: int32 */
+            doubleBookingRefusals: number | string;
+            baselines: components["schemas"]["BaselineView"][];
+        };
         PreviewRequest: {
             token: string;
         };
@@ -4200,6 +5084,8 @@ export interface components {
             phone: null | string;
             email: null | string;
             hasLogo: boolean;
+            /** Format: date */
+            registrationExpiresOn?: null | string;
         };
         QueueTv: {
             now: components["schemas"]["QueueTvNow"][];
@@ -4215,6 +5101,9 @@ export interface components {
             room: null | string;
             doctor: string;
         };
+        Reactivate: {
+            reason: null | string;
+        };
         /** @enum {unknown} */
         ReasonCategory: "General" | "ChronicReview" | "Results" | "PostDischarge" | "Screening" | "Vaccination" | "Paperwork" | "Other";
         /** @enum {unknown} */
@@ -4226,6 +5115,18 @@ export interface components {
         };
         /** @enum {unknown} */
         RebookAction: "Offer" | "Manual";
+        RecordBaseline: {
+            /** Format: uuid */
+            facilityId?: string;
+            metric?: null | components["schemas"]["PilotMetric"];
+            /** Format: int32 */
+            value?: null | number | string;
+            method?: null | string;
+            /** Format: date */
+            fromDate?: null | string;
+            /** Format: date */
+            toDate?: null | string;
+        };
         RegisterRequest: {
             quick?: boolean;
             fullName?: string;
@@ -4256,6 +5157,22 @@ export interface components {
             calendarId?: string;
             /** Format: date-time */
             start?: string;
+        };
+        RescheduleView: {
+            fromCalendarName: string;
+            /** Format: date-time */
+            fromStart: string;
+            /** Format: date-time */
+            fromEnd: string;
+            toCalendarName: string;
+            /** Format: date-time */
+            toStart: string;
+            /** Format: date-time */
+            toEnd: string;
+            actorName: string;
+            /** Format: date-time */
+            occurredAt: string;
+            reassignReason: null | components["schemas"]["ReassignReason"];
         };
         ResourceView: {
             /** Format: uuid */
@@ -4291,6 +5208,7 @@ export interface components {
             reason?: null | string;
             /** Format: uuid */
             replacesId?: null | string;
+            version?: null | string;
             actions?: components["schemas"]["AppointmentAction"][];
         };
         SaveCustomRole: {
@@ -4314,6 +5232,8 @@ export interface components {
             name?: null | string;
             address?: null | string;
             registrationNumber?: null | string;
+            /** Format: date */
+            registrationExpiresOn?: null | string;
             taxNumber?: null | string;
             phone?: null | string;
             email?: null | string;
@@ -4413,6 +5333,7 @@ export interface components {
             /** Format: int32 */
             intervalWeeks?: number | string;
             monthly?: boolean;
+            weekdays?: components["schemas"]["DayOfWeek"][];
             /** Format: int32 */
             count?: number | string;
         };
@@ -4423,12 +5344,31 @@ export interface components {
         };
         /** @enum {unknown} */
         SexAtBirth: "Female" | "Male" | "Other";
+        SignInStart: {
+            loginHint?: null | string;
+            returnUrl?: null | string;
+            invitation?: null | string;
+            signup?: null | boolean;
+        };
+        SlotMatch: {
+            /** Format: uuid */
+            calendarId: string;
+            calendarName: string;
+            /** Format: date-time */
+            start: string;
+        };
         SlotView: {
             /** Format: date-time */
             start: string;
             /** Format: date-time */
             end: string;
             held: boolean;
+        };
+        StartEncounter: {
+            /** Format: uuid */
+            appointmentId: string;
+            /** @default false */
+            leaveOpen: boolean;
         };
         StartRequest: {
             country: null | string;
@@ -4482,6 +5422,41 @@ export interface components {
             /** Format: date-time */
             since: string;
         };
+        WaitlistList: {
+            /** Format: uuid */
+            facilityId: string;
+            timeZone: string;
+            /** Format: date-time */
+            now: string;
+            entries: components["schemas"]["WaitlistView"][];
+        };
+        /** @enum {unknown} */
+        WaitlistState: "Waiting" | "Offered" | "Booked" | "Removed";
+        WaitlistView: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            patientId: string;
+            patientName: string;
+            mrn: string;
+            /** Format: uuid */
+            calendarId: null | string;
+            calendarName: null | string;
+            visitType: components["schemas"]["VisitType"];
+            reasonCategory: components["schemas"]["ReasonCategory"];
+            days: components["schemas"]["DayOfWeek"][];
+            /** Format: time */
+            from: null | string;
+            /** Format: time */
+            until: null | string;
+            state: components["schemas"]["WaitlistState"];
+            /** Format: date-time */
+            requestedAt: string;
+            offered: null | components["schemas"]["SlotMatch"];
+            /** Format: date-time */
+            offerExpiresAt: null | string;
+            match: null | components["schemas"]["SlotMatch"];
+        };
         WalkIn: {
             /** Format: uuid */
             facilityId?: string;
@@ -4491,6 +5466,7 @@ export interface components {
             patientId?: string;
             visitType?: components["schemas"]["VisitType"];
             reasonCategory?: components["schemas"]["ReasonCategory"];
+            allowRepeat?: boolean;
         };
         WorkingHours: {
             weekday?: components["schemas"]["DayOfWeek"];

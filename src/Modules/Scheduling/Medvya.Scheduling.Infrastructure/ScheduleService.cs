@@ -69,11 +69,14 @@ public sealed class ScheduleService(SchedulingDbContext db, SchedulingContext co
         var names = await context.PatientsAsync(appointments.Select(a => a.PatientId), cancellationToken);
         var closures = await context.ClosuresAsync(facility.Id, dates.Min(), dates.Max(), cancellationToken);
         var exceptions = await context.ExceptionsAsync(facility.Id, dates.Min(), dates.Max(), null, cancellationToken);
-        return [.. dates.Select(date => Day(facility, zone, calendars, templates, appointments, holds, names, exceptions, date, closures.GetValueOrDefault(date)))];
+        var hidden = new HashSet<Guid>(); // calendars whose leave reason stays with the doctor and the practice admin (#231)
+        foreach (var id in exceptions.Where(e => e.Reason is not null).Select(e => e.CalendarId).Distinct())
+            if (!await context.CanManageCalendarAsync(facility.Id, id, cancellationToken)) hidden.Add(id);
+        return [.. dates.Select(date => Day(facility, zone, calendars, templates, appointments, holds, names, exceptions, hidden, date, closures.GetValueOrDefault(date)))];
     }
 
     static ScheduleDay Day(FacilityInfo facility, TimeZoneInfo zone, IReadOnlyList<Calendar> calendars, Dictionary<Guid, ScheduleTemplate> templates,
-        List<Appointment> appointments, List<SlotHold> holds, IReadOnlyDictionary<Guid, PatientSummary> names, List<ScheduleAdjustment> exceptions, DateOnly date, string? holiday)
+        List<Appointment> appointments, List<SlotHold> holds, IReadOnlyDictionary<Guid, PatientSummary> names, List<ScheduleAdjustment> exceptions, HashSet<Guid> hiddenReasons, DateOnly date, string? holiday)
     {
         var (from, to) = ScheduleRules.DayBounds(date, zone);
         var days = calendars
@@ -99,7 +102,7 @@ public sealed class ScheduleService(SchedulingDbContext db, SchedulingContext co
             var leave = exceptions.FirstOrDefault(e => e.CalendarId == x.Calendar.Id && e.Kind == ExceptionKind.Leave && e.FromDate <= date && date <= e.ToDate);
             return new ScheduleColumn(x.Calendar.Id, x.Calendar.Kind, x.Calendar.Name, x.Template?.SlotMinutes, x.Day.Hours, slots,
                 holiday is not null ? [new UnavailableBlock(start, end, UnavailableReason.Closed, holiday)]
-                : leave is not null ? [new UnavailableBlock(start, end, UnavailableReason.Leave, leave.Reason)]
+                : leave is not null ? [new UnavailableBlock(start, end, UnavailableReason.Leave, hiddenReasons.Contains(x.Calendar.Id) ? null : leave.Reason)]
                 : ScheduleRules.Unavailable(x.Day, start, end, x.Template is not null),
                 [.. x.Booked.Select(a => SchedulingContext.Chip(a, names))], x.Template is null ? [] : Lengths(x.Template), x.Day.Slots.Count);
         }).ToList();

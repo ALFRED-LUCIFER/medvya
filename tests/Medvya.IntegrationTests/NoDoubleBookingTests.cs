@@ -113,6 +113,31 @@ public sealed class NoDoubleBookingTests(PostgresFixture sql) : IClassFixture<Po
     }
 
     [Fact]
+    public async Task AHundredDesksOnOneDoctorDayBookEveryFreeSlotOnceAndNeverAnswerBusy()
+    {
+        // MDV-P1-022 / P1-037, the worst case for the doctor-day lock: every desk on the same doctor and day. 84 desks each take a
+        // different free 5-minute slot (Tuesday 09:00-13:00 and 17:00-20:00) and must all book; 16 more race them for slots already taken.
+        await h.Schedule(h.Admin).SaveTemplateAsync(h.DoctorTemplate(slotMinutes: 5));
+        var slots = Enumerable.Range(0, 48).Select(i => At(9).AddMinutes(5 * i)).Concat(Enumerable.Range(0, 36).Select(i => At(17).AddMinutes(5 * i)))
+            .Select(s => s.AddDays(1)).ToList();
+        var desks = await h.AddReceptionistsAsync(Desks);
+
+        var (ok, codes) = await Race(desks.Select((d, i) => (Func<Task>)(async () =>
+        {
+            var booking = h.Booking(d);
+            var hold = await booking.HoldAsync(new HoldSlot { FacilityId = h.Facility, CalendarId = h.Doctor, Start = slots[i % slots.Count], VisitType = VisitType.FollowUp });
+            await booking.BookAsync(Book(hold.Id));
+        })));
+
+        Assert.Equal(slots.Count, ok); // every distinct free slot booked: no "busy", no deadlock or serialization error reaches a desk
+        Assert.Equal(Desks - slots.Count, codes.Count);
+        Assert.All(codes, c => Assert.True(c is "being_booked" or "slot_unavailable", c));
+        await using var db = sql.Scheduling(h.Tenant);
+        Assert.Equal(slots.Order(), (await db.Appointments.Select(a => a.Start).ToListAsync()).Order()); // one appointment per slot, none twice
+        Assert.Equal(slots.Count, await db.ScheduleSlots.CountAsync());
+    }
+
+    [Fact]
     public async Task OverlappingMultiSlotBookingsAtOnceGiveExactlyOne()
     {
         var desks = await h.AddReceptionistsAsync(Desks);
@@ -159,7 +184,7 @@ public sealed class NoDoubleBookingTests(PostgresFixture sql) : IClassFixture<Po
         await conn.OpenAsync();
         var tx = conn.BeginTransaction();
         await using var cmd = new NpgsqlCommand("SELECT pg_advisory_xact_lock(hashtextextended(@r, 0))", conn, tx);
-        cmd.Parameters.AddWithValue("r", $"doctor:{h.Doctor}:2026-10-19");
+        cmd.Parameters.AddWithValue("r", $"doctor:{h.Tenant}:{h.Doctor}:2026-10-19");
         await cmd.ExecuteNonQueryAsync();
         return (conn, tx);
     }

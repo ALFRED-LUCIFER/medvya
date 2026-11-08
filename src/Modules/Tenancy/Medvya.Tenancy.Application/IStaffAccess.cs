@@ -20,6 +20,9 @@ public interface IStaffAccess
     /// </summary>
     Task<Access> AccessAsync(Capability capability, Guid facilityId, CancellationToken cancellationToken = default);
 
+    /// <summary>The same for several capabilities at once (in their order), reading the membership, licence and custom role once.</summary>
+    Task<IReadOnlyList<Access>> AccessAsync(IReadOnlyList<Capability> capabilities, Guid facilityId, CancellationToken cancellationToken = default);
+
     /// <summary>The role of the user's active membership at the current facility (database), or null. For display and audit, not for access: use <see cref="AccessAsync(Capability, CancellationToken)"/>.</summary>
     Task<Role?> CurrentRoleAsync(CancellationToken cancellationToken = default);
 

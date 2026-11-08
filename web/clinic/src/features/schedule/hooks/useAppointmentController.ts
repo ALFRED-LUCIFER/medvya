@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { cancelSchema, changeError, emptyCancel, rulesFor, type CancelForm } from '../domain/changes';
 import type { Appointment } from '../domain/schedule';
-import { ApiError, cancelAppointment, cancelFollowing, fetchMessages, markNoShow, rescheduleAppointment } from '../services/scheduleApi';
+import { ApiError, cancelAppointment, cancelFollowing, fetchHistory, fetchMessages, markNoShow, rescheduleAppointment } from '../services/scheduleApi';
 import { checkIn } from '../../front-desk/services/frontDeskApi';
 
 /** The visit the desk opened, with the calendar it sits in; `openedAt` is "now" for the action rules. */
@@ -26,7 +26,7 @@ export function useAppointmentController(facilityId: string, access: { timeZone:
   const [target, setTarget] = useState<Target | null>(null);
   const [done, setDone] = useState<Done | null>(null);
   const form = useForm<CancelForm>({ resolver: zodResolver(cancelSchema), defaultValues: emptyCancel });
-  const refreshSchedule = () => queryClient.invalidateQueries({ queryKey: ['schedule', facilityId] });
+  const refreshSchedule = () => Promise.all([queryClient.invalidateQueries({ queryKey: ['schedule', facilityId] }), queryClient.invalidateQueries({ queryKey: ['visit-history'] })]);
   const finish = (kind: Done['kind'], calendarName?: string, count = 1) => (appointment: Appointment) => {
     setDone({ kind, appointment, calendarName: calendarName ?? opened!.calendarName, count });
     setMode('view');
@@ -41,6 +41,9 @@ export function useAppointmentController(facilityId: string, access: { timeZone:
     enabled: opened !== null,
     refetchInterval: 30_000,
   });
+
+  // Where the visit was before (MDV-P1-024); refetched after each change of this visit.
+  const history = useQuery({ queryKey: ['visit-history', opened?.appointment.id], queryFn: () => fetchHistory(opened!.appointment.id), enabled: opened !== null });
 
   const move = useMutation({
     mutationFn: (t: Target) => rescheduleAppointment(id(), t.calendarId, t.start),
@@ -74,7 +77,9 @@ export function useAppointmentController(facilityId: string, access: { timeZone:
     target,
     done,
     rules: opened && access.timeZone ? rulesFor(opened.appointment, { now: opened.openedAt, timeZone: access.timeZone, canBook: access.canBook, canCheckIn: access.canCheckIn }) : null,
-    messages: messages.isError ? ('error' as const) : (messages.data ?? ('loading' as const)),
+    messages: messages.isError ? ('error' as const) : (messages.data?.messages ?? ('loading' as const)),
+    messagesPreparing: messages.data?.preparing ?? false,
+    history: history.isError ? ('error' as const) : (history.data ?? ('loading' as const)),
     working: mutations.some(m => m.isPending),
     error: failed ? changeError(failed.error instanceof ApiError ? failed.error.code : undefined) : null,
     form,

@@ -4,8 +4,8 @@ import type { Board, BoardCard, BoardColumn, WalkInChoice, WalkInVisit } from '.
 import type { ClinicOverview, ReassignReason } from '../domain/overview';
 
 /** A walk-in: the next free slot today, or queued with the chosen doctor. Ids and list values in the body, never in the URL. */
-export const walkIn = (facilityId: string, patientId: string, c: WalkInChoice) =>
-  post<WalkInVisit>('/v1/appointments/walk-in', { facilityId, patientId, calendarId: c.calendarId || null, visitType: c.visitType, reasonCategory: c.reasonCategory });
+export const walkIn = (facilityId: string, patientId: string, c: WalkInChoice, allowRepeat: boolean) =>
+  post<WalkInVisit>('/v1/appointments/walk-in', { facilityId, patientId, calendarId: c.calendarId || null, visitType: c.visitType, reasonCategory: c.reasonCategory, allowRepeat });
 
 /** Today's board of the facility, in the facility's time zone (the server decides "today"). Ids only in the URL. */
 export const fetchBoard = (facilityId: string) => send<Board>(`/v1/front-desk/board?${new URLSearchParams({ facilityId })}`);

@@ -5,8 +5,11 @@ using Medvya.Tenancy.Domain;
 
 namespace Medvya.Tenancy.Application;
 
-/// <summary>A registration authority a doctor can choose in step 2 (code is stored; the name is shown, in English).</summary>
+/// <summary>A registration authority a doctor can choose in step 1 (code is stored; the name is shown, in English).</summary>
 public sealed record LicenceAuthority(string Code, string Name);
+
+/// <summary>A specialty chip of step 1: the page translates the code; the English name is what the practice defaults keep.</summary>
+public sealed record SpecialtyOption(string Code, string Name);
 
 /// <summary>
 /// Onboarding rules per country (AGENTS.md 3.3): one subclass per country, no country checks elsewhere.
@@ -24,6 +27,15 @@ public abstract partial class OnboardingRules
     public static readonly IReadOnlyList<string> TemplateIds = ["general-opd", "diabetes-review", "hypertension", "paediatrics", "antenatal", "teleconsult"];
     public static readonly IReadOnlyList<Role> TeamRoles = [Role.Receptionist, Role.Nurse];
     public const int MaxTeam = 5;
+    public static readonly IReadOnlyList<SpecialtyOption> Specialties =
+    [
+        new("general-practice", "General practice"), new("paediatrics", "Paediatrics"), new("gynaecology", "Gynaecology"), new("dermatology", "Dermatology"),
+        new("dental", "Dental"), new("ent", "ENT"), new("orthopaedics", "Orthopaedics"), new("physiotherapy", "Physiotherapy"), new("diabetes", "Diabetes"),
+        new("cardiology", "Cardiology"),
+    ];
+    /// <summary>Step 4: upload a spreadsheet, ask Medvya to move the data, or start fresh.</summary>
+    public static readonly IReadOnlyList<string> PatientStarts = ["Upload", "Move", "Fresh"];
+    const int MaxSpecialtyText = 100;
     const long MaxFeeMinor = 100_000_000;
 
     public abstract string Currency { get; }
@@ -33,14 +45,17 @@ public abstract partial class OnboardingRules
     protected abstract Regex LicenceNumber { get; }
     protected abstract Regex? TaxIdFormat { get; }
 
-    /// <summary>The steps this draft goes through: an owner who is not a doctor skips the licence step (2).</summary>
-    public static IReadOnlyList<int> StepsFor(OnboardingData data) => data.Profile?.Mode == Clinic ? [1, 3, 4, 5, 6] : [1, 2, 3, 4, 5, 6];
+    /// <summary>
+    /// The wizard's steps (6 Nov design): 1 your practice, 2 hours and services, 3 your team, 4 your patients, 5 payments and messages.
+    /// The ready screen comes after finishing and has nothing to check.
+    /// </summary>
+    public static readonly IReadOnlyList<int> Steps = [1, 2, 3, 4, 5];
 
-    /// <summary>Every step of the draft's path; used before the practice is created.</summary>
+    /// <summary>Every step; used before the practice is created.</summary>
     public List<OnboardingError> ValidateAll(OnboardingData data)
     {
         var errors = new List<OnboardingError>();
-        foreach (var step in StepsFor(data)) errors.AddRange(ValidateStep(step, data));
+        foreach (var step in Steps) errors.AddRange(ValidateStep(step, data));
         return errors;
     }
 
@@ -49,15 +64,48 @@ public abstract partial class OnboardingRules
         var e = new List<OnboardingError>();
         switch (step)
         {
-            case 1: Profile(d.Profile, e); break;
-            case 2: Licence(d.Licence, e); break;
-            case 3: ClinicStep(d.Clinic, e); break;
-            case 4: Hours(d.Hours, e); break;
-            case 5: Templates(d.Templates, e); break;
-            case 6: Team(d.Team, e); break;
+            case 1:
+                Profile(d.Profile, e);
+                // Only a doctor gives a licence: an owner who is not a doctor has none to check.
+                if (d.Profile?.Mode != Clinic) Licence(d.Licence, e);
+                ClinicStep(d.Clinic, e);
+                break;
+            case 2: Hours(d.Hours, e); Templates(d.Templates, e); break;
+            case 3: Team(d.Team, e); break;
+            case 4: if (d.Patients is { } start && !PatientStarts.Contains(start)) e.Add(new("patients", "unknown")); break;
+            // shortcut: payment and message connections have no back end yet, so step 5 records nothing; connect them from Settings when they ship.
+            case 5: break;
             default: e.Add(new("step", "unknown")); break;
         }
         return e;
+    }
+
+    static readonly DayOfWeek[] MondayToFriday = [DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday];
+
+    /// <summary>The open days and each one's windows. Saturday keeps its own windows when it has them; drafts without day switches are Monday to Friday plus Saturday.</summary>
+    public static IEnumerable<(DayOfWeek Day, IReadOnlyList<HoursWindow> Windows)> OpenDays(OnboardingHours hours)
+    {
+        IReadOnlyList<HoursWindow> usual = hours.Weekdays ?? [], saturday = hours.Saturday ?? [];
+        var days = hours.Days ?? (saturday.Count > 0 ? [.. MondayToFriday, DayOfWeek.Saturday] : MondayToFriday);
+        foreach (var day in days.Distinct())
+        {
+            var windows = day == DayOfWeek.Saturday && saturday.Count > 0 ? saturday : usual;
+            if (windows.Count > 0) yield return (day, windows);
+        }
+    }
+
+    /// <summary>The specialties as one line for the practice defaults: the typed text of older drafts, else the chosen names that fit 100 characters.</summary>
+    public static string? SpecialtyText(OnboardingProfile profile)
+    {
+        if (!string.IsNullOrWhiteSpace(profile.Specialty)) return profile.Specialty.Trim();
+        var text = "";
+        foreach (var name in Specialties.Where(s => profile.Specialties?.Contains(s.Code) == true).Select(s => s.Name))
+        {
+            var next = text.Length == 0 ? name : $"{text}, {name}";
+            if (next.Length > MaxSpecialtyText) break;
+            text = next;
+        }
+        return text.Length == 0 ? null : text;
     }
 
     /// <summary>
@@ -80,7 +128,11 @@ public abstract partial class OnboardingRules
         var mode = p?.Mode;
         if (mode is null) e.Add(new("profile.mode", "required"));
         else if (mode is not (Solo or Clinic)) e.Add(new("profile.mode", "format"));
-        Text(p?.Specialty, "profile.specialty", 100, mode != Clinic, e);
+        Text(p?.Specialty, "profile.specialty", MaxSpecialtyText, false, e);
+        var chosen = p?.Specialties ?? [];
+        if (chosen.Count != chosen.Distinct().Count() || chosen.Any(c => Specialties.All(s => s.Code != c))) e.Add(new("profile.specialties", "unknown"));
+        // A doctor names at least one specialty: a chip, or the text of a draft saved before the chips.
+        else if (mode != Clinic && chosen.Count == 0 && string.IsNullOrWhiteSpace(p?.Specialty)) e.Add(new("profile.specialties", "required"));
         Text(p?.Qualifications, "profile.qualifications", 200, false, e);
         Text(p?.Languages, "profile.languages", 200, false, e);
     }
@@ -98,6 +150,7 @@ public abstract partial class OnboardingRules
     void ClinicStep(OnboardingClinic? c, List<OnboardingError> e)
     {
         Text(c?.Name, "clinic.name", 200, true, e);
+        if (OutboundText.HasLink(c?.Name)) e.Add(new("clinic.name", "link")); // the practice name goes into invitation emails (#886)
         Text(c?.Address, "clinic.address", 500, true, e);
         Text(c?.RegistrationNumber, "clinic.registrationNumber", 50, false, e);
         var tax = c?.TaxId?.Trim();
@@ -109,7 +162,14 @@ public abstract partial class OnboardingRules
     {
         Windows(h?.Weekdays, "hours.weekdays", e);
         Windows(h?.Saturday, "hours.saturday", e);
+        if (h?.Days is { } days)
+        {
+            if (days.Count == 0) e.Add(new("hours.days", "required"));
+            else if (days.Count != days.Distinct().Count() || days.Any(d => !Enum.IsDefined(d))) e.Add(new("hours.days", "unknown"));
+        }
         if (h?.Weekdays is not { Count: > 0 } && h?.Saturday is not { Count: > 0 }) e.Add(new("hours.weekdays", "required"));
+        // A day other than Saturday opens with the usual hours, so they are needed once such a day is switched on.
+        else if (h?.Days?.Any(d => d != DayOfWeek.Saturday) == true && h.Weekdays is not { Count: > 0 }) e.Add(new("hours.weekdays", "required"));
         if (h?.SlotMinutes is not { } slot) e.Add(new("hours.slotMinutes", "required"));
         else if (!SlotMinutes.Contains(slot)) e.Add(new("hours.slotMinutes", "range"));
         Fee(h?.NewVisitFee, "hours.newVisitFee", e);

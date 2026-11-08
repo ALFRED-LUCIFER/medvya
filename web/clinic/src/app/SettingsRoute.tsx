@@ -19,8 +19,16 @@ import { useTermsController } from '../features/settings/hooks/useTermsControlle
 import { useProfileController } from '../features/settings/hooks/useProfileController';
 import CustomRolesPanel from '../features/staff/components/CustomRolesPanel';
 import AuditLogPanel from '../features/audit-log/components/AuditLogPanel';
+import DisplaysPage from '../features/queue-tv/components/DisplaysPage';
+import { useDisplaysController } from '../features/queue-tv/hooks/useDisplaysController';
 import { useAuditLogController } from '../features/audit-log/hooks/useAuditLogController';
+import PilotMetricsPanel from '../features/pilot-metrics/components/PilotMetricsPanel';
+import { usePilotMetricsController } from '../features/pilot-metrics/hooks/usePilotMetricsController';
 import AccessReviewPanel from '../features/staff/components/AccessReviewPanel';
+import AccessRequestsPanel from '../features/clinical-access/components/AccessRequestsPanel';
+import ClinicalPolicyPanel from '../features/clinical-access/components/ClinicalPolicyPanel';
+import { useAccessRequestsController } from '../features/clinical-access/hooks/useAccessRequestsController';
+import { useClinicalPolicyController } from '../features/clinical-access/hooks/useClinicalPolicyController';
 import { useAccessReviewController } from '../features/staff/hooks/useAccessReviewController';
 import StaffPanel from '../features/staff/components/StaffPanel';
 import { useCustomRolesController } from '../features/staff/hooks/useCustomRolesController';
@@ -46,8 +54,12 @@ function Doctors({ facilityId }: { facilityId: string }) {
 const Terms = () => <TermsPanel {...useTermsController()} />;
 const Notifications = () => <NotificationsPanel {...useNotificationSettingsController()} />;
 const Audit = () => <AuditLogPanel {...useAuditLogController()} />;
+const Displays = ({ facilityId }: { facilityId: string }) => <DisplaysPage {...useDisplaysController(facilityId)} />;
+const Metrics = ({ facilityId }: { facilityId: string }) => <PilotMetricsPanel {...usePilotMetricsController(facilityId)} />;
 
 const Review = () => <AccessReviewPanel {...useAccessReviewController()} />;
+const AccessRequests = () => <AccessRequestsPanel {...useAccessRequestsController()} />;
+const ClinicalPolicy = () => <ClinicalPolicyPanel {...useClinicalPolicyController()} />;
 
 function Staff({ facilityId }: { facilityId: string }) {
   const staff = useStaffController(facilityId);
@@ -57,6 +69,8 @@ function Staff({ facilityId }: { facilityId: string }) {
     <>
       <StaffPanel {...staff} {...table} />
       {!staff.loading && !staff.failed && <CustomRolesPanel catalogue={staff.catalogue} {...roles} />}
+      <AccessRequests />
+      <ClinicalPolicy />
       <Review />
     </>
   );
@@ -67,6 +81,6 @@ export default function SettingsRoute({ facilityId, country }: { facilityId: str
   const [params, setParams] = useSearchParams();
   const asked = params.get('tab');
   const tab: SettingsTab = (settingsTabs as readonly string[]).includes(asked ?? '') ? (asked as SettingsTab) : 'profile';
-  const panels = { profile: <Profile />, locations: <Locations facilityId={facilityId} />, hours: <Hours facilityId={facilityId} />, holidays: <Holidays facilityId={facilityId} />, staff: <Staff facilityId={facilityId} />, doctors: <Doctors facilityId={facilityId} />, audit: <Audit />, terms: <Terms />, notifications: <Notifications />, data: <DataPanel country={country} accessLogPath="/settings?tab=audit" /> };
+  const panels = { profile: <Profile />, locations: <Locations facilityId={facilityId} />, hours: <Hours facilityId={facilityId} />, holidays: <Holidays facilityId={facilityId} />, staff: <Staff facilityId={facilityId} />, doctors: <Doctors facilityId={facilityId} />, displays: <Displays facilityId={facilityId} />, audit: <Audit />, metrics: <Metrics facilityId={facilityId} />, terms: <Terms />, notifications: <Notifications />, data: <DataPanel country={country} accessLogPath="/settings?tab=audit" /> };
   return <SettingsPage tab={tab} onTab={next => setParams({ tab: next }, { replace: true })} panels={panels} />;
 }

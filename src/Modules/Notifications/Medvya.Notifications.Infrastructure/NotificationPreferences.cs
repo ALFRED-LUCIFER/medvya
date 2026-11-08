@@ -5,6 +5,7 @@ using Medvya.Notifications.Application;
 using Medvya.Notifications.Domain;
 using Medvya.Notifications.Infrastructure.Persistence;
 using Medvya.Tenancy.Application;
+using Medvya.Tenancy.Domain;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Options;
@@ -15,7 +16,7 @@ namespace Medvya.Notifications.Infrastructure;
 /// A practice's notification settings (MDV-P1-006). Saving writes the row and its audit event in one transaction, and cancels what
 /// is still queued for every message kind or channel that was just turned off, so a turned-off reminder never goes out.
 /// Turning it back on does not bring the cancelled ones back; it applies to visits booked from then on.
-/// shortcut: the audit event names the change but not the before/after values (no settings-change table in this module); add it if the owner needs to see old values.
+/// The audit event's detail holds the before and after of each changed setting (switches and times only, never text).
 /// </summary>
 public sealed class NotificationPreferences(
     NotificationsDbContext db, ICurrentTenant tenant, ICurrentUser user, IAuditLog audit, IOptions<NotificationOptions> options, TimeProvider clock) : INotificationPreferences
@@ -28,16 +29,21 @@ public sealed class NotificationPreferences(
     static NotificationPreferencesView Defaults(NotificationOptions o) =>
         new(true, true, true, true, o.Channels.Contains(NotificationChannel.Email), o.Channels.Contains(NotificationChannel.Sms), o.QuietStart, o.QuietEnd);
 
-    static NotificationPreferencesView ViewOf(NotificationPreference p) => new(p.Confirmation, p.Reminder24h, p.Reminder2h, p.Changes, p.Email, p.Sms, p.QuietStart, p.QuietEnd);
+    static NotificationPreferencesView ViewOf(NotificationPreference p) => new(p.Confirmation, p.Reminder24h, p.Reminder2h, p.Changes, p.Email, p.Sms, p.QuietStart, p.QuietEnd, p.SenderName);
 
     public async Task<NotificationPreferencesView> SaveAsync(NotificationPreferencesView changes, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(changes);
+        // The sender name goes out to patients: short, and never a web address (a phishing link in our emails, #886).
+        var sender = string.IsNullOrWhiteSpace(changes.SenderName) ? null : changes.SenderName.Trim();
+        SettingsValidationException.ThrowIfAny(sender is null ? [] : sender.Length > NotificationPreferencesView.SenderNameMax ? [new("senderName", "too_long")]
+            : OutboundText.HasLink(sender) ? [new("senderName", "link")] : []);
+        changes = changes with { SenderName = sender };
         var before = await GetAsync(cancellationToken);
         var row = await db.Preferences.SingleOrDefaultAsync(cancellationToken);
         if (row is null) db.Preferences.Add(row = new NotificationPreference { TenantId = TenantId });
-        (row.Confirmation, row.Reminder24h, row.Reminder2h, row.Changes, row.Email, row.Sms, row.QuietStart, row.QuietEnd) =
-            (changes.Confirmation, changes.Reminder24h, changes.Reminder2h, changes.Changes, changes.Email, changes.Sms, changes.QuietStart, changes.QuietEnd);
+        (row.Confirmation, row.Reminder24h, row.Reminder2h, row.Changes, row.Email, row.Sms, row.QuietStart, row.QuietEnd, row.SenderName) =
+            (changes.Confirmation, changes.Reminder24h, changes.Reminder2h, changes.Changes, changes.Email, changes.Sms, changes.QuietStart, changes.QuietEnd, changes.SenderName);
         var now = clock.GetUtcNow();
         (row.ChangedBy, row.ChangedAt) = (user.UserId, now);
 
@@ -50,10 +56,27 @@ public sealed class NotificationPreferences(
         await audit.WriteAsync(new AuditEvent
         {
             Id = Guid.CreateVersion7(), TenantId = TenantId, ActorUserId = user.UserId, Action = "settings.notifications.update", ResourceType = "settings", ResourceId = TenantId,
-            Purpose = "operations", Outcome = AuditOutcome.Allowed, OccurredAt = now,
+            Purpose = "operations", Outcome = AuditOutcome.Allowed, OccurredAt = now, Detail = Diff(before, changes),
         }, tx.GetDbTransaction(), cancellationToken);
         await tx.CommitAsync(cancellationToken);
         return changes;
+    }
+
+    /// <summary>"reminder24h:on>off;quietStart:21:00>22:00": the changed settings only, null when nothing changed. Fits the 256-character detail.</summary>
+    public static string? Diff(NotificationPreferencesView before, NotificationPreferencesView after)
+    {
+        static string On(bool v) => v ? "on" : "off";
+        static string At(TimeOnly t) => t.ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture);
+        var all = new (string Name, string Before, string After)[]
+        {
+            ("confirmation", On(before.Confirmation), On(after.Confirmation)), ("reminder24h", On(before.Reminder24h), On(after.Reminder24h)),
+            ("reminder2h", On(before.Reminder2h), On(after.Reminder2h)), ("changes", On(before.Changes), On(after.Changes)),
+            ("email", On(before.Email), On(after.Email)), ("sms", On(before.Sms), On(after.Sms)),
+            ("quietStart", At(before.QuietStart), At(after.QuietStart)), ("quietEnd", At(before.QuietEnd), At(after.QuietEnd)),
+        };
+        var changed = all.Where(c => c.Before != c.After).Select(c => $"{c.Name}:{c.Before}>{c.After}").ToList();
+        if (before.SenderName != after.SenderName) changed.Add("senderName:changed"); // free text stays out of the audit trail (codes only)
+        return changed.Count == 0 ? null : string.Join(';', changed);
     }
 
     Task<int> CancelQueuedAsync(System.Linq.Expressions.Expression<Func<Notification, bool>> which, DateTimeOffset now, CancellationToken ct) =>

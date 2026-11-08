@@ -173,6 +173,18 @@ public sealed class QueueTvTests(PostgresFixture sql) : IClassFixture<PostgresFi
     }
 
     [Fact]
+    public async Task ADisplayLinkPairsOneScreenAndTheCookieIsNotTheLink()
+    {
+        // #884: a photographed or leaked link pairs nothing once the screen it was made for has used it.
+        var (_, token) = await NewDisplay(h.Admin, h.Facility);
+        var (tv, cookie) = await Paired(token);
+        Assert.DoesNotContain(token, cookie, StringComparison.Ordinal);
+        using (var second = await Tv().PostAsJsonAsync("/v1/queue/tv/session", new { token }))
+            Assert.Equal(HttpStatusCode.Unauthorized, second.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await tv.GetAsync("/v1/queue/tv")).StatusCode); // the paired screen keeps working
+    }
+
+    [Fact]
     public async Task TheDisplayCookieIsHttpOnlySecureStrictAndLimitedToTheQueue()
     {
         var (_, token) = await NewDisplay(h.Admin, h.Facility);

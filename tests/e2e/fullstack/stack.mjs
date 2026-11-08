@@ -73,7 +73,10 @@ try {
       ASPNETCORE_WEBROOT: join(work, 'wwwroot'),
       Authentication__Oidc__Authority: `http://localhost:${apiPort}/dev-idp`,
       ConnectionStrings__Medvya: connection,
+      Web__AppPath: '/app/', // as on Azure: server-made redirects (sign-in refused, signed out) go to the app, not the public site
       Testing__ClockStartUtc: clockStart,
+      // Every browser here is one client IP, and Host.Api also serves the app's scripts: the per-IP budget (300/min) is for a real desk.
+      RateLimiting__PermitsPerMinute: '3000',
     },
   });
   api.on('exit', code => { log(`Host.Api exited (${code})`); process.exit(1); });

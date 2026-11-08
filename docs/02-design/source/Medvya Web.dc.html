@@ -49,6 +49,50 @@ button,input,select{font-family:inherit;color:inherit}
 .row{display:flex;align-items:center;gap:10px}
 .sk{background:linear-gradient(90deg,#EEF2F5 25%,#F7FAFC 50%,#EEF2F5 75%);background-size:300% 100%;animation:sk 1.4s ease infinite;border-radius:10px}@keyframes sk{0%{background-position:100% 0}100%{background-position:0 0}}@media (prefers-reduced-motion:reduce){.sk{animation:none}}
 .tr{display:grid;gap:12px;padding:12px 16px;border-top:1px solid #EEF2F5;align-items:center;font-size:14px}
+.mlink{white-space:nowrap;height:38px;padding:0 12px;border:0;border-radius:9px;background:transparent;font-size:14.5px;font-weight:700;color:var(--i7);cursor:pointer;display:inline-flex;align-items:center;gap:2px}
+.mlink:hover,.mlink.on{background:#EEF3F6;color:var(--navy)}
+.mmi{display:flex;gap:12px;align-items:flex-start;padding:12px;border:0;border-radius:12px;background:transparent;cursor:pointer;text-align:start}.mmi:hover{background:#F5F8FA}
+.mmic{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.eyebrow{align-self:flex-start;display:inline-flex;align-items:center;height:26px;padding:0 10px;border-radius:999px;background:var(--b0);color:var(--b7);font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+.h2m{margin:0;letter-spacing:-.03em;line-height:1.08;color:var(--navy);font-weight:800}
+.grad{background:linear-gradient(100deg,#0C7D70 10%,#2F4AC0 90%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.dot{width:8px;height:8px;border-radius:50%;background:#10B981;animation:mvPulseG 2s infinite}
+.store{display:inline-flex;align-items:center;gap:8px;height:44px;padding:0 14px;border-radius:10px;background:#0B1F33;color:#fff}
+.tl{width:10px;height:10px;border-radius:50%}
+.bento{border:1px solid;border-radius:20px;padding:24px;display:flex;flex-direction:column;gap:10px;min-height:220px;box-sizing:border-box}
+.daytab{display:flex;gap:14px;align-items:flex-start;padding:16px;border-radius:14px;border:1px solid transparent;background:transparent;cursor:pointer;width:100%;transition:background .25s,border-color .25s,box-shadow .25s}
+.daytab:hover{background:#fff}.daytab.on{background:#fff;border-color:var(--ln);box-shadow:0 10px 24px -12px rgba(16,42,67,.18)}
+.phone{position:relative;width:250px;height:510px;border-radius:40px;background:#fff;border:10px solid #0B1F33;box-shadow:0 40px 80px -24px rgba(47,74,192,.45);overflow:hidden;box-sizing:border-box}
+.notch{position:absolute;top:8px;left:50%;transform:translateX(-50%);width:84px;height:22px;border-radius:12px;background:#0B1F33}
+.mesh{position:absolute;inset:0;background-image:linear-gradient(rgba(16,42,67,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(16,42,67,.045) 1px,transparent 1px);background-size:44px 44px;-webkit-mask-image:radial-gradient(ellipse at 70% 30%,#000 15%,transparent 70%);mask-image:radial-gradient(ellipse at 70% 30%,#000 15%,transparent 70%)}
+.mqwrap{-webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)}
+.wave i{display:block;width:3px;height:100%;border-radius:2px;background:#5B3FC4;animation:mvWave 1s ease-in-out infinite}.wave.light i{background:#CFC2FF}
+.wave i:nth-child(2){animation-delay:.12s}.wave i:nth-child(3){animation-delay:.24s}.wave i:nth-child(4){animation-delay:.36s}.wave i:nth-child(5){animation-delay:.48s}.wave i:nth-child(6){animation-delay:.6s}.wave i:nth-child(7){animation-delay:.72s}
+.typer{display:inline-block;overflow:hidden;white-space:nowrap;vertical-align:bottom;border-inline-end:2px solid #5B3FC4;animation:mvType 2.8s steps(40) 1.2s both,mvBlink .8s step-end infinite}
+.lift{transition:transform .25s cubic-bezier(.22,1,.36,1),box-shadow .25s}.lift:hover{transform:translateY(-3px);box-shadow:0 18px 36px -16px rgba(16,42,67,.22)}
+.shine{position:relative;overflow:hidden}.shine::after{content:'';position:absolute;inset:0;background:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.35) 50%,transparent 70%);transform:translateX(-100%);animation:mvShine 3.6s 1.4s infinite}
+.ring{position:absolute;inset:0;border-radius:50%;border:2px solid rgba(12,125,112,.35);animation:mvRing 2.4s ease-out infinite}.ring.r2{animation-delay:1.2s}
+.cf{position:absolute;width:8px;height:8px;border-radius:2px;animation:mvConf 1.4s cubic-bezier(.22,1,.36,1) both}
+.mv{animation:mvUp .7s cubic-bezier(.22,1,.36,1) both}.d1{animation-delay:.07s}.d2{animation-delay:.14s}.d3{animation-delay:.21s}.d4{animation-delay:.28s}.d5{animation-delay:.35s}
+.mvp{animation:mvPop .5s cubic-bezier(.22,1,.36,1) both}
+.fl{animation:mvFloat 7s ease-in-out infinite}.fl2{animation:mvFloat 6s ease-in-out .8s infinite}.fl3{animation:mvFloat 8s ease-in-out 1.6s infinite}
+.pop1{animation:mvPop .6s cubic-bezier(.22,1,.36,1) .45s both,mvFloat 7s ease-in-out 1.1s infinite}.pop2{animation:mvPop .6s cubic-bezier(.22,1,.36,1) .7s both,mvFloat 6s ease-in-out 1.3s infinite}.pop3{animation:mvPop .6s cubic-bezier(.22,1,.36,1) .95s both,mvFloat 8s ease-in-out 1.6s infinite}
+.pulse{animation:mvPulse 2.2s infinite}.mq{animation:mvMarq 40s linear infinite}.mqwrap:hover .mq{animation-play-state:paused}
+.bar{animation:mvBar 1.2s cubic-bezier(.22,1,.36,1) .4s both}
+@keyframes mvUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+@keyframes mvPop{from{opacity:0;transform:translateY(10px) scale(.96)}to{opacity:1;transform:none}}
+@keyframes mvFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+@keyframes mvWave{0%,100%{transform:scaleY(.3)}50%{transform:scaleY(1)}}
+@keyframes mvType{from{max-width:0}to{max-width:260px}}
+@keyframes mvBlink{50%{border-color:transparent}}
+@keyframes mvMarq{to{transform:translateX(-50%)}}
+@keyframes mvPulse{0%{box-shadow:0 0 0 0 rgba(6,112,79,.35)}100%{box-shadow:0 0 0 12px rgba(6,112,79,0)}}
+@keyframes mvPulseG{0%{box-shadow:0 0 0 0 rgba(16,185,129,.5)}100%{box-shadow:0 0 0 8px rgba(16,185,129,0)}}
+@keyframes mvShine{0%{transform:translateX(-100%)}40%,100%{transform:translateX(100%)}}
+@keyframes mvRing{from{transform:scale(.6);opacity:1}to{transform:scale(1.3);opacity:0}}
+@keyframes mvConf{from{transform:translateY(30px) scale(0) rotate(0);opacity:0}50%{opacity:1}to{transform:translateY(-14px) scale(1) rotate(220deg);opacity:0}}
+@keyframes mvBar{from{width:0}}
+@media (prefers-reduced-motion:reduce){.mv,.mvp,.fl,.fl2,.fl3,.pop1,.pop2,.pop3,.mq,.wave i,.typer,.dot,.pulse,.shine::after,.bar,.ring,.cf{animation:none!important}.lift:hover{transform:none}.typer{max-width:none}}
 </style>
 </helmet>
 <div style="padding:28px 28px 96px;display:flex;flex-direction:column;gap:20px;width:1440px">
@@ -56,46 +100,12 @@ button,input,select{font-family:inherit;color:inherit}
   <!-- ===== CANVAS HEADER + DESIGN REVIEW ===== -->
   <header style="display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start;justify-content:space-between">
     <div style="display:flex;flex-direction:column;gap:6px;max-width:760px">
-      <div class="k" style="color:var(--i6)">MEDVYA · ONE FILE · PUBLIC SITE → SIGN IN / SIGN UP → TODAY → EVERY DAILY TASK</div>
-      <h1 style="margin:0;font-size:30px;letter-spacing:-.02em;color:var(--navy)">Medvya · the whole product in one flow</h1>
+      <div class="k" style="color:var(--i6)">MEDVYA WEB · MEDVYA.COM → SIGN IN / SIGN UP → ONBOARDING → CLINIC APP</div>
+      <h1 style="margin:0;font-size:30px;letter-spacing:-.02em;color:var(--navy)">Medvya · website, sign-in, onboarding and clinic app</h1>
       <p style="margin:0;font-size:15px;color:var(--i6);line-height:1.55">Click through it like the real app. Everything a front desk or doctor does daily starts from one overview (Today) and opens in a side panel, so nobody loses their place. Use the bar below to jump, switch role, size and language. All people and clinics are synthetic. Hindi and Arabic cover the app frame and sign-in and are machine-drafted (needs review). Decisions approved 06 Nov 2026; legal text marked [LEGAL] awaits counsel’s final wording.</p>
     </div>
     <button onClick="{{ toggleReview }}" class="btn sm" style="margin-top:6px"><span class="ms" style="font-size:18px">fact_check</span>{{ reviewLabel }}</button>
   </header>
-
-  <sc-if value="{{ showReview }}">
-    <section class="card" style="padding:20px;display:flex;flex-direction:column;gap:14px">
-      <div class="row" style="flex-wrap:wrap;justify-content:space-between;gap:12px">
-        <div><div class="k mut">DESIGN AUDIT · WEIGHTED SCORE · 06 NOV 2026</div><h2 style="margin:4px 0 0;font-size:20px;color:var(--navy)">Product experience score</h2><p class="mut" style="margin:4px 0 0;font-size:13.5px;max-width:760px">Scored with the audit brief’s weights on the designs in this canvas. Repository code and the live app could not be opened, so confidence is limited and nothing here is a compliance certification.</p></div>
-        <div class="row" style="gap:16px"><div style="text-align:center"><div style="font-size:40px;font-weight:800;color:var(--navy);line-height:1">{{ ratingNow }}</div><div class="mut" style="font-size:12px;font-weight:700">now · out of 10</div></div><div style="text-align:center"><div style="font-size:24px;font-weight:800;color:var(--i6);line-height:1">{{ ratingBefore }}</div><div class="mut" style="font-size:12px;font-weight:700">at the start</div></div><span class="chip ok" style="height:30px"><span class="ms">rule</span>GO for build · conditions below</span></div>
-      </div>
-      <div style="border:1px solid var(--ln);border-radius:12px;overflow:hidden">
-        <div class="tr" style="grid-template-columns:2fr .6fr .7fr .7fr .8fr 3fr;border-top:0;background:#F7FAFC;font-size:11.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--i6)"><span>Category</span><span>Weight</span><span>Before</span><span>Now</span><span>Confidence</span><span>Evidence and what would raise it</span></div>
-        <sc-for list="{{ rating }}" as="r" hint-placeholder-count="7"><div class="tr" style="grid-template-columns:2fr .6fr .7fr .7fr .8fr 3fr;font-size:13.5px;align-items:start"><strong>{{ r.k }}</strong><span class="mut">{{ r.w }}</span><span class="mut">{{ r.b }}</span><span style="font-weight:800;color:var(--navy)">{{ r.n }}</span><span class="chip {{ r.cc }}" style="align-self:start">{{ r.c }}</span><span class="mut" style="line-height:1.5">{{ r.e }}</span></div></sc-for>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-        <div style="display:flex;flex-direction:column;gap:6px"><h3 style="margin:0;font-size:15px;color:var(--navy)">Rules check (from your design brief)</h3><sc-for list="{{ rules }}" as="r" hint-placeholder-count="8"><div class="row" style="font-size:13px;align-items:flex-start;gap:8px"><span class="ms" style="font-size:18px;color:{{ r.c }}">{{ r.icon }}</span><span><strong>{{ r.k }}</strong> <span class="mut">{{ r.v }}</span></span></div></sc-for></div>
-        <div style="display:flex;flex-direction:column;gap:6px"><h3 style="margin:0;font-size:15px;color:var(--navy)">Regulation and privacy (needs legal review)</h3><sc-for list="{{ regs }}" as="r" hint-placeholder-count="5"><div class="row" style="font-size:13px;align-items:flex-start;gap:8px"><span class="ms" style="font-size:18px;color:{{ r.c }}">{{ r.icon }}</span><span><strong>{{ r.k }}</strong> <span class="mut">{{ r.v }}</span></span></div></sc-for></div>
-      </div>
-    </section>
-  </sc-if>
-
-  <sc-if value="{{ showReview }}">
-    <section class="card" style="padding:20px;display:grid;grid-template-columns:1fr 1fr;gap:24px">
-      <div style="display:flex;flex-direction:column;gap:10px">
-        <div class="row"><span class="chip wrn"><span class="ms">rule</span>Verdict: refine the foundations, then build</span></div>
-        <h2 style="margin:0;font-size:18px;color:var(--navy)">Design review · what was wrong and what changed</h2>
-        <p style="margin:0;font-size:13.5px;color:var(--i6);line-height:1.55">Reviewed against the audit brief using the designs on this canvas. The repository and live app could not be opened from this session, so code, routes, components and live behaviour are <strong>not verified</strong>; the full docs/design-audit reports need repository access.</p>
-        <sc-for list="{{ review }}" as="r" hint-placeholder-count="10"><div style="display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;padding:8px 0;border-top:1px solid #EEF2F5;font-size:13.5px;line-height:1.5"><span class="chip {{ r.cls }}" style="align-self:flex-start">{{ r.sev }}</span><span><strong>{{ r.t }}</strong> <span class="mut">{{ r.d }}</span></span></div></sc-for>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:10px">
-        <h3 style="margin:0;font-size:15px;color:var(--navy)">Kept on purpose</h3>
-        <sc-for list="{{ kept }}" as="r" hint-placeholder-count="5"><div class="row" style="font-size:13.5px;align-items:flex-start"><span class="ms" style="font-size:18px;color:var(--ok)">check</span><span>{{ r }}</span></div></sc-for>
-        <h3 style="margin:8px 0 0;font-size:15px;color:var(--navy)">Open decisions (not invented)</h3>
-        <sc-for list="{{ open }}" as="o" hint-placeholder-count="8"><div style="display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;font-size:13px;line-height:1.5"><span class="chip wrn" style="align-self:flex-start">{{ o.k }}</span><span>{{ o.t }}</span></div></sc-for>
-      </div>
-    </section>
-  </sc-if>
 
   <!-- ===== SCREEN MAP ===== -->
   <section class="card" style="padding:16px 18px;display:flex;flex-direction:column;gap:12px">
@@ -103,12 +113,6 @@ button,input,select{font-family:inherit;color:inherit}
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px">
       <sc-for list="{{ screenMap }}" as="g" hint-placeholder-count="5"><div style="display:flex;flex-direction:column;gap:6px"><div class="row" style="gap:6px"><span class="ms" style="font-size:18px;color:{{ g.c }}">{{ g.icon }}</span><span class="cap" style="color:{{ g.c }}">{{ g.n }}</span></div><div class="row" style="flex-wrap:wrap;gap:6px"><sc-for list="{{ g.items }}" as="i" hint-placeholder-count="6"><button onClick="{{ i.go }}" class="btn sm" style="height:32px;border-color:{{ i.line }};background:{{ i.bg }};color:{{ i.fg }}">{{ i.label }}</button></sc-for></div></div></sc-for>
     </div>
-  </section>
-
-  <!-- ===== WHAT'S STILL PENDING ===== -->
-  <section class="card" style="padding:16px 18px;display:flex;flex-direction:column;gap:12px;border-color:var(--wrnL)">
-    <div class="row" style="justify-content:space-between;flex-wrap:wrap"><h2 style="margin:0;font-size:17px;color:var(--navy)">What’s still pending</h2><span class="mut" style="font-size:13px">{{ pendSummary }}</span></div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px"><sc-for list="{{ pending }}" as="g" hint-placeholder-count="4"><div style="display:flex;flex-direction:column;gap:6px"><span class="cap" style="color:{{ g.c }}">{{ g.n }}</span><sc-for list="{{ g.items }}" as="i" hint-placeholder-count="5"><div class="row" style="align-items:flex-start;gap:8px;font-size:13px;line-height:1.45"><span class="ms" style="font-size:17px;color:{{ i.c }}">{{ i.icon }}</span><span>{{ i.t }}</span></div></sc-for></div></sc-for></div>
   </section>
 
   <!-- ===== CONTROL BAR ===== -->
@@ -126,63 +130,346 @@ button,input,select{font-family:inherit;color:inherit}
 
     <!-- ================= PUBLIC SITE ================= -->
     <sc-if value="{{ area.web }}">
-      <div style="display:flex;align-items:center;gap:12px;padding:{{ pad.bar }};background:#fff;border-bottom:1px solid var(--ln)">
-        <div class="row" style="gap:8px"><span style="width:32px;height:32px;border-radius:9px;background:var(--b6);color:#fff;display:flex;align-items:center;justify-content:center;font:800 16px Manrope">M</span><span style="font:800 18px Manrope;color:var(--navy)">Medvya</span></div>
-        <sc-if value="{{ wide }}"><nav class="row" style="gap:2px;margin-inline-start:20px"><a href="#features" class="btn g sm">{{ t.navProduct }}</a><a href="#how" class="btn g sm">{{ t.navHow }}</a><a href="#trust" class="btn g sm">{{ t.navTrust }}</a><a href="#plans" class="btn g sm">{{ t.navPricing }}</a></nav></sc-if>
-        <div style="flex:1"></div>
-        <button class="btn g sm" aria-label="{{ t.langLabel }}"><span class="ms" style="font-size:18px">language</span>{{ langName }}</button>
-        <button onClick="{{ goSignIn }}" class="btn sm">{{ t.signIn }}</button>
-        <sc-if value="{{ notPhone }}"><button onClick="{{ goSignUp }}" class="btn p sm">{{ t.startFree }}</button></sc-if>
-      </div>
+      <!-- announcement -->
+      <div class="row" style="justify-content:center;gap:10px;padding:9px 16px;background:var(--navy);color:#DCE7F0;font-size:13.5px;flex-wrap:wrap;text-align:center"><span class="chip" style="background:#1E4A6B;color:#9BE3D6;height:22px">NEW</span><span>{{ site.announce }}</span><button onClick="{{ site.goAi }}" style="border:0;background:transparent;color:#7FE0CF;font-weight:700;cursor:pointer;font-size:13.5px;padding:0">{{ site.seeHow }} →</button></div>
 
-      <section style="display:flex;flex-wrap:wrap;gap:40px;align-items:center;padding:{{ pad.hero }};background:linear-gradient(180deg,#fff 0%,var(--bg) 100%)">
-        <div style="flex:1 1 440px;min-width:0;display:flex;flex-direction:column;gap:18px">
-          <span class="chip ok" style="align-self:flex-start;height:28px;padding:0 10px"><span class="ms">public</span>{{ regionLine }}</span>
-          <h1 style="margin:0;font-size:{{ heroSize }};line-height:1.12;letter-spacing:-.025em;color:var(--navy)">{{ t.heroTitle }}</h1>
-          <p style="margin:0;font-size:17.5px;color:var(--i6);max-width:560px;line-height:1.55">{{ t.heroSub }}</p>
-          <div class="row" style="flex-wrap:wrap"><button onClick="{{ goSignUp }}" class="btn p lg">{{ t.startFree }}<span class="ms" style="font-size:19px">{{ fwd }}</span></button><button onClick="{{ goSignIn }}" class="btn lg">{{ t.signIn }}</button></div>
-          <span class="mut" style="font-size:13.5px">{{ t.heroNote }}</span>
+      <!-- nav -->
+      <header style="position:sticky;top:0;z-index:20;background:rgba(255,255,255,.86);backdrop-filter:saturate(1.6) blur(14px);border-bottom:1px solid var(--ln)">
+        <div class="row" style="gap:10px;padding:{{ site.navPad }};max-width:1240px;margin:0 auto;width:100%;box-sizing:border-box;width:100%">
+          <button onClick="{{ site.goHome }}" class="row" style="gap:9px;border:0;background:transparent;cursor:pointer;padding:0" aria-label="Medvya home"><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="9" fill="#0C7D70"/><path d="M6.5 19.5h4l2.6-8 3.6 11 2.7-8.2 1.6 5.2h4.5" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span style="font:800 19px Manrope;color:var(--navy);letter-spacing:-.02em">Medvya</span></button>
+          <sc-if value="{{ wide }}"><nav class="row" style="gap:2px;margin-inline-start:18px">
+            <button onClick="{{ site.mmProduct }}" class="mlink {{ site.mmProductCls }}">{{ site.nProduct }}<span class="ms" style="font-size:18px">expand_more</span></button>
+            <button onClick="{{ site.mmSolutions }}" class="mlink {{ site.mmSolutionsCls }}">{{ site.nSolutions }}<span class="ms" style="font-size:18px">expand_more</span></button>
+            <button onClick="{{ site.goAi }}" class="mlink {{ site.cAi }}">Medvya Assist</button>
+            <button onClick="{{ site.goPricing }}" class="mlink {{ site.cPricing }}">{{ t.navPricing }}</button>
+            <button onClick="{{ site.goSecurity }}" class="mlink {{ site.cSecurity }}">{{ site.nSecurity }}</button>
+          </nav></sc-if>
+          <div style="flex:1"></div>
+          <sc-if value="{{ wide }}"><div class="seg" role="radiogroup" aria-label="Country"><sc-for list="{{ site.ctry }}" as="c" hint-placeholder-count="2"><button onClick="{{ c.pick }}" class="{{ c.cls }}">{{ c.label }}</button></sc-for></div></sc-if>
+          <button onClick="{{ goSignIn }}" class="btn g sm">{{ t.signIn }}</button>
+          <sc-if value="{{ notPhone }}"><button onClick="{{ site.goDemo }}" class="btn sm">{{ site.demo }}</button></sc-if>
+          <sc-if value="{{ notPhone }}"><button onClick="{{ goSignUp }}" class="btn p sm">{{ site.trial }}</button></sc-if>
+          <sc-if value="{{ narrow }}"><button onClick="{{ site.toggleMob }}" class="btn sm" aria-label="Menu" style="width:40px;padding:0"><span class="ms">{{ site.mobIcon }}</span></button></sc-if>
         </div>
-        <div aria-hidden="true" style="flex:1 1 520px;min-width:0;border-radius:16px;border:1px solid var(--ln2);background:#fff;box-shadow:0 24px 60px rgba(16,42,67,.16);overflow:hidden">
-          <div class="row" style="gap:6px;padding:10px 12px;border-bottom:1px solid var(--ln);background:#F7FAFC"><span style="width:10px;height:10px;border-radius:50%;background:#E3E9EE"></span><span style="width:10px;height:10px;border-radius:50%;background:#E3E9EE"></span><span style="width:10px;height:10px;border-radius:50%;background:#E3E9EE"></span><span class="k mut" style="margin-inline-start:8px">Today · Adyar</span></div>
-          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:12px">
-            <sc-for list="{{ previewCols }}" as="c" hint-placeholder-count="4"><div style="background:var(--bg);border-radius:10px;padding:8px;display:flex;flex-direction:column;gap:6px;min-height:170px"><div class="row" style="justify-content:space-between"><span style="font-size:11.5px;font-weight:800;color:var(--i7)">{{ c.t }}</span><span class="k mut">{{ c.n }}</span></div><sc-for list="{{ c.items }}" as="i" hint-placeholder-count="2"><div style="background:#fff;border:1px solid var(--ln);border-radius:8px;padding:7px;display:flex;flex-direction:column;gap:3px"><span class="k" style="color:var(--b7)">{{ i.tok }}</span><span style="font-size:12px;font-weight:700">{{ i.n }}</span><span style="height:5px;width:{{ i.w }};border-radius:3px;background:#E3E9EE"></span></div></sc-for></div></sc-for>
+        <!-- mega menus -->
+        <sc-if value="{{ site.mm.product }}">
+          <div class="mv" style="position:absolute;inset-inline:0;top:100%;background:#fff;border-bottom:1px solid var(--ln);box-shadow:0 24px 48px rgba(16,42,67,.12)">
+            <div style="max-width:1240px;margin:0 auto;width:100%;padding:22px 40px 26px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) 300px;gap:6px 18px;box-sizing:border-box">
+              <sc-for list="{{ site.prodMenu }}" as="m" hint-placeholder-count="6"><button onClick="{{ m.go }}" class="mmi"><span class="mmic" style="background:{{ m.bg }};color:{{ m.fg }}"><span class="ms">{{ m.icon }}</span></span><span style="display:flex;flex-direction:column;gap:2px;text-align:start"><strong style="font-size:14.5px;color:var(--navy)">{{ m.t }}</strong><span class="mut" style="font-size:13px;line-height:1.4">{{ m.d }}</span></span></button></sc-for>
+              <div style="grid-column:4;grid-row:1 / span 2;border-radius:14px;padding:18px;background:linear-gradient(150deg,#102A43,#0F4C5C);color:#fff;display:flex;flex-direction:column;gap:10px"><span class="chip" style="background:#5B3FC4;color:#fff;align-self:flex-start"><span class="ms">auto_awesome</span>Medvya Assist</span><strong style="font-size:17px;line-height:1.3">Talk to your patient. Medvya writes the note. You approve it.</strong><button onClick="{{ site.goAi }}" class="btn sm" style="align-self:flex-start;margin-top:auto">See how it works</button></div>
+            </div>
           </div>
+        </sc-if>
+        <sc-if value="{{ site.mm.solutions }}">
+          <div class="mv" style="position:absolute;inset-inline:0;top:100%;background:#fff;border-bottom:1px solid var(--ln);box-shadow:0 24px 48px rgba(16,42,67,.12)">
+            <div style="max-width:1240px;margin:0 auto;width:100%;padding:22px 40px 26px;display:grid;grid-template-columns:1fr 1fr 1fr 1.3fr;gap:18px;box-sizing:border-box">
+              <sc-for list="{{ site.solMenu }}" as="m" hint-placeholder-count="3"><button onClick="{{ m.go }}" class="mmi"><span class="mmic" style="background:#E7F6F4;color:#0F766E"><span class="ms">{{ m.icon }}</span></span><span style="display:flex;flex-direction:column;gap:2px;text-align:start"><strong style="font-size:14.5px;color:var(--navy)">{{ m.t }}</strong><span class="mut" style="font-size:13px;line-height:1.4">{{ m.d }}</span></span></button></sc-for>
+              <div style="display:flex;flex-direction:column;gap:8px"><span class="cap">By specialty</span><div class="row" style="flex-wrap:wrap;gap:6px"><sc-for list="{{ site.specs }}" as="x" hint-placeholder-count="10"><span class="chip" style="height:28px;padding:0 10px;background:#F1F5F8">{{ x }}</span></sc-for></div></div>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ site.mob }}">
+          <div class="mv" style="position:absolute;inset-inline:0;top:100%;background:#fff;border-bottom:1px solid var(--ln);box-shadow:0 24px 48px rgba(16,42,67,.14);padding:12px 16px 18px;display:flex;flex-direction:column;gap:4px">
+            <sc-for list="{{ site.mobLinks }}" as="m" hint-placeholder-count="6"><button onClick="{{ m.go }}" class="row" style="height:48px;border:0;background:transparent;font-size:16px;font-weight:700;color:var(--navy);cursor:pointer;justify-content:space-between;border-bottom:1px solid #F1F5F8;padding:0 4px">{{ m.t }}<span class="ms" style="color:var(--i4)">{{ chev }}</span></button></sc-for>
+            <div class="row" style="gap:8px;margin-top:10px"><button onClick="{{ site.goDemo }}" class="btn" style="flex:1">{{ site.demo }}</button><button onClick="{{ goSignUp }}" class="btn p" style="flex:1">{{ site.trial }}</button></div>
+          </div>
+        </sc-if>
+      </header>
+
+      <!-- ============ HOME ============ -->
+      <sc-if value="{{ site.pg.home }}">
+        <section style="position:relative;overflow:hidden;background:radial-gradient(1200px 520px at 85% -10%,#D7F3EE 0%,rgba(215,243,238,0) 60%),radial-gradient(900px 480px at -10% 20%,#E6ECFF 0%,rgba(230,236,255,0) 55%),#fff">
+          <div class="mesh" aria-hidden="true"></div>
+          <div style="position:relative;max-width:1240px;margin:0 auto;width:100%;padding:{{ site.heroPad }};display:flex;flex-wrap:wrap;gap:48px;align-items:center;box-sizing:border-box">
+            <div style="flex:1 1 460px;min-width:0;display:flex;flex-direction:column;gap:22px">
+              <span class="chip mv" style="align-self:flex-start;height:30px;padding:0 12px;background:#fff;border:1px solid var(--ln);color:var(--i7);box-shadow:0 1px 2px rgba(16,42,67,.06)"><span class="dot"></span>{{ site.eyebrow }}</span>
+              <h1 class="mv d1" style="margin:0;font-size:{{ site.h1 }};line-height:1.04;letter-spacing:-.035em;color:var(--navy);font-weight:800">{{ site.h1a }} <span class="grad">{{ site.h1b }}</span></h1>
+              <p class="mv d2" style="margin:0;font-size:{{ site.lead }};color:var(--i6);max-width:560px;line-height:1.55">{{ site.sub }}</p>
+              <div class="row mv d3" style="flex-wrap:wrap;gap:10px"><button onClick="{{ goSignUp }}" class="btn p lg shine">{{ site.trialHero }}<span class="ms" style="font-size:19px">{{ fwd }}</span></button><button onClick="{{ site.goDemo }}" class="btn lg"><span class="ms" style="font-size:20px">play_circle</span>{{ site.demo }}</button></div>
+              <div class="row mv d4" style="flex-wrap:wrap;gap:8px 18px;font-size:13.5px;color:var(--i7)"><sc-for list="{{ site.heroChecks }}" as="c" hint-placeholder-count="3"><span class="row" style="gap:6px"><span class="ms" style="font-size:18px;color:var(--ok)">check_circle</span>{{ c }}</span></sc-for></div>
+              <div class="row mv d5" style="gap:10px;flex-wrap:wrap"><span class="store"><span class="ms" style="font-size:22px">phone_iphone</span><span style="display:flex;flex-direction:column;line-height:1.1"><span style="font-size:10.5px;opacity:.75">Download on the</span><strong style="font-size:14px">App Store</strong></span></span><span class="store"><span class="ms" style="font-size:22px">android</span><span style="display:flex;flex-direction:column;line-height:1.1"><span style="font-size:10.5px;opacity:.75">Get it on</span><strong style="font-size:14px">Google Play</strong></span></span><span class="mut" style="font-size:12.5px">Medvya Clinic · Medvya for patients</span></div>
+            </div>
+
+            <!-- hero composite -->
+            <div aria-hidden="true" style="flex:1 1 540px;min-width:0;position:relative;min-height:{{ site.heroArtH }}">
+              <div class="mv d2" style="position:relative;border-radius:18px;border:1px solid #D3DDE6;background:#fff;box-shadow:0 40px 80px -20px rgba(16,42,67,.28),0 0 0 6px rgba(255,255,255,.6);overflow:hidden">
+                <div class="row" style="gap:6px;padding:10px 12px;border-bottom:1px solid var(--ln);background:#F7FAFC"><span class="tl" style="background:#F2B8B5"></span><span class="tl" style="background:#F5D9A6"></span><span class="tl" style="background:#B9E2CF"></span><span class="row" style="flex:1;justify-content:center"><span class="row" style="gap:6px;height:24px;padding:0 12px;border-radius:7px;background:#fff;border:1px solid var(--ln);font-size:11.5px;color:var(--i6)"><span class="ms" style="font-size:14px">lock</span>app.medvya.com/today</span></span></div>
+                <div style="display:flex">
+                  <sc-if value="{{ wide }}"><div style="width:58px;background:var(--navy);display:flex;flex-direction:column;align-items:center;gap:10px;padding:12px 0"><span style="width:30px;height:30px;border-radius:8px;background:#0C7D70;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 32 32"><path d="M6.5 19.5h4l2.6-8 3.6 11 2.7-8.2 1.6 5.2h4.5" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="ms" style="color:#fff;background:#1E4A6B;border-radius:8px;padding:5px;font-size:18px">space_dashboard</span><span class="ms" style="color:#8DA6BD;font-size:18px">calendar_month</span><span class="ms" style="color:#8DA6BD;font-size:18px">groups</span><span class="ms" style="color:#8DA6BD;font-size:18px">receipt_long</span><span class="ms" style="color:#8DA6BD;font-size:18px">inbox</span></div></sc-if>
+                  <div style="flex:1;min-width:0;padding:14px;display:flex;flex-direction:column;gap:10px;background:#F5F7F9">
+                    <div class="row" style="justify-content:space-between"><div><div style="font-size:15px;font-weight:800;color:var(--navy)">Good morning, Priya</div><div class="mut" style="font-size:11.5px">Thursday · 14 booked · 2 walk-ins</div></div><span class="row" style="gap:6px"><span class="chip ok" style="height:22px;font-size:11px">UPI ₹5,400</span><span class="chip inf" style="height:22px;font-size:11px">Avg wait 6 min</span></span></div>
+                    <div style="display:grid;grid-template-columns:repeat({{ site.prevCols }},minmax(0,1fr));gap:8px">
+                      <sc-for list="{{ previewCols }}" as="c" hint-placeholder-count="4"><div style="background:#fff;border:1px solid var(--ln);border-radius:10px;padding:8px;display:flex;flex-direction:column;gap:6px;min-height:150px"><div class="row" style="justify-content:space-between"><span style="font-size:11px;font-weight:800;color:var(--i7)">{{ c.t }}</span><span style="font-size:10.5px;font-weight:800;color:var(--i6);background:#EEF2F5;border-radius:5px;padding:0 5px">{{ c.n }}</span></div><sc-for list="{{ c.items }}" as="i" hint-placeholder-count="2"><div style="border:1px solid #EEF2F5;border-radius:8px;padding:6px;display:flex;flex-direction:column;gap:4px"><div class="row" style="gap:5px"><span class="k" style="font-size:9.5px;color:var(--b7)">{{ i.tok }}</span><span style="font-size:11px;font-weight:700">{{ i.n }}</span></div><div style="height:4px;border-radius:2px;background:#EEF2F5;overflow:hidden"><div class="bar" style="height:100%;width:{{ i.w }};background:var(--b5)"></div></div></div></sc-for></div></sc-for>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <!-- floating cards -->
+              <div class="fl pop1" style="position:absolute;inset-inline-start:{{ site.fcA }};bottom:-26px;width:290px;background:#fff;border:1px solid #E4DCFB;border-radius:14px;padding:12px 14px;box-shadow:0 20px 40px -12px rgba(91,63,196,.35);display:flex;flex-direction:column;gap:8px">
+                <div class="row" style="justify-content:space-between"><span class="chip aic" style="height:22px;font-size:11px"><span class="ms" style="font-size:14px">auto_awesome</span>Medvya Assist · listening</span><span class="row wave" style="gap:2px;height:18px"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></div>
+                <div style="font-size:12px;line-height:1.5;color:var(--i9)"><strong style="color:#5B3FC4">S</strong> 3 days of fever, dry cough, no breathlessness.<br><strong style="color:#5B3FC4">P</strong> <span class="typer">Paracetamol 650 mg SOS · review in 3 days</span></div>
+                <span class="mut" style="font-size:11px">Draft · waiting for Dr. Rao to approve</span>
+              </div>
+              <div class="fl2 pop2" style="position:absolute;inset-inline-end:{{ site.fcB }};top:-22px;background:#fff;border:1px solid #BFE5DF;border-radius:14px;padding:10px 14px;box-shadow:0 18px 36px -12px rgba(6,112,79,.35);display:flex;align-items:center;gap:10px"><span class="pulse" style="width:34px;height:34px;border-radius:50%;background:#E6F6EF;color:#06704F;display:flex;align-items:center;justify-content:center"><span class="ms">{{ site.payIcon }}</span></span><span style="display:flex;flex-direction:column"><strong style="font-size:13.5px;color:var(--navy)">{{ site.payToast }}</strong><span class="mut" style="font-size:11.5px">{{ site.payToastSub }}</span></span></div>
+              <sc-if value="{{ notPhone }}">              <div class="fl3 pop3" style="position:absolute;inset-inline-end:{{ site.fcC }};bottom:56px;background:#fff;border:1px solid var(--ln);border-radius:14px;padding:10px 12px;box-shadow:0 18px 36px -14px rgba(16,42,67,.3);display:flex;align-items:center;gap:10px"><span style="width:32px;height:32px;border-radius:10px;background:#E8F7EE;color:#1E8E4E;display:flex;align-items:center;justify-content:center"><span class="ms">chat</span></span><span style="display:flex;flex-direction:column"><strong style="font-size:13px;color:var(--navy)">Reminder sent on WhatsApp</strong><span class="mut" style="font-size:11.5px">Joseph M. · tomorrow 10:30 · read ✓✓</span></span></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- integrations marquee -->
+        <section style="border-block:1px solid var(--ln);background:#fff;padding:18px 0;overflow:hidden">
+          <div class="row" style="max-width:1240px;margin:0 auto;width:100%;padding:0 {{ site.gut }};gap:24px;box-sizing:border-box">
+            <sc-if value="{{ wide }}"><span class="cap" style="flex-shrink:0;max-width:150px;line-height:1.4">{{ site.marqCap }}</span></sc-if>
+            <div class="mqwrap" style="flex:1;min-width:0;overflow:hidden"><div class="mq row" style="gap:12px;width:max-content"><sc-for list="{{ site.marq }}" as="m" hint-placeholder-count="16"><span class="row" style="gap:8px;height:40px;padding:0 14px;border:1px solid var(--ln);border-radius:999px;font-size:13.5px;font-weight:700;color:var(--i7);background:#FBFCFD;white-space:nowrap"><span class="ms" style="font-size:18px;color:{{ m.c }}">{{ m.icon }}</span>{{ m.t }}</span></sc-for></div></div></sc-if>
+          </div>
+        </section>
+
+        <!-- a day in the clinic -->
+        <section style="padding:{{ site.secPad }};max-width:1240px;margin:0 auto;width:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:28px">
+          <div style="display:flex;flex-direction:column;gap:10px;max-width:760px"><span class="eyebrow">{{ site.dayCap }}</span><h2 class="h2m" style="font-size:{{ site.h2 }}">{{ site.dayTitle }}</h2><p class="mut" style="margin:0;font-size:{{ site.lead }};line-height:1.55">{{ site.daySub }}</p></div>
+          <div style="display:grid;grid-template-columns:{{ site.dayGrid }};gap:24px;align-items:stretch">
+            <div role="tablist" aria-label="Clinic day" style="display:flex;flex-direction:column;gap:6px">
+              <sc-for list="{{ site.dayTabs }}" as="d" hint-placeholder-count="5"><button role="tab" aria-selected="{{ d.sel }}" onClick="{{ d.pick }}" class="daytab {{ d.cls }}"><span class="k" style="color:{{ d.tc }};min-width:44px">{{ d.time }}</span><span style="display:flex;flex-direction:column;gap:3px;text-align:start;flex:1"><strong style="font-size:15.5px;color:var(--navy)">{{ d.t }}</strong><span class="mut" style="font-size:13.5px;line-height:1.45;display:{{ d.show }}">{{ d.d }}</span></span><span class="ms" style="color:{{ d.tc }}">{{ d.icon }}</span></button></sc-for>
+            </div>
+            <div class="card" style="padding:0;overflow:hidden;box-shadow:0 30px 60px -24px rgba(16,42,67,.25);display:flex;flex-direction:column">
+              <div class="row" style="justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--ln);background:#FBFCFD"><span class="row" style="gap:10px"><span style="width:34px;height:34px;border-radius:10px;background:{{ site.day.bg }};color:{{ site.day.fg }};display:flex;align-items:center;justify-content:center"><span class="ms">{{ site.day.icon }}</span></span><strong style="font-size:15px;color:var(--navy)">{{ site.day.head }}</strong></span><span class="chip {{ site.day.chipCls }}">{{ site.day.chip }}</span></div>
+              <div style="padding:18px;display:flex;flex-direction:column;gap:10px;flex:1">
+                <sc-for list="{{ site.day.rows }}" as="r" hint-placeholder-count="4"><div class="row mvp" style="justify-content:space-between;gap:12px;padding:12px 14px;border:1px solid #EEF2F5;border-radius:12px;animation-delay:{{ r.dl }}"><span class="row" style="gap:10px;min-width:0"><span class="ms" style="font-size:20px;color:{{ r.c }}">{{ r.icon }}</span><span style="display:flex;flex-direction:column;min-width:0"><strong style="font-size:14px">{{ r.t }}</strong><span class="mut" style="font-size:12.5px">{{ r.d }}</span></span></span><span class="chip {{ r.cls }}" style="flex-shrink:0">{{ r.s }}</span></div></sc-for>
+                <div class="alert" style="margin-top:auto;background:#F3FBFA;color:var(--b7);font-size:13.5px"><span class="ms" style="font-size:19px">bolt</span><span>{{ site.day.win }}</span></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- bento -->
+        <section style="background:#fff;border-block:1px solid var(--ln)">
+          <div style="padding:{{ site.secPad }};max-width:1240px;margin:0 auto;width:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:28px">
+            <div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:16px;align-items:flex-end"><div style="display:flex;flex-direction:column;gap:10px;max-width:700px"><span class="eyebrow">{{ site.bentoCap }}</span><h2 class="h2m" style="font-size:{{ site.h2 }}">{{ site.bentoTitle }}</h2></div><button onClick="{{ site.goPricing }}" class="btn">{{ site.comparePlans }}<span class="ms" style="font-size:18px">{{ fwd }}</span></button></div>
+            <div style="display:grid;grid-template-columns:repeat({{ site.bentoCols }},minmax(0,1fr));gap:16px">
+              <sc-for list="{{ site.bento }}" as="b" hint-placeholder-count="8"><div class="bento lift" style="grid-column:span {{ b.span }};background:{{ b.bg }};color:{{ b.fg }};border-color:{{ b.line }}">
+                <span style="width:42px;height:42px;border-radius:12px;background:{{ b.ib }};display:flex;align-items:center;justify-content:center"><span class="ms" style="color:{{ b.ic }}">{{ b.icon }}</span></span>
+                <strong style="font-size:18px;letter-spacing:-.01em">{{ b.t }}</strong>
+                <span style="font-size:14.5px;line-height:1.55;opacity:.82">{{ b.d }}</span>
+                <div class="row" style="flex-wrap:wrap;gap:6px;margin-top:auto;padding-top:6px"><sc-for list="{{ b.tags }}" as="x" hint-placeholder-count="3"><span class="chip" style="background:{{ b.tagBg }};color:{{ b.tagFg }}">{{ x }}</span></sc-for></div>
+              </div></sc-for>
+            </div>
+          </div>
+        </section>
+
+        <!-- AI -->
+        <section style="position:relative;overflow:hidden;background:#0B1F33;color:#fff">
+          <div aria-hidden="true" style="position:absolute;inset:0;background:radial-gradient(700px 380px at 15% 10%,rgba(91,63,196,.45),transparent 60%),radial-gradient(600px 360px at 90% 90%,rgba(14,147,132,.35),transparent 60%)"></div>
+          <div style="position:relative;padding:{{ site.secPad }};max-width:1240px;margin:0 auto;width:100%;box-sizing:border-box;display:flex;flex-wrap:wrap;gap:48px;align-items:center">
+            <div style="flex:1 1 420px;min-width:0;display:flex;flex-direction:column;gap:18px">
+              <span class="chip" style="align-self:flex-start;background:rgba(155,130,255,.18);color:#CFC2FF;height:28px"><span class="ms">auto_awesome</span>Medvya Assist · AI notes</span>
+              <h2 class="h2m" style="font-size:{{ site.h2 }};color:#fff"><span style="display:block">Talk to your patient.</span><span style="display:block">Medvya writes the note.</span><span style="display:block;color:#9BE3D6">You approve it.</span></h2>
+              <p style="margin:0;color:#B9C8D6;font-size:{{ site.lead }};line-height:1.6">With the patient’s permission, Medvya listens to the consultation and drafts the history, examination, diagnosis and prescription. You accept, edit or reject every line — nothing is saved until you sign.</p>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 18px"><sc-for list="{{ site.aiSafe }}" as="a" hint-placeholder-count="6"><span class="row" style="gap:8px;font-size:14px;color:#DCE7F0;align-items:flex-start"><span class="ms" style="font-size:18px;color:#7FE0CF">{{ a.icon }}</span>{{ a.t }}</span></sc-for></div>
+              <div class="row" style="gap:10px;flex-wrap:wrap"><button onClick="{{ site.goAi }}" class="btn lg" style="border-color:#fff">How Medvya Assist works</button><span style="color:#8DA6BD;font-size:13.5px">Add-on · {{ site.aiPrice }}</span></div>
+            </div>
+            <div aria-hidden="true" style="flex:1 1 480px;min-width:0;display:flex;flex-direction:column;gap:12px">
+              <div class="row" style="gap:8px;flex-wrap:wrap"><sc-for list="{{ site.aiSteps }}" as="a" hint-placeholder-count="4"><span class="row" style="gap:6px;height:34px;padding:0 12px;border-radius:999px;background:{{ a.bg }};color:{{ a.fg }};font-size:13px;font-weight:700"><span class="ms" style="font-size:17px">{{ a.icon }}</span>{{ a.t }}</span></sc-for></div>
+              <div style="border-radius:18px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);padding:16px;display:flex;flex-direction:column;gap:10px;backdrop-filter:blur(6px)">
+                <div class="row" style="justify-content:space-between"><strong style="font-size:14px">Visit note · Meera Iyer, 52</strong><span class="row wave light" style="gap:2px;height:18px"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></div>
+                <sc-for list="{{ site.aiLines }}" as="l" hint-placeholder-count="4"><div class="mvp" style="display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:10px;align-items:start;padding:10px 12px;border-radius:12px;background:{{ l.bg }};border:1px solid {{ l.line }};animation-delay:{{ l.dl }}"><strong style="color:#CFC2FF;font-size:13px">{{ l.k }}</strong><span style="font-size:13.5px;line-height:1.5;color:#EAF1F7">{{ l.t }}</span><span class="chip" style="background:{{ l.cbg }};color:{{ l.cfg }}">{{ l.s }}</span></div></sc-for>
+                <div class="row" style="gap:10px;padding:10px 12px;border-radius:12px;background:rgba(245,166,35,.12);border:1px solid rgba(245,166,35,.35);font-size:13px;color:#FBD38D"><span class="ms" style="font-size:18px">warning</span>Interaction check: metformin + contrast scan next week — hold 48 h. Source: drug database.</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- who it's for -->
+        <section style="padding:{{ site.secPad }};max-width:1240px;margin:0 auto;width:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:24px">
+          <div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:16px;align-items:flex-end"><div style="display:flex;flex-direction:column;gap:10px;max-width:640px"><span class="eyebrow">Who it’s for</span><h2 class="h2m" style="font-size:{{ site.h2 }}">From a one-doctor clinic to a hospital group.</h2></div><div class="seg"><sc-for list="{{ site.perTabs }}" as="p" hint-placeholder-count="3"><button onClick="{{ p.pick }}" class="{{ p.cls }}">{{ p.label }}</button></sc-for></div></div>
+          <div class="card" style="padding:0;overflow:hidden;display:grid;grid-template-columns:{{ site.perGrid }}">
+            <div style="padding:{{ site.cardPad }};display:flex;flex-direction:column;gap:14px">
+              <span class="chip inf" style="align-self:flex-start">{{ site.per.tag }}</span>
+              <h3 style="margin:0;font-size:26px;letter-spacing:-.02em;color:var(--navy)">{{ site.per.t }}</h3>
+              <p class="mut" style="margin:0;font-size:15.5px;line-height:1.6">{{ site.per.d }}</p>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 18px"><sc-for list="{{ site.per.pts }}" as="x" hint-placeholder-count="6"><span class="row" style="gap:8px;font-size:14px;align-items:flex-start"><span class="ms" style="font-size:18px;color:var(--ok)">check</span>{{ x }}</span></sc-for></div>
+              <div class="row" style="gap:10px;margin-top:6px;flex-wrap:wrap"><button onClick="{{ site.per.go }}" class="btn p">{{ site.per.cta }}</button><span class="mut" style="font-size:13.5px">{{ site.per.price }}</span></div>
+            </div>
+            <div aria-hidden="true" style="background:linear-gradient(160deg,#E7F6F4,#EEF2FF);padding:28px;display:flex;flex-direction:column;justify-content:center;gap:10px">
+              <sc-for list="{{ site.per.stats }}" as="x" hint-placeholder-count="3"><div class="row lift" style="justify-content:space-between;background:#fff;border-radius:14px;padding:14px 16px;border:1px solid var(--ln)"><span class="row" style="gap:10px"><span class="ms" style="color:var(--b7)">{{ x.icon }}</span><span style="font-size:14px;font-weight:700">{{ x.t }}</span></span><span class="mut" style="font-size:13px">{{ x.v }}</span></div></sc-for>
+            </div>
+          </div>
+        </section>
+
+        <!-- patient app -->
+        <section style="background:linear-gradient(180deg,#F3F5FF,#fff);border-block:1px solid var(--ln)">
+          <div style="padding:{{ site.secPad }};max-width:1240px;margin:0 auto;width:100%;box-sizing:border-box;display:flex;flex-wrap:wrap-reverse;gap:48px;align-items:center">
+            <div aria-hidden="true" style="flex:1 1 380px;display:flex;justify-content:center;gap:18px;min-width:0">
+              <div class="phone fl"><div class="notch"></div>
+                <div style="padding:34px 14px 14px;display:flex;flex-direction:column;gap:10px">
+                  <div class="row" style="justify-content:space-between"><span style="font-size:12px;color:var(--i6)">Hi Meera</span><span class="row" style="gap:4px;font-size:11px;font-weight:700;color:#2F4AC0;background:#EEF1FF;border-radius:999px;padding:3px 8px"><span class="ms" style="font-size:14px">group</span>Family</span></div>
+                  <div style="border-radius:14px;background:#2F4AC0;color:#fff;padding:12px;display:flex;flex-direction:column;gap:4px"><span style="font-size:11px;opacity:.8">Next visit</span><strong style="font-size:15px">Tue 11 Nov · 10:30</strong><span style="font-size:11.5px;opacity:.85">Dr. Arjun Rao · Iyer Family Clinic</span><div class="row" style="gap:6px;margin-top:6px"><span style="font-size:11px;font-weight:700;background:#fff;color:#2F4AC0;border-radius:8px;padding:5px 9px">Directions</span><span style="font-size:11px;font-weight:700;background:rgba(255,255,255,.2);border-radius:8px;padding:5px 9px">Reschedule</span></div></div>
+                  <div style="border-radius:14px;border:1px solid var(--ln);padding:10px;display:flex;align-items:center;gap:10px"><span class="ms" style="color:#06704F;background:#E6F6EF;border-radius:10px;padding:6px">{{ site.payIcon }}</span><span style="flex:1;display:flex;flex-direction:column"><strong style="font-size:12.5px">{{ site.appPay }}</strong><span class="mut" style="font-size:11px">Invoice INV-2291</span></span><span style="font-size:11px;font-weight:800;color:#fff;background:#06704F;border-radius:8px;padding:6px 9px">Pay</span></div>
+                  <div style="border-radius:14px;border:1px solid var(--ln);padding:10px;display:flex;align-items:center;gap:10px"><span class="ms" style="color:#2F4AC0;background:#EEF1FF;border-radius:10px;padding:6px">lab_profile</span><span style="flex:1;display:flex;flex-direction:column"><strong style="font-size:12.5px">HbA1c result ready</strong><span class="mut" style="font-size:11px">Reviewed by your doctor</span></span></div>
+                  <div style="border-radius:14px;border:1px solid var(--ln);padding:10px;display:flex;align-items:center;gap:10px"><span class="ms" style="color:#5B3FC4;background:#F1ECFF;border-radius:10px;padding:6px">videocam</span><span style="flex:1;display:flex;flex-direction:column"><strong style="font-size:12.5px">Video visit</strong><span class="mut" style="font-size:11px">Book from home</span></span></div>
+                </div>
+                <div class="row" style="position:absolute;bottom:0;inset-inline:0;justify-content:space-around;height:52px;border-top:1px solid var(--ln);background:#fff"><span class="ms" style="color:#2F4AC0">home</span><span class="ms" style="color:var(--i4)">calendar_month</span><span class="ms" style="color:var(--i4)">folder_shared</span><span class="ms" style="color:var(--i4)">chat</span></div>
+              </div>
+            </div>
+            <div style="flex:1 1 440px;min-width:0;display:flex;flex-direction:column;gap:16px">
+              <span class="eyebrow" style="color:#2F4AC0;background:#EEF1FF">Medvya for patients</span>
+              <h2 class="h2m" style="font-size:{{ site.h2 }}">Your patients get an app too. Free for them, branded for you.</h2>
+              <p class="mut" style="margin:0;font-size:{{ site.lead }};line-height:1.6">Patients sign in with their mobile number, book and pay, join video visits, see results their doctor has released, and manage the whole family from one account.</p>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px"><sc-for list="{{ site.appPts }}" as="a" hint-placeholder-count="6"><div class="row" style="gap:10px;align-items:flex-start"><span class="ms" style="color:#2F4AC0;background:#EEF1FF;border-radius:10px;padding:6px;font-size:19px">{{ a.icon }}</span><span style="display:flex;flex-direction:column;gap:2px"><strong style="font-size:14.5px">{{ a.t }}</strong><span class="mut" style="font-size:13px;line-height:1.45">{{ a.d }}</span></span></div></sc-for></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- switching -->
+        <section style="padding:{{ site.secPad }};max-width:1240px;margin:0 auto;width:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:24px">
+          <div style="display:flex;flex-direction:column;gap:10px;max-width:700px"><span class="eyebrow">Switching is easy</span><h2 class="h2m" style="font-size:{{ site.h2 }}">Live in a day. We move your data for you.</h2></div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr));gap:16px"><sc-for list="{{ site.switch }}" as="w" hint-placeholder-count="4"><div class="card lift" style="padding:22px;display:flex;flex-direction:column;gap:10px;position:relative"><span class="k" style="color:var(--b7)">{{ w.n }}</span><strong style="font-size:17px;color:var(--navy)">{{ w.t }}</strong><span class="mut" style="font-size:14px;line-height:1.55">{{ w.d }}</span></div></sc-for></div>
+          <div class="row" style="gap:12px;padding:16px 18px;border-radius:14px;border:1px dashed var(--ln2);background:#FBFCFD;flex-wrap:wrap"><span class="ms" style="color:var(--i6)">format_quote</span><span class="mut" style="font-size:14px;flex:1;min-width:240px">Customer stories go here after the pilot. We will only publish real quotes, with the clinic’s written permission.</span><span class="chip">Placeholder</span></div>
+        </section>
+
+        <!-- security strip -->
+        <section style="background:#fff;border-block:1px solid var(--ln)">
+          <div style="padding:{{ site.secPad }};max-width:1240px;margin:0 auto;width:100%;box-sizing:border-box;display:grid;grid-template-columns:{{ site.secGrid }};gap:32px;align-items:center">
+            <div style="display:flex;flex-direction:column;gap:12px"><span class="eyebrow">{{ t.trustCap }}</span><h2 class="h2m" style="font-size:{{ site.h2 }}">{{ t.trustTitle }}</h2><p class="mut" style="margin:0;font-size:15.5px;line-height:1.6">{{ t.trustSub }}</p><button onClick="{{ site.goSecurity }}" class="btn" style="align-self:flex-start">Visit the trust centre<span class="ms" style="font-size:18px">{{ fwd }}</span></button></div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:12px"><sc-for list="{{ trust }}" as="r" hint-placeholder-count="6"><div class="row card lift" style="padding:16px;align-items:flex-start;gap:12px"><span class="ms" style="color:var(--b7);background:var(--b0);border-radius:10px;padding:7px">{{ r.icon }}</span><div style="display:flex;flex-direction:column;gap:3px"><strong style="font-size:14.5px">{{ r.t }}</strong><span class="mut" style="font-size:13px;line-height:1.5">{{ r.d }}</span></div></div></sc-for></div>
+          </div>
+        </section>
+
+        <!-- pricing teaser -->
+        <section style="padding:{{ site.secPad }};max-width:1240px;margin:0 auto;width:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:24px">
+          <div class="row" style="flex-wrap:wrap;justify-content:space-between;gap:12px;align-items:flex-end"><div style="display:flex;flex-direction:column;gap:10px"><span class="eyebrow">{{ t.navPricing }}</span><h2 class="h2m" style="font-size:{{ site.h2 }}">Simple plans. 14-day free trial.</h2><span class="mut" style="font-size:14px">{{ pubPriceNote }}</span></div><div class="seg"><sc-for list="{{ pubCycle }}" as="c" hint-placeholder-count="2"><button onClick="{{ c.pick }}" class="{{ c.cls }}">{{ c.label }}</button></sc-for></div></div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:16px"><sc-for list="{{ pubPlans }}" as="p" hint-placeholder-count="3"><div class="card lift" style="padding:24px;display:flex;flex-direction:column;gap:12px;border:{{ p.b }}"><div class="row" style="justify-content:space-between"><strong style="font-size:18px;color:var(--navy)">{{ p.n }}</strong><sc-if value="{{ p.tag }}"><span class="chip ok">{{ p.tag }}</span></sc-if></div><span class="mut" style="font-size:14px">{{ p.who }}</span><div class="row" style="align-items:baseline;gap:6px"><span style="font-size:34px;font-weight:800;color:var(--navy);letter-spacing:-.02em">{{ p.price }}</span><span class="mut" style="font-size:13.5px">{{ p.unit }}</span></div><div style="display:flex;flex-direction:column;gap:8px;flex:1"><sc-for list="{{ p.items }}" as="x" hint-placeholder-count="5"><span class="row" style="gap:8px;font-size:14px;align-items:flex-start"><span class="ms" style="font-size:18px;color:var(--ok)">check</span>{{ x }}</span></sc-for></div><button onClick="{{ goSignUp }}" class="{{ p.cls }}">{{ p.cta }}</button></div></sc-for></div>
+        </section>
+
+        <!-- FAQ -->
+        <section style="background:#fff;border-top:1px solid var(--ln)">
+          <div style="padding:{{ site.secPad }};max-width:1000px;margin:0 auto;width:100%;box-sizing:border-box;display:grid;grid-template-columns:{{ site.faqGrid }};gap:32px">
+            <div style="display:flex;flex-direction:column;gap:10px"><span class="eyebrow">FAQ</span><h2 class="h2m" style="font-size:{{ site.h2 }}">Questions doctors ask us</h2><span class="mut" style="font-size:14.5px">Still unsure? <button onClick="{{ site.goDemo }}" style="border:0;background:transparent;color:var(--fc);font-weight:700;cursor:pointer;padding:0;font-size:14.5px">Talk to us</button></span></div>
+            <div style="display:flex;flex-direction:column"><sc-for list="{{ site.faq }}" as="f" hint-placeholder-count="7"><div style="border-bottom:1px solid var(--ln)"><button onClick="{{ f.pick }}" aria-expanded="{{ f.exp }}" class="row" style="width:100%;justify-content:space-between;gap:12px;padding:18px 0;border:0;background:transparent;cursor:pointer;text-align:start;font-size:16px;font-weight:700;color:var(--navy)">{{ f.q }}<span class="ms" style="transition:transform .25s;transform:rotate({{ f.rot }});color:var(--i6)">add</span></button><sc-if value="{{ f.open }}"><p class="mv" style="margin:0 0 18px;font-size:14.5px;line-height:1.65;color:var(--i6)">{{ f.a }}</p></sc-if></div></sc-for></div>
+          </div>
+        </section>
+      </sc-if>
+
+      <!-- ============ MEDVYA ASSIST PAGE ============ -->
+      <sc-if value="{{ site.pg.ai }}">
+        <section style="background:#0B1F33;color:#fff;position:relative;overflow:hidden">
+          <div aria-hidden="true" style="position:absolute;inset:0;background:radial-gradient(800px 420px at 50% -10%,rgba(91,63,196,.5),transparent 65%)"></div>
+          <div style="position:relative;max-width:900px;margin:0 auto;width:100%;padding:{{ site.heroPad }};text-align:center;display:flex;flex-direction:column;align-items:center;gap:18px;box-sizing:border-box">
+            <span class="chip mv" style="background:rgba(155,130,255,.2);color:#CFC2FF;height:28px"><span class="ms">auto_awesome</span>Medvya Assist</span>
+            <h1 class="mv d1" style="margin:0;font-size:{{ site.h1 }};line-height:1.05;letter-spacing:-.035em">Spend the visit with your patient, not the keyboard.</h1>
+            <p class="mv d2" style="margin:0;color:#B9C8D6;font-size:{{ site.lead }};line-height:1.6;max-width:680px">Medvya Assist drafts the note and prescription from the consultation — in English, Hindi or Arabic. You review every line. Nothing is saved until you sign.</p>
+            <div class="row mv d3" style="gap:10px;flex-wrap:wrap;justify-content:center"><button onClick="{{ goSignUp }}" class="btn p lg">Try it free for 14 days</button><button onClick="{{ site.goDemo }}" class="btn lg">See a live demo</button></div>
+          </div>
+        </section>
+        <section style="padding:{{ site.secPad }};max-width:1240px;margin:0 auto;width:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:24px">
+          <h2 class="h2m" style="font-size:{{ site.h2 }}">How it works, step by step</h2>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr));gap:16px"><sc-for list="{{ site.aiHow }}" as="a" hint-placeholder-count="4"><div class="card lift" style="padding:22px;display:flex;flex-direction:column;gap:10px"><span class="row" style="gap:10px"><span style="width:36px;height:36px;border-radius:50%;background:#F1ECFF;color:#5B3FC4;display:flex;align-items:center;justify-content:center;font-weight:800">{{ a.n }}</span><span class="ms" style="color:#5B3FC4">{{ a.icon }}</span></span><strong style="font-size:17px;color:var(--navy)">{{ a.t }}</strong><span class="mut" style="font-size:14px;line-height:1.55">{{ a.d }}</span></div></sc-for></div>
+        </section>
+        <section style="background:#fff;border-block:1px solid var(--ln)">
+          <div style="padding:{{ site.secPad }};max-width:1240px;margin:0 auto;width:100%;box-sizing:border-box;display:grid;grid-template-columns:{{ site.secGrid }};gap:32px">
+            <div style="display:flex;flex-direction:column;gap:12px"><span class="eyebrow">Safety first</span><h2 class="h2m" style="font-size:{{ site.h2 }}">Built so a doctor is always in charge.</h2><p class="mut" style="margin:0;font-size:15.5px;line-height:1.6">AI helps with writing. It does not diagnose, prescribe or sign. Every suggestion is labelled, linked to what was said, and needs your approval.</p></div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:12px"><sc-for list="{{ site.aiSafeFull }}" as="a" hint-placeholder-count="6"><div class="card" style="padding:16px;display:flex;gap:12px;align-items:flex-start"><span class="ms" style="color:#5B3FC4;background:#F1ECFF;border-radius:10px;padding:7px">{{ a.icon }}</span><span style="display:flex;flex-direction:column;gap:3px"><strong style="font-size:14.5px">{{ a.t }}</strong><span class="mut" style="font-size:13px;line-height:1.5">{{ a.d }}</span></span></div></sc-for></div>
+          </div>
+        </section>
+      </sc-if>
+
+      <!-- ============ HOSPITALS PAGE ============ -->
+      <sc-if value="{{ site.pg.hospitals }}">
+        <section style="background:linear-gradient(160deg,#102A43,#0F4C5C);color:#fff">
+          <div style="max-width:1240px;margin:0 auto;width:100%;padding:{{ site.heroPad }};display:flex;flex-wrap:wrap;gap:40px;align-items:center;box-sizing:border-box">
+            <div style="flex:1 1 460px;display:flex;flex-direction:column;gap:18px;min-width:0"><span class="chip mv" style="align-self:flex-start;background:rgba(255,255,255,.12);color:#CFE6F0;height:28px"><span class="ms">domain</span>For hospitals and groups</span><h1 class="mv d1" style="margin:0;font-size:{{ site.h1 }};line-height:1.05;letter-spacing:-.035em">Every site, department and doctor on one system.</h1><p class="mv d2" style="margin:0;color:#B9C8D6;font-size:{{ site.lead }};line-height:1.6">Single sign-on, central reporting, insurance e-claims and a patient app under your brand — with records kept in your country.</p><div class="row mv d3" style="gap:10px;flex-wrap:wrap"><button onClick="{{ site.goDemo }}" class="btn p lg">Talk to our hospital team</button><button onClick="{{ site.goSecurity }}" class="btn lg" style="background:transparent;color:#fff;border-color:#3F6584">Security and compliance</button></div></div>
+            <div aria-hidden="true" style="flex:1 1 420px;display:grid;grid-template-columns:1fr 1fr;gap:12px;min-width:0"><sc-for list="{{ site.hospStats }}" as="h" hint-placeholder-count="4"><div class="mvp" style="border-radius:16px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);padding:18px;display:flex;flex-direction:column;gap:6px;animation-delay:{{ h.dl }}"><span class="ms" style="color:#7FE0CF">{{ h.icon }}</span><strong style="font-size:16px">{{ h.t }}</strong><span style="font-size:13px;color:#B9C8D6;line-height:1.5">{{ h.d }}</span></div></sc-for></div>
+          </div>
+        </section>
+        <section style="padding:{{ site.secPad }};max-width:1240px;margin:0 auto;width:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:24px">
+          <h2 class="h2m" style="font-size:{{ site.h2 }}">What hospitals get</h2>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,270px),1fr));gap:14px"><sc-for list="{{ site.hospMods }}" as="h" hint-placeholder-count="9"><div class="card lift" style="padding:18px;display:flex;flex-direction:column;gap:8px"><div class="row" style="justify-content:space-between"><span class="ms" style="color:var(--b7)">{{ h.icon }}</span><span class="chip {{ h.cls }}">{{ h.s }}</span></div><strong style="font-size:15.5px;color:var(--navy)">{{ h.t }}</strong><span class="mut" style="font-size:13.5px;line-height:1.5">{{ h.d }}</span></div></sc-for></div>
+        </section>
+      </sc-if>
+
+      <!-- ============ PRICING PAGE ============ -->
+      <sc-if value="{{ site.pg.pricing }}">
+        <section style="background:radial-gradient(900px 400px at 50% -20%,#D7F3EE,transparent 70%),#fff;border-bottom:1px solid var(--ln)">
+          <div style="max-width:1240px;margin:0 auto;width:100%;padding:{{ site.secPad }};box-sizing:border-box;display:flex;flex-direction:column;gap:24px;align-items:center;text-align:center">
+            <span class="eyebrow mv">{{ t.navPricing }}</span>
+            <h1 class="mv d1" style="margin:0;font-size:{{ site.h1s }};letter-spacing:-.03em;color:var(--navy);line-height:1.08">Pay per doctor. Everything else included.</h1>
+            <p class="mut mv d2" style="margin:0;font-size:{{ site.lead }};max-width:640px">{{ pubPriceNote }}</p>
+            <div class="row mv d3" style="gap:12px;flex-wrap:wrap;justify-content:center"><div class="seg"><sc-for list="{{ pubCycle }}" as="c" hint-placeholder-count="2"><button onClick="{{ c.pick }}" class="{{ c.cls }}">{{ c.label }}</button></sc-for></div><div class="seg"><sc-for list="{{ site.ctry }}" as="c" hint-placeholder-count="2"><button onClick="{{ c.pick }}" class="{{ c.cls }}">{{ c.label }}</button></sc-for></div></div>
+            <div style="width:100%;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:16px;text-align:start"><sc-for list="{{ pubPlans }}" as="p" hint-placeholder-count="3"><div class="card lift" style="padding:24px;display:flex;flex-direction:column;gap:12px;border:{{ p.b }}"><div class="row" style="justify-content:space-between"><strong style="font-size:18px;color:var(--navy)">{{ p.n }}</strong><sc-if value="{{ p.tag }}"><span class="chip ok">{{ p.tag }}</span></sc-if></div><span class="mut" style="font-size:14px">{{ p.who }}</span><div class="row" style="align-items:baseline;gap:6px"><span style="font-size:34px;font-weight:800;color:var(--navy);letter-spacing:-.02em">{{ p.price }}</span><span class="mut" style="font-size:13.5px">{{ p.unit }}</span></div><div style="display:flex;flex-direction:column;gap:8px;flex:1"><sc-for list="{{ p.items }}" as="x" hint-placeholder-count="5"><span class="row" style="gap:8px;font-size:14px;align-items:flex-start"><span class="ms" style="font-size:18px;color:var(--ok)">check</span>{{ x }}</span></sc-for></div><button onClick="{{ goSignUp }}" class="{{ p.cls }}">{{ p.cta }}</button></div></sc-for></div>
+          </div>
+        </section>
+        <section style="padding:{{ site.secPad }};max-width:1240px;margin:0 auto;width:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:20px">
+          <h2 class="h2m" style="font-size:{{ site.h2s }}">Compare plans</h2>
+          <div class="card" style="overflow:auto"><div style="min-width:640px">
+            <div class="tr" style="grid-template-columns:2fr 1fr 1fr 1fr;border-top:0;background:#F7FAFC;font-weight:800;color:var(--navy)"><span>Feature</span><span>Solo</span><span>Clinic</span><span>Hospital</span></div>
+            <sc-for list="{{ site.cmp }}" as="r" hint-placeholder-count="12"><div class="tr" style="grid-template-columns:2fr 1fr 1fr 1fr;background:{{ r.bg }}"><span style="font-weight:{{ r.fw }};color:{{ r.c }}">{{ r.k }}</span><span>{{ r.a }}</span><span>{{ r.b }}</span><span>{{ r.d }}</span></div></sc-for>
+          </div></div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:16px">
+            <div class="card" style="padding:20px;display:flex;flex-direction:column;gap:8px"><span class="row" style="gap:8px"><span class="ms" style="color:#5B3FC4">auto_awesome</span><strong style="font-size:16px">Medvya Assist add-on</strong></span><span class="mut" style="font-size:14px;line-height:1.55">AI notes and prescriptions · {{ site.aiPrice }} per doctor. Turn it on or off any month.</span></div>
+            <div class="card" style="padding:20px;display:flex;flex-direction:column;gap:8px"><span class="row" style="gap:8px"><span class="ms" style="color:var(--b7)">volunteer_activism</span><strong style="font-size:16px">If a payment fails</strong></span><span class="mut" style="font-size:14px;line-height:1.55">Nothing locks for 30 days. After that, new online bookings pause; patient records are never locked and you can always export them.</span></div>
+            <div class="card" style="padding:20px;display:flex;flex-direction:column;gap:8px"><span class="row" style="gap:8px"><span class="ms" style="color:var(--b7)">swap_horiz</span><strong style="font-size:16px">Free migration</strong></span><span class="mut" style="font-size:14px;line-height:1.55">Send us your Excel, CSV or old software export. We map it, remove duplicates, and you check it before go-live.</span></div>
+          </div>
+        </section>
+      </sc-if>
+
+      <!-- ============ SECURITY PAGE ============ -->
+      <sc-if value="{{ site.pg.security }}">
+        <section style="background:#fff;border-bottom:1px solid var(--ln)">
+          <div style="max-width:1240px;margin:0 auto;width:100%;padding:{{ site.secPad }};box-sizing:border-box;display:flex;flex-wrap:wrap;gap:40px;align-items:center">
+            <div style="flex:1 1 460px;display:flex;flex-direction:column;gap:16px;min-width:0"><span class="eyebrow mv">Trust centre</span><h1 class="mv d1" style="margin:0;font-size:{{ site.h1s }};letter-spacing:-.03em;color:var(--navy);line-height:1.08">Patient data is the most personal data there is. We treat it that way.</h1><p class="mut mv d2" style="margin:0;font-size:{{ site.lead }};line-height:1.6">How we store, protect and give you control over every record — and what we are still working on.</p></div>
+            <div aria-hidden="true" class="mv d2" style="flex:0 1 340px;margin:0 auto"><div style="width:220px;height:220px;border-radius:50%;margin:0 auto;background:radial-gradient(circle,#E7F6F4 0%,#fff 70%);display:flex;align-items:center;justify-content:center;position:relative"><span class="ring"></span><span class="ring r2"></span><span style="width:96px;height:96px;border-radius:28px;background:#0C7D70;display:flex;align-items:center;justify-content:center;box-shadow:0 20px 40px -10px rgba(12,125,112,.5)"><span class="ms" style="font-size:52px;color:#fff">shield_lock</span></span></div></div>
+          </div>
+        </section>
+        <section style="padding:{{ site.secPad }};max-width:1240px;margin:0 auto;width:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:24px">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:14px"><sc-for list="{{ site.secCards }}" as="c" hint-placeholder-count="9"><div class="card lift" style="padding:20px;display:flex;flex-direction:column;gap:8px"><span class="ms" style="color:var(--b7);background:var(--b0);border-radius:10px;padding:8px;align-self:flex-start">{{ c.icon }}</span><strong style="font-size:16px;color:var(--navy)">{{ c.t }}</strong><span class="mut" style="font-size:14px;line-height:1.55">{{ c.d }}</span></div></sc-for></div>
+          <div class="card" style="padding:0;overflow:hidden"><div class="row" style="padding:14px 18px;justify-content:space-between;border-bottom:1px solid var(--ln);background:#F7FAFC"><strong style="color:var(--navy)">Compliance status</strong><span class="mut" style="font-size:13px">Updated by Medvya · not a certification</span></div><sc-for list="{{ site.comp }}" as="c" hint-placeholder-count="6"><div class="tr" style="grid-template-columns:1.5fr 2.5fr auto"><strong>{{ c.k }}</strong><span class="mut">{{ c.d }}</span><span class="chip {{ c.cls }}">{{ c.s }}</span></div></sc-for></div>
+        </section>
+      </sc-if>
+
+      <!-- ============ DEMO PAGE ============ -->
+      <sc-if value="{{ site.pg.demo }}">
+        <section style="background:radial-gradient(900px 420px at 0% 0%,#D7F3EE,transparent 60%),radial-gradient(800px 420px at 100% 100%,#E6ECFF,transparent 60%),#F5F7F9">
+          <div style="max-width:1160px;margin:0 auto;width:100%;padding:{{ site.secPad }};box-sizing:border-box;display:grid;grid-template-columns:{{ site.secGrid }};gap:40px;align-items:start">
+            <div style="display:flex;flex-direction:column;gap:16px">
+              <span class="eyebrow mv">Book a demo</span>
+              <h1 class="mv d1" style="margin:0;font-size:{{ site.h1s }};letter-spacing:-.03em;color:var(--navy);line-height:1.08">See Medvya with your own clinic’s day.</h1>
+              <p class="mut mv d2" style="margin:0;font-size:{{ site.lead }};line-height:1.6">20 minutes on video with a product specialist. We set up a sandbox with your specialty, fees and team so you see exactly how your day would run.</p>
+              <div style="display:flex;flex-direction:column;gap:12px;margin-top:6px"><sc-for list="{{ site.demoPts }}" as="d" hint-placeholder-count="4"><div class="row" style="gap:12px;align-items:flex-start"><span style="width:30px;height:30px;border-radius:50%;background:#fff;border:1px solid var(--ln);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;color:var(--b7);flex-shrink:0">{{ d.n }}</span><span style="display:flex;flex-direction:column;gap:2px"><strong style="font-size:15px">{{ d.t }}</strong><span class="mut" style="font-size:13.5px">{{ d.d }}</span></span></div></sc-for></div>
+            </div>
+            <div class="card mv d2" style="padding:{{ site.cardPad }};display:flex;flex-direction:column;gap:14px;box-shadow:0 30px 60px -24px rgba(16,42,67,.25)">
+              <sc-if value="{{ site.demoSent }}">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;padding:24px 0"><span class="pop1" style="width:64px;height:64px;border-radius:50%;background:#E6F6EF;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:36px;color:#06704F">event_available</span></span><h2 style="margin:0;font-size:22px;color:var(--navy)">You’re booked — {{ site.slotPicked }}</h2><p class="mut" style="margin:0;font-size:14.5px;max-width:360px">A calendar invite and video link are on their way to your email. Want a head start? You can create your practice now and we’ll use it in the demo.</p><button onClick="{{ goSignUp }}" class="btn p">{{ site.trialLong }}</button></div>
+              </sc-if>
+              <sc-if value="{{ site.demoForm }}">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px"><label class="lbl">Your name<input class="in" value="Dr. Arjun Rao"></label><label class="lbl">Clinic name<input class="in" value="{{ practice }}"></label></div>
+                <label class="lbl">Work email<input class="in" dir="ltr" value="owner@example.com"></label>
+                <label class="lbl">Mobile<div dir="ltr" class="row" style="gap:8px"><span class="in" style="flex:0 0 auto;width:auto;display:flex;align-items:center;background:#F7FAFC;font-weight:700">{{ dial }}</span><input class="in" value="{{ phone }}"></div></label>
+                <div class="lbl">Doctors at your practice<div class="seg"><sc-for list="{{ site.sizeOpts }}" as="o" hint-placeholder-count="4"><button onClick="{{ o.pick }}" class="{{ o.cls }}" style="flex:1">{{ o.label }}</button></sc-for></div></div>
+                <div class="lbl">Pick a time · {{ site.tz }}<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"><sc-for list="{{ site.slots }}" as="o" hint-placeholder-count="6"><button onClick="{{ o.pick }}" style="height:44px;border-radius:10px;border:{{ o.b }};background:{{ o.bg }};color:{{ o.fg }};font-weight:700;font-size:13.5px;cursor:pointer">{{ o.label }}</button></sc-for></div></div>
+                <button onClick="{{ site.sendDemo }}" class="btn p lg">Book my demo</button>
+                <span class="mut" style="font-size:12.5px">We use these details only to arrange the demo. See our privacy notice [LEGAL].</span>
+              </sc-if>
+            </div>
+          </div>
+        </section>
+      </sc-if>
+
+      <!-- final CTA -->
+      <section style="padding:{{ site.ctaPad }}">
+        <div style="max-width:1240px;margin:0 auto;width:100%;border-radius:24px;padding:{{ site.cardPad }};background:linear-gradient(120deg,#0C7D70 0%,#0F4C5C 55%,#2F4AC0 130%);color:#fff;display:flex;flex-wrap:wrap;gap:24px;align-items:center;justify-content:space-between;position:relative;overflow:hidden;box-sizing:border-box">
+          <div aria-hidden="true" style="position:absolute;inset-inline-end:-80px;top:-80px;width:280px;height:280px;border-radius:50%;background:rgba(255,255,255,.08)"></div>
+          <div style="display:flex;flex-direction:column;gap:8px;max-width:640px;position:relative"><h2 style="margin:0;font-size:{{ site.h2s }};letter-spacing:-.02em">{{ t.ctaTitle }}</h2><p style="margin:0;color:#D5EDEA;font-size:15.5px">{{ t.ctaSub }}</p></div>
+          <div class="row" style="flex-wrap:wrap;position:relative"><button onClick="{{ goSignUp }}" class="btn lg" style="border-color:#fff;color:var(--navy)">{{ site.trialLong }}</button><button onClick="{{ site.goDemo }}" class="btn lg" style="background:transparent;color:#fff;border-color:rgba(255,255,255,.5)">{{ site.demoLong }}</button></div>
         </div>
       </section>
 
-      <section id="features" style="padding:{{ pad.sec }};display:flex;flex-direction:column;gap:20px">
-        <div style="display:flex;flex-direction:column;gap:6px;max-width:720px"><span class="cap" style="color:var(--b7)">{{ t.featCap }}</span><h2 style="margin:0;font-size:30px;letter-spacing:-.02em;color:var(--navy)">{{ t.featTitle }}</h2></div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:16px">
-          <sc-for list="{{ features }}" as="f" hint-placeholder-count="6"><div class="card" style="padding:20px;display:flex;flex-direction:column;gap:8px"><span style="width:40px;height:40px;border-radius:10px;background:var(--b0);display:flex;align-items:center;justify-content:center"><span class="ms" style="color:var(--b7)">{{ f.icon }}</span></span><strong style="font-size:16px;color:var(--navy)">{{ f.t }}</strong><span class="mut" style="font-size:14.5px;line-height:1.55">{{ f.d }}</span><sc-if value="{{ f.ai }}"><span class="chip aic" style="align-self:flex-start"><span class="ms">auto_awesome</span>{{ t.aiTag }}</span></sc-if></div></sc-for>
+      <!-- footer -->
+      <footer style="background:#0B1F33;color:#B9C8D6">
+        <div style="max-width:1240px;margin:0 auto;width:100%;padding:{{ site.footPad }};box-sizing:border-box;display:grid;grid-template-columns:{{ site.footGrid }};gap:28px">
+          <div style="display:flex;flex-direction:column;gap:12px"><span class="row" style="gap:9px"><svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="9" fill="#0C7D70"/><path d="M6.5 19.5h4l2.6-8 3.6 11 2.7-8.2 1.6 5.2h4.5" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><strong style="font-size:18px;color:#fff">Medvya</strong></span><span style="font-size:13.5px;line-height:1.6;max-width:260px">Clinic software for doctors in India and the UAE.</span><div class="seg" style="background:#163552;align-self:flex-start"><sc-for list="{{ site.ctry }}" as="c" hint-placeholder-count="2"><button onClick="{{ c.pick }}" class="{{ c.cls }}">{{ c.label }}</button></sc-for></div><span class="row" style="gap:6px;font-size:13px"><span style="width:8px;height:8px;border-radius:50%;background:#34D399"></span>All systems normal · status.medvya.com</span></div>
+          <sc-for list="{{ site.foot }}" as="f" hint-placeholder-count="4"><div style="display:flex;flex-direction:column;gap:10px"><span style="font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#fff">{{ f.h }}</span><sc-for list="{{ f.links }}" as="l" hint-placeholder-count="5"><button onClick="{{ l.go }}" style="border:0;background:transparent;color:#B9C8D6;font-size:14px;cursor:pointer;padding:0;text-align:start">{{ l.t }}</button></sc-for></div></sc-for>
         </div>
-      </section>
-
-      <section id="how" style="padding:{{ pad.sec }};background:#fff;border-block:1px solid var(--ln);display:flex;flex-direction:column;gap:20px">
-        <h2 style="margin:0;font-size:30px;letter-spacing:-.02em;color:var(--navy)">{{ t.howTitle }}</h2>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:16px">
-          <sc-for list="{{ how }}" as="h" hint-placeholder-count="3"><div style="display:flex;gap:14px;align-items:flex-start"><span style="flex-shrink:0;width:36px;height:36px;border-radius:50%;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800">{{ h.n }}</span><div style="display:flex;flex-direction:column;gap:4px"><strong style="font-size:16px">{{ h.t }}</strong><span class="mut" style="font-size:14.5px;line-height:1.55">{{ h.d }}</span></div></div></sc-for>
-        </div>
-      </section>
-
-      <section id="trust" style="padding:{{ pad.sec }};display:flex;flex-direction:column;gap:20px">
-        <div style="display:flex;flex-direction:column;gap:6px;max-width:720px"><span class="cap" style="color:var(--b7)">{{ t.trustCap }}</span><h2 style="margin:0;font-size:30px;letter-spacing:-.02em;color:var(--navy)">{{ t.trustTitle }}</h2><p class="mut" style="margin:0;font-size:15px">{{ t.trustSub }}</p></div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:12px">
-          <sc-for list="{{ trust }}" as="r" hint-placeholder-count="6"><div class="row card" style="padding:16px;align-items:flex-start;gap:12px"><span class="ms" style="color:var(--navy)">{{ r.icon }}</span><div style="display:flex;flex-direction:column;gap:2px"><strong style="font-size:15px">{{ r.t }}</strong><span class="mut" style="font-size:14px;line-height:1.5">{{ r.d }}</span></div></div></sc-for>
-        </div>
-      </section>
-
-      <section id="plans" style="padding:{{ pad.sec }};display:flex;flex-direction:column;gap:20px">
-        <div class="row" style="flex-wrap:wrap;justify-content:space-between;gap:12px"><div style="display:flex;flex-direction:column;gap:6px"><span class="cap" style="color:var(--b7)">Pricing</span><h2 style="margin:0;font-size:30px;letter-spacing:-.02em;color:var(--navy)">Simple plans. 14-day free trial.</h2><span class="mut" style="font-size:14.5px">{{ pubPriceNote }}</span></div><div class="seg"><sc-for list="{{ pubCycle }}" as="o" hint-placeholder-count="2"><button onClick="{{ o.pick }}" class="{{ o.cls }}">{{ o.label }}</button></sc-for></div></div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:16px"><sc-for list="{{ pubPlans }}" as="p" hint-placeholder-count="3"><div class="card" style="padding:22px;display:flex;flex-direction:column;gap:12px;border:{{ p.b }}"><div class="row" style="justify-content:space-between"><strong style="font-size:18px;color:var(--navy)">{{ p.n }}</strong><sc-if value="{{ p.tag }}"><span class="chip ok">{{ p.tag }}</span></sc-if></div><span class="mut" style="font-size:14px">{{ p.who }}</span><div><span style="font-size:30px;font-weight:800;color:var(--navy)">{{ p.price }}</span> <span class="mut" style="font-size:13.5px">{{ p.unit }}</span></div><sc-for list="{{ p.items }}" as="i" hint-placeholder-count="5"><div class="row" style="gap:8px;font-size:14px;align-items:flex-start"><span class="ms" style="font-size:18px;color:var(--ok)">check</span>{{ i }}</div></sc-for><button onClick="{{ goSignUp }}" class="{{ p.cls }}" style="margin-top:auto">{{ p.cta }}</button></div></sc-for></div>
-        <span class="chip ok" style="align-self:flex-start"><span class="ms">verified</span>Prices approved 06 Nov 2026 · taxes shown at checkout</span>
-      </section>
-
-      <section id="pricing" style="padding:{{ pad.sec }};background:var(--navy);color:#fff;display:flex;flex-wrap:wrap;gap:24px;align-items:center;justify-content:space-between">
-        <div style="display:flex;flex-direction:column;gap:8px;max-width:640px"><h2 style="margin:0;font-size:28px;letter-spacing:-.02em">{{ t.ctaTitle }}</h2><p style="margin:0;color:#C9D6E2;font-size:15.5px">{{ t.ctaSub }}</p><span style="color:#C9D6E2;font-size:14px">UPI, cards and net banking in India · cards and Apple Pay in the UAE.</span></div>
-        <div class="row" style="flex-wrap:wrap"><button onClick="{{ goSignUp }}" class="btn p lg">{{ t.startFree }}</button><button class="btn lg" style="background:transparent;color:#fff;border-color:#33506B">{{ t.talk }}</button></div>
-      </section>
-      <footer style="display:flex;flex-wrap:wrap;gap:10px 24px;justify-content:space-between;padding:20px 32px;background:#fff;border-top:1px solid var(--ln);font-size:13.5px;color:var(--i6)"><span>© Medvya [LEGAL entity]</span><span class="row" style="gap:16px;flex-wrap:wrap"><a href="#trust">{{ t.navTrust }}</a><a href="#">{{ t.help }}</a><span>{{ t.legal }}</span></span></footer>
+        <div class="row" style="max-width:1240px;margin:0 auto;width:100%;padding:16px {{ site.gut }} 24px;box-sizing:border-box;justify-content:space-between;flex-wrap:wrap;gap:10px;border-top:1px solid #1E3A55;font-size:13px"><span>© 2026 Medvya [LEGAL entity] · {{ regionLine }}</span><span class="row" style="gap:16px;flex-wrap:wrap"><span>Terms [LEGAL]</span><span>Privacy [LEGAL]</span><span>Cookie settings</span></span></div>
+      </footer>
     </sc-if>
 
     <!-- ================= AUTH (sign in + sign up, one entry) ================= -->
@@ -190,9 +477,10 @@ button,input,select{font-family:inherit;color:inherit}
       <div style="flex:1;display:flex;min-height:{{ fh }}">
         <sc-if value="{{ wide }}">
           <div style="flex:0 0 42%;background:var(--navy);color:#fff;padding:40px 48px;display:flex;flex-direction:column;gap:24px">
-            <button onClick="{{ goWeb }}" class="row" style="gap:8px;border:0;background:transparent;color:#fff;cursor:pointer;padding:0;align-self:flex-start"><span style="width:32px;height:32px;border-radius:9px;background:var(--b6);display:flex;align-items:center;justify-content:center;font:800 16px Manrope">M</span><span style="font:800 18px Manrope">Medvya</span></button>
+            <button onClick="{{ goWeb }}" class="row" style="gap:8px;border:0;background:transparent;color:#fff;cursor:pointer;padding:0;align-self:flex-start"><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="9" fill="#0C7D70"/><path d="M6.5 19.5h4l2.6-8 3.6 11 2.7-8.2 1.6 5.2h4.5" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span style="font:800 18px Manrope">Medvya</span></button>
             <div style="margin-top:auto;display:flex;flex-direction:column;gap:18px;max-width:440px">
               <p style="margin:0;font-size:28px;font-weight:700;line-height:1.28;letter-spacing:-.01em">{{ t.tagline }}</p>
+              <div aria-hidden="true" style="position:relative;height:150px;margin:4px 0 8px"><div class="pop1" style="position:absolute;inset-inline-start:0;top:0;width:270px;background:#fff;color:var(--i9);border-radius:14px;padding:12px 14px;box-shadow:0 20px 40px -12px rgba(0,0,0,.4);display:flex;flex-direction:column;gap:6px"><div class="row" style="justify-content:space-between"><span class="chip aic" style="height:22px;font-size:11px"><span class="ms" style="font-size:14px">auto_awesome</span>AI draft</span><span class="row wave" style="gap:2px;height:16px"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></div><span style="font-size:12px;line-height:1.5"><strong style="color:#5B3FC4">P</strong> <span class="typer">Metformin 500 mg 1-0-1 after food</span></span></div><div class="pop2" style="position:absolute;inset-inline-end:0;bottom:0;background:#fff;color:var(--i9);border-radius:14px;padding:10px 12px;box-shadow:0 20px 40px -12px rgba(0,0,0,.4);display:flex;align-items:center;gap:10px"><span class="pulse" style="width:30px;height:30px;border-radius:50%;background:#E6F6EF;color:#06704F;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:18px">{{ site.payIcon }}</span></span><strong style="font-size:13px">{{ site.payToast }}</strong></div></div>
               <sc-for list="{{ points }}" as="p" hint-placeholder-count="3"><div class="row" style="align-items:flex-start;gap:12px;font-size:15px;color:#C9D6E2"><span class="ms" style="color:#2BB3A3;margin-top:2px">{{ p.icon }}</span><span>{{ p.t }}</span></div></sc-for>
             </div>
             <sc-if value="{{ inCreate }}"><div style="display:flex;flex-direction:column;gap:8px;padding:16px;border-radius:12px;background:var(--navy2)"><sc-for list="{{ cSteps }}" as="c" hint-placeholder-count="3"><div class="row" style="font-size:14px;color:{{ c.fg }};font-weight:{{ c.fw }}"><span class="ms" style="font-size:19px;color:{{ c.ic }}">{{ c.icon }}</span>{{ c.label }}</div></sc-for></div></sc-if>
@@ -201,7 +489,7 @@ button,input,select{font-family:inherit;color:inherit}
         </sc-if>
         <div style="flex:1;min-width:0;display:flex;flex-direction:column;background:#fff">
           <div class="row" style="padding:{{ pad.bar }};justify-content:space-between">
-            <sc-if value="{{ narrow }}"><button onClick="{{ goWeb }}" class="row" style="gap:8px;border:0;background:transparent;cursor:pointer;padding:0"><span style="width:30px;height:30px;border-radius:8px;background:var(--b6);color:#fff;display:flex;align-items:center;justify-content:center;font:800 15px Manrope">M</span><span style="font:800 17px Manrope;color:var(--navy)">Medvya</span></button></sc-if>
+            <sc-if value="{{ narrow }}"><button onClick="{{ goWeb }}" class="row" style="gap:8px;border:0;background:transparent;cursor:pointer;padding:0"><svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="9" fill="#0C7D70"/><path d="M6.5 19.5h4l2.6-8 3.6 11 2.7-8.2 1.6 5.2h4.5" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span style="font:800 17px Manrope;color:var(--navy)">Medvya</span></button></sc-if>
             <sc-if value="{{ wide }}"><span></span></sc-if>
             <div class="row" style="gap:6px"><sc-if value="{{ wide }}"><a href="#" class="btn g sm"><span class="ms" style="font-size:18px">help</span>{{ t.help }}</a></sc-if><button class="btn sm" aria-label="{{ t.langLabel }}"><span class="ms" style="font-size:18px">language</span>{{ langName }}</button></div>
           </div>
@@ -214,6 +502,7 @@ button,input,select{font-family:inherit;color:inherit}
                 <sc-if value="{{ authErr.show }}"><div role="alert" class="alert dan" style="border:1px solid var(--danL)"><span class="ms">error</span><span><strong>{{ authErr.t }}</strong> {{ authErr.d }}</span></div></sc-if>
                 <label class="lbl">{{ t.emailLabel }}<input class="in" dir="ltr" value="{{ demoEmail }}"></label>
                 <div style="display:flex;flex-direction:column;gap:6px;padding:10px 12px;border-radius:10px;border:1px dashed var(--ln2);background:#FBFCFD"><span class="k mut">PROTOTYPE · WHAT THIS EMAIL IS</span><div class="seg" style="flex-wrap:wrap"><sc-for list="{{ routeOpts }}" as="o" hint-placeholder-count="4"><button onClick="{{ o.pick }}" class="{{ o.cls }}">{{ o.label }}</button></sc-for></div></div>
+                <button onClick="{{ toggleShared }}" role="switch" aria-checked="{{ sharedAria }}" class="row" style="gap:10px;border:0;background:transparent;cursor:pointer;padding:0;text-align:start"><span style="width:40px;height:24px;border-radius:12px;background:{{ sharedBg }};position:relative;flex-shrink:0"><span style="position:absolute;top:3px;inset-inline-start:{{ sharedKnob }};width:18px;height:18px;border-radius:50%;background:#fff;transition:inset-inline-start .2s"></span></span><span style="display:flex;flex-direction:column"><strong style="font-size:14px">This is a shared computer</strong><span class="mut" style="font-size:12.5px">Locks after 15 minutes idle. Everyone is signed out after 12 hours.</span></span></button>
                 <button onClick="{{ emailNext }}" class="btn p lg">{{ t.cont }}</button>
                 <div class="row" style="color:var(--i6);font-size:13px"><span style="flex:1;height:1px;background:var(--ln)"></span>{{ t.or }}<span style="flex:1;height:1px;background:var(--ln)"></span></div>
                 <button class="btn"><span class="ms" style="font-size:19px">passkey</span>{{ t.passkey }}</button>
@@ -302,6 +591,111 @@ button,input,select{font-family:inherit;color:inherit}
             </div>
           </div>
           <div class="row" style="padding:{{ pad.foot }};justify-content:space-between;flex-wrap:wrap;font-size:13px;color:var(--i6)"><span class="row" style="gap:6px"><span class="ms" style="font-size:17px">public</span>{{ t.region }}: <strong style="color:var(--i9)">{{ regionLine }}</strong></span><span>{{ t.legal }}</span></div>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ================= ONBOARDING (after sign-up) ================= -->
+    <sc-if value="{{ area.onb }}">
+      <div style="flex:1;display:flex;flex-direction:column;min-height:{{ fh }};background:#F5F7F9">
+        <div class="row" style="gap:12px;padding:{{ pad.bar }};background:#fff;border-bottom:1px solid var(--ln)">
+          <span class="row" style="gap:8px"><svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="9" fill="#0C7D70"/><path d="M6.5 19.5h4l2.6-8 3.6 11 2.7-8.2 1.6 5.2h4.5" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><strong style="font-size:16px;color:var(--navy)">{{ practice }}</strong></span>
+          <span class="chip ok" style="height:22px">Trial · 14 days left</span>
+          <div style="flex:1"></div>
+          <sc-if value="{{ ob.notDone }}"><span class="mut" style="font-size:13px">{{ ob.stepOf }}</span></sc-if>
+          <button onClick="{{ ob.later }}" class="btn g sm">Finish later</button>
+        </div>
+        <div style="height:4px;background:#E3E9EE"><div style="height:100%;width:{{ ob.pct }};background:linear-gradient(90deg,#0E9384,#2F4AC0);transition:width .5s cubic-bezier(.22,1,.36,1)"></div></div>
+        <div style="flex:1;display:grid;grid-template-columns:{{ ob.grid }};min-height:0">
+          <sc-if value="{{ wide }}">
+            <aside style="padding:28px 20px;border-inline-end:1px solid var(--ln);background:#fff;display:flex;flex-direction:column;gap:4px">
+              <span class="cap" style="padding:0 10px 8px">Set up your clinic</span>
+              <sc-for list="{{ ob.steps }}" as="o" hint-placeholder-count="6"><button onClick="{{ o.go }}" aria-current="{{ o.cur }}" class="row" style="gap:12px;padding:10px;border:0;border-radius:10px;background:{{ o.bg }};cursor:pointer;text-align:start"><span style="width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:{{ o.cb }};color:{{ o.cf }};font-size:13px;font-weight:800"><span class="ms" style="font-size:17px;display:{{ o.showIc }}">check</span><span style="display:{{ o.showN }}">{{ o.n }}</span></span><span style="display:flex;flex-direction:column"><strong style="font-size:14px;color:{{ o.fg }}">{{ o.t }}</strong><span class="mut" style="font-size:12px">{{ o.d }}</span></span></button></sc-for>
+              <div style="margin-top:auto;padding:14px;border-radius:12px;background:#F3FBFA;display:flex;flex-direction:column;gap:6px"><strong class="row" style="gap:6px;font-size:13.5px;color:var(--b7)"><span class="ms" style="font-size:18px">support_agent</span>Need a hand?</strong><span class="mut" style="font-size:12.5px;line-height:1.5">Book a free 30-minute setup call, or chat with us. Most clinics finish in under 15 minutes.</span></div>
+            </aside>
+          </sc-if>
+
+          <main style="padding:{{ ob.mainPad }};display:flex;justify-content:center;min-width:0;overflow:auto">
+            <div class="mv" style="width:100%;max-width:640px;display:flex;flex-direction:column;gap:20px">
+
+              <sc-if value="{{ ob.s1 }}">
+                <div style="display:flex;flex-direction:column;gap:6px"><span class="eyebrow">Step 1 · Your practice</span><h1 style="margin:0;font-size:{{ h1 }};letter-spacing:-.02em;color:var(--navy)">Welcome, {{ owner }}. Tell us about your practice.</h1><p class="mut" style="margin:0;font-size:15px">We use this to set up services, notes and forms for your specialty. You can change everything later.</p></div>
+                <div class="lbl">What kind of practice is it?<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px"><sc-for list="{{ ob.types }}" as="o" hint-placeholder-count="3"><button onClick="{{ o.pick }}" role="radio" aria-checked="{{ o.aria }}" class="lift" style="display:flex;flex-direction:column;gap:6px;padding:14px;border-radius:12px;border:{{ o.b }};background:{{ o.bg }};cursor:pointer;text-align:start"><span class="ms" style="color:var(--b7)">{{ o.icon }}</span><strong style="font-size:14.5px;color:var(--navy)">{{ o.t }}</strong><span class="mut" style="font-size:12.5px;font-weight:500">{{ o.d }}</span></button></sc-for></div></div>
+                <div class="lbl">Specialties · choose all that apply<div class="row" style="flex-wrap:wrap;gap:8px"><sc-for list="{{ ob.specs }}" as="o" hint-placeholder-count="10"><button onClick="{{ o.pick }}" aria-pressed="{{ o.aria }}" class="row" style="gap:6px;height:38px;padding:0 14px;border-radius:999px;border:{{ o.b }};background:{{ o.bg }};color:{{ o.fg }};font-weight:700;font-size:13.5px;cursor:pointer"><span class="ms" style="font-size:16px;display:{{ o.showIc }}">check</span>{{ o.t }}</button></sc-for></div></div>
+                <label class="lbl">Medical registration number<input class="in" value="{{ ob.reg }}"><span class="hint">{{ ob.regHint }}</span></label>
+              </sc-if>
+
+              <sc-if value="{{ ob.s2 }}">
+                <div style="display:flex;flex-direction:column;gap:6px"><span class="eyebrow">Step 2 · Hours and services</span><h1 style="margin:0;font-size:{{ h1 }};letter-spacing:-.02em;color:var(--navy)">When are you open, and what do you charge?</h1><p class="mut" style="margin:0;font-size:15px">We filled this in from your specialty. Patients see it when they book online.</p></div>
+                <div class="card" style="padding:0;overflow:hidden"><sc-for list="{{ ob.hours }}" as="h" hint-placeholder-count="7"><div class="row" style="gap:12px;padding:10px 14px;border-top:1px solid #EEF2F5;flex-wrap:wrap"><button onClick="{{ h.pick }}" role="switch" aria-checked="{{ h.aria }}" style="width:40px;height:24px;border-radius:12px;border:0;background:{{ h.tbg }};position:relative;cursor:pointer;flex-shrink:0"><span style="position:absolute;top:3px;inset-inline-start:{{ h.knob }};width:18px;height:18px;border-radius:50%;background:#fff;transition:inset-inline-start .2s;box-shadow:0 1px 2px rgba(0,0,0,.2)"></span></button><strong style="width:44px;font-size:14px">{{ h.d }}</strong><span style="font-size:14px;color:{{ h.fg }}">{{ h.t }}</span></div></sc-for></div>
+                <div class="lbl">Appointment length<div class="seg" style="align-self:flex-start"><sc-for list="{{ ob.lens }}" as="o" hint-placeholder-count="4"><button onClick="{{ o.pick }}" class="{{ o.cls }}">{{ o.label }}</button></sc-for></div></div>
+                <div class="lbl">Services and fees<div class="card" style="padding:0;overflow:hidden"><sc-for list="{{ ob.services }}" as="v" hint-placeholder-count="4"><div class="row" style="justify-content:space-between;padding:12px 14px;border-top:1px solid #EEF2F5"><span style="display:flex;flex-direction:column"><strong style="font-size:14px">{{ v.t }}</strong><span class="mut" style="font-size:12.5px;font-weight:500">{{ v.d }}</span></span><span class="k" style="font-size:13px;color:var(--navy)">{{ v.fee }}</span></div></sc-for><button class="row" style="gap:6px;width:100%;padding:12px 14px;border:0;border-top:1px solid #EEF2F5;background:#FBFCFD;color:var(--fc);font-weight:700;cursor:pointer"><span class="ms" style="font-size:18px">add</span>Add a service</button></div></div>
+              </sc-if>
+
+              <sc-if value="{{ ob.s3 }}">
+                <div style="display:flex;flex-direction:column;gap:6px"><span class="eyebrow">Step 3 · Your team</span><h1 style="margin:0;font-size:{{ h1 }};letter-spacing:-.02em;color:var(--navy)">Invite the people who work with you.</h1><p class="mut" style="margin:0;font-size:15px">Each role sees only what it needs. Front desk never sees clinical notes.</p></div>
+                <sc-for list="{{ ob.team }}" as="m" hint-placeholder-count="3"><div class="row card mvp" style="gap:10px;padding:12px;flex-wrap:wrap;animation-delay:{{ m.dl }}"><span style="width:36px;height:36px;border-radius:50%;background:{{ m.bg }};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0">{{ m.ini }}</span><span style="flex:1;min-width:160px;display:flex;flex-direction:column"><strong style="font-size:14px">{{ m.n }}</strong><span class="mut" dir="ltr" style="font-size:12.5px;text-align:start">{{ m.e }}</span></span><span class="chip {{ m.cls }}">{{ m.r }}</span></div></sc-for>
+                <div class="row" style="gap:8px;flex-wrap:wrap"><input class="in" dir="ltr" value="nurse@example.com" style="flex:1;min-width:200px;width:auto"><div class="seg"><button class="on">Nurse</button><button>Doctor</button><button>Front desk</button></div><button onClick="{{ ob.addTeam }}" class="btn">Invite</button></div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px"><sc-for list="{{ ob.roles }}" as="r" hint-placeholder-count="4"><div style="padding:12px;border-radius:12px;background:#fff;border:1px solid var(--ln);display:flex;flex-direction:column;gap:4px"><strong class="row" style="gap:6px;font-size:13.5px"><span class="ms" style="font-size:17px;color:var(--b7)">{{ r.icon }}</span>{{ r.t }}</strong><span class="mut" style="font-size:12.5px;line-height:1.45">{{ r.d }}</span></div></sc-for></div>
+              </sc-if>
+
+              <sc-if value="{{ ob.s4 }}">
+                <div style="display:flex;flex-direction:column;gap:6px"><span class="eyebrow">Step 4 · Your patients</span><h1 style="margin:0;font-size:{{ h1 }};letter-spacing:-.02em;color:var(--navy)">Bring your existing patients.</h1><p class="mut" style="margin:0;font-size:15px">Upload a spreadsheet, ask us to move data from your old software, or start fresh.</p></div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px"><sc-for list="{{ ob.imps }}" as="o" hint-placeholder-count="3"><button onClick="{{ o.pick }}" role="radio" aria-checked="{{ o.aria }}" class="lift" style="display:flex;flex-direction:column;gap:6px;padding:14px;border-radius:12px;border:{{ o.b }};background:{{ o.bg }};cursor:pointer;text-align:start"><span class="ms" style="color:var(--b7)">{{ o.icon }}</span><strong style="font-size:14.5px;color:var(--navy)">{{ o.t }}</strong><span class="mut" style="font-size:12.5px;font-weight:500">{{ o.d }}</span></button></sc-for></div>
+                <sc-if value="{{ ob.impFile }}">
+                  <div class="card mv" style="padding:0;overflow:hidden">
+                    <div class="row" style="justify-content:space-between;padding:12px 14px;background:#F7FAFC;border-bottom:1px solid var(--ln);flex-wrap:wrap;gap:8px"><span class="row" style="gap:8px"><span class="ms" style="color:#1E8E4E">table_view</span><strong style="font-size:14px">patients_2026.xlsx</strong><span class="mut" style="font-size:12.5px">1,248 rows</span></span><span class="row" style="gap:6px"><span class="chip ok"><span class="ms">check</span>1,236 ready</span><span class="chip wrn"><span class="ms">content_copy</span>12 possible duplicates</span></span></div>
+                    <div class="tr" style="grid-template-columns:1.2fr 0.3fr 1.4fr;border-top:0;font-size:11.5px;font-weight:800;color:var(--i6);text-transform:uppercase;letter-spacing:.04em"><span>Your column</span><span></span><span>Medvya field</span></div>
+                    <sc-for list="{{ ob.map }}" as="m" hint-placeholder-count="5"><div class="tr" style="grid-template-columns:1.2fr 0.3fr 1.4fr;font-size:13.5px"><span class="k" style="font-size:12.5px">{{ m.a }}</span><span class="ms" style="font-size:18px;color:var(--i4)">{{ fwd }}</span><span class="row" style="gap:6px"><span class="ms" style="font-size:16px;color:{{ m.c }}">{{ m.icon }}</span>{{ m.b }}</span></div></sc-for>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ ob.impMove }}"><div class="alert inf mv"><span class="ms">swap_horiz</span><span>Tell us which software you use. Our team exports, maps and checks the data for free, usually within 2 working days. You approve it before go-live.</span></div></sc-if>
+                <sc-if value="{{ ob.impFresh }}"><div class="alert mv" style="background:#F1F5F8;color:var(--i7)"><span class="ms">info</span><span>Patients are created at their first visit — 4 fields at the desk, the rest in the patient app.</span></div></sc-if>
+              </sc-if>
+
+              <sc-if value="{{ ob.s5 }}">
+                <div style="display:flex;flex-direction:column;gap:6px"><span class="eyebrow">Step 5 · Payments and messages</span><h1 style="margin:0;font-size:{{ h1 }};letter-spacing:-.02em;color:var(--navy)">Get paid and keep patients informed.</h1><p class="mut" style="margin:0;font-size:15px">Connect now or later from Settings. Each one takes about a minute.</p></div>
+                <sc-for list="{{ ob.conns }}" as="c" hint-placeholder-count="4"><div class="row card" style="gap:12px;padding:14px;flex-wrap:wrap"><span style="width:40px;height:40px;border-radius:12px;background:{{ c.ib }};color:{{ c.ic }};display:flex;align-items:center;justify-content:center;flex-shrink:0"><span class="ms">{{ c.icon }}</span></span><span style="flex:1;min-width:200px;display:flex;flex-direction:column;gap:2px"><strong style="font-size:14.5px">{{ c.t }}</strong><span class="mut" style="font-size:12.5px;line-height:1.45">{{ c.d }}</span></span><button onClick="{{ c.go }}" class="{{ c.cls }}"><span class="ms" style="font-size:17px;display:{{ c.showIc }}">check</span>{{ c.cta }}</button></div></sc-for>
+              </sc-if>
+
+              <sc-if value="{{ ob.s6 }}">
+                <div style="display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px;padding-top:12px">
+                  <div style="position:relative;width:120px;height:120px;display:flex;align-items:center;justify-content:center"><span class="ring"></span><span class="ring r2"></span><span class="pop1" style="width:84px;height:84px;border-radius:50%;background:#0C7D70;display:flex;align-items:center;justify-content:center;box-shadow:0 20px 40px -10px rgba(12,125,112,.55)"><span class="ms" style="font-size:46px;color:#fff">check</span></span><sc-for list="{{ ob.confetti }}" as="c" hint-placeholder-count="10"><i class="cf" style="background:{{ c.c }};inset-inline-start:{{ c.x }};top:{{ c.y }};animation-delay:{{ c.dl }}"></i></sc-for></div>
+                  <h1 style="margin:0;font-size:{{ h1 }};letter-spacing:-.02em;color:var(--navy)">{{ practice }} is ready.</h1>
+                  <p class="mut" style="margin:0;font-size:15px;max-width:460px">Your clinic is set up. Book your first patient, or try a sample day first — we’ve added 3 synthetic patients you can delete any time.</p>
+                </div>
+                <div class="card" style="padding:0;overflow:hidden"><sc-for list="{{ ob.summary }}" as="x" hint-placeholder-count="5"><div class="row" style="justify-content:space-between;padding:12px 16px;border-top:1px solid #EEF2F5"><span class="row" style="gap:10px"><span class="ms" style="color:{{ x.c }}">{{ x.icon }}</span><span style="font-size:14px">{{ x.t }}</span></span><span class="mut" style="font-size:13px">{{ x.v }}</span></div></sc-for></div>
+                <div class="row" style="gap:12px;padding:14px;border-radius:14px;background:#fff;border:1px solid var(--ln);flex-wrap:wrap"><div aria-label="QR code" style="width:64px;height:64px;border-radius:8px;border:1px solid var(--ln2);display:grid;grid-template-columns:repeat(9,1fr);gap:1px;padding:5px;box-sizing:border-box;flex-shrink:0"><sc-for list="{{ qr }}" as="q" hint-placeholder-count="81"><span style="background:{{ q }};border-radius:1px"></span></sc-for></div><span style="flex:1;min-width:200px;display:flex;flex-direction:column;gap:2px"><strong style="font-size:14px">Get Medvya Clinic on your phone</strong><span class="mut" style="font-size:12.5px">Scan to install on iPhone or Android. Sign in with the same account.</span></span></div>
+              </sc-if>
+
+              <div class="row" style="gap:10px;padding-top:6px;border-top:1px solid var(--ln);flex-wrap:wrap">
+                <sc-if value="{{ ob.canBack }}"><button onClick="{{ ob.back }}" class="btn lg">{{ t.backBtn }}</button></sc-if>
+                <div style="flex:1"></div>
+                <sc-if value="{{ ob.canSkip }}"><button onClick="{{ ob.next }}" class="btn g lg">Skip for now</button></sc-if>
+                <button onClick="{{ ob.next }}" class="btn p lg">{{ ob.nextLabel }}<span class="ms" style="font-size:19px">{{ fwd }}</span></button>
+              </div>
+            </div>
+          </main>
+
+          <sc-if value="{{ ob.showPrev }}">
+            <aside aria-label="Live preview" style="padding:28px 24px;border-inline-start:1px solid var(--ln);background:linear-gradient(180deg,#F3F5FF,#F5F7F9);display:flex;flex-direction:column;gap:12px">
+              <span class="cap">Live preview · your booking page</span>
+              <div class="card" style="padding:0;overflow:hidden;box-shadow:0 20px 40px -18px rgba(16,42,67,.25)">
+                <div style="height:64px;background:linear-gradient(120deg,#0C7D70,#2F4AC0)"></div>
+                <div style="padding:0 16px 16px;margin-top:-22px;display:flex;flex-direction:column;gap:8px">
+                  <span style="width:44px;height:44px;border-radius:12px;background:#fff;border:1px solid var(--ln);display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--b7)">{{ ob.ini }}</span>
+                  <strong style="font-size:16px;color:var(--navy)">{{ practice }}</strong>
+                  <span class="mut" style="font-size:12.5px">{{ city }} · {{ ob.typeName }}</span>
+                  <div class="row" style="flex-wrap:wrap;gap:5px"><sc-for list="{{ ob.specPrev }}" as="x" hint-placeholder-count="3"><span class="chip inf" style="height:22px;font-size:11px">{{ x }}</span></sc-for></div>
+                  <div class="row" style="gap:6px;font-size:12.5px;color:var(--i7)"><span class="ms" style="font-size:16px">schedule</span>{{ ob.hoursLine }}</div>
+                  <div class="row" style="gap:6px;font-size:12.5px;color:var(--i7)"><span class="ms" style="font-size:16px">payments</span>{{ ob.feeLine }}</div>
+                  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:4px"><sc-for list="{{ ob.prevSlots }}" as="x" hint-placeholder-count="6"><span style="height:30px;border-radius:8px;border:1px solid {{ x.b }};background:{{ x.bg }};color:{{ x.fg }};font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ x.t }}</span></sc-for></div>
+                  <span style="height:38px;border-radius:10px;background:#0C7D70;color:#fff;font-weight:700;font-size:13.5px;display:flex;align-items:center;justify-content:center;margin-top:4px">Book appointment</span>
+                </div>
+              </div>
+              <span class="mut" style="font-size:12px;line-height:1.5">Patients find this page from your Google profile, WhatsApp link or the Medvya patient app.</span>
+            </aside>
+          </sc-if>
         </div>
       </div>
     </sc-if>
@@ -794,11 +1188,52 @@ button,input,select{font-family:inherit;color:inherit}
     </sc-if>
   </div>
 
+  <!-- ===== WHAT'S STILL PENDING ===== -->
+  <section class="card" style="padding:16px 18px;display:flex;flex-direction:column;gap:12px;border-color:var(--wrnL)">
+    <div class="row" style="justify-content:space-between;flex-wrap:wrap"><h2 style="margin:0;font-size:17px;color:var(--navy)">What’s still pending</h2><span class="mut" style="font-size:13px">{{ pendSummary }}</span></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px"><sc-for list="{{ pending }}" as="g" hint-placeholder-count="4"><div style="display:flex;flex-direction:column;gap:6px"><span class="cap" style="color:{{ g.c }}">{{ g.n }}</span><sc-for list="{{ g.items }}" as="i" hint-placeholder-count="5"><div class="row" style="align-items:flex-start;gap:8px;font-size:13px;line-height:1.45"><span class="ms" style="font-size:17px;color:{{ i.c }}">{{ i.icon }}</span><span>{{ i.t }}</span></div></sc-for></div></sc-for></div>
+  </section>
+
+  <sc-if value="{{ showReview }}">
+    <section class="card" style="padding:20px;display:flex;flex-direction:column;gap:14px">
+      <div class="row" style="flex-wrap:wrap;justify-content:space-between;gap:12px">
+        <div><div class="k mut">DESIGN AUDIT · WEIGHTED SCORE · 06 NOV 2026</div><h2 style="margin:4px 0 0;font-size:20px;color:var(--navy)">Product experience score</h2><p class="mut" style="margin:4px 0 0;font-size:13.5px;max-width:760px">Scored with the audit brief’s weights on the designs in this canvas. Repository code and the live app could not be opened, so confidence is limited and nothing here is a compliance certification.</p></div>
+        <div class="row" style="gap:16px"><div style="text-align:center"><div style="font-size:40px;font-weight:800;color:var(--navy);line-height:1">{{ ratingNow }}</div><div class="mut" style="font-size:12px;font-weight:700">now · out of 10</div></div><div style="text-align:center"><div style="font-size:24px;font-weight:800;color:var(--i6);line-height:1">{{ ratingBefore }}</div><div class="mut" style="font-size:12px;font-weight:700">at the start</div></div><span class="chip ok" style="height:30px"><span class="ms">rule</span>GO for build · conditions below</span></div>
+      </div>
+      <div style="border:1px solid var(--ln);border-radius:12px;overflow:hidden">
+        <div class="tr" style="grid-template-columns:2fr .6fr .7fr .7fr .8fr 3fr;border-top:0;background:#F7FAFC;font-size:11.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--i6)"><span>Category</span><span>Weight</span><span>Before</span><span>Now</span><span>Confidence</span><span>Evidence and what would raise it</span></div>
+        <sc-for list="{{ rating }}" as="r" hint-placeholder-count="7"><div class="tr" style="grid-template-columns:2fr .6fr .7fr .7fr .8fr 3fr;font-size:13.5px;align-items:start"><strong>{{ r.k }}</strong><span class="mut">{{ r.w }}</span><span class="mut">{{ r.b }}</span><span style="font-weight:800;color:var(--navy)">{{ r.n }}</span><span class="chip {{ r.cc }}" style="align-self:start">{{ r.c }}</span><span class="mut" style="line-height:1.5">{{ r.e }}</span></div></sc-for>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div style="display:flex;flex-direction:column;gap:6px"><h3 style="margin:0;font-size:15px;color:var(--navy)">Rules check (from your design brief)</h3><sc-for list="{{ rules }}" as="r" hint-placeholder-count="8"><div class="row" style="font-size:13px;align-items:flex-start;gap:8px"><span class="ms" style="font-size:18px;color:{{ r.c }}">{{ r.icon }}</span><span><strong>{{ r.k }}</strong> <span class="mut">{{ r.v }}</span></span></div></sc-for></div>
+        <div style="display:flex;flex-direction:column;gap:6px"><h3 style="margin:0;font-size:15px;color:var(--navy)">Regulation and privacy (needs legal review)</h3><sc-for list="{{ regs }}" as="r" hint-placeholder-count="5"><div class="row" style="font-size:13px;align-items:flex-start;gap:8px"><span class="ms" style="font-size:18px;color:{{ r.c }}">{{ r.icon }}</span><span><strong>{{ r.k }}</strong> <span class="mut">{{ r.v }}</span></span></div></sc-for></div>
+      </div>
+    </section>
+  </sc-if>
+
+  <sc-if value="{{ showReview }}">
+    <section class="card" style="padding:20px;display:grid;grid-template-columns:1fr 1fr;gap:24px">
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div class="row"><span class="chip wrn"><span class="ms">rule</span>Verdict: refine the foundations, then build</span></div>
+        <h2 style="margin:0;font-size:18px;color:var(--navy)">Design review · what was wrong and what changed</h2>
+        <p style="margin:0;font-size:13.5px;color:var(--i6);line-height:1.55">Reviewed against the audit brief using the designs on this canvas. The repository and live app could not be opened from this session, so code, routes, components and live behaviour are <strong>not verified</strong>; the full docs/design-audit reports need repository access.</p>
+        <sc-for list="{{ review }}" as="r" hint-placeholder-count="10"><div style="display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;padding:8px 0;border-top:1px solid #EEF2F5;font-size:13.5px;line-height:1.5"><span class="chip {{ r.cls }}" style="align-self:flex-start">{{ r.sev }}</span><span><strong>{{ r.t }}</strong> <span class="mut">{{ r.d }}</span></span></div></sc-for>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <h3 style="margin:0;font-size:15px;color:var(--navy)">Kept on purpose</h3>
+        <sc-for list="{{ kept }}" as="r" hint-placeholder-count="5"><div class="row" style="font-size:13.5px;align-items:flex-start"><span class="ms" style="font-size:18px;color:var(--ok)">check</span><span>{{ r }}</span></div></sc-for>
+        <h3 style="margin:8px 0 0;font-size:15px;color:var(--navy)">Open decisions (not invented)</h3>
+        <sc-for list="{{ open }}" as="o" hint-placeholder-count="8"><div style="display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;font-size:13px;line-height:1.5"><span class="chip wrn" style="align-self:flex-start">{{ o.k }}</span><span>{{ o.t }}</span></div></sc-for>
+      </div>
+    </section>
+  </sc-if>
+
   <!-- ===== DESIGN SYSTEM NOTES ===== -->
-  <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px">
+  <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px">
     <section class="card" style="padding:18px;display:flex;flex-direction:column;gap:8px"><h2 style="margin:0;font-size:16px;color:var(--navy)">Interaction model</h2><sc-for list="{{ model }}" as="m" hint-placeholder-count="6"><div style="font-size:13px;line-height:1.5;padding:5px 0;border-bottom:1px solid #F1F5F8"><strong>{{ m.k }}</strong> <span class="mut">{{ m.v }}</span></div></sc-for></section>
     <section class="card" style="padding:18px;display:flex;flex-direction:column;gap:8px"><h2 style="margin:0;font-size:16px;color:var(--navy)">Tokens and components</h2><sc-for list="{{ tokens }}" as="m" hint-placeholder-count="10"><div class="row" style="font-size:12.5px;padding:4px 0;border-bottom:1px solid #F1F5F8"><span style="width:18px;height:18px;border-radius:5px;flex-shrink:0;background:{{ m.c }};border:1px solid var(--ln)"></span><span class="k" style="flex:1">{{ m.k }}</span><span class="mut">{{ m.v }}</span></div></sc-for></section>
     <section class="card" style="padding:18px;display:flex;flex-direction:column;gap:8px"><h2 style="margin:0;font-size:16px;color:var(--navy)">Accessibility and RTL</h2><sc-for list="{{ a11y }}" as="m" hint-placeholder-count="7"><div class="row" style="font-size:13px;line-height:1.5;align-items:flex-start;padding:3px 0"><span class="ms" style="font-size:17px;color:var(--ok)">check</span><span>{{ m }}</span></div></sc-for></section>
+    <section class="card" style="padding:18px;display:flex;flex-direction:column;gap:8px"><h2 style="margin:0;font-size:16px;color:var(--navy)">Motion · Framer Motion spec</h2><sc-for list="{{ motion }}" as="m" hint-placeholder-count="7"><div style="display:flex;flex-direction:column;gap:2px;font-size:13px;line-height:1.5"><strong>{{ m.k }}</strong><code class="k" style="font-size:11px;color:var(--i7);white-space:normal">{{ m.v }}</code></div></sc-for></section>
   </div>
 </div>
 </x-dc>
@@ -876,6 +1311,151 @@ class Component extends DCLogic {
         summary: [['forward_to_inbox', '#1D4ED8', 'Referral to ophthalmology', 'Letter drafted from the plan · consent to share recorded', 'Review and send', () => set({ drawer: 'referral' })], ['lock', '#102A43', t.cSum1, signed ? 'Version 1 · signed 10:52 · ' + (consent === 'declined' ? 'manual note' : 'from recording') : 'Not signed yet', '', null], ['medication', rxDone ? '#087F5B' : '#975A16', t.cSum2, rxDone ? 'e-Rx sent · generic names first · QR on print' : 'Not authorised yet', 'Print', () => set({ drawer: 'rx' })], ['science', ordDone ? '#087F5B' : '#975A16', t.cSum3, ordDone ? '3 lab tests and 1 referral' : 'Not placed yet', '', null], ['event', '#1D4ED8', t.cSum4, 'Front desk will book 04 Jan 2027 · added to care plan', '', null], ['translate', '#0F766E', t.cSum5, 'Tamil and English · released to the patient app after signing', 'Preview', () => set({ toast: 'Patient summary preview opened in the patient app view' })]].map(([icon, c, x, d, cta, go]) => ({ icon, c, t: x, d, cta, go })),
         backToday: () => this.setState(p => ({ app: 'home', cs: 'consent', q: { ...p.q, q2: 'pay' }, toast: 'Meera Iyer · visit finished · sent to front desk to pay' }))
       }
+    };
+  }
+  siteVals(s, set, t, o) {
+    const { desk, tab, phone, india } = o;
+    const pp = s.pp || 'home', mm = s.mm || null, L = s.lang;
+    const go = k => () => set({ area: 'web', pp: k, mm: null, mob: false });
+    const L3 = (en, hi, ar) => L === 'ar' ? ar : L === 'hi' ? hi : en;
+    const dayI = s.dayT === undefined ? 1 : s.dayT, per = s.per || 'clinic', faqI = s.faq === undefined ? 0 : s.faq;
+    const DAY = [
+      ['09:00', 'Check-in in under a minute', 'Walk-ins and bookings land on one board. Token, vitals and nurse hand-off without paper.', 'how_to_reg', '#0F766E', '#E7F6F4', 'Front desk board', 'Live', 'ok',
+        [['badge', '#0F766E', 'Joseph Mathew · token A-08', 'Booked 09:00 · Dr. Rao', 'Checked in', 'ok'], ['monitor_heart', '#975A16', 'Meera Iyer · vitals', 'BP 148/92 · above target', 'With nurse', 'wrn'], ['directions_walk', '#1D4ED8', 'Omar S. · walk-in', 'Registered in 4 fields', 'Waiting', 'inf']], 'Front desk handles 30+ patients a morning from one tablet.'],
+      ['09:12', 'Consult with AI notes', 'The patient agrees, Medvya Assist listens, the doctor approves every line.', 'auto_awesome', '#5B3FC4', '#F1ECFF', 'Consultation · Meera Iyer', 'AI draft', 'aic',
+        [['how_to_reg', '#06704F', 'Recording consent', 'Asked today · agreed', 'Recorded', 'ok'], ['notes', '#5B3FC4', 'History and examination', '6 lines drafted · 5 accepted', 'Review 1', 'aic'], ['warning', '#975A16', 'Interaction check', 'Metformin + contrast next week', 'Flagged', 'wrn'], ['task_alt', '#0F766E', 'Diagnosis', 'Type 2 diabetes · sub-optimal control', 'Accepted', 'ok']], 'Doctors finish the note before the patient leaves the room.'],
+      ['09:24', 'Prescription and orders', 'E-prescription, lab orders and referral letter in one step, shared to the patient app and WhatsApp.', 'medication', '#1D4ED8', '#EAF0FF', 'Prescription · Rx-2291', 'Signed', 'ok',
+        [['medication', '#1D4ED8', 'Metformin 500 mg', '1-0-1 after food · 90 days', 'Added', 'inf'], ['lab_profile', '#0F766E', 'HbA1c, kidney panel', 'Metropolis Lab · home collection', 'Ordered', 'ok'], ['send', '#1E8E4E', 'Shared with patient', 'Patient app + WhatsApp PDF', 'Delivered', 'ok']], 'No handwriting, no lost slips, every order tracked until the result is back.'],
+      ['09:26', india ? 'Paid by UPI before they leave' : 'Paid by card before they leave', india ? 'Show a QR at the desk, send a pay link, or set up UPI AutoPay for packages.' : 'Tap to pay, send a pay link, or claim from insurance with eClaimLink.', india ? 'qr_code_2' : 'credit_card', '#06704F', '#E6F6EF', 'Payment · INV-2291', 'Paid', 'ok',
+        [[india ? 'qr_code_2' : 'contactless', '#06704F', india ? '₹600 · UPI' : 'AED 250 · card', 'Received 09:26 · auto-matched', 'Paid', 'ok'], ['receipt_long', '#334E68', india ? 'GST invoice' : 'VAT invoice', 'Sent to patient app', 'Sent', 'ok'], ['health_and_safety', '#1D4ED8', india ? 'Insurance pack (NHCX)' : 'eClaimLink claim', india ? 'Ready if the patient claims' : 'Submitted · reply due in 6 h', 'Ready', 'inf']], 'Collections reconcile themselves — no end-of-day counting.'],
+      ['18:00', 'Close the day with confidence', 'See who still needs a call, which results are unreviewed and what you collected.', 'insights', '#975A16', '#FDF3E3', 'Day close · 6 Nov', 'Done', 'ok',
+        [['payments', '#06704F', 'Collected', india ? '₹8,400 · 12 receipts' : 'AED 3,120 · 12 receipts', 'Balanced', 'ok'], ['lab_profile', '#B42333', 'Results to review', '1 critical · potassium 6.1', 'Open', 'dan'], ['event_repeat', '#975A16', 'Follow-ups overdue', '3 patients · reminders queued', 'Queued', 'wrn']], 'Nothing slips: every result and follow-up has an owner.']
+    ];
+    const D = DAY[dayI];
+    const PER = {
+      solo: ['Solo doctors', 'Your whole practice in your pocket.', 'For one doctor with a receptionist or none at all. Run appointments, notes, prescriptions and payments from a laptop or phone.', ['Book and remind on WhatsApp', 'AI notes add-on', 'E-prescriptions', india ? 'UPI QR and pay links' : 'Card and pay links', 'Patient app included', 'Works on your phone'], 'Start free trial', india ? 'From ₹1,999 a month' : 'From AED 349 a month', [['schedule', 'Setup', '15 minutes'], ['phone_iphone', 'Runs on', 'Phone, tablet or laptop'], ['support_agent', 'Help', 'Chat 7 days a week']], () => set({ area: 'auth', au: 'email', route: 'new' })],
+      clinic: ['Multi-doctor clinics', 'One board for the desk, the nurses and every doctor.', 'For clinics with several doctors and a front desk. Queue, rooms, roles, packages and insurance — with reports for the owner.', ['Front desk board', 'Roles and access log', 'Packages and UPI AutoPay', 'Insurance claims', 'Owner reports', 'Multiple locations'], 'Start free trial', india ? '₹3,499 per doctor a month' : 'AED 599 per doctor a month', [['groups', 'Team', 'Up to 15 staff included'], ['storefront', 'Locations', 'Switch in one tap'], ['insights', 'Reports', 'Daily email to the owner']], () => set({ area: 'auth', au: 'email', route: 'new' })],
+      hospital: ['Hospitals and groups', 'Every site and department, one system.', 'For hospitals, day-care centres and groups. SSO, central reporting, HIS integration and a patient app under your brand.', ['Single sign-on', 'Department queues', 'Central reports', 'HIS and lab integration', 'Dedicated success manager', 'Custom contract and DPA'], 'Talk to sales', 'Custom pricing', [['domain', 'Sites', 'Unlimited'], ['key', 'Sign-in', 'SSO with your directory'], ['verified_user', 'Support', 'Named team · 24 × 7']], go('hospitals')]
+    }[per];
+    const FAQ = [
+      ['Is there a free trial?', 'Yes — 14 days with every feature, no card needed. At the end you choose a plan or your account pauses; your data stays safe and exportable.'],
+      ['How long does setup take?', 'Most clinics are seeing patients in Medvya the same day. Setup takes about 15 minutes, and we offer a free setup call.'],
+      ['Can I bring my existing patient data?', 'Yes. Upload Excel or CSV yourself, or send us an export from your old software and we migrate it for free. You check it before go-live.'],
+      ['Where is my data stored?', 'Indian clinics are hosted in India and UAE clinics in the UAE. Records never leave their country.'],
+      ['Does the AI write notes without me?', 'No. Medvya Assist only drafts, and only after the patient agrees to recording. Nothing enters the record until you approve it.'],
+      ['Does it work on a phone or without internet?', 'Yes. Medvya Clinic runs on iPhone and Android, and the front desk keeps working through short internet cuts — changes sync when you’re back online.'],
+      ['Which payment methods can patients use?', india ? 'UPI (QR, pay link or AutoPay), cards, net banking and cash.' : 'Cards, Apple Pay, bank transfer, cash and insurance through eClaimLink.']
+    ];
+    const ctry = [['India', 'India · ₹'], ['UAE', 'UAE · AED']].map(([k, label]) => ({ label, cls: s.country === k ? 'on' : '', pick: () => set({ country: k }) }));
+    const sz = s.dSize || '2–5', slot = s.dSlot === undefined ? 1 : s.dSlot;
+    const SLOTS = ['Today 16:30', 'Fri 10:00', 'Fri 12:30', 'Fri 15:00', 'Sat 10:00', 'Sat 11:30'];
+    const MQ = india ? [['account_balance', '#06704F', 'UPI and UPI AutoPay'], ['badge', '#1D4ED8', 'ABDM · ABHA'], ['health_and_safety', '#0F766E', 'NHCX e-claims'], ['chat', '#1E8E4E', 'WhatsApp Business'], ['credit_card', '#334E68', 'Cards and net banking'], ['science', '#975A16', 'Lab partners'], ['videocam', '#5B3FC4', 'Video visits'], ['print', '#334E68', 'Thermal and A4 printers']] : [['health_and_safety', '#0F766E', 'eClaimLink (Dubai)'], ['local_hospital', '#1D4ED8', 'Riayati (MOHAP)'], ['shield', '#334E68', 'Shafafiya (Abu Dhabi)'], ['chat', '#1E8E4E', 'WhatsApp Business'], ['credit_card', '#334E68', 'Cards and Apple Pay'], ['science', '#975A16', 'Lab partners'], ['videocam', '#5B3FC4', 'Video visits'], ['translate', '#0F766E', 'Arabic and English']];
+    const lnk = (t2, k) => ({ t: t2, go: k ? go(k) : () => {} });
+    return {
+      pg: { home: pp === 'home', ai: pp === 'ai', hospitals: pp === 'hospitals', pricing: pp === 'pricing', security: pp === 'security', demo: pp === 'demo' },
+      goHome: go('home'), goAi: go('ai'), goPricing: go('pricing'), goSecurity: go('security'), goDemo: go('demo'), goHosp: go('hospitals'),
+      cAi: pp === 'ai' ? 'on' : '', cPricing: pp === 'pricing' ? 'on' : '', cSecurity: pp === 'security' ? 'on' : '',
+      mm: { product: mm === 'product', solutions: mm === 'solutions' },
+      mmProduct: () => set({ mm: mm === 'product' ? null : 'product', mob: false }), mmSolutions: () => set({ mm: mm === 'solutions' ? null : 'solutions', mob: false }),
+      mmProductCls: mm === 'product' ? 'on' : '', mmSolutionsCls: mm === 'solutions' ? 'on' : '',
+      mob: !!s.mob && !desk, toggleMob: () => set({ mob: !s.mob, mm: null }), mobIcon: s.mob ? 'close' : 'menu',
+      mobLinks: [['Product', 'home'], ['Medvya Assist', 'ai'], ['Hospitals', 'hospitals'], ['Pricing', 'pricing'], ['Security', 'security'], ['Book a demo', 'demo']].map(([t2, k]) => ({ t: t2, go: go(k) })),
+      nProduct: L3('Product', 'प्रोडक्ट', 'المنتج'), nSolutions: L3('Solutions', 'समाधान', 'الحلول'), nSecurity: L3('Security', 'सुरक्षा', 'الأمان'),
+      demo: L3('Book a demo', 'डेमो बुक करें', 'احجز عرضًا'), demoLong: L3('Book a 20-min demo', '20 मिनट का डेमो बुक करें', 'احجز عرضًا لمدة 20 دقيقة'),
+      trial: L3('Start free', 'मुफ़्त शुरू करें', 'ابدأ مجانًا'), trialHero: L3('Start 14-day free trial', '14 दिन मुफ़्त आज़माएँ', 'ابدأ تجربة 14 يومًا'), trialLong: L3('Start your 14-day free trial', '14 दिन का मुफ़्त ट्रायल शुरू करें', 'ابدأ تجربتك المجانية لمدة 14 يومًا'),
+      announce: L3('Medvya Assist drafts your visit notes in English, Hindi or Arabic — you approve every line.', 'Medvya Assist आपके विज़िट नोट अंग्रेज़ी, हिंदी या अरबी में ड्राफ़्ट करता है — हर पंक्ति आप मंज़ूर करते हैं।', 'يصيغ Medvya Assist ملاحظات الزيارة بالعربية أو الإنجليزية أو الهندية — وأنت توافق على كل سطر.'), seeHow: L3('See how', 'देखें कैसे', 'شاهد كيف'),
+      eyebrow: L3('Clinic software for India and the UAE', 'भारत और यूएई के लिए क्लिनिक सॉफ़्टवेयर', 'برنامج العيادات للهند والإمارات'),
+      h1a: L3('Run your whole clinic from', 'अपना पूरा क्लिनिक चलाएँ', 'أدِر عيادتك بالكامل من'), h1b: L3('one calm screen.', 'एक शांत स्क्रीन से।', 'شاشة واحدة هادئة.'),
+      sub: L3('Front desk, patient records, AI-drafted notes, ' + (india ? 'UPI payments' : 'card payments') + ' and insurance claims in one app. Your team learns it in a morning.', 'फ्रंट डेस्क, मरीज़ रिकॉर्ड, AI से ड्राफ़्ट नोट, ' + (india ? 'UPI भुगतान' : 'कार्ड भुगतान') + ' और बीमा क्लेम — एक ही ऐप में। आपकी टीम इसे एक सुबह में सीख लेती है।', 'الاستقبال وسجلات المرضى وملاحظات يصيغها الذكاء الاصطناعي والدفع ومطالبات التأمين في تطبيق واحد. يتعلمه فريقك في صباح واحد.'),
+      heroChecks: [L3('No card needed', 'कार्ड की ज़रूरत नहीं', 'دون بطاقة'), L3('Live the same day', 'उसी दिन शुरू', 'جاهز في اليوم نفسه'), india ? L3('Data stays in India', 'डेटा भारत में रहता है', 'البيانات تبقى في الهند') : L3('Data stays in the UAE', 'डेटा यूएई में रहता है', 'البيانات تبقى في الإمارات')],
+      payIcon: india ? 'qr_code_2' : 'contactless', payToast: india ? '₹600 received · UPI' : 'AED 250 received · card', payToastSub: 'Kavya M. · invoice sent to her app', appPay: india ? 'Pay ₹600 by UPI' : 'Pay AED 250',
+      ctry, gut: desk ? '40px' : '16px',
+      navPad: desk ? '12px 40px' : '10px 16px', heroPad: desk ? '80px 40px 96px' : tab ? '48px 24px 72px' : '32px 16px 64px', secPad: desk ? '88px 40px' : tab ? '56px 24px' : '44px 16px', ctaPad: desk ? '72px 40px' : '40px 16px', footPad: desk ? '56px 40px 32px' : '36px 16px 24px', cardPad: desk ? '36px' : '20px',
+      h1: desk ? '64px' : tab ? '46px' : '36px', h1s: desk ? '52px' : tab ? '40px' : '32px', h2: desk ? '44px' : tab ? '34px' : '28px', h2s: desk ? '32px' : '24px', lead: desk ? '18.5px' : '16px',
+      heroArtH: desk ? '420px' : '360px', fcA: desk ? '-34px' : '8px', fcB: desk ? '-26px' : '8px', fcC: desk ? '-40px' : '8px', prevCols: phone ? 2 : 4,
+      dayGrid: desk ? '420px minmax(0,1fr)' : '1fr', bentoCols: desk ? 4 : tab ? 2 : 1, perGrid: desk ? '1.3fr 1fr' : '1fr', secGrid: desk ? '1fr 1.4fr' : '1fr', faqGrid: desk ? '1fr 1.8fr' : '1fr', footGrid: desk ? '1.4fr repeat(4,1fr)' : phone ? '1fr 1fr' : '1fr 1fr 1fr',
+      marqCap: 'Works with the systems clinics use',
+      marq: MQ.concat(MQ).map(([icon, c, t2]) => ({ icon, c, t: t2 })),
+      dayCap: 'A day in your clinic', dayTitle: 'From the first token to the last receipt.', daySub: 'Click through a real morning. Every step happens on one screen, and nobody loses their place.',
+      dayTabs: DAY.map((d, i) => ({ time: d[0], t: d[1], d: d[2], icon: d[3], tc: i === dayI ? d[4] : '#8296A8', cls: i === dayI ? 'on' : '', sel: i === dayI ? 'true' : 'false', show: i === dayI ? 'block' : 'none', pick: () => set({ dayT: i }) })),
+      day: { icon: D[3], fg: D[4], bg: D[5], head: D[6], chip: D[7], chipCls: D[8], win: D[10], rows: D[9].map(([icon, c, t2, d, st, cls], i) => ({ icon, c, t: t2, d, s: st, cls, dl: (i * 0.08) + 's' })) },
+      bentoCap: 'Everything in one place', bentoTitle: 'Replace five tools with one that your whole team likes.', comparePlans: 'Compare plans',
+      bento: [
+        [2, 'support_agent', 'Front desk board', 'Walk-ins, tokens, nurse hand-off and payment on one board, built for a tablet at the desk.', ['Tokens', 'Queue', 'Walk-ins'], 'light'],
+        [1, 'auto_awesome', 'AI notes', 'Medvya Assist drafts; you approve every line.', ['Consent first', '3 languages'], 'ai'],
+        [1, 'calendar_month', 'Online booking', 'Your booking page, WhatsApp reminders and fewer no-shows.', ['WhatsApp', 'Google'], 'light'],
+        [1, 'folder_shared', 'Patient record', 'Allergies, problems, medicines, visits and documents on one page.', ['Timeline', 'Consents'], 'light'],
+        [1, india ? 'qr_code_2' : 'credit_card', india ? 'UPI and billing' : 'Payments and billing', india ? 'QR, pay links, AutoPay packages and GST invoices.' : 'Cards, pay links, packages and VAT invoices.', india ? ['UPI', 'GST'] : ['Apple Pay', 'VAT'], 'light'],
+        [1, 'health_and_safety', 'Insurance claims', india ? 'Cashless claims through NHCX and reimbursement packs.' : 'Pre-auth and claims through eClaimLink.', [india ? 'NHCX' : 'eClaimLink'], 'light'],
+        [1, 'phone_iphone', 'Patient app', 'Booking, payments, results and family profiles for your patients.', ['iOS', 'Android'], 'light'],
+        [2, 'insights', 'Owner reports', 'Collections, no-shows, doctor load and follow-ups — on your phone and in a daily email.', ['Daily email', 'Export'], 'dark'],
+        [1, 'policy', 'Roles and access log', 'Front desk never sees notes. See who opened which record.', ['Least privilege'], 'light'],
+        [1, 'videocam', 'Video visits', 'Book, pay and consult by video with prescribing rules built in.', ['Telemedicine'], 'light']
+      ].map(([span, icon, t2, d, tags, k]) => { const sp = desk ? span : 1; const th = { light: ['#fff', 'var(--i9)', 'var(--ln)', '#E7F6F4', '#0F766E', '#F1F5F8', '#334E68'], ai: ['linear-gradient(160deg,#2B1C6E,#5B3FC4)', '#fff', 'transparent', 'rgba(255,255,255,.14)', '#E4DCFF', 'rgba(255,255,255,.14)', '#fff'], dark: ['#102A43', '#fff', 'transparent', 'rgba(255,255,255,.1)', '#7FE0CF', 'rgba(255,255,255,.1)', '#DCE7F0'] }[k]; return { span: sp, icon, t: t2, d, tags, bg: th[0], fg: th[1], line: th[2], ib: th[3], ic: th[4], tagBg: th[5], tagFg: th[6] }; }),
+      aiPrice: india ? '₹999 a month' : 'AED 149 a month',
+      aiSafe: [['how_to_reg', 'Patient consent every visit'], ['rule', 'Every line accepted by you'], ['link', 'Each line linked to what was said'], ['medication', 'Drug interaction checks'], ['delete_history', 'Audio deleted after 30 days'], ['block', 'Never signs on its own']].map(([icon, t2]) => ({ icon, t: t2 })),
+      aiSteps: [['how_to_reg', 'Consent', '#1E4A6B', '#9BE3D6'], ['mic', 'Listen', '#2B1C6E', '#CFC2FF'], ['edit_note', 'Draft', '#2B1C6E', '#CFC2FF'], ['verified', 'You approve', '#0C5D53', '#B8F0E5']].map(([icon, t2, bg, fg]) => ({ icon, t: t2, bg, fg })),
+      aiLines: [['S', 'Fasting sugars 160–190 for a month. Missing evening dose often.', 'Accepted', 'rgba(52,211,153,.15)', '#6EE7B7'], ['O', 'BP 148/92. Weight down 0.6 kg since July. Feet: no ulcers.', 'Accepted', 'rgba(52,211,153,.15)', '#6EE7B7'], ['A', 'Type 2 diabetes, sub-optimal control. Stage 1 hypertension.', 'Review', 'rgba(155,130,255,.2)', '#CFC2FF'], ['P', 'Metformin 500 mg 1-0-1 after food. HbA1c in 3 months.', 'Review', 'rgba(155,130,255,.2)', '#CFC2FF']].map(([k, t2, st, cbg, cfg], i) => ({ k, t: t2, s: st, cbg, cfg, bg: st === 'Review' ? 'rgba(155,130,255,.08)' : 'rgba(255,255,255,.04)', line: st === 'Review' ? 'rgba(155,130,255,.35)' : 'rgba(255,255,255,.08)', dl: (i * 0.12) + 's' })),
+      perTabs: [['solo', 'Solo doctor'], ['clinic', 'Clinic'], ['hospital', 'Hospital']].map(([k, label]) => ({ label, cls: per === k ? 'on' : '', pick: () => set({ per: k }) })),
+      per: { tag: PER[0], t: PER[1], d: PER[2], pts: PER[3], cta: PER[4], price: PER[5], stats: PER[6].map(([icon, t2, v]) => ({ icon, t: t2, v })), go: PER[7] },
+      appPts: [['phone_iphone', 'Mobile number sign-in', 'OTP, then Face ID or fingerprint.'], ['event_available', 'Book and reschedule', 'See real free slots.'], [india ? 'qr_code_2' : 'credit_card', india ? 'Pay by UPI' : 'Pay by card', 'Receipts saved automatically.'], ['videocam', 'Video visits', 'Join from the app, no downloads.'], ['lab_profile', 'Results and prescriptions', 'Released by the doctor, with notes.'], ['family_restroom', 'Whole family', 'Switch between children and parents.']].map(([icon, t2, d]) => ({ icon, t: t2, d })),
+      switch: [['01', 'Create your practice', 'Country, name and secure sign-in. 3 minutes.'], ['02', 'Set up in 15 minutes', 'Hours, services and fees filled in from your specialty.'], ['03', 'We move your data', 'Excel, CSV or old software — migrated free and checked by you.'], ['04', 'Train in a morning', 'Live training for the desk and doctors, plus 30 days of priority help.']].map(([n, t2, d]) => ({ n, t: t2, d })),
+      faq: FAQ.map(([q, a], i) => ({ q, a, open: i === faqI, exp: i === faqI ? 'true' : 'false', rot: i === faqI ? '45deg' : '0deg', pick: () => set({ faq: i === faqI ? -1 : i }) })),
+      prodMenu: [['support_agent', 'Front desk and queue', 'Tokens, walk-ins and check-in', '#E7F6F4', '#0F766E', 'home'], ['calendar_month', 'Scheduling', 'Online booking and reminders', '#EAF0FF', '#1D4ED8', 'home'], ['folder_shared', 'Patient records', 'One page per patient', '#F1F5F8', '#334E68', 'home'], ['auto_awesome', 'Medvya Assist', 'AI notes you approve', '#F1ECFF', '#5B3FC4', 'ai'], [india ? 'qr_code_2' : 'credit_card', 'Billing and payments', india ? 'UPI, GST invoices, packages' : 'Cards, VAT invoices, packages', '#E6F6EF', '#06704F', 'pricing'], ['health_and_safety', 'Insurance claims', india ? 'NHCX and reimbursement' : 'eClaimLink, Riayati', '#EAF0FF', '#1D4ED8', 'hospitals']].map(([icon, t2, d, bg, fg, k]) => ({ icon, t: t2, d, bg, fg, go: go(k) })),
+      solMenu: [['person', 'Solo doctors', 'Everything in your pocket', 'home'], ['groups', 'Multi-doctor clinics', 'Desk, rooms and roles', 'home'], ['domain', 'Hospitals and groups', 'SSO, departments, HIS', 'hospitals']].map(([icon, t2, d, k]) => ({ icon, t: t2, d, go: go(k) })),
+      specs: ['General practice', 'Paediatrics', 'Gynaecology', 'Dermatology', 'Dental', 'ENT', 'Orthopaedics', 'Physiotherapy', 'Diabetes', 'Cardiology'],
+      aiHow: [['1', 'how_to_reg', 'Ask the patient', 'One tap records consent. If they say no, you write as usual — care is the same.'], ['2', 'mic', 'Talk normally', 'Medvya listens on your phone or laptop. Pause any time for a private moment.'], ['3', 'edit_note', 'Review the draft', 'History, exam, diagnosis and plan appear as suggestions, each linked to what was said.'], ['4', 'verified', 'Approve and sign', 'Accept, edit or reject each line. Then sign — prescription and orders go out together.']].map(([n, icon, t2, d]) => ({ n, icon, t: t2, d })),
+      aiSafeFull: [['how_to_reg', 'Consent every visit', 'Patients can say no or stop recording at any time.'], ['rule', 'Doctor approves each line', 'Unreviewed AI text is shown in violet and never saved.'], ['link', 'Traceable', 'Every suggestion links to the part of the conversation it came from.'], ['medication', 'Interaction checks', 'Drug–drug and drug–allergy checks from a clinical database.'], ['delete_history', 'Audio deleted after 30 days', 'Only the signed note is kept, as medical-records law requires.'], ['power_settings_new', 'Off switch', 'Owners can turn AI off for the clinic or for one doctor.']].map(([icon, t2, d]) => ({ icon, t: t2, d })),
+      hospStats: [['key', 'Single sign-on', 'Use your hospital directory and security keys.'], ['account_tree', 'Departments and sites', 'Queues per department, reports across sites.'], ['hub', 'HIS and lab integration', 'HL7 and FHIR interfaces, labs and PACS.'], ['support', 'Named support team', '24 × 7 for clinic-down issues.']].map(([icon, t2, d], i) => ({ icon, t: t2, d, dl: (0.1 + i * 0.08) + 's' })),
+      hospMods: [['support_agent', 'Outpatient (OPD)', 'Registration, tokens, consultation, e-prescription and billing.', 'Available', 'ok'], ['account_tree', 'Departments', 'Separate queues, rooms and reports per department.', 'Available', 'ok'], ['health_and_safety', 'Insurance desk', india ? 'Pre-auth and cashless claims through NHCX.' : 'Pre-auth and claims through eClaimLink and Riayati.', 'Available', 'ok'], ['science', 'Lab and radiology orders', 'Orders out, results back into the patient record.', 'Available', 'ok'], ['insights', 'Central reports', 'Collections, load and outcomes across every site.', 'Available', 'ok'], ['key', 'SSO and audit', 'Directory sign-in and a full access log.', 'Available', 'ok'], ['bed', 'Inpatient and wards', 'Admissions, nursing charts and discharge summaries.', 'In design', 'wrn'], ['inventory_2', 'Pharmacy and stores', 'Stock, purchase orders and dispensing.', 'Planned', 'inf'], ['hub', 'HIS write-back', 'Keep your existing HIS as the system of record.', 'In design', 'wrn']].map(([icon, t2, d, st, cls]) => ({ icon, t: t2, d, s: st, cls })),
+      cmp: [['Daily work', '', '', '', 1], ['Front desk board and queue', '✓', '✓', '✓'], ['Online booking and WhatsApp reminders', '✓', '✓', '✓'], ['Patient record and e-prescriptions', '✓', '✓', '✓'], ['Patient app', '✓', '✓', 'Your brand'], ['Money', '', '', '', 1], [india ? 'UPI QR, links and AutoPay' : 'Cards and pay links', '✓', '✓', '✓'], ['Packages and memberships', '—', '✓', '✓'], ['Insurance e-claims', '—', '✓', '✓'], ['Team and control', '', '', '', 1], ['Doctors', '1', 'Per doctor', 'Unlimited'], ['Staff seats', '2', '15 included', 'Unlimited'], ['Locations', '1', 'Multiple', 'Multiple'], ['Single sign-on', '—', '—', '✓'], ['Support', 'Chat, 7 days', 'Chat + phone', 'Named team · 24 × 7'], ['Medvya Assist (AI notes)', 'Add-on', 'Add-on', 'Included in contract']].map(([k, a, b, d, h]) => ({ k, a, b, d, bg: h ? '#F7FAFC' : '#fff', fw: h ? 800 : 600, c: h ? '#506579' : '#142536' })),
+      secCards: [['public', 'Records stay in your country', 'Separate India and UAE regions. Your region is chosen at sign-up and never changes.'], ['lock', 'Encrypted everywhere', 'In transit with TLS and at rest with managed keys. Backups are encrypted too.'], ['badge', 'Least-privilege roles', 'Front desk never sees notes. Only doctors review results.'], ['policy', 'Every access logged', 'Owners see who opened which record, when, and from where.'], ['key', 'Strong sign-in', 'Authenticator app by default, passkeys supported, shared desks lock after 15 minutes.'], ['support_agent', 'Support access needs approval', 'Our staff can only open your clinic when the owner approves, for a set time.'], ['auto_awesome', 'Safe AI', 'Consent first, doctor approves, audio deleted after 30 days.'], ['download', 'Your data is yours', 'Export everything at any time — even if a payment fails.'], ['bug_report', 'Report a vulnerability', 'security@medvya.com · we reply within 2 working days.']].map(([icon, t2, d]) => ({ icon, t: t2, d })),
+      comp: [['India · DPDP Act 2023', 'Consent, purpose limits and data-principal rights built into the product.', 'Aligning', 'wrn'], ['India · ABDM', 'ABHA linking and health records exchange.', 'Planned', 'inf'], ['India · NHCX', 'Cashless claims exchange onboarding.', 'In progress', 'wrn'], ['UAE · DoH / DHA / MOHAP', 'Health data and telehealth standards per emirate.', 'Aligning', 'wrn'], ['ISO 27001', 'Information security management system.', 'Planned', 'inf'], ['Penetration test', 'Independent test before launch, then yearly.', 'Planned', 'inf']].map(([k, d, st, cls]) => ({ k, d, s: st, cls })),
+      demoPts: [['1', 'Pick a time', 'Today or tomorrow, in your time zone.'], ['2', 'We build your sandbox', 'With your specialty, fees and team.'], ['3', 'See your own day', 'Front desk, consult, payment and reports.'], ['4', 'Start when ready', 'Your sandbox becomes your live practice.']].map(([n, t2, d]) => ({ n, t: t2, d })),
+      sizeOpts: ['1', '2–5', '6–20', '20+'].map(k => ({ label: k, cls: sz === k ? 'on' : '', pick: () => set({ dSize: k }) })),
+      slots: SLOTS.map((label, i) => ({ label, b: i === slot ? '2px solid #0C7D70' : '1px solid #DFE7ED', bg: i === slot ? '#F3FBFA' : '#fff', fg: i === slot ? '#0F766E' : '#334E68', pick: () => set({ dSlot: i }) })),
+      tz: india ? 'India time (IST)' : 'UAE time (GST)', slotPicked: SLOTS[slot], demoSent: !!s.demoSent, demoForm: !s.demoSent, sendDemo: () => set({ demoSent: true }),
+      foot: [['Product', [lnk('Front desk', 'home'), lnk('Medvya Assist', 'ai'), lnk('Patient app', 'home'), lnk('Pricing', 'pricing'), lnk('What’s new')]], ['Solutions', [lnk('Solo doctors', 'home'), lnk('Clinics', 'home'), lnk('Hospitals', 'hospitals'), lnk('By specialty', 'home')]], ['Company', [lnk('About'), lnk('Careers'), lnk('Partners'), lnk('Contact sales', 'demo')]], ['Resources', [lnk('Help centre'), lnk('Trust centre', 'security'), lnk('System status'), lnk('Developers')]]].map(([h, links]) => ({ h, links }))
+    };
+  }
+  onbVals(s, set, t, o) {
+    const { desk, tab, phone, india } = o;
+    const n = s.ob || 1, specs = s.obSpecs || ['General practice', 'Diabetes'], ty = s.obType || 'clinic', hrs = s.obHrs || [1, 1, 1, 1, 1, 1, 0], len = s.obLen || 15, imp = s.obImp || 'file', con = s.obCon || {};
+    const STEPS = [['Your practice', 'Type and specialty'], ['Hours and services', 'When and what you charge'], ['Your team', 'Invite and set roles'], ['Your patients', 'Import or start fresh'], ['Payments and messages', india ? 'UPI and WhatsApp' : 'Cards and WhatsApp'], ['Ready', 'Open your clinic']];
+    const TY = [['solo', 'person', 'Solo practice', 'One doctor'], ['clinic', 'groups', 'Clinic', 'Several doctors'], ['hospital', 'domain', 'Hospital or group', 'Departments or sites']];
+    const SP = ['General practice', 'Paediatrics', 'Gynaecology', 'Dermatology', 'Dental', 'ENT', 'Orthopaedics', 'Physiotherapy', 'Diabetes', 'Cardiology'];
+    const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const fee = india ? '₹600' : 'AED 250';
+    const SV = (specs.includes('Diabetes') ? [['Diabetes review', len + ' min · includes foot check', india ? '₹700' : 'AED 300']] : []).concat([['New consultation', (len + 5) + ' min', india ? '₹800' : 'AED 350'], ['Follow-up visit', len + ' min · within 7 days free', fee], ['Video consultation', len + ' min', india ? '₹500' : 'AED 200']]).concat(specs.includes('Paediatrics') ? [['Vaccination visit', '10 min + vaccine cost', india ? '₹300' : 'AED 120']] : []);
+    const TEAM = [['PN', 'Priya Nair', 'priya.nair@example.com', 'Front desk', 'inf', '#1D4ED8'], ['FS', 'Dr. Fatima Sheikh', 'fatima.s@example.com', 'Doctor', 'ok', '#0F766E']].concat(s.obAdded ? [['NJ', 'Nurse (invited)', 'nurse@example.com', 'Nurse', 'wrn', '#975A16']] : []);
+    const CONN = india ? [['upi', 'qr_code_2', '#E6F6EF', '#06704F', 'UPI collections', 'Patients pay by QR or link. Money goes straight to your bank account.', 'Connect UPI'], ['wa', 'chat', '#E8F7EE', '#1E8E4E', 'WhatsApp reminders', 'Booking confirmations, reminders and receipts from your clinic number.', 'Connect WhatsApp'], ['abha', 'badge', '#EAF0FF', '#1D4ED8', 'ABHA (ABDM)', 'Let patients link their ABHA health ID. Optional.', 'Set up later'], ['nhcx', 'health_and_safety', '#EAF0FF', '#1D4ED8', 'Insurance (NHCX)', 'Send cashless claims electronically. Needs your HFR facility ID.', 'Set up later']] : [['card', 'credit_card', '#E6F6EF', '#06704F', 'Card payments', 'Tap, Apple Pay and pay links. Settled to your bank account.', 'Connect payments'], ['wa', 'chat', '#E8F7EE', '#1E8E4E', 'WhatsApp reminders', 'Booking confirmations, reminders and receipts from your clinic number.', 'Connect WhatsApp'], ['ecl', 'health_and_safety', '#EAF0FF', '#1D4ED8', 'eClaimLink', 'Pre-authorisation and claims for Dubai insurers.', 'Set up later'], ['riayati', 'local_hospital', '#EAF0FF', '#1D4ED8', 'Riayati', 'Northern Emirates health record and claims.', 'Set up later']];
+    const firstHr = india ? '09:00–13:00 · 17:00–20:00' : '08:00–14:00 · 16:00–21:00';
+    return {
+      s1: n === 1, s2: n === 2, s3: n === 3, s4: n === 4, s5: n === 5, s6: n === 6, notDone: n < 6,
+      stepOf: 'Step ' + Math.min(n, 5) + ' of 5', pct: (Math.min(n, 6) / 6 * 100) + '%',
+      grid: desk ? '260px minmax(0,1fr) 320px' : '1fr', showPrev: desk && n < 6, mainPad: desk ? '36px 32px 48px' : '20px 16px 32px',
+      steps: STEPS.map(([t2, d], i) => { const k = i + 1, done = k < n, cur = k === n; return { n: String(k), t: t2, d, cur: cur ? 'step' : 'false', bg: cur ? '#F3FBFA' : 'transparent', cb: done ? '#0C7D70' : cur ? '#102A43' : '#EEF2F5', cf: done || cur ? '#fff' : '#506579', fg: cur ? '#102A43' : '#334E68', showIc: done ? 'inline-block' : 'none', showN: done ? 'none' : 'inline', go: () => set({ ob: k }) }; }),
+      later: () => set({ area: 'app', app: 'home', role: 'doctor', prac: 'terms', terms: false, drawer: null }),
+      canBack: n > 1 && n < 6, back: () => set({ ob: n - 1 }), canSkip: n >= 3 && n <= 5,
+      next: () => n < 6 ? set({ ob: n + 1 }) : set({ area: 'app', app: 'home', role: 'doctor', prac: 'terms', terms: false, drawer: null, toast: 'Welcome to Medvya · 3 sample patients added' }),
+      nextLabel: n === 5 ? 'Finish setup' : n === 6 ? 'Open Today' : 'Continue',
+      types: TY.map(([k, icon, t2, d]) => ({ icon, t: t2, d, aria: ty === k ? 'true' : 'false', b: ty === k ? '2px solid #0C7D70' : '1px solid #DFE7ED', bg: ty === k ? '#F3FBFA' : '#fff', pick: () => set({ obType: k }) })),
+      specs: SP.map(k => { const on = specs.includes(k); return { t: k, aria: on ? 'true' : 'false', b: on ? '1.5px solid #0C7D70' : '1px solid #CBD6E0', bg: on ? '#E7F6F4' : '#fff', fg: on ? '#0F766E' : '#334E68', showIc: on ? 'inline-block' : 'none', pick: () => set({ obSpecs: on ? specs.filter(x => x !== k) : specs.concat([k]) }) }; }),
+      reg: india ? 'TNMC 84213' : 'DOH-L-52817', regHint: india ? 'State medical council number. We verify it within 1 working day; you can see patients meanwhile.' : 'DoH, DHA or MOHAP licence. We verify it within 1 working day.',
+      hours: DAYS.map((d, i) => ({ d, t: hrs[i] ? (i === 5 ? (india ? '09:00–14:00' : '09:00–15:00') : firstHr) : 'Closed', fg: hrs[i] ? '#142536' : '#8296A8', aria: hrs[i] ? 'true' : 'false', tbg: hrs[i] ? '#0C7D70' : '#CBD6E0', knob: hrs[i] ? '19px' : '3px', pick: () => set({ obHrs: hrs.map((v, j) => j === i ? (v ? 0 : 1) : v) }) })),
+      lens: [10, 15, 20, 30].map(k => ({ label: k + ' min', cls: len === k ? 'on' : '', pick: () => set({ obLen: k }) })),
+      services: SV.map(([t2, d, f]) => ({ t: t2, d, fee: f })),
+      team: TEAM.map(([ini, n2, e, r, cls, bg], i) => ({ ini, n: n2, e, r, cls, bg, dl: (i * 0.06) + 's' })), addTeam: () => set({ obAdded: true }),
+      roles: [['support_agent', 'Front desk', 'Booking, check-in, billing. No clinical notes.'], ['monitor_heart', 'Nurse', 'Vitals and intake. Sees allergies and medicines.'], ['stethoscope', 'Doctor', 'Full record, notes, prescriptions, results.'], ['admin_panel_settings', 'Owner', 'Everything, plus plan, reports and access log.']].map(([icon, t2, d]) => ({ icon, t: t2, d })),
+      imps: [['file', 'upload_file', 'Upload Excel or CSV', 'We match the columns'], ['move', 'swap_horiz', 'Move from my software', 'Free, done by our team'], ['fresh', 'person_add', 'Start fresh', 'Add patients as they come']].map(([k, icon, t2, d]) => ({ icon, t: t2, d, aria: imp === k ? 'true' : 'false', b: imp === k ? '2px solid #0C7D70' : '1px solid #DFE7ED', bg: imp === k ? '#F3FBFA' : '#fff', pick: () => set({ obImp: k }) })),
+      impFile: imp === 'file', impMove: imp === 'move', impFresh: imp === 'fresh',
+      map: [['Patient Name', 'Full name', 'check_circle', '#06704F'], ['Mobile No', 'Mobile number', 'check_circle', '#06704F'], ['DOB', 'Date of birth', 'check_circle', '#06704F'], ['Sex', 'Sex', 'check_circle', '#06704F'], ['Allergy', 'Allergies · please check', 'help', '#975A16']].map(([a, b, icon, c]) => ({ a, b, icon, c })),
+      conns: CONN.map(([k, icon, ib, ic, t2, d, cta]) => { const on = !!con[k], later = cta === 'Set up later'; return { icon, ib, ic, t: t2, d, cta: on ? 'Connected' : cta, cls: on ? 'btn sm' : later ? 'btn g sm' : 'btn p sm', showIc: on ? 'inline-block' : 'none', go: () => set({ obCon: { ...con, [k]: !on } }) }; }),
+      confetti: ['#0E9384', '#2F4AC0', '#F5A623', '#5B3FC4', '#34D399', '#F2709C', '#0E9384', '#2F4AC0', '#F5A623', '#5B3FC4'].map((c, i) => ({ c, x: (8 + (i * 37) % 100) + '%', y: (10 + (i * 53) % 80) + '%', dl: (i * 0.05) + 's' })),
+      summary: [['storefront', '#0F766E', TY.find(x => x[0] === ty)[2], specs.slice(0, 2).join(', ') || 'No specialty'], ['schedule', '#1D4ED8', 'Open ' + hrs.reduce((a, b) => a + b, 0) + ' days a week', len + '-minute slots'], ['groups', '#5B3FC4', TEAM.length + ' team members invited', 'They get an email now'], ['folder_shared', '#975A16', { file: '1,236 patients imported', move: 'Migration requested', fresh: 'Starting fresh' }[imp], imp === 'file' ? '12 duplicates to check' : ''], [india ? 'qr_code_2' : 'credit_card', '#06704F', Object.values(con).filter(Boolean).length + ' connections', 'More in Settings']].map(([icon, c, t2, v]) => ({ icon, c, t: t2, v })),
+      ini: (india ? 'IF' : 'AN'), typeName: TY.find(x => x[0] === ty)[2], specPrev: specs.slice(0, 3),
+      hoursLine: DAYS.filter((d, i) => hrs[i]).length ? DAYS.filter((d, i) => hrs[i])[0] + '–' + DAYS.filter((d, i) => hrs[i]).slice(-1)[0] + ' · ' + firstHr.split(' · ')[0] : 'Closed', feeLine: 'Consultation ' + fee + ' · ' + len + ' min',
+      prevSlots: [0, 1, 2, 4, 5, 8].map(k => { const m = 540 + k * len; return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'); }).map((t2, i) => ({ t: t2, b: i === 1 ? '#0C7D70' : '#DFE7ED', bg: i === 1 ? '#E7F6F4' : '#fff', fg: i === 1 ? '#0F766E' : '#334E68' }))
     };
   }
   renderVals() {
@@ -1121,10 +1701,11 @@ class Component extends DCLogic {
       ...(() => {
         const ds = s.ds || 'normal';
         const go = o => () => set({ drawer: null, ds: 'normal', ...o });
-        const cur = s.area === 'web' ? 'web' : s.area === 'auth' ? 'au-' + s.au : (s.app === 'consult' ? 'consult' : s.app) + (s.drawer ? '-' + s.drawer : '');
+        const cur = s.area === 'web' ? 'web-' + (s.pp || 'home') : s.area === 'onb' ? 'ob-' + (s.ob || 1) : s.area === 'auth' ? 'au-' + s.au : (s.app === 'consult' ? 'consult' : s.app) + (s.drawer ? '-' + s.drawer : '');
         const G = [
-          ['Public', 'public', '#0F766E', [['web', 'Homepage', { area: 'web' }]]],
+          ['Public website · medvya.com', 'public', '#0F766E', [['web-home', 'Homepage', { area: 'web', pp: 'home', mm: null }], ['web-ai', 'Medvya Assist (AI)', { area: 'web', pp: 'ai', mm: null }], ['web-hospitals', 'Hospitals', { area: 'web', pp: 'hospitals', mm: null }], ['web-pricing', 'Pricing', { area: 'web', pp: 'pricing', mm: null }], ['web-security', 'Trust centre', { area: 'web', pp: 'security', mm: null }], ['web-demo', 'Book a demo', { area: 'web', pp: 'demo', mm: null, demoSent: false }]]],
           ['Sign in and sign up', 'login', '#1D4ED8', [['au-email', 'Sign in / sign up (email)', { area: 'auth', au: 'email', route: 'known', authErrShown: false }], ['au-code', 'Authenticator code', { area: 'auth', au: 'code', codeErr: false }], ['au-recover', 'Lost phone · recovery code', { area: 'auth', au: 'recover' }], ['au-loc', 'Choose location', { area: 'auth', au: 'loc' }], ['au-ended', 'Session ended', { area: 'auth', au: 'ended' }], ['au-c1', 'Sign up 1 · practice', { area: 'auth', au: 'c1', fromInvite: false }], ['au-c2', 'Sign up 2 · about you', { area: 'auth', au: 'c2', fromInvite: false }], ['au-c3', 'Sign up 3 · secure sign-in', { area: 'auth', au: 'c3', mfa: 'scan', fromInvite: false }], ['au-invite', 'Join by invitation', { area: 'auth', au: 'invite' }]]],
+          ['Onboarding · after sign-up', 'rocket_launch', '#5B3FC4', [['ob-1', '1 · Practice and specialty', { area: 'onb', ob: 1 }], ['ob-2', '2 · Hours and services', { area: 'onb', ob: 2 }], ['ob-3', '3 · Invite team', { area: 'onb', ob: 3 }], ['ob-4', '4 · Import patients', { area: 'onb', ob: 4 }], ['ob-5', '5 · Payments and WhatsApp', { area: 'onb', ob: 5 }], ['ob-6', '6 · Ready', { area: 'onb', ob: 6 }]]],
           ['Clinic app · daily work', 'space_dashboard', '#0F766E', [['home', 'Today', { area: 'app', app: 'home' }], ['home-register', 'Register patient', { area: 'app', app: 'home', drawer: 'register', dup: true }], ['home-book', 'Book appointment', { area: 'app', app: 'home', drawer: 'book' }], ['home-vitals', 'Nurse intake', { area: 'app', app: 'home', drawer: 'vitals', qid: 'q2' }], ['home-pay', 'Take payment', { area: 'app', app: 'home', drawer: 'pay', qid: 'q5' }], ['schedule', 'Schedule', { area: 'app', app: 'schedule' }], ['patients', 'Patients', { area: 'app', app: 'patients' }], ['record', 'Patient record', { area: 'app', app: 'record', pid: 'p1' }], ['consult', 'Consultation', { area: 'app', app: 'consult', role: 'doctor', cs: 'consent', cConsent: null, cF: {}, cSigned: false, cRxDone: false, cOrdDone: false }], ['video', 'Video visit', { area: 'app', app: 'video', role: 'doctor' }], ['home-rx', 'Printed prescription', { area: 'app', app: 'consult', role: 'doctor', cs: 'done', drawer: 'rx' }], ['home-referral', 'Referral letter', { area: 'app', app: 'consult', role: 'doctor', cs: 'done', drawer: 'referral' }], ['inbox', 'Inbox · results, follow-ups, messages', { area: 'app', app: 'inbox', ib: 'results' }], ['billing', 'Billing', { area: 'app', app: 'billing' }], ['settings', 'Practice settings', { area: 'app', app: 'settings', setPane: 'setup' }], ['plan', 'Plan and billing (tenant subscription)', { area: 'app', app: 'settings', setPane: 'plan', role: 'doctor' }]]]
         ];
         const pageName = { home: 'today', schedule: 'schedule', patients: 'patients', record: 'patient record', consult: 'consultation', inbox: 'inbox', billing: 'billing', settings: 'settings' }[s.app] || 'page';
@@ -1232,7 +1813,8 @@ class Component extends DCLogic {
       pad: { bar: desk ? '12px 32px' : '10px 16px', hero: desk ? '64px 40px 56px' : '32px 16px', sec: desk ? '56px 40px' : '36px 16px', form: desk ? '24px 56px' : tab ? '24px 96px' : '16px', foot: desk ? '16px 32px' : '14px 16px', appbar: desk ? '10px 24px' : '10px 14px', page: desk ? '24px' : phone ? '16px 14px 24px' : '20px' },
       heroSize: desk ? '52px' : '32px', colW: desk ? '440px' : '100%', h1: phone ? '22px' : '26px', navW: desk ? '232px' : '72px',
       kpiMin: phone ? '140px' : '160px', qGrid: phone ? '1fr' : tab ? 'repeat(2,minmax(0,1fr))' : 'repeat(4,minmax(0,1fr))', schedMin: phone ? '520px' : '0', tableMin: phone ? '0' : '640px', patGrid: phone ? 'minmax(0,1fr) auto' : '2fr 1fr 1fr 1.6fr', billGrid: phone ? '1fr 1.4fr 1fr 1.2fr' : '1fr 1.6fr 1fr 1fr 1.3fr', drawerW: phone ? '100%' : '440px', toastBottom: phone ? '84px' : '24px',
-      area: { web: s.area === 'web', auth: s.area === 'auth', app: s.area === 'app' },
+      area: { web: s.area === 'web', auth: s.area === 'auth', app: s.area === 'app', onb: s.area === 'onb' },
+      site: this.siteVals(s, set, t, { desk, tab, phone, india }), ob: this.onbVals(s, set, t, { desk, tab, phone, india }),
       showReview: s.review, reviewLabel: s.review ? 'Hide design review' : 'Show design review', toggleReview: () => set({ review: !s.review }),
       jumps: JUMP.map(([k, label, o]) => ({ label, go: () => set(o), bg: curJump === k ? '#102A43' : '#fff', fg: curJump === k ? '#fff' : '#334E68', line: curJump === k ? '#102A43' : '#DFE7ED' })),
       roleOpts: seg(role, [['reception', 'Receptionist'], ['doctor', 'Doctor (owner)'], ['owner', 'Practice manager']], k => set({ role: k, drawer: null })),
@@ -1241,7 +1823,7 @@ class Component extends DCLogic {
       pracOpts: seg(prac, [['live', 'Ready'], ['verify', 'Licence pending'], ['terms', 'Terms not accepted'], ['pastdue', 'Payment failed']], k => set({ prac: k, terms: false })),
       fwd: ar ? 'arrow_back' : 'arrow_forward', back: ar ? 'arrow_forward' : 'arrow_back', chev: ar ? 'chevron_left' : 'chevron_right',
       regionLine: india ? t.regIn : t.regAe,
-      goWeb: () => set({ area: 'web' }), goSignIn: () => set({ area: 'auth', au: 'email', route: 'known', authErrShown: false }), goSignUp: () => set({ area: 'auth', au: 'email', route: 'new', authErrShown: false }),
+      goWeb: () => set({ area: 'web', pp: 'home', mm: null }), goSignIn: () => set({ area: 'auth', au: 'email', route: 'known', authErrShown: false }), goSignUp: () => set({ area: 'auth', au: 'email', route: 'new', authErrShown: false }),
       previewCols: [['Waiting', '2', [['A-08', 'Joseph M.', '70%'], ['W-02', 'Omar S.', '50%']]], ['With nurse', '1', [['A-07', 'Meera I.', '60%']]], ['With doctor', '1', [['A-05', 'Kavya M.', '80%']]], ['To pay', '1', [['A-03', 'Lakshmi P.', '40%']]]].map(([x, n, items]) => ({ t: x, n, items: items.map(([tok, nm, w]) => ({ tok, n: nm, w })) })),
       features: [['support_agent', 'Front desk board', 'Walk-ins, check-in, nurse hand-off and payment move across one board. Built for a tablet at the desk.', false], ['calendar_month', 'Schedule', 'Day and week views per doctor, leave and clinic hours, WhatsApp or SMS confirmations.', false], ['person_search', 'Patient record', 'One page with allergies, problems, medicines, visits, documents and consents.', false], ['summarize', '60-second brief', 'What changed since the last visit, with every AI-found item labelled and linked to its source.', true], ['how_to_reg', 'Consent-first notes', 'Recording starts only after the patient agrees. The doctor reviews and signs every draft.', true], ['receipt_long', 'Billing', 'Invoices, UPI, card and cash, packages and day-end close. Paid means confirmed by the bank.', false]].map(([icon, x, d, ai]) => ({ icon, t: x, d, ai })),
       how: [['1', 'Create your practice', 'Country, practice name and your secure sign-in. Three steps.'], ['2', 'Invite your front desk', 'They get only what their role needs — no clinical notes.'], ['3', 'See your first patient', 'Register, check in, consult and take payment from one screen.']].map(([n, x, d]) => ({ n, t: x, d })),
@@ -1254,6 +1836,7 @@ class Component extends DCLogic {
       demoEmail: { known: 'reception.desk@example.com', new: 'owner@example.com', invite: 'priya.nair@example.com', unknown: 'recepton@example.com' }[s.route],
       routeOpts: seg(s.route, [['known', t.rKnown], ['new', t.rNew], ['invite', t.rInvite], ['unknown', t.rUnknown]], k => set({ route: k, authErrShown: false })),
       authErr: { show: s.authErrShown, t: t.errNoneT, d: t.errNoneD },
+      toggleShared: () => set({ shared: !s.shared }), sharedAria: s.shared ? 'true' : 'false', sharedBg: s.shared ? '#0C7D70' : '#CBD6E0', sharedKnob: s.shared ? '19px' : '3px',
       emailNext: () => { const r = s.route; if (r === 'known') set({ au: 'code', codeErr: false }); else if (r === 'new') set({ au: 'c1', fromInvite: false }); else if (r === 'invite') set({ au: 'invite' }); else set({ authErrShown: true }); },
       toEmail: () => set({ au: 'email', codeErr: false }), codeErr: s.codeErr, toggleCodeErr: () => set({ codeErr: !s.codeErr }),
       otp: '482917'.split('').map(v => ({ v, b: s.codeErr ? '2px solid #B42333' : '1px solid #8296A8' })),
@@ -1266,7 +1849,7 @@ class Component extends DCLogic {
       owner: india ? 'Dr. Arjun Rao' : 'Dr. Layla Haddad', dial: india ? '+91' : '+971', phone: india ? '98•• •• 3146' : '50 ••• 4471',
       mfaScan: s.mfa === 'scan', mfaCodes: s.mfa === 'codes', mfaOk: () => set({ mfa: 'codes' }),
       qr: '111111101100000101101110101101110101101110101100000101111111101000000000101011010'.split('').map(b => b === '1' ? '#102A43' : 'transparent'),
-      finishSignup: () => set(s.fromInvite ? { area: 'app', app: 'home', role: 'reception', prac: 'live', drawer: null } : { area: 'app', app: 'home', role: 'doctor', prac: 'terms', terms: false, drawer: null }),
+      finishSignup: () => set(s.fromInvite ? { area: 'app', app: 'home', role: 'reception', prac: 'live', drawer: null } : { area: 'onb', ob: 1 }),
       navItems: NAV.map(([k, label, icon, count]) => ({ label, icon, count, cbg: k === 'inbox' ? '#B42333' : '#975A16', cls: appPage === k ? 'nav on' : 'nav', cur: appPage === k ? 'page' : 'false', go: () => set({ app: k, drawer: null }) })),
       tabItems: [['home', t.nToday, 'space_dashboard'], ['schedule', t.nSchedule, 'calendar_month'], ['patients', t.nPatients, 'groups'], ['inbox', t.nInbox, 'inbox'], ['settings', t.nMore, 'menu']].map(([k, label, icon]) => ({ label, icon, fg: appPage === k ? '#0F766E' : '#506579', go: () => set({ app: k, drawer: null }) })),
       setCls: s.app === 'settings' ? 'nav on' : 'nav', goSettings: () => set({ app: 'settings', setPane: 'setup', drawer: null }), goSchedule: () => set({ app: 'schedule' }), goPatients: () => set({ app: 'patients' }),
@@ -1322,6 +1905,7 @@ class Component extends DCLogic {
       open: [['Approved', 'Staff sign-in: authenticator app by default, passkey optional, SMS only for recovery.'], ['Approved', 'Sessions: lock after 15 min on shared devices; sign out after 12 h.'], ['Approved', 'Prices, 14-day trial and the 0–90 day grace policy.'], ['Approved', 'Expo: one codebase, two store apps — Medvya Clinic and Medvya for patients.'], ['Approved', 'SYNTHETIC badge in prototypes.'], ['Legal', 'Final wording of Terms, DPAs, patient notice and telemedicine terms from counsel.'], ['Eng', 'Payment gateways, NHCX onboarding, eClaimLink certification, repository access.'], ['Content', 'Native review of Hindi and Arabic.']].map(([k, x]) => ({ k, t: x })),
       model: [['One overview.', 'Today holds the queue, what’s next and what needs attention for the signed-in role.'], ['Side panel for tasks.', 'Register, book, check in, pay, search and preview never leave Today; Cancel returns.'], ['Full page only for deep work.', 'The patient record and settings open as pages with a back link.'], ['One next step per card.', 'Each queue card shows the single action that moves it on.'], ['Role decides content, not layout.', 'Same frame for everyone; the Today cards and nav change.'], ['Nothing blocks the desk.', 'Licence or Terms pending pauses only what it must and says so in a banner.']].map(([k, v]) => ({ k, v })),
       tokens: [['brand.500 · primary action', '#0E9384', '#0E9384'], ['brand.700 · links on tint', '#0F766E', '#0F766E'], ['navy · nav, headings', '#102A43', '#102A43'], ['surface · canvas', '#F5F7F9', '#F5F7F9'], ['danger · critical only', '#B42333', '#B42333'], ['warning · attention', '#975A16', '#975A16'], ['success · confirmed', '#087F5B', '#087F5B'], ['ai · drafts only', '#5B3FC4', '#5B3FC4'], ['radius 10 controls · 14 cards', '—', '#fff'], ['Button 44/36/52 · Input 48 · Sheet 440', '—', '#fff']].map(([k, v, c]) => ({ k, v, c })),
+      motion: [['Page and section enter', 'initial {opacity:0,y:18} → whileInView {opacity:1,y:0} · viewport once · spring stiffness 260, damping 30'], ['Stagger', 'staggerChildren 0.07 s for hero lines, cards and list rows'], ['Tabs and segmented controls', 'layoutId="pill" shared underline/pill · spring 500 / 40'], ['Drawers, menus, sheets', 'AnimatePresence · x 24 → 0 (RTL: −24) · 0.22 s ease [0.22,1,0.36,1]'], ['Ambient', 'Hero cards float y 0 → −9 → 0 over 6–8 s; AI waveform scaleY 0.3 → 1; marquee 40 s linear, pauses on hover'], ['Success', 'Check scales 0.9 → 1 with two expanding rings; confetti 10 particles once'], ['Reduced motion', 'useReducedMotion() → no float, marquee, typing or confetti; fades only. Clinical screens never animate content changes over 200 ms.']].map(([k, v]) => ({ k, v })),
       a11y: ['Targets ≥ 44 px; bottom tabs 52 px.', 'Focus ring 2 px #2563EB with offset on every control.', 'Side panel is a modal dialog; focus moves in and returns on close.', 'Alerts use role="alert"; toasts role="status".', 'Logical start/end layout; phone numbers, codes and email stay left-to-right.', 'Status chips always pair an icon with words.', 'Session lock warns before timing out and keeps unsaved work.']
     };
   }

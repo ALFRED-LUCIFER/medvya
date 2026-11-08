@@ -8,7 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Medvya.IntegrationTests;
 
-/// <summary>MDV-P1-010 on real SQL Server: licence expiry reminders at 60/30/7/0 days and the quarterly access review. Synthetic data only.</summary>
+/// <summary>MDV-P1-010 on real PostgreSQL: licence and practice registration expiry reminders at 60/30/7/0 days and the quarterly access review. Synthetic data only.</summary>
 public sealed partial class NotificationsTests
 {
     async Task<Guid> DoctorMembershipAsync()
@@ -61,6 +61,34 @@ public sealed partial class NotificationsTests
     }
 
     [Fact]
+    public async Task ThePracticeRegistrationSetInSettingsIsRemindedAtEachStepOnceAtEveryLocationWithOneEmail()
+    {
+        await ConfirmEveryoneAsync();
+        var expires = Day(h.Clock.GetUtcNow()).AddDays(45);
+        var saved = await As(h.Admin, sp => sp.GetRequiredService<IPracticeSettings>().SaveProfileAsync(new SaveProfile
+        {
+            Name = "Adyar Clinic (synthetic)", RegistrationNumber = "CE-0001", RegistrationExpiresOn = expires, Email = "desk@clinic.example",
+        }));
+        Assert.Equal(expires, saved.RegistrationExpiresOn);
+
+        var steps = new List<int>();
+        foreach (var daysLeft in new[] { 45, 30, 7, 0 })
+        {
+            h.Clock.Advance(TimeSpan.FromDays(expires.DayNumber - daysLeft - Day(h.Clock.GetUtcNow()).DayNumber));
+            Assert.Equal(2, await RunCompliance()); // one item per location
+            Assert.Equal(0, await RunCompliance()); // idempotent
+            steps.Add(daysLeft);
+        }
+        Assert.Equal(4, email.Sent.Count(m => m.To == "desk@clinic.example")); // one email per step, not per location
+        Assert.Contains(email.Sent, m => m.Subject.Contains("expires today", StringComparison.Ordinal));
+        var items = (await As(h.Admin, sp => sp.GetRequiredService<IStaffNotifications>().ListAsync(h.Facility))).Items.Where(i => i.Kind == StaffNotificationKind.RegistrationExpiring).ToList();
+        Assert.Equal([0, 7, 30, 60], items.Select(i => i.Detail).Order().ToArray());
+        Assert.DoesNotContain((await As(h.Reception, sp => sp.GetRequiredService<IStaffNotifications>().ListAsync(h.Facility))).Items, i => i.Kind == StaffNotificationKind.RegistrationExpiring);
+        await using var audit = sql.Audit(h.Tenant);
+        Assert.Equal(8, await audit.Events.CountAsync(e => e.Action == "compliance.registration_expiry.notify"));
+    }
+
+    [Fact]
     public async Task AFailedEmailUndoesTheReminderSoTheNextRunTriesAgain()
     {
         await ConfirmEveryoneAsync();
@@ -89,10 +117,33 @@ public sealed partial class NotificationsTests
         Assert.Equal(4, await audit.Events.CountAsync(e => e.Action == "compliance.access_review.due"));
     }
 
+    [Fact]
+    public async Task ANewPracticeHasNoReviewDueUntilAQuarterAfterItWasCreated()
+    {
+        await using (var db = sql.Context(h.Tenant))
+            await db.Tenants.ExecuteUpdateAsync(s => s.SetProperty(t => t.CreatedAt, h.Clock.GetUtcNow()));
+        var firstDue = Day(h.Clock.GetUtcNow()).AddMonths(3);
+        Assert.Equal(0, await RunCompliance());
+        h.Clock.Advance(TimeSpan.FromDays(firstDue.DayNumber - Day(h.Clock.GetUtcNow()).DayNumber - 1)); // the day before, in the next quarter
+        Assert.Equal(0, await RunCompliance());
+        h.Clock.Advance(TimeSpan.FromDays(1));
+        Assert.Equal(2, await RunCompliance()); // two facilities
+    }
+
     async Task ConfirmEveryoneAsync()
     {
         var view = await InScope(sp => sp.GetRequiredService<IAccessReviews>().CurrentAsync());
-        foreach (var m in view.Members) Assert.True(await InScope(sp => sp.GetRequiredService<IAccessReviews>().ConfirmAsync(m.MembershipId)));
+        foreach (var m in view.Members) Assert.True(await AsAdminOf(m.FacilityId, sp => sp.GetRequiredService<IAccessReviews>().ConfirmAsync(m.MembershipId)));
+    }
+
+    /// <summary>Staff administration is per facility (#877): acts as the practice admin of <paramref name="facilityId"/>.</summary>
+    async Task<T> AsAdminOf<T>(Guid facilityId, Func<IServiceProvider, Task<T>> action)
+    {
+        var previous = actingUser;
+        actingUser = facilityId == h.Facility ? h.Admin : h.Elsewhere;
+        Rebuild(denyAll: false);
+        try { return await InScope(action); }
+        finally { actingUser = previous; Rebuild(denyAll: false); }
     }
 
     [Fact]
@@ -107,14 +158,15 @@ public sealed partial class NotificationsTests
 
         // Offboarding one person is their decision; confirming the rest completes it.
         var nurse = first.Members.Single(m => m.Role == Role.Nurse).MembershipId;
-        await InScope(async sp => { await sp.GetRequiredService<IStaffRoster>().OffboardAsync(nurse, "Left the practice"); await sp.GetRequiredService<IAccessReviews>().RecordOffboardedAsync(nurse); return 0; });
-        Assert.False(await InScope(sp => sp.GetRequiredService<IAccessReviews>().ConfirmAsync(nurse))); // no longer active
-        Assert.False(await InScope(sp => sp.GetRequiredService<IAccessReviews>().ConfirmAsync(Guid.NewGuid())));
+        Assert.False(await InScope(sp => sp.GetRequiredService<IAccessReviews>().ConfirmAsync(nurse))); // reception does not administer staff (#877)
+        await AsAdminOf(h.Facility, async sp => { await sp.GetRequiredService<IStaffRoster>().OffboardAsync(nurse, "Left the practice", cancellationToken: default); await sp.GetRequiredService<IAccessReviews>().RecordOffboardedAsync(nurse); return 0; });
+        Assert.False(await AsAdminOf(h.Facility, sp => sp.GetRequiredService<IAccessReviews>().ConfirmAsync(nurse))); // no longer active
+        Assert.False(await AsAdminOf(h.Facility, sp => sp.GetRequiredService<IAccessReviews>().ConfirmAsync(Guid.NewGuid())));
         var rest = (await InScope(sp => sp.GetRequiredService<IAccessReviews>().CurrentAsync())).Members;
         Assert.Equal(7, rest.Count);
-        foreach (var m in rest.Take(rest.Count - 1)) await InScope(sp => sp.GetRequiredService<IAccessReviews>().ConfirmAsync(m.MembershipId));
+        foreach (var m in rest.Take(rest.Count - 1)) Assert.True(await AsAdminOf(m.FacilityId, sp => sp.GetRequiredService<IAccessReviews>().ConfirmAsync(m.MembershipId)));
         Assert.Null((await InScope(sp => sp.GetRequiredService<IAccessReviews>().CurrentAsync())).CompletedAt);
-        await InScope(sp => sp.GetRequiredService<IAccessReviews>().ConfirmAsync(rest[^1].MembershipId));
+        Assert.True(await AsAdminOf(rest[^1].FacilityId, sp => sp.GetRequiredService<IAccessReviews>().ConfirmAsync(rest[^1].MembershipId)));
         var done = await InScope(sp => sp.GetRequiredService<IAccessReviews>().CurrentAsync());
         Assert.Equal((h.Clock.GetUtcNow(), h.Clock.GetUtcNow()), (done.CompletedAt, done.LastCompletedAt));
 

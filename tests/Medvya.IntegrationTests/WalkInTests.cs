@@ -71,8 +71,6 @@ public sealed class WalkInTests(PostgresFixture sql) : IClassFixture<PostgresFix
     public async Task WithNoFreeSlotTheWalkInIsQueuedWithoutTakingASlot()
     {
         At(19, 45); // the last slot (19:40) has started: nothing left today
-        Assert.Equal("no_free_slot", (await Assert.ThrowsAsync<SlotUnavailableException>(() => h.Booking(h.Reception).WalkInAsync(For(doctor: null)))).Code);
-
         var queued = await h.Booking(h.Reception).WalkInAsync(For(h.Doctor));
         Assert.Equal((true, true, h.Clock.GetUtcNow(), h.Clock.GetUtcNow()), (queued.WalkIn, queued.Unscheduled, queued.Start, queued.End));
         await using (var db = sql.Scheduling(h.Tenant))
@@ -85,13 +83,49 @@ public sealed class WalkInTests(PostgresFixture sql) : IClassFixture<PostgresFix
         Assert.Equal((AppointmentState.CheckedIn, true, true), (card.State, card.WalkIn, card.Unscheduled));
     }
 
+    /// <summary>
+    /// #912: a just-registered patient's first walk-in, "Next available doctor" (the screen's default) after the last slot of the
+    /// day, was refused 409 no_free_slot on Azure dev. It is queued like a chosen doctor's walk-in, under the only doctor working today.
+    /// </summary>
+    [Fact]
+    public async Task NextAvailableWithNoFreeSlotIsQueuedUnderTheDoctorWorkingToday()
+    {
+        At(19, 45);
+        var queued = await h.Booking(h.Reception).WalkInAsync(For(doctor: null) with { VisitType = VisitType.NewConsultation });
+        Assert.Equal((h.Doctor, true, true), (queued.CalendarId, queued.WalkIn, queued.Unscheduled));
+        Assert.Equal(AppointmentState.CheckedIn, (await h.FrontDesk(h.Reception).CheckInAsync(queued.Id, new CheckIn())).State);
+    }
+
+    /// <summary>With several doctors working today and none free, the one with the fewest open visits today takes the walk-in.</summary>
+    [Fact]
+    public async Task NextAvailableWithNoFreeSlotGoesToTheLeastBusyDoctor()
+    {
+        await h.Schedule(h.Admin).SaveTemplateAsync(h.DoctorTemplate() with { CalendarId = h.SecondDoctor });
+        At(19, 5);
+        await h.BookAsync(19, 20, h.SecondPatient); // Dr. Rao: two open visits today; Dr. Menon: one
+        await h.BookAsync(19, 40, h.SecondPatient);
+        await h.Booking(h.Reception).WalkInAsync(For(h.SecondDoctor));
+        At(19, 45);
+        var queued = await h.Booking(h.Reception).WalkInAsync(For(doctor: null) with { AllowRepeat = true });
+        Assert.Equal((h.SecondDoctor, true), (queued.CalendarId, queued.Unscheduled));
+    }
+
+    /// <summary>Nobody works today (Sunday): there is no doctor to queue with, so the desk is still asked to choose one.</summary>
+    [Fact]
+    public async Task NextAvailableOnADayNobodyWorksStillAsksForADoctor()
+    {
+        h.Clock.Advance(SchedulingHarness.At(10, 0).AddDays(6) - h.Clock.GetUtcNow());
+        Assert.Equal("no_free_slot", (await Assert.ThrowsAsync<SlotUnavailableException>(() => h.Booking(h.Reception).WalkInAsync(For(doctor: null)))).Code);
+    }
+
     /// <summary>No double booking (MDV-P1-022) holds for walk-ins: six desks at once for two free slots get two distinct slots and four queued.</summary>
     [Fact]
     public async Task ParallelWalkInsNeverShareASlot()
     {
         At(19, 5); // free today: 19:20 and 19:40
         var desks = await h.AddReceptionistsAsync(6);
-        var results = await Task.WhenAll(desks.Select(d => h.Booking(d).WalkInAsync(For(h.Doctor))));
+        // One synthetic patient for all six: the desks confirmed the repeat, so only the slot rule is under test here.
+        var results = await Task.WhenAll(desks.Select(d => h.Booking(d).WalkInAsync(For(h.Doctor) with { AllowRepeat = true })));
 
         var slotted = results.Where(r => !r.Unscheduled).ToList();
         Assert.Equal([SchedulingHarness.At(19, 20), SchedulingHarness.At(19, 40)], slotted.Select(r => r.Start).Order());
@@ -100,6 +134,48 @@ public sealed class WalkInTests(PostgresFixture sql) : IClassFixture<PostgresFix
         var units = await db.ScheduleSlots.Where(s => s.CalendarId == h.Doctor && s.SlotStart >= SchedulingHarness.At(19, 20)).Select(s => s.SlotStart).ToListAsync();
         Assert.Equal(8, units.Count);
         Assert.Equal(units.Count, units.Distinct().Count());
+    }
+
+    /// <summary>MDV-P1-052: a patient with an open visit today is not checked in again by accident; the desk must confirm.</summary>
+    [Fact]
+    public async Task ASecondWalkInTheSameDayIsRefusedUntilTheDeskConfirmsIt()
+    {
+        At(10, 5);
+        var first = await h.Booking(h.Reception).WalkInAsync(For(h.Doctor));
+        await h.FrontDesk(h.Reception).CheckInAsync(first.Id, new CheckIn());
+        Assert.Equal("already_today", (await Assert.ThrowsAsync<SlotUnavailableException>(() => h.Booking(h.Reception).WalkInAsync(For(h.Doctor)))).Code);
+        await using (var db = sql.Scheduling(h.Tenant))
+            Assert.Equal(1, await db.Appointments.CountAsync(a => a.PatientId == h.Patient)); // nothing made by the refused attempt
+
+        // A booked visit later today counts too: the desk should check that one in instead.
+        await h.BookAsync(17, 0, h.SecondPatient);
+        Assert.Equal("already_today", (await Assert.ThrowsAsync<SlotUnavailableException>(() => h.Booking(h.Reception).WalkInAsync(For(null, h.SecondPatient)))).Code);
+
+        var second = await h.Booking(h.Reception).WalkInAsync(For(h.Doctor) with { AllowRepeat = true });
+        Assert.NotEqual(first.Id, second.Id);
+
+        // A finished visit does not count: the patient may come back the same day.
+        foreach (var state in new[] { AppointmentState.WithNurse, AppointmentState.ReadyForDoctor, AppointmentState.InConsult, AppointmentState.Billing, AppointmentState.Done })
+            await h.FrontDesk(h.Reception).MoveAsync(first.Id, new MoveVisit { State = state });
+        await h.Booking(h.Reception).CancelAsync(second.Id, new CancelAppointment { Reason = CancelReason.BookedInError });
+        Assert.True((await h.Booking(h.Reception).WalkInAsync(For(h.Doctor))).WalkIn);
+    }
+
+    /// <summary>MDV-P1-052: a walk-in queued "now" with no slot waits behind patients who checked in earlier for later slots.</summary>
+    [Fact]
+    public async Task NextPatientsFollowTheTokenOrderNotTheSlotTime()
+    {
+        At(19, 25); // one slot left today: 19:40
+        var early = await h.Booking(h.Reception).WalkInAsync(For(h.Doctor));
+        await h.FrontDesk(h.Reception).CheckInAsync(early.Id, new CheckIn());
+        At(19, 30);
+        var queued = await h.Booking(h.Reception).WalkInAsync(For(h.Doctor, h.SecondPatient));
+        Assert.True(queued.Unscheduled && queued.Start < early.Start); // stamped 19:30, before the 19:40 slot
+        await h.FrontDesk(h.Reception).CheckInAsync(queued.Id, new CheckIn());
+
+        var doctor = (await h.FrontDesk(h.Reception).GetOverviewAsync(h.Facility)).Doctors.Single(d => d.CalendarId == h.Doctor);
+        Assert.Equal([early.Id, queued.Id], doctor.Next.Select(n => n.Id));
+        Assert.Equal(["A-01", "A-02"], doctor.Next.Select(n => n.Token));
     }
 
     [Fact]

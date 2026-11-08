@@ -5,6 +5,8 @@ export type Profile = {
   name: string;
   address: string | null;
   registrationNumber: string | null;
+  /** ISO date (yyyy-mm-dd), the registration's last valid day. */
+  registrationExpiresOn?: string | null;
   taxNumber: string | null;
   phone: string | null;
   email: string | null;
@@ -32,6 +34,7 @@ export const profileSchema = z.object({
   name: z.string().trim().min(1).max(200),
   address: optional(500),
   registrationNumber: optional(50),
+  registrationExpiresOn: z.union([z.literal(''), z.iso.date()]),
   taxNumber: optional(30),
   phone: optional(30).refine(v => v === '' || /^[0-9+() -]{6,30}$/.test(v)),
   email: optional(254).refine(v => v === '' || /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(v)),
@@ -39,7 +42,7 @@ export const profileSchema = z.object({
 export type ProfileForm = z.infer<typeof profileSchema>;
 
 export const toProfileForm = (p: Profile): ProfileForm => ({
-  name: p.name, address: p.address ?? '', registrationNumber: p.registrationNumber ?? '', taxNumber: p.taxNumber ?? '', phone: p.phone ?? '', email: p.email ?? '',
+  name: p.name, address: p.address ?? '', registrationNumber: p.registrationNumber ?? '', registrationExpiresOn: p.registrationExpiresOn ?? '', taxNumber: p.taxNumber ?? '', phone: p.phone ?? '', email: p.email ?? '',
 });
 
 export const locationSchema = z.object({ name: z.string().trim().min(1).max(200), address: optional(500), timeZone: z.string().min(1) });
@@ -122,7 +125,7 @@ export const logoProblem = (file: { type: string; size: number }): LogoProblem |
   !['image/png', 'image/jpeg'].includes(file.type) ? 'type' : file.size === 0 || file.size > logoMaxBytes ? 'size' : null;
 
 /** Problem codes from the API ("field:code" for a rejected field, as the shared client reports them). */
-export const knownErrors = ['logo:type', 'logo:too_large', 'date:duplicate', 'name:duplicate'] as const;
+export const knownErrors = ['logo:type', 'logo:too_large', 'date:duplicate', 'name:duplicate', 'name:link'] as const;
 export type SettingsError = (typeof knownErrors)[number] | 'failed';
 export const settingsError = (code: string | undefined): SettingsError =>
   (knownErrors as readonly string[]).includes(code ?? '') ? (code as SettingsError) : 'failed';
@@ -130,7 +133,7 @@ export const settingsError = (code: string | undefined): SettingsError =>
 /** The tenant's locations and the one a tab is looking at. */
 export type LocationChoice = { locations: Location[]; locationId: string; onLocation: (id: string) => void; locationsLoading: boolean; locationsFailed: boolean };
 
-export const settingsTabs = ['profile', 'locations', 'hours', 'holidays', 'staff', 'doctors', 'audit', 'terms', 'notifications', 'data'] as const;
+export const settingsTabs = ['profile', 'locations', 'hours', 'holidays', 'staff', 'doctors', 'displays', 'audit', 'metrics', 'terms', 'notifications', 'data'] as const;
 export type SettingsTab = (typeof settingsTabs)[number];
 
 /** The practice's acceptance of the Terms of Service and DPA (MDV-P1-019). Until accepted, booking and sending are refused by the server. */

@@ -19,7 +19,7 @@ public sealed class StaffNotifications(NotificationsDbContext db, IStaffAccess a
     {
         StaffNotificationKind.MessageFailed => Capability.RegisterBookPatients,
         // Practice administration (owner doctor, practice admin, hospital IT): the same people who manage staff and doctors.
-        StaffNotificationKind.LicenceExpiring or StaffNotificationKind.AccessReviewDue => Capability.StaffRolesIntegrations,
+        StaffNotificationKind.LicenceExpiring or StaffNotificationKind.RegistrationExpiring or StaffNotificationKind.AccessReviewDue or StaffNotificationKind.AccessRequested => Capability.StaffRolesIntegrations,
         _ => throw new ArgumentOutOfRangeException(nameof(kind)),
     };
 

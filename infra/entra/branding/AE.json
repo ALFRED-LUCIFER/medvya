@@ -1,0 +1,16 @@
+{
+  "default": {
+    "signInPageText": "Medvya staff sign-in. Every sign-in is logged. Medvya never asks for your code by phone, SMS or email.",
+    "usernameHintText": "name@clinic.ae",
+    "customPrivacyAndCookiesText": "Privacy",
+    "customTermsOfUseText": "Terms"
+  },
+  "localizations": {
+    "ar-AE": {
+      "signInPageText": "دخول موظفي Medvya. يُسجَّل كل دخول. لا يطلب Medvya رمزك أبدًا عبر الهاتف أو الرسائل النصية أو البريد الإلكتروني.",
+      "usernameHintText": "name@clinic.ae",
+      "customPrivacyAndCookiesText": "الخصوصية",
+      "customTermsOfUseText": "الشروط"
+    }
+  }
+}

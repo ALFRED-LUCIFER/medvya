@@ -1,7 +1,11 @@
-import { Footprints, ReceiptText, Stethoscope, UserPlus } from 'lucide-react';
-import { Link } from 'react-router';
+import { Footprints, ListChecks, ReceiptText, Stethoscope, UserPlus } from 'lucide-react';
+import { Link, useNavigate } from 'react-router';
 import { useI18n } from '@medvya/i18n';
 import { buttonVariants } from '@medvya/ui';
+import StartConsult from '../features/encounters/components/StartConsult';
+import { canConsult } from '../features/encounters/domain/encounter';
+import { useStartConsultController } from '../features/encounters/hooks/useStartConsultController';
+import type { BoardCard } from '../features/front-desk/domain/board';
 import BoardPage from '../features/front-desk/components/BoardPage';
 import { useBoardController } from '../features/front-desk/hooks/useBoardController';
 
@@ -11,12 +15,22 @@ type Props = {
   registerPath: string | null;
   /** Walk-in (MDV-P1-025), when this role may book and check in. */
   walkInPath: string | null;
+  /** The waitlist (MDV-P1-027), when this role may book. */
+  waitlistPath: string | null;
   /** Billing, when the billing.invoices flag is on and this role may take payments (from the navigation). */
   billingPath: string | null;
+  /** Doctors (Patient 360 at Full) start consultations from the board (MDV-P2-001); the server checks clinical access each time. */
+  canConsult: boolean;
 };
 
+function Consult({ card, online }: { card: BoardCard; online: boolean }) {
+  const navigate = useNavigate();
+  const consult = useStartConsultController(card.id, card.patientId, id => void navigate(`/consult/${id}`));
+  return <StartConsult {...consult} patientName={card.patientName} inConsult={card.state === 'InConsult'} online={online} />;
+}
+
 /** Composition only: the board controller for the active facility, fed to the presentational P-01 page. */
-export default function FrontDeskRoute({ facilityId, online, canMove, registerPath, walkInPath, billingPath }: Props) {
+export default function FrontDeskRoute({ facilityId, online, canMove, registerPath, walkInPath, waitlistPath, billingPath, canConsult: doctor }: Props) {
   const { t } = useI18n();
   const board = useBoardController(facilityId, online);
   const register = registerPath || walkInPath ? <>
@@ -27,5 +41,7 @@ export default function FrontDeskRoute({ facilityId, online, canMove, registerPa
     ? <Link to={billingPath} className={buttonVariants({ variant: 'outline', className: 'whitespace-normal' })}><ReceiptText aria-hidden />{t('board.action.takePayment')}</Link>
     : undefined;
   const overview = <Link to="/front-desk/overview" className={buttonVariants({ variant: 'outline' })}><Stethoscope aria-hidden />{t('overview.title')}</Link>;
-  return <BoardPage {...board} canMove={canMove} registerAction={register} paymentAction={payment} overviewAction={overview} />;
+  const waitlist = waitlistPath ? <Link to={waitlistPath} className={buttonVariants({ variant: 'outline' })}><ListChecks aria-hidden />{t('waitlist.title')}</Link> : undefined;
+  const consultAction = doctor ? (card: BoardCard) => (canConsult(card.state) ? <Consult key={card.id} card={card} online={online} /> : null) : undefined;
+  return <BoardPage {...board} canMove={canMove} registerAction={register} paymentAction={payment} overviewAction={<>{overview}{waitlist}</>} consultAction={consultAction} />;
 }

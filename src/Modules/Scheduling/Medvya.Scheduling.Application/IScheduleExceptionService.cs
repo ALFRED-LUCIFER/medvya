@@ -25,10 +25,17 @@ public sealed record SaveAdjustment
     public string? Reason { get; init; }
     /// <summary>Set (by PUT) to edit this saved exception of the same calendar instead of adding one.</summary>
     public Guid? ReplacesId { get; init; }
+    /// <summary>With an edit: the <see cref="ExceptionView.Version"/> the editor saw; a different saved version is refused (<c>id:stale</c>).</summary>
+    public string? Version { get; init; }
     public IReadOnlyList<AppointmentAction> Actions { get; init; } = [];
 }
 
-public sealed record ExceptionView(Guid Id, Guid CalendarId, ExceptionKind Kind, DateOnly FromDate, DateOnly ToDate, TimeOnly? Start, TimeOnly? End, string? Reason);
+/// <summary>
+/// A saved exception. <paramref name="Reason"/> is null for staff who may not manage the calendar; <paramref name="CanEdit"/> says whether
+/// the caller may change it; <paramref name="Version"/> is sent back with an edit or delete so a change made meanwhile is not overwritten.
+/// </summary>
+public sealed record ExceptionView(Guid Id, Guid CalendarId, ExceptionKind Kind, DateOnly FromDate, DateOnly ToDate, TimeOnly? Start, TimeOnly? End, string? Reason,
+    bool CanEdit = false, string? Version = null);
 
 public sealed record SavedAdjustment(ExceptionView Exception, int Offered, int Manual);
 
@@ -52,6 +59,6 @@ public interface IScheduleExceptionService
     /// Cancels a saved exception: deleted leave or a shortened day gives the bookable slots back. Visits already moved to "needs rebooking"
     /// stay as they are (nobody is re-booked silently). An extra session that still has booked visits in it cannot be deleted.
     /// </summary>
-    /// <exception cref="SchedulingValidationException">Unknown exception, or an extra session with booked visits (<c>id:has_bookings</c>).</exception>
-    Task DeleteAsync(Guid facilityId, Guid exceptionId, CancellationToken cancellationToken = default);
+    /// <exception cref="SchedulingValidationException">Unknown exception, an extra session with booked visits (<c>id:has_bookings</c>), or changed since <paramref name="version"/> (<c>id:stale</c>).</exception>
+    Task DeleteAsync(Guid facilityId, Guid exceptionId, string? version, CancellationToken cancellationToken = default);
 }

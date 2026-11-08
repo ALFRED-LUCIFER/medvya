@@ -16,6 +16,8 @@ pnpm install && pnpm build                    # web, mobile and packages workspa
 pnpm dev                                      # clinic app on http://localhost:5173
 pnpm --filter @medvya/mobile-clinician ios    # staff app on the iOS simulator (needs Xcode; `android` needs Android Studio)
 pnpm dev:clinician                            # or dev:patient: Metro only; open in Expo Go or an installed build
+# Mobile Development builds sign in with the synthetic cast (any 6-digit code): arjun.rao@example.com (doctor),
+# reception.desk@example.com (front desk), patient +91 90000 00101. Release builds have no data until MDV-P5-033.
 dotnet test Medvya.sln                        # includes tenant-isolation tests on a throwaway PostgreSQL (Testcontainers)
 ```
 
@@ -51,27 +53,29 @@ medvya/
 ├── src/
 │   ├── Host.Api/            # composition only: Program, auth/BFF, context, middleware, observability, public site
 │   │                        #   today also holds feature endpoints (moved to modules by P0-040)
+│   ├── Host.Platform/       # exists (P5-040): platform console host, composition only; no clinic module (ADR-014)
 │   ├── BuildingBlocks/      # Domain, Application, Infrastructure, Security, Contracts, Country
-│   ├── Modules/             # exist: Identity, Tenancy, Audit, Patients, Scheduling, Billing, Notifications, Leads
-│   │                        # planned: Practice, Encounters, Prescribing, Documents, Scribe, Care, Portal,
-│   │                        #   Insurance, Inventory, Laboratory, Migration, Platform, Devices, Integrations
+│   ├── Modules/             # exist: Identity, Tenancy, Audit, Patients, Scheduling, Encounters, Billing, Notifications, Leads, Platform
+│   │                        # planned: Practice, Prescribing, Documents, Scribe, Care, Portal,
+│   │                        #   Insurance, Inventory, Laboratory, Migration, Devices, Integrations
 │   └── Workers/             # planned: Worker.Jobs, Worker.Ai, Worker.Integration (P3+; jobs run in Host today)
 ├── web/
 │   ├── clinic/              # exists: clinic app with clinic-admin routes
-│   ├── platform-admin/      # planned (P5-040): Medvya team console
+│   ├── platform-admin/      # exists (P5-040): Medvya team console: sign-in with a security key, team access, audit log
 │   └── portal/              # planned (P4): patient PWA
 ├── mobile/
 │   ├── .oxlintrc.json       # layer rules (ADR-009), no literals, no web UI
-│   ├── clinician/           # exists (P5-032 foundation, Expo SDK 58): staff app; screens in P5-034/035
-│   └── patient/             # exists (P5-032 foundation, Expo SDK 58): patient app; screens in P5-036/037
+│   ├── clinician/           # exists (Expo SDK 58): sign-in, 15-min lock, Today, Patients, record, Consult, Inbox, Account (P5-034, dev data)
+│   └── patient/             # exists (Expo SDK 58): onboarding, SMS sign-in, Home, Book, Records, Messages, Profile (P5-036, dev data)
 ├── packages/
-│   ├── ui/ · i18n/          # exist (ui is web only)
-│   └── tokens · api-client · domain · auth-client · ui-native · config · test-fixtures   # planned
+│   ├── ui/ · i18n/ · ui-native/   # exist (ui is web only; ui-native is the shared Expo components)
+│   └── tokens · api-client exist; domain · auth-client · config · test-fixtures   # planned
 ├── tests/
 │   ├── Medvya.ArchitectureTests/ · Medvya.IntegrationTests/ · e2e/     # exist
 │   └── Medvya.SecurityTests · Medvya.ContractTests · mobile-e2e · ai-evals   # planned
 ├── infra/
 │   ├── bicep/               # exists; PostgreSQL replaces Azure SQL (MDV-P0-038)
+│   ├── entra/               # exists; hosted sign-in page branding, run by a tenant admin (MDV-P1-060)
 │   └── postgres · monitoring     # planned (roles and RLS policies, alerts); runbooks stay in docs/runbooks
 ├── tools/                   # tickets, prd-extract, erd, synthetic data, db scripts
 ├── docs/                    # 01-prd · 02-design · 03-architecture · 04-security-compliance · 05-delivery · adr · compliance · runbooks

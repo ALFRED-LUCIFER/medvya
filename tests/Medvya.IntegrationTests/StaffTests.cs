@@ -140,6 +140,9 @@ public sealed class StaffTests(PostgresFixture sql) : IClassFixture<PostgresFixt
         Assert.Equal(HttpStatusCode.NoContent, (await client.DeleteAsync($"/v1/invitations/{second}")).StatusCode);
         var revoked = Row(await client.GetFromJsonAsync<JsonElement>("/v1/staff"), r => r.GetProperty("email").GetString() == "joseph@example.test");
         Assert.Equal(("Invited", "revoked"), (revoked.GetProperty("status").GetString(), revoked.GetProperty("invitationState").GetString()));
+        // A revoked invitation is never brought back by a resend (#912).
+        Assert.Equal(HttpStatusCode.NotFound, (await client.PostAsync($"/v1/staff/invitations/{second}/resend", null)).StatusCode);
+        Assert.Equal(2, outbox.Sent.Count);
 
         // The seeded portal user (a patient) is not staff.
         Assert.DoesNotContain((await client.GetFromJsonAsync<JsonElement>("/v1/staff")).EnumerateArray(), r => r.GetProperty("role").GetString() == "Patient");

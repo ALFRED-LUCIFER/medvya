@@ -1,6 +1,8 @@
 using System.Data;
 using System.Globalization;
+using Medvya.BuildingBlocks.Domain;
 using Medvya.Scheduling.Application;
+using Medvya.Scheduling.Domain;
 using Medvya.Scheduling.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -10,19 +12,22 @@ namespace Medvya.Scheduling.Infrastructure;
 
 /// <summary>
 /// The only way to change what a calendar holds or has booked (MDV-P1-022, PRD v2 P1-07). Each attempt runs in a READ COMMITTED
-/// transaction (not SERIALIZABLE: its range locks made unrelated doctor-days queue on each other's index ranges, MDV-P1-037) that first takes a transaction advisory lock "doctor:{calendar}:{date}" (facility-local date) for every doctor-day it touches,
+/// transaction (not SERIALIZABLE: its range locks made unrelated doctor-days queue on each other's index ranges, MDV-P1-037) that first takes a transaction advisory lock "doctor:{tenant}:{calendar}:{date}" (facility-local date; the tenant keeps a doctor who works for two practices from making one wait on the other) for every doctor-day it touches,
 /// in a fixed order so two attempts never wait on each other in a circle. Deadlocks, lock timeouts and an ungranted app lock roll
 /// back and are retried (nothing was written, so a retry cannot duplicate); after the last attempt the caller gets "busy".
 /// A unique-index violation on SCHEDULE_SLOT means another booking won: "slot_unavailable". The app lock keeps every check-then-write of a
 /// doctor-day exclusive, and the unique index is the last line: it holds even if the lock or the checks are bypassed.
 /// </summary>
-public sealed class DoctorDayTransaction(SchedulingDbContext db, IOptions<SchedulingOptions> options)
+public sealed class DoctorDayTransaction(SchedulingDbContext db, ICurrentTenant tenant, IOptions<SchedulingOptions> options, TimeProvider clock)
 {
     const int Attempts = 3;
+    /// <summary>The no-double-booking index on SCHEDULE_SLOT (calendar, location, 5-minute unit).</summary>
+    internal const string SlotIndex = "IX_ScheduleSlots_CalendarId_FacilityId_SlotStart";
 
     public async Task<T> RunAsync<T>(IEnumerable<(Guid CalendarId, DateOnly Date)> doctorDays, Func<Task<T>> work, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(work);
+        var tenantId = tenant.TenantId ?? throw new InvalidOperationException("No tenant context.");
         var locks = doctorDays.Distinct().OrderBy(l => l.CalendarId).ThenBy(l => l.Date).ToList();
         for (var attempt = 1; ; attempt++)
         {
@@ -30,14 +35,27 @@ public sealed class DoctorDayTransaction(SchedulingDbContext db, IOptions<Schedu
             {
                 await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken);
                 foreach (var (calendarId, date) in locks)
-                    await LockAsync(db, string.Create(CultureInfo.InvariantCulture, $"doctor:{calendarId}:{date:yyyy-MM-dd}"), options.Value.LockTimeout, cancellationToken);
+                    await LockAsync(db, DoctorDayKey(tenantId, calendarId, date), options.Value.LockTimeout, cancellationToken);
                 var result = await work();
                 await tx.CommitAsync(cancellationToken);
                 return result;
             }
             catch (Exception e) when (IsUniqueViolation(e))
             {
+                // The refused slot rows are still tracked: they say where the database stopped a double booking (pilot metric).
+                var refused = Pg(e)!.ConstraintName == SlotIndex
+                    ? db.ChangeTracker.Entries<ScheduleSlot>().Where(x => x.State == EntityState.Added).Select(x => x.Entity).FirstOrDefault() : null;
                 db.ChangeTracker.Clear();
+                if (refused is not null)
+                {
+                    // Written after the rollback, on its own: the refusal itself must be counted even though nothing else was saved.
+                    db.BookingConflicts.Add(new BookingConflict
+                    {
+                        Id = Guid.CreateVersion7(), TenantId = tenantId, FacilityId = refused.FacilityId, CalendarId = refused.CalendarId, OccurredAt = clock.GetUtcNow(),
+                    });
+                    await db.SaveChangesAsync(cancellationToken);
+                    db.ChangeTracker.Clear();
+                }
                 throw new SlotUnavailableException("slot_unavailable");
             }
             catch (Exception e) when (IsTransient(e))
@@ -48,6 +66,10 @@ public sealed class DoctorDayTransaction(SchedulingDbContext db, IOptions<Schedu
             }
         }
     }
+
+    /// <summary>The app-lock name of one doctor-day; every writer of that doctor-day takes the lock under this name.</summary>
+    internal static string DoctorDayKey(Guid tenantId, Guid calendarId, DateOnly date) =>
+        string.Create(CultureInfo.InvariantCulture, $"doctor:{tenantId}:{calendarId}:{date:yyyy-MM-dd}");
 
     /// <summary>Exclusive advisory lock owned by the open transaction; released by commit or rollback. Throws when not granted in time.</summary>
     internal static async Task LockAsync(SchedulingDbContext db, string resource, TimeSpan lockTimeout, CancellationToken cancellationToken)

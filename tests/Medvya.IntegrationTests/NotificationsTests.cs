@@ -80,7 +80,7 @@ public sealed partial class NotificationsTests(PostgresFixture sql) : IClassFixt
         foreach (var p in await patients.Patients.ToListAsync()) { p.Email = "meera.iyer@example.test"; p.PreferredLanguage = "hi"; }
         await patients.SaveChangesAsync();
         actingUser = h.Reception;
-        foreach (var group in new[] { "Confirmation", "Rescheduled", "Cancelled", "Reminder" })
+        foreach (var group in new[] { "Confirmation", "Rescheduled", "Cancelled", "SeriesCancelled", "Reminder" })
             foreach (var lang in new[] { "en", "hi", "ar" }) dlt[$"{group}.{lang}"] = $"1107{group.Length:D2}{lang.Length}0000001";
         Rebuild(denyAll: false);
     }
@@ -173,7 +173,7 @@ public sealed partial class NotificationsTests(PostgresFixture sql) : IClassFixt
         h.Clock.Advance(TimeSpan.FromHours(2)); // Monday 11:00
         await RunJobAsync();
         Assert.Single(email.Sent);
-        Assert.Equal("अपॉइंटमेंट की याद", email.Sent[0].Subject); // the patient's language
+        Assert.Equal("Adyar (synthetic): अपॉइंटमेंट की याद", email.Sent[0].Subject); // the patient's language
     }
 
     [Fact]
@@ -304,7 +304,7 @@ public sealed partial class NotificationsTests(PostgresFixture sql) : IClassFixt
         var rows = await RowsAsync(visit.Id);
         Assert.Equal(4, rows.Count(r => r.Status == NotificationStatus.Cancelled && r.FailureCode == "visit_changed")); // old 24 h and 2 h, both channels
         var moved = Assert.Single(email.Sent);
-        Assert.Equal("अपॉइंटमेंट बदली गई", moved.Subject);
+        Assert.Equal("Adyar (synthetic): अपॉइंटमेंट बदली गई", moved.Subject);
         Assert.Equal(Tuesday(18).AddHours(-2), rows.Single(r => r.Kind == NotificationKind.Reminder2h && r.Status == NotificationStatus.Queued && r.Channel == NotificationChannel.Email).SendAt);
 
         // The same event published again changes nothing (at-least-once delivery).
@@ -328,7 +328,7 @@ public sealed partial class NotificationsTests(PostgresFixture sql) : IClassFixt
 
         var rows = await RowsAsync(visit.Id);
         Assert.All(rows.Where(r => r.Kind is NotificationKind.Reminder24h or NotificationKind.Reminder2h), r => Assert.Equal(NotificationStatus.Cancelled, r.Status));
-        Assert.Equal("अपॉइंटमेंट रद्द", Assert.Single(email.Sent).Subject);
+        Assert.Equal("Adyar (synthetic): अपॉइंटमेंट रद्द", Assert.Single(email.Sent).Subject);
     }
 
     [Fact]
@@ -346,9 +346,32 @@ public sealed partial class NotificationsTests(PostgresFixture sql) : IClassFixt
         await h.Booking(h.Reception).CancelFollowingAsync(ids[0], new CancelAppointment { Reason = CancelReason.PatientRequest });
         await RunJobAsync();
 
-        Assert.Equal("अपॉइंटमेंट रद्द", Assert.Single(email.Sent).Subject); // one message for the whole series
+        Assert.Equal("Adyar (synthetic): अपॉइंटमेंट्स रद्द", Assert.Single(email.Sent).Subject); // one message for the whole series, worded for the series
         foreach (var id in ids)
             Assert.All((await RowsAsync(id)).Where(r => r.Kind is NotificationKind.Reminder24h or NotificationKind.Reminder2h), r => Assert.Equal(NotificationStatus.Cancelled, r.Status));
+    }
+
+    [Fact]
+    public async Task LeaveCancelsTheQueuedRemindersOfEveryMovedVisitAndMessagesOnlyTheOffered()
+    {
+        // #231: a visit moved with "Manual" kept its 24 h and 2 h reminders, so the patient was reminded of a visit with no doctor.
+        var offered = await BookTuesdayAsync(10);
+        var manual = await BookTuesdayAsync(11);
+        await RunJobAsync();
+        email.Sent.Clear();
+
+        await h.Adjustments(h.Admin).SaveAsync(new SaveAdjustment
+        {
+            FacilityId = h.Facility, CalendarId = h.Doctor, Kind = ExceptionKind.Leave, FromDate = Monday.AddDays(1), ToDate = Monday.AddDays(1), Reason = "Conference",
+            Actions = [new(offered.Id, RebookAction.Offer), new(manual.Id, RebookAction.Manual)],
+        });
+        await RunJobAsync();
+
+        foreach (var id in new[] { offered.Id, manual.Id })
+            Assert.DoesNotContain(await RowsAsync(id), r => r.Status == NotificationStatus.Queued);
+        Assert.DoesNotContain(await RowsAsync(manual.Id), r => r.Kind == NotificationKind.NeedsRebooking);
+        Assert.Contains(await RowsAsync(offered.Id), r => r.Kind == NotificationKind.NeedsRebooking);
+        Assert.Single(email.Sent); // the offered patient's rebooking message only
     }
 
     [Fact]
@@ -432,6 +455,19 @@ public sealed partial class NotificationsTests(PostgresFixture sql) : IClassFixt
         var late = new DateTimeOffset(2026, 10, 20, 23, 30, 0, TimeSpan.FromHours(5.5)); // 21:30 is quiet, 08:00 next day is after the visit
         Assert.Null(At2h(late));
         Assert.Null(NotificationRules.ReminderTime(now.AddHours(1), TimeSpan.FromHours(2), now, ist, new(21, 0), new(8, 0))); // booked inside the window
+    }
+
+    [Fact]
+    public async Task ABookingIsPreparingUntilTheJobPublishesItThenItsMessagesShow()
+    {
+        var visit = await BookTuesdayAsync();
+        Task<bool> Pending(Guid facility) => InScope(sp => sp.GetRequiredService<IOutboxDispatcher>().PendingAsync(facility, visit.Id));
+        Assert.True(await Pending(h.Facility));
+        Assert.False(await Pending(h.OtherFacility)); // another location's view never learns about it
+        Assert.Empty(await InScope(sp => sp.GetRequiredService<INotificationQueries>().ForAppointmentAsync(h.Facility, visit.Id)));
+        await RunJobAsync();
+        Assert.False(await Pending(h.Facility));
+        Assert.NotEmpty(await InScope(sp => sp.GetRequiredService<INotificationQueries>().ForAppointmentAsync(h.Facility, visit.Id)));
     }
 
     async Task<Notification> SentRowAsync()
@@ -595,6 +631,27 @@ public sealed partial class NotificationsTests(PostgresFixture sql) : IClassFixt
         InScope(async sp => { var p = sp.GetRequiredService<INotificationPreferences>(); await p.SaveAsync(change(await p.GetAsync())); return 0; });
 
     [Fact]
+    public async Task EmailsOpenWithThePracticesSenderNameWhichIsValidatedAndKeptOutOfTheAudit()
+    {
+        // #213, owner decision 7 Nov: until DLT, the clinic is named at the start of every email subject (and as the From name where possible).
+        await Save(p => p with { SenderName = "  Iyer Family Clinic  " });
+        Assert.Equal("Iyer Family Clinic", (await InScope(sp => sp.GetRequiredService<INotificationPreferences>().GetAsync())).SenderName);
+        await BookTuesdayAsync();
+        await RunJobAsync();
+        var sent = Assert.Single(email.Sent);
+        Assert.StartsWith("Iyer Family Clinic: ", sent.Subject, StringComparison.Ordinal);
+        Assert.Equal("Iyer Family Clinic", sent.FromName);
+
+        foreach (var (bad, code) in new[] { (new string('x', 61), "too_long"), ("Visit iyer-clinic.example.com", "link") })
+        {
+            var refused = await Assert.ThrowsAsync<Medvya.Tenancy.Application.SettingsValidationException>(() => Save(p => p with { SenderName = bad }));
+            Assert.Contains(refused.Errors, e => e.Field == "senderName" && e.Code == code);
+        }
+        await using var audit = sql.Audit(h.Tenant);
+        Assert.Contains(await audit.Events.Where(e => e.Action == "settings.notifications.update").Select(e => e.Detail).ToListAsync(), d => d == "senderName:changed");
+    }
+
+    [Fact]
     public async Task TurningOffAReminderCancelsTheQueuedOnesAndStopsSchedulingMore()
     {
         var first = await BookTuesdayAsync();
@@ -614,7 +671,19 @@ public sealed partial class NotificationsTests(PostgresFixture sql) : IClassFixt
         Assert.Contains(later, r => r.Kind == NotificationKind.Reminder2h);
 
         await using var audit = sql.Audit(h.Tenant);
-        Assert.Contains(await audit.Events.Select(e => e.Action).ToListAsync(), a => a == "settings.notifications.update");
+        var saved = await audit.Events.SingleAsync(e => e.Action == "settings.notifications.update");
+        Assert.Equal("reminder24h:on>off", saved.Detail); // the before and after of what changed, nothing else
+    }
+
+    [Fact]
+    public void TheAuditDetailListsEveryChangedSettingAndFitsTheColumn()
+    {
+        var before = new NotificationPreferencesView(true, true, true, true, true, true, new TimeOnly(21, 0), new TimeOnly(8, 0));
+        Assert.Null(NotificationPreferences.Diff(before, before));
+        var everything = new NotificationPreferencesView(false, false, false, false, false, false, new TimeOnly(22, 30), new TimeOnly(7, 0));
+        var detail = NotificationPreferences.Diff(before, everything)!;
+        Assert.Equal("confirmation:on>off;reminder24h:on>off;reminder2h:on>off;changes:on>off;email:on>off;sms:on>off;quietStart:21:00>22:30;quietEnd:08:00>07:00", detail);
+        Assert.True(detail.Length <= 256);
     }
 
     [Fact]
@@ -643,7 +712,7 @@ public sealed partial class NotificationsTests(PostgresFixture sql) : IClassFixt
 
         await h.Booking(h.Reception).CancelAsync(visit.Id, new CancelAppointment { Reason = CancelReason.PatientRequest });
         await RunJobAsync();
-        Assert.Equal("अपॉइंटमेंट रद्द", Assert.Single(email.Sent).Subject);
+        Assert.Equal("Adyar (synthetic): अपॉइंटमेंट रद्द", Assert.Single(email.Sent).Subject);
     }
 
     [Fact]
@@ -696,7 +765,7 @@ public sealed partial class NotificationsTests(PostgresFixture sql) : IClassFixt
         foreach (var lang in new[] { "en", "hi", "ar" })
         {
             var previews = MessageCatalog.Previews(lang);
-            Assert.Equal(5, previews.Count);
+            Assert.Equal(7, previews.Count);
             foreach (var p in previews)
             {
                 Assert.DoesNotContain(MessageCatalog.Slot, p.Text); // slots are named, never raw

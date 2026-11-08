@@ -1,8 +1,13 @@
 import { apiFetch } from '../../api/services/apiClient';
 import type { MeContext } from '../domain/session';
+import type { SignInFailure } from '../domain/signIn';
 
 // The server holds the tokens (BFF, ADR-004); the browser only sends its HTTP-only session cookie.
 const csrf = { 'X-Medvya-Csrf': '1' };
+
+declare global {
+  interface Window { medvyaMeContext?: Promise<Response | undefined> }
+}
 
 /** The server answered 401: the session ended (idle timeout, revoked, signed out elsewhere). */
 export class SessionEndedError extends Error {}
@@ -12,7 +17,12 @@ export class SessionEndedError extends Error {}
  * count as activity, or an unattended screen would never reach its idle timeout.
  */
 export async function fetchMeContext(): Promise<MeContext | null> {
-  const res = await apiFetch('/v1/me/context', { credentials: 'same-origin', headers: { 'X-Medvya-Passive': '1' } });
+  // The first read was started by public/prefetch.js while the bundle downloaded; a failed or 5xx one is read again with retries.
+  const pending = window.medvyaMeContext;
+  window.medvyaMeContext = undefined; // taken once, before awaiting, so a second caller never reads the same body
+  const early = await pending;
+  const res = early && early.status < 500 ? early
+    : await apiFetch('/v1/me/context', { credentials: 'same-origin', headers: { 'X-Medvya-Passive': '1' } });
   if (res.status === 401) return null;
   if (!res.ok) throw new Error(`me/context ${res.status}`);
   return res.json() as Promise<MeContext>;
@@ -27,13 +37,35 @@ export async function chooseFacility(membershipId: string) {
   if (!res.ok) throw new Error(`me/facility ${res.status}`);
 }
 
-/** Starts sign-in and comes back to the page the user was on (F-05a: return to the previous route). */
-export function startSignIn() {
-  window.location.assign(`/bff/login?returnUrl=${encodeURIComponent(window.location.pathname)}`);
+/**
+ * Starts sign-in and comes back to the page the user was on (F-05a: return to the previous route). The work email, when typed, goes to
+ * the provider as a hint only (MDV-P1-059): the server validates it, never stores or logs it.
+ */
+export function startSignIn(loginHint?: string) {
+  const returnUrl = window.location.pathname;
+  if (loginHint) void startSignInWithHint({ loginHint, returnUrl });
+  else window.location.assign(`/bff/login?returnUrl=${encodeURIComponent(returnUrl)}`);
 }
 
+/**
+ * The work email travels in a POST body and the page then navigates to the provider itself, so the email never sits in a Medvya URL
+ * (server logs, browser history, proxies). A refused or failed start shows the generic "sign-in did not complete" message.
+ */
+export async function startSignInWithHint(start: { loginHint: string; returnUrl: string; signup?: boolean }) {
+  try {
+    const res = await apiFetch('/bff/login', { method: 'POST', headers: { ...csrf, 'Content-Type': 'application/json' }, body: JSON.stringify(start) });
+    if (res.ok) { window.location.assign(((await res.json()) as { location: string }).location); return; }
+  } catch { /* offline or timed out: same message as a refusal */ }
+  window.location.assign(`${import.meta.env.BASE_URL}?signin=failed`);
+}
+
+/**
+ * Ends the Medvya session, then the provider's (#912): the server answers with the provider's sign-out address, and the page goes there,
+ * so on a shared PC the provider cannot sign the last account straight back in. It comes back to the app signed out.
+ */
 export async function signOut() {
-  await apiFetch('/bff/logout', { method: 'POST', credentials: 'same-origin', headers: csrf });
+  const res = await apiFetch('/bff/logout', { method: 'POST', credentials: 'same-origin', headers: csrf });
+  if (res.status === 200) window.location.assign(((await res.json()) as { location: string }).location);
 }
 
 // Per tab and PHI-free: only "this tab had a session", so a reload after an idle timeout still shows F-05a.
@@ -47,5 +79,8 @@ export function rememberSession(had: boolean) {
   try { if (had) sessionStorage.setItem(marker, '1'); else sessionStorage.removeItem(marker); } catch { /* storage blocked: F-05a then shows only within the page's lifetime */ }
 }
 
-/** True when the server sent the user back with ?signin=failed (reason stays server-side). */
-export const signInFailed = () => new URLSearchParams(window.location.search).get('signin') === 'failed';
+/** Why the server sent the user back: ?signin=mfa (no second factor, #912) or ?signin=failed (any other reason, which stays server-side). */
+export function signInFailure(): SignInFailure | null {
+  const reason = new URLSearchParams(window.location.search).get('signin');
+  return reason === 'mfa' || reason === 'failed' ? reason : null;
+}

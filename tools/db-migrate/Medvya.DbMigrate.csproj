@@ -13,7 +13,9 @@
     <ProjectReference Include="..\..\src\Modules\Billing\Medvya.Billing.Infrastructure\Medvya.Billing.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\Modules\Scheduling\Medvya.Scheduling.Infrastructure\Medvya.Scheduling.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\Modules\Notifications\Medvya.Notifications.Infrastructure\Medvya.Notifications.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Encounters\Medvya.Encounters.Infrastructure\Medvya.Encounters.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\Modules\Leads\Medvya.Leads.Infrastructure\Medvya.Leads.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Platform\Medvya.Platform.Infrastructure\Medvya.Platform.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>

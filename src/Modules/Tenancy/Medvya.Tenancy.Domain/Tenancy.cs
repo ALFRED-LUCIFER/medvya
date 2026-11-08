@@ -11,6 +11,10 @@ public sealed class Tenant
     [Classification(DataClass.Internal)] public required string ResidencyRegion { get; init; }
     /// <summary>Staff sessions end after this many idle minutes (MDV-P0-012). 15 suits shared clinic PCs; 1–480.</summary>
     [Classification(DataClass.Internal)] public int IdleTimeoutMinutes { get; set; } = 15;
+    /// <summary>Which clinicians treat the facility's patients (MDV-P2-024); a setting of the practice owner.</summary>
+    [Classification(DataClass.Internal)] public ClinicalAccessPolicy ClinicalAccess { get; set; }
+    /// <summary>When the practice was created; the first quarterly access review is due a quarter later (#912). Tenants older than the column read 0001-01-01.</summary>
+    [Classification(DataClass.Internal)] public DateTimeOffset CreatedAt { get; init; }
 }
 
 public sealed class Facility

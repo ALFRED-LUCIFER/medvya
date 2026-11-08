@@ -40,11 +40,23 @@ public static partial class MessageCatalog
             ["hi"] = ("अपॉइंटमेंट रद्द", "{#var#} में {#var#} को {#var#} बजे की आपकी अपॉइंटमेंट रद्द कर दी गई है। दोबारा बुक करने के लिए क्लिनिक से संपर्क करें।"),
             ["ar"] = ("تم إلغاء الموعد", "تم إلغاء موعدك في {#var#} بتاريخ {#var#} الساعة {#var#}. يرجى التواصل مع العيادة لإعادة الحجز."),
         },
+        ["SeriesCancelled"] = new()
+        {
+            ["en"] = ("Appointments cancelled", "Your appointment at {#var#} on {#var#} at {#var#} and your later repeat visits have been cancelled. Please contact the clinic to rebook."),
+            ["hi"] = ("अपॉइंटमेंट्स रद्द", "{#var#} में {#var#} को {#var#} बजे की आपकी अपॉइंटमेंट और उसके बाद की दोहराई गई अपॉइंटमेंट रद्द कर दी गई हैं। दोबारा बुक करने के लिए क्लिनिक से संपर्क करें।"),
+            ["ar"] = ("تم إلغاء المواعيد", "تم إلغاء موعدك في {#var#} بتاريخ {#var#} الساعة {#var#} ومواعيدك المتكررة اللاحقة. يرجى التواصل مع العيادة لإعادة الحجز."),
+        },
         ["NeedsRebooking"] = new()
         {
             ["en"] = ("Please rebook your appointment", "Your appointment at {#var#} on {#var#} at {#var#} cannot go ahead. Please contact the clinic to choose a new time."),
             ["hi"] = ("कृपया अपॉइंटमेंट दोबारा बुक करें", "{#var#} में {#var#} को {#var#} बजे की आपकी अपॉइंटमेंट नहीं हो सकेगी। नया समय चुनने के लिए क्लिनिक से संपर्क करें।"),
             ["ar"] = ("يرجى إعادة حجز الموعد", "تعذر إجراء موعدك في {#var#} بتاريخ {#var#} الساعة {#var#}. يرجى التواصل مع العيادة لاختيار موعد جديد."),
+        },
+        ["WaitlistOffer"] = new()
+        {
+            ["en"] = ("A slot is available", "A slot has opened at {#var#} on {#var#} at {#var#}. Please contact the clinic soon to take it."),
+            ["hi"] = ("एक स्लॉट उपलब्ध है", "{#var#} में {#var#} को {#var#} बजे एक स्लॉट खाली हुआ है। इसे लेने के लिए जल्द क्लिनिक से संपर्क करें।"),
+            ["ar"] = ("يوجد موعد متاح", "توفر موعد في {#var#} بتاريخ {#var#} الساعة {#var#}. يرجى التواصل مع العيادة قريباً لحجزه."),
         },
         ["Reminder"] = new()
         {

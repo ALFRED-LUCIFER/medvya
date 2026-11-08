@@ -13,9 +13,9 @@ export class RequestTimeoutError extends Error {
 const safeToRepeat = (init: RequestInit) =>
   ['GET', 'HEAD', undefined].includes(init.method?.toUpperCase()) || new Headers(init.headers).has('Idempotency-Key');
 
-async function attempt(url: string, init: RequestInit): Promise<Response> {
+async function attempt(url: string, { timeout = timeoutMs, ...init }: RequestInit & { timeout?: number }): Promise<Response> {
   const timer = new AbortController();
-  const id = setTimeout(() => timer.abort(), timeoutMs);
+  const id = setTimeout(() => timer.abort(), timeout);
   const signal = init.signal ? AbortSignal.any([init.signal, timer.signal]) : timer.signal;
   try {
     return await fetch(url, { credentials: 'same-origin', ...init, signal });
@@ -25,7 +25,8 @@ async function attempt(url: string, init: RequestInit): Promise<Response> {
   } finally { clearTimeout(id); }
 }
 
-export async function apiFetch(url: string, init: RequestInit = {}): Promise<Response> {
+/** `timeout` overrides the shared timeout for one call that is known to be slow (the set-up finish). */
+export async function apiFetch(url: string, init: RequestInit & { timeout?: number } = {}): Promise<Response> {
   const retries = safeToRepeat(init) ? maxRetries : 0;
   for (let n = 0; ; n++) {
     try {

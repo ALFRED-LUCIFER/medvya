@@ -43,6 +43,21 @@ public class PatientRulesTests
     }
 
     [Theory]
+    // #880: nothing visible is empty; NUL and bidi overrides are refused, not saved (NUL used to fail as a 500 in PostgreSQL).
+    [InlineData("\u200b\u200b", "required")]
+    [InlineData("Qa\u0000Tester", "format")]
+    [InlineData("Qa \u202eTester", "format")]
+    [InlineData("Qa \u2067Tester", "format")]
+    [InlineData("1234567", "format")]
+    public void ANameMustHaveVisibleLettersAndNoHiddenControls(string name, string code) =>
+        Assert.Contains(new ValidationError("fullName", code), Errors(IndiaBase with { FullName = name }));
+
+    [Fact]
+    public void ZeroWidthJoinersInsideAnIndicNameAreKept() => // Malayalam chillu forms are written with ZWJ
+        Assert.Equal("Lakshmi \u0d2e\u0d4d\u200d (synthetic)",
+            CountryRules.India.Validate(IndiaBase with { FullName = "Lakshmi \u0d2e\u0d4d\u200d (synthetic)" }, Today).Command.FullName);
+
+    [Theory]
     [InlineData("12345")]
     [InlineData("1234567")]
     [InlineData("ABCDEF")]
@@ -195,22 +210,34 @@ public class PatientRulesTests
     [InlineData("IN", "dq-10-4482", SearchKind.Mrn, "DQ-10-4482")]
     [InlineData("AE", "050 000 0201", SearchKind.Phone, "+971500000201")]
     [InlineData("AE", "فاطمة", SearchKind.Name, "فاطمة")]
+    [InlineData("IN", "98470 213", SearchKind.Number, "98470213")]      // part of a mobile number
+    [InlineData("IN", "000123", SearchKind.Number, "000123")]           // six digits: the registry tries it as an MRN first, then as a phone fragment
+    [InlineData("IN", "1234", SearchKind.Number, "1234")]               // four digits: a phone fragment, an MRN or an Aadhaar last 4
+    [InlineData("IN", "9100000000010", SearchKind.Number, "9100000000010")] // 13 of the 14 ABHA digits: only a phone fragment
+    [InlineData("IN", "0000 1111 2222", SearchKind.Identifier, "2222")] // a typed Aadhaar is cut to its last 4 here
+    [InlineData("AE", "784-1990-1234567", SearchKind.Number, "78419901234567")]
     public void DeskSearchReadsNamesPhonesMrnsAndIdentifiers(string country, string query, SearchKind kind, string? value)
     {
         var term = CountryRules.For(country).ParseSearch(query);
         Assert.Equal((kind, value), (term.Kind, term.Value));
     }
 
+    [Fact]
+    public void ATypedAadhaarIsSearchedByItsLastFourOnly()
+    {
+        var term = CountryRules.India.ParseSearch("0000 1111 2222");
+        Assert.Equal(new SearchTerm(SearchKind.Identifier, "2222", IdentifierScheme.AadhaarLast4), term);
+        Assert.DoesNotContain("0000", term.Value, StringComparison.Ordinal); // the rest is dropped, never carried further
+    }
+
     [Theory]
-    [InlineData("IN", "9100000000010", "full_number_required")] // 13 of the 14 ABHA digits
-    [InlineData("IN", "98470 213", "full_number_required")]     // part of a mobile number
-    [InlineData("IN", "0000 1111 2222", "full_number_required")] // a full Aadhaar is never a search key
-    [InlineData("AE", "784-1990-1234567", "full_number_required")]
+    [InlineData("IN", "1234 5678 9012 3456", "full_number_required")] // 16 digits: no phone fragment or ID this long
+    [InlineData("AE", "1234567890123456", "full_number_required")]
     [InlineData("IN", "M", "too_short")]
     [InlineData("IN", "-", "too_short")]   // separators only: nothing to look up (was a 500)
     [InlineData("AE", "( )", "too_short")]
     [InlineData("IN", "+", "too_short")]
-    public void PartialNumbersAreRefusedNotPartiallyMatched(string country, string query, string code) =>
+    public void TooLongNumbersAndEmptySearchesAreRefused(string country, string query, string code) =>
         Assert.Equal([new ValidationError("query", code)],
             Assert.Throws<PatientValidationException>(() => CountryRules.For(country).ParseSearch(query)).Errors);
 

@@ -29,7 +29,7 @@ public sealed class PostgresFixture : IAsyncLifetime
 
     // Every role becomes a login in the fixture, standing in for the Entra identity mapped to it in Azure.
     static readonly string[] Roles = ["medvya_app", "medvya_migrator", "medvya_reporting", "medvya_tenancy", "medvya_audit", "medvya_identity",
-        "medvya_patients", "medvya_billing", "medvya_scheduling", "medvya_leads", "medvya_notifications", "medvya_jobs"];
+        "medvya_patients", "medvya_billing", "medvya_scheduling", "medvya_leads", "medvya_notifications", "medvya_encounters", "medvya_jobs", "medvya_platform"];
 
     /// <summary>The container superuser: the administrator's step, bulk loads and the restore-drill counts. Bypasses row-level security.</summary>
     // Command Timeout 300: the 150,000-row audit seed runs the per-row hash-chain trigger and took longer than Npgsql's 30 s default on a shared CI runner.
@@ -38,7 +38,8 @@ public sealed class PostgresFixture : IAsyncLifetime
     /// <summary>The running application: login medvya_app.</summary>
     public string ConnectionString => As("medvya_app");
 
-    string As(string role) => new NpgsqlConnectionStringBuilder(AdminConnectionString) { Username = role, Password = LoginPassword }.ConnectionString;
+    /// <summary>A login holding only <paramref name="role"/> (e.g. "medvya_platform", the platform console host's).</summary>
+    public string As(string role) => new NpgsqlConnectionStringBuilder(AdminConnectionString) { Username = role, Password = LoginPassword }.ConnectionString;
 
     /// <summary>"app_user" is medvya_app, "migrator_user" medvya_migrator, "x_user" medvya_x, and "dbo" the superuser.</summary>
     string RoleConnection(string user) => user switch

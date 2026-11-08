@@ -26,6 +26,7 @@ public static class PatientsModule
             .AddScoped<IPatientMerges, PatientMerges>()
             .AddScoped<IPatientConsents, PatientConsents>()
             .AddScoped<IPatientDirectory, PatientDirectory>()
+            .AddScoped<Medvya.Tenancy.Application.ICareRelationshipSource, RegistrationCareRelationship>()
             .AddScoped<IPatientContacts, PatientContacts>()
             .AddNationalIdColumns(connectionString);
     }

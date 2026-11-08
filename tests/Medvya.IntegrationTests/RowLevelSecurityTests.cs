@@ -44,6 +44,30 @@ public class RowLevelSecurityTests(PostgresFixture sql) : IClassFixture<Postgres
         Assert.Equal(IdsOnly.Order(), unprotected.Order().ToArray()); // exactly the documented exceptions, nothing else
     }
 
+    /// <summary>
+    /// MDV-P0-042: roles.sql cannot ALTER the attributes on Azure (the administrator is not a superuser), so it checks them instead. A
+    /// medvya role that has gained one stops the administrator's step instead of passing silently.
+    /// </summary>
+    [Fact]
+    public async Task TheRolesStepStopsWhenAMedvyaRoleHasGainedAnAttribute()
+    {
+        // A fresh connection each time: the script runs in its own transaction, which the refusal leaves aborted.
+        async Task<NpgsqlConnection> Admin() { var c = new NpgsqlConnection(sql.AdminConnectionString); await c.OpenAsync(); return c; }
+        await using (var c = await Admin()) await new NpgsqlCommand("ALTER ROLE medvya_reporting CREATEDB", c).ExecuteNonQueryAsync();
+        try
+        {
+            await using var c = await Admin();
+            var refused = await Assert.ThrowsAsync<PostgresException>(() => Medvya.DbMigrate.DatabaseMigrator.ApplyRolesAsync(c));
+            Assert.Contains("medvya_reporting", refused.MessageText, StringComparison.Ordinal);
+        }
+        finally
+        {
+            await using var c = await Admin();
+            await new NpgsqlCommand("ALTER ROLE medvya_reporting NOCREATEDB", c).ExecuteNonQueryAsync();
+        }
+        await using (var c = await Admin()) await Medvya.DbMigrate.DatabaseMigrator.ApplyRolesAsync(c); // clean again: the step passes
+    }
+
     [Fact]
     public async Task NoMedvyaRoleCanBypassRowLevelSecurityOrChangeTheSchema()
     {

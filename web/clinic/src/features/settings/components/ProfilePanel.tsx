@@ -1,5 +1,5 @@
 import { useI18n } from '@medvya/i18n';
-import { Button, Input, Textarea } from '@medvya/ui';
+import { Button, buttonVariants, Input, Textarea } from '@medvya/ui';
 import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import type { ProfileForm } from '../domain/settings';
@@ -15,6 +15,7 @@ type Props = {
   saving: boolean;
   saved: boolean;
   saveFailed: boolean;
+  nameHasLink: boolean;
   onSubmit: FormEventHandler<HTMLFormElement>;
   logoUrl: string | null;
   hasLogo: boolean;
@@ -37,7 +38,7 @@ export default function ProfilePanel(p: Props) {
     <div className="flex flex-col gap-4">
       <Section title={t('settings.profile.title')} intro={t('settings.profile.intro')}>
         <form noValidate onSubmit={p.onSubmit} className="grid gap-4 sm:grid-cols-2">
-          <Field id="profile-name" label={t('settings.profile.name')} error={errors.name && t('settings.error.required')} className="sm:col-span-2">
+          <Field id="profile-name" label={t('settings.profile.name')} error={p.nameHasLink ? t('settings.error.link') : errors.name && t('settings.error.required')} className="sm:col-span-2">
             <Input id="profile-name" className="h-11" autoComplete="organization" {...describedBy('profile-name', !!errors.name)} {...p.form.register('name')} />
           </Field>
           <Field id="profile-address" label={t('settings.profile.address')} error={errors.address && t('settings.error.tooLong')} className="sm:col-span-2">
@@ -45,6 +46,9 @@ export default function ProfilePanel(p: Props) {
           </Field>
           <Field id="profile-registration" label={t('settings.profile.registration')} hint={t('settings.profile.registrationHint')} error={errors.registrationNumber && t('settings.error.tooLong')}>
             <Input id="profile-registration" className="h-11" autoComplete="off" {...describedBy('profile-registration', !!errors.registrationNumber, true)} {...p.form.register('registrationNumber')} />
+          </Field>
+          <Field id="profile-registration-expires" label={t('settings.profile.registrationExpires')} hint={t('settings.profile.registrationExpiresHint')}>
+            <Input id="profile-registration-expires" type="date" dir="ltr" className="h-11" {...describedBy('profile-registration-expires', false, true)} {...p.form.register('registrationExpiresOn')} />
           </Field>
           <Field id="profile-tax" label={t('settings.profile.tax')} hint={t('settings.profile.taxHint')} error={errors.taxNumber && t('settings.error.tooLong')}>
             <Input id="profile-tax" className="h-11" autoComplete="off" {...describedBy('profile-tax', !!errors.taxNumber, true)} {...p.form.register('taxNumber')} />
@@ -58,7 +62,7 @@ export default function ProfilePanel(p: Props) {
           <div className="flex flex-wrap items-center gap-3 sm:col-span-2" aria-live="polite">
             <Button type="submit" className="min-h-11" loading={p.saving}>{t('settings.save')}</Button>
             {p.saved && <span>{t('settings.saved')}</span>}
-            {p.saveFailed && <span role="alert" className={fieldError}>{t('settings.saveFailed')}</span>}
+            {p.saveFailed && !p.nameHasLink && <span role="alert" className={fieldError}>{t('settings.saveFailed')}</span>}
           </div>
         </form>
       </Section>
@@ -70,8 +74,13 @@ export default function ProfilePanel(p: Props) {
         </div>
         <div className="flex flex-wrap items-end gap-3">
           <Field id="logo-file" label={t('settings.logo.choose')} hint={t('settings.logo.hint')} error={logoError} className="min-w-60">
-            <Input id="logo-file" type="file" accept="image/png,image/jpeg" className="h-auto min-h-11 py-2" disabled={p.uploading}
+            {/* #896: the browser's own file button is in the browser's language, not the app's; a translated button stands in for it.
+                A bare input: the house Input's full width outlasts sr-only, which made the page scroll sideways. */}
+            <input id="logo-file" type="file" accept="image/png,image/jpeg" className="peer sr-only" disabled={p.uploading}
               {...describedBy('logo-file', !!logoError, true)} onChange={e => { p.onLogo(e.currentTarget.files?.[0]); e.currentTarget.value = ''; }} />
+            <label htmlFor="logo-file" className={buttonVariants({ variant: 'outline', className: 'min-h-11 w-fit cursor-pointer peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ring peer-disabled:pointer-events-none peer-disabled:opacity-50' })}>
+              {t('settings.logo.pick')}
+            </label>
           </Field>
           {p.hasLogo && <Button type="button" variant="outline" className="min-h-11" loading={p.removing} onClick={p.onRemoveLogo}>{t('settings.logo.remove')}</Button>}
         </div>

@@ -16,6 +16,7 @@ type Props = {
   saving: boolean;
   saved: boolean;
   saveFailed: boolean;
+  senderNameError: 'link' | 'tooLong' | null;
   onSubmit: FormEventHandler<HTMLFormElement>;
 };
 
@@ -66,6 +67,10 @@ export default function NotificationsPanel(p: Props) {
               <p id="notifications-whatsapp" className="text-sm text-muted-foreground">{t('settings.notifications.whatsappLater')}</p>
             </li>
           </ul>
+          <Field id="sender-name" label={t('settings.notifications.senderName')} hint={t('settings.notifications.senderNameHint')}
+            error={(errors.senderName || p.senderNameError === 'tooLong') ? t('settings.error.tooLong') : p.senderNameError === 'link' ? t('settings.error.link') : undefined}>
+            <Input id="sender-name" className="h-11" maxLength={60} autoComplete="organization" {...describedBy('sender-name', !!errors.senderName || !!p.senderNameError, true)} {...p.form.register('senderName')} />
+          </Field>
           <p className="text-sm text-muted-foreground">{t('settings.notifications.senderNote')}</p>
         </Section>
 

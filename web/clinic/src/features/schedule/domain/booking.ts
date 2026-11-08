@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { VisitType } from './schedule';
+import { localDate } from './changes';
 
 // Mirrors src/Modules/Scheduling/Medvya.Scheduling.Domain/Appointment.cs and IBookingService.cs (the server is the authority).
 export const visitTypes = ['FollowUp', 'NewConsultation', 'Procedure', 'Teleconsult'] as const satisfies readonly VisitType[];
@@ -28,7 +29,38 @@ export type BookingForm = z.infer<typeof bookingSchema>;
 export const emptyBooking: BookingForm = { patientId: '', reasonCategory: 'General', reasonText: '', channel: 'InPerson' };
 
 /** 409 codes from the API (SlotUnavailableException); anything else is a generic failure. */
-export const slotErrors = ['being_booked', 'slot_unavailable', 'not_bookable', 'in_past', 'hold_expired', 'busy', 'closed', 'terms_not_accepted'] as const;
+export const slotErrors = ['being_booked', 'slot_unavailable', 'not_bookable', 'in_past', 'hold_expired', 'busy', 'closed', 'terms_not_accepted', 'series_not_booked'] as const;
 export type SlotError = (typeof slotErrors)[number] | 'failed';
 export const slotError = (code: string | undefined): SlotError =>
   (slotErrors as readonly string[]).includes(code ?? '') ? (code as SlotError) : 'failed';
+
+/**
+ * Registering a new patient from the booking panel (MDV-P1-021): the slot travels to registration and back in the address as an
+ * opaque calendar id, a time and a visit type (never patient data); registration adds the new patient's opaque id on the way back.
+ */
+const slotKeys = ['date', 'view', 'calendar', 'start', 'visitType'] as const;
+
+/** The query that opens this slot's day and brings the booking panel back to it. */
+export const slotAddress = (choice: SlotChoice, timeZone: string) =>
+  new URLSearchParams({ date: localDate(choice.start, timeZone), view: 'day', calendar: choice.calendarId, start: choice.start, visitType: choice.visitType });
+
+/** The slot part of an address (registration carries it along untouched), or null when it names no slot. */
+export function pickSlot(params: URLSearchParams): URLSearchParams | null {
+  if (!params.get('calendar')) return null;
+  return new URLSearchParams(slotKeys.flatMap(k => { const v = params.get(k); return v ? [[k, v]] : []; }));
+}
+
+/** The slot and patient to resume booking with, or null when the address does not name a valid one. */
+export function readSlotReturn(params: URLSearchParams): (Omit<SlotChoice, 'calendarName'> & { patientId: string }) | null {
+  const [calendarId, start, visitType, patientId] = ['calendar', 'start', 'visitType', 'patient'].map(k => params.get(k) ?? '');
+  const valid = !!calendarId && z.uuid().safeParse(patientId).success && z.iso.datetime({ offset: true }).safeParse(start).success
+    && (visitTypes as readonly string[]).includes(visitType!);
+  return valid ? { calendarId: calendarId!, start: start!, visitType: visitType as VisitType, patientId: patientId! } : null;
+}
+
+/** The address once the booking has resumed: the day and view stay, the slot and patient go. */
+export function withoutSlotReturn(params: URLSearchParams): URLSearchParams {
+  const out = new URLSearchParams(params);
+  for (const k of ['calendar', 'start', 'visitType', 'patient']) out.delete(k);
+  return out;
+}

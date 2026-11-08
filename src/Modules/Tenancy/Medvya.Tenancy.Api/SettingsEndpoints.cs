@@ -1,6 +1,8 @@
 using Medvya.Scheduling.Application;
 using Medvya.Tenancy.Application;
+using Medvya.Tenancy.Domain;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace Medvya.Tenancy.Api;
 
@@ -18,6 +20,7 @@ public static class SettingsEndpoints
     public sealed record ClosureBody(DateOnly Date, string? Name);
     public sealed record ClosureWithVisits(ClosureView Closure, IReadOnlyList<AppointmentToMove> AppointmentsToMove);
     public sealed record LogoLink(Uri Url, DateTimeOffset ExpiresAt);
+    public sealed record ClinicalAccessBody(ClinicalAccessPolicy Policy);
 
     public static WebApplication MapPracticeSettings(this WebApplication app)
     {
@@ -64,6 +67,11 @@ public static class SettingsEndpoints
         g.MapGet("/logo", async ([FromServices] IPracticeSettings s, CancellationToken ct) =>
             await s.LogoLinkAsync(LogoLinkLifetime, ct) is { } url ? Results.Ok(new LogoLink(url, DateTimeOffset.UtcNow + LogoLinkLifetime)) : Results.NotFound());
 
+        // Which clinicians treat the facility's patients (MDV-P2-024): every clinician of it (default) or only those assigned.
+        g.MapGet("/clinical-access", async ([FromServices] IPracticeSettings s, CancellationToken ct) => Results.Ok(new ClinicalAccessBody(await s.GetClinicalAccessAsync(ct))));
+        g.MapPut("/clinical-access", async ([FromBody] ClinicalAccessBody body, [FromServices] IPracticeSettings s, CancellationToken ct) =>
+            Results.Ok(new ClinicalAccessBody(await s.SaveClinicalAccessAsync(body.Policy, ct))));
+
         // Terms of Service and DPA (MDV-P1-019): anyone who administers the practice can see the status; only an owner (practice admin or
         // solo doctor) can accept, which the service checks. Until accepted, booking and sending are refused (RequireAcceptedTerms).
         g.MapGet("/terms", async ([FromServices] ITermsAcceptance terms, CancellationToken ct) => Results.Ok(await terms.StatusAsync(ct)));
@@ -92,8 +100,21 @@ public static class SettingsEndpoints
         {
             return EmailFailed;
         }
+        catch (InvitationLimitException)
+        {
+            return TooManyInvitations;
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // #889: another administrator saved the same settings meanwhile; nothing was saved.
+            return Results.Problem(statusCode: StatusCodes.Status409Conflict, title: "These settings were changed by someone else. Reload and try again.",
+                extensions: new Dictionary<string, object?> { ["code"] = "changed" });
+        }
     }
 
     /// <summary>502 with a stable code: the screen says the invitation email could not be sent and nothing was saved, not a generic failure.</summary>
+    /// <summary>429 with a stable code when the practice has sent its hourly allowance of invitations (#886).</summary>
+    public static IResult TooManyInvitations => Results.Problem(statusCode: StatusCodes.Status429TooManyRequests, title: "Too many invitations in the last hour.", extensions: new Dictionary<string, object?> { ["code"] = "invitation_limit" });
+
     public static IResult EmailFailed => Results.Problem(statusCode: StatusCodes.Status502BadGateway, title: "The invitation email could not be sent.", extensions: new Dictionary<string, object?> { ["code"] = "email_failed" });
 }

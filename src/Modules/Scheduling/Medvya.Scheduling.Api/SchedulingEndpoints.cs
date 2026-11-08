@@ -24,7 +24,7 @@ public static class SchedulingEndpoints
 
         schedule.MapGet("/", (Guid? facilityId, DateOnly? date, [FromServices] IScheduleService service, CancellationToken ct) =>
                 service.GetDayAsync(facilityId ?? Guid.Empty, date, ct))
-            .AuditedWithErrors("schedule.read", "schedule");
+            .AuditedWithErrors("schedule.read", "schedule", window: AuditWindow.Repeated); // refetched after every change at the desk
 
         // Printing is a read of patient data that leaves the system: one audit row per print, with who printed it (MDV-P1-050).
         schedule.MapPost("/print", (PrintDaySheet command, [FromServices] IScheduleService service, CancellationToken ct) =>
@@ -33,7 +33,7 @@ public static class SchedulingEndpoints
 
         schedule.MapGet("/week", (Guid? facilityId, Guid? calendarId, DateOnly? date, [FromServices] IScheduleService service, CancellationToken ct) =>
                 service.GetWeekAsync(facilityId ?? Guid.Empty, calendarId ?? Guid.Empty, date, ct))
-            .AuditedWithErrors("schedule.read", "schedule");
+            .AuditedWithErrors("schedule.read", "schedule", window: AuditWindow.Repeated);
 
         schedule.MapGet("/templates", (Guid? facilityId, [FromServices] IScheduleService service, CancellationToken ct) =>
                 service.ListTemplatesAsync(facilityId ?? Guid.Empty, ct))
@@ -54,9 +54,9 @@ public static class SchedulingEndpoints
         schedule.MapPut("/exceptions/{id:guid}", (Guid id, SaveAdjustment command, [FromServices] IScheduleExceptionService service, CancellationToken ct) =>
                 service.SaveAsync(command with { ReplacesId = id }, ct))
             .AuditedWriteWithErrors(SchedulingAudit.ExceptionUpdate, SchedulingAudit.ExceptionResource, SchedulingAudit.Operations);
-        schedule.MapDelete("/exceptions/{id:guid}", async (Guid id, Guid? facilityId, [FromServices] IScheduleExceptionService service, CancellationToken ct) =>
+        schedule.MapDelete("/exceptions/{id:guid}", async (Guid id, Guid? facilityId, string? version, [FromServices] IScheduleExceptionService service, CancellationToken ct) =>
             {
-                await service.DeleteAsync(facilityId ?? Guid.Empty, id, ct);
+                await service.DeleteAsync(facilityId ?? Guid.Empty, id, version, ct);
                 return Results.NoContent();
             })
             .AuditedWriteWithErrors(SchedulingAudit.ExceptionDelete, SchedulingAudit.ExceptionResource, SchedulingAudit.Operations);
@@ -109,6 +109,10 @@ public static class SchedulingEndpoints
         appointments.MapPost("/{appointmentId:guid}/no-show", (Guid appointmentId, [FromServices] IBookingService service, CancellationToken ct) =>
                 service.MarkNoShowAsync(appointmentId, ct))
             .AuditedWriteWithErrors(SchedulingAudit.NoShow, SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment);
+        // The visit's moves for the appointment panel (MDV-P1-024): names, slots and times, no patient data.
+        appointments.MapGet("/{appointmentId:guid}/history", (Guid appointmentId, [FromServices] IBookingService service, CancellationToken ct) =>
+                service.HistoryAsync(appointmentId, ct))
+            .AuditedWithErrors("appointment.history.read", SchedulingAudit.AppointmentResource);
         // The reception board (MDV-P1-028). A repeated check-in or move returns the visit unchanged; any other move is a 409.
         appointments.MapPost("/{appointmentId:guid}/check-in", (Guid appointmentId, CheckIn? command, [FromServices] IFrontDeskService service, CancellationToken ct) =>
                 service.CheckInAsync(appointmentId, command ?? new CheckIn(), ct))
@@ -120,10 +124,31 @@ public static class SchedulingEndpoints
                 service.MoveAsync(appointmentId, command, ct))
             .AuditedWriteWithErrors(SchedulingAudit.Status, SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment);
 
+        // Waitlist (MDV-P1-027): the use cases need full booking access at the entry's facility. An offer holds a slot and messages the patient; accepting books it.
+        var waitlist = app.MapGroup("/v1/waitlist").RequireAuthorization();
+        waitlist.MapGet("/", (Guid? facilityId, [FromServices] IWaitlistService service, CancellationToken ct) => service.ListAsync(facilityId ?? Guid.Empty, ct))
+            .AuditedWithErrors("waitlist.read", SchedulingAudit.WaitlistResource, window: AuditWindow.Repeated); // refetched after every change at the desk
+        waitlist.MapPost("/", (AddToWaitlist command, [FromServices] IWaitlistService service, CancellationToken ct) => service.AddAsync(command, ct))
+            .AuditedWriteWithErrors(SchedulingAudit.WaitlistAdd, SchedulingAudit.WaitlistResource, SchedulingAudit.Treatment);
+        waitlist.MapPost("/{id:guid}/offer", (Guid id, OfferSlot command, [FromServices] IWaitlistService service, CancellationToken ct) => service.OfferAsync(id, command, ct))
+            .AuditedWriteWithErrors(SchedulingAudit.WaitlistOffer, SchedulingAudit.WaitlistResource, SchedulingAudit.Treatment)
+            .RequireAcceptedTerms(); // it messages a patient and holds a slot
+        waitlist.MapPost("/{id:guid}/decline", (Guid id, [FromServices] IWaitlistService service, CancellationToken ct) => service.DeclineAsync(id, ct))
+            .AuditedWriteWithErrors(SchedulingAudit.WaitlistDecline, SchedulingAudit.WaitlistResource, SchedulingAudit.Treatment);
+        waitlist.MapPost("/{id:guid}/accept", (Guid id, [FromServices] IWaitlistService service, CancellationToken ct) => service.AcceptAsync(id, ct))
+            .AuditedWriteWithErrors(SchedulingAudit.WaitlistAccept, SchedulingAudit.WaitlistResource, SchedulingAudit.Treatment)
+            .RequireAcceptedTerms();
+        waitlist.MapDelete("/{id:guid}", async (Guid id, [FromServices] IWaitlistService service, CancellationToken ct) =>
+            {
+                await service.RemoveAsync(id, ct);
+                return Results.NoContent();
+            })
+            .AuditedWriteWithErrors(SchedulingAudit.WaitlistRemove, SchedulingAudit.WaitlistResource, SchedulingAudit.Treatment);
+
         var frontDesk = app.MapGroup("/v1/front-desk").RequireAuthorization();
         frontDesk.MapGet("/board", (Guid? facilityId, [FromServices] IFrontDeskService service, CancellationToken ct) =>
                 service.GetBoardAsync(facilityId ?? Guid.Empty, ct))
-            .AuditedWithErrors("front_desk.board.read", "appointment", window: AuditWindow.Board); // a board refetches on every live update
+            .AuditedWithErrors("front_desk.board.read", "appointment", window: AuditWindow.Repeated); // a board refetches on every live update
         // Clinic overview (D-04, MDV-P1-030): doctors' load and delay, the shared waiting room.
         frontDesk.MapGet("/overview", (Guid? facilityId, [FromServices] IFrontDeskService service, CancellationToken ct) =>
                 service.GetOverviewAsync(facilityId ?? Guid.Empty, ct))
@@ -132,6 +157,13 @@ public static class SchedulingEndpoints
         app.MapHub<BoardHub>(BoardHub.Path)
             .RequireCapability(Capability.CheckInQueue, Access.Read, Access.Full)
             .AuditRefusals(BoardHub.ConnectAction, SchedulingAudit.AppointmentResource);
+
+        // Pilot metrics for the owner (MDV-P1-041): aggregates only; the use case checks practice configuration at the facility.
+        schedule.MapGet("/metrics", (Guid? facilityId, int? days, [FromServices] IPilotMetrics metrics, CancellationToken ct) =>
+                metrics.GetAsync(facilityId ?? Guid.Empty, days ?? 14, ct))
+            .AuditedWithErrors("pilot_metrics.read", SchedulingAudit.MetricsResource, SchedulingAudit.Operations);
+        schedule.MapPost("/metrics/baselines", (RecordBaseline command, [FromServices] IPilotMetrics metrics, CancellationToken ct) => metrics.RecordBaselineAsync(command, ct))
+            .AuditedWriteWithErrors(SchedulingAudit.BaselineRecord, SchedulingAudit.MetricsResource, SchedulingAudit.Operations);
 
         // Waiting-room TVs (MDV-P1-031). The TV signs in as a display (QueueDisplayAuth), never as staff, and reads tokens only.
         var queue = app.MapGroup("/v1/queue");
@@ -204,6 +236,10 @@ public static class SchedulingEndpoints
         catch (AppointmentNotFoundException)
         {
             return Results.Problem(statusCode: StatusCodes.Status404NotFound, title: "Appointment not found");
+        }
+        catch (WaitlistNotFoundException)
+        {
+            return Results.Problem(statusCode: StatusCodes.Status404NotFound, title: "Waitlist entry not found");
         }
         catch (DisplayNotFoundException)
         {

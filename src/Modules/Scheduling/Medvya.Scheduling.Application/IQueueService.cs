@@ -47,8 +47,12 @@ public interface IQueueService
     /// <summary>The live display with this token hash in the current tenant, or null when it is unknown or revoked.</summary>
     Task<DisplaySession?> FindDisplayAsync(byte[] tokenHash, CancellationToken cancellationToken = default);
 
-    /// <summary>As <see cref="FindDisplayAsync"/>, and audits the pairing of a TV with the token (the display is the actor).</summary>
-    Task<DisplaySession?> PairDisplayAsync(byte[] tokenHash, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// Pairs one TV with the display link (#884): the link's hash is replaced by <paramref name="screenHash"/>, the hash of the secret only
+    /// that TV's cookie holds, so the link works once and a photographed link pairs nothing. Audited (the display is the actor).
+    /// Null when the link is unknown, revoked or already used.
+    /// </summary>
+    Task<DisplaySession?> PairDisplayAsync(byte[] linkHash, byte[] screenHash, CancellationToken cancellationToken = default);
 }
 
 /// <summary>Real-time groups of queue TVs: opaque ids only, the tenant part of the name, so a group never spans tenants.</summary>

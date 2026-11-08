@@ -84,7 +84,7 @@ test('filters reset to page one and reach the server as a filter, not as text', 
   await expect.poll(() => searches.at(-1)?.postDataJSON()).toEqual({ query: null, filter: 'Incomplete', page: 1 });
 });
 
-test('no match offers registration; a partial number and a refused role explain themselves', async ({ page }) => {
+test('no match offers registration; a number that is too long and a refused role explain themselves', async ({ page }) => {
   await deskWith(page, body =>
     body.query === '98470 213' ? { status: 400, json: { errors: [{ field: 'query', code: 'full_number_required' }] } }
     : body.query === 'forbidden' ? { status: 403, json: {} }
@@ -99,7 +99,7 @@ test('no match offers registration; a partial number and a refused role explain 
 
   await search.fill('98470 213');
   await search.press('Enter');
-  await expect(page.getByText('Enter the full phone number or ID. Partial numbers are not searched.')).toBeVisible();
+  await expect(page.getByText('This number is too long to search. Enter part of the phone number, the MRN or the Aadhaar number.')).toBeVisible();
   await expect(search).toHaveAttribute('aria-invalid', 'true');
 
   await search.fill('forbidden');

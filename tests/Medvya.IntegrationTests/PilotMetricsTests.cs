@@ -1,0 +1,154 @@
+using Medvya.Scheduling.Application;
+using Medvya.Scheduling.Domain;
+using Medvya.Scheduling.Infrastructure;
+using Medvya.Scheduling.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using static Medvya.IntegrationTests.SchedulingHarness;
+
+namespace Medvya.IntegrationTests;
+
+/// <summary>
+/// MDV-P1-041 on real PostgreSQL: the owner's pilot metrics (median check-in of returning patients, no-show rate, the database's
+/// double-booking refusals) from what the desk already does, baselines with method and dates, practice configuration only, and
+/// another tenant sees none of it. SAFETY: mutation check: dropping CheckInMs from the status event, the "first &lt; c.Start" returning
+/// rule, the NoShow count, the conflict write in DoctorDayTransaction or the CanConfigure check each fails a test here.
+/// </summary>
+public sealed class PilotMetricsTests(PostgresFixture sql) : IClassFixture<PostgresFixture>, IAsyncLifetime
+{
+    readonly SchedulingHarness h = new(sql);
+
+    public async Task InitializeAsync()
+    {
+        await h.SeedAsync();
+        await h.DoctorTemplateAsync();
+    }
+
+    public Task DisposeAsync() => h.CloseAsync();
+
+    IPilotMetrics Metrics(Guid user) => h.Get<IPilotMetrics>(user);
+
+    [Fact]
+    public async Task CheckInMedianCountsReturningPatientsAndNoShowsAgainstVisitsAttended()
+    {
+        var first = await h.BookAsync(9);                       // Meera's first visit: not returning
+        var second = await h.BookAsync(9, 20);                  // Meera again: returning
+        var third = await h.BookAsync(9, 40);                   // returning
+        var other = await h.BookAsync(10, 0, h.SecondPatient);  // first visit of another patient
+        var missed = await h.BookAsync(10, 20);
+        await h.BookAsync(10, 40);                              // still booked, outcome unknown: in neither number
+        h.Clock.Advance(At(10, 30) - MondayMorning);
+        var desk = h.FrontDesk(h.Reception);
+        await desk.CheckInAsync(first.Id, new CheckIn { ElapsedMs = 80_000 });
+        await desk.CheckInAsync(second.Id, new CheckIn { ElapsedMs = 30_000 });
+        await desk.CheckInAsync(third.Id, new CheckIn { ElapsedMs = 50_000 });
+        await desk.CheckInAsync(other.Id, new CheckIn { ElapsedMs = 90_000 });
+        await h.Booking(h.Reception).MarkNoShowAsync(missed.Id);
+        h.Clock.Advance(TimeSpan.FromMinutes(20));
+
+        var m = await Metrics(h.Admin).GetAsync(h.Facility, 14);
+        Assert.Equal(new CheckInMetric(40, 2, 65, 4, 60), m.CheckIn);
+        Assert.Equal(new NoShowMetric(1, 4, 20), m.NoShows);
+        Assert.Equal((0, h.Clock.GetUtcNow()), (m.DoubleBookingRefusals, m.To));
+        Assert.Empty(m.Baselines);
+        var elsewhere = await Metrics(h.Elsewhere).GetAsync(h.OtherFacility, 14); // the other location's admin: none of Adyar's visits
+        Assert.Equal((0, 0, 0), (elsewhere.CheckIn.Count, elsewhere.NoShows.NoShows, elsewhere.NoShows.Attended));
+    }
+
+    [Fact]
+    public async Task ADoubleBookingTheDatabaseRefusesIsCounted()
+    {
+        var booked = await h.BookAsync(10);
+        var scope = h.Get<IServiceProvider>(h.Reception);
+        var db = scope.GetRequiredService<SchedulingDbContext>();
+        // Past the service's checks, as a bug or a lost race would be: only the SCHEDULE_SLOT unique index is left to refuse it.
+        var code = (await Assert.ThrowsAsync<SlotUnavailableException>(() => scope.GetRequiredService<DoctorDayTransaction>().RunAsync([(h.Doctor, Monday)], async () =>
+        {
+            var twin = new Appointment
+            {
+                Id = Guid.NewGuid(), TenantId = h.Tenant, FacilityId = h.Facility, CalendarId = h.Doctor, CalendarKind = CalendarKind.Doctor, PatientId = h.SecondPatient,
+                VisitType = VisitType.FollowUp, Start = booked.Start, End = booked.End, State = AppointmentState.Booked, BookedAt = MondayMorning, ChangedAt = MondayMorning,
+            };
+            db.Appointments.Add(twin);
+            db.ScheduleSlots.AddRange(ScheduleSlot.For(twin));
+            await db.SaveChangesAsync();
+            return twin;
+        }, CancellationToken.None))).Code;
+        Assert.Equal("slot_unavailable", code);
+        h.Clock.Advance(TimeSpan.FromMinutes(1));
+
+        Assert.Equal(1, (await Metrics(h.Admin).GetAsync(h.Facility, 14)).DoubleBookingRefusals);
+        Assert.Equal(0, (await Metrics(h.Elsewhere).GetAsync(h.OtherFacility, 14)).DoubleBookingRefusals);
+        await using var check = sql.Scheduling(h.Tenant);
+        Assert.Equal(1, await check.Appointments.CountAsync()); // nothing of the refused booking was kept
+    }
+
+    [Fact]
+    public async Task BaselinesKeepMethodAndDatesAndTheNewestPerMetricIsShown()
+    {
+        RecordBaseline Noshow(int value, string method) => new()
+        {
+            FacilityId = h.Facility, Metric = PilotMetric.NoShowPercent, Value = value, Method = method, FromDate = new(2026, 10, 5), ToDate = new(2026, 10, 18),
+        };
+        await Metrics(h.Doctor).RecordBaselineAsync(Noshow(18, "Paper register count"));
+        h.Clock.Advance(TimeSpan.FromMinutes(5));
+        await Metrics(h.Admin).RecordBaselineAsync(Noshow(16, "  Paper register, recounted  "));
+        await Metrics(h.Admin).RecordBaselineAsync(new() { FacilityId = h.Facility, Metric = PilotMetric.CheckInSeconds, Value = 140, Method = "Stopwatch, 20 patients", FromDate = new(2026, 10, 12), ToDate = new(2026, 10, 12) });
+
+        var baselines = (await Metrics(h.Admin).GetAsync(h.Facility, 14)).Baselines;
+        Assert.Equal([PilotMetric.CheckInSeconds, PilotMetric.NoShowPercent], baselines.Select(b => b.Metric));
+        Assert.Equal((16, "Paper register, recounted", new DateOnly(2026, 10, 5), new DateOnly(2026, 10, 18)), (baselines[1].Value, baselines[1].Method, baselines[1].FromDate, baselines[1].ToDate));
+        await using var db = sql.Scheduling(h.Tenant);
+        Assert.Equal(3, await db.MetricBaselines.CountAsync()); // append-only: the first count is kept
+    }
+
+    [Fact]
+    public async Task ABaselineNeedsEveryFieldInRange()
+    {
+        var refused = await Assert.ThrowsAsync<SchedulingValidationException>(() => Metrics(h.Admin).RecordBaselineAsync(new()
+        {
+            FacilityId = h.Facility, Metric = PilotMetric.ReminderDeliveryPercent, Value = 120, Method = " ", FromDate = new(2026, 10, 18), ToDate = new(2026, 10, 5),
+        }));
+        Assert.Equal(["value:out_of_range", "method:required", "toDate:before_from"], refused.Errors.Select(e => $"{e.Field}:{e.Code}"));
+        refused = await Assert.ThrowsAsync<SchedulingValidationException>(() => Metrics(h.Admin).RecordBaselineAsync(new() { FacilityId = h.Facility }));
+        Assert.Equal(["metric", "value", "method", "fromDate", "toDate"], refused.Errors.Select(e => e.Field));
+    }
+
+    [Fact]
+    public async Task OnlyPracticeConfigurationAtTheFacilitySeesOrRecordsMetrics()
+    {
+        var baseline = new RecordBaseline { FacilityId = h.Facility, Metric = PilotMetric.DoubleBookings, Value = 2, Method = "Complaints book", FromDate = new(2026, 10, 5), ToDate = new(2026, 10, 18) };
+        foreach (var user in new[] { h.Reception, h.Nurse, h.SecondDoctor, h.Elsewhere })
+        {
+            await Assert.ThrowsAsync<SchedulingAccessDeniedException>(() => Metrics(user).GetAsync(h.Facility, 14));
+            await Assert.ThrowsAsync<SchedulingAccessDeniedException>(() => Metrics(user).RecordBaselineAsync(baseline));
+        }
+        await Metrics(h.HospitalIt).RecordBaselineAsync(baseline); // Staff, roles, integrations at Config
+        Assert.Single((await Metrics(h.Doctor).GetAsync(h.Facility, 14)).Baselines);
+        Assert.Empty((await Metrics(h.Elsewhere).GetAsync(h.OtherFacility, 14)).Baselines);
+    }
+
+    [Fact]
+    public async Task AnotherTenantSeesNoneOfTheMetricRows()
+    {
+        await Metrics(h.Admin).RecordBaselineAsync(new() { FacilityId = h.Facility, Metric = PilotMetric.DoubleBookings, Value = 1, Method = "Complaints book", FromDate = new(2026, 10, 5), ToDate = new(2026, 10, 18) });
+        await using (var own = sql.Scheduling(h.Tenant))
+            Assert.Equal(1, await own.MetricBaselines.CountAsync());
+        await using var other = sql.Scheduling(Guid.NewGuid());
+        Assert.Equal(0, await other.MetricBaselines.CountAsync());
+        Assert.Equal(0, await other.MetricBaselines.IgnoreQueryFilters().CountAsync()); // row-level security, not only the EF filter
+        // Layer one: the EF tenant filter on both new tables (row-level security alone would hide its removal above).
+        foreach (var type in new[] { typeof(MetricBaseline), typeof(BookingConflict) })
+            Assert.NotEmpty(other.Model.FindEntityType(type)!.GetDeclaredQueryFilters());
+    }
+
+    [Theory]
+    [InlineData(new double[0], null)]
+    [InlineData(new[] { 42.0 }, 42.0)]
+    [InlineData(new[] { 90.0, 30, 50 }, 50.0)]
+    [InlineData(new[] { 90.0, 30, 50, 80 }, 65.0)]
+    public void MedianOfOddAndEvenCounts(double[] values, double? median) => Assert.Equal(median, PilotMetricRules.Median(values));
+
+    [Fact]
+    public void PercentIsNullWithoutAWhole() => Assert.Equal((null, 33.3), (PilotMetricRules.Percent(0, 0), PilotMetricRules.Percent(1, 3)));
+}

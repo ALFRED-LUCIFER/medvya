@@ -22,21 +22,34 @@ export type ActiveMembership = {
 };
 
 /** /v1/me/context (contract agreed with MDV-P0-012). Older servers send only `user`: that means "no active facility". */
-export type MeContext = { user: { id: string; displayName: string }; memberships?: Membership[]; active?: ActiveMembership | null };
+export type MeContext = {
+  user: { id: string; displayName: string }; memberships?: Membership[]; active?: ActiveMembership | null;
+  /** The membership the user last worked at (from their own sessions, MDV-P1-059); always one of `memberships`. */
+  lastMembershipId?: string | null;
+};
 
 /** The signed-in user's working context; fields the server left out are filled so nothing downstream guesses. */
 export type Session = {
   user: { id: string; displayName: string };
+  /** Last used first, then as the server sent them. */
   memberships: Membership[];
+  lastMembershipId: string | null;
   active: (ActiveMembership & { facilityName: string }) | null;
 };
 
+/** The picker lists the last used facility first (F-03); the rest keep the server's order. */
+export function lastUsedFirst(memberships: Membership[], lastId: string | null | undefined): Membership[] {
+  const last = memberships.find(m => m.id === lastId);
+  return last ? [last, ...memberships.filter(m => m !== last)] : memberships;
+}
+
 export function toSession(me: MeContext): Session {
-  const memberships = me.memberships ?? [];
+  const lastMembershipId = me.lastMembershipId ?? null;
+  const memberships = lastUsedFirst(me.memberships ?? [], lastMembershipId);
   const a = me.active;
-  if (!a) return { user: me.user, memberships, active: null };
+  if (!a) return { user: me.user, memberships, lastMembershipId, active: null };
   return {
-    user: me.user, memberships,
+    user: me.user, memberships, lastMembershipId,
     active: {
       ...a, capabilities: a.capabilities ?? {}, flags: a.flags ?? [],
       facilityName: memberships.find(m => m.id === a.membershipId)?.facilityName ?? '',

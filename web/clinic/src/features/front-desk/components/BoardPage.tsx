@@ -47,6 +47,8 @@ type Props = {
   workload: ReturnType<typeof workload>;
   /** Payment for Billing cards: present when billing is on (flag billing.invoices, P4); until then a disabled placeholder. */
   paymentAction?: ReactNode;
+  /** "Start consultation" for a card (MDV-P2-001), for doctors; null for a card it does not apply to. */
+  consultAction?: (card: BoardCard) => ReactNode;
 };
 
 /** P-01 Reception board: today's visits by state, one tap per step, nonclinical information only. */
@@ -146,7 +148,7 @@ function Rebooking({ cards, timeZone }: { cards: BoardCard[]; timeZone: string }
 }
 
 function Column(props: Props & { state: BoardColumn; board: Board }) {
-  const { t } = useI18n();
+  const { t, tCount } = useI18n();
   const { state, columns } = props;
   const cards = columns[state], Icon = columnIcons[state];
   const id = `board-col-${state}`;
@@ -155,7 +157,7 @@ function Column(props: Props & { state: BoardColumn; board: Board }) {
       <h2 id={id} className="flex items-center justify-between gap-2 px-1 pb-1 text-[13px] font-extrabold">
         <span className="flex items-center gap-1.5"><Icon aria-hidden className="size-4" />{t(`board.column.${state}`)}</span>
         <span className="font-mono text-xs font-semibold text-muted-foreground">
-          <span aria-hidden>{cards.length}</span><span className="sr-only">{t('board.count', { count: cards.length })}</span>
+          <span aria-hidden>{cards.length}</span><span className="sr-only">{tCount('board.count', cards.length)}</span>
         </span>
       </h2>
       {cards.length === 0 ? <p className="px-1 text-xs text-muted-foreground">{t('board.column.none')}</p> : (
@@ -167,7 +169,7 @@ function Column(props: Props & { state: BoardColumn; board: Board }) {
   );
 }
 
-function Card({ card, board, now, failedVisitIds, canMove, online, confirmingId, pendingId, failure, paymentAction, onStartCheckIn, onConfirmCheckIn, onCancelCheckIn, onMove }: Props & { card: BoardCard; board: Board }) {
+function Card({ card, board, now, failedVisitIds, canMove, online, confirmingId, pendingId, failure, paymentAction, consultAction, onStartCheckIn, onConfirmCheckIn, onCancelCheckIn, onMove }: Props & { card: BoardCard; board: Board }) {
   const { t, formatTime, formatDate } = useI18n();
   const state = card.state as BoardColumn;
   const next = nextState(state);
@@ -215,6 +217,7 @@ function Card({ card, board, now, failedVisitIds, canMove, online, confirmingId,
           <p id={`${nameId}-pay`} className="text-xs text-muted-foreground">{t('board.paymentLater')}</p>
         </>
       ))}
+      {consultAction?.(card)}
       {error && <p role="alert" className="text-xs font-bold text-danger-700">{t(`board.error.${error}`)}</p>}
     </article>
   );

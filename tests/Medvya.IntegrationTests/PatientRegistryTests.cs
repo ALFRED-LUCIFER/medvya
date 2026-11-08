@@ -139,8 +139,8 @@ public class PatientRegistryTests(PostgresFixture sql) : IClassFixture<PostgresF
         await using (var db = await sql.PatientsAs("app_user", tenantA))
             Assert.Equal(india.PatientId, Assert.Single((await Search(tenantA, "IN", "91-0000-0000-0002", db)).Items).Id);
         Assert.Empty((await Search(tenantA, "AE", "784-1990-7654321-0")).Items);
-        // A partial ID never matches: it is refused before any query runs.
-        await Assert.ThrowsAsync<PatientValidationException>(() => Search(tenantA, "AE", "784-1990-1234567"));
+        // Part of an ID is only a phone fragment: IDs are encrypted, so it finds nothing.
+        Assert.Empty((await Search(tenantA, "AE", "784-1990-1234567")).Items);
     }
 
     [Fact]
@@ -167,8 +167,34 @@ public class PatientRegistryTests(PostgresFixture sql) : IClassFixture<PostgresF
         Assert.Equal(meera.PatientId, Assert.Single((await Search(tenantA, "IN", "090000 00101")).Items).Id);
         Assert.Equal(meera.PatientId, Assert.Single((await Search(tenantA, "IN", meera.Mrn.TrimStart('0'))).Items).Id);
         Assert.Equal(2, (await Search(tenantA, "IN", "MEERA")).Total);
-        Assert.Single((await Search(tenantA, "IN", "a_r")).Items); // "_" is matched literally, not as a wildcard ("Sara Rao")
-        await Assert.ThrowsAsync<PatientValidationException>(() => Search(tenantA, "IN", "90000 001")); // part of a phone number
+        // Punctuation is dropped from a name query, never passed on as a wildcard: "a_r" is the word "ar" (in both Meera Iyer and Sara Rao), and "%" alone is too short.
+        Assert.Equal(2, (await Search(tenantA, "IN", "a_r")).Items.Count);
+        await Assert.ThrowsAsync<PatientValidationException>(() => Search(tenantA, "IN", "%%"));
+        await Assert.ThrowsAsync<PatientValidationException>(() => Search(tenantA, "IN", "1234 5678 9012 3456")); // too long to be any of these
+    }
+
+    [Fact]
+    public async Task TheDeskFindsAPatientByPartOfThePhoneAnAadhaarOrNamesInAnyOrder()
+    {
+        var meera = await Registry(tenantA).RegisterAsync(IndiaFull(facility) with { FullName = "Meera Iyer (synthetic)", Mobile = "+91 90000 00101", AlternatePhone = "+91 90000 07777", Identifiers = [new(IdentifierScheme.AadhaarLast4, "4471")] });
+        var sara = await Registry(tenantA).RegisterAsync(IndiaFull(facility) with { FullName = "Sara Rao (synthetic)", Mobile = "+91 90000 00103", Identifiers = [new(IdentifierScheme.AadhaarLast4, "5582")] });
+
+        // Part of the mobile (any 4+ digits, any separators) and of the alternate number.
+        var byPhone = await Search(tenantA, "IN", "00 0101");
+        Assert.Equal((SearchKind.Number, meera.PatientId), (byPhone.MatchedOn, Assert.Single(byPhone.Items).Id));
+        Assert.Equal(meera.PatientId, Assert.Single((await Search(tenantA, "IN", "07777")).Items).Id);
+        Assert.Equal(2, (await Search(tenantA, "IN", "9000")).Total); // shared digits find both
+        // A typed 12-digit Aadhaar and the typed last 4 find the patient; another ending finds the other.
+        var byAadhaar = await Search(tenantA, "IN", "9999 8888 4471");
+        Assert.Equal((SearchKind.Identifier, meera.PatientId), (byAadhaar.MatchedOn, Assert.Single(byAadhaar.Items).Id));
+        Assert.Equal(meera.PatientId, Assert.Single((await Search(tenantA, "IN", "4471")).Items).Id);
+        Assert.Equal(sara.PatientId, Assert.Single((await Search(tenantA, "IN", "5582")).Items).Id);
+        Assert.Empty((await Search(tenantA, "IN", "9999 8888 1234")).Items);
+        // The MRN still matches, by its digits.
+        Assert.Contains(sara.PatientId, (await Search(tenantA, "IN", sara.Mrn)).Items.Select(i => i.Id));
+        // Names: each word must appear, in any order.
+        Assert.Equal(meera.PatientId, Assert.Single((await Search(tenantA, "IN", "iyer meera")).Items).Id);
+        Assert.Empty((await Search(tenantA, "IN", "meera rao")).Items);
     }
 
     [Fact]

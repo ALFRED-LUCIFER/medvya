@@ -13,7 +13,7 @@ namespace Medvya.Tenancy.Infrastructure;
 /// audit event in one transaction (action access_review.confirm / .offboard / .complete).
 /// shortcut: a member added after the review completed is not asked about until next quarter; reopen the review when a new membership is created if the owner needs that.
 /// </summary>
-public sealed class AccessReviews(TenancyDbContext db, ICurrentTenant tenant, ICurrentUser user, IAuditLog audit, TimeProvider clock) : IAccessReviews
+public sealed class AccessReviews(TenancyDbContext db, ICurrentTenant tenant, ICurrentUser user, IAuditLog audit, TimeProvider clock, IStaffAccess access) : IAccessReviews
 {
     Guid TenantId => tenant.TenantId ?? throw new InvalidOperationException("No tenant context.");
 
@@ -35,7 +35,10 @@ public sealed class AccessReviews(TenancyDbContext db, ICurrentTenant tenant, IC
 
     public async Task<bool> ConfirmAsync(Guid membershipId, CancellationToken cancellationToken = default)
     {
-        if (!await db.Memberships.AnyAsync(m => m.Id == membershipId && m.Status == MembershipStatus.Active && m.UserId != null && m.Role != Role.Patient, cancellationToken)) return false;
+        var facilityId = await db.Memberships.Where(m => m.Id == membershipId && m.Status == MembershipStatus.Active && m.UserId != null && m.Role != Role.Patient)
+            .Select(m => (Guid?)m.FacilityId).SingleOrDefaultAsync(cancellationToken);
+        // Confirmed only by someone who administers staff at that member's facility (#877).
+        if (facilityId is null || await access.AccessAsync(Capability.StaffRolesIntegrations, facilityId.Value, cancellationToken) != Access.Config) return false;
         await DecideAsync(membershipId, AccessDecision.Confirmed, cancellationToken);
         return true;
     }
@@ -91,9 +94,12 @@ public sealed class ComplianceFactsReader(TenancyDbContext db) : IComplianceFact
         var quarter = AccessReviewQuarter.Of(today);
         var done = await db.AccessReviews.AnyAsync(r => r.Quarter == quarter && r.CompletedAt != null, cancellationToken);
         var facilities = await db.Facilities.AsNoTracking().Select(f => f.Id).ToListAsync(cancellationToken);
-        var clinic = await db.Tenants.AsNoTracking().Select(t => t.Name).SingleAsync(cancellationToken);
-        var contact = await db.Profiles.AsNoTracking().Select(p => p.Email).SingleOrDefaultAsync(cancellationToken);
-        return new ComplianceFacts(clinic, contact, licences, done ? null : quarter, facilities);
+        var clinic = await db.Tenants.AsNoTracking().Select(t => new { t.Name, t.CreatedAt }).SingleAsync(cancellationToken);
+        // A new practice has nobody to review yet: the first review is due a quarter after it was created (#912).
+        var reviewDue = !done && DateOnly.FromDateTime(clinic.CreatedAt.UtcDateTime).AddMonths(3) <= today;
+        var profile = await db.Profiles.AsNoTracking().Select(p => new { p.Email, p.RegistrationExpiresOn }).SingleOrDefaultAsync(cancellationToken);
+        var registration = profile?.RegistrationExpiresOn is { } on && on <= horizon ? on : (DateOnly?)null;
+        return new ComplianceFacts(clinic.Name, profile?.Email, licences, reviewDue ? quarter : null, facilities, registration);
     }
 
     public async Task<IReadOnlyList<Guid>> TenantsAsync(CancellationToken cancellationToken = default) =>

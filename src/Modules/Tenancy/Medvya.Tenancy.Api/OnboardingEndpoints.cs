@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Net.Mail;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -22,6 +21,7 @@ public static partial class OnboardingEndpoints
 {
     public sealed record StartRequest(string? Country);
     public sealed record SaveRequest(int Step, int? Validate, OnboardingData? Data);
+    public sealed record FinishResult(Guid? MembershipId, string? Role, int InvitationsSent, int InvitationsFailed);
 
     static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { Converters = { new JsonStringEnumConverter() } };
 
@@ -47,7 +47,7 @@ public static partial class OnboardingEndpoints
         group.MapPut("/", async (SaveRequest request, ClaimsPrincipal principal, [FromServices] IOnboardingDrafts drafts, CancellationToken ct) =>
         {
             var userId = UserId(principal);
-            if (request.Data is null || request.Step is < 1 or > 6) return Results.ValidationProblem(Errors([new("step", "unknown")]));
+            if (request.Data is null || !OnboardingRules.Steps.Contains(request.Step)) return Results.ValidationProblem(Errors([new("step", "unknown")]));
             var draft = await drafts.GetAsync(userId, ct);
             if (draft is null) return Results.NotFound();
             if (request.Validate is { } step && OnboardingRules.For(draft.Country)!.ValidateStep(step, request.Data) is { Count: > 0 } errors)
@@ -59,20 +59,27 @@ public static partial class OnboardingEndpoints
             [FromServices] IStaffUsers users, CancellationToken ct) =>
         {
             var userId = UserId(principal);
-            if (await drafts.GetAsync(userId, ct) is not { } draft) return Results.NotFound();
+            if (await drafts.GetAsync(userId, ct) is not { } draft)
+            {
+                // A finish the browser gave up on (#205) still completed here: a repeat answers with the practice it made, never a second one.
+                var done = await drafts.CompletedResultAsync(userId, ct) is { } stored ? JsonSerializer.Deserialize<FinishResult>(stored, Json) : null;
+                return done is { MembershipId: not null } ? Results.Ok(done with { InvitationsSent = 0, InvitationsFailed = 0 }) : Results.NotFound();
+            }
             var data = JsonSerializer.Deserialize<OnboardingData>(draft.Data, Json) ?? new OnboardingData(null, null, null, null, null, null);
             if (OnboardingRules.For(draft.Country)!.ValidateAll(data) is { Count: > 0 } errors) return Results.ValidationProblem(Errors(errors));
 
+            // From here the request's token is not used: a browser that stops waiting must not leave a practice half set up (#205).
+            ct = CancellationToken.None;
             // shortcut: two finishes at the same moment would create two practices (the page disables the button while saving);
             // claim the draft in the same transaction as the tenant once the drafts move into one store with it.
             var practice = await provisioning.CreateAsync(draft.Country, data, ct);
-            await drafts.CompleteAsync(userId, ct);
+            await drafts.CompleteAsync(userId, JsonSerializer.Serialize(new FinishResult(practice.MembershipId, practice.Role.ToString(), 0, 0), Json), ct);
             await users.SetDisplayNameAsync(userId, data.Profile!.FullName!, ct);
 
-            // Step 6 goes through the invitation flow (MDV-P0-013), run inside the new tenant so its audit rows land there.
+            // The team step goes through the invitation flow (MDV-P0-013), run inside the new tenant so its audit rows land there.
             int sent = 0, failed = 0;
             await using var scope = http.RequestServices.EnterLinkTenant(practice.TenantId);
-            // The owner doctor is bookable straight away: the hours and slot length of step 4 become their weekly sessions (an upsert, so a repeat adds none).
+            // The owner doctor is bookable straight away: the hours and slot length of step 2 become their weekly sessions (an upsert, so a repeat adds none).
             if (practice.Role == Role.SoloDoctor)
             {
                 try
@@ -88,12 +95,13 @@ public static partial class OnboardingEndpoints
             {
                 try
                 {
-                    if (await invitations.CreateAsync(member.Email!.Trim(), member.Role!.Value, practice.FacilityId, cancellationToken: ct) is not null) sent++; else failed++;
+                    // Saved now, emailed after the response: a cold mail credential or a slow mail server no longer holds up finish (#205).
+                    if (await invitations.CreateAndEmailLaterAsync(member.Email!.Trim(), member.Role!.Value, practice.FacilityId, ct) is not null) sent++; else failed++;
                 }
-                // The practice exists already; an invitation that could not go out is repeated from the staff screen, so it is counted, not thrown.
-                catch (Exception ex) when (ex is SmtpException or InvalidOperationException or IOException or DbUpdateException) { failed++; }
+                // The practice exists already; an invitation that could not be saved is repeated from the staff screen, so it is counted, not thrown.
+                catch (Exception ex) when (ex is InvalidOperationException or IOException or DbUpdateException) { failed++; }
             }
-            return Results.Ok(new { practice.MembershipId, Role = practice.Role.ToString(), InvitationsSent = sent, InvitationsFailed = failed });
+            return Results.Ok(new FinishResult(practice.MembershipId, practice.Role.ToString(), sent, failed));
         });
 
         return app;
@@ -103,13 +111,8 @@ public static partial class OnboardingEndpoints
     [LoggerMessage(Level = LogLevel.Warning, Message = "Onboarding finished without the owner's bookable sessions: the schedule rules rejected the hours")]
     static partial void OwnerSessionsRejected(ILogger logger);
 
-    static readonly DayOfWeek[] Weekdays = [DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday];
-
     static List<WorkingHours> Sessions(OnboardingHours hours) =>
-    [
-        .. Weekdays.SelectMany(day => (hours.Weekdays ?? []).Select(w => Session(day, w))),
-        .. (hours.Saturday ?? []).Select(w => Session(DayOfWeek.Saturday, w)),
-    ];
+        [.. OnboardingRules.OpenDays(hours).SelectMany(open => open.Windows.Select(w => Session(open.Day, w)))];
 
     static WorkingHours Session(DayOfWeek day, HoursWindow w) =>
         new() { Weekday = day, Start = TimeOnly.ParseExact(w.Start!, "HH:mm", CultureInfo.InvariantCulture), End = TimeOnly.ParseExact(w.End!, "HH:mm", CultureInfo.InvariantCulture) };
@@ -119,14 +122,14 @@ public static partial class OnboardingEndpoints
     static Dictionary<string, string[]> Errors(IEnumerable<OnboardingError> errors) =>
         errors.GroupBy(e => e.Field).ToDictionary(g => g.Key, g => g.Select(e => e.Code).ToArray());
 
-    // The draft plus what the page needs to render the country's step 2/4/5 choices; the server stays the authority on them.
+    // The draft plus what the page needs to render the country's choices; the server stays the authority on them.
     static object View(string country, int step, string data)
     {
         var rules = OnboardingRules.For(country)!;
         return new
         {
             country, step, data = JsonSerializer.Deserialize<JsonElement>(data),
-            rules = new { rules.Currency, authorities = rules.Authorities, slotMinutes = OnboardingRules.SlotMinutes, templates = OnboardingRules.TemplateIds },
+            rules = new { rules.Currency, authorities = rules.Authorities, slotMinutes = OnboardingRules.SlotMinutes, templates = OnboardingRules.TemplateIds, specialties = OnboardingRules.Specialties },
         };
     }
 }

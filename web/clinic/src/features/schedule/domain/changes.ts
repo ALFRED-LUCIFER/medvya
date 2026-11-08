@@ -51,3 +51,12 @@ export const changeErrors = ['changed', 'invalid_transition', 'not_started', 'no
 export type ChangeError = (typeof changeErrors)[number] | 'failed';
 export const changeError = (code: string | undefined): ChangeError =>
   (changeErrors as readonly string[]).includes(code ?? '') ? (code as ChangeError) : 'failed';
+
+/**
+ * One move of a visit (GET /v1/appointments/{id}/history, IBookingService.HistoryAsync): the old and new slot, who moved it and when.
+ * Names are empty when the calendar or person is no longer known; reassignReason marks a same-day move to another doctor's queue.
+ */
+export type VisitMove = {
+  fromCalendarName: string; fromStart: string; fromEnd: string; toCalendarName: string; toStart: string; toEnd: string;
+  actorName: string; occurredAt: string; reassignReason: 'DoctorRunningLate' | 'DoctorUnavailable' | 'PatientRequest' | 'BalanceWorkload' | null;
+};

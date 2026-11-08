@@ -4,7 +4,7 @@ import { CircleAlert, CircleCheck, X } from 'lucide-react';
 import { useI18n, type MessageKey } from '@medvya/i18n';
 import { Button, buttonVariants, cn, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea } from '@medvya/ui';
 import { codeKey, needsAttention, type PatientMessage } from '../domain/messages';
-import { actions, cancelReasons, localDate, type Action, type CancelForm, type ChangeError, type Rule } from '../domain/changes';
+import { actions, cancelReasons, localDate, type Action, type CancelForm, type ChangeError, type Rule, type VisitMove } from '../domain/changes';
 import type { Appointment } from '../domain/schedule';
 import { termsPath } from '../../settings/domain/settings';
 import { StateLabel } from './StateLabel';
@@ -34,6 +34,10 @@ type Props = {
   onRebook?: () => void;
   /** What the patient was told (MDV-P1-032/033). */
   messages: PatientMessage[] | 'loading' | 'error';
+  /** Where the visit was before: every reschedule and queue move (MDV-P1-024). */
+  history: VisitMove[] | 'loading' | 'error';
+  /** The booking is saved but the job has not queued its messages yet (#912). */
+  messagesPreparing: boolean;
 };
 
 const actionKeys: Record<Action, MessageKey> = {
@@ -127,7 +131,8 @@ export default function AppointmentPanel(p: Props) {
 
       {p.mode === 'cancel' && <CancelForm {...p} />}
 
-      <Messages messages={p.messages} timeZone={p.timeZone} />
+      <History history={p.history} timeZone={p.timeZone} />
+      <Messages messages={p.messages} preparing={p.messagesPreparing} timeZone={p.timeZone} />
     </aside>
   );
 }
@@ -168,15 +173,44 @@ function CancelForm(p: Props) {
   );
 }
 
+/** The visit's moves, oldest first: from which slot to which, who moved it and when. Shown only when it has moved. */
+function History({ history, timeZone }: { history: Props['history']; timeZone: string }) {
+  const { t, formatShortDay, formatTime } = useI18n();
+  if (Array.isArray(history) && history.length === 0) return null;
+  const slot = (name: string, iso: string) =>
+    t('appointment.slot', { name: name || t('appointment.history.unknown'), day: formatShortDay(localDate(iso, timeZone)), time: formatTime(new Date(iso), timeZone) });
+  return (
+    <section aria-labelledby="appointment-history" className="flex flex-col gap-2 border-t pt-3">
+      <h3 id="appointment-history" className="text-sm font-extrabold">{t('appointment.history.title')}</h3>
+      {history === 'loading' && <p role="status" className="text-xs text-muted-foreground">{t('appointment.history.loading')}</p>}
+      {history === 'error' && <p role="alert" className="text-xs font-bold text-danger-700">{t('appointment.history.error')}</p>}
+      {Array.isArray(history) && (
+        <ol className="flex flex-col gap-1.5">
+          {history.map(m => (
+            <li key={m.occurredAt + m.toStart} className="flex flex-col text-sm">
+              <span>{t('appointment.history.move', { from: slot(m.fromCalendarName, m.fromStart), to: slot(m.toCalendarName, m.toStart) })}</span>
+              <span className="text-xs text-muted-foreground">
+                {t(m.reassignReason ? 'appointment.history.byWhy' : 'appointment.history.by', { name: m.actorName || t('appointment.history.unknown'),
+                  day: formatShortDay(localDate(m.occurredAt, timeZone)), time: formatTime(new Date(m.occurredAt), timeZone), why: m.reassignReason ? t(`overview.reason.${m.reassignReason}`) : '' })}
+              </span>
+            </li>
+          ))}
+        </ol>
+      )}
+    </section>
+  );
+}
+
 /** The messages sent to the patient about this visit. A failed one says so in words and with an icon, never by colour alone. */
-function Messages({ messages, timeZone }: { messages: Props['messages']; timeZone: string }) {
+function Messages({ messages, preparing, timeZone }: { messages: Props['messages']; preparing: boolean; timeZone: string }) {
   const { t, formatShortDay, formatTime } = useI18n();
   return (
     <section aria-labelledby="appointment-messages" className="flex flex-col gap-2 border-t pt-3">
       <h3 id="appointment-messages" className="text-sm font-extrabold">{t('appointment.messages.title')}</h3>
       {messages === 'loading' && <p role="status" className="text-xs text-muted-foreground">{t('appointment.messages.loading')}</p>}
       {messages === 'error' && <p role="alert" className="text-xs font-bold text-danger-700">{t('appointment.messages.error')}</p>}
-      {Array.isArray(messages) && messages.length === 0 && <p className="text-xs text-muted-foreground">{t('appointment.messages.empty')}</p>}
+      {preparing && <p role="status" className="text-xs text-muted-foreground">{t('appointment.messages.preparing')}</p>}
+      {Array.isArray(messages) && messages.length === 0 && !preparing && <p className="text-xs text-muted-foreground">{t('appointment.messages.empty')}</p>}
       {Array.isArray(messages) && messages.length > 0 && (
         <ul className="flex flex-col gap-1.5">
           {messages.map(m => {

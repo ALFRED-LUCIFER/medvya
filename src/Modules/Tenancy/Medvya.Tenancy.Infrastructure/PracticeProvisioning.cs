@@ -3,24 +3,23 @@ using System.Text.Json;
 using Medvya.Audit.Application;
 using Medvya.Audit.Domain;
 using Medvya.BuildingBlocks.Domain;
-using Medvya.BuildingBlocks.Infrastructure;
 using Medvya.Tenancy.Application;
 using Medvya.Tenancy.Domain;
 using Medvya.Tenancy.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Medvya.Tenancy.Infrastructure;
 
 /// <summary>
-/// Creates a practice (MDV-P1-004). The new tenant's rows are written on a connection that already carries the new tenant's
-/// session tenant setting, so row-level security (layer 2) accepts them exactly as it does for any tenant's own writes; it is never switched off.
+/// Creates a practice (MDV-P1-004). The new tenant's rows are written in a DI scope entered for the new tenant, so its connection carries
+/// that tenant's session setting and row-level security (layer 2) accepts them exactly as it does for any tenant's own writes; it is never switched off.
+/// The scope's context shares the app's EF model: a context built by hand here cost the first finish on each instance seconds (#205).
 /// </summary>
-public sealed class PracticeProvisioning(string connectionString, ICurrentUser user, IAuditLog audit)
+public sealed class PracticeProvisioning(IServiceScopeFactory scopes, ICurrentUser user, IAuditLog audit)
     : IPracticeProvisioning
 {
-    sealed class NewTenant(Guid id) : ICurrentTenant { public Guid? TenantId => id; }
-
     public async Task<ProvisionedPractice> CreateAsync(string country, OnboardingData data, CancellationToken cancellationToken = default)
     {
         var rules = OnboardingRules.For(country) ?? throw new ArgumentException("Unsupported country.", nameof(country));
@@ -31,14 +30,15 @@ public sealed class PracticeProvisioning(string connectionString, ICurrentUser u
         var now = DateTimeOffset.UtcNow;
 
         var tenantId = Guid.CreateVersion7();
-        var tenant = new NewTenant(tenantId);
-        await using var db = new TenancyDbContext(
-            new DbContextOptionsBuilder<TenancyDbContext>().UseNpgsql(PostgresDataSources.For(connectionString)).AddInterceptors(new TenantSessionInterceptor(tenant)).Options, tenant);
+        await using var scope = scopes.CreateAsyncScope();
+        scope.ServiceProvider.GetRequiredService<ILinkTenant>().UseLinkTenant(tenantId);
+        var db = scope.ServiceProvider.GetRequiredService<TenancyDbContext>();
 
         var facilityId = Guid.CreateVersion7();
         var membershipId = Guid.CreateVersion7();
         var hours = data.Hours!;
-        db.Tenants.Add(new Tenant { Id = tenantId, Name = clinic.Name!.Trim(), CountryCode = country, ResidencyRegion = ResidencyRegion(country) });
+        var specialty = OnboardingRules.SpecialtyText(data.Profile);
+        db.Tenants.Add(new Tenant { Id = tenantId, Name = clinic.Name!.Trim(), CountryCode = country, ResidencyRegion = ResidencyRegion(country), CreatedAt = now });
         db.Facilities.Add(new Facility { Id = facilityId, TenantId = tenantId, Name = clinic.Name!.Trim(), TimeZone = rules.TimeZone });
         db.Memberships.Add(new Membership { Id = membershipId, TenantId = tenantId, UserId = owner, FacilityId = facilityId, Role = role, Status = MembershipStatus.Active });
         db.Profiles.Add(new PracticeProfile
@@ -48,18 +48,17 @@ public sealed class PracticeProvisioning(string connectionString, ICurrentUser u
         });
         db.PracticeDefaultsSet.Add(new PracticeDefaults
         {
-            TenantId = tenantId, Specialty = Clean(data.Profile.Specialty), Qualifications = Clean(data.Profile.Qualifications), Languages = Clean(data.Profile.Languages),
+            TenantId = tenantId, Specialty = specialty, Qualifications = Clean(data.Profile.Qualifications), Languages = Clean(data.Profile.Languages),
             SlotMinutes = hours.SlotMinutes!.Value, NewVisitFeeMinor = hours.NewVisitFee!.Value, FollowUpFeeMinor = hours.FollowUpFee!.Value, Currency = rules.Currency,
             WeekdayHours = Windows(hours.Weekdays), SaturdayHours = Windows(hours.Saturday), NoteTemplates = JsonSerializer.Serialize(data.Templates ?? []),
+            PatientStart = data.Patients,
         });
         // Opening hours of settings are one span a day: from the first window's start to the last window's end (the split stays in the defaults).
-        foreach (var (days, windows) in new[] { (new[] { DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday }, hours.Weekdays), ([DayOfWeek.Saturday], hours.Saturday) })
+        foreach (var (day, windows) in OnboardingRules.OpenDays(hours))
         {
-            if (windows is not { Count: > 0 }) continue;
             var opens = windows.Min(w => TimeOnly.ParseExact(w.Start!, "HH:mm", CultureInfo.InvariantCulture));
             var closes = windows.Max(w => TimeOnly.ParseExact(w.End!, "HH:mm", CultureInfo.InvariantCulture));
-            foreach (var day in days)
-                db.OperatingHours.Add(new OperatingHours { Id = Guid.CreateVersion7(), TenantId = tenantId, FacilityId = facilityId, Weekday = day, Opens = opens, Closes = closes });
+            db.OperatingHours.Add(new OperatingHours { Id = Guid.CreateVersion7(), TenantId = tenantId, FacilityId = facilityId, Weekday = day, Opens = opens, Closes = closes });
         }
         // Only a doctor submits a licence; their recording and signing stay off until it is verified (LicenceRules).
         if (role == Role.SoloDoctor)
@@ -72,7 +71,7 @@ public sealed class PracticeProvisioning(string connectionString, ICurrentUser u
             // The owner doctor is listed on Settings, Doctors beside the doctors added later (MDV-P1-007).
             db.DoctorProfiles.Add(new DoctorProfile
             {
-                MembershipId = membershipId, TenantId = tenantId, FullName = data.Profile.FullName!.Trim(), Specialty = Clean(data.Profile.Specialty),
+                MembershipId = membershipId, TenantId = tenantId, FullName = data.Profile.FullName!.Trim(), Specialty = specialty,
                 Qualifications = Clean(data.Profile.Qualifications), Languages = Clean(data.Profile.Languages),
                 NewVisitFeeMinor = hours.NewVisitFee!.Value, FollowUpFeeMinor = hours.FollowUpFee!.Value, ChangedBy = owner, ChangedAt = now,
             });

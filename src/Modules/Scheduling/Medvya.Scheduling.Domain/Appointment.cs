@@ -113,6 +113,9 @@ public static class VisitFlow
     /// <summary>Only a booked visit that never checked in is a no-show (and only once it has started: see the use case).</summary>
     public static bool CanMarkNoShow(AppointmentState state) => state == AppointmentState.Booked;
 
+    /// <summary>The doctor may call the patient in from any waiting state, or reopen one already in consult (MDV-P2-001).</summary>
+    public static bool CanStartConsult(AppointmentState state) => CanReassign(state) || state == AppointmentState.InConsult;
+
     /// <summary>Waiting for a doctor (checked in, with the nurse or ready): may move to another doctor's queue (MDV-P1-030).</summary>
     public static bool CanReassign(AppointmentState state) => state is AppointmentState.CheckedIn or AppointmentState.WithNurse or AppointmentState.ReadyForDoctor;
 }
@@ -171,6 +174,11 @@ public sealed class VisitStatusEvent
     [Classification(DataClass.Internal)] public CancelReason? CancelReason { get; init; }
     /// <summary>The desk's note on a cancellation; it may mention health, so it is never on reception screens, in logs or in events.</summary>
     [Classification(DataClass.SensitiveHealth)] public string? Note { get; init; }
+    /// <summary>
+    /// Check-in only: milliseconds from the desk tapping "Check in" as the patient arrives to the visit being checked in, timed by
+    /// the desk (pilot metric, exit gate 3). A number, never patient data; null when not timed.
+    /// </summary>
+    [Classification(DataClass.Internal)] public int? CheckInMs { get; init; }
 }
 
 /// <summary>A reschedule (MDV-P1-024), append-only: the old slot, the new slot, who moved it and when.</summary>
@@ -216,4 +224,41 @@ public sealed class OutboxEvent
 public sealed class OutboxTenant
 {
     [Classification(DataClass.Internal)] public Guid TenantId { get; init; }
+}
+
+/// <summary>
+/// The database refused a double booking (the SCHEDULE_SLOT unique index fired after the doctor-day lock and checks): the pilot's
+/// "double-booking constraint violations" metric (MDV-P1-041). Opaque ids and a time only.
+/// </summary>
+public sealed class BookingConflict
+{
+    [Classification(DataClass.Internal)] public Guid Id { get; init; }
+    [Classification(DataClass.Internal)] public Guid TenantId { get; init; }
+    [Classification(DataClass.Internal)] public Guid FacilityId { get; init; }
+    [Classification(DataClass.Internal)] public Guid CalendarId { get; init; }
+    [Classification(DataClass.Internal)] public DateTimeOffset OccurredAt { get; init; }
+}
+
+/// <summary>The pilot metrics a clinic's pre-Medvya baseline is recorded for (MDV-P1-041, PRD v2 §06).</summary>
+[JsonConverter(typeof(JsonStringEnumConverter<PilotMetric>))]
+public enum PilotMetric { CheckInSeconds, NoShowPercent, DoubleBookings, ReminderDeliveryPercent }
+
+/// <summary>
+/// A clinic's pre-Medvya value of one pilot metric, as a person measured it (e.g. from the paper register over the first two
+/// weeks), with how and over which dates. Append-only: the newest per metric is the baseline. Numbers and method only.
+/// Value is a whole number (seconds, percent or count): a hand-measured baseline is no more precise than that.
+/// </summary>
+public sealed class MetricBaseline
+{
+    [Classification(DataClass.Internal)] public Guid Id { get; init; }
+    [Classification(DataClass.Internal)] public Guid TenantId { get; init; }
+    [Classification(DataClass.Internal)] public Guid FacilityId { get; init; }
+    [Classification(DataClass.Internal)] public PilotMetric Metric { get; init; }
+    [Classification(DataClass.Internal)] public int Value { get; init; }
+    /// <summary>How it was measured ("Paper register, every visit"). Staff free text; the form says never to enter patient details.</summary>
+    [Classification(DataClass.Internal)] public required string Method { get; init; }
+    [Classification(DataClass.Internal)] public DateOnly FromDate { get; init; }
+    [Classification(DataClass.Internal)] public DateOnly ToDate { get; init; }
+    [Classification(DataClass.Internal)] public Guid? RecordedBy { get; init; }
+    [Classification(DataClass.Internal)] public DateTimeOffset RecordedAt { get; init; }
 }

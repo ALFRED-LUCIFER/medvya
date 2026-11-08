@@ -49,9 +49,9 @@ public sealed partial class FrontDeskService(
     public async Task<BoardCard> CheckInAsync(Guid appointmentId, CheckIn command, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
-        var (visit, moved) = await MoveAsync(appointmentId, AppointmentState.CheckedIn, SchedulingAudit.CheckIn, cancellationToken);
-        if (moved && command.ElapsedMs is long ms && ms > 0 && TimeSpan.FromMilliseconds(ms) <= MaxCheckIn)
-            CheckInSeconds.Record(ms / 1000d, new KeyValuePair<string, object?>("tenant_id", visit.TenantId));
+        int? timed = command.ElapsedMs is long ms && ms > 0 && TimeSpan.FromMilliseconds(ms) <= MaxCheckIn ? (int)ms : null;
+        var (visit, moved) = await MoveAsync(appointmentId, AppointmentState.CheckedIn, SchedulingAudit.CheckIn, cancellationToken, timed);
+        if (moved && timed is int t) CheckInSeconds.Record(t / 1000d, new KeyValuePair<string, object?>("tenant_id", visit.TenantId));
         return await CardAsync(visit, cancellationToken);
     }
 
@@ -76,6 +76,8 @@ public sealed partial class FrontDeskService(
             .OrderBy(a => a.Start).ThenBy(a => a.Id).ToListAsync(cancellationToken);
         var patients = await context.PatientsAsync(visits.Select(a => a.PatientId), cancellationToken);
         var tokens = await TokensAsync([.. visits.Select(a => a.Id)], cancellationToken);
+        var ids = visits.Select(a => a.Id).ToList();
+        var issued = await db.QueueTokens.AsNoTracking().Where(t => ids.Contains(t.AppointmentId)).ToDictionaryAsync(t => t.AppointmentId, t => t.IssuedAt, cancellationToken);
         var templates = await db.Templates.AsNoTracking().Where(t => t.FacilityId == facilityId && t.CalendarKind == CalendarKind.Doctor).ToListAsync(cancellationToken);
         var exceptions = await context.ExceptionsAsync(facilityId, date, date, null, cancellationToken);
         var working = templates.Where(t => ScheduleRules.Day(t, date, zone, exceptions.Where(x => x.CalendarId == t.CalendarId)).Hours.Count > 0).Select(t => t.CalendarId).ToHashSet();
@@ -88,7 +90,10 @@ public sealed partial class FrontDeskService(
             {
                 var own = visits.Where(v => v.CalendarId == c.Id).ToList();
                 var counts = VisitFlow.BoardStates.ToDictionary(s => s, s => own.Count(v => v.State == s));
-                var next = own.Where(v => v.State < AppointmentState.InConsult).Take(3)
+                // Arrived patients in token order, then the booked ones by time: a walk-in queued "now" with no slot never jumps the
+                // queue ahead of patients who checked in earlier for later slots (MDV-P1-052).
+                var next = own.Where(v => v.State < AppointmentState.InConsult)
+                    .OrderBy(v => issued.ContainsKey(v.Id) ? 0 : 1).ThenBy(v => issued.GetValueOrDefault(v.Id)).ThenBy(v => v.Start).ThenBy(v => v.Id).Take(3)
                     .Select(v => new NextVisit(v.Id, v.Start, v.State, Name(v.PatientId), tokens.GetValueOrDefault(v.Id))).ToList();
                 return new DoctorLoad(c.Id, c.Name, counts, ClinicDelay.Minutes(own.Select(v => (v.Start, v.State, v.ChangedAt)), now), next);
             }).ToList();
@@ -152,7 +157,7 @@ public sealed partial class FrontDeskService(
     /// Moves the visit to <paramref name="to"/>; Moved is false when it was already there (an idempotent repeat). Either way the
     /// attempt is audited as <paramref name="action"/> in the transaction of what it wrote.
     /// </summary>
-    async Task<(Appointment Visit, bool Moved)> MoveAsync(Guid appointmentId, AppointmentState to, string action, CancellationToken cancellationToken)
+    async Task<(Appointment Visit, bool Moved)> MoveAsync(Guid appointmentId, AppointmentState to, string action, CancellationToken cancellationToken, int? checkInMs = null)
     {
         var visit = await db.Appointments.AsNoTracking().SingleOrDefaultAsync(a => a.Id == appointmentId, cancellationToken)
             ?? throw new AppointmentNotFoundException();
@@ -166,7 +171,7 @@ public sealed partial class FrontDeskService(
 
         var (from, me) = (visit.State, context.UserId);
         // Call-in takes the room of the doctor's session now (or at the visit's time) from the schedule template.
-        var room = to == AppointmentState.InConsult ? await RoomAsync(visit, zone, now, cancellationToken) : visit.Room;
+        var room = to == AppointmentState.InConsult ? await context.RoomAsync(visit, zone, now, cancellationToken) : visit.Room;
         await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
         var changed = await db.Appointments.Where(a => a.Id == appointmentId && a.State == from)
             .ExecuteUpdateAsync(s => s.SetProperty(a => a.State, to).SetProperty(a => a.Room, room)
@@ -182,7 +187,7 @@ public sealed partial class FrontDeskService(
         }
         db.StatusEvents.Add(new VisitStatusEvent
         {
-            Id = Guid.CreateVersion7(), TenantId = visit.TenantId, AppointmentId = visit.Id, State = to, ActorUserId = me, OccurredAt = now,
+            Id = Guid.CreateVersion7(), TenantId = visit.TenantId, AppointmentId = visit.Id, State = to, ActorUserId = me, OccurredAt = now, CheckInMs = checkInMs,
         });
         if (to == AppointmentState.CheckedIn) await IssueTokenAsync(visit, ScheduleRules.LocalDate(now, zone), now, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
@@ -214,17 +219,6 @@ public sealed partial class FrontDeskService(
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Board update for facility {FacilityId} not pushed")]
     static partial void BoardPushFailed(ILogger logger, Exception exception, Guid facilityId);
-
-    /// <summary>The room of the calendar's session running now, else of the session the visit was booked in; else unchanged.</summary>
-    async Task<string?> RoomAsync(Appointment visit, TimeZoneInfo zone, DateTimeOffset now, CancellationToken cancellationToken)
-    {
-        var template = await db.Templates.AsNoTracking().SingleOrDefaultAsync(t => t.FacilityId == visit.FacilityId && t.CalendarId == visit.CalendarId, cancellationToken);
-        if (template is null) return visit.Room;
-        var today = ScheduleRules.LocalDate(now, zone);
-        var hours = ScheduleRules.Day(template, today, zone, await context.ExceptionsAsync(visit.FacilityId, today, today, visit.CalendarId, cancellationToken)).Hours;
-        var session = hours.FirstOrDefault(w => w.Start <= now && now < w.End) ?? hours.FirstOrDefault(w => w.Start <= visit.Start && visit.Start < w.End);
-        return session?.Room ?? visit.Room;
-    }
 
     /// <summary>
     /// The next token of the visit's calendar for the facility's day ("A-07"), added to the open check-in transaction. A per

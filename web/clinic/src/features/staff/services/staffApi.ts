@@ -16,7 +16,10 @@ type RoleBody = { name: string; baseRole: AssignableRole; capabilities: Capabili
 const json = (method: string, body: unknown) => ({ method, headers: { ...csrf, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 export const createRole = (body: RoleBody) => post<CustomRole>('/v1/staff/roles', body);
 export const updateRole = (id: string, body: RoleBody) => send<CustomRole>(`/v1/staff/roles/${id}`, json('PUT', body));
-export const offboardStaff = (membershipId: string, reason: string) => post<void>(`/v1/staff/${membershipId}/offboard`, { reason });
+/** `openVisits`: patients already checked in for them, for reception to reassign on the board. */
+export const offboardStaff = (membershipId: string, reason: string, offerRebooking = false) =>
+  post<{ openVisits: number }>(`/v1/staff/${membershipId}/offboard`, { reason, offerRebooking });
+export const reactivateStaff = (membershipId: string, reason: string) => post<void>(`/v1/staff/${membershipId}/reactivate`, { reason });
 
 // Quarterly access review (MDV-P1-010). Offboarding a person in the review uses offboardStaff above, which the server also records as their decision.
 export const fetchAccessReview = () => send<AccessReview>('/v1/staff/access-review');

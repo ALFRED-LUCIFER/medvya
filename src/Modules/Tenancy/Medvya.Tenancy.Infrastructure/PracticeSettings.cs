@@ -14,8 +14,8 @@ namespace Medvya.Tenancy.Infrastructure;
 /// <summary>
 /// Practice settings (MDV-P1-005). Every change saves, records its before/after (SettingsChange) and writes its audit event in one
 /// transaction (<c>settings.*</c>, resource <c>settings</c>, purpose operations), so an unaudited change never commits.
-/// shortcut: the logo is checked by type (file signature) and size only; no malware scanner exists in the repo yet, so wire
-/// Defender for Storage / a scan step before the logo is served, with MDV-P0-006 (Azure environments).
+/// The logo is checked by file signature and size, then decoded and saved again as PNG (CleanImage) instead of a malware scan
+/// (owner decision of 7 Nov, #211): only pixels are stored.
 /// </summary>
 public sealed class PracticeSettings(
     TenancyDbContext db, ICurrentTenant tenant, ICurrentUser user, ICurrentFacility currentFacility, IFacilityDirectory facilities,
@@ -34,6 +34,7 @@ public sealed class PracticeSettings(
         var errors = new List<ValidationError>();
         if (name is null) errors.Add(new("name", "required"));
         else if (name.Length > 200) errors.Add(new("name", "too_long"));
+        else if (OutboundText.HasLink(name)) errors.Add(new("name", "link"));
         var (address, registration, taxNumber, phone, email) = (Clean(command.Address), Clean(command.RegistrationNumber), Clean(command.TaxNumber), Clean(command.Phone), Clean(command.Email));
         Max(errors, "address", address, 500);
         Max(errors, "registrationNumber", registration, 50);
@@ -47,6 +48,7 @@ public sealed class PracticeSettings(
         var before = ViewOf(clinic, profile);
         if (profile is null) db.Profiles.Add(profile = new PracticeProfile { Id = Guid.CreateVersion7(), TenantId = TenantId });
         (clinic.Name, profile.Address, profile.RegistrationNumber, profile.TaxNumber, profile.Phone, profile.Email) = (name!, address, registration, taxNumber, phone, email);
+        profile.RegistrationExpiresOn = command.RegistrationExpiresOn;
         (profile.ChangedBy, profile.ChangedAt) = (user.UserId, clock.GetUtcNow());
         var after = ViewOf(clinic, profile);
         await SaveAuditedAsync("settings.profile.update", "profile", profile.Id, before, after, cancellationToken);
@@ -152,6 +154,9 @@ public sealed class PracticeSettings(
         if (content.Length == 0 || content.Length > LogoImage.MaxBytes) errors.Add(new("logo", "too_large"));
         else if (type is null) errors.Add(new("logo", "type"));
         SettingsValidationException.ThrowIfAny(errors);
+        // Only the pixels are kept (#211): anything hidden in the file is dropped, and a file that does not decode is refused.
+        content = CleanImage.ToPng(content) ?? throw new SettingsValidationException([new("logo", "type")]);
+        type = "image/png";
 
         var profile = await db.Profiles.SingleOrDefaultAsync(cancellationToken);
         if (profile is null) db.Profiles.Add(profile = new PracticeProfile { Id = Guid.CreateVersion7(), TenantId = TenantId });
@@ -177,6 +182,19 @@ public sealed class PracticeSettings(
     public async Task<Uri?> LogoLinkAsync(TimeSpan lifetime, CancellationToken cancellationToken = default) =>
         await db.Profiles.AsNoTracking().Select(p => p.LogoKey).SingleOrDefaultAsync(cancellationToken) is { } key ? logos.LinkFor(key, lifetime) : null;
 
+    public Task<ClinicalAccessPolicy> GetClinicalAccessAsync(CancellationToken cancellationToken = default) =>
+        db.Tenants.AsNoTracking().Select(t => t.ClinicalAccess).SingleAsync(cancellationToken);
+
+    public async Task<ClinicalAccessPolicy> SaveClinicalAccessAsync(ClinicalAccessPolicy policy, CancellationToken cancellationToken = default)
+    {
+        if (!Enum.IsDefined(policy)) throw new SettingsValidationException([new("policy", "invalid")]);
+        var clinic = await db.Tenants.SingleAsync(cancellationToken);
+        var before = clinic.ClinicalAccess;
+        clinic.ClinicalAccess = policy;
+        await SaveAuditedAsync("settings.clinical_access.update", "clinical_access", TenantId, new { policy = before.ToString() }, new { policy = policy.ToString() }, cancellationToken);
+        return policy;
+    }
+
     async Task<List<DayHours>> HoursAsync(Guid facilityId, CancellationToken cancellationToken) =>
         await db.OperatingHours.AsNoTracking().Where(h => h.FacilityId == facilityId).OrderBy(h => h.Weekday)
             .Select(h => new DayHours(h.Weekday, h.Opens, h.Closes)).ToListAsync(cancellationToken);
@@ -190,6 +208,7 @@ public sealed class PracticeSettings(
         var errors = new List<ValidationError>();
         if (name is null) errors.Add(new("name", "required"));
         else if (name.Length > 200) errors.Add(new("name", "too_long"));
+        else if (OutboundText.HasLink(name)) errors.Add(new("name", "link"));
         Max(errors, "address", address, 500);
         if (zone is null ? requireZone : !TimeZoneInfo.TryFindSystemTimeZoneById(zone, out _)) errors.Add(new("timeZone", zone is null ? "required" : "invalid"));
         SettingsValidationException.ThrowIfAny(errors);
@@ -197,7 +216,7 @@ public sealed class PracticeSettings(
     }
 
     static ProfileView ViewOf(Tenant clinic, PracticeProfile? p) =>
-        new(clinic.Name, p?.Address, p?.RegistrationNumber, p?.TaxNumber, p?.Phone, p?.Email, p?.LogoKey is not null);
+        new(clinic.Name, p?.Address, p?.RegistrationNumber, p?.TaxNumber, p?.Phone, p?.Email, p?.LogoKey is not null, p?.RegistrationExpiresOn);
 
     static void Max(List<ValidationError> errors, string field, string? value, int max)
     {

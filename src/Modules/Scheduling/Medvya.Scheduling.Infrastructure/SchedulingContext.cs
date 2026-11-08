@@ -46,6 +46,19 @@ public sealed class SchedulingContext(
 
     public Guid? UserId => user.UserId;
 
+    /// <summary>
+    /// Leave and exceptions of a calendar (MDV-P1-012, owner decision of 7 Nov, #231): practice configuration manages every calendar,
+    /// a doctor with booking access only their own. Only they see the free-text leave reason; everyone else sees "On leave".
+    /// </summary>
+    public async Task<bool> CanManageCalendarAsync(Guid facilityId, Guid calendarId, CancellationToken cancellationToken)
+    {
+        var configure = await access.AccessAsync(SchedulingAccess.CanConfigure.Capability, facilityId, cancellationToken);
+        if (Array.IndexOf(SchedulingAccess.CanConfigure.Levels, configure) >= 0) return true;
+        if (calendarId != UserId) return false;
+        var book = await access.AccessAsync(SchedulingAccess.CanBook.Capability, facilityId, cancellationToken);
+        return Array.IndexOf(SchedulingAccess.CanBook.Levels, book) >= 0;
+    }
+
     public async Task RequireAsync(Guid facilityId, SchedulingAccess.Need need, CancellationToken cancellationToken)
     {
         if (facilityId == Guid.Empty) throw new SchedulingValidationException([new("facilityId", "required")]);
@@ -69,6 +82,17 @@ public sealed class SchedulingContext(
         db.Exceptions.AsNoTracking().Where(x => x.FacilityId == facilityId && x.FromDate <= last && x.ToDate >= first && (calendarId == null || x.CalendarId == calendarId))
             .ToListAsync(cancellationToken);
 
+    /// <summary>The room of the calendar's session running now, else of the session the visit was booked in; else unchanged.</summary>
+    public async Task<string?> RoomAsync(Appointment visit, TimeZoneInfo zone, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        var template = await db.Templates.AsNoTracking().SingleOrDefaultAsync(t => t.FacilityId == visit.FacilityId && t.CalendarId == visit.CalendarId, cancellationToken);
+        if (template is null) return visit.Room;
+        var today = ScheduleRules.LocalDate(now, zone);
+        var hours = ScheduleRules.Day(template, today, zone, await ExceptionsAsync(visit.FacilityId, today, today, visit.CalendarId, cancellationToken)).Hours;
+        var session = hours.FirstOrDefault(w => w.Start <= now && now < w.End) ?? hours.FirstOrDefault(w => w.Start <= visit.Start && visit.Start < w.End);
+        return session?.Room ?? visit.Room;
+    }
+
     /// <summary>Doctors first, then resources, each by name: the column order of the day view.</summary>
     public async Task<List<Calendar>> CalendarsAsync(Guid facilityId, CancellationToken cancellationToken)
     {
@@ -85,6 +109,10 @@ public sealed class SchedulingContext(
         kind == CalendarKind.Doctor
             ? (await facilities.ActiveDoctorsAsync(facilityId, cancellationToken)).Contains(calendarId)
             : await db.Resources.AnyAsync(r => r.FacilityId == facilityId && r.Id == calendarId, cancellationToken);
+
+    /// <summary>Staff display names by user id (doctors' calendars are their user ids).</summary>
+    public Task<IReadOnlyDictionary<Guid, string>> DisplayNamesAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken) =>
+        staff.DisplayNamesAsync(ids, cancellationToken);
 
     public Task<IReadOnlyDictionary<Guid, PatientSummary>> PatientsAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken) =>
         patients.SummariesAsync([.. ids.Distinct()], cancellationToken);

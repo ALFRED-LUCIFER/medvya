@@ -94,7 +94,8 @@ public sealed class StaffSignInTests(PostgresFixture sql) : IClassFixture<Postgr
         var user = await Account("Joseph");
         using var browser = Browser();
         var callback = await SignIn(browser, user.Subject, extra: "&no_mfa=true");
-        Assert.Equal("/?signin=failed", callback.Headers.Location!.OriginalString);
+        // The one refusal the page names (#912): the person can add a second factor; other refusals stay generic (next test).
+        Assert.Equal("/?signin=mfa", callback.Headers.Location!.OriginalString);
         Assert.Equal(HttpStatusCode.Unauthorized, (await browser.GetAsync(new Uri("/v1/me/context", UriKind.Relative))).StatusCode);
     }
 
@@ -125,6 +126,97 @@ public sealed class StaffSignInTests(PostgresFixture sql) : IClassFixture<Postgr
         Assert.Equal("/", (await SignIn(browser, user.Subject, returnUrl: returnUrl)).Headers.Location!.OriginalString);
     }
 
+    // MDV-P1-059: the work email typed on the sign-in page travels in a POST body, never in a Medvya URL, and reaches the provider as
+    // login_hint only when well formed.
+    static async Task<HttpResponseMessage> StartWithHint(HttpClient browser, string? hint, string path = "/bff/login", bool csrf = true)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, new Uri(path, UriKind.Relative))
+        {
+            Content = JsonContent.Create(new { loginHint = hint, returnUrl = "/schedule" }),
+        };
+        if (csrf) request.Headers.Add(StaffAuthentication.CsrfHeader, "1");
+        return await browser.SendAsync(request);
+    }
+
+    static async Task<Uri> ProviderAddress(HttpResponseMessage start)
+    {
+        Assert.Equal(HttpStatusCode.OK, start.StatusCode);
+        Assert.Null(start.Headers.Location);
+        return new Uri((await start.Content.ReadFromJsonAsync<StaffAuthentication.SignInRedirect>())!.Location);
+    }
+
+    [Fact]
+    public async Task TheWorkEmailIsPassedToTheProviderAsALoginHint()
+    {
+        using var browser = Browser();
+        var provider = await ProviderAddress(await StartWithHint(browser, "reception.desk@example.test"));
+        var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(provider.Query);
+        Assert.Equal("reception.desk@example.test", query["login_hint"]);
+        Assert.Contains("code_challenge_method=S256", provider.Query, StringComparison.Ordinal);
+
+        // Never stored in the OIDC state: the protected state carries only the return address.
+        var format = factory.Services.GetRequiredService<Microsoft.Extensions.Options.IOptionsMonitor<OpenIdConnectOptions>>().Get(OpenIdConnectDefaults.AuthenticationScheme).StateDataFormat;
+        var state = format.Unprotect(query["state"]);
+        Assert.NotNull(state);
+        Assert.Equal("/schedule", state.RedirectUri);
+        Assert.DoesNotContain(state.Items.Values, v => v?.Contains("example.test", StringComparison.Ordinal) == true);
+
+        // The development provider has no emails: it still lists its synthetic users, and its links carry only the chosen one.
+        var page = await browser.GetStringAsync(provider);
+        Assert.Contains("New synthetic person", page, StringComparison.Ordinal);
+        Assert.DoesNotContain("example.test", page, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task WithoutALoginHintTheProviderIsSentNone()
+    {
+        using var browser = Browser();
+        var challenge = await browser.GetAsync(new Uri("/bff/login", UriKind.Relative));
+        Assert.Equal(HttpStatusCode.Redirect, challenge.StatusCode);
+        Assert.DoesNotContain("login_hint", challenge.Headers.Location!.Query, StringComparison.Ordinal);
+        Assert.DoesNotContain("login_hint", (await ProviderAddress(await StartWithHint(browser, null))).Query, StringComparison.Ordinal);
+    }
+
+    // The hint is never read from a query string: GET refuses it, and POST ignores one in its address.
+    [Fact]
+    public async Task ALoginHintInTheAddressIsNeverRead()
+    {
+        using var browser = Browser();
+        var get = await browser.GetAsync(new Uri("/bff/login?returnUrl=%2F&loginHint=reception.desk%40example.test", UriKind.Relative));
+        Assert.Equal(HttpStatusCode.BadRequest, get.StatusCode);
+        Assert.Null(get.Headers.Location);
+
+        var post = await ProviderAddress(await StartWithHint(browser, null, path: "/bff/login?loginHint=reception.desk%40example.test"));
+        Assert.DoesNotContain("login_hint", post.Query, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task StartingWithAHintNeedsTheAntiForgeryHeader()
+    {
+        using var browser = Browser();
+        var res = await StartWithHint(browser, "reception.desk@example.test", csrf: false);
+        Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
+        Assert.Null(res.Headers.Location);
+        Assert.DoesNotContain("example.test", await res.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("not-an-email")]
+    [InlineData("Priya <priya@example.test>")]
+    [InlineData("priya@example.test\r\nX-Injected: 1")]
+    [InlineData("pri ya@example.test")]
+    [InlineData("")]
+    [InlineData("LONG")]
+    public async Task AMalformedLoginHintIsRefusedBeforeTheProvider(string hint)
+    {
+        if (hint == "LONG") hint = new string('a', 250) + "@example.test";
+        using var browser = Browser();
+        var res = await StartWithHint(browser, hint);
+        Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
+        Assert.Null(res.Headers.Location);
+        Assert.DoesNotContain("example.test", await res.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task StateChangingRequestsNeedTheCsrfHeader()
     {
@@ -137,8 +229,30 @@ public sealed class StaffSignInTests(PostgresFixture sql) : IClassFixture<Postgr
 
         using var logout = new HttpRequestMessage(HttpMethod.Post, new Uri("/bff/logout", UriKind.Relative));
         logout.Headers.Add(StaffAuthentication.CsrfHeader, "1");
-        Assert.Equal(HttpStatusCode.NoContent, (await browser.SendAsync(logout)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await browser.SendAsync(logout)).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, (await browser.GetAsync(new Uri("/v1/me/context", UriKind.Relative))).StatusCode);
+    }
+
+    // #912: on a shared front-desk PC the provider must not sign the last account straight back in, so sign-out ends its session too.
+    [Fact]
+    public async Task SignOutEndsTheProviderSessionAndComesBackToTheApp()
+    {
+        var user = await Account("Meera");
+        using var browser = Browser();
+        await SignIn(browser, user.Subject);
+
+        using var logout = new HttpRequestMessage(HttpMethod.Post, new Uri("/bff/logout", UriKind.Relative));
+        logout.Headers.Add(StaffAuthentication.CsrfHeader, "1");
+        var res = await browser.SendAsync(logout);
+        Assert.Equal(HttpStatusCode.OK, res.StatusCode);
+        Assert.Null(res.Headers.Location); // the page navigates; a fetch must not follow the redirect itself
+        var provider = new Uri((await res.Content.ReadFromJsonAsync<StaffAuthentication.SignInRedirect>())!.Location);
+        Assert.Equal("/dev-idp/logout", provider.AbsolutePath);
+        Assert.Contains("post_logout_redirect_uri=https%3A%2F%2Flocalhost%2Fsignout-callback-oidc", provider.Query, StringComparison.Ordinal);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await browser.GetAsync(new Uri("/v1/me/context", UriKind.Relative))).StatusCode);
+
+        var callback = await browser.GetAsync((await browser.GetAsync(provider)).Headers.Location);
+        Assert.Equal("/", callback.Headers.Location!.OriginalString);
     }
 
     [Fact]
@@ -146,12 +260,13 @@ public sealed class StaffSignInTests(PostgresFixture sql) : IClassFixture<Postgr
     {
         using var production = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b
             .UseEnvironment("Production")
+            .UseSetting("Onboarding:DeploymentCountry", "IN")
             .UseSetting("Authentication:Oidc:Authority", "http://localhost/dev-idp"));
         using var browser = production.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false });
         // Production refuses a provider over plain http on every request (fail closed), and the dev provider is not mapped.
         var ex = await Assert.ThrowsAnyAsync<InvalidOperationException>(() => browser.GetAsync(new Uri("/dev-idp/.well-known/openid-configuration", UriKind.Relative)));
         Assert.Contains("HTTPS", ex.Message, StringComparison.Ordinal);
-        using var noProvider = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b.UseEnvironment("Production"));
+        using var noProvider = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b.UseEnvironment("Production").UseSetting("Onboarding:DeploymentCountry", "IN"));
         Assert.Equal(HttpStatusCode.NotFound, (await noProvider.CreateClient().GetAsync(new Uri("/dev-idp/.well-known/openid-configuration", UriKind.Relative))).StatusCode);
     }
 }

@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
@@ -9,6 +10,8 @@ public abstract class PublicPage(SiteText text) : PageModel
     public string Lang => RouteData.Values["lang"] as string ?? "en";
     public string Dir => Lang == "ar" ? "rtl" : "ltr";
     public string Region { get; private set; } = PublicSite.DefaultRegion;
+    /// <summary>Formats dates and times for the page's language.</summary>
+    public CultureInfo Culture => CultureInfo.GetCultureInfo(Lang switch { "hi" => "hi-IN", "ar" => "ar-AE", _ => "en-IN" });
 
     /// <summary>This page's address without the language prefix, e.g. "/" or "/pricing".</summary>
     public string PagePath => PageContext.ActionDescriptor.ViewEnginePath is "/Index" or null ? "/" : PageContext.ActionDescriptor.ViewEnginePath.ToLowerInvariant();
@@ -17,6 +20,11 @@ public abstract class PublicPage(SiteText text) : PageModel
     public string T(string key, IReadOnlyDictionary<string, string> vars) => text.Get(Lang, key, vars);
     /// <summary>Region-specific copy: key.IN or key.AE.</summary>
     public string TRegion(string key) => text.Get(Lang, $"{key}.{Region}");
+
+    public string Date(DateOnly date) => date.ToString("d MMM yyyy", Culture);
+
+    /// <summary>Keeps a left-to-right value such as "₹999" in one piece inside Arabic text (Unicode first-strong isolate).</summary>
+    public string Isolate(string value) => Dir == "rtl" ? $"\u2068{value}\u2069" : value;
 
     public string Href(string path, string? lang = null) => (lang ?? Lang) switch
     {

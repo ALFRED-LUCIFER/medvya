@@ -8,7 +8,7 @@ public enum NotificationChannel { Email, Sms }
 
 /// <summary>What the message is about. Reminders go out at a fixed time before the visit; the others as soon as the change is published.</summary>
 [JsonConverter(typeof(JsonStringEnumConverter<NotificationKind>))]
-public enum NotificationKind { Confirmation, Rescheduled, Cancelled, Reminder24h, Reminder2h, NeedsRebooking }
+public enum NotificationKind { Confirmation, Rescheduled, Cancelled, Reminder24h, Reminder2h, NeedsRebooking, SeriesCancelled, WaitlistOffer }
 
 /// <summary>
 /// Queued: waiting for its time or for a retry. Sent: handed to the provider. Delivered / Bounced: the provider's receipt.
@@ -19,7 +19,7 @@ public enum NotificationKind { Confirmation, Rescheduled, Cancelled, Reminder24h
 public enum NotificationStatus { Queued, Sent, Delivered, Failed, Bounced, Cancelled, Suppressed }
 
 /// <summary>
-/// NOTIFICATION (MDV-P1-032): one message to one patient on one channel about one appointment. It holds no message text and no
+/// NOTIFICATION (MDV-P1-032): one message to one patient on one channel about one appointment (for a waitlist offer, MDV-P1-027: the waitlist entry, whose id is held in AppointmentId). It holds no message text and no
 /// address: both are made at send time from the template and the patient record, so nothing personal is stored here.
 /// </summary>
 public sealed class Notification
@@ -65,7 +65,7 @@ public sealed class NotificationAttempt
 
 /// <summary>What a staff notification is about. The screen words each kind itself, so no text is stored.</summary>
 [JsonConverter(typeof(JsonStringEnumConverter<StaffNotificationKind>))]
-public enum StaffNotificationKind { MessageFailed, LicenceExpiring, AccessReviewDue }
+public enum StaffNotificationKind { MessageFailed, LicenceExpiring, AccessReviewDue, AccessRequested, RegistrationExpiring }
 
 /// <summary>
 /// STAFF_NOTIFICATION (MDV-P1-034): one in-app item for the staff of a facility (the notification centre, D-03). It holds ids and a
@@ -112,6 +112,8 @@ public sealed class NotificationPreference
     /// <summary>Facility-local window with no SMS; equal values mean no quiet hours.</summary>
     [Classification(DataClass.Internal)] public TimeOnly QuietStart { get; set; }
     [Classification(DataClass.Internal)] public TimeOnly QuietEnd { get; set; }
+    /// <summary>Name at the start of every email subject (and the From name where the provider allows it); null means the location's name (#213).</summary>
+    [Classification(DataClass.Public)] public string? SenderName { get; set; }
     [Classification(DataClass.Internal)] public Guid? ChangedBy { get; set; }
     [Classification(DataClass.Internal)] public DateTimeOffset ChangedAt { get; set; }
 }

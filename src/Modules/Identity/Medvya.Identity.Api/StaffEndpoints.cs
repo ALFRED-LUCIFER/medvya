@@ -15,7 +15,9 @@ namespace Medvya.Identity.Api;
 public static class StaffEndpoints
 {
     public sealed record AddStaff(string Email, Role Role, Guid? CustomRoleId, Guid FacilityId);
-    public sealed record Offboard(string? Reason);
+    /// <param name="OfferRebooking">True: the doctor's moved patients get the rebooking message; false: reception calls them (#225).</param>
+    public sealed record Offboard(string? Reason, bool OfferRebooking = false);
+    public sealed record Reactivate(string? Reason);
     public sealed record Row(Capability Capability, Access Access, Access? Extra);
     public sealed record BuiltInRole(Role Role, IReadOnlyList<Row> Rows);
 
@@ -59,12 +61,12 @@ public static class StaffEndpoints
             await invitations.ResendAsync(id, ct) is { } created ? Results.Ok(created) : Results.NotFound());
 
         // Quarterly access review (MDV-P1-010): every active member with role and last sign-in; confirm each, or offboard (the endpoint below).
-        g.MapGet("/access-review", async ([FromServices] IAccessReviews reviews, [FromServices] IStaffUsers users, [FromServices] IStaffSessions sessions, CancellationToken ct) =>
+        g.MapGet("/access-review", async (ClaimsPrincipal principal, [FromServices] IAccessReviews reviews, [FromServices] IStaffUsers users, [FromServices] IStaffSessions sessions, CancellationToken ct) =>
         {
             var review = await reviews.CurrentAsync(ct);
             var ids = review.Members.Select(m => m.UserId).Distinct().ToList();
             var names = await users.DisplayNamesAsync(ids, ct);
-            var signIns = await sessions.LastSignInAsync(ids, ct);
+            var signIns = await sessions.LastSignInAsync(ids, Guid.Parse(principal.FindFirstValue(StaffPolicies.TenantClaim)!), ct);
             return new
             {
                 review.Quarter, review.CompletedAt, review.LastCompletedAt,
@@ -80,22 +82,33 @@ public static class StaffEndpoints
             await reviews.ConfirmAsync(membershipId, ct) ? Results.NoContent() : Results.NotFound());
 
         // Offboarding (MDV-P1-009): access ends in the roster transaction (the membership is no longer active, so every endpoint refuses it
-        // and the facility picker no longer offers it); the person's sessions in this tenant end right after. Other tenants are untouched.
+        // and the facility picker no longer offers it); the person's sessions on that membership end right after. Their other facilities and
+        // other tenants are untouched (#877).
         g.MapPost("/{membershipId:guid}/offboard", async (Guid membershipId, Offboard body, ClaimsPrincipal principal, [FromServices] IStaffRoster roster,
             [FromServices] IStaffSessions sessions, [FromServices] IAccessReviews reviews, CancellationToken ct) =>
         {
             // A doctor's future visits go to reception's "needs rebooking" lane inside the same transaction (IStaffOffboardingParticipant).
-            var result = await roster.OffboardAsync(membershipId, body.Reason, ct);
+            var result = await roster.OffboardAsync(membershipId, body.Reason, body.OfferRebooking, ct);
             // shortcut: recorded after the offboarding commits (not one transaction); if it fails the offboarding stands and the owner is asked about that person only if they were still active.
             if (result.Outcome == OffboardOutcome.NotFound) return Results.NotFound();
             if (result.Outcome == OffboardOutcome.LastAdmin) return Problem("membershipId", "last_admin");
             if (result.UserId is { } userId)
             {
                 await reviews.RecordOffboardedAsync(membershipId, ct); // part of this quarter's access review (MDV-P1-010)
-                await sessions.RevokeInTenantAsync(userId, Guid.Parse(principal.FindFirstValue(StaffPolicies.TenantClaim)!), ct);
+                // Browser sessions and the person's phones alike: a native refresh token is a session row, so it stops on its next refresh.
+                await sessions.RevokeForMembershipAsync(userId, Guid.Parse(principal.FindFirstValue(StaffPolicies.TenantClaim)!), membershipId, ct);
             }
-            return Results.NoContent();
+            return Results.Ok(new { result.OpenVisits }); // patients already checked in for them, for reception to reassign on the board
         });
+
+        // Re-activation (MDV-P1-009, #225): an offboarded member works again with the same role; they sign in again (no session is restored).
+        g.MapPost("/{membershipId:guid}/reactivate", async (Guid membershipId, Reactivate body, [FromServices] IStaffRoster roster, CancellationToken ct) =>
+            await roster.ReactivateAsync(membershipId, body.Reason, ct) switch
+            {
+                ReactivateOutcome.Done => Results.NoContent(),
+                ReactivateOutcome.AboveGranter => Problem("membershipId", "above_granter"),
+                _ => Results.NotFound(),
+            });
 
         // What each assignable role holds (locked: from the role-permission matrix) and which rows a custom role may add.
         g.MapGet("/roles", async ([FromServices] IStaffRoster roster, CancellationToken ct) => Results.Ok(new
@@ -127,6 +140,10 @@ public static class StaffEndpoints
         catch (InvitationEmailException)
         {
             return SettingsEndpoints.EmailFailed;
+        }
+        catch (InvitationLimitException)
+        {
+            return SettingsEndpoints.TooManyInvitations;
         }
     }
 }

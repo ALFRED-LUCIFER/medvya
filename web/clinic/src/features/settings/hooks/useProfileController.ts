@@ -44,6 +44,8 @@ export function useProfileController() {
     saving: save.isPending,
     saved: save.isSuccess && !form.formState.isDirty,
     saveFailed: save.isError,
+    // #886: a web address in the practice name is refused (the name goes into invitation emails).
+    nameHasLink: save.error instanceof ApiError && settingsError(save.error.code) === 'name:link',
     onSubmit: form.handleSubmit(values => save.mutate(values)),
     logoUrl: profile.data?.hasLogo ? link.data?.url ?? null : null,
     hasLogo: profile.data?.hasLogo ?? false,

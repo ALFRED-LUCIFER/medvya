@@ -10,8 +10,10 @@ Feature: Synthetic data generator and seeded staging tenant
 
   # chunk: Seed signable users, synthetic markers and the package listing
   @todo
-  Scenario: Staging has signable seeded users
-    Then staging has a seeded India tenant with one user per role (and a UAE tenant if parameters are enabled)
+  Scenario: The Azure dev environment has a synthetic tenant made through the product
+    Given the founder signed up and ran onboarding as Dr. Arjun Rao with the runbook's synthetic values
+    And invited one persona per role, each accepting with their own Entra account
+    Then "Iyer Family Clinic (synthetic)" has one user per role
     And each can sign in with MFA
 
   @todo

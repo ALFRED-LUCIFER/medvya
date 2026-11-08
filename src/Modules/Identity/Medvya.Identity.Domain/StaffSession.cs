@@ -13,6 +13,9 @@ public sealed class StaffSession
     public static readonly TimeSpan MaxLifetime = TimeSpan.FromHours(8);
     /// <summary>Idle timeout before a facility is chosen; afterwards the tenant's setting applies.</summary>
     public const int DefaultIdleTimeoutMinutes = 15;
+    /// <summary>Native app sessions (MDV-P5-033): the app locks itself after 15 idle minutes (biometric/PIN), so the server-side caps are longer.</summary>
+    public static readonly TimeSpan NativeMaxLifetime = TimeSpan.FromDays(30);
+    public static readonly TimeSpan NativeIdleTimeout = TimeSpan.FromDays(7);
 
     [Classification(DataClass.Internal)] public Guid Id { get; init; }
     [Classification(DataClass.Internal)] public Guid UserId { get; init; }
@@ -25,9 +28,17 @@ public sealed class StaffSession
     [Classification(DataClass.Internal)] public DateTimeOffset CreatedAt { get; init; }
     [Classification(DataClass.Internal)] public DateTimeOffset LastSeenAt { get; set; }
     [Classification(DataClass.Internal)] public DateTimeOffset? RevokedAt { get; set; }
+    /// <summary>SHA-256 of the native app's current refresh token (or of its one-time sign-in code); null for a browser session.</summary>
+    [Classification(DataClass.Internal)] public byte[]? RefreshTokenHash { get; set; }
+    /// <summary>SHA-256 of the token the last rotation replaced: only that one coming back is a replay; any other mismatch is a forgery (#883).</summary>
+    [Classification(DataClass.Internal)] public byte[]? PreviousRefreshTokenHash { get; set; }
+
+    /// <summary>A native app session: reachable only by bearer token, never by cookie (and the reverse).</summary>
+    [Classification(DataClass.Internal)] public bool IsNative => RefreshTokenHash is not null;
 
     public bool IsActive(DateTimeOffset now) =>
-        RevokedAt is null && now < CreatedAt + MaxLifetime && now < LastSeenAt + TimeSpan.FromMinutes(IdleTimeoutMinutes);
+        RevokedAt is null && now < CreatedAt + (IsNative ? NativeMaxLifetime : MaxLifetime)
+        && now < LastSeenAt + (IsNative ? NativeIdleTimeout : TimeSpan.FromMinutes(IdleTimeoutMinutes));
 
     /// <summary>"Chrome on Windows" style label from a User-Agent; unknown parts stay generic.</summary>
     public static string DeviceLabel(string? userAgent)

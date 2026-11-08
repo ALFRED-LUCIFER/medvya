@@ -280,6 +280,9 @@ public sealed class AccessLogTests(PostgresFixture sql) : IClassFixture<Postgres
                 patients[n % patients.Length], "treatment", n % 50 == 0 ? "Denied" : "Allowed", start.AddSeconds(n * 17.28));
         await using (var conn = await sql.OpenAs("dbo", h.Tenant))
         {
+            // Statistics from the class's earlier tests (a few dozen rows), as autoanalyze leaves them on a slow runner: without the
+            // chain trigger's plan pin (LedgerSql, MDV-P0-039) this seed turns quadratic and times out.
+            await using (var analyze = new NpgsqlCommand("ANALYZE audit.\"AuditEvents\"", conn)) await analyze.ExecuteNonQueryAsync();
             await PostgresFixture.BulkCopyAsync(conn, "audit.AuditEvents", table);
         }
         using var client = Client(Role.PracticeAdmin);

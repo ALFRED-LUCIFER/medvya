@@ -119,10 +119,29 @@ public class DatabaseRoleTests(PostgresFixture sql) : IClassFixture<PostgresFixt
         await Denied("notifications_user", "SELECT \"Id\" FROM scheduling.\"Appointments\" LIMIT 1");
         await Denied("notifications_user", "DELETE FROM notifications.\"Attempts\""); // the attempts are the delivery history
         await Denied("scheduling_user", "SELECT \"Id\" FROM notifications.\"Notifications\" LIMIT 1");
+        await Run("encounters_user", "SELECT \"Id\" FROM encounters.\"Encounters\" LIMIT 1");
+        await Denied("encounters_user", "SELECT \"Id\" FROM patients.\"Patients\" LIMIT 1");
+        await Denied("encounters_user", "SELECT \"Id\" FROM scheduling.\"Appointments\" LIMIT 1");
+        await Denied("encounters_user", "DELETE FROM encounters.\"Encounters\""); // clinical records are never deleted
+        await Denied("scheduling_user", "SELECT \"Id\" FROM encounters.\"Encounters\" LIMIT 1");
+        await Denied("reporting_user", "SELECT \"Id\" FROM encounters.\"Encounters\" LIMIT 1");
     }
 
     [Fact]
     public Task BillingRoleCannotDeleteANumberSeries() => Denied("billing_user", "DELETE FROM billing.\"DocSequences\""); // would restart legal numbering
+
+    [Fact]
+    public async Task TheAppDeletesOnlyFromTheTablesItDeletesFrom()
+    {
+        // #879: patients, memberships, settings history, access reviews, MRN counters and visit history are never deleted.
+        await using var conn = await sql.OpenAs("app_user");
+        await using var cmd = new NpgsqlCommand("""
+            SELECT string_agg(schemaname || '.' || tablename, ',' ORDER BY schemaname COLLATE "C", tablename COLLATE "C") FROM pg_tables
+            WHERE schemaname IN ('tenancy', 'patients', 'scheduling') AND has_table_privilege(format('%I.%I', schemaname, tablename), 'DELETE')
+            """, conn);
+        Assert.Equal("patients.PayerCoverages,patients.Relationships,scheduling.ScheduleExceptions,scheduling.ScheduleSlots,scheduling.SlotHolds,"
+            + "tenancy.Closures,tenancy.OperatingHours", await cmd.ExecuteScalarAsync());
+    }
 
     [Fact]
     public async Task AuditRoleCanAppendButNeverChangeOrDelete()

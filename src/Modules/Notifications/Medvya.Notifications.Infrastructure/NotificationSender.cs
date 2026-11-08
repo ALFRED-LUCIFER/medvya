@@ -33,7 +33,7 @@ public sealed partial class NotificationSender(
         var mustTellOnly = !await terms.IsSatisfiedAsync(cancellationToken);
         var due = await db.Notifications.AsNoTracking()
             .Where(n => n.Status == NotificationStatus.Queued && n.SendAt <= now && (n.NextAttemptAt == null || n.NextAttemptAt <= now))
-            .Where(n => !mustTellOnly || n.Kind == NotificationKind.Cancelled || n.Kind == NotificationKind.NeedsRebooking)
+            .Where(n => !mustTellOnly || n.Kind == NotificationKind.Cancelled || n.Kind == NotificationKind.SeriesCancelled || n.Kind == NotificationKind.NeedsRebooking)
             .OrderBy(n => n.SendAt).Select(n => n.Id).Take(batch).ToListAsync(cancellationToken);
         var handled = 0;
         foreach (var id in due)
@@ -53,7 +53,7 @@ public sealed partial class NotificationSender(
         var o = options.Value;
         try
         {
-            if (n.Kind is not (NotificationKind.Cancelled or NotificationKind.NeedsRebooking) && now >= n.AppointmentStart) { await EndAsync(n, now, NotificationStatus.Suppressed, "visit_started", ct); return; }
+            if (n.Kind is not (NotificationKind.Cancelled or NotificationKind.SeriesCancelled or NotificationKind.NeedsRebooking) && now >= n.AppointmentStart) { await EndAsync(n, now, NotificationStatus.Suppressed, "visit_started", ct); return; }
             if (!await consent.AllowsAsync(n.PatientId, n.Channel, ct)) { await EndAsync(n, now, NotificationStatus.Suppressed, "no_consent", ct); return; }
             var contact = await contacts.FindAsync(n.PatientId, ct);
             var address = contact is null ? null : n.Channel == NotificationChannel.Email ? contact.Email : contact.Mobile;
@@ -61,10 +61,10 @@ public sealed partial class NotificationSender(
             var facility = await facilities.FindAsync(n.FacilityId, ct) ?? throw new PermanentFailure("facility_missing");
 
             var zone = TimeZoneInfo.FindSystemTimeZoneById(facility.TimeZone);
+            var prefs = await preferences.GetAsync(ct);
             if (n.Channel == NotificationChannel.Sms)
             {
                 // Quiet hours: no SMS inside the window; wait for its end (the visit-started check above then drops it if the visit came first).
-                var prefs = await preferences.GetAsync(ct);
                 if (NotificationRules.QuietEnd(now, zone, prefs.QuietStart, prefs.QuietEnd) is { } end)
                 {
                     n.NextAttemptAt = end;
@@ -75,7 +75,11 @@ public sealed partial class NotificationSender(
             var message = MessageCatalog.Render(n.Kind, contact.PreferredLanguage, facility.Name, TimeZoneInfo.ConvertTime(n.AppointmentStart, zone));
             var reference = NotificationReference.Make(n.TenantId, n.Id);
             if (n.Channel == NotificationChannel.Email)
-                await email.SendAsync(new EmailMessage(address, message.Subject, message.Body, new Dictionary<string, string> { ["X-SMTPAPI"] = $$$"""{"unique_args":{"ref":"{{{reference}}}"}}""" }), ct);
+            {
+                var sender = prefs.SenderFor(facility.Name); // the practice's name opens the subject on every provider (#213)
+                await email.SendAsync(new EmailMessage(address, $"{sender}: {message.Subject}", message.Body,
+                    new Dictionary<string, string> { ["X-SMTPAPI"] = $$$"""{"unique_args":{"ref":"{{{reference}}}"}}""" }, sender), ct);
+            }
             else
                 await sms.SendAsync(SmsFor(n, contact.CountryCode, address, message, reference, o.Sms), ct);
 

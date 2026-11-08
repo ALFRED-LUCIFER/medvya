@@ -44,9 +44,9 @@ public static class QueueDisplayAuthentication
     {
         app.MapPost("/v1/queue/tv/session", async (PairDisplay body, HttpContext http, CancellationToken ct) =>
             {
-                if (await FindAsync(http.RequestServices, body.Token, pair: true, ct) is null)
+                if (await PairAsync(http.RequestServices, body.Token, ct) is not { } screen)
                     return Results.Problem(statusCode: StatusCodes.Status401Unauthorized, title: "Display not recognised");
-                http.Response.Cookies.Append(QueueDisplayAuth.Cookie, body.Token!, new CookieOptions
+                http.Response.Cookies.Append(QueueDisplayAuth.Cookie, screen, new CookieOptions
                 {
                     HttpOnly = true, Secure = true, SameSite = SameSiteMode.Strict, Path = QueueDisplayAuth.CookiePath, IsEssential = true,
                     MaxAge = TimeSpan.FromDays(400), // the browser maximum; the server checks the display on every request
@@ -58,13 +58,22 @@ public static class QueueDisplayAuthentication
         return app;
     }
 
-    static async Task<(Guid TenantId, DisplaySession Display)?> FindAsync(IServiceProvider services, string? token, bool pair, CancellationToken ct)
+    static async Task<(Guid TenantId, DisplaySession Display)?> FindAsync(IServiceProvider services, string? token, CancellationToken ct)
     {
         if (InvitationToken.Read(token) is not { } read) return null;
         var (tenantId, hash) = read;
         await using var scope = services.EnterLinkTenant(tenantId);
-        var queue = scope.ServiceProvider.GetRequiredService<IQueueService>();
-        return await (pair ? queue.PairDisplayAsync(hash, ct) : queue.FindDisplayAsync(hash, ct)) is { } display ? (tenantId, display) : null;
+        return await scope.ServiceProvider.GetRequiredService<IQueueService>().FindDisplayAsync(hash, ct) is { } display ? (tenantId, display) : null;
+    }
+
+    /// <summary>Swaps the one-time link for a new secret that only this TV's cookie holds (#884); null when the link is unknown, revoked or used.</summary>
+    static async Task<string?> PairAsync(IServiceProvider services, string? link, CancellationToken ct)
+    {
+        if (InvitationToken.Read(link) is not { } read) return null;
+        var (tenantId, linkHash) = read;
+        var (screen, screenHash) = InvitationToken.New(tenantId);
+        await using var scope = services.EnterLinkTenant(tenantId);
+        return await scope.ServiceProvider.GetRequiredService<IQueueService>().PairDisplayAsync(linkHash, screenHash, ct) is null ? null : screen;
     }
 
     sealed class Handler(IOptionsMonitor<AuthenticationSchemeOptions> options, ILoggerFactory logger, UrlEncoder encoder)
@@ -73,7 +82,7 @@ public static class QueueDisplayAuthentication
         protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
         {
             if (!Request.Cookies.TryGetValue(QueueDisplayAuth.Cookie, out var token)) return AuthenticateResult.NoResult();
-            if (await FindAsync(Context.RequestServices, token, pair: false, Context.RequestAborted) is not { } found)
+            if (await FindAsync(Context.RequestServices, token, Context.RequestAborted) is not { } found)
                 return AuthenticateResult.Fail("Unknown or revoked display.");
             var (tenantId, display) = found;
             var identity = new ClaimsIdentity(

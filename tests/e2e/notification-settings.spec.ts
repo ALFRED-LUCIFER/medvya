@@ -19,11 +19,13 @@ const templates = (lang: string) => [
 
 async function open(page: Page, tab: string, locale = 'en') {
   const saved = { puts: [] as { body: unknown; csrf: string | undefined }[] };
-  let prefs = { confirmation: true, reminder24h: true, reminder2h: true, changes: true, email: true, sms: true, quietStart: '21:00:00', quietEnd: '08:00:00' };
+  let prefs = { confirmation: true, reminder24h: true, reminder2h: true, changes: true, email: true, sms: true, quietStart: '21:00:00', quietEnd: '08:00:00', senderName: null as string | null };
   await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
   await page.route('**/v1/me/context', r => r.fulfill({ json: admin }));
   await page.route('**/v1/settings/notifications/templates?*', r => r.fulfill({ json: templates(locale) }));
   await page.route('**/v1/settings/notifications', r => {
+    if (r.request().method() === 'PUT' && /iyer-clinic\.example/.test(r.request().postData() ?? ''))
+      return r.fulfill({ status: 400, json: { title: 'One or more validation errors occurred.', errors: { senderName: ['link'] } } });
     if (r.request().method() === 'PUT') {
       prefs = r.request().postDataJSON() as typeof prefs;
       saved.puts.push({ body: prefs, csrf: r.request().headers()['x-medvya-csrf'] });
@@ -42,8 +44,20 @@ test('the owner turns off a reminder and changes the quiet hours; the server get
   await page.getByLabel('Quiet until').fill('09:30');
   await page.getByRole('button', { name: 'Save changes' }).click();
   await expect(page.getByText('Saved.')).toBeVisible();
-  expect(saved.puts).toEqual([{ body: { confirmation: true, reminder24h: false, reminder2h: true, changes: true, email: true, sms: true, quietStart: '21:00:00', quietEnd: '09:30:00' }, csrf: '1' }]);
+  expect(saved.puts).toEqual([{ body: { confirmation: true, reminder24h: false, reminder2h: true, changes: true, email: true, sms: true, quietStart: '21:00:00', quietEnd: '09:30:00', senderName: null }, csrf: '1' }]);
   await expect(page.getByText('Turning a message off cancels the ones already waiting')).toBeVisible();
+});
+
+test('the email sender name is saved, and one with a web address is refused under the field (#213)', async ({ page }) => {
+  const saved = await open(page, 'notifications');
+  const name = page.getByLabel('Sender name in emails');
+  await name.fill('Visit iyer-clinic.example');
+  await page.getByRole('button', { name: 'Save changes' }).click();
+  await expect(page.getByText('Remove the web address', { exact: false })).toBeVisible();
+  await name.fill('Iyer Family Clinic');
+  await page.getByRole('button', { name: 'Save changes' }).click();
+  await expect(page.getByText('Saved.')).toBeVisible();
+  expect(saved.puts.at(-1)!.body).toMatchObject({ senderName: 'Iyer Family Clinic' });
 });
 
 test('templates show placeholders only and WhatsApp is a disabled placeholder', async ({ page }) => {

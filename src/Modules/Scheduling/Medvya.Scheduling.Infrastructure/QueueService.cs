@@ -101,10 +101,13 @@ public sealed class QueueService(SchedulingDbContext db, SchedulingContext conte
         db.QueueDisplays.AsNoTracking().Where(d => d.TokenHash == tokenHash && d.RevokedAt == null)
             .Select(d => new DisplaySession(d.Id, d.FacilityId)).SingleOrDefaultAsync(cancellationToken);
 
-    public async Task<DisplaySession?> PairDisplayAsync(byte[] tokenHash, CancellationToken cancellationToken = default)
+    public async Task<DisplaySession?> PairDisplayAsync(byte[] linkHash, byte[] screenHash, CancellationToken cancellationToken = default)
     {
-        if (await FindDisplayAsync(tokenHash, cancellationToken) is not { } display) return null;
+        if (await FindDisplayAsync(linkHash, cancellationToken) is not { } display) return null;
         await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
+        // Conditional on the link's hash: of two TVs pairing with one link at once, only one gets a screen secret.
+        if (await db.QueueDisplays.Where(d => d.Id == display.DisplayId && d.TokenHash == linkHash && d.RevokedAt == null)
+                .ExecuteUpdateAsync(u => u.SetProperty(d => d.TokenHash, screenHash), cancellationToken) != 1) return null;
         await context.AuditAsync(SchedulingAudit.DisplayPair, SchedulingAudit.DisplayResource, SchedulingAudit.Operations, display.DisplayId, null, cancellationToken);
         await tx.CommitAsync(cancellationToken);
         return display;

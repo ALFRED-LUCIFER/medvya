@@ -75,6 +75,12 @@ namespace Medvya.Identity.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("MembershipId")
                         .HasColumnType("uuid");
 
+                    b.Property<byte[]>("PreviousRefreshTokenHash")
+                        .HasColumnType("bytea");
+
+                    b.Property<byte[]>("RefreshTokenHash")
+                        .HasColumnType("bytea");
+
                     b.Property<DateTimeOffset?>("RevokedAt")
                         .HasColumnType("timestamp with time zone");
 

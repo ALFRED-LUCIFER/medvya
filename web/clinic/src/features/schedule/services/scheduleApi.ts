@@ -1,7 +1,7 @@
 import { apiFetch } from '../../api/services/apiClient';
 import type { BookedAppointment, BookingForm, Hold, PatientMatch, SlotChoice } from '../domain/booking';
 import type { Occurrence, SeriesResult } from '../domain/series';
-import type { CancelReason } from '../domain/changes';
+import type { CancelReason, VisitMove } from '../domain/changes';
 import type { PatientMessage } from '../domain/messages';
 import type { SaveResult, SavedAdjustment } from '../domain/adjustments';
 import type { Appointment, ScheduleDay } from '../domain/schedule';
@@ -82,17 +82,20 @@ export const cancelFollowing = (appointmentId: string, reason: CancelReason, not
   post<Appointment[]>(`/v1/appointments/${appointmentId}/cancel-following`, { reason, note: note || null });
 
 // MDV-P1-026: recurring appointments. The preview lists each occurrence with the conflict that would refuse it; booking takes the starts the desk confirmed.
-export const previewSeries = (facilityId: string, s: { calendarId: string; visitType: string }, firstStart: string, count: number, monthly: boolean) =>
-  post<Occurrence[]>('/v1/appointments/series/preview', { facilityId, calendarId: s.calendarId, visitType: s.visitType, firstStart, count, intervalWeeks: 1, monthly });
+export const previewSeries = (facilityId: string, s: { calendarId: string; visitType: string }, firstStart: string, count: number, monthly: boolean, weekdays: number[]) =>
+  post<Occurrence[]>('/v1/appointments/series/preview', { facilityId, calendarId: s.calendarId, visitType: s.visitType, firstStart, count, intervalWeeks: 1, monthly, weekdays });
 
 export const bookSeries = (facilityId: string, s: { calendarId: string; visitType: string }, form: BookingForm, starts: string[]) =>
   post<SeriesResult>('/v1/appointments/series', { facilityId, calendarId: s.calendarId, visitType: s.visitType, starts, ...form });
 
 export const markNoShow = (appointmentId: string) => post<Appointment>(`/v1/appointments/${appointmentId}/no-show`, {});
 
-/** Messages sent to the patient about a visit (statuses only). Ids only in the URL. */
+/** The visit's moves, oldest first (MDV-P1-024). */
+export const fetchHistory = (appointmentId: string) => send<VisitMove[]>(`/v1/appointments/${appointmentId}/history`);
+
+/** Messages sent to the patient about a visit (statuses only); `preparing` while the booking's messages are not queued yet. Ids only in the URL. */
 export const fetchMessages = (facilityId: string, appointmentId: string) =>
-  send<PatientMessage[]>(`/v1/appointments/${appointmentId}/notifications?facilityId=${facilityId}`);
+  send<{ messages: PatientMessage[]; preparing: boolean }>(`/v1/appointments/${appointmentId}/notifications?facilityId=${facilityId}`);
 
 // MDV-P1-012: leave and one-off sessions. An answer of 409 "actions_required" carries the affected visits (ApiError.body.affected).
 export const fetchAdjustments = (facilityId: string) => send<SavedAdjustment[]>(`/v1/schedule/exceptions?${new URLSearchParams({ facilityId })}`);
@@ -102,7 +105,8 @@ export const saveAdjustment = (body: unknown) => post<SaveResult>('/v1/schedule/
 /** Edit takes the body of an add (same action rules); delete cancels the exception and gives the slots back. */
 export const updateAdjustment = (id: string, body: unknown) => send<SaveResult>(`/v1/schedule/exceptions/${id}`, { method: 'PUT', headers: { ...csrf, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 
-export const deleteAdjustment = (facilityId: string, id: string) => send<void>(`/v1/schedule/exceptions/${id}?${new URLSearchParams({ facilityId })}`, { method: 'DELETE', headers: csrf });
+export const deleteAdjustment = (facilityId: string, id: string, version: string) =>
+  send<void>(`/v1/schedule/exceptions/${id}?${new URLSearchParams({ facilityId, version })}`, { method: 'DELETE', headers: csrf });
 
 /** MDV-P1-050: the server audits the print and answers with the only fields that may go on paper. */
 export const printDaySheet = (facilityId: string, date: string | null) => post<DaySheet>('/v1/schedule/print', { facilityId, date });

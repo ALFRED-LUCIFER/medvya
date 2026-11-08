@@ -26,6 +26,7 @@ const member = (over: object) => ({
 const staff = [
   member({ membershipId: 'a', name: 'K. Lakshmi (synthetic)', role: 'PracticeAdmin' }),
   member({ membershipId: 'b', email: 'joseph@example.test', status: 'Invited', mfa: 'pending', invitationId: 'i-1', invitationState: 'pending', invitationExpiresAt: '2026-11-12T10:00:00Z' }),
+  member({ membershipId: 'c', email: 'revoked@example.test', status: 'Invited', mfa: 'pending', invitationId: 'i-3', invitationState: 'revoked', invitationExpiresAt: '2026-11-12T10:00:00Z' }),
 ];
 
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
@@ -54,6 +55,11 @@ test('staff table shows role, location, second factor and status, with resend an
   await expect(page.getByRole('row', { name: /K\. Lakshmi/ })).toContainText('Set up');
   await expect(row.getByRole('button', { name: 'Resend invitation to joseph@example.test' })).toBeVisible();
   await expect(row.getByRole('button', { name: 'Revoke invitation to joseph@example.test' })).toBeVisible();
+  // MDV-P1-052: a revoked invitation reads as revoked in the status column, not as Invited, and cannot be revoked again.
+  const gone = page.getByRole('row', { name: /revoked@example\.test/ });
+  await expect(gone.getByRole('cell').nth(3)).toHaveText('Invitation revoked');
+  await expect(gone.getByRole('button', { name: /Revoke/ })).toHaveCount(0);
+  await expect(gone.getByRole('button', { name: /Resend/ })).toHaveCount(0); // #912: revoked stays revoked
 
   let revoked = false;
   await page.route('**/v1/invitations/i-1', r => { revoked = r.request().method() === 'DELETE'; return r.fulfill({ status: 204 }); });
@@ -109,23 +115,71 @@ test('offboarding asks for a reason, confirms, and says the last administrator c
   const desk = member({ membershipId: 'c', name: 'A. Joseph (synthetic)' });
   await page.route('**/v1/staff', r => r.request().method() === 'GET' ? r.fulfill({ json: [staff[0], desk] }) : r.fallback());
   let body = '';
-  await page.route('**/v1/staff/c/offboard', r => { body = r.request().postData() ?? ''; return r.fulfill({ status: 204 }); });
+  await page.route('**/v1/staff/c/offboard', r => { body = r.request().postData() ?? ''; return r.fulfill({ json: { openVisits: 0 } }); });
   await page.route('**/v1/staff/a/offboard', r => r.fulfill({ status: 400, json: { errors: { membershipId: ['last_admin'] } } }));
   await page.goto('/settings?tab=staff');
   await page.getByRole('button', { name: 'Offboard A. Joseph (synthetic)' }).click();
+  // #912: the form opens below the table; it is brought into view with the reason field focused.
+  await expect(page.getByLabel('Reason (kept in the audit trail)')).toBeFocused();
+  await expect(page.getByLabel('Reason (kept in the audit trail)')).toBeInViewport();
   await page.getByRole('button', { name: 'Offboard and sign out everywhere' }).click();
   await expect(page.getByText('Enter a reason.')).toBeVisible();
   await page.getByLabel('Reason (kept in the audit trail)').fill('Left the practice');
   expect(await axe(page)).toEqual([]);
   await page.getByRole('button', { name: 'Offboard and sign out everywhere' }).click();
   await expect(page.getByText('Offboarded. Their access has ended and their sessions are signed out.')).toBeVisible();
-  expect(JSON.parse(body)).toEqual({ reason: 'Left the practice' });
+  expect(JSON.parse(body)).toEqual({ reason: 'Left the practice', offerRebooking: false });
+  await expect(page.getByText(/Patients already checked in/)).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Offboard K. Lakshmi (synthetic)' }).click();
   await page.getByLabel('Reason (kept in the audit trail)').fill('Testing');
   await page.getByRole('button', { name: 'Offboard and sign out everywhere' }).click();
   // scoped: the page can also show an unrelated 'settings could not be loaded' alert while its request fails
   await expect(page.getByRole('alert').filter({ hasText: 'last administrator' })).toBeVisible();
+});
+
+test('offboarding a doctor asks what happens to their patients and names the ones waiting today (#225)', async ({ page }) => {
+  await setUp(page);
+  const doctor = member({ membershipId: 'd', userId: 'u-d', name: 'Dr. R. Menon (synthetic)', role: 'HospitalDoctor' });
+  await page.route('**/v1/staff', r => r.request().method() === 'GET' ? r.fulfill({ json: [staff[0], doctor] }) : r.fallback());
+  let body = '';
+  await page.route('**/v1/staff/d/offboard', r => { body = r.request().postData() ?? ''; return r.fulfill({ json: { openVisits: 2 } }); });
+  await page.goto('/settings?tab=staff');
+  await page.getByRole('button', { name: 'Offboard Dr. R. Menon (synthetic)' }).click();
+  await page.getByLabel('Reason (kept in the audit trail)').fill('Left the practice');
+  await page.getByRole('button', { name: 'Offboard and sign out everywhere' }).click();
+  await expect(page.getByText('Choose what happens to their booked patients.')).toBeVisible();
+  expect(body).toBe('');
+  await page.getByLabel(/Offer new slots/).check();
+  expect(await axe(page)).toEqual([]);
+  await page.getByRole('button', { name: 'Offboard and sign out everywhere' }).click();
+  await expect(page.getByText('Patients already checked in for them: 2. Reassign them to another doctor on the board.')).toBeVisible();
+  expect(JSON.parse(body)).toEqual({ reason: 'Left the practice', rebooking: undefined, offerRebooking: true });
+});
+
+test('an offboarded person is brought back with a reason; a role above the admin is refused (#225)', async ({ page }) => {
+  await setUp(page);
+  const gone = member({ membershipId: 'g', userId: 'u-g', name: 'A. Joseph (synthetic)', status: 'Offboarded' });
+  await page.route('**/v1/staff', r => r.request().method() === 'GET' ? r.fulfill({ json: [staff[0], gone] }) : r.fallback());
+  let body = '';
+  await page.route('**/v1/staff/g/reactivate', r => { body = r.request().postData() ?? ''; return r.fulfill({ status: 204 }); });
+  await page.goto('/settings?tab=staff');
+  await expect(page.getByRole('button', { name: 'Offboard A. Joseph (synthetic)' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Bring back A. Joseph (synthetic)' }).click();
+  await page.getByRole('button', { name: 'Bring back', exact: true }).click();
+  await expect(page.getByText('Enter a reason.')).toBeVisible();
+  await page.getByLabel('Reason (kept in the audit trail)').fill('Returned from leave');
+  expect(await axe(page)).toEqual([]);
+  await page.getByRole('button', { name: 'Bring back', exact: true }).click();
+  await expect(page.getByText('Brought back. They can sign in again with the same role.')).toBeVisible();
+  expect(JSON.parse(body)).toEqual({ reason: 'Returned from leave' });
+
+  await page.unroute('**/v1/staff/g/reactivate');
+  await page.route('**/v1/staff/g/reactivate', r => r.fulfill({ status: 400, json: { errors: { membershipId: ['above_granter'] } } }));
+  await page.getByRole('button', { name: 'Bring back A. Joseph (synthetic)' }).click();
+  await page.getByLabel('Reason (kept in the audit trail)').fill('Again');
+  await page.getByRole('button', { name: 'Bring back', exact: true }).click();
+  await expect(page.getByRole('alert').filter({ hasText: 'access you do not have yourself' })).toBeVisible();
 });
 
 test('the offboarding form lays out right to left in Arabic', async ({ page }) => {

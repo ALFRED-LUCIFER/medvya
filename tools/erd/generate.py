@@ -22,7 +22,7 @@ SOFT_REFS = {
     'CustomRoleId': ('tenancy', 'CustomRoles'), 'PatientId': ('patients', 'Patients'), 'CandidatePatientId': ('patients', 'Patients'),
     'MergedIntoPatientId': ('patients', 'Patients'), 'MergedFromPatientId': ('patients', 'Patients'), 'MovedFromPatientId': ('patients', 'Patients'),
     'UserId': ('identity', 'Users'), 'ActorUserId': ('identity', 'Users'), 'RegisteredBy': ('identity', 'Users'), 'ChangedBy': ('identity', 'Users'),
-    'BookedBy': ('identity', 'Users'), 'DecidedBy': ('identity', 'Users'), 'HeldBy': ('identity', 'Users'), 'VerifiedBy': ('identity', 'Users'),
+    'BookedBy': ('identity', 'Users'), 'DecidedBy': ('identity', 'Users'), 'RequestedBy': ('identity', 'Users'), 'LeadClinicianId': ('identity', 'Users'), 'EndedBy': ('identity', 'Users'), 'HeldBy': ('identity', 'Users'), 'VerifiedBy': ('identity', 'Users'),
     'AppointmentId': ('scheduling', 'Appointments'),
     'NotificationId': ('notifications', 'Notifications'), 'ReviewId': ('tenancy', 'AccessReviews'),
 }
@@ -36,9 +36,9 @@ PLANNED_TO_BUILT = {
     'SCHEDULE_TEMPLATE': 'scheduling.Templates', 'LEAVE': 'scheduling.ScheduleExceptions', 'HOLIDAY': 'tenancy.Closures',
     'PATIENT': 'patients.Patients', 'PATIENT_IDENTIFIER': 'patients.Identifiers', 'PATIENT_RELATIONSHIP': 'patients.Relationships',
     'PAYER_COVERAGE': 'patients.PayerCoverages', 'CONSENT_RECEIPT': 'patients.ConsentReceipts', 'SCHEDULE_SLOT': 'scheduling.ScheduleSlots',
-    'APPOINTMENT': 'scheduling.Appointments', 'QUEUE_TOKEN': 'scheduling.QueueTokens', 'DOC_SEQUENCE': 'billing.DocSequences',
+    'APPOINTMENT': 'scheduling.Appointments', 'WAITLIST_ENTRY': 'scheduling.Waitlist', 'QUEUE_TOKEN': 'scheduling.QueueTokens', 'DOC_SEQUENCE': 'billing.DocSequences',
     'AUDIT_EVENT': 'audit.AuditEvents', 'OUTBOX_EVENT': 'scheduling.OutboxEvents', 'NOTIFICATION': 'notifications.Notifications',
-    'NOTIFICATION_ATTEMPT': 'notifications.Attempts',
+    'NOTIFICATION_ATTEMPT': 'notifications.Attempts', 'ENCOUNTER': 'encounters.Encounters',
 }
 # where the built table covers only part of the planned entity
 PARTIAL = {
@@ -49,7 +49,7 @@ PARTIAL = {
     'DOC_SEQUENCE': 'numbering only; invoices and payments are not built',
 }
 LEDGER = {'audit.AuditEvents', 'patients.ConsentReceipts', 'tenancy.TermsAcceptances'}  # hash-chained, MDV-P0-036
-MODULE_ORDER = ['Tenancy', 'Identity', 'Patients', 'Scheduling', 'Notifications', 'Audit', 'Leads', 'Billing']
+MODULE_ORDER = ['Tenancy', 'Identity', 'Patients', 'Scheduling', 'Encounters', 'Notifications', 'Audit', 'Leads', 'Billing', 'Platform']
 
 
 def module_edges():

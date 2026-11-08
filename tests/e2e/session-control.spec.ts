@@ -31,7 +31,7 @@ test('two memberships: choose a facility, then switch without signing in again',
   const server = await mockServer(page);
   await page.goto('/schedule');
   await expect(page).toHaveURL('/choose-facility');
-  await expect(page.getByRole('heading', { name: 'Choose where you are working today' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Where are you working today?' })).toBeVisible();
   await expect(page.getByRole('button', { name: /Besant Nagar/ })).toContainText('Doctor');
   await expect(page.getByRole('button', { name: 'Keep current facility' })).toHaveCount(0); // nothing to keep yet
 
@@ -56,7 +56,7 @@ for (const locale of ['en', 'ar'])
 
     server.expired = true; // e.g. idle timeout on the server
     await page.clock.fastForward(61_000); // the one-minute status poll sees the 401, with no user action
-    await expect(page.getByRole('alert')).toContainText(locale === 'en' ? 'Session expired' : 'انتهت الجلسة');
+    await expect(page.getByRole('alert')).toContainText(locale === 'en' ? 'You were signed out' : 'تم تسجيل خروجك');
     await page.reload();
     await expect(page.getByRole('alert')).toBeVisible();
     await expect(page).toHaveURL('/schedule'); // signing in again returns here
@@ -66,9 +66,28 @@ for (const locale of ['en', 'ar'])
     expect(violations).toEqual([]);
 
     const login = page.waitForRequest(r => r.url().includes('/bff/login'));
-    await page.getByRole('alert').getByRole('button').click();
+    await page.getByRole('alert').getByRole('button', { name: locale === 'en' ? 'Sign in again' : 'سجّل الدخول مجددًا' }).click();
     expect(new URL((await login).url()).searchParams.get('returnUrl')).toBe('/schedule');
   });
+
+// MDV-P0-015: a refused API call re-reads the session at once; the clock is frozen, so the minute poll cannot be what reacts.
+test('an API call answering 401 shows "Session expired" at once', async ({ page }) => {
+  const server = await mockServer(page);
+  server.chosen = 'm-adyar';
+  await page.clock.install();
+  await page.route('**/v1/patients/search**', r => { server.expired = true; return r.fulfill({ status: 401 }); });
+  await page.goto('/patients/directory');
+  await expect(page.getByRole('alert')).toContainText('You were signed out');
+});
+
+test('an API call answering 403 after the membership was suspended leaves the facility', async ({ page }) => {
+  const server = await mockServer(page);
+  server.chosen = 'm-adyar';
+  await page.clock.install();
+  await page.route('**/v1/patients/search**', r => { server.chosen = null; return r.fulfill({ status: 403, json: {} }); });
+  await page.goto('/patients/directory');
+  await expect(page).toHaveURL('/choose-facility');
+});
 
 test('browser storage holds no patient or session data, only allowlisted keys', async ({ page }) => {
   const server = await mockServer(page);

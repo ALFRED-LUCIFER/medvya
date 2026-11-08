@@ -1,13 +1,16 @@
+using Medvya.Tenancy.Domain;
+
 namespace Medvya.Tenancy.Application;
 
 /// <summary>The clinic profile. Name is the tenant's name; HasLogo says whether a logo link can be requested.</summary>
-public sealed record ProfileView(string Name, string? Address, string? RegistrationNumber, string? TaxNumber, string? Phone, string? Email, bool HasLogo);
+public sealed record ProfileView(string Name, string? Address, string? RegistrationNumber, string? TaxNumber, string? Phone, string? Email, bool HasLogo, DateOnly? RegistrationExpiresOn = null);
 
 public sealed record SaveProfile
 {
     public string? Name { get; init; }
     public string? Address { get; init; }
     public string? RegistrationNumber { get; init; }
+    public DateOnly? RegistrationExpiresOn { get; init; }
     public string? TaxNumber { get; init; }
     public string? Phone { get; init; }
     public string? Email { get; init; }
@@ -94,4 +97,10 @@ public interface IPracticeSettings
 
     /// <summary>A link to the logo that stops working after <paramref name="lifetime"/>; null without a logo.</summary>
     Task<Uri?> LogoLinkAsync(TimeSpan lifetime, CancellationToken cancellationToken = default);
+
+    /// <summary>Which clinicians treat the facility's patients (MDV-P2-024).</summary>
+    Task<ClinicalAccessPolicy> GetClinicalAccessAsync(CancellationToken cancellationToken = default);
+
+    /// <exception cref="SettingsValidationException">Not a known policy.</exception>
+    Task<ClinicalAccessPolicy> SaveClinicalAccessAsync(ClinicalAccessPolicy policy, CancellationToken cancellationToken = default);
 }

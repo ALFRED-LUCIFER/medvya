@@ -1,6 +1,6 @@
 -- Rights on single tables that are narrower than the schema-wide grants in roles.sql (MDV-P0-041). db-migrate applies this file twice:
--- right after roles.sql (as the administrator, which re-grants schema-wide rights) and at the end of every migration run (as medvya_owner,
--- once the tables exist). Idempotent; a table that does not exist yet is skipped and picked up by the next run.
+-- right after roles.sql (which re-grants schema-wide rights) and at the end of every migration run, both times as medvya_owner (once the
+-- tables exist). Idempotent; a table that does not exist yet is skipped and picked up by the next run.
 
 DO $$
 BEGIN
@@ -19,6 +19,11 @@ BEGIN
         REVOKE UPDATE, DELETE, TRUNCATE ON scheduling."OutboxTenants" FROM medvya_scheduling;
     END IF;
 
+    -- The platform audit log is append-only (MDV-P5-040): read and add, never change.
+    IF to_regclass('platform."AuditEntries"') IS NOT NULL THEN
+        REVOKE UPDATE, DELETE, TRUNCATE ON platform."AuditEntries" FROM medvya_platform;
+    END IF;
+
     -- The chain trigger lists a tenant's first row in ledger."Chains"; ledger."Tables" stays read-only (roles.sql).
     IF to_regclass('ledger."Chains"') IS NOT NULL THEN
         GRANT INSERT ON ledger."Chains" TO medvya_tenancy, medvya_patients, medvya_audit;
@@ -27,6 +32,27 @@ BEGIN
     IF to_regclass('ledger."Digests"') IS NOT NULL THEN
         GRANT INSERT ON ledger."Digests" TO medvya_audit;
     END IF;
+END $$;
+
+-- DELETE only on the tables the application deletes from (#879): replaced opening hours, a removed closure, a replaced payer or
+-- emergency contact, freed slots, released holds and removed schedule exceptions. Everything else (patients, memberships, settings
+-- history, access reviews, the MRN counters, visit history) is never deleted, so a buggy or injected delete cannot remove it either.
+-- Revoked schema-wide first, so a new table (granted DELETE by its schema's default privilege) is covered from its first run.
+REVOKE DELETE, TRUNCATE ON ALL TABLES IN SCHEMA tenancy FROM medvya_tenancy;
+REVOKE DELETE, TRUNCATE ON ALL TABLES IN SCHEMA patients FROM medvya_patients;
+REVOKE DELETE, TRUNCATE ON ALL TABLES IN SCHEMA scheduling FROM medvya_scheduling;
+DO $$
+DECLARE t text[];
+BEGIN
+    FOREACH t SLICE 1 IN ARRAY ARRAY[['tenancy', 'OperatingHours', 'medvya_tenancy'], ['tenancy', 'Closures', 'medvya_tenancy'],
+                                    ['patients', 'PayerCoverages', 'medvya_patients'], ['patients', 'Relationships', 'medvya_patients'],
+                                    ['scheduling', 'ScheduleSlots', 'medvya_scheduling'], ['scheduling', 'SlotHolds', 'medvya_scheduling'],
+                                    ['scheduling', 'ScheduleExceptions', 'medvya_scheduling']]
+    LOOP
+        IF to_regclass(format('%I.%I', t[1], t[2])) IS NOT NULL THEN
+            EXECUTE format('GRANT DELETE ON %I.%I TO %I', t[1], t[2], t[3]);
+        END IF;
+    END LOOP;
 END $$;
 
 -- Tenancy tables reporting may read: no personal data (a test checks every listed table's classified columns). Not listed on purpose:

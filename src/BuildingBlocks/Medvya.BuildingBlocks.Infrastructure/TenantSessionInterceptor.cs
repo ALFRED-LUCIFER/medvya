@@ -8,7 +8,8 @@ namespace Medvya.BuildingBlocks.Infrastructure;
 /// <summary>
 /// Sets the session setting medvya.tenant_id on every connection open, so row-level security (MDV-P0-034) filters every query.
 /// Npgsql resets a connection (DISCARD ALL) when it returns to the pool, which clears the setting, so a pooled connection never carries another tenant.
-/// Shared by every module DbContext (Tenancy, Audit, …).
+/// Without a tenant the settings are cleared explicitly as well (#887), so isolation does not rest on the reset alone; PostgresDataSources
+/// refuses a connection string that would skip the reset. Shared by every module DbContext (Tenancy, Audit, …).
 /// </summary>
 public sealed class TenantSessionInterceptor(ICurrentTenant tenant) : DbConnectionInterceptor
 {
@@ -26,8 +27,13 @@ public sealed class TenantSessionInterceptor(ICurrentTenant tenant) : DbConnecti
 
     DbCommand? Command(DbConnection connection)
     {
-        if (tenant.TenantId is not { } id) return null; // no tenant → RLS returns no tenant rows
         var cmd = connection.CreateCommand();
+        if (tenant.TenantId is not { } id)
+        {
+            // No tenant: RLS returns no tenant rows, even on a connection that somehow kept another request's settings.
+            cmd.CommandText = "SELECT set_config('medvya.tenant_id', '', false), set_config('medvya.user_id', '', false)";
+            return cmd;
+        }
         cmd.CommandText = "SELECT set_config('medvya.tenant_id', @tenant, false)";
         var p = cmd.CreateParameter();
         p.ParameterName = "@tenant";

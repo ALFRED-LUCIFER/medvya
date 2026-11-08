@@ -28,6 +28,7 @@ public sealed class TenancyDbContext(DbContextOptions<TenancyDbContext> options,
     public DbSet<AccessReview> AccessReviews => Set<AccessReview>();
     public DbSet<AccessReviewDecision> AccessReviewDecisions => Set<AccessReviewDecision>();
     public DbSet<TenantIndexEntry> TenantIndex => Set<TenantIndexEntry>();
+    public DbSet<AccessRequest> AccessRequests => Set<AccessRequest>();
 
     Guid? CurrentTenantId => tenant.TenantId;
 
@@ -45,6 +46,7 @@ public sealed class TenancyDbContext(DbContextOptions<TenancyDbContext> options,
             e.Property(x => x.CountryCode).HasMaxLength(2).IsFixedLength().Metadata.SetAfterSaveBehavior(PropertySaveBehavior.Throw);
             e.Property(x => x.ResidencyRegion).HasMaxLength(40).Metadata.SetAfterSaveBehavior(PropertySaveBehavior.Throw);
             e.Property(x => x.IdleTimeoutMinutes).HasDefaultValue(15);
+            e.Property(x => x.ClinicalAccess).HasConversion<string>().HasMaxLength(30).HasDefaultValue(ClinicalAccessPolicy.AllFacilityClinicians).HasSentinel((ClinicalAccessPolicy)(-1));
             e.ToTable(t => { t.HasCheckConstraint("CK_Tenants_IdleTimeoutMinutes", "\"IdleTimeoutMinutes\" BETWEEN 1 AND 480"); t.HasTrigger("TR_Tenants_Index"); });
             e.HasQueryFilter(x => x.Id == CurrentTenantId);
         });
@@ -54,13 +56,15 @@ public sealed class TenancyDbContext(DbContextOptions<TenancyDbContext> options,
             e.Property(x => x.TimeZone).HasMaxLength(64);
             e.Property(x => x.Address).HasMaxLength(500);
             e.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
+            e.HasAlternateKey(x => new { x.TenantId, x.Id }); // the target of the membership's (TenantId, FacilityId) key (#890)
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         modelBuilder.Entity<Membership>(e =>
         {
             e.Property(x => x.Role).HasConversion<string>().HasMaxLength(40);
             e.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
-            e.HasOne<Facility>().WithMany().HasForeignKey(x => x.FacilityId).OnDelete(DeleteBehavior.Restrict);
+            // A membership's facility is in the membership's own tenant, enforced by the database (#890): foreign-key checks bypass RLS.
+            e.HasOne<Facility>().WithMany().HasForeignKey(x => new { x.TenantId, x.FacilityId }).HasPrincipalKey(f => new { f.TenantId, f.Id }).OnDelete(DeleteBehavior.Restrict);
             e.HasIndex(x => new { x.TenantId, x.UserId, x.FacilityId }).IsUnique();
             e.HasOne<CustomRole>().WithMany().HasForeignKey(x => x.CustomRoleId).OnDelete(DeleteBehavior.Restrict);
             e.HasIndex(x => x.UserId); // the facility picker looks a user's memberships up across tenants
@@ -79,6 +83,18 @@ public sealed class TenancyDbContext(DbContextOptions<TenancyDbContext> options,
         {
             e.HasKey(x => new { x.ReviewId, x.MembershipId });
             e.Property(x => x.Decision).HasConversion<string>().HasMaxLength(20);
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<AccessRequest>(e =>
+        {
+            e.Property(x => x.Reason).HasConversion<string>().HasMaxLength(30);
+            e.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
+            e.HasOne<Facility>().WithMany().HasForeignKey(x => x.FacilityId).OnDelete(DeleteBehavior.Restrict);
+            // One open request per clinician, patient and facility: a second click (or tab) answers with the first.
+            e.HasIndex(x => new { x.TenantId, x.FacilityId, x.PatientId, x.RequestedBy }).IsUnique().HasFilter("\"Status\" = 'Pending'");
+            e.HasIndex(x => new { x.FacilityId, x.Status, x.RequestedAt }); // the owner's queue
+            e.HasIndex(x => new { x.PatientId, x.RequestedBy }); // the grant check on every clinical request
+            e.ToTable(t => t.HasCheckConstraint("CK_AccessRequests_GrantExpires", "\"Status\" <> 'Granted' OR \"ExpiresAt\" IS NOT NULL"));
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         modelBuilder.Entity<TenantIndexEntry>(e =>
@@ -114,6 +130,7 @@ public sealed class TenancyDbContext(DbContextOptions<TenancyDbContext> options,
         });
         modelBuilder.Entity<PracticeProfile>(e =>
         {
+            e.Property<uint>("xmin").IsRowVersion(); // concurrent saves conflict (409) instead of the later one silently winning (#889)
             e.Property(x => x.Address).HasMaxLength(500);
             e.Property(x => x.RegistrationNumber).HasMaxLength(50);
             e.Property(x => x.TaxNumber).HasMaxLength(30);
@@ -148,12 +165,14 @@ public sealed class TenancyDbContext(DbContextOptions<TenancyDbContext> options,
         });
         modelBuilder.Entity<PracticeDefaults>(e =>
         {
+            e.Property<uint>("xmin").IsRowVersion(); // concurrent saves conflict (409) instead of the later one silently winning (#889)
             e.ToTable("PracticeDefaults");
             e.HasKey(x => x.TenantId);
             e.Property(x => x.Specialty).HasMaxLength(100);
             e.Property(x => x.Qualifications).HasMaxLength(200);
             e.Property(x => x.Languages).HasMaxLength(200);
             e.Property(x => x.Currency).HasMaxLength(3).IsFixedLength();
+            e.Property(x => x.PatientStart).HasMaxLength(10);
             e.HasOne<Tenant>().WithOne().HasForeignKey<PracticeDefaults>(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });

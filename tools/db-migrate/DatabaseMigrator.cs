@@ -4,6 +4,8 @@ using Medvya.Billing.Infrastructure.Persistence;
 using Medvya.BuildingBlocks.Domain;
 using Medvya.Identity.Infrastructure.Persistence;
 using Medvya.Leads.Infrastructure.Persistence;
+using Medvya.Platform.Infrastructure.Persistence;
+using Medvya.Encounters.Infrastructure.Persistence;
 using Medvya.Notifications.Infrastructure.Persistence;
 using Medvya.Patients.Infrastructure.Persistence;
 using Medvya.Scheduling.Infrastructure.Persistence;
@@ -30,7 +32,10 @@ public static class DatabaseMigrator
     public static async Task ApplyRolesAsync(NpgsqlConnection connection, IEnumerable<(string Role, string Password)>? logins = null, CancellationToken ct = default)
     {
         await RunScriptAsync(connection, "roles.sql", ct);
-        await RunScriptAsync(connection, "table-rights.sql", ct); // roles.sql re-grants schema-wide; narrow the single tables again
+        // roles.sql re-grants schema-wide; narrow the single tables again, as their owner (on Azure the administrator is not a superuser).
+        await using (var role = new NpgsqlCommand("SET ROLE medvya_owner", connection)) await role.ExecuteNonQueryAsync(ct);
+        await RunScriptAsync(connection, "table-rights.sql", ct);
+        await using (var reset = new NpgsqlCommand("RESET ROLE", connection)) await reset.ExecuteNonQueryAsync(ct);
         foreach (var (role, password) in logins ?? [])
         {
             if (!role.StartsWith("medvya_", StringComparison.Ordinal)) throw new ArgumentException("Only Medvya roles can become logins.", nameof(logins));
@@ -83,7 +88,9 @@ public static class DatabaseMigrator
         await Migrate(new BillingDbContext(Options<BillingDbContext>(connection), None), ct);
         await Migrate(new SchedulingDbContext(Options<SchedulingDbContext>(connection), None), ct);
         await Migrate(new NotificationsDbContext(Options<NotificationsDbContext>(connection), None), ct);
+        await Migrate(new EncountersDbContext(Options<EncountersDbContext>(connection), None), ct);
         await Migrate(new LeadsDbContext(Options<LeadsDbContext>(connection)), ct);
+        await Migrate(new PlatformDbContext(Options<PlatformDbContext>(connection)), ct);
 
         // The app may not create its job tables (Jobs.cs), so a deploy does it here. Idempotent: Hangfire versions its own schema.
         PostgreSqlObjectsInstaller.Install(connection, "hangfire");

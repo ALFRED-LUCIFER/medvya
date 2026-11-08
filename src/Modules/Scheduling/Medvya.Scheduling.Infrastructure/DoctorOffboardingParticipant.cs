@@ -1,5 +1,5 @@
 using System.Data.Common;
-using System.Globalization;
+using System.Text.Json;
 using Medvya.Audit.Application;
 using Medvya.Audit.Domain;
 using Medvya.BuildingBlocks.Domain;
@@ -14,7 +14,8 @@ using Microsoft.Extensions.Options;
 namespace Medvya.Scheduling.Infrastructure;
 
 /// <summary>
-/// A doctor left the practice (MDV-P1-009): their future booked visits become "needs rebooking" for reception to move (slots freed, audited,
+/// A doctor left a facility of the practice (MDV-P1-009): their future booked visits there (not at the practice's other sites, #877) become "needs rebooking" (slots freed, audited, queued
+/// reminders cancelled; the patient is asked to rebook only if the admin chose to offer new slots),
 /// board told after the commit). It runs inside the offboarding transaction on its connection, so the tenant's row-level security applies and
 /// the move commits or rolls back with the membership change. The caller has already authorised staff administration. Takes the same
 /// per-doctor-day app locks as every booking change, so a booking cannot slip in between.
@@ -23,13 +24,13 @@ public sealed class DoctorOffboardingParticipant(
     ICurrentTenant tenant, ICurrentUser user, IFacilityDirectory facilities, IAuditLog audit, IOptions<SchedulingOptions> options,
     TimeProvider clock, IBoardNotifier notifier, ILogger<DoctorOffboardingParticipant> log) : IStaffOffboardingParticipant
 {
-    public async Task<Func<Task>?> OffboardedAsync(Guid doctorUserId, DbTransaction transaction, CancellationToken cancellationToken)
+    public async Task<OffboardingShare> OffboardedAsync(Guid doctorUserId, Guid facilityId, bool offerRebooking, DbTransaction transaction, CancellationToken cancellationToken)
     {
         var (now, me, tenantId) = (clock.GetUtcNow(), user.UserId, tenant.TenantId ?? throw new InvalidOperationException("No tenant context."));
         await using var db = new SchedulingDbContext(new DbContextOptionsBuilder<SchedulingDbContext>().UseNpgsql(transaction.Connection!).Options, tenant);
         await db.Database.UseTransactionAsync(transaction, cancellationToken);
         Task<List<Appointment>> FutureAsync() => db.Appointments.AsNoTracking()
-            .Where(a => a.CalendarId == doctorUserId && a.Start >= now && a.State == AppointmentState.Booked && !a.Unscheduled).ToListAsync(cancellationToken);
+            .Where(a => a.CalendarId == doctorUserId && a.FacilityId == facilityId && a.Start >= now && a.State == AppointmentState.Booked && !a.Unscheduled).ToListAsync(cancellationToken);
 
         var zones = new Dictionary<Guid, TimeZoneInfo>();
         var days = new SortedSet<(Guid FacilityId, DateOnly Date)>();
@@ -41,7 +42,7 @@ public sealed class DoctorOffboardingParticipant(
             days.Add((a.FacilityId, ScheduleRules.LocalDate(a.Start, zone)));
         }
         foreach (var date in days.Select(d => d.Date).Distinct().Order())
-            await DoctorDayTransaction.LockAsync(db, string.Create(CultureInfo.InvariantCulture, $"doctor:{doctorUserId}:{date:yyyy-MM-dd}"), options.Value.LockTimeout, cancellationToken);
+            await DoctorDayTransaction.LockAsync(db, DoctorDayTransaction.DoctorDayKey(tenantId, doctorUserId, date), options.Value.LockTimeout, cancellationToken);
 
         var affected = await FutureAsync(); // read again under the locks
         foreach (var a in affected)
@@ -51,6 +52,12 @@ public sealed class DoctorOffboardingParticipant(
                 throw new VisitTransitionException("changed");
             await db.ScheduleSlots.Where(s => s.AppointmentId == a.Id).ExecuteDeleteAsync(cancellationToken);
             db.StatusEvents.Add(new VisitStatusEvent { Id = Guid.CreateVersion7(), TenantId = a.TenantId, AppointmentId = a.Id, State = AppointmentState.NeedsRebooking, ActorUserId = me, OccurredAt = now });
+            // Always written: it cancels the visit's queued reminders. The admin chose whether the patient is asked to rebook (#225) or called by reception (quiet).
+            db.Outbox.Add(new OutboxEvent
+            {
+                Id = Guid.CreateVersion7(), TenantId = a.TenantId, Type = "AppointmentNeedsRebooking.v1", AggregateId = a.Id, OccurredAt = now,
+                Payload = JsonSerializer.Serialize(new { appointmentId = a.Id, facilityId = a.FacilityId, calendarId = a.CalendarId, patientId = a.PatientId, start = a.Start, quiet = !offerRebooking }),
+            });
         }
         await db.SaveChangesAsync(cancellationToken);
         foreach (var a in affected)
@@ -59,9 +66,12 @@ public sealed class DoctorOffboardingParticipant(
                 Id = Guid.CreateVersion7(), TenantId = tenantId, ActorUserId = me, Action = SchedulingAudit.NeedsRebooking, ResourceType = SchedulingAudit.AppointmentResource,
                 ResourceId = a.Id, PatientId = a.PatientId, Purpose = SchedulingAudit.Treatment, Outcome = AuditOutcome.Allowed, OccurredAt = now,
             }, transaction, cancellationToken);
-        return affected.Count == 0 ? null : async () =>
+        // Patients already checked in for this doctor (waiting or in consultation) stay on the board: reception reassigns them there.
+        var open = await db.Appointments.CountAsync(a => a.CalendarId == doctorUserId && a.FacilityId == facilityId
+            && (a.State == AppointmentState.CheckedIn || a.State == AppointmentState.WithNurse || a.State == AppointmentState.ReadyForDoctor || a.State == AppointmentState.InConsult), cancellationToken);
+        return new(affected.Count == 0 ? null : async () =>
         {
             foreach (var a in affected) await FrontDeskService.NotifyAsync(notifier, log, new(a.TenantId, a.FacilityId, a.Id, AppointmentState.NeedsRebooking, now));
-        };
+        }, open);
     }
 }

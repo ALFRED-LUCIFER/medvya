@@ -29,6 +29,10 @@ public class SyntheticSeedTests(PostgresFixture sql) : IClassFixture<PostgresFix
 
         await using var db = sql.Context(SyntheticSeed.India.Tenant.Id);
         Assert.Equal(Enum.GetValues<Role>().Order(), (await db.Memberships.Select(m => m.Role).ToListAsync()).Order());
+        // #892: each seeded doctor has the licence and profile rows Settings, Doctors lists, unverified like a new doctor's.
+        var doctors = await db.Memberships.Where(m => m.Role == Role.SoloDoctor || m.Role == Role.HospitalDoctor).Select(m => m.Id).ToListAsync();
+        Assert.Equal(doctors.Order(), (await db.DoctorLicences.Where(l => l.VerifiedAt == null).Select(l => l.MembershipId).ToListAsync()).Order());
+        Assert.Equal(doctors.Order(), (await db.DoctorProfiles.Select(p => p.MembershipId).ToListAsync()).Order());
         Assert.EndsWith(SyntheticSeed.Marker, (await db.Tenants.SingleAsync()).Name, StringComparison.Ordinal);
         Assert.EndsWith(SyntheticSeed.Marker, (await db.Facilities.SingleAsync()).Name, StringComparison.Ordinal);
         Assert.All(SyntheticSeed.Tenants(includeUae: true).SelectMany(t => t.Members),

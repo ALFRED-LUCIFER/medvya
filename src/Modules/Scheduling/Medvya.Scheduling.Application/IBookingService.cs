@@ -89,6 +89,8 @@ public sealed record SeriesPattern
     public VisitType VisitType { get; init; } = VisitType.FollowUp;
     public int IntervalWeeks { get; init; } = 1;
     public bool Monthly { get; init; }
+    /// <summary>When not empty: the visits fall on these days of the week (every <see cref="IntervalWeeks"/>-th week) instead; not with <see cref="Monthly"/>.</summary>
+    public IReadOnlyList<DayOfWeek> Weekdays { get; init; } = [];
     public int Count { get; init; }
 }
 
@@ -163,12 +165,13 @@ public interface IBookingService
     /// Recurring appointments (MDV-P1-026): the occurrences of a pattern with the ones that cannot be booked, so the desk can skip or
     /// move them before confirming. A read; nothing is held.
     /// </summary>
-    /// <exception cref="SchedulingValidationException">Count or interval out of range, or an unknown visit type.</exception>
+    /// <exception cref="SchedulingValidationException">Count or interval out of range, an unknown visit type, or invalid weekdays.</exception>
     Task<IReadOnlyList<SeriesOccurrence>> PreviewSeriesAsync(SeriesPattern pattern, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Books each confirmed start as an independent appointment on the booking path (doctor-day lock, template and overlap re-check,
-    /// SCHEDULE_SLOT rows), all with one series id. A start taken meanwhile is reported, not fatal; the others stay booked.
+    /// SCHEDULE_SLOT rows), all with one series id, in one transaction: all are booked or none. When any start is unavailable (taken meanwhile, past, closed, busy)
+    /// nothing is saved and every start is returned with its conflict ("series_not_booked" for a free one held back by the others).
     /// </summary>
     Task<SeriesResult> BookSeriesAsync(BookSeries command, CancellationToken cancellationToken = default);
 

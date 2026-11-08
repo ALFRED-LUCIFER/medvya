@@ -376,7 +376,7 @@ public sealed class BookingService(
             .OrderBy(a => a.Start).ToListAsync(cancellationToken);
 
         // Each visit ends in its own doctor-day transaction. The chosen one tells the patient; the rest are quiet.
-        var chips = new List<AppointmentChip> { await EndAsync(seen, AppointmentState.Cancelled, SchedulingAudit.Cancel, "AppointmentCancelled.v1", command.Reason, note, cancellationToken) };
+        var chips = new List<AppointmentChip> { await EndAsync(seen, AppointmentState.Cancelled, SchedulingAudit.Cancel, "AppointmentCancelled.v1", command.Reason, note, cancellationToken, series: following.Count > 0) };
         foreach (var next in following)
         {
             try
@@ -404,7 +404,7 @@ public sealed class BookingService(
     /// "changed"), the visit's slots are freed for booking again, and the status event (with the reason) and the outbox event are
     /// written with the audit event, all under the doctor-day lock of the visit.
     /// </summary>
-    async Task<AppointmentChip> EndAsync(Appointment seen, AppointmentState to, string action, string eventType, CancelReason? reason, string? note, CancellationToken cancellationToken, bool quiet = false)
+    async Task<AppointmentChip> EndAsync(Appointment seen, AppointmentState to, string action, string eventType, CancelReason? reason, string? note, CancellationToken cancellationToken, bool quiet = false, bool series = false)
     {
         var (_, zone) = await context.FacilityAsync(seen.FacilityId, cancellationToken);
         var (now, me) = (context.Now, context.UserId);
@@ -418,7 +418,7 @@ public sealed class BookingService(
             {
                 Id = Guid.CreateVersion7(), TenantId = seen.TenantId, AppointmentId = seen.Id, State = to, ActorUserId = me, OccurredAt = now, CancelReason = reason, Note = note,
             });
-            db.Outbox.Add(Event(eventType, seen, now, new { appointmentId = seen.Id, facilityId = seen.FacilityId, calendarId = seen.CalendarId, patientId = seen.PatientId, start = seen.Start, reason, quiet }));
+            db.Outbox.Add(Event(eventType, seen, now, new { appointmentId = seen.Id, facilityId = seen.FacilityId, calendarId = seen.CalendarId, patientId = seen.PatientId, start = seen.Start, reason, quiet, series }));
             await db.SaveChangesAsync(cancellationToken);
             await context.AuditAsync(action, SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment, seen.Id, seen.PatientId, cancellationToken);
             var after = Moved(seen, seen.CalendarId, seen.Start, seen.End, me, now);
@@ -473,12 +473,13 @@ public sealed class BookingService(
         if (pattern.Count is < 2 or > SeriesPattern.MaxCount) errors.Add(new("count", "out_of_range"));
         if (!pattern.Monthly && pattern.IntervalWeeks is < 1 or > SeriesPattern.MaxIntervalWeeks) errors.Add(new("intervalWeeks", "out_of_range"));
         if (!Enum.IsDefined(pattern.VisitType)) errors.Add(new("visitType", "invalid"));
+        if (pattern.Weekdays.Any(d => !Enum.IsDefined(d)) || (pattern.Monthly && pattern.Weekdays.Count > 0)) errors.Add(new("weekdays", "invalid"));
         SchedulingValidationException.ThrowIfAny(errors);
         var (_, zone) = await context.FacilityAsync(pattern.FacilityId, cancellationToken);
         var (now, me) = (context.Now, context.UserId!.Value);
 
         var result = new List<SeriesOccurrence>();
-        foreach (var (start, i) in ScheduleRules.SeriesStarts(pattern.FirstStart, pattern.IntervalWeeks, pattern.Count, zone, pattern.Monthly).Select((s, i) => (s, i)))
+        foreach (var (start, i) in ScheduleRules.SeriesStarts(pattern.FirstStart, pattern.IntervalWeeks, pattern.Count, zone, pattern.Monthly, pattern.Weekdays).Select((s, i) => (s, i)))
         {
             // A read without the lock; booking re-checks under it. Same checks as a hold.
             string? conflict = null;
@@ -519,33 +520,57 @@ public sealed class BookingService(
         var (now, me) = (context.Now, context.UserId!.Value);
 
         var seriesId = Guid.CreateVersion7();
-        var booked = new List<SeriesBooked>();
-        foreach (var start in command.Starts.Order())
+        var starts = command.Starts.Order().ToList();
+        // One transaction for the whole series (all doctor-days locked together): every start is checked first, and only when all
+        // are free are all booked, so a series is never left half booked. Otherwise nothing is saved and the conflicts are returned.
+        try
         {
-            try
+            var (refused, visits) = await transaction.RunAsync(starts.Select(s => (command.CalendarId, ScheduleRules.LocalDate(s, zone))), async () =>
             {
-                if (start < now) throw new SlotUnavailableException("in_past");
-                // shortcut: each occurrence commits on its own, so a crash mid-series leaves the earlier ones booked; the desk re-opens
-                // the series and books the rest. Upgrade to one transaction if partial series prove a problem.
-                var visit = await transaction.RunAsync([(command.CalendarId, ScheduleRules.LocalDate(start, zone))], async () =>
+                var ends = new List<DateTimeOffset>();
+                var conflicts = new List<string?>();
+                foreach (var start in starts)
                 {
-                    var end = await BookableEndAsync(command.FacilityId, command.CalendarId, start, command.VisitType, zone, cancellationToken);
-                    if (await db.SlotHolds.AnyAsync(h => h.CalendarId == command.CalendarId && h.FacilityId == command.FacilityId && h.Start < end && start < h.End
-                            && h.ExpiresAt > now && h.HeldBy != me, cancellationToken))
-                        throw new SlotUnavailableException("being_booked");
-                    var kind = await db.Templates.Where(t => t.FacilityId == command.FacilityId && t.CalendarId == command.CalendarId).Select(t => t.CalendarKind).SingleAsync(cancellationToken);
-                    return await CreateAsync(Draft(command.FacilityId, command.CalendarId, kind, patient.Id, command.VisitType, start, end, command.ReasonCategory, reason, command.Channel, now,
-                        seriesId: seriesId), SchedulingAudit.Book, cancellationToken);
-                }, cancellationToken);
-                booked.Add(new(start, await ViewAsync(visit, patient, now), null));
-            }
-            catch (SlotUnavailableException e)
-            {
-                booked.Add(new(start, null, e.Code));
-            }
+                    string? conflict = null;
+                    try
+                    {
+                        if (start < now) throw new SlotUnavailableException("in_past");
+                        var end = await BookableEndAsync(command.FacilityId, command.CalendarId, start, command.VisitType, zone, cancellationToken);
+                        if (await db.SlotHolds.AnyAsync(h => h.CalendarId == command.CalendarId && h.FacilityId == command.FacilityId && h.Start < end && start < h.End
+                                && h.ExpiresAt > now && h.HeldBy != me, cancellationToken))
+                            conflict = "being_booked";
+                        ends.Add(end);
+                    }
+                    catch (SlotUnavailableException e)
+                    {
+                        conflict = e.Code;
+                        ends.Add(start);
+                    }
+                    conflicts.Add(conflict);
+                }
+                if (conflicts.Any(c => c is not null)) return (Refused(seriesId, starts, conflicts), new List<Appointment>());
+
+                var kind = await db.Templates.Where(t => t.FacilityId == command.FacilityId && t.CalendarId == command.CalendarId).Select(t => t.CalendarKind).SingleAsync(cancellationToken);
+                var created = new List<Appointment>();
+                for (var i = 0; i < starts.Count; i++)
+                    created.Add(await CreateAsync(Draft(command.FacilityId, command.CalendarId, kind, patient.Id, command.VisitType, starts[i], ends[i], command.ReasonCategory, reason, command.Channel, now,
+                        seriesId: seriesId), SchedulingAudit.Book, cancellationToken));
+                return ((SeriesResult?)null, created);
+            }, cancellationToken);
+            if (refused is not null) return refused;
+            var views = new List<SeriesBooked>();
+            foreach (var v in visits) views.Add(new(v.Start, await ViewAsync(v, patient, now), null));
+            return new(seriesId, views);
         }
-        return new(seriesId, booked);
+        catch (SlotUnavailableException e)
+        {
+            return Refused(seriesId, starts, starts.Select(_ => (string?)e.Code).ToList()); // e.g. busy, or a double booking the database stopped: nothing was saved
+        }
     }
+
+    /// <summary>Nothing booked: each start carries its own conflict, and a free one says it was held back by the others.</summary>
+    static SeriesResult Refused(Guid seriesId, List<DateTimeOffset> starts, List<string?> conflicts) =>
+        new(seriesId, [.. starts.Select((s, i) => new SeriesBooked(s, null, conflicts[i] ?? "series_not_booked"))]);
 
     public async Task<PatientView?> FindPatientAsync(Guid facilityId, Guid patientId, CancellationToken cancellationToken = default)
     {

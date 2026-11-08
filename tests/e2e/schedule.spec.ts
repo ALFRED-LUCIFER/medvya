@@ -890,6 +890,10 @@ test('a weekly series shows its conflict, lets the desk move it, then books the 
   await expect(rows.nth(1)).toContainText('Mon, 26 Oct at 10:00'); // facility time, not New York
   await expect(rows.nth(1)).toContainText('This slot is no longer available'); // words and an icon, not colour alone
   await expect(rows.nth(1).getByRole('checkbox')).not.toBeChecked(); // a conflict starts skipped
+  const day = rows.nth(1).getByLabel('Move to (day)'); // MDV-P1-026: another day, not only another time
+  await day.fill('2026-10-27');
+  await day.blur();
+  await expect(rows.nth(1)).toContainText('Tue, 27 Oct at 10:00');
   const move = rows.nth(1).getByLabel('Move to (time)');
   await move.fill('11:00');
   await move.blur();
@@ -899,8 +903,51 @@ test('a weekly series shows its conflict, lets the desk move it, then books the 
   await panel.getByRole('button', { name: 'Book visits (2)' }).click();
 
   await expect(panel).toContainText('Visits booked: 2');
-  expect(calls.series[1]!.body).toMatchObject({ patientId, starts: [ist('2026-10-19', '10:00'), ist('2026-10-26', '11:00')], channel: 'InPerson' });
+  expect(calls.series[1]!.body).toMatchObject({ patientId, starts: [ist('2026-10-19', '10:00'), ist('2026-10-27', '11:00')], channel: 'InPerson' });
   expect(calls.releases).toEqual(['h-1']); // the series did not use the hold
+});
+
+async function chooseNair(page: Page) {
+  await bookButton(page, '10:00').click();
+  const panel = page.getByRole('complementary', { name: 'Book appointment' });
+  await panel.getByRole('searchbox', { name: 'Name, MRN, phone or ID' }).fill('Nair');
+  await panel.getByRole('button', { name: 'Search' }).click();
+  await panel.getByRole('button', { name: 'D N, 47 y, Male, MRN ending 0002. Choose for this booking' }).click();
+  await expect(panel).toContainText('Deepak Nair (synthetic) · MRN 000002');
+  return panel;
+}
+
+test('a weekday pattern sends the chosen days and needs at least one', async ({ page }) => {
+  const calls = await open(page);
+  const panel = await chooseNair(page);
+  await panel.getByLabel('Number of visits').fill('4');
+  await panel.locator('#booking-unit').click();
+  await page.getByRole('option', { name: 'Only on chosen days' }).click();
+  await expect(panel.getByRole('button', { name: 'Review series' })).toBeDisabled(); // no day chosen yet
+  await panel.getByRole('checkbox', { name: 'Mon' }).check();
+  await panel.getByRole('checkbox', { name: 'Wed' }).check();
+  await panel.getByRole('button', { name: 'Review series' }).click();
+  expect(calls.series[0]!.body).toMatchObject({ count: 4, monthly: false, weekdays: [1, 3] });
+});
+
+test('a series the server refuses saves nothing and returns to the review with the conflict', async ({ page }) => {
+  const calls = await open(page);
+  await page.route('**/v1/appointments/series', r => {
+    const body = r.request().postDataJSON() as { starts: string[] };
+    calls.series.push({ url: r.request().url(), body });
+    return r.fulfill({ json: { seriesId: 's-3', occurrences: body.starts.map((start, i) => ({ start, appointment: null, conflict: i === 1 ? 'slot_unavailable' : 'series_not_booked' })) } });
+  });
+  const panel = await chooseNair(page);
+  await panel.getByLabel('Number of visits').fill('3');
+  await panel.getByRole('button', { name: 'Review series' }).click();
+  await panel.getByRole('listitem').nth(1).getByRole('checkbox').check();
+  await panel.getByRole('button', { name: 'Book visits (3)' }).click();
+
+  const rows = panel.getByRole('listitem');
+  await expect(rows.nth(1)).toContainText('This slot is no longer available');
+  await expect(rows.nth(1).getByRole('checkbox')).not.toBeChecked();
+  await expect(rows.nth(0).getByRole('checkbox')).toBeChecked(); // the free visits stay ready
+  await expect(panel).not.toContainText('Visits booked');
 });
 
 test('cancel this and following sends one reason for the rest of the series', async ({ page }) => {

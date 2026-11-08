@@ -60,11 +60,11 @@ jobs:
           dotnet package list --project Medvya.sln --vulnerable --include-transitive | tee vuln.txt
           ! grep -q "has the following vulnerable packages" vuln.txt
 
-  web:
+  web-checks:
     needs: changes
     if: needs.changes.outputs.web == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 20  # e2e ran past 10 min once it grew beyond ~250 specs; a timeout caps a hung run, it is not a test threshold
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -76,17 +76,50 @@ jobs:
       - run: pnpm -r lint
       - run: pnpm -r build # includes tsc type-checking
       - run: pnpm -r test
+      - run: pnpm audit --audit-level high
+      - run: node tools/check-synthetic/check.mjs --self-test && node tools/check-synthetic/check.mjs
+
+  web-e2e:
+    # Playwright split over 3 machines (it was one 14 min run); the performance budgets run last inside each shard.
+    needs: changes
+    if: needs.changes.outputs.web == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -r build # the first-render budget runs against the production build
       - run: pnpm --filter e2e exec playwright install --with-deps chromium
-      - run: pnpm --filter e2e e2e
+      - run: pnpm --filter e2e e2e --shard=${{ matrix.shard }}/3
       - name: Keep the Playwright report when e2e fails
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: playwright-report
+          name: playwright-report-${{ matrix.shard }}
           path: tests/e2e/playwright-report
           retention-days: 7
-      - run: pnpm audit --audit-level high
-      - run: node tools/check-synthetic/check.mjs --self-test && node tools/check-synthetic/check.mjs
+
+  web:
+    # The required check name: passes only when the checks and every e2e shard passed (a skipped web change counts as pass).
+    needs: [changes, web-checks, web-e2e]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - run: |
+          [ "${{ needs.changes.result }}" = success ] || exit 1
+          if [ "${{ needs.changes.outputs.web }}" = true ]; then
+            [ "${{ needs.web-checks.result }}" = success ] && [ "${{ needs.web-e2e.result }}" = success ]
+          fi
 
   contract:
     # The generated TypeScript client must match what Host.Api exports (packages/api-client). Not a required check yet.

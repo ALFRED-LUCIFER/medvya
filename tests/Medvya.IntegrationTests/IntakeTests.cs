@@ -208,9 +208,9 @@ public sealed class IntakeTests(PostgresFixture sql) : IClassFixture<PostgresFix
         await using var db = EncountersDb(h.Tenant);
         await using var tx = await db.Database.BeginTransactionAsync();
         await db.Database.ExecuteSqlAsync($"SELECT set_config('medvya.tenant_id', {h.Tenant.ToString()}, true)");
-        var rows = await db.Observations.AsNoTracking().OrderBy(o => o.Kind).ToListAsync();
+        var rows = await db.Observations.AsNoTracking().OrderBy(o => o.Code).ToListAsync();
         Assert.Equal(3, rows.Count);
-        Assert.All(rows, o => Assert.Equal((ObservationSource.NurseIntake, h.Nurse, h.Nurse, h.Patient, h.Facility, visit), (o.Source, o.RecordedBy, o.VerifiedBy, o.PatientId, o.FacilityId, o.AppointmentId)));
+        Assert.All(rows, o => Assert.Equal((ChartSource.ClinicianVerified, (Guid?)h.Nurse, (Guid?)h.Nurse, h.Patient, (Guid?)h.Facility, (Guid?)visit), (o.Source, o.RecordedBy, o.VerifiedBy, o.PatientId, o.FacilityId, o.AppointmentId)));
     }
 
     [Fact]

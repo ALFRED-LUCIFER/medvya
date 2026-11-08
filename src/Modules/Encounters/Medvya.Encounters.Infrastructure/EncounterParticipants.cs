@@ -26,8 +26,13 @@ public sealed class EncounterCareRelationship(EncountersDbContext db) : ICareRel
 /// </summary>
 public sealed class EncounterMergeParticipant(EncountersDbContext db, ICurrentTenant tenant) : IPatientMergeParticipant
 {
+    // shortcut: allergies, problems and medicines (MDV-P2-004) count as clinical data here but are not moved on a merge, because nothing writes them yet.
+    // The first ticket that does (MDV-P2-008) must move and restore them like encounters, or an allergy is lost.
     public async Task<bool> HasClinicalDataAsync(Guid patientId, CancellationToken cancellationToken) =>
         await db.Encounters.AsNoTracking().AnyAsync(e => e.PatientId == patientId, cancellationToken)
+        || await db.Allergies.AsNoTracking().AnyAsync(a => a.PatientId == patientId, cancellationToken)
+        || await db.Problems.AsNoTracking().AnyAsync(p => p.PatientId == patientId, cancellationToken)
+        || await db.MedicationStatements.AsNoTracking().AnyAsync(m => m.PatientId == patientId, cancellationToken)
         || await db.Intakes.AsNoTracking().AnyAsync(i => i.PatientId == patientId, cancellationToken)
         || await db.Observations.AsNoTracking().AnyAsync(o => o.PatientId == patientId, cancellationToken);
 

@@ -98,6 +98,32 @@ public sealed class PatientSearchPerformanceTests(PostgresFixture sql, ITestOutp
                     searches.Add(await Search(q, f));
         AssertP95(searches, "searches through the endpoint");
 
+        // MDV-P2-003: the doctor's ⌘K lookup adds the care-relationship verdict to each of up to eight rows, inside the same 300 ms budget.
+        var doctor = Guid.NewGuid();
+        await using (var members = sql.Context(tenant))
+        {
+            members.Memberships.Add(new Membership { Id = Guid.NewGuid(), TenantId = tenant, UserId = doctor, FacilityId = facility, Role = Role.SoloDoctor, Status = MembershipStatus.Active });
+            await members.SaveChangesAsync();
+        }
+        using var clinician = host.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost") });
+        clinician.DefaultRequestHeaders.Add("X-Test-User", doctor.ToString());
+        clinician.DefaultRequestHeaders.Add("X-Test-Facility", facility.ToString());
+        async Task<long> Lookup(string query)
+        {
+            var clock = Stopwatch.StartNew();
+            using var res = await clinician.PostAsJsonAsync(new Uri("/v1/patients/lookup", UriKind.Relative), new { query });
+            var elapsed = clock.ElapsedMilliseconds;
+            Assert.Equal(HttpStatusCode.OK, res.StatusCode);
+            var items = (await res.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("items");
+            Assert.True(items.GetArrayLength() > 0 && items[0].GetProperty("access").GetString() == "Open", $"no openable rows for {query}");
+            return elapsed;
+        }
+        foreach (var q in queries.OfType<string>()) await Lookup(q);
+        var lookups = new List<long>();
+        for (var round = 0; round < 8; round++)
+            foreach (var q in queries.OfType<string>()) lookups.Add(await Lookup(q));
+        AssertP95(lookups, "global-search lookups through the endpoint");
+
         // The generated patient 12345 gives a name and birthday that exist; the ABHA of patient 99 exists too, so both the name + DOB and the exact-identifier paths run.
         var known = Medvya.SyntheticData.SyntheticPatients.Generate(tenant, MrnStart, 12_344, DateTimeOffset.UtcNow);
         async Task<long> Check()

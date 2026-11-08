@@ -9,9 +9,12 @@ namespace Medvya.Encounters.Infrastructure.Persistence;
 public sealed class EncountersDbContext(DbContextOptions<EncountersDbContext> options, ICurrentTenant tenant) : DbContext(options)
 {
     public DbSet<Encounter> Encounters => Set<Encounter>();
-
-    public DbSet<Intake> Intakes => Set<Intake>();
+    public DbSet<Allergy> Allergies => Set<Allergy>();
+    public DbSet<Problem> Problems => Set<Problem>();
+    public DbSet<MedicationStatement> MedicationStatements => Set<MedicationStatement>();
     public DbSet<Observation> Observations => Set<Observation>();
+    public DbSet<ClinicalDocument> Documents => Set<ClinicalDocument>();
+    public DbSet<Intake> Intakes => Set<Intake>();
     public DbSet<IntakeEscalation> IntakeEscalations => Set<IntakeEscalation>();
 
     Guid? CurrentTenantId => tenant.TenantId;
@@ -32,6 +35,45 @@ public sealed class EncountersDbContext(DbContextOptions<EncountersDbContext> op
             e.ToTable(t => t.HasCheckConstraint("CK_Encounters_EndedHasTime", "(\"Status\" = 'Ended') = (\"EndedAt\" IS NOT NULL)"));
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
+        // Chart facts (MDV-P2-004): one table each, by patient. Enums are stored as their names.
+        modelBuilder.Entity<Allergy>(e =>
+        {
+            e.Property(x => x.Kind).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.Source).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.Substance).HasMaxLength(200);
+            e.Property(x => x.Reaction).HasMaxLength(200);
+            e.HasIndex(x => new { x.TenantId, x.PatientId });
+            e.ToTable(t => t.HasCheckConstraint("CK_Allergies_SubstanceMatchesKind", "(\"Kind\" = 'Substance') = (\"Substance\" IS NOT NULL)"));
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<Problem>(e =>
+        {
+            e.Property(x => x.Verification).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.Source).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.Icd10Code).HasMaxLength(10);
+            e.Property(x => x.Description).HasMaxLength(200);
+            e.HasIndex(x => new { x.TenantId, x.PatientId });
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<MedicationStatement>(e =>
+        {
+            e.Property(x => x.State).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.Source).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.Name).HasMaxLength(200);
+            e.Property(x => x.Dose).HasMaxLength(100);
+            e.HasIndex(x => new { x.TenantId, x.PatientId });
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<Observation>(e =>
+        {
+            e.Property(x => x.Code).HasConversion<string>().HasMaxLength(30);
+            e.Property(x => x.Source).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.Flag).HasConversion<string>().HasMaxLength(20);
+            e.HasIndex(x => new { x.TenantId, x.PatientId, x.Code, x.TakenAt });
+            e.HasIndex(x => new { x.TenantId, x.AppointmentId, x.Code }); // the visit's readings
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
         modelBuilder.Entity<Intake>(e =>
         {
             e.Property(x => x.ChiefComplaint).HasMaxLength(500);
@@ -39,20 +81,24 @@ public sealed class EncountersDbContext(DbContextOptions<EncountersDbContext> op
             e.HasIndex(x => new { x.TenantId, x.PatientId });
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
-        modelBuilder.Entity<Observation>(e =>
-        {
-            e.Property(x => x.Kind).HasConversion<string>().HasMaxLength(30);
-            e.Property(x => x.Flag).HasConversion<string>().HasMaxLength(20);
-            e.Property(x => x.Source).HasConversion<string>().HasMaxLength(20);
-            e.HasIndex(x => new { x.TenantId, x.AppointmentId, x.Kind });
-            e.HasIndex(x => new { x.TenantId, x.PatientId, x.Kind, x.RecordedAt }); // the previous reading, and the chart's trends
-            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
-        });
         modelBuilder.Entity<IntakeEscalation>(e =>
         {
             e.Property(x => x.Reason).HasMaxLength(500);
             e.HasIndex(x => new { x.TenantId, x.FacilityId, x.EscalatedAt });
             e.HasIndex(x => new { x.TenantId, x.AppointmentId });
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<ClinicalDocument>(e =>
+        {
+            e.ToTable("ClinicalDocuments");
+            e.Property(x => x.Type).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.Source).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.ScanStatus).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.ContentType).HasMaxLength(50);
+            e.Property(x => x.Sha256).HasMaxLength(64);
+            e.Property(x => x.BlobKey).HasMaxLength(64);
+            e.HasIndex(x => new { x.TenantId, x.PatientId, x.DocumentDate });
+            e.HasIndex(x => x.BlobKey).IsUnique();
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
     }

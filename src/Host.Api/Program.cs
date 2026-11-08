@@ -65,7 +65,7 @@ builder.Services.AddScoped<IRequestOrigin>(sp => sp.GetRequiredService<RequestCo
 // capability handler exists, so capability-guarded endpoints answer 403.
 if (builder.Configuration.GetConnectionString("Medvya") is { } sql)
 {
-    builder.Services.AddAuditModule(sql).AddDeniedAccessAudit().AddTenancyModule(sql, builder.Configuration["Storage:ConnectionString"]).AddIdentityModule(sql).AddPatientsModule(sql).AddSchedulingModule(sql).AddEncountersModule(sql)
+    builder.Services.AddAuditModule(sql).AddDeniedAccessAudit().AddTenancyModule(sql, builder.Configuration["Storage:ConnectionString"]).AddIdentityModule(sql).AddPatientsModule(sql).AddSchedulingModule(sql).AddEncountersModule(sql, builder.Configuration, builder.Environment.IsDevelopment())
         .AddNotificationsModule(sql, smsSink: builder.Environment.IsDevelopment() && builder.Configuration["Notifications:Sms:Provider"] == "Sink")
         .AddScoped<IReminderConsent, PatientReminderConsent>() // after the module: replaces its deny-all default (MDV-P1-019)
         .AddLeadsModule(sql, builder.Configuration.GetSection("Leads:Email").Get<LeadsEmailOptions>() ?? new()).AddCapabilityPolicies();
@@ -146,7 +146,8 @@ var app = builder.Build();
 
 app.UseForwardedHeaders(); // first, so every later step sees the client's address
 if (!app.Environment.IsDevelopment()) app.UseHsts();
-app.UseSecurityHeaders(app.Configuration["Storage:ImageOrigin"]);
+// The Blob origin for signed links: set explicitly (local Azurite), else the managed-identity endpoint's own origin (Azure).
+app.UseSecurityHeaders(app.Configuration["Storage:ImageOrigin"] ?? (Uri.TryCreate(app.Configuration["Storage:BlobEndpoint"], UriKind.Absolute, out var blob) ? blob.GetLeftPart(UriPartial.Authority) : null));
 app.UseRateLimiter();
 app.UseWebApp(); // static files only; reads no session cookie
 app.RunPublicSiteBeforeAuthentication(); // public pages never read the session cookie

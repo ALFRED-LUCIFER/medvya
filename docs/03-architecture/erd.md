@@ -34,7 +34,7 @@ flowchart LR
   api --> Identity["Identity<br/>schema identity<br/>3 tables"]
   api --> Patients["Patients<br/>schema patients<br/>7 tables"]
   api --> Scheduling["Scheduling<br/>schema scheduling<br/>15 tables"]
-  api --> Encounters["Encounters<br/>schema encounters<br/>4 tables"]
+  api --> Encounters["Encounters<br/>schema encounters<br/>8 tables"]
   api --> Notifications["Notifications<br/>schema notifications<br/>5 tables"]
   api --> Audit["Audit<br/>schema audit<br/>1 table"]
   api --> Leads["Leads<br/>schema leads<br/>2 tables"]
@@ -58,6 +58,7 @@ flowchart LR
   Audit -->|"Application"| Patients
   Audit -->|"Api"| Tenancy
   Encounters -->|"Api, Application"| Audit
+  Encounters -->|"Application"| Identity
   Encounters -->|"Application"| Patients
   Encounters -->|"Application"| Scheduling
   Encounters -->|"Api, Application"| Tenancy
@@ -88,7 +89,7 @@ flowchart LR
   audit -.->|"ActorUserId"| identity
   audit -.->|"PatientId"| patients
   audit -.->|"FacilityId"| tenancy
-  encounters -.->|"EndedBy, EscalatedBy, HandedOffBy, ..."| identity
+  encounters -.->|"ChangedBy, EndedBy, EscalatedBy, ..."| identity
   encounters -.->|"MergedFromPatientId, PatientId"| patients
   encounters -.->|"AppointmentId"| scheduling
   encounters -.->|"FacilityId"| tenancy
@@ -1191,10 +1192,20 @@ erDiagram
 
 </details>
 
-### Encounters (schema `encounters`, 4 tables)
+### Encounters (schema `encounters`, 8 tables)
 
 ```mermaid
 erDiagram
+  Allergies {
+    guid Id PK
+    guid PatientId "id of patients.Patients"
+  }
+  ClinicalDocuments {
+    guid Id PK
+    guid ChangedBy "id of identity.Users"
+    guid FacilityId "id of tenancy.Facilities"
+    guid PatientId "id of patients.Patients"
+  }
   Encounters {
     guid Id PK
     guid AppointmentId "id of scheduling.Appointments"
@@ -1220,6 +1231,10 @@ erDiagram
     guid MergedFromPatientId "id of patients.Patients"
     guid PatientId "id of patients.Patients"
   }
+  MedicationStatements {
+    guid Id PK
+    guid PatientId "id of patients.Patients"
+  }
   Observations {
     guid Id PK
     guid AppointmentId "id of scheduling.Appointments"
@@ -1228,6 +1243,10 @@ erDiagram
     guid PatientId "id of patients.Patients"
     guid RecordedBy "id of identity.Users"
     guid VerifiedBy "id of identity.Users"
+  }
+  Problems {
+    guid Id PK
+    guid PatientId "id of patients.Patients"
   }
   identity_Users {
     guid Id PK "other module"
@@ -1241,6 +1260,10 @@ erDiagram
   tenancy_Facilities {
     guid Id PK "other module"
   }
+  patients_Patients ||..o{ Allergies : "PatientId"
+  identity_Users |o..o{ ClinicalDocuments : "ChangedBy"
+  tenancy_Facilities ||..o{ ClinicalDocuments : "FacilityId"
+  patients_Patients ||..o{ ClinicalDocuments : "PatientId"
   scheduling_Appointments ||..o{ Encounters : "AppointmentId"
   identity_Users |o..o{ Encounters : "EndedBy"
   tenancy_Facilities ||..o{ Encounters : "FacilityId"
@@ -1257,20 +1280,65 @@ erDiagram
   tenancy_Facilities ||..o{ IntakeEscalations : "FacilityId"
   patients_Patients |o..o{ IntakeEscalations : "MergedFromPatientId"
   patients_Patients ||..o{ IntakeEscalations : "PatientId"
-  scheduling_Appointments ||..o{ Observations : "AppointmentId"
-  tenancy_Facilities ||..o{ Observations : "FacilityId"
+  patients_Patients ||..o{ MedicationStatements : "PatientId"
+  scheduling_Appointments |o..o{ Observations : "AppointmentId"
+  tenancy_Facilities |o..o{ Observations : "FacilityId"
   patients_Patients |o..o{ Observations : "MergedFromPatientId"
   patients_Patients ||..o{ Observations : "PatientId"
-  identity_Users ||..o{ Observations : "RecordedBy"
-  identity_Users ||..o{ Observations : "VerifiedBy"
+  identity_Users |o..o{ Observations : "RecordedBy"
+  identity_Users |o..o{ Observations : "VerifiedBy"
+  patients_Patients ||..o{ Problems : "PatientId"
 ```
 
 | Table | Columns | Primary key | Notes |
 |---|---|---|---|
+| `Allergies` | 9 | Id | tenant-scoped |
+| `ClinicalDocuments` | 16 | Id | tenant-scoped |
 | `Encounters` | 12 | Id | tenant-scoped |
 | `Intakes` | 10 | Id | tenant-scoped |
 | `IntakeEscalations` | 9 | Id | tenant-scoped |
+| `MedicationStatements` | 8 | Id | tenant-scoped |
 | `Observations` | 16 | Id | tenant-scoped |
+| `Problems` | 9 | Id | tenant-scoped |
+
+<details><summary><code>encounters.Allergies</code> columns</summary>
+
+| Column | Type | Null | Links to |
+|---|---|---|---|
+| `Id` | guid |  |  |
+| `Kind` | character varying(20) |  |  |
+| `PatientId` | guid |  | id of `patients.Patients` |
+| `Reaction` | character varying(200) |  |  |
+| `RecordedAt` | timestamptz |  |  |
+| `Source` | character varying(20) |  |  |
+| `Status` | character varying(20) |  |  |
+| `Substance` | character varying(200) |  |  |
+| `TenantId` | guid |  | `tenancy.Tenants` |
+
+</details>
+
+<details><summary><code>encounters.ClinicalDocuments</code> columns</summary>
+
+| Column | Type | Null | Links to |
+|---|---|---|---|
+| `Id` | guid |  |  |
+| `BlobKey` | character varying(64) |  |  |
+| `ChangedAt` | timestamptz | yes |  |
+| `ChangedBy` | guid | yes | id of `identity.Users` |
+| `ContentType` | character varying(50) |  |  |
+| `DocumentDate` | date |  |  |
+| `FacilityId` | guid |  | id of `tenancy.Facilities` |
+| `PatientId` | guid |  | id of `patients.Patients` |
+| `ScanStatus` | character varying(20) |  |  |
+| `Sha256` | character varying(64) |  |  |
+| `SizeBytes` | bigint |  |  |
+| `Source` | character varying(20) |  |  |
+| `TenantId` | guid |  | `tenancy.Tenants` |
+| `Type` | character varying(20) |  |  |
+| `UploadedAt` | timestamptz |  |  |
+| `UploadedBy` | guid |  |  |
+
+</details>
 
 <details><summary><code>encounters.Encounters</code> columns</summary>
 
@@ -1324,26 +1392,57 @@ erDiagram
 
 </details>
 
+<details><summary><code>encounters.MedicationStatements</code> columns</summary>
+
+| Column | Type | Null | Links to |
+|---|---|---|---|
+| `Id` | guid |  |  |
+| `Dose` | character varying(100) |  |  |
+| `Name` | character varying(200) |  |  |
+| `PatientId` | guid |  | id of `patients.Patients` |
+| `RecordedAt` | timestamptz |  |  |
+| `Source` | character varying(20) |  |  |
+| `State` | character varying(20) |  |  |
+| `TenantId` | guid |  | `tenancy.Tenants` |
+
+</details>
+
 <details><summary><code>encounters.Observations</code> columns</summary>
 
 | Column | Type | Null | Links to |
 |---|---|---|---|
 | `Id` | guid |  |  |
-| `AppointmentId` | guid |  | id of `scheduling.Appointments` |
-| `FacilityId` | guid |  | id of `tenancy.Facilities` |
+| `AppointmentId` | guid | yes | id of `scheduling.Appointments` |
+| `Code` | character varying(30) |  |  |
+| `FacilityId` | guid | yes | id of `tenancy.Facilities` |
 | `Flag` | character varying(20) |  |  |
 | `FlagKept` | bool |  |  |
-| `Kind` | character varying(30) |  |  |
 | `MergedFromPatientId` | guid | yes | id of `patients.Patients` |
 | `PatientId` | guid |  | id of `patients.Patients` |
 | `PreviousAt` | timestamptz | yes |  |
 | `PreviousTenths` | int | yes |  |
+| `RecordedBy` | guid | yes | id of `identity.Users` |
+| `Source` | character varying(20) |  |  |
+| `TakenAt` | timestamptz |  |  |
+| `TenantId` | guid |  | `tenancy.Tenants` |
+| `ValueHundredths` | int |  |  |
+| `VerifiedBy` | guid | yes | id of `identity.Users` |
+
+</details>
+
+<details><summary><code>encounters.Problems</code> columns</summary>
+
+| Column | Type | Null | Links to |
+|---|---|---|---|
+| `Id` | guid |  |  |
+| `Description` | character varying(200) |  |  |
+| `Icd10Code` | character varying(10) |  |  |
+| `OnsetOn` | date | yes |  |
+| `PatientId` | guid |  | id of `patients.Patients` |
 | `RecordedAt` | timestamptz |  |  |
-| `RecordedBy` | guid |  | id of `identity.Users` |
 | `Source` | character varying(20) |  |  |
 | `TenantId` | guid |  | `tenancy.Tenants` |
-| `ValueTenths` | int |  |  |
-| `VerifiedBy` | guid |  | id of `identity.Users` |
+| `Verification` | character varying(20) |  |  |
 
 </details>
 
@@ -1775,9 +1874,9 @@ From `docs/03-architecture/data-model.md` (areas A to D). "Built" means a table 
 | A · Tenant, practice, PMS, billing | `CLAIM_RESUBMISSION` | not built | |
 | B · EMR, clinical authority | `ENCOUNTER` | built | `encounters.Encounters` |
 | B · EMR, clinical authority | `OBSERVATION` | built | `encounters.Observations` |
-| B · EMR, clinical authority | `PROBLEM` | not built | |
-| B · EMR, clinical authority | `ALLERGY` | not built | |
-| B · EMR, clinical authority | `MEDICATION_STATEMENT` | not built | |
+| B · EMR, clinical authority | `PROBLEM` | built | `encounters.Problems` |
+| B · EMR, clinical authority | `ALLERGY` | built | `encounters.Allergies` |
+| B · EMR, clinical authority | `MEDICATION_STATEMENT` | built | `encounters.MedicationStatements` |
 | B · EMR, clinical authority | `CLINICAL_NOTE` | not built | |
 | B · EMR, clinical authority | `NOTE_VERSION` | not built | |
 | B · EMR, clinical authority | `CLINICIAN_SIGNATURE` | not built | |
@@ -1789,7 +1888,7 @@ From `docs/03-architecture/data-model.md` (areas A to D). "Built" means a table 
 | B · EMR, clinical authority | `PHARMACY_DISPATCH` | not built | |
 | B · EMR, clinical authority | `FORMULARY_ITEM` | not built | |
 | B · EMR, clinical authority | `ORDER_SET` | not built | |
-| B · EMR, clinical authority | `CLINICAL_DOCUMENT` | not built | |
+| B · EMR, clinical authority | `CLINICAL_DOCUMENT` | built | `encounters.ClinicalDocuments` |
 | B · EMR, clinical authority | `DOCUMENT_PROVENANCE` | not built | |
 | B · EMR, clinical authority | `EXTERNAL_RECORD_LINK` | not built | |
 | C · Consent, capture, AI | `CONSENT_RECEIPT` | not built | |
@@ -1827,11 +1926,11 @@ From `docs/03-architecture/data-model.md` (areas A to D). "Built" means a table 
 
 Tables that exist but were added while building (not named in the plan): `encounters.IntakeEscalations`, `encounters.Intakes`, `identity.OnboardingDrafts`, `identity.Sessions`, `leads.DemoRequests`, `leads.Waitlist`, `notifications.Preferences`, `notifications.StaffNotificationReads`, `notifications.StaffNotifications`, `patients.DataKeys`, `patients.MergeRequests`, `platform.AuditEntries`, `platform.KeyLinks`, `platform.Members`, `platform.SecurityKeys`, `platform.Sessions`, `scheduling.AppointmentReschedules`, `scheduling.BookingConflicts`, `scheduling.MetricBaselines`, `scheduling.OutboxTenants`, `scheduling.QueueDisplays`, `scheduling.Resources`, `scheduling.SlotHolds`, `scheduling.VisitStatusEvents`, `tenancy.AccessRequests`, `tenancy.AccessReviewDecisions`, `tenancy.AccessReviews`, `tenancy.FeatureFlags`, `tenancy.Invitations`, `tenancy.OperatingHours`, `tenancy.PracticeDefaults`, `tenancy.Profiles`, `tenancy.SettingsChanges`, `tenancy.TenantIndex`, `tenancy.TermsAcceptances`.
 
-**Counts:** 61 tables across 10 schemas; 26 of 90 planned entities are built; 35 tables were added during the build.
+**Counts:** 65 tables across 10 schemas; 30 of 90 planned entities are built; 35 tables were added during the build.
 
 ## 6. Rules the model follows
 
-- **Tenant isolation:** 51 of 61 tables carry `TenantId` (EF query filter plus PostgreSQL forced row-level security on `medvya.tenant_id`). Without `TenantId`: `identity.OnboardingDrafts`, `identity.Users`, `leads.DemoRequests`, `leads.Waitlist`, `platform.AuditEntries`, `platform.KeyLinks`, `platform.Members`, `platform.SecurityKeys`, `platform.Sessions`, `tenancy.Tenants`. (`TenantId` present is not proof the row-level-security policy covers the table; see `docs/03-architecture/database-security.md`.)
+- **Tenant isolation:** 55 of 65 tables carry `TenantId` (EF query filter plus PostgreSQL forced row-level security on `medvya.tenant_id`). Without `TenantId`: `identity.OnboardingDrafts`, `identity.Users`, `leads.DemoRequests`, `leads.Waitlist`, `platform.AuditEntries`, `platform.KeyLinks`, `platform.Members`, `platform.SecurityKeys`, `platform.Sessions`, `tenancy.Tenants`. (`TenantId` present is not proof the row-level-security policy covers the table; see `docs/03-architecture/database-security.md`.)
 - **Append-only ledgers:** `audit.AuditEvents`, `patients.ConsentReceipts`, `tenancy.TermsAcceptances` (hash-chained, MDV-P0-036; each also has ChainSeq, PrevHash and RowHash added by `LedgerSql`, outside the EF model).
 - **No cross-module foreign keys:** modules link by id and through application services (AGENTS.md 3.1).
 - **Country data plane:** one deployment and one database per country (ADR-003); this diagram is the same in each.

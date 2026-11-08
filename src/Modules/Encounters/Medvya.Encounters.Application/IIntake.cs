@@ -16,13 +16,13 @@ public sealed record RecordIntake(string? ChiefComplaint, IReadOnlyList<VitalRea
 public sealed record EscalateIntake(string? Reason);
 
 /// <summary>The current reading of one kind, with its flag (a code the UI says in words), the previous one and whether the nurse kept a flagged value.</summary>
-public sealed record VitalView(VitalKind Kind, decimal Value, VitalAlert? Flag, decimal? PreviousValue, DateTimeOffset? PreviousAt, bool FlagKept, DateTimeOffset RecordedAt);
+public sealed record IntakeVital(VitalKind Kind, decimal Value, VitalAlert? Flag, decimal? PreviousValue, DateTimeOffset? PreviousAt, bool FlagKept, DateTimeOffset RecordedAt);
 
 /// <summary>
 /// A visit's intake. <see cref="Blockers"/> are the stable codes that stop the handoff ("vitals_undecided"); empty when the nurse may hand off.
 /// </summary>
 public sealed record IntakeView(
-    Guid AppointmentId, Guid PatientId, Guid FacilityId, string State, string? ChiefComplaint, IReadOnlyList<VitalView> Vitals,
+    Guid AppointmentId, Guid PatientId, Guid FacilityId, string State, string? ChiefComplaint, IReadOnlyList<IntakeVital> Vitals,
     bool Escalated, bool HandedOff, IReadOnlyList<string> Blockers);
 
 /// <summary>An open escalation for the doctor's Today (MDV-P2-002): ids and the nurse's reason only; the screen adds the patient's name.</summary>

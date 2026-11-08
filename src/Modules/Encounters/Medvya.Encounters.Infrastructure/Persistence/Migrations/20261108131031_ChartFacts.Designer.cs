@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Medvya.Encounters.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(EncountersDbContext))]
-    [Migration("20261108132130_NurseIntake")]
-    partial class NurseIntake
+    [Migration("20261108131031_ChartFacts")]
+    partial class ChartFacts
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -25,6 +25,54 @@ namespace Medvya.Encounters.Infrastructure.Persistence.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+
+            modelBuilder.Entity("Medvya.Encounters.Domain.Allergy", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid>("PatientId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Reaction")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTimeOffset>("RecordedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Substance")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "PatientId");
+
+                    b.ToTable("Allergies", "encounters", t =>
+                        {
+                            t.HasCheckConstraint("CK_Allergies_SubstanceMatchesKind", "(\"Kind\" = 'Substance') = (\"Substance\" IS NOT NULL)");
+                        });
+                });
 
             modelBuilder.Entity("Medvya.Encounters.Domain.Encounter", b =>
                 {
@@ -84,89 +132,45 @@ namespace Medvya.Encounters.Infrastructure.Persistence.Migrations
                         });
                 });
 
-            modelBuilder.Entity("Medvya.Encounters.Domain.Intake", b =>
+            modelBuilder.Entity("Medvya.Encounters.Domain.MedicationStatement", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("AppointmentId")
-                        .HasColumnType("uuid");
+                    b.Property<string>("Dose")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
-                    b.Property<string>("ChiefComplaint")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<Guid>("FacilityId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset?>("HandedOffAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("HandedOffBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("MergedFromPatientId")
-                        .HasColumnType("uuid");
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
 
                     b.Property<Guid>("PatientId")
                         .HasColumnType("uuid");
 
+                    b.Property<DateTimeOffset>("RecordedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid");
 
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
                     b.HasKey("Id");
-
-                    b.HasIndex("TenantId", "AppointmentId")
-                        .IsUnique();
 
                     b.HasIndex("TenantId", "PatientId");
 
-                    b.ToTable("Intakes", "encounters");
-                });
-
-            modelBuilder.Entity("Medvya.Encounters.Domain.IntakeEscalation", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("AppointmentId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("EscalatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("EscalatedBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("FacilityId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("MergedFromPatientId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("PatientId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Reason")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<Guid>("TenantId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("TenantId", "AppointmentId");
-
-                    b.HasIndex("TenantId", "FacilityId", "EscalatedAt");
-
-                    b.ToTable("IntakeEscalations", "encounters");
+                    b.ToTable("MedicationStatements", "encounters");
                 });
 
             modelBuilder.Entity("Medvya.Encounters.Domain.Observation", b =>
@@ -175,41 +179,58 @@ namespace Medvya.Encounters.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("AppointmentId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("FacilityId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Flag")
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
-                    b.Property<bool>("FlagKept")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Kind")
+                    b.Property<string>("Code")
                         .IsRequired()
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)");
 
-                    b.Property<Guid?>("MergedFromPatientId")
+                    b.Property<Guid>("PatientId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTimeOffset>("TakenAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ValueHundredths")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "PatientId", "Code", "TakenAt");
+
+                    b.ToTable("Observations", "encounters");
+                });
+
+            modelBuilder.Entity("Medvya.Encounters.Domain.Problem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Icd10Code")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<DateOnly?>("OnsetOn")
+                        .HasColumnType("date");
 
                     b.Property<Guid>("PatientId")
                         .HasColumnType("uuid");
 
-                    b.Property<DateTimeOffset?>("PreviousAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int?>("PreviousTenths")
-                        .HasColumnType("integer");
-
                     b.Property<DateTimeOffset>("RecordedAt")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("RecordedBy")
-                        .HasColumnType("uuid");
 
                     b.Property<string>("Source")
                         .IsRequired()
@@ -219,19 +240,16 @@ namespace Medvya.Encounters.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid");
 
-                    b.Property<int>("ValueTenths")
-                        .HasColumnType("integer");
-
-                    b.Property<Guid>("VerifiedBy")
-                        .HasColumnType("uuid");
+                    b.Property<string>("Verification")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("TenantId", "AppointmentId", "Kind");
+                    b.HasIndex("TenantId", "PatientId");
 
-                    b.HasIndex("TenantId", "PatientId", "Kind", "RecordedAt");
-
-                    b.ToTable("Observations", "encounters");
+                    b.ToTable("Problems", "encounters");
                 });
 #pragma warning restore 612, 618
         }

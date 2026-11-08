@@ -10,9 +10,6 @@ public enum VitalKind { SystolicBp, DiastolicBp, Pulse, Temperature, OxygenSatur
 [JsonConverter(typeof(JsonStringEnumConverter<VitalAlert>))]
 public enum VitalAlert { High, Low, Changed }
 
-[JsonConverter(typeof(JsonStringEnumConverter<ObservationSource>))]
-public enum ObservationSource { NurseIntake }
-
 /// <summary>
 /// The nurse intake of one visit (MDV-P2-007): the chief complaint in the patient's words and whether the nurse has handed the patient to the doctor.
 /// Exists from the nurse's first save, before any encounter (the doctor starts that). One per visit.
@@ -29,32 +26,6 @@ public sealed class Intake
     [Classification(DataClass.Internal)] public Guid? HandedOffBy { get; set; }
     [Classification(DataClass.Internal)] public DateTimeOffset? HandedOffAt { get; set; }
     [Classification(DataClass.Internal)] public DateTimeOffset UpdatedAt { get; set; }
-}
-
-/// <summary>
-/// One vital sign reading (an OBSERVATION): source Nurse intake, recorded and verified by the nurse who entered it. A re-measure is a new row;
-/// the latest of each kind for the visit is the current one. A flagged reading is only final once the nurse kept it on purpose (<see cref="FlagKept"/>).
-/// </summary>
-public sealed class Observation
-{
-    [Classification(DataClass.Internal)] public Guid Id { get; init; }
-    [Classification(DataClass.Internal)] public Guid TenantId { get; init; }
-    [Classification(DataClass.Internal)] public Guid FacilityId { get; init; }
-    [Classification(DataClass.Internal)] public Guid PatientId { get; init; }
-    [Classification(DataClass.Internal)] public Guid? MergedFromPatientId { get; init; }
-    [Classification(DataClass.Internal)] public Guid AppointmentId { get; init; }
-    [Classification(DataClass.Internal)] public VitalKind Kind { get; init; }
-    /// <summary>The reading in tenths of its unit (368 = 36.8 °C): one decimal place is all a bedside reading has, and no column is a fraction (AGENTS.md 3.4).</summary>
-    [Classification(DataClass.SensitiveHealth)] public int ValueTenths { get; init; }
-    [Classification(DataClass.Internal)] public VitalAlert? Flag { get; init; }
-    /// <summary>The patient's last reading of this kind before this visit, to show beside the new one.</summary>
-    [Classification(DataClass.SensitiveHealth)] public int? PreviousTenths { get; init; }
-    [Classification(DataClass.Internal)] public DateTimeOffset? PreviousAt { get; init; }
-    [Classification(DataClass.Internal)] public bool FlagKept { get; set; }
-    [Classification(DataClass.Internal)] public ObservationSource Source { get; init; }
-    [Classification(DataClass.Internal)] public Guid RecordedBy { get; init; }
-    [Classification(DataClass.Internal)] public Guid VerifiedBy { get; init; }
-    [Classification(DataClass.Internal)] public DateTimeOffset RecordedAt { get; init; }
 }
 
 /// <summary>The nurse raised the patient to the treating doctor, with a reason. Open until the doctor starts the consultation.</summary>
@@ -103,6 +74,21 @@ public static class VitalRules
 
     /// <summary>A weight that moved this much (kg) since the last one is worth a second look.</summary>
     public const decimal WeightChangeKg = 2.0m;
+
+    /// <summary>The chart's code for a bedside vital (the same OBSERVATION table holds labs; MDV-P2-004).</summary>
+    public static ObservationCode Code(VitalKind kind) => kind switch
+    {
+        VitalKind.SystolicBp => ObservationCode.BloodPressureSystolic,
+        VitalKind.DiastolicBp => ObservationCode.BloodPressureDiastolic,
+        VitalKind.Pulse => ObservationCode.Pulse,
+        VitalKind.Temperature => ObservationCode.Temperature,
+        VitalKind.OxygenSaturation => ObservationCode.OxygenSaturation,
+        VitalKind.Weight => ObservationCode.Weight,
+        _ => throw new ArgumentOutOfRangeException(nameof(kind)),
+    };
+
+    /// <summary>Null for a lab, which is not a vital.</summary>
+    public static VitalKind? Kind(ObservationCode code) => Enum.GetValues<VitalKind>().Cast<VitalKind?>().FirstOrDefault(k => Code(k!.Value) == code);
 
     public static int ToTenths(decimal value) => (int)decimal.Round(value * 10);
 

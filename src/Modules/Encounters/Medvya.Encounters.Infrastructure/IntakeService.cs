@@ -68,13 +68,14 @@ public sealed class IntakeService(
         {
             var tenths = VitalRules.ToTenths(value);
             if (current.GetValueOrDefault(kind)?.ValueTenths == tenths) continue; // the same value again is not a re-measure and keeps the nurse's decision
-            var before = await db.Observations.AsNoTracking().Where(o => o.PatientId == visit.PatientId && o.Kind == kind && o.AppointmentId != appointmentId)
-                .OrderByDescending(o => o.RecordedAt).ThenByDescending(o => o.Id).Select(o => new { o.ValueTenths, o.RecordedAt }).FirstOrDefaultAsync(cancellationToken);
+            var code = VitalRules.Code(kind);
+            var before = await db.Observations.AsNoTracking().Where(o => o.PatientId == visit.PatientId && o.Code == code && o.AppointmentId != appointmentId)
+                .OrderByDescending(o => o.TakenAt).ThenByDescending(o => o.Id).Select(o => new { o.ValueHundredths, o.TakenAt }).FirstOrDefaultAsync(cancellationToken);
             db.Observations.Add(new Observation
             {
-                Id = Guid.CreateVersion7(), TenantId = TenantId, FacilityId = visit.FacilityId, PatientId = visit.PatientId, AppointmentId = appointmentId, Kind = kind,
-                ValueTenths = tenths, Flag = VitalRules.Flag(kind, value, before is null ? null : VitalRules.FromTenths(before.ValueTenths)), PreviousTenths = before?.ValueTenths, PreviousAt = before?.RecordedAt,
-                Source = ObservationSource.NurseIntake, RecordedBy = me, VerifiedBy = me, RecordedAt = now,
+                Id = Guid.CreateVersion7(), TenantId = TenantId, FacilityId = visit.FacilityId, PatientId = visit.PatientId, AppointmentId = appointmentId, Code = code,
+                ValueHundredths = tenths * 10, Flag = VitalRules.Flag(kind, value, before is null ? null : VitalRules.FromTenths(before.ValueHundredths / 10)), PreviousTenths = before?.ValueHundredths / 10, PreviousAt = before?.TakenAt,
+                Source = ChartSource.ClinicianVerified, RecordedBy = me, VerifiedBy = me, TakenAt = now,
             });
         }
         if (complaint is not null) row.ChiefComplaint = complaint.Length == 0 ? null : complaint;
@@ -180,7 +181,7 @@ public sealed class IntakeService(
     /// <summary>The latest reading of each kind for the visit.</summary>
     async Task<Dictionary<VitalKind, Observation>> CurrentAsync(Guid appointmentId, CancellationToken cancellationToken) =>
         (await db.Observations.AsNoTracking().Where(o => o.AppointmentId == appointmentId).ToListAsync(cancellationToken))
-            .GroupBy(o => o.Kind).ToDictionary(g => g.Key, g => g.OrderByDescending(o => o.RecordedAt).ThenByDescending(o => o.Id).First());
+            .GroupBy(o => VitalRules.Kind(o.Code)!.Value).ToDictionary(g => g.Key, g => g.OrderByDescending(o => o.TakenAt).ThenByDescending(o => o.Id).First());
 
     async Task<List<string>> BlockersAsync(ConsultVisit visit, CancellationToken cancellationToken)
     {
@@ -193,7 +194,7 @@ public sealed class IntakeService(
     {
         var row = await db.Intakes.AsNoTracking().SingleOrDefaultAsync(i => i.AppointmentId == visit.Id, cancellationToken);
         var vitals = (await CurrentAsync(visit.Id, cancellationToken)).OrderBy(p => p.Key).Select(p => p.Value)
-            .Select(o => new VitalView(o.Kind, VitalRules.FromTenths(o.ValueTenths), o.Flag, o.PreviousTenths is { } p ? VitalRules.FromTenths(p) : null, o.PreviousAt, o.FlagKept, o.RecordedAt)).ToList();
+            .Select(o => new IntakeVital(VitalRules.Kind(o.Code)!.Value, VitalRules.FromTenths(o.ValueTenths), o.Flag, o.PreviousTenths is { } p ? VitalRules.FromTenths(p) : null, o.PreviousAt, o.FlagKept, o.TakenAt)).ToList();
         var fresh = await visits.FindAsync(visit.Id, cancellationToken) ?? visit; // the handoff or a colleague may have moved the card
         return new IntakeView(visit.Id, visit.PatientId, visit.FacilityId, fresh.State.ToString(), row?.ChiefComplaint, vitals,
             await db.IntakeEscalations.AnyAsync(e => e.AppointmentId == visit.Id, cancellationToken), row?.HandedOffAt is not null, await BlockersAsync(visit, cancellationToken));

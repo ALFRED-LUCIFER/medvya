@@ -13,7 +13,7 @@ const at = '2026-10-19T04:30:00Z'; // 10:00 IST
 
 journey('J2', {
   // D-01: the next patient is Meera, ready for the doctor; starting the consultation binds it to her visit and shows who it is for, in Room 3.
-  // shortcut: started from the reception board, which doctors share in a small clinic; the doctor's own Today list is MDV-P2-002.
+  // The doctor's own Today (MDV-P2-002): the next patient hero starts the consultation.
   1: async ({ page }) => {
     await page.route('**/v1/me/context', r => r.fulfill({ json: doctor }));
     await page.route('**/v1/front-desk/board?*', r => r.fulfill({ json: { facilityId: 'f-1', timeZone: 'Asia/Kolkata', date: '2026-10-19', now: at, cards: [{
@@ -24,10 +24,28 @@ journey('J2', {
     await page.route('**/v1/encounters', r => r.fulfill({ json: encounter }));
     await page.route('**/v1/encounters/e-1', r => r.fulfill({ json: { encounter, timeZone: 'Asia/Kolkata', treatmentConsent: true,
       patient: { id: 'p-meera', fullName: 'Meera Iyer', mrn: '000001', dateOfBirth: '1972-03-14', ageYears: 54, sexAtBirth: 'Female' } } }));
-    await page.goto('/front-desk');
-    await page.getByRole('button', { name: 'Start consultation with Meera Iyer' }).click();
+    await page.goto('/today');
+    await expect(page.getByRole('region', { name: 'Next patient' })).toContainText('Meera Iyer');
+    await page.getByRole('region', { name: 'Next patient' }).getByRole('button', { name: 'Start consultation with Meera Iyer' }).click();
     const banner = page.getByRole('region', { name: 'Patient identity' });
     await expect(banner.getByRole('heading', { name: 'Meera Iyer' })).toBeVisible();
     await expect(banner).toContainText('Room 3');
+  },
+  // E-01: the 60-second brief is the verified chart (MDV-P2-004): allergy first, then problems and medicines, each with its source.
+  // shortcut: the "AI summary · not reviewed" half of the split is P3 (A-01) and is not shown; only the verified side exists.
+  2: async ({ page }) => {
+    await page.route('**/v1/me/context', r => r.fulfill({ json: doctor }));
+    await page.route('**/v1/patients/p-meera/chart', r => r.fulfill({ json: {
+      patient: { id: 'p-meera', fullName: 'Meera Iyer', mrn: '000001', dateOfBirth: '1972-03-14', ageYears: 54, sexAtBirth: 'Female' }, treatmentConsent: true, timeZone: 'Asia/Kolkata',
+      chart: { allergyState: 'Listed', allergies: [{ substance: 'Penicillin', reaction: null, status: 'Confirmed', source: 'ClinicianVerified' }],
+        problems: [{ icd10Code: 'E11.9', description: 'Type 2 diabetes mellitus', verification: 'Verified', onsetOn: null, source: 'ClinicianVerified' }],
+        medicines: [{ name: 'Metformin', dose: '500 mg', state: 'Active', source: 'Imported' }], lastVitals: [],
+        trends: [{ code: 'HbA1c', unit: '%', points: [{ value: 7.4, takenAt: at, source: 'SyncedFromHis' }] }], recentEncounters: [], openEncounterId: null } } }));
+    await page.goto('/patients/p-meera');
+    const banner = page.getByRole('region', { name: 'Patient Meera Iyer' });
+    await expect(banner).toContainText('Penicillin');
+    await expect(page.getByRole('region', { name: 'Problems', exact: true })).toContainText('Clinician verified');
+    await expect(page.getByRole('region', { name: 'Medicines', exact: true })).toContainText('Imported');
+    await expect(page.getByRole('img', { name: /HbA1c: latest .?7.4 %/ })).toBeVisible();
   },
 });

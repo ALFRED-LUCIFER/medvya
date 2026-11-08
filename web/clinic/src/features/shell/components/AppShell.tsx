@@ -20,6 +20,8 @@ type Props = {
   onSignOut: () => void;
   /** Patient search target (D-02 header entry), when this membership may search patients. */
   searchPath?: string | null;
+  /** The ⌘K patient search (D-02, MDV-P2-003), composed by the app for roles that treat patients; it replaces the plain link to the directory. */
+  globalSearch?: ReactNode;
   /** The notification centre (D-03), composed by the app for roles that may see notifications. */
   notifications?: ReactNode;
   children: ReactNode;
@@ -31,7 +33,7 @@ const initials = (name: string) => name.replace(/^Dr\.?\s+/i, '').split(/\s+/).m
  * Responsive shell (docs/02-design/responsive-and-dark.md): bottom tabs below 768 px, 72 px icon rail from 768 px,
  * full navy sidebar from 1280 px (the md/lg breakpoints in packages/ui/src/styles.css).
  */
-export default function AppShell({ displayName, role, facilityName, groups, tabs, languageSwitcher, signingOut, canSwitchFacility, onSignOut, searchPath, notifications, children }: Props) {
+export default function AppShell({ displayName, role, facilityName, groups, tabs, languageSwitcher, signingOut, canSwitchFacility, onSignOut, searchPath, globalSearch, notifications, children }: Props) {
   const { t } = useI18n();
   return (
     <div className="min-h-screen md:grid md:grid-cols-[72px_minmax(0,1fr)] lg:grid-cols-[clamp(196px,22vw,232px)_minmax(0,1fr)]">
@@ -83,11 +85,11 @@ export default function AppShell({ displayName, role, facilityName, groups, tabs
       <div className="flex min-w-0 flex-col">
         <header className="sticky top-0 z-10 flex min-h-15 items-center gap-3 border-b bg-card px-4 md:px-6 print:hidden">
           <p className="min-w-0 flex-1 truncate font-bold lg:invisible">{facilityName}</p>
-          {searchPath && (
+          {globalSearch ?? (searchPath && (
             <Link to={searchPath} className={cn(buttonVariants({ variant: 'outline' }), 'max-sm:size-11 max-sm:px-0')}>
               <Search aria-hidden /><span className="max-sm:sr-only">{t('patients.search.open')}</span>
             </Link>
-          )}
+          ))}
           <div className="hidden md:block">{languageSwitcher}</div>
           {canSwitchFacility && <Link to="/choose-facility" className={buttonVariants({ variant: 'outline', className: 'hidden md:inline-flex' })}>{t('session.switchFacility')}</Link>}
           <Button variant="outline" className="hidden md:inline-flex" loading={signingOut} onClick={onSignOut}>{t('session.signOut')}</Button>

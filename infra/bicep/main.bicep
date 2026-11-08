@@ -63,7 +63,8 @@ resource logs 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
   properties: {
     sku: { name: 'PerGB2018' }
     retentionInDays: 30
-    workspaceCapping: { dailyQuotaGb: json('0.1') }
+    // 0.1 GB was hit on 7 Nov by pgaudit read/write lines of a bulk seed (170 MB), which silenced App Insights until the 12:00Z reset. Raised to 1 GB; the budget alert still bounds spend.
+    workspaceCapping: { dailyQuotaGb: 1 }
   }
 }
 

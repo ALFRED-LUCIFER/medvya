@@ -643,7 +643,7 @@ erDiagram
 |---|---|---|---|
 | `ConsentReceipts` | 10 | Id | append-only ledger; tenant-scoped |
 | `MergeRequests` | 12 | Id | tenant-scoped |
-| `Patients` | 25 | Id | tenant-scoped |
+| `Patients` | 26 | Id | tenant-scoped |
 | `Identifiers` | 9 | Id | tenant-scoped |
 | `Relationships` | 8 | Id | tenant-scoped |
 | `PayerCoverages` | 9 | Id | tenant-scoped |
@@ -710,6 +710,7 @@ erDiagram
 | `PreferredLanguage` | character varying(35) |  |  |
 | `RegisteredAt` | timestamptz |  |  |
 | `RegisteredBy` | guid | yes | id of `identity.Users` |
+| `SearchKey` | text |  |  |
 | `SexAtBirth` | character varying(20) |  |  |
 | `Status` | character varying(20) |  |  |
 | `TenantId` | guid |  | `tenancy.Tenants` |

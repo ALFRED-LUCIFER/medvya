@@ -21,7 +21,7 @@ az deployment group create  -g rg-medvya-dev-in -f infra/bicep/main.bicep -p <sa
 - **Customer-managed key:** key `medvya-postgres-storage` in the vault; a user-assigned identity holds Crypto Service Encryption User on that key only.
 - **In country:** the module takes `country` (`IN` or `AE`) and fails the deployment if the region, or the geo-backup pair when `geoRedundantBackup` is on, is outside it. The Azure Policy assignment `allowed-locations-in` already evaluates PostgreSQL servers (it checks the location of every resource).
 - **Production defaults** (`env=prod`): zone-redundant HA, General Purpose SKU, 14-day point-in-time restore. Dev: Burstable, no HA, 7 days.
-- **Server parameters:** TLS 1.2+, `log_connections`, `log_disconnections`, pgaudit (`read, write, ddl, role`), extensions allow-list `pgcrypto`, `pg_stat_statements`, `pgaudit`. After the first deployment restart the server once so `shared_preload_libraries` takes effect.
+- **Server parameters:** TLS 1.2+, `log_connections`, `log_disconnections`, pgaudit (`read, write, ddl, role`), extensions allow-list `pgcrypto`, `pg_stat_statements`, `pgaudit`, `pg_trgm`. After the first deployment restart the server once so `shared_preload_libraries` takes effect.
 - Restore drill: `docs/runbooks/postgres-restore-drill.md`.
 
 ## App settings and the deploy job (MDV-P0-042)

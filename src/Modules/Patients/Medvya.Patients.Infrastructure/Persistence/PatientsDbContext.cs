@@ -22,6 +22,8 @@ public sealed class PatientsDbContext(DbContextOptions<PatientsDbContext> option
 
     Guid? CurrentTenantId => tenant.TenantId;
 
+    internal const string SearchKeyColumn = "SearchKey";
+
     /// <summary>The blind-index value to compare with <c>EF.Property&lt;byte[]&gt;(i, NationalIdColumns.LookupIndex)</c> in the current tenant.</summary>
     public byte[] LookupIndexFor(string value) =>
         nationalIds.Index(tenant.TenantId ?? throw new KeyProtectionException(KeyProtectionException.NoTenant), value);
@@ -43,6 +45,9 @@ public sealed class PatientsDbContext(DbContextOptions<PatientsDbContext> option
             // shortcut: checked within one request only; the client does not send back the version it loaded. Add a version round trip
             // to the completion form if two people editing the same field minutes apart becomes a real case.
             e.Property<uint>("xmin").IsRowVersion();
+            // Folded, lower-cased name (and Arabic name) for forgiving desk search, kept by the database on every write so no code path can forget it
+            // and a bulk load fills it too. Derived from the names and never from an identifier: a national ID is not searchable in plaintext.
+            e.Property<string>(SearchKeyColumn).HasComputedColumnSql("patients.search_key(\"FullName\", \"ArabicName\")", stored: true);
             e.Property(x => x.Mrn).HasMaxLength(32);
             e.Property(x => x.CountryCode).HasMaxLength(2).IsFixedLength();
             e.Property(x => x.FullName).HasMaxLength(200);

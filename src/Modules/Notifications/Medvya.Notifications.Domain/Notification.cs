@@ -8,7 +8,7 @@ public enum NotificationChannel { Email, Sms }
 
 /// <summary>What the message is about. Reminders go out at a fixed time before the visit; the others as soon as the change is published.</summary>
 [JsonConverter(typeof(JsonStringEnumConverter<NotificationKind>))]
-public enum NotificationKind { Confirmation, Rescheduled, Cancelled, Reminder24h, Reminder2h, NeedsRebooking, SeriesCancelled }
+public enum NotificationKind { Confirmation, Rescheduled, Cancelled, Reminder24h, Reminder2h, NeedsRebooking, SeriesCancelled, WaitlistOffer }
 
 /// <summary>
 /// Queued: waiting for its time or for a retry. Sent: handed to the provider. Delivered / Bounced: the provider's receipt.
@@ -19,7 +19,7 @@ public enum NotificationKind { Confirmation, Rescheduled, Cancelled, Reminder24h
 public enum NotificationStatus { Queued, Sent, Delivered, Failed, Bounced, Cancelled, Suppressed }
 
 /// <summary>
-/// NOTIFICATION (MDV-P1-032): one message to one patient on one channel about one appointment. It holds no message text and no
+/// NOTIFICATION (MDV-P1-032): one message to one patient on one channel about one appointment (for a waitlist offer, MDV-P1-027: the waitlist entry, whose id is held in AppointmentId). It holds no message text and no
 /// address: both are made at send time from the template and the patient record, so nothing personal is stored here.
 /// </summary>
 public sealed class Notification

@@ -1,4 +1,4 @@
-import { Footprints, ReceiptText, Stethoscope, UserPlus } from 'lucide-react';
+import { Footprints, ListChecks, ReceiptText, Stethoscope, UserPlus } from 'lucide-react';
 import { Link, useNavigate } from 'react-router';
 import { useI18n } from '@medvya/i18n';
 import { buttonVariants } from '@medvya/ui';
@@ -15,6 +15,8 @@ type Props = {
   registerPath: string | null;
   /** Walk-in (MDV-P1-025), when this role may book and check in. */
   walkInPath: string | null;
+  /** The waitlist (MDV-P1-027), when this role may book. */
+  waitlistPath: string | null;
   /** Billing, when the billing.invoices flag is on and this role may take payments (from the navigation). */
   billingPath: string | null;
   /** Doctors (Patient 360 at Full) start consultations from the board (MDV-P2-001); the server checks clinical access each time. */
@@ -28,7 +30,7 @@ function Consult({ card, online }: { card: BoardCard; online: boolean }) {
 }
 
 /** Composition only: the board controller for the active facility, fed to the presentational P-01 page. */
-export default function FrontDeskRoute({ facilityId, online, canMove, registerPath, walkInPath, billingPath, canConsult: doctor }: Props) {
+export default function FrontDeskRoute({ facilityId, online, canMove, registerPath, walkInPath, waitlistPath, billingPath, canConsult: doctor }: Props) {
   const { t } = useI18n();
   const board = useBoardController(facilityId, online);
   const register = registerPath || walkInPath ? <>
@@ -39,6 +41,7 @@ export default function FrontDeskRoute({ facilityId, online, canMove, registerPa
     ? <Link to={billingPath} className={buttonVariants({ variant: 'outline', className: 'whitespace-normal' })}><ReceiptText aria-hidden />{t('board.action.takePayment')}</Link>
     : undefined;
   const overview = <Link to="/front-desk/overview" className={buttonVariants({ variant: 'outline' })}><Stethoscope aria-hidden />{t('overview.title')}</Link>;
+  const waitlist = waitlistPath ? <Link to={waitlistPath} className={buttonVariants({ variant: 'outline' })}><ListChecks aria-hidden />{t('waitlist.title')}</Link> : undefined;
   const consultAction = doctor ? (card: BoardCard) => (canConsult(card.state) ? <Consult key={card.id} card={card} online={online} /> : null) : undefined;
-  return <BoardPage {...board} canMove={canMove} registerAction={register} paymentAction={payment} overviewAction={overview} consultAction={consultAction} />;
+  return <BoardPage {...board} canMove={canMove} registerAction={register} paymentAction={payment} overviewAction={<>{overview}{waitlist}</>} consultAction={consultAction} />;
 }

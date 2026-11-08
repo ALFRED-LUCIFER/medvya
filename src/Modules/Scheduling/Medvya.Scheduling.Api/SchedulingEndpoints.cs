@@ -124,6 +124,27 @@ public static class SchedulingEndpoints
                 service.MoveAsync(appointmentId, command, ct))
             .AuditedWriteWithErrors(SchedulingAudit.Status, SchedulingAudit.AppointmentResource, SchedulingAudit.Treatment);
 
+        // Waitlist (MDV-P1-027): the use cases need full booking access at the entry's facility. An offer holds a slot and messages the patient; accepting books it.
+        var waitlist = app.MapGroup("/v1/waitlist").RequireAuthorization();
+        waitlist.MapGet("/", (Guid? facilityId, [FromServices] IWaitlistService service, CancellationToken ct) => service.ListAsync(facilityId ?? Guid.Empty, ct))
+            .AuditedWithErrors("waitlist.read", SchedulingAudit.WaitlistResource, window: AuditWindow.Repeated); // refetched after every change at the desk
+        waitlist.MapPost("/", (AddToWaitlist command, [FromServices] IWaitlistService service, CancellationToken ct) => service.AddAsync(command, ct))
+            .AuditedWriteWithErrors(SchedulingAudit.WaitlistAdd, SchedulingAudit.WaitlistResource, SchedulingAudit.Treatment);
+        waitlist.MapPost("/{id:guid}/offer", (Guid id, OfferSlot command, [FromServices] IWaitlistService service, CancellationToken ct) => service.OfferAsync(id, command, ct))
+            .AuditedWriteWithErrors(SchedulingAudit.WaitlistOffer, SchedulingAudit.WaitlistResource, SchedulingAudit.Treatment)
+            .RequireAcceptedTerms(); // it messages a patient and holds a slot
+        waitlist.MapPost("/{id:guid}/decline", (Guid id, [FromServices] IWaitlistService service, CancellationToken ct) => service.DeclineAsync(id, ct))
+            .AuditedWriteWithErrors(SchedulingAudit.WaitlistDecline, SchedulingAudit.WaitlistResource, SchedulingAudit.Treatment);
+        waitlist.MapPost("/{id:guid}/accept", (Guid id, [FromServices] IWaitlistService service, CancellationToken ct) => service.AcceptAsync(id, ct))
+            .AuditedWriteWithErrors(SchedulingAudit.WaitlistAccept, SchedulingAudit.WaitlistResource, SchedulingAudit.Treatment)
+            .RequireAcceptedTerms();
+        waitlist.MapDelete("/{id:guid}", async (Guid id, [FromServices] IWaitlistService service, CancellationToken ct) =>
+            {
+                await service.RemoveAsync(id, ct);
+                return Results.NoContent();
+            })
+            .AuditedWriteWithErrors(SchedulingAudit.WaitlistRemove, SchedulingAudit.WaitlistResource, SchedulingAudit.Treatment);
+
         var frontDesk = app.MapGroup("/v1/front-desk").RequireAuthorization();
         frontDesk.MapGet("/board", (Guid? facilityId, [FromServices] IFrontDeskService service, CancellationToken ct) =>
                 service.GetBoardAsync(facilityId ?? Guid.Empty, ct))
@@ -215,6 +236,10 @@ public static class SchedulingEndpoints
         catch (AppointmentNotFoundException)
         {
             return Results.Problem(statusCode: StatusCodes.Status404NotFound, title: "Appointment not found");
+        }
+        catch (WaitlistNotFoundException)
+        {
+            return Results.Problem(statusCode: StatusCodes.Status404NotFound, title: "Waitlist entry not found");
         }
         catch (DisplayNotFoundException)
         {

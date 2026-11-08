@@ -187,6 +187,10 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         ["/v1/notifications/inbox/{id:guid}/read"] = "the inbox row is keyed by tenant and user; another user's id is a no-op (NotificationsTests)",
         ["/v1/me/sessions/{id:guid}"] = "own sessions only: the session row is matched on the caller's user id (SessionControlTests)",
         ["/v1/settings/doctors/{id:guid}/signature"] = "PUT takes an image body; the DELETE on the same route is in the matrix",
+        ["/v1/waitlist/{id:guid}"] = "waitlist: another practice's id is 404 and another location's is 403, in WaitlistEndpointTests and WaitlistTests (RLS)",
+        ["/v1/waitlist/{id:guid}/offer"] = "as above",
+        ["/v1/waitlist/{id:guid}/accept"] = "as above",
+        ["/v1/waitlist/{id:guid}/decline"] = "as above",
         ["/v1/operations/licences/{tenantId:guid}/{doctorId:guid}/decision"] = "Medvya operations only (not a clinic role); the tenant is named on purpose (DoctorTests)",
     };
 

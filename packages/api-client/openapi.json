@@ -1319,6 +1319,185 @@
         }
       }
     },
+    "/v1/waitlist": {
+      "get": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "facilityId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WaitlistList"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Host.Api"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddToWaitlist"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WaitlistView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/waitlist/{id}/offer": {
+      "post": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OfferSlot"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WaitlistView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/waitlist/{id}/decline": {
+      "post": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WaitlistView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/waitlist/{id}/accept": {
+      "post": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppointmentView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/waitlist/{id}": {
+      "delete": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/v1/front-desk/board": {
       "get": {
         "tags": [
@@ -3421,6 +3600,52 @@
           }
         }
       },
+      "AddToWaitlist": {
+        "type": "object",
+        "properties": {
+          "facilityId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "patientId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "calendarId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "visitType": {
+            "$ref": "#/components/schemas/VisitType"
+          },
+          "reasonCategory": {
+            "$ref": "#/components/schemas/ReasonCategory"
+          },
+          "days": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DayOfWeek"
+            }
+          },
+          "from": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "time"
+          },
+          "until": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "time"
+          }
+        }
+      },
       "AnonymousTypeOfGuidAndGuidAndstringAndstringAndRoleAndGuidAndstringAndGuidAndstringAndstringAndstringAndGuidAndstringAndDateTimeOffset": {
         "required": [
           "membershipId",
@@ -5331,6 +5556,19 @@
           }
         }
       },
+      "OfferSlot": {
+        "type": "object",
+        "properties": {
+          "calendarId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "start": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "OnboardingClinic": {
         "required": [
           "name",
@@ -6933,6 +7171,27 @@
           }
         }
       },
+      "SlotMatch": {
+        "required": [
+          "calendarId",
+          "calendarName",
+          "start"
+        ],
+        "type": "object",
+        "properties": {
+          "calendarId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "calendarName": {
+            "type": "string"
+          },
+          "start": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "SlotView": {
         "required": [
           "start",
@@ -7169,6 +7428,152 @@
           "since": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "WaitlistList": {
+        "required": [
+          "facilityId",
+          "timeZone",
+          "now",
+          "entries"
+        ],
+        "type": "object",
+        "properties": {
+          "facilityId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "timeZone": {
+            "type": "string"
+          },
+          "now": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WaitlistView"
+            }
+          }
+        }
+      },
+      "WaitlistState": {
+        "enum": [
+          "Waiting",
+          "Offered",
+          "Booked",
+          "Removed"
+        ]
+      },
+      "WaitlistView": {
+        "required": [
+          "id",
+          "patientId",
+          "patientName",
+          "mrn",
+          "calendarId",
+          "calendarName",
+          "visitType",
+          "reasonCategory",
+          "days",
+          "from",
+          "until",
+          "state",
+          "requestedAt",
+          "offered",
+          "offerExpiresAt",
+          "match"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "patientId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "patientName": {
+            "type": "string"
+          },
+          "mrn": {
+            "type": "string"
+          },
+          "calendarId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "calendarName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "visitType": {
+            "$ref": "#/components/schemas/VisitType"
+          },
+          "reasonCategory": {
+            "$ref": "#/components/schemas/ReasonCategory"
+          },
+          "days": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DayOfWeek"
+            }
+          },
+          "from": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "time"
+          },
+          "until": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "time"
+          },
+          "state": {
+            "$ref": "#/components/schemas/WaitlistState"
+          },
+          "requestedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "offered": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SlotMatch"
+              }
+            ]
+          },
+          "offerExpiresAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "match": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SlotMatch"
+              }
+            ]
           }
         }
       },

@@ -23,6 +23,7 @@ public sealed class SchedulingDbContext(DbContextOptions<SchedulingDbContext> op
     public DbSet<QueueToken> QueueTokens => Set<QueueToken>();
     public DbSet<QueueDisplay> QueueDisplays => Set<QueueDisplay>();
     public DbSet<BookingConflict> BookingConflicts => Set<BookingConflict>();
+    public DbSet<WaitlistEntry> Waitlist => Set<WaitlistEntry>();
     public DbSet<MetricBaseline> MetricBaselines => Set<MetricBaseline>();
 
     Guid? CurrentTenantId => tenant.TenantId;
@@ -131,6 +132,16 @@ public sealed class SchedulingDbContext(DbContextOptions<SchedulingDbContext> op
         modelBuilder.Entity<BookingConflict>(e =>
         {
             e.HasIndex(x => new { x.TenantId, x.FacilityId, x.OccurredAt });
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<WaitlistEntry>(e =>
+        {
+            e.ToTable("Waitlist");
+            e.Property(x => x.VisitType).HasConversion<string>().HasMaxLength(30);
+            e.Property(x => x.ReasonCategory).HasConversion<string>().HasMaxLength(30);
+            e.Property(x => x.State).HasConversion<string>().HasMaxLength(20);
+            e.HasIndex(x => new { x.TenantId, x.FacilityId, x.State, x.RequestedAt });
+            e.HasIndex(x => new { x.TenantId, x.PatientId });
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         modelBuilder.Entity<MetricBaseline>(e =>

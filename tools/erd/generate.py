@@ -36,7 +36,7 @@ PLANNED_TO_BUILT = {
     'SCHEDULE_TEMPLATE': 'scheduling.Templates', 'LEAVE': 'scheduling.ScheduleExceptions', 'HOLIDAY': 'tenancy.Closures',
     'PATIENT': 'patients.Patients', 'PATIENT_IDENTIFIER': 'patients.Identifiers', 'PATIENT_RELATIONSHIP': 'patients.Relationships',
     'PAYER_COVERAGE': 'patients.PayerCoverages', 'CONSENT_RECEIPT': 'patients.ConsentReceipts', 'SCHEDULE_SLOT': 'scheduling.ScheduleSlots',
-    'APPOINTMENT': 'scheduling.Appointments', 'QUEUE_TOKEN': 'scheduling.QueueTokens', 'DOC_SEQUENCE': 'billing.DocSequences',
+    'APPOINTMENT': 'scheduling.Appointments', 'WAITLIST_ENTRY': 'scheduling.Waitlist', 'QUEUE_TOKEN': 'scheduling.QueueTokens', 'DOC_SEQUENCE': 'billing.DocSequences',
     'AUDIT_EVENT': 'audit.AuditEvents', 'OUTBOX_EVENT': 'scheduling.OutboxEvents', 'NOTIFICATION': 'notifications.Notifications',
     'NOTIFICATION_ATTEMPT': 'notifications.Attempts', 'ENCOUNTER': 'encounters.Encounters',
 }

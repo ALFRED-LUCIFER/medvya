@@ -160,6 +160,24 @@ public sealed class PatientMergeTests(PostgresFixture sql) : IClassFixture<Postg
         Assert.NotNull(await sql.Patients(tenant).Patients.SingleAsync(p => p.Id == merged.PatientId)); // both originals are kept
     }
 
+    /// <summary>An MRN typed as digits is a number too: it must find the survivor alone, never also the patients whose phone happens to contain those digits.</summary>
+    [Fact]
+    public async Task AnMrnTypedAsDigitsWinsOverPhonesContainingThemAndFindsTheSurvivorOnly()
+    {
+        var (survivor, merged, request) = await PairAsync();
+        var lookalike = await Registry(reception).RegisterAsync(IndiaBase with { FacilityId = facility, FullName = "Lata Pillai", Mobile = $"+91 9{merged.Mrn}123", Identifiers = [] });
+        await AwaitApprovalAsync(request);
+        await Merges(clinicianA).ApproveAsync(request);
+
+        foreach (var mrn in new[] { survivor.Mrn, merged.Mrn })
+            Assert.Equal(survivor.PatientId, (await Registry(reception).SearchAsync(new("IN", mrn))).Items.Single().Id);
+        Assert.Equal(lookalike.PatientId, (await Registry(reception).SearchAsync(new("IN", "9" + merged.Mrn))).Items.Single().Id); // 7 digits cannot be an MRN: a phone fragment
+
+        Assert.True(await Merges(admin).UndoAsync(request));
+        Assert.Equal(merged.PatientId, (await Registry(reception).SearchAsync(new("IN", merged.Mrn))).Items.Single().Id);
+        Assert.Equal(survivor.PatientId, (await Registry(reception).SearchAsync(new("IN", survivor.Mrn))).Items.Single().Id);
+    }
+
     [Fact]
     public async Task AnAdminUndoRestoresBothOriginalsAndLeavesLaterVisitsOnTheSurvivor()
     {

@@ -132,57 +132,124 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
         var now = clock.GetUtcNow();
 
         var patients = FacilityPatients();
+        // Digits that are an MRN win (MDV-P1-017: the MRN of a merged record finds the survivor); only without an MRN hit are they part of a phone or an Aadhaar last 4.
+        var mrn = term.Kind == SearchKind.Mrn ? term.Value
+            : term.Kind == SearchKind.Number && term.Value!.Length <= Mrn.Digits ? Mrn.Format(int.Parse(term.Value, System.Globalization.CultureInfo.InvariantCulture)) : null;
+        // The survivors of merged records with this MRN, looked up first on the unique MRN index: a correlated EXISTS in the same OR made the MRN search read the whole facility (0.9 s at 1,000,000 patients).
+        var survivors = mrn is null ? []
+            : await db.Patients.AsNoTracking().Where(m => m.FacilityId == FacilityId() && m.Mrn == mrn && m.MergedIntoPatientId != null).Select(m => m.MergedIntoPatientId!.Value).ToListAsync(cancellationToken);
+        if (term.Kind == SearchKind.Number && mrn is not null && await patients.AnyAsync(p => p.Mrn == mrn || survivors.Contains(p.Id), cancellationToken)) term = new(SearchKind.Mrn, mrn);
+        var tokens = term.Kind == SearchKind.Name ? await NameTokensAsync(term.Value!, cancellationToken) : [];
         patients = term.Kind switch
         {
-            // Every word must appear, in any order ("nair meera" finds "Meera Nair"), in either script.
-            SearchKind.Name => NameWords(term.Value!).Aggregate(patients, (q, word) =>
-            {
-                var like = LikeContaining(word);
-                return q.Where(p => EF.Functions.ILike(p.FullName, like, Escape) || (p.ArabicName != null && EF.Functions.ILike(p.ArabicName, like, Escape)));
-            }),
+            SearchKind.Name => Contains(patients, tokens),
             SearchKind.Phone => patients.Where(p => p.Mobile == term.Value || p.AlternatePhone == term.Value),
             // Either MRN of a merged pair finds the survivor (MDV-P1-017); the merged record itself is hidden below.
-            SearchKind.Mrn => patients.Where(p => p.Mrn == term.Value || db.Patients.Any(m => m.MergedIntoPatientId == p.Id && m.Mrn == term.Value)),
+            SearchKind.Mrn => patients.Where(p => p.Mrn == mrn || survivors.Contains(p.Id)),
             // Exact match on the HMAC blind index (MDV-P0-035); the value itself is ciphertext and never compared in SQL.
             SearchKind.Identifier => IdentifierMatch(patients, term.Scheme!.Value, term.Value!),
             SearchKind.Number => NumberMatch(patients, term.Value!),
             _ => patients,
         };
-        patients = search.Filter switch
+        IQueryable<Patient> Filtered(IQueryable<Patient> q) => search.Filter switch
         {
-            DirectoryFilter.Incomplete => patients.Where(p => p.Status == RegistrationStatus.Incomplete),
-            DirectoryFilter.Recent => patients.Where(p => p.RegisteredAt >= now.AddDays(-PatientSearch.RecentDays)),
-            _ => patients,
+            DirectoryFilter.Incomplete => q.Where(p => p.Status == RegistrationStatus.Incomplete),
+            DirectoryFilter.Recent => q.Where(p => p.RegisteredAt >= now.AddDays(-PatientSearch.RecentDays)),
+            _ => q,
         };
+        patients = Filtered(patients);
 
         var total = await patients.CountAsync(cancellationToken);
-        var ordered = term.Kind == SearchKind.Name ? patients.OrderBy(p => p.FullName).ThenBy(p => p.Id) : patients.OrderByDescending(p => p.RegisteredAt).ThenBy(p => p.Id);
-        var rows = await ordered.Skip((search.Page - 1) * PatientSearch.PageSize).Take(PatientSearch.PageSize)
-            .Select(p => new { p.Id, p.FullName, p.DateOfBirth, p.DateOfBirthEstimated, p.SexAtBirth, p.Mrn, p.Status, p.CountryCode })
-            .ToListAsync(cancellationToken);
+        // Too few exact hits: forgive typos too (a missing or transposed letter, a near spelling). Exact hits still rank first.
+        var fuzzy = term.Kind == SearchKind.Name && tokens.Count > 0 && total < FuzzyBelow;
+        if (fuzzy) patients = Filtered(Contains(FacilityPatients(), tokens, await SwappedPatternsAsync(tokens, cancellationToken)));
+        var phrase = string.Join(' ', tokens); // ranks: words together at a word start, then closest, then A to Z
+        var ordered = term.Kind == SearchKind.Name
+            ? patients.OrderByDescending(p => EF.Functions.Like(EF.Property<string>(p, SearchKey), phrase + "%") || EF.Functions.Like(EF.Property<string>(p, SearchKey), "% " + phrase + "%"))
+                .ThenByDescending(p => EF.Functions.TrigramsSimilarity(EF.Property<string>(p, SearchKey), phrase)).ThenBy(p => p.FullName).ThenBy(p => p.Id)
+            : patients.OrderByDescending(p => p.RegisteredAt).ThenBy(p => p.Id);
+        var shown = ordered.Select(p => new { p.Id, p.FullName, p.DateOfBirth, p.DateOfBirthEstimated, p.SexAtBirth, p.Mrn, p.Status, p.CountryCode });
+        List<(Guid Id, string FullName, DateOnly DateOfBirth, bool DateOfBirthEstimated, SexAtBirth SexAtBirth, string Mrn, RegistrationStatus Status, string CountryCode)> rows;
+        if (fuzzy)
+        {
+            // One pass over the facility's rows instead of a count and a page: the filter is the cost. Matches beyond the paging limit are not counted.
+            var all = await shown.Take(PatientSearch.MaxPage * PatientSearch.PageSize).ToListAsync(cancellationToken);
+            total = all.Count;
+            rows = [.. all.Skip((search.Page - 1) * PatientSearch.PageSize).Take(PatientSearch.PageSize).Select(p => (p.Id, p.FullName, p.DateOfBirth, p.DateOfBirthEstimated, p.SexAtBirth, p.Mrn, p.Status, p.CountryCode))];
+        }
+        else
+            rows = [.. (await shown.Skip((search.Page - 1) * PatientSearch.PageSize).Take(PatientSearch.PageSize).ToListAsync(cancellationToken))
+                .Select(p => (p.Id, p.FullName, p.DateOfBirth, p.DateOfBirthEstimated, p.SexAtBirth, p.Mrn, p.Status, p.CountryCode))];
         var items = rows.Select(p => new PatientSearchRow(p.Id, Initials(p.FullName), CountryRules.AgeOn(CountryRules.For(p.CountryCode).Today(now), p.DateOfBirth),
             p.DateOfBirthEstimated, p.SexAtBirth, Tail(p.Mrn), p.Status)).ToList();
         return new(term.Kind, items, search.Page, PatientSearch.PageSize, total);
     }
 
-    /// <summary>Digits (4 to 15) found inside a mobile or alternate number, or as an MRN or the Aadhaar last 4, whichever the desk meant.</summary>
+    /// <summary>
+    /// Digits (4 to 15) that are not an MRN: found inside a mobile or alternate number, or the Aadhaar last 4. An MRN hit is decided first, by the caller.
+    /// Phone is a LIKE on the facility's rows (row-level security keeps it off any index, see below); digits only, so no wildcard can enter the pattern.
+    /// </summary>
     IQueryable<Patient> NumberMatch(IQueryable<Patient> patients, string digits)
     {
-        var like = LikeContaining(digits);
-        var mrn = digits.Length <= Mrn.Digits ? Mrn.Format(int.Parse(digits, System.Globalization.CultureInfo.InvariantCulture)) : "";
+        var like = "%" + digits + "%";
         // Only the 4-digit form can be an Aadhaar last 4; an empty array equals no stored index, and no key is touched for other lengths.
         var aadhaar = digits.Length == 4 ? db.LookupIndexFor(digits) : Array.Empty<byte>();
-        return patients.Where(p => EF.Functions.ILike(p.Mobile, like, Escape) || (p.AlternatePhone != null && EF.Functions.ILike(p.AlternatePhone, like, Escape))
-            || p.Mrn == mrn
+        return patients.Where(p => EF.Functions.Like(p.Mobile, like) || (p.AlternatePhone != null && EF.Functions.Like(p.AlternatePhone, like))
             || db.Identifiers.Any(i => i.PatientId == p.Id && i.Scheme == IdentifierScheme.AadhaarLast4 && EF.Property<byte[]>(i, NationalIdColumns.LookupIndex) == aadhaar));
     }
 
-    /// <summary>At most 5 words, so a long pasted text cannot build a long query.</summary>
-    static IEnumerable<string> NameWords(string text) => text.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Take(5);
+    // Why no trigram index: row-level security keeps pg_trgm's operators (LIKE, %, <%) out of every index, because they are not "leakproof"
+    // and only a superuser can mark a function so. The tenant and facility index narrows to one facility, and these filters run on its rows;
+    // docs/03-architecture/patient-search.md has the measurements and the ceiling.
+    const string SearchKey = PatientsDbContext.SearchKeyColumn;
+    const int FuzzyBelow = 3;
+    const int MaxTokens = 5;
+    const int MaxTokenLength = 30;
+    const double WordSimilarity = 0.6;
 
-    const string Escape = "\\";
-    static string LikeContaining(string text) => "%" + text.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("%", "\\%", StringComparison.Ordinal)
-        .Replace("_", "\\_", StringComparison.Ordinal).Replace("[", "\\[", StringComparison.Ordinal) + "%";
+    /// <summary>
+    /// The query folded the way the stored search key is (the same SQL function, so spellings meet: Mohamed, Muhammad), as letter-and-digit words.
+    /// Anything else is dropped, so a word can never carry a LIKE wildcard or a regex operator into a pattern.
+    /// </summary>
+    async Task<IReadOnlyList<string>> NameTokensAsync(string text, CancellationToken cancellationToken)
+    {
+        var folded = (await db.Database.SqlQuery<string>($"""SELECT patients.fold_name({text}) AS "Value" """).ToListAsync(cancellationToken)).Single();
+        return [.. folded.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Select(w => new string([.. w.Where(c => char.IsLetterOrDigit(c) || char.GetUnicodeCategory(c) is System.Globalization.UnicodeCategory.NonSpacingMark or System.Globalization.UnicodeCategory.SpacingCombiningMark)]))
+            .Where(w => w.Length > 0).Select(w => w.Length > MaxTokenLength ? w[..MaxTokenLength] : w).Take(MaxTokens)];
+    }
+
+    /// <summary>Every word occurs in the search key; with <paramref name="swaps"/> (the fuzzy pass), a word may instead be near one (trigram word similarity) or have two adjacent letters swapped.</summary>
+    static IQueryable<Patient> Contains(IQueryable<Patient> patients, IReadOnlyList<string> tokens, IReadOnlyDictionary<string, string?>? swaps = null)
+    {
+        foreach (var t in tokens)
+        {
+            var like = "%" + t + "%";
+            var swapped = swaps?.GetValueOrDefault(t);
+            patients = swaps is null
+                ? patients.Where(p => EF.Functions.Like(EF.Property<string>(p, SearchKey), like))
+                : swapped is null
+                    ? patients.Where(p => EF.Functions.Like(EF.Property<string>(p, SearchKey), like) || EF.Functions.TrigramsWordSimilarity(t, EF.Property<string>(p, SearchKey)) >= WordSimilarity)
+                    : patients.Where(p => EF.Functions.Like(EF.Property<string>(p, SearchKey), like) || EF.Functions.TrigramsWordSimilarity(t, EF.Property<string>(p, SearchKey)) >= WordSimilarity
+                        || System.Text.RegularExpressions.Regex.IsMatch(EF.Property<string>(p, SearchKey), swapped));
+        }
+        return patients;
+    }
+
+    /// <summary>
+    /// Per word of 4 characters or more, an alternation of the word with each adjacent pair swapped (krsihnan finds krishnan), each variant folded by the
+    /// same SQL function as the stored key; null for a shorter word. Words are letters and digits only, so the alternation holds no regex operator.
+    /// </summary>
+    async Task<IReadOnlyDictionary<string, string?>> SwappedPatternsAsync(IReadOnlyList<string> tokens, CancellationToken cancellationToken)
+    {
+        var result = new Dictionary<string, string?>();
+        foreach (var t in tokens.Distinct())
+        {
+            var variants = t.Length < 4 ? [] : Enumerable.Range(0, t.Length - 1).Where(i => t[i] != t[i + 1]).Select(i => string.Concat(t.AsSpan(0, i), t.AsSpan(i + 1, 1), t.AsSpan(i, 1), t.AsSpan(i + 2))).Distinct().ToArray();
+            result[t] = variants.Length == 0 ? null : string.Join('|', await db.Database.SqlQuery<string>($"""SELECT patients.fold_name(v) AS "Value" FROM unnest({variants}) AS v""").ToListAsync(cancellationToken));
+        }
+        return result;
+    }
 
     /// <summary>First letters of the first and last words (words that start with a letter, so "(synthetic)" is skipped).</summary>
     internal static string Initials(string fullName)

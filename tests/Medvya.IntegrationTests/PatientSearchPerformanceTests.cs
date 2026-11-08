@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Npgsql;
 using Microsoft.Extensions.DependencyInjection;
+using Xunit.Abstractions;
 
 namespace Medvya.IntegrationTests;
 
@@ -20,67 +21,46 @@ namespace Medvya.IntegrationTests;
 public sealed class RunsAlone;
 
 /// <summary>
-/// MDV-P1-018 and MDV-P1-016 NFRs: desk search and the duplicate check, p95 under 300 ms with 50,000 synthetic patients in one
-/// facility (real SQL Server). Measured through the endpoints, so the capability check, the audit write and the Always Encrypted
+/// MDV-P1-018 and MDV-P1-016 NFRs: desk search and the duplicate check, p95 under 300 ms with 40,000 synthetic patients in one
+/// facility (real PostgreSQL), name typos included. Measured through the endpoints, so the capability check, the audit write and the Always Encrypted
 /// identifier lookup are all inside the timing.
 /// </summary>
 [Collection(nameof(RunsAlone))]
-public sealed class PatientSearchPerformanceTests(PostgresFixture sql) : IClassFixture<PostgresFixture>
+public sealed class PatientSearchPerformanceTests(PostgresFixture sql, ITestOutputHelper output) : IClassFixture<PostgresFixture>
 {
-    const int Patients = 50_000;
-    readonly Guid tenant = Guid.NewGuid(), facility = Guid.NewGuid(), receptionist = Guid.NewGuid();
-
-    static readonly string[] Given = ["Meera", "Deepak", "Fatima", "Arjun", "Kavya", "Rahul", "Priya", "Omar", "Lakshmi", "Suresh", "Anita", "Ravi"];
-    static readonly string[] Family = ["Iyer", "Nair", "Menon", "Rao", "Pillai", "Khan", "Haddad", "Thomas", "Joseph", "Varghese", "Reddy", "Shah"];
+    // MEDVYA_SEARCH_PATIENTS=200000 re-measures at a larger practice (the budget still applies); the default is the pilot target.
+    static readonly int Patients = int.TryParse(Environment.GetEnvironmentVariable("MEDVYA_SEARCH_PATIENTS"), CultureInfo.InvariantCulture, out var n) ? n : 40_000;
+    const int MrnStart = 100_000;
+    readonly Guid receptionist = Guid.NewGuid();
+    Guid tenant, facility;
+    Guid[] ids = [];
 
     /// <summary>ABHA number of synthetic patient n: "91" and n in 12 digits (14 digits, as ABHA; not a real ABHA).</summary>
     static string Abha(int n) => "91" + n.ToString("D12", CultureInfo.InvariantCulture);
 
     /// <summary>
-    /// Bulk-loads synthetic patients and one ABHA each inside the tenant (row-level security block predicates apply as for the API).
-    /// The identifiers are encrypted and blind-indexed with the fixture's keys, exactly as the API stores them (MDV-P0-035).
+    /// The same 40,000-patient synthetic practice the load tests and the Azure run use (tools/synthetic-data-generator), plus one ABHA each,
+    /// encrypted and blind-indexed with the fixture's keys exactly as the API stores them (MDV-P0-035).
     /// </summary>
     async Task SeedAsync()
     {
-        await using (var db = sql.Context(tenant))
-        {
-            db.Tenants.Add(new Tenant { Id = tenant, Name = "Perf Clinic (synthetic)", CountryCode = "IN", ResidencyRegion = "centralindia" });
-            db.Facilities.Add(new Facility { Id = facility, TenantId = tenant, Name = "Perf (synthetic)", TimeZone = "Asia/Kolkata" });
-            db.Memberships.Add(new Membership { Id = Guid.NewGuid(), TenantId = tenant, UserId = receptionist, FacilityId = facility, Role = Role.Receptionist, Status = MembershipStatus.Active });
-            await db.SaveChangesAsync();
-        }
-
-        var patients = new DataTable();
-        foreach (var (name, type) in new (string, Type)[]
-        {
-            ("Id", typeof(Guid)), ("TenantId", typeof(Guid)), ("FacilityId", typeof(Guid)), ("Mrn", typeof(string)), ("CountryCode", typeof(string)),
-            ("FullName", typeof(string)), ("DateOfBirth", typeof(DateTime)), ("DateOfBirthEstimated", typeof(bool)), ("SexAtBirth", typeof(string)),
-            ("Mobile", typeof(string)), ("Status", typeof(string)), ("RegisteredAt", typeof(DateTimeOffset)), ("ChangedAt", typeof(DateTimeOffset)),
-        }) patients.Columns.Add(name, type);
+        (tenant, facility, ids, _) = await Medvya.SyntheticData.SyntheticPatients.SeedAsync(sql.ConnectionString, "Development", "Search Perf Clinic", Patients, MrnStart, memberUserId: receptionist);
         var identifiers = new DataTable();
         foreach (var (name, type) in new (string, Type)[]
         {
             ("Id", typeof(Guid)), ("TenantId", typeof(Guid)), ("PatientId", typeof(Guid)), ("Scheme", typeof(string)), ("LookupValue", typeof(byte[])), ("LookupIndex", typeof(byte[])),
         }) identifiers.Columns.Add(name, type);
-
-        var start = DateTimeOffset.UtcNow.AddMinutes(-Patients); // about one registration a minute, the last week "recent"
-        for (var n = 1; n <= Patients; n++)
+        for (var i = 1; i <= Patients; i++)
         {
-            var id = Guid.CreateVersion7();
-            patients.Rows.Add(id, tenant, facility, Mrn.Format(n), "IN",
-                $"{Given[n % Given.Length]} {Family[n / Given.Length % Family.Length]} {n} (synthetic)", new DateTime(1940 + n % 80, 1 + n % 12, 1 + n % 28),
-                false, n % 2 == 0 ? "Female" : "Male", $"+9190{n:D8}", n % 10 == 0 ? "Incomplete" : "Complete", start.AddMinutes(n), start.AddMinutes(n));
             var identifierId = Guid.CreateVersion7();
-            identifiers.Rows.Add(identifierId, tenant, id, "Abha", sql.NationalIds.Encrypt(tenant, NationalIdColumns.IdentifierLookup, identifierId, Abha(n)), sql.NationalIds.Index(tenant, Abha(n)));
+            identifiers.Rows.Add(identifierId, tenant, ids[i - 1], "Abha", sql.NationalIds.Encrypt(tenant, NationalIdColumns.IdentifierLookup, identifierId, Abha(i)), sql.NationalIds.Index(tenant, Abha(i)));
         }
-
         await using var conn = await sql.OpenAs("dbo", tenant);
-        await PostgresFixture.BulkCopyAsync(conn, "patients.Patients", patients);
         await PostgresFixture.BulkCopyAsync(conn, "patients.Identifiers", identifiers);
     }
 
     [Fact]
-    public async Task SearchAndDuplicateCheckP95StayUnder300MillisecondsWith50000Patients()
+    public async Task SearchAndDuplicateCheckP95StayUnder300MillisecondsWith40000Patients()
     {
         await SeedAsync();
         using var host = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b
@@ -101,8 +81,8 @@ public sealed class PatientSearchPerformanceTests(PostgresFixture sql) : IClassF
             return (elapsed, await res.Content.ReadFromJsonAsync<JsonElement>());
         }
 
-        // Name, phone, MRN, exact ABHA (deterministic Always Encrypted), and the directory with its filters.
-        string?[] queries = ["kavya", "deepak rao", "+91 90 0001 2345", "012345", "91 0000 0001 2345", null];
+        // Name prefix, a spelling variant, a transposed and a missing letter, a partial two-word name, phone, MRN, exact ABHA, and the directory with its filters.
+        string?[] queries = ["kavit", "mohamed", "krsihnan", "venkatsh", "sreen kumar", "+91 90 0011 2345", "112345", "0011 2345", "91 0000 0000 0099", null];
         var filters = new[] { "All", "Incomplete", "Recent" };
         async Task<long> Search(string? query, string filter)
         {
@@ -118,12 +98,12 @@ public sealed class PatientSearchPerformanceTests(PostgresFixture sql) : IClassF
                     searches.Add(await Search(q, f));
         AssertP95(searches, "searches through the endpoint");
 
-        // Patient 12345 is "Suresh Joseph 12345", born 26 Oct 1965 (see SeedAsync), and about 30 patients share each birthday;
-        // the ABHA of patient 99 exists too, so both the name + DOB and the exact-identifier paths run.
+        // The generated patient 12345 gives a name and birthday that exist; the ABHA of patient 99 exists too, so both the name + DOB and the exact-identifier paths run.
+        var known = Medvya.SyntheticData.SyntheticPatients.Generate(tenant, MrnStart, 12_344, DateTimeOffset.UtcNow);
         async Task<long> Check()
         {
             var (ms, body) = await Post("/v1/patients/duplicate-check",
-                new { fullName = "Suresh Joseph", dateOfBirth = "1965-10-26", identifiers = new[] { new { scheme = "Abha", value = Abha(99) } } });
+                new { fullName = known.FullName, dateOfBirth = known.DateOfBirth.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), identifiers = new[] { new { scheme = "Abha", value = Abha(99) } } });
             Assert.True(body.GetProperty("candidates").GetArrayLength() > 0, "no duplicate candidates");
             return ms;
         }
@@ -133,10 +113,11 @@ public sealed class PatientSearchPerformanceTests(PostgresFixture sql) : IClassF
         AssertP95(checks, "duplicate checks through the endpoint");
     }
 
-    static void AssertP95(List<long> timings, string what)
+    void AssertP95(List<long> timings, string what)
     {
         timings.Sort();
         var p95 = timings[(int)Math.Ceiling(timings.Count * 0.95) - 1];
+        output.WriteLine(string.Create(CultureInfo.InvariantCulture, $"{what}: {Patients} patients, p50 {timings[timings.Count / 2]} ms, p95 {p95} ms, max {timings[^1]} ms over {timings.Count}"));
         Assert.True(p95 < 300, string.Create(CultureInfo.InvariantCulture, $"p95 {p95} ms over {timings.Count} {what} (max {timings[^1]} ms)"));
     }
 }

@@ -5,7 +5,8 @@ export const timelineKinds = ['Encounter', 'Lab', 'Medicine', 'Document'] as con
 export type TimelineKind = (typeof timelineKinds)[number];
 export const timelineSources = ['ClinicianVerified', 'PatientReported', 'Imported', 'SyncedFromHis'] as const satisfies readonly ChartSource[];
 
-export type TimelineCode = 'Consultation' | 'ConsultationInProgress' | 'HbA1c' | 'MedicineActive' | 'MedicineStopped';
+export type TimelineCode = 'Consultation' | 'ConsultationInProgress' | 'HbA1c' | 'MedicineActive' | 'MedicineStopped'
+  | 'DocumentLabReport' | 'DocumentImaging' | 'DocumentPrescription' | 'DocumentReferral' | 'DocumentOther';
 export type TimelineEntry = {
   id: string; kind: TimelineKind; at: string;
   /** What it is, translated by the screen; `title` and `detail` are the data that go with it (a medicine's name and dose, a result's value). */

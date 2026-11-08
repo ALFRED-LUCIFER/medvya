@@ -733,6 +733,138 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/patients/{patientId}/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    patientId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: {
+                    type?: string;
+                    date?: string;
+                    source?: string;
+                };
+                header?: never;
+                path: {
+                    patientId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/documents/{documentId}/view-link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    documentId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/documents/{documentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    documentId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["UpdateDocumentRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        trace?: never;
+    };
     "/v1/schedule": {
         parameters: {
             query?: never;
@@ -4949,6 +5081,8 @@ export interface components {
             followUpFee: number | string;
             currency: string;
         };
+        /** @enum {unknown} */
+        DocumentType: "LabReport" | "Imaging" | "Prescription" | "Referral" | "Other";
         DuplicateCheckRequest: {
             fullName?: null | string;
             /** Format: date */
@@ -5549,6 +5683,11 @@ export interface components {
         };
         /** @enum {unknown} */
         UnavailableReason: "NotWorking" | "Break" | "NoSchedule" | "Closed" | "Leave";
+        UpdateDocumentRequest: {
+            type: components["schemas"]["DocumentType"];
+            /** Format: date */
+            documentDate: string;
+        };
         VisitLength: {
             visitType?: components["schemas"]["VisitType"];
             /** Format: int32 */

@@ -71,6 +71,79 @@ namespace Medvya.Encounters.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Medvya.Encounters.Domain.ClinicalDocument", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("BlobKey")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTimeOffset?>("ChangedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ChangedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateOnly>("DocumentDate")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("FacilityId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PatientId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ScanStatus")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Sha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTimeOffset>("UploadedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UploadedBy")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BlobKey")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "PatientId", "DocumentDate");
+
+                    b.ToTable("ClinicalDocuments", "encounters");
+                });
+
             modelBuilder.Entity("Medvya.Encounters.Domain.Encounter", b =>
                 {
                     b.Property<Guid>("Id")

@@ -13,6 +13,7 @@ public sealed class EncountersDbContext(DbContextOptions<EncountersDbContext> op
     public DbSet<Problem> Problems => Set<Problem>();
     public DbSet<MedicationStatement> MedicationStatements => Set<MedicationStatement>();
     public DbSet<Observation> Observations => Set<Observation>();
+    public DbSet<ClinicalDocument> Documents => Set<ClinicalDocument>();
 
     Guid? CurrentTenantId => tenant.TenantId;
 
@@ -67,6 +68,19 @@ public sealed class EncountersDbContext(DbContextOptions<EncountersDbContext> op
             e.Property(x => x.Code).HasConversion<string>().HasMaxLength(30);
             e.Property(x => x.Source).HasConversion<string>().HasMaxLength(20);
             e.HasIndex(x => new { x.TenantId, x.PatientId, x.Code, x.TakenAt });
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<ClinicalDocument>(e =>
+        {
+            e.ToTable("ClinicalDocuments");
+            e.Property(x => x.Type).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.Source).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.ScanStatus).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.ContentType).HasMaxLength(50);
+            e.Property(x => x.Sha256).HasMaxLength(64);
+            e.Property(x => x.BlobKey).HasMaxLength(64);
+            e.HasIndex(x => new { x.TenantId, x.PatientId, x.DocumentDate });
+            e.HasIndex(x => x.BlobKey).IsUnique();
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
     }

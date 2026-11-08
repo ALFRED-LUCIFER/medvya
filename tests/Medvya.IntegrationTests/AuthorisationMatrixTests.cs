@@ -103,6 +103,17 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         var request = await other.Get<IAccessRequests>(other.SecondDoctor, s => s.AddScoped<IAccessRequestParticipant, AccessRequestNotifier>())
             .RequestAsync(other.Patient, other.Facility, AccessRequestReason.CoveringColleague);
 
+        var document = new Encounters.Domain.ClinicalDocument
+        {
+            Id = Guid.CreateVersion7(), TenantId = other.Tenant, FacilityId = other.Facility, PatientId = other.Patient, Type = Encounters.Domain.DocumentType.LabReport, DocumentDate = new(2026, 10, 1),
+            Source = Encounters.Domain.ChartSource.Imported, ContentType = "application/pdf", SizeBytes = 1, Sha256 = new('0', 64), BlobKey = Guid.NewGuid().ToString("N"),
+            ScanStatus = Encounters.Domain.ScanStatus.Clean, UploadedBy = other.Doctor, UploadedAt = SchedulingHarness.MondayMorning,
+        };
+        await using (var documents = sql.Encounters(other.Tenant))
+        {
+            documents.Documents.Add(document);
+            await documents.SaveChangesAsync();
+        }
         await using var db = sql.Context(other.Tenant);
         var invited = new Membership { Id = Guid.NewGuid(), TenantId = other.Tenant, FacilityId = other.Facility, Role = Role.Receptionist, Status = MembershipStatus.Invited };
         var invitation = new Invitation
@@ -118,7 +129,7 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
 
         return new()
         {
-            ["patient"] = other.Patient, ["appointment"] = visit, ["encounter"] = encounter, ["hold"] = hold.Id, ["display"] = display.Display.Id,
+            ["patient"] = other.Patient, ["appointment"] = visit, ["encounter"] = encounter, ["document"] = document.Id, ["hold"] = hold.Id, ["display"] = display.Display.Id,
             ["closure"] = closure!.Id, ["exception"] = leave.Exception.Id, ["accessRequest"] = request.Id, ["invitation"] = invitation.Id,
             ["membership"] = membership, ["doctor"] = doctor, ["location"] = other.Facility, ["role"] = role.Id, ["user"] = other.Reception,
         };
@@ -152,6 +163,10 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.Receptionist, new("GET", "/v1/appointments/{appointment}/history")),
         (Role.SoloDoctor, new("GET", "/v1/encounters/{encounter}")),
         (Role.SoloDoctor, new("GET", "/v1/patients/{patient}/chart")),
+        (Role.SoloDoctor, new("POST", "/v1/documents/{document}/view-link")),
+        (Role.SoloDoctor, new("PATCH", "/v1/documents/{document}", """{"type":"Other","documentDate":"2026-09-01"}""")),
+        (Role.Receptionist, new("GET", "/v1/patients/{patient}/documents")),
+        (Role.Receptionist, new("POST", "/v1/patients/{patient}/documents?type=LabReport&date=2026-10-01&source=Imported")),
         (Role.SoloDoctor, new("GET", "/v1/patients/{patient}/timeline")),
         (Role.SoloDoctor, new("GET", "/v1/patients/{patient}/trends")),
         (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/end")),
@@ -288,6 +303,10 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.Receptionist, new("GET", "/v1/access-requests")),
         (Role.Receptionist, new("GET", "/v1/encounters/{encounter}")), // Patient 360: X
         (Role.Receptionist, new("GET", "/v1/patients/{patient}/chart")), // Patient 360: X
+        (Role.Receptionist, new("POST", "/v1/documents/{document}/view-link")), // the desk uploads and lists, never opens
+        (Role.Receptionist, new("PATCH", "/v1/documents/{document}", """{"type":"Other","documentDate":"2026-09-01"}""")),
+        (Role.Patient, new("GET", "/v1/patients/{patient}/documents")), // Register / book: Own
+        (Role.HospitalIt, new("POST", "/v1/patients/{patient}/documents?type=LabReport&date=2026-10-01&source=Imported")),
         (Role.Receptionist, new("GET", "/v1/patients/{patient}/timeline")),
         (Role.Receptionist, new("GET", "/v1/patients/{patient}/trends")),
         (Role.PracticeAdmin, new("GET", "/v1/patients/{patient}/chart")),
@@ -311,7 +330,7 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
     [Fact]
     public async Task ARoleWithoutTheCapabilityIsRefused()
     {
-        var ours = new Dictionary<string, Guid> { ["patient"] = h.Patient, ["appointment"] = ownVisit, ["encounter"] = ownEncounter };
+        var ours = new Dictionary<string, Guid> { ["patient"] = h.Patient, ["appointment"] = ownVisit, ["encounter"] = ownEncounter, ["document"] = Guid.NewGuid() };
         await using (var db = sql.Context(h.Tenant))
             ours["membership"] = await db.Memberships.Where(m => m.UserId == h.Nurse).Select(m => m.Id).SingleAsync();
         var failures = new List<string>();

@@ -40,6 +40,7 @@ PLANNED_TO_BUILT = {
     'AUDIT_EVENT': 'audit.AuditEvents', 'OUTBOX_EVENT': 'scheduling.OutboxEvents', 'NOTIFICATION': 'notifications.Notifications',
     'NOTIFICATION_ATTEMPT': 'notifications.Attempts', 'ENCOUNTER': 'encounters.Encounters',
     'OBSERVATION': 'encounters.Observations', 'PROBLEM': 'encounters.Problems', 'ALLERGY': 'encounters.Allergies', 'MEDICATION_STATEMENT': 'encounters.MedicationStatements',
+    'CLINICAL_DOCUMENT': 'encounters.ClinicalDocuments',
 }
 # where the built table covers only part of the planned entity
 PARTIAL = {

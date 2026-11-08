@@ -8,7 +8,7 @@ import { bannerAllergies, pathOf, provenanceOf, sparkBox, trendLines } from '../
 
 type Props = {
   data: Patient360 | null; loading: boolean; notFound: boolean; refusal: ClinicalRefusal | null; failed: boolean;
-  backPath: string; consultPath: (encounterId: string) => string; timelinePath: string;
+  backPath: string; consultPath: (encounterId: string) => string; timelinePath: string; documentsPath: string;
 };
 
 const sex = { Female: 'F', Male: 'M', Other: 'X' } as const;
@@ -36,6 +36,7 @@ export default function Patient360Page(p: Props) {
         {chart.openEncounterId
           ? <Link to={p.consultPath(chart.openEncounterId)} className={buttonVariants({ variant: 'navy', className: 'min-h-11' })}>{t('consult.open')}</Link>
           : <span className="text-muted-foreground">{t('patient360.startFromBoard')}</span>}
+        <Link to={p.documentsPath} className={buttonVariants({ variant: 'outline', className: 'min-h-11' })}>{t('documents.title')}</Link>
         <Link to={p.timelinePath} className={buttonVariants({ variant: 'outline', className: 'min-h-11' })}>{t('timeline.open')}</Link>
         <Link to={p.backPath} className={buttonVariants({ variant: 'outline', className: 'min-h-11' })}>{t('patient360.back')}</Link>
       </div>

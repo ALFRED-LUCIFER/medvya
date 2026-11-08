@@ -10,10 +10,17 @@ public static class SecurityHeaders
         "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; " +
         "font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'";
 
-    /// <param name="imageOrigin">Origin of the private Blob endpoint, so signed logo links load (img-src); null when no storage is configured.</param>
+    /// <summary>
+    /// With the private Blob endpoint's origin, signed logo links load (img-src) and a signed document link can be shown in a frame (frame-src,
+    /// for a PDF in the secure viewer, MDV-P2-006); without one, nothing outside this origin loads.
+    /// </summary>
+    public static string PolicyFor(string? blobOrigin) => blobOrigin is null ? ContentSecurityPolicy
+        : ContentSecurityPolicy.Replace("img-src 'self' data: blob:", $"img-src 'self' data: blob: {blobOrigin}", StringComparison.Ordinal) + $"; frame-src {blobOrigin}";
+
+    /// <param name="imageOrigin">Origin of the private Blob endpoint (see <see cref="PolicyFor"/>); null when no storage is configured.</param>
     public static IApplicationBuilder UseSecurityHeaders(this IApplicationBuilder app, string? imageOrigin = null) => app.Use(async (ctx, next) =>
     {
-        var policy = imageOrigin is null ? ContentSecurityPolicy : ContentSecurityPolicy.Replace("img-src 'self' data: blob:", $"img-src 'self' data: blob: {imageOrigin}", StringComparison.Ordinal);
+        var policy = PolicyFor(imageOrigin);
         ctx.Response.OnStarting(() =>
         {
             var h = ctx.Response.Headers;

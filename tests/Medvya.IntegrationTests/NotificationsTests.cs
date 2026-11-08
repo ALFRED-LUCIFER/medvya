@@ -257,6 +257,29 @@ public sealed partial class NotificationsTests(PostgresFixture sql) : IClassFixt
         Assert.Empty(email.Sent); // withdrawn: the newest receipt wins
     }
 
+    /// <summary>Reproduces the Azure dev report: reminders are queued without consent (checked at send time), but reception must not see them as "scheduled". Mutation check: drop the consent test in NotificationQueries and this fails.</summary>
+    [Fact]
+    public async Task QueuedRemindersWithoutConsentShowAsNotSentAndWithConsentAsScheduled()
+    {
+        Rebuild(denyAll: false, realConsent: true);
+        var visit = await BookTuesdayAsync();
+        await RunJobAsync();
+        Assert.Contains(await RowsAsync(visit.Id), r => r.Kind == NotificationKind.Reminder2h && r.Status == NotificationStatus.Queued); // the raw cause: queued, never sent
+        Task<IReadOnlyList<NotificationView>> View() => InScope(sp => sp.GetRequiredService<INotificationQueries>().ForAppointmentAsync(h.Facility, visit.Id));
+
+        var views = await View();
+        Assert.DoesNotContain(views, v => v.Status == NotificationStatus.Queued);
+        Assert.All(views.Where(v => v.Kind == NotificationKind.Reminder2h), v => Assert.Equal((NotificationStatus.Suppressed, "no_consent"), (v.Status, v.FailureCode)));
+
+        await using (var db = sql.Patients(h.Tenant))
+        {
+            db.ConsentReceipts.Add(new() { Id = Guid.CreateVersion7(), TenantId = h.Tenant, PatientId = h.Patient, Type = ConsentType.Reminders, Channel = ConsentChannel.Email,
+                PolicyVersion = ConsentPolicy.CurrentVersion, Jurisdiction = "IN", Granted = true, DecidedAt = h.Clock.GetUtcNow() });
+            await db.SaveChangesAsync();
+        }
+        Assert.Contains(await View(), v => v.Kind == NotificationKind.Reminder2h && v.Channel == NotificationChannel.Email && v.Status == NotificationStatus.Queued);
+    }
+
     [Fact]
     public async Task WithoutAConsentModuleNothingIsSent()
     {

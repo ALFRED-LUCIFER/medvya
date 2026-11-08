@@ -211,7 +211,7 @@ public class PatientRulesTests
     [InlineData("AE", "050 000 0201", SearchKind.Phone, "+971500000201")]
     [InlineData("AE", "فاطمة", SearchKind.Name, "فاطمة")]
     [InlineData("IN", "98470 213", SearchKind.Number, "98470213")]      // part of a mobile number
-    [InlineData("IN", "000123", SearchKind.Mrn, "000123")]              // six digits: a whole MRN, exact
+    [InlineData("IN", "000123", SearchKind.Number, "000123")]           // six digits: the registry tries it as an MRN first, then as a phone fragment
     [InlineData("IN", "1234", SearchKind.Number, "1234")]               // four digits: a phone fragment, an MRN or an Aadhaar last 4
     [InlineData("IN", "9100000000010", SearchKind.Number, "9100000000010")] // 13 of the 14 ABHA digits: only a phone fragment
     [InlineData("IN", "0000 1111 2222", SearchKind.Identifier, "2222")] // a typed Aadhaar is cut to its last 4 here

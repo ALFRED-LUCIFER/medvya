@@ -208,6 +208,7 @@ public class PatientRulesTests
     [InlineData("IN", "deepak.nair.synthetic@sbx", SearchKind.Identifier, "deepak.nair.synthetic@sbx")]
     [InlineData("IN", "42", SearchKind.Mrn, "000042")]
     [InlineData("IN", "dq-10-4482", SearchKind.Mrn, "DQ-10-4482")]
+    [InlineData("IN", "Test Patient 2", SearchKind.Name, "Test Patient 2")] // a trailing digit is part of the name, not an MRN code
     [InlineData("AE", "050 000 0201", SearchKind.Phone, "+971500000201")]
     [InlineData("AE", "فاطمة", SearchKind.Name, "فاطمة")]
     [InlineData("IN", "98470 213", SearchKind.Number, "98470213")]      // part of a mobile number

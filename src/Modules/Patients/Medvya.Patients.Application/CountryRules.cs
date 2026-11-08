@@ -194,7 +194,8 @@ public abstract partial class CountryRules
             if (compact.Length >= MinNumberDigits) return new(SearchKind.Number, compact);
             return new(SearchKind.Mrn, Mrn.Format(int.Parse(compact, CultureInfo.InvariantCulture)));
         }
-        if (q.Any(char.IsDigit)) return new(SearchKind.Mrn, q.ToUpperInvariant()); // e.g. DQ-10-4482
+        // An MRN code has no spaces (DQ-10-4482); words with a digit ("Test Patient 2") are a name, whose digit token the registry matches.
+        if (q.Any(char.IsDigit) && !q.Any(char.IsWhiteSpace)) return new(SearchKind.Mrn, q.ToUpperInvariant());
         if (q.Count(char.IsLetter) < 2) throw new PatientValidationException([new("query", "too_short")]);
         return new(SearchKind.Name, q);
     }

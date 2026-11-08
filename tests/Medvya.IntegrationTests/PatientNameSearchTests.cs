@@ -56,6 +56,15 @@ public sealed class PatientNameSearchTests(PostgresFixture sql) : IClassFixture<
     }
 
     [Fact]
+    public async Task ANameEndingInADigitIsFoundByItsFullName()
+    {
+        await SeedAsync();
+        await AddAsync(tenant, facility, "000002", "Test Patient 2");
+        Assert.Contains("Test Patient 2", await Found("Test Patient 2"));
+        Assert.Contains("Test Patient 2", await Found("test patient"));
+    }
+
+    [Fact]
     public async Task SpellingVariantsDoubledMissingAndTransposedLettersAreForgiven()
     {
         await SeedAsync();

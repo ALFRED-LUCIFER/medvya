@@ -180,7 +180,7 @@ public sealed class PracticeSettings(
     }
 
     public async Task<Uri?> LogoLinkAsync(TimeSpan lifetime, CancellationToken cancellationToken = default) =>
-        await db.Profiles.AsNoTracking().Select(p => p.LogoKey).SingleOrDefaultAsync(cancellationToken) is { } key ? logos.LinkFor(key, lifetime) : null;
+        await db.Profiles.AsNoTracking().Select(p => p.LogoKey).SingleOrDefaultAsync(cancellationToken) is { } key ? await logos.LinkForAsync(key, lifetime, cancellationToken) : null;
 
     public Task<ClinicalAccessPolicy> GetClinicalAccessAsync(CancellationToken cancellationToken = default) =>
         db.Tenants.AsNoTracking().Select(t => t.ClinicalAccess).SingleAsync(cancellationToken);

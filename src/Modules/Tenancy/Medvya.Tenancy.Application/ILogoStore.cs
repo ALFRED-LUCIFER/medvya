@@ -8,7 +8,7 @@ public interface ILogoStore
     Task DeleteAsync(string key, CancellationToken cancellationToken = default);
 
     /// <summary>A read-only link to the object that expires after <paramref name="lifetime"/>.</summary>
-    Uri LinkFor(string key, TimeSpan lifetime);
+    Task<Uri> LinkForAsync(string key, TimeSpan lifetime, CancellationToken cancellationToken = default);
 }
 
 /// <summary>

@@ -211,6 +211,20 @@ resource documentsQuarantineApp 'Microsoft.Authorization/roleAssignments@2022-04
   properties: { roleDefinitionId: blobContributor, principalId: app.identity.principalId, principalType: 'ServicePrincipal' }
 }
 
+// Clinic logos and doctor signature images (MDV-P1-005): a private container the app writes to and reads through user-delegation SAS links
+// (the Storage Blob Delegator role below). The app does not create it.
+resource practiceAssets 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
+  parent: blobProtection
+  name: 'practice-assets'
+  properties: { publicAccess: 'None' }
+}
+
+resource practiceAssetsApp 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: practiceAssets
+  name: guid(practiceAssets.id, app.id, blobContributor)
+  properties: { roleDefinitionId: blobContributor, principalId: app.identity.principalId, principalType: 'ServicePrincipal' }
+}
+
 var blobDelegator = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'db58b8e5-c6ad-4a2a-8342-4190687cbf4a')
 resource documentsDelegatorApp 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   scope: storage

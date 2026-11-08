@@ -167,7 +167,7 @@ public sealed class BookingService(
         foreach (var t in templates) if (await context.IsActiveAsync(command.FacilityId, t.CalendarId, CalendarKind.Doctor, cancellationToken)) doctors.Add(t);
         if (command.CalendarId is not null && doctors.Count == 0) throw new SchedulingValidationException([new("calendarId", "unknown")]);
 
-        foreach (var (calendar, start) in await FreeStartsAsync(command, doctors, today, zone, now, me, cancellationToken))
+        foreach (var (calendar, start) in await FreeStartsAsync(command.FacilityId, command.VisitType, doctors, today, zone, now, me, MaxWalkInAttempts, cancellationToken))
         {
             try
             {
@@ -227,35 +227,35 @@ public sealed class BookingService(
     /// Slot starts from now on today that fit the visit type, free of appointments and of other users' holds, earliest first
     /// across the doctors. A read without the lock: the booking path re-checks the one it takes.
     /// </summary>
-    async Task<List<(Guid Calendar, DateTimeOffset Start)>> FreeStartsAsync(WalkIn command, List<ScheduleTemplate> doctors, DateOnly today, TimeZoneInfo zone,
-        DateTimeOffset now, Guid me, CancellationToken cancellationToken)
+    internal async Task<List<(Guid Calendar, DateTimeOffset Start)>> FreeStartsAsync(Guid facilityId, VisitType visitType, List<ScheduleTemplate> doctors, DateOnly today, TimeZoneInfo zone,
+        DateTimeOffset now, Guid me, int take, CancellationToken cancellationToken)
     {
         var ids = doctors.Select(d => d.CalendarId).ToList();
         var (from, to) = ScheduleRules.DayBounds(today, zone);
-        var exceptions = await context.ExceptionsAsync(command.FacilityId, today, today, null, cancellationToken);
+        var exceptions = await context.ExceptionsAsync(facilityId, today, today, null, cancellationToken);
         var taken = await db.Appointments.AsNoTracking()
-            .Where(a => a.FacilityId == command.FacilityId && ids.Contains(a.CalendarId) && a.Start < to && a.End > from && !a.Unscheduled
+            .Where(a => a.FacilityId == facilityId && ids.Contains(a.CalendarId) && a.Start < to && a.End > from && !a.Unscheduled
                 && a.State != AppointmentState.Cancelled && a.State != AppointmentState.NoShow && a.State != AppointmentState.NeedsRebooking)
             .Select(a => new { a.CalendarId, a.Start, a.End }).ToListAsync(cancellationToken);
         var held = await db.SlotHolds.AsNoTracking()
-            .Where(h => h.FacilityId == command.FacilityId && ids.Contains(h.CalendarId) && h.ExpiresAt > now && h.HeldBy != me)
+            .Where(h => h.FacilityId == facilityId && ids.Contains(h.CalendarId) && h.ExpiresAt > now && h.HeldBy != me)
             .Select(h => new { h.CalendarId, h.Start, h.End }).ToListAsync(cancellationToken);
         return [.. doctors
             .SelectMany(t =>
             {
                 var day = ScheduleRules.Day(t, today, zone, exceptions.Where(x => x.CalendarId == t.CalendarId));
-                var length = ScheduleRules.SlotsFor(t, command.VisitType);
+                var length = ScheduleRules.SlotsFor(t, visitType);
                 return day.Slots.Where(s => s.Start >= now).Select(s => (Calendar: t.CalendarId, s.Start, End: ScheduleRules.SpanEnd(day, s.Start, length)));
             })
             .Where(c => c.End is { } end
                 && !taken.Any(a => a.CalendarId == c.Calendar && a.Start < end && c.Start < a.End)
                 && !held.Any(h => h.CalendarId == c.Calendar && h.Start < end && c.Start < h.End))
             .OrderBy(c => c.Start).ThenBy(c => c.Calendar)
-            .Take(MaxWalkInAttempts)
+            .Take(take)
             .Select(c => (c.Calendar, c.Start))];
     }
 
-    static Appointment Draft(Guid facilityId, Guid calendarId, CalendarKind kind, Guid patientId, VisitType type, DateTimeOffset start, DateTimeOffset end,
+    internal static Appointment Draft(Guid facilityId, Guid calendarId, CalendarKind kind, Guid patientId, VisitType type, DateTimeOffset start, DateTimeOffset end,
         ReasonCategory reason, string? reasonText, BookingChannel channel, DateTimeOffset now, bool walkIn = false, bool unscheduled = false, Guid? seriesId = null) => new()
     {
         Id = Guid.CreateVersion7(), FacilityId = facilityId, CalendarId = calendarId, CalendarKind = kind, PatientId = patientId, VisitType = type,
@@ -268,7 +268,7 @@ public sealed class BookingService(
     /// the unique index refuses a double booking of any 5-minute unit), the first status event, AppointmentBooked.v1 and the audit
     /// event of <paramref name="action"/>.
     /// </summary>
-    async Task<Appointment> CreateAsync(Appointment draft, string action, CancellationToken cancellationToken, IdempotencyHashes? key = null)
+    internal async Task<Appointment> CreateAsync(Appointment draft, string action, CancellationToken cancellationToken, IdempotencyHashes? key = null)
     {
         var booked = new Appointment
         {
@@ -291,7 +291,7 @@ public sealed class BookingService(
     }
 
     /// <summary>After the commit: a new card on the open boards, and the visit as reception sees it.</summary>
-    async Task<AppointmentView> ViewAsync(Appointment a, Medvya.Patients.Application.PatientSummary patient, DateTimeOffset now)
+    internal async Task<AppointmentView> ViewAsync(Appointment a, Medvya.Patients.Application.PatientSummary patient, DateTimeOffset now)
     {
         await FrontDeskService.NotifyAsync(notifier, log, new(a.TenantId, a.FacilityId, a.Id, a.State, now));
         return new(a.Id, AppointmentReference.Of(a.Id), a.FacilityId, a.CalendarId, patient.Id, patient.FullName, patient.Mrn,
@@ -559,7 +559,7 @@ public sealed class BookingService(
     /// slot of the template with enough back-to-back slots, and no appointment occupies any of them. When <paramref name="moving"/>
     /// is a visit being rescheduled, its own time does not count as taken and the calendar must be of its kind.
     /// </summary>
-    async Task<DateTimeOffset> BookableEndAsync(Guid facilityId, Guid calendarId, DateTimeOffset start, VisitType type, TimeZoneInfo zone, CancellationToken cancellationToken,
+    internal async Task<DateTimeOffset> BookableEndAsync(Guid facilityId, Guid calendarId, DateTimeOffset start, VisitType type, TimeZoneInfo zone, CancellationToken cancellationToken,
         Appointment? moving = null)
     {
         var template = await db.Templates.AsNoTracking().SingleOrDefaultAsync(t => t.FacilityId == facilityId && t.CalendarId == calendarId, cancellationToken);
@@ -587,7 +587,7 @@ public sealed class BookingService(
         });
 
     /// <summary>An outbox event of the visit. Payloads are opaque ids, instants and list values, never names or notes.</summary>
-    static OutboxEvent Event(string type, Appointment a, DateTimeOffset now, object payload) => new()
+    internal static OutboxEvent Event(string type, Appointment a, DateTimeOffset now, object payload) => new()
     {
         Id = Guid.CreateVersion7(), TenantId = a.TenantId, Type = type, AggregateId = a.Id, OccurredAt = now, Payload = JsonSerializer.Serialize(payload),
     };

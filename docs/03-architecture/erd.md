@@ -33,7 +33,7 @@ flowchart LR
   api --> Tenancy["Tenancy<br/>schema tenancy<br/>18 tables"]
   api --> Identity["Identity<br/>schema identity<br/>3 tables"]
   api --> Patients["Patients<br/>schema patients<br/>7 tables"]
-  api --> Scheduling["Scheduling<br/>schema scheduling<br/>14 tables"]
+  api --> Scheduling["Scheduling<br/>schema scheduling<br/>15 tables"]
   api --> Encounters["Encounters<br/>schema encounters<br/>1 table"]
   api --> Notifications["Notifications<br/>schema notifications<br/>5 tables"]
   api --> Audit["Audit<br/>schema audit<br/>1 table"]
@@ -776,7 +776,7 @@ erDiagram
 
 </details>
 
-### Scheduling (schema `scheduling`, 14 tables)
+### Scheduling (schema `scheduling`, 15 tables)
 
 ```mermaid
 erDiagram
@@ -853,6 +853,14 @@ erDiagram
     guid ActorUserId "id of identity.Users"
     guid AppointmentId FK "FK to Appointments"
   }
+  Waitlist {
+    guid Id PK
+    guid AppointmentId "id of scheduling.Appointments"
+    guid CalendarId "doctor or room"
+    guid FacilityId "id of tenancy.Facilities"
+    guid PatientId "id of patients.Patients"
+    guid RequestedBy "id of identity.Users"
+  }
   identity_Users {
     guid Id PK "other module"
   }
@@ -905,6 +913,12 @@ erDiagram
   identity_Users ||..o{ SlotHolds : "HeldBy"
   Appointments ||--o{ VisitStatusEvents : "AppointmentId"
   identity_Users |o..o{ VisitStatusEvents : "ActorUserId"
+  Appointments |o..o{ Waitlist : "AppointmentId, no FK"
+  tenancy_Memberships |o..o{ Waitlist : "CalendarId (doctor calendar)"
+  Resources |o..o{ Waitlist : "CalendarId (room calendar)"
+  tenancy_Facilities ||..o{ Waitlist : "FacilityId"
+  patients_Patients ||..o{ Waitlist : "PatientId"
+  identity_Users |o..o{ Waitlist : "RequestedBy"
 ```
 
 | Table | Columns | Primary key | Notes |
@@ -923,6 +937,7 @@ erDiagram
 | `Templates` | 8 | Id | tenant-scoped |
 | `SlotHolds` | 9 | Id | tenant-scoped |
 | `VisitStatusEvents` | 9 | Id | tenant-scoped |
+| `Waitlist` | 18 | Id | tenant-scoped |
 
 <details><summary><code>scheduling.Appointments</code> columns</summary>
 
@@ -1146,6 +1161,31 @@ erDiagram
 | `OccurredAt` | timestamptz |  |  |
 | `State` | character varying(20) |  |  |
 | `TenantId` | guid |  | `tenancy.Tenants` |
+
+</details>
+
+<details><summary><code>scheduling.Waitlist</code> columns</summary>
+
+| Column | Type | Null | Links to |
+|---|---|---|---|
+| `Id` | guid |  |  |
+| `AppointmentId` | guid | yes | id of `scheduling.Appointments` |
+| `CalendarId` | guid | yes | doctor or room (`CalendarKind`) |
+| `ChangedAt` | timestamptz |  |  |
+| `Days` | int |  |  |
+| `FacilityId` | guid |  | id of `tenancy.Facilities` |
+| `From` | time | yes |  |
+| `OfferCalendarId` | guid | yes |  |
+| `OfferExpiresAt` | timestamptz | yes |  |
+| `OfferStart` | timestamptz | yes |  |
+| `PatientId` | guid |  | id of `patients.Patients` |
+| `ReasonCategory` | character varying(30) |  |  |
+| `RequestedAt` | timestamptz |  |  |
+| `RequestedBy` | guid | yes | id of `identity.Users` |
+| `State` | character varying(20) |  |  |
+| `TenantId` | guid |  | `tenancy.Tenants` |
+| `Until` | time | yes |  |
+| `VisitType` | character varying(30) |  |  |
 
 </details>
 
@@ -1611,7 +1651,7 @@ From `docs/03-architecture/data-model.md` (areas A to D). "Built" means a table 
 | A · Tenant, practice, PMS, billing | `CONSENT_RECEIPT` | partly built | `patients.ConsentReceipts` (registration consents; the per-encounter recording consent in area C is not built) |
 | A · Tenant, practice, PMS, billing | `SCHEDULE_SLOT` | built | `scheduling.ScheduleSlots` |
 | A · Tenant, practice, PMS, billing | `APPOINTMENT` | built | `scheduling.Appointments` |
-| A · Tenant, practice, PMS, billing | `WAITLIST_ENTRY` | not built | |
+| A · Tenant, practice, PMS, billing | `WAITLIST_ENTRY` | built | `scheduling.Waitlist` |
 | A · Tenant, practice, PMS, billing | `QUEUE_TOKEN` | built | `scheduling.QueueTokens` |
 | A · Tenant, practice, PMS, billing | `SERVICE_CATALOGUE` | not built | |
 | A · Tenant, practice, PMS, billing | `PRICE_VERSION` | not built | |
@@ -1685,11 +1725,11 @@ From `docs/03-architecture/data-model.md` (areas A to D). "Built" means a table 
 
 Tables that exist but were added while building (not named in the plan): `identity.OnboardingDrafts`, `identity.Sessions`, `leads.DemoRequests`, `leads.Waitlist`, `notifications.Preferences`, `notifications.StaffNotificationReads`, `notifications.StaffNotifications`, `patients.DataKeys`, `patients.MergeRequests`, `platform.AuditEntries`, `platform.KeyLinks`, `platform.Members`, `platform.SecurityKeys`, `platform.Sessions`, `scheduling.AppointmentReschedules`, `scheduling.BookingConflicts`, `scheduling.MetricBaselines`, `scheduling.OutboxTenants`, `scheduling.QueueDisplays`, `scheduling.Resources`, `scheduling.SlotHolds`, `scheduling.VisitStatusEvents`, `tenancy.AccessRequests`, `tenancy.AccessReviewDecisions`, `tenancy.AccessReviews`, `tenancy.FeatureFlags`, `tenancy.Invitations`, `tenancy.OperatingHours`, `tenancy.PracticeDefaults`, `tenancy.Profiles`, `tenancy.SettingsChanges`, `tenancy.TenantIndex`, `tenancy.TermsAcceptances`.
 
-**Counts:** 57 tables across 10 schemas; 24 of 90 planned entities are built; 33 tables were added during the build.
+**Counts:** 58 tables across 10 schemas; 25 of 90 planned entities are built; 33 tables were added during the build.
 
 ## 6. Rules the model follows
 
-- **Tenant isolation:** 47 of 57 tables carry `TenantId` (EF query filter plus PostgreSQL forced row-level security on `medvya.tenant_id`). Without `TenantId`: `identity.OnboardingDrafts`, `identity.Users`, `leads.DemoRequests`, `leads.Waitlist`, `platform.AuditEntries`, `platform.KeyLinks`, `platform.Members`, `platform.SecurityKeys`, `platform.Sessions`, `tenancy.Tenants`. (`TenantId` present is not proof the row-level-security policy covers the table; see `docs/03-architecture/database-security.md`.)
+- **Tenant isolation:** 48 of 58 tables carry `TenantId` (EF query filter plus PostgreSQL forced row-level security on `medvya.tenant_id`). Without `TenantId`: `identity.OnboardingDrafts`, `identity.Users`, `leads.DemoRequests`, `leads.Waitlist`, `platform.AuditEntries`, `platform.KeyLinks`, `platform.Members`, `platform.SecurityKeys`, `platform.Sessions`, `tenancy.Tenants`. (`TenantId` present is not proof the row-level-security policy covers the table; see `docs/03-architecture/database-security.md`.)
 - **Append-only ledgers:** `audit.AuditEvents`, `patients.ConsentReceipts`, `tenancy.TermsAcceptances` (hash-chained, MDV-P0-036; each also has ChainSeq, PrevHash and RowHash added by `LedgerSql`, outside the EF model).
 - **No cross-module foreign keys:** modules link by id and through application services (AGENTS.md 3.1).
 - **Country data plane:** one deployment and one database per country (ADR-003); this diagram is the same in each.

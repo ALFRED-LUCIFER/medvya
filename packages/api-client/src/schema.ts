@@ -1628,6 +1628,216 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/waitlist": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    facilityId?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["WaitlistList"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AddToWaitlist"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["WaitlistView"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/waitlist/{id}/offer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["OfferSlot"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["WaitlistView"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/waitlist/{id}/decline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["WaitlistView"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/waitlist/{id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AppointmentView"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/waitlist/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/front-desk/board": {
         parameters: {
             query?: never;
@@ -4251,6 +4461,21 @@ export interface components {
             /** Format: uuid */
             facilityId: string;
         };
+        AddToWaitlist: {
+            /** Format: uuid */
+            facilityId?: string;
+            /** Format: uuid */
+            patientId?: string;
+            /** Format: uuid */
+            calendarId?: null | string;
+            visitType?: components["schemas"]["VisitType"];
+            reasonCategory?: components["schemas"]["ReasonCategory"];
+            days?: components["schemas"]["DayOfWeek"][];
+            /** Format: time */
+            from?: null | string;
+            /** Format: time */
+            until?: null | string;
+        };
         AnonymousTypeOfGuidAndGuidAndstringAndstringAndRoleAndGuidAndstringAndGuidAndstringAndstringAndstringAndGuidAndstringAndDateTimeOffset: {
             /** Format: uuid */
             membershipId: string;
@@ -4756,6 +4981,12 @@ export interface components {
             /** @default false */
             offerRebooking: boolean;
         };
+        OfferSlot: {
+            /** Format: uuid */
+            calendarId?: string;
+            /** Format: date-time */
+            start?: string;
+        };
         OnboardingClinic: {
             name: null | string;
             address: null | string;
@@ -5118,6 +5349,13 @@ export interface components {
             invitation?: null | string;
             signup?: null | boolean;
         };
+        SlotMatch: {
+            /** Format: uuid */
+            calendarId: string;
+            calendarName: string;
+            /** Format: date-time */
+            start: string;
+        };
         SlotView: {
             /** Format: date-time */
             start: string;
@@ -5182,6 +5420,41 @@ export interface components {
             start: string;
             /** Format: date-time */
             since: string;
+        };
+        WaitlistList: {
+            /** Format: uuid */
+            facilityId: string;
+            timeZone: string;
+            /** Format: date-time */
+            now: string;
+            entries: components["schemas"]["WaitlistView"][];
+        };
+        /** @enum {unknown} */
+        WaitlistState: "Waiting" | "Offered" | "Booked" | "Removed";
+        WaitlistView: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            patientId: string;
+            patientName: string;
+            mrn: string;
+            /** Format: uuid */
+            calendarId: null | string;
+            calendarName: null | string;
+            visitType: components["schemas"]["VisitType"];
+            reasonCategory: components["schemas"]["ReasonCategory"];
+            days: components["schemas"]["DayOfWeek"][];
+            /** Format: time */
+            from: null | string;
+            /** Format: time */
+            until: null | string;
+            state: components["schemas"]["WaitlistState"];
+            /** Format: date-time */
+            requestedAt: string;
+            offered: null | components["schemas"]["SlotMatch"];
+            /** Format: date-time */
+            offerExpiresAt: null | string;
+            match: null | components["schemas"]["SlotMatch"];
         };
         WalkIn: {
             /** Format: uuid */

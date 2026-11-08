@@ -615,6 +615,78 @@ namespace Medvya.Scheduling.Infrastructure.Persistence.Migrations
                     b.ToTable("VisitStatusEvents", "scheduling");
                 });
 
+            modelBuilder.Entity("Medvya.Scheduling.Domain.WaitlistEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AppointmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CalendarId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("ChangedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Days")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("FacilityId")
+                        .HasColumnType("uuid");
+
+                    b.Property<TimeOnly?>("From")
+                        .HasColumnType("time without time zone");
+
+                    b.Property<Guid?>("OfferCalendarId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("OfferExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("OfferStart")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("PatientId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ReasonCategory")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<DateTimeOffset>("RequestedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("RequestedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<TimeOnly?>("Until")
+                        .HasColumnType("time without time zone");
+
+                    b.Property<string>("VisitType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "PatientId");
+
+                    b.HasIndex("TenantId", "FacilityId", "State", "RequestedAt");
+
+                    b.ToTable("Waitlist", "scheduling");
+                });
+
             modelBuilder.Entity("Medvya.Scheduling.Domain.AppointmentReschedule", b =>
                 {
                     b.HasOne("Medvya.Scheduling.Domain.Appointment", null)

@@ -10,6 +10,8 @@ public sealed class SchedulingOptions
 {
     public TimeSpan SlotHold { get; set; } = TimeSpan.FromMinutes(2);
     public TimeSpan LockTimeout { get; set; } = TimeSpan.FromSeconds(10);
+    /// <summary>How long a slot offered to a waitlisted patient (MDV-P1-027) stays reserved before the next candidate can be offered.</summary>
+    public TimeSpan OfferHold { get; set; } = TimeSpan.FromMinutes(30);
 }
 
 /// <summary>Reserve a slot (and the slots a longer visit type needs) while the booking form is open.</summary>

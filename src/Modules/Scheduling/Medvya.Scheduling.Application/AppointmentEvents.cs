@@ -1,6 +1,6 @@
 namespace Medvya.Scheduling.Application;
 
-public enum AppointmentEventKind { Booked, Rescheduled, Cancelled, NoShow, NeedsRebooking }
+public enum AppointmentEventKind { Booked, Rescheduled, Cancelled, NoShow, NeedsRebooking, SlotOffered }
 
 /// <summary>
 /// An appointment change as other modules may see it (MDV-P1-032): opaque ids and instants only, never names or notes.

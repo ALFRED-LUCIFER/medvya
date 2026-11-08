@@ -37,6 +37,11 @@ POST   /v1/appointments/{id}/reschedule|cancel|no-show   # P1-024: booking path 
 POST   /v1/appointments/series/preview {facilityId, calendarId, firstStart, count, intervalWeeks, monthly}  # P1-026: occurrences (same facility wall-clock time, every N weeks or on the same date each month) with the conflict code of each, read-only
 POST   /v1/appointments/series {…, patientId, starts[]}   # P1-026: each confirmed start booked on the booking path as its own appointment (one SeriesId); a start taken meanwhile is reported, not fatal
 POST   /v1/appointments/{id}/cancel-following      # P1-026: this and later Booked/Checked-in visits of the series, one reason; the first visit's event notifies, the rest are quiet
+GET    /v1/waitlist?facilityId=                    # P1-027: waiting and offered patients, oldest request first, each waiting one with the earliest free slot that suits it (14 days)
+POST   /v1/waitlist {facilityId, patientId, calendarId?, visitType, reasonCategory, days[], from?, until?}   # add; one open entry per patient
+POST   /v1/waitlist/{id}/offer {calendarId, start}  # holds that slot (keyed by the entry, 30 min) on the booking path and queues a WaitlistOffer message (clinic, date, time only)
+POST   /v1/waitlist/{id}/accept|decline             # accept books the held slot and ends the entry; decline releases it. An offer that runs out frees the slot by itself
+DELETE /v1/waitlist/{id}                            # off the list, any hold released
 POST   /v1/appointments/{id}/check-in              # P1-028; a repeat returns the visit unchanged
 POST   /v1/appointments/{id}/status                # next board column only (state machine), else 409
 POST   /v1/appointments/{id}/reassign  {calendarId, reason}   # P1-030: a waiting visit to another doctor today; reason is a code

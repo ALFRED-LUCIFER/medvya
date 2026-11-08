@@ -46,6 +46,12 @@ public static partial class MessageCatalog
             ["hi"] = ("कृपया अपॉइंटमेंट दोबारा बुक करें", "{#var#} में {#var#} को {#var#} बजे की आपकी अपॉइंटमेंट नहीं हो सकेगी। नया समय चुनने के लिए क्लिनिक से संपर्क करें।"),
             ["ar"] = ("يرجى إعادة حجز الموعد", "تعذر إجراء موعدك في {#var#} بتاريخ {#var#} الساعة {#var#}. يرجى التواصل مع العيادة لاختيار موعد جديد."),
         },
+        ["WaitlistOffer"] = new()
+        {
+            ["en"] = ("A slot is available", "A slot has opened at {#var#} on {#var#} at {#var#}. Please contact the clinic soon to take it."),
+            ["hi"] = ("एक स्लॉट उपलब्ध है", "{#var#} में {#var#} को {#var#} बजे एक स्लॉट खाली हुआ है। इसे लेने के लिए जल्द क्लिनिक से संपर्क करें।"),
+            ["ar"] = ("يوجد موعد متاح", "توفر موعد في {#var#} بتاريخ {#var#} الساعة {#var#}. يرجى التواصل مع العيادة قريباً لحجزه."),
+        },
         ["Reminder"] = new()
         {
             ["en"] = ("Appointment reminder", "Reminder: your appointment at {#var#} is on {#var#} at {#var#}."),

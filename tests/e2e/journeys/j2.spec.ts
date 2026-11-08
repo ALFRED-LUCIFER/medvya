@@ -23,7 +23,9 @@ journey('J2', {
     const encounter = { id: 'e-1', appointmentId: 'a1', patientId: 'p-meera', facilityId: 'f-1', leadClinicianId: 'u-rao', status: 'Active', authorityMode: 'Medvya', startedAt: at, endedAt: null, room: 'Room 3' };
     await page.route('**/v1/encounters', r => r.fulfill({ json: encounter }));
     await page.route('**/v1/encounters/e-1', r => r.fulfill({ json: { encounter, timeZone: 'Asia/Kolkata', treatmentConsent: true,
-      patient: { id: 'p-meera', fullName: 'Meera Iyer', mrn: '000001', dateOfBirth: '1972-03-14', ageYears: 54, sexAtBirth: 'Female' } } }));
+      patient: { id: 'p-meera', fullName: 'Meera Iyer', mrn: '000001', dateOfBirth: '1972-03-14', ageYears: 54, sexAtBirth: 'Female' },
+      allergies: { state: 'NotRecorded', allergies: [] } } }));
+    await page.route('**/v1/chart/allergy-flags', r => r.fulfill({ json: { items: [{ patientId: 'p-a1', state: 'NotRecorded' }] } }));
     await page.goto('/today');
     await expect(page.getByRole('region', { name: 'Next patient' })).toContainText('Meera Iyer');
     await page.getByRole('region', { name: 'Next patient' }).getByRole('button', { name: 'Start consultation with Meera Iyer' }).click();

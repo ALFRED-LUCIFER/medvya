@@ -11,12 +11,12 @@ namespace Medvya.Tenancy.Infrastructure;
 public static class TenancyModule
 {
     /// <summary>Needs the Audit module (flag changes and invitations are audited) and an IEmailSender (invitations).</summary>
-    public static IServiceCollection AddTenancyModule(this IServiceCollection services, string connectionString, string? blobConnectionString = null)
+    public static IServiceCollection AddTenancyModule(this IServiceCollection services, string connectionString, string? blobConnectionString = null, string? blobEndpoint = null)
     {
         services.TryAddScoped<TenantSessionInterceptor>();
         services.TryAddSingleton(TimeProvider.System);
-        // Without a storage connection the logo store refuses every call (fail closed); nothing else needs it.
-        services.TryAddSingleton<ILogoStore>(blobConnectionString is null ? new NoLogoStore() : new BlobLogoStore(blobConnectionString));
+        // Azure sets the endpoint (managed identity); local runs a connection string. With neither, the logo store refuses every call (fail closed).
+        services.TryAddSingleton<ILogoStore>(blobEndpoint is { Length: > 0 } ? new BlobLogoStore(new Uri(blobEndpoint)) : blobConnectionString is null ? new NoLogoStore() : new BlobLogoStore(blobConnectionString));
         return services
             .AddDbContext<TenancyDbContext>((sp, o) => o.UseNpgsql(PostgresDataSources.For(connectionString)).AddInterceptors(sp.GetRequiredService<TenantSessionInterceptor>()))
             .AddScoped<IFeatureFlags, FeatureFlags>()

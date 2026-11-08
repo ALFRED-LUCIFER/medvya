@@ -227,6 +227,7 @@ test('moves between days and back to today', async ({ page }) => {
   await page.getByRole('button', { name: 'Next day' }).click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Tuesday, 20 October 2026');
   await page.getByRole('button', { name: 'Previous day' }).click();
+  await expect.poll(() => calls.dates).toContain('2026-10-19'); // two clicks before a render step the address twice but fetch only the last day
   await page.getByRole('button', { name: 'Previous day' }).click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Sunday, 18 October 2026');
   await page.getByRole('button', { name: 'Today' }).click();

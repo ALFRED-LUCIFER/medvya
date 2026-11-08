@@ -75,6 +75,13 @@ public sealed class EncounterService(
         return View(encounter, (await visits.FindAsync(encounter.AppointmentId, cancellationToken))?.Room);
     }
 
+    public async Task<AllergyBanner?> AllergiesAsync(Guid encounterId, CancellationToken cancellationToken = default)
+    {
+        if (await db.Encounters.AsNoTracking().SingleOrDefaultAsync(e => e.Id == encounterId, cancellationToken) is not { } encounter) return null;
+        await clinical.RequireAsync(encounter.PatientId, encounter.FacilityId, Capability.Patient360Chart, Treats, cancellationToken);
+        return ChartReads.BannerOf(await db.Allergies.AsNoTracking().Where(a => a.PatientId == encounter.PatientId).ToListAsync(cancellationToken));
+    }
+
     public async Task<EncounterView?> EndAsync(Guid encounterId, CancellationToken cancellationToken = default)
     {
         if (await db.Encounters.AsNoTracking().SingleOrDefaultAsync(e => e.Id == encounterId, cancellationToken) is not { } encounter) return null;

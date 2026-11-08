@@ -157,4 +157,33 @@ public sealed class PatientChartTests(PostgresFixture sql) : IClassFixture<Postg
         Assert.Equal((h.Patient, AuditPurpose.Treatment, h.Doctor), (rows[0].PatientId, rows[0].Purpose, rows[0].ActorUserId));
         Assert.Equal(h.Patient, rows[1].PatientId); // the receptionist's attempt names the patient too
     }
+
+    Task<HttpResponseMessage> Flags(Guid user, params Guid[] patients) => Client(user).PostAsJsonAsync("/v1/chart/allergy-flags", new { patientIds = patients });
+
+    /// <summary>SAFETY, mutation check: let the flags skip the care-relationship check and the colleague's list shows the patient's allergy state.</summary>
+    [Fact]
+    public async Task TodaysAllergyFlagsAreOnlyForPatientsTheCliniciansMayTreatAndAreAudited()
+    {
+        await h.Settings(h.Admin).SaveClinicalAccessAsync(ClinicalAccessPolicy.AssignedOnly);
+        await SeedAsync(db => db.Allergies.Add(Allergy(h.Patient, AllergyKind.Substance, "Penicillin")));
+
+        using var mine = await Flags(h.Doctor, h.Patient, h.Patient, Guid.NewGuid());
+        var items = (await Json(mine)).GetProperty("items").EnumerateArray().ToList();
+        // One answer for the patient (a repeated id is one), none for an id nobody knows; the state only, never a substance.
+        Assert.Equal((HttpStatusCode.OK, 1), (mine.StatusCode, items.Count));
+        Assert.Equal(["patientId", "state"], items[0].EnumerateObject().Select(x => x.Name).Order());
+        Assert.Equal("Listed", items[0].GetProperty("state").GetString());
+
+        using var colleague = await Flags(h.SecondDoctor, h.Patient);
+        Assert.Equal((HttpStatusCode.OK, 0), (colleague.StatusCode, (await Json(colleague)).GetProperty("items").GetArrayLength()));
+        using var desk = await Flags(h.Reception, h.Patient);
+        Assert.Equal(HttpStatusCode.Forbidden, desk.StatusCode);
+        using var empty = await Flags(h.Doctor);
+        using var many = await Flags(h.Doctor, [.. Enumerable.Range(0, 101).Select(_ => Guid.NewGuid())]);
+        Assert.Equal((HttpStatusCode.BadRequest, HttpStatusCode.BadRequest), (empty.StatusCode, many.StatusCode));
+
+        await using var audit = sql.Audit(h.Tenant);
+        var rows = await audit.Events.Where(e => e.Action == "patient.chart.allergy-flag").Select(e => new { e.PatientId, e.Purpose, e.ActorUserId }).ToListAsync();
+        Assert.Equal([(h.Patient, AuditPurpose.Treatment, (Guid?)h.Doctor)], rows.Select(r => (r.PatientId, r.Purpose, r.ActorUserId)));
+    }
 }

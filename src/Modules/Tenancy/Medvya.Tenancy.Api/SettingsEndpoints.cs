@@ -21,6 +21,10 @@ public static class SettingsEndpoints
     public sealed record ClosureWithVisits(ClosureView Closure, IReadOnlyList<AppointmentToMove> AppointmentsToMove);
     public sealed record LogoLink(Uri Url, DateTimeOffset ExpiresAt);
     public sealed record ClinicalAccessBody(ClinicalAccessPolicy Policy);
+    public sealed record NurseIntakeBody(bool Enabled);
+
+    /// <summary>The tenant flag the Encounters module reads (IntakeFlag.Key); a test pins that the two agree.</summary>
+    public const string NurseIntakeFlag = "clinical.nurse-intake";
 
     public static WebApplication MapPracticeSettings(this WebApplication app)
     {
@@ -71,6 +75,14 @@ public static class SettingsEndpoints
         g.MapGet("/clinical-access", async ([FromServices] IPracticeSettings s, CancellationToken ct) => Results.Ok(new ClinicalAccessBody(await s.GetClinicalAccessAsync(ct))));
         g.MapPut("/clinical-access", async ([FromBody] ClinicalAccessBody body, [FromServices] IPracticeSettings s, CancellationToken ct) =>
             Results.Ok(new ClinicalAccessBody(await s.SaveClinicalAccessAsync(body.Policy, ct))));
+
+        // Nurse intake before the doctor (MDV-P2-007): a practice-wide switch, off until the owner turns it on. Changes are audited by the flag service.
+        g.MapGet("/nurse-intake", async ([FromServices] IFeatureFlags flags, CancellationToken ct) => Results.Ok(new NurseIntakeBody(await flags.IsEnabledAsync(NurseIntakeFlag, ct))));
+        g.MapPut("/nurse-intake", async ([FromBody] NurseIntakeBody body, [FromServices] IFeatureFlags flags, CancellationToken ct) =>
+        {
+            await flags.SetAsync(NurseIntakeFlag, body.Enabled, "practice", "Nurse intake before the doctor (MDV-P2-007)", ct);
+            return Results.Ok(body);
+        });
 
         // Terms of Service and DPA (MDV-P1-019): anyone who administers the practice can see the status; only an owner (practice admin or
         // solo doctor) can accept, which the service checks. Until accepted, booking and sending are refused (RequireAcceptedTerms).

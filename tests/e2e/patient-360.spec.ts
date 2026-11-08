@@ -76,6 +76,11 @@ test('refusals: no care relationship asks for access, the role is told so, and a
   await open(page, { response: { status: 403, json: { code: 'no_care_relationship', requestPending: false } } });
   await expect(page.getByRole('alert')).toContainText("You are not this patient's clinician here");
   await expect(page.getByText('Meera')).toHaveCount(0); // nothing about the patient comes with a refusal
+  const asked: unknown[] = [];
+  await page.route('**/v1/patients/p-1/access-requests', r => { asked.push(r.request().postDataJSON()); return r.fulfill({ json: { id: 'r-1', status: 'Pending' } }); });
+  await page.getByRole('button', { name: 'Request access' }).click();
+  await expect(page.getByRole('alert')).toContainText('Access requested. An owner of the clinic will decide.');
+  expect(asked).toEqual([{ reason: 'SeeingPatientToday' }]);
   await page.unroute('**/v1/patients/p-1/chart');
   await page.route('**/v1/patients/p-1/chart', r => r.fulfill({ status: 403, json: { code: 'no_access' } }));
   await page.reload();

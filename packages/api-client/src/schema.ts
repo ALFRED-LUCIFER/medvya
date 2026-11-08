@@ -658,6 +658,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/chart/allergy-flags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["AllergyFlagsRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/patients/{patientId}/timeline": {
         parameters: {
             query?: never;
@@ -3238,6 +3275,60 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/settings/nurse-intake": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["NurseIntakeBody"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/settings/terms": {
         parameters: {
             query?: never;
@@ -5122,6 +5213,9 @@ export interface components {
             /** Format: time */
             until?: null | string;
         };
+        AllergyFlagsRequest: {
+            patientIds: null | string[];
+        };
         /** @enum {unknown} */
         AllergyStatus: "Confirmed" | "PatientReported" | "Unknown" | "NotAnAllergy" | null;
         AnonymousTypeOfGuidAndGuidAndstringAndstringAndRoleAndGuidAndstringAndGuidAndstringAndstringAndstringAndGuidAndstringAndDateTimeOffset: {
@@ -5628,6 +5722,9 @@ export interface components {
             /** Format: time */
             quietEnd: string;
             senderName?: null | string;
+        };
+        NurseIntakeBody: {
+            enabled: boolean;
         };
         Offboard: {
             reason: null | string;

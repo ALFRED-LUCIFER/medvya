@@ -78,7 +78,7 @@ function Actions(p: Props & { row: LookupRow }) {
         <div className="flex flex-wrap gap-2">
           <Button variant="navy" className="min-h-11" onClick={() => p.onOpenChart(row)}>{t('globalSearch.openChart')}</Button>
           {p.startVisitPath && <Link to={`${p.startVisitPath}?patient=${row.id}`} onClick={p.onClose} className={buttonVariants({ variant: 'outline', className: 'min-h-11' })}>{t('globalSearch.startVisit')}</Link>}
-          {p.bookPath && <Link to={p.bookPath} onClick={p.onClose} className={buttonVariants({ variant: 'outline', className: 'min-h-11' })}>{t('globalSearch.book')}</Link>}
+          {p.bookPath && <Link to={`${p.bookPath}?patient=${row.id}`} onClick={p.onClose} className={buttonVariants({ variant: 'outline', className: 'min-h-11' })}>{t('globalSearch.book')}</Link>}
         </div>
       )}
       {row.access === 'CanRequest' && (

@@ -1,6 +1,7 @@
 import { useI18n } from '@medvya/i18n';
-import { Button, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
-import { accessReasons, type AccessReason } from '../../clinical-access/domain/clinicalAccess';
+import { Button } from '@medvya/ui';
+import RequestAccess from '../../clinical-access/components/RequestAccess';
+import type { AccessReason } from '../../clinical-access/domain/clinicalAccess';
 import type { StartProblem } from '../domain/encounter';
 
 type Props = {
@@ -27,17 +28,7 @@ export default function StartConsult(p: Props) {
       )}
       {problem?.kind === 'refused' && (
         <div role="alert" className="flex flex-col gap-2 rounded-md border p-2 text-sm">
-          {!problem.refusal.canRequest ? <p className="font-bold">{t('consult.refused.role')}</p>
-            : problem.refusal.requestPending ? <p className="font-bold">{t('consult.refused.pending')}</p>
-            : <>
-                <p className="font-bold">{t('consult.refused.ask')}</p>
-                <Select value={p.reason} onValueChange={v => p.onReason(v as AccessReason)}>
-                  <SelectTrigger className="h-11 w-full" aria-label={t('consult.refused.reason')}><SelectValue /></SelectTrigger>
-                  <SelectContent>{accessReasons.map(r => <SelectItem key={r} value={r}>{t(`clinicalAccess.reason.${r}`)}</SelectItem>)}</SelectContent>
-                </Select>
-                <Button className="min-h-11 whitespace-normal" loading={p.asking} onClick={p.onRequestAccess}>{t('state.noAccess.cta')}</Button>
-                {p.askFailed && <p className="font-bold text-danger-700">{t('consult.failed')}</p>}
-              </>}
+          <RequestAccess refusal={problem.refusal} roleMessage={t('consult.refused.role')} reason={p.reason} asking={p.asking} askFailed={p.askFailed} onReason={p.onReason} onRequestAccess={p.onRequestAccess} />
         </div>
       )}
       {problem?.kind === 'visit' && <p role="alert" className="text-xs font-bold text-danger-700">{t(`consult.visit.${problem.code}`)}</p>}

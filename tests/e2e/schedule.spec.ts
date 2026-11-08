@@ -331,6 +331,17 @@ test('closing the panel releases the hold, and a slot taken meanwhile says so', 
 });
 
 // MDV-P1-021: patient not found → register them → back to the same slot, held again, with the new patient chosen.
+test('Book from the global search carries the patient: the next slot chosen is for them', async ({ page }) => {
+  const calls = await open(page);
+  await page.goto(`/schedule?patient=${patientId}`);
+  await bookButton(page, '10:20').click();
+  const panel = page.getByRole('complementary', { name: 'Book appointment' });
+  await expect(panel).toContainText('Deepak Nair (synthetic) · MRN 000002'); // chosen without searching again
+  await panel.getByRole('button', { name: 'Confirm booking' }).click();
+  await expect(panel).toContainText('Appointment booked');
+  expect(calls.bookings[0]!.body).toMatchObject({ patientId });
+});
+
 test('registering a new patient from the booking panel comes back to the held slot with the patient chosen', async ({ page }) => {
   const calls = await open(page);
   await page.route('**/v1/patients/duplicate-check', r => r.fulfill({ json: { candidates: [] } }));
@@ -342,6 +353,8 @@ test('registering a new patient from the booking panel comes back to the held sl
 
   await page.getByRole('link', { name: 'Quick (busy desk)' }).click(); // switching mode keeps the slot
   await expect(page).toHaveURL(/calendar=d-1.*mode=quick/);
+  // The address changes before the screen does: fill only once the quick form is what is shown, or the typed name goes into the form being replaced.
+  await expect(page.getByText('Quick (busy desk): the minimum safe fields')).toBeVisible();
   await page.getByLabel('Full name').fill('Deepak Nair');
   await page.getByLabel('Mobile').fill('+91 90000 00201');
   await page.getByRole('textbox', { name: 'Date of birth', exact: true }).fill('1979-08-14');

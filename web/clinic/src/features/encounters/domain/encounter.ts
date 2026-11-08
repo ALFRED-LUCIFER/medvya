@@ -1,5 +1,6 @@
 import { refusalOf, type ClinicalRefusal } from '../../clinical-access/domain/clinicalAccess';
 import type { SexAtBirth } from '../../patients/domain/directory';
+import type { Allergy, AllergyState } from '../../patient360/domain/chart';
 
 // Encounters (MDV-P2-001): what the server answers. The server decides every access; nothing here grants anything.
 export type EncounterStatus = 'Active' | 'Ended';
@@ -15,6 +16,8 @@ export type EncounterBanner = {
   treatmentConsent: boolean;
   /** The encounter facility's IANA zone: its times show in it, whatever the device's zone. */
   timeZone: string;
+  /** Not recorded, no known allergies and listed are three different answers (never "none" for unknown). */
+  allergies: { state: AllergyState; allergies: Allergy[] };
 };
 
 /** Visits a doctor can open a consultation for (the server's VisitFlow.CanStartConsult). */

@@ -2493,6 +2493,7 @@
   "consult.banner.mrn": "MRN {mrn}",
   "consult.banner.dob": "जन्म {date}",
   "consult.banner.allergiesNotRecorded": "एलर्जी: अभी दर्ज नहीं",
+  "consult.banner.allergies": "एलर्जी: {list}",
   "consult.banner.consentGiven": "उपचार सहमति: दी गई",
   "consult.banner.consentNotRecorded": "उपचार सहमति: दर्ज नहीं",
   "consult.banner.when": "शुरू {date}, {time} · {room}",
@@ -3046,5 +3047,6 @@
   "today.age": "{years} वर्ष",
   "today.empty.title": "आज कोई विज़िट नहीं",
   "today.empty.mine": "आज आपका कोई विज़िट नहीं है। सहकर्मियों के विज़िट देखने के लिए पूरा क्लिनिक चुनें।",
-  "today.empty.clinic": "आज क्लिनिक में कोई विज़िट बुक नहीं है।"
+  "today.empty.clinic": "आज क्लिनिक में कोई विज़िट बुक नहीं है।",
+  "today.allergy.listed": "एलर्जी दर्ज हैं"
 }

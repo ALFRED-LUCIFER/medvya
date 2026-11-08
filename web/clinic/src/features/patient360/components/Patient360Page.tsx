@@ -3,12 +3,15 @@ import { Link } from 'react-router';
 import { ltr, useI18n } from '@medvya/i18n';
 import { buttonVariants, IdentityBanner, ProvenanceTag } from '@medvya/ui';
 import { CircleAlert, CircleCheck } from 'lucide-react';
+import RequestAccess from '../../clinical-access/components/RequestAccess';
+import type { AccessReason } from '../../clinical-access/domain/clinicalAccess';
 import type { ClinicalRefusal, Patient360, TrendLine } from '../domain/chart';
 import { bannerAllergies, pathOf, provenanceOf, sparkBox, trendLines } from '../domain/chart';
 
 type Props = {
   data: Patient360 | null; loading: boolean; notFound: boolean; refusal: ClinicalRefusal | null; failed: boolean;
   backPath: string; consultPath: (encounterId: string) => string; timelinePath: string; documentsPath: string;
+  reason: AccessReason; asking: boolean; askFailed: boolean; onReason: (r: AccessReason) => void; onRequestAccess: () => void;
 };
 
 const sex = { Female: 'F', Male: 'M', Other: 'X' } as const;
@@ -21,7 +24,12 @@ const sex = { Female: 'F', Male: 'M', Other: 'X' } as const;
 export default function Patient360Page(p: Props) {
   const { t } = useI18n();
   if (p.loading) return <p role="status">{t('patient360.loading')}</p>;
-  if (p.refusal) return <Message title={t('patient360.refused.title')} body={t(p.refusal.canRequest ? 'consult.refused.ask' : 'patient360.refused.role')} backPath={p.backPath} />;
+  if (p.refusal) {
+    return (
+      <Message title={t('patient360.refused.title')} backPath={p.backPath}
+        body={<RequestAccess refusal={p.refusal} roleMessage={t('patient360.refused.role')} reason={p.reason} asking={p.asking} askFailed={p.askFailed} onReason={p.onReason} onRequestAccess={p.onRequestAccess} />} />
+    );
+  }
   if (p.notFound || p.failed || !p.data) return <Message title={t(p.notFound ? 'patient360.notFound' : 'patient360.loadFailed')} backPath={p.backPath} />;
   const { chart, treatmentConsent, timeZone } = p.data;
   const trends = trendLines(chart.trends);
@@ -144,12 +152,12 @@ function TrendCard({ line, zone }: { line: TrendLine; zone: string }) {
   );
 }
 
-function Message({ title, body, backPath }: { title: string; body?: string; backPath: string }) {
+function Message({ title, body, backPath }: { title: string; body?: ReactNode; backPath: string }) {
   const { t } = useI18n();
   return (
     <div role="alert" className="flex flex-col items-start gap-3 rounded-xl border bg-card p-6">
       <h1 className="text-lg font-extrabold">{title}</h1>
-      {body && <p>{body}</p>}
+      {body && <div className="flex flex-col items-start gap-2">{body}</div>}
       <Link to={backPath} className={buttonVariants({ variant: 'outline', className: 'min-h-11' })}>{t('patient360.back')}</Link>
     </div>
   );

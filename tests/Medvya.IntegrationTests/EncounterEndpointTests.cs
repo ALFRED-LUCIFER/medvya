@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Medvya.Audit.Domain;
+using Medvya.Encounters.Domain;
 using Medvya.Scheduling.Application;
 using Medvya.Tenancy.Domain;
 using Microsoft.AspNetCore.Hosting;
@@ -78,7 +79,18 @@ public sealed class EncounterEndpointTests(PostgresFixture sql) : IClassFixture<
              patient.GetProperty("ageYears").GetInt32(), patient.GetProperty("sexAtBirth").GetString()));
         Assert.Equal("Asia/Kolkata", banner.GetProperty("timeZone").GetString()); // the encounter facility's zone, for its times
         Assert.False(banner.GetProperty("treatmentConsent").GetBoolean()); // the seeded patient has no receipt: never shown as given
-        Assert.False(banner.TryGetProperty("allergies", out _)); // not recorded until MDV-P2-005, so not claimed either way
+        // Nothing recorded reads "not recorded", never "none"; then a listed allergy and a recorded "no known allergies" are told apart.
+        Assert.Equal(("NotRecorded", 0), (banner.GetProperty("allergies").GetProperty("state").GetString(), banner.GetProperty("allergies").GetProperty("allergies").GetArrayLength()));
+        await using (var db = sql.Encounters(h.Tenant))
+        {
+            db.Allergies.Add(new() { Id = Guid.NewGuid(), TenantId = h.Tenant, PatientId = h.Patient, Kind = AllergyKind.Substance, Substance = "Penicillin", Status = AllergyStatus.Confirmed, Source = ChartSource.ClinicianVerified, RecordedAt = h.Clock.GetUtcNow() });
+            await db.SaveChangesAsync();
+        }
+        using (var again = await Client(h.Doctor).GetAsync(U($"/v1/encounters/{id}")))
+        {
+            var listed = (await Json(again)).GetProperty("allergies");
+            Assert.Equal(("Listed", "Penicillin", "Confirmed"), (listed.GetProperty("state").GetString(), listed.GetProperty("allergies")[0].GetProperty("substance").GetString(), listed.GetProperty("allergies")[0].GetProperty("status").GetString()));
+        }
         var encounter = banner.GetProperty("encounter");
         Assert.Equal(("Active", "Room 3"), (encounter.GetProperty("status").GetString(), encounter.GetProperty("room").GetString()));
 
@@ -87,7 +99,7 @@ public sealed class EncounterEndpointTests(PostgresFixture sql) : IClassFixture<
 
         await using var audit = sql.Audit(h.Tenant);
         var rows = await audit.Events.Where(e => e.ResourceType == "encounter").OrderBy(e => e.Id).Select(e => new { e.Action, e.Outcome, e.PatientId, e.Purpose }).ToListAsync();
-        Assert.Equal(["encounter.start", "encounter.read", "encounter.end"], rows.Select(r => r.Action));
+        Assert.Equal(["encounter.start", "encounter.read", "encounter.read", "encounter.end"], rows.Select(r => r.Action)); // the banner was opened twice
         Assert.All(rows, r => Assert.Equal((AuditOutcome.Allowed, (Guid?)h.Patient, AuditPurpose.Treatment), (r.Outcome, r.PatientId, r.Purpose)));
     }
 

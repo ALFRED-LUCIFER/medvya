@@ -53,7 +53,7 @@ test('Ctrl+K opens the search from any screen; arrows, Enter and Esc work; resul
   expect(calls.lookups).toEqual([{ url: expect.not.stringContaining('me'), body: { query: 'me' } }]);
   expect(calls.lookups[0]!.url).not.toContain('?');
   await input.press('Enter');
-  await expect(page).toHaveURL(/\/patients\/directory\/p-1$/);
+  await expect(page).toHaveURL(/\/patients\/p-1$/); // Patient 360, where the server checks the care relationship
   await expect(search).toHaveCount(0);
 
   await page.keyboard.press('Control+k');
@@ -85,7 +85,7 @@ test('an Open row also offers Start visit and Book, and no match offers register
   await search.getByRole('combobox').fill('me');
   await search.getByRole('option').first().click();
   await expect(search.getByRole('link', { name: 'Start visit' })).toHaveAttribute('href', '/front-desk/walk-in?patient=p-1');
-  await expect(search.getByRole('link', { name: 'Book' })).toHaveAttribute('href', '/schedule');
+  await expect(search.getByRole('link', { name: 'Book' })).toHaveAttribute('href', '/schedule?patient=p-1'); // the patient comes along
 });
 
 test('no match says so and offers to register a patient', async ({ page }) => {

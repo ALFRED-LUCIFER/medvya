@@ -2497,6 +2497,7 @@
   "consult.banner.mrn": "MRN {mrn}",
   "consult.banner.dob": "Born {date}",
   "consult.banner.allergiesNotRecorded": "Allergies: not recorded yet",
+  "consult.banner.allergies": "Allergies: {list}",
   "consult.banner.consentGiven": "Treatment consent: given",
   "consult.banner.consentNotRecorded": "Treatment consent: not recorded",
   "consult.banner.when": "Started {date}, {time} · {room}",
@@ -3052,5 +3053,6 @@
   "today.age": "{years} y",
   "today.empty.title": "No visits today",
   "today.empty.mine": "You have no visits today. Switch to the whole clinic to see your colleagues' visits.",
-  "today.empty.clinic": "No visits are booked at the clinic today."
+  "today.empty.clinic": "No visits are booked at the clinic today.",
+  "today.allergy.listed": "Allergies listed"
 }

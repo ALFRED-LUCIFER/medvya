@@ -1,9 +1,11 @@
 import type { ReactNode } from 'react';
-import { CalendarCheck, CircleCheck, ClipboardCheck, DoorOpen, ReceiptText, Syringe, UserCheck, type LucideIcon } from 'lucide-react';
+import { Link } from 'react-router';
+import { CalendarCheck, CircleAlert, CircleCheck, CircleHelp, ClipboardCheck, DoorOpen, ReceiptText, Syringe, UserCheck, type LucideIcon } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
 import { Button, FrontDeskTag } from '@medvya/ui';
 import type { BoardCard, BoardColumn, LiveStatus } from '../../front-desk/domain/board';
 import { canConsult } from '../../encounters/domain/encounter';
+import type { AllergyState } from '../../patient360/domain/chart';
 import { ageOn, type Scope } from '../domain/today';
 
 // A status is always an icon and words, never colour alone.
@@ -15,6 +17,10 @@ type Props = {
   day: string | null; timeZone: string | null; visits: BoardCard[]; next: BoardCard | null; scope: Scope; onScope: (s: Scope) => void;
   /** Whole minutes since a visit entered its state, on the server's clock. */
   waitMinutes: (since: string) => number;
+  /** Allergy state by patient, only for patients the clinician may treat; no entry shows no flag. */
+  allergyFlags: Record<string, AllergyState>;
+  /** Patient 360 of a patient. */
+  chartPath: (patientId: string) => string;
   loading: boolean; offline: boolean; online: boolean; live: LiveStatus; forbidden: boolean; failed: boolean; onRetry: () => void;
   /** "Start consultation" for a visit (MDV-P2-001): the same control as the board, which also asks for access when there is no care relationship. */
   consultAction: (card: BoardCard) => ReactNode;
@@ -82,7 +88,7 @@ function Hero(p: Props & { card: BoardCard }) {
     <section aria-labelledby="today-next" className="flex flex-col gap-3 rounded-xl border-2 border-action-600 bg-card p-4">
       <h2 id="today-next" className="text-[13px] font-bold text-action-600">{t(c.state === 'InConsult' ? 'today.hero.current' : 'today.hero.next')}</h2>
       <div>
-        <p className="text-xl font-extrabold">{c.patientName || t('board.unknownPatient')}</p>
+        <p className="text-xl font-extrabold"><PatientLink {...p} card={c} /></p>
         <p className="text-sm text-muted-foreground">{formatTime(new Date(c.start), p.timeZone ?? undefined)}{' · '}{t(`reasonCategory.${c.reasonCategory}`)}</p>
       </div>
       <Chips {...p} card={c} />
@@ -100,6 +106,7 @@ function Chips(p: Props & { card: BoardCard }) {
       <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-[13px] font-bold">
         <Icon aria-hidden className="size-4" />{t(`board.column.${c.state as BoardColumn}`)}{c.state === 'CheckedIn' && ` · ${t('board.waiting', { minutes: p.waitMinutes(c.since) })}`}
       </span>
+      <AllergyFlag state={p.allergyFlags[c.patientId]} />
       {c.registrationIncomplete && <FrontDeskTag kind="incomplete" />}
       {c.walkIn && <FrontDeskTag kind="walkIn" />}
     </div>
@@ -115,7 +122,7 @@ function Visit(p: Props & { card: BoardCard }) {
       <div className="flex min-w-0 flex-col gap-1.5">
         <h3 id={nameId} className="text-sm font-bold">
           <span className="font-mono text-xs font-semibold text-muted-foreground">{formatTime(new Date(c.start), p.timeZone ?? undefined)}</span>{' '}
-          {c.patientName || t('board.unknownPatient')}{age !== null && <span className="font-normal text-muted-foreground">{' · '}{t('today.age', { years: age })}</span>}
+          <PatientLink {...p} card={c} />{age !== null && <span className="font-normal text-muted-foreground">{' · '}{t('today.age', { years: age })}</span>}
         </h3>
         <p className="text-xs text-muted-foreground">{[t(`reasonCategory.${c.reasonCategory}`), p.scope === 'clinic' ? c.calendarName : ''].filter(Boolean).join(' · ')}</p>
         <Chips {...p} card={c} />
@@ -123,4 +130,25 @@ function Visit(p: Props & { card: BoardCard }) {
       {canConsult(c.state) && <div className="[&_button]:min-w-40">{p.consultAction(c)}</div>}
     </article>
   );
+}
+
+/** The patient's name opens Patient 360; the server still checks the care relationship when it opens. */
+function PatientLink(p: Props & { card: BoardCard }) {
+  const { t } = useI18n();
+  const c = p.card, name = c.patientName || t('board.unknownPatient');
+  return c.patientId ? <Link to={p.chartPath(c.patientId)} className="underline-offset-2 hover:underline focus-visible:underline">{name}</Link> : <>{name}</>;
+}
+
+// An allergy state is an icon and words, never colour alone; "not recorded" is never worded as "none".
+const flagLooks = {
+  Listed: { Icon: CircleAlert, key: 'today.allergy.listed' },
+  NoKnownAllergies: { Icon: CircleCheck, key: 'banner.noAllergies' },
+  NotRecorded: { Icon: CircleHelp, key: 'banner.allergiesNotRecorded' },
+} as const satisfies Record<AllergyState, { Icon: LucideIcon; key: string }>;
+
+function AllergyFlag({ state }: { state: AllergyState | undefined }) {
+  const { t } = useI18n();
+  if (!state) return null;
+  const { Icon, key } = flagLooks[state];
+  return <span className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[13px] font-bold"><Icon aria-hidden className="size-4" />{t(key)}</span>;
 }

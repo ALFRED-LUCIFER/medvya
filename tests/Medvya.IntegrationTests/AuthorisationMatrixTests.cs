@@ -151,6 +151,7 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.Receptionist, new("GET", "/v1/appointments/{appointment}/notifications?facilityId={facility}")),
         (Role.Receptionist, new("GET", "/v1/appointments/{appointment}/history")),
         (Role.SoloDoctor, new("GET", "/v1/encounters/{encounter}")),
+        (Role.SoloDoctor, new("GET", "/v1/patients/{patient}/chart")),
         (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/end")),
         (Role.SoloDoctor, new("POST", "/v1/encounters", """{"appointmentId":"{appointment}","leaveOpen":true}""")),
         (Role.Receptionist, new("DELETE", "/v1/slot-holds/{hold}")),
@@ -284,6 +285,8 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.Receptionist, new("GET", "/v1/settings/doctors")),
         (Role.Receptionist, new("GET", "/v1/access-requests")),
         (Role.Receptionist, new("GET", "/v1/encounters/{encounter}")), // Patient 360: X
+        (Role.Receptionist, new("GET", "/v1/patients/{patient}/chart")), // Patient 360: X
+        (Role.PracticeAdmin, new("GET", "/v1/patients/{patient}/chart")),
         (Role.PracticeAdmin, new("GET", "/v1/encounters/{encounter}")),
         (Role.Receptionist, new("POST", "/v1/encounters", """{"appointmentId":"{appointment}","leaveOpen":true}""")),
         (Role.Receptionist, new("GET", "/v1/audit/access-log")), // Audit log: X

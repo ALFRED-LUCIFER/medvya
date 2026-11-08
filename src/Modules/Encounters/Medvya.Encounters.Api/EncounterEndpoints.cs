@@ -1,5 +1,6 @@
 using Medvya.Audit.Api;
 using Medvya.Audit.Domain;
+using Medvya.BuildingBlocks.Domain;
 using Medvya.Encounters.Application;
 using Medvya.Patients.Application;
 using Medvya.Patients.Domain;
@@ -23,6 +24,9 @@ public sealed record BannerPatient(Guid Id, string FullName, string Mrn, DateOnl
 /// </summary>
 public sealed record EncounterBanner(EncounterView Encounter, BannerPatient Patient, bool TreatmentConsent, string TimeZone);
 
+/// <summary>Patient 360 (MDV-P2-004): the banner identity and the verified chart, each fact with its source.</summary>
+public sealed record Patient360(BannerPatient Patient, bool TreatmentConsent, string TimeZone, PatientChart Chart);
+
 public static class EncounterEndpoints
 {
     /// <summary>
@@ -45,7 +49,27 @@ public static class EncounterEndpoints
         encounters.MapPost("/{encounterId:guid}/end", async (Guid encounterId, [FromServices] IEncounters service, CancellationToken ct) =>
                 await service.EndAsync(encounterId, ct) is { } ended ? Results.Ok(ended) : Results.NotFound())
             .AuditedByUseCase("encounter.end", "encounter", AuditPurpose.Treatment).AddEndpointFilter(MapErrors);
+
+        // Patient 360 (E-01). Policy: a role with the Patient 360 capability (reception has none: refused, audited as denied). The use case
+        // then checks the care relationship at the session's facility and audits the read with the patient and purpose treatment.
+        app.MapGet("/v1/patients/{patientId:guid}/chart", Chart)
+            .RequireCapability(Capability.Patient360Chart, Access.Read, Access.Limited, Access.Full, Access.Sign)
+            .AuditedByUseCase("patient.chart.read", "patient", AuditPurpose.Treatment, patientRouteKey: "patientId")
+            .AddEndpointFilter(MapErrors);
         return app;
+    }
+
+    static async Task<IResult> Chart(Guid patientId, [FromServices] IPatientChart chart, [FromServices] IPatientDirectory patients, [FromServices] IPatientConsents consents,
+        [FromServices] IStaffAccess staff, [FromServices] IFacilityDirectory facilities, [FromServices] ICurrentFacility current, [FromServices] TimeProvider clock, CancellationToken ct)
+    {
+        if (current.FacilityId is not { } facilityId) return Results.Problem(statusCode: StatusCodes.Status403Forbidden, title: "No facility context");
+        // Existence only comes before the access check; nothing about the patient is returned until it passes.
+        if ((await patients.SummariesAsync([patientId], ct)).GetValueOrDefault(patientId) is not { } p) return Results.NotFound();
+        var facts = await chart.GetAsync(patientId, facilityId, ct);
+        var today = CountryRules.For(await staff.TenantCountryAsync(ct) ?? throw new InvalidOperationException("No tenant country.")).Today(clock.GetUtcNow());
+        return Results.Ok(new Patient360(new BannerPatient(p.Id, p.FullName, p.Mrn, p.DateOfBirth, CountryRules.AgeOn(today, p.DateOfBirth), p.SexAtBirth),
+            await consents.IsGrantedAsync(p.Id, ConsentType.Treatment, cancellationToken: ct),
+            (await facilities.FindAsync(facilityId, ct) ?? throw new InvalidOperationException("Session facility not in this tenant.")).TimeZone, facts));
     }
 
     static async Task<IResult> Banner(Guid encounterId, [FromServices] IEncounters service, [FromServices] IPatientDirectory patients, [FromServices] IPatientConsents consents,

@@ -9,6 +9,10 @@ namespace Medvya.Encounters.Infrastructure.Persistence;
 public sealed class EncountersDbContext(DbContextOptions<EncountersDbContext> options, ICurrentTenant tenant) : DbContext(options)
 {
     public DbSet<Encounter> Encounters => Set<Encounter>();
+    public DbSet<Allergy> Allergies => Set<Allergy>();
+    public DbSet<Problem> Problems => Set<Problem>();
+    public DbSet<MedicationStatement> MedicationStatements => Set<MedicationStatement>();
+    public DbSet<Observation> Observations => Set<Observation>();
 
     Guid? CurrentTenantId => tenant.TenantId;
 
@@ -26,6 +30,43 @@ public sealed class EncountersDbContext(DbContextOptions<EncountersDbContext> op
             e.HasIndex(x => new { x.TenantId, x.LeadClinicianId, x.Status }); // the doctor's open consultation
             e.HasIndex(x => new { x.TenantId, x.PatientId }); // care relationship and merges
             e.ToTable(t => t.HasCheckConstraint("CK_Encounters_EndedHasTime", "(\"Status\" = 'Ended') = (\"EndedAt\" IS NOT NULL)"));
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        // Chart facts (MDV-P2-004): one table each, by patient. Enums are stored as their names.
+        modelBuilder.Entity<Allergy>(e =>
+        {
+            e.Property(x => x.Kind).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.Source).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.Substance).HasMaxLength(200);
+            e.Property(x => x.Reaction).HasMaxLength(200);
+            e.HasIndex(x => new { x.TenantId, x.PatientId });
+            e.ToTable(t => t.HasCheckConstraint("CK_Allergies_SubstanceMatchesKind", "(\"Kind\" = 'Substance') = (\"Substance\" IS NOT NULL)"));
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<Problem>(e =>
+        {
+            e.Property(x => x.Verification).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.Source).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.Icd10Code).HasMaxLength(10);
+            e.Property(x => x.Description).HasMaxLength(200);
+            e.HasIndex(x => new { x.TenantId, x.PatientId });
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<MedicationStatement>(e =>
+        {
+            e.Property(x => x.State).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.Source).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.Name).HasMaxLength(200);
+            e.Property(x => x.Dose).HasMaxLength(100);
+            e.HasIndex(x => new { x.TenantId, x.PatientId });
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<Observation>(e =>
+        {
+            e.Property(x => x.Code).HasConversion<string>().HasMaxLength(30);
+            e.Property(x => x.Source).HasConversion<string>().HasMaxLength(20);
+            e.HasIndex(x => new { x.TenantId, x.PatientId, x.Code, x.TakenAt });
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
     }

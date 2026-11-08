@@ -24,7 +24,9 @@ public sealed record BannerPatient(Guid Id, string FullName, string Mrn, DateOnl
 /// The encounter with its patient's identity and treatment consent. Allergies are not here yet: they are recorded from MDV-P2-005, and until
 /// then the banner says they are not recorded (never "none"). Times show in <see cref="TimeZone"/>, the encounter facility's zone.
 /// </summary>
-public sealed record EncounterBanner(EncounterView Encounter, BannerPatient Patient, bool TreatmentConsent, string TimeZone);
+public sealed record EncounterBanner(EncounterView Encounter, BannerPatient Patient, bool TreatmentConsent, string TimeZone, AllergyBanner Allergies);
+
+public sealed record AllergyFlagsRequest(IReadOnlyList<Guid>? PatientIds);
 
 /// <summary>Patient 360 (MDV-P2-004): the banner identity and the verified chart, each fact with its source.</summary>
 public sealed record Patient360(BannerPatient Patient, bool TreatmentConsent, string TimeZone, PatientChart Chart);
@@ -65,6 +67,11 @@ public static class EncounterEndpoints
         app.MapGet("/v1/patients/{patientId:guid}/chart", Chart)
             .RequireCapability(Capability.Patient360Chart, Access.Read, Access.Limited, Access.Full, Access.Sign)
             .AuditedByUseCase("patient.chart.read", "patient", AuditPurpose.Treatment, patientRouteKey: "patientId")
+            .AddEndpointFilter(MapErrors);
+
+        // Today's allergy flag per visit (MDV-P2-002 follow-up): only for patients the caller has a care relationship with.
+        app.MapPost("/v1/chart/allergy-flags", AllergyFlags)
+            .RequireCapability(Capability.Patient360Chart, Access.Read, Access.Limited, Access.Full, Access.Sign)
             .AddEndpointFilter(MapErrors);
 
         // E-02. Filters and the cursor are codes and ids, never patient data, so they may travel in the query string.
@@ -148,7 +155,16 @@ public static class EncounterEndpoints
         var today = CountryRules.For(await staff.TenantCountryAsync(ct) ?? throw new InvalidOperationException("No tenant country.")).Today(clock.GetUtcNow());
         return Results.Ok(new EncounterBanner(encounter, new BannerPatient(p.Id, p.FullName, p.Mrn, p.DateOfBirth, CountryRules.AgeOn(today, p.DateOfBirth), p.SexAtBirth),
             await consents.IsGrantedAsync(p.Id, ConsentType.Treatment, cancellationToken: ct),
-            (await facilities.FindAsync(encounter.FacilityId, ct) ?? throw new InvalidOperationException("Encounter facility not in this tenant.")).TimeZone));
+            (await facilities.FindAsync(encounter.FacilityId, ct) ?? throw new InvalidOperationException("Encounter facility not in this tenant.")).TimeZone,
+            await service.AllergiesAsync(encounterId, ct) ?? throw new InvalidOperationException("Encounter vanished.")));
+    }
+
+    // ids in the body, never the URL; a patient the caller may not treat is simply absent from the answer.
+    static async Task<IResult> AllergyFlags([FromBody] AllergyFlagsRequest? body, [FromServices] IPatientChart chart, [FromServices] ICurrentFacility current, CancellationToken ct)
+    {
+        if (current.FacilityId is not { } facilityId) return Results.Problem(statusCode: StatusCodes.Status403Forbidden, title: "No facility context");
+        if (body?.PatientIds is not { Count: > 0 and <= IPatientChart.MaxFlags } ids) return Results.ValidationProblem(new Dictionary<string, string[]> { ["patientIds"] = ["invalid"] });
+        return Results.Ok(new { items = await chart.AllergyFlagsAsync(ids, facilityId, ct) });
     }
 
     // Inside the audit filter (added after it), so the row records the answer the caller gets.

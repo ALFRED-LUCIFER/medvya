@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { BoardCard } from '../../front-desk/domain/board';
-import { ageOn, nextPatient, todayVisits } from './today';
+import { ageOn, MAX_FLAGS, nextPatient, patientIdsOf, todayVisits } from './today';
 
 const card = (id: string, calendarId: string, state: BoardCard['state'], start: string, since = start): BoardCard => ({
   id, reference: id, patientId: `p-${id}`, patientName: id, dateOfBirth: null, registrationIncomplete: false, calendarId, calendarName: calendarId,
@@ -33,4 +33,13 @@ describe('ageOn', () => {
     expect(ageOn('1972-03-12', '2026-03-12')).toBe(54);
     expect(ageOn(null, '2026-03-12')).toBeNull();
   });
+});
+
+describe('patientIdsOf', () => {
+  it('lists each patient once, in the order shown, so the flag lookup runs again only when the people change', () => {
+    const twice = [card('a', 'me', 'Booked', '2026-10-19T04:00:00Z'), card('b', 'me', 'Booked', '2026-10-19T05:00:00Z'), { ...card('c', 'me', 'Booked', '2026-10-19T06:00:00Z'), patientId: 'p-a' }];
+    expect(patientIdsOf(twice)).toEqual(['p-a', 'p-b']);
+    expect(patientIdsOf([{ ...twice[0]!, patientId: '' }])).toEqual([]); // a visit without a patient has nothing to look up
+  });
+  it('stays inside what the server answers per lookup', () => expect(MAX_FLAGS).toBe(100));
 });

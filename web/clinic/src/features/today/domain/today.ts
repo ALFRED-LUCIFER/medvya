@@ -24,3 +24,9 @@ export function ageOn(dateOfBirth: string | null, day: string): number | null {
   const [y, m, d] = dateOfBirth.split('-').map(Number), [ty, tm, td] = day.split('-').map(Number);
   return ty! - y! - (tm! < m! || (tm === m && td! < d!) ? 1 : 0);
 }
+
+/** The server answers at most this many patients per flag lookup (IPatientChart.MaxFlags). */
+export const MAX_FLAGS = 100;
+
+/** The distinct patients of the visits, in the order shown: the lookup's key, so it runs again only when the people change. */
+export const patientIdsOf = (visits: BoardCard[]): string[] => [...new Set(visits.map(v => v.patientId).filter(Boolean))];

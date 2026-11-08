@@ -2496,6 +2496,7 @@
   "consult.banner.mrn": "رقم الملف {mrn}",
   "consult.banner.dob": "تاريخ الميلاد {date}",
   "consult.banner.allergiesNotRecorded": "الحساسية: لم تُسجَّل بعد",
+  "consult.banner.allergies": "الحساسية: {list}",
   "consult.banner.consentGiven": "موافقة العلاج: مُعطاة",
   "consult.banner.consentNotRecorded": "موافقة العلاج: غير مسجّلة",
   "consult.banner.when": "بدأت {date}، {time} · {room}",
@@ -3049,5 +3050,6 @@
   "today.age": "{years} سنة",
   "today.empty.title": "لا زيارات اليوم",
   "today.empty.mine": "ليس لديك زيارات اليوم. انتقل إلى العيادة كلها لرؤية زيارات زملائك.",
-  "today.empty.clinic": "لا توجد زيارات محجوزة في العيادة اليوم."
+  "today.empty.clinic": "لا توجد زيارات محجوزة في العيادة اليوم.",
+  "today.allergy.listed": "حساسية مسجلة"
 }

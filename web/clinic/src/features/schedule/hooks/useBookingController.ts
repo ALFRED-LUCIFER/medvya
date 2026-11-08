@@ -24,6 +24,8 @@ export function useBookingController(facilityId: string, timeZone: string | null
   const [params, setParams] = useSearchParams();
   // Back from registering a new patient: the slot to hold again and the patient to choose (read once, at mount).
   const [resumed] = useState(() => { const back = readSlotReturn(params); return back && { choice: { ...back, calendarName: '' }, patientId: back.patientId }; });
+  // From the global search's "Book" (MDV-P2-003): the address names a patient but no slot, and the next slot chosen is booked for them.
+  const [carried, setCarried] = useState(() => { const id = params.get('patient') ?? ''; return !readSlotReturn(params) && z.uuid().safeParse(id).success ? id : ''; });
   const [choice, setChoice] = useState<SlotChoice | null>(resumed?.choice ?? null);
   const [booked, setBooked] = useState<BookedAppointment | null>(null);
   // A no-show's rebook (MDV-P1-024): the next slot chosen is booked for this patient, already filled in.
@@ -46,6 +48,7 @@ export function useBookingController(facilityId: string, timeZone: string | null
       forgetKey(bookKey);
       setBooked(appointment);
       setRebook(null);
+      setCarried('');
       setChoice(null);
       hold.reset();
       form.reset(emptyBooking);
@@ -94,7 +97,7 @@ export function useBookingController(facilityId: string, timeZone: string | null
     setPlan(null);
     book.reset();
     setChoice(next);
-    if (rebook) form.setValue('patientId', rebook.id, { shouldValidate: true });
+    if (rebook || carried) form.setValue('patientId', rebook?.id ?? carried, { shouldValidate: true });
     hold.mutate(next); // the server replaces this user's previous hold
   };
 

@@ -126,4 +126,27 @@ public sealed class AccessRequestEndpointTests(PostgresFixture sql) : IClassFixt
         using var read = await Client(h.Doctor).GetAsync(U("/v1/settings/clinical-access"));
         Assert.Equal("AssignedOnly", (await read.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("policy").GetString());
     }
+
+    /// <summary>SAFETY, mutation check: drop the ManageStaff policy from the settings group and the nurse switches the clinic's intake flow.</summary>
+    [Fact]
+    public async Task OnlyAnOwnerSwitchesNurseIntakeAndEveryChangeIsAudited()
+    {
+        Assert.Equal(Medvya.Encounters.Application.IntakeFlag.Key, Medvya.Tenancy.Api.SettingsEndpoints.NurseIntakeFlag); // the two modules name one flag
+        foreach (var user in new[] { h.Nurse, h.Reception, h.SecondDoctor })
+        {
+            using var refused = await Client(user).PutAsJsonAsync(U("/v1/settings/nurse-intake"), new { enabled = true });
+            Assert.Equal((user, HttpStatusCode.Forbidden), (user, refused.StatusCode));
+        }
+        using (var off = await Client(h.Admin).GetAsync(U("/v1/settings/nurse-intake")))
+            Assert.False((await off.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("enabled").GetBoolean()); // off until the owner says so
+
+        using (var on = await Client(h.Admin).PutAsJsonAsync(U("/v1/settings/nurse-intake"), new { enabled = true })) Assert.Equal(HttpStatusCode.OK, on.StatusCode);
+        using (var read = await Client(h.Admin).GetAsync(U("/v1/settings/nurse-intake")))
+            Assert.True((await read.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("enabled").GetBoolean());
+        using (var back = await Client(h.Admin).PutAsJsonAsync(U("/v1/settings/nurse-intake"), new { enabled = false })) Assert.Equal(HttpStatusCode.OK, back.StatusCode);
+
+        await using var db = sql.Audit(h.Tenant);
+        var rows = (await db.Events.Where(e => e.Action.StartsWith("flag.")).ToListAsync()).OrderBy(e => e.Id).Select(e => (e.Action, e.ActorUserId)).ToList();
+        Assert.Equal([("flag.enable", (Guid?)h.Admin), ("flag.disable", (Guid?)h.Admin)], rows);
+    }
 }

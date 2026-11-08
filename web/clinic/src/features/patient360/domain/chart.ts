@@ -30,12 +30,14 @@ export type Patient360 = {
 export const provenanceOf = { ClinicianVerified: 'verified', PatientReported: 'patient', Imported: 'imported', SyncedFromHis: 'his' } as const satisfies Record<ChartSource, string>;
 
 const allergyBannerStatus = { Confirmed: 'verified', PatientReported: 'patientReported', Unknown: 'unknown' } as const;
+/** The status names the chart words (patient360.allergyStatus.*), by the banner's own. */
+export const allergyStatusOf = { verified: 'Confirmed', patientReported: 'PatientReported', unknown: 'Unknown' } as const;
 
 /**
  * The banner's allergies: null = not recorded, [] = no known allergies, else the substances. "Not an allergy" entries are cleared, so they are
  * left out; if that leaves nothing the state is unclear, and it reads "not recorded", never "none" (the unsafe reading).
  */
-export function bannerAllergies(chart: Patient360['chart']): { name: string; status: 'verified' | 'patientReported' | 'unknown' }[] | null {
+export function bannerAllergies(chart: Pick<Patient360['chart'], 'allergyState' | 'allergies'>): { name: string; status: 'verified' | 'patientReported' | 'unknown' }[] | null {
   if (chart.allergyState === 'NotRecorded') return null;
   if (chart.allergyState === 'NoKnownAllergies') return [];
   const shown = chart.allergies.flatMap(a => (a.status === 'NotAnAllergy' ? [] : [{ name: a.substance, status: allergyBannerStatus[a.status] }]));

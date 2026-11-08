@@ -1,16 +1,18 @@
 import { CircleAlert, CircleCheck, CircleHelp, DoorOpen } from 'lucide-react';
 import { ltr, useI18n } from '@medvya/i18n';
+import { allergyStatusOf, bannerAllergies } from '../../patient360/domain/chart';
 import type { EncounterBanner } from '../domain/encounter';
 
 /**
  * The identity banner (MDV-P2-001) at the top of every clinical screen of an encounter: who it is for, so no note or order can land on the
  * wrong person. Allergy and consent state are words with an icon, never colour alone.
- * shortcut: allergies always read "not recorded yet" until allergies are recorded (MDV-P2-005); it must never say "none" for unknown.
+ * Allergies are the chart's: listed (with each status), no known allergies, or not recorded. Unknown is never worded as "none".
  */
 export default function IdentityBanner({ banner }: { banner: EncounterBanner }) {
   const { t, formatDate, formatTime } = useI18n();
   const { patient, encounter, timeZone } = banner;
   const started = new Date(encounter.startedAt);
+  const allergies = bannerAllergies({ allergyState: banner.allergies.state, allergies: banner.allergies.allergies });
   return (
     <section aria-label={t('consult.banner.label')} className="flex flex-col gap-2 rounded-xl border-2 border-brand-700 bg-card p-4">
       <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
@@ -20,7 +22,11 @@ export default function IdentityBanner({ banner }: { banner: EncounterBanner }) 
         <span>{t('consult.banner.dob', { date: formatDate(new Date(`${patient.dateOfBirth}T12:00:00Z`), 'UTC') })}</span>
       </div>
       <ul className="flex flex-wrap gap-x-5 gap-y-1 text-sm">
-        <li className="inline-flex items-center gap-1.5 font-bold"><CircleHelp aria-hidden className="size-4" />{t('consult.banner.allergiesNotRecorded')}</li>
+        <li className="inline-flex items-center gap-1.5 font-bold">
+          {allergies === null ? <><CircleHelp aria-hidden className="size-4" />{t('consult.banner.allergiesNotRecorded')}</>
+            : allergies.length === 0 ? <><CircleCheck aria-hidden className="size-4" />{t('banner.noAllergies')}</>
+            : <><CircleAlert aria-hidden className="size-4" />{t('consult.banner.allergies', { list: allergies.map(a => `${a.name} (${t(`patient360.allergyStatus.${allergyStatusOf[a.status]}`)})`).join(', ') })}</>}
+        </li>
         <li className="inline-flex items-center gap-1.5">
           {banner.treatmentConsent
             ? <><CircleCheck aria-hidden className="size-4" />{t('consult.banner.consentGiven')}</>

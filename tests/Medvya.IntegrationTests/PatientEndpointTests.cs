@@ -142,6 +142,25 @@ public sealed class PatientEndpointTests(PostgresFixture sql) : IClassFixture<Po
         Assert.Equal(("Meera Iyer (synthetic)", "+919000000101"), (opened.GetProperty("fullName").GetString(), opened.GetProperty("mobile").GetString()));
     }
 
+    /// <summary>
+    /// The registration record is what the desk needs to register, book and check in, so the desk reads it without a care relationship (that
+    /// check is for the chart, MDV-P2-004). It therefore carries no clinical fact: this pins its fields, so adding one is a decision that
+    /// breaks this test and sends the author to the chart's care-relationship check instead. Mutation check: add an allergy field to PatientDetails.
+    /// </summary>
+    [Fact]
+    public async Task TheRegistrationRecordCarriesNoClinicalFactAndTheChartIsNotInIt()
+    {
+        using var host = Host();
+        using var desk = Client(host, "receptionist");
+        var opened = await desk.GetFromJsonAsync<JsonElement>(new Uri($"/v1/patients/{meera}", UriKind.Relative));
+        Assert.Equal(
+            ["address", "ageYears", "alternatePhone", "arabicName", "dateOfBirth", "dateOfBirthEstimated", "email", "emergencyContact", "fullName", "genderIdentity", "guardian",
+             "id", "identifiers", "mobile", "mrn", "nationality", "payer", "preferredLanguage", "registeredOn", "sexAtBirth", "status"],
+            opened.EnumerateObject().Select(p => p.Name).Order(StringComparer.Ordinal));
+        // Identifiers are the last four digits only; the full number needs the audited reveal.
+        Assert.All(opened.GetProperty("identifiers").EnumerateArray(), i => Assert.DoesNotContain(i.EnumerateObject(), p => p.Name == "value"));
+    }
+
     [Fact]
     public async Task SearchTextIsNeverAcceptedInTheUrl()
     {

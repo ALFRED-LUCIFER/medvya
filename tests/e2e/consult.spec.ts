@@ -42,6 +42,7 @@ async function open(page: Page, { locale = 'en', start }: Options = {}) {
   await page.route('**/v1/encounters/e-1', r => r.fulfill({ json: {
     encounter: encounter(status), timeZone: 'Asia/Kolkata', treatmentConsent: true,
     patient: { id: 'p-a1', fullName: 'Meera Iyer (synthetic)', mrn: '000001', dateOfBirth: '1972-03-12', ageYears: 54, sexAtBirth: 'Female' },
+    allergies: { state: 'NotRecorded', allergies: [] },
   } }));
   await page.route('**/v1/encounters/e-1/end', r => { calls.ends++; status = 'Ended'; return r.fulfill({ json: encounter('Ended') }); });
   await page.route('**/v1/patients/*/access-requests', r => { calls.requests.push({ url: r.request().url(), body: r.request().postDataJSON() }); return r.fulfill({ json: { id: 'r-1', status: 'Pending' } }); });

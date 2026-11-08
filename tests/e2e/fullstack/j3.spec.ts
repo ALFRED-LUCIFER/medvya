@@ -5,6 +5,8 @@ import { expectArabicAxeClean, expectNoAxeViolations, signIn, syntheticPatient, 
 // MDV-P0-023: journey J3 (busy reception → nurse handoff, docs/02-design/journeys.md) through the real stack, one test per storyboard step.
 // Each step makes its own synthetic walk-in, so a step runs alone. The register → book → check-in → cancel story is front-desk.spec.ts.
 const joseph = /A\. Joseph/;
+const owner = /K\. Lakshmi/; // the practice admin: only an owner switches nurse intake on
+const nurseUser = /S\. Thomas/;
 const rao = /Dr\. Arjun Rao/;
 const board = '/app/front-desk';
 
@@ -71,7 +73,51 @@ journey('J3', {
     await page.reload();
     await expect(page.getByRole('region', { name: /^With nurse/ }).getByRole('article', { name: patient.name })).toBeVisible();
   },
-  5: 'MDV-P2-007', // N-01 nurse intake and vitals; allergy verification is MDV-P2-008
+  // MDV-P2-007 / MDV-P2-008: the owner switches nurse intake on (audited), the nurse opens the intake from the With nurse card, records a vital,
+  // confirms "no known allergies" on purpose and hands off; the card is Ready for doctor. The flag is put back, so step 6's board move still works.
+  5: async ({ page, browser }) => {
+    const patient = syntheticPatient('Kavitha', 'Menon');
+    const switchIntake = async (enabled: boolean) => {
+      const admin = await browser.newPage();
+      try {
+        await signIn(admin, owner);
+        const r = await admin.request.put('/v1/settings/nurse-intake', { data: { enabled }, headers: { 'X-Medvya-Csrf': '1' } });
+        expect(r.status()).toBe(200);
+      } finally {
+        await admin.close();
+      }
+    };
+    await switchIntake(true);
+    try {
+      await signIn(page, joseph);
+      await walkIn(page, patient, rao);
+      await page.goto(board);
+      await page.getByRole('article', { name: patient.name }).getByRole('button', { name: 'Send to nurse' }).click();
+      await expect(page.getByRole('region', { name: /^With nurse/ }).getByRole('article', { name: patient.name })).toBeVisible();
+
+      const nurse = await browser.newPage();
+      await signIn(nurse, nurseUser); // after the switch: the screens learn of it from the session
+      await nurse.goto(board);
+      await nurse.getByRole('article', { name: patient.name }).getByRole('link', { name: `Open intake for ${patient.name}` }).click();
+      await nurse.getByRole('textbox', { name: 'Pulse' }).fill('72');
+      await nurse.getByRole('button', { name: 'Save vitals' }).click();
+      await expect(nurse.getByRole('button', { name: 'Save vitals' })).toBeEnabled(); // the save has finished
+      await expect(nurse.getByRole('button', { name: 'Hand off · Ready for doctor' })).toBeDisabled(); // allergies not confirmed yet: never assumed
+      await expectNoAxeViolations(nurse);
+      await nurse.getByRole('button', { name: 'Confirm: no known allergies' }).click();
+      await nurse.getByRole('button', { name: 'Hand off · Ready for doctor' }).click();
+      await expect(nurse).toHaveURL(/\/nurse$/);
+      await expect(nurse.getByRole('heading', { name: 'Nurse intake queue' })).toBeVisible(); // the shared database holds other patients with the nurse
+      await expect(nurse.getByRole('article', { name: patient.name })).toHaveCount(0); // this one has left the queue
+      await nurse.close();
+
+      await page.goto(board);
+      await expect(page.getByRole('region', { name: /^Ready for doctor/ }).getByRole('article', { name: patient.name })).toBeVisible();
+      await expectArabicAxeClean(browser, nurseUser, '/app/nurse');
+    } finally {
+      await switchIntake(false);
+    }
+  },
   // MDV-P1-028 / MDV-P2-001: the nurse marks intake done; the card is Ready for doctor and the doctor can start the consultation from it.
   // shortcut: the doctor sees it on the shared board, not on Today; Doctor Today (D-01) is MDV-P2-002.
   6: async ({ page, browser }) => {

@@ -16,10 +16,33 @@ namespace Medvya.Encounters.Infrastructure;
 /// </summary>
 public sealed class PatientChartService(EncountersDbContext db, IClinicalAccess clinical, ICurrentTenant tenant, ICurrentUser user, IAuditLog audit, TimeProvider clock) : IPatientChart
 {
-    public const string ReadAction = "patient.chart.read";
+    public const string ReadAction = "patient.chart.read", AllergyFlagAction = "patient.chart.allergy-flag";
     /// <summary>Every clinician who treats patients may read the chart; Patient 360 is not granted to the front desk at all.</summary>
     static readonly Access[] Treats = [Access.Read, Access.Limited, Access.Full, Access.Sign];
     const int TrendPoints = 12, RecentEncounters = 5;
+
+    public async Task<IReadOnlyList<AllergyFlag>> AllergyFlagsAsync(IReadOnlyList<Guid> patientIds, Guid facilityId, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(patientIds);
+        var ids = patientIds.Distinct().ToList();
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(ids.Count, IPatientChart.MaxFlags);
+        List<Guid> allowed = [];
+        foreach (var id in ids)
+        {
+            try
+            {
+                await clinical.RequireAsync(id, facilityId, Capability.Patient360Chart, Treats, cancellationToken);
+                allowed.Add(id);
+            }
+            catch (ClinicalAccessDeniedException)
+            {
+                // Left out: a list of visits shows a flag only where the clinician may see the chart.
+            }
+        }
+        var rows = (await db.Allergies.AsNoTracking().Where(a => allowed.Contains(a.PatientId)).ToListAsync(cancellationToken)).ToLookup(a => a.PatientId);
+        foreach (var id in allowed) await ChartReads.AuditAsync(audit, tenant, user.UserId, clock, AllergyFlagAction, id, cancellationToken);
+        return [.. allowed.Select(id => new AllergyFlag(id, ChartReads.BannerOf([.. rows[id]]).State))];
+    }
 
     public async Task<PatientChart> GetAsync(Guid patientId, Guid facilityId, CancellationToken cancellationToken = default)
     {
@@ -40,10 +63,8 @@ public sealed class PatientChartService(EncountersDbContext db, IClinicalAccess 
 
         await ChartReads.AuditAsync(audit, tenant, me, clock, ReadAction, patientId, cancellationToken);
 
-        var listed = allergies.Where(a => a.Kind == AllergyKind.Substance).Select(a => new AllergyView(a.Substance!, a.Reaction, a.Status, a.Source)).ToList();
-        // A listed allergy always wins over a "no known allergies" entry: the safer reading when the chart disagrees with itself.
-        var state = listed.Count > 0 ? AllergyState.Listed : allergies.Count > 0 ? AllergyState.NoKnownAllergies : AllergyState.NotRecorded;
-        return new(state, listed, [.. problems.Select(p => new ProblemView(p.Icd10Code, p.Description, p.Verification, p.OnsetOn, p.Source))],
+        var banner = ChartReads.BannerOf(allergies);
+        return new(banner.State, banner.Allergies, [.. problems.Select(p => new ProblemView(p.Icd10Code, p.Description, p.Verification, p.OnsetOn, p.Source))],
             [.. medicines.Select(m => new MedicineView(m.Name, m.Dose, m.State, m.Source))],
             [.. vitals.OrderBy(o => o.Code).Select(o => new VitalView(o.Code, o.ValueHundredths / 100m, Observation.Units(o.Code), o.TakenAt, o.Source))], trends, encounters, open);
     }
@@ -52,6 +73,13 @@ public sealed class PatientChartService(EncountersDbContext db, IClinicalAccess 
 /// <summary>What the chart and the timeline both read and write: the trend series and the audit event of a read.</summary>
 static class ChartReads
 {
+    /// <summary>A listed allergy always wins over a "no known allergies" entry: the safer reading when the chart disagrees with itself.</summary>
+    public static AllergyBanner BannerOf(IReadOnlyCollection<Allergy> rows)
+    {
+        var listed = rows.Where(a => a.Kind == AllergyKind.Substance).Select(a => new AllergyView(a.Substance!, a.Reaction, a.Status, a.Source)).ToList();
+        return new(listed.Count > 0 ? AllergyState.Listed : rows.Count > 0 ? AllergyState.NoKnownAllergies : AllergyState.NotRecorded, listed);
+    }
+
     static readonly ObservationCode[] TrendCodes = [ObservationCode.HbA1c, ObservationCode.BloodPressureSystolic, ObservationCode.BloodPressureDiastolic, ObservationCode.Weight];
 
     /// <summary>The last <paramref name="take"/> readings of each trend measure, oldest first; a measure with none is left out.</summary>

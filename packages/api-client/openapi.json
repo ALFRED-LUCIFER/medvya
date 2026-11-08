@@ -407,6 +407,34 @@
         }
       }
     },
+    "/v1/chart/allergy-flags": {
+      "post": {
+        "tags": [
+          "EncounterEndpoints"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AllergyFlagsRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/v1/patients/{patientId}/timeline": {
       "get": {
         "tags": [
@@ -2578,6 +2606,38 @@
         }
       }
     },
+    "/v1/settings/nurse-intake": {
+      "get": {
+        "tags": [
+          "Host.Api"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Host.Api"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NurseIntakeBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/v1/settings/terms": {
       "get": {
         "tags": [
@@ -4289,6 +4349,24 @@
               "string"
             ],
             "format": "time"
+          }
+        }
+      },
+      "AllergyFlagsRequest": {
+        "required": [
+          "patientIds"
+        ],
+        "type": "object",
+        "properties": {
+          "patientIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         }
       },
@@ -6213,6 +6291,17 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "NurseIntakeBody": {
+        "required": [
+          "enabled"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
           }
         }
       },

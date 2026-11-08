@@ -33,6 +33,9 @@ public interface IEncounters
     /// <summary>Null: no such encounter in this tenant.</summary>
     Task<EncounterView?> GetAsync(Guid encounterId, CancellationToken cancellationToken = default);
 
+    /// <summary>The allergy answer for the encounter's banner; same access as <see cref="GetAsync"/>, whose audit event covers it. Null: no such encounter.</summary>
+    Task<AllergyBanner?> AllergiesAsync(Guid encounterId, CancellationToken cancellationToken = default);
+
     /// <summary>Ends the encounter (the visit moves on to Billing); ending an ended one returns it. Null: no such encounter.</summary>
     Task<EncounterView?> EndAsync(Guid encounterId, CancellationToken cancellationToken = default);
 }

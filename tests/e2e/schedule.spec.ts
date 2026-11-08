@@ -331,6 +331,17 @@ test('closing the panel releases the hold, and a slot taken meanwhile says so', 
 });
 
 // MDV-P1-021: patient not found → register them → back to the same slot, held again, with the new patient chosen.
+test('Book from the global search carries the patient: the next slot chosen is for them', async ({ page }) => {
+  const calls = await open(page);
+  await page.goto(`/schedule?patient=${patientId}`);
+  await bookButton(page, '10:20').click();
+  const panel = page.getByRole('complementary', { name: 'Book appointment' });
+  await expect(panel).toContainText('Deepak Nair (synthetic) · MRN 000002'); // chosen without searching again
+  await panel.getByRole('button', { name: 'Confirm booking' }).click();
+  await expect(panel).toContainText('Appointment booked');
+  expect(calls.bookings[0]!.body).toMatchObject({ patientId });
+});
+
 test('registering a new patient from the booking panel comes back to the held slot with the patient chosen', async ({ page }) => {
   const calls = await open(page);
   await page.route('**/v1/patients/duplicate-check', r => r.fulfill({ json: { candidates: [] } }));

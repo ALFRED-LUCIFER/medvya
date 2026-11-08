@@ -22,7 +22,10 @@ const card = (id: string, name: string, time: string, state: string, calendarId 
 const encounter = { id: 'e-1', appointmentId: 'a1', patientId: 'p-a1', facilityId: 'f-1', leadClinicianId: 'u-rao', status: 'Active', authorityMode: 'Medvya',
   startedAt: ist('10:05'), endedAt: null, room: 'Room 3' };
 
+const flagRequests: { patientIds: string[] }[] = [];
+
 async function open(page: Page, locale = 'en') {
+  flagRequests.length = 0;
   await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
   await page.route('**/v1/me/context', r => r.fulfill({ json: doctor }));
   await page.route('**/v1/front-desk/board?*', r => r.fulfill({ json: { facilityId: 'f-1', timeZone: 'Asia/Kolkata', date: '2026-10-19', now: ist('10:04'), cards: [
@@ -32,7 +35,13 @@ async function open(page: Page, locale = 'en') {
   ] } }));
   await page.route('**/v1/encounters', r => r.fulfill({ json: encounter }));
   await page.route('**/v1/encounters/e-1', r => r.fulfill({ json: { encounter, timeZone: 'Asia/Kolkata', treatmentConsent: true,
-    patient: { id: 'p-a1', fullName: 'Meera Iyer (synthetic)', mrn: '000001', dateOfBirth: '1972-03-12', ageYears: 54, sexAtBirth: 'Female' } } }));
+    patient: { id: 'p-a1', fullName: 'Meera Iyer (synthetic)', mrn: '000001', dateOfBirth: '1972-03-12', ageYears: 54, sexAtBirth: 'Female' },
+    allergies: { state: 'Listed', allergies: [{ substance: 'Penicillin', reaction: null, status: 'Confirmed', source: 'ClinicianVerified' }] } } }));
+  // The server answers only for patients this doctor may treat: Farah (a colleague's) is left out, so she shows no flag.
+  await page.route('**/v1/chart/allergy-flags', r => {
+    flagRequests.push(r.request().postDataJSON() as { patientIds: string[] });
+    return r.fulfill({ json: { items: [{ patientId: 'p-a1', state: 'Listed' }, { patientId: 'p-a2', state: 'NotRecorded' }] } });
+  });
   await page.goto('/today');
 }
 
@@ -52,7 +61,23 @@ test('Today shows my visits first, the clinic when toggled, and starts the consu
   await page.getByRole('button', { name: 'My patients' }).click();
   await hero.getByRole('button', { name: 'Start consultation with Meera Iyer (synthetic)' }).click();
   await expect(page).toHaveURL(/\/consult\/e-1$/);
-  await expect(page.getByRole('region', { name: 'Patient identity' })).toBeVisible();
+  const banner = page.getByRole('region', { name: 'Patient identity' });
+  await expect(banner).toBeVisible();
+  await expect(banner).toContainText('Allergies: Penicillin (Verified)'); // the chart's allergies, not "not recorded yet"
+});
+
+test('each visit shows its allergy state in words and links to the chart; a patient outside my care shows no flag', async ({ page }) => {
+  await open(page);
+  const list = page.getByRole('region', { name: "Today's visits" });
+  await expect(page.getByRole('region', { name: 'Next patient' })).toContainText('Allergies listed');
+  await expect(list.getByRole('article').filter({ hasText: 'Deepak Nair' })).toContainText('Allergies not recorded'); // unknown is never "none"
+  await page.getByRole('button', { name: 'Whole clinic' }).click();
+  await expect(list.getByRole('article').filter({ hasText: 'Farah Ali' })).not.toContainText(/llergies/);
+  // The ids go in the body, once each, never the address.
+  expect(flagRequests.at(-1)!.patientIds.sort()).toEqual(['p-a1', 'p-a2', 'p-a3']);
+  await expect(list.getByRole('link', { name: 'Deepak Nair (synthetic)' })).toHaveAttribute('href', '/patients/p-a2');
+  await page.getByRole('region', { name: 'Next patient' }).getByRole('link', { name: 'Meera Iyer (synthetic)' }).click();
+  await expect(page).toHaveURL(/\/patients\/p-a1$/);
 });
 
 test('on a phone the next patient and the consult button come first and the page does not scroll sideways', async ({ page }) => {

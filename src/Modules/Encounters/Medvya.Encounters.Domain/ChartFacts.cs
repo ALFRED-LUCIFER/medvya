@@ -27,6 +27,12 @@ public sealed class Allergy
     [Classification(DataClass.SensitiveHealth)] public AllergyStatus Status { get; set; }
     [Classification(DataClass.Internal)] public ChartSource Source { get; init; }
     [Classification(DataClass.Internal)] public DateTimeOffset RecordedAt { get; init; }
+    // Set only for an allergy written at nurse intake (MDV-P2-008); who set the current status and when.
+    [Classification(DataClass.Internal)] public Guid? FacilityId { get; init; }
+    [Classification(DataClass.Internal)] public Guid? MergedFromPatientId { get; init; }
+    [Classification(DataClass.Internal)] public Guid? RecordedBy { get; init; }
+    [Classification(DataClass.Internal)] public Guid? StatusSetBy { get; set; }
+    [Classification(DataClass.Internal)] public DateTimeOffset? StatusSetAt { get; set; }
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter<ProblemVerification>))]
@@ -60,6 +66,13 @@ public sealed class MedicationStatement
     [Classification(DataClass.SensitiveHealth)] public MedicationState State { get; set; }
     [Classification(DataClass.Internal)] public ChartSource Source { get; init; }
     [Classification(DataClass.Internal)] public DateTimeOffset RecordedAt { get; init; }
+    // Set only for a medicine the patient reported at nurse intake (MDV-P2-008). NeedsClarification: the name could not be identified and is kept as said.
+    [Classification(DataClass.Internal)] public Guid? FacilityId { get; init; }
+    [Classification(DataClass.Internal)] public Guid? MergedFromPatientId { get; init; }
+    [Classification(DataClass.Internal)] public Guid? AppointmentId { get; init; }
+    [Classification(DataClass.SensitiveHealth)] public string? Frequency { get; init; }
+    [Classification(DataClass.Internal)] public bool NeedsClarification { get; init; }
+    [Classification(DataClass.Internal)] public Guid? RecordedBy { get; init; }
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter<ObservationCode>))]

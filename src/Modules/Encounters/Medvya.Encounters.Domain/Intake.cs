@@ -23,6 +23,9 @@ public sealed class Intake
     [Classification(DataClass.Internal)] public Guid? MergedFromPatientId { get; init; }
     [Classification(DataClass.Internal)] public Guid AppointmentId { get; init; }
     [Classification(DataClass.SensitiveHealth)] public string? ChiefComplaint { get; set; }
+    /// <summary>The nurse asked the patient at this visit and confirmed on purpose that they have no known allergies (MDV-P2-008). Never a default; asked again at every visit.</summary>
+    [Classification(DataClass.Internal)] public Guid? NoKnownAllergiesBy { get; set; }
+    [Classification(DataClass.Internal)] public DateTimeOffset? NoKnownAllergiesAt { get; set; }
     [Classification(DataClass.Internal)] public Guid? HandedOffBy { get; set; }
     [Classification(DataClass.Internal)] public DateTimeOffset? HandedOffAt { get; set; }
     [Classification(DataClass.Internal)] public DateTimeOffset UpdatedAt { get; set; }

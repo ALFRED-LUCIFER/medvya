@@ -52,6 +52,11 @@ test('the nurse works the intake from the queue to the handoff', async ({ page }
   await expect(page.getByText('Escalated: the treating doctor has an urgent item for this patient.')).toBeVisible();
   expect(calls.escalations).toEqual([{ reason: 'Chest tightness with BP 168 (synthetic)' }]);
 
+  // No allergy is recorded, and "no known allergies" is never assumed: the handoff waits for the nurse to confirm it.
+  await expect(handOff).toBeDisabled();
+  await expect(page.getByText('Confirm allergy status to hand off.')).toBeVisible();
+  await page.getByRole('button', { name: 'Confirm: no known allergies' }).click();
+  await expect(page.getByText('No known allergies, confirmed by the nurse.')).toBeVisible();
   await expect(handOff).toBeEnabled();
   await handOff.click();
   await expect(page).toHaveURL(/\/nurse$/);
@@ -68,11 +73,57 @@ test('reception does not move a With nurse card around the nurse', async ({ page
   await expect(page).toHaveURL(/\/nurse\/a1$/);
 });
 
+// MDV-P2-008: every allergy needs a status before the handoff; "no known allergies" is explicit; medicines are patient-reported.
+test('an allergy without a status blocks the handoff until the nurse sets one', async ({ page }) => {
+  const { calls } = await mockNurse(page, 'en', { unreviewed: true });
+  await page.goto('/nurse/a1');
+  const allergies = page.getByRole('region', { name: 'Allergies' });
+  await expect(allergies.getByText('Penicillin (synthetic)', { exact: true })).toBeVisible();
+  await expect(allergies.getByText('Status not set')).toBeVisible(); // words and an icon, not colour
+  await expect(allergies.getByText('Patient reported', { exact: true }).first()).toBeVisible();
+  const handOff = page.getByRole('button', { name: 'Hand off · Ready for doctor' });
+  await expect(handOff).toBeDisabled();
+  await expect(page.getByText('Confirm allergy status to hand off.')).toBeVisible();
+
+  await allergies.getByRole('combobox', { name: 'Status of Penicillin (synthetic)' }).click();
+  await page.getByRole('option', { name: 'Patient reported' }).click();
+  expect(calls.statuses).toEqual([{ id: 'al-1', status: 'PatientReported' }]);
+  await expect(allergies.getByText('Status not set')).toHaveCount(0);
+  await expect(handOff).toBeEnabled();
+  await handOff.click();
+  await expect(page).toHaveURL(/\/nurse$/);
+  expect(calls.handoffs).toBe(1);
+});
+
+test('the nurse adds an allergy with its reaction and a medicine the patient could not name', async ({ page }) => {
+  const { calls } = await mockNurse(page);
+  await page.goto('/nurse/a1');
+  const allergies = page.getByRole('region', { name: 'Allergies' });
+  await expect(allergies.getByText('No allergies are recorded for this patient.')).toBeVisible();
+  await allergies.getByRole('button', { name: 'Add allergy' }).click(); // nothing typed: refused in words
+  await expect(allergies.getByText('Say what the patient is allergic to.')).toBeVisible();
+  await allergies.getByLabel('Allergic to').fill('Peanuts (synthetic)');
+  await allergies.getByLabel('Reaction').fill('Hives');
+  await allergies.getByRole('button', { name: 'Add allergy' }).click();
+  await expect(allergies.getByText('Peanuts (synthetic) · Hives')).toBeVisible();
+  expect(calls.allergies).toEqual([{ substance: 'Peanuts (synthetic)', reaction: 'Hives', status: 'PatientReported' }]);
+  await expect(allergies.getByText('Patient reported', { exact: true }).first()).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Hand off · Ready for doctor' })).toBeEnabled(); // an allergy with a status needs no "none"
+
+  const medicines = page.getByRole('region', { name: 'Medicines the patient takes' });
+  await medicines.getByLabel('Medicine name, as the patient says it').fill('a white tablet for sugar');
+  await medicines.getByRole('switch', { name: 'Needs clarification' }).click();
+  await medicines.getByRole('button', { name: 'Add medicine' }).click();
+  await expect(medicines.getByText('a white tablet for sugar')).toBeVisible();
+  await expect(medicines.getByText('Needs clarification').first()).toBeVisible();
+  expect(calls.medicines).toEqual([{ name: 'a white tablet for sugar', dose: '', frequency: '', needsClarification: true }]);
+});
+
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
 for (const locale of ['en', 'ar'])
   test(`axe finds no violations on the intake (${locale}); tablet targets are 44 px`, async ({ page }) => {
     await page.setViewportSize({ width: 820, height: 1180 });
-    await mockNurse(page, locale);
+    await mockNurse(page, locale, { unreviewed: true });
     await page.goto('/nurse/a1');
     await page.getByRole('textbox').nth(1).fill('168'); // BP systolic
     await page.getByRole('button').filter({ hasText: /^(Save vitals|احفظ العلامات الحيوية)$/ }).click();

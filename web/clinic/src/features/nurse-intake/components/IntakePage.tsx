@@ -4,14 +4,19 @@ import type { UseFormReturn } from 'react-hook-form';
 import { CircleCheck, TriangleAlert } from 'lucide-react';
 import { ltr, useI18n, type MessageKey } from '@medvya/i18n';
 import { Button, buttonVariants, Input, Label, Textarea } from '@medvya/ui';
+import AllergiesSection from './AllergiesSection';
+import MedicinesSection from './MedicinesSection';
 import {
-  undecided, vitalKinds, vitalUnits, weightChange, type IntakeForm, type IntakeProblem, type IntakeScreen, type VitalKind, type VitalView,
+  allergyBlockers, undecided, vitalKinds, vitalUnits, weightChange, type IntakeForm, type AllergyForm, type AllergyStatus, type IntakeProblem, type IntakeScreen, type MedicineForm, type VitalKind, type VitalView,
 } from '../domain/intake';
 
 type Props = {
   screen: IntakeScreen | null; loading: boolean; notFound: boolean; refused: boolean; failed: boolean;
   form: UseFormReturn<IntakeForm>;
   escalationForm: UseFormReturn<{ reason: string }>;
+  allergyForm: UseFormReturn<AllergyForm>; medicineForm: UseFormReturn<MedicineForm>;
+  settingAllergy: string | null; addingAllergy: boolean; confirmingNone: boolean; addingMedicine: boolean;
+  onAllergyStatus: (id: string, status: AllergyStatus) => void; onAddAllergy: FormEventHandler<HTMLFormElement>; onNoKnownAllergies: () => void; onAddMedicine: FormEventHandler<HTMLFormElement>;
   problem: IntakeProblem | null; badKind: VitalKind | null;
   saving: boolean; keeping: VitalKind | null; escalating: boolean; sendingEscalation: boolean; handingOff: boolean; dirty: boolean; online: boolean;
   onSave: FormEventHandler<HTMLFormElement>; onKeep: (kind: VitalKind) => void; onRemeasure: (kind: VitalKind) => void;
@@ -36,7 +41,12 @@ export default function IntakePage(p: Props) {
   const { errors } = p.form.formState;
   const readOnly = !withNurse;
   const blocked = intake.blockers.length > 0 || p.dirty;
-  const reason: MessageKey = intake.blockers.includes('vitals_undecided') ? 'intake.handOff.blockedVitals' : 'intake.handOff.unsaved';
+  // Every reason the handoff waits, in words: the allergy gate first, as it is the one that must never be skipped.
+  const reasons: MessageKey[] = [
+    ...(allergyBlockers.some(b => intake.blockers.includes(b)) ? (['intake.handOff.blockedAllergies'] as const) : []),
+    ...(intake.blockers.includes('vitals_undecided') ? (['intake.handOff.blockedVitals'] as const) : []),
+    ...(p.dirty ? (['intake.handOff.unsaved'] as const) : []),
+  ];
 
   return (
     <div className="flex max-w-[960px] flex-col gap-4">
@@ -55,11 +65,16 @@ export default function IntakePage(p: Props) {
               keeping={p.keeping === kind} onKeep={p.onKeep} onRemeasure={p.onRemeasure} />
           ))}
         </div>
-        {p.problem?.kind === 'invalid' && p.badKind === null && <p role="alert" className={fieldError}>{t(problemKey(p.problem))}</p>}
+        {p.problem?.kind === 'invalid' && p.badKind === null && isVitalsField(p.problem.field) && <p role="alert" className={fieldError}>{t(problemKey(p.problem))}</p>}
         {!readOnly && <Button type="submit" className="min-h-11 self-start" loading={p.saving} disabled={!p.online}>{t('intake.save')}</Button>}
       </form>
 
-      {p.problem && p.problem.kind !== 'invalid' && <p role="alert" className={fieldError}>{t(problemKey(p.problem))}</p>}
+      <AllergiesSection allergies={intake.allergies} noKnownConfirmed={intake.noKnownAllergiesConfirmed} form={p.allergyForm} readOnly={readOnly} online={p.online}
+        settingId={p.settingAllergy} adding={p.addingAllergy} confirmingNone={p.confirmingNone} onStatus={p.onAllergyStatus} onAdd={p.onAddAllergy} onNone={p.onNoKnownAllergies}
+        invalid={p.problem?.kind === 'invalid' ? p.problem : null} />
+      <MedicinesSection medicines={intake.medicines} form={p.medicineForm} readOnly={readOnly} online={p.online} adding={p.addingMedicine} onAdd={p.onAddMedicine} />
+
+      {p.problem && (p.problem.kind !== 'invalid' || (!isVitalsField(p.problem.field) && p.problem.field !== 'substance')) && <p role="alert" className={fieldError}>{t(problemKey(p.problem))}</p>}
       {intake.escalated && <p role="status" className="inline-flex items-center gap-1.5 font-bold"><TriangleAlert aria-hidden className="size-4" />{t('intake.escalated')}</p>}
 
       {withNurse && (
@@ -71,7 +86,7 @@ export default function IntakePage(p: Props) {
             </Button>
             <Link to={p.queuePath} className={buttonVariants({ variant: 'outline', className: 'min-h-11' })}>{t('intake.back')}</Link>
           </div>
-          {blocked && <p id="intake-handoff-why" className="text-sm font-semibold">{t(reason)}</p>}
+          {blocked && <ul id="intake-handoff-why" className="text-sm font-semibold">{reasons.map(r => <li key={r}>{t(r)}</li>)}</ul>}
           {p.escalating && (
             <form noValidate onSubmit={p.onEscalate} className="flex flex-col gap-2">
               <Label htmlFor="intake-reason" className="font-bold">{t('intake.escalate.reason')}</Label>
@@ -88,7 +103,9 @@ export default function IntakePage(p: Props) {
   );
 }
 
-const knownCodes = ['implausible', 'too_precise', 'systolic_not_above_diastolic', 'not_with_nurse', 'handoff_blocked', 'not_flagged'] as const;
+/** Fields of the vitals form; other refused fields belong to the allergy and medicine forms. */
+const isVitalsField = (field: string) => field.startsWith('vitals') || field === 'chiefComplaint';
+const knownCodes = ['has_allergies', 'implausible', 'too_precise', 'systolic_not_above_diastolic', 'not_with_nurse', 'handoff_blocked', 'not_flagged'] as const;
 
 function problemKey(p: IntakeProblem): MessageKey {
   if (p.kind === 'invalid' || p.kind === 'conflict') return (knownCodes as readonly string[]).includes(p.code) ? `intake.error.${p.code as (typeof knownCodes)[number]}` : 'intake.error.failed';

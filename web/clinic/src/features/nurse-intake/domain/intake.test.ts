@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formOf, intakeFormSchema, intakeProblem, invalidKind, toRecord, undecided, weightChange, type VitalView } from './intake';
+import { allergySchema, formOf, medicineSchema, intakeFormSchema, intakeProblem, invalidKind, toRecord, undecided, weightChange, type VitalView } from './intake';
 
 const blank = { chiefComplaint: '', SystolicBp: '', DiastolicBp: '', Pulse: '', Temperature: '', OxygenSaturation: '', Weight: '' };
 const view = (o: Partial<VitalView>): VitalView => ({ kind: 'Weight', value: 72.4, flag: null, previousValue: null, previousAt: null, flagKept: false, recordedAt: '2026-10-19T04:30:00Z', ...o });
@@ -47,5 +47,18 @@ describe('server answers', () => {
     const sent = [{ kind: 'Pulse' as const }, { kind: 'OxygenSaturation' as const }];
     expect(invalidKind('vitals[1].value', sent)).toBe('OxygenSaturation');
     expect(invalidKind('chiefComplaint', sent)).toBeNull();
+  });
+});
+
+describe('allergy and medicine forms', () => {
+  it('needs a substance and a status a nurse may add; "Not an allergy" is not one', () => {
+    expect(allergySchema.safeParse({ substance: ' Peanuts ', reaction: '', status: 'PatientReported' }).success).toBe(true);
+    expect(allergySchema.safeParse({ substance: ' ', reaction: '', status: 'Confirmed' }).success).toBe(false);
+    expect(allergySchema.safeParse({ substance: 'X', reaction: '', status: 'NotAnAllergy' }).success).toBe(false);
+  });
+
+  it('keeps a medicine as the patient named it, with or without a dose', () => {
+    expect(medicineSchema.safeParse({ name: 'a white tablet for sugar', dose: '', frequency: '', needsClarification: true }).success).toBe(true);
+    expect(medicineSchema.safeParse({ name: '', dose: '500 mg', frequency: '', needsClarification: false }).success).toBe(false);
   });
 });

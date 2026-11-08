@@ -53,17 +53,18 @@ public sealed class PatientMergeTests(PostgresFixture sql) : IClassFixture<Postg
     }
 
     /// <summary>The older record (survivor) and a newer one with the same ABHA plus an ABHA address, asked for review at registration.</summary>
+    // The pair's mobiles start 8: the MRN-digits test searches "9" + an MRN, and a 9000 0.. mobile whose last four digits began like a two-digit MRN (12) contained it, so the survivor matched about 1 run in 50.
     async Task<(RegistrationResult Survivor, RegistrationResult Merged, Guid Request)> PairAsync(string survivorName = "Ravi Menon", string mergedName = "Ravindran Menon K")
     {
         var abha = new IdentifierInput(IdentifierScheme.Abha, "91-0000-0000-0" + Random.Shared.Next(100, 999));
         var survivor = await Registry(reception).RegisterAsync(IndiaBase with
         {
-            FacilityId = facility, FullName = survivorName, DateOfBirth = new DateOnly(1971, 3, 9), Mobile = "+91 90000 0" + Random.Shared.Next(1000, 9999), Identifiers = [abha],
+            FacilityId = facility, FullName = survivorName, DateOfBirth = new DateOnly(1971, 3, 9), Mobile = "+91 80000 0" + Random.Shared.Next(1000, 9999), Identifiers = [abha],
         });
         clock.Advance(TimeSpan.FromHours(1));
         var merged = await Registry(reception).RegisterAsync(IndiaBase with
         {
-            FacilityId = facility, FullName = mergedName, DateOfBirth = new DateOnly(1971, 3, 9), Mobile = "+91 90000 0" + Random.Shared.Next(1000, 9999),
+            FacilityId = facility, FullName = mergedName, DateOfBirth = new DateOnly(1971, 3, 9), Mobile = "+91 80000 0" + Random.Shared.Next(1000, 9999),
             Identifiers = [abha, new(IdentifierScheme.AbhaAddress, "merged" + Random.Shared.Next(100, 999) + "@abdm")],
             Duplicates = new(DuplicateDecision.MergeReview, [survivor.PatientId]),
         });

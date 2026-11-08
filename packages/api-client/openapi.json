@@ -3835,6 +3835,155 @@
         }
       }
     },
+    "/v1/intake/{appointmentId}/allergies": {
+      "post": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "appointmentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AddAllergy"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/intake/{appointmentId}/allergies/{allergyId}/status": {
+      "put": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "appointmentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "allergyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/SetAllergyStatus"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/intake/{appointmentId}/no-known-allergies": {
+      "post": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "appointmentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/intake/{appointmentId}/medicines": {
+      "post": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "appointmentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AddMedicine"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/v1/intake/{appointmentId}/handoff": {
       "post": {
         "tags": [
@@ -3901,6 +4050,38 @@
           "ReviewingResults",
           "Referral"
         ]
+      },
+      "AddAllergy": {
+        "required": [
+          "substance",
+          "reaction",
+          "status"
+        ],
+        "type": "object",
+        "properties": {
+          "substance": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reaction": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/AllergyStatus"
+              }
+            ]
+          }
+        }
       },
       "AddDoctor": {
         "type": "object",
@@ -3987,6 +4168,38 @@
               "string"
             ],
             "format": "int64"
+          }
+        }
+      },
+      "AddMedicine": {
+        "required": [
+          "name",
+          "dose",
+          "frequency",
+          "needsClarification"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "dose": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "frequency": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "needsClarification": {
+            "type": "boolean"
           }
         }
       },
@@ -4078,6 +4291,15 @@
             "format": "time"
           }
         }
+      },
+      "AllergyStatus": {
+        "enum": [
+          "Confirmed",
+          "PatientReported",
+          "Unknown",
+          "NotAnAllergy",
+          null
+        ]
       },
       "AnonymousTypeOfGuidAndGuidAndstringAndstringAndRoleAndGuidAndstringAndGuidAndstringAndstringAndstringAndGuidAndstringAndDateTimeOffset": {
         "required": [
@@ -7612,6 +7834,24 @@
             "items": {
               "$ref": "#/components/schemas/SeriesBooked"
             }
+          }
+        }
+      },
+      "SetAllergyStatus": {
+        "required": [
+          "status"
+        ],
+        "type": "object",
+        "properties": {
+          "status": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/AllergyStatus"
+              }
+            ]
           }
         }
       },

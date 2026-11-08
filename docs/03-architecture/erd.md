@@ -1198,7 +1198,11 @@ erDiagram
 erDiagram
   Allergies {
     guid Id PK
+    guid FacilityId "id of tenancy.Facilities"
+    guid MergedFromPatientId "id of patients.Patients"
     guid PatientId "id of patients.Patients"
+    guid RecordedBy "id of identity.Users"
+    guid StatusSetBy "id of identity.Users"
   }
   ClinicalDocuments {
     guid Id PK
@@ -1221,6 +1225,7 @@ erDiagram
     guid FacilityId "id of tenancy.Facilities"
     guid HandedOffBy "id of identity.Users"
     guid MergedFromPatientId "id of patients.Patients"
+    guid NoKnownAllergiesBy "id of identity.Users"
     guid PatientId "id of patients.Patients"
   }
   IntakeEscalations {
@@ -1233,7 +1238,11 @@ erDiagram
   }
   MedicationStatements {
     guid Id PK
+    guid AppointmentId "id of scheduling.Appointments"
+    guid FacilityId "id of tenancy.Facilities"
+    guid MergedFromPatientId "id of patients.Patients"
     guid PatientId "id of patients.Patients"
+    guid RecordedBy "id of identity.Users"
   }
   Observations {
     guid Id PK
@@ -1260,7 +1269,11 @@ erDiagram
   tenancy_Facilities {
     guid Id PK "other module"
   }
+  tenancy_Facilities |o..o{ Allergies : "FacilityId"
+  patients_Patients |o..o{ Allergies : "MergedFromPatientId"
   patients_Patients ||..o{ Allergies : "PatientId"
+  identity_Users |o..o{ Allergies : "RecordedBy"
+  identity_Users |o..o{ Allergies : "StatusSetBy"
   identity_Users |o..o{ ClinicalDocuments : "ChangedBy"
   tenancy_Facilities ||..o{ ClinicalDocuments : "FacilityId"
   patients_Patients ||..o{ ClinicalDocuments : "PatientId"
@@ -1274,13 +1287,18 @@ erDiagram
   tenancy_Facilities ||..o{ Intakes : "FacilityId"
   identity_Users |o..o{ Intakes : "HandedOffBy"
   patients_Patients |o..o{ Intakes : "MergedFromPatientId"
+  identity_Users |o..o{ Intakes : "NoKnownAllergiesBy"
   patients_Patients ||..o{ Intakes : "PatientId"
   scheduling_Appointments ||..o{ IntakeEscalations : "AppointmentId"
   identity_Users ||..o{ IntakeEscalations : "EscalatedBy"
   tenancy_Facilities ||..o{ IntakeEscalations : "FacilityId"
   patients_Patients |o..o{ IntakeEscalations : "MergedFromPatientId"
   patients_Patients ||..o{ IntakeEscalations : "PatientId"
+  scheduling_Appointments |o..o{ MedicationStatements : "AppointmentId"
+  tenancy_Facilities |o..o{ MedicationStatements : "FacilityId"
+  patients_Patients |o..o{ MedicationStatements : "MergedFromPatientId"
   patients_Patients ||..o{ MedicationStatements : "PatientId"
+  identity_Users |o..o{ MedicationStatements : "RecordedBy"
   scheduling_Appointments |o..o{ Observations : "AppointmentId"
   tenancy_Facilities |o..o{ Observations : "FacilityId"
   patients_Patients |o..o{ Observations : "MergedFromPatientId"
@@ -1292,12 +1310,12 @@ erDiagram
 
 | Table | Columns | Primary key | Notes |
 |---|---|---|---|
-| `Allergies` | 9 | Id | tenant-scoped |
+| `Allergies` | 14 | Id | tenant-scoped |
 | `ClinicalDocuments` | 16 | Id | tenant-scoped |
 | `Encounters` | 12 | Id | tenant-scoped |
-| `Intakes` | 10 | Id | tenant-scoped |
+| `Intakes` | 12 | Id | tenant-scoped |
 | `IntakeEscalations` | 9 | Id | tenant-scoped |
-| `MedicationStatements` | 8 | Id | tenant-scoped |
+| `MedicationStatements` | 14 | Id | tenant-scoped |
 | `Observations` | 16 | Id | tenant-scoped |
 | `Problems` | 9 | Id | tenant-scoped |
 
@@ -1306,12 +1324,17 @@ erDiagram
 | Column | Type | Null | Links to |
 |---|---|---|---|
 | `Id` | guid |  |  |
+| `FacilityId` | guid | yes | id of `tenancy.Facilities` |
 | `Kind` | character varying(20) |  |  |
+| `MergedFromPatientId` | guid | yes | id of `patients.Patients` |
 | `PatientId` | guid |  | id of `patients.Patients` |
 | `Reaction` | character varying(200) |  |  |
 | `RecordedAt` | timestamptz |  |  |
+| `RecordedBy` | guid | yes | id of `identity.Users` |
 | `Source` | character varying(20) |  |  |
 | `Status` | character varying(20) |  |  |
+| `StatusSetAt` | timestamptz | yes |  |
+| `StatusSetBy` | guid | yes | id of `identity.Users` |
 | `Substance` | character varying(200) |  |  |
 | `TenantId` | guid |  | `tenancy.Tenants` |
 
@@ -1370,6 +1393,8 @@ erDiagram
 | `HandedOffAt` | timestamptz | yes |  |
 | `HandedOffBy` | guid | yes | id of `identity.Users` |
 | `MergedFromPatientId` | guid | yes | id of `patients.Patients` |
+| `NoKnownAllergiesAt` | timestamptz | yes |  |
+| `NoKnownAllergiesBy` | guid | yes | id of `identity.Users` |
 | `PatientId` | guid |  | id of `patients.Patients` |
 | `TenantId` | guid |  | `tenancy.Tenants` |
 | `UpdatedAt` | timestamptz |  |  |
@@ -1397,10 +1422,16 @@ erDiagram
 | Column | Type | Null | Links to |
 |---|---|---|---|
 | `Id` | guid |  |  |
+| `AppointmentId` | guid | yes | id of `scheduling.Appointments` |
 | `Dose` | character varying(100) |  |  |
+| `FacilityId` | guid | yes | id of `tenancy.Facilities` |
+| `Frequency` | character varying(50) |  |  |
+| `MergedFromPatientId` | guid | yes | id of `patients.Patients` |
 | `Name` | character varying(200) |  |  |
+| `NeedsClarification` | bool |  |  |
 | `PatientId` | guid |  | id of `patients.Patients` |
 | `RecordedAt` | timestamptz |  |  |
+| `RecordedBy` | guid | yes | id of `identity.Users` |
 | `Source` | character varying(20) |  |  |
 | `State` | character varying(20) |  |  |
 | `TenantId` | guid |  | `tenancy.Tenants` |

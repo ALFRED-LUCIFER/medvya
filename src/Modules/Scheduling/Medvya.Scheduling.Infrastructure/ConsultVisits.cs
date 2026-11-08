@@ -43,6 +43,15 @@ public sealed class ConsultVisits(SchedulingDbContext db, SchedulingContext cont
             : View(visit);
     }
 
+    public async Task<ConsultVisit> HandOffAsync(Guid appointmentId, DbTransaction transaction, CancellationToken cancellationToken = default)
+    {
+        await using var shared = await SharedAsync(transaction, cancellationToken);
+        var visit = await shared.Appointments.AsNoTracking().SingleOrDefaultAsync(a => a.Id == appointmentId, cancellationToken) ?? throw new AppointmentNotFoundException();
+        if (visit.State == AppointmentState.ReadyForDoctor) return View(visit);
+        if (visit.State != AppointmentState.WithNurse) throw new VisitTransitionException("invalid_transition");
+        return await MoveAsync(shared, visit, AppointmentState.ReadyForDoctor, visit.Room, context.Now, cancellationToken);
+    }
+
     public Task NotifyAsync(ConsultVisit visit, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(visit);

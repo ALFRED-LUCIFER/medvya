@@ -36,6 +36,15 @@ WALK_IN ──▶ CHECKED_IN
 - Start and end are pushed to the facility's open boards after the commit, as ids and state only (as in MDV-P1-029).
 - Every call needs clinical access (MDV-P2-024): Patient 360 at Full to start or end, any treating level to read. Leading an encounter is a care relationship under "assigned only".
 
+## Nurse intake (P2, MDV-P2-007)
+
+One intake per visit, from the nurse's first save; the visit must be WITH_NURSE to record, keep, escalate or hand off. Vitals are OBSERVATIONs (source Nurse intake, recorded and verified by the nurse), one row per reading; a re-measure is a new row and the latest of each kind is current.
+- A value no living person can have is refused (400, `implausible`). A usual-range miss is saved with a flag (`High`, `Low`, `Changed` for weight) the screen says in words.
+- **Handoff** (WITH_NURSE → READY_FOR_DOCTOR) is refused (409 `handoff_blocked`) while a flagged reading is neither re-measured to an unflagged value nor kept on purpose (blocker `vitals_undecided`). It moves the board card in the same transaction and is pushed to the boards after the commit. Repeating it changes nothing.
+- With the tenant flag `clinical.nurse-intake` on, the board's generic move WITH_NURSE → READY_FOR_DOCTOR is refused (409 `intake_required`) until the intake was handed off, so the handoff cannot be done around the checks. With the flag off the board moves as before.
+- **Escalation** needs a reason and creates an open item for the treating doctor (`GET /v1/intake-escalations`), open until the doctor starts the consultation.
+- Every call needs clinical access for Vitals and allergies entry at Full (role, facility, care relationship, MDV-P2-024) and is audited with the patient.
+
 ## Access request (P2, MDV-P2-024)
 
 `PENDING → GRANTED (1, 7 or 30 days, then expired) | DECLINED`. There is one PENDING request per clinician, patient and facility; asking again returns it. Only an owner of that facility (Staff, roles, integrations: Config) decides, never the requester, and the first decision wins. A grant is a care relationship until it expires. After an expiry or a decline, the clinician asks again.

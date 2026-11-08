@@ -12,7 +12,7 @@ namespace Medvya.Encounters.Infrastructure;
 
 public static class EncountersModule
 {
-    /// <summary>Needs Tenancy (clinical access), Scheduling (the visit), Patients (merges) and Audit.</summary>
+    /// <summary>Needs Tenancy (clinical access, feature flags), Scheduling (the visit), Patients (merges) and Audit.</summary>
     public static IServiceCollection AddEncountersModule(this IServiceCollection services, string connectionString, IConfiguration? configuration = null, bool development = false)
     {
         AddDocumentStorage(services, configuration, development);
@@ -24,6 +24,8 @@ public static class EncountersModule
             .AddScoped<IPatientChart, PatientChartService>()
             .AddScoped<IPatientTimeline, PatientTimelineService>()
             .AddScoped<IDocuments, DocumentService>()
+            .AddScoped<IIntake, IntakeService>()
+            .AddScoped<Medvya.Scheduling.Application.IHandoffGate, IntakeHandoffGate>()
             .AddScoped<Medvya.Tenancy.Application.ICareRelationshipSource, EncounterCareRelationship>()
             .AddScoped<Medvya.Patients.Application.IPatientMergeParticipant, EncounterMergeParticipant>();
     }

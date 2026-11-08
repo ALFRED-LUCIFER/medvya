@@ -61,7 +61,7 @@ export const minutesSince = (since: string, now: number) => Math.max(0, Math.flo
 export const serverNow = (board: Pick<Board, 'now'>, fetchedAt: number, deviceNow: number) => Date.parse(board.now) + Math.max(0, deviceNow - fetchedAt);
 
 /** 409 codes from the API (VisitTransitionException); anything else is a generic failure. */
-export const moveErrors = ['invalid_transition', 'not_today'] as const;
+export const moveErrors = ['invalid_transition', 'not_today', 'intake_required'] as const;
 export type MoveError = (typeof moveErrors)[number] | 'failed';
 export const moveError = (code: string | undefined): MoveError =>
   (moveErrors as readonly string[]).includes(code ?? '') ? (code as MoveError) : 'failed';

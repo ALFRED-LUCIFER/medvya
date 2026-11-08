@@ -76,6 +76,20 @@ public sealed class Observation
     [Classification(DataClass.SensitiveHealth)] public int ValueHundredths { get; init; }
     [Classification(DataClass.SensitiveHealth)] public DateTimeOffset TakenAt { get; init; }
     [Classification(DataClass.Internal)] public ChartSource Source { get; init; }
+    // Set only for a vital taken at a visit's nurse intake (MDV-P2-007); labs and imports leave them empty. A re-measure is a new row.
+    [Classification(DataClass.Internal)] public Guid? FacilityId { get; init; }
+    [Classification(DataClass.Internal)] public Guid? MergedFromPatientId { get; init; }
+    [Classification(DataClass.Internal)] public Guid? AppointmentId { get; init; }
+    [Classification(DataClass.Internal)] public VitalAlert? Flag { get; init; }
+    /// <summary>The patient's last reading of this code before this visit, in tenths, to show beside the new one.</summary>
+    [Classification(DataClass.SensitiveHealth)] public int? PreviousTenths { get; init; }
+    [Classification(DataClass.Internal)] public DateTimeOffset? PreviousAt { get; init; }
+    /// <summary>A flagged reading is only final once the nurse kept it on purpose.</summary>
+    [Classification(DataClass.Internal)] public bool FlagKept { get; set; }
+    [Classification(DataClass.Internal)] public Guid? RecordedBy { get; init; }
+    [Classification(DataClass.Internal)] public Guid? VerifiedBy { get; init; }
+    /// <summary>Nurse readings have one decimal place; the stored value is hundredths. Not a column.</summary>
+    [Classification(DataClass.SensitiveHealth)] public int ValueTenths => ValueHundredths / 10;
 
     public static string Units(ObservationCode code) => code switch
     {

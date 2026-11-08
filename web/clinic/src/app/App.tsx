@@ -22,6 +22,7 @@ import { useShellController } from '../features/shell/hooks/useShellController';
 import FrontDeskRoute from './FrontDeskRoute';
 import GlobalSearchRoute from './GlobalSearchRoute';
 import NotificationsRoute from './NotificationsRoute';
+import { NurseIntakeRoute, NurseQueueRoute } from './NurseRoutes';
 import ScheduleRoute from './ScheduleRoute';
 
 // Loaded on demand: invitations bring the form stack (React Hook Form, Zod) that most sessions never need.
@@ -77,6 +78,7 @@ export default function App({ locale, onLocaleChange }: Props) {
   const deskDocuments = active?.capabilities.RegisterBookPatients === 'Full' && active.capabilities.CheckInQueue === 'Full';
   const registerPath = shell.items.find(i => i.id === 'register')?.path ?? null;
   const pathOf = (id: string) => shell.items.find(i => i.id === id)?.path ?? null;
+  const nursePath = pathOf('nurse');
   // Walk-in (MDV-P1-025) books and checks in: Register / book patients and Check-in & queue, both at Full.
   const walkInPath = pathOf('frontDesk') && active?.capabilities.CheckInQueue === 'Full' && active.capabilities.RegisterBookPatients === 'Full'
     ? `${pathOf('frontDesk')}/walk-in` : null;
@@ -128,7 +130,9 @@ export default function App({ locale, onLocaleChange }: Props) {
             : i.id === 'frontDesk' || (i.id === 'today' && pathOf('frontDesk'))
             ? <FrontDeskRoute facilityId={active.facilityId} online={online} canMove={active.capabilities.CheckInQueue === 'Full'}
                 registerPath={registerPath} walkInPath={walkInPath} waitlistPath={waitlistPath} billingPath={shell.items.find(b => b.id === 'billing')?.path ?? null}
-                canConsult={active.capabilities.Patient360Chart === 'Full'} />
+                canConsult={active.capabilities.Patient360Chart === 'Full'} nurseStepOn={active.flags.includes('clinical.nurse-intake')}
+                intakePath={nursePath && active.capabilities.VitalsAllergiesEntry === 'Full' ? (id: string) => `${nursePath}/${id}` : null} />
+            : i.id === 'nurse' ? <NurseQueueRoute facilityId={active.facilityId} online={online} nursePath={i.path} />
             : i.id === 'settings' ? <SettingsRoute facilityId={active.facilityId} country={active.country ?? null} />
             // Until the patient chart exists (phase 2) the Patients menu opens the patient directory instead of a placeholder.
             : i.id === 'patients' && searchPath ? <Navigate to={searchPath} replace />
@@ -143,6 +147,8 @@ export default function App({ locale, onLocaleChange }: Props) {
           {pathOf('frontDesk') && <Route path="/front-desk/overview" element={
             <OverviewRoute facilityId={active.facilityId} online={online} canMove={active.capabilities.CheckInQueue === 'Full'}
               userId={shell.session?.user.id ?? ''} boardPath={pathOf('frontDesk')!} />} />}
+          {/* Nurse intake (MDV-P2-007): one visit's intake, reached from the queue or a With nurse card; the server checks clinical access on every call. */}
+          {nursePath && <Route path={`${nursePath}/:appointmentId`} element={<NurseIntakeRoute online={online} nursePath={nursePath} />} />}
           {/* A consultation (MDV-P2-001) for any role that treats patients; the server checks the care relationship on every call. */}
           {['Read', 'Limited', 'Full', 'Sign'].includes(active.capabilities.Patient360Chart ?? 'None') &&
             <Route path="/consult/:encounterId" element={<ConsultRoute boardPath={pathOf('frontDesk') ?? '/'} />} />}

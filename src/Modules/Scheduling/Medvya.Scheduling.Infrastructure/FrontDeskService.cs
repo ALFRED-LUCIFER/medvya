@@ -19,7 +19,7 @@ namespace Medvya.Scheduling.Infrastructure;
 /// </summary>
 public sealed partial class FrontDeskService(
     SchedulingDbContext db, SchedulingContext context, DoctorDayTransaction transaction, IBoardNotifier notifier, IOptions<SchedulingOptions> options,
-    ILogger<FrontDeskService> log) : IFrontDeskService
+    ILogger<FrontDeskService> log, IEnumerable<IHandoffGate> handoffGates) : IFrontDeskService
 {
     /// <summary>Meter of front-desk measurements. Values are durations only; the one tag is the opaque tenant id.</summary>
     public const string MeterName = "Medvya.FrontDesk";
@@ -164,6 +164,10 @@ public sealed partial class FrontDeskService(
         await context.RequireAsync(visit.FacilityId, SchedulingAccess.CanRunQueue, cancellationToken);
         if (visit.State == to) return (await RepeatAsync(visit, action, cancellationToken), false);
         Guard(visit.State, to);
+        // The nurse's handoff is its own action (MDV-P2-007): of the generic moves, none may skip the intake's checks.
+        if (visit.State == AppointmentState.WithNurse && to == AppointmentState.ReadyForDoctor)
+            foreach (var gate in handoffGates)
+                if (!await gate.MayMoveOnAsync(visit.Id, cancellationToken)) throw new VisitTransitionException("intake_required");
         var (_, zone) = await context.FacilityAsync(visit.FacilityId, cancellationToken);
         var now = context.Now;
         if (to == AppointmentState.CheckedIn && ScheduleRules.LocalDate(visit.Start, zone) != ScheduleRules.LocalDate(now, zone))

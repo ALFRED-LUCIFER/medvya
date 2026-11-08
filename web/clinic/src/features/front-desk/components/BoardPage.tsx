@@ -49,6 +49,8 @@ type Props = {
   paymentAction?: ReactNode;
   /** "Start consultation" for a card (MDV-P2-001), for doctors; null for a card it does not apply to. */
   consultAction?: (card: BoardCard) => ReactNode;
+  /** With the nurse-intake step on (MDV-P2-007) a With nurse card leaves the nurse by the nurse's handoff, not by this board's move: shown instead of "Intake done". */
+  nurseStep?: (card: BoardCard) => ReactNode;
 };
 
 /** P-01 Reception board: today's visits by state, one tap per step, nonclinical information only. */
@@ -169,7 +171,7 @@ function Column(props: Props & { state: BoardColumn; board: Board }) {
   );
 }
 
-function Card({ card, board, now, failedVisitIds, canMove, online, confirmingId, pendingId, failure, paymentAction, consultAction, onStartCheckIn, onConfirmCheckIn, onCancelCheckIn, onMove }: Props & { card: BoardCard; board: Board }) {
+function Card({ card, board, now, failedVisitIds, canMove, online, confirmingId, pendingId, failure, paymentAction, consultAction, nurseStep, onStartCheckIn, onConfirmCheckIn, onCancelCheckIn, onMove }: Props & { card: BoardCard; board: Board }) {
   const { t, formatTime, formatDate } = useI18n();
   const state = card.state as BoardColumn;
   const next = nextState(state);
@@ -204,7 +206,7 @@ function Card({ card, board, now, failedVisitIds, canMove, online, confirmingId,
           <Button autoFocus className="whitespace-normal" loading={busy} disabled={!online} onClick={onConfirmCheckIn}>{t('board.confirm.arrived')}</Button>
           <Button variant="outline" onClick={onCancelCheckIn}>{t('booking.cancel')}</Button>
         </div>
-      ) : canMove && next && state !== 'Done' ? (
+      ) : nurseStep && state === 'WithNurse' ? nurseStep(card) : canMove && next && state !== 'Done' ? (
         <Button variant="outline" className="mt-1 whitespace-normal" loading={busy} disabled={!online}
           onClick={() => (state === 'Booked' ? onStartCheckIn(card.id) : onMove(card.id, next))}>
           {t(actionKeys[state])}

@@ -26,13 +26,14 @@ public sealed class EncounterCareRelationship(EncountersDbContext db) : ICareRel
 /// </summary>
 public sealed class EncounterMergeParticipant(EncountersDbContext db, ICurrentTenant tenant) : IPatientMergeParticipant
 {
-    // shortcut: chart facts (allergies, problems, medicines, observations; MDV-P2-004) count as clinical data here but are not moved on a merge,
-    // because nothing writes them yet. The first ticket that does (MDV-P2-007) must move and restore them like encounters, or an allergy is lost.
+    // shortcut: allergies, problems and medicines (MDV-P2-004) count as clinical data here but are not moved on a merge, because nothing writes them yet.
+    // The first ticket that does (MDV-P2-008) must move and restore them like encounters, or an allergy is lost.
     public async Task<bool> HasClinicalDataAsync(Guid patientId, CancellationToken cancellationToken) =>
         await db.Encounters.AsNoTracking().AnyAsync(e => e.PatientId == patientId, cancellationToken)
         || await db.Allergies.AsNoTracking().AnyAsync(a => a.PatientId == patientId, cancellationToken)
         || await db.Problems.AsNoTracking().AnyAsync(p => p.PatientId == patientId, cancellationToken)
         || await db.MedicationStatements.AsNoTracking().AnyAsync(m => m.PatientId == patientId, cancellationToken)
+        || await db.Intakes.AsNoTracking().AnyAsync(i => i.PatientId == patientId, cancellationToken)
         || await db.Observations.AsNoTracking().AnyAsync(o => o.PatientId == patientId, cancellationToken);
 
     public Task<int> VisitsAsync(Guid patientId, CancellationToken cancellationToken) => Task.FromResult(0); // visits are Scheduling's to count
@@ -42,12 +43,24 @@ public sealed class EncounterMergeParticipant(EncountersDbContext db, ICurrentTe
         await using var shared = await SharedAsync(transaction, cancellationToken);
         await shared.Encounters.Where(e => e.PatientId == fromPatientId)
             .ExecuteUpdateAsync(s => s.SetProperty(e => e.PatientId, toPatientId).SetProperty(e => e.MergedFromPatientId, fromPatientId), cancellationToken);
+        await shared.Intakes.Where(e => e.PatientId == fromPatientId)
+            .ExecuteUpdateAsync(s => s.SetProperty(e => e.PatientId, toPatientId).SetProperty(e => e.MergedFromPatientId, fromPatientId), cancellationToken);
+        await shared.Observations.Where(e => e.PatientId == fromPatientId)
+            .ExecuteUpdateAsync(s => s.SetProperty(e => e.PatientId, toPatientId).SetProperty(e => e.MergedFromPatientId, fromPatientId), cancellationToken);
+        await shared.IntakeEscalations.Where(e => e.PatientId == fromPatientId)
+            .ExecuteUpdateAsync(s => s.SetProperty(e => e.PatientId, toPatientId).SetProperty(e => e.MergedFromPatientId, fromPatientId), cancellationToken);
     }
 
     public async Task RestoreAsync(Guid fromPatientId, Guid toPatientId, DbTransaction transaction, CancellationToken cancellationToken)
     {
         await using var shared = await SharedAsync(transaction, cancellationToken);
         await shared.Encounters.Where(e => e.PatientId == toPatientId && e.MergedFromPatientId == fromPatientId)
+            .ExecuteUpdateAsync(s => s.SetProperty(e => e.PatientId, fromPatientId).SetProperty(e => e.MergedFromPatientId, (Guid?)null), cancellationToken);
+        await shared.Intakes.Where(e => e.PatientId == toPatientId && e.MergedFromPatientId == fromPatientId)
+            .ExecuteUpdateAsync(s => s.SetProperty(e => e.PatientId, fromPatientId).SetProperty(e => e.MergedFromPatientId, (Guid?)null), cancellationToken);
+        await shared.Observations.Where(e => e.PatientId == toPatientId && e.MergedFromPatientId == fromPatientId)
+            .ExecuteUpdateAsync(s => s.SetProperty(e => e.PatientId, fromPatientId).SetProperty(e => e.MergedFromPatientId, (Guid?)null), cancellationToken);
+        await shared.IntakeEscalations.Where(e => e.PatientId == toPatientId && e.MergedFromPatientId == fromPatientId)
             .ExecuteUpdateAsync(s => s.SetProperty(e => e.PatientId, fromPatientId).SetProperty(e => e.MergedFromPatientId, (Guid?)null), cancellationToken);
     }
 

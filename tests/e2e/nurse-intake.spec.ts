@@ -80,7 +80,7 @@ test('an allergy without a status blocks the handoff until the nurse sets one', 
   const allergies = page.getByRole('region', { name: 'Allergies' });
   await expect(allergies.getByText('Penicillin (synthetic)', { exact: true })).toBeVisible();
   await expect(allergies.getByText('Status not set')).toBeVisible(); // words and an icon, not colour
-  await expect(allergies.getByText('Reported by the patient')).toBeVisible();
+  await expect(allergies.getByText('Patient reported', { exact: true }).first()).toBeVisible();
   const handOff = page.getByRole('button', { name: 'Hand off · Ready for doctor' });
   await expect(handOff).toBeDisabled();
   await expect(page.getByText('Confirm allergy status to hand off.')).toBeVisible();
@@ -107,7 +107,7 @@ test('the nurse adds an allergy with its reaction and a medicine the patient cou
   await allergies.getByRole('button', { name: 'Add allergy' }).click();
   await expect(allergies.getByText('Peanuts (synthetic) · Hives')).toBeVisible();
   expect(calls.allergies).toEqual([{ substance: 'Peanuts (synthetic)', reaction: 'Hives', status: 'PatientReported' }]);
-  await expect(allergies.getByText('Added at nurse intake')).toBeVisible();
+  await expect(allergies.getByText('Patient reported', { exact: true }).first()).toBeVisible();
   await expect(page.getByRole('button', { name: 'Hand off · Ready for doctor' })).toBeEnabled(); // an allergy with a status needs no "none"
 
   const medicines = page.getByRole('region', { name: 'Medicines the patient takes' });

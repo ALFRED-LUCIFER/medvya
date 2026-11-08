@@ -162,7 +162,7 @@ public abstract partial class CountryRules
     /// phones are normalised exactly as registration stored them, so deterministic encryption and equality match.
     /// A full ABHA / Emirates ID or mobile number matches exactly. Any other run of 4 to 15 digits (a part of a phone number, an MRN, the
     /// last 4 of an Aadhaar) is a <see cref="SearchKind.Number"/>; a typed 12-digit Aadhaar is cut to its last 4 here and the rest is
-    /// dropped (only the last 4 are ever stored). Fewer than 4 digits is an MRN number; more than 15 is refused ("full_number_required").
+    /// dropped (only the last 4 are ever stored). Fewer than 4 digits, or exactly 6 (a whole MRN), is an MRN; more than 15 is refused ("full_number_required").
     /// </summary>
     /// <summary>Fewest digits searched as part of a number: fewer would list a large share of the register.</summary>
     public const int MinNumberDigits = 4, MaxNumberDigits = 15;
@@ -191,7 +191,8 @@ public abstract partial class CountryRules
         {
             if (AadhaarLastFour(compact) is { } last4) return new(SearchKind.Identifier, last4, IdentifierScheme.AadhaarLast4);
             if (!compact.All(char.IsAsciiDigit) || compact.Length > MaxNumberDigits) throw new PatientValidationException([new("query", "full_number_required")]);
-            if (compact.Length >= MinNumberDigits) return new(SearchKind.Number, compact);
+            // A whole MRN stays an exact MRN search (it also finds the survivor of a merge); a phone fragment of exactly this length cannot be searched.
+            if (compact.Length >= MinNumberDigits && compact.Length != Mrn.Digits) return new(SearchKind.Number, compact);
             return new(SearchKind.Mrn, Mrn.Format(int.Parse(compact, CultureInfo.InvariantCulture)));
         }
         if (q.Any(char.IsDigit)) return new(SearchKind.Mrn, q.ToUpperInvariant()); // e.g. DQ-10-4482

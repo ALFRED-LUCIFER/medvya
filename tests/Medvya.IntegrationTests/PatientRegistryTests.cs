@@ -178,7 +178,7 @@ public class PatientRegistryTests(PostgresFixture sql) : IClassFixture<PostgresF
         var sara = await Registry(tenantA).RegisterAsync(IndiaFull(facility) with { FullName = "Sara Rao (synthetic)", Mobile = "+91 90000 00103", Identifiers = [new(IdentifierScheme.AadhaarLast4, "5582")] });
 
         // Part of the mobile (any 4+ digits, any separators) and of the alternate number.
-        var byPhone = await Search(tenantA, "IN", "00 0101");
+        var byPhone = await Search(tenantA, "IN", "0 0101");
         Assert.Equal((SearchKind.Number, meera.PatientId), (byPhone.MatchedOn, Assert.Single(byPhone.Items).Id));
         Assert.Equal(meera.PatientId, Assert.Single((await Search(tenantA, "IN", "07777")).Items).Id);
         Assert.Equal(2, (await Search(tenantA, "IN", "9000")).Total); // shared digits find both

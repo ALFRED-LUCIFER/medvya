@@ -2806,5 +2806,16 @@
   "audit.actionName.waitlist.offer": "Slot offered from waitlist",
   "audit.actionName.waitlist.decline": "Waitlist offer released",
   "audit.actionName.waitlist.accept": "Waitlist offer accepted and booked",
-  "audit.actionName.waitlist.remove": "Patient removed from waitlist"
+  "audit.actionName.waitlist.remove": "Patient removed from waitlist",
+  "today.title": "Today · {day}",
+  "today.scope": "Whose visits",
+  "today.scope.mine": "My patients",
+  "today.scope.clinic": "Whole clinic",
+  "today.hero.next": "Next patient",
+  "today.hero.current": "Current patient",
+  "today.list": "Today's visits",
+  "today.age": "{years} y",
+  "today.empty.title": "No visits today",
+  "today.empty.mine": "You have no visits today. Switch to the whole clinic to see your colleagues' visits.",
+  "today.empty.clinic": "No visits are booked at the clinic today."
 }

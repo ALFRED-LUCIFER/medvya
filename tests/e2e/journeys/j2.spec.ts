@@ -13,7 +13,7 @@ const at = '2026-10-19T04:30:00Z'; // 10:00 IST
 
 journey('J2', {
   // D-01: the next patient is Meera, ready for the doctor; starting the consultation binds it to her visit and shows who it is for, in Room 3.
-  // shortcut: started from the reception board, which doctors share in a small clinic; the doctor's own Today list is MDV-P2-002.
+  // The doctor's own Today (MDV-P2-002): the next patient hero starts the consultation.
   1: async ({ page }) => {
     await page.route('**/v1/me/context', r => r.fulfill({ json: doctor }));
     await page.route('**/v1/front-desk/board?*', r => r.fulfill({ json: { facilityId: 'f-1', timeZone: 'Asia/Kolkata', date: '2026-10-19', now: at, cards: [{
@@ -24,8 +24,9 @@ journey('J2', {
     await page.route('**/v1/encounters', r => r.fulfill({ json: encounter }));
     await page.route('**/v1/encounters/e-1', r => r.fulfill({ json: { encounter, timeZone: 'Asia/Kolkata', treatmentConsent: true,
       patient: { id: 'p-meera', fullName: 'Meera Iyer', mrn: '000001', dateOfBirth: '1972-03-14', ageYears: 54, sexAtBirth: 'Female' } } }));
-    await page.goto('/front-desk');
-    await page.getByRole('button', { name: 'Start consultation with Meera Iyer' }).click();
+    await page.goto('/today');
+    await expect(page.getByRole('region', { name: 'Next patient' })).toContainText('Meera Iyer');
+    await page.getByRole('region', { name: 'Next patient' }).getByRole('button', { name: 'Start consultation with Meera Iyer' }).click();
     const banner = page.getByRole('region', { name: 'Patient identity' });
     await expect(banner.getByRole('heading', { name: 'Meera Iyer' })).toBeVisible();
     await expect(banner).toContainText('Room 3');

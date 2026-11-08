@@ -62,6 +62,8 @@ public sealed class EncountersDbContext(DbContextOptions<EncountersDbContext> op
             e.Property(x => x.Source).HasConversion<string>().HasMaxLength(20);
             e.Property(x => x.Name).HasMaxLength(200);
             e.Property(x => x.Dose).HasMaxLength(100);
+            e.Property(x => x.Frequency).HasMaxLength(50);
+            e.HasIndex(x => new { x.TenantId, x.AppointmentId });
             e.HasIndex(x => new { x.TenantId, x.PatientId });
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });

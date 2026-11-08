@@ -3,8 +3,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { ApiError } from '../../schedule/services/scheduleApi';
-import { escalateSchema, formOf, intakeFormSchema, intakeProblem, invalidKind, toRecord, type IntakeForm, type IntakeProblem, type IntakeScreen, type IntakeView, type VitalKind } from '../domain/intake';
-import { escalateIntake, fetchIntake, handOffIntake, keepVital, saveIntake } from '../services/intakeApi';
+import {
+  allergySchema, emptyAllergy, emptyMedicine, escalateSchema, formOf, intakeFormSchema, intakeProblem, invalidKind, medicineSchema, toRecord,
+  type AllergyForm, type AllergyStatus, type IntakeForm, type IntakeProblem, type IntakeScreen, type IntakeView, type MedicineForm, type VitalKind,
+} from '../domain/intake';
+import { addAllergy, addMedicine, confirmNoKnownAllergies, escalateIntake, fetchIntake, handOffIntake, keepVital, saveIntake, setAllergyStatus } from '../services/intakeApi';
 
 /**
  * One nurse intake (N-01, MDV-P2-007): the form for the readings and chief complaint, the nurse's decisions on flagged readings, the
@@ -16,6 +19,8 @@ export function useIntakeController(appointmentId: string, onHandedOff: () => vo
   const key = ['intake', appointmentId];
   const query = useQuery({ queryKey: key, queryFn: () => fetchIntake(appointmentId), retry: false });
   const form = useForm<IntakeForm>({ resolver: zodResolver(intakeFormSchema), defaultValues: formOf(null) });
+  const allergyForm = useForm<AllergyForm>({ resolver: zodResolver(allergySchema), defaultValues: emptyAllergy });
+  const medicineForm = useForm<MedicineForm>({ resolver: zodResolver(medicineSchema), defaultValues: emptyMedicine });
   const escalation = useForm({ resolver: zodResolver(escalateSchema), defaultValues: { reason: '' } });
   const [escalating, setEscalating] = useState(false);
   const [problem, setProblem] = useState<IntakeProblem | null>(null);
@@ -57,6 +62,10 @@ export function useIntakeController(appointmentId: string, onHandedOff: () => vo
     onSuccess: intake => { take(intake); setEscalating(false); escalation.reset(); },
     onError: fail,
   });
+  const status = useMutation({ mutationFn: (v: { id: string; status: AllergyStatus }) => setAllergyStatus(appointmentId, v.id, v.status), onSuccess: take, onError: fail });
+  const newAllergy = useMutation({ mutationFn: (v: AllergyForm) => addAllergy(appointmentId, v), onSuccess: intake => { take(intake); allergyForm.reset(emptyAllergy); }, onError: fail });
+  const noAllergies = useMutation({ mutationFn: () => confirmNoKnownAllergies(appointmentId), onSuccess: take, onError: fail });
+  const medicine = useMutation({ mutationFn: (v: MedicineForm) => addMedicine(appointmentId, v), onSuccess: intake => { take(intake); medicineForm.reset(emptyMedicine); }, onError: fail });
   const handOff = useMutation({ mutationFn: () => handOffIntake(appointmentId), onSuccess: intake => { take(intake); onHandedOff(); }, onError: fail });
 
   const error = query.error instanceof ApiError ? query.error : null;
@@ -68,6 +77,8 @@ export function useIntakeController(appointmentId: string, onHandedOff: () => vo
     failed: query.isError,
     form,
     escalationForm: escalation,
+    allergyForm,
+    medicineForm,
     problem,
     /** The reading the server called impossible (its field), so the screen can mark it. */
     badKind,
@@ -81,6 +92,14 @@ export function useIntakeController(appointmentId: string, onHandedOff: () => vo
     onRemeasure: (kind: VitalKind) => form.setFocus(kind, { shouldSelect: true }),
     /** Typed since the last save: the handoff goes on the saved readings, so it waits for the save. */
     dirty: form.formState.isDirty,
+    settingAllergy: status.isPending ? status.variables.id : null,
+    addingAllergy: newAllergy.isPending,
+    confirmingNone: noAllergies.isPending,
+    addingMedicine: medicine.isPending,
+    onAllergyStatus: (id: string, value: AllergyStatus) => status.mutate({ id, status: value }),
+    onAddAllergy: allergyForm.handleSubmit(v => newAllergy.mutate(v)),
+    onNoKnownAllergies: () => noAllergies.mutate(),
+    onAddMedicine: medicineForm.handleSubmit(v => medicine.mutate(v)),
     onToggleEscalate: () => setEscalating(e => !e),
     onEscalate: escalation.handleSubmit(v => escalate.mutate(v.reason)),
     onHandOff: () => handOff.mutate(),

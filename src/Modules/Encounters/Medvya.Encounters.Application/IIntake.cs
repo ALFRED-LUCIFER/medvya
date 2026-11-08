@@ -18,12 +18,24 @@ public sealed record EscalateIntake(string? Reason);
 /// <summary>The current reading of one kind, with its flag (a code the UI says in words), the previous one and whether the nurse kept a flagged value.</summary>
 public sealed record IntakeVital(VitalKind Kind, decimal Value, VitalAlert? Flag, decimal? PreviousValue, DateTimeOffset? PreviousAt, bool FlagKept, DateTimeOffset RecordedAt);
 
+public sealed record IntakeAllergy(Guid Id, string Substance, string? Reaction, AllergyStatus? Status, ChartSource Source, DateTimeOffset? StatusSetAt);
+
+public sealed record IntakeMedicine(Guid Id, string Name, string? Dose, string? Frequency, bool NeedsClarification, ChartSource Source, DateTimeOffset RecordedAt);
+
+/// <summary>A new allergy with its status chosen by the nurse (a status is required: an allergy is never added "unset").</summary>
+public sealed record AddAllergy(string? Substance, string? Reaction, AllergyStatus? Status);
+
+public sealed record SetAllergyStatus(AllergyStatus? Status);
+
+/// <summary>A medicine the patient says they take. <see cref="NeedsClarification"/>: the name could not be identified, so it is kept as said.</summary>
+public sealed record AddMedicine(string? Name, string? Dose, string? Frequency, bool NeedsClarification);
+
 /// <summary>
-/// A visit's intake. <see cref="Blockers"/> are the stable codes that stop the handoff ("vitals_undecided"); empty when the nurse may hand off.
+/// A visit's intake. <see cref="Blockers"/> are the stable codes that stop the handoff ("vitals_undecided", "allergy_status_required", "allergies_not_confirmed"); empty when the nurse may hand off.
 /// </summary>
 public sealed record IntakeView(
     Guid AppointmentId, Guid PatientId, Guid FacilityId, string State, string? ChiefComplaint, IReadOnlyList<IntakeVital> Vitals,
-    bool Escalated, bool HandedOff, IReadOnlyList<string> Blockers);
+    IReadOnlyList<IntakeAllergy> Allergies, IReadOnlyList<IntakeMedicine> Medicines, bool NoKnownAllergiesConfirmed, bool Escalated, bool HandedOff, IReadOnlyList<string> Blockers);
 
 /// <summary>An open escalation for the doctor's Today (MDV-P2-002): ids and the nurse's reason only; the screen adds the patient's name.</summary>
 public sealed record EscalationView(Guid Id, Guid AppointmentId, Guid PatientId, string Reason, DateTimeOffset EscalatedAt);
@@ -60,6 +72,22 @@ public interface IIntake
 
     /// <exception cref="IntakeValidationException">"reason: required".</exception>
     Task<IntakeView?> EscalateAsync(Guid appointmentId, EscalateIntake command, CancellationToken cancellationToken = default);
+
+    /// <summary>Adds an allergy of the patient (source Nurse intake) with a status.</summary>
+    /// <exception cref="IntakeValidationException"/>
+    Task<IntakeView?> AddAllergyAsync(Guid appointmentId, AddAllergy command, CancellationToken cancellationToken = default);
+
+    /// <summary>Sets the status of one of the visit patient's allergies. Null: no such visit, or the allergy is not this patient's.</summary>
+    /// <exception cref="IntakeValidationException"/>
+    Task<IntakeView?> SetAllergyStatusAsync(Guid appointmentId, Guid allergyId, SetAllergyStatus command, CancellationToken cancellationToken = default);
+
+    /// <summary>The nurse confirms, on purpose, that the patient has no known allergies. Refused while the patient has any allergy on record.</summary>
+    /// <exception cref="IntakeConflictException">"has_allergies".</exception>
+    Task<IntakeView?> ConfirmNoKnownAllergiesAsync(Guid appointmentId, CancellationToken cancellationToken = default);
+
+    /// <summary>Records a medicine the patient says they take (patient-reported).</summary>
+    /// <exception cref="IntakeValidationException"/>
+    Task<IntakeView?> AddMedicineAsync(Guid appointmentId, AddMedicine command, CancellationToken cancellationToken = default);
 
     /// <summary>Hands the patient to the doctor: the visit moves to Ready for doctor. Refused while a blocker stands; repeating it changes nothing.</summary>
     /// <exception cref="IntakeConflictException"/>

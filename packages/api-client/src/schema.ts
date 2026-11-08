@@ -4832,6 +4832,159 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/intake/{appointmentId}/allergies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    appointmentId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["AddAllergy"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/intake/{appointmentId}/allergies/{allergyId}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    appointmentId: string;
+                    allergyId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["SetAllergyStatus"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/intake/{appointmentId}/no-known-allergies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    appointmentId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/intake/{appointmentId}/medicines": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    appointmentId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["AddMedicine"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/intake/{appointmentId}/handoff": {
         parameters: {
             query?: never;
@@ -4911,6 +5064,11 @@ export interface components {
         };
         /** @enum {unknown} */
         AccessRequestReason: "CoveringColleague" | "SeeingPatientToday" | "ReviewingResults" | "Referral";
+        AddAllergy: {
+            substance: null | string;
+            reaction: null | string;
+            status: null | components["schemas"]["AllergyStatus"];
+        };
         AddDoctor: {
             fullName?: null | string;
             email?: null | string;
@@ -4929,6 +5087,12 @@ export interface components {
             newVisitFee?: null | number | string;
             /** Format: int64 */
             followUpFee?: null | number | string;
+        };
+        AddMedicine: {
+            name: null | string;
+            dose: null | string;
+            frequency: null | string;
+            needsClarification: boolean;
         };
         AddResource: {
             /** Format: uuid */
@@ -4958,6 +5122,8 @@ export interface components {
             /** Format: time */
             until?: null | string;
         };
+        /** @enum {unknown} */
+        AllergyStatus: "Confirmed" | "PatientReported" | "Unknown" | "NotAnAllergy" | null;
         AnonymousTypeOfGuidAndGuidAndstringAndstringAndRoleAndGuidAndstringAndGuidAndstringAndstringAndstringAndGuidAndstringAndDateTimeOffset: {
             /** Format: uuid */
             membershipId: string;
@@ -5832,6 +5998,9 @@ export interface components {
             /** Format: uuid */
             seriesId: string;
             occurrences: components["schemas"]["SeriesBooked"][];
+        };
+        SetAllergyStatus: {
+            status: null | components["schemas"]["AllergyStatus"];
         };
         /** @enum {unknown} */
         SexAtBirth: "Female" | "Male" | "Other";

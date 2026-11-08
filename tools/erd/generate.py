@@ -22,7 +22,7 @@ SOFT_REFS = {
     'CustomRoleId': ('tenancy', 'CustomRoles'), 'PatientId': ('patients', 'Patients'), 'CandidatePatientId': ('patients', 'Patients'),
     'MergedIntoPatientId': ('patients', 'Patients'), 'MergedFromPatientId': ('patients', 'Patients'), 'MovedFromPatientId': ('patients', 'Patients'),
     'UserId': ('identity', 'Users'), 'ActorUserId': ('identity', 'Users'), 'RegisteredBy': ('identity', 'Users'), 'ChangedBy': ('identity', 'Users'),
-    'BookedBy': ('identity', 'Users'), 'DecidedBy': ('identity', 'Users'), 'RequestedBy': ('identity', 'Users'), 'LeadClinicianId': ('identity', 'Users'), 'EndedBy': ('identity', 'Users'), 'HeldBy': ('identity', 'Users'), 'VerifiedBy': ('identity', 'Users'), 'RecordedBy': ('identity', 'Users'), 'EscalatedBy': ('identity', 'Users'), 'HandedOffBy': ('identity', 'Users'),
+    'BookedBy': ('identity', 'Users'), 'DecidedBy': ('identity', 'Users'), 'RequestedBy': ('identity', 'Users'), 'LeadClinicianId': ('identity', 'Users'), 'EndedBy': ('identity', 'Users'), 'HeldBy': ('identity', 'Users'), 'VerifiedBy': ('identity', 'Users'), 'RecordedBy': ('identity', 'Users'), 'EscalatedBy': ('identity', 'Users'), 'HandedOffBy': ('identity', 'Users'), 'NoKnownAllergiesBy': ('identity', 'Users'), 'StatusSetBy': ('identity', 'Users'),
     'AppointmentId': ('scheduling', 'Appointments'),
     'NotificationId': ('notifications', 'Notifications'), 'ReviewId': ('tenancy', 'AccessReviews'),
 }

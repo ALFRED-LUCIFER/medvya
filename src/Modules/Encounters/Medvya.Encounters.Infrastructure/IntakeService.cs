@@ -23,8 +23,10 @@ public sealed class IntakeService(
     EncountersDbContext db, IConsultVisits visits, IClinicalAccess clinical, ICurrentTenant tenant, ICurrentUser user, IAuditLog audit, TimeProvider clock) : IIntake
 {
     public const string ReadAction = "intake.read", RecordAction = "intake.record", KeepAction = "intake.keep", EscalateAction = "intake.escalate",
-        HandOffAction = "intake.handoff", EscalationsAction = "intake.escalations.read", Resource = "intake";
-    public const int MaxText = 500;
+        HandOffAction = "intake.handoff", AllergyAddAction = "intake.allergy.add", AllergyStatusAction = "intake.allergy.status",
+        NoKnownAllergiesAction = "intake.allergy.none", MedicineAddAction = "intake.medicine.add", EscalationsAction = "intake.escalations.read", Resource = "intake";
+    public const int MaxText = 500, MaxName = 100, MaxDetail = 50;
+    static readonly AllergyStatus[] NewAllergyStatuses = [AllergyStatus.Confirmed, AllergyStatus.PatientReported, AllergyStatus.Unknown];
     static readonly Access[] Nurses = [Access.Full], Doctors = [Access.Full];
 
     public async Task<IntakeView?> GetAsync(Guid appointmentId, CancellationToken cancellationToken = default)
@@ -124,6 +126,107 @@ public sealed class IntakeService(
         return await ViewAsync(visit, cancellationToken);
     }
 
+    public async Task<IntakeView?> AddAllergyAsync(Guid appointmentId, AddAllergy command, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        if (await WithNurseAsync(appointmentId, cancellationToken) is not { } visit) return null;
+        var (substance, reaction) = (command.Substance?.Trim(), command.Reaction?.Trim());
+        var errors = new List<(string, string)>();
+        if (string.IsNullOrEmpty(substance)) errors.Add(("substance", "required"));
+        else if (substance.Length > MaxName) errors.Add(("substance", "too_long"));
+        if (reaction?.Length > MaxText) errors.Add(("reaction", "too_long"));
+        // A new allergy is added with a status the nurse chose; "Not an allergy" is for an allergy someone else recorded.
+        var status = command.Status ?? default;
+        if (command.Status is null || !NewAllergyStatuses.Contains(status)) errors.Add(("status", "invalid"));
+        // A patient has a handful of allergies, so the comparison is made here, ignoring case.
+        if (errors.Count == 0 && (await db.Allergies.AsNoTracking().Where(a => a.PatientId == visit.PatientId && a.Kind == AllergyKind.Substance).Select(a => a.Substance).ToListAsync(cancellationToken))
+                .Exists(x => string.Equals(x, substance, StringComparison.OrdinalIgnoreCase)))
+            errors.Add(("substance", "duplicate"));
+        if (errors.Count > 0) throw new IntakeValidationException(errors);
+
+        var (now, me) = (clock.GetUtcNow(), user.UserId ?? throw new InvalidOperationException("No user."));
+        await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
+        db.Allergies.Add(new Allergy
+        {
+            Id = Guid.CreateVersion7(), TenantId = TenantId, FacilityId = visit.FacilityId, PatientId = visit.PatientId, Kind = AllergyKind.Substance, Substance = substance!,
+            Reaction = string.IsNullOrEmpty(reaction) ? null : reaction, Status = status, Source = ChartSource.PatientReported, RecordedBy = me, RecordedAt = now,
+            StatusSetBy = me, StatusSetAt = now,
+        });
+        await db.SaveChangesAsync(cancellationToken);
+        await audit.WriteAsync(Event(AllergyAddAction, visit), tx.GetDbTransaction(), cancellationToken);
+        await tx.CommitAsync(cancellationToken);
+        return await ViewAsync(visit, cancellationToken);
+    }
+
+    public async Task<IntakeView?> SetAllergyStatusAsync(Guid appointmentId, Guid allergyId, SetAllergyStatus command, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        if (await WithNurseAsync(appointmentId, cancellationToken) is not { } visit) return null;
+        // Only an allergy of this visit's patient: another patient's (or another clinic's) id is simply not found.
+        if (!await db.Allergies.AnyAsync(a => a.Id == allergyId && a.PatientId == visit.PatientId && a.Kind == AllergyKind.Substance, cancellationToken)) return null;
+        if (command.Status is not { } status || !Enum.IsDefined(status)) throw new IntakeValidationException([("status", "invalid")]);
+
+        var (now, me) = (clock.GetUtcNow(), user.UserId ?? throw new InvalidOperationException("No user."));
+        await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
+        await db.Allergies.Where(a => a.Id == allergyId && a.PatientId == visit.PatientId)
+            .ExecuteUpdateAsync(s => s.SetProperty(a => a.Status, status).SetProperty(a => a.StatusSetBy, me).SetProperty(a => a.StatusSetAt, now), cancellationToken);
+        await audit.WriteAsync(Event(AllergyStatusAction, visit), tx.GetDbTransaction(), cancellationToken);
+        await tx.CommitAsync(cancellationToken);
+        return await ViewAsync(visit, cancellationToken);
+    }
+
+    public async Task<IntakeView?> ConfirmNoKnownAllergiesAsync(Guid appointmentId, CancellationToken cancellationToken = default)
+    {
+        if (await WithNurseAsync(appointmentId, cancellationToken) is not { } visit) return null;
+        if (await db.Allergies.AnyAsync(a => a.PatientId == visit.PatientId && a.Kind == AllergyKind.Substance, cancellationToken)) throw new IntakeConflictException("has_allergies");
+
+        var (now, me) = (clock.GetUtcNow(), user.UserId ?? throw new InvalidOperationException("No user."));
+        var row = await EnsureAsync(visit, cancellationToken);
+        await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
+        (row.NoKnownAllergiesBy, row.NoKnownAllergiesAt, row.UpdatedAt) = (me, now, now);
+        // The chart keeps the statement too (Patient 360 shows "No known allergies"); the per-visit confirmation above is what the handoff asks again each visit.
+        if (!await db.Allergies.AnyAsync(a => a.PatientId == visit.PatientId, cancellationToken))
+            db.Allergies.Add(new Allergy { Id = Guid.CreateVersion7(), TenantId = TenantId, FacilityId = visit.FacilityId, PatientId = visit.PatientId, Kind = AllergyKind.NoKnownAllergies,
+                Status = AllergyStatus.Confirmed, Source = ChartSource.ClinicianVerified, RecordedBy = me, RecordedAt = now, StatusSetBy = me, StatusSetAt = now });
+        await db.SaveChangesAsync(cancellationToken);
+        await audit.WriteAsync(Event(NoKnownAllergiesAction, visit), tx.GetDbTransaction(), cancellationToken);
+        await tx.CommitAsync(cancellationToken);
+        return await ViewAsync(visit, cancellationToken);
+    }
+
+    public async Task<IntakeView?> AddMedicineAsync(Guid appointmentId, AddMedicine command, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        if (await WithNurseAsync(appointmentId, cancellationToken) is not { } visit) return null;
+        var (name, dose, frequency) = (command.Name?.Trim(), command.Dose?.Trim(), command.Frequency?.Trim());
+        var errors = new List<(string, string)>();
+        if (string.IsNullOrEmpty(name)) errors.Add(("name", "required"));
+        else if (name.Length > MaxName) errors.Add(("name", "too_long"));
+        if (dose?.Length > MaxDetail) errors.Add(("dose", "too_long"));
+        if (frequency?.Length > MaxDetail) errors.Add(("frequency", "too_long"));
+        if (errors.Count > 0) throw new IntakeValidationException(errors);
+
+        await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
+        db.MedicationStatements.Add(new MedicationStatement
+        {
+            Id = Guid.CreateVersion7(), TenantId = TenantId, FacilityId = visit.FacilityId, PatientId = visit.PatientId, AppointmentId = appointmentId, Name = name!,
+            Dose = string.IsNullOrEmpty(dose) ? null : dose, Frequency = string.IsNullOrEmpty(frequency) ? null : frequency, NeedsClarification = command.NeedsClarification,
+            State = MedicationState.Active, Source = ChartSource.PatientReported, RecordedBy = user.UserId ?? throw new InvalidOperationException("No user."), RecordedAt = clock.GetUtcNow(),
+        });
+        await db.SaveChangesAsync(cancellationToken);
+        await audit.WriteAsync(Event(MedicineAddAction, visit), tx.GetDbTransaction(), cancellationToken);
+        await tx.CommitAsync(cancellationToken);
+        return await ViewAsync(visit, cancellationToken);
+    }
+
+    /// <summary>The visit, once the caller may work its intake and the patient is with the nurse. Null: no such visit.</summary>
+    async Task<ConsultVisit?> WithNurseAsync(Guid appointmentId, CancellationToken cancellationToken)
+    {
+        if (await visits.FindAsync(appointmentId, cancellationToken) is not { } visit) return null;
+        await RequireAsync(visit, cancellationToken);
+        return visit.State == AppointmentState.WithNurse ? visit : throw new IntakeConflictException("not_with_nurse");
+    }
+
     public async Task<IntakeView?> HandOffAsync(Guid appointmentId, CancellationToken cancellationToken = default)
     {
         if (await visits.FindAsync(appointmentId, cancellationToken) is not { } visit) return null;
@@ -187,6 +290,12 @@ public sealed class IntakeService(
     {
         var blockers = new List<string>();
         if ((await CurrentAsync(visit.Id, cancellationToken)).Values.Any(o => o.Flag is not null && !o.FlagKept)) blockers.Add("vitals_undecided");
+        // Every allergy needs a status set by the clinic (the one a patient or an import brought has none until a nurse looks), and a patient with
+        // none on record needs "no known allergies" confirmed on purpose at this visit, never assumed.
+        var listed = await db.Allergies.AsNoTracking().Where(a => a.PatientId == visit.PatientId && a.Kind == AllergyKind.Substance).Select(a => a.StatusSetAt).ToListAsync(cancellationToken);
+        if (listed.Contains(null)) blockers.Add("allergy_status_required");
+        else if (listed.Count == 0 && !await db.Intakes.AsNoTracking().AnyAsync(i => i.AppointmentId == visit.Id && i.NoKnownAllergiesAt != null, cancellationToken))
+            blockers.Add("allergies_not_confirmed");
         return blockers;
     }
 
@@ -195,8 +304,13 @@ public sealed class IntakeService(
         var row = await db.Intakes.AsNoTracking().SingleOrDefaultAsync(i => i.AppointmentId == visit.Id, cancellationToken);
         var vitals = (await CurrentAsync(visit.Id, cancellationToken)).OrderBy(p => p.Key).Select(p => p.Value)
             .Select(o => new IntakeVital(VitalRules.Kind(o.Code)!.Value, VitalRules.FromTenths(o.ValueTenths), o.Flag, o.PreviousTenths is { } p ? VitalRules.FromTenths(p) : null, o.PreviousAt, o.FlagKept, o.TakenAt)).ToList();
+        var allergies = await db.Allergies.AsNoTracking().Where(a => a.PatientId == visit.PatientId && a.Kind == AllergyKind.Substance).OrderBy(a => a.RecordedAt).ThenBy(a => a.Id)
+            .Select(a => new IntakeAllergy(a.Id, a.Substance!, a.Reaction, a.StatusSetAt == null ? null : a.Status, a.Source, a.StatusSetAt)).ToListAsync(cancellationToken);
+        var medicines = await db.MedicationStatements.AsNoTracking().Where(m => m.PatientId == visit.PatientId && m.AppointmentId == visit.Id).OrderBy(m => m.RecordedAt).ThenBy(m => m.Id)
+            .Select(m => new IntakeMedicine(m.Id, m.Name, m.Dose, m.Frequency, m.NeedsClarification, m.Source, m.RecordedAt)).ToListAsync(cancellationToken);
         var fresh = await visits.FindAsync(visit.Id, cancellationToken) ?? visit; // the handoff or a colleague may have moved the card
         return new IntakeView(visit.Id, visit.PatientId, visit.FacilityId, fresh.State.ToString(), row?.ChiefComplaint, vitals,
+            allergies, medicines, allergies.Count == 0 && row?.NoKnownAllergiesAt is not null,
             await db.IntakeEscalations.AnyAsync(e => e.AppointmentId == visit.Id, cancellationToken), row?.HandedOffAt is not null, await BlockersAsync(visit, cancellationToken));
     }
 

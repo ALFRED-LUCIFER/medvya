@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { SexAtBirth } from '../../patients/domain/directory';
+import type { ChartSource } from '../../patient360/domain/chart';
 
 // Nurse intake (MDV-P2-007). The server decides what is possible and what is flagged (VitalRules); this file only shapes the form and reads answers.
 export const vitalKinds = ['SystolicBp', 'DiastolicBp', 'Pulse', 'Temperature', 'OxygenSaturation', 'Weight'] as const;
@@ -12,9 +13,19 @@ export type VitalView = {
   kind: VitalKind; value: number; flag: VitalAlert | null; previousValue: number | null; previousAt: string | null; flagKept: boolean; recordedAt: string;
 };
 
+/** How sure the clinic is of an allergy (MDV-P2-008); null is "not set yet" and blocks the handoff. */
+export const allergyStatuses = ['Confirmed', 'PatientReported', 'Unknown', 'NotAnAllergy'] as const;
+export type AllergyStatus = (typeof allergyStatuses)[number];
+/** A nurse adds a new allergy as one of these; "Not an allergy" is for one someone else recorded. */
+export const newAllergyStatuses = ['Confirmed', 'PatientReported', 'Unknown'] as const satisfies readonly AllergyStatus[];
+
+export type AllergyView = { id: string; substance: string; reaction: string | null; status: AllergyStatus | null; source: ChartSource; statusSetAt: string | null };
+export type MedicineView = { id: string; name: string; dose: string | null; frequency: string | null; needsClarification: boolean; source: ChartSource; recordedAt: string };
+
 export type IntakeView = {
   appointmentId: string; patientId: string; facilityId: string; state: string; chiefComplaint: string | null;
-  vitals: VitalView[]; escalated: boolean; handedOff: boolean; blockers: string[];
+  vitals: VitalView[]; allergies: AllergyView[]; medicines: MedicineView[]; noKnownAllergiesConfirmed: boolean;
+  escalated: boolean; handedOff: boolean; blockers: string[];
 };
 
 export type IntakeScreen = {
@@ -30,6 +41,21 @@ export const intakeFormSchema = z.object({
   SystolicBp: reading, DiastolicBp: reading, Pulse: reading, Temperature: reading, OxygenSaturation: reading, Weight: reading,
 });
 export type IntakeForm = z.infer<typeof intakeFormSchema>;
+
+export const allergySchema = z.object({
+  substance: z.string().trim().min(1).max(100), reaction: z.string().trim().max(500), status: z.enum(newAllergyStatuses),
+});
+export type AllergyForm = z.infer<typeof allergySchema>;
+export const emptyAllergy: AllergyForm = { substance: '', reaction: '', status: 'PatientReported' };
+
+export const medicineSchema = z.object({
+  name: z.string().trim().min(1).max(100), dose: z.string().trim().max(50), frequency: z.string().trim().max(50), needsClarification: z.boolean(),
+});
+export type MedicineForm = z.infer<typeof medicineSchema>;
+export const emptyMedicine: MedicineForm = { name: '', dose: '', frequency: '', needsClarification: false };
+
+/** Blockers the screen says as the allergy gate, as opposed to the vitals one. */
+export const allergyBlockers = ['allergy_status_required', 'allergies_not_confirmed'] as const;
 
 export const escalateSchema = z.object({ reason: z.string().trim().min(1).max(500) });
 

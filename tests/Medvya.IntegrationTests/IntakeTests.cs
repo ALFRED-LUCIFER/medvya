@@ -105,7 +105,7 @@ public sealed class IntakeTests(PostgresFixture sql) : IClassFixture<PostgresFix
             saved.Vitals.Select(v => (v.Kind, v.Flag)));
         Assert.DoesNotContain(saved.Vitals, v => v.Kind is VitalKind.Temperature or VitalKind.Weight); // not taken: blank, never guessed
         Assert.All(saved.Vitals.Where(v => v.Flag is not null), v => Assert.False(v.FlagKept));
-        Assert.Equal(["vitals_undecided"], saved.Blockers);
+        Assert.Contains("vitals_undecided", saved.Blockers);
     }
 
     [Fact]
@@ -127,6 +127,7 @@ public sealed class IntakeTests(PostgresFixture sql) : IClassFixture<PostgresFix
     public async Task AFlaggedValueNeedsAReMeasureOrAnExplicitKeepBeforeHandoff()
     {
         var visit = await WithNurseAsync();
+        await Intake(h.Nurse).ConfirmNoKnownAllergiesAsync(visit); // the allergy gate is its own tests; here the patient has none
         await Intake(h.Nurse).RecordAsync(visit, Vitals(sys: 168, dia: 96));
 
         var blocked = await Assert.ThrowsAsync<IntakeConflictException>(() => Intake(h.Nurse).HandOffAsync(visit));
@@ -144,6 +145,7 @@ public sealed class IntakeTests(PostgresFixture sql) : IClassFixture<PostgresFix
 
         // Keep: explicit, and only for a flagged reading; saving the same value again does not undo the decision.
         var visit2 = await WithNurseAsync(h.SecondPatient, 10, 20);
+        await Intake(h.Nurse).ConfirmNoKnownAllergiesAsync(visit2); // the allergy gate is its own tests; here the patient has none
         await Intake(h.Nurse).RecordAsync(visit2, Vitals(spo2: 91));
         await Assert.ThrowsAsync<IntakeValidationException>(() => Intake(h.Nurse).KeepAsync(visit2, VitalKind.Pulse)); // nothing flagged to keep
         var kept = await Intake(h.Nurse).KeepAsync(visit2, VitalKind.OxygenSaturation);
@@ -170,6 +172,7 @@ public sealed class IntakeTests(PostgresFixture sql) : IClassFixture<PostgresFix
         Assert.Equal(AppointmentState.WithNurse, await StateAsync(visit));
 
         await Intake(h.Nurse).RecordAsync(visit, Vitals(pulse: 70));
+        await Intake(h.Nurse).ConfirmNoKnownAllergiesAsync(visit); // the allergy gate is its own tests; here the patient has none
         await Intake(h.Nurse).HandOffAsync(visit);
         Assert.Equal(AppointmentState.ReadyForDoctor, (await h.FrontDesk(h.Reception).MoveAsync(visit, new MoveVisit { State = AppointmentState.ReadyForDoctor })).State); // a repeat
 
@@ -195,6 +198,7 @@ public sealed class IntakeTests(PostgresFixture sql) : IClassFixture<PostgresFix
         // Open until the doctor takes the patient in.
         await Intake(h.Nurse).KeepAsync(visit, VitalKind.SystolicBp);
         await Intake(h.Nurse).KeepAsync(visit, VitalKind.DiastolicBp);
+        await Intake(h.Nurse).ConfirmNoKnownAllergiesAsync(visit); // the allergy gate is its own tests; here the patient has none
         await Intake(h.Nurse).HandOffAsync(visit);
         await h.Get<IEncounters>(h.Doctor).StartAsync(new StartEncounter(visit));
         Assert.Empty(await Intake(h.Doctor).EscalationsAsync(h.Facility));
@@ -227,6 +231,7 @@ public sealed class IntakeTests(PostgresFixture sql) : IClassFixture<PostgresFix
         Assert.Null(await Intake(h.Nurse).GetAsync(Guid.NewGuid()));
 
         await Intake(h.Nurse).RecordAsync(visit, Vitals(pulse: 70));
+        await Intake(h.Nurse).ConfirmNoKnownAllergiesAsync(visit); // the allergy gate is its own tests; here the patient has none
         await Intake(h.Nurse).HandOffAsync(visit);
         Assert.Equal("not_with_nurse", (await Assert.ThrowsAsync<IntakeConflictException>(() => Intake(h.Nurse).RecordAsync(visit, Vitals(pulse: 80)))).Code); // readings do not change after handoff
         var booked = await h.BookAsync(11);
@@ -239,10 +244,11 @@ public sealed class IntakeTests(PostgresFixture sql) : IClassFixture<PostgresFix
         var visit = await WithNurseAsync();
         await Intake(h.Nurse).GetAsync(visit);
         await Intake(h.Nurse).RecordAsync(visit, Vitals("Synthetic complaint", pulse: 70));
+        await Intake(h.Nurse).ConfirmNoKnownAllergiesAsync(visit); // the allergy gate is its own tests; here the patient has none
         await Intake(h.Nurse).HandOffAsync(visit);
         await using var audit = sql.Audit(h.Tenant);
         var rows = await audit.Events.Where(e => e.ResourceType == "intake").OrderBy(e => e.Id).ToListAsync();
-        Assert.Equal(["intake.read", "intake.record", "intake.handoff"], rows.Select(r => r.Action));
+        Assert.Equal(["intake.read", "intake.record", "intake.allergy.none", "intake.handoff"], rows.Select(r => r.Action));
         Assert.All(rows, r => Assert.Equal((AuditOutcome.Allowed, (Guid?)h.Patient, AuditPurpose.Treatment, (Guid?)visit, (Guid?)h.Nurse),
             (r.Outcome, r.PatientId, r.Purpose, r.ResourceId, r.ActorUserId)));
     }

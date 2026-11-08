@@ -51,6 +51,7 @@ journey('J3', {
     await page.getByRole('article', { name: 'Meera Iyer (synthetic)' }).getByRole('link', { name: 'Open intake for Meera Iyer (synthetic)' }).click();
     await page.getByRole('textbox', { name: 'Pulse' }).fill('72');
     await page.getByRole('button', { name: 'Save vitals' }).click();
+    await page.getByRole('button', { name: 'Confirm: no known allergies' }).click();
     await page.getByRole('button', { name: 'Hand off · Ready for doctor' }).click();
     await expect(page).toHaveURL(/\/nurse$/);
     await expect(page.getByRole('heading', { name: 'No one is with the nurse' })).toBeVisible();

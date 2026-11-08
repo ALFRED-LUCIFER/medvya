@@ -109,6 +109,7 @@ public sealed class IntakeEndpointTests(PostgresFixture sql) : IClassFixture<Pos
         using (var escalate = await Client(h.Nurse).PostAsJsonAsync(U($"/v1/intake/{visit}/escalate"), new { reason = "Headache with high BP (synthetic)" })) Assert.Equal(HttpStatusCode.OK, escalate.StatusCode);
         using (var urgent = await Client(h.Doctor).GetAsync(U($"/v1/intake-escalations?facilityId={h.Facility}")))
             Assert.Equal("Headache with high BP (synthetic)", (await Json(urgent))[0].GetProperty("reason").GetString());
+        using (var none = await Client(h.Nurse).PostAsync(U($"/v1/intake/{visit}/no-known-allergies"), null)) Assert.Equal(HttpStatusCode.OK, none.StatusCode);
         using (var handed = await Client(h.Nurse).PostAsync(U($"/v1/intake/{visit}/handoff"), null))
         {
             var body = await Json(handed);

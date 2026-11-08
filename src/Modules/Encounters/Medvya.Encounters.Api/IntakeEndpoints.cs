@@ -41,6 +41,19 @@ public static class IntakeEndpoints
         intake.MapPost("/{appointmentId:guid}/escalate", async (Guid appointmentId, [FromBody] EscalateIntake? body, [FromServices] IIntake service, CancellationToken ct) =>
                 await service.EscalateAsync(appointmentId, body ?? new EscalateIntake(null), ct) is { } view ? Results.Ok(view) : Results.NotFound())
             .AuditedByUseCase("intake.escalate", "intake", AuditPurpose.Treatment).AddEndpointFilter(MapErrors);
+        // Allergies and patient-reported medicines (MDV-P2-008). The handoff below is impossible until every allergy has a status.
+        intake.MapPost("/{appointmentId:guid}/allergies", async (Guid appointmentId, [FromBody] AddAllergy? body, [FromServices] IIntake service, CancellationToken ct) =>
+                await service.AddAllergyAsync(appointmentId, body ?? new AddAllergy(null, null, null), ct) is { } view ? Results.Ok(view) : Results.NotFound())
+            .AuditedByUseCase("intake.allergy.add", "intake", AuditPurpose.Treatment).AddEndpointFilter(MapErrors);
+        intake.MapPut("/{appointmentId:guid}/allergies/{allergyId:guid}/status", async (Guid appointmentId, Guid allergyId, [FromBody] SetAllergyStatus? body, [FromServices] IIntake service, CancellationToken ct) =>
+                await service.SetAllergyStatusAsync(appointmentId, allergyId, body ?? new SetAllergyStatus(null), ct) is { } view ? Results.Ok(view) : Results.NotFound())
+            .AuditedByUseCase("intake.allergy.status", "intake", AuditPurpose.Treatment).AddEndpointFilter(MapErrors);
+        intake.MapPost("/{appointmentId:guid}/no-known-allergies", async (Guid appointmentId, [FromServices] IIntake service, CancellationToken ct) =>
+                await service.ConfirmNoKnownAllergiesAsync(appointmentId, ct) is { } view ? Results.Ok(view) : Results.NotFound())
+            .AuditedByUseCase("intake.allergy.none", "intake", AuditPurpose.Treatment).AddEndpointFilter(MapErrors);
+        intake.MapPost("/{appointmentId:guid}/medicines", async (Guid appointmentId, [FromBody] AddMedicine? body, [FromServices] IIntake service, CancellationToken ct) =>
+                await service.AddMedicineAsync(appointmentId, body ?? new AddMedicine(null, null, null, false), ct) is { } view ? Results.Ok(view) : Results.NotFound())
+            .AuditedByUseCase("intake.medicine.add", "intake", AuditPurpose.Treatment).AddEndpointFilter(MapErrors);
         intake.MapPost("/{appointmentId:guid}/handoff", async (Guid appointmentId, [FromServices] IIntake service, CancellationToken ct) =>
                 await service.HandOffAsync(appointmentId, ct) is { } view ? Results.Ok(view) : Results.NotFound())
             .AuditedByUseCase("intake.handoff", "intake", AuditPurpose.Treatment).AddEndpointFilter(MapErrors);

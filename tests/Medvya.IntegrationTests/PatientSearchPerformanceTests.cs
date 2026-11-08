@@ -82,7 +82,7 @@ public sealed class PatientSearchPerformanceTests(PostgresFixture sql, ITestOutp
         }
 
         // Name prefix, a spelling variant, a transposed and a missing letter, a partial two-word name, phone, MRN, exact ABHA, and the directory with its filters.
-        string?[] queries = ["kavit", "mohamed", "krsihnan", "venkatsh", "sreen kumar", "+91 90 0011 2345", "112345", "91 0000 0000 0099", null];
+        string?[] queries = ["kavit", "mohamed", "krsihnan", "venkatsh", "sreen kumar", "+91 90 0011 2345", "112345", "0011 2345", "91 0000 0000 0099", null];
         var filters = new[] { "All", "Incomplete", "Recent" };
         async Task<long> Search(string? query, string filter)
         {

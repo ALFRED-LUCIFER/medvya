@@ -87,6 +87,7 @@ test('a merge review request is sent as the decision; "Use existing record" regi
   expect(saves[0]!.postDataJSON()).toMatchObject({ duplicates: { decision: 'MergeReview', candidateIds: [existingId] } });
 
   await page.getByRole('button', { name: 'Register another' }).click();
+  await expect(page.getByLabel(/^Full name/)).toBeFocused(); // a busy desk types the next patient without the mouse
   await typeDeepak(page);
   await page.route(`**/v1/patients/${existingId}`, r => r.fulfill({ status: 404, json: {} }));
   await page.getByRole('link', { name: 'Use existing record' }).click();

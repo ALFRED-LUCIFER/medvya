@@ -8,6 +8,7 @@ Front-desk search (`POST /v1/patients/search`, `PatientRegistry.SearchAsync`, MD
 |---|---|---|
 | MRN | exact on the unique `(TenantId, FacilityId, Mrn)` index; the survivors of merged records with that MRN are looked up first, by the same index | yes |
 | Phone | exact `Mobile` or `AlternatePhone` | `Mobile` index; the alternate number is filtered |
+| 4 to 15 digits (not a full phone, ABHA or Emirates ID) | an MRN first (6 digits or fewer: the MRN index, merged records to their survivor); only with no MRN hit, the digits as part of `Mobile` or `AlternatePhone` (`LIKE`, a filter on the facility's rows, never an index) or as an Aadhaar last 4 (blind index). A typed 12-digit Aadhaar is cut to its last 4 in memory; the rest is dropped, never stored or logged | MRN index, then a filter |
 | ABHA, Emirates ID | HMAC blind index (ADR-012); the value is never compared in plaintext | yes |
 | Name | the stored **search key** (below): every word is a substring of it (`LIKE`); ranked words-together-at-a-word-start first, then trigram similarity, then A to Z | tenant and facility index, then a filter |
 | Name, fewer than 3 exact hits | the same, but a word may also be near a word of the key (`word_similarity` of at least 0.6) or have two adjacent letters swapped (`krsihnan` finds `Krishnan`). Exact hits still rank first. One pass, at most 1,000 matches (the paging limit) | filter |

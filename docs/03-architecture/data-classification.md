@@ -153,6 +153,7 @@ Not clinic data, so no tenant. Of the app roles only `medvya_leads` reaches the 
 | Column | Stored as | Why |
 |---|---|---|
 | PATIENT_IDENTIFIER.value (ABHA number, ABHA address, Emirates ID, passport) | `LookupValue` ciphertext + `LookupIndex` blind index | Exact-match search at the desk; passport for the duplicate check only (MDV-P1-016) |
+| PATIENT_IDENTIFIER.value (Aadhaar last 4) | randomized `DisplayValue` ciphertext + `LookupIndex` blind index (MED-FEAT-001, #931) | Desk search by the last 4 (a typed 12-digit Aadhaar is cut to its last 4 on the server and dropped); rows registered earlier have no index |
 | PATIENT_IDENTIFIER.value (Aadhaar last 4, visa file) | `DisplayValue` ciphertext | Display only, no lookup |
 | PAYER_COVERAGE.member_no | `MemberNumber` ciphertext | Shown to the desk; no lookup yet (add a blind index when eligibility needs exact match) |
 

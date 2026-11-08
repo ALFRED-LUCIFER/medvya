@@ -132,19 +132,23 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
         var now = clock.GetUtcNow();
 
         var patients = FacilityPatients();
+        // Digits that are an MRN win (MDV-P1-017: the MRN of a merged record finds the survivor); only without an MRN hit are they part of a phone or an Aadhaar last 4.
+        var mrn = term.Kind == SearchKind.Mrn ? term.Value
+            : term.Kind == SearchKind.Number && term.Value!.Length <= Mrn.Digits ? Mrn.Format(int.Parse(term.Value, System.Globalization.CultureInfo.InvariantCulture)) : null;
         // The survivors of merged records with this MRN, looked up first on the unique MRN index: a correlated EXISTS in the same OR made the MRN search read the whole facility (0.9 s at 1,000,000 patients).
-        var survivors = term.Kind == SearchKind.Mrn
-            ? await db.Patients.AsNoTracking().Where(m => m.FacilityId == FacilityId() && m.Mrn == term.Value && m.MergedIntoPatientId != null).Select(m => m.MergedIntoPatientId!.Value).ToListAsync(cancellationToken)
-            : [];
+        var survivors = mrn is null ? []
+            : await db.Patients.AsNoTracking().Where(m => m.FacilityId == FacilityId() && m.Mrn == mrn && m.MergedIntoPatientId != null).Select(m => m.MergedIntoPatientId!.Value).ToListAsync(cancellationToken);
+        if (term.Kind == SearchKind.Number && mrn is not null && await patients.AnyAsync(p => p.Mrn == mrn || survivors.Contains(p.Id), cancellationToken)) term = new(SearchKind.Mrn, mrn);
         var tokens = term.Kind == SearchKind.Name ? await NameTokensAsync(term.Value!, cancellationToken) : [];
         patients = term.Kind switch
         {
             SearchKind.Name => Contains(patients, tokens),
             SearchKind.Phone => patients.Where(p => p.Mobile == term.Value || p.AlternatePhone == term.Value),
             // Either MRN of a merged pair finds the survivor (MDV-P1-017); the merged record itself is hidden below.
-            SearchKind.Mrn => patients.Where(p => p.Mrn == term.Value || survivors.Contains(p.Id)),
+            SearchKind.Mrn => patients.Where(p => p.Mrn == mrn || survivors.Contains(p.Id)),
             // Exact match on the HMAC blind index (MDV-P0-035); the value itself is ciphertext and never compared in SQL.
             SearchKind.Identifier => IdentifierMatch(patients, term.Scheme!.Value, term.Value!),
+            SearchKind.Number => NumberMatch(patients, term.Value!),
             _ => patients,
         };
         IQueryable<Patient> Filtered(IQueryable<Patient> q) => search.Filter switch
@@ -179,6 +183,19 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
         var items = rows.Select(p => new PatientSearchRow(p.Id, Initials(p.FullName), CountryRules.AgeOn(CountryRules.For(p.CountryCode).Today(now), p.DateOfBirth),
             p.DateOfBirthEstimated, p.SexAtBirth, Tail(p.Mrn), p.Status)).ToList();
         return new(term.Kind, items, search.Page, PatientSearch.PageSize, total);
+    }
+
+    /// <summary>
+    /// Digits (4 to 15) that are not an MRN: found inside a mobile or alternate number, or the Aadhaar last 4. An MRN hit is decided first, by the caller.
+    /// Phone is a LIKE on the facility's rows (row-level security keeps it off any index, see below); digits only, so no wildcard can enter the pattern.
+    /// </summary>
+    IQueryable<Patient> NumberMatch(IQueryable<Patient> patients, string digits)
+    {
+        var like = "%" + digits + "%";
+        // Only the 4-digit form can be an Aadhaar last 4; an empty array equals no stored index, and no key is touched for other lengths.
+        var aadhaar = digits.Length == 4 ? db.LookupIndexFor(digits) : Array.Empty<byte>();
+        return patients.Where(p => EF.Functions.Like(p.Mobile, like) || (p.AlternatePhone != null && EF.Functions.Like(p.AlternatePhone, like))
+            || db.Identifiers.Any(i => i.PatientId == p.Id && i.Scheme == IdentifierScheme.AadhaarLast4 && EF.Property<byte[]>(i, NationalIdColumns.LookupIndex) == aadhaar));
     }
 
     // Why no trigram index: row-level security keeps pg_trgm's operators (LIKE, %, <%) out of every index, because they are not "leakproof"

@@ -2,6 +2,7 @@ using Medvya.Audit.Infrastructure.Persistence;
 using Medvya.Billing.Infrastructure.Persistence;
 using Medvya.BuildingBlocks.Domain;
 using Medvya.BuildingBlocks.Infrastructure;
+using Medvya.Encounters.Infrastructure.Persistence;
 using Medvya.Patients.Infrastructure.Persistence;
 using Medvya.Notifications.Infrastructure.Persistence;
 using Medvya.Scheduling.Infrastructure.Persistence;
@@ -78,6 +79,8 @@ public sealed class PostgresFixture : IAsyncLifetime
         new(new DbContextOptionsBuilder<BillingDbContext>().UseNpgsql(AdminConnectionString).Options, new FixedTenant(tenantId));
 
     public SchedulingDbContext Scheduling(Guid? tenantId) => new(Options<SchedulingDbContext>(tenantId).Options, new FixedTenant(tenantId));
+
+    public EncountersDbContext Encounters(Guid? tenantId) => new(Options<EncountersDbContext>(tenantId).Options, new FixedTenant(tenantId));
 
     public NotificationsDbContext Notifications(Guid? tenantId) => new(Options<NotificationsDbContext>(tenantId).Options, new FixedTenant(tenantId));
 

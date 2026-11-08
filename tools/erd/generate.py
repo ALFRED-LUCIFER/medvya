@@ -39,6 +39,7 @@ PLANNED_TO_BUILT = {
     'APPOINTMENT': 'scheduling.Appointments', 'WAITLIST_ENTRY': 'scheduling.Waitlist', 'QUEUE_TOKEN': 'scheduling.QueueTokens', 'DOC_SEQUENCE': 'billing.DocSequences',
     'AUDIT_EVENT': 'audit.AuditEvents', 'OUTBOX_EVENT': 'scheduling.OutboxEvents', 'NOTIFICATION': 'notifications.Notifications',
     'NOTIFICATION_ATTEMPT': 'notifications.Attempts', 'ENCOUNTER': 'encounters.Encounters',
+    'OBSERVATION': 'encounters.Observations', 'PROBLEM': 'encounters.Problems', 'ALLERGY': 'encounters.Allergies', 'MEDICATION_STATEMENT': 'encounters.MedicationStatements',
 }
 # where the built table covers only part of the planned entity
 PARTIAL = {

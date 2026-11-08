@@ -384,6 +384,29 @@
         }
       }
     },
+    "/v1/patients/{patientId}/chart": {
+      "get": {
+        "tags": [
+          "EncounterEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "patientId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/v1/schedule": {
       "get": {
         "tags": [
@@ -7662,13 +7685,13 @@
       "name": "AccessRequestEndpoints"
     },
     {
+      "name": "EncounterEndpoints"
+    },
+    {
       "name": "AccessLogEndpoints"
     },
     {
       "name": "PatientEndpoints"
-    },
-    {
-      "name": "EncounterEndpoints"
     }
   ]
 }

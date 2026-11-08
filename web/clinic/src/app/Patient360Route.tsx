@@ -9,5 +9,5 @@ export default function Patient360Route({ backPath }: { backPath: string }) {
 }
 
 function Chart({ patientId, backPath }: { patientId: string; backPath: string }) {
-  return <Patient360Page {...usePatient360Controller(patientId)} backPath={backPath} consultPath={id => `/consult/${id}`} />;
+  return <Patient360Page {...usePatient360Controller(patientId)} backPath={backPath} consultPath={id => `/consult/${id}`} timelinePath={`/patients/${patientId}/timeline`} />;
 }

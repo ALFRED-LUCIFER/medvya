@@ -2,6 +2,8 @@ using Medvya.Audit.Api;
 using Medvya.Audit.Domain;
 using Medvya.BuildingBlocks.Domain;
 using Medvya.Encounters.Application;
+using Medvya.Encounters.Domain;
+using Medvya.Identity.Application;
 using Medvya.Patients.Application;
 using Medvya.Patients.Domain;
 using Medvya.Scheduling.Application;
@@ -26,6 +28,14 @@ public sealed record EncounterBanner(EncounterView Encounter, BannerPatient Pati
 
 /// <summary>Patient 360 (MDV-P2-004): the banner identity and the verified chart, each fact with its source.</summary>
 public sealed record Patient360(BannerPatient Patient, bool TreatmentConsent, string TimeZone, PatientChart Chart);
+
+/// <summary>A timeline entry as the screen shows it: the author's name, never an id the screen would look up.</summary>
+public sealed record TimelineEntryView(Guid Id, TimelineKind Kind, DateTimeOffset At, string Code, string? Title, string? Detail, string? Author, ChartSource Source);
+
+/// <summary><see cref="Next"/> goes back as <c>before</c> for "Load earlier"; null at the end.</summary>
+public sealed record TimelineResponse(IReadOnlyList<TimelineEntryView> Entries, string? Next, string TimeZone);
+
+public sealed record TrendsResponse(IReadOnlyList<TrendView> Trends, string TimeZone);
 
 public static class EncounterEndpoints
 {
@@ -56,7 +66,64 @@ public static class EncounterEndpoints
             .RequireCapability(Capability.Patient360Chart, Access.Read, Access.Limited, Access.Full, Access.Sign)
             .AuditedByUseCase("patient.chart.read", "patient", AuditPurpose.Treatment, patientRouteKey: "patientId")
             .AddEndpointFilter(MapErrors);
+
+        // E-02. Filters and the cursor are codes and ids, never patient data, so they may travel in the query string.
+        app.MapGet("/v1/patients/{patientId:guid}/timeline", Timeline)
+            .RequireCapability(Capability.Patient360Chart, Access.Read, Access.Limited, Access.Full, Access.Sign)
+            .AuditedByUseCase("patient.timeline.read", "patient", AuditPurpose.Treatment, patientRouteKey: "patientId")
+            .AddEndpointFilter(MapErrors);
+        app.MapGet("/v1/patients/{patientId:guid}/trends", Trends)
+            .RequireCapability(Capability.Patient360Chart, Access.Read, Access.Limited, Access.Full, Access.Sign)
+            .AuditedByUseCase("patient.trends.read", "patient", AuditPurpose.Treatment, patientRouteKey: "patientId")
+            .AddEndpointFilter(MapErrors);
         return app;
+    }
+
+    static async Task<IResult> Timeline(Guid patientId, string? kinds, string? source, string? before, int? limit, [FromServices] IPatientTimeline timeline,
+        [FromServices] IPatientDirectory patients, [FromServices] IStaffUsers users, [FromServices] IFacilityDirectory facilities, [FromServices] ICurrentFacility current, CancellationToken ct)
+    {
+        if (current.FacilityId is not { } facilityId) return Results.Problem(statusCode: StatusCodes.Status403Forbidden, title: "No facility context");
+        var parsedKinds = new List<TimelineKind>();
+        foreach (var k in (kinds ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries))
+        {
+            if (!Enum.TryParse<TimelineKind>(k, out var kind) || !Enum.IsDefined(kind)) return BadFilter();
+            parsedKinds.Add(kind);
+        }
+        ChartSource? parsedSource = null;
+        if (source is not null)
+        {
+            if (!Enum.TryParse<ChartSource>(source, out var s) || !Enum.IsDefined(s)) return BadFilter();
+            parsedSource = s;
+        }
+        if (!TryCursor(before, out var cursor)) return BadFilter();
+        if (!(await patients.SummariesAsync([patientId], ct)).ContainsKey(patientId)) return Results.NotFound();
+        var page = await timeline.PageAsync(patientId, facilityId, new(parsedKinds.ToHashSet(), parsedSource, cursor, limit ?? TimelineQuery.PageSize), ct);
+        var names = await users.DisplayNamesAsync([.. page.Entries.Where(e => e.AuthorUserId is not null).Select(e => e.AuthorUserId!.Value).Distinct()], ct);
+        var last = page.HasMore ? page.Entries[^1] : null;
+        return Results.Ok(new TimelineResponse(
+            [.. page.Entries.Select(e => new TimelineEntryView(e.Id, e.Kind, e.At, e.Code, e.Title, e.Detail, e.AuthorUserId is { } a ? names.GetValueOrDefault(a) : null, e.Source))],
+            last is null ? null : $"{last.At.UtcTicks}.{last.Id}", (await facilities.FindAsync(facilityId, ct) ?? throw new InvalidOperationException("Session facility not in this tenant.")).TimeZone));
+    }
+
+    static IResult BadFilter() => Results.ValidationProblem(new Dictionary<string, string[]> { ["filter"] = ["invalid"] });
+
+    static bool TryCursor(string? text, out TimelineCursor? cursor)
+    {
+        cursor = null;
+        if (string.IsNullOrEmpty(text)) return true;
+        var parts = text.Split('.', 2);
+        if (parts.Length != 2 || !long.TryParse(parts[0], out var ticks) || ticks < 0 || ticks > DateTime.MaxValue.Ticks || !Guid.TryParse(parts[1], out var id)) return false;
+        cursor = new(new DateTimeOffset(ticks, TimeSpan.Zero), id);
+        return true;
+    }
+
+    static async Task<IResult> Trends(Guid patientId, [FromServices] IPatientTimeline timeline, [FromServices] IPatientDirectory patients, [FromServices] IFacilityDirectory facilities,
+        [FromServices] ICurrentFacility current, CancellationToken ct)
+    {
+        if (current.FacilityId is not { } facilityId) return Results.Problem(statusCode: StatusCodes.Status403Forbidden, title: "No facility context");
+        if (!(await patients.SummariesAsync([patientId], ct)).ContainsKey(patientId)) return Results.NotFound();
+        return Results.Ok(new TrendsResponse(await timeline.TrendsAsync(patientId, facilityId, ct),
+            (await facilities.FindAsync(facilityId, ct) ?? throw new InvalidOperationException("Session facility not in this tenant.")).TimeZone));
     }
 
     static async Task<IResult> Chart(Guid patientId, [FromServices] IPatientChart chart, [FromServices] IPatientDirectory patients, [FromServices] IPatientConsents consents,

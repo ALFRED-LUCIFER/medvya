@@ -58,6 +58,7 @@ flowchart LR
   Audit -->|"Application"| Patients
   Audit -->|"Api"| Tenancy
   Encounters -->|"Api, Application"| Audit
+  Encounters -->|"Application"| Identity
   Encounters -->|"Application"| Patients
   Encounters -->|"Application"| Scheduling
   Encounters -->|"Api, Application"| Tenancy

@@ -8,7 +8,7 @@ import { bannerAllergies, pathOf, provenanceOf, sparkBox, trendLines } from '../
 
 type Props = {
   data: Patient360 | null; loading: boolean; notFound: boolean; refusal: ClinicalRefusal | null; failed: boolean;
-  backPath: string; consultPath: (encounterId: string) => string;
+  backPath: string; consultPath: (encounterId: string) => string; timelinePath: string;
 };
 
 const sex = { Female: 'F', Male: 'M', Other: 'X' } as const;
@@ -23,15 +23,12 @@ export default function Patient360Page(p: Props) {
   if (p.loading) return <p role="status">{t('patient360.loading')}</p>;
   if (p.refusal) return <Message title={t('patient360.refused.title')} body={t(p.refusal.canRequest ? 'consult.refused.ask' : 'patient360.refused.role')} backPath={p.backPath} />;
   if (p.notFound || p.failed || !p.data) return <Message title={t(p.notFound ? 'patient360.notFound' : 'patient360.loadFailed')} backPath={p.backPath} />;
-  const { patient, chart, treatmentConsent, timeZone } = p.data;
+  const { chart, treatmentConsent, timeZone } = p.data;
   const trends = trendLines(chart.trends);
   return (
     <div className="flex flex-col gap-4">
       <h1 className="sr-only">{t('patient360.title')}</h1>
-      <IdentityBanner patient={{
-        name: patient.fullName, age: patient.ageYears, sex: sex[patient.sexAtBirth], mrn: patient.mrn, dob: patient.dateOfBirth,
-        allergies: bannerAllergies(chart),
-      }} />
+      <PatientBanner data={p.data} />
       <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
         <span className="inline-flex items-center gap-1.5">
           {treatmentConsent ? <><CircleCheck aria-hidden className="size-4" />{t('consult.banner.consentGiven')}</> : <><CircleAlert aria-hidden className="size-4" />{t('consult.banner.consentNotRecorded')}</>}
@@ -39,6 +36,7 @@ export default function Patient360Page(p: Props) {
         {chart.openEncounterId
           ? <Link to={p.consultPath(chart.openEncounterId)} className={buttonVariants({ variant: 'navy', className: 'min-h-11' })}>{t('consult.open')}</Link>
           : <span className="text-muted-foreground">{t('patient360.startFromBoard')}</span>}
+        <Link to={p.timelinePath} className={buttonVariants({ variant: 'outline', className: 'min-h-11' })}>{t('timeline.open')}</Link>
         <Link to={p.backPath} className={buttonVariants({ variant: 'outline', className: 'min-h-11' })}>{t('patient360.back')}</Link>
       </div>
       <div className="grid gap-4 md:grid-cols-2">
@@ -88,6 +86,13 @@ export default function Patient360Page(p: Props) {
         </Card>
       </div>
     </div>
+  );
+}
+
+/** The identity banner with the allergy state, shared by every Patient 360 screen (chart, timeline, documents). */
+export function PatientBanner({ data: { patient, chart } }: { data: Patient360 }) {
+  return (
+    <IdentityBanner patient={{ name: patient.fullName, age: patient.ageYears, sex: sex[patient.sexAtBirth], mrn: patient.mrn, dob: patient.dateOfBirth, allergies: bannerAllergies(chart) }} />
   );
 }
 

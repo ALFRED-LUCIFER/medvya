@@ -20,6 +20,7 @@ import ShellMessage, { ComingSoon } from '../features/shell/components/ShellMess
 import { allows, navItems, patientDirectory } from '../features/shell/domain/navigation';
 import { useShellController } from '../features/shell/hooks/useShellController';
 import FrontDeskRoute from './FrontDeskRoute';
+import GlobalSearchRoute from './GlobalSearchRoute';
 import NotificationsRoute from './NotificationsRoute';
 import ScheduleRoute from './ScheduleRoute';
 
@@ -104,6 +105,8 @@ export default function App({ locale, onLocaleChange }: Props) {
         <Route path="/choose-facility" element={picker} />
         <Route element={
           <AppShell {...account} role={active.role} facilityName={active.facilityName} groups={shell.groups} tabs={shell.tabs} searchPath={searchPath}
+            globalSearch={searchPath && ['Read', 'Limited', 'Full', 'Sign'].includes(active.capabilities.Patient360Chart ?? 'None')
+              ? <GlobalSearchRoute recordBase={searchPath} startVisitPath={walkInPath} bookPath={pathOf('schedule')} registerPath={registerPath} /> : undefined}
             notifications={allows(active, patientDirectory) || allows(active, { capability: 'StaffRolesIntegrations', access: ['Config'] } as const) ? <NotificationsRoute facilityId={active.facilityId} online={online} /> : undefined}
             languageSwitcher={<LanguageSwitcher inline value={locale} onChange={onLocaleChange} />}>
             {active.licencePending && <LicenceNotice />}

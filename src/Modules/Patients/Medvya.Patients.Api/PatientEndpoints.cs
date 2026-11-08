@@ -1,4 +1,6 @@
+using System.Text.Json.Serialization;
 using Medvya.Audit.Api;
+using Medvya.Audit.Domain;
 using Medvya.BuildingBlocks.Domain;
 using Medvya.Patients.Application;
 using Medvya.Patients.Domain;
@@ -15,6 +17,13 @@ namespace Medvya.Patients.Api;
 
 /// <summary>Search text travels in the POST body: names, phones and IDs are PHI and never go in a URL or query string.</summary>
 public sealed record SearchRequest(string? Query = null, DirectoryFilter Filter = DirectoryFilter.All, int Page = 1);
+
+/// <summary>What the signed-in clinician may do with a ⌘K result (MDV-P2-003): open it, ask for access (or already did), or nothing (the role cannot treat patients).</summary>
+[JsonConverter(typeof(JsonStringEnumConverter<LookupAccess>))]
+public enum LookupAccess { Open, CanRequest, RequestPending, NoAccess }
+
+/// <summary>A ⌘K result: initials, age and the MRN tail only (never a name, phone or identifier) and whether the chart may be opened.</summary>
+public sealed record LookupRow(Guid Id, string Initials, int AgeYears, bool AgeEstimated, string MrnTail, LookupAccess Access);
 
 /// <summary>National and insurance numbers are masked to their last four characters (data-classification.md: masked in UI).</summary>
 public sealed record IdentifierView(IdentifierScheme Scheme, string LastFour, DateOnly? ExpiresOn);
@@ -101,6 +110,11 @@ public static class PatientEndpoints
         patients.MapPost("/search", Search)
             .RequireUserRateLimit(SearchRateLimit) // before the audit filter: a refused search reads nothing
             .Audited("patient.search", "patient", Purpose);
+
+        // Global search (MDV-P2-003): the same audited, rate-limited search, for treatment, with the care-relationship verdict per row.
+        patients.MapPost("/lookup", Lookup)
+            .RequireUserRateLimit(SearchRateLimit)
+            .Audited("patient.search", "patient", AuditPurpose.Treatment);
 
         // shortcut: per-user limits only; no alert on unusual read volume (e.g. one user opening hundreds of records a day) until the
         // practice access log exists (MDV-P1-035).
@@ -270,6 +284,44 @@ public static class PatientEndpoints
         catch (PatientValidationException e)
         {
             return Invalid(e);
+        }
+    }
+
+    /// <summary>Rows a ⌘K overlay shows: each one is checked against the care relationship, so the list stays short.</summary>
+    const int LookupRows = 8;
+
+    // shortcut: one clinical-access check per row (at most LookupRows); batch them if the p95 budget (300 ms) is ever at risk.
+    static async Task<IResult> Lookup([FromBody] SearchRequest? request, [FromServices] IStaffAccess staff, [FromServices] ICurrentFacility facility,
+        [FromServices] IClinicalAccess clinical, [FromServices] IPatientRegistry registry, CancellationToken ct)
+    {
+        if (await staff.TenantCountryAsync(ct) is not { } country || facility.FacilityId is not { } facilityId)
+            return Results.Problem(statusCode: StatusCodes.Status403Forbidden, title: "No facility context");
+        // Nothing typed lists nothing: this is a search box, not a directory.
+        if (string.IsNullOrWhiteSpace(request?.Query)) return Results.Ok(new { items = Array.Empty<LookupRow>(), total = 0 });
+        try
+        {
+            var found = await registry.SearchAsync(new(country, request.Query, DirectoryFilter.All, 1), ct);
+            List<LookupRow> rows = [];
+            foreach (var r in found.Items.Take(LookupRows))
+                rows.Add(new(r.Id, r.Initials, r.AgeYears, r.AgeEstimated, r.MrnTail, await AccessOf(clinical, r.Id, facilityId, ct)));
+            return Results.Ok(new { items = rows, total = found.Total });
+        }
+        catch (PatientValidationException e)
+        {
+            return Invalid(e);
+        }
+    }
+
+    static async Task<LookupAccess> AccessOf(IClinicalAccess clinical, Guid patientId, Guid facilityId, CancellationToken ct)
+    {
+        try
+        {
+            await clinical.RequireAsync(patientId, facilityId, Capability.Patient360Chart, [Access.Read, Access.Limited, Access.Full, Access.Sign], ct);
+            return LookupAccess.Open;
+        }
+        catch (ClinicalAccessDeniedException e)
+        {
+            return !e.CanRequest ? LookupAccess.NoAccess : e.RequestPending ? LookupAccess.RequestPending : LookupAccess.CanRequest;
         }
     }
 

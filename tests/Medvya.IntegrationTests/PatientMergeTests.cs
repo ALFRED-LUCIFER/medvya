@@ -171,7 +171,10 @@ public sealed class PatientMergeTests(PostgresFixture sql) : IClassFixture<Postg
 
         foreach (var mrn in new[] { survivor.Mrn, merged.Mrn })
             Assert.Equal(survivor.PatientId, (await Registry(reception).SearchAsync(new("IN", mrn))).Items.Single().Id);
-        Assert.Equal(lookalike.PatientId, (await Registry(reception).SearchAsync(new("IN", "9" + merged.Mrn))).Items.Single().Id); // 7 digits cannot be an MRN: a phone fragment
+        // 7 digits cannot be an MRN: a phone fragment. Other tests' patients share this database, so other phones may contain the digits too: no Single().
+        var byPhoneFragment = (await Registry(reception).SearchAsync(new("IN", "9" + merged.Mrn))).Items;
+        Assert.Contains(byPhoneFragment, i => i.Id == lookalike.PatientId);
+        Assert.DoesNotContain(byPhoneFragment, i => i.Id == survivor.PatientId || i.Id == merged.PatientId);
 
         Assert.True(await Merges(admin).UndoAsync(request));
         Assert.Equal(merged.PatientId, (await Registry(reception).SearchAsync(new("IN", merged.Mrn))).Items.Single().Id);

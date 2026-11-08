@@ -1182,6 +1182,8 @@
   "schedule.filter.all": "सभी डॉक्टर और संसाधन",
   "schedule.bookNext": "अपॉइंटमेंट बुक करें",
   "schedule.legend": "रंगों और आकारों का अर्थ",
+  "schedule.drawer": "अपॉइंटमेंट पैनल",
+  "schedule.discard": "इस बुकिंग को छोड़ें? आपके चुने मरीज़ और कारण मिट जाएँगे।",
   "schedule.weekOf": "{name} का सप्ताह",
   "schedule.week.bookedOf": "{capacity} में से बुक",
   "schedule.week.appointments": "{day} के अपॉइंटमेंट",

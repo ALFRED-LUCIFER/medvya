@@ -45,6 +45,21 @@ for (const [w, h] of [[768, 1024], [1024, 768]] as const)
     await expect(panel.getByRole('button', { name: 'Cancel' })).toBeVisible();
     await page.mouse.click(20, h - 20); // the scrim, beside the drawer
     await expect(panel.getByRole('button', { name: 'Cancel' })).toBeHidden();
+
+    // Screen readers get a modal dialog; a typed reason is not lost to a stray Escape or scrim tap (MDV-P1-036).
+    await slot.click();
+    const dialog = page.getByRole('dialog', { name: 'Appointment panel' });
+    await expect(dialog).toHaveAttribute('aria-modal', 'true');
+    await dialog.getByLabel("Reason in the patient's words (optional)").fill('Synthetic: sugar high');
+    const asked: string[] = [];
+    let accept = false;
+    page.on('dialog', d => { asked.push(d.message()); void (accept ? d.accept() : d.dismiss()); });
+    await page.keyboard.press('Escape');
+    await expect(dialog).toBeVisible(); // kept: the desk said no
+    accept = true;
+    await page.mouse.click(20, h - 20);
+    await expect(dialog).toBeHidden();
+    expect(asked).toHaveLength(2);
   });
 
 test.describe('touch tablet', () => {

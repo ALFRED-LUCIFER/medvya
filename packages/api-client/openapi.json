@@ -486,6 +486,134 @@
         }
       }
     },
+    "/v1/patients/{patientId}/documents": {
+      "get": {
+        "tags": [
+          "DocumentEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "patientId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "DocumentEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "patientId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/documents/{documentId}/view-link": {
+      "post": {
+        "tags": [
+          "DocumentEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "documentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/documents/{documentId}": {
+      "patch": {
+        "tags": [
+          "DocumentEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "documentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/UpdateDocumentRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/v1/schedule": {
       "get": {
         "tags": [
@@ -5043,6 +5171,15 @@
           }
         }
       },
+      "DocumentType": {
+        "enum": [
+          "LabReport",
+          "Imaging",
+          "Prescription",
+          "Referral",
+          "Other"
+        ]
+      },
       "DuplicateCheckRequest": {
         "type": "object",
         "properties": {
@@ -7495,6 +7632,22 @@
           "Leave"
         ]
       },
+      "UpdateDocumentRequest": {
+        "required": [
+          "type",
+          "documentDate"
+        ],
+        "type": "object",
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/DocumentType"
+          },
+          "documentDate": {
+            "type": "string",
+            "format": "date"
+          }
+        }
+      },
       "VisitLength": {
         "type": "object",
         "properties": {
@@ -7793,6 +7946,9 @@
     },
     {
       "name": "EncounterEndpoints"
+    },
+    {
+      "name": "DocumentEndpoints"
     },
     {
       "name": "AccessLogEndpoints"

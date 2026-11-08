@@ -85,7 +85,9 @@ function Entry({ entry: e, zone }: { entry: TimelineEntry; zone: string }) {
   const { t, formatDate, formatTime } = useI18n();
   const when = new Date(e.at);
   const title = e.title ?? t(`timeline.code.${e.code}`);
-  const subtitle = [t(`timeline.kind.${e.kind}`), e.detail && ltr(e.detail), e.author].filter(Boolean).join(' · ');
+  // A document's detail is the date written on it; a result's, its value; a medicine's, its dose.
+  const detail = e.kind === 'Document' && e.detail ? t('documents.documentDate', { date: formatDate(new Date(`${e.detail}T12:00:00Z`), 'UTC') }) : e.detail && ltr(e.detail);
+  const subtitle = [t(`timeline.kind.${e.kind}`), detail, e.author].filter(Boolean).join(' · ');
   return (
     <li className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1 border-b pb-3 last:border-b-0">
       <div className="flex flex-col">

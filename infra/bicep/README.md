@@ -65,3 +65,7 @@ Invitations (add doctor, add staff, onboarding) need a working sender; the app r
 
 - **`Acs` (default): Azure Communication Services Email.** Created by this template (Azure-managed sender domain, data location `emailDataLocation`, default India). The app sends with its managed identity: no key or password. Register the provider once: `az provider register -n Microsoft.Communication`.
 - **`Smtp`: SendGrid's relay.** Verify a sender in SendGrid (a domain you own is best), create an API key with only "Mail Send", store it without echoing: `az keyvault secret set --vault-name <kv> --name sendgrid-api-key --value "<key>"`, then deploy with `emailProvider=Smtp emailFrom=<verified sender>`.
+
+## Patient documents (MDV-P2-006)
+
+The template creates the private `clinical-documents` and `documents-quarantine` containers and gives the app identity Blob Data Contributor on them and Storage Blob Delegator on the account (viewer links are five-minute user-delegation SAS). **Malware scanning is not in the template:** turn on Microsoft Defender for Storage with on-upload malware scanning for the storage account (`az security atp storage update` or the portal; an owner decision, it costs money). The app reads Defender's result from the blob index tag "Malware Scanning scan result". Until the plan is on, every upload stays "Scanning" and nothing can be opened: that is the safe failure. The first run in this environment must also confirm that the user-delegation link works (it cannot be exercised against local Azurite).

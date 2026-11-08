@@ -44,6 +44,7 @@ const TodayRoute = lazy(() => import('./TodayRoute'));
 const ConsultRoute = lazy(() => import('./ConsultRoute'));
 const Patient360Route = lazy(() => import('./Patient360Route'));
 const TimelineRoute = lazy(() => import('./TimelineRoute'));
+const DocumentsRoute = lazy(() => import('./DocumentsRoute'));
 const AdjustmentsRoute = lazy(() => import('./AdjustmentsRoute'));
 const CompleteRegistrationRoute = lazy(() => import('./PatientRoutes').then(m => ({ default: m.CompleteRegistrationRoute })));
 
@@ -72,6 +73,8 @@ export default function App({ locale, onLocaleChange }: Props) {
       onChoose={id => shell.chooseFacility(id, () => navigate(from ?? '/', { replace: true }))} onCancel={active ? () => navigate(-1) : undefined} />
   );
   const searchPath = allows(active ?? null, patientDirectory) ? patientDirectory.path : null;
+  // The front desk's part of documents: register / book and check-in both at Full, as the server's rule (DocumentRules.CanUploadAtDesk).
+  const deskDocuments = active?.capabilities.RegisterBookPatients === 'Full' && active.capabilities.CheckInQueue === 'Full';
   const registerPath = shell.items.find(i => i.id === 'register')?.path ?? null;
   const pathOf = (id: string) => shell.items.find(i => i.id === id)?.path ?? null;
   // Walk-in (MDV-P1-025) books and checks in: Register / book patients and Check-in & queue, both at Full.
@@ -149,13 +152,16 @@ export default function App({ locale, onLocaleChange }: Props) {
               <Route path="/patients/:patientId" element={<Patient360Route backPath={searchPath ?? '/'} />} />
               <Route path="/patients/:patientId/timeline" element={<TimelineRoute />} />
             </>}
+          {/* Documents (MDV-P2-006): clinicians, and the front desk (upload and list only; the server refuses it any file). */}
+          {(['Read', 'Limited', 'Full', 'Sign'].includes(active.capabilities.Patient360Chart ?? 'None') || deskDocuments) &&
+            <Route path="/patients/:patientId/docs" element={<DocumentsRoute clinician={['Read', 'Limited', 'Full', 'Sign'].includes(active.capabilities.Patient360Chart ?? 'None')} deskRecordPath={searchPath} />} />}
           {/* Queue displays live in Settings (MDV-P1-052); the old address still works for links already shared. */}
           <Route path="/admin/displays" element={<Navigate to="/settings?tab=displays" replace />} />
           {searchPath && <>
             <Route path={searchPath} element={<PatientDirectoryRoute registerPath={registerPath} mergePath={`${searchPath}/merge`} />} />
             <Route path={`${searchPath}/merge/:requestId?`} element={<MergeReviewRoute can={{ request: active.capabilities.RegisterBookPatients === 'Full',
               approve: active.capabilities.ClinicalNotes === 'Sign', undo: active.capabilities.StaffRolesIntegrations === 'Config' }} />} />
-            <Route path={`${searchPath}/:patientId`} element={<PatientRecordRoute canReveal={active.capabilities.RegisterBookPatients === 'Full'} />} />
+            <Route path={`${searchPath}/:patientId`} element={<PatientRecordRoute canReveal={active.capabilities.RegisterBookPatients === 'Full'} canDocs={deskDocuments} />} />
             {active.capabilities.RegisterBookPatients === 'Full' &&
               <Route path={`${searchPath}/:patientId/complete`} element={<CompleteRegistrationRoute country={country} />} />}
           </>}

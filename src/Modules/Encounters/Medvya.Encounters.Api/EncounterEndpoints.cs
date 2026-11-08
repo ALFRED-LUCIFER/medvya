@@ -76,6 +76,7 @@ public static class EncounterEndpoints
             .RequireCapability(Capability.Patient360Chart, Access.Read, Access.Limited, Access.Full, Access.Sign)
             .AuditedByUseCase("patient.trends.read", "patient", AuditPurpose.Treatment, patientRouteKey: "patientId")
             .AddEndpointFilter(MapErrors);
+        app.MapDocumentEndpoints();
         return app;
     }
 

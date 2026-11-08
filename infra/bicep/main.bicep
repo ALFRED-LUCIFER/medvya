@@ -182,6 +182,42 @@ resource digestsApp 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   properties: { roleDefinitionId: digestWriter.id, principalId: app.identity.principalId, principalType: 'ServicePrincipal' }
 }
 
+// Patient documents (MDV-P2-006): private containers for uploaded files and for files the malware scan quarantined. The app writes a blob once
+// under a random key and never replaces it; its role can also delete, only so a quarantined file can be moved out of the live container.
+// Viewer links are user-delegation SAS (signed by Entra, five minutes), which needs the Storage Blob Delegator role on the account.
+// Not applied from here: Defender for Storage malware scanning is a separate plan on the storage account (an owner decision, cost). Until it is on,
+// every upload stays "scanning" and nothing can be opened (README, Documents).
+resource documents 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
+  parent: blobProtection
+  name: 'clinical-documents'
+  properties: { publicAccess: 'None' }
+}
+
+resource documentsQuarantine 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
+  parent: blobProtection
+  name: 'documents-quarantine'
+  properties: { publicAccess: 'None' }
+}
+
+resource documentsApp 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: documents
+  name: guid(documents.id, app.id, blobContributor)
+  properties: { roleDefinitionId: blobContributor, principalId: app.identity.principalId, principalType: 'ServicePrincipal' }
+}
+
+resource documentsQuarantineApp 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: documentsQuarantine
+  name: guid(documentsQuarantine.id, app.id, blobContributor)
+  properties: { roleDefinitionId: blobContributor, principalId: app.identity.principalId, principalType: 'ServicePrincipal' }
+}
+
+var blobDelegator = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'db58b8e5-c6ad-4a2a-8342-4190687cbf4a')
+resource documentsDelegatorApp 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: storage
+  name: guid(storage.id, app.id, blobDelegator)
+  properties: { roleDefinitionId: blobDelegator, principalId: app.identity.principalId, principalType: 'ServicePrincipal' }
+}
+
 // The deploy workflow uploads the db-migrate build here; the database job downloads and runs it.
 resource deployArtifacts 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
   parent: blobProtection

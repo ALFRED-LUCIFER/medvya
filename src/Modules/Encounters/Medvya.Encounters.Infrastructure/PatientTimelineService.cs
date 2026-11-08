@@ -14,8 +14,8 @@ namespace Medvya.Encounters.Infrastructure;
 /// The timeline (MDV-P2-005): encounters, results and medicines of one patient, newest first, each with its source. Clinical access first,
 /// then the read, then the audit event with the patient (as the chart does). Each source is asked for one page more than needed and the
 /// pages are merged, so no entry of any source is skipped or repeated across "Load earlier".
-/// shortcut: only encounters, HbA1c results and medicines exist as sources so far; documents join with MDV-P2-006 and lab-feed results
-/// with the lab integration. A page can repeat entries only if more than one page of one source shares a single instant.
+/// Documents join once their scan has passed (MDV-P2-006); an unscanned or quarantined file is not in the record.
+/// shortcut: lab-feed results (the lab integration) and signed notes (MDV-P2-012) are not sources yet. A page can repeat entries only if more than one page of one source shares a single instant.
 /// </summary>
 public sealed class PatientTimelineService(EncountersDbContext db, IClinicalAccess clinical, ICurrentTenant tenant, ICurrentUser user, IAuditLog audit, TimeProvider clock) : IPatientTimeline
 {
@@ -52,6 +52,12 @@ public sealed class PatientTimelineService(EncountersDbContext db, IClinicalAcce
             var rows = await db.MedicationStatements.AsNoTracking().Where(m => m.PatientId == patientId && (cut == null || m.RecordedAt <= cut) && (query.Source == null || m.Source == query.Source))
                 .OrderByDescending(m => m.RecordedAt).ThenByDescending(m => m.Id).Take(take + 1).ToListAsync(cancellationToken);
             entries.AddRange(rows.Select(m => new TimelineEntry(m.Id, TimelineKind.Medicine, m.RecordedAt, m.State == MedicationState.Active ? "MedicineActive" : "MedicineStopped", m.Name, m.Dose, null, m.Source)));
+        }
+        if (Wants(TimelineKind.Document))
+        {
+            var rows = await db.Documents.AsNoTracking().Where(d => d.PatientId == patientId && d.ScanStatus == ScanStatus.Clean && (cut == null || d.UploadedAt <= cut) && (query.Source == null || d.Source == query.Source))
+                .OrderByDescending(d => d.UploadedAt).ThenByDescending(d => d.Id).Take(take + 1).ToListAsync(cancellationToken);
+            entries.AddRange(rows.Select(d => new TimelineEntry(d.Id, TimelineKind.Document, d.UploadedAt, $"Document{d.Type}", null, d.DocumentDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), d.UploadedBy, d.Source)));
         }
 
         var ordered = entries.OrderByDescending(e => e.At).ThenByDescending(e => e.Id).AsEnumerable();

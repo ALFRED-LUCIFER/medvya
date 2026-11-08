@@ -39,6 +39,7 @@ const RegistrationRoute = lazy(() => import('./PatientRoutes').then(m => ({ defa
 // Walk-in (MDV-P1-025) brings the patient picker and booking lists: loaded when opened, never at first paint.
 const WalkInRoute = lazy(() => import('./WalkInRoute'));
 const WaitlistRoute = lazy(() => import('./WaitlistRoute'));
+const TodayRoute = lazy(() => import('./TodayRoute'));
 const ConsultRoute = lazy(() => import('./ConsultRoute'));
 const Patient360Route = lazy(() => import('./Patient360Route'));
 const AdjustmentsRoute = lazy(() => import('./AdjustmentsRoute'));
@@ -114,6 +115,9 @@ export default function App({ locale, onLocaleChange }: Props) {
             ? <ScheduleRoute facilityId={active.facilityId} userId={shell.session?.user.id ?? ''} userName={shell.session?.user.displayName ?? ''} canBook={active.capabilities.RegisterBookPatients === 'Full'}
                 canCheckIn={active.capabilities.CheckInQueue === 'Full'} registerPath={registerPath} leavePath={leavePath} />
             : i.id === 'register' ? registration
+            // Doctors (Patient 360 at Full) land on their own Today (MDV-P2-002); reception and nurses keep the board there.
+            : i.id === 'today' && active.capabilities.Patient360Chart === 'Full' && pathOf('frontDesk')
+            ? <TodayRoute facilityId={active.facilityId} online={online} userId={shell.session?.user.id ?? ''} />
             : i.id === 'frontDesk' || (i.id === 'today' && pathOf('frontDesk'))
             ? <FrontDeskRoute facilityId={active.facilityId} online={online} canMove={active.capabilities.CheckInQueue === 'Full'}
                 registerPath={registerPath} walkInPath={walkInPath} waitlistPath={waitlistPath} billingPath={shell.items.find(b => b.id === 'billing')?.path ?? null}

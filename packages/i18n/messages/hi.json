@@ -2842,5 +2842,16 @@
   "audit.actionName.waitlist.offer": "प्रतीक्षा सूची से स्लॉट ऑफ़र किया गया",
   "audit.actionName.waitlist.decline": "प्रतीक्षा सूची का ऑफ़र छोड़ा गया",
   "audit.actionName.waitlist.accept": "प्रतीक्षा सूची का ऑफ़र स्वीकार कर बुक किया गया",
-  "audit.actionName.waitlist.remove": "मरीज़ प्रतीक्षा सूची से हटाया गया"
+  "audit.actionName.waitlist.remove": "मरीज़ प्रतीक्षा सूची से हटाया गया",
+  "today.title": "आज · {day}",
+  "today.scope": "किसके विज़िट",
+  "today.scope.mine": "मेरे मरीज़",
+  "today.scope.clinic": "पूरा क्लिनिक",
+  "today.hero.next": "अगला मरीज़",
+  "today.hero.current": "वर्तमान मरीज़",
+  "today.list": "आज के विज़िट",
+  "today.age": "{years} वर्ष",
+  "today.empty.title": "आज कोई विज़िट नहीं",
+  "today.empty.mine": "आज आपका कोई विज़िट नहीं है। सहकर्मियों के विज़िट देखने के लिए पूरा क्लिनिक चुनें।",
+  "today.empty.clinic": "आज क्लिनिक में कोई विज़िट बुक नहीं है।"
 }

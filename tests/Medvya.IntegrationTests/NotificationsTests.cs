@@ -742,7 +742,7 @@ public sealed partial class NotificationsTests(PostgresFixture sql) : IClassFixt
         foreach (var lang in new[] { "en", "hi", "ar" })
         {
             var previews = MessageCatalog.Previews(lang);
-            Assert.Equal(5, previews.Count);
+            Assert.Equal(6, previews.Count);
             foreach (var p in previews)
             {
                 Assert.DoesNotContain(MessageCatalog.Slot, p.Text); // slots are named, never raw

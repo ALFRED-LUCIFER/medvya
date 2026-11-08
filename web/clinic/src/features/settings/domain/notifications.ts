@@ -30,4 +30,4 @@ export const toPrefsPayload = (f: NotificationPrefsForm): NotificationPrefs =>
   ({ ...f, quietStart: `${f.quietStart}:00`, quietEnd: `${f.quietEnd}:00`, senderName: f.senderName.trim() || null });
 
 /** The preview groups in the catalogue map to these screen labels (message keys settings.notifications.group.*). */
-export const previewGroups = ['Confirmation', 'Reminder', 'Rescheduled', 'Cancelled', 'NeedsRebooking', 'WaitlistOffer'] as const;
+export const previewGroups = ['Confirmation', 'Reminder', 'Rescheduled', 'Cancelled', 'SeriesCancelled', 'NeedsRebooking', 'WaitlistOffer'] as const;

@@ -7,7 +7,7 @@ import PatientSummaryLine from '../../patients/components/PatientSummaryLine';
 import type { SearchErrorCode, SearchResult } from '../../patients/domain/directory';
 import { channels, reasonCategories, visitTypes, type BookedAppointment, type BookingForm, type Hold, type PatientMatch, type SlotChoice, type SlotError } from '../domain/booking';
 import type { VisitLength, VisitType } from '../domain/schedule';
-import { localTime, type PlanRow, type SeriesDone } from '../domain/series';
+import { localTime, weekdayOrder, type PlanRow, type SeriesDone } from '../domain/series';
 import { slotError } from '../domain/booking';
 import { localDate } from '../domain/changes';
 import { termsPath } from '../../settings/domain/settings';
@@ -43,12 +43,15 @@ type Props = {
   repeat: number;
   maxRepeat: number;
   onRepeat: (n: number) => void;
-  monthly: boolean;
-  onMonthly: (monthly: boolean) => void;
+  unit: 'weekly' | 'monthly' | 'weekdays';
+  onUnit: (unit: 'weekly' | 'monthly' | 'weekdays') => void;
+  /** Chosen days of the week for the 'weekdays' pattern (0 = Sunday). */
+  days: number[];
+  onToggleDay: (day: number) => void;
   plan: PlanRow[] | null;
   seriesDone: SeriesDone | null;
   onToggleOccurrence: (index: number) => void;
-  onMoveOccurrence: (index: number, time: string) => void;
+  onMoveOccurrence: (index: number, to: { date?: string; time?: string }) => void;
   onBackToForm: () => void;
   onDismissSeries: () => void;
   onConfirm: () => void;
@@ -121,11 +124,17 @@ export default function BookingPanel(p: Props) {
                   <input type="checkbox" className="size-5" checked={row.include} onChange={() => p.onToggleOccurrence(i)} />
                   {t('series.row.include')}
                 </label>
-                {row.conflict && (
-                  <div className="flex flex-col gap-1">
-                    <Label htmlFor={`series-move-${i}`} className="text-xs">{t('series.row.moveTo')}</Label>
-                    <Input id={`series-move-${i}`} type="time" className="h-11 w-32" step={300} defaultValue={localTime(row.start, p.timeZone)} onBlur={e => { if (e.target.value && e.target.value !== localTime(row.start, p.timeZone)) p.onMoveOccurrence(i, e.target.value); }} />
-                  </div>
+                {(row.conflict || row.moved) && (
+                  <>
+                    <div className="flex flex-col gap-1">
+                      <Label htmlFor={`series-move-day-${i}`} className="text-xs">{t('series.row.moveToDay')}</Label>
+                      <Input id={`series-move-day-${i}`} type="date" className="h-11 w-44" defaultValue={localDate(row.start, p.timeZone)} onBlur={e => { if (e.target.value && e.target.value !== localDate(row.start, p.timeZone)) p.onMoveOccurrence(i, { date: e.target.value }); }} />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <Label htmlFor={`series-move-${i}`} className="text-xs">{t('series.row.moveTo')}</Label>
+                      <Input id={`series-move-${i}`} type="time" className="h-11 w-32" step={300} defaultValue={localTime(row.start, p.timeZone)} onBlur={e => { if (e.target.value && e.target.value !== localTime(row.start, p.timeZone)) p.onMoveOccurrence(i, { time: e.target.value }); }} />
+                    </div>
+                  </>
                 )}
               </div>
             </li>
@@ -198,11 +207,25 @@ export default function BookingPanel(p: Props) {
 
         <div className={field}>
           <Label htmlFor="booking-unit">{t('series.unit')}</Label>
-          <Select value={p.monthly ? 'monthly' : 'weekly'} onValueChange={v => p.onMonthly(v === 'monthly')}>
+          <Select value={p.unit} onValueChange={v => p.onUnit(v as Props['unit'])}>
             <SelectTrigger id="booking-unit" className={control}><SelectValue /></SelectTrigger>
-            <SelectContent>{(['weekly', 'monthly'] as const).map(u => <SelectItem key={u} value={u}>{t(`series.unit.${u}`)}</SelectItem>)}</SelectContent>
+            <SelectContent>{(['weekly', 'monthly', 'weekdays'] as const).map(u => <SelectItem key={u} value={u}>{t(`series.unit.${u}`)}</SelectItem>)}</SelectContent>
           </Select>
         </div>
+
+        {p.unit === 'weekdays' && (
+          <fieldset className="flex flex-col gap-1">
+            <legend className="text-sm font-bold">{t('series.weekdays')}</legend>
+            <div className="flex flex-wrap gap-2">
+              {weekdayOrder.map(d => (
+                <label key={d} className="flex min-h-11 items-center gap-2 rounded-md border px-3 text-sm">
+                  <input type="checkbox" className="size-5" checked={p.days.includes(d)} onChange={() => p.onToggleDay(d)} />
+                  {t(`series.weekday.${d}`)}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+        )}
 
         <div className={field}>
           <Label htmlFor="booking-repeat">{t('series.repeat')}</Label>
@@ -213,7 +236,7 @@ export default function BookingPanel(p: Props) {
 
         {p.bookError && <BookError code={p.bookError} />}
         <div className="flex flex-wrap gap-2">
-          <Button type="submit" loading={p.booking} disabled={!p.hold || p.holding || !p.patient?.match}>{t(p.repeat > 1 ? 'series.review.action' : 'booking.confirm')}</Button>
+          <Button type="submit" loading={p.booking} disabled={!p.hold || p.holding || !p.patient?.match || (p.repeat > 1 && p.unit === 'weekdays' && p.days.length === 0)}>{t(p.repeat > 1 ? 'series.review.action' : 'booking.confirm')}</Button>
           <Button type="button" variant="outline" onClick={p.onClose}>{t('booking.cancel')}</Button>
         </div>
       </form>

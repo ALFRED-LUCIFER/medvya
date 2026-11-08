@@ -82,8 +82,8 @@ export const cancelFollowing = (appointmentId: string, reason: CancelReason, not
   post<Appointment[]>(`/v1/appointments/${appointmentId}/cancel-following`, { reason, note: note || null });
 
 // MDV-P1-026: recurring appointments. The preview lists each occurrence with the conflict that would refuse it; booking takes the starts the desk confirmed.
-export const previewSeries = (facilityId: string, s: { calendarId: string; visitType: string }, firstStart: string, count: number, monthly: boolean) =>
-  post<Occurrence[]>('/v1/appointments/series/preview', { facilityId, calendarId: s.calendarId, visitType: s.visitType, firstStart, count, intervalWeeks: 1, monthly });
+export const previewSeries = (facilityId: string, s: { calendarId: string; visitType: string }, firstStart: string, count: number, monthly: boolean, weekdays: number[]) =>
+  post<Occurrence[]>('/v1/appointments/series/preview', { facilityId, calendarId: s.calendarId, visitType: s.visitType, firstStart, count, intervalWeeks: 1, monthly, weekdays });
 
 export const bookSeries = (facilityId: string, s: { calendarId: string; visitType: string }, form: BookingForm, starts: string[]) =>
   post<SeriesResult>('/v1/appointments/series', { facilityId, calendarId: s.calendarId, visitType: s.visitType, starts, ...form });

@@ -87,15 +87,61 @@ public sealed class SeriesTests(PostgresFixture sql) : IClassFixture<PostgresFix
     }
 
     [Fact]
-    public async Task AnOccurrenceTakenAfterThePreviewIsReportedAndTheOthersStayBooked()
+    public async Task AnOccurrenceTakenAfterThePreviewRefusesTheWholeSeriesAndSavesNothing()
     {
         var preview = await Desk.PreviewSeriesAsync(Weekly(10, 3));
         await h.BookAsync(10, start: At(10).AddDays(7), patient: h.SecondPatient); // another desk wins that slot meanwhile
         var result = await Desk.BookSeriesAsync(Confirm(preview.Select(o => o.Start)));
 
-        Assert.Equal([null, "slot_unavailable", null], result.Occurrences.Select(o => o.Conflict));
+        Assert.Equal(["series_not_booked", "slot_unavailable", "series_not_booked"], result.Occurrences.Select(o => o.Conflict));
+        Assert.All(result.Occurrences, o => Assert.Null(o.Appointment));
         await using var db = sql.Scheduling(h.Tenant);
-        Assert.Equal(2, await db.Appointments.CountAsync(a => a.SeriesId == result.SeriesId));
+        Assert.Equal(0, await db.Appointments.CountAsync(a => a.SeriesId == result.SeriesId)); // the first and third were free, and were not booked
+        Assert.Equal(1, await db.Appointments.CountAsync(a => a.State == AppointmentState.Booked)); // only the other desk's visit
+        Assert.Equal(1, await db.Outbox.CountAsync(e => e.Type == "AppointmentBooked.v1"));
+    }
+
+    [Fact]
+    public async Task ASeriesWithAClosedDayIsRefusedAsAWhole()
+    {
+        // Sat 24 Oct is not on the template: the series is refused, and the free Monday is not booked.
+        var result = await Desk.BookSeriesAsync(Confirm([At(10), At(10).AddDays(5)]));
+        Assert.Equal(["series_not_booked", "not_bookable"], result.Occurrences.Select(o => o.Conflict));
+        await using var db = sql.Scheduling(h.Tenant);
+        Assert.Equal(0, await db.Appointments.CountAsync(a => a.SeriesId == result.SeriesId));
+    }
+
+    [Fact]
+    public async Task AWeekdayPatternPreviewsAndBooksTheChosenDays()
+    {
+        var pattern = Weekly(10, 4) with { Weekdays = [DayOfWeek.Wednesday, DayOfWeek.Monday] }; // first date Monday 19 Oct
+        var preview = await Desk.PreviewSeriesAsync(pattern);
+        Assert.Equal([At(10), At(10).AddDays(2), At(10).AddDays(7), At(10).AddDays(9)], preview.Select(o => o.Start));
+        Assert.All(preview, o => Assert.Null(o.Conflict));
+
+        var result = await Desk.BookSeriesAsync(Confirm(preview.Select(o => o.Start)));
+        Assert.All(result.Occurrences, o => Assert.NotNull(o.Appointment));
+        await using var db = sql.Scheduling(h.Tenant);
+        Assert.Equal(4, await db.Appointments.CountAsync(a => a.SeriesId == result.SeriesId));
+    }
+
+    [Fact]
+    public async Task WeekdaysMustBeRealDaysAndCannotBeCombinedWithMonthly()
+    {
+        async Task<IReadOnlyList<ValidationError>> Invalid(SeriesPattern p) => (await Assert.ThrowsAsync<SchedulingValidationException>(() => Desk.PreviewSeriesAsync(p))).Errors;
+        Assert.Equal([new ValidationError("weekdays", "invalid")], await Invalid(Weekly(10, 3) with { Weekdays = [(DayOfWeek)9] }));
+        Assert.Equal([new ValidationError("weekdays", "invalid")], await Invalid(Weekly(10, 3) with { Weekdays = [DayOfWeek.Monday], Monthly = true }));
+    }
+
+    [Fact]
+    public async Task AnOccurrenceMovedToAnotherDayIsBookedThereInTheSameSeries()
+    {
+        await h.BookAsync(10, start: At(10).AddDays(7), patient: h.SecondPatient); // Monday 26 Oct 10:00 is taken: move it to Tuesday 27 Oct
+        var result = await Desk.BookSeriesAsync(Confirm([At(10), At(10).AddDays(8), At(10).AddDays(14)]));
+
+        Assert.All(result.Occurrences, o => Assert.NotNull(o.Appointment));
+        await using var db = sql.Scheduling(h.Tenant);
+        Assert.Equal([At(10), At(10).AddDays(8), At(10).AddDays(14)], (await db.Appointments.Where(a => a.SeriesId == result.SeriesId).OrderBy(a => a.Start).ToListAsync()).Select(a => a.Start));
     }
 
     [Fact]
@@ -135,6 +181,16 @@ public sealed class SeriesTests(PostgresFixture sql) : IClassFixture<PostgresFix
         var events = (await db.Outbox.Where(e => e.Type == "AppointmentCancelled.v1" && ids.Contains(e.AggregateId)).ToListAsync()).OrderBy(e => e.Id).ToList();
         Assert.Equal([false, true, true], events.Select(e => e.Payload.Contains("\"quiet\":true", StringComparison.Ordinal))); // only the first tells the patient
         Assert.Equal(ids[2], events[0].AggregateId);
+        Assert.Equal([true, false, false], events.Select(e => e.Payload.Contains("\"series\":true", StringComparison.Ordinal))); // only the message that tells the patient is worded for the series
+    }
+
+    [Fact]
+    public async Task CancellingTheLastVisitOfASeriesIsAnOrdinaryCancellation()
+    {
+        var ids = (await BookWeeklyAsync(2)).Occurrences.Select(o => o.Appointment!.Id).ToList();
+        await Desk.CancelFollowingAsync(ids[1], new CancelAppointment { Reason = CancelReason.PatientRequest });
+        await using var db = sql.Scheduling(h.Tenant);
+        Assert.DoesNotContain("\"series\":true", (await db.Outbox.SingleAsync(e => e.Type == "AppointmentCancelled.v1" && e.AggregateId == ids[1])).Payload, StringComparison.Ordinal);
     }
 
     [Fact]

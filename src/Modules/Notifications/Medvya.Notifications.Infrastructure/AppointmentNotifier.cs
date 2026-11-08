@@ -55,7 +55,7 @@ public sealed class AppointmentNotifier(NotificationsDbContext db, IFacilityDire
                 AddReminders();
                 break;
             case AppointmentEventKind.Cancelled when !e.Quiet:
-                Add(NotificationKind.Cancelled, e.OccurredAt);
+                Add(e.Series ? NotificationKind.SeriesCancelled : NotificationKind.Cancelled, e.OccurredAt);
                 break;
             case AppointmentEventKind.SlotOffered: // a freed slot is held for the waitlisted patient (MDV-P1-027): the time only, nothing clinical
                 Add(NotificationKind.WaitlistOffer, e.OccurredAt);

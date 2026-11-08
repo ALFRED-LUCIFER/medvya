@@ -206,18 +206,27 @@ public static class ScheduleRules
     /// Starts of a series: the same facility wall-clock time every <paramref name="intervalWeeks"/> weeks, so a visit keeps its
     /// local hour across a daylight-saving change (IST and GST have none). A wall-clock time the zone skips moves an hour on.
     /// Monthly: the same date each month (<paramref name="intervalWeeks"/> is ignored); a month without that date uses its last day.
+    /// <paramref name="weekdays"/>: those days of the week instead, in every <paramref name="intervalWeeks"/>-th week.
     /// </summary>
-    public static List<DateTimeOffset> SeriesStarts(DateTimeOffset first, int intervalWeeks, int count, TimeZoneInfo zone, bool monthly = false)
+    public static List<DateTimeOffset> SeriesStarts(DateTimeOffset first, int intervalWeeks, int count, TimeZoneInfo zone, bool monthly = false, IReadOnlyCollection<DayOfWeek>? weekdays = null)
     {
         var local = TimeZoneInfo.ConvertTime(first, zone).DateTime;
-        var starts = new List<DateTimeOffset>(count);
-        for (var i = 0; i < count; i++)
+        var walls = new List<DateTime>(count);
+        if (weekdays is { Count: > 0 })
         {
-            var wall = DateTime.SpecifyKind(monthly ? local.AddMonths(i) : local.AddDays(7 * intervalWeeks * i), DateTimeKind.Unspecified);
-            if (zone.IsInvalidTime(wall)) wall = wall.AddHours(1);
-            starts.Add(new DateTimeOffset(TimeZoneInfo.ConvertTimeToUtc(wall, zone), TimeSpan.Zero));
+            // Chosen weekdays, in every intervalWeeks-th ISO week counted from the week of the first date, from the first date on.
+            var monday = local.Date.AddDays(-(((int)local.DayOfWeek + 6) % 7));
+            for (var day = local.Date; walls.Count < count; day = day.AddDays(1))
+                if (weekdays.Contains(day.DayOfWeek) && (int)(day - monday).TotalDays / 7 % intervalWeeks == 0) walls.Add(day + local.TimeOfDay);
         }
-        return starts;
+        else
+            for (var i = 0; i < count; i++) walls.Add(monthly ? local.AddMonths(i) : local.AddDays(7 * intervalWeeks * i));
+        return [.. walls.Select(w =>
+        {
+            var wall = DateTime.SpecifyKind(w, DateTimeKind.Unspecified);
+            if (zone.IsInvalidTime(wall)) wall = wall.AddHours(1);
+            return new DateTimeOffset(TimeZoneInfo.ConvertTimeToUtc(wall, zone), TimeSpan.Zero);
+        })];
     }
 
     /// <summary>The facility-local calendar date of an instant.</summary>

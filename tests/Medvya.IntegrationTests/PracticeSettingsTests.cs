@@ -117,7 +117,7 @@ public sealed class PracticeSettingsTests(PostgresFixture sql) : IClassFixture<P
         Assert.Equal(HttpStatusCode.OK, (await client.PutAsJsonAsync("/v1/settings/notifications", body)).StatusCode);
         var saved = await client.GetFromJsonAsync<JsonElement>("/v1/settings/notifications");
         Assert.Equal((false, false, "20:00:00"), (saved.GetProperty("reminder24h").GetBoolean(), saved.GetProperty("sms").GetBoolean(), saved.GetProperty("quietStart").GetString()));
-        Assert.Equal(6, (await client.GetFromJsonAsync<JsonElement>("/v1/settings/notifications/templates?language=hi")).GetArrayLength());
+        Assert.Equal(7, (await client.GetFromJsonAsync<JsonElement>("/v1/settings/notifications/templates?language=hi")).GetArrayLength());
     }
 
     // ---- Profile, locations, hours ----

@@ -33,7 +33,7 @@ public sealed partial class NotificationSender(
         var mustTellOnly = !await terms.IsSatisfiedAsync(cancellationToken);
         var due = await db.Notifications.AsNoTracking()
             .Where(n => n.Status == NotificationStatus.Queued && n.SendAt <= now && (n.NextAttemptAt == null || n.NextAttemptAt <= now))
-            .Where(n => !mustTellOnly || n.Kind == NotificationKind.Cancelled || n.Kind == NotificationKind.NeedsRebooking)
+            .Where(n => !mustTellOnly || n.Kind == NotificationKind.Cancelled || n.Kind == NotificationKind.SeriesCancelled || n.Kind == NotificationKind.NeedsRebooking)
             .OrderBy(n => n.SendAt).Select(n => n.Id).Take(batch).ToListAsync(cancellationToken);
         var handled = 0;
         foreach (var id in due)
@@ -53,7 +53,7 @@ public sealed partial class NotificationSender(
         var o = options.Value;
         try
         {
-            if (n.Kind is not (NotificationKind.Cancelled or NotificationKind.NeedsRebooking) && now >= n.AppointmentStart) { await EndAsync(n, now, NotificationStatus.Suppressed, "visit_started", ct); return; }
+            if (n.Kind is not (NotificationKind.Cancelled or NotificationKind.SeriesCancelled or NotificationKind.NeedsRebooking) && now >= n.AppointmentStart) { await EndAsync(n, now, NotificationStatus.Suppressed, "visit_started", ct); return; }
             if (!await consent.AllowsAsync(n.PatientId, n.Channel, ct)) { await EndAsync(n, now, NotificationStatus.Suppressed, "no_consent", ct); return; }
             var contact = await contacts.FindAsync(n.PatientId, ct);
             var address = contact is null ? null : n.Channel == NotificationChannel.Email ? contact.Email : contact.Mobile;

@@ -17,9 +17,19 @@ export const planOf = (occurrences: Occurrence[]): PlanRow[] =>
 
 export const toggleRow = (plan: PlanRow[], index: number): PlanRow[] => plan.map((r, i) => (i === index ? { ...r, include: !r.include } : r));
 
-/** Moves one occurrence to another time of day on the same facility-local date, and includes it. */
-export const moveRow = (plan: PlanRow[], index: number, time: string, timeZone: string): PlanRow[] =>
-  plan.map((r, i) => (i === index ? { start: zonedInstant(localDate(r.start, timeZone), time, timeZone), conflict: null, include: true, moved: true } : r));
+/** Moves one occurrence to another day and/or time of day (facility-local; what is not given stays), and includes it. */
+export const moveRow = (plan: PlanRow[], index: number, to: { date?: string; time?: string }, timeZone: string): PlanRow[] =>
+  plan.map((r, i) => (i === index ? { start: zonedInstant(to.date ?? localDate(r.start, timeZone), to.time ?? localTime(r.start, timeZone), timeZone), conflict: null, include: true, moved: true } : r));
+
+/** Weekdays as the server numbers them (0 = Sunday), shown Monday first. */
+export const weekdayOrder = [1, 2, 3, 4, 5, 6, 0] as const;
+
+/** A refused booking (nothing was saved): back to the review with each conflict shown; the free ones stay included. */
+export const replanOf = (result: SeriesResult): PlanRow[] =>
+  result.occurrences.map(o => {
+    const conflict = o.conflict === 'series_not_booked' ? null : o.conflict;
+    return { start: o.start, conflict, include: conflict === null, moved: false };
+  });
 
 export const includedStarts = (plan: PlanRow[]) => plan.filter(r => r.include).map(r => r.start);
 

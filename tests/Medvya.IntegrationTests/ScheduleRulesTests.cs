@@ -204,6 +204,19 @@ public class ScheduleRulesTests
     }
 
     [Fact]
+    public void AWeekdaySeriesFallsOnTheChosenDaysFromTheFirstDateOnAndSkipsWeeksByTheInterval()
+    {
+        var wed = new DateTimeOffset(2026, 10, 21, 4, 30, 0, TimeSpan.Zero); // Wednesday 10:00 IST
+        var mondayWednesday = new[] { DayOfWeek.Monday, DayOfWeek.Wednesday };
+        // Monday 19 Oct is before the first date; counted from the week of the first date.
+        Assert.Equal([wed, wed.AddDays(5), wed.AddDays(7), wed.AddDays(12)], ScheduleRules.SeriesStarts(wed, 1, 4, Kolkata, weekdays: mondayWednesday));
+        // Every second week: that week (Wed 21), then two weeks on (Mon 2 Nov, Wed 4 Nov).
+        Assert.Equal([wed, wed.AddDays(12), wed.AddDays(14)], ScheduleRules.SeriesStarts(wed, 2, 3, Kolkata, weekdays: mondayWednesday));
+        Assert.Equal([wed, wed.AddDays(1), wed.AddDays(2)], ScheduleRules.SeriesStarts(wed, 1, 3, Kolkata, weekdays: [DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday])); // order of the days does not matter
+        Assert.Equal([wed, wed.AddDays(7)], ScheduleRules.SeriesStarts(wed, 1, 2, Kolkata, weekdays: [])); // no weekdays: the weekly pattern
+    }
+
+    [Fact]
     public void ASeriesInIstOrGstRepeatsAtTheSameUtcTime()
     {
         var first = new DateTimeOffset(2026, 10, 19, 4, 30, 0, TimeSpan.Zero);

@@ -238,7 +238,7 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P2-015](P2-doctor-workspace/MDV-P2-015.md) | Prescription composer with dose builder and add-medicine-while-prescribing (E-05, E-11) | P2 | wk 12–13 | 84% |
 | [MDV-P2-025](P2-doctor-workspace/MDV-P2-025.md) | Note template engine and specialty template pack for the partner clinics | P2 | wk 11–12 | 85% |
 
-## Week 13 · 18 Jan 2027 – 22 Jan 2027 · load 32.4 dev-days ⚠ over capacity
+## Week 13 · 18 Jan 2027 – 22 Jan 2027 · load 36.1 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -252,6 +252,9 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P1-067](P1-front-desk/MDV-P1-067.md) | Terms of Service and DPA update: the organisation is responsible for the licences it attests | P1 | wk 12–14 | 60% |
 | [MDV-P1-068](P1-front-desk/MDV-P1-068.md) | Migrate existing tenants to Approved and their doctor licences to owner-attested | P1 | wk 12–14 | 75% |
 | [MDV-P1-069](P1-front-desk/MDV-P1-069.md) | Starter plan cap: 1 doctor and 2 staff enforced server-side | P1 | wk 12–14 | 80% |
+| [MDV-P1-070](P1-front-desk/MDV-P1-070.md) | Add a location to an organisation (Settings, Locations): certificate and tax record, same country, audited | P1 | wk 13–15 | 75% |
+| [MDV-P1-071](P1-front-desk/MDV-P1-071.md) | Staff and doctors across locations: a membership covers one or more locations; schedule, board and queue stay per location | P1 | wk 13–15 | 65% |
+| [MDV-P1-072](P1-front-desk/MDV-P1-072.md) | Shared patient record across an organisation's locations: one MRN and one chart, search across locations, location in the access log | P1 | wk 13–15 | 55% |
 | [MDV-P2-012](P2-doctor-workspace/MDV-P2-012.md) | Sign and finalise: immutable signed note v1 with re-authentication (E-06) | P2 | wk 12–13 | 90% |
 | [MDV-P2-013](P2-doctor-workspace/MDV-P2-013.md) | Addenda, version history and print/PDF of the signed note (E-06) | P2 | wk 13–13 | 88% |
 | [MDV-P2-015](P2-doctor-workspace/MDV-P2-015.md) | Prescription composer with dose builder and add-medicine-while-prescribing (E-05, E-11) | P2 | wk 12–13 | 84% |
@@ -264,7 +267,7 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P3-022](P3-ai-scribe/MDV-P3-022.md) | AI vendor DPA, no-training guarantee and regional processing confirmed per country | P3 | wk 13–15 | 75% |
 | [MDV-P3-023](P3-ai-scribe/MDV-P3-023.md) | Legal review of recording consent in each market | P3 | wk 13–14 | 60% |
 
-## Week 14 · 25 Jan 2027 – 29 Jan 2027 · load 20.3 dev-days ⚠ over capacity
+## Week 14 · 25 Jan 2027 – 29 Jan 2027 · load 24.0 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -276,6 +279,9 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P1-067](P1-front-desk/MDV-P1-067.md) | Terms of Service and DPA update: the organisation is responsible for the licences it attests | P1 | wk 12–14 | 60% |
 | [MDV-P1-068](P1-front-desk/MDV-P1-068.md) | Migrate existing tenants to Approved and their doctor licences to owner-attested | P1 | wk 12–14 | 75% |
 | [MDV-P1-069](P1-front-desk/MDV-P1-069.md) | Starter plan cap: 1 doctor and 2 staff enforced server-side | P1 | wk 12–14 | 80% |
+| [MDV-P1-070](P1-front-desk/MDV-P1-070.md) | Add a location to an organisation (Settings, Locations): certificate and tax record, same country, audited | P1 | wk 13–15 | 75% |
+| [MDV-P1-071](P1-front-desk/MDV-P1-071.md) | Staff and doctors across locations: a membership covers one or more locations; schedule, board and queue stay per location | P1 | wk 13–15 | 65% |
+| [MDV-P1-072](P1-front-desk/MDV-P1-072.md) | Shared patient record across an organisation's locations: one MRN and one chart, search across locations, location in the access log | P1 | wk 13–15 | 55% |
 | [MDV-P2-017](P2-doctor-workspace/MDV-P2-017.md) | Rx authorisation (separate from note), server-side multilingual printed Rx A4/A5 with hash and QR verify (E-10) | P2 | wk 13–14 | 82% |
 | [MDV-P2-019](P2-doctor-workspace/MDV-P2-019.md) | Referrals out and in with status (E-09) | P2 | wk 14–14 | 80% |
 | [MDV-P2-020](P2-doctor-workspace/MDV-P2-020.md) | Share Rx with patient/pharmacy (e-Rx PDF/link) and pharmacy dispatch record (E-10) | P2 | wk 14–14 | 70% |
@@ -288,10 +294,13 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P3-022](P3-ai-scribe/MDV-P3-022.md) | AI vendor DPA, no-training guarantee and regional processing confirmed per country | P3 | wk 13–15 | 75% |
 | [MDV-P3-023](P3-ai-scribe/MDV-P3-023.md) | Legal review of recording consent in each market | P3 | wk 13–14 | 60% |
 
-## Week 15 · 01 Feb 2027 – 05 Feb 2027 · load 11.3 dev-days ⚠ over capacity
+## Week 15 · 01 Feb 2027 – 05 Feb 2027 · load 15.0 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
+| [MDV-P1-070](P1-front-desk/MDV-P1-070.md) | Add a location to an organisation (Settings, Locations): certificate and tax record, same country, audited | P1 | wk 13–15 | 75% |
+| [MDV-P1-071](P1-front-desk/MDV-P1-071.md) | Staff and doctors across locations: a membership covers one or more locations; schedule, board and queue stay per location | P1 | wk 13–15 | 65% |
+| [MDV-P1-072](P1-front-desk/MDV-P1-072.md) | Shared patient record across an organisation's locations: one MRN and one chart, search across locations, location in the access log | P1 | wk 13–15 | 55% |
 | [MDV-P2-028](P2-doctor-workspace/MDV-P2-028.md) | R2 pilot, exit gate review (≥ 20 signed visits per doctor) and release notes | P2 | wk 15–15 | 72% |
 | [MDV-P3-004](P3-ai-scribe/MDV-P3-004.md) | Consent revoked mid-visit stops capture and discards later audio (A-09) | P3 | wk 15–15 | 88% |
 | [MDV-P3-005](P3-ai-scribe/MDV-P3-005.md) | Capture on phone (mobile web) or desktop mic with timer, pause, consent indicator and warnings (A-03, X-01) | P3 | wk 14–15 | 80% |

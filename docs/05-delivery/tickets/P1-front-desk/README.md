@@ -8,9 +8,9 @@
 **Day one:** Register patients, book, reschedule and cancel appointments, check patients in, run the waiting room and send automatic confirmations and reminders.  
 **Goal:** A clinic can run its entire appointment day in Medvya. This is the workflow to validate with real clinics before anything clinical is built on top.
 
-**Tickets:** 68 · **Estimate:** 149.5 dev-days vs **35 working days** in the window (OVER by 114.5 days: needs scope trade-off or overlap) · **Average confidence:** 78%
+**Tickets:** 71 · **Estimate:** 160.5 dev-days vs **35 working days** in the window (OVER by 125.5 days: needs scope trade-off or overlap) · **Average confidence:** 77%
 
-**Status:** To do 40 · Partly done 16 · Done 12
+**Status:** To do 43 · Partly done 16 · Done 12
 
 ## Epics
 
@@ -100,6 +100,9 @@
 | [MDV-P1-069](MDV-P1-069.md) | To do | Starter plan cap: 1 doctor and 2 staff enforced server-side | Story | MUST | P1-03 | F-08, F-09 | 2 | 12–14 | 11 Jan → 29 Jan 2027 | 80% Medium |
 | [MDV-P1-051](MDV-P1-051.md) | To do | Encrypted read-only schedule cache for outages (needs an ADR first) | Story | COULD | P1-08 | — | 5 | 13–13 | 18 Jan → 22 Jan 2027 | 55% Low |
 | [MDV-P1-066](MDV-P1-066.md) | To do | Retire solo-doctor naming: Role.SoloDoctor, session flags, copy and docs | Task | SHOULD | P1-02 | F-04, F-08 | 2.5 | 13–14 | 18 Jan → 29 Jan 2027 | 70% Medium |
+| [MDV-P1-070](MDV-P1-070.md) | To do | Add a location to an organisation (Settings, Locations): certificate and tax record, same country, audited | Story | MUST | P1-02 | F-08 | 3 | 13–15 | 18 Jan → 05 Feb 2027 | 75% Medium |
+| [MDV-P1-071](MDV-P1-071.md) | To do | Staff and doctors across locations: a membership covers one or more locations; schedule, board and queue stay per location | Story | MUST | P1-03 | F-09, F-10 | 3 | 13–15 | 18 Jan → 05 Feb 2027 | 65% Medium |
+| [MDV-P1-072](MDV-P1-072.md) | To do | Shared patient record across an organisation's locations: one MRN and one chart, search across locations, location in the access log | Story | MUST | P1-05 | P-02, P-03 | 5 | 13–15 | 18 Jan → 05 Feb 2027 | 55% Low |
 
 ## Exit criteria (release gate)
 

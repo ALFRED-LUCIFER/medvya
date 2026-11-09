@@ -48,6 +48,8 @@ ac:
 - Authority is set per facility and stamped on every new encounter.
 - With HIS authority, chart items show "Synced from HIS" and Medvya never creates a second authoritative chart.
 - Mixed authority shows the attention banner and cross-facility views show source badges.
+notes:
+- Overlap with MDV-P1-072 (shared patient record across locations): the clinic-level version is built first; record authority per facility for hospital groups extends it here.
 
 === MDV-P7-003
 title: Organisation, facilities and departments administration (H-02)
@@ -68,6 +70,8 @@ Facility tree with departments, beds/type metadata, authority badge, time zone; 
 ac:
 - Facility scope drives every permission check (tests with cross-facility users).
 - Departments are assignable to staff and encounters.
+notes:
+- Overlap with ADR-016 and MDV-P1-070 to P1-072: the clinic-level version (one organisation, many locations, shared patient record, staff across locations) is built first in P1; this ticket later extends it with hospital departments.
 
 === MDV-P7-004
 title: SSO (SAML/OIDC via Entra federation), SCIM provisioning and facility/department role grants with expiry (H-03)

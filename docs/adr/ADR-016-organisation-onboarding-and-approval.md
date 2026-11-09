@@ -1,7 +1,7 @@
 # ADR-016 · Organisation onboarding and approval: Medvya approves organisations, never individual doctors
 
 - **Status:** Decided by the product owner on 10 Nov 2026, including the answers of the same day to the open points (set-up-only mode before approval, starter plan cap, document lists, interim approval queue, owner-attested licence). Counsel still reviews the document lists and the terms wording (MDV-P1-044, MDV-P2-022) before they are used with a real clinic. Supersedes the "Medvya operations verify each doctor's licence" default in MDV-P1-007, MDV-P2-023 and MDV-P5-044.
-- **Tickets:** MDV-P1-062 to P1-069 (new), MDV-P2-023 and MDV-P5-044 (rewritten); plans and self-service upgrade later in MDV-P5-016 and MDV-P5-042.
+- **Tickets:** MDV-P1-062 to P1-072 (new), MDV-P2-023 and MDV-P5-044 (rewritten); plans and self-service upgrade later in MDV-P5-016 and MDV-P5-042.
 
 ## Context
 
@@ -46,7 +46,18 @@ Until `Approved` the owner can sign in and set up the organisation: profile, hou
 
 ## Starter plan (DECIDED: one hard-coded plan, enforced now)
 
-Until plans exist (MDV-P5-042) every organisation has one hard-coded starter plan: **1 doctor and 2 other staff** (any mix of nurse, receptionist and admin; the owner-doctor is the doctor). **Patients are not capped.** Adding beyond the cap is refused by the server with the message "Your plan allows 1 doctor and 2 staff; contact Medvya to upgrade". The cap lives in one place with a `shortcut:` comment (hard-coded plan, replaced by entitlements when MDV-P5-042 lands). The owner self-service upgrade comes with MDV-P5-042 and MDV-P5-016. Ticket: MDV-P1-069.
+Until plans exist (MDV-P5-042) every organisation has one hard-coded starter plan: **1 doctor and 2 other staff** (any mix of nurse, receptionist and admin; the owner-doctor is the doctor), counted **per organisation in total across its locations**. **Patients are not capped.** Adding beyond the cap is refused by the server with the message "Your plan allows 1 doctor and 2 staff; contact Medvya to upgrade". The cap lives in one place with a `shortcut:` comment (hard-coded plan, replaced by entitlements when MDV-P5-042 lands). The owner self-service upgrade comes with MDV-P5-042 and MDV-P5-016. Ticket: MDV-P1-069.
+
+## Locations: one organisation, many locations (DECIDED 10 Nov 2026)
+
+- **Chain model.** One organisation has one or more locations (branches or facilities, like a hospital group in Surat, Mumbai, Hyderabad and Bhopal). The organisation is onboarded and approved once; the first location is created at onboarding. In code a location is a facility. Doctors, nurses and staff, and the plan, belong to the **organisation** and may work at one or more of its locations.
+- **Separate organisations.** A person may also own several separate organisations. This already works through multiple memberships and the facility picker (P0-012); each organisation is approved separately.
+- **Adding a location is the owner's act, with no new Medvya approval.** The owner enters the location (name, address, time zone) and uploads its registration certificate and tax number as a record. That is the owner's responsibility, the same principle as attesting a doctor. The audit log records who added it and when. The location's country must equal the organisation's country (data stays in country, ADR-003).
+- **The starter plan counts per organisation**, in total across locations (1 doctor and 2 other staff); a bigger chain needs a bigger plan (MDV-P5-042).
+- **Patients are one shared record across the organisation's locations**: one MRN and one chart. Staff at any location may open it under the existing access, care-relationship and audit rules; the access log shows the location where it was read (role and facility at event time are already kept). Row-level security and the EF filter stay on the organisation (tenant), not the facility.
+- **Out of scope:** reassigning or walking a patient in between doctors of different locations.
+- **Relation to P7.** MDV-P7-003 (organisation, facilities and departments administration) and MDV-P7-002 (record authority per facility) overlap. The clinic-level version is built first (MDV-P1-070 to P1-072); P7-003 later extends it with hospital departments.
+- Tickets: MDV-P1-070 (add a location), MDV-P1-071 (staff and doctors across locations), MDV-P1-072 (shared patient record).
 
 ## What changes for doctors
 
@@ -81,15 +92,18 @@ Every tenant that exists when this ships (the dev and pilot tenants, for example
 | Operations approval | `DoctorEndpoints.cs` (`OperationsPolicies`, `Operations:LicenceReviewers`, licence verify and reject routes), `LicenceReview.cs`, `ILicenceReview`, `Host.Platform` queue page and `Medvya.Platform` read path (ADR-014 says the licence queue gets its own narrow, reviewed read path) | Replace with organisation approve, ask for changes, reject, suspend; interim endpoint, then the console queue (MDV-P5-044) | M (3 days) interim endpoint and simple console queue, M (3 days) later console extension |
 | Owner attestation | `Doctors.cs`, `IDoctors.cs`, `Practice.cs` (`DoctorLicence`, `LicenceStatus`, `LicenceRules`), doctor wizard in Settings (step "verification status"), `SessionControl.cs` (`LicencePending`), `web/clinic` session domain (`licencePending`), `App.tsx` notice | Attestation fields and audit, remove the verification states and the gate, show "Attested by", keep expiry reminders | M (3 days) |
 | Naming | `Role.SoloDoctor` in `RoleMatrix.cs` (52 files use it, mostly tests and the web `Role` type), `role.SoloDoctor` label already reads "Owner doctor", `StaffPolicies` comments, copy in `packages/i18n` (`onboarding.licence.notice`, `doctors.intro`, `invite.licence`, `inviteForm.licence`, `onboarding.team.doctors`, `staff.doctorNotice`), docs | Rename to an owner-doctor concept or keep the enum value and retire only the wording; a rename touches the JWT role claim and stored memberships, so it needs a migration | M (2.5 days) |
+| Locations | `Medvya.Tenancy` facility directory (`FacilityDirectory.cs`), Settings, Locations in `web/clinic`, audit | Owner adds a location with certificate and tax record, same country, audited | M (3 days) |
+| Staff and doctors across locations | memberships and facility scope in `Medvya.Tenancy` (`StaffAccess.cs`, `Invitations.cs`), `Medvya.Scheduling` (schedule, board and queue per location), facility picker | A membership can cover several locations of the organisation | M (3 days) |
+| Shared patient record | `Medvya.Patients` (`Patient.cs` has `FacilityId`; `PatientRegistry.cs` allocates the MRN per facility via `NextMrnAsync(tenantId, facilityId)`, requires registration at the active facility, and searches and checks duplicates by facility; `PatientDirectory.cs`, `PatientMerges.cs` filter by `FacilityId`; `RegistrationCareRelationship.cs`, `AccessRequestEndpoints.cs`), Scheduling, Encounters, the access log | One MRN sequence and one duplicate scope per organisation, search across locations, facility kept as where the person was registered or seen | L (5 days) |
 | Terms | `ITermsAcceptance.cs` / `TermsPolicy` version, legal text (P1-044) | New version stating the organisation's licence responsibility; owners re-accept | S (0.5 day) plus counsel |
 | Migration | New forward-only migration, ERD regeneration (`tools/erd/generate.py`) | Existing tenants Approved, licences attested | S (1 day) |
 | Tests and journeys | Tenancy integration tests (licence gate tests become approval gate tests), `web/clinic` tests, `tests/e2e` onboarding spec and J1 | Rewrite to the new flow | included above |
 
 ## Status of work
 
-- **Done so far:** this ADR and the ticket sources (MDV-P1-062 to P1-069, rewritten MDV-P2-023 and MDV-P5-044, notes on related tickets), journey J1, personas and the handoff note. **Nothing is implemented.**
+- **Done so far:** this ADR and the ticket sources (MDV-P1-062 to P1-069, rewritten MDV-P2-023 and MDV-P5-044, notes on related tickets), journey J1, personas and the handoff note. The location decisions of the second pass are recorded too. **Nothing is implemented.**
 - **Not done:** all implementation: the onboarding request, the organisation state and set-up-only gate, the approval queue and interim endpoint, owner attestation and the printed licence, the starter plan cap, the rename, the terms text and the migration.
-- **Open questions:** (1) whether an expired attested licence blocks signing (default: warn only); (2) the approval SLA and the named Medvya reviewer; (3) hospital specifics beyond the four extra documents; (4) counsel review of the document lists and the terms wording.
+- **Open questions:** (1) whether an expired attested licence blocks signing (default: warn only); (2) the approval SLA and the named Medvya reviewer; (3) hospital specifics beyond the four extra documents; (4) counsel review of the document lists and the terms wording; (5) whether a doctor's fees and hours differ per location; (6) whether a location's tax number may differ from the organisation's (assumed yes, kept as a record); (7) whether the plan cap should ever differ per location (decided: no, per organisation).
 
 ## Not decided here
 

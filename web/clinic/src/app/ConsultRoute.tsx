@@ -9,16 +9,16 @@ import SlipPage from '../features/orders/components/SlipPage';
 import { useOrdersController, useSlipController } from '../features/orders/hooks/useOrdersController';
 
 /** Composition only: one consultation (MDV-P2-001) by its id in the address; the server checks clinical access on every call. */
-export default function ConsultRoute({ boardPath, canOrder }: { boardPath: string; canOrder: boolean }) {
+export default function ConsultRoute({ boardPath, canOrder, canReconcile }: { boardPath: string; canOrder: boolean; canReconcile: boolean }) {
   const { encounterId = '' } = useParams();
-  return <Consult key={encounterId} encounterId={encounterId} boardPath={boardPath} canOrder={canOrder} />;
+  return <Consult key={encounterId} encounterId={encounterId} boardPath={boardPath} canOrder={canOrder} canReconcile={canReconcile} />;
 }
 
-function Consult({ encounterId, boardPath, canOrder }: { encounterId: string; boardPath: string; canOrder: boolean }) {
+function Consult({ encounterId, boardPath, canOrder, canReconcile }: { encounterId: string; boardPath: string; canOrder: boolean; canReconcile: boolean }) {
   const consult = useConsultController(encounterId);
   return (
     <div className="flex flex-col gap-4">
-      <ConsultPage {...consult} boardPath={boardPath} />
+      <ConsultPage {...consult} boardPath={boardPath} canReconcile={canReconcile} />
       {consult.banner && canOrder && <Orders encounterId={encounterId} ended={consult.banner.encounter.status === 'Ended'} />}
       {consult.banner && canOrder && <Referrals patientId={consult.banner.encounter.patientId} encounterId={encounterId} ended={consult.banner.encounter.status === 'Ended'} />}
     </div>

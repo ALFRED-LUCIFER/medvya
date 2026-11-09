@@ -71,7 +71,7 @@ export default function Patient360Page(p: Props) {
             : <List>{chart.medicines.map((m, i) => (
                 <Item key={i} source={m.source}>
                   <strong>{m.name}</strong>
-                  <span>{[m.dose && ltr(m.dose), t(`patient360.medicineState.${m.state}`)].filter(Boolean).join(' · ')}</span>
+                  <span>{[m.dose && ltr(m.dose), t(`patient360.medicineState.${m.state}`)].filter(Boolean).join(' · ')}{m.stoppedAt && <>{' · '}<DateText iso={m.stoppedAt} zone={timeZone} /></>}</span>
                 </Item>))}</List>}
         </Card>
         <Card title={t('patient360.vitals')}>

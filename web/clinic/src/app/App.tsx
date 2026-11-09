@@ -45,6 +45,7 @@ const TodayRoute = lazy(() => import('./TodayRoute'));
 const ConsultRoute = lazy(() => import('./ConsultRoute'));
 const LetterRoute = lazy(() => import('./ConsultRoute').then(m => ({ default: m.LetterRoute })));
 const SlipRoute = lazy(() => import('./ConsultRoute').then(m => ({ default: m.SlipRoute })));
+const ReconciliationRoute = lazy(() => import('./ReconciliationRoute'));
 const Patient360Route = lazy(() => import('./Patient360Route'));
 const TimelineRoute = lazy(() => import('./TimelineRoute'));
 const DocumentsRoute = lazy(() => import('./DocumentsRoute'));
@@ -153,12 +154,15 @@ export default function App({ locale, onLocaleChange }: Props) {
           {nursePath && <Route path={`${nursePath}/:appointmentId`} element={<NurseIntakeRoute online={online} nursePath={nursePath} />} />}
           {/* A consultation (MDV-P2-001) for any role that treats patients; the server checks the care relationship on every call. */}
           {['Read', 'Limited', 'Full', 'Sign'].includes(active.capabilities.Patient360Chart ?? 'None') &&
-            <Route path="/consult/:encounterId" element={<ConsultRoute boardPath={pathOf('frontDesk') ?? '/'} canOrder={active.capabilities.PrescriptionsOrders === 'Sign'} />} />}
+            <Route path="/consult/:encounterId" element={<ConsultRoute boardPath={pathOf('frontDesk') ?? '/'} canOrder={active.capabilities.PrescriptionsOrders === 'Sign'} canReconcile={active.capabilities.Patient360Chart === 'Full'} />} />}
           {/* The investigation slip (MDV-P2-018): same roles; the server lets only an ordering doctor read it. */}
           {active.capabilities.PrescriptionsOrders === 'Sign' && <>
             <Route path="/consult/:encounterId/slip" element={<SlipRoute />} />
             <Route path="/consult/:encounterId/referrals/:referralId/letter" element={<LetterRoute />} />
           </>}
+          {/* Medication reconciliation (MDV-P2-011, E-07): a doctor's, inside a consultation. */}
+          {active.capabilities.Patient360Chart === 'Full' &&
+            <Route path="/consult/:encounterId/medicines" element={<ReconciliationRoute boardPath={pathOf('frontDesk') ?? '/'} online={online} />} />}
           {/* Patient 360 (MDV-P2-004, E-01): same roles; /patients/new and /patients/directory are more specific and win. */}
           {['Read', 'Limited', 'Full', 'Sign'].includes(active.capabilities.Patient360Chart ?? 'None') &&
             <>

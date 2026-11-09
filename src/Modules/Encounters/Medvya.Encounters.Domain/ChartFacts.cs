@@ -55,14 +55,14 @@ public sealed class Problem
 [JsonConverter(typeof(JsonStringEnumConverter<MedicationState>))]
 public enum MedicationState { Active, Stopped }
 
-/// <summary>MEDICATION_STATEMENT: a medicine on the chart, active or stopped (reconciliation arrives with MDV-P2-011).</summary>
+/// <summary>MEDICATION_STATEMENT: a medicine on the chart, active or stopped. The doctor's reconciliation (MDV-P2-011) is its only writer for chart medicines.</summary>
 public sealed class MedicationStatement
 {
     [Classification(DataClass.Internal)] public Guid Id { get; init; }
     [Classification(DataClass.Internal)] public Guid TenantId { get; init; }
     [Classification(DataClass.Internal)] public Guid PatientId { get; init; }
     [Classification(DataClass.SensitiveHealth)] public required string Name { get; init; }
-    [Classification(DataClass.SensitiveHealth)] public string? Dose { get; init; }
+    [Classification(DataClass.SensitiveHealth)] public string? Dose { get; set; }
     [Classification(DataClass.SensitiveHealth)] public MedicationState State { get; set; }
     [Classification(DataClass.Internal)] public ChartSource Source { get; init; }
     [Classification(DataClass.Internal)] public DateTimeOffset RecordedAt { get; init; }
@@ -73,6 +73,10 @@ public sealed class MedicationStatement
     [Classification(DataClass.SensitiveHealth)] public string? Frequency { get; init; }
     [Classification(DataClass.Internal)] public bool NeedsClarification { get; init; }
     [Classification(DataClass.Internal)] public Guid? RecordedBy { get; init; }
+    // Set by the doctor's reconciliation (MDV-P2-011): when the clinic last reviewed this medicine, and when it was stopped (Patient 360 and the timeline show it).
+    [Classification(DataClass.Internal)] public DateTimeOffset? ReviewedAt { get; set; }
+    [Classification(DataClass.Internal)] public Guid? ReviewedBy { get; set; }
+    [Classification(DataClass.Internal)] public DateTimeOffset? StoppedAt { get; set; }
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter<ObservationCode>))]

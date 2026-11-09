@@ -9,7 +9,7 @@ export type ObservationCode = 'BloodPressureSystolic' | 'BloodPressureDiastolic'
 
 export type Allergy = { substance: string; reaction: string | null; status: AllergyStatus; source: ChartSource };
 export type Problem = { icd10Code: string | null; description: string; verification: 'Verified' | 'PatientReported' | 'Provisional'; onsetOn: string | null; source: ChartSource };
-export type Medicine = { name: string; dose: string | null; state: 'Active' | 'Stopped'; source: ChartSource };
+export type Medicine = { name: string; dose: string | null; state: 'Active' | 'Stopped'; source: ChartSource; stoppedAt: string | null };
 export type Vital = { code: ObservationCode; value: number; unit: string; takenAt: string; source: ChartSource };
 export type TrendPoint = { value: number; takenAt: string; source: ChartSource };
 export type Trend = { code: ObservationCode; unit: string; points: TrendPoint[] };

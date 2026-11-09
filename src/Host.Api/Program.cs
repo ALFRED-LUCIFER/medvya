@@ -184,6 +184,7 @@ app.MapIntakeEndpoints();
 app.MapFormularyEndpoints();
 app.MapOrderEndpoints();
 app.MapReferralEndpoints();
+app.MapNoteTemplateEndpoints();
 if (app.Environment.IsDevelopment() && app.Configuration["Authentication:Oidc:Authority"]?.EndsWith(DevIdentityProvider.Path, StringComparison.Ordinal) == true)
     app.MapDevIdentityProvider(Medvya.Identity.Domain.IdentityProviders.Development, async http =>
         await http.RequestServices.GetRequiredService<Medvya.Identity.Infrastructure.Persistence.IdentityDbContext>().Users.AsNoTracking()

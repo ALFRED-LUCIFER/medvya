@@ -84,6 +84,8 @@ public static class EncounterEndpoints
             .AuditedByUseCase("patient.trends.read", "patient", AuditPurpose.Treatment, patientRouteKey: "patientId")
             .AddEndpointFilter(MapErrors);
         app.MapDocumentEndpoints();
+        app.MapReconciliationEndpoints();
+        app.MapNoteEndpoints();
         return app;
     }
 

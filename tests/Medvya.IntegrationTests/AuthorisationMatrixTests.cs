@@ -186,6 +186,11 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.SoloDoctor, new("GET", "/v1/patients/{patient}/timeline")),
         (Role.SoloDoctor, new("GET", "/v1/patients/{patient}/trends")),
         (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/end")),
+        (Role.SoloDoctor, new("GET", "/v1/encounters/{encounter}/medicines/reconciliation")),
+        (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/medicines/reconciliation/decisions", """{"key":"synthetic","kind":"Keep"}""")),
+        (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/medicines/reconciliation/confirm")),
+        (Role.SoloDoctor, new("GET", "/v1/encounters/{encounter}/note")),
+        (Role.SoloDoctor, new("PUT", "/v1/encounters/{encounter}/note", """{"baseVersion":0,"sections":{}}""")),
         (Role.SoloDoctor, new("POST", "/v1/encounters", """{"appointmentId":"{appointment}","leaveOpen":true}""")),
         (Role.Nurse, new("GET", "/v1/intake/{appointment}")),
         (Role.Nurse, new("PUT", "/v1/intake/{appointment}", """{"chiefComplaint":"Synthetic","vitals":[]}""")),
@@ -338,6 +343,8 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.Receptionist, new("GET", "/v1/settings/doctors")),
         (Role.Receptionist, new("GET", "/v1/access-requests")),
         (Role.Receptionist, new("GET", "/v1/encounters/{encounter}")), // Patient 360: X
+        (Role.Receptionist, new("PUT", "/v1/encounters/{encounter}/note", """{"baseVersion":0,"sections":{}}""")), // Patient 360: X
+        (Role.Nurse, new("GET", "/v1/encounters/{encounter}/note")), // notes are the doctor's: Patient 360 below Full
         (Role.Receptionist, new("GET", "/v1/patients/{patient}/chart")), // Patient 360: X
         (Role.Receptionist, new("POST", "/v1/documents/{document}/view-link")), // the desk uploads and lists, never opens
         (Role.Receptionist, new("PATCH", "/v1/documents/{document}", """{"type":"Other","documentDate":"2026-09-01"}""")),
@@ -355,6 +362,8 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.Nurse, new("PUT", "/v1/settings/nurse-intake", """{"enabled":true}""")), // the owner's switch: Staff, roles, integrations
         (Role.Receptionist, new("PUT", "/v1/settings/nurse-intake", """{"enabled":true}""")),
         (Role.Receptionist, new("POST", "/v1/chart/allergy-flags", """{"patientIds":["{patient}"]}""")), // Patient 360: X
+        (Role.Receptionist, new("PUT", "/v1/note-templates/mine", """{"keys":["general-opd"]}""")), // Patient 360: X
+        (Role.Nurse, new("GET", "/v1/note-templates/")),
         (Role.PracticeAdmin, new("POST", "/v1/chart/allergy-flags", """{"patientIds":["{patient}"]}""")),
         (Role.Nurse, new("POST", "/v1/encounters/{encounter}/referrals", """{"provider":"Dr. Synthetic","urgency":"Routine","reason":"Synthetic","sections":[]}""")), // Prescriptions & orders: X
         (Role.Receptionist, new("GET", "/v1/patients/{patient}/referrals")), // Patient 360: X

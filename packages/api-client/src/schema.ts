@@ -4790,6 +4790,173 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/encounters/{encounterId}/medicines/reconciliation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    encounterId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/encounters/{encounterId}/medicines/reconciliation/decisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    encounterId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["DecideMedicine"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/encounters/{encounterId}/medicines/reconciliation/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    encounterId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/encounters/{encounterId}/note": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    encounterId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    encounterId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["SaveNote"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/intake/{appointmentId}": {
         parameters: {
             query?: never;
@@ -5146,43 +5313,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/formulary": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: {
-                    q?: string;
-                    limit?: number | string;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/order-sets": {
+    "/v1/note-templates": {
         parameters: {
             query?: never;
             header?: never;
@@ -5215,215 +5346,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/settings/formulary": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: {
-                    q?: string;
-                    limit?: number | string;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": null | components["schemas"]["AddMedicine"];
-                };
-            };
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/settings/order-sets": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": null | components["schemas"]["CreateOrderSet"];
-                };
-            };
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/encounters/{encounterId}/orders": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    encounterId: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    encounterId: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": null | components["schemas"]["AddOrder"];
-                };
-            };
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/encounters/{encounterId}/orders/from-set": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    encounterId: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": null | components["schemas"]["AddOrderSetOrders"];
-                };
-            };
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/orders/{orderId}/included": {
+    "/v1/note-templates/mine": {
         parameters: {
             query?: never;
             header?: never;
@@ -5435,165 +5358,12 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: never;
-                path: {
-                    orderId: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": null | components["schemas"]["IncludeOrder"];
-                };
-            };
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/encounters/{encounterId}/orders/place": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    encounterId: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": null | components["schemas"]["PlaceOrders"];
-                };
-            };
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/encounters/{encounterId}/orders/slip": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    encounterId: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/encounters/{encounterId}/referrals": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    encounterId: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": null | components["schemas"]["CreateReferral"];
-                };
-            };
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/referrals/in": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
                 path?: never;
                 cookie?: never;
             };
             requestBody?: {
                 content: {
-                    "application/json": null | components["schemas"]["FileReferralIn"];
+                    "application/json": null | components["schemas"]["ChooseNoteTemplates"];
                 };
             };
             responses: {
@@ -5606,153 +5376,6 @@ export interface paths {
                 };
             };
         };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/referrals/{referralId}/send": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    referralId: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": null | components["schemas"]["SendReferral"];
-                };
-            };
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/referrals/{referralId}/status": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    referralId: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": null | components["schemas"]["AdvanceReferral"];
-                };
-            };
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/referrals/{referralId}/letter": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    referralId: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/patients/{patientId}/referrals": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    patientId: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -5799,15 +5422,6 @@ export interface components {
             frequency: null | string;
             needsClarification: boolean;
         };
-        AddOrder: {
-            kind: null | components["schemas"]["OrderKind"];
-            name: null | string;
-            note: null | string;
-        };
-        AddOrderSetOrders: {
-            /** Format: uuid */
-            orderSetId: null | string;
-        };
         AddResource: {
             /** Format: uuid */
             facilityId?: string;
@@ -5835,12 +5449,6 @@ export interface components {
             from?: null | string;
             /** Format: time */
             until?: null | string;
-        };
-        AdvanceReferral: {
-            state: null | components["schemas"]["ReferralState"];
-            /** Format: uuid */
-            documentId: null | string;
-            note: null | string;
         };
         AllergyFlagsRequest: {
             patientIds: null | string[];
@@ -6026,6 +5634,9 @@ export interface components {
             /** Format: int32 */
             targetSeconds: number | string;
         };
+        ChooseNoteTemplates: {
+            keys: null | string[];
+        };
         ClinicalAccessBody: {
             policy: components["schemas"]["ClinicalAccessPolicy"];
         };
@@ -6077,16 +5688,6 @@ export interface components {
             facilityId?: string;
             name?: null | string;
         };
-        CreateOrderSet: {
-            name: null | string;
-            items: null | string[];
-        };
-        CreateReferral: {
-            provider: null | string;
-            urgency: null | components["schemas"]["ReferralUrgency"];
-            reason: null | string;
-            sections: null | components["schemas"]["ReferralSection"][];
-        };
         DayHours: {
             weekday: components["schemas"]["DayOfWeek"];
             /** Format: time */
@@ -6121,6 +5722,12 @@ export interface components {
             ageYears: null | number | string;
             visitType: components["schemas"]["VisitType"];
             state: components["schemas"]["AppointmentState"];
+        };
+        DecideMedicine: {
+            key: null | string;
+            kind: null | components["schemas"]["MedicationDecisionKind"];
+            newDose: null | string;
+            reason: null | string;
         };
         Decision: {
             verified: boolean;
@@ -6252,14 +5859,6 @@ export interface components {
             followUpFee: number | string;
             currency: string;
         };
-        FileReferralIn: {
-            /** Format: uuid */
-            patientId: null | string;
-            provider: null | string;
-            reason: null | string;
-            /** Format: uuid */
-            documentId: null | string;
-        };
         FrontDeskBoard: {
             /** Format: uuid */
             facilityId: string;
@@ -6310,9 +5909,6 @@ export interface components {
         };
         /** @enum {unknown} */
         IdentifierScheme: "Abha" | "AbhaAddress" | "AadhaarLast4" | "EmiratesId" | "Passport" | "Visa";
-        IncludeOrder: {
-            included: null | boolean;
-        };
         InviteRequest: {
             email: string;
             role: components["schemas"]["Role"];
@@ -6332,6 +5928,8 @@ export interface components {
             address: null | string;
             timeZone: string;
         };
+        /** @enum {unknown} */
+        MedicationDecisionKind: "Keep" | "Change" | "Stop" | "Add" | "Ignore" | null;
         /** @enum {unknown} */
         MembershipStatus: "Invited" | "Active" | "Suspended" | "Offboarded";
         MergeRequestBody: {
@@ -6430,8 +6028,6 @@ export interface components {
             email: null | string;
             role: null | components["schemas"]["Role"];
         };
-        /** @enum {unknown} */
-        OrderKind: "Lab" | "Imaging" | null;
         PairDisplay: {
             token: null | string;
         };
@@ -6468,9 +6064,6 @@ export interface components {
             /** Format: int32 */
             doubleBookingRefusals: number | string;
             baselines: components["schemas"]["BaselineView"][];
-        };
-        PlaceOrders: {
-            destination: null | string;
         };
         PreviewRequest: {
             token: string;
@@ -6536,14 +6129,6 @@ export interface components {
             chiefComplaint: null | string;
             vitals: null | components["schemas"]["VitalReading"][];
         };
-        /** @enum {unknown} */
-        ReferralChannel: "Print" | "Email" | "PatientCarries" | null;
-        /** @enum {unknown} */
-        ReferralSection: "Allergies" | "Problems" | "Medicines";
-        /** @enum {unknown} */
-        ReferralState: "Draft" | "Sent" | "AppointmentBooked" | "ReportReceived" | "Closed" | "Received" | null;
-        /** @enum {unknown} */
-        ReferralUrgency: "Routine" | "Urgent" | null;
         RegisterRequest: {
             quick?: boolean;
             fullName?: string;
@@ -6645,6 +6230,15 @@ export interface components {
             address?: null | string;
             timeZone?: null | string;
         };
+        SaveNote: {
+            templateKey: null | string;
+            manual: boolean;
+            /** Format: int32 */
+            baseVersion: number | string;
+            sections: null | {
+                [key: string]: string;
+            };
+        };
         SaveProfile: {
             name?: null | string;
             address?: null | string;
@@ -6725,9 +6319,6 @@ export interface components {
              * @default 1
              */
             page: number | string;
-        };
-        SendReferral: {
-            channel: null | components["schemas"]["ReferralChannel"];
         };
         SeriesBooked: {
             /** Format: date-time */

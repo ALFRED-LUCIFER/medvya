@@ -3765,6 +3765,151 @@
         }
       }
     },
+    "/v1/encounters/{encounterId}/medicines/reconciliation": {
+      "get": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "encounterId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/encounters/{encounterId}/medicines/reconciliation/decisions": {
+      "post": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "encounterId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/DecideMedicine"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/encounters/{encounterId}/medicines/reconciliation/confirm": {
+      "post": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "encounterId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/encounters/{encounterId}/note": {
+      "get": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "encounterId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "encounterId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/SaveNote"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/v1/intake/{appointmentId}": {
       "get": {
         "tags": [
@@ -4089,40 +4234,7 @@
         }
       }
     },
-    "/v1/formulary": {
-      "get": {
-        "tags": [
-          "FormularyEndpoints"
-        ],
-        "parameters": [
-          {
-            "name": "q",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "schema": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
-              "type": [
-                "integer",
-                "string"
-              ],
-              "format": "int32"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/v1/order-sets": {
+    "/v1/note-templates": {
       "get": {
         "tags": [
           "Host.Api"
@@ -4134,218 +4246,11 @@
         }
       }
     },
-    "/v1/settings/formulary": {
-      "get": {
-        "tags": [
-          "FormularyEndpoints"
-        ],
-        "parameters": [
-          {
-            "name": "q",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "schema": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
-              "type": [
-                "integer",
-                "string"
-              ],
-              "format": "int32"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      },
-      "post": {
-        "tags": [
-          "Host.Api"
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "oneOf": [
-                  {
-                    "type": "null"
-                  },
-                  {
-                    "$ref": "#/components/schemas/AddMedicine"
-                  }
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/v1/settings/order-sets": {
-      "get": {
-        "tags": [
-          "Host.Api"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      },
-      "post": {
-        "tags": [
-          "Host.Api"
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "oneOf": [
-                  {
-                    "type": "null"
-                  },
-                  {
-                    "$ref": "#/components/schemas/CreateOrderSet"
-                  }
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/v1/encounters/{encounterId}/orders": {
-      "get": {
-        "tags": [
-          "Host.Api"
-        ],
-        "parameters": [
-          {
-            "name": "encounterId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      },
-      "post": {
-        "tags": [
-          "Host.Api"
-        ],
-        "parameters": [
-          {
-            "name": "encounterId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "oneOf": [
-                  {
-                    "type": "null"
-                  },
-                  {
-                    "$ref": "#/components/schemas/AddOrder"
-                  }
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/v1/encounters/{encounterId}/orders/from-set": {
-      "post": {
-        "tags": [
-          "Host.Api"
-        ],
-        "parameters": [
-          {
-            "name": "encounterId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "oneOf": [
-                  {
-                    "type": "null"
-                  },
-                  {
-                    "$ref": "#/components/schemas/AddOrderSetOrders"
-                  }
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/v1/orders/{orderId}/included": {
+    "/v1/note-templates/mine": {
       "put": {
         "tags": [
           "Host.Api"
         ],
-        "parameters": [
-          {
-            "name": "orderId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -4355,266 +4260,13 @@
                     "type": "null"
                   },
                   {
-                    "$ref": "#/components/schemas/IncludeOrder"
+                    "$ref": "#/components/schemas/ChooseNoteTemplates"
                   }
                 ]
               }
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/v1/encounters/{encounterId}/orders/place": {
-      "post": {
-        "tags": [
-          "Host.Api"
-        ],
-        "parameters": [
-          {
-            "name": "encounterId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "oneOf": [
-                  {
-                    "type": "null"
-                  },
-                  {
-                    "$ref": "#/components/schemas/PlaceOrders"
-                  }
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/v1/encounters/{encounterId}/orders/slip": {
-      "get": {
-        "tags": [
-          "Host.Api"
-        ],
-        "parameters": [
-          {
-            "name": "encounterId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/v1/encounters/{encounterId}/referrals": {
-      "post": {
-        "tags": [
-          "Host.Api"
-        ],
-        "parameters": [
-          {
-            "name": "encounterId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "oneOf": [
-                  {
-                    "type": "null"
-                  },
-                  {
-                    "$ref": "#/components/schemas/CreateReferral"
-                  }
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/v1/referrals/in": {
-      "post": {
-        "tags": [
-          "Host.Api"
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "oneOf": [
-                  {
-                    "type": "null"
-                  },
-                  {
-                    "$ref": "#/components/schemas/FileReferralIn"
-                  }
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/v1/referrals/{referralId}/send": {
-      "post": {
-        "tags": [
-          "Host.Api"
-        ],
-        "parameters": [
-          {
-            "name": "referralId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "oneOf": [
-                  {
-                    "type": "null"
-                  },
-                  {
-                    "$ref": "#/components/schemas/SendReferral"
-                  }
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/v1/referrals/{referralId}/status": {
-      "post": {
-        "tags": [
-          "Host.Api"
-        ],
-        "parameters": [
-          {
-            "name": "referralId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "oneOf": [
-                  {
-                    "type": "null"
-                  },
-                  {
-                    "$ref": "#/components/schemas/AdvanceReferral"
-                  }
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/v1/referrals/{referralId}/letter": {
-      "get": {
-        "tags": [
-          "Host.Api"
-        ],
-        "parameters": [
-          {
-            "name": "referralId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/v1/patients/{patientId}/referrals": {
-      "get": {
-        "tags": [
-          "Host.Api"
-        ],
-        "parameters": [
-          {
-            "name": "patientId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
         "responses": {
           "200": {
             "description": "OK"
@@ -4796,53 +4448,6 @@
           }
         }
       },
-      "AddOrder": {
-        "required": [
-          "kind",
-          "name",
-          "note"
-        ],
-        "type": "object",
-        "properties": {
-          "kind": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/OrderKind"
-              }
-            ]
-          },
-          "name": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "note": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
-      },
-      "AddOrderSetOrders": {
-        "required": [
-          "orderSetId"
-        ],
-        "type": "object",
-        "properties": {
-          "orderSetId": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "uuid"
-          }
-        }
-      },
       "AddResource": {
         "type": "object",
         "properties": {
@@ -4929,39 +4534,6 @@
               "string"
             ],
             "format": "time"
-          }
-        }
-      },
-      "AdvanceReferral": {
-        "required": [
-          "state",
-          "documentId",
-          "note"
-        ],
-        "type": "object",
-        "properties": {
-          "state": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/ReferralState"
-              }
-            ]
-          },
-          "documentId": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "uuid"
-          },
-          "note": {
-            "type": [
-              "null",
-              "string"
-            ]
           }
         }
       },
@@ -5662,6 +5234,23 @@
           }
         }
       },
+      "ChooseNoteTemplates": {
+        "required": [
+          "keys"
+        ],
+        "type": "object",
+        "properties": {
+          "keys": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
       "ClinicalAccessBody": {
         "required": [
           "policy"
@@ -5891,72 +5480,6 @@
           }
         }
       },
-      "CreateOrderSet": {
-        "required": [
-          "name",
-          "items"
-        ],
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "items": {
-            "type": [
-              "null",
-              "array"
-            ],
-            "items": {
-              "type": "string"
-            }
-          }
-        }
-      },
-      "CreateReferral": {
-        "required": [
-          "provider",
-          "urgency",
-          "reason",
-          "sections"
-        ],
-        "type": "object",
-        "properties": {
-          "provider": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "urgency": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/ReferralUrgency"
-              }
-            ]
-          },
-          "reason": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "sections": {
-            "type": [
-              "null",
-              "array"
-            ],
-            "items": {
-              "$ref": "#/components/schemas/ReferralSection"
-            }
-          }
-        }
-      },
       "DayHours": {
         "required": [
           "weekday",
@@ -6083,6 +5606,45 @@
           },
           "state": {
             "$ref": "#/components/schemas/AppointmentState"
+          }
+        }
+      },
+      "DecideMedicine": {
+        "required": [
+          "key",
+          "kind",
+          "newDose",
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "kind": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/MedicationDecisionKind"
+              }
+            ]
+          },
+          "newDose": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reason": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -6586,43 +6148,6 @@
           }
         }
       },
-      "FileReferralIn": {
-        "required": [
-          "patientId",
-          "provider",
-          "reason",
-          "documentId"
-        ],
-        "type": "object",
-        "properties": {
-          "patientId": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "uuid"
-          },
-          "provider": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "reason": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "documentId": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "uuid"
-          }
-        }
-      },
       "FrontDeskBoard": {
         "required": [
           "facilityId",
@@ -6786,20 +6311,6 @@
           "Visa"
         ]
       },
-      "IncludeOrder": {
-        "required": [
-          "included"
-        ],
-        "type": "object",
-        "properties": {
-          "included": {
-            "type": [
-              "null",
-              "boolean"
-            ]
-          }
-        }
-      },
       "InviteRequest": {
         "required": [
           "email",
@@ -6869,6 +6380,16 @@
             "type": "string"
           }
         }
+      },
+      "MedicationDecisionKind": {
+        "enum": [
+          "Keep",
+          "Change",
+          "Stop",
+          "Add",
+          "Ignore",
+          null
+        ]
       },
       "MembershipStatus": {
         "enum": [
@@ -7348,13 +6869,6 @@
           }
         }
       },
-      "OrderKind": {
-        "enum": [
-          "Lab",
-          "Imaging",
-          null
-        ]
-      },
       "PairDisplay": {
         "required": [
           "token"
@@ -7518,20 +7032,6 @@
             "items": {
               "$ref": "#/components/schemas/BaselineView"
             }
-          }
-        }
-      },
-      "PlaceOrders": {
-        "required": [
-          "destination"
-        ],
-        "type": "object",
-        "properties": {
-          "destination": {
-            "type": [
-              "null",
-              "string"
-            ]
           }
         }
       },
@@ -7820,39 +7320,6 @@
             }
           }
         }
-      },
-      "ReferralChannel": {
-        "enum": [
-          "Print",
-          "Email",
-          "PatientCarries",
-          null
-        ]
-      },
-      "ReferralSection": {
-        "enum": [
-          "Allergies",
-          "Problems",
-          "Medicines"
-        ]
-      },
-      "ReferralState": {
-        "enum": [
-          "Draft",
-          "Sent",
-          "AppointmentBooked",
-          "ReportReceived",
-          "Closed",
-          "Received",
-          null
-        ]
-      },
-      "ReferralUrgency": {
-        "enum": [
-          "Routine",
-          "Urgent",
-          null
-        ]
       },
       "RegisterRequest": {
         "type": "object",
@@ -8276,6 +7743,43 @@
           }
         }
       },
+      "SaveNote": {
+        "required": [
+          "templateKey",
+          "manual",
+          "baseVersion",
+          "sections"
+        ],
+        "type": "object",
+        "properties": {
+          "templateKey": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "manual": {
+            "type": "boolean"
+          },
+          "baseVersion": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "sections": {
+            "type": [
+              "null",
+              "object"
+            ],
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        }
+      },
       "SaveProfile": {
         "type": "object",
         "properties": {
@@ -8585,24 +8089,6 @@
             ],
             "format": "int32",
             "default": 1
-          }
-        }
-      },
-      "SendReferral": {
-        "required": [
-          "channel"
-        ],
-        "type": "object",
-        "properties": {
-          "channel": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/ReferralChannel"
-              }
-            ]
           }
         }
       },
@@ -9341,9 +8827,6 @@
     },
     {
       "name": "IntakeEndpoints"
-    },
-    {
-      "name": "FormularyEndpoints"
     }
   ]
 }

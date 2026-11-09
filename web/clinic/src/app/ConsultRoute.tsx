@@ -1,5 +1,7 @@
 import { useParams } from 'react-router';
 import ConsultPage from '../features/encounters/components/ConsultPage';
+import NoteEditor from '../features/encounters/components/NoteEditor';
+import NoteTemplateChoice from '../features/encounters/components/NoteTemplateChoice';
 import { useConsultController } from '../features/encounters/hooks/useConsultController';
 import OrdersPanel from '../features/orders/components/OrdersPanel';
 import LetterPage from '../features/referrals/components/LetterPage';
@@ -7,8 +9,10 @@ import ReferralsPanel from '../features/referrals/components/ReferralsPanel';
 import { useLetterController, useReferralsController } from '../features/referrals/hooks/useReferralsController';
 import SlipPage from '../features/orders/components/SlipPage';
 import { useOrdersController, useSlipController } from '../features/orders/hooks/useOrdersController';
+import { useNoteController } from '../features/encounters/hooks/useNoteController';
+import { useNoteTemplatesController } from '../features/encounters/hooks/useNoteTemplatesController';
 
-/** Composition only: one consultation (MDV-P2-001) by its id in the address; the server checks clinical access on every call. */
+/** Composition only: one consultation (MDV-P2-001) by its id in the address, with its note (MDV-P2-009); the server checks clinical access on every call. */
 export default function ConsultRoute({ boardPath, canOrder, canReconcile }: { boardPath: string; canOrder: boolean; canReconcile: boolean }) {
   const { encounterId = '' } = useParams();
   return <Consult key={encounterId} encounterId={encounterId} boardPath={boardPath} canOrder={canOrder} canReconcile={canReconcile} />;
@@ -18,7 +22,10 @@ function Consult({ encounterId, boardPath, canOrder, canReconcile }: { encounter
   const consult = useConsultController(encounterId);
   return (
     <div className="flex flex-col gap-4">
-      <ConsultPage {...consult} boardPath={boardPath} canReconcile={canReconcile} />
+      <ConsultPage {...consult} boardPath={boardPath} canReconcile={canReconcile}>
+        <NoteEditor {...useNoteController(encounterId)} />
+        <NoteTemplateChoice {...useNoteTemplatesController()} />
+      </ConsultPage>
       {consult.banner && canOrder && <Orders encounterId={encounterId} ended={consult.banner.encounter.status === 'Ended'} />}
       {consult.banner && canOrder && <Referrals patientId={consult.banner.encounter.patientId} encounterId={encounterId} ended={consult.banner.encounter.status === 'Ended'} />}
     </div>

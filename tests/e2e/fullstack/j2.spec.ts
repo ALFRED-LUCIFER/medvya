@@ -45,9 +45,16 @@ journey('J2', {
     await expect(banner.getByRole('heading', { name: meera })).toBeVisible();
     await expectArabicAxeClean(browser, rao, new URL(page.url()).pathname);
 
+    // MDV-P2-009: the doctor types the note; it autosaves on the server and is still there after a reload.
+    const note = page.getByRole('region', { name: 'Consultation note' });
+    await note.getByLabel('Chief complaint').fill('Increased thirst for two weeks (synthetic)');
+    await expect(note.getByRole('status')).toHaveText('Saved');
+    await page.reload();
+    await expect(note.getByLabel('Chief complaint')).toHaveValue('Increased thirst for two weeks (synthetic)');
+
     await page.getByRole('button', { name: 'End consultation' }).click(); // leaves no open consultation for a later run
-    await expect(page.getByRole('status')).toHaveText(/^Consultation ended at \d\d:\d\d\.$/);
-    expect(watch.leaks(['Meera', 'Iyer', '1972-03-12', 'DQ-10-4482'])).toEqual([]); // whole values: a short digit run can occur by chance in a random id
+    await expect(page.getByRole('status').filter({ hasText: 'Consultation ended' })).toHaveText(/^Consultation ended at \d\d:\d\d\.$/);
+    expect(watch.leaks(['Meera', 'Iyer', '1972-03-12', 'DQ-10-4482', 'thirst'])).toEqual([]); // whole values: a short digit run can occur by chance in a random id
   },
   2: 'MDV-P2-004', // E-01 Patient 360 brief (verified facts vs AI summary)
   3: 'MDV-P3-005', // A-03 live capture; recording consent first is MDV-P3-003

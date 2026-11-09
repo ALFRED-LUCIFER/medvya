@@ -8,9 +8,22 @@ namespace Medvya.Encounters.Application;
 /// </summary>
 public sealed record SaveNote(string? TemplateKey, bool Manual, int BaseVersion, IReadOnlyDictionary<string, string>? Sections);
 
-/// <summary>Version 0 and no sections: nothing saved yet (the default template is offered).</summary>
+/// <summary>The signature of a signed note: who, when and the hash of what was signed (ids only; the page shows the name).</summary>
+public sealed record NoteSignature(int VersionNo, Guid SignedBy, DateTimeOffset SignedAt, string ContentHash);
+
+/// <summary>Version 0 and no sections: nothing saved yet (the default template is offered). <see cref="Signature"/> is set once signed.</summary>
 public sealed record NoteView(
-    Guid EncounterId, string TemplateKey, int TemplateVersion, NoteStatus Status, bool Manual, IReadOnlyDictionary<string, string> Sections, int Version, DateTimeOffset? UpdatedAt);
+    Guid EncounterId, string TemplateKey, int TemplateVersion, NoteStatus Status, bool Manual, IReadOnlyDictionary<string, string> Sections, int Version, DateTimeOffset? UpdatedAt,
+    NoteSignature? Signature = null);
+
+/// <summary>Sign the note as the editor last saw it (<see cref="BaseVersion"/>), so text typed in another tab is never signed unseen.</summary>
+public sealed record SignNote(int BaseVersion);
+
+/// <summary>The note is signed: it cannot be saved (code note_signed). A correction is an addendum.</summary>
+public sealed class NoteSignedException() : Exception("The note is signed.");
+
+/// <summary>Signing needs a re-authentication in the last 5 minutes (code reauth_required).</summary>
+public sealed class ReauthRequiredException() : Exception("Re-authentication is required to sign.");
 
 /// <summary>Field/code pairs only, never the entered text.</summary>
 public sealed class NoteValidationException(IReadOnlyList<(string Field, string Code)> errors)
@@ -35,5 +48,15 @@ public interface IConsultNotes
 
     /// <exception cref="NoteValidationException"/>
     /// <exception cref="StaleNoteException"/>
+    /// <exception cref="NoteSignedException"/>
     Task<NoteView?> SaveAsync(Guid encounterId, SaveNote command, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Signs (MDV-P2-012): Sign on Clinical notes with a care relationship, a re-authentication in the last 5 minutes, every required section
+    /// filled. Freezes version 1. Signing a signed note again returns it unchanged. Addenda (MDV-P2-013) are not here yet.
+    /// </summary>
+    /// <exception cref="ReauthRequiredException"/>
+    /// <exception cref="NoteValidationException">A required section is blank (code <c>required</c> on <c>sections.&lt;id&gt;</c>).</exception>
+    /// <exception cref="StaleNoteException"/>
+    Task<NoteView?> SignAsync(Guid encounterId, SignNote command, CancellationToken cancellationToken = default);
 }

@@ -75,7 +75,8 @@ public abstract class FormularyRules
 
     public static bool IsAtc(string value) => AtcShape.IsMatch(value);
 
-    public abstract IReadOnlySet<RegulatoryClass> Classes { get; }
+    /// <summary>The classes this country uses (a method, not a property: domain properties are stored fields and carry a data classification).</summary>
+    public abstract IReadOnlySet<RegulatoryClass> Classes();
 
     /// <summary>What a printed prescription needs for this class (empty for an ordinary medicine): warning text and who keeps a copy.</summary>
     public abstract IReadOnlyList<string> PrintRequirements(RegulatoryClass regClass);
@@ -85,7 +86,9 @@ public abstract class FormularyRules
 
     sealed class IndiaFormulary : FormularyRules
     {
-        public override IReadOnlySet<RegulatoryClass> Classes { get; } = new HashSet<RegulatoryClass> { RegulatoryClass.None, RegulatoryClass.ScheduleH, RegulatoryClass.ScheduleH1, RegulatoryClass.ScheduleX };
+        static readonly HashSet<RegulatoryClass> Used = [RegulatoryClass.None, RegulatoryClass.ScheduleH, RegulatoryClass.ScheduleH1, RegulatoryClass.ScheduleX];
+
+        public override IReadOnlySet<RegulatoryClass> Classes() => Used;
 
         public override IReadOnlyList<string> PrintRequirements(RegulatoryClass regClass) => regClass switch
         {
@@ -101,7 +104,9 @@ public abstract class FormularyRules
 
     sealed class UaeFormulary : FormularyRules
     {
-        public override IReadOnlySet<RegulatoryClass> Classes { get; } = new HashSet<RegulatoryClass> { RegulatoryClass.None, RegulatoryClass.Controlled };
+        static readonly HashSet<RegulatoryClass> Used = [RegulatoryClass.None, RegulatoryClass.Controlled];
+
+        public override IReadOnlySet<RegulatoryClass> Classes() => Used;
 
         public override IReadOnlyList<string> PrintRequirements(RegulatoryClass regClass) =>
             regClass == RegulatoryClass.Controlled ? ["warning_controlled", "pharmacist_keeps_copy"] : [];

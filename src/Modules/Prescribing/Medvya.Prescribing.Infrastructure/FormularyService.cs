@@ -55,7 +55,7 @@ public sealed class FormularyService(PrescribingDbContext db, IStaffAccess staff
         if (sig?.Length > 200) errors.Add(("defaultSig", "too_long"));
         // The class is chosen on purpose: an ordinary medicine is "None", never the default of a missing answer.
         if (command.RegClass is not { } regClass) errors.Add(("regClass", "required"));
-        else if (!rules.Classes.Contains(regClass)) errors.Add(("regClass", "not_in_country"));
+        else if (!rules.Classes().Contains(regClass)) errors.Add(("regClass", "not_in_country"));
         if (errors.Count > 0) throw new FormularyValidationException(errors);
 
         var (sameGeneric, sameStrength) = (Escape(generic!), Escape(strength!));

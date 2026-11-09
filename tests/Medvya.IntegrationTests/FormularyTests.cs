@@ -196,12 +196,12 @@ public sealed class FormularyTests(PostgresFixture sql) : IClassFixture<Postgres
     [Fact]
     public void TheCountryRulesHoldTheClassesPrintRulesAndCodeShapes()
     {
-        Assert.Equal([RegulatoryClass.None, RegulatoryClass.ScheduleH, RegulatoryClass.ScheduleH1, RegulatoryClass.ScheduleX], FormularyRules.India.Classes.Order());
-        Assert.Equal([RegulatoryClass.None, RegulatoryClass.Controlled], FormularyRules.Uae.Classes.Order());
+        Assert.Equal([RegulatoryClass.None, RegulatoryClass.ScheduleH, RegulatoryClass.ScheduleH1, RegulatoryClass.ScheduleX], FormularyRules.India.Classes().Order());
+        Assert.Equal([RegulatoryClass.None, RegulatoryClass.Controlled], FormularyRules.Uae.Classes().Order());
         Assert.Equal(["warning_schedule_x", "pharmacist_keeps_copy", "duplicate_prescription"], FormularyRules.India.PrintRequirements(RegulatoryClass.ScheduleX));
         Assert.Empty(FormularyRules.Uae.PrintRequirements(RegulatoryClass.None));
         Assert.All(Enum.GetValues<RegulatoryClass>().Where(c => c != RegulatoryClass.None), c =>
-            Assert.True(FormularyRules.India.Classes.Contains(c) ? FormularyRules.India.PrintRequirements(c).Count > 0 : FormularyRules.Uae.PrintRequirements(c).Count > 0)); // a scheduled class always has print rules
+            Assert.True(FormularyRules.India.Classes().Contains(c) ? FormularyRules.India.PrintRequirements(c).Count > 0 : FormularyRules.Uae.PrintRequirements(c).Count > 0)); // a scheduled class always has print rules
         Assert.True(FormularyRules.Uae.IsNationalCode("A12-3456-789"));
         Assert.False(FormularyRules.Uae.IsNationalCode("ab"));
         Assert.False(FormularyRules.India.IsNationalCode("with space"));
@@ -216,7 +216,7 @@ public sealed class FormularyTests(PostgresFixture sql) : IClassFixture<Postgres
         Assert.Equal(FormularySeed.Rows.Count, FormularySeed.Rows.Select(FormularySeed.IdOf).Distinct().Count());
         Assert.All(FormularySeed.Rows, r =>
         {
-            Assert.Contains(r.RegClass, FormularyRules.For(r.Country).Classes);
+            Assert.Contains(r.RegClass, FormularyRules.For(r.Country).Classes());
             Assert.Contains(r.Form, FormularyRules.Forms);
             Assert.True(FormularyRules.IsAtc(r.Atc));
         });

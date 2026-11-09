@@ -205,7 +205,7 @@ public static class SyntheticSeed
     static PatientsDbContext Patients(string connectionString, Guid? tenantId, NationalIdColumns nationalIds) =>
         new(Options<PatientsDbContext>(connectionString, tenantId), new FixedTenant(tenantId), nationalIds);
 
-    static SchedulingDbContext Scheduling(string connectionString, Guid? tenantId) =>
+    internal static SchedulingDbContext Scheduling(string connectionString, Guid? tenantId) =>
         new(Options<SchedulingDbContext>(connectionString, tenantId), new FixedTenant(tenantId));
 
     sealed class FixedTenant(Guid? id) : ICurrentTenant { public Guid? TenantId => id; }

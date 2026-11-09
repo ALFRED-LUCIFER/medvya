@@ -17,6 +17,8 @@ public sealed class EncountersDbContext(DbContextOptions<EncountersDbContext> op
     public DbSet<ClinicalDocument> Documents => Set<ClinicalDocument>();
     public DbSet<Intake> Intakes => Set<Intake>();
     public DbSet<IntakeEscalation> IntakeEscalations => Set<IntakeEscalation>();
+    public DbSet<MedicationDecision> MedicationDecisions => Set<MedicationDecision>();
+    public DbSet<MedicationReconciliation> MedicationReconciliations => Set<MedicationReconciliation>();
     public DbSet<DoctorNoteTemplate> DoctorNoteTemplates => Set<DoctorNoteTemplate>();
     public DbSet<ConsultNote> ConsultNotes => Set<ConsultNote>();
 
@@ -67,6 +69,24 @@ public sealed class EncountersDbContext(DbContextOptions<EncountersDbContext> op
             e.Property(x => x.Dose).HasMaxLength(100);
             e.Property(x => x.Frequency).HasMaxLength(50);
             e.HasIndex(x => new { x.TenantId, x.AppointmentId });
+            e.HasIndex(x => new { x.TenantId, x.PatientId });
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<MedicationDecision>(e =>
+        {
+            e.Property(x => x.Kind).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.MedicineKey).HasMaxLength(200);
+            e.Property(x => x.Name).HasMaxLength(200);
+            e.Property(x => x.FromDose).HasMaxLength(100);
+            e.Property(x => x.NewDose).HasMaxLength(100);
+            e.Property(x => x.Reason).HasMaxLength(500);
+            e.HasIndex(x => new { x.TenantId, x.EncounterId, x.MedicineKey, x.DecidedAt });
+            e.HasIndex(x => new { x.TenantId, x.PatientId });
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<MedicationReconciliation>(e =>
+        {
+            e.HasIndex(x => new { x.TenantId, x.EncounterId }).IsUnique(); // one confirmation per consultation, even for two simultaneous confirms
             e.HasIndex(x => new { x.TenantId, x.PatientId });
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });

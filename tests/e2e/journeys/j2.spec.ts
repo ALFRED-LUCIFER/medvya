@@ -1,4 +1,6 @@
 import { expect } from '@playwright/test';
+import { test } from '@playwright/test';
+import { mockReconciliation } from '../support/reconciliation';
 import { journey } from './storyboard';
 
 // Storyboard: docs/02-design/journeys.md. Implement steps as their screens ship.
@@ -11,7 +13,21 @@ const doctor = {
 };
 const at = '2026-10-19T04:30:00Z'; // 10:00 IST
 
+// J2.5 is "Resolve conflicts & sign": signing is MDV-P2-012, so the step stays pending below. Its conflict half is built (MDV-P2-011, E-07):
+// the statin the chart says is active and the patient says stopped is decided before the note is signed.
+test('J2.5 (conflict half, MDV-P2-011) E-07 · Doctor: statin stopped vs chart active is decided', async ({ page }) => {
+  const { calls } = await mockReconciliation(page);
+  await page.goto('/consult/e-1/medicines');
+  await expect(page.getByText('Atorvastatin active in the chart, patient says stopped')).toBeVisible();
+  await page.getByRole('group', { name: 'Decision for Atorvastatin' }).getByRole('button', { name: 'Stop' }).click();
+  await page.getByLabel('Reason').fill('Muscle pain (synthetic)');
+  await page.getByRole('button', { name: 'Save decision' }).click();
+  await expect(page.getByText('Decided: Stop · Muscle pain (synthetic)')).toBeVisible();
+  expect(calls.decisions).toEqual([{ key: 'atorvastatin', kind: 'Stop', newDose: '', reason: 'Muscle pain (synthetic)' }]);
+});
+
 journey('J2', {
+  5: 'MDV-P2-012',
   // D-01: the next patient is Meera, ready for the doctor; starting the consultation binds it to her visit and shows who it is for, in Room 3.
   // The doctor's own Today (MDV-P2-002): the next patient hero starts the consultation.
   1: async ({ page }) => {

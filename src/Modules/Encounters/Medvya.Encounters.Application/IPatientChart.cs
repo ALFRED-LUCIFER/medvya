@@ -13,7 +13,7 @@ public sealed record AllergyBanner(AllergyState State, IReadOnlyList<AllergyView
 public sealed record AllergyFlag(Guid PatientId, AllergyState State);
 
 public sealed record ProblemView(string? Icd10Code, string Description, ProblemVerification Verification, DateOnly? OnsetOn, ChartSource Source);
-public sealed record MedicineView(string Name, string? Dose, MedicationState State, ChartSource Source);
+public sealed record MedicineView(string Name, string? Dose, MedicationState State, ChartSource Source, DateTimeOffset? StoppedAt = null);
 public sealed record VitalView(ObservationCode Code, decimal Value, string Unit, DateTimeOffset TakenAt, ChartSource Source);
 public sealed record TrendPoint(decimal Value, DateTimeOffset TakenAt, ChartSource Source);
 /// <summary>The last readings of one measure, oldest first. Blood pressure is two series (systolic and diastolic).</summary>

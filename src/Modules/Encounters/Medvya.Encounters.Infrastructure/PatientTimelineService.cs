@@ -49,9 +49,9 @@ public sealed class PatientTimelineService(EncountersDbContext db, IClinicalAcce
         }
         if (Wants(TimelineKind.Medicine))
         {
-            var rows = await db.MedicationStatements.AsNoTracking().Where(m => m.PatientId == patientId && (cut == null || m.RecordedAt <= cut) && (query.Source == null || m.Source == query.Source))
-                .OrderByDescending(m => m.RecordedAt).ThenByDescending(m => m.Id).Take(take + 1).ToListAsync(cancellationToken);
-            entries.AddRange(rows.Select(m => new TimelineEntry(m.Id, TimelineKind.Medicine, m.RecordedAt, m.State == MedicationState.Active ? "MedicineActive" : "MedicineStopped", m.Name, m.Dose, null, m.Source)));
+            var rows = await db.MedicationStatements.AsNoTracking().Where(m => m.PatientId == patientId && (cut == null || (m.StoppedAt ?? m.RecordedAt) <= cut) && (query.Source == null || m.Source == query.Source))
+                .OrderByDescending(m => m.StoppedAt ?? m.RecordedAt).ThenByDescending(m => m.Id).Take(take + 1).ToListAsync(cancellationToken);
+            entries.AddRange(rows.Select(m => new TimelineEntry(m.Id, TimelineKind.Medicine, m.StoppedAt ?? m.RecordedAt, m.State == MedicationState.Active ? "MedicineActive" : "MedicineStopped", m.Name, m.Dose, null, m.Source)));
         }
         if (Wants(TimelineKind.Document))
         {

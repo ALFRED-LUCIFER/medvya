@@ -3765,7 +3765,7 @@
         }
       }
     },
-    "/v1/encounters/{encounterId}/medicines/reconciliation": {
+    "/v1/encounters/{encounterId}/note": {
       "get": {
         "tags": [
           "Host.Api"
@@ -3786,10 +3786,8 @@
             "description": "OK"
           }
         }
-      }
-    },
-    "/v1/encounters/{encounterId}/medicines/reconciliation/decisions": {
-      "post": {
+      },
+      "put": {
         "tags": [
           "Host.Api"
         ],
@@ -3813,36 +3811,13 @@
                     "type": "null"
                   },
                   {
-                    "$ref": "#/components/schemas/DecideMedicine"
+                    "$ref": "#/components/schemas/SaveNote"
                   }
                 ]
               }
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/v1/encounters/{encounterId}/medicines/reconciliation/confirm": {
-      "post": {
-        "tags": [
-          "Host.Api"
-        ],
-        "parameters": [
-          {
-            "name": "encounterId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
         "responses": {
           "200": {
             "description": "OK"
@@ -4167,6 +4142,46 @@
             }
           }
         ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/note-templates": {
+      "get": {
+        "tags": [
+          "Host.Api"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/note-templates/mine": {
+      "put": {
+        "tags": [
+          "Host.Api"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/ChooseNoteTemplates"
+                  }
+                ]
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "OK"
@@ -5134,6 +5149,23 @@
           }
         }
       },
+      "ChooseNoteTemplates": {
+        "required": [
+          "keys"
+        ],
+        "type": "object",
+        "properties": {
+          "keys": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
       "ClinicalAccessBody": {
         "required": [
           "policy"
@@ -5489,45 +5521,6 @@
           },
           "state": {
             "$ref": "#/components/schemas/AppointmentState"
-          }
-        }
-      },
-      "DecideMedicine": {
-        "required": [
-          "key",
-          "kind",
-          "newDose",
-          "reason"
-        ],
-        "type": "object",
-        "properties": {
-          "key": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "kind": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/MedicationDecisionKind"
-              }
-            ]
-          },
-          "newDose": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "reason": {
-            "type": [
-              "null",
-              "string"
-            ]
           }
         }
       },
@@ -6263,16 +6256,6 @@
             "type": "string"
           }
         }
-      },
-      "MedicationDecisionKind": {
-        "enum": [
-          "Keep",
-          "Change",
-          "Stop",
-          "Add",
-          "Ignore",
-          null
-        ]
       },
       "MembershipStatus": {
         "enum": [
@@ -7623,6 +7606,43 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "SaveNote": {
+        "required": [
+          "templateKey",
+          "manual",
+          "baseVersion",
+          "sections"
+        ],
+        "type": "object",
+        "properties": {
+          "templateKey": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "manual": {
+            "type": "boolean"
+          },
+          "baseVersion": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "sections": {
+            "type": [
+              "null",
+              "object"
+            ],
+            "additionalProperties": {
+              "type": "string"
+            }
           }
         }
       },

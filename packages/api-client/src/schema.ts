@@ -4790,7 +4790,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/encounters/{encounterId}/medicines/reconciliation": {
+    "/v1/encounters/{encounterId}/note": {
         parameters: {
             query?: never;
             header?: never;
@@ -4817,24 +4817,7 @@ export interface paths {
                 };
             };
         };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/encounters/{encounterId}/medicines/reconciliation/decisions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
+        put: {
             parameters: {
                 query?: never;
                 header?: never;
@@ -4845,7 +4828,7 @@ export interface paths {
             };
             requestBody?: {
                 content: {
-                    "application/json": null | components["schemas"]["DecideMedicine"];
+                    "application/json": null | components["schemas"]["SaveNote"];
                 };
             };
             responses: {
@@ -4858,41 +4841,7 @@ export interface paths {
                 };
             };
         };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/encounters/{encounterId}/medicines/reconciliation/confirm": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    encounterId: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -5255,6 +5204,76 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/note-templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/note-templates/mine": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["ChooseNoteTemplates"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -5506,6 +5525,9 @@ export interface components {
             /** Format: int32 */
             targetSeconds: number | string;
         };
+        ChooseNoteTemplates: {
+            keys: null | string[];
+        };
         ClinicalAccessBody: {
             policy: components["schemas"]["ClinicalAccessPolicy"];
         };
@@ -5591,12 +5613,6 @@ export interface components {
             ageYears: null | number | string;
             visitType: components["schemas"]["VisitType"];
             state: components["schemas"]["AppointmentState"];
-        };
-        DecideMedicine: {
-            key: null | string;
-            kind: null | components["schemas"]["MedicationDecisionKind"];
-            newDose: null | string;
-            reason: null | string;
         };
         Decision: {
             verified: boolean;
@@ -5797,8 +5813,6 @@ export interface components {
             address: null | string;
             timeZone: string;
         };
-        /** @enum {unknown} */
-        MedicationDecisionKind: "Keep" | "Change" | "Stop" | "Add" | "Ignore" | null;
         /** @enum {unknown} */
         MembershipStatus: "Invited" | "Active" | "Suspended" | "Offboarded";
         MergeRequestBody: {
@@ -6098,6 +6112,15 @@ export interface components {
             name?: null | string;
             address?: null | string;
             timeZone?: null | string;
+        };
+        SaveNote: {
+            templateKey: null | string;
+            manual: boolean;
+            /** Format: int32 */
+            baseVersion: number | string;
+            sections: null | {
+                [key: string]: string;
+            };
         };
         SaveProfile: {
             name?: null | string;

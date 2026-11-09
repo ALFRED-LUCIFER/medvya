@@ -85,6 +85,7 @@ public static class EncounterEndpoints
             .AddEndpointFilter(MapErrors);
         app.MapDocumentEndpoints();
         app.MapReconciliationEndpoints();
+        app.MapNoteEndpoints();
         return app;
     }
 

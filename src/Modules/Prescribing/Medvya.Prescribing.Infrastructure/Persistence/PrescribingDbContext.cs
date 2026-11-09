@@ -11,6 +11,8 @@ public sealed class PrescribingDbContext(DbContextOptions<PrescribingDbContext> 
     public DbSet<FormularyItem> FormularyItems => Set<FormularyItem>();
     public DbSet<OrderSet> OrderSets => Set<OrderSet>();
     public DbSet<ClinicalOrder> Orders => Set<ClinicalOrder>();
+    public DbSet<Referral> Referrals => Set<Referral>();
+    public DbSet<ReferralEvent> ReferralEvents => Set<ReferralEvent>();
 
     Guid? CurrentTenantId => tenant.TenantId;
 
@@ -46,6 +48,26 @@ public sealed class PrescribingDbContext(DbContextOptions<PrescribingDbContext> 
             e.HasIndex(x => new { x.TenantId, x.EncounterId });
             e.HasIndex(x => new { x.TenantId, x.PatientId }); // the timeline and merges
             e.ToTable(t => t.HasCheckConstraint("CK_Orders_OrderedHasTime", "(\"State\" = 'Ordered') = (\"OrderedAt\" IS NOT NULL)"));
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<Referral>(e =>
+        {
+            e.Property(x => x.Direction).HasConversion<string>().HasMaxLength(10);
+            e.Property(x => x.Urgency).HasConversion<string>().HasMaxLength(10);
+            e.Property(x => x.State).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.Channel).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.Provider).HasMaxLength(200);
+            e.Property(x => x.Reason).HasMaxLength(500);
+            e.Property(x => x.Sections).HasMaxLength(60);
+            e.HasIndex(x => new { x.TenantId, x.PatientId, x.State }); // Patient 360's open referrals, and merges
+            e.ToTable(t => t.HasCheckConstraint("CK_Referrals_SentHasChannel", "(\"SentAt\" IS NULL) = (\"Channel\" IS NULL)"));
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<ReferralEvent>(e =>
+        {
+            e.Property(x => x.State).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.Note).HasMaxLength(200);
+            e.HasIndex(x => new { x.TenantId, x.ReferralId, x.At });
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         modelBuilder.Entity<OrderSet>(e =>

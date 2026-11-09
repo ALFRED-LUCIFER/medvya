@@ -22,6 +22,7 @@ public static class EncountersModule
             .AddDbContext<EncountersDbContext>((sp, o) => o.UseNpgsql(PostgresDataSources.For(connectionString)).AddInterceptors(sp.GetRequiredService<TenantSessionInterceptor>()))
             .AddScoped<IEncounters, EncounterService>()
             .AddScoped<IEncounterDirectory, EncounterDirectory>()
+            .AddScoped<IDocumentDirectory, DocumentDirectory>()
             .AddScoped<IPatientChart, PatientChartService>()
             .AddScoped<IPatientTimeline, PatientTimelineService>()
             .AddScoped<IDocuments, DocumentService>()

@@ -18,3 +18,12 @@ public interface ITimelineSource
 {
     Task<IReadOnlyList<TimelineEntry>> EntriesAsync(Guid patientId, DateTimeOffset? upTo, int take, CancellationToken cancellationToken = default);
 }
+
+/// <summary>
+/// Whether a document is one of this patient's, for a status move or a filed letter that points at it (MDV-P2-019). Tenant filters and row-level security
+/// apply; a document that failed its malware scan is not a document of the record.
+/// </summary>
+public interface IDocumentDirectory
+{
+    Task<bool> BelongsToAsync(Guid documentId, Guid patientId, CancellationToken cancellationToken = default);
+}

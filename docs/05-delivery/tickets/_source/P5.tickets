@@ -894,6 +894,8 @@ ac:
 - Given a clinical flag, when is moved to everyone without sign-off, then the change is refused.
 - Given the kill switch, when is used, then the feature disappears for all tenants and no data is deleted.
 - Given a flag change, when is made, then it is audited with a reason.
+notes:
+- Scope (ADR-016 (docs/adr/ADR-016-organisation-onboarding-and-approval.md)): rollout targets are organisations, and optionally one location of an organisation, never a single doctor.
 
 === MDV-P5-042
 title: Plans and entitlements: versioned plans, India and UAE prices, seats, trial days, 30 days' notice
@@ -939,6 +941,8 @@ ac:
 - Given a payment fails, when day 30 is reached, then online bookings pause and clinicians can still read and treat.
 - Given a non-owner, when opens billing, then the API returns 403.
 - Given a practice is closed, when the owner confirms, then a full export is offered first and the plan stops at the end of the paid period.
+notes:
+- Scope (ADR-016 (docs/adr/ADR-016-organisation-onboarding-and-approval.md)): the subscription belongs to the organisation, not to a doctor or a location. Seats (doctors, staff, patients) are counted per organisation in total across its locations; the starter plan of MDV-P1-069 (1 doctor and 2 other staff) is what applies until a plan is bought. The owner upgrades and adds seats self-service and is responsible for the choice. Invoices carry the organisation's own tax number (GSTIN or TRN), not a location's. An organisation that is not Approved (set-up-only mode, Needs changes or Rejected) has no paid subscription: billing creates no trial, invoice or dunning for it, and the subscription starts only when the organisation is Approved. A Suspended organisation keeps its subscription record, dunning is paused while the suspension lasts, and existing records stay readable for care. "Close practice" means closing the organisation (MDV-P5-049).
 
 === MDV-P5-044
 title: Organisation approval console: onboarding request queue, document view, approve, ask for changes, reject, suspend
@@ -961,6 +965,8 @@ ac:
 - Given a reviewer asks for changes or rejects, when it is saved, then the applicant gets the reason in plain words by email and on the status page.
 - Given an organisation is suspended, when staff sign in, then new registration, booking and signing are refused and existing records stay readable for care.
 - Given any queue endpoint, when it returns data, then it holds no patient field (architecture test); every action needs a reason.
+notes:
+- Admin design to redraw (ADR-016 (docs/adr/ADR-016-organisation-onboarding-and-approval.md)); the design file docs/02-design/source/Medvya Admin.dc.html is read-only and not edited: (1) Doctor licence verification becomes organisation review (request, type, documents, states, approve, ask for changes, reject, suspend); (2) the tenant catalogue shows the approval state and the location count; (3) the plans screen shows seat types (doctors, staff, patients) counted per organisation.
 
 === MDV-P5-045
 title: Releases and What's new, maintenance and incident banners, integrations register
@@ -1003,6 +1009,8 @@ ac:
 - Given a new version requires acceptance, when an owner has not accepted, then online booking pauses and clinical work continues.
 - Given platform staff, when try to edit wording, then the console offers no edit, only publish.
 - Given an owner accepts, when it is saved, then user, version and time are recorded.
+notes:
+- Scope (ADR-016 (docs/adr/ADR-016-organisation-onboarding-and-approval.md)): acceptance of the ToS and DPA is part of the onboarding request (MDV-P1-062, MDV-P1-067). The owner accepts on behalf of the organisation, and acceptance is recorded per organisation (version, who, when), not per location or per person. A HOSPITAL must upload a SIGNED DPA before approval; it is not accepted online afterwards. The re-acceptance gate applies to Approved organisations only and must not block set-up-only mode (profile, hours, rooms, staff).
 
 === MDV-P5-047
 title: Service requests: Help in the clinic app, support inbox with SLA, internal notes, diagnostics
@@ -1024,6 +1032,8 @@ ac:
 - Given a screenshot shows patient data, when it is attached, then the patient data is blurred before storage.
 - Given support, when asks for access, then nothing is visible until the owner approves and it ends after 60 minutes.
 - Given a request breaches its SLA, when time passes, then it is flagged to the team lead.
+notes:
+- Scope (ADR-016 (docs/adr/ADR-016-organisation-onboarding-and-approval.md)): an organisation in set-up-only mode and an applicant in Needs changes can use Help and raise a request; the request can be linked to its onboarding request so the reviewer sees it. Requests are tied to the organisation (and optionally a location).
 
 === MDV-P5-048
 title: Platform analytics, practice health score and scheduled reports with small-count hiding
@@ -1045,6 +1055,8 @@ ac:
 - Given a count is 4, when the chart renders, then it shows as hidden.
 - Given a report, when is scheduled, then only the named recipients get it and it holds no patient data.
 - Given a practice's health score falls, when it is shown, then the reasons are listed.
+notes:
+- Scope (ADR-016 (docs/adr/ADR-016-organisation-onboarding-and-approval.md)): the unit is the organisation, with a per-location breakdown. Add onboarding funnel metrics as platform metrics: requests submitted, needs changes, approved, rejected, and time to approve. The small-count rule (any count under 5 hidden) applies to them too.
 
 === MDV-P5-049
 title: Data requests and offboarding runs from the console without opening records
@@ -1066,6 +1078,8 @@ ac:
 - Given a closure is requested, when it is approved, then a full export is delivered before any retention clock starts.
 - Given retention ends, when the job runs, then records are deleted and a certificate is stored.
 - Given an operator, when opens a request, then no record content is shown.
+notes:
+- Scope (ADR-016 (docs/adr/ADR-016-organisation-onboarding-and-approval.md)): offboarding is at organisation level and covers all its locations. Removing one location is a separate, smaller action: its staff scope and schedules end, but patients are one shared record per organisation, so removing a location never deletes patients or charts. A Suspended organisation keeps its data untouched and readable for care while the suspension lasts. A Rejected applicant never held patient data (set-up-only mode); its request, uploaded documents and set-up are deleted after a retention period to be set with counsel (MDV-P1-044).
 
 === MDV-P5-050
 title: Public pricing page with 14-day trial, monthly and yearly toggle and country currency

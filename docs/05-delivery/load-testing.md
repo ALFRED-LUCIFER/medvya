@@ -89,6 +89,49 @@ The database is private (VNet) and Entra-admin only, so the seed runs as a one-o
 
 Needs from the owner: an OK to create the job, the staff user id, and the `azure.extensions` server parameter including `PG_TRGM` (the Bicep change in this PR sets it; apply the infra deployment before the app deploy).
 
+## A synthetic multi-doctor practice (`practice` command)
+
+For thorough testing of the clinic flow (board, queue, walk-ins, reassigning a visit, pending licences) on Azure dev and locally, the same tool seeds a whole practice, "Menon Multi-Doctor Clinic (synthetic)", through the same refusal rules as `patients` (Development, Staging or Test only; the name must not contain prod, live, real, customer or pilot and an existing practice must be marked "(synthetic)"; no default connection). It writes as the application role inside the tenant, so row-level security applies, and a re-run adds only what is missing:
+
+```
+DOTNET_ENVIRONMENT=Development ConnectionStrings__Medvya="<medvya_app connection>" \
+  dotnet run -c Release --project tools/synthetic-data-generator -- practice [--practice "Menon Multi-Doctor Clinic"] [--count 50000] [--mrn-start 100000] [--member-user <staff user id>]
+```
+
+| What | Count | Detail |
+|---|---|---|
+| Patients | 50,000 | the `patients` seed, MRN 100000 to 149999, nothing can message them (no consent receipt) |
+| Doctors | 8 | two general practitioners (Dr. Anil Menon, Dr. Suma Pillai, 15-minute slots), paediatrics, gynaecology, cardiology, orthopaedics, dermatology, ENT; slots of 15, 20 or 30 minutes, weekly hours (Monday to Saturday for most) |
+| Licences | 6 verified, 2 pending | licence numbers `SYN-TCMC-10001` to `SYN-TCMC-10008` (unique, valid for the India format), authority TCMC. **Verified:** the two GPs, paediatrics, gynaecology, cardiology, orthopaedics (expiry five years out, so they can record, sign and prescribe once those features are used). **Verification pending:** Dr. Fatima Khan (dermatology) and Dr. Vijay Kurup (ENT), to test the gated state |
+| Nurses, receptionists, admin | 8, 3, 1 | Role Nurse, Receptionist, PracticeAdmin at the one facility |
+| Rooms | 3 | ECG room, Minor procedure room, Nebulisation room (30-minute slots), plus a room name on each doctor's hours |
+| Visits | about 65 for the day of the run | per doctor: three bookings in the next ten days; for each doctor working today: two checked in, one with the nurse, one booked and two walk-ins queued with no slot (token per doctor, "A-01" on), so you can send a walk-in to the other GP and reassign a checked-in visit with the existing reasons |
+
+**These people cannot sign in.** Every staff member has a Medvya user row (so they show in lists, doctor pickers and the board) but there is no Entra account behind any of them: the rows use the development sign-in issuer, which does not exist outside Development, and their ids are fixed hashes, not Entra subjects. To test what a nurse, receptionist or doctor sees you need real Entra test users, which the owner creates; add each as a staff member of the practice (invite, or `--member-user <id>` for one Receptionist membership) so they get a real membership.
+
+The visits are written directly (no audit event and no outbox event, so nothing is sent), dated from the run day, so a re-run on a later day adds that day's queue and the next ten days' bookings. They exist to make the board and schedule realistic, not to test booking; book through the app for that. Same timings as `patients` plus the staff: 50,000 patients and the cast take about 4 s locally (a re-run about 1 s).
+
+Measured locally (Docker PostgreSQL 16, one seeded practice of 50,000 patients, a signed-in receptionist through the real API, 30 calls each after 3 warm-up calls; a laptop, so relative numbers only):
+
+| Call | p50 | p95 |
+|---|---|---|
+| Patient search (names, spelling variants, phone, MRN) | 21 ms | 100 ms |
+| Booking list (day schedule, 8 doctors) | 10 ms | 11 ms |
+| Board (today's queue) | 7 ms | 8 ms |
+
+Re-measure on any seeded database with the app login: `MEDVYA_PRACTICE_CONNECTION="<medvya_app connection>" dotnet test tests/Medvya.IntegrationTests --filter FullyQualifiedName~LatencyAtScale --logger "console;verbosity=detailed"` (skipped when the variable is unset; `MEDVYA_PRACTICE_NAME` if the practice is not the default).
+
+### Azure dev, step by step for `practice` (not run; the owner runs it)
+
+Same one-off Container Apps job as for `patients` above (steps 1 to 4: publish the tool, create the job from the `job-db-*` pattern with the `id-migrate-*` identity, deploy the app first so the schema is current, read the log, delete the job). Only the command differs:
+
+`DOTNET_ENVIRONMENT=Staging ConnectionStrings__Medvya="Host=$PGHOST;Database=$PGDATABASE;Username=$MIGRATOR_NAME;SslMode=VerifyFull;Options=-c role=medvya_owner" ./Medvya.SyntheticData practice --practice "Menon Multi-Doctor Clinic" --count 50000 --mrn-start 100000 --member-user <your staff user id>`
+
+1. `--member-user` gives you a Receptionist membership at the new facility so you can pick it after sign-in; use the owner's account for the practice-admin views by also being added as staff through Settings once inside. The printed tenant and facility ids go in the job's log (`ContainerAppConsoleLogs_CL`).
+2. Check on Azure dev: Settings, Doctors lists eight doctors with two "Verification pending"; the schedule shows every doctor with open slots on their working days; the board shows the day's queue.
+3. 50,000 patients are 2.5 times the 20,000 the Azure load run asks for; the run searches by MRN, so it works unchanged against this practice (`MEDVYA_LOAD_FACILITY=<printed facility id>`, MRNs 100000 and up). A load run books real visits that send nothing only because no patient has a phone consent or email; cancel what it booked afterwards.
+4. Removing the practice is not built: `patients --reset` clears its patients only. Staff, visits and schedule rows stay (shortcut: build a tenant purge when a second synthetic practice is needed).
+
 ## What the numbers mean
 
 - A local run is Docker and Rosetta on a laptop with other processes: PostgreSQL, Kestrel and the load generator share the CPU, and fsync on the

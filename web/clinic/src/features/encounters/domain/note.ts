@@ -7,9 +7,11 @@ export type NoteSection = { id: string; required: boolean };
 export type NoteTemplate = { key: string; version: number; sections: NoteSection[]; quickPhrases: string[] };
 export type NoteCatalog = { templates: NoteTemplate[]; mine: string[] };
 export type NoteSections = Record<string, string>;
+/** Ids only: who signed, when, and the hash of what was signed (MDV-P2-012). */
+export type NoteSignature = { versionNo: number; signedBy: string; signedAt: string; contentHash: string };
 export type NoteView = {
-  encounterId: string; templateKey: string; templateVersion: number; status: 'Draft'; manual: boolean;
-  sections: NoteSections; version: number; updatedAt: string | null;
+  encounterId: string; templateKey: string; templateVersion: number; status: 'Draft' | 'Signed'; manual: boolean;
+  sections: NoteSections; version: number; updatedAt: string | null; signature?: NoteSignature | null;
 };
 /** What an autosave sends besides the version: the template and the whole note (a section left out is cleared). */
 export type NoteDraft = { templateKey: string; sections: NoteSections };
@@ -57,3 +59,17 @@ export function staleVersion(status: number | undefined, body: unknown): number 
 
 /** The templates a doctor can switch to: their choice, plus the one this note is already on. */
 export const switchChoices = (catalog: NoteCatalog, current: string) => catalog.templates.filter(t => catalog.mine.includes(t.key) || t.key === current);
+
+/** Why a sign call was refused, from the status and problem body: what the doctor sees or does next (MDV-P2-012). */
+export type SignFailure = { kind: 'reauth' | 'stale' | 'signed' | 'denied' | 'failed' } | { kind: 'blank'; sections: string[] };
+
+export function signFailure(status: number | undefined, body: unknown): SignFailure {
+  const b = (typeof body === 'object' && body !== null ? body : {}) as { code?: unknown; errors?: Record<string, string[]> };
+  if (status === 403) return { kind: b.code === 'reauth_required' ? 'reauth' : 'denied' };
+  if (status === 409) return { kind: b.code === 'stale_note' ? 'stale' : b.code === 'note_signed' ? 'signed' : 'failed' };
+  const blank = Object.keys(b.errors ?? {}).filter(k => k.startsWith('sections.')).map(k => k.slice('sections.'.length));
+  return status === 400 && blank.length > 0 ? { kind: 'blank', sections: blank } : { kind: 'failed' };
+}
+
+/** Section ids in the template's order, so the first one named is the first one on the page. */
+export const inTemplateOrder = (template: NoteTemplate, ids: string[]) => template.sections.map(s => s.id).filter(id => ids.includes(id));

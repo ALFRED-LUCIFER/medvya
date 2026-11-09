@@ -2903,6 +2903,8 @@
   "staff.reactivateConfirm": "Bring back",
   "staff.reactivateError.aboveGranter": "You cannot give this role: it has access you do not have yourself. Ask the practice owner.",
   "staff.reactivateError.failed": "That did not work. Nothing was changed; try again.",
+  "staff.reactivateError.planFull": "Your plan allows 1 doctor and 2 staff; contact Medvya to upgrade",
+  "plan.full": "Your plan allows 1 doctor and 2 staff; contact Medvya to upgrade",
   "staff.notice.reactivated": "Brought back. They can sign in again with the same role.",
   "audit.actionName.staff.reactivate": "Staff member brought back",
   "settings.notifications.senderName": "Sender name in emails",

@@ -116,7 +116,7 @@ public static partial class SyntheticPatients
         return (t, f);
     }
 
-    static Guid PatientId(Guid tenant, string mrn) => new(SHA256.HashData(Encoding.UTF8.GetBytes(tenant + ":" + mrn)).AsSpan(0, 16));
+    internal static Guid PatientId(Guid tenant, string mrn) => new(SHA256.HashData(Encoding.UTF8.GetBytes(tenant + ":" + mrn)).AsSpan(0, 16));
 
     public static void EnsureAllowed(string? environment, string practice, int count, int mrnStart)
     {

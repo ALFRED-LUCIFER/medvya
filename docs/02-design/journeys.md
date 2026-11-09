@@ -86,7 +86,7 @@ Which steps run in the browser against the real stack (`pnpm e2e:fullstack`: rea
 | J2 | 1 | 2 MDV-P2-004 · 3 MDV-P3-005 · 4 MDV-P3-009 · 5 MDV-P3-012 · 6 MDV-P2-017 · 7 MDV-P2-020 · 8 MDV-P4-016 |
 | J3 | 1, 2, 3, 4, 6 (doctor sees it on the board, not Today), 7 | 5 MDV-P2-007, MDV-P2-008 (green in the mocked spec `journeys/j3.spec.ts` and on the real stack, `fullstack/j3.spec.ts`, after the owner switches nurse intake on (`PUT /v1/settings/nurse-intake`; there is no Settings screen for it yet)) |
 | J4 | none | 1 MDV-P6-002 · 2 MDV-P6-003 · 3 MDV-P6-004 · 4 MDV-P3-010 · 5 MDV-P3-009 · 6 MDV-P7-006 |
-| J5 | none | 1 MDV-P2-018 · 2 MDV-P4-014 · 3, 5 MDV-P4-015 · 4 MDV-P4-018 · 6 MDV-P4-019 · 7 MDV-P4-016 |
+| J5 | none | 1 MDV-P2-018 (green in the mocked spec `journeys/j5.spec.ts`; on the real stack once the seeded doctor's licence is verified, which Medvya operations do, MDV-P1-010) · 2 MDV-P4-014 · 3, 5 MDV-P4-015 · 4 MDV-P4-018 · 6 MDV-P4-019 · 7 MDV-P4-016 |
 | J6 | none | 1 MDV-P7-002 · 2 to 5 MDV-P7-006 · 6 MDV-P7-008 |
 
 Clinical advisor sign-off (MDV-P0-023, R0 exit criterion 1): not recorded yet.

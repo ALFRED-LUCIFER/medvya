@@ -35,7 +35,7 @@ flowchart LR
   api --> Patients["Patients<br/>schema patients<br/>7 tables"]
   api --> Scheduling["Scheduling<br/>schema scheduling<br/>15 tables"]
   api --> Encounters["Encounters<br/>schema encounters<br/>8 tables"]
-  api --> Prescribing["Prescribing<br/>schema prescribing<br/>2 tables"]
+  api --> Prescribing["Prescribing<br/>schema prescribing<br/>3 tables"]
   api --> Notifications["Notifications<br/>schema notifications<br/>5 tables"]
   api --> Audit["Audit<br/>schema audit<br/>1 table"]
   api --> Leads["Leads<br/>schema leads<br/>2 tables"]
@@ -70,7 +70,10 @@ flowchart LR
   Notifications -->|"Api, Application, Domain"| Tenancy
   Patients -->|"Api, Application"| Audit
   Patients -->|"Api, Application"| Tenancy
-  Prescribing -->|"Application"| Audit
+  Prescribing -->|"Api, Application"| Audit
+  Prescribing -->|"Application"| Encounters
+  Prescribing -->|"Application"| Identity
+  Prescribing -->|"Application"| Patients
   Prescribing -->|"Api, Application"| Tenancy
   Scheduling -->|"Api, Application"| Audit
   Scheduling -->|"Application"| Identity
@@ -81,7 +84,7 @@ flowchart LR
   Tenancy -->|"Application, Domain"| Scheduling
 ```
 
-`Host.Api` references: Audit, Encounters, Identity, Leads, Notifications, Patients, Prescribing, Scheduling, Tenancy. Modules with no incoming arrow from another module: Billing, Encounters, Leads, Notifications, Platform, Prescribing.
+`Host.Api` references: Audit, Encounters, Identity, Leads, Notifications, Patients, Prescribing, Scheduling, Tenancy. Modules with no incoming arrow from another module: Billing, Leads, Notifications, Platform, Prescribing.
 
 ## 3. How the data links across modules
 
@@ -103,7 +106,10 @@ flowchart LR
   notifications -.->|"FacilityId"| tenancy
   patients -.->|"ChangedBy, DecidedBy, RegisteredBy"| identity
   patients -.->|"FacilityId"| tenancy
-  prescribing -.->|"AddedBy, CreatedBy"| identity
+  prescribing -.->|"EncounterId"| encounters
+  prescribing -.->|"AddedBy, CreatedBy, OrderedBy"| identity
+  prescribing -.->|"MergedFromPatientId, PatientId"| patients
+  prescribing -.->|"FacilityId"| tenancy
   scheduling -.->|"ActorUserId, BookedBy, ChangedBy, ..."| identity
   scheduling -.->|"MergedFromPatientId, PatientId"| patients
   scheduling -.->|"CalendarId, FacilityId, FromCalendarId, ..."| tenancy
@@ -1489,10 +1495,19 @@ erDiagram
 
 </details>
 
-### Prescribing (schema `prescribing`, 2 tables)
+### Prescribing (schema `prescribing`, 3 tables)
 
 ```mermaid
 erDiagram
+  Orders {
+    guid Id PK
+    guid CreatedBy "id of identity.Users"
+    guid EncounterId "id of encounters.Encounters"
+    guid FacilityId "id of tenancy.Facilities"
+    guid MergedFromPatientId "id of patients.Patients"
+    guid OrderedBy "id of identity.Users"
+    guid PatientId "id of patients.Patients"
+  }
   FormularyItems {
     guid Id PK
     guid AddedBy "id of identity.Users"
@@ -1501,17 +1516,55 @@ erDiagram
     guid Id PK
     guid CreatedBy "id of identity.Users"
   }
+  encounters_Encounters {
+    guid Id PK "other module"
+  }
   identity_Users {
     guid Id PK "other module"
   }
+  patients_Patients {
+    guid Id PK "other module"
+  }
+  tenancy_Facilities {
+    guid Id PK "other module"
+  }
+  identity_Users ||..o{ Orders : "CreatedBy"
+  encounters_Encounters ||..o{ Orders : "EncounterId"
+  tenancy_Facilities ||..o{ Orders : "FacilityId"
+  patients_Patients |o..o{ Orders : "MergedFromPatientId"
+  identity_Users |o..o{ Orders : "OrderedBy"
+  patients_Patients ||..o{ Orders : "PatientId"
   identity_Users |o..o{ FormularyItems : "AddedBy"
   identity_Users ||..o{ OrderSets : "CreatedBy"
 ```
 
 | Table | Columns | Primary key | Notes |
 |---|---|---|---|
+| `Orders` | 15 | Id | tenant-scoped |
 | `FormularyItems` | 14 | Id | tenant-scoped |
 | `OrderSets` | 5 | Id | tenant-scoped |
+
+<details><summary><code>prescribing.Orders</code> columns</summary>
+
+| Column | Type | Null | Links to |
+|---|---|---|---|
+| `Id` | guid |  |  |
+| `CreatedAt` | timestamptz |  |  |
+| `CreatedBy` | guid |  | id of `identity.Users` |
+| `Destination` | character varying(100) |  |  |
+| `EncounterId` | guid |  | id of `encounters.Encounters` |
+| `FacilityId` | guid |  | id of `tenancy.Facilities` |
+| `Kind` | character varying(20) |  |  |
+| `MergedFromPatientId` | guid | yes | id of `patients.Patients` |
+| `Name` | character varying(200) |  |  |
+| `Note` | character varying(200) |  |  |
+| `OrderedAt` | timestamptz | yes |  |
+| `OrderedBy` | guid | yes | id of `identity.Users` |
+| `PatientId` | guid |  | id of `patients.Patients` |
+| `State` | character varying(20) |  |  |
+| `TenantId` | guid |  | `tenancy.Tenants` |
+
+</details>
 
 <details><summary><code>prescribing.FormularyItems</code> columns</summary>
 
@@ -1980,7 +2033,7 @@ From `docs/03-architecture/data-model.md` (areas A to D). "Built" means a table 
 | B · EMR, clinical authority | `CLINICAL_NOTE` | not built | |
 | B · EMR, clinical authority | `NOTE_VERSION` | not built | |
 | B · EMR, clinical authority | `CLINICIAN_SIGNATURE` | not built | |
-| B · EMR, clinical authority | `CLINICAL_ORDER` | not built | |
+| B · EMR, clinical authority | `CLINICAL_ORDER` | built | `prescribing.Orders` |
 | B · EMR, clinical authority | `CLINICAL_RESULT` | not built | |
 | B · EMR, clinical authority | `PRESCRIPTION` | not built | |
 | B · EMR, clinical authority | `PRESCRIPTION_ITEM` | not built | |
@@ -2026,11 +2079,11 @@ From `docs/03-architecture/data-model.md` (areas A to D). "Built" means a table 
 
 Tables that exist but were added while building (not named in the plan): `encounters.IntakeEscalations`, `encounters.Intakes`, `identity.OnboardingDrafts`, `identity.Sessions`, `leads.DemoRequests`, `leads.Waitlist`, `notifications.Preferences`, `notifications.StaffNotificationReads`, `notifications.StaffNotifications`, `patients.DataKeys`, `patients.MergeRequests`, `platform.AuditEntries`, `platform.KeyLinks`, `platform.Members`, `platform.SecurityKeys`, `platform.Sessions`, `scheduling.AppointmentReschedules`, `scheduling.BookingConflicts`, `scheduling.MetricBaselines`, `scheduling.OutboxTenants`, `scheduling.QueueDisplays`, `scheduling.Resources`, `scheduling.SlotHolds`, `scheduling.VisitStatusEvents`, `tenancy.AccessRequests`, `tenancy.AccessReviewDecisions`, `tenancy.AccessReviews`, `tenancy.FeatureFlags`, `tenancy.Invitations`, `tenancy.OperatingHours`, `tenancy.PracticeDefaults`, `tenancy.Profiles`, `tenancy.SettingsChanges`, `tenancy.TenantIndex`, `tenancy.TermsAcceptances`.
 
-**Counts:** 67 tables across 11 schemas; 32 of 90 planned entities are built; 35 tables were added during the build.
+**Counts:** 68 tables across 11 schemas; 33 of 90 planned entities are built; 35 tables were added during the build.
 
 ## 6. Rules the model follows
 
-- **Tenant isolation:** 57 of 67 tables carry `TenantId` (EF query filter plus PostgreSQL forced row-level security on `medvya.tenant_id`). Without `TenantId`: `identity.OnboardingDrafts`, `identity.Users`, `leads.DemoRequests`, `leads.Waitlist`, `platform.AuditEntries`, `platform.KeyLinks`, `platform.Members`, `platform.SecurityKeys`, `platform.Sessions`, `tenancy.Tenants`. (`TenantId` present is not proof the row-level-security policy covers the table; see `docs/03-architecture/database-security.md`.)
+- **Tenant isolation:** 58 of 68 tables carry `TenantId` (EF query filter plus PostgreSQL forced row-level security on `medvya.tenant_id`). Without `TenantId`: `identity.OnboardingDrafts`, `identity.Users`, `leads.DemoRequests`, `leads.Waitlist`, `platform.AuditEntries`, `platform.KeyLinks`, `platform.Members`, `platform.SecurityKeys`, `platform.Sessions`, `tenancy.Tenants`. (`TenantId` present is not proof the row-level-security policy covers the table; see `docs/03-architecture/database-security.md`.)
 - **Append-only ledgers:** `audit.AuditEvents`, `patients.ConsentReceipts`, `tenancy.TermsAcceptances` (hash-chained, MDV-P0-036; each also has ChainSeq, PrevHash and RowHash added by `LedgerSql`, outside the EF model).
 - **No cross-module foreign keys:** modules link by id and through application services (AGENTS.md 3.1).
 - **Country data plane:** one deployment and one database per country (ADR-003); this diagram is the same in each.

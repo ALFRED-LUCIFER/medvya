@@ -48,7 +48,7 @@
 | [MDV-P5-028](MDV-P5-028.md) | To do | Commercial readiness: order form and SLA signed with the first paying clinic | Chore | MUST | P5-07 | — | 1 | 27–27 | 26 Apr → 30 Apr 2027 | 65% Medium |
 | [MDV-P5-041](MDV-P5-041.md) | To do | Feature rollouts: staged release (internal, beta tenants, percentage, everyone), kill switch and clinical sign-off gate | Story | MUST | P5-08 | N-12 | 3 | 27–29 | 26 Apr → 14 May 2027 | 70% Medium |
 | [MDV-P5-043](MDV-P5-043.md) | To do | Subscription billing in the console and for owners: invoices, payment method, add seats, dunning ladder, close practice | Story | MUST | P5-07 | N-11 | 3.5 | 27–29 | 26 Apr → 14 May 2027 | 60% Low |
-| [MDV-P5-044](MDV-P5-044.md) | To do | Licence verification console: reviewer queue, certificate view, approve or ask for changes | Story | MUST | P5-08 | N-12 | 2.5 | 27–29 | 26 Apr → 14 May 2027 | 65% Medium |
+| [MDV-P5-044](MDV-P5-044.md) | To do | Organisation approval console: onboarding request queue, document view, approve, ask for changes, reject, suspend | Story | MUST | P5-08 | N-12 | 2.5 | 27–29 | 26 Apr → 14 May 2027 | 65% Medium |
 | [MDV-P5-046](MDV-P5-046.md) | To do | Legal documents: versioned terms, privacy notice and DPA, re-acceptance gate that pauses booking only | Story | MUST | P5-08 | N-12 | 2 | 27–29 | 26 Apr → 14 May 2027 | 65% Medium |
 | [MDV-P5-009](MDV-P5-009.md) | To do | Pre-authorisation, claims, resubmission and remittance matching — India TPA/PMJAY/CGHS (P-14) | Story | MUST | P5-03 | P-14 | 4 | 28–29 | 03 May → 14 May 2027 | 65% Medium |
 | [MDV-P5-011](MDV-P5-011.md) | To do | Emirates ID card-reader check-in under 30 seconds and UAE PASS (N-06) | Story | MUST | P5-04 | N-06 | 3 | 28–29 | 03 May → 14 May 2027 | 55% Low |

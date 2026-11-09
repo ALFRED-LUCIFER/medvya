@@ -19,6 +19,7 @@ The design project contains documents written at different times. **PRD v2 (20 O
 | C-13 | Brand / working name | Uploads use "DoctorMate"; one Build Plan header shows "D" | **Medvya** (working name, trademark clearance pending) | Keep the name global and replaceable (i18n key) |
 | C-14 | Data plane of the Build Plan security list | "Postgres row-level security", "pgvector later" | Azure SQL equivalents (RLS predicates). Vector search is out of scope until a need is proven | — |
 | C-15 | UI library | PRD v1 / October plan: **shadcn/ui + Radix + Tailwind 4**, Lucide icons ("port MUI tokens to Tailwind in P0"). Handoff, UI/UX prompt, Architecture v2 and Build Plan: **MUI** | **shadcn/ui + Radix + Tailwind 4** (founder decision 21 Oct 2026, ADR-010), overriding PRD v2's MUI | Migrated in `@medvya/ui`; MUI removed |
+| C-16 | Who verifies doctors; solo-doctor account | PRD v2 P1-02, P1-03, P2 dependency 2 and the design files: solo doctor and clinic modes; Medvya operations verify each doctor's licence | **Owner decision 10 Nov 2026:** Medvya approves the organisation (Clinic or Hospital) through an onboarding request; there is no individual account; the owner attests each doctor's licence. PRD v2 stays verbatim; read "solo doctor" as the owner-doctor of a one-doctor clinic and "licence verification process" as the organisation review | ADR-016; tickets MDV-P1-062 to P1-068, MDV-P2-023, MDV-P5-044 |
 
 ## Open questions found while building docs and tickets (not answered by any source)
 

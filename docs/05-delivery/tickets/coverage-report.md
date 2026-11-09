@@ -19,8 +19,8 @@ Every requirement, screen, exit criterion, NFR, delivery-package item and depend
 | P0-09 | P0 | MUST | MDV-P0-008, MDV-P0-009, MDV-P0-034, MDV-P0-035, MDV-P0-037, MDV-P0-041 |
 | P0-10 | P0 | MUST | MDV-P0-016, MDV-P0-018, MDV-P0-025, MDV-P0-026, MDV-P0-027 |
 | P1-01 | P1 | SHOULD | MDV-P1-001, MDV-P1-002, MDV-P1-003, MDV-P1-053, MDV-P1-054, MDV-P1-055, MDV-P1-056, MDV-P1-057, MDV-P1-058 |
-| P1-02 | P1 | MUST | MDV-P1-004, MDV-P1-005, MDV-P1-006, MDV-P1-039, MDV-P1-043, MDV-P1-059, MDV-P1-060, MDV-P1-061 |
-| P1-03 | P1 | MUST | MDV-P1-007, MDV-P1-008 |
+| P1-02 | P1 | MUST | MDV-P1-004, MDV-P1-005, MDV-P1-006, MDV-P1-039, MDV-P1-043, MDV-P1-059, MDV-P1-060, MDV-P1-061, MDV-P1-062, MDV-P1-063, MDV-P1-064, MDV-P1-066, MDV-P1-068 |
+| P1-03 | P1 | MUST | MDV-P1-007, MDV-P1-008, MDV-P1-065 |
 | P1-04 | P1 | MUST | MDV-P1-011, MDV-P1-012 |
 | P1-05 | P1 | MUST | MDV-P1-013, MDV-P1-014, MDV-P1-015, MDV-P1-016, MDV-P1-017, MDV-P1-018, MDV-P1-020, MDV-P1-038 |
 | P1-06 | P1 | MUST | MDV-P1-021, MDV-P1-023, MDV-P1-024, MDV-P1-025, MDV-P1-026, MDV-P1-027, MDV-P1-037, MDV-P1-042, MDV-P1-047 |
@@ -29,7 +29,7 @@ Every requirement, screen, exit criterion, NFR, delivery-package item and depend
 | P1-09 | P1 | MUST | MDV-P1-032, MDV-P1-033, MDV-P1-034, MDV-P1-041, MDV-P1-045 |
 | P1-10 | P1 | MUST | MDV-P1-035 |
 | P1-11 | P1 | MUST | MDV-P1-009, MDV-P1-010, MDV-P1-038 |
-| P1-12 | P1 | MUST | MDV-P1-019, MDV-P1-044 |
+| P1-12 | P1 | MUST | MDV-P1-019, MDV-P1-044, MDV-P1-067 |
 | P2-01 | P2 | MUST | MDV-P2-002, MDV-P2-003 |
 | P2-02 | P2 | MUST | MDV-P2-004, MDV-P2-005, MDV-P2-006, MDV-P2-024 |
 | P2-03 | P2 | MUST | MDV-P2-007, MDV-P2-008, MDV-P2-026 |
@@ -98,10 +98,10 @@ Every requirement, screen, exit criterion, NFR, delivery-package item and depend
 | D-04 Clinic overview (multi-doctor Today, shared waiting room) | P1 | DESIGNED | MDV-P1-030 |
 | F-01 Landing (solo doctor / hospital) | P1 | DESIGNED | MDV-P1-001, MDV-P1-053, MDV-P1-054, MDV-P1-055, MDV-P1-056, MDV-P5-050 |
 | F-02 Country & data residency selector | P1 | DESIGNED | MDV-P1-002 |
-| F-04 Solo doctor onboarding (licence, schedule, invite) | P1 | DESIGNED | MDV-P1-004, MDV-P1-059, MDV-P1-061 |
+| F-04 Solo doctor onboarding (licence, schedule, invite) | P1 | DESIGNED | MDV-P1-004, MDV-P1-059, MDV-P1-061, MDV-P1-062, MDV-P1-063, MDV-P1-066 |
 | F-07 Trust centre & demo request | P1 | DESIGNED | MDV-P1-003, MDV-P1-057, MDV-P1-058 |
-| F-08 Practice settings (profile, availability, staff, services, n | P1 | DESIGNED | MDV-P1-005, MDV-P1-006, MDV-P1-019 |
-| F-09 Add doctor (clinic mode): licence, schedule, fees, access, s | P1 | DESIGNED | MDV-P1-007 |
+| F-08 Practice settings (profile, availability, staff, services, n | P1 | DESIGNED | MDV-P1-005, MDV-P1-006, MDV-P1-019, MDV-P1-063, MDV-P1-066 |
+| F-09 Add doctor (clinic mode): licence, schedule, fees, access, s | P1 | DESIGNED | MDV-P1-007, MDV-P1-065 |
 | F-10 Add staff & roles (scope, permissions, invite, custom roles) | P1 | DESIGNED | MDV-P1-008, MDV-P1-009 |
 | F-12 Practice access log | P1 | DESIGNED | MDV-P1-035 |
 | P-01 Appointment & reception board | P1 | DESIGNED | MDV-P1-025, MDV-P1-028, MDV-P1-029 |

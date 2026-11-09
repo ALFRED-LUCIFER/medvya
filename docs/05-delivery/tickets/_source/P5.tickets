@@ -361,6 +361,8 @@ ac:
 - Trial converts to paid with correct tax invoice; seat changes prorate.
 - Dunning never blocks clinicians from reading existing patient records (safety rule); it limits new features/admin.
 - Subscription data lives in the platform control plane with no PHI.
+notes:
+- Direction (ADR-016 (docs/adr/ADR-016-organisation-onboarding-and-approval.md, owner decision 10 Nov 2026)): the owner upgrades the plan themselves, self-service, when the clinic adds more doctors, staff or patients than the plan allows, and is responsible for that choice. Seats are doctors, staff and patients; no individual account exists, so a one-doctor clinic is a Clinic plan with one seat.
 
 === MDV-P5-017
 title: Platform operations console: tenant catalogue, onboarding automation, per-tenant flags, time-boxed audited support access visible to the clinic (N-12)
@@ -384,6 +386,8 @@ ac:
 - Every support action is audited and listed in the clinic's access log (F-12).
 - Flags can be toggled per tenant from the console with audit.
 - The control plane stores no PHI (data map updated).
+notes:
+- Organisation onboarding requests are reviewed in the approval queue (MDV-P5-044); "New tenant" sales-led onboarding creates an already Approved organisation (ADR-016 (docs/adr/ADR-016-organisation-onboarding-and-approval.md, owner decision 10 Nov 2026)).
 
 === MDV-P5-018
 title: In-app role guides, help centre, feedback and public status page (N-13)
@@ -906,11 +910,13 @@ depends: MDV-P5-016, MDV-P5-040
 confidence: 70 | Design exists (6 Nov 2026); build estimate not yet calibrated.
 sources: docs/02-design/source/Medvya Admin.dc.html (6 Nov 2026 revamp) (Plans); docs/02-design/source/Medvya Web.dc.html (6 Nov 2026 revamp) (pricing 06 Nov 2026)
 desc:
-Plans (Solo ₹1,999 per month; Clinic ₹3,499 per doctor per month; Hospital custom) with separate INR and AED prices, seats, trial days and the feature list. An edit creates a new plan version: new subscriptions use it now, existing ones at renewal with 30 days' notice. Removing a feature never deletes data. Entitlements are read by the feature gate.
+Plans (Clinic with one doctor ₹1,999 per month; Clinic ₹3,499 per doctor per month; Hospital custom) with separate INR and AED prices, seats, trial days and the feature list. An edit creates a new plan version: new subscriptions use it now, existing ones at renewal with 30 days' notice. Removing a feature never deletes data. Entitlements are read by the feature gate.
 ac:
 - Given a plan is edited, when it is saved, then a new version exists and current subscribers keep the old one until renewal.
 - Given a price changes, when a subscriber exists, then they are notified 30 days before it applies.
 - Given a feature is removed from a plan, when data exists, then the data stays.
+notes:
+- The "Solo" plan is a one-doctor Clinic plan, not an individual account (ADR-016 (docs/adr/ADR-016-organisation-onboarding-and-approval.md, owner decision 10 Nov 2026)); revisit plan names and seat types (doctors, staff, patients) when this is built.
 
 === MDV-P5-043
 title: Subscription billing in the console and for owners: invoices, payment method, add seats, dunning ladder, close practice
@@ -934,25 +940,26 @@ ac:
 - Given a practice is closed, when the owner confirms, then a full export is offered first and the plan stops at the end of the paid period.
 
 === MDV-P5-044
-title: Licence verification console: reviewer queue, certificate view, approve or ask for changes
+title: Organisation approval console: onboarding request queue, document view, approve, ask for changes, reject, suspend
 type: Story
 epic: MDV-P5-E09
 prd: P5-08
 screens: N-12
 priority: MUST
 roles: Reviewer, Medvya operations
-labels: platform, licence, clinical-safety
+labels: platform, onboarding, clinical-safety
 estimate: 2.5
 weeks: 27-29
-depends: MDV-P5-040, MDV-P1-007, MDV-P2-023
+depends: MDV-P5-040, MDV-P1-064, MDV-P2-023
 confidence: 65 | Design exists (6 Nov 2026); build estimate not yet calibrated.
-sources: docs/02-design/source/Medvya Admin.dc.html (6 Nov 2026 revamp) (Doctor licence verification); MDV-P2 licence process
+sources: docs/adr/ADR-016-organisation-onboarding-and-approval.md; docs/02-design/source/Medvya Admin.dc.html (6 Nov 2026 revamp) (Doctor licence verification, to be redrawn as organisation review)
 desc:
-Reviewer queue of doctors with register, number, expiry and uploaded certificate. Recording, signing notes and e-prescriptions stay locked for the doctor until a reviewer checks the official register. Approve records reviewer, register checked and time; reject or ask for changes sends the owner a plain reason and leaves the rest of the practice working.
+Superseded scope (ADR-016): the reviewer queue lists organisation onboarding requests (type Clinic or Hospital, country, submitted date, documents, state), not doctors. The reviewer opens the uploaded documents, then approves, asks for changes with a plain reason, rejects with a reason, or later suspends an approved organisation. The queue reads only the control-plane request and documents through its own narrow, reviewed read path (ADR-014), never patient data. Replaces the interim operations endpoint of MDV-P1-064. The design file still shows the doctor-licence screen and must be redrawn.
 ac:
-- Given a doctor is unverified, when they try to sign a note, then the API refuses.
-- Given a reviewer approves, when it is saved, then name, register and time are recorded.
-- Given a licence is rejected, when the owner is told, then the reason is in plain words and other staff keep working.
+- Given an organisation is Submitted, when a reviewer approves it, then reviewer, documents checked and time are recorded and the organisation can register patients.
+- Given a reviewer asks for changes or rejects, when it is saved, then the applicant gets the reason in plain words by email and on the status page.
+- Given an organisation is suspended, when staff sign in, then new registration, booking and signing are refused and existing records stay readable for care.
+- Given any queue endpoint, when it returns data, then it holds no patient field (architecture test); every action needs a reason.
 
 === MDV-P5-045
 title: Releases and What's new, maintenance and incident banners, integrations register

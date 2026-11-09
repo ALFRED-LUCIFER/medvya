@@ -5,8 +5,8 @@
 # dep:  1 privacy notice + consent wording reviewed (DPDP/UAE) · 2 DLT SMS sender + templates · 3 two partner clinics signed
 
 @epic MDV-P1-E01 | Public site | P1-01 | Landing, region/residency selector, trust centre and demo request on the Razor public site.
-@epic MDV-P1-E02 | Clinic onboarding and practice settings | P1-02, P1-12 | A solo doctor or clinic can set up the practice, hours, holidays, notifications and legal terms.
-@epic MDV-P1-E03 | Doctors, staff and staff lifecycle | P1-03, P1-11 | Owners add doctors (licence, signature, schedule) and staff (roles, scope); access ends immediately on offboarding.
+@epic MDV-P1-E02 | Clinic onboarding and practice settings | P1-02, P1-12 | A clinic or hospital applies through an onboarding request (ADR-016) and, once approved, sets up the practice, hours, holidays, notifications and legal terms.
+@epic MDV-P1-E03 | Doctors, staff and staff lifecycle | P1-03, P1-11 | Owners add doctors (licence they attest, signature, schedule) and staff (roles, scope); access ends immediately on offboarding.
 @epic MDV-P1-E04 | Schedules and availability | P1-04 | Working hours, breaks, slot lengths, leave and exceptions per doctor and location.
 @epic MDV-P1-E05 | Patient registration, duplicates and consents | P1-05, P1-12 | Register India and UAE patients quickly and safely, with separate versioned consents and no silent duplicates.
 @epic MDV-P1-E06 | Booking and no double booking | P1-06, P1-07 | Create, move, cancel and track appointments with database-guaranteed slot integrity.
@@ -24,7 +24,7 @@ progress:
 - Verified in the browser (axe clean at 360/640/1280 px in en/hi/ar, keyboard path, no-JS region switch, RTL); Lighthouse mobile 100/100 performance/accessibility on /, /ar and /hi/pricing (local)
 - Review fixes ([PR #67](https://github.com/ALFRED-LUCIFER/medvya/pull/67)): 44 px targets for region, nav and language links with an underline on the current region; anti-forgery cookie Secure over HTTPS; pages sent no-cache, no-store; tests cover every page (no script, session never read, no certification claim when rendered)
 - Left: product shot and favicon assets (design); own host name for the site when App Service hosting lands (MDV-P0-007); /region and /trust links go live with MDV-P1-002 and MDV-P1-003
-title: Public site on Razor Pages and landing page (solo doctor / hospital CTAs, region-aware copy)
+title: Public site on Razor Pages and landing page (clinic / hospital CTAs, region-aware copy)
 type: Story
 epic: MDV-P1-E01
 prd: P1-01
@@ -44,6 +44,8 @@ ac:
 - Only the two designed CTAs exist above the fold; Pricing shows a placeholder with no invented prices or metrics.
 - Pages are available in English, Hindi and Arabic (RTL) with SEO metadata and no third-party trackers without consent.
 - No PHI or tenant data is reachable from public pages (separate route group, no auth cookie read).
+notes:
+- Scope change, ADR-016 (docs/adr/ADR-016-organisation-onboarding-and-approval.md, owner decision 10 Nov 2026): there is no solo-doctor account. The doctor CTA reads "Register your clinic" and goes to the onboarding request (MDV-P1-062); the hospital CTA stays "book a demo" until Hospital onboarding opens in the same request.
 
 === MDV-P1-002
 status: Partly done
@@ -60,7 +62,7 @@ epic: MDV-P1-E01
 prd: P1-01
 screens: F-02
 priority: SHOULD
-roles: Public, Solo doctor, Practice owner
+roles: Public, Practice owner
 labels: public-site, residency, tenancy
 estimate: 1.5
 weeks: 4
@@ -113,13 +115,13 @@ progress:
 - Recording and signing capabilities (clinical notes, prescriptions, recording, AI drafts, result review) are None in IStaffAccess while the licence is unverified, so every capability policy refuses them; booking and registering stay; the shell shows the designed notice (gate mutation-checked)
 - Browser (mocked API, English and Arabic RTL, 768 px, keyboard, axe clean) and Testcontainers SQL Server tests; J1 step 1 implemented
 - Left: store the certificate file in Blob (only its name is kept; needs the Blob upload path, MDV-P0-006); back-office licence verification that sets VerifiedAt (MDV-P1-007); mobile/SMS invitations in step 6 (MDV-P1-033); claim the draft in the same transaction as the tenant so a double submit cannot create two practices (when drafts and tenants share a store); the live country's sign-up address (PublicSite:Deployments:SignUpUrls, MDV-P0-003); several doctors and locations (MDV-P1-005, MDV-P1-007)
-title: Solo doctor and clinic sign-up with the six-step onboarding wizard (autosave)
+title: Clinic sign-up with the six-step onboarding wizard (autosave); the onboarding request itself is MDV-P1-062
 type: Story
 epic: MDV-P1-E02
 prd: P1-02
 screens: F-04
 priority: MUST
-roles: Solo doctor, Practice owner
+roles: Practice owner
 labels: onboarding
 estimate: 3
 weeks: 4-5
@@ -135,6 +137,8 @@ ac:
 - Step 6 sends invitations through the P0 invitation flow (MDV-P0-013).
 - Finishing lands on the role's home (Today for doctors, Front desk for owners/reception) and creates tenant, facility, membership, practice profile, hours and fee defaults.
 - The whole wizard works at 768 px (tablet) and is keyboard-completable.
+notes:
+- Scope change, ADR-016 (docs/adr/ADR-016-organisation-onboarding-and-approval.md, owner decision 10 Nov 2026): the wizard now belongs to an onboarding request (MDV-P1-062) and the Medvya licence gate in AC 3 is retired (MDV-P1-063, MDV-P1-065). A doctor who works alone registers a clinic and is its owner; the owner-doctor attests their own licence. The step 2 "Verification pending" notice goes.
 
 === MDV-P1-005
 status: Partly done
@@ -147,7 +151,7 @@ epic: MDV-P1-E02
 prd: P1-02
 screens: F-08
 priority: MUST
-roles: Practice admin, Solo doctor
+roles: Practice admin, Practice owner
 labels: settings
 estimate: 2.5
 weeks: 5
@@ -216,6 +220,7 @@ ac:
 - The new doctor appears in schedule columns once hours are set.
 notes:
 - Define the licence verification process (who checks which register, SLA "usually within 1 working day") with the founder; this closes the P2 dependency.
+- Superseded in scope by ADR-016 (docs/adr/ADR-016-organisation-onboarding-and-approval.md, owner decision 10 Nov 2026): Medvya operations no longer verify doctors. Owner attestation replaces the Verified/Pending states and the licence gate (MDV-P1-065); the licence verify and reject endpoint and Operations:LicenceReviewers are replaced by organisation approval (MDV-P1-064). The Done work stays until those tickets land.
 
 === MDV-P1-008
 status: Done
@@ -1171,6 +1176,8 @@ ac:
 - Approved texts with version numbers (e.g. v2026.2) are stored in the repo and loaded into consent templates.
 - Review notes list any change to the consent model and the resulting ticket updates.
 - Sign-off is recorded before the first real patient is registered (P1 for demographics).
+notes:
+- Add to the review (ADR-016 (docs/adr/ADR-016-organisation-onboarding-and-approval.md, owner decision 10 Nov 2026)): a doctor licence is attested by the owner, so a false licence is the organisation's liability (ToS and DPA wording, MDV-P1-067); the proposed Clinic and Hospital document lists.
 
 === MDV-P1-045
 title: Register India DLT sender ID and SMS templates (and UAE SMS sender if applicable)
@@ -1457,7 +1464,7 @@ epic: MDV-P1-E02
 prd: P1-02
 screens: F-03, F-04, F-06
 priority: MUST
-roles: Solo doctor, Practice owner, Receptionist, Doctor
+roles: Practice owner, Receptionist, Doctor
 labels: identity, onboarding, a11y
 estimate: 3
 weeks: 12
@@ -1480,7 +1487,7 @@ epic: MDV-P1-E02
 prd: P1-02
 screens: F-03
 priority: SHOULD
-roles: Solo doctor, Practice owner, Receptionist, Doctor
+roles: Practice owner, Receptionist, Doctor
 labels: identity, infra, needs-person
 estimate: 1
 weeks: 12
@@ -1500,7 +1507,7 @@ epic: MDV-P1-E02
 prd: P1-02
 screens: F-04
 priority: MUST
-roles: Solo doctor, Practice owner
+roles: Practice owner
 labels: onboarding, a11y
 estimate: 5
 weeks: 12-13
@@ -1514,3 +1521,161 @@ ac:
 - Given a step, when it is submitted, then the server validates it with the country rules and shows errors under the field, announced to screen readers.
 - Given the team step, when an owner invites a front-desk member, then the invitation is sent with the front-desk role and that role cannot open clinical notes (server-side test).
 - Every step is keyboard-complete, 44 px targets, axe clean in en, hi and ar; Arabic is right to left.
+
+=== MDV-P1-062
+title: Onboarding request at sign-up: choose Clinic or Hospital, give the required documents, submit for Medvya review
+type: Story
+epic: MDV-P1-E02
+prd: P1-02
+screens: F-04
+priority: MUST
+roles: Practice owner, Medvya operations
+labels: onboarding, documents
+estimate: 5
+weeks: 12-14
+depends: MDV-P1-004, MDV-P0-006
+confidence: 60 | Document lists are proposed and need legal review (MDV-P1-044); hospital specifics are open.
+sources: docs/adr/ADR-016-organisation-onboarding-and-approval.md; docs/02-design/screen-specs.md#f-04-solo-doctor-onboarding-6-steps-autosave
+desc:
+Sign-up asks first for the organisation type, Clinic or Hospital (there is no individual or solo-doctor account; a doctor working alone registers a clinic and is its owner). The wizard (MDV-P1-004, MDV-P1-061) then collects the per-type documents proposed in ADR-016: registration number and validity, tax number, owner identity (Hospital: authorised signatory and IT contact), and for an owner who is a doctor the council registration number and expiry. Files go to private Blob. Submit moves the request from Draft to Submitted; the applicant sees a status page (Submitted, Needs changes with the reason, Approved, Rejected) and can resubmit after Needs changes. Hospital connection to a HIS or SSO is P7.
+ac:
+- Given an applicant, when they start sign-up, then they must choose Clinic or Hospital and are asked only for that type's documents.
+- Given a required document or field is missing or fails the country rules, when they submit, then the server refuses with errors under the field announced to screen readers.
+- Given a Submitted request, when the applicant signs in, then they see its status and, for Needs changes, the reviewer's reason, and can edit and resubmit.
+- Uploaded files are validated (type, size), malware-scanned, stored in private Blob and readable only by Medvya operations.
+- The flow works in English, Hindi and Arabic (RTL), keyboard-complete, axe clean; no PHI in logs, URLs or telemetry.
+notes:
+- Journey J1 step 1 covers the happy path; the document lists stay proposed until MDV-P1-044 confirms them.
+
+=== MDV-P1-063
+title: Organisation state and restricted mode before approval: server-side gate replaces the doctor licence gate
+type: Story
+epic: MDV-P1-E02
+prd: P1-02
+screens: F-04, F-08
+priority: MUST
+roles: Practice owner, Practice admin
+labels: onboarding, security, tenancy
+estimate: 4
+weeks: 12-14
+depends: MDV-P1-062
+confidence: 60 | Pre-approval access is a proposal (set up allowed, patient work refused) with a stricter alternative awaiting the owner's choice.
+sources: docs/adr/ADR-016-organisation-onboarding-and-approval.md
+desc:
+Add the organisation state (Draft, Submitted, NeedsChanges, Approved, Rejected, Suspended) to the tenant and check it in IStaffAccess for every capability, replacing LicenceRules and the licencePending session flag. Proposal: until Approved the owner can set up the organisation and add staff and doctors, but patient registration, booking, check-in, notes, prescriptions and signing are refused by the server, and staff see a "waiting for approval" notice. Suspended refuses new registration, booking and signing but keeps existing records readable for care. Alternative if legal prefers it: status page only until Approved.
+ac:
+- Given an organisation that is not Approved, when any user calls a patient, booking, check-in, note or signing endpoint, then the API refuses (403) and the attempt is audited.
+- Given the organisation is Approved, when the same call is made, then it works as before.
+- Given an organisation is Suspended, when staff open an existing record, then it is readable and new registration, booking and signing are refused.
+- The gate is covered by integration tests on a real database under row-level security and shown to fail when the check is removed (mutation check).
+- The shell shows a plain notice per state in English and Arabic; state is never conveyed by colour alone.
+notes:
+- Reuses the capability gate in IStaffAccess; ADR-016 sizes this at about 4 days.
+
+=== MDV-P1-064
+title: Interim Medvya operations review of onboarding requests: approve, ask for changes, reject, suspend (before the console exists)
+type: Story
+epic: MDV-P1-E02
+prd: P1-02
+priority: MUST
+roles: Medvya operations
+labels: onboarding, operations, security
+estimate: 3
+weeks: 12-14
+depends: MDV-P1-063
+confidence: 60 | The console queue (MDV-P5-044) comes weeks later; the pilot needs a reviewed minimal path first.
+sources: docs/adr/ADR-016-organisation-onboarding-and-approval.md; docs/adr/ADR-014-platform-console.md
+desc:
+Replace the licence verify and reject endpoint, OperationsPolicies.LicenceReview and the Operations:LicenceReviewers id list with an organisation-approval capability. Minimal operations endpoints (reason required, audited, applicant emailed a plain reason for changes, rejection or suspension) read only the control-plane request and its documents, through a narrow reviewed read path inside row-level security. MDV-P5-044 later puts a queue UI on the same capability.
+ac:
+- Given a user without the organisation-approval capability, when they call the endpoints, then 403 (server-side test).
+- Given a Submitted request, when an authorised operator approves, asks for changes, rejects or suspends with a reason, then the state changes, the audit names the operator, and the applicant is emailed the reason.
+- Given any of these endpoints, when called, then no patient data is returned and none is logged.
+- Operations:LicenceReviewers and the doctor licence endpoints are removed, and the capability is mutation-checked.
+
+=== MDV-P1-065
+title: Owner attests each doctor's licence; retire the Medvya licence verification states
+type: Story
+epic: MDV-P1-E03
+prd: P1-03
+screens: F-09
+priority: MUST
+roles: Practice owner, Practice admin
+labels: staff, licence, clinical-safety
+estimate: 3
+weeks: 12-14
+depends: MDV-P1-063
+confidence: 65 | Replaces the Done MDV-P1-007 behaviour; whether an expired licence blocks signing is left for the owner to decide.
+sources: docs/adr/ADR-016-organisation-onboarding-and-approval.md
+desc:
+When an owner adds a doctor (and for the owner-doctor in the wizard) they enter authority, number and expiry and attest they have checked it. Store the attesting owner, time and values in the audit (append-only). Remove the Verified, Pending and Rejected states, the Doctors tab verification step, ILicenceReview and the "Verification pending" notice; recording, signing and prescribing no longer depend on VerifiedAt. The doctor list shows "Attested by {owner} on {date}". Expiry reminders stay, and an expired licence asks the owner to re-attest (default: warn, do not block).
+ac:
+- Given an owner adds a doctor, when they do not attest, then the doctor cannot be added.
+- Given a doctor was added, when anyone views the list, then it shows who attested and when; the audit holds the values.
+- Given an approved organisation, when a doctor with an attested licence records or signs, then it is allowed with no Medvya check.
+- Given a licence nears or passes expiry, when the reminder runs, then the owner is told to re-attest.
+- The licence gate tests are replaced by attestation tests; the removed gate is not reachable by any endpoint.
+notes:
+- Clinical safety: a false licence is the organisation's liability, and the owner accepted that there is no independent check, including for controlled drugs (ADR-016); recorded in MDV-P2-021.
+
+=== MDV-P1-066
+title: Retire solo-doctor naming: Role.SoloDoctor, session flags, copy and docs
+type: Task
+epic: MDV-P1-E02
+prd: P1-02
+screens: F-04, F-08
+priority: SHOULD
+roles: Practice owner
+labels: onboarding, refactor
+estimate: 2.5
+weeks: 13-14
+depends: MDV-P1-065
+confidence: 70 | The "Owner doctor" label already exists; a rename touches the role claim and stored memberships.
+sources: docs/adr/ADR-016-organisation-onboarding-and-approval.md
+desc:
+Rename or retire Role.SoloDoctor (RoleMatrix.cs, the web Role type, role matrix tests, about 52 files) so no individual-account concept remains, keeping the owner-doctor as an owner who is a doctor. Remove licencePending from the session, context and shell (SessionControl.cs, session.ts, App.tsx LicenceNotice). Rewrite copy that says Medvya verifies licences (onboarding.licence.notice, doctors.intro, invite.licence, inviteForm.licence, onboarding.team.doctors, staff.doctorNotice) in en, hi and ar. A change to a stored role value ships with a forward-only migration.
+ac:
+- Given the codebase, when searched for SoloDoctor or "solo doctor" in user-visible text, then nothing remains.
+- Given an existing owner-doctor, when they sign in after the change, then access is unchanged.
+- Copy in en, hi and ar says the owner attests licences and Medvya approves the organisation.
+- Role matrix and permission tests pass; the ERD is regenerated if a table or column changes.
+
+=== MDV-P1-067
+title: Terms of Service and DPA update: the organisation is responsible for the licences it attests
+type: Chore
+epic: MDV-P1-E10
+prd: P1-12
+priority: MUST
+roles: Founder, external counsel
+labels: legal, compliance
+estimate: 0.5
+weeks: 12-14
+depends: MDV-P1-044
+confidence: 60 | External counsel dependency.
+sources: docs/adr/ADR-016-organisation-onboarding-and-approval.md
+desc:
+New terms and DPA version stating that Medvya approves the organisation only, does not verify individual doctors, and that the owner is responsible for who they add and for attesting each doctor's licence, including the effect of a false attestation. Bump the terms version so owners re-accept through the existing terms gate.
+ac:
+- Counsel signs off the wording before it is used with a real pilot clinic.
+- Given the new version, when an owner signs in, then they must accept it before booking or messaging (existing gate).
+- The attestation step shows a plain-language reminder of this responsibility.
+
+=== MDV-P1-068
+title: Migrate existing tenants to Approved and their doctor licences to owner-attested
+type: Task
+epic: MDV-P1-E02
+prd: P1-02
+priority: MUST
+roles: Practice owner, Medvya operations
+labels: tenancy, migration
+estimate: 1
+weeks: 12-14
+depends: MDV-P1-063, MDV-P1-065
+confidence: 75 | Forward-only migration; dev and pilot tenants only.
+sources: docs/adr/ADR-016-organisation-onboarding-and-approval.md
+desc:
+Forward-only migration setting every existing tenant to Approved with an audit entry naming the migration, and marking existing doctor licences attested by the tenant's owner as of migration time (the owner re-confirms on next sign-in). Regenerate the ERD in the same change.
+ac:
+- Given an existing tenant, when the migration runs, then it is Approved and keeps working with no new step.
+- Given a doctor licence that was Verified, Pending or Rejected, when the migration runs, then it shows owner-attested and the audit names the migration.
+- Tested against a real database seeded with each prior licence state; docs/03-architecture/erd.md is regenerated.

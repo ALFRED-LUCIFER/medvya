@@ -6,12 +6,12 @@ Source: PRD v2 §02, Foundations §05 sitemap, UI/UX prompt §2.
 |---|---|---|---|
 | Receptionist | Calendar → register / dedup → check-in → queue → invoice → call next patient | P1 (R1 Front Desk) | Front-desk shell; **never sees clinical notes** |
 | Practice owner / admin | Settings, staff, schedules, services, reports, day-end close, subscription | P1 | Admin shell, single facility |
-| Solo doctor | Today → chart → consultation → signed note and Rx → follow-up → billing | P2 (R2 Consult) | Doctor shell, own practice |
+| Owner doctor (a doctor who works alone registers a one-doctor clinic and is its owner; there is no individual account, ADR-016) | Today → chart → consultation → signed note and Rx → follow-up → billing | P2 (R2 Consult) | Doctor shell, own practice |
 | Clinic doctor | Same loop inside a shared clinic with a shared waiting room | P2 | Doctor shell |
 | Nurse | Rooming list → identity check → vitals and allergies → handoff → delegated tasks | P2 | Nurse console |
 | Care coordinator | Results inbox, overdue tasks, contact outcomes, escalations | P4 (R4 Clinic Ops) | Care shell |
 | Patient / caregiver | Book, consent, see released records and instructions, act as proxy | P4 | Portal shell, mobile-first, 17px min text, 48px targets |
-| Medvya operations | Onboard tenants, run migrations, support with audited access | P5 (R5 v1.0 GA) | Platform ops console (N-12) |
+| Medvya operations | Approve organisation onboarding requests (Clinic or Hospital), run migrations, support with audited access | P5 (R5 v1.0 GA) | Platform ops console (N-12) |
 | Hospital clinician | HIS-linked list, governed chart, write-back status | P7 (R7 Enterprise) | Doctor shell, facility scoped |
 | Hospital IT / privacy officer | Facilities, SSO, integrations, audit, retention, data requests | P7 | Enterprise shell |
 

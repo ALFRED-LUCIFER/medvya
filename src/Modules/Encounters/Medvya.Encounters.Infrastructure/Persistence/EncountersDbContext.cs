@@ -16,6 +16,7 @@ public sealed class EncountersDbContext(DbContextOptions<EncountersDbContext> op
     public DbSet<ClinicalDocument> Documents => Set<ClinicalDocument>();
     public DbSet<Intake> Intakes => Set<Intake>();
     public DbSet<IntakeEscalation> IntakeEscalations => Set<IntakeEscalation>();
+    public DbSet<DoctorNoteTemplate> DoctorNoteTemplates => Set<DoctorNoteTemplate>();
 
     Guid? CurrentTenantId => tenant.TenantId;
 
@@ -88,6 +89,11 @@ public sealed class EncountersDbContext(DbContextOptions<EncountersDbContext> op
             e.Property(x => x.Reason).HasMaxLength(500);
             e.HasIndex(x => new { x.TenantId, x.FacilityId, x.EscalatedAt });
             e.HasIndex(x => new { x.TenantId, x.AppointmentId });
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<DoctorNoteTemplate>(e =>
+        {
+            e.HasIndex(x => new { x.TenantId, x.UserId }).IsUnique();
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         modelBuilder.Entity<ClinicalDocument>(e =>

@@ -159,6 +159,30 @@ namespace Medvya.Encounters.Infrastructure.Persistence.Migrations
                     b.ToTable("ClinicalDocuments", "encounters");
                 });
 
+            modelBuilder.Entity("Medvya.Encounters.Domain.DoctorNoteTemplate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.PrimitiveCollection<string[]>("TemplateKeys")
+                        .IsRequired()
+                        .HasColumnType("text[]");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "UserId")
+                        .IsUnique();
+
+                    b.ToTable("DoctorNoteTemplates", "encounters");
+                });
+
             modelBuilder.Entity("Medvya.Encounters.Domain.Encounter", b =>
                 {
                     b.Property<Guid>("Id")

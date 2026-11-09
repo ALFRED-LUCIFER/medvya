@@ -26,15 +26,15 @@ public sealed class PatientMergeEndpointTests(PostgresFixture sql) : IClassFixtu
     {
         await using (var db = sql.Context(tenant))
         {
-            db.Tenants.Add(new Tenant { Id = tenant, Name = "Iyer Family Clinic (synthetic)", CountryCode = "IN", ResidencyRegion = "centralindia" });
+            db.Tenants.Add(new Tenant { State = OrganisationState.Approved, Id = tenant, Name = "Iyer Family Clinic (synthetic)", CountryCode = "IN", ResidencyRegion = "centralindia" });
             db.Facilities.Add(new Facility { Id = facility, TenantId = tenant, Name = "Adyar (synthetic)", TimeZone = "Asia/Kolkata" });
-            foreach (var (name, role) in new[] { ("receptionist", Role.Receptionist), ("doctor", Role.HospitalDoctor), ("unverified", Role.HospitalDoctor), ("admin", Role.PracticeAdmin), ("nurse", Role.Nurse) })
+            foreach (var (name, role) in new[] { ("receptionist", Role.Receptionist), ("doctor", Role.HospitalDoctor), ("admin", Role.PracticeAdmin), ("nurse", Role.Nurse) })
             {
                 users[name] = Guid.NewGuid();
                 var membership = new Membership { Id = Guid.NewGuid(), TenantId = tenant, UserId = users[name], FacilityId = facility, Role = role, Status = MembershipStatus.Active };
                 db.Memberships.Add(membership);
                 if (name == "doctor")
-                    db.DoctorLicences.Add(new DoctorLicence { MembershipId = membership.Id, TenantId = tenant, Authority = "TNMC", Number = "84213", SubmittedAt = DateTimeOffset.UtcNow, VerifiedAt = DateTimeOffset.UtcNow });
+                    db.DoctorLicences.Add(new DoctorLicence { MembershipId = membership.Id, TenantId = tenant, Authority = "TNMC", Number = "84213", SubmittedAt = DateTimeOffset.UtcNow });
             }
             await db.SaveChangesAsync();
         }
@@ -87,9 +87,8 @@ public sealed class PatientMergeEndpointTests(PostgresFixture sql) : IClassFixtu
         Assert.Equal(HttpStatusCode.OK, (await nurse.GetAsync(new Uri($"/v1/patients/merge-requests/{request}", UriKind.Relative))).StatusCode);
 
         Assert.Equal(HttpStatusCode.NoContent, (await Post(desk, $"/v1/patients/merge-requests/{request}/request-approval")).StatusCode);
-        // The desk, the admin, a nurse and a doctor whose licence is not verified cannot approve: that is verified clinician work.
-        using var unverified = Client(host, "unverified");
-        foreach (var who in new[] { desk, admin, nurse, unverified })
+        // The desk, the admin and a nurse cannot approve: that is clinician work.
+        foreach (var who in new[] { desk, admin, nurse })
             Assert.Equal(HttpStatusCode.Forbidden, (await Post(who, $"/v1/patients/merge-requests/{request}/approve")).StatusCode);
         Assert.Equal("AwaitingApproval", await StatusAsync());
 

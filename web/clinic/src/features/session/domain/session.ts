@@ -8,6 +8,9 @@ export type Capability =
   | 'ReleaseRecordsToPortal' | 'DevicePairingFleet' | 'StaffRolesIntegrations' | 'AuditLog';
 export type Access = 'None' | 'Read' | 'Own' | 'Limited' | 'Released' | 'Full' | 'Sign' | 'Config' | 'BreakGlass';
 
+/** Mirrors Medvya.Tenancy.Domain.OrganisationState (ADR-016). */
+export type OrganisationState = 'Draft' | 'Submitted' | 'NeedsChanges' | 'Approved' | 'Rejected' | 'Suspended';
+
 export type Membership = { id: string; tenantId: string; tenantName: string; facilityId: string; facilityName: string; role: Role };
 export type ActiveMembership = {
   membershipId: string; tenantId: string; facilityId: string; role: Role;
@@ -17,8 +20,8 @@ export type ActiveMembership = {
   timeZone?: string;
   capabilities: Partial<Record<Capability, Access>>;
   flags: string[];
-  /** A doctor whose licence is not verified yet: recording and signing are off (the server already left them out of `capabilities`). */
-  licencePending?: boolean;
+  /** Where the organisation stands with Medvya (ADR-016). Before Approved only set-up is open; Suspended is read-only. The server already narrowed `capabilities`. */
+  organisationState?: OrganisationState;
 };
 
 /** /v1/me/context (contract agreed with MDV-P0-012). Older servers send only `user`: that means "no active facility". */

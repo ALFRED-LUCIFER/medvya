@@ -303,48 +303,6 @@
         }
       }
     },
-    "/v1/operations/licences/{tenantId}/{doctorId}/decision": {
-      "post": {
-        "tags": [
-          "Host.Api"
-        ],
-        "parameters": [
-          {
-            "name": "tenantId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "doctorId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Decision"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
     "/v1/queue/tv/session": {
       "post": {
         "tags": [
@@ -4990,6 +4948,9 @@
               "string"
             ]
           },
+          "attested": {
+            "type": "boolean"
+          },
           "newVisitFee": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
@@ -6388,24 +6349,6 @@
           }
         }
       },
-      "Decision": {
-        "required": [
-          "verified",
-          "reason"
-        ],
-        "type": "object",
-        "properties": {
-          "verified": {
-            "type": "boolean"
-          },
-          "reason": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
-      },
       "DirectoryFilter": {
         "enum": [
           "All",
@@ -6531,8 +6474,10 @@
           "number",
           "category",
           "expiresOn",
-          "licence",
-          "rejectionReason",
+          "expired",
+          "attestedBy",
+          "attestedByName",
+          "attestedAt",
           "hasSignature",
           "newVisitFee",
           "followUpFee",
@@ -6594,14 +6539,25 @@
             ],
             "format": "date"
           },
-          "licence": {
-            "$ref": "#/components/schemas/LicenceStatus"
+          "expired": {
+            "type": "boolean"
           },
-          "rejectionReason": {
+          "attestedBy": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "attestedByName": {
             "type": [
               "null",
               "string"
             ]
+          },
+          "attestedAt": {
+            "type": "string",
+            "format": "date-time"
           },
           "hasSignature": {
             "type": "boolean"
@@ -7137,14 +7093,6 @@
           }
         }
       },
-      "LicenceStatus": {
-        "enum": [
-          "Pending",
-          "Verified",
-          "Rejected",
-          "Expired"
-        ]
-      },
       "LocationView": {
         "required": [
           "id",
@@ -7581,6 +7529,10 @@
               "null",
               "string"
             ]
+          },
+          "attested": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -8416,6 +8368,9 @@
       "ResubmitLicence": {
         "type": "object",
         "properties": {
+          "attested": {
+            "type": "boolean"
+          },
           "authority": {
             "type": [
               "null",

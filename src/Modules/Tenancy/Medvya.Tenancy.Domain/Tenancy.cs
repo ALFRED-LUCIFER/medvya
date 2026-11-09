@@ -15,6 +15,8 @@ public sealed class Tenant
     [Classification(DataClass.Internal)] public ClinicalAccessPolicy ClinicalAccess { get; set; }
     /// <summary>When the practice was created; the first quarterly access review is due a quarter later (#912). Tenants older than the column read 0001-01-01.</summary>
     [Classification(DataClass.Internal)] public DateTimeOffset CreatedAt { get; init; }
+    /// <summary>Where the organisation stands in Medvya's review (ADR-016); the server gates capabilities on it. Changed only through <see cref="IOrganisationState"/>.</summary>
+    [Classification(DataClass.Internal)] public OrganisationState State { get; set; }
 }
 
 public sealed class Facility

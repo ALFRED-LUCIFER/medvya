@@ -29,8 +29,8 @@ public sealed class PracticeDefaults
 }
 
 /// <summary>
-/// A doctor's licence as submitted. Until <see cref="VerifiedAt"/> is set (back-office decision, MDV-P1-007) the doctor can book and
-/// register patients but not record or sign (<see cref="LicenceRules"/>). A rejected licence stays gated until it is corrected and verified.
+/// A doctor's licence as entered and attested by the practice owner (ADR-016, MDV-P1-065). Medvya does not check it and no capability
+/// depends on it; the owner answers for it. The values attested are kept in the append-only settings change row.
 /// </summary>
 public sealed class DoctorLicence
 {
@@ -44,16 +44,10 @@ public sealed class DoctorLicence
     /// <summary>Name of the certificate file the doctor chose; the file itself is not stored yet.</summary>
     [Classification(DataClass.Personal)] public string? CertificateName { get; set; }
     [Classification(DataClass.Internal)] public DateTimeOffset SubmittedAt { get; set; }
-    [Classification(DataClass.Internal)] public DateTimeOffset? VerifiedAt { get; set; }
-    /// <summary>The Medvya operations user who verified the licence.</summary>
-    [Classification(DataClass.Internal)] public Guid? VerifiedBy { get; set; }
-    [Classification(DataClass.Internal)] public DateTimeOffset? RejectedAt { get; set; }
-    /// <summary>Why operations rejected it; shown to the practice. Must not contain personal details (the screen says so).</summary>
-    [Classification(DataClass.Internal)] public string? RejectionReason { get; set; }
+    /// <summary>The owner who attested the licence (null only for a licence whose tenant had no owner at migration, MDV-P1-068).</summary>
+    [Classification(DataClass.Internal)] public Guid? AttestedBy { get; set; }
+    [Classification(DataClass.Internal)] public DateTimeOffset AttestedAt { get; set; }
 }
-
-/// <summary>Expired: verified once, but past its expiry date; the doctor is gated again until a renewed licence is verified.</summary>
-public enum LicenceStatus { Pending, Verified, Rejected, Expired }
 
 /// <summary>
 /// A doctor added in clinic mode (MDV-P1-007), one per doctor membership: the profile shown on the doctor list, fee defaults and the
@@ -77,23 +71,8 @@ public sealed class DoctorProfile
 
 public static class LicenceRules
 {
-    /// <summary>Recording and signing capabilities that stay off until the licence is verified (F-04 notice).</summary>
-    public static readonly IReadOnlySet<Capability> Gated = new HashSet<Capability>
-    {
-        Capability.RecordingConsentCapture, Capability.AiDraftsEvidence, Capability.ClinicalNotes,
-        Capability.PrescriptionsOrders, Capability.ResultReviewAcknowledge,
-    };
-
-    /// <summary>The access the role's matrix grants, or None for a gated capability while the licence is unverified.</summary>
-    public static Access Apply(Access access, Capability capability, bool licencePending) =>
-        licencePending && Gated.Contains(capability) ? Access.None : access;
-
     /// <summary>A licence is valid through its expiry date (inclusive) and expired from the day after (MDV-P1-010). No date means no expiry.</summary>
     public static bool IsExpired(DoctorLicence l, DateOnly today) => l.ExpiresOn is { } expiry && expiry < today;
-
-    public static LicenceStatus StatusOf(DoctorLicence l, DateOnly today) =>
-        l.VerifiedAt is not null ? (IsExpired(l, today) ? LicenceStatus.Expired : LicenceStatus.Verified)
-        : l.RejectedAt is not null ? LicenceStatus.Rejected : LicenceStatus.Pending;
 }
 
 /// <summary>What the owner decided about one person at a quarterly access review (MDV-P1-010).</summary>

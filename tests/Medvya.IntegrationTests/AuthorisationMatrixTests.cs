@@ -251,7 +251,6 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         ["/v1/waitlist/{id:guid}/offer"] = "as above",
         ["/v1/waitlist/{id:guid}/accept"] = "as above",
         ["/v1/waitlist/{id:guid}/decline"] = "as above",
-        ["/v1/operations/licences/{tenantId:guid}/{doctorId:guid}/decision"] = "Medvya operations only (not a clinic role); the tenant is named on purpose (DoctorTests)",
     };
 
     /// <summary>

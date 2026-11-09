@@ -89,7 +89,7 @@ public sealed class ComplianceFactsReader(TenancyDbContext db) : IComplianceFact
         var licences = await (
             from l in db.DoctorLicences.AsNoTracking()
             join m in db.Memberships on l.MembershipId equals m.Id
-            where m.Status == MembershipStatus.Active && l.VerifiedAt != null && l.ExpiresOn != null && l.ExpiresOn <= horizon
+            where m.Status == MembershipStatus.Active && l.ExpiresOn != null && l.ExpiresOn <= horizon
             select new ExpiringLicence(l.MembershipId, m.FacilityId, l.ExpiresOn!.Value)).ToListAsync(cancellationToken);
         var quarter = AccessReviewQuarter.Of(today);
         var done = await db.AccessReviews.AnyAsync(r => r.Quarter == quarter && r.CompletedAt != null, cancellationToken);

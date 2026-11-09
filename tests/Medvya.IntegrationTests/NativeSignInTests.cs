@@ -32,7 +32,7 @@ public sealed class NativeSignInTests(PostgresFixture sql) : IClassFixture<Postg
         var facility = Guid.NewGuid();
         await using (var db = sql.Context(tenant))
         {
-            db.Tenants.Add(new Tenant { Id = tenant, Name = "Iyer Family Clinic (synthetic)", CountryCode = "IN", ResidencyRegion = "centralindia" });
+            db.Tenants.Add(new Tenant { State = OrganisationState.Approved, Id = tenant, Name = "Iyer Family Clinic (synthetic)", CountryCode = "IN", ResidencyRegion = "centralindia" });
             db.Facilities.Add(new Facility { Id = facility, TenantId = tenant, Name = "Adyar (synthetic)", TimeZone = "Asia/Kolkata" });
             await db.SaveChangesAsync();
         }

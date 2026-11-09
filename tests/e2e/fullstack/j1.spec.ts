@@ -36,6 +36,7 @@ test('J1: a new solo doctor sets up the practice, registers a patient, books and
     await page.getByRole('combobox', { name: 'Medical council' }).click();
     await page.getByRole('option', { name: /TNMC/ }).click();
     await page.getByLabel('Registration number').fill('84213');
+    await page.getByLabel('I confirm this registration is my own and that it is valid.').check(); // ADR-016: the owner-doctor attests their own licence
     await page.getByRole('button', { name: 'Continue' }).click();
     await page.getByRole('button', { name: 'Continue' }).click(); // hours and fees: the design defaults
     await page.getByLabel('Email address').fill(`reception${n}@example.test`);
@@ -53,11 +54,11 @@ test('J1: a new solo doctor sets up the practice, registers a patient, books and
     await expect(page.getByText(/could not be sent/)).toHaveCount(0);
     await expectNoAxeViolations(page);
     await page.getByRole('button', { name: 'Open Today' }).click();
-    await expect(page.getByText('Verification pending · usually within 1 working day.')).toBeVisible();
+    await expect(page.getByText(/Waiting for approval|being set up/)).toHaveCount(0); // no Medvya licence check: recording and signing are open at once
     await page.reload(); // the server, not the screen, holds the practice
     await expect(page.getByRole('navigation').first()).toBeVisible();
     await expect(page).not.toHaveURL(/onboarding/);
-    // The owner of a solo practice administers it (Staff, roles, integrations = Config): the staff list opens before the licence is verified.
+    // The owner of a solo practice administers it (Staff, roles, integrations = Config): the staff list opens at once.
     const staff = await page.request.get('/v1/staff');
     expect(staff.status(), await staff.text()).toBe(200);
     // shortcut: the stack has no SMTP sink (that is `pnpm services:up`), so delivery is not asserted here; the integration tests check the email.

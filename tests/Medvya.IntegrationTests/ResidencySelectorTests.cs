@@ -182,7 +182,7 @@ public class TenantResidencyTests(PostgresFixture sql) : IClassFixture<PostgresF
         var id = Guid.NewGuid();
         await using (var db = sql.Context(id))
         {
-            db.Tenants.Add(new Tenant { Id = id, Name = "Synthetic Residency Clinic", CountryCode = "IN", ResidencyRegion = "centralindia" });
+            db.Tenants.Add(new Tenant { State = OrganisationState.Approved, Id = id, Name = "Synthetic Residency Clinic", CountryCode = "IN", ResidencyRegion = "centralindia" });
             await db.SaveChangesAsync();
         }
         await using var again = sql.Context(id);

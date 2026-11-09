@@ -136,7 +136,7 @@ public sealed class AccessLogTests(PostgresFixture sql) : IClassFixture<Postgres
         await Seed(h.Tenant, "patient.update", h.Patient, h.Reception, Noon.AddDays(-40));
         await using (var db = sql.Context(other))
         {
-            db.Tenants.Add(new Tenant { Id = other, Name = "Elsewhere Clinic (synthetic)", CountryCode = "IN", ResidencyRegion = "centralindia" });
+            db.Tenants.Add(new Tenant { State = OrganisationState.Approved, Id = other, Name = "Elsewhere Clinic (synthetic)", CountryCode = "IN", ResidencyRegion = "centralindia" });
             await db.SaveChangesAsync();
         }
         await Seed(other, "patient.read", Guid.NewGuid(), Guid.NewGuid(), Noon);

@@ -88,7 +88,7 @@ public class RowLevelSecurityTests(PostgresFixture sql) : IClassFixture<Postgres
         foreach (var t in new[] { a, b })
         {
             await using var seed = sql.Context(t);
-            seed.Tenants.Add(new Tenant { Id = t, Name = "Iyer Family Clinic (synthetic)", CountryCode = "IN", ResidencyRegion = "centralindia" });
+            seed.Tenants.Add(new Tenant { State = OrganisationState.Approved, Id = t, Name = "Iyer Family Clinic (synthetic)", CountryCode = "IN", ResidencyRegion = "centralindia" });
             await seed.SaveChangesAsync();
         }
 

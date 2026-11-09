@@ -24,7 +24,7 @@ public class TenantIsolationTests(PostgresFixture sql) : IClassFixture<PostgresF
     {
         await using var db = sql.Context(tenant); // writing a tenant's rows requires being in that tenant
         var facility = new Facility { Id = Guid.NewGuid(), TenantId = tenant, Name = name, TimeZone = country == "IN" ? "Asia/Kolkata" : "Asia/Dubai" };
-        db.Tenants.Add(new Tenant { Id = tenant, Name = name, CountryCode = country, ResidencyRegion = country == "IN" ? "centralindia" : "uaenorth" });
+        db.Tenants.Add(new Tenant { State = OrganisationState.Approved, Id = tenant, Name = name, CountryCode = country, ResidencyRegion = country == "IN" ? "centralindia" : "uaenorth" });
         db.Facilities.Add(facility);
         db.Memberships.Add(new Membership { Id = Guid.NewGuid(), TenantId = tenant, UserId = sharedUser, FacilityId = facility.Id, Role = Role.Receptionist, Status = MembershipStatus.Active });
         await db.SaveChangesAsync();

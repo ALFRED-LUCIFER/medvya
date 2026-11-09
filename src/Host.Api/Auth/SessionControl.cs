@@ -73,8 +73,8 @@ public static class SessionControl
             var memberships = await directory.ForCurrentUserAsync(ct);
             // Role comes from the live membership row, so a suspended membership is no longer offered as active.
             var active = memberships.FirstOrDefault(m => m.Id == Read(principal, MembershipClaim));
-            var licencePending = active is not null && await staff.LicencePendingAsync(ct);
-            var capabilities = active is null ? new Dictionary<string, string>() : RoleMatrix.Grants(active.Role).Select(g => (g.Capability, Access: LicenceRules.Apply(g.Access, g.Capability, licencePending)))
+            var state = active is null ? OrganisationState.Draft : await staff.OrganisationStateAsync(ct);
+            var capabilities = active is null ? new Dictionary<string, string>() : RoleMatrix.Grants(active.Role).Select(g => (g.Capability, Access: OrganisationRules.Apply(g.Access, g.Capability, state)))
                 .Where(g => g.Access != Access.None).ToDictionary(g => g.Capability.ToString(), g => g.Access.ToString());
             // Capabilities a practice-defined role adds to its base role (MDV-P1-008); the same live check the endpoints use.
             if (active is not null)
@@ -96,8 +96,8 @@ public static class SessionControl
                     // The facility's time zone: screens that show instants (the access log) show them in clinic time, not the browser's.
                     TimeZone = (await facilities.FindAsync(active.FacilityId, ct))?.TimeZone,
                     Role = active.Role.ToString(),
-                    // Recording and signing stay off until the doctor's licence is verified (MDV-P1-004), as the server enforces on each call.
-                    LicencePending = licencePending,
+                    // Before approval only set-up is open; Suspended is read-only (ADR-016), as the server enforces on each call.
+                    OrganisationState = state.ToString(),
                     Capabilities = capabilities,
                     Flags = await flags.EnabledKeysAsync(ct),
                 },

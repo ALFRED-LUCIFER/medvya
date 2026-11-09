@@ -17,7 +17,7 @@ function useFieldError(errors: Errors) {
   return (name: string) => (errors[name] ? t(`doctors.error.${errors[name]!}`) : null);
 }
 
-/** Authority, number, category, expiry and certificate file name: the licence step, also used to correct a rejected licence. */
+/** Authority, number, category, expiry, certificate file name and the owner's attestation: the licence step, also used to renew a licence. */
 export function LicenceFields<T extends FieldValues>({ form, errors, authorities, prefix }: { form: UseFormReturn<T>; errors: Errors; authorities: Authority[]; prefix: string }) {
   const { t, country } = useI18n();
   const error = useFieldError(errors);
@@ -44,6 +44,13 @@ export function LicenceFields<T extends FieldValues>({ form, errors, authorities
       <Field id={`${prefix}-certificate`} label={t('onboarding.field.certificate')} hint={t('doctors.licence.certificateHint')} error={error('certificateName')} className="sm:col-span-2">
         <Input id={`${prefix}-certificate`} className="h-11" autoComplete="off" {...describedBy(`${prefix}-certificate`, !!errors.certificateName, true)} {...f.register('certificateName')} />
       </Field>
+      <div className="flex flex-col gap-2 sm:col-span-2">
+        <label className="flex min-h-11 items-start gap-3 text-sm font-semibold">
+          <input id={`${prefix}-attested`} type="checkbox" className="mt-1 size-4 accent-brand-700" {...describedBy(`${prefix}-attested`, !!errors.attested)} {...f.register('attested')} />
+          {t('doctors.licence.attest')}
+        </label>
+        {error('attested') && <p id={`${prefix}-attested-error`} role="alert" className={fieldError}>{error('attested')}</p>}
+      </div>
     </>
   );
 }
@@ -69,7 +76,7 @@ type Props = {
   onSubmit: FormEventHandler<HTMLFormElement>;
 };
 
-/** Add doctor (F-09): details, licence, verification, schedule, fees, access, signature. Nothing is created until the last step. */
+/** Add doctor (F-09): details, licence, schedule, fees, access, signature. Nothing is created until the last step. */
 export default function DoctorWizard(p: Props) {
   const { t } = useI18n();
   const error = useFieldError(p.fieldErrors);
@@ -100,13 +107,6 @@ export default function DoctorWizard(p: Props) {
             </>
           )}
           {p.step === 'licence' && <LicenceFields form={p.form} errors={p.fieldErrors} authorities={p.authorities} prefix="d" />}
-          {p.step === 'verification' && (
-            <div className="flex flex-col gap-2 sm:col-span-2">
-              <p><span className="font-bold">{t('doctors.verification.status')}</span> {t('doctors.licence.Pending')}</p>
-              <p>{t('doctors.verification.body')}</p>
-              <p>{t('doctors.verification.until')}</p>
-            </div>
-          )}
           {p.step === 'schedule' && <p className="sm:col-span-2">{t('doctors.schedule.body')}</p>}
           {p.step === 'fees' && (
             <>

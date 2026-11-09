@@ -916,7 +916,7 @@ ac:
 - Given a price changes, when a subscriber exists, then they are notified 30 days before it applies.
 - Given a feature is removed from a plan, when data exists, then the data stays.
 notes:
-- The "Solo" plan is a one-doctor Clinic plan, not an individual account (ADR-016 (docs/adr/ADR-016-organisation-onboarding-and-approval.md, owner decision 10 Nov 2026)); revisit plan names and seat types (doctors, staff, patients) when this is built.
+- The "Solo" plan is a one-doctor Clinic plan, not an individual account (ADR-016 (docs/adr/ADR-016-organisation-onboarding-and-approval.md, owner decision 10 Nov 2026)); revisit plan names and seat types (doctors, staff, patients) when this is built. This ticket replaces the hard-coded starter plan (1 doctor and 2 staff, patients uncapped) enforced from MDV-P1-069, and adds the owner's self-service upgrade.
 
 === MDV-P5-043
 title: Subscription billing in the console and for owners: invoices, payment method, add seats, dunning ladder, close practice
@@ -954,7 +954,7 @@ depends: MDV-P5-040, MDV-P1-064, MDV-P2-023
 confidence: 65 | Design exists (6 Nov 2026); build estimate not yet calibrated.
 sources: docs/adr/ADR-016-organisation-onboarding-and-approval.md; docs/02-design/source/Medvya Admin.dc.html (6 Nov 2026 revamp) (Doctor licence verification, to be redrawn as organisation review)
 desc:
-Superseded scope (ADR-016): the reviewer queue lists organisation onboarding requests (type Clinic or Hospital, country, submitted date, documents, state), not doctors. The reviewer opens the uploaded documents, then approves, asks for changes with a plain reason, rejects with a reason, or later suspends an approved organisation. The queue reads only the control-plane request and documents through its own narrow, reviewed read path (ADR-014), never patient data. Replaces the interim operations endpoint of MDV-P1-064. The design file still shows the doctor-licence screen and must be redrawn.
+Superseded scope (ADR-016): the reviewer queue lists organisation onboarding requests (type Clinic or Hospital, country, submitted date, documents, state), not doctors. The reviewer opens the uploaded documents, then approves, asks for changes with a plain reason, rejects with a reason, or later suspends an approved organisation. The queue reads only the control-plane request and documents through its own narrow, reviewed read path (ADR-014), never patient data. Extends the simple queue and documented API built in MDV-P1-064 (documents view, suspension, reviewer roles). The design file still shows the doctor-licence screen and must be redrawn.
 ac:
 - Given an organisation is Submitted, when a reviewer approves it, then reviewer, documents checked and time are recorded and the organisation can register patients.
 - Given a reviewer asks for changes or rejects, when it is saved, then the applicant gets the reason in plain words by email and on the status page.

@@ -20,7 +20,7 @@ Every requirement, screen, exit criterion, NFR, delivery-package item and depend
 | P0-10 | P0 | MUST | MDV-P0-016, MDV-P0-018, MDV-P0-025, MDV-P0-026, MDV-P0-027 |
 | P1-01 | P1 | SHOULD | MDV-P1-001, MDV-P1-002, MDV-P1-003, MDV-P1-053, MDV-P1-054, MDV-P1-055, MDV-P1-056, MDV-P1-057, MDV-P1-058 |
 | P1-02 | P1 | MUST | MDV-P1-004, MDV-P1-005, MDV-P1-006, MDV-P1-039, MDV-P1-043, MDV-P1-059, MDV-P1-060, MDV-P1-061, MDV-P1-062, MDV-P1-063, MDV-P1-064, MDV-P1-066, MDV-P1-068 |
-| P1-03 | P1 | MUST | MDV-P1-007, MDV-P1-008, MDV-P1-065 |
+| P1-03 | P1 | MUST | MDV-P1-007, MDV-P1-008, MDV-P1-065, MDV-P1-069 |
 | P1-04 | P1 | MUST | MDV-P1-011, MDV-P1-012 |
 | P1-05 | P1 | MUST | MDV-P1-013, MDV-P1-014, MDV-P1-015, MDV-P1-016, MDV-P1-017, MDV-P1-018, MDV-P1-020, MDV-P1-038 |
 | P1-06 | P1 | MUST | MDV-P1-021, MDV-P1-023, MDV-P1-024, MDV-P1-025, MDV-P1-026, MDV-P1-027, MDV-P1-037, MDV-P1-042, MDV-P1-047 |
@@ -100,8 +100,8 @@ Every requirement, screen, exit criterion, NFR, delivery-package item and depend
 | F-02 Country & data residency selector | P1 | DESIGNED | MDV-P1-002 |
 | F-04 Solo doctor onboarding (licence, schedule, invite) | P1 | DESIGNED | MDV-P1-004, MDV-P1-059, MDV-P1-061, MDV-P1-062, MDV-P1-063, MDV-P1-066 |
 | F-07 Trust centre & demo request | P1 | DESIGNED | MDV-P1-003, MDV-P1-057, MDV-P1-058 |
-| F-08 Practice settings (profile, availability, staff, services, n | P1 | DESIGNED | MDV-P1-005, MDV-P1-006, MDV-P1-019, MDV-P1-063, MDV-P1-066 |
-| F-09 Add doctor (clinic mode): licence, schedule, fees, access, s | P1 | DESIGNED | MDV-P1-007, MDV-P1-065 |
+| F-08 Practice settings (profile, availability, staff, services, n | P1 | DESIGNED | MDV-P1-005, MDV-P1-006, MDV-P1-019, MDV-P1-063, MDV-P1-066, MDV-P1-069 |
+| F-09 Add doctor (clinic mode): licence, schedule, fees, access, s | P1 | DESIGNED | MDV-P1-007, MDV-P1-065, MDV-P1-069 |
 | F-10 Add staff & roles (scope, permissions, invite, custom roles) | P1 | DESIGNED | MDV-P1-008, MDV-P1-009 |
 | F-12 Practice access log | P1 | DESIGNED | MDV-P1-035 |
 | P-01 Appointment & reception board | P1 | DESIGNED | MDV-P1-025, MDV-P1-028, MDV-P1-029 |
@@ -164,7 +164,7 @@ Every requirement, screen, exit criterion, NFR, delivery-package item and depend
 | N-09 Letters, certificates & e-sick leave | P5 | DESIGN NEEDED | MDV-P5-001, MDV-P5-013 |
 | N-10 Voice appointment assistant: live calls console & owner sett | P5 | DESIGN NEEDED | MDV-P5-001, MDV-P5-015, MDV-P6-009 |
 | N-11 Medvya plans, trial, subscription billing for clinics | P5 | DESIGN NEEDED | MDV-P5-001, MDV-P5-016, MDV-P5-042, MDV-P5-043 |
-| N-12 Platform admin console: tenants, onboarding, support access  | P5 | DESIGN NEEDED | MDV-P5-001, MDV-P5-017, MDV-P5-040, MDV-P5-041, MDV-P5-044, MDV-P5-046, MDV-P5-048 |
+| N-12 Platform admin console: tenants, onboarding, support access  | P5 | DESIGN NEEDED | MDV-P1-064, MDV-P5-001, MDV-P5-017, MDV-P5-040, MDV-P5-041, MDV-P5-044, MDV-P5-046, MDV-P5-048 |
 | N-13 In-app guides, help centre, feedback & status page | P5 | DESIGN NEEDED | MDV-P5-001, MDV-P5-018, MDV-P5-045, MDV-P5-047 |
 | N-14 Clinic data export (FHIR + CSV) | P5 | DESIGN NEEDED | MDV-P5-001, MDV-P5-019, MDV-P5-049 |
 | P-08 Insurance eligibility & claims handoff | P5 | DESIGNED | MDV-P5-008 |

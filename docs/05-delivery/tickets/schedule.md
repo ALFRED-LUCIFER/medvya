@@ -207,7 +207,7 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P2-022](P2-doctor-workspace/MDV-P2-022.md) | Legal review of clinical data processing before the first real note | P2 | wk 9–11 | 62% |
 | [MDV-P2-025](P2-doctor-workspace/MDV-P2-025.md) | Note template engine and specialty template pack for the partner clinics | P2 | wk 11–12 | 85% |
 
-## Week 12 · 11 Jan 2027 – 15 Jan 2027 · load 40.5 dev-days ⚠ over capacity
+## Week 12 · 11 Jan 2027 – 15 Jan 2027 · load 41.5 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -222,12 +222,13 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P1-059](P1-front-desk/MDV-P1-059.md) | Staff sign-in, sign-up, invitation, location and signed-out screens to the 6 Nov design | P1 | wk 12–12 | 70% |
 | [MDV-P1-060](P1-front-desk/MDV-P1-060.md) | Entra External ID branding for the email code, MFA set-up and recovery pages | P1 | wk 12–12 | 60% |
 | [MDV-P1-061](P1-front-desk/MDV-P1-061.md) | Practice set-up wizard to the 6 Nov design (practice, hours and services, team, patients, payments and messages, ready) | P1 | wk 12–13 | 60% |
-| [MDV-P1-062](P1-front-desk/MDV-P1-062.md) | Onboarding request at sign-up: choose Clinic or Hospital, give the required documents, submit for Medvya review | P1 | wk 12–14 | 60% |
-| [MDV-P1-063](P1-front-desk/MDV-P1-063.md) | Organisation state and restricted mode before approval: server-side gate replaces the doctor licence gate | P1 | wk 12–14 | 60% |
-| [MDV-P1-064](P1-front-desk/MDV-P1-064.md) | Interim Medvya operations review of onboarding requests: approve, ask for changes, reject, suspend (before the console exists) | P1 | wk 12–14 | 60% |
-| [MDV-P1-065](P1-front-desk/MDV-P1-065.md) | Owner attests each doctor's licence; retire the Medvya licence verification states | P1 | wk 12–14 | 65% |
+| [MDV-P1-062](P1-front-desk/MDV-P1-062.md) | Onboarding request at sign-up: choose Clinic or Hospital, give the required documents, submit for Medvya review | P1 | wk 12–14 | 70% |
+| [MDV-P1-063](P1-front-desk/MDV-P1-063.md) | Organisation state and set-up-only mode before approval: server-side gate replaces the doctor licence gate | P1 | wk 12–14 | 75% |
+| [MDV-P1-064](P1-front-desk/MDV-P1-064.md) | Operations approval queue in the platform console (Host.Platform) and interim documented API: approve, ask for changes, reject, suspend | P1 | wk 12–14 | 65% |
+| [MDV-P1-065](P1-front-desk/MDV-P1-065.md) | Owner attests each doctor's licence (number, authority, expiry), printed on prescriptions; retire Medvya licence verification | P1 | wk 12–14 | 70% |
 | [MDV-P1-067](P1-front-desk/MDV-P1-067.md) | Terms of Service and DPA update: the organisation is responsible for the licences it attests | P1 | wk 12–14 | 60% |
 | [MDV-P1-068](P1-front-desk/MDV-P1-068.md) | Migrate existing tenants to Approved and their doctor licences to owner-attested | P1 | wk 12–14 | 75% |
+| [MDV-P1-069](P1-front-desk/MDV-P1-069.md) | Starter plan cap: 1 doctor and 2 staff enforced server-side | P1 | wk 12–14 | 80% |
 | [MDV-P2-006](P2-doctor-workspace/MDV-P2-006.md) | Documents: upload, malware scan, secure viewer with time-limited links, scan to patient file (E-03) | P2 | wk 11–12 | 82% |
 | [MDV-P2-009](P2-doctor-workspace/MDV-P2-009.md) | Consultation note editor: chief complaint, SOAP, specialty templates, manual note when recording is declined (E-04) | P2 | wk 11–12 | 85% |
 | [MDV-P2-010](P2-doctor-workspace/MDV-P2-010.md) | Diagnosis coding with ICD-10 and problem verification states (E-07) | P2 | wk 12–12 | 82% |
@@ -237,19 +238,20 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P2-015](P2-doctor-workspace/MDV-P2-015.md) | Prescription composer with dose builder and add-medicine-while-prescribing (E-05, E-11) | P2 | wk 12–13 | 84% |
 | [MDV-P2-025](P2-doctor-workspace/MDV-P2-025.md) | Note template engine and specialty template pack for the partner clinics | P2 | wk 11–12 | 85% |
 
-## Week 13 · 18 Jan 2027 – 22 Jan 2027 · load 31.4 dev-days ⚠ over capacity
+## Week 13 · 18 Jan 2027 – 22 Jan 2027 · load 32.4 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
 | [MDV-P1-051](P1-front-desk/MDV-P1-051.md) | Encrypted read-only schedule cache for outages (needs an ADR first) | P1 | wk 13–13 | 55% |
 | [MDV-P1-061](P1-front-desk/MDV-P1-061.md) | Practice set-up wizard to the 6 Nov design (practice, hours and services, team, patients, payments and messages, ready) | P1 | wk 12–13 | 60% |
-| [MDV-P1-062](P1-front-desk/MDV-P1-062.md) | Onboarding request at sign-up: choose Clinic or Hospital, give the required documents, submit for Medvya review | P1 | wk 12–14 | 60% |
-| [MDV-P1-063](P1-front-desk/MDV-P1-063.md) | Organisation state and restricted mode before approval: server-side gate replaces the doctor licence gate | P1 | wk 12–14 | 60% |
-| [MDV-P1-064](P1-front-desk/MDV-P1-064.md) | Interim Medvya operations review of onboarding requests: approve, ask for changes, reject, suspend (before the console exists) | P1 | wk 12–14 | 60% |
-| [MDV-P1-065](P1-front-desk/MDV-P1-065.md) | Owner attests each doctor's licence; retire the Medvya licence verification states | P1 | wk 12–14 | 65% |
+| [MDV-P1-062](P1-front-desk/MDV-P1-062.md) | Onboarding request at sign-up: choose Clinic or Hospital, give the required documents, submit for Medvya review | P1 | wk 12–14 | 70% |
+| [MDV-P1-063](P1-front-desk/MDV-P1-063.md) | Organisation state and set-up-only mode before approval: server-side gate replaces the doctor licence gate | P1 | wk 12–14 | 75% |
+| [MDV-P1-064](P1-front-desk/MDV-P1-064.md) | Operations approval queue in the platform console (Host.Platform) and interim documented API: approve, ask for changes, reject, suspend | P1 | wk 12–14 | 65% |
+| [MDV-P1-065](P1-front-desk/MDV-P1-065.md) | Owner attests each doctor's licence (number, authority, expiry), printed on prescriptions; retire Medvya licence verification | P1 | wk 12–14 | 70% |
 | [MDV-P1-066](P1-front-desk/MDV-P1-066.md) | Retire solo-doctor naming: Role.SoloDoctor, session flags, copy and docs | P1 | wk 13–14 | 70% |
 | [MDV-P1-067](P1-front-desk/MDV-P1-067.md) | Terms of Service and DPA update: the organisation is responsible for the licences it attests | P1 | wk 12–14 | 60% |
 | [MDV-P1-068](P1-front-desk/MDV-P1-068.md) | Migrate existing tenants to Approved and their doctor licences to owner-attested | P1 | wk 12–14 | 75% |
+| [MDV-P1-069](P1-front-desk/MDV-P1-069.md) | Starter plan cap: 1 doctor and 2 staff enforced server-side | P1 | wk 12–14 | 80% |
 | [MDV-P2-012](P2-doctor-workspace/MDV-P2-012.md) | Sign and finalise: immutable signed note v1 with re-authentication (E-06) | P2 | wk 12–13 | 90% |
 | [MDV-P2-013](P2-doctor-workspace/MDV-P2-013.md) | Addenda, version history and print/PDF of the signed note (E-06) | P2 | wk 13–13 | 88% |
 | [MDV-P2-015](P2-doctor-workspace/MDV-P2-015.md) | Prescription composer with dose builder and add-medicine-while-prescribing (E-05, E-11) | P2 | wk 12–13 | 84% |
@@ -262,17 +264,18 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P3-022](P3-ai-scribe/MDV-P3-022.md) | AI vendor DPA, no-training guarantee and regional processing confirmed per country | P3 | wk 13–15 | 75% |
 | [MDV-P3-023](P3-ai-scribe/MDV-P3-023.md) | Legal review of recording consent in each market | P3 | wk 13–14 | 60% |
 
-## Week 14 · 25 Jan 2027 – 29 Jan 2027 · load 19.3 dev-days ⚠ over capacity
+## Week 14 · 25 Jan 2027 – 29 Jan 2027 · load 20.3 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
-| [MDV-P1-062](P1-front-desk/MDV-P1-062.md) | Onboarding request at sign-up: choose Clinic or Hospital, give the required documents, submit for Medvya review | P1 | wk 12–14 | 60% |
-| [MDV-P1-063](P1-front-desk/MDV-P1-063.md) | Organisation state and restricted mode before approval: server-side gate replaces the doctor licence gate | P1 | wk 12–14 | 60% |
-| [MDV-P1-064](P1-front-desk/MDV-P1-064.md) | Interim Medvya operations review of onboarding requests: approve, ask for changes, reject, suspend (before the console exists) | P1 | wk 12–14 | 60% |
-| [MDV-P1-065](P1-front-desk/MDV-P1-065.md) | Owner attests each doctor's licence; retire the Medvya licence verification states | P1 | wk 12–14 | 65% |
+| [MDV-P1-062](P1-front-desk/MDV-P1-062.md) | Onboarding request at sign-up: choose Clinic or Hospital, give the required documents, submit for Medvya review | P1 | wk 12–14 | 70% |
+| [MDV-P1-063](P1-front-desk/MDV-P1-063.md) | Organisation state and set-up-only mode before approval: server-side gate replaces the doctor licence gate | P1 | wk 12–14 | 75% |
+| [MDV-P1-064](P1-front-desk/MDV-P1-064.md) | Operations approval queue in the platform console (Host.Platform) and interim documented API: approve, ask for changes, reject, suspend | P1 | wk 12–14 | 65% |
+| [MDV-P1-065](P1-front-desk/MDV-P1-065.md) | Owner attests each doctor's licence (number, authority, expiry), printed on prescriptions; retire Medvya licence verification | P1 | wk 12–14 | 70% |
 | [MDV-P1-066](P1-front-desk/MDV-P1-066.md) | Retire solo-doctor naming: Role.SoloDoctor, session flags, copy and docs | P1 | wk 13–14 | 70% |
 | [MDV-P1-067](P1-front-desk/MDV-P1-067.md) | Terms of Service and DPA update: the organisation is responsible for the licences it attests | P1 | wk 12–14 | 60% |
 | [MDV-P1-068](P1-front-desk/MDV-P1-068.md) | Migrate existing tenants to Approved and their doctor licences to owner-attested | P1 | wk 12–14 | 75% |
+| [MDV-P1-069](P1-front-desk/MDV-P1-069.md) | Starter plan cap: 1 doctor and 2 staff enforced server-side | P1 | wk 12–14 | 80% |
 | [MDV-P2-017](P2-doctor-workspace/MDV-P2-017.md) | Rx authorisation (separate from note), server-side multilingual printed Rx A4/A5 with hash and QR verify (E-10) | P2 | wk 13–14 | 82% |
 | [MDV-P2-019](P2-doctor-workspace/MDV-P2-019.md) | Referrals out and in with status (E-09) | P2 | wk 14–14 | 80% |
 | [MDV-P2-020](P2-doctor-workspace/MDV-P2-020.md) | Share Rx with patient/pharmacy (e-Rx PDF/link) and pharmacy dispatch record (E-10) | P2 | wk 14–14 | 70% |

@@ -8,9 +8,9 @@
 **Day one:** Register patients, book, reschedule and cancel appointments, check patients in, run the waiting room and send automatic confirmations and reminders.  
 **Goal:** A clinic can run its entire appointment day in Medvya. This is the workflow to validate with real clinics before anything clinical is built on top.
 
-**Tickets:** 67 · **Estimate:** 146.5 dev-days vs **35 working days** in the window (OVER by 111.5 days: needs scope trade-off or overlap) · **Average confidence:** 77%
+**Tickets:** 68 · **Estimate:** 149.5 dev-days vs **35 working days** in the window (OVER by 114.5 days: needs scope trade-off or overlap) · **Average confidence:** 78%
 
-**Status:** To do 39 · Partly done 16 · Done 12
+**Status:** To do 40 · Partly done 16 · Done 12
 
 ## Epics
 
@@ -91,12 +91,13 @@
 | [MDV-P1-059](MDV-P1-059.md) | To do | Staff sign-in, sign-up, invitation, location and signed-out screens to the 6 Nov design | Story | MUST | P1-02 | F-03, F-04, F-06 | 3 | 12–12 | 11 Jan → 15 Jan 2027 | 70% Medium |
 | [MDV-P1-060](MDV-P1-060.md) | To do | Entra External ID branding for the email code, MFA set-up and recovery pages | Task | SHOULD | P1-02 | F-03 | 1 | 12–12 | 11 Jan → 15 Jan 2027 | 60% Low |
 | [MDV-P1-061](MDV-P1-061.md) | To do | Practice set-up wizard to the 6 Nov design (practice, hours and services, team, patients, payments and messages, ready) | Story | MUST | P1-02 | F-04 | 5 | 12–13 | 11 Jan → 22 Jan 2027 | 60% Low |
-| [MDV-P1-062](MDV-P1-062.md) | To do | Onboarding request at sign-up: choose Clinic or Hospital, give the required documents, submit for Medvya review | Story | MUST | P1-02 | F-04 | 5 | 12–14 | 11 Jan → 29 Jan 2027 | 60% Low |
-| [MDV-P1-063](MDV-P1-063.md) | To do | Organisation state and restricted mode before approval: server-side gate replaces the doctor licence gate | Story | MUST | P1-02 | F-04, F-08 | 4 | 12–14 | 11 Jan → 29 Jan 2027 | 60% Low |
-| [MDV-P1-064](MDV-P1-064.md) | To do | Interim Medvya operations review of onboarding requests: approve, ask for changes, reject, suspend (before the console exists) | Story | MUST | P1-02 | — | 3 | 12–14 | 11 Jan → 29 Jan 2027 | 60% Low |
-| [MDV-P1-065](MDV-P1-065.md) | To do | Owner attests each doctor's licence; retire the Medvya licence verification states | Story | MUST | P1-03 | F-09 | 3 | 12–14 | 11 Jan → 29 Jan 2027 | 65% Medium |
+| [MDV-P1-062](MDV-P1-062.md) | To do | Onboarding request at sign-up: choose Clinic or Hospital, give the required documents, submit for Medvya review | Story | MUST | P1-02 | F-04 | 5 | 12–14 | 11 Jan → 29 Jan 2027 | 70% Medium |
+| [MDV-P1-063](MDV-P1-063.md) | To do | Organisation state and set-up-only mode before approval: server-side gate replaces the doctor licence gate | Story | MUST | P1-02 | F-04, F-08 | 4 | 12–14 | 11 Jan → 29 Jan 2027 | 75% Medium |
+| [MDV-P1-064](MDV-P1-064.md) | To do | Operations approval queue in the platform console (Host.Platform) and interim documented API: approve, ask for changes, reject, suspend | Story | MUST | P1-02 | N-12 | 4 | 12–14 | 11 Jan → 29 Jan 2027 | 65% Medium |
+| [MDV-P1-065](MDV-P1-065.md) | To do | Owner attests each doctor's licence (number, authority, expiry), printed on prescriptions; retire Medvya licence verification | Story | MUST | P1-03 | F-09 | 3 | 12–14 | 11 Jan → 29 Jan 2027 | 70% Medium |
 | [MDV-P1-067](MDV-P1-067.md) | To do | Terms of Service and DPA update: the organisation is responsible for the licences it attests | Chore | MUST | P1-12 | — | 0.5 | 12–14 | 11 Jan → 29 Jan 2027 | 60% Low |
 | [MDV-P1-068](MDV-P1-068.md) | To do | Migrate existing tenants to Approved and their doctor licences to owner-attested | Task | MUST | P1-02 | — | 1 | 12–14 | 11 Jan → 29 Jan 2027 | 75% Medium |
+| [MDV-P1-069](MDV-P1-069.md) | To do | Starter plan cap: 1 doctor and 2 staff enforced server-side | Story | MUST | P1-03 | F-08, F-09 | 2 | 12–14 | 11 Jan → 29 Jan 2027 | 80% Medium |
 | [MDV-P1-051](MDV-P1-051.md) | To do | Encrypted read-only schedule cache for outages (needs an ADR first) | Story | COULD | P1-08 | — | 5 | 13–13 | 18 Jan → 22 Jan 2027 | 55% Low |
 | [MDV-P1-066](MDV-P1-066.md) | To do | Retire solo-doctor naming: Role.SoloDoctor, session flags, copy and docs | Task | SHOULD | P1-02 | F-04, F-08 | 2.5 | 13–14 | 18 Jan → 29 Jan 2027 | 70% Medium |
 

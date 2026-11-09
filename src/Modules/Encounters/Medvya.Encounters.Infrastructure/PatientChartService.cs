@@ -65,7 +65,7 @@ public sealed class PatientChartService(EncountersDbContext db, IClinicalAccess 
 
         var banner = ChartReads.BannerOf(allergies);
         return new(banner.State, banner.Allergies, [.. problems.Select(p => new ProblemView(p.Icd10Code, p.Description, p.Verification, p.OnsetOn, p.Source))],
-            [.. medicines.Select(m => new MedicineView(m.Name, m.Dose, m.State, m.Source))],
+            [.. medicines.Select(m => new MedicineView(m.Name, m.Dose, m.State, m.Source, m.StoppedAt))],
             [.. vitals.OrderBy(o => o.Code).Select(o => new VitalView(o.Code, o.ValueHundredths / 100m, Observation.Units(o.Code), o.TakenAt, o.Source))], trends, encounters, open);
     }
 }

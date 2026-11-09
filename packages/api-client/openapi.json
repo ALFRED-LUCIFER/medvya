@@ -3765,6 +3765,91 @@
         }
       }
     },
+    "/v1/encounters/{encounterId}/medicines/reconciliation": {
+      "get": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "encounterId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/encounters/{encounterId}/medicines/reconciliation/decisions": {
+      "post": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "encounterId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/DecideMedicine"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/encounters/{encounterId}/medicines/reconciliation/confirm": {
+      "post": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "encounterId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/v1/intake/{appointmentId}": {
       "get": {
         "tags": [
@@ -5407,6 +5492,45 @@
           }
         }
       },
+      "DecideMedicine": {
+        "required": [
+          "key",
+          "kind",
+          "newDose",
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "kind": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/MedicationDecisionKind"
+              }
+            ]
+          },
+          "newDose": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "Decision": {
         "required": [
           "verified",
@@ -6139,6 +6263,16 @@
             "type": "string"
           }
         }
+      },
+      "MedicationDecisionKind": {
+        "enum": [
+          "Keep",
+          "Change",
+          "Stop",
+          "Add",
+          "Ignore",
+          null
+        ]
       },
       "MembershipStatus": {
         "enum": [

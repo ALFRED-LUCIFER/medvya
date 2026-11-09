@@ -1,7 +1,8 @@
 import type { UseFormRegisterReturn } from 'react-hook-form';
 import { useI18n } from '@medvya/i18n';
 import { Button, Dialog, DialogContent, DialogDescription, DialogTitle, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea } from '@medvya/ui';
-import { maxSectionLength, sectionLabelKey, templateNameKey, type NoteTemplate, type SavePhase } from '../domain/note';
+import { maxSectionLength, sectionLabelKey, templateNameKey, type NoteSignature, type NoteTemplate, type SavePhase } from '../domain/note';
+import { SignedLine, SignNote, type SignProblem } from './NoteSign';
 
 type Props = {
   register: (sectionId: string) => UseFormRegisterReturn;
@@ -11,6 +12,10 @@ type Props = {
   pendingSwitch: { template: NoteTemplate; dropped: string[] } | null;
   onRequestSwitch: (key: string) => void; onCancelSwitch: () => void; onConfirmSwitch: () => void;
   onRetry: () => void; onReapply: () => void;
+  canSign: boolean; signing: boolean; confirming: boolean; signProblem: SignProblem; signature: NoteSignature | null;
+  onRequestSign: () => void; onCancelSign: () => void; onConfirmSign: () => void;
+  /** Shown beside the signature: the signer's id is all the server sends, so the name is only known for the person looking. */
+  userId: string; userName: string; timeZone: string | undefined;
 };
 
 /** E-04: the consultation note. Sections come from the template; saving is automatic and its state is always shown. Read-only once not a draft. */
@@ -32,6 +37,7 @@ export default function NoteEditor(p: Props) {
       </div>
       <p className="text-sm text-muted-foreground">{t('noteEditor.manualBanner')}</p>
       {p.readOnly && <p role="status" className="font-bold">{t('noteEditor.signed')}</p>}
+      {p.signature && <SignedLine signature={p.signature} userId={p.userId} userName={p.userName} timeZone={p.timeZone} />}
       <SaveState phase={p.phase} reloading={p.reloading} onRetry={p.onRetry} onReapply={p.onReapply} />
       <div className="flex flex-col gap-4">
         {p.template.sections.map(s => (
@@ -44,6 +50,13 @@ export default function NoteEditor(p: Props) {
           </div>
         ))}
       </div>
+      {!p.readOnly && (
+        <>
+          {!p.canSign && <p className="text-sm text-muted-foreground">{t('noteSign.onlyDoctor')}</p>}
+          <SignNote canSign={p.canSign} signing={p.signing} confirming={p.confirming} problem={p.signProblem}
+            onRequest={p.onRequestSign} onCancel={p.onCancelSign} onConfirm={p.onConfirmSign} />
+        </>
+      )}
       <Dialog open={p.pendingSwitch !== null} onOpenChange={open => { if (!open) p.onCancelSwitch(); }}>
         <DialogContent closeLabel={t('noteEditor.switch.close')}>
           <DialogTitle>{t('noteEditor.switch.title')}</DialogTitle>

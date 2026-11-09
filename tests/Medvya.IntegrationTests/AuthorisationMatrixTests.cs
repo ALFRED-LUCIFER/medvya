@@ -328,6 +328,8 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.Nurse, new("PUT", "/v1/settings/nurse-intake", """{"enabled":true}""")), // the owner's switch: Staff, roles, integrations
         (Role.Receptionist, new("PUT", "/v1/settings/nurse-intake", """{"enabled":true}""")),
         (Role.Receptionist, new("POST", "/v1/chart/allergy-flags", """{"patientIds":["{patient}"]}""")), // Patient 360: X
+        (Role.Receptionist, new("PUT", "/v1/note-templates/mine", """{"keys":["general-opd"]}""")), // Patient 360: X
+        (Role.Nurse, new("GET", "/v1/note-templates/")),
         (Role.PracticeAdmin, new("POST", "/v1/chart/allergy-flags", """{"patientIds":["{patient}"]}""")),
         (Role.Receptionist, new("GET", "/v1/audit/access-log")), // Audit log: X
         (Role.Nurse, new("GET", "/v1/audit/access-log/patients/{patient}")),

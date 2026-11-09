@@ -63,4 +63,41 @@ describe('autosaver', () => {
     expect(save).toHaveBeenLastCalledWith(merged, 2);
     expect(phases.at(-1)).toBe('saved');
   });
+
+  it('flush saves what is typed before signing and reports the version to sign', async () => {
+    const save = vi.fn(async (d: NoteDraft, v: number) => view(v + 1, d.sections));
+    const { saver } = setup(save);
+    saver.setBase(view(4, {}));
+    saver.edit(draft({ plan: 'typed just now' }));
+    expect(await saver.flush()).toBe(true);
+    expect(save).toHaveBeenCalledExactlyOnceWith(draft({ plan: 'typed just now' }), 4);
+    expect(saver.version()).toBe(5);
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(save).toHaveBeenCalledTimes(1); // the debounce timer does not save it again
+  });
+
+  it('flush waits for a save in flight, and says no when the text could not be saved', async () => {
+    let release!: () => void;
+    const save = vi.fn()
+      .mockImplementationOnce(async (d: NoteDraft, v: number) => { await new Promise<void>(r => { release = r; }); return view(v + 1, d.sections); })
+      .mockRejectedValue(new ApiError(500));
+    const { saver } = setup(save);
+    saver.edit(draft({ plan: 'a' }));
+    await vi.advanceTimersByTimeAsync(1000);
+    saver.edit(draft({ plan: 'ab' }));
+    const flushed = saver.flush();
+    release();
+    expect(await flushed).toBe(false); // the second save failed: signing must not go ahead
+    expect(saver.unsaved()).toBe(true);
+  });
+
+  it('flush says no during a conflict, and markStale keeps the text for the editor\'s reapply', async () => {
+    const save = vi.fn(async (d: NoteDraft, v: number) => view(v + 1, d.sections));
+    const { saver, phases } = setup(save);
+    saver.setBase(view(1, { plan: 'old' }));
+    saver.markStale(draft({ plan: 'old' }));
+    expect(phases.at(-1)).toBe('conflict');
+    expect(await saver.flush()).toBe(false);
+    expect(saver.resolve(view(2, { plan: 'theirs' }))).toEqual(draft({ plan: 'theirs' }));
+  });
 });

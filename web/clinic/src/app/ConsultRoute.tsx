@@ -13,17 +13,19 @@ import { useNoteController } from '../features/encounters/hooks/useNoteControlle
 import { useNoteTemplatesController } from '../features/encounters/hooks/useNoteTemplatesController';
 
 /** Composition only: one consultation (MDV-P2-001) by its id in the address, with its note (MDV-P2-009); the server checks clinical access on every call. */
-export default function ConsultRoute({ boardPath, canOrder, canReconcile }: { boardPath: string; canOrder: boolean; canReconcile: boolean }) {
+type Props = { boardPath: string; canOrder: boolean; canReconcile: boolean; canSign: boolean; userId: string; userName: string };
+
+export default function ConsultRoute({ boardPath, ...rest }: Props) {
   const { encounterId = '' } = useParams();
-  return <Consult key={encounterId} encounterId={encounterId} boardPath={boardPath} canOrder={canOrder} canReconcile={canReconcile} />;
+  return <Consult key={encounterId} encounterId={encounterId} boardPath={boardPath} {...rest} />;
 }
 
-function Consult({ encounterId, boardPath, canOrder, canReconcile }: { encounterId: string; boardPath: string; canOrder: boolean; canReconcile: boolean }) {
+function Consult({ encounterId, boardPath, canOrder, canReconcile, canSign, userId, userName }: Props & { encounterId: string }) {
   const consult = useConsultController(encounterId);
   return (
     <div className="flex flex-col gap-4">
       <ConsultPage {...consult} boardPath={boardPath} canReconcile={canReconcile}>
-        <NoteEditor {...useNoteController(encounterId)} />
+        <NoteEditor {...useNoteController(encounterId, canSign)} userId={userId} userName={userName} timeZone={consult.banner?.timeZone} />
         <NoteTemplateChoice {...useNoteTemplatesController()} />
       </ConsultPage>
       {consult.banner && canOrder && <Orders encounterId={encounterId} ended={consult.banner.encounter.status === 'Ended'} />}

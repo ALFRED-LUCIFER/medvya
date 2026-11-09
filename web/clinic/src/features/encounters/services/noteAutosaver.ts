@@ -13,14 +13,19 @@ export function createAutosaver({ save, delayMs, onPhase }: Options) {
   let pending: NoteDraft | null = null;
   let phase: SavePhase = 'idle';
   let timer: ReturnType<typeof setTimeout> | undefined;
+  let inflight: Promise<void> = Promise.resolve();
   const set = (p: SavePhase) => { phase = p; onPhase(p); };
 
-  async function run() {
+  function run() {
     clearTimeout(timer);
-    if (phase === 'saving' || phase === 'conflict' || !pending) return;
+    if (phase === 'saving' || phase === 'conflict' || !pending) return Promise.resolve();
     const draft = pending;
     pending = null;
     set('saving');
+    return (inflight = attempt(draft));
+  }
+
+  async function attempt(draft: NoteDraft) {
     try {
       const view = await save(draft, base.version);
       base = { version: view.version, sections: view.sections };
@@ -46,6 +51,14 @@ export function createAutosaver({ save, delayMs, onPhase }: Options) {
       void run();
       return merged;
     },
+    /** Before signing: saves what is typed and waits for a save in flight. False when it could not be saved (failed or in conflict). */
+    async flush() {
+      for (let i = 0; i < 3 && (pending || phase === 'saving') && phase !== 'conflict'; i++) await (phase === 'saving' ? inflight : run());
+      return !pending && phase !== 'saving' && phase !== 'conflict';
+    },
+    /** The server was ahead of the version being signed: the text on screen is kept as unsaved and the editor's conflict handling takes over. */
+    markStale(draft: NoteDraft) { pending = draft; clearTimeout(timer); set('conflict'); },
+    version: () => base.version,
     unsaved: () => pending !== null || phase === 'saving',
     dispose: () => clearTimeout(timer),
   };

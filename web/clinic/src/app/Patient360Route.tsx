@@ -1,4 +1,6 @@
 import { useParams } from 'react-router';
+import OpenReferrals from '../features/referrals/components/OpenReferrals';
+import { useOpenReferralsController } from '../features/referrals/hooks/useReferralsController';
 import Patient360Page from '../features/patient360/components/Patient360Page';
 import { usePatient360Controller } from '../features/patient360/hooks/usePatient360Controller';
 
@@ -9,5 +11,11 @@ export default function Patient360Route({ backPath }: { backPath: string }) {
 }
 
 function Chart({ patientId, backPath }: { patientId: string; backPath: string }) {
-  return <Patient360Page {...usePatient360Controller(patientId)} backPath={backPath} consultPath={id => `/consult/${id}`} timelinePath={`/patients/${patientId}/timeline`} documentsPath={`/patients/${patientId}/docs`} />;
+  const referrals = useOpenReferralsController(patientId);
+  return (
+    <div className="flex flex-col gap-4">
+      <Patient360Page {...usePatient360Controller(patientId)} backPath={backPath} consultPath={id => `/consult/${id}`} timelinePath={`/patients/${patientId}/timeline`} documentsPath={`/patients/${patientId}/docs`} />
+      {!referrals.hidden && !referrals.loading && !referrals.failed && <OpenReferrals open={referrals.open} />}
+    </div>
+  );
 }

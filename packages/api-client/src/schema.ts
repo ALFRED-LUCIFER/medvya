@@ -5536,6 +5536,230 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/encounters/{encounterId}/referrals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    encounterId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["CreateReferral"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/referrals/in": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["FileReferralIn"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/referrals/{referralId}/send": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    referralId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["SendReferral"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/referrals/{referralId}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    referralId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["AdvanceReferral"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/referrals/{referralId}/letter": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    referralId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/patients/{patientId}/referrals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    patientId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -5611,6 +5835,12 @@ export interface components {
             from?: null | string;
             /** Format: time */
             until?: null | string;
+        };
+        AdvanceReferral: {
+            state: null | components["schemas"]["ReferralState"];
+            /** Format: uuid */
+            documentId: null | string;
+            note: null | string;
         };
         AllergyFlagsRequest: {
             patientIds: null | string[];
@@ -5851,6 +6081,12 @@ export interface components {
             name: null | string;
             items: null | string[];
         };
+        CreateReferral: {
+            provider: null | string;
+            urgency: null | components["schemas"]["ReferralUrgency"];
+            reason: null | string;
+            sections: null | components["schemas"]["ReferralSection"][];
+        };
         DayHours: {
             weekday: components["schemas"]["DayOfWeek"];
             /** Format: time */
@@ -6015,6 +6251,14 @@ export interface components {
             /** Format: int64 */
             followUpFee: number | string;
             currency: string;
+        };
+        FileReferralIn: {
+            /** Format: uuid */
+            patientId: null | string;
+            provider: null | string;
+            reason: null | string;
+            /** Format: uuid */
+            documentId: null | string;
         };
         FrontDeskBoard: {
             /** Format: uuid */
@@ -6292,6 +6536,14 @@ export interface components {
             chiefComplaint: null | string;
             vitals: null | components["schemas"]["VitalReading"][];
         };
+        /** @enum {unknown} */
+        ReferralChannel: "Print" | "Email" | "PatientCarries" | null;
+        /** @enum {unknown} */
+        ReferralSection: "Allergies" | "Problems" | "Medicines";
+        /** @enum {unknown} */
+        ReferralState: "Draft" | "Sent" | "AppointmentBooked" | "ReportReceived" | "Closed" | "Received" | null;
+        /** @enum {unknown} */
+        ReferralUrgency: "Routine" | "Urgent" | null;
         RegisterRequest: {
             quick?: boolean;
             fullName?: string;
@@ -6473,6 +6725,9 @@ export interface components {
              * @default 1
              */
             page: number | string;
+        };
+        SendReferral: {
+            channel: null | components["schemas"]["ReferralChannel"];
         };
         SeriesBooked: {
             /** Format: date-time */

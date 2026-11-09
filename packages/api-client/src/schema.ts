@@ -95,6 +95,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/bff/reauth": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ReauthStart"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me/context": {
         parameters: {
             query?: never;
@@ -900,6 +937,45 @@ export interface paths {
                 };
             };
         };
+        trace?: never;
+    };
+    "/v1/encounters/{encounterId}/note/sign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    encounterId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["SignNote"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/v1/schedule": {
@@ -5994,6 +6070,9 @@ export interface components {
             calendarId?: null | string;
             reason?: null | components["schemas"]["ReassignReason"];
         };
+        ReauthStart: {
+            returnUrl?: null | string;
+        };
         /** @enum {unknown} */
         RebookAction: "Offer" | "Manual";
         RecordBaseline: {
@@ -6246,6 +6325,10 @@ export interface components {
             returnUrl?: null | string;
             invitation?: null | string;
             signup?: null | boolean;
+        };
+        SignNote: {
+            /** Format: int32 */
+            baseVersion: number | string;
         };
         SlotMatch: {
             /** Format: uuid */

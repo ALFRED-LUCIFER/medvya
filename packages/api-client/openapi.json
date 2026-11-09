@@ -72,6 +72,28 @@
         }
       }
     },
+    "/bff/reauth": {
+      "post": {
+        "tags": [
+          "Host.Api"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReauthStart"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/v1/me/context": {
       "get": {
         "tags": [
@@ -629,6 +651,45 @@
                   },
                   {
                     "$ref": "#/components/schemas/UpdateDocumentRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/encounters/{encounterId}/note/sign": {
+      "post": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "encounterId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/SignNote"
                   }
                 ]
               }
@@ -7109,6 +7170,17 @@
           }
         }
       },
+      "ReauthStart": {
+        "type": "object",
+        "properties": {
+          "returnUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "RebookAction": {
         "enum": [
           "Offer",
@@ -8131,6 +8203,22 @@
               "null",
               "boolean"
             ]
+          }
+        }
+      },
+      "SignNote": {
+        "required": [
+          "baseVersion"
+        ],
+        "type": "object",
+        "properties": {
+          "baseVersion": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },

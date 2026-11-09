@@ -1,4 +1,4 @@
-import { send } from '../../schedule/services/scheduleApi';
+import { post, send } from '../../schedule/services/scheduleApi';
 import type { NoteCatalog, NoteDraft, NoteView } from '../domain/note';
 
 const put = <T>(url: string, body: unknown) =>
@@ -13,3 +13,12 @@ export const saveNote = (encounterId: string, draft: NoteDraft, baseVersion: num
 // Note templates (MDV-P2-025).
 export const fetchNoteCatalog = () => send<NoteCatalog>('/v1/note-templates');
 export const chooseNoteTemplates = (keys: string[]) => put<string[]>('/v1/note-templates/mine', { keys });
+
+/** Signs the version the editor last saw. A 403 reauth_required means: confirm the password and second factor first (`startReauth`), then call again. */
+export const signNote = (encounterId: string, baseVersion: number) => post<NoteView>(`/v1/encounters/${encounterId}/note/sign`, { baseVersion });
+
+/** Step-up before signing: the provider asks again, then returns to this consult path (an opaque id, never patient data). */
+export async function startReauth() {
+  const { location } = await post<{ location: string }>('/bff/reauth', { returnUrl: window.location.pathname });
+  window.location.assign(location);
+}

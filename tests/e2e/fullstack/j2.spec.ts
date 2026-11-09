@@ -52,6 +52,14 @@ journey('J2', {
     await page.reload();
     await expect(note.getByLabel('Chief complaint')).toHaveValue('Increased thirst for two weeks (synthetic)');
 
+    // MDV-P2-012: signing needs a verified licence, and the seeded Dr. Rao is unverified on purpose (only Medvya operations verify one, and the
+    // stack has no operator). So the real stack shows the gate: no Sign button, and why. The sign, re-authentication and signed read-only view are
+    // in consult-note.spec.ts (mocked) and ConsultNoteTests (server).
+    // shortcut: the real-stack sign round trip (dev provider ignores prompt=login: picking the same user again is the re-auth) waits for a
+    // verified doctor in the stack, e.g. J1 with a platform operator step; upgrade then.
+    await expect(note).toContainText('Only a doctor with a verified licence can sign this note.');
+    await expect(note.getByRole('button', { name: 'Sign note' })).toHaveCount(0);
+
     await page.getByRole('button', { name: 'End consultation' }).click(); // leaves no open consultation for a later run
     await expect(page.getByRole('status').filter({ hasText: 'Consultation ended' })).toHaveText(/^Consultation ended at \d\d:\d\d\.$/);
     expect(watch.leaks(['Meera', 'Iyer', '1972-03-12', 'DQ-10-4482', 'thirst'])).toEqual([]); // whole values: a short digit run can occur by chance in a random id

@@ -14,10 +14,14 @@ namespace Medvya.Tenancy.Infrastructure;
 static class StarterPlan
 {
     const int Doctors = 1, Staff = 2;
+    // Test seam, internal and keyed by tenant id so parallel test classes never see each other's cap. Empty in production: nothing calls it.
+    static readonly System.Collections.Concurrent.ConcurrentDictionary<Guid, bool> Raised = new();
+    internal static void RaiseCapForTests(Guid tenantId) => Raised[tenantId] = true;
 
     /// <summary>Call inside the transaction that adds the seat, before saving it. The per-tenant advisory lock makes parallel adds count one after the other.</summary>
     public static async Task EnsureRoomAsync(TenancyDbContext db, Guid tenantId, Role adding, CancellationToken cancellationToken)
     {
+        if (Raised.ContainsKey(tenantId)) return;
         var key = $"plan:{tenantId}";
         await db.Database.ExecuteSqlAsync($"SELECT pg_advisory_xact_lock(hashtextextended({key}, 0))", cancellationToken);
         var held = await db.Memberships.Where(m => m.Role != Role.Patient && (m.Status == MembershipStatus.Active || m.Status == MembershipStatus.Suspended

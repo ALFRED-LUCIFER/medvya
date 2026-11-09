@@ -76,6 +76,14 @@ PROPOSED → PHYSICIAN_APPROVED → ASSIGNED → AWAITING_TEST/AWAITING_REPORT �
 ```
 `BLOCKED`, `OVERDUE`, `CANCELLED` and `UNREACHABLE` each require an explicit reason and an accountable actor. **A sent reminder never closes a task.**
 
+## Investigation order (E-05, MDV-P2-018)
+
+`DRAFT ⇄ NOT_INCLUDED` (the doctor switches a test off or on while the consultation is open), then `DRAFT → ORDERED` only by "Place orders" (one audited call for every included draft; never by signing a note). `ORDERED` is final in P2; results and review are the result loop below (P4). Orders of an ended consultation cannot change.
+
+## Referral (E-09, MDV-P2-019)
+
+Out: `DRAFT → SENT → APPOINTMENT_BOOKED → REPORT_RECEIVED → CLOSED` (a step may be skipped forward, never back; any open referral may go straight to `CLOSED`, which is how a draft is abandoned: nothing is deleted). In: `RECEIVED → CLOSED`. Sending records the channel and time and, for an emailed letter, needs the patient's information-exchange consent at that moment. Each step is an append-only event that can carry a document of the patient as evidence. Open = not `CLOSED`.
+
 ## Result loop (C-01, display states)
 
 `Ordered → Sample collected → Result received → Reviewed by doctor → (Assigned) → Released to patient → Patient contacted → Follow-up completed`. "Message delivered ≠ done" is its own visual state.

@@ -4,7 +4,7 @@ using Medvya.Encounters.Domain;
 namespace Medvya.Encounters.Application;
 
 [JsonConverter(typeof(JsonStringEnumConverter<TimelineKind>))]
-public enum TimelineKind { Encounter, Lab, Medicine, Document }
+public enum TimelineKind { Encounter, Lab, Medicine, Document, Order }
 
 /// <summary>
 /// One line of the timeline (MDV-P2-005). <see cref="Code"/> names what it is (the screen translates it); <see cref="Title"/> and

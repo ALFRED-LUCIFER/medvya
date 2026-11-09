@@ -65,7 +65,7 @@ test('the doctor starts the consultation from the board and sees who it is for',
   expect(calls.starts).toEqual([{ appointmentId: 'a1', leaveOpen: false }]);
 
   await page.getByRole('button', { name: 'End consultation' }).click();
-  await expect(page.getByRole('status')).toHaveText('Consultation ended at 10:25.');
+  await expect(page.getByRole('status').filter({ hasText: 'Consultation ended' })).toHaveText('Consultation ended at 10:25.');
   await expect(page.getByRole('button', { name: 'End consultation' })).toHaveCount(0);
   expect(calls.ends).toBe(1);
   await page.getByRole('link', { name: 'Back to the board' }).click();

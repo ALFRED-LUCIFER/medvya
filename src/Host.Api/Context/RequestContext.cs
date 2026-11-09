@@ -29,6 +29,7 @@ public sealed class RequestContext(IHttpContextAccessor accessor, IServiceProvid
 
     HttpContext? Http => connection ?? accessor.HttpContext;
     public Guid? UserId => Read(ClaimTypes.NameIdentifier);
+    public DateTimeOffset? ReauthenticatedAt => long.TryParse(Http?.User.FindFirst(Host.Api.Auth.StaffAuthentication.ReauthClaim)?.Value, out var at) ? DateTimeOffset.FromUnixTimeSeconds(at) : null;
     public string? ClientIp => Http?.Connection.RemoteIpAddress?.ToString();
     public string? CorrelationId => Http?.TraceIdentifier;
     string? role;

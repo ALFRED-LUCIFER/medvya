@@ -1,6 +1,7 @@
 import { expect } from '@playwright/test';
 import { test } from '@playwright/test';
 import { mockReconciliation } from '../support/reconciliation';
+import { mockNote } from '../support/note';
 import { journey } from './storyboard';
 
 // Storyboard: docs/02-design/journeys.md. Implement steps as their screens ship.
@@ -48,6 +49,10 @@ journey('J2', {
     const banner = page.getByRole('region', { name: 'Patient identity' });
     await expect(banner.getByRole('heading', { name: 'Meera Iyer' })).toBeVisible();
     await expect(banner).toContainText('Room 3');
+    // MDV-P2-009: the note opens beside the banner, ready to type (no recording, so the manual path).
+    await mockNote(page);
+    await page.reload();
+    await expect(page.getByRole('region', { name: 'Consultation note' }).getByLabel('Chief complaint')).toBeVisible();
   },
   // E-01: the 60-second brief is the verified chart (MDV-P2-004): allergy first, then problems and medicines, each with its source.
   // shortcut: the "AI summary · not reviewed" half of the split is P3 (A-01) and is not shown; only the verified side exists.

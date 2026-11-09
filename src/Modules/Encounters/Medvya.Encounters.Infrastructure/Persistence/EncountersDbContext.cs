@@ -21,6 +21,7 @@ public sealed class EncountersDbContext(DbContextOptions<EncountersDbContext> op
     public DbSet<MedicationReconciliation> MedicationReconciliations => Set<MedicationReconciliation>();
     public DbSet<DoctorNoteTemplate> DoctorNoteTemplates => Set<DoctorNoteTemplate>();
     public DbSet<ConsultNote> ConsultNotes => Set<ConsultNote>();
+    public DbSet<SignedNoteVersion> SignedNoteVersions => Set<SignedNoteVersion>();
 
     Guid? CurrentTenantId => tenant.TenantId;
 
@@ -127,6 +128,16 @@ public sealed class EncountersDbContext(DbContextOptions<EncountersDbContext> op
                 v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null), v => JsonSerializer.Deserialize<Dictionary<string, string>>(v, (JsonSerializerOptions?)null)!);
             e.Property(x => x.Version).IsConcurrencyToken();
             e.HasIndex(x => new { x.TenantId, x.EncounterId }).IsUnique(); // one draft note per encounter, even for two simultaneous first saves
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        // Hash-chained and append-only (LedgerSql, MDV-P2-012): the sign migration adds the chain columns and the triggers.
+        modelBuilder.Entity<SignedNoteVersion>(e =>
+        {
+            e.Property(x => x.TemplateKey).HasMaxLength(50);
+            e.Property(x => x.ContentHash).HasMaxLength(64);
+            e.Property(x => x.Sections).HasColumnType("jsonb").HasConversion(
+                v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null), v => JsonSerializer.Deserialize<Dictionary<string, string>>(v, (JsonSerializerOptions?)null)!);
+            e.HasIndex(x => new { x.TenantId, x.NoteId, x.VersionNo }).IsUnique(); // one signature per note: a second concurrent sign loses here
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         modelBuilder.Entity<ClinicalDocument>(e =>

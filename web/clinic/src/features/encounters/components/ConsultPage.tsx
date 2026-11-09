@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { useI18n } from '@medvya/i18n';
 import { Button, buttonVariants } from '@medvya/ui';
@@ -9,6 +10,8 @@ type Props = {
   banner: EncounterBanner | null; loading: boolean; notFound: boolean; refusal: ClinicalRefusal | null; failed: boolean;
   ending: boolean; endFailed: boolean; onEnd: () => void;
   boardPath: string; canReconcile: boolean;
+  /** The work of the visit (the note editor, MDV-P2-009), composed in by the route. */
+  children?: ReactNode;
 };
 
 /**
@@ -34,6 +37,7 @@ export default function ConsultPage(p: Props) {
       </div>
       {!ended && <p className="text-sm text-muted-foreground">{t('consult.leaveNote')}</p>}
       {p.endFailed && <p role="alert" className="font-bold text-danger-700">{t('consult.endFailed')}</p>}
+      {p.children}
     </div>
   );
 }

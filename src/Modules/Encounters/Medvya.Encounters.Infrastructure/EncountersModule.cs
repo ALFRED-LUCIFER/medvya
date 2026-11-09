@@ -26,6 +26,7 @@ public static class EncountersModule
             .AddScoped<IDocuments, DocumentService>()
             .AddScoped<IIntake, IntakeService>()
             .AddScoped<INoteTemplates, NoteTemplateService>()
+            .AddScoped<IConsultNotes, ConsultNoteService>()
             .AddScoped<Medvya.Scheduling.Application.IHandoffGate, IntakeHandoffGate>()
             .AddScoped<Medvya.Tenancy.Application.ICareRelationshipSource, EncounterCareRelationship>()
             .AddScoped<Medvya.Patients.Application.IPatientMergeParticipant, EncounterMergeParticipant>();

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Medvya.BuildingBlocks.Domain;
 using Medvya.Encounters.Domain;
 using Microsoft.EntityFrameworkCore;
@@ -17,6 +18,7 @@ public sealed class EncountersDbContext(DbContextOptions<EncountersDbContext> op
     public DbSet<Intake> Intakes => Set<Intake>();
     public DbSet<IntakeEscalation> IntakeEscalations => Set<IntakeEscalation>();
     public DbSet<DoctorNoteTemplate> DoctorNoteTemplates => Set<DoctorNoteTemplate>();
+    public DbSet<ConsultNote> ConsultNotes => Set<ConsultNote>();
 
     Guid? CurrentTenantId => tenant.TenantId;
 
@@ -94,6 +96,17 @@ public sealed class EncountersDbContext(DbContextOptions<EncountersDbContext> op
         modelBuilder.Entity<DoctorNoteTemplate>(e =>
         {
             e.HasIndex(x => new { x.TenantId, x.UserId }).IsUnique();
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<ConsultNote>(e =>
+        {
+            e.Property(x => x.TemplateKey).HasMaxLength(50);
+            e.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
+            // As text through a converter: Npgsql's dynamic JSON (which a Dictionary would need) stays off for the whole data source.
+            e.Property(x => x.Sections).HasColumnType("jsonb").HasConversion(
+                v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null), v => JsonSerializer.Deserialize<Dictionary<string, string>>(v, (JsonSerializerOptions?)null)!);
+            e.Property(x => x.Version).IsConcurrencyToken();
+            e.HasIndex(x => new { x.TenantId, x.EncounterId }).IsUnique(); // one draft note per encounter, even for two simultaneous first saves
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         modelBuilder.Entity<ClinicalDocument>(e =>

@@ -1,0 +1,242 @@
+using System.Globalization;
+using System.Net;
+using System.Net.Http.Json;
+using System.Text.Json;
+using Medvya.Audit.Domain;
+using Medvya.Encounters.Domain;
+using Medvya.Scheduling.Application;
+using Medvya.Tenancy.Domain;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Npgsql;
+
+namespace Medvya.IntegrationTests;
+
+/// <summary>
+/// MDV-P2-012 (backend) over HTTP on real PostgreSQL: a verified doctor with a care relationship and a re-authentication in the last 5 minutes
+/// signs a complete note into an immutable version 1; afterwards nothing edits it, at the API or at the database. Synthetic data only.
+/// </summary>
+public sealed class SignNoteTests(PostgresFixture sql) : IClassFixture<PostgresFixture>, IAsyncLifetime
+{
+    const string Text = "Synthetic cough for three days";
+    static readonly object Complete = new { chiefComplaint = Text, assessment = "Synthetic viral cold", plan = "Rest and fluids" };
+    readonly SchedulingHarness h = new(sql);
+    WebApplicationFactory<Program> factory = null!;
+    Guid encounter;
+
+    public async Task InitializeAsync()
+    {
+        await h.SeedAsync();
+        await h.DoctorTemplateAsync();
+        factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b
+            .UseSetting("ConnectionStrings:Medvya", sql.ConnectionString)
+            .ConfigureTestServices(s =>
+            {
+                PatientEndpointTests.SignInFromHeaders(s, h.Tenant);
+                s.AddSingleton<TimeProvider>(h.Clock);
+            }));
+        var visit = await h.BookAsync(10, patient: h.Patient);
+        await h.FrontDesk(h.Reception).CheckInAsync(visit.Id, new CheckIn());
+        using var started = await Client(h.Doctor).PostAsJsonAsync(U("/v1/encounters"), new { appointmentId = visit.Id });
+        encounter = (await Json(started)).GetProperty("id").GetGuid();
+    }
+
+    public async Task DisposeAsync()
+    {
+        await factory.DisposeAsync();
+        await h.CloseAsync();
+    }
+
+    /// <summary>Re-authenticated <paramref name="minutesAgo"/> minutes before the test clock; null: never.</summary>
+    HttpClient Client(Guid user, int? minutesAgo = null)
+    {
+        var client = factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost") });
+        client.DefaultRequestHeaders.Add("X-Test-User", user.ToString());
+        client.DefaultRequestHeaders.Add("X-Test-Facility", h.Facility.ToString());
+        if (minutesAgo is { } m) client.DefaultRequestHeaders.Add("X-Test-Reauth", h.Clock.GetUtcNow().AddMinutes(-m).ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture));
+        return client;
+    }
+
+    static Uri U(string path) => new(path, UriKind.Relative);
+
+    static async Task<JsonElement> Json(HttpResponseMessage r) => await r.Content.ReadFromJsonAsync<JsonElement>();
+
+    async Task VerifyLicenceAsync(Guid user)
+    {
+        await using var db = sql.Context(h.Tenant);
+        var membership = await db.Memberships.SingleAsync(m => m.UserId == user && m.FacilityId == h.Facility);
+        db.DoctorLicences.Add(new DoctorLicence { MembershipId = membership.Id, TenantId = h.Tenant, Authority = "TNMC", Number = "SYN-0001", SubmittedAt = h.Clock.GetUtcNow(), VerifiedAt = h.Clock.GetUtcNow() });
+        await db.SaveChangesAsync();
+    }
+
+    async Task<int> SaveDraftAsync(object sections, int baseVersion = 0)
+    {
+        using var r = await Client(h.Doctor).PutAsJsonAsync(U($"/v1/encounters/{encounter}/note"), new { baseVersion, sections });
+        Assert.True(r.IsSuccessStatusCode, await r.Content.ReadAsStringAsync());
+        return (await Json(r)).GetProperty("version").GetInt32();
+    }
+
+    Task<HttpResponseMessage> SignAsync(Guid user, int baseVersion, int? reauthMinutesAgo = 0, Guid? id = null) =>
+        Client(user, reauthMinutesAgo).PostAsJsonAsync(U($"/v1/encounters/{id ?? encounter}/note/sign"), new { baseVersion });
+
+    async Task<ConsultNote> NoteAsync()
+    {
+        await using var db = sql.Encounters(h.Tenant);
+        return await db.ConsultNotes.AsNoTracking().SingleAsync();
+    }
+
+    async Task<int> SignedRowsAsync()
+    {
+        await using var db = sql.Encounters(h.Tenant);
+        return await db.SignedNoteVersions.CountAsync();
+    }
+
+    async Task<Guid?> BrokenChainRowAsync()
+    {
+        await using var conn = await sql.OpenAs("app_user", h.Tenant);
+        return await new NpgsqlCommand($"""SELECT ledger.verify_chain('encounters.SignedNoteVersions', '{h.Tenant}')""", conn).ExecuteScalarAsync() is Guid g ? g : null;
+    }
+
+    [Fact]
+    public async Task ASignedNoteFreezesVersionOneWithItsHashSignerAndTimeAndIsAudited()
+    {
+        await VerifyLicenceAsync(h.Doctor);
+        var version = await SaveDraftAsync(Complete);
+        using var signed = await SignAsync(h.Doctor, version);
+        Assert.True(signed.IsSuccessStatusCode, await signed.Content.ReadAsStringAsync());
+        var view = await Json(signed);
+        Assert.Equal(("Signed", 1), (view.GetProperty("status").GetString(), view.GetProperty("signature").GetProperty("versionNo").GetInt32()));
+        Assert.Equal(h.Doctor, view.GetProperty("signature").GetProperty("signedBy").GetGuid());
+
+        await using var db = sql.Encounters(h.Tenant);
+        var row = await db.SignedNoteVersions.SingleAsync();
+        Assert.Equal(("general-opd", 1, h.Doctor, Text), (row.TemplateKey, row.TemplateVersion, row.SignedBy, row.Sections["chiefComplaint"]));
+        Assert.Equal(SignedNoteVersion.Hash("general-opd", 1, row.Sections), row.ContentHash); // the stored hash verifies against the stored content
+        Assert.Equal(row.ContentHash, view.GetProperty("signature").GetProperty("contentHash").GetString());
+        Assert.Null(await BrokenChainRowAsync()); // the ledger chain is intact
+
+        using var read = await Client(h.Doctor).GetAsync(U($"/v1/encounters/{encounter}/note"));
+        var again = await Json(read);
+        Assert.Equal(("Signed", row.SignedAt), (again.GetProperty("status").GetString(), again.GetProperty("signature").GetProperty("signedAt").GetDateTimeOffset()));
+
+        await using var audit = sql.Audit(h.Tenant);
+        var sign = await audit.Events.SingleAsync(e => e.Action == "note.sign");
+        Assert.Equal((h.Patient, AuditOutcome.Allowed), (sign.PatientId, sign.Outcome));
+        Assert.DoesNotContain("cough", JsonSerializer.Serialize(sign), StringComparison.Ordinal);
+    }
+
+    // SAFETY mutation check: remove the ReauthenticatedAt test in ConsultNoteService.SignAsync and the first two cases fail.
+    [Fact]
+    public async Task SigningNeedsAReauthenticationInTheLastFiveMinutes()
+    {
+        await VerifyLicenceAsync(h.Doctor);
+        var version = await SaveDraftAsync(Complete);
+        foreach (var minutes in new int?[] { null, 6 })
+        {
+            using var refused = await SignAsync(h.Doctor, version, minutes);
+            Assert.Equal((HttpStatusCode.Forbidden, "reauth_required"), (refused.StatusCode, (await Json(refused)).GetProperty("code").GetString()));
+        }
+        Assert.Equal((NoteStatus.Draft, 0), ((await NoteAsync()).Status, await SignedRowsAsync()));
+        using var ok = await SignAsync(h.Doctor, version, 4);
+        Assert.Equal(HttpStatusCode.OK, ok.StatusCode);
+    }
+
+    [Fact]
+    public async Task ABlankRequiredSectionBlocksSigningWithItsCodeAndNothingIsWritten()
+    {
+        await VerifyLicenceAsync(h.Doctor);
+        var version = await SaveDraftAsync(new { chiefComplaint = Text, plan = "  " }); // assessment never entered, plan blank
+        using var blocked = await SignAsync(h.Doctor, version);
+        Assert.Equal(HttpStatusCode.BadRequest, blocked.StatusCode);
+        var errors = (await Json(blocked)).GetProperty("errors");
+        Assert.Equal("required", errors.GetProperty("sections.assessment")[0].GetString());
+        Assert.Equal("required", errors.GetProperty("sections.plan")[0].GetString());
+        Assert.Equal((NoteStatus.Draft, 0), ((await NoteAsync()).Status, await SignedRowsAsync()));
+    }
+
+    [Fact]
+    public async Task OnlyAVerifiedDoctorWithACareRelationshipSigns()
+    {
+        var version = await SaveDraftAsync(Complete);
+        using (var unverified = await SignAsync(h.Doctor, version)) Assert.Equal(HttpStatusCode.Forbidden, unverified.StatusCode); // licence not verified
+        await VerifyLicenceAsync(h.Doctor);
+        await VerifyLicenceAsync(h.SecondDoctor);
+        foreach (var user in new[] { h.Reception, h.Nurse })
+        {
+            using var r = await SignAsync(user, version);
+            Assert.Equal(HttpStatusCode.Forbidden, r.StatusCode);
+        }
+        await h.Settings(h.Admin).SaveClinicalAccessAsync(ClinicalAccessPolicy.AssignedOnly);
+        using (var colleague = await SignAsync(h.SecondDoctor, version))
+        {
+            Assert.Equal(HttpStatusCode.Forbidden, colleague.StatusCode);
+            Assert.Equal("no_care_relationship", (await Json(colleague)).GetProperty("code").GetString());
+        }
+        using (var unknown = await SignAsync(h.Doctor, version, id: Guid.NewGuid())) Assert.Equal(HttpStatusCode.NotFound, unknown.StatusCode);
+        Assert.Equal((NoteStatus.Draft, 0), ((await NoteAsync()).Status, await SignedRowsAsync()));
+    }
+
+    // SAFETY mutation check: remove the Status == Signed guard in ConsultNoteService.SaveAsync and the 409 case fails (the trigger would answer 500);
+    // drop the TR_ConsultNotes_SignedImmutable trigger (migration SignedNotes) and the direct-database cases fail.
+    [Fact]
+    public async Task ASignedNoteCannotBeEditedByTheApiOrTheDatabase()
+    {
+        await VerifyLicenceAsync(h.Doctor);
+        var version = await SaveDraftAsync(Complete);
+        using (await SignAsync(h.Doctor, version)) { }
+        var signed = await NoteAsync();
+
+        using (var edit = await Client(h.Doctor).PutAsJsonAsync(U($"/v1/encounters/{encounter}/note"), new { baseVersion = signed.Version, sections = new { chiefComplaint = "Changed" } }))
+            Assert.Equal(("note_signed", HttpStatusCode.Conflict), ((await Json(edit)).GetProperty("code").GetString(), edit.StatusCode));
+
+        await using (var db = sql.Encounters(h.Tenant)) // the repository path: even code that skips the service is refused
+        {
+            var tracked = await db.ConsultNotes.SingleAsync();
+            tracked.Sections = new Dictionary<string, string> { ["chiefComplaint"] = "Changed" };
+            await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
+        }
+        await using (var db = sql.Encounters(h.Tenant))
+        {
+            db.ConsultNotes.Remove(await db.ConsultNotes.SingleAsync());
+            await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
+        }
+        await using (var conn = await sql.OpenAs("app_user", h.Tenant)) // raw SQL on the signed version: the ledger refuses
+        {
+            var ex = await Assert.ThrowsAsync<PostgresException>(() => new NpgsqlCommand("""UPDATE encounters."SignedNoteVersions" SET "Sections" = '{}'""", conn).ExecuteNonQueryAsync());
+            Assert.Equal(PostgresErrorCodes.RestrictViolation, ex.SqlState);
+        }
+        var after = await NoteAsync();
+        Assert.Equal((Text, NoteStatus.Signed), (after.Sections["chiefComplaint"], after.Status));
+    }
+
+    [Fact]
+    public async Task SigningTwiceOrAtOnceWritesOneSignatureAndTheRetryGetsTheSignedNote()
+    {
+        await VerifyLicenceAsync(h.Doctor);
+        var version = await SaveDraftAsync(Complete);
+        var results = await Task.WhenAll(Enumerable.Range(0, 4).Select(async _ =>
+        {
+            using var r = await SignAsync(h.Doctor, version);
+            return (r.StatusCode, (await Json(r)).GetProperty("status").GetString());
+        }));
+        Assert.All(results, r => Assert.Equal((HttpStatusCode.OK, "Signed"), r));
+        using (var again = await SignAsync(h.Doctor, version)) Assert.Equal(HttpStatusCode.OK, again.StatusCode);
+        Assert.Equal(1, await SignedRowsAsync());
+        await using var audit = sql.Audit(h.Tenant);
+        Assert.Equal(1, await audit.Events.CountAsync(e => e.Action == "note.sign" && e.Outcome == AuditOutcome.Allowed));
+    }
+
+    [Fact]
+    public async Task ASaveSinceTheEditorReadTheNoteIsRefusedAsStaleNotSigned()
+    {
+        await VerifyLicenceAsync(h.Doctor);
+        var version = await SaveDraftAsync(Complete);
+        await SaveDraftAsync(Complete, version);
+        using var stale = await SignAsync(h.Doctor, version);
+        Assert.Equal(("stale_note", HttpStatusCode.Conflict), ((await Json(stale)).GetProperty("code").GetString(), stale.StatusCode));
+        Assert.Equal(0, await SignedRowsAsync());
+    }
+}

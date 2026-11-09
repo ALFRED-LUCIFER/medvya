@@ -4,4 +4,7 @@ namespace Medvya.BuildingBlocks.Domain;
 public interface ICurrentUser
 {
     Guid? UserId { get; }
+
+    /// <summary>When the user last re-entered their credentials in this session (step-up for signing); null if never, or no browser session.</summary>
+    DateTimeOffset? ReauthenticatedAt => null;
 }

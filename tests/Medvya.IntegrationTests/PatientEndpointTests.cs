@@ -103,6 +103,7 @@ public sealed class PatientEndpointTests(PostgresFixture sql) : IClassFixture<Po
             if (!Request.Headers.TryGetValue("X-Test-User", out var user)) return Task.FromResult(AuthenticateResult.NoResult());
             List<Claim> claims = [new(ClaimTypes.NameIdentifier, user.ToString()), new("tenant_id", tenant.Id.ToString())];
             if (Request.Headers.TryGetValue("X-Test-Facility", out var f)) claims.Add(new("facility_id", f.ToString()));
+            if (Request.Headers.TryGetValue("X-Test-Reauth", out var r)) claims.Add(new("reauth_at", r.ToString())); // unix seconds, as /bff/reauth stamps the cookie
             return Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(new ClaimsPrincipal(new ClaimsIdentity(claims, SchemeName)), SchemeName)));
         }
     }

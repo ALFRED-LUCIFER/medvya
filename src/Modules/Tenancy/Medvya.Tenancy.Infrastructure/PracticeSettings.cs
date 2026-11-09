@@ -58,17 +58,45 @@ public sealed class PracticeSettings(
     public async Task<IReadOnlyList<LocationView>> ListLocationsAsync(CancellationToken cancellationToken = default) =>
         await db.Facilities.AsNoTracking().OrderBy(f => f.Name).Select(f => new LocationView(f.Id, f.Name, f.Address, f.TimeZone)).ToListAsync(cancellationToken);
 
-    public async Task<LocationView> AddLocationAsync(SaveLocation command, CancellationToken cancellationToken = default)
+    public async Task<LocationView> AddLocationAsync(AddLocation command, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
-        var (name, address, zone) = ValidLocation(command, requireZone: true);
-        var site = new Facility { Id = Guid.CreateVersion7(), TenantId = TenantId, Name = name, Address = address, TimeZone = zone! };
+        var (name, address, zone) = ValidLocation(new SaveLocation { Name = command.Name, Address = command.Address, TimeZone = command.TimeZone }, requireZone: true);
+        var errors = new List<ValidationError>();
+        var country = await db.Tenants.AsNoTracking().Select(t => t.CountryCode).SingleAsync(cancellationToken);
+        // Data stays in the organisation's country (ADR-003); a missing country is refused like a wrong one.
+        if (Clean(command.CountryCode) is not { } given) errors.Add(new("countryCode", "required"));
+        else if (given != country) errors.Add(new("countryCode", "mismatch"));
+        var tax = Clean(command.TaxNumber);
+        if (tax is null) errors.Add(new("taxNumber", "required"));
+        else if (!(OnboardingRules.For(country)?.IsTaxId(tax) ?? false)) errors.Add(new("taxNumber", "format"));
+        var file = command.Certificate;
+        var type = file is { Length: > 0 } ? LocationCertificate.ContentTypeOf(file) : null;
+        var fileName = Clean(command.CertificateName);
+        if (file is null || file.Length == 0) errors.Add(new("certificate", "required"));
+        else if (file.Length > LocationCertificate.MaxBytes) errors.Add(new("certificate", "too_large"));
+        else if (type is null) errors.Add(new("certificate", "type"));
+        if (fileName?.Length > 200) errors.Add(new("certificateName", "too_long"));
+        SettingsValidationException.ThrowIfAny(errors);
+
+        // shortcut: the certificate is stored as uploaded (a PDF cannot be re-encoded like the logo) and never rendered by the app, so it is not malware-scanned; add the scan with the document pipeline.
+        var key = $"{TenantId}/location-certificate/{Guid.NewGuid()}"; // random, no names in blob paths
+        await logos.PutAsync(key, file!, type!, cancellationToken);
+        var site = new Facility { Id = Guid.CreateVersion7(), TenantId = TenantId, Name = name, Address = address, TimeZone = zone!, TaxNumber = tax, CertificateName = fileName, CertificateKey = key };
         db.Facilities.Add(site);
         // The creator works at the new location with the role they hold at the current one (a membership is what grants access there).
         if (user.UserId is { } userId && currentFacility.FacilityId is { } here && await facilities.ActiveRoleAsync(userId, here, cancellationToken) is { } role)
             db.Memberships.Add(new Membership { Id = Guid.CreateVersion7(), TenantId = TenantId, UserId = userId, FacilityId = site.Id, Role = role, Status = MembershipStatus.Active });
         var view = new LocationView(site.Id, site.Name, site.Address, site.TimeZone);
-        await SaveAuditedAsync("settings.location.create", "location", site.Id, null, view, cancellationToken);
+        try
+        {
+            await SaveAuditedAsync("settings.location.create", "location", site.Id, null, new { view.Name, view.Address, view.TimeZone, taxNumber = tax, certificate = fileName, type }, cancellationToken);
+        }
+        catch
+        {
+            await logos.DeleteAsync(key, CancellationToken.None); // no unaudited location and no orphan file
+            throw;
+        }
         return view;
     }
 

@@ -52,7 +52,7 @@ PARTIAL = {
     'NOTIFICATION': 'patient messages only; staff notifications are separate tables',
     'DOC_SEQUENCE': 'numbering only; invoices and payments are not built',
 }
-LEDGER = {'audit.AuditEvents', 'patients.ConsentReceipts', 'tenancy.TermsAcceptances'}  # hash-chained, MDV-P0-036
+LEDGER = {'audit.AuditEvents', 'encounters.SignedNoteVersions', 'patients.ConsentReceipts', 'tenancy.TermsAcceptances'}  # hash-chained, MDV-P0-036
 MODULE_ORDER = ['Tenancy', 'Identity', 'Patients', 'Scheduling', 'Encounters', 'Prescribing', 'Notifications', 'Audit', 'Leads', 'Billing', 'Platform']
 
 

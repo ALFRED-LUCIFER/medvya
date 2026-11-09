@@ -27,6 +27,12 @@ public static class NoteEndpoints
                 body is null ? Results.ValidationProblem(new Dictionary<string, string[]> { ["body"] = ["required"] })
                 : await service.SaveAsync(encounterId, body, ct) is { } view ? Results.Ok(view) : Results.NotFound())
             .AuditedByUseCase("note.save", "note", AuditPurpose.Treatment).AddEndpointFilter(MapErrors);
+        // MDV-P2-012: Sign on Clinical notes (a licence-verified doctor); the use case adds the care relationship and the 5-minute re-authentication.
+        app.MapPost("/v1/encounters/{encounterId:guid}/note/sign", async (Guid encounterId, [FromBody] SignNote? body, [FromServices] IConsultNotes service, CancellationToken ct) =>
+                body is null ? Results.ValidationProblem(new Dictionary<string, string[]> { ["body"] = ["required"] })
+                : await service.SignAsync(encounterId, body, ct) is { } view ? Results.Ok(view) : Results.NotFound())
+            .RequireCapability(Capability.ClinicalNotes, Access.Sign)
+            .AuditedByUseCase("note.sign", "note", AuditPurpose.Treatment).AddEndpointFilter(MapErrors);
         return app;
     }
 
@@ -43,6 +49,14 @@ public static class NoteEndpoints
         catch (NoteValidationException e)
         {
             return Results.ValidationProblem(e.Errors.GroupBy(x => x.Field).ToDictionary(g => g.Key, g => g.Select(x => x.Code).ToArray()));
+        }
+        catch (NoteSignedException)
+        {
+            return Results.Problem(statusCode: StatusCodes.Status409Conflict, title: "The note is signed", extensions: new Dictionary<string, object?> { ["code"] = "note_signed" });
+        }
+        catch (ReauthRequiredException)
+        {
+            return Results.Problem(statusCode: StatusCodes.Status403Forbidden, title: "Confirm your identity to sign", extensions: new Dictionary<string, object?> { ["code"] = "reauth_required" });
         }
         catch (StaleNoteException e)
         {

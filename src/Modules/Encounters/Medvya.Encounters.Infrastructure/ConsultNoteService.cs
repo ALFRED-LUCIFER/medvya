@@ -17,8 +17,8 @@ namespace Medvya.Encounters.Infrastructure;
 /// </summary>
 public sealed class ConsultNoteService(EncountersDbContext db, IClinicalAccess clinical, ICurrentTenant tenant, ICurrentUser user, IAuditLog audit, TimeProvider clock) : IConsultNotes
 {
-    public const string ReadAction = "note.read", SaveAction = "note.save", Resource = "note";
-    static readonly Access[] Leads = [Access.Full];
+    public const string ReadAction = "note.read", SaveAction = "note.save", SignAction = "note.sign", Resource = "note";
+    static readonly Access[] Leads = [Access.Full], SignLevel = [Access.Sign];
 
     public async Task<NoteView?> GetAsync(Guid encounterId, CancellationToken cancellationToken = default)
     {
@@ -26,8 +26,57 @@ public sealed class ConsultNoteService(EncountersDbContext db, IClinicalAccess c
         await clinical.RequireAsync(encounter.PatientId, encounter.FacilityId, Capability.Patient360Chart, Leads, cancellationToken);
         var note = await db.ConsultNotes.AsNoTracking().SingleOrDefaultAsync(n => n.EncounterId == encounterId, cancellationToken);
         await audit.WriteAsync(Event(ReadAction, encounter, note?.Id), cancellationToken);
-        return note is null ? Empty(encounterId) : View(note);
+        return note is null ? Empty(encounterId) : View(note, await SignatureOf(note, cancellationToken));
     }
+
+    public async Task<NoteView?> SignAsync(Guid encounterId, SignNote command, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        if (await db.Encounters.AsNoTracking().SingleOrDefaultAsync(e => e.Id == encounterId, cancellationToken) is not { } encounter) return null;
+        // The endpoint already needs Sign on Clinical notes (licence gate included); this adds the care relationship.
+        await clinical.RequireAsync(encounter.PatientId, encounter.FacilityId, Capability.ClinicalNotes, SignLevel, cancellationToken);
+        var me = user.UserId ?? throw new InvalidOperationException("No user.");
+        var now = clock.GetUtcNow();
+        // shortcut: the stamp is a claim in the session cookie, set by /bff/reauth and checked here; the idle session row is not asked. Upgrade to a column on the session if a stamp must be revocable.
+        if (user.ReauthenticatedAt is not { } at || now - at > SignedNoteVersion.ReauthWindow || at > now.AddMinutes(1)) throw new ReauthRequiredException();
+        var note = await db.ConsultNotes.SingleOrDefaultAsync(n => n.EncounterId == encounterId, cancellationToken);
+        if (note?.Status == NoteStatus.Signed) return View(note, await SignatureOf(note, cancellationToken)); // a double click or retry: nothing new is written
+        if (command.BaseVersion != (note?.Version ?? 0)) throw new StaleNoteException(note?.Version ?? 0);
+
+        var template = note is null ? NoteTemplates.Latest(NoteTemplates.Default) : NoteTemplates.Find(note.TemplateKey, note.TemplateVersion);
+        var blanks = template!.Sections.Where(s => s.Required && string.IsNullOrWhiteSpace(note?.Sections.GetValueOrDefault(s.Id))).Select(s => ($"sections.{s.Id}", "required")).ToList();
+        if (blanks.Count > 0) throw new NoteValidationException(blanks);
+
+        var signed = new SignedNoteVersion
+        {
+            Id = Guid.CreateVersion7(), TenantId = TenantId, EncounterId = encounterId, NoteId = note!.Id, VersionNo = 1, TemplateKey = note.TemplateKey,
+            TemplateVersion = note.TemplateVersion, Manual = note.Manual, Sections = note.Sections, SignedBy = me, SignedAt = now,
+            ContentHash = SignedNoteVersion.Hash(note.TemplateKey, note.TemplateVersion, note.Sections),
+        };
+        (note.Status, note.Version, note.UpdatedBy, note.UpdatedAt) = (NoteStatus.Signed, note.Version + 1, me, now);
+        db.SignedNoteVersions.Add(signed);
+        try
+        {
+            await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
+            await db.SaveChangesAsync(cancellationToken);
+            await audit.WriteAsync(Event(SignAction, encounter, note.Id), tx.GetDbTransaction(), cancellationToken);
+            await tx.CommitAsync(cancellationToken);
+        }
+        // A save or a second signature won the race: the note is no longer the version this one read.
+        catch (Exception e) when (e is DbUpdateConcurrencyException || e is DbUpdateException { InnerException: Npgsql.PostgresException { SqlState: Npgsql.PostgresErrorCodes.UniqueViolation } })
+        {
+            db.ChangeTracker.Clear();
+            var current = await db.ConsultNotes.AsNoTracking().SingleAsync(n => n.EncounterId == encounterId, cancellationToken);
+            if (current.Status == NoteStatus.Signed) return View(current, await SignatureOf(current, cancellationToken));
+            throw new StaleNoteException(current.Version);
+        }
+        return View(note, new NoteSignature(signed.VersionNo, signed.SignedBy, signed.SignedAt, signed.ContentHash));
+    }
+
+    async Task<NoteSignature?> SignatureOf(ConsultNote note, CancellationToken cancellationToken) =>
+        note.Status != NoteStatus.Signed ? null
+        : await db.SignedNoteVersions.AsNoTracking().Where(v => v.NoteId == note.Id && v.VersionNo == 1)
+            .Select(v => new NoteSignature(v.VersionNo, v.SignedBy, v.SignedAt, v.ContentHash)).SingleOrDefaultAsync(cancellationToken);
 
     public async Task<NoteView?> SaveAsync(Guid encounterId, SaveNote command, CancellationToken cancellationToken = default)
     {
@@ -37,6 +86,7 @@ public sealed class ConsultNoteService(EncountersDbContext db, IClinicalAccess c
         var me = user.UserId ?? throw new InvalidOperationException("No user.");
         var note = await db.ConsultNotes.SingleOrDefaultAsync(n => n.EncounterId == encounterId, cancellationToken);
 
+        if (note?.Status == NoteStatus.Signed) throw new NoteSignedException(); // the database refuses it too (trigger)
         if (command.BaseVersion != (note?.Version ?? 0)) throw new StaleNoteException(note?.Version ?? 0);
 
         var key = command.TemplateKey ?? note?.TemplateKey ?? NoteTemplates.Default;
@@ -82,5 +132,5 @@ public sealed class ConsultNoteService(EncountersDbContext db, IClinicalAccess c
 
     static NoteView Empty(Guid encounterId) => new(encounterId, NoteTemplates.Default, NoteTemplates.Latest(NoteTemplates.Default)!.Version, NoteStatus.Draft, false, new Dictionary<string, string>(), 0, null);
 
-    static NoteView View(ConsultNote n) => new(n.EncounterId, n.TemplateKey, n.TemplateVersion, n.Status, n.Manual, n.Sections, n.Version, n.UpdatedAt);
+    static NoteView View(ConsultNote n, NoteSignature? signature = null) => new(n.EncounterId, n.TemplateKey, n.TemplateVersion, n.Status, n.Manual, n.Sections, n.Version, n.UpdatedAt, signature);
 }

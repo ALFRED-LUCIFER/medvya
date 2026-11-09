@@ -65,6 +65,8 @@ public static partial class StaffAuthentication
                 o.Events.OnRedirectToIdentityProvider = ctx =>
                 {
                     if (ctx.Properties.GetParameter<string>(LoginHintParameter) is { } hint) ctx.ProtocolMessage.LoginHint = hint;
+                    // Step-up for signing (MDV-P2-012): the provider must ask for the credentials again, whatever its own session says.
+                    if (ctx.Properties.Items.ContainsKey(ReauthItem)) { ctx.ProtocolMessage.Prompt = "login"; ctx.ProtocolMessage.MaxAge = "0"; }
                     return Task.CompletedTask;
                 };
                 // A refused or broken sign-in returns to the app with a generic error; the reason is only in the logs. The one exception is a
@@ -99,6 +101,22 @@ public static partial class StaffAuthentication
         var subject = principal.FindFirst("sub")?.Value;
         var user = issuer is null || subject is null ? null
             : await ctx.HttpContext.RequestServices.GetRequiredService<IStaffUsers>().FindAsync(issuer, subject, ctx.HttpContext.RequestAborted);
+        // Step-up (MDV-P2-012): only the person already signed in on this browser session may answer, and the session stays the same; the
+        // cookie is re-issued with the time of this sign-in. Anyone else (or nobody) is refused and no new session starts.
+        if (ctx.Properties?.Items.ContainsKey(ReauthItem) == true)
+        {
+            var current = ctx.HttpContext.User;
+            if (user is null || current.FindFirst(ClaimTypes.NameIdentifier)?.Value != user.Id.ToString() || current.FindFirst(SessionControl.SessionIdClaim) is null)
+            {
+                SignInRefusedUnknownAccount(log);
+                ctx.Fail("The re-authentication does not match the signed-in user.");
+                return;
+            }
+            ctx.Principal = new ClaimsPrincipal(new ClaimsIdentity(
+                current.Claims.Where(c => c.Type != ReauthClaim).Append(new Claim(ReauthClaim, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture))),
+                CookieAuthenticationDefaults.AuthenticationScheme));
+            return;
+        }
         // Joining by invitation (MDV-P0-013): the token rode in the protected OIDC state.
         if (issuer is not null && subject is not null && ctx.Properties?.Items.TryGetValue(InvitationSignIn.Item, out var invitation) == true && invitation is not null)
         {
@@ -187,6 +205,21 @@ public static partial class StaffAuthentication
             .AllowAnonymous()
             .RequireRateLimiting(SignInRateLimit);
 
+        // Step-up before signing (MDV-P2-012): a signed-in browser session asks the provider for the password and second factor again.
+        // POST with the house header like the sign-in start; the page navigates to the returned address and comes back to returnUrl.
+        app.MapPost("/bff/reauth", async (ReauthStart start, HttpContext ctx, IConfiguration config) =>
+            {
+                if (!ctx.Request.Headers.ContainsKey(CsrfHeader)) return Results.Problem(statusCode: StatusCodes.Status400BadRequest, title: "Missing anti-forgery header");
+                var properties = SignInProperties(start.ReturnUrl, null, null, config);
+                properties.Items[ReauthItem] = "1";
+                await ctx.ChallengeAsync(OpenIdConnectDefaults.AuthenticationScheme, properties);
+                var location = ctx.Response.Headers.Location.ToString();
+                ctx.Response.Headers.Remove(Microsoft.Net.Http.Headers.HeaderNames.Location);
+                return Results.Ok(new SignInRedirect(location));
+            })
+            .RequireAuthorization()
+            .RequireRateLimiting(SignInRateLimit);
+
         // /bff/logout and /v1/me/* live in SessionControl.
         return app.MapSessionControl();
     }
@@ -197,6 +230,9 @@ public static partial class StaffAuthentication
     public static string AppPath(IConfiguration config) => config["Web:AppPath"] ?? "/";
 
     const string LoginHintParameter = "login_hint";
+    const string ReauthItem = "reauth";
+    /// <summary>Unix seconds of the last re-authentication, in the session cookie (read by RequestContext, checked by the sign use case).</summary>
+    public const string ReauthClaim = "reauth_at";
 
     static AuthenticationProperties SignInProperties(string? returnUrl, string? invitation, bool? signup, IConfiguration config)
     {
@@ -216,6 +252,8 @@ public static partial class StaffAuthentication
 
     /// <summary>Starting sign-in with the work email (MDV-P1-059). The email is a hint for the provider only: never stored or logged.</summary>
     public sealed record SignInStart(string? LoginHint = null, string? ReturnUrl = null, string? Invitation = null, bool? Signup = null);
+
+    public sealed record ReauthStart(string? ReturnUrl = null);
 
     /// <summary>The identity provider's address (sign-in or sign-out); the page navigates there.</summary>
     public sealed record SignInRedirect(string Location);

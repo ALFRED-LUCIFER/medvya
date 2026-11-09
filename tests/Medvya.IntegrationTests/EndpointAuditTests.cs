@@ -26,6 +26,7 @@ public sealed class EndpointAuditTests(PostgresFixture sql) : IClassFixture<Post
     static readonly HashSet<string> NoPatientData =
     [
         "POST /bff/logout",     // ends the staff session
+        "POST /bff/reauth",     // step-up before signing: starts a provider redirect, touches no patient data
         "GET /v1/me/context",   // the signed-in staff user, memberships and permissions
         // Session control (MDV-P0-012): staff sessions only; each change writes its own auth/session audit event (SessionControl).
         "POST /v1/me/facility",

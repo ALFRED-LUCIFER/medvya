@@ -20,10 +20,11 @@ OUT = ROOT / 'docs/03-architecture/erd.md'
 SOFT_REFS = {
     'TenantId': ('tenancy', 'Tenants'), 'FacilityId': ('tenancy', 'Facilities'), 'MembershipId': ('tenancy', 'Memberships'),
     'CustomRoleId': ('tenancy', 'CustomRoles'), 'PatientId': ('patients', 'Patients'), 'CandidatePatientId': ('patients', 'Patients'),
-    'MergedIntoPatientId': ('patients', 'Patients'), 'MergedFromPatientId': ('patients', 'Patients'), 'MovedFromPatientId': ('patients', 'Patients'),
+    'MergedIntoPatientId': ('patients', 'Patients'), 'MergedFromPatientId': ('patients', 'Patients'), 'MovedFromPatientId': ('patients', 'Patients'), 'EncounterId': ('encounters', 'Encounters'),
     'UserId': ('identity', 'Users'), 'ActorUserId': ('identity', 'Users'), 'RegisteredBy': ('identity', 'Users'), 'ChangedBy': ('identity', 'Users'),
     'BookedBy': ('identity', 'Users'), 'DecidedBy': ('identity', 'Users'), 'RequestedBy': ('identity', 'Users'), 'LeadClinicianId': ('identity', 'Users'), 'EndedBy': ('identity', 'Users'), 'HeldBy': ('identity', 'Users'), 'VerifiedBy': ('identity', 'Users'), 'RecordedBy': ('identity', 'Users'), 'EscalatedBy': ('identity', 'Users'), 'HandedOffBy': ('identity', 'Users'), 'NoKnownAllergiesBy': ('identity', 'Users'), 'StatusSetBy': ('identity', 'Users'),
     'AppointmentId': ('scheduling', 'Appointments'),
+    'AddedBy': ('identity', 'Users'), 'OrderedBy': ('identity', 'Users'), 'SentBy': ('identity', 'Users'), 'CreatedBy': ('identity', 'Users'),
     'NotificationId': ('notifications', 'Notifications'), 'ReviewId': ('tenancy', 'AccessReviews'),
 }
 # CalendarId (and the from/to of a reschedule) is a doctor (a membership, inferred) or a room, told apart by CalendarKind.
@@ -41,6 +42,7 @@ PLANNED_TO_BUILT = {
     'NOTIFICATION_ATTEMPT': 'notifications.Attempts', 'ENCOUNTER': 'encounters.Encounters',
     'OBSERVATION': 'encounters.Observations', 'PROBLEM': 'encounters.Problems', 'ALLERGY': 'encounters.Allergies', 'MEDICATION_STATEMENT': 'encounters.MedicationStatements',
     'CLINICAL_DOCUMENT': 'encounters.ClinicalDocuments',
+    'FORMULARY_ITEM': 'prescribing.FormularyItems', 'ORDER_SET': 'prescribing.OrderSets', 'CLINICAL_ORDER': 'prescribing.Orders', 'REFERRAL': 'prescribing.Referrals',
 }
 # where the built table covers only part of the planned entity
 PARTIAL = {
@@ -51,7 +53,7 @@ PARTIAL = {
     'DOC_SEQUENCE': 'numbering only; invoices and payments are not built',
 }
 LEDGER = {'audit.AuditEvents', 'patients.ConsentReceipts', 'tenancy.TermsAcceptances'}  # hash-chained, MDV-P0-036
-MODULE_ORDER = ['Tenancy', 'Identity', 'Patients', 'Scheduling', 'Encounters', 'Notifications', 'Audit', 'Leads', 'Billing', 'Platform']
+MODULE_ORDER = ['Tenancy', 'Identity', 'Patients', 'Scheduling', 'Encounters', 'Prescribing', 'Notifications', 'Audit', 'Leads', 'Billing', 'Platform']
 
 
 def module_edges():

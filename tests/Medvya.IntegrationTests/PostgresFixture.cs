@@ -3,6 +3,7 @@ using Medvya.Billing.Infrastructure.Persistence;
 using Medvya.BuildingBlocks.Domain;
 using Medvya.BuildingBlocks.Infrastructure;
 using Medvya.Encounters.Infrastructure.Persistence;
+using Medvya.Prescribing.Infrastructure.Persistence;
 using Medvya.Patients.Infrastructure.Persistence;
 using Medvya.Notifications.Infrastructure.Persistence;
 using Medvya.Scheduling.Infrastructure.Persistence;
@@ -30,7 +31,7 @@ public sealed class PostgresFixture : IAsyncLifetime
 
     // Every role becomes a login in the fixture, standing in for the Entra identity mapped to it in Azure.
     static readonly string[] Roles = ["medvya_app", "medvya_migrator", "medvya_reporting", "medvya_tenancy", "medvya_audit", "medvya_identity",
-        "medvya_patients", "medvya_billing", "medvya_scheduling", "medvya_leads", "medvya_notifications", "medvya_encounters", "medvya_jobs", "medvya_platform"];
+        "medvya_patients", "medvya_billing", "medvya_scheduling", "medvya_leads", "medvya_notifications", "medvya_encounters", "medvya_prescribing", "medvya_jobs", "medvya_platform"];
 
     /// <summary>The container superuser: the administrator's step, bulk loads and the restore-drill counts. Bypasses row-level security.</summary>
     // Command Timeout 300: the 150,000-row audit seed runs the per-row hash-chain trigger and took longer than Npgsql's 30 s default on a shared CI runner.
@@ -81,6 +82,8 @@ public sealed class PostgresFixture : IAsyncLifetime
     public SchedulingDbContext Scheduling(Guid? tenantId) => new(Options<SchedulingDbContext>(tenantId).Options, new FixedTenant(tenantId));
 
     public EncountersDbContext Encounters(Guid? tenantId) => new(Options<EncountersDbContext>(tenantId).Options, new FixedTenant(tenantId));
+
+    public PrescribingDbContext Prescribing(Guid? tenantId) => new(Options<PrescribingDbContext>(tenantId).Options, new FixedTenant(tenantId));
 
     public NotificationsDbContext Notifications(Guid? tenantId) => new(Options<NotificationsDbContext>(tenantId).Options, new FixedTenant(tenantId));
 

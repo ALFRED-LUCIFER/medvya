@@ -1,0 +1,85 @@
+import { useDeferredValue, useState } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useForm } from 'react-hook-form';
+import { ApiError } from '../../schedule/services/scheduleApi';
+import { emptyMedicine, medicineSchema, orderSetSchema, splitProblem, type MedicineForm, type OrderSetForm, type ProblemCode } from '../domain/formulary';
+import { addMedicine, addOrderSet, fetchOrderSets, searchFormulary } from '../services/formularyApi';
+
+const problemOf = (e: unknown) => splitProblem(e instanceof ApiError ? e.code : undefined);
+
+/** Medicines tab (F-13): search the country list, add a clinic medicine. The server validates by the country's rules and answers with codes. */
+export function useFormularyController() {
+  const queryClient = useQueryClient();
+  const [query, setQuery] = useState('');
+  const deferred = useDeferredValue(query.trim());
+  const list = useQuery({ queryKey: ['formulary', deferred], queryFn: () => searchFormulary(deferred), placeholderData: keepPreviousData });
+  const form = useForm<MedicineForm>({ resolver: zodResolver(medicineSchema), defaultValues: emptyMedicine() });
+  const [saved, setSaved] = useState(false);
+  const [formError, setFormError] = useState<ProblemCode | null>(null);
+
+  const add = useMutation({
+    mutationFn: addMedicine,
+    onSuccess: () => {
+      form.reset(emptyMedicine());
+      setSaved(true);
+      setFormError(null);
+      void queryClient.invalidateQueries({ queryKey: ['formulary'] });
+    },
+    onError: e => {
+      setSaved(false);
+      const { field, code } = problemOf(e);
+      if (field && field in medicineSchema.shape) form.setError(field as keyof MedicineForm, { type: 'server', message: code });
+      else setFormError(code);
+    },
+  });
+
+  return {
+    query,
+    onQuery: setQuery,
+    items: list.data ?? [],
+    loading: list.isPending,
+    failed: list.isError,
+    form,
+    saving: add.isPending,
+    saved,
+    formError,
+    onSubmit: form.handleSubmit(values => { setSaved(false); add.mutate(values); }),
+  };
+}
+
+/** Order sets: the clinic's list and the form to add one. */
+export function useOrderSetsController() {
+  const queryClient = useQueryClient();
+  const list = useQuery({ queryKey: ['order-sets'], queryFn: fetchOrderSets });
+  const form = useForm<OrderSetForm>({ resolver: zodResolver(orderSetSchema), defaultValues: { name: '', items: '' } });
+  const [saved, setSaved] = useState(false);
+  const [formError, setFormError] = useState<ProblemCode | null>(null);
+
+  const add = useMutation({
+    mutationFn: addOrderSet,
+    onSuccess: () => {
+      form.reset();
+      setSaved(true);
+      setFormError(null);
+      void queryClient.invalidateQueries({ queryKey: ['order-sets'] });
+    },
+    onError: e => {
+      setSaved(false);
+      const { field, code } = problemOf(e);
+      if (field === 'name' || field === 'items') form.setError(field, { type: 'server', message: code });
+      else setFormError(code);
+    },
+  });
+
+  return {
+    sets: list.data ?? [],
+    loading: list.isPending,
+    failed: list.isError,
+    form,
+    saving: add.isPending,
+    saved,
+    formError,
+    onSubmit: form.handleSubmit(values => { setSaved(false); add.mutate(values); }),
+  };
+}

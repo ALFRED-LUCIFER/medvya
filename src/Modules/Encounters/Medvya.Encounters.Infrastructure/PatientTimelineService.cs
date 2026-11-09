@@ -17,7 +17,7 @@ namespace Medvya.Encounters.Infrastructure;
 /// Documents join once their scan has passed (MDV-P2-006); an unscanned or quarantined file is not in the record.
 /// shortcut: lab-feed results (the lab integration) and signed notes (MDV-P2-012) are not sources yet. A page can repeat entries only if more than one page of one source shares a single instant.
 /// </summary>
-public sealed class PatientTimelineService(EncountersDbContext db, IClinicalAccess clinical, ICurrentTenant tenant, ICurrentUser user, IAuditLog audit, TimeProvider clock) : IPatientTimeline
+public sealed class PatientTimelineService(EncountersDbContext db, IClinicalAccess clinical, ICurrentTenant tenant, ICurrentUser user, IAuditLog audit, TimeProvider clock, IEnumerable<ITimelineSource> sources) : IPatientTimeline
 {
     public const string ReadAction = "patient.timeline.read", TrendsAction = "patient.trends.read";
     static readonly Access[] Treats = [Access.Read, Access.Limited, Access.Full, Access.Sign];
@@ -59,6 +59,10 @@ public sealed class PatientTimelineService(EncountersDbContext db, IClinicalAcce
                 .OrderByDescending(d => d.UploadedAt).ThenByDescending(d => d.Id).Take(take + 1).ToListAsync(cancellationToken);
             entries.AddRange(rows.Select(d => new TimelineEntry(d.Id, TimelineKind.Document, d.UploadedAt, $"Document{d.Type}", null, d.DocumentDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), d.UploadedBy, d.Source)));
         }
+
+        // Other modules' entries (orders, MDV-P2-018) are clinician-entered: they have no other source to filter by.
+        if (Wants(TimelineKind.Order) && (query.Source is null or ChartSource.ClinicianVerified))
+            foreach (var source in sources) entries.AddRange(await source.EntriesAsync(patientId, cut, take + 1, cancellationToken));
 
         var ordered = entries.OrderByDescending(e => e.At).ThenByDescending(e => e.Id).AsEnumerable();
         if (query.Before is { } before) ordered = ordered.Where(e => e.At < before.At || (e.At == before.At && e.Id.CompareTo(before.Id) < 0));

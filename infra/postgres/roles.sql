@@ -24,7 +24,7 @@ DECLARE r text;
 BEGIN
     FOREACH r IN ARRAY ARRAY['medvya_owner', 'medvya_migrator', 'medvya_app', 'medvya_reporting', 'medvya_tenancy', 'medvya_audit',
                              'medvya_identity', 'medvya_patients', 'medvya_billing', 'medvya_scheduling', 'medvya_leads',
-                             'medvya_notifications', 'medvya_encounters', 'medvya_jobs', 'medvya_platform']
+                             'medvya_notifications', 'medvya_encounters', 'medvya_prescribing', 'medvya_jobs', 'medvya_platform']
     LOOP
         IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = r) THEN
             EXECUTE format('CREATE ROLE %I NOLOGIN NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE NOREPLICATION', r);
@@ -54,7 +54,7 @@ GRANT medvya_owner TO medvya_migrator WITH INHERIT FALSE, SET TRUE;
 DO $$
 DECLARE s text;
 BEGIN
-    FOREACH s IN ARRAY ARRAY['tenancy', 'audit', 'identity', 'patients', 'billing', 'scheduling', 'leads', 'notifications', 'encounters', 'hangfire', 'ledger', 'reporting', 'platform']
+    FOREACH s IN ARRAY ARRAY['tenancy', 'audit', 'identity', 'patients', 'billing', 'scheduling', 'leads', 'notifications', 'encounters', 'prescribing', 'hangfire', 'ledger', 'reporting', 'platform']
     LOOP
         EXECUTE format('CREATE SCHEMA IF NOT EXISTS %I', s);
         EXECUTE format('ALTER SCHEMA %I OWNER TO medvya_owner', s);
@@ -77,7 +77,7 @@ DO $$
 DECLARE r text;
 BEGIN
     FOREACH r IN ARRAY ARRAY['medvya_tenancy', 'medvya_audit', 'medvya_identity', 'medvya_patients', 'medvya_billing', 'medvya_scheduling',
-                             'medvya_leads', 'medvya_notifications', 'medvya_encounters', 'medvya_jobs']
+                             'medvya_leads', 'medvya_notifications', 'medvya_encounters', 'medvya_prescribing', 'medvya_jobs']
     LOOP
         EXECUTE format('GRANT %I TO medvya_app', r);
     END LOOP;
@@ -90,7 +90,7 @@ SET ROLE medvya_owner;
 DO $$
 DECLARE s text;
 BEGIN
-    FOREACH s IN ARRAY ARRAY['tenancy', 'audit', 'identity', 'patients', 'billing', 'scheduling', 'leads', 'notifications', 'encounters', 'hangfire', 'ledger', 'reporting', 'platform']
+    FOREACH s IN ARRAY ARRAY['tenancy', 'audit', 'identity', 'patients', 'billing', 'scheduling', 'leads', 'notifications', 'encounters', 'prescribing', 'hangfire', 'ledger', 'reporting', 'platform']
     LOOP
         EXECUTE format('GRANT USAGE, CREATE ON SCHEMA %I TO medvya_migrator', s);
     END LOOP;
@@ -117,6 +117,8 @@ INSERT INTO module_grants VALUES
     ('notifications', 'medvya_notifications', 'SELECT, INSERT, UPDATE'),
     -- Encounters: clinical records are never deleted (an ended consultation stays; corrections are addenda). Not in reporting.
     ('encounters',    'medvya_encounters',    'SELECT, INSERT, UPDATE'),
+    -- Prescribing: the formulary, order sets and (later) prescriptions and orders. A medicine is made inactive, never deleted. Not in reporting.
+    ('prescribing',   'medvya_prescribing',   'SELECT, INSERT, UPDATE'),
     -- Hangfire job storage in its own schema, no module data. Its tables are created by the owner on deploy (the app may not).
     -- shortcut: a role, not yet a separate database login; give the Worker its own identity when Worker.Jobs becomes a separate host.
     ('hangfire',      'medvya_jobs',          'SELECT, INSERT, UPDATE, DELETE'),

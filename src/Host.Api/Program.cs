@@ -9,6 +9,8 @@ using Host.Api.Middleware;
 using Medvya.Identity.Api;
 using Medvya.Encounters.Api;
 using Medvya.Encounters.Infrastructure;
+using Medvya.Prescribing.Api;
+using Medvya.Prescribing.Infrastructure;
 using Medvya.Notifications.Api;
 using Medvya.Notifications.Application;
 using Medvya.Notifications.Infrastructure;
@@ -65,7 +67,7 @@ builder.Services.AddScoped<IRequestOrigin>(sp => sp.GetRequiredService<RequestCo
 // capability handler exists, so capability-guarded endpoints answer 403.
 if (builder.Configuration.GetConnectionString("Medvya") is { } sql)
 {
-    builder.Services.AddAuditModule(sql).AddDeniedAccessAudit().AddTenancyModule(sql, builder.Configuration["Storage:ConnectionString"], builder.Configuration["Storage:BlobEndpoint"]).AddIdentityModule(sql).AddPatientsModule(sql).AddSchedulingModule(sql).AddEncountersModule(sql, builder.Configuration, builder.Environment.IsDevelopment())
+    builder.Services.AddAuditModule(sql).AddDeniedAccessAudit().AddTenancyModule(sql, builder.Configuration["Storage:ConnectionString"], builder.Configuration["Storage:BlobEndpoint"]).AddIdentityModule(sql).AddPatientsModule(sql).AddSchedulingModule(sql).AddEncountersModule(sql, builder.Configuration, builder.Environment.IsDevelopment()).AddPrescribingModule(sql)
         .AddNotificationsModule(sql, smsSink: builder.Environment.IsDevelopment() && builder.Configuration["Notifications:Sms:Provider"] == "Sink")
         .AddScoped<IReminderConsent, PatientReminderConsent>() // after the module: replaces its deny-all default (MDV-P1-019)
         .AddLeadsModule(sql, builder.Configuration.GetSection("Leads:Email").Get<LeadsEmailOptions>() ?? new()).AddCapabilityPolicies();
@@ -179,6 +181,9 @@ app.MapPatientEndpoints();
 app.MapAccessRequestEndpoints();
 app.MapEncounterEndpoints();
 app.MapIntakeEndpoints();
+app.MapFormularyEndpoints();
+app.MapOrderEndpoints();
+app.MapReferralEndpoints();
 app.MapNoteTemplateEndpoints();
 if (app.Environment.IsDevelopment() && app.Configuration["Authentication:Oidc:Authority"]?.EndsWith(DevIdentityProvider.Path, StringComparison.Ordinal) == true)
     app.MapDevIdentityProvider(Medvya.Identity.Domain.IdentityProviders.Development, async http =>

@@ -22,11 +22,14 @@ public static class RowLevelSecurity
     /// <summary>Forces RLS on <paramref name="schema"/>.<paramref name="table"/> and allows only rows whose <paramref name="column"/> is the connection's tenant.</summary>
     /// <param name="alsoReadable">An extra condition for seeing rows (the facility picker). Every write still has to pass the tenant check,
     /// so an UPDATE of a row seen this way fails loudly, and DELETE sees tenant rows only.</param>
-    public static void Tenant(this MigrationBuilder migration, string schema, string table, string column = "TenantId", string? alsoReadable = null)
+    /// <param name="sharedRows">Rows whose tenant column is NULL are a shared catalogue (the formulary's starter list): every tenant reads them,
+    /// and no tenant can write them (the write checks still demand the connection's own tenant).</param>
+    public static void Tenant(this MigrationBuilder migration, string schema, string table, string column = "TenantId", string? alsoReadable = null, bool sharedRows = false)
     {
         var t = $"\"{schema}\".\"{table}\"";
         var own = $"\"{column}\" = {CurrentTenant}";
         var read = alsoReadable is null ? own : $"({own}) OR ({NoTenantSet} AND {alsoReadable})";
+        if (sharedRows) read = $"({read}) OR \"{column}\" IS NULL";
         migration.Sql($"""
             ALTER TABLE {t} ENABLE ROW LEVEL SECURITY;
             ALTER TABLE {t} FORCE ROW LEVEL SECURITY;

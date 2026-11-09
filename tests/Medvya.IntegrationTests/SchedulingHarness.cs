@@ -1,5 +1,6 @@
 using Medvya.Audit.Infrastructure;
 using Medvya.Encounters.Infrastructure;
+using Medvya.Prescribing.Infrastructure;
 using Medvya.BuildingBlocks.Domain;
 using Medvya.Identity.Domain;
 using Medvya.Identity.Infrastructure;
@@ -45,6 +46,8 @@ internal sealed class SchedulingHarness(PostgresFixture sql)
         [Role.Nurse] = Nurse, [Role.Patient] = PortalUser, [Role.CareCoordinator] = CareCoordinator, [Role.HospitalIt] = HospitalIt,
     };
     public readonly Guid Patient = Guid.NewGuid(), SecondPatient = Guid.NewGuid(), OtherFacilityPatient = Guid.NewGuid();
+    /// <summary>The tenant's country; "AE" gives a UAE clinic (its patients and clock stay Indian: only the tenant's rules differ).</summary>
+    public string Country { get; init; } = "IN";
     public ManualClock Clock { get; } = new(MondayMorning);
     public InMemoryLogos Logos { get; } = new();
     public SchedulingOptions Options { get; } = new();
@@ -58,7 +61,7 @@ internal sealed class SchedulingHarness(PostgresFixture sql)
     {
         await using (var db = sql.Context(Tenant))
         {
-            db.Tenants.Add(new Tenant { Id = Tenant, Name = "Iyer Family Clinic (synthetic)", CountryCode = "IN", ResidencyRegion = "centralindia" });
+            db.Tenants.Add(new Tenant { Id = Tenant, Name = "Iyer Family Clinic (synthetic)", CountryCode = Country, ResidencyRegion = "centralindia" });
             db.Facilities.Add(new Facility { Id = Facility, TenantId = Tenant, Name = "Adyar (synthetic)", TimeZone = "Asia/Kolkata" });
             db.Facilities.Add(new Facility { Id = OtherFacility, TenantId = Tenant, Name = "Velachery (synthetic)", TimeZone = "Asia/Kolkata" });
             foreach (var (user, role, at) in new[]
@@ -115,7 +118,7 @@ internal sealed class SchedulingHarness(PostgresFixture sql)
             .AddSingleton<Medvya.Tenancy.Application.ILogoStore>(Logos) // before the module, which only adds a store when none is registered
             .AddSingleton(sql.NationalIds) // the fixture's national-ID setup (this harness has no host configuration)
             .AddAuditModule(ConnectionString).AddTenancyModule(ConnectionString).AddIdentityModule(ConnectionString)
-            .AddPatientsModule(ConnectionString).AddSchedulingModule(ConnectionString).AddEncountersModule(ConnectionString);
+            .AddPatientsModule(ConnectionString).AddSchedulingModule(ConnectionString).AddEncountersModule(ConnectionString).AddPrescribingModule(ConnectionString);
         if (interceptor is not null) services.ConfigureDbContext<Medvya.Scheduling.Infrastructure.Persistence.SchedulingDbContext>(o => o.AddInterceptors(interceptor));
         services.Configure<SchedulingOptions>(o => (o.SlotHold, o.LockTimeout) = (Options.SlotHold, Options.LockTimeout));
         configure?.Invoke(services);

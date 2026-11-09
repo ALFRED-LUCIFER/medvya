@@ -28,6 +28,7 @@
     <ProjectReference Include="..\..\src\Modules\Leads\Medvya.Leads.Domain\Medvya.Leads.Domain.csproj" />
     <ProjectReference Include="..\..\src\Modules\Notifications\Medvya.Notifications.Domain\Medvya.Notifications.Domain.csproj" />
     <ProjectReference Include="..\..\src\Modules\Encounters\Medvya.Encounters.Domain\Medvya.Encounters.Domain.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Prescribing\Medvya.Prescribing.Domain\Medvya.Prescribing.Domain.csproj" />
     <ProjectReference Include="..\..\src\Modules\Platform\Medvya.Platform.Domain\Medvya.Platform.Domain.csproj" />
     <!-- The console host, to check it can reach no clinic module (PlatformConsoleTests). -->
     <ProjectReference Include="..\..\src\Host.Platform\Host.Platform.csproj" />

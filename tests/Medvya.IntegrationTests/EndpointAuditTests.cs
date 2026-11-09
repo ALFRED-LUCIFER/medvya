@@ -95,6 +95,13 @@ public sealed class EndpointAuditTests(PostgresFixture sql) : IClassFixture<Post
         "GET /v1/settings/notifications/templates",
         // Queue TV (MDV-P1-031): display sessions only, never staff. Tokens, rooms, doctor display names and waits, no patient
         // data (QueueTvTests pins the fields); the hub's message is empty. Pairing a display is audited (queue_display.pair).
+        // Formulary and order sets (MDV-P2-014): medicine names, classes and test names, no patient data; an add is audited inside the service (formulary.add, orderset.create; FormularyTests).
+        "GET /v1/formulary",
+        "GET /v1/order-sets",
+        "GET /v1/settings/formulary",
+        "POST /v1/settings/formulary",
+        "GET /v1/settings/order-sets",
+        "POST /v1/settings/order-sets",
         "GET /v1/queue/tv",
         "GET /v1/queue/hub/negotiate",
         "GET /v1/queue/hub",

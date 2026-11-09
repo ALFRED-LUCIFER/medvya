@@ -6,6 +6,7 @@ using Medvya.Identity.Infrastructure.Persistence;
 using Medvya.Leads.Infrastructure.Persistence;
 using Medvya.Platform.Infrastructure.Persistence;
 using Medvya.Encounters.Infrastructure.Persistence;
+using Medvya.Prescribing.Infrastructure.Persistence;
 using Medvya.Notifications.Infrastructure.Persistence;
 using Medvya.Patients.Infrastructure.Persistence;
 using Medvya.Scheduling.Infrastructure.Persistence;
@@ -89,6 +90,7 @@ public static class DatabaseMigrator
         await Migrate(new SchedulingDbContext(Options<SchedulingDbContext>(connection), None), ct);
         await Migrate(new NotificationsDbContext(Options<NotificationsDbContext>(connection), None), ct);
         await Migrate(new EncountersDbContext(Options<EncountersDbContext>(connection), None), ct);
+        await Migrate(new PrescribingDbContext(Options<PrescribingDbContext>(connection), None), ct);
         await Migrate(new LeadsDbContext(Options<LeadsDbContext>(connection)), ct);
         await Migrate(new PlatformDbContext(Options<PlatformDbContext>(connection)), ct);
 

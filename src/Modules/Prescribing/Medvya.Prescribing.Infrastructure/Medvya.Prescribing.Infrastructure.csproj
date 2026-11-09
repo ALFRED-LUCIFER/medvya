@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Medvya.Prescribing.Application\Medvya.Prescribing.Application.csproj" />
+    <ProjectReference Include="..\Medvya.Prescribing.Domain\Medvya.Prescribing.Domain.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\Medvya.BuildingBlocks.Infrastructure\Medvya.BuildingBlocks.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Audit\Medvya.Audit.Application\Medvya.Audit.Application.csproj" />
+    <ProjectReference Include="..\..\Tenancy\Medvya.Tenancy.Application\Medvya.Tenancy.Application.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+  </ItemGroup>
+
+</Project>

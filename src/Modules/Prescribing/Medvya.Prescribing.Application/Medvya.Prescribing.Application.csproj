@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\Medvya.Prescribing.Domain\Medvya.Prescribing.Domain.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,4 +1,7 @@
 import { useSearchParams } from 'react-router';
+import FormularyPanel from '../features/formulary/components/FormularyPanel';
+import OrderSetsPanel from '../features/formulary/components/OrderSetsPanel';
+import { useFormularyController, useOrderSetsController } from '../features/formulary/hooks/useFormularyController';
 import DoctorsPanel from '../features/settings/components/DoctorsPanel';
 import HolidaysPanel from '../features/settings/components/HolidaysPanel';
 import HoursPanel from '../features/settings/components/HoursPanel';
@@ -51,6 +54,15 @@ function Doctors({ facilityId }: { facilityId: string }) {
   return <DoctorsPanel {...useDoctorsController(facilityId)} locations={useLocationChoice(facilityId).locations} />;
 }
 
+function Medicines({ country }: { country: 'IN' | 'AE' | null }) {
+  return (
+    <>
+      <FormularyPanel country={country} {...useFormularyController()} />
+      <OrderSetsPanel {...useOrderSetsController()} />
+    </>
+  );
+}
+
 const Terms = () => <TermsPanel {...useTermsController()} />;
 const Notifications = () => <NotificationsPanel {...useNotificationSettingsController()} />;
 const Audit = () => <AuditLogPanel {...useAuditLogController()} />;
@@ -81,6 +93,6 @@ export default function SettingsRoute({ facilityId, country }: { facilityId: str
   const [params, setParams] = useSearchParams();
   const asked = params.get('tab');
   const tab: SettingsTab = (settingsTabs as readonly string[]).includes(asked ?? '') ? (asked as SettingsTab) : 'profile';
-  const panels = { profile: <Profile />, locations: <Locations facilityId={facilityId} />, hours: <Hours facilityId={facilityId} />, holidays: <Holidays facilityId={facilityId} />, staff: <Staff facilityId={facilityId} />, doctors: <Doctors facilityId={facilityId} />, displays: <Displays facilityId={facilityId} />, audit: <Audit />, metrics: <Metrics facilityId={facilityId} />, terms: <Terms />, notifications: <Notifications />, data: <DataPanel country={country} accessLogPath="/settings?tab=audit" /> };
+  const panels = { profile: <Profile />, locations: <Locations facilityId={facilityId} />, hours: <Hours facilityId={facilityId} />, holidays: <Holidays facilityId={facilityId} />, staff: <Staff facilityId={facilityId} />, doctors: <Doctors facilityId={facilityId} />, medicines: <Medicines country={country} />, displays: <Displays facilityId={facilityId} />, audit: <Audit />, metrics: <Metrics facilityId={facilityId} />, terms: <Terms />, notifications: <Notifications />, data: <DataPanel country={country} accessLogPath="/settings?tab=audit" /> };
   return <SettingsPage tab={tab} onTab={next => setParams({ tab: next }, { replace: true })} panels={panels} />;
 }

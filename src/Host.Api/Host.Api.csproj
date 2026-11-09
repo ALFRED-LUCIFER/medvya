@@ -15,6 +15,8 @@
     <ProjectReference Include="..\Modules\Notifications\Medvya.Notifications.Api\Medvya.Notifications.Api.csproj" />
     <ProjectReference Include="..\Modules\Encounters\Medvya.Encounters.Api\Medvya.Encounters.Api.csproj" />
     <ProjectReference Include="..\Modules\Encounters\Medvya.Encounters.Infrastructure\Medvya.Encounters.Infrastructure.csproj" />
+    <ProjectReference Include="..\Modules\Prescribing\Medvya.Prescribing.Api\Medvya.Prescribing.Api.csproj" />
+    <ProjectReference Include="..\Modules\Prescribing\Medvya.Prescribing.Infrastructure\Medvya.Prescribing.Infrastructure.csproj" />
     <ProjectReference Include="..\Modules\Notifications\Medvya.Notifications.Infrastructure\Medvya.Notifications.Infrastructure.csproj" />
     <ProjectReference Include="..\BuildingBlocks\Medvya.BuildingBlocks.Domain\Medvya.BuildingBlocks.Domain.csproj" />
   </ItemGroup>

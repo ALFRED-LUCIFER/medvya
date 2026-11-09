@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Medvya.Prescribing.Application\Medvya.Prescribing.Application.csproj" />
+    <ProjectReference Include="..\..\Tenancy\Medvya.Tenancy.Api\Medvya.Tenancy.Api.csproj" />
+  </ItemGroup>
+
+</Project>

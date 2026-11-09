@@ -10,7 +10,7 @@ namespace Medvya.ArchitectureTests;
 /// </summary>
 public class PlatformConsoleTests
 {
-    static readonly string[] ClinicModules = ["Patients", "Encounters", "Scheduling", "Notifications", "Billing", "Tenancy", "Identity", "Audit", "Leads"];
+    static readonly string[] ClinicModules = ["Patients", "Encounters", "Prescribing", "Scheduling", "Notifications", "Billing", "Tenancy", "Identity", "Audit", "Leads"];
 
     internal static List<string> ClinicAssemblies(IEnumerable<string> names) =>
         [.. names.Where(n => ClinicModules.Any(m => n.StartsWith($"Medvya.{m}.", StringComparison.Ordinal)))];

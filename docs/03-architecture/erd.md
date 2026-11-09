@@ -35,6 +35,7 @@ flowchart LR
   api --> Patients["Patients<br/>schema patients<br/>7 tables"]
   api --> Scheduling["Scheduling<br/>schema scheduling<br/>15 tables"]
   api --> Encounters["Encounters<br/>schema encounters<br/>8 tables"]
+  api --> Prescribing["Prescribing<br/>schema prescribing<br/>2 tables"]
   api --> Notifications["Notifications<br/>schema notifications<br/>5 tables"]
   api --> Audit["Audit<br/>schema audit<br/>1 table"]
   api --> Leads["Leads<br/>schema leads<br/>2 tables"]
@@ -69,6 +70,8 @@ flowchart LR
   Notifications -->|"Api, Application, Domain"| Tenancy
   Patients -->|"Api, Application"| Audit
   Patients -->|"Api, Application"| Tenancy
+  Prescribing -->|"Application"| Audit
+  Prescribing -->|"Api, Application"| Tenancy
   Scheduling -->|"Api, Application"| Audit
   Scheduling -->|"Application"| Identity
   Scheduling -->|"Application"| Patients
@@ -78,7 +81,7 @@ flowchart LR
   Tenancy -->|"Application, Domain"| Scheduling
 ```
 
-`Host.Api` references: Audit, Encounters, Identity, Leads, Notifications, Patients, Scheduling, Tenancy. Modules with no incoming arrow from another module: Billing, Encounters, Leads, Notifications, Platform.
+`Host.Api` references: Audit, Encounters, Identity, Leads, Notifications, Patients, Prescribing, Scheduling, Tenancy. Modules with no incoming arrow from another module: Billing, Encounters, Leads, Notifications, Platform, Prescribing.
 
 ## 3. How the data links across modules
 
@@ -100,10 +103,11 @@ flowchart LR
   notifications -.->|"FacilityId"| tenancy
   patients -.->|"ChangedBy, DecidedBy, RegisteredBy"| identity
   patients -.->|"FacilityId"| tenancy
+  prescribing -.->|"AddedBy, CreatedBy"| identity
   scheduling -.->|"ActorUserId, BookedBy, ChangedBy, ..."| identity
   scheduling -.->|"MergedFromPatientId, PatientId"| patients
   scheduling -.->|"CalendarId, FacilityId, FromCalendarId, ..."| tenancy
-  tenancy -.->|"ActorUserId, ChangedBy, DecidedBy, ..."| identity
+  tenancy -.->|"ActorUserId, ChangedBy, CreatedBy, ..."| identity
   tenancy -.->|"PatientId"| patients
 ```
 
@@ -151,6 +155,7 @@ erDiagram
   FeatureFlags {
     guid Id PK
     guid ChangedBy "id of identity.Users"
+    guid CreatedBy "id of identity.Users"
   }
   Invitations {
     guid Id PK
@@ -209,6 +214,7 @@ erDiagram
   Tenants ||--o{ Facilities : "TenantId"
   Tenants ||--o{ FeatureFlags : "TenantId"
   identity_Users |o..o{ FeatureFlags : "ChangedBy"
+  identity_Users |o..o{ FeatureFlags : "CreatedBy"
   Memberships ||--o{ Invitations : "MembershipId"
   CustomRoles |o--o{ Memberships : "CustomRoleId"
   Facilities ||--o{ Memberships : "FacilityId"
@@ -368,7 +374,7 @@ erDiagram
 | `ChangedAt` | timestamptz |  |  |
 | `ChangedBy` | guid | yes | id of `identity.Users` |
 | `CreatedAt` | timestamptz |  |  |
-| `CreatedBy` | guid | yes |  |
+| `CreatedBy` | guid | yes | id of `identity.Users` |
 | `Description` | character varying(500) |  |  |
 | `Enabled` | bool |  |  |
 | `Key` | character varying(100) |  |  |
@@ -815,6 +821,7 @@ erDiagram
   }
   QueueDisplays {
     guid Id PK
+    guid CreatedBy "id of identity.Users"
     guid FacilityId "id of tenancy.Facilities"
   }
   QueueTokens {
@@ -826,10 +833,12 @@ erDiagram
   ScheduleExceptions {
     guid Id PK
     guid CalendarId "doctor or room"
+    guid CreatedBy "id of identity.Users"
     guid FacilityId "id of tenancy.Facilities"
   }
   Resources {
     guid Id PK
+    guid CreatedBy "id of identity.Users"
     guid FacilityId "id of tenancy.Facilities"
   }
   ScheduleSlots {
@@ -893,6 +902,7 @@ erDiagram
   tenancy_Facilities ||..o{ BookingConflicts : "FacilityId"
   tenancy_Facilities ||..o{ MetricBaselines : "FacilityId"
   identity_Users |o..o{ MetricBaselines : "RecordedBy"
+  identity_Users |o..o{ QueueDisplays : "CreatedBy"
   tenancy_Facilities ||..o{ QueueDisplays : "FacilityId"
   Appointments ||--o{ QueueTokens : "AppointmentId"
   tenancy_Memberships ||..o{ QueueTokens : "CalendarId (doctor calendar)"
@@ -900,7 +910,9 @@ erDiagram
   tenancy_Facilities ||..o{ QueueTokens : "FacilityId"
   tenancy_Memberships ||..o{ ScheduleExceptions : "CalendarId (doctor calendar)"
   Resources ||..o{ ScheduleExceptions : "CalendarId (room calendar)"
+  identity_Users |o..o{ ScheduleExceptions : "CreatedBy"
   tenancy_Facilities ||..o{ ScheduleExceptions : "FacilityId"
+  identity_Users |o..o{ Resources : "CreatedBy"
   tenancy_Facilities ||..o{ Resources : "FacilityId"
   Appointments ||--o{ ScheduleSlots : "AppointmentId"
   tenancy_Memberships ||..o{ ScheduleSlots : "CalendarId (doctor calendar)"
@@ -1049,7 +1061,7 @@ erDiagram
 |---|---|---|---|
 | `Id` | guid |  |  |
 | `CreatedAt` | timestamptz |  |  |
-| `CreatedBy` | guid | yes |  |
+| `CreatedBy` | guid | yes | id of `identity.Users` |
 | `FacilityId` | guid |  | id of `tenancy.Facilities` |
 | `Name` | character varying(60) |  |  |
 | `RevokedAt` | timestamptz | yes |  |
@@ -1082,7 +1094,7 @@ erDiagram
 | `Id` | guid |  |  |
 | `CalendarId` | guid |  | doctor or room (`CalendarKind`) |
 | `CreatedAt` | timestamptz |  |  |
-| `CreatedBy` | guid | yes |  |
+| `CreatedBy` | guid | yes | id of `identity.Users` |
 | `End` | time | yes |  |
 | `FacilityId` | guid |  | id of `tenancy.Facilities` |
 | `FromDate` | date |  |  |
@@ -1100,7 +1112,7 @@ erDiagram
 |---|---|---|---|
 | `Id` | guid |  |  |
 | `CreatedAt` | timestamptz |  |  |
-| `CreatedBy` | guid | yes |  |
+| `CreatedBy` | guid | yes | id of `identity.Users` |
 | `FacilityId` | guid |  | id of `tenancy.Facilities` |
 | `Name` | character varying(100) |  |  |
 | `TenantId` | guid |  | `tenancy.Tenants` |
@@ -1474,6 +1486,63 @@ erDiagram
 | `Source` | character varying(20) |  |  |
 | `TenantId` | guid |  | `tenancy.Tenants` |
 | `Verification` | character varying(20) |  |  |
+
+</details>
+
+### Prescribing (schema `prescribing`, 2 tables)
+
+```mermaid
+erDiagram
+  FormularyItems {
+    guid Id PK
+    guid AddedBy "id of identity.Users"
+  }
+  OrderSets {
+    guid Id PK
+    guid CreatedBy "id of identity.Users"
+  }
+  identity_Users {
+    guid Id PK "other module"
+  }
+  identity_Users |o..o{ FormularyItems : "AddedBy"
+  identity_Users ||..o{ OrderSets : "CreatedBy"
+```
+
+| Table | Columns | Primary key | Notes |
+|---|---|---|---|
+| `FormularyItems` | 14 | Id | tenant-scoped |
+| `OrderSets` | 5 | Id | tenant-scoped |
+
+<details><summary><code>prescribing.FormularyItems</code> columns</summary>
+
+| Column | Type | Null | Links to |
+|---|---|---|---|
+| `Id` | guid |  |  |
+| `Active` | bool |  |  |
+| `AddedAt` | timestamptz | yes |  |
+| `AddedBy` | guid | yes | id of `identity.Users` |
+| `Atc` | character varying(7) |  |  |
+| `Country` | character varying(2) |  |  |
+| `DefaultSig` | character varying(200) |  |  |
+| `Form` | character varying(40) |  |  |
+| `Generic` | character varying(200) |  |  |
+| `NationalCode` | character varying(30) |  |  |
+| `RegClass` | character varying(20) |  |  |
+| `Source` | character varying(20) |  |  |
+| `Strength` | character varying(50) |  |  |
+| `TenantId` | guid | yes | `tenancy.Tenants` |
+
+</details>
+
+<details><summary><code>prescribing.OrderSets</code> columns</summary>
+
+| Column | Type | Null | Links to |
+|---|---|---|---|
+| `Id` | guid |  |  |
+| `CreatedAt` | timestamptz |  |  |
+| `CreatedBy` | guid |  | id of `identity.Users` |
+| `Name` | character varying(100) |  |  |
+| `TenantId` | guid |  | `tenancy.Tenants` |
 
 </details>
 
@@ -1917,8 +1986,8 @@ From `docs/03-architecture/data-model.md` (areas A to D). "Built" means a table 
 | B · EMR, clinical authority | `PRESCRIPTION_ITEM` | not built | |
 | B · EMR, clinical authority | `REFERRAL` | not built | |
 | B · EMR, clinical authority | `PHARMACY_DISPATCH` | not built | |
-| B · EMR, clinical authority | `FORMULARY_ITEM` | not built | |
-| B · EMR, clinical authority | `ORDER_SET` | not built | |
+| B · EMR, clinical authority | `FORMULARY_ITEM` | built | `prescribing.FormularyItems` |
+| B · EMR, clinical authority | `ORDER_SET` | built | `prescribing.OrderSets` |
 | B · EMR, clinical authority | `CLINICAL_DOCUMENT` | built | `encounters.ClinicalDocuments` |
 | B · EMR, clinical authority | `DOCUMENT_PROVENANCE` | not built | |
 | B · EMR, clinical authority | `EXTERNAL_RECORD_LINK` | not built | |
@@ -1957,11 +2026,11 @@ From `docs/03-architecture/data-model.md` (areas A to D). "Built" means a table 
 
 Tables that exist but were added while building (not named in the plan): `encounters.IntakeEscalations`, `encounters.Intakes`, `identity.OnboardingDrafts`, `identity.Sessions`, `leads.DemoRequests`, `leads.Waitlist`, `notifications.Preferences`, `notifications.StaffNotificationReads`, `notifications.StaffNotifications`, `patients.DataKeys`, `patients.MergeRequests`, `platform.AuditEntries`, `platform.KeyLinks`, `platform.Members`, `platform.SecurityKeys`, `platform.Sessions`, `scheduling.AppointmentReschedules`, `scheduling.BookingConflicts`, `scheduling.MetricBaselines`, `scheduling.OutboxTenants`, `scheduling.QueueDisplays`, `scheduling.Resources`, `scheduling.SlotHolds`, `scheduling.VisitStatusEvents`, `tenancy.AccessRequests`, `tenancy.AccessReviewDecisions`, `tenancy.AccessReviews`, `tenancy.FeatureFlags`, `tenancy.Invitations`, `tenancy.OperatingHours`, `tenancy.PracticeDefaults`, `tenancy.Profiles`, `tenancy.SettingsChanges`, `tenancy.TenantIndex`, `tenancy.TermsAcceptances`.
 
-**Counts:** 65 tables across 10 schemas; 30 of 90 planned entities are built; 35 tables were added during the build.
+**Counts:** 67 tables across 11 schemas; 32 of 90 planned entities are built; 35 tables were added during the build.
 
 ## 6. Rules the model follows
 
-- **Tenant isolation:** 55 of 65 tables carry `TenantId` (EF query filter plus PostgreSQL forced row-level security on `medvya.tenant_id`). Without `TenantId`: `identity.OnboardingDrafts`, `identity.Users`, `leads.DemoRequests`, `leads.Waitlist`, `platform.AuditEntries`, `platform.KeyLinks`, `platform.Members`, `platform.SecurityKeys`, `platform.Sessions`, `tenancy.Tenants`. (`TenantId` present is not proof the row-level-security policy covers the table; see `docs/03-architecture/database-security.md`.)
+- **Tenant isolation:** 57 of 67 tables carry `TenantId` (EF query filter plus PostgreSQL forced row-level security on `medvya.tenant_id`). Without `TenantId`: `identity.OnboardingDrafts`, `identity.Users`, `leads.DemoRequests`, `leads.Waitlist`, `platform.AuditEntries`, `platform.KeyLinks`, `platform.Members`, `platform.SecurityKeys`, `platform.Sessions`, `tenancy.Tenants`. (`TenantId` present is not proof the row-level-security policy covers the table; see `docs/03-architecture/database-security.md`.)
 - **Append-only ledgers:** `audit.AuditEvents`, `patients.ConsentReceipts`, `tenancy.TermsAcceptances` (hash-chained, MDV-P0-036; each also has ChainSeq, PrevHash and RowHash added by `LedgerSql`, outside the EF model).
 - **No cross-module foreign keys:** modules link by id and through application services (AGENTS.md 3.1).
 - **Country data plane:** one deployment and one database per country (ADR-003); this diagram is the same in each.

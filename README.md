@@ -55,7 +55,7 @@ medvya/
 │   │                        #   today also holds feature endpoints (moved to modules by P0-040)
 │   ├── Host.Platform/       # exists (P5-040): platform console host, composition only; no clinic module (ADR-014)
 │   ├── BuildingBlocks/      # Domain, Application, Infrastructure, Security, Contracts, Country
-│   ├── Modules/             # exist: Identity, Tenancy, Audit, Patients, Scheduling, Encounters, Billing, Notifications, Leads, Platform
+│   ├── Modules/             # exist: Identity, Tenancy, Audit, Patients, Scheduling, Encounters, Prescribing, Billing, Notifications, Leads, Platform
 │   │                        # planned: Practice, Prescribing, Documents, Scribe, Care, Portal,
 │   │                        #   Insurance, Inventory, Laboratory, Migration, Devices, Integrations
 │   └── Workers/             # planned: Worker.Jobs, Worker.Ai, Worker.Integration (P3+; jobs run in Host today)

@@ -33,8 +33,10 @@ public sealed class OrganisationRequestTests(PostgresFixture sql) : IClassFixtur
     sealed class Mail : IEmailSender
     {
         public List<EmailMessage> Sent { get; } = [];
+        public bool Fails { get; set; }
         public Task SendAsync(EmailMessage message, CancellationToken cancellationToken = default)
         {
+            if (Fails) throw new IOException("mail server down");
             lock (Sent) Sent.Add(message);
             return Task.CompletedTask;
         }
@@ -253,6 +255,17 @@ public sealed class OrganisationRequestTests(PostgresFixture sql) : IClassFixtur
         Assert.Contains("organisation.state.Suspended", await audit.Events.Select(e => e.Action).ToListAsync());
         Assert.Equal(5, mail.Sent.Count); // changes, rejection, approval, suspension, reinstatement; the applicant's own submits send nothing
         Assert.All(mail.Sent, m => Assert.Equal("desk@iyer-clinic.example", m.To));
+    }
+
+    [Fact]
+    public async Task AFailedEmailDoesNotUndoTheDecision()
+    {
+        await SetStateAsync(OrganisationState.Submitted);
+        mail.Fails = true;
+        var ops = Client(approver);
+        Assert.Equal(HttpStatusCode.NoContent, (await ops.PostAsJsonAsync($"/v1/operations/organisations/{h.Tenant}/approve", new { reason = "Documents checked" })).StatusCode);
+        Assert.Equal(OrganisationState.Approved, await StateAsync()); // the applicant reads the outcome on the status page
+        Assert.Empty(mail.Sent);
     }
 
     [Fact]

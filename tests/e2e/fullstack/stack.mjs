@@ -15,6 +15,7 @@ const apiPort = process.env.E2E_API_PORT ?? '5391';
 const clockStart = process.env.E2E_CLOCK_START ?? '2026-11-03T04:00:00Z'; // Tuesday 09:30 in Asia/Kolkata
 const password = `Pw_${randomBytes(12).toString('hex')}_1A`;
 const container = `medvya-e2e-sql-${process.pid}`;
+const blobContainer = `medvya-e2e-blob-${process.pid}`;
 const work = mkdtempSync(join(tmpdir(), 'medvya-e2e-'));
 const log = m => console.log(`[stack] ${m}`);
 let api;
@@ -26,7 +27,7 @@ const freePort = () => new Promise((ok, fail) => {
 
 function cleanup() {
   if (api?.pid) try { process.kill(-api.pid, 'SIGTERM'); } catch { /* already gone */ }
-  spawnSync('docker', ['rm', '-f', container], { stdio: 'ignore' });
+  spawnSync('docker', ['rm', '-f', container, blobContainer], { stdio: 'ignore' });
   rmSync(work, { recursive: true, force: true });
 }
 for (const sig of ['SIGTERM', 'SIGINT', 'SIGHUP']) process.on(sig, () => { cleanup(); process.exit(0); });
@@ -39,6 +40,11 @@ try {
   log(`PostgreSQL on 127.0.0.1:${sqlPort}`);
   execFileSync('docker', ['run', '-d', '--rm', '--name', container, '-p', `127.0.0.1:${sqlPort}:5432`,
     '-e', 'POSTGRES_DB=medvya', '-e', 'POSTGRES_USER=medvya', '-e', `POSTGRES_PASSWORD=${password}`, 'postgres:16'], { stdio: 'ignore' });
+  // Private Blob for the onboarding documents (MDV-P1-062): a throwaway Azurite whose account key is random per run.
+  const blobPort = await freePort();
+  const blobKey = randomBytes(48).toString('base64');
+  execFileSync('docker', ['run', '-d', '--rm', '--name', blobContainer, '-p', `127.0.0.1:${blobPort}:10000`, '-e', `AZURITE_ACCOUNTS=medvyae2e:${blobKey}`,
+    'mcr.microsoft.com/azure-storage/azurite:latest', 'azurite-blob', '--blobHost', '0.0.0.0', '--loose', '--skipApiVersionCheck'], { stdio: 'ignore' });
   const as = user => `Host=127.0.0.1;Port=${sqlPort};Database=medvya;Username=${user};Password=${password}`;
   const connection = as('medvya_app'); // the API and the seeder run as the application role, so row-level security applies
 
@@ -73,6 +79,9 @@ try {
       ASPNETCORE_WEBROOT: join(work, 'wwwroot'),
       Authentication__Oidc__Authority: `http://localhost:${apiPort}/dev-idp`,
       ConnectionStrings__Medvya: connection,
+      Storage__ConnectionString: `DefaultEndpointsProtocol=http;AccountName=medvyae2e;AccountKey=${blobKey};BlobEndpoint=http://127.0.0.1:${blobPort}/medvyae2e;`,
+      // Medvya operations for the approval API (MDV-P1-064): the seeded practice admin K. Lakshmi stands in for the operator (a Development stack only).
+      Operations__OrganisationApprovers__0: '5e1d0001-0002-4000-8000-000000000007',
       Web__AppPath: '/app/', // as on Azure: server-made redirects (sign-in refused, signed out) go to the app, not the public site
       Testing__ClockStartUtc: clockStart,
       // Every browser here is one client IP, and Host.Api also serves the app's scripts: the per-IP budget (300/min) is for a real desk.

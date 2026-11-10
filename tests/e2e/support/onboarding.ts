@@ -57,6 +57,8 @@ export async function completeWizard(page: Page, { lost = false } = {}) {
   await page.getByRole('button', { name: 'Start setup' }).click();
   await page.getByLabel('Full name').fill('Arjun Rao (synthetic)');
   await page.getByLabel('Practice name').fill('Rao Clinic (synthetic)');
+  await page.getByLabel('A clinic').check();
+  await page.getByLabel('Email Medvya writes to about this request').fill('desk@example.test');
   await page.getByLabel(/^Address/).fill('12 Test Street, Chennai');
   await page.getByLabel('General practice').check();
   await page.getByRole('combobox', { name: 'Medical council' }).click();

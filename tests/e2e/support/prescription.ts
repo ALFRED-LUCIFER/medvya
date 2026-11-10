@@ -77,6 +77,7 @@ export async function mockPrescription(page: Page, opts: {
   });
   await page.route('**/v1/encounters/e-1/prescription/print', r =>
     state.authorised && !state.changed ? r.fulfill({ json: printView() }) : r.fulfill({ status: 409, json: { code: state.authorised ? 'changed' : 'not_authorised' } }));
+  await page.route('**/v1/encounters/e-1/prescription/shares', r => r.fulfill({ json: [] })); // MDV-P2-020; support/share.ts mocks the share flow
   let layout = { layoutVersion: 1, approvedAt: null as string | null };
   await page.route('**/v1/prescription-layout', r => r.fulfill({ json: layout }));
   await page.route('**/v1/prescription-layout/approval', r => { calls.approved++; layout = { ...layout, approvedAt: '2026-10-19T04:55:00Z' }; return r.fulfill({ json: layout }); });

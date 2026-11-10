@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { FileDown, Printer, ShieldCheck } from 'lucide-react';
 import { ltr, useI18n } from '@medvya/i18n';
@@ -12,6 +13,8 @@ type Props = {
   onPrint: () => void; onPdf: (paper: 'A4' | 'A5') => void; downloading: 'A4' | 'A5' | null; pdfProblem: 'unsupported' | 'failed' | null;
   layout: RxLayout | null; approving: boolean; layoutFailed: boolean; onApprove: () => void;
   consultPath: string;
+  /** The share panel (MDV-P2-020), under the paper once it prints. */
+  share?: ReactNode;
 };
 
 /**
@@ -95,6 +98,7 @@ export default function RxPrintPage(p: Props) {
           </>}
         {p.layoutFailed && <p role="alert" className="font-bold text-danger-700">{t('rxPrint.layout.failed')}</p>}
       </section>
+      {p.share}
     </div>
   );
 }

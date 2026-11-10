@@ -2981,7 +2981,7 @@ export interface paths {
             };
             requestBody: {
                 content: {
-                    "application/json": components["schemas"]["SaveLocation"];
+                    "application/json": components["schemas"]["AddLocation"];
                 };
             };
             responses: {
@@ -6066,6 +6066,16 @@ export interface components {
             newVisitFee?: null | number | string;
             /** Format: int64 */
             followUpFee?: null | number | string;
+        };
+        AddLocation: {
+            name?: null | string;
+            address?: null | string;
+            timeZone?: null | string;
+            countryCode?: null | string;
+            taxNumber?: null | string;
+            certificateName?: null | string;
+            /** Format: byte */
+            certificate?: null | string;
         };
         AddMedicine: {
             name: null | string;

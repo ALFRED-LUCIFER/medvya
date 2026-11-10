@@ -57,6 +57,9 @@ public sealed class TenancyDbContext(DbContextOptions<TenancyDbContext> options,
             e.Property(x => x.Name).HasMaxLength(200);
             e.Property(x => x.TimeZone).HasMaxLength(64);
             e.Property(x => x.Address).HasMaxLength(500);
+            e.Property(x => x.TaxNumber).HasMaxLength(20);
+            e.Property(x => x.CertificateName).HasMaxLength(200);
+            e.Property(x => x.CertificateKey).HasMaxLength(200);
             e.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
             e.HasAlternateKey(x => new { x.TenantId, x.Id }); // the target of the membership's (TenantId, FacilityId) key (#890)
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);

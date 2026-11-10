@@ -1,20 +1,24 @@
-import { useI18n } from '@medvya/i18n';
+import { useI18n, type MessageKey } from '@medvya/i18n';
 import { Button, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea } from '@medvya/ui';
 import { timeZones } from '../domain/settings';
 import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
-import type { CalendarTemplate, LocationChoice, LocationForm, ResourceForm } from '../domain/settings';
+import type { AddLocationForm, CalendarTemplate, LocationChoice, ResourceForm } from '../domain/settings';
 import { describedBy, fieldError } from './fieldStyles';
 import { Field } from './Field';
 import { LocationSelect } from './LocationSelect';
 import { Section } from './Section';
 
 type Props = LocationChoice & {
-  form: UseFormReturn<LocationForm>;
+  form: UseFormReturn<AddLocationForm>;
   editingId: string | null;
   onEdit: (id: string | null) => void;
   saving: boolean;
-  saveFailed: boolean;
+  saveProblem: MessageKey | null;
+  certificateError: MessageKey | null;
+  certificateName: string | null;
+  onCertificate: (file: File | undefined) => void;
+  added: string | null;
   onSubmit: FormEventHandler<HTMLFormElement>;
   resources: CalendarTemplate[];
   resourcesFailed: boolean;
@@ -61,10 +65,23 @@ export default function LocationsPanel(p: Props) {
           <Field id="location-address" label={t('settings.locations.address')} error={errors.address && t('settings.error.tooLong')} className="sm:col-span-2">
             <Textarea id="location-address" rows={2} {...describedBy('location-address', !!errors.address)} {...p.form.register('address')} />
           </Field>
+          {!editing && (
+            <>
+              <Field id="location-tax" label={t('settings.locations.taxNumber')} hint={t('settings.locations.taxNumberHint')} error={errors.taxNumber && t(errors.taxNumber.message as MessageKey)}>
+                <Input id="location-tax" className="h-11" autoComplete="off" {...describedBy('location-tax', !!errors.taxNumber, true)} {...p.form.register('taxNumber')} />
+              </Field>
+              <Field id="location-certificate" label={t('settings.locations.certificate')} hint={t('settings.locations.certificateHint')} error={p.certificateError && t(p.certificateError)}>
+                <Input id="location-certificate" type="file" accept="application/pdf,image/png,image/jpeg" className="h-auto min-h-11 py-2" {...describedBy('location-certificate', !!p.certificateError, true)}
+                  onChange={e => p.onCertificate(e.currentTarget.files?.[0])} />
+              </Field>
+              {p.certificateName && <p role="status" className="sm:col-span-2">{t('settings.locations.certificateChosen', { name: p.certificateName })}</p>}
+            </>
+          )}
           <div className="flex flex-wrap items-center gap-3 sm:col-span-2" aria-live="polite">
             <Button type="submit" className="min-h-11" loading={p.saving}>{editing ? t('settings.save') : t('settings.locations.addButton')}</Button>
             {editing && <Button type="button" variant="outline" className="min-h-11" onClick={() => p.onEdit(null)}>{t('settings.cancel')}</Button>}
-            {p.saveFailed && <span role="alert" className={fieldError}>{t('settings.saveFailed')}</span>}
+            {p.saveProblem && <span role="alert" className={fieldError}>{t(p.saveProblem)}</span>}
+            {p.added && <span role="status">{t('settings.locations.added', { name: p.added })}</span>}
           </div>
         </form>
       </Section>

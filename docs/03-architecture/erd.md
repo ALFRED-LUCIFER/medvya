@@ -241,7 +241,7 @@ erDiagram
 | `CustomRoles` | 6 | Id | tenant-scoped |
 | `DoctorLicences` | 10 | MembershipId | tenant-scoped |
 | `DoctorProfiles` | 11 | MembershipId | tenant-scoped |
-| `Facilities` | 5 | Id | tenant-scoped |
+| `Facilities` | 8 | Id | tenant-scoped |
 | `FeatureFlags` | 10 | Id | tenant-scoped |
 | `Invitations` | 10 | Id | tenant-scoped |
 | `Memberships` | 7 | Id | tenant-scoped |
@@ -362,7 +362,10 @@ erDiagram
 |---|---|---|---|
 | `Id` | guid |  |  |
 | `Address` | character varying(500) |  |  |
+| `CertificateKey` | character varying(200) |  |  |
+| `CertificateName` | character varying(200) |  |  |
 | `Name` | character varying(200) |  |  |
+| `TaxNumber` | character varying(20) |  |  |
 | `TenantId` | guid |  | FK to `Tenant` |
 | `TimeZone` | character varying(64) |  |  |
 

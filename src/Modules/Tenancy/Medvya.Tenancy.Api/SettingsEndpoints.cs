@@ -34,7 +34,7 @@ public static class SettingsEndpoints
         g.MapPut("/profile", ([FromBody] SaveProfile body, [FromServices] IPracticeSettings s, CancellationToken ct) => s.SaveProfileAsync(body, ct));
 
         g.MapGet("/locations", ([FromServices] IPracticeSettings s, CancellationToken ct) => s.ListLocationsAsync(ct));
-        g.MapPost("/locations", async ([FromBody] SaveLocation body, [FromServices] IPracticeSettings s, CancellationToken ct) =>
+        g.MapPost("/locations", async ([FromBody] AddLocation body, [FromServices] IPracticeSettings s, CancellationToken ct) =>
             Results.Created("/v1/settings/locations", await s.AddLocationAsync(body, ct)));
         g.MapPut("/locations/{id:guid}", async (Guid id, [FromBody] SaveLocation body, [FromServices] IPracticeSettings s, CancellationToken ct) =>
             await s.UpdateLocationAsync(id, body, ct) is { } v ? Results.Ok(v) : Results.NotFound());

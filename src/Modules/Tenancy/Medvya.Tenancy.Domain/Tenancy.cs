@@ -27,6 +27,12 @@ public sealed class Facility
     [Classification(DataClass.Internal)] public required string TimeZone { get; set; }
     /// <summary>Street address of the location, printed on invoices and prescriptions (MDV-P1-005).</summary>
     [Classification(DataClass.Public)] public string? Address { get; set; }
+    /// <summary>GSTIN (India) or TRN (UAE) of an added location (MDV-P1-070); null for the first location, whose tax number is the practice profile's.</summary>
+    [Classification(DataClass.Public)] public string? TaxNumber { get; set; }
+    /// <summary>Original file name of the registration certificate, for display; null without one.</summary>
+    [Classification(DataClass.Internal)] public string? CertificateName { get; set; }
+    /// <summary>Random private-Blob key of the registration certificate (no names in paths); null for the first location.</summary>
+    [Classification(DataClass.Internal)] public string? CertificateKey { get; set; }
 }
 
 public enum MembershipStatus { Invited, Active, Suspended, Offboarded }

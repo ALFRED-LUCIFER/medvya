@@ -11,6 +11,7 @@ import NotFoundPage from '../features/errors/components/NotFoundPage';
 import TermsNotice from '../features/settings/components/TermsNotice';
 import { useTermsNotice } from '../features/settings/hooks/useTermsNotice';
 import OrganisationNotice from '../features/onboarding/components/OrganisationNotice';
+import { organisationPath } from '../features/onboarding/domain/organisationRequest';
 import LanguageSwitcher from '../features/locale/components/LanguageSwitcher';
 import FacilityPicker from '../features/session/components/FacilityPicker';
 import SessionExpiredPage from '../features/session/components/SessionExpiredPage';
@@ -50,6 +51,7 @@ const Patient360Route = lazy(() => import('./Patient360Route'));
 const TimelineRoute = lazy(() => import('./TimelineRoute'));
 const DocumentsRoute = lazy(() => import('./DocumentsRoute'));
 const AdjustmentsRoute = lazy(() => import('./AdjustmentsRoute'));
+const OrganisationRoute = lazy(() => import('./OrganisationRoute'));
 const CompleteRegistrationRoute = lazy(() => import('./PatientRoutes').then(m => ({ default: m.CompleteRegistrationRoute })));
 
 type Props = { locale: Locale; onLocaleChange: (l: Locale) => void };
@@ -118,7 +120,7 @@ export default function App({ locale, onLocaleChange }: Props) {
               ? <GlobalSearchRoute startVisitPath={walkInPath} bookPath={pathOf('schedule')} registerPath={registerPath} /> : undefined}
             notifications={allows(active, patientDirectory) || allows(active, { capability: 'StaffRolesIntegrations', access: ['Config'] } as const) ? <NotificationsRoute facilityId={active.facilityId} online={online} /> : undefined}
             languageSwitcher={<LanguageSwitcher inline value={locale} onChange={onLocaleChange} />}>
-            <OrganisationNotice state={active.organisationState} />
+            <OrganisationNotice state={active.organisationState} requestPath={active.capabilities.StaffRolesIntegrations === 'Config' ? organisationPath : undefined} />
             {termsPending && <TermsNotice />}
             <Suspense fallback={<ShellMessage busy title={t('shell.loading')} />}><Outlet /></Suspense>
           </AppShell>}>
@@ -146,6 +148,8 @@ export default function App({ locale, onLocaleChange }: Props) {
           {waitlistPath && <Route path={waitlistPath} element={<WaitlistRoute facilityId={active.facilityId} boardPath={pathOf('frontDesk')!} />} />}
           {/* shortcut: reachable by URL only; the Staff screen and its navigation entry come with F-10 (MDV-P1-008). */}
           {active.capabilities.StaffRolesIntegrations === 'Config' && <Route path="/admin/staff" element={<InviteColleagueRoute />} />}
+          {/* The owner's onboarding request (ADR-016, MDV-P1-062): status, documents and Submit; the shell notice links here until approval. */}
+          {active.capabilities.StaffRolesIntegrations === 'Config' && <Route path={organisationPath} element={<OrganisationRoute />} />}
           {/* D-04 clinic overview (MDV-P1-030): for everyone who sees the board; moving patients needs the full queue capability. */}
           {pathOf('frontDesk') && <Route path="/front-desk/overview" element={
             <OverviewRoute facilityId={active.facilityId} online={online} canMove={active.capabilities.CheckInQueue === 'Full'}

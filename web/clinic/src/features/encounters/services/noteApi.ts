@@ -1,5 +1,6 @@
-import { post, send } from '../../schedule/services/scheduleApi';
-import type { NoteCatalog, NoteDraft, NoteView } from '../domain/note';
+import { apiFetch } from '../../api/services/apiClient';
+import { ApiError, csrf, post, send } from '../../schedule/services/scheduleApi';
+import type { AddendumForm, NoteCatalog, NoteDraft, NoteView } from '../domain/note';
 
 const put = <T>(url: string, body: unknown) =>
   send<T>(url, { method: 'PUT', headers: { 'X-Medvya-Csrf': '1', 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -16,6 +17,23 @@ export const chooseNoteTemplates = (keys: string[]) => put<string[]>('/v1/note-t
 
 /** Signs the version the editor last saw. A 403 reauth_required means: confirm the password and second factor first (`startReauth`), then call again. */
 export const signNote = (encounterId: string, baseVersion: number) => post<NoteView>(`/v1/encounters/${encounterId}/note/sign`, { baseVersion });
+
+/** Signs an addendum to a signed note (MDV-P2-013): the same re-authentication as signing. The text travels in the body only. */
+export const addAddendum = (encounterId: string, addendum: AddendumForm) => post<NoteView>(`/v1/encounters/${encounterId}/note/addenda`, addendum);
+
+/** The server renders and keeps the PDF (POST: each copy handed out is stored and audited); the browser saves it under a name with no patient data. */
+export async function downloadNotePdf(encounterId: string): Promise<void> {
+  const res = await apiFetch(`/v1/encounters/${encounterId}/note/pdf`, { method: 'POST', credentials: 'same-origin', headers: csrf });
+  if (!res.ok) throw new ApiError(res.status);
+  const url = URL.createObjectURL(await res.blob());
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'consultation-note.pdf';
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+export const printPage = () => window.print();
 
 /** Step-up before signing: the provider asks again, then returns to this consult path (an opaque id, never patient data). */
 export async function startReauth() {

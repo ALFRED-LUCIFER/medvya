@@ -1,6 +1,8 @@
 using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using Medvya.Audit.Domain;
 using Medvya.Encounters.Domain;
@@ -265,5 +267,179 @@ public sealed class SignNoteTests(PostgresFixture sql) : IClassFixture<PostgresF
             using var r = await Client(user).GetAsync(U("/v1/notes/pending"));
             Assert.Equal(HttpStatusCode.Forbidden, r.StatusCode);
         }
+    }
+
+    // ---- MDV-P2-013: addenda and the PDF ----
+
+    async Task SignedNoteAsync()
+    {
+        using var signed = await SignAsync(h.Doctor, await SaveDraftAsync(Complete));
+        Assert.True(signed.IsSuccessStatusCode, await signed.Content.ReadAsStringAsync());
+    }
+
+    Task<HttpResponseMessage> AddendumAsync(Guid user, string? text, string? reason, int? reauthMinutesAgo = 0) =>
+        Client(user, reauthMinutesAgo).PostAsJsonAsync(U($"/v1/encounters/{encounter}/note/addenda"), new { text, reason });
+
+    Task<HttpResponseMessage> PdfAsync(Guid user) => Client(user).PostAsync(U($"/v1/encounters/{encounter}/note/pdf"), null);
+
+    async Task<Guid?> BrokenChainAsync(string table)
+    {
+        await using var conn = await sql.OpenAs("app_user", h.Tenant);
+        return await new NpgsqlCommand($"""SELECT ledger.verify_chain('encounters.{table}', '{h.Tenant}')""", conn).ExecuteScalarAsync() is Guid g ? g : null;
+    }
+
+    [Fact]
+    public async Task AnAddendumIsANewSignedVersionAndNeverAltersVersionOne()
+    {
+        await SignedNoteAsync();
+        SignedNoteVersion v1;
+        await using (var db = sql.Encounters(h.Tenant)) v1 = await db.SignedNoteVersions.AsNoTracking().SingleAsync();
+        var note = await NoteAsync();
+
+        foreach (var (text, reason) in new[] { ("Synthetic: dose corrected to 500 mg", "Dose typed wrongly"), ("Synthetic: lab result reviewed", "New result") })
+        {
+            using var r = await AddendumAsync(h.Doctor, text, reason);
+            Assert.True(r.IsSuccessStatusCode, await r.Content.ReadAsStringAsync());
+            h.Clock.Advance(TimeSpan.FromMinutes(1));
+        }
+
+        using var read = await Client(h.Doctor).GetAsync(U($"/v1/encounters/{encounter}/note"));
+        var view = await Json(read);
+        Assert.Equal(Text, view.GetProperty("sections").GetProperty("chiefComplaint").GetString()); // the original, as signed
+        Assert.Equal(1, view.GetProperty("signature").GetProperty("versionNo").GetInt32());
+        var addenda = view.GetProperty("addenda").EnumerateArray().ToList();
+        Assert.Equal([(2, 1, "Dose typed wrongly"), (3, 2, "New result")],
+            addenda.Select(a => (a.GetProperty("versionNo").GetInt32(), a.GetProperty("amendsVersionNo").GetInt32(), a.GetProperty("reason").GetString())));
+        Assert.Equal("Synthetic: dose corrected to 500 mg", addenda[0].GetProperty("text").GetString());
+
+        await using (var db = sql.Encounters(h.Tenant))
+        {
+            var rows = await db.SignedNoteVersions.AsNoTracking().OrderBy(v => v.VersionNo).ToListAsync();
+            Assert.Equal((v1.ContentHash, v1.SignedAt, Text), (rows[0].ContentHash, rows[0].SignedAt, rows[0].Sections["chiefComplaint"])); // v1 untouched
+            Assert.Equal((rows[0].Id, rows[1].Id), (rows[1].AmendsVersionId!.Value, rows[2].AmendsVersionId!.Value));
+            foreach (var a in rows.Skip(1)) // each stored hash verifies against its text, link and reason
+                Assert.Equal(SignedNoteVersion.Hash(a.TemplateKey, a.TemplateVersion, a.Sections, a.AmendsVersionId, a.Reason), a.ContentHash);
+            Assert.NotEqual(SignedNoteVersion.Hash(rows[1].TemplateKey, rows[1].TemplateVersion, rows[1].Sections, rows[1].AmendsVersionId, "Another reason"), rows[1].ContentHash);
+        }
+        var after = await NoteAsync();
+        Assert.Equal((note.Version, note.UpdatedAt, NoteStatus.Signed), (after.Version, after.UpdatedAt, after.Status));
+        Assert.Null(await BrokenChainAsync("SignedNoteVersions"));
+
+        await using var audit = sql.Audit(h.Tenant);
+        var events = await audit.Events.Where(e => e.Action == "note.addendum").ToListAsync();
+        Assert.Equal(2, events.Count);
+        Assert.All(events, e => Assert.Equal((h.Patient, AuditOutcome.Allowed), (e.PatientId, e.Outcome)));
+        Assert.DoesNotContain("500 mg", JsonSerializer.Serialize(events), StringComparison.Ordinal);
+    }
+
+    // SAFETY mutation checks: remove RequireReauth() from ConsultNoteService.AddAddendumAsync and the re-authentication cases fail; remove the
+    // reason check and the blank-reason cases fail; remove its clinical.RequireAsync call and the colleague case fails.
+    [Fact]
+    public async Task AnAddendumNeedsASignedNoteATextAReasonAndTheSameGateAsSigning()
+    {
+        using (var draft = await AddendumAsync(h.Doctor, "Synthetic", "Synthetic"))
+            Assert.Equal((HttpStatusCode.Conflict, "note_not_signed"), (draft.StatusCode, (await Json(draft)).GetProperty("code").GetString()));
+        await SignedNoteAsync();
+
+        foreach (var minutes in new int?[] { null, 6 })
+        {
+            using var refused = await AddendumAsync(h.Doctor, "Synthetic correction", "Synthetic reason", minutes);
+            Assert.Equal((HttpStatusCode.Forbidden, "reauth_required"), (refused.StatusCode, (await Json(refused)).GetProperty("code").GetString()));
+        }
+        foreach (var (text, reason, field, code) in new (string?, string?, string, string)[] { ("Synthetic correction", " ", "reason", "required"),
+                     ("Synthetic correction", null, "reason", "required"), ("", "Synthetic reason", "text", "required"), ("Synthetic correction", new string('r', 501), "reason", "too_long") })
+        {
+            using var invalid = await AddendumAsync(h.Doctor, text, reason);
+            Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
+            Assert.Equal(code, (await Json(invalid)).GetProperty("errors").GetProperty(field)[0].GetString());
+        }
+        foreach (var user in new[] { h.Reception, h.Nurse })
+        {
+            using var r = await AddendumAsync(user, "Synthetic correction", "Synthetic reason");
+            Assert.Equal(HttpStatusCode.Forbidden, r.StatusCode);
+        }
+        await h.Settings(h.Admin).SaveClinicalAccessAsync(ClinicalAccessPolicy.AssignedOnly);
+        using (var colleague = await AddendumAsync(h.SecondDoctor, "Synthetic correction", "Synthetic reason"))
+            Assert.Equal((HttpStatusCode.Forbidden, "no_care_relationship"), (colleague.StatusCode, (await Json(colleague)).GetProperty("code").GetString()));
+        Assert.Equal(1, await SignedRowsAsync()); // only version 1
+
+        using var ok = await AddendumAsync(h.Doctor, "Synthetic correction", "Synthetic reason", 4);
+        Assert.Equal(HttpStatusCode.OK, ok.StatusCode);
+    }
+
+    // SAFETY mutation check: drop CK_SignedNoteVersions_Addendum (migration NoteAddenda) and the unlinked addendum is stored.
+    [Fact]
+    public async Task TheDatabaseRefusesAnAddendumWithoutItsLinkAndReason()
+    {
+        await SignedNoteAsync();
+        await using var db = sql.Encounters(h.Tenant);
+        var v1 = await db.SignedNoteVersions.AsNoTracking().SingleAsync();
+        db.SignedNoteVersions.Add(new SignedNoteVersion
+        {
+            Id = Guid.NewGuid(), TenantId = h.Tenant, EncounterId = encounter, NoteId = v1.NoteId, VersionNo = 2, TemplateKey = v1.TemplateKey, TemplateVersion = 1,
+            Sections = new() { [SignedNoteVersion.AddendumSection] = "Synthetic" }, ContentHash = v1.ContentHash, SignedBy = h.Doctor, SignedAt = v1.SignedAt,
+        });
+        var ex = await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
+        Assert.Equal(PostgresErrorCodes.CheckViolation, (ex.InnerException as PostgresException)?.SqlState);
+    }
+
+    // SAFETY mutation check: drop the header lines from SignedNotePdfDocument.Write's page loop and the per-page identifier counts fail.
+    [Fact]
+    public async Task ThePdfIsRenderedServerSideWithIdentifiersOnEveryPageAndStoredWithItsHash()
+    {
+        var plan = string.Join('\n', Enumerable.Range(1, 70).Select(i => $"Synthetic plan line {i}"));
+        using (var signed = await SignAsync(h.Doctor, await SaveDraftAsync(new { chiefComplaint = Text, assessment = "Synthetic viral cold", plan }))) Assert.True(signed.IsSuccessStatusCode);
+        using (var added = await AddendumAsync(h.Doctor, "Synthetic: follow-up moved to Friday", "Patient asked")) Assert.True(added.IsSuccessStatusCode);
+        await using (var patients = sql.Patients(h.Tenant)) // a long name must not push the MRN or date of birth off the page
+            await patients.Patients.Where(x => x.Id == h.Patient).ExecuteUpdateAsync(x => x.SetProperty(y => y.FullName, "Meera Lakshmi Venkataraman Iyer (synthetic)"));
+
+        using var r = await PdfAsync(h.Doctor);
+        Assert.Equal(HttpStatusCode.OK, r.StatusCode);
+        Assert.Equal("application/pdf", r.Content.Headers.ContentType?.MediaType);
+        var bytes = await r.Content.ReadAsByteArrayAsync();
+        var hash = Convert.ToHexStringLower(SHA256.HashData(bytes));
+        Assert.Equal(hash, r.Headers.GetValues("X-Content-SHA256").Single());
+
+        var text = Encoding.Latin1.GetString(bytes);
+        Assert.StartsWith("%PDF-1.4", text, StringComparison.Ordinal);
+        var pages = text.Split("/Type /Page ").Length - 1;
+        Assert.True(pages >= 2, $"{pages} page(s)");
+        foreach (var marker in new[] { "MRN 000001", "Date of birth 12 Mar 1972", @"Meera Lakshmi Venkataraman Iyer \(synthetic\)", "Corrections are added as signed addenda." })
+            Assert.Equal(pages, text.Split(marker).Length - 1);
+        // Every shown line fits between the margins: 80 Courier columns (an escape such as \267 or \( is one character).
+        var shown = System.Text.RegularExpressions.Regex.Matches(text, @"\(((?:[^\\)]|\\.)*)\) Tj").Select(m => System.Text.RegularExpressions.Regex.Replace(m.Groups[1].Value, @"\\(\d{3}|.)", "x"));
+        Assert.All(shown, line => Assert.True(line.Length <= 80, line));
+        foreach (var expected in new[] { @"Signed by Dr. Arjun Rao \(synthetic\)", @"Addendum \267 version 2", "Reason: Patient asked", "Synthetic: follow-up moved to Friday", "Asia/Kolkata" })
+            Assert.Contains(expected, text, StringComparison.Ordinal);
+
+        await using (var db = sql.Encounters(h.Tenant))
+        {
+            var stored = await db.SignedNotePdfs.AsNoTracking().SingleAsync();
+            Assert.Equal((hash, 2, h.Doctor), (stored.Sha256, stored.VersionNo, stored.RenderedBy));
+            Assert.Equal(bytes, stored.Content);
+        }
+        Assert.Null(await BrokenChainAsync("SignedNotePdfs"));
+        await using (var conn = await sql.OpenAs("app_user", h.Tenant)) // the stored copy cannot be replaced
+        {
+            var ex = await Assert.ThrowsAsync<PostgresException>(() => new NpgsqlCommand("""UPDATE encounters."SignedNotePdfs" SET "Sha256" = 'x'""", conn).ExecuteNonQueryAsync());
+            Assert.Equal(PostgresErrorCodes.RestrictViolation, ex.SqlState);
+        }
+        await using var audit = sql.Audit(h.Tenant);
+        var pdf = await audit.Events.SingleAsync(e => e.Action == "note.pdf");
+        Assert.Equal((h.Patient, AuditOutcome.Allowed), (pdf.PatientId, pdf.Outcome));
+    }
+
+    [Fact]
+    public async Task ThePdfNeedsASignedNoteReadAccessAndTextItCanShow()
+    {
+        var version = await SaveDraftAsync(new { chiefComplaint = "खांसी (synthetic)", assessment = "Synthetic viral cold", plan = "Rest" });
+        using (var draft = await PdfAsync(h.Doctor))
+            Assert.Equal((HttpStatusCode.Conflict, "note_not_signed"), (draft.StatusCode, (await Json(draft)).GetProperty("code").GetString()));
+        using (var signed = await SignAsync(h.Doctor, version)) Assert.True(signed.IsSuccessStatusCode);
+        using (var nurse = await PdfAsync(h.Nurse)) Assert.Equal(HttpStatusCode.Forbidden, nurse.StatusCode);
+        using (var script = await PdfAsync(h.Doctor))
+            Assert.Equal((HttpStatusCode.UnprocessableEntity, "pdf_unsupported_text"), (script.StatusCode, (await Json(script)).GetProperty("code").GetString()));
+        await using var db = sql.Encounters(h.Tenant);
+        Assert.Equal(0, await db.SignedNotePdfs.CountAsync());
     }
 }

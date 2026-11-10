@@ -27,6 +27,7 @@ SOFT_REFS = {
     'AddedBy': ('identity', 'Users'), 'OrderedBy': ('identity', 'Users'), 'SentBy': ('identity', 'Users'), 'CreatedBy': ('identity', 'Users'),
     'NotificationId': ('notifications', 'Notifications'), 'ReviewId': ('tenancy', 'AccessReviews'),
     'FormularyItemId': ('prescribing', 'FormularyItems'),
+    'NoteId': ('encounters', 'ConsultNotes'), 'AmendsVersionId': ('encounters', 'SignedNoteVersions'), 'SignedBy': ('identity', 'Users'), 'RenderedBy': ('identity', 'Users'),
 }
 # CalendarId (and the from/to of a reschedule) is a doctor (a membership, inferred) or a room, told apart by CalendarKind.
 CALENDAR_COLS = ('CalendarId', 'FromCalendarId', 'ToCalendarId')
@@ -55,7 +56,7 @@ PARTIAL = {
     'DOC_SEQUENCE': 'numbering only; invoices and payments are not built',
     'PRESCRIPTION_ITEM': 'draft lines only; the PRESCRIPTION header and its authorisation come with MDV-P2-017',
 }
-LEDGER = {'audit.AuditEvents', 'encounters.SignedNoteVersions', 'patients.ConsentReceipts', 'tenancy.TermsAcceptances'}  # hash-chained, MDV-P0-036
+LEDGER = {'audit.AuditEvents', 'encounters.SignedNoteVersions', 'encounters.SignedNotePdfs', 'patients.ConsentReceipts', 'tenancy.TermsAcceptances'}  # hash-chained, MDV-P0-036
 MODULE_ORDER = ['Tenancy', 'Identity', 'Patients', 'Scheduling', 'Encounters', 'Prescribing', 'Notifications', 'Audit', 'Leads', 'Billing', 'Platform']
 
 

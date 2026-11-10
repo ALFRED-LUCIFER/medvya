@@ -1,6 +1,8 @@
 import { useParams } from 'react-router';
 import ConsultPage from '../features/encounters/components/ConsultPage';
 import NoteEditor from '../features/encounters/components/NoteEditor';
+import NoteHistory from '../features/encounters/components/NoteHistory';
+import NotePrintPage from '../features/encounters/components/NotePrintPage';
 import NoteTemplateChoice from '../features/encounters/components/NoteTemplateChoice';
 import { useConsultController } from '../features/encounters/hooks/useConsultController';
 import OrdersPanel from '../features/orders/components/OrdersPanel';
@@ -13,6 +15,7 @@ import SlipPage from '../features/orders/components/SlipPage';
 import { useOrdersController, useSlipController } from '../features/orders/hooks/useOrdersController';
 import { useNoteController } from '../features/encounters/hooks/useNoteController';
 import { useNoteTemplatesController } from '../features/encounters/hooks/useNoteTemplatesController';
+import { useAddendumController, useNotePrintController } from '../features/encounters/hooks/useSignedNoteController';
 
 /** Composition only: one consultation (MDV-P2-001) by its id in the address, with its note (MDV-P2-009); the server checks clinical access on every call. */
 type Props = { boardPath: string; canOrder: boolean; canReconcile: boolean; canSign: boolean; userId: string; userName: string };
@@ -28,6 +31,7 @@ function Consult({ encounterId, boardPath, canOrder, canReconcile, canSign, user
     <div className="flex flex-col gap-4">
       <ConsultPage {...consult} boardPath={boardPath} canReconcile={canReconcile}>
         <NoteEditor {...useNoteController(encounterId, canSign)} userId={userId} userName={userName} timeZone={consult.banner?.timeZone} />
+        <NoteHistory {...useAddendumController(encounterId, canSign)} userId={userId} userName={userName} timeZone={consult.banner?.timeZone} printPath={`/consult/${encounterId}/note/print`} />
         <NoteTemplateChoice {...useNoteTemplatesController()} />
       </ConsultPage>
       {consult.banner && canOrder && <Prescription encounterId={encounterId} ended={consult.banner.encounter.status === 'Ended'} />}
@@ -65,4 +69,13 @@ export function LetterRoute() {
 export function SlipRoute() {
   const { encounterId = '' } = useParams();
   return <SlipPage {...useSlipController(encounterId)} consultPath={`/consult/${encounterId}`} />;
+}
+
+/** The signed note's print view and PDF (MDV-P2-013), with the patient's identifiers from the consultation. */
+export function NotePrintRoute({ userId, userName }: { userId: string; userName: string }) {
+  const { encounterId = '' } = useParams();
+  const print = useNotePrintController(encounterId);
+  const consult = useConsultController(encounterId);
+  return <NotePrintPage {...print} loading={print.loading || consult.loading} failed={print.failed || consult.failed} banner={consult.banner}
+    consultPath={`/consult/${encounterId}`} userId={userId} userName={userName} />;
 }

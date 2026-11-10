@@ -656,10 +656,50 @@ namespace Medvya.Encounters.Infrastructure.Persistence.Migrations
                     b.ToTable("Problems", "encounters");
                 });
 
+            modelBuilder.Entity("Medvya.Encounters.Domain.SignedNotePdf", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<byte[]>("Content")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<Guid>("NoteId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("RenderedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("RenderedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Sha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("VersionNo")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "NoteId");
+
+                    b.ToTable("SignedNotePdfs", "encounters");
+                });
+
             modelBuilder.Entity("Medvya.Encounters.Domain.SignedNoteVersion", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AmendsVersionId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("ContentHash")
@@ -675,6 +715,10 @@ namespace Medvya.Encounters.Infrastructure.Persistence.Migrations
 
                     b.Property<Guid>("NoteId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
                     b.Property<string>("Sections")
                         .IsRequired()
@@ -705,7 +749,10 @@ namespace Medvya.Encounters.Infrastructure.Persistence.Migrations
                     b.HasIndex("TenantId", "NoteId", "VersionNo")
                         .IsUnique();
 
-                    b.ToTable("SignedNoteVersions", "encounters");
+                    b.ToTable("SignedNoteVersions", "encounters", t =>
+                        {
+                            t.HasCheckConstraint("CK_SignedNoteVersions_Addendum", "(\"VersionNo\" = 1 AND \"AmendsVersionId\" IS NULL AND \"Reason\" IS NULL) OR (\"VersionNo\" > 1 AND \"AmendsVersionId\" IS NOT NULL AND \"Reason\" IS NOT NULL)");
+                        });
                 });
 #pragma warning restore 612, 618
         }

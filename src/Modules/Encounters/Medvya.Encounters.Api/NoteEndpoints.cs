@@ -35,6 +35,21 @@ public static class NoteEndpoints
                 : await service.SignAsync(encounterId, body, ct) is { } view ? Results.Ok(view) : Results.NotFound())
             .RequireCapability(Capability.ClinicalNotes, Access.Sign)
             .AuditedByUseCase("note.sign", "note", AuditPurpose.Treatment).AddEndpointFilter(MapErrors);
+        // MDV-P2-013: an addendum is signed under the same gate as the note; the PDF is a read of the note that also stores the copy it hands out.
+        app.MapPost("/v1/encounters/{encounterId:guid}/note/addenda", async (Guid encounterId, [FromBody] AddNoteAddendum? body, [FromServices] IConsultNotes service, CancellationToken ct) =>
+                body is null ? Results.ValidationProblem(new Dictionary<string, string[]> { ["body"] = ["required"] })
+                : await service.AddAddendumAsync(encounterId, body, ct) is { } view ? Results.Ok(view) : Results.NotFound())
+            .RequireCapability(Capability.ClinicalNotes, Access.Sign)
+            .AuditedByUseCase("note.addendum", "note", AuditPurpose.Treatment).AddEndpointFilter(MapErrors);
+        app.MapPost("/v1/encounters/{encounterId:guid}/note/pdf", async (Guid encounterId, [FromServices] IConsultNotes service, HttpContext http, CancellationToken ct) =>
+            {
+                if (await service.PdfAsync(encounterId, ct) is not { } pdf) return Results.NotFound();
+                http.Response.Headers["X-Content-SHA256"] = pdf.Sha256;
+                http.Response.Headers.CacheControl = "no-store";
+                return Results.File(pdf.Content, "application/pdf");
+            })
+            .RequireCapability(Capability.Patient360Chart, Access.Full)
+            .AuditedByUseCase("note.pdf", "note", AuditPurpose.Treatment).AddEndpointFilter(MapErrors);
         // Today's pending notes (MDV-P2-002): the signed-in doctor's own unsigned consultations at this facility, with the patient's name to find them.
         // Like the allergy flags, the use case writes one note.pending row per patient answered, so each patient's access log shows it.
         app.MapGet("/v1/notes/pending", Pending).RequireCapability(Capability.Patient360Chart, Access.Full).AddEndpointFilter(MapErrors);
@@ -66,6 +81,15 @@ public static class NoteEndpoints
         catch (NoteSignedException)
         {
             return Results.Problem(statusCode: StatusCodes.Status409Conflict, title: "The note is signed", extensions: new Dictionary<string, object?> { ["code"] = "note_signed" });
+        }
+        catch (NoteNotSignedException)
+        {
+            return Results.Problem(statusCode: StatusCodes.Status409Conflict, title: "The note is not signed", extensions: new Dictionary<string, object?> { ["code"] = "note_not_signed" });
+        }
+        catch (NotePdfUnsupportedTextException)
+        {
+            return Results.Problem(statusCode: StatusCodes.Status422UnprocessableEntity, title: "The note has text the PDF cannot show; use the print view",
+                extensions: new Dictionary<string, object?> { ["code"] = "pdf_unsupported_text" });
         }
         catch (ReauthRequiredException)
         {

@@ -198,6 +198,8 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.SoloDoctor, new("GET", "/v1/encounters/{encounter}/note")),
         (Role.SoloDoctor, new("PUT", "/v1/encounters/{encounter}/note", """{"baseVersion":0,"sections":{}}""")),
         (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/note/sign", """{"baseVersion":0}""")),
+        (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/note/addenda", """{"text":"Synthetic","reason":"Synthetic"}""")),
+        (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/note/pdf")),
         (Role.SoloDoctor, new("POST", "/v1/encounters", """{"appointmentId":"{appointment}","leaveOpen":true}""")),
         (Role.Nurse, new("GET", "/v1/intake/{appointment}")),
         (Role.Nurse, new("PUT", "/v1/intake/{appointment}", """{"chiefComplaint":"Synthetic","vitals":[]}""")),
@@ -365,6 +367,8 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.Receptionist, new("PUT", "/v1/encounters/{encounter}/note", """{"baseVersion":0,"sections":{}}""")), // Patient 360: X
         (Role.Receptionist, new("POST", "/v1/encounters/{encounter}/note/sign", """{"baseVersion":0}""")), // Clinical notes: X
         (Role.Nurse, new("POST", "/v1/encounters/{encounter}/note/sign", """{"baseVersion":0}""")), // Clinical notes: Read, never Sign
+        (Role.Nurse, new("POST", "/v1/encounters/{encounter}/note/addenda", """{"text":"Synthetic","reason":"Synthetic"}""")), // Clinical notes: Read, never Sign
+        (Role.Receptionist, new("POST", "/v1/encounters/{encounter}/note/pdf")), // Patient 360: X
         (Role.Nurse, new("GET", "/v1/encounters/{encounter}/note")), // notes are the doctor's: Patient 360 below Full
         (Role.Receptionist, new("GET", "/v1/patients/{patient}/chart")), // Patient 360: X
         (Role.Receptionist, new("POST", "/v1/documents/{document}/view-link")), // the desk uploads and lists, never opens

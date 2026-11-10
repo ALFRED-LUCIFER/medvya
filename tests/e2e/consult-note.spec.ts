@@ -204,6 +204,80 @@ test('a signed note shows its signature and no way to edit or sign again', async
   await expect(note(page).getByRole('button', { name: 'Sign note' })).toHaveCount(0);
 });
 
+// MDV-P2-013: addenda, version history and the print view. The server rules (v1 never altered, reason and step-up, PDF with identifiers on every
+// page, stored with its hash) are SignNoteTests on PostgreSQL; here the screen shows them and sends the right calls.
+const signedSeed = { version: 3, status: 'Signed', sections: { chiefComplaint: 'Thirst', assessment: 'Review', plan: 'Metformin 500 mg' },
+  signature: { versionNo: 1, signedBy: 'u-rao', signedAt: at, contentHash: 'b'.repeat(64) } };
+const history = (page: Page) => page.getByRole('region', { name: 'Version history' });
+
+test('addendum: a reason is required, it is signed as version 2, and the original stays as it was', async ({ page }) => {
+  const mock = await open(page, signedSeed);
+  mock.reauthed = true;
+  await expect(history(page)).toContainText('Original note');
+  await expect(history(page)).toContainText('Version 1 · signed by Dr. Arjun Rao (synthetic) on 19 Oct 2026 at 10:05');
+  await expect(history(page)).toContainText('Corrections are added as signed addenda.');
+  await history(page).getByRole('button', { name: 'Add addendum' }).click();
+  await history(page).getByLabel('Addendum', { exact: true }).fill('Synthetic: metformin dose is 1000 mg, not 500 mg');
+  await history(page).getByRole('button', { name: 'Sign addendum' }).click();
+  await expect(history(page).getByRole('alert')).toHaveText('Write the addendum and its reason, then sign.');
+  expect(mock.addendumPosts).toEqual([]);
+  await history(page).getByLabel('Reason for the addendum').fill('Dose typed wrongly');
+  await history(page).getByRole('button', { name: 'Sign addendum' }).click();
+  await expect(history(page)).toContainText('Addendum to version 1');
+  await expect(history(page)).toContainText('Version 2 · signed by Dr. Arjun Rao (synthetic) on 19 Oct 2026 at 10:30');
+  await expect(history(page)).toContainText('Reason: Dose typed wrongly');
+  await expect(history(page).getByLabel('Addendum', { exact: true })).toHaveCount(0); // the composer closes
+  expect(mock.addendumPosts).toEqual([{ text: 'Synthetic: metformin dose is 1000 mg, not 500 mg', reason: 'Dose typed wrongly' }]);
+  await expect(note(page).getByLabel('Plan')).toHaveValue('Metformin 500 mg'); // v1 as signed
+  await expect(note(page).getByLabel('Plan')).toHaveJSProperty('readOnly', true);
+});
+
+test('addendum: a step-up refusal keeps the text on screen until the doctor chooses to confirm identity', async ({ page }) => {
+  const mock = await open(page, signedSeed);
+  await history(page).getByRole('button', { name: 'Add addendum' }).click();
+  await history(page).getByLabel('Addendum', { exact: true }).fill('Synthetic correction');
+  await history(page).getByLabel('Reason for the addendum').fill('Synthetic reason');
+  await history(page).getByRole('button', { name: 'Sign addendum' }).click();
+  await expect(history(page).getByRole('alert')).toContainText('confirm your identity again. Copy your text first');
+  await expect(history(page).getByLabel('Addendum', { exact: true })).toHaveValue('Synthetic correction');
+  expect(mock.reauths).toEqual([]); // nothing leaves the page until the doctor says so
+  await history(page).getByRole('button', { name: 'Confirm identity' }).click();
+  await expect(page.getByText('Confirm your identity', { exact: true })).toBeVisible();
+  expect(mock.reauths).toEqual([{ returnUrl: '/consult/e-1' }]);
+  expect(await page.evaluate(() => JSON.stringify([localStorage, sessionStorage]))).not.toContain('Synthetic correction');
+});
+
+test('a role without Sign sees the history and the print view, but no addendum', async ({ page }) => {
+  const nurse = { ...doctor, active: { ...doctor.active, capabilities: { ...doctor.active.capabilities, ClinicalNotes: 'Full' } } };
+  await open(page, signedSeed, 'en', nurse);
+  await expect(history(page)).toContainText('Original note');
+  await expect(history(page).getByRole('button', { name: 'Add addendum' })).toHaveCount(0);
+  await expect(history(page).getByRole('link', { name: 'Print view and PDF' })).toBeVisible();
+});
+
+const withAddendum = { ...signedSeed, addenda: [{ versionNo: 2, amendsVersionNo: 1, reason: 'Dose typed wrongly', text: 'Synthetic: metformin 1000 mg', signedBy: 'u-rao', signedAt: at, contentHash: 'c'.repeat(64) }] };
+
+test('print view: the original then each addendum in order, with identifiers; the PDF is the server\'s', async ({ page }) => {
+  const mock = await open(page, withAddendum);
+  await history(page).getByRole('link', { name: 'Print view and PDF' }).click();
+  await expect(page).toHaveURL(/\/consult\/e-1\/note\/print$/);
+  const article = page.getByRole('article', { name: 'Signed consultation note' });
+  await expect(article).toContainText('Meera Iyer (synthetic)');
+  await expect(article).toContainText('000001');
+  await expect(article).toContainText('12 Mar 1972');
+  await expect(article.getByRole('heading', { level: 2 })).toHaveText(['Chief complaint', 'Assessment', 'Plan', 'Version history']);
+  await expect(article.getByRole('listitem')).toHaveCount(2);
+  await expect(article.getByRole('listitem').last()).toContainText('Addendum to version 1');
+  await expect(article).toContainText('Corrections are added as signed addenda.');
+  const download = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Download PDF' }).click();
+  expect((await download).suggestedFilename()).toBe('consultation-note.pdf'); // no patient data in the file name
+  mock.pdfNext = 'unsupported';
+  await page.getByRole('button', { name: 'Download PDF' }).click();
+  await expect(page.getByRole('alert')).toHaveText('This note has text the PDF cannot show yet. Use Print instead.');
+  expect(mock.pdfs).toBe(2);
+});
+
 test('a role without Sign sees no Sign button, only why', async ({ page }) => {
   const nurse = { ...doctor, active: { ...doctor.active, capabilities: { ...doctor.active.capabilities, ClinicalNotes: 'Full' } } };
   await open(page, { version: 1, sections: { plan: 'x' } }, 'en', nurse);
@@ -225,4 +299,28 @@ for (const locale of ['en', 'ar'])
       (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations
         .map(v => `${v.id} (${v.nodes.length})`));
     expect(violations).toEqual([]);
+  });
+
+const axeViolations = async (page: Page) => {
+  await page.addScriptTag({ path: axePath });
+  return page.evaluate(async () =>
+    (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations
+      .map(v => `${v.id} (${v.nodes.length})`));
+};
+for (const locale of ['en', 'ar'])
+  test(`axe finds no violations on the signed note with the addendum composer and on the print view at 200% zoom (${locale})`, async ({ page }) => {
+    await open(page, withAddendum, locale);
+    if (locale === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+    const versions = page.getByRole('region', { name: locale === 'ar' ? 'سجل النسخ' : 'Version history' });
+    await versions.getByRole('button', { name: locale === 'ar' ? 'إضافة ملحق' : 'Add addendum' }).click();
+    await versions.getByRole('button', { name: locale === 'ar' ? 'توقيع الملحق' : 'Sign addendum' }).click(); // the alert in words
+    for (const target of await versions.locator('button, a, input, textarea').all()) expect((await target.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    expect(await axeViolations(page)).toEqual([]);
+
+    // WCAG 1.4.10: 200% zoom on a 1280 px screen leaves 640 CSS px; the print view reflows with no sideways scrolling.
+    await page.setViewportSize({ width: 640, height: 800 });
+    await versions.getByRole('link').click();
+    await expect(page.getByRole('article')).toContainText('000001');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    expect(await axeViolations(page)).toEqual([]);
   });

@@ -9,9 +9,11 @@ export type NoteCatalog = { templates: NoteTemplate[]; mine: string[] };
 export type NoteSections = Record<string, string>;
 /** Ids only: who signed, when, and the hash of what was signed (MDV-P2-012). */
 export type NoteSignature = { versionNo: number; signedBy: string; signedAt: string; contentHash: string };
+/** A signed addendum (MDV-P2-013): version 2 and later, each following the version before it. */
+export type NoteAddendum = { versionNo: number; amendsVersionNo: number; reason: string; text: string; signedBy: string; signedAt: string; contentHash: string };
 export type NoteView = {
   encounterId: string; templateKey: string; templateVersion: number; status: 'Draft' | 'Signed'; manual: boolean;
-  sections: NoteSections; version: number; updatedAt: string | null; signature?: NoteSignature | null;
+  sections: NoteSections; version: number; updatedAt: string | null; signature?: NoteSignature | null; addenda?: NoteAddendum[];
 };
 /** What an autosave sends besides the version: the template and the whole note (a section left out is cleared). */
 export type NoteDraft = { templateKey: string; sections: NoteSections };
@@ -73,3 +75,18 @@ export function signFailure(status: number | undefined, body: unknown): SignFail
 
 /** Section ids in the template's order, so the first one named is the first one on the page. */
 export const inTemplateOrder = (template: NoteTemplate, ids: string[]) => template.sections.map(s => s.id).filter(id => ids.includes(id));
+
+export const maxReasonLength = 500;
+/** An addendum needs its text and why it is added (MDV-P2-013); the server checks the same. */
+export const addendumSchema = z.object({ text: z.string().trim().min(1).max(maxSectionLength), reason: z.string().trim().min(1).max(maxReasonLength) });
+export type AddendumForm = z.infer<typeof addendumSchema>;
+
+/** Why an addendum was refused: confirm identity, another addendum won the same moment, not allowed, or anything else. */
+export type AddendumFailure = 'reauth' | 'stale' | 'denied' | 'failed';
+export function addendumFailure(status: number | undefined, body: unknown): AddendumFailure {
+  const { kind } = signFailure(status, body);
+  return kind === 'reauth' || kind === 'stale' || kind === 'denied' ? kind : 'failed';
+}
+
+/** The server PDF refuses text in a script it cannot show yet (422 pdf_unsupported_text): the print view shows it. */
+export const pdfFailure = (status: number | undefined): 'unsupported' | 'failed' => (status === 422 ? 'unsupported' : 'failed');

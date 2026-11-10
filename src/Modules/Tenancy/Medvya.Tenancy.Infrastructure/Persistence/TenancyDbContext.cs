@@ -29,6 +29,8 @@ public sealed class TenancyDbContext(DbContextOptions<TenancyDbContext> options,
     public DbSet<AccessReviewDecision> AccessReviewDecisions => Set<AccessReviewDecision>();
     public DbSet<TenantIndexEntry> TenantIndex => Set<TenantIndexEntry>();
     public DbSet<AccessRequest> AccessRequests => Set<AccessRequest>();
+    public DbSet<OrganisationRequest> OrganisationRequests => Set<OrganisationRequest>();
+    public DbSet<OrganisationDocument> OrganisationDocuments => Set<OrganisationDocument>();
 
     Guid? CurrentTenantId => tenant.TenantId;
 
@@ -198,6 +200,25 @@ public sealed class TenancyDbContext(DbContextOptions<TenancyDbContext> options,
             e.Property(x => x.Category).HasMaxLength(40);
             e.Property(x => x.CertificateName).HasMaxLength(200);
             e.HasOne<Membership>().WithOne().HasForeignKey<DoctorLicence>(x => x.MembershipId).OnDelete(DeleteBehavior.Restrict);
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<OrganisationRequest>(e =>
+        {
+            e.HasKey(x => x.TenantId);
+            e.Property(x => x.Type).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.ItContactName).HasMaxLength(200);
+            e.Property(x => x.ItContactEmail).HasMaxLength(254);
+            e.Property(x => x.LastReason).HasMaxLength(500);
+            e.HasOne<Tenant>().WithOne().HasForeignKey<OrganisationRequest>(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<OrganisationDocument>(e =>
+        {
+            e.Property(x => x.Kind).HasMaxLength(40);
+            e.Property(x => x.ContentType).HasMaxLength(40);
+            e.Property(x => x.BlobKey).HasMaxLength(120);
+            e.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
+            e.HasIndex(x => new { x.TenantId, x.Kind }).IsUnique();
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         modelBuilder.Entity<DoctorProfile>(e =>

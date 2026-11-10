@@ -99,7 +99,7 @@ public sealed partial class OnboardingTests(PostgresFixture sql) : IClassFixture
     {
         profile = new { fullName = "Arjun Rao (synthetic)", mode = "Solo", specialties = new[] { "general-practice", "diabetes" }, qualifications = "MBBS", languages = "English, Tamil" },
         licence = new { authority, number, certificateName = "council-certificate.pdf", attested = true },
-        clinic = new { name = "Rao Clinic (synthetic)", address = "12 Test Street, Chennai", registrationNumber = "CE-0001", taxId = gstin },
+        clinic = new { name = "Rao Clinic (synthetic)", address = "12 Test Street, Chennai", registrationNumber = "CE-0001", taxId = gstin, type = "Clinic", contactEmail = "desk@rao-clinic.example" },
         hours = new
         {
             weekdays = new[] { new { start = "09:00", end = "13:00" }, new { start = "17:00", end = "20:00" } },
@@ -186,7 +186,8 @@ public sealed partial class OnboardingTests(PostgresFixture sql) : IClassFixture
             Assert.Equal(("General practice, Diabetes", "Move"), (profile.Specialty, profile.PatientStart));
             Assert.Contains("17:00", profile.WeekdayHours, StringComparison.Ordinal);
             var licence = await db.DoctorLicences.SingleAsync();
-            Assert.Equal((userId, Approved: OrganisationState.Approved), (licence.AttestedBy, Approved: tenant.State)); // the owner-doctor attested their own licence
+            Assert.Equal((userId, OrganisationState.Draft), (licence.AttestedBy, tenant.State)); // the owner-doctor attested their own licence; the organisation starts as Draft (ADR-016)
+            Assert.Equal((OrganisationType.Clinic, "desk@rao-clinic.example"), ((await db.OrganisationRequests.SingleAsync()).Type, address.Email));
             Assert.Equal(1, await db.Invitations.CountAsync());
         }
         await using (var other = sql.Context(Guid.NewGuid()))
@@ -195,6 +196,12 @@ public sealed partial class OnboardingTests(PostgresFixture sql) : IClassFixture
             Assert.Empty(await other.DoctorLicences.IgnoreQueryFilters().ToListAsync());
         }
 
+        // A new organisation is set-up only until Medvya approves it (ADR-016); the owner-doctor then records and signs with no Medvya licence check.
+        Assert.Equal(HttpStatusCode.NoContent, (await browser.PostAsJsonAsync(new Uri("/v1/me/facility", UriKind.Relative), new { membershipId = membership.GetProperty("id").GetGuid() })).StatusCode);
+        var draft = (await Json(await browser.GetAsync(new Uri("/v1/me/context", UriKind.Relative)))).GetProperty("active");
+        Assert.Equal("Draft", draft.GetProperty("organisationState").GetString());
+        Assert.False(draft.GetProperty("capabilities").TryGetProperty("RegisterBookPatients", out _));
+        await using (var db = sql.Context(tenantId)) await db.Tenants.ExecuteUpdateAsync(t => t.SetProperty(x => x.State, OrganisationState.Approved));
         // The owner doctor is bookable straight away: step 2's windows are their sessions on the open days at the chosen slot length, and they show in the day view.
         Assert.Equal(HttpStatusCode.NoContent, (await browser.PostAsJsonAsync(new Uri("/v1/me/facility", UriKind.Relative), new { membershipId = membership.GetProperty("id").GetGuid() })).StatusCode);
         var facilityId = (await Json(await browser.GetAsync(new Uri("/v1/me/context", UriKind.Relative)))).GetProperty("active").GetProperty("facilityId").GetGuid();
@@ -205,7 +212,6 @@ public sealed partial class OnboardingTests(PostgresFixture sql) : IClassFixture
         var day = await Json(await browser.GetAsync(new Uri($"/v1/schedule?facilityId={facilityId}&date=2026-11-02", UriKind.Relative))); // a Monday
         Assert.Equal(userId, Assert.Single(day.GetProperty("columns").EnumerateArray()).GetProperty("calendarId").GetGuid());
 
-        // No Medvya licence check: the owner-doctor can record and sign at once (ADR-016).
         Assert.Equal(HttpStatusCode.NoContent, (await browser.PostAsJsonAsync(new Uri("/v1/me/facility", UriKind.Relative), new { membershipId = membership.GetProperty("id").GetGuid() })).StatusCode);
         var session = (await Json(await browser.GetAsync(new Uri("/v1/me/context", UriKind.Relative)))).GetProperty("active");
         Assert.Equal("Approved", session.GetProperty("organisationState").GetString());
@@ -352,7 +358,7 @@ public sealed partial class OnboardingTests(PostgresFixture sql) : IClassFixture
         var data = new
         {
             profile = new { fullName = "K. Lakshmi (synthetic)", mode = "Clinic" },
-            clinic = new { name = "Al Noor Clinic (synthetic)", address = "1 Test Road, Abu Dhabi", registrationNumber = "FL-1", taxId = "100123456700003" },
+            clinic = new { name = "Al Noor Clinic (synthetic)", address = "1 Test Road, Abu Dhabi", registrationNumber = "FL-1", taxId = "100123456700003", type = "Clinic", contactEmail = "desk@al-noor.example" },
             hours = new { weekdays = new[] { new { start = "08:00", end = "16:00" } }, saturday = Array.Empty<object>(), slotMinutes = 15, newVisitFee = 35_000, followUpFee = 25_000 },
             templates = Array.Empty<string>(), team = Array.Empty<object>(),
         };

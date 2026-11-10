@@ -64,6 +64,7 @@ public sealed class OrganisationStateTests(PostgresFixture sql) : IClassFixture<
         await db.Tenants.ExecuteUpdateAsync(s => s.SetProperty(t => t.State, state));
     }
 
+    sealed class NoMail : IEmailSender { public Task SendAsync(EmailMessage message, CancellationToken cancellationToken = default) => Task.CompletedTask; }
     sealed class Who(Guid id) : ICurrentUser { public Guid? UserId => id; }
     sealed class At(Guid id) : ICurrentFacility { public Guid? FacilityId => id; }
 
@@ -121,24 +122,25 @@ public sealed class OrganisationStateTests(PostgresFixture sql) : IClassFixture<
     {
         await SetStateAsync(OrganisationState.Submitted);
         OrganisationStates States(Guid user, TenancyDbContext db) =>
-            new(db, new PostgresFixture.FixedTenant(h.Tenant), new Who(user), new Medvya.Audit.Infrastructure.AuditLog(sql.Audit(h.Tenant)), TimeProvider.System);
+            new(db, new PostgresFixture.FixedTenant(h.Tenant), new Who(user), new Medvya.Audit.Infrastructure.AuditLog(sql.Audit(h.Tenant)), new NoMail(), TimeProvider.System);
 
         await using (var db = sql.Context(h.Tenant))
         {
             await Assert.ThrowsAsync<SettingsValidationException>(() => States(h.Admin, db).SetAsync(OrganisationState.Rejected, "  ")); // a reason is required
             await States(h.Admin, db).SetAsync(OrganisationState.NeedsChanges, "Registration certificate is unreadable");
             await States(h.Admin, db).SetAsync(OrganisationState.NeedsChanges, "again"); // already there: nothing more is written
+            await States(h.Admin, db).SetAsync(OrganisationState.Submitted, null); // the applicant resubmits
         }
         await using (var db = sql.Context(h.Tenant))
             await States(h.Admin, db).SetAsync(OrganisationState.Approved, null);
 
         await using var check = sql.Context(h.Tenant);
-        Assert.Equal(OrganisationState.Approved, await new OrganisationStates(check, new PostgresFixture.FixedTenant(h.Tenant), new Who(h.Admin), null!, TimeProvider.System).CurrentAsync());
+        Assert.Equal(OrganisationState.Approved, await new OrganisationStates(check, new PostgresFixture.FixedTenant(h.Tenant), new Who(h.Admin), null!, null!, TimeProvider.System).CurrentAsync());
         var changes = await check.SettingsChanges.Where(c => c.Section == "organisation").OrderBy(c => c.OccurredAt).ToListAsync();
-        Assert.Equal(2, changes.Count);
+        Assert.Equal(3, changes.Count);
         Assert.Contains("Registration certificate is unreadable", changes[0].After, StringComparison.Ordinal);
         Assert.All(changes, c => Assert.Equal(h.Admin, c.ActorUserId));
         await using var audit = sql.Audit(h.Tenant);
-        Assert.Equal(["organisation.state.Approved", "organisation.state.NeedsChanges"], (await audit.Events.Where(e => e.Action.StartsWith("organisation.state.")).Select(e => e.Action).ToListAsync()).Order());
+        Assert.Equal(["organisation.state.Approved", "organisation.state.NeedsChanges", "organisation.state.Submitted"], (await audit.Events.Where(e => e.Action.StartsWith("organisation.state.")).Select(e => e.Action).ToListAsync()).Order());
     }
 }

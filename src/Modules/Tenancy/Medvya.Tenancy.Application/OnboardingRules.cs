@@ -156,6 +156,11 @@ public abstract partial class OnboardingRules
 
     void ClinicStep(OnboardingClinic? c, List<OnboardingError> e)
     {
+        if (string.IsNullOrWhiteSpace(c?.Type)) e.Add(new("clinic.type", "required"));
+        else if (c.Type is not (nameof(OrganisationType.Clinic) or nameof(OrganisationType.Hospital))) e.Add(new("clinic.type", "unknown"));
+        var contact = c?.ContactEmail?.Trim();
+        if (string.IsNullOrEmpty(contact)) e.Add(new("clinic.contactEmail", "required"));
+        else if (!IsBareEmail(contact)) e.Add(new("clinic.contactEmail", "format"));
         Text(c?.Name, "clinic.name", 200, true, e);
         if (OutboundText.HasLink(c?.Name)) e.Add(new("clinic.name", "link")); // the practice name goes into invitation emails (#886)
         Text(c?.Address, "clinic.address", 500, true, e);
@@ -219,13 +224,15 @@ public abstract partial class OnboardingRules
         {
             var email = team[i].Email?.Trim();
             if (string.IsNullOrEmpty(email)) e.Add(new($"team.{i}.email", "required"));
-            // A bare address only, as the invitation flow requires (MDV-P0-013).
-            else if (email.Length > 254 || !MailAddress.TryCreate(email, out var parsed) || parsed.Address != email) e.Add(new($"team.{i}.email", "format"));
+            else if (!IsBareEmail(email)) e.Add(new($"team.{i}.email", "format"));
             if (team[i].Role is not { } role || !TeamRoles.Contains(role)) e.Add(new($"team.{i}.role", "unknown"));
         }
         var emails = team.Select(m => m.Email?.Trim().ToLowerInvariant()).Where(m => !string.IsNullOrEmpty(m)).ToList();
         if (emails.Count != emails.Distinct().Count()) e.Add(new("team", "duplicate"));
     }
+
+    /// <summary>A bare address only, as the invitation flow requires (MDV-P0-013).</summary>
+    public static bool IsBareEmail(string email) => email.Length <= 254 && MailAddress.TryCreate(email, out var parsed) && parsed.Address == email;
 
     static void Text(string? value, string field, int max, bool required, List<OnboardingError> e)
     {

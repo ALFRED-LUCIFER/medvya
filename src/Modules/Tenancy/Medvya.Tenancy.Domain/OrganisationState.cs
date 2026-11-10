@@ -5,6 +5,18 @@ public enum OrganisationState { Draft, Submitted, NeedsChanges, Approved, Reject
 
 public static class OrganisationRules
 {
+    /// <summary>
+    /// The state machine (ADR-016): Draft or NeedsChanges to Submitted (the applicant), Submitted to Approved, NeedsChanges or Rejected (Medvya),
+    /// Approved to Suspended and back (Medvya). Rejected is final for the request.
+    /// </summary>
+    public static bool CanMove(OrganisationState from, OrganisationState to) => (from, to) switch
+    {
+        (OrganisationState.Draft or OrganisationState.NeedsChanges, OrganisationState.Submitted) => true,
+        (OrganisationState.Submitted, OrganisationState.Approved or OrganisationState.NeedsChanges or OrganisationState.Rejected) => true,
+        (OrganisationState.Approved, OrganisationState.Suspended) or (OrganisationState.Suspended, OrganisationState.Approved) => true,
+        _ => false,
+    };
+
     /// <summary>What an organisation that is not Approved can still do: set itself up (settings, staff) and read its audit log.</summary>
     static readonly HashSet<Capability> SetUp = new HashSet<Capability> { Capability.StaffRolesIntegrations, Capability.AuditLog };
 

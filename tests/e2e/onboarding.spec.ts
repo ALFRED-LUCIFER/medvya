@@ -108,6 +108,8 @@ test('errors appear under the field and are announced; a server error keeps the 
 
   await page.getByLabel('Full name').fill('Arjun Rao (synthetic)');
   await page.getByLabel('Practice name').fill('Rao Clinic (synthetic)');
+  await page.getByLabel('A clinic').check();
+  await page.getByLabel('Email Medvya writes to about this request').fill('desk@example.test');
   await page.getByLabel(/^Address/).fill('12 Test Street');
   await page.getByLabel('Paediatrics').check();
   await page.getByRole('combobox', { name: 'Medical council' }).click();
@@ -126,6 +128,8 @@ test('an owner who is not a doctor gives no licence and needs no specialty', asy
   await expect(page.getByRole('combobox', { name: 'Medical council' })).toHaveCount(0);
   await page.getByLabel('Full name').fill('K. Lakshmi (synthetic)');
   await page.getByLabel('Practice name').fill('Lakshmi Clinic (synthetic)');
+  await page.getByLabel('A clinic').check();
+  await page.getByLabel('Email Medvya writes to about this request').fill('desk@example.test');
   await page.getByLabel(/^Address/).fill('1 Test Road');
   await page.getByRole('button', { name: 'Continue' }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'When are you open, and what do you charge?' })).toBeVisible();
@@ -167,7 +171,7 @@ test('skip leaves a step empty; finish later saves and signs out', async ({ page
 
 test('the wizard works from the keyboard at 768 px', async ({ page }) => {
   await page.setViewportSize({ width: 768, height: 1024 });
-  await mockOnboarding(page, { step: 1, data: { profile: { mode: 'Clinic' } } });
+  await mockOnboarding(page, { step: 1, data: { profile: { mode: 'Clinic' }, clinic: { type: 'Clinic' } } });
   await page.goto('/onboarding');
   await page.getByLabel('Full name').focus();
   await page.keyboard.type('K. Lakshmi (synthetic)');
@@ -175,6 +179,8 @@ test('the wizard works from the keyboard at 768 px', async ({ page }) => {
   await page.keyboard.type('Lakshmi Clinic (synthetic)');
   await page.keyboard.press('Tab');
   await page.keyboard.type('1 Test Road');
+  await page.keyboard.press('Tab');
+  await page.keyboard.type('desk@example.test');
   await page.keyboard.press('Enter'); // Enter in a field submits the step
   await expect(page.getByRole('heading', { level: 1, name: 'When are you open, and what do you charge?' })).toBeVisible();
   await page.getByRole('switch', { name: /Sunday/ }).focus();

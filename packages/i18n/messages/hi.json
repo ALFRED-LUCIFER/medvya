@@ -2887,6 +2887,8 @@
   "staff.reactivateConfirm": "वापस लाएँ",
   "staff.reactivateError.aboveGranter": "आप यह भूमिका नहीं दे सकते: इसमें ऐसी पहुँच है जो आपके पास नहीं है। प्रैक्टिस मालिक से कहें।",
   "staff.reactivateError.failed": "यह नहीं हुआ। कुछ नहीं बदला; फिर से कोशिश करें।",
+  "staff.reactivateError.planFull": "आपके प्लान में 1 डॉक्टर और 2 स्टाफ की अनुमति है; अपग्रेड के लिए Medvya से संपर्क करें",
+  "plan.full": "आपके प्लान में 1 डॉक्टर और 2 स्टाफ की अनुमति है; अपग्रेड के लिए Medvya से संपर्क करें",
   "staff.notice.reactivated": "वापस लाया गया। वे उसी भूमिका के साथ फिर से साइन इन कर सकते हैं।",
   "audit.actionName.staff.reactivate": "स्टाफ़ सदस्य को वापस लाया गया",
   "settings.notifications.senderName": "ईमेल में भेजने वाले का नाम",

@@ -2890,6 +2890,8 @@
   "staff.reactivateConfirm": "إعادة",
   "staff.reactivateError.aboveGranter": "لا يمكنك منح هذا الدور: فيه وصول لا تملكه أنت. اطلب ذلك من مالك العيادة.",
   "staff.reactivateError.failed": "لم ينجح ذلك. لم يتغير شيء؛ حاول مرة أخرى.",
+  "staff.reactivateError.planFull": "تتيح خطتك طبيبًا واحدًا وموظفَين اثنين؛ تواصل مع Medvya للترقية",
+  "plan.full": "تتيح خطتك طبيبًا واحدًا وموظفَين اثنين؛ تواصل مع Medvya للترقية",
   "staff.notice.reactivated": "تمت الإعادة. يمكنهم تسجيل الدخول مرة أخرى بالدور نفسه.",
   "audit.actionName.staff.reactivate": "إعادة أحد الموظفين",
   "settings.notifications.senderName": "اسم المرسل في رسائل البريد",

@@ -144,6 +144,7 @@ public sealed class StaffRoster(TenancyDbContext db, ICurrentTenant tenant, ICur
             Before = JsonSerializer.Serialize(new { status = MembershipStatus.Offboarded }, Json), After = JsonSerializer.Serialize(new { status = member.Status, reason }, Json),
         });
         await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
+        await StarterPlan.EnsureRoomAsync(db, TenantId, member.Role, cancellationToken); // coming back takes a seat again
         await db.SaveChangesAsync(cancellationToken);
         await audit.WriteAsync(new AuditEvent
         {

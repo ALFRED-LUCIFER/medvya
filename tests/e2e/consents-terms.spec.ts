@@ -73,7 +73,7 @@ test('a role without Register / book at Full sees the consents but cannot change
 for (const locale of ['en', 'ar'])
   test(`the owner accepts the terms and the tab shows who can proceed, axe clean (${locale})`, async ({ page }) => {
     let accepted = false;
-    const status = () => ({ version: '2026-11-draft', accepted, acceptedAt: accepted ? at : null, required: true });
+    const status = () => ({ version: '2026-11-draft-2', accepted, acceptedAt: accepted ? at : null, required: true });
     await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
     await page.route('**/v1/me/context', r => r.fulfill({ json: context('PracticeAdmin', { StaffRolesIntegrations: 'Config' }) }));
     await page.route('**/v1/settings/terms', r => r.fulfill({ json: status() }));
@@ -82,6 +82,7 @@ for (const locale of ['en', 'ar'])
     expect(await page.evaluate(() => document.documentElement.dir)).toBe(locale === 'ar' ? 'rtl' : 'ltr');
     const accept = page.getByRole('button').filter({ hasText: locale === 'en' ? 'Accept the terms for this practice' : 'الموافقة على الشروط لهذه العيادة' });
     await expect(accept).toBeVisible();
+    await expect(page.getByRole('heading', { name: locale === 'en' ? 'Licence responsibility' : 'مسؤولية التراخيص' })).toBeVisible(); // MDV-P1-067
     expect(await axe(page)).toEqual([]);
     await accept.click();
     await expect(accept).toHaveCount(0);
@@ -92,7 +93,7 @@ for (const locale of ['en', 'ar'])
 test('a non-owner who tries to accept is told only the owner can', async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('medvya.locale', 'en'));
   await page.route('**/v1/me/context', r => r.fulfill({ json: context('HospitalIt', { StaffRolesIntegrations: 'Config' }) }));
-  await page.route('**/v1/settings/terms', r => r.fulfill({ json: { version: '2026-11-draft', accepted: false, acceptedAt: null, required: true } }));
+  await page.route('**/v1/settings/terms', r => r.fulfill({ json: { version: '2026-11-draft-2', accepted: false, acceptedAt: null, required: true } }));
   await page.route('**/v1/settings/terms/accept', r => r.fulfill({ status: 403, json: { title: 'Only the practice owner can accept' } }));
   await page.goto('/settings?tab=terms');
   await page.getByRole('button', { name: 'Accept the terms for this practice' }).click();
@@ -103,7 +104,7 @@ test('a non-owner who tries to accept is told only the owner can', async ({ page
 test('the owner sees the terms prompt on every page until accepted; a desk role does not', async ({ page }) => {
   let asked = 0;
   await page.addInitScript(() => localStorage.setItem('medvya.locale', 'en'));
-  await page.route('**/v1/settings/terms', r => { asked++; return r.fulfill({ json: { version: '2026-11-draft', accepted: false, acceptedAt: null, required: true } }); });
+  await page.route('**/v1/settings/terms', r => { asked++; return r.fulfill({ json: { version: '2026-11-draft-2', accepted: false, acceptedAt: null, required: true } }); });
   await page.route('**/v1/me/context', r => r.fulfill({ json: context('PracticeAdmin', { StaffRolesIntegrations: 'Config' }) }));
   await page.goto('/settings?tab=profile');
   const notice = page.getByRole('note').filter({ hasText: 'Booking and messages are paused' });

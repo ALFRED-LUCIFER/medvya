@@ -69,6 +69,7 @@ test('the Doctors tab lists doctors with who attested the licence, and an expire
   await page.getByLabel('Expiry date').fill('2031-12-31');
   await page.getByRole('button', { name: 'Save and confirm' }).click();
   await expect(page.getByLabel(/I confirm this licence belongs to this doctor/)).toHaveAttribute('aria-invalid', 'true'); // the owner must attest
+  await expect(page.getByText('Your organisation answers for this licence. Medvya does not check it.')).toBeVisible(); // MDV-P1-067 reminder
   await page.getByLabel(/I confirm this licence belongs to this doctor/).check();
   await page.getByRole('button', { name: 'Save and confirm' }).click();
   await expect(page.getByText('Attested by the owner on 2026-11-10')).toBeVisible();

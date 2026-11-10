@@ -18,6 +18,10 @@ export default function TermsPanel(p: Props) {
       <p className="rounded-md border border-warning-700 px-3 py-2 text-sm font-semibold">
         {t('settings.terms.draft')} <bdi dir="ltr">{t('settings.terms.version', { version: terms.version })}</bdi>
       </p>
+      <div className="flex flex-col gap-1">
+        <h3 className="font-bold">{t('settings.terms.licenceTitle')}</h3>
+        <p>{t('settings.terms.licenceClause')}</p>
+      </div>
       {terms.accepted && terms.acceptedAt ? (
         <p role="status" className="flex items-center gap-2 font-bold"><CircleCheck aria-hidden className="size-5" />{t('settings.terms.accepted', { date: formatDate(new Date(terms.acceptedAt)) })}</p>
       ) : (

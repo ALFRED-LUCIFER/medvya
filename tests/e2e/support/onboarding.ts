@@ -52,7 +52,7 @@ export async function mockOnboarding(page: Page, draft: { step: number; data: Re
   return state;
 }
 
-/** Fills the five steps for a solo doctor in India, invites the front desk, finishes and opens Today from the ready screen. */
+/** Fills the five steps for an owner-doctor in India, invites the front desk, finishes and opens Today from the ready screen. */
 export async function completeWizard(page: Page, { lost = false } = {}) {
   await page.getByRole('button', { name: 'Start setup' }).click();
   await page.getByLabel('Full name').fill('Arjun Rao (synthetic)');

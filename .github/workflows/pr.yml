@@ -150,6 +150,8 @@ jobs:
         run: node tools/check-synthetic/check.mjs --self-test && node tools/check-synthetic/check.mjs
       - name: Relative Markdown links resolve
         run: python3 -I tools/check-links/check.py --self-test && python3 -I tools/check-links/check.py
+      - name: Draft terms block any deploy beyond dev (MDV-P1-067)
+        run: bash tools/check-legal-marker.sh dev && ! bash tools/check-legal-marker.sh pilot
       - name: Generated ticket pages are current
         run: |
           python3 -I tools/tickets/build.py

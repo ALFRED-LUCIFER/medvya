@@ -1,3 +1,4 @@
+using Medvya.Identity.Application;
 using Medvya.Tenancy.Application;
 using Medvya.Tenancy.Domain;
 using Microsoft.AspNetCore.Authorization;
@@ -73,7 +74,19 @@ public static class OrganisationApprovalEndpoints
         var read = app.MapGroup("/v1/operations/organisations").RequireAuthorization(OperationsPolicies.OrganisationRead).AddEndpointFilter(SettingsEndpoints.MapErrors);
         var act = app.MapGroup("/v1/operations/organisations").RequireAuthorization(OperationsPolicies.OrganisationApprove).AddEndpointFilter(SettingsEndpoints.MapErrors);
 
-        read.MapGet("/", async (OrganisationState? state, [FromServices] IOrganisationReviews queue, CancellationToken ct) => Results.Ok(await queue.ListAsync(state, ct)));
+        read.MapGet("/", async (ReviewFilter? filter, [FromServices] IOrganisationReviews queue, CancellationToken ct) => Results.Ok(await queue.ListAsync(filter ?? ReviewFilter.All, ct)));
+        read.MapGet("/{tenantId:guid}", async (Guid tenantId, HttpContext http, CancellationToken ct) =>
+        {
+            await using var scope = http.RequestServices.EnterLinkTenant(tenantId);
+            RequestDetail detail;
+            try { detail = await scope.ServiceProvider.GetRequiredService<IOrganisationRequests>().DetailAsync(ct); }
+            catch (InvalidOperationException) { return Results.NotFound(); } // no readable tenant row
+            catch (SettingsValidationException) { return Results.NotFound(); } // an organisation without a request (migrated)
+            var names = await scope.ServiceProvider.GetRequiredService<IStaffUsers>().DisplayNamesAsync([.. detail.History.Select(h => h.ActorUserId).OfType<Guid>().Distinct()], ct);
+            return Results.Ok(new { detail.Name, detail.Country, detail.Type, detail.State, detail.SubmittedAt, detail.Reason, detail.Address, detail.ContactEmail, detail.RegistrationNumber,
+                detail.TaxNumber, detail.ItContactName, detail.ItContactEmail, detail.Documents,
+                History = detail.History.Select(h => new { h.At, Actor = h.ActorUserId is { } id && names.TryGetValue(id, out var n) ? n : null, h.State, h.Reason }) });
+        });
         read.MapGet("/{tenantId:guid}/documents/{documentId:guid}", async (Guid tenantId, Guid documentId, HttpContext http, CancellationToken ct) =>
         {
             await using var scope = http.RequestServices.EnterLinkTenant(tenantId);
@@ -81,22 +94,27 @@ public static class OrganisationApprovalEndpoints
             return Results.Ok(new DocumentLink(url, DateTimeOffset.UtcNow.AddMinutes(5)));
         });
 
-        act.MapPost("/{tenantId:guid}/approve", (Guid tenantId, [FromBody] Decision body, HttpContext http, CancellationToken ct) => Apply(http, tenantId, OrganisationState.Approved, body, ct));
+        act.MapPost("/{tenantId:guid}/approve", (Guid tenantId, [FromBody] Decision body, HttpContext http, CancellationToken ct) => Apply(http, tenantId, OrganisationState.Approved, body, ct, OrganisationState.Submitted));
+        act.MapPost("/{tenantId:guid}/reinstate", (Guid tenantId, [FromBody] Decision body, HttpContext http, CancellationToken ct) => Apply(http, tenantId, OrganisationState.Approved, body, ct, OrganisationState.Suspended));
         act.MapPost("/{tenantId:guid}/request-changes", (Guid tenantId, [FromBody] Decision body, HttpContext http, CancellationToken ct) => Apply(http, tenantId, OrganisationState.NeedsChanges, body, ct));
         act.MapPost("/{tenantId:guid}/reject", (Guid tenantId, [FromBody] Decision body, HttpContext http, CancellationToken ct) => Apply(http, tenantId, OrganisationState.Rejected, body, ct));
         act.MapPost("/{tenantId:guid}/suspend", (Guid tenantId, [FromBody] Decision body, HttpContext http, CancellationToken ct) => Apply(http, tenantId, OrganisationState.Suspended, body, ct));
         return app;
     }
 
-    static async Task<IResult> Apply(HttpContext http, Guid tenantId, OrganisationState to, Decision body, CancellationToken ct)
+    static async Task<IResult> Apply(HttpContext http, Guid tenantId, OrganisationState to, Decision body, CancellationToken ct, OrganisationState? from = null)
     {
         var reason = body.Reason?.Trim();
         if (string.IsNullOrEmpty(reason)) throw new SettingsValidationException([new("reason", "required")]);
         if (reason.Length < 5) throw new SettingsValidationException([new("reason", "too_short")]);
+        if (reason.Length > 500) throw new SettingsValidationException([new("reason", "too_long")]);
         await using var scope = http.RequestServices.EnterLinkTenant(tenantId);
         var states = scope.ServiceProvider.GetRequiredService<IOrganisationState>();
         // An unknown organisation id reads no tenant row under row-level security.
-        try { await states.CurrentAsync(ct); } catch (InvalidOperationException) { return Results.NotFound(); }
+        OrganisationState current;
+        try { current = await states.CurrentAsync(ct); } catch (InvalidOperationException) { return Results.NotFound(); }
+        // Approve is for a request in review and Reinstate for a suspended organisation: the same move, two deliberate actions.
+        if (from is { } required && current != required) throw new SettingsValidationException([new("state", "transition")]);
         await states.SetAsync(to, reason, ct);
         return Results.NoContent();
     }

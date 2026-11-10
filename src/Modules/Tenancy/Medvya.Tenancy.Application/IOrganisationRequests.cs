@@ -34,8 +34,32 @@ public interface IOrganisationRequests
     /// <exception cref="SettingsValidationException">"request:locked", "document.{kind}:required", "itContact.name:required", "itContact.email:format".</exception>
     Task SubmitAsync(CancellationToken cancellationToken = default);
 
+    /// <summary>The whole request as Medvya's reviewer reads it: profile, documents and history. Business details only, never patient data.</summary>
+    Task<RequestDetail> DetailAsync(CancellationToken cancellationToken = default);
+
     /// <summary>A short-lived read link to one document. For Medvya operations only: the endpoint is behind the approval capability.</summary>
     Task<Uri?> DocumentLinkAsync(Guid documentId, CancellationToken cancellationToken = default);
+}
+
+public sealed record HistoryEntry(DateTimeOffset At, Guid? ActorUserId, string State, string? Reason);
+
+/// <summary>The reviewer's detail (console design, 10 Nov 2026): the organisation's profile, its documents and who decided what.</summary>
+public sealed record RequestDetail(
+    string Name, string Country, OrganisationType Type, OrganisationState State, DateTimeOffset? SubmittedAt, string? Reason, string? Address, string? ContactEmail,
+    string? RegistrationNumber, string? TaxNumber, string? ItContactName, string? ItContactEmail, IReadOnlyList<OrganisationDocumentView> Documents, IReadOnlyList<HistoryEntry> History);
+
+/// <summary>The queue's filters (console design): Waiting is Submitted, Decided is Approved, Rejected or Suspended.</summary>
+public enum ReviewFilter { Waiting, NeedsChanges, Decided, All }
+
+public static class ReviewFilters
+{
+    public static IReadOnlyList<OrganisationState> States(ReviewFilter filter) => filter switch
+    {
+        ReviewFilter.Waiting => [OrganisationState.Submitted],
+        ReviewFilter.NeedsChanges => [OrganisationState.NeedsChanges],
+        ReviewFilter.Decided => [OrganisationState.Approved, OrganisationState.Rejected, OrganisationState.Suspended],
+        _ => [.. Enum.GetValues<OrganisationState>()],
+    };
 }
 
 /// <summary>One organisation in Medvya's review queue: control-plane facts and document metadata, never clinic data.</summary>
@@ -49,6 +73,6 @@ public sealed record QueueItem(
 /// </summary>
 public interface IOrganisationReviews
 {
-    /// <summary>Organisations with a request in <paramref name="state"/> (all states when null), oldest submission first.</summary>
-    Task<IReadOnlyList<QueueItem>> ListAsync(OrganisationState? state, CancellationToken cancellationToken = default);
+    /// <summary>Organisations whose state is in <paramref name="filter"/>, oldest submission first.</summary>
+    Task<IReadOnlyList<QueueItem>> ListAsync(ReviewFilter filter, CancellationToken cancellationToken = default);
 }

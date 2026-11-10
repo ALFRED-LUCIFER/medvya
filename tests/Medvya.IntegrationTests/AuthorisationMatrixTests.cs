@@ -245,6 +245,8 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         ["/v1/notifications/inbox/{id:guid}/read"] = "the inbox row is keyed by tenant and user; another user's id is a no-op (NotificationsTests)",
         ["/v1/me/sessions/{id:guid}"] = "own sessions only: the session row is matched on the caller's user id (SessionControlTests)",
         ["/v1/operations/organisations/{tenantId:guid}/documents/{documentId:guid}"] = "Medvya operations act on any organisation by design, behind the approval capability: a practice user gets 403 (OrganisationRequestTests)",
+        ["/v1/operations/organisations/{tenantId:guid}"] = "as above",
+        ["/v1/operations/organisations/{tenantId:guid}/reinstate"] = "as above",
         ["/v1/operations/organisations/{tenantId:guid}/approve"] = "as above",
         ["/v1/operations/organisations/{tenantId:guid}/request-changes"] = "as above",
         ["/v1/operations/organisations/{tenantId:guid}/reject"] = "as above",

@@ -26,6 +26,11 @@ public sealed partial class OrganisationStates(TenancyDbContext db, ICurrentTena
         if (row.State == state) return;
         if (!OrganisationRules.CanMove(row.State, state)) throw new SettingsValidationException([new("state", "transition")]);
         var before = row.State;
+        // A hospital cannot be approved without its signed data processing agreement on file (design 10 Nov 2026): ask for changes instead.
+        if (state == OrganisationState.Approved && before == OrganisationState.Submitted
+            && await db.OrganisationRequests.AnyAsync(r => r.Type == OrganisationType.Hospital, cancellationToken)
+            && !await db.OrganisationDocuments.AnyAsync(d => d.Kind == OrganisationDocumentRules.Dpa, cancellationToken))
+            throw new SettingsValidationException([new("document.Dpa", "required")]);
         row.State = state;
         // The applicant reads the last reason on the status page and by email; approving clears it.
         var request = await db.OrganisationRequests.SingleOrDefaultAsync(cancellationToken);

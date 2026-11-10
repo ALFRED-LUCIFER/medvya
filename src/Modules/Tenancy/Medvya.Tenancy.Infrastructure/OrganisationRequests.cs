@@ -77,6 +77,26 @@ public sealed class OrganisationRequests(TenancyDbContext db, ICurrentTenant ten
         await state.SetAsync(OrganisationState.Submitted, null, cancellationToken); // saves the request's change with the state and its audit row
     }
 
+    public async Task<RequestDetail> DetailAsync(CancellationToken cancellationToken = default)
+    {
+        var request = await db.OrganisationRequests.AsNoTracking().SingleOrDefaultAsync(cancellationToken) ?? throw new SettingsValidationException([new("request", "missing")]);
+        var tenantRow = await db.Tenants.AsNoTracking().SingleAsync(cancellationToken);
+        var profile = await db.Profiles.AsNoTracking().SingleOrDefaultAsync(cancellationToken);
+        var documents = await db.OrganisationDocuments.AsNoTracking().OrderBy(d => d.UploadedAt)
+            .Select(d => new OrganisationDocumentView(d.Id, d.Kind, d.ContentType, d.SizeBytes, d.UploadedAt)).ToListAsync(cancellationToken);
+        // The state changes recorded by IOrganisationState, oldest first: {"state":"NeedsChanges","reason":"..."}.
+        var changes = await db.SettingsChanges.AsNoTracking().Where(c => c.Section == "organisation" && c.After != null).OrderBy(c => c.OccurredAt).ToListAsync(cancellationToken);
+        var history = changes.Select(c =>
+        {
+            using var json = System.Text.Json.JsonDocument.Parse(c.After!);
+            var state = json.RootElement.TryGetProperty("state", out var s) ? s.GetString() : null;
+            var reason = json.RootElement.TryGetProperty("reason", out var r) && r.ValueKind == System.Text.Json.JsonValueKind.String ? r.GetString() : null;
+            return state is null ? null : new HistoryEntry(c.OccurredAt, c.ActorUserId, state, reason);
+        }).OfType<HistoryEntry>().ToList();
+        return new RequestDetail(tenantRow.Name, tenantRow.CountryCode, request.Type, tenantRow.State, request.SubmittedAt, request.LastReason, profile?.Address, profile?.Email,
+            profile?.RegistrationNumber, profile?.TaxNumber, request.ItContactName, request.ItContactEmail, documents, history);
+    }
+
     public async Task<Uri?> DocumentLinkAsync(Guid documentId, CancellationToken cancellationToken = default)
     {
         if (await db.OrganisationDocuments.AsNoTracking().Where(d => d.Id == documentId).Select(d => d.BlobKey).SingleOrDefaultAsync(cancellationToken) is not { } key) return null;

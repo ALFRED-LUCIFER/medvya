@@ -88,7 +88,9 @@ public sealed class EndpointAuditTests(PostgresFixture sql) : IClassFixture<Post
         "POST /v1/organisation/request/submit",
         // Medvya operations' approval API (MDV-P1-064): control-plane requests and documents only, never clinic data; each decision is audited inside the organisation (OrganisationApprovalTests).
         "GET /v1/operations/organisations/",
+        "GET /v1/operations/organisations/{tenantId:guid}",
         "GET /v1/operations/organisations/{tenantId:guid}/documents/{documentId:guid}",
+        "POST /v1/operations/organisations/{tenantId:guid}/reinstate",
         "POST /v1/operations/organisations/{tenantId:guid}/approve",
         "POST /v1/operations/organisations/{tenantId:guid}/request-changes",
         "POST /v1/operations/organisations/{tenantId:guid}/reject",

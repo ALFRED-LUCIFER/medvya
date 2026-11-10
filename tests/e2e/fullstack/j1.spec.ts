@@ -85,7 +85,7 @@ test('J1: a new clinic owner sets up the practice, Medvya approves it, then a pa
     const ops = await browser.newPage();
     await signIn(ops, /K\. Lakshmi/);
     const act = (action: string, reason: string) => ops.request.post(`/v1/operations/organisations/${tenantId}/${action}`, { headers: { 'X-Medvya-Csrf': '1' }, data: { reason } });
-    const queue = await ops.request.get('/v1/operations/organisations/?state=Submitted');
+    const queue = await ops.request.get('/v1/operations/organisations/?filter=Waiting');
     expect(await queue.json()).toContainEqual(expect.objectContaining({ tenantId, state: 'Submitted', type: 'Clinic' }));
     expect((await act('request-changes', 'The registration certificate is unreadable')).status()).toBe(204);
 

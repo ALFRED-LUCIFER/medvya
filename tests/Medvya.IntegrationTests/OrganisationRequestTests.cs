@@ -189,7 +189,7 @@ public sealed class OrganisationRequestTests(PostgresFixture sql) : IClassFixtur
 
         var support = Client(reader);
         Assert.Equal(HttpStatusCode.OK, (await support.GetAsync("/v1/operations/organisations/")).StatusCode);
-        foreach (var action in new[] { "approve", "request-changes", "reject", "suspend" })
+        foreach (var action in new[] { "approve", "request-changes", "reject", "suspend", "reinstate" })
             Assert.Equal(HttpStatusCode.Forbidden, (await support.PostAsJsonAsync($"/v1/operations/organisations/{tenant}/{action}", new { reason = "Documents checked" })).StatusCode);
         Assert.Equal(OrganisationState.Submitted, await StateAsync());
     }
@@ -199,7 +199,7 @@ public sealed class OrganisationRequestTests(PostgresFixture sql) : IClassFixtur
     {
         await SetStateAsync(OrganisationState.Submitted);
         var ops = Client(approver);
-        foreach (var action in new[] { "approve", "request-changes", "reject", "suspend" })
+        foreach (var action in new[] { "approve", "request-changes", "reject", "suspend", "reinstate" })
         {
             var url = $"/v1/operations/organisations/{h.Tenant}/{action}";
             Assert.Equal(["reason:required"], await ErrorsAsync(await ops.PostAsJsonAsync(url, new { reason = "  " })));
@@ -242,7 +242,9 @@ public sealed class OrganisationRequestTests(PostgresFixture sql) : IClassFixtur
         Assert.Equal(OrganisationState.Approved, await StateAsync());
         Assert.Equal(HttpStatusCode.NoContent, await Act("suspend", "Payment dispute"));
         Assert.Equal(OrganisationState.Suspended, await StateAsync());
-        Assert.Equal(HttpStatusCode.NoContent, await Act("approve", "Dispute settled")); // reinstated
+        Assert.Equal(HttpStatusCode.BadRequest, await Act("approve", "Dispute settled")); // approve is for a request in review
+        Assert.Equal(HttpStatusCode.NoContent, await Act("reinstate", "Dispute settled")); // back to Approved, with a reason
+        Assert.Equal(HttpStatusCode.BadRequest, await Act("reinstate", "Not suspended")); // only a suspended organisation is reinstated
         Assert.Equal(OrganisationState.Approved, await StateAsync());
 
         await using var db = sql.Context(h.Tenant);
@@ -255,6 +257,58 @@ public sealed class OrganisationRequestTests(PostgresFixture sql) : IClassFixtur
         Assert.Contains("organisation.state.Suspended", await audit.Events.Select(e => e.Action).ToListAsync());
         Assert.Equal(5, mail.Sent.Count); // changes, rejection, approval, suspension, reinstatement; the applicant's own submits send nothing
         Assert.All(mail.Sent, m => Assert.Equal("desk@iyer-clinic.example", m.To));
+    }
+
+    [Fact]
+    public async Task AHospitalWithoutItsSignedDpaCannotBeApprovedAndOneWithItCan()
+    {
+        await using (var db = sql.Context(h.Tenant)) await db.OrganisationRequests.ExecuteUpdateAsync(s => s.SetProperty(r => r.Type, OrganisationType.Hospital));
+        using var owner = Client(h.Admin);
+        foreach (var kind in OrganisationDocumentRules.Required(OrganisationType.Hospital, false).Where(k => k != OrganisationDocumentRules.Dpa))
+            Assert.Equal(HttpStatusCode.OK, (await PutFile(owner, kind, Pdf)).StatusCode);
+        await SetStateAsync(OrganisationState.Submitted); // as if sent (the submit rule itself is tested above)
+        var ops = Client(approver);
+        var refused = await ops.PostAsJsonAsync($"/v1/operations/organisations/{h.Tenant}/approve", new { reason = "Documents checked" });
+        Assert.Equal(["document.Dpa:required"], await ErrorsAsync(refused));
+        Assert.Equal(OrganisationState.Submitted, await StateAsync());
+        Assert.Equal(HttpStatusCode.NoContent, (await ops.PostAsJsonAsync($"/v1/operations/organisations/{h.Tenant}/request-changes", new { reason = "Upload the signed DPA" })).StatusCode); // the other way out
+
+        await SetStateAsync(OrganisationState.Draft);
+        Assert.Equal(HttpStatusCode.OK, (await PutFile(owner, OrganisationDocumentRules.Dpa, Pdf)).StatusCode);
+        await SetStateAsync(OrganisationState.Submitted);
+        Assert.Equal(HttpStatusCode.NoContent, (await ops.PostAsJsonAsync($"/v1/operations/organisations/{h.Tenant}/approve", new { reason = "Documents checked" })).StatusCode);
+    }
+
+    [Fact]
+    public async Task TheDetailShowsTheProfileDocumentsAndWhoDecidedWhatAndNothingAboutPatients()
+    {
+        using var owner = Client(h.Admin);
+        await UploadAllAsync(owner, OrganisationType.Clinic);
+        await SetStateAsync(OrganisationState.Submitted);
+        var ops = Client(approver);
+        Assert.Equal(HttpStatusCode.NoContent, (await ops.PostAsJsonAsync($"/v1/operations/organisations/{h.Tenant}/request-changes", new { reason = "Tax registration is unreadable" })).StatusCode);
+
+        var detail = await Client(reader).GetFromJsonAsync<JsonElement>($"/v1/operations/organisations/{h.Tenant}");
+        Assert.Equal(["address", "contactEmail", "country", "documents", "history", "itContactEmail", "itContactName", "name", "reason", "registrationNumber", "state", "submittedAt", "taxNumber", "type"],
+            detail.EnumerateObject().Select(p => p.Name).Order());
+        Assert.Equal("desk@iyer-clinic.example", detail.GetProperty("contactEmail").GetString());
+        Assert.Equal(4, detail.GetProperty("documents").GetArrayLength());
+        var entry = Assert.Single(detail.GetProperty("history").EnumerateArray());
+        Assert.Equal(("NeedsChanges", "Tax registration is unreadable"), (entry.GetProperty("state").GetString(), entry.GetProperty("reason").GetString()));
+        Assert.Equal(HttpStatusCode.NotFound, (await Client(reader).GetAsync($"/v1/operations/organisations/{Guid.NewGuid()}")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await owner.GetAsync($"/v1/operations/organisations/{h.Tenant}")).StatusCode); // not Medvya operations
+    }
+
+    [Fact]
+    public async Task TheQueueFiltersAreWaitingNeedsChangesDecidedAndAll()
+    {
+        await SetStateAsync(OrganisationState.NeedsChanges);
+        var ops = Client(reader);
+        async Task<string> Seen() => (await Listed("Waiting") ? "W" : "-") + (await Listed("NeedsChanges") ? "N" : "-") + (await Listed("Decided") ? "D" : "-") + (await Listed("All") ? "A" : "-");
+        async Task<bool> Listed(string filter) => (await ops.GetFromJsonAsync<JsonElement>($"/v1/operations/organisations/?filter={filter}")).EnumerateArray().Any(i => i.GetProperty("tenantId").GetGuid() == h.Tenant);
+        Assert.Equal("-N-A", await Seen());
+        await SetStateAsync(OrganisationState.Suspended);
+        Assert.Equal("--DA", await Seen());
     }
 
     [Fact]
@@ -283,14 +337,14 @@ public sealed class OrganisationRequestTests(PostgresFixture sql) : IClassFixtur
         }
 
         var ops = Client(reader);
-        var items = (await ops.GetFromJsonAsync<JsonElement>("/v1/operations/organisations/?state=Submitted")).EnumerateArray().ToList();
+        var items = (await ops.GetFromJsonAsync<JsonElement>("/v1/operations/organisations/?filter=Waiting")).EnumerateArray().ToList();
         Assert.Contains(items, i => i.GetProperty("tenantId").GetGuid() == h.Tenant && i.GetProperty("documents").GetArrayLength() == 4);
         Assert.Contains(items, i => i.GetProperty("tenantId").GetGuid() == other && i.GetProperty("type").GetString() == "Hospital");
         // Control-plane fields only: no patient, staff or schedule data is part of the item.
         Assert.Equal(["country", "documents", "itContactEmail", "itContactName", "name", "reason", "state", "submittedAt", "tenantId", "type"],
             items[0].EnumerateObject().Select(p => p.Name).Order());
         Assert.All(items, i => Assert.Equal("Submitted", i.GetProperty("state").GetString()));
-        Assert.DoesNotContain((await ops.GetFromJsonAsync<JsonElement>("/v1/operations/organisations/?state=Approved")).EnumerateArray(), i => i.GetProperty("tenantId").GetGuid() == h.Tenant);
+        Assert.DoesNotContain((await ops.GetFromJsonAsync<JsonElement>("/v1/operations/organisations/?filter=Decided")).EnumerateArray(), i => i.GetProperty("tenantId").GetGuid() == h.Tenant);
 
         // Row-level security: the queue's read widens three tables only, and a tenant-scoped connection still sees its own organisation alone.
         await using (var scoped = sql.Context(h.Tenant))

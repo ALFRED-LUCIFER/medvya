@@ -17,8 +17,9 @@ public sealed class OrganisationReviews(string connectionString, ICurrentUser us
 {
     sealed class NoTenant : ICurrentTenant { public Guid? TenantId => null; }
 
-    public async Task<IReadOnlyList<QueueItem>> ListAsync(OrganisationState? state, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<QueueItem>> ListAsync(ReviewFilter filter, CancellationToken cancellationToken = default)
     {
+        var states = ReviewFilters.States(filter);
         var operatorId = user.UserId ?? throw new InvalidOperationException("No signed-in user.");
         await using var connection = await PostgresDataSources.For(connectionString).OpenConnectionAsync(cancellationToken);
         await using (var cmd = new NpgsqlCommand("SELECT set_config('medvya.operator', @user, false)", connection))
@@ -33,7 +34,7 @@ public sealed class OrganisationReviews(string connectionString, ICurrentUser us
             var rows = await (
                 from t in db.Tenants.IgnoreQueryFilters()
                 join r in db.OrganisationRequests.IgnoreQueryFilters() on t.Id equals r.TenantId
-                where state == null || t.State == state
+                where states.Contains(t.State)
                 orderby r.SubmittedAt, t.Name
                 select new { t.Id, t.Name, t.CountryCode, r.Type, t.State, r.SubmittedAt, r.LastReason, r.ItContactName, r.ItContactEmail }).ToListAsync(cancellationToken);
             var documents = (await db.OrganisationDocuments.IgnoreQueryFilters().OrderBy(d => d.UploadedAt).ToListAsync(cancellationToken))

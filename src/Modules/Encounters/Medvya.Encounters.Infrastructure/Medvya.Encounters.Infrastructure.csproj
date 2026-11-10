@@ -8,6 +8,12 @@
     <ProjectReference Include="..\..\Scheduling\Medvya.Scheduling.Application\Medvya.Scheduling.Application.csproj" />
     <ProjectReference Include="..\..\Patients\Medvya.Patients.Application\Medvya.Patients.Application.csproj" />
     <ProjectReference Include="..\..\Tenancy\Medvya.Tenancy.Application\Medvya.Tenancy.Application.csproj" />
+    <ProjectReference Include="..\..\Identity\Medvya.Identity.Application\Medvya.Identity.Application.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The signed note PDF's English copy (MDV-P2-013), from the shared catalogue. -->
+    <EmbeddedResource Include="..\..\..\..\packages\i18n\messages\en.json" LogicalName="Medvya.Encounters.messages.en.json" />
   </ItemGroup>
 
   <ItemGroup>

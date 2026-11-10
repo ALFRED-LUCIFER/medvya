@@ -22,6 +22,7 @@ public sealed class EncountersDbContext(DbContextOptions<EncountersDbContext> op
     public DbSet<DoctorNoteTemplate> DoctorNoteTemplates => Set<DoctorNoteTemplate>();
     public DbSet<ConsultNote> ConsultNotes => Set<ConsultNote>();
     public DbSet<SignedNoteVersion> SignedNoteVersions => Set<SignedNoteVersion>();
+    public DbSet<SignedNotePdf> SignedNotePdfs => Set<SignedNotePdf>();
 
     Guid? CurrentTenantId => tenant.TenantId;
 
@@ -135,9 +136,20 @@ public sealed class EncountersDbContext(DbContextOptions<EncountersDbContext> op
         {
             e.Property(x => x.TemplateKey).HasMaxLength(50);
             e.Property(x => x.ContentHash).HasMaxLength(64);
+            e.Property(x => x.Reason).HasMaxLength(SignedNoteVersion.MaxReasonLength);
             e.Property(x => x.Sections).HasColumnType("jsonb").HasConversion(
                 v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null), v => JsonSerializer.Deserialize<Dictionary<string, string>>(v, (JsonSerializerOptions?)null)!);
             e.HasIndex(x => new { x.TenantId, x.NoteId, x.VersionNo }).IsUnique(); // one signature per note: a second concurrent sign loses here
+            // Version 1 is the signature; every later version is an addendum with its amends link and reason (MDV-P2-013).
+            e.ToTable(t => t.HasCheckConstraint("CK_SignedNoteVersions_Addendum",
+                "(\"VersionNo\" = 1 AND \"AmendsVersionId\" IS NULL AND \"Reason\" IS NULL) OR (\"VersionNo\" > 1 AND \"AmendsVersionId\" IS NOT NULL AND \"Reason\" IS NOT NULL)"));
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        // Append-only and hash-chained (LedgerSql, MDV-P2-013): the addenda migration adds the chain.
+        modelBuilder.Entity<SignedNotePdf>(e =>
+        {
+            e.Property(x => x.Sha256).HasMaxLength(64);
+            e.HasIndex(x => new { x.TenantId, x.NoteId });
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         modelBuilder.Entity<ClinicalDocument>(e =>

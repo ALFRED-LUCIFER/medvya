@@ -46,6 +46,7 @@ const TodayRoute = lazy(() => import('./TodayRoute'));
 const ConsultRoute = lazy(() => import('./ConsultRoute'));
 const LetterRoute = lazy(() => import('./ConsultRoute').then(m => ({ default: m.LetterRoute })));
 const SlipRoute = lazy(() => import('./ConsultRoute').then(m => ({ default: m.SlipRoute })));
+const NotePrintRoute = lazy(() => import('./ConsultRoute').then(m => ({ default: m.NotePrintRoute })));
 const ReconciliationRoute = lazy(() => import('./ReconciliationRoute'));
 const Patient360Route = lazy(() => import('./Patient360Route'));
 const TimelineRoute = lazy(() => import('./TimelineRoute'));
@@ -159,6 +160,9 @@ export default function App({ locale, onLocaleChange }: Props) {
           {/* A consultation (MDV-P2-001) for any role that treats patients; the server checks the care relationship on every call. */}
           {['Read', 'Limited', 'Full', 'Sign'].includes(active.capabilities.Patient360Chart ?? 'None') &&
             <Route path="/consult/:encounterId" element={<ConsultRoute boardPath={pathOf('frontDesk') ?? '/'} canOrder={active.capabilities.PrescriptionsOrders === 'Sign'} canReconcile={active.capabilities.Patient360Chart === 'Full'} canSign={active.capabilities.ClinicalNotes === 'Sign'} userId={shell.session?.user.id ?? ''} userName={shell.session?.user.displayName ?? ''} />} />}
+          {/* The signed note's print view and PDF (MDV-P2-013): the note's readers (Patient 360 at Full); the server decides for this patient. */}
+          {active.capabilities.Patient360Chart === 'Full' &&
+            <Route path="/consult/:encounterId/note/print" element={<NotePrintRoute userId={shell.session?.user.id ?? ''} userName={shell.session?.user.displayName ?? ''} />} />}
           {/* The investigation slip (MDV-P2-018): same roles; the server lets only an ordering doctor read it. */}
           {active.capabilities.PrescriptionsOrders === 'Sign' && <>
             <Route path="/consult/:encounterId/slip" element={<SlipRoute />} />

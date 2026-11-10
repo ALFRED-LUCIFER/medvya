@@ -10,7 +10,8 @@ export const catalog = {
   mine: ['general-opd', 'diabetes-review'],
 };
 
-type Note = { templateKey: string; sections: Record<string, string>; version: number; status: string; signature?: { versionNo: number; signedBy: string; signedAt: string; contentHash: string } };
+type Addendum = { versionNo: number; amendsVersionNo: number; reason: string; text: string; signedBy: string; signedAt: string; contentHash: string };
+type Note = { templateKey: string; sections: Record<string, string>; version: number; status: string; signature?: { versionNo: number; signedBy: string; signedAt: string; contentHash: string }; addenda?: Addendum[] };
 export type NoteMock = {
   note: Note; puts: { templateKey: string; manual: boolean; baseVersion: number; sections: Record<string, string> }[]; chosen: string[][];
   /** The next PUT answers like this instead of saving: a 409 stale_note, or a dropped connection. */
@@ -18,10 +19,12 @@ export type NoteMock = {
   /** Sign calls received, the re-authentications asked for, and the answer to the next sign instead of the real one (the server's rules are ConsultNoteTests). */
   signs: { baseVersion: number }[]; reauths: { returnUrl?: string }[]; reauthed: boolean;
   signNext: 'stale' | 'denied' | 'blank' | null;
+  /** Addenda received (MDV-P2-013); they need the same re-authentication as signing. PDFs asked for, and the answer to the next one. */
+  addendumPosts: { text: string; reason: string }[]; pdfs: number; pdfNext: 'unsupported' | null;
 };
 
 export async function mockNote(page: Page, seed: Partial<Note> = {}): Promise<NoteMock> {
-  const mock: NoteMock = { note: { templateKey: 'general-opd', sections: {}, version: 0, status: 'Draft', ...seed }, puts: [], chosen: [], next: null, signs: [], reauths: [], reauthed: false, signNext: null };
+  const mock: NoteMock = { note: { templateKey: 'general-opd', sections: {}, version: 0, status: 'Draft', ...seed }, puts: [], chosen: [], next: null, signs: [], reauths: [], reauthed: false, signNext: null, addendumPosts: [], pdfs: 0, pdfNext: null };
   const view = () => ({ encounterId: 'e-1', templateVersion: 1, manual: true, updatedAt: null, ...mock.note });
   await page.route('**/v1/encounters/e-1/note', async r => {
     if (r.request().method() === 'GET') return r.fulfill({ json: view() });
@@ -44,6 +47,20 @@ export async function mockNote(page: Page, seed: Partial<Note> = {}): Promise<No
     mock.note = { ...mock.note, status: 'Signed', version: mock.note.version + 1,
       signature: { versionNo: 1, signedBy: 'u-rao', signedAt: '2026-10-19T04:40:00Z', contentHash: 'a'.repeat(64) } };
     return r.fulfill({ json: view() });
+  });
+  await page.route('**/v1/encounters/e-1/note/addenda', r => {
+    const body = r.request().postDataJSON() as { text: string; reason: string };
+    mock.addendumPosts.push(body);
+    if (!mock.reauthed) return problem(r, 403, { code: 'reauth_required' });
+    const addenda = mock.note.addenda ?? [];
+    const versionNo = addenda.length + 2;
+    mock.note = { ...mock.note, addenda: [...addenda, { versionNo, amendsVersionNo: versionNo - 1, ...body, signedBy: 'u-rao', signedAt: '2026-10-19T05:00:00Z', contentHash: 'c'.repeat(64) }] };
+    return r.fulfill({ json: view() });
+  });
+  await page.route('**/v1/encounters/e-1/note/pdf', r => {
+    mock.pdfs++;
+    if (mock.pdfNext === 'unsupported') { mock.pdfNext = null; return problem(r, 422, { code: 'pdf_unsupported_text' }); }
+    return r.fulfill({ contentType: 'application/pdf', headers: { 'X-Content-SHA256': 'd'.repeat(64) }, body: '%PDF-1.4\n%%EOF\n' });
   });
   // The provider's page is a stub: a spec "returns" from it by opening the consult path again, as the BFF's redirect does.
   await page.route('**/bff/reauth', r => { mock.reauths.push(r.request().postDataJSON() as { returnUrl?: string }); mock.reauthed = true; return r.fulfill({ json: { location: '/idp-stub' } }); });

@@ -124,9 +124,15 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
             Id = Guid.CreateVersion7(), TenantId = other.Tenant, FacilityId = other.Facility, PatientId = other.Patient, EncounterId = encounter, Direction = Medvya.Prescribing.Domain.ReferralDirection.Out,
             Provider = "Dr. Other (synthetic B)", Urgency = Medvya.Prescribing.Domain.ReferralUrgency.Routine, State = Medvya.Prescribing.Domain.ReferralState.Draft, CreatedBy = other.Doctor, CreatedAt = SchedulingHarness.MondayMorning,
         };
+        var rxItem = new Medvya.Prescribing.Domain.PrescriptionItem
+        {
+            Id = Guid.CreateVersion7(), TenantId = other.Tenant, FacilityId = other.Facility, PatientId = other.Patient, EncounterId = encounter, Medicine = $"Synthetic medicine {Theirs}",
+            CreatedBy = other.Doctor, CreatedAt = SchedulingHarness.MondayMorning, UpdatedAt = SchedulingHarness.MondayMorning,
+        };
         await using (var orders = sql.Prescribing(other.Tenant))
         {
             orders.Orders.Add(order);
+            orders.PrescriptionItems.Add(rxItem);
             orders.Referrals.Add(referral);
             await orders.SaveChangesAsync();
         }
@@ -145,7 +151,7 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
 
         return new()
         {
-            ["patient"] = other.Patient, ["appointment"] = visit, ["encounter"] = encounter, ["document"] = document.Id, ["order"] = order.Id, ["referral"] = referral.Id, ["hold"] = hold.Id, ["display"] = display.Display.Id,
+            ["patient"] = other.Patient, ["appointment"] = visit, ["encounter"] = encounter, ["document"] = document.Id, ["order"] = order.Id, ["rxItem"] = rxItem.Id, ["referral"] = referral.Id, ["hold"] = hold.Id, ["display"] = display.Display.Id,
             ["closure"] = closure!.Id, ["exception"] = leave.Exception.Id, ["accessRequest"] = request.Id, ["invitation"] = invitation.Id,
             ["membership"] = membership, ["doctor"] = doctor, ["location"] = other.Facility, ["role"] = role.Id, ["user"] = other.Reception,
         };
@@ -200,6 +206,10 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/orders/place", """{"destination":"Synthetic lab"}""")),
         (Role.SoloDoctor, new("GET", "/v1/encounters/{encounter}/orders/slip")),
         (Role.SoloDoctor, new("PUT", "/v1/orders/{order}/included", """{"included":false}""")),
+        (Role.SoloDoctor, new("GET", "/v1/encounters/{encounter}/prescription")),
+        (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/prescription/items", """{"medicine":"Synthetic medicine"}""")),
+        (Role.SoloDoctor, new("PUT", "/v1/prescription-items/{rxItem}", """{"dose":"1","doseUnit":"tablet"}""")),
+        (Role.SoloDoctor, new("PUT", "/v1/prescription-items/{rxItem}/included", """{"included":false}""")),
         (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/referrals", """{"provider":"Dr. Synthetic","urgency":"Routine","reason":"Synthetic","sections":[]}""")),
         (Role.SoloDoctor, new("POST", "/v1/referrals/{referral}/send", """{"channel":"Print"}""")),
         (Role.SoloDoctor, new("POST", "/v1/referrals/{referral}/status", """{"state":"Closed"}""")),
@@ -379,6 +389,9 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.Nurse, new("POST", "/v1/encounters/{encounter}/referrals", """{"provider":"Dr. Synthetic","urgency":"Routine","reason":"Synthetic","sections":[]}""")), // Prescriptions & orders: X
         (Role.Receptionist, new("GET", "/v1/patients/{patient}/referrals")), // Patient 360: X
         (Role.Nurse, new("GET", "/v1/encounters/{encounter}/orders")), // Prescriptions & orders: X
+        (Role.Nurse, new("GET", "/v1/encounters/{encounter}/prescription")), // Prescriptions & orders: X
+        (Role.Receptionist, new("POST", "/v1/encounters/{encounter}/prescription/items", """{"medicine":"Synthetic medicine"}""")),
+        (Role.PracticeAdmin, new("GET", "/v1/encounters/{encounter}/prescription")),
         (Role.Receptionist, new("POST", "/v1/encounters/{encounter}/orders/place", """{"destination":"Synthetic lab"}""")),
         (Role.PracticeAdmin, new("GET", "/v1/encounters/{encounter}/orders/slip")),
         (Role.Nurse, new("GET", "/v1/formulary")), // Prescriptions & orders: X

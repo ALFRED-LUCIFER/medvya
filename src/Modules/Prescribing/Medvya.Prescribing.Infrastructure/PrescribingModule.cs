@@ -18,6 +18,7 @@ public static class PrescribingModule
             .AddDbContext<PrescribingDbContext>((sp, o) => o.UseNpgsql(PostgresDataSources.For(connectionString)).AddInterceptors(sp.GetRequiredService<TenantSessionInterceptor>()))
             .AddScoped<IFormulary, FormularyService>()
             .AddScoped<IOrders, OrderService>()
+            .AddScoped<IPrescriptions, PrescriptionService>()
             .AddScoped<IReferrals, ReferralService>()
             .AddScoped<Medvya.Encounters.Application.ITimelineSource, OrderTimelineSource>()
             .AddScoped<Medvya.Patients.Application.IPatientMergeParticipant, OrderMergeParticipant>();

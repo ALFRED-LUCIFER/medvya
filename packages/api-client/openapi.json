@@ -4961,6 +4961,146 @@
         }
       }
     },
+    "/v1/encounters/{encounterId}/prescription": {
+      "get": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "encounterId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/encounters/{encounterId}/prescription/items": {
+      "post": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "encounterId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AddRxLine"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/prescription-items/{itemId}": {
+      "put": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/UpdateRxLine"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/prescription-items/{itemId}/included": {
+      "put": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/IncludeRxLine"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/v1/encounters/{encounterId}/referrals": {
       "post": {
         "tags": [
@@ -5482,6 +5622,42 @@
             "format": "uuid"
           },
           "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "AddRxLine": {
+        "required": [
+          "formularyItemId",
+          "medicine",
+          "strength",
+          "form"
+        ],
+        "type": "object",
+        "properties": {
+          "formularyItemId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "medicine": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "strength": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "form": {
             "type": [
               "null",
               "string"
@@ -7493,6 +7669,20 @@
         ]
       },
       "IncludeOrder": {
+        "required": [
+          "included"
+        ],
+        "type": "object",
+        "properties": {
+          "included": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          }
+        }
+      },
+      "IncludeRxLine": {
         "required": [
           "included"
         ],
@@ -9842,6 +10032,75 @@
           "documentDate": {
             "type": "string",
             "format": "date"
+          }
+        }
+      },
+      "UpdateRxLine": {
+        "required": [
+          "dose",
+          "doseUnit",
+          "route",
+          "frequency",
+          "timing",
+          "durationDays",
+          "quantity",
+          "instructions"
+        ],
+        "type": "object",
+        "properties": {
+          "dose": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "doseUnit": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "route": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "frequency": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "timing": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "durationDays": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "quantity": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "instructions": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

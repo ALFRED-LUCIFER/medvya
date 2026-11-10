@@ -4,6 +4,8 @@ import NoteEditor from '../features/encounters/components/NoteEditor';
 import NoteTemplateChoice from '../features/encounters/components/NoteTemplateChoice';
 import { useConsultController } from '../features/encounters/hooks/useConsultController';
 import OrdersPanel from '../features/orders/components/OrdersPanel';
+import PrescriptionPanel from '../features/prescription/components/PrescriptionPanel';
+import { usePrescriptionController } from '../features/prescription/hooks/usePrescriptionController';
 import LetterPage from '../features/referrals/components/LetterPage';
 import ReferralsPanel from '../features/referrals/components/ReferralsPanel';
 import { useLetterController, useReferralsController } from '../features/referrals/hooks/useReferralsController';
@@ -28,10 +30,17 @@ function Consult({ encounterId, boardPath, canOrder, canReconcile, canSign, user
         <NoteEditor {...useNoteController(encounterId, canSign)} userId={userId} userName={userName} timeZone={consult.banner?.timeZone} />
         <NoteTemplateChoice {...useNoteTemplatesController()} />
       </ConsultPage>
+      {consult.banner && canOrder && <Prescription encounterId={encounterId} ended={consult.banner.encounter.status === 'Ended'} />}
       {consult.banner && canOrder && <Orders encounterId={encounterId} ended={consult.banner.encounter.status === 'Ended'} />}
       {consult.banner && canOrder && <Referrals patientId={consult.banner.encounter.patientId} encounterId={encounterId} ended={consult.banner.encounter.status === 'Ended'} />}
     </div>
   );
+}
+
+/** The draft prescription (MDV-P2-015) under the consultation, for a role with "Prescriptions and orders" at Sign; the server still decides for this clinician and patient. */
+function Prescription({ encounterId, ended }: { encounterId: string; ended: boolean }) {
+  const rx = usePrescriptionController(encounterId);
+  return rx.hidden ? null : <PrescriptionPanel {...rx} ended={ended} />;
 }
 
 /** Orders (MDV-P2-018) under the consultation, for a role with "Prescriptions and orders" at Sign; the server still decides for this clinician and patient. */

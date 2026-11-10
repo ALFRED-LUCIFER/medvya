@@ -13,7 +13,7 @@ public sealed class OrganisationRequests(TenancyDbContext db, ICurrentTenant ten
     : IOrganisationRequests
 {
     // shortcut: the private container is the logo store's; a file is checked by signature and size only, with no malware scan yet.
-    // Add the Defender scan the clinical documents use (MDV-P2-003) before the first real applicant uploads, and move to its own container.
+    // Add the Defender scan the clinical documents use (follow-up criterion of MDV-P2-006) before the first real applicant uploads, and move to its own container.
     static readonly TimeSpan LinkLifetime = TimeSpan.FromMinutes(5);
 
     public async Task<RequestView?> GetAsync(CancellationToken cancellationToken = default)

@@ -17,12 +17,7 @@ public sealed class OrganisationMigrationTests(PostgresFixture sql) : IClassFixt
     [Fact]
     public async Task ExistingTenantsBecomeApprovedAndEveryLicenceIsAttestedByTheOwnerWithAnAuditRow()
     {
-        var gate = new NpgsqlConnectionStringBuilder(sql.AdminConnectionString) { Database = "org_" + Guid.NewGuid().ToString("N")[..8], Pooling = false }.ConnectionString;
-        await using (var admin = await sql.OpenAs("dbo"))
-            await new NpgsqlCommand($"CREATE DATABASE {new NpgsqlConnectionStringBuilder(gate).Database}", admin).ExecuteNonQueryAsync();
-        await using var conn = new NpgsqlConnection(gate);
-        await conn.OpenAsync();
-        await Medvya.DbMigrate.DatabaseMigrator.ApplyRolesAsync(conn);
+        await using var conn = await NewDatabase();
         await new NpgsqlCommand("SET ROLE medvya_owner", conn).ExecuteNonQueryAsync();
         var none = new PostgresFixture.FixedTenant(null);
         await using (var audit = new AuditDbContext(new DbContextOptionsBuilder<AuditDbContext>().UseNpgsql(conn).Options, none)) await audit.Database.MigrateAsync();
@@ -59,6 +54,34 @@ public sealed class OrganisationMigrationTests(PostgresFixture sql) : IClassFixt
         Assert.Equal(1, await Count(conn, $"""SELECT count(*) FROM tenancy."SettingsChanges" WHERE "Section" = 'doctor' AND "ResourceId" = '{pending}' AND ("Before"::jsonb)->>'licence' = 'Pending'"""));
         Assert.Equal(1, await Count(conn, $"""SELECT count(*) FROM tenancy."SettingsChanges" WHERE "Section" = 'doctor' AND "ResourceId" = '{rejected}' AND ("Before"::jsonb)->>'licence' = 'Rejected'"""));
         Assert.Equal(0, await Count(conn, """SELECT count(*) FROM information_schema.columns WHERE table_schema = 'tenancy' AND table_name = 'DoctorLicences' AND column_name IN ('VerifiedAt', 'VerifiedBy', 'RejectedAt', 'RejectionReason')"""));
+    }
+
+    [Fact]
+    public async Task AnEmptyDatabaseMigratesAndRunningTheMigrationsAgainChangesNothing()
+    {
+        await using var conn = await NewDatabase();
+        var none = new PostgresFixture.FixedTenant(null);
+        await new NpgsqlCommand("SET ROLE medvya_owner", conn).ExecuteNonQueryAsync();
+        await using (var audit = new AuditDbContext(new DbContextOptionsBuilder<AuditDbContext>().UseNpgsql(conn).Options, none)) await audit.Database.MigrateAsync();
+        for (var run = 0; run < 2; run++)
+        {
+            await using var tenancy = new TenancyDbContext(new DbContextOptionsBuilder<TenancyDbContext>().UseNpgsql(conn).Options, none);
+            await tenancy.Database.MigrateAsync();
+        }
+        await new NpgsqlCommand("RESET ROLE", conn).ExecuteNonQueryAsync();
+        Assert.Equal(0, await Count(conn, """SELECT count(*) FROM tenancy."Tenants" """));
+        Assert.Equal(0, await Count(conn, """SELECT count(*) FROM tenancy."SettingsChanges" """));
+    }
+
+    async Task<NpgsqlConnection> NewDatabase()
+    {
+        var gate = new NpgsqlConnectionStringBuilder(sql.AdminConnectionString) { Database = "org_" + Guid.NewGuid().ToString("N")[..8], Pooling = false }.ConnectionString;
+        await using (var admin = await sql.OpenAs("dbo"))
+            await new NpgsqlCommand($"CREATE DATABASE {new NpgsqlConnectionStringBuilder(gate).Database}", admin).ExecuteNonQueryAsync();
+        var conn = new NpgsqlConnection(gate);
+        await conn.OpenAsync();
+        await Medvya.DbMigrate.DatabaseMigrator.ApplyRolesAsync(conn);
+        return conn;
     }
 
     static async Task Run(NpgsqlConnection conn, string text) => await new NpgsqlCommand(text, conn).ExecuteNonQueryAsync();

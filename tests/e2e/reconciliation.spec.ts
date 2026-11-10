@@ -61,7 +61,6 @@ for (const locale of ['en', 'ar'] as const) {
     await page.getByRole('group').first().getByRole('button').nth(2).click(); // opens the Stop form
     expect(await page.evaluate(() => document.documentElement.dir)).toBe(locale === 'ar' ? 'rtl' : 'ltr');
     await page.getByRole('form').waitFor();
-    await page.waitForTimeout(500); // the pressed button's colour transition must end, or axe reads mid-fade colours
     await page.addScriptTag({ path: axePath });
     const violations = await page.evaluate(async () =>
       (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations

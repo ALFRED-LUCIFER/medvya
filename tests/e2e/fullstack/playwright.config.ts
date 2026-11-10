@@ -15,7 +15,8 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   reporter: process.env.CI ? 'github' : 'list',
   timeout: 90_000,
-  use: { baseURL: `http://localhost:${port}`, trace: 'retain-on-failure' },
+  // Reduced motion: styles.css then drops every transition, so axe never samples a button's colour mid-fade (a flaky false contrast failure).
+  use: { baseURL: `http://localhost:${port}`, trace: 'retain-on-failure', reducedMotion: 'reduce' },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {
     command: 'node stack.mjs',

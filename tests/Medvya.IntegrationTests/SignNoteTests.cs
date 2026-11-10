@@ -222,4 +222,48 @@ public sealed class SignNoteTests(PostgresFixture sql) : IClassFixture<PostgresF
         Assert.Equal(("stale_note", HttpStatusCode.Conflict), ((await Json(stale)).GetProperty("code").GetString(), stale.StatusCode));
         Assert.Equal(0, await SignedRowsAsync());
     }
+
+    async Task<JsonElement[]> PendingAsync(Guid user)
+    {
+        using var r = await Client(user).GetAsync(U("/v1/notes/pending"));
+        Assert.True(r.IsSuccessStatusCode, await r.Content.ReadAsStringAsync());
+        var body = await Json(r);
+        Assert.False(body.GetProperty("more").GetBoolean()); // well under the cap
+        return [.. body.GetProperty("items").EnumerateArray()];
+    }
+
+    // MDV-P2-002 SAFETY mutation checks: drop the lead-clinician filter in ConsultNoteService.PendingAsync and the colleague sees it; drop the
+    // signed filter and the signed note stays listed.
+    [Fact]
+    public async Task AnUnsignedNoteStaysOnItsDoctorsPendingListAcrossDaysUntilSigned()
+    {
+        var started = Assert.Single(await PendingAsync(h.Doctor)); // started, nothing typed yet: still a consultation without a signed note
+        Assert.Equal((encounter, false), (started.GetProperty("encounterId").GetGuid(), started.GetProperty("drafted").GetBoolean()));
+        Assert.False(string.IsNullOrEmpty(started.GetProperty("patientName").GetString()));
+        Assert.Empty(await PendingAsync(h.SecondDoctor)); // a colleague who may treat the patient still sees only their own
+
+        var version = await SaveDraftAsync(Complete);
+        h.Clock.Advance(TimeSpan.FromDays(2));
+        var later = Assert.Single(await PendingAsync(h.Doctor));
+        Assert.True(later.GetProperty("drafted").GetBoolean());
+        Assert.DoesNotContain("cough", later.ToString(), StringComparison.Ordinal); // no note text in the list
+
+        using (var signed = await SignAsync(h.Doctor, version)) Assert.True(signed.IsSuccessStatusCode, await signed.Content.ReadAsStringAsync());
+        Assert.Empty(await PendingAsync(h.Doctor));
+
+        await using var audit = sql.Audit(h.Tenant);
+        var rows = await audit.Events.Where(e => e.Action == "note.pending").ToListAsync();
+        Assert.Equal(2, rows.Count); // one per note answered, none for the empty answers
+        Assert.All(rows, r => Assert.Equal((h.Patient, h.Doctor, AuditOutcome.Allowed), (r.PatientId!.Value, r.ActorUserId!.Value, r.Outcome)));
+    }
+
+    [Fact]
+    public async Task OnlyARoleThatWritesNotesHasAPendingList()
+    {
+        foreach (var user in new[] { h.Reception, h.Nurse })
+        {
+            using var r = await Client(user).GetAsync(U("/v1/notes/pending"));
+            Assert.Equal(HttpStatusCode.Forbidden, r.StatusCode);
+        }
+    }
 }

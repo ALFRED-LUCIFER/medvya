@@ -42,6 +42,12 @@ async function open(page: Page, locale = 'en') {
     flagRequests.push(r.request().postDataJSON() as { patientIds: string[] });
     return r.fulfill({ json: { items: [{ patientId: 'p-a1', state: 'Listed' }, { patientId: 'p-a2', state: 'NotRecorded' }] } });
   });
+  // The nurse's urgent item for Meera's visit (MDV-P2-007); the server answers only for patients this doctor may treat.
+  await page.route('**/v1/intake-escalations?*', r => r.fulfill({ json: [
+    { id: 'x-1', appointmentId: 'a1', patientId: 'p-a1', reason: 'BP 210/130 with headache (synthetic)', escalatedAt: ist('10:02') }] }));
+  // An unsigned note from an earlier day (MDV-P2-002): the server lists only this doctor's own.
+  await page.route('**/v1/notes/pending', r => r.fulfill({ json: { more: false, items: [
+    { encounterId: 'e-old', startedAt: '2026-10-16T06:30:00Z', drafted: true, patientName: 'Kavya Reddy (synthetic)' }] } }));
   await page.goto('/today');
 }
 
@@ -78,6 +84,29 @@ test('each visit shows its allergy state in words and links to the chart; a pati
   await expect(list.getByRole('link', { name: 'Deepak Nair (synthetic)' })).toHaveAttribute('href', '/patients/p-a2');
   await page.getByRole('region', { name: 'Next patient' }).getByRole('link', { name: 'Meera Iyer (synthetic)' }).click();
   await expect(page).toHaveURL(/\/patients\/p-a1$/);
+});
+
+test("a nurse's escalation shows on that visit in words with an icon, not colour alone", async ({ page }) => {
+  await open(page);
+  await expect(page.getByRole('region', { name: 'Next patient' })).toContainText('Nurse escalation: BP 210/130 with headache (synthetic)');
+  await expect(page.getByRole('region', { name: "Today's visits" }).getByRole('article').filter({ hasText: 'Deepak Nair' })).not.toContainText('Nurse escalation');
+});
+
+test('a failed escalation read is announced, never shown as "no escalation"', async ({ page }) => {
+  await open(page);
+  await page.unroute('**/v1/intake-escalations?*');
+  await page.route('**/v1/intake-escalations?*', r => r.fulfill({ status: 500, json: {} }));
+  await page.reload();
+  await expect(page.getByRole('alert').filter({ hasText: 'Nurse escalations could not be loaded' })).toBeVisible();
+});
+
+test('an unsigned note from an earlier day stays on Today and opens its consultation', async ({ page }) => {
+  await open(page);
+  const pending = page.getByRole('region', { name: '1 note to sign' });
+  await expect(pending).toContainText('Kavya Reddy (synthetic)');
+  await expect(pending).toContainText('16 Oct 2026 · Draft, not signed');
+  await pending.getByRole('link', { name: 'Open to finish' }).click();
+  await expect(page).toHaveURL(/\/consult\/e-old$/);
 });
 
 test('on a phone the next patient and the consult button come first and the page does not scroll sideways', async ({ page }) => {

@@ -38,6 +38,9 @@ public sealed class StaleNoteException(int current) : Exception("The note change
     public int Current { get; } = current;
 }
 
+/// <summary>An encounter the signed-in doctor led whose note is not signed (MDV-P2-002, Today's pending notes). Ids and times only.</summary>
+public sealed record PendingNote(Guid EncounterId, Guid PatientId, DateTimeOffset StartedAt, bool Drafted);
+
 /// <summary>
 /// Consult notes (MDV-P2-009). Clinical access to the encounter's patient at its facility for Patient 360 at Full (role, care relationship,
 /// facility), and one audit event with the patient and no note text. Null: no such encounter in this tenant.
@@ -59,4 +62,13 @@ public interface IConsultNotes
     /// <exception cref="NoteValidationException">A required section is blank (code <c>required</c> on <c>sections.&lt;id&gt;</c>).</exception>
     /// <exception cref="StaleNoteException"/>
     Task<NoteView?> SignAsync(Guid encounterId, SignNote command, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Today's pending notes (MDV-P2-002): encounters at this facility the signed-in clinician led whose note is not signed, oldest first, at
+    /// most <see cref="MaxPending"/>. Only patients the clinician may still treat; one audit event per encounter answered.
+    /// </summary>
+    /// <returns>The notes, and whether more were left out by the cap.</returns>
+    Task<(IReadOnlyList<PendingNote> Notes, bool More)> PendingAsync(Guid facilityId, CancellationToken cancellationToken = default);
+
+    public const int MaxPending = 50;
 }

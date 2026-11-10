@@ -6,7 +6,8 @@ export default defineConfig({
   testIgnore: 'fullstack/**', // needs Docker and .NET: `pnpm e2e:fullstack`
   forbidOnly: !!process.env.CI,
   reporter: process.env.CI ? [['github'], ['html', { open: 'never' }]] : 'list',
-  use: { baseURL: 'http://localhost:4173', trace: 'retain-on-failure' },
+  // Reduced motion: styles.css then drops every transition, so axe never samples a button's colour mid-fade (a flaky false contrast failure).
+  use: { baseURL: 'http://localhost:4173', trace: 'retain-on-failure', reducedMotion: 'reduce' },
   projects: [
     { name: 'chromium', testIgnore: ['fullstack/**', /-performance\.spec\.ts/], use: { ...devices['Desktop Chrome'] } },
     // Time budgets run alone, after every other spec has finished: measured beside 250 parallel specs they test the runner, not the page.

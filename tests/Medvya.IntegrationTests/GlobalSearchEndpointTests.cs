@@ -106,4 +106,22 @@ public sealed class GlobalSearchEndpointTests(PostgresFixture sql) : IClassFixtu
         var row = Assert.Single(await db.Events.Where(e => e.Action == "patient.search").ToListAsync());
         Assert.Equal((AuditPurpose.Treatment, AuditOutcome.Allowed, (Guid?)null), (row.Purpose, row.Outcome, row.PatientId));
     }
+
+    // MDV-P2-003 follow-up (#957): the lookup has its own per-user budget; a desk that used up its searches can still use ⌘K, and the reverse.
+    [Fact]
+    public async Task TheLookupHasItsOwnRateLimitSeparateFromDeskSearch()
+    {
+        await using var limited = factory.WithWebHostBuilder(b => b.UseSetting("RateLimiting:PatientSearchPerMinute", "1").UseSetting("RateLimiting:PatientLookupsPerMinute", "2"));
+        using var doctor = limited.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost") });
+        doctor.DefaultRequestHeaders.Add("X-Test-User", h.Doctor.ToString());
+        doctor.DefaultRequestHeaders.Add("X-Test-Facility", h.Facility.ToString());
+        async Task<HttpStatusCode> Post(string path)
+        {
+            using var r = await doctor.PostAsJsonAsync(U(path), new { query = "meera" });
+            return r.StatusCode;
+        }
+        Assert.Equal([HttpStatusCode.OK, HttpStatusCode.TooManyRequests], [await Post("/v1/patients/search"), await Post("/v1/patients/search")]);
+        Assert.Equal([HttpStatusCode.OK, HttpStatusCode.OK, HttpStatusCode.TooManyRequests],
+            [await Post("/v1/patients/lookup"), await Post("/v1/patients/lookup"), await Post("/v1/patients/lookup")]);
+    }
 }

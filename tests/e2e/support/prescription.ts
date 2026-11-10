@@ -24,10 +24,33 @@ export const stopLine = (medicine: string, reason: string): RxLine => ({
   sig: { en: 'Stop this medicine.', hi: 'यह दवा बंद करें।', ar: 'أوقف هذا الدواء.' },
 });
 
-export async function mockPrescription(page: Page, opts: { locale?: string; ended?: boolean; allowed?: boolean; lines?: RxLine[] } = {}) {
+// The safety checks (MDV-P2-016), in RxCheckView's shape. Which alert fires for which conflict is proven in SafetyRulesTests and PrescriptionCheckTests.
+export type RxChecks = {
+  ruleSet: string; ruleSetVersion: string; allergies: 'NotRecorded' | 'NoKnownAllergies' | 'Listed'; alerts: Record<string, unknown>[];
+  notChecked: { id: string; medicine: string; onChart: boolean; reason: string }[];
+  overrides: { key: string; reason: string; ruleSetVersion: string; overriddenBy: string; overriddenAt: string }[]; unresolved: number; checkedAt: string;
+};
+export const clearChecks = (more: Partial<RxChecks> = {}): RxChecks => ({
+  ruleSet: 'medvya-curated', ruleSetVersion: '2026.11-draft-1', allergies: 'NoKnownAllergies', alerts: [], notChecked: [], overrides: [], unresolved: 0,
+  checkedAt: '2026-10-19T04:30:00Z', ...more,
+});
+export const penicillinAlert = (itemId: string) => ({
+  key: `allergy:${itemId}:al-1`, kind: 'Allergy', severity: 'Severe', itemId, medicine: 'Amoxicillin', other: null, otherOnChart: false, code: 'penicillins',
+  substance: 'Penicillin', allergyStatus: 'Confirmed', dailyMicrograms: null, maxDailyMicrograms: null,
+});
+
+export async function mockPrescription(page: Page, opts: { locale?: string; ended?: boolean; allowed?: boolean; lines?: RxLine[]; checks?: RxChecks } = {}) {
   await mockOrders(page, { locale: opts.locale, ended: opts.ended });
   const lines: RxLine[] = [...(opts.lines ?? [])];
-  const calls = { added: [] as unknown[], saved: [] as unknown[], included: [] as unknown[], searched: [] as string[] };
+  const calls = { added: [] as unknown[], saved: [] as unknown[], included: [] as unknown[], searched: [] as string[], checked: 0, overrides: [] as unknown[] };
+  let checks = opts.checks ?? clearChecks();
+  await page.route('**/v1/encounters/e-1/prescription/checks', r => { calls.checked++; return r.fulfill({ json: checks }); });
+  await page.route('**/v1/encounters/e-1/prescription/overrides', r => {
+    const body = r.request().postDataJSON() as { key: string; reason: string };
+    calls.overrides.push(body);
+    checks = { ...checks, unresolved: checks.unresolved - 1, overrides: [...checks.overrides, { ...body, ruleSetVersion: checks.ruleSetVersion, overriddenBy: 'u-rao', overriddenAt: checks.checkedAt }] };
+    return r.fulfill({ json: checks });
+  });
   const answer = () => [...lines.filter(l => l.kind === 'Prescribe'), ...lines.filter(l => l.kind === 'Discontinue')];
   await page.route('**/v1/encounters/e-1/prescription', r =>
     opts.allowed === false ? r.fulfill({ status: 403, json: { code: 'no_access', requestPending: false } }) : r.fulfill({ json: answer() }));

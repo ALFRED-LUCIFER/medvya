@@ -20,11 +20,12 @@ namespace Medvya.Prescribing.Infrastructure;
 /// changed decision changes the line. Nothing here authorises: that is its own step (MDV-P2-017).
 /// </summary>
 public sealed class PrescriptionService(
-    PrescribingDbContext db, IEncounterDirectory encounters, IReconciliationStops stops, IClinicalAccess clinical, IStaffAccess staff,
+    PrescribingDbContext db, IEncounterDirectory encounters, IReconciliationStops stops, IPrescribingChart chart, IClinicalAccess clinical, IStaffAccess staff,
     ICurrentTenant tenant, ICurrentUser user, IAuditLog audit, TimeProvider clock) : IPrescriptions
 {
-    public const string ReadAction = "rx.read", AddAction = "rx.add", UpdateAction = "rx.update", IncludeAction = "rx.include", Resource = "prescription";
-    public const int MaxMedicine = 200, MaxStrength = 50;
+    public const string ReadAction = "rx.read", AddAction = "rx.add", UpdateAction = "rx.update", IncludeAction = "rx.include",
+        CheckAction = "rx.check", OverrideAction = "rx.override", Resource = "prescription";
+    public const int MaxMedicine = 200, MaxStrength = 50, MaxReason = 200;
     static readonly Access[] Doctors = [Access.Sign];
 
     public async Task<IReadOnlyList<RxLineView>?> ListAsync(Guid encounterId, CancellationToken cancellationToken = default)
@@ -95,6 +96,76 @@ public sealed class PrescriptionService(
         if (command.Included is not { } included) throw new PrescriptionValidationException([("included", "required")]);
         await SaveAsync(encounter, IncludeAction, itemId, $"included:{included}", () => (item.Included, item.UpdatedAt) = (included, clock.GetUtcNow()), cancellationToken);
         return await ViewsAsync(item.EncounterId, cancellationToken);
+    }
+
+    public async Task<RxCheckView?> CheckAsync(Guid encounterId, CancellationToken cancellationToken = default)
+    {
+        if (await RequireAsync(encounterId, cancellationToken) is not { } encounter) return null;
+        var view = await ChecksAsync(encounter, cancellationToken);
+        // The result is recorded with the rule set that gave it: version and counts only, never a medicine or an allergy.
+        await audit.WriteAsync(Event(CheckAction, encounter, encounterId,
+            $"rules:{view.RuleSetVersion};severe:{view.Alerts.Count(a => a.Severity == RxSeverity.Severe)};moderate:{view.Alerts.Count(a => a.Severity == RxSeverity.Moderate)};unresolved:{view.Unresolved}"), cancellationToken);
+        return view;
+    }
+
+    public async Task<RxCheckView?> OverrideAsync(Guid encounterId, OverrideRxAlert command, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        if (await RequireAsync(encounterId, cancellationToken) is not { } encounter) return null;
+        Open(encounter);
+        var errors = new List<(string, string)>();
+        var reason = Text(command.Reason, "reason", MaxReason, true, errors);
+        // Only a severe alert of the check as it stands now: an old key (the dose changed, the line went) needs the new finding's reason.
+        var alert = (await ChecksAsync(encounter, cancellationToken)).Alerts.FirstOrDefault(a => a.Key == command.Key && a.Severity == RxSeverity.Severe);
+        if (alert is null) errors.Add(("key", "unknown"));
+        if (errors.Count > 0) throw new PrescriptionValidationException(errors);
+
+        var id = Guid.CreateVersion7();
+        await SaveAsync(encounter, OverrideAction, id, $"kind:{alert!.Kind};rules:{SafetyRules.Version}", () => db.RxAlertOverrides.Add(new RxAlertOverride
+        {
+            Id = id, TenantId = TenantId, FacilityId = encounter.FacilityId, PatientId = encounter.PatientId, EncounterId = encounter.Id, AlertKey = alert.Key,
+            Kind = alert.Kind, Reason = reason!, RuleSetVersion = SafetyRules.Version, OverriddenBy = Me, OverriddenAt = clock.GetUtcNow(),
+        }), cancellationToken);
+        return await ChecksAsync(encounter, cancellationToken);
+    }
+
+    /// <summary>The checks over the included prescribe lines and the chart's active medicines (less those stopped in this visit), with the current overrides
+    /// (made under this rule set version: a new version asks again).</summary>
+    async Task<RxCheckView> ChecksAsync(EncounterView encounter, CancellationToken cancellationToken)
+    {
+        var items = await db.PrescriptionItems.AsNoTracking().Where(i => i.EncounterId == encounter.Id && i.Included).OrderBy(i => i.CreatedAt).ThenBy(i => i.Id).ToListAsync(cancellationToken);
+        var formularyIds = items.Where(i => i.FormularyItemId is not null).Select(i => i.FormularyItemId!.Value).ToList();
+        var atcOf = await db.FormularyItems.AsNoTracking().Where(f => formularyIds.Contains(f.Id)).ToDictionaryAsync(f => f.Id, f => f.Atc, cancellationToken);
+        var facts = await chart.FactsAsync(encounter.PatientId, cancellationToken);
+        // The generic names are read only when there are chart medicines to match (a clinic's formulary can hold thousands of rows).
+        Dictionary<string, string?> generics = new(StringComparer.OrdinalIgnoreCase);
+        if (facts.ActiveMedicines.Count > 0)
+        {
+            var country = await staff.TenantCountryAsync(cancellationToken) ?? throw new InvalidOperationException("No tenant country.");
+            generics = (await db.FormularyItems.AsNoTracking().Where(f => f.Country == country && f.Active && f.Atc != null).Select(f => new { f.Generic, f.Atc }).ToListAsync(cancellationToken))
+                .GroupBy(f => f.Generic, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Select(f => f.Atc!).Distinct().Count() == 1 ? g.First().Atc : null, StringComparer.OrdinalIgnoreCase);
+        }
+        var stopped = (await stops.StopsAsync(encounter.Id, cancellationToken)).Select(s => s.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var lines = items.Select(i => new CheckedMedicine(i.Id, i.Medicine, i.FormularyItemId is { } f ? atcOf.GetValueOrDefault(f) : null, i.Strength,
+            new SigParts(i.Dose, i.DoseUnit, i.Route, i.Frequency, i.Timing, i.DurationDays, i.Quantity, i.Instructions), false, i.FormularyItemId is null)).ToList();
+        // A chart medicine is checked only when its name names one formulary generic with one ATC code; otherwise it is reported as not checked.
+        var onChart = facts.ActiveMedicines.Where(m => !stopped.Contains(m.Name))
+            .Select(m => new CheckedMedicine(m.Id, m.Name, SafetyRules.MatchGeneric(m.Name, generics.Keys) is { } g ? generics[g] : null, null, null, true, false)).ToList();
+        var state = facts.AllergyState switch
+        {
+            AllergyState.Listed => ChartAllergies.Listed,
+            AllergyState.NoKnownAllergies => ChartAllergies.NoKnownAllergies,
+            _ => ChartAllergies.NotRecorded,
+        };
+        var result = SafetyRules.Evaluate(lines, onChart, state, [.. facts.Allergies.Select(a => new CheckedAllergy(a.Id, a.Substance, a.Status.ToString()))]);
+
+        var keys = result.Alerts.Select(a => a.Key).ToList();
+        var overrides = (await db.RxAlertOverrides.AsNoTracking().Where(o => o.EncounterId == encounter.Id && o.RuleSetVersion == SafetyRules.Version && keys.Contains(o.AlertKey)).ToListAsync(cancellationToken))
+            .GroupBy(o => o.AlertKey).Select(g => g.OrderByDescending(o => o.OverriddenAt).ThenByDescending(o => o.Id).First())
+            .Select(o => new RxOverrideView(o.AlertKey, o.Reason, o.RuleSetVersion, o.OverriddenBy, o.OverriddenAt)).ToList();
+        var unresolved = result.Alerts.Count(a => a.Severity == RxSeverity.Severe && overrides.All(o => o.Key != a.Key));
+        return new(SafetyRules.Source, SafetyRules.Version, state, result.Alerts, result.NotChecked, overrides, unresolved, clock.GetUtcNow());
     }
 
     /// <summary>The encounter, once the caller may prescribe for its patient at its facility. Null: no such encounter in this tenant.</summary>

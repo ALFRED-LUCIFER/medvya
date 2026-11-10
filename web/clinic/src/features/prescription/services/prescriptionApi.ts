@@ -1,4 +1,5 @@
 import { csrf, post, send } from '../../schedule/services/scheduleApi';
+import type { RxChecks } from '../domain/checks';
 import { toSigBody, type Medicine, type RxLine, type SigDraft } from '../domain/prescription';
 
 // The draft prescription (MDV-P2-015). Ids in paths; medicine names and dose fields in bodies. The formulary search carries a medicine name
@@ -10,3 +11,7 @@ export const addFreeText = (encounterId: string, medicine: string) => post<RxLin
 export const saveSig = (itemId: string, draft: SigDraft) => put<RxLine[]>(`/v1/prescription-items/${itemId}`, toSigBody(draft));
 export const includeLine = (itemId: string, included: boolean) => put<RxLine[]>(`/v1/prescription-items/${itemId}/included`, { included });
 export const searchMedicines = (query: string) => send<Medicine[]>(`/v1/formulary?${new URLSearchParams({ q: query, limit: '8' })}`);
+// Safety checks (MDV-P2-016): the alert key and the doctor's reason travel in the body.
+export const fetchChecks = (encounterId: string) => send<RxChecks>(`/v1/encounters/${encounterId}/prescription/checks`);
+export const overrideAlert = (encounterId: string, key: string, reason: string) =>
+  post<RxChecks>(`/v1/encounters/${encounterId}/prescription/overrides`, { key, reason: reason.trim() });

@@ -2,7 +2,7 @@ import { expect } from '@playwright/test';
 import { test } from '@playwright/test';
 import { mockReconciliation } from '../support/reconciliation';
 import { mockNote } from '../support/note';
-import { mockPrescription, stopLine } from '../support/prescription';
+import { clearChecks, mockPrescription, stopLine } from '../support/prescription';
 import { mockProblems } from '../support/problems';
 import { journey } from './storyboard';
 
@@ -30,9 +30,10 @@ test('J2.5 (conflict half, MDV-P2-011) E-07 · Doctor: statin stopped vs chart a
 });
 
 // J2.6 is "Authorise Rx & orders": authorising is MDV-P2-017, so the step stays pending below. Its composer half is built (MDV-P2-015, E-05): the
-// statin stopped in reconciliation is a discontinue line, and the doctor adds metformin from the formulary as a draft.
-test('J2.6 (composer half, MDV-P2-015) E-05 · Doctor: the stopped statin is a discontinue line beside the new draft', async ({ page }) => {
-  const { calls } = await mockPrescription(page, { lines: [stopLine('Atorvastatin', 'Muscle pain (synthetic)')] });
+// statin stopped in reconciliation is a discontinue line, and the doctor adds metformin from the formulary as a draft. The safety checks that
+// authorising will require (MDV-P2-016, E-11) run on the draft: Meera has no known allergies and metformin raises nothing.
+test('J2.6 (composer and safety-check halves, MDV-P2-015/016) E-05 · Doctor: the stopped statin is a discontinue line beside the new, checked draft', async ({ page }) => {
+  const { calls } = await mockPrescription(page, { lines: [stopLine('Atorvastatin', 'Muscle pain (synthetic)')], checks: clearChecks() });
   await page.goto('/consult/e-1');
   await expect(page.getByRole('list', { name: 'Medicines to stop' })).toContainText('Atorvastatin');
   const rx = page.getByRole('region', { name: 'Prescription' });
@@ -40,6 +41,9 @@ test('J2.6 (composer half, MDV-P2-015) E-05 · Doctor: the stopped statin is a d
   await rx.getByRole('button', { name: 'Add Metformin 500 mg Tablet' }).click();
   expect(calls.added).toEqual([{ formularyItemId: 'fi-metformin' }]);
   await expect(rx).toContainText('Draft, not authorised');
+  const checks = page.getByRole('region', { name: 'Safety checks' });
+  await expect(checks).toContainText('Allergies: no known allergies (recorded)');
+  await expect(checks).toContainText('No alerts from the checks that could run.');
 });
 
 // The coding half of J2.5 (MDV-P2-010, E-07): before signing, the doctor codes Meera's diagnosis with ICD-10; a provisional one says so.

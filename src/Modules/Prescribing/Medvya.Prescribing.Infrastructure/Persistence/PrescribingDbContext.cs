@@ -14,6 +14,7 @@ public sealed class PrescribingDbContext(DbContextOptions<PrescribingDbContext> 
     public DbSet<Referral> Referrals => Set<Referral>();
     public DbSet<ReferralEvent> ReferralEvents => Set<ReferralEvent>();
     public DbSet<PrescriptionItem> PrescriptionItems => Set<PrescriptionItem>();
+    public DbSet<RxAlertOverride> RxAlertOverrides => Set<RxAlertOverride>();
 
     Guid? CurrentTenantId => tenant.TenantId;
 
@@ -82,6 +83,16 @@ public sealed class PrescribingDbContext(DbContextOptions<PrescribingDbContext> 
             e.Property(x => x.Frequency).HasMaxLength(20);
             e.Property(x => x.Timing).HasMaxLength(20);
             e.Property(x => x.Instructions).HasMaxLength(200);
+            e.HasIndex(x => new { x.TenantId, x.EncounterId });
+            e.HasIndex(x => new { x.TenantId, x.PatientId }); // merges
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<RxAlertOverride>(e =>
+        {
+            e.Property(x => x.AlertKey).HasMaxLength(200);
+            e.Property(x => x.Kind).HasConversion<string>().HasMaxLength(30);
+            e.Property(x => x.Reason).HasMaxLength(200);
+            e.Property(x => x.RuleSetVersion).HasMaxLength(40);
             e.HasIndex(x => new { x.TenantId, x.EncounterId });
             e.HasIndex(x => new { x.TenantId, x.PatientId }); // merges
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);

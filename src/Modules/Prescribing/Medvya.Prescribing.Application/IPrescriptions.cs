@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Medvya.Prescribing.Domain;
 
 namespace Medvya.Prescribing.Application;
 
@@ -36,6 +37,21 @@ public sealed class PrescriptionValidationException(IReadOnlyList<(string Field,
     public IReadOnlyList<(string Field, string Code)> Errors { get; } = errors;
 }
 
+/// <summary>The reason a severe alert was overridden, under the rule set version that raised it.</summary>
+public sealed record RxOverrideView(string Key, string Reason, string RuleSetVersion, Guid OverriddenBy, DateTimeOffset OverriddenAt);
+
+/// <summary>
+/// The safety checks over the draft (MDV-P2-016): every alert in words with its evidence, what the rules could not check, and the rule set
+/// (source and version) that answered. <see cref="Overrides"/> holds the current reason of each overridden alert. <see cref="Unresolved"/> counts
+/// severe alerts with no override: authorisation (MDV-P2-017) runs the checks again and must refuse while it is above zero.
+/// </summary>
+public sealed record RxCheckView(
+    string RuleSet, string RuleSetVersion, ChartAllergies Allergies, IReadOnlyList<SafetyAlert> Alerts, IReadOnlyList<NotChecked> NotChecked,
+    IReadOnlyList<RxOverrideView> Overrides, int Unresolved, DateTimeOffset CheckedAt);
+
+/// <summary>Go ahead despite a severe alert (its key from the latest check), with the doctor's reason.</summary>
+public sealed record OverrideRxAlert(string? Key, string? Reason);
+
 /// <summary>The call is not possible now: "encounter_ended".</summary>
 public sealed class PrescriptionConflictException(string code) : Exception("Prescription conflict: " + code)
 {
@@ -58,4 +74,10 @@ public interface IPrescriptions
 
     /// <summary>Switch a line off (kept on the record, not prescribed) or back on.</summary>
     Task<IReadOnlyList<RxLineView>?> IncludeAsync(Guid itemId, IncludeRxLine command, CancellationToken cancellationToken = default);
+
+    /// <summary>Runs the safety checks over the included lines and the chart (after every change, and again at authorisation); audited with the rule set version and counts.</summary>
+    Task<RxCheckView?> CheckAsync(Guid encounterId, CancellationToken cancellationToken = default);
+
+    /// <summary>Records the reason for going ahead despite a severe alert of the current check. Refused for an alert that is not current or not severe.</summary>
+    Task<RxCheckView?> OverrideAsync(Guid encounterId, OverrideRxAlert command, CancellationToken cancellationToken = default);
 }

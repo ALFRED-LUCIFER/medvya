@@ -182,3 +182,24 @@ public static class Sig
     /// <summary>The discontinue line's instruction in <paramref name="language"/>.</summary>
     public static string Stop(string language) => ByLanguage[language].Stop;
 }
+
+/// <summary>
+/// The doctor's reason for going ahead despite a severe safety alert (MDV-P2-016), for one finding of one consultation's draft (its
+/// <see cref="SafetyAlert.Key"/>) under the rule set version that raised it. Append-only: a new reason is a new row and the latest counts.
+/// Authorisation (MDV-P2-017) refuses while a severe alert has none.
+/// </summary>
+public sealed class RxAlertOverride
+{
+    [Classification(DataClass.Internal)] public Guid Id { get; init; }
+    [Classification(DataClass.Internal)] public Guid TenantId { get; init; }
+    [Classification(DataClass.Internal)] public Guid FacilityId { get; init; }
+    [Classification(DataClass.Internal)] public Guid PatientId { get; init; }
+    [Classification(DataClass.Internal)] public Guid? MergedFromPatientId { get; init; }
+    [Classification(DataClass.Internal)] public Guid EncounterId { get; init; }
+    [Classification(DataClass.Internal)] public string AlertKey { get; init; } = "";
+    [Classification(DataClass.SensitiveHealth)] public RxAlertKind Kind { get; init; }
+    [Classification(DataClass.SensitiveHealth)] public string Reason { get; init; } = "";
+    [Classification(DataClass.Internal)] public string RuleSetVersion { get; init; } = "";
+    [Classification(DataClass.Internal)] public Guid OverriddenBy { get; init; }
+    [Classification(DataClass.Internal)] public DateTimeOffset OverriddenAt { get; init; }
+}

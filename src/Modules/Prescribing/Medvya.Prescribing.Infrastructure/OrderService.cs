@@ -213,6 +213,8 @@ public sealed class OrderMergeParticipant(ICurrentTenant tenant) : IPatientMerge
             .ExecuteUpdateAsync(s => s.SetProperty(o => o.PatientId, toPatientId).SetProperty(o => o.MergedFromPatientId, fromPatientId), cancellationToken);
         await shared.PrescriptionItems.Where(i => i.PatientId == fromPatientId)
             .ExecuteUpdateAsync(s => s.SetProperty(i => i.PatientId, toPatientId).SetProperty(i => i.MergedFromPatientId, fromPatientId), cancellationToken);
+        await shared.RxAlertOverrides.Where(o => o.PatientId == fromPatientId)
+            .ExecuteUpdateAsync(s => s.SetProperty(o => o.PatientId, toPatientId).SetProperty(o => o.MergedFromPatientId, fromPatientId), cancellationToken);
         await shared.Referrals.Where(r => r.PatientId == fromPatientId)
             .ExecuteUpdateAsync(s => s.SetProperty(r => r.PatientId, toPatientId).SetProperty(r => r.MergedFromPatientId, fromPatientId), cancellationToken);
     }
@@ -224,6 +226,8 @@ public sealed class OrderMergeParticipant(ICurrentTenant tenant) : IPatientMerge
             .ExecuteUpdateAsync(s => s.SetProperty(o => o.PatientId, fromPatientId).SetProperty(o => o.MergedFromPatientId, (Guid?)null), cancellationToken);
         await shared.PrescriptionItems.Where(i => i.PatientId == toPatientId && i.MergedFromPatientId == fromPatientId)
             .ExecuteUpdateAsync(s => s.SetProperty(i => i.PatientId, fromPatientId).SetProperty(i => i.MergedFromPatientId, (Guid?)null), cancellationToken);
+        await shared.RxAlertOverrides.Where(o => o.PatientId == toPatientId && o.MergedFromPatientId == fromPatientId)
+            .ExecuteUpdateAsync(s => s.SetProperty(o => o.PatientId, fromPatientId).SetProperty(o => o.MergedFromPatientId, (Guid?)null), cancellationToken);
         await shared.Referrals.Where(r => r.PatientId == toPatientId && r.MergedFromPatientId == fromPatientId)
             .ExecuteUpdateAsync(s => s.SetProperty(r => r.PatientId, fromPatientId).SetProperty(r => r.MergedFromPatientId, (Guid?)null), cancellationToken);
     }

@@ -38,7 +38,7 @@ test('the owner adds a second branch with tax number and certificate, and it app
   await expect(page.getByRole('status').filter({ hasText: 'Location added: Velachery (synthetic).' })).toBeVisible();
   await expect(page.getByRole('listitem').filter({ hasText: 'Velachery (synthetic)' }).filter({ has: page.getByRole('button', { name: 'Edit Velachery (synthetic)' }) })).toBeVisible();
   expect(posted[0]).toMatchObject({ name: 'Velachery (synthetic)', countryCode: 'IN', taxNumber: '27AAAAA0000A1Z5', certificateName: 'registration.pdf' });
-  expect(typeof posted[0].certificate).toBe('string');
+  expect(typeof posted[0]?.certificate).toBe('string');
 });
 
 test('a missing certificate and a server refusal are announced under the field or beside the button', async ({ page }) => {

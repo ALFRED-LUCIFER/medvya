@@ -2,6 +2,7 @@ import { apiFetch } from '../../api/services/apiClient';
 import { ApiError, csrf, post, send } from '../../schedule/services/scheduleApi';
 import type { RxAuthorisationState, RxLayout, RxPrint, RxVerify } from '../domain/authorisation';
 import type { RxChecks } from '../domain/checks';
+import { toShareBody, type RxShare, type ShareForm } from '../domain/share';
 import { toSigBody, type Medicine, type RxLine, type SigDraft } from '../domain/prescription';
 
 // The draft prescription (MDV-P2-015). Ids in paths; medicine names and dose fields in bodies. The formulary search carries a medicine name
@@ -31,10 +32,31 @@ export const verifyRx = (token: string) => post<RxVerify>('/v1/prescriptions/ver
 export async function downloadRxPdf(encounterId: string, paper: 'A4' | 'A5'): Promise<void> {
   const res = await apiFetch(`/v1/encounters/${encounterId}/prescription/pdf?paper=${paper}`, { method: 'POST', credentials: 'same-origin', headers: csrf });
   if (!res.ok) throw new ApiError(res.status);
+  await save(res, `prescription-${paper.toLowerCase()}.pdf`);
+}
+
+async function save(res: Response, name: string) {
   const url = URL.createObjectURL(await res.blob());
   const link = document.createElement('a');
   link.href = url;
-  link.download = `prescription-${paper.toLowerCase()}.pdf`;
+  link.download = name;
   link.click();
   URL.revokeObjectURL(url);
+}
+
+// Sharing (MDV-P2-020): the patient's address is read on the server; a pharmacy's travels in the body. Never in a URL.
+export const fetchShares = (encounterId: string) => send<RxShare[]>(`/v1/encounters/${encounterId}/prescription/shares`);
+export const shareRx = (encounterId: string, form: ShareForm) => post<RxShare[]>(`/v1/encounters/${encounterId}/prescription/shares`, toShareBody(form));
+export const recordDispatch = (shareId: string, body: { state: 'Dispensed' | 'Cancelled'; pharmacyRef?: string | null; dispensedAt?: string }) =>
+  post<RxShare[]>(`/v1/prescription-shares/${shareId}/dispatch`, body);
+/** Public: the link token travels in the body. */
+export const sendSharedCode = (token: string) => post<void>('/v1/prescriptions/shared/code', { token });
+
+/** Public: the shared PDF once the code matches, saved under a name with no patient data. */
+export async function openSharedRx(token: string, code: string): Promise<void> {
+  const res = await apiFetch('/v1/prescriptions/shared/open', {
+    method: 'POST', credentials: 'same-origin', headers: { ...csrf, 'Content-Type': 'application/json' }, body: JSON.stringify({ token, code }),
+  });
+  if (!res.ok) throw new ApiError(res.status, ((await res.json().catch(() => null)) as { code?: string } | null)?.code);
+  await save(res, 'prescription.pdf');
 }

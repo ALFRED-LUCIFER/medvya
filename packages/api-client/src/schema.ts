@@ -1115,6 +1115,80 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/prescriptions/shared/code": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["SharedRx"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/prescriptions/shared/open": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["SharedRx"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/schedule": {
         parameters: {
             query?: never;
@@ -6947,6 +7021,103 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/encounters/{encounterId}/prescription/shares": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    encounterId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    encounterId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["ShareRx"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/prescription-shares/{shareId}/dispatch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    shareId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["UpdateDispatch"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/encounters/{encounterId}/referrals": {
         parameters: {
             query?: never;
@@ -7651,6 +7822,8 @@ export interface components {
          * @enum {unknown}
          */
         DirectoryFilter: "All" | "Incomplete" | "Recent";
+        /** @enum {unknown} */
+        DispatchState: "Sent" | "Dispensed" | "Cancelled" | null;
         DisplayView: {
             /** Format: uuid */
             id: string;
@@ -8161,6 +8334,10 @@ export interface components {
             /** Format: date-time */
             approvedAt: null | string;
         };
+        /** @enum {unknown} */
+        RxShareChannel: "Sms" | "Email" | null;
+        /** @enum {unknown} */
+        RxShareRecipient: "Patient" | "Pharmacy" | null;
         SaveAdjustment: {
             /** Format: uuid */
             facilityId?: string;
@@ -8337,6 +8514,16 @@ export interface components {
         };
         /** @enum {unknown} */
         SexAtBirth: "Female" | "Male" | "Other";
+        SharedRx: {
+            token: null | string;
+            code: null | string;
+        };
+        ShareRx: {
+            recipient: null | components["schemas"]["RxShareRecipient"];
+            channel: null | components["schemas"]["RxShareChannel"];
+            pharmacyName: null | string;
+            pharmacyEmail: null | string;
+        };
         SignInStart: {
             loginHint?: null | string;
             returnUrl?: null | string;
@@ -8399,6 +8586,12 @@ export interface components {
         };
         /** @enum {unknown} */
         UnavailableReason: "NotWorking" | "Break" | "NoSchedule" | "Closed" | "Leave";
+        UpdateDispatch: {
+            state: null | components["schemas"]["DispatchState"];
+            pharmacyRef: null | string;
+            /** Format: date-time */
+            dispensedAt: null | string;
+        };
         UpdateDocumentRequest: {
             type: components["schemas"]["DocumentType"];
             /** Format: date */

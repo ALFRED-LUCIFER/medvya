@@ -86,6 +86,20 @@ public class SecurityBaselineTests
         Assert.Equal([HttpStatusCode.Unauthorized, HttpStatusCode.TooManyRequests], codes);
     }
 
+    // MDV-P2-017/020: the public prescription checks share the sign-in limit; guessing a link or a code costs as much as guessing a password.
+    [Theory]
+    [InlineData("/v1/prescriptions/verify")]
+    [InlineData("/v1/prescriptions/shared/code")]
+    [InlineData("/v1/prescriptions/shared/open")]
+    public async Task ThePublicPrescriptionChecksHaveTheSignInLimit(string path)
+    {
+        using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b.UseSetting("RateLimiting:SignInPerMinute", "1"));
+        using var client = factory.CreateClient(new() { BaseAddress = new Uri("https://clinic.medvya.test") });
+        var codes = new List<HttpStatusCode>();
+        for (var i = 0; i < 2; i++) codes.Add((await client.PostAsJsonAsync(new Uri(path, UriKind.Relative), new { token = "not-a-link", code = "000000" })).StatusCode);
+        Assert.Equal([HttpStatusCode.NotFound, HttpStatusCode.TooManyRequests], codes);
+    }
+
     [Fact]
     public async Task TheDeliveryReceiptWebhookIsRateLimitedPerClient()
     {

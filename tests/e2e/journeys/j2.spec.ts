@@ -2,7 +2,8 @@ import { expect } from '@playwright/test';
 import { test } from '@playwright/test';
 import { mockReconciliation } from '../support/reconciliation';
 import { mockNote } from '../support/note';
-import { clearChecks, line, mockPrescription, stopLine } from '../support/prescription';
+import { authorised, clearChecks, line, mockPrescription, stopLine } from '../support/prescription';
+import { mockShares } from '../support/share';
 import { mockProblems } from '../support/problems';
 import { journey } from './storyboard';
 
@@ -81,6 +82,23 @@ journey('J2', {
     await expect(page.getByText('Orders placed.')).toBeVisible();
     expect(orderCalls.placed).toEqual([{ destination: null }]); // its own action
     expect(calls.authorised).toBe(2);
+  },
+  // E-10: the authorised prescription goes to Meera by a secure link (the message names only the clinic; the link opens with a code to her mobile)
+  // and to her pharmacy, whose dispatch is recorded (MDV-P2-020). The gates and the message texts are proven on PostgreSQL in RxShareTests.
+  7: async ({ page }) => {
+    await mockPrescription(page, { lines: [line('rx-1', 'Metformin')], authorisation: { authorised: authorised(), changed: false } });
+    const { calls } = await mockShares(page);
+    await page.goto('/consult/e-1/rx/print');
+    const share = page.getByRole('region', { name: 'Share with the patient or a pharmacy' });
+    await share.getByRole('button', { name: 'Send secure link' }).click();
+    await expect(share.getByRole('row', { name: /Patient, by SMS/ })).toBeVisible();
+    await share.getByRole('combobox', { name: 'Send to' }).click();
+    await page.getByRole('option', { name: 'A pharmacy, by email' }).click();
+    await share.getByLabel('Pharmacy name').fill('Apollo Pharmacy Adyar (synthetic)');
+    await share.getByLabel('Pharmacy email').fill('orders@pharmacy.example.test');
+    await share.getByRole('button', { name: 'Send secure link' }).click();
+    await expect(share.getByRole('row', { name: /Apollo Pharmacy Adyar/ })).toContainText('Sent to the pharmacy');
+    expect(calls.shared).toHaveLength(2);
   },
   // D-01: the next patient is Meera, ready for the doctor; starting the consultation binds it to her visit and shows who it is for, in Room 3.
   // The doctor's own Today (MDV-P2-002): the next patient hero starts the consultation.

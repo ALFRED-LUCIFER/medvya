@@ -4,6 +4,8 @@ using Medvya.BuildingBlocks.Domain;
 using Medvya.BuildingBlocks.Infrastructure;
 using Medvya.Encounters.Application;
 using Medvya.Encounters.Domain;
+using Medvya.Notifications.Application;
+using Medvya.Notifications.Domain;
 using Medvya.Patients.Application;
 using Medvya.Prescribing.Application;
 using Medvya.Prescribing.Domain;
@@ -34,11 +36,12 @@ public sealed class PrescribingOptions
 public sealed class PrescriptionService(
     PrescribingDbContext db, IEncounterDirectory encounters, IReconciliationStops stops, IPrescribingChart chart, IClinicalAccess clinical, IStaffAccess staff,
     ICurrentTenant tenant, ICurrentUser user, IAuditLog audit, TimeProvider clock, IPatientDirectory patients, IFacilityDirectory facilities,
-    IOptions<PrescribingOptions> options) : IPrescriptions
+    IOptions<PrescribingOptions> options, IPatientContacts contacts, ISecureLinkMessages links) : IPrescriptions
 {
     public const string ReadAction = "rx.read", AddAction = "rx.add", UpdateAction = "rx.update", IncludeAction = "rx.include",
         CheckAction = "rx.check", OverrideAction = "rx.override", AuthorisationAction = "rx.authorisation", AuthoriseAction = "rx.authorise",
-        PrintAction = "rx.print", PdfAction = "rx.pdf", LayoutApproveAction = "rx.layout.approve", Resource = "prescription";
+        PrintAction = "rx.print", PdfAction = "rx.pdf", LayoutApproveAction = "rx.layout.approve", ShareAction = "rx.share", ShareReadAction = "rx.share.read",
+        DispatchAction = "rx.dispatch", Resource = "prescription";
     public const int MaxMedicine = 200, MaxStrength = 50, MaxReason = 200;
     static readonly Access[] Doctors = [Access.Sign];
 
@@ -203,14 +206,118 @@ public sealed class PrescriptionService(
         var size = paper switch { null or "A4" => PlainPdf.A4, "A5" => PlainPdf.A5, _ => throw new PrescriptionValidationException([("paper", "unknown")]) };
         if (await RequireAsync(encounterId, cancellationToken) is not { } encounter) return null;
         var rx = await PrintableAsync(encounter, cancellationToken);
+        var pdf = await RenderAsync(encounter, rx, size, cancellationToken);
+        await SaveAsync(encounter, PdfAction, rx.Id, $"version:{rx.VersionNo};paper:{size.Name}", () => db.PrescriptionPdfs.Add(pdf), cancellationToken);
+        return new RxPdf(pdf.Content, pdf.Sha256);
+    }
+
+    async Task<PrescriptionPdf> RenderAsync(EncounterView encounter, AuthorisedPrescription rx, PlainPdf.Paper size, CancellationToken cancellationToken)
+    {
         var content = RxPdfDocument.Render(await PrintViewAsync(encounter, rx, cancellationToken), size);
-        var pdf = new PrescriptionPdf
+        return new PrescriptionPdf
         {
             Id = Guid.CreateVersion7(), TenantId = TenantId, PrescriptionId = rx.Id, Paper = size.Name, Content = content,
             Sha256 = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(content)), RenderedBy = Me, RenderedAt = clock.GetUtcNow(),
         };
-        await SaveAsync(encounter, PdfAction, rx.Id, $"version:{rx.VersionNo};paper:{size.Name}", () => db.PrescriptionPdfs.Add(pdf), cancellationToken);
-        return new RxPdf(content, pdf.Sha256);
+    }
+
+    public async Task<IReadOnlyList<RxShareView>?> SharesAsync(Guid encounterId, CancellationToken cancellationToken = default)
+    {
+        if (await RequireAsync(encounterId, cancellationToken) is not { } encounter) return null;
+        await audit.WriteAsync(Event(ShareReadAction, encounter, encounterId), cancellationToken);
+        return await ShareViewsAsync(encounterId, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<RxShareView>?> ShareAsync(Guid encounterId, ShareRx command, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        var errors = new List<(string, string)>();
+        var pharmacy = command.Recipient == RxShareRecipient.Pharmacy;
+        string? name = null, email = null;
+        if (command.Recipient is null) errors.Add(("recipient", "required"));
+        if (pharmacy)
+        {
+            name = Text(command.PharmacyName, "pharmacyName", RxShareRules.MaxPharmacyName, true, errors);
+            email = Text(command.PharmacyEmail, "pharmacyEmail", 254, true, errors);
+            if (email is not null && !System.Net.Mail.MailAddress.TryCreate(email, out _)) errors.Add(("pharmacyEmail", "invalid"));
+        }
+        else if (command.Recipient is not null && command.Channel is null) errors.Add(("channel", "required"));
+        if (errors.Count > 0) throw new PrescriptionValidationException(errors);
+        var channel = pharmacy ? RxShareChannel.Email : command.Channel!.Value;
+
+        if (await RequireAsync(encounterId, cancellationToken) is not { } encounter) return null;
+        // Only the latest authorisation, still what the draft says: never an unauthorised, changed or replaced prescription.
+        var rx = await PrintableAsync(encounter, cancellationToken);
+        // The code that opens the link always goes to the patient's registered mobile, whoever the link is for.
+        if (string.IsNullOrWhiteSpace((await contacts.FindAsync(encounter.PatientId, cancellationToken))?.Mobile)) throw new PrescriptionConflictException("no_mobile");
+        var pdf = await RenderAsync(encounter, rx, PlainPdf.A4, cancellationToken);
+        var (token, hash) = InvitationToken.New(TenantId);
+        var now = clock.GetUtcNow();
+        var share = new RxShare
+        {
+            Id = Guid.CreateVersion7(), TenantId = TenantId, FacilityId = encounter.FacilityId, EncounterId = encounter.Id, PrescriptionId = rx.Id, PdfId = pdf.Id,
+            Recipient = command.Recipient!.Value, Channel = channel, PharmacyName = name, PharmacyEmail = email, LinkHash = hash,
+            ExpiresAt = now + RxShareRules.LinkLifetime, SharedBy = Me, SharedAt = now,
+        };
+        var url = $"{BaseUrl}/rx/{token}";
+
+        await using (var tx = await db.Database.BeginTransactionAsync(cancellationToken))
+        {
+            db.PrescriptionPdfs.Add(pdf);
+            db.RxShares.Add(share);
+            if (pharmacy) db.PharmacyDispatchEvents.Add(new() { Id = Guid.CreateVersion7(), TenantId = TenantId, ShareId = share.Id, State = DispatchState.Sent, ChangedBy = Me, ChangedAt = now });
+            await db.SaveChangesAsync(cancellationToken);
+            await audit.WriteAsync(Event(ShareAction, encounter, share.Id, $"recipient:{share.Recipient};channel:{channel};version:{rx.VersionNo}"), tx.GetDbTransaction(), cancellationToken);
+            // Sent inside the transaction: a message that cannot go leaves no share behind.
+            try
+            {
+                if (pharmacy) await links.SendLinkToPharmacyAsync(email!, encounter.FacilityId, url, share.ExpiresAt, cancellationToken);
+                else await links.SendLinkToPatientAsync(encounter.PatientId, encounter.FacilityId, channel == RxShareChannel.Sms ? NotificationChannel.Sms : NotificationChannel.Email,
+                    url, share.ExpiresAt, share.Id, cancellationToken);
+            }
+            catch (SecureLinkNotSentException e)
+            {
+                throw new PrescriptionConflictException(e.Code);
+            }
+            await tx.CommitAsync(cancellationToken);
+        }
+        return await ShareViewsAsync(encounterId, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<RxShareView>?> DispatchAsync(Guid shareId, UpdateDispatch command, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        if (await db.RxShares.AsNoTracking().SingleOrDefaultAsync(s => s.Id == shareId && s.Recipient == RxShareRecipient.Pharmacy, cancellationToken) is not { } share) return null;
+        if (await RequireAsync(share.EncounterId, cancellationToken) is not { } encounter) return null;
+        var now = clock.GetUtcNow();
+        var errors = new List<(string, string)>();
+        var reference = Text(command.PharmacyRef, "pharmacyRef", RxShareRules.MaxPharmacyRef, false, errors);
+        var state = command.State ?? DispatchState.Sent;
+        if (state == DispatchState.Sent) errors.Add(("state", "unknown")); // a dispatch starts as Sent; only the clinic's later states are recorded here
+        if (state == DispatchState.Dispensed && (command.DispensedAt is not { } at || at > now.AddMinutes(5) || at < share.SharedAt.AddMinutes(-5))) errors.Add(("dispensedAt", "invalid"));
+        if (errors.Count > 0) throw new PrescriptionValidationException(errors);
+        var current = await db.PharmacyDispatchEvents.AsNoTracking().Where(d => d.ShareId == shareId).OrderByDescending(d => d.ChangedAt).ThenByDescending(d => d.Id).FirstAsync(cancellationToken);
+        if (!RxShareRules.CanMove(current.State, state)) throw new PrescriptionConflictException("dispatch_final");
+
+        var row = new PharmacyDispatchEvent
+        {
+            Id = Guid.CreateVersion7(), TenantId = TenantId, ShareId = shareId, State = state, PharmacyRef = reference,
+            DispensedAt = state == DispatchState.Dispensed ? command.DispensedAt : null, ChangedBy = Me, ChangedAt = now,
+        };
+        await SaveAsync(encounter, DispatchAction, shareId, $"state:{state}", () => db.PharmacyDispatchEvents.Add(row), cancellationToken);
+        return await ShareViewsAsync(share.EncounterId, cancellationToken);
+    }
+
+    async Task<IReadOnlyList<RxShareView>> ShareViewsAsync(Guid encounterId, CancellationToken cancellationToken)
+    {
+        var versions = await db.AuthorisedPrescriptions.AsNoTracking().Where(p => p.EncounterId == encounterId).ToDictionaryAsync(p => p.Id, p => p.VersionNo, cancellationToken);
+        var latest = versions.Count == 0 ? 0 : versions.Values.Max();
+        var shares = await db.RxShares.AsNoTracking().Where(s => s.EncounterId == encounterId).OrderByDescending(s => s.SharedAt).ThenByDescending(s => s.Id).ToListAsync(cancellationToken);
+        var ids = shares.Select(s => s.Id).ToList();
+        var dispatch = (await db.PharmacyDispatchEvents.AsNoTracking().Where(d => ids.Contains(d.ShareId)).ToListAsync(cancellationToken))
+            .GroupBy(d => d.ShareId).ToDictionary(g => g.Key, g => g.OrderByDescending(d => d.ChangedAt).ThenByDescending(d => d.Id).First());
+        return [.. shares.Select(s => new RxShareView(s.Id, s.Recipient, s.Channel, s.PharmacyName, versions[s.PrescriptionId], versions[s.PrescriptionId] < latest, s.SharedBy, s.SharedAt, s.ExpiresAt,
+            dispatch.TryGetValue(s.Id, out var d) ? new DispatchView(d.State, d.PharmacyRef, d.DispensedAt, d.ChangedBy, d.ChangedAt) : null))];
     }
 
     public async Task<RxLayoutView> LayoutAsync(CancellationToken cancellationToken = default) =>
@@ -285,8 +392,7 @@ public sealed class PrescriptionService(
         var doctor = await facilities.PrescriberAsync(rx.AuthorisedBy, rx.FacilityId, cancellationToken) ?? throw new InvalidOperationException("The authorising doctor has no licence on record.");
         var facts = await chart.FactsAsync(encounter.PatientId, cancellationToken);
         var allergies = facts.AllergyState switch { AllergyState.Listed => ChartAllergies.Listed, AllergyState.NoKnownAllergies => ChartAllergies.NoKnownAllergies, _ => ChartAllergies.NotRecorded };
-        var baseUrl = options.Value.VerifyBaseUrl ?? throw new InvalidOperationException("Prescribing:VerifyBaseUrl (or Invitations:LinkBaseUrl) is not configured.");
-        var url = $"{baseUrl.TrimEnd('/')}/verify/rx/{RxVerifyToken.Token(rx.TenantId, rx.VerifyCode)}";
+        var url = $"{BaseUrl}/verify/rx/{RxVerifyToken.Token(rx.TenantId, rx.VerifyCode)}";
         return new RxPrintView(View(rx), facility.Name, facility.TimeZone, doctor.FullName, doctor.Qualifications, doctor.LicenceNumber, doctor.LicenceAuthority,
             new SlipPatient(patient.FullName, patient.Mrn, patient.DateOfBirth, patient.SexAtBirth.ToString()), allergies,
             [.. facts.Allergies.Where(a => a.Status != AllergyStatus.NotAnAllergy && a.Substance is not null).Select(a => a.Substance!)],
@@ -398,6 +504,7 @@ public sealed class PrescriptionService(
         PatientId = encounter.PatientId, FacilityId = encounter.FacilityId, Purpose = AuditPurpose.Treatment, Outcome = AuditOutcome.Allowed, OccurredAt = clock.GetUtcNow(), Detail = detail,
     };
 
+    string BaseUrl => (options.Value.VerifyBaseUrl ?? throw new InvalidOperationException("Prescribing:VerifyBaseUrl (or Invitations:LinkBaseUrl) is not configured.")).TrimEnd('/');
     Guid TenantId => tenant.TenantId ?? throw new InvalidOperationException("No tenant context.");
     Guid Me => user.UserId ?? throw new InvalidOperationException("No user.");
 }

@@ -8,8 +8,10 @@ import { useConsultController } from '../features/encounters/hooks/useConsultCon
 import OrdersPanel from '../features/orders/components/OrdersPanel';
 import PrescriptionPanel from '../features/prescription/components/PrescriptionPanel';
 import RxPrintPage from '../features/prescription/components/RxPrintPage';
+import RxSharePanel from '../features/prescription/components/RxSharePanel';
 import { usePrescriptionController } from '../features/prescription/hooks/usePrescriptionController';
 import { useRxPrintController } from '../features/prescription/hooks/useRxPrintController';
+import { useRxShareController } from '../features/prescription/hooks/useRxShareController';
 import LetterPage from '../features/referrals/components/LetterPage';
 import ReferralsPanel from '../features/referrals/components/ReferralsPanel';
 import { useLetterController, useReferralsController } from '../features/referrals/hooks/useReferralsController';
@@ -85,5 +87,7 @@ export function NotePrintRoute({ userId, userName }: { userId: string; userName:
 /** The printed prescription of one consultation (MDV-P2-017): only once authorised; the server decides for this clinician and patient. */
 export function RxPrintRoute() {
   const { encounterId = '' } = useParams();
-  return <RxPrintPage {...useRxPrintController(encounterId)} consultPath={`/consult/${encounterId}`} />;
+  const print = useRxPrintController(encounterId);
+  const share = useRxShareController(encounterId);
+  return <RxPrintPage {...print} consultPath={`/consult/${encounterId}`} share={print.print && <RxSharePanel {...share} timeZone={print.print.timeZone} />} />;
 }

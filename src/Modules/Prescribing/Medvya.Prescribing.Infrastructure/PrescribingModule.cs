@@ -24,6 +24,7 @@ public static class PrescribingModule
             .AddScoped<IOrders, OrderService>()
             .AddScoped<IPrescriptions, PrescriptionService>()
             .AddScoped<IPrescriptionVerification, PrescriptionVerification>()
+            .AddScoped<IRxShareLinks, RxShareLinks>()
             .AddScoped<IReferrals, ReferralService>()
             .AddScoped<Medvya.Encounters.Application.ITimelineSource, OrderTimelineSource>()
             .AddScoped<Medvya.Patients.Application.IPatientMergeParticipant, OrderMergeParticipant>();

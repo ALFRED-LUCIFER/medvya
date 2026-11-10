@@ -1534,8 +1534,8 @@ labels: onboarding, documents
 estimate: 5
 weeks: 12-14
 depends: MDV-P1-004, MDV-P0-006
-confidence: 70 | Decided 10 Nov 2026; counsel still confirms the document lists (MDV-P1-044).
-sources: docs/adr/ADR-016-organisation-onboarding-and-approval.md; docs/02-design/screen-specs.md#f-04-solo-doctor-onboarding-6-steps-autosave
+confidence: 75 | Decided 10 Nov 2026 and designed in Medvya Web (10 Nov 2026, 4-step request then 3 setup steps); counsel still confirms the document lists (MDV-P1-044).
+sources: docs/adr/ADR-016-organisation-onboarding-and-approval.md; docs/02-design/source/Medvya Web.dc.html (10 Nov 2026: onboarding wizard, Settings Organisation and approval); docs/02-design/screen-specs.md#f-04-solo-doctor-onboarding-6-steps-autosave
 desc:
 Context: what we decided and why. Medvya is a platform and approves organisations, never individual doctors (ADR-016, owner decision 10 Nov 2026). There is no solo-doctor account: a doctor working alone registers a Clinic and is its owner. Clinic and Hospital are one build; Hospital adds documents. Review by a person is the trust gate, so the request must carry what the reviewer needs.
 What to build. Sign-up asks first for the type, Clinic or Hospital, then collects the documents. Clinic: clinic registration certificate, tax registration (GSTIN or TRN), owner's government ID, owner doctor's medical council registration (kept as a document, not verified as a doctor check). Hospital: the same plus hospital registration certificate, authorised signatory letter, IT or security contact, and a signed DPA before approval. Files go to private Blob and are readable only by Medvya operations. Submit moves Draft to Submitted; the applicant sees a status page (Submitted, Needs changes with the reason, Approved, Rejected) and can resubmit. Autosave and resume from MDV-P1-004 stay. An organisation has 1..n locations from the start: the first location is created at onboarding, more are added by the owner later (MDV-P1-070). Hospital HIS and SSO is P7.
@@ -1597,8 +1597,8 @@ labels: onboarding, operations, security, platform
 estimate: 4
 weeks: 12-14
 depends: MDV-P1-063
-confidence: 65 | Decided 10 Nov 2026; the console is not on Azure yet, so the API call is the interim route.
-sources: docs/adr/ADR-016-organisation-onboarding-and-approval.md; docs/adr/ADR-014-platform-console.md
+confidence: 75 | Decided 10 Nov 2026 and designed in Medvya Admin (10 Nov 2026); the console is not on Azure yet, so the API call is the interim route.
+sources: docs/adr/ADR-016-organisation-onboarding-and-approval.md; docs/02-design/source/Medvya Admin.dc.html (10 Nov 2026: Organisation approvals); docs/adr/ADR-014-platform-console.md
 desc:
 Context: what we decided and why. The pilot cannot wait for the full console (MDV-P5-044, weeks 26 to 29). The owner decided a simple approval queue is built now in the platform console, approved by a configured Medvya operations user; until the console runs on Azure, a documented API call does the same and stays.
 What to build. An organisation-approval capability replaces OperationsPolicies.LicenceReview and the Operations:LicenceReviewers id list. Operations endpoints (reason of 5 to 500 characters, audited, applicant emailed a plain reason for changes, rejection or suspension) list Submitted requests and apply approve, ask for changes, reject and suspend. A simple queue page in web/platform-admin calls them. The review reads only the control-plane request and documents through a narrow reviewed read path (ADR-014), never clinic patient data. Document the API call in docs/runbooks.
@@ -1606,6 +1606,7 @@ Touched: Medvya.Tenancy.Api/DoctorEndpoints.cs (remove licence verify and reject
 ac:
 - Given a user without the organisation-approval capability, when they call the endpoints or open the queue, then they get 403.
 - Given a Submitted request, when a configured operations user approves, asks for changes, rejects or suspends with a reason, then the state changes, the audit names the operator, and the applicant is emailed the reason.
+- Given a Hospital request without a signed DPA, when approval is attempted, then it is refused (design 10 Nov 2026).
 - Given an action without a reason, when it is sent, then it is rejected.
 - Given any queue or approval endpoint, when it returns data, then it holds no patient field and logs none (architecture test).
 - Given the console is not deployed, when an operator follows the runbook, then the documented API call approves a request.

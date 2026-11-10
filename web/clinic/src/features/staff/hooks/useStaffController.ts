@@ -10,6 +10,8 @@ import { addStaff, fetchRoles, fetchStaff, offboardStaff, reactivateStaff, resen
 
 /** Settings → Staff: the staff table and the "Add staff member" steps (role → location → permissions → invite). */
 /** The invitation email could not be sent; the server saved nothing (502 with this code). */
+/** The plan has no free doctor or staff seat (409 with this code); the server saved nothing. */
+const planFull = (e: unknown) => e instanceof ApiError && e.code === 'plan_limit';
 const sendFailed = (e: unknown) => e instanceof ApiError && e.code === 'email_failed';
 
 export function useStaffController(defaultFacilityId: string) {
@@ -72,7 +74,8 @@ export function useStaffController(defaultFacilityId: string) {
     canContinue,
     notice,
     adding: add.isPending,
-    addFailed: add.isError && !sendFailed(add.error),
+    addFailed: add.isError && !sendFailed(add.error) && !planFull(add.error),
+    planFull: planFull(add.error),
     emailFailed: sendFailed(add.error) || sendFailed(resend.error),
     working: resend.isPending || revoke.isPending,
     rowFailed: (resend.isError && !sendFailed(resend.error)) || revoke.isError,
@@ -96,7 +99,7 @@ export function useStaffController(defaultFacilityId: string) {
     reactivating,
     reactivateForm,
     reactivateWorking: reactivate.isPending,
-    reactivateError: !reactivate.isError ? null : reactivate.error instanceof ApiError && reactivate.error.code === 'membershipId:above_granter' ? ('aboveGranter' as const) : ('failed' as const),
+    reactivateError: !reactivate.isError ? null : reactivate.error instanceof ApiError && reactivate.error.code === 'membershipId:above_granter' ? ('aboveGranter' as const) : planFull(reactivate.error) ? ('planFull' as const) : ('failed' as const),
     onReactivate: (m: StaffMember) => { setNotice(null); closeOffboard(); reactivate.reset(); setReactivating(m); },
     onReactivateSubmit: reactivateForm.handleSubmit(values => reactivate.mutate(values)),
     onReactivateCancel: closeReactivate,

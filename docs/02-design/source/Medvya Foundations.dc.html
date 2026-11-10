@@ -24,7 +24,7 @@
     <p style="margin:0;font-size:16px;line-height:1.6;color:#506579;max-width:720px">Source: DoctorMate Architecture v2 (PMS · EMR · AI · Care · Portal · Enterprise) and the UI/UX master prompt. Working name replaced with Medvya. All patient data is synthetic.</p>
   </div>
   <div style="display:flex;gap:8px;flex-wrap:wrap">
-    <a href="Medvya Clinician App.dc.html" style="display:flex;align-items:center;gap:8px;height:44px;padding:0 18px;border-radius:10px;background:#0E9384;color:#fff;font-weight:700;font-size:14px;text-decoration:none"><span class="ms" style="font-size:20px">play_arrow</span>Clinician app</a><a href="Medvya Patient Portal.dc.html" style="display:flex;align-items:center;height:44px;padding:0 16px;border-radius:10px;border:1px solid #CBD6E0;background:#fff;color:#142536;font-weight:700;font-size:14px">Patient portal</a><a href="Medvya Enterprise Admin.dc.html" style="display:flex;align-items:center;height:44px;padding:0 16px;border-radius:10px;border:1px solid #CBD6E0;background:#fff;color:#142536;font-weight:700;font-size:14px">Enterprise admin</a><a href="Medvya Patient Registration.dc.html" style="display:flex;align-items:center;height:44px;padding:0 16px;border-radius:10px;border:1px solid #CBD6E0;background:#fff;color:#142536;font-weight:700;font-size:14px">Registration</a><a href="Medvya Clinical Screens.dc.html" style="display:flex;align-items:center;height:44px;padding:0 16px;border-radius:10px;border:1px solid #CBD6E0;background:#fff;color:#142536;font-weight:700;font-size:14px">Clinical Screens</a><a href="Medvya Access and Onboarding.dc.html" style="display:flex;align-items:center;height:44px;padding:0 16px;border-radius:10px;border:1px solid #CBD6E0;background:#fff;color:#142536;font-weight:700;font-size:14px">Access and Onboarding</a><a href="Medvya Enterprise Pages.dc.html" style="display:flex;align-items:center;height:44px;padding:0 16px;border-radius:10px;border:1px solid #CBD6E0;background:#fff;color:#142536;font-weight:700;font-size:14px">Enterprise Pages</a><a href="Medvya Mobile and Tablet.dc.html" style="display:flex;align-items:center;height:44px;padding:0 16px;border-radius:10px;border:1px solid #CBD6E0;background:#fff;color:#142536;font-weight:700;font-size:14px">Mobile and Tablet</a><a href="Medvya Handoff.dc.html" style="display:flex;align-items:center;height:44px;padding:0 16px;border-radius:10px;border:1px solid #CBD6E0;background:#fff;color:#142536;font-weight:700;font-size:14px">Handoff</a><a href="Medvya Journeys.dc.html" style="display:flex;align-items:center;height:44px;padding:0 16px;border-radius:10px;border:1px solid #CBD6E0;background:#fff;color:#142536;font-weight:700;font-size:14px">Journeys</a><a href="Medvya Wireframes.dc.html" style="display:flex;align-items:center;height:44px;padding:0 16px;border-radius:10px;border:1px solid #CBD6E0;background:#fff;color:#142536;font-weight:700;font-size:14px">Wireframes</a>
+    <a href="Medvya Web.dc.html" style="display:flex;align-items:center;gap:8px;height:44px;padding:0 18px;border-radius:10px;background:#0E9384;color:#fff;font-weight:700;font-size:14px;text-decoration:none"><span class="ms" style="font-size:20px">play_arrow</span>Start the flow · Web</a><a href="Medvya Admin.dc.html" style="display:flex;align-items:center;height:44px;padding:0 16px;border-radius:10px;border:1px solid #CBD6E0;background:#fff;color:#142536;font-weight:700;font-size:14px">Medvya Admin</a><a href="Medvya Mobile.dc.html" style="display:flex;align-items:center;height:44px;padding:0 16px;border-radius:10px;border:1px solid #CBD6E0;background:#fff;color:#142536;font-weight:700;font-size:14px">Mobile</a>
   </div>
 </header>
 
@@ -263,14 +263,12 @@
 </section>
 
 <section style="display:flex;flex-direction:column;gap:16px">
-  <div style="display:flex;align-items:baseline;gap:12px"><span style="font:500 13px 'JetBrains Mono',monospace;color:#0E9384">09</span><h2 style="margin:0;font-size:24px;font-weight:700;color:#102A43">Still open</h2></div>
+  <div style="display:flex;align-items:baseline;gap:12px"><span style="font:500 13px 'JetBrains Mono',monospace;color:#0E9384">09</span><h2 style="margin:0;font-size:24px;font-weight:700;color:#102A43">Status and approved decisions</h2></div>
   <div style="background:#fff;border:1px solid #DFE7ED;border-radius:12px;padding:20px 24px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:12px 32px;font-size:14px;line-height:1.55">
-    <div><strong>Open screens:</strong> none in the inventory. E-08 vaccinations is designed but scheduled for a later release.</div>
-    <div><strong>Clickable journeys:</strong> J1, J2, J3 (front desk → nurse intake → doctor) and J5 run inside the clinician app. J4 uses the clip tweak; J6 uses the authority = HIS tweak and continues in Enterprise Admin.</div>
-    <div><strong>Static vs interactive:</strong> Access & onboarding, enterprise pages and mobile/tablet frames are hi-fi with light interaction; they are not wired to the clinician app state.</div>
-    <div><strong>Content:</strong> Arabic RTL shown for UAE portal home, registration and clinician mobile Today. The desktop clinician app is English only. Consent and legal text need clinical and legal review.</div>
-    <div><strong>Handoff:</strong> Figma file itself (frame names are specified), Storybook stories and real contrast-tool report export.</div>
-  </div>
+    <div><strong>Files:</strong> Medvya Web (public site, sign-in, clinic app), Medvya Admin (platform console), Medvya Mobile (Expo staff and patient apps), and this file.</div>
+    <div><strong>Approved 06 Nov 2026:</strong> prices and grace policy, 14-day trial, authenticator-first sign-in, 15-min lock / 12-h sign-out, Expo one codebase with two store apps, SYNTHETIC badge.</div>
+    <div><strong>UI library:</strong> shadcn/ui + Radix + Tailwind 4 on web; the same tokens feed an Expo theme object. The older MUI theme in Handoff is superseded.</div>
+    <div><strong>Still open:</strong> final legal wording from counsel, payment gateways, NHCX and eClaimLink onboarding, native-speaker review of Hindi and Arabic.</div>
   </div>
 </section>
 
@@ -289,7 +287,8 @@ class Component extends DCLogic {
     const colors = [
       ['brand.950', '#102A43', '#0B1622', '14.5:1', 'Sidebar, headings'],
       ['brand.700', '#0F766E', '#2BB3A3', '5.5:1', 'Active nav, brand'],
-      ['brand.500', '#0E9384', '#2BB3A3', '3.9:1', 'Primary action fill (white text bold)'],
+      ['brand.500', '#0E9384', '#2BB3A3', '3.8:1', 'Accents, progress, icons only — not under text'],
+      ['brand.600', '#0C7D70', '#2BB3A3', '5.0:1', 'Primary button fill (white text)'],
       ['action.600', '#2563EB', '#6B9BFF', '5.2:1', 'Links, secondary actions'],
       ['ai.600', '#7155D8', '#A08CF0', '5.3:1', 'AI-provisional only'],
       ['surface.base', '#F7FAFC', '#0F1C2A', '—', 'App canvas'],
@@ -299,7 +298,10 @@ class Component extends DCLogic {
       ['border.default', '#DFE7ED', '#22364A', '—', '1px separation'],
       ['danger.700', '#B42333', '#F47A86', '6.4:1', 'Critical, unacknowledged'],
       ['warning.700', '#975A16', '#E9B15F', '5.6:1', 'Uncertainty, attention'],
-      ['success.700', '#087F5B', '#4CC79C', '5.2:1', 'Confirmed success']
+      ['success.700', '#06704F', '#4CC79C', '5.4:1', 'Confirmed success (on success tint)'],
+      ['patient.600', '#2F4AC0', '#9CB0FF', '7.0:1', 'Patient app accent only'],
+      ['platform.900', '#0F172A', '#0F172A', '17:1', 'Medvya Admin console chrome'],
+      ['ink.400', '#8296A8', '#5E7489', '3.0:1', 'Input borders and dividers only — never text']
     ].map(([token, hex, dark, ratio, use]) => ({ token, hex, dark, ratio, use }));
 
     const modules = [

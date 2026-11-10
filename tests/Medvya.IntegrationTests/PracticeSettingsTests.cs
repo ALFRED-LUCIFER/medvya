@@ -22,6 +22,7 @@ namespace Medvya.IntegrationTests;
 public sealed class PracticeSettingsTests(PostgresFixture sql) : IClassFixture<PostgresFixture>, IAsyncLifetime
 {
     static readonly byte[] Png = TestImages.Png;
+    const string Gstin = "27AAAAA0000A1Z5"; // format only (synthetic)
     readonly SchedulingHarness h = new(sql);
     WebApplicationFactory<Program>? factory;
 
@@ -68,7 +69,7 @@ public sealed class PracticeSettingsTests(PostgresFixture sql) : IClassFixture<P
     HttpRequestMessage[] Writes() =>
     [
         new(HttpMethod.Put, "/v1/settings/profile") { Content = JsonContent.Create(new { name = "Renamed Clinic (synthetic)" }) },
-        new(HttpMethod.Post, "/v1/settings/locations") { Content = JsonContent.Create(new { name = "New site (synthetic)", timeZone = "Asia/Kolkata" }) },
+        new(HttpMethod.Post, "/v1/settings/locations") { Content = JsonContent.Create(new { name = "New site (synthetic)", timeZone = "Asia/Kolkata", countryCode = "IN", taxNumber = Gstin, certificateName = "reg.png", certificate = Png }) },
         new(HttpMethod.Put, $"/v1/settings/locations/{h.Facility}") { Content = JsonContent.Create(new { name = "Renamed site (synthetic)" }) },
         new(HttpMethod.Put, $"/v1/settings/locations/{h.Facility}/hours") { Content = JsonContent.Create(Array.Empty<object>()) },
         new(HttpMethod.Post, $"/v1/settings/locations/{h.Facility}/closures") { Content = JsonContent.Create(new { date = "2026-11-01", name = "Diwali" }) },
@@ -158,19 +159,59 @@ public sealed class PracticeSettingsTests(PostgresFixture sql) : IClassFixture<P
     public async Task ALocationIsAddedAndRenamedAndAnotherTenantsIsNotFound()
     {
         var settings = h.Settings(h.Admin);
-        var added = await settings.AddLocationAsync(new SaveLocation { Name = "Velachery 2 (synthetic)", Address = "4 Synthetic Street", TimeZone = "Asia/Kolkata" });
+        var added = await settings.AddLocationAsync(Branch());
         Assert.Contains(added.Id, (await settings.ListLocationsAsync()).Select(l => l.Id));
         await using (var db = sql.Context(h.Tenant)) // the creator can work at the new site
             Assert.True(await db.Memberships.AnyAsync(m => m.FacilityId == added.Id && m.UserId == h.Admin && m.Role == Role.PracticeAdmin && m.Status == MembershipStatus.Active));
 
         var renamed = await settings.UpdateLocationAsync(added.Id, new SaveLocation { Name = "Velachery North (synthetic)" });
         Assert.Equal(("Velachery North (synthetic)", "Asia/Kolkata"), (renamed!.Name, renamed.TimeZone)); // the zone stays when not sent
-        var bad = await Assert.ThrowsAsync<SettingsValidationException>(() => settings.AddLocationAsync(new SaveLocation { Name = "X", TimeZone = "Mars/Olympus" }));
+        var bad = await Assert.ThrowsAsync<SettingsValidationException>(() => settings.AddLocationAsync(Branch() with { Name = "X", TimeZone = "Mars/Olympus" }));
         Assert.Equal("timeZone:invalid", $"{bad.Errors[0].Field}:{bad.Errors[0].Code}");
 
         var otherTenant = Guid.NewGuid();
         Assert.Null(await h.Settings(h.Admin, otherTenant).UpdateLocationAsync(h.Facility, new SaveLocation { Name = "Stolen" }));
         Assert.Null(await h.Settings(h.Admin, otherTenant).GetHoursAsync(h.Facility));
+    }
+
+    static AddLocation Branch() => new()
+    {
+        Name = "Velachery 2 (synthetic)", Address = "4 Synthetic Street", TimeZone = "Asia/Kolkata", CountryCode = "IN", TaxNumber = Gstin, CertificateName = "reg.png", Certificate = Png,
+    };
+
+    [Fact]
+    public async Task AddedLocationKeepsItsCertificatePrivatelyAndIsAuditedAndHiddenFromOtherTenants()
+    {
+        var added = await h.Settings(h.Admin).AddLocationAsync(Branch());
+        await using (var db = sql.Context(h.Tenant))
+        {
+            var site = await db.Facilities.SingleAsync(f => f.Id == added.Id);
+            Assert.Equal((Gstin, "reg.png"), (site.TaxNumber, site.CertificateName));
+            Assert.Equal(Png, h.Logos.Stored[site.CertificateKey!].Content);
+            Assert.StartsWith($"{h.Tenant}/location-certificate/", site.CertificateKey); // random key, no file name
+        }
+        await using var audit = sql.Audit(h.Tenant);
+        var row = Assert.Single(await audit.Events.ToListAsync());
+        Assert.Equal(("settings.location.create", h.Admin, added.Id), (row.Action, row.ActorUserId, row.ResourceId));
+        Assert.DoesNotContain(added.Id, (await h.Settings(h.Admin, Guid.NewGuid()).ListLocationsAsync()).Select(l => l.Id));
+    }
+
+    [Fact]
+    public async Task LocationInAnotherCountryOrWithBadTaxOrCertificateIsRefusedAndNothingIsStored()
+    {
+        var settings = h.Settings(h.Admin);
+        async Task<string[]> Refused(AddLocation command) =>
+            (await Assert.ThrowsAsync<SettingsValidationException>(() => settings.AddLocationAsync(command))).Errors.Select(e => $"{e.Field}:{e.Code}").Order().ToArray();
+        Assert.Equal(["countryCode:mismatch"], await Refused(Branch() with { CountryCode = "AE" }));
+        Assert.Equal(["countryCode:required"], await Refused(Branch() with { CountryCode = null }));
+        Assert.Equal(["taxNumber:format"], await Refused(Branch() with { TaxNumber = "not-a-gstin" }));
+        Assert.Equal(["taxNumber:required"], await Refused(Branch() with { TaxNumber = " " }));
+        Assert.Equal(["certificate:required"], await Refused(Branch() with { Certificate = null }));
+        Assert.Equal(["certificate:type"], await Refused(Branch() with { Certificate = "<svg onload=x>"u8.ToArray() }));
+        Assert.Equal(["certificate:too_large"], await Refused(Branch() with { Certificate = [.. "%PDF-"u8, .. new byte[LocationCertificate.MaxBytes]] }));
+        Assert.Empty(h.Logos.Stored);
+        await using var db = sql.Context(h.Tenant);
+        Assert.DoesNotContain(await db.Facilities.ToListAsync(), f => f.CertificateKey is not null);
     }
 
     [Fact]

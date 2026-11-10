@@ -2381,7 +2381,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/SaveLocation"
+                "$ref": "#/components/schemas/AddLocation"
               }
             }
           },
@@ -5221,6 +5221,54 @@
               "string"
             ],
             "format": "int64"
+          }
+        }
+      },
+      "AddLocation": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "address": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "timeZone": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "countryCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "taxNumber": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "certificateName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "certificate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "byte"
           }
         }
       },

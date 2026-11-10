@@ -134,7 +134,7 @@ function Line({ line, ended, busy, language, draftOf, saveOf, invalidOf, onInclu
   const fieldId = (f: SigField) => `rx-${id}-${f}`;
   const text = (f: 'dose' | 'durationDays' | 'quantity' | 'instructions', className = '') => (
     <Field id={fieldId(f)} label={t(`rx.field.${f}`)} error={invalid.includes(f) ? t(`rx.invalid.${f}`) : null} className={className}>
-      <Input id={fieldId(f)} className="h-11" autoComplete="off" inputMode={f === 'instructions' ? undefined : 'decimal'} disabled={locked} value={draft[f]}
+      <Input id={fieldId(f)} className="h-11" autoComplete="off" inputMode={f === 'dose' ? 'decimal' : f === 'instructions' ? undefined : 'numeric'} disabled={locked} value={draft[f]}
         {...describedBy(fieldId(f), invalid.includes(f))} onChange={e => onField(line, f, e.target.value)} />
     </Field>
   );

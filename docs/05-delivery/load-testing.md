@@ -44,6 +44,7 @@ over budget, has an error, or its p95 is more than 20 % over the baseline (and a
 differed by 14 ms on search, and most steps take 5 to 20 ms, so smaller moves are runner noise). The committed baseline is the slower of the
 first two CI runs per step (runs 42405506360 and 42406606403). A failing nightly or manual run opens an issue titled
 "Nightly load test failed (MDV-P1-037)" labelled `performance`, or comments on it while it is open. The report is in the run summary.
+To prove the alert, run the workflow by hand with `force_fail` ticked (`gh workflow run load-nightly.yml -f force_fail=true`): it fails at once and opens the issue; close that issue afterwards. Scheduled runs never take the input.
 
 ## Azure dev (by hand, with the owner)
 
@@ -56,7 +57,9 @@ credentials), `MEDVYA_LOAD_FACILITY`, `MEDVYA_LOAD_DOCTORS` (comma-separated cal
 slots for those doctors, e.g. 27 weeks ahead). One cookie for every desk: `MEDVYA_LOAD_DESKS='[{"Cookie":"<name>=<value>"}]'`. The per-user
 limits (30 searches a minute) then cap one session at about 15 desks at 30 s think time; use `MEDVYA_LOAD_THINK_MS=60000` with 20 desks (about
 1,000 bookings an hour, 5 times the pilot) or one cookie per desk. The target needs at least 20,000 synthetic patients with MRNs 100000 to 119999
-(the run searches by MRN) and booked visits today for the check-in step. Write the report outside `docs/` (`MEDVYA_LOAD_REPORT=/tmp/azure.md`).
+(the run searches by MRN) and booked visits today for the check-in step. An external run refuses to start unless `MEDVYA_LOAD_EXTERNAL_ACK` is
+the target's exact host (`MEDVYA_LOAD_URL=https://<host>/ MEDVYA_LOAD_EXTERNAL_ACK=<host>`, so a typo cannot load another site) and the report is
+outside `docs/` (`MEDVYA_LOAD_REPORT=/tmp/azure.md`; the default report path is under `docs/`, so it must be set).
 "Board push" compares the server's change time with the load machine's clock, so clock skew shows up in it. Not run against Azure yet.
 
 ## Seeding a large synthetic practice (40,000 patients)

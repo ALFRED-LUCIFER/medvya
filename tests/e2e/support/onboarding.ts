@@ -14,7 +14,7 @@ const doctor = {
   user: { id: 'u-arjun', displayName: 'Arjun Rao (synthetic)' },
   memberships: [{ id: 'm-1', tenantId: 't-1', tenantName: 'Rao Clinic (synthetic)', facilityId: 'f-1', facilityName: 'Rao Clinic (synthetic)', role: 'SoloDoctor' }],
   active: {
-    membershipId: 'm-1', tenantId: 't-1', facilityId: 'f-1', role: 'SoloDoctor', flags: [], country: 'IN', licencePending: true,
+    membershipId: 'm-1', tenantId: 't-1', facilityId: 'f-1', role: 'SoloDoctor', flags: [], country: 'IN', organisationState: 'Approved',
     capabilities: { RegisterBookPatients: 'Full', CheckInQueue: 'Full', InvoicesPayments: 'Full', Patient360Chart: 'Full', VitalsAllergiesEntry: 'Full' },
   },
 };
@@ -62,6 +62,7 @@ export async function completeWizard(page: Page, { lost = false } = {}) {
   await page.getByRole('combobox', { name: 'Medical council' }).click();
   await page.getByRole('option', { name: /TNMC/ }).click();
   await page.getByLabel('Registration number').fill('84213');
+  await page.getByLabel('I confirm this registration is my own and that it is valid.').check();
   await page.getByRole('button', { name: 'Continue' }).click();
 
   await expect(page.getByRole('heading', { level: 1, name: 'When are you open, and what do you charge?' })).toBeVisible();

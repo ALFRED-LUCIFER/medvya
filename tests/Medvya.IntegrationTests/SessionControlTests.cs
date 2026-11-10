@@ -30,7 +30,7 @@ public sealed class SessionControlTests(PostgresFixture sql) : IClassFixture<Pos
     {
         await using var db = sql.Context(tenant);
         var facility = new Facility { Id = Guid.NewGuid(), TenantId = tenant, Name = "Adyar (synthetic)", TimeZone = "Asia/Kolkata" };
-        db.Tenants.Add(new Tenant { Id = tenant, Name = name, CountryCode = "IN", ResidencyRegion = "centralindia" });
+        db.Tenants.Add(new Tenant { State = OrganisationState.Approved, Id = tenant, Name = name, CountryCode = "IN", ResidencyRegion = "centralindia" });
         db.Facilities.Add(facility);
         db.FeatureFlags.Add(new FeatureFlag { Id = Guid.NewGuid(), TenantId = tenant, Key = flag, Enabled = true, Owner = "platform", Description = "test" });
         db.FeatureFlags.Add(new FeatureFlag { Id = Guid.NewGuid(), TenantId = tenant, Key = flag + ".off", Enabled = false, Owner = "platform", Description = "test" });
@@ -450,6 +450,7 @@ public sealed class SessionControlTests(PostgresFixture sql) : IClassFixture<Pos
     {
         // #225: re-activation. Only an administrator of that facility, never above what they could grant; the old sessions stay ended.
         await Clinics();
+        Medvya.Tenancy.Infrastructure.StarterPlan.RaiseCapForTests(tenantA); // admin and two receptionists exceed the starter plan on return; the cap has its own tests
         var admin = await Account("K. Lakshmi");
         var staff = await Account("A. Joseph");
         var adminMembership = await Member(admin, tenantA, facilityA, Role.PracticeAdmin);

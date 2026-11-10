@@ -3,12 +3,14 @@ import { doctorSchema, emptyDoctor, errorTarget, signatureProblem, stepFields, t
 
 const valid = {
   ...emptyDoctor('f1', { newVisitFee: 50000, followUpFee: 30000 }),
-  fullName: 'Dr. Sana Khan (synthetic)', email: 'sana@example.test', specialty: 'Paediatrics', authority: 'TNMC', number: '84213', category: 'Permanent', expiresOn: '2031-12-31',
+  fullName: 'Dr. Sana Khan (synthetic)', email: 'sana@example.test', specialty: 'Paediatrics', authority: 'TNMC', number: '84213', category: 'Permanent', expiresOn: '2031-12-31', attested: true as const,
 };
 
 describe('doctor form', () => {
-  it('needs an expiry date, a category and a licence number', () => {
+  it('needs an expiry date, a category, a licence number and the owner’s attestation', () => {
     expect(doctorSchema.safeParse(valid).success).toBe(true);
+    expect(doctorSchema.safeParse({ ...valid, attested: false }).success).toBe(false);
+    expect(toAddBody(valid)).toMatchObject({ attested: true });
     for (const field of ['expiresOn', 'category', 'number', 'authority', 'email'] as const)
       expect(doctorSchema.safeParse({ ...valid, [field]: '' }).success).toBe(false);
   });
@@ -28,7 +30,8 @@ describe('doctor form', () => {
     expect(errorTarget('email')).toEqual({ step: 'details', field: 'email' });
     expect(errorTarget('newVisitFee')).toEqual({ step: 'fees', field: 'newVisitFee' });
     expect(errorTarget('nothing')).toBeNull();
-    expect(stepFields.verification).toEqual([]);
+    expect(errorTarget('attested')).toEqual({ step: 'licence', field: 'attested' });
+    expect(Object.keys(stepFields)).not.toContain('verification'); // Medvya no longer verifies licences (ADR-016)
   });
 
   it('accepts only PNG or JPEG signatures within the size limit', () => {

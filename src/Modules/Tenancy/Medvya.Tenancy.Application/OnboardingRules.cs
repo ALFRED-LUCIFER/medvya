@@ -45,6 +45,9 @@ public abstract partial class OnboardingRules
     protected abstract Regex LicenceNumber { get; }
     protected abstract Regex? TaxIdFormat { get; }
 
+    /// <summary>Whether the text is a well-formed tax number of this country (GSTIN or TRN; format only, no checksum).</summary>
+    public bool IsTaxId(string tax) => tax.Length <= 20 && (TaxIdFormat?.IsMatch(tax) ?? true);
+
     /// <summary>
     /// The wizard's steps (6 Nov design): 1 your practice, 2 hours and services, 3 your team, 4 your patients, 5 payments and messages.
     /// The ready screen comes after finishing and has nothing to check.
@@ -66,8 +69,12 @@ public abstract partial class OnboardingRules
         {
             case 1:
                 Profile(d.Profile, e);
-                // Only a doctor gives a licence: an owner who is not a doctor has none to check.
-                if (d.Profile?.Mode != Clinic) Licence(d.Licence, e);
+                // Only a doctor gives a licence: an owner who is not a doctor has none. The owner-doctor attests it (ADR-016).
+                if (d.Profile?.Mode != Clinic)
+                {
+                    Licence(d.Licence, e);
+                    if (d.Licence?.Attested != true) e.Add(new("licence.attested", "required"));
+                }
                 ClinicStep(d.Clinic, e);
                 break;
             case 2: Hours(d.Hours, e); Templates(d.Templates, e); break;

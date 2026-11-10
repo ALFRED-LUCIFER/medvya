@@ -27,7 +27,7 @@ public sealed class PatientRegistrationFlowTests(PostgresFixture sql) : IClassFi
         var (tenant, facility, receptionist) = (Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
         await using (var db = sql.Context(tenant))
         {
-            db.Tenants.Add(new Tenant { Id = tenant, Name = "Registration Clinic (synthetic)", CountryCode = country, ResidencyRegion = country == "IN" ? "centralindia" : "uaenorth" });
+            db.Tenants.Add(new Tenant { State = OrganisationState.Approved, Id = tenant, Name = "Registration Clinic (synthetic)", CountryCode = country, ResidencyRegion = country == "IN" ? "centralindia" : "uaenorth" });
             db.Facilities.Add(new Facility { Id = facility, TenantId = tenant, Name = "Front desk (synthetic)", TimeZone = country == "IN" ? "Asia/Kolkata" : "Asia/Dubai" });
             db.Memberships.Add(new Membership { Id = Guid.NewGuid(), TenantId = tenant, UserId = receptionist, FacilityId = facility, Role = Role.Receptionist, Status = MembershipStatus.Active });
             await db.SaveChangesAsync();

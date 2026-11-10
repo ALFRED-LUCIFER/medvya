@@ -35,7 +35,7 @@ describe('set-up wizard model (6 Nov steps)', () => {
   });
 
   it('answers "required" at once, per step and mode', () => {
-    expect(issues(1, emptyForm('IN'))).toEqual(['fullName:required', 'clinicName:required', 'address:required', 'specialties:required', 'authority:required', 'number:required']);
+    expect(issues(1, emptyForm('IN'))).toEqual(['fullName:required', 'clinicName:required', 'address:required', 'specialties:required', 'authority:required', 'number:required', 'attested:required']);
     expect(issues(1, { ...emptyForm('IN'), mode: 'Clinic' })).toEqual(['fullName:required', 'clinicName:required', 'address:required']); // no licence, no specialty
     expect(issues(1, { ...emptyForm('IN'), mode: 'Clinic', fullName: 'K', clinicName: 'C', address: 'A' })).toEqual([]);
     expect(issues(2, emptyForm('IN'))).toEqual([]); // the design defaults are complete
@@ -59,6 +59,7 @@ describe('set-up wizard model (6 Nov steps)', () => {
 
   it('puts a server error under the right field and finds its step', () => {
     expect(formFieldOf('licence.number')).toBe('number');
+    expect(formFieldOf('licence.attested')).toBe('attested');
     expect(formFieldOf('profile.specialties')).toBe('specialties');
     expect(formFieldOf('hours.days')).toBe('days');
     expect(formFieldOf('team.1.role')).toBe('team.1.email');

@@ -24,7 +24,7 @@ public sealed class OrderTests(PostgresFixture sql) : IClassFixture<PostgresFixt
         // "Prescriptions and orders" is a signing capability: it stays off until the doctor's licence is verified.
         await using var db = sql.Context(h.Tenant);
         var membership = await db.Memberships.SingleAsync(m => m.UserId == h.Doctor);
-        db.DoctorLicences.Add(new Medvya.Tenancy.Domain.DoctorLicence { MembershipId = membership.Id, TenantId = h.Tenant, Authority = "TNMC", Number = "84213", SubmittedAt = h.Clock.GetUtcNow(), VerifiedAt = h.Clock.GetUtcNow() });
+        db.DoctorLicences.Add(new Medvya.Tenancy.Domain.DoctorLicence { MembershipId = membership.Id, TenantId = h.Tenant, Authority = "TNMC", Number = "84213", SubmittedAt = h.Clock.GetUtcNow() });
         await db.SaveChangesAsync();
     }
 

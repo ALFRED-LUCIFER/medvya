@@ -207,7 +207,7 @@ test('a signed note shows its signature and no way to edit or sign again', async
 test('a role without Sign sees no Sign button, only why', async ({ page }) => {
   const nurse = { ...doctor, active: { ...doctor.active, capabilities: { ...doctor.active.capabilities, ClinicalNotes: 'Full' } } };
   await open(page, { version: 1, sections: { plan: 'x' } }, 'en', nurse);
-  await expect(note(page)).toContainText('Only a doctor with a verified licence can sign this note.');
+  await expect(note(page)).toContainText('Only a doctor can sign this note.');
   await expect(note(page).getByRole('button', { name: 'Sign note' })).toHaveCount(0);
 });
 

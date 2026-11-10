@@ -35,6 +35,8 @@ public sealed partial class InvitationTests(PostgresFixture sql) : IClassFixture
 
     public async Task InitializeAsync()
     {
+        StarterPlan.RaiseCapForTests(tenantA); // one seeded member per role is more than the starter plan; PlanCapTests covers the cap
+        StarterPlan.RaiseCapForTests(tenantB);
         facilityA = await Clinic(tenantA, "Iyer Family Clinic (synthetic)", "Adyar (synthetic)");
         facilityB = await Clinic(tenantB, "Al Noor Family Clinic (synthetic)", "Abu Dhabi (synthetic)");
         await using (var members = sql.Context(tenantA)) // one member per other role: access comes from the membership, not a claim
@@ -58,7 +60,7 @@ public sealed partial class InvitationTests(PostgresFixture sql) : IClassFixture
     {
         await using var db = sql.Context(tenant);
         var site = new Facility { Id = Guid.NewGuid(), TenantId = tenant, Name = facility, TimeZone = "Asia/Kolkata" };
-        db.Tenants.Add(new Tenant { Id = tenant, Name = name, CountryCode = "IN", ResidencyRegion = "centralindia" });
+        db.Tenants.Add(new Tenant { State = OrganisationState.Approved, Id = tenant, Name = name, CountryCode = "IN", ResidencyRegion = "centralindia" });
         db.Facilities.Add(site);
         db.Memberships.Add(new Membership { Id = Guid.NewGuid(), TenantId = tenant, UserId = admin, FacilityId = site.Id, Role = Role.PracticeAdmin, Status = MembershipStatus.Active });
         await db.SaveChangesAsync();

@@ -15,6 +15,8 @@ public sealed class Tenant
     [Classification(DataClass.Internal)] public ClinicalAccessPolicy ClinicalAccess { get; set; }
     /// <summary>When the practice was created; the first quarterly access review is due a quarter later (#912). Tenants older than the column read 0001-01-01.</summary>
     [Classification(DataClass.Internal)] public DateTimeOffset CreatedAt { get; init; }
+    /// <summary>Where the organisation stands in Medvya's review (ADR-016); the server gates capabilities on it. Changed only through <see cref="IOrganisationState"/>.</summary>
+    [Classification(DataClass.Internal)] public OrganisationState State { get; set; }
 }
 
 public sealed class Facility
@@ -25,6 +27,12 @@ public sealed class Facility
     [Classification(DataClass.Internal)] public required string TimeZone { get; set; }
     /// <summary>Street address of the location, printed on invoices and prescriptions (MDV-P1-005).</summary>
     [Classification(DataClass.Public)] public string? Address { get; set; }
+    /// <summary>GSTIN (India) or TRN (UAE) of an added location (MDV-P1-070); null for the first location, whose tax number is the practice profile's.</summary>
+    [Classification(DataClass.Public)] public string? TaxNumber { get; set; }
+    /// <summary>Original file name of the registration certificate, for display; null without one.</summary>
+    [Classification(DataClass.Internal)] public string? CertificateName { get; set; }
+    /// <summary>Random private-Blob key of the registration certificate (no names in paths); null for the first location.</summary>
+    [Classification(DataClass.Internal)] public string? CertificateKey { get; set; }
 }
 
 public enum MembershipStatus { Invited, Active, Suspended, Offboarded }

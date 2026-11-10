@@ -40,7 +40,7 @@ import { useStaffTableController } from '../features/staff/hooks/useStaffTableCo
 
 // Each panel is its own component so its controller runs (and fetches) only while its tab is open.
 const Profile = () => <ProfilePanel {...useProfileController()} />;
-const Locations = ({ facilityId }: { facilityId: string }) => <LocationsPanel {...useLocationsController(facilityId)} />;
+const Locations = ({ facilityId, country }: { facilityId: string; country: 'IN' | 'AE' | null }) => <LocationsPanel {...useLocationsController(facilityId, country)} />;
 function Hours({ facilityId }: { facilityId: string }) {
   const choice = useLocationChoice(facilityId);
   return <HoursPanel choice={choice} hours={useOpeningHoursController(choice.locationId)} schedules={useSchedulesController(choice.locationId)} />;
@@ -93,6 +93,6 @@ export default function SettingsRoute({ facilityId, country }: { facilityId: str
   const [params, setParams] = useSearchParams();
   const asked = params.get('tab');
   const tab: SettingsTab = (settingsTabs as readonly string[]).includes(asked ?? '') ? (asked as SettingsTab) : 'profile';
-  const panels = { profile: <Profile />, locations: <Locations facilityId={facilityId} />, hours: <Hours facilityId={facilityId} />, holidays: <Holidays facilityId={facilityId} />, staff: <Staff facilityId={facilityId} />, doctors: <Doctors facilityId={facilityId} />, medicines: <Medicines country={country} />, displays: <Displays facilityId={facilityId} />, audit: <Audit />, metrics: <Metrics facilityId={facilityId} />, terms: <Terms />, notifications: <Notifications />, data: <DataPanel country={country} accessLogPath="/settings?tab=audit" /> };
+  const panels = { profile: <Profile />, locations: <Locations facilityId={facilityId} country={country} />, hours: <Hours facilityId={facilityId} />, holidays: <Holidays facilityId={facilityId} />, staff: <Staff facilityId={facilityId} />, doctors: <Doctors facilityId={facilityId} />, medicines: <Medicines country={country} />, displays: <Displays facilityId={facilityId} />, audit: <Audit />, metrics: <Metrics facilityId={facilityId} />, terms: <Terms />, notifications: <Notifications />, data: <DataPanel country={country} accessLogPath="/settings?tab=audit" /> };
   return <SettingsPage tab={tab} onTab={next => setParams({ tab: next }, { replace: true })} panels={panels} />;
 }

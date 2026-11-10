@@ -26,6 +26,30 @@ public sealed record SaveLocation
     public string? TimeZone { get; init; }
 }
 
+/// <summary>
+/// Adding a location to the organisation (MDV-P1-070). The certificate is the file itself (PDF, PNG or JPEG, up to 5 MB); the owner is
+/// responsible for it, Medvya does not approve it. CountryCode must equal the organisation's.
+/// </summary>
+public sealed record AddLocation
+{
+    public string? Name { get; init; }
+    public string? Address { get; init; }
+    public string? TimeZone { get; init; }
+    public string? CountryCode { get; init; }
+    public string? TaxNumber { get; init; }
+    public string? CertificateName { get; init; }
+    public byte[]? Certificate { get; init; }
+}
+
+/// <summary>What a registration certificate upload may be: the type comes from the bytes, never the file name or the client's header.</summary>
+public static class LocationCertificate
+{
+    public const int MaxBytes = 5 * 1024 * 1024;
+
+    public static string? ContentTypeOf(ReadOnlySpan<byte> content) =>
+        content.StartsWith("%PDF-"u8) ? "application/pdf" : LogoImage.ContentTypeOf(content);
+}
+
 /// <summary>Opening hours of one weekday in facility wall-clock time. A weekday without an entry is closed.</summary>
 public sealed record DayHours(DayOfWeek Weekday, TimeOnly Opens, TimeOnly Closes);
 
@@ -67,8 +91,8 @@ public interface IPracticeSettings
     Task<IReadOnlyList<LocationView>> ListLocationsAsync(CancellationToken cancellationToken = default);
 
     /// <summary>Adds a location; the caller gets the same role there, so they can work at it.</summary>
-    /// <exception cref="SettingsValidationException"/>
-    Task<LocationView> AddLocationAsync(SaveLocation command, CancellationToken cancellationToken = default);
+    /// <exception cref="SettingsValidationException">A field missing or malformed, or a country other than the organisation's ("countryCode:mismatch").</exception>
+    Task<LocationView> AddLocationAsync(AddLocation command, CancellationToken cancellationToken = default);
 
     /// <summary>Null when the location is not one of the tenant's.</summary>
     /// <exception cref="SettingsValidationException"/>

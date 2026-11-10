@@ -33,7 +33,7 @@ public sealed class PatientEndpointTests(PostgresFixture sql) : IClassFixture<Po
     {
         await using (var db = sql.Context(tenant))
         {
-            db.Tenants.Add(new Tenant { Id = tenant, Name = "Iyer Family Clinic (synthetic)", CountryCode = "IN", ResidencyRegion = "centralindia" });
+            db.Tenants.Add(new Tenant { State = OrganisationState.Approved, Id = tenant, Name = "Iyer Family Clinic (synthetic)", CountryCode = "IN", ResidencyRegion = "centralindia" });
             db.Facilities.Add(new Facility { Id = facility, TenantId = tenant, Name = "Adyar (synthetic)", TimeZone = "Asia/Kolkata" });
             db.Facilities.Add(new Facility { Id = otherFacility, TenantId = tenant, Name = "Besant Nagar (synthetic)", TimeZone = "Asia/Kolkata" });
             foreach (var (name, role, status) in new[]

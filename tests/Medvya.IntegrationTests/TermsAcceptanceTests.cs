@@ -32,7 +32,7 @@ public sealed class TermsAcceptanceTests(PostgresFixture sql) : IClassFixture<Po
     {
         await using (var db = sql.Context(tenant))
         {
-            db.Tenants.Add(new Tenant { Id = tenant, Name = "Iyer Family Clinic (synthetic)", CountryCode = "IN", ResidencyRegion = "centralindia" });
+            db.Tenants.Add(new Tenant { State = OrganisationState.Approved, Id = tenant, Name = "Iyer Family Clinic (synthetic)", CountryCode = "IN", ResidencyRegion = "centralindia" });
             db.Facilities.Add(new Facility { Id = facility, TenantId = tenant, Name = "Adyar (synthetic)", TimeZone = "Asia/Kolkata" });
             db.Facilities.Add(new Facility { Id = otherFacility, TenantId = tenant, Name = "Besant Nagar (synthetic)", TimeZone = "Asia/Kolkata" });
             foreach (var (name, role) in new[] { ("receptionist", Role.Receptionist), ("admin", Role.PracticeAdmin), ("it", Role.HospitalIt), ("solo", Role.SoloDoctor) })
@@ -141,7 +141,7 @@ public sealed class TermsAcceptanceTests(PostgresFixture sql) : IClassFixture<Po
         var other = Guid.NewGuid();
         await using (var o = sql.Context(other))
         {
-            o.Tenants.Add(new Tenant { Id = other, Name = "Other Clinic (synthetic)", CountryCode = "IN", ResidencyRegion = "centralindia" });
+            o.Tenants.Add(new Tenant { State = OrganisationState.Approved, Id = other, Name = "Other Clinic (synthetic)", CountryCode = "IN", ResidencyRegion = "centralindia" });
             await o.SaveChangesAsync();
         }
         var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> { ["Terms:RequireAcceptance"] = "true" }).Build();

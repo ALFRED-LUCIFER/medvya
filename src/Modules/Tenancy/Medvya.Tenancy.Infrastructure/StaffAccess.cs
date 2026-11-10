@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Medvya.Tenancy.Infrastructure;
 
 /// <summary>The active membership's role at the session's facility, through the facility directory; tenant from filters and RLS.</summary>
-public sealed class StaffAccess(TenancyDbContext db, IFacilityDirectory facilities, ICurrentUser user, ICurrentFacility facility, TimeProvider? clock = null) : IStaffAccess
+public sealed class StaffAccess(TenancyDbContext db, IFacilityDirectory facilities, ICurrentUser user, ICurrentFacility facility) : IStaffAccess
 {
     public Task<Access> AccessAsync(Capability capability, CancellationToken cancellationToken = default) =>
         facility.FacilityId is { } facilityId ? AccessAsync(capability, facilityId, cancellationToken) : Task.FromResult(Access.None);
@@ -23,7 +23,7 @@ public sealed class StaffAccess(TenancyDbContext db, IFacilityDirectory faciliti
         ArgumentNullException.ThrowIfNull(capabilities);
         if (user.UserId is not { } userId || await facilities.ActiveRoleAsync(userId, facilityId, cancellationToken) is not { } role)
             return [.. capabilities.Select(_ => Access.None)];
-        var pending = await LicencePendingAsync(userId, facilityId, cancellationToken);
+        var state = await OrganisationStateAsync(cancellationToken);
         (bool Read, string? Value) extras = (false, null);
         var result = new List<Access>(capabilities.Count);
         foreach (var capability in capabilities)
@@ -37,22 +37,14 @@ public sealed class StaffAccess(TenancyDbContext db, IFacilityDirectory faciliti
                         .Select(m => db.CustomRoles.Where(r => r.Id == m.CustomRoleId).Select(r => r.Capabilities).FirstOrDefault()).SingleOrDefaultAsync(cancellationToken));
                 access = CustomRoleRules.Effective(role, extras.Value, capability);
             }
-            result.Add(LicenceRules.Apply(access, capability, pending));
+            result.Add(OrganisationRules.Apply(access, capability, state));
         }
         return result;
     }
 
-    public Task<bool> LicencePendingAsync(CancellationToken cancellationToken = default) =>
-        user.UserId is not { } userId || facility.FacilityId is not { } facilityId ? Task.FromResult(false) : LicencePendingAsync(userId, facilityId, cancellationToken);
-
-    Task<bool> LicencePendingAsync(Guid userId, Guid facilityId, CancellationToken cancellationToken) =>
-        // A doctor with no verified licence is gated, including one with no licence row at all (invited by another route), so the gate
-        // cannot be skipped by not submitting a licence. A verified licence past its expiry date no longer counts (MDV-P1-010).
-        db.Memberships.AnyAsync(m => m.UserId == userId && m.FacilityId == facilityId && m.Status == MembershipStatus.Active
-            && (m.Role == Role.SoloDoctor || m.Role == Role.HospitalDoctor)
-            && !db.DoctorLicences.Any(l => l.MembershipId == m.Id && l.VerifiedAt != null && (l.ExpiresOn == null || l.ExpiresOn >= Today)), cancellationToken);
-
-    DateOnly Today => DateOnly.FromDateTime((clock ?? TimeProvider.System).GetUtcNow().UtcDateTime);
+    // Tenant from filters and RLS; no readable tenant row fails closed as Draft (set-up only).
+    public async Task<OrganisationState> OrganisationStateAsync(CancellationToken cancellationToken = default) =>
+        await db.Tenants.Select(t => (OrganisationState?)t.State).SingleOrDefaultAsync(cancellationToken) ?? OrganisationState.Draft;
 
     public Task<string?> TenantCountryAsync(CancellationToken cancellationToken = default) =>
         db.Tenants.Select(t => t.CountryCode).SingleOrDefaultAsync(cancellationToken);

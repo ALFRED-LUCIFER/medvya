@@ -1,6 +1,6 @@
 import { ApiError, csrf, post, send } from '../../schedule/services/scheduleApi';
 import type { NotificationPrefs, TemplatePreview } from '../domain/notifications';
-import type { CalendarTemplate, Closure, ClosureForm, ClosureWithVisits, DayHours, Location, LocationForm, LogoLink, Profile, ProfileForm, TermsStatus } from '../domain/settings';
+import type { AddLocationForm, CalendarTemplate, Closure, ClosureForm, ClosureWithVisits, DayHours, Location, LocationForm, LogoLink, Profile, ProfileForm, TermsStatus } from '../domain/settings';
 
 const json = (method: string, body: unknown) => ({ method, headers: { ...csrf, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 const blank = <T extends Record<string, string>>(form: T) => Object.fromEntries(Object.entries(form).map(([k, v]) => [k, v === '' ? null : v]));
@@ -23,7 +23,15 @@ export const uploadLogo = (file: File) => send<void>('/v1/settings/logo', { meth
 export const removeLogo = () => send<void>('/v1/settings/logo', { method: 'DELETE', headers: csrf });
 
 export const fetchLocations = () => send<Location[]>('/v1/settings/locations');
-export const addLocation = (form: LocationForm) => post<Location>('/v1/settings/locations', blank(form));
+const toBase64 = (file: File) => new Promise<string>((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onload = () => resolve(String(reader.result).split(',')[1] ?? '');
+  reader.onerror = () => reject(reader.error);
+  reader.readAsDataURL(file);
+});
+/** The certificate travels in the JSON body as base64; the country is the organisation's, sent so the server can refuse a mismatch. */
+export const addLocation = async (form: AddLocationForm, certificate: File, countryCode: string) =>
+  post<Location>('/v1/settings/locations', { ...blank(form), countryCode, certificateName: certificate.name, certificate: await toBase64(certificate) });
 export const saveLocation = (id: string, form: LocationForm) => send<Location>(`/v1/settings/locations/${id}`, json('PUT', blank(form)));
 
 export const fetchHours = (locationId: string) => send<DayHours[]>(`/v1/settings/locations/${locationId}/hours`);

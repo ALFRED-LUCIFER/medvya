@@ -32,7 +32,7 @@ public class MembershipDirectoryTests(PostgresFixture sql) : IClassFixture<Postg
         await using var db = sql.Context(tenant);
         var first = new Facility { Id = Guid.NewGuid(), TenantId = tenant, Name = "Main (synthetic)", TimeZone = "Asia/Kolkata" };
         var second = new Facility { Id = Guid.NewGuid(), TenantId = tenant, Name = "Annexe (synthetic)", TimeZone = "Asia/Kolkata" };
-        db.Tenants.Add(new Tenant { Id = tenant, Name = name, CountryCode = "IN", ResidencyRegion = "centralindia", IdleTimeoutMinutes = 20 });
+        db.Tenants.Add(new Tenant { State = OrganisationState.Approved, Id = tenant, Name = name, CountryCode = "IN", ResidencyRegion = "centralindia", IdleTimeoutMinutes = 20 });
         db.Facilities.AddRange(first, second);
         db.Memberships.AddRange(people.Select((p, i) => new Membership
         {

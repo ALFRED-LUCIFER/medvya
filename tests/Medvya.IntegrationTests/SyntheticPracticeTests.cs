@@ -41,8 +41,7 @@ public sealed class SyntheticPracticeTests(PostgresFixture sql, ITestOutputHelpe
         var licences = await db.DoctorLicences.OrderBy(l => l.Number).ToListAsync();
         Assert.Equal(8, licences.Select(l => l.Number).Distinct().Count());
         Assert.All(licences, l => Assert.Matches(IndiaLicence, l.Number));
-        Assert.Equal(6, licences.Count(l => l.VerifiedAt is not null && l.VerifiedBy is not null));
-        Assert.Equal(2, licences.Count(l => l.VerifiedAt is null && l.RejectedAt is null)); // "Verification pending"
+        Assert.All(licences, l => Assert.NotNull(l.AttestedBy)); // the owner attests every licence (ADR-016)
         var profiles = await db.DoctorProfiles.ToListAsync();
         Assert.Equal(2, profiles.Count(p => p.Specialty == "General Practice"));
         Assert.All(profiles, p => Assert.EndsWith(SyntheticSeed.Marker, p.FullName, StringComparison.Ordinal));

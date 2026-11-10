@@ -35,13 +35,14 @@ type Props = {
   reactivating: StaffMember | null;
   reactivateForm: UseFormReturn<ReactivateForm>;
   reactivateWorking: boolean;
-  reactivateError: 'aboveGranter' | 'failed' | null;
+  reactivateError: 'aboveGranter' | 'planFull' | 'failed' | null;
   onReactivate: (member: StaffMember) => void;
   onReactivateSubmit: FormEventHandler<HTMLFormElement>;
   onReactivateCancel: () => void;
   adding: boolean;
   addFailed: boolean;
   emailFailed: boolean;
+  planFull: boolean;
   working: boolean;
   rowFailed: boolean;
   onOpen: () => void;
@@ -206,6 +207,7 @@ export default function StaffPanel(p: Props) {
             )}
             {p.addFailed && <p role="alert" className={fieldError}>{t('staff.error.add')}</p>}
             {p.emailFailed && <p role="alert" className={fieldError}>{t('staff.error.email')}</p>}
+            {p.planFull && <p role="alert" className={fieldError}>{t('plan.full')}</p>}
             <div className="flex flex-wrap gap-2">
               {p.step !== 'role' && <Button type="button" variant="outline" onClick={p.onBack}>{t('staff.back')}</Button>}
               {p.step !== 'permissions' && <Button type="button" disabled={!p.canContinue} onClick={p.onNext}>{t('staff.next')}</Button>}

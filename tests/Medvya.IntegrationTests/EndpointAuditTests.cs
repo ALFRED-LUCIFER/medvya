@@ -81,7 +81,6 @@ public sealed class EndpointAuditTests(PostgresFixture sql) : IClassFixture<Post
         "PUT /v1/settings/doctors/{id:guid}/licence",
         "PUT /v1/settings/doctors/{id:guid}/signature",
         "DELETE /v1/settings/doctors/{id:guid}/signature",
-        "POST /v1/operations/licences/{tenantId:guid}/{doctorId:guid}/decision", // Medvya operations only; audited as licence.verify / licence.reject
         // Live board hub (MDV-P1-029): opening the connection carries no patient data. A refused connect is audited Denied
         // (.AuditRefusals, front_desk.board.connect); every Watch call is audited Allowed or Denied by the hub (front_desk.board.watch);
         // messages are ids and state only, and the board itself is read through the audited GET /v1/front-desk/board (BoardHubTests).
@@ -117,7 +116,7 @@ public sealed class EndpointAuditTests(PostgresFixture sql) : IClassFixture<Post
     public async Task InitializeAsync()
     {
         await using var db = sql.Context(tenant);
-        db.Tenants.Add(new Tenant { Id = tenant, Name = "Audit Enumeration Clinic (synthetic)", CountryCode = "IN", ResidencyRegion = "centralindia" });
+        db.Tenants.Add(new Tenant { State = OrganisationState.Approved, Id = tenant, Name = "Audit Enumeration Clinic (synthetic)", CountryCode = "IN", ResidencyRegion = "centralindia" });
         db.Facilities.Add(new Facility { Id = facility, TenantId = tenant, Name = "Adyar (synthetic)", TimeZone = "Asia/Kolkata" });
         foreach (var (role, user) in staff)
         {
@@ -125,7 +124,7 @@ public sealed class EndpointAuditTests(PostgresFixture sql) : IClassFixture<Post
             db.Memberships.Add(membership);
             // A verified solo doctor: signing capabilities (merge approval) are off until the licence is verified, so the allowed path needs one.
             if (role == Role.SoloDoctor)
-                db.DoctorLicences.Add(new DoctorLicence { MembershipId = membership.Id, TenantId = tenant, Authority = "TNMC", Number = "84213", SubmittedAt = DateTimeOffset.UtcNow, VerifiedAt = DateTimeOffset.UtcNow });
+                db.DoctorLicences.Add(new DoctorLicence { MembershipId = membership.Id, TenantId = tenant, Authority = "TNMC", Number = "84213", SubmittedAt = DateTimeOffset.UtcNow });
         }
         await db.SaveChangesAsync();
     }

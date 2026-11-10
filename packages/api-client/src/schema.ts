@@ -544,46 +544,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/operations/licences/{tenantId}/{doctorId}/decision": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    tenantId: string;
-                    doctorId: string;
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["Decision"];
-                };
-            };
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/v1/queue/tv/session": {
         parameters: {
             query?: never;
@@ -3021,7 +2981,7 @@ export interface paths {
             };
             requestBody: {
                 content: {
-                    "application/json": components["schemas"]["SaveLocation"];
+                    "application/json": components["schemas"]["AddLocation"];
                 };
             };
             responses: {
@@ -6101,10 +6061,21 @@ export interface components {
             /** Format: date */
             expiresOn?: null | string;
             certificateName?: null | string;
+            attested?: boolean;
             /** Format: int64 */
             newVisitFee?: null | number | string;
             /** Format: int64 */
             followUpFee?: null | number | string;
+        };
+        AddLocation: {
+            name?: null | string;
+            address?: null | string;
+            timeZone?: null | string;
+            countryCode?: null | string;
+            taxNumber?: null | string;
+            certificateName?: null | string;
+            /** Format: byte */
+            certificate?: null | string;
         };
         AddMedicine: {
             name: null | string;
@@ -6444,10 +6415,6 @@ export interface components {
             newDose: null | string;
             reason: null | string;
         };
-        Decision: {
-            verified: boolean;
-            reason: null | string;
-        };
         /**
          * @default All
          * @enum {unknown}
@@ -6496,8 +6463,12 @@ export interface components {
             category: null | string;
             /** Format: date */
             expiresOn: null | string;
-            licence: components["schemas"]["LicenceStatus"];
-            rejectionReason: null | string;
+            expired: boolean;
+            /** Format: uuid */
+            attestedBy: null | string;
+            attestedByName: null | string;
+            /** Format: date-time */
+            attestedAt: string;
             hasSignature: boolean;
             /** Format: int64 */
             newVisitFee: number | string;
@@ -6645,8 +6616,6 @@ export interface components {
             code: string;
             name: string;
         };
-        /** @enum {unknown} */
-        LicenceStatus: "Pending" | "Verified" | "Rejected" | "Expired";
         LocationView: {
             /** Format: uuid */
             id: string;
@@ -6741,6 +6710,8 @@ export interface components {
             authority: null | string;
             number: null | string;
             certificateName: null | string;
+            /** @default false */
+            attested: boolean;
         };
         OnboardingProfile: {
             fullName: null | string;
@@ -6926,6 +6897,7 @@ export interface components {
             name: string;
         };
         ResubmitLicence: {
+            attested?: boolean;
             authority?: null | string;
             number?: null | string;
             category?: null | string;

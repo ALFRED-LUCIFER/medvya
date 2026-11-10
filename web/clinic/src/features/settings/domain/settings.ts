@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { MessageKey } from '@medvya/i18n';
 
 // Mirrors src/Modules/Tenancy/Medvya.Tenancy.Application/IPracticeSettings.cs (the server is the authority; these checks only save a round trip).
 export type Profile = {
@@ -48,6 +49,29 @@ export const toProfileForm = (p: Profile): ProfileForm => ({
 export const locationSchema = z.object({ name: z.string().trim().min(1).max(200), address: optional(500), timeZone: z.string().min(1) });
 export type LocationForm = z.infer<typeof locationSchema>;
 export const emptyLocation: LocationForm = { name: '', address: '', timeZone: timeZones[0] };
+/** Adding a location also needs its tax number (GSTIN or TRN) and certificate; the controller asks for them on add only, and the server checks the format. */
+export const addLocationSchema = locationSchema.extend({ taxNumber: optional(20) });
+export type AddLocationForm = z.infer<typeof addLocationSchema>;
+export const emptyAddLocation: AddLocationForm = { ...emptyLocation, taxNumber: '' };
+
+export const certificateMaxBytes = 5 * 1024 * 1024;
+export type CertificateProblem = 'required' | 'type' | 'too_large';
+export const certificateErrorKey = (p: CertificateProblem): MessageKey => locationErrorKeys[`certificate:${p}`];
+/** Quick check before upload; the server decides from the file's own bytes and is never bypassed. */
+export const certificateProblem = (file: { type: string; size: number } | null): CertificateProblem | null =>
+  !file || file.size === 0 ? 'required' : !['application/pdf', 'image/png', 'image/jpeg'].includes(file.type) ? 'type' : file.size > certificateMaxBytes ? 'too_large' : null;
+
+/** Where a server refusal of an added location belongs: under a field, or (a wrong country, anything else) beside the button. */
+export const locationErrorKeys = {
+  'taxNumber:required': 'settings.locations.error.taxNumber.required', 'taxNumber:format': 'settings.locations.error.taxNumber.format',
+  'certificate:required': 'settings.locations.error.certificate.required', 'certificate:type': 'settings.locations.error.certificate.type',
+  'certificate:too_large': 'settings.locations.error.certificate.too_large', 'countryCode:mismatch': 'settings.locations.error.country',
+} as const satisfies Record<string, MessageKey>;
+export const locationProblem = (code: string | undefined): { field: 'taxNumber' | 'certificate' | 'form'; key: MessageKey } => {
+  const key = (locationErrorKeys as Record<string, MessageKey>)[code ?? ''];
+  const field = (code ?? '').split(':')[0];
+  return key ? { field: field === 'taxNumber' || field === 'certificate' ? field : 'form', key } : { field: 'form', key: 'settings.saveFailed' };
+};
 
 export const closureSchema = z.object({ date: z.iso.date(), name: z.string().trim().min(1).max(100) });
 export type ClosureForm = z.infer<typeof closureSchema>;

@@ -10,7 +10,7 @@ import LoadErrorBoundary from '../features/errors/components/LoadErrorBoundary';
 import NotFoundPage from '../features/errors/components/NotFoundPage';
 import TermsNotice from '../features/settings/components/TermsNotice';
 import { useTermsNotice } from '../features/settings/hooks/useTermsNotice';
-import LicenceNotice from '../features/onboarding/components/LicenceNotice';
+import OrganisationNotice from '../features/onboarding/components/OrganisationNotice';
 import LanguageSwitcher from '../features/locale/components/LanguageSwitcher';
 import FacilityPicker from '../features/session/components/FacilityPicker';
 import SessionExpiredPage from '../features/session/components/SessionExpiredPage';
@@ -118,7 +118,7 @@ export default function App({ locale, onLocaleChange }: Props) {
               ? <GlobalSearchRoute startVisitPath={walkInPath} bookPath={pathOf('schedule')} registerPath={registerPath} /> : undefined}
             notifications={allows(active, patientDirectory) || allows(active, { capability: 'StaffRolesIntegrations', access: ['Config'] } as const) ? <NotificationsRoute facilityId={active.facilityId} online={online} /> : undefined}
             languageSwitcher={<LanguageSwitcher inline value={locale} onChange={onLocaleChange} />}>
-            {active.licencePending && <LicenceNotice />}
+            <OrganisationNotice state={active.organisationState} />
             {termsPending && <TermsNotice />}
             <Suspense fallback={<ShellMessage busy title={t('shell.loading')} />}><Outlet /></Suspense>
           </AppShell>}>

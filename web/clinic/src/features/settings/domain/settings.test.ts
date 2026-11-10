@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { closureSchema, hoursProblems, logoProblem, profileSchema, sessionProblem, settingsError, templateBody, toDayHours, toHoursRows, type CalendarTemplate } from './settings';
+import { certificateProblem, closureSchema, locationProblem, hoursProblems, logoProblem, profileSchema, sessionProblem, settingsError, templateBody, toDayHours, toHoursRows, type CalendarTemplate } from './settings';
 
 describe('practice settings rules', () => {
   it('shows the week from Monday and sends only the open days', () => {
@@ -62,5 +62,19 @@ describe('practice settings rules', () => {
 
   it('knows the codes the API reports for a rejected field', () => {
     expect([settingsError('logo:type'), settingsError('date:duplicate'), settingsError('x'), settingsError(undefined)]).toEqual(['logo:type', 'date:duplicate', 'failed', 'failed']);
+  });
+
+  it('checks a location certificate by type and size and asks for one', () => {
+    expect(certificateProblem(null)).toBe('required');
+    expect(certificateProblem({ type: 'application/pdf', size: 1000 })).toBeNull();
+    expect(certificateProblem({ type: 'image/svg+xml', size: 1000 })).toBe('type');
+    expect(certificateProblem({ type: 'image/png', size: 5 * 1024 * 1024 + 1 })).toBe('too_large');
+  });
+
+  it('puts a refusal of an added location under its field, or beside the button', () => {
+    expect(locationProblem('taxNumber:format')).toEqual({ field: 'taxNumber', key: 'settings.locations.error.taxNumber.format' });
+    expect(locationProblem('certificate:type')).toEqual({ field: 'certificate', key: 'settings.locations.error.certificate.type' });
+    expect(locationProblem('countryCode:mismatch')).toEqual({ field: 'form', key: 'settings.locations.error.country' });
+    expect(locationProblem(undefined)).toEqual({ field: 'form', key: 'settings.saveFailed' });
   });
 });

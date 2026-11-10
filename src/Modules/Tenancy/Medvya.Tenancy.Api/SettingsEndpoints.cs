@@ -34,7 +34,7 @@ public static class SettingsEndpoints
         g.MapPut("/profile", ([FromBody] SaveProfile body, [FromServices] IPracticeSettings s, CancellationToken ct) => s.SaveProfileAsync(body, ct));
 
         g.MapGet("/locations", ([FromServices] IPracticeSettings s, CancellationToken ct) => s.ListLocationsAsync(ct));
-        g.MapPost("/locations", async ([FromBody] SaveLocation body, [FromServices] IPracticeSettings s, CancellationToken ct) =>
+        g.MapPost("/locations", async ([FromBody] AddLocation body, [FromServices] IPracticeSettings s, CancellationToken ct) =>
             Results.Created("/v1/settings/locations", await s.AddLocationAsync(body, ct)));
         g.MapPut("/locations/{id:guid}", async (Guid id, [FromBody] SaveLocation body, [FromServices] IPracticeSettings s, CancellationToken ct) =>
             await s.UpdateLocationAsync(id, body, ct) is { } v ? Results.Ok(v) : Results.NotFound());
@@ -116,6 +116,10 @@ public static class SettingsEndpoints
         {
             return TooManyInvitations;
         }
+        catch (PlanLimitException)
+        {
+            return PlanLimit;
+        }
         catch (DbUpdateConcurrencyException)
         {
             // #889: another administrator saved the same settings meanwhile; nothing was saved.
@@ -127,6 +131,9 @@ public static class SettingsEndpoints
     /// <summary>502 with a stable code: the screen says the invitation email could not be sent and nothing was saved, not a generic failure.</summary>
     /// <summary>429 with a stable code when the practice has sent its hourly allowance of invitations (#886).</summary>
     public static IResult TooManyInvitations => Results.Problem(statusCode: StatusCodes.Status429TooManyRequests, title: "Too many invitations in the last hour.", extensions: new Dictionary<string, object?> { ["code"] = "invitation_limit" });
+
+    /// <summary>409 with a stable code when the plan has no free doctor or staff seat (MDV-P1-069).</summary>
+    public static IResult PlanLimit => Results.Problem(statusCode: StatusCodes.Status409Conflict, title: PlanLimitException.Text, extensions: new Dictionary<string, object?> { ["code"] = "plan_limit" });
 
     public static IResult EmailFailed => Results.Problem(statusCode: StatusCodes.Status502BadGateway, title: "The invitation email could not be sent.", extensions: new Dictionary<string, object?> { ["code"] = "email_failed" });
 }

@@ -26,7 +26,7 @@ public sealed class ReferralTests(PostgresFixture sql) : IClassFixture<PostgresF
         await h.DoctorTemplateAsync();
         await using var db = sql.Context(h.Tenant);
         var membership = await db.Memberships.SingleAsync(m => m.UserId == h.Doctor);
-        db.DoctorLicences.Add(new Medvya.Tenancy.Domain.DoctorLicence { MembershipId = membership.Id, TenantId = h.Tenant, Authority = "TNMC", Number = "84213", SubmittedAt = h.Clock.GetUtcNow(), VerifiedAt = h.Clock.GetUtcNow() });
+        db.DoctorLicences.Add(new Medvya.Tenancy.Domain.DoctorLicence { MembershipId = membership.Id, TenantId = h.Tenant, Authority = "TNMC", Number = "84213", SubmittedAt = h.Clock.GetUtcNow() });
         await db.SaveChangesAsync();
     }
 

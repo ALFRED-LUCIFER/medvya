@@ -86,6 +86,7 @@ export function PracticeStep({ form, country, rules }: StepProps) {
             <SelectField form={form} name="authority" label={t(`onboarding.field.authority.${country}`)} required placeholder={t('onboarding.choose')}
               options={rules.authorities.map(a => a.code)} optionLabel={code => `${code} · ${rules.authorities.find(a => a.code === code)?.name ?? ''}`} />
             <TextField form={form} name="number" label={t(`onboarding.field.licenceNumber.${country}`)} required ltr hint={t(`onboarding.hint.licenceNumber.${country}`)} />
+            <TextField form={form} name="expiresOn" label={t('onboarding.field.licenceExpiry')} required ltr type="date" />
           </div>
           <Group legend={t('onboarding.attest.legend')} error={{ id: 'attested-error', code: errors.attested?.message }}>
             <label className={chip}>

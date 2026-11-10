@@ -2865,6 +2865,18 @@
         }
       }
     },
+    "/v1/organisation/request/start-new": {
+      "post": {
+        "tags": [
+          "Host.Api"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/v1/operations/organisations": {
       "get": {
         "tags": [
@@ -7969,6 +7981,13 @@
           "attested": {
             "type": "boolean",
             "default": false
+          },
+          "expiresOn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
           }
         }
       },

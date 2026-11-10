@@ -49,6 +49,7 @@ export function LicenceFields<T extends FieldValues>({ form, errors, authorities
           <input id={`${prefix}-attested`} type="checkbox" className="mt-1 size-4 accent-brand-700" {...describedBy(`${prefix}-attested`, !!errors.attested)} {...f.register('attested')} />
           {t('doctors.licence.attest')}
         </label>
+        <p className="text-sm">{t('doctors.licence.reminder')}</p>
         {error('attested') && <p id={`${prefix}-attested-error`} role="alert" className={fieldError}>{error('attested')}</p>}
       </div>
     </>

@@ -9,7 +9,7 @@ const issues = (step: number, f: ReturnType<typeof emptyForm>) => {
 describe('set-up wizard model (6 Nov steps)', () => {
   it('keeps what was typed through a save and a resume', () => {
     const form = { ...emptyForm('IN'), orgType: 'Hospital' as const, contactEmail: 'desk@example.test', fullName: 'Arjun Rao (synthetic)', clinicName: 'Rao Clinic (synthetic)', specialties: ['general-practice', 'diabetes'],
-      authority: 'TNMC', number: '84213', days: ['Monday', 'Wednesday', 'Saturday', 'Sunday'] as Day[],
+      authority: 'TNMC', number: '84213', expiresOn: '2031-12-31', days: ['Monday', 'Wednesday', 'Saturday', 'Sunday'] as Day[],
       newVisitFee: '1000', team: [{ email: 'joseph@example.test', role: 'Receptionist' as const }], patients: 'Move' as const };
     const data = toData(form);
     expect(data.hours).toMatchObject({ newVisitFee: 100000, slotMinutes: 15, days: ['Monday', 'Wednesday', 'Saturday', 'Sunday'], saturday: [{ start: '09:00', end: '14:00' }] });
@@ -36,7 +36,7 @@ describe('set-up wizard model (6 Nov steps)', () => {
   });
 
   it('answers "required" at once, per step and mode', () => {
-    expect(issues(1, emptyForm('IN'))).toEqual(['orgType:required', 'contactEmail:required', 'fullName:required', 'clinicName:required', 'address:required', 'specialties:required', 'authority:required', 'number:required', 'attested:required']);
+    expect(issues(1, emptyForm('IN'))).toEqual(['orgType:required', 'contactEmail:required', 'fullName:required', 'clinicName:required', 'address:required', 'specialties:required', 'authority:required', 'number:required', 'expiresOn:required', 'attested:required']);
     expect(issues(1, { ...emptyForm('IN'), mode: 'Clinic' })).toEqual(['orgType:required', 'contactEmail:required', 'fullName:required', 'clinicName:required', 'address:required']); // no licence, no specialty
     expect(issues(1, { ...emptyForm('IN'), mode: 'Clinic', orgType: 'Hospital', contactEmail: 'desk@example.test', fullName: 'K', clinicName: 'C', address: 'A' })).toEqual([]);
     expect(issues(2, emptyForm('IN'))).toEqual([]); // the design defaults are complete

@@ -41,7 +41,7 @@ export function Field({ id, label, required = false, optional = false, error, hi
 
 export function TextField({ form, name, label, required, optional, hint, ltr, wide, type = 'text', inputMode }: FormProps & {
   name: FormField; label: string; required?: boolean; optional?: boolean; hint?: ReactNode; ltr?: boolean; wide?: boolean;
-  type?: 'text' | 'email' | 'time'; inputMode?: 'numeric' | 'email';
+  type?: 'text' | 'email' | 'time' | 'date'; inputMode?: 'numeric' | 'email';
 }) {
   return (
     <Field id={name} label={label} required={required} optional={optional} error={form.formState.errors[name]?.message} hint={hint} wide={wide}>

@@ -34,6 +34,12 @@ public interface IOrganisationRequests
     /// <exception cref="SettingsValidationException">"request:locked", "document.{kind}:required", "itContact.name:required", "itContact.email:format".</exception>
     Task SubmitAsync(CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Rejected to Draft: the applicant starts a new request. The decisions stay in the history; the old request's documents are kept aside for Medvya, and its IT contact and reason are cleared.
+    /// </summary>
+    /// <exception cref="SettingsValidationException">"request:notRejected".</exception>
+    Task StartNewAsync(CancellationToken cancellationToken = default);
+
     /// <summary>The whole request as Medvya's reviewer reads it: profile, documents and history. Business details only, never patient data.</summary>
     Task<RequestDetail> DetailAsync(CancellationToken cancellationToken = default);
 

@@ -38,7 +38,7 @@ public sealed partial class OrganisationStates(TenancyDbContext db, ICurrentTena
         // Medvya's decisions are emailed to the practice contact once the change is saved. The applicant's own submit and an organisation without a contact
         // address send nothing. shortcut: sent once, in the request, with no retry; a failed send is logged (type only) and the applicant reads the reason on the
         // status page. Move it to a durable outbox when one exists, so a restart or a mail outage does not lose it.
-        var contact = state is OrganisationState.Submitted ? null : await db.Profiles.AsNoTracking().Select(p => p.Email).SingleOrDefaultAsync(cancellationToken);
+        var contact = state is OrganisationState.Submitted or OrganisationState.Draft ? null : await db.Profiles.AsNoTracking().Select(p => p.Email).SingleOrDefaultAsync(cancellationToken);
         await SettingsAudit.SaveAsync(db, audit, tenantId, user.UserId, clock.GetUtcNow(), $"organisation.state.{state}", "organisation", tenantId,
             new { state = before.ToString() }, new { state = state.ToString(), reason }, cancellationToken);
         if (contact is null) return;

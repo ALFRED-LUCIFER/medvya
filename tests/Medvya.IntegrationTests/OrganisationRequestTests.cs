@@ -211,6 +211,34 @@ public sealed class OrganisationRequestTests(PostgresFixture sql) : IClassFixtur
     }
 
     [Fact]
+    public async Task ARejectedOwnerStartsANewRequestAndTheOldDecisionStaysInTheHistory()
+    {
+        using var owner = Client(h.Admin);
+        using var ops = Client(approver);
+        Assert.Equal(["request:notRejected"], await ErrorsAsync(await owner.PostAsync("/v1/organisation/request/start-new", null))); // only after a rejection
+        await UploadAllAsync(owner, OrganisationType.Clinic);
+        Assert.Equal(HttpStatusCode.NoContent, (await owner.PostAsync("/v1/organisation/request/submit", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await ops.PostAsJsonAsync($"/v1/operations/organisations/{h.Tenant}/reject", new { reason = "Not a registered clinic" })).StatusCode);
+        var mailed = mail.Sent.Count;
+
+        Assert.Equal(HttpStatusCode.NoContent, (await owner.PostAsync("/v1/organisation/request/start-new", null)).StatusCode);
+        Assert.Equal(OrganisationState.Draft, await StateAsync());
+        Assert.Equal(mailed, mail.Sent.Count); // starting again sends no email
+        var view = await owner.GetFromJsonAsync<JsonElement>("/v1/organisation/request/");
+        Assert.Equal(0, view.GetProperty("documents").GetArrayLength()); // the new request starts without the old files
+        Assert.Equal(JsonValueKind.Null, view.GetProperty("reason").ValueKind);
+        Assert.Equal(4, files.Stored.Count); // the old files are kept for Medvya, not deleted
+        var history = (await ops.GetFromJsonAsync<JsonElement>($"/v1/operations/organisations/{h.Tenant}")).GetProperty("history").EnumerateArray().Select(e => e.GetProperty("state").GetString()).ToList();
+        Assert.Equal(["Submitted", "Rejected", "Draft"], history); // the old request's decision stays
+
+        await UploadAllAsync(owner, OrganisationType.Clinic); // and it can be sent again
+        Assert.Equal(HttpStatusCode.NoContent, (await owner.PostAsync("/v1/organisation/request/submit", null)).StatusCode);
+        Assert.Equal(OrganisationState.Submitted, await StateAsync());
+        Assert.Equal(8, (await ops.GetFromJsonAsync<JsonElement>($"/v1/operations/organisations/{h.Tenant}")).GetProperty("documents").GetArrayLength()); // old and new
+        Assert.Equal(["request:notRejected"], await ErrorsAsync(await owner.PostAsync("/v1/organisation/request/start-new", null)));
+    }
+
+    [Fact]
     public async Task AskForChangesResubmitRejectApproveAndSuspendFollowTheStateMachineAreAuditedAndEmailed()
     {
         await SetStateAsync(OrganisationState.Submitted);
@@ -382,6 +410,7 @@ public class OrganisationTransitionTests
     [InlineData(OrganisationState.Suspended, OrganisationState.Approved, true)]
     [InlineData(OrganisationState.Draft, OrganisationState.Approved, false)]
     [InlineData(OrganisationState.NeedsChanges, OrganisationState.Approved, false)]
+    [InlineData(OrganisationState.Rejected, OrganisationState.Draft, true)] // the applicant starts a new request
     [InlineData(OrganisationState.Rejected, OrganisationState.Submitted, false)]
     [InlineData(OrganisationState.Rejected, OrganisationState.Approved, false)]
     [InlineData(OrganisationState.Approved, OrganisationState.Rejected, false)]

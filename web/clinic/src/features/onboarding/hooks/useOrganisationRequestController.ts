@@ -7,7 +7,7 @@ import { sessionQueryKey } from '../../session/hooks/useSessionController';
 import {
   canSubmit, fileProblem, isEditable, itContactSchema, missingKinds, requestError, type DocumentKind, type FileProblem, type ItContactForm, type RequestError,
 } from '../domain/organisationRequest';
-import { fetchRequest, saveItContact, submitRequest, uploadDocument } from '../services/organisationRequestApi';
+import { fetchRequest, saveItContact, startNewRequest, submitRequest, uploadDocument } from '../services/organisationRequestApi';
 
 const requestKey = ['organisation', 'request'];
 
@@ -24,6 +24,7 @@ export function useOrganisationRequestController() {
   const form = useForm<ItContactForm>({ resolver: zodResolver(itContactSchema), values: { name: data?.itContactName ?? '', email: data?.itContactEmail ?? '' } });
   const contact = useMutation({ mutationFn: saveItContact, onSuccess: refresh });
   const submit = useMutation({ mutationFn: submitRequest, onSuccess: refresh });
+  const startNew = useMutation({ mutationFn: startNewRequest, onSuccess: refresh });
 
   const failure = (e: unknown): RequestError | null => (e instanceof ApiError ? requestError(e.code) : e ? 'failed' : null);
   const uploadError: RequestError | FileProblem | null = pickProblem?.problem ?? failure(upload.error);
@@ -54,5 +55,8 @@ export function useOrganisationRequestController() {
     submitting: submit.isPending,
     submitFailed: submit.isError,
     onSubmit: () => submit.mutate(),
+    startingNew: startNew.isPending,
+    startNewFailed: startNew.isError,
+    onStartNew: () => startNew.mutate(),
   };
 }

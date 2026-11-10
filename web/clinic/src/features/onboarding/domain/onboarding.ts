@@ -13,7 +13,7 @@ export const patientStarts = ['Upload', 'Move', 'Fresh'] as const;
 export type PatientStart = (typeof patientStarts)[number];
 export type OnboardingData = {
   profile?: { fullName?: string; mode?: Mode; specialty?: string; specialties?: string[]; qualifications?: string; languages?: string };
-  licence?: { authority?: string; number?: string; certificateName?: string };
+  licence?: { authority?: string; number?: string; certificateName?: string; attested?: boolean };
   clinic?: { name?: string; address?: string; registrationNumber?: string; taxId?: string };
   hours?: { weekdays?: Window[]; saturday?: Window[]; slotMinutes?: number; newVisitFee?: number; followUpFee?: number; days?: Day[] };
   templates?: string[];
@@ -34,7 +34,7 @@ export const skippable = (step: number) => step >= 3;
 /** The form: flat strings, as typed. Fees are whole currency units here and minor units (x100) on the wire. */
 export type WizardForm = {
   mode: Mode; fullName: string; clinicName: string; address: string; specialties: string[];
-  authority: string; number: string; qualifications: string; languages: string; registrationNumber: string; taxId: string;
+  authority: string; number: string; attested: boolean; qualifications: string; languages: string; registrationNumber: string; taxId: string;
   days: Day[]; weekdayStart1: string; weekdayEnd1: string; weekdayStart2: string; weekdayEnd2: string; saturdayStart: string; saturdayEnd: string;
   slotMinutes: string; newVisitFee: string; followUpFee: string;
   team: Member[]; inviteEmail: string; inviteRole: TeamRole; patients: PatientStart | '';
@@ -44,7 +44,7 @@ export type WizardForm = {
 export type FormField = keyof WizardForm;
 
 export const stepFields: Record<number, FormField[]> = {
-  1: ['mode', 'fullName', 'clinicName', 'address', 'specialties', 'authority', 'number', 'qualifications', 'languages', 'registrationNumber', 'taxId'],
+  1: ['mode', 'fullName', 'clinicName', 'address', 'specialties', 'authority', 'number', 'attested', 'qualifications', 'languages', 'registrationNumber', 'taxId'],
   2: ['days', 'weekdayStart1', 'weekdayEnd1', 'weekdayStart2', 'weekdayEnd2', 'saturdayStart', 'saturdayEnd', 'slotMinutes', 'newVisitFee', 'followUpFee'],
   3: ['team', 'inviteEmail'],
   4: ['patients'],
@@ -60,7 +60,7 @@ const openByDefault: Day[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Fri
 
 export const emptyForm = (country: Country): WizardForm => ({
   mode: 'Solo', fullName: '', clinicName: '', address: '', specialties: [],
-  authority: '', number: '', qualifications: '', languages: '', registrationNumber: '', taxId: '',
+  authority: '', number: '', attested: false, qualifications: '', languages: '', registrationNumber: '', taxId: '',
   days: openByDefault, ...defaults[country], slotMinutes: '15',
   team: [], inviteEmail: '', inviteRole: 'Receptionist', patients: '',
   specialty: '', certificateName: '', templates: [],
@@ -75,7 +75,7 @@ const minor = (major: string) => (major.trim() === '' ? undefined : Math.round(N
 export function toData(f: WizardForm): OnboardingData {
   return {
     profile: { fullName: f.fullName, mode: f.mode, specialty: f.specialty, specialties: f.specialties, qualifications: f.qualifications, languages: f.languages },
-    licence: f.mode === 'Solo' ? { authority: f.authority, number: f.number, certificateName: f.certificateName } : undefined,
+    licence: f.mode === 'Solo' ? { authority: f.authority, number: f.number, certificateName: f.certificateName, attested: f.attested } : undefined,
     clinic: { name: f.clinicName, address: f.address, registrationNumber: f.registrationNumber, taxId: f.taxId },
     hours: {
       weekdays: windows(f.weekdayStart1, f.weekdayEnd1, f.weekdayStart2, f.weekdayEnd2),
@@ -102,7 +102,7 @@ export function toForm(data: OnboardingData, country: Country): WizardForm {
     ...base,
     mode: data.profile?.mode ?? base.mode, fullName: data.profile?.fullName ?? '', specialty: data.profile?.specialty ?? '',
     specialties: data.profile?.specialties ?? [], qualifications: data.profile?.qualifications ?? '', languages: data.profile?.languages ?? '',
-    authority: data.licence?.authority ?? '', number: data.licence?.number ?? '', certificateName: data.licence?.certificateName ?? '',
+    authority: data.licence?.authority ?? '', number: data.licence?.number ?? '', attested: data.licence?.attested ?? false, certificateName: data.licence?.certificateName ?? '',
     clinicName: data.clinic?.name ?? '', address: data.clinic?.address ?? '', registrationNumber: data.clinic?.registrationNumber ?? '', taxId: data.clinic?.taxId ?? '',
     ...(h && {
       days: h.days ?? legacyDays,
@@ -128,7 +128,7 @@ export const maxTeam = 5;
 
 const anyText = z.string();
 const base = z.object({
-  mode: z.enum(['Solo', 'Clinic']), specialties: z.array(z.string()), days: z.array(z.enum(weekDays)), templates: z.array(z.string()),
+  mode: z.enum(['Solo', 'Clinic']), attested: z.boolean(), specialties: z.array(z.string()), days: z.array(z.enum(weekDays)), templates: z.array(z.string()),
   team: z.array(z.object({ email: z.string(), role: z.enum(['Receptionist', 'Nurse']) })), inviteRole: z.enum(['Receptionist', 'Nurse']),
   patients: z.enum(['', ...patientStarts]),
   fullName: anyText, clinicName: anyText, address: anyText, authority: anyText, number: anyText, qualifications: anyText, languages: anyText,
@@ -143,7 +143,7 @@ export const stepSchema = (step: number) => base.superRefine((f, ctx) => {
   const filled = (v: string) => v.trim() !== '';
   if (step === 1) {
     need('fullName', filled(f.fullName)); need('clinicName', filled(f.clinicName)); need('address', filled(f.address));
-    if (f.mode === 'Solo') { need('specialties', f.specialties.length > 0 || filled(f.specialty)); need('authority', filled(f.authority)); need('number', filled(f.number)); }
+    if (f.mode === 'Solo') { need('specialties', f.specialties.length > 0 || filled(f.specialty)); need('authority', filled(f.authority)); need('number', filled(f.number)); need('attested', f.attested); }
   }
   if (step === 2) {
     need('days', f.days.length > 0);
@@ -158,7 +158,7 @@ export const stepSchema = (step: number) => base.superRefine((f, ctx) => {
 export function formFieldOf(path: string): FormField | `team.${number}.email` | null {
   const direct: Record<string, FormField> = {
     'profile.mode': 'mode', 'profile.fullName': 'fullName', 'profile.specialty': 'specialties', 'profile.specialties': 'specialties',
-    'profile.qualifications': 'qualifications', 'profile.languages': 'languages', 'licence.authority': 'authority', 'licence.number': 'number',
+    'profile.qualifications': 'qualifications', 'profile.languages': 'languages', 'licence.authority': 'authority', 'licence.number': 'number', 'licence.attested': 'attested',
     'licence.certificate': 'number', 'clinic.name': 'clinicName', 'clinic.address': 'address', 'clinic.registrationNumber': 'registrationNumber',
     'clinic.taxId': 'taxId', 'hours.days': 'days', 'hours.weekdays': 'weekdayStart1', 'hours.saturday': 'saturdayStart', 'hours.slotMinutes': 'slotMinutes',
     'hours.newVisitFee': 'newVisitFee', 'hours.followUpFee': 'followUpFee', templates: 'slotMinutes', team: 'inviteEmail', patients: 'patients',

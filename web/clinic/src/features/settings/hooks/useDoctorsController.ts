@@ -10,7 +10,7 @@ import {
 import { addDoctor, fetchDoctors, removeSignature, resubmitLicence, uploadSignature } from '../services/doctorsApi';
 
 /** The invitation email could not be sent; the server saved nothing (502 with this code). */
-const emailFailed = 'email_failed';
+const emailFailed = 'email_failed', planFull = 'plan_limit';
 
 /** What to say under a field: a code the screen translates ("invalid" for what the form itself rejects, else the server's code). */
 const codeOf = (e: FieldErrors<DoctorForm>[keyof DoctorForm]) => (e ? fieldProblem(e.type === 'server' ? String(e.message) : undefined) : undefined);
@@ -106,7 +106,8 @@ export function useDoctorsController(defaultFacilityId: string) {
     onNext: next,
     onSubmit: form.handleSubmit(values => add.mutate(values)),
     submitting: add.isPending,
-    submitFailed: add.isError && !(add.error instanceof ApiError && (add.error.status === 400 || add.error.code === emailFailed)),
+    submitFailed: add.isError && !(add.error instanceof ApiError && (add.error.status === 400 || add.error.code === emailFailed || add.error.code === planFull)),
+    planFull: add.error instanceof ApiError && add.error.code === planFull,
     emailFailed: add.error instanceof ApiError && add.error.code === emailFailed,
     signature,
     signatureProblem: signatureProblemKind,
@@ -121,7 +122,7 @@ export function useDoctorsController(defaultFacilityId: string) {
     licenceErrors,
     onCorrect: (d: Doctor | null) => {
       setCorrecting(d);
-      if (d) licenceForm.reset({ authority: d.authority, number: d.number, category: d.category ?? '', expiresOn: d.expiresOn ?? '', certificateName: '' });
+      if (d) licenceForm.reset({ authority: d.authority, number: d.number, category: d.category ?? '', expiresOn: d.expiresOn ?? '', certificateName: '', attested: false as unknown as true });
     },
     onSubmitLicence: licenceForm.handleSubmit(values => correct.mutate(values)),
     correctingBusy: correct.isPending,

@@ -24,7 +24,7 @@ public sealed class OrderEndpointTests(PostgresFixture sql) : IClassFixture<Post
         await using (var db = sql.Context(h.Tenant))
         {
             var membership = await db.Memberships.SingleAsync(m => m.UserId == h.Doctor);
-            db.DoctorLicences.Add(new Medvya.Tenancy.Domain.DoctorLicence { MembershipId = membership.Id, TenantId = h.Tenant, Authority = "TNMC", Number = "84213", SubmittedAt = h.Clock.GetUtcNow(), VerifiedAt = h.Clock.GetUtcNow() });
+            db.DoctorLicences.Add(new Medvya.Tenancy.Domain.DoctorLicence { MembershipId = membership.Id, TenantId = h.Tenant, Authority = "TNMC", Number = "84213", SubmittedAt = h.Clock.GetUtcNow() });
             await db.SaveChangesAsync();
         }
         var visit = await h.BookAsync(10);
@@ -95,7 +95,7 @@ public sealed class OrderEndpointTests(PostgresFixture sql) : IClassFixture<Post
         using (var empty = await Client(h.Doctor).PostAsync(U($"/v1/encounters/{encounter}/orders"), new StringContent("null", System.Text.Encoding.UTF8, "application/json")))
             Assert.Equal(HttpStatusCode.BadRequest, empty.StatusCode);
         using (var unknown = await Client(h.Doctor).GetAsync(U($"/v1/encounters/{Guid.NewGuid()}/orders"))) Assert.Equal(HttpStatusCode.NotFound, unknown.StatusCode);
-        foreach (var user in new[] { h.Nurse, h.Reception, h.Admin, h.SecondDoctor })
+        foreach (var user in new[] { h.Nurse, h.Reception, h.Admin })
         {
             using var denied = await Client(user).GetAsync(U($"/v1/encounters/{encounter}/orders"));
             Assert.Equal(HttpStatusCode.Forbidden, denied.StatusCode);

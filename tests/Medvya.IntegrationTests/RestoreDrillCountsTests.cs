@@ -49,7 +49,7 @@ public sealed class RestoreDrillCountsTests(PostgresFixture sql) : IClassFixture
         var tenant = Guid.NewGuid();
         await using (var db = sql.Context(tenant))
         {
-            db.Tenants.Add(new Tenant { Id = tenant, Name = "Restore Drill (synthetic)", CountryCode = "IN", ResidencyRegion = "centralindia" });
+            db.Tenants.Add(new Tenant { State = OrganisationState.Approved, Id = tenant, Name = "Restore Drill (synthetic)", CountryCode = "IN", ResidencyRegion = "centralindia" });
             await db.SaveChangesAsync();
         }
 

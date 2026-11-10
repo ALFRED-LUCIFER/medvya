@@ -149,7 +149,6 @@ erDiagram
   }
   DoctorLicences {
     guid MembershipId PK, FK "FK to Memberships"
-    guid VerifiedBy "id of identity.Users"
   }
   DoctorProfiles {
     guid MembershipId PK, FK "FK to Memberships"
@@ -214,7 +213,6 @@ erDiagram
   Facilities ||--o{ Closures : "FacilityId"
   Tenants ||--o{ CustomRoles : "TenantId"
   Memberships ||--o{ DoctorLicences : "MembershipId"
-  identity_Users |o..o{ DoctorLicences : "VerifiedBy"
   Memberships ||--o{ DoctorProfiles : "MembershipId"
   identity_Users |o..o{ DoctorProfiles : "ChangedBy"
   Tenants ||--o{ Facilities : "TenantId"
@@ -241,7 +239,7 @@ erDiagram
 | `AccessReviewDecisions` | 6 | ReviewId, MembershipId | tenant-scoped |
 | `Closures` | 5 | Id | tenant-scoped |
 | `CustomRoles` | 6 | Id | tenant-scoped |
-| `DoctorLicences` | 12 | MembershipId | tenant-scoped |
+| `DoctorLicences` | 10 | MembershipId | tenant-scoped |
 | `DoctorProfiles` | 11 | MembershipId | tenant-scoped |
 | `Facilities` | 8 | Id | tenant-scoped |
 | `FeatureFlags` | 10 | Id | tenant-scoped |
@@ -251,7 +249,7 @@ erDiagram
 | `PracticeDefaults` | 13 | TenantId | tenant-scoped |
 | `Profiles` | 12 | Id | tenant-scoped |
 | `SettingsChanges` | 8 | Id | tenant-scoped |
-| `Tenants` | 7 | Id |  |
+| `Tenants` | 8 | Id |  |
 | `TenantIndex` | 1 | TenantId | tenant-scoped |
 | `TermsAcceptances` | 5 | Id | append-only ledger; tenant-scoped |
 
@@ -328,17 +326,15 @@ erDiagram
 | Column | Type | Null | Links to |
 |---|---|---|---|
 | `MembershipId` | guid |  | FK to `Membership` |
+| `AttestedAt` | timestamptz |  |  |
+| `AttestedBy` | guid | yes |  |
 | `Authority` | character varying(20) |  |  |
 | `Category` | character varying(40) |  |  |
 | `CertificateName` | character varying(200) |  |  |
 | `ExpiresOn` | date | yes |  |
 | `Number` | character varying(20) |  |  |
-| `RejectedAt` | timestamptz | yes |  |
-| `RejectionReason` | character varying(500) |  |  |
 | `SubmittedAt` | timestamptz |  |  |
 | `TenantId` | guid |  | `tenancy.Tenants` |
-| `VerifiedAt` | timestamptz | yes |  |
-| `VerifiedBy` | guid | yes | id of `identity.Users` |
 
 </details>
 
@@ -501,6 +497,7 @@ erDiagram
 | `IdleTimeoutMinutes` | int |  |  |
 | `Name` | character varying(200) |  |  |
 | `ResidencyRegion` | character varying(40) |  |  |
+| `State` | character varying(20) |  |  |
 
 </details>
 

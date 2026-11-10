@@ -26,7 +26,7 @@ public class FeatureFlagTests(PostgresFixture sql) : IClassFixture<PostgresFixtu
         foreach (var (tenant, country) in new[] { (tenantA, "IN"), (tenantB, "AE") })
         {
             await using var db = sql.Context(tenant);
-            db.Tenants.Add(new Tenant { Id = tenant, Name = "Synthetic Clinic", CountryCode = country, ResidencyRegion = country == "IN" ? "centralindia" : "uaenorth" });
+            db.Tenants.Add(new Tenant { State = OrganisationState.Approved, Id = tenant, Name = "Synthetic Clinic", CountryCode = country, ResidencyRegion = country == "IN" ? "centralindia" : "uaenorth" });
             await db.SaveChangesAsync();
         }
     }

@@ -202,6 +202,12 @@ namespace Medvya.Tenancy.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("MembershipId")
                         .HasColumnType("uuid");
 
+                    b.Property<DateTimeOffset>("AttestedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("AttestedBy")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Authority")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -223,23 +229,10 @@ namespace Medvya.Tenancy.Infrastructure.Persistence.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
-                    b.Property<DateTimeOffset?>("RejectedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("RejectionReason")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
                     b.Property<DateTimeOffset>("SubmittedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("TenantId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset?>("VerifiedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("VerifiedBy")
                         .HasColumnType("uuid");
 
                     b.HasKey("MembershipId");
@@ -692,6 +685,13 @@ namespace Medvya.Tenancy.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(40)
                         .HasColumnType("character varying(40)");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("Approved");
 
                     b.HasKey("Id");
 

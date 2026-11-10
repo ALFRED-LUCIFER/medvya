@@ -46,6 +46,8 @@ public sealed class TenancyDbContext(DbContextOptions<TenancyDbContext> options,
             e.Property(x => x.CountryCode).HasMaxLength(2).IsFixedLength().Metadata.SetAfterSaveBehavior(PropertySaveBehavior.Throw);
             e.Property(x => x.ResidencyRegion).HasMaxLength(40).Metadata.SetAfterSaveBehavior(PropertySaveBehavior.Throw);
             e.Property(x => x.IdleTimeoutMinutes).HasDefaultValue(15);
+            // The column default is Approved so tenants that exist when the state arrives stay open (MDV-P1-068); new tenants always set it.
+            e.Property(x => x.State).HasConversion<string>().HasMaxLength(20).HasDefaultValue(OrganisationState.Approved).HasSentinel((OrganisationState)(-1));
             e.Property(x => x.ClinicalAccess).HasConversion<string>().HasMaxLength(30).HasDefaultValue(ClinicalAccessPolicy.AllFacilityClinicians).HasSentinel((ClinicalAccessPolicy)(-1));
             e.ToTable(t => { t.HasCheckConstraint("CK_Tenants_IdleTimeoutMinutes", "\"IdleTimeoutMinutes\" BETWEEN 1 AND 480"); t.HasTrigger("TR_Tenants_Index"); });
             e.HasQueryFilter(x => x.Id == CurrentTenantId);
@@ -195,7 +197,6 @@ public sealed class TenancyDbContext(DbContextOptions<TenancyDbContext> options,
             e.Property(x => x.Number).HasMaxLength(20);
             e.Property(x => x.Category).HasMaxLength(40);
             e.Property(x => x.CertificateName).HasMaxLength(200);
-            e.Property(x => x.RejectionReason).HasMaxLength(500);
             e.HasOne<Membership>().WithOne().HasForeignKey<DoctorLicence>(x => x.MembershipId).OnDelete(DeleteBehavior.Restrict);
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });

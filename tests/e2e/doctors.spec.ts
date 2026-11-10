@@ -10,7 +10,7 @@ const admin = {
 };
 const existing = {
   id: 'd-1', fullName: 'Dr. Arjun Rao (synthetic)', specialty: 'Family medicine', qualifications: null, languages: null, facilityId: 'f-1', facilityName: 'Adyar (synthetic)',
-  status: 'Active', authority: 'TNMC', number: '84213', category: null, expiresOn: null, licence: 'Rejected', rejectionReason: 'Number not found in the register', hasSignature: false,
+  status: 'Active', authority: 'TNMC', number: '84213', category: null, expiresOn: null, expired: true, attestedBy: 'u-lakshmi', attestedByName: null, attestedAt: '2026-11-01T09:00:00Z', hasSignature: false,
 };
 const list = (doctors: object[]) => ({
   doctors, defaults: { newVisitFee: 50000, followUpFee: 30000, currency: 'INR' },
@@ -26,7 +26,7 @@ async function setUp(page: Page, locale = 'en') {
     if (r.request().method() === 'POST') {
       state.added = r.request().postDataJSON();
       const body = state.added as { fullName: string };
-      const doctor = { ...existing, id: 'd-2', fullName: body.fullName, status: 'Invited', licence: 'Pending', rejectionReason: null };
+      const doctor = { ...existing, id: 'd-2', fullName: body.fullName, status: 'Invited', expired: false, attestedAt: '2026-11-10T09:00:00Z' };
       state.doctors = [...state.doctors, doctor];
       return r.fulfill({ status: 201, json: doctor });
     }
@@ -34,7 +34,7 @@ async function setUp(page: Page, locale = 'en') {
   });
   await page.route('**/v1/settings/doctors/*/licence', async r => {
     state.resubmitted = r.request().postDataJSON();
-    state.doctors = [{ ...existing, licence: 'Pending', rejectionReason: null }];
+    state.doctors = [{ ...existing, expired: false, attestedAt: '2026-11-10T09:00:00Z' }];
     return r.fulfill({ json: state.doctors[0] });
   });
   await page.route('**/v1/settings/doctors/*/signature', async r => {
@@ -52,34 +52,37 @@ async function axe(page: Page) {
       .map(v => `${v.id} (${v.nodes.length})`));
 }
 
-test('the Doctors tab lists doctors with their licence state in words, and a rejected licence shows why and can be corrected', async ({ page }) => {
+test('the Doctors tab lists doctors with who attested the licence, and an expired licence warns and is renewed with a new attestation', async ({ page }) => {
   const state = await setUp(page);
   await page.goto('/settings?tab=doctors');
 
   await expect(page.getByRole('tab', { name: 'Doctors' })).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByRole('heading', { name: 'Dr. Arjun Rao (synthetic)' })).toBeVisible();
-  await expect(page.getByText('Not verified')).toBeVisible();
-  await expect(page.getByText('Medvya could not verify this licence: Number not found in the register')).toBeVisible();
+  await expect(page.getByText('Licence expired')).toBeVisible();
+  await expect(page.getByText('This licence has passed its expiry date. Renew it and confirm it again. The doctor is not blocked from working.')).toBeVisible();
   await expect(page.getByText('Signing in Medvya is always an authenticated action by the doctor (passkey / MFA), never the image alone.')).toBeVisible();
 
-  await page.getByRole('button', { name: 'Correct licence' }).click();
+  await page.getByRole('button', { name: 'Renew licence' }).click();
   await page.getByLabel('Registration category').fill('Permanent');
-  await page.getByRole('button', { name: 'Send for verification again' }).click();
+  await page.getByRole('button', { name: 'Save and confirm' }).click();
   await expect(page.getByLabel('Expiry date')).toHaveAttribute('aria-invalid', 'true'); // expiry is required
   await page.getByLabel('Expiry date').fill('2031-12-31');
-  await page.getByRole('button', { name: 'Send for verification again' }).click();
-  await expect(page.getByText('Verification pending')).toBeVisible();
-  expect(state.resubmitted).toMatchObject({ authority: 'TNMC', number: '84213', category: 'Permanent', expiresOn: '2031-12-31' });
+  await page.getByRole('button', { name: 'Save and confirm' }).click();
+  await expect(page.getByLabel(/I confirm this licence belongs to this doctor/)).toHaveAttribute('aria-invalid', 'true'); // the owner must attest
+  await page.getByLabel(/I confirm this licence belongs to this doctor/).check();
+  await page.getByRole('button', { name: 'Save and confirm' }).click();
+  await expect(page.getByText('Attested by the owner on 2026-11-10')).toBeVisible();
+  expect(state.resubmitted).toMatchObject({ authority: 'TNMC', number: '84213', category: 'Permanent', expiresOn: '2031-12-31', attested: true });
 });
 
-test('Add doctor: seven steps, fees prefilled in whole currency units, then one request and the signature image', async ({ page }) => {
+test('Add doctor: six steps, fees prefilled in whole currency units, then one request and the signature image', async ({ page }) => {
   const state = await setUp(page);
   await page.goto('/settings?tab=doctors');
   await page.getByRole('button', { name: 'Add doctor' }).first().click();
 
-  await expect(page.getByText('Step 1 of 7: Details')).toBeVisible();
+  await expect(page.getByText('Step 1 of 6: Details')).toBeVisible();
   await page.getByRole('button', { name: 'Next' }).click(); // nothing typed: refused, still on step 1
-  await expect(page.getByText('Step 1 of 7: Details')).toBeVisible();
+  await expect(page.getByText('Step 1 of 6: Details')).toBeVisible();
   await expect(page.getByLabel('Full name')).toHaveAttribute('aria-invalid', 'true');
 
   await page.getByLabel('Full name').fill('Dr. Sana Khan (synthetic)');
@@ -87,29 +90,29 @@ test('Add doctor: seven steps, fees prefilled in whole currency units, then one 
   await page.getByLabel('Specialty').fill('Paediatrics');
   await page.getByRole('button', { name: 'Next' }).click();
 
-  await expect(page.getByText('Step 2 of 7: Licence')).toBeVisible();
+  await expect(page.getByText('Step 2 of 6: Licence')).toBeVisible();
   await page.getByRole('combobox', { name: 'Medical council' }).click();
   await page.getByRole('option', { name: 'Tamil Nadu Medical Council' }).click();
   await page.getByLabel('Registration number').fill('84213');
   await page.getByLabel('Registration category').fill('Permanent');
   await page.getByLabel('Expiry date').fill('2031-12-31');
   await page.getByRole('button', { name: 'Next' }).click();
-
-  await expect(page.getByText('Step 3 of 7: Verification')).toBeVisible();
-  await expect(page.getByText('usually within 1 working day')).toBeVisible();
-  await page.getByRole('button', { name: 'Next' }).click();
-  await expect(page.getByText('Step 4 of 7: Schedule')).toBeVisible();
+  await expect(page.getByText('Step 2 of 6: Licence')).toBeVisible(); // not without the owner's attestation
+  await page.getByLabel(/I confirm this licence belongs to this doctor/).check();
   await page.getByRole('button', { name: 'Next' }).click();
 
-  await expect(page.getByText('Step 5 of 7: Default fees')).toBeVisible();
+  await expect(page.getByText('Step 3 of 6: Schedule')).toBeVisible();
+  await page.getByRole('button', { name: 'Next' }).click();
+
+  await expect(page.getByText('Step 4 of 6: Default fees')).toBeVisible();
   await expect(page.getByLabel('New patient fee (INR)')).toHaveValue('500');
   await expect(page.getByLabel('Follow-up fee (INR)')).toHaveValue('300');
   await page.getByRole('button', { name: 'Next' }).click();
-  await expect(page.getByText('Step 6 of 7: Access')).toBeVisible();
+  await expect(page.getByText('Step 5 of 6: Access')).toBeVisible();
   await expect(page.getByLabel('Role')).toHaveValue('Doctor');
   await page.getByRole('button', { name: 'Next' }).click();
 
-  await expect(page.getByText('Step 7 of 7: Signature image')).toBeVisible();
+  await expect(page.getByText('Step 6 of 6: Signature image')).toBeVisible();
   await expect(page.getByText('Signing in Medvya is always an authenticated action by the doctor (passkey / MFA), never the image alone.')).toBeVisible();
   expect(await axe(page)).toEqual([]);
   const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
@@ -118,7 +121,7 @@ test('Add doctor: seven steps, fees prefilled in whole currency units, then one 
 
   await expect(page.getByText('Dr. Sana Khan (synthetic) was added and the invitation was sent.')).toBeVisible();
   expect(state.added).toMatchObject({
-    fullName: 'Dr. Sana Khan (synthetic)', email: 'sana.khan@example.test', authority: 'TNMC', licenceNumber: '84213', category: 'Permanent', expiresOn: '2031-12-31',
+    fullName: 'Dr. Sana Khan (synthetic)', email: 'sana.khan@example.test', authority: 'TNMC', licenceNumber: '84213', category: 'Permanent', expiresOn: '2031-12-31', attested: true,
     newVisitFee: 50000, followUpFee: 30000, facilityId: 'f-1', qualifications: null,
   });
   expect(state.signature).toBe('image/png');

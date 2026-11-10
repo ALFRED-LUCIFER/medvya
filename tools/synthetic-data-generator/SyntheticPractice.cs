@@ -57,7 +57,7 @@ public static class SyntheticPractice
         // Patients first: this runs every refusal rule (environment, name, "(synthetic)" marker) and creates the tenant and facility.
         var (tenant, facility, _, patientsAdded) = await SyntheticPatients.SeedAsync(connectionString, environment, practice, patientCount, mrnStart, null, memberUserId, region, ct);
         var at = DateTimeOffset.UtcNow;
-        var by = Det(tenant, "operations"); // the "Medvya operations" verifier: a fixed synthetic id, not an account
+        var by = Det(tenant, "operations"); // the owner who attests the licences: a fixed synthetic id, not an account
 
         var people = Doctors.Select((d, i) => (Key: $"doctor{i}", d.Name, Role: Role.HospitalDoctor))
             .Concat(Nurses.Select((n, i) => (Key: $"nurse{i}", Name: n + " RN", Role: Role.Nurse)))
@@ -87,7 +87,7 @@ public static class SyntheticPractice
                 {
                     MembershipId = m, TenantId = tenant, Authority = "TCMC", Number = Licence(i), Category = "Permanent", SubmittedAt = at,
                     ExpiresOn = d.Verified ? DateOnly.FromDateTime(at.UtcDateTime).AddYears(5) : null,
-                    VerifiedAt = d.Verified ? at : null, VerifiedBy = d.Verified ? by : null,
+                    AttestedAt = at, AttestedBy = by,
                 });
             }
             await db.SaveChangesAsync(ct);

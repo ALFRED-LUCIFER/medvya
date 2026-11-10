@@ -73,7 +73,12 @@ export function PracticeStep({ form, country, rules }: StepProps) {
               options={rules.authorities.map(a => a.code)} optionLabel={code => `${code} · ${rules.authorities.find(a => a.code === code)?.name ?? ''}`} />
             <TextField form={form} name="number" label={t(`onboarding.field.licenceNumber.${country}`)} required ltr hint={t(`onboarding.hint.licenceNumber.${country}`)} />
           </div>
-          <Note>{t('onboarding.licence.notice')}</Note>
+          <Group legend={t('onboarding.attest.legend')} error={{ id: 'attested-error', code: errors.attested?.message }}>
+            <label className={chip}>
+              <input type="checkbox" {...form.register('attested')} className="size-4 accent-brand-700" />{t('onboarding.attest.label')}
+            </label>
+          </Group>
+          <Note>{t('onboarding.attest.notice')}</Note>
         </div>
       )}
       <details className="rounded-xl border p-4" open={Boolean(errors.taxId || errors.registrationNumber || errors.qualifications || errors.languages)}>

@@ -40,7 +40,7 @@ test('the create-account answers fill the new draft once, then leave the browser
   expect(await page.evaluate(() => sessionStorage.getItem('medvya.signUp'))).toBeNull();
 });
 
-test('a solo doctor completes the five steps, sees the ready screen and lands on the app with the licence notice', async ({ page }) => {
+test('a solo doctor completes the five steps, sees the ready screen and lands on the app', async ({ page }) => {
   const api = await mockOnboarding(page);
   await page.goto('/onboarding?country=IN');
   await completeWizard(page);
@@ -50,14 +50,14 @@ test('a solo doctor completes the five steps, sees the ready screen and lands on
   const last = api.saves.at(-1)!.data as { profile: { specialties: string[] }; licence: { authority: string; number: string };
     hours: { newVisitFee: number; days: string[]; weekdays: unknown[] }; team: unknown[]; patients: string };
   expect(last.profile.specialties).toEqual(['general-practice']);
-  expect(last.licence).toMatchObject({ authority: 'TNMC', number: '84213' });
+  expect(last.licence).toMatchObject({ authority: 'TNMC', number: '84213', attested: true });
   expect(last.hours).toMatchObject({ newVisitFee: 80000, slotMinutes: 15, days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] });
   expect(last.hours.weekdays).toHaveLength(2);
   expect(last.team).toEqual([{ email: 'joseph@example.test', role: 'Receptionist' }]);
   expect(last.patients).toBe('Fresh');
 
   await expect.poll(() => api.chose).toBe('m-1'); // the new practice becomes the working context
-  await expect(page.getByText('Verification pending · usually within 1 working day.')).toBeVisible();
+  await expect(page.getByText(/Waiting for approval|being set up/)).toHaveCount(0); // an approved organisation has no notice
 });
 
 test('the live preview mirrors what is typed (1280 px)', async ({ page }) => {
@@ -113,6 +113,7 @@ test('errors appear under the field and are announced; a server error keeps the 
   await page.getByRole('combobox', { name: 'Medical council' }).click();
   await page.getByRole('option', { name: /TNMC/ }).click();
   await page.getByLabel('Registration number').fill('1'); // the fake server refuses this one
+  await page.getByLabel('I confirm this registration is my own and that it is valid.').check();
   await page.getByRole('button', { name: 'Continue' }).click();
   await expect(page.locator('#number-error')).toHaveText('Check the format.');
   await expect(page.getByRole('heading', { level: 1, name: 'Tell us about your practice.' })).toBeVisible();

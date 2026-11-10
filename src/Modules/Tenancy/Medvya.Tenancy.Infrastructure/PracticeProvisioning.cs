@@ -38,7 +38,11 @@ public sealed class PracticeProvisioning(IServiceScopeFactory scopes, ICurrentUs
         var membershipId = Guid.CreateVersion7();
         var hours = data.Hours!;
         var specialty = OnboardingRules.SpecialtyText(data.Profile);
-        db.Tenants.Add(new Tenant { Id = tenantId, Name = clinic.Name!.Trim(), CountryCode = country, ResidencyRegion = ResidencyRegion(country), CreatedAt = now });
+        db.Tenants.Add(new Tenant { Id = tenantId, Name = clinic.Name!.Trim(), CountryCode = country, ResidencyRegion = ResidencyRegion(country), CreatedAt = now,
+            // shortcut: sign-up opens the organisation at once. ADR-016 starts it at Draft until Medvya approves; switch to Draft when the onboarding
+            // request and approval queue (MDV-P1-062, MDV-P1-064) exist, or no new clinic can be approved.
+            State = OrganisationState.Approved,
+        });
         db.Facilities.Add(new Facility { Id = facilityId, TenantId = tenantId, Name = clinic.Name!.Trim(), TimeZone = rules.TimeZone });
         db.Memberships.Add(new Membership { Id = membershipId, TenantId = tenantId, UserId = owner, FacilityId = facilityId, Role = role, Status = MembershipStatus.Active });
         db.Profiles.Add(new PracticeProfile
@@ -60,13 +64,13 @@ public sealed class PracticeProvisioning(IServiceScopeFactory scopes, ICurrentUs
             var closes = windows.Max(w => TimeOnly.ParseExact(w.End!, "HH:mm", CultureInfo.InvariantCulture));
             db.OperatingHours.Add(new OperatingHours { Id = Guid.CreateVersion7(), TenantId = tenantId, FacilityId = facilityId, Weekday = day, Opens = opens, Closes = closes });
         }
-        // Only a doctor submits a licence; their recording and signing stay off until it is verified (LicenceRules).
+        // Only a doctor enters a licence; the owner-doctor attests their own in the wizard (ADR-016).
         if (role == Role.SoloDoctor)
         {
             db.DoctorLicences.Add(new DoctorLicence
             {
                 MembershipId = membershipId, TenantId = tenantId, Authority = data.Licence!.Authority!, Number = data.Licence.Number!.Trim(),
-                CertificateName = Clean(data.Licence.CertificateName), SubmittedAt = now,
+                CertificateName = Clean(data.Licence.CertificateName), SubmittedAt = now, AttestedBy = owner, AttestedAt = now,
             });
             // The owner doctor is listed on Settings, Doctors beside the doctors added later (MDV-P1-007).
             db.DoctorProfiles.Add(new DoctorProfile

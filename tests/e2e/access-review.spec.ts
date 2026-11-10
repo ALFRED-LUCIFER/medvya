@@ -69,11 +69,11 @@ test('an expired licence shows as Expired with Renew licence', async ({ page }) 
   await page.route('**/v1/settings/locations', r => r.fulfill({ json: [{ id: facility, name: 'Adyar (synthetic)', address: null, timeZone: 'Asia/Kolkata' }] }));
   await page.route('**/v1/settings/doctors', r => r.fulfill({ json: {
     doctors: [{ id: 'd-1', fullName: 'Dr. Arjun Rao (synthetic)', specialty: null, qualifications: null, languages: null, facilityId: facility, facilityName: 'Adyar (synthetic)',
-      status: 'Active', authority: 'TNMC', number: '84213', category: 'Permanent', expiresOn: '2026-11-01', licence: 'Expired', rejectionReason: null, hasSignature: false }],
+      status: 'Active', authority: 'TNMC', number: '84213', category: 'Permanent', expiresOn: '2026-11-01', expired: true, attestedBy: 'u-lakshmi', attestedByName: null, attestedAt: '2026-11-01T09:00:00Z', hasSignature: false }],
     defaults: { newVisitFee: 50000, followUpFee: 30000, currency: 'INR' }, authorities: [{ code: 'TNMC', name: 'Tamil Nadu Medical Council' }] } }));
   await page.route('**/v1/notifications/inbox?*', r => r.fulfill({ json: { unread: 0, items: [] } }));
   await page.goto('/settings?tab=doctors');
-  await expect(page.getByText('Expired', { exact: true })).toBeVisible();
+  await expect(page.getByText('Licence expired', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Renew licence' })).toBeVisible();
 });
 

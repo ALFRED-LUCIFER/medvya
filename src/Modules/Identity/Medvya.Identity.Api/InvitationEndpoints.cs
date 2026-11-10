@@ -41,6 +41,10 @@ public static class InvitationEndpoints
             {
                 return SettingsEndpoints.TooManyInvitations;
             }
+            catch (PlanLimitException)
+            {
+                return SettingsEndpoints.PlanLimit;
+            }
         });
 
         admin.MapDelete("/{id:guid}", async (Guid id, [FromServices] IInvitations invitations, CancellationToken ct) =>

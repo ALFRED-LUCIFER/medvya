@@ -74,7 +74,7 @@ test('choosing Doctor shows the redirect notice and cannot continue', async ({ p
   await page.goto('/settings?tab=staff');
   await page.getByRole('button', { name: 'Add staff member' }).click();
   await page.getByRole('radio', { name: /^Doctor/ }).check();
-  await expect(page.getByText('Doctors need licence verification. Use Settings → Doctors → Add doctor.')).toBeVisible();
+  await expect(page.getByText('Add doctors from Settings → Doctors → Add doctor. You enter and confirm each licence.')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Next' })).toBeDisabled();
 });
 
@@ -181,6 +181,27 @@ test('an offboarded person is brought back with a reason; a role above the admin
   await page.getByRole('button', { name: 'Bring back', exact: true }).click();
   await expect(page.getByRole('alert').filter({ hasText: 'access you do not have yourself' })).toBeVisible();
 });
+
+// MDV-P1-069 (J1 step 1, invite staff): a full starter plan is refused by the server and the screen says why, in both languages.
+for (const [locale, text, add, role, email, next, send] of [
+  ['en', 'Your plan allows 1 doctor and 2 staff; contact Medvya to upgrade', 'Add staff member', /^Receptionist/, 'Work email', 'Next', 'Send invitation'],
+  ['ar', 'تتيح خطتك طبيبًا واحدًا وموظفَين اثنين؛ تواصل مع Medvya للترقية', 'إضافة موظف', /^موظف استقبال/, 'البريد الإلكتروني للعمل', 'التالي', 'إرسال الدعوة'],
+] as const)
+  test(`a full starter plan refuses another staff member and says so (${locale})`, async ({ page }) => {
+    await setUp(page, locale);
+    await page.route('**/v1/staff', r => r.request().method() === 'POST'
+      ? r.fulfill({ status: 409, contentType: 'application/problem+json', json: { title: 'Your plan allows 1 doctor and 2 staff; contact Medvya to upgrade', code: 'plan_limit' } })
+      : r.fallback());
+    await page.goto('/settings?tab=staff');
+    await page.getByRole('button', { name: add }).click();
+    await page.getByRole('radio', { name: role }).check();
+    await page.getByRole('button', { name: next }).click();
+    await page.getByLabel(email).fill('third.desk@example.test');
+    await page.getByRole('button', { name: next }).click();
+    await page.getByRole('button', { name: send, exact: true }).click();
+    await expect(page.getByRole('alert').filter({ hasText: text })).toBeVisible();
+    expect(await axe(page)).toEqual([]);
+  });
 
 test('the offboarding form lays out right to left in Arabic', async ({ page }) => {
   await setUp(page, 'ar');

@@ -59,9 +59,10 @@ internal sealed class SchedulingHarness(PostgresFixture sql)
 
     public async Task SeedAsync()
     {
+        Medvya.Tenancy.Infrastructure.StarterPlan.RaiseCapForTests(Tenant); // the cast has one member of every role, more than the starter plan (PlanCapTests covers the cap)
         await using (var db = sql.Context(Tenant))
         {
-            db.Tenants.Add(new Tenant { Id = Tenant, Name = "Iyer Family Clinic (synthetic)", CountryCode = Country, ResidencyRegion = "centralindia" });
+            db.Tenants.Add(new Tenant { State = OrganisationState.Approved, Id = Tenant, Name = "Iyer Family Clinic (synthetic)", CountryCode = Country, ResidencyRegion = "centralindia" });
             db.Facilities.Add(new Facility { Id = Facility, TenantId = Tenant, Name = "Adyar (synthetic)", TimeZone = "Asia/Kolkata" });
             db.Facilities.Add(new Facility { Id = OtherFacility, TenantId = Tenant, Name = "Velachery (synthetic)", TimeZone = "Asia/Kolkata" });
             foreach (var (user, role, at) in new[]

@@ -1840,6 +1840,7 @@
   "audit.col.time": "समय",
   "audit.col.staff": "स्टाफ़",
   "audit.col.role": "भूमिका",
+  "audit.col.location": "स्थान",
   "audit.col.action": "कार्रवाई",
   "audit.col.patient": "मरीज़",
   "audit.col.purpose": "उद्देश्य",

@@ -196,9 +196,9 @@ public static partial class SyntheticPatients
         ], ct);
         // The next registration by the API must not reuse a seeded MRN.
         await Exec(conn, """
-            INSERT INTO patients."MrnCounters" ("TenantId","FacilityId","LastNumber") VALUES (@t, @f, @last)
-            ON CONFLICT ("TenantId","FacilityId") DO UPDATE SET "LastNumber" = GREATEST(patients."MrnCounters"."LastNumber", EXCLUDED."LastNumber")
-            """, ct, ("t", tenant), ("f", facility), ("last", mrnStart + count - 1));
+            INSERT INTO patients."MrnCounters" ("TenantId","LastNumber") VALUES (@t, @last)
+            ON CONFLICT ("TenantId") DO UPDATE SET "LastNumber" = GREATEST(patients."MrnCounters"."LastNumber", EXCLUDED."LastNumber")
+            """, ct, ("t", tenant), ("last", mrnStart + count - 1));
         await tx.CommitAsync(ct);
         // Planner statistics for the new rows; autovacuum does it within a minute where the role may not ANALYZE.
         try { await Exec(conn, "ANALYZE patients.\"Patients\"", ct); } catch (PostgresException e) when (e.SqlState == PostgresErrorCodes.InsufficientPrivilege) { }

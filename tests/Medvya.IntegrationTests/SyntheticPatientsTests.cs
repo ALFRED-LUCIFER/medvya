@@ -20,7 +20,7 @@ public sealed class SyntheticPatientsTests(PostgresFixture sql) : IClassFixture<
         Assert.Equal(ids.Order(), patients.Select(p => p.Id).Order());
         Assert.All(patients, p => Assert.Null(p.Email));
         Assert.Empty(await db.ConsentReceipts.ToListAsync()); // no consent: no reminder is ever sent to them
-        Assert.Equal(1_500 + 99_999, (await db.Database.SqlQuery<int>($"""SELECT "LastNumber" AS "Value" FROM patients."MrnCounters" WHERE "FacilityId" = {facility}""").SingleAsync()));
+        Assert.Equal(1_500 + 99_999, (await db.Database.SqlQuery<int>($"""SELECT "LastNumber" AS "Value" FROM patients."MrnCounters" """).SingleAsync())); // one counter per organisation
         Assert.Contains(patients, p => p.Status == Medvya.Patients.Domain.RegistrationStatus.Incomplete);
 
         // Another tenant sees none of them (row-level security).

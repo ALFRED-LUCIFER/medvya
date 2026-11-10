@@ -46,14 +46,14 @@ public class PatientRegistryTests(PostgresFixture sql) : IClassFixture<PostgresF
     static RegisterPatient UaeQuick(Guid facility) => UaeBase with { FacilityId = facility, Quick = true, DateOfBirth = NextDob(), EmergencyContact = null };
 
     [Fact]
-    public async Task FullRegistrationAssignsFacilityScopedMrnsAndIsAudited()
+    public async Task FullRegistrationAssignsOrganisationWideMrnsAndIsAudited()
     {
         var first = await Registry(tenantA).RegisterAsync(IndiaFull(facility));
         var second = await Registry(tenantA).RegisterAsync(IndiaFull(facility) with { Identifiers = [] });
         var other = Guid.NewGuid();
         var otherFacility = await Registry(tenantA, at: other).RegisterAsync(IndiaFull(other) with { Identifiers = [] });
 
-        Assert.Equal(("000001", "000002", "000001"), (first.Mrn, second.Mrn, otherFacility.Mrn));
+        Assert.Equal(("000001", "000002", "000003"), (first.Mrn, second.Mrn, otherFacility.Mrn)); // one sequence for both locations (MDV-P1-072)
         Assert.Equal((RegistrationStatus.Complete, actor), (first.Status, first.RegisteredBy!.Value));
 
         var record = await Registry(tenantA).GetAsync(first.PatientId);
@@ -214,35 +214,60 @@ public class PatientRegistryTests(PostgresFixture sql) : IClassFixture<PostgresF
         Assert.Equal(50, PatientSearch.MaxPage);
     }
 
+    /// <summary>MDV-P1-072: one chart per person across the organisation's locations, found by name, MRN or phone from another location.</summary>
     [Fact]
-    public async Task AnotherFacilitysPatientIsNeitherListedNorOpened()
+    public async Task APatientRegisteredAtAnotherLocationIsFoundAndOpenedAsOneChart()
     {
         var other = Guid.NewGuid();
-        var elsewhere = await Registry(tenantA, at: other).RegisterAsync(IndiaFull(other) with { FullName = "Rahul Menon (synthetic)" });
-        Assert.Empty((await Search(tenantA, "IN", "Rahul")).Items);
-        Assert.Empty((await Search(tenantA, "IN", "91-0000-0000-0002")).Items);
-        Assert.Null(await Registry(tenantA).GetAsync(elsewhere.PatientId));
+        var elsewhere = await Registry(tenantA, at: other).RegisterAsync(IndiaFull(other) with { FullName = "Rahul Menon (synthetic)", Mobile = "+91 90000 04242", Identifiers = [] });
+
+        foreach (var query in new[] { "Rahul", elsewhere.Mrn, "+91 90000 04242" })
+            Assert.Equal(elsewhere.PatientId, Assert.Single((await Search(tenantA, "IN", query)).Items).Id);
+        var record = await Registry(tenantA).GetAsync(elsewhere.PatientId);
+        Assert.Equal((elsewhere.Mrn, other), (record!.Patient.Mrn, record.Patient.FacilityId)); // still where the person was registered
     }
 
-    /// <summary>Writes are facility-scoped like reads: a desk can neither register into nor complete another facility's record.</summary>
+    /// <summary>MDV-P1-072 mutation check: scope the duplicate query to the facility again and this fails.</summary>
     [Fact]
-    public async Task AnotherFacilitysPatientCannotBeCompletedOrRegisteredInto()
+    public async Task ADuplicateAtAnotherLocationIsWarnedAbout()
+    {
+        var other = Guid.NewGuid();
+        var dob = new DateOnly(1975, 6, 15);
+        var first = await Registry(tenantA).RegisterAsync(IndiaFull(facility) with { FullName = "Imran Qureshi (synthetic)", DateOfBirth = dob, Identifiers = [] });
+
+        var found = await Registry(tenantA, at: other).FindDuplicatesAsync(new("IN", "Imran Qureshi (synthetic)", dob, []));
+        Assert.Equal(first.Mrn[^4..], Assert.Single(found).MrnTail);
+        var ex = await Assert.ThrowsAsync<PatientValidationException>(() =>
+            Registry(tenantA, at: other).RegisterAsync(IndiaFull(other) with { FullName = "Imran Qureshi (synthetic)", DateOfBirth = dob, Identifiers = [] }));
+        Assert.Contains(ex.Errors, e => e.Field == "duplicates");
+    }
+
+    /// <summary>MDV-P1-072: desks at two locations registering at once never get the same MRN (the counter row lock serialises them).</summary>
+    [Fact]
+    public async Task ConcurrentRegistrationsAtTwoLocationsGetDistinctMrns()
+    {
+        var other = Guid.NewGuid();
+        var results = await Task.WhenAll(Enumerable.Range(0, 12).Select(i =>
+        {
+            var at = i % 2 == 0 ? facility : other;
+            return Task.Run(() => Registry(tenantA, at: at).RegisterAsync(IndiaFull(at) with { Identifiers = [], DateOfBirth = new DateOnly(1950, 1, 1).AddDays(i * 400), FullName = $"Racer {(char)('A' + i)} Person (synthetic)" }));
+        }));
+
+        Assert.Equal(12, results.Select(r => r.Mrn).Distinct().Count());
+    }
+
+    /// <summary>Completing a record is organisation-wide too; a command naming another facility than the active one is still refused before anything is written.</summary>
+    [Fact]
+    public async Task ARecordFromAnotherLocationCanBeCompletedButRegistrationMustBeAtTheActiveFacility()
     {
         var other = Guid.NewGuid();
         var elsewhere = await Registry(tenantA, at: other).RegisterAsync(UaeQuick(other));
 
         var address = new PatientAddress { Line1 = "Villa 1", Line2 = "Al Reem", Region = "AUH" };
-        Assert.Null(await Registry(tenantA).CompleteRegistrationAsync(elsewhere.PatientId, address, new(PayerKind.SelfPay)));
-        await using (var db = sql.Patients(tenantA))
-        {
-            var unchanged = await db.Patients.SingleAsync(p => p.Id == elsewhere.PatientId);
-            Assert.Equal((RegistrationStatus.Incomplete, (PatientAddress?)null), (unchanged.Status, unchanged.Address));
-            Assert.False(await db.PayerCoverages.AnyAsync(c => c.PatientId == elsewhere.PatientId));
-        }
+        Assert.Equal(RegistrationStatus.Incomplete, await Registry(tenantA).CompleteRegistrationAsync(elsewhere.PatientId, address, new(PayerKind.SelfPay)));
         await using (var audit = sql.Audit(tenantA))
-            Assert.False(await audit.Events.AnyAsync(e => e.PatientId == elsewhere.PatientId && e.Action == "patient.update")); // nothing was changed
+            Assert.True(await audit.Events.AnyAsync(e => e.PatientId == elsewhere.PatientId && e.Action == "patient.update"));
 
-        // A command naming another facility than the one the desk works at is refused before anything is written.
         await Assert.ThrowsAsync<InvalidOperationException>(() => Registry(tenantA).RegisterAsync(UaeQuick(other)));
         await using var check = sql.Patients(tenantA);
         Assert.Equal(1, await check.Patients.CountAsync(p => p.FacilityId == other));

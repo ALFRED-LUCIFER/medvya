@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage;
 namespace Medvya.Patients.Infrastructure;
 
 /// <summary>Consent receipts (MDV-P1-019): written with the registration, changed by new receipts, read by other modules through <see cref="IPatientConsents"/>.</summary>
-public sealed class PatientConsents(PatientsDbContext db, ICurrentTenant tenant, ICurrentFacility facility, ICurrentUser user, IAuditLog audit, TimeProvider clock)
+public sealed class PatientConsents(PatientsDbContext db, ICurrentTenant tenant, ICurrentUser user, IAuditLog audit, TimeProvider clock)
     : IPatientConsents
 {
     internal static IEnumerable<ConsentReceipt> Receipts(Guid tenantId, Guid patientId, ConsentSet set, string jurisdiction, DateTimeOffset now, Guid? actor) =>
@@ -31,8 +31,7 @@ public sealed class PatientConsents(PatientsDbContext db, ICurrentTenant tenant,
 
     public async Task<IReadOnlyList<ConsentState>?> CurrentAsync(Guid patientId, CancellationToken cancellationToken = default)
     {
-        var facilityId = facility.FacilityId ?? throw new InvalidOperationException("No facility context.");
-        if (!await db.Patients.AsNoTracking().AnyAsync(p => p.Id == patientId && p.FacilityId == facilityId, cancellationToken)) return null;
+        if (!await db.Patients.AsNoTracking().AnyAsync(p => p.Id == patientId, cancellationToken)) return null;
         var all = await db.ConsentReceipts.AsNoTracking().Where(r => r.PatientId == patientId).ToListAsync(cancellationToken);
         return all.GroupBy(r => (r.Type, r.Channel))
             .Select(g => g.OrderByDescending(r => r.DecidedAt).ThenBy(r => r.Granted).First())
@@ -43,9 +42,8 @@ public sealed class PatientConsents(PatientsDbContext db, ICurrentTenant tenant,
     public async Task<IReadOnlyList<ConsentDecisionInput>?> ChangeAsync(Guid patientId, ConsentSet consents, CancellationToken cancellationToken = default)
     {
         var tenantId = tenant.TenantId ?? throw new InvalidOperationException("No tenant context.");
-        var facilityId = facility.FacilityId ?? throw new InvalidOperationException("No facility context.");
-        // Facility-scoped like the registration reads: another facility's patient is not found and nothing is written.
-        var patient = await db.Patients.AsNoTracking().Where(p => p.Id == patientId && p.FacilityId == facilityId)
+        // Organisation-wide like the registration reads (MDV-P1-072): another tenant's patient is not found and nothing is written.
+        var patient = await db.Patients.AsNoTracking().Where(p => p.Id == patientId)
             .Select(p => new { p.CountryCode, Region = p.Address != null ? p.Address.Region : null }).SingleOrDefaultAsync(cancellationToken);
         if (patient is null) return null;
         var set = ConsentRules.ForChange(consents);

@@ -14,9 +14,10 @@ namespace Medvya.Patients.Infrastructure;
 /// Patient registration, directory and search. Each write and its audit events run in one database transaction (fail closed): the
 /// events commit with the change, and a failed audit write rolls the change back. Reads do not audit here: the calling endpoint's
 /// <c>.Audited()</c> filter writes one event before the answer is sent, so each request leaves exactly one event.
-/// Reads and writes reach the active facility's patients only: a registration command must name the active facility (the HTTP
-/// endpoint fills it from the session, never from the request body), and another facility's patient is not found for completion.
-/// shortcut: reads see the active facility's patients only; sharing patients across one tenant's facilities waits for multi-site rules (P7).
+/// The patient record is shared by the organisation's locations (MDV-P1-072): the tenant is the organisation, so one MRN sequence, search and
+/// duplicate scope cover every location. A registration command must still name the active facility (the HTTP endpoint fills it from the
+/// session, never from the request body): <c>Patient.FacilityId</c> stays where the person was registered. Tenant isolation is the EF filter
+/// and row-level security; whether a clinician may open a chart at another location is the care-relationship check, not this class.
 /// </summary>
 public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant, ICurrentFacility facility, ICurrentUser user, IAuditLog audit, TimeProvider clock,
     IFacilityDirectory facilities) : IPatientRegistry
@@ -39,7 +40,7 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
         if (key is not null && await ReplayAsync(key, now, warnings, cancellationToken) is { } first) return first;
 
         // Checked here as well as while typing: the save is refused until the desk has decided about every possible match.
-        var duplicates = await DuplicatesAsync(c.FacilityId, c.FullName, estimated ? null : dob, rules.MatchKeys(c.Identifiers), cancellationToken);
+        var duplicates = await DuplicatesAsync(c.FullName, estimated ? null : dob, rules.MatchKeys(c.Identifiers), cancellationToken);
         var resolved = c.Duplicates?.CandidateIds ?? [];
         if (duplicates.Any(d => !resolved.Contains(d.PatientId)))
         {
@@ -54,7 +55,7 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
         var patient = new Patient
         {
             Id = Guid.CreateVersion7(), TenantId = tenantId, FacilityId = c.FacilityId, CountryCode = c.CountryCode,
-            Mrn = await NextMrnAsync(tenantId, c.FacilityId, cancellationToken),
+            Mrn = await NextMrnAsync(tenantId, cancellationToken),
             FullName = c.FullName, ArabicName = c.ArabicName, DateOfBirth = dob, DateOfBirthEstimated = estimated, SexAtBirth = c.SexAtBirth,
             GenderIdentity = c.GenderIdentity, PreferredLanguage = c.PreferredLanguage, Nationality = c.Nationality,
             Mobile = c.Mobile, AlternatePhone = c.AlternatePhone, Email = c.Email, Address = c.Address,
@@ -131,13 +132,13 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
         var term = CountryRules.For(search.CountryCode).ParseSearch(search.Query);
         var now = clock.GetUtcNow();
 
-        var patients = FacilityPatients();
+        var patients = OrgPatients();
         // Digits that are an MRN win (MDV-P1-017: the MRN of a merged record finds the survivor); only without an MRN hit are they part of a phone or an Aadhaar last 4.
         var mrn = term.Kind == SearchKind.Mrn ? term.Value
             : term.Kind == SearchKind.Number && term.Value!.Length <= Mrn.Digits ? Mrn.Format(int.Parse(term.Value, System.Globalization.CultureInfo.InvariantCulture)) : null;
-        // The survivors of merged records with this MRN, looked up first on the unique MRN index: a correlated EXISTS in the same OR made the MRN search read the whole facility (0.9 s at 1,000,000 patients).
+        // The survivors of merged records with this MRN, looked up first on the unique MRN index: a correlated EXISTS in the same OR made the MRN search read the whole organisation (0.9 s at 1,000,000 patients).
         var survivors = mrn is null ? []
-            : await db.Patients.AsNoTracking().Where(m => m.FacilityId == FacilityId() && m.Mrn == mrn && m.MergedIntoPatientId != null).Select(m => m.MergedIntoPatientId!.Value).ToListAsync(cancellationToken);
+            : await db.Patients.AsNoTracking().Where(m => m.Mrn == mrn && m.MergedIntoPatientId != null).Select(m => m.MergedIntoPatientId!.Value).ToListAsync(cancellationToken);
         if (term.Kind == SearchKind.Number && mrn is not null && await patients.AnyAsync(p => p.Mrn == mrn || survivors.Contains(p.Id), cancellationToken)) term = new(SearchKind.Mrn, mrn);
         var tokens = term.Kind == SearchKind.Name ? await NameTokensAsync(term.Value!, cancellationToken) : [];
         patients = term.Kind switch
@@ -162,7 +163,7 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
         var total = await patients.CountAsync(cancellationToken);
         // Too few exact hits: forgive typos too (a missing or transposed letter, a near spelling). Exact hits still rank first.
         var fuzzy = term.Kind == SearchKind.Name && tokens.Count > 0 && total < FuzzyBelow;
-        if (fuzzy) patients = Filtered(Contains(FacilityPatients(), tokens, await SwappedPatternsAsync(tokens, cancellationToken)));
+        if (fuzzy) patients = Filtered(Contains(OrgPatients(), tokens, await SwappedPatternsAsync(tokens, cancellationToken)));
         var phrase = string.Join(' ', tokens); // ranks: words together at a word start, then closest, then A to Z
         var ordered = term.Kind == SearchKind.Name
             ? patients.OrderByDescending(p => EF.Functions.Like(EF.Property<string>(p, SearchKey), phrase + "%") || EF.Functions.Like(EF.Property<string>(p, SearchKey), "% " + phrase + "%"))
@@ -172,7 +173,7 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
         List<(Guid Id, string FullName, DateOnly DateOfBirth, bool DateOfBirthEstimated, SexAtBirth SexAtBirth, string Mrn, RegistrationStatus Status, string CountryCode)> rows;
         if (fuzzy)
         {
-            // One pass over the facility's rows instead of a count and a page: the filter is the cost. Matches beyond the paging limit are not counted.
+            // One pass over the organisation's rows instead of a count and a page: the filter is the cost. Matches beyond the paging limit are not counted.
             var all = await shown.Take(PatientSearch.MaxPage * PatientSearch.PageSize).ToListAsync(cancellationToken);
             total = all.Count;
             rows = [.. all.Skip((search.Page - 1) * PatientSearch.PageSize).Take(PatientSearch.PageSize).Select(p => (p.Id, p.FullName, p.DateOfBirth, p.DateOfBirthEstimated, p.SexAtBirth, p.Mrn, p.Status, p.CountryCode))];
@@ -187,7 +188,7 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
 
     /// <summary>
     /// Digits (4 to 15) that are not an MRN: found inside a mobile or alternate number, or the Aadhaar last 4. An MRN hit is decided first, by the caller.
-    /// Phone is a LIKE on the facility's rows (row-level security keeps it off any index, see below); digits only, so no wildcard can enter the pattern.
+    /// Phone is a LIKE on the organisation's rows (row-level security keeps it off any index, see below); digits only, so no wildcard can enter the pattern.
     /// </summary>
     IQueryable<Patient> NumberMatch(IQueryable<Patient> patients, string digits)
     {
@@ -199,7 +200,7 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
     }
 
     // Why no trigram index: row-level security keeps pg_trgm's operators (LIKE, %, <%) out of every index, because they are not "leakproof"
-    // and only a superuser can mark a function so. The tenant and facility index narrows to one facility, and these filters run on its rows;
+    // and only a superuser can mark a function so. The tenant index narrows to one organisation, and these filters run on its rows;
     // docs/03-architecture/patient-search.md has the measurements and the ceiling.
     const string SearchKey = PatientsDbContext.SearchKeyColumn;
     const int FuzzyBelow = 3;
@@ -259,11 +260,10 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
         return initials.ToUpperInvariant();
     }
 
-    IQueryable<Patient> FacilityPatients() => FacilityPatients(FacilityId());
-
     Guid FacilityId() => facility.FacilityId ?? throw new InvalidOperationException("No facility context.");
 
-    IQueryable<Patient> FacilityPatients(Guid facilityId) => db.Patients.AsNoTracking().Where(p => p.FacilityId == facilityId && p.MergedIntoPatientId == null);
+    /// <summary>Every location's live patients of the organisation (the tenant filter and row-level security do the isolation).</summary>
+    IQueryable<Patient> OrgPatients() => db.Patients.AsNoTracking().Where(p => p.MergedIntoPatientId == null);
 
     /// <summary>At most this many possible matches are shown: enough to decide, too few to browse the register through this door.</summary>
     const int MaxCandidates = 5;
@@ -271,12 +271,11 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
     public Task<IReadOnlyList<DuplicateCandidate>> FindDuplicatesAsync(DuplicateQuery query, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(query);
-        var facilityId = FacilityId();
-        return DuplicatesAsync(facilityId, query.FullName, query.DateOfBirth, CountryRules.For(query.CountryCode).MatchKeys(query.Identifiers), cancellationToken);
+        return DuplicatesAsync(query.FullName, query.DateOfBirth, CountryRules.For(query.CountryCode).MatchKeys(query.Identifiers), cancellationToken);
     }
 
     /// <summary>Exact identifier matches, then a similar name with the identical recorded date of birth. Phone is never read.</summary>
-    async Task<IReadOnlyList<DuplicateCandidate>> DuplicatesAsync(Guid facilityId, string fullName, DateOnly? dateOfBirth, IReadOnlyList<IdentifierInput> keys, CancellationToken cancellationToken)
+    async Task<IReadOnlyList<DuplicateCandidate>> DuplicatesAsync(string fullName, DateOnly? dateOfBirth, IReadOnlyList<IdentifierInput> keys, CancellationToken cancellationToken)
     {
         var byIdentifier = new Dictionary<Guid, List<IdentifierScheme>>();
         foreach (var key in keys)
@@ -291,7 +290,7 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
         if (dateOfBirth is { } dob)
         {
             // An estimated date of birth (from a stated age) is not a date of birth: it never counts as "identical".
-            var sameDay = await FacilityPatients(facilityId).Where(p => p.DateOfBirth == dob && !p.DateOfBirthEstimated)
+            var sameDay = await OrgPatients().Where(p => p.DateOfBirth == dob && !p.DateOfBirthEstimated)
                 .Select(p => new { p.Id, p.FullName }).ToListAsync(cancellationToken);
             byName = [.. sameDay.Where(p => NameMatch.Similar(fullName, p.FullName)).Select(p => p.Id)];
         }
@@ -299,7 +298,7 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
         var matched = byIdentifier.Keys.Union(byName).ToList();
         if (matched.Count == 0) return [];
         var now = clock.GetUtcNow();
-        var rows = await FacilityPatients(facilityId).Where(p => matched.Contains(p.Id)).OrderByDescending(p => p.RegisteredAt).Take(MaxCandidates)
+        var rows = await OrgPatients().Where(p => matched.Contains(p.Id)).OrderByDescending(p => p.RegisteredAt).Take(MaxCandidates)
             .Select(p => new { p.Id, p.FullName, p.DateOfBirth, p.SexAtBirth, p.Mrn, p.CountryCode }).ToListAsync(cancellationToken);
         var shown = rows.Select(r => r.Id).ToList();
         var identifiers = await db.Identifiers.AsNoTracking().Where(i => shown.Contains(i.PatientId)).ToListAsync(cancellationToken);
@@ -315,9 +314,7 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
         CancellationToken cancellationToken = default)
     {
         var tenantId = TenantId();
-        var facilityId = FacilityId();
-        // Facility-scoped like every read here: another facility's patient is not found and nothing is changed.
-        var patient = await db.Patients.SingleOrDefaultAsync(p => p.Id == patientId && p.FacilityId == facilityId, cancellationToken);
+        var patient = await db.Patients.SingleOrDefaultAsync(p => p.Id == patientId, cancellationToken);
         if (patient is null) return null;
         if (address is null && payer is null && emergencyContact is null) throw new PatientValidationException([new("completion", "required")]);
         var (validAddress, validPayer, emergency) = CountryRules.For(patient.CountryCode).ValidateCompletion(address, payer, emergencyContact);
@@ -380,7 +377,7 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
 
     async Task<PatientRecord?> LoadAsync(Guid patientId, CancellationToken cancellationToken)
     {
-        var patient = await FacilityPatients().SingleOrDefaultAsync(p => p.Id == patientId, cancellationToken);
+        var patient = await OrgPatients().SingleOrDefaultAsync(p => p.Id == patientId, cancellationToken);
         if (patient is null) return null;
         var identifiers = await db.Identifiers.AsNoTracking().Where(i => i.PatientId == patientId).ToListAsync(cancellationToken);
         var payer = await db.PayerCoverages.AsNoTracking().SingleOrDefaultAsync(p => p.PatientId == patientId, cancellationToken);
@@ -388,12 +385,12 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
         return new(patient, identifiers, payer, relationships);
     }
 
-    /// <summary>Next facility-scoped MRN, allocated inside the caller's transaction (the upsert's row lock serialises concurrent desks).</summary>
-    async Task<string> NextMrnAsync(Guid tenantId, Guid facilityId, CancellationToken cancellationToken)
+    /// <summary>Next MRN of the organisation, allocated inside the caller's transaction (the upsert's row lock serialises concurrent desks at every location).</summary>
+    async Task<string> NextMrnAsync(Guid tenantId, CancellationToken cancellationToken)
     {
         var next = (await db.Database.SqlQuery<int>($"""
-            INSERT INTO patients."MrnCounters" ("TenantId", "FacilityId", "LastNumber") VALUES ({tenantId}, {facilityId}, 1)
-            ON CONFLICT ("TenantId", "FacilityId") DO UPDATE SET "LastNumber" = patients."MrnCounters"."LastNumber" + 1
+            INSERT INTO patients."MrnCounters" ("TenantId", "LastNumber") VALUES ({tenantId}, 1)
+            ON CONFLICT ("TenantId") DO UPDATE SET "LastNumber" = patients."MrnCounters"."LastNumber" + 1
             RETURNING "LastNumber" AS "Value"
             """).ToListAsync(cancellationToken)).Single();
         return Mrn.Format(next);

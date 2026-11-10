@@ -34,7 +34,7 @@ public sealed class PatientNameSearchTests(PostgresFixture sql) : IClassFixture<
         for (var i = 0; i < names.Length; i++) await AddAsync(tenant, facility, $"{100000 + i}", names[i]);
         await AddAsync(tenant, facility, "100100", "Fatima Al Mansoori", "فاطمة المنصوري");
         await AddAsync(tenant, facility, "100101", "Sunita Sharma", "सुनीता शर्मा");
-        await AddAsync(tenant, otherFacility, "100000", "Mohamed Elsewhere");
+        await AddAsync(tenant, otherFacility, "100200", "Mohamed Elsewhere");
         await AddAsync(otherTenant, facility, "100000", "Mohamed Hussain");
     }
 
@@ -51,7 +51,7 @@ public sealed class PatientNameSearchTests(PostgresFixture sql) : IClassFixture<
     {
         var ids = await Names(query);
         await using var db = sql.Patients(tenant);
-        var all = db.Patients.Where(p => p.FacilityId == facility).ToDictionary(p => p.Id, p => p.FullName);
+        var all = db.Patients.ToDictionary(p => p.Id, p => p.FullName);
         return [.. ids.Select(id => all[id])];
     }
 
@@ -71,7 +71,8 @@ public sealed class PatientNameSearchTests(PostgresFixture sql) : IClassFixture<
         var mohamed = await Found("mohamed");
         Assert.Contains("Muhammad Rafiq Khan", mohamed);
         Assert.Contains("Mohammed Ali", mohamed);
-        Assert.DoesNotContain(mohamed, n => n.Contains("Hussain", StringComparison.Ordinal) || n.Contains("Elsewhere", StringComparison.Ordinal)); // another tenant, another facility
+        Assert.Contains("Mohamed Elsewhere", mohamed); // another location of the organisation (MDV-P1-072)
+        Assert.DoesNotContain(mohamed, n => n.Contains("Hussain", StringComparison.Ordinal)); // another tenant
         Assert.Contains("Krishnan Subramanian", await Found("krishnann subramanian")); // doubled letter
         Assert.Contains("Krishnan Subramanian", await Found("krsihnan")); // transposed
         Assert.Contains("Venkatesh Reddy", await Found("venkatsh")); // missing letter
@@ -100,6 +101,6 @@ public sealed class PatientNameSearchTests(PostgresFixture sql) : IClassFixture<
         Assert.Equal("Sreenivasan Kumar", found[0]);
         Assert.Contains("Aaron Srinivasa", found);
         Assert.Empty(await Found("hussain"));
-        Assert.Empty(await Found("elsewhere"));
+        Assert.Equal(["Mohamed Elsewhere"], await Found("elsewhere")); // another location of the same organisation (MDV-P1-072)
     }
 }

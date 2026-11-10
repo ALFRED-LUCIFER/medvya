@@ -6,11 +6,11 @@ Front-desk search (`POST /v1/patients/search`, `PatientRegistry.SearchAsync`, MD
 
 | Query | How it is found | Index |
 |---|---|---|
-| MRN | exact on the unique `(TenantId, FacilityId, Mrn)` index; the survivors of merged records with that MRN are looked up first, by the same index | yes |
+| MRN | exact on the unique `(TenantId, Mrn)` index; the survivors of merged records with that MRN are looked up first, by the same index | yes |
 | Phone | exact `Mobile` or `AlternatePhone` | `Mobile` index; the alternate number is filtered |
-| 4 to 15 digits (not a full phone, ABHA or Emirates ID) | an MRN first (6 digits or fewer: the MRN index, merged records to their survivor); only with no MRN hit, the digits as part of `Mobile` or `AlternatePhone` (`LIKE`, a filter on the facility's rows, never an index) or as an Aadhaar last 4 (blind index). A typed 12-digit Aadhaar is cut to its last 4 in memory; the rest is dropped, never stored or logged | MRN index, then a filter |
+| 4 to 15 digits (not a full phone, ABHA or Emirates ID) | an MRN first (6 digits or fewer: the MRN index, merged records to their survivor); only with no MRN hit, the digits as part of `Mobile` or `AlternatePhone` (`LIKE`, a filter on the organisation's rows, never an index) or as an Aadhaar last 4 (blind index). A typed 12-digit Aadhaar is cut to its last 4 in memory; the rest is dropped, never stored or logged | MRN index, then a filter |
 | ABHA, Emirates ID | HMAC blind index (ADR-012); the value is never compared in plaintext | yes |
-| Name | the stored **search key** (below): every word is a substring of it (`LIKE`); ranked words-together-at-a-word-start first, then trigram similarity, then A to Z | tenant and facility index, then a filter |
+| Name | the stored **search key** (below): every word is a substring of it (`LIKE`); ranked words-together-at-a-word-start first, then trigram similarity, then A to Z | tenant index, then a filter |
 | Name, fewer than 3 exact hits | the same, but a word may also be near a word of the key (`word_similarity` of at least 0.6) or have two adjacent letters swapped (`krsihnan` finds `Krishnan`). Exact hits still rank first. One pass, at most 1,000 matches (the paging limit) | filter |
 
 **Search key.** `patients."Patients"."SearchKey"` is a stored generated column, `patients.search_key("FullName", "ArabicName")`, kept by the database on every insert and update, so no code path can forget it and a bulk load fills it too. `patients.fold_name` lower-cases and folds spellings that meet in practice: `Mohamed`, `Mohammed`, `Muhammad` give `muhamad`; `Krishnann` gives `krisnan`; `Shree` and `Sree` give `sri`; `D'Souza` gives `dsuza`; `Laxmi` and `Lakshmi` give `laksmi`; `Fathima` and `Fatima` meet. Devanagari and Arabic letters pass through lower-cased, so those names are found by substring. The query is folded by the same SQL function (never a second copy in C#), then cut into letter-and-digit words, so a `%`, `_` or regex character in what the user typed can never reach a pattern.
@@ -21,7 +21,7 @@ Front-desk search (`POST /v1/patients/search`, `PatientRegistry.SearchAsync`, MD
 
 ## Why there is no trigram index
 
-A `pg_trgm` GIN index was built and measured first (a composite on `TenantId, FacilityId, SearchKey gin_trgm_ops`). As a superuser it answers in 3 ms to 9 ms. As `medvya_app` PostgreSQL never uses it for `LIKE`, `%` or `<%`: with row-level security, a user's qualifier may reach an index only if its function is **leakproof**, and `textlike`, `similarity_op` and `word_similarity_op` are not (`SELECT proname, proleakproof FROM pg_proc`). Only a superuser can mark a function leakproof, which Azure Flexible Server does not give us. So the index would be 10 MB per 240,000 patients and used by nothing. The planner uses the tenant and facility index, and the filter runs on that facility's rows.
+A `pg_trgm` GIN index was built and measured first (a composite on `TenantId, SearchKey gin_trgm_ops`). As a superuser it answers in 3 ms to 9 ms. As `medvya_app` PostgreSQL never uses it for `LIKE`, `%` or `<%`: with row-level security, a user's qualifier may reach an index only if its function is **leakproof**, and `textlike`, `similarity_op` and `word_similarity_op` are not (`SELECT proname, proleakproof FROM pg_proc`). Only a superuser can mark a function leakproof, which Azure Flexible Server does not give us. So the index would be 10 MB per 240,000 patients and used by nothing. The planner uses the tenant index, and the filter runs on that organisation's rows.
 
 Ways around it, none taken: a `SECURITY DEFINER` search function under a role exempt from the policy (the tenant predicate would then rest on one function, not on row-level security: a new ADR); a token table searched by prefix with leakproof comparisons (`text_pattern_ops`), which cannot do middle-of-word or typos without storing every deletion variant; an external search service (ruled out). The extension is still needed for `similarity` and `word_similarity` (functions only): `roles.sql` creates `pg_trgm`, and `azure.extensions` lists `PG_TRGM` (`infra/bicep/postgres.bicep`).
 
@@ -39,16 +39,16 @@ Local PostgreSQL 16 in Colima, one practice per size in the same table, seeded b
 | MRN after | 0.02 ms | 0.02 ms | 0.02 ms |
 | Phone exact | 4 ms | 23 ms | 42 ms |
 
-Plans: name with exact hits, tenant and facility index (bitmap) at 40k and 200k, parallel sequential scan at 1,000,000, the substring filter on each row; typo the same with the similarity filter (about 1 µs per row, CPU bound); MRN a `BitmapOr` of the MRN index and the primary key; phone a bitmap scan on the `Mobile` index plus filter.
+Plans: name with exact hits, tenant index (bitmap) at 40k and 200k, parallel sequential scan at 1,000,000, the substring filter on each row; typo the same with the similarity filter (about 1 µs per row, CPU bound); MRN a `BitmapOr` of the MRN index and the primary key; phone a bitmap scan on the `Mobile` index plus filter.
 
 Through the endpoint (`PatientSearchPerformanceTests`, Testcontainers PostgreSQL, 88 searches: prefix, spelling variant, transposed and missing letters, two-word partial, phone, MRN, ABHA, directory): 40,000 patients p50 17 ms, p95 77 to 134 ms (limit 300). At 200,000 (`MEDVYA_SEARCH_PATIENTS=200000`): p50 111 ms, p95 480 ms, so the typo queries are over budget there and the exact ones are not.
 
 ## Ceiling and what to do at the ceiling
 
-- Exact-hit name search, MRN, phone and identifier: comfortable to 1,000,000 patients in one facility.
-- Typo-tolerant fallback: within budget to about 100,000 patients per facility on this hardware; at 200,000 it is about 0.3 s in the database alone. A facility that big needs the leakproof token table or the `SECURITY DEFINER` function above (an ADR first). Patients are searched per facility, not per tenant, so a hospital group's total does not count.
+- Exact-hit name search, MRN, phone and identifier: comfortable to 1,000,000 patients in one organisation.
+- Typo-tolerant fallback: within budget to about 100,000 patients per organisation on this hardware; at 200,000 it is about 0.3 s in the database alone. An organisation that big needs the leakproof token table or the `SECURITY DEFINER` function above (an ADR first). Since MDV-P1-072 patients are searched per organisation (tenant), across all its locations, so the total of every location counts.
 - A word shorter than 3 characters matches too much to be useful and still runs.
-- `AlternatePhone` has no index; add one (`TenantId, FacilityId, AlternatePhone`) if phone search at 1,000,000 matters.
+- `AlternatePhone` has no index; add one (`TenantId, AlternatePhone`) if phone search at 1,000,000 matters.
 - Changing the folding rules rewrites the table: ship a new function and column, never an edit in place.
 - No unaccent: Latin names with diacritics are not folded.
 

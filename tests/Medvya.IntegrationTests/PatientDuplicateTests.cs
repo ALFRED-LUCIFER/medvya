@@ -86,10 +86,12 @@ public sealed class PatientDuplicateTests(PostgresFixture sql) : IClassFixture<P
     }
 
     [Fact]
-    public async Task AnotherFacilitysPatientIsNotACandidate()
+    public async Task AnotherLocationsPatientOfTheOrganisationIsACandidate()
     {
-        await Register(India("Suresh Reddy") with { FacilityId = Guid.NewGuid() });
-        Assert.Empty(await Check("IN", "Suresh Reddy", Dob));
+        // MDV-P1-072: one duplicate scope per organisation. The registry here works at one facility, so the other location's record is written directly.
+        var other = await Register(India("Suresh Reddy"));
+        await using (var db = sql.Patients(tenant)) await db.Patients.Where(p => p.Id == other.PatientId).ExecuteUpdateAsync(s => s.SetProperty(p => p.FacilityId, Guid.NewGuid()));
+        Assert.Single(await Check("IN", "Suresh Reddy", Dob));
     }
 
     [Fact]

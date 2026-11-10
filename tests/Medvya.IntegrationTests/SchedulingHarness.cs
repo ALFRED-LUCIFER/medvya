@@ -83,7 +83,7 @@ internal sealed class SchedulingHarness(PostgresFixture sql)
         foreach (var (id, name, mrn, at) in new[]
         {
             (Patient, "Meera Iyer (synthetic)", "000001", Facility), (SecondPatient, "Deepak Nair (synthetic)", "000002", Facility),
-            (OtherFacilityPatient, "Lakshmi Pillai (synthetic)", "000001", OtherFacility),
+            (OtherFacilityPatient, "Lakshmi Pillai (synthetic)", "000003", OtherFacility),
         })
             patients.Patients.Add(new Patient
             {

@@ -71,14 +71,15 @@ public sealed class PatientsDbContext(DbContextOptions<PatientsDbContext> option
                 a.Property(x => x.Makani).HasMaxLength(10);
                 a.Property(x => x.PoBox).HasMaxLength(10);
             });
-            e.HasIndex(x => new { x.TenantId, x.FacilityId, x.Mrn }).IsUnique();
+            // One MRN sequence per organisation (MDV-P1-072); the indexes below serve the organisation-wide desk queries.
+            e.HasIndex(x => new { x.TenantId, x.Mrn }).IsUnique();
             // Desk directory (newest first) and exact phone search (MDV-P1-018).
-            e.HasIndex(x => new { x.TenantId, x.FacilityId, x.RegisteredAt });
-            e.HasIndex(x => new { x.TenantId, x.FacilityId, x.Mobile });
+            e.HasIndex(x => new { x.TenantId, x.RegisteredAt });
+            e.HasIndex(x => new { x.TenantId, x.Mobile });
             // Duplicate check: patients with the same date of birth (MDV-P1-016).
-            e.HasIndex(x => new { x.TenantId, x.FacilityId, x.DateOfBirth });
+            e.HasIndex(x => new { x.TenantId, x.DateOfBirth });
             // Name search scans this narrow covering index instead of the wide table rows (LIKE '%…%' cannot seek).
-            e.HasIndex(x => new { x.TenantId, x.FacilityId, x.FullName })
+            e.HasIndex(x => new { x.TenantId, x.FullName })
                 .IncludeProperties(x => new { x.ArabicName, x.DateOfBirth, x.DateOfBirthEstimated, x.SexAtBirth, x.Mrn, x.Status, x.CountryCode, x.RegisteredAt });
             e.HasIndex(x => new { x.TenantId, x.MergedIntoPatientId }); // merged records of a survivor (MDV-P1-017)
             e.Property(x => x.IdempotencyKeyHash).HasMaxLength(64).IsFixedLength();

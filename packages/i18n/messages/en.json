@@ -1844,6 +1844,7 @@
   "audit.col.time": "Time",
   "audit.col.staff": "Staff",
   "audit.col.role": "Role",
+  "audit.col.location": "Location",
   "audit.col.action": "Action",
   "audit.col.patient": "Patient",
   "audit.col.purpose": "Purpose",

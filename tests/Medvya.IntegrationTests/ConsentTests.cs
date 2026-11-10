@@ -26,8 +26,8 @@ public class ConsentTests(PostgresFixture sql) : IClassFixture<PostgresFixture>
         new(sql.Patients(t ?? tenant), new PostgresFixture.FixedTenant(t ?? tenant), new FixedFacility(at ?? facility), new User(actor),
             new AuditLog(sql.Audit(t ?? tenant)), TimeProvider.System, new FacilityZone("Asia/Kolkata"));
 
-    PatientConsents Consents(Guid? t = null, Guid? at = null) =>
-        new(sql.Patients(t ?? tenant), new PostgresFixture.FixedTenant(t ?? tenant), new FixedFacility(at ?? facility), new User(actor),
+    PatientConsents Consents(Guid? t = null) =>
+        new(sql.Patients(t ?? tenant), new PostgresFixture.FixedTenant(t ?? tenant), new User(actor),
             new AuditLog(sql.Audit(t ?? tenant)), TimeProvider.System);
 
     Task<RegistrationResult> Register(ConsentSet? consents, string country = "IN", string? region = null) =>
@@ -122,7 +122,7 @@ public class ConsentTests(PostgresFixture sql) : IClassFixture<PostgresFixture>
         await Assert.ThrowsAsync<PostgresException>(() => db.Database.ExecuteSqlAsync($"""DELETE FROM patients."ConsentReceipts" WHERE "PatientId" = {saved.PatientId}"""));
 
         Assert.False(await Consents(Guid.NewGuid()).IsGrantedAsync(saved.PatientId, ConsentType.Treatment)); // another tenant
-        Assert.Null(await Consents(at: Guid.NewGuid()).ChangeAsync(saved.PatientId, Set(Reminders(ConsentChannel.Sms, false)))); // another facility
+        Assert.Null(await Consents(Guid.NewGuid()).ChangeAsync(saved.PatientId, Set(Reminders(ConsentChannel.Sms, false)))); // another tenant; another location of the organisation shares the record (MDV-P1-072)
         Assert.True(await Consents().IsGrantedAsync(saved.PatientId, ConsentType.Reminders, ConsentChannel.Sms));
     }
 }

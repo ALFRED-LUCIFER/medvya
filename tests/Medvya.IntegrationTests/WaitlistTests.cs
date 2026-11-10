@@ -176,7 +176,8 @@ public sealed class WaitlistTests(PostgresFixture sql) : IClassFixture<PostgresF
     public async Task AddingChecksThePatientDoctorWindowAndDuplicates()
     {
         async Task<IReadOnlyList<ValidationError>> Invalid(AddToWaitlist c) => (await Assert.ThrowsAsync<SchedulingValidationException>(() => Desk().AddAsync(c))).Errors;
-        Assert.Equal([new ValidationError("patientId", "unknown")], await Invalid(new() { FacilityId = h.Facility, PatientId = h.OtherFacilityPatient })); // another location's patient
+        await h.SeedOtherOrganisationPatientAsync();
+        Assert.Equal([new ValidationError("patientId", "unknown")], await Invalid(new() { FacilityId = h.Facility, PatientId = h.ForeignPatient })); // another organisation's patient
         Assert.Equal([new ValidationError("calendarId", "unknown")], await Invalid(new() { FacilityId = h.Facility, PatientId = h.Patient, CalendarId = Guid.NewGuid() }));
         Assert.Equal([new ValidationError("until", "before_from")], await Invalid(new() { FacilityId = h.Facility, PatientId = h.Patient, From = new(12, 0), Until = new(9, 0) }));
         await AddAsync();

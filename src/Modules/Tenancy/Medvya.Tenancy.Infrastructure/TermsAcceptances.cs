@@ -32,8 +32,8 @@ public sealed class TermsAcceptances(TenancyDbContext db, ICurrentTenant tenant,
     public async Task<bool> AcceptAsync(CancellationToken cancellationToken = default)
     {
         var tenantId = tenant.TenantId ?? throw new InvalidOperationException("No tenant context.");
-        // The owner of a practice: its admin, or the solo doctor running it. Not hospital IT, not a hospital's clinicians.
-        // A solo doctor whose licence is still pending may accept: the DPA binds the account holder as data controller, and a pending doctor may book
+        // The owner of a practice: its admin, or the owner-doctor running it. Not hospital IT, not a hospital's clinicians.
+        // The DPA binds the account holder as data controller, whatever the state of their licence attestation, and a doctor may book
         // (DoctorLicence); the licence gates recording and signing only.
         if (user.UserId is not { } userId || await staff.CurrentRoleAsync(cancellationToken) is not (Role.PracticeAdmin or Role.SoloDoctor)) return false;
         if (await AcceptedAtAsync(cancellationToken) is not null) return true;

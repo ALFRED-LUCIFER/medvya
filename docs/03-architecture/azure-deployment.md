@@ -28,7 +28,7 @@ Sources: PRD v2 §07/§07b (authoritative), Azure Architecture (stages, residenc
 |---|---|---|
 | 1 Single customer | One subscription, one app, one DB per country | P0–P5 |
 | 2 Landing zone + control plane | Management group per country, tenant catalogue, onboarding automation, stamp routing | P5 (platform console) |
-| 3 Pooled stamps | IN-01/AE-01 for solo doctors and clinics, RLS. New stamp at ~2,000 tenants or 60% sustained DB CPU | On evidence |
+| 3 Pooled stamps | IN-01/AE-01 for one-doctor clinics and clinics, RLS. New stamp at ~2,000 tenants or 60% sustained DB CPU | On evidence |
 | 4 Dedicated hospital stamps | Own compute + DB + Key Vault + storage, CMK (HSM), private link to the HIS, own upgrade ring | P7-06 |
 
 Azure Front Door Premium + WAF, Container Apps/AKS, Fleet Manager, Flux GitOps, KEDA and Sentinel come in with stages 3–4 (P7). They are not used earlier.

@@ -19,6 +19,9 @@ public sealed class PrescribingDbContext(DbContextOptions<PrescribingDbContext> 
     public DbSet<AuthorisedPrescription> AuthorisedPrescriptions => Set<AuthorisedPrescription>();
     public DbSet<PrescriptionPdf> PrescriptionPdfs => Set<PrescriptionPdf>();
     public DbSet<RxLayoutApproval> RxLayoutApprovals => Set<RxLayoutApproval>();
+    public DbSet<RxShare> RxShares => Set<RxShare>();
+    public DbSet<RxShareCode> RxShareCodes => Set<RxShareCode>();
+    public DbSet<PharmacyDispatchEvent> PharmacyDispatchEvents => Set<PharmacyDispatchEvent>();
 
     Guid? CurrentTenantId => tenant.TenantId;
 
@@ -118,6 +121,31 @@ public sealed class PrescribingDbContext(DbContextOptions<PrescribingDbContext> 
             e.Property(x => x.Paper).HasMaxLength(2);
             e.Property(x => x.Sha256).HasMaxLength(64);
             e.HasIndex(x => new { x.TenantId, x.PrescriptionId });
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        // MDV-P2-020: shares and dispatch states are append-only and hash-chained; codes count wrong tries, so they are not.
+        modelBuilder.Entity<RxShare>(e =>
+        {
+            e.Property(x => x.Recipient).HasConversion<string>().HasMaxLength(10);
+            e.Property(x => x.Channel).HasConversion<string>().HasMaxLength(10);
+            e.Property(x => x.PharmacyName).HasMaxLength(RxShareRules.MaxPharmacyName);
+            e.Property(x => x.PharmacyEmail).HasMaxLength(254);
+            e.Property(x => x.LinkHash).HasMaxLength(32);
+            e.HasIndex(x => new { x.TenantId, x.LinkHash }).IsUnique();
+            e.HasIndex(x => new { x.TenantId, x.EncounterId });
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<RxShareCode>(e =>
+        {
+            e.Property(x => x.CodeHash).HasMaxLength(32);
+            e.HasIndex(x => new { x.TenantId, x.ShareId });
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<PharmacyDispatchEvent>(e =>
+        {
+            e.Property(x => x.State).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.PharmacyRef).HasMaxLength(RxShareRules.MaxPharmacyRef);
+            e.HasIndex(x => new { x.TenantId, x.ShareId });
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         modelBuilder.Entity<RxLayoutApproval>(e =>

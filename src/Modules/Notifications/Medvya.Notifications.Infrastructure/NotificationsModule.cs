@@ -27,6 +27,7 @@ public static class NotificationsModule
             .AddDbContext<NotificationsDbContext>((sp, o) => o.UseNpgsql(PostgresDataSources.For(connectionString)).AddInterceptors(sp.GetRequiredService<TenantSessionInterceptor>()))
             .AddScoped<IAppointmentSubscriber, AppointmentNotifier>()
             .AddScoped<INotificationSender, NotificationSender>()
+            .AddScoped<ISecureLinkMessages, SecureLinkMessages>()
             .AddScoped<IReceiptProcessor, ReceiptProcessor>()
             .AddScoped<INotificationQueries, NotificationQueries>()
             .AddScoped<IStaffNotifications, StaffNotifications>()

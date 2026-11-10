@@ -122,6 +122,15 @@ internal sealed class SchedulingHarness(PostgresFixture sql)
 
     sealed class FixedUser(Guid id) : ICurrentUser { public Guid? UserId => id; }
 
+    /// <summary>This harness has no Notifications module: a secure-link message never goes (RxShareTests sends through the host).</summary>
+    sealed class NoSecureLinks : Medvya.Notifications.Application.ISecureLinkMessages
+    {
+        static Task Refuse() => throw new Medvya.Notifications.Application.SecureLinkNotSentException("send_failed");
+        public Task SendLinkToPatientAsync(Guid patientId, Guid facilityId, Medvya.Notifications.Domain.NotificationChannel channel, string url, DateTimeOffset expiresAt, Guid reference, CancellationToken cancellationToken = default) => Refuse();
+        public Task SendLinkToPharmacyAsync(string email, Guid facilityId, string url, DateTimeOffset expiresAt, CancellationToken cancellationToken = default) => Refuse();
+        public Task SendCodeAsync(Guid patientId, Guid facilityId, string code, Guid reference, CancellationToken cancellationToken = default) => Refuse();
+    }
+
     IServiceProvider Scope(Guid user, Guid? inTenant, IInterceptor? interceptor = null, Action<IServiceCollection>? configure = null)
     {
         var services = new ServiceCollection()
@@ -131,6 +140,7 @@ internal sealed class SchedulingHarness(PostgresFixture sql)
             .AddSingleton<ICurrentFacility>(new PatientRegistryTests.FixedFacility(Facility))
             .AddSingleton<Medvya.Tenancy.Application.ILogoStore>(Logos) // before the module, which only adds a store when none is registered
             .AddSingleton(sql.NationalIds) // the fixture's national-ID setup (this harness has no host configuration)
+            .AddSingleton<Medvya.Notifications.Application.ISecureLinkMessages>(new NoSecureLinks())
             .AddAuditModule(ConnectionString).AddTenancyModule(ConnectionString).AddIdentityModule(ConnectionString)
             .AddPatientsModule(ConnectionString).AddSchedulingModule(ConnectionString).AddEncountersModule(ConnectionString).AddPrescribingModule(ConnectionString);
         if (interceptor is not null) services.ConfigureDbContext<Medvya.Scheduling.Infrastructure.Persistence.SchedulingDbContext>(o => o.AddInterceptors(interceptor));

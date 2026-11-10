@@ -142,6 +142,51 @@ public interface IPrescriptions
 
     /// <summary>Records the signed-in doctor's approval of the current print layout (exit gate 4); approving again keeps the first approval.</summary>
     Task<RxLayoutView> ApproveLayoutAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Every share of the consultation's prescription, newest first; audited as rx.share.read.</summary>
+    Task<IReadOnlyList<RxShareView>?> SharesAsync(Guid encounterId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Shares the authorised, unchanged prescription (MDV-P2-020): renders and stores its English A4 PDF, makes an expiring link and sends it, with no
+    /// clinical detail, to the patient (SMS or email) or to a named pharmacy (email; its dispatch starts as Sent). Opening the link needs a code sent to
+    /// the patient's registered mobile, so the patient must have one. Audited as rx.share in the transaction; nothing is kept when the message cannot go.
+    /// </summary>
+    /// <exception cref="PrescriptionConflictException">not_authorised, changed, no_mobile, no_address, send_failed.</exception>
+    /// <exception cref="PrescriptionValidationException">recipient, channel, pharmacyName, pharmacyEmail.</exception>
+    Task<IReadOnlyList<RxShareView>?> ShareAsync(Guid encounterId, ShareRx command, CancellationToken cancellationToken = default);
+
+    /// <summary>Records a pharmacy dispatch's next state (Dispensed with its time, or Cancelled) with the signed-in doctor as actor; audited as rx.dispatch.</summary>
+    /// <exception cref="PrescriptionConflictException">dispatch_final: it is no longer Sent.</exception>
+    /// <exception cref="PrescriptionValidationException">state, dispensedAt, pharmacyRef.</exception>
+    Task<IReadOnlyList<RxShareView>?> DispatchAsync(Guid shareId, UpdateDispatch command, CancellationToken cancellationToken = default);
+}
+
+/// <summary>Share the prescription with the patient (channel Sms or Email) or with a named pharmacy (by email).</summary>
+public sealed record ShareRx(RxShareRecipient? Recipient, RxShareChannel? Channel, string? PharmacyName, string? PharmacyEmail);
+
+/// <summary>A pharmacy dispatch's current state and who recorded it.</summary>
+public sealed record DispatchView(DispatchState State, string? PharmacyRef, DateTimeOffset? DispensedAt, Guid ChangedBy, DateTimeOffset ChangedAt);
+
+/// <summary>One share as the doctor sees it, never the address. <see cref="Replaced"/>: a later authorisation replaced the version shared, so the link opens nothing.</summary>
+public sealed record RxShareView(
+    Guid Id, RxShareRecipient Recipient, RxShareChannel Channel, string? PharmacyName, int VersionNo, bool Replaced, Guid SharedBy, DateTimeOffset SharedAt,
+    DateTimeOffset ExpiresAt, DispatchView? Dispatch);
+
+public sealed record UpdateDispatch(DispatchState? State, string? PharmacyRef, DateTimeOffset? DispensedAt);
+
+/// <summary>
+/// The public side of a share link (MDV-P2-020), run inside the link's tenant. An unknown or expired link is null (the caller answers both alike);
+/// every answer for a known link is audited with the patient and no actor.
+/// </summary>
+public interface IRxShareLinks
+{
+    /// <summary>Sends a new one-time code to the patient's registered mobile. False: no such live link.</summary>
+    /// <exception cref="PrescriptionConflictException">replaced, too_soon (a code went less than a minute ago), code_limit, no_address, send_failed.</exception>
+    Task<bool> SendCodeAsync(byte[] linkHash, CancellationToken cancellationToken = default);
+
+    /// <summary>The shared PDF, once the latest code matches; the code is then used up. Null: no such live link.</summary>
+    /// <exception cref="PrescriptionConflictException">replaced, no_code (none live: ask for a new one), wrong_code.</exception>
+    Task<RxPdf?> OpenAsync(byte[] linkHash, string? code, CancellationToken cancellationToken = default);
 }
 
 /// <summary>The public QR verify check (MDV-P2-017): runs inside the token's tenant; unknown and malformed tokens are null alike. Audited with the patient.</summary>

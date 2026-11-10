@@ -121,3 +121,26 @@ public interface INotificationPreferences
     /// <summary>Saves, audits, and cancels what is still queued for anything just turned off.</summary>
     Task<NotificationPreferencesView> SaveAsync(NotificationPreferencesView changes, CancellationToken cancellationToken = default);
 }
+
+/// <summary>Why a secure-link message could not go: "no_address" (none registered), "send_failed" (the provider refused, or no provider is set up).</summary>
+public sealed class SecureLinkNotSentException(string code) : Exception("Secure link message not sent: " + code)
+{
+    public string Code { get; } = code;
+}
+
+/// <summary>
+/// Secure-link messages (MDV-P2-020): fixed texts with the clinic's name, the link (or the code) and its expiry, and nothing else: no patient name, no
+/// medicine, no clinical detail. Sent at once, not queued: the person is waiting. Addresses come from the patient record at send time and are never
+/// logged or stored. Each call throws <see cref="SecureLinkNotSentException"/> when nothing was sent.
+/// </summary>
+public interface ISecureLinkMessages
+{
+    /// <summary>The link to the patient's registered mobile (SMS) or email, in their language.</summary>
+    Task SendLinkToPatientAsync(Guid patientId, Guid facilityId, NotificationChannel channel, string url, DateTimeOffset expiresAt, Guid reference, CancellationToken cancellationToken = default);
+
+    /// <summary>The link to a pharmacy's email, in English; it tells the pharmacy to ask the patient for the code.</summary>
+    Task SendLinkToPharmacyAsync(string email, Guid facilityId, string url, DateTimeOffset expiresAt, CancellationToken cancellationToken = default);
+
+    /// <summary>A one-time code by SMS to the patient's registered mobile, whoever opened the link.</summary>
+    Task SendCodeAsync(Guid patientId, Guid facilityId, string code, Guid reference, CancellationToken cancellationToken = default);
+}

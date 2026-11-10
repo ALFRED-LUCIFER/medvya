@@ -1,6 +1,8 @@
 using Medvya.Audit.Api;
 using Medvya.Audit.Domain;
+using Medvya.BuildingBlocks.Domain;
 using Medvya.Encounters.Application;
+using Medvya.Patients.Application;
 using Medvya.Tenancy.Api;
 using Medvya.Tenancy.Application;
 using Medvya.Tenancy.Domain;
@@ -33,7 +35,18 @@ public static class NoteEndpoints
                 : await service.SignAsync(encounterId, body, ct) is { } view ? Results.Ok(view) : Results.NotFound())
             .RequireCapability(Capability.ClinicalNotes, Access.Sign)
             .AuditedByUseCase("note.sign", "note", AuditPurpose.Treatment).AddEndpointFilter(MapErrors);
+        // Today's pending notes (MDV-P2-002): the signed-in doctor's own unsigned consultations at this facility, with the patient's name to find them.
+        app.MapGet("/v1/notes/pending", Pending).RequireCapability(Capability.Patient360Chart, Access.Full)
+            .AuditedByUseCase("note.pending", "note", AuditPurpose.Treatment).AddEndpointFilter(MapErrors);
         return app;
+    }
+
+    static async Task<IResult> Pending([FromServices] IConsultNotes service, [FromServices] IPatientDirectory patients, [FromServices] ICurrentFacility current, CancellationToken ct)
+    {
+        if (current.FacilityId is not { } facilityId) return Results.Problem(statusCode: StatusCodes.Status403Forbidden, title: "No facility context");
+        var (pending, more) = await service.PendingAsync(facilityId, ct);
+        var names = await patients.SummariesAsync([.. pending.Select(p => p.PatientId).Distinct()], ct);
+        return Results.Ok(new { more, items = pending.Select(p => new { p.EncounterId, p.StartedAt, p.Drafted, patientName = names.GetValueOrDefault(p.PatientId)?.FullName }) });
     }
 
     static async ValueTask<object?> MapErrors(EndpointFilterInvocationContext context, EndpointFilterDelegate next)

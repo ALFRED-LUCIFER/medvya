@@ -104,6 +104,22 @@ journey('J3', {
       await expect(nurse.getByRole('button', { name: 'Save vitals' })).toBeEnabled(); // the save has finished
       await expect(nurse.getByRole('button', { name: 'Hand off · Ready for doctor' })).toBeDisabled(); // allergies not confirmed yet: never assumed
       await expectNoAxeViolations(nurse);
+
+      // MDV-P2-002: the nurse escalates; the treating doctor's open Today shows it within 2 seconds, without a reload (the board hub push).
+      const doctor = await browser.newPage();
+      await signIn(doctor, rao);
+      await doctor.goto('/app/today');
+      await doctor.getByRole('button', { name: 'My patients' }).click();
+      const visit = doctor.getByRole('region', { name: "Today's visits" }).getByRole('article', { name: new RegExp(patient.name) });
+      await expect(visit).toBeVisible();
+      await expect(doctor.getByRole('status').filter({ hasText: /^Live updates$/ })).toBeVisible(); // joined the hub before the push
+      await nurse.getByRole('button', { name: 'Escalate to doctor' }).click();
+      await nurse.getByRole('textbox', { name: 'Reason for the doctor' }).fill('Synthetic chest pain on arrival');
+      await nurse.getByRole('button', { name: 'Send urgent item' }).click();
+      await expect(visit).toContainText('Nurse escalation: Synthetic chest pain on arrival', { timeout: 2_000 });
+      await expectNoAxeViolations(doctor);
+      await doctor.close();
+
       await nurse.getByRole('button', { name: 'Confirm: no known allergies' }).click();
       await nurse.getByRole('button', { name: 'Hand off · Ready for doctor' }).click();
       await expect(nurse).toHaveURL(/\/nurse$/);

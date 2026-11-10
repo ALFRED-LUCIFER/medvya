@@ -1,12 +1,12 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
-import { CalendarCheck, CircleAlert, CircleCheck, CircleHelp, ClipboardCheck, DoorOpen, ReceiptText, Syringe, UserCheck, type LucideIcon } from 'lucide-react';
+import { CalendarCheck, FilePen, Siren, CircleAlert, CircleCheck, CircleHelp, ClipboardCheck, DoorOpen, ReceiptText, Syringe, UserCheck, type LucideIcon } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, FrontDeskTag } from '@medvya/ui';
+import { Button, buttonVariants, FrontDeskTag } from '@medvya/ui';
 import type { BoardCard, BoardColumn, LiveStatus } from '../../front-desk/domain/board';
 import { canConsult } from '../../encounters/domain/encounter';
 import type { AllergyState } from '../../patient360/domain/chart';
-import { ageOn, type Scope } from '../domain/today';
+import { ageOn, type PendingNote, type Scope } from '../domain/today';
 
 // A status is always an icon and words, never colour alone.
 const stateIcons: Record<string, LucideIcon> = {
@@ -19,9 +19,16 @@ type Props = {
   waitMinutes: (since: string) => number;
   /** Allergy state by patient, only for patients the clinician may treat; no entry shows no flag. */
   allergyFlags: Record<string, AllergyState>;
+  /** A nurse's urgent reason by visit (appointment id), only for patients the clinician may treat. */
+  escalations: Record<string, string>; escalationsFailed: boolean;
   /** Patient 360 of a patient. */
   chartPath: (patientId: string) => string;
   loading: boolean; offline: boolean; online: boolean; live: LiveStatus; forbidden: boolean; failed: boolean; onRetry: () => void;
+  /** The doctor's unsigned notes from any day, oldest first; each opens its consultation. */
+  pendingNotes: PendingNote[]; pendingFailed: boolean;
+  /** The server capped the list: there are more unsigned notes than shown. */
+  pendingMore: boolean;
+  consultPath: (encounterId: string) => string;
   /** "Start consultation" for a visit (MDV-P2-001): the same control as the board, which also asks for access when there is no care relationship. */
   consultAction: (card: BoardCard) => ReactNode;
 };
@@ -43,7 +50,9 @@ export default function DoctorTodayPage(p: Props) {
           </div>
         </div>
       </header>
+      {p.escalationsFailed && <p role="alert" className="text-sm font-semibold text-danger-700">{t('today.escalation.error')}</p>}
       <Body {...p} />
+      <PendingNotes {...p} />
     </div>
   );
 }
@@ -106,6 +115,11 @@ function Chips(p: Props & { card: BoardCard }) {
       <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-[13px] font-bold">
         <Icon aria-hidden className="size-4" />{t(`board.column.${c.state as BoardColumn}`)}{c.state === 'CheckedIn' && ` · ${t('board.waiting', { minutes: p.waitMinutes(c.since) })}`}
       </span>
+      {p.escalations[c.id] && (
+        <span className="inline-flex items-center gap-1.5 rounded-full border-2 border-danger-700 px-2.5 py-1 text-danger-700 text-[13px] font-bold">
+          <Siren aria-hidden className="size-4" />{t('today.escalation', { reason: p.escalations[c.id]! })}
+        </span>
+      )}
       <AllergyFlag state={p.allergyFlags[c.patientId]} />
       {c.registrationIncomplete && <FrontDeskTag kind="incomplete" />}
       {c.walkIn && <FrontDeskTag kind="walkIn" />}
@@ -151,4 +165,28 @@ function AllergyFlag({ state }: { state: AllergyState | undefined }) {
   if (!state) return null;
   const { Icon, key } = flagLooks[state];
   return <span className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[13px] font-bold"><Icon aria-hidden className="size-4" />{t(key)}</span>;
+}
+
+/** Unsigned notes from today and earlier days (MDV-P2-002), so none is forgotten; a note leaves the list only when it is signed. */
+function PendingNotes(p: Props) {
+  const { t, tCount, formatDate } = useI18n();
+  if (p.pendingFailed) return <p role="alert" className="text-sm text-muted-foreground">{t('today.pending.error')}</p>;
+  if (p.pendingNotes.length === 0) return null;
+  return (
+    <section aria-labelledby="today-pending" className="flex flex-col gap-2">
+      <h2 id="today-pending" className="text-[15px] font-extrabold">{p.pendingMore ? t('today.pending.more', { count: p.pendingNotes.length }) : tCount('today.pending', p.pendingNotes.length)}</h2>
+      <ul className="flex flex-col gap-2">
+        {p.pendingNotes.map(n => (
+          <li key={n.encounterId} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-card px-3 py-2.5">
+            <span className="flex items-center gap-2 text-sm">
+              <FilePen aria-hidden className="size-4 shrink-0" />
+              <span className="font-bold">{n.patientName || t('board.unknownPatient')}</span>
+              <span className="text-muted-foreground">{formatDate(new Date(n.startedAt), p.timeZone ?? undefined)}{' · '}{t(n.drafted ? 'today.pending.draft' : 'today.pending.empty')}</span>
+            </span>
+            <Link to={p.consultPath(n.encounterId)} className={buttonVariants({ variant: 'outline', className: 'min-h-11' })}>{t('today.pending.open')}</Link>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
 }

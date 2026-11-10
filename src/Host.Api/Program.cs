@@ -137,6 +137,8 @@ builder.Services.AddRateLimiter(o =>
 // Patient search per signed-in user: a desk searches a few times a minute; bulk enumeration is refused. Enforced after sign-in
 // (an endpoint filter), because the middleware above runs before authentication and would key every caller as anonymous.
 builder.Services.AddUserRateLimit(PatientEndpoints.SearchRateLimit, builder.Configuration.GetValue("RateLimiting:PatientSearchPerMinute", 30));
+// The ⌘K lookup runs after a 400 ms typing pause, so a doctor typing steadily makes a few calls a search; per user, after sign-in.
+builder.Services.AddUserRateLimit(PatientEndpoints.LookupRateLimit, builder.Configuration.GetValue("RateLimiting:PatientLookupsPerMinute", 60));
 // Opening records (and revealing their numbers): a desk opens a few a minute; bulk reading is refused. Per user, after sign-in.
 builder.Services.AddUserRateLimit(PatientEndpoints.RecordRateLimit, builder.Configuration.GetValue("RateLimiting:PatientRecordsPerMinute", 30));
 // The duplicate check runs (debounced) while the desk types: a few calls per registration. Per user, after sign-in, likewise.

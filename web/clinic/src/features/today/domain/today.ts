@@ -30,3 +30,9 @@ export const MAX_FLAGS = 100;
 
 /** The distinct patients of the visits, in the order shown: the lookup's key, so it runs again only when the people change. */
 export const patientIdsOf = (visits: BoardCard[]): string[] => [...new Set(visits.map(v => v.patientId).filter(Boolean))];
+
+/** An unsigned note of the signed-in doctor's (MDV-P2-002): the consultation to finish it in. */
+export type PendingNote = { encounterId: string; startedAt: string; drafted: boolean; patientName: string | null };
+
+/** A nurse's urgent call to the treating doctor about a visit (MDV-P2-007), shown on that visit until the consultation starts. */
+export type Escalation = { id: string; appointmentId: string; reason: string; escalatedAt: string };

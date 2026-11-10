@@ -66,6 +66,7 @@ public sealed class PatientSearchPerformanceTests(PostgresFixture sql, ITestOutp
         using var host = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b
             .UseSetting("ConnectionStrings:Medvya", sql.ConnectionString)
             .UseSetting("RateLimiting:PatientSearchPerMinute", "100000")
+            .UseSetting("RateLimiting:PatientLookupsPerMinute", "100000")
             .UseSetting("RateLimiting:DuplicateChecksPerMinute", "100000")
             .ConfigureTestServices(s => PatientEndpointTests.SignInFromHeaders(s, tenant)));
         using var desk = host.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost") });

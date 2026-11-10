@@ -86,6 +86,7 @@ try {
       Testing__ClockStartUtc: clockStart,
       // Every browser here is one client IP, and Host.Api also serves the app's scripts: the per-IP budget (300/min) is for a real desk.
       RateLimiting__PermitsPerMinute: '3000',
+      RateLimiting__SignInPerMinute: '600', // the suite signs in over 20 times a minute from this one IP; the 20/min default is for a real desk
     },
   });
   api.on('exit', code => { log(`Host.Api exited (${code})`); process.exit(1); });

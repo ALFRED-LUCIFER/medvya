@@ -42,6 +42,7 @@ Each step: who acts, on which screen, and what changes. 🔒 = clinician approva
 | 6 | P-01 | Nurse | Ready for doctor | Doctor sees it on Today. |  |
 | 7 | D-01 | Doctor | Clinic overview | Shared waiting room, reassign doctor. |  |
 | 8 | P-02 | Reception at a second location | Find a patient registered at the first location | Found by name, MRN or phone; one MRN, one chart; the access log shows the second location (MDV-P1-072). |  |
+| 9 | P-01 | Reception at a second location | Book or check in that patient there | The visit is at the second location, whose clinicians then treat the patient there; the chart stays one (MDV-P1-072). |  |
 
 ## J4 · Multilingual ward round · 3 speakers · clip — Hospital clinician · M3–M4
 
@@ -85,7 +86,7 @@ Which steps run in the browser against the real stack (`pnpm e2e:fullstack`: rea
 |---|---|---|
 | J1 | 1, 3, 4 (one story test, `fullstack/j1.spec.ts`) | 2 MDV-P4-002 · 5 MDV-P3-003 · 6 MDV-P2-009 · 7 MDV-P3-012 · 8 MDV-P4-004 |
 | J2 | 1 | 2 MDV-P2-004 · 3 MDV-P3-005 · 4 MDV-P3-009 · 5 MDV-P3-012 · 6 MDV-P2-017 · 7 MDV-P2-020 · 8 MDV-P4-016 |
-| J3 | 1, 2, 3, 4, 6 (doctor sees it on the board, not Today), 7, 8 (mocked spec only: a second location exists on the real stack once MDV-P1-070 lands) | 5 MDV-P2-007, MDV-P2-008 (green in the mocked spec `journeys/j3.spec.ts` and on the real stack, `fullstack/j3.spec.ts`, after the owner switches nurse intake on (`PUT /v1/settings/nurse-intake`; there is no Settings screen for it yet)) |
+| J3 | 1, 2, 3, 4, 6 (doctor sees it on the board, not Today), 7, 8, 9 (mocked spec only: a second location exists on the real stack once MDV-P1-070 lands) | 5 MDV-P2-007, MDV-P2-008 (green in the mocked spec `journeys/j3.spec.ts` and on the real stack, `fullstack/j3.spec.ts`, after the owner switches nurse intake on (`PUT /v1/settings/nurse-intake`; there is no Settings screen for it yet)) |
 | J4 | none | 1 MDV-P6-002 · 2 MDV-P6-003 · 3 MDV-P6-004 · 4 MDV-P3-010 · 5 MDV-P3-009 · 6 MDV-P7-006 |
 | J5 | none | 1 MDV-P2-018 (green in the mocked spec `journeys/j5.spec.ts`; on the real stack once the seeded doctor's licence is attested by the owner (ADR-016; until MDV-P1-065 lands, verified by Medvya operations)) · 2 MDV-P4-014 · 3, 5 MDV-P4-015 · 4 MDV-P4-018 · 6 MDV-P4-019 · 7 MDV-P4-016 |
 | J6 | none | 1 MDV-P7-002 · 2 to 5 MDV-P7-006 · 6 MDV-P7-008 |

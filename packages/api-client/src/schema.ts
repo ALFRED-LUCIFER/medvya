@@ -3728,10 +3728,45 @@ export interface paths {
         get: {
             parameters: {
                 query?: {
-                    state?: components["schemas"]["OrganisationState"];
+                    filter?: components["schemas"]["ReviewFilter"];
                 };
                 header?: never;
                 path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/operations/organisations/{tenantId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    tenantId: string;
+                };
                 cookie?: never;
             };
             requestBody?: never;
@@ -3790,6 +3825,45 @@ export interface paths {
         trace?: never;
     };
     "/v1/operations/organisations/{tenantId}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    tenantId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["Decision"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/operations/organisations/{tenantId}/reinstate": {
         parameters: {
             query?: never;
             header?: never;
@@ -7097,8 +7171,6 @@ export interface components {
         };
         /** @enum {unknown} */
         OrderKind: "Lab" | "Imaging" | null;
-        /** @enum {unknown} */
-        OrganisationState: "Draft" | "Submitted" | "NeedsChanges" | "Approved" | "Rejected" | "Suspended" | null;
         PairDisplay: {
             token: null | string;
         };
@@ -7277,6 +7349,8 @@ export interface components {
             expiresOn?: null | string;
             certificateName?: null | string;
         };
+        /** @enum {unknown} */
+        ReviewFilter: "Waiting" | "NeedsChanges" | "Decided" | "All" | null;
         /** @enum {unknown} */
         Role: "SoloDoctor" | "HospitalDoctor" | "Receptionist" | "Nurse" | "CareCoordinator" | "Patient" | "PracticeAdmin" | "HospitalIt";
         SaveAdjustment: {

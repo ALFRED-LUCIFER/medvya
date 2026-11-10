@@ -2872,10 +2872,33 @@
         ],
         "parameters": [
           {
-            "name": "state",
+            "name": "filter",
             "in": "query",
             "schema": {
-              "$ref": "#/components/schemas/OrganisationState"
+              "$ref": "#/components/schemas/ReviewFilter"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/operations/organisations/{tenantId}": {
+      "get": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
             }
           }
         ],
@@ -2919,6 +2942,39 @@
       }
     },
     "/v1/operations/organisations/{tenantId}/approve": {
+      "post": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Decision"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/operations/organisations/{tenantId}/reinstate": {
       "post": {
         "tags": [
           "Host.Api"
@@ -7946,17 +8002,6 @@
           null
         ]
       },
-      "OrganisationState": {
-        "enum": [
-          "Draft",
-          "Submitted",
-          "NeedsChanges",
-          "Approved",
-          "Rejected",
-          "Suspended",
-          null
-        ]
-      },
       "PairDisplay": {
         "required": [
           "token"
@@ -8741,6 +8786,15 @@
             ]
           }
         }
+      },
+      "ReviewFilter": {
+        "enum": [
+          "Waiting",
+          "NeedsChanges",
+          "Decided",
+          "All",
+          null
+        ]
       },
       "Role": {
         "enum": [

@@ -3482,7 +3482,7 @@
   "noteSign.reauth": "Confirming your identity. You are taken to sign in again and then return to this note. Your text is saved.",
   "noteSign.signedBy": "Signed by {name} on {date} at {time} · version {version}",
   "noteSign.signedByOther": "Signed by another clinician on {date} at {time} · version {version}",
-  "notePdf.patient": "{name} · MRN {mrn} · Date of birth {dob}",
+  "notePdf.patient": "MRN {mrn} · Date of birth {dob}",
   "notePdf.title": "{facility} · Signed consultation note · version {version}",
   "notePdf.signedBy": "Version {version} · Signed by {name} · {when}",
   "notePdf.when": "{date} ({zone})",

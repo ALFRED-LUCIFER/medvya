@@ -3472,7 +3472,7 @@
   "noteSign.reauth": "आपकी पहचान की पुष्टि हो रही है। आपको दोबारा साइन इन के लिए ले जाया जाएगा और फिर इस नोट पर लौटाया जाएगा। आपका पाठ सहेजा गया है।",
   "noteSign.signedBy": "{name} ने {date} को {time} बजे हस्ताक्षर किए · संस्करण {version}",
   "noteSign.signedByOther": "किसी अन्य चिकित्सक ने {date} को {time} बजे हस्ताक्षर किए · संस्करण {version}",
-  "notePdf.patient": "{name} · MRN {mrn} · जन्म तिथि {dob}",
+  "notePdf.patient": "MRN {mrn} · जन्म तिथि {dob}",
   "notePdf.title": "{facility} · हस्ताक्षरित परामर्श नोट · संस्करण {version}",
   "notePdf.signedBy": "संस्करण {version} · {name} द्वारा हस्ताक्षरित · {when}",
   "notePdf.when": "{date} ({zone})",

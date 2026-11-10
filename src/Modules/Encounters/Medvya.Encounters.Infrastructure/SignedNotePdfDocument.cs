@@ -19,8 +19,7 @@ public static class SignedNotePdfDocument
 {
     const double Width = 595.28, Height = 841.89, Margin = 56, FontSize = 10, Leading = 14;
     const int Columns = 80; // Courier is 0.6 em per character: 80 x 6 pt = 480 pt, inside the 483 pt between the margins
-    const double HeaderTop = 800, BodyTop = 756, BodyBottom = 70, FooterY = 40;
-    static readonly int LinesPerPage = (int)((BodyTop - BodyBottom) / Leading) + 1;
+    const double HeaderTop = 800, BodyBottom = 70, FooterY = 40;
     static readonly Encoding WinAnsi = CodePagesEncodingProvider.Instance.GetEncoding(1252, EncoderFallback.ExceptionFallback, DecoderFallback.ExceptionFallback)!;
     static readonly Lazy<Dictionary<string, string>> Catalog = new(() =>
     {
@@ -56,7 +55,8 @@ public static class SignedNotePdfDocument
             ]);
         string[] header =
         [
-            Text("notePdf.patient", ("name", patient.FullName), ("mrn", patient.Mrn), ("dob", patient.DateOfBirth.ToString("dd MMM yyyy", CultureInfo.InvariantCulture))),
+            patient.FullName,
+            Text("notePdf.patient", ("mrn", patient.Mrn), ("dob", patient.DateOfBirth.ToString("dd MMM yyyy", CultureInfo.InvariantCulture))),
             Text("notePdf.title", ("facility", facilityName), ("version", versions[^1].Row.VersionNo.ToString(CultureInfo.InvariantCulture))),
         ];
         return Write(header, body, (page, pages) => Text("notePdf.footer", ("page", page.ToString(CultureInfo.InvariantCulture)), ("pages", pages.ToString(CultureInfo.InvariantCulture))));
@@ -66,11 +66,16 @@ public static class SignedNotePdfDocument
         values.Aggregate(Catalog.Value.GetValueOrDefault(key) ?? throw new KeyNotFoundException($"Message key '{key}' is not in en.json."),
             (text, v) => text.Replace("{" + v.Name + "}", v.Value, StringComparison.Ordinal));
 
-    /// <summary>Lines wrapped at <see cref="Columns"/> on spaces (a longer word is cut), paginated, with the header and footer on every page.</summary>
+    /// <summary>
+    /// Header and body wrapped at <see cref="Columns"/> on spaces (a longer word is cut), so a long name never pushes the MRN or date of birth off
+    /// the page; paginated, with the header (name and identifiers bold) and footer on every page.
+    /// </summary>
     internal static byte[] Write(IReadOnlyList<string> header, IReadOnlyList<(string Text, bool Bold)> body, Func<int, int, string> footer)
     {
+        var head = header.SelectMany((h, i) => Wrap(h).Select(w => (Text: w, Bold: i < 2))).ToList();
+        var bodyTop = HeaderTop - head.Count * Leading - 16;
         var lines = body.SelectMany(l => Wrap(l.Text).Select(w => (Text: w, l.Bold))).ToList();
-        var pages = lines.Chunk(LinesPerPage).ToList();
+        var pages = lines.Chunk((int)((bodyTop - BodyBottom) / Leading) + 1).ToList();
         if (pages.Count == 0) pages.Add([]);
 
         var objects = new List<byte[]> { Ascii("<< /Type /Catalog /Pages 2 0 R /Lang (en) >>"), Array.Empty<byte>(), Font("Courier"), Font("Courier-Bold") };
@@ -80,9 +85,10 @@ public static class SignedNotePdfDocument
             var content = new StringBuilder();
             void Line(string text, bool bold, double y) =>
                 content.Append(CultureInfo.InvariantCulture, $"BT /F{(bold ? 2 : 1)} {FontSize} Tf {Margin} {y:0.##} Td (").Append(Escape(text)).Append(") Tj ET\n");
-            for (var h = 0; h < header.Count; h++) Line(header[h], h == 0, HeaderTop - h * Leading);
-            content.Append(CultureInfo.InvariantCulture, $"0.5 w {Margin} {HeaderTop - header.Count * Leading + 4:0.##} m {Width - Margin:0.##} {HeaderTop - header.Count * Leading + 4:0.##} l S\n");
-            for (var i = 0; i < pages[p].Length; i++) Line(pages[p][i].Text, pages[p][i].Bold, BodyTop - i * Leading);
+            for (var h = 0; h < head.Count; h++) Line(head[h].Text, head[h].Bold, HeaderTop - h * Leading);
+            var rule = HeaderTop - head.Count * Leading + 4;
+            content.Append(CultureInfo.InvariantCulture, $"0.5 w {Margin} {rule:0.##} m {Width - Margin:0.##} {rule:0.##} l S\n");
+            for (var i = 0; i < pages[p].Length; i++) Line(pages[p][i].Text, pages[p][i].Bold, bodyTop - i * Leading);
             Line(footer(p + 1, pages.Count), false, FooterY);
             var stream = Ascii(content.ToString());
             objects.Add(Ascii($"<< /Length {stream.Length} >>\nstream\n").Concat(stream).Concat(Ascii("endstream")).ToArray());

@@ -390,6 +390,8 @@ public sealed class SignNoteTests(PostgresFixture sql) : IClassFixture<PostgresF
         var plan = string.Join('\n', Enumerable.Range(1, 70).Select(i => $"Synthetic plan line {i}"));
         using (var signed = await SignAsync(h.Doctor, await SaveDraftAsync(new { chiefComplaint = Text, assessment = "Synthetic viral cold", plan }))) Assert.True(signed.IsSuccessStatusCode);
         using (var added = await AddendumAsync(h.Doctor, "Synthetic: follow-up moved to Friday", "Patient asked")) Assert.True(added.IsSuccessStatusCode);
+        await using (var patients = sql.Patients(h.Tenant)) // a long name must not push the MRN or date of birth off the page
+            await patients.Patients.Where(x => x.Id == h.Patient).ExecuteUpdateAsync(x => x.SetProperty(y => y.FullName, "Meera Lakshmi Venkataraman Iyer (synthetic)"));
 
         using var r = await PdfAsync(h.Doctor);
         Assert.Equal(HttpStatusCode.OK, r.StatusCode);
@@ -402,8 +404,11 @@ public sealed class SignNoteTests(PostgresFixture sql) : IClassFixture<PostgresF
         Assert.StartsWith("%PDF-1.4", text, StringComparison.Ordinal);
         var pages = text.Split("/Type /Page ").Length - 1;
         Assert.True(pages >= 2, $"{pages} page(s)");
-        foreach (var marker in new[] { "MRN 000001", "Date of birth 12 Mar 1972", @"Meera Iyer \(synthetic\)", "Corrections are added as signed addenda." })
+        foreach (var marker in new[] { "MRN 000001", "Date of birth 12 Mar 1972", @"Meera Lakshmi Venkataraman Iyer \(synthetic\)", "Corrections are added as signed addenda." })
             Assert.Equal(pages, text.Split(marker).Length - 1);
+        // Every shown line fits between the margins: 80 Courier columns (an escape such as \267 or \( is one character).
+        var shown = System.Text.RegularExpressions.Regex.Matches(text, @"\(((?:[^\\)]|\\.)*)\) Tj").Select(m => System.Text.RegularExpressions.Regex.Replace(m.Groups[1].Value, @"\\(\d{3}|.)", "x"));
+        Assert.All(shown, line => Assert.True(line.Length <= 80, line));
         foreach (var expected in new[] { @"Signed by Dr. Arjun Rao \(synthetic\)", @"Addendum \267 version 2", "Reason: Patient asked", "Synthetic: follow-up moved to Friday", "Asia/Kolkata" })
             Assert.Contains(expected, text, StringComparison.Ordinal);
 

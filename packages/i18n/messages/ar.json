@@ -3479,7 +3479,7 @@
   "noteSign.reauth": "جارٍ تأكيد هويتك. سيتم نقلك لتسجيل الدخول مرة أخرى ثم تعود إلى هذه الملاحظة. نصّك محفوظ.",
   "noteSign.signedBy": "وقّع {name} في {date} الساعة {time} · النسخة {version}",
   "noteSign.signedByOther": "وقّع طبيب آخر في {date} الساعة {time} · النسخة {version}",
-  "notePdf.patient": "{name} · رقم السجل {mrn} · تاريخ الميلاد {dob}",
+  "notePdf.patient": "رقم السجل {mrn} · تاريخ الميلاد {dob}",
   "notePdf.title": "{facility} · ملاحظة استشارة موقّعة · النسخة {version}",
   "notePdf.signedBy": "النسخة {version} · وقّعها {name} · {when}",
   "notePdf.when": "{date} ({zone})",

@@ -41,7 +41,10 @@ test('a formulary medicine gets a dose that autosaves and reads in the chosen pr
   const arabic = metformin.locator('[lang="ar"]');
   await expect(arabic).toHaveText('تناول 1 tablet oral BD after_food 5d.');
   await expect(arabic).toHaveAttribute('dir', 'rtl');
-  await expect(page.getByRole('button', { name: /authori[sz]e/i })).toHaveCount(0); // MDV-P2-017
+  // Authorising is the doctor's own, separate action (MDV-P2-017): building the draft never authorises it.
+  await expect(rx.getByRole('button', { name: 'Authorise prescription' })).toBeVisible();
+  expect(calls.authorised).toBe(0);
+  await expect(rx.getByRole('link', { name: 'Print prescription' })).toHaveCount(0);
 });
 
 test('an invalid dose is named and not saved; a switched-off line stays listed', async ({ page }) => {

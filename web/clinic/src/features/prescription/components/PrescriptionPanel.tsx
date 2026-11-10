@@ -1,8 +1,10 @@
 import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
-import { CircleSlash, FilePen, History, Plus, UserRound } from 'lucide-react';
+import { Link } from 'react-router';
+import { CircleAlert, CircleSlash, FilePen, History, Plus, Printer, ShieldCheck, UserRound } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, ClinicalAlert, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Switch } from '@medvya/ui';
+import { Button, buttonVariants, ClinicalAlert, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Switch } from '@medvya/ui';
+import type { AuthoriseProblem, RxAuthorisationState } from '../domain/authorisation';
 import { describedBy, fieldError } from '../../settings/components/fieldStyles';
 import { Field } from '../../settings/components/Field';
 import { Section } from '../../settings/components/Section';
@@ -31,6 +33,12 @@ type Props = SafetyProps & {
   onAddFreeText: FormEventHandler<HTMLFormElement>;
   onInclude: (id: string, included: boolean) => void;
   onField: (l: RxLine, field: SigField, value: string) => void;
+  authorisation: RxAuthorisationState | null;
+  authorising: boolean;
+  authProblem: AuthoriseProblem | null;
+  onAuthorise: () => void;
+  onConfirmIdentity: () => void;
+  printPath: string;
 };
 
 const none = 'none';
@@ -38,7 +46,7 @@ const sourceIcon = { AddedByYou: UserRound, AddedByColleague: UserRound, ChartRe
 
 /**
  * Prescription composer (E-05, E-11): medicines from the formulary or typed as free text (flagged), each with a dose builder that autosaves,
- * the readable instruction in the chosen print language, and discontinue lines from the reconciliation. A draft only: authorising is separate.
+ * the readable instruction in the chosen print language, and discontinue lines from the reconciliation. Authorising (MDV-P2-017) is its own action here.
  * The safety checks (MDV-P2-016) follow the lines, and each line carries its safety chip.
  */
 export default function PrescriptionPanel(p: Props) {
@@ -56,7 +64,7 @@ export default function PrescriptionPanel(p: Props) {
             <SelectContent>{printLanguages.map(l => <SelectItem key={l} value={l}>{t(`rx.lang.${l}`)}</SelectItem>)}</SelectContent>
           </Select>
         </Field>
-        <p className="flex items-center gap-2 text-sm font-bold"><FilePen aria-hidden className="size-4" />{t('rx.draftState')}</p>
+        <AuthorisationState state={p.authorisation} />
       </div>
 
       {status && <p role="status">{status}</p>}
@@ -85,6 +93,8 @@ export default function PrescriptionPanel(p: Props) {
 
       {prescribed.length > 0 && <SafetyChecks {...p} />}
 
+      {p.lines.length > 0 && <Authorise {...p} />}
+
       {!p.ended && (
         <form noValidate onSubmit={p.onAddFreeText} className="flex flex-col gap-3 border-t pt-4">
           <h3 className="font-bold">{t('rx.add.title')}</h3>
@@ -109,6 +119,44 @@ export default function PrescriptionPanel(p: Props) {
 
       {p.problem && <p role="alert" className={fieldError}>{t(`rx.error.${p.problem}`)}</p>}
     </Section>
+  );
+}
+
+/** Draft, authorised (version and the number on the paper), or changed since: an icon and words, never colour alone. */
+function AuthorisationState({ state }: { state: RxAuthorisationState | null }) {
+  const { t } = useI18n();
+  const a = state?.authorised;
+  const [Icon, text] = !a ? [FilePen, t('rx.draftState')]
+    : state.changed ? [CircleAlert, t('rx.auth.changed')]
+    : [ShieldCheck, t('rx.auth.authorised', { version: a.versionNo, number: a.number })];
+  return <p role="status" className="flex items-center gap-2 text-sm font-bold"><Icon aria-hidden className="size-4" />{text}</p>;
+}
+
+/** Authorising (MDV-P2-017): its own action after the safety checks, separate from signing the note. Printing follows an unchanged authorisation. */
+function Authorise(p: Props) {
+  const { t } = useI18n();
+  const state = p.authorisation;
+  const current = !!state?.authorised && !state.changed;
+  return (
+    <div className="flex flex-col gap-2 border-t pt-4">
+      <p className="text-sm">{t('rx.auth.separate')}</p>
+      {(p.checks?.unresolved ?? 0) > 0 && <p className="text-sm font-bold">{t('rx.auth.unresolved')}</p>}
+      <div className="flex flex-wrap gap-3">
+        {!current && (
+          <Button className="min-h-11" loading={p.authorising} disabled={p.busy} onClick={p.onAuthorise}>
+            <ShieldCheck aria-hidden className="size-4" />{t(state?.authorised ? 'rx.auth.again' : 'rx.auth.authorise')}
+          </Button>
+        )}
+        {current && <Link to={p.printPath} className={buttonVariants({ variant: 'outline', className: 'min-h-11' })}><Printer aria-hidden className="size-4" />{t('rx.auth.print')}</Link>}
+      </div>
+      {p.authProblem === 'reauth' && (
+        <div role="alert" className="flex flex-wrap items-center gap-3">
+          <p className="font-bold">{t('rx.auth.reauth')}</p>
+          <Button variant="outline" className="min-h-11" onClick={p.onConfirmIdentity}>{t('rx.auth.confirm')}</Button>
+        </div>
+      )}
+      {p.authProblem && p.authProblem !== 'reauth' && <p role="alert" className={fieldError}>{t(`rx.auth.error.${p.authProblem}`)}</p>}
+    </div>
   );
 }
 

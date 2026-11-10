@@ -1,8 +1,10 @@
 using Medvya.Audit.Application;
 using Medvya.Audit.Domain;
 using Medvya.BuildingBlocks.Domain;
+using Medvya.BuildingBlocks.Infrastructure;
 using Medvya.Encounters.Application;
 using Medvya.Encounters.Domain;
+using Medvya.Patients.Application;
 using Medvya.Prescribing.Application;
 using Medvya.Prescribing.Domain;
 using Medvya.Prescribing.Infrastructure.Persistence;
@@ -10,21 +12,33 @@ using Medvya.Tenancy.Application;
 using Medvya.Tenancy.Domain;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.Options;
+using QRCoder;
 
 namespace Medvya.Prescribing.Infrastructure;
+
+/// <summary>Settings (section Prescribing).</summary>
+public sealed class PrescribingOptions
+{
+    /// <summary>Origin of the clinic app the QR verify link opens, e.g. https://in.medvya.example/app. Defaults to Invitations:LinkBaseUrl; never the request's Host header.</summary>
+    public string? VerifyBaseUrl { get; set; }
+}
 
 /// <summary>
 /// The draft prescription composer (MDV-P2-015). Clinical access first (Prescriptions and orders at Sign, care relationship, the encounter's
 /// facility), then the work in one transaction with its audit event (purpose treatment, with the patient; codes only, never a medicine). Lines are
 /// changed only while the consultation is open. Discontinue lines are not stored: they are the reconciliation's current stop decisions, so a
-/// changed decision changes the line. Nothing here authorises: that is its own step (MDV-P2-017).
+/// changed decision changes the line. Authorising (MDV-P2-017) is its own step, separate from signing the note: it freezes the draft as an
+/// append-only version, and only an authorised, unchanged prescription prints.
 /// </summary>
 public sealed class PrescriptionService(
     PrescribingDbContext db, IEncounterDirectory encounters, IReconciliationStops stops, IPrescribingChart chart, IClinicalAccess clinical, IStaffAccess staff,
-    ICurrentTenant tenant, ICurrentUser user, IAuditLog audit, TimeProvider clock) : IPrescriptions
+    ICurrentTenant tenant, ICurrentUser user, IAuditLog audit, TimeProvider clock, IPatientDirectory patients, IFacilityDirectory facilities,
+    IOptions<PrescribingOptions> options) : IPrescriptions
 {
     public const string ReadAction = "rx.read", AddAction = "rx.add", UpdateAction = "rx.update", IncludeAction = "rx.include",
-        CheckAction = "rx.check", OverrideAction = "rx.override", Resource = "prescription";
+        CheckAction = "rx.check", OverrideAction = "rx.override", AuthorisationAction = "rx.authorisation", AuthoriseAction = "rx.authorise",
+        PrintAction = "rx.print", PdfAction = "rx.pdf", LayoutApproveAction = "rx.layout.approve", Resource = "prescription";
     public const int MaxMedicine = 200, MaxStrength = 50, MaxReason = 200;
     static readonly Access[] Doctors = [Access.Sign];
 
@@ -128,6 +142,166 @@ public sealed class PrescriptionService(
         }), cancellationToken);
         return await ChecksAsync(encounter, cancellationToken);
     }
+
+    public async Task<RxAuthorisationState?> AuthorisationAsync(Guid encounterId, CancellationToken cancellationToken = default)
+    {
+        if (await RequireAsync(encounterId, cancellationToken) is not { } encounter) return null;
+        var latest = await LatestAsync(encounterId, cancellationToken);
+        await audit.WriteAsync(Event(AuthorisationAction, encounter, latest?.Id ?? encounterId, $"version:{latest?.VersionNo ?? 0}"), cancellationToken);
+        return await StateAsync(latest, cancellationToken);
+    }
+
+    public async Task<RxAuthorisationState?> AuthoriseAsync(Guid encounterId, CancellationToken cancellationToken = default)
+    {
+        // The endpoint already needs Sign on Prescriptions and orders; this adds the care relationship, then the step-up, as signing the note does.
+        if (await RequireAsync(encounterId, cancellationToken) is not { } encounter) return null;
+        var now = clock.GetUtcNow();
+        // shortcut: the stamp is the session cookie's claim set by /bff/reauth, as for signing (ConsultNoteService); upgrade both together if it must be revocable.
+        if (user.ReauthenticatedAt is not { } at || now - at > AuthorisedPrescription.ReauthWindow || at > now.AddMinutes(1)) throw new ReauthRequiredException();
+        // A paper prescription carries the doctor's licence (ADR-016): a member with no licence on record cannot authorise one.
+        if (await facilities.PrescriberAsync(Me, encounter.FacilityId, cancellationToken) is null) throw new PrescriptionConflictException("no_licence");
+        var lines = await DraftAsync(encounter.Id, cancellationToken);
+        if (lines.Count == 0) throw new PrescriptionConflictException("nothing_to_authorise");
+        if (lines.Any(l => !l.Discontinue && l.Sig["en"].Length == 0)) throw new PrescriptionValidationException([("lines", "no_instructions")]);
+        // The checks run again here, never trusted from the screen: a severe alert without a reason stops the authorisation.
+        var checks = await ChecksAsync(encounter, cancellationToken);
+        if (checks.Unresolved > 0) throw new PrescriptionConflictException("unresolved_alerts");
+
+        var hash = AuthorisedPrescription.Hash(lines);
+        var latest = await LatestAsync(encounter.Id, cancellationToken);
+        if (latest?.ContentHash == hash) return await StateAsync(latest, cancellationToken); // a double click or retry: nothing new is written
+        var row = new AuthorisedPrescription
+        {
+            Id = Guid.CreateVersion7(), TenantId = TenantId, FacilityId = encounter.FacilityId, EncounterId = encounter.Id, VersionNo = (latest?.VersionNo ?? 0) + 1,
+            Lines = lines, ContentHash = hash, RuleSetVersion = checks.RuleSetVersion, VerifyCode = RxVerifyToken.NewCode(), AuthorisedBy = Me, AuthorisedAt = now,
+        };
+        try
+        {
+            await SaveAsync(encounter, AuthoriseAction, row.Id, $"version:{row.VersionNo};lines:{lines.Count};rules:{checks.RuleSetVersion};reauth:ok",
+                () => db.AuthorisedPrescriptions.Add(row), cancellationToken);
+        }
+        // Another authorisation took this version number at the same moment: nothing of this one was written; the answer says what stands.
+        catch (DbUpdateException e) when (e.InnerException is Npgsql.PostgresException { SqlState: Npgsql.PostgresErrorCodes.UniqueViolation })
+        {
+            db.ChangeTracker.Clear();
+            return await StateAsync(await LatestAsync(encounter.Id, cancellationToken), cancellationToken);
+        }
+        return new(View(row), false);
+    }
+
+    public async Task<RxPrintView?> PrintAsync(Guid encounterId, CancellationToken cancellationToken = default)
+    {
+        if (await RequireAsync(encounterId, cancellationToken) is not { } encounter) return null;
+        var rx = await PrintableAsync(encounter, cancellationToken);
+        var view = await PrintViewAsync(encounter, rx, cancellationToken);
+        await audit.WriteAsync(Event(PrintAction, encounter, rx.Id, $"version:{rx.VersionNo}"), cancellationToken);
+        return view;
+    }
+
+    public async Task<RxPdf?> PdfAsync(Guid encounterId, string? paper, CancellationToken cancellationToken = default)
+    {
+        var size = paper switch { null or "A4" => PlainPdf.A4, "A5" => PlainPdf.A5, _ => throw new PrescriptionValidationException([("paper", "unknown")]) };
+        if (await RequireAsync(encounterId, cancellationToken) is not { } encounter) return null;
+        var rx = await PrintableAsync(encounter, cancellationToken);
+        var content = RxPdfDocument.Render(await PrintViewAsync(encounter, rx, cancellationToken), size);
+        var pdf = new PrescriptionPdf
+        {
+            Id = Guid.CreateVersion7(), TenantId = TenantId, PrescriptionId = rx.Id, Paper = size.Name, Content = content,
+            Sha256 = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(content)), RenderedBy = Me, RenderedAt = clock.GetUtcNow(),
+        };
+        await SaveAsync(encounter, PdfAction, rx.Id, $"version:{rx.VersionNo};paper:{size.Name}", () => db.PrescriptionPdfs.Add(pdf), cancellationToken);
+        return new RxPdf(content, pdf.Sha256);
+    }
+
+    public async Task<RxLayoutView> LayoutAsync(CancellationToken cancellationToken = default) =>
+        new(RxPdfDocument.LayoutVersion, await db.RxLayoutApprovals.AsNoTracking().Where(a => a.UserId == Me && a.LayoutVersion == RxPdfDocument.LayoutVersion)
+            .Select(a => (DateTimeOffset?)a.ApprovedAt).SingleOrDefaultAsync(cancellationToken));
+
+    public async Task<RxLayoutView> ApproveLayoutAsync(CancellationToken cancellationToken = default)
+    {
+        if (await LayoutAsync(cancellationToken) is { ApprovedAt: not null } approved) return approved;
+        var row = new RxLayoutApproval { Id = Guid.CreateVersion7(), TenantId = TenantId, UserId = Me, LayoutVersion = RxPdfDocument.LayoutVersion, ApprovedAt = clock.GetUtcNow() };
+        await using (var tx = await db.Database.BeginTransactionAsync(cancellationToken))
+        {
+            db.RxLayoutApprovals.Add(row);
+            try
+            {
+                await db.SaveChangesAsync(cancellationToken);
+            }
+            // Approved in another tab at the same moment: that approval stands.
+            catch (DbUpdateException e) when (e.InnerException is Npgsql.PostgresException { SqlState: Npgsql.PostgresErrorCodes.UniqueViolation })
+            {
+                db.ChangeTracker.Clear();
+                await tx.RollbackAsync(cancellationToken);
+                return await LayoutAsync(cancellationToken);
+            }
+            await audit.WriteAsync(new AuditEvent
+            {
+                Id = Guid.CreateVersion7(), TenantId = TenantId, ActorUserId = Me, Action = LayoutApproveAction, ResourceType = "prescription_layout", ResourceId = row.Id,
+                Purpose = AuditPurpose.Operations, Outcome = AuditOutcome.Allowed, OccurredAt = row.ApprovedAt, Detail = $"layout:{row.LayoutVersion}",
+            }, tx.GetDbTransaction(), cancellationToken);
+            await tx.CommitAsync(cancellationToken);
+        }
+        return new(row.LayoutVersion, row.ApprovedAt);
+    }
+
+    Task<AuthorisedPrescription?> LatestAsync(Guid encounterId, CancellationToken cancellationToken) =>
+        db.AuthorisedPrescriptions.AsNoTracking().Where(p => p.EncounterId == encounterId).OrderByDescending(p => p.VersionNo).FirstOrDefaultAsync(cancellationToken);
+
+    // shortcut: "changed" compares the rendered instructions, so a wording fix (the translator's sign-off of Sig) marks older prescriptions changed
+    // until re-authorised (it fails safe: no print, never wrong text); hash the structured sig instead once the wording is signed off.
+    async Task<RxAuthorisationState> StateAsync(AuthorisedPrescription? latest, CancellationToken cancellationToken) =>
+        latest is null ? new(null, false) : new(View(latest), latest.ContentHash != AuthorisedPrescription.Hash(await DraftAsync(latest.EncounterId, cancellationToken)));
+
+    /// <summary>The latest authorisation, once it is what the draft still says: an unauthorised or changed prescription never prints.</summary>
+    async Task<AuthorisedPrescription> PrintableAsync(EncounterView encounter, CancellationToken cancellationToken)
+    {
+        var latest = await LatestAsync(encounter.Id, cancellationToken) ?? throw new PrescriptionConflictException("not_authorised");
+        if ((await StateAsync(latest, cancellationToken)).Changed) throw new PrescriptionConflictException("changed");
+        return latest;
+    }
+
+    /// <summary>The included prescribe lines (each instruction in every print language, its class's print requirements) and the reconciliation's stops, as authorising freezes them.</summary>
+    async Task<List<AuthorisedLine>> DraftAsync(Guid encounterId, CancellationToken cancellationToken)
+    {
+        var items = await db.PrescriptionItems.AsNoTracking().Where(i => i.EncounterId == encounterId && i.Included).OrderBy(i => i.CreatedAt).ThenBy(i => i.Id).ToListAsync(cancellationToken);
+        var ids = items.Where(i => i.FormularyItemId is not null).Select(i => i.FormularyItemId!.Value).ToList();
+        var classes = await db.FormularyItems.AsNoTracking().Where(f => ids.Contains(f.Id)).ToDictionaryAsync(f => f.Id, f => f.RegClass, cancellationToken);
+        var rules = classes.Count == 0 ? null : FormularyRules.For(await staff.TenantCountryAsync(cancellationToken) ?? throw new InvalidOperationException("No tenant country."));
+        var stopped = await stops.StopsAsync(encounterId, cancellationToken);
+        return
+        [
+            .. items.Select(i => new AuthorisedLine(false, i.Medicine, i.Strength, i.Form, i.FormularyItemId is null,
+                Sig.Languages.ToDictionary(l => l, l => Sig.Render(new SigParts(i.Dose, i.DoseUnit, i.Route, i.Frequency, i.Timing, i.DurationDays, i.Quantity, i.Instructions), l)),
+                i.FormularyItemId is { } f && classes.TryGetValue(f, out var c) ? [.. rules!.PrintRequirements(c)] : [], null)),
+            .. stopped.Select(s => new AuthorisedLine(true, s.Name, null, null, false, Sig.Languages.ToDictionary(l => l, Sig.Stop), [], s.Reason)),
+        ];
+    }
+
+    async Task<RxPrintView> PrintViewAsync(EncounterView encounter, AuthorisedPrescription rx, CancellationToken cancellationToken)
+    {
+        var patient = (await patients.SummariesAsync([encounter.PatientId], cancellationToken)).GetValueOrDefault(encounter.PatientId) ?? throw new InvalidOperationException("Patient not in this tenant.");
+        var facility = await facilities.FindAsync(rx.FacilityId, cancellationToken) ?? throw new InvalidOperationException("Facility not in this tenant.");
+        var doctor = await facilities.PrescriberAsync(rx.AuthorisedBy, rx.FacilityId, cancellationToken) ?? throw new InvalidOperationException("The authorising doctor has no licence on record.");
+        var facts = await chart.FactsAsync(encounter.PatientId, cancellationToken);
+        var allergies = facts.AllergyState switch { AllergyState.Listed => ChartAllergies.Listed, AllergyState.NoKnownAllergies => ChartAllergies.NoKnownAllergies, _ => ChartAllergies.NotRecorded };
+        var baseUrl = options.Value.VerifyBaseUrl ?? throw new InvalidOperationException("Prescribing:VerifyBaseUrl (or Invitations:LinkBaseUrl) is not configured.");
+        var url = $"{baseUrl.TrimEnd('/')}/verify/rx/{RxVerifyToken.Token(rx.TenantId, rx.VerifyCode)}";
+        return new RxPrintView(View(rx), facility.Name, facility.TimeZone, doctor.FullName, doctor.Qualifications, doctor.LicenceNumber, doctor.LicenceAuthority,
+            new SlipPatient(patient.FullName, patient.Mrn, patient.DateOfBirth, patient.SexAtBirth.ToString()), allergies,
+            [.. facts.Allergies.Where(a => a.Status != AllergyStatus.NotAnAllergy && a.Substance is not null).Select(a => a.Substance!)],
+            [.. rx.Lines.Select(l => new RxPrintLine(l.Discontinue, l.Medicine, l.Strength, l.Form, l.Sig, l.PrintRequirements, l.Reason))], url, Qr(url), RxPdfDocument.LayoutVersion);
+    }
+
+    /// <summary>The QR code's modules, row by row ('1' dark), with its quiet zone; error correction M survives a crease or a stamp.</summary>
+    static string[] Qr(string text)
+    {
+        using var generator = new QRCodeGenerator();
+        using var data = generator.CreateQrCode(text, QRCodeGenerator.ECCLevel.M);
+        return [.. data.ModuleMatrix.Select(row => string.Concat(row.Cast<bool>().Select(b => b ? '1' : '0')))];
+    }
+
+    static RxAuthorisationView View(AuthorisedPrescription p) => new(p.VersionNo, p.Number(), p.AuthorisedBy, p.AuthorisedAt, p.ContentHash, p.Lines.Count(l => !l.Discontinue));
 
     /// <summary>The checks over the included prescribe lines and the chart's active medicines (less those stopped in this visit), with the current overrides
     /// (made under this rule set version: a new version asks again).</summary>

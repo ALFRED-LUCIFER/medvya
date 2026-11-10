@@ -39,10 +39,47 @@ export const penicillinAlert = (itemId: string) => ({
   substance: 'Penicillin', allergyStatus: 'Confirmed', dailyMicrograms: null, maxDailyMicrograms: null,
 });
 
-export async function mockPrescription(page: Page, opts: { locale?: string; ended?: boolean; allowed?: boolean; lines?: RxLine[]; checks?: RxChecks } = {}) {
-  await mockOrders(page, { locale: opts.locale, ended: opts.ended });
+// MDV-P2-017: the authorisation (RxAuthorisationState), the print view (RxPrintView) and the public verify answer (RxVerifyView), in the server's shapes.
+export const authorised = (versionNo = 1) => ({
+  versionNo, number: 'RX-3F9A21C7', authorisedBy: 'u-rao', authorisedAt: '2026-10-19T04:50:00Z', contentHash: 'a'.repeat(64), lines: 1,
+});
+// A 29-module stand-in for the QR code (the real one is QRCoder's, proven in RxAuthorisationTests).
+const qr = Array.from({ length: 29 }, (_, y) => Array.from({ length: 29 }, (_, x) => ((x * 7 + y * 3) % 5 === 0 && x > 3 && y > 3 && x < 25 && y < 25 ? '1' : '0')).join(''));
+export const printView = () => ({
+  authorisation: authorised(), clinic: 'Iyer Family Clinic · Adyar', timeZone: 'Asia/Kolkata', doctor: 'Dr. Arjun Rao (synthetic)', qualifications: 'MBBS, MD (General Medicine)',
+  licenceNumber: '84213', licenceAuthority: 'Tamil Nadu Medical Council',
+  patient: { fullName: 'Meera Iyer (synthetic)', mrn: '000001', dateOfBirth: '1972-03-12', sexAtBirth: 'Female' }, allergies: 'NoKnownAllergies', allergySubstances: [],
+  lines: [
+    { discontinue: false, medicine: 'Metformin', strength: '500 mg', form: 'Tablet', printRequirements: ['warning_schedule_h'], reason: null, sig: {
+      en: 'Take 1 tablet by mouth twice a day after food for 5 days. Quantity: 10.', hi: '1 गोली मुँह से दिन में दो बार खाने के बाद 5 दिन तक लें। मात्रा: 10।',
+      ta: '1 மாத்திரை வாய் வழியாக தினமும் இரண்டு முறை உணவுக்குப் பின் 5 நாட்களுக்கு எடுத்துக்கொள்ளவும். அளவு: 10.',
+      ar: 'تناول 1 قرص عن طريق الفم مرتين يوميًا بعد الأكل لمدة 5 أيام. الكمية: 10.' } },
+    { discontinue: true, medicine: 'Atorvastatin', strength: null, form: null, printRequirements: [], reason: 'Muscle pain (synthetic)', sig: { en: 'Stop this medicine.' } },
+  ],
+  verifyUrl: 'https://clinic.test/app/verify/rx/synthetic-token', qr, layoutVersion: 1,
+});
+
+type AuthState = { authorised: ReturnType<typeof authorised> | null; changed: boolean };
+
+export async function mockPrescription(page: Page, opts: {
+  locale?: string; ended?: boolean; allowed?: boolean; lines?: RxLine[]; checks?: RxChecks; authorisation?: AuthState; reauthFirst?: boolean;
+} = {}) {
+  const ordered = await mockOrders(page, { locale: opts.locale, ended: opts.ended });
   const lines: RxLine[] = [...(opts.lines ?? [])];
-  const calls = { added: [] as unknown[], saved: [] as unknown[], included: [] as unknown[], searched: [] as string[], checked: 0, overrides: [] as unknown[] };
+  const calls = { added: [] as unknown[], saved: [] as unknown[], included: [] as unknown[], searched: [] as string[], checked: 0, overrides: [] as unknown[], authorised: 0, approved: 0 };
+  let state: AuthState = opts.authorisation ?? { authorised: null, changed: false };
+  await page.route('**/v1/encounters/e-1/prescription/authorisation', r => {
+    if (r.request().method() === 'GET') return r.fulfill({ json: state });
+    calls.authorised++;
+    if (opts.reauthFirst && calls.authorised === 1) return r.fulfill({ status: 403, json: { code: 'reauth_required' } });
+    state = { authorised: authorised((state.authorised?.versionNo ?? 0) + 1), changed: false };
+    return r.fulfill({ json: state });
+  });
+  await page.route('**/v1/encounters/e-1/prescription/print', r =>
+    state.authorised && !state.changed ? r.fulfill({ json: printView() }) : r.fulfill({ status: 409, json: { code: state.authorised ? 'changed' : 'not_authorised' } }));
+  let layout = { layoutVersion: 1, approvedAt: null as string | null };
+  await page.route('**/v1/prescription-layout', r => r.fulfill({ json: layout }));
+  await page.route('**/v1/prescription-layout/approval', r => { calls.approved++; layout = { ...layout, approvedAt: '2026-10-19T04:55:00Z' }; return r.fulfill({ json: layout }); });
   let checks = opts.checks ?? clearChecks();
   await page.route('**/v1/encounters/e-1/prescription/checks', r => { calls.checked++; return r.fulfill({ json: checks }); });
   await page.route('**/v1/encounters/e-1/prescription/overrides', r => {
@@ -81,5 +118,5 @@ export async function mockPrescription(page: Page, opts: { locale?: string; ende
     return r.fulfill({ json: [{ id: 'fi-metformin', generic: 'Metformin', strength: '500 mg', form: 'Tablet', brands: ['Glycomet'], nationalCode: null, regClass: 'ScheduleH',
       printRequirements: ['warning_schedule_h'], atc: 'A10BA02', defaultSig: '1 tablet twice a day with meals', source: 'Starter', active: true }] });
   });
-  return { lines, calls };
+  return { lines, calls, orders: ordered.orders, orderCalls: ordered.calls };
 }

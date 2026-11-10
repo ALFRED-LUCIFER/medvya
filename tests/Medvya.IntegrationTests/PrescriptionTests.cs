@@ -63,6 +63,7 @@ public sealed class PrescriptionTests(PostgresFixture sql) : IClassFixture<Postg
         Assert.Equal("Take 1 tablet by mouth twice a day after food for 5 days. Quantity: 10. Check sugar weekly", built.Sig["en"]);
         Assert.Equal("1 गोली मुँह से दिन में दो बार खाने के बाद 5 दिन तक लें। मात्रा: 10। Check sugar weekly", built.Sig["hi"]);
         Assert.Equal("تناول 1 قرص عن طريق الفم مرتين يوميًا بعد الأكل لمدة 5 أيام. الكمية: 10. Check sugar weekly", built.Sig["ar"]);
+        Assert.Equal("1 மாத்திரை வாய் வழியாக தினமும் இரண்டு முறை உணவுக்குப் பின் 5 நாட்களுக்கு எடுத்துக்கொள்ளவும். அளவு: 10. Check sugar weekly", built.Sig["ta"]);
 
         // Autosaved: a fresh read has it, and each change left one audit row with codes only.
         Assert.Equal(built, Assert.Single((await Rx(h.Doctor).ListAsync(enc.Id))!), new LineComparer());

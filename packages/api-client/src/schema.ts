@@ -4219,6 +4219,45 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/staff/{membershipId}/locations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    membershipId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SetLocations"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/staff/{membershipId}/reactivate": {
         parameters: {
             query?: never;
@@ -6494,6 +6533,7 @@ export interface components {
             languages?: null | string;
             /** Format: uuid */
             facilityId?: string;
+            alsoFacilityIds?: null | string[];
             authority?: null | string;
             licenceNumber?: null | string;
             category?: null | string;
@@ -6543,6 +6583,7 @@ export interface components {
             customRoleId: null | string;
             /** Format: uuid */
             facilityId: string;
+            alsoFacilityIds?: null | string[];
         };
         AddToWaitlist: {
             /** Format: uuid */
@@ -7522,6 +7563,10 @@ export interface components {
         };
         SetAllergyStatus: {
             status: null | components["schemas"]["AllergyStatus"];
+        };
+        SetLocations: {
+            facilityIds: null | string[];
+            reason: null | string;
         };
         /** @enum {unknown} */
         SexAtBirth: "Female" | "Male" | "Other";

@@ -9,7 +9,7 @@ import type { Location } from '../../settings/domain/settings';
 import { Field } from '../../settings/components/Field';
 import { Section } from '../../settings/components/Section';
 import { staffColumns, type StaffColumn } from '../domain/staffTable';
-import { assignableRoles, canOffboard, canReactivate, canResend, canRevoke, isDoctor, permissionRows, statusLabel, type AddStaffForm, type OffboardForm, type ReactivateForm, type RoleCatalogue, type RoleChoice, type StaffMember, type Step } from '../domain/staff';
+import { assignableRoles, canOffboard, canSetLocations, locationsOf, canReactivate, canResend, canRevoke, isDoctor, permissionRows, statusLabel, type AddStaffForm, type LocationsForm, type OffboardForm, type ReactivateForm, type RoleCatalogue, type RoleChoice, type StaffMember, type Step } from '../domain/staff';
 
 type Props = {
   rows: StaffMember[];
@@ -23,7 +23,7 @@ type Props = {
   choice: RoleChoice | null;
   form: UseFormReturn<AddStaffForm>;
   canContinue: boolean;
-  notice: 'invited' | 'resent' | 'revoked' | 'offboarded' | 'reactivated' | null;
+  notice: 'invited' | 'resent' | 'revoked' | 'offboarded' | 'reactivated' | 'locations' | null;
   openVisits: number;
   offboarding: StaffMember | null;
   offboardForm: UseFormReturn<OffboardForm>;
@@ -32,6 +32,13 @@ type Props = {
   onOffboard: (member: StaffMember) => void;
   onOffboardSubmit: FormEventHandler<HTMLFormElement>;
   onOffboardCancel: () => void;
+  locating: StaffMember | null;
+  locationsForm: UseFormReturn<LocationsForm>;
+  locationsWorking: boolean;
+  locationsError: 'lastAdmin' | 'failed' | null;
+  onLocations: (member: StaffMember) => void;
+  onLocationsSubmit: FormEventHandler<HTMLFormElement>;
+  onLocationsCancel: () => void;
   reactivating: StaffMember | null;
   reactivateForm: UseFormReturn<ReactivateForm>;
   reactivateWorking: boolean;
@@ -108,6 +115,7 @@ export default function StaffPanel(p: Props) {
                       <span className="flex flex-wrap gap-2">
                         {canResend(m) && <Button type="button" variant="outline" className="min-h-11 min-w-11" disabled={p.working} aria-label={t('staff.resendNamed', { name: who })} onClick={() => p.onResend(m.invitationId!)}>{t('staff.resend')}</Button>}
                         {canRevoke(m) && <Button type="button" variant="outline" className="min-h-11 min-w-11" disabled={p.working} aria-label={t('staff.revokeNamed', { name: who })} onClick={() => p.onRevoke(m.invitationId!)}>{t('staff.revoke')}</Button>}
+                        {canSetLocations(m) && p.locations.length > 1 && <Button type="button" variant="outline" className="min-h-11 min-w-11" disabled={p.working || !!p.locating} aria-label={t('staff.locationsNamed', { name: who })} onClick={() => p.onLocations(m)}>{t('staff.locations')}</Button>}
                         {canReactivate(m) && <Button type="button" variant="outline" className="min-h-11 min-w-11" disabled={p.working || !!p.reactivating} aria-label={t('staff.reactivateNamed', { name: who })} onClick={() => p.onReactivate(m)}>{t('staff.reactivate')}</Button>}
                         {canOffboard(m) && <Button type="button" variant="outline" className="min-h-11 min-w-11" disabled={p.working || !!p.offboarding} aria-label={t('staff.offboardNamed', { name: who })} onClick={() => p.onOffboard(m)}>{t('staff.offboard')}</Button>}
                       </span>
@@ -147,6 +155,39 @@ export default function StaffPanel(p: Props) {
           </form>
         </Section>
       )}
+
+      {p.locating && (() => {
+        const chosen = p.locationsForm.watch('facilityIds');
+        const current = locationsOf(p.rows, p.locating);
+        const removing = current.some(id => !chosen.includes(id));
+        const toggle = (id: string) => p.locationsForm.setValue('facilityIds', chosen.includes(id) ? chosen.filter(x => x !== id) : [...chosen, id], { shouldValidate: true });
+        return (
+          <Section title={t('staff.locationsTitle', { name: p.locating.name ?? p.locating.email ?? '' })} intro={t('staff.locationsIntro')}>
+            <form noValidate onSubmit={p.onLocationsSubmit} className="flex flex-col gap-4">
+              <fieldset className="flex flex-col gap-2" aria-describedby={p.locationsForm.formState.errors.facilityIds ? 'staff-locations-error' : undefined}>
+                <legend className="mb-1 font-bold">{t('staff.facility')}</legend>
+                {p.locations.map(l => (
+                  <label key={l.id} className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border p-3 has-[:checked]:border-primary has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring/50">
+                    <input type="checkbox" className="size-4 accent-brand-700" checked={chosen.includes(l.id)} onChange={() => toggle(l.id)} />
+                    <span className="font-semibold">{l.name}</span>
+                  </label>
+                ))}
+                {p.locationsForm.formState.errors.facilityIds && <p id="staff-locations-error" role="alert" className={fieldError}>{t('staff.locationsRequired')}</p>}
+              </fieldset>
+              {removing && (
+                <Field id="staff-locations-reason" label={t('staff.offboardReason')} hint={t('staff.locationsReasonHint')} error={p.locationsForm.formState.errors.reason && t('staff.offboardReasonRequired')}>
+                  <Textarea id="staff-locations-reason" rows={3} maxLength={500} {...describedBy('staff-locations-reason', !!p.locationsForm.formState.errors.reason)} {...p.locationsForm.register('reason')} />
+                </Field>
+              )}
+              {p.locationsError && <p role="alert" className={fieldError}>{t(`staff.locationsError.${p.locationsError}`)}</p>}
+              <div className="flex flex-wrap gap-2">
+                <Button type="submit" loading={p.locationsWorking}>{t('staff.locationsConfirm')}</Button>
+                <Button type="button" variant="outline" onClick={p.onLocationsCancel}>{t('settings.cancel')}</Button>
+              </div>
+            </form>
+          </Section>
+        );
+      })()}
 
       {p.reactivating && (
         <Section title={t('staff.reactivateTitle', { name: p.reactivating.name ?? p.reactivating.email ?? '' })} intro={t('staff.reactivateIntro')}>
@@ -189,6 +230,22 @@ export default function StaffPanel(p: Props) {
                     <SelectContent>{p.locations.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}</SelectContent>
                   </Select>
                 </Field>
+                {p.locations.length > 1 && (
+                  <fieldset className="flex flex-col gap-2 sm:col-span-2">
+                    <legend className="mb-1 font-bold">{t('staff.alsoAt')}</legend>
+                    {p.locations.filter(l => l.id !== p.form.watch('facilityId')).map(l => {
+                      const also = p.form.watch('alsoFacilityIds');
+                      return (
+                        <label key={l.id} className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border p-3 has-[:checked]:border-primary has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring/50">
+                          <input type="checkbox" className="size-4 accent-brand-700" checked={also.includes(l.id)}
+                            onChange={() => p.form.setValue('alsoFacilityIds', also.includes(l.id) ? also.filter(x => x !== l.id) : [...also, l.id])} />
+                          <span className="font-semibold">{l.name}</span>
+                        </label>
+                      );
+                    })}
+                    <p className="text-sm text-muted-foreground">{t('staff.alsoAtHint')}</p>
+                  </fieldset>
+                )}
               </div>
             )}
             {p.step === 'permissions' && p.choice && (

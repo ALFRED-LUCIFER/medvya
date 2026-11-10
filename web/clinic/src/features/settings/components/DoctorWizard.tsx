@@ -81,7 +81,7 @@ type Props = {
 export default function DoctorWizard(p: Props) {
   const { t } = useI18n();
   const error = useFieldError(p.fieldErrors);
-  const { register, control } = p.form;
+  const { register, control, watch } = p.form;
   const title = t(`doctors.step.${p.step}`);
   return (
     <Section title={t('doctors.add.title')} intro={t('doctors.add.intro')}>
@@ -132,6 +132,21 @@ export default function DoctorWizard(p: Props) {
                   </Select>
                 )} />
               </Field>
+              {p.locations.length > 1 && (
+                <Controller control={control} name="alsoFacilityIds" render={({ field }) => (
+                  <fieldset className="flex flex-col gap-2 sm:col-span-2">
+                    <legend className="mb-1 font-bold">{t('staff.alsoAt')}</legend>
+                    {p.locations.filter(l => l.id !== watch('facilityId')).map(l => (
+                      <label key={l.id} className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border p-3 has-[:checked]:border-primary has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring/50">
+                        <input type="checkbox" className="size-4 accent-brand-700" checked={field.value.includes(l.id)}
+                          onChange={() => field.onChange(field.value.includes(l.id) ? field.value.filter(x => x !== l.id) : [...field.value, l.id])} />
+                        <span className="font-semibold">{l.name}</span>
+                      </label>
+                    ))}
+                    <p className="text-sm text-muted-foreground">{t('doctors.alsoAtHint')}</p>
+                  </fieldset>
+                )} />
+              )}
             </>
           )}
           {p.step === 'signature' && (

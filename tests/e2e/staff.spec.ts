@@ -98,7 +98,7 @@ test('adding a receptionist: role, location, locked permissions, then the invita
   expect(await axe(page)).toEqual([]);
   await page.getByRole('button', { name: 'Send invitation', exact: true }).click();
   await expect(page.getByText('Invitation sent.')).toBeVisible();
-  expect(JSON.parse(body)).toEqual({ email: 'new.desk@example.test', facilityId: facility, role: 'Receptionist', customRoleId: null });
+  expect(JSON.parse(body)).toEqual({ email: 'new.desk@example.test', facilityId: facility, role: 'Receptionist', customRoleId: null, alsoFacilityIds: [] });
 });
 
 test('a custom role offers only the rows the server allows, and Arabic lays the table out right to left', async ({ page }) => {
@@ -233,4 +233,37 @@ for (const locale of ['en', 'ar'])
     if (locale === 'ar') expect(header!.x + header!.width).toBeGreaterThan(box!.x + box!.width - 60);
     else expect(header!.x).toBeLessThan(box!.x + 60);
     expect(await axe(page)).toEqual([]);
+  });
+
+// MDV-P1-071: a member works at several locations of the organisation; the owner sets them, taking one away needs a reason.
+// Mocked like the rest of this file; the server rules (403 at an unassigned location, one seat per person, offboarding at every location) are in StaffLocationsTests.cs.
+const velachery = '22222222-2222-4222-8222-222222222222';
+const twoLocations = [{ id: facility, name: 'Adyar (synthetic)', address: null, timeZone: 'Asia/Kolkata' }, { id: velachery, name: 'Velachery (synthetic)', address: null, timeZone: 'Asia/Kolkata' }];
+for (const [locale, button, reasonLabel, saved] of [
+  ['en', 'Locations of P. Devi (synthetic)', 'Reason (kept in the audit trail)', 'Locations saved.'],
+  ['ar', 'المواقع لـ P. Devi (synthetic)', 'السبب (يُحفظ في سجل التدقيق)', 'تم حفظ المواقع.'],
+] as const)
+  test(`the owner sets a member's locations, and taking one away needs a reason (${locale})`, async ({ page }) => {
+    await setUp(page, locale);
+    await page.route('**/v1/settings/locations', r => r.fulfill({ json: twoLocations }));
+    const at = (id: string, where: string, name: string) => member({ membershipId: id, userId: 'u-devi', name: 'P. Devi (synthetic)', facilityId: where, facilityName: name });
+    await page.route('**/v1/staff', r => r.request().method() === 'GET'
+      ? r.fulfill({ json: [at('d1', facility, 'Adyar (synthetic)'), at('d2', velachery, 'Velachery (synthetic)')] }) : r.fallback());
+    let body: { facilityIds: string[]; reason: string } | null = null;
+    await page.route('**/v1/staff/d1/locations', r => { body = r.request().postDataJSON(); return r.fulfill({ status: 204 }); });
+    await page.goto('/settings?tab=staff');
+    await page.getByRole('button', { name: button }).first().click();
+    const boxes = page.getByRole('checkbox');
+    await expect(boxes).toHaveCount(2);
+    await expect(boxes.nth(0)).toBeChecked();
+    await expect(boxes.nth(1)).toBeChecked();
+    await boxes.nth(1).uncheck();
+    await page.locator('form button[type="submit"]').click();
+    await expect(page.getByLabel(reasonLabel)).toBeVisible(); // taking Velachery away asks why; nothing was sent yet
+    expect(body).toBeNull();
+    await page.getByLabel(reasonLabel).fill('Moved to Adyar');
+    expect(await axe(page)).toEqual([]);
+    await page.locator('form button[type="submit"]').click();
+    await expect(page.getByText(saved)).toBeVisible();
+    expect(body).toEqual({ facilityIds: [facility], reason: 'Moved to Adyar' });
   });

@@ -382,6 +382,10 @@ namespace Medvya.Tenancy.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset?>("AcceptedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid[]>("AlsoFacilityIds")
+                        .IsRequired()
+                        .HasColumnType("uuid[]");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 

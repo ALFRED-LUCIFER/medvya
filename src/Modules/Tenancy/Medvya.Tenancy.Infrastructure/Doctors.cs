@@ -50,7 +50,6 @@ public sealed class Doctors(TenancyDbContext db, ICurrentTenant tenant, ICurrent
         var now = clock.GetUtcNow();
         Guid id = default;
         // Doctors join as hospital doctors: the solo-doctor role carries practice-configuration rights (RoleMatrix), which an added doctor must not get.
-        // shortcut: one facility per doctor; add the doctor again for another location (a membership is per facility). Multi-facility scope with MDV-P1-009.
         var created = await invitations.CreateAsync(email!, Role.HospitalDoctor, command.FacilityId, m =>
         {
             id = m.Id;
@@ -70,7 +69,7 @@ public sealed class Doctors(TenancyDbContext db, ICurrentTenant tenant, ICurrent
                 Id = Guid.CreateVersion7(), TenantId = TenantId, ActorUserId = user.UserId, Section = "doctor", ResourceId = m.Id, OccurredAt = now,
                 After = $$"""{"facilityId":"{{command.FacilityId}}","authority":"{{command.Authority}}","number":"{{command.LicenceNumber!.Trim()}}","expiresOn":"{{command.ExpiresOn:yyyy-MM-dd}}","licence":"Attested"}""",
             });
-        }, cancellationToken);
+        }, command.AlsoFacilityIds, cancellationToken);
         return created is null ? null : (await QueryAsync(id, rules.Currency, cancellationToken))[0];
     }
 

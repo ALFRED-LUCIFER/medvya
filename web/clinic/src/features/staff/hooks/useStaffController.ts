@@ -4,8 +4,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { fetchLocations } from '../../settings/services/settingsApi';
 import { ApiError } from '../../schedule/services/scheduleApi';
-import { addStaffSchema, offboardSchema, reactivateSchema, rebookingMissing, type AddStaffForm, type OffboardForm, type ReactivateForm, type StaffMember, type AssignableRole, type RoleChoice, type Step } from '../domain/staff';
-import { addStaff, fetchRoles, fetchStaff, offboardStaff, reactivateStaff, resendInvitation, revokeInvitation } from '../services/staffApi';
+import { addStaffSchema, offboardSchema, reactivateSchema, rebookingMissing, locationsOf, locationsSchema, reasonMissing, type LocationsForm, type AddStaffForm, type OffboardForm, type ReactivateForm, type StaffMember, type AssignableRole, type RoleChoice, type Step } from '../domain/staff';
+import { addStaff, fetchRoles, fetchStaff, offboardStaff, reactivateStaff, resendInvitation, revokeInvitation, setStaffLocations } from '../services/staffApi';
 
 
 /** Settings → Staff: the staff table and the "Add staff member" steps (role → location → permissions → invite). */
@@ -23,16 +23,16 @@ export function useStaffController(defaultFacilityId: string) {
 
   const [step, setStep] = useState<Step | null>(null);
   const [choice, setChoice] = useState<RoleChoice | null>(null);
-  const [notice, setNotice] = useState<'invited' | 'resent' | 'revoked' | 'offboarded' | 'reactivated' | null>(null);
+  const [notice, setNotice] = useState<'invited' | 'resent' | 'revoked' | 'offboarded' | 'reactivated' | 'locations' | null>(null);
   /** Patients already checked in for the person just offboarded: reception reassigns them on the board. */
   const [openVisits, setOpenVisits] = useState(0);
   const [offboarding, setOffboarding] = useState<StaffMember | null>(null);
   const offboardForm = useForm<OffboardForm>({ resolver: zodResolver(offboardSchema), defaultValues: { reason: '', rebooking: null } });
   const [reactivating, setReactivating] = useState<StaffMember | null>(null);
   const reactivateForm = useForm<ReactivateForm>({ resolver: zodResolver(reactivateSchema), defaultValues: { reason: '' } });
-  const form = useForm<AddStaffForm>({ resolver: zodResolver(addStaffSchema), defaultValues: { email: '', facilityId: defaultFacilityId } });
+  const form = useForm<AddStaffForm>({ resolver: zodResolver(addStaffSchema), defaultValues: { email: '', facilityId: defaultFacilityId, alsoFacilityIds: [] } });
 
-  const close = () => { setStep(null); setChoice(null); form.reset({ email: '', facilityId: defaultFacilityId }); };
+  const close = () => { setStep(null); setChoice(null); form.reset({ email: '', facilityId: defaultFacilityId, alsoFacilityIds: [] }); };
   const add = useMutation({
     mutationFn: (values: AddStaffForm) => {
       if (!choice || choice.kind === 'doctor') throw new Error('no role');
@@ -54,6 +54,15 @@ export function useStaffController(defaultFacilityId: string) {
     onSuccess: () => { closeReactivate(); setNotice('reactivated'); refresh(); },
   });
   const closeReactivate = () => { setReactivating(null); reactivateForm.reset({ reason: '' }); reactivate.reset(); };
+
+  const [locating, setLocating] = useState<StaffMember | null>(null);
+  const current = locating ? locationsOf(staff.data ?? [], locating) : [];
+  const locationsForm = useForm<LocationsForm>({ resolver: zodResolver(locationsSchema), defaultValues: { facilityIds: [], reason: '' } });
+  const closeLocations = () => { setLocating(null); locationsForm.reset({ facilityIds: [], reason: '' }); setLocations.reset(); };
+  const setLocations = useMutation({
+    mutationFn: (values: LocationsForm) => setStaffLocations(locating!.membershipId, values.facilityIds, values.reason),
+    onSuccess: () => { closeLocations(); setNotice('locations'); refresh(); },
+  });
 
   // Doctors need a licence check, so choosing one stops the steps and shows where to go instead.
   const canContinue = step === 'role' ? choice !== null && choice.kind !== 'doctor' : true;
@@ -103,6 +112,16 @@ export function useStaffController(defaultFacilityId: string) {
     onReactivate: (m: StaffMember) => { setNotice(null); closeOffboard(); reactivate.reset(); setReactivating(m); },
     onReactivateSubmit: reactivateForm.handleSubmit(values => reactivate.mutate(values)),
     onReactivateCancel: closeReactivate,
+    locating,
+    locationsForm,
+    locationsWorking: setLocations.isPending,
+    locationsError: !setLocations.isError ? null : setLocations.error instanceof ApiError && setLocations.error.code === 'membershipId:last_admin' ? ('lastAdmin' as const) : ('failed' as const),
+    onLocations: (m: StaffMember) => { setNotice(null); closeOffboard(); closeReactivate(); setLocations.reset(); locationsForm.reset({ facilityIds: locationsOf(staff.data ?? [], m), reason: '' }); setLocating(m); },
+    onLocationsSubmit: locationsForm.handleSubmit(values => {
+      if (reasonMissing(current, values)) locationsForm.setError('reason', { type: 'required' });
+      else setLocations.mutate(values);
+    }),
+    onLocationsCancel: closeLocations,
     onResend: (id: string) => { setNotice(null); resend.mutate(id); },
     onRevoke: (id: string) => { setNotice(null); revoke.mutate(id); },
   };

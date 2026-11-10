@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addableRows, canOffboard, canResend, canReactivate, permissionRows, rebookingMissing, statusLabel, type RoleCatalogue, type StaffMember } from './staff';
+import { addableRows, canOffboard, canResend, canReactivate, canSetLocations, locationsOf, permissionRows, reasonMissing, rebookingMissing, removesLocation, statusLabel, type RoleCatalogue, type StaffMember } from './staff';
 
 const catalogue: RoleCatalogue = {
   builtIn: [
@@ -63,5 +63,26 @@ describe('offboarding and re-activation (#225)', () => {
     expect(canReactivate(m({ status: 'Offboarded' }))).toBe(true);
     expect(canReactivate(m({ status: 'Offboarded', userId: null }))).toBe(false);
     expect(canReactivate(m({ status: 'Active' }))).toBe(false);
+  });
+});
+
+describe('locations (MDV-P1-071)', () => {
+  const row = (membershipId: string, userId: string | null, facilityId: string, status: StaffMember['status'] = 'Active'): StaffMember => ({
+    membershipId, userId, name: null, email: null, role: 'Receptionist', customRoleId: null, customRoleName: null, facilityId, facilityName: facilityId,
+    status, mfa: 'enrolled', invitationId: null, invitationState: null, invitationExpiresAt: null,
+  });
+  const rows = [row('1', 'u', 'adyar'), row('2', 'u', 'velachery'), row('3', 'u', 'mylapore', 'Offboarded'), row('4', 'v', 'adyar')];
+  it('lists the active locations of the same person only', () => {
+    expect(locationsOf(rows, rows[0]!)).toEqual(['adyar', 'velachery']);
+    expect(locationsOf(rows, rows[3]!)).toEqual(['adyar']);
+  });
+  it('edits only people who have joined and are active', () => {
+    expect([row('a', 'u', 'f'), row('b', null, 'f', 'Invited'), row('c', 'u', 'f', 'Offboarded')].map(canSetLocations)).toEqual([true, false, false]);
+  });
+  it('needs a reason only when a location is taken away', () => {
+    expect(removesLocation(['a', 'b'], ['a', 'b', 'c'])).toBe(false);
+    expect(removesLocation(['a', 'b'], ['a'])).toBe(true);
+    expect(reasonMissing(['a', 'b'], { facilityIds: ['a'], reason: '' })).toBe(true);
+    expect(reasonMissing(['a', 'b'], { facilityIds: ['a', 'b', 'c'], reason: '' })).toBe(false);
   });
 });

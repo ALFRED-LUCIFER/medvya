@@ -190,12 +190,24 @@ public sealed class BookingServiceTests(PostgresFixture sql) : IClassFixture<Pos
     }
 
     [Fact]
-    public async Task AnotherFacilitysPatientIsNeitherFoundNorBookable()
+    public async Task APatientRegisteredAtAnotherLocationOfTheOrganisationIsFoundAndBookable()
     {
-        // Same tenant, registered at Velachery: reception at Adyar must not open or book them by id.
-        Assert.Null(await h.Booking(h.Reception).FindPatientAsync(h.Facility, h.OtherFacilityPatient));
+        // MDV-P1-072: same tenant, registered at Velachery: reception at Adyar finds and books them; the visit is at Adyar.
+        Assert.Equal("Lakshmi Pillai (synthetic)", (await h.Booking(h.Reception).FindPatientAsync(h.Facility, h.OtherFacilityPatient))!.FullName);
         var hold = await h.Booking(h.Reception).HoldAsync(Slot(9));
-        var refused = await Assert.ThrowsAsync<SchedulingValidationException>(() => h.Booking(h.Reception).BookAsync(Book(hold.Id) with { PatientId = h.OtherFacilityPatient }));
+        var booked = await h.Booking(h.Reception).BookAsync(Book(hold.Id) with { PatientId = h.OtherFacilityPatient });
+        Assert.Equal((h.Facility, h.OtherFacilityPatient), (booked.FacilityId, booked.PatientId));
+        await using var db = sql.Scheduling(h.Tenant);
+        Assert.Equal(h.Facility, (await db.Appointments.SingleAsync()).FacilityId);
+    }
+
+    [Fact]
+    public async Task APatientOfAnotherOrganisationIsNeitherFoundNorBookable()
+    {
+        await h.SeedOtherOrganisationPatientAsync();
+        Assert.Null(await h.Booking(h.Reception).FindPatientAsync(h.Facility, h.ForeignPatient));
+        var hold = await h.Booking(h.Reception).HoldAsync(Slot(9));
+        var refused = await Assert.ThrowsAsync<SchedulingValidationException>(() => h.Booking(h.Reception).BookAsync(Book(hold.Id) with { PatientId = h.ForeignPatient }));
         Assert.Equal([new ValidationError("patientId", "unknown")], refused.Errors);
         await using var db = sql.Scheduling(h.Tenant);
         Assert.Empty(await db.Appointments.ToListAsync());

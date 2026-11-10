@@ -145,14 +145,15 @@ public sealed class SeriesTests(PostgresFixture sql) : IClassFixture<PostgresFix
     }
 
     [Fact]
-    public async Task ASeriesIsValidatedAndPatientsOfOtherFacilitiesAreRefused()
+    public async Task ASeriesIsValidatedAndPatientsOfOtherOrganisationsAreRefused()
     {
         async Task<IReadOnlyList<ValidationError>> Invalid(Func<Task> call) => (await Assert.ThrowsAsync<SchedulingValidationException>(call)).Errors;
         Assert.Equal([new ValidationError("count", "out_of_range")], await Invalid(() => Desk.PreviewSeriesAsync(Weekly(10, 1))));
         Assert.Equal([new ValidationError("count", "out_of_range")], await Invalid(() => Desk.PreviewSeriesAsync(Weekly(10, SeriesPattern.MaxCount + 1))));
         Assert.Equal([new ValidationError("starts", "out_of_range")], await Invalid(() => Desk.BookSeriesAsync(Confirm([]))));
         Assert.Equal([new ValidationError("starts", "out_of_range")], await Invalid(() => Desk.BookSeriesAsync(Confirm([At(10), At(10)]))));
-        Assert.Equal([new ValidationError("patientId", "unknown")], await Invalid(() => Desk.BookSeriesAsync(Confirm([At(10)]) with { PatientId = h.OtherFacilityPatient })));
+        await h.SeedOtherOrganisationPatientAsync();
+        Assert.Equal([new ValidationError("patientId", "unknown")], await Invalid(() => Desk.BookSeriesAsync(Confirm([At(10)]) with { PatientId = h.ForeignPatient })));
     }
 
     [Fact]

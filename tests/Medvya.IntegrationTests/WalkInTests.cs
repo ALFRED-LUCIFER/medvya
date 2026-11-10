@@ -179,12 +179,13 @@ public sealed class WalkInTests(PostgresFixture sql) : IClassFixture<PostgresFix
     }
 
     [Fact]
-    public async Task OnlyStaffWhoMayBookAndOnlyThisFacilitysPatientsAndDoctors()
+    public async Task OnlyStaffWhoMayBookAndOnlyThisOrganisationsPatientsAndThisFacilitysDoctors()
     {
         At(10, 5);
         await Assert.ThrowsAsync<SchedulingAccessDeniedException>(() => h.Booking(h.Nurse).WalkInAsync(For(null)));
+        await h.SeedOtherOrganisationPatientAsync();
         Assert.Equal("unknown", Assert.Single((await Assert.ThrowsAsync<SchedulingValidationException>(() =>
-            h.Booking(h.Reception).WalkInAsync(For(null, h.OtherFacilityPatient)))).Errors).Code);
+            h.Booking(h.Reception).WalkInAsync(For(null, h.ForeignPatient)))).Errors).Code);
         Assert.Equal("calendarId", Assert.Single((await Assert.ThrowsAsync<SchedulingValidationException>(() =>
             h.Booking(h.Reception).WalkInAsync(For(Guid.NewGuid())))).Errors).Field);
     }

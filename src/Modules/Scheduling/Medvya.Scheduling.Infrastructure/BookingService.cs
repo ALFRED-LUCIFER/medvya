@@ -83,8 +83,8 @@ public sealed class BookingService(
         var reason = ScheduleService.Clean(command.ReasonText);
         if (reason?.Length > MaxReason) errors.Add(new("reasonText", "too_long"));
         SchedulingValidationException.ThrowIfAny(errors);
-        // Only a patient registered at the hold's facility: a membership at one facility never reaches another's patients.
-        var patient = (await context.PatientsAsync([command.PatientId], cancellationToken)).GetValueOrDefault(command.PatientId) is { } p && p.FacilityId == hold.FacilityId
+        // Any patient of the organisation (MDV-P1-072); another organisation's is invisible (tenant filter and row-level security).
+        var patient = (await context.PatientsAsync([command.PatientId], cancellationToken)).GetValueOrDefault(command.PatientId) is { } p
             ? p
             : throw new SchedulingValidationException([new("patientId", "unknown")]);
         var (_, zone) = await context.FacilityAsync(hold.FacilityId, cancellationToken);
@@ -141,8 +141,8 @@ public sealed class BookingService(
         if (!Enum.IsDefined(command.VisitType)) errors.Add(new("visitType", "invalid"));
         if (!Enum.IsDefined(command.ReasonCategory)) errors.Add(new("reasonCategory", "invalid"));
         SchedulingValidationException.ThrowIfAny(errors);
-        // As booking: only a patient registered at this facility.
-        var patient = (await context.PatientsAsync([command.PatientId], cancellationToken)).GetValueOrDefault(command.PatientId) is { } p && p.FacilityId == command.FacilityId
+        // As booking: any patient of the organisation.
+        var patient = (await context.PatientsAsync([command.PatientId], cancellationToken)).GetValueOrDefault(command.PatientId) is { } p
             ? p
             : throw new SchedulingValidationException([new("patientId", "unknown")]);
         var (_, zone) = await context.FacilityAsync(command.FacilityId, cancellationToken);
@@ -513,7 +513,7 @@ public sealed class BookingService(
         if (reason?.Length > MaxReason) errors.Add(new("reasonText", "too_long"));
         if (command.Starts.Count is < 1 or > SeriesPattern.MaxCount || command.Starts.Distinct().Count() != command.Starts.Count) errors.Add(new("starts", "out_of_range"));
         SchedulingValidationException.ThrowIfAny(errors);
-        var patient = (await context.PatientsAsync([command.PatientId], cancellationToken)).GetValueOrDefault(command.PatientId) is { } p && p.FacilityId == command.FacilityId
+        var patient = (await context.PatientsAsync([command.PatientId], cancellationToken)).GetValueOrDefault(command.PatientId) is { } p
             ? p
             : throw new SchedulingValidationException([new("patientId", "unknown")]);
         var (_, zone) = await context.FacilityAsync(command.FacilityId, cancellationToken);
@@ -575,8 +575,8 @@ public sealed class BookingService(
     public async Task<PatientView?> FindPatientAsync(Guid facilityId, Guid patientId, CancellationToken cancellationToken = default)
     {
         await context.RequireAsync(facilityId, SchedulingAccess.CanBook, cancellationToken);
-        // Patients of this facility only, as front-desk search (MDV-P1-018): another facility's patient is "not found".
-        return (await context.PatientsAsync([patientId], cancellationToken)).TryGetValue(patientId, out var p) && p.FacilityId == facilityId ? new(p.Id, p.FullName, p.Mrn) : null;
+        // Any patient of the organisation, as front-desk search (MDV-P1-072); another organisation's is "not found" (tenant filter and RLS).
+        return (await context.PatientsAsync([patientId], cancellationToken)).TryGetValue(patientId, out var p) ? new(p.Id, p.FullName, p.Mrn) : null;
     }
 
     /// <summary>

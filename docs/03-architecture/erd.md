@@ -1334,7 +1334,10 @@ erDiagram
   }
   Problems {
     guid Id PK
+    guid EncounterId "id of encounters.Encounters"
+    guid MergedFromPatientId "id of patients.Patients"
     guid PatientId "id of patients.Patients"
+    guid RecordedBy "id of identity.Users"
   }
   SignedNotePdfs {
     guid Id PK
@@ -1405,7 +1408,10 @@ erDiagram
   patients_Patients ||..o{ Observations : "PatientId"
   identity_Users |o..o{ Observations : "RecordedBy"
   identity_Users |o..o{ Observations : "VerifiedBy"
+  Encounters |o..o{ Problems : "EncounterId, no FK"
+  patients_Patients |o..o{ Problems : "MergedFromPatientId"
   patients_Patients ||..o{ Problems : "PatientId"
+  identity_Users |o..o{ Problems : "RecordedBy"
   ConsultNotes ||..o{ SignedNotePdfs : "NoteId, no FK"
   identity_Users ||..o{ SignedNotePdfs : "RenderedBy"
   SignedNoteVersions |o..o{ SignedNoteVersions : "AmendsVersionId, no FK"
@@ -1427,7 +1433,7 @@ erDiagram
 | `MedicationReconciliations` | 7 | Id | tenant-scoped |
 | `MedicationStatements` | 17 | Id | tenant-scoped |
 | `Observations` | 16 | Id | tenant-scoped |
-| `Problems` | 9 | Id | tenant-scoped |
+| `Problems` | 17 | Id | tenant-scoped |
 | `SignedNotePdfs` | 8 | Id | append-only ledger; tenant-scoped |
 | `SignedNoteVersions` | 14 | Id | append-only ledger; tenant-scoped |
 
@@ -1643,13 +1649,21 @@ erDiagram
 | Column | Type | Null | Links to |
 |---|---|---|---|
 | `Id` | guid |  |  |
+| `CodeSystem` | character varying(20) |  |  |
+| `CodeSystemVersion` | character varying(30) |  |  |
 | `Description` | character varying(200) |  |  |
+| `EncounterId` | guid | yes | id of `encounters.Encounters` |
 | `Icd10Code` | character varying(10) |  |  |
+| `MergedFromPatientId` | guid | yes | id of `patients.Patients` |
 | `OnsetOn` | date | yes |  |
 | `PatientId` | guid |  | id of `patients.Patients` |
 | `RecordedAt` | timestamptz |  |  |
+| `RecordedBy` | guid | yes | id of `identity.Users` |
 | `Source` | character varying(20) |  |  |
+| `Status` | character varying(20) |  |  |
 | `TenantId` | guid |  | `tenancy.Tenants` |
+| `UpdatedAt` | timestamptz | yes |  |
+| `UpdatedBy` | guid | yes |  |
 | `Verification` | character varying(20) |  |  |
 
 </details>

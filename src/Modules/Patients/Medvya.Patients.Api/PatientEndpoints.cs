@@ -93,6 +93,8 @@ public static class PatientEndpoints
 {
     /// <summary>Per-user rate limit for search endpoints (registered by the host with <see cref="UserRateLimit.AddUserRateLimit"/>).</summary>
     public const string SearchRateLimit = "patient-search";
+    /// <summary>Per-user rate limit for the doctor's ⌘K lookup (MDV-P2-003), its own budget so desk searching and the overlay never starve each other.</summary>
+    public const string LookupRateLimit = "patient-lookup";
     /// <summary>Per-user rate limit for opening records and revealing their numbers (registered by the host, like search).</summary>
     public const string RecordRateLimit = "patient-record";
     /// <summary>Per-user rate limit for the duplicate check, which runs while the desk types (registered by the host, like search).</summary>
@@ -111,9 +113,9 @@ public static class PatientEndpoints
             .RequireUserRateLimit(SearchRateLimit) // before the audit filter: a refused search reads nothing
             .Audited("patient.search", "patient", Purpose);
 
-        // Global search (MDV-P2-003): the same audited, rate-limited search, for treatment, with the care-relationship verdict per row.
+        // Global search (MDV-P2-003): the same audited search on its own per-user budget, for treatment, with the care-relationship verdict per row.
         patients.MapPost("/lookup", Lookup)
-            .RequireUserRateLimit(SearchRateLimit)
+            .RequireUserRateLimit(LookupRateLimit)
             .Audited("patient.search", "patient", AuditPurpose.Treatment);
 
         // shortcut: per-user limits only; no alert on unusual read volume (e.g. one user opening hundreds of records a day) until the

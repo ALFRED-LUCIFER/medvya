@@ -123,6 +123,8 @@ public sealed class IntakeService(
         await db.SaveChangesAsync(cancellationToken);
         await audit.WriteAsync(Event(EscalateAction, visit), tx.GetDbTransaction(), cancellationToken);
         await tx.CommitAsync(cancellationToken);
+        // Ids and state only (no reason, no patient): an open Today refetches its escalations at once instead of on its next refresh (MDV-P2-002).
+        await visits.NotifyAsync(visit, cancellationToken);
         return await ViewAsync(visit, cancellationToken);
     }
 

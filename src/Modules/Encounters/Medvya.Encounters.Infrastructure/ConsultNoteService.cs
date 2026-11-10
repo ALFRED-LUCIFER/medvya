@@ -17,7 +17,7 @@ namespace Medvya.Encounters.Infrastructure;
 /// </summary>
 public sealed class ConsultNoteService(EncountersDbContext db, IClinicalAccess clinical, ICurrentTenant tenant, ICurrentUser user, IAuditLog audit, TimeProvider clock) : IConsultNotes
 {
-    public const string ReadAction = "note.read", SaveAction = "note.save", SignAction = "note.sign", Resource = "note";
+    public const string ReadAction = "note.read", SaveAction = "note.save", SignAction = "note.sign", PendingAction = "note.pending", Resource = "note";
     static readonly Access[] Leads = [Access.Full], SignLevel = [Access.Sign];
 
     public async Task<NoteView?> GetAsync(Guid encounterId, CancellationToken cancellationToken = default)
@@ -71,6 +71,32 @@ public sealed class ConsultNoteService(EncountersDbContext db, IClinicalAccess c
             throw new StaleNoteException(current.Version);
         }
         return View(note, new NoteSignature(signed.VersionNo, signed.SignedBy, signed.SignedAt, signed.ContentHash));
+    }
+
+    public async Task<(IReadOnlyList<PendingNote> Notes, bool More)> PendingAsync(Guid facilityId, CancellationToken cancellationToken = default)
+    {
+        var me = user.UserId ?? throw new InvalidOperationException("No user.");
+        var open = await db.Encounters.AsNoTracking()
+            .Where(e => e.LeadClinicianId == me && e.FacilityId == facilityId && !db.ConsultNotes.Any(n => n.EncounterId == e.Id && n.Status == NoteStatus.Signed))
+            // shortcut: the oldest 50 only, flagged as "more"; page the list if a pilot doctor routinely carries more than 50 unsigned notes.
+            .OrderBy(e => e.StartedAt).Take(IConsultNotes.MaxPending + 1)
+            .Select(e => new { Encounter = e, Drafted = db.ConsultNotes.Any(n => n.EncounterId == e.Id) }).ToListAsync(cancellationToken);
+        List<PendingNote> pending = [];
+        foreach (var row in open.Take(IConsultNotes.MaxPending))
+        {
+            try
+            {
+                // The doctor led it, but a care relationship can end (reassignment, policy change): a note they may no longer open is not offered.
+                await clinical.RequireAsync(row.Encounter.PatientId, facilityId, Capability.Patient360Chart, Leads, cancellationToken);
+            }
+            catch (ClinicalAccessDeniedException)
+            {
+                continue;
+            }
+            await audit.WriteAsync(Event(PendingAction, row.Encounter, null), cancellationToken);
+            pending.Add(new(row.Encounter.Id, row.Encounter.PatientId, row.Encounter.StartedAt, row.Drafted));
+        }
+        return (pending, open.Count > IConsultNotes.MaxPending);
     }
 
     async Task<NoteSignature?> SignatureOf(ConsultNote note, CancellationToken cancellationToken) =>

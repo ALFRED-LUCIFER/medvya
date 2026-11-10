@@ -59,6 +59,12 @@ journey('J2', {
 
     await page.getByRole('button', { name: 'End consultation' }).click(); // leaves no open consultation for a later run
     await expect(page.getByRole('status').filter({ hasText: 'Consultation ended' })).toHaveText(/^Consultation ended at \d\d:\d\d\.$/);
+    // MDV-P2-002: the unsigned note waits on Today (from any day) until it is signed, and opens its consultation again.
+    await page.getByRole('link', { name: 'Today' }).first().click();
+    const pending = page.getByRole('region', { name: /notes? to sign$/ });
+    const row = pending.getByRole('listitem').filter({ hasText: meera }).filter({ hasText: 'Draft, not signed' }).last(); // newest of this run; earlier runs leave theirs
+    await row.getByRole('link', { name: 'Open to finish' }).click();
+    await expect(page.getByRole('region', { name: 'Consultation note' }).getByLabel('Chief complaint')).toHaveValue('Increased thirst for two weeks (synthetic)');
     expect(watch.leaks(['Meera', 'Iyer', '1972-03-12', 'DQ-10-4482', 'thirst'])).toEqual([]); // whole values: a short digit run can occur by chance in a random id
   },
   2: 'MDV-P2-004', // E-01 Patient 360 brief (verified facts vs AI summary)

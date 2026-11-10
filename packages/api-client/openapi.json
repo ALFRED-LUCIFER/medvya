@@ -661,6 +661,18 @@
         }
       }
     },
+    "/v1/notes/pending": {
+      "get": {
+        "tags": [
+          "NoteEndpoints"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/v1/schedule": {
       "get": {
         "tags": [
@@ -10173,6 +10185,9 @@
     },
     {
       "name": "DocumentEndpoints"
+    },
+    {
+      "name": "NoteEndpoints"
     },
     {
       "name": "AccessLogEndpoints"

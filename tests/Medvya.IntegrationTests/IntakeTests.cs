@@ -191,8 +191,14 @@ public sealed class IntakeTests(PostgresFixture sql) : IClassFixture<PostgresFix
             Assert.Contains(("reason", "required"), (await Assert.ThrowsAsync<IntakeValidationException>(() => Intake(h.Nurse).EscalateAsync(visit, new EscalateIntake(blank)))).Errors);
         Assert.Empty(await Intake(h.Doctor).EscalationsAsync(h.Facility));
 
+        await h.Settings(h.Admin).SaveClinicalAccessAsync(ClinicalAccessPolicy.AssignedOnly);
+        pushes.Changes.Clear();
         var escalated = await Intake(h.Nurse).EscalateAsync(visit, new EscalateIntake("Severe headache with BP 210/130 (synthetic)"));
         Assert.True(escalated!.Escalated);
+        // MDV-P2-002 mutation check: drop the push in IntakeService.EscalateAsync and this fails. The push is ids and state, never the reason.
+        var push = Assert.Single(pushes.Changes);
+        Assert.Equal((visit, h.Facility, AppointmentState.WithNurse), (push.AppointmentId, push.FacilityId, push.State));
+        Assert.Empty(await Intake(h.SecondDoctor).EscalationsAsync(h.Facility)); // not the treating doctor: nothing, even with the push
         var urgent = Assert.Single(await Intake(h.Doctor).EscalationsAsync(h.Facility));
         Assert.Equal((visit, h.Patient, "Severe headache with BP 210/130 (synthetic)"), (urgent.AppointmentId, urgent.PatientId, urgent.Reason));
         // Open until the doctor takes the patient in.

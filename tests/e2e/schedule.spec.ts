@@ -634,7 +634,6 @@ for (const locale of ['en', 'ar'] as const)
       await expect(page.getByText('Meera Iyer (synthetic)').first()).toBeVisible();
       for (const size of [{ width: 1280, height: 720 }, { width: 640, height: 720 }]) { // 640 px is a 1280 px screen at 200 %
         await page.setViewportSize(size);
-        await page.evaluate(() => Promise.all(document.getAnimations().map(a => a.finished))); // axe must not sample a colour mid-transition
         await page.addScriptTag({ path: axePath });
         const violations = await page.evaluate(async () =>
           (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations

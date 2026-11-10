@@ -6283,6 +6283,158 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/encounters/{encounterId}/prescription": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    encounterId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/encounters/{encounterId}/prescription/items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    encounterId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["AddRxLine"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/prescription-items/{itemId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    itemId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["UpdateRxLine"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/prescription-items/{itemId}/included": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    itemId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["IncludeRxLine"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/encounters/{encounterId}/referrals": {
         parameters: {
             query?: never;
@@ -6641,6 +6793,13 @@ export interface components {
             /** Format: uuid */
             facilityId?: string;
             name?: null | string;
+        };
+        AddRxLine: {
+            /** Format: uuid */
+            formularyItemId: null | string;
+            medicine: null | string;
+            strength: null | string;
+            form: null | string;
         };
         AddStaff: {
             email: string;
@@ -7153,6 +7312,9 @@ export interface components {
         /** @enum {unknown} */
         IdentifierScheme: "Abha" | "AbhaAddress" | "AadhaarLast4" | "EmiratesId" | "Passport" | "Visa";
         IncludeOrder: {
+            included: null | boolean;
+        };
+        IncludeRxLine: {
             included: null | boolean;
         };
         InviteRequest: {
@@ -7704,6 +7866,18 @@ export interface components {
             type: components["schemas"]["DocumentType"];
             /** Format: date */
             documentDate: string;
+        };
+        UpdateRxLine: {
+            dose: null | string;
+            doseUnit: null | string;
+            route: null | string;
+            frequency: null | string;
+            timing: null | string;
+            /** Format: int32 */
+            durationDays: null | number | string;
+            /** Format: int32 */
+            quantity: null | number | string;
+            instructions: null | string;
         };
         VisitLength: {
             visitType?: components["schemas"]["VisitType"];

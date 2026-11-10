@@ -2,6 +2,7 @@ import { expect } from '@playwright/test';
 import { test } from '@playwright/test';
 import { mockReconciliation } from '../support/reconciliation';
 import { mockNote } from '../support/note';
+import { mockPrescription, stopLine } from '../support/prescription';
 import { journey } from './storyboard';
 
 // Storyboard: docs/02-design/journeys.md. Implement steps as their screens ship.
@@ -27,8 +28,22 @@ test('J2.5 (conflict half, MDV-P2-011) E-07 · Doctor: statin stopped vs chart a
   expect(calls.decisions).toEqual([{ key: 'atorvastatin', kind: 'Stop', newDose: '', reason: 'Muscle pain (synthetic)' }]);
 });
 
+// J2.6 is "Authorise Rx & orders": authorising is MDV-P2-017, so the step stays pending below. Its composer half is built (MDV-P2-015, E-05): the
+// statin stopped in reconciliation is a discontinue line, and the doctor adds metformin from the formulary as a draft.
+test('J2.6 (composer half, MDV-P2-015) E-05 · Doctor: the stopped statin is a discontinue line beside the new draft', async ({ page }) => {
+  const { calls } = await mockPrescription(page, { lines: [stopLine('Atorvastatin', 'Muscle pain (synthetic)')] });
+  await page.goto('/consult/e-1');
+  await expect(page.getByRole('list', { name: 'Medicines to stop' })).toContainText('Atorvastatin');
+  const rx = page.getByRole('region', { name: 'Prescription' });
+  await rx.getByLabel('Medicine', { exact: true }).fill('metformin');
+  await rx.getByRole('button', { name: 'Add Metformin 500 mg Tablet' }).click();
+  expect(calls.added).toEqual([{ formularyItemId: 'fi-metformin' }]);
+  await expect(rx).toContainText('Draft, not authorised');
+});
+
 journey('J2', {
   5: 'MDV-P2-012',
+  6: 'MDV-P2-017',
   // D-01: the next patient is Meera, ready for the doctor; starting the consultation binds it to her visit and shows who it is for, in Room 3.
   // The doctor's own Today (MDV-P2-002): the next patient hero starts the consultation.
   1: async ({ page }) => {

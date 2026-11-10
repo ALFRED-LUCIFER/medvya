@@ -187,6 +187,7 @@ app.MapEncounterEndpoints();
 app.MapIntakeEndpoints();
 app.MapFormularyEndpoints();
 app.MapOrderEndpoints();
+app.MapPrescriptionEndpoints();
 app.MapReferralEndpoints();
 app.MapNoteTemplateEndpoints();
 if (app.Environment.IsDevelopment() && app.Configuration["Authentication:Oidc:Authority"]?.EndsWith(DevIdentityProvider.Path, StringComparison.Ordinal) == true)

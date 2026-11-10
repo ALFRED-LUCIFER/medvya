@@ -13,6 +13,7 @@ public sealed class PrescribingDbContext(DbContextOptions<PrescribingDbContext> 
     public DbSet<ClinicalOrder> Orders => Set<ClinicalOrder>();
     public DbSet<Referral> Referrals => Set<Referral>();
     public DbSet<ReferralEvent> ReferralEvents => Set<ReferralEvent>();
+    public DbSet<PrescriptionItem> PrescriptionItems => Set<PrescriptionItem>();
 
     Guid? CurrentTenantId => tenant.TenantId;
 
@@ -68,6 +69,21 @@ public sealed class PrescribingDbContext(DbContextOptions<PrescribingDbContext> 
             e.Property(x => x.State).HasConversion<string>().HasMaxLength(20);
             e.Property(x => x.Note).HasMaxLength(200);
             e.HasIndex(x => new { x.TenantId, x.ReferralId, x.At });
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<PrescriptionItem>(e =>
+        {
+            e.Property(x => x.Medicine).HasMaxLength(200);
+            e.Property(x => x.Strength).HasMaxLength(50);
+            e.Property(x => x.Form).HasMaxLength(40);
+            e.Property(x => x.Dose).HasMaxLength(9);
+            e.Property(x => x.DoseUnit).HasMaxLength(20);
+            e.Property(x => x.Route).HasMaxLength(20);
+            e.Property(x => x.Frequency).HasMaxLength(20);
+            e.Property(x => x.Timing).HasMaxLength(20);
+            e.Property(x => x.Instructions).HasMaxLength(200);
+            e.HasIndex(x => new { x.TenantId, x.EncounterId });
+            e.HasIndex(x => new { x.TenantId, x.PatientId }); // merges
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         modelBuilder.Entity<OrderSet>(e =>

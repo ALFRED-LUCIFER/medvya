@@ -26,6 +26,7 @@ SOFT_REFS = {
     'AppointmentId': ('scheduling', 'Appointments'),
     'AddedBy': ('identity', 'Users'), 'OrderedBy': ('identity', 'Users'), 'SentBy': ('identity', 'Users'), 'CreatedBy': ('identity', 'Users'),
     'NotificationId': ('notifications', 'Notifications'), 'ReviewId': ('tenancy', 'AccessReviews'),
+    'FormularyItemId': ('prescribing', 'FormularyItems'),
 }
 # CalendarId (and the from/to of a reschedule) is a doctor (a membership, inferred) or a room, told apart by CalendarKind.
 CALENDAR_COLS = ('CalendarId', 'FromCalendarId', 'ToCalendarId')
@@ -43,6 +44,7 @@ PLANNED_TO_BUILT = {
     'OBSERVATION': 'encounters.Observations', 'PROBLEM': 'encounters.Problems', 'ALLERGY': 'encounters.Allergies', 'MEDICATION_STATEMENT': 'encounters.MedicationStatements',
     'CLINICAL_DOCUMENT': 'encounters.ClinicalDocuments',
     'FORMULARY_ITEM': 'prescribing.FormularyItems', 'ORDER_SET': 'prescribing.OrderSets', 'CLINICAL_ORDER': 'prescribing.Orders', 'REFERRAL': 'prescribing.Referrals',
+    'PRESCRIPTION_ITEM': 'prescribing.PrescriptionItems',
 }
 # where the built table covers only part of the planned entity
 PARTIAL = {
@@ -51,6 +53,7 @@ PARTIAL = {
     'CONSENT_RECEIPT': 'registration consents; the per-encounter recording consent in area C is not built',
     'NOTIFICATION': 'patient messages only; staff notifications are separate tables',
     'DOC_SEQUENCE': 'numbering only; invoices and payments are not built',
+    'PRESCRIPTION_ITEM': 'draft lines only; the PRESCRIPTION header and its authorisation come with MDV-P2-017',
 }
 LEDGER = {'audit.AuditEvents', 'encounters.SignedNoteVersions', 'patients.ConsentReceipts', 'tenancy.TermsAcceptances'}  # hash-chained, MDV-P0-036
 MODULE_ORDER = ['Tenancy', 'Identity', 'Patients', 'Scheduling', 'Encounters', 'Prescribing', 'Notifications', 'Audit', 'Leads', 'Billing', 'Platform']

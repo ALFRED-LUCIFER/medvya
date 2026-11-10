@@ -165,3 +165,12 @@ public sealed class MedicationReconciliationService(
     Guid TenantId => tenant.TenantId ?? throw new InvalidOperationException("No tenant context.");
     Guid Me => user.UserId ?? throw new InvalidOperationException("No user.");
 }
+
+/// <summary>The current Stop decisions of one encounter (the latest decision per medicine); see <see cref="IReconciliationStops"/>.</summary>
+public sealed class ReconciliationStops(EncountersDbContext db) : IReconciliationStops
+{
+    public async Task<IReadOnlyList<StoppedMedicine>> StopsAsync(Guid encounterId, CancellationToken cancellationToken = default) =>
+        [.. (await db.MedicationDecisions.AsNoTracking().Where(d => d.EncounterId == encounterId).ToListAsync(cancellationToken))
+            .GroupBy(d => d.MedicineKey).Select(g => g.OrderByDescending(d => d.DecidedAt).ThenByDescending(d => d.Id).First())
+            .Where(d => d.Kind == MedicationDecisionKind.Stop).OrderBy(d => d.Name, StringComparer.OrdinalIgnoreCase).Select(d => new StoppedMedicine(d.Name, d.Reason))];
+}

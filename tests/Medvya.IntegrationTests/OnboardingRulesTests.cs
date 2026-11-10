@@ -9,7 +9,7 @@ public class OnboardingRulesTests
     static OnboardingData Valid(string number = "84213", string authority = "TNMC", string? taxId = null, string mode = "Solo") => new(
         new("Arjun Rao (synthetic)", mode, "General medicine", null, null),
         new(authority, number, null, true),
-        new("Rao Clinic (synthetic)", "12 Test Street, Chennai", null, taxId),
+        new("Rao Clinic (synthetic)", "12 Test Street, Chennai", null, taxId, "Clinic", "desk@rao-clinic.example"),
         new([new("09:00", "13:00"), new("17:00", "20:00")], [], 20, 100_000, 60_000),
         ["general-opd"],
         []);

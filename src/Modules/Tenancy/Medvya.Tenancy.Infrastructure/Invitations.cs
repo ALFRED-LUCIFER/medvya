@@ -81,7 +81,7 @@ public sealed partial class Invitations(TenancyDbContext db, ICurrentTenant tena
     async Task<Func<Capability, Access>?> GranterAsync(Guid facilityId, CancellationToken cancellationToken)
     {
         var capabilities = Enum.GetValues<Capability>();
-        var held = (await access.AccessAsync(capabilities, facilityId, cancellationToken)).Zip(capabilities).ToDictionary(x => x.Second, x => x.First);
+        var held = (await access.RoleAccessAsync(capabilities, facilityId, cancellationToken)).Zip(capabilities).ToDictionary(x => x.Second, x => x.First);
         return held[Capability.StaffRolesIntegrations] == Access.Config ? c => held[c] : null;
     }
 

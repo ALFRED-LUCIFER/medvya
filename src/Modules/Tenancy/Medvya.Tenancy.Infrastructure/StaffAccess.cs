@@ -18,12 +18,18 @@ public sealed class StaffAccess(TenancyDbContext db, IFacilityDirectory faciliti
     public async Task<Access> AccessAsync(Capability capability, Guid facilityId, CancellationToken cancellationToken = default) =>
         (await AccessAsync([capability], facilityId, cancellationToken))[0];
 
-    public async Task<IReadOnlyList<Access>> AccessAsync(IReadOnlyList<Capability> capabilities, Guid facilityId, CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<Access>> AccessAsync(IReadOnlyList<Capability> capabilities, Guid facilityId, CancellationToken cancellationToken = default) =>
+        AccessCoreAsync(capabilities, facilityId, applyState: true, cancellationToken);
+
+    public Task<IReadOnlyList<Access>> RoleAccessAsync(IReadOnlyList<Capability> capabilities, Guid facilityId, CancellationToken cancellationToken = default) =>
+        AccessCoreAsync(capabilities, facilityId, applyState: false, cancellationToken);
+
+    async Task<IReadOnlyList<Access>> AccessCoreAsync(IReadOnlyList<Capability> capabilities, Guid facilityId, bool applyState, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(capabilities);
         if (user.UserId is not { } userId || await facilities.ActiveRoleAsync(userId, facilityId, cancellationToken) is not { } role)
             return [.. capabilities.Select(_ => Access.None)];
-        var state = await OrganisationStateAsync(cancellationToken);
+        var state = applyState ? await OrganisationStateAsync(cancellationToken) : OrganisationState.Approved;
         (bool Read, string? Value) extras = (false, null);
         var result = new List<Access>(capabilities.Count);
         foreach (var capability in capabilities)

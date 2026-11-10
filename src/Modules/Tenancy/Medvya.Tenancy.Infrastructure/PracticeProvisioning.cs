@@ -39,16 +39,16 @@ public sealed class PracticeProvisioning(IServiceScopeFactory scopes, ICurrentUs
         var hours = data.Hours!;
         var specialty = OnboardingRules.SpecialtyText(data.Profile);
         db.Tenants.Add(new Tenant { Id = tenantId, Name = clinic.Name!.Trim(), CountryCode = country, ResidencyRegion = ResidencyRegion(country), CreatedAt = now,
-            // shortcut: sign-up opens the organisation at once. ADR-016 starts it at Draft until Medvya approves; switch to Draft when the onboarding
-            // request and approval queue (MDV-P1-062, MDV-P1-064) exist, or no new clinic can be approved.
-            State = OrganisationState.Approved,
+            // ADR-016: a new organisation sets itself up as Draft; the owner submits the request and Medvya approves it.
+            State = OrganisationState.Draft,
         });
+        db.OrganisationRequests.Add(new OrganisationRequest { TenantId = tenantId, Type = Enum.Parse<OrganisationType>(clinic.Type!) });
         db.Facilities.Add(new Facility { Id = facilityId, TenantId = tenantId, Name = clinic.Name!.Trim(), TimeZone = rules.TimeZone });
         db.Memberships.Add(new Membership { Id = membershipId, TenantId = tenantId, UserId = owner, FacilityId = facilityId, Role = role, Status = MembershipStatus.Active });
         db.Profiles.Add(new PracticeProfile
         {
             Id = Guid.CreateVersion7(), TenantId = tenantId, Address = clinic.Address!.Trim(), RegistrationNumber = Clean(clinic.RegistrationNumber),
-            TaxNumber = Clean(clinic.TaxId), ChangedBy = owner, ChangedAt = now,
+            TaxNumber = Clean(clinic.TaxId), Email = clinic.ContactEmail!.Trim(), ChangedBy = owner, ChangedAt = now,
         });
         db.PracticeDefaultsSet.Add(new PracticeDefaults
         {

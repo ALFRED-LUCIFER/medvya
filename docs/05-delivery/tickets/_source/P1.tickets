@@ -5,8 +5,8 @@
 # dep:  1 privacy notice + consent wording reviewed (DPDP/UAE) · 2 DLT SMS sender + templates · 3 two partner clinics signed
 
 @epic MDV-P1-E01 | Public site | P1-01 | Landing, region/residency selector, trust centre and demo request on the Razor public site.
-@epic MDV-P1-E02 | Clinic onboarding and practice settings | P1-02, P1-12 | A solo doctor or clinic can set up the practice, hours, holidays, notifications and legal terms.
-@epic MDV-P1-E03 | Doctors, staff and staff lifecycle | P1-03, P1-11 | Owners add doctors (licence, signature, schedule) and staff (roles, scope); access ends immediately on offboarding.
+@epic MDV-P1-E02 | Clinic onboarding and practice settings | P1-02, P1-12 | A clinic or hospital applies through an onboarding request (ADR-016) and, once approved, sets up the practice, hours, holidays, notifications and legal terms.
+@epic MDV-P1-E03 | Doctors, staff and staff lifecycle | P1-03, P1-11 | Owners add doctors (licence they attest, signature, schedule) and staff (roles, scope); access ends immediately on offboarding.
 @epic MDV-P1-E04 | Schedules and availability | P1-04 | Working hours, breaks, slot lengths, leave and exceptions per doctor and location.
 @epic MDV-P1-E05 | Patient registration, duplicates and consents | P1-05, P1-12 | Register India and UAE patients quickly and safely, with separate versioned consents and no silent duplicates.
 @epic MDV-P1-E06 | Booking and no double booking | P1-06, P1-07 | Create, move, cancel and track appointments with database-guaranteed slot integrity.
@@ -24,7 +24,7 @@ progress:
 - Verified in the browser (axe clean at 360/640/1280 px in en/hi/ar, keyboard path, no-JS region switch, RTL); Lighthouse mobile 100/100 performance/accessibility on /, /ar and /hi/pricing (local)
 - Review fixes ([PR #67](https://github.com/ALFRED-LUCIFER/medvya/pull/67)): 44 px targets for region, nav and language links with an underline on the current region; anti-forgery cookie Secure over HTTPS; pages sent no-cache, no-store; tests cover every page (no script, session never read, no certification claim when rendered)
 - Left: product shot and favicon assets (design); own host name for the site when App Service hosting lands (MDV-P0-007); /region and /trust links go live with MDV-P1-002 and MDV-P1-003
-title: Public site on Razor Pages and landing page (solo doctor / hospital CTAs, region-aware copy)
+title: Public site on Razor Pages and landing page (clinic / hospital CTAs, region-aware copy)
 type: Story
 epic: MDV-P1-E01
 prd: P1-01
@@ -44,6 +44,8 @@ ac:
 - Only the two designed CTAs exist above the fold; Pricing shows a placeholder with no invented prices or metrics.
 - Pages are available in English, Hindi and Arabic (RTL) with SEO metadata and no third-party trackers without consent.
 - No PHI or tenant data is reachable from public pages (separate route group, no auth cookie read).
+notes:
+- Scope change, ADR-016 (docs/adr/ADR-016-organisation-onboarding-and-approval.md, owner decision 10 Nov 2026): there is no solo-doctor account. The doctor CTA reads "Register your clinic" and goes to the onboarding request (MDV-P1-062); the hospital CTA stays "book a demo" until Hospital onboarding opens in the same request.
 
 === MDV-P1-002
 status: Partly done
@@ -60,7 +62,7 @@ epic: MDV-P1-E01
 prd: P1-01
 screens: F-02
 priority: SHOULD
-roles: Public, Solo doctor, Practice owner
+roles: Public, Practice owner
 labels: public-site, residency, tenancy
 estimate: 1.5
 weeks: 4
@@ -113,13 +115,13 @@ progress:
 - Recording and signing capabilities (clinical notes, prescriptions, recording, AI drafts, result review) are None in IStaffAccess while the licence is unverified, so every capability policy refuses them; booking and registering stay; the shell shows the designed notice (gate mutation-checked)
 - Browser (mocked API, English and Arabic RTL, 768 px, keyboard, axe clean) and Testcontainers SQL Server tests; J1 step 1 implemented
 - Left: store the certificate file in Blob (only its name is kept; needs the Blob upload path, MDV-P0-006); back-office licence verification that sets VerifiedAt (MDV-P1-007); mobile/SMS invitations in step 6 (MDV-P1-033); claim the draft in the same transaction as the tenant so a double submit cannot create two practices (when drafts and tenants share a store); the live country's sign-up address (PublicSite:Deployments:SignUpUrls, MDV-P0-003); several doctors and locations (MDV-P1-005, MDV-P1-007)
-title: Solo doctor and clinic sign-up with the six-step onboarding wizard (autosave)
+title: Clinic sign-up with the six-step onboarding wizard (autosave); the onboarding request itself is MDV-P1-062
 type: Story
 epic: MDV-P1-E02
 prd: P1-02
 screens: F-04
 priority: MUST
-roles: Solo doctor, Practice owner
+roles: Practice owner
 labels: onboarding
 estimate: 3
 weeks: 4-5
@@ -135,6 +137,8 @@ ac:
 - Step 6 sends invitations through the P0 invitation flow (MDV-P0-013).
 - Finishing lands on the role's home (Today for doctors, Front desk for owners/reception) and creates tenant, facility, membership, practice profile, hours and fee defaults.
 - The whole wizard works at 768 px (tablet) and is keyboard-completable.
+notes:
+- Scope change, ADR-016 (docs/adr/ADR-016-organisation-onboarding-and-approval.md, owner decision 10 Nov 2026): the wizard now belongs to an onboarding request (MDV-P1-062) and the Medvya licence gate in AC 3 is retired (MDV-P1-063, MDV-P1-065). A doctor who works alone registers a clinic and is its owner; the owner-doctor attests their own licence. The step 2 "Verification pending" notice goes.
 
 === MDV-P1-005
 status: Partly done
@@ -147,7 +151,7 @@ epic: MDV-P1-E02
 prd: P1-02
 screens: F-08
 priority: MUST
-roles: Practice admin, Solo doctor
+roles: Practice admin, Practice owner
 labels: settings
 estimate: 2.5
 weeks: 5
@@ -216,6 +220,7 @@ ac:
 - The new doctor appears in schedule columns once hours are set.
 notes:
 - Define the licence verification process (who checks which register, SLA "usually within 1 working day") with the founder; this closes the P2 dependency.
+- Superseded in scope by ADR-016 (docs/adr/ADR-016-organisation-onboarding-and-approval.md, owner decision 10 Nov 2026): Medvya operations no longer verify doctors. Owner attestation replaces the Verified/Pending states and the licence gate (MDV-P1-065); the licence verify and reject endpoint and Operations:LicenceReviewers are replaced by organisation approval (MDV-P1-064). The Done work stays until those tickets land.
 
 === MDV-P1-008
 status: Done
@@ -1171,6 +1176,8 @@ ac:
 - Approved texts with version numbers (e.g. v2026.2) are stored in the repo and loaded into consent templates.
 - Review notes list any change to the consent model and the resulting ticket updates.
 - Sign-off is recorded before the first real patient is registered (P1 for demographics).
+notes:
+- Add to the review (ADR-016 (docs/adr/ADR-016-organisation-onboarding-and-approval.md, owner decision 10 Nov 2026)): a doctor licence is attested by the owner, so a false licence is the organisation's liability (ToS and DPA wording, MDV-P1-067); the Clinic and Hospital document lists decided on 10 Nov 2026.
 
 === MDV-P1-045
 title: Register India DLT sender ID and SMS templates (and UAE SMS sender if applicable)
@@ -1457,7 +1464,7 @@ epic: MDV-P1-E02
 prd: P1-02
 screens: F-03, F-04, F-06
 priority: MUST
-roles: Solo doctor, Practice owner, Receptionist, Doctor
+roles: Practice owner, Receptionist, Doctor
 labels: identity, onboarding, a11y
 estimate: 3
 weeks: 12
@@ -1480,7 +1487,7 @@ epic: MDV-P1-E02
 prd: P1-02
 screens: F-03
 priority: SHOULD
-roles: Solo doctor, Practice owner, Receptionist, Doctor
+roles: Practice owner, Receptionist, Doctor
 labels: identity, infra, needs-person
 estimate: 1
 weeks: 12
@@ -1500,7 +1507,7 @@ epic: MDV-P1-E02
 prd: P1-02
 screens: F-04
 priority: MUST
-roles: Solo doctor, Practice owner
+roles: Practice owner
 labels: onboarding, a11y
 estimate: 5
 weeks: 12-13
@@ -1514,3 +1521,333 @@ ac:
 - Given a step, when it is submitted, then the server validates it with the country rules and shows errors under the field, announced to screen readers.
 - Given the team step, when an owner invites a front-desk member, then the invitation is sent with the front-desk role and that role cannot open clinical notes (server-side test).
 - Every step is keyboard-complete, 44 px targets, axe clean in en, hi and ar; Arabic is right to left.
+
+=== MDV-P1-062
+title: Onboarding request at sign-up: choose Clinic or Hospital, give the required documents, submit for Medvya review
+type: Story
+epic: MDV-P1-E02
+prd: P1-02
+screens: F-04
+priority: MUST
+roles: Practice owner, Medvya operations
+labels: onboarding, documents
+estimate: 5
+weeks: 12-14
+depends: MDV-P1-004, MDV-P0-006
+confidence: 70 | Decided 10 Nov 2026; counsel still confirms the document lists (MDV-P1-044).
+sources: docs/adr/ADR-016-organisation-onboarding-and-approval.md; docs/02-design/screen-specs.md#f-04-solo-doctor-onboarding-6-steps-autosave
+desc:
+Context: what we decided and why. Medvya is a platform and approves organisations, never individual doctors (ADR-016, owner decision 10 Nov 2026). There is no solo-doctor account: a doctor working alone registers a Clinic and is its owner. Clinic and Hospital are one build; Hospital adds documents. Review by a person is the trust gate, so the request must carry what the reviewer needs.
+What to build. Sign-up asks first for the type, Clinic or Hospital, then collects the documents. Clinic: clinic registration certificate, tax registration (GSTIN or TRN), owner's government ID, owner doctor's medical council registration (kept as a document, not verified as a doctor check). Hospital: the same plus hospital registration certificate, authorised signatory letter, IT or security contact, and a signed DPA before approval. Files go to private Blob and are readable only by Medvya operations. Submit moves Draft to Submitted; the applicant sees a status page (Submitted, Needs changes with the reason, Approved, Rejected) and can resubmit. Autosave and resume from MDV-P1-004 stay. An organisation has 1..n locations from the start: the first location is created at onboarding, more are added by the owner later (MDV-P1-070). Hospital HIS and SSO is P7.
+Touched: Medvya.Tenancy.Api/OnboardingEndpoints.cs, Medvya.Identity onboarding drafts, Medvya.Tenancy.Infrastructure/PracticeProvisioning.cs (a request is created, the practice is active only on approval), web/clinic/src/features/onboarding (new type and documents steps, status page, domain/onboarding.ts rules, Zod schemas), public site CTAs (Host.Api/PublicSite), packages/i18n en, hi, ar, ERD.
+ac:
+- Given an applicant starts sign-up, when they have not chosen Clinic or Hospital, then they cannot continue, and only that type's documents are asked.
+- Given a required document or field is missing or fails the country rules, when they submit, then the server refuses with errors under the field announced to screen readers.
+- Given a Hospital request, when it is submitted without the signed DPA, signatory letter or IT contact, then it is refused.
+- Given a Submitted request, when the applicant signs in, then they see its status and, for Needs changes, the reviewer's reason, and can edit and resubmit.
+- Given an uploaded file, when it is wrong type or too large or fails the malware scan, then it is refused; accepted files sit in private Blob and only Medvya operations can open them.
+- Given the flow, when used in English, Hindi and Arabic, then it is keyboard-complete and axe clean, with Arabic right to left, and no PHI or document content appears in logs, URLs or telemetry.
+tests:
+- Unit: Zod and country rules per document and type; state transitions.
+- Integration on real PostgreSQL: request create, submit, resubmit; row-level security isolates requests; file access refused for non-operations users.
+- Playwright: journey J1 step 1 (Clinic) and a Hospital variant.
+- Security: server-side authorisation on each endpoint, upload validation, no PHI in logs, pnpm audit clean.
+- Browser: English and Arabic, axe clean.
+
+=== MDV-P1-063
+title: Organisation state and set-up-only mode before approval: server-side gate replaces the doctor licence gate
+type: Story
+epic: MDV-P1-E02
+prd: P1-02
+screens: F-04, F-08
+priority: MUST
+roles: Practice owner, Practice admin
+labels: onboarding, security, tenancy
+estimate: 4
+weeks: 12-14
+depends: MDV-P1-062
+confidence: 75 | Decided 10 Nov 2026: set-up only until Approved.
+sources: docs/adr/ADR-016-organisation-onboarding-and-approval.md
+desc:
+Context: what we decided and why. Until an organisation is Approved it may only set itself up: profile, hours, rooms, adding staff. No patient registration, booking, check-in, notes or signing, so no patient data exists before Medvya has reviewed the organisation. The Medvya licence gate (LicenceRules) is retired by ADR-016 and this organisation gate takes its place.
+What to build. Add the organisation state (Draft, Submitted, NeedsChanges, Approved, Rejected, Suspended) to the tenant and check it in IStaffAccess for every capability, replacing LicenceRules.Apply and the licencePending session flag. While not Approved the server refuses patient, booking, check-in, note, prescription and signing capabilities; settings and staff invitations work. Suspended refuses new registration, booking and signing but keeps existing records readable for care. The shell shows a plain notice per state. The state belongs to the organisation and applies to all its locations (1..n from the start, MDV-P1-070).
+Touched: Medvya.Tenancy.Domain (state on the tenant, Practice.cs), Medvya.Tenancy.Application/IStaffAccess.cs and Infrastructure/StaffAccess.cs, Host.Api/Auth/SessionControl.cs, the capability policies in Medvya.Tenancy.Api/StaffPolicies.cs, web/clinic session domain and App.tsx banner, i18n, ERD, a row-level-security-safe read of the state.
+ac:
+- Given an organisation that is not Approved, when any user calls a patient, booking, check-in, note, prescription or signing endpoint, then the API refuses with 403 and the attempt is audited.
+- Given a not-Approved organisation, when the owner edits profile, hours or rooms or invites staff, then it works.
+- Given the organisation becomes Approved, when the same calls are made, then they work as before.
+- Given an organisation is Suspended, when staff open an existing record, then it is readable and new registration, booking and signing are refused.
+- Given each state, when the shell loads, then a plain notice is shown in English and Arabic and the state is never conveyed by colour alone.
+tests:
+- Unit: capability matrix per state.
+- Integration on real PostgreSQL under row-level security, mutation-checked (remove the gate and the test fails).
+- Playwright: J1 step 1 shows set-up only, then Approved unlocks step 3.
+- Security: ponytail-review, every capability endpoint covered, tenant isolation unchanged.
+- Browser: English and Arabic, axe clean.
+
+=== MDV-P1-064
+title: Operations approval queue in the platform console (Host.Platform) and interim documented API: approve, ask for changes, reject, suspend
+type: Story
+epic: MDV-P1-E02
+prd: P1-02
+screens: N-12
+priority: MUST
+roles: Medvya operations
+labels: onboarding, operations, security, platform
+estimate: 4
+weeks: 12-14
+depends: MDV-P1-063
+confidence: 65 | Decided 10 Nov 2026; the console is not on Azure yet, so the API call is the interim route.
+sources: docs/adr/ADR-016-organisation-onboarding-and-approval.md; docs/adr/ADR-014-platform-console.md
+desc:
+Context: what we decided and why. The pilot cannot wait for the full console (MDV-P5-044, weeks 26 to 29). The owner decided a simple approval queue is built now in the platform console, approved by a configured Medvya operations user; until the console runs on Azure, a documented API call does the same and stays.
+What to build. An organisation-approval capability replaces OperationsPolicies.LicenceReview and the Operations:LicenceReviewers id list. Operations endpoints (reason of 5 to 500 characters, audited, applicant emailed a plain reason for changes, rejection or suspension) list Submitted requests and apply approve, ask for changes, reject and suspend. A simple queue page in web/platform-admin calls them. The review reads only the control-plane request and documents through a narrow reviewed read path (ADR-014), never clinic patient data. Document the API call in docs/runbooks.
+Touched: Medvya.Tenancy.Api/DoctorEndpoints.cs (remove licence verify and reject routes and OperationsPolicies), Medvya.Tenancy.Infrastructure/LicenceReview.cs and ILicenceReview (remove), Host.Platform and Medvya.Platform (queue read path and page), web/platform-admin, a configured operations user list, docs/runbooks.
+ac:
+- Given a user without the organisation-approval capability, when they call the endpoints or open the queue, then they get 403.
+- Given a Submitted request, when a configured operations user approves, asks for changes, rejects or suspends with a reason, then the state changes, the audit names the operator, and the applicant is emailed the reason.
+- Given an action without a reason, when it is sent, then it is rejected.
+- Given any queue or approval endpoint, when it returns data, then it holds no patient field and logs none (architecture test).
+- Given the console is not deployed, when an operator follows the runbook, then the documented API call approves a request.
+tests:
+- Unit: transition rules and reason validation.
+- Integration on real PostgreSQL: each transition, audit entry, email, role refusal; the console login cannot read clinic schemas.
+- Playwright: platform console queue approve and ask-for-changes path; J1 step 1 ends at Approved.
+- Security: ponytail-review, mutation check on the capability, reason-on-every-action test.
+- Browser: English, queue page axe clean.
+
+=== MDV-P1-065
+title: Owner attests each doctor's licence (number, authority, expiry), printed on prescriptions; retire Medvya licence verification
+type: Story
+epic: MDV-P1-E03
+prd: P1-03
+screens: F-09
+priority: MUST
+roles: Practice owner, Practice admin
+labels: staff, licence, clinical-safety
+estimate: 3
+weeks: 12-14
+depends: MDV-P1-063
+confidence: 70 | Decided 10 Nov 2026; replaces the Done MDV-P1-007 behaviour; expiry blocking is open (default warn only).
+sources: docs/adr/ADR-016-organisation-onboarding-and-approval.md
+desc:
+Context: what we decided and why. What happens inside an approved organisation is its own responsibility. Medvya does not check doctors; the owner enters the licence and attests it, accepting liability in the terms (MDV-P1-067). The owner accepted that there is no independent check, including for controlled drugs.
+What to build. The licence record (number, authority, expiry) is required and entered by the owner for each doctor, and for the owner-doctor in the wizard, with an attestation checkbox. The audit (append-only) stores the owner, time and values. Remove the Verified, Pending and Rejected states, the verification step in the Add doctor wizard, ILicenceReview and the "Verification pending" notice; recording, signing and prescribing no longer depend on VerifiedAt. The doctor list shows "Attested by {owner} on {date}". The licence number and authority print on prescriptions (the prescription print from MDV-P2 reads the record). Expiry reminders stay; an expired licence warns the owner and doctor and asks the owner to re-attest (does not block; open question).
+Touched: Medvya.Tenancy.Infrastructure/Doctors.cs, Application/IDoctors.cs, Domain/Practice.cs (DoctorLicence, LicenceStatus, LicenceRules), PracticeProvisioning.cs, Host.Api/Auth/SessionControl.cs, web/clinic doctors and onboarding features, App.tsx LicenceNotice, the prescription print, i18n, ERD.
+ac:
+- Given an owner adds a doctor, when licence number, authority, expiry or the attestation is missing, then the doctor cannot be added.
+- Given a doctor was added, when anyone views the doctor list, then it shows who attested and when, and the audit holds the values.
+- Given an approved organisation, when a doctor with an attested licence records, signs or prescribes, then it is allowed with no Medvya check.
+- Given a prescription is printed, when it renders, then it shows the doctor's licence number and authority.
+- Given a licence nears or passes expiry, when the reminder runs, then the owner is told to re-attest and signing is not blocked.
+- The licence gate tests are replaced by attestation tests and no endpoint still reads VerifiedAt.
+tests:
+- Unit: attestation validation, expiry rules per country.
+- Integration on real PostgreSQL: add doctor with and without attestation, audit content, signing allowed.
+- Playwright: J1 steps 1 and 7 (sign) without any verification step.
+- Security: server-side authorisation, audit append-only, ponytail-review.
+- Browser: English and Arabic, axe clean.
+
+=== MDV-P1-066
+title: Retire solo-doctor naming: Role.SoloDoctor, session flags, copy and docs
+type: Task
+epic: MDV-P1-E02
+prd: P1-02
+screens: F-04, F-08
+priority: SHOULD
+roles: Practice owner
+labels: onboarding, refactor
+estimate: 2.5
+weeks: 13-14
+depends: MDV-P1-065
+confidence: 70 | The "Owner doctor" label already exists; a rename touches the role claim and stored memberships.
+sources: docs/adr/ADR-016-organisation-onboarding-and-approval.md
+desc:
+Context: what we decided and why. There is no individual account; a one-doctor practice is a clinic whose owner is a doctor. Names and copy must say so and must not say Medvya verifies licences.
+What to build. Rename or retire Role.SoloDoctor (RoleMatrix.cs, the web Role type, role matrix tests, about 52 files), keeping the owner-doctor as an owner who is a doctor. Remove licencePending from the session and shell (SessionControl.cs, session.ts, App.tsx LicenceNotice). Rewrite copy that says Medvya verifies licences (onboarding.licence.notice, doctors.intro, invite.licence, inviteForm.licence, onboarding.team.doctors, staff.doctorNotice) in en, hi and ar. A change to a stored role value ships with a forward-only migration.
+ac:
+- Given the codebase, when searched for SoloDoctor or "solo doctor" in user-visible text, then nothing remains.
+- Given an existing owner-doctor, when they sign in after the change, then access is unchanged.
+- Given copy in en, hi and ar, when read, then it says the owner attests licences and Medvya approves the organisation.
+- Given the role matrix tests, when run, then they pass; the ERD is regenerated if a table or column changes.
+tests:
+- Unit: role matrix per role.
+- Integration on real PostgreSQL: migrated memberships keep their access.
+- Playwright: existing onboarding and settings specs pass unchanged in behaviour.
+- Security: ponytail-review (touches roles); no role widening.
+- Browser: English and Arabic, axe clean.
+
+=== MDV-P1-067
+title: Terms of Service and DPA update: the organisation is responsible for the licences it attests
+type: Chore
+epic: MDV-P1-E10
+prd: P1-12
+priority: MUST
+roles: Founder, external counsel
+labels: legal, compliance
+estimate: 0.5
+weeks: 12-14
+depends: MDV-P1-044
+confidence: 60 | External counsel dependency.
+sources: docs/adr/ADR-016-organisation-onboarding-and-approval.md
+desc:
+Context: what we decided and why. Medvya approves the organisation only. A false licence is the organisation's liability, so the terms and DPA must say so in plain words, and a Hospital signs the DPA before approval.
+What to build. New terms and DPA version stating that Medvya does not verify individual doctors, that the owner is responsible for who they add and for attesting each licence including the effect of a false attestation, and that Medvya may suspend an organisation. Bump TermsPolicy (ITermsAcceptance.cs) so owners re-accept through the existing terms gate. The attestation step shows a short reminder. Counsel reviews the document lists too.
+ac:
+- Given the wording, when counsel reviews it, then written sign-off exists before use with a real pilot clinic.
+- Given the new version, when an owner signs in, then they must accept it before booking or messaging (existing gate).
+- Given the attestation step, when shown, then it carries the plain-language reminder in en, hi and ar.
+tests:
+- Integration on real PostgreSQL: version bump forces re-acceptance.
+- Playwright: consents and terms spec updated.
+- Browser: English and Arabic.
+
+=== MDV-P1-068
+title: Migrate existing tenants to Approved and their doctor licences to owner-attested
+type: Task
+epic: MDV-P1-E02
+prd: P1-02
+priority: MUST
+roles: Practice owner, Medvya operations
+labels: tenancy, migration
+estimate: 1
+weeks: 12-14
+depends: MDV-P1-063, MDV-P1-065
+confidence: 75 | Forward-only migration; dev and pilot tenants only.
+sources: docs/adr/ADR-016-organisation-onboarding-and-approval.md
+desc:
+Context: what we decided and why. Dev and pilot tenants exist already and must keep working when the gate arrives.
+What to build. A forward-only migration setting every existing tenant to Approved with an audit entry naming the migration, and marking existing doctor licences attested by the tenant's owner as of migration time (the owner re-confirms on next sign-in). Regenerate the ERD (python3 -I tools/erd/generate.py) in the same change. Touched: Medvya.Tenancy.Infrastructure migrations and Persistence, docs/03-architecture/erd.md.
+ac:
+- Given an existing tenant, when the migration runs, then it is Approved and keeps working with no new step.
+- Given a doctor licence that was Verified, Pending or Rejected, when the migration runs, then it shows owner-attested and the audit names the migration.
+- Given the migration, when run twice or on an empty database, then it is safe.
+tests:
+- Integration on real PostgreSQL: seed each prior licence state, migrate, assert state and audit.
+- Playwright: Azure dev tenant signs in and books after deploy.
+- Security: row-level security unaffected; ponytail-review.
+
+=== MDV-P1-069
+title: Starter plan cap: 1 doctor and 2 staff enforced server-side
+type: Story
+epic: MDV-P1-E03
+prd: P1-03
+screens: F-08, F-09
+priority: MUST
+roles: Practice owner, Practice admin
+labels: staff, plans, tenancy
+estimate: 2
+weeks: 12-14
+depends: MDV-P1-063
+confidence: 80 | Decided 10 Nov 2026; one hard-coded plan until MDV-P5-042.
+sources: docs/adr/ADR-016-organisation-onboarding-and-approval.md
+desc:
+Context: what we decided and why. Subscriptions will have seats, but plans are built in P5. Until then every organisation gets one hard-coded starter plan so growth is bounded and the upgrade conversation exists: 1 doctor plus 2 other staff (any mix of nurse, receptionist, admin; the owner-doctor is the doctor), counted per organisation in total across all its locations (MDV-P1-070); a bigger chain needs a bigger plan (MDV-P5-042). Patients are not capped. Self-service upgrade comes with MDV-P5-042 and MDV-P5-016; the owner is responsible for what they choose then.
+What to build. One place (a small plan class with a shortcut: comment, hard-coded plan, replaced by entitlements when MDV-P5-042 lands) counts active and invited doctors and other staff per organisation (tenant), in total across its locations, never per location. Adding a doctor, adding staff and sending an invitation are refused server-side beyond the cap with the message "Your plan allows 1 doctor and 2 staff; contact Medvya to upgrade". The web shows the same message. Offboarded members and revoked invitations free their seat. A race of parallel invitations cannot exceed the cap.
+Touched: Medvya.Tenancy.Infrastructure/Doctors.cs, Invitations.cs, Medvya.Identity.Api/StaffEndpoints.cs, Medvya.Tenancy.Api settings endpoints, web/clinic staff and doctors features, i18n en, hi, ar.
+ac:
+- Given a clinic with its owner-doctor and 2 other staff, when the owner adds a third staff member or invites one, then the server refuses with "Your plan allows 1 doctor and 2 staff; contact Medvya to upgrade".
+- Given a clinic with 1 doctor, when the owner adds a second doctor, then it is refused with the same message.
+- Given a staff member is offboarded or an invitation is revoked, when the owner adds another, then it is allowed.
+- Given an organisation with several locations, when staff are added at different locations, then they count together against the one cap.
+- Given any number of patients, when patients are registered, then no cap applies.
+- Given parallel add or invite calls, when they race, then the cap still holds (integration test).
+tests:
+- Unit: cap counting by role.
+- Integration on real PostgreSQL: cap, seat release, 100 parallel invitations.
+- Playwright: Settings, Staff shows the message in English and Arabic.
+- Security: server-side only; ponytail-review; cap cannot be bypassed by another endpoint.
+- Browser: English and Arabic, axe clean.
+
+=== MDV-P1-070
+title: Add a location to an organisation (Settings, Locations): certificate and tax record, same country, audited
+type: Story
+epic: MDV-P1-E02
+prd: P1-02
+screens: F-08
+priority: MUST
+roles: Practice owner
+labels: settings, locations, tenancy
+estimate: 3
+weeks: 13-15
+depends: MDV-P1-063, MDV-P1-005
+confidence: 75 | Decided 10 Nov 2026; overlaps MDV-P7-003, whose hospital-department version extends this later.
+sources: docs/adr/ADR-016-organisation-onboarding-and-approval.md
+desc:
+Context: what we decided and why. One organisation, many locations, like a hospital group with branches in several cities. The organisation is approved once; the owner adds branches inside it with no new Medvya approval, and uploading the branch's registration certificate and tax number is a record the owner is responsible for (same principle as attesting a doctor). The first location is created at onboarding. Overlap: MDV-P7-003 (organisation, facilities and departments administration) is the hospital-scale version; this clinic-level ticket is built first and P7-003 extends it with departments.
+What to build. Settings, Locations (exists from MDV-P1-005) gains Add location: name, address, time zone, registration certificate (private Blob) and tax number (GSTIN or TRN format-checked). The location's country must equal the organisation's country (refused otherwise, data stays in country, ADR-003). The audit log records who added it and when. The existing location picker lists the new location. Hours, rooms and holidays are set per location as today. Only an Approved organisation, and only its owner or admin with practice configuration, may add one.
+Touched: Medvya.Tenancy.Infrastructure/FacilityDirectory.cs and PracticeSettings.cs, Medvya.Tenancy.Api/SettingsEndpoints.cs, Facility domain (certificate name, tax number), web/clinic settings locations tab, i18n en, hi, ar, ERD.
+ac:
+- Given an approved organisation, when its owner adds a location with name, address, time zone, certificate and tax number, then it is created, appears in the location picker, and the audit names the owner and time.
+- Given a location in another country than the organisation, when it is submitted, then the server refuses it.
+- Given a missing certificate, a missing or malformed tax number or time zone, when submitted, then the server refuses with errors under the field announced to screen readers.
+- Given a user without practice configuration, or an organisation that is not Approved, when they call the endpoint, then 403.
+- Given the new location, when the owner sets hours and rooms, then they apply to that location only.
+tests:
+- Unit: country and tax rules, time zone validation.
+- Integration on real PostgreSQL: create, cross-country refusal, audit entry, row-level security isolates tenants.
+- Playwright: settings locations add path (journey J1 variant for a second branch).
+- Security: server-side authorisation, upload validation, ponytail-review.
+- Browser: English and Arabic, axe clean.
+
+=== MDV-P1-071
+title: Staff and doctors across locations: a membership covers one or more locations; schedule, board and queue stay per location
+type: Story
+epic: MDV-P1-E03
+prd: P1-03
+screens: F-09, F-10
+priority: MUST
+roles: Practice owner, Practice admin, Doctor, Receptionist
+labels: staff, locations, scheduling
+estimate: 3
+weeks: 13-15
+depends: MDV-P1-070
+confidence: 65 | Decided 10 Nov 2026; whether a doctor's fees and hours differ per location is open.
+sources: docs/adr/ADR-016-organisation-onboarding-and-approval.md
+desc:
+Context: what we decided and why. People and the plan belong to the organisation, so one doctor or nurse can work at several branches. The plan cap counts them once (MDV-P1-069). Overlap: MDV-P7-003 and MDV-P7-002 (facility scope for hospital roles) extend this for hospital departments later.
+What to build. A membership gets a set of locations within the organisation (today one facility; MDV-P1-009 scoped it). The owner assigns locations when adding or editing staff and doctors, and invitations carry them. The facility picker lists only the member's locations. Schedule, reception board and queue stay per location; a doctor with two locations has one schedule template per location. Reassigning or walking a patient between doctors of different locations is out of scope. Offboarding removes access at every location at once.
+Touched: Medvya.Tenancy.Infrastructure/StaffAccess.cs, Invitations.cs, Doctors.cs, membership and facility scope in Medvya.Tenancy, Medvya.Identity.Api/StaffEndpoints.cs, Medvya.Scheduling (SchedulingAccess.cs, schedule, board, queue by location), web/clinic staff, doctors and facility picker, i18n, ERD.
+ac:
+- Given an owner edits a staff member, when they pick two locations, then the member can switch between them in the picker and sees only those.
+- Given a member without a location, when they call an endpoint for that location, then 403 (server-side).
+- Given a doctor at two locations, when the reception board or queue opens at one location, then it shows only that location's visits.
+- Given a member is offboarded, when it is saved, then access ends at every location immediately.
+- Given the starter plan, when the same person is at two locations, then they count once.
+tests:
+- Unit: location scope in capability checks.
+- Integration on real PostgreSQL: scope refusal, picker list, offboarding at all locations, board per location.
+- Playwright: staff with two locations switch picker; board differs per location.
+- Security: authorisation on each endpoint; no cross-organisation leak; ponytail-review.
+- Browser: English and Arabic, axe clean.
+
+=== MDV-P1-072
+title: Shared patient record across an organisation's locations: one MRN and one chart, search across locations, location in the access log
+type: Story
+epic: MDV-P1-E05
+prd: P1-05
+screens: P-02, P-03
+priority: MUST
+roles: Receptionist, Doctor, Nurse, Practice owner
+labels: patients, locations, tenancy, security
+estimate: 5
+weeks: 13-15
+depends: MDV-P1-070
+confidence: 55 | Decided 10 Nov 2026; touches registration, duplicates, search, merge and access rules, so the estimate is the least certain.
+sources: docs/adr/ADR-016-organisation-onboarding-and-approval.md
+desc:
+Context: what we decided and why. In a chain a patient who visits Surat and then Mumbai is one person with one chart. Patients are one shared record across the organisation: one MRN and one chart, opened by staff at any location under the existing access, care-relationship and audit rules. Tenant isolation stays on the organisation: the EF filter and row-level security use the tenant, not the facility. Overlap: MDV-P7-002 and MDV-P7-003 (record authority per facility) deal with hospital groups; this is the clinic-level version, built first.
+What to build. Check what assumes patient-per-facility and change it: Patient.FacilityId stays as where the patient was registered; PatientRegistry allocates the MRN with NextMrnAsync(tenantId, facilityId) and requires registration at the active facility, searches by facility (FacilityId filter around line 140) and checks duplicates by facility: move the MRN sequence, search and duplicate scope to the organisation. PatientDirectory.cs and PatientMerges.cs filter pairs by FacilityId (merge and review queues): scope them to the organisation. RegistrationCareRelationship.cs and AccessRequestEndpoints.cs and the care-relationship rules must still hold for staff at another location. Scheduling, Encounters and Billing references by patient stay valid. The access log shows the location where the record was read (role and facility at event time exist). Existing MRNs stay unique; migration handles two facilities of one tenant that issued the same MRN (collision plan in the ticket). Out of scope: reassigning or walking in a patient between doctors of different locations.
+ac:
+- Given a patient registered at location A, when staff at location B of the same organisation search by name, MRN or phone, then the patient is found and opens as one chart with one MRN.
+- Given a new registration at location B, when the name and date of birth match a patient at location A, then the duplicate warning shows that patient.
+- Given staff at location B open the record, when the access log is read, then the entry shows location B.
+- Given staff from another organisation, when they search or open the record, then it is refused by both the EF filter and row-level security.
+- Given a member not scoped to location B, when they search there, then they cannot reach it (MDV-P1-071).
+- Given existing data with the same MRN at two facilities of one tenant, when the migration runs, then every MRN is unique per organisation and nothing is lost.
+tests:
+- Unit: MRN allocation per organisation, duplicate matching scope.
+- Integration on real PostgreSQL: search, duplicate, merge across locations; row-level security and EF filter on tenant; migration with colliding MRNs; mutation check on the isolation.
+- Playwright: register at one location, find and open at another (journey J3 variant).
+- Security: ponytail-review (tenancy and consent), access log content, no PHI in logs.
+- Browser: English and Arabic, axe clean.

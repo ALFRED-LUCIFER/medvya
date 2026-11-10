@@ -361,6 +361,8 @@ ac:
 - Trial converts to paid with correct tax invoice; seat changes prorate.
 - Dunning never blocks clinicians from reading existing patient records (safety rule); it limits new features/admin.
 - Subscription data lives in the platform control plane with no PHI.
+notes:
+- Direction (ADR-016 (docs/adr/ADR-016-organisation-onboarding-and-approval.md, owner decision 10 Nov 2026)): the owner upgrades the plan themselves, self-service, when the clinic adds more doctors, staff or patients than the plan allows, and is responsible for that choice. Seats are doctors, staff and patients; no individual account exists, so a one-doctor clinic is a Clinic plan with one seat.
 
 === MDV-P5-017
 title: Platform operations console: tenant catalogue, onboarding automation, per-tenant flags, time-boxed audited support access visible to the clinic (N-12)
@@ -384,6 +386,8 @@ ac:
 - Every support action is audited and listed in the clinic's access log (F-12).
 - Flags can be toggled per tenant from the console with audit.
 - The control plane stores no PHI (data map updated).
+notes:
+- Organisation onboarding requests are reviewed in the approval queue (MDV-P5-044); "New tenant" sales-led onboarding creates an already Approved organisation (ADR-016 (docs/adr/ADR-016-organisation-onboarding-and-approval.md, owner decision 10 Nov 2026)).
 
 === MDV-P5-018
 title: In-app role guides, help centre, feedback and public status page (N-13)
@@ -890,6 +894,8 @@ ac:
 - Given a clinical flag, when is moved to everyone without sign-off, then the change is refused.
 - Given the kill switch, when is used, then the feature disappears for all tenants and no data is deleted.
 - Given a flag change, when is made, then it is audited with a reason.
+notes:
+- Scope (ADR-016 (docs/adr/ADR-016-organisation-onboarding-and-approval.md)): rollout targets are organisations, and optionally one location of an organisation, never a single doctor.
 
 === MDV-P5-042
 title: Plans and entitlements: versioned plans, India and UAE prices, seats, trial days, 30 days' notice
@@ -906,11 +912,14 @@ depends: MDV-P5-016, MDV-P5-040
 confidence: 70 | Design exists (6 Nov 2026); build estimate not yet calibrated.
 sources: docs/02-design/source/Medvya Admin.dc.html (6 Nov 2026 revamp) (Plans); docs/02-design/source/Medvya Web.dc.html (6 Nov 2026 revamp) (pricing 06 Nov 2026)
 desc:
-Plans (Solo ₹1,999 per month; Clinic ₹3,499 per doctor per month; Hospital custom) with separate INR and AED prices, seats, trial days and the feature list. An edit creates a new plan version: new subscriptions use it now, existing ones at renewal with 30 days' notice. Removing a feature never deletes data. Entitlements are read by the feature gate.
+Plans (Clinic with one doctor ₹1,999 per month; Clinic ₹3,499 per doctor per month; Hospital custom) with separate INR and AED prices, seats, trial days and the feature list. An edit creates a new plan version: new subscriptions use it now, existing ones at renewal with 30 days' notice. Removing a feature never deletes data. Entitlements are read by the feature gate.
 ac:
 - Given a plan is edited, when it is saved, then a new version exists and current subscribers keep the old one until renewal.
 - Given a price changes, when a subscriber exists, then they are notified 30 days before it applies.
 - Given a feature is removed from a plan, when data exists, then the data stays.
+notes:
+- The "Solo" plan is a one-doctor Clinic plan, not an individual account (ADR-016 (docs/adr/ADR-016-organisation-onboarding-and-approval.md, owner decision 10 Nov 2026)); revisit plan names and seat types (doctors, staff, patients) when this is built. This ticket replaces the hard-coded starter plan (1 doctor and 2 staff, patients uncapped) enforced from MDV-P1-069, and adds the owner's self-service upgrade.
+- Seat counts are per organisation in total across its locations (ADR-016, MDV-P1-069); bigger chains need a bigger plan.
 
 === MDV-P5-043
 title: Subscription billing in the console and for owners: invoices, payment method, add seats, dunning ladder, close practice
@@ -932,27 +941,32 @@ ac:
 - Given a payment fails, when day 30 is reached, then online bookings pause and clinicians can still read and treat.
 - Given a non-owner, when opens billing, then the API returns 403.
 - Given a practice is closed, when the owner confirms, then a full export is offered first and the plan stops at the end of the paid period.
+notes:
+- Scope (ADR-016 (docs/adr/ADR-016-organisation-onboarding-and-approval.md)): the subscription belongs to the organisation, not to a doctor or a location. Seats (doctors, staff, patients) are counted per organisation in total across its locations; the starter plan of MDV-P1-069 (1 doctor and 2 other staff) is what applies until a plan is bought. The owner upgrades and adds seats self-service and is responsible for the choice. Invoices carry the organisation's own tax number (GSTIN or TRN), not a location's. An organisation that is not Approved (set-up-only mode, Needs changes or Rejected) has no paid subscription: billing creates no trial, invoice or dunning for it, and the subscription starts only when the organisation is Approved. A Suspended organisation keeps its subscription record, dunning is paused while the suspension lasts, and existing records stay readable for care. "Close practice" means closing the organisation (MDV-P5-049).
 
 === MDV-P5-044
-title: Licence verification console: reviewer queue, certificate view, approve or ask for changes
+title: Organisation approval console: onboarding request queue, document view, approve, ask for changes, reject, suspend
 type: Story
 epic: MDV-P5-E09
 prd: P5-08
 screens: N-12
 priority: MUST
 roles: Reviewer, Medvya operations
-labels: platform, licence, clinical-safety
+labels: platform, onboarding, clinical-safety
 estimate: 2.5
 weeks: 27-29
-depends: MDV-P5-040, MDV-P1-007, MDV-P2-023
+depends: MDV-P5-040, MDV-P1-064, MDV-P2-023
 confidence: 65 | Design exists (6 Nov 2026); build estimate not yet calibrated.
-sources: docs/02-design/source/Medvya Admin.dc.html (6 Nov 2026 revamp) (Doctor licence verification); MDV-P2 licence process
+sources: docs/adr/ADR-016-organisation-onboarding-and-approval.md; docs/02-design/source/Medvya Admin.dc.html (6 Nov 2026 revamp) (Doctor licence verification, to be redrawn as organisation review)
 desc:
-Reviewer queue of doctors with register, number, expiry and uploaded certificate. Recording, signing notes and e-prescriptions stay locked for the doctor until a reviewer checks the official register. Approve records reviewer, register checked and time; reject or ask for changes sends the owner a plain reason and leaves the rest of the practice working.
+Superseded scope (ADR-016): the reviewer queue lists organisation onboarding requests (type Clinic or Hospital, country, submitted date, documents, state), not doctors. The reviewer opens the uploaded documents, then approves, asks for changes with a plain reason, rejects with a reason, or later suspends an approved organisation. The queue reads only the control-plane request and documents through its own narrow, reviewed read path (ADR-014), never patient data. Extends the simple queue and documented API built in MDV-P1-064 (documents view, suspension, reviewer roles). The design file still shows the doctor-licence screen and must be redrawn.
 ac:
-- Given a doctor is unverified, when they try to sign a note, then the API refuses.
-- Given a reviewer approves, when it is saved, then name, register and time are recorded.
-- Given a licence is rejected, when the owner is told, then the reason is in plain words and other staff keep working.
+- Given an organisation is Submitted, when a reviewer approves it, then reviewer, documents checked and time are recorded and the organisation can register patients.
+- Given a reviewer asks for changes or rejects, when it is saved, then the applicant gets the reason in plain words by email and on the status page.
+- Given an organisation is suspended, when staff sign in, then new registration, booking and signing are refused and existing records stay readable for care.
+- Given any queue endpoint, when it returns data, then it holds no patient field (architecture test); every action needs a reason.
+notes:
+- Admin design to redraw (ADR-016 (docs/adr/ADR-016-organisation-onboarding-and-approval.md)); the design file docs/02-design/source/Medvya Admin.dc.html is read-only and not edited: (1) Doctor licence verification becomes organisation review (request, type, documents, states, approve, ask for changes, reject, suspend); (2) the tenant catalogue shows the approval state and the location count; (3) the plans screen shows seat types (doctors, staff, patients) counted per organisation.
 
 === MDV-P5-045
 title: Releases and What's new, maintenance and incident banners, integrations register
@@ -995,6 +1009,8 @@ ac:
 - Given a new version requires acceptance, when an owner has not accepted, then online booking pauses and clinical work continues.
 - Given platform staff, when try to edit wording, then the console offers no edit, only publish.
 - Given an owner accepts, when it is saved, then user, version and time are recorded.
+notes:
+- Scope (ADR-016 (docs/adr/ADR-016-organisation-onboarding-and-approval.md)): acceptance of the ToS and DPA is part of the onboarding request (MDV-P1-062, MDV-P1-067). The owner accepts on behalf of the organisation, and acceptance is recorded per organisation (version, who, when), not per location or per person. A HOSPITAL must upload a SIGNED DPA before approval; it is not accepted online afterwards. The re-acceptance gate applies to Approved organisations only and must not block set-up-only mode (profile, hours, rooms, staff).
 
 === MDV-P5-047
 title: Service requests: Help in the clinic app, support inbox with SLA, internal notes, diagnostics
@@ -1016,6 +1032,8 @@ ac:
 - Given a screenshot shows patient data, when it is attached, then the patient data is blurred before storage.
 - Given support, when asks for access, then nothing is visible until the owner approves and it ends after 60 minutes.
 - Given a request breaches its SLA, when time passes, then it is flagged to the team lead.
+notes:
+- Scope (ADR-016 (docs/adr/ADR-016-organisation-onboarding-and-approval.md)): an organisation in set-up-only mode and an applicant in Needs changes can use Help and raise a request; the request can be linked to its onboarding request so the reviewer sees it. Requests are tied to the organisation (and optionally a location).
 
 === MDV-P5-048
 title: Platform analytics, practice health score and scheduled reports with small-count hiding
@@ -1037,6 +1055,8 @@ ac:
 - Given a count is 4, when the chart renders, then it shows as hidden.
 - Given a report, when is scheduled, then only the named recipients get it and it holds no patient data.
 - Given a practice's health score falls, when it is shown, then the reasons are listed.
+notes:
+- Scope (ADR-016 (docs/adr/ADR-016-organisation-onboarding-and-approval.md)): the unit is the organisation, with a per-location breakdown. Add onboarding funnel metrics as platform metrics: requests submitted, needs changes, approved, rejected, and time to approve. The small-count rule (any count under 5 hidden) applies to them too.
 
 === MDV-P5-049
 title: Data requests and offboarding runs from the console without opening records
@@ -1058,6 +1078,8 @@ ac:
 - Given a closure is requested, when it is approved, then a full export is delivered before any retention clock starts.
 - Given retention ends, when the job runs, then records are deleted and a certificate is stored.
 - Given an operator, when opens a request, then no record content is shown.
+notes:
+- Scope (ADR-016 (docs/adr/ADR-016-organisation-onboarding-and-approval.md)): offboarding is at organisation level and covers all its locations. Removing one location is a separate, smaller action: its staff scope and schedules end, but patients are one shared record per organisation, so removing a location never deletes patients or charts. A Suspended organisation keeps its data untouched and readable for care while the suspension lasts. A Rejected applicant never held patient data (set-up-only mode); its request, uploaded documents and set-up are deleted after a retention period to be set with counsel (MDV-P1-044).
 
 === MDV-P5-050
 title: Public pricing page with 14-day trial, monthly and yearly toggle and country currency

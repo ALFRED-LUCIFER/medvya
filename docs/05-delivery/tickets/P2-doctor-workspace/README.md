@@ -31,7 +31,7 @@
 | [MDV-P2-002](MDV-P2-002.md) | To do | Doctor Today (D-01): schedule, patient flags, pending notes, inbox counts | Story | MUST | P2-01 | D-01 | 3 | 9–10 | 21 Dec → 01 Jan 2027 | 86% High |
 | [MDV-P2-021](MDV-P2-021.md) | To do | Clinical safety case and hazard log with a named clinical safety reviewer | Chore | MUST | P2-08 | — | 2 | 9–10 | 21 Dec → 01 Jan 2027 | 78% Medium |
 | [MDV-P2-022](MDV-P2-022.md) | To do | Legal review of clinical data processing before the first real note | Chore | MUST | P2-08 | — | 0.5 | 9–11 | 21 Dec → 08 Jan 2027 | 62% Low |
-| [MDV-P2-023](MDV-P2-023.md) | To do | Define and operate the doctor licence verification process | Chore | MUST | P2-05 | — | 0.5 | 9–9 | 21 Dec → 25 Dec 2026 | 75% Medium |
+| [MDV-P2-023](MDV-P2-023.md) | To do | Define and operate the organisation onboarding review process (documents, SLA, rejection reasons, suspension) | Chore | MUST | P2-05 | — | 0.5 | 9–9 | 21 Dec → 25 Dec 2026 | 70% Medium |
 | [MDV-P2-024](MDV-P2-024.md) | To do | Clinical authorisation: care relationship and purpose checks, request access for clinics | Task | MUST | P2-02 | — | 2 | 9–10 | 21 Dec → 01 Jan 2027 | 84% Medium |
 | [MDV-P2-029](MDV-P2-029.md) | To do | Encounters start race: a second start that loses the race answers with the winner's encounter | Task | MUST | P2-04 | — | 0.5 | 9–9 | 21 Dec → 25 Dec 2026 | 95% High |
 | [MDV-P2-003](MDV-P2-003.md) | To do | Privacy-safe global search (⌘K) with care-relationship check and "Request access" | Story | MUST | P2-01 | D-02 | 2 | 10–10 | 28 Dec → 01 Jan 2027 | 88% High |

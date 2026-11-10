@@ -5,14 +5,14 @@
 
 Jira-style tickets for every PRD v2 phase (P0–P8). The source of truth is `docs/05-delivery/tickets/_source/*.tickets`. Run `python3 -I tools/tickets/build.py` to regenerate the ticket files, [schedule.md](schedule.md), [jira-import.csv](jira-import.csv) and [coverage-report.md](coverage-report.md).
 
-**272 tickets** in 51 epics · **670 dev-days** estimated · confidence: High 88 · Medium 132 · Low 52 · coverage: ✅ every requirement, screen, exit criterion, NFR, package item and dependency is ticketed
+**283 tickets** in 51 epics · **703 dev-days** estimated · confidence: High 88 · Medium 141 · Low 54 · coverage: ✅ every requirement, screen, exit criterion, NFR, package item and dependency is ticketed
 
 Conventions, Definition of Ready/Done and the confidence scale: [docs/05-delivery](../README.md).
 
 | Phase | Folder | Window | Tickets | Done | Partly / in progress | Estimate (dev-days) | Capacity (days) | Avg confidence |
 |---|---|---|---|---|---|---|---|---|
 | P0 Foundation and safety | [P0-foundation](P0-foundation/README.md) | 26 Oct 2026 → 13 Nov 2026 | 42 | 11 | 16 | 84 | 15 | 81% |
-| P1 Front desk and appointments MVP | [P1-front-desk](P1-front-desk/README.md) | 16 Nov 2026 → 01 Jan 2027 | 60 | 12 | 16 | 127.5 | 35 | 79% |
+| P1 Front desk and appointments MVP | [P1-front-desk](P1-front-desk/README.md) | 16 Nov 2026 → 01 Jan 2027 | 71 | 12 | 16 | 160.5 | 35 | 77% |
 | P2 Doctor workspace and EMR core | [P2-doctor-workspace](P2-doctor-workspace/README.md) | 21 Dec 2026 → 05 Feb 2027 | 29 | 0 | 0 | 60.5 | 35 | 82% |
 | P3 AI-drafted notes under clinician review | [P3-ai-scribe](P3-ai-scribe/README.md) | 18 Jan 2027 → 12 Mar 2027 | 27 | 0 | 0 | 57.5 | 40 | 80% |
 | P4 Billing, care follow-up and patient portal | [P4-clinic-operations](P4-clinic-operations/README.md) | 15 Feb 2027 → 23 Apr 2027 | 34 | 1 | 0 | 75.5 | 50 | 78% |
@@ -23,7 +23,7 @@ Conventions, Definition of Ready/Done and the confidence scale: [docs/05-deliver
 
 ## Capacity check (read this before committing to dates)
 
-PRD v2 plans **v1.0 GA in week 32** for one full-time developer with AI help, about **160 working days**. The P0–P5 tickets add up to **557 ideal dev-days**, roughly **3.5×** that capacity. Phase overlap does not create capacity for a single developer. Before scope freeze, choose one or more of: add a second developer (or a part-time contractor for infra, security and print layouts); cut SHOULD items from P1–P5 (public site, doctor discovery, dictation, voice assistant, clinic messages); launch one country only (ADR-002), which removes the UAE pack from the critical path; or move the GA date. Weeks over capacity are flagged ⚠ in [schedule.md](schedule.md). Estimates are ideal days and should be recalibrated against actual velocity after P0.
+PRD v2 plans **v1.0 GA in week 32** for one full-time developer with AI help, about **160 working days**. The P0–P5 tickets add up to **590 ideal dev-days**, roughly **3.7×** that capacity. Phase overlap does not create capacity for a single developer. Before scope freeze, choose one or more of: add a second developer (or a part-time contractor for infra, security and print layouts); cut SHOULD items from P1–P5 (public site, doctor discovery, dictation, voice assistant, clinic messages); launch one country only (ADR-002), which removes the UAE pack from the critical path; or move the GA date. Weeks over capacity are flagged ⚠ in [schedule.md](schedule.md). Estimates are ideal days and should be recalibrated against actual velocity after P0.
 
 
 ## Lowest-confidence tickets (resolve these first)
@@ -45,8 +45,8 @@ PRD v2 plans **v1.0 GA in week 32** for one full-time developer with AI help, ab
 | [MDV-P7-013](P7-hospital-enterprise/MDV-P7-013.md) | R7 hospital pilot, clinical sign-off and release | 50% | Hospital-driven timeline. |
 | [MDV-P1-046](P1-front-desk/MDV-P1-046.md) | Start UAE regulator onboarding applications early (risk mitigation) | 55% | Requirements and timelines are controlled by regulators; mitigation step named in PRD v2 risk register. |
 | [MDV-P1-051](P1-front-desk/MDV-P1-051.md) | Encrypted read-only schedule cache for outages (needs an ADR first) | 55% | Storing any patient data in the browser needs a recorded decision; build only if pilot clinics report outages long enough that a paper sheet is not enough. |
+| [MDV-P1-072](P1-front-desk/MDV-P1-072.md) | Shared patient record across an organisation's locations: one MRN and one chart, search across locations, location in the access log | 55% | Decided 10 Nov 2026; touches registration, duplicates, search, merge and access rules, so the estimate is the least certain. |
 | [MDV-P4-027](P4-clinic-operations/MDV-P4-027.md) | Public doctor and clinic profiles with live availability, indexed for search (N-02, design needed) | 55% | DESIGN NEEDED: no screen exists; scope comes only from the October plan line item. |
 | [MDV-P4-034](P4-clinic-operations/MDV-P4-034.md) | UPI AutoPay for packages, secure pay link by WhatsApp, Apple Pay and Google Pay in the UAE | 55% | Design exists (6 Nov 2026); build estimate not yet calibrated. |
 | [MDV-P5-011](P5-commercial-launch/MDV-P5-011.md) | Emirates ID card-reader check-in under 30 seconds and UAE PASS (N-06) | 55% | Hardware sourcing and reader SDK/browser integration are unknown. |
 | [MDV-P5-029](P5-commercial-launch/MDV-P5-029.md) | First paying clinic cut-over without closing (week 29) with go-live runbook | 55% | Depends on migration complexity of the specific clinic and parallel-run stability. |
-| [MDV-P5-037](P5-commercial-launch/MDV-P5-037.md) | Patient app: results, prescriptions, messages, consents, payments and video visit | 55% | Design exists (6 Nov 2026); build estimate not yet calibrated. |

@@ -8,17 +8,17 @@
 **Day one:** Register patients, book, reschedule and cancel appointments, check patients in, run the waiting room and send automatic confirmations and reminders.  
 **Goal:** A clinic can run its entire appointment day in Medvya. This is the workflow to validate with real clinics before anything clinical is built on top.
 
-**Tickets:** 60 · **Estimate:** 127.5 dev-days vs **35 working days** in the window (OVER by 92.5 days: needs scope trade-off or overlap) · **Average confidence:** 79%
+**Tickets:** 71 · **Estimate:** 160.5 dev-days vs **35 working days** in the window (OVER by 125.5 days: needs scope trade-off or overlap) · **Average confidence:** 77%
 
-**Status:** To do 32 · Partly done 16 · Done 12
+**Status:** To do 43 · Partly done 16 · Done 12
 
 ## Epics
 
 | Epic | Title | Requirements | Goal |
 |---|---|---|---|
 | MDV-P1-E01 | Public site | P1-01 | Landing, region/residency selector, trust centre and demo request on the Razor public site. |
-| MDV-P1-E02 | Clinic onboarding and practice settings | P1-02, P1-12 | A solo doctor or clinic can set up the practice, hours, holidays, notifications and legal terms. |
-| MDV-P1-E03 | Doctors, staff and staff lifecycle | P1-03, P1-11 | Owners add doctors (licence, signature, schedule) and staff (roles, scope); access ends immediately on offboarding. |
+| MDV-P1-E02 | Clinic onboarding and practice settings | P1-02, P1-12 | A clinic or hospital applies through an onboarding request (ADR-016) and, once approved, sets up the practice, hours, holidays, notifications and legal terms. |
+| MDV-P1-E03 | Doctors, staff and staff lifecycle | P1-03, P1-11 | Owners add doctors (licence they attest, signature, schedule) and staff (roles, scope); access ends immediately on offboarding. |
 | MDV-P1-E04 | Schedules and availability | P1-04 | Working hours, breaks, slot lengths, leave and exceptions per doctor and location. |
 | MDV-P1-E05 | Patient registration, duplicates and consents | P1-05, P1-12 | Register India and UAE patients quickly and safely, with separate versioned consents and no silent duplicates. |
 | MDV-P1-E06 | Booking and no double booking | P1-06, P1-07 | Create, move, cancel and track appointments with database-guaranteed slot integrity. |
@@ -32,9 +32,9 @@
 
 | Key | Status | Title | Type | Prio | PRD | Screens | Est | Weeks | Dates | Confidence |
 |---|---|---|---|---|---|---|---|---|---|---|
-| [MDV-P1-001](MDV-P1-001.md) | Done | Public site on Razor Pages and landing page (solo doctor / hospital CTAs, region-aware copy) | Story | SHOULD | P1-01 | F-01 | 2 | 4–4 | 16 Nov → 20 Nov 2026 | 88% High |
+| [MDV-P1-001](MDV-P1-001.md) | Done | Public site on Razor Pages and landing page (clinic / hospital CTAs, region-aware copy) | Story | SHOULD | P1-01 | F-01 | 2 | 4–4 | 16 Nov → 20 Nov 2026 | 88% High |
 | [MDV-P1-002](MDV-P1-002.md) | Partly done | Country and data-residency selector that binds a new tenant to one data plane | Story | SHOULD | P1-01 | F-02 | 1.5 | 4–4 | 16 Nov → 20 Nov 2026 | 85% High |
-| [MDV-P1-004](MDV-P1-004.md) | Partly done | Solo doctor and clinic sign-up with the six-step onboarding wizard (autosave) | Story | MUST | P1-02 | F-04 | 3 | 4–5 | 16 Nov → 27 Nov 2026 | 85% High |
+| [MDV-P1-004](MDV-P1-004.md) | Partly done | Clinic sign-up with the six-step onboarding wizard (autosave); the onboarding request itself is MDV-P1-062 | Story | MUST | P1-02 | F-04 | 3 | 4–5 | 16 Nov → 27 Nov 2026 | 85% High |
 | [MDV-P1-043](MDV-P1-043.md) | To do | Sign pilot agreements with two partner clinics | Chore | MUST | P1-02 | — | 1 | 4–6 | 16 Nov → 04 Dec 2026 | 60% Low |
 | [MDV-P1-044](MDV-P1-044.md) | To do | Legal review of privacy notice, ToS, DPA and consent wording (DPDP India; UAE health data) | Chore | MUST | P1-12 | — | 1 | 4–6 | 16 Nov → 04 Dec 2026 | 60% Low |
 | [MDV-P1-045](MDV-P1-045.md) | To do | Register India DLT sender ID and SMS templates (and UAE SMS sender if applicable) | Chore | MUST | P1-09 | — | 0.5 | 4–6 | 16 Nov → 04 Dec 2026 | 62% Low |
@@ -91,7 +91,18 @@
 | [MDV-P1-059](MDV-P1-059.md) | To do | Staff sign-in, sign-up, invitation, location and signed-out screens to the 6 Nov design | Story | MUST | P1-02 | F-03, F-04, F-06 | 3 | 12–12 | 11 Jan → 15 Jan 2027 | 70% Medium |
 | [MDV-P1-060](MDV-P1-060.md) | To do | Entra External ID branding for the email code, MFA set-up and recovery pages | Task | SHOULD | P1-02 | F-03 | 1 | 12–12 | 11 Jan → 15 Jan 2027 | 60% Low |
 | [MDV-P1-061](MDV-P1-061.md) | To do | Practice set-up wizard to the 6 Nov design (practice, hours and services, team, patients, payments and messages, ready) | Story | MUST | P1-02 | F-04 | 5 | 12–13 | 11 Jan → 22 Jan 2027 | 60% Low |
+| [MDV-P1-062](MDV-P1-062.md) | To do | Onboarding request at sign-up: choose Clinic or Hospital, give the required documents, submit for Medvya review | Story | MUST | P1-02 | F-04 | 5 | 12–14 | 11 Jan → 29 Jan 2027 | 70% Medium |
+| [MDV-P1-063](MDV-P1-063.md) | To do | Organisation state and set-up-only mode before approval: server-side gate replaces the doctor licence gate | Story | MUST | P1-02 | F-04, F-08 | 4 | 12–14 | 11 Jan → 29 Jan 2027 | 75% Medium |
+| [MDV-P1-064](MDV-P1-064.md) | To do | Operations approval queue in the platform console (Host.Platform) and interim documented API: approve, ask for changes, reject, suspend | Story | MUST | P1-02 | N-12 | 4 | 12–14 | 11 Jan → 29 Jan 2027 | 65% Medium |
+| [MDV-P1-065](MDV-P1-065.md) | To do | Owner attests each doctor's licence (number, authority, expiry), printed on prescriptions; retire Medvya licence verification | Story | MUST | P1-03 | F-09 | 3 | 12–14 | 11 Jan → 29 Jan 2027 | 70% Medium |
+| [MDV-P1-067](MDV-P1-067.md) | To do | Terms of Service and DPA update: the organisation is responsible for the licences it attests | Chore | MUST | P1-12 | — | 0.5 | 12–14 | 11 Jan → 29 Jan 2027 | 60% Low |
+| [MDV-P1-068](MDV-P1-068.md) | To do | Migrate existing tenants to Approved and their doctor licences to owner-attested | Task | MUST | P1-02 | — | 1 | 12–14 | 11 Jan → 29 Jan 2027 | 75% Medium |
+| [MDV-P1-069](MDV-P1-069.md) | To do | Starter plan cap: 1 doctor and 2 staff enforced server-side | Story | MUST | P1-03 | F-08, F-09 | 2 | 12–14 | 11 Jan → 29 Jan 2027 | 80% Medium |
 | [MDV-P1-051](MDV-P1-051.md) | To do | Encrypted read-only schedule cache for outages (needs an ADR first) | Story | COULD | P1-08 | — | 5 | 13–13 | 18 Jan → 22 Jan 2027 | 55% Low |
+| [MDV-P1-066](MDV-P1-066.md) | To do | Retire solo-doctor naming: Role.SoloDoctor, session flags, copy and docs | Task | SHOULD | P1-02 | F-04, F-08 | 2.5 | 13–14 | 18 Jan → 29 Jan 2027 | 70% Medium |
+| [MDV-P1-070](MDV-P1-070.md) | To do | Add a location to an organisation (Settings, Locations): certificate and tax record, same country, audited | Story | MUST | P1-02 | F-08 | 3 | 13–15 | 18 Jan → 05 Feb 2027 | 75% Medium |
+| [MDV-P1-071](MDV-P1-071.md) | To do | Staff and doctors across locations: a membership covers one or more locations; schedule, board and queue stay per location | Story | MUST | P1-03 | F-09, F-10 | 3 | 13–15 | 18 Jan → 05 Feb 2027 | 65% Medium |
+| [MDV-P1-072](MDV-P1-072.md) | To do | Shared patient record across an organisation's locations: one MRN and one chart, search across locations, location in the access log | Story | MUST | P1-05 | P-02, P-03 | 5 | 13–15 | 18 Jan → 05 Feb 2027 | 55% Low |
 
 ## Exit criteria (release gate)
 

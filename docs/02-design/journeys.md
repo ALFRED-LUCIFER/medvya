@@ -4,11 +4,11 @@
 
 Each step: who acts, on which screen, and what changes. 🔒 = clinician approval boundary. ↪ = recovery branch. The P0 exit gate requires the clinical advisor to walk all six journeys and sign them off. In P0 they become Playwright E2E specs (X8).
 
-## J1 · First solo-doctor visit — Solo doctor · M1
+## J1 · First visit at a one-doctor clinic — Owner doctor · M1
 
 | # | Screen | Role | Step | What changes | Gate |
 |---|---|---|---|---|---|
-| 1 | F-04 | Practice admin | Set up practice | Licence, clinic profile, hours, invite receptionist. |  |
+| 1 | F-04 | Practice admin | Set up practice | Onboarding request (Clinic), clinic profile, owner doctor's own licence attested, hours, invite receptionist; Medvya approves the organisation (ADR-016). |  |
 | 2 | F-11 | Practice admin | Add services & fees | INR catalogue, GST-exempt consults. |  |
 | 3 | P-02 | Reception | Register first patient | Quick or full registration, ABHA optional. |  |
 | 4 | P-04 | Reception | Book & check in | Slot booked, WhatsApp confirmation. |  |
@@ -86,7 +86,7 @@ Which steps run in the browser against the real stack (`pnpm e2e:fullstack`: rea
 | J2 | 1 | 2 MDV-P2-004 · 3 MDV-P3-005 · 4 MDV-P3-009 · 5 MDV-P3-012 · 6 MDV-P2-017 · 7 MDV-P2-020 · 8 MDV-P4-016 |
 | J3 | 1, 2, 3, 4, 6 (doctor sees it on the board, not Today), 7 | 5 MDV-P2-007, MDV-P2-008 (green in the mocked spec `journeys/j3.spec.ts` and on the real stack, `fullstack/j3.spec.ts`, after the owner switches nurse intake on (`PUT /v1/settings/nurse-intake`; there is no Settings screen for it yet)) |
 | J4 | none | 1 MDV-P6-002 · 2 MDV-P6-003 · 3 MDV-P6-004 · 4 MDV-P3-010 · 5 MDV-P3-009 · 6 MDV-P7-006 |
-| J5 | none | 1 MDV-P2-018 (green in the mocked spec `journeys/j5.spec.ts`; on the real stack once the seeded doctor's licence is verified, which Medvya operations do, MDV-P1-010) · 2 MDV-P4-014 · 3, 5 MDV-P4-015 · 4 MDV-P4-018 · 6 MDV-P4-019 · 7 MDV-P4-016 |
+| J5 | none | 1 MDV-P2-018 (green in the mocked spec `journeys/j5.spec.ts`; on the real stack once the seeded doctor's licence is attested by the owner (ADR-016; until MDV-P1-065 lands, verified by Medvya operations)) · 2 MDV-P4-014 · 3, 5 MDV-P4-015 · 4 MDV-P4-018 · 6 MDV-P4-019 · 7 MDV-P4-016 |
 | J6 | none | 1 MDV-P7-002 · 2 to 5 MDV-P7-006 · 6 MDV-P7-008 |
 
 Clinical advisor sign-off (MDV-P0-023, R0 exit criterion 1): not recorded yet.

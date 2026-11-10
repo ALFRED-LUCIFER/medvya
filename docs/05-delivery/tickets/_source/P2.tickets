@@ -39,7 +39,7 @@ epic: MDV-P2-E01
 prd: P2-01
 screens: D-01
 priority: MUST
-roles: Doctor, Solo doctor
+roles: Doctor, Practice owner
 labels: today, ui
 estimate: 3
 weeks: 9-10
@@ -479,6 +479,8 @@ ac:
 - Hazard log covers every P2 clinical feature with at least one mitigation linked to a test or control.
 - A named clinical safety reviewer is recorded and signs the R2 release.
 - Clinical incident review process (report → triage → fix → review) is documented and tested once with a tabletop exercise.
+notes:
+- Add hazard (ADR-016 (docs/adr/ADR-016-organisation-onboarding-and-approval.md, owner decision 10 Nov 2026)): a prescriber with a false or lapsed licence, with no Medvya check. Record cause, the organisation-attestation control and the owner-accepted residual risk, especially for controlled drugs.
 
 === MDV-P2-022
 title: Legal review of clinical data processing before the first real note
@@ -499,26 +501,29 @@ Counsel reviews clinical data handling (purposes, consent/lawful basis, retentio
 ac:
 - Written sign-off before clinical features are enabled for real patients (flag remains off until then).
 - Retention periods for notes, prescriptions and documents per country are confirmed and loaded into retention configuration.
+notes:
+- Add to the review (ADR-016 (docs/adr/ADR-016-organisation-onboarding-and-approval.md, owner decision 10 Nov 2026)): the owner accepts liability for attested doctor licences; Medvya does no independent licence check, including for controlled drugs (risk accepted by the owner, 10 Nov 2026); confirm whether any extra control is wanted.
 
 === MDV-P2-023
-title: Define and operate the doctor licence verification process
+title: Define and operate the organisation onboarding review process (documents, SLA, rejection reasons, suspension)
 type: Chore
 epic: MDV-P2-E06
 prd: P2-05
 covers: dep:2
 priority: MUST
 roles: Medvya operations, Founder
-labels: licence, operations
+labels: onboarding, operations
 estimate: 0.5
 weeks: 9
-depends: MDV-P1-007
-confidence: 75 | Process must be designed with registries per authority (NMC/state councils, DoH/DHA/MOHAP).
-sources: PRD v2 P2 dependency 2; docs/02-design/source/Medvya Access and Onboarding (F-04 licence notice)
+depends: MDV-P1-062, MDV-P1-064
+confidence: 70 | Depends on the legal review of the document lists (MDV-P1-044).
+sources: docs/adr/ADR-016-organisation-onboarding-and-approval.md; PRD v2 P2 dependency 2 (read as the organisation review)
 desc:
-Runbook for verifying licences: which public register per authority, evidence captured (screenshot/reference), SLA (usually within 1 working day), rejection reasons, re-verification on expiry, and who may perform it (ops vs owner attestation).
+Superseded scope (ADR-016): Medvya reviews organisations, not doctors. Runbook for reviewing an onboarding request: which documents per type (Clinic, Hospital), what is checked against which public register or certificate, evidence recorded, SLA (target one working day, to be confirmed), standard reasons for ask-for-changes and reject, suspension and re-approval, and who may decide. Doctor licences are attested by the owner and are not checked here.
 ac:
-- Runbook published in docs/runbooks/licence-verification.md and linked from F-09.
-- Every pilot doctor's licence is verified with recorded evidence before they sign real notes.
+- Runbook published in docs/runbooks/organisation-onboarding-review.md and linked from the platform console queue (MDV-P5-044).
+- Every pilot organisation is approved with recorded evidence of what was checked before it registers patients.
+- The runbook states that Medvya does not verify individual doctors and where the owner's attestation is recorded.
 
 === MDV-P2-024
 title: Clinical authorisation: care relationship and purpose checks, request access for clinics

@@ -899,6 +899,39 @@ export interface paths {
         };
         trace?: never;
     };
+    "/v1/diagnosis-codes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/encounters/{encounterId}/note/sign": {
         parameters: {
             query?: never;
@@ -5553,6 +5586,104 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/encounters/{encounterId}/problems": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    encounterId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    encounterId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["AddProblem"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/encounters/{encounterId}/problems/{problemId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    encounterId: string;
+                    problemId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["UpdateProblem"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/encounters/{encounterId}/note": {
         parameters: {
             query?: never;
@@ -6867,6 +6998,13 @@ export interface components {
             /** Format: uuid */
             orderSetId: null | string;
         };
+        AddProblem: {
+            code: null | string;
+            description: null | string;
+            verification: null | components["schemas"]["ProblemVerification"];
+            /** Format: date */
+            onsetOn: null | string;
+        };
         AddResource: {
             /** Format: uuid */
             facilityId?: string;
@@ -7569,6 +7707,10 @@ export interface components {
             /** Format: date */
             date: null | string;
         };
+        /** @enum {unknown} */
+        ProblemStatus: "Active" | "Resolved" | null;
+        /** @enum {unknown} */
+        ProblemVerification: "Verified" | "PatientReported" | "Provisional" | null;
         ProfileView: {
             name: string;
             address: null | string;
@@ -7944,6 +8086,12 @@ export interface components {
             type: components["schemas"]["DocumentType"];
             /** Format: date */
             documentDate: string;
+        };
+        UpdateProblem: {
+            verification: null | components["schemas"]["ProblemVerification"];
+            status: null | components["schemas"]["ProblemStatus"];
+            /** Format: date */
+            onsetOn: null | string;
         };
         UpdateRxLine: {
             dose: null | string;

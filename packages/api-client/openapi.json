@@ -622,6 +622,18 @@
         }
       }
     },
+    "/v1/diagnosis-codes": {
+      "get": {
+        "tags": [
+          "Host.Api"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/v1/encounters/{encounterId}/note/sign": {
       "post": {
         "tags": [
@@ -4297,6 +4309,114 @@
         }
       }
     },
+    "/v1/encounters/{encounterId}/problems": {
+      "get": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "encounterId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "encounterId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AddProblem"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/encounters/{encounterId}/problems/{problemId}": {
+      "put": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "encounterId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "problemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/UpdateProblem"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/v1/encounters/{encounterId}/note": {
       "get": {
         "tags": [
@@ -5694,6 +5814,46 @@
               "string"
             ],
             "format": "uuid"
+          }
+        }
+      },
+      "AddProblem": {
+        "required": [
+          "code",
+          "description",
+          "verification",
+          "onsetOn"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "description": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "verification": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ProblemVerification"
+              }
+            ]
+          },
+          "onsetOn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
           }
         }
       },
@@ -8570,6 +8730,21 @@
           }
         }
       },
+      "ProblemStatus": {
+        "enum": [
+          "Active",
+          "Resolved",
+          null
+        ]
+      },
+      "ProblemVerification": {
+        "enum": [
+          "Verified",
+          "PatientReported",
+          "Provisional",
+          null
+        ]
+      },
       "ProfileView": {
         "required": [
           "name",
@@ -10114,6 +10289,43 @@
           },
           "documentDate": {
             "type": "string",
+            "format": "date"
+          }
+        }
+      },
+      "UpdateProblem": {
+        "required": [
+          "verification",
+          "status",
+          "onsetOn"
+        ],
+        "type": "object",
+        "properties": {
+          "verification": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ProblemVerification"
+              }
+            ]
+          },
+          "status": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ProblemStatus"
+              }
+            ]
+          },
+          "onsetOn": {
+            "type": [
+              "null",
+              "string"
+            ],
             "format": "date"
           }
         }

@@ -7,7 +7,9 @@ import NoteTemplateChoice from '../features/encounters/components/NoteTemplateCh
 import { useConsultController } from '../features/encounters/hooks/useConsultController';
 import OrdersPanel from '../features/orders/components/OrdersPanel';
 import PrescriptionPanel from '../features/prescription/components/PrescriptionPanel';
+import RxPrintPage from '../features/prescription/components/RxPrintPage';
 import { usePrescriptionController } from '../features/prescription/hooks/usePrescriptionController';
+import { useRxPrintController } from '../features/prescription/hooks/useRxPrintController';
 import LetterPage from '../features/referrals/components/LetterPage';
 import ReferralsPanel from '../features/referrals/components/ReferralsPanel';
 import { useLetterController, useReferralsController } from '../features/referrals/hooks/useReferralsController';
@@ -44,7 +46,7 @@ function Consult({ encounterId, boardPath, canOrder, canReconcile, canSign, user
 /** The draft prescription (MDV-P2-015) under the consultation, for a role with "Prescriptions and orders" at Sign; the server still decides for this clinician and patient. */
 function Prescription({ encounterId, ended }: { encounterId: string; ended: boolean }) {
   const rx = usePrescriptionController(encounterId);
-  return rx.hidden ? null : <PrescriptionPanel {...rx} ended={ended} />;
+  return rx.hidden ? null : <PrescriptionPanel {...rx} ended={ended} printPath={`/consult/${encounterId}/rx/print`} />;
 }
 
 /** Orders (MDV-P2-018) under the consultation, for a role with "Prescriptions and orders" at Sign; the server still decides for this clinician and patient. */
@@ -78,4 +80,10 @@ export function NotePrintRoute({ userId, userName }: { userId: string; userName:
   const consult = useConsultController(encounterId);
   return <NotePrintPage {...print} loading={print.loading || consult.loading} failed={print.failed || consult.failed} banner={consult.banner}
     consultPath={`/consult/${encounterId}`} userId={userId} userName={userName} />;
+}
+
+/** The printed prescription of one consultation (MDV-P2-017): only once authorised; the server decides for this clinician and patient. */
+export function RxPrintRoute() {
+  const { encounterId = '' } = useParams();
+  return <RxPrintPage {...useRxPrintController(encounterId)} consultPath={`/consult/${encounterId}`} />;
 }

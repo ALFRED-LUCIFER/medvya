@@ -383,7 +383,7 @@ public sealed class SignNoteTests(PostgresFixture sql) : IClassFixture<PostgresF
         Assert.Equal(PostgresErrorCodes.CheckViolation, (ex.InnerException as PostgresException)?.SqlState);
     }
 
-    // SAFETY mutation check: drop the header lines from SignedNotePdfDocument.Write's page loop and the per-page identifier counts fail.
+    // SAFETY mutation check: drop the header lines from PlainPdf.Write's page loop and the per-page identifier counts fail.
     [Fact]
     public async Task ThePdfIsRenderedServerSideWithIdentifiersOnEveryPageAndStoredWithItsHash()
     {

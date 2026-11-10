@@ -4,16 +4,21 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { useForm, useWatch } from 'react-hook-form';
 import { ApiError } from '../../schedule/services/scheduleApi';
 import { overrideSchema } from '../domain/checks';
+import { startReauth } from '../../encounters/services/noteApi';
+import { authoriseProblem, type AuthoriseProblem } from '../domain/authorisation';
 import { freeTextSchema, invalidFields, problemOf, toDraft, type PrintLanguage, type RxLine, type RxProblem, type SaveState, type SigDraft, type SigField } from '../domain/prescription';
-import { addFreeText, addFromFormulary, fetchChecks, fetchPrescription, includeLine, overrideAlert, saveSig, searchMedicines } from '../services/prescriptionApi';
+import {
+  addFreeText, addFromFormulary, authorise, fetchAuthorisation, fetchChecks, fetchPrescription, includeLine, overrideAlert, saveSig, searchMedicines,
+} from '../services/prescriptionApi';
 
 const autosaveMs = 700;
 
 /**
  * The draft prescription of one consultation (MDV-P2-015). The server decides who may prescribe: a refusal (403) hides the panel. Every answer
  * is the whole draft (with the readable instruction in each print language), which replaces the cached one. The dose builder autosaves each
- * line a moment after the last change; a pending save is sent at once when the panel closes, so nothing typed is lost. Nothing here authorises.
+ * line a moment after the last change; a pending save is sent at once when the panel closes, so nothing typed is lost.
  * The safety checks (MDV-P2-016) run on the server again after every change; a severe alert takes a reason, one alert at a time.
+ * Authorising (MDV-P2-017) is its own action: the server asks for the step-up (403 reauth_required) and runs the checks again before it agrees.
  */
 export function usePrescriptionController(encounterId: string) {
   const queryClient = useQueryClient();
@@ -21,7 +26,6 @@ export function usePrescriptionController(encounterId: string) {
   const list = useQuery({ queryKey: key, queryFn: () => fetchPrescription(encounterId), retry: false });
   const checksKey = ['prescription-checks', encounterId];
   const checks = useQuery({ queryKey: checksKey, queryFn: () => fetchChecks(encounterId), enabled: list.isSuccess, retry: false });
-  const recheck = () => void queryClient.invalidateQueries({ queryKey: checksKey });
   const reasonForm = useForm<{ reason: string }>({ resolver: zodResolver(overrideSchema), defaultValues: { reason: '' } });
   const [overriding, setOverriding] = useState<string | null>(null);
   const add = useForm<{ medicine: string }>({ resolver: zodResolver(freeTextSchema), defaultValues: { medicine: '' } });
@@ -33,6 +37,19 @@ export function usePrescriptionController(encounterId: string) {
   const [language, setLanguage] = useState<PrintLanguage>('en');
   const pending = useRef(new Map<string, { timer: ReturnType<typeof setTimeout>; draft: SigDraft }>());
 
+  // MDV-P2-017: the authorisation and whether the draft changed since; every draft change asks again.
+  const authKey = ['prescription-authorisation', encounterId];
+  const authorisation = useQuery({ queryKey: authKey, queryFn: () => fetchAuthorisation(encounterId), enabled: list.isSuccess, retry: false });
+  const [authProblem, setAuthProblem] = useState<AuthoriseProblem | null>(null);
+  const doAuthorise = useMutation({
+    mutationFn: () => authorise(encounterId),
+    onSuccess: s => { queryClient.setQueryData(authKey, s); setAuthProblem(null); },
+    onError: e => { setAuthProblem(authoriseProblem(e instanceof ApiError ? e.status : undefined, e instanceof ApiError ? e.code : undefined)); recheck(); },
+  });
+  const recheck = () => {
+    void queryClient.invalidateQueries({ queryKey: checksKey });
+    void queryClient.invalidateQueries({ queryKey: authKey });
+  };
   const take = (lines: RxLine[]) => { queryClient.setQueryData(key, lines); setProblem(null); recheck(); };
   const failed = (e: unknown) => setProblem(problemOf(e instanceof ApiError ? e.code : undefined));
   const mark = (id: string, state: SaveState) => setSaves(s => ({ ...s, [id]: state }));
@@ -78,6 +95,14 @@ export function usePrescriptionController(encounterId: string) {
     checksFailed: checks.isError,
     overriding,
     reasonForm,
+    authorisation: authorisation.data ?? null,
+    authorising: doAuthorise.isPending,
+    authProblem,
+    onAuthorise: () => doAuthorise.mutate(),
+    /** The step-up leaves for the provider and comes back here; the draft is already saved on the server, nothing is put in browser storage. */
+    onConfirmIdentity: async () => {
+      try { await startReauth(); } catch { setAuthProblem('failed'); }
+    },
     onOverride: (alertKey: string | null) => { setOverriding(alertKey); reasonForm.reset({ reason: '' }); },
     onReason: reasonForm.handleSubmit(v => { if (overriding) override.mutate({ key: overriding, reason: v.reason }); }),
     draftOf,

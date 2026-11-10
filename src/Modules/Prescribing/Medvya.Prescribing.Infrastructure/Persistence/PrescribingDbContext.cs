@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Medvya.BuildingBlocks.Domain;
 using Medvya.Prescribing.Domain;
 using Microsoft.EntityFrameworkCore;
@@ -15,6 +16,9 @@ public sealed class PrescribingDbContext(DbContextOptions<PrescribingDbContext> 
     public DbSet<ReferralEvent> ReferralEvents => Set<ReferralEvent>();
     public DbSet<PrescriptionItem> PrescriptionItems => Set<PrescriptionItem>();
     public DbSet<RxAlertOverride> RxAlertOverrides => Set<RxAlertOverride>();
+    public DbSet<AuthorisedPrescription> AuthorisedPrescriptions => Set<AuthorisedPrescription>();
+    public DbSet<PrescriptionPdf> PrescriptionPdfs => Set<PrescriptionPdf>();
+    public DbSet<RxLayoutApproval> RxLayoutApprovals => Set<RxLayoutApproval>();
 
     Guid? CurrentTenantId => tenant.TenantId;
 
@@ -95,6 +99,30 @@ public sealed class PrescribingDbContext(DbContextOptions<PrescribingDbContext> 
             e.Property(x => x.RuleSetVersion).HasMaxLength(40);
             e.HasIndex(x => new { x.TenantId, x.EncounterId });
             e.HasIndex(x => new { x.TenantId, x.PatientId }); // merges
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        // MDV-P2-017: the three are append-only and hash-chained (LedgerSql, in their migration).
+        modelBuilder.Entity<AuthorisedPrescription>(e =>
+        {
+            e.Property(x => x.Lines).HasColumnType("jsonb").HasConversion(
+                v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null), v => JsonSerializer.Deserialize<List<AuthorisedLine>>(v, (JsonSerializerOptions?)null)!);
+            e.Property(x => x.ContentHash).HasMaxLength(64);
+            e.Property(x => x.RuleSetVersion).HasMaxLength(40);
+            e.Property(x => x.VerifyCode).HasMaxLength(22);
+            e.HasIndex(x => new { x.TenantId, x.EncounterId, x.VersionNo }).IsUnique(); // two authorisations at once: the second loses here
+            e.HasIndex(x => new { x.TenantId, x.VerifyCode }).IsUnique();
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<PrescriptionPdf>(e =>
+        {
+            e.Property(x => x.Paper).HasMaxLength(2);
+            e.Property(x => x.Sha256).HasMaxLength(64);
+            e.HasIndex(x => new { x.TenantId, x.PrescriptionId });
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<RxLayoutApproval>(e =>
+        {
+            e.HasIndex(x => new { x.TenantId, x.UserId, x.LayoutVersion }).IsUnique();
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         modelBuilder.Entity<OrderSet>(e =>

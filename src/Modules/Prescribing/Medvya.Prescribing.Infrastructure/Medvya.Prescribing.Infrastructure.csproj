@@ -12,11 +12,17 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The printed prescription's English copy (MDV-P2-017), from the shared catalogue. -->
+    <EmbeddedResource Include="..\..\..\..\packages\i18n\messages\en.json" LogicalName="Medvya.Prescribing.messages.en.json" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <PackageReference Include="QRCoder" />
   </ItemGroup>
 
 </Project>

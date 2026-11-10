@@ -2,7 +2,7 @@ import { expect } from '@playwright/test';
 import { test } from '@playwright/test';
 import { mockReconciliation } from '../support/reconciliation';
 import { mockNote } from '../support/note';
-import { clearChecks, mockPrescription, stopLine } from '../support/prescription';
+import { clearChecks, line, mockPrescription, stopLine } from '../support/prescription';
 import { mockProblems } from '../support/problems';
 import { journey } from './storyboard';
 
@@ -29,7 +29,7 @@ test('J2.5 (conflict half, MDV-P2-011) E-07 · Doctor: statin stopped vs chart a
   expect(calls.decisions).toEqual([{ key: 'atorvastatin', kind: 'Stop', newDose: '', reason: 'Muscle pain (synthetic)' }]);
 });
 
-// J2.6 is "Authorise Rx & orders": authorising is MDV-P2-017, so the step stays pending below. Its composer half is built (MDV-P2-015, E-05): the
+// J2.6 is "Authorise Rx & orders" (the step below, MDV-P2-017). Its composer half (MDV-P2-015, E-05): the
 // statin stopped in reconciliation is a discontinue line, and the doctor adds metformin from the formulary as a draft. The safety checks that
 // authorising will require (MDV-P2-016, E-11) run on the draft: Meera has no known allergies and metformin raises nothing.
 test('J2.6 (composer and safety-check halves, MDV-P2-015/016) E-05 · Doctor: the stopped statin is a discontinue line beside the new, checked draft', async ({ page }) => {
@@ -59,7 +59,29 @@ test('J2.5 (coding half, MDV-P2-010) E-07 · Doctor: the diagnosis is coded with
 
 journey('J2', {
   5: 'MDV-P2-012',
-  6: 'MDV-P2-017',
+  // E-05: the prescription and the orders are approved separately, each by its own action and neither by signing the note (MDV-P2-017, MDV-P2-018).
+  // Authorising asks for the step-up first; the gates themselves are proven on PostgreSQL in RxAuthorisationTests.
+  6: async ({ page }) => {
+    const { calls, orders, orderCalls } = await mockPrescription(page, {
+      lines: [line('rx-1', 'Metformin', { dose: '1', doseUnit: 'tablet', route: 'oral', frequency: 'BD', sig: { en: 'Take 1 tablet by mouth twice a day.', hi: '', ta: '', ar: '' } }),
+        stopLine('Atorvastatin', 'Muscle pain (synthetic)')],
+      checks: clearChecks(), reauthFirst: true,
+    });
+    await page.goto('/consult/e-1');
+    const rx = page.getByRole('region', { name: 'Prescription' });
+    await rx.getByRole('button', { name: 'Authorise prescription' }).click();
+    await expect(rx.getByRole('alert')).toContainText('Confirm your identity to authorise.');
+    await rx.getByRole('button', { name: 'Authorise prescription' }).click(); // after the step-up
+    await expect(rx).toContainText('Authorised · version 1');
+    expect(orders.every(o => o.state === 'Draft')).toBe(true); // authorising the prescription placed nothing
+
+    await page.getByLabel('Test', { exact: true }).fill('HbA1c');
+    await page.getByRole('button', { name: 'Add test' }).click();
+    await page.getByRole('button', { name: 'Place orders' }).click();
+    await expect(page.getByText('Orders placed.')).toBeVisible();
+    expect(orderCalls.placed).toEqual([{ destination: null }]); // its own action
+    expect(calls.authorised).toBe(2);
+  },
   // D-01: the next patient is Meera, ready for the doctor; starting the consultation binds it to her visit and shows who it is for, in Room 3.
   // The doctor's own Today (MDV-P2-002): the next patient hero starts the consultation.
   1: async ({ page }) => {

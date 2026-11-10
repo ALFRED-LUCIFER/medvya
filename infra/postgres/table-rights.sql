@@ -26,7 +26,7 @@ BEGIN
 
     -- The chain trigger lists a tenant's first row in ledger."Chains"; ledger."Tables" stays read-only (roles.sql).
     IF to_regclass('ledger."Chains"') IS NOT NULL THEN
-        GRANT INSERT ON ledger."Chains" TO medvya_tenancy, medvya_patients, medvya_audit, medvya_encounters;
+        GRANT INSERT ON ledger."Chains" TO medvya_tenancy, medvya_patients, medvya_audit, medvya_encounters, medvya_prescribing;
     END IF;
     -- The digest job records each published digest (MDV-P0-042); append-only (its triggers refuse UPDATE/DELETE for every role too).
     IF to_regclass('ledger."Digests"') IS NOT NULL THEN

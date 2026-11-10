@@ -1,4 +1,6 @@
-import { csrf, post, send } from '../../schedule/services/scheduleApi';
+import { apiFetch } from '../../api/services/apiClient';
+import { ApiError, csrf, post, send } from '../../schedule/services/scheduleApi';
+import type { RxAuthorisationState, RxLayout, RxPrint, RxVerify } from '../domain/authorisation';
 import type { RxChecks } from '../domain/checks';
 import { toSigBody, type Medicine, type RxLine, type SigDraft } from '../domain/prescription';
 
@@ -15,3 +17,24 @@ export const searchMedicines = (query: string) => send<Medicine[]>(`/v1/formular
 export const fetchChecks = (encounterId: string) => send<RxChecks>(`/v1/encounters/${encounterId}/prescription/checks`);
 export const overrideAlert = (encounterId: string, key: string, reason: string) =>
   post<RxChecks>(`/v1/encounters/${encounterId}/prescription/overrides`, { key, reason: reason.trim() });
+
+// Authorisation and print (MDV-P2-017): authorising is its own call (the server asks for the step-up and runs the checks again).
+export const fetchAuthorisation = (encounterId: string) => send<RxAuthorisationState>(`/v1/encounters/${encounterId}/prescription/authorisation`);
+export const authorise = (encounterId: string) => post<RxAuthorisationState>(`/v1/encounters/${encounterId}/prescription/authorisation`, {});
+export const fetchRxPrint = (encounterId: string) => send<RxPrint>(`/v1/encounters/${encounterId}/prescription/print`);
+export const fetchLayout = () => send<RxLayout>('/v1/prescription-layout');
+export const approveLayout = () => post<RxLayout>('/v1/prescription-layout/approval', {});
+/** Public: the token from the QR code travels in the body, never in a query string. */
+export const verifyRx = (token: string) => post<RxVerify>('/v1/prescriptions/verify', { token });
+
+/** The server renders and keeps the PDF (POST: each copy handed out is stored and audited); saved under a name with no patient data. */
+export async function downloadRxPdf(encounterId: string, paper: 'A4' | 'A5'): Promise<void> {
+  const res = await apiFetch(`/v1/encounters/${encounterId}/prescription/pdf?paper=${paper}`, { method: 'POST', credentials: 'same-origin', headers: csrf });
+  if (!res.ok) throw new ApiError(res.status);
+  const url = URL.createObjectURL(await res.blob());
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `prescription-${paper.toLowerCase()}.pdf`;
+  link.click();
+  URL.revokeObjectURL(url);
+}

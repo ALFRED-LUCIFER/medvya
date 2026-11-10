@@ -216,6 +216,10 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.SoloDoctor, new("PUT", "/v1/prescription-items/{rxItem}/included", """{"included":false}""")),
         (Role.SoloDoctor, new("GET", "/v1/encounters/{encounter}/prescription/checks")),
         (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/prescription/overrides", """{"key":"synthetic","reason":"Synthetic"}""")),
+        (Role.SoloDoctor, new("GET", "/v1/encounters/{encounter}/prescription/authorisation")),
+        (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/prescription/authorisation")),
+        (Role.SoloDoctor, new("GET", "/v1/encounters/{encounter}/prescription/print")),
+        (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/prescription/pdf")),
         (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/referrals", """{"provider":"Dr. Synthetic","urgency":"Routine","reason":"Synthetic","sections":[]}""")),
         (Role.SoloDoctor, new("POST", "/v1/referrals/{referral}/send", """{"channel":"Print"}""")),
         (Role.SoloDoctor, new("POST", "/v1/referrals/{referral}/status", """{"state":"Closed"}""")),
@@ -403,6 +407,11 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.PracticeAdmin, new("GET", "/v1/encounters/{encounter}/prescription")),
         (Role.Nurse, new("GET", "/v1/encounters/{encounter}/prescription/checks")), // Prescriptions & orders: X
         (Role.Receptionist, new("POST", "/v1/encounters/{encounter}/prescription/overrides", """{"key":"synthetic","reason":"Synthetic"}""")),
+        (Role.SoloDoctor, new("GET", "/v1/encounters/{encounter}/prescription/authorisation")),
+        (Role.Nurse, new("GET", "/v1/encounters/{encounter}/prescription/authorisation")), // Prescriptions & orders: X
+        (Role.Receptionist, new("POST", "/v1/encounters/{encounter}/prescription/authorisation")),
+        (Role.PracticeAdmin, new("GET", "/v1/encounters/{encounter}/prescription/print")),
+        (Role.Nurse, new("POST", "/v1/prescription-layout/approval")),
         (Role.Receptionist, new("POST", "/v1/encounters/{encounter}/orders/place", """{"destination":"Synthetic lab"}""")),
         (Role.PracticeAdmin, new("GET", "/v1/encounters/{encounter}/orders/slip")),
         (Role.Nurse, new("GET", "/v1/formulary")), // Prescriptions & orders: X

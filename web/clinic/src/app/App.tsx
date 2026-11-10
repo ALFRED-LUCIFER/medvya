@@ -28,6 +28,7 @@ import ScheduleRoute from './ScheduleRoute';
 
 // Loaded on demand: invitations bring the form stack (React Hook Form, Zod) that most sessions never need.
 const InvitationRoute = lazy(() => import('./InvitationRoute'));
+const RxVerifyRoute = lazy(() => import('./RxVerifyRoute'));
 const InviteColleagueRoute = lazy(() => import('./InviteColleagueRoute'));
 const SignUpRoute = lazy(() => import('./SignUpRoute'));
 const SignInRoute = lazy(() => import('./SignInRoute'));
@@ -47,6 +48,7 @@ const ConsultRoute = lazy(() => import('./ConsultRoute'));
 const LetterRoute = lazy(() => import('./ConsultRoute').then(m => ({ default: m.LetterRoute })));
 const SlipRoute = lazy(() => import('./ConsultRoute').then(m => ({ default: m.SlipRoute })));
 const NotePrintRoute = lazy(() => import('./ConsultRoute').then(m => ({ default: m.NotePrintRoute })));
+const RxPrintRoute = lazy(() => import('./ConsultRoute').then(m => ({ default: m.RxPrintRoute })));
 const ReconciliationRoute = lazy(() => import('./ReconciliationRoute'));
 const ProblemsRoute = lazy(() => import('./ProblemsRoute'));
 const Patient360Route = lazy(() => import('./Patient360Route'));
@@ -164,9 +166,10 @@ export default function App({ locale, onLocaleChange }: Props) {
           {/* The signed note's print view and PDF (MDV-P2-013): the note's readers (Patient 360 at Full); the server decides for this patient. */}
           {active.capabilities.Patient360Chart === 'Full' &&
             <Route path="/consult/:encounterId/note/print" element={<NotePrintRoute userId={shell.session?.user.id ?? ''} userName={shell.session?.user.displayName ?? ''} />} />}
-          {/* The investigation slip (MDV-P2-018): same roles; the server lets only an ordering doctor read it. */}
+          {/* The investigation slip (MDV-P2-018) and the printed prescription (MDV-P2-017): same roles; the server lets only an ordering doctor read them. */}
           {active.capabilities.PrescriptionsOrders === 'Sign' && <>
             <Route path="/consult/:encounterId/slip" element={<SlipRoute />} />
+            <Route path="/consult/:encounterId/rx/print" element={<RxPrintRoute />} />
             <Route path="/consult/:encounterId/referrals/:referralId/letter" element={<LetterRoute />} />
           </>}
           {/* Medication reconciliation (MDV-P2-011) and diagnosis coding (MDV-P2-010), E-07: a doctor's, inside a consultation. */}
@@ -208,6 +211,8 @@ export default function App({ locale, onLocaleChange }: Props) {
             <Route path="/__ui" element={<UiGallery switcher={switcher} />} />
             {/* Public and token-based (F-06): the same page whether or not someone is signed in. */}
             <Route path="/invite/:token" element={<InvitationRoute switcher={switcher} />} />
+            {/* The QR code on a printed prescription (MDV-P2-017): public, validity only. */}
+            <Route path="/verify/rx/:token" element={<RxVerifyRoute switcher={switcher} />} />
             {routes}
           </Routes>
         </Suspense>

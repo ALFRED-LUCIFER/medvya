@@ -52,14 +52,14 @@ public sealed record SigParts(
 
 /// <summary>
 /// The dose builder's vocabulary and the human-readable instruction it makes in each print language (MDV-P2-015).
-/// shortcut: the Hindi and Arabic wording is a draft (simple singular/plural only) and needs a clinical translator's sign-off before the printed Rx (MDV-P2-017); Tamil is added there with the print languages.
+/// shortcut: the Hindi, Tamil and Arabic wording is a draft (simple singular/plural only) and needs a clinical translator's sign-off before a pilot clinic hands it to patients.
 /// </summary>
 public static class Sig
 {
     public const int MaxInstructions = 200, MaxDuration = 365, MaxQuantity = 10_000;
     // Up to five ASCII digits and three decimals ("1", "0.5"); more than zero is checked apart.
     static readonly Regex DoseShape = new(@"^[0-9]{1,5}(\.[0-9]{1,3})?\z", RegexOptions.CultureInvariant | RegexOptions.NonBacktracking);
-    public static readonly IReadOnlyList<string> Languages = ["en", "hi", "ar"];
+    public static readonly IReadOnlyList<string> Languages = ["en", "hi", "ta", "ar"];
 
     sealed record Words(
         IReadOnlyDictionary<string, (string One, string Many)> Units, IReadOnlyDictionary<string, string> Routes, IReadOnlyDictionary<string, string> Frequencies,
@@ -113,6 +113,30 @@ public static class Sig
                 ["with_breakfast"] = "नाश्ते के साथ", ["with_lunch"] = "दोपहर के खाने के साथ", ["with_dinner"] = "रात के खाने के साथ", ["bedtime"] = "सोते समय",
             },
             "लें", "इस्तेमाल करें", ("{0} दिन तक", "{0} दिन तक"), "मात्रा: {0}।", "यह दवा बंद करें।", (verb, rest) => $"{rest} {verb}।"),
+        ["ta"] = new(
+            new Dictionary<string, (string, string)>
+            {
+                ["tablet"] = ("மாத்திரை", "மாத்திரைகள்"), ["capsule"] = ("கேப்ஸ்யூல்", "கேப்ஸ்யூல்கள்"), ["ml"] = ("மி.லி.", "மி.லி."), ["mg"] = ("மி.கி.", "மி.கி."),
+                ["drop"] = ("சொட்டு", "சொட்டுகள்"), ["puff"] = ("பஃப்", "பஃப்கள்"), ["unit"] = ("யூனிட்", "யூனிட்கள்"), ["sachet"] = ("பாக்கெட்", "பாக்கெட்டுகள்"),
+                ["application"] = ("முறை", "முறை"),
+            },
+            new Dictionary<string, string>
+            {
+                ["oral"] = "வாய் வழியாக", ["sublingual"] = "நாக்கின் அடியில்", ["topical"] = "தோலின் மேல்", ["inhaled"] = "உள்ளிழுத்து", ["eye"] = "கண்ணில்", ["ear"] = "காதில்",
+                ["nasal"] = "மூக்கில்", ["rectal"] = "ஆசனவாய் வழியாக", ["subcutaneous"] = "தோலுக்கு அடியில் ஊசி மூலம்", ["intramuscular"] = "தசையில் ஊசி மூலம்",
+                ["intravenous"] = "நரம்பில் ஊசி மூலம்",
+            },
+            new Dictionary<string, string>
+            {
+                ["OD"] = "தினமும் ஒரு முறை", ["BD"] = "தினமும் இரண்டு முறை", ["TDS"] = "தினமும் மூன்று முறை", ["QID"] = "தினமும் நான்கு முறை", ["SOS"] = "தேவைப்படும்போது",
+                ["STAT"] = "இப்போது ஒரு முறை", ["WEEKLY"] = "வாரம் ஒரு முறை",
+            },
+            new Dictionary<string, string>
+            {
+                ["before_food"] = "உணவுக்கு முன்", ["after_food"] = "உணவுக்குப் பின்", ["with_food"] = "உணவுடன்", ["empty_stomach"] = "வெறும் வயிற்றில்", ["morning"] = "காலையில்",
+                ["with_breakfast"] = "காலை உணவுடன்", ["with_lunch"] = "மதிய உணவுடன்", ["with_dinner"] = "இரவு உணவுடன்", ["bedtime"] = "தூங்கும் முன்",
+            },
+            "எடுத்துக்கொள்ளவும்", "பயன்படுத்தவும்", ("{0} நாளுக்கு", "{0} நாட்களுக்கு"), "அளவு: {0}.", "இந்த மருந்தை நிறுத்தவும்.", (verb, rest) => $"{rest} {verb}."),
         ["ar"] = new(
             new Dictionary<string, (string, string)>
             {
@@ -202,4 +226,97 @@ public sealed class RxAlertOverride
     [Classification(DataClass.Internal)] public string RuleSetVersion { get; init; } = "";
     [Classification(DataClass.Internal)] public Guid OverriddenBy { get; init; }
     [Classification(DataClass.Internal)] public DateTimeOffset OverriddenAt { get; init; }
+}
+
+/// <summary>One line as authorised and printed: a frozen copy of the draft line (MDV-P2-017), with its instruction in every print language and the
+/// print requirements of its regulatory class (codes, see <see cref="FormularyRules.PrintRequirements"/>). A discontinue line carries the reason.</summary>
+public sealed record AuthorisedLine(
+    [property: Classification(DataClass.SensitiveHealth)] bool Discontinue, [property: Classification(DataClass.SensitiveHealth)] string Medicine,
+    [property: Classification(DataClass.SensitiveHealth)] string? Strength, [property: Classification(DataClass.SensitiveHealth)] string? Form,
+    [property: Classification(DataClass.SensitiveHealth)] bool FreeText, [property: Classification(DataClass.SensitiveHealth)] IReadOnlyDictionary<string, string> Sig,
+    [property: Classification(DataClass.SensitiveHealth)] IReadOnlyList<string> PrintRequirements, [property: Classification(DataClass.SensitiveHealth)] string? Reason);
+
+/// <summary>
+/// AUTHORISED PRESCRIPTION (MDV-P2-017): the doctor's authorisation of a consultation's prescription, separate from signing the note. A hash-chained
+/// append-only ledger row (the database refuses UPDATE and DELETE for every role): an authorised prescription is never edited. Authorising a changed
+/// draft adds the next version, which replaces the one before (the older one then verifies as replaced). Ids only for the patient: the encounter names them,
+/// so a patient merge never has to touch this row. <see cref="VerifyCode"/> is the random half of the QR code's token (the other half is the tenant).
+/// </summary>
+public sealed class AuthorisedPrescription
+{
+    /// <summary>Authorising needs a re-authentication no older than this, as signing does (NFR: step-up within the last 5 minutes).</summary>
+    public static readonly TimeSpan ReauthWindow = TimeSpan.FromMinutes(5);
+
+    [Classification(DataClass.Internal)] public Guid Id { get; init; }
+    [Classification(DataClass.Internal)] public Guid TenantId { get; init; }
+    [Classification(DataClass.Internal)] public Guid FacilityId { get; init; }
+    [Classification(DataClass.Internal)] public Guid EncounterId { get; init; }
+    [Classification(DataClass.Internal)] public int VersionNo { get; init; }
+    [Classification(DataClass.SensitiveHealth)] public required IReadOnlyList<AuthorisedLine> Lines { get; init; }
+    /// <summary>SHA-256 (hex) of the lines' canonical JSON: the same draft authorised again is recognised, not stored twice.</summary>
+    [Classification(DataClass.Internal)] public required string ContentHash { get; init; }
+    [Classification(DataClass.Internal)] public required string RuleSetVersion { get; init; }
+    [Classification(DataClass.Internal)] public required string VerifyCode { get; init; }
+    [Classification(DataClass.Internal)] public Guid AuthorisedBy { get; init; }
+    [Classification(DataClass.Internal)] public DateTimeOffset AuthorisedAt { get; init; }
+
+    public static string Hash(IReadOnlyList<AuthorisedLine> lines) =>
+        Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(
+            lines.Select(l => l with { Sig = new SortedDictionary<string, string>(l.Sig.ToDictionary(), StringComparer.Ordinal) }).ToList())));
+
+    /// <summary>The number printed on the paper ("RX-" and eight letters of the id's random part): a reference to read out, not a credential.</summary>
+    public string Number() => "RX-" + Id.ToString("N")[^8..].ToUpperInvariant();
+}
+
+/// <summary>PRESCRIPTION PDF (MDV-P2-017): every PDF of an authorised prescription the server rendered, byte for byte with its SHA-256, append-only.
+/// shortcut: the bytes are kept in PostgreSQL (a text-only PDF is a few kilobytes); move them to Blob when the PDF carries images (logo, signature).</summary>
+public sealed class PrescriptionPdf
+{
+    [Classification(DataClass.Internal)] public Guid Id { get; init; }
+    [Classification(DataClass.Internal)] public Guid TenantId { get; init; }
+    [Classification(DataClass.Internal)] public Guid PrescriptionId { get; init; }
+    [Classification(DataClass.Internal)] public required string Paper { get; init; }
+    [Classification(DataClass.SensitiveHealth)] public required byte[] Content { get; init; }
+    [Classification(DataClass.Internal)] public required string Sha256 { get; init; }
+    [Classification(DataClass.Internal)] public Guid RenderedBy { get; init; }
+    [Classification(DataClass.Internal)] public DateTimeOffset RenderedAt { get; init; }
+}
+
+/// <summary>A doctor's approval of the printed prescription's layout version as their own (MDV-P2-017, exit gate 4). Append-only: the record of who approved what, when.</summary>
+public sealed class RxLayoutApproval
+{
+    [Classification(DataClass.Internal)] public Guid Id { get; init; }
+    [Classification(DataClass.Internal)] public Guid TenantId { get; init; }
+    [Classification(DataClass.Internal)] public Guid UserId { get; init; }
+    [Classification(DataClass.Internal)] public int LayoutVersion { get; init; }
+    [Classification(DataClass.Internal)] public DateTimeOffset ApprovedAt { get; init; }
+}
+
+/// <summary>
+/// The QR code's token (MDV-P2-017): the tenant id and 16 random bytes, base64url. The tenant half lets the public verify page look the code up inside
+/// that tenant (row-level security stays on); the random half is <see cref="AuthorisedPrescription.VerifyCode"/>. It reveals no patient data.
+/// </summary>
+public static class RxVerifyToken
+{
+    const int TenantBytes = 16, RandomBytes = 16, Length = TenantBytes + RandomBytes;
+
+    /// <summary>A new random code (stored) for the tenant.</summary>
+    public static string NewCode() => System.Buffers.Text.Base64Url.EncodeToString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(RandomBytes));
+
+    public static string Token(Guid tenantId, string code)
+    {
+        var bytes = new byte[Length];
+        tenantId.TryWriteBytes(bytes);
+        System.Buffers.Text.Base64Url.DecodeFromChars(code, bytes.AsSpan(TenantBytes));
+        return System.Buffers.Text.Base64Url.EncodeToString(bytes);
+    }
+
+    /// <summary>The tenant and code of a token, or null when it is not a well-formed token.</summary>
+    public static (Guid TenantId, string Code)? Read(string? token)
+    {
+        if (token is null || token.Length > 64 || !System.Buffers.Text.Base64Url.IsValid(token, out var length) || length != Length) return null;
+        Span<byte> bytes = stackalloc byte[Length];
+        if (!System.Buffers.Text.Base64Url.TryDecodeFromChars(token, bytes, out var written) || written != Length) return null;
+        return (new Guid(bytes[..TenantBytes]), System.Buffers.Text.Base64Url.EncodeToString(bytes[TenantBytes..]));
+    }
 }

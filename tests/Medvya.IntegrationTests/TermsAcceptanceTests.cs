@@ -129,6 +129,27 @@ public sealed class TermsAcceptanceTests(PostgresFixture sql) : IClassFixture<Po
         Assert.Equal(1, await audit.Events.CountAsync(e => e.Action == "tenant.terms.accept" && e.ActorUserId == users["solo"]));
     }
 
+    // SAFETY: mutation check: matching any version (not only TermsPolicy.CurrentVersion) in TermsAcceptances.AcceptedAtAsync lets the old acceptance stand.
+    [Fact]
+    public async Task AnAcceptanceOfAnEarlierVersionDoesNotCountAndTheOwnerAcceptsTheCurrentOne()
+    {
+        await using (var db = sql.Context(tenant))
+        {
+            db.TermsAcceptances.Add(new TermsAcceptance { Id = Guid.NewGuid(), TenantId = tenant, TermsVersion = "2026-11-draft", AcceptedAt = DateTimeOffset.UtcNow.AddDays(-1), AcceptedBy = users["admin"] });
+            await db.SaveChangesAsync();
+        }
+        using var host = Host();
+        using var desk = Client(host, "receptionist");
+        using var admin = Client(host, "admin");
+        Assert.NotEqual("2026-11-draft", TermsPolicy.CurrentVersion);
+        Assert.Equal("terms_not_accepted", await Code(await WalkIn(desk)));
+        Assert.False((await admin.GetFromJsonAsync<JsonElement>(Url("/v1/settings/terms"))).GetProperty("accepted").GetBoolean());
+        Assert.Equal(HttpStatusCode.OK, (await admin.PostAsync(Url("/v1/settings/terms/accept"), null)).StatusCode);
+        Assert.Null(await Code(await WalkIn(desk)));
+        await using var check = sql.Context(tenant);
+        Assert.Equal(["2026-11-draft", TermsPolicy.CurrentVersion], (await check.TermsAcceptances.Select(a => a.TermsVersion).ToListAsync()).Order());
+    }
+
     [Fact]
     public async Task TheRecordCannotBeChangedAndAnotherTenantsAcceptanceDoesNotCount()
     {

@@ -3,10 +3,10 @@ namespace Medvya.Tenancy.Application;
 public static class TermsPolicy
 {
     /// <summary>
-    /// The Terms of Service and DPA wording an owner accepts. Same DRAFT version as the consent wording.
+    /// The Terms of Service and DPA wording an owner accepts. One version for both. Bumped to -2 for the organisation's licence responsibility (MDV-P1-067) so every owner re-accepts through the terms gate; no longer shared with the consent wording version.
     /// shortcut: DRAFT text, not legally reviewed (MDV-P1-044), one built-in version; go-live needs the reviewed en/hi/ar text.
     /// </summary>
-    public const string CurrentVersion = "2026-11-draft";
+    public const string CurrentVersion = "2026-11-draft-2";
 }
 
 public sealed record TermsStatus(string Version, bool Accepted, DateTimeOffset? AcceptedAt, bool Required);

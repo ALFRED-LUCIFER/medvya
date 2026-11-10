@@ -98,6 +98,24 @@ public sealed class SyntheticPracticeTests(PostgresFixture sql, ITestOutputHelpe
         else Assert.True(cards >= 16, $"{cards} cards"); // walk-ins and checked-in visits of the doctors working today
     }
 
+    // SAFETY: mutation check: removing the marker or id check in SyntheticPractice.BookableAsync lets it approve a tenant it did not make, and this fails.
+    [Fact]
+    public async Task BookableRefusesATenantTheSeederDidNotMake()
+    {
+        var real = Guid.NewGuid();
+        await using (var db = sql.Context(real))
+        {
+            db.Tenants.Add(new Tenant { Id = real, Name = "Some Real Clinic", CountryCode = "IN", ResidencyRegion = "centralindia" });
+            await db.SaveChangesAsync();
+        }
+        OrganisationState before;
+        await using (var db = sql.Context(real)) before = (await db.Tenants.SingleAsync()).State;
+        await Assert.ThrowsAsync<InvalidOperationException>(() => SyntheticPractice.BookableAsync(sql.ConnectionString, real, Guid.NewGuid(), 1, 10, 100_000));
+        await using var check = sql.Context(real);
+        Assert.Equal(before, (await check.Tenants.SingleAsync()).State);
+        Assert.Equal(0, await check.TermsAcceptances.CountAsync());
+    }
+
     // SAFETY: mutation check: dropping the terms row, the Approved state or the templates in SyntheticPractice.BookableAsync makes the hold fail here.
     [Fact]
     public async Task PatientsWithDoctorsMakesThePracticeBookableForADeskAndARerunAddsNothing()

@@ -153,7 +153,9 @@ public static class SyntheticPractice
         await using (var db = SyntheticSeed.Tenancy(connectionString, tenant))
         {
             var t = await db.Tenants.SingleAsync(x => x.Id == tenant, ct);
-            if (!t.Name.EndsWith(SyntheticSeed.Marker, StringComparison.Ordinal)) throw new InvalidOperationException("Synthetic seeding refused: that practice is not marked synthetic.");
+            // The tenant id is derived from the practice name, so a name that carries the marker and hashes to this id is the one the seeder made.
+            if (!t.Name.EndsWith(SyntheticSeed.Marker, StringComparison.Ordinal) || SyntheticPatients.Ids(t.Name[..^SyntheticSeed.Marker.Length]).Tenant != tenant)
+                throw new InvalidOperationException("Synthetic seeding refused: that practice is not one the synthetic seeder made.");
             t.State = OrganisationState.Approved;
             if (!await db.TermsAcceptances.AnyAsync(a => a.TermsVersion == TermsPolicy.CurrentVersion, ct))
                 db.TermsAcceptances.Add(new TermsAcceptance { Id = Det(tenant, "terms:" + TermsPolicy.CurrentVersion), TenantId = tenant,

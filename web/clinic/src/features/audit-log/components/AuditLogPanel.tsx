@@ -78,7 +78,7 @@ export default function AuditLogPanel(p: Props) {
       <TableState state={p.state === 'loading' || p.state === 'error' ? p.state : p.rows.length === 0 ? 'empty' : 'ready'} messages={{ loading: t('settings.loading'), error: t('audit.loadFailed'), empty: t('audit.empty') }}>
         <Table label={t('audit.tableLabel')} className="min-w-[800px]">
           <TableHeader>
-            <TableRow>{(['time', 'staff', 'role', 'action', 'patient', 'purpose', 'outcome'] as const).map(c => <TableHead key={c} scope="col">{t(`audit.col.${c}`)}</TableHead>)}</TableRow>
+            <TableRow>{(['time', 'staff', 'role', 'location', 'action', 'patient', 'purpose', 'outcome'] as const).map(c => <TableHead key={c} scope="col">{t(`audit.col.${c}`)}</TableHead>)}</TableRow>
           </TableHeader>
           <TableBody>
             {p.rows.map(r => {
@@ -88,6 +88,7 @@ export default function AuditLogPanel(p: Props) {
                   <TableCell className="whitespace-nowrap"><time dateTime={r.occurredAt}>{formatDate(at)} {formatTime(at, zone)}</time></TableCell>
                   <TableCell>{r.actorName ?? t('audit.unknownStaff')}</TableCell>
                   <TableCell>{r.role ? t(`role.${r.role}`) : t('audit.roleNotRecorded')}</TableCell>
+                  <TableCell>{r.location ?? t('audit.roleNotRecorded')}</TableCell>
                   <TableCell>{actionName(r.action)}{r.detail && <span className="block text-xs text-muted-foreground">{r.detail}</span>}</TableCell>
                   <TableCell>{r.patientName ?? (r.patientMrn ? t('audit.mrn', { mrn: r.patientMrn }) : '')}</TableCell>
                   <TableCell>{r.purpose}</TableCell>

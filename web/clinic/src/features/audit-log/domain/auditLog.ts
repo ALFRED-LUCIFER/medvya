@@ -12,6 +12,8 @@ export type AuditRow = {
   actorName: string | null;
   /** The role held when the event happened; null on rows from before it was recorded. */
   role: Role | null;
+  /** The location where the record was read or changed; null on rows from before it was recorded. */
+  location: string | null;
   action: string;
   resourceType: string;
   patientId: string | null;

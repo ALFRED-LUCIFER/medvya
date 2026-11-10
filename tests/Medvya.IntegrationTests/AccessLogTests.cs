@@ -78,6 +78,19 @@ public sealed class AccessLogTests(PostgresFixture sql) : IClassFixture<Postgres
         await db.SaveChangesAsync();
     }
 
+    /// <summary>MDV-P1-072: the row shows the location where the record was read, not where the patient was registered; older rows show none.</summary>
+    [Fact]
+    public async Task EachRowNamesTheLocationWhereTheRecordWasRead()
+    {
+        await Seed(h.Tenant, "patient.read", h.Patient, h.Doctor, Noon.AddMinutes(-9), facility: h.OtherFacility); // Patient is registered at Facility (Adyar)
+        await Seed(h.Tenant, "patient.read", h.Patient, h.Doctor, Noon.AddMinutes(-8)); // before the location was recorded
+        using var client = Client(Role.PracticeAdmin);
+
+        var rows = (await client.GetFromJsonAsync<JsonElement>($"/v1/audit/access-log/patients/{h.Patient}")).GetProperty("items").EnumerateArray()
+            .Where(i => i.GetProperty("actorUserId").GetGuid() == h.Doctor).Select(i => i.GetProperty("location")).ToList();
+        Assert.Equal(["(none)", "Velachery (synthetic)"], rows.Select(l => l.ValueKind == JsonValueKind.Null ? "(none)" : l.GetString()!)); // newest first
+    }
+
     [Theory]
     [InlineData(Role.Receptionist)]
     [InlineData(Role.Nurse)]

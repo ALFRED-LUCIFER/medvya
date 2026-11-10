@@ -439,13 +439,8 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
             if ((await response.Content.ReadAsStringAsync()).Contains("Lakshmi", StringComparison.Ordinal)) failures.Add($"{path}: Velachery's patient in the answer");
         }
 
-        // Velachery's patient through the record endpoints from an Adyar session: refused or unknown, never the record.
-        foreach (var path in new[] { $"/v1/patients/{h.OtherFacilityPatient}/consents" })
-            Expect($"Adyar reception GET {path}", (await desk.GetAsync(new Uri(path, UriKind.Relative))).StatusCode, HttpStatusCode.Forbidden, HttpStatusCode.NotFound);
-        using (var completion = new StringContent("""{"fullName":"Changed (synthetic)"}""", Encoding.UTF8, "application/json"))
-            Expect("Adyar reception completes a Velachery record",
-                (await desk.PostAsync(new Uri($"/v1/patients/{h.OtherFacilityPatient}/completion", UriKind.Relative), completion)).StatusCode,
-                HttpStatusCode.Forbidden, HttpStatusCode.NotFound);
+        // MDV-P1-072: the patient record itself (/v1/patients/{id}, consents, completion) is shared by the organisation's locations, so it is not a
+        // facility boundary any more; the cross-tenant matrix above and PatientRegistryTests cover its isolation (EF filter and row-level security).
         None(failures);
     }
 

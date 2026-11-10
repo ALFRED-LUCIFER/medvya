@@ -15,10 +15,10 @@ namespace Medvya.Patients.Infrastructure;
 /// its identifiers and visits are moved with a marker of where they came from, and an undo moves them back. Every change and its
 /// audit event commit in one transaction. The route for who may do what is the endpoint's capability policy; the rules that make a
 /// merge impossible without its approvers are here, so no caller can skip them.
-/// shortcut: one facility's records only, the older record always survives, and the merged record's phone, payer, contacts and
+/// shortcut: the older record always survives, and the merged record's phone, payer, contacts and
 /// consents stay on it (history keeps them); a survivor choice and field-by-field merge wait for pilot feedback.
 /// </summary>
-public sealed class PatientMerges(PatientsDbContext db, ICurrentTenant tenant, ICurrentFacility facility, ICurrentUser user, IAuditLog audit, TimeProvider clock,
+public sealed class PatientMerges(PatientsDbContext db, ICurrentTenant tenant, ICurrentUser user, IAuditLog audit, TimeProvider clock,
     IEnumerable<IPatientMergeParticipant> mergeParticipants) : IPatientMerges
 {
     const string Purpose = "registration";
@@ -26,17 +26,10 @@ public sealed class PatientMerges(PatientsDbContext db, ICurrentTenant tenant, I
 
     static readonly MergeRequestStatus[] Open = [MergeRequestStatus.Proposed, MergeRequestStatus.AwaitingApproval];
 
-    Guid FacilityId() => facility.FacilityId ?? throw new InvalidOperationException("No facility context.");
-
     Guid TenantId() => tenant.TenantId ?? throw new InvalidOperationException("No tenant context.");
 
-    /// <summary>Requests whose two records are both at the active facility (a request is never visible through another facility).</summary>
-    IQueryable<MergeRequest> Requests()
-    {
-        var facilityId = FacilityId();
-        return db.MergeRequests.Where(r => db.Patients.Any(p => p.Id == r.PatientId && p.FacilityId == facilityId)
-            && db.Patients.Any(p => p.Id == r.CandidatePatientId && p.FacilityId == facilityId));
-    }
+    /// <summary>The organisation's requests, whichever locations the two records were registered at (the tenant filter and row-level security isolate organisations).</summary>
+    DbSet<MergeRequest> Requests() => db.MergeRequests;
 
     public async Task<IReadOnlyList<MergeQueueRow>> QueueAsync(CancellationToken cancellationToken = default) =>
         await Requests().AsNoTracking().Where(r => Open.Contains(r.Status)).OrderByDescending(r => r.DecidedAt)
@@ -70,9 +63,8 @@ public sealed class PatientMerges(PatientsDbContext db, ICurrentTenant tenant, I
 
     public async Task<Guid?> RequestAsync(Guid patientId, Guid otherPatientId, CancellationToken cancellationToken = default)
     {
-        var facilityId = FacilityId();
         if (patientId == otherPatientId) throw Refused("same_record");
-        var pair = await db.Patients.Where(p => (p.Id == patientId || p.Id == otherPatientId) && p.FacilityId == facilityId).ToListAsync(cancellationToken);
+        var pair = await db.Patients.Where(p => p.Id == patientId || p.Id == otherPatientId).ToListAsync(cancellationToken);
         if (pair.Count != 2) return null;
         if (pair.Any(p => p.MergedIntoPatientId is not null)) throw Refused("already_merged");
         // Suppression: any earlier request for the pair, in either order, wins ("not the same" is final; a merged or undone pair is not re-asked).
@@ -209,8 +201,7 @@ public sealed class PatientMerges(PatientsDbContext db, ICurrentTenant tenant, I
 
     public async Task<IReadOnlyList<MergeHistoryEntry>?> HistoryAsync(Guid patientId, CancellationToken cancellationToken = default)
     {
-        var facilityId = FacilityId();
-        if (!await db.Patients.AnyAsync(p => p.Id == patientId && p.FacilityId == facilityId, cancellationToken)) return null;
+        if (!await db.Patients.AnyAsync(p => p.Id == patientId, cancellationToken)) return null;
         var rows = await Requests().AsNoTracking()
             .Where(r => (r.PatientId == patientId || r.CandidatePatientId == patientId) && (r.Status == MergeRequestStatus.Merged || r.Status == MergeRequestStatus.Unmerged))
             .OrderByDescending(r => r.MergedAt)

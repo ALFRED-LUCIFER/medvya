@@ -274,20 +274,20 @@ namespace Medvya.Patients.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("TenantId", "DateOfBirth");
+
+                    b.HasIndex("TenantId", "FullName");
+
+                    NpgsqlIndexBuilderExtensions.IncludeProperties(b.HasIndex("TenantId", "FullName"), new[] { "ArabicName", "DateOfBirth", "DateOfBirthEstimated", "SexAtBirth", "Mrn", "Status", "CountryCode", "RegisteredAt" });
+
                     b.HasIndex("TenantId", "MergedIntoPatientId");
 
-                    b.HasIndex("TenantId", "FacilityId", "DateOfBirth");
+                    b.HasIndex("TenantId", "Mobile");
 
-                    b.HasIndex("TenantId", "FacilityId", "FullName");
-
-                    NpgsqlIndexBuilderExtensions.IncludeProperties(b.HasIndex("TenantId", "FacilityId", "FullName"), new[] { "ArabicName", "DateOfBirth", "DateOfBirthEstimated", "SexAtBirth", "Mrn", "Status", "CountryCode", "RegisteredAt" });
-
-                    b.HasIndex("TenantId", "FacilityId", "Mobile");
-
-                    b.HasIndex("TenantId", "FacilityId", "Mrn")
+                    b.HasIndex("TenantId", "Mrn")
                         .IsUnique();
 
-                    b.HasIndex("TenantId", "FacilityId", "RegisteredAt");
+                    b.HasIndex("TenantId", "RegisteredAt");
 
                     b.HasIndex("TenantId", "RegisteredBy", "IdempotencyKeyHash")
                         .IsUnique()

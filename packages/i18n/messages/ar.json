@@ -1854,6 +1854,7 @@
   "audit.col.time": "الوقت",
   "audit.col.staff": "الموظف",
   "audit.col.role": "الدور",
+  "audit.col.location": "الموقع",
   "audit.col.action": "الإجراء",
   "audit.col.patient": "المريض",
   "audit.col.purpose": "الغرض",

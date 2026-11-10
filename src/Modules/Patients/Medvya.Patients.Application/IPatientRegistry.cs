@@ -68,8 +68,8 @@ public sealed record RegistrationResult(Guid PatientId, string Mrn, DateTimeOffs
 
 public sealed record PatientRecord(Patient Patient, IReadOnlyList<PatientIdentifier> Identifiers, PayerCoverage? Payer, IReadOnlyList<PatientRelationship> Relationships);
 
-/// <summary>Medical record numbers: facility-scoped, zero-padded.</summary>
-/// <remarks>shortcut: plain zero-padded number; add the facility prefix (e.g. DQ-11-) when facilities have codes.</remarks>
+/// <summary>Medical record numbers: one sequence per organisation (all its locations), zero-padded.</summary>
+/// <remarks>shortcut: plain zero-padded number; add a location prefix (e.g. DQ-11-) only if a pilot asks to see where an MRN was issued.</remarks>
 public static class Mrn
 {
     public const int Digits = 6;

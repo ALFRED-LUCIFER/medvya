@@ -11,7 +11,7 @@ public static class StaffPolicies
 {
     public const string TenantClaim = "tenant_id";
 
-    /// <summary>Staff, roles and integrations at Config level: practice admin, solo doctor (own practice), hospital IT.</summary>
+    /// <summary>Staff, roles and integrations at Config level: practice admin, owner-doctor (own practice), hospital IT.</summary>
     public const string ManageStaff = "staff.manage";
 
     public static AuthorizationBuilder AddStaffPolicies(this AuthorizationBuilder builder) =>

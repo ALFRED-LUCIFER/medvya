@@ -45,7 +45,7 @@ internal sealed class SchedulingHarness(PostgresFixture sql)
         [Role.SoloDoctor] = Doctor, [Role.HospitalDoctor] = SecondDoctor, [Role.Receptionist] = Reception, [Role.PracticeAdmin] = Admin,
         [Role.Nurse] = Nurse, [Role.Patient] = PortalUser, [Role.CareCoordinator] = CareCoordinator, [Role.HospitalIt] = HospitalIt,
     };
-    public readonly Guid Patient = Guid.NewGuid(), SecondPatient = Guid.NewGuid(), OtherFacilityPatient = Guid.NewGuid();
+    public readonly Guid Patient = Guid.NewGuid(), SecondPatient = Guid.NewGuid(), OtherFacilityPatient = Guid.NewGuid(), ForeignPatient = Guid.NewGuid();
     /// <summary>The tenant's country; "AE" gives a UAE clinic (its patients and clock stay Indian: only the tenant's rules differ).</summary>
     public string Country { get; init; } = "IN";
     public ManualClock Clock { get; } = new(MondayMorning);
@@ -91,6 +91,19 @@ internal sealed class SchedulingHarness(PostgresFixture sql)
                 Id = id, TenantId = Tenant, FacilityId = at, Mrn = mrn, CountryCode = "IN", FullName = name, DateOfBirth = new(1972, 3, 12),
                 SexAtBirth = SexAtBirth.Female, Mobile = "+919000000101", Status = RegistrationStatus.Incomplete, RegisteredAt = MondayMorning, ChangedAt = MondayMorning,
             });
+        await patients.SaveChangesAsync();
+    }
+
+    /// <summary>One patient of a different organisation (tenant): nothing of this one may reach it.</summary>
+    public async Task SeedOtherOrganisationPatientAsync()
+    {
+        var foreignTenant = Guid.NewGuid();
+        await using var patients = sql.Patients(foreignTenant);
+        patients.Patients.Add(new Patient
+        {
+            Id = ForeignPatient, TenantId = foreignTenant, FacilityId = Guid.NewGuid(), Mrn = "000001", CountryCode = "IN", FullName = "Foreign Patient (synthetic)", DateOfBirth = new(1972, 3, 12),
+            SexAtBirth = SexAtBirth.Female, Mobile = "+919000000102", Status = RegistrationStatus.Incomplete, RegisteredAt = MondayMorning, ChangedAt = MondayMorning,
+        });
         await patients.SaveChangesAsync();
     }
 

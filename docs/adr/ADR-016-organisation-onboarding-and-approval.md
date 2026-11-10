@@ -54,7 +54,7 @@ Until plans exist (MDV-P5-042) every organisation has one hard-coded starter pla
 - **Separate organisations.** A person may also own several separate organisations. This already works through multiple memberships and the facility picker (P0-012); each organisation is approved separately.
 - **Adding a location is the owner's act, with no new Medvya approval.** The owner enters the location (name, address, time zone) and uploads its registration certificate and tax number as a record. That is the owner's responsibility, the same principle as attesting a doctor. The audit log records who added it and when. The location's country must equal the organisation's country (data stays in country, ADR-003).
 - **The starter plan counts per organisation**, in total across locations (1 doctor and 2 other staff); a bigger chain needs a bigger plan (MDV-P5-042).
-- **Patients are one shared record across the organisation's locations**: one MRN and one chart. Staff at any location may open it under the existing access, care-relationship and audit rules; the access log shows the location where it was read (role and facility at event time are already kept). Row-level security and the EF filter stay on the organisation (tenant), not the facility.
+- **Patients are one shared record across the organisation's locations**: one MRN and one chart. Staff at any location may open it under the existing access, care-relationship and audit rules; the access log shows the location where it was read (role and facility at event time are already kept). Row-level security and the EF filter stay on the organisation (tenant), not the facility. Booking, walk-in, series, waitlist and desk document upload accept any patient of the organisation (MDV-P1-072 follow-up); the visit is at the booking location and, being a visit there, is what gives that location's clinicians a care relationship. Registration at another location relates nobody.
 - **Out of scope:** reassigning or walking a patient in between doctors of different locations.
 - **Relation to P7.** MDV-P7-003 (organisation, facilities and departments administration) and MDV-P7-002 (record authority per facility) overlap. The clinic-level version is built first (MDV-P1-070 to P1-072); P7-003 later extends it with hospital departments.
 - Tickets: MDV-P1-070 (add a location), MDV-P1-071 (staff and doctors across locations), MDV-P1-072 (shared patient record).
@@ -108,3 +108,7 @@ Every tenant that exists when this ships (the dev and pilot tenants, for example
 ## Not decided here
 
 Real plans, prices and the self-service upgrade flow (MDV-P5-016, MDV-P5-042); the hospital HIS, SSO and multi-facility model (P7); whether an expired attestation blocks signing.
+
+## Decision on naming (MDV-P1-066)
+
+The enum value `Role.SoloDoctor` is kept: it is the stored membership value and the JWT role claim, and a rename would need a migration plus a compatibility window for issued sessions, for no change in behaviour. Only the wording is retired: the label reads "Owner doctor" in en, hi and ar, comments say owner-doctor, and no copy says Medvya verifies licences. The RoleMatrix is untouched. The role may be renamed later with its own migration if the name causes confusion.

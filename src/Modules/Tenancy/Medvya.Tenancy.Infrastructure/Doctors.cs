@@ -49,7 +49,7 @@ public sealed class Doctors(TenancyDbContext db, ICurrentTenant tenant, ICurrent
 
         var now = clock.GetUtcNow();
         Guid id = default;
-        // Doctors join as hospital doctors: the solo-doctor role carries practice-configuration rights (RoleMatrix), which an added doctor must not get.
+        // Doctors join as hospital doctors: the owner-doctor role carries practice-configuration rights (RoleMatrix), which an added doctor must not get.
         var created = await invitations.CreateAsync(email!, Role.HospitalDoctor, command.FacilityId, m =>
         {
             id = m.Id;

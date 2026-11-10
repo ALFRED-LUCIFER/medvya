@@ -110,8 +110,8 @@ public sealed class DocumentService(
             return true;
         }
         if (!DocumentRules.CanUploadAtDesk(granted[1], granted[2])) throw new ClinicalAccessDeniedException(false, false);
-        // The desk works with its own facility's patients; another facility's patient, or another tenant's, is refused as not found would be: no access.
-        if ((await patients.SummariesAsync([patientId], cancellationToken)).GetValueOrDefault(patientId) is not { } p || p.FacilityId != facilityId)
+        // The desk works with the organisation's patients (MDV-P1-072); another tenant's is not visible, so it is refused as no access.
+        if ((await patients.SummariesAsync([patientId], cancellationToken)).GetValueOrDefault(patientId) is null)
             throw new ClinicalAccessDeniedException(false, false);
         return false;
     }

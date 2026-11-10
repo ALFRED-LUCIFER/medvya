@@ -86,8 +86,8 @@ public sealed class WaitlistService(
         if (command.Days.Any(d => !Enum.IsDefined(d))) errors.Add(new("days", "invalid"));
         if (command.From is { } from && command.Until is { } until && until < from) errors.Add(new("until", "before_from"));
         SchedulingValidationException.ThrowIfAny(errors);
-        // Only a patient registered at this facility, and only an active doctor of it.
-        var patient = (await context.PatientsAsync([command.PatientId], cancellationToken)).GetValueOrDefault(command.PatientId) is { } p && p.FacilityId == command.FacilityId
+        // Any patient of the organisation, and only an active doctor of this facility.
+        var patient = (await context.PatientsAsync([command.PatientId], cancellationToken)).GetValueOrDefault(command.PatientId) is { } p
             ? p
             : throw new SchedulingValidationException([new("patientId", "unknown")]);
         string? doctor = null;
@@ -177,7 +177,7 @@ public sealed class WaitlistService(
         if (entry.State != WaitlistState.Offered || entry.OfferCalendarId is not { } calendar) throw new SlotUnavailableException("no_offer");
         var hold = await db.SlotHolds.AsNoTracking().SingleOrDefaultAsync(h => h.HeldBy == id, cancellationToken);
         if (entry.OfferExpiresAt <= now || hold is null || hold.ExpiresAt <= now) throw new SlotUnavailableException("offer_expired");
-        var patient = (await context.PatientsAsync([entry.PatientId], cancellationToken)).GetValueOrDefault(entry.PatientId) is { } p && p.FacilityId == entry.FacilityId
+        var patient = (await context.PatientsAsync([entry.PatientId], cancellationToken)).GetValueOrDefault(entry.PatientId) is { } p
             ? p
             : throw new SchedulingValidationException([new("patientId", "unknown")]);
         var (_, zone) = await context.FacilityAsync(entry.FacilityId, cancellationToken);

@@ -207,11 +207,19 @@ public sealed class DocumentTests(PostgresFixture sql, AzuriteFixture blobs) : I
     }
 
     [Fact]
-    public async Task OnlyTheRightRolesAndOnlyTheirOwnFacilitysPatientsAndEveryCallIsAudited()
+    public async Task TheDeskAtOneLocationUploadsToAPatientRegisteredAtAnotherLocationOfTheOrganisation()
+    {
+        using var ok = await UploadAsync(h.Reception, Pdf, patient: h.OtherFacilityPatient); // MDV-P1-072
+        Assert.True(ok.IsSuccessStatusCode, ok.StatusCode.ToString());
+    }
+
+    [Fact]
+    public async Task OnlyTheRightRolesAndOnlyTheirOwnOrganisationsPatientsAndEveryCallIsAudited()
     {
         using (var admin = await UploadAsync(h.Admin, Pdf)) Assert.Equal(HttpStatusCode.Forbidden, admin.StatusCode); // the practice admin has no business in documents
         using (var adminList = await Client(h.Admin).GetAsync(Docs())) Assert.Equal(HttpStatusCode.Forbidden, adminList.StatusCode);
-        using (var elsewhere = await UploadAsync(h.Reception, Pdf, patient: h.OtherFacilityPatient)) Assert.Equal(HttpStatusCode.Forbidden, elsewhere.StatusCode); // another facility's patient
+        await h.SeedOtherOrganisationPatientAsync();
+        using (var elsewhere = await UploadAsync(h.Reception, Pdf, patient: h.ForeignPatient)) Assert.Equal(HttpStatusCode.NotFound, elsewhere.StatusCode); // another organisation's patient does not exist here
         using (var missing = await Client(h.Doctor).GetAsync(Docs(Guid.NewGuid()))) Assert.Equal(HttpStatusCode.NotFound, missing.StatusCode);
         await h.Settings(h.Admin).SaveClinicalAccessAsync(ClinicalAccessPolicy.AssignedOnly);
         using (var colleague = await Client(h.SecondDoctor).GetAsync(Docs()))
@@ -221,7 +229,7 @@ public sealed class DocumentTests(PostgresFixture sql, AzuriteFixture blobs) : I
         await using var audit = sql.Audit(h.Tenant);
         var rows = await audit.Events.Where(e => e.ResourceType == "document").OrderBy(e => e.Id).Select(e => new { e.Action, e.Outcome }).ToListAsync();
         Assert.Equal(
-            [("patient.document.upload", AuditOutcome.Denied), ("patient.document.list", AuditOutcome.Denied), ("patient.document.upload", AuditOutcome.Denied),
+            [("patient.document.upload", AuditOutcome.Denied), ("patient.document.list", AuditOutcome.Denied), ("patient.document.upload", AuditOutcome.NotFound),
              ("patient.document.list", AuditOutcome.NotFound), ("patient.document.list", AuditOutcome.Denied), ("patient.document.list", AuditOutcome.Allowed)],
             rows.Select(r => (r.Action, r.Outcome)));
     }

@@ -47,6 +47,28 @@ public class PlatformConsoleTests
         Assert.Empty(ClinicAssemblies(["Medvya.Platform.Domain", "Medvya.BuildingBlocks.Security"]));
     }
 
+    // MDV-P1-064: what the queue and approval calls return (IOrganisationConsole) has no patient, health or national-id property, at any depth.
+    [Fact]
+    public void TheApprovalQueueReturnsNoPatientField()
+    {
+        var seen = new HashSet<Type>();
+        var names = new List<string>();
+        void Walk(Type t)
+        {
+            if (t.IsGenericType) { foreach (var a in t.GetGenericArguments()) Walk(a); }
+            if (!t.Namespace!.StartsWith("Medvya.", StringComparison.Ordinal) || !seen.Add(t)) return;
+            foreach (var p in t.GetProperties())
+            {
+                names.Add(p.Name);
+                Walk(p.PropertyType);
+            }
+        }
+        foreach (var m in typeof(Medvya.Tenancy.Application.IOrganisationConsole).GetMethods()) Walk(m.ReturnType);
+        Assert.NotEmpty(names);
+        Assert.DoesNotContain(names, n => n.Contains("Patient", StringComparison.Ordinal) || n.Contains("NationalId", StringComparison.Ordinal)
+            || n.Contains("Diagnosis", StringComparison.Ordinal) || n.Contains("Allerg", StringComparison.Ordinal) || n.Contains("Phone", StringComparison.Ordinal));
+    }
+
     [Fact]
     public void TheConsoleDomainHoldsNoHealthOrNationalIdField()
     {

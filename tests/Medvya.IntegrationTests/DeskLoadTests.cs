@@ -59,7 +59,7 @@ internal sealed class StepStats(string name, int budgetMs)
 /// Local mode seeds a busy clinic on Testcontainers PostgreSQL and starts the host on a loopback port; set MEDVYA_LOAD_URL to point
 /// the same flow at another environment (staging), with MEDVYA_LOAD_DESKS (JSON array of request-header objects, one per desk, the
 /// credentials), MEDVYA_LOAD_FACILITY, MEDVYA_LOAD_DOCTORS (comma-separated calendar ids), MEDVYA_LOAD_BOOK_FROM (a Monday, yyyy-MM-dd,
-/// from which every doctor has free slots). Other knobs: MEDVYA_LOAD_SECONDS (180), MEDVYA_LOAD_DESKS_COUNT (20), MEDVYA_LOAD_THINK_MS (30000: 20 desks then book about 2,400 an hour, 12 times the pilot's 200),
+/// from which every doctor has free slots), MEDVYA_LOAD_EXTERNAL_ACK (the target's exact host) and MEDVYA_LOAD_REPORT outside docs/. Other knobs: MEDVYA_LOAD_SECONDS (180), MEDVYA_LOAD_DESKS_COUNT (20), MEDVYA_LOAD_THINK_MS (30000: 20 desks then book about 2,400 an hour, 12 times the pilot's 200),
 /// MEDVYA_LOAD_REPORT (report path), MEDVYA_LOAD_RESULTS (JSON results path), MEDVYA_LOAD_BASELINE (a results file: the run fails when a
 /// step's p95 is more than 20 % and 25 ms over it, the nightly regression check). Never run it against production.
 /// </summary>
@@ -107,6 +107,8 @@ public sealed class DeskLoadTests(ITestOutputHelper output)
             if (Environment.GetEnvironmentVariable("MEDVYA_LOAD_URL") is { Length: > 0 } external)
             {
                 (url, target) = (new Uri(external), external);
+                var refused = ExternalTargetRefusal(url, Environment.GetEnvironmentVariable("MEDVYA_LOAD_EXTERNAL_ACK"), Env("MEDVYA_LOAD_REPORT", DefaultReport()), RepoRoot());
+                Assert.True(refused is null, refused);
                 deskHeaders = JsonSerializer.Deserialize<List<Dictionary<string, string>>>(Env("MEDVYA_LOAD_DESKS", "[]"))!;
                 facility = Guid.Parse(Env("MEDVYA_LOAD_FACILITY", ""));
                 doctors = [.. Env("MEDVYA_LOAD_DOCTORS", "").Split(',').Select(Guid.Parse)];
@@ -277,7 +279,7 @@ public sealed class DeskLoadTests(ITestOutputHelper output)
                 {(topWaits.Length == 0 ? "  - (not sampled)" : topWaits)}
                 """);
             output.WriteLine(report);
-            var path = Env("MEDVYA_LOAD_REPORT", Path.Combine(RepoRoot(), "docs", "05-delivery", "load-test-desk.md"));
+            var path = Env("MEDVYA_LOAD_REPORT", DefaultReport());
             await File.WriteAllTextAsync(path, report);
             var results = steps.ToDictionary(s => s.Name, s => new StepResult(s.Count, s.Errors, s.Percentile(0.5), s.Percentile(0.95), s.Percentile(0.99)));
             if (Environment.GetEnvironmentVariable("MEDVYA_LOAD_RESULTS") is { Length: > 0 } resultsPath)
@@ -295,6 +297,36 @@ public sealed class DeskLoadTests(ITestOutputHelper output)
             host?.Dispose();
             if (sql is not null) await sql.DisposeAsync();
         }
+    }
+
+    static string DefaultReport() => Path.Combine(RepoRoot(), "docs", "05-delivery", "load-test-desk.md");
+
+    /// <summary>
+    /// Why an external run (MEDVYA_LOAD_URL) must not start, or null: the target's exact host must be acknowledged in MEDVYA_LOAD_EXTERNAL_ACK,
+    /// so a typo cannot load another site, and its report must be written outside the repo's docs/ folder (only local reports are committed).
+    /// </summary>
+    internal static string? ExternalTargetRefusal(Uri url, string? ack, string reportPath, string repoRoot)
+    {
+        if (!string.Equals(url.Host, ack, StringComparison.OrdinalIgnoreCase))
+            return $"external load target {url.Host}: set MEDVYA_LOAD_EXTERNAL_ACK={url.Host} to confirm this exact host";
+        var docs = Path.GetFullPath(Path.Combine(repoRoot, "docs")) + Path.DirectorySeparatorChar;
+        return Path.GetFullPath(reportPath).StartsWith(docs, StringComparison.OrdinalIgnoreCase)
+            ? "an external run writes its report outside docs/: set MEDVYA_LOAD_REPORT (for example /tmp/azure.md)"
+            : null;
+    }
+
+    [Fact]
+    public void AnExternalRunNeedsItsExactHostAcknowledgedAndAReportOutsideDocs()
+    {
+        var url = new Uri("https://app-medvya-dev.example.test/");
+        var repo = Path.Combine(Path.GetTempPath(), "repo");
+        var outside = Path.Combine(Path.GetTempPath(), "azure.md");
+        Assert.NotNull(ExternalTargetRefusal(url, null, outside, repo));
+        Assert.NotNull(ExternalTargetRefusal(url, "app-medvya-dev.example.tes", outside, repo)); // a typo is not the host
+        Assert.NotNull(ExternalTargetRefusal(url, "app-medvya-dev.example.test", Path.Combine(repo, "docs", "05-delivery", "load-test-desk.md"), repo));
+        Assert.NotNull(ExternalTargetRefusal(url, "app-medvya-dev.example.test", Path.Combine(repo, "tests", "..", "docs", "x.md"), repo));
+        Assert.Null(ExternalTargetRefusal(url, "app-medvya-dev.example.test", outside, repo));
+        Assert.Null(ExternalTargetRefusal(url, "app-medvya-dev.example.test", Path.Combine(repo, "docs-out", "x.md"), repo));
     }
 
     /// <summary>One step's numbers in the results and baseline files.</summary>

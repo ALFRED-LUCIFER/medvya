@@ -36,8 +36,8 @@ public static class NoteEndpoints
             .RequireCapability(Capability.ClinicalNotes, Access.Sign)
             .AuditedByUseCase("note.sign", "note", AuditPurpose.Treatment).AddEndpointFilter(MapErrors);
         // Today's pending notes (MDV-P2-002): the signed-in doctor's own unsigned consultations at this facility, with the patient's name to find them.
-        app.MapGet("/v1/notes/pending", Pending).RequireCapability(Capability.Patient360Chart, Access.Full)
-            .AuditedByUseCase("note.pending", "note", AuditPurpose.Treatment).AddEndpointFilter(MapErrors);
+        // Like the allergy flags, the use case writes one note.pending row per patient answered, so each patient's access log shows it.
+        app.MapGet("/v1/notes/pending", Pending).RequireCapability(Capability.Patient360Chart, Access.Full).AddEndpointFilter(MapErrors);
         return app;
     }
 

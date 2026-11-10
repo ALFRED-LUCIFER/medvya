@@ -1,5 +1,9 @@
 namespace Medvya.Tenancy.Domain;
 
+/// <summary>
+/// SoloDoctor is the owner-doctor: a doctor who works alone registers a clinic and is its owner (ADR-016). The name is kept because it is the
+/// stored membership value and the token claim (shortcut: not renamed, it would need a migration and a claim compatibility window; rename if it ever confuses).
+/// </summary>
 public enum Role { SoloDoctor, HospitalDoctor, Receptionist, Nurse, CareCoordinator, Patient, PracticeAdmin, HospitalIt }
 
 public enum Capability
@@ -22,7 +26,7 @@ public enum Access { None, Read, Own, Limited, Released, Full, Sign, Config, Bre
 /// </summary>
 public static class RoleMatrix
 {
-    // Column order: SoloDoctor HospitalDoctor Receptionist Nurse CareCoordinator Patient PracticeAdmin HospitalIt.
+    // Column order: SoloDoctor (owner-doctor) HospitalDoctor Receptionist Nurse CareCoordinator Patient PracticeAdmin HospitalIt.
     // F Full · R Read · O Own · L Limited · P Released · S Sign · C Config · B Break-glass · X None
     public static readonly IReadOnlyList<(Capability Capability, string Label, string Codes)> Rows =
     [

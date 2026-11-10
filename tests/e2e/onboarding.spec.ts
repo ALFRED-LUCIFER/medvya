@@ -40,7 +40,7 @@ test('the create-account answers fill the new draft once, then leave the browser
   expect(await page.evaluate(() => sessionStorage.getItem('medvya.signUp'))).toBeNull();
 });
 
-test('a solo doctor completes the five steps, sees the ready screen and lands on the app', async ({ page }) => {
+test('an owner-doctor completes the five steps, sees the ready screen and lands on the app', async ({ page }) => {
   const api = await mockOnboarding(page);
   await page.goto('/onboarding?country=IN');
   await completeWizard(page);

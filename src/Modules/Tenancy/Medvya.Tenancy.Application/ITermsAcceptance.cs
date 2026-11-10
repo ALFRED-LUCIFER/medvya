@@ -23,7 +23,7 @@ public interface ITermsAcceptance
     Task<TermsStatus> StatusAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Records acceptance of the current version by the signed-in owner (practice admin or solo doctor), audited in the same transaction.
+    /// Records acceptance of the current version by the signed-in owner (practice admin or owner-doctor), audited in the same transaction.
     /// Repeating it adds nothing. False when the caller is not an owner.
     /// </summary>
     Task<bool> AcceptAsync(CancellationToken cancellationToken = default);

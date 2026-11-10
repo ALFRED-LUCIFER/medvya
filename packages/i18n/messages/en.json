@@ -3946,5 +3946,6 @@
   "sharedRx.problem.too_soon": "A code was just sent. Wait a minute before asking for another.",
   "sharedRx.problem.code_limit": "Too many codes for this link. Ask the clinic to share it again.",
   "sharedRx.problem.failed": "That did not work. Try again in a moment.",
-  "sharedRx.privacy": "Nothing about the patient is shown on this page. Every opening is recorded for the patient."
+  "sharedRx.privacy": "Nothing about the patient is shown on this page. Every opening is recorded for the patient.",
+  "rxShare.error.pdf_unsupported_text": "The prescription has text the shared PDF cannot show yet (another script). Print it and hand it over instead."
 }

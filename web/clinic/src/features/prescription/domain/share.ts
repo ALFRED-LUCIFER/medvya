@@ -36,8 +36,8 @@ export type DispensedForm = z.infer<typeof dispensedSchema>;
 export const toDispensedBody = (f: DispensedForm) => ({ state: 'Dispensed' as const, pharmacyRef: f.pharmacyRef || null, dispensedAt: new Date(f.dispensedAt).toISOString() });
 
 /** A share refusal the screen words: the codes ShareAsync / DispatchAsync throw; anything else is "failed". */
-export type ShareProblem = 'not_authorised' | 'changed' | 'no_mobile' | 'no_address' | 'send_failed' | 'dispatch_final' | 'failed';
-const shareProblems: readonly string[] = ['not_authorised', 'changed', 'no_mobile', 'no_address', 'send_failed', 'dispatch_final'];
+export type ShareProblem = 'not_authorised' | 'changed' | 'no_mobile' | 'no_address' | 'send_failed' | 'dispatch_final' | 'pdf_unsupported_text' | 'failed';
+const shareProblems: readonly string[] = ['not_authorised', 'changed', 'no_mobile', 'no_address', 'send_failed', 'dispatch_final', 'pdf_unsupported_text'];
 export const shareProblem = (code: string | undefined): ShareProblem => (code && shareProblems.includes(code) ? (code as ShareProblem) : 'failed');
 
 /** What the public link page says after a refusal: 404 is a link that is unknown or expired (the server tells them apart for nobody). */

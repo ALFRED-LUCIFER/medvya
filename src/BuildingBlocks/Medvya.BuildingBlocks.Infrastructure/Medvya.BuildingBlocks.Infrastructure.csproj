@@ -4,6 +4,7 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
     <PackageReference Include="Azure.Identity" />
+    <FrameworkReference Include="Microsoft.AspNetCore.App" /> <!-- EmailSetup binds configuration; both hosts share it -->
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Medvya.BuildingBlocks.Domain\Medvya.BuildingBlocks.Domain.csproj" />

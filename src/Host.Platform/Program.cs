@@ -2,11 +2,14 @@ using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 using Host.Platform.Auth;
 using Host.Platform.Context;
+using Medvya.Audit.Infrastructure;
+using Medvya.BuildingBlocks.Infrastructure;
 using Medvya.BuildingBlocks.Security;
 using Medvya.Platform.Api;
 using Medvya.Platform.Application;
 using Medvya.Platform.Infrastructure;
 using Medvya.Platform.Infrastructure.Persistence;
+using Medvya.Tenancy.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 // The platform console host (MDV-P5-040, ADR-014): a separate app for the Medvya team. It reads only the control plane and signs in to the
@@ -24,6 +27,13 @@ builder.Services.AddScoped<IPlatformCaller, PlatformCaller>();
 // Without a database nothing resolves the console's services, so every endpoint fails closed.
 if (builder.Configuration.GetConnectionString("Platform") is { } sql)
     builder.Services.AddPlatformModule(sql, builder.Configuration.GetSection("Platform").Get<PlatformOptions>() ?? new());
+// The organisation approvals (MDV-P1-064): the queue and every decision run through the reviewed Tenancy review path, on its own narrow database login
+// (medvya_review: the request, its documents, the state and the audit rows of a decision; no patient, staff or scheduling table). Without it those endpoints fail closed.
+if (builder.Configuration.GetConnectionString("Review") is { } review)
+{
+    builder.Services.AddEmailSender(builder.Configuration, () => new Azure.Identity.ManagedIdentityCredential(Azure.Identity.ManagedIdentityId.SystemAssigned));
+    builder.Services.AddAuditModule(review).AddOrganisationReviewPath(review, builder.Configuration["Storage:ConnectionString"], builder.Configuration["Storage:BlobEndpoint"]);
+}
 builder.Services.AddHsts(o => { o.MaxAge = TimeSpan.FromDays(365); o.IncludeSubDomains = true; });
 builder.Services.AddRateLimiter(o =>
 {
@@ -38,7 +48,8 @@ builder.Services.AddRateLimiter(o =>
 var app = builder.Build();
 
 if (!app.Environment.IsDevelopment()) app.UseHsts();
-app.UseSecurityHeaders();
+// "blob:" lets the approvals viewer show a document it fetched from this host in a frame (a PDF) and nothing from outside this origin.
+app.UseSecurityHeaders("blob:");
 app.UseRateLimiter();
 // The built console (web/platform-admin) when the deploy copies it to wwwroot; client routes reload into its shell.
 app.UseStaticFiles();

@@ -70,6 +70,7 @@ flowchart LR
   Notifications -->|"Api, Application, Domain"| Tenancy
   Patients -->|"Api, Application"| Audit
   Patients -->|"Api, Application"| Tenancy
+  Platform -->|"Application"| Tenancy
   Prescribing -->|"Api, Application"| Audit
   Prescribing -->|"Application"| Encounters
   Prescribing -->|"Application"| Identity

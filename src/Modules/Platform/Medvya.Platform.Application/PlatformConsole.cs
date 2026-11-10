@@ -62,6 +62,16 @@ public interface IPlatformAuditLog
     Task<string> ExportCsvAsync(string reason, CancellationToken cancellationToken = default);
 }
 
+/// <summary>Console pages that act on an organisation (MDV-P1-064) log each action here, in the platform audit log, with the organisation it concerns.</summary>
+public interface IConsoleActions
+{
+    /// <summary>Appends an entry naming the signed-in member, the action, the organisation and the reason (null for a view).</summary>
+    Task RecordAsync(string action, string resourceType, Guid resourceId, Guid subjectTenantId, string? reason, CancellationToken cancellationToken = default);
+
+    /// <summary>Display names of console members, for a history that records them as actors. Unknown ids are left out.</summary>
+    Task<IReadOnlyDictionary<Guid, string>> MemberNamesAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default);
+}
+
 public sealed record ConsoleSession(Guid MemberId, Guid SessionId);
 
 /// <summary><see cref="CanRegister"/>: this session may register a key (it signed on with a usable link, or it is the first owner's first key).</summary>

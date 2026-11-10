@@ -76,3 +76,31 @@ public interface IOrganisationReviews
     /// <summary>Organisations whose state is in <paramref name="filter"/>, oldest submission first.</summary>
     Task<IReadOnlyList<QueueItem>> ListAsync(ReviewFilter filter, CancellationToken cancellationToken = default);
 }
+
+/// <summary>What Medvya operations may do to an organisation (ADR-016). Approve needs a Submitted request, Reinstate a Suspended organisation.</summary>
+public enum ReviewAction { Approve, RequestChanges, Reject, Suspend, Reinstate }
+
+/// <summary>The email the applicant is sent after a decision, shown to the operator. Business details only: the organisation's name and the operator's reason.</summary>
+public sealed record EmailPreview(string Subject, string Body);
+
+public sealed record OrganisationFile(byte[] Content, string ContentType);
+
+/// <summary>
+/// The platform console's one way into the organisation review (ADR-014 note, ADR-016, MDV-P1-064): the queue through the reviewed cross-tenant read
+/// path and every decision through <see cref="IOrganisationState"/>, run inside the organisation's tenant scope for the operator named. No
+/// authorisation here; the console endpoints hold the policy. Reads the request and its documents only, never clinic patient data.
+/// </summary>
+public interface IOrganisationConsole
+{
+    Task<IReadOnlyList<QueueItem>> ListAsync(ReviewFilter filter, Guid operatorId, CancellationToken cancellationToken = default);
+
+    /// <summary>Null when the organisation is unknown or has no request.</summary>
+    Task<RequestDetail?> DetailAsync(Guid tenantId, Guid operatorId, CancellationToken cancellationToken = default);
+
+    /// <summary>The document's bytes for the private viewer, read by the server so no storage link reaches the browser. Audited in the organisation before it is read. Null when unknown.</summary>
+    Task<OrganisationFile?> OpenDocumentAsync(Guid tenantId, Guid documentId, Guid operatorId, CancellationToken cancellationToken = default);
+
+    /// <summary>Null when the organisation is unknown.</summary>
+    /// <exception cref="SettingsValidationException">"reason:*", "state:transition", "document.Dpa:required" (a Hospital without its signed DPA).</exception>
+    Task<EmailPreview?> DecideAsync(Guid tenantId, ReviewAction action, string reason, Guid operatorId, CancellationToken cancellationToken = default);
+}

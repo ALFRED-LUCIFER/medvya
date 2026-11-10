@@ -1,12 +1,12 @@
 import type { ReactNode } from 'react';
 import { NavLink } from 'react-router';
-import { ClipboardList, LayoutDashboard, LogOut, ShieldCheck, Users } from 'lucide-react';
+import { ClipboardCheck, ClipboardList, LayoutDashboard, LogOut, ShieldCheck, Users } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
 import { Button, cn } from '@medvya/ui';
 import type { PlatformRole } from '../../session/domain/session';
 import type { NavId, NavItem } from '../domain/navigation';
 
-const icons: Record<NavId, typeof Users> = { overview: LayoutDashboard, team: Users, audit: ClipboardList };
+const icons: Record<NavId, typeof Users> = { overview: LayoutDashboard, approvals: ClipboardCheck, team: Users, audit: ClipboardList };
 
 type Props = {
   displayName: string;

@@ -96,8 +96,8 @@ test('the audit log reads in Arabic, right to left, with actions in words', asyn
   expect(await axe(page)).toEqual([]);
 });
 
-test('a reviewer sees no team or audit pages', async ({ page }) => {
+test('a reviewer sees approvals but no team or audit pages', async ({ page }) => {
   await page.route('**/v1/me', r => r.fulfill({ json: owner({ role: 'Reviewer', keyVerified: true, hasKey: true, canRegister: false }) }));
   await page.goto('/');
-  await expect(page.getByRole('navigation').getByRole('link')).toHaveText(['Overview']);
+  await expect(page.getByRole('navigation').getByRole('link')).toHaveText(['Overview', 'Approvals']);
 });

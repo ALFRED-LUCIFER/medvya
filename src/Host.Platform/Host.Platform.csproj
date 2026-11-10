@@ -2,12 +2,16 @@
 
   <!--
     The platform console host (MDV-P5-040): composition only, like Host.Api. It references the Platform module and shared building blocks,
-    never a clinic module, so no patient type can reach a console endpoint (PlatformConsoleTests checks the references).
+    never a patient-data module, so no patient type can reach a console endpoint (PlatformConsoleTests checks the references).
   -->
   <ItemGroup>
     <ProjectReference Include="..\Modules\Platform\Medvya.Platform.Api\Medvya.Platform.Api.csproj" />
     <ProjectReference Include="..\Modules\Platform\Medvya.Platform.Infrastructure\Medvya.Platform.Infrastructure.csproj" />
     <ProjectReference Include="..\BuildingBlocks\Medvya.BuildingBlocks.Security\Medvya.BuildingBlocks.Security.csproj" />
+    <!-- The reviewed organisation review path (ADR-014 note, MDV-P1-064): the Tenancy and Audit contracts and implementations, and no other clinic module.
+         PlatformConsoleTests allows exactly these assemblies and fails on any patient-data module. -->
+    <ProjectReference Include="..\Modules\Tenancy\Medvya.Tenancy.Infrastructure\Medvya.Tenancy.Infrastructure.csproj" />
+    <ProjectReference Include="..\Modules\Audit\Medvya.Audit.Infrastructure\Medvya.Audit.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>

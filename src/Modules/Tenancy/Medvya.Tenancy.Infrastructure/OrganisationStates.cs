@@ -50,7 +50,7 @@ public sealed partial class OrganisationStates(TenancyDbContext db, ICurrentTena
     static partial void EmailFailed(ILogger logger, OrganisationState state, string errorType);
 
     // No patient data: the organisation's name, the outcome and the operator's reason (plain words, never personal details). English only until templates are localised (MDV-P1-032).
-    static EmailMessage Message(string to, string organisation, OrganisationState state, string? reason) => state switch
+    internal static EmailMessage Message(string to, string organisation, OrganisationState state, string? reason) => state switch
     {
         OrganisationState.Approved => new(to, $"{organisation} is approved on Medvya", $"{organisation} is approved. Sign in to Medvya to register patients and book visits."),
         OrganisationState.NeedsChanges => new(to, $"Medvya needs changes to the request for {organisation}",

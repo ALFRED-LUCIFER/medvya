@@ -1,9 +1,10 @@
 using Azure.Core;
 using Medvya.BuildingBlocks.Domain;
-using Medvya.BuildingBlocks.Infrastructure;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
-namespace Host.Api.Middleware;
+namespace Medvya.BuildingBlocks.Infrastructure;
 
 public static class EmailSetup
 {

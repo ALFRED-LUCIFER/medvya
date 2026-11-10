@@ -13,6 +13,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Medvya.Platform.Application\Medvya.Platform.Application.csproj" />
+    <!-- The contracts of the organisation review path (IOrganisationConsole); the host registers its implementation (ADR-014 note). -->
+    <ProjectReference Include="..\..\Tenancy\Medvya.Tenancy.Application\Medvya.Tenancy.Application.csproj" />
   </ItemGroup>
 
 </Project>

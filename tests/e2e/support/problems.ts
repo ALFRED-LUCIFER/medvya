@@ -24,7 +24,7 @@ const coded = (code: string, title: string) => ({ code, codeSystem: 'ICD-10', co
 
 export async function mockProblems(page: Page, locale = 'en', ended = false) {
   const rows: Row[] = [
-    { id: 'pr-1', ...coded('E11.9', codes[0].title), verification: 'Verified', status: 'Active', onsetOn: '2019-06-01', source: 'ClinicianVerified', addedHere: false, confirmed: true, recordedAt: at },
+    { id: 'pr-1', ...coded('E11.9', 'Type 2 diabetes mellitus without complications'), verification: 'Verified', status: 'Active', onsetOn: '2019-06-01', source: 'ClinicianVerified', addedHere: false, confirmed: true, recordedAt: at },
     { id: 'pr-2', code: null, codeSystem: null, codeSystemVersion: null, description: 'Knee pain since a fall (synthetic)', verification: 'PatientReported', status: 'Active', onsetOn: null, source: 'PatientReported', addedHere: false, confirmed: false, recordedAt: at },
   ];
   const calls = { adds: [] as unknown[], updates: [] as unknown[] };

@@ -114,6 +114,9 @@ public sealed class ProblemListTests(PostgresFixture sql) : IClassFixture<Postgr
         await list.UpdateAsync(encounter, first.Id, new UpdateProblem(ProblemVerification.Verified, ProblemStatus.Resolved, null));
         var rows = (await list.AddAsync(encounter, Coded("J06.9")))!.Rows;
         Assert.Equal([ProblemStatus.Active, ProblemStatus.Resolved], rows.Select(r => r.Status)); // active first
+        // Reopening the old one while the new one is active would list the diagnosis twice.
+        Assert.Equal("duplicate", (await Assert.ThrowsAsync<ProblemConflictException>(() => list.UpdateAsync(encounter, first.Id, new UpdateProblem(ProblemVerification.Verified, ProblemStatus.Active, null)))).Code);
+        await list.UpdateAsync(encounter, rows[0].Id, new UpdateProblem(ProblemVerification.Provisional, ProblemStatus.Active, null)); // the row itself is not "another"
     }
 
     [Fact]

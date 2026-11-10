@@ -48,8 +48,7 @@ public sealed class ProblemListService(
         if (command.Verification is not { } verification || !Enum.IsDefined(verification)) errors.Add(("verification", "required"));
         if (Future(command.OnsetOn)) errors.Add(("onsetOn", "future"));
         if (errors.Count > 0) throw new ProblemValidationException(errors);
-        if (code is not null && await db.Problems.AnyAsync(p => p.PatientId == encounter.PatientId && p.Icd10Code == code.Code && p.Status == ProblemStatus.Active, cancellationToken))
-            throw new ProblemConflictException("duplicate");
+        if (code is not null && await ActiveElsewhereAsync(encounter.PatientId, code.Code, null, cancellationToken)) throw new ProblemConflictException("duplicate");
 
         var now = clock.GetUtcNow();
         await SaveAsync(AddAction, encounter, () => db.Problems.Add(new Problem
@@ -75,6 +74,8 @@ public sealed class ProblemListService(
         if (command.Status is not { } status || !Enum.IsDefined(status)) errors.Add(("status", "required"));
         if (Future(command.OnsetOn)) errors.Add(("onsetOn", "future"));
         if (errors.Count > 0) throw new ProblemValidationException(errors);
+        if (command.Status == ProblemStatus.Active && problem.Icd10Code is { } same && await ActiveElsewhereAsync(problem.PatientId, same, problem.Id, cancellationToken))
+            throw new ProblemConflictException("duplicate"); // reopening a code that was added again meanwhile
 
         await SaveAsync(UpdateAction, encounter, () =>
         {
@@ -83,6 +84,11 @@ public sealed class ProblemListService(
         }, cancellationToken);
         return await ViewAsync(encounter, cancellationToken);
     }
+
+    // shortcut: a check, then a write; two tabs adding the same code in the same instant both succeed. No unique index fits (resolved
+    // copies are allowed); add a partial unique index on active codes if duplicates show up in practice.
+    Task<bool> ActiveElsewhereAsync(Guid patientId, string code, Guid? except, CancellationToken cancellationToken) =>
+        db.Problems.AnyAsync(p => p.PatientId == patientId && p.Icd10Code == code && p.Status == ProblemStatus.Active && p.Id != except, cancellationToken);
 
     async Task SaveAsync(string action, Encounter encounter, Action change, CancellationToken cancellationToken)
     {

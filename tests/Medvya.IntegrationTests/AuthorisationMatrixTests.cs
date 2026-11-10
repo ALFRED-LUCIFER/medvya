@@ -222,6 +222,7 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.PracticeAdmin, new("POST", "/v1/staff/access-review/{membership}/confirm")),
         (Role.PracticeAdmin, new("POST", "/v1/staff/{membership}/offboard", """{"reason":"Synthetic test"}""")),
         (Role.PracticeAdmin, new("POST", "/v1/staff/{membership}/reactivate", """{"reason":"Synthetic test"}""")),
+        (Role.PracticeAdmin, new("PUT", "/v1/staff/{membership}/locations", """{"facilityIds":["{facility}"],"reason":"Synthetic test"}""")),
         (Role.PracticeAdmin, new("PUT", "/v1/staff/roles/{role}", """{"name":"Renamed (synthetic)","baseRole":"Receptionist","capabilities":[]}""")),
         (Role.PracticeAdmin, new("DELETE", "/v1/staff/{user}/sessions")),
         (Role.PracticeAdmin, new("PUT", "/v1/settings/locations/{location}", """{"name":"Renamed (synthetic)"}""")),
@@ -335,6 +336,7 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.Nurse, new("POST", "/v1/invitations", """{"email":"x@example.test","role":"Receptionist","facilityId":"{facility}"}""")),
         (Role.Receptionist, new("POST", "/v1/staff/{membership}/offboard", """{"reason":"Synthetic"}""")),
         (Role.Receptionist, new("POST", "/v1/staff/{membership}/reactivate", """{"reason":"Synthetic"}""")),
+        (Role.Receptionist, new("PUT", "/v1/staff/{membership}/locations", """{"facilityIds":["{facility}"],"reason":"Synthetic"}""")),
         (Role.Receptionist, new("GET", "/v1/settings/profile")),
         (Role.SoloDoctor, new("GET", "/v1/settings/profile")), // solo doctor holds Config: control row below
         (Role.Receptionist, new("GET", "/v1/schedule/metrics?facilityId={facility}")), // pilot metrics: Staff, roles, integrations at Config

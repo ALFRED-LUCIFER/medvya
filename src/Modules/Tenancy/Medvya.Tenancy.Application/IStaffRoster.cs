@@ -20,8 +20,9 @@ public sealed record SaveCustomRole
 }
 
 /// <summary>How an offboarding ended. <see cref="UserId"/> is the person whose sessions the caller must now end (null for a never-accepted invitee).</summary>
+/// <param name="MembershipIds">Every membership ended: the person's memberships at all locations the caller administers (MDV-P1-071).</param>
 /// <param name="OpenVisits">Patients already checked in for the person today (waiting or in consultation): reception reassigns them on the board.</param>
-public sealed record OffboardResult(OffboardOutcome Outcome, Guid? UserId = null, int OpenVisits = 0);
+public sealed record OffboardResult(OffboardOutcome Outcome, Guid? UserId = null, int OpenVisits = 0, IReadOnlyList<Guid>? MembershipIds = null);
 
 /// <summary>Another module's share of an offboarding: what to run after the commit, and how many open items it left for reception.</summary>
 public sealed record OffboardingShare(Func<Task>? AfterCommit, int OpenItems = 0);
@@ -29,6 +30,11 @@ public sealed record OffboardingShare(Func<Task>? AfterCommit, int OpenItems = 0
 public enum OffboardOutcome { Done, NotFound, LastAdmin }
 
 public enum ReactivateOutcome { Done, NotFound, AboveGranter }
+
+public enum LocationsOutcome { Done, NotFound, AboveGranter, LastAdmin }
+
+/// <param name="Removed">Memberships ended by taking locations away, whose sessions the caller must now end for <paramref name="UserId"/>.</param>
+public sealed record LocationsResult(LocationsOutcome Outcome, Guid? UserId = null, IReadOnlyList<Guid>? Removed = null);
 
 /// <summary>Staff list and practice-defined roles (MDV-P1-008). Each role change saves its before/after and audit event in one transaction.</summary>
 public interface IStaffRoster
@@ -45,7 +51,7 @@ public interface IStaffRoster
     Task<CustomRoleView?> UpdateRoleAsync(Guid id, SaveCustomRole command, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Offboards a membership of the current tenant (MDV-P1-009): status Offboarded, pending invitations revoked, reason and actor kept
+    /// Offboards a membership of the current tenant (MDV-P1-009), and the same person's memberships at the other locations the caller administers (MDV-P1-071): status Offboarded, pending invitations revoked, reason and actor kept
     /// (SettingsChange "staff.offboard") and audited, all in one transaction. Refuses the last active staff administrator. An already
     /// offboarded membership is NotFound. The caller ends the person's sessions in this tenant.
     /// </summary>
@@ -53,6 +59,13 @@ public interface IStaffRoster
     /// moves them quietly for reception to call (owner decision, #225).</param>
     /// <exception cref="SettingsValidationException">No reason, or one over 500 characters.</exception>
     Task<OffboardResult> OffboardAsync(Guid membershipId, string? reason, bool offerRebooking = false, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Sets the locations an active member works at (MDV-P1-071): a location added gets the same role there (a doctor, their own profile and licence
+    /// copy) and takes no new plan seat; a location left out ends there (needs a reason). The caller must administer staff at every location changed.
+    /// </summary>
+    /// <exception cref="SettingsValidationException">No locations, or no reason when one is taken away.</exception>
+    Task<LocationsResult> SetLocationsAsync(Guid membershipId, IReadOnlyList<Guid> facilityIds, string? reason, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Brings an offboarded member back (MDV-P1-009): status Active again with the same role, reason and actor kept and audited. Only someone

@@ -36,6 +36,8 @@ export type RoleCatalogue = { builtIn: BuiltInRole[]; custom: CustomRole[] };
 export const addStaffSchema = z.object({
   email: z.email().max(254),
   facilityId: z.uuid(),
+  /** Other locations they also work at (MDV-P1-071); the invitation carries them. */
+  alsoFacilityIds: z.array(z.uuid()),
 });
 export type AddStaffForm = z.infer<typeof addStaffSchema>;
 
@@ -84,5 +86,15 @@ export const rebookingMissing = (m: StaffMember, v: OffboardForm) => isDoctor(m)
 export const canReactivate = (m: StaffMember) => m.status === 'Offboarded' && m.userId !== null;
 export const reactivateSchema = z.object({ reason: z.string().trim().min(1).max(500) });
 export type ReactivateForm = z.infer<typeof reactivateSchema>;
+
+/** The locations a person works at: the active rows of the same user (one membership per location, MDV-P1-071). */
+export const locationsOf = (rows: StaffMember[], m: StaffMember) =>
+  m.userId === null ? [m.facilityId] : rows.filter(r => r.userId === m.userId && r.status === 'Active').map(r => r.facilityId);
+export const canSetLocations = (m: StaffMember) => m.status === 'Active' && m.userId !== null;
+export const locationsSchema = z.object({ facilityIds: z.array(z.uuid()).min(1), reason: z.string().trim().max(500) });
+export type LocationsForm = z.infer<typeof locationsSchema>;
+/** Taking a location away ends access there and needs a reason; only adding does not. */
+export const removesLocation = (current: string[], chosen: string[]) => current.some(id => !chosen.includes(id));
+export const reasonMissing = (current: string[], v: LocationsForm) => removesLocation(current, v.facilityIds) && v.reason === '';
 
 export type Step = 'role' | 'scope' | 'permissions';

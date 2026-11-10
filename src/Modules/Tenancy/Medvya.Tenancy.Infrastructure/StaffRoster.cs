@@ -76,7 +76,11 @@ public sealed class StaffRoster(TenancyDbContext db, ICurrentTenant tenant, ICur
         return reason!;
     }
 
-    public async Task<OffboardResult> OffboardAsync(Guid membershipId, string? reason, bool offerRebooking = false, CancellationToken cancellationToken = default)
+    public Task<OffboardResult> OffboardAsync(Guid membershipId, string? reason, bool offerRebooking = false, CancellationToken cancellationToken = default) =>
+        OffboardCoreAsync(membershipId, reason, offerRebooking, true, cancellationToken);
+
+    // allLocations: access ends at every location of the person at once (MDV-P1-071); false only when the owner takes one location away (SetLocationsAsync).
+    async Task<OffboardResult> OffboardCoreAsync(Guid membershipId, string? reason, bool offerRebooking, bool allLocations, CancellationToken cancellationToken)
     {
         reason = ValidReason(reason);
         // Serializable: two administrators offboarding each other at once must not both pass the last-administrator check.
@@ -85,45 +89,106 @@ public sealed class StaffRoster(TenancyDbContext db, ICurrentTenant tenant, ICur
         // Only someone who administers staff at that member's facility offboards them (#877); elsewhere the member does not exist for them.
         if (member is null || await access.AccessAsync(Capability.StaffRolesIntegrations, member.FacilityId, cancellationToken) != Access.Config)
             return new(OffboardOutcome.NotFound);
-        if (member.Status == MembershipStatus.Active && RoleMatrix.Of(member.Role, Capability.StaffRolesIntegrations) == Access.Config)
+        var leaving = new List<Membership> { member };
+        if (allLocations && member.UserId is { } person)
+            // The person's other locations, where this administrator also administers staff; elsewhere they keep working (#877).
+            foreach (var other in await db.Memberships.Where(m => m.UserId == person && m.Id != membershipId && m.Role != Role.Patient && m.Status != MembershipStatus.Offboarded).ToListAsync(cancellationToken))
+                if (await access.AccessAsync(Capability.StaffRolesIntegrations, other.FacilityId, cancellationToken) == Access.Config) leaving.Add(other);
+        var ids = leaving.Select(m => m.Id).ToList();
+        if (leaving.Any(m => m.Status == MembershipStatus.Active && RoleMatrix.Of(m.Role, Capability.StaffRolesIntegrations) == Access.Config))
         {
-            var others = await db.Memberships.Where(m => m.Status == MembershipStatus.Active && m.Id != membershipId).Select(m => m.Role).ToListAsync(cancellationToken);
+            var others = await db.Memberships.Where(m => m.Status == MembershipStatus.Active && !ids.Contains(m.Id)).Select(m => m.Role).ToListAsync(cancellationToken);
             if (!others.Any(r => RoleMatrix.Of(r, Capability.StaffRolesIntegrations) == Access.Config)) return new(OffboardOutcome.LastAdmin);
         }
-        var before = member.Status;
         var now = clock.GetUtcNow();
-        // A never-joined invitee has no user, and the check constraint keeps such a row Invited: offboarding only cancels the invitation.
-        if (member.UserId is not null) member.Status = MembershipStatus.Offboarded;
-        await db.Invitations.Where(i => i.MembershipId == membershipId && i.AcceptedAt == null && i.RevokedAt == null)
-            .ExecuteUpdateAsync(s => s.SetProperty(i => i.RevokedAt, now), cancellationToken);
-        // Their open requests for patient access at that site go off the owner's queue: nobody is left to use a grant.
-        if (member.UserId is { } asker)
-            await db.AccessRequests.Where(r => r.RequestedBy == asker && r.FacilityId == member.FacilityId && r.Status == AccessRequestStatus.Pending)
-                .ExecuteUpdateAsync(s => s.SetProperty(r => r.Status, AccessRequestStatus.Withdrawn).SetProperty(r => r.DecidedBy, user.UserId).SetProperty(r => r.DecidedAt, now), cancellationToken);
-        db.SettingsChanges.Add(new SettingsChange
-        {
-            Id = Guid.CreateVersion7(), TenantId = TenantId, ActorUserId = user.UserId, Section = "staff.offboard", ResourceId = membershipId, OccurredAt = now,
-            Before = JsonSerializer.Serialize(new { status = before }, Json), After = JsonSerializer.Serialize(new { status = member.Status, reason }, Json),
-        });
-        await db.SaveChangesAsync(cancellationToken);
-        await audit.WriteAsync(new AuditEvent
-        {
-            Id = Guid.CreateVersion7(), TenantId = TenantId, ActorUserId = user.UserId, Action = "staff.offboard", ResourceType = "membership", ResourceId = membershipId,
-            Purpose = "operations", Outcome = AuditOutcome.Allowed, OccurredAt = now,
-        }, tx.GetDbTransaction(), cancellationToken);
-        // Other modules' share (a doctor's future visits to "needs rebooking") joins this transaction: all of it commits, or none.
         var afterCommit = new List<Func<Task>>();
         var open = 0;
-        if (member.UserId is { } leaving)
-            foreach (var part in offboarding)
+        foreach (var one in leaving)
+        {
+            var before = one.Status;
+            // A never-joined invitee has no user, and the check constraint keeps such a row Invited: offboarding only cancels the invitation.
+            if (one.UserId is not null) one.Status = MembershipStatus.Offboarded;
+            await db.Invitations.Where(i => i.MembershipId == one.Id && i.AcceptedAt == null && i.RevokedAt == null)
+                .ExecuteUpdateAsync(s => s.SetProperty(i => i.RevokedAt, now), cancellationToken);
+            // Their open requests for patient access at that site go off the owner's queue: nobody is left to use a grant.
+            if (one.UserId is { } asker)
+                await db.AccessRequests.Where(r => r.RequestedBy == asker && r.FacilityId == one.FacilityId && r.Status == AccessRequestStatus.Pending)
+                    .ExecuteUpdateAsync(s => s.SetProperty(r => r.Status, AccessRequestStatus.Withdrawn).SetProperty(r => r.DecidedBy, user.UserId).SetProperty(r => r.DecidedAt, now), cancellationToken);
+            db.SettingsChanges.Add(new SettingsChange
             {
-                var share = await part.OffboardedAsync(leaving, member.FacilityId, offerRebooking, tx.GetDbTransaction(), cancellationToken);
-                if (share.AfterCommit is { } after) afterCommit.Add(after);
-                open += share.OpenItems;
-            }
+                Id = Guid.CreateVersion7(), TenantId = TenantId, ActorUserId = user.UserId, Section = "staff.offboard", ResourceId = one.Id, OccurredAt = now,
+                Before = JsonSerializer.Serialize(new { status = before }, Json), After = JsonSerializer.Serialize(new { status = one.Status, reason }, Json),
+            });
+            await db.SaveChangesAsync(cancellationToken);
+            await audit.WriteAsync(new AuditEvent
+            {
+                Id = Guid.CreateVersion7(), TenantId = TenantId, ActorUserId = user.UserId, Action = "staff.offboard", ResourceType = "membership", ResourceId = one.Id,
+                Purpose = "operations", Outcome = AuditOutcome.Allowed, OccurredAt = now,
+            }, tx.GetDbTransaction(), cancellationToken);
+            // Other modules' share (a doctor's future visits to "needs rebooking") joins this transaction: all of it commits, or none.
+            if (one.UserId is { } gone)
+                foreach (var part in offboarding)
+                {
+                    var share = await part.OffboardedAsync(gone, one.FacilityId, offerRebooking, tx.GetDbTransaction(), cancellationToken);
+                    if (share.AfterCommit is { } after) afterCommit.Add(after);
+                    open += share.OpenItems;
+                }
+        }
         await tx.CommitAsync(cancellationToken);
         foreach (var after in afterCommit) await after();
-        return new(OffboardOutcome.Done, member.UserId, open);
+        return new(OffboardOutcome.Done, member.UserId, open, ids);
+    }
+
+    public async Task<LocationsResult> SetLocationsAsync(Guid membershipId, IReadOnlyList<Guid> facilityIds, string? reason, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(facilityIds);
+        var want = facilityIds.Distinct().ToList();
+        if (want.Count == 0) throw new SettingsValidationException([new("facilityIds", "required")]);
+        var source = await db.Memberships.SingleOrDefaultAsync(m => m.Id == membershipId && m.Role != Role.Patient && m.Status == MembershipStatus.Active && m.UserId != null, cancellationToken);
+        if (source is null || await access.AccessAsync(Capability.StaffRolesIntegrations, source.FacilityId, cancellationToken) != Access.Config) return new(LocationsOutcome.NotFound);
+        var held = await db.Memberships.Where(m => m.UserId == source.UserId && m.Role != Role.Patient).ToListAsync(cancellationToken);
+        var active = held.Where(m => m.Status == MembershipStatus.Active).ToList();
+        var add = want.Except(active.Select(m => m.FacilityId)).ToList();
+        var remove = active.Where(m => !want.Contains(m.FacilityId)).ToList();
+        if (remove.Count > 0) reason = ValidReason(reason);
+        // Granting or taking away a location needs the same staff administration there; a location of another organisation does not exist here.
+        foreach (var f in add.Concat(remove.Select(m => m.FacilityId)))
+            if (!await db.Facilities.AnyAsync(x => x.Id == f, cancellationToken) || await access.AccessAsync(Capability.StaffRolesIntegrations, f, cancellationToken) != Access.Config)
+                return new(LocationsOutcome.NotFound);
+        // Bringing someone to a location grants their role there: the same ceiling as inviting them (#875).
+        if (add.Count > 0)
+        {
+            var extras = source.CustomRoleId is { } id ? await db.CustomRoles.Where(r => r.Id == id).Select(r => r.Capabilities).SingleOrDefaultAsync(cancellationToken) : null;
+            if (await GranterAsync(cancellationToken) is not { } granter || !InvitationRules.CanGrant(granter, c => CustomRoleRules.Effective(source.Role, extras, c)))
+                return new(LocationsOutcome.AboveGranter);
+        }
+        var now = clock.GetUtcNow();
+        if (add.Count > 0)
+        {
+            await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
+            foreach (var f in add) await Locations.AddAsync(db, source, f, cancellationToken); // no new seat: the person already holds one
+            db.SettingsChanges.Add(new SettingsChange
+            {
+                Id = Guid.CreateVersion7(), TenantId = TenantId, ActorUserId = user.UserId, Section = "staff.locations", ResourceId = membershipId, OccurredAt = now,
+                Before = JsonSerializer.Serialize(new { facilityIds = active.Select(m => m.FacilityId) }, Json), After = JsonSerializer.Serialize(new { facilityIds = want }, Json),
+            });
+            await db.SaveChangesAsync(cancellationToken);
+            await audit.WriteAsync(new AuditEvent
+            {
+                Id = Guid.CreateVersion7(), TenantId = TenantId, ActorUserId = user.UserId, Action = "staff.locations.add", ResourceType = "membership", ResourceId = membershipId,
+                Purpose = "operations", Outcome = AuditOutcome.Allowed, OccurredAt = now,
+            }, tx.GetDbTransaction(), cancellationToken);
+            await tx.CommitAsync(cancellationToken);
+        }
+        // shortcut: additions commit first, then each removal in its own transaction; a refused removal (last administrator) leaves the additions in place. One transaction when needed.
+        var ended = new List<Guid>();
+        foreach (var m in remove)
+        {
+            var result = await OffboardCoreAsync(m.Id, reason, false, false, cancellationToken);
+            if (result.Outcome != OffboardOutcome.Done) return new(result.Outcome == OffboardOutcome.LastAdmin ? LocationsOutcome.LastAdmin : LocationsOutcome.NotFound, source.UserId, ended);
+            ended.Add(m.Id);
+        }
+        return new(LocationsOutcome.Done, source.UserId, ended);
     }
 
     public async Task<ReactivateOutcome> ReactivateAsync(Guid membershipId, string? reason, CancellationToken cancellationToken = default)
@@ -144,7 +209,7 @@ public sealed class StaffRoster(TenancyDbContext db, ICurrentTenant tenant, ICur
             Before = JsonSerializer.Serialize(new { status = MembershipStatus.Offboarded }, Json), After = JsonSerializer.Serialize(new { status = member.Status, reason }, Json),
         });
         await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
-        await StarterPlan.EnsureRoomAsync(db, TenantId, member.Role, cancellationToken); // coming back takes a seat again
+        await StarterPlan.EnsureRoomAsync(db, TenantId, member.Role, cancellationToken, member.UserId); // coming back takes a seat again, unless the person holds one at another location
         await db.SaveChangesAsync(cancellationToken);
         await audit.WriteAsync(new AuditEvent
         {

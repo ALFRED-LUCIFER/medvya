@@ -27,16 +27,16 @@ public sealed partial class Invitations(TenancyDbContext db, ICurrentTenant tena
     public async Task<IReadOnlyList<FacilityOption>> FacilitiesAsync(CancellationToken cancellationToken = default) =>
         await db.Facilities.OrderBy(f => f.Name).Select(f => new FacilityOption(f.Id, f.Name)).ToListAsync(cancellationToken);
 
-    public Task<InvitationCreated?> CreateAsync(string email, Role role, Guid facilityId, Guid? customRoleId = null, CancellationToken cancellationToken = default) =>
-        CreateCoreAsync(email, role, facilityId, customRoleId, null, false, cancellationToken);
+    public Task<InvitationCreated?> CreateAsync(string email, Role role, Guid facilityId, Guid? customRoleId = null, IReadOnlyList<Guid>? alsoFacilityIds = null, CancellationToken cancellationToken = default) =>
+        CreateCoreAsync(email, role, facilityId, customRoleId, null, false, alsoFacilityIds, cancellationToken);
 
-    public Task<InvitationCreated?> CreateAsync(string email, Role role, Guid facilityId, Action<Membership> stage, CancellationToken cancellationToken = default) =>
-        CreateCoreAsync(email, role, facilityId, null, stage, false, cancellationToken);
+    public Task<InvitationCreated?> CreateAsync(string email, Role role, Guid facilityId, Action<Membership> stage, IReadOnlyList<Guid>? alsoFacilityIds = null, CancellationToken cancellationToken = default) =>
+        CreateCoreAsync(email, role, facilityId, null, stage, false, alsoFacilityIds, cancellationToken);
 
     public Task<InvitationCreated?> CreateAndEmailLaterAsync(string email, Role role, Guid facilityId, CancellationToken cancellationToken = default) =>
-        CreateCoreAsync(email, role, facilityId, null, null, true, cancellationToken);
+        CreateCoreAsync(email, role, facilityId, null, null, true, null, cancellationToken);
 
-    async Task<InvitationCreated?> CreateCoreAsync(string email, Role role, Guid facilityId, Guid? customRoleId, Action<Membership>? stage, bool emailLater, CancellationToken cancellationToken)
+    async Task<InvitationCreated?> CreateCoreAsync(string email, Role role, Guid facilityId, Guid? customRoleId, Action<Membership>? stage, bool emailLater, IReadOnlyList<Guid>? alsoFacilityIds, CancellationToken cancellationToken)
     {
         email = Valid(email);
         // Every route gets the same role rule (#875): staff roles only here; a doctor only through Settings → Doctors, which stages the
@@ -56,13 +56,17 @@ public sealed partial class Invitations(TenancyDbContext db, ICurrentTenant tena
         }
         // Staff are administered where the inviter administers staff (#877), and never with more patient access than the inviter has (#875).
         if (await GranterAsync(facilityId, cancellationToken) is not { } granter) return null;
+        // The other locations: each is the tenant's own and one the inviter administers staff at, like the first.
+        var also = (alsoFacilityIds ?? []).Where(f => f != facilityId).Distinct().ToArray();
+        foreach (var other in also)
+            if (!await db.Facilities.AnyAsync(f => f.Id == other, cancellationToken) || await GranterAsync(other, cancellationToken) is null) return null;
         var grantedRole = role;
         if (!InvitationRules.CanGrant(granter, c => CustomRoleRules.Effective(grantedRole, extras, c)))
             throw new ArgumentException("This role gives access the inviter does not have.", nameof(role));
         var membership = new Membership { Id = Guid.CreateVersion7(), TenantId = tenantId, FacilityId = facilityId, Role = role, Status = MembershipStatus.Invited, CustomRoleId = customRoleId };
         db.Memberships.Add(membership);
         stage?.Invoke(membership);
-        return await IssueAsync(membership, facility, email, null, emailLater, cancellationToken);
+        return await IssueAsync(membership, facility, email, null, emailLater, also, cancellationToken);
     }
 
     public async Task<InvitationCreated?> ResendAsync(Guid invitationId, CancellationToken cancellationToken = default)
@@ -74,7 +78,7 @@ public sealed partial class Invitations(TenancyDbContext db, ICurrentTenant tena
         var membership = await db.Memberships.SingleAsync(m => m.Id == old.MembershipId, cancellationToken);
         if (membership.Status != MembershipStatus.Invited || await GranterAsync(membership.FacilityId, cancellationToken) is null) return null;
         var facility = await db.Facilities.SingleAsync(f => f.Id == membership.FacilityId, cancellationToken);
-        return await IssueAsync(membership, facility, old.Email, old, false, cancellationToken);
+        return await IssueAsync(membership, facility, old.Email, old, false, old.AlsoFacilityIds, cancellationToken);
     }
 
     /// <summary>The inviter's access at <paramref name="facilityId"/>, or null when they do not administer staff there.</summary>
@@ -95,7 +99,7 @@ public sealed partial class Invitations(TenancyDbContext db, ICurrentTenant tena
     }
 
     /// <summary>Saves a fresh invitation (and the membership when new) with its audit row and sends the email; a resend revokes the old link in the same transaction.</summary>
-    async Task<InvitationCreated> IssueAsync(Membership membership, Facility facility, string email, Invitation? superseded, bool emailLater, CancellationToken cancellationToken)
+    async Task<InvitationCreated> IssueAsync(Membership membership, Facility facility, string email, Invitation? superseded, bool emailLater, Guid[] also, CancellationToken cancellationToken)
     {
         var tenantId = membership.TenantId;
         var inviter = user.UserId ?? throw new InvalidOperationException("No signed-in user.");
@@ -108,7 +112,7 @@ public sealed partial class Invitations(TenancyDbContext db, ICurrentTenant tena
         var invitation = new Invitation
         {
             Id = Guid.CreateVersion7(), TenantId = tenantId, MembershipId = membership.Id, Email = email, TokenHash = hash,
-            InvitedBy = inviter, CreatedAt = now, ExpiresAt = now + options.Value.Lifetime,
+            InvitedBy = inviter, CreatedAt = now, ExpiresAt = now + options.Value.Lifetime, AlsoFacilityIds = also,
         };
         db.Invitations.Add(invitation);
         if (superseded is not null) superseded.RevokedAt ??= now;
@@ -199,6 +203,10 @@ public sealed partial class Invitations(TenancyDbContext db, ICurrentTenant tena
             return false; // already joined this facility: the unique index would refuse it anyway
         membership.UserId = userId;
         membership.Status = MembershipStatus.Active;
+        // The other locations the owner granted with the invitation (MDV-P1-071); a place the person already holds is left as it is.
+        foreach (var also in invitation.AlsoFacilityIds)
+            if (!await db.Memberships.AnyAsync(m => m.UserId == userId && m.FacilityId == also, cancellationToken))
+                await Locations.AddAsync(db, membership, also, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
         await Audit(t.TenantId, userId, "invitation.accept", invitation.Id, now, cancellationToken);
         await tx.CommitAsync(cancellationToken);

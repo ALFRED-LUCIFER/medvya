@@ -55,12 +55,14 @@ export const doctorSchema = licenceSchema.extend({
   newVisitFee: money,
   followUpFee: money,
   facilityId: z.string().min(1),
+  /** Other locations the doctor also works at (MDV-P1-071). */
+  alsoFacilityIds: z.array(z.string()),
 });
 export type DoctorForm = z.infer<typeof doctorSchema>;
 
 export const emptyLicence = { authority: '', number: '', category: '', expiresOn: '', certificateName: '', attested: false } as unknown as LicenceForm; // attested starts unticked: the owner must tick it
 export const emptyDoctor = (facilityId: string, fees: { newVisitFee: number; followUpFee: number } = { newVisitFee: 0, followUpFee: 0 }): DoctorForm => ({
-  ...emptyLicence, fullName: '', email: '', specialty: '', qualifications: '', languages: '', facilityId,
+  ...emptyLicence, fullName: '', email: '', specialty: '', qualifications: '', languages: '', facilityId, alsoFacilityIds: [],
   newVisitFee: String(fees.newVisitFee / 100), followUpFee: String(fees.followUpFee / 100),
 });
 
@@ -70,7 +72,7 @@ export const stepFields: Record<DoctorStep, (keyof DoctorForm)[]> = {
   licence: ['authority', 'number', 'category', 'expiresOn', 'certificateName', 'attested'],
   schedule: [],
   fees: ['newVisitFee', 'followUpFee'],
-  access: ['facilityId'],
+  access: ['facilityId', 'alsoFacilityIds'],
   signature: [],
 };
 
@@ -80,7 +82,7 @@ export const toMinor = (major: string) => Math.round(Number(major) * 100);
 const blank = (v: string) => (v === '' ? null : v);
 
 export const toAddBody = (f: DoctorForm) => ({
-  fullName: f.fullName, email: f.email, specialty: f.specialty, qualifications: blank(f.qualifications), languages: blank(f.languages), facilityId: f.facilityId,
+  fullName: f.fullName, email: f.email, specialty: f.specialty, qualifications: blank(f.qualifications), languages: blank(f.languages), facilityId: f.facilityId, alsoFacilityIds: f.alsoFacilityIds.filter(id => id !== f.facilityId),
   authority: f.authority, licenceNumber: f.number, category: f.category, expiresOn: f.expiresOn, certificateName: blank(f.certificateName), attested: f.attested,
   newVisitFee: toMinor(f.newVisitFee), followUpFee: toMinor(f.followUpFee),
 });

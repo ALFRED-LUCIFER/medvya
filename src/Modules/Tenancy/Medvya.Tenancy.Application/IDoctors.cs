@@ -20,6 +20,8 @@ public sealed record AddDoctor
     public string? Qualifications { get; init; }
     public string? Languages { get; init; }
     public Guid FacilityId { get; init; }
+    /// <summary>Other locations the doctor also works at (MDV-P1-071); each gets its own schedule, profile and fees.</summary>
+    public IReadOnlyList<Guid>? AlsoFacilityIds { get; init; }
     public string? Authority { get; init; }
     public string? LicenceNumber { get; init; }
     public string? Category { get; init; }

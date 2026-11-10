@@ -20,6 +20,8 @@ public sealed class Invitation
     [Classification(DataClass.Internal)] public DateTimeOffset ExpiresAt { get; init; }
     [Classification(DataClass.Internal)] public DateTimeOffset? RevokedAt { get; set; }
     [Classification(DataClass.Internal)] public DateTimeOffset? AcceptedAt { get; set; }
+    /// <summary>Other locations of the organisation the person also joins on accepting (MDV-P1-071); the invited membership is the first.</summary>
+    [Classification(DataClass.Internal)] public Guid[] AlsoFacilityIds { get; init; } = [];
 }
 
 public static class InvitationRules

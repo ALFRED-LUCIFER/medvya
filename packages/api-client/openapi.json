@@ -2937,6 +2937,39 @@
         }
       }
     },
+    "/v1/staff/{membershipId}/locations": {
+      "put": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "membershipId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetLocations"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/v1/staff/{membershipId}/reactivate": {
       "post": {
         "tags": [
@@ -4917,6 +4950,16 @@
             "type": "string",
             "format": "uuid"
           },
+          "alsoFacilityIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
           "authority": {
             "type": [
               "null",
@@ -5138,6 +5181,16 @@
           "facilityId": {
             "type": "string",
             "format": "uuid"
+          },
+          "alsoFacilityIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         }
       },
@@ -9105,6 +9158,31 @@
               {
                 "$ref": "#/components/schemas/AllergyStatus"
               }
+            ]
+          }
+        }
+      },
+      "SetLocations": {
+        "required": [
+          "facilityIds",
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "facilityIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "reason": {
+            "type": [
+              "null",
+              "string"
             ]
           }
         }

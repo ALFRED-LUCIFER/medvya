@@ -243,7 +243,7 @@ erDiagram
 | `DoctorProfiles` | 11 | MembershipId | tenant-scoped |
 | `Facilities` | 8 | Id | tenant-scoped |
 | `FeatureFlags` | 10 | Id | tenant-scoped |
-| `Invitations` | 10 | Id | tenant-scoped |
+| `Invitations` | 11 | Id | tenant-scoped |
 | `Memberships` | 7 | Id | tenant-scoped |
 | `OperatingHours` | 6 | Id | tenant-scoped |
 | `PracticeDefaults` | 13 | TenantId | tenant-scoped |
@@ -394,6 +394,7 @@ erDiagram
 |---|---|---|---|
 | `Id` | guid |  |  |
 | `AcceptedAt` | timestamptz | yes |  |
+| `AlsoFacilityIds` | uuid[] |  |  |
 | `CreatedAt` | timestamptz |  |  |
 | `Email` | character varying(254) |  |  |
 | `ExpiresAt` | timestamptz |  |  |

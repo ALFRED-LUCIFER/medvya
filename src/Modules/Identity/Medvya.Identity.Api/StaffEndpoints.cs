@@ -14,10 +14,12 @@ namespace Medvya.Identity.Api;
 /// </summary>
 public static class StaffEndpoints
 {
-    public sealed record AddStaff(string Email, Role Role, Guid? CustomRoleId, Guid FacilityId);
+    public sealed record AddStaff(string Email, Role Role, Guid? CustomRoleId, Guid FacilityId, IReadOnlyList<Guid>? AlsoFacilityIds = null);
     /// <param name="OfferRebooking">True: the doctor's moved patients get the rebooking message; false: reception calls them (#225).</param>
     public sealed record Offboard(string? Reason, bool OfferRebooking = false);
     public sealed record Reactivate(string? Reason);
+    /// <param name="FacilityIds">Every location the member works at afterwards; one left out is taken away and needs <paramref name="Reason"/>.</param>
+    public sealed record SetLocations(IReadOnlyList<Guid>? FacilityIds, string? Reason);
     public sealed record Row(Capability Capability, Access Access, Access? Extra);
     public sealed record BuiltInRole(Role Role, IReadOnlyList<Row> Rows);
 
@@ -48,7 +50,7 @@ public static class StaffEndpoints
             if (!CustomRoleRules.Assignable.Contains(body.Role)) return Problem("role", "invalid");
             try
             {
-                var created = await invitations.CreateAsync(body.Email, body.Role, body.FacilityId, body.CustomRoleId, ct);
+                var created = await invitations.CreateAsync(body.Email, body.Role, body.FacilityId, body.CustomRoleId, body.AlsoFacilityIds, ct);
                 return created is null ? Results.NotFound() : Results.Created($"/v1/invitations/{created.Id}", created);
             }
             catch (ArgumentException ex) when (ex.ParamName is { } field)
@@ -94,11 +96,34 @@ public static class StaffEndpoints
             if (result.Outcome == OffboardOutcome.LastAdmin) return Problem("membershipId", "last_admin");
             if (result.UserId is { } userId)
             {
-                await reviews.RecordOffboardedAsync(membershipId, ct); // part of this quarter's access review (MDV-P1-010)
-                // Browser sessions and the person's phones alike: a native refresh token is a session row, so it stops on its next refresh.
-                await sessions.RevokeForMembershipAsync(userId, Guid.Parse(principal.FindFirstValue(StaffPolicies.TenantClaim)!), membershipId, ct);
+                var tenantId = Guid.Parse(principal.FindFirstValue(StaffPolicies.TenantClaim)!);
+                // Every location the person leaves (MDV-P1-071).
+                foreach (var id in result.MembershipIds ?? [membershipId])
+                {
+                    await reviews.RecordOffboardedAsync(id, ct); // part of this quarter's access review (MDV-P1-010)
+                    // Browser sessions and the person's phones alike: a native refresh token is a session row, so it stops on its next refresh.
+                    await sessions.RevokeForMembershipAsync(userId, tenantId, id, ct);
+                }
             }
             return Results.Ok(new { result.OpenVisits }); // patients already checked in for them, for reception to reassign on the board
+        });
+
+        // Locations (MDV-P1-071): the owner sets where a member works. Taking one away ends their access there and their sessions on it.
+        g.MapPut("/{membershipId:guid}/locations", async (Guid membershipId, SetLocations body, ClaimsPrincipal principal, [FromServices] IStaffRoster roster,
+            [FromServices] IStaffSessions sessions, CancellationToken ct) =>
+        {
+            var result = await roster.SetLocationsAsync(membershipId, body.FacilityIds ?? [], body.Reason, ct);
+            // Also when a later removal was refused: the ones already taken away must not keep a session.
+            if (result.UserId is { } user)
+                foreach (var gone in result.Removed ?? [])
+                    await sessions.RevokeForMembershipAsync(user, Guid.Parse(principal.FindFirstValue(StaffPolicies.TenantClaim)!), gone, ct);
+            return result.Outcome switch
+            {
+                LocationsOutcome.Done => Results.NoContent(),
+                LocationsOutcome.AboveGranter => Problem("membershipId", "above_granter"),
+                LocationsOutcome.LastAdmin => Problem("membershipId", "last_admin"),
+                _ => Results.NotFound(),
+            };
         });
 
         // Re-activation (MDV-P1-009, #225): an offboarded member works again with the same role; they sign in again (no session is restored).

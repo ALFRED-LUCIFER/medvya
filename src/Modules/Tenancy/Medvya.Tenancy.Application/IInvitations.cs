@@ -18,9 +18,10 @@ public interface IInvitations
 
     /// <summary>
     /// Creates an Invited membership and its invitation in the current tenant, invited by the current user, and emails the link.
-    /// Null when the facility is not one of the tenant's. Throws ArgumentException for an invalid email or a role that cannot be invited.
+    /// Null when the facility, or one of <paramref name="alsoFacilityIds"/>, is not one of the tenant's or the inviter does not administer staff there.
+    /// The person also joins the other locations on accepting (MDV-P1-071) and takes one plan seat. Throws ArgumentException for an invalid email or a role that cannot be invited.
     /// </summary>
-    Task<InvitationCreated?> CreateAsync(string email, Role role, Guid facilityId, Guid? customRoleId = null, CancellationToken cancellationToken = default);
+    Task<InvitationCreated?> CreateAsync(string email, Role role, Guid facilityId, Guid? customRoleId = null, IReadOnlyList<Guid>? alsoFacilityIds = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Replaces the newest, not yet accepted invitation of a membership with a fresh link (the old one is revoked) and emails it.
@@ -29,13 +30,13 @@ public interface IInvitations
     Task<InvitationCreated?> ResendAsync(Guid invitationId, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Like <see cref="CreateAsync(string, Role, Guid, Guid?, CancellationToken)"/>, but the invitation commits first and the email goes out afterwards,
+    /// Like <see cref="CreateAsync(string, Role, Guid, Guid?, IReadOnlyList{Guid}, CancellationToken)"/>, but the invitation commits first and the email goes out afterwards,
     /// off the caller: a slow or failing send leaves a pending invitation to resend instead of failing the caller (onboarding finish, #205).
     /// </summary>
     Task<InvitationCreated?> CreateAndEmailLaterAsync(string email, Role role, Guid facilityId, CancellationToken cancellationToken = default);
 
     /// <summary><paramref name="stage"/> may add more rows to the shared tenant context for the new membership; they save, and fail, with it (MDV-P1-007).</summary>
-    Task<InvitationCreated?> CreateAsync(string email, Role role, Guid facilityId, Action<Membership> stage, CancellationToken cancellationToken = default);
+    Task<InvitationCreated?> CreateAsync(string email, Role role, Guid facilityId, Action<Membership> stage, IReadOnlyList<Guid>? alsoFacilityIds = null, CancellationToken cancellationToken = default);
 
     /// <summary>Revokes a pending invitation of the current tenant. False when there is none (unknown, used, revoked).</summary>
     Task<bool> RevokeAsync(Guid invitationId, CancellationToken cancellationToken = default);

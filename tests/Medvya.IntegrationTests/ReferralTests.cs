@@ -144,6 +144,8 @@ public sealed class ReferralTests(PostgresFixture sql) : IClassFixture<PostgresF
         await using (var db = sql.Encounters(h.Tenant))
         {
             db.Problems.Add(new Problem { Id = Guid.NewGuid(), TenantId = h.Tenant, PatientId = h.Patient, Description = "Type 2 diabetes (synthetic)", Verification = ProblemVerification.PatientReported, Source = ChartSource.PatientReported, RecordedAt = h.Clock.GetUtcNow() });
+            db.Problems.Add(new Problem { Id = Guid.NewGuid(), TenantId = h.Tenant, PatientId = h.Patient, Description = "Angina, not specified", Icd10Code = "I20.9", CodeSystem = "ICD-10", CodeSystemVersion = "2019-medvya-starter-1", Verification = ProblemVerification.Provisional, Source = ChartSource.ClinicianVerified, RecordedAt = h.Clock.GetUtcNow().AddMinutes(1) });
+            db.Problems.Add(new Problem { Id = Guid.NewGuid(), TenantId = h.Tenant, PatientId = h.Patient, Description = "Resolved cold (synthetic)", Verification = ProblemVerification.Verified, Status = ProblemStatus.Resolved, Source = ChartSource.ClinicianVerified, RecordedAt = h.Clock.GetUtcNow().AddMinutes(2) });
             db.MedicationStatements.Add(new MedicationStatement { Id = Guid.NewGuid(), TenantId = h.Tenant, PatientId = h.Patient, Name = "Metformin", Dose = "500 mg", State = MedicationState.Active, Source = ChartSource.ClinicianVerified, RecordedAt = h.Clock.GetUtcNow() });
             db.MedicationStatements.Add(new MedicationStatement { Id = Guid.NewGuid(), TenantId = h.Tenant, PatientId = h.Patient, Name = "Stopped drug (synthetic)", State = MedicationState.Stopped, Source = ChartSource.ClinicianVerified, RecordedAt = h.Clock.GetUtcNow() });
             await db.SaveChangesAsync();
@@ -158,8 +160,10 @@ public sealed class ReferralTests(PostgresFixture sql) : IClassFixture<PostgresF
         Assert.DoesNotContain(letter.Sections, s => s.Section == ReferralSection.Problems); // not selected: not in the letter
 
         var problems = (await Referrals(h.Doctor).CreateAsync(enc.Id, Draft(ReferralSection.Problems)))!;
-        var problemLine = Assert.Single((await Referrals(h.Doctor).LetterAsync(problems.Id))!.Sections.Single().Lines);
-        Assert.Equal(("Type 2 diabetes (synthetic)", "PatientReported"), (problemLine.Text, problemLine.Source)); // an unverified fact says so
+        // An unverified fact says so; a provisional diagnosis is marked provisional, never "clinician verified" (MDV-P2-010); a resolved one is not current.
+        // SAFETY, mutation check: drop the Provisional mark in LetterAsync and a working diagnosis leaves as a confirmed one.
+        var problemLines = (await Referrals(h.Doctor).LetterAsync(problems.Id))!.Sections.Single().Lines;
+        Assert.Equal([("Type 2 diabetes (synthetic)", "PatientReported"), ("Angina, not specified", "Provisional")], problemLines.Select(l => (l.Text, l.Source)));
 
         var none = (await Referrals(h.Doctor).CreateAsync(enc.Id, Draft()))!;
         var before = (await AuditAsync("patient.chart.read")).Count;

@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { ltr, useI18n } from '@medvya/i18n';
 import { buttonVariants, IdentityBanner, ProvenanceTag } from '@medvya/ui';
-import { CircleAlert, CircleCheck } from 'lucide-react';
+import { CircleAlert, CircleCheck, CircleHelp } from 'lucide-react';
 import RequestAccess from '../../clinical-access/components/RequestAccess';
 import type { AccessReason } from '../../clinical-access/domain/clinicalAccess';
 import type { ClinicalRefusal, Patient360, TrendLine } from '../domain/chart';
@@ -63,7 +63,10 @@ export default function Patient360Page(p: Props) {
             : <List>{chart.problems.map((x, i) => (
                 <Item key={i} source={x.source}>
                   <strong>{x.description}</strong>
-                  <span>{[x.icd10Code && ltr(x.icd10Code), t(`patient360.verification.${x.verification}`)].filter(Boolean).join(' · ')}</span>
+                  <span className={x.verification === 'Provisional' ? 'inline-flex items-center gap-1.5 self-start rounded-md border border-dashed border-foreground px-2 py-0.5' : undefined}>
+                    {x.verification === 'Provisional' && <CircleHelp aria-hidden className="size-4 shrink-0" />}
+                    {[x.icd10Code && ltr(x.icd10Code), t(`patient360.verification.${x.verification}`), x.status === 'Resolved' && t('problems.status.Resolved')].filter(Boolean).join(' · ')}
+                  </span>
                 </Item>))}</List>}
         </Card>
         <Card title={t('patient360.medicines')}>

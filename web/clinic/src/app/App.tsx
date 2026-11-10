@@ -48,6 +48,7 @@ const LetterRoute = lazy(() => import('./ConsultRoute').then(m => ({ default: m.
 const SlipRoute = lazy(() => import('./ConsultRoute').then(m => ({ default: m.SlipRoute })));
 const NotePrintRoute = lazy(() => import('./ConsultRoute').then(m => ({ default: m.NotePrintRoute })));
 const ReconciliationRoute = lazy(() => import('./ReconciliationRoute'));
+const ProblemsRoute = lazy(() => import('./ProblemsRoute'));
 const Patient360Route = lazy(() => import('./Patient360Route'));
 const TimelineRoute = lazy(() => import('./TimelineRoute'));
 const DocumentsRoute = lazy(() => import('./DocumentsRoute'));
@@ -168,9 +169,11 @@ export default function App({ locale, onLocaleChange }: Props) {
             <Route path="/consult/:encounterId/slip" element={<SlipRoute />} />
             <Route path="/consult/:encounterId/referrals/:referralId/letter" element={<LetterRoute />} />
           </>}
-          {/* Medication reconciliation (MDV-P2-011, E-07): a doctor's, inside a consultation. */}
-          {active.capabilities.Patient360Chart === 'Full' &&
-            <Route path="/consult/:encounterId/medicines" element={<ReconciliationRoute boardPath={pathOf('frontDesk') ?? '/'} online={online} />} />}
+          {/* Medication reconciliation (MDV-P2-011) and diagnosis coding (MDV-P2-010), E-07: a doctor's, inside a consultation. */}
+          {active.capabilities.Patient360Chart === 'Full' && <>
+            <Route path="/consult/:encounterId/medicines" element={<ReconciliationRoute boardPath={pathOf('frontDesk') ?? '/'} online={online} />} />
+            <Route path="/consult/:encounterId/problems" element={<ProblemsRoute boardPath={pathOf('frontDesk') ?? '/'} online={online} />} />
+          </>}
           {/* Patient 360 (MDV-P2-004, E-01): same roles; /patients/new and /patients/directory are more specific and win. */}
           {['Read', 'Limited', 'Full', 'Sign'].includes(active.capabilities.Patient360Chart ?? 'None') &&
             <>

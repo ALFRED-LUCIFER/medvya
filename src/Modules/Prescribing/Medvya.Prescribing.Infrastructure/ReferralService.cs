@@ -169,7 +169,9 @@ public sealed class ReferralService(
                 sections.Add(new LetterSection(s, s switch
                 {
                     ReferralSection.Allergies => record.Allergies.Select(a => new LetterLine(a.Reaction is null ? a.Substance : $"{a.Substance}: {a.Reaction}", a.Source.ToString())).ToList(),
-                    ReferralSection.Problems => record.Problems.Select(p => new LetterLine(p.Description, p.Source.ToString())).ToList(),
+                    // Active problems only; a provisional one is marked so, never passed on as a confirmed diagnosis (MDV-P2-010).
+                    ReferralSection.Problems => record.Problems.Where(p => p.Status == ProblemStatus.Active)
+                        .Select(p => new LetterLine(p.Description, p.Verification == ProblemVerification.Provisional ? nameof(ProblemVerification.Provisional) : p.Source.ToString())).ToList(),
                     _ => record.Medicines.Where(m => m.State == MedicationState.Active).Select(m => new LetterLine(m.Dose is null ? m.Name : $"{m.Name} {m.Dose}", m.Source.ToString())).ToList(),
                 }));
         }

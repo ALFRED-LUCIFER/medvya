@@ -3,6 +3,7 @@ import { test } from '@playwright/test';
 import { mockReconciliation } from '../support/reconciliation';
 import { mockNote } from '../support/note';
 import { mockPrescription, stopLine } from '../support/prescription';
+import { mockProblems } from '../support/problems';
 import { journey } from './storyboard';
 
 // Storyboard: docs/02-design/journeys.md. Implement steps as their screens ship.
@@ -39,6 +40,17 @@ test('J2.6 (composer half, MDV-P2-015) E-05 · Doctor: the stopped statin is a d
   await rx.getByRole('button', { name: 'Add Metformin 500 mg Tablet' }).click();
   expect(calls.added).toEqual([{ formularyItemId: 'fi-metformin' }]);
   await expect(rx).toContainText('Draft, not authorised');
+});
+
+// The coding half of J2.5 (MDV-P2-010, E-07): before signing, the doctor codes Meera's diagnosis with ICD-10; a provisional one says so.
+test('J2.5 (coding half, MDV-P2-010) E-07 · Doctor: the diagnosis is coded with ICD-10 and a verification state', async ({ page }) => {
+  const { calls } = await mockProblems(page);
+  await page.goto('/consult/e-1/problems');
+  await page.getByLabel('Search ICD-10 by code or words').fill('hypertension');
+  await page.getByRole('list', { name: 'Matching codes' }).getByRole('button', { name: /I10/ }).click();
+  await page.getByRole('button', { name: 'Add problem' }).click();
+  await expect(page.getByRole('region', { name: 'Problem list' }).getByRole('row', { name: /hypertension/ })).toContainText('Added today · verified');
+  expect(calls.adds).toEqual([{ code: 'I10', description: null, verification: 'Verified', onsetOn: null }]);
 });
 
 journey('J2', {

@@ -15,6 +15,7 @@ Format: Context · Decision · Consequences · Status. One decision per file. Ne
 | [ADR-014](ADR-014-platform-console.md) | Platform console: separate host and DB role, company sign-on plus our own WebAuthn key, reason on every action | Proposed (key model chosen by the founder) | P5 |
 | [ADR-015](ADR-015-formulary-data-source.md) | Formulary data source: a small starter list with no licence risk, clinic additions, licensed registers later | Accepted for the pilot starter (registers pending a person) | P2 |
 | [ADR-016](ADR-016-organisation-onboarding-and-approval.md) | Organisation onboarding and approval: Medvya approves Clinic and Hospital organisations, never individual doctors; owners attest their doctors | Decided 10 Nov 2026 (document lists and pre-approval mode proposed, legal review) | P1 |
+| [ADR-017](ADR-017-diagnosis-code-set.md) | Diagnosis code set per country: a curated WHO ICD-10 starter list with the system and version stored on every coded problem; licensed sets (UAE ICD-10-CM) before claims | Accepted for the pilot starter (licensed sets pending a person) | P2 |
 | [ADR-009](ADR-009-frontend-architecture.md) | Front-end: domain-driven features, controller hooks, presentational components (lint-enforced) | **Accepted** | Now |
 
 The Software Architecture blueprint also lists ADR topics for speech providers, consent ledger and audio retention. They are ticketed in P3: speech and LLM providers as ADR-007 (MDV-P3-001), consent templates and receipts (MDV-P3-002), audio retention (MDV-P3-019).

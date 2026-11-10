@@ -1,9 +1,9 @@
 import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
-import { BadgeCheck, CalendarX, CircleX, Clock, Info } from 'lucide-react';
+import { BadgeCheck, CalendarX, Info } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
 import { Button, Input } from '@medvya/ui';
-import type { Authority, Doctor, DoctorForm, DoctorStep, FieldProblem, LicenceForm, LicenceStatus } from '../domain/doctors';
+import type { Authority, Doctor, DoctorForm, DoctorStep, FieldProblem, LicenceForm } from '../domain/doctors';
 import type { Location } from '../domain/settings';
 import DoctorWizard, { LicenceFields } from './DoctorWizard';
 import { describedBy, fieldError } from './fieldStyles';
@@ -41,13 +41,13 @@ type Props = Wizard & {
   onRemoveSignature: (id: string) => void;
 };
 
-const statusIcon = { Verified: BadgeCheck, Pending: Clock, Rejected: CircleX, Expired: CalendarX } as const;
-
-/** The licence state in words and an icon, never colour alone. */
-function LicenceBadge({ status }: { status: LicenceStatus }) {
+/** Who attested the licence and when, or that it has expired: words and an icon, never colour alone. Medvya does not check licences (ADR-016). */
+function LicenceBadge({ doctor: d }: { doctor: Doctor }) {
   const { t } = useI18n();
-  const Icon = statusIcon[status];
-  return <span className="inline-flex items-center gap-1.5 font-bold"><Icon className="size-4 shrink-0" aria-hidden />{t(`doctors.licence.${status}`)}</span>;
+  const Icon = d.expired ? CalendarX : BadgeCheck;
+  const date = d.attestedAt.slice(0, 10);
+  const label = d.expired ? t('doctors.licence.expired') : d.attestedByName ? t('doctors.licence.attestedBy', { name: d.attestedByName, date }) : t('doctors.licence.attestedByOwner', { date });
+  return <span className="inline-flex items-center gap-1.5 font-bold"><Icon className="size-4 shrink-0" aria-hidden />{label}</span>;
 }
 
 /** Doctors (F-09, MDV-P1-007): the doctors of the practice with their licence state, and the Add doctor wizard. */
@@ -95,13 +95,13 @@ function DoctorRow({ doctor: d, ...p }: Props & { doctor: Doctor }) {
     <li className="flex flex-col gap-3 rounded-lg border p-4">
       <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
         <h3 className="text-base font-extrabold">{d.fullName}</h3>
-        <LicenceBadge status={d.licence} />
+        <LicenceBadge doctor={d} />
         <span className="text-muted-foreground">{t(`doctors.status.${d.status}`)}</span>
       </div>
       <p className="text-sm text-muted-foreground">{[d.specialty, d.facilityName].filter(Boolean).join(' · ')}</p>
       <p className="text-sm"><span dir="ltr">{d.authority} {d.number}</span>{d.expiresOn ? ` · ${t('doctors.licence.until', { date: d.expiresOn })}` : ''}</p>
-      {d.licence === 'Rejected' && d.rejectionReason && <p role="note" className="text-sm font-semibold">{t('doctors.licence.rejectedBecause', { reason: d.rejectionReason })}</p>}
-      {d.licence !== 'Verified' && !editing && <div><Button type="button" variant="outline" className="min-h-11" onClick={() => p.onCorrect(d)}>{t(d.licence === 'Expired' ? 'doctors.licence.renew' : 'doctors.licence.correct')}</Button></div>}
+      {d.expired && <p role="note" className="text-sm font-semibold">{t('doctors.licence.expiredNote')}</p>}
+      {!editing && <div><Button type="button" variant="outline" className="min-h-11" onClick={() => p.onCorrect(d)}>{t(d.expired ? 'doctors.licence.renew' : 'doctors.licence.correct')}</Button></div>}
       {editing && (
         <form noValidate onSubmit={p.onSubmitLicence} className="grid gap-4 sm:grid-cols-2" aria-label={t('doctors.licence.correct')}>
           <LicenceFields form={p.licenceForm} errors={p.licenceErrors} authorities={p.authorities} prefix={`c-${d.id}`} />

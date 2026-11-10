@@ -98,7 +98,7 @@ public sealed partial class OnboardingTests(PostgresFixture sql) : IClassFixture
     static object Data(string number = "84213", string authority = "TNMC", string gstin = "", object? team = null) => new
     {
         profile = new { fullName = "Arjun Rao (synthetic)", mode = "Solo", specialties = new[] { "general-practice", "diabetes" }, qualifications = "MBBS", languages = "English, Tamil" },
-        licence = new { authority, number, certificateName = "council-certificate.pdf" },
+        licence = new { authority, number, certificateName = "council-certificate.pdf", attested = true },
         clinic = new { name = "Rao Clinic (synthetic)", address = "12 Test Street, Chennai", registrationNumber = "CE-0001", taxId = gstin },
         hours = new
         {
@@ -186,7 +186,7 @@ public sealed partial class OnboardingTests(PostgresFixture sql) : IClassFixture
             Assert.Equal(("General practice, Diabetes", "Move"), (profile.Specialty, profile.PatientStart));
             Assert.Contains("17:00", profile.WeekdayHours, StringComparison.Ordinal);
             var licence = await db.DoctorLicences.SingleAsync();
-            Assert.Null(licence.VerifiedAt);
+            Assert.Equal((userId, Approved: OrganisationState.Approved), (licence.AttestedBy, Approved: tenant.State)); // the owner-doctor attested their own licence
             Assert.Equal(1, await db.Invitations.CountAsync());
         }
         await using (var other = sql.Context(Guid.NewGuid()))
@@ -205,19 +205,13 @@ public sealed partial class OnboardingTests(PostgresFixture sql) : IClassFixture
         var day = await Json(await browser.GetAsync(new Uri($"/v1/schedule?facilityId={facilityId}&date=2026-11-02", UriKind.Relative))); // a Monday
         Assert.Equal(userId, Assert.Single(day.GetProperty("columns").EnumerateArray()).GetProperty("calendarId").GetGuid());
 
-        // Until the licence is verified: booking stays, recording and signing are off (the server removes them from the session).
+        // No Medvya licence check: the owner-doctor can record and sign at once (ADR-016).
         Assert.Equal(HttpStatusCode.NoContent, (await browser.PostAsJsonAsync(new Uri("/v1/me/facility", UriKind.Relative), new { membershipId = membership.GetProperty("id").GetGuid() })).StatusCode);
-        var pending = (await Json(await browser.GetAsync(new Uri("/v1/me/context", UriKind.Relative)))).GetProperty("active");
-        Assert.True(pending.GetProperty("licencePending").GetBoolean());
-        Assert.Equal("Full", pending.GetProperty("capabilities").GetProperty("RegisterBookPatients").GetString());
-        Assert.False(pending.GetProperty("capabilities").TryGetProperty("ClinicalNotes", out _));
-        Assert.False(pending.GetProperty("capabilities").TryGetProperty("RecordingConsentCapture", out _));
-
-        await using (var db = sql.Context(tenantId))
-            await db.DoctorLicences.ExecuteUpdateAsync(s => s.SetProperty(l => l.VerifiedAt, DateTimeOffset.UtcNow));
-        var verified = (await Json(await browser.GetAsync(new Uri("/v1/me/context", UriKind.Relative)))).GetProperty("active");
-        Assert.False(verified.GetProperty("licencePending").GetBoolean());
-        Assert.Equal("Sign", verified.GetProperty("capabilities").GetProperty("ClinicalNotes").GetString());
+        var session = (await Json(await browser.GetAsync(new Uri("/v1/me/context", UriKind.Relative)))).GetProperty("active");
+        Assert.Equal("Approved", session.GetProperty("organisationState").GetString());
+        Assert.False(session.TryGetProperty("licencePending", out _));
+        Assert.Equal("Full", session.GetProperty("capabilities").GetProperty("RegisterBookPatients").GetString());
+        Assert.Equal("Sign", session.GetProperty("capabilities").GetProperty("ClinicalNotes").GetString());
 
         // The front desk member invited in the team step joins with the front-desk role and the server keeps them out of clinical notes
         // and consultations (MDV-P1-061). Mutation check: invite with another role in /finish and this fails.
@@ -435,41 +429,4 @@ public sealed partial class OnboardingTests(PostgresFixture sql) : IClassFixture
         Assert.Equal("/?signin=failed", callback.Headers.Location?.OriginalString);
     }
 
-    /// <summary>
-    /// The server-side gate behind every capability policy (CapabilityHandler → IStaffAccess): a doctor with an unverified licence
-    /// can register and book but not record or sign. Mutation check: remove LicenceRules.Apply from StaffAccess and this fails.
-    /// </summary>
-    [Fact]
-    public async Task AccessToRecordingAndSigningIsNoneUntilTheLicenceIsVerified()
-    {
-        var (tenantId, facilityId, userId) = (Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
-        await using (var db = sql.Context(tenantId))
-        {
-            var membershipId = Guid.NewGuid();
-            db.Tenants.Add(new Tenant { Id = tenantId, Name = "Licence Gate Clinic (synthetic)", CountryCode = "IN", ResidencyRegion = "centralindia" });
-            db.Facilities.Add(new Facility { Id = facilityId, TenantId = tenantId, Name = "Main (synthetic)", TimeZone = "Asia/Kolkata" });
-            db.Memberships.Add(new Membership { Id = membershipId, TenantId = tenantId, UserId = userId, FacilityId = facilityId, Role = Role.SoloDoctor, Status = MembershipStatus.Active });
-            db.DoctorLicences.Add(new DoctorLicence { MembershipId = membershipId, TenantId = tenantId, Authority = "TNMC", Number = "84213", SubmittedAt = DateTimeOffset.UtcNow });
-            await db.SaveChangesAsync();
-        }
-
-        async Task<Access> AccessTo(Capability capability)
-        {
-            await using var db = sql.Context(tenantId);
-            return await new StaffAccess(db, new FacilityDirectory(db), new Who(userId), new At(facilityId)).AccessAsync(capability);
-        }
-
-        Assert.Equal(Medvya.Tenancy.Domain.Access.Full, await AccessTo(Capability.RegisterBookPatients));
-        Assert.Equal(Medvya.Tenancy.Domain.Access.Full, await AccessTo(Capability.CheckInQueue));
-        foreach (var gated in new[] { Capability.ClinicalNotes, Capability.PrescriptionsOrders, Capability.RecordingConsentCapture, Capability.AiDraftsEvidence, Capability.ResultReviewAcknowledge })
-            Assert.Equal(Medvya.Tenancy.Domain.Access.None, await AccessTo(gated));
-
-        await using (var db = sql.Context(tenantId))
-            await db.DoctorLicences.ExecuteUpdateAsync(s => s.SetProperty(l => l.VerifiedAt, DateTimeOffset.UtcNow));
-        Assert.Equal(Medvya.Tenancy.Domain.Access.Sign, await AccessTo(Capability.ClinicalNotes));
-        Assert.Equal(Medvya.Tenancy.Domain.Access.Full, await AccessTo(Capability.RecordingConsentCapture));
-    }
-
-    sealed class Who(Guid id) : ICurrentUser { public Guid? UserId => id; }
-    sealed class At(Guid id) : ICurrentFacility { public Guid? FacilityId => id; }
 }

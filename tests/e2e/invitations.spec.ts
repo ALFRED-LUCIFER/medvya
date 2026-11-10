@@ -84,7 +84,7 @@ test('admin invites a colleague by email with role and facility', async ({ page 
   await page.getByRole('button', { name: 'Send invitation' }).click();
 
   await expect(page.getByText('Invitation sent. It expires 28 Oct 2026.')).toBeVisible();
-  await expect(page.getByText('This doctor must verify their licence before recording or signing.')).toBeVisible();
+  await expect(page.getByText('You enter this doctor’s licence and confirm it yourself; Medvya does not check it.')).toBeVisible();
   expect(sent).toEqual({ email: 'joseph@example.test', role: 'HospitalDoctor', facilityId: '5e1d0001-0001-4000-8000-000000000001' });
   expect(await axe(page)).toEqual([]);
 });

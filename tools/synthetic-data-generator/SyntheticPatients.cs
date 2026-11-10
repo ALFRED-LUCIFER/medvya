@@ -143,7 +143,7 @@ public static partial class SyntheticPatients
         {
             var existing = await db.Tenants.FindAsync([tenant], ct);
             if (existing is not null && existing.Name != name) throw new InvalidOperationException("Synthetic seeding refused: that practice exists and is not marked synthetic.");
-            if (existing is null) db.Tenants.Add(new Tenant { Id = tenant, Name = name, CountryCode = "IN", ResidencyRegion = region });
+            if (existing is null) db.Tenants.Add(new Tenant { State = OrganisationState.Approved, Id = tenant, Name = name, CountryCode = "IN", ResidencyRegion = region });
             if (await db.Facilities.FindAsync([facility], ct) is null) db.Facilities.Add(new Facility { Id = facility, TenantId = tenant, Name = "Main" + SyntheticSeed.Marker, TimeZone = "Asia/Kolkata" });
             if (memberUserId is { } u && !await db.Memberships.AnyAsync(m => m.UserId == u, ct))
                 db.Memberships.Add(new Membership { Id = Guid.CreateVersion7(), TenantId = tenant, UserId = u, FacilityId = facility, Role = Role.Receptionist, Status = MembershipStatus.Active });

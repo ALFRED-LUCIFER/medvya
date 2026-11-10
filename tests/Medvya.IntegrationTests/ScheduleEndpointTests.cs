@@ -24,7 +24,7 @@ public sealed class ScheduleEndpointTests(PostgresFixture sql) : IClassFixture<P
     {
         await using (var db = sql.Context(tenant))
         {
-            db.Tenants.Add(new Tenant { Id = tenant, Name = "Iyer Family Clinic (synthetic)", CountryCode = "IN", ResidencyRegion = "centralindia" });
+            db.Tenants.Add(new Tenant { State = OrganisationState.Approved, Id = tenant, Name = "Iyer Family Clinic (synthetic)", CountryCode = "IN", ResidencyRegion = "centralindia" });
             db.Facilities.Add(new Facility { Id = facility, TenantId = tenant, Name = "Adyar (synthetic)", TimeZone = "Asia/Kolkata" });
             foreach (var (user, role) in new[] { (doctor, Role.SoloDoctor), (reception, Role.Receptionist), (admin, Role.PracticeAdmin) })
                 db.Memberships.Add(new Membership { Id = Guid.NewGuid(), TenantId = tenant, UserId = user, FacilityId = facility, Role = role, Status = MembershipStatus.Active });

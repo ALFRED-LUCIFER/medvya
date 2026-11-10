@@ -66,8 +66,12 @@ public abstract partial class OnboardingRules
         {
             case 1:
                 Profile(d.Profile, e);
-                // Only a doctor gives a licence: an owner who is not a doctor has none to check.
-                if (d.Profile?.Mode != Clinic) Licence(d.Licence, e);
+                // Only a doctor gives a licence: an owner who is not a doctor has none. The owner-doctor attests it (ADR-016).
+                if (d.Profile?.Mode != Clinic)
+                {
+                    Licence(d.Licence, e);
+                    if (d.Licence?.Attested != true) e.Add(new("licence.attested", "required"));
+                }
                 ClinicStep(d.Clinic, e);
                 break;
             case 2: Hours(d.Hours, e); Templates(d.Templates, e); break;

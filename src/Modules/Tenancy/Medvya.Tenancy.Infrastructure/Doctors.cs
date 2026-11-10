@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Medvya.Tenancy.Infrastructure;
 
 /// <summary>
-/// Doctors added in clinic mode (MDV-P1-007). Adding creates the Invited membership, profile, licence (pending) and invitation in
+/// Doctors added in clinic mode (MDV-P1-007). Adding creates the Invited membership, profile, licence (attested by the owner, ADR-016) and invitation in
 /// one transaction through <see cref="IInvitations"/>. The signature image goes to the same private container as logos under its own key.
 /// </summary>
 public sealed class Doctors(TenancyDbContext db, ICurrentTenant tenant, ICurrentUser user, IInvitations invitations, IAuditLog audit, ILogoStore store, TimeProvider clock)
@@ -41,6 +41,7 @@ public sealed class Doctors(TenancyDbContext db, ICurrentTenant tenant, ICurrent
         if (email is null) errors.Add(new("email", "required"));
         else if (email.Length > 254 || !MailAddress.TryCreate(email, out var parsed) || parsed.Address != email) errors.Add(new("email", "format"));
         Licence(errors, rules, command.Authority, command.LicenceNumber, command.Category, command.ExpiresOn, command.CertificateName);
+        if (!command.Attested) errors.Add(new("attested", "required"));
         Fee(errors, "newVisitFee", command.NewVisitFee);
         Fee(errors, "followUpFee", command.FollowUpFee);
         SettingsValidationException.ThrowIfAny(errors);
@@ -61,13 +62,13 @@ public sealed class Doctors(TenancyDbContext db, ICurrentTenant tenant, ICurrent
             db.DoctorLicences.Add(new DoctorLicence
             {
                 MembershipId = m.Id, TenantId = TenantId, Authority = command.Authority!, Number = command.LicenceNumber!.Trim(), Category = Clean(command.Category),
-                ExpiresOn = command.ExpiresOn, CertificateName = Clean(command.CertificateName), SubmittedAt = now,
+                ExpiresOn = command.ExpiresOn, CertificateName = Clean(command.CertificateName), SubmittedAt = now, AttestedBy = user.UserId, AttestedAt = now,
             });
             // The before/after row saves with the membership; the invitation's own audit event covers the same transaction.
             db.SettingsChanges.Add(new SettingsChange
             {
                 Id = Guid.CreateVersion7(), TenantId = TenantId, ActorUserId = user.UserId, Section = "doctor", ResourceId = m.Id, OccurredAt = now,
-                After = $$"""{"facilityId":"{{command.FacilityId}}","authority":"{{command.Authority}}","licence":"Pending"}""",
+                After = $$"""{"facilityId":"{{command.FacilityId}}","authority":"{{command.Authority}}","number":"{{command.LicenceNumber!.Trim()}}","expiresOn":"{{command.ExpiresOn:yyyy-MM-dd}}","licence":"Attested"}""",
             });
         }, cancellationToken);
         return created is null ? null : (await QueryAsync(id, rules.Currency, cancellationToken))[0];
@@ -80,19 +81,16 @@ public sealed class Doctors(TenancyDbContext db, ICurrentTenant tenant, ICurrent
         if (licence is null) return null;
         var rules = await RulesAsync(cancellationToken);
         var errors = new List<ValidationError>();
-        var today = DateOnly.FromDateTime(clock.GetUtcNow().UtcDateTime);
-        // Changing a verified licence would keep the old decision; an expired one is renewed here and verified again.
-        if (licence.VerifiedAt is not null && !LicenceRules.IsExpired(licence, today)) errors.Add(new("licence", "verified"));
         Licence(errors, rules, command.Authority, command.Number, command.Category, command.ExpiresOn, command.CertificateName);
+        if (!command.Attested) errors.Add(new("attested", "required"));
         SettingsValidationException.ThrowIfAny(errors);
 
-        var before = new { licence = LicenceRules.StatusOf(licence, today).ToString(), authority = licence.Authority };
+        var before = new { authority = licence.Authority, number = licence.Number, expiresOn = licence.ExpiresOn };
         (licence.Authority, licence.Number, licence.Category, licence.ExpiresOn, licence.CertificateName) =
             (command.Authority!, command.Number!.Trim(), Clean(command.Category), command.ExpiresOn, Clean(command.CertificateName));
-        (licence.SubmittedAt, licence.RejectedAt, licence.RejectionReason) = (clock.GetUtcNow(), null, null);
-        (licence.VerifiedAt, licence.VerifiedBy) = (null, null); // a renewed licence is checked again by Medvya operations
+        (licence.SubmittedAt, licence.AttestedBy, licence.AttestedAt) = (clock.GetUtcNow(), user.UserId, clock.GetUtcNow());
         await SettingsAudit.SaveAsync(db, audit, TenantId, user.UserId, licence.SubmittedAt, "settings.doctor.licence.update", "doctor", doctorId,
-            before, new { licence = "Pending", authority = licence.Authority }, cancellationToken);
+            before, new { authority = licence.Authority, number = licence.Number, expiresOn = licence.ExpiresOn, licence = "Attested" }, cancellationToken);
         return (await QueryAsync(doctorId, rules.Currency, cancellationToken))[0];
     }
 
@@ -143,10 +141,13 @@ public sealed class Doctors(TenancyDbContext db, ICurrentTenant tenant, ICurrent
             join p in db.DoctorProfiles.AsNoTracking() on m.Id equals p.MembershipId
             where id == null || m.Id == id
             orderby p.FullName
-            select new { m.Id, p, m.FacilityId, Facility = f.Name, m.Status, Licence = l }).ToListAsync(ct);
+            // Who attested, by the name of their own doctor profile; an owner who is not a doctor has none and the screen says "the owner".
+            let attester = (from am in db.Memberships join ap in db.DoctorProfiles on am.Id equals ap.MembershipId where am.UserId == l.AttestedBy select ap.FullName).FirstOrDefault()
+            select new { m.Id, p, m.FacilityId, Facility = f.Name, m.Status, Licence = l, attester }).ToListAsync(ct);
+        var today = DateOnly.FromDateTime(clock.GetUtcNow().UtcDateTime);
         return [.. rows.Select(r => new DoctorView(
             r.Id, r.p.FullName, r.p.Specialty, r.p.Qualifications, r.p.Languages, r.FacilityId, r.Facility, r.Status,
-            r.Licence.Authority, r.Licence.Number, r.Licence.Category, r.Licence.ExpiresOn, LicenceRules.StatusOf(r.Licence, DateOnly.FromDateTime(clock.GetUtcNow().UtcDateTime)), r.Licence.RejectionReason,
+            r.Licence.Authority, r.Licence.Number, r.Licence.Category, r.Licence.ExpiresOn, LicenceRules.IsExpired(r.Licence, today), r.Licence.AttestedBy, r.attester, r.Licence.AttestedAt,
             r.p.SignatureKey is not null, r.p.NewVisitFeeMinor, r.p.FollowUpFeeMinor, currency))];
     }
 

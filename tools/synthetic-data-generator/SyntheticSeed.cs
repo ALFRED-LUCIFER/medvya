@@ -41,7 +41,7 @@ public static class SyntheticSeed
 
     static CastTenant Clinic(int t, string name, string country, string region, string facility, string timeZone, params (string Name, Role Role)[] people)
     {
-        var tenant = new Tenant { Id = Id(t, 0, 1), Name = name + Marker, CountryCode = country, ResidencyRegion = region };
+        var tenant = new Tenant { State = OrganisationState.Approved, Id = Id(t, 0, 1), Name = name + Marker, CountryCode = country, ResidencyRegion = region };
         var site = new Facility { Id = Id(t, 1, 1), TenantId = tenant.Id, Name = facility + Marker, TimeZone = timeZone };
         var members = people.Select((p, i) => new CastMember(Id(t, 2, i + 1), p.Name + Marker, new Membership
         {
@@ -161,7 +161,7 @@ public static class SyntheticSeed
             var existing = await db.Memberships.Select(m => m.Id).ToListAsync(ct);
             db.Memberships.AddRange(c.Members.Where(m => !existing.Contains(m.Membership.Id)).Select(m => m.Membership));
             // Every doctor has the licence and profile rows the app creates with them, so Settings, Doctors lists them (#892). The licence
-            // stays unverified, as for a new doctor: recording and signing stay gated until Medvya operations verify it.
+            // is attested by the practice owner like a new doctor's (ADR-016); Medvya does not check it.
             var listed = await db.DoctorLicences.Select(l => l.MembershipId).ToListAsync(ct);
             foreach (var d in c.Members.Where(m => m.Membership.Role is Role.SoloDoctor or Role.HospitalDoctor && !listed.Contains(m.Membership.Id)))
             {
@@ -169,7 +169,7 @@ public static class SyntheticSeed
                 db.DoctorLicences.Add(new DoctorLicence
                 {
                     MembershipId = d.Membership.Id, TenantId = c.Tenant.Id, Authority = c.Tenant.CountryCode == "IN" ? "NMC" : "DHA",
-                    Number = $"SYN-{d.Membership.Id.ToString()[^4..]}", SubmittedAt = at,
+                    Number = $"SYN-{d.Membership.Id.ToString()[^4..]}", SubmittedAt = at, AttestedAt = at,
                 });
                 db.DoctorProfiles.Add(new DoctorProfile { MembershipId = d.Membership.Id, TenantId = c.Tenant.Id, FullName = d.Name, ChangedAt = at });
             }

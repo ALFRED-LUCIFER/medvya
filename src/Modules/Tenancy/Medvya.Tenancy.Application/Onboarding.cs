@@ -5,7 +5,7 @@ namespace Medvya.Tenancy.Application;
 // The draft of the set-up wizard (F-04, 6 Nov design, MDV-P1-061). A section is null until its step was filled in.
 // Specialties are codes from OnboardingRules.Specialties; Specialty is the free text drafts saved before them.
 public sealed record OnboardingProfile(string? FullName, string? Mode, string? Specialty, string? Qualifications, string? Languages, IReadOnlyList<string>? Specialties = null);
-public sealed record OnboardingLicence(string? Authority, string? Number, string? CertificateName);
+public sealed record OnboardingLicence(string? Authority, string? Number, string? CertificateName, bool Attested = false);
 public sealed record OnboardingClinic(string? Name, string? Address, string? RegistrationNumber, string? TaxId);
 public sealed record HoursWindow(string? Start, string? End);
 // Days: the open days, each with the usual (Weekdays) windows; Saturday keeps its own windows when they are given. Null = Monday to Friday

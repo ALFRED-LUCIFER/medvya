@@ -53,7 +53,7 @@ export const fixtures: Record<string, unknown> = {
   '**/v1/staff/roles': { builtIn: [], custom: [] },
   '**/v1/settings/doctors': {
     doctors: [{ id: 'd-1', fullName: 'Dr. Arjun Rao (synthetic)', specialty: 'Family medicine', qualifications: null, languages: null, facilityId: 'f-1', facilityName: 'Adyar (synthetic)',
-      status: 'Active', authority: 'TNMC', number: '84213', category: null, expiresOn: null, licence: 'Pending', rejectionReason: null, hasSignature: false }],
+      status: 'Active', authority: 'TNMC', number: '84213', category: null, expiresOn: null, expired: false, attestedBy: 'u-1', attestedByName: null, attestedAt: '2026-11-01T09:00:00Z', hasSignature: false }],
     defaults: { newVisitFee: 50000, followUpFee: 30000, currency: 'INR' }, authorities: [{ code: 'TNMC', name: 'Tamil Nadu Medical Council' }],
   },
   '**/v1/queue/displays?*': [{ id: 'q-1', facilityId: 'f-1', name: 'Lobby TV', createdAt: '2026-10-01T04:00:00Z', revokedAt: null }],

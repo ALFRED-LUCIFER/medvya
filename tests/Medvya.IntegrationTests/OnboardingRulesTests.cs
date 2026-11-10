@@ -8,7 +8,7 @@ public class OnboardingRulesTests
 {
     static OnboardingData Valid(string number = "84213", string authority = "TNMC", string? taxId = null, string mode = "Solo") => new(
         new("Arjun Rao (synthetic)", mode, "General medicine", null, null),
-        new(authority, number, null),
+        new(authority, number, null, true),
         new("Rao Clinic (synthetic)", "12 Test Street, Chennai", null, taxId),
         new([new("09:00", "13:00"), new("17:00", "20:00")], [], 20, 100_000, 60_000),
         ["general-opd"],
@@ -66,7 +66,7 @@ public class OnboardingRulesTests
         var clinic = Valid(mode: "Clinic") with { Licence = null, Profile = new("K. Lakshmi (synthetic)", "Clinic", null, null, null) };
         Assert.Empty(OnboardingRules.India.ValidateAll(clinic));
         // The same answers as a doctor: the practice step asks for the licence and a specialty.
-        Assert.Equal(["profile.specialties:required", "licence.authority:required", "licence.number:required"],
+        Assert.Equal(["profile.specialties:required", "licence.authority:required", "licence.number:required", "licence.attested:required"],
             Fields(OnboardingRules.India, 1, clinic with { Profile = clinic.Profile! with { Mode = "Solo" } }));
     }
 
@@ -131,19 +131,27 @@ public class OnboardingRulesTests
         Assert.DoesNotContain(errors, e => e.Field.Contains("secret", StringComparison.Ordinal) || e.Code.Contains("secret", StringComparison.Ordinal));
     }
 
-    [Theory]
-    [InlineData(Capability.ClinicalNotes, true)]
-    [InlineData(Capability.PrescriptionsOrders, true)]
-    [InlineData(Capability.RecordingConsentCapture, true)]
-    [InlineData(Capability.AiDraftsEvidence, true)]
-    [InlineData(Capability.ResultReviewAcknowledge, true)]
-    [InlineData(Capability.RegisterBookPatients, false)]
-    [InlineData(Capability.CheckInQueue, false)]
-    [InlineData(Capability.InvoicesPayments, false)]
-    public void ARecordingOrSigningCapabilityTurnsOffWhileTheLicenceIsPendingAndBookingDoesNot(Capability capability, bool gated)
+    [Fact]
+    public void ADoctorOwnerMustAttestTheirLicenceButAClinicOwnerHasNone()
     {
-        var full = RoleMatrix.Of(Role.SoloDoctor, capability);
-        Assert.Equal(gated ? Access.None : full, LicenceRules.Apply(full, capability, licencePending: true));
-        Assert.Equal(full, LicenceRules.Apply(full, capability, licencePending: false));
+        Assert.Equal(["licence.attested:required"], Fields(OnboardingRules.India, 1, Valid() with { Licence = new("TNMC", "84213", null) }));
+        Assert.Empty(OnboardingRules.India.ValidateStep(1, Valid(mode: "Clinic") with { Licence = null }));
+    }
+
+    [Theory]
+    [InlineData(OrganisationState.Approved, Capability.ClinicalNotes, Access.Sign)]
+    [InlineData(OrganisationState.Draft, Capability.ClinicalNotes, Access.None)]
+    [InlineData(OrganisationState.Submitted, Capability.RegisterBookPatients, Access.None)]
+    [InlineData(OrganisationState.NeedsChanges, Capability.CheckInQueue, Access.None)]
+    [InlineData(OrganisationState.Rejected, Capability.PrescriptionsOrders, Access.None)]
+    [InlineData(OrganisationState.Draft, Capability.StaffRolesIntegrations, Access.Config)] // set-up stays open
+    [InlineData(OrganisationState.Draft, Capability.AuditLog, Access.Read)]
+    [InlineData(OrganisationState.Suspended, Capability.ClinicalNotes, Access.Read)] // existing records readable, signing refused
+    [InlineData(OrganisationState.Suspended, Capability.RegisterBookPatients, Access.Read)]
+    [InlineData(OrganisationState.Suspended, Capability.StaffRolesIntegrations, Access.Config)]
+    public void TheOrganisationStateNarrowsWhatTheRoleMayDo(OrganisationState state, Capability capability, Access expected)
+    {
+        var role = capability is Capability.AuditLog ? Role.PracticeAdmin : Role.SoloDoctor;
+        Assert.Equal(expected, OrganisationRules.Apply(RoleMatrix.Of(role, capability), capability, state));
     }
 }

@@ -61,7 +61,7 @@ internal sealed class SchedulingHarness(PostgresFixture sql)
     {
         await using (var db = sql.Context(Tenant))
         {
-            db.Tenants.Add(new Tenant { Id = Tenant, Name = "Iyer Family Clinic (synthetic)", CountryCode = Country, ResidencyRegion = "centralindia" });
+            db.Tenants.Add(new Tenant { State = OrganisationState.Approved, Id = Tenant, Name = "Iyer Family Clinic (synthetic)", CountryCode = Country, ResidencyRegion = "centralindia" });
             db.Facilities.Add(new Facility { Id = Facility, TenantId = Tenant, Name = "Adyar (synthetic)", TimeZone = "Asia/Kolkata" });
             db.Facilities.Add(new Facility { Id = OtherFacility, TenantId = Tenant, Name = "Velachery (synthetic)", TimeZone = "Asia/Kolkata" });
             foreach (var (user, role, at) in new[]

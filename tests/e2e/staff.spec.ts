@@ -74,7 +74,7 @@ test('choosing Doctor shows the redirect notice and cannot continue', async ({ p
   await page.goto('/settings?tab=staff');
   await page.getByRole('button', { name: 'Add staff member' }).click();
   await page.getByRole('radio', { name: /^Doctor/ }).check();
-  await expect(page.getByText('Doctors need licence verification. Use Settings → Doctors → Add doctor.')).toBeVisible();
+  await expect(page.getByText('Add doctors from Settings → Doctors → Add doctor. You enter and confirm each licence.')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Next' })).toBeDisabled();
 });
 

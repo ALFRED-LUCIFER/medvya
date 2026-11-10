@@ -297,13 +297,16 @@ public sealed class PlatformApprovalTests(PostgresFixture sql) : IClassFixture<P
     }
 
     [Fact]
-    public async Task TheReviewLoginSeesNoOrganisationWithoutTheOperatorSettingAndCannotDeleteOrChangeAuditRows()
+    public async Task TheReviewLoginSeesNoOrganisationWithoutTheOperatorSettingAndCannotDeleteOrChangeAuditRowsOrMoreThanADecision()
     {
         var (id, _) = await Org();
         await using var conn = await sql.OpenAs("review_user");
         await using (var none = new NpgsqlCommand("SELECT count(*) FROM tenancy.\"Tenants\"", conn))
             Assert.Equal(0L, await none.ExecuteScalarAsync());
-        foreach (var statement in new[] { "DELETE FROM tenancy.\"Tenants\"", "UPDATE audit.\"AuditEvents\" SET \"Action\" = 'x'", "DELETE FROM audit.\"AuditEvents\"", "INSERT INTO tenancy.\"Facilities\" (\"Id\") VALUES (gen_random_uuid())" })
+        foreach (var statement in new[] { "DELETE FROM tenancy.\"Tenants\"", "UPDATE audit.\"AuditEvents\" SET \"Action\" = 'x'", "DELETE FROM audit.\"AuditEvents\"", "INSERT INTO tenancy.\"Facilities\" (\"Id\") VALUES (gen_random_uuid())",
+            // A decision changes the state and the reason only, and the audit chain head is all it may read of the audit log.
+            "UPDATE tenancy.\"Tenants\" SET \"Name\" = 'renamed'", "UPDATE tenancy.\"OrganisationRequests\" SET \"Type\" = 'Hospital'",
+            "SELECT \"Action\", \"ActorUserId\" FROM audit.\"AuditEvents\"" })
         {
             await using var cmd = new NpgsqlCommand(statement, conn);
             Assert.Equal(PostgresErrorCodes.InsufficientPrivilege, (await Assert.ThrowsAsync<PostgresException>(() => cmd.ExecuteNonQueryAsync())).SqlState);

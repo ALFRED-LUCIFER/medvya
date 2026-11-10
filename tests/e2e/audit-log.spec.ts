@@ -10,7 +10,7 @@ const admin = {
   active: { membershipId: 'm-1', tenantId: 't-1', facilityId: facility, role: 'PracticeAdmin', flags: [], capabilities: { StaffRolesIntegrations: 'Config', AuditLog: 'Read' } },
 };
 const row = (over: object) => ({
-  id: 'e', occurredAt: '2026-11-04T05:30:00Z', actorUserId: 'u-rao', actorName: 'Dr. Arjun Rao (synthetic)', role: 'SoloDoctor', action: 'patient.read', resourceType: 'patient',
+  id: 'e', occurredAt: '2026-11-04T05:30:00Z', actorUserId: 'u-rao', actorName: 'Dr. Arjun Rao (synthetic)', role: 'SoloDoctor', location: 'Velachery', action: 'patient.read', resourceType: 'patient',
   patientId: 'p-1', patientMrn: '000001', patientName: null, purpose: 'treatment', outcome: 'Allowed', detail: null, ...over,
 });
 const logPage = (items: object[], next: string | null = null) => ({ items, next, actions: ['patient.read', 'patient.update'] });
@@ -47,6 +47,7 @@ test('the access log shows who did what, writes the outcome out, pages, and expo
   await expect(page.getByRole('heading', { name: 'Practice access log' })).toBeVisible();
   const denied = page.getByRole('row', { name: /S\. Thomas/ });
   await expect(denied).toContainText('Denied'); // written out, not colour alone
+  await expect(denied).toContainText('Velachery'); // the location where the record was read (MDV-P1-072)
   await expect(denied).toContainText('MRN 000001');
   const legacy = page.getByRole('row', { name: /Access log exported/ }); // MDV-P1-052: the action in words, not its code
   await expect(legacy).toContainText('Not recorded'); // a row from before roles were recorded never shows the current role

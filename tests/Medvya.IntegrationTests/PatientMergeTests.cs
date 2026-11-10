@@ -49,7 +49,7 @@ public sealed class PatientMergeTests(PostgresFixture sql) : IClassFixture<Postg
         var db = sql.Patients(tenant);
         var who = new PostgresFixture.FixedTenant(tenant);
         IPatientMergeParticipant[] parts = [new PatientMergeParticipant(sql.Scheduling(tenant), who), new Clinical(clinical), .. extra is null ? [] : new[] { extra }];
-        return new(db, who, new PatientRegistryTests.FixedFacility(at ?? facility), new User(user), new AuditLog(sql.Audit(tenant)), clock, parts);
+        return new(db, who, new User(user), new AuditLog(sql.Audit(tenant)), clock, parts);
     }
 
     /// <summary>The older record (survivor) and a newer one with the same ABHA plus an ABHA address, asked for review at registration.</summary>
@@ -243,17 +243,19 @@ public sealed class PatientMergeTests(PostgresFixture sql) : IClassFixture<Postg
         Assert.DoesNotContain("patient.merge", await AuditActionsAsync(survivor.PatientId));
     }
 
+    /// <summary>MDV-P1-072: the merge queue is the organisation's, so a pair registered at two locations is reviewed once.</summary>
     [Fact]
-    public async Task AnotherFacilityCannotSeeOrDecideTheRequest()
+    public async Task APairAcrossTwoLocationsIsInTheOrganisationsQueue()
     {
-        var (_, _, request) = await PairAsync();
         var elsewhere = Guid.NewGuid();
+        var first = await Registry(reception).RegisterAsync(IndiaBase with { FacilityId = facility, FullName = "Deepa Nair (synthetic)", DateOfBirth = new DateOnly(1969, 2, 2), Identifiers = [] });
+        // The duplicate warning at the second location names the first (one duplicate scope), and the desk sends the pair to review.
+        var second = await Registry(reception, at: elsewhere).RegisterAsync(IndiaBase with { FacilityId = elsewhere, FullName = "Deepa Nair (synthetic)", DateOfBirth = new DateOnly(1969, 2, 2), Identifiers = [],
+            Duplicates = new(DuplicateDecision.MergeReview, [first.PatientId]) });
 
-        Assert.Null(await Merges(reception, at: elsewhere).GetAsync(request));
-        Assert.False(await Merges(reception, at: elsewhere).NotSameAsync(request));
-        Assert.Null(await Merges(clinicianA, at: elsewhere).ApproveAsync(request));
-        Assert.Empty(await Merges(reception, at: elsewhere).QueueAsync());
-        Assert.Equal(MergeRequestStatus.Proposed, (await Merges(reception).GetAsync(request))!.Status);
+        var queue = await Merges(reception, at: elsewhere).QueueAsync();
+        Assert.Contains(queue, q => q.SurvivorMrn == first.Mrn || q.MergedMrn == first.Mrn);
+        Assert.NotEmpty(await Merges(reception).QueueAsync());
     }
 
     [Fact]
@@ -262,7 +264,7 @@ public sealed class PatientMergeTests(PostgresFixture sql) : IClassFixture<Postg
         var (_, _, request) = await PairAsync();
         var other = Guid.NewGuid();
         var db = sql.Patients(other);
-        var stranger = new PatientMerges(db, new PostgresFixture.FixedTenant(other), new PatientRegistryTests.FixedFacility(facility), new User(clinicianA),
+        var stranger = new PatientMerges(db, new PostgresFixture.FixedTenant(other), new User(clinicianA),
             new AuditLog(sql.Audit(other)), clock, []);
 
         Assert.Null(await stranger.GetAsync(request));

@@ -227,48 +227,45 @@ public sealed class PatientEndpointTests(PostgresFixture sql) : IClassFixture<Po
         Assert.Equal(HttpStatusCode.Forbidden, (await Search(client, new { })).StatusCode);
     }
 
+    /// <summary>MDV-P1-072: another location's patient of the same organisation opens as one chart, and the log row names the location it was read from.</summary>
     [Fact]
-    public async Task AnotherFacilitysRecordIsNotFound()
+    public async Task AnotherLocationsRecordOpensAndTheReadIsAuditedAtTheLocationItWasReadFrom()
     {
         using var host = Host();
         using var desk = Client(host, "receptionist");
-        Assert.Equal(HttpStatusCode.NotFound, (await desk.GetAsync(new Uri($"/v1/patients/{elsewhere}", UriKind.Relative))).StatusCode);
-        // Nothing was opened, so the trail must not say it was.
+        var opened = await desk.GetAsync(new Uri($"/v1/patients/{elsewhere}", UriKind.Relative));
+        Assert.Equal(HttpStatusCode.OK, opened.StatusCode);
+        Assert.Equal("Rahul Menon (synthetic)", (await opened.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("fullName").GetString());
         await using var db = sql.Audit(tenant);
         var row = await db.Events.SingleAsync(e => e.Action == "patient.read" && e.PatientId == elsewhere);
-        Assert.Equal(Medvya.Audit.Domain.AuditOutcome.NotFound, row.Outcome);
-
-        // Revealing that record's numbers is not found either, and audited as such (one row).
-        Assert.Equal(HttpStatusCode.NotFound, (await desk.PostAsync(new Uri($"/v1/patients/{elsewhere}/identifiers/reveal", UriKind.Relative), null)).StatusCode);
-        var reveal = await db.Events.SingleAsync(e => e.Action == "patient.identifiers.reveal" && e.PatientId == elsewhere);
-        Assert.Equal(Medvya.Audit.Domain.AuditOutcome.NotFound, reveal.Outcome);
+        Assert.Equal((Medvya.Audit.Domain.AuditOutcome.Allowed, (Guid?)facility), (row.Outcome, row.FacilityId)); // read from the active location, not where registered
     }
 
-    /// <summary>MDV-P1-019: a changed consent is a new receipt for the desk's own patient; another facility's is 404 with nothing written; a nurse is refused.</summary>
+    /// <summary>MDV-P1-019: a changed consent is a new receipt for the desk's own patient; another location's of the organisation too (MDV-P1-072); a nurse is refused.</summary>
     [Fact]
-    public async Task ConsentChangesAreFacilityScopedAndNeedFullRegistrationAccess()
+    public async Task ConsentChangesNeedFullRegistrationAccessAtAnyLocationOfTheOrganisation()
     {
         using var host = Host();
         using var desk = Client(host, "receptionist");
         var body = new { policyVersion = ConsentPolicy.CurrentVersion, decisions = new object[] { new { type = "Reminders", channel = "Sms", granted = true } } };
 
-        Assert.Equal(HttpStatusCode.NotFound, (await desk.PostAsJsonAsync(new Uri($"/v1/patients/{elsewhere}/consents", UriKind.Relative), body)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await desk.PostAsJsonAsync(new Uri($"/v1/patients/{elsewhere}/consents", UriKind.Relative), body)).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await desk.PostAsJsonAsync(new Uri($"/v1/patients/{meera}/consents", UriKind.Relative), body)).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await desk.PostAsJsonAsync(new Uri($"/v1/patients/{meera}/consents", UriKind.Relative), body with { policyVersion = "old" })).StatusCode);
         using var nurse = Client(host, "nurse");
         Assert.Equal(HttpStatusCode.Forbidden, (await nurse.PostAsJsonAsync(new Uri($"/v1/patients/{meera}/consents", UriKind.Relative), body)).StatusCode);
 
         await using var db = sql.Patients(tenant);
-        Assert.False(await db.ConsentReceipts.AnyAsync(r => r.PatientId == elsewhere && r.Type == Medvya.Patients.Domain.ConsentType.Reminders));
+        Assert.Equal(1, await db.ConsentReceipts.CountAsync(r => r.PatientId == elsewhere && r.Type == Medvya.Patients.Domain.ConsentType.Reminders));
         Assert.Equal(1, await db.ConsentReceipts.CountAsync(r => r.PatientId == meera && r.Type == Medvya.Patients.Domain.ConsentType.Reminders));
     }
 
     /// <summary>
-    /// MDV-P1-015: completing a quick registration is facility-scoped like opening the record. Another facility's patient is 404,
-    /// is not changed, and leaves exactly one NotFound row; the desk's own patient becomes Complete with one Allowed row.
+    /// MDV-P1-015: completing a quick registration. Since MDV-P1-072 the record is the organisation's, so another location's patient is completed
+    /// too, with exactly one Allowed row; a patient the desk cannot see (another tenant) is covered by PatientRegistryTests.
     /// </summary>
     [Fact]
-    public async Task OnlyTheActiveFacilitysPatientCanBeCompleted()
+    public async Task AnyLocationsPatientOfTheOrganisationCanBeCompleted()
     {
         using var host = Host();
         using var desk = Client(host, "receptionist");
@@ -280,16 +277,10 @@ public sealed class PatientEndpointTests(PostgresFixture sql) : IClassFixture<Po
         };
         await using var audit = sql.Audit(tenant);
 
-        var refused = await desk.PostAsJsonAsync(new Uri($"/v1/patients/{elsewhere}/completion", UriKind.Relative), body);
-        Assert.Equal(HttpStatusCode.NotFound, refused.StatusCode);
-        await using (var db = sql.Patients(tenant))
-        {
-            var unchanged = await db.Patients.SingleAsync(p => p.Id == elsewhere);
-            Assert.Equal((Medvya.Patients.Domain.RegistrationStatus.Incomplete, (Medvya.Patients.Domain.PatientAddress?)null), (unchanged.Status, unchanged.Address));
-            Assert.False(await db.PayerCoverages.AnyAsync(c => c.PatientId == elsewhere));
-        }
+        var other = await desk.PostAsJsonAsync(new Uri($"/v1/patients/{elsewhere}/completion", UriKind.Relative), body);
+        Assert.Equal(HttpStatusCode.OK, other.StatusCode);
         var rows = await audit.Events.Where(e => e.PatientId == elsewhere && e.Action == "patient.update").ToListAsync();
-        Assert.Equal(Medvya.Audit.Domain.AuditOutcome.NotFound, Assert.Single(rows).Outcome);
+        Assert.Equal(Medvya.Audit.Domain.AuditOutcome.Allowed, Assert.Single(rows).Outcome);
 
         var own = await Register(facility, "Leela Raman (synthetic)", "+91 90000 00131", c => c with { DateOfBirth = new DateOnly(1993, 4, 2), Quick = true, Address = null, Payer = null });
         var completed = await desk.PostAsJsonAsync(new Uri($"/v1/patients/{own}/completion", UriKind.Relative), body);

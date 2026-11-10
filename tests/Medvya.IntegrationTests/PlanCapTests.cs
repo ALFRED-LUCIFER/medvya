@@ -36,7 +36,7 @@ public sealed class PlanCapTests(PostgresFixture sql) : IClassFixture<PostgresFi
         {
             facility = Guid.NewGuid();
             second = Guid.NewGuid();
-            db.Tenants.Add(new Tenant { Id = tenant, Name = "Iyer Family Clinic (synthetic)", CountryCode = "IN", ResidencyRegion = "centralindia" });
+            db.Tenants.Add(new Tenant { State = OrganisationState.Approved, Id = tenant, Name = "Iyer Family Clinic (synthetic)", CountryCode = "IN", ResidencyRegion = "centralindia" });
             db.Facilities.Add(new Facility { Id = facility, TenantId = tenant, Name = "Adyar (synthetic)", TimeZone = "Asia/Kolkata" });
             db.Facilities.Add(new Facility { Id = second, TenantId = tenant, Name = "Velachery (synthetic)", TimeZone = "Asia/Kolkata" });
             await db.SaveChangesAsync();
@@ -94,7 +94,7 @@ public sealed class PlanCapTests(PostgresFixture sql) : IClassFixture<PostgresFi
     static object Doctor(string email, Guid at) => new
     {
         fullName = "Dr. Sana Khan (synthetic)", email, specialty = "Paediatrics", facilityId = at, authority = "TNMC", licenceNumber = "84213",
-        category = "Permanent", expiresOn = DateOnly.FromDateTime(DateTime.UtcNow).AddYears(5), newVisitFee = 50000, followUpFee = 30000, attested = true, // the owner attests the licence (MDV-P1-065): without it the add is a 400 before the cap is reached
+        category = "Permanent", attested = true, expiresOn = DateOnly.FromDateTime(DateTime.UtcNow).AddYears(5), newVisitFee = 50000, followUpFee = 30000,
     };
 
     [Fact]

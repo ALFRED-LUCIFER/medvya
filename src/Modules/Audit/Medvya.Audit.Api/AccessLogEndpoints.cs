@@ -26,7 +26,7 @@ public static class AccessLogEndpoints
     public sealed record Filters(Guid? ActorUserId, string? Action, DateTimeOffset? From, DateTimeOffset? To, string? After, int? Limit);
     public sealed record ExportRequest(Guid? ActorUserId, Guid? PatientId, string? Action, DateTimeOffset? From, DateTimeOffset? To);
 
-    sealed record Row(Guid Id, DateTimeOffset OccurredAt, Guid? ActorUserId, string? ActorName, string? Role, string Action, string ResourceType,
+    sealed record Row(Guid Id, DateTimeOffset OccurredAt, Guid? ActorUserId, string? ActorName, string? Role, string? Location, string Action, string ResourceType,
         Guid? PatientId, string? PatientMrn, string? PatientName, string Purpose, string Outcome, string? Detail);
 
     public static WebApplication MapAccessLog(this WebApplication app)
@@ -87,12 +87,16 @@ public static class AccessLogEndpoints
     {
         var actors = events.Where(e => e.ActorUserId is not null).Select(e => e.ActorUserId!.Value).Distinct().ToList();
         var names = await sp.GetRequiredService<IStaffUsers>().DisplayNamesAsync(actors, ct);
+        // The location where the record was read (the shared patient record, MDV-P1-072); older rows show none.
+        var sites = sp.GetRequiredService<IFacilityDirectory>();
+        var locations = new Dictionary<Guid, string?>();
+        foreach (var f in events.Where(e => e.FacilityId is not null).Select(e => e.FacilityId!.Value).Distinct()) locations[f] = (await sites.FindAsync(f, ct))?.Name;
         var patients = await sp.GetRequiredService<IPatientDirectory>().SummariesAsync([.. events.Where(e => e.PatientId is not null).Select(e => e.PatientId!.Value).Distinct()], ct);
         return [.. events.Select(e =>
         {
             var patient = e.PatientId is { } p && patients.TryGetValue(p, out var s) ? s : null;
             return new Row(e.Id, e.OccurredAt, e.ActorUserId, e.ActorUserId is { } a ? names.GetValueOrDefault(a) : null,
-                e.Role, e.Action, e.ResourceType, e.PatientId, patient?.Mrn, withPatientName ? patient?.FullName : null, e.Purpose, e.Outcome.ToString(), e.Detail);
+                e.Role, e.FacilityId is { } site ? locations[site] : null, e.Action, e.ResourceType, e.PatientId, patient?.Mrn, withPatientName ? patient?.FullName : null, e.Purpose, e.Outcome.ToString(), e.Detail);
         })];
     }
 
@@ -102,9 +106,9 @@ public static class AccessLogEndpoints
     {
         var mark = $"Medvya practice access log. Exported by {exporter} at {at.UtcDateTime.ToString("u", CultureInfo.InvariantCulture)}. Confidential: contains staff activity on patient records.";
         var sb = new StringBuilder().Append(Cell(mark)).Append("\r\n")
-            .Append("Time (UTC),Staff,Role at the time,Action,Resource,Patient MRN,Purpose,Outcome,Details\r\n");
+            .Append("Time (UTC),Staff,Role at the time,Location,Action,Resource,Patient MRN,Purpose,Outcome,Details\r\n");
         foreach (var r in rows)
-            sb.AppendJoin(',', Cell(r.OccurredAt.UtcDateTime.ToString("u", CultureInfo.InvariantCulture)), Cell(r.ActorName ?? r.ActorUserId?.ToString()), Cell(r.Role),
+            sb.AppendJoin(',', Cell(r.OccurredAt.UtcDateTime.ToString("u", CultureInfo.InvariantCulture)), Cell(r.ActorName ?? r.ActorUserId?.ToString()), Cell(r.Role), Cell(r.Location),
                 Cell(r.Action), Cell(r.ResourceType), Cell(r.PatientMrn), Cell(r.Purpose), Cell(r.Outcome), Cell(r.Detail)).Append("\r\n");
         if (truncated) sb.Append(Cell($"Only the newest {MaxExport} events are included. Narrow the filters to see the rest.")).Append("\r\n");
         return sb.Append(Cell(mark)).Append("\r\n").ToString();

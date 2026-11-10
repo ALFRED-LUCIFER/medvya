@@ -189,7 +189,7 @@ public sealed class TermsAcceptanceTests(PostgresFixture sql) : IClassFixture<Po
 
     // SAFETY: mutation check: dropping the facility condition in PatientConsents.CurrentAsync makes the other facility's patient readable (200).
     [Fact]
-    public async Task TheConsentScreenReadsTheNewestDecisionPerTypeAndNothingFromAnotherFacility()
+    public async Task TheConsentScreenReadsTheNewestDecisionPerTypeAtAnyLocationOfTheOrganisation()
     {
         using var host = Host(requireTerms: false);
         using var desk = Client(host, "receptionist");
@@ -203,7 +203,7 @@ public sealed class TermsAcceptanceTests(PostgresFixture sql) : IClassFixture<Po
         var sms = current.GetProperty("decisions").EnumerateArray().Single(d => d.GetProperty("type").GetString() == "Reminders" && d.GetProperty("channel").GetString() == "Sms");
         Assert.False(sms.GetProperty("granted").GetBoolean());
         Assert.Equal(ConsentPolicy.CurrentVersion, current.GetProperty("policyVersion").GetString());
-        Assert.Equal(HttpStatusCode.NotFound, (await desk.GetAsync(Url($"/v1/patients/{elsewhere}/consents"))).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await desk.GetAsync(Url($"/v1/patients/{elsewhere}/consents"))).StatusCode); // one record for the organisation (MDV-P1-072)
         await using var audit = sql.Audit(tenant);
         Assert.True(await audit.Events.AnyAsync(e => e.Action == "patient.consent.read" && e.PatientId == meera));
     }

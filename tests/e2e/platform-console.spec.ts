@@ -96,8 +96,75 @@ test('the audit log reads in Arabic, right to left, with actions in words', asyn
   expect(await axe(page)).toEqual([]);
 });
 
-test('a reviewer sees no team or audit pages', async ({ page }) => {
+test('a reviewer sees organisations but no team or audit pages', async ({ page }) => {
   await page.route('**/v1/me', r => r.fulfill({ json: owner({ role: 'Reviewer', keyVerified: true, hasKey: true, canRegister: false }) }));
   await page.goto('/');
-  await expect(page.getByRole('navigation').getByRole('link')).toHaveText(['Overview']);
+  await expect(page.getByRole('navigation').getByRole('link')).toHaveText(['Overview', 'Organisations']);
+});
+
+// MDV-P1-064: the organisation approval queue. Server rules (roles, reason, state machine, audit, email, the review login's rights) are tested on
+// PostgreSQL in PlatformOrganisationReviewTests.cs; here the browser path: queue, detail, ask for changes, approve.
+const iyer = { tenantId: 't-1', name: 'Iyer Family Clinic (synthetic)', country: 'IN', type: 'Clinic', state: 'Submitted', submittedAt: '2026-11-09T05:00:00Z',
+  reason: null, itContactName: null, itContactEmail: null, documents: [{ id: 'd-1', kind: 'RegistrationCertificate', contentType: 'application/pdf', sizeBytes: 1200, uploadedAt: '2026-11-09T04:50:00Z' }] };
+const detail = (state: string, history: object[] = []) => ({ ...iyer, state, address: '12 Lake Road, Chennai', contactEmail: 'desk@iyer-clinic.example',
+  registrationNumber: 'TN-CL-0000', taxNumber: '33AAAAA0000A1Z0', history });
+
+test('operations open a waiting request, ask for changes with a reason, then approve it', async ({ page }) => {
+  await page.route('**/v1/me', r => r.fulfill({ json: owner({ role: 'Operations', keyVerified: true, hasKey: true, canRegister: false }) }));
+  await page.route('**/v1/organisations?filter=Waiting', r => r.fulfill({ json: [iyer] }));
+  let state = 'Submitted';
+  const sent: { path: string; body: unknown }[] = [];
+  await page.route('**/v1/organisations/t-1', r => r.fulfill({ json: detail(state, state === 'Submitted' ? [] : [{ at: '2026-11-10T05:00:00Z', actor: 'Ops Admin (synthetic)', state, reason: 'Certificate is unreadable' }]) }));
+  await page.route('**/v1/organisations/t-1/*', r => {
+    const action = new URL(r.request().url()).pathname.split('/').pop()!;
+    sent.push({ path: action, body: r.request().postDataJSON() });
+    state = action === 'approve' ? 'Approved' : 'NeedsChanges';
+    return r.fulfill({ status: 204 });
+  });
+
+  await page.goto('/organisations');
+  await expect(page.getByRole('heading', { name: 'Organisation approval' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Waiting', pressed: true })).toBeVisible();
+  expect(await axe(page)).toEqual([]);
+  await page.getByRole('link', { name: 'Iyer Family Clinic (synthetic)' }).click();
+  await expect(page.getByRole('heading', { name: 'Iyer Family Clinic (synthetic)' })).toBeVisible();
+  await expect(page.getByText('desk@iyer-clinic.example')).toBeVisible();
+  await expect(page.getByRole('button', { name: /Registration certificate/ })).toBeVisible();
+  expect(await axe(page)).toEqual([]);
+
+  await page.getByRole('button', { name: 'Ask for changes' }).click();
+  await page.getByRole('region', { name: 'Ask Iyer Family Clinic (synthetic) for changes' }).getByRole('button', { name: 'Ask for changes' }).click();
+  await expect(page.getByText('Give a reason of at least 5 characters.')).toBeVisible();
+  expect(sent).toEqual([]);
+  await page.getByLabel('Reason (saved in the audit log)').fill('Certificate is unreadable');
+  await page.getByRole('region', { name: 'Ask Iyer Family Clinic (synthetic) for changes' }).getByRole('button', { name: 'Ask for changes' }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Changes requested' })).toBeVisible();
+  expect(sent).toEqual([{ path: 'request-changes', body: { reason: 'Certificate is unreadable' } }]);
+  await expect(page.getByText('Status: Needs changes')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Approve' })).toHaveCount(0); // the applicant resubmits first
+
+  state = 'Submitted';
+  await page.reload();
+  await page.getByRole('button', { name: 'Approve' }).click();
+  await page.getByLabel('Reason (saved in the audit log)').fill('Documents checked');
+  await page.getByRole('region', { name: 'Approve Iyer Family Clinic (synthetic)' }).getByRole('button', { name: 'Approve' }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Approved. The applicant was emailed.' })).toBeVisible();
+  expect(sent[1]).toEqual({ path: 'approve', body: { reason: 'Documents checked' } });
+  expect(await axe(page)).toEqual([]);
+});
+
+test('the queue reads in Arabic, right to left, and support can read but not decide', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('medvya.locale', 'ar'));
+  await page.route('**/v1/me', r => r.fulfill({ json: owner({ role: 'Support', keyVerified: true, hasKey: true, canRegister: false }) }));
+  await page.route('**/v1/organisations?filter=Waiting', r => r.fulfill({ json: [iyer] }));
+  await page.route('**/v1/organisations/t-1', r => r.fulfill({ json: detail('Submitted') }));
+  await page.goto('/organisations');
+  await expect(page.getByRole('heading', { name: 'اعتماد المؤسسات' })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.dir)).toBe('rtl');
+  await expect(page.getByRole('row', { name: /Iyer Family Clinic/ })).toContainText('بانتظار المراجعة');
+  expect(await axe(page)).toEqual([]);
+  await page.getByRole('link', { name: 'Iyer Family Clinic (synthetic)' }).click();
+  await expect(page.getByText('الحالة: بانتظار المراجعة')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'اعتماد' })).toHaveCount(0);
+  expect(await axe(page)).toEqual([]);
 });

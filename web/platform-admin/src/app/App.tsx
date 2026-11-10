@@ -6,7 +6,7 @@ import { useSessionController } from '../features/session/hooks/useSessionContro
 import ConsoleShell from '../features/shell/components/ConsoleShell';
 import { navFor } from '../features/shell/domain/navigation';
 import OverviewPage from '../features/overview/components/OverviewPage';
-import { AuditRoute, TeamRoute } from './routes';
+import { AuditRoute, OrganisationDetailRoute, OrganisationQueueRoute, TeamRoute } from './routes';
 
 export default function App({ locale, onLocaleChange }: { locale: Locale; onLocaleChange: (l: Locale) => void }) {
   const { t } = useI18n();
@@ -22,6 +22,8 @@ export default function App({ locale, onLocaleChange }: { locale: Locale; onLoca
     <ConsoleShell displayName={s.me.displayName} role={s.me.role} items={items} languageSwitcher={languages} signingOut={s.signingOut} onSignOut={s.onSignOut}>
       <Routes>
         <Route path="/team" element={<TeamRoute />} />
+        <Route path="/organisations" element={<OrganisationQueueRoute />} />
+        <Route path="/organisations/:tenantId" element={<OrganisationDetailRoute role={s.me.role} />} />
         <Route path="/audit" element={<AuditRoute canExport={s.me.role === 'Owner'} />} />
         <Route path="*" element={<OverviewPage displayName={s.me.displayName} role={s.me.role} items={items} />} />
       </Routes>

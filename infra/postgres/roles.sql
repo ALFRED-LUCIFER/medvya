@@ -169,7 +169,6 @@ GRANT SELECT ON ALL TABLES IN SCHEMA reporting TO medvya_reporting;
 ALTER DEFAULT PRIVILEGES FOR ROLE medvya_owner IN SCHEMA reporting GRANT SELECT ON TABLES TO medvya_reporting;
 -- The console's organisation review (medvya_review) uses the schemas below; its table rights are in table-rights.sql, table by table.
 GRANT USAGE ON SCHEMA tenancy, audit, ledger TO medvya_review;
-GRANT SELECT ON ALL TABLES IN SCHEMA ledger TO medvya_review;
 
 -- shortcut: audit, identity and scheduling have no masked views yet (audit ClientIp, staff contacts, the visit reason), so reporting cannot
 -- read them at all; add a view in schema reporting when a report needs one.

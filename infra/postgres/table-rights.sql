@@ -74,8 +74,8 @@ END $$;
 
 -- The platform console's organisation review (MDV-P1-064, ADR-014 amended; Host.Platform's second login). Row-level security still applies:
 -- with medvya.operator and no tenant it reads the queue's three tables; inside one organisation's tenant it reads that organisation's request
--- and writes the decision (state, last reason, settings history, audit event). Nothing else: no patient, encounter, scheduling, identity or
--- membership right, so a bug in the console cannot reach clinic data. Revoked first, so a wider grant is undone each run.
+-- and writes the decision (state, last reason, settings history, audit event). Nothing else: no patient, encounter, scheduling or identity
+-- right, and of memberships only the ids its policy reads, so a bug in the console cannot reach clinic data. Revoked first each run.
 REVOKE ALL ON ALL TABLES IN SCHEMA tenancy, audit FROM medvya_review;
 DO $$
 DECLARE t text[];
@@ -88,11 +88,26 @@ BEGIN
             EXECUTE format('GRANT %s ON %I.%I TO medvya_review', t[3], t[1], t[2]);
         END IF;
     END LOOP;
-    IF to_regclass('tenancy."Tenants"') IS NOT NULL THEN GRANT UPDATE ("State") ON tenancy."Tenants" TO medvya_review; END IF;
-    IF to_regclass('tenancy."OrganisationRequests"') IS NOT NULL THEN GRANT UPDATE ("LastReason") ON tenancy."OrganisationRequests" TO medvya_review; END IF;
+    -- Here, not in roles.sql: migrations create the ledger tables, so a grant before them would match nothing on a new database.
+    IF to_regclass('ledger."Tables"') IS NOT NULL THEN GRANT SELECT ON ledger."Tables", ledger."Chains" TO medvya_review; END IF;
     IF to_regclass('ledger."Chains"') IS NOT NULL THEN GRANT INSERT ON ledger."Chains" TO medvya_review; END IF;
-    -- The ledger chain trigger (run as the caller) reads the chain head to link a new audit row: ids, sequence and hash, never the content.
-    IF to_regclass('audit."AuditEvents"') IS NOT NULL THEN GRANT SELECT ("TenantId", "ChainSeq", "RowHash") ON audit."AuditEvents" TO medvya_review; END IF;
-    -- The Tenants policy's facility-picker branch reads these three columns; PostgreSQL checks them as the caller. Ids and status only.
-    IF to_regclass('tenancy."Memberships"') IS NOT NULL THEN GRANT SELECT ("TenantId", "UserId", "Status") ON tenancy."Memberships" TO medvya_review; END IF;
+END $$;
+-- Column rights, each applied only once every column exists: this file also runs before migrations, when a new column is not there yet.
+--   Tenants.State, OrganisationRequests.LastReason: what a decision changes.
+--   AuditEvents chain head: the ledger chain trigger (run as the caller) reads it to link a new audit row; ids, sequence and hash, never content.
+--   Memberships ids and status: the Tenants policy's facility-picker branch reads them, and PostgreSQL checks them as the caller.
+DO $$
+DECLARE c text[];
+BEGIN
+    FOREACH c SLICE 1 IN ARRAY ARRAY[['UPDATE', 'tenancy', 'Tenants', '"State"'], ['UPDATE', 'tenancy', 'OrganisationRequests', '"LastReason"'],
+                                    ['SELECT', 'audit', 'AuditEvents', '"TenantId", "ChainSeq", "RowHash"'],
+                                    ['SELECT', 'tenancy', 'Memberships', '"TenantId", "UserId", "Status"']]
+    LOOP
+        IF to_regclass(format('%I.%I', c[2], c[3])) IS NOT NULL AND NOT EXISTS (
+            SELECT 1 FROM unnest(string_to_array(replace(replace(c[4], '"', ''), ' ', ''), ',')) AS col(name)
+            WHERE NOT EXISTS (SELECT 1 FROM pg_attribute WHERE attrelid = to_regclass(format('%I.%I', c[2], c[3])) AND attname = col.name AND NOT attisdropped))
+        THEN
+            EXECUTE format('GRANT %s (%s) ON %I.%I TO medvya_review', c[1], c[4], c[2], c[3]);
+        END IF;
+    END LOOP;
 END $$;

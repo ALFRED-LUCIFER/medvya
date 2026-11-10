@@ -7,7 +7,7 @@ import type { NavItem } from '../../shell/domain/navigation';
  * Platform overview. shortcut: no tenant counts, rollouts or attention list yet; they need the tenant catalogue (MDV-P5-017) and
  * rollouts (MDV-P5-041), which read the control plane through their own reviewed paths.
  */
-const blurbs = { team: 'platform.overview.team', audit: 'platform.overview.audit' } as const;
+const blurbs = { organisations: 'platform.overview.organisations', team: 'platform.overview.team', audit: 'platform.overview.audit' } as const;
 
 export default function OverviewPage({ displayName, role, items }: { displayName: string; role: PlatformRole; items: NavItem[] }) {
   const { t } = useI18n();

@@ -15,6 +15,17 @@ phishing-resistant: company sign-on, then a security key, with lost-key recovery
   login holds only `medvya_platform`, which has rights on schema `platform` alone; the clinic app role (`medvya_app`) is not a member, and the
   console login cannot read any clinic schema (`TheConsoleLoginCannotReadClinicData`). A later console page that needs clinic facts (the licence
   queue, MDV-P5-044; the tenant catalogue, MDV-P5-017) gets its own narrow, reviewed read path, not a wider grant.
+- **Amended 10 Nov 2026 (MDV-P1-064, owner decision): the organisation review path.** The console's organisation approval queue reuses
+  Tenancy's request, state and review services (the same ones behind Host.Api's interim API, so the state machine, the DPA rule, the clinic
+  audit and the applicant's email exist once). `Host.Platform` may therefore reference `Medvya.Tenancy` and `Medvya.Audit` and no other clinic
+  module (`TheConsoleHostReachesNoClinicModuleButTheOrganisationReview`), and registers only the review services (`AddOrganisationReview`,
+  no staff, facility or clinical-access service). They run on a **second login, `medvya_review`**, not on `medvya_platform` and not a member
+  of `medvya_app`: `SELECT` on the tenant, request, document, profile and settings-history tables, `UPDATE` of the state and last reason only,
+  `INSERT` of the settings-history and audit rows, and the few columns row-level security and the audit chain read as the caller
+  (`Memberships` ids and status, the audit chain head). No patient, encounter, scheduling, identity, invitation or audit-content right
+  (`TheReviewLoginCannotReadClinicData`). Reads use the `medvya.operator` row-level security branch; a decision runs inside the organisation's
+  tenant. Roles: operations and reviewer decide, support reads, owner and finance get 403 (least access: the documents include the owner's
+  government ID). Each decision is in the clinic audit, naming the console member, and in the platform audit log.
 - **Sign-in = BFF (ADR-004) + WebAuthn.** Company sign-on runs through the host (OIDC code + PKCE, tokens never reach the browser) and starts a
   server-side session that reaches only the key steps and `/v1/me`. A WebAuthn assertion with user verification marks the session
   key-verified; only then do the console policies (also the default and fallback policy) pass. Keys are device-bound: a backup-eligible

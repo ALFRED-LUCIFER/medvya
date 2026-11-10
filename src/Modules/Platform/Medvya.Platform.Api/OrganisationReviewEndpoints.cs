@@ -73,7 +73,7 @@ public static class OrganisationReviewEndpoints
             if (from is { } required && current != required) throw new SettingsValidationException([new("state", "transition")]);
             await states.SetAsync(to, reason, ct);
         }
-        // After the decision is saved with its clinic audit row, so the console log never shows a decision that did not happen.
+        // After the decision is saved with its clinic audit row (the authoritative record), so the console log never shows a decision that did not happen.
         await http.RequestServices.GetRequiredService<IPlatformAuditLog>().RecordAsync($"organisation.{action}", "organisation", tenantId, reason, ct);
         return Results.NoContent();
     }

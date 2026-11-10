@@ -1,6 +1,9 @@
 # Runbook: approving an organisation (interim API)
 
-Medvya approves **organisations**, never individual doctors (ADR-016). Until the platform console runs on Azure, Medvya operations review and decide through the API of `Host.Api` described here. This interim API stays after the console arrives (MDV-P1-064).
+Medvya approves **organisations**, never individual doctors (ADR-016). Two routes do the same thing through the same Tenancy services:
+
+- **The platform console** (`web/platform-admin`, page *Organisations*, MDV-P1-064): the queue with its filters, the detail, the documents and a reason panel for each decision. Console roles decide who may act: **operations** and **reviewer** decide, **support** reads, **owner** and **finance** get 403. It runs locally (`pnpm dev:platform`) until the console is deployed on Azure (people-and-Azure work, `docs/05-delivery/session-handoff.md`).
+- **The interim API of `Host.Api`** described below: the Azure route until then, and it stays after the console arrives.
 
 ## Who may call it
 
@@ -13,7 +16,7 @@ Two lists of Medvya staff user ids in configuration (Key Vault on Azure, user se
 
 Each value is a JSON array of ids, for example `Operations__OrganisationApprovers__0=<user id>`. The id is the operator's Medvya user id (the `NameIdentifier` of their session). The operator signs in to the clinic app's BFF like any staff member, so they need a Medvya account: invite them to any organisation once, or create the account the way the owner's sign-up does. Anyone not listed gets 403; the check reads the configuration on every request.
 
-shortcut: ids in configuration stand in for the console's operations and reviewer roles; the console queue (MDV-P5-044) calls the same service and reads the platform member roles instead.
+shortcut: ids in configuration stand in for the console's operations and reviewer roles; the console queue calls the same services and reads the platform member roles instead.
 
 ## Endpoints
 
@@ -58,6 +61,10 @@ Only the control-plane request: the organisation's name, country, type, state, h
 
 shortcut: uploaded files are checked by file signature (PDF, PNG, JPEG) and size (5 MB) but not malware-scanned; add the Defender scan before the first real applicant uploads.
 
+## The console queue (MDV-P1-064)
+
+`Host.Platform` serves `/v1/organisations` (`GET /?filter=`, `GET /{tenantId}`, `GET /{tenantId}/documents/{documentId}`, and the five `POST` decisions with `{ "reason" }`), with the same rules as the interim API above. It signs in to the database as **`medvya_review`**, a login that reaches only the onboarding tables and appends to the clinic audit log (`docs/03-architecture/database-security.md`). The clinic audit names the console member; the platform audit log records `organisation.<decision>` with the organisation and the reason.
+
 ## Not built yet (console design of 10 Nov 2026)
 
-The queue and detail pages of the platform console (filters, profile grid, the private watermarked document viewer with no download, the automatic document checks such as "name and address match", the email preview after a decision) are not built: ADR-014 keeps the console login away from clinic schemas, so the console first needs a reviewed path to this data. The API above has what those pages need (filters, detail with history, logged document links, reinstate); the viewer, the checks and the pages belong with the console work (MDV-P5-044).
+The private watermarked document viewer with no download (the console opens the five-minute link in a new tab), the automatic document checks such as "name and address match", and the email preview after a decision belong to MDV-P5-044.

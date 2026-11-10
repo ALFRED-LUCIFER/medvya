@@ -1,6 +1,6 @@
 import type { PlatformRole } from '../../session/domain/session';
 
-export type NavId = 'overview' | 'team' | 'audit';
+export type NavId = 'overview' | 'organisations' | 'team' | 'audit';
 export type NavItem = { id: NavId; path: string; roles: readonly PlatformRole[] };
 
 const everyone: readonly PlatformRole[] = ['Owner', 'Operations', 'Support', 'Finance', 'Reviewer'];
@@ -11,6 +11,7 @@ const everyone: readonly PlatformRole[] = ['Owner', 'Operations', 'Support', 'Fi
  */
 export const navItems: readonly NavItem[] = [
   { id: 'overview', path: '/', roles: everyone },
+  { id: 'organisations', path: '/organisations', roles: ['Operations', 'Reviewer', 'Support'] },
   { id: 'team', path: '/team', roles: ['Owner'] },
   { id: 'audit', path: '/audit', roles: ['Owner', 'Operations'] },
 ];

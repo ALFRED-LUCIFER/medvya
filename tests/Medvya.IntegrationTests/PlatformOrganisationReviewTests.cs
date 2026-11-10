@@ -170,6 +170,27 @@ public sealed class PlatformOrganisationReviewTests(PostgresFixture sql) : IClas
         Assert.Equal(HttpStatusCode.NotFound, (await ops.GetAsync(new Uri($"/v1/organisations/{Guid.NewGuid()}", UriKind.Relative))).StatusCode);
     }
 
+    [Fact]
+    public async Task OpeningADocumentGivesAShortLinkAndIsAuditedNamingTheMember()
+    {
+        var documentId = Guid.NewGuid();
+        await using (var db = sql.Context(h.Tenant))
+        {
+            db.OrganisationDocuments.Add(new OrganisationDocument { Id = documentId, TenantId = h.Tenant, Kind = OrganisationDocumentRules.RegistrationCertificate,
+                BlobKey = $"organisations/{h.Tenant}/registration.pdf", ContentType = "application/pdf", SizeBytes = 18, UploadedAt = DateTimeOffset.UtcNow });
+            await db.SaveChangesAsync();
+        }
+        var (_, finance) = await As(PlatformRole.Finance);
+        Assert.Equal(HttpStatusCode.Forbidden, (await finance.GetAsync(new Uri($"/v1/organisations/{h.Tenant}/documents/{documentId}", UriKind.Relative))).StatusCode);
+        var (member, ops) = await As(PlatformRole.Operations);
+        var link = await ops.GetFromJsonAsync<JsonElement>(new Uri($"/v1/organisations/{h.Tenant}/documents/{documentId}", UriKind.Relative));
+        Assert.True(link.GetProperty("expiresAt").GetDateTimeOffset() <= DateTimeOffset.UtcNow.AddMinutes(5));
+        Assert.Equal(HttpStatusCode.NotFound, (await ops.GetAsync(new Uri($"/v1/organisations/{h.Tenant}/documents/{Guid.NewGuid()}", UriKind.Relative))).StatusCode);
+        await using var audit = sql.Audit(h.Tenant);
+        var view = Assert.Single(await audit.Events.Where(e => e.Action == "organisation.document.view").ToListAsync());
+        Assert.Equal((member.Id, documentId), (view.ActorUserId!.Value, view.ResourceId!.Value));
+    }
+
     // The database layer: whatever the console code does, its review login cannot reach clinic data, and changes only what a decision changes.
     [Theory]
     [InlineData("patients.\"Patients\"")]

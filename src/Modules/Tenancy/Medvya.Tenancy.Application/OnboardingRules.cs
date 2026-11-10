@@ -72,7 +72,7 @@ public abstract partial class OnboardingRules
                 // Only a doctor gives a licence: an owner who is not a doctor has none. The owner-doctor attests it (ADR-016).
                 if (d.Profile?.Mode != Clinic)
                 {
-                    Licence(d.Licence, e);
+                    Licence(d.Licence, e, DateOnly.FromDateTime(DateTime.UtcNow));
                     if (d.Licence?.Attested != true) e.Add(new("licence.attested", "required"));
                 }
                 ClinicStep(d.Clinic, e);
@@ -122,10 +122,8 @@ public abstract partial class OnboardingRules
     public List<OnboardingError> ValidateLicence(string? authority, string? number, string? category, DateOnly? expiresOn, string? certificateName, DateOnly today)
     {
         var e = new List<OnboardingError>();
-        Licence(new OnboardingLicence(authority, number, certificateName), e);
+        Licence(new OnboardingLicence(authority, number, certificateName, ExpiresOn: expiresOn), e, today);
         Text(category, "licence.category", 40, true, e);
-        if (expiresOn is not { } expiry) e.Add(new("licence.expiresOn", "required"));
-        else if (expiry <= today) e.Add(new("licence.expiresOn", "past"));
         return e;
     }
 
@@ -144,7 +142,7 @@ public abstract partial class OnboardingRules
         Text(p?.Languages, "profile.languages", 200, false, e);
     }
 
-    void Licence(OnboardingLicence? l, List<OnboardingError> e)
+    void Licence(OnboardingLicence? l, List<OnboardingError> e, DateOnly today)
     {
         if (string.IsNullOrWhiteSpace(l?.Authority)) e.Add(new("licence.authority", "required"));
         else if (Authorities.All(a => a.Code != l.Authority)) e.Add(new("licence.authority", "unknown"));
@@ -152,6 +150,8 @@ public abstract partial class OnboardingRules
         if (string.IsNullOrEmpty(number)) e.Add(new("licence.number", "required"));
         else if (!LicenceNumber.IsMatch(number)) e.Add(new("licence.number", "format"));
         Text(l?.CertificateName, "licence.certificate", 200, false, e);
+        if (l?.ExpiresOn is not { } expiry) e.Add(new("licence.expiresOn", "required"));
+        else if (expiry <= today) e.Add(new("licence.expiresOn", "past"));
     }
 
     void ClinicStep(OnboardingClinic? c, List<OnboardingError> e)

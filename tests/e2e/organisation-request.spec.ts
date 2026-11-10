@@ -18,7 +18,7 @@ const hospitalDocs = ['HospitalRegistration', 'TaxRegistration', 'OwnerId', 'Sig
 
 async function mockRequest(page: Page, { type = 'Clinic', state = 'Draft', reason = null as string | null } = {}) {
   const required = type === 'Clinic' ? clinicDocs : hospitalDocs;
-  const api = { state, documents: [] as Doc[], submits: 0, contact: null as { name: string; email: string } | null };
+  const api = { state, documents: [] as Doc[], submits: 0, starts: 0, contact: null as { name: string; email: string } | null };
   await page.route('**/v1/me/context', r => r.fulfill({ json: {
     user: { id: 'u-arjun', displayName: 'Arjun Rao (synthetic)' },
     memberships: [{ id: 'm-1', tenantId: 't-1', tenantName: 'Rao Clinic (synthetic)', facilityId: 'f-1', facilityName: 'Rao Clinic (synthetic)', role: 'SoloDoctor' }],
@@ -36,6 +36,7 @@ async function mockRequest(page: Page, { type = 'Clinic', state = 'Draft', reaso
     return r.fulfill({ json: doc });
   });
   await page.route('**/v1/organisation/request/it-contact', r => { api.contact = r.request().postDataJSON() as { name: string; email: string }; return r.fulfill({ status: 204 }); });
+  await page.route('**/v1/organisation/request/start-new', r => { api.starts++; api.state = 'Draft'; api.documents = []; return r.fulfill({ status: 204 }); });
   await page.route('**/v1/organisation/request/submit', r => { api.submits++; api.state = 'Submitted'; return r.fulfill({ status: 204 }); });
   return api;
 }
@@ -72,6 +73,18 @@ test('a file of the wrong type is refused before it is sent, and the reason is a
   await page.getByLabel('Clinic registration certificate').setInputFiles({ name: 'logo.svg', mimeType: 'image/svg+xml', buffer: Buffer.from('<svg/>') });
   await expect(page.getByRole('alert').filter({ hasText: 'Use a PDF, PNG or JPEG file.' })).toBeVisible();
   expect(api.documents).toHaveLength(0);
+});
+
+test('a rejected owner can start a new request, which opens empty for editing', async ({ page }) => {
+  const api = await mockRequest(page, { state: 'Rejected', reason: 'Not a registered clinic' });
+  await page.goto('/organisation');
+  await expect(page.getByText('Not a registered clinic')).toBeVisible();
+  await expect(page.getByLabel('Clinic registration certificate')).toHaveCount(0); // final for this request
+  expect(await axe(page)).toEqual([]);
+  await page.getByRole('button', { name: 'Start a new request' }).click();
+  await expect.poll(() => api.starts).toBe(1);
+  await expect(page.getByLabel('Clinic registration certificate')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Start a new request' })).toHaveCount(0);
 });
 
 test('Medvya asked for changes: the reason is shown and the request can be sent again', async ({ page }) => {

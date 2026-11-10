@@ -21,7 +21,7 @@ public sealed class OrganisationRequests(TenancyDbContext db, ICurrentTenant ten
         var request = await db.OrganisationRequests.AsNoTracking().SingleOrDefaultAsync(cancellationToken);
         if (request is null) return null;
         var current = await db.Tenants.AsNoTracking().Select(t => t.State).SingleAsync(cancellationToken);
-        var documents = await db.OrganisationDocuments.AsNoTracking().OrderBy(d => d.UploadedAt)
+        var documents = await db.OrganisationDocuments.AsNoTracking().Where(d => !d.Kind.StartsWith("old-")).OrderBy(d => d.UploadedAt)
             .Select(d => new OrganisationDocumentView(d.Id, d.Kind, d.ContentType, d.SizeBytes, d.UploadedAt)).ToListAsync(cancellationToken);
         return new RequestView(request.Type, current, request.LastReason, request.ItContactName, request.ItContactEmail, request.SubmittedAt,
             OrganisationDocumentRules.Required(request.Type, await OwnerIsDoctorAsync(cancellationToken)), documents);
@@ -75,6 +75,17 @@ public sealed class OrganisationRequests(TenancyDbContext db, ICurrentTenant ten
         SettingsValidationException.ThrowIfAny(errors);
         request.SubmittedAt = clock.GetUtcNow();
         await state.SetAsync(OrganisationState.Submitted, null, cancellationToken); // saves the request's change with the state and its audit row
+    }
+
+    public async Task StartNewAsync(CancellationToken cancellationToken = default)
+    {
+        var request = await db.OrganisationRequests.SingleOrDefaultAsync(cancellationToken) ?? throw new SettingsValidationException([new("request", "missing")]);
+        if (await db.Tenants.Select(t => t.State).SingleAsync(cancellationToken) != OrganisationState.Rejected) throw new SettingsValidationException([new("request", "notRejected")]);
+        // Documents are never deleted (the table is append and update only): the old files move aside under a unique "old-" kind, so the new request
+        // asks for each kind again and Medvya can still open the rejected request's files. shortcut: the applicant no longer sees them; add an archive view if it is needed.
+        foreach (var d in await db.OrganisationDocuments.ToListAsync(cancellationToken)) d.Kind = $"old-{Guid.NewGuid():N}"[..12] + $"-{d.Kind}";
+        (request.SubmittedAt, request.ItContactName, request.ItContactEmail) = (null, null, null);
+        await state.SetAsync(OrganisationState.Draft, null, cancellationToken); // saves these changes with the state and its audit row
     }
 
     public async Task<RequestDetail> DetailAsync(CancellationToken cancellationToken = default)

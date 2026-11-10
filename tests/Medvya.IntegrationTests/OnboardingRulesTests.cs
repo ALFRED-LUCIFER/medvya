@@ -8,7 +8,7 @@ public class OnboardingRulesTests
 {
     static OnboardingData Valid(string number = "84213", string authority = "TNMC", string? taxId = null, string mode = "Solo") => new(
         new("Arjun Rao (synthetic)", mode, "General medicine", null, null),
-        new(authority, number, null, true),
+        new(authority, number, null, true, new DateOnly(2099, 1, 1)),
         new("Rao Clinic (synthetic)", "12 Test Street, Chennai", null, taxId, "Clinic", "desk@rao-clinic.example"),
         new([new("09:00", "13:00"), new("17:00", "20:00")], [], 20, 100_000, 60_000),
         ["general-opd"],
@@ -66,7 +66,7 @@ public class OnboardingRulesTests
         var clinic = Valid(mode: "Clinic") with { Licence = null, Profile = new("K. Lakshmi (synthetic)", "Clinic", null, null, null) };
         Assert.Empty(OnboardingRules.India.ValidateAll(clinic));
         // The same answers as a doctor: the practice step asks for the licence and a specialty.
-        Assert.Equal(["profile.specialties:required", "licence.authority:required", "licence.number:required", "licence.attested:required"],
+        Assert.Equal(["profile.specialties:required", "licence.authority:required", "licence.number:required", "licence.expiresOn:required", "licence.attested:required"],
             Fields(OnboardingRules.India, 1, clinic with { Profile = clinic.Profile! with { Mode = "Solo" } }));
     }
 
@@ -131,10 +131,16 @@ public class OnboardingRulesTests
         Assert.DoesNotContain(errors, e => e.Field.Contains("secret", StringComparison.Ordinal) || e.Code.Contains("secret", StringComparison.Ordinal));
     }
 
+    [Theory]
+    [InlineData(null, "licence.expiresOn:required")]
+    [InlineData("2000-01-01", "licence.expiresOn:past")]
+    public void TheOwnerDoctorsLicenceNeedsAFutureExpiryDate(string? expiry, string expected) =>
+        Assert.Equal([expected], Fields(OnboardingRules.India, 1, Valid() with { Licence = new("TNMC", "84213", null, true, expiry is null ? null : DateOnly.Parse(expiry, System.Globalization.CultureInfo.InvariantCulture)) }));
+
     [Fact]
     public void ADoctorOwnerMustAttestTheirLicenceButAClinicOwnerHasNone()
     {
-        Assert.Equal(["licence.attested:required"], Fields(OnboardingRules.India, 1, Valid() with { Licence = new("TNMC", "84213", null) }));
+        Assert.Equal(["licence.attested:required"], Fields(OnboardingRules.India, 1, Valid() with { Licence = new("TNMC", "84213", null, false, new DateOnly(2099, 1, 1)) }));
         Assert.Empty(OnboardingRules.India.ValidateStep(1, Valid(mode: "Clinic") with { Licence = null }));
     }
 

@@ -63,7 +63,10 @@ public sealed class PracticeSettings(
         ArgumentNullException.ThrowIfNull(command);
         var (name, address, zone) = ValidLocation(new SaveLocation { Name = command.Name, Address = command.Address, TimeZone = command.TimeZone }, requireZone: true);
         var errors = new List<ValidationError>();
-        var country = await db.Tenants.AsNoTracking().Select(t => t.CountryCode).SingleAsync(cancellationToken);
+        var org = await db.Tenants.AsNoTracking().Select(t => new { t.CountryCode, t.State }).SingleAsync(cancellationToken);
+        var (country, state) = (org.CountryCode, org.State);
+        // Set-up-only mode allows locations before approval (ADR-016); a suspended organisation adds nothing new.
+        if (state == OrganisationState.Suspended) throw new SettingsValidationException([new("state", "suspended")]);
         // Data stays in the organisation's country (ADR-003); a missing country is refused like a wrong one.
         if (Clean(command.CountryCode) is not { } given) errors.Add(new("countryCode", "required"));
         else if (given != country) errors.Add(new("countryCode", "mismatch"));

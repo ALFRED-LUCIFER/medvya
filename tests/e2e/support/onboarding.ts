@@ -64,6 +64,7 @@ export async function completeWizard(page: Page, { lost = false } = {}) {
   await page.getByRole('combobox', { name: 'Medical council' }).click();
   await page.getByRole('option', { name: /TNMC/ }).click();
   await page.getByLabel('Registration number').fill('84213');
+  await page.getByLabel('Registration expiry date').fill('2031-12-31');
   await page.getByLabel('I confirm this registration is my own and that it is valid.').check();
   await page.getByRole('button', { name: 'Continue' }).click();
 

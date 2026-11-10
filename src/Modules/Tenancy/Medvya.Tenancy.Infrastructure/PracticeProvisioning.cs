@@ -70,7 +70,13 @@ public sealed class PracticeProvisioning(IServiceScopeFactory scopes, ICurrentUs
             db.DoctorLicences.Add(new DoctorLicence
             {
                 MembershipId = membershipId, TenantId = tenantId, Authority = data.Licence!.Authority!, Number = data.Licence.Number!.Trim(),
-                CertificateName = Clean(data.Licence.CertificateName), SubmittedAt = now, AttestedBy = owner, AttestedAt = now,
+                ExpiresOn = data.Licence.ExpiresOn, CertificateName = Clean(data.Licence.CertificateName), SubmittedAt = now, AttestedBy = owner, AttestedAt = now,
+            });
+            // The values the owner attested, append-only, like Settings, Doctors, Add doctor (ADR-016).
+            db.SettingsChanges.Add(new SettingsChange
+            {
+                Id = Guid.CreateVersion7(), TenantId = tenantId, ActorUserId = owner, Section = "doctor", ResourceId = membershipId, OccurredAt = now,
+                After = JsonSerializer.Serialize(new { authority = data.Licence.Authority, number = data.Licence.Number.Trim(), expiresOn = data.Licence.ExpiresOn, licence = "Attested" }, JsonSerializerOptions.Web),
             });
             // The owner doctor is listed on Settings, Doctors beside the doctors added later (MDV-P1-007).
             db.DoctorProfiles.Add(new DoctorProfile

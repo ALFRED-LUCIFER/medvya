@@ -214,6 +214,8 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/prescription/items", """{"medicine":"Synthetic medicine"}""")),
         (Role.SoloDoctor, new("PUT", "/v1/prescription-items/{rxItem}", """{"dose":"1","doseUnit":"tablet"}""")),
         (Role.SoloDoctor, new("PUT", "/v1/prescription-items/{rxItem}/included", """{"included":false}""")),
+        (Role.SoloDoctor, new("GET", "/v1/encounters/{encounter}/prescription/checks")),
+        (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/prescription/overrides", """{"key":"synthetic","reason":"Synthetic"}""")),
         (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/referrals", """{"provider":"Dr. Synthetic","urgency":"Routine","reason":"Synthetic","sections":[]}""")),
         (Role.SoloDoctor, new("POST", "/v1/referrals/{referral}/send", """{"channel":"Print"}""")),
         (Role.SoloDoctor, new("POST", "/v1/referrals/{referral}/status", """{"state":"Closed"}""")),
@@ -399,6 +401,8 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.Nurse, new("GET", "/v1/encounters/{encounter}/prescription")), // Prescriptions & orders: X
         (Role.Receptionist, new("POST", "/v1/encounters/{encounter}/prescription/items", """{"medicine":"Synthetic medicine"}""")),
         (Role.PracticeAdmin, new("GET", "/v1/encounters/{encounter}/prescription")),
+        (Role.Nurse, new("GET", "/v1/encounters/{encounter}/prescription/checks")), // Prescriptions & orders: X
+        (Role.Receptionist, new("POST", "/v1/encounters/{encounter}/prescription/overrides", """{"key":"synthetic","reason":"Synthetic"}""")),
         (Role.Receptionist, new("POST", "/v1/encounters/{encounter}/orders/place", """{"destination":"Synthetic lab"}""")),
         (Role.PracticeAdmin, new("GET", "/v1/encounters/{encounter}/orders/slip")),
         (Role.Nurse, new("GET", "/v1/formulary")), // Prescriptions & orders: X

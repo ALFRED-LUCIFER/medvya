@@ -3,8 +3,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm, useWatch } from 'react-hook-form';
 import { ApiError } from '../../schedule/services/scheduleApi';
+import { overrideSchema } from '../domain/checks';
 import { freeTextSchema, invalidFields, problemOf, toDraft, type PrintLanguage, type RxLine, type RxProblem, type SaveState, type SigDraft, type SigField } from '../domain/prescription';
-import { addFreeText, addFromFormulary, fetchPrescription, includeLine, saveSig, searchMedicines } from '../services/prescriptionApi';
+import { addFreeText, addFromFormulary, fetchChecks, fetchPrescription, includeLine, overrideAlert, saveSig, searchMedicines } from '../services/prescriptionApi';
 
 const autosaveMs = 700;
 
@@ -12,11 +13,17 @@ const autosaveMs = 700;
  * The draft prescription of one consultation (MDV-P2-015). The server decides who may prescribe: a refusal (403) hides the panel. Every answer
  * is the whole draft (with the readable instruction in each print language), which replaces the cached one. The dose builder autosaves each
  * line a moment after the last change; a pending save is sent at once when the panel closes, so nothing typed is lost. Nothing here authorises.
+ * The safety checks (MDV-P2-016) run on the server again after every change; a severe alert takes a reason, one alert at a time.
  */
 export function usePrescriptionController(encounterId: string) {
   const queryClient = useQueryClient();
   const key = ['prescription', encounterId];
   const list = useQuery({ queryKey: key, queryFn: () => fetchPrescription(encounterId), retry: false });
+  const checksKey = ['prescription-checks', encounterId];
+  const checks = useQuery({ queryKey: checksKey, queryFn: () => fetchChecks(encounterId), enabled: list.isSuccess, retry: false });
+  const recheck = () => void queryClient.invalidateQueries({ queryKey: checksKey });
+  const reasonForm = useForm<{ reason: string }>({ resolver: zodResolver(overrideSchema), defaultValues: { reason: '' } });
+  const [overriding, setOverriding] = useState<string | null>(null);
   const add = useForm<{ medicine: string }>({ resolver: zodResolver(freeTextSchema), defaultValues: { medicine: '' } });
   const text = (useWatch({ control: add.control, name: 'medicine' }) ?? '').trim();
   const search = useQuery({ queryKey: ['formulary', 'doctor', text], queryFn: () => searchMedicines(text), enabled: list.isSuccess && text.length >= 2, placeholderData: keepPreviousData });
@@ -26,7 +33,7 @@ export function usePrescriptionController(encounterId: string) {
   const [language, setLanguage] = useState<PrintLanguage>('en');
   const pending = useRef(new Map<string, { timer: ReturnType<typeof setTimeout>; draft: SigDraft }>());
 
-  const take = (lines: RxLine[]) => { queryClient.setQueryData(key, lines); setProblem(null); };
+  const take = (lines: RxLine[]) => { queryClient.setQueryData(key, lines); setProblem(null); recheck(); };
   const failed = (e: unknown) => setProblem(problemOf(e instanceof ApiError ? e.code : undefined));
   const mark = (id: string, state: SaveState) => setSaves(s => ({ ...s, [id]: state }));
 
@@ -35,8 +42,14 @@ export function usePrescriptionController(encounterId: string) {
   const include = useMutation({ mutationFn: (v: { id: string; included: boolean }) => includeLine(v.id, v.included), onSuccess: take, onError: failed });
   const save = useMutation({
     mutationFn: (v: { id: string; draft: SigDraft }) => saveSig(v.id, v.draft),
-    onSuccess: (l, v) => { queryClient.setQueryData(key, l); mark(v.id, 'saved'); },
+    onSuccess: (l, v) => { queryClient.setQueryData(key, l); mark(v.id, 'saved'); recheck(); },
     onError: (e, v) => mark(v.id, problemOf(e instanceof ApiError ? e.code : undefined)),
+  });
+
+  const override = useMutation({
+    mutationFn: (v: { key: string; reason: string }) => overrideAlert(encounterId, v.key, v.reason),
+    onSuccess: c => { queryClient.setQueryData(checksKey, c); setOverriding(null); reasonForm.reset({ reason: '' }); setProblem(null); },
+    onError: failed,
   });
 
   // Closing the consultation page sends what is still waiting, instead of dropping it.
@@ -59,7 +72,14 @@ export function usePrescriptionController(encounterId: string) {
     searching: search.isFetching,
     language, onLanguage: setLanguage,
     problem,
-    busy: addMedicine.isPending || addText.isPending || include.isPending,
+    busy: addMedicine.isPending || addText.isPending || include.isPending || override.isPending,
+    checks: checks.data ?? null,
+    checksLoading: checks.isPending && list.isSuccess,
+    checksFailed: checks.isError,
+    overriding,
+    reasonForm,
+    onOverride: (alertKey: string | null) => { setOverriding(alertKey); reasonForm.reset({ reason: '' }); },
+    onReason: reasonForm.handleSubmit(v => { if (overriding) override.mutate({ key: overriding, reason: v.reason }); }),
     draftOf,
     saveOf: (id: string) => saves[id] ?? null,
     invalidOf: (l: RxLine) => invalidFields(draftOf(l)),

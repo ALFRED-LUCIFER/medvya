@@ -6,12 +6,14 @@ import { Button, ClinicalAlert, Input, Select, SelectContent, SelectItem, Select
 import { describedBy, fieldError } from '../../settings/components/fieldStyles';
 import { Field } from '../../settings/components/Field';
 import { Section } from '../../settings/components/Section';
+import { lineSafety } from '../domain/checks';
+import SafetyChecks, { SafetyChip, type SafetyProps } from './SafetyChecks';
 import {
   directionOf, doseUnits, frequencies, printLanguages, routes, timings,
   type Medicine, type PrintLanguage, type RxLine, type RxProblem, type SaveState, type SigDraft, type SigField,
 } from '../domain/prescription';
 
-type Props = {
+type Props = SafetyProps & {
   ended: boolean;
   lines: RxLine[];
   loading: boolean;
@@ -37,6 +39,7 @@ const sourceIcon = { AddedByYou: UserRound, AddedByColleague: UserRound, ChartRe
 /**
  * Prescription composer (E-05, E-11): medicines from the formulary or typed as free text (flagged), each with a dose builder that autosaves,
  * the readable instruction in the chosen print language, and discontinue lines from the reconciliation. A draft only: authorising is separate.
+ * The safety checks (MDV-P2-016) follow the lines, and each line carries its safety chip.
  */
 export default function PrescriptionPanel(p: Props) {
   const { t } = useI18n();
@@ -79,6 +82,8 @@ export default function PrescriptionPanel(p: Props) {
           ))}
         </ul>
       )}
+
+      {prescribed.length > 0 && <SafetyChecks {...p} />}
 
       {!p.ended && (
         <form noValidate onSubmit={p.onAddFreeText} className="flex flex-col gap-3 border-t pt-4">
@@ -124,7 +129,7 @@ function Sig({ line, language }: { line: RxLine; language: PrintLanguage }) {
   );
 }
 
-function Line({ line, ended, busy, language, draftOf, saveOf, invalidOf, onInclude, onField }: Props & { line: RxLine }) {
+function Line({ line, ended, busy, language, checks, draftOf, saveOf, invalidOf, onInclude, onField }: Props & { line: RxLine }) {
   const { t } = useI18n();
   const id = line.id ?? '';
   const draft = draftOf(line);
@@ -156,6 +161,7 @@ function Line({ line, ended, busy, language, draftOf, saveOf, invalidOf, onInclu
         <span className="font-bold">{line.medicine}</span>
         {(line.strength || line.form) && <span className="text-sm">{[line.strength, line.form].filter(Boolean).join(' · ')}</span>}
         <SourceChip line={line} />
+        {checks && line.included && <SafetyChip state={lineSafety(checks, id)} />}
         {!line.included && <span className="text-sm font-bold">{t('rx.notIncluded')}</span>}
         {!ended && <Switch className="ms-auto" checked={line.included} disabled={busy} aria-label={t('rx.include', { name: line.medicine })} onCheckedChange={on => onInclude(id, on)} />}
       </div>

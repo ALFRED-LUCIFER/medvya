@@ -34,6 +34,13 @@ public static class PrescriptionEndpoints
         g.MapPut("/prescription-items/{itemId:guid}/included", async (Guid itemId, [FromBody] IncludeRxLine? body, [FromServices] IPrescriptions service, CancellationToken ct) =>
                 await service.IncludeAsync(itemId, body ?? new IncludeRxLine(null), ct) is { } v ? Results.Ok(v) : Results.NotFound())
             .AuditedByUseCase("rx.include", "prescription", AuditPurpose.Treatment).AddEndpointFilter(MapErrors);
+        // Safety checks (MDV-P2-016): run after every change; an override carries its reason in the body.
+        g.MapGet("/encounters/{encounterId:guid}/prescription/checks", async (Guid encounterId, [FromServices] IPrescriptions service, CancellationToken ct) =>
+                await service.CheckAsync(encounterId, ct) is { } v ? Results.Ok(v) : Results.NotFound())
+            .AuditedByUseCase("rx.check", "prescription", AuditPurpose.Treatment).AddEndpointFilter(MapErrors);
+        g.MapPost("/encounters/{encounterId:guid}/prescription/overrides", async (Guid encounterId, [FromBody] OverrideRxAlert? body, [FromServices] IPrescriptions service, CancellationToken ct) =>
+                await service.OverrideAsync(encounterId, body ?? new OverrideRxAlert(null, null), ct) is { } v ? Results.Ok(v) : Results.NotFound())
+            .AuditedByUseCase("rx.override", "prescription", AuditPurpose.Treatment).AddEndpointFilter(MapErrors);
         return app;
     }
 

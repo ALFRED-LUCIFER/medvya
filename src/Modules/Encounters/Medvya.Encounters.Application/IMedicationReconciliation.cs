@@ -55,3 +55,21 @@ public interface IReconciliationStops
 {
     Task<IReadOnlyList<StoppedMedicine>> StopsAsync(Guid encounterId, CancellationToken cancellationToken = default);
 }
+
+/// <summary>A substance on the chart (never a "no known allergies" entry, never one ruled "not an allergy"), with its status for the evidence.</summary>
+public sealed record ChartAllergy(Guid Id, string Substance, AllergyStatus Status);
+
+/// <summary>An active medicine on the chart, as named there.</summary>
+public sealed record ChartMedicine(Guid Id, string Name);
+
+/// <summary>What a prescription is checked against: the allergy state (three different things, never merged), the listed allergies and the active medicines.</summary>
+public sealed record PrescribingFacts(AllergyState AllergyState, IReadOnlyList<ChartAllergy> Allergies, IReadOnlyList<ChartMedicine> ActiveMedicines);
+
+/// <summary>
+/// The chart facts for the prescription safety checks (MDV-P2-016). No access check and no audit event here: the caller has already checked
+/// clinical access to the patient and audits its own check.
+/// </summary>
+public interface IPrescribingChart
+{
+    Task<PrescribingFacts> FactsAsync(Guid patientId, CancellationToken cancellationToken = default);
+}

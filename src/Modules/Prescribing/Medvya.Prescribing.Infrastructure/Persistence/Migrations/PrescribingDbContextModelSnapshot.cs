@@ -403,6 +403,62 @@ namespace Medvya.Prescribing.Infrastructure.Persistence.Migrations
 
                     b.ToTable("ReferralEvents", "prescribing");
                 });
+
+            modelBuilder.Entity("Medvya.Prescribing.Domain.RxAlertOverride", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AlertKey")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("EncounterId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("FacilityId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<Guid?>("MergedFromPatientId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("OverriddenAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("OverriddenBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PatientId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("RuleSetVersion")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "EncounterId");
+
+                    b.HasIndex("TenantId", "PatientId");
+
+                    b.ToTable("RxAlertOverrides", "prescribing");
+                });
 #pragma warning restore 612, 618
         }
     }

@@ -1,6 +1,6 @@
 import { createRequire } from 'node:module';
 import { expect, test, type Page } from '@playwright/test';
-import { line, mockPrescription, stopLine } from './support/prescription';
+import { clearChecks, line, mockPrescription, penicillinAlert, stopLine } from './support/prescription';
 
 // MDV-P2-015 (E-05, E-11): the doctor adds a formulary medicine and builds its dose, which autosaves and shows the instruction in the chosen
 // print language; a free-text medicine is flagged; a reconciliation stop is a discontinue line. CI has no API: endpoints are mocked in the
@@ -92,6 +92,55 @@ test('an ended consultation shows the draft and cannot change it; a role that ma
   await expect(page.getByRole('region', { name: 'Prescription' })).toHaveCount(0);
 });
 
+// MDV-P2-016 (E-11): the checks' result in words with its evidence; a severe alert takes a reason; what was not checked is said plainly.
+test('a severe allergy alert is in words with its evidence and needs a reason; what was not checked is named', async ({ page }) => {
+  const { calls } = await mockPrescription(page, {
+    lines: [line('rx-1', 'Amoxicillin'), line('rx-2', 'Herbal tonic X', { formularyItemId: null, strength: null, form: null, freeText: true })],
+    checks: clearChecks({ allergies: 'Listed', unresolved: 1, alerts: [penicillinAlert('rx-1')], notChecked: [{ id: 'rx-2', medicine: 'Herbal tonic X', onChart: false, reason: 'FreeText' }] }),
+  });
+  await page.goto('/consult/e-1');
+  const checks = page.getByRole('region', { name: 'Safety checks' });
+  await expect(checks).toContainText('Allergies: listed on the chart');
+  const alert = checks.getByRole('list', { name: 'Safety alerts' }).getByRole('alert');
+  await expect(alert).toContainText('Severe · Allergy: Penicillin · verified. Amoxicillin: penicillin class.');
+  await expect(checks).toContainText('Severe alerts without a reason: 1.');
+  await expect(card(page, 'Amoxicillin')).toContainText('Safety: severe alert');
+  await expect(card(page, 'Herbal tonic X')).toContainText('Safety: not fully checked');
+  await expect(checks).toContainText('Herbal tonic X: typed as free text, so not checked for allergies, interactions or dose.');
+
+  await checks.getByRole('button', { name: 'Give a reason to go ahead' }).click();
+  await checks.getByRole('button', { name: 'Record reason' }).click();
+  await expect(checks.getByText('Give a reason, up to 200 characters.')).toBeVisible();
+  expect(calls.overrides).toEqual([]);
+  await checks.getByLabel('Reason to go ahead').fill('Tolerated amoxicillin before (synthetic)');
+  await checks.getByRole('button', { name: 'Record reason' }).click();
+  await expect(checks).toContainText('Overridden with reason: Tolerated amoxicillin before (synthetic)');
+  expect(calls.overrides).toEqual([{ key: 'allergy:rx-1:al-1', reason: 'Tolerated amoxicillin before (synthetic)' }]);
+  await expect(card(page, 'Amoxicillin')).toContainText('Safety: overridden with reason');
+  await expect(checks).not.toContainText('Severe alerts without a reason');
+
+  await checks.getByText('About these checks').click();
+  await expect(checks).toContainText("Source: Medvya's curated starter rules, not a licensed drug database, pending clinical safety sign-off.");
+  await expect(checks).toContainText('Version: 2026.11-draft-1');
+  await expect(checks).toContainText('Age, weight and kidney function are not taken into account.');
+});
+
+test('the checks run again after a change, and "not recorded" allergies are said, never read as none', async ({ page }) => {
+  const { calls } = await mockPrescription(page, { lines: [line('rx-1', 'Metformin')], checks: clearChecks({ allergies: 'NotRecorded', alerts: [{
+    key: 'allergies:not_recorded', kind: 'AllergiesNotRecorded', severity: 'Moderate', itemId: null, medicine: null, other: null, otherOnChart: false, code: null,
+    substance: null, allergyStatus: null, dailyMicrograms: null, maxDailyMicrograms: null }] }) });
+  await page.goto('/consult/e-1');
+  const checks = page.getByRole('region', { name: 'Safety checks' });
+  await expect(checks).toContainText('Allergies: not recorded');
+  await expect(checks.getByRole('status').filter({ hasText: 'Moderate · Allergies are not recorded for this patient' })).toBeVisible();
+  await expect(card(page, 'Metformin')).toContainText('Safety: not fully checked');
+  await expect(checks.getByRole('button', { name: 'Give a reason to go ahead' })).toHaveCount(0); // moderate: no reason asked
+  const before = calls.checked;
+  await card(page, 'Metformin').getByLabel('Dose').fill('2');
+  await expect(card(page, 'Metformin').getByText('Saved')).toBeVisible();
+  await expect.poll(() => calls.checked).toBeGreaterThan(before);
+});
+
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
 for (const locale of ['en', 'ar'])
   test(`axe finds no violations on the prescription composer (${locale})`, async ({ page }) => {
@@ -99,10 +148,14 @@ for (const locale of ['en', 'ar'])
       line('rx-1', 'Metformin', { dose: '1', doseUnit: 'tablet', route: 'oral', frequency: 'BD', sig: { en: 'Take 1 tablet by mouth twice a day.', hi: '1 गोली मुँह से दिन में दो बार लें।', ar: 'تناول 1 قرص عن طريق الفم مرتين يوميًا.' } }),
       line('rx-2', 'Herbal tonic X', { formularyItemId: null, strength: null, form: null, freeText: true }),
       stopLine('Atorvastatin', 'Muscle pain (synthetic)'),
-    ] });
+    ], checks: clearChecks({ allergies: 'Listed', unresolved: 1, alerts: [penicillinAlert('rx-1'), { ...penicillinAlert('rx-1'), key: 'dup', kind: 'Duplicate', severity: 'Moderate', other: 'Metformin', code: 'same_class' }],
+      notChecked: [{ id: 'rx-2', medicine: 'Herbal tonic X', onChart: false, reason: 'FreeText' }] }) });
     await page.goto('/consult/e-1');
     await expect(page.getByRole('region', { name: locale === 'ar' ? 'الوصفة الطبية' : 'Prescription' })).toBeVisible();
     if (locale === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+    await expect(page.getByRole('region', { name: locale === 'ar' ? 'فحوص السلامة' : 'Safety checks' })).toBeVisible();
+    await page.getByRole('button', { name: locale === 'ar' ? 'اذكر سبب المتابعة' : 'Give a reason to go ahead' }).click(); // the reason form is checked too
+    await page.locator('details summary').click();
     await page.addScriptTag({ path: axePath });
     const violations = await page.evaluate(async () =>
       (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations.map(v => `${v.id} (${v.nodes.length})`));

@@ -8,7 +8,7 @@ const issues = (step: number, f: ReturnType<typeof emptyForm>) => {
 
 describe('set-up wizard model (6 Nov steps)', () => {
   it('keeps what was typed through a save and a resume', () => {
-    const form = { ...emptyForm('IN'), fullName: 'Arjun Rao (synthetic)', clinicName: 'Rao Clinic (synthetic)', specialties: ['general-practice', 'diabetes'],
+    const form = { ...emptyForm('IN'), orgType: 'Hospital' as const, contactEmail: 'desk@example.test', fullName: 'Arjun Rao (synthetic)', clinicName: 'Rao Clinic (synthetic)', specialties: ['general-practice', 'diabetes'],
       authority: 'TNMC', number: '84213', days: ['Monday', 'Wednesday', 'Saturday', 'Sunday'] as Day[],
       newVisitFee: '1000', team: [{ email: 'joseph@example.test', role: 'Receptionist' as const }], patients: 'Move' as const };
     const data = toData(form);
@@ -16,6 +16,7 @@ describe('set-up wizard model (6 Nov steps)', () => {
     expect(data.profile?.specialties).toEqual(['general-practice', 'diabetes']);
     expect(data.team).toEqual([{ email: 'joseph@example.test', role: 'Receptionist' }]);
     expect(data.patients).toBe('Move');
+    expect(data.clinic).toMatchObject({ type: 'Hospital', contactEmail: 'desk@example.test' });
     expect(toForm(JSON.parse(JSON.stringify(data)), 'IN')).toEqual(form);
   });
 
@@ -35,9 +36,9 @@ describe('set-up wizard model (6 Nov steps)', () => {
   });
 
   it('answers "required" at once, per step and mode', () => {
-    expect(issues(1, emptyForm('IN'))).toEqual(['fullName:required', 'clinicName:required', 'address:required', 'specialties:required', 'authority:required', 'number:required', 'attested:required']);
-    expect(issues(1, { ...emptyForm('IN'), mode: 'Clinic' })).toEqual(['fullName:required', 'clinicName:required', 'address:required']); // no licence, no specialty
-    expect(issues(1, { ...emptyForm('IN'), mode: 'Clinic', fullName: 'K', clinicName: 'C', address: 'A' })).toEqual([]);
+    expect(issues(1, emptyForm('IN'))).toEqual(['orgType:required', 'contactEmail:required', 'fullName:required', 'clinicName:required', 'address:required', 'specialties:required', 'authority:required', 'number:required', 'attested:required']);
+    expect(issues(1, { ...emptyForm('IN'), mode: 'Clinic' })).toEqual(['orgType:required', 'contactEmail:required', 'fullName:required', 'clinicName:required', 'address:required']); // no licence, no specialty
+    expect(issues(1, { ...emptyForm('IN'), mode: 'Clinic', orgType: 'Hospital', contactEmail: 'desk@example.test', fullName: 'K', clinicName: 'C', address: 'A' })).toEqual([]);
     expect(issues(2, emptyForm('IN'))).toEqual([]); // the design defaults are complete
     expect(issues(2, { ...emptyForm('IN'), days: [], newVisitFee: ' ' })).toEqual(['days:required', 'newVisitFee:required']);
     expect(issues(2, { ...emptyForm('IN'), weekdayStart1: '', weekdayEnd1: '' })).toEqual(['weekdayStart1:required']);
@@ -63,8 +64,10 @@ describe('set-up wizard model (6 Nov steps)', () => {
     expect(formFieldOf('profile.specialties')).toBe('specialties');
     expect(formFieldOf('hours.days')).toBe('days');
     expect(formFieldOf('team.1.role')).toBe('team.1.email');
+    expect(formFieldOf('clinic.type')).toBe('orgType');
+    expect(formFieldOf('clinic.contactEmail')).toBe('contactEmail');
     expect(formFieldOf('step')).toBeNull();
-    expect(['profile.fullName', 'licence.number', 'clinic.taxId', 'hours.slotMinutes', 'templates', 'team.1.email', 'patients'].map(stepOfPath)).toEqual([1, 1, 1, 2, 2, 3, 4]);
+    expect(['profile.fullName', 'licence.number', 'clinic.taxId', 'clinic.type', 'clinic.contactEmail', 'hours.slotMinutes', 'templates', 'team.1.email', 'patients'].map(stepOfPath)).toEqual([1, 1, 1, 1, 1, 2, 2, 3, 4]);
   });
 
   it('previews the booking page from what is typed', () => {

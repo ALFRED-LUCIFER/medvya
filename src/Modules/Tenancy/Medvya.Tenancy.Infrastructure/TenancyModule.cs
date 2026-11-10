@@ -31,6 +31,8 @@ public static class TenancyModule
             .AddScoped<IPracticeSettings, PracticeSettings>()
             .AddScoped<IDoctors, Doctors>()
             .AddScoped<IOrganisationState, OrganisationStates>()
+            .AddScoped<IOrganisationRequests, OrganisationRequests>()
+            .AddScoped<IOrganisationReviews>(sp => new OrganisationReviews(connectionString, sp.GetRequiredService<ICurrentUser>()))
             .AddScoped<IStaffRoster, StaffRoster>()
             .AddScoped<IAccessReviews, AccessReviews>()
             .AddScoped<IComplianceFacts, ComplianceFactsReader>();

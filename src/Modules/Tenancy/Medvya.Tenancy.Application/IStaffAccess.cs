@@ -23,6 +23,12 @@ public interface IStaffAccess
     /// <summary>The same for several capabilities at once (in their order), reading the membership, organisation state and custom role once.</summary>
     Task<IReadOnlyList<Access>> AccessAsync(IReadOnlyList<Capability> capabilities, Guid facilityId, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// The access the member's role holds at <paramref name="facilityId"/> before the organisation's state narrows it. Only for the check that a grant
+    /// never exceeds the granter's own access (invitations, custom roles): that comparison must not change while an organisation is set-up only.
+    /// </summary>
+    Task<IReadOnlyList<Access>> RoleAccessAsync(IReadOnlyList<Capability> capabilities, Guid facilityId, CancellationToken cancellationToken = default);
+
     /// <summary>The role of the user's active membership at the current facility (database), or null. For display and audit, not for access: use <see cref="AccessAsync(Capability, CancellationToken)"/>.</summary>
     Task<Role?> CurrentRoleAsync(CancellationToken cancellationToken = default);
 

@@ -16,6 +16,12 @@ public static class RowLevelSecurity
     /// <summary>The signed-in user, set only by MembershipDirectory (the facility picker).</summary>
     public const string CurrentUser = "nullif(current_setting('medvya.user_id', true), '')::uuid";
 
+    /// <summary>
+    /// Set only by the operations review queue (MDV-P1-064): with no tenant it lets that connection read the organisation, its request and
+    /// its documents (control-plane rows). It never widens a tenant-scoped connection, and it writes nothing.
+    /// </summary>
+    public const string OperatorReview = "nullif(current_setting('medvya.operator', true), '') IS NOT NULL";
+
     /// <summary>The facility-picker branch applies only when no tenant is set, so it never widens a tenant-scoped connection.</summary>
     public const string NoTenantSet = "nullif(current_setting('medvya.tenant_id', true), '') IS NULL";
 

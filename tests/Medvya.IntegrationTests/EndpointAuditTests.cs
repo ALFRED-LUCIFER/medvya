@@ -82,6 +82,20 @@ public sealed class EndpointAuditTests(PostgresFixture sql) : IClassFixture<Post
         "PUT /v1/settings/doctors/{id:guid}/licence",
         "PUT /v1/settings/doctors/{id:guid}/signature",
         "DELETE /v1/settings/doctors/{id:guid}/signature",
+        // Onboarding request (MDV-P1-062): the organisation's type, IT contact and documents, no patient data; every change is audited inside the service (OrganisationRequestTests).
+        "GET /v1/organisation/request/",
+        "PUT /v1/organisation/request/it-contact",
+        "PUT /v1/organisation/request/documents/{kind}",
+        "POST /v1/organisation/request/submit",
+        // Medvya operations' approval API (MDV-P1-064): control-plane requests and documents only, never clinic data; each decision is audited inside the organisation (OrganisationApprovalTests).
+        "GET /v1/operations/organisations/",
+        "GET /v1/operations/organisations/{tenantId:guid}",
+        "GET /v1/operations/organisations/{tenantId:guid}/documents/{documentId:guid}",
+        "POST /v1/operations/organisations/{tenantId:guid}/reinstate",
+        "POST /v1/operations/organisations/{tenantId:guid}/approve",
+        "POST /v1/operations/organisations/{tenantId:guid}/request-changes",
+        "POST /v1/operations/organisations/{tenantId:guid}/reject",
+        "POST /v1/operations/organisations/{tenantId:guid}/suspend",
         // Live board hub (MDV-P1-029): opening the connection carries no patient data. A refused connect is audited Denied
         // (.AuditRefusals, front_desk.board.connect); every Watch call is audited Allowed or Denied by the hub (front_desk.board.watch);
         // messages are ids and state only, and the board itself is read through the audited GET /v1/front-desk/board (BoardHubTests).

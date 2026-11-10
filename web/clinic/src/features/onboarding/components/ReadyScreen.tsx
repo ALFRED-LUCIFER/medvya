@@ -1,4 +1,4 @@
-import { CalendarPlus, CircleCheck, FolderInput, Plug, Store, Users, type LucideIcon } from 'lucide-react';
+import { CalendarPlus, CircleCheck, FileUp, FolderInput, Plug, Store, Users, type LucideIcon } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
 import { Button } from '@medvya/ui';
 import { specialtyIdOf, type FinishResult, type WizardForm } from '../domain/onboarding';
@@ -38,7 +38,7 @@ export default function ReadyScreen({ form, done, homeLabel, onBook, onHome }: P
         ))}
       </dl>
       <div className="flex flex-wrap gap-3">
-        <Button onClick={onBook}><CalendarPlus className="size-4" aria-hidden />{t('onboarding.ready.book')}</Button>
+        <Button onClick={onBook}><FileUp className="size-4" aria-hidden />{t('onboarding.ready.book')}</Button>
         <Button variant="outline" onClick={onHome}>{t(`onboarding.finish.${homeLabel}`)}</Button>
       </div>
     </div>

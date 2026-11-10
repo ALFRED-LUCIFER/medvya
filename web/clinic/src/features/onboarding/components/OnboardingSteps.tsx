@@ -37,6 +37,19 @@ export function PracticeStep({ form, country, rules }: StepProps) {
   const errors = form.formState.errors;
   return (
     <div className="flex flex-col gap-6">
+      <Group legend={t('onboarding.orgType.legend')} error={{ id: 'orgType-error', code: errors.orgType?.message }}>
+        <div className={grid}>
+          {(['Clinic', 'Hospital'] as const).map(k => (
+            <label key={k} className={card}>
+              <input type="radio" value={k} {...form.register('orgType')} className="mt-0.5 size-4 accent-brand-700" />
+              <span className="flex flex-col gap-0.5">
+                <strong className="flex items-center gap-1.5"><Building2 className="size-4" aria-hidden />{t(`onboarding.orgType.${k}`)}</strong>
+                <span className="text-muted-foreground">{t(`onboarding.orgType.${k}.hint`)}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+      </Group>
       <Group legend={t('onboarding.mode.legend')}>
         <div className={grid}>
           {(['Solo', 'Clinic'] as const).map(m => (
@@ -56,6 +69,7 @@ export function PracticeStep({ form, country, rules }: StepProps) {
         <TextField form={form} name="fullName" label={t('onboarding.field.fullName')} required />
         <TextField form={form} name="clinicName" label={t('onboarding.field.clinicName')} required />
         <TextField form={form} name="address" label={t('onboarding.field.address')} required wide />
+        <TextField form={form} name="contactEmail" label={t('onboarding.field.contactEmail')} required ltr type="email" hint={t('onboarding.hint.contactEmail')} />
       </div>
       <Group legend={t('onboarding.specialties.legend')} error={{ id: 'specialties-error', code: errors.specialties?.message }}>
         <div className="flex flex-wrap gap-2">

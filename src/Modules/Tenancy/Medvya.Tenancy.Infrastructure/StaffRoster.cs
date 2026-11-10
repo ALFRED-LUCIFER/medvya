@@ -244,7 +244,7 @@ public sealed class StaffRoster(TenancyDbContext db, ICurrentTenant tenant, ICur
     {
         if (facility.FacilityId is not { } facilityId) return null;
         var capabilities = Enum.GetValues<Capability>();
-        var held = (await access.AccessAsync(capabilities, facilityId, cancellationToken)).Zip(capabilities).ToDictionary(x => x.Second, x => x.First);
+        var held = (await access.RoleAccessAsync(capabilities, facilityId, cancellationToken)).Zip(capabilities).ToDictionary(x => x.Second, x => x.First);
         return c => held[c];
     }
 

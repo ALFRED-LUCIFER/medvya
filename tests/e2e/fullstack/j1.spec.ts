@@ -1,6 +1,6 @@
 import { createRequire } from 'node:module';
 import { expect, test } from '@playwright/test';
-import { browserNow, expectNoAxeViolations, watchUrls } from './support';
+import { browserNow, expectNoAxeViolations, signIn, watchUrls } from './support';
 
 // MDV-P0-029: journey J1 (first solo-doctor visit, docs/02-design/journeys.md) through the real stack: a brand-new person signs up at the
 // development identity provider, sets up a practice, then registers a patient, books and checks in. Step 2 (fees catalogue) and steps 5-8
@@ -12,7 +12,7 @@ const patient = {
   mobile: `+91 90000 0${n}`, emergency: 'Gopal Iyengar', emergencyMobile: `+91 90000 1${n}`,
 };
 
-test('J1: a new solo doctor sets up the practice, registers a patient, books and checks in', async ({ page }) => {
+test('J1: a new clinic owner sets up the practice, Medvya approves it, then a patient is registered, booked and checked in', async ({ page, browser }) => {
   const watch = watchUrls(page);
   await page.addInitScript({ path: axePath });
   await page.clock.setFixedTime(browserNow());
@@ -32,6 +32,8 @@ test('J1: a new solo doctor sets up the practice, registers a patient, books and
     await expect(page.getByLabel('Full name')).toHaveValue('Arjun Menon (synthetic)');
     await expect(page.getByLabel('Practice name')).toHaveValue(`Menon Clinic ${n} (synthetic)`);
     await page.getByLabel(/^Address/).fill('12 Test Street, Chennai');
+    await page.getByLabel('A clinic').check(); // ADR-016: Clinic or Hospital is chosen first; a doctor who works alone registers a clinic
+    await page.getByLabel('Email Medvya writes to about this request').fill(`owner${n}@example.test`);
     await page.getByLabel('General practice').check();
     await page.getByRole('combobox', { name: 'Medical council' }).click();
     await page.getByRole('option', { name: /TNMC/ }).click();
@@ -53,18 +55,52 @@ test('J1: a new solo doctor sets up the practice, registers a patient, books and
     await expect(page.getByRole('heading', { level: 1, name: `Menon Clinic ${n} (synthetic) is ready.` })).toBeVisible();
     await expect(page.getByText(/could not be sent/)).toHaveCount(0);
     await expectNoAxeViolations(page);
-    await page.getByRole('button', { name: 'Open Today' }).click();
-    await expect(page.getByRole('navigation').first()).toBeVisible(); // wait for the shell: the absence check below proves nothing on the wizard
-    await expect(page).not.toHaveURL(/onboarding/);
-    await expect(page.getByText(/Waiting for approval|being set up/)).toHaveCount(0); // no Medvya licence check: recording and signing are open at once
-    await page.reload(); // the server, not the screen, holds the practice
-    await expect(page.getByRole('navigation').first()).toBeVisible();
-    await expect(page).not.toHaveURL(/onboarding/);
-    // The owner of a solo practice administers it (Staff, roles, integrations = Config): the staff list opens at once.
+    await expect(page.getByText(/add the documents Medvya needs and send the request/)).toBeVisible();
+    // ADR-016: the new organisation is set-up only until Medvya approves it. The ready screen leads to the onboarding request.
+    await page.getByRole('button', { name: 'Add documents and send the request' }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Onboarding request' })).toBeVisible();
+    await expect(page.getByRole('note').filter({ hasText: 'Medvya has not approved it yet' })).toBeVisible();
+    const refused = await page.request.post('/v1/patients/search', { headers: { 'X-Medvya-Csrf': '1' }, data: {} });
+    expect(refused.status()).toBe(403); // the server, not the screen, keeps patients off before approval
+    // The staff list of the new organisation: set-up works at once for the owner (Staff, roles, integrations = Config).
     const staff = await page.request.get('/v1/staff');
     expect(staff.status(), await staff.text()).toBe(200);
     // shortcut: the stack has no SMTP sink (that is `pnpm services:up`), so delivery is not asserted here; the integration tests check the email.
     expect(await staff.json()).toContainEqual(expect.objectContaining({ email: `reception${n}@example.test`, status: 'Invited' }));
+  });
+
+  await test.step('J1.1 submit the onboarding request, Medvya asks for a change, the owner resubmits, Medvya approves', async () => {
+    const pdf = { name: 'document.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 synthetic') };
+    const tenantId = (await (await page.request.get('/v1/me/context')).json()).memberships[0].tenantId as string;
+    await expect(page.getByRole('button', { name: 'Send request to Medvya' })).toBeDisabled();
+    for (const label of ['Clinic registration certificate', 'Tax registration (GSTIN or TRN)', /^Owner’s government ID/, 'Your medical council registration'])
+      await page.getByLabel(label).setInputFiles(pdf);
+    await expect(page.getByText('Not added yet')).toHaveCount(0);
+    await expectNoAxeViolations(page);
+    await page.getByRole('button', { name: 'Send request to Medvya' }).click();
+    await expect(page.getByRole('status').filter({ hasText: 'Sent. Waiting for Medvya to review it.' })).toBeVisible();
+    await expect(page.getByRole('note').filter({ hasText: 'Waiting for approval' })).toBeVisible();
+
+    // Medvya operations, through the interim API (docs/runbooks/organisation-approval.md), in their own browser.
+    const ops = await browser.newPage();
+    await signIn(ops, /K\. Lakshmi/);
+    const act = (action: string, reason: string) => ops.request.post(`/v1/operations/organisations/${tenantId}/${action}`, { headers: { 'X-Medvya-Csrf': '1' }, data: { reason } });
+    const queue = await ops.request.get('/v1/operations/organisations/?filter=Waiting');
+    expect(await queue.json()).toContainEqual(expect.objectContaining({ tenantId, state: 'Submitted', type: 'Clinic' }));
+    expect((await act('request-changes', 'The registration certificate is unreadable')).status()).toBe(204);
+
+    await page.reload();
+    await expect(page.getByText('The registration certificate is unreadable')).toBeVisible();
+    await page.getByLabel('Clinic registration certificate').setInputFiles(pdf);
+    await page.getByRole('button', { name: 'Send again to Medvya' }).click();
+    await expect(page.getByRole('status').filter({ hasText: 'Sent. Waiting for Medvya to review it.' })).toBeVisible();
+    expect((await act('approve', 'Documents checked')).status()).toBe(204);
+    await ops.close();
+
+    await page.goto('/app/');
+    await expect(page.getByRole('navigation').first()).toBeVisible();
+    await expect(page.getByText(/Waiting for approval|being set up/)).toHaveCount(0); // approved: patients, booking and notes are on
+    await expect(page).not.toHaveURL(/onboarding/);
   });
 
   await test.step('J1.3 from an empty slot, register the first patient with the India minimum, ABHA left empty', async () => {

@@ -85,7 +85,7 @@ export default function AuditLogPanel(p: Props) {
               const at = new Date(r.occurredAt);
               return (
                 <TableRow key={r.id}>
-                  <TableCell className="whitespace-nowrap"><time dateTime={r.occurredAt}>{formatDate(at)} {formatTime(at, zone)}</time></TableCell>
+                  <TableCell className="whitespace-nowrap"><time dateTime={r.occurredAt}>{formatDate(at, zone)} {formatTime(at, zone)}</time></TableCell>
                   <TableCell>{r.actorName ?? t('audit.unknownStaff')}</TableCell>
                   <TableCell>{r.role ? t(`role.${r.role}`) : t('audit.roleNotRecorded')}</TableCell>
                   <TableCell>{r.location ?? t('audit.roleNotRecorded')}</TableCell>

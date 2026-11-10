@@ -23,3 +23,7 @@ Added `Medvya Admin.dc.html` (platform console) and `Medvya Mobile.dc.html` (two
 ## Web re-import, 7 Nov 2026
 
 `Medvya Web.dc.html` was replaced with the current version from the design project: it adds the public site pages (home, Medvya Assist, for hospitals, pricing, trust centre, book a demo), the sign-in and create-account screens and the six-step set-up wizard. Planned in MDV-P1-053 to P1-061 and MDV-P5-050.
+
+## Foundations re-import, 10 Nov 2026 (MDV-P5-001)
+
+`Medvya Foundations.dc.html` was replaced with the newer version from the design project (links to Medvya Web, records the 6 Nov approvals). `Medvya Admin`, `Medvya Mobile` and `Medvya Web` were compared with the design project and are byte-identical, so they were not re-imported. **Screens N-04 to N-14 are not in the design project yet** (no migration, data-quality, EID, exchange, extraction, letters, voice-console, plans, ops-console, help or export design), so MDV-P5-001 stays open and the dependent ticket confidence is unchanged.

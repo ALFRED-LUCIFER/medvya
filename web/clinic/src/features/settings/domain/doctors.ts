@@ -1,8 +1,6 @@
 import { z } from 'zod';
 
 // Mirrors src/Modules/Tenancy/Medvya.Tenancy.Application/IDoctors.cs (the server is the authority; these checks only save a round trip).
-/** Expired: verified once but past its expiry date; the doctor cannot record or sign until a renewed licence is verified (MDV-P1-010). */
-export type LicenceStatus = 'Pending' | 'Verified' | 'Rejected' | 'Expired';
 export type Authority = { code: string; name: string };
 export type Doctor = {
   id: string;
@@ -17,8 +15,12 @@ export type Doctor = {
   number: string;
   category: string | null;
   expiresOn: string | null;
-  licence: LicenceStatus;
-  rejectionReason: string | null;
+  /** Past its expiry date: a warning and a re-attestation prompt, never a block (ADR-016). */
+  expired: boolean;
+  attestedBy: string | null;
+  /** The attesting owner's name when they are a doctor of the practice; otherwise the screen says "the owner". */
+  attestedByName: string | null;
+  attestedAt: string;
   hasSignature: boolean;
 };
 export type DoctorList = {
@@ -27,8 +29,8 @@ export type DoctorList = {
   authorities: Authority[];
 };
 
-/** The wizard steps in order (F-09). Verification and schedule only explain what happens next; they collect nothing. */
-export const doctorSteps = ['details', 'licence', 'verification', 'schedule', 'fees', 'access', 'signature'] as const;
+/** The wizard steps in order (F-09). Schedule only explains what happens next; it collects nothing. */
+export const doctorSteps = ['details', 'licence', 'schedule', 'fees', 'access', 'signature'] as const;
 export type DoctorStep = (typeof doctorSteps)[number];
 
 const text = (max: number) => z.string().trim().max(max);
@@ -40,6 +42,7 @@ export const licenceSchema = z.object({
   category: z.string().trim().min(1).max(40),
   expiresOn: z.iso.date(),
   certificateName: text(200),
+  attested: z.literal(true),
 });
 export type LicenceForm = z.infer<typeof licenceSchema>;
 
@@ -55,7 +58,7 @@ export const doctorSchema = licenceSchema.extend({
 });
 export type DoctorForm = z.infer<typeof doctorSchema>;
 
-export const emptyLicence: LicenceForm = { authority: '', number: '', category: '', expiresOn: '', certificateName: '' };
+export const emptyLicence = { authority: '', number: '', category: '', expiresOn: '', certificateName: '', attested: false } as unknown as LicenceForm; // attested starts unticked: the owner must tick it
 export const emptyDoctor = (facilityId: string, fees: { newVisitFee: number; followUpFee: number } = { newVisitFee: 0, followUpFee: 0 }): DoctorForm => ({
   ...emptyLicence, fullName: '', email: '', specialty: '', qualifications: '', languages: '', facilityId,
   newVisitFee: String(fees.newVisitFee / 100), followUpFee: String(fees.followUpFee / 100),
@@ -64,8 +67,7 @@ export const emptyDoctor = (facilityId: string, fees: { newVisitFee: number; fol
 /** Fields each wizard step asks for, so Next validates only its own step. */
 export const stepFields: Record<DoctorStep, (keyof DoctorForm)[]> = {
   details: ['fullName', 'email', 'specialty', 'qualifications', 'languages'],
-  licence: ['authority', 'number', 'category', 'expiresOn', 'certificateName'],
-  verification: [],
+  licence: ['authority', 'number', 'category', 'expiresOn', 'certificateName', 'attested'],
   schedule: [],
   fees: ['newVisitFee', 'followUpFee'],
   access: ['facilityId'],
@@ -79,7 +81,7 @@ const blank = (v: string) => (v === '' ? null : v);
 
 export const toAddBody = (f: DoctorForm) => ({
   fullName: f.fullName, email: f.email, specialty: f.specialty, qualifications: blank(f.qualifications), languages: blank(f.languages), facilityId: f.facilityId,
-  authority: f.authority, licenceNumber: f.number, category: f.category, expiresOn: f.expiresOn, certificateName: blank(f.certificateName),
+  authority: f.authority, licenceNumber: f.number, category: f.category, expiresOn: f.expiresOn, certificateName: blank(f.certificateName), attested: f.attested,
   newVisitFee: toMinor(f.newVisitFee), followUpFee: toMinor(f.followUpFee),
 });
 
@@ -93,7 +95,7 @@ export function errorTarget(path: string): { step: DoctorStep; field: keyof Doct
 }
 
 /** Problem codes from the API ("field:code" for a rejected field, as the shared client reports them). */
-export const doctorProblems = ['signature:type', 'signature:too_large', 'licence:verified'] as const;
+export const doctorProblems = ['signature:type', 'signature:too_large'] as const;
 export type DoctorProblem = (typeof doctorProblems)[number] | 'failed';
 export const doctorProblem = (code: string | undefined): DoctorProblem => ((doctorProblems as readonly string[]).includes(code ?? '') ? (code as DoctorProblem) : 'failed');
 

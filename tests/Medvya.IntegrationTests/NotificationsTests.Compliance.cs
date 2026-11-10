@@ -22,7 +22,7 @@ public sealed partial class NotificationsTests
     {
         var membership = await DoctorMembershipAsync();
         await using var db = sql.Context(h.Tenant);
-        db.DoctorLicences.Add(new DoctorLicence { MembershipId = membership, TenantId = h.Tenant, Authority = "TNMC", Number = "84213", ExpiresOn = expires, SubmittedAt = h.Clock.GetUtcNow(), VerifiedAt = h.Clock.GetUtcNow() });
+        db.DoctorLicences.Add(new DoctorLicence { MembershipId = membership, TenantId = h.Tenant, Authority = "TNMC", Number = "84213", ExpiresOn = expires, SubmittedAt = h.Clock.GetUtcNow() });
         db.Profiles.Add(new PracticeProfile { Id = Guid.CreateVersion7(), TenantId = h.Tenant, Email = "desk@clinic.example" });
         await db.SaveChangesAsync();
         return membership;

@@ -60,7 +60,7 @@ public sealed partial class InvitationTests(PostgresFixture sql) : IClassFixture
     {
         await using var db = sql.Context(tenant);
         var site = new Facility { Id = Guid.NewGuid(), TenantId = tenant, Name = facility, TimeZone = "Asia/Kolkata" };
-        db.Tenants.Add(new Tenant { Id = tenant, Name = name, CountryCode = "IN", ResidencyRegion = "centralindia" });
+        db.Tenants.Add(new Tenant { State = OrganisationState.Approved, Id = tenant, Name = name, CountryCode = "IN", ResidencyRegion = "centralindia" });
         db.Facilities.Add(site);
         db.Memberships.Add(new Membership { Id = Guid.NewGuid(), TenantId = tenant, UserId = admin, FacilityId = site.Id, Role = Role.PracticeAdmin, Status = MembershipStatus.Active });
         await db.SaveChangesAsync();

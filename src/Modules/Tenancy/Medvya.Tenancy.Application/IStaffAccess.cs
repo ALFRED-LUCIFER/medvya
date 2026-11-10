@@ -16,21 +16,21 @@ public interface IStaffAccess
 
     /// <summary>
     /// Same as <see cref="AccessAsync(Capability, CancellationToken)"/> for an explicit facility of the tenant (scheduling and messages take
-    /// the facility from the request). Includes custom-role extras and the licence gate; <see cref="Access.None"/> without an active membership there.
+    /// the facility from the request). Includes custom-role extras and the organisation-state gate; <see cref="Access.None"/> without an active membership there.
     /// </summary>
     Task<Access> AccessAsync(Capability capability, Guid facilityId, CancellationToken cancellationToken = default);
 
-    /// <summary>The same for several capabilities at once (in their order), reading the membership, licence and custom role once.</summary>
+    /// <summary>The same for several capabilities at once (in their order), reading the membership, organisation state and custom role once.</summary>
     Task<IReadOnlyList<Access>> AccessAsync(IReadOnlyList<Capability> capabilities, Guid facilityId, CancellationToken cancellationToken = default);
 
     /// <summary>The role of the user's active membership at the current facility (database), or null. For display and audit, not for access: use <see cref="AccessAsync(Capability, CancellationToken)"/>.</summary>
     Task<Role?> CurrentRoleAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// True while the active membership is a doctor whose licence is not verified (pending, rejected or never submitted): recording and signing
-    /// capabilities are then <see cref="Access.None"/> in <see cref="AccessAsync"/> (MDV-P1-004, feature-level, not only the UI).
+    /// The current organisation's state. <see cref="AccessAsync(Capability, CancellationToken)"/> already applies it (<see cref="OrganisationRules"/>),
+    /// so a patient, booking, note or signing endpoint is refused before approval (ADR-016, MDV-P1-063); this is for the shell notice.
     /// </summary>
-    Task<bool> LicencePendingAsync(CancellationToken cancellationToken = default);
+    Task<OrganisationState> OrganisationStateAsync(CancellationToken cancellationToken = default);
 
     /// <summary>Country of the current tenant ("IN" or "AE"); selects the country rules. Null without a tenant.</summary>
     Task<string?> TenantCountryAsync(CancellationToken cancellationToken = default);

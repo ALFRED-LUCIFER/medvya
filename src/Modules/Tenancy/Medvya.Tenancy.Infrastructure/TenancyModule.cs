@@ -30,7 +30,7 @@ public static class TenancyModule
             .AddScoped<IAccessRequests, AccessRequests>()
             .AddScoped<IPracticeSettings, PracticeSettings>()
             .AddScoped<IDoctors, Doctors>()
-            .AddScoped<ILicenceReview, LicenceReview>()
+            .AddScoped<IOrganisationState, OrganisationStates>()
             .AddScoped<IStaffRoster, StaffRoster>()
             .AddScoped<IAccessReviews, AccessReviews>()
             .AddScoped<IComplianceFacts, ComplianceFactsReader>();

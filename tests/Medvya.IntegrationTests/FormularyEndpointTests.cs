@@ -22,7 +22,7 @@ public sealed class FormularyEndpointTests(PostgresFixture sql) : IClassFixture<
         await using (var db = sql.Context(h.Tenant))
         {
             var membership = await db.Memberships.SingleAsync(m => m.UserId == h.Doctor);
-            db.DoctorLicences.Add(new Medvya.Tenancy.Domain.DoctorLicence { MembershipId = membership.Id, TenantId = h.Tenant, Authority = "TNMC", Number = "84213", SubmittedAt = DateTimeOffset.UtcNow, VerifiedAt = DateTimeOffset.UtcNow });
+            db.DoctorLicences.Add(new Medvya.Tenancy.Domain.DoctorLicence { MembershipId = membership.Id, TenantId = h.Tenant, Authority = "TNMC", Number = "84213", SubmittedAt = DateTimeOffset.UtcNow });
             await db.SaveChangesAsync();
         }
         factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b

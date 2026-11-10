@@ -122,7 +122,7 @@ export function useDoctorsController(defaultFacilityId: string) {
     licenceErrors,
     onCorrect: (d: Doctor | null) => {
       setCorrecting(d);
-      if (d) licenceForm.reset({ authority: d.authority, number: d.number, category: d.category ?? '', expiresOn: d.expiresOn ?? '', certificateName: '' });
+      if (d) licenceForm.reset({ authority: d.authority, number: d.number, category: d.category ?? '', expiresOn: d.expiresOn ?? '', certificateName: '', attested: false as unknown as true });
     },
     onSubmitLicence: licenceForm.handleSubmit(values => correct.mutate(values)),
     correctingBusy: correct.isPending,

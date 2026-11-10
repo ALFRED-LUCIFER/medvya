@@ -64,14 +64,6 @@ public sealed class SignNoteTests(PostgresFixture sql) : IClassFixture<PostgresF
 
     static async Task<JsonElement> Json(HttpResponseMessage r) => await r.Content.ReadFromJsonAsync<JsonElement>();
 
-    async Task VerifyLicenceAsync(Guid user)
-    {
-        await using var db = sql.Context(h.Tenant);
-        var membership = await db.Memberships.SingleAsync(m => m.UserId == user && m.FacilityId == h.Facility);
-        db.DoctorLicences.Add(new DoctorLicence { MembershipId = membership.Id, TenantId = h.Tenant, Authority = "TNMC", Number = "SYN-0001", SubmittedAt = h.Clock.GetUtcNow(), VerifiedAt = h.Clock.GetUtcNow() });
-        await db.SaveChangesAsync();
-    }
-
     async Task<int> SaveDraftAsync(object sections, int baseVersion = 0)
     {
         using var r = await Client(h.Doctor).PutAsJsonAsync(U($"/v1/encounters/{encounter}/note"), new { baseVersion, sections });
@@ -103,7 +95,6 @@ public sealed class SignNoteTests(PostgresFixture sql) : IClassFixture<PostgresF
     [Fact]
     public async Task ASignedNoteFreezesVersionOneWithItsHashSignerAndTimeAndIsAudited()
     {
-        await VerifyLicenceAsync(h.Doctor);
         var version = await SaveDraftAsync(Complete);
         using var signed = await SignAsync(h.Doctor, version);
         Assert.True(signed.IsSuccessStatusCode, await signed.Content.ReadAsStringAsync());
@@ -132,7 +123,6 @@ public sealed class SignNoteTests(PostgresFixture sql) : IClassFixture<PostgresF
     [Fact]
     public async Task SigningNeedsAReauthenticationInTheLastFiveMinutes()
     {
-        await VerifyLicenceAsync(h.Doctor);
         var version = await SaveDraftAsync(Complete);
         foreach (var minutes in new int?[] { null, 6 })
         {
@@ -147,7 +137,6 @@ public sealed class SignNoteTests(PostgresFixture sql) : IClassFixture<PostgresF
     [Fact]
     public async Task ABlankRequiredSectionBlocksSigningWithItsCodeAndNothingIsWritten()
     {
-        await VerifyLicenceAsync(h.Doctor);
         var version = await SaveDraftAsync(new { chiefComplaint = Text, plan = "  " }); // assessment never entered, plan blank
         using var blocked = await SignAsync(h.Doctor, version);
         Assert.Equal(HttpStatusCode.BadRequest, blocked.StatusCode);
@@ -158,12 +147,9 @@ public sealed class SignNoteTests(PostgresFixture sql) : IClassFixture<PostgresF
     }
 
     [Fact]
-    public async Task OnlyAVerifiedDoctorWithACareRelationshipSigns()
+    public async Task OnlyADoctorWithACareRelationshipSigns()
     {
         var version = await SaveDraftAsync(Complete);
-        using (var unverified = await SignAsync(h.Doctor, version)) Assert.Equal(HttpStatusCode.Forbidden, unverified.StatusCode); // licence not verified
-        await VerifyLicenceAsync(h.Doctor);
-        await VerifyLicenceAsync(h.SecondDoctor);
         foreach (var user in new[] { h.Reception, h.Nurse })
         {
             using var r = await SignAsync(user, version);
@@ -184,7 +170,6 @@ public sealed class SignNoteTests(PostgresFixture sql) : IClassFixture<PostgresF
     [Fact]
     public async Task ASignedNoteCannotBeEditedByTheApiOrTheDatabase()
     {
-        await VerifyLicenceAsync(h.Doctor);
         var version = await SaveDraftAsync(Complete);
         using (await SignAsync(h.Doctor, version)) { }
         var signed = await NoteAsync();
@@ -215,7 +200,6 @@ public sealed class SignNoteTests(PostgresFixture sql) : IClassFixture<PostgresF
     [Fact]
     public async Task SigningTwiceOrAtOnceWritesOneSignatureAndTheRetryGetsTheSignedNote()
     {
-        await VerifyLicenceAsync(h.Doctor);
         var version = await SaveDraftAsync(Complete);
         var results = await Task.WhenAll(Enumerable.Range(0, 4).Select(async _ =>
         {
@@ -232,7 +216,6 @@ public sealed class SignNoteTests(PostgresFixture sql) : IClassFixture<PostgresF
     [Fact]
     public async Task ASaveSinceTheEditorReadTheNoteIsRefusedAsStaleNotSigned()
     {
-        await VerifyLicenceAsync(h.Doctor);
         var version = await SaveDraftAsync(Complete);
         await SaveDraftAsync(Complete, version);
         using var stale = await SignAsync(h.Doctor, version);

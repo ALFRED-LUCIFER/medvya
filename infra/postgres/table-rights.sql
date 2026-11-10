@@ -83,12 +83,27 @@ GRANT USAGE ON SCHEMA tenancy, audit, ledger TO medvya_review;
 DO $$
 DECLARE g text[];
 BEGIN
-    FOREACH g SLICE 1 IN ARRAY ARRAY[['tenancy.Tenants', 'SELECT, UPDATE'], ['tenancy.OrganisationRequests', 'SELECT, UPDATE'],
+    FOREACH g SLICE 1 IN ARRAY ARRAY[['tenancy.Tenants', 'SELECT'], ['tenancy.OrganisationRequests', 'SELECT'],
                                     ['tenancy.OrganisationDocuments', 'SELECT'], ['tenancy.Profiles', 'SELECT'],
-                                    ['tenancy.SettingsChanges', 'SELECT, INSERT'], ['audit.AuditEvents', 'SELECT, INSERT']]
+                                    ['tenancy.SettingsChanges', 'SELECT, INSERT'], ['audit.AuditEvents', 'INSERT']]
     LOOP
         IF to_regclass(format('%I.%I', split_part(g[1], '.', 1), split_part(g[1], '.', 2))) IS NOT NULL THEN
             EXECUTE format('GRANT %s ON %I.%I TO medvya_review', g[2], split_part(g[1], '.', 1), split_part(g[1], '.', 2));
+        END IF;
+    END LOOP;
+    -- Column rights (each only once its columns exist: this file also runs before migrations, when a new column is not there yet).
+    --   Tenants.State and OrganisationRequests.LastReason: all a decision changes, so not the organisation's name or anything else.
+    --   AuditEvents chain head: the ledger trigger (run as the caller) reads it to link a new row; ids, sequence and hash, never what happened.
+    FOREACH g SLICE 1 IN ARRAY ARRAY[['tenancy.Tenants', 'UPDATE', 'State'], ['tenancy.OrganisationRequests', 'UPDATE', 'LastReason'],
+                                    ['audit.AuditEvents', 'SELECT', 'TenantId,ChainSeq,RowHash']]
+    LOOP
+        IF to_regclass(format('%I.%I', split_part(g[1], '.', 1), split_part(g[1], '.', 2))) IS NOT NULL AND NOT EXISTS (
+            SELECT 1 FROM unnest(string_to_array(g[3], ',')) AS col(name) WHERE NOT EXISTS (
+                SELECT 1 FROM pg_attribute WHERE attrelid = to_regclass(format('%I.%I', split_part(g[1], '.', 1), split_part(g[1], '.', 2)))
+                AND attname = col.name AND NOT attisdropped))
+        THEN
+            EXECUTE format('GRANT %s (%s) ON %I.%I TO medvya_review', g[2],
+                (SELECT string_agg(format('%I', c), ', ') FROM unnest(string_to_array(g[3], ',')) AS c), split_part(g[1], '.', 1), split_part(g[1], '.', 2));
         END IF;
     END LOOP;
     -- The tenant row's read policy has a facility-picker branch that looks the signed-in user up in Memberships; a policy runs with the caller's rights,

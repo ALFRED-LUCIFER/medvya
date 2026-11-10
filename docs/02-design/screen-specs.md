@@ -28,17 +28,29 @@ Rebuilt to the 6 Nov 2026 design (`Medvya Web`, area web) by MDV-P1-053 (shell) 
 - Required states (wireframe): wrong code, locked (15 min), passkey unsupported, SSO-enforced tenant.
 - **6 Nov 2026 revision (MDV-P1-059, MDV-P1-060):** Medvya renders the sign-in start (work email, passed to Entra as a login hint; passkey and organisation sign-in start the same Entra flow), create account steps 1-2 (country, practice name, city; full name, email, doctor or clinic manager: they pre-fill the F-04 draft), invitation acceptance (F-06), choose location ("Where are you working today?", last used first, "Not you? Sign out") and signed out (F-05a, "You were signed out"). The code, passkey, MFA set-up, recovery and the states above are Entra pages, branded by `infra/entra/branding.sh`. Not built: "This is a shared computer" (no shared-device session policy on the server yet), the mobile number (recovery is Entra's), Help link and legal line (no pages yet).
 
-### F-04 Solo doctor onboarding (6 steps, autosave)
-| Step | Fields |
-|---|---|
-| 1 Your profile | Full name, specialty, qualifications, languages consulted in |
-| 2 Licence | India: council + reg. no. (e.g. TNMC 84213). UAE: DoH/DHA/MOHAP licence (GD-29918). Certificate upload. **Notice:** "Verification pending · usually within 1 working day. You can book and register patients meanwhile; ambient recording and signing unlock after verification." |
-| 3 Clinic | Clinic name, address, India "Clinical establishment reg." / UAE "Facility licence", India GSTIN (optional) / UAE TRN |
-| 4 Hours & fees | Weekdays 09:00–13:00, 17:00–20:00; Saturday; slot length 20 min; fee ₹1,000 new · ₹600 follow-up (AED 350 / 250) |
-| 5 Note templates | General OPD, Diabetes review, Hypertension, Paediatrics, Antenatal, Teleconsult (multi-select) |
-| 6 Invite your team | Receptionist and nurse email/mobile (optional). CTA "Finish · go to Today" |
+### F-04 Organisation approval request, then set up while waiting (ADR-016; `Medvya Web`, redesigned 10 Nov 2026)
+Replaces the 6-step solo-doctor wizard. Eight steps: four of the **approval request**, three of **setup while you wait**, one status step. Draft autosaves ("Draft saved 10:42"); a "Why we approve first" note says Medvya approves the organisation once and reviewers never see patient data.
 
-- Side note: "Progress saves automatically. You can see patients before finishing; recording unlocks after licence verification."
+| Step | Content |
+|---|---|
+| 1 of 4 Clinic or hospital | Two cards: Clinic ("including a doctor working alone; the owner registers it") and Hospital ("an authorised signatory registers it"). Clinic only: toggle "I am a doctor and the owner" (adds the council registration document). Specialties multi-select (for services and forms). |
+| 2 of 4 Organisation details | Legal name, registered address, contact phone and email, country (fixed at sign-up, "can't be changed"), tax number with format check (India GSTIN, state code checked; UAE TRN 15 digits). Hospital adds authorised signatory and IT or security contact. |
+| 3 of 4 Documents | Clinic: registration certificate, tax number, owner ID, owner's council registration (if doctor) = 4 or 5 items. Hospital: registration certificate, tax number, signatory ID, authorisation letter, IT contact, signed DPA = 6 items. PDF, JPG or PNG up to 10 MB, "stored privately in your country". India ID hint: mask the first 8 digits of Aadhaar. |
+| 4 of 4 Check and submit | Review rows with ticks, missing count in red. Clinic: checkbox accepting Terms and DPA ("[LEGAL]" wording pending). Hospital: shows whether the signed DPA is uploaded. Confirmation that details are true and the person is authorised. Usual reply time "[SLA, to be decided]". CTA "Submit for approval". |
+| Setup 1 of 3 Hours and services | Opening days, appointment length, services with fees (prefilled from specialty). |
+| Setup 2 of 3 First team | "N of 3 starter places used, 1 doctor + 2 other staff"; at the cap an Invite is disabled with "Starter limit reached ... after Medvya approves". Invitees see only "waiting for approval". |
+| Setup 3 of 3 Payments and messages | India UPI, WhatsApp, NHCX (later); UAE cards, WhatsApp. "Connect now; they start working when you are approved." |
+| Waiting for approval | Summary, what happens next, app download prompt, CTA "Open Medvya". |
+
+**After the wizard** (`prac` states in the clinic app, owner and staff):
+- States: Draft, Submitted (in review), Needs changes, Rejected, Suspended, Approved. Each has a banner (icon plus words, not colour alone), a "Medvya reviewer" reason card and a four-step timeline (started, submitted, reviewed, approved).
+- Before approval (Draft, Submitted, Needs changes, Rejected) non-owner staff see a full-page "Waiting for approval" (or "isn't active" for Rejected) with "Questions? Ask {owner}". The owner sees "You can do now" (profile and locations, hours and services, staff up to the cap, payments) and "Opens after approval" (register patients, booking, check-in and queue, notes and signing, more staff), with "The server refuses these until approval, not only this screen".
+- Needs changes: reason, fix and Resubmit. Rejected: reason, "final for this request", "Start a new request" copies the details in (documents re-uploaded), "Contact Medvya".
+- Suspended: banner only; existing records open; "New registration paused".
+- Settings, **Organisation and approval**: profile, documents (locked while in review), history; **Team and roles**; **Practice and locations** (each location records its certificate and tax number); **Plan and billing**.
+- **Attest doctor's licence** drawer (Team): licence number, issuing authority (country list), valid until, checkbox "I have seen this doctor's current licence ... I am responsible", "Printed on prescriptions as ...". Copy: Medvya does not check licences; reminders 30 days before expiry and on the day; an expired licence warns and does not block signing ("policy under review").
+- Public site: solo plan reads "you register as a clinic and are its owner"; FAQ "Why does Medvya approve my clinic first?"; switch-over steps "Sign up as a clinic or hospital, Medvya approves you".
+- Not designed: clinic approval email text, resubmit validation errors, document upload errors (size, type, malware), Hindi and Arabic strings for the new steps, mobile layouts of the wizard.
 
 ### F-05 System states
 | ID | Title | Body | CTA |
@@ -62,6 +74,21 @@ Microcopy key `err.403` = "You don’t have access to this facility."
 - Footer: "We describe our controls; we do not claim certifications we have not obtained." Policy versions and sub-processors are listed with dates. A demo request form collects **no PHI**.
 
 ---
+
+### F-07 (Foundations 10 Nov 2026) Organisation approvals queue
+Foundations now lists a second **F-07** ("Organisation approvals queue, admin /approvals") next to this Trust centre. The ID clashes; the queue is specified under Platform console below. Question for the designer: renumber one.
+
+## Platform console, organisation approvals (N-12, MDV-P1-064, MDV-P5-044) — `Medvya Admin`, redesigned 10 Nov 2026
+Nav item "Approvals" (was "Verifications"), badge = waiting count. Overview KPI "Approvals waiting" (oldest 3 days, target [SLA]) and attention row "N organisation requests waiting for approval: can set up but can't see patients until decided". Funnel drop-off reads "Waiting for organisation approval". The page header says "Medvya approves clinics and hospitals, never individual doctors. You see only the request and its documents, never patient data."
+- **Queue** (left, 340 px): filters Waiting (count), Needs changes, Decided, All; each row shows name, place, state chip, type chip (Clinic or Hospital), country chip, wait. Empty: "Nothing here."
+- **Detail**: header with name, place, country, type and state chips; wait line with target "[SLA · to be decided] · reviewer not yet named" and "No patient data in this request"; profile grid (owner or authorised signatory, contact, GSTIN or TRN, starter team); **Documents** each with an automatic check line (e.g. "Name and address match", "Format OK · state 27 matches", "Spelling differs" as a warning) and Open (private, watermarked viewer, no download, every view logged); History with actor.
+- **Decision** (only Operations and Reviewer): Approve, Ask for changes, Reject. Required reason, sent to the applicant, plain language, no patient details; preset text per decision. Reject shows "Rejection is final for this request. The applicant can start a new one." A hospital without a signed DPA cannot be approved ("Can't approve yet ... Ask for changes instead"). The confirmation toast says email sent and logged; an email preview ("No PHI") appears after the decision. Name, decision, reason and time go to the audit log.
+- **Roles** ("Acting as", demo control): Support and Finance read requests only (cannot approve, ask for changes, reject or suspend); team page adds a Reviewer, "Support, read-only on approvals" and "Finance, read-only on approvals".
+- **Suspend and reinstate** (tenant page): button reads "Suspend organisation..." and, once suspended, "Reinstate organisation" (one click, no confirmation, logged). Hint "Operations and reviewers only. Always with a written reason; logged." Confirmation copy: existing records stay readable for care under way; new registration, booking and signing are refused; the owner is emailed the reason; nothing is deleted.
+- Not designed: the tenant catalogue and tenant detail do not yet show organisation type, approval state or location count; plans do not show seat types; resubmitted requests (history only); per-document flagging (one reason for the whole request); suspension reason entry on this screen beyond the confirm dialog; 403 page; loading and error states; Arabic.
+
+## Mobile clinic app (`Medvya Mobile`, 10 Nov 2026)
+A "Clinic approval" demo switch (Approved, Waiting, Suspended). Waiting: after sign-in a "Waiting for approval" page (hourglass, "{clinic} is waiting for Medvya to approve it. We'll send a notification as soon as you can start", "Ask {owner}, the owner", Sign out). Suspended: a banner "Clinic suspended by Medvya. You can open existing records for care under way. New patients, bookings and signing are paused."
 
 ## Patient registration (P-02) — `Medvya Patient Registration`
 

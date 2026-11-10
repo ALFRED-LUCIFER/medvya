@@ -85,7 +85,7 @@ public static class SettingsEndpoints
         });
 
         // Terms of Service and DPA (MDV-P1-019): anyone who administers the practice can see the status; only an owner (practice admin or
-        // solo doctor) can accept, which the service checks. Until accepted, booking and sending are refused (RequireAcceptedTerms).
+        // owner-doctor) can accept, which the service checks. Until accepted, booking and sending are refused (RequireAcceptedTerms).
         g.MapGet("/terms", async ([FromServices] ITermsAcceptance terms, CancellationToken ct) => Results.Ok(await terms.StatusAsync(ct)));
         g.MapPost("/terms/accept", async ([FromServices] ITermsAcceptance terms, CancellationToken ct) =>
             await terms.AcceptAsync(ct) ? Results.Ok(await terms.StatusAsync(ct)) : Results.Problem(statusCode: StatusCodes.Status403Forbidden, title: "Only the practice owner can accept"));

@@ -54,6 +54,8 @@ test('J1: a new solo doctor sets up the practice, registers a patient, books and
     await expect(page.getByText(/could not be sent/)).toHaveCount(0);
     await expectNoAxeViolations(page);
     await page.getByRole('button', { name: 'Open Today' }).click();
+    await expect(page.getByRole('navigation').first()).toBeVisible(); // wait for the shell: the absence check below proves nothing on the wizard
+    await expect(page).not.toHaveURL(/onboarding/);
     await expect(page.getByText(/Waiting for approval|being set up/)).toHaveCount(0); // no Medvya licence check: recording and signing are open at once
     await page.reload(); // the server, not the screen, holds the practice
     await expect(page.getByRole('navigation').first()).toBeVisible();

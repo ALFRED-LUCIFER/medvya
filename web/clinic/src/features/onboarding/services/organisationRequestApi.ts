@@ -7,4 +7,5 @@ export const uploadDocument = (kind: DocumentKind, file: File) =>
   send<OrganisationDocument>(`/v1/organisation/request/documents/${kind}`, { method: 'PUT', headers: { ...csrf, 'Content-Type': file.type }, body: file });
 export const saveItContact = (form: ItContactForm) =>
   send<void>('/v1/organisation/request/it-contact', { method: 'PUT', headers: { ...csrf, 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
+export const startNewRequest = () => send<void>('/v1/organisation/request/start-new', { method: 'POST', headers: csrf });
 export const submitRequest = () => send<void>('/v1/organisation/request/submit', { method: 'POST', headers: csrf });

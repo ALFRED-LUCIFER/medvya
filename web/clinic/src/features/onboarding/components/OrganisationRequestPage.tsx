@@ -26,6 +26,9 @@ type Props = {
   submitting: boolean;
   submitFailed: boolean;
   onSubmit: () => void;
+  startingNew: boolean;
+  startNewFailed: boolean;
+  onStartNew: () => void;
 };
 
 const error = 'text-sm font-semibold text-danger-700';
@@ -50,6 +53,13 @@ export default function OrganisationRequestPage(p: Props) {
           <p className="rounded-lg border p-3"><strong>{t('orgRequest.reason')}</strong> {r.reason}</p>
         )}
       </header>
+
+      {r.state === 'Rejected' && (
+        <div className="flex flex-col gap-2">
+          <Button className="min-h-11 self-start" loading={p.startingNew} onClick={p.onStartNew}>{t('orgRequest.startNew')}</Button>
+          {p.startNewFailed && <p role="alert" className={error}>{t('orgRequest.error.failed')}</p>}
+        </div>
+      )}
 
       <fieldset className="flex flex-col gap-3" disabled={!p.editable}>
         <legend className="mb-1 text-lg font-bold">{t('orgRequest.docs.legend')}</legend>

@@ -174,6 +174,25 @@ public sealed class PracticeSettingsTests(PostgresFixture sql) : IClassFixture<P
         Assert.Null(await h.Settings(h.Admin, otherTenant).GetHoursAsync(h.Facility));
     }
 
+    [Theory]
+    [InlineData(OrganisationState.Draft, true)]
+    [InlineData(OrganisationState.Submitted, true)]
+    [InlineData(OrganisationState.NeedsChanges, true)]
+    [InlineData(OrganisationState.Rejected, true)]
+    [InlineData(OrganisationState.Approved, true)]
+    [InlineData(OrganisationState.Suspended, false)]
+    public async Task ALocationCanBeAddedInSetUpStatesAndNotWhenSuspended(OrganisationState state, bool allowed)
+    {
+        await using (var db = sql.Context(h.Tenant)) await db.Tenants.ExecuteUpdateAsync(s => s.SetProperty(t => t.State, state));
+        await using var before = sql.Context(h.Tenant);
+        var sites = await before.Facilities.CountAsync();
+        var add = () => h.Settings(h.Admin).AddLocationAsync(Branch());
+        if (allowed) { await add(); return; }
+        Assert.Equal("state:suspended", $"{(await Assert.ThrowsAsync<SettingsValidationException>(add)).Errors[0].Field}:suspended");
+        await using var check = sql.Context(h.Tenant);
+        Assert.Equal(sites, await check.Facilities.CountAsync()); // nothing stored
+    }
+
     static AddLocation Branch() => new()
     {
         Name = "Velachery 2 (synthetic)", Address = "4 Synthetic Street", TimeZone = "Asia/Kolkata", CountryCode = "IN", TaxNumber = Gstin, CertificateName = "reg.png", Certificate = Png,

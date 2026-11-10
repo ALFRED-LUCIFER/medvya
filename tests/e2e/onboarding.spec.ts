@@ -11,7 +11,7 @@ async function axe(page: Page) {
       .map(v => `${v.id} (${v.nodes.length})`));
 }
 
-const practice = { profile: { fullName: 'Arjun Rao (synthetic)', mode: 'Solo', specialties: ['general-practice'] }, licence: { authority: 'KMC', number: '1234' },
+const practice = { profile: { fullName: 'Arjun Rao (synthetic)', mode: 'Solo', specialties: ['general-practice'] }, licence: { authority: 'KMC', number: '1234', expiresOn: '2031-12-31' },
   clinic: { name: 'Rao Clinic (synthetic)', address: '12 Test Street, Chennai' } };
 
 test('a visitor from the region selector signs up: the country is carried into multi-factor sign-in', async ({ page }) => {
@@ -50,7 +50,7 @@ test('a solo doctor completes the five steps, sees the ready screen and lands on
   const last = api.saves.at(-1)!.data as { profile: { specialties: string[] }; licence: { authority: string; number: string };
     hours: { newVisitFee: number; days: string[]; weekdays: unknown[] }; team: unknown[]; patients: string };
   expect(last.profile.specialties).toEqual(['general-practice']);
-  expect(last.licence).toMatchObject({ authority: 'TNMC', number: '84213', attested: true });
+  expect(last.licence).toMatchObject({ authority: 'TNMC', number: '84213', attested: true, expiresOn: '2031-12-31' });
   expect(last.hours).toMatchObject({ newVisitFee: 80000, slotMinutes: 15, days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] });
   expect(last.hours.weekdays).toHaveLength(2);
   expect(last.team).toEqual([{ email: 'joseph@example.test', role: 'Receptionist' }]);
@@ -115,6 +115,7 @@ test('errors appear under the field and are announced; a server error keeps the 
   await page.getByRole('combobox', { name: 'Medical council' }).click();
   await page.getByRole('option', { name: /TNMC/ }).click();
   await page.getByLabel('Registration number').fill('1'); // the fake server refuses this one
+  await page.getByLabel('Registration expiry date').fill('2031-12-31');
   await page.getByLabel('I confirm this registration is my own and that it is valid.').check();
   await page.getByRole('button', { name: 'Continue' }).click();
   await expect(page.locator('#number-error')).toHaveText('Check the format.');

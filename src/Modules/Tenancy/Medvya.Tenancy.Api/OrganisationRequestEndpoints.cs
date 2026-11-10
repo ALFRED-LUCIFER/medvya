@@ -55,6 +55,11 @@ public static class OrganisationRequestEndpoints
             await r.SubmitAsync(ct);
             return Results.NoContent();
         });
+        g.MapPost("/start-new", async ([FromServices] IOrganisationRequests r, CancellationToken ct) =>
+        {
+            await r.StartNewAsync(ct);
+            return Results.NoContent();
+        });
         return app;
     }
 }

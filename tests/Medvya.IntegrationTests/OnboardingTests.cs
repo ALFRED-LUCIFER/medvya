@@ -98,7 +98,7 @@ public sealed partial class OnboardingTests(PostgresFixture sql) : IClassFixture
     static object Data(string number = "84213", string authority = "TNMC", string gstin = "", object? team = null) => new
     {
         profile = new { fullName = "Arjun Rao (synthetic)", mode = "Solo", specialties = new[] { "general-practice", "diabetes" }, qualifications = "MBBS", languages = "English, Tamil" },
-        licence = new { authority, number, certificateName = "council-certificate.pdf", attested = true },
+        licence = new { authority, number, certificateName = "council-certificate.pdf", attested = true, expiresOn = "2099-01-01" },
         clinic = new { name = "Rao Clinic (synthetic)", address = "12 Test Street, Chennai", registrationNumber = "CE-0001", taxId = gstin, type = "Clinic", contactEmail = "desk@rao-clinic.example" },
         hours = new
         {
@@ -186,6 +186,8 @@ public sealed partial class OnboardingTests(PostgresFixture sql) : IClassFixture
             Assert.Equal(("General practice, Diabetes", "Move"), (profile.Specialty, profile.PatientStart));
             Assert.Contains("17:00", profile.WeekdayHours, StringComparison.Ordinal);
             var licence = await db.DoctorLicences.SingleAsync();
+            Assert.Equal(new DateOnly(2099, 1, 1), licence.ExpiresOn);
+            Assert.Contains("\"expiresOn\":\"2099-01-01\"", (await db.SettingsChanges.SingleAsync(c => c.Section == "doctor")).After, StringComparison.Ordinal); // attested values kept in the audit trail
             Assert.Equal((userId, OrganisationState.Draft), (licence.AttestedBy, tenant.State)); // the owner-doctor attested their own licence; the organisation starts as Draft (ADR-016)
             Assert.Equal((OrganisationType.Clinic, "desk@rao-clinic.example"), ((await db.OrganisationRequests.SingleAsync()).Type, address.Email));
             Assert.Equal(1, await db.Invitations.CountAsync());

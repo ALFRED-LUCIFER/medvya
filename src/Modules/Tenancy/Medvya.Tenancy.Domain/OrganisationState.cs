@@ -7,11 +7,12 @@ public static class OrganisationRules
 {
     /// <summary>
     /// The state machine (ADR-016): Draft or NeedsChanges to Submitted (the applicant), Submitted to Approved, NeedsChanges or Rejected (Medvya),
-    /// Approved to Suspended and back (Medvya). Rejected is final for the request.
+    /// Approved to Suspended and back (Medvya). Rejected is final for the request; the applicant starts a new one (Rejected to Draft).
     /// </summary>
     public static bool CanMove(OrganisationState from, OrganisationState to) => (from, to) switch
     {
         (OrganisationState.Draft or OrganisationState.NeedsChanges, OrganisationState.Submitted) => true,
+        (OrganisationState.Rejected, OrganisationState.Draft) => true,
         (OrganisationState.Submitted, OrganisationState.Approved or OrganisationState.NeedsChanges or OrganisationState.Rejected) => true,
         (OrganisationState.Approved, OrganisationState.Suspended) or (OrganisationState.Suspended, OrganisationState.Approved) => true,
         _ => false,

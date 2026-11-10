@@ -15,7 +15,7 @@ export const patientStarts = ['Upload', 'Move', 'Fresh'] as const;
 export type PatientStart = (typeof patientStarts)[number];
 export type OnboardingData = {
   profile?: { fullName?: string; mode?: Mode; specialty?: string; specialties?: string[]; qualifications?: string; languages?: string };
-  licence?: { authority?: string; number?: string; certificateName?: string; attested?: boolean };
+  licence?: { authority?: string; number?: string; certificateName?: string; attested?: boolean; expiresOn?: string };
   clinic?: { name?: string; address?: string; registrationNumber?: string; taxId?: string; type?: OrganisationKind; contactEmail?: string };
   hours?: { weekdays?: Window[]; saturday?: Window[]; slotMinutes?: number; newVisitFee?: number; followUpFee?: number; days?: Day[] };
   templates?: string[];
@@ -37,7 +37,7 @@ export const skippable = (step: number) => step >= 3;
 export type WizardForm = {
   orgType: OrganisationKind | ''; contactEmail: string;
   mode: Mode; fullName: string; clinicName: string; address: string; specialties: string[];
-  authority: string; number: string; attested: boolean; qualifications: string; languages: string; registrationNumber: string; taxId: string;
+  authority: string; number: string; expiresOn: string; attested: boolean; qualifications: string; languages: string; registrationNumber: string; taxId: string;
   days: Day[]; weekdayStart1: string; weekdayEnd1: string; weekdayStart2: string; weekdayEnd2: string; saturdayStart: string; saturdayEnd: string;
   slotMinutes: string; newVisitFee: string; followUpFee: string;
   team: Member[]; inviteEmail: string; inviteRole: TeamRole; patients: PatientStart | '';
@@ -47,7 +47,7 @@ export type WizardForm = {
 export type FormField = keyof WizardForm;
 
 export const stepFields: Record<number, FormField[]> = {
-  1: ['orgType', 'mode', 'fullName', 'contactEmail', 'clinicName', 'address', 'specialties', 'authority', 'number', 'attested', 'qualifications', 'languages', 'registrationNumber', 'taxId'],
+  1: ['orgType', 'mode', 'fullName', 'contactEmail', 'clinicName', 'address', 'specialties', 'authority', 'number', 'expiresOn', 'attested', 'qualifications', 'languages', 'registrationNumber', 'taxId'],
   2: ['days', 'weekdayStart1', 'weekdayEnd1', 'weekdayStart2', 'weekdayEnd2', 'saturdayStart', 'saturdayEnd', 'slotMinutes', 'newVisitFee', 'followUpFee'],
   3: ['team', 'inviteEmail'],
   4: ['patients'],
@@ -63,7 +63,7 @@ const openByDefault: Day[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Fri
 
 export const emptyForm = (country: Country): WizardForm => ({
   orgType: '', contactEmail: '', mode: 'Solo', fullName: '', clinicName: '', address: '', specialties: [],
-  authority: '', number: '', attested: false, qualifications: '', languages: '', registrationNumber: '', taxId: '',
+  authority: '', number: '', expiresOn: '', attested: false, qualifications: '', languages: '', registrationNumber: '', taxId: '',
   days: openByDefault, ...defaults[country], slotMinutes: '15',
   team: [], inviteEmail: '', inviteRole: 'Receptionist', patients: '',
   specialty: '', certificateName: '', templates: [],
@@ -78,7 +78,7 @@ const minor = (major: string) => (major.trim() === '' ? undefined : Math.round(N
 export function toData(f: WizardForm): OnboardingData {
   return {
     profile: { fullName: f.fullName, mode: f.mode, specialty: f.specialty, specialties: f.specialties, qualifications: f.qualifications, languages: f.languages },
-    licence: f.mode === 'Solo' ? { authority: f.authority, number: f.number, certificateName: f.certificateName, attested: f.attested } : undefined,
+    licence: f.mode === 'Solo' ? { authority: f.authority, number: f.number, certificateName: f.certificateName, attested: f.attested, expiresOn: f.expiresOn || undefined } : undefined,
     clinic: { name: f.clinicName, address: f.address, registrationNumber: f.registrationNumber, taxId: f.taxId, type: f.orgType || undefined, contactEmail: f.contactEmail },
     hours: {
       weekdays: windows(f.weekdayStart1, f.weekdayEnd1, f.weekdayStart2, f.weekdayEnd2),
@@ -105,7 +105,7 @@ export function toForm(data: OnboardingData, country: Country): WizardForm {
     ...base,
     mode: data.profile?.mode ?? base.mode, fullName: data.profile?.fullName ?? '', specialty: data.profile?.specialty ?? '',
     specialties: data.profile?.specialties ?? [], qualifications: data.profile?.qualifications ?? '', languages: data.profile?.languages ?? '',
-    authority: data.licence?.authority ?? '', number: data.licence?.number ?? '', attested: data.licence?.attested ?? false, certificateName: data.licence?.certificateName ?? '',
+    authority: data.licence?.authority ?? '', number: data.licence?.number ?? '', expiresOn: data.licence?.expiresOn ?? '', attested: data.licence?.attested ?? false, certificateName: data.licence?.certificateName ?? '',
     orgType: data.clinic?.type ?? '', contactEmail: data.clinic?.contactEmail ?? '', clinicName: data.clinic?.name ?? '', address: data.clinic?.address ?? '', registrationNumber: data.clinic?.registrationNumber ?? '', taxId: data.clinic?.taxId ?? '',
     ...(h && {
       days: h.days ?? legacyDays,
@@ -135,7 +135,7 @@ const base = z.object({
   mode: z.enum(['Solo', 'Clinic']), attested: z.boolean(), specialties: z.array(z.string()), days: z.array(z.enum(weekDays)), templates: z.array(z.string()),
   team: z.array(z.object({ email: z.string(), role: z.enum(['Receptionist', 'Nurse']) })), inviteRole: z.enum(['Receptionist', 'Nurse']),
   patients: z.enum(['', ...patientStarts]),
-  fullName: anyText, clinicName: anyText, address: anyText, authority: anyText, number: anyText, qualifications: anyText, languages: anyText,
+  fullName: anyText, clinicName: anyText, address: anyText, authority: anyText, number: anyText, expiresOn: anyText, qualifications: anyText, languages: anyText,
   registrationNumber: anyText, taxId: anyText, weekdayStart1: anyText, weekdayEnd1: anyText, weekdayStart2: anyText, weekdayEnd2: anyText,
   saturdayStart: anyText, saturdayEnd: anyText, slotMinutes: anyText, newVisitFee: anyText, followUpFee: anyText, inviteEmail: anyText,
   specialty: anyText, certificateName: anyText,
@@ -148,7 +148,7 @@ export const stepSchema = (step: number) => base.superRefine((f, ctx) => {
   if (step === 1) {
     need('orgType', f.orgType !== ''); need('contactEmail', filled(f.contactEmail));
     need('fullName', filled(f.fullName)); need('clinicName', filled(f.clinicName)); need('address', filled(f.address));
-    if (f.mode === 'Solo') { need('specialties', f.specialties.length > 0 || filled(f.specialty)); need('authority', filled(f.authority)); need('number', filled(f.number)); need('attested', f.attested); }
+    if (f.mode === 'Solo') { need('specialties', f.specialties.length > 0 || filled(f.specialty)); need('authority', filled(f.authority)); need('number', filled(f.number)); need('expiresOn', filled(f.expiresOn)); need('attested', f.attested); }
   }
   if (step === 2) {
     need('days', f.days.length > 0);
@@ -163,7 +163,7 @@ export const stepSchema = (step: number) => base.superRefine((f, ctx) => {
 export function formFieldOf(path: string): FormField | `team.${number}.email` | null {
   const direct: Record<string, FormField> = {
     'profile.mode': 'mode', 'profile.fullName': 'fullName', 'profile.specialty': 'specialties', 'profile.specialties': 'specialties',
-    'profile.qualifications': 'qualifications', 'profile.languages': 'languages', 'licence.authority': 'authority', 'licence.number': 'number', 'licence.attested': 'attested',
+    'profile.qualifications': 'qualifications', 'profile.languages': 'languages', 'licence.authority': 'authority', 'licence.number': 'number', 'licence.expiresOn': 'expiresOn', 'licence.attested': 'attested',
     'licence.certificate': 'number', 'clinic.type': 'orgType', 'clinic.contactEmail': 'contactEmail', 'clinic.name': 'clinicName', 'clinic.address': 'address', 'clinic.registrationNumber': 'registrationNumber',
     'clinic.taxId': 'taxId', 'hours.days': 'days', 'hours.weekdays': 'weekdayStart1', 'hours.saturday': 'saturdayStart', 'hours.slotMinutes': 'slotMinutes',
     'hours.newVisitFee': 'newVisitFee', 'hours.followUpFee': 'followUpFee', templates: 'slotMinutes', team: 'inviteEmail', patients: 'patients',
@@ -180,7 +180,7 @@ export function stepOfPath(path: string): number {
 }
 
 /** The codes the server sends, each with a translated message. */
-export const errorCodes = ['required', 'tooLong', 'format', 'unknown', 'range', 'overlap', 'duplicate', 'pending', 'link'] as const;
+export const errorCodes = ['required', 'tooLong', 'format', 'unknown', 'range', 'overlap', 'duplicate', 'pending', 'link', 'past'] as const;
 export const errorCode = (code: string): (typeof errorCodes)[number] => errorCodes.find(c => c === code) ?? 'format';
 
 /** Specialty codes we have a label for; others are not shown. */

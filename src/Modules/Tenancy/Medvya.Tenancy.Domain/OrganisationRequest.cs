@@ -27,7 +27,7 @@ public sealed class OrganisationDocument
     [Classification(DataClass.Internal)] public Guid Id { get; init; }
     [Classification(DataClass.Internal)] public Guid TenantId { get; init; }
     /// <summary>One of <see cref="OrganisationDocumentRules.Kinds"/>; a new upload of the same kind replaces the old one.</summary>
-    [Classification(DataClass.Internal)] public required string Kind { get; init; }
+    [Classification(DataClass.Internal)] public required string Kind { get; set; }
     [Classification(DataClass.Internal)] public required string ContentType { get; set; }
     [Classification(DataClass.Internal)] public long SizeBytes { get; set; }
     [Classification(DataClass.Internal)] public required string BlobKey { get; set; }

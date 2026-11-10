@@ -222,9 +222,9 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P1-059](P1-front-desk/MDV-P1-059.md) | Staff sign-in, sign-up, invitation, location and signed-out screens to the 6 Nov design | P1 | wk 12–12 | 70% |
 | [MDV-P1-060](P1-front-desk/MDV-P1-060.md) | Entra External ID branding for the email code, MFA set-up and recovery pages | P1 | wk 12–12 | 60% |
 | [MDV-P1-061](P1-front-desk/MDV-P1-061.md) | Practice set-up wizard to the 6 Nov design (practice, hours and services, team, patients, payments and messages, ready) | P1 | wk 12–13 | 60% |
-| [MDV-P1-062](P1-front-desk/MDV-P1-062.md) | Onboarding request at sign-up: choose Clinic or Hospital, give the required documents, submit for Medvya review | P1 | wk 12–14 | 70% |
+| [MDV-P1-062](P1-front-desk/MDV-P1-062.md) | Onboarding request at sign-up: choose Clinic or Hospital, give the required documents, submit for Medvya review | P1 | wk 12–14 | 75% |
 | [MDV-P1-063](P1-front-desk/MDV-P1-063.md) | Organisation state and set-up-only mode before approval: server-side gate replaces the doctor licence gate | P1 | wk 12–14 | 75% |
-| [MDV-P1-064](P1-front-desk/MDV-P1-064.md) | Operations approval queue in the platform console (Host.Platform) and interim documented API: approve, ask for changes, reject, suspend | P1 | wk 12–14 | 65% |
+| [MDV-P1-064](P1-front-desk/MDV-P1-064.md) | Operations approval queue in the platform console (Host.Platform) and interim documented API: approve, ask for changes, reject, suspend | P1 | wk 12–14 | 75% |
 | [MDV-P1-065](P1-front-desk/MDV-P1-065.md) | Owner attests each doctor's licence (number, authority, expiry), printed on prescriptions; retire Medvya licence verification | P1 | wk 12–14 | 70% |
 | [MDV-P1-067](P1-front-desk/MDV-P1-067.md) | Terms of Service and DPA update: the organisation is responsible for the licences it attests | P1 | wk 12–14 | 60% |
 | [MDV-P1-068](P1-front-desk/MDV-P1-068.md) | Migrate existing tenants to Approved and their doctor licences to owner-attested | P1 | wk 12–14 | 75% |
@@ -244,9 +244,9 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 |---|---|---|---|---|
 | [MDV-P1-051](P1-front-desk/MDV-P1-051.md) | Encrypted read-only schedule cache for outages (needs an ADR first) | P1 | wk 13–13 | 55% |
 | [MDV-P1-061](P1-front-desk/MDV-P1-061.md) | Practice set-up wizard to the 6 Nov design (practice, hours and services, team, patients, payments and messages, ready) | P1 | wk 12–13 | 60% |
-| [MDV-P1-062](P1-front-desk/MDV-P1-062.md) | Onboarding request at sign-up: choose Clinic or Hospital, give the required documents, submit for Medvya review | P1 | wk 12–14 | 70% |
+| [MDV-P1-062](P1-front-desk/MDV-P1-062.md) | Onboarding request at sign-up: choose Clinic or Hospital, give the required documents, submit for Medvya review | P1 | wk 12–14 | 75% |
 | [MDV-P1-063](P1-front-desk/MDV-P1-063.md) | Organisation state and set-up-only mode before approval: server-side gate replaces the doctor licence gate | P1 | wk 12–14 | 75% |
-| [MDV-P1-064](P1-front-desk/MDV-P1-064.md) | Operations approval queue in the platform console (Host.Platform) and interim documented API: approve, ask for changes, reject, suspend | P1 | wk 12–14 | 65% |
+| [MDV-P1-064](P1-front-desk/MDV-P1-064.md) | Operations approval queue in the platform console (Host.Platform) and interim documented API: approve, ask for changes, reject, suspend | P1 | wk 12–14 | 75% |
 | [MDV-P1-065](P1-front-desk/MDV-P1-065.md) | Owner attests each doctor's licence (number, authority, expiry), printed on prescriptions; retire Medvya licence verification | P1 | wk 12–14 | 70% |
 | [MDV-P1-066](P1-front-desk/MDV-P1-066.md) | Retire solo-doctor naming: Role.SoloDoctor, session flags, copy and docs | P1 | wk 13–14 | 70% |
 | [MDV-P1-067](P1-front-desk/MDV-P1-067.md) | Terms of Service and DPA update: the organisation is responsible for the licences it attests | P1 | wk 12–14 | 60% |
@@ -271,9 +271,9 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
-| [MDV-P1-062](P1-front-desk/MDV-P1-062.md) | Onboarding request at sign-up: choose Clinic or Hospital, give the required documents, submit for Medvya review | P1 | wk 12–14 | 70% |
+| [MDV-P1-062](P1-front-desk/MDV-P1-062.md) | Onboarding request at sign-up: choose Clinic or Hospital, give the required documents, submit for Medvya review | P1 | wk 12–14 | 75% |
 | [MDV-P1-063](P1-front-desk/MDV-P1-063.md) | Organisation state and set-up-only mode before approval: server-side gate replaces the doctor licence gate | P1 | wk 12–14 | 75% |
-| [MDV-P1-064](P1-front-desk/MDV-P1-064.md) | Operations approval queue in the platform console (Host.Platform) and interim documented API: approve, ask for changes, reject, suspend | P1 | wk 12–14 | 65% |
+| [MDV-P1-064](P1-front-desk/MDV-P1-064.md) | Operations approval queue in the platform console (Host.Platform) and interim documented API: approve, ask for changes, reject, suspend | P1 | wk 12–14 | 75% |
 | [MDV-P1-065](P1-front-desk/MDV-P1-065.md) | Owner attests each doctor's licence (number, authority, expiry), printed on prescriptions; retire Medvya licence verification | P1 | wk 12–14 | 70% |
 | [MDV-P1-066](P1-front-desk/MDV-P1-066.md) | Retire solo-doctor naming: Role.SoloDoctor, session flags, copy and docs | P1 | wk 13–14 | 70% |
 | [MDV-P1-067](P1-front-desk/MDV-P1-067.md) | Terms of Service and DPA update: the organisation is responsible for the licences it attests | P1 | wk 12–14 | 60% |
@@ -483,7 +483,7 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P5-041](P5-commercial-launch/MDV-P5-041.md) | Feature rollouts: staged release (internal, beta tenants, percentage, everyone), kill switch and clinical sign-off gate | P5 | wk 27–29 | 70% |
 | [MDV-P5-042](P5-commercial-launch/MDV-P5-042.md) | Plans and entitlements: versioned plans, India and UAE prices, seats, trial days, 30 days' notice | P5 | wk 26–28 | 70% |
 | [MDV-P5-043](P5-commercial-launch/MDV-P5-043.md) | Subscription billing in the console and for owners: invoices, payment method, add seats, dunning ladder, close practice | P5 | wk 27–29 | 60% |
-| [MDV-P5-044](P5-commercial-launch/MDV-P5-044.md) | Organisation approval console: onboarding request queue, document view, approve, ask for changes, reject, suspend | P5 | wk 27–29 | 65% |
+| [MDV-P5-044](P5-commercial-launch/MDV-P5-044.md) | Organisation approval console: onboarding request queue, document view, approve, ask for changes, reject, suspend | P5 | wk 27–29 | 75% |
 | [MDV-P5-046](P5-commercial-launch/MDV-P5-046.md) | Legal documents: versioned terms, privacy notice and DPA, re-acceptance gate that pauses booking only | P5 | wk 27–29 | 65% |
 | [MDV-P5-050](P5-commercial-launch/MDV-P5-050.md) | Public pricing page with 14-day trial, monthly and yearly toggle and country currency | P5 | wk 26–27 | 75% |
 
@@ -507,7 +507,7 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P5-041](P5-commercial-launch/MDV-P5-041.md) | Feature rollouts: staged release (internal, beta tenants, percentage, everyone), kill switch and clinical sign-off gate | P5 | wk 27–29 | 70% |
 | [MDV-P5-042](P5-commercial-launch/MDV-P5-042.md) | Plans and entitlements: versioned plans, India and UAE prices, seats, trial days, 30 days' notice | P5 | wk 26–28 | 70% |
 | [MDV-P5-043](P5-commercial-launch/MDV-P5-043.md) | Subscription billing in the console and for owners: invoices, payment method, add seats, dunning ladder, close practice | P5 | wk 27–29 | 60% |
-| [MDV-P5-044](P5-commercial-launch/MDV-P5-044.md) | Organisation approval console: onboarding request queue, document view, approve, ask for changes, reject, suspend | P5 | wk 27–29 | 65% |
+| [MDV-P5-044](P5-commercial-launch/MDV-P5-044.md) | Organisation approval console: onboarding request queue, document view, approve, ask for changes, reject, suspend | P5 | wk 27–29 | 75% |
 | [MDV-P5-046](P5-commercial-launch/MDV-P5-046.md) | Legal documents: versioned terms, privacy notice and DPA, re-acceptance gate that pauses booking only | P5 | wk 27–29 | 65% |
 | [MDV-P5-047](P5-commercial-launch/MDV-P5-047.md) | Service requests: Help in the clinic app, support inbox with SLA, internal notes, diagnostics | P5 | wk 28–30 | 65% |
 
@@ -536,7 +536,7 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P5-036](P5-commercial-launch/MDV-P5-036.md) | Patient app: SMS sign-in, family profiles, home, booking, check-in and reschedule | P5 | wk 29–32 | 65% |
 | [MDV-P5-041](P5-commercial-launch/MDV-P5-041.md) | Feature rollouts: staged release (internal, beta tenants, percentage, everyone), kill switch and clinical sign-off gate | P5 | wk 27–29 | 70% |
 | [MDV-P5-043](P5-commercial-launch/MDV-P5-043.md) | Subscription billing in the console and for owners: invoices, payment method, add seats, dunning ladder, close practice | P5 | wk 27–29 | 60% |
-| [MDV-P5-044](P5-commercial-launch/MDV-P5-044.md) | Organisation approval console: onboarding request queue, document view, approve, ask for changes, reject, suspend | P5 | wk 27–29 | 65% |
+| [MDV-P5-044](P5-commercial-launch/MDV-P5-044.md) | Organisation approval console: onboarding request queue, document view, approve, ask for changes, reject, suspend | P5 | wk 27–29 | 75% |
 | [MDV-P5-045](P5-commercial-launch/MDV-P5-045.md) | Releases and What's new, maintenance and incident banners, integrations register | P5 | wk 29–31 | 65% |
 | [MDV-P5-046](P5-commercial-launch/MDV-P5-046.md) | Legal documents: versioned terms, privacy notice and DPA, re-acceptance gate that pauses booking only | P5 | wk 27–29 | 65% |
 | [MDV-P5-047](P5-commercial-launch/MDV-P5-047.md) | Service requests: Help in the clinic app, support inbox with SLA, internal notes, diagnostics | P5 | wk 28–30 | 65% |

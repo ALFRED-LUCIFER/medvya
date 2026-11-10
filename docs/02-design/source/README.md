@@ -27,3 +27,7 @@ Added `Medvya Admin.dc.html` (platform console) and `Medvya Mobile.dc.html` (two
 ## Foundations re-import, 10 Nov 2026 (MDV-P5-001)
 
 `Medvya Foundations.dc.html` was replaced with the newer version from the design project (links to Medvya Web, records the 6 Nov approvals). `Medvya Admin`, `Medvya Mobile` and `Medvya Web` were compared with the design project and are byte-identical, so they were not re-imported. **Screens N-04 to N-14 are not in the design project yet** (no migration, data-quality, EID, exchange, extraction, letters, voice-console, plans, ops-console, help or export design), so MDV-P5-001 stays open and the dependent ticket confidence is unchanged.
+
+## Admin, Web, Mobile and Foundations re-import, 10 Nov 2026 (MDV-P5-001)
+
+All four design files differ from the copies imported earlier the same day (the design project was republished with the ADR-016 organisation-approval design) and were replaced. Changes: **Admin** "Verifications" (doctor licence checks) became "Approvals" (organisation queue, detail, decision, suspend and reinstate, reviewer and finance roles); **Web** adds the Clinic or Hospital onboarding request, setup-while-waiting, approval states, Organisation and approval settings and owner licence attestation; **Mobile** adds a waiting-for-approval page and suspended banner; **Foundations** renames F-04, adds a second F-07 (approvals queue), ORGANISATION and an approval state list. Screens N-04 to N-14 (apart from the console approvals) still have no designs. Details: `../screen-specs.md`.

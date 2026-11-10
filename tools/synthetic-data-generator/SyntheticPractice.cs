@@ -5,6 +5,7 @@ using Medvya.Identity.Domain;
 using Medvya.Identity.Infrastructure.Persistence;
 using Medvya.Scheduling.Domain;
 using Medvya.Scheduling.Infrastructure.Persistence;
+using Medvya.Tenancy.Application;
 using Medvya.Tenancy.Domain;
 using Microsoft.EntityFrameworkCore;
 
@@ -131,6 +132,75 @@ public static class SyntheticPractice
 
         var visits = await AddVisitsAsync(sdb, tenant, facility, patientCount, mrnStart, doctorTemplates, at, ct);
         return new(tenant, facility, patientsAdded, doctors, nurses, receptionists, admins, rooms, visits);
+    }
+
+    /// <summary>
+    /// Makes the synthetic practice that <see cref="SyntheticPatients.SeedAsync"/> just checked bookable for the desk load test (MDV-P1-037):
+    /// <paramref name="count"/> doctors with weekly hours on the load test's grid (Monday to Saturday, 9 to 13 and 17 to 20, 20-minute slots),
+    /// the organisation Approved, the current terms accepted, and the same few visits as <see cref="SeedAsync"/> (today's give the check-in step arrivals).
+    /// Returns the doctors' calendar ids (their user ids) and the visits added. A re-run adds only what is missing.
+    /// shortcut: the terms row is written without the "tenant.terms.accept" audit event and by a fixed synthetic id, not an owner; fine for a synthetic practice only.
+    /// </summary>
+    public static async Task<(Guid[] Calendars, int Visits)> BookableAsync(string connectionString, Guid tenant, Guid facility, int count, int patientCount, int mrnStart,
+        CancellationToken ct = default)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(count);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(count, 50);
+        var at = DateTimeOffset.UtcNow;
+        var by = Det(tenant, "operations");
+        var people = Enumerable.Range(0, count).Select(i => (Name: $"Dr. Load Doctor {i + 1}{SyntheticSeed.Marker}", UserId: Det(tenant, $"user:loaddoctor{i}"), MembershipId: Det(tenant, $"member:loaddoctor{i}"))).ToList();
+
+        await using (var db = SyntheticSeed.Tenancy(connectionString, tenant))
+        {
+            var t = await db.Tenants.SingleAsync(x => x.Id == tenant, ct);
+            if (!t.Name.EndsWith(SyntheticSeed.Marker, StringComparison.Ordinal)) throw new InvalidOperationException("Synthetic seeding refused: that practice is not marked synthetic.");
+            t.State = OrganisationState.Approved;
+            if (!await db.TermsAcceptances.AnyAsync(a => a.TermsVersion == TermsPolicy.CurrentVersion, ct))
+                db.TermsAcceptances.Add(new TermsAcceptance { Id = Det(tenant, "terms:" + TermsPolicy.CurrentVersion), TenantId = tenant,
+                    TermsVersion = TermsPolicy.CurrentVersion, AcceptedAt = at, AcceptedBy = by });
+            var members = await db.Memberships.Select(m => m.Id).ToListAsync(ct);
+            for (var i = 0; i < count; i++)
+            {
+                var p = people[i];
+                if (members.Contains(p.MembershipId)) continue;
+                db.Memberships.Add(new Membership { Id = p.MembershipId, TenantId = tenant, UserId = p.UserId, FacilityId = facility, Role = Role.HospitalDoctor, Status = MembershipStatus.Active });
+                db.DoctorProfiles.Add(new DoctorProfile
+                {
+                    MembershipId = p.MembershipId, TenantId = tenant, FullName = p.Name, Specialty = "General Practice", Qualifications = "MBBS", Languages = "English",
+                    NewVisitFeeMinor = 50_000, FollowUpFeeMinor = 30_000, ChangedAt = at,
+                });
+                db.DoctorLicences.Add(new DoctorLicence
+                {
+                    MembershipId = p.MembershipId, TenantId = tenant, Authority = "TCMC", Number = $"SYN-LOAD-{20001 + i}", Category = "Permanent", SubmittedAt = at,
+                    ExpiresOn = DateOnly.FromDateTime(at.UtcDateTime).AddYears(5), AttestedAt = at, AttestedBy = by,
+                });
+            }
+            await db.SaveChangesAsync(ct);
+        }
+
+        await using (var identity = new IdentityDbContext(new DbContextOptionsBuilder<IdentityDbContext>().UseNpgsql(connectionString).Options))
+        {
+            var ids = people.Select(p => p.UserId).ToList();
+            var have = await identity.Users.Where(u => ids.Contains(u.Id)).Select(u => u.Id).ToListAsync(ct);
+            identity.Users.AddRange(people.Where(p => !have.Contains(p.UserId)).Select(p => new StaffUser
+            {
+                Id = p.UserId, Issuer = IdentityProviders.Development, Subject = p.UserId.ToString(), DisplayName = p.Name,
+            }));
+            await identity.SaveChangesAsync(ct);
+        }
+
+        await using var sdb = SyntheticSeed.Scheduling(connectionString, tenant);
+        var templates = await sdb.Templates.Select(t => t.Id).ToListAsync(ct);
+        var wanted = people.Select((p, i) => new ScheduleTemplate
+        {
+            Id = Det(tenant, $"template:loaddoctor{i}"), TenantId = tenant, FacilityId = facility, CalendarId = p.UserId, CalendarKind = CalendarKind.Doctor, SlotMinutes = 20,
+            Hours = [.. MonSat.SelectMany(d => new[] { (9, 13), (17, 20) }.Select(s => new WorkingHours { Weekday = d, Start = new(s.Item1, 0), End = new(s.Item2, 0), Room = $"Room {i + 1}" }))],
+            VisitLengths = [new VisitLength { VisitType = VisitType.NewConsultation, Minutes = 40 }], ChangedAt = at,
+        }).ToList();
+        sdb.Templates.AddRange(wanted.Where(t => !templates.Contains(t.Id)));
+        await sdb.SaveChangesAsync(ct);
+        var visits = await AddVisitsAsync(sdb, tenant, facility, patientCount, mrnStart, wanted, at, ct);
+        return ([.. people.Select(p => p.UserId)], visits);
     }
 
     /// <summary>Per doctor: three bookings in the next ten days; today (when they work): two checked in, one with the nurse, one booked, and two walk-ins queued with no slot.</summary>

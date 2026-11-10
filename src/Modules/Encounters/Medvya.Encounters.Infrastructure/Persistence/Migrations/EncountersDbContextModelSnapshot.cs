@@ -618,14 +618,28 @@ namespace Medvya.Encounters.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("CodeSystem")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("CodeSystemVersion")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<Guid?>("EncounterId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Icd10Code")
                         .HasMaxLength(10)
                         .HasColumnType("character varying(10)");
+
+                    b.Property<Guid?>("MergedFromPatientId")
+                        .HasColumnType("uuid");
 
                     b.Property<DateOnly?>("OnsetOn")
                         .HasColumnType("date");
@@ -636,12 +650,26 @@ namespace Medvya.Encounters.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset>("RecordedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid?>("RecordedBy")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Source")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
                     b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
                         .HasColumnType("uuid");
 
                     b.Property<string>("Verification")
@@ -651,9 +679,14 @@ namespace Medvya.Encounters.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("TenantId", "EncounterId");
+
                     b.HasIndex("TenantId", "PatientId");
 
-                    b.ToTable("Problems", "encounters");
+                    b.ToTable("Problems", "encounters", t =>
+                        {
+                            t.HasCheckConstraint("CK_Problems_CodeHasSystem", "(\"CodeSystem\" IS NULL) = (\"CodeSystemVersion\" IS NULL) AND (\"CodeSystem\" IS NULL OR \"Icd10Code\" IS NOT NULL)");
+                        });
                 });
 
             modelBuilder.Entity("Medvya.Encounters.Domain.SignedNotePdf", b =>

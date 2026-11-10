@@ -12,7 +12,7 @@ public sealed record AllergyBanner(AllergyState State, IReadOnlyList<AllergyView
 /// <summary>One patient's allergy state, for a list of visits (Today). No substances: the list shows a flag, the chart shows the detail.</summary>
 public sealed record AllergyFlag(Guid PatientId, AllergyState State);
 
-public sealed record ProblemView(string? Icd10Code, string Description, ProblemVerification Verification, DateOnly? OnsetOn, ChartSource Source);
+public sealed record ProblemView(string? Icd10Code, string Description, ProblemVerification Verification, DateOnly? OnsetOn, ChartSource Source, ProblemStatus Status = ProblemStatus.Active);
 public sealed record MedicineView(string Name, string? Dose, MedicationState State, ChartSource Source, DateTimeOffset? StoppedAt = null);
 public sealed record VitalView(ObservationCode Code, decimal Value, string Unit, DateTimeOffset TakenAt, ChartSource Source);
 public sealed record TrendPoint(decimal Value, DateTimeOffset TakenAt, ChartSource Source);

@@ -57,10 +57,16 @@ public sealed class EncountersDbContext(DbContextOptions<EncountersDbContext> op
         modelBuilder.Entity<Problem>(e =>
         {
             e.Property(x => x.Verification).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
             e.Property(x => x.Source).HasConversion<string>().HasMaxLength(20);
             e.Property(x => x.Icd10Code).HasMaxLength(10);
+            e.Property(x => x.CodeSystem).HasMaxLength(20);
+            e.Property(x => x.CodeSystemVersion).HasMaxLength(30);
             e.Property(x => x.Description).HasMaxLength(200);
             e.HasIndex(x => new { x.TenantId, x.PatientId });
+            e.HasIndex(x => new { x.TenantId, x.EncounterId }); // the diagnoses of a consultation, for claims later (P5)
+            // A system and version always come together and name a code; a code from before coding (imports) may have neither.
+            e.ToTable(t => t.HasCheckConstraint("CK_Problems_CodeHasSystem", "(\"CodeSystem\" IS NULL) = (\"CodeSystemVersion\" IS NULL) AND (\"CodeSystem\" IS NULL OR \"Icd10Code\" IS NOT NULL)"));
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         modelBuilder.Entity<MedicationStatement>(e =>

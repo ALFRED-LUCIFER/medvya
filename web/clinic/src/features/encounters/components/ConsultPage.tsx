@@ -32,6 +32,7 @@ export default function ConsultPage(p: Props) {
         {ended
           ? <p role="status" className="font-bold">{t('consult.ended', { time: formatTime(new Date(encounter.endedAt!), p.banner.timeZone) })}</p>
           : <Button className="min-h-11" loading={p.ending} onClick={p.onEnd}>{t('consult.end')}</Button>}
+        {p.canReconcile && <Link to={`/consult/${encounter.id}/problems`} className={buttonVariants({ variant: 'outline', className: 'min-h-11' })}>{t('consult.codeProblems')}</Link>}
         {p.canReconcile && <Link to={`/consult/${encounter.id}/medicines`} className={buttonVariants({ variant: 'outline', className: 'min-h-11' })}>{t('consult.reconcileMedicines')}</Link>}
         <Link to={p.boardPath} className={buttonVariants({ variant: 'outline', className: 'min-h-11' })}>{t(ended ? 'consult.backToBoard' : 'consult.leave')}</Link>
       </div>

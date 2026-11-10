@@ -224,7 +224,17 @@ public sealed class PrescriptionService(
         await using (var tx = await db.Database.BeginTransactionAsync(cancellationToken))
         {
             db.RxLayoutApprovals.Add(row);
-            await db.SaveChangesAsync(cancellationToken);
+            try
+            {
+                await db.SaveChangesAsync(cancellationToken);
+            }
+            // Approved in another tab at the same moment: that approval stands.
+            catch (DbUpdateException e) when (e.InnerException is Npgsql.PostgresException { SqlState: Npgsql.PostgresErrorCodes.UniqueViolation })
+            {
+                db.ChangeTracker.Clear();
+                await tx.RollbackAsync(cancellationToken);
+                return await LayoutAsync(cancellationToken);
+            }
             await audit.WriteAsync(new AuditEvent
             {
                 Id = Guid.CreateVersion7(), TenantId = TenantId, ActorUserId = Me, Action = LayoutApproveAction, ResourceType = "prescription_layout", ResourceId = row.Id,
@@ -238,6 +248,8 @@ public sealed class PrescriptionService(
     Task<AuthorisedPrescription?> LatestAsync(Guid encounterId, CancellationToken cancellationToken) =>
         db.AuthorisedPrescriptions.AsNoTracking().Where(p => p.EncounterId == encounterId).OrderByDescending(p => p.VersionNo).FirstOrDefaultAsync(cancellationToken);
 
+    // shortcut: "changed" compares the rendered instructions, so a wording fix (the translator's sign-off of Sig) marks older prescriptions changed
+    // until re-authorised (it fails safe: no print, never wrong text); hash the structured sig instead once the wording is signed off.
     async Task<RxAuthorisationState> StateAsync(AuthorisedPrescription? latest, CancellationToken cancellationToken) =>
         latest is null ? new(null, false) : new(View(latest), latest.ContentHash != AuthorisedPrescription.Hash(await DraftAsync(latest.EncounterId, cancellationToken)));
 

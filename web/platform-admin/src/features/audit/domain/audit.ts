@@ -16,6 +16,12 @@ const actionKeys = {
   'team.remove': 'platform.audit.action.team_remove',
   'team.access_review': 'platform.audit.action.team_access_review',
   'audit.export': 'platform.audit.action.audit_export',
+  'organisation.approve': 'platform.audit.action.organisation_approve',
+  'organisation.request-changes': 'platform.audit.action.organisation_request_changes',
+  'organisation.reject': 'platform.audit.action.organisation_reject',
+  'organisation.suspend': 'platform.audit.action.organisation_suspend',
+  'organisation.reinstate': 'platform.audit.action.organisation_reinstate',
+  'organisation.document.view': 'platform.audit.action.organisation_document_view',
 } as const;
 export type KnownAction = keyof typeof actionKeys;
 export const knownActions = Object.keys(actionKeys) as KnownAction[];

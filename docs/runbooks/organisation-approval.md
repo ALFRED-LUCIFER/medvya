@@ -58,6 +58,26 @@ Only the control-plane request: the organisation's name, country, type, state, h
 
 shortcut: uploaded files are checked by file signature (PDF, PNG, JPEG) and size (5 MB) but not malware-scanned; add the Defender scan before the first real applicant uploads.
 
-## Not built yet (console design of 10 Nov 2026)
+## The platform console (MDV-P1-064, ADR-014 note)
 
-The queue and detail pages of the platform console (filters, profile grid, the private watermarked document viewer with no download, the automatic document checks such as "name and address match", the email preview after a decision) are not built: ADR-014 keeps the console login away from clinic schemas, so the console first needs a reviewed path to this data. The API above has what those pages need (filters, detail with history, logged document links, reinstate); the viewer, the checks and the pages belong with the console work (MDV-P5-044).
+The console (`Host.Platform`, `web/platform-admin`, page **Approvals**) does the same job with its own sign-on: company sign-on, then the security key. It is not on Azure yet; locally `pnpm dev:platform`.
+
+| Console role | Approvals |
+|---|---|
+| Owner, Operations, Reviewer | read, and approve, ask for changes, reject, suspend, reinstate |
+| Support, Finance | read only: the buttons are absent and the server answers 403 |
+
+- **Queue:** filters Waiting, Needs changes, Decided, All, oldest first. **Detail:** profile, tax number format check, documents with a file check, history with the operator, decision.
+- **Documents** open in a private viewer: shown from memory, no download button or menu, the operator's name and time drawn over the file. The console host fetches the file, so no storage link reaches the browser. Every view is audited in the organisation and in the platform audit log.
+- **A Hospital without its signed DPA cannot be approved:** the Approve button is off and the screen offers Ask for changes; the server refuses too (`document.Dpa:required`).
+- **Reason** (5 to 500 characters) on every action; the box starts with suggested wording you can edit. After the decision the screen shows the email the applicant was sent (no patient data).
+- **Two logs per action:** the organisation's own audit (clinic audit and settings history, the operator's console member id as actor) and the platform audit log (`organisation.approve`, `organisation.request-changes`, `organisation.reject`, `organisation.suspend`, `organisation.reinstate`, `organisation.document.view`, with the organisation). The console is the Audit log page's source for the second.
+- **Configuration:** `ConnectionStrings:Review` (a database login in the role `medvya_review`, created like the console's own: `db-migrate admin ... medvya_review=<password>`), plus the storage and email settings the clinic host uses (`Storage:BlobEndpoint` or `Storage:ConnectionString`, `Email:*`). Without `ConnectionStrings:Review` the approvals endpoints fail closed.
+- **What the review login can read:** the request, its documents and the practice profile of the organisation named, nothing clinic-side (`TheReviewLoginCannotReadClinicData`).
+
+The interim API above stays: it is what to use when the console is not available.
+
+shortcut: the automatic document checks are the file type and size and the tax number's format; "name and address match" needs reading the document (OCR), not built.
+shortcut: the watermark is drawn on screen over the document, not burned into the file; burn it in when anyone outside the reviewer role may open documents.
+shortcut: the state change and the platform audit entry are in two databases and not one transaction; the organisation's own audit records the decision first.
+shortcut: the decision email is English only until templates are localised (MDV-P1-032); the preview shows exactly that text.

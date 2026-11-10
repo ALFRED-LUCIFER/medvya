@@ -71,3 +71,34 @@ BEGIN
         END IF;
     END LOOP;
 END $$;
+
+-- The platform console's organisation approvals (MDV-P1-064, ADR-014 note): the console host's second login, IN ROLE medvya_review alone. It reads
+-- the organisation, its onboarding request and documents and the practice profile, updates the state and the request's last reason, and appends the
+-- settings change and audit event of a decision. It holds no right on patients, scheduling, encounters, identity, staff memberships or licences, and
+-- no schema-wide or default right anywhere (a new table is closed to it until it is listed here). Row-level security still scopes every row: the
+-- queue's operator branch covers Tenants, OrganisationRequests and OrganisationDocuments only (migration OrganisationRequests). Granted from scratch
+-- on each run, so whatever an earlier run or a default privilege gave more is undone.
+REVOKE ALL ON ALL TABLES IN SCHEMA tenancy, audit, ledger FROM medvya_review;
+GRANT USAGE ON SCHEMA tenancy, audit, ledger TO medvya_review;
+DO $$
+DECLARE g text[];
+BEGIN
+    FOREACH g SLICE 1 IN ARRAY ARRAY[['tenancy.Tenants', 'SELECT, UPDATE'], ['tenancy.OrganisationRequests', 'SELECT, UPDATE'],
+                                    ['tenancy.OrganisationDocuments', 'SELECT'], ['tenancy.Profiles', 'SELECT'],
+                                    ['tenancy.SettingsChanges', 'SELECT, INSERT'], ['audit.AuditEvents', 'SELECT, INSERT']]
+    LOOP
+        IF to_regclass(format('%I.%I', split_part(g[1], '.', 1), split_part(g[1], '.', 2))) IS NOT NULL THEN
+            EXECUTE format('GRANT %s ON %I.%I TO medvya_review', g[2], split_part(g[1], '.', 1), split_part(g[1], '.', 2));
+        END IF;
+    END LOOP;
+    -- The tenant row's read policy has a facility-picker branch that looks the signed-in user up in Memberships; a policy runs with the caller's rights,
+    -- so it needs those three columns and no others (no role, facility or invitation: nothing about a person beyond an opaque id).
+    IF to_regclass('tenancy."Memberships"') IS NOT NULL THEN
+        GRANT SELECT ("TenantId", "UserId", "Status") ON tenancy."Memberships" TO medvya_review;
+    END IF;
+    -- The chain triggers of the audit and settings tables list a tenant's first row in ledger."Chains" (see the module roles above).
+    IF to_regclass('ledger."Chains"') IS NOT NULL THEN
+        GRANT SELECT ON ALL TABLES IN SCHEMA ledger TO medvya_review;
+        GRANT INSERT ON ledger."Chains" TO medvya_review;
+    END IF;
+END $$;

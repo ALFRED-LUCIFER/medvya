@@ -144,6 +144,7 @@ ac:
 - Receptionists can upload and see the document list but cannot open clinical documents (policy test).
 - Original files are immutable; metadata edits (type, date) are audited.
 - Phone camera capture works on mobile web (multi-page to single PDF).
+- Follow-up moved from MDV-P1-062: an organisation onboarding document (MDV-P1-062) is scanned by the same seam, is not openable by Medvya operations until the scan is clean, and an infected file is refused and quarantined. Needs the seam in a shared place both Encounters and Tenancy may use, and the organisation documents in their own container.
 
 === MDV-P2-007
 title: Nurse intake queue and vitals with out-of-range re-measure and escalation (N-01)
@@ -393,6 +394,7 @@ ac:
 - Language option prints instructions in English plus Hindi/Tamil/Arabic (RTL correct) for the pilot languages.
 - Each pilot doctor reviews and approves their own Rx layout (approval recorded per doctor; exit gate 4).
 - Print layout passes 200 % zoom and screen-reader labelling checks in the on-screen preview.
+- Given a prescription is printed, when it renders, then it shows the doctor's licence number and authority (moved from MDV-P1-065; the number and authority are already stored on DoctorLicence and attested by the owner).
 
 === MDV-P2-018
 title: Investigation orders composer with Draft → Ordered states (E-05)

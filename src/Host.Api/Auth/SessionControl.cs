@@ -28,7 +28,7 @@ public static class SessionControl
     const string RoleClaim = "role";
     /// <summary>Background requests (status polls) send this so they do not count as activity and cannot keep an idle session alive.</summary>
     public const string PassiveHeader = "X-Medvya-Passive";
-    /// <summary>Tenant administrators: Config on "Staff, roles, integrations" in the role matrix (Practice admin, solo-doctor owner, hospital IT).</summary>
+    /// <summary>Tenant administrators: Config on "Staff, roles, integrations" in the role matrix (Practice admin, owner-doctor, hospital IT).</summary>
     public const string StaffAdminPolicy = "staff-admin";
 
     public sealed record FacilityChoiceRequest(Guid MembershipId);

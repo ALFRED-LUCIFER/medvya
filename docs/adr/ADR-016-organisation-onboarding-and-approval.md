@@ -108,3 +108,7 @@ Every tenant that exists when this ships (the dev and pilot tenants, for example
 ## Not decided here
 
 Real plans, prices and the self-service upgrade flow (MDV-P5-016, MDV-P5-042); the hospital HIS, SSO and multi-facility model (P7); whether an expired attestation blocks signing.
+
+## Decision on naming (MDV-P1-066)
+
+The enum value `Role.SoloDoctor` is kept: it is the stored membership value and the JWT role claim, and a rename would need a migration plus a compatibility window for issued sessions, for no change in behaviour. Only the wording is retired: the label reads "Owner doctor" in en, hi and ar, comments say owner-doctor, and no copy says Medvya verifies licences. The RoleMatrix is untouched. The role may be renamed later with its own migration if the name causes confusion.

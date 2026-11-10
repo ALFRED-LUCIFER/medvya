@@ -20,7 +20,7 @@ public static class SchedulingAccess
     /// <summary>See the reception board: read or full access to "Check-in & queue" (doctors, reception, nurse, coordinator, admin).</summary>
     public static readonly Need CanViewBoard = new(Capability.CheckInQueue, Access.Read, Access.Full);
 
-    /// <summary>Check in and move visits along the board: full access to "Check-in & queue" (solo doctor, reception, nurse).</summary>
+    /// <summary>Check in and move visits along the board: full access to "Check-in & queue" (owner-doctor, reception, nurse).</summary>
     public static readonly Need CanRunQueue = new(Capability.CheckInQueue, Access.Full);
 
     /// <summary>Change templates and resources: practice configuration (owner doctor, practice admin, hospital IT).</summary>

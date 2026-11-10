@@ -2,7 +2,7 @@ import { createRequire } from 'node:module';
 import { expect, test } from '@playwright/test';
 import { browserNow, expectNoAxeViolations, signIn, watchUrls } from './support';
 
-// MDV-P0-029: journey J1 (first solo-doctor visit, docs/02-design/journeys.md) through the real stack: a brand-new person signs up at the
+// MDV-P0-029: journey J1 (first owner-doctor visit, docs/02-design/journeys.md) through the real stack: a brand-new person signs up at the
 // development identity provider, sets up a practice, then registers a patient, books and checks in. Step 2 (fees catalogue) and steps 5-8
 // (consent, recording, note, invoice) have no screens yet and are not faked here. Synthetic people only.
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');

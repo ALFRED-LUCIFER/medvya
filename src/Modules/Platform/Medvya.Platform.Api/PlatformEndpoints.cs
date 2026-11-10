@@ -17,6 +17,9 @@ public static class PlatformPolicies
     public const string Console = "platform.console";
     public const string Owner = "platform.owner";
     public const string AuditRead = "platform.audit.read";
+    /// <summary>Organisation review (MDV-P1-064): operations and reviewers decide; support may read the queue to answer an applicant. Least access:
+    /// owner and finance are not in it, since the documents include the owner's government ID.</summary>
+    public const string OrganisationRead = "platform.organisation.read", OrganisationApprove = "platform.organisation.approve";
 
     public static AuthorizationBuilder AddPlatformPolicies(this AuthorizationBuilder builder)
     {
@@ -27,7 +30,9 @@ public static class PlatformPolicies
             .AddPolicy(SignedOn, p => p.RequireAuthenticatedUser())
             .AddPolicy(Console, console)
             .AddPolicy(Owner, p => p.Combine(console).RequireClaim(RoleClaim, nameof(PlatformRole.Owner)))
-            .AddPolicy(AuditRead, p => p.Combine(console).RequireClaim(RoleClaim, nameof(PlatformRole.Owner), nameof(PlatformRole.Operations)));
+            .AddPolicy(AuditRead, p => p.Combine(console).RequireClaim(RoleClaim, nameof(PlatformRole.Owner), nameof(PlatformRole.Operations)))
+            .AddPolicy(OrganisationRead, p => p.Combine(console).RequireClaim(RoleClaim, nameof(PlatformRole.Operations), nameof(PlatformRole.Reviewer), nameof(PlatformRole.Support)))
+            .AddPolicy(OrganisationApprove, p => p.Combine(console).RequireClaim(RoleClaim, nameof(PlatformRole.Operations), nameof(PlatformRole.Reviewer)));
     }
 }
 

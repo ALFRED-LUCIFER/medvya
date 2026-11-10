@@ -13,6 +13,9 @@
 --   medvya_reporting  Read-only: tenancy and the masked views in schema reporting. Row-level security still applies: without a tenant
 --                     setting it sees no clinic rows.
 --   medvya_<module>   Rights on that module's own schema only.
+--   medvya_review     The platform console's organisation review (MDV-P1-064, ADR-014 amended): its own login, not a member of medvya_app,
+--                     with rights on the onboarding tables and an append to the clinic audit log only (table-rights.sql). No patient,
+--                     encounter, scheduling or identity right.
 --
 -- Every role is NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE, so FORCE ROW LEVEL SECURITY binds all of them, owner included.
 -- Adding a module: add its schema to the schema list and a row to module_grants.
@@ -24,7 +27,7 @@ DECLARE r text;
 BEGIN
     FOREACH r IN ARRAY ARRAY['medvya_owner', 'medvya_migrator', 'medvya_app', 'medvya_reporting', 'medvya_tenancy', 'medvya_audit',
                              'medvya_identity', 'medvya_patients', 'medvya_billing', 'medvya_scheduling', 'medvya_leads',
-                             'medvya_notifications', 'medvya_encounters', 'medvya_prescribing', 'medvya_jobs', 'medvya_platform']
+                             'medvya_notifications', 'medvya_encounters', 'medvya_prescribing', 'medvya_jobs', 'medvya_platform', 'medvya_review']
     LOOP
         IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = r) THEN
             EXECUTE format('CREATE ROLE %I NOLOGIN NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE NOREPLICATION', r);
@@ -71,7 +74,7 @@ GRANT USAGE, CREATE ON SCHEMA public TO medvya_owner;
 CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public;
 
 -- Role memberships need ADMIN on the module roles, which the administrator holds and the owner does not.
--- medvya_platform is NOT here: the platform console (Host.Platform, MDV-P5-040) signs in with its own login IN ROLE medvya_platform alone,
+-- medvya_platform and medvya_review are NOT here: the platform console (Host.Platform, MDV-P5-040) signs in with its own login IN ROLE medvya_platform alone,
 -- so it cannot read any clinic schema, and the clinic application cannot read the console's tables.
 DO $$
 DECLARE r text;
@@ -164,6 +167,10 @@ GRANT USAGE ON SCHEMA tenancy, reporting TO medvya_reporting;
 ALTER DEFAULT PRIVILEGES FOR ROLE medvya_owner IN SCHEMA tenancy REVOKE SELECT ON TABLES FROM medvya_reporting;
 GRANT SELECT ON ALL TABLES IN SCHEMA reporting TO medvya_reporting;
 ALTER DEFAULT PRIVILEGES FOR ROLE medvya_owner IN SCHEMA reporting GRANT SELECT ON TABLES TO medvya_reporting;
+-- The console's organisation review (medvya_review) uses the schemas below; its table rights are in table-rights.sql, table by table.
+GRANT USAGE ON SCHEMA tenancy, audit, ledger TO medvya_review;
+GRANT SELECT ON ALL TABLES IN SCHEMA ledger TO medvya_review;
+
 -- shortcut: audit, identity and scheduling have no masked views yet (audit ClientIp, staff contacts, the visit reason), so reporting cannot
 -- read them at all; add a view in schema reporting when a report needs one.
 

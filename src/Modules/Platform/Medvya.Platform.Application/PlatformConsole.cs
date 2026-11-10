@@ -44,6 +44,8 @@ public enum TeamOutcome { Done, NotFound, Refused }
 public interface IPlatformTeam
 {
     Task<TeamView> ListAsync(CancellationToken cancellationToken = default);
+    /// <summary>Display names of members (removed ones too), for naming who decided what.</summary>
+    Task<IReadOnlyDictionary<Guid, string>> NamesAsync(IReadOnlyCollection<Guid> memberIds, CancellationToken cancellationToken = default);
     Task<IssuedLink> InviteAsync(Invite invite, CancellationToken cancellationToken = default);
     /// <summary>Lost key: revokes the member's keys and sessions at once and issues a one-hour link to register a new key.</summary>
     Task<(TeamOutcome Outcome, IssuedLink? Link)> IssueRecoveryAsync(Guid memberId, string reason, CancellationToken cancellationToken = default);
@@ -60,6 +62,8 @@ public interface IPlatformAuditLog
     Task<IReadOnlyList<AuditEntryView>> ListAsync(DateTimeOffset? before, Guid? beforeId, int limit, CancellationToken cancellationToken = default);
     /// <summary>The whole log as CSV, for auditors. The export itself is logged with its reason first.</summary>
     Task<string> ExportCsvAsync(string reason, CancellationToken cancellationToken = default);
+    /// <summary>Logs an action the console took in another module (an organisation decision), with the practice it concerns.</summary>
+    Task RecordAsync(string action, string resourceType, Guid? subjectTenantId, string reason, CancellationToken cancellationToken = default);
 }
 
 public sealed record ConsoleSession(Guid MemberId, Guid SessionId);

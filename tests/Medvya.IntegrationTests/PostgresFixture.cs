@@ -31,7 +31,7 @@ public sealed class PostgresFixture : IAsyncLifetime
 
     // Every role becomes a login in the fixture, standing in for the Entra identity mapped to it in Azure.
     static readonly string[] Roles = ["medvya_app", "medvya_migrator", "medvya_reporting", "medvya_tenancy", "medvya_audit", "medvya_identity",
-        "medvya_patients", "medvya_billing", "medvya_scheduling", "medvya_leads", "medvya_notifications", "medvya_encounters", "medvya_prescribing", "medvya_jobs", "medvya_platform"];
+        "medvya_patients", "medvya_billing", "medvya_scheduling", "medvya_leads", "medvya_notifications", "medvya_encounters", "medvya_prescribing", "medvya_jobs", "medvya_platform", "medvya_review"];
 
     /// <summary>The container superuser: the administrator's step, bulk loads and the restore-drill counts. Bypasses row-level security.</summary>
     // Command Timeout 300: the 150,000-row audit seed runs the per-row hash-chain trigger and took longer than Npgsql's 30 s default on a shared CI runner.

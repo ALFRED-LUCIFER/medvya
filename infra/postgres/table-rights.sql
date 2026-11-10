@@ -71,3 +71,28 @@ BEGIN
         END IF;
     END LOOP;
 END $$;
+
+-- The platform console's organisation review (MDV-P1-064, ADR-014 amended; Host.Platform's second login). Row-level security still applies:
+-- with medvya.operator and no tenant it reads the queue's three tables; inside one organisation's tenant it reads that organisation's request
+-- and writes the decision (state, last reason, settings history, audit event). Nothing else: no patient, encounter, scheduling, identity or
+-- membership right, so a bug in the console cannot reach clinic data. Revoked first, so a wider grant is undone each run.
+REVOKE ALL ON ALL TABLES IN SCHEMA tenancy, audit FROM medvya_review;
+DO $$
+DECLARE t text[];
+BEGIN
+    FOREACH t SLICE 1 IN ARRAY ARRAY[['tenancy', 'Tenants', 'SELECT'], ['tenancy', 'OrganisationRequests', 'SELECT'],
+                                    ['tenancy', 'OrganisationDocuments', 'SELECT'], ['tenancy', 'Profiles', 'SELECT'],
+                                    ['tenancy', 'SettingsChanges', 'SELECT, INSERT'], ['audit', 'AuditEvents', 'INSERT']]
+    LOOP
+        IF to_regclass(format('%I.%I', t[1], t[2])) IS NOT NULL THEN
+            EXECUTE format('GRANT %s ON %I.%I TO medvya_review', t[3], t[1], t[2]);
+        END IF;
+    END LOOP;
+    IF to_regclass('tenancy."Tenants"') IS NOT NULL THEN GRANT UPDATE ("State") ON tenancy."Tenants" TO medvya_review; END IF;
+    IF to_regclass('tenancy."OrganisationRequests"') IS NOT NULL THEN GRANT UPDATE ("LastReason") ON tenancy."OrganisationRequests" TO medvya_review; END IF;
+    IF to_regclass('ledger."Chains"') IS NOT NULL THEN GRANT INSERT ON ledger."Chains" TO medvya_review; END IF;
+    -- The ledger chain trigger (run as the caller) reads the chain head to link a new audit row: ids, sequence and hash, never the content.
+    IF to_regclass('audit."AuditEvents"') IS NOT NULL THEN GRANT SELECT ("TenantId", "ChainSeq", "RowHash") ON audit."AuditEvents" TO medvya_review; END IF;
+    -- The Tenants policy's facility-picker branch reads these three columns; PostgreSQL checks them as the caller. Ids and status only.
+    IF to_regclass('tenancy."Memberships"') IS NOT NULL THEN GRANT SELECT ("TenantId", "UserId", "Status") ON tenancy."Memberships" TO medvya_review; END IF;
+END $$;

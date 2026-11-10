@@ -4,8 +4,8 @@ using Medvya.BuildingBlocks.Domain;
 namespace Medvya.ArchitectureTests;
 
 /// <summary>
-/// MDV-P5-040: the platform console never shows patient records. Its host can load no clinic module, so no patient type, DbContext or
-/// service can reach a console endpoint; its own domain holds no health or national-id field; and its database login has no right on any
+/// MDV-P5-040: the platform console never shows patient records. Its host can load no clinic module but Tenancy and Audit (the organisation
+/// review, MDV-P1-064, over its own narrow login), so no patient type, DbContext or service can reach a console endpoint; its own domain holds no health or national-id field; and its database login has no right on any
 /// clinic schema (DatabaseRoleTests in the integration tests).
 /// </summary>
 public class PlatformConsoleTests
@@ -27,9 +27,25 @@ public class PlatformConsoleTests
         return seen;
     }
 
+    // The organisation review (ADR-014 amended) needs Tenancy's approval services and the clinic audit log; nothing with patient data.
+    static readonly string[] ReviewModules = ["Medvya.Audit.Application", "Medvya.Audit.Domain", "Medvya.Audit.Infrastructure",
+        "Medvya.Tenancy.Application", "Medvya.Tenancy.Domain", "Medvya.Tenancy.Infrastructure"];
+
     [Fact]
-    public void TheConsoleHostCannotReachAnyClinicModule() =>
-        Assert.Empty(ClinicAssemblies(ReferenceClosure(typeof(Host.Platform.Auth.ConsoleAuthentication).Assembly)));
+    public void TheConsoleHostReachesNoClinicModuleButTheOrganisationReview() =>
+        Assert.Empty(ClinicAssemblies(ReferenceClosure(typeof(Host.Platform.Auth.ConsoleAuthentication).Assembly)).Except(ReviewModules));
+
+    [Fact]
+    public void TheOrganisationReviewTypesHoldNoPatientField()
+    {
+        // What the queue and detail return: control-plane facts and document metadata only.
+        var types = new[] { typeof(Medvya.Tenancy.Application.QueueItem), typeof(Medvya.Tenancy.Application.RequestDetail),
+            typeof(Medvya.Tenancy.Application.OrganisationDocumentView), typeof(Medvya.Tenancy.Application.HistoryEntry) };
+        var fields = types.SelectMany(t => t.GetProperties().Select(p => p.Name)).ToList();
+        Assert.DoesNotContain(fields, f => f.Contains("Patient", StringComparison.OrdinalIgnoreCase) || f.Contains("Mrn", StringComparison.OrdinalIgnoreCase)
+            || f.Contains("Diagnos", StringComparison.OrdinalIgnoreCase) || f.Contains("NationalId", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(types.SelectMany(t => t.GetProperties()), p => p.PropertyType.Assembly.GetName().Name is { } n && ClinicAssemblies([n]).Except(ReviewModules).Any());
+    }
 
     [Fact]
     public void TheCheckerCatchesAClinicModule()

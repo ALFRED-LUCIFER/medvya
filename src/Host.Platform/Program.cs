@@ -2,11 +2,15 @@ using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 using Host.Platform.Auth;
 using Host.Platform.Context;
+using Medvya.Audit.Infrastructure;
+using Medvya.BuildingBlocks.Domain;
+using Medvya.BuildingBlocks.Infrastructure;
 using Medvya.BuildingBlocks.Security;
 using Medvya.Platform.Api;
 using Medvya.Platform.Application;
 using Medvya.Platform.Infrastructure;
 using Medvya.Platform.Infrastructure.Persistence;
+using Medvya.Tenancy.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 // The platform console host (MDV-P5-040, ADR-014): a separate app for the Medvya team. It reads only the control plane and signs in to the
@@ -24,6 +28,18 @@ builder.Services.AddScoped<IPlatformCaller, PlatformCaller>();
 // Without a database nothing resolves the console's services, so every endpoint fails closed.
 if (builder.Configuration.GetConnectionString("Platform") is { } sql)
     builder.Services.AddPlatformModule(sql, builder.Configuration.GetSection("Platform").Get<PlatformOptions>() ?? new());
+// The organisation review (MDV-P1-064) signs in as medvya_review: the onboarding tables and an append to the clinic audit log, nothing else
+// (infra/postgres/table-rights.sql). Without it the review endpoints fail closed like the rest.
+if (builder.Configuration.GetConnectionString("Review") is { } review)
+{
+    builder.Services.AddScoped<ReviewContext>()
+        .AddScoped<ICurrentTenant>(sp => sp.GetRequiredService<ReviewContext>())
+        .AddScoped<ICurrentUser>(sp => sp.GetRequiredService<ReviewContext>())
+        .AddScoped<ILinkTenant>(sp => sp.GetRequiredService<ReviewContext>())
+        .AddEmailSender(builder.Configuration, () => new Azure.Identity.ManagedIdentityCredential(Azure.Identity.ManagedIdentityId.SystemAssigned))
+        .AddAuditModule(review)
+        .AddOrganisationReview(review, builder.Configuration["Storage:ConnectionString"], builder.Configuration["Storage:BlobEndpoint"]);
+}
 builder.Services.AddHsts(o => { o.MaxAge = TimeSpan.FromDays(365); o.IncludeSubDomains = true; });
 builder.Services.AddRateLimiter(o =>
 {
@@ -47,6 +63,7 @@ app.UseConsoleAuthentication();
 app.MapGet("/health", () => Results.Ok(new { status = "ok" })).AllowAnonymous(); // public: deploy smoke tests
 app.MapConsoleSession();
 app.MapPlatformConsole();
+app.MapOrganisationReview();
 app.MapFallbackToFile("{*path:nonfile}", "index.html").AllowAnonymous();
 if (app.Environment.IsDevelopment() && app.Configuration["Authentication:Oidc:Authority"]?.EndsWith(DevIdentityProvider.Path, StringComparison.Ordinal) == true)
 {

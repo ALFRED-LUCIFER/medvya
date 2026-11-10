@@ -27,17 +27,17 @@ public sealed class PlatformConsoleTests(PostgresFixture sql) : IClassFixture<Po
     internal const string Origin = "https://localhost";
     readonly WebApplicationFactory<ConsoleProgram> factory = CreateFactory(sql);
 
-    internal static WebApplicationFactory<ConsoleProgram> CreateFactory(PostgresFixture sql, int signInPerMinute = 20)
+    internal static WebApplicationFactory<ConsoleProgram> CreateFactory(PostgresFixture sql, int signInPerMinute = 20, Action<IWebHostBuilder>? configure = null)
     {
         WebApplicationFactory<ConsoleProgram> factory = null!;
-        factory = new WebApplicationFactory<ConsoleProgram>().WithWebHostBuilder(b => b
+        factory = new WebApplicationFactory<ConsoleProgram>().WithWebHostBuilder(b => (configure ?? (_ => { }))(b
             .UseEnvironment("Development")
             .UseSetting("ConnectionStrings:Platform", sql.As("medvya_platform"))
             .UseSetting("Authentication:Oidc:Authority", "http://localhost/dev-idp")
             .UseSetting("Platform:Origins:0", Origin)
             .UseSetting("RateLimiting:SignInPerMinute", signInPerMinute.ToString(System.Globalization.CultureInfo.InvariantCulture))
             .ConfigureServices(s => s.Configure<OpenIdConnectOptions>(OpenIdConnectDefaults.AuthenticationScheme,
-                o => o.BackchannelHttpHandler = factory.Server.CreateHandler())));
+                o => o.BackchannelHttpHandler = factory.Server.CreateHandler()))));
         return factory;
     }
 

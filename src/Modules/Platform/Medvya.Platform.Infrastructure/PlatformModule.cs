@@ -57,8 +57,9 @@ public static class PlatformModule
 static class PlatformAudit
 {
     public static PlatformAuditEntry Entry(IPlatformCaller caller, DateTimeOffset now, string action, string resourceType, Guid? resourceId,
-        string? reason = null, Guid? actor = null) => new()
+        string? reason = null, Guid? actor = null, Guid? subjectTenantId = null) => new()
     {
+        SubjectTenantId = subjectTenantId,
         ActorMemberId = actor ?? caller.MemberId,
         Action = action,
         ResourceType = resourceType,

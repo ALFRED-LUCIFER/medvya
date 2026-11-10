@@ -15,6 +15,9 @@ sealed class PlatformTeam(PlatformDbContext db, IPlatformCaller caller, TimeProv
 
     Guid Actor => caller.MemberId ?? throw new InvalidOperationException("No signed-in console member.");
 
+    public async Task<IReadOnlyDictionary<Guid, string>> NamesAsync(IReadOnlyCollection<Guid> memberIds, CancellationToken cancellationToken = default) =>
+        await db.Members.AsNoTracking().Where(m => memberIds.Contains(m.Id)).ToDictionaryAsync(m => m.Id, m => m.DisplayName, cancellationToken);
+
     public async Task<TeamView> ListAsync(CancellationToken cancellationToken = default)
     {
         var now = clock.GetUtcNow();
@@ -111,6 +114,12 @@ sealed class PlatformAuditLog(PlatformDbContext db, IPlatformCaller caller, Time
         // The cursor is (time, id), the sort order: entries saved together share a time, and a time alone would skip one at a page boundary.
         if (before is { } b) q = beforeId is { } id ? q.Where(a => a.OccurredAt < b || (a.OccurredAt == b && a.Id.CompareTo(id) < 0)) : q.Where(a => a.OccurredAt < b);
         return await View(q.OrderByDescending(a => a.OccurredAt).ThenByDescending(a => a.Id).Take(Math.Clamp(limit, 1, MaxPage))).ToListAsync(cancellationToken);
+    }
+
+    public async Task RecordAsync(string action, string resourceType, Guid? subjectTenantId, string reason, CancellationToken cancellationToken = default)
+    {
+        db.AuditEntries.Add(PlatformAudit.Entry(caller, clock.GetUtcNow(), action, resourceType, subjectTenantId, reason, subjectTenantId: subjectTenantId));
+        await db.SaveChangesAsync(cancellationToken);
     }
 
     public async Task<string> ExportCsvAsync(string reason, CancellationToken cancellationToken = default)

@@ -13,6 +13,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Medvya.Platform.Application\Medvya.Platform.Application.csproj" />
+    <!-- The organisation review only (MDV-P1-064, ADR-014 amended): its contracts, never another clinic module. -->
+    <ProjectReference Include="..\..\Tenancy\Medvya.Tenancy.Application\Medvya.Tenancy.Application.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,5 +1,4 @@
 using Azure.Core;
-using Host.Api.Middleware;
 using Medvya.BuildingBlocks.Domain;
 using Medvya.BuildingBlocks.Infrastructure;
 using Microsoft.Extensions.Configuration;

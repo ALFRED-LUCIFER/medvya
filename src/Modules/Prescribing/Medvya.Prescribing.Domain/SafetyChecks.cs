@@ -315,7 +315,7 @@ public static class SafetyRules
         return dose * each;
     }
 
-    static int? PerDay(string? frequency) => frequency switch { "OD" or "STAT" => 1, "BD" => 2, "TDS" => 3, "QID" => 4, _ => null };
+    static int? PerDay(string? frequency) => frequency switch { "OD" or "MORNING" or "NIGHT" or "STAT" => 1, "BD" => 2, "TDS" => 3, "QID" => 4, _ => null };
 
     /// <summary>A liquid's concentration ("120 mg/5 mL", "250 mg/mL") in micrograms per mL; null when the strength is not one.</summary>
     static decimal? MicrogramsPerMl(string? strength)

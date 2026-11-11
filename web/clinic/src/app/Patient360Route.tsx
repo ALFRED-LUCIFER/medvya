@@ -10,10 +10,12 @@ import type { LifeStage } from '../features/patient360/domain/chart';
 import { useChartSectionController } from '../features/patient360/hooks/useChartSectionController';
 import { useHistoryController } from '../features/patient360/hooks/useHistoryController';
 import { usePatient360Controller } from '../features/patient360/hooks/usePatient360Controller';
+import AddMedicinePanel from '../features/prescription/components/AddMedicinePanel';
+import { useAddMedicineController } from '../features/prescription/hooks/useAddMedicineController';
 import TimelinePreview from '../features/timeline/components/TimelinePreview';
 import { useTimelinePreviewController } from '../features/timeline/hooks/useTimelinePreviewController';
 
-type Props = { backPath: string; canEditHistory: boolean; userId: string };
+type Props = { backPath: string; canEditHistory: boolean; canOrder: boolean; userId: string };
 
 /**
  * The life-stage modules (MDV-P2-034 to P2-038), by the life stage the server works out. Each is a route-level component that takes the patient
@@ -27,15 +29,19 @@ export default function Patient360Route(props: Props) {
   return <Chart key={patientId} patientId={patientId} {...props} />;
 }
 
-function Chart({ patientId, backPath, canEditHistory, userId }: Props & { patientId: string }) {
+function Chart({ patientId, backPath, canEditHistory, canOrder, userId }: Props & { patientId: string }) {
   const referrals = useOpenReferralsController(patientId);
   const chart = usePatient360Controller(patientId);
   const history = useHistoryController(patientId, chart.data, canEditHistory);
-  const modules = chart.data ? stageModules[chart.data.lifeStage] : [];
+  // Add medicine (MDV-P2-039) goes on the open consultation's draft; with none open the panel says to start one. The server still decides.
+  const add = useAddMedicineController(chart.data?.chart.openEncounterId ?? null);
+  const d = chart.data;
+  const modules = d ? stageModules[d.lifeStage] : [];
   // The timeline and documents are fetched only once the chart has opened, so a refused chart asks the server nothing more.
   return (
     <div className="flex flex-col gap-4">
       <Patient360Page {...chart} {...useChartSectionController(userId)} backPath={backPath} consultPath={id => `/consult/${id}`}
+        addMedicine={canOrder && d && <AddMedicinePanel {...add} patient={{ ...d.patient, allergies: { state: d.chart.allergyState, allergies: d.chart.allergies } }} />}
         history={chart.data && <HistorySections {...history} />}
         stageModule={modules.length > 0 ? <div className="flex flex-col gap-4">{modules.map((M, i) => <M key={i} patientId={patientId} />)}</div> : undefined}
         timeline={chart.data && <Timeline patientId={patientId} />}

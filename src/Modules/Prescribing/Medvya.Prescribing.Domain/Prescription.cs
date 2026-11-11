@@ -82,7 +82,7 @@ public static class Sig
             new Dictionary<string, string>
             {
                 ["OD"] = "once a day", ["BD"] = "twice a day", ["TDS"] = "three times a day", ["QID"] = "four times a day", ["SOS"] = "when needed",
-                ["STAT"] = "once, now", ["WEEKLY"] = "once a week",
+                ["STAT"] = "once, now", ["WEEKLY"] = "once a week", ["MORNING"] = "once a day in the morning", ["NIGHT"] = "once a day at night",
             },
             new Dictionary<string, string>
             {
@@ -105,7 +105,7 @@ public static class Sig
             new Dictionary<string, string>
             {
                 ["OD"] = "दिन में एक बार", ["BD"] = "दिन में दो बार", ["TDS"] = "दिन में तीन बार", ["QID"] = "दिन में चार बार", ["SOS"] = "ज़रूरत होने पर",
-                ["STAT"] = "अभी एक बार", ["WEEKLY"] = "हफ़्ते में एक बार",
+                ["STAT"] = "अभी एक बार", ["WEEKLY"] = "हफ़्ते में एक बार", ["MORNING"] = "दिन में एक बार सुबह", ["NIGHT"] = "दिन में एक बार रात को",
             },
             new Dictionary<string, string>
             {
@@ -129,7 +129,7 @@ public static class Sig
             new Dictionary<string, string>
             {
                 ["OD"] = "தினமும் ஒரு முறை", ["BD"] = "தினமும் இரண்டு முறை", ["TDS"] = "தினமும் மூன்று முறை", ["QID"] = "தினமும் நான்கு முறை", ["SOS"] = "தேவைப்படும்போது",
-                ["STAT"] = "இப்போது ஒரு முறை", ["WEEKLY"] = "வாரம் ஒரு முறை",
+                ["STAT"] = "இப்போது ஒரு முறை", ["WEEKLY"] = "வாரம் ஒரு முறை", ["MORNING"] = "தினமும் காலையில் ஒரு முறை", ["NIGHT"] = "தினமும் இரவில் ஒரு முறை",
             },
             new Dictionary<string, string>
             {
@@ -151,7 +151,7 @@ public static class Sig
             new Dictionary<string, string>
             {
                 ["OD"] = "مرة واحدة يوميًا", ["BD"] = "مرتين يوميًا", ["TDS"] = "ثلاث مرات يوميًا", ["QID"] = "أربع مرات يوميًا", ["SOS"] = "عند الحاجة",
-                ["STAT"] = "مرة واحدة الآن", ["WEEKLY"] = "مرة واحدة أسبوعيًا",
+                ["STAT"] = "مرة واحدة الآن", ["WEEKLY"] = "مرة واحدة أسبوعيًا", ["MORNING"] = "مرة واحدة يوميًا صباحًا", ["NIGHT"] = "مرة واحدة يوميًا ليلًا",
             },
             new Dictionary<string, string>
             {

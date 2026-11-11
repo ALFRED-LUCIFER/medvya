@@ -189,7 +189,7 @@ export default function App({ locale, onLocaleChange }: Props) {
           {/* Patient 360 (MDV-P2-004, E-01): same roles; /patients/new and /patients/directory are more specific and win. */}
           {['Read', 'Limited', 'Full', 'Sign'].includes(active.capabilities.Patient360Chart ?? 'None') &&
             <>
-              <Route path="/patients/:patientId" element={<Patient360Route backPath={searchPath ?? '/'} canEditHistory={active.capabilities.VitalsAllergiesEntry === 'Full'} userId={shell.session?.user.id ?? ''} />} />
+              <Route path="/patients/:patientId" element={<Patient360Route backPath={searchPath ?? '/'} canEditHistory={active.capabilities.VitalsAllergiesEntry === 'Full'} canOrder={active.capabilities.PrescriptionsOrders === 'Sign'} userId={shell.session?.user.id ?? ''} />} />
               <Route path="/patients/:patientId/timeline" element={<TimelineRoute />} />
             </>}
           {/* Documents (MDV-P2-006): clinicians, and the front desk (upload and list only; the server refuses it any file). */}

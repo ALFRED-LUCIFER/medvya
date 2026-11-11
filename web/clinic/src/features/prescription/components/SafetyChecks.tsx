@@ -1,4 +1,4 @@
-import type { FormEventHandler } from 'react';
+import { useId, type FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { CircleAlert, CircleCheck, CircleHelp, ShieldCheck, TriangleAlert, type LucideIcon } from 'lucide-react';
 import { useI18n, type MessageKey } from '@medvya/i18n';
@@ -77,6 +77,9 @@ export function SafetyChip({ state }: { state: LineSafety }) {
  */
 export default function SafetyChecks(p: SafetyProps) {
   const { t } = useI18n();
+  // Unique per instance: the composer and the Add medicine panel can both show the checks on one page.
+  const id = useId();
+  const [titleId, reasonId] = [`${id}-title`, `${id}-reason`];
   if (p.checksLoading) return <p role="status">{t('rx.check.loading')}</p>;
   if (p.checksFailed) return <p role="alert" className={fieldError}>{t('rx.check.failed')}</p>;
   const c = p.checks;
@@ -84,8 +87,8 @@ export default function SafetyChecks(p: SafetyProps) {
   const error = p.reasonForm.formState.errors.reason;
 
   return (
-    <section aria-labelledby="rx-checks-title" className="flex flex-col gap-3 border-t pt-4">
-      <h3 id="rx-checks-title" className="flex items-center gap-2 font-bold"><ShieldCheck aria-hidden className="size-4" />{t('rx.check.title')}</h3>
+    <section aria-labelledby={titleId} className="flex flex-col gap-3 border-t pt-4">
+      <h3 id={titleId} className="flex items-center gap-2 font-bold"><ShieldCheck aria-hidden className="size-4" />{t('rx.check.title')}</h3>
       <p className="text-sm">{t(`rx.check.allergies.${c.allergies}`)}</p>
       {c.unresolved > 0 && <p className="text-sm font-bold">{t('rx.check.unresolved', { count: c.unresolved })}</p>}
       {c.alerts.length === 0 ? <p className="text-sm">{t('rx.check.clear')}</p> : (
@@ -98,8 +101,8 @@ export default function SafetyChecks(p: SafetyProps) {
                 {given && <p className="text-sm">{t('rx.check.overridden', { reason: given.reason })}</p>}
                 {!given && a.severity === 'Severe' && !p.ended && (p.overriding === a.key ? (
                   <form noValidate onSubmit={p.onReason} className="flex flex-col gap-2">
-                    <Field id="rx-override-reason" label={t('rx.check.reason')} hint={t('rx.check.reasonHint')} error={error && t('rx.check.reasonRequired')}>
-                      <Input id="rx-override-reason" className="h-11" autoComplete="off" {...describedBy('rx-override-reason', !!error, true)} {...p.reasonForm.register('reason')} />
+                    <Field id={reasonId} label={t('rx.check.reason')} hint={t('rx.check.reasonHint')} error={error && t('rx.check.reasonRequired')}>
+                      <Input id={reasonId} className="h-11" autoComplete="off" {...describedBy(reasonId, !!error, true)} {...p.reasonForm.register('reason')} />
                     </Field>
                     <div className="flex flex-wrap gap-2">
                       <Button type="submit" className="min-h-11" disabled={p.busy}>{t('rx.check.record')}</Button>

@@ -86,6 +86,19 @@ public sealed class PrescriptionTests(PostgresFixture sql) : IClassFixture<Postg
     }
 
     [Fact]
+    public void TheAddMedicinePresetsOneZeroZeroAndZeroZeroOneKeepTheTimeOfDayBesideTheFoodTiming()
+    {
+        // MDV-P2-039: "1-0-0" and "0-0-1" are once a day in the morning or at night, and still take "after food" in the timing slot.
+        static SigParts Once(string frequency) => new("1", "tablet", "oral", frequency, "after_food", 5, 5, null);
+        Assert.Empty(Sig.Validate(Once("MORNING")));
+        Assert.Empty(Sig.Validate(Once("NIGHT")));
+        Assert.Equal("Take 1 tablet by mouth once a day in the morning after food for 5 days. Quantity: 5.", Sig.Render(Once("MORNING"), "en"));
+        Assert.Equal("Take 1 tablet by mouth once a day at night after food for 5 days. Quantity: 5.", Sig.Render(Once("NIGHT"), "en"));
+        foreach (var language in Sig.Languages)
+            Assert.NotEqual(Sig.Render(Once("MORNING"), language), Sig.Render(Once("NIGHT"), language));
+    }
+
+    [Fact]
     public async Task InvalidDoseBuilderFieldsAreRefusedWithCodesAndNothingIsSaved()
     {
         var enc = await ConsultationAsync();

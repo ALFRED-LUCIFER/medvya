@@ -4,7 +4,11 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
     <PackageReference Include="Azure.Identity" />
+    <PackageReference Include="QuestPDF" />
     <FrameworkReference Include="Microsoft.AspNetCore.App" /> <!-- EmailSetup binds configuration; both hosts share it -->
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Fonts\*.ttf" LogicalName="Medvya.Fonts.%(Filename)%(Extension)" /> <!-- Noto, SIL Open Font Licence (Fonts/OFL.txt) -->
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Medvya.BuildingBlocks.Domain\Medvya.BuildingBlocks.Domain.csproj" />

@@ -14,6 +14,10 @@
     <PackageVersion Include="Azure.Identity" Version="1.21.0" />
     <!-- MDV-P2-017: the QR code that verifies a printed prescription. MIT, managed, no dependencies; a hand-written encoder (Reed-Solomon, masks) would need its own decoder to test. -->
     <PackageVersion Include="QRCoder" Version="1.8.1" />
+    <!-- Every server PDF (signed note, prescription; ADR-018): shaped Hindi, Tamil and Arabic with embedded Noto fonts, native Skia shipped in the package (linux-x64 App Service). Community licence, see the ADR. -->
+    <PackageVersion Include="QuestPDF" Version="2026.9.1" />
+    <!-- Test only: reads the text and pages back out of the server PDFs. Apache-2.0. -->
+    <PackageVersion Include="PdfPig" Version="0.1.16" />
     <!-- Wraps per-tenant data keys with a Key Vault key (MDV-P0-035); already a transitive of the Always Encrypted provider. -->
     <PackageVersion Include="Azure.Security.KeyVault.Keys" Version="4.7.0" />
     <!-- Email through Azure Communication Services (Email:Provider=Acs), passwordless with the app identity. -->

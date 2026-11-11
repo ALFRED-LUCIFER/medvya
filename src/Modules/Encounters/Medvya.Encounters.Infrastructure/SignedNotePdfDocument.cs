@@ -11,7 +11,7 @@ namespace Medvya.Encounters.Infrastructure;
 /// The signed note as an A4 PDF (MDV-P2-013, E-06): the patient's name, MRN and date of birth at the top of every page, version 1 with its signer
 /// block, then each addendum in order with its reason and signer, and "Corrections are added as signed addenda" at the foot of every page.
 /// Copy comes from the shared English catalogue (packages/i18n/messages/en.json); the server never invents wording.
-/// Written by <see cref="PlainPdf"/>: text in another script than Latin is refused with <see cref="NotePdfUnsupportedTextException"/> (its shortcut).
+/// Written by <see cref="PlainPdf"/>: Hindi, Tamil and Arabic print shaped; text no embedded font has is refused with <see cref="NotePdfUnsupportedTextException"/>.
 /// </summary>
 public static class SignedNotePdfDocument
 {

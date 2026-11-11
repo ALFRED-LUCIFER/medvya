@@ -38,8 +38,8 @@ export function usePregnancyController(patientId: string, data: Patient360 | nul
     setForm(f);
   };
   return {
-    // A man is offered no pregnancy card unless one is already open (recorded by mistake, so it can be closed).
-    shown: !!data && (data.patient.sexAtBirth !== 'Male' || !!data.pregnancy.open),
+    // Offered to a patient who is not male and is 10 or older; an open one always shows (one recorded by mistake can then be closed).
+    shown: !!data && (!!data.pregnancy.open || (data.patient.sexAtBirth !== 'Male' && data.patient.ageYears >= 10)),
     status: data?.pregnancy ?? { open: null, ruledOut: null },
     timeZone: data?.timeZone ?? 'UTC',
     canManage, canRecord, form, startForm, closeForm, readingsForm,

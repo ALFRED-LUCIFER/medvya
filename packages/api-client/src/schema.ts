@@ -972,6 +972,119 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/patients/{patientId}/child-health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    patientId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/patients/{patientId}/immunisations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    patientId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["RecordDose"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/patients/{patientId}/milestones": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    patientId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["AnswerMilestone"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/encounters/{encounterId}/note/sign": {
         parameters: {
             query?: never;
@@ -7835,6 +7948,12 @@ export interface components {
             lastCompletedAt: null | string;
             members: null | components["schemas"]["AnonymousTypeOfGuidAndstringAndRoleAndstringAndDateTimeOffsetAndstring"][];
         };
+        AnswerMilestone: {
+            band: null | string;
+            milestone: null | string;
+            answer: null | components["schemas"]["MilestoneAnswer"];
+            answeredBy: null | components["schemas"]["MilestoneAnswerer"];
+        };
         AppointmentAction: {
             /** Format: uuid */
             appointmentId: string;
@@ -8152,6 +8271,8 @@ export interface components {
         };
         /** @enum {unknown} */
         DocumentType: "LabReport" | "Imaging" | "Prescription" | "Referral" | "Other";
+        /** @enum {unknown} */
+        DoseOutcome: "Given" | "Deferred" | null;
         DuplicateCheckRequest: {
             fullName?: null | string;
             /** Format: date */
@@ -8321,6 +8442,10 @@ export interface components {
             /** Format: uuid */
             otherPatientId: string;
         };
+        /** @enum {unknown} */
+        MilestoneAnswer: "Yes" | "No" | "Unsure" | null;
+        /** @enum {unknown} */
+        MilestoneAnswerer: "Parent" | "Clinician" | null;
         MoveVisit: {
             state?: null | components["schemas"]["AppointmentState"];
         };
@@ -8534,6 +8659,17 @@ export interface components {
             fromDate?: null | string;
             /** Format: date */
             toDate?: null | string;
+        };
+        RecordDose: {
+            vaccine: null | string;
+            /** Format: int32 */
+            dose: null | number | string;
+            outcome: null | components["schemas"]["DoseOutcome"];
+            /** Format: date */
+            givenOn: null | string;
+            batch: null | string;
+            givenBy: null | string;
+            reason: null | string;
         };
         /** @enum {unknown} */
         RecordingConsent: "Agreed" | "Declined" | "Withdrawn" | null;

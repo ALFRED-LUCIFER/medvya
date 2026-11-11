@@ -94,6 +94,7 @@ public static class EncounterEndpoints
         app.MapDocumentEndpoints();
         app.MapReconciliationEndpoints();
         app.MapProblemEndpoints();
+        app.MapChildHealthEndpoints();
         app.MapNoteEndpoints();
         return app;
     }

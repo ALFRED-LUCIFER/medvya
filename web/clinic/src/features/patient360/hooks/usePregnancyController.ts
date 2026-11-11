@@ -38,8 +38,8 @@ export function usePregnancyController(patientId: string, data: Patient360 | nul
     setForm(f);
   };
   return {
-    // Offered to a patient who is not male and is 10 or older; an open one always shows (one recorded by mistake can then be closed).
-    shown: !!data && (!!data.pregnancy.open || (data.patient.sexAtBirth !== 'Male' && data.patient.ageYears >= 10)),
+    // Offered to a patient who is not male and is 10 to 55; an open one always shows (one recorded by mistake can then be closed).
+    shown: !!data && (!!data.pregnancy.open || (data.patient.sexAtBirth !== 'Male' && data.patient.ageYears >= 10 && data.patient.ageYears <= 55)),
     status: data?.pregnancy ?? { open: null, ruledOut: null },
     timeZone: data?.timeZone ?? 'UTC',
     canManage, canRecord, form, startForm, closeForm, readingsForm,

@@ -5,8 +5,10 @@ import OpenReferrals from '../features/referrals/components/OpenReferrals';
 import { useOpenReferralsController } from '../features/referrals/hooks/useReferralsController';
 import HistorySections from '../features/patient360/components/HistorySections';
 import PregnancyCard from '../features/patient360/components/PregnancyCard';
+import OlderAdultCards from '../features/patient360/components/OlderAdultCards';
 import Patient360Page from '../features/patient360/components/Patient360Page';
 import { useHistoryController } from '../features/patient360/hooks/useHistoryController';
+import { useOlderAdultController } from '../features/patient360/hooks/useOlderAdultController';
 import AddMedicinePanel from '../features/prescription/components/AddMedicinePanel';
 import { useAddMedicineController } from '../features/prescription/hooks/useAddMedicineController';
 import { usePatient360Controller } from '../features/patient360/hooks/usePatient360Controller';
@@ -32,14 +34,19 @@ function Chart({ patientId, backPath, canEditHistory, canManagePregnancy, canOrd
   const child = d?.lifeStage === 'Child';
   const childHealth = useChildHealthController(patientId, child);
   const pregnancy = usePregnancyController(patientId, d, canManagePregnancy, canEditHistory);
+  const older = d?.lifeStage === 'OlderAdult';
+  const olderAdult = useOlderAdultController(patientId, older);
+  const consultPath = (id: string) => `/consult/${id}`;
+  const open = d?.chart.openEncounterId;
   return (
     <div className="flex flex-col gap-4">
       <Patient360Page {...chart} backPath={backPath}
         addMedicine={canOrder && d && <AddMedicinePanel {...add} patient={{ ...d.patient, allergies: { state: d.chart.allergyState, allergies: d.chart.allergies } }} />}
-        consultPath={id => `/consult/${id}`} timelinePath={`/patients/${patientId}/timeline`} documentsPath={`/patients/${patientId}/docs`} />
+        consultPath={consultPath} timelinePath={`/patients/${patientId}/timeline`} documentsPath={`/patients/${patientId}/docs`} />
       {pregnancy.shown && <PregnancyCard {...pregnancy} />}
       {chart.data && <HistorySections {...history} />}
       {child && <ChildHealthCard {...childHealth} canRecord={canEditHistory} online={online} />}
+      {older && <OlderAdultCards {...olderAdult} consultPath={open ? consultPath(open) : null} />}
       {!referrals.hidden && !referrals.loading && !referrals.failed && <OpenReferrals open={referrals.open} />}
     </div>
   );

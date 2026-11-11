@@ -1085,6 +1085,64 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/patients/{patientId}/geriatric-assessments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    patientId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    patientId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["RecordGeriatricAssessment"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/encounters/{encounterId}/note/sign": {
         parameters: {
             query?: never;
@@ -7281,6 +7339,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/patients/{patientId}/medicine-review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    patientId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/encounters/{encounterId}/prescription/checks": {
         parameters: {
             query?: never;
@@ -8917,6 +9010,31 @@ export interface components {
             batch: null | string;
             givenBy: null | string;
             reason: null | string;
+        };
+        RecordGeriatricAssessment: {
+            /** Format: int32 */
+            fallsLast12Months: null | number | string;
+            /** Format: double */
+            timedUpAndGoSeconds: null | number | string;
+            /** Format: int32 */
+            lyingSystolic: null | number | string;
+            /** Format: int32 */
+            lyingDiastolic: null | number | string;
+            /** Format: int32 */
+            standingSystolic: null | number | string;
+            /** Format: int32 */
+            standingDiastolic: null | number | string;
+            /** Format: int32 */
+            clinicalFrailtyScale: null | number | string;
+            /** Format: int32 */
+            miniCog: null | number | string;
+            /** Format: int32 */
+            adl: null | number | string;
+            /** Format: int32 */
+            iadl: null | number | string;
+            /** Format: int32 */
+            phq2: null | number | string;
+            nutritionNote: null | string;
         };
         /** @enum {unknown} */
         RecordingConsent: "Agreed" | "Declined" | "Withdrawn" | null;

@@ -50,11 +50,13 @@ describe('add medicine checks', () => {
     ruleSet: 'r', ruleSetVersion: 'v', allergies: 'Listed', checkedAt: '', unresolved: 2,
     alerts: [alert('mine', 'a'), alert('other', 'b'), alert('patient', null, 'Moderate')],
     notChecked: [{ id: 'b', medicine: 'X', onChart: false, reason: 'FreeText' }], overrides: [],
+    weightDoses: [{ itemId: 'b', medicine: 'X', weightHundredthsKg: 1420, mgPerKg: 15, doseMicrograms: 213_000, doseTenthsMl: 89, maxDosesPerDay: 4, maxDailyMicrograms: 852_000 }],
   };
   it("keeps this line's findings and the patient-wide ones, and counts only its open severe ones", () => {
     const mine = checksFor(all, 'a');
     expect(mine.alerts.map(a => a.key)).toEqual(['mine', 'patient']);
     expect(mine.notChecked).toEqual([]);
+    expect(mine.weightDoses).toEqual([]);
     expect(mine.unresolved).toBe(1);
     expect(checksFor({ ...all, overrides: [{ key: 'mine', reason: 'r', ruleSetVersion: 'v', overriddenBy: 'u', overriddenAt: '' }] }, 'a').unresolved).toBe(0);
   });

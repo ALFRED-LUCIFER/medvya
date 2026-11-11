@@ -49,5 +49,5 @@ export const medicinesOf = (results: Medicine[]) => results.filter((m, i) => res
 export function checksFor(checks: RxChecks, itemId: string): RxChecks {
   const alerts = checks.alerts.filter(a => a.itemId === itemId || a.itemId === null);
   const open = alerts.filter(a => a.severity === 'Severe' && !checks.overrides.some(o => o.key === a.key));
-  return { ...checks, alerts, notChecked: checks.notChecked.filter(n => n.id === itemId), unresolved: open.length };
+  return { ...checks, alerts, notChecked: checks.notChecked.filter(n => n.id === itemId), weightDoses: checks.weightDoses.filter(d => d.itemId === itemId), unresolved: open.length };
 }

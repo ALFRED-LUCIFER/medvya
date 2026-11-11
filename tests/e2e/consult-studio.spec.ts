@@ -144,3 +144,71 @@ for (const locale of ['en', 'ar'])
     for (const target of await page.getByRole('main').locator('nav a, [role=tab], button:not([role=switch]), textarea').all()) expect((await target.boundingBox())!.height).toBeGreaterThanOrEqual(44);
     expect(await axe(page)).toEqual([]);
   });
+
+// MDV-P2-042: the structured review of systems (History) and examination by system (Examination), and the template suggested for the patient.
+const ros = (page: Page) => note(page).getByRole('group', { name: 'Review of systems' });
+const exam = (page: Page) => note(page).getByRole('group', { name: 'Examination by system' });
+const item = (section: ReturnType<typeof ros>, name: string) => section.getByRole('group', { name, exact: true });
+const press = (section: ReturnType<typeof ros>, name: string, answer: string) => item(section, name).getByRole('button', { name: answer, exact: true });
+
+test('the review of systems sits in History: Yes or No per symptom, pressed again it clears, an unanswered one is not sent', async ({ page }) => {
+  const mock = await open(page, { templateKey: 'diabetes-review', suggestedTemplateKey: 'diabetes-review' });
+  await expect(note(page)).toContainText("Suggested from the patient's age and problems. You can change it.");
+  const history = note(page).getByRole('heading', { name: '2 · History' }).locator('..');
+  await expect(history.getByRole('group', { name: 'Review of systems' })).toBeVisible();
+  await press(ros(page), 'Tiredness', 'Yes').click();
+  await press(ros(page), 'Chest pain', 'No').click();
+  await expect(press(ros(page), 'Tiredness', 'Yes')).toHaveAttribute('aria-pressed', 'true');
+  await expect.poll(() => mock.puts.at(-1)?.sections.reviewOfSystems).toBe('{"tiredness":{"answer":"yes"},"chestPain":{"answer":"no"}}');
+  await press(ros(page), 'Tiredness', 'Yes').click(); // pressed again: blank, not "no"
+  await expect.poll(() => mock.puts.at(-1)?.sections.reviewOfSystems).toBe('{"chestPain":{"answer":"no"}}');
+  await expect(note(page)).not.toContainText('Suggested from the patient'); // saved: the doctor's note now, no longer a suggestion
+});
+
+test('the examination sits in Examination: Abnormal waits for its note, Not examined is kept; the guided steps edit the same answers', async ({ page }) => {
+  const mock = await open(page, { templateKey: 'diabetes-review', version: 1, sections: { chiefComplaint: 'Thirst', assessment: 'Review', plan: 'Rest' }, recordingConsent: 'Declined' });
+  const section = note(page).getByRole('heading', { name: '4 · Examination' }).locator('..');
+  await expect(section.getByRole('group', { name: 'Examination by system' })).toBeVisible();
+  await press(exam(page), 'Heart', 'Normal').click();
+  await press(exam(page), 'Nervous system', 'Not examined').click();
+  await press(exam(page), 'Feet', 'Abnormal').click();
+  await expect(exam(page)).toContainText('Describe the abnormal finding. It is saved once it has a note.');
+  await expect(bar(page).getByRole('link', { name: '4 · Examination Done' })).toBeVisible();
+  await expect.poll(() => mock.puts.at(-1)?.sections.examination).toBe('{"heart":{"answer":"normal"},"nervousSystem":{"answer":"notExamined"}}');
+  await note(page).getByRole('button', { name: 'Sign note' }).click(); // signing points to the finding without a note
+  await expect(note(page)).toContainText('An abnormal finding has no note yet. Describe it before you sign.');
+  await expect(exam(page).getByLabel('Finding for Feet (required)')).toBeFocused();
+  await page.getByRole('button', { name: 'Guided steps' }).click();
+  await exam(page).getByLabel('Finding for Feet (required)').fill('Reduced monofilament both soles');
+  await expect.poll(() => mock.puts.at(-1)?.sections.examination)
+    .toBe('{"heart":{"answer":"normal"},"feet":{"answer":"abnormal","note":"Reduced monofilament both soles"},"nervousSystem":{"answer":"notExamined"}}');
+  await expect(press(exam(page), 'Heart', 'Normal')).toHaveAttribute('aria-pressed', 'true');
+});
+
+test('a signed note shows the answers in words and leaves an unanswered item out', async ({ page }) => {
+  await open(page, { templateKey: 'diabetes-review', version: 2, status: 'Signed', recordingConsent: 'Declined',
+    signature: { versionNo: 1, signedBy: 'u-rao', signedAt: at, contentHash: 'a'.repeat(64), signerName: 'Dr Asha Raman (synthetic)' },
+    sections: { chiefComplaint: 'Thirst', assessment: 'Review', plan: 'Rest', reviewOfSystems: '{"tinglingFeet":{"answer":"yes"}}',
+      examination: '{"feet":{"answer":"abnormal","note":"Reduced sensation"},"nervousSystem":{"answer":"notExamined"}}' } });
+  await expect(note(page)).toContainText('Tingling feet: Yes');
+  await expect(note(page)).toContainText('Feet: Abnormal. Reduced sensation');
+  await expect(note(page)).toContainText('Nervous system: Not examined');
+  await expect(note(page)).not.toContainText('Chest pain');
+  await expect(note(page).getByRole('button', { name: 'Yes' })).toHaveCount(0);
+});
+
+for (const locale of ['en', 'ar'])
+  test(`axe finds no violations on the review of systems and examination (${locale}); targets are 44 px`, async ({ page }) => {
+    await open(page, { templateKey: 'older-adult-review', version: 1, sections: { chiefComplaint: 'Dizzy', reviewOfSystems: '{"dizzyOnStanding":{"answer":"yes"}}', examination: '{"joints":{"answer":"abnormal"}}' } }, locale);
+    const ar = locale === 'ar';
+    const main = page.getByRole('main'); // the note region's name is in the page's language
+    await expect(main.getByRole('group', { name: ar ? 'مراجعة الأجهزة' : 'Review of systems' })).toBeVisible();
+    await expect(main.getByRole('group', { name: ar ? 'الفحص حسب الجهاز' : 'Examination by system' })).toBeVisible();
+    await expect(main.getByRole('heading', { name: ar ? '3 · مراجعة كبار السن' : '3 · Older adult review' })).toBeVisible();
+    if (ar) await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+    for (const target of await main.locator('[role=group] [role=group] button, input[id$="-note"]').all()) {
+      const box = (await target.boundingBox())!;
+      expect(Math.min(box.height, box.width)).toBeGreaterThanOrEqual(44);
+    }
+    expect(await axe(page)).toEqual([]);
+  });

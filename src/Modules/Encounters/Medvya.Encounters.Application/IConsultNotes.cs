@@ -19,10 +19,12 @@ public sealed record NoteAddendum(int VersionNo, int AmendsVersionNo, string Rea
 /// Version 0 and no sections: nothing saved yet (the default template is offered). <see cref="Signature"/> is set once signed; <see cref="Addenda"/>
 /// are the signed addenda in version order (empty until one is added). <see cref="SignAsName"/> is the name the current user's signature will show (unsigned notes only).
 /// <see cref="RecordingConsent"/> and <see cref="UndecidedAi"/> are what the review-and-sign checklist reads (MDV-P2-044); it is never stored.
+/// <see cref="SuggestedTemplateKey"/> (MDV-P2-042): on a note with nothing saved, the template picked from the patient's age and problems; the note starts on it.
 /// </summary>
 public sealed record NoteView(
     Guid EncounterId, string TemplateKey, int TemplateVersion, NoteStatus Status, bool Manual, IReadOnlyDictionary<string, string> Sections, int Version, DateTimeOffset? UpdatedAt,
-    NoteSignature? Signature = null, IReadOnlyList<NoteAddendum>? Addenda = null, string? SignAsName = null, RecordingConsent? RecordingConsent = null, IReadOnlyList<string>? UndecidedAi = null);
+    NoteSignature? Signature = null, IReadOnlyList<NoteAddendum>? Addenda = null, string? SignAsName = null, RecordingConsent? RecordingConsent = null, IReadOnlyList<string>? UndecidedAi = null,
+    string? SuggestedTemplateKey = null);
 
 /// <summary>An addendum to a signed note: the text and why it is added. Both are required.</summary>
 public sealed record AddNoteAddendum(string? Text, string? Reason);

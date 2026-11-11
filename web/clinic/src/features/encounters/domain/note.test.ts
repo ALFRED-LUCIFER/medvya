@@ -1,9 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { insertAt, maxSectionLength, snippetSections, addendumFailure, addendumSchema, inTemplateOrder, missingRequired, pdfFailure, signFailure, reapply, staleVersion, switchChoices, switchTemplate, type NoteTemplate } from './note';
+import { withTitle, insertAt, maxSectionLength, snippetSections, addendumFailure, addendumSchema, inTemplateOrder, missingRequired, pdfFailure, signFailure, reapply, staleVersion, switchChoices, switchTemplate, type NoteTemplate } from './note';
 
 const tpl = (key: string, ...ids: string[]): NoteTemplate => ({ key, version: 1, quickPhrases: [], sections: ids.map(id => ({ id, required: id === 'plan' })) });
 
 describe('note rules', () => {
+  it('titles a doctor once', () => {
+    expect(withTitle('Arjun Rao')).toBe('Dr. Arjun Rao');
+    expect(withTitle('Dr. Arjun Rao')).toBe('Dr. Arjun Rao');
+    expect(withTitle('dr Arjun Rao')).toBe('dr Arjun Rao');
+  });
+
   it('lists required sections that are blank, whitespace included', () => {
     expect(missingRequired(tpl('a', 'plan', 'objective'), { plan: '  ', objective: 'x' })).toEqual(['plan']);
     expect(missingRequired(tpl('a', 'plan'), { plan: 'rest' })).toEqual([]);

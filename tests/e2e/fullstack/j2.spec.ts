@@ -52,9 +52,8 @@ journey('J2', {
     await page.reload();
     await expect(note.getByLabel('Chief complaint')).toHaveValue('Increased thirst for two weeks (synthetic)');
 
-    // MDV-P2-012 and ADR-016: no Medvya licence check stands in the way, so the gate message is gone. The sign, re-authentication and signed
-    // read-only view are in consult-note.spec.ts (mocked) and ConsultNoteTests (server).
-    // shortcut: the real-stack sign round trip (dev provider ignores prompt=login: picking the same user again is the re-auth) is not driven here yet.
+    // MDV-P2-012 and ADR-016: no Medvya licence check stands in the way, so the gate message is gone. The signing itself is below, after the unsigned note
+    // has been found again on Today.
     await expect(note).not.toContainText('Only a doctor can sign this note.');
 
     await page.getByRole('button', { name: 'End consultation' }).click(); // leaves no open consultation for a later run
@@ -65,6 +64,27 @@ journey('J2', {
     const row = pending.getByRole('listitem').filter({ hasText: meera }).filter({ hasText: 'Draft, not signed' }).last(); // newest of this run; earlier runs leave theirs
     await row.getByRole('link', { name: 'Open to finish' }).click();
     await expect(page.getByRole('region', { name: 'Consultation note' }).getByLabel('Chief complaint')).toHaveValue('Increased thirst for two weeks (synthetic)');
+
+    // MDV-P2-012: sign on the real API and PostgreSQL by a doctor whose licence the owner attested. The first try needs a fresh sign-in (the dev provider has no
+    // password: picking the same user again is the step-up); the real Entra prompt=login and MFA are not exercised here. The save, the 5-minute window, the
+    // immutable v1 and its signer line with the attested licence number are the server's.
+    await note.getByLabel('Assessment').fill('Raised blood sugar, review (synthetic)');
+    await note.getByLabel('Plan').fill('Diet advice, review in two weeks (synthetic)');
+    await expect(note.getByRole('status')).toHaveText('Saved');
+    await note.getByRole('button', { name: 'Sign note' }).click();
+    const dialog = page.getByRole('dialog', { name: `Sign note for ${meera}?` });
+    await expect(dialog).toContainText('I have reviewed every section');
+    await dialog.getByRole('button', { name: /^Sign as Dr\. Arjun Rao/ }).click();
+    await page.getByRole('link', { name: rao }).click();
+    await page.waitForURL(/\/app\/consult\/[0-9a-f-]{36}$/);
+    await note.getByRole('button', { name: 'Sign note' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: /^Sign as Dr\. Arjun Rao/ }).click();
+    await expect(note).toContainText('SIGNED v1 · read-only');
+    await expect(note).toContainText(/Signed by Dr\. Arjun Rao.*licence .*SYN-TCMC-\d+/);
+    await expect(note.getByLabel('Plan')).toHaveJSProperty('readOnly', true);
+    await expect(note.getByRole('button', { name: 'Sign note' })).toHaveCount(0);
+    await page.reload(); // the signature is the server's, not the page's
+    await expect(note).toContainText('SIGNED v1 · read-only');
     expect(watch.leaks(['Meera', 'Iyer', '1972-03-12', 'DQ-10-4482', 'thirst'])).toEqual([]); // whole values: a short digit run can occur by chance in a random id
   },
   2: 'MDV-P2-004', // E-01 Patient 360 brief (verified facts vs AI summary)

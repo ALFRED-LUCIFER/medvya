@@ -58,7 +58,8 @@ export function useNoteController(encounterId: string, canSign: boolean, timeZon
   const template = catalog.data?.templates.find(t => t.key === templateKey) ?? null;
   const request = (key: string) => {
     const to = catalog.data?.templates.find(t => t.key === key);
-    if (to && key !== templateKey) setPendingSwitch({ template: to, dropped: switchTemplate(form.getValues('sections'), to).dropped });
+    // Next tick: with Enter on the Select's option, the key's keypress lands on whatever has focus once the dialog opens, which would confirm the switch unseen.
+    if (to && key !== templateKey) setTimeout(() => setPendingSwitch({ template: to, dropped: switchTemplate(form.getValues('sections'), to).dropped }), 0);
   };
 
   // Sign (MDV-P2-012): save what is typed, sign the version just saved, and on "reauth_required" send the doctor to confirm their identity.

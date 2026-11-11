@@ -8,7 +8,7 @@
 
 Rank every task by whether it moves a pilot clinic closer to using this flow safely. Prefer it over new features, polish or later phases. A change counts as done for this goal only when it has:
 
-1. **Tests.** Unit and integration tests against real SQL Server, plus a Playwright journey step (J1–J6 in `docs/02-design/journeys.md`) for the user-visible path.
+1. **Tests.** Unit and integration tests against real PostgreSQL (Testcontainers), plus a Playwright journey step (J1–J6 in `docs/02-design/journeys.md`) for the user-visible path.
 2. **A security check.** Server-side authorisation on each endpoint, tenant isolation (EF filter and row-level security), no PHI in logs or URLs, and `pnpm audit` clean. Anything touching auth, consent or tenancy gets `ponytail:ponytail-review` and a mutation check. The external review (P1-038) comes before the pilot.
 3. **A browser check** in English and Arabic, with axe clean.
 

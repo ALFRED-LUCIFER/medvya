@@ -1,4 +1,4 @@
-Feature: Tenancy model with EF Core global filters and Azure SQL row-level security (cross-tenant test in CI)
+Feature: Tenancy model with EF Core global filters and PostgreSQL row-level security (cross-tenant test in CI)
   As a staff member, I want to see only my clinic's data, so that patient data never leaks across tenants.
 
   # chunk: Block cross-tenant reads and writes with filters and row-level security

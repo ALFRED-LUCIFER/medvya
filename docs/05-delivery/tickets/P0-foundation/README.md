@@ -30,9 +30,9 @@
 | [MDV-P0-002](MDV-P0-002.md) | Partly done | Record and accept ADR-001 (stack) and supporting ADRs 003–006 | Chore | MUST | P0-08 | — | 0.5 | 1–1 | 26 Oct → 30 Oct 2026 | 90% High |
 | [MDV-P0-003](MDV-P0-003.md) | Partly done | Decide launch market (ADR-002) and confirm Azure subscription and region | Chore | MUST | P0-08 | — | 0.5 | 1–1 | 26 Oct → 30 Oct 2026 | 70% Medium |
 | [MDV-P0-004](MDV-P0-004.md) | Done | GitHub repository protections and PR pipeline (build, analyzers, tests, CodeQL, dependency and secret scanning) | Task | MUST | P0-01 | — | 1.5 | 1–1 | 26 Oct → 30 Oct 2026 | 90% High |
-| [MDV-P0-005](MDV-P0-005.md) | Done | Local development environment with Docker Compose (SQL Server, Azurite, mail and SMS sinks) | Task | MUST | P0-01 | — | 1 | 1–1 | 26 Oct → 30 Oct 2026 | 90% High |
-| [MDV-P0-006](MDV-P0-006.md) | Partly done | Azure environments as code (Bicep): App Service, Azure SQL private endpoint, Blob, Key Vault, App Insights, Defender, budgets | Task | MUST | P0-02 | — | 3 | 1–2 | 26 Oct → 06 Nov 2026 | 80% Medium |
-| [MDV-P0-016](MDV-P0-016.md) | Done | Data classification register and ERD → Azure SQL type mapping | Chore | MUST | P0-10, P0-08 | — | 1.5 | 1–2 | 26 Oct → 06 Nov 2026 | 85% High |
+| [MDV-P0-005](MDV-P0-005.md) | Done | Local development environment with Docker Compose (PostgreSQL, Azurite, mail and SMS sinks) | Task | MUST | P0-01 | — | 1 | 1–1 | 26 Oct → 30 Oct 2026 | 90% High |
+| [MDV-P0-006](MDV-P0-006.md) | Partly done | Azure environments as code (Bicep): App Service, PostgreSQL private access, Blob, Key Vault, App Insights, Defender, budgets | Task | MUST | P0-02 | — | 3 | 1–2 | 26 Oct → 06 Nov 2026 | 80% Medium |
+| [MDV-P0-016](MDV-P0-016.md) | Done | Data classification register and ERD → PostgreSQL type mapping | Chore | MUST | P0-10, P0-08 | — | 1.5 | 1–2 | 26 Oct → 06 Nov 2026 | 85% High |
 | [MDV-P0-020](MDV-P0-020.md) | Done | Medvya design system in code: shadcn/ui + Tailwind tokens and clinical status primitives (packages/ui) | Story | MUST | P0-07 | — | 3 | 1–2 | 26 Oct → 06 Nov 2026 | 92% High |
 | [MDV-P0-024](MDV-P0-024.md) | Done | Threat model, data map, DPIA draft (DPDP) and record-retention map per country | Chore | MUST | P0-08 | — | 2.5 | 1–3 | 26 Oct → 13 Nov 2026 | 75% Medium |
 | [MDV-P0-025](MDV-P0-025.md) | Done | Secure development policies: SECURITY.md, code review rules, synthetic-only data, JIT access, offline break-glass account | Chore | MUST | P0-10 | — | 1 | 1–1 | 26 Oct → 30 Oct 2026 | 90% High |
@@ -41,12 +41,12 @@
 | [MDV-P0-032](MDV-P0-032.md) | To do | Swap the platform to PostgreSQL: Npgsql provider, Testcontainers.PostgreSql, Hangfire.PostgreSql, local services and CI | Story | MUST | P0-01 | — | 3 | 1–2 | 26 Oct → 06 Nov 2026 | 75% Medium |
 | [MDV-P0-007](MDV-P0-007.md) | Partly done | GitHub OIDC federation to Azure and tagged deploy to staging | Task | MUST | P0-01, P0-02 | — | 1.5 | 2–2 | 02 Nov → 06 Nov 2026 | 88% High |
 | [MDV-P0-008](MDV-P0-008.md) | Partly done | Database security baseline part 1: Entra-only auth, managed identity, least-privilege users per module and for migrations | Task | MUST | P0-09 | — | 1.5 | 2–2 | 02 Nov → 06 Nov 2026 | 85% High |
-| [MDV-P0-009](MDV-P0-009.md) | Partly done | Database security baseline part 2: Always Encrypted (national/insurance IDs), dynamic data masking, TDE with customer-managed key | Task | MUST | P0-09 | — | 2.5 | 2–3 | 02 Nov → 13 Nov 2026 | 72% Medium |
-| [MDV-P0-010](MDV-P0-010.md) | Done | Tenancy model with EF Core global filters and Azure SQL row-level security (cross-tenant test in CI) | Story | MUST | P0-04 | — | 3 | 2–2 | 02 Nov → 06 Nov 2026 | 88% High |
+| [MDV-P0-009](MDV-P0-009.md) | Partly done | Database security baseline part 2: national/insurance ID encryption, masked access, storage encryption with a customer-managed key | Task | MUST | P0-09 | — | 2.5 | 2–3 | 02 Nov → 13 Nov 2026 | 72% Medium |
+| [MDV-P0-010](MDV-P0-010.md) | Done | Tenancy model with EF Core global filters and PostgreSQL row-level security (cross-tenant test in CI) | Story | MUST | P0-04 | — | 3 | 2–2 | 02 Nov → 06 Nov 2026 | 88% High |
 | [MDV-P0-011](MDV-P0-011.md) | Partly done | Staff sign-in through the BFF with Entra External ID: MFA (TOTP), passkeys and recovery | Story | MUST | P0-03 | F-03 | 3 | 2–2 | 02 Nov → 06 Nov 2026 | 78% Medium |
 | [MDV-P0-012](MDV-P0-012.md) | Partly done | Session control: facility picker, idle timeout on shared clinic PCs, device/session revocation | Story | MUST | P0-03 | F-03 | 2 | 2–3 | 02 Nov → 13 Nov 2026 | 85% High |
 | [MDV-P0-014](MDV-P0-014.md) | Partly done | Server-side authorisation from the Foundations role-permission matrix | Story | MUST | P0-05 | — | 3 | 2–3 | 02 Nov → 13 Nov 2026 | 87% High |
-| [MDV-P0-017](MDV-P0-017.md) | Partly done | Append-only audit log on Azure SQL ledger tables with audit middleware | Story | MUST | P0-06 | — | 2.5 | 2–3 | 02 Nov → 13 Nov 2026 | 85% High |
+| [MDV-P0-017](MDV-P0-017.md) | Partly done | Append-only audit log on hash-chained PostgreSQL tables with audit middleware | Story | MUST | P0-06 | — | 2.5 | 2–3 | 02 Nov → 13 Nov 2026 | 85% High |
 | [MDV-P0-018](MDV-P0-018.md) | Partly done | Observability with OpenTelemetry and PHI redaction (structured logs, telemetry processor) | Task | MUST | P0-10 | — | 1.5 | 2–2 | 02 Nov → 06 Nov 2026 | 88% High |
 | [MDV-P0-021](MDV-P0-021.md) | Done | Internationalisation pipeline: English, Hindi, Arabic with full RTL | Task | MUST | P0-07 | — | 1.5 | 2–2 | 02 Nov → 06 Nov 2026 | 88% High |
 | [MDV-P0-026](MDV-P0-026.md) | Done | OWASP ASVS L2 baseline: security headers, CSP, HSTS, rate limiting, input validation | Task | MUST | P0-10, P0-03 | — | 1.5 | 2–2 | 02 Nov → 06 Nov 2026 | 88% High |

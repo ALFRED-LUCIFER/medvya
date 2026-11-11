@@ -1,4 +1,4 @@
-Feature: Azure environments as code (Bicep): App Service, Azure SQL private endpoint, Blob, Key Vault, App Insights, Defender, budgets
+Feature: Azure environments as code (Bicep): App Service, PostgreSQL private access, Blob, Key Vault, App Insights, Defender, budgets
   As a developer, I want the Azure environments defined as code, so that they are repeatable, private and cost-controlled.
 
   # chunk: Deploy environments from CI with what-if
@@ -7,10 +7,10 @@ Feature: Azure environments as code (Bicep): App Service, Azure SQL private endp
     When CI runs "az deployment sub what-if" and a real deployment of dev
     Then both succeed with no manual portal steps
 
-  # chunk: Lock down SQL, Key Vault and Storage
+  # chunk: Lock down PostgreSQL, Key Vault and Storage
   @todo
-  Scenario: Azure SQL is private only
-    Then Azure SQL publicNetworkAccess is Disabled
+  Scenario: PostgreSQL is private only
+    Then the PostgreSQL server publicNetworkAccess is Disabled
     And a connectivity test from outside the VNet fails
 
   @todo

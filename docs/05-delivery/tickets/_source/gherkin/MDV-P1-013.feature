@@ -13,7 +13,7 @@ Feature: Patient registration - India full flow (identity, ABHA optional, Aadhaa
   Scenario: Aadhaar stored as last 4 only and ABHA encrypted
     When 12 Aadhaar digits are entered
     Then they are rejected with an explanation
-    And ABHA is stored via Always Encrypted and is never required for care
+    And ABHA is stored with envelope encryption (ADR-012) and is never required for care
 
   # chunk: Add registration save with success screen
   @done

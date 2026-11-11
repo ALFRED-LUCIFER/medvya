@@ -4,7 +4,7 @@ Feature: No double booking under concurrency (unique index, serializable transac
   # chunk: Add concurrency guards for single and multi-slot bookings
   @done
   Scenario: 100 parallel attempts at one slot
-    When 100 parallel booking attempts target one slot on Testcontainers SQL Server
+    When 100 parallel booking attempts target one slot on Testcontainers PostgreSQL
     Then exactly one succeeds
     And 99 receive a clear "slot no longer available" error
 

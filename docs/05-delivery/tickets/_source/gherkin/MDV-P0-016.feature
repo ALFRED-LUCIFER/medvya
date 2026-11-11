@@ -1,4 +1,4 @@
-Feature: Data classification register and ERD -> Azure SQL type mapping
+Feature: Data classification register and ERD -> PostgreSQL type mapping
   As a founder, I want every field classified and mapped, so that controls and the data map are provable.
 
   # chunk: Add classification attribute, register and type mapping
@@ -9,10 +9,10 @@ Feature: Data classification register and ERD -> Azure SQL type mapping
 
   @done
   Scenario: Register lists encryption and masking sets
-    Then the register lists the Always Encrypted column set and the masking set used by MDV-P0-009
+    Then the register lists the encrypted national-ID column set and the masked-view set used by MDV-P0-009
 
   @done
-  Scenario: ERD to Azure SQL mapping is closed
+  Scenario: ERD to PostgreSQL mapping is closed
     Then the mapping table closes the PRD item "ERD mapped to Azure SQL types" with status Covered
 
   @done

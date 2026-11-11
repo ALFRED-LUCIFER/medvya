@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { bannerAllergies, sparkline, trendLines, type Patient360, type Trend } from './chart';
 
 const chart = (over: Partial<Patient360['chart']>): Patient360['chart'] => ({
-  allergyState: 'NotRecorded', allergies: [], problems: [], medicines: [], lastVitals: [], trends: [], recentEncounters: [], openEncounterId: null, ...over,
+  allergyState: 'NotRecorded', allergies: [], problems: [], medicines: [], lastVitals: [], trends: [], recentEncounters: [], openEncounterId: null, lastLabs: [], bmi: null, ...over,
 });
 const allergy = (status: 'Confirmed' | 'PatientReported' | 'Unknown' | 'NotAnAllergy') => ({ substance: 'Penicillin', reaction: null, status, source: 'ClinicianVerified' as const });
 

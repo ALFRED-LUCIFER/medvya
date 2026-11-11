@@ -54,7 +54,7 @@ async function open(page: Page, { locale = 'en', consent = true } = {}) {
     sections: [{ section: 'Medicines', lines: [{ text: 'Metformin 500 mg', source: 'ClinicianVerified' }] }] } }));
   await page.route('**/v1/referrals/*/letter/pdf', r => r.fulfill({ status: 200, contentType: 'application/pdf', body: '%PDF-1.7 synthetic' }));
   await page.route('**/v1/patients/p-1/chart', r => r.fulfill({ json: { patient: { id: 'p-1', fullName: 'Meera Iyer (synthetic)', mrn: '000001', dateOfBirth: '1972-03-12', ageYears: 54, sexAtBirth: 'Female' },
-    treatmentConsent: true, timeZone: 'Asia/Kolkata', chart: { allergyState: 'NotRecorded', allergies: [], problems: [], medicines: [], lastVitals: [], trends: [], recentEncounters: [], openEncounterId: null } } }));
+    treatmentConsent: true, timeZone: 'Asia/Kolkata', chart: { allergyState: 'NotRecorded', allergies: [], problems: [], medicines: [], lastVitals: [], trends: [], recentEncounters: [], openEncounterId: null, lastLabs: [], bmi: null } } }));
   return { referrals, calls };
 }
 

@@ -51,9 +51,6 @@ public sealed class PatientChartService(EncountersDbContext db, IClinicalAccess 
         var allergies = await db.Allergies.AsNoTracking().Where(a => a.PatientId == patientId).OrderBy(a => a.RecordedAt).ToListAsync(cancellationToken);
         var problems = await db.Problems.AsNoTracking().Where(p => p.PatientId == patientId).OrderBy(p => p.RecordedAt).ToListAsync(cancellationToken);
         var medicines = await db.MedicationStatements.AsNoTracking().Where(m => m.PatientId == patientId).OrderBy(m => m.State).ThenBy(m => m.Name).ToListAsync(cancellationToken);
-        // The latest reading of each code, chosen in the database.
-        var vitals = await db.Observations.AsNoTracking().Where(o => o.PatientId == patientId && o.Code != ObservationCode.HbA1c)
-            .GroupBy(o => o.Code).Select(g => g.OrderByDescending(o => o.TakenAt).First()).ToListAsync(cancellationToken);
         var trends = await ChartReads.TrendsAsync(db, patientId, TrendPoints, cancellationToken);
         var encounters = await db.Encounters.AsNoTracking().Where(e => e.PatientId == patientId).OrderByDescending(e => e.StartedAt).Take(RecentEncounters)
             .Select(e => new RecentEncounter(e.Id, e.StartedAt, e.Status)).ToListAsync(cancellationToken);
@@ -64,9 +61,25 @@ public sealed class PatientChartService(EncountersDbContext db, IClinicalAccess 
         await ChartReads.AuditAsync(audit, tenant, me, clock, ReadAction, patientId, cancellationToken);
 
         var banner = ChartReads.BannerOf(allergies);
+        // The latest reading of each code is the last point of its trend, flagged against the code's adult range.
+        var latest = trends.Select(t => Latest(t.Code, t.Points[^1])).ToList();
         return new(banner.State, banner.Allergies, [.. problems.Select(p => new ProblemView(p.Icd10Code, p.Description, p.Verification, p.OnsetOn, p.Source, p.Status))],
             [.. medicines.Select(m => new MedicineView(m.Name, m.Dose, m.State, m.Source, m.StoppedAt))],
-            [.. vitals.OrderBy(o => o.Code).Select(o => new VitalView(o.Code, o.ValueHundredths / 100m, Observation.Units(o.Code), o.TakenAt, o.Source))], trends, encounters, open);
+            [.. latest.Where(v => !Observation.IsLab(v.Code))], trends, encounters, open, [.. latest.Where(v => Observation.IsLab(v.Code))], BmiOf(latest));
+    }
+
+    static VitalView Latest(ObservationCode code, TrendPoint p)
+    {
+        var range = ReferenceRanges.For(code);
+        return new(code, p.Value, Observation.Units(code), p.TakenAt, p.Source, range?.Flag((int)(p.Value * 100)), range?.Text);
+    }
+
+    /// <summary>BMI from the latest weight and height, naming the older of the two; none without both.</summary>
+    static BmiView? BmiOf(List<VitalView> latest)
+    {
+        if (latest.Find(v => v.Code == ObservationCode.Weight) is not { } w || latest.Find(v => v.Code == ObservationCode.Height) is not { } h) return null;
+        var older = w.TakenAt <= h.TakenAt ? w : h;
+        return new(ReferenceRanges.BmiTenths((int)(w.Value * 100), (int)(h.Value * 100)) / 10m, older.Code, older.TakenAt);
     }
 }
 
@@ -80,19 +93,13 @@ static class ChartReads
         return new(listed.Count > 0 ? AllergyState.Listed : rows.Count > 0 ? AllergyState.NoKnownAllergies : AllergyState.NotRecorded, listed);
     }
 
-    static readonly ObservationCode[] TrendCodes = [ObservationCode.HbA1c, ObservationCode.BloodPressureSystolic, ObservationCode.BloodPressureDiastolic, ObservationCode.Weight];
-
-    /// <summary>The last <paramref name="take"/> readings of each trend measure, oldest first; a measure with none is left out.</summary>
+    /// <summary>The last <paramref name="take"/> readings of every code with a reading, oldest first, in one query; a code with none is left out.</summary>
     public static async Task<List<TrendView>> TrendsAsync(EncountersDbContext db, Guid patientId, int take, CancellationToken cancellationToken)
     {
-        var trends = new List<TrendView>();
-        foreach (var code in TrendCodes)
-        {
-            var points = await db.Observations.AsNoTracking().Where(o => o.PatientId == patientId && o.Code == code)
-                .OrderByDescending(o => o.TakenAt).Take(take).Select(o => new TrendPoint(o.ValueHundredths / 100m, o.TakenAt, o.Source)).ToListAsync(cancellationToken);
-            if (points.Count > 0) trends.Add(new(code, Observation.Units(code), [.. points.AsEnumerable().Reverse()]));
-        }
-        return trends;
+        var groups = await db.Observations.AsNoTracking().Where(o => o.PatientId == patientId).GroupBy(o => o.Code)
+            .Select(g => new { g.Key, Points = g.OrderByDescending(o => o.TakenAt).ThenByDescending(o => o.Id).Take(take).Select(o => new TrendPoint(o.ValueHundredths / 100m, o.TakenAt, o.Source)).ToList() })
+            .ToListAsync(cancellationToken);
+        return [.. groups.OrderBy(g => g.Key).Select(g => new TrendView(g.Key, Observation.Units(g.Key), [.. g.Points.AsEnumerable().Reverse()]))];
     }
 
     public static Task AuditAsync(IAuditLog audit, ICurrentTenant tenant, Guid? actor, TimeProvider clock, string action, Guid patientId, CancellationToken cancellationToken) =>

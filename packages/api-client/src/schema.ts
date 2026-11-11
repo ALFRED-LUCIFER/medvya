@@ -8874,7 +8874,7 @@ export interface components {
         /** @enum {unknown} */
         VisitType: "FollowUp" | "NewConsultation" | "Procedure" | "Teleconsult";
         /** @enum {unknown} */
-        VitalKind: "SystolicBp" | "DiastolicBp" | "Pulse" | "Temperature" | "OxygenSaturation" | "Weight" | null;
+        VitalKind: "SystolicBp" | "DiastolicBp" | "Pulse" | "Temperature" | "OxygenSaturation" | "Weight" | "Height" | "RespiratoryRate" | null;
         VitalReading: {
             kind: null | components["schemas"]["VitalKind"];
             /** Format: double */

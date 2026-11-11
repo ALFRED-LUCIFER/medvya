@@ -14,16 +14,23 @@ public sealed record AllergyFlag(Guid PatientId, AllergyState State);
 
 public sealed record ProblemView(string? Icd10Code, string Description, ProblemVerification Verification, DateOnly? OnsetOn, ChartSource Source, ProblemStatus Status = ProblemStatus.Active);
 public sealed record MedicineView(string Name, string? Dose, MedicationState State, ChartSource Source, DateTimeOffset? StoppedAt = null);
-public sealed record VitalView(ObservationCode Code, decimal Value, string Unit, DateTimeOffset TakenAt, ChartSource Source);
+/// <summary>
+/// The latest reading of one code, a vital or a lab. <see cref="Flag"/> is High or Low against the adult <see cref="Range"/> (MDV-P2-031,
+/// awaiting clinical sign-off); a code without a range has neither.
+/// </summary>
+public sealed record VitalView(ObservationCode Code, decimal Value, string Unit, DateTimeOffset TakenAt, ChartSource Source, VitalAlert? Flag = null, string? Range = null);
+/// <summary>BMI worked out from the latest weight and the latest height, never stored. The chart names the older of the two and its date.</summary>
+public sealed record BmiView(decimal Value, ObservationCode OlderCode, DateTimeOffset OlderAt);
 public sealed record TrendPoint(decimal Value, DateTimeOffset TakenAt, ChartSource Source);
-/// <summary>The last readings of one measure, oldest first. Blood pressure is two series (systolic and diastolic).</summary>
+/// <summary>The last readings of one code, oldest first, for every code with a reading. Blood pressure is two series (systolic and diastolic).</summary>
 public sealed record TrendView(ObservationCode Code, string Unit, IReadOnlyList<TrendPoint> Points);
 public sealed record RecentEncounter(Guid Id, DateTimeOffset StartedAt, EncounterStatus Status);
 
 /// <summary>The verified chart of one patient (MDV-P2-004). Every fact carries its source; the AI summary is not part of it (P3).</summary>
 public sealed record PatientChart(
     AllergyState AllergyState, IReadOnlyList<AllergyView> Allergies, IReadOnlyList<ProblemView> Problems, IReadOnlyList<MedicineView> Medicines,
-    IReadOnlyList<VitalView> LastVitals, IReadOnlyList<TrendView> Trends, IReadOnlyList<RecentEncounter> RecentEncounters, Guid? OpenEncounterId);
+    IReadOnlyList<VitalView> LastVitals, IReadOnlyList<TrendView> Trends, IReadOnlyList<RecentEncounter> RecentEncounters, Guid? OpenEncounterId,
+    IReadOnlyList<VitalView> LastLabs, BmiView? Bmi);
 
 /// <summary>
 /// Patient 360's chart (MDV-P2-004). Needs clinical access to the patient at the given facility (role, care relationship, MDV-P2-024;

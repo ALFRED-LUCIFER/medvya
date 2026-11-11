@@ -108,6 +108,55 @@ public sealed class IntakeTests(PostgresFixture sql) : IClassFixture<PostgresFix
         Assert.Contains("vitals_undecided", saved.Blockers);
     }
 
+    /// <summary>
+    /// SAFETY, mutation check (#956): flag every age with the adult band (make Usual ignore ageInMonths) and the child's normal pulse and
+    /// blood pressure come back flagged, while the same numbers stay flagged for the adult.
+    /// </summary>
+    [Fact]
+    public async Task AChildsVitalsAreFlaggedAgainstTheirAgeBandNotTheAdultOne()
+    {
+        await using (var patients = sql.Patients(h.Tenant))
+        {
+            var row = await patients.Patients.SingleAsync(p => p.Id == h.SecondPatient);
+            row.DateOfBirth = DateOnly.FromDateTime(h.Clock.GetUtcNow().UtcDateTime).AddYears(-4); // a preschool child, synthetic
+            await patients.SaveChangesAsync();
+        }
+        var childVisit = await WithNurseAsync(h.SecondPatient, hour: 9);
+        var adultVisit = await WithNurseAsync(hour: 10);
+
+        var child = await Intake(h.Nurse).RecordAsync(childVisit, Vitals(sys: 85, dia: 50, pulse: 115));
+        var adult = await Intake(h.Nurse).RecordAsync(adultVisit, Vitals(sys: 85, dia: 50, pulse: 115));
+        var tooFast = await Intake(h.Nurse).RecordAsync(childVisit, Vitals(pulse: 150));
+
+        Assert.All(child!.Vitals, v => Assert.Null(v.Flag));
+        Assert.Equal([VitalAlert.Low, VitalAlert.Low, VitalAlert.High], adult!.Vitals.Select(v => v.Flag));
+        Assert.Equal(VitalAlert.High, tooFast!.Vitals.Single(v => v.Kind == VitalKind.Pulse).Flag);
+    }
+
+    [Theory]
+    [InlineData(0, VitalKind.Pulse, 180, null)] // newborn
+    [InlineData(0, VitalKind.SystolicBp, 55, VitalAlert.Low)]
+    [InlineData(6, VitalKind.Pulse, 190, VitalAlert.High)] // infant
+    [InlineData(6, VitalKind.Pulse, 150, null)]
+    [InlineData(24, VitalKind.SystolicBp, 71, VitalAlert.Low)] // toddler: PALS hypotension line
+    [InlineData(96, VitalKind.Pulse, 119, VitalAlert.High)] // school age
+    [InlineData(180, VitalKind.SystolicBp, 132, VitalAlert.High)] // adolescent
+    [InlineData(180, VitalKind.Pulse, 55, VitalAlert.Low)]
+    [InlineData(216, VitalKind.Pulse, 55, null)] // 18: the adult band
+    [InlineData(216, VitalKind.SystolicBp, 140, VitalAlert.High)]
+    [InlineData(6, VitalKind.Temperature, 38.0, VitalAlert.High)] // fever and SpO2 lines are the same at every age
+    [InlineData(600, VitalKind.OxygenSaturation, 93, VitalAlert.Low)]
+    public void UsualRangesFollowTheAgeBand(int ageInMonths, VitalKind kind, double value, VitalAlert? expected) =>
+        Assert.Equal(expected, VitalRules.Flag(kind, (decimal)value, null, ageInMonths));
+
+    [Theory]
+    [InlineData("2022-11-11", "2026-11-11", 48)]
+    [InlineData("2022-11-12", "2026-11-11", 47)] // the birthday is tomorrow
+    [InlineData("2026-10-31", "2026-11-30", 0)]
+    [InlineData("2026-11-12", "2026-11-11", 0)] // a date of birth after the reading (bad data) is not a negative age
+    public void AgeInMonthsCountsWholeMonths(string born, string on, int months) =>
+        Assert.Equal(months, VitalRules.AgeInMonths(DateOnly.Parse(born, System.Globalization.CultureInfo.InvariantCulture), DateOnly.Parse(on, System.Globalization.CultureInfo.InvariantCulture)));
+
     [Fact]
     public async Task AWeightThatMovedALotSincePatientsLastVisitIsFlaggedWithTheDifference()
     {

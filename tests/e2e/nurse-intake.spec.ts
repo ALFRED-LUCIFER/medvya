@@ -64,6 +64,18 @@ test('the nurse works the intake from the queue to the handoff', async ({ page }
   await expect(page.getByRole('heading', { name: 'No one is with the nurse' })).toBeVisible();
 });
 
+// #956: the nurse need not wait for reception; a Checked in patient is taken to intake from the queue.
+test('the nurse takes a checked-in patient to intake', async ({ page }) => {
+  const { calls } = await mockNurse(page, 'en', { checkedIn: true });
+  await page.goto('/nurse');
+  const waiting = page.getByRole('region', { name: 'Checked in' });
+  await expect(page.getByRole('region', { name: 'With the nurse' })).toHaveCount(0);
+  await waiting.getByRole('button', { name: 'Take to intake: Meera Iyer (synthetic)' }).click();
+  expect(calls.moves).toEqual(['WithNurse']);
+  await page.getByRole('region', { name: 'With the nurse' }).getByRole('link', { name: 'Open intake for Meera Iyer (synthetic)' }).click();
+  await expect(page).toHaveURL(/\/nurse\/a1$/);
+});
+
 test('reception does not move a With nurse card around the nurse', async ({ page }) => {
   await mockNurse(page);
   await page.goto('/front-desk');
@@ -131,6 +143,21 @@ for (const locale of ['en', 'ar'])
     if (locale === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
     for (const target of await page.getByRole('main').getByRole('button').all()) expect((await target.boundingBox())!.height).toBeGreaterThanOrEqual(44);
     for (const target of await page.getByRole('main').getByRole('textbox').all()) expect((await target.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    await page.addScriptTag({ path: axePath });
+    const violations = await page.evaluate(async () =>
+      (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations
+        .map(v => `${v.id} (${v.nodes.length})`));
+    expect(violations).toEqual([]);
+  });
+
+for (const locale of ['en', 'ar'])
+  test(`axe finds no violations on the queue with a checked-in patient (${locale}); targets are 44 px`, async ({ page }) => {
+    await page.setViewportSize({ width: 820, height: 1180 });
+    await mockNurse(page, locale, { checkedIn: true });
+    await page.goto('/nurse');
+    await expect(page.getByRole('main').getByRole('button')).toHaveCount(1);
+    if (locale === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+    expect((await page.getByRole('main').getByRole('button').boundingBox())!.height).toBeGreaterThanOrEqual(44);
     await page.addScriptTag({ path: axePath });
     const violations = await page.evaluate(async () =>
       (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations

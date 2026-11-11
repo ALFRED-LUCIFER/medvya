@@ -21,11 +21,14 @@ type Allergy = { id: string; substance: string; reaction: string | null; status:
 type Medicine = { id: string; name: string; dose: string | null; frequency: string | null; needsClarification: boolean; source: string; recordedAt: string };
 export type Intake = { vitals: Vital[]; allergies: Allergy[]; medicines: Medicine[]; noKnown: boolean; escalated: boolean; state: string };
 
-/** Mocks the nurse's API. `calls` records what the screen sent; `intake` is the server's current state. `unreviewed`: the patient has an allergy nobody has set a status for. */
-export async function mockNurse(page: Page, locale = 'en', { unreviewed = false }: { unreviewed?: boolean } = {}) {
-  const calls = { saves: [] as unknown[], keeps: [] as string[], escalations: [] as unknown[], handoffs: 0, none: 0, allergies: [] as unknown[], statuses: [] as unknown[], medicines: [] as unknown[] };
+/**
+ * Mocks the nurse's API. `calls` records what the screen sent; `intake` is the server's current state. `unreviewed`: the patient has an allergy
+ * nobody has set a status for. `checkedIn`: the visit is still Checked in, for the nurse to take to intake (#956).
+ */
+export async function mockNurse(page: Page, locale = 'en', { unreviewed = false, checkedIn = false }: { unreviewed?: boolean; checkedIn?: boolean } = {}) {
+  const calls = { moves: [] as unknown[], saves: [] as unknown[], keeps: [] as string[], escalations: [] as unknown[], handoffs: 0, none: 0, allergies: [] as unknown[], statuses: [] as unknown[], medicines: [] as unknown[] };
   const intake: Intake = {
-    vitals: [], medicines: [], noKnown: false, escalated: false, state: 'WithNurse',
+    vitals: [], medicines: [], noKnown: false, escalated: false, state: checkedIn ? 'CheckedIn' : 'WithNurse',
     allergies: unreviewed ? [{ id: 'al-1', substance: 'Penicillin (synthetic)', reaction: null, status: null, source: 'PatientReported', statusSetAt: null }] : [],
   };
   const view = () => ({
@@ -39,6 +42,12 @@ export async function mockNurse(page: Page, locale = 'en', { unreviewed = false 
   await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
   await page.route('**/v1/me/context', r => r.fulfill({ json: nurse }));
   await page.route('**/v1/front-desk/board?*', r => r.fulfill({ json: { facilityId: 'f-1', timeZone: 'Asia/Kolkata', date: '2026-10-19', now: '2026-10-19T04:40:00Z', cards: [{ ...visit, state: intake.state }] } }));
+  await page.route('**/v1/appointments/a1/status', r => {
+    const { state } = r.request().postDataJSON() as { state: string };
+    calls.moves.push(state);
+    intake.state = state;
+    return r.fulfill({ json: { ...visit, state } });
+  });
   await page.route('**/v1/intake/a1', async r => {
     if (r.request().method() === 'PUT') {
       const body = r.request().postDataJSON() as { vitals: { kind: string; value: number }[] };

@@ -58,6 +58,12 @@ public sealed class ConsultNoteService(
         };
         (note.Status, note.Version, note.UpdatedBy, note.UpdatedAt) = (NoteStatus.Signed, note.Version + 1, me, now);
         db.SignedNoteVersions.Add(signed);
+        // NoteSigned.v1 in the same transaction as the signature: opaque ids and the instant, no text.
+        db.Outbox.Add(new()
+        {
+            Id = Guid.CreateVersion7(), TenantId = TenantId, Type = "NoteSigned.v1", AggregateId = note.Id, OccurredAt = now,
+            Payload = System.Text.Json.JsonSerializer.Serialize(new { noteId = note.Id, encounterId, facilityId = encounter.FacilityId, patientId = encounter.PatientId, signedBy = me, signedAt = now }),
+        });
         try
         {
             await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);

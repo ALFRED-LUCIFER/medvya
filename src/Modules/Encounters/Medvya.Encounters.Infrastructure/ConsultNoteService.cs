@@ -31,7 +31,20 @@ public sealed class ConsultNoteService(
         await clinical.RequireAsync(encounter.PatientId, encounter.FacilityId, Capability.Patient360Chart, Leads, cancellationToken);
         var note = await db.ConsultNotes.AsNoTracking().SingleOrDefaultAsync(n => n.EncounterId == encounterId, cancellationToken);
         await audit.WriteAsync(Event(ReadAction, encounter, note?.Id), cancellationToken);
-        return note is null ? Empty(encounterId) with { SignAsName = await SignAsAsync(encounter.FacilityId, cancellationToken) } : await ViewAsync(note, cancellationToken);
+        if (note is not null) return await ViewAsync(note, cancellationToken);
+        var suggested = await SuggestAsync(encounter, cancellationToken);
+        return Empty(encounterId, suggested) with { SignAsName = await SignAsAsync(encounter.FacilityId, cancellationToken) };
+    }
+
+    /// <summary>MDV-P2-042: the template a new note starts on, from the patient's age on the facility's date and their active problems.</summary>
+    async Task<string?> SuggestAsync(Encounter encounter, CancellationToken cancellationToken)
+    {
+        var patient = (await patients.SummariesAsync([encounter.PatientId], cancellationToken)).GetValueOrDefault(encounter.PatientId);
+        var facility = await facilities.FindAsync(encounter.FacilityId, cancellationToken);
+        if (patient is null || facility is null) return null;
+        var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(clock.GetUtcNow(), TimeZoneInfo.FindSystemTimeZoneById(facility.TimeZone)).DateTime);
+        var codes = await db.Problems.AsNoTracking().Where(p => p.PatientId == encounter.PatientId && p.Status == ProblemStatus.Active).Select(p => p.Icd10Code).ToListAsync(cancellationToken);
+        return NoteTemplates.Suggest(patient.DateOfBirth, today, codes);
     }
 
     public async Task<IReadOnlyList<VerifiedVital>?> PrefillAsync(Guid encounterId, CancellationToken cancellationToken = default)
@@ -257,14 +270,20 @@ public sealed class ConsultNoteService(
         var errors = new List<(string, string)>();
         if (template is null) errors.Add(("templateKey", "invalid"));
         if (command.RecordingConsent is { } consent && !Enum.IsDefined(consent)) errors.Add(("recordingConsent", "invalid"));
+        var sections = new Dictionary<string, string>();
         foreach (var (id, text) in input)
         {
-            if (template is not null && !template.Sections.Any(s => s.Id == id)) errors.Add(($"sections.{id}", "unknown_section"));
+            var section = template?.Sections.FirstOrDefault(s => s.Id == id);
+            if (template is not null && section is null) errors.Add(($"sections.{id}", "unknown_section"));
             else if (text.Length > ConsultNote.MaxSectionLength) errors.Add(($"sections.{id}", "too_long"));
+            else if (string.IsNullOrWhiteSpace(text) || section is null) continue;
+            else if (section.Kind == SectionKind.Text) sections[id] = text;
+            // MDV-P2-042: a structured section is stored in its canonical form, so the same answers always hash the same; no answer is no section.
+            else if (StructuredAnswers.Normalise(section, text) is var (canonical, wrong) && wrong.Count > 0) errors.AddRange(wrong);
+            else if (canonical is not null) sections[id] = canonical;
         }
         if (errors.Count > 0) throw new NoteValidationException(errors);
 
-        var sections = input.Where(s => !string.IsNullOrWhiteSpace(s.Value)).ToDictionary(s => s.Key, s => s.Value);
         if (note is null) db.ConsultNotes.Add(note = new() { Id = Guid.CreateVersion7(), TenantId = TenantId, EncounterId = encounterId, Status = NoteStatus.Draft });
         (note.TemplateKey, note.TemplateVersion, note.Manual, note.Sections, note.RecordingConsent, note.Version, note.UpdatedBy, note.UpdatedAt) =
             (template!.Key, template.Version, command.Manual, sections, command.RecordingConsent, command.BaseVersion + 1, me, clock.GetUtcNow());
@@ -292,7 +311,11 @@ public sealed class ConsultNoteService(
 
     Guid TenantId => tenant.TenantId ?? throw new InvalidOperationException("No tenant context.");
 
-    static NoteView Empty(Guid encounterId) => new(encounterId, NoteTemplates.Default, NoteTemplates.Latest(NoteTemplates.Default)!.Version, NoteStatus.Draft, false, new Dictionary<string, string>(), 0, null, null, [], null, null, []);
+    static NoteView Empty(Guid encounterId, string? suggested)
+    {
+        var template = NoteTemplates.Latest(suggested ?? NoteTemplates.Default)!;
+        return new(encounterId, template.Key, template.Version, NoteStatus.Draft, false, new Dictionary<string, string>(), 0, null, null, [], null, null, [], suggested);
+    }
 
     /// <summary>Version 1 is the signature; every later version is an addendum, numbered with the version it follows.</summary>
     static NoteView View(ConsultNote n, IReadOnlyList<SignedNoteVersion>? versions = null, IReadOnlyDictionary<Guid, (string Name, string? Licence)>? signers = null)

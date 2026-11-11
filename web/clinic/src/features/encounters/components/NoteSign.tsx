@@ -5,7 +5,7 @@ import { Button, Dialog, DialogContent, DialogDescription, DialogTitle } from '@
 import { checklistKey, type ChecklistItem } from '../domain/checklist';
 import { sectionLabelKey, withTitle, type NoteSignature, type SignFailure, type SignPatient } from '../domain/note';
 
-export type SignProblem = SignFailure | { kind: 'unsaved' } | null;
+export type SignProblem = SignFailure | { kind: 'unsaved' } | { kind: 'finding' } | null;
 type Props = {
   canSign: boolean; signing: boolean; patient: SignPatient | null; doctorName: string | null; confirming: boolean; problem: SignProblem;
   /** Checklist items still to do (MDV-P2-044): Sign stays locked until none is left. */

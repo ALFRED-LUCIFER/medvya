@@ -3,11 +3,13 @@ import { useI18n } from '@medvya/i18n';
 import type { ChecklistItem } from '../domain/checklist';
 import type { NoteSignature, NoteTemplate, RecordingConsent, SavePhase, SignPatient } from '../domain/note';
 import NoteAssist, { type Assist } from './NoteAssist';
-import { SaveState, SectionField, SignedBanner, TemplatePicker } from './NoteParts';
+import { NoteSectionField, SaveState, SignedBanner, TemplatePicker, type StructuredProps } from './NoteParts';
 import { SignChecklist, SignedLine, SignNote, type SignProblem } from './NoteSign';
 import RecordingConsentChoice from './RecordingConsentChoice';
 
-export type NoteEditorProps = {
+export type NoteEditorProps = StructuredProps & {
+  /** MDV-P2-042: the note is on the template suggested for this patient and nothing is saved yet. */
+  suggested: boolean;
   register: (sectionId: string) => UseFormRegisterReturn;
   /** Null once the note is signed: nothing can be added to it any more. */
   assist: Assist | null;
@@ -34,7 +36,7 @@ export default function NoteEditor(p: NoteEditorProps) {
     <section aria-labelledby="note-title" className="flex flex-col gap-4 rounded-xl border bg-card p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 id="note-title" className="text-lg font-extrabold">{t('noteEditor.title')}</h2>
-        <TemplatePicker templateKey={p.templateKey} choices={p.choices} readOnly={p.readOnly} pendingSwitch={p.pendingSwitch}
+        <TemplatePicker templateKey={p.templateKey} choices={p.choices} readOnly={p.readOnly} pendingSwitch={p.pendingSwitch} suggested={p.suggested}
           onRequestSwitch={p.onRequestSwitch} onCancelSwitch={p.onCancelSwitch} onConfirmSwitch={p.onConfirmSwitch} />
       </div>
       <RecordingConsentChoice value={p.consent} readOnly={p.readOnly} onChange={p.onConsent} />
@@ -44,7 +46,7 @@ export default function NoteEditor(p: NoteEditorProps) {
       {!p.readOnly && <SaveState phase={p.phase} reloading={p.reloading} onRetry={p.onRetry} onReapply={p.onReapply} />}
       {p.assist && <NoteAssist assist={p.assist} template={p.template} timeZone={p.timeZone} />}
       <div className="flex flex-col gap-4">
-        {p.template.sections.map(s => <SectionField key={s.id} section={s} register={p.register} readOnly={p.readOnly} />)}
+        {p.template.sections.map(s => <NoteSectionField key={s.id} section={s} register={p.register} readOnly={p.readOnly} answers={p.answers} onAnswers={p.onAnswers} />)}
       </div>
       {!p.readOnly && (
         <>

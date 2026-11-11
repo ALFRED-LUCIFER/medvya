@@ -4,16 +4,28 @@ import type { Page, Route } from '@playwright/test';
 const soap = (...extra: string[]) => ['chiefComplaint', 'subjective', ...extra, 'objective', 'assessment', 'plan']
   .map(id => ({ id, required: ['chiefComplaint', 'assessment', 'plan'].includes(id) }));
 const template = (key: string, ...extra: string[]) => ({ key, version: 1, sections: soap(...extra), quickPhrases: [] });
+// MDV-P2-042: version 2 adds the review of systems after the history and the examination by system before Objective (NoteTemplates.Structured).
+const structured = (key: string, symptoms: string[], systems: string[], ...extra: string[]) => {
+  const [cc, subjective, ...rest] = soap(...extra);
+  const objective = rest.length - 3;
+  return { key, version: 2, quickPhrases: [], sections: [cc, subjective, { id: 'reviewOfSystems', required: false, kind: 'ReviewOfSystems', items: symptoms }, ...rest.slice(0, objective),
+    { id: 'examination', required: false, kind: 'Examination', items: systems }, ...rest.slice(objective)] };
+};
 export const catalog = {
-  templates: [{ ...template('general-opd'), quickPhrases: ['noRedFlags', 'reviewIfWorse', 'adviceFluidsRest'] }, template('diabetes-review', 'selfMonitoring', 'footAndEyeCare'), template('hypertension', 'homeBloodPressure'),
-    template('paediatrics', 'growthAndDevelopment', 'immunisations'), template('antenatal', 'obstetricHistory', 'fetalWellbeing'), template('teleconsult', 'remoteContext')],
+  templates: [{ ...template('general-opd'), quickPhrases: ['noRedFlags', 'reviewIfWorse', 'adviceFluidsRest'] }, structured('diabetes-review', ['tiredness', 'visionChange', 'chestPain', 'breathless', 'abdominalPain', 'nightUrination', 'tinglingFeet', 'footSores'],
+    ['general', 'heart', 'lungs', 'abdomen', 'feet', 'nervousSystem'], 'selfMonitoring', 'footAndEyeCare'), template('hypertension', 'homeBloodPressure'),
+    template('paediatrics', 'growthAndDevelopment', 'immunisations'), template('antenatal', 'obstetricHistory', 'fetalWellbeing'), template('teleconsult', 'remoteContext'),
+    structured('older-adult-review', ['weightLoss', 'dizzyOnStanding', 'breathless', 'indigestion', 'nightUrination', 'kneePain', 'weakness', 'lowMood'],
+      ['general', 'heart', 'lungs', 'joints', 'nervousSystem', 'feet'], 'standingBloodPressure', 'walkingTest', 'frailty', 'homeSafety')],
   mine: ['general-opd', 'diabetes-review'],
 };
 
 type Addendum = { versionNo: number; amendsVersionNo: number; reason: string; text: string; signedBy: string; signedAt: string; contentHash: string; signerName?: string };
 type Note = { templateKey: string; sections: Record<string, string>; version: number; status: string; signature?: { versionNo: number; signedBy: string; signedAt: string; contentHash: string; signerName?: string; signerLicence?: string }; addenda?: Addendum[]; signAsName?: string;
   /** MDV-P2-044: the doctor's record of the recording consent (null: not recorded) and the sections with an undecided AI draft. */
-  recordingConsent?: 'Agreed' | 'Declined' | 'Withdrawn' | null; undecidedAi?: string[] };
+  recordingConsent?: 'Agreed' | 'Declined' | 'Withdrawn' | null; undecidedAi?: string[];
+  /** MDV-P2-042: the template the server suggests for a note with nothing saved. */
+  suggestedTemplateKey?: string | null };
 // The doctor profile's name, which the server uses for the signature, the addenda and the sign button; the session's display name differs on purpose.
 const signer = 'Dr Asha Raman (synthetic)';
 export type NoteMock = {

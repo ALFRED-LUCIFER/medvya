@@ -12,8 +12,9 @@ namespace Medvya.Prescribing.Infrastructure;
 /// regulatory class needs, the medicines to stop, the authorisation with its content hash, and the QR code that verifies it.
 /// Copy comes from the shared English catalogue (packages/i18n/messages/en.json); the server never invents wording.
 /// Written by <see cref="PlainPdf"/>: names, medicines and notes in Hindi, Tamil or Arabic print shaped; text no embedded font has is refused.
-/// shortcut: the PDF's instructions are English only (the browser's print view adds the second language), and there is no clinic logo or signature
-/// image yet; both come with the stored-copy-in-Blob change (MDV-P2-017).
+/// shortcut: the PDF's instructions are English only (owner decision 11 Nov 2026: the pharmacist explains them); add a translator-reviewed
+/// patient-language line if pilot clinics ask for it.
+/// shortcut: no clinic logo or signature image yet; both come with the stored-copy-in-Blob change (MDV-P2-017).
 /// shortcut: brand names are not printed, because the composer does not choose one (generic only); print "generic (brand)" once it does.
 /// </summary>
 public static class RxPdfDocument

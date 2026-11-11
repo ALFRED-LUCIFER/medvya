@@ -3,7 +3,7 @@ import { emptyWaitlistForm, offerable, toRequest, waitlistError, waitlistSchema,
 
 const entry = (over: Partial<WaitlistEntry>): WaitlistEntry => ({
   id: 'e1', patientId: 'p1', patientName: 'Meera Iyer (synthetic)', mrn: '000001', calendarId: null, calendarName: null, visitType: 'FollowUp', reasonCategory: 'General',
-  days: [], from: null, until: null, state: 'Waiting', requestedAt: '2026-10-19T03:00:00Z', offered: null, offerExpiresAt: null, match: null, ...over,
+  days: [], from: null, until: null, state: 'Waiting', requestedAt: '2026-10-19T03:00:00Z', offered: null, offerExpiresAt: null, match: null, followUp: null, dueOn: null, ...over,
 });
 
 describe('waitlist form', () => {

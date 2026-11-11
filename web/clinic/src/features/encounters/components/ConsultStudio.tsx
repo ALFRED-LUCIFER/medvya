@@ -16,6 +16,8 @@ type Props = NoteEditorProps & {
   ticks: Record<StudioSection, boolean> | null;
   panel: StudioPanel; onPanel: (panel: StudioPanel) => void;
   chart: { data: Patient360['chart'] | null; loading: boolean; failed: boolean };
+  /** The plan's actions (MDV-P2-043): medicines, the prescription, tests, advice, follow-up and referral, composed in by the route. */
+  plan?: ReactNode;
 };
 
 const heading = (id: StudioSection) => `studio-${id}`;
@@ -23,8 +25,8 @@ const heading = (id: StudioSection) => `studio-${id}`;
 /**
  * E-04 one page (MDV-P2-041, CONSULTATION STUDIO): the recording consent first, a section bar that stays at the top, numbered sections over
  * today's template and a side panel (Assist, chart summary, checklist). The same form, autosave and sign as the guided steps.
- * shortcut: History, Examination and Plan hold today's text sections; the structured review of systems and examination (MDV-P2-042) and the
- * plan actions with Add medicine (MDV-P2-043, MDV-P2-039) go inside those sections when they land.
+ * shortcut: History and Examination hold today's text sections; the structured review of systems and examination (MDV-P2-042) go inside
+ * them when they land. Plan holds its text and the plan's actions (MDV-P2-043).
  */
 export default function ConsultStudio(p: Props) {
   const { t } = useI18n();
@@ -70,7 +72,7 @@ export default function ConsultStudio(p: Props) {
           </Numbered>
           <Numbered id="exam" title={title}>{field('objective')}</Numbered>
           <Numbered id="assessment" title={title}>{field('assessment')}</Numbered>
-          <Numbered id="plan" title={title}>{field('plan')}</Numbered>
+          <Numbered id="plan" title={title}>{field('plan')}{p.plan}</Numbered>
           <Numbered id="sign" title={title}>
             <SignedBanner signed={p.readOnly} versionNo={p.signature?.versionNo ?? 1} />
             {p.signature && <SignedLine signature={p.signature} timeZone={p.timeZone} />}

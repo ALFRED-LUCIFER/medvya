@@ -73,7 +73,7 @@ journey('J3', {
     await page.reload();
     await expect(page.getByRole('region', { name: /^With nurse/ }).getByRole('article', { name: patient.name })).toBeVisible();
   },
-  // MDV-P2-007 / MDV-P2-008: the owner switches nurse intake on (audited), the nurse opens the intake from the With nurse card, records a vital,
+  // MDV-P2-007 / MDV-P2-008: the owner switches nurse intake on in Settings (audited), the nurse opens the intake from the With nurse card, records a vital,
   // confirms "no known allergies" on purpose and hands off; the card is Ready for doctor. The flag is put back, so step 6's board move still works.
   5: async ({ page, browser }) => {
     const patient = syntheticPatient('Kavitha', 'Menon');
@@ -81,8 +81,11 @@ journey('J3', {
       const admin = await browser.newPage();
       try {
         await signIn(admin, owner);
-        const r = await admin.request.put('/v1/settings/nurse-intake', { data: { enabled }, headers: { 'X-Medvya-Csrf': '1' } });
-        expect(r.status()).toBe(200);
+        await admin.goto('/app/settings?tab=staff');
+        const toggle = admin.getByRole('region', { name: 'Nurse intake' }).getByRole('switch', { name: /^Nurse intake before the doctor/ });
+        await expect(toggle).toBeVisible();
+        if ((await toggle.getAttribute('aria-checked')) !== String(enabled)) await toggle.click();
+        await expect(toggle).toHaveAttribute('aria-checked', String(enabled)); // shown from the server's answer, so the switch is saved
       } finally {
         await admin.close();
       }

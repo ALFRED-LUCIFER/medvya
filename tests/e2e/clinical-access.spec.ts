@@ -16,9 +16,19 @@ const pending = () => [
 ];
 
 async function open(page: Page, { locale = 'en', path = '/settings?tab=staff', refuse = '' } = {}) {
-  const state = { requests: pending(), policy: 'AllFacilityClinicians', decisions: [] as { url: string; body: string; csrf: string | undefined }[], saved: [] as string[] };
+  const state = { requests: pending(), policy: 'AllFacilityClinicians', decisions: [] as { url: string; body: string; csrf: string | undefined }[], saved: [] as string[], intake: false, intakeSaves: [] as boolean[], contextLoads: 0 };
   await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
-  await page.route('**/v1/me/context', r => r.fulfill({ json: admin }));
+  await page.route('**/v1/me/context', r => {
+    state.contextLoads++;
+    return r.fulfill({ json: { ...admin, active: { ...admin.active, flags: state.intake ? ['clinical.nurse-intake'] : [] } } });
+  });
+  await page.route('**/v1/settings/nurse-intake', r => {
+    if (r.request().method() === 'PUT') {
+      state.intake = (JSON.parse(r.request().postData() ?? '{}') as { enabled: boolean }).enabled;
+      state.intakeSaves.push(state.intake);
+    }
+    return r.fulfill({ json: { enabled: state.intake } });
+  });
   await page.route('**/v1/settings/locations', r => r.fulfill({ json: [{ id: facility, name: 'Adyar (synthetic)', address: null, timeZone: 'Asia/Kolkata' }] }));
   await page.route('**/v1/staff', r => r.fulfill({ json: [] }));
   await page.route('**/v1/staff/roles', r => r.fulfill({ json: { builtIn: [], custom: [] } }));
@@ -76,6 +86,19 @@ test('the owner limits record opening to each patient\'s own clinicians', async 
   await policy.getByRole('button', { name: 'Save changes' }).click();
   await expect(policy.getByRole('status')).toHaveText('Saved.');
   expect(state.saved).toEqual(['AssignedOnly']);
+});
+
+// MDV-P2-007: the owner turns nurse intake on from Settings (the server allows only an owner or practice admin and audits it); the session is
+// refetched so the nurse step shows at once.
+test('the owner turns nurse intake on', async ({ page }) => {
+  const state = await open(page);
+  const toggle = page.getByRole('region', { name: 'Nurse intake' }).getByRole('switch', { name: /^Nurse intake before the doctor/ });
+  await expect(toggle).toHaveAttribute('aria-checked', 'false');
+  const loads = state.contextLoads;
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-checked', 'true');
+  expect(state.intakeSaves).toEqual([true]);
+  await expect.poll(() => state.contextLoads).toBeGreaterThan(loads);
 });
 
 test('the bell points the owner at the request', async ({ page }) => {

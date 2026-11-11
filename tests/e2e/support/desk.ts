@@ -47,6 +47,7 @@ export const fixtures: Record<string, unknown> = {
   '**/v1/settings/locations/*/closures': [],
   '**/v1/access-requests': { requests: [], grantDays: [1, 7, 30] },
   '**/v1/settings/clinical-access': { policy: 'AllFacilityClinicians' },
+  '**/v1/settings/nurse-intake': { enabled: false },
   '**/v1/staff/access-review': { quarter: '2026-Q4', completedAt: null, lastCompletedAt: null,
     members: [{ membershipId: 'a', name: 'Dr. Arjun Rao (synthetic)', role: 'SoloDoctor', facilityName: 'Adyar (synthetic)', lastSignIn: null, decision: null }] },
   '**/v1/staff': [member],

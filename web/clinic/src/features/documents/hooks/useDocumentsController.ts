@@ -4,7 +4,7 @@ import { ApiError } from '../../schedule/services/scheduleApi';
 import { refusalOf } from '../../patient360/domain/chart';
 import { anyPending, fileProblem, todayIn, uploadFailure, type DocumentSource, type DocumentType, type ScanStatus, type UploadFailure, type ViewLink } from '../domain/documents';
 import { buildPdf, type PageImage } from '../domain/pdf';
-import { fetchDocuments, openDocument, uploadDocument, type UploadDetails } from '../services/documentsApi';
+import { fetchDocuments, openDocument, updateDocument, uploadDocument, type UploadDetails } from '../services/documentsApi';
 import { toPageImage } from '../services/imagePages';
 
 type Upload = { file: Blob; pages: boolean };
@@ -57,6 +57,12 @@ export function useDocumentsController(patientId: string) {
     return () => clearTimeout(closeAt.current);
   }, [viewer]);
 
+  const [editing, setEditing] = useState<{ id: string; type: DocumentType; date: string } | null>(null);
+  const edit = useMutation({
+    mutationFn: (e: { id: string; type: DocumentType; date: string }) => updateDocument(e.id, { type: e.type, documentDate: e.date }),
+    onSuccess: () => { setEditing(null); void queryClient.invalidateQueries({ queryKey: key }); },
+  });
+
   const error = list.error instanceof ApiError ? list.error : null;
   const openError = open.error instanceof ApiError ? open.error : null;
   return {
@@ -92,6 +98,13 @@ export function useDocumentsController(patientId: string) {
     opening: open.isPending ? (open.variables ?? null) : null,
     openProblem: openError ? (openError.code === 'scan_pending' ? ('scan_pending' as const) : openError.code === 'quarantined' ? ('quarantined' as const) : ('failed' as const)) : null,
     onOpen: (id: string) => open.mutate(id),
+    editing,
+    saving: edit.isPending,
+    editFailed: edit.isError,
+    onEdit: (d: { id: string; type: DocumentType; documentDate: string }) => { edit.reset(); setEditing({ id: d.id, type: d.type, date: d.documentDate }); },
+    onEditChange: (patch: { type?: DocumentType; date?: string }) => setEditing(e => e && { ...e, ...patch }),
+    onSaveEdit: () => editing && edit.mutate(editing),
+    onCancelEdit: () => setEditing(null),
     onCloseViewer: () => { setViewer(null); setExpired(false); },
   };
 }

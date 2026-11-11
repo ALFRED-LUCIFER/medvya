@@ -17,3 +17,7 @@ export function uploadDocument(patientId: string, details: UploadDetails, file: 
 
 /** POST, not GET: issuing a link is an audited action. The link expires within five minutes. */
 export const openDocument = (documentId: string) => post<ViewLink>(`/v1/documents/${documentId}/view-link`, {});
+
+/** Changes the type and date only; the file is never touched and the edit is audited. */
+export const updateDocument = (documentId: string, body: { type: DocumentType; documentDate: string }) =>
+  send<DocumentRow>(`/v1/documents/${documentId}`, { method: 'PATCH', headers: { ...csrf, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });

@@ -233,6 +233,39 @@ public sealed class StaffSignInTests(PostgresFixture sql) : IClassFixture<Postgr
         Assert.Equal(HttpStatusCode.Unauthorized, (await browser.GetAsync(new Uri("/v1/me/context", UriKind.Relative))).StatusCode);
     }
 
+    /// <summary>The step-up (MDV-P2-012): POST /bff/reauth, the provider, then the callback; returns the callback response.</summary>
+    static async Task<HttpResponseMessage> Reauth(HttpClient browser, string subject)
+    {
+        using var start = new HttpRequestMessage(HttpMethod.Post, new Uri("/bff/reauth", UriKind.Relative)) { Content = JsonContent.Create(new { returnUrl = "/consult/x" }) };
+        start.Headers.Add(StaffAuthentication.CsrfHeader, "1");
+        var asked = await browser.SendAsync(start);
+        Assert.Equal(HttpStatusCode.OK, asked.StatusCode);
+        var provider = new Uri((await asked.Content.ReadFromJsonAsync<StaffAuthentication.SignInRedirect>())!.Location);
+        Assert.Contains("prompt=login", provider.Query, StringComparison.Ordinal);
+        var authorize = await browser.GetAsync(new Uri($"{provider}&login_hint={subject}"));
+        return await browser.GetAsync(authorize.Headers.Location);
+    }
+
+    // SAFETY mutation check: make the callback read HttpContext.User again (or drop the user comparison) and the first case fails (it was refused on the
+    // real stack) or the second one signs the wrong person in.
+    [Fact]
+    public async Task OnlyThePersonSignedInCanStepUpAndTheSessionStaysTheirs()
+    {
+        var user = await Account("Arjun Rao");
+        var other = await Account("Someone Else");
+        using var browser = Browser();
+        await SignIn(browser, user.Subject);
+
+        var ok = await Reauth(browser, user.Subject);
+        Assert.Equal("/consult/x", ok.Headers.Location!.OriginalString);
+        Assert.Contains(ok.Headers.GetValues("Set-Cookie"), c => c.StartsWith(StaffAuthentication.CookieName + "=", StringComparison.Ordinal));
+        Assert.Contains(user.DisplayName, await (await browser.GetAsync(new Uri("/v1/me/context", UriKind.Relative))).Content.ReadAsStringAsync(), StringComparison.Ordinal);
+
+        var wrong = await Reauth(browser, other.Subject); // a colleague at the same browser cannot answer for the doctor
+        Assert.Equal("/?signin=failed", wrong.Headers.Location!.OriginalString);
+        Assert.Contains(user.DisplayName, await (await browser.GetAsync(new Uri("/v1/me/context", UriKind.Relative))).Content.ReadAsStringAsync(), StringComparison.Ordinal);
+    }
+
     // #912: on a shared front-desk PC the provider must not sign the last account straight back in, so sign-out ends its session too.
     [Fact]
     public async Task SignOutEndsTheProviderSessionAndComesBackToTheApp()

@@ -80,7 +80,7 @@ journey('J2', {
     await note.getByRole('button', { name: 'Sign note' }).click();
     await page.getByRole('dialog').getByRole('button', { name: /^Sign as Dr\. Arjun Rao/ }).click();
     await expect(note).toContainText('SIGNED v1 · read-only');
-    await expect(note).toContainText(/Signed by Dr\. Arjun Rao.*licence .*SYN-TCMC-\d+/);
+    await expect(note).toContainText(/Signed by Dr\. Arjun Rao.*licence .*SYN-\d+/);
     await expect(note.getByLabel('Plan')).toHaveJSProperty('readOnly', true);
     await expect(note.getByRole('button', { name: 'Sign note' })).toHaveCount(0);
     await page.reload(); // the signature is the server's, not the page's

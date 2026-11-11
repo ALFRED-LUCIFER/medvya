@@ -101,19 +101,22 @@ public static partial class StaffAuthentication
         var subject = principal.FindFirst("sub")?.Value;
         var user = issuer is null || subject is null ? null
             : await ctx.HttpContext.RequestServices.GetRequiredService<IStaffUsers>().FindAsync(issuer, subject, ctx.HttpContext.RequestAborted);
-        // Step-up (MDV-P2-012): only the person already signed in on this browser session may answer, and the session stays the same; the
-        // cookie is re-issued with the time of this sign-in. Anyone else (or nobody) is refused and no new session starts.
-        if (ctx.Properties?.Items.ContainsKey(ReauthItem) == true)
+        // Step-up (MDV-P2-012): only the person who asked for it, on this browser, may answer, and the session stays the same; the cookie is
+        // re-issued with the time of this sign-in. The claims of the asking session ride in the protected OIDC state (set by /bff/reauth): the
+        // callback cannot read the session cookie (the middleware runs this handler before it sets HttpContext.User, and a SameSite=Strict cookie
+        // does not travel on a redirect back from another site). Anyone else is refused and no new session starts.
+        if (ctx.Properties?.Items.TryGetValue(ReauthItem, out var asked) == true)
         {
-            var current = ctx.HttpContext.User;
-            if (user is null || current.FindFirst(ClaimTypes.NameIdentifier)?.Value != user.Id.ToString() || current.FindFirst(SessionControl.SessionIdClaim) is null)
+            var claims = asked is null ? [] : System.Text.Json.JsonSerializer.Deserialize<string[][]>(asked)!.Where(c => c.Length == 2).Select(c => new Claim(c[0], c[1])).ToList();
+            if (user is null || claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value != user.Id.ToString() || claims.All(c => c.Type != SessionControl.SessionIdClaim))
             {
                 SignInRefusedUnknownAccount(log);
                 ctx.Fail("The re-authentication does not match the signed-in user.");
                 return;
             }
+            var now = ctx.HttpContext.RequestServices.GetRequiredService<TimeProvider>().GetUtcNow(); // the clock the signing check reads
             ctx.Principal = new ClaimsPrincipal(new ClaimsIdentity(
-                current.Claims.Where(c => c.Type != ReauthClaim).Append(new Claim(ReauthClaim, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture))),
+                claims.Where(c => c.Type != ReauthClaim).Append(new Claim(ReauthClaim, now.ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture))),
                 CookieAuthenticationDefaults.AuthenticationScheme));
             return;
         }
@@ -211,7 +214,8 @@ public static partial class StaffAuthentication
             {
                 if (!ctx.Request.Headers.ContainsKey(CsrfHeader)) return Results.Problem(statusCode: StatusCodes.Status400BadRequest, title: "Missing anti-forgery header");
                 var properties = SignInProperties(start.ReturnUrl, null, null, config);
-                properties.Items[ReauthItem] = "1";
+                // The asking session's claims: the callback only accepts the same person and re-issues the same session (see OnTokenValidated).
+                properties.Items[ReauthItem] = System.Text.Json.JsonSerializer.Serialize(ctx.User.Claims.Where(c => c.Type != ReauthClaim).Select(c => new[] { c.Type, c.Value }));
                 await ctx.ChallengeAsync(OpenIdConnectDefaults.AuthenticationScheme, properties);
                 var location = ctx.Response.Headers.Location.ToString();
                 ctx.Response.Headers.Remove(Microsoft.Net.Http.Headers.HeaderNames.Location);

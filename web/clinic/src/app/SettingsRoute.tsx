@@ -9,6 +9,7 @@ import LocationsPanel from '../features/settings/components/LocationsPanel';
 import ProfilePanel from '../features/settings/components/ProfilePanel';
 import DataPanel from '../features/settings/components/DataPanel';
 import NotificationsPanel from '../features/settings/components/NotificationsPanel';
+import NurseIntakePanel from '../features/settings/components/NurseIntakePanel';
 import TermsPanel from '../features/settings/components/TermsPanel';
 import SettingsPage from '../features/settings/components/SettingsPage';
 import { settingsTabs, type SettingsTab } from '../features/settings/domain/settings';
@@ -18,6 +19,7 @@ import { useOpeningHoursController, useSchedulesController } from '../features/s
 import { useLocationChoice } from '../features/settings/hooks/useLocationChoice';
 import { useLocationsController } from '../features/settings/hooks/useLocationsController';
 import { useNotificationSettingsController } from '../features/settings/hooks/useNotificationSettingsController';
+import { useNurseIntakeController } from '../features/settings/hooks/useNurseIntakeController';
 import { useTermsController } from '../features/settings/hooks/useTermsController';
 import { useProfileController } from '../features/settings/hooks/useProfileController';
 import CustomRolesPanel from '../features/staff/components/CustomRolesPanel';
@@ -72,6 +74,7 @@ const Metrics = ({ facilityId }: { facilityId: string }) => <PilotMetricsPanel {
 const Review = () => <AccessReviewPanel {...useAccessReviewController()} />;
 const AccessRequests = () => <AccessRequestsPanel {...useAccessRequestsController()} />;
 const ClinicalPolicy = () => <ClinicalPolicyPanel {...useClinicalPolicyController()} />;
+const NurseIntake = () => <NurseIntakePanel {...useNurseIntakeController()} />;
 
 function Staff({ facilityId }: { facilityId: string }) {
   const staff = useStaffController(facilityId);
@@ -83,6 +86,7 @@ function Staff({ facilityId }: { facilityId: string }) {
       {!staff.loading && !staff.failed && <CustomRolesPanel catalogue={staff.catalogue} {...roles} />}
       <AccessRequests />
       <ClinicalPolicy />
+      <NurseIntake />
       <Review />
     </>
   );

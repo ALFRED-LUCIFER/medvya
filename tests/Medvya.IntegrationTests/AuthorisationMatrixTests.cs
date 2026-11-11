@@ -247,6 +247,10 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.SoloDoctor, new("GET", "/v1/patients/{patient}/geriatric-assessments")),
         (Role.Nurse, new("POST", "/v1/patients/{patient}/geriatric-assessments", """{"clinicalFrailtyScale":4}""")),
         (Role.SoloDoctor, new("GET", "/v1/patients/{patient}/medicine-review")),
+        (Role.Nurse, new("GET", "/v1/patients/{patient}/chronic-care")),
+        (Role.SoloDoctor, new("PUT", "/v1/patients/{patient}/care-targets", """{"code":"HbA1c","limit":7.5}""")),
+        (Role.SoloDoctor, new("POST", "/v1/patients/{patient}/care-checks", """{"kind":"DiabeticEyeExam","doneOn":"2026-10-01"}""")),
+        (Role.SoloDoctor, new("POST", "/v1/patients/{patient}/care-goals", """{"text":"Synthetic goal"}""")),
         (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/orders/from-set", """{"orderSetId":"{order}"}""")),
         (Role.Nurse, new("POST", "/v1/intake/{appointment}/escalate", """{"reason":"Synthetic"}""")),
         (Role.Nurse, new("POST", "/v1/intake/{appointment}/handoff")),
@@ -303,6 +307,7 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         ["/v1/waitlist/{id:guid}/offer"] = "as above",
         ["/v1/waitlist/{id:guid}/accept"] = "as above",
         ["/v1/waitlist/{id:guid}/decline"] = "as above",
+        ["/v1/patients/{patientId:guid}/care-goals/{goalId:guid}"] = "two ids: only a goal of the route's own patient is found, another's is not (ChronicCareTests, with row-level security); the patient's goal route is in the matrix",
     };
 
     /// <summary>
@@ -434,6 +439,10 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.Receptionist, new("GET", "/v1/patients/{patient}/geriatric-assessments")), // Patient 360: X
         (Role.CareCoordinator, new("POST", "/v1/patients/{patient}/geriatric-assessments", """{"clinicalFrailtyScale":4}""")), // Vitals & allergies entry: X
         (Role.Nurse, new("GET", "/v1/patients/{patient}/medicine-review")), // Prescriptions & orders: X
+        (Role.Receptionist, new("GET", "/v1/patients/{patient}/chronic-care")), // Patient 360: X
+        (Role.Nurse, new("PUT", "/v1/patients/{patient}/care-targets", """{"code":"HbA1c","limit":7.5}""")), // Patient 360: L
+        (Role.Nurse, new("POST", "/v1/patients/{patient}/care-checks", """{"kind":"DiabeticEyeExam","doneOn":"2026-10-01"}""")), // Patient 360: L
+        (Role.CareCoordinator, new("POST", "/v1/patients/{patient}/care-goals", """{"text":"Synthetic goal"}""")), // Patient 360: L
         (Role.Nurse, new("GET", "/v1/encounters/{encounter}/orders")), // Prescriptions & orders: X
         (Role.Nurse, new("GET", "/v1/encounters/{encounter}/prescription")), // Prescriptions & orders: X
         (Role.Receptionist, new("POST", "/v1/encounters/{encounter}/prescription/items", """{"medicine":"Synthetic medicine"}""")),

@@ -842,6 +842,194 @@
         }
       }
     },
+    "/v1/patients/{patientId}/chronic-care": {
+      "get": {
+        "tags": [
+          "ChronicCareEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "patientId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/patients/{patientId}/care-targets": {
+      "put": {
+        "tags": [
+          "ChronicCareEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "patientId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/SetCareTarget"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/patients/{patientId}/care-checks": {
+      "post": {
+        "tags": [
+          "ChronicCareEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "patientId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/RecordCareCheck"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/patients/{patientId}/care-goals": {
+      "post": {
+        "tags": [
+          "ChronicCareEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "patientId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AddCareGoal"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/patients/{patientId}/care-goals/{goalId}": {
+      "put": {
+        "tags": [
+          "ChronicCareEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "patientId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "goalId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/UpdateCareGoal"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/v1/encounters/{encounterId}/note/sign": {
       "post": {
         "tags": [
@@ -6348,6 +6536,37 @@
           }
         }
       },
+      "AddCareGoal": {
+        "required": [
+          "text",
+          "target",
+          "progressPercent"
+        ],
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "target": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "progressPercent": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "AddDoctor": {
         "type": "object",
         "properties": {
@@ -7489,6 +7708,13 @@
           "DevicePairingFleet",
           "StaffRolesIntegrations",
           "AuditLog"
+        ]
+      },
+      "CareCheckKind": {
+        "enum": [
+          "DiabeticEyeExam",
+          "DiabeticFootExam",
+          null
         ]
       },
       "CheckIn": {
@@ -9099,6 +9325,35 @@
           }
         }
       },
+      "ObservationCode": {
+        "enum": [
+          "BloodPressureSystolic",
+          "BloodPressureDiastolic",
+          "Pulse",
+          "Temperature",
+          "OxygenSaturation",
+          "Weight",
+          "RespiratoryRate",
+          "Height",
+          "PainScore",
+          "BloodPressureStandingSystolic",
+          "BloodPressureStandingDiastolic",
+          "FundalHeight",
+          "FetalHeartRate",
+          "HbA1c",
+          "LdlCholesterol",
+          "Egfr",
+          "UrineAlbuminCreatinineRatio",
+          "Haemoglobin",
+          "Ferritin",
+          "Potassium",
+          "Sodium",
+          "Tsh",
+          "VitaminD",
+          "Platelets",
+          null
+        ]
+      },
       "Offboard": {
         "required": [
           "reason"
@@ -9932,6 +10187,32 @@
             "format": "date"
           },
           "toDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          }
+        }
+      },
+      "RecordCareCheck": {
+        "required": [
+          "kind",
+          "doneOn"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CareCheckKind"
+              }
+            ]
+          },
+          "doneOn": {
             "type": [
               "null",
               "string"
@@ -11226,6 +11507,34 @@
           }
         }
       },
+      "SetCareTarget": {
+        "required": [
+          "code",
+          "limit"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ObservationCode"
+              }
+            ]
+          },
+          "limit": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          }
+        }
+      },
       "SetLocations": {
         "required": [
           "facilityIds",
@@ -11560,6 +11869,23 @@
           "Closed",
           "Leave"
         ]
+      },
+      "UpdateCareGoal": {
+        "required": [
+          "progressPercent"
+        ],
+        "type": "object",
+        "properties": {
+          "progressPercent": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
       },
       "UpdateDispatch": {
         "required": [
@@ -12075,6 +12401,9 @@
     },
     {
       "name": "GeriatricEndpoints"
+    },
+    {
+      "name": "ChronicCareEndpoints"
     },
     {
       "name": "NoteEndpoints"

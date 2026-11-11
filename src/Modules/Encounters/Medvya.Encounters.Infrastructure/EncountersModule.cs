@@ -33,6 +33,7 @@ public static class EncountersModule
             .AddScoped<IProblemList, ProblemListService>()
             .AddScoped<IChildHealth, ChildHealthService>()
             .AddScoped<IGeriatricAssessments, GeriatricAssessmentService>()
+            .AddScoped<IChronicCare, ChronicCareService>()
             .AddScoped<IPrescribingChart, PrescribingChart>()
             .AddScoped<INoteTemplates, NoteTemplateService>()
             .AddScoped<IConsultNotes, ConsultNoteService>()

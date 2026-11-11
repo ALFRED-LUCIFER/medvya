@@ -1143,6 +1143,198 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/patients/{patientId}/chronic-care": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    patientId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/patients/{patientId}/care-targets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    patientId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["SetCareTarget"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/patients/{patientId}/care-checks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    patientId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["RecordCareCheck"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/patients/{patientId}/care-goals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    patientId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["AddCareGoal"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/patients/{patientId}/care-goals/{goalId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    patientId: string;
+                    goalId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["UpdateCareGoal"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/encounters/{encounterId}/note/sign": {
         parameters: {
             query?: never;
@@ -7897,6 +8089,12 @@ export interface components {
             reaction: null | string;
             status: null | components["schemas"]["AllergyStatus"];
         };
+        AddCareGoal: {
+            text: null | string;
+            target: null | string;
+            /** Format: int32 */
+            progressPercent: null | number | string;
+        };
         AddDoctor: {
             fullName?: null | string;
             email?: null | string;
@@ -8173,6 +8371,8 @@ export interface components {
         };
         /** @enum {unknown} */
         Capability: "RegisterBookPatients" | "CheckInQueue" | "InvoicesPayments" | "Patient360Chart" | "VitalsAllergiesEntry" | "ClinicalNotes" | "PrescriptionsOrders" | "RecordingConsentCapture" | "AiDraftsEvidence" | "ResultReviewAcknowledge" | "CareTasksPatientContact" | "ReleaseRecordsToPortal" | "DevicePairingFleet" | "StaffRolesIntegrations" | "AuditLog";
+        /** @enum {unknown} */
+        CareCheckKind: "DiabeticEyeExam" | "DiabeticFootExam" | null;
         CheckIn: {
             /** Format: int64 */
             elapsedMs?: null | number | string;
@@ -8575,6 +8775,8 @@ export interface components {
         NurseIntakeBody: {
             enabled: boolean;
         };
+        /** @enum {unknown} */
+        ObservationCode: "BloodPressureSystolic" | "BloodPressureDiastolic" | "Pulse" | "Temperature" | "OxygenSaturation" | "Weight" | "RespiratoryRate" | "Height" | "PainScore" | "BloodPressureStandingSystolic" | "BloodPressureStandingDiastolic" | "FundalHeight" | "FetalHeartRate" | "HbA1c" | "LdlCholesterol" | "Egfr" | "UrineAlbuminCreatinineRatio" | "Haemoglobin" | "Ferritin" | "Potassium" | "Sodium" | "Tsh" | "VitaminD" | "Platelets" | null;
         Offboard: {
             reason: null | string;
             /** @default false */
@@ -8752,6 +8954,11 @@ export interface components {
             fromDate?: null | string;
             /** Format: date */
             toDate?: null | string;
+        };
+        RecordCareCheck: {
+            kind: null | components["schemas"]["CareCheckKind"];
+            /** Format: date */
+            doneOn: null | string;
         };
         RecordDose: {
             vaccine: null | string;
@@ -9056,6 +9263,11 @@ export interface components {
         SetAllergyStatus: {
             status: null | components["schemas"]["AllergyStatus"];
         };
+        SetCareTarget: {
+            code: null | components["schemas"]["ObservationCode"];
+            /** Format: double */
+            limit: null | number | string;
+        };
         SetLocations: {
             facilityIds: null | string[];
             reason: null | string;
@@ -9134,6 +9346,10 @@ export interface components {
         };
         /** @enum {unknown} */
         UnavailableReason: "NotWorking" | "Break" | "NoSchedule" | "Closed" | "Leave";
+        UpdateCareGoal: {
+            /** Format: int32 */
+            progressPercent: null | number | string;
+        };
         UpdateDispatch: {
             state: null | components["schemas"]["DispatchState"];
             pharmacyRef: null | string;

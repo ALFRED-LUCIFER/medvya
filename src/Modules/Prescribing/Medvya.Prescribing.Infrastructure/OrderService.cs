@@ -213,6 +213,14 @@ public sealed class OrderTimelineSource(PrescribingDbContext db) : ITimelineSour
     }
 }
 
+/// <summary>The patient's placed orders for the "ordered but never resulted" care gap (MDV-P2-038), through the Encounters contract.</summary>
+public sealed class PlacedOrders(PrescribingDbContext db) : IPlacedOrders
+{
+    public async Task<IReadOnlyList<PlacedOrderFact>> SinceAsync(Guid patientId, DateTimeOffset since, CancellationToken cancellationToken = default) =>
+        await db.Orders.AsNoTracking().Where(o => o.PatientId == patientId && o.State == OrderState.Ordered && o.OrderedAt >= since)
+            .Select(o => new PlacedOrderFact(o.Name, o.OrderedAt!.Value)).ToListAsync(cancellationToken);
+}
+
 /// <summary>A patient merge moves the surviving record's orders, prescription lines and referrals along and an undo moves them back (MDV-P1-017), in the merge's transaction.</summary>
 public sealed class OrderMergeParticipant(ICurrentTenant tenant) : IPatientMergeParticipant
 {

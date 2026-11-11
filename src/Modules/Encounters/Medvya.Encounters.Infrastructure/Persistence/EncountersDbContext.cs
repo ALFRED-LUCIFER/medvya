@@ -15,6 +15,9 @@ public sealed class EncountersDbContext(DbContextOptions<EncountersDbContext> op
     public DbSet<MedicationStatement> MedicationStatements => Set<MedicationStatement>();
     public DbSet<Observation> Observations => Set<Observation>();
     public DbSet<GeriatricAssessment> GeriatricAssessments => Set<GeriatricAssessment>();
+    public DbSet<CareTarget> CareTargets => Set<CareTarget>();
+    public DbSet<CareCheck> CareChecks => Set<CareCheck>();
+    public DbSet<CareGoal> CareGoals => Set<CareGoal>();
     public DbSet<ClinicalDocument> Documents => Set<ClinicalDocument>();
     public DbSet<Intake> Intakes => Set<Intake>();
     public DbSet<IntakeEscalation> IntakeEscalations => Set<IntakeEscalation>();
@@ -123,6 +126,25 @@ public sealed class EncountersDbContext(DbContextOptions<EncountersDbContext> op
         {
             e.Property(x => x.NutritionNote).HasMaxLength(GeriatricRules.MaxNutritionNote);
             e.HasIndex(x => new { x.TenantId, x.PatientId, x.AssessedAt }); // the patient's latest reviews
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<CareTarget>(e =>
+        {
+            e.Property(x => x.Code).HasConversion<string>().HasMaxLength(30);
+            e.HasIndex(x => new { x.TenantId, x.PatientId, x.Code, x.SetAt }); // append-only: the newest row of a code is current
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<CareCheck>(e =>
+        {
+            e.Property(x => x.Kind).HasConversion<string>().HasMaxLength(30);
+            e.HasIndex(x => new { x.TenantId, x.PatientId, x.Kind, x.DoneOn });
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<CareGoal>(e =>
+        {
+            e.Property(x => x.Text).HasMaxLength(CareGoal.MaxText);
+            e.Property(x => x.Target).HasMaxLength(CareGoal.MaxTarget);
+            e.HasIndex(x => new { x.TenantId, x.PatientId, x.CreatedAt });
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         modelBuilder.Entity<Intake>(e =>

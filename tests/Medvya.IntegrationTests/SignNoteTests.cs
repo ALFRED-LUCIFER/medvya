@@ -169,10 +169,9 @@ public sealed class SignNoteTests(PostgresFixture sql) : IClassFixture<PostgresF
             Assert.Equal((name, licence), (signature.GetProperty("signerName").GetString(), signature.GetProperty("signerLicence").GetString()));
             Assert.Equal(name, view.GetProperty("addenda")[0].GetProperty("signerName").GetString());
             using var pdf = await PdfAsync(h.Doctor);
-            var text = Encoding.Latin1.GetString(await pdf.Content.ReadAsByteArrayAsync());
-            var escaped = name.Replace("(", @"\(", StringComparison.Ordinal).Replace(")", @"\)", StringComparison.Ordinal);
-            Assert.Contains($"Signed by {escaped}", text, StringComparison.Ordinal);
-            Assert.Contains($"Signed by {escaped}", text[(text.IndexOf("Addendum", StringComparison.Ordinal))..], StringComparison.Ordinal);
+            var text = string.Join(' ', PdfPages.Read(await pdf.Content.ReadAsByteArrayAsync(), PlainPdf.A4.Margin).Select(p => p.Text));
+            Assert.Contains($"Version 1 · Signed by {name} ·", text, StringComparison.Ordinal);
+            Assert.Contains($"Addendum · version 2 · Signed by {name} ·", text, StringComparison.Ordinal);
         }
         await AssertNameAsync("Dr Asha Raman (synthetic)", "Tamil Nadu Medical Council 84213");
 

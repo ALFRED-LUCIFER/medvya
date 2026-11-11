@@ -805,6 +805,120 @@ namespace Medvya.Encounters.Infrastructure.Persistence.Migrations
                     b.ToTable("OutboxEvents", "encounters");
                 });
 
+            modelBuilder.Entity("Medvya.Encounters.Domain.PregnancyEpisode", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("Abortions")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("ClosedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ClosedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("DangerSignsCounselledAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DangerSignsCounselledBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DatedBy")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("DatingReason")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateOnly>("DueDate")
+                        .HasColumnType("date");
+
+                    b.Property<int?>("Gravida")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("Living")
+                        .HasColumnType("integer");
+
+                    b.Property<DateOnly?>("Lmp")
+                        .HasColumnType("date");
+
+                    b.Property<Guid?>("MergedFromPatientId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Outcome")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<int?>("Para")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("PatientId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly?>("PreviousDueDate")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly?>("ScanDate")
+                        .HasColumnType("date");
+
+                    b.Property<int?>("ScanGestationDays")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("StartedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("StartedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "PatientId")
+                        .IsUnique()
+                        .HasFilter("\"Outcome\" IS NULL");
+
+                    b.ToTable("PregnancyEpisodes", "encounters");
+                });
+
+            modelBuilder.Entity("Medvya.Encounters.Domain.PregnancyRuledOut", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("FacilityId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("MergedFromPatientId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PatientId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("RecordedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("RecordedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "PatientId", "RecordedAt");
+
+                    b.ToTable("PregnancyRuledOuts", "encounters");
+                });
+
             modelBuilder.Entity("Medvya.Encounters.Domain.Problem", b =>
                 {
                     b.Property<Guid>("Id")

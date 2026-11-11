@@ -78,4 +78,13 @@ public sealed record PrescribingFacts(AllergyState AllergyState, IReadOnlyList<C
 public interface IPrescribingChart
 {
     Task<PrescribingFacts> FactsAsync(Guid patientId, CancellationToken cancellationToken = default);
+
+    /// <summary>The pregnancy state for the checks (MDV-P2-034), on the facility's date.</summary>
+    Task<ChartPregnancy> PregnancyAsync(Guid patientId, Guid facilityId, CancellationToken cancellationToken = default);
 }
+
+/// <summary>
+/// The pregnancy facts the checks read: the completed weeks of an open pregnancy, or a "not pregnant" statement that holds today. Neither is
+/// "not recorded", never "not pregnant".
+/// </summary>
+public sealed record ChartPregnancy(int? GestationWeeks, bool RuledOut);

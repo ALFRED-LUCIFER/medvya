@@ -27,6 +27,8 @@ public sealed class EncountersDbContext(DbContextOptions<EncountersDbContext> op
     public DbSet<HistoryEntry> HistoryEntries => Set<HistoryEntry>();
     public DbSet<Immunisation> Immunisations => Set<Immunisation>();
     public DbSet<MilestoneResponse> MilestoneResponses => Set<MilestoneResponse>();
+    public DbSet<PregnancyEpisode> PregnancyEpisodes => Set<PregnancyEpisode>();
+    public DbSet<PregnancyRuledOut> PregnancyRuledOuts => Set<PregnancyRuledOut>();
 
     Guid? CurrentTenantId => tenant.TenantId;
 
@@ -116,6 +118,19 @@ public sealed class EncountersDbContext(DbContextOptions<EncountersDbContext> op
             e.Property(x => x.Section).HasConversion<string>().HasMaxLength(20);
             e.Property(x => x.Text).HasMaxLength(HistoryRules.MaxText);
             e.HasIndex(x => new { x.TenantId, x.PatientId, x.Section, x.RecordedAt }); // append-only: the newest row of a section is current
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<PregnancyEpisode>(e =>
+        {
+            e.Property(x => x.DatedBy).HasConversion<string>().HasMaxLength(10);
+            e.Property(x => x.DatingReason).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.Outcome).HasConversion<string>().HasMaxLength(20);
+            e.HasIndex(x => new { x.TenantId, x.PatientId }).IsUnique().HasFilter("\"Outcome\" IS NULL"); // one open pregnancy per patient
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<PregnancyRuledOut>(e =>
+        {
+            e.HasIndex(x => new { x.TenantId, x.PatientId, x.RecordedAt });
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         modelBuilder.Entity<Intake>(e =>

@@ -4,6 +4,7 @@ using Medvya.BuildingBlocks.Domain;
 using Medvya.Encounters.Application;
 using Medvya.Encounters.Domain;
 using Medvya.Encounters.Infrastructure.Persistence;
+using Medvya.Patients.Application;
 using Medvya.Scheduling.Application;
 using Medvya.Scheduling.Domain;
 using Medvya.Tenancy.Application;
@@ -20,7 +21,7 @@ namespace Medvya.Encounters.Infrastructure;
 /// keeps it on purpose. Blanks stay blank. The handoff moves the board card in the same transaction and tells the boards after the commit.
 /// </summary>
 public sealed class IntakeService(
-    EncountersDbContext db, IConsultVisits visits, IClinicalAccess clinical, ICurrentTenant tenant, ICurrentUser user, IAuditLog audit, TimeProvider clock) : IIntake
+    EncountersDbContext db, IConsultVisits visits, IPatientDirectory patients, IClinicalAccess clinical, ICurrentTenant tenant, ICurrentUser user, IAuditLog audit, TimeProvider clock) : IIntake
 {
     public const string ReadAction = "intake.read", RecordAction = "intake.record", KeepAction = "intake.keep", EscalateAction = "intake.escalate",
         HandOffAction = "intake.handoff", AllergyAddAction = "intake.allergy.add", AllergyStatusAction = "intake.allergy.status",
@@ -64,6 +65,9 @@ public sealed class IntakeService(
         if (errors.Count > 0) throw new IntakeValidationException(errors);
 
         var (now, me) = (clock.GetUtcNow(), user.UserId ?? throw new InvalidOperationException("No user."));
+        var born = (await patients.SummariesAsync([visit.PatientId], cancellationToken)).GetValueOrDefault(visit.PatientId)?.DateOfBirth
+            ?? throw new InvalidOperationException("The visit's patient is not in the directory.");
+        var ageInMonths = VitalRules.AgeInMonths(born, DateOnly.FromDateTime(now.UtcDateTime));
         var row = await EnsureAsync(visit, cancellationToken);
         await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
         foreach (var (kind, value) in readings)
@@ -76,7 +80,7 @@ public sealed class IntakeService(
             db.Observations.Add(new Observation
             {
                 Id = Guid.CreateVersion7(), TenantId = TenantId, FacilityId = visit.FacilityId, PatientId = visit.PatientId, AppointmentId = appointmentId, Code = code,
-                ValueHundredths = tenths * 10, Flag = VitalRules.Flag(kind, value, before is null ? null : VitalRules.FromTenths(before.ValueHundredths / 10)), PreviousTenths = before?.ValueHundredths / 10, PreviousAt = before?.TakenAt,
+                ValueHundredths = tenths * 10, Flag = VitalRules.Flag(kind, value, before is null ? null : VitalRules.FromTenths(before.ValueHundredths / 10), ageInMonths), PreviousTenths = before?.ValueHundredths / 10, PreviousAt = before?.TakenAt,
                 Source = ChartSource.ClinicianVerified, RecordedBy = me, VerifiedBy = me, TakenAt = now,
             });
         }

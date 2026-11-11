@@ -46,12 +46,19 @@ public sealed class IntakeEscalation
 }
 
 /// <summary>
-/// What a reading may be and when it is flagged (adult ranges). A value no living person can have is refused; a usual-range miss is saved
-/// and flagged.
-/// shortcut: one adult range set for every facility and patient; per-facility, paediatric and pregnancy ranges when clinics ask for them.
+/// What a reading may be and when it is flagged, by age band (MDV-P2-007, #956). A value no living person can have is refused; a usual-range
+/// miss is saved and flagged. Children: AHA PALS 2020 awake heart rate and blood pressure ranges, low systolic at the PALS hypotension line
+/// (under 1 month 60, under 1 year 70, then 70 + 2 x age to 90 from 10 years). Adults (18 and over): the ranges used since MDV-P2-007.
+/// Temperature and SpO2 use the same lines at every age. The references give no sex-specific values for these six measurements, so sex does
+/// not change a range; sex- and height-specific blood-pressure centiles are not used.
+/// shortcut: one range set for every facility, no pregnancy ranges, and the weight-change line is 2 kg at every age; per-facility and
+/// pregnancy ranges and a relative weight line for children when the clinical reviewer asks for them.
 /// </summary>
 public static class VitalRules
 {
+    /// <summary>The clinician who reviewed these ranges and when. Null: the ranges are a draft awaiting clinical sign-off (owner decision 11 Nov 2026).</summary>
+    public static readonly ClinicalSignOff? SignOff; // set to new(name, registration, date) when signed
+
     /// <summary>Hard limits: outside them the reading is a typing or device mistake and is refused.</summary>
     public static (decimal Min, decimal Max) Possible(VitalKind kind) => kind switch
     {
@@ -64,16 +71,32 @@ public static class VitalRules
         _ => throw new ArgumentOutOfRangeException(nameof(kind)),
     };
 
-    /// <summary>Usual range: below Low or at/above High is flagged.</summary>
-    static (decimal Low, decimal High) Usual(VitalKind kind) => kind switch
+    /// <summary>Usual range for a patient this many whole months old: below Low or at/above High is flagged.</summary>
+    public static (decimal Low, decimal High) Usual(VitalKind kind, int ageInMonths) => (kind, ageInMonths) switch
     {
-        VitalKind.SystolicBp => (90, 140),
-        VitalKind.DiastolicBp => (60, 90),
-        VitalKind.Pulse => (50, 101),
-        VitalKind.Temperature => (36.0m, 38.0m),
-        VitalKind.OxygenSaturation => (94, 101),
-        _ => (decimal.MinValue, decimal.MaxValue),
+        (VitalKind.Temperature, _) => (36.0m, 38.0m),
+        (VitalKind.OxygenSaturation, _) => (94, 101),
+        (VitalKind.Weight, _) => (decimal.MinValue, decimal.MaxValue),
+        (_, < 1) => Band(kind, pulse: (100, 206), sys: (60, 85), dia: (31, 54)),
+        (_, < 12) => Band(kind, pulse: (100, 181), sys: (70, 105), dia: (37, 57)),
+        (_, < 36) => Band(kind, pulse: (98, 141), sys: (72, 107), dia: (42, 64)),
+        (_, < 72) => Band(kind, pulse: (80, 121), sys: (76, 113), dia: (46, 73)),
+        (_, < 120) => Band(kind, pulse: (75, 119), sys: (82, 116), dia: (57, 77)),
+        (_, < 216) => Band(kind, pulse: (60, 101), sys: (90, 132), dia: (64, 84)),
+        _ => Band(kind, pulse: (50, 101), sys: (90, 140), dia: (60, 90)),
     };
+
+    static (decimal, decimal) Band(VitalKind kind, (decimal, decimal) pulse, (decimal, decimal) sys, (decimal, decimal) dia) => kind switch
+    {
+        VitalKind.Pulse => pulse,
+        VitalKind.SystolicBp => sys,
+        VitalKind.DiastolicBp => dia,
+        _ => throw new ArgumentOutOfRangeException(nameof(kind)),
+    };
+
+    /// <summary>Whole months between the date of birth and the day of the reading.</summary>
+    public static int AgeInMonths(DateOnly dateOfBirth, DateOnly on) =>
+        Math.Max(0, (on.Year - dateOfBirth.Year) * 12 + on.Month - dateOfBirth.Month - (on.Day < dateOfBirth.Day ? 1 : 0));
 
     /// <summary>A weight that moved this much (kg) since the last one is worth a second look.</summary>
     public const decimal WeightChangeKg = 2.0m;
@@ -99,10 +122,15 @@ public static class VitalRules
 
     public static bool IsPossible(VitalKind kind, decimal value) => Possible(kind) is var (min, max) && value >= min && value <= max;
 
-    public static VitalAlert? Flag(VitalKind kind, decimal value, decimal? previous)
+    public static VitalAlert? Flag(VitalKind kind, decimal value, decimal? previous, int ageInMonths)
     {
         if (kind == VitalKind.Weight) return previous is { } p && Math.Abs(value - p) >= WeightChangeKg ? VitalAlert.Changed : null;
-        var (low, high) = Usual(kind);
+        var (low, high) = Usual(kind, ageInMonths);
         return value < low ? VitalAlert.Low : value >= high ? VitalAlert.High : null;
     }
 }
+
+/// <summary>Who signed the vital ranges off clinically: name, registration number and the day.</summary>
+public sealed record ClinicalSignOff(
+    [property: Classification(DataClass.Personal)] string Reviewer, [property: Classification(DataClass.Personal)] string Registration,
+    [property: Classification(DataClass.Internal)] DateOnly SignedOn);

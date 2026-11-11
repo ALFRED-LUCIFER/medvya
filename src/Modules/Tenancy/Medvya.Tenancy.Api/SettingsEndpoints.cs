@@ -1,6 +1,7 @@
 using Medvya.Scheduling.Application;
 using Medvya.Tenancy.Application;
 using Medvya.Tenancy.Domain;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -31,7 +32,9 @@ public static class SettingsEndpoints
         var g = app.MapGroup("/v1/settings").RequireAuthorization(StaffPolicies.ManageStaff).AddEndpointFilter(MapErrors);
 
         g.MapGet("/profile", ([FromServices] IPracticeSettings s, CancellationToken ct) => s.GetProfileAsync(ct));
-        g.MapPut("/profile", ([FromBody] SaveProfile body, [FromServices] IPracticeSettings s, CancellationToken ct) => s.SaveProfileAsync(body, ct));
+        // The version is required: a save always says which version it read, so it never overwrites a change it has not seen (#889).
+        g.MapPut("/profile", async Task<Results<ValidationProblem, Ok<ProfileView>>> ([FromBody] SaveProfile body, [FromServices] IPracticeSettings s, CancellationToken ct) =>
+            body.Version is null ? TypedResults.ValidationProblem(new Dictionary<string, string[]> { ["version"] = ["required"] }) : TypedResults.Ok(await s.SaveProfileAsync(body, ct)));
 
         g.MapGet("/locations", ([FromServices] IPracticeSettings s, CancellationToken ct) => s.ListLocationsAsync(ct));
         g.MapPost("/locations", async ([FromBody] AddLocation body, [FromServices] IPracticeSettings s, CancellationToken ct) =>

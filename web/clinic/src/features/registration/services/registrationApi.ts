@@ -18,9 +18,9 @@ export async function registerPatient(request: RegisterRequest, key: string): Pr
 }
 
 /** Adds the address and/or payer to a quick registration of the active facility; any other facility's patient is 404. */
-export async function completeRegistration(patientId: string, request: CompletionRequest): Promise<{ status: RegistrationStatus }> {
+export async function completeRegistration(patientId: string, request: CompletionRequest, version: number): Promise<{ status: RegistrationStatus }> {
   const res = await apiFetch(`/v1/patients/${encodeURIComponent(patientId)}/completion`, {
-    method: 'POST', credentials: 'same-origin', headers: jsonHeaders, body: JSON.stringify(request),
+    method: 'POST', credentials: 'same-origin', headers: jsonHeaders, body: JSON.stringify({ ...request, version }),
   });
   if (!res.ok) return fail(res);
   return res.json() as Promise<{ status: RegistrationStatus }>;

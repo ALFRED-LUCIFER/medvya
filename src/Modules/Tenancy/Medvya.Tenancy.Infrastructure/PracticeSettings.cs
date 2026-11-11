@@ -25,7 +25,8 @@ public sealed class PracticeSettings(
     Guid TenantId => tenant.TenantId ?? throw new InvalidOperationException("No tenant context.");
 
     public async Task<ProfileView> GetProfileAsync(CancellationToken cancellationToken = default) =>
-        ViewOf(await db.Tenants.AsNoTracking().SingleAsync(cancellationToken), await db.Profiles.AsNoTracking().SingleOrDefaultAsync(cancellationToken));
+        ViewOf(await db.Tenants.AsNoTracking().SingleAsync(cancellationToken), await db.Profiles.AsNoTracking().SingleOrDefaultAsync(cancellationToken))
+            with { Version = await db.Profiles.AsNoTracking().Select(p => EF.Property<uint>(p, "xmin")).SingleOrDefaultAsync(cancellationToken) };
 
     public async Task<ProfileView> SaveProfileAsync(SaveProfile command, CancellationToken cancellationToken = default)
     {
@@ -46,13 +47,19 @@ public sealed class PracticeSettings(
         var clinic = await db.Tenants.SingleAsync(cancellationToken);
         var profile = await db.Profiles.SingleOrDefaultAsync(cancellationToken);
         var before = ViewOf(clinic, profile);
-        if (profile is null) db.Profiles.Add(profile = new PracticeProfile { Id = Guid.CreateVersion7(), TenantId = TenantId });
+        if (profile is null)
+        {
+            // A version other than "no profile yet" means someone else created it meanwhile and it was deleted, or the screen is stale.
+            if (command.Version is > 0) throw new DbUpdateConcurrencyException();
+            db.Profiles.Add(profile = new PracticeProfile { Id = Guid.CreateVersion7(), TenantId = TenantId });
+        }
+        else if (command.Version is { } seen) db.Entry(profile).Property<uint>("xmin").OriginalValue = seen; // refused at save if the row moved on (#889)
         (clinic.Name, profile.Address, profile.RegistrationNumber, profile.TaxNumber, profile.Phone, profile.Email) = (name!, address, registration, taxNumber, phone, email);
         profile.RegistrationExpiresOn = command.RegistrationExpiresOn;
         (profile.ChangedBy, profile.ChangedAt) = (user.UserId, clock.GetUtcNow());
         var after = ViewOf(clinic, profile);
         await SaveAuditedAsync("settings.profile.update", "profile", profile.Id, before, after, cancellationToken);
-        return after;
+        return after with { Version = db.Entry(profile).Property<uint>("xmin").CurrentValue }; // the next save starts from this version
     }
 
     public async Task<IReadOnlyList<LocationView>> ListLocationsAsync(CancellationToken cancellationToken = default) =>

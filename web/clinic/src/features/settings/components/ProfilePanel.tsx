@@ -15,6 +15,9 @@ type Props = {
   saving: boolean;
   saved: boolean;
   saveFailed: boolean;
+  /** The save was refused because someone else changed the profile first. */
+  changed: boolean;
+  onReload: () => void;
   nameHasLink: boolean;
   onSubmit: FormEventHandler<HTMLFormElement>;
   logoUrl: string | null;
@@ -62,6 +65,11 @@ export default function ProfilePanel(p: Props) {
           <div className="flex flex-wrap items-center gap-3 sm:col-span-2" aria-live="polite">
             <Button type="submit" className="min-h-11" loading={p.saving}>{t('settings.save')}</Button>
             {p.saved && <span>{t('settings.saved')}</span>}
+            {p.changed && (
+              <span role="alert" className={fieldError}>
+                {t('settings.changed')} <Button type="button" variant="outline" className="min-h-11" onClick={p.onReload}>{t('settings.changed.reload')}</Button>
+              </span>
+            )}
             {p.saveFailed && !p.nameHasLink && <span role="alert" className={fieldError}>{t('settings.saveFailed')}</span>}
           </div>
         </form>

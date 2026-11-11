@@ -14,7 +14,7 @@ const leela = {
   id, mrn: '001131', fullName: 'Leela Raman (synthetic)', arabicName: null, dateOfBirth: '1993-04-02', dateOfBirthEstimated: false, ageYears: 33,
   sexAtBirth: 'Female', genderIdentity: null, preferredLanguage: 'Tamil, English', nationality: null, mobile: '+919000000131',
   alternatePhone: null, email: null, status: 'Incomplete', registeredOn: '2026-10-25', address: null, identifiers: [], payer: null,
-  emergencyContact: null, guardian: null,
+  emergencyContact: null, guardian: null, version: 7,
 };
 
 async function open(page: Page, { capabilities = full as Record<string, string>, locale = 'en' } = {}) {
@@ -61,6 +61,7 @@ test('the record shows the completion task; completing it sends address and paye
     address: { line1: '4 Synthetic Street', line2: null, city: 'Chennai', district: null, region: 'Tamil Nadu', postalCode: '600020', makani: null, poBox: null },
     payer: { kind: 'SelfPay', payerName: null, plan: null, memberNumber: null, validTo: null, network: null },
     emergencyContact: { name: 'Mohan Raman', relationship: 'Sibling', phone: '+91 90000 00132' },
+    version: 7, // #889: the version the record was read at
   });
   await page.getByRole('link', { name: 'Back to the record' }).click();
   await expect(page).toHaveURL(`/patients/directory/${id}`);
@@ -74,6 +75,7 @@ test('a role that may only read patients sees the tag but not the completion act
 
 test('another facility\'s patient is not found here, and nothing is shown to complete', async ({ page }) => {
   await page.route('**/v1/me/context', r => r.fulfill({ json: desk(full) }));
+  await page.route(`**/v1/patients/${id}`, r => r.fulfill({ json: leela }));
   await page.route(`**/v1/patients/${id}/completion`, r => r.fulfill({ status: 404, json: {} }));
   await page.goto(`/patients/directory/${id}/complete`);
   await page.getByLabel('House / flat, building').fill('4 Synthetic Street');
@@ -86,6 +88,50 @@ test('another facility\'s patient is not found here, and nothing is shown to com
 });
 
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
+
+// #889: someone else completed the record first. The save is refused with 409 "changed" and the screen says so; Reload reads the record
+// again (what was typed is dropped), and the next save carries the new version.
+const fillAddress = async (page: Page) => {
+  await page.locator('#line1').fill('4 Synthetic Street');
+  await page.locator('#city').fill('Chennai');
+  await page.locator('#region').click();
+  await page.getByRole('option').first().click();
+  await page.locator('#postalCode').fill('600020');
+  await page.locator('form button[type=submit]').click();
+};
+for (const locale of ['en', 'ar'])
+  test(`a save from a stale record says it was changed by someone else, reloads, and saves with the new version (${locale})`, async ({ page }) => {
+    const saves = await open(page, { locale });
+    let version = 7;
+    await page.route(`**/v1/patients/${id}`, r => r.fulfill({ json: { ...leela, version } }));
+    await page.route(`**/v1/patients/${id}/completion`, r => {
+      saves.push(r.request());
+      const sent = (r.request().postDataJSON() as { version: number }).version;
+      return sent === version ? r.fulfill({ json: { status: 'Incomplete' } }) : r.fulfill({ status: 409, json: { code: 'changed' } });
+    });
+    await page.goto(`/patients/directory/${id}/complete`);
+    await expect(page.locator('#line1')).toBeVisible();
+    version = 8; // the other desk saved after this page read the record
+    await fillAddress(page);
+
+    const alert = page.getByRole('alert').filter({ has: page.getByRole('button') });
+    await expect(alert).toBeVisible();
+    if (locale === 'en') await expect(alert).toContainText('This record was changed by someone else. Nothing was saved.');
+    else await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+    expect((saves.at(-1)!.postDataJSON() as { version: number }).version).toBe(7);
+    await page.addScriptTag({ path: axePath });
+    const violations = await page.evaluate(async () =>
+      (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations.map(v => `${v.id} (${v.nodes.length})`));
+    expect(violations).toEqual([]);
+
+    await alert.getByRole('button').click();
+    await expect(alert).toHaveCount(0);
+    await expect(page.locator('#line1')).toHaveValue('');
+    await fillAddress(page);
+    await expect(page.locator('form')).toHaveCount(0); // saved: the form gives way to the status line
+    expect((saves.at(-1)!.postDataJSON() as { version: number }).version).toBe(8);
+  });
+
 for (const locale of ['en', 'hi', 'ar'])
   for (const width of [1366, 375])
     test(`record task and completion form are axe clean and fit (${locale}, ${width}px)`, async ({ page }) => {

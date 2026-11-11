@@ -183,8 +183,11 @@ public sealed class PrescribingChart(EncountersDbContext db) : IPrescribingChart
         var allergies = await db.Allergies.AsNoTracking().Where(a => a.PatientId == patientId).OrderBy(a => a.RecordedAt).ThenBy(a => a.Id).ToListAsync(cancellationToken);
         var medicines = await db.MedicationStatements.AsNoTracking().Where(m => m.PatientId == patientId && m.State == MedicationState.Active)
             .OrderBy(m => m.Name).ThenBy(m => m.Id).Select(m => new ChartMedicine(m.Id, m.Name)).ToListAsync(cancellationToken);
+        // A flagged reading the nurse has not kept may be a typing slip: a dose is never worked out from it.
+        var weight = await db.Observations.AsNoTracking().Where(o => o.PatientId == patientId && o.Code == ObservationCode.Weight && (o.Flag == null || o.FlagKept))
+            .OrderByDescending(o => o.TakenAt).ThenByDescending(o => o.Id).Select(o => new ChartReading(o.ValueHundredths, o.TakenAt)).FirstOrDefaultAsync(cancellationToken);
         // The banner's rule decides the state, so the checks never read "not recorded" differently from the chart.
         return new(ChartReads.BannerOf(allergies).State,
-            [.. allergies.Where(a => a.Kind == AllergyKind.Substance && a.Status != AllergyStatus.NotAnAllergy).Select(a => new ChartAllergy(a.Id, a.Substance!, a.Status))], medicines);
+            [.. allergies.Where(a => a.Kind == AllergyKind.Substance && a.Status != AllergyStatus.NotAnAllergy).Select(a => new ChartAllergy(a.Id, a.Substance!, a.Status))], medicines, weight);
     }
 }

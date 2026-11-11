@@ -485,14 +485,19 @@ public sealed class PrescriptionService(
             AllergyState.NoKnownAllergies => ChartAllergies.NoKnownAllergies,
             _ => ChartAllergies.NotRecorded,
         };
-        var result = SafetyRules.Evaluate(lines, onChart, state, [.. facts.Allergies.Select(a => new CheckedAllergy(a.Id, a.Substance, a.Status.ToString()))]);
+        var patient = (await patients.SummariesAsync([encounter.PatientId], cancellationToken)).GetValueOrDefault(encounter.PatientId) ?? throw new InvalidOperationException("Patient not in this tenant.");
+        var now = clock.GetUtcNow();
+        // shortcut: no eGFR (the chart has no code for it until MDV-P2-031) and no pregnancy (MDV-P2-034); both are reported as not checked until fed.
+        var context = new PatientContext(CountryRules.AgeOn(CountryRules.For(await staff.TenantCountryAsync(cancellationToken) ?? throw new InvalidOperationException("No tenant country.")).Today(now), patient.DateOfBirth),
+            patient.SexAtBirth == Medvya.Patients.Domain.SexAtBirth.Female, facts.Weight is { } w && w.TakenAt >= now.AddMonths(-1) ? w.ValueHundredths : null, null, null);
+        var result = SafetyRules.Evaluate(lines, onChart, state, [.. facts.Allergies.Select(a => new CheckedAllergy(a.Id, a.Substance, a.Status.ToString()))], context);
 
         var keys = result.Alerts.Select(a => a.Key).ToList();
         var overrides = (await db.RxAlertOverrides.AsNoTracking().Where(o => o.EncounterId == encounter.Id && o.RuleSetVersion == SafetyRules.Version && keys.Contains(o.AlertKey)).ToListAsync(cancellationToken))
             .GroupBy(o => o.AlertKey).Select(g => g.OrderByDescending(o => o.OverriddenAt).ThenByDescending(o => o.Id).First())
             .Select(o => new RxOverrideView(o.AlertKey, o.Reason, o.RuleSetVersion, o.OverriddenBy, o.OverriddenAt)).ToList();
         var unresolved = result.Alerts.Count(a => a.Severity == RxSeverity.Severe && overrides.All(o => o.Key != a.Key));
-        return new(SafetyRules.Source, SafetyRules.Version, state, result.Alerts, result.NotChecked, overrides, unresolved, clock.GetUtcNow());
+        return new(SafetyRules.Source, SafetyRules.Version, state, result.Alerts, result.NotChecked, overrides, unresolved, now, result.WeightDoses);
     }
 
     /// <summary>The encounter, once the caller may prescribe for its patient at its facility. Null: no such encounter in this tenant.</summary>

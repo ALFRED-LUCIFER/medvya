@@ -1870,7 +1870,7 @@ erDiagram
 | `PharmacyDispatchEvents` | 8 | Id | append-only ledger; tenant-scoped |
 | `PrescriptionCancellations` | 6 | Id | tenant-scoped |
 | `PrescriptionItems` | 22 | Id | tenant-scoped |
-| `PrescriptionPdfs` | 8 | Id | append-only ledger; tenant-scoped |
+| `PrescriptionPdfs` | 9 | Id | append-only ledger; tenant-scoped |
 | `Referrals` | 19 | Id | tenant-scoped |
 | `ReferralEvents` | 8 | Id | tenant-scoped |
 | `RxAlertOverrides` | 12 | Id | tenant-scoped |
@@ -2013,6 +2013,7 @@ erDiagram
 | Column | Type | Null | Links to |
 |---|---|---|---|
 | `Id` | guid |  |  |
+| `BlobKey` | character varying(200) |  |  |
 | `Content` | bytes |  |  |
 | `Paper` | character varying(2) |  |  |
 | `PrescriptionId` | guid |  | id of `prescribing.AuthorisedPrescriptions` |

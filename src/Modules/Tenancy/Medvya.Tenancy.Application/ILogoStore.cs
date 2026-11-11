@@ -7,6 +7,9 @@ public interface ILogoStore
 
     Task DeleteAsync(string key, CancellationToken cancellationToken = default);
 
+    /// <summary>The stored bytes, for a server-made document (the printed prescription's logo and signature).</summary>
+    Task<byte[]> ReadAsync(string key, CancellationToken cancellationToken = default);
+
     /// <summary>A read-only link to the object that expires after <paramref name="lifetime"/>.</summary>
     Task<Uri> LinkForAsync(string key, TimeSpan lifetime, CancellationToken cancellationToken = default);
 }

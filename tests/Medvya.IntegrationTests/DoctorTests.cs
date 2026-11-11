@@ -192,7 +192,7 @@ public sealed class DoctorTests(PostgresFixture sql) : IClassFixture<PostgresFix
     async Task<Access> NotesAsync(Guid user, Guid facility)
     {
         await using var db = sql.Context(h.Tenant);
-        return await new StaffAccess(db, new FacilityDirectory(db), new Who(user), new At(facility)).AccessAsync(Capability.ClinicalNotes);
+        return await new StaffAccess(db, new FacilityDirectory(db, new NoLogoStore()), new Who(user), new At(facility)).AccessAsync(Capability.ClinicalNotes);
     }
 
     [Fact]

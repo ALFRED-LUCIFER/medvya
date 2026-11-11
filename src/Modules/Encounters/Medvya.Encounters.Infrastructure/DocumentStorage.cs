@@ -47,6 +47,9 @@ public sealed class BlobDocumentStore(BlobServiceClient service, bool userDelega
         }
     }
 
+    public async Task<byte[]> ReadAsync(string key, CancellationToken cancellationToken = default) =>
+        (await live.GetBlobClient(key).DownloadContentAsync(cancellationToken)).Value.Content.ToArray();
+
     public async Task<Uri> ViewLinkAsync(string key, string contentType, Guid viewer, TimeSpan lifetime, CancellationToken cancellationToken = default)
     {
         var blob = live.GetBlobClient(key);
@@ -79,6 +82,7 @@ public sealed class BlobDocumentStore(BlobServiceClient service, bool userDelega
 public sealed class NoDocumentStore : IDocumentStore, IMalwareScan
 {
     public Task PutAsync(string key, Stream content, string contentType, CancellationToken cancellationToken = default) => throw new DocumentStorageUnavailableException();
+    public Task<byte[]> ReadAsync(string key, CancellationToken cancellationToken = default) => throw new DocumentStorageUnavailableException();
     public Task<Uri> ViewLinkAsync(string key, string contentType, Guid viewer, TimeSpan lifetime, CancellationToken cancellationToken = default) => throw new DocumentStorageUnavailableException();
     public Task QuarantineAsync(string key, CancellationToken cancellationToken = default) => throw new DocumentStorageUnavailableException();
     public Task<ScanVerdict> CheckAsync(string key, CancellationToken cancellationToken = default) => throw new DocumentStorageUnavailableException();

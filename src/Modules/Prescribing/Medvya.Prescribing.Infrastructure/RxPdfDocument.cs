@@ -3,6 +3,7 @@ using System.Text.Json;
 using Medvya.BuildingBlocks.Infrastructure;
 using Medvya.Prescribing.Application;
 using Medvya.Prescribing.Domain;
+using Medvya.Tenancy.Application;
 
 namespace Medvya.Prescribing.Infrastructure;
 
@@ -14,13 +15,13 @@ namespace Medvya.Prescribing.Infrastructure;
 /// Written by <see cref="PlainPdf"/>: names, medicines and notes in Hindi, Tamil or Arabic print shaped; text no embedded font has is refused.
 /// shortcut: the PDF's instructions are English only (owner decision 11 Nov 2026: the pharmacist explains them); add a translator-reviewed
 /// patient-language line if pilot clinics ask for it.
-/// shortcut: no clinic logo or signature image yet; both come with the stored-copy-in-Blob change (MDV-P2-017).
+/// The clinic logo heads every page and the doctor's signature image sits under the authorisation line, when each was uploaded (Tenancy settings).
 /// shortcut: brand names are not printed, because the composer does not choose one (generic only); print "generic (brand)" once it does.
 /// </summary>
 public static class RxPdfDocument
 {
     /// <summary>The layout a doctor approves (exit gate 4): raise it whenever what the paper shows or where changes, so each doctor approves again.</summary>
-    public const int LayoutVersion = 1;
+    public const int LayoutVersion = 2; // 2: the logo and the signature image
 
     static readonly Lazy<Dictionary<string, string>> Catalog = new(() =>
     {
@@ -30,7 +31,7 @@ public static class RxPdfDocument
     });
 
     /// <exception cref="PdfUnsupportedTextException"/>
-    public static byte[] Render(RxPrintView v, PlainPdf.Paper paper)
+    public static byte[] Render(RxPrintView v, PlainPdf.Paper paper, PrintImages images)
     {
         var zone = TimeZoneInfo.FindSystemTimeZoneById(v.TimeZone);
         var when = TimeZoneInfo.ConvertTime(v.Authorisation.AuthorisedAt, zone).ToString("dd MMM yyyy, HH:mm", CultureInfo.InvariantCulture);
@@ -68,12 +69,13 @@ public static class RxPdfDocument
             body.Add(("", false));
         }
         body.AddRange([
-            (Text("rxPrint.authorised", ("name", v.Doctor), ("when", when)), true),
             (Text("rxPrint.hash", ("hash", v.Authorisation.ContentHash)), false),
             (Text("rxPrint.verify", ("url", v.VerifyUrl)), false),
+            ("", false),
+            (Text("rxPrint.authorised", ("name", v.Doctor), ("when", when)), true), // the signature image follows it
         ]);
         return PlainPdf.Write(header, body, (page, pages) => Text("rxPrint.footer", ("number", v.Authorisation.Number),
-            ("page", page.ToString(CultureInfo.InvariantCulture)), ("pages", pages.ToString(CultureInfo.InvariantCulture))), paper, v.Qr);
+            ("page", page.ToString(CultureInfo.InvariantCulture)), ("pages", pages.ToString(CultureInfo.InvariantCulture))), paper, v.Qr, images.Logo, images.Signature);
     }
 
     static string Text(string key, params (string Name, string Value)[] values) =>

@@ -14,7 +14,7 @@ public sealed class PdfUnsupportedTextException() : Exception("The text has char
 /// <summary>
 /// The server's text PDF (MDV-P2-013 signed note, MDV-P2-017 prescription; ADR-018): QuestPDF with embedded Noto Sans, Devanagari, Tamil and Arabic,
 /// so Hindi, Tamil and Arabic print shaped. A header on every page (its first two lines bold) over a rule, the body wrapped to the margins, a footer
-/// on every page and, optionally, a QR code after the body, kept whole on one page. A4 or A5.
+/// on every page and, optionally, a logo above the header, a signature image and a QR code after the body, each kept whole on one page. A4 or A5.
 /// A line with a character no embedded font has is refused with <see cref="PdfUnsupportedTextException"/>, never printed as empty boxes.
 /// shortcut: text copied out of the PDF is garbled for Hindi and Arabic (the font's ToUnicode map for joined glyphs); the printed page is right and the
 /// web view is the searchable, screen-reader copy. Tag the PDF (PDF/UA) when a PDF must be read aloud.
@@ -24,7 +24,7 @@ public static class PlainPdf
     public sealed record Paper(string Name, float Width, float Height, float Margin);
 
     public static readonly Paper A4 = new("A4", 595.28f, 841.89f, 56), A5 = new("A5", 419.53f, 595.28f, 36);
-    const float FontSize = 10, Module = 2;
+    const float FontSize = 10, Module = 2, LogoHeight = 36, SignatureHeight = 40;
     static readonly string[] Fonts = ["Noto Sans", "Noto Sans Devanagari", "Noto Sans Tamil", "Noto Sans Arabic"];
 
     static PlainPdf()
@@ -39,10 +39,13 @@ public static class PlainPdf
         }
     }
 
-    /// <summary>Header, body and footer on every page; <paramref name="qr"/> is the QR code's rows ('1' dark), drawn after the body.</summary>
+    /// <summary>
+    /// Header, body and footer on every page; <paramref name="logo"/> above the header on every page; <paramref name="signature"/> right after the body,
+    /// then <paramref name="qr"/>, the QR code's rows ('1' dark). Images are PNG or JPEG, scaled to fit their height.
+    /// </summary>
     /// <exception cref="PdfUnsupportedTextException"/>
     public static byte[] Write(IReadOnlyList<string> header, IReadOnlyList<(string Text, bool Bold)> body, Func<int, int, string> footer, Paper? paper = null,
-        IReadOnlyList<string>? qr = null)
+        IReadOnlyList<string>? qr = null, byte[]? logo = null, byte[]? signature = null)
     {
         var p = paper ?? A4;
         var document = Document.Create(d => d.Page(page =>
@@ -52,6 +55,7 @@ public static class PlainPdf
             page.DefaultTextStyle(t => t.FontFamily(Fonts).FontSize(FontSize).LineHeight(1.3f));
             page.Header().PaddingBottom(10).Column(c =>
             {
+                if (logo is not null) c.Item().PaddingBottom(4).Height(LogoHeight).AlignLeft().Image(logo).FitHeight();
                 for (var i = 0; i < header.Count; i++) Line(c, header[i], i < 2);
                 c.Item().PaddingTop(4).LineHorizontal(0.5f);
             });
@@ -60,6 +64,7 @@ public static class PlainPdf
                 foreach (var (text, bold) in body)
                     if (text.Length == 0) c.Item().Height(FontSize);
                     else Line(c, text, bold);
+                if (signature is not null) c.Item().Height(SignatureHeight).AlignLeft().Image(signature).FitHeight();
                 if (qr is { Count: > 0 }) c.Item().PaddingTop(FontSize).Width(qr.Count * Module).Height(qr.Count * Module).Svg(Svg(qr));
             });
             page.Footer().Dynamic(new Footer(footer));

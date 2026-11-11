@@ -236,7 +236,7 @@ public sealed class StaffTests(PostgresFixture sql) : IClassFixture<PostgresFixt
         return async capability =>
         {
             await using var db = sql.Context(h.Tenant);
-            return await new StaffAccess(db, new FacilityDirectory(db), new Who(user), new At(h.Facility)).AccessAsync(capability);
+            return await new StaffAccess(db, new FacilityDirectory(db, new NoLogoStore()), new Who(user), new At(h.Facility)).AccessAsync(capability);
         };
     }
 

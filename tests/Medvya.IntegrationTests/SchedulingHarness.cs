@@ -211,5 +211,6 @@ internal sealed class InMemoryLogos : Medvya.Tenancy.Application.ILogoStore
         Stored.Remove(key);
         return Task.CompletedTask;
     }
+    public Task<byte[]> ReadAsync(string key, CancellationToken cancellationToken = default) => Task.FromResult(Stored[key].Content);
     public Task<Uri> LinkForAsync(string key, TimeSpan lifetime, CancellationToken cancellationToken = default) => Task.FromResult(new Uri($"https://blob.test/{key}?se={lifetime.TotalSeconds}"));
 }

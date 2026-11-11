@@ -127,7 +127,9 @@ public sealed class PrescribingDbContext(DbContextOptions<PrescribingDbContext> 
         {
             e.Property(x => x.Paper).HasMaxLength(2);
             e.Property(x => x.Sha256).HasMaxLength(64);
+            e.Property(x => x.BlobKey).HasMaxLength(200);
             e.HasIndex(x => new { x.TenantId, x.PrescriptionId });
+            e.ToTable(t => t.HasCheckConstraint("CK_PrescriptionPdfs_OneCopy", "(\"Content\" IS NULL) <> (\"BlobKey\" IS NULL)"));
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         // MDV-P2-020: shares and dispatch states are append-only and hash-chained; codes count wrong tries, so they are not.

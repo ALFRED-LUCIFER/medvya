@@ -16,6 +16,7 @@ const clockStart = process.env.E2E_CLOCK_START ?? '2026-11-03T04:00:00Z'; // Tue
 const password = `Pw_${randomBytes(12).toString('hex')}_1A`;
 const container = `medvya-e2e-sql-${process.pid}`;
 const blobContainer = `medvya-e2e-blob-${process.pid}`;
+const mailContainer = `medvya-e2e-mail-${process.pid}`;
 const work = mkdtempSync(join(tmpdir(), 'medvya-e2e-'));
 const log = m => console.log(`[stack] ${m}`);
 let api;
@@ -27,7 +28,7 @@ const freePort = () => new Promise((ok, fail) => {
 
 function cleanup() {
   if (api?.pid) try { process.kill(-api.pid, 'SIGTERM'); } catch { /* already gone */ }
-  spawnSync('docker', ['rm', '-f', container, blobContainer], { stdio: 'ignore' });
+  spawnSync('docker', ['rm', '-f', container, blobContainer, mailContainer], { stdio: 'ignore' });
   rmSync(work, { recursive: true, force: true });
 }
 for (const sig of ['SIGTERM', 'SIGINT', 'SIGHUP']) process.on(sig, () => { cleanup(); process.exit(0); });
@@ -45,6 +46,9 @@ try {
   const blobKey = randomBytes(48).toString('base64');
   execFileSync('docker', ['run', '-d', '--rm', '--name', blobContainer, '-p', `127.0.0.1:${blobPort}:10000`, '-e', `AZURITE_ACCOUNTS=medvyae2e:${blobKey}`,
     'mcr.microsoft.com/azure-storage/azurite:latest', 'azurite-blob', '--blobHost', '0.0.0.0', '--loose', '--skipApiVersionCheck'], { stdio: 'ignore' });
+  // Mail sink for the emails a journey sends (pharmacy secure link, MDV-P2-020): without it the send fails and nothing is shared.
+  const mailPort = await freePort();
+  execFileSync('docker', ['run', '-d', '--rm', '--name', mailContainer, '-p', `127.0.0.1:${mailPort}:25`, 'rnwood/smtp4dev:latest'], { stdio: 'ignore' });
   const as = user => `Host=127.0.0.1;Port=${sqlPort};Database=medvya;Username=${user};Password=${password}`;
   const connection = as('medvya_app'); // the API and the seeder run as the application role, so row-level security applies
 
@@ -79,6 +83,8 @@ try {
       ASPNETCORE_WEBROOT: join(work, 'wwwroot'),
       Authentication__Oidc__Authority: `http://localhost:${apiPort}/dev-idp`,
       ConnectionStrings__Medvya: connection,
+      Email__Smtp__Host: '127.0.0.1',
+      Email__Smtp__Port: String(mailPort),
       Storage__ConnectionString: `DefaultEndpointsProtocol=http;AccountName=medvyae2e;AccountKey=${blobKey};BlobEndpoint=http://127.0.0.1:${blobPort}/medvyae2e;`,
       // Medvya operations for the approval API (MDV-P1-064): the seeded practice admin K. Lakshmi stands in for the operator (a Development stack only).
       Operations__OrganisationApprovers__0: '5e1d0001-0002-4000-8000-000000000007',

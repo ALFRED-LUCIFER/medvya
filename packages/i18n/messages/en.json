@@ -2503,7 +2503,7 @@
   "consult.start": "Start consultation",
   "consult.startFor": "Start consultation with {name}",
   "consult.open": "Open consultation",
-  "consult.openFor": "Open the consultation with {name}",
+  "consult.openFor": "Open consultation with {name}",
   "consult.openElsewhere": "You have another consultation open. Return to it, or leave it open and start this one.",
   "consult.returnToOpen": "Return to the open consultation",
   "consult.leaveOpenAndStart": "Leave it open and start this one",

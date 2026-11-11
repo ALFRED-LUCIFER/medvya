@@ -658,7 +658,7 @@ depends: MDV-P0-016
 confidence: 75 | Open item in PRD completeness check with a clear decision deadline.
 sources: PRD v2 completeness "Reporting store that keeps PHI out of analytics" (decide before P4-10); docs/01-prd/source-conflicts.md (Q-06)
 desc:
-Decide between Azure SQL read replica with masked/aggregated views and a separate de-identified warehouse; define the metric model for reports and how drill-down to authorised detail works.
+Decide between a PostgreSQL read replica with masked/aggregated views and a separate de-identified warehouse; define the metric model for reports and how drill-down to authorised detail works.
 ac:
 - ADR-008 records the choice, cost and PHI controls.
 - Report queries never run against tables with unmasked PHI for non-clinical roles.

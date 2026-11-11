@@ -273,7 +273,7 @@ depends: MDV-P2-009, MDV-P1-007
 confidence: 90 | Sign modal copy and immutability rule fully specified; ledger approach in ADR-006.
 sources: docs/02-design/source/Medvya Clinician App (sign modal, signed banner); docs/adr/ADR-006-immutable-signed-records.md
 desc:
-Sign modal: "Sign note for {name}? MRN · DOB · encounter id. I have reviewed every section … read-only after signing. Prescriptions and orders are authorised separately." CTA "Sign as Dr. {name}" requires passkey/MFA step-up. Signed NOTE_VERSION v1 is stored in a ledger table with document hash; banner "SIGNED v1 · read-only" and signer line with licence number and time.
+Sign modal: "Sign note for {name}? MRN · DOB · encounter id. I have reviewed every section … read-only after signing. Prescriptions and orders are authorised separately." CTA "Sign as Dr. {name}" requires passkey/MFA step-up. Signed NOTE_VERSION v1 is stored in a hash-chained table (MDV-P0-036) with document hash; banner "SIGNED v1 · read-only" and signer line with licence number and time.
 ac:
 - Only a doctor with a verified licence and care relationship can sign; step-up authentication is required within the last 5 minutes.
 - After signing, the note body cannot be modified through any API; an automated test attempts direct API and repository updates and both fail (exit gate 3).

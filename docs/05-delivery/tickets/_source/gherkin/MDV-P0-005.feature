@@ -1,4 +1,4 @@
-Feature: Local development environment with Docker Compose (SQL Server, Azurite, mail and SMS sinks)
+Feature: Local development environment with Docker Compose (PostgreSQL, Azurite, mail and SMS sinks)
   As a developer, I want a one-command local environment, so that I can run and sign in to the full stack without real secrets.
 
   # chunk: Add one-command start and dev-only OIDC stub

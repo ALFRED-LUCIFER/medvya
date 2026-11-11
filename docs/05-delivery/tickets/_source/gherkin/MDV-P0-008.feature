@@ -4,7 +4,7 @@ Feature: Database security baseline part 1: Entra-only auth, managed identity, l
   # chunk: Enforce least-privilege roles per module and for migrations
   @done
   Scenario: App identity cannot change schema but migration identity can
-    Given roles equivalent to production on a Testcontainers SQL Server
+    Given roles equivalent to production on a Testcontainers PostgreSQL
     When the app identity tries to ALTER or CREATE objects
     Then it is refused
     And the migration identity can

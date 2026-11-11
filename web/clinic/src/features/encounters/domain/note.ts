@@ -7,17 +7,19 @@ export type NoteSection = { id: string; required: boolean };
 export type NoteTemplate = { key: string; version: number; sections: NoteSection[]; quickPhrases: string[] };
 export type NoteCatalog = { templates: NoteTemplate[]; mine: string[] };
 export type NoteSections = Record<string, string>;
-/** Who signed, when, and the hash of what was signed (MDV-P2-012); the name and the licence the owner attested come from the doctor's profile and are absent without one. */
+/** Who signed, when, and the hash of what was signed (MDV-P2-012); the name is the doctor profile's, else the account's, one name on every surface; the licence the owner attested is absent without a profile. */
 export type NoteSignature = { versionNo: number; signedBy: string; signedAt: string; contentHash: string; signerName?: string | null; signerLicence?: string | null };
 /** The note is for this person: what the sign modal repeats so a signature cannot land on the wrong chart. */
 export type SignPatient = { name: string; mrn: string; dateOfBirth: string; encounterId: string };
 /** "Dr. {name}" without doubling a title the profile already carries. */
 export const withTitle = (name: string) => (/^dr\.?\s/i.test(name) ? name : `Dr. ${name}`);
 /** A signed addendum (MDV-P2-013): version 2 and later, each following the version before it. */
-export type NoteAddendum = { versionNo: number; amendsVersionNo: number; reason: string; text: string; signedBy: string; signedAt: string; contentHash: string };
+export type NoteAddendum = { versionNo: number; amendsVersionNo: number; reason: string; text: string; signedBy: string; signedAt: string; contentHash: string; signerName?: string | null };
 export type NoteView = {
   encounterId: string; templateKey: string; templateVersion: number; status: 'Draft' | 'Signed'; manual: boolean;
   sections: NoteSections; version: number; updatedAt: string | null; signature?: NoteSignature | null; addenda?: NoteAddendum[];
+  /** The name this user's signature will show (the profile's, else the account's); the sign modal repeats it. */
+  signAsName?: string | null;
 };
 /** What an autosave sends besides the version: the template and the whole note (a section left out is cleared). */
 export type NoteDraft = { templateKey: string; sections: NoteSections };

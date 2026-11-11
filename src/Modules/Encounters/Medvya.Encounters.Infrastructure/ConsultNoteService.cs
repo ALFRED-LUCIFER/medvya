@@ -31,7 +31,7 @@ public sealed class ConsultNoteService(
         await clinical.RequireAsync(encounter.PatientId, encounter.FacilityId, Capability.Patient360Chart, Leads, cancellationToken);
         var note = await db.ConsultNotes.AsNoTracking().SingleOrDefaultAsync(n => n.EncounterId == encounterId, cancellationToken);
         await audit.WriteAsync(Event(ReadAction, encounter, note?.Id), cancellationToken);
-        return note is null ? Empty(encounterId) : await ViewAsync(note, cancellationToken);
+        return note is null ? Empty(encounterId) with { SignAsName = await SignAsAsync(encounter.FacilityId, cancellationToken) } : await ViewAsync(note, cancellationToken);
     }
 
     public async Task<IReadOnlyList<VerifiedVital>?> PrefillAsync(Guid encounterId, CancellationToken cancellationToken = default)
@@ -160,10 +160,10 @@ public sealed class ConsultNoteService(
         var versions = await db.SignedNoteVersions.AsNoTracking().Where(v => v.NoteId == note.Id).OrderBy(v => v.VersionNo).ToListAsync(cancellationToken);
         var patient = (await patients.SummariesAsync([encounter.PatientId], cancellationToken)).GetValueOrDefault(encounter.PatientId)
             ?? throw new InvalidOperationException("The encounter's patient was not found.");
-        var names = await staff.DisplayNamesAsync([.. versions.Select(v => v.SignedBy).Distinct()], cancellationToken);
+        var signers = await SignersAsync(encounter.FacilityId, [.. versions.Select(v => v.SignedBy).Distinct()], cancellationToken);
         var facility = await facilities.FindAsync(encounter.FacilityId, cancellationToken) ?? throw new InvalidOperationException("The encounter's facility was not found.");
         var content = SignedNotePdfDocument.Render(patient, facility.Name, TimeZoneInfo.FindSystemTimeZoneById(facility.TimeZone),
-            NoteTemplates.Find(note.TemplateKey, note.TemplateVersion)!, [.. versions.Select(v => new SignedNotePdfDocument.Version(v, names.GetValueOrDefault(v.SignedBy) ?? "?"))]);
+            NoteTemplates.Find(note.TemplateKey, note.TemplateVersion)!, [.. versions.Select(v => new SignedNotePdfDocument.Version(v, signers[v.SignedBy].Name))]);
         var pdf = new SignedNotePdf
         {
             Id = Guid.CreateVersion7(), TenantId = TenantId, NoteId = note.Id, VersionNo = versions[^1].VersionNo, Content = content,
@@ -214,16 +214,26 @@ public sealed class ConsultNoteService(
 
     async Task<NoteView> ViewAsync(ConsultNote note, CancellationToken cancellationToken, IReadOnlyList<SignedNoteVersion>? known = null)
     {
-        if (note.Status != NoteStatus.Signed) return View(note);
+        var facilityId = await db.Encounters.AsNoTracking().Where(e => e.Id == note.EncounterId).Select(e => e.FacilityId).SingleAsync(cancellationToken);
+        if (note.Status != NoteStatus.Signed) return View(note) with { SignAsName = await SignAsAsync(facilityId, cancellationToken) };
         var versions = known ?? await db.SignedNoteVersions.AsNoTracking().Where(v => v.NoteId == note.Id).OrderBy(v => v.VersionNo).ToListAsync(cancellationToken);
-        PrescriberInfo? signer = null;
-        if (versions.FirstOrDefault(v => v.VersionNo == 1) is { } first)
-        {
-            // The signer's name and licence come from Tenancy (never its tables). shortcut: today's attested licence, not a copy taken at signing; upgrade if a licence may change after signing.
-            var facilityId = await db.Encounters.AsNoTracking().Where(e => e.Id == note.EncounterId).Select(e => e.FacilityId).SingleAsync(cancellationToken);
-            signer = await facilities.PrescriberAsync(first.SignedBy, facilityId, cancellationToken);
-        }
-        return View(note, versions, signer);
+        return View(note, versions, await SignersAsync(facilityId, [.. versions.Select(v => v.SignedBy).Distinct()], cancellationToken));
+    }
+
+    async Task<string> SignAsAsync(Guid facilityId, CancellationToken cancellationToken) =>
+        (await SignersAsync(facilityId, [user.UserId ?? throw new InvalidOperationException("No user.")], cancellationToken)).Values.Single().Name;
+
+    /// <summary>
+    /// One name per signer on every surface: the doctor profile's (it carries the attested licence), else the account's display name, never blank.
+    /// Names and licences come from Tenancy and Identity (never their tables). shortcut: today's profile, not a copy taken at signing; upgrade if a name or licence may change after signing.
+    /// </summary>
+    async Task<IReadOnlyDictionary<Guid, (string Name, string? Licence)>> SignersAsync(Guid facilityId, IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken)
+    {
+        var profiles = await facilities.PrescribersAsync(facilityId, ids, cancellationToken);
+        var rest = ids.Where(id => !profiles.ContainsKey(id)).ToList();
+        var names = rest.Count == 0 ? new Dictionary<Guid, string>() : await staff.DisplayNamesAsync(rest, cancellationToken);
+        return ids.ToDictionary(id => id, id => profiles.TryGetValue(id, out var p) ? (p.FullName, (string?)$"{p.LicenceAuthority} {p.LicenceNumber}")
+            : (names.GetValueOrDefault(id) is { Length: > 0 } n ? n : "?", null));
     }
 
     public async Task<NoteView?> SaveAsync(Guid encounterId, SaveNote command, CancellationToken cancellationToken = default)
@@ -267,7 +277,7 @@ public sealed class ConsultNoteService(
             db.ChangeTracker.Clear();
             throw new StaleNoteException(await db.ConsultNotes.AsNoTracking().Where(n => n.EncounterId == encounterId).Select(n => n.Version).SingleOrDefaultAsync(cancellationToken));
         }
-        return View(note);
+        return await ViewAsync(note, cancellationToken);
     }
 
     AuditEvent Event(string action, Encounter e, Guid? noteId) => new()
@@ -281,13 +291,13 @@ public sealed class ConsultNoteService(
     static NoteView Empty(Guid encounterId) => new(encounterId, NoteTemplates.Default, NoteTemplates.Latest(NoteTemplates.Default)!.Version, NoteStatus.Draft, false, new Dictionary<string, string>(), 0, null, null, []);
 
     /// <summary>Version 1 is the signature; every later version is an addendum, numbered with the version it follows.</summary>
-    static NoteView View(ConsultNote n, IReadOnlyList<SignedNoteVersion>? versions = null, PrescriberInfo? signer = null)
+    static NoteView View(ConsultNote n, IReadOnlyList<SignedNoteVersion>? versions = null, IReadOnlyDictionary<Guid, (string Name, string? Licence)>? signers = null)
     {
         var all = versions ?? [];
         var numbers = all.ToDictionary(v => v.Id, v => v.VersionNo);
-        var signature = all.FirstOrDefault(v => v.VersionNo == 1) is { } first ? new NoteSignature(first.VersionNo, first.SignedBy, first.SignedAt, first.ContentHash, signer?.FullName, signer is null ? null : $"{signer.LicenceAuthority} {signer.LicenceNumber}") : null;
+        var signature = all.FirstOrDefault(v => v.VersionNo == 1) is { } first ? new NoteSignature(first.VersionNo, first.SignedBy, first.SignedAt, first.ContentHash, signers![first.SignedBy].Name, signers[first.SignedBy].Licence) : null;
         var addenda = all.Where(v => v.AmendsVersionId is not null)
-            .Select(v => new NoteAddendum(v.VersionNo, numbers[v.AmendsVersionId!.Value], v.Reason!, v.Sections[SignedNoteVersion.AddendumSection], v.SignedBy, v.SignedAt, v.ContentHash)).ToList();
+            .Select(v => new NoteAddendum(v.VersionNo, numbers[v.AmendsVersionId!.Value], v.Reason!, v.Sections[SignedNoteVersion.AddendumSection], v.SignedBy, v.SignedAt, v.ContentHash, signers![v.SignedBy].Name)).ToList();
         return new(n.EncounterId, n.TemplateKey, n.TemplateVersion, n.Status, n.Manual, n.Sections, n.Version, n.UpdatedAt, signature, addenda);
     }
 }

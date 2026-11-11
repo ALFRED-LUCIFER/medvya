@@ -125,10 +125,10 @@ public sealed class SignNoteTests(PostgresFixture sql) : IClassFixture<PostgresF
     public async Task TheSignatureNamesTheSignerAndTheLicenceTheOwnerAttestedAndNothingWithoutOne()
     {
         var version = await SaveDraftAsync(Complete);
-        using (var unprofiled = await SignAsync(h.Doctor, version)) // no profile or licence on record: the signature carries ids only
+        using (var unprofiled = await SignAsync(h.Doctor, version)) // no profile or licence on record: the account's name, no licence
         {
             var bare = (await Json(unprofiled)).GetProperty("signature");
-            Assert.Equal((JsonValueKind.Null, JsonValueKind.Null), (bare.GetProperty("signerName").ValueKind, bare.GetProperty("signerLicence").ValueKind));
+            Assert.Equal(("Dr. Arjun Rao (synthetic)", JsonValueKind.Null), (bare.GetProperty("signerName").GetString(), bare.GetProperty("signerLicence").ValueKind));
         }
         await using (var db = sql.Context(h.Tenant))
         {
@@ -140,6 +140,47 @@ public sealed class SignNoteTests(PostgresFixture sql) : IClassFixture<PostgresF
         using var read = await Client(h.Doctor).GetAsync(U($"/v1/encounters/{encounter}/note")); // the read view carries who signed and under which licence
         var signature = (await Json(read)).GetProperty("signature");
         Assert.Equal(("Dr. Arjun Rao (synthetic)", "Tamil Nadu Medical Council 84213"), (signature.GetProperty("signerName").GetString(), signature.GetProperty("signerLicence").GetString()));
+    }
+
+    // One signature, one name: the profile's name on the banner, the addenda, the dialog (SignAsName) and the PDF; the account's name once the profile is gone.
+    [Fact]
+    public async Task OneSignerShowsOneNameEverywhereAndStillANameWhenTheProfileIsGone()
+    {
+        using (var draft = await Client(h.Doctor).GetAsync(U($"/v1/encounters/{encounter}/note")))
+            Assert.Equal("Dr. Arjun Rao (synthetic)", (await Json(draft)).GetProperty("signAsName").GetString()); // no profile yet: the account's name
+        await using (var db = sql.Context(h.Tenant))
+        {
+            var membership = await db.Memberships.SingleAsync(m => m.UserId == h.Doctor);
+            db.DoctorLicences.Add(new DoctorLicence { MembershipId = membership.Id, TenantId = h.Tenant, Authority = "TNMC", Number = "84213", SubmittedAt = h.Clock.GetUtcNow() });
+            db.DoctorProfiles.Add(new DoctorProfile { MembershipId = membership.Id, TenantId = h.Tenant, FullName = "Dr Asha Raman (synthetic)" });
+            await db.SaveChangesAsync();
+        }
+        using (var draft = await Client(h.Doctor).GetAsync(U($"/v1/encounters/{encounter}/note")))
+            Assert.Equal("Dr Asha Raman (synthetic)", (await Json(draft)).GetProperty("signAsName").GetString());
+        using (var signed = await SignAsync(h.Doctor, await SaveDraftAsync(Complete))) Assert.True(signed.IsSuccessStatusCode);
+        using (var added = await AddendumAsync(h.Doctor, "Synthetic: follow-up moved", "Patient asked")) Assert.True(added.IsSuccessStatusCode);
+
+        async Task AssertNameAsync(string name, string? licence)
+        {
+            using var read = await Client(h.Doctor).GetAsync(U($"/v1/encounters/{encounter}/note"));
+            var view = await Json(read);
+            var signature = view.GetProperty("signature");
+            Assert.Equal((name, licence), (signature.GetProperty("signerName").GetString(), signature.GetProperty("signerLicence").GetString()));
+            Assert.Equal(name, view.GetProperty("addenda")[0].GetProperty("signerName").GetString());
+            using var pdf = await PdfAsync(h.Doctor);
+            var text = Encoding.Latin1.GetString(await pdf.Content.ReadAsByteArrayAsync());
+            var escaped = name.Replace("(", @"\(", StringComparison.Ordinal).Replace(")", @"\)", StringComparison.Ordinal);
+            Assert.Contains($"Signed by {escaped}", text, StringComparison.Ordinal);
+            Assert.Contains($"Signed by {escaped}", text[(text.IndexOf("Addendum", StringComparison.Ordinal))..], StringComparison.Ordinal);
+        }
+        await AssertNameAsync("Dr Asha Raman (synthetic)", "Tamil Nadu Medical Council 84213");
+
+        await using (var admin = new NpgsqlConnection(sql.AdminConnectionString)) // the app role cannot delete them: this is an operator removing the profile
+        {
+            await admin.OpenAsync();
+            await new NpgsqlCommand("""DELETE FROM tenancy."DoctorProfiles"; DELETE FROM tenancy."DoctorLicences";""", admin).ExecuteNonQueryAsync();
+        }
+        await AssertNameAsync("Dr. Arjun Rao (synthetic)", null);
     }
 
     // SAFETY mutation check: remove the ReauthenticatedAt test in ConsultNoteService.SignAsync and the first two cases fail.

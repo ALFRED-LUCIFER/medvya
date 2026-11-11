@@ -5,7 +5,7 @@ import { sectionLabelKey, withTitle, type NoteSignature, type SignFailure, type 
 
 export type SignProblem = SignFailure | { kind: 'unsaved' } | null;
 type Props = {
-  canSign: boolean; signing: boolean; patient: SignPatient | null; doctorName: string; confirming: boolean; problem: SignProblem;
+  canSign: boolean; signing: boolean; patient: SignPatient | null; doctorName: string | null; confirming: boolean; problem: SignProblem;
   onRequest: () => void; onCancel: () => void; onConfirm: () => void;
 };
 
@@ -27,7 +27,7 @@ export function SignNote(p: Props) {
           <DialogDescription>{t('noteSign.confirm.body')}</DialogDescription>
           <p className="text-sm text-muted-foreground">{t('noteSign.confirm.stepUp')}</p>
           <div className="flex flex-wrap gap-3">
-            <Button className="min-h-11" loading={p.signing} onClick={p.onConfirm}>{t('noteSign.confirm.confirm', { doctor: withTitle(p.doctorName) })}</Button>
+            <Button className="min-h-11" loading={p.signing} onClick={p.onConfirm}>{t('noteSign.confirm.confirm', { doctor: withTitle(p.doctorName ?? '') })}</Button>
             <Button variant="outline" className="min-h-11" disabled={p.signing} onClick={p.onCancel}>{t('noteSign.confirm.cancel')}</Button>
           </div>
         </DialogContent>
@@ -43,12 +43,12 @@ function SignProblemText({ problem }: { problem: SignProblem }) {
   return <p role={problem.kind === 'reauth' ? 'status' : 'alert'} className={problem.kind === 'reauth' ? 'font-bold' : 'font-bold text-danger-700'}>{text}</p>;
 }
 
-/** Who signed, with the licence the owner attested, and when. Without a doctor profile the server sends the id only: the name is then shown only for the person looking. */
-export function SignedLine({ signature, userId, userName, timeZone }: { signature: NoteSignature; userId: string; userName: string; timeZone: string | undefined }) {
+/** Who signed (the server's one name for the signer), with the licence the owner attested, and when. */
+export function SignedLine({ signature, timeZone }: { signature: NoteSignature; timeZone: string | undefined }) {
   const { t, formatDate, formatTime } = useI18n();
   const at = new Date(signature.signedAt);
   const when = { date: formatDate(at, timeZone), time: formatTime(at, timeZone), version: String(signature.versionNo) };
-  const name = signature.signerName ?? (signature.signedBy === userId ? userName : null);
+  const name = signature.signerName ?? null;
   return (
     <p role="status" className="font-bold">
       {name === null ? t('noteSign.signedByOther', when)

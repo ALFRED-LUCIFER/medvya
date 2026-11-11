@@ -18,8 +18,7 @@ type Props = {
   onRetry: () => void; onReapply: () => void;
   canSign: boolean; signing: boolean; confirming: boolean; signProblem: SignProblem; signature: NoteSignature | null;
   onRequestSign: () => void; onCancelSign: () => void; onConfirmSign: () => void;
-  /** Shown beside the signature: the signer's id is all the server sends, so the name is only known for the person looking. */
-  userId: string; userName: string; timeZone: string | undefined; patient: SignPatient | null;
+  signAsName: string | null; timeZone: string | undefined; patient: SignPatient | null;
 };
 
 /** E-04: the consultation note. Sections come from the template; saving is automatic and its state is always shown. Read-only once not a draft. */
@@ -49,7 +48,7 @@ export default function NoteEditor(p: Props) {
       </div>
       <p className="text-sm text-muted-foreground">{t('noteEditor.manualBanner')}</p>
       {p.readOnly && <p ref={signedRef} tabIndex={-1} role="status" className="font-bold focus:outline-none">{t('noteEditor.signed', { version: String(p.signature?.versionNo ?? 1) })}</p>}
-      {p.signature && <SignedLine signature={p.signature} userId={p.userId} userName={p.userName} timeZone={p.timeZone} />}
+      {p.signature && <SignedLine signature={p.signature} timeZone={p.timeZone} />}
       {!p.readOnly && <SaveState phase={p.phase} reloading={p.reloading} onRetry={p.onRetry} onReapply={p.onReapply} />}
       {p.assist && <NoteAssist assist={p.assist} template={p.template} timeZone={p.timeZone} />}
       <div className="flex flex-col gap-4">
@@ -66,7 +65,7 @@ export default function NoteEditor(p: Props) {
       {!p.readOnly && (
         <>
           {!p.canSign && <p className="text-sm text-muted-foreground">{t('noteSign.onlyDoctor')}</p>}
-          <SignNote canSign={p.canSign} patient={p.patient} doctorName={p.userName} signing={p.signing} confirming={p.confirming} problem={p.signProblem}
+          <SignNote canSign={p.canSign} patient={p.patient} doctorName={p.signAsName} signing={p.signing} confirming={p.confirming} problem={p.signProblem}
             onRequest={p.onRequestSign} onCancel={p.onCancelSign} onConfirm={p.onConfirmSign} />
         </>
       )}

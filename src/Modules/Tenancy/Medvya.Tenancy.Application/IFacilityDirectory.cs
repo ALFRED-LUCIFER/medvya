@@ -25,6 +25,9 @@ public interface IFacilityDirectory
     /// <summary>The doctor's profile and licence for their membership at this facility; null when that membership has none (not a doctor).</summary>
     Task<PrescriberInfo?> PrescriberAsync(Guid userId, Guid facilityId, CancellationToken cancellationToken = default);
 
+    /// <summary>The same for several users in one go; users without a profile at this facility are left out.</summary>
+    Task<IReadOnlyDictionary<Guid, PrescriberInfo>> PrescribersAsync(Guid facilityId, IReadOnlyCollection<Guid> userIds, CancellationToken cancellationToken = default);
+
     /// <summary>Holidays of the facility between two facility-local dates (inclusive), name by date. Bookings on these dates are refused (MDV-P1-005).</summary>
     Task<IReadOnlyDictionary<DateOnly, string>> ClosuresAsync(Guid facilityId, DateOnly first, DateOnly last, CancellationToken cancellationToken = default);
 }

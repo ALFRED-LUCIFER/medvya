@@ -90,3 +90,34 @@ export function addendumFailure(status: number | undefined, body: unknown): Adde
 
 /** The server PDF refuses text in a script it cannot show yet (422 pdf_unsupported_text): the print view shows it. */
 export const pdfFailure = (status: number | undefined): 'unsupported' | 'failed' => (status === 422 ? 'unsupported' : 'failed');
+
+// Verified prefill, quick phrases and earlier-note snippets (MDV-P2-009). Nothing is added unless the doctor presses a button; the server decides what is verified.
+/** One verified nurse-intake reading of this visit with its source: who took it and when. `recordedByName` is null when unknown. */
+export type VerifiedVital = { code: string; value: number; unit: string; takenAt: string; source: string; recordedByName: string | null };
+/** A signed note of the same patient, offered as snippets. */
+export type PreviousNote = { encounterId: string; signedAt: string; signedByName: string | null; templateKey: string; sections: NoteSections };
+
+export const phraseKey = (key: string) => `noteTemplates.phrase.${key}` as MessageKey;
+export const vitalNameKey = (code: string) => `noteAssist.vital.${code}` as MessageKey;
+/** Quick phrases and snippets go to the section last edited, else the plan. */
+export const defaultTargetSection = 'plan';
+
+/** The sections of an earlier note that have text, in the current template's order first, then any the template has no place for. */
+export function snippetSections(note: Pick<PreviousNote, 'sections'>, template: NoteTemplate) {
+  const ids = Object.keys(note.sections).filter(id => !isBlank(note.sections[id]));
+  const order = template.sections.map(s => s.id);
+  return [...order.filter(id => ids.includes(id)), ...ids.filter(id => !order.includes(id))];
+}
+
+/**
+ * Puts `snippet` where the cursor is (replacing a selection), on a new line unless the text before it already ends one. Null when the section
+ * would pass its length limit: nothing is cut off silently.
+ */
+export function insertAt(text: string, start: number, end: number, snippet: string): { text: string; caret: number } | null {
+  const from = Math.min(start, text.length);
+  const to = Math.min(Math.max(end, from), text.length);
+  const before = text.slice(0, from);
+  const add = (before && !before.endsWith('\n') ? '\n' : '') + snippet;
+  const next = before + add + text.slice(to);
+  return next.length > maxSectionLength ? null : { text: next, caret: from + add.length };
+}

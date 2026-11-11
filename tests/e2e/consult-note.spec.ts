@@ -285,7 +285,82 @@ test('a role without Sign sees no Sign button, only why', async ({ page }) => {
   await expect(note(page).getByRole('button', { name: 'Sign note' })).toHaveCount(0);
 });
 
+// MDV-P2-009 (J2.5, E-04): verified prefill, quick phrases and earlier-note snippets. Nothing is added until the doctor presses a button, and
+// every added line says where it came from. Which readings are verified is decided on the server (ConsultNoteAssistTests, mutation-checked).
+const nurse = 'Anita Nair (synthetic)';
+const verified = [
+  { code: 'BloodPressureSystolic', value: 150, unit: 'mmHg', takenAt: at, source: 'ClinicianVerified', recordedByName: nurse },
+  { code: 'Pulse', value: 88, unit: '/min', takenAt: at, source: 'ClinicianVerified', recordedByName: null },
+];
+const earlier = [{ encounterId: 'e-0', signedAt: '2026-09-02T05:30:00Z', signedByName: 'Dr. Arjun Rao (synthetic)', templateKey: 'general-opd', sections: { chiefComplaint: 'Thirst (synthetic)', plan: 'Review in a month' } }];
+
+test('J2.5 (note assist, MDV-P2-009) E-04 · Doctor: verified vitals are added to Objective only on request, each with its source', async ({ page }) => {
+  const mock = await open(page, { version: 1, sections: { plan: 'x' } });
+  mock.vitals = verified;
+  await page.reload();
+  const assist = note(page).getByRole('region', { name: 'Add to the note' });
+  await expect(assist.getByRole('listitem')).toHaveText([
+    'Blood pressure, systolic 150 mmHg (Anita Nair (synthetic), nurse intake, verified 19 Oct 2026 10:05)',
+    'Pulse 88 /min (nurse intake, verified 19 Oct 2026 10:05)', // no name known: the line says so by leaving it out, never guesses one
+  ]);
+  await expect(note(page).getByLabel('Objective')).toHaveValue(''); // shown, not added
+  expect(mock.puts).toEqual([]);
+  await assist.getByRole('button', { name: 'Add to Objective' }).click();
+  await expect(note(page).getByRole('status')).toHaveText('Saved');
+  await expect(note(page).getByLabel('Objective')).toHaveValue(
+    'Blood pressure, systolic 150 mmHg (Anita Nair (synthetic), nurse intake, verified 19 Oct 2026 10:05)\nPulse 88 /min (nurse intake, verified 19 Oct 2026 10:05)');
+  expect(mock.puts.at(-1)!.sections.objective).toContain('nurse intake, verified');
+});
+
+test('J2.5 (note assist, MDV-P2-009) E-04 · Doctor: with nothing verified, Objective stays blank and says so', async ({ page }) => {
+  await open(page);
+  const assist = note(page).getByRole('region', { name: 'Add to the note' });
+  await expect(assist).toContainText('No verified vitals for this visit. Objective stays blank until you write it.');
+  await expect(assist.getByRole('button', { name: 'Add to Objective' })).toHaveCount(0);
+  await expect(note(page).getByLabel('Objective')).toHaveValue('');
+});
+
+test('J2.5 (note assist, MDV-P2-009) E-04 · Doctor: a quick phrase and an earlier signed snippet go in at the cursor of the section being edited', async ({ page }) => {
+  const mock = await open(page);
+  mock.previous = earlier;
+  await page.reload();
+  const assist = note(page).getByRole('region', { name: 'Add to the note' });
+  const plan = note(page).getByRole('textbox', { name: /^Plan/ });
+  await plan.fill('Start. End.');
+  await plan.evaluate((el: HTMLTextAreaElement) => { el.focus(); el.setSelectionRange(6, 6); });
+  await assist.getByRole('group', { name: 'Quick phrases' }).getByRole('button', { name: 'Advised fluids and rest.' }).click();
+  await expect(plan).toHaveValue('Start.\nAdvised fluids and rest. End.');
+  await expect(assist).toContainText('Phrases and snippets go into: Plan');
+  await assist.getByText('02 Sept 2026, signed by Dr. Arjun Rao (synthetic)').click();
+  await assist.getByRole('button', { name: 'Insert Chief complaint text from 02 Sept 2026' }).click(); // goes to the section last edited, marked with its source
+  await expect(plan).toHaveValue('Start.\nAdvised fluids and rest.\nThirst (synthetic) (copied from the note of 02 Sept 2026) End.');
+  await expect(note(page).getByRole('status')).toHaveText('Saved');
+  expect(mock.puts.at(-1)!.sections.plan).toContain('copied from the note of 02 Sept 2026');
+});
+
+test('a signed note offers nothing to add', async ({ page }) => {
+  await open(page, { version: 2, status: 'Signed', sections: { plan: 'x' } });
+  await expect(note(page).getByRole('region', { name: 'Add to the note' })).toHaveCount(0);
+});
+
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
+for (const locale of ['en', 'ar'])
+  test(`axe finds no violations on the add-to-note panel (${locale}); targets are 44 px`, async ({ page }) => {
+    const mock = await open(page, { sections: { plan: 'x' }, version: 1 }, locale);
+    mock.vitals = verified;
+    mock.previous = earlier;
+    await page.reload();
+    const assist = page.getByRole('region', { name: locale === 'ar' ? 'ملاحظة الاستشارة' : 'Consultation note' }).getByRole('region', { name: locale === 'ar' ? 'الإضافة إلى الملاحظة' : 'Add to the note' });
+    await assist.locator('summary').click();
+    if (locale === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+    for (const target of await assist.locator('button, summary').all()) expect((await target.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    await page.addScriptTag({ path: axePath });
+    const violations = await page.evaluate(async () =>
+      (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations
+        .map(v => `${v.id} (${v.nodes.length})`));
+    expect(violations).toEqual([]);
+  });
+
 for (const locale of ['en', 'ar'])
   test(`axe finds no violations on the note (${locale}); targets are 44 px`, async ({ page }) => {
     await open(page, { sections: { plan: 'x' }, version: 1 }, locale);

@@ -231,6 +231,11 @@ A "Clinic approval" demo switch (Approved, Waiting, Suspended). Waiting: after s
 ### E-04 Manual note (consent declined)
 - Banner "Recording declined". SOAP sections prefilled from the **verified chart only**. Quick phrases and templates. Same sign flow. **No guilt copy.**
 - `consent.declined` = "No recording for this visit. You can write the note manually."
+- **Add to the note** panel (MDV-P2-009), for a draft only; nothing is added until the doctor presses a button, and the text lands at the cursor of the section last edited:
+  - Verified vitals of this visit (the nurse's intake readings, checked by a clinician; a flagged reading only once the nurse kept it), each worded with who took it and when. "Add to Objective" adds them. With none verified the panel says so and Objective stays blank.
+  - Quick phrases of the template (static, versioned with it).
+  - Earlier signed notes of the same patient as snippets with date and signer; an inserted snippet is marked "(copied from the note of {date})".
+  - Each read of the vitals and of earlier notes is an audit row (`note.prefill`, `note.previous`) with the patient and no values.
 
 ### E-06 Signed note
 - Banner "SIGNED v1 · read-only · Print · Addendum".

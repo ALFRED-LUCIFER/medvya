@@ -2,10 +2,13 @@ import type { UseFormRegisterReturn } from 'react-hook-form';
 import { useI18n } from '@medvya/i18n';
 import { Button, Dialog, DialogContent, DialogDescription, DialogTitle, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea } from '@medvya/ui';
 import { maxSectionLength, sectionLabelKey, templateNameKey, type NoteSignature, type NoteTemplate, type SavePhase } from '../domain/note';
+import NoteAssist, { type Assist } from './NoteAssist';
 import { SignedLine, SignNote, type SignProblem } from './NoteSign';
 
 type Props = {
   register: (sectionId: string) => UseFormRegisterReturn;
+  /** Null once the note is signed: nothing can be added to it any more. */
+  assist: Assist | null;
   loading: boolean; forbidden: boolean; loadFailed: boolean;
   template: NoteTemplate | null; templateKey: string | null; choices: NoteTemplate[];
   readOnly: boolean; phase: SavePhase; reloading: boolean;
@@ -39,6 +42,7 @@ export default function NoteEditor(p: Props) {
       {p.readOnly && <p role="status" className="font-bold">{t('noteEditor.signed')}</p>}
       {p.signature && <SignedLine signature={p.signature} userId={p.userId} userName={p.userName} timeZone={p.timeZone} />}
       <SaveState phase={p.phase} reloading={p.reloading} onRetry={p.onRetry} onReapply={p.onReapply} />
+      {p.assist && <NoteAssist assist={p.assist} template={p.template} timeZone={p.timeZone} />}
       <div className="flex flex-col gap-4">
         {p.template.sections.map(s => (
           <div key={s.id} className="flex flex-col gap-1.5">

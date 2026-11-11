@@ -5,7 +5,7 @@ const soap = (...extra: string[]) => ['chiefComplaint', 'subjective', ...extra, 
   .map(id => ({ id, required: ['chiefComplaint', 'assessment', 'plan'].includes(id) }));
 const template = (key: string, ...extra: string[]) => ({ key, version: 1, sections: soap(...extra), quickPhrases: [] });
 export const catalog = {
-  templates: [template('general-opd'), template('diabetes-review', 'selfMonitoring', 'footAndEyeCare'), template('hypertension', 'homeBloodPressure'),
+  templates: [{ ...template('general-opd'), quickPhrases: ['noRedFlags', 'reviewIfWorse', 'adviceFluidsRest'] }, template('diabetes-review', 'selfMonitoring', 'footAndEyeCare'), template('hypertension', 'homeBloodPressure'),
     template('paediatrics', 'growthAndDevelopment', 'immunisations'), template('antenatal', 'obstetricHistory', 'fetalWellbeing'), template('teleconsult', 'remoteContext')],
   mine: ['general-opd', 'diabetes-review'],
 };
@@ -21,10 +21,15 @@ export type NoteMock = {
   signNext: 'stale' | 'denied' | 'blank' | null;
   /** Addenda received (MDV-P2-013); they need the same re-authentication as signing. PDFs asked for, and the answer to the next one. */
   addendumPosts: { text: string; reason: string }[]; pdfs: number; pdfNext: 'unsupported' | null;
+  /** What the server offers to copy into the note (MDV-P2-009): verified vitals of this visit and earlier signed notes. Empty until a spec seeds them. */
+  vitals: { code: string; value: number; unit: string; takenAt: string; source: string; recordedByName: string | null }[];
+  previous: { encounterId: string; signedAt: string; signedByName: string | null; templateKey: string; sections: Record<string, string> }[];
 };
 
 export async function mockNote(page: Page, seed: Partial<Note> = {}): Promise<NoteMock> {
-  const mock: NoteMock = { note: { templateKey: 'general-opd', sections: {}, version: 0, status: 'Draft', ...seed }, puts: [], chosen: [], next: null, signs: [], reauths: [], reauthed: false, signNext: null, addendumPosts: [], pdfs: 0, pdfNext: null };
+  const mock: NoteMock = { note: { templateKey: 'general-opd', sections: {}, version: 0, status: 'Draft', ...seed }, puts: [], chosen: [], next: null, signs: [], reauths: [], reauthed: false, signNext: null, addendumPosts: [], pdfs: 0, pdfNext: null, vitals: [], previous: [] };
+  await page.route('**/v1/encounters/e-1/note/prefill', r => r.fulfill({ json: { vitals: mock.vitals } }));
+  await page.route('**/v1/encounters/e-1/note/previous', r => r.fulfill({ json: { notes: mock.previous } }));
   const view = () => ({ encounterId: 'e-1', templateVersion: 1, manual: true, updatedAt: null, ...mock.note });
   await page.route('**/v1/encounters/e-1/note', async r => {
     if (r.request().method() === 'GET') return r.fulfill({ json: view() });

@@ -99,3 +99,15 @@ test('a role without the audit log sees the refusal, and Arabic lays the table o
   await expect(other.getByRole('alert')).toContainText('Your role does not include the audit log');
 });
 
+// Found on Azure dev: the date followed the browser's zone and the time the clinic's, so an event after 18:30 UTC showed the right time on the day before.
+test.describe('in a browser on another zone', () => {
+  test.use({ timezoneId: 'UTC' });
+  test('a row shows the day and the time in the clinic\'s zone', async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem('medvya.locale', 'en'));
+    await page.route('**/v1/me/context', r => r.fulfill({ json: { ...admin, active: { ...admin.active, timeZone: 'Asia/Kolkata' } } }));
+    await page.route('**/v1/staff', r => r.fulfill({ json: staff }));
+    await page.route('**/v1/audit/access-log**', r => r.fulfill({ json: logPage([row({ occurredAt: '2026-11-10T19:06:00Z' })]) }));
+    await page.goto('/settings?tab=audit');
+    await expect(page.getByRole('region', { name: 'Access log' }).locator('time')).toHaveText('11 Nov 2026 00:36'); // 00:36 on 11 Nov in Chennai
+  });
+});

@@ -43,3 +43,33 @@ public interface IMedicationReconciliation
     /// <exception cref="ReconciliationConflictException"/>
     Task<ReconciliationView?> ConfirmAsync(Guid encounterId, CancellationToken cancellationToken = default);
 }
+
+/// <summary>A medicine the doctor decided to stop in an encounter's reconciliation (its latest decision), with the reason given.</summary>
+public sealed record StoppedMedicine(string Name, string? Reason);
+
+/// <summary>
+/// The stop decisions of an encounter's reconciliation, for the prescription composer (MDV-P2-015), which shows each as a discontinue line.
+/// No access check and no audit event here: the caller has already checked clinical access to the encounter's patient and audits its own read.
+/// </summary>
+public interface IReconciliationStops
+{
+    Task<IReadOnlyList<StoppedMedicine>> StopsAsync(Guid encounterId, CancellationToken cancellationToken = default);
+}
+
+/// <summary>A substance on the chart (never a "no known allergies" entry, never one ruled "not an allergy"), with its status for the evidence.</summary>
+public sealed record ChartAllergy(Guid Id, string Substance, AllergyStatus Status);
+
+/// <summary>An active medicine on the chart, as named there.</summary>
+public sealed record ChartMedicine(Guid Id, string Name);
+
+/// <summary>What a prescription is checked against: the allergy state (three different things, never merged), the listed allergies and the active medicines.</summary>
+public sealed record PrescribingFacts(AllergyState AllergyState, IReadOnlyList<ChartAllergy> Allergies, IReadOnlyList<ChartMedicine> ActiveMedicines);
+
+/// <summary>
+/// The chart facts for the prescription safety checks (MDV-P2-016). No access check and no audit event here: the caller has already checked
+/// clinical access to the patient and audits its own check.
+/// </summary>
+public interface IPrescribingChart
+{
+    Task<PrescribingFacts> FactsAsync(Guid patientId, CancellationToken cancellationToken = default);
+}

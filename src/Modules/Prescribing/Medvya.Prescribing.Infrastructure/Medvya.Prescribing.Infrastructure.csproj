@@ -9,6 +9,12 @@
     <ProjectReference Include="..\..\Encounters\Medvya.Encounters.Application\Medvya.Encounters.Application.csproj" />
     <ProjectReference Include="..\..\Patients\Medvya.Patients.Application\Medvya.Patients.Application.csproj" />
     <ProjectReference Include="..\..\Identity\Medvya.Identity.Application\Medvya.Identity.Application.csproj" />
+    <ProjectReference Include="..\..\Notifications\Medvya.Notifications.Application\Medvya.Notifications.Application.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The printed prescription's English copy (MDV-P2-017), from the shared catalogue. -->
+    <EmbeddedResource Include="..\..\..\..\packages\i18n\messages\en.json" LogicalName="Medvya.Prescribing.messages.en.json" />
   </ItemGroup>
 
   <ItemGroup>
@@ -17,6 +23,7 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <PackageReference Include="QRCoder" />
   </ItemGroup>
 
 </Project>

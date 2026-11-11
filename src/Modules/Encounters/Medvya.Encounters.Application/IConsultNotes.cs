@@ -11,10 +11,28 @@ public sealed record SaveNote(string? TemplateKey, bool Manual, int BaseVersion,
 /// <summary>The signature of a signed note: who, when and the hash of what was signed (ids only; the page shows the name).</summary>
 public sealed record NoteSignature(int VersionNo, Guid SignedBy, DateTimeOffset SignedAt, string ContentHash);
 
-/// <summary>Version 0 and no sections: nothing saved yet (the default template is offered). <see cref="Signature"/> is set once signed.</summary>
+/// <summary>A signed addendum (MDV-P2-013): version 2 and later, each following the version before it. Ids only for the signer.</summary>
+public sealed record NoteAddendum(int VersionNo, int AmendsVersionNo, string Reason, string Text, Guid SignedBy, DateTimeOffset SignedAt, string ContentHash);
+
+/// <summary>
+/// Version 0 and no sections: nothing saved yet (the default template is offered). <see cref="Signature"/> is set once signed; <see cref="Addenda"/>
+/// are the signed addenda in version order (empty until one is added).
+/// </summary>
 public sealed record NoteView(
     Guid EncounterId, string TemplateKey, int TemplateVersion, NoteStatus Status, bool Manual, IReadOnlyDictionary<string, string> Sections, int Version, DateTimeOffset? UpdatedAt,
-    NoteSignature? Signature = null);
+    NoteSignature? Signature = null, IReadOnlyList<NoteAddendum>? Addenda = null);
+
+/// <summary>An addendum to a signed note: the text and why it is added. Both are required.</summary>
+public sealed record AddNoteAddendum(string? Text, string? Reason);
+
+/// <summary>The PDF of a signed note as stored: the bytes and their SHA-256 (hex).</summary>
+public sealed record NotePdf(byte[] Content, string Sha256);
+
+/// <summary>An addendum or a PDF needs a signed note (code note_not_signed): a draft is still edited in place.</summary>
+public sealed class NoteNotSignedException() : Exception("The note is not signed.");
+
+/// <summary>The note holds characters the server PDF cannot show yet (code pdf_unsupported_text); the browser's print view shows them.</summary>
+public sealed class NotePdfUnsupportedTextException() : Exception("The note has text the PDF cannot show.");
 
 /// <summary>Sign the note as the editor last saw it (<see cref="BaseVersion"/>), so text typed in another tab is never signed unseen.</summary>
 public sealed record SignNote(int BaseVersion);
@@ -56,12 +74,29 @@ public interface IConsultNotes
 
     /// <summary>
     /// Signs (MDV-P2-012): Sign on Clinical notes with a care relationship, a re-authentication in the last 5 minutes, every required section
-    /// filled. Freezes version 1. Signing a signed note again returns it unchanged. Addenda (MDV-P2-013) are not here yet.
+    /// filled. Freezes version 1. Signing a signed note again returns it unchanged.
     /// </summary>
     /// <exception cref="ReauthRequiredException"/>
     /// <exception cref="NoteValidationException">A required section is blank (code <c>required</c> on <c>sections.&lt;id&gt;</c>).</exception>
     /// <exception cref="StaleNoteException"/>
     Task<NoteView?> SignAsync(Guid encounterId, SignNote command, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Signs an addendum (MDV-P2-013) as the next version of a signed note, under the same gate as signing (Sign on Clinical notes, care
+    /// relationship, re-authentication in the last 5 minutes). Earlier versions are never touched.
+    /// </summary>
+    /// <exception cref="ReauthRequiredException"/>
+    /// <exception cref="NoteNotSignedException"/>
+    /// <exception cref="NoteValidationException">Blank or too long (codes <c>required</c>, <c>too_long</c> on <c>text</c> and <c>reason</c>).</exception>
+    /// <exception cref="StaleNoteException">Another addendum was signed at the same moment.</exception>
+    Task<NoteView?> AddAddendumAsync(Guid encounterId, AddNoteAddendum command, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Renders the signed note with its addenda as an A4 PDF (MDV-P2-013) and stores that exact copy with its hash. Read access as for the note.
+    /// </summary>
+    /// <exception cref="NoteNotSignedException"/>
+    /// <exception cref="NotePdfUnsupportedTextException"/>
+    Task<NotePdf?> PdfAsync(Guid encounterId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Today's pending notes (MDV-P2-002): encounters at this facility the signed-in clinician led whose note is not signed, oldest first, at

@@ -406,6 +406,7 @@ public class PatientRegistryTests(PostgresFixture sql) : IClassFixture<PostgresF
             Task.FromResult<Medvya.Tenancy.Application.FacilityInfo?>(new(facilityId, "Synthetic facility", zone));
         public Task<Medvya.Tenancy.Domain.Role?> ActiveRoleAsync(Guid userId, Guid facilityId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<IReadOnlyList<Guid>> ActiveDoctorsAsync(Guid facilityId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<Medvya.Tenancy.Application.PrescriberInfo?> PrescriberAsync(Guid userId, Guid facilityId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<IReadOnlyDictionary<DateOnly, string>> ClosuresAsync(Guid facilityId, DateOnly first, DateOnly last, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     }
 

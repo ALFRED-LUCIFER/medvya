@@ -35,21 +35,38 @@ public sealed class Allergy
     [Classification(DataClass.Internal)] public DateTimeOffset? StatusSetAt { get; set; }
 }
 
+/// <summary>How sure the clinic is of a problem. Provisional is a working diagnosis: shown apart and never passed on as a confirmed one (MDV-P2-010).</summary>
 [JsonConverter(typeof(JsonStringEnumConverter<ProblemVerification>))]
 public enum ProblemVerification { Verified, PatientReported, Provisional }
 
-/// <summary>PROBLEM: a diagnosis on the problem list with its verification state (coding arrives with MDV-P2-010).</summary>
+[JsonConverter(typeof(JsonStringEnumConverter<ProblemStatus>))]
+public enum ProblemStatus { Active, Resolved }
+
+/// <summary>
+/// PROBLEM: a diagnosis on the problem list with its verification state. A doctor codes it in a consultation (MDV-P2-010): the code keeps the
+/// code system and version it was chosen from, and the encounter and author it was recorded in. Uncoded is allowed: an unknown code stays blank.
+/// </summary>
 public sealed class Problem
 {
     [Classification(DataClass.Internal)] public Guid Id { get; init; }
     [Classification(DataClass.Internal)] public Guid TenantId { get; init; }
     [Classification(DataClass.Internal)] public Guid PatientId { get; init; }
     [Classification(DataClass.SensitiveHealth)] public string? Icd10Code { get; init; }
+    /// <summary>The code set <see cref="Icd10Code"/> was chosen from, e.g. "ICD-10" and "2019-medvya-starter-1" (see <see cref="DiagnosisCodeRules"/>).</summary>
+    [Classification(DataClass.Internal)] public string? CodeSystem { get; init; }
+    [Classification(DataClass.Internal)] public string? CodeSystemVersion { get; init; }
     [Classification(DataClass.SensitiveHealth)] public required string Description { get; init; }
     [Classification(DataClass.SensitiveHealth)] public ProblemVerification Verification { get; set; }
-    [Classification(DataClass.SensitiveHealth)] public DateOnly? OnsetOn { get; init; }
+    [Classification(DataClass.SensitiveHealth)] public ProblemStatus Status { get; set; }
+    [Classification(DataClass.SensitiveHealth)] public DateOnly? OnsetOn { get; set; }
     [Classification(DataClass.Internal)] public ChartSource Source { get; init; }
     [Classification(DataClass.Internal)] public DateTimeOffset RecordedAt { get; init; }
+    // Set for a problem recorded in a consultation (MDV-P2-010); imports and older rows leave them empty.
+    [Classification(DataClass.Internal)] public Guid? EncounterId { get; init; }
+    [Classification(DataClass.Internal)] public Guid? RecordedBy { get; init; }
+    [Classification(DataClass.Internal)] public Guid? UpdatedBy { get; set; }
+    [Classification(DataClass.Internal)] public DateTimeOffset? UpdatedAt { get; set; }
+    [Classification(DataClass.Internal)] public Guid? MergedFromPatientId { get; init; }
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter<MedicationState>))]

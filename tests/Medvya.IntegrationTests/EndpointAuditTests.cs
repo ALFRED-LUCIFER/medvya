@@ -121,6 +121,11 @@ public sealed class EndpointAuditTests(PostgresFixture sql) : IClassFixture<Post
         "POST /v1/settings/formulary",
         "GET /v1/settings/order-sets",
         "POST /v1/settings/order-sets",
+        // Diagnosis code set (MDV-P2-010): the country's codes and descriptions, no patient data; the problem list itself is audited.
+        "GET /v1/diagnosis-codes",
+        // The doctor's own approval of the Rx print layout (MDV-P2-017, exit gate 4): a layout version and a time, no patient data; audited as rx.layout.approve (RxAuthorisationTests).
+        "GET /v1/prescription-layout",
+        "POST /v1/prescription-layout/approval",
         "GET /v1/queue/tv",
         "GET /v1/queue/hub/negotiate",
         "GET /v1/queue/hub",

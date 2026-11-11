@@ -199,7 +199,7 @@ public sealed class OrderTimelineSource(PrescribingDbContext db) : ITimelineSour
     }
 }
 
-/// <summary>A patient merge moves the surviving record's orders and referrals along and an undo moves them back (MDV-P1-017), in the merge's transaction.</summary>
+/// <summary>A patient merge moves the surviving record's orders, prescription lines and referrals along and an undo moves them back (MDV-P1-017), in the merge's transaction.</summary>
 public sealed class OrderMergeParticipant(ICurrentTenant tenant) : IPatientMergeParticipant
 {
     public Task<bool> HasClinicalDataAsync(Guid patientId, CancellationToken cancellationToken) => Task.FromResult(false); // the patient's encounters already count
@@ -211,6 +211,10 @@ public sealed class OrderMergeParticipant(ICurrentTenant tenant) : IPatientMerge
         await using var shared = await SharedAsync(transaction, cancellationToken);
         await shared.Orders.Where(o => o.PatientId == fromPatientId)
             .ExecuteUpdateAsync(s => s.SetProperty(o => o.PatientId, toPatientId).SetProperty(o => o.MergedFromPatientId, fromPatientId), cancellationToken);
+        await shared.PrescriptionItems.Where(i => i.PatientId == fromPatientId)
+            .ExecuteUpdateAsync(s => s.SetProperty(i => i.PatientId, toPatientId).SetProperty(i => i.MergedFromPatientId, fromPatientId), cancellationToken);
+        await shared.RxAlertOverrides.Where(o => o.PatientId == fromPatientId)
+            .ExecuteUpdateAsync(s => s.SetProperty(o => o.PatientId, toPatientId).SetProperty(o => o.MergedFromPatientId, fromPatientId), cancellationToken);
         await shared.Referrals.Where(r => r.PatientId == fromPatientId)
             .ExecuteUpdateAsync(s => s.SetProperty(r => r.PatientId, toPatientId).SetProperty(r => r.MergedFromPatientId, fromPatientId), cancellationToken);
     }
@@ -219,6 +223,10 @@ public sealed class OrderMergeParticipant(ICurrentTenant tenant) : IPatientMerge
     {
         await using var shared = await SharedAsync(transaction, cancellationToken);
         await shared.Orders.Where(o => o.PatientId == toPatientId && o.MergedFromPatientId == fromPatientId)
+            .ExecuteUpdateAsync(s => s.SetProperty(o => o.PatientId, fromPatientId).SetProperty(o => o.MergedFromPatientId, (Guid?)null), cancellationToken);
+        await shared.PrescriptionItems.Where(i => i.PatientId == toPatientId && i.MergedFromPatientId == fromPatientId)
+            .ExecuteUpdateAsync(s => s.SetProperty(i => i.PatientId, fromPatientId).SetProperty(i => i.MergedFromPatientId, (Guid?)null), cancellationToken);
+        await shared.RxAlertOverrides.Where(o => o.PatientId == toPatientId && o.MergedFromPatientId == fromPatientId)
             .ExecuteUpdateAsync(s => s.SetProperty(o => o.PatientId, fromPatientId).SetProperty(o => o.MergedFromPatientId, (Guid?)null), cancellationToken);
         await shared.Referrals.Where(r => r.PatientId == toPatientId && r.MergedFromPatientId == fromPatientId)
             .ExecuteUpdateAsync(s => s.SetProperty(r => r.PatientId, fromPatientId).SetProperty(r => r.MergedFromPatientId, (Guid?)null), cancellationToken);

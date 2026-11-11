@@ -26,8 +26,6 @@ public sealed class EncounterCareRelationship(EncountersDbContext db) : ICareRel
 /// </summary>
 public sealed class EncounterMergeParticipant(EncountersDbContext db, ICurrentTenant tenant) : IPatientMergeParticipant
 {
-    // shortcut: problems (MDV-P2-004) count as clinical data here but are not moved on a merge, because nothing writes them yet.
-    // The first ticket that does (MDV-P2-010) must move and restore them like encounters, or a diagnosis is lost.
     public async Task<bool> HasClinicalDataAsync(Guid patientId, CancellationToken cancellationToken) =>
         await db.Encounters.AsNoTracking().AnyAsync(e => e.PatientId == patientId, cancellationToken)
         || await db.Allergies.AsNoTracking().AnyAsync(a => a.PatientId == patientId, cancellationToken)
@@ -57,6 +55,8 @@ public sealed class EncounterMergeParticipant(EncountersDbContext db, ICurrentTe
             .ExecuteUpdateAsync(s => s.SetProperty(e => e.PatientId, toPatientId).SetProperty(e => e.MergedFromPatientId, fromPatientId), cancellationToken);
         await shared.MedicationReconciliations.Where(e => e.PatientId == fromPatientId)
             .ExecuteUpdateAsync(s => s.SetProperty(e => e.PatientId, toPatientId).SetProperty(e => e.MergedFromPatientId, fromPatientId), cancellationToken);
+        await shared.Problems.Where(e => e.PatientId == fromPatientId)
+            .ExecuteUpdateAsync(s => s.SetProperty(e => e.PatientId, toPatientId).SetProperty(e => e.MergedFromPatientId, fromPatientId), cancellationToken);
     }
 
     public async Task RestoreAsync(Guid fromPatientId, Guid toPatientId, DbTransaction transaction, CancellationToken cancellationToken)
@@ -77,6 +77,8 @@ public sealed class EncounterMergeParticipant(EncountersDbContext db, ICurrentTe
         await shared.MedicationDecisions.Where(e => e.PatientId == toPatientId && e.MergedFromPatientId == fromPatientId)
             .ExecuteUpdateAsync(s => s.SetProperty(e => e.PatientId, fromPatientId).SetProperty(e => e.MergedFromPatientId, (Guid?)null), cancellationToken);
         await shared.MedicationReconciliations.Where(e => e.PatientId == toPatientId && e.MergedFromPatientId == fromPatientId)
+            .ExecuteUpdateAsync(s => s.SetProperty(e => e.PatientId, fromPatientId).SetProperty(e => e.MergedFromPatientId, (Guid?)null), cancellationToken);
+        await shared.Problems.Where(e => e.PatientId == toPatientId && e.MergedFromPatientId == fromPatientId)
             .ExecuteUpdateAsync(s => s.SetProperty(e => e.PatientId, fromPatientId).SetProperty(e => e.MergedFromPatientId, (Guid?)null), cancellationToken);
     }
 

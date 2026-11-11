@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { inTemplateOrder, missingRequired, signFailure, reapply, staleVersion, switchChoices, switchTemplate, type NoteTemplate } from './note';
+import { addendumFailure, addendumSchema, inTemplateOrder, missingRequired, pdfFailure, signFailure, reapply, staleVersion, switchChoices, switchTemplate, type NoteTemplate } from './note';
 
 const tpl = (key: string, ...ids: string[]): NoteTemplate => ({ key, version: 1, quickPhrases: [], sections: ids.map(id => ({ id, required: id === 'plan' })) });
 
@@ -47,5 +47,23 @@ describe('sign failures (MDV-P2-012)', () => {
   });
   it('names sections in the order of the template', () => {
     expect(inTemplateOrder(tpl('a', 'chiefComplaint', 'assessment', 'plan'), ['plan', 'chiefComplaint'])).toEqual(['chiefComplaint', 'plan']);
+  });
+});
+
+describe('addendum rules (MDV-P2-013)', () => {
+  it('needs a text and a reason, blanks included', () => {
+    expect(addendumSchema.safeParse({ text: 'Dose corrected', reason: 'Typo' }).success).toBe(true);
+    expect(addendumSchema.safeParse({ text: 'Dose corrected', reason: '   ' }).success).toBe(false);
+    expect(addendumSchema.safeParse({ text: '', reason: 'Typo' }).success).toBe(false);
+    expect(addendumSchema.safeParse({ text: 'x', reason: 'r'.repeat(501) }).success).toBe(false);
+  });
+  it('maps refusals to what the doctor sees', () => {
+    expect(addendumFailure(403, { code: 'reauth_required' })).toBe('reauth');
+    expect(addendumFailure(403, { code: 'no_care_relationship' })).toBe('denied');
+    expect(addendumFailure(409, { code: 'stale_note', currentVersion: 4 })).toBe('stale');
+    expect(addendumFailure(409, { code: 'note_not_signed' })).toBe('failed');
+    expect(addendumFailure(400, { errors: { reason: ['required'] } })).toBe('failed');
+    expect(pdfFailure(422)).toBe('unsupported');
+    expect(pdfFailure(500)).toBe('failed');
   });
 });

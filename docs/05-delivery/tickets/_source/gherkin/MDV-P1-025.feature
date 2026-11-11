@@ -13,10 +13,3 @@ Feature: Walk-in registration and booking straight to the queue
   Scenario: Walk-ins appear in Checked in
     When a walk-in is checked in
     Then it appears in the Checked in column with wait time and the Walk-in tag
-
-  # chunk: Prove the 60-second walk-in
-  @todo
-  Scenario: Walk-in registered and checked in in under 60 seconds
-    Given a trained user at the pilot
-    When they quick-register and check in a walk-in
-    Then it takes under 60 seconds

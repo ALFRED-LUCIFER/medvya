@@ -26,6 +26,10 @@ SOFT_REFS = {
     'AppointmentId': ('scheduling', 'Appointments'),
     'AddedBy': ('identity', 'Users'), 'OrderedBy': ('identity', 'Users'), 'SentBy': ('identity', 'Users'), 'CreatedBy': ('identity', 'Users'),
     'NotificationId': ('notifications', 'Notifications'), 'ReviewId': ('tenancy', 'AccessReviews'),
+    'FormularyItemId': ('prescribing', 'FormularyItems'),
+    'NoteId': ('encounters', 'ConsultNotes'), 'AmendsVersionId': ('encounters', 'SignedNoteVersions'), 'SignedBy': ('identity', 'Users'), 'RenderedBy': ('identity', 'Users'),
+    'AuthorisedBy': ('identity', 'Users'), 'PrescriptionId': ('prescribing', 'AuthorisedPrescriptions'),
+    'PdfId': ('prescribing', 'PrescriptionPdfs'), 'ShareId': ('prescribing', 'RxShares'), 'SharedBy': ('identity', 'Users'),
 }
 # CalendarId (and the from/to of a reschedule) is a doctor (a membership, inferred) or a room, told apart by CalendarKind.
 CALENDAR_COLS = ('CalendarId', 'FromCalendarId', 'ToCalendarId')
@@ -43,6 +47,7 @@ PLANNED_TO_BUILT = {
     'OBSERVATION': 'encounters.Observations', 'PROBLEM': 'encounters.Problems', 'ALLERGY': 'encounters.Allergies', 'MEDICATION_STATEMENT': 'encounters.MedicationStatements',
     'CLINICAL_DOCUMENT': 'encounters.ClinicalDocuments',
     'FORMULARY_ITEM': 'prescribing.FormularyItems', 'ORDER_SET': 'prescribing.OrderSets', 'CLINICAL_ORDER': 'prescribing.Orders', 'REFERRAL': 'prescribing.Referrals',
+    'PRESCRIPTION_ITEM': 'prescribing.PrescriptionItems', 'PRESCRIPTION': 'prescribing.AuthorisedPrescriptions', 'PHARMACY_DISPATCH': 'prescribing.PharmacyDispatchEvents',
 }
 # where the built table covers only part of the planned entity
 PARTIAL = {
@@ -51,8 +56,11 @@ PARTIAL = {
     'CONSENT_RECEIPT': 'registration consents; the per-encounter recording consent in area C is not built',
     'NOTIFICATION': 'patient messages only; staff notifications are separate tables',
     'DOC_SEQUENCE': 'numbering only; invoices and payments are not built',
+    'PRESCRIPTION_ITEM': 'draft lines; the authorised lines are frozen in prescribing.AuthorisedPrescriptions (MDV-P2-017)',
+    'PRESCRIPTION': 'each authorisation is an append-only version holding its lines; printed copies in prescribing.PrescriptionPdfs',
+    'PHARMACY_DISPATCH': 'one append-only row per state with its actor; the secure link it rides on is prescribing.RxShares (MDV-P2-020)',
 }
-LEDGER = {'audit.AuditEvents', 'encounters.SignedNoteVersions', 'patients.ConsentReceipts', 'tenancy.TermsAcceptances'}  # hash-chained, MDV-P0-036
+LEDGER = {'audit.AuditEvents', 'encounters.SignedNoteVersions', 'encounters.SignedNotePdfs', 'prescribing.AuthorisedPrescriptions', 'prescribing.PrescriptionPdfs', 'prescribing.RxLayoutApprovals', 'prescribing.RxShares', 'prescribing.PharmacyDispatchEvents', 'patients.ConsentReceipts', 'tenancy.TermsAcceptances'}  # hash-chained, MDV-P0-036
 MODULE_ORDER = ['Tenancy', 'Identity', 'Patients', 'Scheduling', 'Encounters', 'Prescribing', 'Notifications', 'Audit', 'Leads', 'Billing', 'Platform']
 
 

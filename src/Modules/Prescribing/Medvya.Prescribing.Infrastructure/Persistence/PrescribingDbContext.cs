@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Medvya.BuildingBlocks.Domain;
 using Medvya.Prescribing.Domain;
 using Microsoft.EntityFrameworkCore;
@@ -13,6 +14,14 @@ public sealed class PrescribingDbContext(DbContextOptions<PrescribingDbContext> 
     public DbSet<ClinicalOrder> Orders => Set<ClinicalOrder>();
     public DbSet<Referral> Referrals => Set<Referral>();
     public DbSet<ReferralEvent> ReferralEvents => Set<ReferralEvent>();
+    public DbSet<PrescriptionItem> PrescriptionItems => Set<PrescriptionItem>();
+    public DbSet<RxAlertOverride> RxAlertOverrides => Set<RxAlertOverride>();
+    public DbSet<AuthorisedPrescription> AuthorisedPrescriptions => Set<AuthorisedPrescription>();
+    public DbSet<PrescriptionPdf> PrescriptionPdfs => Set<PrescriptionPdf>();
+    public DbSet<RxLayoutApproval> RxLayoutApprovals => Set<RxLayoutApproval>();
+    public DbSet<RxShare> RxShares => Set<RxShare>();
+    public DbSet<RxShareCode> RxShareCodes => Set<RxShareCode>();
+    public DbSet<PharmacyDispatchEvent> PharmacyDispatchEvents => Set<PharmacyDispatchEvent>();
 
     Guid? CurrentTenantId => tenant.TenantId;
 
@@ -68,6 +77,80 @@ public sealed class PrescribingDbContext(DbContextOptions<PrescribingDbContext> 
             e.Property(x => x.State).HasConversion<string>().HasMaxLength(20);
             e.Property(x => x.Note).HasMaxLength(200);
             e.HasIndex(x => new { x.TenantId, x.ReferralId, x.At });
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<PrescriptionItem>(e =>
+        {
+            e.Property(x => x.Medicine).HasMaxLength(200);
+            e.Property(x => x.Strength).HasMaxLength(50);
+            e.Property(x => x.Form).HasMaxLength(40);
+            e.Property(x => x.Dose).HasMaxLength(9);
+            e.Property(x => x.DoseUnit).HasMaxLength(20);
+            e.Property(x => x.Route).HasMaxLength(20);
+            e.Property(x => x.Frequency).HasMaxLength(20);
+            e.Property(x => x.Timing).HasMaxLength(20);
+            e.Property(x => x.Instructions).HasMaxLength(200);
+            e.HasIndex(x => new { x.TenantId, x.EncounterId });
+            e.HasIndex(x => new { x.TenantId, x.PatientId }); // merges
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<RxAlertOverride>(e =>
+        {
+            e.Property(x => x.AlertKey).HasMaxLength(200);
+            e.Property(x => x.Kind).HasConversion<string>().HasMaxLength(30);
+            e.Property(x => x.Reason).HasMaxLength(200);
+            e.Property(x => x.RuleSetVersion).HasMaxLength(40);
+            e.HasIndex(x => new { x.TenantId, x.EncounterId });
+            e.HasIndex(x => new { x.TenantId, x.PatientId }); // merges
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        // MDV-P2-017: the three are append-only and hash-chained (LedgerSql, in their migration).
+        modelBuilder.Entity<AuthorisedPrescription>(e =>
+        {
+            e.Property(x => x.Lines).HasColumnType("jsonb").HasConversion(
+                v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null), v => JsonSerializer.Deserialize<List<AuthorisedLine>>(v, (JsonSerializerOptions?)null)!);
+            e.Property(x => x.ContentHash).HasMaxLength(64);
+            e.Property(x => x.RuleSetVersion).HasMaxLength(40);
+            e.Property(x => x.VerifyCode).HasMaxLength(22);
+            e.HasIndex(x => new { x.TenantId, x.EncounterId, x.VersionNo }).IsUnique(); // two authorisations at once: the second loses here
+            e.HasIndex(x => new { x.TenantId, x.VerifyCode }).IsUnique();
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<PrescriptionPdf>(e =>
+        {
+            e.Property(x => x.Paper).HasMaxLength(2);
+            e.Property(x => x.Sha256).HasMaxLength(64);
+            e.HasIndex(x => new { x.TenantId, x.PrescriptionId });
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        // MDV-P2-020: shares and dispatch states are append-only and hash-chained; codes count wrong tries, so they are not.
+        modelBuilder.Entity<RxShare>(e =>
+        {
+            e.Property(x => x.Recipient).HasConversion<string>().HasMaxLength(10);
+            e.Property(x => x.Channel).HasConversion<string>().HasMaxLength(10);
+            e.Property(x => x.PharmacyName).HasMaxLength(RxShareRules.MaxPharmacyName);
+            e.Property(x => x.PharmacyEmail).HasMaxLength(254);
+            e.Property(x => x.LinkHash).HasMaxLength(32);
+            e.HasIndex(x => new { x.TenantId, x.LinkHash }).IsUnique();
+            e.HasIndex(x => new { x.TenantId, x.EncounterId });
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<RxShareCode>(e =>
+        {
+            e.Property(x => x.CodeHash).HasMaxLength(32);
+            e.HasIndex(x => new { x.TenantId, x.ShareId });
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<PharmacyDispatchEvent>(e =>
+        {
+            e.Property(x => x.State).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.PharmacyRef).HasMaxLength(RxShareRules.MaxPharmacyRef);
+            e.HasIndex(x => new { x.TenantId, x.ShareId });
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<RxLayoutApproval>(e =>
+        {
+            e.HasIndex(x => new { x.TenantId, x.UserId, x.LayoutVersion }).IsUnique();
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         modelBuilder.Entity<OrderSet>(e =>

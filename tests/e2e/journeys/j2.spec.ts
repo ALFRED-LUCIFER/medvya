@@ -2,6 +2,9 @@ import { expect } from '@playwright/test';
 import { test } from '@playwright/test';
 import { mockReconciliation } from '../support/reconciliation';
 import { mockNote } from '../support/note';
+import { authorised, clearChecks, line, mockPrescription, stopLine } from '../support/prescription';
+import { mockShares } from '../support/share';
+import { mockProblems } from '../support/problems';
 import { journey } from './storyboard';
 
 // Storyboard: docs/02-design/journeys.md. Implement steps as their screens ship.
@@ -27,8 +30,76 @@ test('J2.5 (conflict half, MDV-P2-011) E-07 · Doctor: statin stopped vs chart a
   expect(calls.decisions).toEqual([{ key: 'atorvastatin', kind: 'Stop', newDose: '', reason: 'Muscle pain (synthetic)' }]);
 });
 
+// J2.6 is "Authorise Rx & orders" (the step below, MDV-P2-017). Its composer half (MDV-P2-015, E-05): the
+// statin stopped in reconciliation is a discontinue line, and the doctor adds metformin from the formulary as a draft. The safety checks that
+// authorising will require (MDV-P2-016, E-11) run on the draft: Meera has no known allergies and metformin raises nothing.
+test('J2.6 (composer and safety-check halves, MDV-P2-015/016) E-05 · Doctor: the stopped statin is a discontinue line beside the new, checked draft', async ({ page }) => {
+  const { calls } = await mockPrescription(page, { lines: [stopLine('Atorvastatin', 'Muscle pain (synthetic)')], checks: clearChecks() });
+  await page.goto('/consult/e-1');
+  await expect(page.getByRole('list', { name: 'Medicines to stop' })).toContainText('Atorvastatin');
+  const rx = page.getByRole('region', { name: 'Prescription' });
+  await rx.getByLabel('Medicine', { exact: true }).fill('metformin');
+  await rx.getByRole('button', { name: 'Add Metformin 500 mg Tablet' }).click();
+  expect(calls.added).toEqual([{ formularyItemId: 'fi-metformin' }]);
+  await expect(rx).toContainText('Draft, not authorised');
+  const checks = page.getByRole('region', { name: 'Safety checks' });
+  await expect(checks).toContainText('Allergies: no known allergies (recorded)');
+  await expect(checks).toContainText('No alerts from the checks that could run.');
+});
+
+// The coding half of J2.5 (MDV-P2-010, E-07): before signing, the doctor codes Meera's diagnosis with ICD-10; a provisional one says so.
+test('J2.5 (coding half, MDV-P2-010) E-07 · Doctor: the diagnosis is coded with ICD-10 and a verification state', async ({ page }) => {
+  const { calls } = await mockProblems(page);
+  await page.goto('/consult/e-1/problems');
+  await page.getByLabel('Search ICD-10 by code or words').fill('hypertension');
+  await page.getByRole('list', { name: 'Matching codes' }).getByRole('button', { name: /I10/ }).click();
+  await page.getByRole('button', { name: 'Add problem' }).click();
+  await expect(page.getByRole('region', { name: 'Problem list' }).getByRole('row', { name: /hypertension/ })).toContainText('Added today · verified');
+  expect(calls.adds).toEqual([{ code: 'I10', description: null, verification: 'Verified', onsetOn: null }]);
+});
+
 journey('J2', {
   5: 'MDV-P2-012',
+  // E-05: the prescription and the orders are approved separately, each by its own action and neither by signing the note (MDV-P2-017, MDV-P2-018).
+  // Authorising asks for the step-up first; the gates themselves are proven on PostgreSQL in RxAuthorisationTests.
+  6: async ({ page }) => {
+    const { calls, orders, orderCalls } = await mockPrescription(page, {
+      lines: [line('rx-1', 'Metformin', { dose: '1', doseUnit: 'tablet', route: 'oral', frequency: 'BD', sig: { en: 'Take 1 tablet by mouth twice a day.', hi: '', ta: '', ar: '' } }),
+        stopLine('Atorvastatin', 'Muscle pain (synthetic)')],
+      checks: clearChecks(), reauthFirst: true,
+    });
+    await page.goto('/consult/e-1');
+    const rx = page.getByRole('region', { name: 'Prescription' });
+    await rx.getByRole('button', { name: 'Authorise prescription' }).click();
+    await expect(rx.getByRole('alert')).toContainText('Confirm your identity to authorise.');
+    await rx.getByRole('button', { name: 'Authorise prescription' }).click(); // after the step-up
+    await expect(rx).toContainText('Authorised · version 1');
+    expect(orders.every(o => o.state === 'Draft')).toBe(true); // authorising the prescription placed nothing
+
+    await page.getByLabel('Test', { exact: true }).fill('HbA1c');
+    await page.getByRole('button', { name: 'Add test' }).click();
+    await page.getByRole('button', { name: 'Place orders' }).click();
+    await expect(page.getByText('Orders placed.')).toBeVisible();
+    expect(orderCalls.placed).toEqual([{ destination: null }]); // its own action
+    expect(calls.authorised).toBe(2);
+  },
+  // E-10: the authorised prescription goes to Meera by a secure link (the message names only the clinic; the link opens with a code to her mobile)
+  // and to her pharmacy, whose dispatch is recorded (MDV-P2-020). The gates and the message texts are proven on PostgreSQL in RxShareTests.
+  7: async ({ page }) => {
+    await mockPrescription(page, { lines: [line('rx-1', 'Metformin')], authorisation: { authorised: authorised(), changed: false } });
+    const { calls } = await mockShares(page);
+    await page.goto('/consult/e-1/rx/print');
+    const share = page.getByRole('region', { name: 'Share with the patient or a pharmacy' });
+    await share.getByRole('button', { name: 'Send secure link' }).click();
+    await expect(share.getByRole('row', { name: /Patient, by SMS/ })).toBeVisible();
+    await share.getByRole('combobox', { name: 'Send to' }).click();
+    await page.getByRole('option', { name: 'A pharmacy, by email' }).click();
+    await share.getByLabel('Pharmacy name').fill('Apollo Pharmacy Adyar (synthetic)');
+    await share.getByLabel('Pharmacy email').fill('orders@pharmacy.example.test');
+    await share.getByRole('button', { name: 'Send secure link' }).click();
+    await expect(share.getByRole('row', { name: /Apollo Pharmacy Adyar/ })).toContainText('Sent to the pharmacy');
+    expect(calls.shared).toHaveLength(2);
+  },
   // D-01: the next patient is Meera, ready for the doctor; starting the consultation binds it to her visit and shows who it is for, in Room 3.
   // The doctor's own Today (MDV-P2-002): the next patient hero starts the consultation.
   1: async ({ page }) => {

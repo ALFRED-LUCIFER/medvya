@@ -146,7 +146,7 @@ END $$;
 DO $$
 DECLARE r text;
 BEGIN
-    FOREACH r IN ARRAY ARRAY['medvya_tenancy', 'medvya_patients', 'medvya_audit', 'medvya_encounters']
+    FOREACH r IN ARRAY ARRAY['medvya_tenancy', 'medvya_patients', 'medvya_audit', 'medvya_encounters', 'medvya_prescribing']
     LOOP
         EXECUTE format('GRANT USAGE ON SCHEMA ledger TO %I', r);
         EXECUTE format('REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON ALL TABLES IN SCHEMA ledger FROM %I', r);

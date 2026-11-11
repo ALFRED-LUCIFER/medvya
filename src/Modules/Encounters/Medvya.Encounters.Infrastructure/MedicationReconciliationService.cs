@@ -165,3 +165,26 @@ public sealed class MedicationReconciliationService(
     Guid TenantId => tenant.TenantId ?? throw new InvalidOperationException("No tenant context.");
     Guid Me => user.UserId ?? throw new InvalidOperationException("No user.");
 }
+
+/// <summary>The current Stop decisions of one encounter (the latest decision per medicine); see <see cref="IReconciliationStops"/>.</summary>
+public sealed class ReconciliationStops(EncountersDbContext db) : IReconciliationStops
+{
+    public async Task<IReadOnlyList<StoppedMedicine>> StopsAsync(Guid encounterId, CancellationToken cancellationToken = default) =>
+        [.. (await db.MedicationDecisions.AsNoTracking().Where(d => d.EncounterId == encounterId).ToListAsync(cancellationToken))
+            .GroupBy(d => d.MedicineKey).Select(g => g.OrderByDescending(d => d.DecidedAt).ThenByDescending(d => d.Id).First())
+            .Where(d => d.Kind == MedicationDecisionKind.Stop).OrderBy(d => d.Name, StringComparer.OrdinalIgnoreCase).Select(d => new StoppedMedicine(d.Name, d.Reason))];
+}
+
+/// <summary>The allergies and active medicines of one patient for the prescription checks; see <see cref="IPrescribingChart"/>.</summary>
+public sealed class PrescribingChart(EncountersDbContext db) : IPrescribingChart
+{
+    public async Task<PrescribingFacts> FactsAsync(Guid patientId, CancellationToken cancellationToken = default)
+    {
+        var allergies = await db.Allergies.AsNoTracking().Where(a => a.PatientId == patientId).OrderBy(a => a.RecordedAt).ThenBy(a => a.Id).ToListAsync(cancellationToken);
+        var medicines = await db.MedicationStatements.AsNoTracking().Where(m => m.PatientId == patientId && m.State == MedicationState.Active)
+            .OrderBy(m => m.Name).ThenBy(m => m.Id).Select(m => new ChartMedicine(m.Id, m.Name)).ToListAsync(cancellationToken);
+        // The banner's rule decides the state, so the checks never read "not recorded" differently from the chart.
+        return new(ChartReads.BannerOf(allergies).State,
+            [.. allergies.Where(a => a.Kind == AllergyKind.Substance && a.Status != AllergyStatus.NotAnAllergy).Select(a => new ChartAllergy(a.Id, a.Substance!, a.Status))], medicines);
+    }
+}

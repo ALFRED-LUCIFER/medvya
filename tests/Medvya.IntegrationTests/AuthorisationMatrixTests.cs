@@ -124,9 +124,22 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
             Id = Guid.CreateVersion7(), TenantId = other.Tenant, FacilityId = other.Facility, PatientId = other.Patient, EncounterId = encounter, Direction = Medvya.Prescribing.Domain.ReferralDirection.Out,
             Provider = "Dr. Other (synthetic B)", Urgency = Medvya.Prescribing.Domain.ReferralUrgency.Routine, State = Medvya.Prescribing.Domain.ReferralState.Draft, CreatedBy = other.Doctor, CreatedAt = SchedulingHarness.MondayMorning,
         };
+        var rxItem = new Medvya.Prescribing.Domain.PrescriptionItem
+        {
+            Id = Guid.CreateVersion7(), TenantId = other.Tenant, FacilityId = other.Facility, PatientId = other.Patient, EncounterId = encounter, Medicine = $"Synthetic medicine {Theirs}",
+            CreatedBy = other.Doctor, CreatedAt = SchedulingHarness.MondayMorning, UpdatedAt = SchedulingHarness.MondayMorning,
+        };
+        var rxShare = new Medvya.Prescribing.Domain.RxShare
+        {
+            Id = Guid.CreateVersion7(), TenantId = other.Tenant, FacilityId = other.Facility, EncounterId = encounter, PrescriptionId = Guid.NewGuid(), PdfId = Guid.NewGuid(),
+            Recipient = Medvya.Prescribing.Domain.RxShareRecipient.Pharmacy, Channel = Medvya.Prescribing.Domain.RxShareChannel.Email, PharmacyName = $"Pharmacy {Theirs}",
+            LinkHash = InvitationToken.New(other.Tenant).Hash, ExpiresAt = SchedulingHarness.MondayMorning.AddDays(3), SharedBy = other.Doctor, SharedAt = SchedulingHarness.MondayMorning,
+        };
         await using (var orders = sql.Prescribing(other.Tenant))
         {
+            orders.RxShares.Add(rxShare);
             orders.Orders.Add(order);
+            orders.PrescriptionItems.Add(rxItem);
             orders.Referrals.Add(referral);
             await orders.SaveChangesAsync();
         }
@@ -145,7 +158,7 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
 
         return new()
         {
-            ["patient"] = other.Patient, ["appointment"] = visit, ["encounter"] = encounter, ["document"] = document.Id, ["order"] = order.Id, ["referral"] = referral.Id, ["hold"] = hold.Id, ["display"] = display.Display.Id,
+            ["patient"] = other.Patient, ["appointment"] = visit, ["encounter"] = encounter, ["document"] = document.Id, ["order"] = order.Id, ["rxItem"] = rxItem.Id, ["rxShare"] = rxShare.Id, ["referral"] = referral.Id, ["hold"] = hold.Id, ["display"] = display.Display.Id,
             ["closure"] = closure!.Id, ["exception"] = leave.Exception.Id, ["accessRequest"] = request.Id, ["invitation"] = invitation.Id,
             ["membership"] = membership, ["doctor"] = doctor, ["location"] = other.Facility, ["role"] = role.Id, ["user"] = other.Reception,
         };
@@ -189,9 +202,13 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.SoloDoctor, new("GET", "/v1/encounters/{encounter}/medicines/reconciliation")),
         (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/medicines/reconciliation/decisions", """{"key":"synthetic","kind":"Keep"}""")),
         (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/medicines/reconciliation/confirm")),
+        (Role.SoloDoctor, new("GET", "/v1/encounters/{encounter}/problems")),
+        (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/problems", """{"code":"I10","verification":"Verified"}""")),
         (Role.SoloDoctor, new("GET", "/v1/encounters/{encounter}/note")),
         (Role.SoloDoctor, new("PUT", "/v1/encounters/{encounter}/note", """{"baseVersion":0,"sections":{}}""")),
         (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/note/sign", """{"baseVersion":0}""")),
+        (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/note/addenda", """{"text":"Synthetic","reason":"Synthetic"}""")),
+        (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/note/pdf")),
         (Role.SoloDoctor, new("POST", "/v1/encounters", """{"appointmentId":"{appointment}","leaveOpen":true}""")),
         (Role.Nurse, new("GET", "/v1/intake/{appointment}")),
         (Role.Nurse, new("PUT", "/v1/intake/{appointment}", """{"chiefComplaint":"Synthetic","vitals":[]}""")),
@@ -200,6 +217,19 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/orders/place", """{"destination":"Synthetic lab"}""")),
         (Role.SoloDoctor, new("GET", "/v1/encounters/{encounter}/orders/slip")),
         (Role.SoloDoctor, new("PUT", "/v1/orders/{order}/included", """{"included":false}""")),
+        (Role.SoloDoctor, new("GET", "/v1/encounters/{encounter}/prescription")),
+        (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/prescription/items", """{"medicine":"Synthetic medicine"}""")),
+        (Role.SoloDoctor, new("PUT", "/v1/prescription-items/{rxItem}", """{"dose":"1","doseUnit":"tablet"}""")),
+        (Role.SoloDoctor, new("PUT", "/v1/prescription-items/{rxItem}/included", """{"included":false}""")),
+        (Role.SoloDoctor, new("GET", "/v1/encounters/{encounter}/prescription/checks")),
+        (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/prescription/overrides", """{"key":"synthetic","reason":"Synthetic"}""")),
+        (Role.SoloDoctor, new("GET", "/v1/encounters/{encounter}/prescription/authorisation")),
+        (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/prescription/authorisation")),
+        (Role.SoloDoctor, new("GET", "/v1/encounters/{encounter}/prescription/print")),
+        (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/prescription/pdf")),
+        (Role.SoloDoctor, new("GET", "/v1/encounters/{encounter}/prescription/shares")),
+        (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/prescription/shares", """{"recipient":"Patient","channel":"Sms"}""")),
+        (Role.SoloDoctor, new("POST", "/v1/prescription-shares/{rxShare}/dispatch", """{"state":"Cancelled"}""")),
         (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/referrals", """{"provider":"Dr. Synthetic","urgency":"Routine","reason":"Synthetic","sections":[]}""")),
         (Role.SoloDoctor, new("POST", "/v1/referrals/{referral}/send", """{"channel":"Print"}""")),
         (Role.SoloDoctor, new("POST", "/v1/referrals/{referral}/status", """{"state":"Closed"}""")),
@@ -254,6 +284,7 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         ["/v1/operations/organisations/{tenantId:guid}/suspend"] = "as above",
         ["/v1/settings/doctors/{id:guid}/signature"] = "PUT takes an image body; the DELETE on the same route is in the matrix",
         ["/v1/intake/{appointmentId:guid}/vitals/{kind}/keep"] = "same visit lookup and clinical access as the other intake routes, which are in the matrix; the reading is a route value (IntakeTests, IntakeEndpointTests)",
+        ["/v1/encounters/{encounterId:guid}/problems/{problemId:guid}"] = "two ids: only a problem of the encounter's own patient is found, another patient's is not (ProblemListTests, with row-level security); the encounter route is in the matrix",
         ["/v1/intake/{appointmentId:guid}/allergies/{allergyId:guid}/status"] = "two ids: only an allergy of the visit's own patient is found, another patient's or clinic's is not (AllergyIntakeTests, with row-level security)",
         ["/v1/waitlist/{id:guid}"] = "waitlist: another practice's id is 404 and another location's is 403, in WaitlistEndpointTests and WaitlistTests (RLS)",
         ["/v1/waitlist/{id:guid}/offer"] = "as above",
@@ -355,6 +386,8 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.Receptionist, new("PUT", "/v1/encounters/{encounter}/note", """{"baseVersion":0,"sections":{}}""")), // Patient 360: X
         (Role.Receptionist, new("POST", "/v1/encounters/{encounter}/note/sign", """{"baseVersion":0}""")), // Clinical notes: X
         (Role.Nurse, new("POST", "/v1/encounters/{encounter}/note/sign", """{"baseVersion":0}""")), // Clinical notes: Read, never Sign
+        (Role.Nurse, new("POST", "/v1/encounters/{encounter}/note/addenda", """{"text":"Synthetic","reason":"Synthetic"}""")), // Clinical notes: Read, never Sign
+        (Role.Receptionist, new("POST", "/v1/encounters/{encounter}/note/pdf")), // Patient 360: X
         (Role.Nurse, new("GET", "/v1/encounters/{encounter}/note")), // notes are the doctor's: Patient 360 below Full
         (Role.Receptionist, new("GET", "/v1/patients/{patient}/chart")), // Patient 360: X
         (Role.Receptionist, new("POST", "/v1/documents/{document}/view-link")), // the desk uploads and lists, never opens
@@ -379,6 +412,19 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.Nurse, new("POST", "/v1/encounters/{encounter}/referrals", """{"provider":"Dr. Synthetic","urgency":"Routine","reason":"Synthetic","sections":[]}""")), // Prescriptions & orders: X
         (Role.Receptionist, new("GET", "/v1/patients/{patient}/referrals")), // Patient 360: X
         (Role.Nurse, new("GET", "/v1/encounters/{encounter}/orders")), // Prescriptions & orders: X
+        (Role.Nurse, new("GET", "/v1/encounters/{encounter}/prescription")), // Prescriptions & orders: X
+        (Role.Receptionist, new("POST", "/v1/encounters/{encounter}/prescription/items", """{"medicine":"Synthetic medicine"}""")),
+        (Role.PracticeAdmin, new("GET", "/v1/encounters/{encounter}/prescription")),
+        (Role.Nurse, new("GET", "/v1/encounters/{encounter}/prescription/checks")), // Prescriptions & orders: X
+        (Role.Receptionist, new("POST", "/v1/encounters/{encounter}/prescription/overrides", """{"key":"synthetic","reason":"Synthetic"}""")),
+        (Role.SoloDoctor, new("GET", "/v1/encounters/{encounter}/prescription/authorisation")),
+        (Role.Nurse, new("GET", "/v1/encounters/{encounter}/prescription/authorisation")), // Prescriptions & orders: X
+        (Role.Receptionist, new("POST", "/v1/encounters/{encounter}/prescription/authorisation")),
+        (Role.PracticeAdmin, new("GET", "/v1/encounters/{encounter}/prescription/print")),
+        (Role.Nurse, new("POST", "/v1/prescription-layout/approval")),
+        (Role.SoloDoctor, new("GET", "/v1/encounters/{encounter}/prescription/shares")),
+        (Role.Nurse, new("GET", "/v1/encounters/{encounter}/prescription/shares")), // Prescriptions & orders: X
+        (Role.Receptionist, new("POST", "/v1/encounters/{encounter}/prescription/shares", """{"recipient":"Patient","channel":"Sms"}""")), // the desk shares once the matrix says so
         (Role.Receptionist, new("POST", "/v1/encounters/{encounter}/orders/place", """{"destination":"Synthetic lab"}""")),
         (Role.PracticeAdmin, new("GET", "/v1/encounters/{encounter}/orders/slip")),
         (Role.Nurse, new("GET", "/v1/formulary")), // Prescriptions & orders: X

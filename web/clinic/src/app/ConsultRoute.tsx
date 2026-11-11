@@ -1,9 +1,17 @@
 import { useParams } from 'react-router';
 import ConsultPage from '../features/encounters/components/ConsultPage';
 import NoteEditor from '../features/encounters/components/NoteEditor';
+import NoteHistory from '../features/encounters/components/NoteHistory';
+import NotePrintPage from '../features/encounters/components/NotePrintPage';
 import NoteTemplateChoice from '../features/encounters/components/NoteTemplateChoice';
 import { useConsultController } from '../features/encounters/hooks/useConsultController';
 import OrdersPanel from '../features/orders/components/OrdersPanel';
+import PrescriptionPanel from '../features/prescription/components/PrescriptionPanel';
+import RxPrintPage from '../features/prescription/components/RxPrintPage';
+import RxSharePanel from '../features/prescription/components/RxSharePanel';
+import { usePrescriptionController } from '../features/prescription/hooks/usePrescriptionController';
+import { useRxPrintController } from '../features/prescription/hooks/useRxPrintController';
+import { useRxShareController } from '../features/prescription/hooks/useRxShareController';
 import LetterPage from '../features/referrals/components/LetterPage';
 import ReferralsPanel from '../features/referrals/components/ReferralsPanel';
 import { useLetterController, useReferralsController } from '../features/referrals/hooks/useReferralsController';
@@ -11,6 +19,7 @@ import SlipPage from '../features/orders/components/SlipPage';
 import { useOrdersController, useSlipController } from '../features/orders/hooks/useOrdersController';
 import { useNoteController } from '../features/encounters/hooks/useNoteController';
 import { useNoteTemplatesController } from '../features/encounters/hooks/useNoteTemplatesController';
+import { useAddendumController, useNotePrintController } from '../features/encounters/hooks/useSignedNoteController';
 
 /** Composition only: one consultation (MDV-P2-001) by its id in the address, with its note (MDV-P2-009); the server checks clinical access on every call. */
 type Props = { boardPath: string; canOrder: boolean; canReconcile: boolean; canSign: boolean; userId: string; userName: string };
@@ -26,12 +35,20 @@ function Consult({ encounterId, boardPath, canOrder, canReconcile, canSign, user
     <div className="flex flex-col gap-4">
       <ConsultPage {...consult} boardPath={boardPath} canReconcile={canReconcile}>
         <NoteEditor {...useNoteController(encounterId, canSign)} userId={userId} userName={userName} timeZone={consult.banner?.timeZone} />
+        <NoteHistory {...useAddendumController(encounterId, canSign)} userId={userId} userName={userName} timeZone={consult.banner?.timeZone} printPath={`/consult/${encounterId}/note/print`} />
         <NoteTemplateChoice {...useNoteTemplatesController()} />
       </ConsultPage>
+      {consult.banner && canOrder && <Prescription encounterId={encounterId} ended={consult.banner.encounter.status === 'Ended'} />}
       {consult.banner && canOrder && <Orders encounterId={encounterId} ended={consult.banner.encounter.status === 'Ended'} />}
       {consult.banner && canOrder && <Referrals patientId={consult.banner.encounter.patientId} encounterId={encounterId} ended={consult.banner.encounter.status === 'Ended'} />}
     </div>
   );
+}
+
+/** The draft prescription (MDV-P2-015) under the consultation, for a role with "Prescriptions and orders" at Sign; the server still decides for this clinician and patient. */
+function Prescription({ encounterId, ended }: { encounterId: string; ended: boolean }) {
+  const rx = usePrescriptionController(encounterId);
+  return rx.hidden ? null : <PrescriptionPanel {...rx} ended={ended} printPath={`/consult/${encounterId}/rx/print`} />;
 }
 
 /** Orders (MDV-P2-018) under the consultation, for a role with "Prescriptions and orders" at Sign; the server still decides for this clinician and patient. */
@@ -56,4 +73,21 @@ export function LetterRoute() {
 export function SlipRoute() {
   const { encounterId = '' } = useParams();
   return <SlipPage {...useSlipController(encounterId)} consultPath={`/consult/${encounterId}`} />;
+}
+
+/** The signed note's print view and PDF (MDV-P2-013), with the patient's identifiers from the consultation. */
+export function NotePrintRoute({ userId, userName }: { userId: string; userName: string }) {
+  const { encounterId = '' } = useParams();
+  const print = useNotePrintController(encounterId);
+  const consult = useConsultController(encounterId);
+  return <NotePrintPage {...print} loading={print.loading || consult.loading} failed={print.failed || consult.failed} banner={consult.banner}
+    consultPath={`/consult/${encounterId}`} userId={userId} userName={userName} />;
+}
+
+/** The printed prescription of one consultation (MDV-P2-017): only once authorised; the server decides for this clinician and patient. */
+export function RxPrintRoute() {
+  const { encounterId = '' } = useParams();
+  const print = useRxPrintController(encounterId);
+  const share = useRxShareController(encounterId);
+  return <RxPrintPage {...print} consultPath={`/consult/${encounterId}`} share={print.print && <RxSharePanel {...share} timeZone={print.print.timeZone} />} />;
 }

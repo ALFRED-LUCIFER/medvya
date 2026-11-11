@@ -294,7 +294,7 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P3-022](P3-ai-scribe/MDV-P3-022.md) | AI vendor DPA, no-training guarantee and regional processing confirmed per country | P3 | wk 13–15 | 75% |
 | [MDV-P3-023](P3-ai-scribe/MDV-P3-023.md) | Legal review of recording consent in each market | P3 | wk 13–14 | 60% |
 
-## Week 15 · 01 Feb 2027 – 05 Feb 2027 · load 15.0 dev-days ⚠ over capacity
+## Week 15 · 01 Feb 2027 – 05 Feb 2027 · load 26.5 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -302,6 +302,13 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P1-071](P1-front-desk/MDV-P1-071.md) | Staff and doctors across locations: a membership covers one or more locations; schedule, board and queue stay per location | P1 | wk 13–15 | 65% |
 | [MDV-P1-072](P1-front-desk/MDV-P1-072.md) | Shared patient record across an organisation's locations: one MRN and one chart, search across locations, location in the access log | P1 | wk 13–15 | 55% |
 | [MDV-P2-028](P2-doctor-workspace/MDV-P2-028.md) | R2 pilot, exit gate review (≥ 20 signed visits per doctor) and release notes | P2 | wk 15–15 | 72% |
+| [MDV-P2-030](P2-doctor-workspace/MDV-P2-030.md) | Import the 12 Nov 2026 design (one-page chart, one-page consultation, Add medicine) and plan the upgrade epic | P2 | wk 15–15 | 95% |
+| [MDV-P2-031](P2-doctor-workspace/MDV-P2-031.md) | More vitals and key labs on the chart, each flagged against its reference range | P2 | wk 15–15 | 85% |
+| [MDV-P2-032](P2-doctor-workspace/MDV-P2-032.md) | Life stage, history sections and the fuller chart banner | P2 | wk 15–15 | 85% |
+| [MDV-P2-033](P2-doctor-workspace/MDV-P2-033.md) | Patient chart on one page (E-01 redesign) with section filters and a life-stage module | P2 | wk 15–16 | 82% |
+| [MDV-P2-039](P2-doctor-workspace/MDV-P2-039.md) | Add medicine panel from the chart and the consultation: strength, how often, when, how long, instructions, line and quantity | P2 | wk 15–15 | 84% |
+| [MDV-P2-040](P2-doctor-workspace/MDV-P2-040.md) | Patient-aware prescribing checks: pregnancy, weight-based child dose, kidney function and older adult | P2 | wk 15–16 | 70% |
+| [MDV-P2-041](P2-doctor-workspace/MDV-P2-041.md) | Consultation on one page (E-04 redesign) with the guided steps kept as an option | P2 | wk 15–16 | 82% |
 | [MDV-P3-004](P3-ai-scribe/MDV-P3-004.md) | Consent revoked mid-visit stops capture and discards later audio (A-09) | P3 | wk 15–15 | 88% |
 | [MDV-P3-005](P3-ai-scribe/MDV-P3-005.md) | Capture on phone (mobile web) or desktop mic with timer, pause, consent indicator and warnings (A-03, X-01) | P3 | wk 14–15 | 80% |
 | [MDV-P3-006](P3-ai-scribe/MDV-P3-006.md) | Encrypted chunked upload with resume; upload progress, failed/partial recovery states (A-06) | P3 | wk 15–15 | 82% |
@@ -310,10 +317,22 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P3-018](P3-ai-scribe/MDV-P3-018.md) | De-identified evaluation set and CI gate before any prompt or model change | P3 | wk 14–19 | 70% |
 | [MDV-P3-022](P3-ai-scribe/MDV-P3-022.md) | AI vendor DPA, no-training guarantee and regional processing confirmed per country | P3 | wk 13–15 | 75% |
 
-## Week 16 · 08 Feb 2027 – 12 Feb 2027 · load 9.7 dev-days ⚠ over capacity
+## Week 16 · 08 Feb 2027 – 12 Feb 2027 · load 35.7 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
+| [MDV-P2-033](P2-doctor-workspace/MDV-P2-033.md) | Patient chart on one page (E-01 redesign) with section filters and a life-stage module | P2 | wk 15–16 | 82% |
+| [MDV-P2-034](P2-doctor-workspace/MDV-P2-034.md) | Pregnancy record: dates, gestation, obstetric history, antenatal contacts and danger signs | P2 | wk 16–16 | 78% |
+| [MDV-P2-035](P2-doctor-workspace/MDV-P2-035.md) | Child growth: measurements and WHO centiles with a growth chart | P2 | wk 16–16 | 72% |
+| [MDV-P2-036](P2-doctor-workspace/MDV-P2-036.md) | Immunisations against the country schedule, and developmental milestones | P2 | wk 16–16 | 70% |
+| [MDV-P2-037](P2-doctor-workspace/MDV-P2-037.md) | Older adult review: falls, walking test, standing blood pressure drop, frailty, memory, daily activities and a medicine review | P2 | wk 16–16 | 76% |
+| [MDV-P2-038](P2-doctor-workspace/MDV-P2-038.md) | Chronic care targets, care gaps due today and care-plan goals | P2 | wk 16–16 | 74% |
+| [MDV-P2-040](P2-doctor-workspace/MDV-P2-040.md) | Patient-aware prescribing checks: pregnancy, weight-based child dose, kidney function and older adult | P2 | wk 15–16 | 70% |
+| [MDV-P2-041](P2-doctor-workspace/MDV-P2-041.md) | Consultation on one page (E-04 redesign) with the guided steps kept as an option | P2 | wk 15–16 | 82% |
+| [MDV-P2-042](P2-doctor-workspace/MDV-P2-042.md) | Structured review of systems and examination, and a template chosen by the patient | P2 | wk 16–16 | 80% |
+| [MDV-P2-043](P2-doctor-workspace/MDV-P2-043.md) | Plan section: medicine actions, tests to order, advice in the patient's language, follow-up and referral | P2 | wk 16–16 | 80% |
+| [MDV-P2-044](P2-doctor-workspace/MDV-P2-044.md) | Review and sign checklist: signing stays locked until every item is reviewed | P2 | wk 16–16 | 84% |
+| [MDV-P2-045](P2-doctor-workspace/MDV-P2-045.md) | J2 journey steps for the one-page chart, Add medicine and the one-page consultation on the real stack | P2 | wk 16–16 | 85% |
 | [MDV-P3-008](P3-ai-scribe/MDV-P3-008.md) | Transcription with diarisation and language identification (in-region Azure AI Speech) | P3 | wk 15–16 | 75% |
 | [MDV-P3-009](P3-ai-scribe/MDV-P3-009.md) | Multi-speaker transcript review with speaker confirmation (A-04) | P3 | wk 16–16 | 86% |
 | [MDV-P3-010](P3-ai-scribe/MDV-P3-010.md) | Overlapping speech and unconfirmed speaker handling (A-10) | P3 | wk 16–16 | 85% |
@@ -542,7 +561,7 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P5-047](P5-commercial-launch/MDV-P5-047.md) | Service requests: Help in the clinic app, support inbox with SLA, internal notes, diagnostics | P5 | wk 28–30 | 65% |
 | [MDV-P5-049](P5-commercial-launch/MDV-P5-049.md) | Data requests and offboarding runs from the console without opening records | P5 | wk 29–31 | 65% |
 
-## Week 30 · 17 May 2027 – 21 May 2027 · load 24.9 dev-days ⚠ over capacity
+## Week 30 · 17 May 2027 – 21 May 2027 · load 28.9 dev-days ⚠ over capacity
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
@@ -568,6 +587,8 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P5-047](P5-commercial-launch/MDV-P5-047.md) | Service requests: Help in the clinic app, support inbox with SLA, internal notes, diagnostics | P5 | wk 28–30 | 65% |
 | [MDV-P5-048](P5-commercial-launch/MDV-P5-048.md) | Platform analytics, practice health score and scheduled reports with small-count hiding | P5 | wk 30–32 | 55% |
 | [MDV-P5-049](P5-commercial-launch/MDV-P5-049.md) | Data requests and offboarding runs from the console without opening records | P5 | wk 29–31 | 65% |
+| [MDV-P5-051](P5-commercial-launch/MDV-P5-051.md) | Patient app trackers: BP and sugar log, a child's growth and vaccines, and a private cycle tracker (PT-09) | P5 | wk 30–30 | 68% |
+| [MDV-P5-052](P5-commercial-launch/MDV-P5-052.md) | Platform console switches for the new chart sections and the patient-app trackers | P5 | wk 30–30 | 80% |
 
 ## Week 31 · 24 May 2027 – 28 May 2027 · load 15.8 dev-days ⚠ over capacity
 

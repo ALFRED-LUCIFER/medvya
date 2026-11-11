@@ -8,6 +8,7 @@ using Medvya.Audit.Domain;
 using Medvya.BuildingBlocks.Infrastructure;
 using Azure.Storage.Blobs;
 using Medvya.Encounters.Application;
+using Medvya.Encounters.Domain;
 using Medvya.Encounters.Infrastructure;
 using Medvya.Prescribing.Application;
 using Medvya.Prescribing.Domain;
@@ -299,6 +300,38 @@ public sealed class RxAuthorisationTests(PostgresFixture sql, AzuriteFixture blo
         var ex = await Assert.ThrowsAsync<PostgresException>(() => new NpgsqlCommand("""UPDATE prescribing."PrescriptionCancellations" SET "Reason" = 'x'""", conn).ExecuteNonQueryAsync());
         Assert.Equal(PostgresErrorCodes.RestrictViolation, ex.SqlState);
         await Assert.ThrowsAsync<PostgresException>(() => new NpgsqlCommand("""DELETE FROM prescribing."PrescriptionCancellations" """, conn).ExecuteNonQueryAsync());
+    }
+
+    /// <summary>MDV-P2-043 AC1: a change and a taper decided in the reconciliation are lines of the prescription, frozen at authorisation and printed in words with the reason.</summary>
+    [Fact]
+    public async Task AChangeAndATaperFromTheReconciliationPrintOnThePrescription()
+    {
+        await using (var db = sql.Encounters(h.Tenant))
+        {
+            foreach (var (name, dose) in new[] { ("Metformin", "500 mg"), ("Prednisolone", "20 mg") })
+                db.MedicationStatements.Add(new MedicationStatement { Id = Guid.NewGuid(), TenantId = h.Tenant, PatientId = h.Patient, FacilityId = h.Facility, Name = name, Dose = dose,
+                    State = MedicationState.Active, Source = ChartSource.ClinicianVerified, RecordedAt = h.Clock.GetUtcNow(), RecordedBy = h.Doctor });
+            await db.SaveChangesAsync();
+        }
+        var rec = h.Get<IMedicationReconciliation>(h.Doctor);
+        await rec.DecideAsync(encounter, new DecideMedicine("metformin", MedicationDecisionKind.Change, "1000 mg", "HbA1c above target (synthetic)"));
+        await rec.DecideAsync(encounter, new DecideMedicine("prednisolone", MedicationDecisionKind.Taper, null, "Flare settled (synthetic)", [new("10 mg", 5), new("5 mg", 5)]));
+
+        var lines = (await h.Get<IPrescriptions>(h.Doctor).ListAsync(encounter))!;
+        Assert.Equal([(RxLineKind.Change, "Metformin"), (RxLineKind.Taper, "Prednisolone")], lines.Select(l => (l.Kind, l.Medicine)));
+        Assert.All(lines, l => Assert.Equal((RxSource.ChartReconciliation, (Guid?)null), (l.Source, l.Id)));
+        Assert.Equal(("Change the dose from 500 mg to 1000 mg.", "غيّر الجرعة من 500 mg إلى 1000 mg."), (lines[0].Sig["en"], lines[0].Sig["ar"]));
+        Assert.Equal("Reduce the dose step by step: 10 mg for 5 days, then 5 mg for 5 days. Last dose on 28 Oct 2026.", lines[1].Sig["en"]);
+
+        using (var ok = await AuthoriseAsync(h.Doctor)) Assert.Equal(HttpStatusCode.OK, ok.StatusCode);
+        var frozen = Assert.Single(await AuthorisedAsync()).Lines;
+        Assert.Equal(["Metformin", "Prednisolone"], frozen.Select(l => l.Medicine));
+        Assert.All(frozen, l => Assert.False(l.Discontinue));
+        using var pdf = await PdfAsync();
+        Assert.Equal(HttpStatusCode.OK, pdf.StatusCode);
+        var text = string.Join(' ', PdfPages.Read(await pdf.Content.ReadAsByteArrayAsync(), PlainPdf.A4.Margin).Select(p => p.Text));
+        foreach (var expected in new[] { "1. Metformin", "Change the dose from 500 mg to 1000 mg.", "Reason: HbA1c above target (synthetic)", "2. Prednisolone", "Last dose on 28 Oct 2026." })
+            Assert.Contains(expected, text, StringComparison.Ordinal);
     }
 
     // SAFETY mutation check: drop page.Header() from PlainPdf.Write and the per-page identifier checks fail.

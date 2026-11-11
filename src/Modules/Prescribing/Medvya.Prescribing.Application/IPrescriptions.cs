@@ -3,9 +3,10 @@ using Medvya.Prescribing.Domain;
 
 namespace Medvya.Prescribing.Application;
 
-/// <summary>Prescribe: a medicine to take. Discontinue: a medicine the doctor stopped in this visit's medication reconciliation.</summary>
+/// <summary>Prescribe: a medicine to take. Discontinue: a medicine the doctor stopped in this visit's medication reconciliation. Change and Taper
+/// (MDV-P2-043): a new dose, or steps down to an end date, decided there; like Discontinue they follow the reconciliation.</summary>
 [JsonConverter(typeof(JsonStringEnumConverter<RxLineKind>))]
-public enum RxLineKind { Prescribe, Discontinue }
+public enum RxLineKind { Prescribe, Discontinue, Change, Taper }
 
 /// <summary>The line's source chip: added in the composer by the caller or by a colleague, or brought in from chart reconciliation.</summary>
 [JsonConverter(typeof(JsonStringEnumConverter<RxSource>))]

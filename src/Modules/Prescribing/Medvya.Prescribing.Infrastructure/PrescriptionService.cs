@@ -422,12 +422,15 @@ public sealed class PrescriptionService(
         var classes = await db.FormularyItems.AsNoTracking().Where(f => ids.Contains(f.Id)).ToDictionaryAsync(f => f.Id, f => f.RegClass, cancellationToken);
         var rules = classes.Count == 0 ? null : FormularyRules.For(await staff.TenantCountryAsync(cancellationToken) ?? throw new InvalidOperationException("No tenant country."));
         var stopped = await stops.StopsAsync(encounterId, cancellationToken);
+        var changed = await stops.ChangesAsync(encounterId, cancellationToken);
         return
         [
             .. items.Select(i => new AuthorisedLine(false, i.Medicine, i.Strength, i.Form, i.FormularyItemId is null,
                 Sig.Languages.ToDictionary(l => l, l => Sig.Render(new SigParts(i.Dose, i.DoseUnit, i.Route, i.Frequency, i.Timing, i.DurationDays, i.Quantity, i.Instructions), l)),
                 i.FormularyItemId is { } f && classes.TryGetValue(f, out var c) ? [.. rules!.PrintRequirements(c)] : [], null)),
             .. stopped.Select(s => new AuthorisedLine(true, s.Name, null, null, false, Sig.Languages.ToDictionary(l => l, Sig.Stop), [], s.Reason)),
+            // A change or taper prints as a numbered line whose instruction says so in words, with the doctor's reason.
+            .. changed.Select(c => new AuthorisedLine(false, c.Name, null, null, false, ChangeSig(c), [], c.Reason)),
         ];
     }
 
@@ -539,8 +542,14 @@ public sealed class PrescriptionService(
             }),
             .. stopped.Select(s => new RxLineView(null, RxLineKind.Discontinue, RxSource.ChartReconciliation, null, s.Name, null, null, false, true,
                 null, null, null, null, null, null, null, null, s.Reason, Sig.Languages.ToDictionary(l => l, Sig.Stop))),
+            .. (await stops.ChangesAsync(encounterId, cancellationToken)).Select(c => new RxLineView(null, c.Kind == MedicationDecisionKind.Taper ? RxLineKind.Taper : RxLineKind.Change,
+                RxSource.ChartReconciliation, null, c.Name, null, null, false, true, null, null, null, null, null, null, null, null, c.Reason, ChangeSig(c))),
         ];
     }
+
+    static Dictionary<string, string> ChangeSig(ChangedMedicine c) => Sig.Languages.ToDictionary(l => l, l => c.Kind == MedicationDecisionKind.Taper
+        ? Sig.Taper(l, c.Steps!.Select(s => (s.Dose, s.Days)), c.EndsOn!.Value)
+        : Sig.Change(l, c.FromDose, c.NewDose!));
 
     static string? Blank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 

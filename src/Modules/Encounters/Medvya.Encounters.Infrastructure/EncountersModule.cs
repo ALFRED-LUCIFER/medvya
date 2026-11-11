@@ -24,6 +24,7 @@ public static class EncountersModule
             .AddScoped<IEncounterDirectory, EncounterDirectory>()
             .AddScoped<IDocumentDirectory, DocumentDirectory>()
             .AddScoped<IPatientChart, PatientChartService>()
+            .AddScoped<IPatientHistory, PatientHistoryService>()
             .AddScoped<IPatientTimeline, PatientTimelineService>()
             .AddScoped<IDocuments, DocumentService>()
             .AddScoped<IIntake, IntakeService>()

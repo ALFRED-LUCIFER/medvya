@@ -72,7 +72,7 @@ public static class IntakeEndpoints
         if (await service.GetAsync(appointmentId, ct) is not { } view) return Results.NotFound();
         if ((await patients.SummariesAsync([view.PatientId], ct)).GetValueOrDefault(view.PatientId) is not { } p) return Results.NotFound();
         var today = CountryRules.For(await staff.TenantCountryAsync(ct) ?? throw new InvalidOperationException("No tenant country.")).Today(clock.GetUtcNow());
-        return Results.Ok(new IntakeScreen(view, new BannerPatient(p.Id, p.FullName, p.Mrn, p.DateOfBirth, CountryRules.AgeOn(today, p.DateOfBirth), p.SexAtBirth),
+        return Results.Ok(new IntakeScreen(view, EncounterEndpoints.BannerOf(p, today),
             (await facilities.FindAsync(view.FacilityId, ct) ?? throw new InvalidOperationException("Visit facility not in this tenant.")).TimeZone));
     }
 

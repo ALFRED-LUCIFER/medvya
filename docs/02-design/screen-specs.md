@@ -223,6 +223,7 @@ A "Clinic approval" demo switch (Approved, Waiting, Suspended). Waiting: after s
 - Verified chart is kept separate from the AI summary (the AI part is P3).
 - Timeline filters: All, Encounters, Labs, Medicines, Documents. Each entry has a **provenance tag**: Medvya · signed, Clinician verified, Lab feed · HL7, Synced from HIS, Uploaded by patient. "Load earlier…".
 - Trends: HbA1c / BP / weight.
+- Life stage, banner details and history (MDV-P2-032): under the banner, the life stage as a label with an icon and words (Child under 18, Pregnancy while a pregnancy is open (MDV-P2-034), Older adult from 65, else Adult), then blood group, preferred language and care team only when recorded, and the treatment consent. A History card lists the sections the life stage offers (birth and feeding for a child, function and falls for an older adult, obstetric in pregnancy, women's health for a woman) plus any section already written, each with its author and date and its earlier versions; a doctor or nurse edits a section or the blood group and every save adds a version.
 - Last vitals and Results (MDV-P2-031): the latest reading of each code, flagged in words with an arrow (High or Low, with the usual adult range) and a line saying the ranges await clinical review. BMI is worked out from the latest weight and height and names the older of the two with its date. The full results table and trend lines per code are the one-page chart (MDV-P2-033).
 
 ### E-03 Documents

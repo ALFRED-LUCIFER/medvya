@@ -26,11 +26,16 @@ public sealed record TrendPoint(decimal Value, DateTimeOffset TakenAt, ChartSour
 public sealed record TrendView(ObservationCode Code, string Unit, IReadOnlyList<TrendPoint> Points);
 public sealed record RecentEncounter(Guid Id, DateTimeOffset StartedAt, EncounterStatus Status);
 
-/// <summary>The verified chart of one patient (MDV-P2-004). Every fact carries its source; the AI summary is not part of it (P3).</summary>
+/// <summary>
+/// The verified chart of one patient (MDV-P2-004). Every fact carries its source; the AI summary is not part of it (P3). History is every saved
+/// version, newest first; <see cref="BloodGroup"/> is the current blood group, null when never recorded; <see cref="CareTeam"/> is the
+/// clinicians who led the patient's consultations, most recent first (MDV-P2-032).
+/// </summary>
 public sealed record PatientChart(
     AllergyState AllergyState, IReadOnlyList<AllergyView> Allergies, IReadOnlyList<ProblemView> Problems, IReadOnlyList<MedicineView> Medicines,
     IReadOnlyList<VitalView> LastVitals, IReadOnlyList<TrendView> Trends, IReadOnlyList<RecentEncounter> RecentEncounters, Guid? OpenEncounterId,
-    IReadOnlyList<VitalView> LastLabs, BmiView? Bmi);
+    IReadOnlyList<VitalView> LastLabs, BmiView? Bmi,
+    IReadOnlyList<HistoryEntryView> History, string? BloodGroup, IReadOnlyList<string> CareTeam);
 
 /// <summary>
 /// Patient 360's chart (MDV-P2-004). Needs clinical access to the patient at the given facility (role, care relationship, MDV-P2-024;

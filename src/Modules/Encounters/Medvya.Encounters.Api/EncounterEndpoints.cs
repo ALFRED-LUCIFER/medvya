@@ -17,8 +17,8 @@ using Microsoft.AspNetCore.Routing;
 
 namespace Medvya.Encounters.Api;
 
-/// <summary>Who the encounter is for, as the identity banner shows it on every clinical screen (MDV-P2-001).</summary>
-public sealed record BannerPatient(Guid Id, string FullName, string Mrn, DateOnly DateOfBirth, int AgeYears, SexAtBirth SexAtBirth);
+/// <summary>Who the encounter is for, as the identity banner shows it on every clinical screen (MDV-P2-001). The language only as recorded (MDV-P2-032).</summary>
+public sealed record BannerPatient(Guid Id, string FullName, string Mrn, DateOnly DateOfBirth, int AgeYears, SexAtBirth SexAtBirth, string? PreferredLanguage);
 
 /// <summary>
 /// The encounter with its patient's identity and treatment consent. Allergies are not here yet: they are recorded from MDV-P2-005, and until
@@ -28,8 +28,11 @@ public sealed record EncounterBanner(EncounterView Encounter, BannerPatient Pati
 
 public sealed record AllergyFlagsRequest(IReadOnlyList<Guid>? PatientIds);
 
-/// <summary>Patient 360 (MDV-P2-004): the banner identity and the verified chart, each fact with its source.</summary>
-public sealed record Patient360(BannerPatient Patient, bool TreatmentConsent, string TimeZone, PatientChart Chart);
+/// <summary>
+/// Patient 360 (MDV-P2-004): the banner identity and the verified chart, each fact with its source. The life stage and the history sections
+/// it offers (MDV-P2-032) are worked out from the date of birth on the facility's date.
+/// </summary>
+public sealed record Patient360(BannerPatient Patient, bool TreatmentConsent, string TimeZone, PatientChart Chart, LifeStage LifeStage, IReadOnlyList<HistorySection> HistorySections);
 
 /// <summary>A timeline entry as the screen shows it: the author's name, never an id the screen would look up.</summary>
 public sealed record TimelineEntryView(Guid Id, TimelineKind Kind, DateTimeOffset At, string Code, string? Title, string? Detail, string? Author, ChartSource Source);
@@ -67,6 +70,11 @@ public static class EncounterEndpoints
         app.MapGet("/v1/patients/{patientId:guid}/chart", Chart)
             .RequireCapability(Capability.Patient360Chart, Access.Read, Access.Limited, Access.Full, Access.Sign)
             .AuditedByUseCase("patient.chart.read", "patient", AuditPurpose.Treatment, patientRouteKey: "patientId")
+            .AddEndpointFilter(MapErrors);
+        // History sections (MDV-P2-032): a doctor or a nurse (vitals and allergies entry at Full); the text is in the body, never the URL.
+        app.MapPut("/v1/patients/{patientId:guid}/history/{section}", SaveHistory)
+            .RequireCapability(Capability.VitalsAllergiesEntry, Access.Full)
+            .AuditedByUseCase("patient.history.save", "patient", AuditPurpose.Treatment, patientRouteKey: "patientId")
             .AddEndpointFilter(MapErrors);
 
         // Today's allergy flag per visit (MDV-P2-002 follow-up): only for patients the caller has a care relationship with.
@@ -145,9 +153,23 @@ public static class EncounterEndpoints
         if ((await patients.SummariesAsync([patientId], ct)).GetValueOrDefault(patientId) is not { } p) return Results.NotFound();
         var facts = await chart.GetAsync(patientId, facilityId, ct);
         var today = CountryRules.For(await staff.TenantCountryAsync(ct) ?? throw new InvalidOperationException("No tenant country.")).Today(clock.GetUtcNow());
-        return Results.Ok(new Patient360(new BannerPatient(p.Id, p.FullName, p.Mrn, p.DateOfBirth, CountryRules.AgeOn(today, p.DateOfBirth), p.SexAtBirth),
-            await consents.IsGrantedAsync(p.Id, ConsentType.Treatment, cancellationToken: ct),
-            (await facilities.FindAsync(facilityId, ct) ?? throw new InvalidOperationException("Session facility not in this tenant.")).TimeZone, facts));
+        var stage = LifeStages.Of(p.DateOfBirth, today, openPregnancy: false); // shortcut: no pregnancy record until MDV-P2-034, which passes the open one here
+        return Results.Ok(new Patient360(BannerOf(p, today), await consents.IsGrantedAsync(p.Id, ConsentType.Treatment, cancellationToken: ct),
+            (await facilities.FindAsync(facilityId, ct) ?? throw new InvalidOperationException("Session facility not in this tenant.")).TimeZone, facts,
+            stage, HistoryRules.Sections(stage, female: p.SexAtBirth == SexAtBirth.Female)));
+    }
+
+    internal static BannerPatient BannerOf(PatientSummary p, DateOnly today) =>
+        new(p.Id, p.FullName, p.Mrn, p.DateOfBirth, CountryRules.AgeOn(today, p.DateOfBirth), p.SexAtBirth, p.PreferredLanguage);
+
+    // The section is a name, parsed here so an unknown one is a refusal the audit filter records (route binding would answer before it).
+    static async Task<IResult> SaveHistory(Guid patientId, string section, [FromBody] SaveHistory? body, [FromServices] IPatientHistory history,
+        [FromServices] IPatientDirectory patients, [FromServices] ICurrentFacility current, CancellationToken ct)
+    {
+        if (current.FacilityId is not { } facilityId) return Results.Problem(statusCode: StatusCodes.Status403Forbidden, title: "No facility context");
+        if (!Enum.GetNames<HistorySection>().Contains(section)) return Results.ValidationProblem(new Dictionary<string, string[]> { ["section"] = ["invalid"] });
+        if (!(await patients.SummariesAsync([patientId], ct)).ContainsKey(patientId)) return Results.NotFound();
+        return Results.Ok(new { items = await history.SaveAsync(patientId, facilityId, Enum.Parse<HistorySection>(section), body ?? new SaveHistory(null), ct) });
     }
 
     static async Task<IResult> Banner(Guid encounterId, [FromServices] IEncounters service, [FromServices] IPatientDirectory patients, [FromServices] IPatientConsents consents,
@@ -156,7 +178,7 @@ public static class EncounterEndpoints
         if (await service.GetAsync(encounterId, ct) is not { } encounter) return Results.NotFound();
         if ((await patients.SummariesAsync([encounter.PatientId], ct)).GetValueOrDefault(encounter.PatientId) is not { } p) return Results.NotFound();
         var today = CountryRules.For(await staff.TenantCountryAsync(ct) ?? throw new InvalidOperationException("No tenant country.")).Today(clock.GetUtcNow());
-        return Results.Ok(new EncounterBanner(encounter, new BannerPatient(p.Id, p.FullName, p.Mrn, p.DateOfBirth, CountryRules.AgeOn(today, p.DateOfBirth), p.SexAtBirth),
+        return Results.Ok(new EncounterBanner(encounter, BannerOf(p, today),
             await consents.IsGrantedAsync(p.Id, ConsentType.Treatment, cancellationToken: ct),
             (await facilities.FindAsync(encounter.FacilityId, ct) ?? throw new InvalidOperationException("Encounter facility not in this tenant.")).TimeZone,
             await service.AllergiesAsync(encounterId, ct) ?? throw new InvalidOperationException("Encounter vanished.")));
@@ -180,6 +202,10 @@ public static class EncounterEndpoints
         catch (ClinicalAccessDeniedException e)
         {
             return ClinicalAccessProblem.For(e);
+        }
+        catch (HistoryValidationException e)
+        {
+            return Results.ValidationProblem(e.Errors.GroupBy(x => x.Field).ToDictionary(g => g.Key, g => g.Select(x => x.Code).ToArray()));
         }
         catch (OpenEncounterException e)
         {

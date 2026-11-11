@@ -2,10 +2,10 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { ltr, useI18n } from '@medvya/i18n';
 import { buttonVariants, IdentityBanner, ProvenanceTag } from '@medvya/ui';
-import { ArrowDown, ArrowUp, CircleAlert, CircleCheck, CircleHelp } from 'lucide-react';
+import { Armchair, ArrowDown, ArrowUp, Baby, CircleAlert, CircleCheck, CircleHelp, Droplet, HeartPulse, Languages, User, Users } from 'lucide-react';
 import RequestAccess from '../../clinical-access/components/RequestAccess';
 import type { AccessReason } from '../../clinical-access/domain/clinicalAccess';
-import type { Bmi, ClinicalRefusal, Patient360, TrendLine, Vital } from '../domain/chart';
+import type { Bmi, ClinicalRefusal, LifeStage, Patient360, TrendLine, Vital } from '../domain/chart';
 import { bannerAllergies, pathOf, provenanceOf, sparkBox, trendLines } from '../domain/chart';
 
 type Props = {
@@ -15,6 +15,8 @@ type Props = {
 };
 
 const sex = { Female: 'F', Male: 'M', Other: 'X' } as const;
+/** The life stage is said in words beside an icon, never by colour alone. */
+const stageIcon = { Adult: User, Child: Baby, Pregnancy: HeartPulse, OlderAdult: Armchair } as const satisfies Record<LifeStage, unknown>;
 
 /**
  * Patient 360 (MDV-P2-004, E-01): the identity banner with the allergy state, then the verified chart. Every fact carries its source tag.
@@ -31,12 +33,20 @@ export default function Patient360Page(p: Props) {
     );
   }
   if (p.notFound || p.failed || !p.data) return <Message title={t(p.notFound ? 'patient360.notFound' : 'patient360.loadFailed')} backPath={p.backPath} />;
-  const { chart, treatmentConsent, timeZone } = p.data;
+  const { chart, treatmentConsent, timeZone, lifeStage, patient } = p.data;
   const trends = trendLines(chart.trends);
+  const Stage = stageIcon[lifeStage];
   return (
     <div className="flex flex-col gap-4">
       <h1 className="sr-only">{t('patient360.title')}</h1>
       <PatientBanner data={p.data} />
+      {/* Banner details (MDV-P2-032): blood group, language and care team only when recorded; nothing is guessed. */}
+      <ul aria-label={t('patient360.bannerDetails')} className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
+        <li className="inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 font-bold"><Stage aria-hidden className="size-4" />{t(`patient360.lifeStage.${lifeStage}`)}</li>
+        {chart.bloodGroup && <li className="inline-flex items-center gap-1.5"><Droplet aria-hidden className="size-4" />{t('patient360.bloodGroup', { value: ltr(chart.bloodGroup) })}</li>}
+        {patient.preferredLanguage && <li className="inline-flex items-center gap-1.5"><Languages aria-hidden className="size-4" />{t('patient360.language', { value: patient.preferredLanguage })}</li>}
+        {chart.careTeam.length > 0 && <li className="inline-flex items-center gap-1.5"><Users aria-hidden className="size-4" />{t('patient360.careTeam', { names: chart.careTeam.join(', ') })}</li>}
+      </ul>
       <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
         <span className="inline-flex items-center gap-1.5">
           {treatmentConsent ? <><CircleCheck aria-hidden className="size-4" />{t('consult.banner.consentGiven')}</> : <><CircleAlert aria-hidden className="size-4" />{t('consult.banner.consentNotRecorded')}</>}

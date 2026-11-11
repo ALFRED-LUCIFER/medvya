@@ -36,7 +36,7 @@ public sealed class PrescribingOptions
 public sealed class PrescriptionService(
     PrescribingDbContext db, IEncounterDirectory encounters, IReconciliationStops stops, IPrescribingChart chart, IClinicalAccess clinical, IStaffAccess staff,
     ICurrentTenant tenant, ICurrentUser user, IAuditLog audit, TimeProvider clock, IPatientDirectory patients, IFacilityDirectory facilities,
-    IOptions<PrescribingOptions> options, IPatientContacts contacts, ISecureLinkMessages links) : IPrescriptions
+    IOptions<PrescribingOptions> options, IPatientContacts contacts, ISecureLinkMessages links, IDocumentStore files) : IPrescriptions
 {
     public const string ReadAction = "rx.read", AddAction = "rx.add", UpdateAction = "rx.update", IncludeAction = "rx.include",
         CheckAction = "rx.check", OverrideAction = "rx.override", AuthorisationAction = "rx.authorisation", AuthoriseAction = "rx.authorise", CancelAction = "rx.cancel",
@@ -229,19 +229,27 @@ public sealed class PrescriptionService(
         var size = paper switch { null or "A4" => PlainPdf.A4, "A5" => PlainPdf.A5, _ => throw new PrescriptionValidationException([("paper", "unknown")]) };
         if (await RequireAsync(encounterId, cancellationToken) is not { } encounter) return null;
         var rx = await PrintableAsync(encounter, cancellationToken);
-        var pdf = await RenderAsync(encounter, rx, size, cancellationToken);
+        var (pdf, content) = await RenderAsync(encounter, rx, size, cancellationToken);
         await SaveAsync(encounter, PdfAction, rx.Id, $"version:{rx.VersionNo};paper:{size.Name}", () => db.PrescriptionPdfs.Add(pdf), cancellationToken);
-        return new RxPdf(pdf.Content, pdf.Sha256);
+        return new RxPdf(content, pdf.Sha256);
     }
 
-    async Task<PrescriptionPdf> RenderAsync(EncounterView encounter, AuthorisedPrescription rx, PlainPdf.Paper size, CancellationToken cancellationToken)
+    /// <summary>
+    /// Renders the paper with the clinic logo and the authorising doctor's signature, and writes it once to Blob under a random key, before its row:
+    /// a failed save leaves only an unreachable blob, never a row without its copy.
+    /// </summary>
+    async Task<(PrescriptionPdf Row, byte[] Content)> RenderAsync(EncounterView encounter, AuthorisedPrescription rx, PlainPdf.Paper size, CancellationToken cancellationToken)
     {
-        var content = RxPdfDocument.Render(await PrintViewAsync(encounter, rx, cancellationToken), size);
-        return new PrescriptionPdf
+        var images = await facilities.PrintImagesAsync(rx.AuthorisedBy, rx.FacilityId, cancellationToken);
+        var content = RxPdfDocument.Render(await PrintViewAsync(encounter, rx, cancellationToken), size, images);
+        var id = Guid.CreateVersion7();
+        var key = $"{TenantId}/rx/{id}"; // ids only, no names in blob paths
+        await using (var stream = new MemoryStream(content, writable: false)) await files.PutAsync(key, stream, "application/pdf", cancellationToken);
+        return (new PrescriptionPdf
         {
-            Id = Guid.CreateVersion7(), TenantId = TenantId, PrescriptionId = rx.Id, Paper = size.Name, Content = content,
+            Id = id, TenantId = TenantId, PrescriptionId = rx.Id, Paper = size.Name, BlobKey = key,
             Sha256 = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(content)), RenderedBy = Me, RenderedAt = clock.GetUtcNow(),
-        };
+        }, content);
     }
 
     public async Task<IReadOnlyList<RxShareView>?> SharesAsync(Guid encounterId, CancellationToken cancellationToken = default)
@@ -273,7 +281,7 @@ public sealed class PrescriptionService(
         var rx = await PrintableAsync(encounter, cancellationToken);
         // The code that opens the link always goes to the patient's registered mobile, whoever the link is for.
         if (string.IsNullOrWhiteSpace((await contacts.FindAsync(encounter.PatientId, cancellationToken))?.Mobile)) throw new PrescriptionConflictException("no_mobile");
-        var pdf = await RenderAsync(encounter, rx, PlainPdf.A4, cancellationToken);
+        var (pdf, _) = await RenderAsync(encounter, rx, PlainPdf.A4, cancellationToken);
         var (token, hash) = InvitationToken.New(TenantId);
         var now = clock.GetUtcNow();
         var share = new RxShare

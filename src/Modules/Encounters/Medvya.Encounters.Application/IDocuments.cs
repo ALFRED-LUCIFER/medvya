@@ -64,6 +64,9 @@ public interface IDocumentStore
     /// <exception cref="InvalidOperationException">The key already exists.</exception>
     Task PutAsync(string key, Stream content, string contentType, CancellationToken cancellationToken = default);
 
+    /// <summary>The stored bytes, for a server-made document the API streams itself (the printed prescription behind a share link).</summary>
+    Task<byte[]> ReadAsync(string key, CancellationToken cancellationToken = default);
+
     /// <summary>A read-only link that expires after <paramref name="lifetime"/>; <paramref name="viewer"/> is recorded in the storage logs where the platform allows it.</summary>
     Task<Uri> ViewLinkAsync(string key, string contentType, Guid viewer, TimeSpan lifetime, CancellationToken cancellationToken = default);
 

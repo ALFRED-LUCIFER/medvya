@@ -6,11 +6,15 @@ using System.Text;
 using System.Text.Json;
 using Medvya.Audit.Domain;
 using Medvya.BuildingBlocks.Infrastructure;
+using Azure.Storage.Blobs;
 using Medvya.Encounters.Application;
+using Medvya.Encounters.Infrastructure;
 using Medvya.Prescribing.Application;
 using Medvya.Prescribing.Domain;
+using Medvya.Prescribing.Infrastructure;
 using Medvya.Scheduling.Application;
 using Medvya.Tenancy.Domain;
+using Medvya.Tenancy.Infrastructure;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -26,7 +30,7 @@ namespace Medvya.IntegrationTests;
 /// prescription prints; the PDF renders server-side on A4 and A5 and is stored with its hash; the QR verify check is public and shows validity only;
 /// each doctor's layout approval is recorded. SAFETY mutation checks are named on the tests. Synthetic data only.
 /// </summary>
-public sealed class RxAuthorisationTests(PostgresFixture sql) : IClassFixture<PostgresFixture>, IAsyncLifetime
+public sealed class RxAuthorisationTests(PostgresFixture sql, AzuriteFixture blobs) : IClassFixture<PostgresFixture>, IClassFixture<AzuriteFixture>, IAsyncLifetime
 {
     readonly SchedulingHarness h = new(sql);
     WebApplicationFactory<Program> factory = null!;
@@ -48,6 +52,7 @@ public sealed class RxAuthorisationTests(PostgresFixture sql) : IClassFixture<Po
             .UseSetting("ConnectionStrings:Medvya", sql.ConnectionString)
             .UseSetting("Invitations:LinkBaseUrl", "https://clinic.test/app")
             .UseSetting("RateLimiting:SignInPerMinute", "1000")
+            .UseSetting("Storage:ConnectionString", blobs.ConnectionString) // the stored copies, the logo and the signature: a real Azurite
             .ConfigureTestServices(s =>
             {
                 PatientEndpointTests.SignInFromHeaders(s, h.Tenant);
@@ -333,10 +338,53 @@ public sealed class RxAuthorisationTests(PostgresFixture sql) : IClassFixture<Po
             Assert.True(pages[^1].Shapes > 200, "the QR code is drawn"); // a version 5+ code has hundreds of dark modules
         }
         await using (var db = sql.Prescribing(h.Tenant))
-            Assert.Equal(hashes.Order(), (await db.PrescriptionPdfs.AsNoTracking().ToListAsync()).Select(p => p.Sha256).Order());
+        {
+            var rows = await db.PrescriptionPdfs.AsNoTracking().ToListAsync();
+            Assert.Equal(hashes.Order(), rows.Select(p => p.Sha256).Order());
+            foreach (var row in rows) // the copy is in Blob, byte for byte, under an id-only key; not in the database
+                Assert.Equal((null, $"{h.Tenant}/rx/{row.Id}", row.Sha256), (row.Content, row.BlobKey, Convert.ToHexStringLower(SHA256.HashData(await StoredAsync(row.BlobKey!)))));
+        }
         Assert.Null(await BrokenChainAsync("PrescriptionPdfs"));
         Assert.Equal(["version:1;paper:A4", "version:1;paper:A5"], (await AuditAsync("rx.pdf")).Select(e => e.Detail));
         using (var unknown = await PdfAsync("A3")) Assert.Equal(HttpStatusCode.BadRequest, unknown.StatusCode);
+    }
+
+    async Task<byte[]> StoredAsync(string key) =>
+        (await new BlobContainerClient(blobs.ConnectionString, BlobDocumentStore.Live).GetBlobClient(key).DownloadContentAsync()).Value.Content.ToArray();
+
+    [Fact]
+    public async Task ThePdfCarriesTheClinicLogoOnEveryPageAndTheDoctorsSignatureOnlyWhenUploaded()
+    {
+        foreach (var i in Enumerable.Range(1, 12)) await PrescribeAsync("Cetirizine", Twice with { Instructions = $"Synthetic note {i}" }); // more than one A5 page
+        foreach (var alert in (await h.Get<IPrescriptions>(h.Doctor).CheckAsync(encounter))!.Alerts.Where(a => a.Severity == RxSeverity.Severe))
+            await h.Get<IPrescriptions>(h.Doctor).OverrideAsync(encounter, new OverrideRxAlert(alert.Key, "Synthetic reason"));
+        using (var ok = await AuthoriseAsync(h.Doctor)) Assert.Equal(HttpStatusCode.OK, ok.StatusCode);
+        async Task<IReadOnlyList<PdfPages.Page>> PagesAsync()
+        {
+            using var r = await PdfAsync("A5");
+            Assert.Equal(HttpStatusCode.OK, r.StatusCode);
+            return PdfPages.Read(await r.Content.ReadAsByteArrayAsync(), PlainPdf.A5.Margin);
+        }
+        Assert.All(await PagesAsync(), p => Assert.Equal(0, p.Images)); // nothing uploaded: no images, and the paper still prints
+
+        // What the settings screens store (Tenancy re-encodes both to PNG): the keys on the profiles, the bytes in the private container.
+        var logos = new BlobLogoStore(blobs.ConnectionString);
+        var (logo, signature) = ($"{h.Tenant}/logo/{Guid.NewGuid()}", $"{h.Tenant}/signature/{Guid.NewGuid()}");
+        await logos.PutAsync(logo, TestImages.Png, "image/png");
+        await logos.PutAsync(signature, TestImages.Make(8, 2, SkiaSharp.SKEncodedImageFormat.Png), "image/png");
+        await using (var db = sql.Context(h.Tenant))
+        {
+            db.Profiles.Add(new PracticeProfile { Id = Guid.NewGuid(), TenantId = h.Tenant, LogoKey = logo, ChangedAt = h.Clock.GetUtcNow() });
+            var membership = await db.Memberships.SingleAsync(m => m.UserId == h.Doctor);
+            (await db.DoctorProfiles.SingleAsync(p => p.MembershipId == membership.Id)).SignatureKey = signature;
+            await db.SaveChangesAsync();
+        }
+        var pages = await PagesAsync();
+        Assert.True(pages.Count >= 2, $"{pages.Count} page(s)");
+        // The logo heads every page; the signature sits once, under the authorisation line.
+        Assert.All(pages, p => Assert.Equal(p.Text.Contains("Authorised by", StringComparison.Ordinal) ? 2 : 1, p.Images));
+        Assert.Single(pages, p => p.Text.Contains("Authorised by", StringComparison.Ordinal));
+        Assert.All(pages, p => Assert.True(p.InsideMargins));
     }
 
     // SAFETY mutation check: drop the glyph catch in PlainPdf.Write and the emoji gives 500, not 422.
@@ -408,7 +456,7 @@ public sealed class RxAuthorisationTests(PostgresFixture sql) : IClassFixture<Po
         using (var nurse = await Client(h.Nurse).PostAsync(U("/v1/prescription-layout/approval"), null)) Assert.Equal(HttpStatusCode.Forbidden, nurse.StatusCode);
 
         var row = Assert.Single(await AuditAsync("rx.layout.approve"));
-        Assert.Equal(((Guid?)h.Doctor, "layout:1", (Guid?)null), (row.ActorUserId, row.Detail, row.PatientId));
+        Assert.Equal(((Guid?)h.Doctor, $"layout:{RxPdfDocument.LayoutVersion}", (Guid?)null), (row.ActorUserId, row.Detail, row.PatientId));
         Assert.Null(await BrokenChainAsync("RxLayoutApprovals"));
     }
 }

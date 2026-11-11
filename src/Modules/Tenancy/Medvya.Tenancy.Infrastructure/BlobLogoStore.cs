@@ -36,6 +36,9 @@ public sealed class BlobLogoStore : ILogoStore
     public Task DeleteAsync(string key, CancellationToken cancellationToken = default) =>
         container.GetBlobClient(key).DeleteIfExistsAsync(cancellationToken: cancellationToken);
 
+    public async Task<byte[]> ReadAsync(string key, CancellationToken cancellationToken = default) =>
+        (await container.GetBlobClient(key).DownloadContentAsync(cancellationToken)).Value.Content.ToArray();
+
     public async Task<Uri> LinkForAsync(string key, TimeSpan lifetime, CancellationToken cancellationToken = default)
     {
         var blob = container.GetBlobClient(key);
@@ -53,6 +56,7 @@ public sealed class NoLogoStore : ILogoStore
 {
     public Task PutAsync(string key, byte[] content, string contentType, CancellationToken cancellationToken = default) => throw Unavailable();
     public Task DeleteAsync(string key, CancellationToken cancellationToken = default) => throw Unavailable();
+    public Task<byte[]> ReadAsync(string key, CancellationToken cancellationToken = default) => throw Unavailable();
     public Task<Uri> LinkForAsync(string key, TimeSpan lifetime, CancellationToken cancellationToken = default) => throw Unavailable();
     static InvalidOperationException Unavailable() => new("Blob storage is not configured (Storage:BlobEndpoint or Storage:ConnectionString).");
 }

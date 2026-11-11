@@ -71,7 +71,7 @@ public sealed class OrganisationStateTests(PostgresFixture sql) : IClassFixture<
     async Task<Access> AccessAsync(Role role, Capability capability)
     {
         await using var db = sql.Context(h.Tenant);
-        return await new StaffAccess(db, new FacilityDirectory(db), new Who(h.ByRole[role]), new At(h.Facility)).AccessAsync(capability);
+        return await new StaffAccess(db, new FacilityDirectory(db, new NoLogoStore()), new Who(h.ByRole[role]), new At(h.Facility)).AccessAsync(capability);
     }
 
     [Theory]
@@ -114,7 +114,7 @@ public sealed class OrganisationStateTests(PostgresFixture sql) : IClassFixture<
     {
         await SetStateAsync(OrganisationState.Draft);
         await using var other = sql.Context(Guid.NewGuid());
-        Assert.Equal(OrganisationState.Draft, await new StaffAccess(other, new FacilityDirectory(other), new Who(h.Admin), new At(h.Facility)).OrganisationStateAsync()); // no readable tenant row fails closed
+        Assert.Equal(OrganisationState.Draft, await new StaffAccess(other, new FacilityDirectory(other, new NoLogoStore()), new Who(h.Admin), new At(h.Facility)).OrganisationStateAsync()); // no readable tenant row fails closed
     }
 
     [Fact]

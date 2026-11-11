@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using Medvya.Audit.Application;
 using Medvya.Audit.Domain;
 using Medvya.BuildingBlocks.Domain;
@@ -16,8 +17,8 @@ namespace Medvya.Prescribing.Infrastructure;
 /// prescription version is still the latest, and only with the latest one-time code sent to the patient's registered mobile: five wrong tries end a
 /// code, five codes end a link. Every answer for a known link is audited with the patient and no actor (rx.share.code, rx.share.open).
 /// </summary>
-public sealed class RxShareLinks(PrescribingDbContext db, IEncounterDirectory encounters, ISecureLinkMessages messages, ICurrentTenant tenant, IAuditLog audit, TimeProvider clock)
-    : IRxShareLinks
+public sealed class RxShareLinks(PrescribingDbContext db, IEncounterDirectory encounters, ISecureLinkMessages messages, ICurrentTenant tenant, IAuditLog audit, TimeProvider clock,
+    IDocumentStore files) : IRxShareLinks
 {
     public const string CodeAction = "rx.share.code", OpenAction = "rx.share.open";
 
@@ -68,8 +69,11 @@ public sealed class RxShareLinks(PrescribingDbContext db, IEncounterDirectory en
             await RefuseAsync(share, patient, OpenAction, "no_code", cancellationToken);
 
         var pdf = await db.PrescriptionPdfs.AsNoTracking().SingleAsync(p => p.Id == share.PdfId, cancellationToken);
+        var content = pdf.Content ?? await files.ReadAsync(pdf.BlobKey!, cancellationToken);
+        // The hash is in the hash-chained row: a changed or swapped blob is refused, never handed out.
+        if (Convert.ToHexStringLower(SHA256.HashData(content)) != pdf.Sha256) throw new InvalidOperationException("The stored prescription copy does not match its hash.");
         await audit.WriteAsync(Event(OpenAction, share, patient, AuditOutcome.Allowed, $"recipient:{share.Recipient}"), cancellationToken);
-        return new RxPdf(pdf.Content, pdf.Sha256);
+        return new RxPdf(content, pdf.Sha256);
     }
 
     Task<RxShare?> LiveAsync(byte[] linkHash, CancellationToken ct)

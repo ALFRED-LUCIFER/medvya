@@ -413,8 +413,11 @@ namespace Medvya.Prescribing.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("BlobKey")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
                     b.Property<byte[]>("Content")
-                        .IsRequired()
                         .HasColumnType("bytea");
 
                     b.Property<string>("Paper")
@@ -443,7 +446,10 @@ namespace Medvya.Prescribing.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("TenantId", "PrescriptionId");
 
-                    b.ToTable("PrescriptionPdfs", "prescribing");
+                    b.ToTable("PrescriptionPdfs", "prescribing", t =>
+                        {
+                            t.HasCheckConstraint("CK_PrescriptionPdfs_OneCopy", "(\"Content\" IS NULL) <> (\"BlobKey\" IS NULL)");
+                        });
                 });
 
             modelBuilder.Entity("Medvya.Prescribing.Domain.Referral", b =>

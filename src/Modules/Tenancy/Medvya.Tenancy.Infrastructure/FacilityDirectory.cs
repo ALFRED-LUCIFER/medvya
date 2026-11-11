@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Medvya.Tenancy.Infrastructure;
 
-public sealed class FacilityDirectory(TenancyDbContext db) : IFacilityDirectory
+public sealed class FacilityDirectory(TenancyDbContext db, ILogoStore store) : IFacilityDirectory
 {
     static readonly Role[] Doctors = [Role.SoloDoctor, Role.HospitalDoctor];
 
@@ -25,6 +25,16 @@ public sealed class FacilityDirectory(TenancyDbContext db) : IFacilityDirectory
 
     public async Task<PrescriberInfo?> PrescriberAsync(Guid userId, Guid facilityId, CancellationToken cancellationToken = default) =>
         (await PrescribersAsync(facilityId, [userId], cancellationToken)).GetValueOrDefault(userId);
+
+    public async Task<PrintImages> PrintImagesAsync(Guid userId, Guid facilityId, CancellationToken cancellationToken = default)
+    {
+        var logo = await db.Profiles.AsNoTracking().Select(p => p.LogoKey).SingleOrDefaultAsync(cancellationToken);
+        var signature = await (from m in db.Memberships.AsNoTracking()
+                               join p in db.DoctorProfiles.AsNoTracking() on m.Id equals p.MembershipId
+                               where m.FacilityId == facilityId && m.UserId == userId
+                               select p.SignatureKey).SingleOrDefaultAsync(cancellationToken);
+        return new(logo is null ? null : await store.ReadAsync(logo, cancellationToken), signature is null ? null : await store.ReadAsync(signature, cancellationToken));
+    }
 
     public async Task<IReadOnlyDictionary<Guid, PrescriberInfo>> PrescribersAsync(Guid facilityId, IReadOnlyCollection<Guid> userIds, CancellationToken cancellationToken = default)
     {

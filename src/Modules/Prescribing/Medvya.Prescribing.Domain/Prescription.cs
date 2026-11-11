@@ -292,7 +292,10 @@ public sealed class PrescriptionPdf
     [Classification(DataClass.Internal)] public Guid TenantId { get; init; }
     [Classification(DataClass.Internal)] public Guid PrescriptionId { get; init; }
     [Classification(DataClass.Internal)] public required string Paper { get; init; }
-    [Classification(DataClass.SensitiveHealth)] public required byte[] Content { get; init; }
+    /// <summary>The bytes, only on rows made before the copies moved to Blob (MDV-P2-017); newer rows have <see cref="BlobKey"/> instead.</summary>
+    [Classification(DataClass.SensitiveHealth)] public byte[]? Content { get; init; }
+    /// <summary>The copy in the private clinical-documents container, written once. <see cref="Sha256"/> (hash-chained) proves the bytes on every read.</summary>
+    [Classification(DataClass.Internal)] public string? BlobKey { get; init; }
     [Classification(DataClass.Internal)] public required string Sha256 { get; init; }
     [Classification(DataClass.Internal)] public Guid RenderedBy { get; init; }
     [Classification(DataClass.Internal)] public DateTimeOffset RenderedAt { get; init; }

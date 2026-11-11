@@ -6,7 +6,9 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using Medvya.Audit.Domain;
 using Medvya.BuildingBlocks.Domain;
+using Azure.Storage.Blobs;
 using Medvya.Encounters.Application;
+using Medvya.Encounters.Infrastructure;
 using Medvya.Notifications.Application;
 using Medvya.Prescribing.Application;
 using Medvya.Prescribing.Domain;
@@ -27,7 +29,7 @@ namespace Medvya.IntegrationTests;
 /// sent to the patient's registered mobile, and each open is audited; message texts carry no clinical detail; a pharmacy dispatch records each
 /// state with its actor; no regulator submission endpoint exists. Messages go to fakes, never a provider. SAFETY mutation checks are named on the tests.
 /// </summary>
-public sealed partial class RxShareTests(PostgresFixture sql) : IClassFixture<PostgresFixture>, IAsyncLifetime
+public sealed partial class RxShareTests(PostgresFixture sql, AzuriteFixture blobs) : IClassFixture<PostgresFixture>, IClassFixture<AzuriteFixture>, IAsyncLifetime
 {
     readonly SchedulingHarness h = new(sql);
     readonly FakeEmail email = new();
@@ -72,6 +74,7 @@ public sealed partial class RxShareTests(PostgresFixture sql) : IClassFixture<Po
             .UseSetting("ConnectionStrings:Medvya", sql.ConnectionString)
             .UseSetting("Invitations:LinkBaseUrl", "https://clinic.test/app")
             .UseSetting("RateLimiting:SignInPerMinute", "1000")
+            .UseSetting("Storage:ConnectionString", blobs.ConnectionString) // the shared copy lives in Blob
             .UseSetting("Notifications:Sms:DefaultSender", "MEDVYA")
             .UseSetting("Notifications:Sms:DltTemplateIds:SecureLink.en", "1107000000000000001")
             .UseSetting("Notifications:Sms:DltTemplateIds:SecureCode.en", "1107000000000000002")
@@ -158,6 +161,26 @@ public sealed partial class RxShareTests(PostgresFixture sql) : IClassFixture<Po
 
     /// <summary>What no message may carry: the patient's name, record number, birth year or id, the medicine or its dose.</summary>
     string[] Phi => ["Meera", "Iyer", "000001", "1972", h.Patient.ToString(), "Metformin", "500 mg", "tablet", "twice"];
+
+    // SAFETY mutation check: drop the hash check in RxShareLinks.OpenAsync and the swapped copy is handed out.
+    [Fact]
+    public async Task AStoredCopyThatNoLongerMatchesItsHashIsNeverHandedOut()
+    {
+        await AuthorisedAsync();
+        using (var shared = await ShareAsync(new { recipient = "Patient", channel = "Sms" })) Assert.Equal(HttpStatusCode.OK, shared.StatusCode);
+        var token = TokenIn(sms.Sent[^1].Text);
+        string key;
+        await using (var db = sql.Prescribing(h.Tenant)) key = (await db.PrescriptionPdfs.SingleAsync()).BlobKey!;
+        // Someone with storage access swaps the file; the hash in the hash-chained row still says what was shared.
+        await new BlobContainerClient(blobs.ConnectionString, BlobDocumentStore.Live).GetBlobClient(key).UploadAsync(new BinaryData("%PDF-1.7 synthetic swap"), overwrite: true);
+        using (var sent = await SendCodeAsync(token)) Assert.Equal(HttpStatusCode.NoContent, sent.StatusCode);
+        using (var open = await OpenAsync(token, LastCode()))
+        {
+            Assert.Equal(HttpStatusCode.InternalServerError, open.StatusCode);
+            Assert.DoesNotContain("synthetic swap", await open.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+        }
+        Assert.DoesNotContain(await AuditAsync("rx.share.open"), e => e.Outcome == AuditOutcome.Allowed);
+    }
 
     // SAFETY mutation check: drop the CodeMatches check in RxShareLinks.OpenAsync and the wrong-code open returns the PDF; drop the ExpiresAt filter in
     // LiveAsync and the expired link still sends a code; drop the UsedAt update and the same code opens twice; put the patient's name or a medicine

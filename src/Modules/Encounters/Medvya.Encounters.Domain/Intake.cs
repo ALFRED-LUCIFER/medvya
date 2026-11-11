@@ -139,8 +139,3 @@ public static class VitalRules
         return value < low ? VitalAlert.Low : value >= high ? VitalAlert.High : null;
     }
 }
-
-/// <summary>Who signed the vital ranges off clinically: name, registration number and the day.</summary>
-public sealed record ClinicalSignOff(
-    [property: Classification(DataClass.Personal)] string Reviewer, [property: Classification(DataClass.Personal)] string Registration,
-    [property: Classification(DataClass.Internal)] DateOnly SignedOn);

@@ -782,6 +782,66 @@
         }
       }
     },
+    "/v1/patients/{patientId}/geriatric-assessments": {
+      "get": {
+        "tags": [
+          "GeriatricEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "patientId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "GeriatricEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "patientId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/RecordGeriatricAssessment"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/v1/encounters/{encounterId}/note/sign": {
       "post": {
         "tags": [
@@ -5622,6 +5682,29 @@
         }
       }
     },
+    "/v1/patients/{patientId}/medicine-review": {
+      "get": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "patientId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/v1/encounters/{encounterId}/prescription/checks": {
       "get": {
         "tags": [
@@ -9921,6 +10004,130 @@
           }
         }
       },
+      "RecordGeriatricAssessment": {
+        "required": [
+          "fallsLast12Months",
+          "timedUpAndGoSeconds",
+          "lyingSystolic",
+          "lyingDiastolic",
+          "standingSystolic",
+          "standingDiastolic",
+          "clinicalFrailtyScale",
+          "miniCog",
+          "adl",
+          "iadl",
+          "phq2",
+          "nutritionNote"
+        ],
+        "type": "object",
+        "properties": {
+          "fallsLast12Months": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "timedUpAndGoSeconds": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "lyingSystolic": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "lyingDiastolic": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "standingSystolic": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "standingDiastolic": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "clinicalFrailtyScale": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "miniCog": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "adl": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "iadl": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "phq2": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "nutritionNote": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "RecordingConsent": {
         "enum": [
           "Agreed",
@@ -11865,6 +12072,9 @@
     },
     {
       "name": "DocumentEndpoints"
+    },
+    {
+      "name": "GeriatricEndpoints"
     },
     {
       "name": "NoteEndpoints"

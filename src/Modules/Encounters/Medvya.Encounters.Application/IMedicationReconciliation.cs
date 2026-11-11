@@ -59,17 +59,18 @@ public interface IReconciliationStops
 /// <summary>A substance on the chart (never a "no known allergies" entry, never one ruled "not an allergy"), with its status for the evidence.</summary>
 public sealed record ChartAllergy(Guid Id, string Substance, AllergyStatus Status);
 
-/// <summary>An active medicine on the chart, as named there.</summary>
-public sealed record ChartMedicine(Guid Id, string Name);
+/// <summary>An active medicine on the chart, as named there, and when it was first recorded on the chart (the earliest the clinic knows it was taken).</summary>
+public sealed record ChartMedicine(Guid Id, string Name, DateTimeOffset RecordedAt);
 
 /// <summary>A reading on the chart: the value in hundredths of its unit (14.2 kg is 1420) and when it was taken.</summary>
 public sealed record ChartReading(int ValueHundredths, DateTimeOffset TakenAt);
 
 /// <summary>
 /// What a prescription is checked against: the allergy state (three different things, never merged), the listed allergies, the active medicines
-/// and the latest weight and eGFR (null: none on the chart; the checks decide whether a weight is recent enough).
+/// and the latest weight, eGFR and potassium (null: none on the chart; the checks decide whether a weight is recent enough).
 /// </summary>
-public sealed record PrescribingFacts(AllergyState AllergyState, IReadOnlyList<ChartAllergy> Allergies, IReadOnlyList<ChartMedicine> ActiveMedicines, ChartReading? Weight, ChartReading? Egfr);
+public sealed record PrescribingFacts(
+    AllergyState AllergyState, IReadOnlyList<ChartAllergy> Allergies, IReadOnlyList<ChartMedicine> ActiveMedicines, ChartReading? Weight, ChartReading? Egfr, ChartReading? Potassium);
 
 /// <summary>
 /// The chart facts for the prescription safety checks (MDV-P2-016, MDV-P2-040). No access check and no audit event here: the caller has already checked

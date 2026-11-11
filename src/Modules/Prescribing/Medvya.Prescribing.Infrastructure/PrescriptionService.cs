@@ -505,21 +505,15 @@ public sealed class PrescriptionService(
         var formularyIds = items.Where(i => i.FormularyItemId is not null).Select(i => i.FormularyItemId!.Value).ToList();
         var atcOf = await db.FormularyItems.AsNoTracking().Where(f => formularyIds.Contains(f.Id)).ToDictionaryAsync(f => f.Id, f => f.Atc, cancellationToken);
         var facts = await chart.FactsAsync(encounter.PatientId, cancellationToken);
-        // The generic names are read only when there are chart medicines to match (a clinic's formulary can hold thousands of rows).
-        Dictionary<string, string?> generics = new(StringComparer.OrdinalIgnoreCase);
-        if (facts.ActiveMedicines.Count > 0)
-        {
-            var country = await staff.TenantCountryAsync(cancellationToken) ?? throw new InvalidOperationException("No tenant country.");
-            generics = (await db.FormularyItems.AsNoTracking().Where(f => f.Country == country && f.Active && f.Atc != null).Select(f => new { f.Generic, f.Atc }).ToListAsync(cancellationToken))
-                .GroupBy(f => f.Generic, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Select(f => f.Atc!).Distinct().Count() == 1 ? g.First().Atc : null, StringComparer.OrdinalIgnoreCase);
-        }
+        var country = await staff.TenantCountryAsync(cancellationToken) ?? throw new InvalidOperationException("No tenant country.");
+        var generics = await ChartMatch.GenericsAsync(db, country, facts.ActiveMedicines.Count, cancellationToken);
         var stopped = (await stops.StopsAsync(encounter.Id, cancellationToken)).Select(s => s.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         var lines = items.Select(i => new CheckedMedicine(i.Id, i.Medicine, i.FormularyItemId is { } f ? atcOf.GetValueOrDefault(f) : null, i.Strength,
             new SigParts(i.Dose, i.DoseUnit, i.Route, i.Frequency, i.Timing, i.DurationDays, i.Quantity, i.Instructions), false, i.FormularyItemId is null)).ToList();
         // A chart medicine is checked only when its name names one formulary generic with one ATC code; otherwise it is reported as not checked.
         var onChart = facts.ActiveMedicines.Where(m => !stopped.Contains(m.Name))
-            .Select(m => new CheckedMedicine(m.Id, m.Name, SafetyRules.MatchGeneric(m.Name, generics.Keys) is { } g ? generics[g] : null, null, null, true, false)).ToList();
+            .Select(m => new CheckedMedicine(m.Id, m.Name, ChartMatch.Atc(m.Name, generics), null, null, true, false)).ToList();
         var state = facts.AllergyState switch
         {
             AllergyState.Listed => ChartAllergies.Listed,
@@ -528,11 +522,7 @@ public sealed class PrescriptionService(
         };
         var patient = (await patients.SummariesAsync([encounter.PatientId], cancellationToken)).GetValueOrDefault(encounter.PatientId) ?? throw new InvalidOperationException("Patient not in this tenant.");
         var now = clock.GetUtcNow();
-        // eGFR in whole units, rounded down so a reading just under a threshold counts as under it.
-        // shortcut: the latest eGFR at any age, and no pregnancy until MDV-P2-034 feeds it (reported as not checked until then); an eGFR age limit
-        // when the clinical reviewer sets one (MDV-P2-028).
-        var context = new PatientContext(CountryRules.AgeOn(CountryRules.For(await staff.TenantCountryAsync(cancellationToken) ?? throw new InvalidOperationException("No tenant country.")).Today(now), patient.DateOfBirth),
-            patient.SexAtBirth == Medvya.Patients.Domain.SexAtBirth.Female, facts.Weight is { } w && w.TakenAt >= now.AddMonths(-1) ? w.ValueHundredths : null, facts.Egfr?.ValueHundredths / 100, null);
+        var context = ChartMatch.Patient(patient, country, facts, now);
         var result = SafetyRules.Evaluate(lines, onChart, state, [.. facts.Allergies.Select(a => new CheckedAllergy(a.Id, a.Substance, a.Status.ToString()))], context);
 
         var keys = result.Alerts.Select(a => a.Key).ToList();

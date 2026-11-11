@@ -681,6 +681,167 @@
         }
       }
     },
+    "/v1/patients/{patientId}/child-health": {
+      "get": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "patientId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/patients/{patientId}/immunisations": {
+      "post": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "patientId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/RecordDose"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/patients/{patientId}/milestones": {
+      "post": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "patientId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AnswerMilestone"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/patients/{patientId}/geriatric-assessments": {
+      "get": {
+        "tags": [
+          "GeriatricEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "patientId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "GeriatricEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "patientId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/RecordGeriatricAssessment"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/v1/encounters/{encounterId}/note/sign": {
       "post": {
         "tags": [
@@ -5581,6 +5742,29 @@
         }
       }
     },
+    "/v1/patients/{patientId}/medicine-review": {
+      "get": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "patientId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/v1/encounters/{encounterId}/prescription/checks": {
       "get": {
         "tags": [
@@ -6955,6 +7139,49 @@
           }
         }
       },
+      "AnswerMilestone": {
+        "required": [
+          "band",
+          "milestone",
+          "answer",
+          "answeredBy"
+        ],
+        "type": "object",
+        "properties": {
+          "band": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "milestone": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "answer": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/MilestoneAnswer"
+              }
+            ]
+          },
+          "answeredBy": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/MilestoneAnswerer"
+              }
+            ]
+          }
+        }
+      },
       "AppointmentAction": {
         "required": [
           "appointmentId",
@@ -8215,6 +8442,13 @@
           "Other"
         ]
       },
+      "DoseOutcome": {
+        "enum": [
+          "Given",
+          "Deferred",
+          null
+        ]
+      },
       "DuplicateCheckRequest": {
         "type": "object",
         "properties": {
@@ -8839,6 +9073,21 @@
             "format": "uuid"
           }
         }
+      },
+      "MilestoneAnswer": {
+        "enum": [
+          "Yes",
+          "No",
+          "Unsure",
+          null
+        ]
+      },
+      "MilestoneAnswerer": {
+        "enum": [
+          "Parent",
+          "Clinician",
+          null
+        ]
       },
       "MoveVisit": {
         "type": "object",
@@ -9818,6 +10067,194 @@
               "string"
             ],
             "format": "date"
+          }
+        }
+      },
+      "RecordDose": {
+        "required": [
+          "vaccine",
+          "dose",
+          "outcome",
+          "givenOn",
+          "batch",
+          "givenBy",
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "vaccine": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "dose": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "outcome": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/DoseOutcome"
+              }
+            ]
+          },
+          "givenOn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "batch": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "givenBy": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "RecordGeriatricAssessment": {
+        "required": [
+          "fallsLast12Months",
+          "timedUpAndGoSeconds",
+          "lyingSystolic",
+          "lyingDiastolic",
+          "standingSystolic",
+          "standingDiastolic",
+          "clinicalFrailtyScale",
+          "miniCog",
+          "adl",
+          "iadl",
+          "phq2",
+          "nutritionNote"
+        ],
+        "type": "object",
+        "properties": {
+          "fallsLast12Months": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "timedUpAndGoSeconds": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "lyingSystolic": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "lyingDiastolic": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "standingSystolic": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "standingDiastolic": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "clinicalFrailtyScale": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "miniCog": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "adl": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "iadl": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "phq2": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "nutritionNote": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -11826,6 +12263,9 @@
     },
     {
       "name": "DocumentEndpoints"
+    },
+    {
+      "name": "GeriatricEndpoints"
     },
     {
       "name": "NoteEndpoints"

@@ -14,6 +14,7 @@ public sealed class EncountersDbContext(DbContextOptions<EncountersDbContext> op
     public DbSet<Problem> Problems => Set<Problem>();
     public DbSet<MedicationStatement> MedicationStatements => Set<MedicationStatement>();
     public DbSet<Observation> Observations => Set<Observation>();
+    public DbSet<GeriatricAssessment> GeriatricAssessments => Set<GeriatricAssessment>();
     public DbSet<ClinicalDocument> Documents => Set<ClinicalDocument>();
     public DbSet<Intake> Intakes => Set<Intake>();
     public DbSet<IntakeEscalation> IntakeEscalations => Set<IntakeEscalation>();
@@ -25,6 +26,8 @@ public sealed class EncountersDbContext(DbContextOptions<EncountersDbContext> op
     public DbSet<SignedNotePdf> SignedNotePdfs => Set<SignedNotePdf>();
     public DbSet<OutboxEvent> Outbox => Set<OutboxEvent>();
     public DbSet<HistoryEntry> HistoryEntries => Set<HistoryEntry>();
+    public DbSet<Immunisation> Immunisations => Set<Immunisation>();
+    public DbSet<MilestoneResponse> MilestoneResponses => Set<MilestoneResponse>();
 
     Guid? CurrentTenantId => tenant.TenantId;
 
@@ -118,6 +121,12 @@ public sealed class EncountersDbContext(DbContextOptions<EncountersDbContext> op
             e.HasIndex(x => new { x.TenantId, x.PatientId, x.Section, x.RecordedAt }); // append-only: the newest row of a section is current
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
+        modelBuilder.Entity<GeriatricAssessment>(e =>
+        {
+            e.Property(x => x.NutritionNote).HasMaxLength(GeriatricRules.MaxNutritionNote);
+            e.HasIndex(x => new { x.TenantId, x.PatientId, x.AssessedAt }); // the patient's latest reviews
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
         modelBuilder.Entity<Intake>(e =>
         {
             e.Property(x => x.ChiefComplaint).HasMaxLength(500);
@@ -175,6 +184,29 @@ public sealed class EncountersDbContext(DbContextOptions<EncountersDbContext> op
             e.ToTable("OutboxEvents");
             e.Property(x => x.Type).HasMaxLength(100);
             e.HasIndex(x => new { x.PublishedAt, x.OccurredAt });
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        // Child health (MDV-P2-036): append-only rows by patient; the latest of a dose or milestone is its answer.
+        modelBuilder.Entity<Immunisation>(e =>
+        {
+            e.Property(x => x.Vaccine).HasMaxLength(20);
+            e.Property(x => x.Outcome).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.Batch).HasMaxLength(ChildHealthService.MaxBatch);
+            e.Property(x => x.GivenBy).HasMaxLength(ChildHealthService.MaxGivenBy);
+            e.Property(x => x.DeferReason).HasMaxLength(ChildHealthService.MaxReason);
+            e.HasIndex(x => new { x.TenantId, x.PatientId });
+            // A given dose has its day and no reason; a deferral has its reason and nothing of a given dose.
+            e.ToTable(t => t.HasCheckConstraint("CK_Immunisations_Outcome",
+                "(\"Outcome\" = 'Given' AND \"GivenOn\" IS NOT NULL AND \"DeferReason\" IS NULL) OR (\"Outcome\" = 'Deferred' AND \"DeferReason\" IS NOT NULL AND \"GivenOn\" IS NULL AND \"Batch\" IS NULL AND \"GivenBy\" IS NULL)"));
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<MilestoneResponse>(e =>
+        {
+            e.Property(x => x.Band).HasMaxLength(20);
+            e.Property(x => x.Milestone).HasMaxLength(50);
+            e.Property(x => x.Answer).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.AnsweredBy).HasConversion<string>().HasMaxLength(20);
+            e.HasIndex(x => new { x.TenantId, x.PatientId, x.Band });
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         modelBuilder.Entity<ClinicalDocument>(e =>

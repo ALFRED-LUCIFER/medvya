@@ -95,6 +95,8 @@ public static class EncounterEndpoints
         app.MapReconciliationEndpoints();
         app.MapFollowUpEndpoints();
         app.MapProblemEndpoints();
+        app.MapChildHealthEndpoints();
+        app.MapGeriatricEndpoints();
         app.MapNoteEndpoints();
         return app;
     }

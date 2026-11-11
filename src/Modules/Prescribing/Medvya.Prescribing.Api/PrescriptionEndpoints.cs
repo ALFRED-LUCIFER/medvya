@@ -1,5 +1,6 @@
 using Medvya.Audit.Api;
 using Medvya.Audit.Domain;
+using Medvya.BuildingBlocks.Domain;
 using Medvya.BuildingBlocks.Infrastructure;
 using Medvya.Encounters.Application;
 using Medvya.Prescribing.Application;
@@ -46,6 +47,11 @@ public static class PrescriptionEndpoints
                 await service.IncludeAsync(itemId, body ?? new IncludeRxLine(null), ct) is { } v ? Results.Ok(v) : Results.NotFound())
             .AuditedByUseCase("rx.include", "prescription", AuditPurpose.Treatment).AddEndpointFilter(MapErrors);
         // Safety checks (MDV-P2-016): run after every change; an override carries its reason in the body.
+        // MDV-P2-037: the older adult medicine review on Patient 360. Read only: suggestions for the doctor, never a change to a medicine.
+        g.MapGet("/patients/{patientId:guid}/medicine-review", async (Guid patientId, [FromServices] IMedicineReview service, [FromServices] ICurrentFacility current, CancellationToken ct) =>
+                current.FacilityId is not { } facilityId ? Results.Problem(statusCode: StatusCodes.Status403Forbidden, title: "No facility context")
+                : await service.GetAsync(patientId, facilityId, ct) is { } v ? Results.Ok(v) : Results.NotFound())
+            .AuditedByUseCase("patient.medicine-review.read", "patient", AuditPurpose.Treatment, patientRouteKey: "patientId").AddEndpointFilter(MapErrors);
         g.MapGet("/encounters/{encounterId:guid}/prescription/checks", async (Guid encounterId, [FromServices] IPrescriptions service, CancellationToken ct) =>
                 await service.CheckAsync(encounterId, ct) is { } v ? Results.Ok(v) : Results.NotFound())
             .AuditedByUseCase("rx.check", "prescription", AuditPurpose.Treatment).AddEndpointFilter(MapErrors);

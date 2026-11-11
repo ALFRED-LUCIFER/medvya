@@ -61,6 +61,13 @@ public static class RxPdfDocument
             if (l.Reason is { } reason) body.Add((Text("rxPrint.reason", ("reason", reason)), false));
             body.Add(("", false));
         }
+        if (v.Advice is { Text: { } advice } a)
+        {
+            body.Add((Text("rxPrint.advice"), true));
+            body.Add((advice, false));
+            if (!a.InPatientLanguage) body.Add((Text("rxPrint.adviceInEnglish"), false));
+            body.Add(("", false));
+        }
         body.AddRange([
             (Text("rxPrint.hash", ("hash", v.Authorisation.ContentHash)), false),
             (Text("rxPrint.verify", ("url", v.VerifyUrl)), false),

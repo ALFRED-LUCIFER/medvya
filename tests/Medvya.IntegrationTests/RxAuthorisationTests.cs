@@ -334,6 +334,41 @@ public sealed class RxAuthorisationTests(PostgresFixture sql, AzuriteFixture blo
             Assert.Contains(expected, text, StringComparison.Ordinal);
     }
 
+    /// <summary>MDV-P2-043: the advice is written once, frozen with the authorisation (a changed advice needs a new one), printed, and in English with a
+    /// note for a patient whose language has no reviewed translation. A doctor's only, and only in this tenant.</summary>
+    [Fact]
+    public async Task TheAdviceIsFrozenWithThePrescriptionAndPrintsInEnglishWithANoteForAnotherLanguage()
+    {
+        await using (var patients = sql.Patients(h.Tenant))
+        {
+            (await patients.Patients.SingleAsync(p => p.Id == h.Patient)).PreferredLanguage = "ta";
+            await patients.SaveChangesAsync();
+        }
+        await PrescribeAsync("Metformin", Twice);
+        var rx = h.Get<IPrescriptions>(h.Doctor);
+        Assert.Equal(new RxAdviceView(null, "ta", false), await rx.AdviceAsync(encounter));
+        Assert.Equal(new RxAdviceView("Drink plenty of water (synthetic).", "ta", false), await rx.SetAdviceAsync(encounter, new SetRxAdvice("  Drink plenty of water (synthetic).  ")));
+        Assert.Equal([("text", "too_long")], (await Assert.ThrowsAsync<PrescriptionValidationException>(() => rx.SetAdviceAsync(encounter, new SetRxAdvice(new string('a', 1001))))).Errors);
+
+        using (var ok = await AuthoriseAsync(h.Doctor)) Assert.Equal((HttpStatusCode.OK, null), (ok.StatusCode, ok.IsSuccessStatusCode ? null : await Code(ok)));
+        Assert.Equal("Drink plenty of water (synthetic).", Assert.Single(await AuthorisedAsync()).Advice);
+        using (var pdf = await PdfAsync())
+        {
+            var text = string.Join(' ', PdfPages.Read(await pdf.Content.ReadAsByteArrayAsync(), PlainPdf.A4.Margin).Select(p => p.Text));
+            foreach (var expected in new[] { "Advice for the patient", "Drink plenty of water (synthetic).", "Advice is in English: there is no reviewed translation" })
+                Assert.Contains(expected, text, StringComparison.Ordinal);
+        }
+
+        await rx.SetAdviceAsync(encounter, new SetRxAdvice("Rest for two days (synthetic)."));
+        Assert.True((await rx.AuthorisationAsync(encounter))!.Changed); // the paper no longer says what the plan says: authorise again
+        using (var changed = await PdfAsync()) Assert.Equal(HttpStatusCode.Conflict, changed.StatusCode);
+
+        foreach (var user in new[] { h.Reception, h.Nurse })
+            Assert.Equal(HttpStatusCode.Forbidden, (await Client(user).PutAsJsonAsync(U($"/v1/encounters/{encounter}/prescription/advice"), new { text = "x" })).StatusCode);
+        await using var foreign = sql.Prescribing(Guid.NewGuid());
+        Assert.Equal(0, await foreign.RxAdvice.IgnoreQueryFilters().CountAsync());
+    }
+
     // SAFETY mutation check: drop page.Header() from PlainPdf.Write and the per-page identifier checks fail.
     [Fact]
     public async Task ThePdfRendersServerSideOnA4AndA5WithTheLicenceAndIsStoredWithItsHash()

@@ -4103,6 +4103,8 @@
   "rxPrint.allergiesNotRecorded": "الحساسية: غير مسجلة",
   "rxPrint.stop": "إيقاف: {medicine}",
   "rxPrint.reason": "السبب: {reason}",
+  "rxPrint.advice": "نصائح للمريض",
+  "rxPrint.adviceInEnglish": "النصائح باللغة الإنجليزية: لا توجد بعد ترجمة مراجعة إلى لغة المريض.",
   "rxPrint.authorised": "اعتمدها {name} · {when}",
   "rxPrint.hash": "SHA-256 للأسطر المعتمدة: {hash}",
   "rxPrint.verify": "تحقق من صلاحية هذه الوصفة: امسح الرمز أو افتح {url}",

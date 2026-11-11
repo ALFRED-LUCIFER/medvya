@@ -4106,6 +4106,8 @@
   "rxPrint.allergiesNotRecorded": "Allergies: not recorded",
   "rxPrint.stop": "Stop: {medicine}",
   "rxPrint.reason": "Reason: {reason}",
+  "rxPrint.advice": "Advice for the patient",
+  "rxPrint.adviceInEnglish": "Advice is in English: there is no reviewed translation into the patient's language yet.",
   "rxPrint.authorised": "Authorised by {name} · {when}",
   "rxPrint.hash": "SHA-256 of the authorised lines: {hash}",
   "rxPrint.verify": "Check this prescription is valid: scan the code or open {url}",

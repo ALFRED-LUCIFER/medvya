@@ -85,7 +85,16 @@ public sealed record RxPrintLine(bool Discontinue, string Medicine, string? Stre
 public sealed record RxPrintView(
     RxAuthorisationView Authorisation, string Clinic, string TimeZone, string Doctor, string? Qualifications, string LicenceNumber, string LicenceAuthority,
     SlipPatient Patient, ChartAllergies Allergies, IReadOnlyList<string> AllergySubstances, IReadOnlyList<RxPrintLine> Lines, string VerifyUrl, IReadOnlyList<string> Qr,
-    int LayoutVersion);
+    int LayoutVersion, RxAdviceView? Advice = null);
+
+/// <summary>The advice for the patient (MDV-P2-043). Blank text is none.</summary>
+public sealed record SetRxAdvice(string? Text);
+
+/// <summary>
+/// The advice as written (null: none) and the patient's preferred language. <see cref="InPatientLanguage"/> false: it prints and is sent in English
+/// with a note, because no reviewed translation into that language exists (never a machine translation).
+/// </summary>
+public sealed record RxAdviceView(string? Text, string? PatientLanguage, bool InPatientLanguage);
 
 /// <summary>The PDF of an authorised prescription as stored: the bytes and their SHA-256 (hex).</summary>
 public sealed record RxPdf(byte[] Content, string Sha256);
@@ -144,6 +153,14 @@ public interface IPrescriptions
     /// <exception cref="PrescriptionConflictException">not_authorised.</exception>
     /// <exception cref="PrescriptionValidationException">reason: required, too_long.</exception>
     Task<RxAuthorisationState?> CancelAsync(Guid encounterId, CancelRx command, CancellationToken cancellationToken = default);
+
+    /// <summary>The consultation's advice for the patient (MDV-P2-043); audited as rx.advice.read.</summary>
+    Task<RxAdviceView?> AdviceAsync(Guid encounterId, CancellationToken cancellationToken = default);
+
+    /// <summary>Writes (or with blank text clears) the advice while the consultation is open; audited as rx.advice.set. A changed advice needs a new authorisation to print.</summary>
+    /// <exception cref="PrescriptionValidationException">text: too_long.</exception>
+    /// <exception cref="PrescriptionConflictException">encounter_ended.</exception>
+    Task<RxAdviceView?> SetAdviceAsync(Guid encounterId, SetRxAdvice command, CancellationToken cancellationToken = default);
 
     /// <summary>The authorised prescription for the print view; audited as rx.print.</summary>
     /// <exception cref="PrescriptionConflictException">not_authorised, changed, cancelled.</exception>

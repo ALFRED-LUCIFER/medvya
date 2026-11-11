@@ -282,12 +282,35 @@ public sealed class AuthorisedPrescription
     [Classification(DataClass.Internal)] public Guid AuthorisedBy { get; init; }
     [Classification(DataClass.Internal)] public DateTimeOffset AuthorisedAt { get; init; }
 
-    public static string Hash(IReadOnlyList<AuthorisedLine> lines) =>
-        Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(
-            lines.Select(l => l with { Sig = new SortedDictionary<string, string>(l.Sig.ToDictionary(), StringComparer.Ordinal) }).ToList())));
+    /// <summary>The advice for the patient as authorised with the lines (MDV-P2-043); null: none. Covered by <see cref="ContentHash"/>.</summary>
+    [Classification(DataClass.SensitiveHealth)] public string? Advice { get; init; }
+
+    /// <summary>Advice joins the hash only when there is some, so every authorisation made before it existed keeps its hash.</summary>
+    public static string Hash(IReadOnlyList<AuthorisedLine> lines, string? advice = null)
+    {
+        byte[] json = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(
+            lines.Select(l => l with { Sig = new SortedDictionary<string, string>(l.Sig.ToDictionary(), StringComparer.Ordinal) }).ToList());
+        return Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(advice is null ? json : [.. json, .. System.Text.Encoding.UTF8.GetBytes("\nadvice:" + advice)]));
+    }
 
     /// <summary>The number printed on the paper ("RX-" and eight letters of the id's random part): a reference to read out, not a credential.</summary>
     public string Number() => "RX-" + Id.ToString("N")[^8..].ToUpperInvariant();
+}
+
+/// <summary>
+/// The advice for the patient in a consultation's plan (MDV-P2-043): written once, by the doctor, in English; one row per consultation, changed only
+/// while it is open. Authorising freezes it with the prescription, which prints it and shares it. Ids only: the encounter names the patient.
+/// </summary>
+public sealed class RxAdvice
+{
+    public const int MaxText = 1000;
+
+    [Classification(DataClass.Internal)] public Guid Id { get; init; }
+    [Classification(DataClass.Internal)] public Guid TenantId { get; init; }
+    [Classification(DataClass.Internal)] public Guid EncounterId { get; init; }
+    [Classification(DataClass.SensitiveHealth)] public string Text { get; set; } = "";
+    [Classification(DataClass.Internal)] public Guid UpdatedBy { get; set; }
+    [Classification(DataClass.Internal)] public DateTimeOffset UpdatedAt { get; set; }
 }
 
 /// <summary>

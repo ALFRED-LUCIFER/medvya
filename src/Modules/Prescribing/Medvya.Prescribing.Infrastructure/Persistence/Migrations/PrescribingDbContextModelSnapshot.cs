@@ -452,6 +452,68 @@ namespace Medvya.Prescribing.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Medvya.Prescribing.Domain.PrintedPaper", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("BlobKey")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("ContentHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid>("DoctorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("FacilityId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Items")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTimeOffset>("RenderedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("RenderedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Sha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid>("SourceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("VerifyCode")
+                        .IsRequired()
+                        .HasMaxLength(22)
+                        .HasColumnType("character varying(22)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "SourceId");
+
+                    b.HasIndex("TenantId", "VerifyCode")
+                        .IsUnique();
+
+                    b.ToTable("PrintedPapers", "prescribing");
+                });
+
             modelBuilder.Entity("Medvya.Prescribing.Domain.Referral", b =>
                 {
                     b.Property<Guid>("Id")

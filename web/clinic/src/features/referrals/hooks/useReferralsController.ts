@@ -8,7 +8,8 @@ import {
   advanceSchema, emptyReferral, fileInSchema, problemOf, referralSchema,
   type AdvanceForm, type Channel, type FileInForm, type Referral, type ReferralForm, type ReferralProblem,
 } from '../domain/referrals';
-import { advanceReferral, createReferral, fetchLetter, fetchReferrals, fileReferralIn, printPage, sendReferral } from '../services/referralsApi';
+import { usePaperPdf } from '../../prescription/hooks/useRxPrintController';
+import { advanceReferral, createReferral, downloadLetterPdf, fetchLetter, fetchReferrals, fileReferralIn, printPage, sendReferral } from '../services/referralsApi';
 
 /**
  * The referrals of one patient (MDV-P2-019), under a consultation. The server decides who may write: a refusal (403) of the list hides the panel.
@@ -66,5 +67,6 @@ export function useOpenReferralsController(patientId: string) {
 export function useLetterController(referralId: string) {
   const letter = useQuery({ queryKey: ['referral-letter', referralId], queryFn: () => fetchLetter(referralId), retry: false });
   const error = letter.error instanceof ApiError ? letter.error : null;
-  return { letter: letter.data ?? null, loading: letter.isPending, notFound: error?.status === 404, failed: letter.isError && error?.status !== 404, onPrint: printPage };
+  const pdf = usePaperPdf(() => downloadLetterPdf(referralId));
+  return { letter: letter.data ?? null, loading: letter.isPending, notFound: error?.status === 404, failed: letter.isError && error?.status !== 404, onPrint: printPage, ...pdf };
 }

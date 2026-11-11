@@ -775,6 +775,34 @@
         }
       }
     },
+    "/v1/papers/verify": {
+      "post": {
+        "tags": [
+          "Host.Api"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/VerifyRx"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/v1/prescriptions/shared/code": {
       "post": {
         "tags": [
@@ -5273,6 +5301,29 @@
         }
       }
     },
+    "/v1/encounters/{encounterId}/orders/slip/pdf": {
+      "post": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "encounterId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/v1/encounters/{encounterId}/prescription": {
       "get": {
         "tags": [
@@ -5895,6 +5946,29 @@
     },
     "/v1/referrals/{referralId}/letter": {
       "get": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "referralId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/referrals/{referralId}/letter/pdf": {
+      "post": {
         "tags": [
           "Host.Api"
         ],

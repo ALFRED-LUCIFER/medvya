@@ -24,10 +24,10 @@ namespace Medvya.Prescribing.Infrastructure;
 /// </summary>
 public sealed class ReferralService(
     PrescribingDbContext db, IEncounterDirectory encounters, IDocumentDirectory documents, IClinicalAccess clinical, IPatientDirectory patients, IPatientConsents consents,
-    IPatientChart chart, IFacilityDirectory facilities, IStaffUsers staffUsers, ICurrentTenant tenant, ICurrentUser user, IAuditLog audit, TimeProvider clock) : IReferrals
+    IPatientChart chart, IFacilityDirectory facilities, IStaffUsers staffUsers, ICurrentTenant tenant, ICurrentUser user, IAuditLog audit, TimeProvider clock, PaperIssuer papers) : IReferrals
 {
     public const string CreateAction = "referral.create", FileInAction = "referral.file_in", SendAction = "referral.send", AdvanceAction = "referral.advance",
-        ReadAction = "referral.read", LetterAction = "referral.letter", Resource = "referral";
+        ReadAction = "referral.read", LetterAction = "referral.letter", LetterPdfAction = "referral.letter.pdf", Resource = "referral";
     public const int MaxProvider = 200, MaxReason = 500, MaxNote = 200;
     static readonly Access[] Doctors = [Access.Sign], Treats = [Access.Read, Access.Limited, Access.Full, Access.Sign];
 
@@ -152,6 +152,22 @@ public sealed class ReferralService(
 
     public async Task<ReferralLetter?> LetterAsync(Guid referralId, CancellationToken cancellationToken = default)
     {
+        if (await BuildLetterAsync(referralId, cancellationToken) is not { } built) return null;
+        await audit.WriteAsync(Event(LetterAction, built.Referral), cancellationToken);
+        return built.Letter;
+    }
+
+    public async Task<PaperPdf?> LetterPdfAsync(Guid referralId, CancellationToken cancellationToken = default)
+    {
+        if (await BuildLetterAsync(referralId, cancellationToken) is not { } built) return null;
+        var (referral, letter) = (built.Referral, built.Letter);
+        return await papers.IssueAsync(PaperKind.ReferralLetter, referral.FacilityId, referral.Id, referral.CreatedBy, letter.Sections.Count, letter,
+            paper => PaperPdfDocument.Letter(letter, built.TimeZone, paper), Event(LetterPdfAction, referral, $"sections:{letter.Sections.Count}"), cancellationToken);
+    }
+
+    /// <summary>The letter of one referral out, once the caller may see it; null when there is no such referral out.</summary>
+    async Task<(Referral Referral, ReferralLetter Letter, string TimeZone)?> BuildLetterAsync(Guid referralId, CancellationToken cancellationToken)
+    {
         if (await FindAsync(referralId, cancellationToken) is not { } referral) return null;
         await clinical.RequireAsync(referral.PatientId, referral.FacilityId, Capability.PrescriptionsOrders, Doctors, cancellationToken);
         if (referral.Direction != ReferralDirection.Out) return null;
@@ -175,9 +191,8 @@ public sealed class ReferralService(
                     _ => record.Medicines.Where(m => m.State == MedicationState.Active).Select(m => new LetterLine(m.Dose is null ? m.Name : $"{m.Name} {m.Dose}", m.Source.ToString())).ToList(),
                 }));
         }
-        await audit.WriteAsync(Event(LetterAction, referral), cancellationToken);
-        return new ReferralLetter(new LetterPatient(patient.FullName, patient.Mrn, patient.DateOfBirth, patient.SexAtBirth.ToString()), facility.Name, doctor, referral.Provider,
-            referral.Urgency, referral.Reason, referral.SentAt ?? clock.GetUtcNow(), sections);
+        return (referral, new ReferralLetter(new LetterPatient(patient.FullName, patient.Mrn, patient.DateOfBirth, patient.SexAtBirth.ToString()), facility.Name, doctor,
+            referral.Provider, referral.Urgency, referral.Reason, referral.SentAt ?? clock.GetUtcNow(), sections), facility.TimeZone);
     }
 
     async Task<Referral?> FindAsync(Guid id, CancellationToken cancellationToken) => await db.Referrals.AsNoTracking().SingleOrDefaultAsync(r => r.Id == id, cancellationToken);

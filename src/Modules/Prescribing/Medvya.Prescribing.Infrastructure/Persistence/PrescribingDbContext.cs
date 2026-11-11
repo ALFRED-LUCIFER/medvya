@@ -19,6 +19,7 @@ public sealed class PrescribingDbContext(DbContextOptions<PrescribingDbContext> 
     public DbSet<AuthorisedPrescription> AuthorisedPrescriptions => Set<AuthorisedPrescription>();
     public DbSet<PrescriptionCancellation> PrescriptionCancellations => Set<PrescriptionCancellation>();
     public DbSet<PrescriptionPdf> PrescriptionPdfs => Set<PrescriptionPdf>();
+    public DbSet<PrintedPaper> PrintedPapers => Set<PrintedPaper>();
     public DbSet<RxLayoutApproval> RxLayoutApprovals => Set<RxLayoutApproval>();
     public DbSet<RxShare> RxShares => Set<RxShare>();
     public DbSet<RxShareCode> RxShareCodes => Set<RxShareCode>();
@@ -130,6 +131,18 @@ public sealed class PrescribingDbContext(DbContextOptions<PrescribingDbContext> 
             e.Property(x => x.BlobKey).HasMaxLength(200);
             e.HasIndex(x => new { x.TenantId, x.PrescriptionId });
             e.ToTable(t => t.HasCheckConstraint("CK_PrescriptionPdfs_OneCopy", "(\"Content\" IS NULL) <> (\"BlobKey\" IS NULL)"));
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        // MDV-P2-018/019: every slip and letter PDF handed out; append-only and hash-chained (LedgerSql, in its migration).
+        modelBuilder.Entity<PrintedPaper>(e =>
+        {
+            e.Property(x => x.Kind).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.VerifyCode).HasMaxLength(22);
+            e.Property(x => x.ContentHash).HasMaxLength(64);
+            e.Property(x => x.Sha256).HasMaxLength(64);
+            e.Property(x => x.BlobKey).HasMaxLength(200);
+            e.HasIndex(x => new { x.TenantId, x.VerifyCode }).IsUnique();
+            e.HasIndex(x => new { x.TenantId, x.SourceId });
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         // MDV-P2-020: shares and dispatch states are append-only and hash-chained; codes count wrong tries, so they are not.

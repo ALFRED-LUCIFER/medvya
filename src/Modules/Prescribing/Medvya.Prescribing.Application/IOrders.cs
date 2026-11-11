@@ -53,4 +53,7 @@ public interface IOrders
 
     /// <summary>The placed orders for printing or sharing. Null also when nothing has been placed yet.</summary>
     Task<OrderSlip?> SlipAsync(Guid encounterId, CancellationToken cancellationToken = default);
+
+    /// <summary>The slip as a server PDF with the clinic logo, the doctor's signature, its content hash and a QR verify code, stored once in Blob. Null: no encounter or nothing placed.</summary>
+    Task<PaperPdf?> SlipPdfAsync(Guid encounterId, CancellationToken cancellationToken = default);
 }

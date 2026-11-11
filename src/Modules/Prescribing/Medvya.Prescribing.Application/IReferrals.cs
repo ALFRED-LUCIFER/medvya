@@ -65,4 +65,7 @@ public interface IReferrals
 
     /// <summary>The letter of one referral out, with only its selected sections.</summary>
     Task<ReferralLetter?> LetterAsync(Guid referralId, CancellationToken cancellationToken = default);
+
+    /// <summary>The letter as a server PDF with the clinic logo, the doctor's signature, its content hash and a QR verify code, stored once in Blob.</summary>
+    Task<PaperPdf?> LetterPdfAsync(Guid referralId, CancellationToken cancellationToken = default);
 }

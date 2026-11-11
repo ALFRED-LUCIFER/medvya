@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises';
 import { expect, type Page } from '@playwright/test';
 import { journey } from '../journeys/storyboard';
 import { expectArabicAxeClean, expectNoAxeViolations, signIn, watchUrls } from './support';
@@ -142,6 +143,14 @@ journey('J2', {
     await orders.getByRole('button', { name: 'Place orders' }).click();
     await expect(orders.getByText('Orders placed.')).toBeVisible();
     await expectNoAxeViolations(page);
+    // MDV-P2-018: the slip's server PDF, stored in Blob with its hash and QR (the QR check itself is proven in PaperPdfTests).
+    await page.getByRole('link', { name: 'Investigation slip' }).click();
+    const slipPdf = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Download PDF' }).click();
+    const slip = await slipPdf;
+    expect(slip.suggestedFilename()).toBe('investigation-slip.pdf');
+    expect((await readFile((await slip.path())!)).subarray(0, 5).toString()).toBe('%PDF-');
+    await page.goto(consultPath);
 
     await rx.getByRole('link', { name: 'Print prescription' }).click();
     await expect(page.getByText('Take 1 tablet by mouth twice a day.')).toBeVisible();

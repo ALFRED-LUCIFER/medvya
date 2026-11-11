@@ -1,15 +1,16 @@
 import { Link } from 'react-router';
-import { Printer } from 'lucide-react';
+import { FileDown, Printer } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
 import { Button, buttonVariants } from '@medvya/ui';
 import type { OrderSlip } from '../domain/orders';
 
-type Props = { slip: OrderSlip | null; loading: boolean; nothingPlaced: boolean; failed: boolean; onPrint: () => void; consultPath: string };
+type Props = { slip: OrderSlip | null; loading: boolean; nothingPlaced: boolean; failed: boolean; onPrint: () => void; consultPath: string;
+  downloading: boolean; pdfProblem: 'unsupported' | 'failed' | null; onPdf: () => void };
 
 /**
  * The investigation slip (E-05): who it is for, who ordered, where it goes and each test with its instructions, in plain black on white.
- * The page prints (the app shell hides itself), so "Save as PDF" in the print dialog gives the PDF the patient can share.
- * shortcut: the browser makes the PDF; a server-made PDF with a verification code comes with the prescription print (MDV-P2-017).
+ * The page prints (the app shell hides itself); "Download PDF" gets the server's copy, stored with its hash and a QR code that verifies it
+ * (MDV-P2-018, ADR-018).
  */
 export default function SlipPage(p: Props) {
   const { t, formatDate, formatDay } = useI18n();
@@ -20,8 +21,10 @@ export default function SlipPage(p: Props) {
     <div className="flex max-w-[720px] flex-col gap-4">
       <div className="flex flex-wrap gap-3 print:hidden">
         <Button className="min-h-11" onClick={p.onPrint}><Printer aria-hidden className="size-4" />{t('orders.slip.print')}</Button>
+        <Button variant="outline" className="min-h-11" loading={p.downloading} disabled={p.downloading} onClick={p.onPdf}><FileDown aria-hidden className="size-4" />{t('paper.pdf')}</Button>
         <Link to={p.consultPath} className={buttonVariants({ variant: 'outline', className: 'min-h-11' })}>{t('orders.slip.back')}</Link>
       </div>
+      {p.pdfProblem && <p role="alert" className="font-bold text-danger-700 print:hidden">{t(p.pdfProblem === 'unsupported' ? 'paper.pdfUnsupported' : 'paper.pdfFailed')}</p>}
       <article aria-labelledby="slip-title" className="flex flex-col gap-4 rounded-xl border bg-white p-6 text-black print:rounded-none print:border-0 print:p-0">
         <header className="border-b-2 border-black pb-2">
           <h1 id="slip-title" className="text-xl font-extrabold">{t('orders.slip.title')}</h1>

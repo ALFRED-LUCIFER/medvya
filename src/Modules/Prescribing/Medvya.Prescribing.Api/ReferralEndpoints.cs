@@ -1,6 +1,7 @@
 using Medvya.Audit.Api;
 using Medvya.BuildingBlocks.Domain;
 using Medvya.Audit.Domain;
+using Medvya.BuildingBlocks.Infrastructure;
 using Medvya.Prescribing.Application;
 using Medvya.Tenancy.Api;
 using Medvya.Tenancy.Application;
@@ -38,6 +39,9 @@ public static class ReferralEndpoints
         g.MapGet("/referrals/{referralId:guid}/letter", async (Guid referralId, [FromServices] IReferrals service, CancellationToken ct) =>
                 await service.LetterAsync(referralId, ct) is { } v ? Results.Ok(v) : Results.NotFound())
             .AuditedByUseCase("referral.letter", "referral", AuditPurpose.Treatment).AddEndpointFilter(MapErrors);
+        g.MapPost("/referrals/{referralId:guid}/letter/pdf", async (Guid referralId, [FromServices] IReferrals service, HttpContext http, CancellationToken ct) =>
+                OrderEndpoints.File(http, await service.LetterPdfAsync(referralId, ct)))
+            .AuditedByUseCase("referral.letter.pdf", "referral", AuditPurpose.Treatment).AddEndpointFilter(MapErrors);
 
         // Patient 360 shows the open referrals to every role that reads the chart (a nurse too), so this is the chart's capability, not the doctor's.
         app.MapGroup("/v1/patients").RequireCapability(Capability.Patient360Chart, Access.Read, Access.Limited, Access.Full, Access.Sign)
@@ -66,6 +70,11 @@ public static class ReferralEndpoints
         catch (ReferralConflictException e)
         {
             return Results.Problem(statusCode: StatusCodes.Status409Conflict, title: "The referral cannot do this now", extensions: new Dictionary<string, object?> { ["code"] = e.Code });
+        }
+        catch (PdfUnsupportedTextException)
+        {
+            return Results.Problem(statusCode: StatusCodes.Status422UnprocessableEntity, title: "The paper has text the PDF cannot show; use the print view",
+                extensions: new Dictionary<string, object?> { ["code"] = "pdf_unsupported_text" });
         }
     }
 }

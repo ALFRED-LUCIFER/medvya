@@ -23,10 +23,10 @@ namespace Medvya.Prescribing.Infrastructure;
 /// </summary>
 public sealed class OrderService(
     PrescribingDbContext db, IEncounterDirectory encounters, IClinicalAccess clinical, IPatientDirectory patients, IFacilityDirectory facilities,
-    IStaffUsers staffUsers, ICurrentTenant tenant, ICurrentUser user, IAuditLog audit, TimeProvider clock) : IOrders
+    IStaffUsers staffUsers, ICurrentTenant tenant, ICurrentUser user, IAuditLog audit, TimeProvider clock, PaperIssuer papers) : IOrders
 {
     public const string ReadAction = "order.read", AddAction = "order.add", AddSetAction = "order.set.add", IncludeAction = "order.include",
-        PlaceAction = "order.place", SlipAction = "order.slip", Resource = "order";
+        PlaceAction = "order.place", SlipAction = "order.slip", SlipPdfAction = "order.slip.pdf", Resource = "order";
     public const int MaxName = 200, MaxNote = 200, MaxDestination = 100;
     static readonly Access[] Doctors = [Access.Sign];
 
@@ -119,16 +119,30 @@ public sealed class OrderService(
 
     public async Task<OrderSlip?> SlipAsync(Guid encounterId, CancellationToken cancellationToken = default)
     {
-        if (await RequireAsync(encounterId, cancellationToken) is not { } encounter) return null;
-        var placed = await db.Orders.AsNoTracking().Where(o => o.EncounterId == encounterId && o.State == OrderState.Ordered).OrderBy(o => o.CreatedAt).ThenBy(o => o.Id).ToListAsync(cancellationToken);
+        if (await RequireAsync(encounterId, cancellationToken) is not { } encounter || await BuildSlipAsync(encounter, cancellationToken) is not { } built) return null;
+        await audit.WriteAsync(Event(SlipAction, encounter, encounterId), cancellationToken);
+        return built.Slip;
+    }
+
+    public async Task<PaperPdf?> SlipPdfAsync(Guid encounterId, CancellationToken cancellationToken = default)
+    {
+        if (await RequireAsync(encounterId, cancellationToken) is not { } encounter || await BuildSlipAsync(encounter, cancellationToken) is not { } built) return null;
+        var slip = built.Slip;
+        return await papers.IssueAsync(PaperKind.InvestigationSlip, encounter.FacilityId, encounter.Id, encounter.LeadClinicianId, slip.Orders.Count, slip,
+            paper => PaperPdfDocument.Slip(slip, built.TimeZone, paper), Event(SlipPdfAction, encounter, encounterId, $"tests:{slip.Orders.Count}"), cancellationToken);
+    }
+
+    /// <summary>The slip of the placed orders and the facility's time zone; null when nothing is placed.</summary>
+    async Task<(OrderSlip Slip, string TimeZone)?> BuildSlipAsync(EncounterView encounter, CancellationToken cancellationToken)
+    {
+        var placed = await db.Orders.AsNoTracking().Where(o => o.EncounterId == encounter.Id && o.State == OrderState.Ordered).OrderBy(o => o.CreatedAt).ThenBy(o => o.Id).ToListAsync(cancellationToken);
         if (placed.Count == 0) return null;
         var patient = (await patients.SummariesAsync([encounter.PatientId], cancellationToken)).GetValueOrDefault(encounter.PatientId) ?? throw new InvalidOperationException("Patient not in this tenant.");
         var facility = await facilities.FindAsync(encounter.FacilityId, cancellationToken) ?? throw new InvalidOperationException("Facility not in this tenant.");
         var doctor = (await staffUsers.DisplayNamesAsync([encounter.LeadClinicianId], cancellationToken)).GetValueOrDefault(encounter.LeadClinicianId);
-        await audit.WriteAsync(Event(SlipAction, encounter, encounterId), cancellationToken);
         var destinations = placed.Select(o => o.Destination).Distinct().ToList();
-        return new OrderSlip(new SlipPatient(patient.FullName, patient.Mrn, patient.DateOfBirth, patient.SexAtBirth.ToString()), facility.Name, doctor,
-            placed.Max(o => o.OrderedAt)!.Value, destinations.Count == 1 ? destinations[0] : null, placed.Select(View).ToList());
+        return (new OrderSlip(new SlipPatient(patient.FullName, patient.Mrn, patient.DateOfBirth, patient.SexAtBirth.ToString()), facility.Name, doctor,
+            placed.Max(o => o.OrderedAt)!.Value, destinations.Count == 1 ? destinations[0] : null, placed.Select(View).ToList()), facility.TimeZone);
     }
 
     /// <summary>The encounter, once the caller may order for its patient at its facility. Null: no such encounter in this tenant.</summary>

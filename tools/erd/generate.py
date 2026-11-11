@@ -30,6 +30,7 @@ SOFT_REFS = {
     'NoteId': ('encounters', 'ConsultNotes'), 'AmendsVersionId': ('encounters', 'SignedNoteVersions'), 'SignedBy': ('identity', 'Users'), 'RenderedBy': ('identity', 'Users'),
     'AuthorisedBy': ('identity', 'Users'), 'PrescriptionId': ('prescribing', 'AuthorisedPrescriptions'),
     'PdfId': ('prescribing', 'PrescriptionPdfs'), 'ShareId': ('prescribing', 'RxShares'), 'SharedBy': ('identity', 'Users'),
+    'DoctorId': ('identity', 'Users'),  # PrintedPapers: the doctor the slip or letter names (SourceId is the encounter or the referral, by Kind)
 }
 # CalendarId (and the from/to of a reschedule) is a doctor (a membership, inferred) or a room, told apart by CalendarKind.
 CALENDAR_COLS = ('CalendarId', 'FromCalendarId', 'ToCalendarId')
@@ -60,7 +61,7 @@ PARTIAL = {
     'PRESCRIPTION': 'each authorisation is an append-only version holding its lines; printed copies in prescribing.PrescriptionPdfs',
     'PHARMACY_DISPATCH': 'one append-only row per state with its actor; the secure link it rides on is prescribing.RxShares (MDV-P2-020)',
 }
-LEDGER = {'audit.AuditEvents', 'encounters.SignedNoteVersions', 'encounters.SignedNotePdfs', 'prescribing.AuthorisedPrescriptions', 'prescribing.PrescriptionPdfs', 'prescribing.RxLayoutApprovals', 'prescribing.RxShares', 'prescribing.PharmacyDispatchEvents', 'patients.ConsentReceipts', 'tenancy.TermsAcceptances'}  # hash-chained, MDV-P0-036
+LEDGER = {'audit.AuditEvents', 'encounters.SignedNoteVersions', 'encounters.SignedNotePdfs', 'prescribing.AuthorisedPrescriptions', 'prescribing.PrescriptionPdfs', 'prescribing.RxLayoutApprovals', 'prescribing.RxShares', 'prescribing.PharmacyDispatchEvents', 'prescribing.PrintedPapers', 'patients.ConsentReceipts', 'tenancy.TermsAcceptances'}  # hash-chained, MDV-P0-036
 MODULE_ORDER = ['Tenancy', 'Identity', 'Patients', 'Scheduling', 'Encounters', 'Prescribing', 'Notifications', 'Audit', 'Leads', 'Billing', 'Platform']
 
 

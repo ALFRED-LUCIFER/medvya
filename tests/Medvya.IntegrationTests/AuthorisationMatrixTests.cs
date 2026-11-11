@@ -218,6 +218,7 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/orders", """{"kind":"Lab","name":"Synthetic test"}""")),
         (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/orders/place", """{"destination":"Synthetic lab"}""")),
         (Role.SoloDoctor, new("GET", "/v1/encounters/{encounter}/orders/slip")),
+        (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/orders/slip/pdf")),
         (Role.SoloDoctor, new("PUT", "/v1/orders/{order}/included", """{"included":false}""")),
         (Role.SoloDoctor, new("GET", "/v1/encounters/{encounter}/prescription")),
         (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/prescription/items", """{"medicine":"Synthetic medicine"}""")),
@@ -237,6 +238,7 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.SoloDoctor, new("POST", "/v1/referrals/{referral}/send", """{"channel":"Print"}""")),
         (Role.SoloDoctor, new("POST", "/v1/referrals/{referral}/status", """{"state":"Closed"}""")),
         (Role.SoloDoctor, new("GET", "/v1/referrals/{referral}/letter")),
+        (Role.SoloDoctor, new("POST", "/v1/referrals/{referral}/letter/pdf")),
         (Role.SoloDoctor, new("GET", "/v1/patients/{patient}/referrals")),
         (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/orders/from-set", """{"orderSetId":"{order}"}""")),
         (Role.Nurse, new("POST", "/v1/intake/{appointment}/escalate", """{"reason":"Synthetic"}""")),
@@ -433,6 +435,7 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.Receptionist, new("POST", "/v1/encounters/{encounter}/prescription/shares", """{"recipient":"Patient","channel":"Sms"}""")), // the desk shares once the matrix says so
         (Role.Receptionist, new("POST", "/v1/encounters/{encounter}/orders/place", """{"destination":"Synthetic lab"}""")),
         (Role.PracticeAdmin, new("GET", "/v1/encounters/{encounter}/orders/slip")),
+        (Role.Nurse, new("POST", "/v1/encounters/{encounter}/orders/slip/pdf")), // Prescriptions & orders: X
         (Role.Nurse, new("GET", "/v1/formulary")), // Prescriptions & orders: X
         (Role.PracticeAdmin, new("GET", "/v1/order-sets")), // Prescriptions & orders: X (the admin reads them under settings)
         (Role.HospitalDoctor, new("POST", "/v1/settings/formulary", """{"generic":"Synthetic","strength":"1 mg","form":"Tablet","regClass":"None"}""")), // Staff, roles, integrations: X

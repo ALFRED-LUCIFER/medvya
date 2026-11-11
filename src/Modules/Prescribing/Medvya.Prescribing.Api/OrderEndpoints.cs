@@ -1,5 +1,6 @@
 using Medvya.Audit.Api;
 using Medvya.Audit.Domain;
+using Medvya.BuildingBlocks.Infrastructure;
 using Medvya.Prescribing.Application;
 using Medvya.Tenancy.Api;
 using Medvya.Tenancy.Application;
@@ -40,7 +41,19 @@ public static class OrderEndpoints
         g.MapGet("/encounters/{encounterId:guid}/orders/slip", async (Guid encounterId, [FromServices] IOrders service, CancellationToken ct) =>
                 await service.SlipAsync(encounterId, ct) is { } v ? Results.Ok(v) : Results.NotFound())
             .AuditedByUseCase("order.slip", "order", AuditPurpose.Treatment).AddEndpointFilter(MapErrors);
+        // POST: each copy handed out is a new stored, audited paper with its own verify code.
+        g.MapPost("/encounters/{encounterId:guid}/orders/slip/pdf", async (Guid encounterId, [FromServices] IOrders service, HttpContext http, CancellationToken ct) =>
+                File(http, await service.SlipPdfAsync(encounterId, ct)))
+            .AuditedByUseCase("order.slip.pdf", "order", AuditPurpose.Treatment).AddEndpointFilter(MapErrors);
         return app;
+    }
+
+    internal static IResult File(HttpContext http, PaperPdf? pdf)
+    {
+        if (pdf is null) return Results.NotFound();
+        http.Response.Headers["X-Content-SHA256"] = pdf.Sha256;
+        http.Response.Headers.CacheControl = "no-store";
+        return Results.File(pdf.Content, "application/pdf");
     }
 
     // Inside the audit filter (added after it), so the row records the answer the caller gets.
@@ -61,6 +74,11 @@ public static class OrderEndpoints
         catch (OrdersConflictException e)
         {
             return Results.Problem(statusCode: StatusCodes.Status409Conflict, title: "Orders cannot do this now", extensions: new Dictionary<string, object?> { ["code"] = e.Code });
+        }
+        catch (PdfUnsupportedTextException)
+        {
+            return Results.Problem(statusCode: StatusCodes.Status422UnprocessableEntity, title: "The paper has text the PDF cannot show; use the print view",
+                extensions: new Dictionary<string, object?> { ["code"] = "pdf_unsupported_text" });
         }
     }
 }

@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Text.Json;
 using Medvya.BuildingBlocks.Infrastructure;
 using Medvya.Prescribing.Application;
 using Medvya.Prescribing.Domain;
@@ -22,13 +21,6 @@ public static class RxPdfDocument
 {
     /// <summary>The layout a doctor approves (exit gate 4): raise it whenever what the paper shows or where changes, so each doctor approves again.</summary>
     public const int LayoutVersion = 2; // 2: the logo and the signature image
-
-    static readonly Lazy<Dictionary<string, string>> Catalog = new(() =>
-    {
-        using var stream = typeof(RxPdfDocument).Assembly.GetManifestResourceStream("Medvya.Prescribing.messages.en.json")
-            ?? throw new InvalidOperationException("The English message catalogue is not embedded.");
-        return JsonSerializer.Deserialize<Dictionary<string, string>>(stream)!;
-    });
 
     /// <exception cref="PdfUnsupportedTextException"/>
     public static byte[] Render(RxPrintView v, PlainPdf.Paper paper, PrintImages images)
@@ -78,7 +70,5 @@ public static class RxPdfDocument
             ("page", page.ToString(CultureInfo.InvariantCulture)), ("pages", pages.ToString(CultureInfo.InvariantCulture))), paper, v.Qr, images.Logo, images.Signature);
     }
 
-    static string Text(string key, params (string Name, string Value)[] values) =>
-        values.Aggregate(Catalog.Value.GetValueOrDefault(key) ?? throw new KeyNotFoundException($"Message key '{key}' is not in en.json."),
-            (text, v) => text.Replace("{" + v.Name + "}", v.Value, StringComparison.Ordinal));
+    static string Text(string key, params (string Name, string Value)[] values) => PaperText.Get(key, values);
 }

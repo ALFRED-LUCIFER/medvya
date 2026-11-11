@@ -52,6 +52,7 @@ async function open(page: Page, { locale = 'en', consent = true } = {}) {
     patient: { fullName: 'Meera Iyer (synthetic)', mrn: '000001', dateOfBirth: '1972-03-12', sexAtBirth: 'Female' }, facilityName: 'Iyer Family Clinic · Adyar', doctorName: 'Dr. Arjun Rao (synthetic)',
     provider: 'Dr. S. Menon, Endocrinology (synthetic)', urgency: 'Routine', reason: 'Uncontrolled HbA1c (synthetic)', at: '2026-10-19T04:55:00Z',
     sections: [{ section: 'Medicines', lines: [{ text: 'Metformin 500 mg', source: 'ClinicianVerified' }] }] } }));
+  await page.route('**/v1/referrals/*/letter/pdf', r => r.fulfill({ status: 200, contentType: 'application/pdf', body: '%PDF-1.7 synthetic' }));
   await page.route('**/v1/patients/p-1/chart', r => r.fulfill({ json: { patient: { id: 'p-1', fullName: 'Meera Iyer (synthetic)', mrn: '000001', dateOfBirth: '1972-03-12', ageYears: 54, sexAtBirth: 'Female' },
     treatmentConsent: true, timeZone: 'Asia/Kolkata', chart: { allergyState: 'NotRecorded', allergies: [], problems: [], medicines: [], lastVitals: [], trends: [], recentEncounters: [], openEncounterId: null } } }));
   return { referrals, calls };
@@ -115,6 +116,9 @@ test('a received letter is filed with its document and the letter page prints on
   await expect(letter).toContainText('[Clinician verified]'); // each fact says where it came from
   await expect(letter).not.toContainText('Allergies'); // not selected: not in the letter
   await expect(page.getByRole('button', { name: 'Print or save as PDF' })).toBeVisible();
+  const download = page.waitForEvent('download'); // the server's copy with its QR check (MDV-P2-019)
+  await page.getByRole('button', { name: 'Download PDF' }).click();
+  expect((await download).suggestedFilename()).toBe('referral-letter.pdf');
 });
 
 test('Patient 360 shows the open referrals', async ({ page }) => {

@@ -4436,5 +4436,5 @@
   "structured.noteRequired": "Finding for {item} (required)",
   "structured.noteMissing": "Describe the abnormal finding. It is saved once it has a note.",
   "structured.noneAnswered": "Nothing recorded.",
-  "structured.suggested": "Suggested from the patient's age and problems. You can change it."
+  "structured.suggested": "Suggested for this patient's life stage and problems. You can change it."
 }

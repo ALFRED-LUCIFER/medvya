@@ -153,7 +153,7 @@ const press = (section: ReturnType<typeof ros>, name: string, answer: string) =>
 
 test('the review of systems sits in History: Yes or No per symptom, pressed again it clears, an unanswered one is not sent', async ({ page }) => {
   const mock = await open(page, { templateKey: 'diabetes-review', suggestedTemplateKey: 'diabetes-review' });
-  await expect(note(page)).toContainText("Suggested from the patient's age and problems. You can change it.");
+  await expect(note(page)).toContainText("Suggested for this patient's life stage and problems. You can change it.");
   const history = note(page).getByRole('heading', { name: '2 · History' }).locator('..');
   await expect(history.getByRole('group', { name: 'Review of systems' })).toBeVisible();
   await press(ros(page), 'Tiredness', 'Yes').click();
@@ -162,7 +162,7 @@ test('the review of systems sits in History: Yes or No per symptom, pressed agai
   await expect.poll(() => mock.puts.at(-1)?.sections.reviewOfSystems).toBe('{"tiredness":{"answer":"yes"},"chestPain":{"answer":"no"}}');
   await press(ros(page), 'Tiredness', 'Yes').click(); // pressed again: blank, not "no"
   await expect.poll(() => mock.puts.at(-1)?.sections.reviewOfSystems).toBe('{"chestPain":{"answer":"no"}}');
-  await expect(note(page)).not.toContainText('Suggested from the patient'); // saved: the doctor's note now, no longer a suggestion
+  await expect(note(page)).not.toContainText('Suggested for this patient'); // saved: the doctor's note now, no longer a suggestion
 });
 
 test('the examination sits in Examination: Abnormal waits for its note, Not examined is kept; the guided steps edit the same answers', async ({ page }) => {

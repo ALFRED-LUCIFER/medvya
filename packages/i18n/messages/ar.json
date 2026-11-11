@@ -4433,5 +4433,5 @@
   "structured.noteRequired": "نتيجة فحص {item} (مطلوبة)",
   "structured.noteMissing": "صِف النتيجة غير الطبيعية. تُحفظ بعد كتابة الملاحظة.",
   "structured.noneAnswered": "لم يُسجَّل شيء.",
-  "structured.suggested": "مقترح بناءً على عمر المريض ومشكلاته. يمكنك تغييره."
+  "structured.suggested": "مقترح بناءً على المرحلة العمرية للمريض ومشكلاته. يمكنك تغييره."
 }

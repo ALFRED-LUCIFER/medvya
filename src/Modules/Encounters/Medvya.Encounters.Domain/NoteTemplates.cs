@@ -76,21 +76,23 @@ public static class NoteTemplates
 
     public static NoteTemplate? Find(string key, int version) => History.FirstOrDefault(t => t.Key == key && t.Version == version);
 
-    // shortcut: the age bands repeat LifeStages (MDV-P2-032, PR #1072) and pregnancy is an active O or Z33/Z34 problem until the pregnancy record
-    // (MDV-P2-034); call LifeStages.Of once it is on main.
-    public const int ChildUnderYears = 18, OlderAdultFromYears = 65;
-
     /// <summary>
-    /// The template a new note starts on (MDV-P2-042): antenatal for a pregnancy, paediatrics for a child, the older-adult review from 65, diabetes
-    /// review for an adult with active diabetes (E10–E14), else null (General OPD). Only a note with nothing saved yet gets it; the doctor's choice wins.
+    /// The template a new note starts on (MDV-P2-042), from the life stage (MDV-P2-032) and active problems: antenatal for a pregnancy, paediatrics
+    /// for a child, the older-adult review for an older adult, diabetes review for an adult with active diabetes (E10–E14), else null (General OPD).
+    /// Only a note with nothing saved yet gets it; the doctor's choice wins.
+    /// shortcut: a pregnancy is an active O or Z33/Z34 problem until the pregnancy record (MDV-P2-034) passes the open one to LifeStages.Of.
     /// </summary>
     public static string? Suggest(DateOnly dateOfBirth, DateOnly today, IEnumerable<string?> activeProblemCodes)
     {
         var codes = activeProblemCodes.OfType<string>().Select(c => c.Trim().ToUpperInvariant()).ToList();
-        if (codes.Exists(c => c.StartsWith('O') || c.StartsWith("Z33", StringComparison.Ordinal) || c.StartsWith("Z34", StringComparison.Ordinal))) return "antenatal";
-        if (dateOfBirth.AddYears(ChildUnderYears) > today) return "paediatrics";
-        if (dateOfBirth.AddYears(OlderAdultFromYears) <= today) return "older-adult-review";
-        return codes.Exists(c => c is ['E', '1', >= '0' and <= '4', ..]) ? "diabetes-review" : null;
+        var pregnant = codes.Exists(c => c.StartsWith('O') || c.StartsWith("Z33", StringComparison.Ordinal) || c.StartsWith("Z34", StringComparison.Ordinal));
+        return LifeStages.Of(dateOfBirth, today, pregnant) switch
+        {
+            LifeStage.Pregnancy => "antenatal",
+            LifeStage.Child => "paediatrics",
+            LifeStage.OlderAdult => "older-adult-review",
+            _ => codes.Exists(c => c is ['E', '1', >= '0' and <= '4', ..]) ? "diabetes-review" : null,
+        };
     }
 }
 

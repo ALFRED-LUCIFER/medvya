@@ -407,7 +407,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "$ref": "#/components/schemas/HistorySection"
+              "type": "string"
             }
           }
         ],
@@ -8423,21 +8423,6 @@
             "format": "int32"
           }
         }
-      },
-      "HistorySection": {
-        "enum": [
-          "PastMedical",
-          "Surgical",
-          "Family",
-          "Social",
-          "WomensHealth",
-          "Obstetric",
-          "Birth",
-          "Feeding",
-          "Function",
-          "Falls",
-          "BloodGroup"
-        ]
       },
       "HoldSlot": {
         "type": "object",

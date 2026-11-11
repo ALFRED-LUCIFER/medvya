@@ -669,7 +669,7 @@ export interface paths {
                 header?: never;
                 path: {
                     patientId: string;
-                    section: components["schemas"]["HistorySection"];
+                    section: string;
                 };
                 cookie?: never;
             };
@@ -8241,8 +8241,6 @@ export interface components {
             /** Format: int32 */
             days: number | string;
         };
-        /** @enum {unknown} */
-        HistorySection: "PastMedical" | "Surgical" | "Family" | "Social" | "WomensHealth" | "Obstetric" | "Birth" | "Feeding" | "Function" | "Falls" | "BloodGroup";
         HoldSlot: {
             /** Format: uuid */
             facilityId?: string;

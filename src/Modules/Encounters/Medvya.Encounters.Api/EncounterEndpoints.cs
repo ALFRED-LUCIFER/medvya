@@ -162,12 +162,14 @@ public static class EncounterEndpoints
     internal static BannerPatient BannerOf(PatientSummary p, DateOnly today) =>
         new(p.Id, p.FullName, p.Mrn, p.DateOfBirth, CountryRules.AgeOn(today, p.DateOfBirth), p.SexAtBirth, p.PreferredLanguage);
 
-    static async Task<IResult> SaveHistory(Guid patientId, HistorySection section, [FromBody] SaveHistory? body, [FromServices] IPatientHistory history,
+    // The section is a name, parsed here so an unknown one is a refusal the audit filter records (route binding would answer before it).
+    static async Task<IResult> SaveHistory(Guid patientId, string section, [FromBody] SaveHistory? body, [FromServices] IPatientHistory history,
         [FromServices] IPatientDirectory patients, [FromServices] ICurrentFacility current, CancellationToken ct)
     {
         if (current.FacilityId is not { } facilityId) return Results.Problem(statusCode: StatusCodes.Status403Forbidden, title: "No facility context");
+        if (!Enum.GetNames<HistorySection>().Contains(section)) return Results.ValidationProblem(new Dictionary<string, string[]> { ["section"] = ["invalid"] });
         if (!(await patients.SummariesAsync([patientId], ct)).ContainsKey(patientId)) return Results.NotFound();
-        return Results.Ok(new { items = await history.SaveAsync(patientId, facilityId, section, body ?? new SaveHistory(null), ct) });
+        return Results.Ok(new { items = await history.SaveAsync(patientId, facilityId, Enum.Parse<HistorySection>(section), body ?? new SaveHistory(null), ct) });
     }
 
     static async Task<IResult> Banner(Guid encounterId, [FromServices] IEncounters service, [FromServices] IPatientDirectory patients, [FromServices] IPatientConsents consents,

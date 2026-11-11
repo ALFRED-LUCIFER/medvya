@@ -133,6 +133,9 @@ public sealed class SafetyRulesTests
         Assert.Equal((6_000_000L, 4_000_000L), (over.DailyMicrograms!.Value, over.MaxDailyMicrograms!.Value));
         Assert.StartsWith($"dose:{over.ItemId}:6000000", over.Key, StringComparison.Ordinal); // a different dose is a different finding
         Assert.Equal(1_000L, SafetyRules.DailyMicrograms(Line("H03AA01", strength: "50 mcg", sig: new("10", "tablet", null, "BD", null, null, null, null))));
+        // MDV-P2-039: once in the morning or at night is once a day, so the maximum still applies (9 x 500 mg = 4.5 g).
+        foreach (var once in new[] { "MORNING", "NIGHT" })
+            Assert.Equal(4_500_000L, Assert.Single(Run([Line("N02BE01", "Paracetamol", "500 mg", Tabs("9", once))]).Alerts).DailyMicrograms);
 
         foreach (var sig in new SigParts[] { Tabs("8", "SOS"), Tabs("8", "WEEKLY"), new("50", "ml", null, "QID", null, null, null, null), Tabs("8", null!), new(null, "tablet", null, "QID", null, null, null, null) })
         {

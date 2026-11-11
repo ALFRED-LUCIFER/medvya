@@ -24,6 +24,12 @@ export const stopLine = (medicine: string, reason: string): RxLine => ({
   sig: { en: 'Stop this medicine.', hi: 'यह दवा बंद करें।', ar: 'أوقف هذا الدواء.' },
 });
 
+// A formulary row (FormularyItemView), as the search answers it.
+export type Medicine = ReturnType<typeof medicine>;
+export const medicine = (id: string, generic: string, strength: string, form: string, brands: string[] = []) => ({
+  id, generic, strength, form, brands, nationalCode: null, regClass: 'ScheduleH', printRequirements: [] as string[], atc: null as string | null, defaultSig: null, source: 'Starter', active: true,
+});
+
 // The safety checks (MDV-P2-016, MDV-P2-040), in RxCheckView's shape. Which alert fires for which conflict is proven in SafetyRulesTests and PrescriptionCheckTests.
 export type RxChecks = {
   ruleSet: string; ruleSetVersion: string; allergies: 'NotRecorded' | 'NoKnownAllergies' | 'Listed'; alerts: Record<string, unknown>[];
@@ -71,9 +77,14 @@ type AuthState = { authorised: ReturnType<typeof authorised> | null; changed: bo
 
 export async function mockPrescription(page: Page, opts: {
   locale?: string; ended?: boolean; allowed?: boolean; lines?: RxLine[]; checks?: RxChecks; authorisation?: AuthState; reauthFirst?: boolean;
+  /** The formulary rows a search answers (default: Metformin 500 mg); a line added from one takes its name, strength and form. */
+  formulary?: Medicine[];
+  /** The checks as the server would run them over the current lines, instead of a fixed answer. */
+  checksOf?: (lines: RxLine[]) => RxChecks;
 } = {}) {
   const ordered = await mockOrders(page, { locale: opts.locale, ended: opts.ended });
   const lines: RxLine[] = [...(opts.lines ?? [])];
+  const formulary = opts.formulary ?? [medicine('fi-metformin', 'Metformin', '500 mg', 'Tablet', ['Glycomet'])];
   const calls = { added: [] as unknown[], saved: [] as unknown[], included: [] as unknown[], searched: [] as string[], checked: 0, overrides: [] as unknown[], authorised: 0, approved: 0 };
   let state: AuthState = opts.authorisation ?? { authorised: null, changed: false };
   await page.route('**/v1/encounters/e-1/prescription/authorisation', r => {
@@ -90,7 +101,15 @@ export async function mockPrescription(page: Page, opts: {
   await page.route('**/v1/prescription-layout', r => r.fulfill({ json: layout }));
   await page.route('**/v1/prescription-layout/approval', r => { calls.approved++; layout = { ...layout, approvedAt: '2026-10-19T04:55:00Z' }; return r.fulfill({ json: layout }); });
   let checks = opts.checks ?? clearChecks();
-  await page.route('**/v1/encounters/e-1/prescription/checks', r => { calls.checked++; return r.fulfill({ json: checks }); });
+  await page.route('**/v1/encounters/e-1/prescription/checks', r => {
+    calls.checked++;
+    if (opts.checksOf) {
+      const now = opts.checksOf(lines);
+      const open = now.alerts.filter(a => a.severity === 'Severe' && !checks.overrides.some(o => o.key === a.key)).length;
+      checks = { ...now, overrides: checks.overrides, unresolved: open };
+    }
+    return r.fulfill({ json: checks });
+  });
   await page.route('**/v1/encounters/e-1/prescription/overrides', r => {
     const body = r.request().postDataJSON() as { key: string; reason: string };
     calls.overrides.push(body);
@@ -103,8 +122,9 @@ export async function mockPrescription(page: Page, opts: {
   await page.route('**/v1/encounters/e-1/prescription/items', r => {
     const body = r.request().postDataJSON() as { formularyItemId?: string; medicine?: string };
     calls.added.push(body);
-    lines.push(body.formularyItemId
-      ? line(`rx-${lines.length + 1}`, 'Metformin')
+    const row = formulary.find(f => f.id === body.formularyItemId);
+    lines.push(row
+      ? line(`rx-${lines.length + 1}`, row.generic, { formularyItemId: row.id, strength: row.strength, form: row.form })
       : line(`rx-${lines.length + 1}`, body.medicine!, { formularyItemId: null, strength: null, form: null, freeText: true }));
     return r.fulfill({ json: answer() });
   });
@@ -124,8 +144,8 @@ export async function mockPrescription(page: Page, opts: {
   });
   await page.route('**/v1/formulary?*', r => {
     calls.searched.push(new URL(r.request().url()).searchParams.get('q') ?? '');
-    return r.fulfill({ json: [{ id: 'fi-metformin', generic: 'Metformin', strength: '500 mg', form: 'Tablet', brands: ['Glycomet'], nationalCode: null, regClass: 'ScheduleH',
-      printRequirements: ['warning_schedule_h'], atc: 'A10BA02', defaultSig: '1 tablet twice a day with meals', source: 'Starter', active: true }] });
+    const q = (new URL(r.request().url()).searchParams.get('q') ?? '').toLowerCase();
+    return r.fulfill({ json: formulary.filter(f => !opts.formulary || f.generic.toLowerCase().includes(q) || f.brands.some(b => b.toLowerCase().includes(q))) });
   });
   return { lines, calls, orders: ordered.orders, orderCalls: ordered.calls };
 }

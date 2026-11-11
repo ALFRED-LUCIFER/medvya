@@ -4,7 +4,7 @@ import { z } from 'zod';
 // The server is the authority and writes the readable instruction; these checks only save a round trip.
 export const doseUnits = ['tablet', 'capsule', 'ml', 'mg', 'drop', 'puff', 'unit', 'sachet', 'application'] as const;
 export const routes = ['oral', 'sublingual', 'topical', 'inhaled', 'eye', 'ear', 'nasal', 'rectal', 'subcutaneous', 'intramuscular', 'intravenous'] as const;
-export const frequencies = ['OD', 'BD', 'TDS', 'QID', 'SOS', 'STAT', 'WEEKLY'] as const;
+export const frequencies = ['OD', 'MORNING', 'NIGHT', 'BD', 'TDS', 'QID', 'SOS', 'STAT', 'WEEKLY'] as const;
 export const timings = ['before_food', 'after_food', 'with_food', 'empty_stomach', 'morning', 'with_breakfast', 'with_lunch', 'with_dinner', 'bedtime'] as const;
 export const printLanguages = ['en', 'hi', 'ta', 'ar'] as const;
 export type PrintLanguage = (typeof printLanguages)[number];

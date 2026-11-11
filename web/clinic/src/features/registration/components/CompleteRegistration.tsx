@@ -12,11 +12,13 @@ type Props = {
   form: UseFormReturn<RegistrationForm>;
   country: Country;
   values: RegistrationForm;
+  loading: boolean;
   saving: boolean;
   onSubmit: () => void;
+  onReload: () => void;
   /** Set after a save: Complete closes the desk's completion task. */
   status: RegistrationStatus | null;
-  failure: 'notFound' | 'forbidden' | 'error' | null;
+  failure: 'notFound' | 'forbidden' | 'changed' | 'error' | null;
   recordPath: string;
 };
 
@@ -32,6 +34,8 @@ export default function CompleteRegistration(p: Props) {
   if (p.failure === 'notFound')
     return <div className="flex flex-col gap-4">{back}<div role="alert"><PatientsMessage pageHeading title={t('patients.record.notFound.title')} body={t('patients.record.notFound.body')} /></div></div>;
   if (p.failure === 'forbidden') return <PatientsMessage pageHeading title={t('err.403')} body={t('registration.forbidden.body')} />;
+
+  if (p.loading) return <p role="status">{t('registration.complete.loading')}</p>;
 
   const { register, control, formState: { errors } } = p.form;
   const f = { register, control, errors };
@@ -63,6 +67,12 @@ export default function CompleteRegistration(p: Props) {
             <PayerStep f={f} country={p.country} values={p.values} />
           </section>
           <div className="flex flex-col items-start gap-2">
+            {p.failure === 'changed' && (
+              <div role="alert" className="flex flex-col items-start gap-2 text-sm font-semibold text-danger-700">
+                <p>{t('registration.complete.changed')}</p>
+                <Button type="button" variant="outline" onClick={p.onReload}>{t('registration.complete.changed.reload')}</Button>
+              </div>
+            )}
             {p.failure === 'error' && <p role="alert" className="text-sm font-semibold text-danger-700">{t('registration.complete.failed')}</p>}
             <Button type="submit" loading={p.saving}>{p.saving ? t('registration.save.saving') : t('registration.complete.save')}</Button>
           </div>

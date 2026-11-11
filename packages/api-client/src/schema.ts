@@ -3223,6 +3223,15 @@ export interface paths {
                         "application/json": components["schemas"]["ProfileView"];
                     };
                 };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                    };
+                };
             };
         };
         post?: never;
@@ -7954,6 +7963,8 @@ export interface components {
             address?: null | components["schemas"]["PatientAddress"];
             payer?: null | components["schemas"]["PayerInput"];
             emergencyContact?: null | components["schemas"]["ContactInput"];
+            /** Format: uint32 */
+            version?: null | number | string;
         };
         /** @enum {unknown} */
         ConsentChannel: "WhatsApp" | "Sms" | "Email" | null;
@@ -8218,6 +8229,17 @@ export interface components {
             start: null | string;
             end: null | string;
         };
+        HttpValidationProblemDetails: {
+            type?: null | string;
+            title?: null | string;
+            /** Format: int32 */
+            status?: null | number | string;
+            detail?: null | string;
+            instance?: null | string;
+            errors?: {
+                [key: string]: string[];
+            };
+        };
         IdentifierInput: {
             scheme: components["schemas"]["IdentifierScheme"];
             value: string;
@@ -8424,6 +8446,11 @@ export interface components {
             hasLogo: boolean;
             /** Format: date */
             registrationExpiresOn?: null | string;
+            /**
+             * Format: uint32
+             * @default 0
+             */
+            version: number | string;
         };
         QueueTv: {
             now: components["schemas"]["QueueTvNow"][];
@@ -8616,6 +8643,8 @@ export interface components {
             taxNumber?: null | string;
             phone?: null | string;
             email?: null | string;
+            /** Format: uint32 */
+            version?: null | number | string;
         };
         SaveRequest: {
             /** Format: int32 */

@@ -12,6 +12,8 @@ export type Profile = {
   phone: string | null;
   email: string | null;
   hasLogo: boolean;
+  /** The row version this was read at (0 before a profile exists); a save sends it back and is refused (409 "changed") if it moved on (#889). */
+  version: number;
 };
 export type LogoLink = { url: string; expiresAt: string };
 export type Location = { id: string; name: string; address: string | null; timeZone: string };

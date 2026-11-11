@@ -7,7 +7,7 @@ const blank = <T extends Record<string, string>>(form: T) => Object.fromEntries(
 
 // Practice settings (F-08, MDV-P1-005). Ids in paths, details in bodies; business details only.
 export const fetchProfile = () => send<Profile>('/v1/settings/profile');
-export const saveProfile = (form: ProfileForm) => send<Profile>('/v1/settings/profile', json('PUT', blank(form)));
+export const saveProfile = (form: ProfileForm, version: number) => send<Profile>('/v1/settings/profile', json('PUT', { ...blank(form), version }));
 
 /** A short-lived signed link to the logo; null when there is none. */
 export async function fetchLogoLink(): Promise<LogoLink | null> {

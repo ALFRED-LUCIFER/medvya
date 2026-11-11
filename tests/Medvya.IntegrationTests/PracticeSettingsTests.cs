@@ -145,6 +145,22 @@ public sealed class PracticeSettingsTests(PostgresFixture sql) : IClassFixture<P
         Assert.Equal(("settings.profile.update", "settings", Medvya.Audit.Domain.AuditOutcome.Allowed), (row.Action, row.ResourceType, row.Outcome));
     }
 
+    /// <summary>#889: two administrators open the profile, both save. The second sends a version the first already replaced, so it is refused.</summary>
+    [Fact]
+    public async Task ASecondAdministratorSavingFromAStaleProfileIsRefusedAndNothingIsOverwritten()
+    {
+        var settings = h.Settings(h.Admin);
+        var loaded = await settings.GetProfileAsync();
+        var first = await settings.SaveProfileAsync(new SaveProfile { Name = loaded.Name, Phone = "+91 90000 00201", Version = loaded.Version });
+        Assert.NotEqual(loaded.Version, first.Version);
+        Assert.Equal(first.Version, (await settings.GetProfileAsync()).Version); // what the save returned is what the next read shows
+
+        await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => h.Settings(h.Admin).SaveProfileAsync(new SaveProfile { Name = loaded.Name, Phone = "+91 90000 00202", Version = loaded.Version }));
+        Assert.Equal("+91 90000 00201", (await settings.GetProfileAsync()).Phone);
+        var again = await settings.SaveProfileAsync(new SaveProfile { Name = loaded.Name, Phone = "+91 90000 00202", Version = first.Version }); // reloaded, saves
+        Assert.Equal("+91 90000 00202", again.Phone);
+    }
+
     [Fact]
     public async Task InvalidProfileIsRejectedWithFieldCodesAndNothingIsSaved()
     {

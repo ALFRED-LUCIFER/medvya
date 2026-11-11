@@ -156,7 +156,7 @@ public sealed class PatientEndpointTests(PostgresFixture sql) : IClassFixture<Po
         var opened = await desk.GetFromJsonAsync<JsonElement>(new Uri($"/v1/patients/{meera}", UriKind.Relative));
         Assert.Equal(
             ["address", "ageYears", "alternatePhone", "arabicName", "dateOfBirth", "dateOfBirthEstimated", "email", "emergencyContact", "fullName", "genderIdentity", "guardian",
-             "id", "identifiers", "mobile", "mrn", "nationality", "payer", "preferredLanguage", "registeredOn", "sexAtBirth", "status"],
+             "id", "identifiers", "mobile", "mrn", "nationality", "payer", "preferredLanguage", "registeredOn", "sexAtBirth", "status", "version"],
             opened.EnumerateObject().Select(p => p.Name).Order(StringComparer.Ordinal));
         // Identifiers are the last four digits only; the full number needs the audited reveal.
         Assert.All(opened.GetProperty("identifiers").EnumerateArray(), i => Assert.DoesNotContain(i.EnumerateObject(), p => p.Name == "value"));
@@ -269,25 +269,49 @@ public sealed class PatientEndpointTests(PostgresFixture sql) : IClassFixture<Po
     {
         using var host = Host();
         using var desk = Client(host, "receptionist");
-        var body = new
+        async Task<object> BodyFor(Guid id) => new
         {
             address = new { line1 = "12 Test Street", city = "Kochi", region = "Kerala", postalCode = "682001" },
             payer = new { kind = "SelfPay" },
             emergencyContact = new { name = "Lakshmi Nair (synthetic)", relationship = "Spouse", phone = "+91 90000 00009" },
+            version = (await desk.GetFromJsonAsync<JsonElement>(new Uri($"/v1/patients/{id}", UriKind.Relative))).GetProperty("version").GetUInt32(), // #889
         };
         await using var audit = sql.Audit(tenant);
 
-        var other = await desk.PostAsJsonAsync(new Uri($"/v1/patients/{elsewhere}/completion", UriKind.Relative), body);
+        var other = await desk.PostAsJsonAsync(new Uri($"/v1/patients/{elsewhere}/completion", UriKind.Relative), await BodyFor(elsewhere));
         Assert.Equal(HttpStatusCode.OK, other.StatusCode);
         var rows = await audit.Events.Where(e => e.PatientId == elsewhere && e.Action == "patient.update").ToListAsync();
         Assert.Equal(Medvya.Audit.Domain.AuditOutcome.Allowed, Assert.Single(rows).Outcome);
 
         var own = await Register(facility, "Leela Raman (synthetic)", "+91 90000 00131", c => c with { DateOfBirth = new DateOnly(1993, 4, 2), Quick = true, Address = null, Payer = null });
-        var completed = await desk.PostAsJsonAsync(new Uri($"/v1/patients/{own}/completion", UriKind.Relative), body);
+        var completed = await desk.PostAsJsonAsync(new Uri($"/v1/patients/{own}/completion", UriKind.Relative), await BodyFor(own));
         Assert.Equal(HttpStatusCode.OK, completed.StatusCode);
         Assert.Equal("Complete", (await completed.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("status").GetString());
         var allowed = await audit.Events.Where(e => e.PatientId == own && e.Action == "patient.update").ToListAsync();
         Assert.Equal(Medvya.Audit.Domain.AuditOutcome.Allowed, Assert.Single(allowed).Outcome);
+    }
+
+    /// <summary>#889: the completion form sends back the version it read. A stale one is a 409 "changed" and nothing is saved; none at all is a 400.</summary>
+    [Fact]
+    public async Task ACompletionFromAStaleRecordIsRefusedAndOneWithoutAVersionToo()
+    {
+        using var host = Host();
+        using var desk = Client(host, "receptionist");
+        var id = await Register(facility, "Gita Menon (synthetic)", "+91 90000 00141", c => c with { DateOfBirth = new DateOnly(1991, 5, 6), Quick = true, Address = null, Payer = null });
+        var url = new Uri($"/v1/patients/{id}/completion", UriKind.Relative);
+        var read = await desk.GetFromJsonAsync<JsonElement>(new Uri($"/v1/patients/{id}", UriKind.Relative));
+        var seen = read.GetProperty("version").GetUInt32();
+        object Save(string line, uint? version) => new { address = new { line1 = line, city = "Kochi", region = "Kerala", postalCode = "682001" }, version };
+
+        Assert.Equal(HttpStatusCode.BadRequest, (await desk.PostAsJsonAsync(url, Save("1 First Road", null))).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await desk.PostAsJsonAsync(url, Save("1 First Road", seen))).StatusCode); // writer one
+        var stale = await desk.PostAsJsonAsync(url, Save("2 Second Road", seen)); // writer two read before writer one saved
+        Assert.Equal(HttpStatusCode.Conflict, stale.StatusCode);
+        Assert.Equal("changed", (await stale.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString());
+
+        var now = await desk.GetFromJsonAsync<JsonElement>(new Uri($"/v1/patients/{id}", UriKind.Relative));
+        Assert.Equal("1 First Road", now.GetProperty("address").GetProperty("line1").GetString()); // writer one's address was not overwritten
+        Assert.Equal(HttpStatusCode.OK, (await desk.PostAsJsonAsync(url, Save("3 Third Road", now.GetProperty("version").GetUInt32()))).StatusCode); // reload, then save
     }
 
     [Fact]

@@ -67,6 +67,22 @@ public class PatientRegistryTests(PostgresFixture sql) : IClassFixture<PostgresF
     }
 
     [Fact]
+    public async Task ACompletionFromAnOlderReadOfTheRecordIsRefusedAndTheNewerOneStays()
+    {
+        // #889: two desks open the same record, both complete it. The version each sends is the one it read.
+        var quick = await Registry(tenantA).RegisterAsync(UaeQuick(facility));
+        var seen = (await Registry(tenantA).GetAsync(quick.PatientId))!.Version;
+        await Registry(tenantA).CompleteRegistrationAsync(quick.PatientId, new PatientAddress { Line1 = "Villa 1", Region = "AUH" }, null, expectedVersion: seen);
+
+        await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() =>
+            Registry(tenantA).CompleteRegistrationAsync(quick.PatientId, new PatientAddress { Line1 = "Villa 2", Region = "AUH" }, null, expectedVersion: seen));
+        var now = (await Registry(tenantA).GetAsync(quick.PatientId))!;
+        Assert.Equal("Villa 1", now.Patient.Address!.Line1);
+        Assert.NotEqual(seen, now.Version);
+        await Registry(tenantA).CompleteRegistrationAsync(quick.PatientId, new PatientAddress { Line1 = "Villa 2", Region = "AUH" }, null, expectedVersion: now.Version); // after a reload
+    }
+
+    [Fact]
     public async Task QuickRegistrationStaysIncompleteUntilAddressPayerAndEmergencyContactAreAdded()
     {
         var quick = await Registry(tenantA).RegisterAsync(UaeQuick(facility));

@@ -274,6 +274,22 @@ public sealed partial class RxShareTests(PostgresFixture sql, AzuriteFixture blo
         using (var latest = await OpenAsync(token, LastCode())) Assert.Equal(HttpStatusCode.OK, latest.StatusCode); // the latest code still works
     }
 
+    // SAFETY mutation check: drop the FOR UPDATE lock in SendCodeAsync and parallel requests each pass the count, so several codes are sent.
+    [Fact]
+    public async Task ParallelCodeRequestsForOneLinkSendOneCode()
+    {
+        await AuthorisedAsync();
+        using (await ShareAsync(new { recipient = "Patient", channel = "Sms" })) { }
+        var token = TokenIn(sms.Sent[^1].Text);
+        var answers = await Task.WhenAll(Enumerable.Range(0, 8).Select(async _ =>
+        {
+            using var r = await SendCodeAsync(token);
+            return r.StatusCode;
+        }));
+        Assert.Equal(1, answers.Count(s => s == HttpStatusCode.NoContent));
+        Assert.All(answers.Where(s => s != HttpStatusCode.NoContent), s => Assert.Equal(HttpStatusCode.TooManyRequests, s));
+    }
+
     // SAFETY mutation check: drop PrintableAsync from PrescriptionService.ShareAsync and the unauthorised and changed prescriptions are shared;
     // drop RefuseIfReplacedAsync from RxShareLinks and the replaced version still opens.
     [Fact]

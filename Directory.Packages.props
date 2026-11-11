@@ -22,6 +22,8 @@
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.14" />
     <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="10.0.13" />
+    <!-- Transitive via Fido2 in the test projects; 9.0.0 has GHSA-vmv3-wvjp-wqpj (CVE-2026-118747), fixed in 10.0.15. -->
+    <PackageVersion Include="System.Formats.Cbor" Version="10.0.15" />
     <!-- Jobs on PostgreSQL (ADR-012): reminders and the outbox publisher, MDV-P1-032. -->
     <!-- WebAuthn security keys for the platform console (MDV-P5-040): the attestation and assertion checks are not ours to hand-roll. -->
     <PackageVersion Include="Fido2" Version="4.3.2" />

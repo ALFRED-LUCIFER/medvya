@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Medvya.Audit.Domain;
+using Medvya.BuildingBlocks.Infrastructure;
 using Medvya.Encounters.Domain;
 using Medvya.Scheduling.Application;
 using Medvya.Tenancy.Domain;
@@ -458,7 +459,7 @@ public sealed class SignNoteTests(PostgresFixture sql) : IClassFixture<PostgresF
         Assert.Equal(PostgresErrorCodes.CheckViolation, (ex.InnerException as PostgresException)?.SqlState);
     }
 
-    // SAFETY mutation check: drop the header lines from PlainPdf.Write's page loop and the per-page identifier counts fail.
+    // SAFETY mutation check: drop page.Header() from PlainPdf.Write and the per-page identifier checks fail.
     [Fact]
     public async Task ThePdfIsRenderedServerSideWithIdentifiersOnEveryPageAndStoredWithItsHash()
     {
@@ -475,16 +476,18 @@ public sealed class SignNoteTests(PostgresFixture sql) : IClassFixture<PostgresF
         var hash = Convert.ToHexStringLower(SHA256.HashData(bytes));
         Assert.Equal(hash, r.Headers.GetValues("X-Content-SHA256").Single());
 
-        var text = Encoding.Latin1.GetString(bytes);
-        Assert.StartsWith("%PDF-1.4", text, StringComparison.Ordinal);
-        var pages = text.Split("/Type /Page ").Length - 1;
-        Assert.True(pages >= 2, $"{pages} page(s)");
-        foreach (var marker in new[] { "MRN 000001", "Date of birth 12 Mar 1972", @"Meera Lakshmi Venkataraman Iyer \(synthetic\)", "Corrections are added as signed addenda." })
-            Assert.Equal(pages, text.Split(marker).Length - 1);
-        // Every shown line fits between the margins: 80 Courier columns (an escape such as \267 or \( is one character).
-        var shown = System.Text.RegularExpressions.Regex.Matches(text, @"\(((?:[^\\)]|\\.)*)\) Tj").Select(m => System.Text.RegularExpressions.Regex.Replace(m.Groups[1].Value, @"\\(\d{3}|.)", "x"));
-        Assert.All(shown, line => Assert.True(line.Length <= 80, line));
-        foreach (var expected in new[] { @"Signed by Dr. Arjun Rao \(synthetic\)", @"Addendum \267 version 2", "Reason: Patient asked", "Synthetic: follow-up moved to Friday", "Asia/Kolkata" })
+        Assert.StartsWith("%PDF-", Encoding.ASCII.GetString(bytes, 0, 5), StringComparison.Ordinal);
+        var pages = PdfPages.Read(bytes, PlainPdf.A4.Margin);
+        string[] markers = ["MRN 000001", "Date of birth 12 Mar 1972", "Meera Lakshmi Venkataraman Iyer (synthetic)", "Corrections are added as signed addenda."];
+        Assert.True(pages.Count >= 2, $"{pages.Count} page(s)");
+        Assert.All(pages, page =>
+        {
+            Assert.True(page.InsideMargins, "a line runs past the margin");
+            foreach (var marker in markers)
+                Assert.Contains(marker, page.Text, StringComparison.Ordinal);
+        });
+        var text = string.Join(' ', pages.Select(x => x.Text));
+        foreach (var expected in new[] { "Signed by Dr. Arjun Rao (synthetic)", "Addendum · version 2", "Reason: Patient asked", "Synthetic: follow-up moved to Friday", "Asia/Kolkata" })
             Assert.Contains(expected, text, StringComparison.Ordinal);
 
         await using (var db = sql.Encounters(h.Tenant))
@@ -504,17 +507,24 @@ public sealed class SignNoteTests(PostgresFixture sql) : IClassFixture<PostgresF
         Assert.Equal((h.Patient, AuditOutcome.Allowed), (pdf.PatientId, pdf.Outcome));
     }
 
+    // SAFETY mutation check: drop the glyph catch in PlainPdf.Write and the emoji addendum gives 500, not 422.
     [Fact]
-    public async Task ThePdfNeedsASignedNoteReadAccessAndTextItCanShow()
+    public async Task ThePdfNeedsASignedNoteAndReadAccessPrintsHindiAndRefusesAnEmoji()
     {
         var version = await SaveDraftAsync(new { chiefComplaint = "खांसी (synthetic)", assessment = "Synthetic viral cold", plan = "Rest" });
         using (var draft = await PdfAsync(h.Doctor))
             Assert.Equal((HttpStatusCode.Conflict, "note_not_signed"), (draft.StatusCode, (await Json(draft)).GetProperty("code").GetString()));
         using (var signed = await SignAsync(h.Doctor, version)) Assert.True(signed.IsSuccessStatusCode);
         using (var nurse = await PdfAsync(h.Nurse)) Assert.Equal(HttpStatusCode.Forbidden, nurse.StatusCode);
-        using (var script = await PdfAsync(h.Doctor))
-            Assert.Equal((HttpStatusCode.UnprocessableEntity, "pdf_unsupported_text"), (script.StatusCode, (await Json(script)).GetProperty("code").GetString()));
+        using (var hindi = await PdfAsync(h.Doctor))
+        {
+            Assert.Equal(HttpStatusCode.OK, hindi.StatusCode);
+            Assert.Contains("(synthetic)", PdfPages.Read(await hindi.Content.ReadAsByteArrayAsync(), PlainPdf.A4.Margin)[0].Text, StringComparison.Ordinal);
+        }
+        using (var added = await AddendumAsync(h.Doctor, "Synthetic: patient sent 🤒", "Patient asked")) Assert.True(added.IsSuccessStatusCode);
+        using (var emoji = await PdfAsync(h.Doctor))
+            Assert.Equal((HttpStatusCode.UnprocessableEntity, "pdf_unsupported_text"), (emoji.StatusCode, (await Json(emoji)).GetProperty("code").GetString()));
         await using var db = sql.Encounters(h.Tenant);
-        Assert.Equal(0, await db.SignedNotePdfs.CountAsync());
+        Assert.Equal(1, await db.SignedNotePdfs.CountAsync());
     }
 }

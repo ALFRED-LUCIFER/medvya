@@ -11,8 +11,9 @@ namespace Medvya.Prescribing.Infrastructure;
 /// the patient's identifiers and the Rx number, then the chart's allergies, each medicine by its generic name with its instruction and the notes its
 /// regulatory class needs, the medicines to stop, the authorisation with its content hash, and the QR code that verifies it.
 /// Copy comes from the shared English catalogue (packages/i18n/messages/en.json); the server never invents wording.
-/// shortcut: written by <see cref="PlainPdf"/> (Latin only), so the PDF is English and Hindi, Tamil or Arabic instructions are printed from the
-/// browser's print view; no clinic logo or signature image yet (the writer draws text and squares only). Upgrade both with a Unicode font and images.
+/// Written by <see cref="PlainPdf"/>: names, medicines and notes in Hindi, Tamil or Arabic print shaped; text no embedded font has is refused.
+/// shortcut: the PDF's instructions are English only (the browser's print view adds the second language), and there is no clinic logo or signature
+/// image yet; both come with the stored-copy-in-Blob change (MDV-P2-017).
 /// shortcut: brand names are not printed, because the composer does not choose one (generic only); print "generic (brand)" once it does.
 /// </summary>
 public static class RxPdfDocument

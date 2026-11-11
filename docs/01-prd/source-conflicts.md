@@ -29,7 +29,7 @@ The design project contains documents written at different times. **PRD v2 (20 O
 | Q-02 | Does Hangfire's SQL storage share the clinical database or use a separate one? | P1 start | Separate `jobs` schema in the same database, with its own least-privilege user |
 | Q-03 | SMS provider for India DLT and for the UAE | P1 wk 4 | Azure Communication Services where DLT is supported, else a DLT-registered aggregator behind an adapter |
 | Q-04 | Formulary data source per country (licence) | P2 start | Curated seed list per partner clinic + national code lists; licence decision recorded in an ADR |
-| Q-05 | QuestPDF licence tier | P2 | Community tier if revenue is under the threshold; re-check at P5 |
+| Q-05 | QuestPDF licence tier | P2 | **Decided 11 Nov 2026 (ADR-018):** Community tier while revenue is under USD 1M and the licensee is neither public-sector nor listed; re-check before either (session handoff) |
 | Q-06 | Reporting store that keeps PHI out of analytics | Before P4-10 | Read replica with masked views first; warehouse later |
 | Q-07 | Who is the named clinical safety reviewer (P2-08)? | P2 start | Clinical advisor from P0 |
 | Q-08 | Year-end holiday impact on the P1 pilot exit (2 consecutive weeks) | P1 | Run the measured pilot weeks in January 2027 |

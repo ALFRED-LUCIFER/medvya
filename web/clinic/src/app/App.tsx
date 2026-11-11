@@ -30,6 +30,7 @@ import ScheduleRoute from './ScheduleRoute';
 const InvitationRoute = lazy(() => import('./InvitationRoute'));
 const RxVerifyRoute = lazy(() => import('./RxVerifyRoute'));
 const SharedRxRoute = lazy(() => import('./RxVerifyRoute').then(m => ({ default: m.SharedRxRoute })));
+const PaperVerifyRoute = lazy(() => import('./RxVerifyRoute').then(m => ({ default: m.PaperVerifyRoute })));
 const InviteColleagueRoute = lazy(() => import('./InviteColleagueRoute'));
 const SignUpRoute = lazy(() => import('./SignUpRoute'));
 const SignInRoute = lazy(() => import('./SignInRoute'));
@@ -221,6 +222,8 @@ export default function App({ locale, onLocaleChange }: Props) {
             <Route path="/invite/:token" element={<InvitationRoute switcher={switcher} />} />
             {/* The QR code on a printed prescription (MDV-P2-017): public, validity only. */}
             <Route path="/verify/rx/:token" element={<RxVerifyRoute switcher={switcher} />} />
+            {/* The QR code on an investigation slip or referral letter (MDV-P2-018/019): public, what the paper is, never whose. */}
+            <Route path="/verify/paper/:token" element={<PaperVerifyRoute switcher={switcher} />} />
             {/* A shared prescription link (MDV-P2-020): public, it opens with the code sent to the patient's mobile. */}
             <Route path="/rx/:token" element={<SharedRxRoute switcher={switcher} />} />
             {routes}

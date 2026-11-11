@@ -96,6 +96,13 @@ public static class PrescriptionEndpoints
             await using var scope = http.RequestServices.EnterLinkTenant(token.TenantId);
             return await scope.ServiceProvider.GetRequiredService<IPrescriptionVerification>().VerifyAsync(token.Code, ct) is { } v ? Results.Ok(v) : Results.NotFound();
         }).AllowAnonymous().RequireRateLimiting(VerifyRateLimit);
+        // The same for an investigation slip or referral letter (MDV-P2-018/019): what the paper is, when and from whom; never the patient or what it lists.
+        app.MapPost("/v1/papers/verify", async ([FromBody] VerifyRx? body, HttpContext http, CancellationToken ct) =>
+        {
+            if (RxVerifyToken.Read(body?.Token) is not { } token) return Results.NotFound();
+            await using var scope = http.RequestServices.EnterLinkTenant(token.TenantId);
+            return await scope.ServiceProvider.GetRequiredService<IPaperVerification>().VerifyAsync(token.Code, ct) is { } v ? Results.Ok(v) : Results.NotFound();
+        }).AllowAnonymous().RequireRateLimiting(VerifyRateLimit);
 
         // Public on purpose (MDV-P2-020): the patient or pharmacy opening a share link is not signed in. The link token (in the body) names the tenant;
         // malformed, unknown and expired links are all 404. The PDF comes only with the one-time code sent to the patient's registered mobile.

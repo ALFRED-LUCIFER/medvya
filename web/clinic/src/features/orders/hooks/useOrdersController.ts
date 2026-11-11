@@ -4,7 +4,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { ApiError } from '../../schedule/services/scheduleApi';
 import { emptyOrder, orderSchema, problemOf, type Order, type OrderForm, type OrderProblem } from '../domain/orders';
-import { addOrder, addOrderSet, fetchOrders, fetchOrderSets, fetchSlip, includeOrder, placeOrders, printPage } from '../services/ordersApi';
+import { usePaperPdf } from '../../prescription/hooks/useRxPrintController';
+import { addOrder, addOrderSet, downloadSlipPdf, fetchOrders, fetchOrderSets, fetchSlip, includeOrder, placeOrders, printPage } from '../services/ordersApi';
 
 /**
  * The orders of one consultation (MDV-P2-018). The server decides who may order: a refusal (403) hides the panel. Every answer is the
@@ -53,5 +54,6 @@ export function useOrdersController(encounterId: string) {
 export function useSlipController(encounterId: string) {
   const slip = useQuery({ queryKey: ['order-slip', encounterId], queryFn: () => fetchSlip(encounterId), retry: false });
   const error = slip.error instanceof ApiError ? slip.error : null;
-  return { slip: slip.data ?? null, loading: slip.isPending, nothingPlaced: error?.status === 404, failed: slip.isError && error?.status !== 404, onPrint: printPage };
+  const pdf = usePaperPdf(() => downloadSlipPdf(encounterId));
+  return { slip: slip.data ?? null, loading: slip.isPending, nothingPlaced: error?.status === 404, failed: slip.isError && error?.status !== 404, onPrint: printPage, ...pdf };
 }

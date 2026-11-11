@@ -1,15 +1,16 @@
 import { Link } from 'react-router';
-import { Printer } from 'lucide-react';
+import { FileDown, Printer } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
 import { Button, buttonVariants } from '@medvya/ui';
 import type { Letter } from '../domain/referrals';
 
-type Props = { letter: Letter | null; loading: boolean; notFound: boolean; failed: boolean; onPrint: () => void; consultPath: string };
+type Props = { letter: Letter | null; loading: boolean; notFound: boolean; failed: boolean; onPrint: () => void; consultPath: string;
+  downloading: boolean; pdfProblem: 'unsupported' | 'failed' | null; onPdf: () => void };
 
 /**
  * The referral letter (E-09): who it is about and from, to whom, why and urgency, and only the chart sections the doctor selected, each fact
- * with where it came from. Plain black on white; the app shell hides itself when printed, so "Save as PDF" in the print dialog gives the PDF.
- * shortcut: the browser makes the PDF; a server-made PDF with a verification code comes with the prescription print (MDV-P2-017).
+ * with where it came from. Plain black on white; the app shell hides itself when printed. "Download PDF" gets the server's copy, stored with its
+ * hash and a QR code that verifies it (MDV-P2-019, ADR-018).
  */
 export default function LetterPage(p: Props) {
   const { t, formatDate, formatDay } = useI18n();
@@ -20,8 +21,10 @@ export default function LetterPage(p: Props) {
     <div className="flex max-w-[720px] flex-col gap-4">
       <div className="flex flex-wrap gap-3 print:hidden">
         <Button className="min-h-11" onClick={p.onPrint}><Printer aria-hidden className="size-4" />{t('referrals.letter.print')}</Button>
+        <Button variant="outline" className="min-h-11" loading={p.downloading} disabled={p.downloading} onClick={p.onPdf}><FileDown aria-hidden className="size-4" />{t('paper.pdf')}</Button>
         <Link to={p.consultPath} className={buttonVariants({ variant: 'outline', className: 'min-h-11' })}>{t('referrals.letter.back')}</Link>
       </div>
+      {p.pdfProblem && <p role="alert" className="font-bold text-danger-700 print:hidden">{t(p.pdfProblem === 'unsupported' ? 'paper.pdfUnsupported' : 'paper.pdfFailed')}</p>}
       <article aria-labelledby="letter-title" className="flex flex-col gap-4 rounded-xl border bg-white p-6 text-black print:rounded-none print:border-0 print:p-0">
         <header className="border-b-2 border-black pb-2">
           <h1 id="letter-title" className="text-xl font-extrabold">{t('referrals.letter.title')}</h1>

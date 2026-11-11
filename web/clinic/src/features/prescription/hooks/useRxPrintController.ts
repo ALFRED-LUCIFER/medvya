@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError } from '../../schedule/services/scheduleApi';
 import { printPage } from '../../encounters/services/noteApi';
 import { pdfProblem, type SecondLanguage } from '../domain/authorisation';
-import { approveLayout, downloadRxPdf, fetchLayout, fetchRxPrint, verifyRx } from '../services/prescriptionApi';
+import { approveLayout, downloadRxPdf, fetchLayout, fetchRxPrint, verifyPaper, verifyRx } from '../services/prescriptionApi';
 
 /**
  * The printed prescription (MDV-P2-017): the authorised prescription from the server (a 409 means not authorised, changed or cancelled since), the second
@@ -42,6 +42,27 @@ export function useRxPrintController(encounterId: string) {
 /** The public QR check (MDV-P2-017): validity only. A 404 is a code that matches no prescription. */
 export function useRxVerifyController(token: string) {
   const check = useQuery({ queryKey: ['rx-verify', token], queryFn: () => verifyRx(token), retry: false, refetchOnWindowFocus: false });
+  const error = check.error instanceof ApiError ? check.error : null;
+  return { result: check.data ?? null, loading: check.isPending, unknown: error?.status === 404, failed: check.isError && error?.status !== 404 };
+}
+
+/** A server paper's PDF button (slip, letter): one download at a time, and a 422 (text no PDF font has) told apart from any other failure. */
+export function usePaperPdf(download: () => Promise<void>) {
+  const [downloading, setDownloading] = useState(false);
+  const [problem, setProblem] = useState<'unsupported' | 'failed' | null>(null);
+  return {
+    downloading, pdfProblem: problem,
+    onPdf: async () => {
+      setDownloading(true);
+      setProblem(null);
+      try { await download(); } catch (e) { setProblem(pdfProblem(e instanceof ApiError ? e.status : undefined)); } finally { setDownloading(false); }
+    },
+  };
+}
+
+/** The public QR check of a slip or letter (MDV-P2-018/019). A 404 is a code that matches no paper. */
+export function usePaperVerifyController(token: string) {
+  const check = useQuery({ queryKey: ['paper-verify', token], queryFn: () => verifyPaper(token), retry: false, refetchOnWindowFocus: false });
   const error = check.error instanceof ApiError ? check.error : null;
   return { result: check.data ?? null, loading: check.isPending, unknown: error?.status === 404, failed: check.isError && error?.status !== 404 };
 }

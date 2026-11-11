@@ -1,6 +1,6 @@
 import { apiFetch } from '../../api/services/apiClient';
 import { ApiError, csrf, post, send } from '../../schedule/services/scheduleApi';
-import type { RxAuthorisationState, RxLayout, RxPrint, RxVerify } from '../domain/authorisation';
+import type { PaperVerify, RxAuthorisationState, RxLayout, RxPrint, RxVerify } from '../domain/authorisation';
 import type { RxChecks } from '../domain/checks';
 import { toShareBody, type RxShare, type ShareForm } from '../domain/share';
 import { toSigBody, type Medicine, type RxLine, type SigDraft } from '../domain/prescription';
@@ -30,6 +30,14 @@ export const fetchLayout = () => send<RxLayout>('/v1/prescription-layout');
 export const approveLayout = () => post<RxLayout>('/v1/prescription-layout/approval', {});
 /** Public: the token from the QR code travels in the body, never in a query string. */
 export const verifyRx = (token: string) => post<RxVerify>('/v1/prescriptions/verify', { token });
+export const verifyPaper = (token: string) => post<PaperVerify>('/v1/papers/verify', { token });
+
+/** A server paper (investigation slip or referral letter): each POST renders, stores and audits a new copy; saved under a name with no patient data. */
+export async function downloadPaperPdf(path: string, name: string): Promise<void> {
+  const res = await apiFetch(path, { method: 'POST', credentials: 'same-origin', headers: csrf });
+  if (!res.ok) throw new ApiError(res.status);
+  await save(res, name);
+}
 
 /** The server renders and keeps the PDF (POST: each copy handed out is stored and audited); saved under a name with no patient data. */
 export async function downloadRxPdf(encounterId: string, paper: 'A4' | 'A5'): Promise<void> {

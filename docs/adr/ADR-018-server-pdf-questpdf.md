@@ -1,6 +1,6 @@
 # ADR-018 · Server PDFs with QuestPDF (Community licence) and embedded Noto fonts
 
-- **Status:** Accepted, 11 Nov 2026 (owner decision). Settles Q-05. Tickets: MDV-P2-017 (prescription), MDV-P2-013 (signed note); the investigation slip and referral letter (MDV-P2-019, #353) follow.
+- **Status:** Accepted, 11 Nov 2026 (owner decision). Settles Q-05. Tickets: MDV-P2-017 (prescription), MDV-P2-013 (signed note), MDV-P2-018 and MDV-P2-019 (investigation slip and referral letter, with a hash and QR verify, #353).
 - **Context:** The signed note and the printed prescription are stored, hashed PDFs. The first writer (`PlainPdf`, no dependency) used the built-in Courier font in Windows-1252, so any Hindi, Tamil or Arabic text (a patient's name, a free-text medicine, a note) was refused and the doctor had to print from the browser. Clinics in India and the UAE write in those scripts every day. A PDF library has to shape Indic and Arabic text correctly, run on the Linux App Service (`DOTNETCORE|10.0`, linux-x64), and cost nothing for the pilot.
 
 ## Decision

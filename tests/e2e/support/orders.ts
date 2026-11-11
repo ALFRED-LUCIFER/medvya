@@ -11,7 +11,7 @@ type Order = { id: string; kind: string; name: string; note: string | null; stat
 
 export async function mockOrders(page: Page, { locale = 'en', ended = false, allowed = true }: { locale?: string; ended?: boolean; allowed?: boolean } = {}) {
   const orders: Order[] = [];
-  const calls = { added: [] as unknown[], placed: [] as unknown[], included: [] as unknown[], sets: [] as unknown[] };
+  const calls = { added: [] as unknown[], placed: [] as unknown[], included: [] as unknown[], sets: [] as unknown[], pdfs: 0, pdfStatus: 200 };
   await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
   await page.route('**/v1/me/context', r => r.fulfill({ json: doctor }));
   await page.route('**/v1/notifications/inbox?*', r => r.fulfill({ json: { unread: 0, items: [] } }));
@@ -55,6 +55,13 @@ export async function mockOrders(page: Page, { locale = 'en', ended = false, all
     if (placed.length === 0) return r.fulfill({ status: 404, json: {} });
     return r.fulfill({ json: { patient: { fullName: 'Meera Iyer (synthetic)', mrn: '000001', dateOfBirth: '1972-03-12', sexAtBirth: 'Female' },
       facilityName: 'Iyer Family Clinic · Adyar', doctorName: 'Dr. Arjun Rao (synthetic)', orderedAt: '2026-10-19T04:50:00Z', destination: placed[0]!.destination, orders: placed } });
+  });
+  // The server PDF (MDV-P2-018): each POST is a new stored paper; 422 when its text has characters no PDF font has.
+  await page.route('**/v1/encounters/e-1/orders/slip/pdf', r => {
+    calls.pdfs += 1;
+    return calls.pdfStatus === 200
+      ? r.fulfill({ status: 200, contentType: 'application/pdf', body: '%PDF-1.7 synthetic' })
+      : r.fulfill({ status: calls.pdfStatus, json: { code: 'pdf_unsupported_text' } });
   });
   return { orders, calls };
 }

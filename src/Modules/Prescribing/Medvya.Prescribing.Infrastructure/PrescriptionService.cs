@@ -446,7 +446,7 @@ public sealed class PrescriptionService(
     }
 
     /// <summary>The QR code's modules, row by row ('1' dark), with its quiet zone; error correction M survives a crease or a stamp.</summary>
-    static string[] Qr(string text)
+    internal static string[] Qr(string text)
     {
         using var generator = new QRCodeGenerator();
         using var data = generator.CreateQrCode(text, QRCodeGenerator.ECCLevel.M);
@@ -551,7 +551,10 @@ public sealed class PrescriptionService(
         PatientId = encounter.PatientId, FacilityId = encounter.FacilityId, Purpose = AuditPurpose.Treatment, Outcome = AuditOutcome.Allowed, OccurredAt = clock.GetUtcNow(), Detail = detail,
     };
 
-    string BaseUrl => (options.Value.VerifyBaseUrl ?? throw new InvalidOperationException("Prescribing:VerifyBaseUrl (or Invitations:LinkBaseUrl) is not configured.")).TrimEnd('/');
+    string BaseUrl => VerifyBase(options.Value);
+
+    internal static string VerifyBase(PrescribingOptions o) =>
+        (o.VerifyBaseUrl ?? throw new InvalidOperationException("Prescribing:VerifyBaseUrl (or Invitations:LinkBaseUrl) is not configured.")).TrimEnd('/');
     Guid TenantId => tenant.TenantId ?? throw new InvalidOperationException("No tenant context.");
     Guid Me => user.UserId ?? throw new InvalidOperationException("No user.");
 }

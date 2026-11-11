@@ -522,3 +522,55 @@ for (const locale of ['en', 'ar'])
     await expect(page.getByRole('status').filter({ hasText: ar ? 'موقّعة v1' : 'SIGNED v1' })).toBeVisible();
     expect(await axeViolations(page)).toEqual([]);
   });
+
+// MDV-P2-009 keyboard pass: focus never falls to the page, and a legal signature is never one Enter away.
+test('keyboard: the sign dialog opens with focus on the dialog, not on a button, so Enter on open signs nothing', async ({ page }) => {
+  const mock = await open(page, { version: 1, sections: { chiefComplaint: 'Thirst', assessment: 'Review', plan: 'Rest' } });
+  mock.reauthed = true;
+  const sign = note(page).getByRole('button', { name: 'Sign note' });
+  await tabTo(page, sign);
+  await page.keyboard.press('Enter');
+  const dialog = page.getByRole('dialog', { name: 'Sign note for Meera Iyer (synthetic)?' });
+  await expect(dialog).toBeFocused();
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Space');
+  await expect(dialog).toBeVisible();
+  expect(mock.signs).toEqual([]);
+  await page.keyboard.press('Tab');
+  await expect(dialog.getByRole('button', { name: 'Sign as Dr. Arjun Rao (synthetic)' })).toBeFocused();
+});
+
+test('keyboard: focus lands on the SIGNED banner after signing, then the addendum field, the new version, and back to the button on cancel', async ({ page }) => {
+  const mock = await open(page, { version: 1, sections: { chiefComplaint: 'Thirst', assessment: 'Review', plan: 'Rest' } });
+  mock.reauthed = true;
+  await tabTo(page, note(page).getByRole('button', { name: 'Sign note' }));
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Tab');
+  await page.keyboard.press('Enter');
+  await expect(note(page).getByRole('status').filter({ hasText: 'SIGNED v1' })).toBeFocused();
+  await expect(note(page).getByText('Changes save automatically.')).toHaveCount(0); // nothing saves in a signed note
+
+  const add = history(page).getByRole('button', { name: 'Add addendum' });
+  await tabTo(page, add);
+  await page.keyboard.press('Enter');
+  await expect(history(page).getByLabel('Addendum', { exact: true })).toBeFocused();
+  await page.keyboard.type('Synthetic correction');
+  await page.keyboard.press('Tab');
+  await page.keyboard.type('Synthetic reason');
+  await page.keyboard.press('Enter');
+  await expect(history(page).getByRole('listitem').filter({ hasText: 'Addendum to version 1' })).toBeFocused();
+
+  await tabTo(page, add);
+  await page.keyboard.press('Enter');
+  await tabTo(page, history(page).getByRole('button', { name: 'Cancel' }));
+  await page.keyboard.press('Enter');
+  await expect(add).toBeFocused();
+});
+
+test('keyboard: following the print link puts focus on the page content, not the page start', async ({ page }) => {
+  await open(page, signedSeed);
+  await tabTo(page, history(page).getByRole('link', { name: 'Print view and PDF' }));
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('article')).toBeVisible();
+  await expect(page.locator('#main')).toBeFocused();
+});

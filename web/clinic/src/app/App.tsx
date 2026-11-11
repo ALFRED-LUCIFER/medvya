@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect, useRef } from 'react';
 import type { Locale } from '@medvya/i18n';
 import { I18nProvider, useI18n } from '@medvya/i18n';
 import { SystemState } from '@medvya/ui';
@@ -66,6 +66,13 @@ export default function App({ locale, onLocaleChange }: Props) {
   const { t, country: signedOutCountry } = useI18n();
   const navigate = useNavigate();
   const location = useLocation();
+  // A link that took the doctor to another screen is gone, so focus would fall to the page start: move it to the content, which a screen reader then reads.
+  const path = useRef(location.pathname);
+  useEffect(() => {
+    if (path.current === location.pathname) return;
+    path.current = location.pathname;
+    if (document.activeElement === document.body) document.getElementById('main')?.focus();
+  }, [location.pathname]);
   const { online, retry, reload } = useConnectivityController();
   const shell = useShellController();
   const termsPending = useTermsNotice(shell.items.some(i => i.id === 'settings'));

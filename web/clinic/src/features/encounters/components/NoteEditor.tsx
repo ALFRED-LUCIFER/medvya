@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import type { UseFormRegisterReturn } from 'react-hook-form';
 import { useI18n } from '@medvya/i18n';
 import { Button, Dialog, DialogContent, DialogDescription, DialogTitle, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea } from '@medvya/ui';
@@ -26,6 +26,13 @@ type Props = {
 export default function NoteEditor(p: Props) {
   const { t } = useI18n();
   const templateRef = useRef<HTMLButtonElement>(null);
+  const signedRef = useRef<HTMLParagraphElement>(null);
+  const wasDraft = useRef(false);
+  // Signing removes the button the doctor pressed: move focus to the SIGNED banner (read out as it arrives) instead of losing it to the page.
+  useEffect(() => {
+    if (p.readOnly && wasDraft.current) signedRef.current?.focus();
+    wasDraft.current = !p.loading && !p.readOnly;
+  }, [p.loading, p.readOnly]);
   if (p.loading) return <p role="status">{t('noteEditor.loading')}</p>;
   if (p.loadFailed || !p.template || !p.templateKey) return <p role="alert" className="font-bold text-danger-700">{t(p.forbidden ? 'noteEditor.forbidden' : 'noteEditor.loadFailed')}</p>;
   return (
@@ -41,9 +48,9 @@ export default function NoteEditor(p: Props) {
         </div>
       </div>
       <p className="text-sm text-muted-foreground">{t('noteEditor.manualBanner')}</p>
-      {p.readOnly && <p role="status" className="font-bold">{t('noteEditor.signed', { version: String(p.signature?.versionNo ?? 1) })}</p>}
+      {p.readOnly && <p ref={signedRef} tabIndex={-1} role="status" className="font-bold focus:outline-none">{t('noteEditor.signed', { version: String(p.signature?.versionNo ?? 1) })}</p>}
       {p.signature && <SignedLine signature={p.signature} userId={p.userId} userName={p.userName} timeZone={p.timeZone} />}
-      <SaveState phase={p.phase} reloading={p.reloading} onRetry={p.onRetry} onReapply={p.onReapply} />
+      {!p.readOnly && <SaveState phase={p.phase} reloading={p.reloading} onRetry={p.onRetry} onReapply={p.onReapply} />}
       {p.assist && <NoteAssist assist={p.assist} template={p.template} timeZone={p.timeZone} />}
       <div className="flex flex-col gap-4">
         {p.template.sections.map(s => (

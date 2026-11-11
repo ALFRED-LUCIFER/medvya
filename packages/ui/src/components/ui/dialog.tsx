@@ -25,6 +25,7 @@ function DialogContent({
   className,
   children,
   closeLabel,
+  onOpenAutoFocus,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & { closeLabel: string }) {
   return (
@@ -35,9 +36,18 @@ function DialogContent({
         // Radix defaults to ltr; follow the document so Arabic reads right to left inside the dialog.
         dir={document.documentElement.dir === 'rtl' ? 'rtl' : 'ltr'}
         className={cn(
-          "fixed start-1/2 top-[10vh] z-50 grid max-h-[80vh] w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 gap-3 overflow-y-auto rounded-xl border bg-card p-4 shadow-lg rtl:translate-x-1/2",
+          "fixed start-1/2 top-[10vh] outline-none z-50 grid max-h-[80vh] w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 gap-3 overflow-y-auto rounded-xl border bg-card p-4 shadow-lg rtl:translate-x-1/2",
           className
         )}
+        // WAI-ARIA dialog pattern: Radix focuses the first tabbable, which in a confirm dialog is the confirming button, so Enter on open would confirm.
+        // A dialog with no field to type in gets focus on itself: the name and description are read, and Tab reaches the first control.
+        // One with a field (search) keeps Radix's default so typing can start. A caller may still choose.
+        onOpenAutoFocus={onOpenAutoFocus ?? (e => {
+          const dialog = e.currentTarget as HTMLElement;
+          if (dialog.querySelector('input, textarea, select')) return;
+          e.preventDefault();
+          dialog.focus();
+        })}
         {...props}
       >
         {children}

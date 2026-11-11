@@ -14,6 +14,7 @@ public sealed class EncountersDbContext(DbContextOptions<EncountersDbContext> op
     public DbSet<Problem> Problems => Set<Problem>();
     public DbSet<MedicationStatement> MedicationStatements => Set<MedicationStatement>();
     public DbSet<Observation> Observations => Set<Observation>();
+    public DbSet<GeriatricAssessment> GeriatricAssessments => Set<GeriatricAssessment>();
     public DbSet<ClinicalDocument> Documents => Set<ClinicalDocument>();
     public DbSet<Intake> Intakes => Set<Intake>();
     public DbSet<IntakeEscalation> IntakeEscalations => Set<IntakeEscalation>();
@@ -116,6 +117,12 @@ public sealed class EncountersDbContext(DbContextOptions<EncountersDbContext> op
             e.Property(x => x.Section).HasConversion<string>().HasMaxLength(20);
             e.Property(x => x.Text).HasMaxLength(HistoryRules.MaxText);
             e.HasIndex(x => new { x.TenantId, x.PatientId, x.Section, x.RecordedAt }); // append-only: the newest row of a section is current
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<GeriatricAssessment>(e =>
+        {
+            e.Property(x => x.NutritionNote).HasMaxLength(GeriatricRules.MaxNutritionNote);
+            e.HasIndex(x => new { x.TenantId, x.PatientId, x.AssessedAt }); // the patient's latest reviews
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         modelBuilder.Entity<Intake>(e =>

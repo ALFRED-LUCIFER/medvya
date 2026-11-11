@@ -244,6 +244,9 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.SoloDoctor, new("GET", "/v1/referrals/{referral}/letter")),
         (Role.SoloDoctor, new("POST", "/v1/referrals/{referral}/letter/pdf")),
         (Role.SoloDoctor, new("GET", "/v1/patients/{patient}/referrals")),
+        (Role.SoloDoctor, new("GET", "/v1/patients/{patient}/geriatric-assessments")),
+        (Role.Nurse, new("POST", "/v1/patients/{patient}/geriatric-assessments", """{"clinicalFrailtyScale":4}""")),
+        (Role.SoloDoctor, new("GET", "/v1/patients/{patient}/medicine-review")),
         (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/orders/from-set", """{"orderSetId":"{order}"}""")),
         (Role.Nurse, new("POST", "/v1/intake/{appointment}/escalate", """{"reason":"Synthetic"}""")),
         (Role.Nurse, new("POST", "/v1/intake/{appointment}/handoff")),
@@ -428,6 +431,9 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.PracticeAdmin, new("POST", "/v1/chart/allergy-flags", """{"patientIds":["{patient}"]}""")),
         (Role.Nurse, new("POST", "/v1/encounters/{encounter}/referrals", """{"provider":"Dr. Synthetic","urgency":"Routine","reason":"Synthetic","sections":[]}""")), // Prescriptions & orders: X
         (Role.Receptionist, new("GET", "/v1/patients/{patient}/referrals")), // Patient 360: X
+        (Role.Receptionist, new("GET", "/v1/patients/{patient}/geriatric-assessments")), // Patient 360: X
+        (Role.CareCoordinator, new("POST", "/v1/patients/{patient}/geriatric-assessments", """{"clinicalFrailtyScale":4}""")), // Vitals & allergies entry: X
+        (Role.Nurse, new("GET", "/v1/patients/{patient}/medicine-review")), // Prescriptions & orders: X
         (Role.Nurse, new("GET", "/v1/encounters/{encounter}/orders")), // Prescriptions & orders: X
         (Role.Nurse, new("GET", "/v1/encounters/{encounter}/prescription")), // Prescriptions & orders: X
         (Role.Receptionist, new("POST", "/v1/encounters/{encounter}/prescription/items", """{"medicine":"Synthetic medicine"}""")),

@@ -299,6 +299,74 @@ namespace Medvya.Encounters.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Medvya.Encounters.Domain.GeriatricAssessment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("Adl")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("AssessedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("ClinicalFrailtyScale")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("FacilityId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("FallsLast12Months")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("Iadl")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("LyingDiastolic")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("LyingSystolic")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("MergedFromPatientId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("MiniCog")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("NutritionNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("PatientId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("Phq2")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("RecordedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("StandingDiastolic")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("StandingSystolic")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("TimedUpAndGoTenths")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "PatientId", "AssessedAt");
+
+                    b.ToTable("GeriatricAssessments", "encounters");
+                });
+
             modelBuilder.Entity("Medvya.Encounters.Domain.HistoryEntry", b =>
                 {
                     b.Property<Guid>("Id")

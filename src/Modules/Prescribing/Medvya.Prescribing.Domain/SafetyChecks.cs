@@ -152,8 +152,9 @@ public static class SafetyRules
     /// <summary>Under this age the weight-based dose applies (the BNF for Children covers to 18); from <see cref="OlderAdultAge"/> the Beers subset.</summary>
     public const int ChildUnder = 18, OlderAdultAge = 65;
 
-    // Systemic NSAIDs (tablets and injections; a gel is M02A and is not caught), RAAS blockers, metformin, benzodiazepines (anxiolytic and hypnotic).
-    static readonly string[] Nsaid = ["M01A"], Raas = ["C09"], Benzodiazepine = ["N05BA", "N05CD"];
+    // Systemic NSAIDs (tablets and injections; a gel is M02A and is not caught), RAAS blockers (ACE inhibitors and ARBs), metformin, benzodiazepines
+    // (anxiolytic and hypnotic), proton pump inhibitors. Shared with the older adult medicine review (MedicineReview), so the two never disagree.
+    internal static readonly string[] Nsaid = ["M01A"], Raas = ["C09"], Benzodiazepine = ["N05BA", "N05CD"], Ppi = ["A02BC"];
     const string Metformin = "A10BA02";
 
     static readonly Regex StrengthShape = new(@"^\s*([0-9]{1,6}(?:\.[0-9]{1,3})?)\s*(mg|mcg|g)\b", RegexOptions.CultureInvariant | RegexOptions.IgnoreCase | RegexOptions.NonBacktracking);
@@ -344,7 +345,7 @@ public static class SafetyRules
             .FirstOrDefault(g => n.Equals(g, StringComparison.OrdinalIgnoreCase) || (n.StartsWith(g, StringComparison.OrdinalIgnoreCase) && !char.IsLetter(n[g.Length])));
     }
 
-    static bool Starts(string atc, IReadOnlyList<string> prefixes) => prefixes.Any(p => atc.StartsWith(p, StringComparison.Ordinal));
+    internal static bool Starts(string atc, IReadOnlyList<string> prefixes) => prefixes.Any(p => atc.StartsWith(p, StringComparison.Ordinal));
 
     static HashSet<string> Tokens(string text) => [.. Words.Split(text.ToLowerInvariant()).Where(w => w.Length > 0)];
 }

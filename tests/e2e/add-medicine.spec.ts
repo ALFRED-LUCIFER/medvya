@@ -90,7 +90,7 @@ const chart = (openEncounterId: string | null) => ({
   treatmentConsent: true, timeZone: 'Asia/Kolkata',
   chart: {
     allergyState: 'Listed', allergies: [{ substance: 'Penicillin', reaction: 'Rash', status: 'Confirmed', source: 'ClinicianVerified' }], problems: [],
-    medicines: [{ name: 'Metformin', dose: '500 mg', state: 'Active', source: 'Imported', stoppedAt: null }], lastVitals: [], trends: [], recentEncounters: [], openEncounterId,
+    medicines: [{ name: 'Metformin', dose: '500 mg', state: 'Active', source: 'Imported', stoppedAt: null }], lastVitals: [], lastLabs: [], bmi: null, trends: [], recentEncounters: [], openEncounterId,
   },
 });
 

@@ -5,7 +5,7 @@ import { useI18n, type MessageKey } from '@medvya/i18n';
 import { Button, ClinicalAlert, Input } from '@medvya/ui';
 import { describedBy, fieldError } from '../../settings/components/fieldStyles';
 import { Field } from '../../settings/components/Field';
-import { amountOf, lookOf, type LineSafety, type RxChecks, type SafetyAlert } from '../domain/checks';
+import { amountOf, kgOf, lookOf, mlOf, type LineSafety, type RxChecks, type SafetyAlert, type WeightDose } from '../domain/checks';
 
 export type SafetyProps = {
   checks: RxChecks | null;
@@ -24,11 +24,19 @@ type T = (key: MessageKey, vars?: Record<string, string | number>) => string;
 // The rule set's codes (allergy class, effect, status) each have their words in the catalogue.
 const words = (t: T, key: string, code: string | null) => (code ? t(`${key}.${code}` as MessageKey) : '');
 
+const amountText = (t: T, mcg: number | null) => (mcg === null ? '' : t(`rx.check.amount.${amountOf(mcg).unit}`, { value: amountOf(mcg).value }));
+
+/** A child's dose by weight, for example "Paracetamol syrup: 15 mg/kg × 14.2 kg = 213 mg = 8.9 mL a dose, at most 4 doses (852 mg) a day." */
+const weightText = (t: T, d: WeightDose) => t(d.doseTenthsMl === null ? 'rx.check.weight.dose' : 'rx.check.weight.doseMl', {
+  medicine: d.medicine, mgPerKg: d.mgPerKg, kg: kgOf(d.weightHundredthsKg), dose: amountText(t, d.doseMicrograms), ml: mlOf(d.doseTenthsMl ?? 0),
+  doses: d.maxDosesPerDay, daily: amountText(t, d.maxDailyMicrograms),
+});
+
 /** The alert in words with its evidence, for example "Allergy: Penicillin · verified. Amoxicillin: penicillin class." */
-function alertText(t: T, a: SafetyAlert): string {
+function alertText(t: T, a: SafetyAlert, doses: WeightDose[]): string {
   const base = { medicine: a.medicine ?? '', other: a.other ?? '' };
   const status = words(t, 'rx.check.status', a.allergyStatus);
-  const amount = (mcg: number | null) => (mcg === null ? '' : t(`rx.check.amount.${amountOf(mcg).unit}`, { value: amountOf(mcg).value }));
+  const amount = (mcg: number | null) => amountText(t, mcg);
   switch (a.kind) {
     case 'Allergy':
     case 'CrossSensitivity':
@@ -41,6 +49,16 @@ function alertText(t: T, a: SafetyAlert): string {
       return t('rx.check.alert.DoseAboveMaximum', { ...base, daily: amount(a.dailyMicrograms), max: amount(a.maxDailyMicrograms) });
     case 'AllergiesNotRecorded':
       return t('rx.check.alert.AllergiesNotRecorded');
+    case 'Pregnancy':
+    case 'Kidney':
+    case 'OlderAdult':
+      return t(`rx.check.alert.${a.kind}`, { ...base, measure: a.measure ?? '', rule: words(t, 'rx.check.rule', a.code) });
+    case 'ChildDose': {
+      const d = doses.find(w => w.itemId === a.itemId);
+      return t(`rx.check.alert.ChildDose.${a.code === 'doses_a_day' ? 'doses_a_day' : 'per_dose'}`, {
+        ...base, mgPerKg: d?.mgPerKg ?? '', kg: d ? kgOf(d.weightHundredthsKg) : '', doses: d?.maxDosesPerDay ?? '',
+      });
+    }
   }
 }
 
@@ -76,7 +94,7 @@ export default function SafetyChecks(p: SafetyProps) {
             const given = c.overrides.find(o => o.key === a.key);
             return (
               <li key={a.key} className="flex flex-col gap-2">
-                <ClinicalAlert severity={lookOf(a, !!given)}>{`${t(`rx.check.severity.${a.severity}`)} · ${alertText(t, a)}`}</ClinicalAlert>
+                <ClinicalAlert severity={lookOf(a, !!given)}>{`${t(`rx.check.severity.${a.severity}`)} · ${alertText(t, a, c.weightDoses)}`}</ClinicalAlert>
                 {given && <p className="text-sm">{t('rx.check.overridden', { reason: given.reason })}</p>}
                 {!given && a.severity === 'Severe' && !p.ended && (p.overriding === a.key ? (
                   <form noValidate onSubmit={p.onReason} className="flex flex-col gap-2">
@@ -95,6 +113,14 @@ export default function SafetyChecks(p: SafetyProps) {
             );
           })}
         </ul>
+      )}
+      {c.weightDoses.length > 0 && (
+        <div className="flex flex-col gap-1">
+          <h4 className="text-sm font-bold">{t('rx.check.weight.title')}</h4>
+          <ul className="flex list-disc flex-col gap-1 ps-5 text-sm">
+            {c.weightDoses.map(d => <li key={d.itemId}>{weightText(t, d)}</li>)}
+          </ul>
+        </div>
       )}
       {c.notChecked.length > 0 && (
         <div className="flex flex-col gap-1">

@@ -24,19 +24,27 @@ export const stopLine = (medicine: string, reason: string): RxLine => ({
   sig: { en: 'Stop this medicine.', hi: 'यह दवा बंद करें।', ar: 'أوقف هذا الدواء.' },
 });
 
-// The safety checks (MDV-P2-016), in RxCheckView's shape. Which alert fires for which conflict is proven in SafetyRulesTests and PrescriptionCheckTests.
+// The safety checks (MDV-P2-016, MDV-P2-040), in RxCheckView's shape. Which alert fires for which conflict is proven in SafetyRulesTests and PrescriptionCheckTests.
 export type RxChecks = {
   ruleSet: string; ruleSetVersion: string; allergies: 'NotRecorded' | 'NoKnownAllergies' | 'Listed'; alerts: Record<string, unknown>[];
   notChecked: { id: string; medicine: string; onChart: boolean; reason: string }[];
   overrides: { key: string; reason: string; ruleSetVersion: string; overriddenBy: string; overriddenAt: string }[]; unresolved: number; checkedAt: string;
+  weightDoses: Record<string, unknown>[];
 };
 export const clearChecks = (more: Partial<RxChecks> = {}): RxChecks => ({
-  ruleSet: 'medvya-curated', ruleSetVersion: '2026.11-draft-1', allergies: 'NoKnownAllergies', alerts: [], notChecked: [], overrides: [], unresolved: 0,
-  checkedAt: '2026-10-19T04:30:00Z', ...more,
+  ruleSet: 'medvya-curated', ruleSetVersion: '2026.11-draft-2', allergies: 'NoKnownAllergies', alerts: [], notChecked: [], overrides: [], unresolved: 0,
+  checkedAt: '2026-10-19T04:30:00Z', weightDoses: [], ...more,
 });
 export const penicillinAlert = (itemId: string) => ({
   key: `allergy:${itemId}:al-1`, kind: 'Allergy', severity: 'Severe', itemId, medicine: 'Amoxicillin', other: null, otherOnChart: false, code: 'penicillins',
-  substance: 'Penicillin', allergyStatus: 'Confirmed', dailyMicrograms: null, maxDailyMicrograms: null,
+  substance: 'Penicillin', allergyStatus: 'Confirmed', dailyMicrograms: null, maxDailyMicrograms: null, measure: null,
+});
+/** A patient-rule finding (MDV-P2-040): pregnancy, child dose, kidney or older adult, with the patient fact it rests on. */
+export const patientAlert = (itemId: string, medicine: string, kind: string, severity: string, code: string, measure: number | null) => ({
+  ...penicillinAlert(itemId), key: `${kind}:${code}:${itemId}`, kind, severity, medicine, code, substance: null, allergyStatus: null, measure,
+});
+export const paracetamolForWeight = (itemId: string) => ({
+  itemId, medicine: 'Paracetamol syrup', weightHundredthsKg: 1420, mgPerKg: 15, doseMicrograms: 213_000, doseTenthsMl: 89, maxDosesPerDay: 4, maxDailyMicrograms: 852_000,
 });
 
 // MDV-P2-017: the authorisation (RxAuthorisationState), the print view (RxPrintView) and the public verify answer (RxVerifyView), in the server's shapes.

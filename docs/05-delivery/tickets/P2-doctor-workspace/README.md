@@ -8,9 +8,9 @@
 **Day one:** Open Doctor Today, see the patient chart, record vitals, write and sign a note, and print a prescription, without AI.  
 **Goal:** A doctor completes a full visit, from chart to signed note and prescription, in Medvya. This is also the fallback that AI must never break.
 
-**Tickets:** 29 · **Estimate:** 60.5 dev-days vs **35 working days** in the window (OVER by 25.5 days: needs scope trade-off or overlap) · **Average confidence:** 82%
+**Tickets:** 45 · **Estimate:** 98 dev-days vs **35 working days** in the window (OVER by 63 days: needs scope trade-off or overlap) · **Average confidence:** 81%
 
-**Status:** To do 29
+**Status:** To do 45
 
 ## Epics
 
@@ -22,6 +22,7 @@
 | MDV-P2-E04 | Consultation note, coding and reconciliation | P2-04, P2-05 | Write, code, reconcile and sign an immutable note; amend only by addendum. |
 | MDV-P2-E05 | Prescriptions, orders and referrals | P2-06 | Safe prescribing from a country formulary, printed multilingual Rx, investigation orders and referrals. |
 | MDV-P2-E06 | Clinical safety and R2 gate | P2-08 | Hazard log, legal review, training, templates and the R2 exit gate. |
+| MDV-P2-E07 | Consultation and chart upgrade | P2-02, P2-04, P2-06 | One-page chart by life stage (adult, pregnancy, child, older adult), one-page consultation and a full Add medicine flow with patient-aware safety checks (design of 12 Nov 2026). |
 
 ## Tickets
 
@@ -56,6 +57,22 @@
 | [MDV-P2-026](MDV-P2-026.md) | To do | Doctor and nurse training (30 min each) and R2 materials | Chore | MUST | P2-03, P2-05 | — | 1 | 14–14 | 25 Jan → 29 Jan 2027 | 88% High |
 | [MDV-P2-027](MDV-P2-027.md) | To do | Print, accessibility and zoom verification across clinical screens | Task | MUST | P2-05, P2-06 | — | 1 | 14–14 | 25 Jan → 29 Jan 2027 | 90% High |
 | [MDV-P2-028](MDV-P2-028.md) | To do | R2 pilot, exit gate review (≥ 20 signed visits per doctor) and release notes | Gate | MUST | P2-05 | — | 1.5 | 15–15 | 01 Feb → 05 Feb 2027 | 72% Medium |
+| [MDV-P2-030](MDV-P2-030.md) | To do | Import the 12 Nov 2026 design (one-page chart, one-page consultation, Add medicine) and plan the upgrade epic | Task | MUST | P2-02, P2-04 | — | 0.5 | 15–15 | 01 Feb → 05 Feb 2027 | 95% High |
+| [MDV-P2-031](MDV-P2-031.md) | To do | More vitals and key labs on the chart, each flagged against its reference range | Story | MUST | P2-02, P2-03 | E-01, N-01 | 2 | 15–15 | 01 Feb → 05 Feb 2027 | 85% High |
+| [MDV-P2-032](MDV-P2-032.md) | To do | Life stage, history sections and the fuller chart banner | Story | MUST | P2-02 | E-01 | 2 | 15–15 | 01 Feb → 05 Feb 2027 | 85% High |
+| [MDV-P2-033](MDV-P2-033.md) | To do | Patient chart on one page (E-01 redesign) with section filters and a life-stage module | Story | MUST | P2-02 | E-01, E-02, E-03 | 3 | 15–16 | 01 Feb → 12 Feb 2027 | 82% Medium |
+| [MDV-P2-039](MDV-P2-039.md) | To do | Add medicine panel from the chart and the consultation: strength, how often, when, how long, instructions, line and quantity | Story | MUST | P2-06 | E-05, E-11 | 2.5 | 15–15 | 01 Feb → 05 Feb 2027 | 84% Medium |
+| [MDV-P2-040](MDV-P2-040.md) | To do | Patient-aware prescribing checks: pregnancy, weight-based child dose, kidney function and older adult | Story | MUST | P2-06 | E-11 | 3 | 15–16 | 01 Feb → 12 Feb 2027 | 70% Medium |
+| [MDV-P2-041](MDV-P2-041.md) | To do | Consultation on one page (E-04 redesign) with the guided steps kept as an option | Story | MUST | P2-04 | E-04 | 3 | 15–16 | 01 Feb → 12 Feb 2027 | 82% Medium |
+| [MDV-P2-034](MDV-P2-034.md) | To do | Pregnancy record: dates, gestation, obstetric history, antenatal contacts and danger signs | Story | MUST | P2-02 | E-01 | 3 | 16–16 | 08 Feb → 12 Feb 2027 | 78% Medium |
+| [MDV-P2-035](MDV-P2-035.md) | To do | Child growth: measurements and WHO centiles with a growth chart | Story | MUST | P2-02 | E-01 | 3 | 16–16 | 08 Feb → 12 Feb 2027 | 72% Medium |
+| [MDV-P2-036](MDV-P2-036.md) | To do | Immunisations against the country schedule, and developmental milestones | Story | MUST | P2-02 | E-01 | 3 | 16–16 | 08 Feb → 12 Feb 2027 | 70% Medium |
+| [MDV-P2-037](MDV-P2-037.md) | To do | Older adult review: falls, walking test, standing blood pressure drop, frailty, memory, daily activities and a medicine review | Story | MUST | P2-02 | E-01 | 2.5 | 16–16 | 08 Feb → 12 Feb 2027 | 76% Medium |
+| [MDV-P2-038](MDV-P2-038.md) | To do | Chronic care targets, care gaps due today and care-plan goals | Story | SHOULD | P2-02 | E-01 | 2.5 | 16–16 | 08 Feb → 12 Feb 2027 | 74% Medium |
+| [MDV-P2-042](MDV-P2-042.md) | To do | Structured review of systems and examination, and a template chosen by the patient | Story | MUST | P2-04 | E-04 | 2.5 | 16–16 | 08 Feb → 12 Feb 2027 | 80% Medium |
+| [MDV-P2-043](MDV-P2-043.md) | To do | Plan section: medicine actions, tests to order, advice in the patient's language, follow-up and referral | Story | MUST | P2-04, P2-06 | E-04, E-05 | 2.5 | 16–16 | 08 Feb → 12 Feb 2027 | 80% Medium |
+| [MDV-P2-044](MDV-P2-044.md) | To do | Review and sign checklist: signing stays locked until every item is reviewed | Story | MUST | P2-05 | E-04, E-06 | 1.5 | 16–16 | 08 Feb → 12 Feb 2027 | 84% Medium |
+| [MDV-P2-045](MDV-P2-045.md) | To do | J2 journey steps for the one-page chart, Add medicine and the one-page consultation on the real stack | Task | MUST | P2-02, P2-04 | — | 1 | 16–16 | 08 Feb → 12 Feb 2027 | 85% High |
 
 ## Exit criteria (release gate)
 

@@ -22,7 +22,7 @@ public sealed class ConsultNoteService(
     IPatientDirectory patients, IStaffUsers staff, IFacilityDirectory facilities) : IConsultNotes
 {
     public const string ReadAction = "note.read", SaveAction = "note.save", SignAction = "note.sign", AddendumAction = "note.addendum", PdfAction = "note.pdf",
-        PendingAction = "note.pending", Resource = "note";
+        PendingAction = "note.pending", PrefillAction = "note.prefill", PreviousAction = "note.previous", Resource = "note";
     static readonly Access[] Leads = [Access.Full], SignLevel = [Access.Sign];
 
     public async Task<NoteView?> GetAsync(Guid encounterId, CancellationToken cancellationToken = default)
@@ -32,6 +32,34 @@ public sealed class ConsultNoteService(
         var note = await db.ConsultNotes.AsNoTracking().SingleOrDefaultAsync(n => n.EncounterId == encounterId, cancellationToken);
         await audit.WriteAsync(Event(ReadAction, encounter, note?.Id), cancellationToken);
         return note is null ? Empty(encounterId) : await ViewAsync(note, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<VerifiedVital>?> PrefillAsync(Guid encounterId, CancellationToken cancellationToken = default)
+    {
+        if (await db.Encounters.AsNoTracking().SingleOrDefaultAsync(e => e.Id == encounterId, cancellationToken) is not { } encounter) return null;
+        await clinical.RequireAsync(encounter.PatientId, encounter.FacilityId, Capability.Patient360Chart, Leads, cancellationToken);
+        // Verified means: a nurse's intake reading of this visit (the appointment), checked by a clinician, and a flagged one kept on purpose.
+        // Labs, imports and other visits' readings are not offered. Remove a condition and ConsultNotePrefillTests fails.
+        var rows = await db.Observations.AsNoTracking().Where(o => o.AppointmentId == encounter.AppointmentId && o.PatientId == encounter.PatientId
+                && o.Source == ChartSource.ClinicianVerified && o.VerifiedBy != null && (o.Flag == null || o.FlagKept))
+            .GroupBy(o => o.Code).Select(g => g.OrderByDescending(o => o.TakenAt).ThenByDescending(o => o.Id).First()).ToListAsync(cancellationToken);
+        var names = await staff.DisplayNamesAsync([.. rows.Select(o => o.RecordedBy ?? o.VerifiedBy!.Value).Distinct()], cancellationToken);
+        await audit.WriteAsync(Event(PrefillAction, encounter, null), cancellationToken);
+        return [.. rows.OrderBy(o => o.Code).Select(o => new VerifiedVital(o.Code, o.ValueHundredths / 100m, Observation.Units(o.Code), o.TakenAt, o.Source, names.GetValueOrDefault(o.RecordedBy ?? o.VerifiedBy!.Value)))];
+    }
+
+    public async Task<IReadOnlyList<PreviousNote>?> PreviousAsync(Guid encounterId, CancellationToken cancellationToken = default)
+    {
+        if (await db.Encounters.AsNoTracking().SingleOrDefaultAsync(e => e.Id == encounterId, cancellationToken) is not { } encounter) return null;
+        await clinical.RequireAsync(encounter.PatientId, encounter.FacilityId, Capability.Patient360Chart, Leads, cancellationToken);
+        var signed = await (from v in db.SignedNoteVersions.AsNoTracking()
+                            join e in db.Encounters.AsNoTracking() on v.EncounterId equals e.Id
+                            where v.VersionNo == 1 && e.PatientId == encounter.PatientId && e.Id != encounterId
+                            orderby v.SignedAt descending
+                            select v).Take(IConsultNotes.MaxPrevious).ToListAsync(cancellationToken);
+        var names = await staff.DisplayNamesAsync([.. signed.Select(v => v.SignedBy).Distinct()], cancellationToken);
+        await audit.WriteAsync(Event(PreviousAction, encounter, null), cancellationToken);
+        return [.. signed.Select(v => new PreviousNote(v.EncounterId, v.SignedAt, names.GetValueOrDefault(v.SignedBy), v.TemplateKey, v.Sections))];
     }
 
     public async Task<NoteView?> SignAsync(Guid encounterId, SignNote command, CancellationToken cancellationToken = default)

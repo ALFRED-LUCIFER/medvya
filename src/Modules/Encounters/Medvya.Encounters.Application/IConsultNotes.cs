@@ -56,6 +56,15 @@ public sealed class StaleNoteException(int current) : Exception("The note change
     public int Current { get; } = current;
 }
 
+/// <summary>
+/// One reading offered to the Objective section (MDV-P2-009): taken and verified by a nurse at this visit's intake. The source says who and when;
+/// nothing is derived or filled in. <see cref="RecordedByName"/> is null when the staff member can no longer be named.
+/// </summary>
+public sealed record VerifiedVital(ObservationCode Code, decimal Value, string Unit, DateTimeOffset TakenAt, ChartSource Source, string? RecordedByName);
+
+/// <summary>A signed note of the same patient, offered as snippets (MDV-P2-009). Version 1 only: an addendum is not a note of its own.</summary>
+public sealed record PreviousNote(Guid EncounterId, DateTimeOffset SignedAt, string? SignedByName, string TemplateKey, IReadOnlyDictionary<string, string> Sections);
+
 /// <summary>An encounter the signed-in doctor led whose note is not signed (MDV-P2-002, Today's pending notes). Ids and times only.</summary>
 public sealed record PendingNote(Guid EncounterId, Guid PatientId, DateTimeOffset StartedAt, bool Drafted);
 
@@ -97,6 +106,21 @@ public interface IConsultNotes
     /// <exception cref="NoteNotSignedException"/>
     /// <exception cref="NotePdfUnsupportedTextException"/>
     Task<NotePdf?> PdfAsync(Guid encounterId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// The readings the doctor may add to Objective (MDV-P2-009): this visit's nurse-intake vitals, verified, and (when flagged) kept on purpose by
+    /// the nurse; the latest of each kind. An empty list means nothing is verified: the section stays blank. Read access as for the note, audited
+    /// as <c>note.prefill</c> with the patient and no values.
+    /// </summary>
+    Task<IReadOnlyList<VerifiedVital>?> PrefillAsync(Guid encounterId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Signed notes of the same patient, newest first, at most <see cref="MaxPrevious"/>, for the doctor to copy from (MDV-P2-009). Read access as for
+    /// the note, one <c>note.previous</c> audit row per read with the patient and no note text.
+    /// </summary>
+    Task<IReadOnlyList<PreviousNote>?> PreviousAsync(Guid encounterId, CancellationToken cancellationToken = default);
+
+    public const int MaxPrevious = 5;
 
     /// <summary>
     /// Today's pending notes (MDV-P2-002): encounters at this facility the signed-in clinician led whose note is not signed, oldest first, at

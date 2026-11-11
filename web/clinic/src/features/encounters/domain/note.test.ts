@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addendumFailure, addendumSchema, inTemplateOrder, missingRequired, pdfFailure, signFailure, reapply, staleVersion, switchChoices, switchTemplate, type NoteTemplate } from './note';
+import { insertAt, maxSectionLength, snippetSections, addendumFailure, addendumSchema, inTemplateOrder, missingRequired, pdfFailure, signFailure, reapply, staleVersion, switchChoices, switchTemplate, type NoteTemplate } from './note';
 
 const tpl = (key: string, ...ids: string[]): NoteTemplate => ({ key, version: 1, quickPhrases: [], sections: ids.map(id => ({ id, required: id === 'plan' })) });
 
@@ -29,6 +29,25 @@ describe('note rules', () => {
   it('offers the doctor\'s templates and the current one', () => {
     const catalog = { templates: [tpl('a'), tpl('b'), tpl('c')], mine: ['a'] };
     expect(switchChoices(catalog, 'c').map(t => t.key)).toEqual(['a', 'c']);
+  });
+});
+
+describe('adding text to the note (MDV-P2-009)', () => {
+  it('inserts at the cursor, replacing a selection, on its own line', () => {
+    expect(insertAt('', 0, 0, 'Pulse 88')).toEqual({ text: 'Pulse 88', caret: 8 });
+    expect(insertAt('Cough', 5, 5, 'Rest')).toEqual({ text: 'Cough\nRest', caret: 10 });
+    expect(insertAt('Cough\n', 6, 6, 'Rest')).toEqual({ text: 'Cough\nRest', caret: 10 });
+    expect(insertAt('abcXYZdef', 3, 6, 'Q')).toEqual({ text: 'abc\nQdef', caret: 5 });
+    expect(insertAt('ab', 99, 99, 'c')?.text).toBe('ab\nc'); // a stale cursor lands at the end
+  });
+
+  it('refuses rather than cutting text off at the length limit', () => {
+    expect(insertAt('x'.repeat(maxSectionLength), 0, 0, 'y')).toBeNull();
+  });
+
+  it('offers an earlier note\'s sections in the template order, skipping blanks', () => {
+    const note = { sections: { plan: 'p', objective: '  ', chiefComplaint: 'c', old: 'o' } };
+    expect(snippetSections(note, tpl('a', 'chiefComplaint', 'objective', 'plan'))).toEqual(['chiefComplaint', 'plan', 'old']);
   });
 });
 

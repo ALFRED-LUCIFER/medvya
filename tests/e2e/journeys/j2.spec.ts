@@ -134,7 +134,7 @@ journey('J2', {
       chart: { allergyState: 'Listed', allergies: [{ substance: 'Penicillin', reaction: null, status: 'Confirmed', source: 'ClinicianVerified' }],
         problems: [{ icd10Code: 'E11.9', description: 'Type 2 diabetes mellitus', verification: 'Verified', onsetOn: null, source: 'ClinicianVerified' }],
         medicines: [{ name: 'Metformin', dose: '500 mg', state: 'Active', source: 'Imported' }], lastVitals: [],
-        trends: [{ code: 'HbA1c', unit: '%', points: [{ value: 7.4, takenAt: at, source: 'SyncedFromHis' }] }], recentEncounters: [], openEncounterId: null } } }));
+        trends: [{ code: 'HbA1c', unit: '%', points: [{ value: 7.4, takenAt: at, source: 'SyncedFromHis' }] }], recentEncounters: [], openEncounterId: null, lastLabs: [], bmi: null } } }));
     await page.goto('/patients/p-meera');
     const banner = page.getByRole('region', { name: 'Patient Meera Iyer' });
     await expect(banner).toContainText('Penicillin');

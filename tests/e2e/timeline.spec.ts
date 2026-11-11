@@ -17,7 +17,7 @@ const entry = (n: number, kind: string, source = 'ClinicianVerified') => kind ==
 const points = (values: number[]) => values.map((value, i) => ({ value, takenAt: day(i + 1), source: 'ClinicianVerified' }));
 const chart = {
   patient: { id: 'p-1', fullName: 'Meera Iyer (synthetic)', mrn: '000001', dateOfBirth: '1972-03-12', ageYears: 54, sexAtBirth: 'Female' }, treatmentConsent: true, timeZone: 'Asia/Kolkata',
-  chart: { allergyState: 'NoKnownAllergies', allergies: [], problems: [], medicines: [], lastVitals: [], trends: [], recentEncounters: [], openEncounterId: null },
+  chart: { allergyState: 'NoKnownAllergies', allergies: [], problems: [], medicines: [], lastVitals: [], trends: [], recentEncounters: [], openEncounterId: null, lastLabs: [], bmi: null },
 };
 
 async function open(page: Page, { locale = 'en', all = [] as ReturnType<typeof entry>[], pageSize = 2 } = {}) {

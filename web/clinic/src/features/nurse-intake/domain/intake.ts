@@ -3,11 +3,11 @@ import type { SexAtBirth } from '../../patients/domain/directory';
 import type { ChartSource } from '../../patient360/domain/chart';
 
 // Nurse intake (MDV-P2-007). The server decides what is possible and what is flagged (VitalRules); this file only shapes the form and reads answers.
-export const vitalKinds = ['SystolicBp', 'DiastolicBp', 'Pulse', 'Temperature', 'OxygenSaturation', 'Weight'] as const;
+export const vitalKinds = ['SystolicBp', 'DiastolicBp', 'Pulse', 'Temperature', 'OxygenSaturation', 'RespiratoryRate', 'Weight', 'Height'] as const;
 export type VitalKind = (typeof vitalKinds)[number];
 export type VitalAlert = 'High' | 'Low' | 'Changed';
 
-export const vitalUnits: Record<VitalKind, string> = { SystolicBp: 'mmHg', DiastolicBp: 'mmHg', Pulse: 'bpm', Temperature: '°C', OxygenSaturation: '%', Weight: 'kg' };
+export const vitalUnits: Record<VitalKind, string> = { SystolicBp: 'mmHg', DiastolicBp: 'mmHg', Pulse: 'bpm', Temperature: '°C', OxygenSaturation: '%', Weight: 'kg', Height: 'cm', RespiratoryRate: '/min' };
 
 export type VitalView = {
   kind: VitalKind; value: number; flag: VitalAlert | null; previousValue: number | null; previousAt: string | null; flagKept: boolean; recordedAt: string;
@@ -38,7 +38,7 @@ export type IntakeScreen = {
 const reading = z.string().trim().refine(v => v === '' || /^\d{1,3}([.,]\d)?$/.test(v), 'number');
 export const intakeFormSchema = z.object({
   chiefComplaint: z.string().max(500),
-  SystolicBp: reading, DiastolicBp: reading, Pulse: reading, Temperature: reading, OxygenSaturation: reading, Weight: reading,
+  SystolicBp: reading, DiastolicBp: reading, Pulse: reading, Temperature: reading, OxygenSaturation: reading, Weight: reading, Height: reading, RespiratoryRate: reading,
 });
 export type IntakeForm = z.infer<typeof intakeFormSchema>;
 

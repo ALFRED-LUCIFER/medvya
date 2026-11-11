@@ -25,13 +25,15 @@ test('the nurse works the intake from the queue to the handoff', async ({ page }
   await page.getByLabel('SpO₂').fill('');
   await page.getByLabel('BP systolic').fill('168');
   await page.getByLabel('Weight').fill('72.4');
+  await page.getByLabel('Respiratory rate').fill('18'); // MDV-P2-031
+  await page.getByLabel('Height').fill('158.5');
   await page.getByRole('button', { name: 'Save vitals' }).click();
   const flag = page.getByText('High · re-check');
   await expect(flag).toBeVisible();
   // Numbers are isolated left-to-right, so these match around the invisible marks.
   await expect(page.getByText(/\+2\.4.*kg.*since 02 Oct 2026 · re-check/)).toBeVisible();
   await expect(page.getByText(/Previous.*70.*kg.* · 02 Oct 2026/)).toBeVisible();
-  expect(calls.saves.at(-1)).toEqual({ chiefComplaint: 'Chest tightness on stairs', vitals: [{ kind: 'SystolicBp', value: 168 }, { kind: 'Weight', value: 72.4 }] });
+  expect(calls.saves.at(-1)).toEqual({ chiefComplaint: 'Chest tightness on stairs', vitals: [{ kind: 'SystolicBp', value: 168 }, { kind: 'RespiratoryRate', value: 18 }, { kind: 'Weight', value: 72.4 }, { kind: 'Height', value: 158.5 }] });
   await expect(handOff).toBeDisabled();
   await expect(page.getByText('Re-measure or keep each flagged reading to hand off.')).toBeVisible();
 

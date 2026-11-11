@@ -23,6 +23,7 @@ public sealed class EncountersDbContext(DbContextOptions<EncountersDbContext> op
     public DbSet<ConsultNote> ConsultNotes => Set<ConsultNote>();
     public DbSet<SignedNoteVersion> SignedNoteVersions => Set<SignedNoteVersion>();
     public DbSet<SignedNotePdf> SignedNotePdfs => Set<SignedNotePdf>();
+    public DbSet<OutboxEvent> Outbox => Set<OutboxEvent>();
 
     Guid? CurrentTenantId => tenant.TenantId;
 
@@ -156,6 +157,13 @@ public sealed class EncountersDbContext(DbContextOptions<EncountersDbContext> op
         {
             e.Property(x => x.Sha256).HasMaxLength(64);
             e.HasIndex(x => new { x.TenantId, x.NoteId });
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<OutboxEvent>(e =>
+        {
+            e.ToTable("OutboxEvents");
+            e.Property(x => x.Type).HasMaxLength(100);
+            e.HasIndex(x => new { x.PublishedAt, x.OccurredAt });
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         modelBuilder.Entity<ClinicalDocument>(e =>

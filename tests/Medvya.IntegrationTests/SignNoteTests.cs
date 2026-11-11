@@ -225,6 +225,60 @@ public sealed class SignNoteTests(PostgresFixture sql) : IClassFixture<PostgresF
         Assert.Equal(0, await SignedRowsAsync());
     }
 
+    async Task<List<OutboxEvent>> OutboxAsync(Guid? tenant = null)
+    {
+        await using var db = sql.Encounters(tenant ?? h.Tenant);
+        return await db.Outbox.IgnoreQueryFilters().AsNoTracking().ToListAsync();
+    }
+
+    // MDV-P2-012 chunk 3. SAFETY mutation check: remove db.Outbox.Add in ConsultNoteService.SignAsync and the first and third tests fail.
+    [Fact]
+    public async Task SigningWritesOneNoteSignedEventOfOpaqueIdsAndTheNoteLeavesTodaysPendingList()
+    {
+        var version = await SaveDraftAsync(Complete);
+        Assert.Single(await PendingAsync(h.Doctor));
+        using (var signed = await SignAsync(h.Doctor, version)) Assert.Equal(HttpStatusCode.OK, signed.StatusCode);
+        var note = await NoteAsync();
+        var row = Assert.Single(await OutboxAsync());
+        Assert.Equal(("NoteSigned.v1", note.Id, null), (row.Type, row.AggregateId, row.PublishedAt));
+        var payload = JsonDocument.Parse(row.Payload).RootElement;
+        Assert.Equal(
+            ["encounterId", "facilityId", "noteId", "patientId", "signedAt", "signedBy"],
+            payload.EnumerateObject().Select(p => p.Name).Order(StringComparer.Ordinal));
+        Assert.Equal((encounter, h.Patient, h.Doctor), (payload.GetProperty("encounterId").GetGuid(), payload.GetProperty("patientId").GetGuid(), payload.GetProperty("signedBy").GetGuid()));
+        Assert.DoesNotContain("cough", row.Payload, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(await PendingAsync(h.Doctor));
+    }
+
+    [Fact]
+    public async Task ARetryAndAnAddendumWriteNoSecondEvent()
+    {
+        var version = await SaveDraftAsync(Complete);
+        for (var i = 0; i < 3; i++) using (await SignAsync(h.Doctor, version)) { }
+        using (var addendum = await Client(h.Doctor, 0).PostAsJsonAsync(U($"/v1/encounters/{encounter}/note/addenda"), new { text = "Synthetic addition", reason = "Clarify" }))
+            Assert.True(addendum.IsSuccessStatusCode, await addendum.Content.ReadAsStringAsync());
+        Assert.Equal(["NoteSigned.v1"], (await OutboxAsync()).Select(e => e.Type));
+    }
+
+    [Fact]
+    public async Task ARefusedSignWritesNoEvent()
+    {
+        var version = await SaveDraftAsync(Complete);
+        using (await SignAsync(h.Doctor, version, null)) { } // no re-authentication
+        using (await SignAsync(h.Reception, version)) { } // unauthorised
+        using (await SignAsync(h.Doctor, version + 5)) { } // stale
+        Assert.Empty(await OutboxAsync());
+    }
+
+    [Fact]
+    public async Task AnotherTenantCannotReadTheOutbox()
+    {
+        var version = await SaveDraftAsync(Complete);
+        using (await SignAsync(h.Doctor, version)) { }
+        Assert.Single(await OutboxAsync());
+        Assert.Empty(await OutboxAsync(Guid.NewGuid())); // row-level security, not just the EF filter
+    }
+
     async Task<JsonElement[]> PendingAsync(Guid user)
     {
         using var r = await Client(user).GetAsync(U("/v1/notes/pending"));

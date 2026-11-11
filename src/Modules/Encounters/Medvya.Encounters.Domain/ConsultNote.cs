@@ -93,3 +93,20 @@ public sealed class SignedNotePdf
     [Classification(DataClass.Internal)] public Guid RenderedBy { get; init; }
     [Classification(DataClass.Internal)] public DateTimeOffset RenderedAt { get; init; }
 }
+
+/// <summary>
+/// Transactional outbox of the Encounters module (MDV-P2-012): an event is written in the same transaction as the change it announces
+/// (NoteSigned.v1). Payload is opaque ids and instants only, never note text or names.
+/// shortcut: nothing subscribes yet, so there is no dispatcher and PublishedAt stays null; add one (as Scheduling's OutboxDispatcher) with the first subscriber.
+/// </summary>
+public sealed class OutboxEvent
+{
+    [Classification(DataClass.Internal)] public Guid Id { get; init; }
+    [Classification(DataClass.Internal)] public Guid TenantId { get; init; }
+    /// <summary>Versioned event name, e.g. "NoteSigned.v1".</summary>
+    [Classification(DataClass.Internal)] public required string Type { get; init; }
+    [Classification(DataClass.Internal)] public Guid AggregateId { get; init; }
+    [Classification(DataClass.Internal)] public required string Payload { get; init; }
+    [Classification(DataClass.Internal)] public DateTimeOffset OccurredAt { get; init; }
+    [Classification(DataClass.Internal)] public DateTimeOffset? PublishedAt { get; set; }
+}

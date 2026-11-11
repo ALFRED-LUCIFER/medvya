@@ -141,6 +141,53 @@ public sealed class PrescriptionCheckTests(PostgresFixture sql) : IClassFixture<
         Assert.Equal(RxAlertKind.AllergiesNotRecorded, Assert.Single(check.Alerts).Kind);
     }
 
+    /// <summary>
+    /// MDV-P2-040 through the contract. SAFETY (mutation check: pass no weight or eGFR from PrescribingChart, take an older eGFR, drop the one-month
+    /// line in CheckAsync, or read the age from anything but the date of birth, and this fails). A child's weight older than one month is not used; a recent one works
+    /// the dose out, and a 500 mg tablet is above 15 mg/kg at 14.2 kg. The 54-year-old woman's ibuprofen says what was not checked.
+    /// </summary>
+    [Fact]
+    public async Task AChildsDoseUsesOnlyAWeightFromTheLastMonthAndMissingContextIsNotChecked()
+    {
+        await ChartAsync([NoneKnown]);
+        var enc = await ConsultationAsync();
+        var ibuprofen = await AddAsync(enc.Id, "Ibuprofen");
+        var adult = (await Rx(h.Doctor).CheckAsync(enc.Id))!;
+        Assert.Contains(adult.NotChecked, n => n.Id == ibuprofen && n.Reason == NotCheckedReason.NoEgfr);
+        Assert.Contains(adult.NotChecked, n => n.Id == ibuprofen && n.Reason == NotCheckedReason.PregnancyNotRecorded);
+        await RecordAsync(ObservationCode.Egfr, 6500, 400); // an older, normal eGFR: the latest one counts
+        await RecordAsync(ObservationCode.Egfr, 2999, 2); // 29.99 counts as under 30
+        var kidney = Assert.Single((await Rx(h.Doctor).CheckAsync(enc.Id))!.Alerts, a => a.Kind == RxAlertKind.Kidney);
+        Assert.Equal((RxSeverity.Severe, "nsaid_egfr_under_30", (int?)29, (Guid?)ibuprofen), (kidney.Severity, kidney.Code, kidney.Measure, kidney.ItemId));
+        await Rx(h.Doctor).IncludeAsync(ibuprofen, new IncludeRxLine(false));
+
+        await using (var patients = sql.Patients(h.Tenant))
+        {
+            var row = await patients.Patients.SingleAsync(p => p.Id == h.Patient);
+            row.DateOfBirth = DateOnly.FromDateTime(h.Clock.GetUtcNow().UtcDateTime).AddYears(-4);
+            await patients.SaveChangesAsync();
+        }
+        Task WeighAsync(int days) => RecordAsync(ObservationCode.Weight, 1420, days);
+        await WeighAsync(32);
+        var paracetamol = await AddAsync(enc.Id, "Paracetamol");
+        await Rx(h.Doctor).UpdateAsync(paracetamol, new UpdateRxLine("1", "tablet", "oral", "TDS", null, 3, 9, null));
+        var stale = (await Rx(h.Doctor).CheckAsync(enc.Id))!;
+        Assert.Equal(NotCheckedReason.NoRecentWeight, Assert.Single(stale.NotChecked, n => n.Id == paracetamol).Reason);
+        Assert.Empty(stale.WeightDoses);
+
+        await WeighAsync(1);
+        var fresh = (await Rx(h.Doctor).CheckAsync(enc.Id))!;
+        Assert.Equal((paracetamol, 213_000L), (Assert.Single(fresh.WeightDoses).ItemId, fresh.WeightDoses[0].DoseMicrograms));
+        Assert.Equal((RxAlertKind.ChildDose, "per_dose", 1), (Assert.Single(fresh.Alerts).Kind, fresh.Alerts[0].Code, fresh.Unresolved));
+    }
+
+    async Task RecordAsync(ObservationCode code, int hundredths, int daysAgo)
+    {
+        await using var db = sql.Encounters(h.Tenant);
+        db.Observations.Add(new Observation { Id = Guid.NewGuid(), TenantId = h.Tenant, PatientId = h.Patient, Code = code, ValueHundredths = hundredths, TakenAt = h.Clock.GetUtcNow().AddDays(-daysAgo), Source = ChartSource.ClinicianVerified });
+        await db.SaveChangesAsync();
+    }
+
     /// <summary>SAFETY (mutation check: leave out the chart medicines, or keep those stopped in this visit, and this fails).</summary>
     [Fact]
     public async Task AChartMedicineInteractsUnlessStoppedInThisVisitAndAnUnknownOneIsReportedNotGuessed()

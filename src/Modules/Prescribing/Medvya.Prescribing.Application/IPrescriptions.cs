@@ -43,11 +43,12 @@ public sealed record RxOverrideView(string Key, string Reason, string RuleSetVer
 /// <summary>
 /// The safety checks over the draft (MDV-P2-016): every alert in words with its evidence, what the rules could not check, and the rule set
 /// (source and version) that answered. <see cref="Overrides"/> holds the current reason of each overridden alert. <see cref="Unresolved"/> counts
-/// severe alerts with no override: authorisation (MDV-P2-017) runs the checks again and must refuse while it is above zero.
+/// severe alerts with no override: authorisation (MDV-P2-017) runs the checks again and must refuse while it is above zero. <see cref="WeightDoses"/>:
+/// a child's doses worked out from the weight (MDV-P2-040).
 /// </summary>
 public sealed record RxCheckView(
     string RuleSet, string RuleSetVersion, ChartAllergies Allergies, IReadOnlyList<SafetyAlert> Alerts, IReadOnlyList<NotChecked> NotChecked,
-    IReadOnlyList<RxOverrideView> Overrides, int Unresolved, DateTimeOffset CheckedAt);
+    IReadOnlyList<RxOverrideView> Overrides, int Unresolved, DateTimeOffset CheckedAt, IReadOnlyList<WeightDose> WeightDoses);
 
 /// <summary>Go ahead despite a severe alert (its key from the latest check), with the doctor's reason.</summary>
 public sealed record OverrideRxAlert(string? Key, string? Reason);

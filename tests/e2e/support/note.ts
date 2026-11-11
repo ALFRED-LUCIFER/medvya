@@ -11,16 +11,20 @@ export const catalog = {
 };
 
 type Addendum = { versionNo: number; amendsVersionNo: number; reason: string; text: string; signedBy: string; signedAt: string; contentHash: string; signerName?: string };
-type Note = { templateKey: string; sections: Record<string, string>; version: number; status: string; signature?: { versionNo: number; signedBy: string; signedAt: string; contentHash: string; signerName?: string; signerLicence?: string }; addenda?: Addendum[]; signAsName?: string };
+type Note = { templateKey: string; sections: Record<string, string>; version: number; status: string; signature?: { versionNo: number; signedBy: string; signedAt: string; contentHash: string; signerName?: string; signerLicence?: string }; addenda?: Addendum[]; signAsName?: string;
+  /** MDV-P2-044: the doctor's record of the recording consent (null: not recorded) and the sections with an undecided AI draft. */
+  recordingConsent?: 'Agreed' | 'Declined' | 'Withdrawn' | null; undecidedAi?: string[] };
 // The doctor profile's name, which the server uses for the signature, the addenda and the sign button; the session's display name differs on purpose.
 const signer = 'Dr Asha Raman (synthetic)';
 export type NoteMock = {
-  note: Note; puts: { templateKey: string; manual: boolean; baseVersion: number; sections: Record<string, string> }[]; chosen: string[][];
+  note: Note; puts: { templateKey: string; manual: boolean; recordingConsent: Note['recordingConsent']; baseVersion: number; sections: Record<string, string> }[]; chosen: string[][];
   /** The next PUT answers like this instead of saving: a 409 stale_note, or a dropped connection. */
   next: 'stale' | 'offline' | null;
   /** Sign calls received, the re-authentications asked for, and the answer to the next sign instead of the real one (the server's rules are ConsultNoteTests). */
   signs: { baseVersion: number }[]; reauths: { returnUrl?: string }[]; reauthed: boolean;
-  signNext: 'stale' | 'denied' | 'blank' | null;
+  signNext: 'stale' | 'denied' | 'blank' | 'unreviewed' | null;
+  /** The visit's medication reconciliation as the checklist reads it (MDV-P2-044): nothing to reconcile unless a spec says so. */
+  reconciliation: { confirmedAt: string | null; total: number };
   /** Addenda received (MDV-P2-013); they need the same re-authentication as signing. PDFs asked for, and the answer to the next one. */
   addendumPosts: { text: string; reason: string }[]; pdfs: number; pdfNext: 'unsupported' | null;
   /** What the server offers to copy into the note (MDV-P2-009): verified vitals of this visit and earlier signed notes. Empty until a spec seeds them. */
@@ -29,7 +33,8 @@ export type NoteMock = {
 };
 
 export async function mockNote(page: Page, seed: Partial<Note> = {}): Promise<NoteMock> {
-  const mock: NoteMock = { note: { templateKey: 'general-opd', sections: {}, version: 0, status: 'Draft', signAsName: signer, ...seed }, puts: [], chosen: [], next: null, signs: [], reauths: [], reauthed: false, signNext: null, addendumPosts: [], pdfs: 0, pdfNext: null, vitals: [], previous: [] };
+  const mock: NoteMock = { note: { templateKey: 'general-opd', sections: {}, version: 0, status: 'Draft', signAsName: signer, recordingConsent: null, undecidedAi: [], ...seed }, puts: [], chosen: [], next: null, signs: [], reauths: [], reauthed: false, signNext: null, reconciliation: { confirmedAt: null, total: 0 }, addendumPosts: [], pdfs: 0, pdfNext: null, vitals: [], previous: [] };
+  await page.route('**/v1/encounters/e-1/medicines/reconciliation', r => r.fulfill({ json: { encounterId: 'e-1', patientId: 'p-a1', rows: [], decided: 0, disagree: 0, ...mock.reconciliation } }));
   await page.route('**/v1/encounters/e-1/note/prefill', r => r.fulfill({ json: { vitals: mock.vitals } }));
   await page.route('**/v1/encounters/e-1/note/previous', r => r.fulfill({ json: { notes: mock.previous } }));
   const view = () => ({ encounterId: 'e-1', templateVersion: 1, manual: true, updatedAt: null, ...mock.note });
@@ -39,7 +44,7 @@ export async function mockNote(page: Page, seed: Partial<Note> = {}): Promise<No
     if (mock.next === 'offline') { mock.next = null; return r.abort('connectionfailed'); }
     if (mock.next === 'stale') { mock.next = null; return r.fulfill({ status: 409, contentType: 'application/problem+json', json: { code: 'stale_note', currentVersion: mock.note.version } }); }
     mock.puts.push(body);
-    mock.note = { ...mock.note, templateKey: body.templateKey, sections: body.sections, version: body.baseVersion + 1 };
+    mock.note = { ...mock.note, templateKey: body.templateKey, sections: body.sections, recordingConsent: body.recordingConsent, version: body.baseVersion + 1 };
     return r.fulfill({ json: view() });
   });
   const problem = (r: Route, status: number, json: object) => r.fulfill({ status, contentType: 'application/problem+json', json });
@@ -51,6 +56,7 @@ export async function mockNote(page: Page, seed: Partial<Note> = {}): Promise<No
     if (next === 'denied') return problem(r, 403, { code: 'no_care_relationship' });
     if (next === 'stale') return problem(r, 409, { code: 'stale_note', currentVersion: mock.note.version + 1 });
     if (next === 'blank') return problem(r, 400, { errors: { 'sections.plan': ['required'], 'sections.chiefComplaint': ['required'] } });
+    if (next === 'unreviewed') return problem(r, 400, { errors: { undecidedAi: ['undecided'] } });
     mock.note = { ...mock.note, status: 'Signed', version: mock.note.version + 1,
       signature: { versionNo: 1, signedBy: 'u-rao', signedAt: '2026-10-19T04:40:00Z', contentHash: 'a'.repeat(64), signerName: signer, signerLicence: 'Tamil Nadu Medical Council 84213' } };
     return r.fulfill({ json: view() });

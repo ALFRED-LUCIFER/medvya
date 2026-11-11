@@ -171,6 +171,10 @@ namespace Medvya.Encounters.Infrastructure.Persistence.Migrations
                     b.Property<bool>("Manual")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("RecordingConsent")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
                     b.Property<string>("Sections")
                         .IsRequired()
                         .HasColumnType("jsonb");
@@ -190,6 +194,10 @@ namespace Medvya.Encounters.Infrastructure.Persistence.Migrations
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid");
+
+                    b.PrimitiveCollection<string[]>("UndecidedAi")
+                        .IsRequired()
+                        .HasColumnType("text[]");
 
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");

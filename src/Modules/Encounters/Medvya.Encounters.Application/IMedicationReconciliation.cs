@@ -62,11 +62,17 @@ public sealed record ChartAllergy(Guid Id, string Substance, AllergyStatus Statu
 /// <summary>An active medicine on the chart, as named there.</summary>
 public sealed record ChartMedicine(Guid Id, string Name);
 
-/// <summary>What a prescription is checked against: the allergy state (three different things, never merged), the listed allergies and the active medicines.</summary>
-public sealed record PrescribingFacts(AllergyState AllergyState, IReadOnlyList<ChartAllergy> Allergies, IReadOnlyList<ChartMedicine> ActiveMedicines);
+/// <summary>A reading on the chart: the value in hundredths of its unit (14.2 kg is 1420) and when it was taken.</summary>
+public sealed record ChartReading(int ValueHundredths, DateTimeOffset TakenAt);
 
 /// <summary>
-/// The chart facts for the prescription safety checks (MDV-P2-016). No access check and no audit event here: the caller has already checked
+/// What a prescription is checked against: the allergy state (three different things, never merged), the listed allergies, the active medicines
+/// and the latest weight and eGFR (null: none on the chart; the checks decide whether a weight is recent enough).
+/// </summary>
+public sealed record PrescribingFacts(AllergyState AllergyState, IReadOnlyList<ChartAllergy> Allergies, IReadOnlyList<ChartMedicine> ActiveMedicines, ChartReading? Weight, ChartReading? Egfr);
+
+/// <summary>
+/// The chart facts for the prescription safety checks (MDV-P2-016, MDV-P2-040). No access check and no audit event here: the caller has already checked
 /// clinical access to the patient and audits its own check.
 /// </summary>
 public interface IPrescribingChart

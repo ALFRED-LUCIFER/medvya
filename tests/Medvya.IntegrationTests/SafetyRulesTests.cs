@@ -21,8 +21,16 @@ public sealed class SafetyRulesTests
 
     static string Atc(string prefix) => prefix.PadRight(7, '0');
 
+    // An adult man with a normal eGFR: none of the patient rules has anything to say, so the MDV-P2-016 tests read as before.
+    static readonly PatientContext Adult = new(40, false, null, 90, null);
+
     static SafetyResult Run(IReadOnlyList<CheckedMedicine> lines, IReadOnlyList<CheckedMedicine>? chart = null, ChartAllergies state = ChartAllergies.Listed, params CheckedAllergy[] allergies) =>
-        SafetyRules.Evaluate(lines, chart ?? [], state, allergies);
+        SafetyRules.Evaluate(lines, chart ?? [], state, allergies, Adult);
+
+    static SafetyResult For(PatientContext patient, IReadOnlyList<CheckedMedicine> lines, IReadOnlyList<CheckedMedicine>? chart = null) =>
+        SafetyRules.Evaluate(lines, chart ?? [], ChartAllergies.NoKnownAllergies, [], patient);
+
+    static SigParts Sig(string dose, string unit, string? frequency) => new(dose, unit, "oral", frequency, null, null, null, null);
 
     static CheckedAllergy Allergy(string substance, string status = "Confirmed") => new(Id(), substance, status);
 
@@ -167,4 +175,120 @@ public sealed class SafetyRulesTests
         Assert.Null(SafetyRules.MatchGeneric("Metformina", generics));
         Assert.Null(SafetyRules.MatchGeneric("Low-dose aspirin", generics)); // not guessed from the middle of a name
     }
+
+    // MDV-P2-040: the seeded patient set. Each SAFETY test names its mutation check.
+
+    /// <summary>SAFETY (mutation check: drop the pregnancy rule, or move the line from 20 weeks, and this fails).</summary>
+    [Fact]
+    public void IbuprofenAt24WeeksIsSevereAndBefore20WeeksIsNot()
+    {
+        var ibuprofen = Line("M01AE01", "Ibuprofen", "400 mg", Sig("1", "tablet", "BD"));
+        var alert = Assert.Single(For(new(31, true, null, 95, 24), [ibuprofen]).Alerts);
+        Assert.Equal((RxAlertKind.Pregnancy, RxSeverity.Severe, "nsaid_from_20_weeks", (int?)24, (Guid?)ibuprofen.Id), (alert.Kind, alert.Severity, alert.Code, alert.Measure, alert.ItemId));
+        Assert.Single(For(new(31, true, null, 95, 20), [ibuprofen]).Alerts);
+        Assert.Empty(For(new(31, true, null, 95, 19), [ibuprofen]).Alerts);
+        Assert.Empty(For(new(31, true, null, 95, 24), [Line("N02BE01", "Paracetamol", "500 mg", Sig("1", "tablet", "QID"))]).Alerts); // not an NSAID
+    }
+
+    /// <summary>SAFETY (mutation check: stop reporting an unrecorded pregnancy, and this fails). Unknown is never read as "not pregnant".</summary>
+    [Fact]
+    public void AnNsaidForAWomanOfChildbearingAgeWithNoPregnancyRecordedIsNotChecked()
+    {
+        var ibuprofen = Line("M01AE01", "Ibuprofen", "400 mg", Sig("1", "tablet", "BD"));
+        Assert.Contains(For(new(31, true, null, 95, null), [ibuprofen]).NotChecked, n => n.Id == ibuprofen.Id && n.Reason == NotCheckedReason.PregnancyNotRecorded);
+        Assert.DoesNotContain(For(new(31, false, null, 95, null), [ibuprofen]).NotChecked, n => n.Reason == NotCheckedReason.PregnancyNotRecorded);
+        Assert.DoesNotContain(For(new(70, true, null, 95, null), [ibuprofen]).NotChecked, n => n.Reason == NotCheckedReason.PregnancyNotRecorded);
+    }
+
+    /// <summary>
+    /// SAFETY (mutation check: drop the child dose rule, the concentration, or the 0.1 mL rounding, and this fails). Paracetamol 15 mg/kg at
+    /// 14.2 kg is 213 mg, 8.9 mL of 120 mg/5 mL, at most 4 doses (852 mg) a day; 8.9 mL every 6 hours is within it, more is severe.
+    /// </summary>
+    [Fact]
+    public void AChildsParacetamolIsWorkedOutByWeightInMgAndMlAndAboveItIsSevere()
+    {
+        var child = new PatientContext(4, false, 1420, null, null);
+        CheckedMedicine Syrup(string ml, string frequency) => Line("N02BE01", "Paracetamol syrup", "120 mg/5 mL", Sig(ml, "ml", frequency));
+        var line = Syrup("8.9", "QID");
+        var r = For(child, [line]);
+        var dose = Assert.Single(r.WeightDoses);
+        Assert.Equal((line.Id, 1420, 15, 213_000L, (int?)89, 4, 852_000L), (dose.ItemId, dose.WeightHundredthsKg, dose.MgPerKg, dose.DoseMicrograms, dose.DoseTenthsMl, dose.MaxDosesPerDay, dose.MaxDailyMicrograms));
+        Assert.Empty(r.Alerts);
+        Assert.Empty(r.NotChecked);
+        Assert.Empty(For(child, [Syrup("8.9", "SOS")]).NotChecked); // when needed: the dose is checked, the doses a day are on the label
+
+        var big = Assert.Single(For(child, [Syrup("10", "QID")]).Alerts);
+        Assert.Equal((RxAlertKind.ChildDose, RxSeverity.Severe, "per_dose"), (big.Kind, big.Severity, big.Code));
+        var often = Assert.Single(For(child, [Line("M01AE01", "Ibuprofen syrup", "100 mg/5 mL", Sig("7.1", "ml", "QID"))]).Alerts); // 10 mg/kg, up to 3 a day
+        Assert.Equal((RxAlertKind.ChildDose, "doses_a_day"), (often.Kind, often.Code));
+        var tablet = For(child, [Line("N02BE01", "Paracetamol", "500 mg", Sig("1", "tablet", "TDS"))]);
+        Assert.Equal((213_000L, (int?)null), (tablet.WeightDoses[0].DoseMicrograms, tablet.WeightDoses[0].DoseTenthsMl));
+        Assert.Equal("per_dose", Assert.Single(tablet.Alerts).Code); // 500 mg is above 213 mg though within the adult maximum
+    }
+
+    /// <summary>SAFETY (mutation check: check a child's dose without a recent weight, or by the adult maximum alone, and this fails).</summary>
+    [Fact]
+    public void AChildsDoseWithoutAWeightFromTheLastMonthIsNotCheckedAndSaysSo()
+    {
+        var line = Line("N02BE01", "Paracetamol syrup", "120 mg/5 mL", Sig("20", "ml", "QID"));
+        var r = For(new(4, false, null, null, null), [line]);
+        Assert.Equal(NotCheckedReason.NoRecentWeight, Assert.Single(r.NotChecked).Reason);
+        Assert.Empty(r.Alerts);
+        Assert.Empty(r.WeightDoses);
+        // A medicine with no rule by weight is not checked for a child, even within the adult maximum.
+        Assert.Equal(NotCheckedReason.DoseNotChecked, Assert.Single(For(new(4, false, 1420, null, null), [Line("J01CA04", "Amoxicillin", "250 mg", Sig("1", "tablet", "TDS"))]).NotChecked).Reason);
+    }
+
+    /// <summary>
+    /// SAFETY (mutation check: drop the NSAID eGFR rule, its RAAS step, or the Beers subset, and this fails). Diclofenac tablets at 76 with eGFR
+    /// 52 and losartan on the chart: kidney severe (with the RAAS blocker), the existing interaction, and the older-adult finding.
+    /// </summary>
+    [Fact]
+    public void DiclofenacTabletsWithEgfr52AndLosartanAt76AreSevereForTheKidney()
+    {
+        var diclofenac = Line("M01AB05", "Diclofenac", "50 mg", Sig("1", "tablet", "BD"));
+        var older = new PatientContext(76, true, null, 52, null);
+        var r = For(older, [diclofenac], [Chart("C09CA01", "Losartan 50 mg")]);
+        var kidney = Assert.Single(r.Alerts, a => a.Kind == RxAlertKind.Kidney);
+        Assert.Equal((RxSeverity.Severe, "nsaid_egfr_under_60_raas", (int?)52), (kidney.Severity, kidney.Code, kidney.Measure));
+        Assert.Contains(r.Alerts, a => a is { Kind: RxAlertKind.Interaction, Code: "renal_function" });
+        Assert.Contains(r.Alerts, a => a is { Kind: RxAlertKind.OlderAdult, Severity: RxSeverity.Moderate, Code: "systemic_nsaid" });
+
+        Assert.Equal((RxSeverity.Moderate, "nsaid_egfr_under_60"), Kidney(For(older, [diclofenac])));
+        Assert.Equal((RxSeverity.Severe, "nsaid_egfr_under_30"), Kidney(For(older with { Egfr = 29 }, [diclofenac])));
+        Assert.DoesNotContain(For(older with { Egfr = 60 }, [diclofenac]).Alerts, a => a.Kind == RxAlertKind.Kidney);
+        Assert.Empty(For(older, [Line("M02AA15", "Diclofenac gel 1 %")], [Chart("C09CA01")]).Alerts); // a gel is not systemic
+    }
+
+    /// <summary>SAFETY (mutation check: drop either metformin threshold, and this fails).</summary>
+    [Fact]
+    public void MetforminIsSevereUnderEgfr30AndModerateUnder45()
+    {
+        var metformin = Line("A10BA02", "Metformin", "500 mg", Sig("1", "tablet", "BD"));
+        Assert.Equal((RxSeverity.Severe, "metformin_egfr_under_30"), Kidney(For(new(60, false, null, 29, null), [metformin])));
+        Assert.Equal((RxSeverity.Moderate, "metformin_egfr_under_45"), Kidney(For(new(60, false, null, 44, null), [metformin])));
+        Assert.Empty(For(new(60, false, null, 45, null), [metformin]).Alerts);
+    }
+
+    /// <summary>SAFETY (mutation check: read a missing eGFR as normal, and this fails).</summary>
+    [Fact]
+    public void AKidneyRuleWithoutAnEgfrIsNotChecked()
+    {
+        var metformin = Line("A10BA02", "Metformin", "500 mg", Sig("1", "tablet", "BD"));
+        Assert.Equal(NotCheckedReason.NoEgfr, Assert.Single(For(new(60, false, null, null, null), [metformin]).NotChecked).Reason);
+        Assert.Empty(For(new(60, false, null, null, null), [Line("C09CA01", "Losartan", "50 mg", Sig("1", "tablet", "OD"))]).NotChecked); // no kidney rule
+    }
+
+    /// <summary>SAFETY (mutation check: drop the benzodiazepine entry, or move the age line from 65, and this fails).</summary>
+    [Fact]
+    public void DiazepamAt76IsAModerateOlderAdultFinding()
+    {
+        var diazepam = Line("N05BA01", "Diazepam", "2 mg", Sig("1", "tablet", "OD"));
+        var alert = Assert.Single(For(new(76, true, null, 52, null), [diazepam]).Alerts);
+        Assert.Equal((RxAlertKind.OlderAdult, RxSeverity.Moderate, "benzodiazepine", (int?)76), (alert.Kind, alert.Severity, alert.Code, alert.Measure));
+        Assert.Single(For(new(65, false, null, 90, null), [diazepam]).Alerts);
+        Assert.Empty(For(new(64, false, null, 90, null), [diazepam]).Alerts);
+    }
+
+    static (RxSeverity, string?) Kidney(SafetyResult r) => Assert.Single(r.Alerts, a => a.Kind == RxAlertKind.Kidney) is var a ? (a.Severity, a.Code) : default;
 }

@@ -7,9 +7,11 @@ import NotePrintPage from '../features/encounters/components/NotePrintPage';
 import NoteTemplateChoice from '../features/encounters/components/NoteTemplateChoice';
 import { useConsultController } from '../features/encounters/hooks/useConsultController';
 import OrdersPanel from '../features/orders/components/OrdersPanel';
+import AddMedicinePanel, { type AddMedicinePatient } from '../features/prescription/components/AddMedicinePanel';
 import PrescriptionPanel from '../features/prescription/components/PrescriptionPanel';
 import RxPrintPage from '../features/prescription/components/RxPrintPage';
 import RxSharePanel from '../features/prescription/components/RxSharePanel';
+import { useAddMedicineController } from '../features/prescription/hooks/useAddMedicineController';
 import { usePrescriptionController } from '../features/prescription/hooks/usePrescriptionController';
 import { useRxPrintController } from '../features/prescription/hooks/useRxPrintController';
 import { useRxShareController } from '../features/prescription/hooks/useRxShareController';
@@ -42,7 +44,7 @@ function Consult({ encounterId, boardPath, canOrder, canReconcile, canSign }: Pr
         <NoteHistory {...useAddendumController(encounterId, canSign)} timeZone={consult.banner?.timeZone} printPath={`/consult/${encounterId}/note/print`} />
         <NoteTemplateChoice {...useNoteTemplatesController()} />
       </ConsultPage>
-      {consult.banner && canOrder && <Prescription encounterId={encounterId} ended={consult.banner.encounter.status === 'Ended'} />}
+      {consult.banner && canOrder && <Prescription encounterId={encounterId} ended={consult.banner.encounter.status === 'Ended'} patient={{ ...consult.banner.patient, allergies: consult.banner.allergies }} />}
       {consult.banner && canOrder && <Orders encounterId={encounterId} ended={consult.banner.encounter.status === 'Ended'} />}
       {consult.banner && canOrder && <Referrals patientId={consult.banner.encounter.patientId} encounterId={encounterId} ended={consult.banner.encounter.status === 'Ended'} />}
     </div>
@@ -50,9 +52,10 @@ function Consult({ encounterId, boardPath, canOrder, canReconcile, canSign }: Pr
 }
 
 /** The draft prescription (MDV-P2-015) under the consultation, for a role with "Prescriptions and orders" at Sign; the server still decides for this clinician and patient. */
-function Prescription({ encounterId, ended }: { encounterId: string; ended: boolean }) {
+function Prescription({ encounterId, ended, patient }: { encounterId: string; ended: boolean; patient: AddMedicinePatient }) {
   const rx = usePrescriptionController(encounterId);
-  return rx.hidden ? null : <PrescriptionPanel {...rx} ended={ended} printPath={`/consult/${encounterId}/rx/print`} />;
+  const add = useAddMedicineController(encounterId);
+  return rx.hidden ? null : <PrescriptionPanel {...rx} ended={ended} printPath={`/consult/${encounterId}/rx/print`} addMedicine={<AddMedicinePanel {...add} patient={patient} />} />;
 }
 
 /** Orders (MDV-P2-018) under the consultation, for a role with "Prescriptions and orders" at Sign; the server still decides for this clinician and patient. */

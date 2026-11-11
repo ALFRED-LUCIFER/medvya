@@ -1,4 +1,4 @@
-import type { FormEventHandler } from 'react';
+import type { FormEventHandler, ReactNode } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { Link } from 'react-router';
 import { CircleAlert, CircleSlash, CircleX, FilePen, History, Plus, Printer, ShieldCheck, UserRound } from 'lucide-react';
@@ -45,6 +45,8 @@ type Props = SafetyProps & {
   onCancel: FormEventHandler<HTMLFormElement>;
   onConfirmIdentity: () => void;
   printPath: string;
+  /** The Add medicine panel (MDV-P2-039), opened from here while the consultation is open. */
+  addMedicine?: ReactNode;
 };
 
 const none = 'none';
@@ -71,6 +73,7 @@ export default function PrescriptionPanel(p: Props) {
           </Select>
         </Field>
         <AuthorisationState state={p.authorisation} />
+        {!p.ended && p.addMedicine}
       </div>
 
       {status && <p role="status">{status}</p>}

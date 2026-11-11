@@ -11,6 +11,8 @@ import { bannerAllergies, pathOf, provenanceOf, sparkBox, trendLines } from '../
 type Props = {
   data: Patient360 | null; loading: boolean; notFound: boolean; refusal: ClinicalRefusal | null; failed: boolean;
   backPath: string; consultPath: (encounterId: string) => string; timelinePath: string; documentsPath: string;
+  /** Add medicine (MDV-P2-039) on the Medicines card, for a role that may prescribe. */
+  addMedicine?: ReactNode;
   reason: AccessReason; asking: boolean; askFailed: boolean; onReason: (r: AccessReason) => void; onRequestAccess: () => void;
 };
 
@@ -80,6 +82,7 @@ export default function Patient360Page(p: Props) {
                 </Item>))}</List>}
         </Card>
         <Card title={t('patient360.medicines')}>
+          {p.addMedicine}
           {chart.medicines.length === 0 ? <Empty text={t('patient360.medicines.empty')} />
             : <List>{chart.medicines.map((m, i) => (
                 <Item key={i} source={m.source}>

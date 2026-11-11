@@ -121,6 +121,27 @@ public sealed class SignNoteTests(PostgresFixture sql) : IClassFixture<PostgresF
         Assert.DoesNotContain("cough", JsonSerializer.Serialize(sign), StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task TheSignatureNamesTheSignerAndTheLicenceTheOwnerAttestedAndNothingWithoutOne()
+    {
+        var version = await SaveDraftAsync(Complete);
+        using (var unprofiled = await SignAsync(h.Doctor, version)) // no profile or licence on record: the signature carries ids only
+        {
+            var bare = (await Json(unprofiled)).GetProperty("signature");
+            Assert.Equal((JsonValueKind.Null, JsonValueKind.Null), (bare.GetProperty("signerName").ValueKind, bare.GetProperty("signerLicence").ValueKind));
+        }
+        await using (var db = sql.Context(h.Tenant))
+        {
+            var membership = await db.Memberships.SingleAsync(m => m.UserId == h.Doctor);
+            db.DoctorLicences.Add(new DoctorLicence { MembershipId = membership.Id, TenantId = h.Tenant, Authority = "TNMC", Number = "84213", SubmittedAt = h.Clock.GetUtcNow() });
+            db.DoctorProfiles.Add(new DoctorProfile { MembershipId = membership.Id, TenantId = h.Tenant, FullName = "Dr. Arjun Rao (synthetic)" });
+            await db.SaveChangesAsync();
+        }
+        using var read = await Client(h.Doctor).GetAsync(U($"/v1/encounters/{encounter}/note")); // the read view carries who signed and under which licence
+        var signature = (await Json(read)).GetProperty("signature");
+        Assert.Equal(("Dr. Arjun Rao (synthetic)", "Tamil Nadu Medical Council 84213"), (signature.GetProperty("signerName").GetString(), signature.GetProperty("signerLicence").GetString()));
+    }
+
     // SAFETY mutation check: remove the ReauthenticatedAt test in ConsultNoteService.SignAsync and the first two cases fail.
     [Fact]
     public async Task SigningNeedsAReauthenticationInTheLastFiveMinutes()

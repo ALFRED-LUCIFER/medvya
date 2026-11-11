@@ -11,7 +11,7 @@ export const catalog = {
 };
 
 type Addendum = { versionNo: number; amendsVersionNo: number; reason: string; text: string; signedBy: string; signedAt: string; contentHash: string };
-type Note = { templateKey: string; sections: Record<string, string>; version: number; status: string; signature?: { versionNo: number; signedBy: string; signedAt: string; contentHash: string }; addenda?: Addendum[] };
+type Note = { templateKey: string; sections: Record<string, string>; version: number; status: string; signature?: { versionNo: number; signedBy: string; signedAt: string; contentHash: string; signerName?: string; signerLicence?: string }; addenda?: Addendum[] };
 export type NoteMock = {
   note: Note; puts: { templateKey: string; manual: boolean; baseVersion: number; sections: Record<string, string> }[]; chosen: string[][];
   /** The next PUT answers like this instead of saving: a 409 stale_note, or a dropped connection. */
@@ -50,7 +50,7 @@ export async function mockNote(page: Page, seed: Partial<Note> = {}): Promise<No
     if (next === 'stale') return problem(r, 409, { code: 'stale_note', currentVersion: mock.note.version + 1 });
     if (next === 'blank') return problem(r, 400, { errors: { 'sections.plan': ['required'], 'sections.chiefComplaint': ['required'] } });
     mock.note = { ...mock.note, status: 'Signed', version: mock.note.version + 1,
-      signature: { versionNo: 1, signedBy: 'u-rao', signedAt: '2026-10-19T04:40:00Z', contentHash: 'a'.repeat(64) } };
+      signature: { versionNo: 1, signedBy: 'u-rao', signedAt: '2026-10-19T04:40:00Z', contentHash: 'a'.repeat(64), signerName: 'Dr. Arjun Rao (synthetic)', signerLicence: 'Tamil Nadu Medical Council 84213' } };
     return r.fulfill({ json: view() });
   });
   await page.route('**/v1/encounters/e-1/note/addenda', r => {

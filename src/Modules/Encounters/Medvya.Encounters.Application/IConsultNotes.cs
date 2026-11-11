@@ -8,8 +8,8 @@ namespace Medvya.Encounters.Application;
 /// </summary>
 public sealed record SaveNote(string? TemplateKey, bool Manual, int BaseVersion, IReadOnlyDictionary<string, string>? Sections);
 
-/// <summary>The signature of a signed note: who, when and the hash of what was signed (ids only; the page shows the name).</summary>
-public sealed record NoteSignature(int VersionNo, Guid SignedBy, DateTimeOffset SignedAt, string ContentHash);
+/// <summary>The signature of a signed note: who, when and the hash of what was signed. The signer's name and attested licence (authority and number) are null when no doctor profile exists.</summary>
+public sealed record NoteSignature(int VersionNo, Guid SignedBy, DateTimeOffset SignedAt, string ContentHash, string? SignerName = null, string? SignerLicence = null);
 
 /// <summary>A signed addendum (MDV-P2-013): version 2 and later, each following the version before it. Ids only for the signer.</summary>
 public sealed record NoteAddendum(int VersionNo, int AmendsVersionNo, string Reason, string Text, Guid SignedBy, DateTimeOffset SignedAt, string ContentHash);

@@ -90,7 +90,7 @@ test('switching template asks first, keeps shared sections and names the text th
 
 test('a note that is not a draft is read-only', async ({ page }) => {
   await open(page, { version: 3, status: 'Signed', sections: { plan: 'Signed plan' } });
-  await expect(note(page)).toContainText('This note is signed and read-only.');
+  await expect(note(page)).toContainText('SIGNED v1 · read-only');
   await expect(note(page).getByLabel('Plan')).toHaveJSProperty('readOnly', true);
   await expect(note(page).getByRole('combobox', { name: 'Template' })).toBeDisabled();
 });
@@ -119,14 +119,19 @@ test('sign: confirms what signing means, saves first, then shows the signed note
   mock.reauthed = true;
   await note(page).getByLabel('Plan').fill('Rest and fluids'); // typed just before signing: saved first, then that version is signed
   await note(page).getByRole('button', { name: 'Sign note' }).click();
-  const dialog = page.getByRole('dialog', { name: 'Sign this note?' });
-  await expect(dialog).toContainText('permanent');
+  const dialog = page.getByRole('dialog', { name: 'Sign note for Meera Iyer (synthetic)?' });
+  await expect(dialog).toContainText(/000001.* · 12 Mar 1972 · encounter .*e-1/); // who it is for, so a signature cannot land on the wrong chart
+  await expect(dialog).toContainText('I have reviewed every section');
+  await expect(dialog).toContainText('permanent and read-only');
   await expect(dialog).toContainText('addenda');
+  await expect(dialog).toContainText('Prescriptions and orders are authorised separately.');
+  await expect(dialog).toContainText('confirm your identity again');
   await dialog.getByRole('button', { name: 'Keep editing' }).click();
   expect(mock.signs).toEqual([]);
   await note(page).getByRole('button', { name: 'Sign note' }).click();
-  await page.getByRole('dialog').getByRole('button', { name: 'Sign note' }).click();
-  await expect(note(page)).toContainText('Signed by Dr. Arjun Rao (synthetic) on 19 Oct 2026 at 10:10 · version 1');
+  await page.getByRole('dialog').getByRole('button', { name: 'Sign as Dr. Arjun Rao (synthetic)' }).click();
+  await expect(note(page)).toContainText('SIGNED v1 · read-only');
+  await expect(note(page)).toContainText(/Signed by Dr\. Arjun Rao \(synthetic\), licence .*Tamil Nadu Medical Council 84213.*, on 19 Oct 2026 at 10:10 · version 1/); // the licence the owner attested
   expect(mock.puts.at(-1)).toMatchObject({ baseVersion: 2, sections: { plan: 'Rest and fluids' } });
   expect(mock.signs).toEqual([{ baseVersion: 3 }]);
   await expect(note(page).getByLabel('Plan')).toHaveJSProperty('readOnly', true);
@@ -147,7 +152,7 @@ test('sign: blank required sections are named in words and the first one is focu
   await note(page).getByLabel('Plan').fill('Rest');
   mock.signNext = 'blank';
   await note(page).getByRole('button', { name: 'Sign note' }).click();
-  await page.getByRole('dialog').getByRole('button', { name: 'Sign note' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Sign as Dr. Arjun Rao (synthetic)' }).click();
   await expect(note(page).getByRole('alert')).toHaveText('These required sections are empty: Chief complaint, Plan. Fill them in, then sign.');
   await expect(note(page).getByLabel('Chief complaint')).toBeFocused();
 });
@@ -156,7 +161,7 @@ test('sign: reauth_required sends the doctor to confirm identity, the draft surv
   const mock = await open(page, { version: 1, sections: { chiefComplaint: 'Thirst', assessment: 'Review', plan: 'Rest' } });
   await note(page).getByLabel('Plan').fill('Rest and fluids (unsaved when Sign was pressed)');
   await note(page).getByRole('button', { name: 'Sign note' }).click();
-  await page.getByRole('dialog').getByRole('button', { name: 'Sign note' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Sign as Dr. Arjun Rao (synthetic)' }).click();
   await expect(page.getByText('Confirm your identity', { exact: true })).toBeVisible(); // the provider's stub page
   expect(mock.reauths).toEqual([{ returnUrl: '/consult/e-1' }]); // the opaque consult path only
   expect(mock.signs).toHaveLength(1);
@@ -164,7 +169,7 @@ test('sign: reauth_required sends the doctor to confirm identity, the draft surv
   await page.goto('/consult/e-1'); // the provider returns here
   await expect(note(page).getByLabel('Plan')).toHaveValue('Rest and fluids (unsaved when Sign was pressed)'); // reloaded from the server
   await note(page).getByRole('button', { name: 'Sign note' }).click();
-  await page.getByRole('dialog').getByRole('button', { name: 'Sign note' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Sign as Dr. Arjun Rao (synthetic)' }).click();
   await expect(note(page)).toContainText('version 1');
   expect(mock.signs).toHaveLength(2);
   expect(await page.evaluate(() => JSON.stringify([localStorage, sessionStorage]))).not.toContain('Rest and fluids');
@@ -177,7 +182,7 @@ test('sign: a stale note keeps the doctor\'s text and uses the editor\'s reload 
   await expect(note(page).getByLabel('Plan')).toHaveValue('Rest');
   mock.note = { ...mock.note, version: 2, sections: { ...mock.note.sections, plan: 'Their plan' } }; // another device saved meanwhile
   await note(page).getByRole('button', { name: 'Sign note' }).click();
-  await page.getByRole('dialog').getByRole('button', { name: 'Sign note' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Sign as Dr. Arjun Rao (synthetic)' }).click();
   await expect(note(page).getByRole('alert')).toContainText('changed elsewhere');
   await expect(note(page).getByLabel('Plan')).toHaveValue('Rest');
   await note(page).getByRole('button', { name: 'Reload and reapply my changes' }).click();
@@ -191,7 +196,7 @@ test('sign: a refusal is said in words and the note stays a draft', async ({ pag
   mock.reauthed = true;
   mock.signNext = 'denied';
   await note(page).getByRole('button', { name: 'Sign note' }).click();
-  await page.getByRole('dialog').getByRole('button', { name: 'Sign note' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Sign as Dr. Arjun Rao (synthetic)' }).click();
   await expect(note(page).getByRole('alert')).toContainText('You cannot sign this note.');
   await expect(note(page).getByLabel('Plan')).toBeEditable();
 });
@@ -397,5 +402,123 @@ for (const locale of ['en', 'ar'])
     await versions.getByRole('link').click();
     await expect(page.getByRole('article')).toContainText('000001');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    expect(await axeViolations(page)).toEqual([]);
+  });
+
+// MDV-P2-009 (4/4): the editor by keyboard only and at 200% zoom. No mouse call below: every control is reached with Tab and worked with Enter,
+// Space, arrows and Escape, the focus ring is visible each time, and a dialog holds focus and gives it back.
+const focused = (page: Page) => page.evaluate(() => {
+  const el = document.activeElement as HTMLElement;
+  const s = getComputedStyle(el);
+  return { tag: `${el.tagName} ${el.textContent?.trim().slice(0, 30)}`, ring: (s.outlineStyle !== 'none' && parseFloat(s.outlineWidth) > 0) || s.boxShadow !== 'none' };
+});
+async function tabTo(page: Page, target: ReturnType<Page['locator']>, key = 'Tab', max = 60) {
+  for (let i = 0; i < max; i++) {
+    if (await target.evaluate(el => el === document.activeElement)) return;
+    await page.keyboard.press(key);
+    const f = await focused(page);
+    expect(f.ring, `focus ring on step ${i}: ${f.tag}`).toBe(true);
+  }
+  throw new Error('not reachable by Tab');
+}
+
+test('keyboard only: write, add a phrase, switch template, and sign, with a visible focus ring, a focus trap and focus returned', async ({ page }) => {
+  const mock = await open(page, { version: 1, templateKey: 'diabetes-review', sections: { chiefComplaint: 'Thirst', assessment: 'Review', plan: 'Rest', selfMonitoring: 'Fasting readings' } });
+  mock.reauthed = true;
+  mock.previous = earlier;
+  await page.reload();
+  const region = note(page);
+  await expect(region.getByRole('region', { name: 'Add to the note' })).toContainText('02 Sept 2026'); // everything has loaded: nothing re-renders under the keyboard
+
+  const plan = region.getByRole('textbox', { name: /^Plan/ });
+  await tabTo(page, plan);
+  await page.keyboard.type(' and fluids');
+  await expect(region.getByRole('status')).toHaveText('Saved');
+  expect(mock.puts.at(-1)!.sections.plan).toBe('Rest and fluids');
+
+  const snippets = region.getByRole('region', { name: 'Add to the note' }).locator('summary');
+  await tabTo(page, snippets, 'Shift+Tab'); // the add-to-note panel sits above the sections
+  await page.keyboard.press('Enter');
+  await tabTo(page, region.getByRole('button', { name: /^Insert .* text from 02 Sept 2026$/ }).first());
+  await page.keyboard.press('Space');
+  await expect.poll(() => mock.puts.at(-1)!.sections.chiefComplaint).toContain('copied from the note of 02 Sept 2026'); // into the section focus last passed through
+
+  // Template switch: arrows choose, the dialog traps Tab, Escape returns focus to the template control.
+  const template = region.getByRole('combobox', { name: 'Template' });
+  await tabTo(page, template, 'Shift+Tab');
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('option', { name: 'General OPD' })).toBeVisible();
+  await page.keyboard.press('ArrowUp');
+  await expect(page.getByRole('option', { name: 'General OPD' })).toBeFocused();
+  await page.keyboard.press('Enter');
+  const switchDialog = page.getByRole('dialog', { name: 'Switch template?' });
+  await expect(switchDialog).toBeVisible();
+  for (let i = 0; i < 6; i++) {
+    await page.keyboard.press('Tab');
+    expect(await switchDialog.evaluate(d => d.contains(document.activeElement))).toBe(true);
+  }
+  await page.keyboard.press('Escape');
+  await expect(switchDialog).toHaveCount(0);
+  await expect(template).toBeFocused();
+
+  // Sign: the dialog names who it is for, Tab and Shift+Tab stay inside it, Escape returns to the Sign button, Enter on the CTA signs.
+  const sign = region.getByRole('button', { name: 'Sign note' });
+  await tabTo(page, sign);
+  await page.keyboard.press('Enter');
+  const dialog = page.getByRole('dialog', { name: 'Sign note for Meera Iyer (synthetic)?' });
+  await expect(dialog).toBeVisible();
+  for (let i = 0; i < 6; i++) {
+    await page.keyboard.press(i % 2 ? 'Shift+Tab' : 'Tab');
+    expect(await dialog.evaluate(d => d.contains(document.activeElement))).toBe(true);
+    expect((await focused(page)).ring).toBe(true);
+  }
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+  await expect(sign).toBeFocused();
+  expect(mock.signs).toEqual([]);
+  await page.keyboard.press('Enter');
+  await tabTo(page, dialog.getByRole('button', { name: 'Sign as Dr. Arjun Rao (synthetic)' }));
+  await page.keyboard.press('Enter');
+  await expect(region).toContainText('SIGNED v1 · read-only');
+  expect(mock.signs).toHaveLength(1);
+});
+
+test('200% zoom: the note, the sign dialog and its buttons stay readable and reachable with no sideways scrolling', async ({ page }) => {
+  await open(page, { version: 1, sections: { chiefComplaint: 'Thirst', assessment: 'Review', plan: 'Rest' } });
+  await page.setViewportSize({ width: 640, height: 360 }); // 1280 x 720 at 200%: WCAG 1.4.4 and 1.4.10
+  await expect(note(page)).toBeVisible();
+  const fits = () => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth);
+  expect(await fits()).toBe(true);
+  const sign = note(page).getByRole('button', { name: 'Sign note' });
+  await sign.scrollIntoViewIfNeeded();
+  await sign.click();
+  const dialog = page.getByRole('dialog');
+  const confirm = dialog.getByRole('button', { name: 'Sign as Dr. Arjun Rao (synthetic)' });
+  await confirm.scrollIntoViewIfNeeded(); // a tall dialog scrolls inside the viewport; nothing is cut off
+  const box = (await dialog.boundingBox())!;
+  expect(box.x).toBeGreaterThanOrEqual(0);
+  expect(box.x + box.width).toBeLessThanOrEqual(640);
+  const confirmBox = (await confirm.boundingBox())!;
+  expect(confirmBox.x).toBeGreaterThanOrEqual(0);
+  expect(confirmBox.x + confirmBox.width).toBeLessThanOrEqual(640);
+  expect(await fits()).toBe(true);
+  expect(await axeViolations(page)).toEqual([]);
+});
+
+for (const locale of ['en', 'ar'])
+  test(`the sign dialog and the signed note: axe clean, 44 px targets, no animation under reduced motion (${locale})`, async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    const mock = await open(page, { version: 1, sections: { chiefComplaint: 'Thirst', assessment: 'Review', plan: 'Rest' } }, locale);
+    mock.reauthed = true;
+    const ar = locale === 'ar';
+    if (ar) await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+    await page.getByRole('button', { name: ar ? 'توقيع الملاحظة' : 'Sign note' }).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    expect(await dialog.evaluate(d => d.getAnimations().length)).toBe(0);
+    for (const target of await dialog.locator('button').all()) expect((await target.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    expect(await axeViolations(page)).toEqual([]);
+    await dialog.getByRole('button', { name: ar ? /^التوقيع بصفتي/ : /^Sign as/ }).click();
+    await expect(page.getByRole('status').filter({ hasText: ar ? 'موقّعة v1' : 'SIGNED v1' })).toBeVisible();
     expect(await axeViolations(page)).toEqual([]);
   });

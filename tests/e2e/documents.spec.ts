@@ -17,7 +17,7 @@ const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR
 
 type Options = { as?: typeof doctor; locale?: string; canOpen?: boolean; docs?: ReturnType<typeof row>[]; uploads?: { status: number; json: unknown }[]; path?: string };
 async function open(page: Page, { as = doctor, locale = 'en', canOpen = true, docs = [row('d1', 'LabReport', 'Clean')], uploads = [], path = '/patients/p-1/docs' }: Options = {}) {
-  const calls = { posts: [] as { url: string; body: Buffer; csrf: string | undefined }[], links: 0, lists: 0 };
+  const calls = { posts: [] as { url: string; body: Buffer; csrf: string | undefined }[], links: 0, lists: 0, patches: [] as { body: unknown; csrf: string | undefined }[] };
   await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
   await page.route('**/v1/me/context', r => r.fulfill({ json: as }));
   await page.route(/\/v1\/patients\/p-1\/documents(\?.*)?$/, r => {
@@ -32,6 +32,10 @@ async function open(page: Page, { as = doctor, locale = 'en', canOpen = true, do
   await page.route('**/v1/documents/d1/view-link', r => {
     calls.links++;
     return r.fulfill({ json: { url: 'https://blob.example.test/clinical-documents/abc?sp=r&se=2026-10-02T04:35:00Z', expiresAt: new Date(Date.now() + 5 * 60_000).toISOString(), contentType: 'image/png', viewer: 'Dr. Arjun Rao (synthetic)', viewedAt: new Date().toISOString() } });
+  });
+  await page.route('**/v1/documents/d1', r => {
+    calls.patches.push({ body: r.request().postDataJSON(), csrf: r.request().headers()['x-medvya-csrf'] });
+    return r.fulfill({ json: { ...row('d1', 'Imaging', 'Clean'), documentDate: '2026-09-15' } });
   });
   await page.route('https://blob.example.test/**', r => r.fulfill({ body: png, contentType: 'image/png' }));
   await page.goto(path);
@@ -83,6 +87,22 @@ test('the front desk uploads a file and sees the list but has no way to open any
   expect(url.toString()).not.toContain('scan.pdf'); // no file name in the URL
   expect(calls.posts[0]!.body.toString()).toBe('%PDF-1.4\nsynthetic'); // the file as the raw body
   expect(calls.posts[0]!.csrf).toBe('1');
+});
+
+test('a doctor edits a document\'s type and date; the desk has no edit button', async ({ page }) => {
+  const calls = await open(page);
+  await page.getByRole('button', { name: 'Edit details: Lab report' }).click();
+  const form = page.getByRole('group', { name: 'Edit document details' });
+  await expect(form).toContainText('The original file stays as it was');
+  await form.getByRole('combobox', { name: 'Type' }).click();
+  await page.getByRole('option', { name: 'Imaging' }).click();
+  await form.getByLabel('Date on the document').fill('2026-09-15');
+  await form.getByRole('button', { name: 'Save' }).click();
+  await expect(form).toHaveCount(0);
+  expect(calls.patches).toEqual([{ body: { type: 'Imaging', documentDate: '2026-09-15' }, csrf: '1' }]);
+  const deskCalls = await open(page, { as: desk, canOpen: false });
+  expect(deskCalls.patches).toHaveLength(0);
+  await expect(page.getByRole('button', { name: /^Edit/ })).toHaveCount(0);
 });
 
 test('a failed upload keeps the file and can be retried', async ({ page }) => {

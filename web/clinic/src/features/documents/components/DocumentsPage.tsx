@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { Link } from 'react-router';
-import { Camera, CircleAlert, CircleCheck, Hourglass, ShieldAlert, Upload } from 'lucide-react';
+import { Camera, CircleAlert, CircleCheck, Hourglass, Pencil, ShieldAlert, Upload } from 'lucide-react';
 import { ltr, useI18n } from '@medvya/i18n';
 import { Button, buttonVariants, Input, Label, ProvenanceTag, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
 import type { ClinicalRefusal } from '../../patient360/domain/chart';
@@ -15,6 +15,8 @@ type Props = {
   onFile: (file: File) => void; onRetry: () => void; onDismissFailure: () => void;
   pages: number; addingPhoto: boolean; photoFailed: boolean; onPhoto: (file: File) => void; onClearPages: () => void; onSavePages: () => void;
   viewer: ViewLink | null; expired: boolean; opening: string | null; openProblem: 'scan_pending' | 'quarantined' | 'failed' | null; onOpen: (id: string) => void; onCloseViewer: () => void;
+  editing: { id: string; type: DocumentType; date: string } | null; saving: boolean; editFailed: boolean;
+  onEdit: (d: DocumentRow) => void; onEditChange: (patch: { type?: DocumentType; date?: string }) => void; onSaveEdit: () => void; onCancelEdit: () => void;
   backPath: string;
 };
 
@@ -110,6 +112,7 @@ function UploadPanel(p: Props) {
 function Row({ doc: d, ...p }: Props & { doc: DocumentRow }) {
   const { t, formatDate } = useI18n();
   const open = canOpenDocument(d, p.canOpen);
+  const editing = p.editing?.id === d.id ? p.editing : null;
   return (
     <li className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 border-b pb-3 last:border-b-0">
       <div className="flex flex-col">
@@ -123,8 +126,28 @@ function Row({ doc: d, ...p }: Props & { doc: DocumentRow }) {
           {d.scanStatus === 'Clean' ? <CircleCheck aria-hidden className="size-4" /> : d.scanStatus === 'Pending' ? <Hourglass aria-hidden className="size-4" /> : <ShieldAlert aria-hidden className="size-4" />}
           {t(`documents.scan.${d.scanStatus}`)}
         </span>
+        {p.canOpen && d.scanStatus !== 'Infected' && !editing && <Button variant="outline" className="min-h-11" onClick={() => p.onEdit(d)} aria-label={t('documents.editFor', { type: t(`documents.type.${d.type}`) })}><Pencil aria-hidden className="size-4" />{t('documents.edit')}</Button>}
         {open && <Button variant="navy" className="min-h-11" loading={p.opening === d.id} onClick={() => p.onOpen(d.id)} aria-label={t('documents.openFor', { type: t(`documents.type.${d.type}`) })}>{t('documents.open')}</Button>}
       </div>
+      {editing && (
+        <div role="group" aria-label={t('documents.editing')} className="flex w-full flex-wrap items-end gap-3 rounded-md border p-3">
+          <div className="flex flex-col gap-1">
+            <Label htmlFor={`edit-type-${d.id}`}>{t('documents.field.type')}</Label>
+            <Select value={editing.type} onValueChange={v => p.onEditChange({ type: v as DocumentType })}>
+              <SelectTrigger id={`edit-type-${d.id}`} className="h-11 w-52"><SelectValue /></SelectTrigger>
+              <SelectContent>{documentTypes.map(x => <SelectItem key={x} value={x}>{t(`documents.type.${x}`)}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label htmlFor={`edit-date-${d.id}`}>{t('documents.field.date')}</Label>
+            <Input id={`edit-date-${d.id}`} type="date" className="h-11 w-44" value={editing.date} onChange={e => p.onEditChange({ date: e.target.value })} />
+          </div>
+          <Button className="min-h-11" loading={p.saving} onClick={p.onSaveEdit}>{t('documents.edit.save')}</Button>
+          <Button variant="ghost" className="min-h-11" disabled={p.saving} onClick={p.onCancelEdit}>{t('documents.edit.cancel')}</Button>
+          <p className="basis-full text-sm text-muted-foreground">{t('documents.edit.note')}</p>
+          {p.editFailed && <p role="alert" className="basis-full font-bold text-danger-700">{t('documents.edit.failed')}</p>}
+        </div>
+      )}
     </li>
   );
 }
@@ -134,7 +157,7 @@ const xml = (text: string) => text.replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)
 const watermark = (text: string) =>
   `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="560" height="240"><text x="280" y="120" text-anchor="middle" transform="rotate(-25 280 120)" font-family="sans-serif" font-size="18" font-weight="700" fill="#102A43" fill-opacity="0.22">${xml(text)}</text></svg>`)}")`;
 
-/** The secure viewer: the file from a link that expires, with who opened it and when written over it. The watermark is a deterrent on screen, not part of the file. */
+/** The secure viewer: the file from a link that expires, with who opened it and when written over it. shortcut: the watermark is drawn over the file on screen, not burned into it (decided 11 Nov, #955, as for the console in ADR-014): a screenshot is marked but the served bytes are not; bake it in only if downloads are ever allowed. */
 function Viewer({ viewer, timeZone, onClose }: { viewer: ViewLink; timeZone: string; onClose: () => void }) {
   const { t, formatDate, formatTime } = useI18n();
   const at = new Date(viewer.viewedAt), until = new Date(viewer.expiresAt);

@@ -14,9 +14,9 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P0-002](P0-foundation/MDV-P0-002.md) | Record and accept ADR-001 (stack) and supporting ADRs 003–006 | P0 | wk 1–1 | 90% |
 | [MDV-P0-003](P0-foundation/MDV-P0-003.md) | Decide launch market (ADR-002) and confirm Azure subscription and region | P0 | wk 1–1 | 70% |
 | [MDV-P0-004](P0-foundation/MDV-P0-004.md) | GitHub repository protections and PR pipeline (build, analyzers, tests, CodeQL, dependency and secret scanning) | P0 | wk 1–1 | 90% |
-| [MDV-P0-005](P0-foundation/MDV-P0-005.md) | Local development environment with Docker Compose (SQL Server, Azurite, mail and SMS sinks) | P0 | wk 1–1 | 90% |
-| [MDV-P0-006](P0-foundation/MDV-P0-006.md) | Azure environments as code (Bicep): App Service, Azure SQL private endpoint, Blob, Key Vault, App Insights, Defender, budgets | P0 | wk 1–2 | 80% |
-| [MDV-P0-016](P0-foundation/MDV-P0-016.md) | Data classification register and ERD → Azure SQL type mapping | P0 | wk 1–2 | 85% |
+| [MDV-P0-005](P0-foundation/MDV-P0-005.md) | Local development environment with Docker Compose (PostgreSQL, Azurite, mail and SMS sinks) | P0 | wk 1–1 | 90% |
+| [MDV-P0-006](P0-foundation/MDV-P0-006.md) | Azure environments as code (Bicep): App Service, PostgreSQL private access, Blob, Key Vault, App Insights, Defender, budgets | P0 | wk 1–2 | 80% |
+| [MDV-P0-016](P0-foundation/MDV-P0-016.md) | Data classification register and ERD → PostgreSQL type mapping | P0 | wk 1–2 | 85% |
 | [MDV-P0-020](P0-foundation/MDV-P0-020.md) | Medvya design system in code: shadcn/ui + Tailwind tokens and clinical status primitives (packages/ui) | P0 | wk 1–2 | 92% |
 | [MDV-P0-024](P0-foundation/MDV-P0-024.md) | Threat model, data map, DPIA draft (DPDP) and record-retention map per country | P0 | wk 1–3 | 75% |
 | [MDV-P0-025](P0-foundation/MDV-P0-025.md) | Secure development policies: SECURITY.md, code review rules, synthetic-only data, JIT access, offline break-glass account | P0 | wk 1–1 | 90% |
@@ -28,16 +28,16 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
-| [MDV-P0-006](P0-foundation/MDV-P0-006.md) | Azure environments as code (Bicep): App Service, Azure SQL private endpoint, Blob, Key Vault, App Insights, Defender, budgets | P0 | wk 1–2 | 80% |
+| [MDV-P0-006](P0-foundation/MDV-P0-006.md) | Azure environments as code (Bicep): App Service, PostgreSQL private access, Blob, Key Vault, App Insights, Defender, budgets | P0 | wk 1–2 | 80% |
 | [MDV-P0-007](P0-foundation/MDV-P0-007.md) | GitHub OIDC federation to Azure and tagged deploy to staging | P0 | wk 2–2 | 88% |
 | [MDV-P0-008](P0-foundation/MDV-P0-008.md) | Database security baseline part 1: Entra-only auth, managed identity, least-privilege users per module and for migrations | P0 | wk 2–2 | 85% |
-| [MDV-P0-009](P0-foundation/MDV-P0-009.md) | Database security baseline part 2: Always Encrypted (national/insurance IDs), dynamic data masking, TDE with customer-managed key | P0 | wk 2–3 | 72% |
-| [MDV-P0-010](P0-foundation/MDV-P0-010.md) | Tenancy model with EF Core global filters and Azure SQL row-level security (cross-tenant test in CI) | P0 | wk 2–2 | 88% |
+| [MDV-P0-009](P0-foundation/MDV-P0-009.md) | Database security baseline part 2: national/insurance ID encryption, masked access, storage encryption with a customer-managed key | P0 | wk 2–3 | 72% |
+| [MDV-P0-010](P0-foundation/MDV-P0-010.md) | Tenancy model with EF Core global filters and PostgreSQL row-level security (cross-tenant test in CI) | P0 | wk 2–2 | 88% |
 | [MDV-P0-011](P0-foundation/MDV-P0-011.md) | Staff sign-in through the BFF with Entra External ID: MFA (TOTP), passkeys and recovery | P0 | wk 2–2 | 78% |
 | [MDV-P0-012](P0-foundation/MDV-P0-012.md) | Session control: facility picker, idle timeout on shared clinic PCs, device/session revocation | P0 | wk 2–3 | 85% |
 | [MDV-P0-014](P0-foundation/MDV-P0-014.md) | Server-side authorisation from the Foundations role-permission matrix | P0 | wk 2–3 | 87% |
-| [MDV-P0-016](P0-foundation/MDV-P0-016.md) | Data classification register and ERD → Azure SQL type mapping | P0 | wk 1–2 | 85% |
-| [MDV-P0-017](P0-foundation/MDV-P0-017.md) | Append-only audit log on Azure SQL ledger tables with audit middleware | P0 | wk 2–3 | 85% |
+| [MDV-P0-016](P0-foundation/MDV-P0-016.md) | Data classification register and ERD → PostgreSQL type mapping | P0 | wk 1–2 | 85% |
+| [MDV-P0-017](P0-foundation/MDV-P0-017.md) | Append-only audit log on hash-chained PostgreSQL tables with audit middleware | P0 | wk 2–3 | 85% |
 | [MDV-P0-018](P0-foundation/MDV-P0-018.md) | Observability with OpenTelemetry and PHI redaction (structured logs, telemetry processor) | P0 | wk 2–2 | 88% |
 | [MDV-P0-020](P0-foundation/MDV-P0-020.md) | Medvya design system in code: shadcn/ui + Tailwind tokens and clinical status primitives (packages/ui) | P0 | wk 1–2 | 92% |
 | [MDV-P0-021](P0-foundation/MDV-P0-021.md) | Internationalisation pipeline: English, Hindi, Arabic with full RTL | P0 | wk 2–2 | 88% |
@@ -54,12 +54,12 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
-| [MDV-P0-009](P0-foundation/MDV-P0-009.md) | Database security baseline part 2: Always Encrypted (national/insurance IDs), dynamic data masking, TDE with customer-managed key | P0 | wk 2–3 | 72% |
+| [MDV-P0-009](P0-foundation/MDV-P0-009.md) | Database security baseline part 2: national/insurance ID encryption, masked access, storage encryption with a customer-managed key | P0 | wk 2–3 | 72% |
 | [MDV-P0-012](P0-foundation/MDV-P0-012.md) | Session control: facility picker, idle timeout on shared clinic PCs, device/session revocation | P0 | wk 2–3 | 85% |
 | [MDV-P0-013](P0-foundation/MDV-P0-013.md) | Invite a colleague and accept the invitation (membership invited → active) | P0 | wk 3–3 | 88% |
 | [MDV-P0-014](P0-foundation/MDV-P0-014.md) | Server-side authorisation from the Foundations role-permission matrix | P0 | wk 2–3 | 87% |
 | [MDV-P0-015](P0-foundation/MDV-P0-015.md) | System state screens: session expired, 403 no facility access, 404, offline | P0 | wk 3–3 | 92% |
-| [MDV-P0-017](P0-foundation/MDV-P0-017.md) | Append-only audit log on Azure SQL ledger tables with audit middleware | P0 | wk 2–3 | 85% |
+| [MDV-P0-017](P0-foundation/MDV-P0-017.md) | Append-only audit log on hash-chained PostgreSQL tables with audit middleware | P0 | wk 2–3 | 85% |
 | [MDV-P0-019](P0-foundation/MDV-P0-019.md) | Backups, point-in-time restore and a timed restore drill | P0 | wk 3–3 | 90% |
 | [MDV-P0-022](P0-foundation/MDV-P0-022.md) | App shell with role-based navigation (desktop sidebar, tablet rail, mobile tabs) | P0 | wk 3–3 | 85% |
 | [MDV-P0-023](P0-foundation/MDV-P0-023.md) | Six end-to-end journeys as Playwright specs and clinical advisor sign-off (X-03) | P0 | wk 3–3 | 80% |

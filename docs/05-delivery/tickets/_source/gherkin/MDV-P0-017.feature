@@ -1,4 +1,4 @@
-Feature: Append-only audit log on Azure SQL ledger tables with audit middleware
+Feature: Append-only audit log on hash-chained PostgreSQL tables with audit middleware
   As a practice admin, I want every patient-data access recorded tamper-evidently, so that access is provable.
 
   # chunk: Audit every patient-data request, including refusals

@@ -129,7 +129,7 @@ progress:
 - Dev-only OIDC provider (Development only, refusal tested) arrived with [PR #39](https://github.com/ALFRED-LUCIFER/medvya/pull/39)
 - Merged [PR #64](https://github.com/ALFRED-LUCIFER/medvya/pull/64): docs corrected — API on :5080 (what the clinic proxy and dev sign-in expect), Colima and Docker Desktop sockets, Rosetta and exit-139 hint, settings for parallel worktrees, seeded modules
 - SMS sink: SMS sent locally goes to the mail sink (smtp4dev) as a message to `<number>@sms.sink.local` with sender and DLT template id, never to a phone (MDV-P1-033, `Notifications:Sms:Provider=Sink`, Development only)
-title: Local development environment with Docker Compose (SQL Server, Azurite, mail and SMS sinks)
+title: Local development environment with Docker Compose (PostgreSQL, Azurite, mail and SMS sinks)
 type: Task
 epic: MDV-P0-E01
 prd: P0-01
@@ -142,7 +142,7 @@ depends: MDV-P0-001
 confidence: 90 | Explicit in P0-01; well-known tooling.
 sources: PRD v2 P0-01, §08 Environments
 desc:
-docker-compose.yml with SQL Server 2022 (Developer), Azurite (Blob), smtp4dev (email sink) and a fake SMS endpoint, plus a one-command start (`make dev` or `pnpm dev`) that applies EF Core migrations and seeds the synthetic tenant. Local identity uses a development Entra External ID tenant or a dev-only OIDC stub that is impossible to enable outside Development.
+docker-compose.yml with PostgreSQL 17, Azurite (Blob), smtp4dev (email sink) and a fake SMS endpoint, plus a one-command start (`make dev` or `pnpm dev`) that applies EF Core migrations and seeds the synthetic tenant. Local identity uses a development Entra External ID tenant or a dev-only OIDC stub that is impossible to enable outside Development.
 ac:
 - Given Docker is running, when I run the documented start command, then API, web/clinic and all dependencies start and the seeded synthetic tenant can sign in within 5 minutes on a clean machine.
 - The dev OIDC stub refuses to start unless ASPNETCORE_ENVIRONMENT=Development (verified by a test).
@@ -154,7 +154,7 @@ status: Partly done
 progress:
 - Dev environment for India as code in `infra/bicep/main.bicep` (single file), deployed to resource group rg-medvya-dev-in in Central India: App Service (F1), Azure SQL free offer with Entra-only auth, Storage, Key Vault (RBAC, purge protection), Log Analytics + Application Insights with a daily cap, a 1,800 INR monthly budget with 50/80/100 % alerts, and an allowed-locations policy
 - Left (shortcut, cost): private endpoints and SQL public access disabled, Defender plans, staging slot and VNet integration; staging and prod parameter files; deploy from CI (MDV-P0-007)
-title: Azure environments as code (Bicep): App Service, Azure SQL private endpoint, Blob, Key Vault, App Insights, Defender, budgets
+title: Azure environments as code (Bicep): App Service, PostgreSQL private access, Blob, Key Vault, App Insights, Defender, budgets
 type: Task
 epic: MDV-P0-E01
 prd: P0-02
@@ -167,10 +167,10 @@ depends: MDV-P0-003
 confidence: 80 | Resources are explicit; private networking cost and region SKU availability still need confirming in the subscription.
 sources: PRD v2 P0-02, §07b; docs/03-architecture/azure-deployment.md
 desc:
-infra/bicep/main.bicep + modules (network, appservice, sql, storage, keyvault, monitoring, defender, budgets) and parameter files for dev, staging and prod in the launch country (UAE parameter files created but not deployed unless ADR-002 says UAE). App Service (Linux, .NET 10) with VNet integration and a staging slot; Azure SQL with Entra-only auth, private endpoint, public network access disabled; Storage with private endpoint and no public blob access; Key Vault with RBAC, soft delete and purge protection; Application Insights + Log Analytics; Defender for Cloud plans; budgets and cost alerts per environment; Azure Policy denying resources outside the allowed region(s).
+infra/bicep/main.bicep + modules (network, appservice, postgres, storage, keyvault, monitoring, defender, budgets) and parameter files for dev, staging and prod in the launch country (UAE parameter files created but not deployed unless ADR-002 says UAE). App Service (Linux, .NET 10) with VNet integration and a staging slot; Azure Database for PostgreSQL Flexible Server with Entra-only auth, private access (VNet-integrated), public network access disabled; Storage with private endpoint and no public blob access; Key Vault with RBAC, soft delete and purge protection; Application Insights + Log Analytics; Defender for Cloud plans; budgets and cost alerts per environment; Azure Policy denying resources outside the allowed region(s).
 ac:
 - `az deployment sub what-if` and a real deployment of dev succeed from CI with no manual portal steps.
-- Azure SQL `publicNetworkAccess` is Disabled and only reachable through the private endpoint (verified by a connectivity test from outside the VNet failing).
+- The PostgreSQL server `publicNetworkAccess` is Disabled and only reachable from the VNet (verified by a connectivity test from outside the VNet failing).
 - Key Vault has purge protection enabled; Storage has `allowBlobPublicAccess=false`.
 - A budget with email alerts at 50/80/100 % exists for each environment.
 - Azure Policy assignment denies creating resources in any region other than the configured country region(s).
@@ -225,13 +225,13 @@ labels: database, security
 estimate: 1.5
 weeks: 2
 depends: MDV-P0-006, MDV-P0-038
-confidence: 85 | Azure SQL features are well documented; per-module schema permissions need care with EF Core.
+confidence: 85 | PostgreSQL role and grant features are well documented; per-module schema permissions need care with EF Core.
 sources: PRD v2 P0-09, §07b layers 01–02; docs/03-architecture/data-model.md
 desc:
 Configure Microsoft Entra-only authentication on the logical server. The App Service managed identity is the only application principal. Create one database user/role per module schema (identity, tenancy, audit, … ) with GRANT only on its own schema, a separate migration principal with DDL rights, and a read-only reporting role. Connection strings use `Authentication=Active Directory Managed Identity; Encrypt=Strict`. No SQL logins with passwords exist.
 ac:
 - Attempting SQL authentication with a username/password fails (Entra-only is on).
-- The app identity cannot ALTER/CREATE objects; the migration identity can; verified by integration test against Testcontainers SQL Server using equivalent roles.
+- The app identity cannot ALTER/CREATE objects; the migration identity can; verified by integration test against Testcontainers PostgreSQL using equivalent roles.
 - A module's database role cannot SELECT from another module's schema (architecture/integration test).
 - Connection strings in App Service settings contain no password; `Encrypt=Strict` is enforced.
 - Human access to production data is only via just-in-time elevation (documented runbook, links MDV-P0-025).
@@ -245,7 +245,7 @@ progress:
 - Dynamic data masking on names, DOB, phone, email and address; `medvya_patients` role has UNMASK, reporting sees masked values (tested); protected-column list in the data classification register; mutation-checked
 - Key Vault column master key (RSA 3072, Crypto User on the key only) in Bicep; the app registers the Key Vault provider with its managed identity; `db-migrate admin` creates the keys
 - Left: TDE with customer-managed key and rotation; CMK rotation procedure
-title: Database security baseline part 2: Always Encrypted (national/insurance IDs), dynamic data masking, TDE with customer-managed key
+title: Database security baseline part 2: national/insurance ID encryption, masked access, storage encryption with a customer-managed key
 type: Task
 epic: MDV-P0-E03
 prd: P0-09
@@ -276,7 +276,7 @@ progress:
 - Merged [PR #27](https://github.com/ALFRED-LUCIFER/medvya/pull/27): Tenant/Facility/Membership, EF global filters + SQL Server row-level security on SESSION_CONTEXT (FILTER + BLOCK predicates)
 - Testcontainers tests on SQL Server 2022: cross-tenant reads blocked with filters off and with raw SQL, cross-tenant writes/moves blocked, no tenant = no rows, 100 pooled connections without leaks; mutation-checked (RLS off → 4/5 fail). Satisfies P0 exit criterion 3
 - Also pinned System.Security.Cryptography.Pkcs 10.0.13 (CVE-2026-70162)
-title: Tenancy model with EF Core global filters and Azure SQL row-level security (cross-tenant test in CI)
+title: Tenancy model with EF Core global filters and PostgreSQL row-level security (cross-tenant test in CI)
 type: Story
 epic: MDV-P0-E02
 prd: P0-04
@@ -445,7 +445,7 @@ ac:
 status: Done
 progress:
 - Merged [PR #7](https://github.com/ALFRED-LUCIFER/medvya/pull/7): [Classification] attribute + architecture test (self-test caught nested-type bug), register in docs/03-architecture/data-classification.md with Always Encrypted and masking sets
-title: Data classification register and ERD → Azure SQL type mapping
+title: Data classification register and ERD → PostgreSQL type mapping
 type: Chore
 epic: MDV-P0-E03
 prd: P0-10, P0-08
@@ -462,7 +462,7 @@ desc:
 Produce docs/03-architecture/data-classification.md listing every planned field for P0–P2 entities with its class (public, internal, personal, sensitive health, national ID) and control (RLS, masking, Always Encrypted, audit-on-read). Finalise the ERD → Azure SQL mapping (uuid → uniqueidentifier, jsonb → json/nvarchar(max)+ISJSON, exclusion constraint → unique slot index + app lock, RLS policies → security predicates, money → bigint minor units). Add a [Classification] attribute in code used by the PHI redaction processor and EF configuration.
 ac:
 - Every column in the P0 schema has a classification attribute; a unit test fails if a new entity property lacks one.
-- The register lists the Always Encrypted column set and the masking set used by MDV-P0-009.
+- The register lists the encrypted national-ID column set and the masked-view set used by MDV-P0-009.
 - The mapping table closes the PRD completeness item "ERD mapped to Azure SQL types" (status Covered).
 - The data map (what data, where stored, which country, which processors) is published as part of the P0 delivery package.
 
@@ -476,7 +476,7 @@ progress:
 - Merged [PR #68](https://github.com/ALFRED-LUCIFER/medvya/pull/68): one outcome rule in the `.Audited()` filter, which now writes after the endpoint answers and before the answer is sent (401/403 → Denied, 404 → new NotFound, else Allowed); Scheduling maps its errors inside the filter, so a refused scheduling call is no longer audited as Allowed; clinic queries no longer refetch audited reads on tab focus or retry 4xx; mutation-checked
 - Open [PR #72](https://github.com/ALFRED-LUCIFER/medvya/pull/72): every audited write (Scheduling templates, resources, holds, release, booking, check-in, board moves; patient registration) commits its audit event in the same database transaction as the change (`IAuditLog.WriteAsync(event, transaction)` on the caller's connection), so no committed change lacks its event and a failed audit write rolls the change back; new outcome Rejected (400/409/422, codes only) on both the read filter and the write path; use-case events now carry the patient id, client address and correlation id; per-role enumeration also checks outcomes and reaches the allowed path of template, resource, hold and registration writes; mutation-checked
 - Left: refusals are recorded only for callers with a tenant (MDV-P0-012); daily digest export to immutable Blob (needs Azure, MDV-P0-006); session control, invitations and feature flags still audit on their own connection before the change (an audit failure stops the change, a later failure leaves an extra event)
-title: Append-only audit log on Azure SQL ledger tables with audit middleware
+title: Append-only audit log on hash-chained PostgreSQL tables with audit middleware
 type: Story
 epic: MDV-P0-E03
 prd: P0-06
@@ -537,7 +537,7 @@ labels: backup, dr
 estimate: 1
 weeks: 3
 depends: MDV-P0-006
-confidence: 90 | Azure SQL PITR is built in; drill is a runbook exercise.
+confidence: 90 | PostgreSQL Flexible Server PITR is built in; drill is a runbook exercise.
 sources: PRD v2 P0 NFR 3, exit 2, X7; docs/04-security-compliance/README.md
 desc:
 Configure PITR retention (35 days in prod), long-term retention per country rule, backups kept in-country; storage soft delete/versioning for Blob. Write runbook docs/runbooks/restore.md and perform one restore of staging to a new database, verifying data and timing.

@@ -1,7 +1,7 @@
-Feature: Database security baseline part 2: Always Encrypted (national/insurance IDs), dynamic data masking, TDE with customer-managed key
+Feature: Database security baseline part 2: national/insurance ID encryption, masked access, storage encryption with a customer-managed key
   As a developer, I want national and insurance IDs encrypted and contact data masked, so that admins and support never see raw sensitive values.
 
-  # chunk: Encrypt national and insurance IDs with Always Encrypted
+  # chunk: Encrypt national and insurance IDs (envelope encryption, ADR-012)
   @done
   Scenario: Admin sees ciphertext only
     When a DBA or admin queries an encrypted column without access to the column master key

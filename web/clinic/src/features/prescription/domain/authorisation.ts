@@ -1,5 +1,9 @@
 // Mirrors the MDV-P2-017 records in src/Modules/Prescribing/Medvya.Prescribing.Application/IPrescriptions.cs.
-export type RxAuthorisation = { versionNo: number; number: string; authorisedBy: string; authorisedAt: string; contentHash: string; lines: number };
+/** `cancellation`: the doctor cancelled this version without a replacement; it no longer prints or opens by link. */
+export type RxAuthorisation = {
+  versionNo: number; number: string; authorisedBy: string; authorisedAt: string; contentHash: string; lines: number;
+  cancellation: { reason: string; cancelledBy: string; cancelledAt: string } | null;
+};
 /** `authorised` null: never authorised. `changed`: the draft differs from what was authorised, so it does not print until authorised again. */
 export type RxAuthorisationState = { authorised: RxAuthorisation | null; changed: boolean };
 
@@ -15,7 +19,7 @@ export type RxPrint = {
 };
 export type RxLayout = { layoutVersion: number; approvedAt: string | null };
 /** What the public QR check answers: validity and what the paper shows, never the patient or the medicines. */
-export type RxVerify = { status: 'Valid' | 'Replaced'; number: string; versionNo: number; authorisedAt: string; timeZone: string; clinic: string; doctor: string; lines: number };
+export type RxVerify = { status: 'Valid' | 'Replaced' | 'Cancelled'; number: string; versionNo: number; authorisedAt: string; timeZone: string; clinic: string; doctor: string; lines: number };
 
 export type AuthoriseProblem = 'reauth' | 'unresolved_alerts' | 'nothing_to_authorise' | 'no_instructions' | 'no_licence' | 'failed';
 const known: readonly string[] = ['unresolved_alerts', 'nothing_to_authorise', 'no_instructions', 'no_licence'];
@@ -25,6 +29,9 @@ export function authoriseProblem(status: number | undefined, code: string | unde
   const reason = code?.includes(':') ? code.split(':')[1] : code;
   return reason && known.includes(reason) ? (reason as AuthoriseProblem) : 'failed';
 }
+
+/** Authorised, unchanged and not cancelled: the prescription that prints and can be cancelled. */
+export const isCurrent = (s: RxAuthorisationState | null) => !!s?.authorised && !s.changed && !s.authorised.cancellation;
 
 /** The second print language beside English: none, or one of the pilot languages. Arabic prints right to left. */
 export const secondLanguages = ['none', 'hi', 'ta', 'ar'] as const;

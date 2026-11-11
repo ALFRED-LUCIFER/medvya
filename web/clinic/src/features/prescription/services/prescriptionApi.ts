@@ -22,6 +22,9 @@ export const overrideAlert = (encounterId: string, key: string, reason: string) 
 // Authorisation and print (MDV-P2-017): authorising is its own call (the server asks for the step-up and runs the checks again).
 export const fetchAuthorisation = (encounterId: string) => send<RxAuthorisationState>(`/v1/encounters/${encounterId}/prescription/authorisation`);
 export const authorise = (encounterId: string) => post<RxAuthorisationState>(`/v1/encounters/${encounterId}/prescription/authorisation`, {});
+/** Cancel without a replacement (step-up as for authorising); the doctor's reason travels in the body. */
+export const cancelPrescription = (encounterId: string, reason: string) =>
+  post<RxAuthorisationState>(`/v1/encounters/${encounterId}/prescription/cancellation`, { reason: reason.trim() });
 export const fetchRxPrint = (encounterId: string) => send<RxPrint>(`/v1/encounters/${encounterId}/prescription/print`);
 export const fetchLayout = () => send<RxLayout>('/v1/prescription-layout');
 export const approveLayout = () => post<RxLayout>('/v1/prescription-layout/approval', {});

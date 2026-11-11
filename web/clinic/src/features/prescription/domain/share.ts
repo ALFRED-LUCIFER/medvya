@@ -41,10 +41,10 @@ const shareProblems: readonly string[] = ['not_authorised', 'changed', 'no_mobil
 export const shareProblem = (code: string | undefined): ShareProblem => (code && shareProblems.includes(code) ? (code as ShareProblem) : 'failed');
 
 /** What the public link page says after a refusal: 404 is a link that is unknown or expired (the server tells them apart for nobody). */
-export type OpenProblem = 'unknown' | 'replaced' | 'wrong_code' | 'no_code' | 'too_soon' | 'code_limit' | 'failed';
+export type OpenProblem = 'unknown' | 'replaced' | 'cancelled' | 'wrong_code' | 'no_code' | 'too_soon' | 'code_limit' | 'failed';
 export function openProblem(status: number | undefined, code: string | undefined): OpenProblem {
   if (status === 404) return 'unknown';
-  return code && ['replaced', 'wrong_code', 'no_code', 'too_soon', 'code_limit'].includes(code) ? (code as OpenProblem) : 'failed';
+  return code && ['replaced', 'cancelled', 'wrong_code', 'no_code', 'too_soon', 'code_limit'].includes(code) ? (code as OpenProblem) : 'failed';
 }
 
 /** The one-time code as typed: six digits. */

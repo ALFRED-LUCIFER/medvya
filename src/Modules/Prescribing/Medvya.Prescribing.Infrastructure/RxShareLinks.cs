@@ -81,9 +81,11 @@ public sealed class RxShareLinks(PrescribingDbContext db, IEncounterDirectory en
     async Task<Guid> PatientAsync(RxShare share, CancellationToken ct) =>
         (await encounters.FindAsync(share.EncounterId, ct) ?? throw new InvalidOperationException("Encounter not in this tenant.")).PatientId;
 
-    /// <summary>A later authorisation replaced the shared version: the link says so and opens nothing.</summary>
+    /// <summary>The doctor cancelled the shared version, or a later authorisation replaced it: the link says so and opens nothing.</summary>
     async Task RefuseIfReplacedAsync(RxShare share, Guid patient, string action, CancellationToken ct)
     {
+        if (await db.PrescriptionCancellations.AsNoTracking().AnyAsync(c => c.PrescriptionId == share.PrescriptionId, ct))
+            await RefuseAsync(share, patient, action, "cancelled", ct);
         var shared = await db.AuthorisedPrescriptions.AsNoTracking().Where(p => p.Id == share.PrescriptionId).Select(p => p.VersionNo).SingleAsync(ct);
         if (await db.AuthorisedPrescriptions.AsNoTracking().AnyAsync(p => p.EncounterId == share.EncounterId && p.VersionNo > shared, ct))
             await RefuseAsync(share, patient, action, "replaced", ct);

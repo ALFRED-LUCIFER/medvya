@@ -238,6 +238,63 @@ public sealed class RxAuthorisationTests(PostgresFixture sql) : IClassFixture<Po
         await Assert.ThrowsAsync<PostgresException>(() => new NpgsqlCommand("""DELETE FROM prescribing."AuthorisedPrescriptions" """, conn).ExecuteNonQueryAsync()); // no right, and the ledger refuses
     }
 
+    Task<HttpResponseMessage> CancelAsync(Guid user, object body, int? reauthMinutesAgo = 0) =>
+        Client(user, reauthMinutesAgo).PostAsJsonAsync(U($"/v1/encounters/{encounter}/prescription/cancellation"), body);
+
+    // SAFETY mutation check: remove RequireFreshReauth from PrescriptionService.CancelAsync and the stale cancellations go through; drop the cancelled
+    // throw in PrintableAsync and the cancelled prescription prints; drop the cancellation look-up in PrescriptionVerification and it verifies as valid;
+    // drop AddLedger for PrescriptionCancellations (migration RxCancellations) and the database UPDATE succeeds.
+    [Fact]
+    public async Task CancellingNeedsAFreshStepUpAndAReasonThenItNeverPrintsAndVerifiesAsCancelled()
+    {
+        await PrescribeAsync("Metformin", Twice);
+        using (var none = await CancelAsync(h.Doctor, new { reason = "Synthetic" })) Assert.Equal((HttpStatusCode.Conflict, "not_authorised"), (none.StatusCode, await Code(none)));
+        using (await AuthoriseAsync(h.Doctor)) { }
+        var first = await TokenAsync();
+
+        foreach (var stale in new int?[] { null, 6 })
+        {
+            using var r = await CancelAsync(h.Doctor, new { reason = "Synthetic" }, stale);
+            Assert.Equal((HttpStatusCode.Forbidden, "reauth_required"), (r.StatusCode, await Code(r)));
+        }
+        foreach (var reason in new[] { "", new string('x', 201) })
+        {
+            using var r = await CancelAsync(h.Doctor, new { reason });
+            Assert.Equal(HttpStatusCode.BadRequest, r.StatusCode);
+        }
+        foreach (var user in new[] { h.Reception, h.Nurse })
+        {
+            using var r = await CancelAsync(user, new { reason = "Synthetic" });
+            Assert.Equal(HttpStatusCode.Forbidden, r.StatusCode);
+        }
+        await using (var db = sql.Prescribing(h.Tenant)) Assert.Equal(0, await db.PrescriptionCancellations.CountAsync());
+
+        using (var ok = await CancelAsync(h.Doctor, new { reason = "Wrong dose written (synthetic)" }))
+        {
+            var cancellation = (await Json(ok)).GetProperty("authorised").GetProperty("cancellation");
+            Assert.Equal(("Wrong dose written (synthetic)", h.Doctor), (cancellation.GetProperty("reason").GetString(), cancellation.GetProperty("cancelledBy").GetGuid()));
+        }
+        h.Clock.Advance(TimeSpan.FromMinutes(1));
+        using (var twice = await CancelAsync(h.Doctor, new { reason = "Again (synthetic)" })) // the first cancellation stands
+            Assert.Equal("Wrong dose written (synthetic)", (await Json(twice)).GetProperty("authorised").GetProperty("cancellation").GetProperty("reason").GetString());
+        using (var print = await Client(h.Doctor).GetAsync(U($"/v1/encounters/{encounter}/prescription/print")))
+            Assert.Equal((HttpStatusCode.Conflict, "cancelled"), (print.StatusCode, await Code(print)));
+        using (var pdf = await PdfAsync()) Assert.Equal((HttpStatusCode.Conflict, "cancelled"), (pdf.StatusCode, await Code(pdf)));
+        using (var old = await VerifyAsync(first)) Assert.Equal("Cancelled", (await Json(old)).GetProperty("status").GetString());
+        Assert.Equal(["version:1;reauth:ok"], (await AuditAsync("rx.cancel")).Where(e => e.Outcome == AuditOutcome.Allowed).Select(e => e.Detail)); // refusals are audited Denied
+
+        // The same draft authorised again is a new version; the cancelled paper stays cancelled.
+        using (var again = await AuthoriseAsync(h.Doctor)) Assert.Equal(2, (await Json(again)).GetProperty("authorised").GetProperty("versionNo").GetInt32());
+        using (var current = await VerifyAsync(await TokenAsync())) Assert.Equal("Valid", (await Json(current)).GetProperty("status").GetString());
+        using (var old = await VerifyAsync(first)) Assert.Equal("Cancelled", (await Json(old)).GetProperty("status").GetString());
+
+        Assert.Null(await BrokenChainAsync("PrescriptionCancellations"));
+        await using var conn = await sql.OpenAs("app_user", h.Tenant);
+        var ex = await Assert.ThrowsAsync<PostgresException>(() => new NpgsqlCommand("""UPDATE prescribing."PrescriptionCancellations" SET "Reason" = 'x'""", conn).ExecuteNonQueryAsync());
+        Assert.Equal(PostgresErrorCodes.RestrictViolation, ex.SqlState);
+        await Assert.ThrowsAsync<PostgresException>(() => new NpgsqlCommand("""DELETE FROM prescribing."PrescriptionCancellations" """, conn).ExecuteNonQueryAsync());
+    }
+
     // SAFETY mutation check: drop the header lines from PlainPdf.Write's page loop and the per-page identifier counts fail.
     [Fact]
     public async Task ThePdfRendersServerSideOnA4AndA5WithTheLicenceAndIsStoredWithItsHash()

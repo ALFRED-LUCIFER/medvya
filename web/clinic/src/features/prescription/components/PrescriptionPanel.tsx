@@ -1,10 +1,10 @@
 import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { Link } from 'react-router';
-import { CircleAlert, CircleSlash, FilePen, History, Plus, Printer, ShieldCheck, UserRound } from 'lucide-react';
+import { CircleAlert, CircleSlash, CircleX, FilePen, History, Plus, Printer, ShieldCheck, UserRound } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
 import { Button, buttonVariants, ClinicalAlert, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Switch } from '@medvya/ui';
-import type { AuthoriseProblem, RxAuthorisationState } from '../domain/authorisation';
+import { isCurrent, type AuthoriseProblem, type RxAuthorisationState } from '../domain/authorisation';
 import { describedBy, fieldError } from '../../settings/components/fieldStyles';
 import { Field } from '../../settings/components/Field';
 import { Section } from '../../settings/components/Section';
@@ -37,6 +37,12 @@ type Props = SafetyProps & {
   authorising: boolean;
   authProblem: AuthoriseProblem | null;
   onAuthorise: () => void;
+  cancelling: boolean;
+  cancelForm: UseFormReturn<{ reason: string }>;
+  cancelPending: boolean;
+  cancelProblem: 'reauth' | 'failed' | null;
+  onCancelling: (open: boolean) => void;
+  onCancel: FormEventHandler<HTMLFormElement>;
   onConfirmIdentity: () => void;
   printPath: string;
 };
@@ -122,11 +128,12 @@ export default function PrescriptionPanel(p: Props) {
   );
 }
 
-/** Draft, authorised (version and the number on the paper), or changed since: an icon and words, never colour alone. */
+/** Draft, authorised (version and the number on the paper), cancelled, or changed since: an icon and words, never colour alone. */
 function AuthorisationState({ state }: { state: RxAuthorisationState | null }) {
   const { t } = useI18n();
   const a = state?.authorised;
   const [Icon, text] = !a ? [FilePen, t('rx.draftState')]
+    : a.cancellation ? [CircleX, t('rx.auth.cancelled', { version: a.versionNo, number: a.number })]
     : state.changed ? [CircleAlert, t('rx.auth.changed')]
     : [ShieldCheck, t('rx.auth.authorised', { version: a.versionNo, number: a.number })];
   return <p role="status" className="flex items-center gap-2 text-sm font-bold"><Icon aria-hidden className="size-4" />{text}</p>;
@@ -136,19 +143,43 @@ function AuthorisationState({ state }: { state: RxAuthorisationState | null }) {
 function Authorise(p: Props) {
   const { t } = useI18n();
   const state = p.authorisation;
-  const current = !!state?.authorised && !state.changed;
+  const current = isCurrent(state);
+  const cancellation = state?.authorised?.cancellation;
+  const reasonError = p.cancelForm.formState.errors.reason;
   return (
     <div className="flex flex-col gap-2 border-t pt-4">
       <p className="text-sm">{t('rx.auth.separate')}</p>
       {(p.checks?.unresolved ?? 0) > 0 && <p className="text-sm font-bold">{t('rx.auth.unresolved')}</p>}
+      {cancellation && <p className="text-sm">{t('rx.auth.cancelledReason', { reason: cancellation.reason })}</p>}
       <div className="flex flex-wrap gap-3">
         {!current && (
           <Button className="min-h-11" loading={p.authorising} disabled={p.busy} onClick={p.onAuthorise}>
-            <ShieldCheck aria-hidden className="size-4" />{t(state?.authorised ? 'rx.auth.again' : 'rx.auth.authorise')}
+            <ShieldCheck aria-hidden className="size-4" />{t(cancellation ? 'rx.auth.reissue' : state?.authorised ? 'rx.auth.again' : 'rx.auth.authorise')}
           </Button>
         )}
         {current && <Link to={p.printPath} className={buttonVariants({ variant: 'outline', className: 'min-h-11' })}><Printer aria-hidden className="size-4" />{t('rx.auth.print')}</Link>}
+        {current && !p.cancelling && (
+          <Button variant="outline" className="min-h-11" onClick={() => p.onCancelling(true)}><CircleX aria-hidden className="size-4" />{t('rx.auth.cancel')}</Button>
+        )}
       </div>
+      {current && p.cancelling && (
+        <form noValidate onSubmit={p.onCancel} className="flex flex-col gap-2">
+          <Field id="rx-cancel-reason" label={t('rx.auth.cancelReason')} hint={t('rx.auth.cancelHint')} error={reasonError && t('rx.auth.cancelReasonRequired')}>
+            <Input id="rx-cancel-reason" className="h-11" autoComplete="off" {...describedBy('rx-cancel-reason', !!reasonError, true)} {...p.cancelForm.register('reason')} />
+          </Field>
+          <div className="flex flex-wrap gap-2">
+            <Button type="submit" className="min-h-11" loading={p.cancelPending}>{t('rx.auth.cancelConfirm')}</Button>
+            <Button type="button" variant="outline" className="min-h-11" onClick={() => p.onCancelling(false)}>{t('rx.auth.keep')}</Button>
+          </div>
+        </form>
+      )}
+      {p.cancelProblem === 'reauth' && (
+        <div role="alert" className="flex flex-wrap items-center gap-3">
+          <p className="font-bold">{t('rx.auth.cancelReauth')}</p>
+          <Button variant="outline" className="min-h-11" onClick={p.onConfirmIdentity}>{t('rx.auth.confirm')}</Button>
+        </div>
+      )}
+      {p.cancelProblem === 'failed' && <p role="alert" className={fieldError}>{t('rx.auth.cancelFailed')}</p>}
       {p.authProblem === 'reauth' && (
         <div role="alert" className="flex flex-wrap items-center gap-3">
           <p className="font-bold">{t('rx.auth.reauth')}</p>

@@ -6,7 +6,7 @@ import { pdfProblem, type SecondLanguage } from '../domain/authorisation';
 import { approveLayout, downloadRxPdf, fetchLayout, fetchRxPrint, verifyRx } from '../services/prescriptionApi';
 
 /**
- * The printed prescription (MDV-P2-017): the authorised prescription from the server (a 409 means not authorised, or changed since), the second
+ * The printed prescription (MDV-P2-017): the authorised prescription from the server (a 409 means not authorised, changed or cancelled since), the second
  * print language, the server PDF on A4 or A5, and the doctor's own approval of the layout.
  */
 export function useRxPrintController(encounterId: string) {
@@ -22,6 +22,7 @@ export function useRxPrintController(encounterId: string) {
     print: print.data ?? null,
     loading: print.isPending,
     notAuthorised: error?.status === 409,
+    cancelled: error?.code === 'cancelled',
     failed: print.isError && error?.status !== 409,
     second, onSecond: setSecond,
     onPrint: printPage,

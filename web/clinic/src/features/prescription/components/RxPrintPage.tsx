@@ -8,7 +8,7 @@ import { qrCells, secondLanguages, type RxLayout, type RxPrint, type RxPrintLine
 import { directionOf } from '../domain/prescription';
 
 type Props = {
-  print: RxPrint | null; loading: boolean; notAuthorised: boolean; failed: boolean;
+  print: RxPrint | null; loading: boolean; notAuthorised: boolean; cancelled: boolean; failed: boolean;
   second: SecondLanguage; onSecond: (l: SecondLanguage) => void;
   onPrint: () => void; onPdf: (paper: 'A4' | 'A5') => void; downloading: 'A4' | 'A5' | null; pdfProblem: 'unsupported' | 'failed' | null;
   layout: RxLayout | null; approving: boolean; layoutFailed: boolean; onApprove: () => void;
@@ -25,7 +25,7 @@ type Props = {
 export default function RxPrintPage(p: Props) {
   const { t, formatDate, formatTime } = useI18n();
   if (p.loading) return <p role="status">{t('rxPrint.loading')}</p>;
-  if (p.notAuthorised) return <div className="flex flex-col gap-3"><p role="alert" className="font-bold">{t('rxPrint.notAuthorised')}</p><Back {...p} /></div>;
+  if (p.notAuthorised) return <div className="flex flex-col gap-3"><p role="alert" className="font-bold">{t(p.cancelled ? 'rxPrint.cancelled' : 'rxPrint.notAuthorised')}</p><Back {...p} /></div>;
   if (p.failed || !p.print) return <p role="alert" className="font-bold">{t('rxPrint.loadFailed')}</p>;
   const v = p.print;
   const at = new Date(v.authorisation.authorisedAt);

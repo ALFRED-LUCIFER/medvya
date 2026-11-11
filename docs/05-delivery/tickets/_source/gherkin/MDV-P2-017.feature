@@ -23,15 +23,11 @@ Feature: Rx authorisation (separate from note), server-side multilingual printed
 
   # chunk: Add pilot language printing
   @todo
-  Scenario Outline: Print language
-    Given an Rx printed in <language>
+  Scenario: English instructions, pilot-language text shaped
+    Given an authorised Rx whose free text is in Tamil
     When the PDF is produced
-    Then instructions appear in English plus <language>, with RTL correct for Arabic
-    Examples:
-      | language |
-      | Hindi |
-      | Tamil |
-      | Arabic |
+    Then the instructions print in English and the Tamil text prints shaped
+    And text that no embedded font can show is refused rather than printed as boxes
 
   # chunk: Add per-doctor layout approval and preview accessibility
   @todo

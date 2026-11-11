@@ -11246,6 +11246,8 @@
           "Temperature",
           "OxygenSaturation",
           "Weight",
+          "Height",
+          "RespiratoryRate",
           null
         ]
       },

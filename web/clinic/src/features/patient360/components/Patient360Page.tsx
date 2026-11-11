@@ -2,10 +2,10 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { ltr, useI18n } from '@medvya/i18n';
 import { buttonVariants, IdentityBanner, ProvenanceTag } from '@medvya/ui';
-import { CircleAlert, CircleCheck, CircleHelp } from 'lucide-react';
+import { ArrowDown, ArrowUp, CircleAlert, CircleCheck, CircleHelp } from 'lucide-react';
 import RequestAccess from '../../clinical-access/components/RequestAccess';
 import type { AccessReason } from '../../clinical-access/domain/clinicalAccess';
-import type { ClinicalRefusal, Patient360, TrendLine } from '../domain/chart';
+import type { Bmi, ClinicalRefusal, Patient360, TrendLine, Vital } from '../domain/chart';
 import { bannerAllergies, pathOf, provenanceOf, sparkBox, trendLines } from '../domain/chart';
 
 type Props = {
@@ -78,12 +78,10 @@ export default function Patient360Page(p: Props) {
                 </Item>))}</List>}
         </Card>
         <Card title={t('patient360.vitals')}>
-          {chart.lastVitals.length === 0 ? <Empty text={t('patient360.vitals.empty')} />
-            : <List>{chart.lastVitals.map(v => (
-                <Item key={v.code} source={v.source}>
-                  <strong>{t(`patient360.code.${v.code}`)}</strong>
-                  <span>{ltr(`${v.value} ${v.unit}`)}{' · '}<DateText iso={v.takenAt} zone={timeZone} /></span>
-                </Item>))}</List>}
+          {chart.lastVitals.length === 0 ? <Empty text={t('patient360.vitals.empty')} /> : <Readings items={chart.lastVitals} bmi={chart.bmi} zone={timeZone} />}
+        </Card>
+        <Card title={t('patient360.labs')}>
+          {chart.lastLabs.length === 0 ? <Empty text={t('patient360.labs.empty')} /> : <Readings items={chart.lastLabs} zone={timeZone} />}
         </Card>
         <Card title={t('patient360.trends')} wide>
           {trends.length === 0 ? <Empty text={t('patient360.trends.empty')} />
@@ -127,6 +125,35 @@ function Item({ source, children }: { source: keyof typeof provenanceOf; childre
       <span className="flex flex-col">{children}</span>
       <ProvenanceTag source={provenanceOf[source]} />
     </li>
+  );
+}
+
+/** Latest readings, each flagged in words with an arrow (never colour alone) against its adult range, and BMI when it can be worked out. */
+function Readings({ items, bmi, zone }: { items: Vital[]; bmi?: Bmi | null; zone: string }) {
+  const { t, formatDate } = useI18n();
+  return (
+    <>
+      <List>
+        {items.map(v => (
+          <Item key={v.code} source={v.source}>
+            <strong>{t(`patient360.code.${v.code}`)}</strong>
+            <span>{ltr(`${v.value} ${v.unit}`)}{' · '}<DateText iso={v.takenAt} zone={zone} /></span>
+            {v.flag && v.range && (
+              <span className="inline-flex items-center gap-1.5 font-bold">
+                {v.flag === 'High' ? <ArrowUp aria-hidden className="size-4 shrink-0" /> : <ArrowDown aria-hidden className="size-4 shrink-0" />}
+                {t(`patient360.flag.${v.flag}`, { range: ltr(`${v.range} ${v.unit}`) })}
+              </span>
+            )}
+          </Item>))}
+        {bmi && (
+          <li className="flex flex-col">
+            <strong>{t('patient360.bmi', { value: ltr(String(bmi.value)) })}</strong>
+            <span className="text-muted-foreground">{t(`patient360.bmi.older.${bmi.olderCode}`, { date: formatDate(new Date(bmi.olderAt), zone) })}</span>
+          </li>
+        )}
+      </List>
+      {items.some(v => v.range) && <p className="text-sm text-muted-foreground">{t('patient360.rangesDraft')}</p>}
+    </>
   );
 }
 

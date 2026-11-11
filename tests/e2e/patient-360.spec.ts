@@ -21,11 +21,16 @@ const chart = (over: Record<string, unknown> = {}) => ({
     problems: [{ icd10Code: 'E11.9', description: 'Type 2 diabetes mellitus', verification: 'Verified', onsetOn: '2019-04-02', source: 'ClinicianVerified' },
       { icd10Code: null, description: 'Knee pain', verification: 'PatientReported', onsetOn: null, source: 'PatientReported' }],
     medicines: [{ name: 'Metformin', dose: '500 mg', state: 'Active', source: 'Imported', stoppedAt: null }, { name: 'Atorvastatin', dose: '10 mg', state: 'Stopped', source: 'SyncedFromHis', stoppedAt: '2026-10-12T04:30:00Z' }],
-    lastVitals: [{ code: 'Weight', value: 71.5, unit: 'kg', takenAt: at(3), source: 'ClinicianVerified' }],
+    lastVitals: [{ code: 'Weight', value: 71.5, unit: 'kg', takenAt: at(3), source: 'ClinicianVerified', flag: null, range: null },
+      { code: 'RespiratoryRate', value: 24, unit: '/min', takenAt: at(3), source: 'ClinicianVerified', flag: 'High', range: '12–20' },
+      { code: 'Height', value: 158, unit: 'cm', takenAt: at(1), source: 'ClinicianVerified', flag: null, range: null }],
     trends: [{ code: 'HbA1c', unit: '%', points: points([8.1, 7.6, 7.4], 'SyncedFromHis') },
       { code: 'BloodPressureSystolic', unit: 'mmHg', points: points([132, 128, 124]) }, { code: 'BloodPressureDiastolic', unit: 'mmHg', points: points([84, 82, 80]) },
       { code: 'Weight', unit: 'kg', points: points([72.4, 72, 71.5]) }],
-    recentEncounters: [{ id: 'e-0', startedAt: at(3), status: 'Ended' }], openEncounterId: null, ...over,
+    recentEncounters: [{ id: 'e-0', startedAt: at(3), status: 'Ended' }], openEncounterId: null,
+    lastLabs: [{ code: 'Egfr', value: 52, unit: 'mL/min/1.73 m²', takenAt: at(2), source: 'Imported', flag: 'Low', range: '≥ 60' },
+      { code: 'Sodium', value: 140, unit: 'mmol/L', takenAt: at(2), source: 'SyncedFromHis', flag: null, range: '135–145' }],
+    bmi: { value: 28.6, olderCode: 'Height', olderAt: at(1) }, ...over,
   },
 });
 
@@ -52,6 +57,23 @@ test('the banner shows the allergy with icon and text, and every fact carries it
   await expect(page.getByRole('img', { name: /HbA1c: latest .?7.4 %.? on .*3 readings/ })).toBeVisible();
   await expect(page.getByRole('img', { name: /Blood pressure: latest .?124\/80 mmHg/ })).toBeVisible();
   await expect(page.getByText('To start a consultation, use the visit on the board.')).toBeVisible();
+});
+
+test('MDV-P2-031: a reading outside its range is flagged in words with the range, and BMI names the older measure', async ({ page }) => {
+  await open(page);
+  const vitals = page.getByRole('region', { name: 'Last vitals', exact: true });
+  await expect(vitals.getByRole('listitem').filter({ hasText: 'Respiratory rate' })).toContainText(/High, usual .?12–20 \/min/);
+  await expect(vitals.getByRole('listitem').filter({ hasText: 'Weight' })).not.toContainText('usual');
+  await expect(vitals).toContainText(/BMI .?28.6.?uses the height of 01 Oct 2026/);
+  const labs = page.getByRole('region', { name: 'Key results', exact: true });
+  await expect(labs.getByRole('listitem').filter({ hasText: 'eGFR' })).toContainText(/Low, usual .?≥ 60 mL\/min\/1.73 m²/);
+  await expect(labs.getByRole('listitem').filter({ hasText: 'Sodium' })).not.toContainText('usual');
+  await expect(labs).toContainText('The reference ranges are a draft awaiting clinical review.');
+  await page.unroute('**/v1/patients/p-1/chart');
+  await page.route('**/v1/patients/p-1/chart', r => r.fulfill({ json: chart({ lastLabs: [], bmi: null }) }));
+  await page.reload();
+  await expect(page.getByRole('region', { name: 'Key results', exact: true })).toContainText('No results recorded.');
+  await expect(page.getByText(/BMI/)).toHaveCount(0); // no BMI without both a weight and a height
 });
 
 test('"no known allergies" and "not recorded" read differently', async ({ page }) => {

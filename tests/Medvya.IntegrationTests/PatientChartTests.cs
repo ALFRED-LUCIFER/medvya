@@ -119,6 +119,47 @@ public sealed class PatientChartTests(PostgresFixture sql) : IClassFixture<Postg
         Assert.Equal((84m, "kg"), (lastWeight.GetProperty("value").GetDecimal(), lastWeight.GetProperty("unit").GetString())); // the latest reading; HbA1c is a lab, not a vital
     }
 
+    Observation Reading(ObservationCode code, int hundredths, DateTimeOffset at, ChartSource source = ChartSource.SyncedFromHis) =>
+        new() { Id = Guid.NewGuid(), TenantId = h.Tenant, PatientId = h.Patient, Code = code, ValueHundredths = hundredths, TakenAt = at, Source = source };
+
+    /// <summary>MDV-P2-031: labs apart from vitals, each latest reading flagged in words against its range, BMI worked out, a trend per code.</summary>
+    [Fact]
+    public async Task LatestReadingsAreFlaggedAgainstTheirRangeAndBmiIsWorkedOut()
+    {
+        await SeedAsync(db => db.Observations.AddRange(
+            Reading(ObservationCode.Potassium, 440, T0), Reading(ObservationCode.Potassium, 520, T0.AddDays(30)), // latest is high
+            Reading(ObservationCode.Egfr, 5200, T0.AddDays(30), ChartSource.Imported),
+            Reading(ObservationCode.Sodium, 14000, T0.AddDays(30)),
+            Reading(ObservationCode.Height, 16000, T0, ChartSource.ClinicianVerified), // the older of the two
+            Reading(ObservationCode.Weight, 6400, T0.AddDays(10), ChartSource.ClinicianVerified),
+            Reading(ObservationCode.RespiratoryRate, 1600, T0.AddDays(10), ChartSource.ClinicianVerified)));
+        using var r = await Client(h.Doctor).GetAsync(Chart(h.Patient));
+        var chart = (await Json(r)).GetProperty("chart");
+
+        static (string?, decimal, string?, string?, string?) Row(JsonElement v) => (v.GetProperty("code").GetString(), v.GetProperty("value").GetDecimal(),
+            v.GetProperty("unit").GetString(), v.GetProperty("flag").GetString(), v.GetProperty("range").GetString());
+        Assert.Equal([("Egfr", 52m, "mL/min/1.73 m²", "Low", "≥ 60"), ("Potassium", 5.2m, "mmol/L", "High", "3.5–5.0"), ("Sodium", 140m, "mmol/L", null, "135–145")],
+            chart.GetProperty("lastLabs").EnumerateArray().Select(Row));
+        Assert.Equal([("Weight", 64m, "kg", null, null), ("RespiratoryRate", 16m, "/min", null, "12–20"), ("Height", 160m, "cm", null, null)],
+            chart.GetProperty("lastVitals").EnumerateArray().Select(Row));
+
+        var bmi = chart.GetProperty("bmi"); // 64 / 1.6² = 25.0, never stored
+        Assert.Equal((25.0m, "Height", T0), (bmi.GetProperty("value").GetDecimal(), bmi.GetProperty("olderCode").GetString(), bmi.GetProperty("olderAt").GetDateTimeOffset()));
+        await using (var db = sql.Encounters(h.Tenant)) Assert.Equal(7, await db.Observations.CountAsync()); // the seven seeded: BMI is never stored
+
+        var potassium = chart.GetProperty("trends").EnumerateArray().Single(t => t.GetProperty("code").GetString() == "Potassium");
+        Assert.Equal([4.4m, 5.2m], potassium.GetProperty("points").EnumerateArray().Select(p => p.GetProperty("value").GetDecimal())); // oldest first
+        Assert.All(potassium.GetProperty("points").EnumerateArray(), p => Assert.Equal("SyncedFromHis", p.GetProperty("source").GetString()));
+    }
+
+    [Fact]
+    public async Task NoBmiWithoutBothAWeightAndAHeight()
+    {
+        await SeedAsync(db => db.Observations.Add(Reading(ObservationCode.Weight, 6400, T0)));
+        using var r = await Client(h.Doctor).GetAsync(Chart(h.Patient));
+        Assert.Equal(JsonValueKind.Null, (await Json(r)).GetProperty("chart").GetProperty("bmi").ValueKind);
+    }
+
     [Fact]
     public async Task OnlyTheBannerIdentityComesWithTheChart()
     {

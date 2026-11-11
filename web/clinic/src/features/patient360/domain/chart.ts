@@ -5,12 +5,18 @@ import type { SexAtBirth } from '../../patients/domain/directory';
 export type ChartSource = 'ClinicianVerified' | 'PatientReported' | 'Imported' | 'SyncedFromHis';
 export type AllergyState = 'NotRecorded' | 'NoKnownAllergies' | 'Listed';
 export type AllergyStatus = 'Confirmed' | 'PatientReported' | 'Unknown' | 'NotAnAllergy';
-export type ObservationCode = 'BloodPressureSystolic' | 'BloodPressureDiastolic' | 'Pulse' | 'Temperature' | 'OxygenSaturation' | 'Weight' | 'HbA1c';
+export type ObservationCode =
+  | 'BloodPressureSystolic' | 'BloodPressureDiastolic' | 'Pulse' | 'Temperature' | 'OxygenSaturation' | 'Weight' | 'RespiratoryRate' | 'Height' | 'PainScore'
+  | 'BloodPressureStandingSystolic' | 'BloodPressureStandingDiastolic' | 'FundalHeight' | 'FetalHeartRate'
+  | 'HbA1c' | 'LdlCholesterol' | 'Egfr' | 'UrineAlbuminCreatinineRatio' | 'Haemoglobin' | 'Ferritin' | 'Potassium' | 'Sodium' | 'Tsh' | 'VitaminD' | 'Platelets';
 
 export type Allergy = { substance: string; reaction: string | null; status: AllergyStatus; source: ChartSource };
 export type Problem = { icd10Code: string | null; description: string; verification: 'Verified' | 'PatientReported' | 'Provisional'; onsetOn: string | null; source: ChartSource; status: 'Active' | 'Resolved' };
 export type Medicine = { name: string; dose: string | null; state: 'Active' | 'Stopped'; source: ChartSource; stoppedAt: string | null };
-export type Vital = { code: ObservationCode; value: number; unit: string; takenAt: string; source: ChartSource };
+/** The latest reading of a vital or a lab; flag and range come from the server's adult reference range (null when the code has none). */
+export type Vital = { code: ObservationCode; value: number; unit: string; takenAt: string; source: ChartSource; flag: 'High' | 'Low' | null; range: string | null };
+/** BMI worked out by the server from the latest weight and height; the older of the two is named with its date. */
+export type Bmi = { value: number; olderCode: 'Weight' | 'Height'; olderAt: string };
 export type TrendPoint = { value: number; takenAt: string; source: ChartSource };
 export type Trend = { code: ObservationCode; unit: string; points: TrendPoint[] };
 export type RecentEncounter = { id: string; startedAt: string; status: 'Active' | 'Ended' };
@@ -22,7 +28,7 @@ export type Patient360 = {
   timeZone: string;
   chart: {
     allergyState: AllergyState; allergies: Allergy[]; problems: Problem[]; medicines: Medicine[]; lastVitals: Vital[]; trends: Trend[];
-    recentEncounters: RecentEncounter[]; openEncounterId: string | null;
+    recentEncounters: RecentEncounter[]; openEncounterId: string | null; lastLabs: Vital[]; bmi: Bmi | null;
   };
 };
 

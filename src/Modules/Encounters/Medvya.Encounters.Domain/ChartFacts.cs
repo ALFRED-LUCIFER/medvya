@@ -97,7 +97,14 @@ public sealed class MedicationStatement
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter<ObservationCode>))]
-public enum ObservationCode { BloodPressureSystolic, BloodPressureDiastolic, Pulse, Temperature, OxygenSaturation, Weight, HbA1c }
+public enum ObservationCode
+{
+    // Vitals and bedside measures (MDV-P2-007, P2-031). Stored by name (at most 30 characters), so the order here is only the chart's order.
+    BloodPressureSystolic, BloodPressureDiastolic, Pulse, Temperature, OxygenSaturation, Weight, RespiratoryRate, Height, PainScore,
+    BloodPressureStandingSystolic, BloodPressureStandingDiastolic, FundalHeight, FetalHeartRate,
+    // Key labs (MDV-P2-005, P2-031).
+    HbA1c, LdlCholesterol, Egfr, UrineAlbuminCreatinineRatio, Haemoglobin, Ferritin, Potassium, Sodium, Tsh, VitaminD, Platelets,
+}
 
 /// <summary>OBSERVATION: one measured value (vitals from MDV-P2-007, key labs from MDV-P2-005). Units are fixed per code (see <see cref="Units"/>).</summary>
 public sealed class Observation
@@ -127,11 +134,25 @@ public sealed class Observation
 
     public static string Units(ObservationCode code) => code switch
     {
-        ObservationCode.BloodPressureSystolic or ObservationCode.BloodPressureDiastolic => "mmHg",
-        ObservationCode.Pulse => "/min",
+        ObservationCode.BloodPressureSystolic or ObservationCode.BloodPressureDiastolic
+            or ObservationCode.BloodPressureStandingSystolic or ObservationCode.BloodPressureStandingDiastolic => "mmHg",
+        ObservationCode.Pulse or ObservationCode.RespiratoryRate or ObservationCode.FetalHeartRate => "/min",
         ObservationCode.Temperature => "°C",
         ObservationCode.OxygenSaturation or ObservationCode.HbA1c => "%",
         ObservationCode.Weight => "kg",
+        ObservationCode.Height or ObservationCode.FundalHeight => "cm",
+        ObservationCode.PainScore => "/10",
+        ObservationCode.LdlCholesterol => "mg/dL",
+        ObservationCode.Egfr => "mL/min/1.73 m²",
+        ObservationCode.UrineAlbuminCreatinineRatio => "mg/g",
+        ObservationCode.Haemoglobin => "g/dL",
+        ObservationCode.Ferritin or ObservationCode.VitaminD => "ng/mL",
+        ObservationCode.Potassium or ObservationCode.Sodium => "mmol/L",
+        ObservationCode.Tsh => "mIU/L",
+        ObservationCode.Platelets => "×10³/µL",
         _ => throw new ArgumentOutOfRangeException(nameof(code)),
     };
+
+    /// <summary>A laboratory result, as opposed to a vital or bedside measure.</summary>
+    public static bool IsLab(ObservationCode code) => code >= ObservationCode.HbA1c;
 }

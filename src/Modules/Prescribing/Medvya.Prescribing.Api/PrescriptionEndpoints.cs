@@ -59,6 +59,9 @@ public static class PrescriptionEndpoints
         g.MapPost("/encounters/{encounterId:guid}/prescription/authorisation", async (Guid encounterId, [FromServices] IPrescriptions service, CancellationToken ct) =>
                 await service.AuthoriseAsync(encounterId, ct) is { } v ? Results.Ok(v) : Results.NotFound())
             .AuditedByUseCase("rx.authorise", "prescription", AuditPurpose.Treatment).AddEndpointFilter(MapErrors);
+        g.MapPost("/encounters/{encounterId:guid}/prescription/cancellation", async (Guid encounterId, [FromBody] CancelRx? body, [FromServices] IPrescriptions service, CancellationToken ct) =>
+                await service.CancelAsync(encounterId, body ?? new CancelRx(null), ct) is { } v ? Results.Ok(v) : Results.NotFound())
+            .AuditedByUseCase("rx.cancel", "prescription", AuditPurpose.Treatment).AddEndpointFilter(MapErrors);
         g.MapGet("/encounters/{encounterId:guid}/prescription/print", async (Guid encounterId, [FromServices] IPrescriptions service, CancellationToken ct) =>
                 await service.PrintAsync(encounterId, ct) is { } v ? Results.Ok(v) : Results.NotFound())
             .AuditedByUseCase("rx.print", "prescription", AuditPurpose.Treatment).AddEndpointFilter(MapErrors);
@@ -117,7 +120,7 @@ public static class PrescriptionEndpoints
         return app;
     }
 
-    /// <summary>A refusal of a live link as its code: replaced (410), wrong or no code (403), too many codes (429), the code could not be sent (503).</summary>
+    /// <summary>A refusal of a live link as its code: replaced or cancelled (410), wrong or no code (403), too many codes (429), the code could not be sent (503).</summary>
     static async Task<IResult> Shared<T>(Func<Task<T>> call, Func<T, IResult> ok)
     {
         try
@@ -128,7 +131,7 @@ public static class PrescriptionEndpoints
         {
             var status = e.Code switch
             {
-                "replaced" => StatusCodes.Status410Gone,
+                "replaced" or "cancelled" => StatusCodes.Status410Gone,
                 "wrong_code" or "no_code" => StatusCodes.Status403Forbidden,
                 "too_soon" or "code_limit" => StatusCodes.Status429TooManyRequests,
                 _ => StatusCodes.Status503ServiceUnavailable,

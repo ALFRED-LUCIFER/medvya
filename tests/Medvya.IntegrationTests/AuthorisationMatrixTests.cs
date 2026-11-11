@@ -227,6 +227,7 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/prescription/overrides", """{"key":"synthetic","reason":"Synthetic"}""")),
         (Role.SoloDoctor, new("GET", "/v1/encounters/{encounter}/prescription/authorisation")),
         (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/prescription/authorisation")),
+        (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/prescription/cancellation", """{"reason":"Synthetic"}""")),
         (Role.SoloDoctor, new("GET", "/v1/encounters/{encounter}/prescription/print")),
         (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/prescription/pdf")),
         (Role.SoloDoctor, new("GET", "/v1/encounters/{encounter}/prescription/shares")),
@@ -424,6 +425,7 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.SoloDoctor, new("GET", "/v1/encounters/{encounter}/prescription/authorisation")),
         (Role.Nurse, new("GET", "/v1/encounters/{encounter}/prescription/authorisation")), // Prescriptions & orders: X
         (Role.Receptionist, new("POST", "/v1/encounters/{encounter}/prescription/authorisation")),
+        (Role.Nurse, new("POST", "/v1/encounters/{encounter}/prescription/cancellation", """{"reason":"Synthetic"}""")), // Prescriptions & orders: X
         (Role.PracticeAdmin, new("GET", "/v1/encounters/{encounter}/prescription/print")),
         (Role.Nurse, new("POST", "/v1/prescription-layout/approval")),
         (Role.SoloDoctor, new("GET", "/v1/encounters/{encounter}/prescription/shares")),

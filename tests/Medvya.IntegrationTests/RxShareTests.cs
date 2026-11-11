@@ -279,6 +279,26 @@ public sealed partial class RxShareTests(PostgresFixture sql) : IClassFixture<Po
         }
     }
 
+    // SAFETY mutation check: drop the cancellation check from RxShareLinks.RefuseIfReplacedAsync and the cancelled prescription still opens by its link.
+    [Fact]
+    public async Task ACancelledPrescriptionIsNotSharedAndItsLinkOpensNothing()
+    {
+        await AuthorisedAsync();
+        using (await ShareAsync(new { recipient = "Patient", channel = "Sms" })) { }
+        var token = TokenIn(sms.Sent[^1].Text);
+        using (var code = await SendCodeAsync(token)) Assert.Equal(HttpStatusCode.NoContent, code.StatusCode);
+        var issued = LastCode();
+
+        using (var cancel = await Client(h.Doctor, 0).PostAsJsonAsync(U($"/v1/encounters/{encounter}/prescription/cancellation"), new { reason = "Wrong patient (synthetic)" }))
+            Assert.Equal(HttpStatusCode.OK, cancel.StatusCode);
+        using (var open = await OpenAsync(token, issued)) Assert.Equal((HttpStatusCode.Gone, "cancelled"), (open.StatusCode, await Code(open))); // even with a live code
+        using (var again = await SendCodeAsync(token)) Assert.Equal((HttpStatusCode.Gone, "cancelled"), (again.StatusCode, await Code(again)));
+        using (var share = await ShareAsync(new { recipient = "Patient", channel = "Sms" }))
+            Assert.Equal((HttpStatusCode.Conflict, "cancelled"), (share.StatusCode, await Code(share)));
+        Assert.Equal(1, await SharesAsync());
+        Assert.Equal((AuditOutcome.Denied, "cancelled"), ((await AuditAsync("rx.share.open"))[^1].Outcome, (await AuditAsync("rx.share.open"))[^1].Detail));
+    }
+
     [Fact]
     public async Task NothingIsKeptWhenTheMessageCannotGoOrThePatientHasNoMobile()
     {

@@ -6949,6 +6949,45 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/encounters/{encounterId}/prescription/cancellation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    encounterId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["CancelRx"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/encounters/{encounterId}/prescription/print": {
         parameters: {
             query?: never;
@@ -7761,6 +7800,9 @@ export interface components {
         };
         /** @enum {unknown} */
         CancelReason: "PatientRequest" | "PatientUnwell" | "DoctorUnavailable" | "BookedInError" | "ClinicClosed" | "Other" | null;
+        CancelRx: {
+            reason: null | string;
+        };
         /** @enum {unknown} */
         Capability: "RegisterBookPatients" | "CheckInQueue" | "InvoicesPayments" | "Patient360Chart" | "VitalsAllergiesEntry" | "ClinicalNotes" | "PrescriptionsOrders" | "RecordingConsentCapture" | "AiDraftsEvidence" | "ResultReviewAcknowledge" | "CareTasksPatientContact" | "ReleaseRecordsToPortal" | "DevicePairingFleet" | "StaffRolesIntegrations" | "AuditLog";
         CheckIn: {

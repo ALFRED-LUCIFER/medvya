@@ -54,15 +54,21 @@ public sealed record OverrideRxAlert(string? Key, string? Reason);
 
 /// <summary>
 /// The call is not possible now: "encounter_ended"; authorising: "nothing_to_authorise", "unresolved_alerts" (a severe alert has no reason);
-/// printing: "not_authorised", "changed" (the draft changed since it was authorised: authorise it again first).
+/// printing: "not_authorised", "changed" (the draft changed since it was authorised: authorise it again first), "cancelled" (the doctor cancelled it).
 /// </summary>
 public sealed class PrescriptionConflictException(string code) : Exception("Prescription conflict: " + code)
 {
     public string Code { get; } = code;
 }
 
-/// <summary>The latest authorisation of a consultation's prescription (MDV-P2-017). Ids only for the doctor; <see cref="Number"/> is printed on the paper.</summary>
-public sealed record RxAuthorisationView(int VersionNo, string Number, Guid AuthorisedBy, DateTimeOffset AuthorisedAt, string ContentHash, int Lines);
+/// <summary>The latest authorisation of a consultation's prescription (MDV-P2-017). Ids only for the doctor; <see cref="Number"/> is printed on the paper.
+/// <see cref="Cancellation"/>: the doctor cancelled this version without a replacement.</summary>
+public sealed record RxAuthorisationView(int VersionNo, string Number, Guid AuthorisedBy, DateTimeOffset AuthorisedAt, string ContentHash, int Lines, RxCancellationView? Cancellation = null);
+
+public sealed record RxCancellationView(string Reason, Guid CancelledBy, DateTimeOffset CancelledAt);
+
+/// <summary>Cancel the authorised prescription without replacing it, with the doctor's reason.</summary>
+public sealed record CancelRx(string? Reason);
 
 /// <summary>Null <see cref="Authorised"/>: never authorised. <see cref="Changed"/>: the draft differs from what was authorised (printing waits for a new authorisation).</summary>
 public sealed record RxAuthorisationState(RxAuthorisationView? Authorised, bool Changed);
@@ -82,9 +88,9 @@ public sealed record RxPrintView(
 /// <summary>The PDF of an authorised prescription as stored: the bytes and their SHA-256 (hex).</summary>
 public sealed record RxPdf(byte[] Content, string Sha256);
 
-/// <summary>Valid: the latest authorisation of its consultation. Replaced: a later authorisation took its place.</summary>
+/// <summary>Valid: the latest authorisation of its consultation. Replaced: a later authorisation took its place. Cancelled: the doctor withdrew it.</summary>
 [JsonConverter(typeof(JsonStringEnumConverter<RxValidity>))]
-public enum RxValidity { Valid, Replaced }
+public enum RxValidity { Valid, Replaced, Cancelled }
 
 /// <summary>What the QR verify page shows (MDV-P2-017): validity, the paper's number and date, who issued it, and how many lines it has. No patient data.</summary>
 public sealed record RxVerifyView(RxValidity Status, string Number, int VersionNo, DateTimeOffset AuthorisedAt, string TimeZone, string Clinic, string Doctor, int Lines);
@@ -128,8 +134,17 @@ public interface IPrescriptions
     /// <exception cref="PrescriptionValidationException">An included medicine has no instruction (lines: no_instructions).</exception>
     Task<RxAuthorisationState?> AuthoriseAsync(Guid encounterId, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Cancels the latest authorised version without a replacement (MDV-P2-017): the same access and fresh re-authentication as authorising, and a reason.
+    /// It no longer prints, opens by link or verifies as valid; cancelling it again returns the state unchanged. Audited as rx.cancel.
+    /// </summary>
+    /// <exception cref="Exception">ReauthRequiredException (Encounters) when the re-authentication is missing or too old.</exception>
+    /// <exception cref="PrescriptionConflictException">not_authorised.</exception>
+    /// <exception cref="PrescriptionValidationException">reason: required, too_long.</exception>
+    Task<RxAuthorisationState?> CancelAsync(Guid encounterId, CancelRx command, CancellationToken cancellationToken = default);
+
     /// <summary>The authorised prescription for the print view; audited as rx.print.</summary>
-    /// <exception cref="PrescriptionConflictException">not_authorised, changed.</exception>
+    /// <exception cref="PrescriptionConflictException">not_authorised, changed, cancelled.</exception>
     Task<RxPrintView?> PrintAsync(Guid encounterId, CancellationToken cancellationToken = default);
 
     /// <summary>Renders the authorised prescription as an English PDF on <paramref name="paper"/> (A4 or A5) and stores that exact copy with its hash; audited as rx.pdf.</summary>
@@ -181,11 +196,11 @@ public sealed record UpdateDispatch(DispatchState? State, string? PharmacyRef, D
 public interface IRxShareLinks
 {
     /// <summary>Sends a new one-time code to the patient's registered mobile. False: no such live link.</summary>
-    /// <exception cref="PrescriptionConflictException">replaced, too_soon (a code went less than a minute ago), code_limit, no_address, send_failed.</exception>
+    /// <exception cref="PrescriptionConflictException">replaced, cancelled, too_soon (a code went less than a minute ago), code_limit, no_address, send_failed.</exception>
     Task<bool> SendCodeAsync(byte[] linkHash, CancellationToken cancellationToken = default);
 
     /// <summary>The shared PDF, once the latest code matches; the code is then used up. Null: no such live link.</summary>
-    /// <exception cref="PrescriptionConflictException">replaced, no_code (none live: ask for a new one), wrong_code.</exception>
+    /// <exception cref="PrescriptionConflictException">replaced, cancelled, no_code (none live: ask for a new one), wrong_code.</exception>
     Task<RxPdf?> OpenAsync(byte[] linkHash, string? code, CancellationToken cancellationToken = default);
 }
 

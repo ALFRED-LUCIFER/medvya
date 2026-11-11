@@ -268,6 +268,22 @@ public sealed class AuthorisedPrescription
     public string Number() => "RX-" + Id.ToString("N")[^8..].ToUpperInvariant();
 }
 
+/// <summary>
+/// The doctor's cancellation of an authorised prescription without a replacement (MDV-P2-017): a hash-chained append-only row, at most one per version.
+/// A cancelled version never prints or opens by link, and verifies as cancelled; authorising the draft again adds the next version.
+/// </summary>
+public sealed class PrescriptionCancellation
+{
+    public const int MaxReason = 200;
+
+    [Classification(DataClass.Internal)] public Guid Id { get; init; }
+    [Classification(DataClass.Internal)] public Guid TenantId { get; init; }
+    [Classification(DataClass.Internal)] public Guid PrescriptionId { get; init; }
+    [Classification(DataClass.SensitiveHealth)] public required string Reason { get; init; }
+    [Classification(DataClass.Internal)] public Guid CancelledBy { get; init; }
+    [Classification(DataClass.Internal)] public DateTimeOffset CancelledAt { get; init; }
+}
+
 /// <summary>PRESCRIPTION PDF (MDV-P2-017): every PDF of an authorised prescription the server rendered, byte for byte with its SHA-256, append-only.
 /// shortcut: the bytes are kept in PostgreSQL (a text-only PDF is a few kilobytes); move them to Blob when the PDF carries images (logo, signature).</summary>
 public sealed class PrescriptionPdf

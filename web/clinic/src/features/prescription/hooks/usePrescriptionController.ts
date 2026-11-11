@@ -8,7 +8,7 @@ import { startReauth } from '../../encounters/services/noteApi';
 import { authoriseProblem, type AuthoriseProblem } from '../domain/authorisation';
 import { freeTextSchema, invalidFields, problemOf, toDraft, type PrintLanguage, type RxLine, type RxProblem, type SaveState, type SigDraft, type SigField } from '../domain/prescription';
 import {
-  addFreeText, addFromFormulary, authorise, fetchAuthorisation, fetchChecks, fetchPrescription, includeLine, overrideAlert, saveSig, searchMedicines,
+  addFreeText, addFromFormulary, authorise, cancelPrescription, fetchAuthorisation, fetchChecks, fetchPrescription, includeLine, overrideAlert, saveSig, searchMedicines,
 } from '../services/prescriptionApi';
 
 const autosaveMs = 700;
@@ -45,6 +45,15 @@ export function usePrescriptionController(encounterId: string) {
     mutationFn: () => authorise(encounterId),
     onSuccess: s => { queryClient.setQueryData(authKey, s); setAuthProblem(null); },
     onError: e => { setAuthProblem(authoriseProblem(e instanceof ApiError ? e.status : undefined, e instanceof ApiError ? e.code : undefined)); recheck(); },
+  });
+  // Cancelling (MDV-P2-017): a reason, and the same step-up as authorising; the reason form reuses the override's rule (1 to 200 characters).
+  const cancelForm = useForm<{ reason: string }>({ resolver: zodResolver(overrideSchema), defaultValues: { reason: '' } });
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelProblem, setCancelProblem] = useState<'reauth' | 'failed' | null>(null);
+  const doCancel = useMutation({
+    mutationFn: (reason: string) => cancelPrescription(encounterId, reason),
+    onSuccess: s => { queryClient.setQueryData(authKey, s); setCancelling(false); setCancelProblem(null); cancelForm.reset({ reason: '' }); },
+    onError: e => setCancelProblem(authoriseProblem(e instanceof ApiError ? e.status : undefined, e instanceof ApiError ? e.code : undefined) === 'reauth' ? 'reauth' : 'failed'),
   });
   const recheck = () => {
     void queryClient.invalidateQueries({ queryKey: checksKey });
@@ -99,6 +108,9 @@ export function usePrescriptionController(encounterId: string) {
     authorising: doAuthorise.isPending,
     authProblem,
     onAuthorise: () => doAuthorise.mutate(),
+    cancelling, cancelForm, cancelPending: doCancel.isPending, cancelProblem,
+    onCancelling: (open: boolean) => { setCancelling(open); setCancelProblem(null); cancelForm.reset({ reason: '' }); },
+    onCancel: cancelForm.handleSubmit(v => doCancel.mutate(v.reason)),
     /** The step-up leaves for the provider and comes back here; the draft is already saved on the server, nothing is put in browser storage. */
     onConfirmIdentity: async () => {
       try { await startReauth(); } catch { setAuthProblem('failed'); }

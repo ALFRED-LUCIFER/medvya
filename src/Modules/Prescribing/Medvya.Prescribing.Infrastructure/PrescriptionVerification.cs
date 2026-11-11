@@ -23,7 +23,9 @@ public sealed class PrescriptionVerification(PrescribingDbContext db, IEncounter
     {
         if (await db.AuthorisedPrescriptions.AsNoTracking().SingleOrDefaultAsync(p => p.VerifyCode == verifyCode, cancellationToken) is not { } rx) return null;
         var latest = await db.AuthorisedPrescriptions.AsNoTracking().Where(p => p.EncounterId == rx.EncounterId).MaxAsync(p => p.VersionNo, cancellationToken);
-        var status = latest == rx.VersionNo ? RxValidity.Valid : RxValidity.Replaced;
+        // Cancelled outranks replaced: a cancelled paper is withdrawn whatever followed it.
+        var status = await db.PrescriptionCancellations.AsNoTracking().AnyAsync(c => c.PrescriptionId == rx.Id, cancellationToken) ? RxValidity.Cancelled
+            : latest == rx.VersionNo ? RxValidity.Valid : RxValidity.Replaced;
         var facility = await facilities.FindAsync(rx.FacilityId, cancellationToken) ?? throw new InvalidOperationException("Facility not in this tenant.");
         var doctor = await facilities.PrescriberAsync(rx.AuthorisedBy, rx.FacilityId, cancellationToken);
         var encounter = await encounters.FindAsync(rx.EncounterId, cancellationToken);

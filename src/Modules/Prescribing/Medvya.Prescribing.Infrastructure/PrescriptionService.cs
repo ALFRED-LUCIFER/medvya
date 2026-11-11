@@ -39,7 +39,7 @@ public sealed class PrescriptionService(
     IOptions<PrescribingOptions> options, IPatientContacts contacts, ISecureLinkMessages links) : IPrescriptions
 {
     public const string ReadAction = "rx.read", AddAction = "rx.add", UpdateAction = "rx.update", IncludeAction = "rx.include",
-        CheckAction = "rx.check", OverrideAction = "rx.override", AuthorisationAction = "rx.authorisation", AuthoriseAction = "rx.authorise",
+        CheckAction = "rx.check", OverrideAction = "rx.override", AuthorisationAction = "rx.authorisation", AuthoriseAction = "rx.authorise", CancelAction = "rx.cancel",
         PrintAction = "rx.print", PdfAction = "rx.pdf", LayoutApproveAction = "rx.layout.approve", ShareAction = "rx.share", ShareReadAction = "rx.share.read",
         DispatchAction = "rx.dispatch", Resource = "prescription";
     public const int MaxMedicine = 200, MaxStrength = 50, MaxReason = 200;
@@ -158,9 +158,7 @@ public sealed class PrescriptionService(
     {
         // The endpoint already needs Sign on Prescriptions and orders; this adds the care relationship, then the step-up, as signing the note does.
         if (await RequireAsync(encounterId, cancellationToken) is not { } encounter) return null;
-        var now = clock.GetUtcNow();
-        // shortcut: the stamp is the session cookie's claim set by /bff/reauth, as for signing (ConsultNoteService); upgrade both together if it must be revocable.
-        if (user.ReauthenticatedAt is not { } at || now - at > AuthorisedPrescription.ReauthWindow || at > now.AddMinutes(1)) throw new ReauthRequiredException();
+        var now = RequireFreshReauth();
         // A paper prescription carries the doctor's licence (ADR-016): a member with no licence on record cannot authorise one.
         if (await facilities.PrescriberAsync(Me, encounter.FacilityId, cancellationToken) is null) throw new PrescriptionConflictException("no_licence");
         var lines = await DraftAsync(encounter.Id, cancellationToken);
@@ -172,7 +170,8 @@ public sealed class PrescriptionService(
 
         var hash = AuthorisedPrescription.Hash(lines);
         var latest = await LatestAsync(encounter.Id, cancellationToken);
-        if (latest?.ContentHash == hash) return await StateAsync(latest, cancellationToken); // a double click or retry: nothing new is written
+        // A double click or retry: nothing new is written. A cancelled version authorised again is a new version.
+        if (latest?.ContentHash == hash && await CancellationAsync(latest.Id, cancellationToken) is null) return await StateAsync(latest, cancellationToken);
         var row = new AuthorisedPrescription
         {
             Id = Guid.CreateVersion7(), TenantId = TenantId, FacilityId = encounter.FacilityId, EncounterId = encounter.Id, VersionNo = (latest?.VersionNo ?? 0) + 1,
@@ -190,6 +189,30 @@ public sealed class PrescriptionService(
             return await StateAsync(await LatestAsync(encounter.Id, cancellationToken), cancellationToken);
         }
         return new(View(row), false);
+    }
+
+    public async Task<RxAuthorisationState?> CancelAsync(Guid encounterId, CancelRx command, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        var errors = new List<(string, string)>();
+        var reason = Text(command.Reason, "reason", PrescriptionCancellation.MaxReason, true, errors);
+        if (errors.Count > 0) throw new PrescriptionValidationException(errors);
+        // The same gate as authorising: Sign at the endpoint, then the care relationship and a fresh step-up.
+        if (await RequireAsync(encounterId, cancellationToken) is not { } encounter) return null;
+        var now = RequireFreshReauth();
+        var latest = await LatestAsync(encounter.Id, cancellationToken) ?? throw new PrescriptionConflictException("not_authorised");
+        if (await CancellationAsync(latest.Id, cancellationToken) is not null) return await StateAsync(latest, cancellationToken);
+        var row = new PrescriptionCancellation { Id = Guid.CreateVersion7(), TenantId = TenantId, PrescriptionId = latest.Id, Reason = reason!, CancelledBy = Me, CancelledAt = now };
+        try
+        {
+            await SaveAsync(encounter, CancelAction, latest.Id, $"version:{latest.VersionNo};reauth:ok", () => db.PrescriptionCancellations.Add(row), cancellationToken);
+        }
+        // Cancelled in another tab at the same moment: that cancellation stands.
+        catch (DbUpdateException e) when (e.InnerException is Npgsql.PostgresException { SqlState: Npgsql.PostgresErrorCodes.UniqueViolation })
+        {
+            db.ChangeTracker.Clear();
+        }
+        return await StateAsync(latest, cancellationToken);
     }
 
     public async Task<RxPrintView?> PrintAsync(Guid encounterId, CancellationToken cancellationToken = default)
@@ -358,14 +381,29 @@ public sealed class PrescriptionService(
     // shortcut: "changed" compares the rendered instructions, so a wording fix (the translator's sign-off of Sig) marks older prescriptions changed
     // until re-authorised (it fails safe: no print, never wrong text); hash the structured sig instead once the wording is signed off.
     async Task<RxAuthorisationState> StateAsync(AuthorisedPrescription? latest, CancellationToken cancellationToken) =>
-        latest is null ? new(null, false) : new(View(latest), latest.ContentHash != AuthorisedPrescription.Hash(await DraftAsync(latest.EncounterId, cancellationToken)));
+        latest is null ? new(null, false) : new(View(latest, await CancellationAsync(latest.Id, cancellationToken)),
+            latest.ContentHash != AuthorisedPrescription.Hash(await DraftAsync(latest.EncounterId, cancellationToken)));
 
-    /// <summary>The latest authorisation, once it is what the draft still says: an unauthorised or changed prescription never prints.</summary>
+    Task<PrescriptionCancellation?> CancellationAsync(Guid prescriptionId, CancellationToken cancellationToken) =>
+        db.PrescriptionCancellations.AsNoTracking().SingleOrDefaultAsync(c => c.PrescriptionId == prescriptionId, cancellationToken);
+
+    /// <summary>The latest authorisation, once it is what the draft still says and not cancelled: an unauthorised, changed or cancelled prescription never prints.</summary>
     async Task<AuthorisedPrescription> PrintableAsync(EncounterView encounter, CancellationToken cancellationToken)
     {
         var latest = await LatestAsync(encounter.Id, cancellationToken) ?? throw new PrescriptionConflictException("not_authorised");
-        if ((await StateAsync(latest, cancellationToken)).Changed) throw new PrescriptionConflictException("changed");
+        var state = await StateAsync(latest, cancellationToken);
+        if (state.Authorised!.Cancellation is not null) throw new PrescriptionConflictException("cancelled");
+        if (state.Changed) throw new PrescriptionConflictException("changed");
         return latest;
+    }
+
+    /// <summary>The time now, once the caller re-authenticated within the window (authorising and cancelling, as for signing the note).</summary>
+    DateTimeOffset RequireFreshReauth()
+    {
+        var now = clock.GetUtcNow();
+        // shortcut: the stamp is the session cookie's claim set by /bff/reauth, as for signing (ConsultNoteService); upgrade both together if it must be revocable.
+        if (user.ReauthenticatedAt is not { } at || now - at > AuthorisedPrescription.ReauthWindow || at > now.AddMinutes(1)) throw new ReauthRequiredException();
+        return now;
     }
 
     /// <summary>The included prescribe lines (each instruction in every print language, its class's print requirements) and the reconciliation's stops, as authorising freezes them.</summary>
@@ -407,7 +445,8 @@ public sealed class PrescriptionService(
         return [.. data.ModuleMatrix.Select(row => string.Concat(row.Cast<bool>().Select(b => b ? '1' : '0')))];
     }
 
-    static RxAuthorisationView View(AuthorisedPrescription p) => new(p.VersionNo, p.Number(), p.AuthorisedBy, p.AuthorisedAt, p.ContentHash, p.Lines.Count(l => !l.Discontinue));
+    static RxAuthorisationView View(AuthorisedPrescription p, PrescriptionCancellation? c = null) => new(p.VersionNo, p.Number(), p.AuthorisedBy, p.AuthorisedAt, p.ContentHash,
+        p.Lines.Count(l => !l.Discontinue), c is null ? null : new RxCancellationView(c.Reason, c.CancelledBy, c.CancelledAt));
 
     /// <summary>The checks over the included prescribe lines and the chart's active medicines (less those stopped in this visit), with the current overrides
     /// (made under this rule set version: a new version asks again).</summary>

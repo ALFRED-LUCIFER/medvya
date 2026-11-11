@@ -14,8 +14,9 @@ const at = '2026-10-19T04:35:00Z';
 // One name per signature: the doctor profile's (the licence-bearing one), never the account's display name above (u-rao is signed in as Dr. Arjun Rao).
 const signer = 'Dr Asha Raman (synthetic)';
 
+// These specs cover the guided steps (the note as one card); the one-page view (MDV-P2-041) is consult-studio.spec.ts, over the same mocks.
 async function open(page: Page, seed: Parameters<typeof mockNote>[1] = {}, locale = 'en', context: typeof doctor = doctor) {
-  await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
+  await page.addInitScript(l => { localStorage.setItem('medvya.locale', l); localStorage.setItem('medvya.consultView', 'steps'); }, locale);
   await page.route('**/v1/me/context', r => r.fulfill({ json: context }));
   await page.route('**/v1/encounters/e-1', r => r.fulfill({ json: {
     encounter: { id: 'e-1', appointmentId: 'a1', patientId: 'p-a1', facilityId: 'f-1', leadClinicianId: 'u-rao', status: 'Active', authorityMode: 'Medvya', startedAt: at, endedAt: null, room: 'Room 3' },

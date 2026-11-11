@@ -5,7 +5,7 @@ import { useForm, useWatch } from 'react-hook-form';
 import { useI18n } from '@medvya/i18n';
 import { ApiError } from '../../schedule/services/scheduleApi';
 import { fetchReconciliation } from '../../reconciliation/services/reconciliationApi';
-import { remainingItems, signChecklist } from '../domain/checklist';
+import { remainingItems, sectionTicks, signChecklist } from '../domain/checklist';
 import type { EncounterBanner } from '../domain/encounter';
 import { autosaveDelayMs, defaultTargetSection, insertAt, inTemplateOrder, phraseKey, vitalNameKey, type PreviousNote, type VerifiedVital, missingRequired, noteFormSchema, signFailure, switchChoices, switchTemplate, type NoteForm, type NoteSections, type NoteTemplate, type RecordingConsent, type SavePhase, type SignFailure } from '../domain/note';
 import { fetchNote, fetchNoteCatalog, fetchPrefill, fetchPrevious, saveNote, signNote, startReauth } from '../services/noteApi';
@@ -146,6 +146,8 @@ export function useNoteController(encounterId: string, canSign: boolean, timeZon
 
   return {
     form, assist, checklist, remaining,
+    // MDV-P2-041: the one page's section bar; worked out from the same form the guided steps edit.
+    ticks: template && note.data ? sectionTicks({ template, sections, undecidedAi: note.data.undecidedAi ?? [], vitals: prefill.data?.vitals.length ?? 0, signed: !isDraft }) : null,
     consent,
     onConsent: (value: RecordingConsent) => { setConsent(value); queue(draft(form.getValues('sections'), templateKey, value)); },
     canSign: canSign && !!note.data && note.data.status === 'Draft',

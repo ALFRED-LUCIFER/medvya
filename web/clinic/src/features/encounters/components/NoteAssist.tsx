@@ -9,10 +9,11 @@ export type Assist = {
   previous: { id: string; signedAt: string; signedByName: string | null; sections: NoteSections }[];
   onInsertPhrase: (key: string) => void; onInsertVitals: () => void; onInsertSnippet: (noteId: string, sectionId: string) => void;
 };
-type Props = { assist: Assist; template: NoteTemplate; timeZone: string | undefined };
+/** `showVitals` false: the one page shows the verified readings in its own Vitals section (MDV-P2-041). */
+type Props = { assist: Assist; template: NoteTemplate; timeZone: string | undefined; showVitals?: boolean };
 
 /** E-04: what the doctor may add to the note. Nothing goes in by itself: each button adds text the doctor then reads and edits. */
-export default function NoteAssist({ assist: a, template, timeZone }: Props) {
+export default function NoteAssist({ assist: a, template, timeZone, showVitals = true }: Props) {
   const { t, formatDate } = useI18n();
   return (
     <section aria-labelledby="note-assist-title" className="flex flex-col gap-4 rounded-lg border p-3">
@@ -20,7 +21,7 @@ export default function NoteAssist({ assist: a, template, timeZone }: Props) {
       {a.loading && <p className="text-sm text-muted-foreground">{t('noteAssist.loading')}</p>}
       {a.failed && <p role="alert" className="text-sm font-bold text-danger-700">{t('noteAssist.failed')}</p>}
       {a.tooLong && <p role="alert" className="text-sm font-bold text-danger-700">{t('noteAssist.tooLong')}</p>}
-      {!a.loading && !a.failed && (
+      {showVitals && !a.loading && !a.failed && (
         <div className="flex flex-col gap-1.5">
           <h4 className="text-sm font-bold">{t('noteAssist.vitals.title')}</h4>
           {a.vitals.length === 0

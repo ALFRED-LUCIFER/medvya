@@ -1,5 +1,6 @@
 import { useParams } from 'react-router';
 import ConsultPage from '../features/encounters/components/ConsultPage';
+import ConsultStudio from '../features/encounters/components/ConsultStudio';
 import NoteEditor from '../features/encounters/components/NoteEditor';
 import NoteHistory from '../features/encounters/components/NoteHistory';
 import NotePrintPage from '../features/encounters/components/NotePrintPage';
@@ -31,11 +32,13 @@ export default function ConsultRoute({ boardPath, ...rest }: Props) {
 
 function Consult({ encounterId, boardPath, canOrder, canReconcile, canSign }: Props & { encounterId: string }) {
   const consult = useConsultController(encounterId);
+  // One controller for both views (MDV-P2-041): switching keeps the form, the autosave and every typed word.
+  const note = { ...useNoteController(encounterId, canSign, consult.banner?.timeZone, consult.banner), timeZone: consult.banner?.timeZone,
+    patient: consult.banner && { name: consult.banner.patient.fullName, mrn: consult.banner.patient.mrn, dateOfBirth: consult.banner.patient.dateOfBirth, encounterId } };
   return (
     <div className="flex flex-col gap-4">
       <ConsultPage {...consult} boardPath={boardPath} canReconcile={canReconcile}>
-        <NoteEditor {...useNoteController(encounterId, canSign, consult.banner?.timeZone, consult.banner)} timeZone={consult.banner?.timeZone}
-          patient={consult.banner && { name: consult.banner.patient.fullName, mrn: consult.banner.patient.mrn, dateOfBirth: consult.banner.patient.dateOfBirth, encounterId }} />
+        {consult.view === 'page' ? <ConsultStudio {...note} panel={consult.panel} onPanel={consult.onPanel} chart={consult.chart} /> : <NoteEditor {...note} />}
         <NoteHistory {...useAddendumController(encounterId, canSign)} timeZone={consult.banner?.timeZone} printPath={`/consult/${encounterId}/note/print`} />
         <NoteTemplateChoice {...useNoteTemplatesController()} />
       </ConsultPage>

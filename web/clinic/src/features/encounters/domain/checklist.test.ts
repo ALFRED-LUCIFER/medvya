@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { remainingItems, signChecklist, type ChecklistInput } from './checklist';
+import { remainingItems, sectionTicks, signChecklist, templateOwnSections, type ChecklistInput } from './checklist';
 import { signFailure } from './note';
 
 const ready: ChecklistInput = {
@@ -42,5 +42,15 @@ describe('review and sign checklist (MDV-P2-044)', () => {
     expect(signFailure(400, { errors: { recordingConsent: ['required'] } })).toEqual({ kind: 'unreviewed' });
     expect(signFailure(400, { errors: { undecidedAi: ['undecided'] } })).toEqual({ kind: 'unreviewed' });
     expect(signFailure(400, { errors: { 'sections.plan': ['required'], recordingConsent: ['required'] } })).toEqual({ kind: 'blank', sections: ['plan'] });
+  });
+
+  it('ticks a numbered section once it is finished; an AI draft still undecided leaves it open', () => {
+    const tpl = { key: 'diabetes-review', version: 1, quickPhrases: [], sections: ['chiefComplaint', 'subjective', 'selfMonitoring', 'objective', 'assessment', 'plan'].map(id => ({ id, required: false })) };
+    expect(templateOwnSections(tpl).map(s => s.id)).toEqual(['selfMonitoring']);
+    const base = { template: tpl, sections: { chiefComplaint: 'Thirst', objective: 'Feet normal', assessment: 'Review' }, undecidedAi: [], vitals: 0, signed: false };
+    expect(sectionTicks(base)).toEqual({ vitals: false, history: true, template: false, exam: true, assessment: true, plan: false, sign: false });
+    expect(sectionTicks({ ...base, vitals: 2, sections: { ...base.sections, selfMonitoring: 'Fasting 140', plan: 'Rest' }, undecidedAi: ['objective'], signed: true }))
+      .toEqual({ vitals: true, history: true, template: true, exam: false, assessment: true, plan: true, sign: true });
+    expect(sectionTicks({ ...base, template: { ...tpl, sections: tpl.sections.filter(s => s.id !== 'selfMonitoring') } }).template).toBe(true); // nothing of its own
   });
 });

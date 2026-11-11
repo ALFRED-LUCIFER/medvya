@@ -1,4 +1,4 @@
-import type { MouseEvent, ReactNode } from 'react';
+import { useEffect, type MouseEvent, type ReactNode } from 'react';
 import { Circle, CircleCheck } from 'lucide-react';
 import { useI18n, type MessageKey } from '@medvya/i18n';
 import { Button, Tabs, TabsContent, TabsList, TabsTrigger } from '@medvya/ui';
@@ -28,14 +28,15 @@ const heading = (id: StudioSection) => `studio-${id}`;
  */
 export default function ConsultStudio(p: Props) {
   const { t } = useI18n();
+  // Assist is off when the patient declined recording; the typed note works as today, and the panel moves to the chart (read when shown).
+  const showAssist = !!p.assist && p.consent !== 'Declined';
+  const { panel, onPanel } = p;
+  useEffect(() => { if (!p.loading && !showAssist && panel === 'assist') onPanel('chart'); }, [p.loading, showAssist, panel, onPanel]);
   if (p.loading) return <p role="status">{t('noteEditor.loading')}</p>;
   if (p.loadFailed || !p.template || !p.templateKey || !p.ticks) return <p role="alert" className="font-bold text-danger-700">{t(p.forbidden ? 'noteEditor.forbidden' : 'noteEditor.loadFailed')}</p>;
   const { template, ticks } = p;
   const field = (id: string) => template.sections.filter(s => s.id === id).map(s => <SectionField key={s.id} section={s} register={p.register} readOnly={p.readOnly} />);
   const title = (id: StudioSection) => id === 'template' ? t(templateNameKey(template.key)) : t(`studio.section.${id}` as MessageKey);
-  // Assist is off when the patient declined recording; the typed note works as today.
-  const showAssist = !!p.assist && p.consent !== 'Declined';
-  const panel = !showAssist && p.panel === 'assist' ? 'chart' : p.panel;
   const done = p.checklist.filter(c => c.state !== 'todo').length;
   return (
     <section aria-labelledby="note-title" className="flex flex-col gap-4">

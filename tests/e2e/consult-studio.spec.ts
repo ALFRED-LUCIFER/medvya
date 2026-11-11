@@ -94,6 +94,7 @@ test('declined consent hides Assist and keeps the manual note; agreed shows it',
   await expect(panel.getByRole('tab', { name: 'Assist' })).toHaveCount(0);
   await expect(panel.getByRole('region', { name: 'Add to the note' })).toHaveCount(0);
   await expect(panel.getByRole('tab', { name: 'Chart', selected: true })).toBeVisible();
+  await expect(panel).toContainText('Type 2 diabetes (synthetic)'); // the chart is read once its tab shows
   await expect(note(page).getByLabel('Plan')).toBeEditable(); // the manual note path as today
   await note(page).getByRole('radio', { name: 'Patient agreed to recording' }).check();
   await panel.getByRole('tab', { name: 'Assist' }).click();

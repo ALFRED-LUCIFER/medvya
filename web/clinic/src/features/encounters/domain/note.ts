@@ -15,14 +15,20 @@ export type SignPatient = { name: string; mrn: string; dateOfBirth: string; enco
 export const withTitle = (name: string) => (/^dr\.?\s/i.test(name) ? name : `Dr. ${name}`);
 /** A signed addendum (MDV-P2-013): version 2 and later, each following the version before it. */
 export type NoteAddendum = { versionNo: number; amendsVersionNo: number; reason: string; text: string; signedBy: string; signedAt: string; contentHash: string; signerName?: string | null };
+/** The doctor's record of the patient's answer about recording this visit (MDV-P2-044); none yet means the note cannot be signed. */
+export const recordingConsents = ['Agreed', 'Declined', 'Withdrawn'] as const;
+export type RecordingConsent = (typeof recordingConsents)[number];
 export type NoteView = {
   encounterId: string; templateKey: string; templateVersion: number; status: 'Draft' | 'Signed'; manual: boolean;
   sections: NoteSections; version: number; updatedAt: string | null; signature?: NoteSignature | null; addenda?: NoteAddendum[];
   /** The name this user's signature will show (the profile's, else the account's); the sign modal repeats it. */
   signAsName?: string | null;
+  recordingConsent?: RecordingConsent | null;
+  /** Section ids with an AI draft or suggestion the doctor has not accepted or dismissed (written from MDV-P3 on). */
+  undecidedAi?: string[];
 };
-/** What an autosave sends besides the version: the template and the whole note (a section left out is cleared). */
-export type NoteDraft = { templateKey: string; sections: NoteSections };
+/** What an autosave sends besides the version: the template, the whole note (a section left out is cleared) and the recording consent. */
+export type NoteDraft = { templateKey: string; sections: NoteSections; recordingConsent: RecordingConsent | null };
 
 export type SavePhase = 'idle' | 'saving' | 'saved' | 'failed' | 'conflict';
 
@@ -68,15 +74,16 @@ export function staleVersion(status: number | undefined, body: unknown): number 
 /** The templates a doctor can switch to: their choice, plus the one this note is already on. */
 export const switchChoices = (catalog: NoteCatalog, current: string) => catalog.templates.filter(t => catalog.mine.includes(t.key) || t.key === current);
 
-/** Why a sign call was refused, from the status and problem body: what the doctor sees or does next (MDV-P2-012). */
-export type SignFailure = { kind: 'reauth' | 'stale' | 'signed' | 'denied' | 'failed' } | { kind: 'blank'; sections: string[] };
+/** Why a sign call was refused, from the status and problem body: what the doctor sees or does next (MDV-P2-012). Unreviewed: a checklist gate the server holds (MDV-P2-044). */
+export type SignFailure = { kind: 'reauth' | 'stale' | 'signed' | 'denied' | 'unreviewed' | 'failed' } | { kind: 'blank'; sections: string[] };
 
 export function signFailure(status: number | undefined, body: unknown): SignFailure {
   const b = (typeof body === 'object' && body !== null ? body : {}) as { code?: unknown; errors?: Record<string, string[]> };
   if (status === 403) return { kind: b.code === 'reauth_required' ? 'reauth' : 'denied' };
   if (status === 409) return { kind: b.code === 'stale_note' ? 'stale' : b.code === 'note_signed' ? 'signed' : 'failed' };
   const blank = Object.keys(b.errors ?? {}).filter(k => k.startsWith('sections.')).map(k => k.slice('sections.'.length));
-  return status === 400 && blank.length > 0 ? { kind: 'blank', sections: blank } : { kind: 'failed' };
+  if (status === 400 && blank.length > 0) return { kind: 'blank', sections: blank };
+  return status === 400 && (b.errors?.recordingConsent || b.errors?.undecidedAi) ? { kind: 'unreviewed' } : { kind: 'failed' };
 }
 
 /** Section ids in the template's order, so the first one named is the first one on the page. */

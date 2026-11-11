@@ -2,9 +2,11 @@ import { useEffect, useRef } from 'react';
 import type { UseFormRegisterReturn } from 'react-hook-form';
 import { useI18n } from '@medvya/i18n';
 import { Button, Dialog, DialogContent, DialogDescription, DialogTitle, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea } from '@medvya/ui';
-import { maxSectionLength, sectionLabelKey, templateNameKey, type NoteSignature, type NoteTemplate, type SavePhase, type SignPatient } from '../domain/note';
+import type { ChecklistItem } from '../domain/checklist';
+import { maxSectionLength, sectionLabelKey, templateNameKey, type NoteSignature, type NoteTemplate, type RecordingConsent, type SavePhase, type SignPatient } from '../domain/note';
 import NoteAssist, { type Assist } from './NoteAssist';
-import { SignedLine, SignNote, type SignProblem } from './NoteSign';
+import { SignChecklist, SignedLine, SignNote, type SignProblem } from './NoteSign';
+import RecordingConsentChoice from './RecordingConsentChoice';
 
 type Props = {
   register: (sectionId: string) => UseFormRegisterReturn;
@@ -19,6 +21,9 @@ type Props = {
   canSign: boolean; signing: boolean; confirming: boolean; signProblem: SignProblem; signature: NoteSignature | null;
   onRequestSign: () => void; onCancelSign: () => void; onConfirmSign: () => void;
   signAsName: string | null; timeZone: string | undefined; patient: SignPatient | null;
+  consent: RecordingConsent | null; onConsent: (value: RecordingConsent) => void;
+  /** Empty without Sign or once signed. */
+  checklist: ChecklistItem[]; remaining: number;
 };
 
 /** E-04: the consultation note. Sections come from the template; saving is automatic and its state is always shown. Read-only once not a draft. */
@@ -46,6 +51,7 @@ export default function NoteEditor(p: Props) {
           </Select>
         </div>
       </div>
+      <RecordingConsentChoice value={p.consent} readOnly={p.readOnly} onChange={p.onConsent} />
       <p className="text-sm text-muted-foreground">{t('noteEditor.manualBanner')}</p>
       {p.readOnly && <p ref={signedRef} tabIndex={-1} role="status" className="font-bold focus:outline-none">{t('noteEditor.signed', { version: String(p.signature?.versionNo ?? 1) })}</p>}
       {p.signature && <SignedLine signature={p.signature} timeZone={p.timeZone} />}
@@ -65,7 +71,8 @@ export default function NoteEditor(p: Props) {
       {!p.readOnly && (
         <>
           {!p.canSign && <p className="text-sm text-muted-foreground">{t('noteSign.onlyDoctor')}</p>}
-          <SignNote canSign={p.canSign} patient={p.patient} doctorName={p.signAsName} signing={p.signing} confirming={p.confirming} problem={p.signProblem}
+          {p.checklist.length > 0 && <SignChecklist items={p.checklist} />}
+          <SignNote canSign={p.canSign} remaining={p.remaining} patient={p.patient} doctorName={p.signAsName} signing={p.signing} confirming={p.confirming} problem={p.signProblem}
             onRequest={p.onRequestSign} onCancel={p.onCancelSign} onConfirm={p.onConfirmSign} />
         </>
       )}

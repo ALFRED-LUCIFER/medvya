@@ -8495,6 +8495,8 @@ export interface components {
             /** Format: date */
             toDate?: null | string;
         };
+        /** @enum {unknown} */
+        RecordingConsent: "Agreed" | "Declined" | "Withdrawn" | null;
         RecordIntake: {
             chiefComplaint: null | string;
             vitals: null | components["schemas"]["VitalReading"][];
@@ -8633,6 +8635,7 @@ export interface components {
             sections: null | {
                 [key: string]: string;
             };
+            recordingConsent?: null | components["schemas"]["RecordingConsent"];
         };
         SaveProfile: {
             name?: null | string;

@@ -210,6 +210,8 @@ A "Clinic approval" demo switch (Approved, Waiting, Suspended). Waiting: after s
 ## Clinical (P2) — `Medvya Clinician App`, `Medvya Clinical Screens`
 
 ### N-01 Nurse intake
+- Queue: "With the nurse" cards open their intake; "Checked in" cards can be taken to intake by the nurse without waiting for reception.
+- Usual ranges follow the patient's age band (PALS for children, adult from 18); they are a draft until a clinician signs them off (`VitalRules.SignOff`).
 - Large vitals inputs: BP systolic/diastolic, pulse, temperature, SpO₂, weight. Each shows the previous value.
 - Out-of-range values are flagged in words ("High · re-check", "Outside usual range", "+2.2 kg since 02 Oct"). **Re-measure prompt, then Escalate to doctor with a reason.**
 - Allergies: each must be set to **Confirmed / Patient reported / Unknown / Not an allergy**. Hand-off is disabled with "Confirm allergy status to hand off" until all are set.

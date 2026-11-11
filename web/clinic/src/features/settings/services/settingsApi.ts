@@ -54,3 +54,7 @@ export const acceptTerms = () => post<TermsStatus>('/v1/settings/terms/accept', 
 export const fetchNotificationPrefs = () => send<NotificationPrefs>('/v1/settings/notifications');
 export const saveNotificationPrefs = (prefs: NotificationPrefs) => send<NotificationPrefs>('/v1/settings/notifications', json('PUT', prefs));
 export const fetchTemplatePreviews = (language: string) => send<TemplatePreview[]>(`/v1/settings/notifications/templates?${new URLSearchParams({ language })}`);
+
+// Nurse intake before the doctor (MDV-P2-007): one practice-wide switch; the server lets only an owner or practice admin change it and audits it.
+export const fetchNurseIntake = () => send<{ enabled: boolean }>('/v1/settings/nurse-intake');
+export const saveNurseIntake = (enabled: boolean) => send<{ enabled: boolean }>('/v1/settings/nurse-intake', json('PUT', { enabled }));

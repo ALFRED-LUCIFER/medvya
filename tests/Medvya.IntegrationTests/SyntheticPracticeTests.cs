@@ -98,6 +98,76 @@ public sealed class SyntheticPracticeTests(PostgresFixture sql, ITestOutputHelpe
         else Assert.True(cards >= 16, $"{cards} cards"); // walk-ins and checked-in visits of the doctors working today
     }
 
+    // SAFETY: mutation check: removing the marker or id check in SyntheticPractice.BookableAsync lets it approve a tenant it did not make, and this fails.
+    [Fact]
+    public async Task BookableRefusesATenantTheSeederDidNotMake()
+    {
+        var real = Guid.NewGuid();
+        await using (var db = sql.Context(real))
+        {
+            db.Tenants.Add(new Tenant { Id = real, Name = "Some Real Clinic", CountryCode = "IN", ResidencyRegion = "centralindia" });
+            await db.SaveChangesAsync();
+        }
+        OrganisationState before;
+        await using (var db = sql.Context(real)) before = (await db.Tenants.SingleAsync()).State;
+        await Assert.ThrowsAsync<InvalidOperationException>(() => SyntheticPractice.BookableAsync(sql.ConnectionString, real, Guid.NewGuid(), 1, 10, 100_000));
+        await using var check = sql.Context(real);
+        Assert.Equal(before, (await check.Tenants.SingleAsync()).State);
+        Assert.Equal(0, await check.TermsAcceptances.CountAsync());
+    }
+
+    // SAFETY: mutation check: dropping the terms row, the Approved state or the templates in SyntheticPractice.BookableAsync makes the hold fail here.
+    [Fact]
+    public async Task PatientsWithDoctorsMakesThePracticeBookableForADeskAndARerunAddsNothing()
+    {
+        const string name = "Load Seed Test Clinic";
+        var reception = Guid.NewGuid();
+        var (tenant, facility, patients, _) = await SyntheticPatients.SeedAsync(sql.ConnectionString, "Development", name, 100, 100_000, memberUserId: reception);
+        await using (var db = sql.Context(tenant))
+        {
+            (await db.Tenants.SingleAsync()).State = OrganisationState.Draft; // as an older synthetic practice may be
+            await db.SaveChangesAsync();
+        }
+        var (calendars, visits) = await SyntheticPractice.BookableAsync(sql.ConnectionString, tenant, facility, 2, 100, 100_000);
+        var again = await SyntheticPractice.BookableAsync(sql.ConnectionString, tenant, facility, 2, 100, 100_000);
+        Assert.Equal(2, calendars.Distinct().Count());
+        Assert.Equal(calendars, again.Calendars);
+        Assert.Equal(0, again.Visits);
+        await using (var db = sql.Context(tenant))
+        {
+            Assert.Equal(2, await db.Memberships.CountAsync(m => m.Role == Role.HospitalDoctor));
+            Assert.Equal(2, await db.DoctorLicences.CountAsync());
+            Assert.Equal(1, await db.TermsAcceptances.CountAsync());
+        }
+        await using (var sched = sql.Scheduling(tenant))
+        {
+            Assert.Equal(2, await sched.Templates.CountAsync());
+            Assert.Equal(visits, await sched.Appointments.CountAsync());
+        }
+
+        using var host = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b
+            .UseSetting("ConnectionStrings:Medvya", sql.ConnectionString)
+            .UseSetting("Terms:RequireAcceptance", "true")
+            .ConfigureTestServices(s => PatientEndpointTests.SignInFromHeaders(s, tenant)));
+        using var desk = host.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost") });
+        desk.DefaultRequestHeaders.Add("X-Test-User", reception.ToString());
+        desk.DefaultRequestHeaders.Add("X-Test-Facility", facility.ToString());
+        // A Monday past the seeded visits (next ten days), at a time the desk load test books.
+        var ist = DateOnly.FromDateTime((DateTimeOffset.UtcNow + TimeSpan.FromHours(5.5)).DateTime);
+        var monday = ist.AddDays(11 + ((int)DayOfWeek.Monday - (int)ist.AddDays(11).DayOfWeek + 7) % 7);
+        var start = new DateTimeOffset(monday.ToDateTime(new TimeOnly(9, 20)), TimeSpan.FromHours(5.5));
+        using var held = await desk.PostAsJsonAsync(new Uri("/v1/slot-holds", UriKind.Relative), new { facilityId = facility, calendarId = calendars[1], start, visitType = "FollowUp" });
+        Assert.Equal(HttpStatusCode.OK, held.StatusCode);
+        var hold = (await held.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+        using var book = new HttpRequestMessage(HttpMethod.Post, new Uri("/v1/appointments", UriKind.Relative))
+        {
+            Content = JsonContent.Create(new { holdId = hold, patientId = patients[0], reasonCategory = "General", channel = "Phone" }),
+        };
+        book.Headers.Add("Idempotency-Key", Guid.NewGuid().ToString());
+        using var booked = await desk.SendAsync(book);
+        Assert.True(booked.IsSuccessStatusCode, $"{booked.StatusCode} {await booked.Content.ReadAsStringAsync()}");
+    }
+
     /// <summary>Measures the practice seeded in MEDVYA_PRACTICE_CONNECTION through the real API (a signed-in receptionist): p50 and p95 over 30 calls each.</summary>
     [PracticeLatencyFact]
     public async Task LatencyAtScale()

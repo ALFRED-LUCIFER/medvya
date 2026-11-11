@@ -9644,6 +9644,14 @@
           }
         }
       },
+      "RecordingConsent": {
+        "enum": [
+          "Agreed",
+          "Declined",
+          "Withdrawn",
+          null
+        ]
+      },
       "RecordIntake": {
         "required": [
           "chiefComplaint",
@@ -10228,6 +10236,16 @@
             "additionalProperties": {
               "type": "string"
             }
+          },
+          "recordingConsent": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RecordingConsent"
+              }
+            ]
           }
         }
       },

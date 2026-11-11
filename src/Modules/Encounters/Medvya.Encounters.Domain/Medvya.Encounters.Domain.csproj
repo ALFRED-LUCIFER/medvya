@@ -2,4 +2,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\BuildingBlocks\Medvya.BuildingBlocks.Domain\Medvya.BuildingBlocks.Domain.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Growth\who-lms-0-5y.csv" LogicalName="Medvya.Encounters.Domain.Growth.who-lms-0-5y.csv" />
+  </ItemGroup>
 </Project>

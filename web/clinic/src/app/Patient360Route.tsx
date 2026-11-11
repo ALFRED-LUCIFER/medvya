@@ -1,6 +1,8 @@
 import { useParams } from 'react-router';
 import ChildHealthCard from '../features/child-health/components/ChildHealthCard';
 import { useChildHealthController } from '../features/child-health/hooks/useChildHealthController';
+import GrowthCard from '../features/child-health/components/GrowthCard';
+import { useGrowthController } from '../features/child-health/hooks/useGrowthController';
 import OpenReferrals from '../features/referrals/components/OpenReferrals';
 import { useOpenReferralsController } from '../features/referrals/hooks/useReferralsController';
 import HistorySections from '../features/patient360/components/HistorySections';
@@ -29,12 +31,14 @@ function Chart({ patientId, backPath, canEditHistory, canOrder, online }: Props 
   // capability as the history sections (vitals and allergies entry at Full: doctor or nurse).
   const child = d?.lifeStage === 'Child';
   const childHealth = useChildHealthController(patientId, child);
+  const growth = useGrowthController(patientId, child); // MDV-P2-035: same rule for asking and recording
   return (
     <div className="flex flex-col gap-4">
       <Patient360Page {...chart} backPath={backPath}
         addMedicine={canOrder && d && <AddMedicinePanel {...add} patient={{ ...d.patient, allergies: { state: d.chart.allergyState, allergies: d.chart.allergies } }} />}
         consultPath={id => `/consult/${id}`} timelinePath={`/patients/${patientId}/timeline`} documentsPath={`/patients/${patientId}/docs`} />
       {chart.data && <HistorySections {...history} />}
+      {child && <GrowthCard {...growth} canRecord={canEditHistory} online={online} />}
       {child && <ChildHealthCard {...childHealth} canRecord={canEditHistory} online={online} />}
       {!referrals.hidden && !referrals.loading && !referrals.failed && <OpenReferrals open={referrals.open} />}
     </div>

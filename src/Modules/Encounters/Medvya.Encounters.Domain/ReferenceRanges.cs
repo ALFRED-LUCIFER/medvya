@@ -60,7 +60,7 @@ public static class ReferenceRanges
         ObservationCode.RespiratoryRate => new(1200, 2000),
         ObservationCode.PainScore => new(null, 400),
         ObservationCode.FetalHeartRate => new(11000, 16000),
-        ObservationCode.Weight or ObservationCode.Height or ObservationCode.FundalHeight => null,
+        ObservationCode.Weight or ObservationCode.Height or ObservationCode.FundalHeight or ObservationCode.Length or ObservationCode.HeadCircumference => null,
         ObservationCode.HbA1c => new(null, 570),
         ObservationCode.LdlCholesterol => new(null, 10000),
         ObservationCode.Egfr => new(6000, null),

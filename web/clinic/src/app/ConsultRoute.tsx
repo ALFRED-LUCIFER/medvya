@@ -22,21 +22,21 @@ import { useNoteTemplatesController } from '../features/encounters/hooks/useNote
 import { useAddendumController, useNotePrintController } from '../features/encounters/hooks/useSignedNoteController';
 
 /** Composition only: one consultation (MDV-P2-001) by its id in the address, with its note (MDV-P2-009); the server checks clinical access on every call. */
-type Props = { boardPath: string; canOrder: boolean; canReconcile: boolean; canSign: boolean; userId: string; userName: string };
+type Props = { boardPath: string; canOrder: boolean; canReconcile: boolean; canSign: boolean };
 
 export default function ConsultRoute({ boardPath, ...rest }: Props) {
   const { encounterId = '' } = useParams();
   return <Consult key={encounterId} encounterId={encounterId} boardPath={boardPath} {...rest} />;
 }
 
-function Consult({ encounterId, boardPath, canOrder, canReconcile, canSign, userId, userName }: Props & { encounterId: string }) {
+function Consult({ encounterId, boardPath, canOrder, canReconcile, canSign }: Props & { encounterId: string }) {
   const consult = useConsultController(encounterId);
   return (
     <div className="flex flex-col gap-4">
       <ConsultPage {...consult} boardPath={boardPath} canReconcile={canReconcile}>
-        <NoteEditor {...useNoteController(encounterId, canSign, consult.banner?.timeZone)} userId={userId} userName={userName} timeZone={consult.banner?.timeZone}
+        <NoteEditor {...useNoteController(encounterId, canSign, consult.banner?.timeZone)} timeZone={consult.banner?.timeZone}
           patient={consult.banner && { name: consult.banner.patient.fullName, mrn: consult.banner.patient.mrn, dateOfBirth: consult.banner.patient.dateOfBirth, encounterId }} />
-        <NoteHistory {...useAddendumController(encounterId, canSign)} userId={userId} userName={userName} timeZone={consult.banner?.timeZone} printPath={`/consult/${encounterId}/note/print`} />
+        <NoteHistory {...useAddendumController(encounterId, canSign)} timeZone={consult.banner?.timeZone} printPath={`/consult/${encounterId}/note/print`} />
         <NoteTemplateChoice {...useNoteTemplatesController()} />
       </ConsultPage>
       {consult.banner && canOrder && <Prescription encounterId={encounterId} ended={consult.banner.encounter.status === 'Ended'} />}
@@ -77,12 +77,12 @@ export function SlipRoute() {
 }
 
 /** The signed note's print view and PDF (MDV-P2-013), with the patient's identifiers from the consultation. */
-export function NotePrintRoute({ userId, userName }: { userId: string; userName: string }) {
+export function NotePrintRoute() {
   const { encounterId = '' } = useParams();
   const print = useNotePrintController(encounterId);
   const consult = useConsultController(encounterId);
   return <NotePrintPage {...print} loading={print.loading || consult.loading} failed={print.failed || consult.failed} banner={consult.banner}
-    consultPath={`/consult/${encounterId}`} userId={userId} userName={userName} />;
+    consultPath={`/consult/${encounterId}`} />;
 }
 
 /** The printed prescription of one consultation (MDV-P2-017): only once authorised; the server decides for this clinician and patient. */

@@ -10,8 +10,10 @@ export const catalog = {
   mine: ['general-opd', 'diabetes-review'],
 };
 
-type Addendum = { versionNo: number; amendsVersionNo: number; reason: string; text: string; signedBy: string; signedAt: string; contentHash: string };
-type Note = { templateKey: string; sections: Record<string, string>; version: number; status: string; signature?: { versionNo: number; signedBy: string; signedAt: string; contentHash: string; signerName?: string; signerLicence?: string }; addenda?: Addendum[] };
+type Addendum = { versionNo: number; amendsVersionNo: number; reason: string; text: string; signedBy: string; signedAt: string; contentHash: string; signerName?: string };
+type Note = { templateKey: string; sections: Record<string, string>; version: number; status: string; signature?: { versionNo: number; signedBy: string; signedAt: string; contentHash: string; signerName?: string; signerLicence?: string }; addenda?: Addendum[]; signAsName?: string };
+// The doctor profile's name, which the server uses for the signature, the addenda and the sign button; the session's display name differs on purpose.
+const signer = 'Dr Asha Raman (synthetic)';
 export type NoteMock = {
   note: Note; puts: { templateKey: string; manual: boolean; baseVersion: number; sections: Record<string, string> }[]; chosen: string[][];
   /** The next PUT answers like this instead of saving: a 409 stale_note, or a dropped connection. */
@@ -27,7 +29,7 @@ export type NoteMock = {
 };
 
 export async function mockNote(page: Page, seed: Partial<Note> = {}): Promise<NoteMock> {
-  const mock: NoteMock = { note: { templateKey: 'general-opd', sections: {}, version: 0, status: 'Draft', ...seed }, puts: [], chosen: [], next: null, signs: [], reauths: [], reauthed: false, signNext: null, addendumPosts: [], pdfs: 0, pdfNext: null, vitals: [], previous: [] };
+  const mock: NoteMock = { note: { templateKey: 'general-opd', sections: {}, version: 0, status: 'Draft', signAsName: signer, ...seed }, puts: [], chosen: [], next: null, signs: [], reauths: [], reauthed: false, signNext: null, addendumPosts: [], pdfs: 0, pdfNext: null, vitals: [], previous: [] };
   await page.route('**/v1/encounters/e-1/note/prefill', r => r.fulfill({ json: { vitals: mock.vitals } }));
   await page.route('**/v1/encounters/e-1/note/previous', r => r.fulfill({ json: { notes: mock.previous } }));
   const view = () => ({ encounterId: 'e-1', templateVersion: 1, manual: true, updatedAt: null, ...mock.note });
@@ -50,7 +52,7 @@ export async function mockNote(page: Page, seed: Partial<Note> = {}): Promise<No
     if (next === 'stale') return problem(r, 409, { code: 'stale_note', currentVersion: mock.note.version + 1 });
     if (next === 'blank') return problem(r, 400, { errors: { 'sections.plan': ['required'], 'sections.chiefComplaint': ['required'] } });
     mock.note = { ...mock.note, status: 'Signed', version: mock.note.version + 1,
-      signature: { versionNo: 1, signedBy: 'u-rao', signedAt: '2026-10-19T04:40:00Z', contentHash: 'a'.repeat(64), signerName: 'Dr. Arjun Rao (synthetic)', signerLicence: 'Tamil Nadu Medical Council 84213' } };
+      signature: { versionNo: 1, signedBy: 'u-rao', signedAt: '2026-10-19T04:40:00Z', contentHash: 'a'.repeat(64), signerName: signer, signerLicence: 'Tamil Nadu Medical Council 84213' } };
     return r.fulfill({ json: view() });
   });
   await page.route('**/v1/encounters/e-1/note/addenda', r => {
@@ -59,7 +61,7 @@ export async function mockNote(page: Page, seed: Partial<Note> = {}): Promise<No
     if (!mock.reauthed) return problem(r, 403, { code: 'reauth_required' });
     const addenda = mock.note.addenda ?? [];
     const versionNo = addenda.length + 2;
-    mock.note = { ...mock.note, addenda: [...addenda, { versionNo, amendsVersionNo: versionNo - 1, ...body, signedBy: 'u-rao', signedAt: '2026-10-19T05:00:00Z', contentHash: 'c'.repeat(64) }] };
+    mock.note = { ...mock.note, addenda: [...addenda, { versionNo, amendsVersionNo: versionNo - 1, ...body, signedBy: 'u-rao', signedAt: '2026-10-19T05:00:00Z', contentHash: 'c'.repeat(64), signerName: signer }] };
     return r.fulfill({ json: view() });
   });
   await page.route('**/v1/encounters/e-1/note/pdf', r => {

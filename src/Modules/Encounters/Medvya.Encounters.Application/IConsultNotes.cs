@@ -8,19 +8,19 @@ namespace Medvya.Encounters.Application;
 /// </summary>
 public sealed record SaveNote(string? TemplateKey, bool Manual, int BaseVersion, IReadOnlyDictionary<string, string>? Sections);
 
-/// <summary>The signature of a signed note: who, when and the hash of what was signed. The signer's name and attested licence (authority and number) are null when no doctor profile exists.</summary>
+/// <summary>The signature of a signed note: who, when and the hash of what was signed. The signer's name is the doctor profile's, else the account's display name (never blank); the attested licence (authority and number) is null without a profile.</summary>
 public sealed record NoteSignature(int VersionNo, Guid SignedBy, DateTimeOffset SignedAt, string ContentHash, string? SignerName = null, string? SignerLicence = null);
 
 /// <summary>A signed addendum (MDV-P2-013): version 2 and later, each following the version before it. Ids only for the signer.</summary>
-public sealed record NoteAddendum(int VersionNo, int AmendsVersionNo, string Reason, string Text, Guid SignedBy, DateTimeOffset SignedAt, string ContentHash);
+public sealed record NoteAddendum(int VersionNo, int AmendsVersionNo, string Reason, string Text, Guid SignedBy, DateTimeOffset SignedAt, string ContentHash, string? SignerName = null);
 
 /// <summary>
 /// Version 0 and no sections: nothing saved yet (the default template is offered). <see cref="Signature"/> is set once signed; <see cref="Addenda"/>
-/// are the signed addenda in version order (empty until one is added).
+/// are the signed addenda in version order (empty until one is added). <see cref="SignAsName"/> is the name the current user's signature will show (unsigned notes only).
 /// </summary>
 public sealed record NoteView(
     Guid EncounterId, string TemplateKey, int TemplateVersion, NoteStatus Status, bool Manual, IReadOnlyDictionary<string, string> Sections, int Version, DateTimeOffset? UpdatedAt,
-    NoteSignature? Signature = null, IReadOnlyList<NoteAddendum>? Addenda = null);
+    NoteSignature? Signature = null, IReadOnlyList<NoteAddendum>? Addenda = null, string? SignAsName = null);
 
 /// <summary>An addendum to a signed note: the text and why it is added. Both are required.</summary>
 public sealed record AddNoteAddendum(string? Text, string? Reason);

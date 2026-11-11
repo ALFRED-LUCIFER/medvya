@@ -11,6 +11,8 @@ const doctor = {
     capabilities: { RegisterBookPatients: 'Full', CheckInQueue: 'Full', Patient360Chart: 'Full', ClinicalNotes: 'Sign' } },
 };
 const at = '2026-10-19T04:35:00Z';
+// One name per signature: the doctor profile's (the licence-bearing one), never the account's display name above (u-rao is signed in as Dr. Arjun Rao).
+const signer = 'Dr Asha Raman (synthetic)';
 
 async function open(page: Page, seed: Parameters<typeof mockNote>[1] = {}, locale = 'en', context: typeof doctor = doctor) {
   await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
@@ -129,9 +131,9 @@ test('sign: confirms what signing means, saves first, then shows the signed note
   await dialog.getByRole('button', { name: 'Keep editing' }).click();
   expect(mock.signs).toEqual([]);
   await note(page).getByRole('button', { name: 'Sign note' }).click();
-  await page.getByRole('dialog').getByRole('button', { name: 'Sign as Dr. Arjun Rao (synthetic)' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Sign as Dr Asha Raman (synthetic)' }).click();
   await expect(note(page)).toContainText('SIGNED v1 · read-only');
-  await expect(note(page)).toContainText(/Signed by Dr\. Arjun Rao \(synthetic\), licence .*Tamil Nadu Medical Council 84213.*, on 19 Oct 2026 at 10:10 · version 1/); // the licence the owner attested
+  await expect(note(page)).toContainText(/Signed by Dr Asha Raman \(synthetic\), licence .*Tamil Nadu Medical Council 84213.*, on 19 Oct 2026 at 10:10 · version 1/); // the licence the owner attested
   expect(mock.puts.at(-1)).toMatchObject({ baseVersion: 2, sections: { plan: 'Rest and fluids' } });
   expect(mock.signs).toEqual([{ baseVersion: 3 }]);
   await expect(note(page).getByLabel('Plan')).toHaveJSProperty('readOnly', true);
@@ -152,7 +154,7 @@ test('sign: blank required sections are named in words and the first one is focu
   await note(page).getByLabel('Plan').fill('Rest');
   mock.signNext = 'blank';
   await note(page).getByRole('button', { name: 'Sign note' }).click();
-  await page.getByRole('dialog').getByRole('button', { name: 'Sign as Dr. Arjun Rao (synthetic)' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Sign as Dr Asha Raman (synthetic)' }).click();
   await expect(note(page).getByRole('alert')).toHaveText('These required sections are empty: Chief complaint, Plan. Fill them in, then sign.');
   await expect(note(page).getByLabel('Chief complaint')).toBeFocused();
 });
@@ -161,7 +163,7 @@ test('sign: reauth_required sends the doctor to confirm identity, the draft surv
   const mock = await open(page, { version: 1, sections: { chiefComplaint: 'Thirst', assessment: 'Review', plan: 'Rest' } });
   await note(page).getByLabel('Plan').fill('Rest and fluids (unsaved when Sign was pressed)');
   await note(page).getByRole('button', { name: 'Sign note' }).click();
-  await page.getByRole('dialog').getByRole('button', { name: 'Sign as Dr. Arjun Rao (synthetic)' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Sign as Dr Asha Raman (synthetic)' }).click();
   await expect(page.getByText('Confirm your identity', { exact: true })).toBeVisible(); // the provider's stub page
   expect(mock.reauths).toEqual([{ returnUrl: '/consult/e-1' }]); // the opaque consult path only
   expect(mock.signs).toHaveLength(1);
@@ -169,7 +171,7 @@ test('sign: reauth_required sends the doctor to confirm identity, the draft surv
   await page.goto('/consult/e-1'); // the provider returns here
   await expect(note(page).getByLabel('Plan')).toHaveValue('Rest and fluids (unsaved when Sign was pressed)'); // reloaded from the server
   await note(page).getByRole('button', { name: 'Sign note' }).click();
-  await page.getByRole('dialog').getByRole('button', { name: 'Sign as Dr. Arjun Rao (synthetic)' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Sign as Dr Asha Raman (synthetic)' }).click();
   await expect(note(page)).toContainText('version 1');
   expect(mock.signs).toHaveLength(2);
   expect(await page.evaluate(() => JSON.stringify([localStorage, sessionStorage]))).not.toContain('Rest and fluids');
@@ -182,7 +184,7 @@ test('sign: a stale note keeps the doctor\'s text and uses the editor\'s reload 
   await expect(note(page).getByLabel('Plan')).toHaveValue('Rest');
   mock.note = { ...mock.note, version: 2, sections: { ...mock.note.sections, plan: 'Their plan' } }; // another device saved meanwhile
   await note(page).getByRole('button', { name: 'Sign note' }).click();
-  await page.getByRole('dialog').getByRole('button', { name: 'Sign as Dr. Arjun Rao (synthetic)' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Sign as Dr Asha Raman (synthetic)' }).click();
   await expect(note(page).getByRole('alert')).toContainText('changed elsewhere');
   await expect(note(page).getByLabel('Plan')).toHaveValue('Rest');
   await note(page).getByRole('button', { name: 'Reload and reapply my changes' }).click();
@@ -196,7 +198,7 @@ test('sign: a refusal is said in words and the note stays a draft', async ({ pag
   mock.reauthed = true;
   mock.signNext = 'denied';
   await note(page).getByRole('button', { name: 'Sign note' }).click();
-  await page.getByRole('dialog').getByRole('button', { name: 'Sign as Dr. Arjun Rao (synthetic)' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Sign as Dr Asha Raman (synthetic)' }).click();
   await expect(note(page).getByRole('alert')).toContainText('You cannot sign this note.');
   await expect(note(page).getByLabel('Plan')).toBeEditable();
 });
@@ -212,14 +214,14 @@ test('a signed note shows its signature and no way to edit or sign again', async
 // MDV-P2-013: addenda, version history and the print view. The server rules (v1 never altered, reason and step-up, PDF with identifiers on every
 // page, stored with its hash) are SignNoteTests on PostgreSQL; here the screen shows them and sends the right calls.
 const signedSeed = { version: 3, status: 'Signed', sections: { chiefComplaint: 'Thirst', assessment: 'Review', plan: 'Metformin 500 mg' },
-  signature: { versionNo: 1, signedBy: 'u-rao', signedAt: at, contentHash: 'b'.repeat(64) } };
+  signature: { versionNo: 1, signedBy: 'u-rao', signedAt: at, contentHash: 'b'.repeat(64), signerName: signer } };
 const history = (page: Page) => page.getByRole('region', { name: 'Version history' });
 
 test('addendum: a reason is required, it is signed as version 2, and the original stays as it was', async ({ page }) => {
   const mock = await open(page, signedSeed);
   mock.reauthed = true;
   await expect(history(page)).toContainText('Original note');
-  await expect(history(page)).toContainText('Version 1 · signed by Dr. Arjun Rao (synthetic) on 19 Oct 2026 at 10:05');
+  await expect(history(page)).toContainText('Version 1 · signed by Dr Asha Raman (synthetic) on 19 Oct 2026 at 10:05');
   await expect(history(page)).toContainText('Corrections are added as signed addenda.');
   await history(page).getByRole('button', { name: 'Add addendum' }).click();
   await history(page).getByLabel('Addendum', { exact: true }).fill('Synthetic: metformin dose is 1000 mg, not 500 mg');
@@ -229,7 +231,7 @@ test('addendum: a reason is required, it is signed as version 2, and the origina
   await history(page).getByLabel('Reason for the addendum').fill('Dose typed wrongly');
   await history(page).getByRole('button', { name: 'Sign addendum' }).click();
   await expect(history(page)).toContainText('Addendum to version 1');
-  await expect(history(page)).toContainText('Version 2 · signed by Dr. Arjun Rao (synthetic) on 19 Oct 2026 at 10:30');
+  await expect(history(page)).toContainText('Version 2 · signed by Dr Asha Raman (synthetic) on 19 Oct 2026 at 10:30');
   await expect(history(page)).toContainText('Reason: Dose typed wrongly');
   await expect(history(page).getByLabel('Addendum', { exact: true })).toHaveCount(0); // the composer closes
   expect(mock.addendumPosts).toEqual([{ text: 'Synthetic: metformin dose is 1000 mg, not 500 mg', reason: 'Dose typed wrongly' }]);
@@ -260,7 +262,7 @@ test('a role without Sign sees the history and the print view, but no addendum',
   await expect(history(page).getByRole('link', { name: 'Print view and PDF' })).toBeVisible();
 });
 
-const withAddendum = { ...signedSeed, addenda: [{ versionNo: 2, amendsVersionNo: 1, reason: 'Dose typed wrongly', text: 'Synthetic: metformin 1000 mg', signedBy: 'u-rao', signedAt: at, contentHash: 'c'.repeat(64) }] };
+const withAddendum = { ...signedSeed, addenda: [{ versionNo: 2, amendsVersionNo: 1, reason: 'Dose typed wrongly', text: 'Synthetic: metformin 1000 mg', signedBy: 'u-rao', signedAt: at, contentHash: 'c'.repeat(64), signerName: signer }] };
 
 test('print view: the original then each addendum in order, with identifiers; the PDF is the server\'s', async ({ page }) => {
   const mock = await open(page, withAddendum);
@@ -272,6 +274,9 @@ test('print view: the original then each addendum in order, with identifiers; th
   await expect(article).toContainText('12 Mar 1972');
   await expect(article.getByRole('heading', { level: 2 })).toHaveText(['Chief complaint', 'Assessment', 'Plan', 'Version history']);
   await expect(article.getByRole('listitem')).toHaveCount(2);
+  await expect(article.getByRole('listitem').first()).toContainText(`signed by ${signer}`); // the same name as the banner and the sign button, not the account's
+  await expect(article.getByRole('listitem').last()).toContainText(`signed by ${signer}`);
+  await expect(article).not.toContainText('Arjun');
   await expect(article.getByRole('listitem').last()).toContainText('Addendum to version 1');
   await expect(article).toContainText('Corrections are added as signed addenda.');
   const download = page.waitForEvent('download');
@@ -477,7 +482,7 @@ test('keyboard only: write, add a phrase, switch template, and sign, with a visi
   await expect(sign).toBeFocused();
   expect(mock.signs).toEqual([]);
   await page.keyboard.press('Enter');
-  await tabTo(page, dialog.getByRole('button', { name: 'Sign as Dr. Arjun Rao (synthetic)' }));
+  await tabTo(page, dialog.getByRole('button', { name: 'Sign as Dr Asha Raman (synthetic)' }));
   await page.keyboard.press('Enter');
   await expect(region).toContainText('SIGNED v1 · read-only');
   expect(mock.signs).toHaveLength(1);
@@ -493,7 +498,7 @@ test('200% zoom: the note, the sign dialog and its buttons stay readable and rea
   await sign.scrollIntoViewIfNeeded();
   await sign.click();
   const dialog = page.getByRole('dialog');
-  const confirm = dialog.getByRole('button', { name: 'Sign as Dr. Arjun Rao (synthetic)' });
+  const confirm = dialog.getByRole('button', { name: 'Sign as Dr Asha Raman (synthetic)' });
   await confirm.scrollIntoViewIfNeeded(); // a tall dialog scrolls inside the viewport; nothing is cut off
   const box = (await dialog.boundingBox())!;
   expect(box.x).toBeGreaterThanOrEqual(0);
@@ -537,7 +542,7 @@ test('keyboard: the sign dialog opens with focus on the dialog, not on a button,
   await expect(dialog).toBeVisible();
   expect(mock.signs).toEqual([]);
   await page.keyboard.press('Tab');
-  await expect(dialog.getByRole('button', { name: 'Sign as Dr. Arjun Rao (synthetic)' })).toBeFocused();
+  await expect(dialog.getByRole('button', { name: 'Sign as Dr Asha Raman (synthetic)' })).toBeFocused();
 });
 
 test('keyboard: focus lands on the SIGNED banner after signing, then the addendum field, the new version, and back to the button on cancel', async ({ page }) => {

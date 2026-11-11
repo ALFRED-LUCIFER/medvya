@@ -170,10 +170,10 @@ export default function App({ locale, onLocaleChange }: Props) {
           {nursePath && <Route path={`${nursePath}/:appointmentId`} element={<NurseIntakeRoute online={online} nursePath={nursePath} />} />}
           {/* A consultation (MDV-P2-001) for any role that treats patients; the server checks the care relationship on every call. */}
           {['Read', 'Limited', 'Full', 'Sign'].includes(active.capabilities.Patient360Chart ?? 'None') &&
-            <Route path="/consult/:encounterId" element={<ConsultRoute boardPath={pathOf('frontDesk') ?? '/'} canOrder={active.capabilities.PrescriptionsOrders === 'Sign'} canReconcile={active.capabilities.Patient360Chart === 'Full'} canSign={active.capabilities.ClinicalNotes === 'Sign'} userId={shell.session?.user.id ?? ''} userName={shell.session?.user.displayName ?? ''} />} />}
+            <Route path="/consult/:encounterId" element={<ConsultRoute boardPath={pathOf('frontDesk') ?? '/'} canOrder={active.capabilities.PrescriptionsOrders === 'Sign'} canReconcile={active.capabilities.Patient360Chart === 'Full'} canSign={active.capabilities.ClinicalNotes === 'Sign'} />} />}
           {/* The signed note's print view and PDF (MDV-P2-013): the note's readers (Patient 360 at Full); the server decides for this patient. */}
           {active.capabilities.Patient360Chart === 'Full' &&
-            <Route path="/consult/:encounterId/note/print" element={<NotePrintRoute userId={shell.session?.user.id ?? ''} userName={shell.session?.user.displayName ?? ''} />} />}
+            <Route path="/consult/:encounterId/note/print" element={<NotePrintRoute />} />}
           {/* The investigation slip (MDV-P2-018) and the printed prescription (MDV-P2-017): same roles; the server lets only an ordering doctor read them. */}
           {active.capabilities.PrescriptionsOrders === 'Sign' && <>
             <Route path="/consult/:encounterId/slip" element={<SlipRoute />} />

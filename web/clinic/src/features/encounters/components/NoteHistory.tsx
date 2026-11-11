@@ -10,7 +10,7 @@ type Props = {
   canAdd: boolean; composing: boolean; problem: AddendumFailure | null; submitting: boolean; invalid: boolean;
   register: UseFormRegister<AddendumForm>;
   onCompose: () => void; onCancel: () => void; onSubmit: () => void; onConfirmIdentity: () => void;
-  userId: string; userName: string; timeZone: string | undefined; printPath: string;
+  timeZone: string | undefined; printPath: string;
 };
 
 /** E-06: a signed note's version history, the addendum composer (a new signed version, never an edit) and the way to print. Nothing before signing. */
@@ -32,7 +32,7 @@ export default function NoteHistory(p: Props) {
   return (
     <section aria-labelledby="note-history" className="flex flex-col gap-4 rounded-xl border bg-card p-4">
       <h2 id="note-history" className="text-lg font-extrabold">{t('noteHistory.title')}</h2>
-      <Versions lastRef={lastRef} signature={p.signature} addenda={p.addenda} userId={p.userId} userName={p.userName} timeZone={p.timeZone} />
+      <Versions lastRef={lastRef} signature={p.signature} addenda={p.addenda} timeZone={p.timeZone} />
       <p className="text-sm text-muted-foreground">{t('notePrint.corrections')}</p>
       <div className="flex flex-wrap gap-3">
         {p.canAdd && !p.composing && <Button ref={addRef} className="min-h-11" onClick={p.onCompose}>{t('noteAddendum.add')}</Button>}
@@ -67,20 +67,20 @@ export default function NoteHistory(p: Props) {
 }
 
 /** Version 1 and every addendum in order, each with its signer and time; an addendum also shows why it was added and its text. */
-export function Versions({ lastRef, signature, addenda, userId, userName, timeZone }: { lastRef?: Ref<HTMLLIElement>; signature: NoteSignature; addenda: NoteAddendum[]; userId: string; userName: string; timeZone: string | undefined }) {
+export function Versions({ lastRef, signature, addenda, timeZone }: { lastRef?: Ref<HTMLLIElement>; signature: NoteSignature; addenda: NoteAddendum[]; timeZone: string | undefined }) {
   const { t, formatDate, formatTime } = useI18n();
-  const signedLine = (version: number, by: string, at: string) => t(by === userId ? 'noteHistory.signed' : 'noteHistory.signedOther',
-    { version: String(version), name: userName, date: formatDate(new Date(at), timeZone), time: formatTime(new Date(at), timeZone) });
+  const signedLine = (version: number, name: string | null | undefined, at: string) => t(name ? 'noteHistory.signed' : 'noteHistory.signedOther',
+    { version: String(version), name: name ?? '', date: formatDate(new Date(at), timeZone), time: formatTime(new Date(at), timeZone) });
   return (
     <ol className="flex flex-col gap-3">
       <li className="flex flex-col gap-0.5">
         <span className="font-bold">{t('noteHistory.original')}</span>
-        <span>{signedLine(signature.versionNo, signature.signedBy, signature.signedAt)}</span>
+        <span>{signedLine(signature.versionNo, signature.signerName, signature.signedAt)}</span>
       </li>
       {addenda.map((a, i) => (
         <li key={a.versionNo} ref={i === addenda.length - 1 ? lastRef : undefined} tabIndex={-1} className="focus:outline-none flex flex-col gap-0.5 border-s-4 border-brand-700 ps-3">
           <span className="font-bold">{t('noteHistory.addendum', { amends: String(a.amendsVersionNo) })}</span>
-          <span>{signedLine(a.versionNo, a.signedBy, a.signedAt)}</span>
+          <span>{signedLine(a.versionNo, a.signerName, a.signedAt)}</span>
           <span>{t('noteHistory.reason', { reason: a.reason })}</span>
           <p className="whitespace-pre-wrap">{a.text}</p>
         </li>

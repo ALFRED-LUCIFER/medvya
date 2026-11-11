@@ -9,7 +9,7 @@ import { Versions } from './NoteHistory';
 type Props = {
   banner: EncounterBanner | null; note: NoteView | null; template: NoteTemplate | null; loading: boolean; failed: boolean;
   downloading: boolean; pdfProblem: 'unsupported' | 'failed' | null; onPrint: () => void; onPdf: () => void;
-  consultPath: string; userId: string; userName: string;
+  consultPath: string;
 };
 
 /**
@@ -46,7 +46,7 @@ export default function NotePrintPage(p: Props) {
         ))}
         <section aria-labelledby="print-versions">
           <h2 id="print-versions" className="mb-1 font-extrabold">{t('noteHistory.title')}</h2>
-          <Versions signature={p.note.signature} addenda={note.addenda ?? []} userId={p.userId} userName={p.userName} timeZone={banner.timeZone} />
+          <Versions signature={p.note.signature} addenda={note.addenda ?? []} timeZone={banner.timeZone} />
         </section>
         <p className="border-t border-black pt-2 text-sm font-bold">{t('notePrint.corrections')}</p>
       </article>

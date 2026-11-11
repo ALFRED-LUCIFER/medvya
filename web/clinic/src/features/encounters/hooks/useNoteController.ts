@@ -131,6 +131,7 @@ export function useNoteController(encounterId: string, canSign: boolean, timeZon
     form, assist,
     canSign: canSign && !!note.data && note.data.status === 'Draft',
     signature: note.data?.signature ?? null,
+    signAsName: note.data?.signAsName ?? null,
     confirming, signing, signProblem,
     onRequestSign: requestSign,
     onCancelSign: () => setConfirming(false),

@@ -52,7 +52,7 @@ public sealed class PatientRegistrationFlowTests(PostgresFixture sql) : IClassFi
     static readonly string[] RecordFields =
     [
         "id", "mrn", "fullName", "arabicName", "dateOfBirth", "dateOfBirthEstimated", "ageYears", "sexAtBirth", "genderIdentity", "preferredLanguage",
-        "nationality", "mobile", "alternatePhone", "email", "address", "status", "registeredOn", "identifiers", "payer", "emergencyContact", "guardian",
+        "nationality", "mobile", "alternatePhone", "email", "address", "status", "registeredOn", "identifiers", "payer", "emergencyContact", "guardian", "version",
     ];
 
     [Fact]

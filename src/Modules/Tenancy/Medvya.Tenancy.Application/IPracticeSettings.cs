@@ -2,8 +2,8 @@ using Medvya.Tenancy.Domain;
 
 namespace Medvya.Tenancy.Application;
 
-/// <summary>The clinic profile. Name is the tenant's name; HasLogo says whether a logo link can be requested.</summary>
-public sealed record ProfileView(string Name, string? Address, string? RegistrationNumber, string? TaxNumber, string? Phone, string? Email, bool HasLogo, DateOnly? RegistrationExpiresOn = null);
+/// <summary>The clinic profile. Name is the tenant's name; HasLogo says whether a logo link can be requested. Version is the profile row's version (0 before it exists): a save sends it back and is refused as stale if the row changed since (#889).</summary>
+public sealed record ProfileView(string Name, string? Address, string? RegistrationNumber, string? TaxNumber, string? Phone, string? Email, bool HasLogo, DateOnly? RegistrationExpiresOn = null, uint Version = 0);
 
 public sealed record SaveProfile
 {
@@ -14,6 +14,8 @@ public sealed record SaveProfile
     public string? TaxNumber { get; init; }
     public string? Phone { get; init; }
     public string? Email { get; init; }
+    /// <summary>The version the screen loaded (ProfileView.Version). Null skips the stale check; the API requires it.</summary>
+    public uint? Version { get; init; }
 }
 
 public sealed record LocationView(Guid Id, string Name, string? Address, string TimeZone);

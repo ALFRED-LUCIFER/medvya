@@ -33,6 +33,8 @@ export type PatientDetails = {
   /** Names and numbers to call (MDV-P1-020); never portal users. */
   emergencyContact: ContactView | null;
   guardian: ContactView | null;
+  /** The row version this was read at; a save sends it back and is refused (409 "changed") if the record moved on (#889). */
+  version: number;
 };
 
 export type Relationship = 'Spouse' | 'Parent' | 'Child' | 'Sibling' | 'Friend' | 'Sponsor' | 'Other';

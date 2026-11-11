@@ -11,7 +11,7 @@ import { fetchLogoLink, fetchProfile, removeLogo, saveProfile, uploadLogo } from
 export function useProfileController() {
   const queryClient = useQueryClient();
   const profile = useQuery({ queryKey: ['settings', 'profile'], queryFn: fetchProfile });
-  const form = useForm<ProfileForm>({ resolver: zodResolver(profileSchema), defaultValues: toProfileForm({ name: '', address: null, registrationNumber: null, taxNumber: null, phone: null, email: null, hasLogo: false }) });
+  const form = useForm<ProfileForm>({ resolver: zodResolver(profileSchema), defaultValues: toProfileForm({ name: '', address: null, registrationNumber: null, taxNumber: null, phone: null, email: null, hasLogo: false, version: 0 }) });
   const loaded = useRef<unknown>(null);
   useEffect(() => {
     if (profile.data && loaded.current !== profile.data) {
@@ -21,7 +21,7 @@ export function useProfileController() {
   }, [profile.data, form]);
 
   const save = useMutation({
-    mutationFn: saveProfile,
+    mutationFn: (values: ProfileForm) => saveProfile(values, profile.data?.version ?? 0),
     onSuccess: data => { queryClient.setQueryData(['settings', 'profile'], data); },
   });
   // The signed link expires in minutes; ask again whenever the logo changes or the screen is reopened.
@@ -32,6 +32,7 @@ export function useProfileController() {
   const upload = useMutation({ mutationFn: uploadLogo, onSuccess: afterLogoChange });
   const remove = useMutation({ mutationFn: removeLogo, onSuccess: afterLogoChange });
 
+  const changed = save.error instanceof ApiError && save.error.status === 409 && save.error.code === 'changed';
   const rejected = upload.error instanceof ApiError ? settingsError(upload.error.code) : null;
   const logoError: 'type' | 'size' | 'failed' | null = pickProblem
     ?? (rejected === 'logo:type' ? 'type' : rejected === 'logo:too_large' ? 'size' : upload.isError || remove.isError ? 'failed' : null);
@@ -43,7 +44,10 @@ export function useProfileController() {
     loadFailed: profile.isError,
     saving: save.isPending,
     saved: save.isSuccess && !form.formState.isDirty,
-    saveFailed: save.isError,
+    // #889: another administrator saved first; nothing was saved, and reloading shows what they saved.
+    changed,
+    saveFailed: save.isError && !changed,
+    onReload: () => { save.reset(); void profile.refetch(); },
     // #886: a web address in the practice name is refused (the name goes into invitation emails).
     nameHasLink: save.error instanceof ApiError && settingsError(save.error.code) === 'name:link',
     onSubmit: form.handleSubmit(values => save.mutate(values)),

@@ -311,11 +311,13 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
     static string Tail(string value) => value.Length <= 4 ? value : value[^4..];
 
     public async Task<RegistrationStatus?> CompleteRegistrationAsync(Guid patientId, PatientAddress? address, PayerInput? payer, ContactInput? emergencyContact = null,
-        CancellationToken cancellationToken = default)
+        uint? expectedVersion = null, CancellationToken cancellationToken = default)
     {
         var tenantId = TenantId();
         var patient = await db.Patients.SingleOrDefaultAsync(p => p.Id == patientId, cancellationToken);
         if (patient is null) return null;
+        // The save is refused (DbUpdateConcurrencyException) if the row moved on since the caller read it at this version (#889).
+        if (expectedVersion is { } seen) db.Entry(patient).Property<uint>("xmin").OriginalValue = seen;
         if (address is null && payer is null && emergencyContact is null) throw new PatientValidationException([new("completion", "required")]);
         var (validAddress, validPayer, emergency) = CountryRules.For(patient.CountryCode).ValidateCompletion(address, payer, emergencyContact);
         (address, payer) = (validAddress, validPayer);
@@ -377,12 +379,13 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
 
     async Task<PatientRecord?> LoadAsync(Guid patientId, CancellationToken cancellationToken)
     {
-        var patient = await OrgPatients().SingleOrDefaultAsync(p => p.Id == patientId, cancellationToken);
-        if (patient is null) return null;
+        var row = await OrgPatients().Where(p => p.Id == patientId).Select(p => new { Patient = p, Version = EF.Property<uint>(p, "xmin") }).SingleOrDefaultAsync(cancellationToken);
+        if (row is null) return null;
+        var patient = row.Patient;
         var identifiers = await db.Identifiers.AsNoTracking().Where(i => i.PatientId == patientId).ToListAsync(cancellationToken);
         var payer = await db.PayerCoverages.AsNoTracking().SingleOrDefaultAsync(p => p.PatientId == patientId, cancellationToken);
         var relationships = await db.Relationships.AsNoTracking().Where(r => r.PatientId == patientId).OrderBy(r => r.IsGuardian).ToListAsync(cancellationToken);
-        return new(patient, identifiers, payer, relationships);
+        return new(patient, identifiers, payer, relationships, row.Version);
     }
 
     /// <summary>Next MRN of the organisation, allocated inside the caller's transaction (the upsert's row lock serialises concurrent desks at every location).</summary>

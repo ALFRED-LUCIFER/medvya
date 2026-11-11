@@ -66,7 +66,8 @@ public sealed record DuplicateResolution(DuplicateDecision Decision, IReadOnlyLi
 /// <summary>What the success screen shows: MRN, time and actor. Warnings are codes (e.g. "emirates_id.expired") that never block.</summary>
 public sealed record RegistrationResult(Guid PatientId, string Mrn, DateTimeOffset RegisteredAt, Guid? RegisteredBy, RegistrationStatus Status, IReadOnlyList<string> Warnings);
 
-public sealed record PatientRecord(Patient Patient, IReadOnlyList<PatientIdentifier> Identifiers, PayerCoverage? Payer, IReadOnlyList<PatientRelationship> Relationships);
+/// <param name="Version">The row version (PostgreSQL xmin) the record was read at; a write sends it back and is refused as stale if the row changed since (#889).</param>
+public sealed record PatientRecord(Patient Patient, IReadOnlyList<PatientIdentifier> Identifiers, PayerCoverage? Payer, IReadOnlyList<PatientRelationship> Relationships, uint Version);
 
 /// <summary>Medical record numbers: one sequence per organisation (all its locations), zero-padded.</summary>
 /// <remarks>shortcut: plain zero-padded number; add a location prefix (e.g. DQ-11-) only if a pilot asks to see where an MRN was issued.</remarks>
@@ -144,5 +145,5 @@ public interface IPatientRegistry
     /// patient): nothing is changed or audited, and the endpoint answers 404.
     /// </summary>
     /// <exception cref="PatientValidationException">Nothing given ("completion"/"required"), or a part is invalid.</exception>
-    Task<RegistrationStatus?> CompleteRegistrationAsync(Guid patientId, PatientAddress? address, PayerInput? payer, ContactInput? emergencyContact = null, CancellationToken cancellationToken = default);
+    Task<RegistrationStatus?> CompleteRegistrationAsync(Guid patientId, PatientAddress? address, PayerInput? payer, ContactInput? emergencyContact = null, uint? expectedVersion = null, CancellationToken cancellationToken = default);
 }

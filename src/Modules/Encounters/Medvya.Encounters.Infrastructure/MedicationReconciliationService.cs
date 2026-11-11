@@ -186,8 +186,10 @@ public sealed class PrescribingChart(EncountersDbContext db) : IPrescribingChart
         // A flagged reading the nurse has not kept may be a typing slip: a dose is never worked out from it.
         var weight = await db.Observations.AsNoTracking().Where(o => o.PatientId == patientId && o.Code == ObservationCode.Weight && (o.Flag == null || o.FlagKept))
             .OrderByDescending(o => o.TakenAt).ThenByDescending(o => o.Id).Select(o => new ChartReading(o.ValueHundredths, o.TakenAt)).FirstOrDefaultAsync(cancellationToken);
+        var egfr = await db.Observations.AsNoTracking().Where(o => o.PatientId == patientId && o.Code == ObservationCode.Egfr)
+            .OrderByDescending(o => o.TakenAt).ThenByDescending(o => o.Id).Select(o => new ChartReading(o.ValueHundredths, o.TakenAt)).FirstOrDefaultAsync(cancellationToken);
         // The banner's rule decides the state, so the checks never read "not recorded" differently from the chart.
         return new(ChartReads.BannerOf(allergies).State,
-            [.. allergies.Where(a => a.Kind == AllergyKind.Substance && a.Status != AllergyStatus.NotAnAllergy).Select(a => new ChartAllergy(a.Id, a.Substance!, a.Status))], medicines, weight);
+            [.. allergies.Where(a => a.Kind == AllergyKind.Substance && a.Status != AllergyStatus.NotAnAllergy).Select(a => new ChartAllergy(a.Id, a.Substance!, a.Status))], medicines, weight, egfr);
     }
 }

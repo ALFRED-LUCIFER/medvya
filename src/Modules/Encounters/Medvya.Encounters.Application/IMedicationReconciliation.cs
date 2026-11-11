@@ -67,9 +67,9 @@ public sealed record ChartReading(int ValueHundredths, DateTimeOffset TakenAt);
 
 /// <summary>
 /// What a prescription is checked against: the allergy state (three different things, never merged), the listed allergies, the active medicines
-/// and the latest weight (null: none on the chart; the checks decide whether it is recent enough).
+/// and the latest weight and eGFR (null: none on the chart; the checks decide whether a weight is recent enough).
 /// </summary>
-public sealed record PrescribingFacts(AllergyState AllergyState, IReadOnlyList<ChartAllergy> Allergies, IReadOnlyList<ChartMedicine> ActiveMedicines, ChartReading? Weight);
+public sealed record PrescribingFacts(AllergyState AllergyState, IReadOnlyList<ChartAllergy> Allergies, IReadOnlyList<ChartMedicine> ActiveMedicines, ChartReading? Weight, ChartReading? Egfr);
 
 /// <summary>
 /// The chart facts for the prescription safety checks (MDV-P2-016, MDV-P2-040). No access check and no audit event here: the caller has already checked

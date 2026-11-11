@@ -487,9 +487,11 @@ public sealed class PrescriptionService(
         };
         var patient = (await patients.SummariesAsync([encounter.PatientId], cancellationToken)).GetValueOrDefault(encounter.PatientId) ?? throw new InvalidOperationException("Patient not in this tenant.");
         var now = clock.GetUtcNow();
-        // shortcut: no eGFR (the chart has no code for it until MDV-P2-031) and no pregnancy (MDV-P2-034); both are reported as not checked until fed.
+        // eGFR in whole units, rounded down so a reading just under a threshold counts as under it.
+        // shortcut: the latest eGFR at any age, and no pregnancy until MDV-P2-034 feeds it (reported as not checked until then); an eGFR age limit
+        // when the clinical reviewer sets one (MDV-P2-028).
         var context = new PatientContext(CountryRules.AgeOn(CountryRules.For(await staff.TenantCountryAsync(cancellationToken) ?? throw new InvalidOperationException("No tenant country.")).Today(now), patient.DateOfBirth),
-            patient.SexAtBirth == Medvya.Patients.Domain.SexAtBirth.Female, facts.Weight is { } w && w.TakenAt >= now.AddMonths(-1) ? w.ValueHundredths : null, null, null);
+            patient.SexAtBirth == Medvya.Patients.Domain.SexAtBirth.Female, facts.Weight is { } w && w.TakenAt >= now.AddMonths(-1) ? w.ValueHundredths : null, facts.Egfr?.ValueHundredths / 100, null);
         var result = SafetyRules.Evaluate(lines, onChart, state, [.. facts.Allergies.Select(a => new CheckedAllergy(a.Id, a.Substance, a.Status.ToString()))], context);
 
         var keys = result.Alerts.Select(a => a.Key).ToList();

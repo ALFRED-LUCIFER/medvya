@@ -21,14 +21,24 @@ export type TrendPoint = { value: number; takenAt: string; source: ChartSource }
 export type Trend = { code: ObservationCode; unit: string; points: TrendPoint[] };
 export type RecentEncounter = { id: string; startedAt: string; status: 'Active' | 'Ended' };
 
+/** The life stage the server works out from the date of birth (MDV-P2-032); shown with an icon and words. */
+export type LifeStage = 'Adult' | 'Child' | 'Pregnancy' | 'OlderAdult';
+export type HistorySection = 'PastMedical' | 'Surgical' | 'Family' | 'Social' | 'WomensHealth' | 'Obstetric' | 'Birth' | 'Feeding' | 'Function' | 'Falls' | 'BloodGroup';
+/** One saved version of a history section; lists are newest first. */
+export type HistoryEntry = { section: HistorySection; text: string; author: string | null; recordedAt: string };
+
 export type Patient360 = {
-  patient: { id: string; fullName: string; mrn: string; dateOfBirth: string; ageYears: number; sexAtBirth: SexAtBirth };
+  patient: { id: string; fullName: string; mrn: string; dateOfBirth: string; ageYears: number; sexAtBirth: SexAtBirth; preferredLanguage: string | null };
+  lifeStage: LifeStage;
+  /** The sections the chart offers at this life stage, in order (the server decides). */
+  historySections: HistorySection[];
   treatmentConsent: boolean;
   /** The session facility's IANA zone: times show in it, whatever the device's zone. */
   timeZone: string;
   chart: {
     allergyState: AllergyState; allergies: Allergy[]; problems: Problem[]; medicines: Medicine[]; lastVitals: Vital[]; trends: Trend[];
     recentEncounters: RecentEncounter[]; openEncounterId: string | null; lastLabs: Vital[]; bmi: Bmi | null;
+    history: HistoryEntry[]; bloodGroup: string | null; careTeam: string[];
   };
 };
 

@@ -130,11 +130,11 @@ journey('J2', {
   2: async ({ page }) => {
     await page.route('**/v1/me/context', r => r.fulfill({ json: doctor }));
     await page.route('**/v1/patients/p-meera/chart', r => r.fulfill({ json: {
-      patient: { id: 'p-meera', fullName: 'Meera Iyer', mrn: '000001', dateOfBirth: '1972-03-14', ageYears: 54, sexAtBirth: 'Female' }, treatmentConsent: true, timeZone: 'Asia/Kolkata',
+      patient: { id: 'p-meera', fullName: 'Meera Iyer', mrn: '000001', dateOfBirth: '1972-03-14', ageYears: 54, sexAtBirth: 'Female', preferredLanguage: null }, treatmentConsent: true, timeZone: 'Asia/Kolkata', lifeStage: 'Adult', historySections: ['PastMedical', 'Surgical', 'Family', 'Social', 'WomensHealth'], 
       chart: { allergyState: 'Listed', allergies: [{ substance: 'Penicillin', reaction: null, status: 'Confirmed', source: 'ClinicianVerified' }],
         problems: [{ icd10Code: 'E11.9', description: 'Type 2 diabetes mellitus', verification: 'Verified', onsetOn: null, source: 'ClinicianVerified' }],
         medicines: [{ name: 'Metformin', dose: '500 mg', state: 'Active', source: 'Imported' }], lastVitals: [],
-        trends: [{ code: 'HbA1c', unit: '%', points: [{ value: 7.4, takenAt: at, source: 'SyncedFromHis' }] }], recentEncounters: [], openEncounterId: null, lastLabs: [], bmi: null } } }));
+        trends: [{ code: 'HbA1c', unit: '%', points: [{ value: 7.4, takenAt: at, source: 'SyncedFromHis' }] }], recentEncounters: [], openEncounterId: null, lastLabs: [], bmi: null, history: [], bloodGroup: null, careTeam: [] } } }));
     await page.goto('/patients/p-meera');
     const banner = page.getByRole('region', { name: 'Patient Meera Iyer' });
     await expect(banner).toContainText('Penicillin');

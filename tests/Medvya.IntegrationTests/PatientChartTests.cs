@@ -165,8 +165,8 @@ public sealed class PatientChartTests(PostgresFixture sql) : IClassFixture<Postg
     {
         using var r = await Client(h.Doctor).GetAsync(Chart(h.Patient));
         var body = await Json(r);
-        Assert.Equal(["chart", "patient", "timeZone", "treatmentConsent"], body.EnumerateObject().Select(p => p.Name).Order());
-        Assert.Equal(["ageYears", "dateOfBirth", "fullName", "id", "mrn", "sexAtBirth"], body.GetProperty("patient").EnumerateObject().Select(p => p.Name).Order());
+        Assert.Equal(["chart", "historySections", "lifeStage", "patient", "timeZone", "treatmentConsent"], body.EnumerateObject().Select(p => p.Name).Order());
+        Assert.Equal(["ageYears", "dateOfBirth", "fullName", "id", "mrn", "preferredLanguage", "sexAtBirth"], body.GetProperty("patient").EnumerateObject().Select(p => p.Name).Order());
     }
 
     [Fact]

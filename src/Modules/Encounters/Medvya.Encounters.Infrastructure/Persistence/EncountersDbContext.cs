@@ -24,6 +24,7 @@ public sealed class EncountersDbContext(DbContextOptions<EncountersDbContext> op
     public DbSet<SignedNoteVersion> SignedNoteVersions => Set<SignedNoteVersion>();
     public DbSet<SignedNotePdf> SignedNotePdfs => Set<SignedNotePdf>();
     public DbSet<OutboxEvent> Outbox => Set<OutboxEvent>();
+    public DbSet<HistoryEntry> HistoryEntries => Set<HistoryEntry>();
 
     Guid? CurrentTenantId => tenant.TenantId;
 
@@ -106,6 +107,13 @@ public sealed class EncountersDbContext(DbContextOptions<EncountersDbContext> op
             e.Property(x => x.Flag).HasConversion<string>().HasMaxLength(20);
             e.HasIndex(x => new { x.TenantId, x.PatientId, x.Code, x.TakenAt });
             e.HasIndex(x => new { x.TenantId, x.AppointmentId, x.Code }); // the visit's readings
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<HistoryEntry>(e =>
+        {
+            e.Property(x => x.Section).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.Text).HasMaxLength(HistoryRules.MaxText);
+            e.HasIndex(x => new { x.TenantId, x.PatientId, x.Section, x.RecordedAt }); // append-only: the newest row of a section is current
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         modelBuilder.Entity<Intake>(e =>

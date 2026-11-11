@@ -387,6 +387,53 @@
         }
       }
     },
+    "/v1/patients/{patientId}/history/{section}": {
+      "put": {
+        "tags": [
+          "EncounterEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "patientId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "section",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/HistorySection"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/SaveHistory"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/v1/chart/allergy-flags": {
       "post": {
         "tags": [
@@ -8377,6 +8424,21 @@
           }
         }
       },
+      "HistorySection": {
+        "enum": [
+          "PastMedical",
+          "Surgical",
+          "Family",
+          "Social",
+          "WomensHealth",
+          "Obstetric",
+          "Birth",
+          "Feeding",
+          "Function",
+          "Falls",
+          "BloodGroup"
+        ]
+      },
       "HoldSlot": {
         "type": "object",
         "properties": {
@@ -10147,6 +10209,20 @@
               "string"
             ],
             "format": "int32"
+          }
+        }
+      },
+      "SaveHistory": {
+        "required": [
+          "text"
+        ],
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

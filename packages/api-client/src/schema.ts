@@ -655,6 +655,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/patients/{patientId}/history/{section}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    patientId: string;
+                    section: components["schemas"]["HistorySection"];
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["SaveHistory"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/chart/allergy-flags": {
         parameters: {
             query?: never;
@@ -8201,6 +8241,8 @@ export interface components {
             /** Format: int32 */
             days: number | string;
         };
+        /** @enum {unknown} */
+        HistorySection: "PastMedical" | "Surgical" | "Family" | "Social" | "WomensHealth" | "Obstetric" | "Birth" | "Feeding" | "Function" | "Falls" | "BloodGroup";
         HoldSlot: {
             /** Format: uuid */
             facilityId?: string;
@@ -8615,6 +8657,9 @@ export interface components {
             offered: number | string;
             /** Format: int32 */
             manual: number | string;
+        };
+        SaveHistory: {
+            text: null | string;
         };
         SaveItContact: {
             name: null | string;

@@ -14,7 +14,7 @@ using Microsoft.AspNetCore.Authorization;
 namespace Medvya.Notifications.Api;
 
 /// <summary>
-/// Hangfire on Azure SQL (ADR-001, MDV-P1-032): one recurring job publishes each tenant's outbox and then sends what is due, so a
+/// Hangfire on PostgreSQL (ADR-001, MDV-P1-032): one recurring job publishes each tenant's outbox and then sends what is due, so a
 /// confirmation leaves within about a minute of booking and reminders at their time. No Redis, no Service Bus.
 /// shortcut: the server runs inside Host.Api; move it to the Worker.Jobs host (docs/03-architecture/repository-structure.md) when load or deploys need it.
 /// </summary>

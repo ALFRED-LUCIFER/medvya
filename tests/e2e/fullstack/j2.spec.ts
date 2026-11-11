@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { expect, type Page } from '@playwright/test';
 import { journey } from '../journeys/storyboard';
-import { expectArabicAxeClean, expectNoAxeViolations, signIn, watchUrls } from './support';
+import { choosePatient, expectArabicAxeClean, expectNoAxeViolations, signIn, watchUrls } from './support';
 
 // MDV-P0-023: journey J2 (returning diabetic patient, docs/02-design/journeys.md) through the real stack. Only the start of the visit is built;
 // every later step names the ticket that builds it. Meera Iyer is the seeded synthetic patient (docs/00-overview/personas.md).
@@ -13,12 +13,7 @@ let consultPath = ''; // step 6's consultation, which step 7 shares (the steps r
 async function startVisit(page: Page) {
   await page.goto('/app/schedule');
   await page.getByRole('list', { name: rao }).getByRole('button', { name: /^Book / }).first().click();
-  const panel = page.getByRole('complementary', { name: 'Book appointment' });
-  await panel.getByRole('searchbox', { name: 'Name, MRN, phone or ID' }).fill('Meera');
-  await panel.getByRole('button', { name: 'Search' }).click();
-  await panel.getByRole('button', { name: /^M I, 54 y, Female/ }).click();
-  await panel.getByRole('combobox', { name: 'Reason category' }).click();
-  await page.getByRole('option', { name: 'Long-term condition review' }).click();
+  const panel = await choosePatient(page, 'Meera', /^M I, 54 y, Female/);
   await panel.getByRole('button', { name: 'Confirm booking' }).click();
   await expect(panel).toContainText('Appointment booked');
 

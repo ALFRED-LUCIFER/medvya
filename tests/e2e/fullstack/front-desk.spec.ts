@@ -1,8 +1,8 @@
 import { expect, test, type Page } from '@playwright/test';
-import { expectNoAxeViolations, signIn, watchUrls } from './support';
+import { choosePatient, expectNoAxeViolations, signIn, watchUrls } from './support';
 
 // MDV-P0-029: the front-desk journey of docs/02-design/journeys.md J3 (busy reception) through the real browser, real Host.Api and real
-// SQL Server: sign in -> register -> book -> check in -> board -> cancel. No API is mocked. Synthetic people only.
+// PostgreSQL: sign in -> register -> book -> check in -> board -> cancel. No API is mocked. Synthetic people only.
 const joseph = /A\. Joseph/;
 // A date of birth and mobile of this run only, so a re-run on a kept database is not flagged as a duplicate (synthetic +91 90000 0xxxx range).
 const n = Math.floor(Math.random() * 9000) + 1000;
@@ -55,14 +55,8 @@ test('front desk: register, book, check in, see the board, cancel', async ({ pag
     await expect(rao(page)).toBeVisible();
     await expectNoAxeViolations(page);
     await rao(page).getByRole('button', { name: /^Book / }).first().click();
-    const panel = page.getByRole('complementary', { name: 'Book appointment' });
-    await expect(panel).toContainText('Held for you until');
-    await panel.getByRole('searchbox', { name: 'Name, MRN, phone or ID' }).fill(patient.mobile);
-    await panel.getByRole('button', { name: 'Search' }).click();
-    await panel.getByRole('button', { name: /^K P, \d+ y, Female/ }).click();
+    const panel = await choosePatient(page, patient.mobile, /^K P, \d+ y, Female/);
     await expect(panel).toContainText(`${patient.name} · MRN`);
-    await panel.getByRole('combobox', { name: 'Reason category' }).click();
-    await page.getByRole('option', { name: 'Long-term condition review' }).click();
     const booking = page.waitForRequest(r => r.method() === 'POST' && new URL(r.url()).pathname === '/v1/appointments');
     const booked = page.waitForResponse(r => r.request().method() === 'POST' && new URL(r.url()).pathname === '/v1/appointments');
     await panel.getByRole('button', { name: 'Confirm booking' }).click();
@@ -99,12 +93,7 @@ test('front desk: register, book, check in, see the board, cancel', async ({ pag
     await page.getByRole('link', { name: 'Schedule' }).first().click();
     const slots = rao(page).getByRole('button', { name: /^Book / });
     await slots.first().click();
-    const panel = page.getByRole('complementary', { name: 'Book appointment' });
-    await panel.getByRole('searchbox', { name: 'Name, MRN, phone or ID' }).fill(patient.mobile);
-    await panel.getByRole('button', { name: 'Search' }).click();
-    await panel.getByRole('button', { name: /^K P, \d+ y, Female/ }).click();
-    await panel.getByRole('combobox', { name: 'Reason category' }).click();
-    await page.getByRole('option', { name: 'Long-term condition review' }).click();
+    const panel = await choosePatient(page, patient.mobile, /^K P, \d+ y, Female/);
     await panel.getByRole('button', { name: 'Confirm booking' }).click();
     await expect(panel).toContainText('Appointment booked');
     await panel.getByRole('button', { name: 'Done' }).click();

@@ -76,6 +76,9 @@ public sealed class ConsultNoteService(
 
         var template = note is null ? NoteTemplates.Latest(NoteTemplates.Default) : NoteTemplates.Find(note.TemplateKey, note.TemplateVersion);
         var blanks = template!.Sections.Where(s => s.Required && string.IsNullOrWhiteSpace(note?.Sections.GetValueOrDefault(s.Id))).Select(s => ($"sections.{s.Id}", "required")).ToList();
+        // MDV-P2-044: the checklist's server gates, so the locked Sign button is not the only control. Remove one and SignNoteTests fails.
+        if (note?.RecordingConsent is null) blanks.Add(("recordingConsent", "required"));
+        if (note?.UndecidedAi.Length > 0) blanks.Add(("undecidedAi", "undecided"));
         if (blanks.Count > 0) throw new NoteValidationException(blanks);
 
         var signed = new SignedNoteVersion
@@ -253,6 +256,7 @@ public sealed class ConsultNoteService(
         var input = command.Sections ?? new Dictionary<string, string>();
         var errors = new List<(string, string)>();
         if (template is null) errors.Add(("templateKey", "invalid"));
+        if (command.RecordingConsent is { } consent && !Enum.IsDefined(consent)) errors.Add(("recordingConsent", "invalid"));
         foreach (var (id, text) in input)
         {
             if (template is not null && !template.Sections.Any(s => s.Id == id)) errors.Add(($"sections.{id}", "unknown_section"));
@@ -262,8 +266,8 @@ public sealed class ConsultNoteService(
 
         var sections = input.Where(s => !string.IsNullOrWhiteSpace(s.Value)).ToDictionary(s => s.Key, s => s.Value);
         if (note is null) db.ConsultNotes.Add(note = new() { Id = Guid.CreateVersion7(), TenantId = TenantId, EncounterId = encounterId, Status = NoteStatus.Draft });
-        (note.TemplateKey, note.TemplateVersion, note.Manual, note.Sections, note.Version, note.UpdatedBy, note.UpdatedAt) =
-            (template!.Key, template.Version, command.Manual, sections, command.BaseVersion + 1, me, clock.GetUtcNow());
+        (note.TemplateKey, note.TemplateVersion, note.Manual, note.Sections, note.RecordingConsent, note.Version, note.UpdatedBy, note.UpdatedAt) =
+            (template!.Key, template.Version, command.Manual, sections, command.RecordingConsent, command.BaseVersion + 1, me, clock.GetUtcNow());
         try
         {
             await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
@@ -288,7 +292,7 @@ public sealed class ConsultNoteService(
 
     Guid TenantId => tenant.TenantId ?? throw new InvalidOperationException("No tenant context.");
 
-    static NoteView Empty(Guid encounterId) => new(encounterId, NoteTemplates.Default, NoteTemplates.Latest(NoteTemplates.Default)!.Version, NoteStatus.Draft, false, new Dictionary<string, string>(), 0, null, null, []);
+    static NoteView Empty(Guid encounterId) => new(encounterId, NoteTemplates.Default, NoteTemplates.Latest(NoteTemplates.Default)!.Version, NoteStatus.Draft, false, new Dictionary<string, string>(), 0, null, null, [], null, null, []);
 
     /// <summary>Version 1 is the signature; every later version is an addendum, numbered with the version it follows.</summary>
     static NoteView View(ConsultNote n, IReadOnlyList<SignedNoteVersion>? versions = null, IReadOnlyDictionary<Guid, (string Name, string? Licence)>? signers = null)
@@ -298,6 +302,6 @@ public sealed class ConsultNoteService(
         var signature = all.FirstOrDefault(v => v.VersionNo == 1) is { } first ? new NoteSignature(first.VersionNo, first.SignedBy, first.SignedAt, first.ContentHash, signers![first.SignedBy].Name, signers[first.SignedBy].Licence) : null;
         var addenda = all.Where(v => v.AmendsVersionId is not null)
             .Select(v => new NoteAddendum(v.VersionNo, numbers[v.AmendsVersionId!.Value], v.Reason!, v.Sections[SignedNoteVersion.AddendumSection], v.SignedBy, v.SignedAt, v.ContentHash, signers![v.SignedBy].Name)).ToList();
-        return new(n.EncounterId, n.TemplateKey, n.TemplateVersion, n.Status, n.Manual, n.Sections, n.Version, n.UpdatedAt, signature, addenda);
+        return new(n.EncounterId, n.TemplateKey, n.TemplateVersion, n.Status, n.Manual, n.Sections, n.Version, n.UpdatedAt, signature, addenda, null, n.RecordingConsent, n.UndecidedAi);
     }
 }

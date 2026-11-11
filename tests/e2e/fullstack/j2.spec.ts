@@ -90,7 +90,11 @@ journey('J2', {
     // immutable v1 and its signer line with the attested licence number are the server's.
     await note.getByLabel('Assessment').fill('Raised blood sugar, review (synthetic)');
     await note.getByLabel('Plan').fill('Diet advice, review in two weeks (synthetic)');
+    // MDV-P2-044: Sign stays locked until the recording consent is recorded (the server refuses it too); allergies not recorded are said, not a lock.
+    await expect(note.getByRole('button', { name: 'Sign note' })).toBeDisabled();
+    await note.getByRole('radio', { name: 'Patient declined: I type the note' }).check();
     await expect(note.getByRole('status')).toHaveText('Saved');
+    await expect(note.getByRole('button', { name: 'Sign note' })).toHaveAccessibleDescription('Everything reviewed. Ready to sign.');
     await note.getByRole('button', { name: 'Sign note' }).click();
     const dialog = page.getByRole('dialog', { name: `Sign note for ${meera}?` });
     await expect(dialog).toContainText('I have reviewed every section');

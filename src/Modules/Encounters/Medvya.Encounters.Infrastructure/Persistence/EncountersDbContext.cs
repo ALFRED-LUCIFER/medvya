@@ -134,6 +134,7 @@ public sealed class EncountersDbContext(DbContextOptions<EncountersDbContext> op
             // As text through a converter: Npgsql's dynamic JSON (which a Dictionary would need) stays off for the whole data source.
             e.Property(x => x.Sections).HasColumnType("jsonb").HasConversion(
                 v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null), v => JsonSerializer.Deserialize<Dictionary<string, string>>(v, (JsonSerializerOptions?)null)!);
+            e.Property(x => x.RecordingConsent).HasConversion<string>().HasMaxLength(20);
             e.Property(x => x.Version).IsConcurrencyToken();
             e.HasIndex(x => new { x.TenantId, x.EncounterId }).IsUnique(); // one draft note per encounter, even for two simultaneous first saves
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);

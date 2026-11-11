@@ -34,7 +34,7 @@ function Consult({ encounterId, boardPath, canOrder, canReconcile, canSign }: Pr
   return (
     <div className="flex flex-col gap-4">
       <ConsultPage {...consult} boardPath={boardPath} canReconcile={canReconcile}>
-        <NoteEditor {...useNoteController(encounterId, canSign, consult.banner?.timeZone)} timeZone={consult.banner?.timeZone}
+        <NoteEditor {...useNoteController(encounterId, canSign, consult.banner?.timeZone, consult.banner)} timeZone={consult.banner?.timeZone}
           patient={consult.banner && { name: consult.banner.patient.fullName, mrn: consult.banner.patient.mrn, dateOfBirth: consult.banner.patient.dateOfBirth, encounterId }} />
         <NoteHistory {...useAddendumController(encounterId, canSign)} timeZone={consult.banner?.timeZone} printPath={`/consult/${encounterId}/note/print`} />
         <NoteTemplateChoice {...useNoteTemplatesController()} />

@@ -1428,7 +1428,7 @@ erDiagram
 |---|---|---|---|
 | `Allergies` | 14 | Id | tenant-scoped |
 | `ClinicalDocuments` | 16 | Id | tenant-scoped |
-| `ConsultNotes` | 11 | Id | tenant-scoped |
+| `ConsultNotes` | 12 | Id | tenant-scoped |
 | `DoctorNoteTemplates` | 3 | Id | tenant-scoped |
 | `Encounters` | 12 | Id | tenant-scoped |
 | `Intakes` | 12 | Id | tenant-scoped |
@@ -1493,6 +1493,7 @@ erDiagram
 | `Id` | guid |  |  |
 | `EncounterId` | guid |  | id of `encounters.Encounters` |
 | `Manual` | bool |  |  |
+| `RecordingConsent` | character varying(20) |  |  |
 | `Sections` | jsonb |  |  |
 | `Status` | character varying(20) |  |  |
 | `TemplateKey` | character varying(50) |  |  |

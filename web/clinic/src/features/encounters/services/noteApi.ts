@@ -9,7 +9,7 @@ const put = <T>(url: string, body: unknown) =>
 export const fetchNote = (encounterId: string) => send<NoteView>(`/v1/encounters/${encounterId}/note`);
 /** `manual` is true: there is no recording to draft from until MDV-P3, so every note is typed by the doctor. */
 export const saveNote = (encounterId: string, draft: NoteDraft, baseVersion: number) =>
-  put<NoteView>(`/v1/encounters/${encounterId}/note`, { templateKey: draft.templateKey, manual: true, baseVersion, sections: Object.fromEntries(Object.entries(draft.sections).filter(([, v]) => v.trim())) });
+  put<NoteView>(`/v1/encounters/${encounterId}/note`, { templateKey: draft.templateKey, manual: true, recordingConsent: draft.recordingConsent, baseVersion, sections: Object.fromEntries(Object.entries(draft.sections).filter(([, v]) => v.trim())) });
 
 // What the doctor may copy into the note (MDV-P2-009): verified intake vitals of this visit, and earlier signed notes of the patient. Each read is audited.
 export const fetchPrefill = (encounterId: string) => send<{ vitals: VerifiedVital[] }>(`/v1/encounters/${encounterId}/note/prefill`);

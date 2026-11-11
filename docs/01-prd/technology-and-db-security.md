@@ -17,7 +17,7 @@
 | Jobs and messaging | Hangfire on Azure SQL (P1); Azure Service Bus + .NET workers for AI and integrations (P3+) | Redis only on measured need | v2 |
 | AI | .NET worker with Microsoft.Extensions.AI, Azure AI Speech and Azure OpenAI in region; Python only for offline evaluation | One production language; worker has no database credentials | v2 |
 | Realtime | SignalR for reception board, queue TV and live transcript |  | v2 |
-| Files and PDFs | Private Blob Storage with CMK, malware scan, user-delegation SAS; QuestPDF for Rx and invoices | Check the QuestPDF licence tier | v2 |
+| Files and PDFs | Private Blob Storage with CMK, malware scan, user-delegation SAS; QuestPDF for Rx and invoices | QuestPDF Community licence (ADR-018) | v2 |
 | Interoperability | Firely .NET SDK for FHIR; HL7 v2 for exchanges and labs (P5, P7) |  | v2 |
 | Hosting | Azure App Service (Linux) per country; Container Apps or AKS from P7 stamps | Azure Architecture stages 1 → 4 | Both |
 | Quality and delivery | xUnit, Testcontainers, Vitest, Playwright; OpenTelemetry → Application Insights; GitHub Actions with OIDC, CodeQL, Dependabot, secret scanning |  | Build plan |

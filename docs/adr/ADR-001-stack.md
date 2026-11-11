@@ -25,7 +25,7 @@ A single owner-developer must build and secure the product. It handles health da
 | Jobs | Hangfire on Azure SQL (P1). Azure Service Bus + .NET workers (P3+). Redis only on measured need |
 | AI | .NET worker with Microsoft.Extensions.AI, Azure AI Speech, Azure OpenAI in region. **Python only for offline evaluation** |
 | Realtime | SignalR (board, queue TV, live transcript) |
-| Files | Private Blob (CMK), malware scan, user-delegation SAS. QuestPDF (check licence tier) |
+| Files | Private Blob (CMK), malware scan, user-delegation SAS. QuestPDF (Community licence, ADR-018) |
 | Interop | Firely .NET SDK (FHIR), HL7 v2 (P5, P7) |
 | Hosting | Azure App Service (Linux) per country. Container Apps/AKS only from P7 stamps |
 | Quality | xUnit, Testcontainers, Vitest, Playwright. OpenTelemetry → Application Insights. GitHub Actions with OIDC, CodeQL, Dependabot, secret scanning |

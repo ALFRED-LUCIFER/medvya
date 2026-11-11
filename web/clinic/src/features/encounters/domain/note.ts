@@ -94,7 +94,7 @@ export function addendumFailure(status: number | undefined, body: unknown): Adde
   return kind === 'reauth' || kind === 'stale' || kind === 'denied' ? kind : 'failed';
 }
 
-/** The server PDF refuses text in a script it cannot show yet (422 pdf_unsupported_text): the print view shows it. */
+/** The server PDF refuses characters none of its fonts has, such as an emoji (422 pdf_unsupported_text): the print view shows them. */
 export const pdfFailure = (status: number | undefined): 'unsupported' | 'failed' => (status === 422 ? 'unsupported' : 'failed');
 
 // Verified prefill, quick phrases and earlier-note snippets (MDV-P2-009). Nothing is added unless the doctor presses a button; the server decides what is verified.

@@ -31,7 +31,7 @@ public sealed record NotePdf(byte[] Content, string Sha256);
 /// <summary>An addendum or a PDF needs a signed note (code note_not_signed): a draft is still edited in place.</summary>
 public sealed class NoteNotSignedException() : Exception("The note is not signed.");
 
-/// <summary>The note holds characters the server PDF cannot show yet (code pdf_unsupported_text); the browser's print view shows them.</summary>
+/// <summary>The note holds characters no embedded PDF font has, such as an emoji (code pdf_unsupported_text); the browser's print view shows them.</summary>
 public sealed class NotePdfUnsupportedTextException() : Exception("The note has text the PDF cannot show.");
 
 /// <summary>Sign the note as the editor last saw it (<see cref="BaseVersion"/>), so text typed in another tab is never signed unseen.</summary>

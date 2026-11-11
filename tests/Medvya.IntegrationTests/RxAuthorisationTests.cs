@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Medvya.Audit.Domain;
+using Medvya.BuildingBlocks.Infrastructure;
 using Medvya.Encounters.Application;
 using Medvya.Prescribing.Application;
 using Medvya.Prescribing.Domain;
@@ -295,7 +296,7 @@ public sealed class RxAuthorisationTests(PostgresFixture sql) : IClassFixture<Po
         await Assert.ThrowsAsync<PostgresException>(() => new NpgsqlCommand("""DELETE FROM prescribing."PrescriptionCancellations" """, conn).ExecuteNonQueryAsync());
     }
 
-    // SAFETY mutation check: drop the header lines from PlainPdf.Write's page loop and the per-page identifier counts fail.
+    // SAFETY mutation check: drop page.Header() from PlainPdf.Write and the per-page identifier checks fail.
     [Fact]
     public async Task ThePdfRendersServerSideOnA4AndA5WithTheLicenceAndIsStoredWithItsHash()
     {
@@ -306,27 +307,30 @@ public sealed class RxAuthorisationTests(PostgresFixture sql) : IClassFixture<Po
         using (var ok = await AuthoriseAsync(h.Doctor)) Assert.Equal(HttpStatusCode.OK, ok.StatusCode);
 
         var hashes = new List<string>();
-        foreach (var (paper, width) in new[] { ("A4", "595.28"), ("A5", "419.53") })
+        foreach (var paper in new[] { PlainPdf.A4, PlainPdf.A5 })
         {
-            using var r = await PdfAsync(paper);
+            using var r = await PdfAsync(paper.Name);
             Assert.Equal(HttpStatusCode.OK, r.StatusCode);
             Assert.Equal("application/pdf", r.Content.Headers.ContentType?.MediaType);
             var bytes = await r.Content.ReadAsByteArrayAsync();
             var hash = Convert.ToHexStringLower(SHA256.HashData(bytes));
             Assert.Equal(hash, r.Headers.GetValues("X-Content-SHA256").Single());
             hashes.Add(hash);
-            var text = Encoding.Latin1.GetString(bytes);
-            Assert.Contains($"/MediaBox [0 0 {width} ", text, StringComparison.Ordinal);
-            var pages = text.Split("/Type /Page ").Length - 1;
-            Assert.True(paper == "A4" || pages >= 2, $"{paper}: {pages} page(s)");
-            foreach (var marker in new[] { "Licence 84213 \\267 Tamil Nadu Medical Council", "MRN 000001", "Dr. Arjun Rao \\(synthetic\\) \\267 MBBS, MD \\(General Medicine\\)" })
-                Assert.Equal(pages, text.Split(marker).Length - 1);
-            foreach (var expected in new[] { "1. Metformin 500 mg Tablet", "Take 1 tablet by mouth twice a day after food", "Schedule H drug. Warning", "Allergies: not recorded", "https://clinic.test/app/verify/rx/" })
+            var pages = PdfPages.Read(bytes, paper.Margin);
+            string[] markers = ["Licence 84213 · Tamil Nadu Medical Council", "MRN 000001", "Dr. Arjun Rao (synthetic) · MBBS, MD (General Medicine)"];
+            Assert.True(paper == PlainPdf.A4 || pages.Count >= 2, $"{paper.Name}: {pages.Count} page(s)");
+            Assert.All(pages, page =>
+            {
+                Assert.Equal(paper.Width, page.Width, 0.1); // Skia writes the page box to a quarter point
+                Assert.True(page.InsideMargins, $"{paper.Name}: a line runs past the margin");
+                foreach (var marker in markers)
+                    Assert.Contains(marker, page.Text, StringComparison.Ordinal);
+            });
+            var text = string.Join(' ', pages.Select(x => x.Text));
+            foreach (var expected in new[] { "1. Metformin 500 mg Tablet", "Take 1 tablet by mouth twice a day after food", "Schedule H drug. Warning", "Allergies: not recorded" })
                 Assert.Contains(expected, text, StringComparison.Ordinal);
-            Assert.True(text.Split(" re\n").Length > 200, "the QR code is drawn"); // a version 5+ code has hundreds of dark modules
-            var columns = paper == "A4" ? 80 : 57;
-            var shown = System.Text.RegularExpressions.Regex.Matches(text, @"\(((?:[^\\)]|\\.)*)\) Tj").Select(m => System.Text.RegularExpressions.Regex.Replace(m.Groups[1].Value, @"\\(\d{3}|.)", "x"));
-            Assert.All(shown, l => Assert.True(l.Length <= columns, l));
+            Assert.Contains("https://clinic.test/app/verify/rx/", text.Replace(" ", "", StringComparison.Ordinal), StringComparison.Ordinal); // A5 wraps the long link
+            Assert.True(pages[^1].Shapes > 200, "the QR code is drawn"); // a version 5+ code has hundreds of dark modules
         }
         await using (var db = sql.Prescribing(h.Tenant))
             Assert.Equal(hashes.Order(), (await db.PrescriptionPdfs.AsNoTracking().ToListAsync()).Select(p => p.Sha256).Order());
@@ -335,8 +339,9 @@ public sealed class RxAuthorisationTests(PostgresFixture sql) : IClassFixture<Po
         using (var unknown = await PdfAsync("A3")) Assert.Equal(HttpStatusCode.BadRequest, unknown.StatusCode);
     }
 
+    // SAFETY mutation check: drop the glyph catch in PlainPdf.Write and the emoji gives 500, not 422.
     [Fact]
-    public async Task ThePrintViewCarriesEveryPrintLanguageAndThePdfRefusesAScriptItCannotShow()
+    public async Task ThePrintViewCarriesEveryPrintLanguageAndThePdfPrintsTamilButRefusesAnEmoji()
     {
         await PrescribeAsync("Metformin", Twice);
         var free = (await h.Get<IPrescriptions>(h.Doctor).AddAsync(encounter, new AddRxLine(null, "சித்த மருந்து (synthetic)", null, null)))!.Single(l => l.FreeText).Id!.Value;
@@ -347,10 +352,19 @@ public sealed class RxAuthorisationTests(PostgresFixture sql) : IClassFixture<Po
         Assert.Equal("1 மாத்திரை வாய் வழியாக தினமும் இரண்டு முறை உணவுக்குப் பின் 5 நாட்களுக்கு எடுத்துக்கொள்ளவும். அளவு: 10.", sig.GetProperty("ta").GetString());
         Assert.Equal("1 गोली मुँह से दिन में दो बार खाने के बाद 5 दिन तक लें। मात्रा: 10।", sig.GetProperty("hi").GetString());
         Assert.StartsWith("تناول 1 قرص", sig.GetProperty("ar").GetString(), StringComparison.Ordinal);
-        using var pdf = await PdfAsync();
-        Assert.Equal((HttpStatusCode.UnprocessableEntity, "pdf_unsupported_text"), (pdf.StatusCode, await Code(pdf)));
+        using (var pdf = await PdfAsync())
+        {
+            Assert.Equal(HttpStatusCode.OK, pdf.StatusCode);
+            Assert.Contains("(synthetic)", PdfPages.Read(await pdf.Content.ReadAsByteArrayAsync(), PlainPdf.A4.Margin)[0].Text, StringComparison.Ordinal);
+        }
+
+        var emoji = (await h.Get<IPrescriptions>(h.Doctor).AddAsync(encounter, new AddRxLine(null, "Synthetic syrup 🍯", null, null)))!.Single(l => l.Medicine.Contains("🍯", StringComparison.Ordinal)).Id!.Value;
+        await h.Get<IPrescriptions>(h.Doctor).UpdateAsync(emoji, Twice);
+        using (var again = await AuthoriseAsync(h.Doctor)) Assert.Equal(HttpStatusCode.OK, again.StatusCode);
+        using (var refused = await PdfAsync())
+            Assert.Equal((HttpStatusCode.UnprocessableEntity, "pdf_unsupported_text"), (refused.StatusCode, await Code(refused)));
         await using var db = sql.Prescribing(h.Tenant);
-        Assert.Equal(0, await db.PrescriptionPdfs.CountAsync());
+        Assert.Equal(1, await db.PrescriptionPdfs.CountAsync());
     }
 
     // SAFETY mutation check: put the patient's name or the lines into RxVerifyView and the PHI assertions fail; drop EnterLinkTenant and the look-up finds nothing.

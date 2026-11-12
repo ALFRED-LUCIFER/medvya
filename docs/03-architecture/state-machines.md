@@ -13,6 +13,7 @@ BOOKED ──check-in──▶ CHECKED_IN ──▶ WITH_NURSE ──▶ READY_F
 WALK_IN ──▶ CHECKED_IN
 ```
 - Check-in is only allowed from BOOKED, on the visit's facility-local day.
+- WITH_NURSE and BILLING are optional steps (MDV audit UX-05, `VisitSteps`): WITH_NURSE only while the tenant flag `clinical.nurse-intake` is on, BILLING only while `billing.invoices` is on. A step that is off is skipped (CHECKED_IN → READY_FOR_DOCTOR, IN_CONSULT → DONE) and its board column is hidden; a visit already in it when the step is turned off still moves on.
 - No-show is only allowed from BOOKED, once the start time has passed.
 - Reschedule is only allowed from BOOKED, to a free slot of a calendar of the same kind. History is kept: the old slot, the new slot, who and when.
 - Cancel needs a reason from a short list, and Other needs a note. It is allowed from BOOKED, or from CHECKED_IN when the patient leaves before being seen. From WITH_NURSE on, the visit is finished on the board, and a completed, cancelled or no-show visit cannot be cancelled. This is narrower than the design's "not when Completed" (MDV-P1-024).
@@ -32,7 +33,7 @@ WALK_IN ──▶ CHECKED_IN
 `ACTIVE → ENDED`. There is one encounter per visit, led by the doctor who started it, and authority is Medvya (a hospital HIS comes in P7).
 - **Start** is allowed from a waiting visit (CHECKED_IN, WITH_NURSE, READY_FOR_DOCTOR) on the visit's facility-local day. It moves the visit to IN_CONSULT with the room of the doctor's session, in the same transaction as the encounter. Starting a visit already IN_CONSULT just creates the encounter. A second start, or one at the same moment, returns the same encounter.
 - **One open consultation per doctor.** To start another, the doctor ends the open one or explicitly leaves it open (`leaveOpen`).
-- **End** moves the visit IN_CONSULT → BILLING. A visit the desk already moved on stays where it is. An ended encounter is never reopened.
+- **End** moves the visit IN_CONSULT → BILLING, or → DONE when billing is off. A visit the desk already moved on stays where it is. An ended encounter is never reopened.
 - Start and end are pushed to the facility's open boards after the commit, as ids and state only (as in MDV-P1-029).
 - Every call needs clinical access (MDV-P2-024): Patient 360 at Full to start or end, any treating level to read. Leading an encounter is a care relationship under "assigned only".
 

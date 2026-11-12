@@ -211,7 +211,7 @@ public sealed class BoardHubTests(PostgresFixture sql) : IClassFixture<PostgresF
         for (var i = 0; i < 3; i++) states.Add((await Next(messages, TimeSpan.FromSeconds(2)))?.GetProperty("state").GetString());
         Assert.Equal(["CheckedIn", "ReadyForDoctor", "InConsult"], states);
         // A refused move changes nothing and tells no board.
-        using var skip = await desk.PostAsJsonAsync($"/v1/appointments/{visit.Id}/status", new { state = "Done" });
+        using var skip = await desk.PostAsJsonAsync($"/v1/appointments/{visit.Id}/status", new { state = "Booked" }); // never backwards
         Assert.Equal(HttpStatusCode.Conflict, skip.StatusCode);
         Assert.Null(await Next(messages, TimeSpan.FromMilliseconds(300)));
     }

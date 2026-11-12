@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { gestation, gpal, readingsBody, readingsSchema, startBody, startSchema } from './pregnancy';
+import { gestation, gpal, pregnancyOffer, readingsBody, readingsSchema, startBody, startSchema } from './pregnancy';
 
 describe('gestation', () => {
   it('says 24 w 3 d, second trimester, for 171 days, and caps the bar at term', () => {
@@ -29,5 +29,19 @@ describe('the forms', () => {
     expect(readingsBody({ fundalHeightCm: '24', fetalHeartRate: '' })).toEqual({ fundalHeightCm: 24, fetalHeartRate: null });
     expect(readingsSchema.safeParse({ fundalHeightCm: '', fetalHeartRate: '' }).success).toBe(false);
     expect(readingsSchema.safeParse({ fetalHeartRate: '400' }).success).toBe(false);
+  });
+});
+
+describe('pregnancyOffer (UX-09)', () => {
+  it('shows the card in full from 15 to 49, folded from 10 to 14 and 50 to 55, never to a male patient, and always when one is open', () => {
+    expect(pregnancyOffer('Female', 30, false)).toBe('full');
+    expect(pregnancyOffer('Female', 15, false)).toBe('full');
+    expect(pregnancyOffer('Female', 49, false)).toBe('full');
+    expect(pregnancyOffer('Female', 54, false)).toBe('folded');
+    expect(pregnancyOffer('Other', 12, false)).toBe('folded');
+    expect(pregnancyOffer('Female', 56, false)).toBeNull();
+    expect(pregnancyOffer('Female', 9, false)).toBeNull();
+    expect(pregnancyOffer('Male', 30, false)).toBeNull();
+    expect(pregnancyOffer('Female', 54, true)).toBe('full');
   });
 });

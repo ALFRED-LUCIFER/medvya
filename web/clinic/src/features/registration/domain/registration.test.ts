@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { catalogs, loadCatalog, type Country } from '@medvya/i18n';
 import {
-  ageOn, completionSchema, consentPolicyVersion, duplicateQuery, isMinor, eidExpired, emirates, emptyForm, errorCode, formField, hieFor, indiaStates, knownErrors, messageFor, payerFields,
-  payerKinds, payerLabel, regionKey, registrationSchema, resolves, rules, stepOf, toCompletionRequest, toRegisterRequest, type DuplicateCandidate, type RegistrationForm,
+  ageOn, completionSchema, consentPolicyVersion, duplicateQuery, guardianRelationships, isMinor, eidExpired, emirates, emptyForm, errorCode, formField, hieFor, indiaStates, knownErrors, messageFor, payerFields,
+  payerKinds, payerLabel, regionKey, registrationSchema, relationships, resolves, rules, stepOf, toCompletionRequest, toRegisterRequest, type DuplicateCandidate, type RegistrationForm,
 } from './registration';
 
 // Synthetic values only (IDs fail their checksums).
@@ -188,7 +188,7 @@ describe('completing a quick registration (MDV-P1-015)', () => {
 });
 
 describe('family, emergency contact and guardian (MDV-P1-020)', () => {
-  const ravi = { guardianName: 'Ravi Nair', guardianRelationship: 'Parent', guardianPhone: '+91 90000 00210' };
+  const ravi = { guardianName: 'Ravi Nair', guardianRelationship: 'Father', guardianPhone: '+91 90000 00210' };
   const child = { ...deepak, dateOfBirth: '2016-05-01' };
 
   it('needs an emergency contact for full registration, not for quick', () => {
@@ -212,10 +212,17 @@ describe('family, emergency contact and guardian (MDV-P1-020)', () => {
     expect(errors('AE', false, { ...fatima, dateOfBirth: '2019-06-01', guardianName: 'Ahmed', guardianRelationship: 'Sponsor', guardianPhone: '050 000 0459' })).toEqual({});
   });
 
+  it('offers a minor guardian parents and family but never a spouse or child; an adult or unknown age gets every value (UX-10)', () => {
+    expect(guardianRelationships('IN', true)).toEqual(['Mother', 'Father', 'Sibling', 'Grandparent', 'Friend', 'Other']);
+    expect(guardianRelationships('AE', true)).toContain('Sponsor');
+    expect(guardianRelationships('IN', false)).toContain('Spouse');
+    expect(guardianRelationships('IN', null)).toEqual(relationships.IN);
+  });
+
   it('sends the emergency contact in full mode and the guardian in both; maps their server errors', () => {
     const full = toRegisterRequest({ ...child, ...ravi }, 'IN', false, null);
     expect([full.emergencyContact, full.guardian]).toEqual([
-      { name: 'Lakshmi Nair', relationship: 'Spouse', phone: '+91 90000 00209' }, { name: 'Ravi Nair', relationship: 'Parent', phone: '+91 90000 00210' }]);
+      { name: 'Lakshmi Nair', relationship: 'Spouse', phone: '+91 90000 00209' }, { name: 'Ravi Nair', relationship: 'Father', phone: '+91 90000 00210' }]);
     const quick = toRegisterRequest({ ...child, ...ravi }, 'IN', true, null);
     expect([quick.emergencyContact, quick.guardian?.name]).toEqual([null, 'Ravi Nair']);
     expect(['guardian', 'guardian.phone', 'emergencyContact.relationship'].map(f => formField(f, { identifiers: [] }, 'IN')))

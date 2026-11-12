@@ -41,6 +41,9 @@ type Props = {
   onVisitType: (v: VisitType) => void;
   /** MDV-P1-026: repeat weekly. `plan` is the reviewed series (null until previewed); the desk skips or moves conflicts before confirming. */
   repeat: number;
+  /** The repeat controls are shown (the desk asked for them). */
+  repeatOpen: boolean;
+  onRepeatOpen: (open: boolean) => void;
   maxRepeat: number;
   onRepeat: (n: number) => void;
   unit: 'weekly' | 'monthly' | 'weekdays';
@@ -205,34 +208,40 @@ export default function BookingPanel(p: Props) {
           </Select>
         </div>
 
-        <div className={field}>
-          <Label htmlFor="booking-unit">{t('series.unit')}</Label>
-          <Select value={p.unit} onValueChange={v => p.onUnit(v as Props['unit'])}>
-            <SelectTrigger id="booking-unit" className={control}><SelectValue /></SelectTrigger>
-            <SelectContent>{(['weekly', 'monthly', 'weekdays'] as const).map(u => <SelectItem key={u} value={u}>{t(`series.unit.${u}`)}</SelectItem>)}</SelectContent>
-          </Select>
-        </div>
-
-        {p.unit === 'weekdays' && (
-          <fieldset className="flex flex-col gap-1">
-            <legend className="text-sm font-bold">{t('series.weekdays')}</legend>
-            <div className="flex flex-wrap gap-2">
-              {weekdayOrder.map(d => (
-                <label key={d} className="flex min-h-11 items-center gap-2 rounded-md border px-3 text-sm">
-                  <input type="checkbox" className="size-5" checked={p.days.includes(d)} onChange={() => p.onToggleDay(d)} />
-                  {t(`series.weekday.${d}`)}
-                </label>
-              ))}
+        {/* One visit is the usual case: repeating stays folded until the desk asks for it (UX-10); folding it again books one visit. */}
+        <details open={p.repeatOpen} onToggle={e => p.onRepeatOpen(e.currentTarget.open)} className="rounded-md border p-3">
+          <summary className="flex min-h-11 cursor-pointer items-center text-sm font-bold">{t('series.toggle')}</summary>
+          {p.repeatOpen && <div className="mt-2 flex flex-col gap-4">
+            <div className={field}>
+              <Label htmlFor="booking-unit">{t('series.unit')}</Label>
+              <Select value={p.unit} onValueChange={v => p.onUnit(v as Props['unit'])}>
+                <SelectTrigger id="booking-unit" className={control}><SelectValue /></SelectTrigger>
+                <SelectContent>{(['weekly', 'monthly', 'weekdays'] as const).map(u => <SelectItem key={u} value={u}>{t(`series.unit.${u}`)}</SelectItem>)}</SelectContent>
+              </Select>
             </div>
-          </fieldset>
-        )}
 
-        <div className={field}>
-          <Label htmlFor="booking-repeat">{t('series.repeat')}</Label>
-          <Input id="booking-repeat" type="number" inputMode="numeric" min={1} max={p.maxRepeat} className={cn(control, 'w-28')} value={p.repeat}
-            aria-describedby="booking-repeat-hint" onChange={e => p.onRepeat(e.target.valueAsNumber)} />
-          <p id="booking-repeat-hint" className="text-xs text-muted-foreground">{t('series.repeatHint', { max: p.maxRepeat })}</p>
-        </div>
+            {p.unit === 'weekdays' && (
+              <fieldset className="flex flex-col gap-1">
+                <legend className="text-sm font-bold">{t('series.weekdays')}</legend>
+                <div className="flex flex-wrap gap-2">
+                  {weekdayOrder.map(d => (
+                    <label key={d} className="flex min-h-11 items-center gap-2 rounded-md border px-3 text-sm">
+                      <input type="checkbox" className="size-5" checked={p.days.includes(d)} onChange={() => p.onToggleDay(d)} />
+                      {t(`series.weekday.${d}`)}
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+            )}
+
+            <div className={field}>
+              <Label htmlFor="booking-repeat">{t('series.repeat')}</Label>
+              <Input id="booking-repeat" type="number" inputMode="numeric" min={1} max={p.maxRepeat} className={cn(control, 'w-28')} value={p.repeat}
+                aria-describedby="booking-repeat-hint" onChange={e => p.onRepeat(e.target.valueAsNumber)} />
+              <p id="booking-repeat-hint" className="text-xs text-muted-foreground">{t('series.repeatHint', { max: p.maxRepeat })}</p>
+            </div>
+          </div>}
+        </details>
 
         {p.bookError && <BookError code={p.bookError} />}
         <div className="flex flex-wrap gap-2">

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { toSession, type Access, type Capability, type Role } from '../../session/domain/session';
-import { allows, mobileTabs, navItems, patientDirectory, visibleNav } from './navigation';
+import { allows, homeItem, mobileTabs, navItems, patientDirectory, visibleNav } from './navigation';
 
 // Copy of RoleMatrix.cs rows (what /v1/me/context sends as `capabilities` for each role).
 const roles: Role[] = ['SoloDoctor', 'HospitalDoctor', 'Receptionist', 'Nurse', 'CareCoordinator', 'Patient', 'PracticeAdmin', 'HospitalIt'];
@@ -19,6 +19,18 @@ const ids = (role: Role, flags: string[] = []) => visibleNav({ role, capabilitie
 const groups = (role: Role, flags: string[] = []) => new Set(visibleNav({ role, capabilities: capabilities(role), flags }).map(i => i.group));
 
 describe('role-based navigation', () => {
+  it('lands a nurse on the nurse queue when intake is on, and everyone else on their first screen (UX-08)', () => {
+    const home = (role: Role, flags: string[] = []) => {
+      const active = { role, capabilities: capabilities(role), flags };
+      return homeItem(visibleNav(active), active)?.id;
+    };
+    expect(home('Nurse', ['clinical.nurse-intake'])).toBe('nurse');
+    expect(home('Nurse')).toBe('today');
+    expect(home('SoloDoctor', ['clinical.nurse-intake'])).toBe('today');
+    expect(home('HospitalDoctor', ['clinical.nurse-intake'])).toBe('today');
+    expect(home('Receptionist', ['clinical.nurse-intake'])).toBe('frontDesk');
+  });
+
   it('shows a receptionist only Practice items, never Clinical, even with every flag on', () => {
     expect(ids('Receptionist')).toEqual(['frontDesk', 'schedule', 'register']);
     expect(groups('Receptionist', allFlags)).toEqual(new Set(['practice']));

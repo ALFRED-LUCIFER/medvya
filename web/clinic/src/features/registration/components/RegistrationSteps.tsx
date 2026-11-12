@@ -5,7 +5,7 @@ import { Button } from '@medvya/ui';
 import type { IdentifierScheme, PayerKind } from '../../patients/domain/directory';
 import {
   eidExpired, emirates, genderIdentities, hieFor, indiaStates, languages, nationalities, otherIdChoices, payerFields, payerKinds, payerLabel,
-  isSex, quickIdentifier, regionKey, relationships, type RegistrationForm, type Step,
+  guardianRelationships, isSex, quickIdentifier, regionKey, relationships, type RegistrationForm, type Step,
 } from '../domain/registration';
 import { Checkbox, SelectField, SexField, TextField, type FormProps } from './FormFields';
 
@@ -55,7 +55,7 @@ function GuardianFields({ f, country, minor }: { f: FormProps; country: Country;
   return (
     <>
       <TextField f={f} name="guardianName" label={t(`registration.field.guardianName.${country}`)} required={minor === true} hint={hint} wide />
-      <SelectField f={f} name="guardianRelationship" label={t('registration.field.guardianRelationship')} options={relationships[country]}
+      <SelectField f={f} name="guardianRelationship" label={t('registration.field.guardianRelationship')} options={guardianRelationships(country, minor)}
         optionLabel={r => t(`registration.relationship.${r}`)} placeholder={t('registration.choose')} required={minor === true} />
       <TextField f={f} name="guardianPhone" label={t('registration.field.guardianPhone')} required={minor === true} ltr type="tel" inputMode="tel" />
     </>
@@ -210,7 +210,7 @@ const Ltr = ({ children }: { children: ReactNode }) => <bdi dir="ltr">{children}
 
 /** Step 6 · Review: what will be saved, each part with Edit. The duplicate decision sits below it. */
 export function ReviewStep({ country, values, ageInstead, onEdit }: { country: Country; values: RegistrationForm; ageInstead: boolean; onEdit: (s: Step) => void }) {
-  const { t, formatDate } = useI18n();
+  const { t, formatCalendarDate } = useI18n();
   const missing = t('patients.record.none');
   const kind = values.payerKind as PayerKind | '';
   const id = (scheme: IdentifierScheme, value: string) => value.trim() ? <>{t(`patients.scheme.${scheme}`)} <Ltr>{value.trim()}</Ltr></> : null;
@@ -224,7 +224,7 @@ export function ReviewStep({ country, values, ageInstead, onEdit }: { country: C
   const contact = (name: string, relationship: string, phone: string) => name.trim()
     ? <><bdi>{name.trim()}</bdi> {isRelationship(country, relationship) && t('registration.review.relationship', { relationship: t(`registration.relationship.${relationship}`) })} {number(phone)}</> : null;
   const born = ageInstead ? t('registration.duplicates.age', { age: values.ageYears })
-    : /^\d{4}-\d{2}-\d{2}$/.test(values.dateOfBirth) ? formatDate(new Date(`${values.dateOfBirth}T00:00:00`)) : '';
+    : /^\d{4}-\d{2}-\d{2}$/.test(values.dateOfBirth) ? formatCalendarDate(values.dateOfBirth) : '';
   const rows: ReviewRow[] = [
     { label: t('registration.review.name'), parts: [text(values.fullName), country === 'AE' ? text(values.arabicName) : null], step: 'identity' },
     { label: t('registration.review.born'), parts: [born], step: 'identity' },

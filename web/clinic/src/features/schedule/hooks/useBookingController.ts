@@ -32,6 +32,7 @@ export function useBookingController(facilityId: string, timeZone: string | null
   const [rebook, setRebook] = useState<{ id: string; name: string } | null>(null);
   // MDV-P1-026: repeat weekly or monthly. 1 books one visit; more previews the series so the desk can skip or move conflicts before confirming.
   const [repeat, setRepeat] = useState(1);
+  const [repeatOpen, setRepeatOpen] = useState(false);
   const [unit, setUnit] = useState<'weekly' | 'monthly' | 'weekdays'>('weekly');
   const [days, setDays] = useState<number[]>([]); // for 'weekdays': 0 = Sunday, as the server numbers them
   const [plan, setPlan] = useState<PlanRow[] | null>(null);
@@ -60,6 +61,7 @@ export function useBookingController(facilityId: string, timeZone: string | null
   const endBooking = () => {
     setPlan(null);
     setRepeat(1);
+    setRepeatOpen(false);
     setUnit('weekly');
     setDays([]);
     setChoice(null);
@@ -128,6 +130,11 @@ export function useBookingController(facilityId: string, timeZone: string | null
     booking: book.isPending || preview.isPending || bookMany.isPending,
     bookError: book.isError ? errorOf(book.error) : preview.isError ? errorOf(preview.error) : bookMany.isError ? errorOf(bookMany.error) : null,
     repeat,
+    repeatOpen,
+    onRepeatOpen: (open: boolean) => {
+      setRepeatOpen(open);
+      if (!open) { setRepeat(1); setUnit('weekly'); setDays([]); }
+    },
     maxRepeat,
     unit,
     days,
@@ -152,6 +159,7 @@ export function useBookingController(facilityId: string, timeZone: string | null
       book.reset();
       setPlan(null);
       setRepeat(1);
+      setRepeatOpen(false);
       setUnit('weekly');
       setDays([]);
       form.reset(emptyBooking);

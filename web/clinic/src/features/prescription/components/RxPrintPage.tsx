@@ -23,7 +23,7 @@ type Props = {
  * the PDF is the server's stored English copy. The doctor approves the layout as their own once (exit gate 4).
  */
 export default function RxPrintPage(p: Props) {
-  const { t, formatDate, formatTime } = useI18n();
+  const { t, formatDate, formatTime, formatCalendarDate } = useI18n();
   if (p.loading) return <p role="status">{t('rxPrint.loading')}</p>;
   if (p.notAuthorised) return <div className="flex flex-col gap-3"><p role="alert" className="font-bold">{t(p.cancelled ? 'rxPrint.cancelled' : 'rxPrint.notAuthorised')}</p><Back {...p} /></div>;
   if (p.failed || !p.print) return <p role="alert" className="font-bold">{t('rxPrint.loadFailed')}</p>;
@@ -56,7 +56,7 @@ export default function RxPrintPage(p: Props) {
           <h1 id="rx-print-title" className="text-xl font-extrabold">{v.clinic}</h1>
           <p className="font-bold">{v.qualifications ? t('rxPrint.doctor', { name: v.doctor, qualifications: v.qualifications }) : v.doctor}</p>
           <p>{t('rxPrint.licence', { number: ltr(v.licenceNumber), authority: v.licenceAuthority })}</p>
-          <p>{t('rxPrint.patient', { name: v.patient.fullName, sex: t(`rxPrint.sex.${v.patient.sexAtBirth}`), mrn: ltr(v.patient.mrn), dob: formatDate(new Date(`${v.patient.dateOfBirth}T12:00:00Z`), 'UTC') })}</p>
+          <p>{t('rxPrint.patient', { name: v.patient.fullName, sex: t(`rxPrint.sex.${v.patient.sexAtBirth}`), mrn: ltr(v.patient.mrn), dob: formatCalendarDate(v.patient.dateOfBirth) })}</p>
           <p>{t('rxPrint.number', { number: ltr(v.authorisation.number), version: v.authorisation.versionNo, when, zone: v.timeZone })}</p>
         </header>
         <p className="font-bold">

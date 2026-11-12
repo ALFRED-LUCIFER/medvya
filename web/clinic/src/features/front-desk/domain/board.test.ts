@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { groupByColumn, needsRebooking, minutesSince, moveError, nextState, serverNow, visibleColumns, walkInError, type BoardCard } from './board';
+import { inToday, groupByColumn, needsRebooking, minutesSince, moveError, nextState, serverNow, visibleColumns, walkInError, type BoardCard } from './board';
 
 describe('walk-in (MDV-P1-025)', () => {
   it('tells "no free slot" (choose a doctor to queue with) and "busy" from other failures', () => {
@@ -72,5 +72,16 @@ describe('reception board', () => {
     expect(moveError('not_today')).toBe('not_today');
     expect(moveError('something_new')).toBe('failed');
     expect(moveError(undefined)).toBe('failed');
+  });
+});
+
+describe('walk-in doctors (UX-10)', () => {
+  const h = (start: string, end: string) => ({ start: `2026-10-19T${start}:00+05:30`, end: `2026-10-19T${end}:00+05:30` });
+  it('offers a doctor with hours today that leave does not cover, and not one without hours or on leave all day', () => {
+    expect(inToday({ hours: [{ ...h('09:00', '13:00'), room: null }], unavailable: [] })).toBe(true);
+    expect(inToday({ hours: [], unavailable: [] })).toBe(false);
+    expect(inToday({ hours: [{ ...h('09:00', '13:00'), room: null }], unavailable: [{ ...h('00:00', '23:59'), reason: 'Leave', label: null }] })).toBe(false);
+    // Away for the morning session only: still in for the afternoon.
+    expect(inToday({ hours: [{ ...h('09:00', '13:00'), room: null }, { ...h('16:00', '19:00'), room: null }], unavailable: [{ ...h('09:00', '13:00'), reason: 'Leave', label: null }] })).toBe(true);
   });
 });

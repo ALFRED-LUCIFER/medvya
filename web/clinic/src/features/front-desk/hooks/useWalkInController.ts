@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { emptyWalkIn, newPatientWalkIn, walkInError, type WalkInChoice, type WalkInVisit } from '../domain/board';
+import { emptyWalkIn, inToday, newPatientWalkIn, walkInError, type WalkInChoice, type WalkInVisit } from '../domain/board';
 import { checkIn, monotonicNow, walkIn } from '../services/frontDeskApi';
 import { ApiError, fetchScheduleDay, findPatient } from '../../schedule/services/scheduleApi';
 import { usePatientSearch } from '../../patients/hooks/usePatientSearch';
@@ -19,9 +19,9 @@ export function useWalkInController(facilityId: string, initialPatientId: string
 
   // Name and MRN of the chosen patient (an audited lookup), as booking confirms them.
   const patient = useQuery({ queryKey: ['booking-patient', facilityId, patientId], queryFn: () => findPatient(facilityId, patientId), enabled: patientId !== '', staleTime: Infinity });
-  // The doctors to choose from: the day view's doctor columns.
+  // The doctors to choose from: the day view's doctor columns, without those who are not in today (no hours, or on leave all day).
   const day = useQuery({ queryKey: ['schedule', facilityId, 'walk-in'], queryFn: () => fetchScheduleDay(facilityId, null) });
-  const doctors = (day.data?.columns ?? []).filter(c => c.calendarKind === 'Doctor').map(c => ({ id: c.calendarId, name: c.name }));
+  const doctors = (day.data?.columns ?? []).filter(c => c.calendarKind === 'Doctor' && inToday(c)).map(c => ({ id: c.calendarId, name: c.name }));
 
   const done = useMutation({
     mutationFn: async (allowRepeat: boolean): Promise<WalkInVisit & { token: string | null }> => {

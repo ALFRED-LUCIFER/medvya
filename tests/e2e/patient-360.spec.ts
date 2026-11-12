@@ -309,7 +309,11 @@ test('MDV-P2-034: a doctor starts a pregnancy; a nurse records "not pregnant" bu
   await page.route('**/v1/patients/p-1/chart', r => r.fulfill({ json: started ? pregnant : chart() }));
   await page.goto('/patients/p-1');
   const card = page.getByRole('region', { name: 'Pregnancy' });
+  // UX-09: at 54, outside the 15 to 49 band, the card is folded under its heading and Start is a secondary (outline) button.
+  await expect(card.getByRole('button', { name: 'Start pregnancy' })).toBeHidden();
+  await card.getByText('Pregnancy', { exact: true }).click();
   await expect(card).toContainText('No pregnancy recorded. The medicine checks treat this as not known.');
+  await expect(card.getByRole('button', { name: 'Start pregnancy' })).toHaveAttribute('data-variant', 'outline');
   await card.getByRole('button', { name: 'Start pregnancy' }).click();
   await card.getByRole('button', { name: 'Save' }).click();
   await expect(card.getByText('Check this value.').first()).toBeVisible();
@@ -325,6 +329,7 @@ test('MDV-P2-034: a doctor starts a pregnancy; a nurse records "not pregnant" bu
   await page.route('**/v1/patients/p-1/chart', r => r.fulfill({ json: chart() }));
   await page.route('**/v1/patients/p-1/pregnancy/ruled-out', r => r.fulfill({ json: { open: null, ruledOut: { recordedBy: 'Sister Anu (synthetic)', recordedAt: at(19) } } }));
   await page.reload();
+  await card.getByText('Pregnancy', { exact: true }).click();
   await expect(card.getByRole('button', { name: 'Start pregnancy' })).toHaveCount(0);
   await expect(card.getByRole('button', { name: 'Record not pregnant today' })).toBeVisible();
 });

@@ -20,7 +20,7 @@ type Props = {
 
 /** Medvya team access (design: Medvya Admin, team access): who may use the console. Least access by default; reviewed every quarter. */
 export default function TeamPage({ vm }: Props) {
-  const { t, formatDate, formatTime } = useI18n();
+  const { t, formatDate, formatTime, formatCalendarDate } = useI18n();
   const ids = { name: useId(), email: useId(), role: useId(), ends: useId() };
   const errorText = (code?: string) => (code ? t(`platform.error.${code}` as MessageKey) : null);
   const when = (iso: string) => `${formatDate(new Date(iso))} ${formatTime(new Date(iso))}`;
@@ -133,7 +133,7 @@ export default function TeamPage({ vm }: Props) {
                 <TableCell>{t(`platform.role.${m.role}`)}</TableCell>
                 <TableCell>{t(`platform.team.keyState.${keyState(m)}`)}</TableCell>
                 <TableCell>{m.lastActiveAt ? when(m.lastActiveAt) : t('platform.team.never')}</TableCell>
-                <TableCell>{m.accessEndsOn ? formatDate(new Date(`${m.accessEndsOn}T12:00:00Z`)) : t('platform.team.untilRemoved')}</TableCell>
+                <TableCell>{m.accessEndsOn ? formatCalendarDate(m.accessEndsOn) : t('platform.team.untilRemoved')}</TableCell>
                 <TableCell>
                   <div className="flex flex-wrap gap-2">
                     <Button variant="outline" aria-label={t('platform.team.recoverFor', { name: m.displayName })}

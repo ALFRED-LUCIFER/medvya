@@ -55,7 +55,7 @@ journey('J3', {
     await expect(review).toContainText('Matched on name + date of birth.');
     await expect(page.getByRole('button', { name: 'Resolve duplicate to save' })).toBeDisabled();
     await expectNoAxeViolations(page);
-    await review.getByRole('button', { name: 'Request merge review (P-03)' }).click();
+    await review.getByRole('button', { name: 'Request merge review' }).click();
     const saved = page.waitForResponse(r => r.request().method() === 'POST' && new URL(r.url()).pathname === '/v1/patients');
     await page.getByRole('button', { name: 'Register patient' }).click();
     expect((await saved).status()).toBeLessThan(300);

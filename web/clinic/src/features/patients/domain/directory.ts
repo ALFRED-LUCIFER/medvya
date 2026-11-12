@@ -42,7 +42,7 @@ export type PatientDetails = {
   version: number;
 };
 
-export type Relationship = 'Spouse' | 'Parent' | 'Child' | 'Sibling' | 'Friend' | 'Sponsor' | 'Other';
+export type Relationship = 'Spouse' | 'Parent' | 'Child' | 'Sibling' | 'Friend' | 'Sponsor' | 'Other' | 'Mother' | 'Father' | 'Grandparent';
 export type ContactView = { name: string; relationship: Relationship; phone: string };
 
 /** What the desk's completion task still waits for (MDV-P1-015/020); the server sets the status from the same three. */

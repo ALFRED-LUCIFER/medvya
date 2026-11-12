@@ -2,7 +2,7 @@ import { CircleCheck, CircleDashed, Info } from 'lucide-react';
 import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, Input, Label } from '@medvya/ui';
+import { Button, buttonVariants, Input, Label, PageContainer, PageHeader } from '@medvya/ui';
 import { uploadErrorKey, type DocumentKind, type FileProblem, type ItContactForm, type OrganisationRequest, type RequestError } from '../domain/organisationRequest';
 
 type Props = {
@@ -37,22 +37,28 @@ const error = 'text-sm font-semibold text-danger-700';
 export default function OrganisationRequestPage(p: Props) {
   const { t } = useI18n();
   const { errors } = p.form.formState;
-  if (p.loading) return <p role="status" className="p-6">{t('orgRequest.loading')}</p>;
-  if (!p.request) return <p role="alert" className={`${error} p-6`}>{t(p.forbidden ? 'orgRequest.forbidden' : p.notFound ? 'orgRequest.none' : 'orgRequest.loadFailed')}</p>;
+  // Every state keeps the page heading (UX-08): a loading or refused page is never a bare sentence.
+  if (p.loading || !p.request) {
+    return (
+      <PageContainer width="form">
+        <PageHeader title={t('orgRequest.title')} />
+        {p.loading ? <p role="status">{t('orgRequest.loading')}</p>
+          : <p role="alert" className={error}>{t(p.forbidden ? 'orgRequest.forbidden' : p.notFound ? 'orgRequest.none' : 'orgRequest.loadFailed')}</p>}
+      </PageContainer>
+    );
+  }
   const { request: r } = p;
   const uploadMessage = p.uploadError ? t(`orgRequest.error.${uploadErrorKey(p.uploadError)}`) : null;
   return (
-    <section aria-labelledby="org-request-title" className="mx-auto flex w-full max-w-2xl flex-col gap-6 p-4 md:p-6">
-      <header className="flex flex-col gap-2">
-        <h1 id="org-request-title" className="text-2xl font-extrabold">{t('orgRequest.title')}</h1>
-        <p className="text-muted-foreground">{t('orgRequest.intro', { type: t(`orgRequest.type.${r.type}`) })}</p>
+    <PageContainer width="form" className="gap-6">
+      <PageHeader title={t('orgRequest.title')} description={t('orgRequest.intro', { type: t(`orgRequest.type.${r.type}`) })} className="flex-col items-stretch">
         <p role="status" className="flex items-start gap-2 rounded-lg bg-muted p-3 font-semibold">
           <Info className="mt-0.5 size-4 shrink-0" aria-hidden />{t(`orgRequest.status.${r.state}`)}
         </p>
         {r.reason && (r.state === 'NeedsChanges' || r.state === 'Rejected' || r.state === 'Suspended') && (
           <p className="rounded-lg border p-3"><strong>{t('orgRequest.reason')}</strong> {r.reason}</p>
         )}
-      </header>
+      </PageHeader>
 
       {r.state === 'Rejected' && (
         <div className="flex flex-col gap-2">
@@ -127,6 +133,6 @@ export default function OrganisationRequestPage(p: Props) {
           {p.submitFailed && <p role="alert" className={error}>{t('orgRequest.error.submit')}</p>}
         </div>
       ) : null}
-    </section>
+    </PageContainer>
   );
 }

@@ -55,7 +55,9 @@ export function readSlotReturn(params: URLSearchParams): (Omit<SlotChoice, 'cale
   const [calendarId, start, visitType, patientId] = ['calendar', 'start', 'visitType', 'patient'].map(k => params.get(k) ?? '');
   const valid = !!calendarId && z.uuid().safeParse(patientId).success && z.iso.datetime({ offset: true }).safeParse(start).success
     && (visitTypes as readonly string[]).includes(visitType!);
-  return valid ? { calendarId: calendarId!, start: start!, visitType: visitType as VisitType, patientId: patientId! } : null;
+  // The patient was registered on the way, so this is their first visit: the untouched default Follow-up comes back as New consultation (UX-10).
+  const type = visitType === 'FollowUp' ? 'NewConsultation' : visitType as VisitType;
+  return valid ? { calendarId: calendarId!, start: start!, visitType: type, patientId: patientId! } : null;
 }
 
 /** The address once the booking has resumed: the day and view stay, the slot and patient go. */

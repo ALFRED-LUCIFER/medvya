@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { ApiError } from '../../schedule/services/scheduleApi';
 import type { Patient360, PregnancyStatus } from '../domain/chart';
 import {
-  closeSchema, pregnancyConflicts, readingsBody, readingsSchema, startBody, startSchema, type CloseForm, type PregnancyForm, type PregnancyProblem, type ReadingsForm, type StartForm,
+  closeSchema, pregnancyConflicts, pregnancyOffer, readingsBody, readingsSchema, startBody, startSchema, type CloseForm, type PregnancyForm, type PregnancyProblem, type ReadingsForm, type StartForm,
 } from '../domain/pregnancy';
 import { closePregnancy, counselDangerSigns, recordPregnancyReadings, ruleOutPregnancy, startPregnancy } from '../services/pregnancyApi';
 
@@ -37,9 +37,11 @@ export function usePregnancyController(patientId: string, data: Patient360 | nul
     if (f === 'readings') readingsForm.reset({});
     setForm(f);
   };
+  // An open one always shows (one recorded by mistake can then be closed); otherwise by sex and age band.
+  const offer = data ? pregnancyOffer(data.patient.sexAtBirth, data.patient.ageYears, !!data.pregnancy.open) : null;
   return {
-    // Offered to a patient who is not male and is 10 to 55; an open one always shows (one recorded by mistake can then be closed).
-    shown: !!data && (!!data.pregnancy.open || (data.patient.sexAtBirth !== 'Male' && data.patient.ageYears >= 10 && data.patient.ageYears <= 55)),
+    shown: offer !== null,
+    folded: offer === 'folded',
     status: data?.pregnancy ?? { open: null, ruledOut: null },
     timeZone: data?.timeZone ?? 'UTC',
     canManage, canRecord, form, startForm, closeForm, readingsForm,

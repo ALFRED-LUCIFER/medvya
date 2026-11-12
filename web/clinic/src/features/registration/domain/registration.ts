@@ -11,12 +11,16 @@ export const isSex = (s: string): s is SexAtBirth => (sexes as readonly string[]
 export type Step = 'identity' | 'contact' | 'family' | 'payer' | 'consents' | 'review';
 export const steps: readonly Step[] = ['identity', 'contact', 'family', 'payer', 'consents', 'review'];
 
-/** Relationship values per country (RelationshipKind; the UAE adds Sponsor of a dependant). */
+/** Relationship values per country (RelationshipKind; the UAE adds Sponsor of a dependant). Parent is still accepted by the server for older records. */
 export const relationships = {
-  IN: ['Spouse', 'Parent', 'Child', 'Sibling', 'Friend', 'Other'],
-  AE: ['Spouse', 'Parent', 'Child', 'Sibling', 'Sponsor', 'Other'],
+  IN: ['Spouse', 'Mother', 'Father', 'Child', 'Sibling', 'Grandparent', 'Friend', 'Other'],
+  AE: ['Spouse', 'Mother', 'Father', 'Child', 'Sibling', 'Grandparent', 'Sponsor', 'Other'],
 } as const satisfies Record<Country, readonly string[]>;
 export type Relationship = (typeof relationships)[Country][number];
+
+/** A minor's guardian is a parent, grandparent, sibling or (UAE) sponsor, never a spouse or a child (UX-10); an adult's or unknown age gets every value. */
+export const guardianRelationships = (country: Country, minor: boolean | null): readonly Relationship[] =>
+  minor ? relationships[country].filter(r => r !== 'Spouse' && r !== 'Child') : relationships[country];
 
 /** Below this age a guardian is required (CountryRules.AdultAge, MDV-P1-020). */
 export const adultAge = 18;

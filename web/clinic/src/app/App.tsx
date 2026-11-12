@@ -18,7 +18,7 @@ import SessionExpiredPage from '../features/session/components/SessionExpiredPag
 import AppShell from '../features/shell/components/AppShell';
 import MorePage from '../features/shell/components/MorePage';
 import ShellMessage, { ComingSoon } from '../features/shell/components/ShellMessage';
-import { allows, patientDirectory } from '../features/shell/domain/navigation';
+import { allows, homeItem, patientDirectory } from '../features/shell/domain/navigation';
 import { useShellController } from '../features/shell/hooks/useShellController';
 import FrontDeskRoute from './FrontDeskRoute';
 import GlobalSearchRoute from './GlobalSearchRoute';
@@ -84,7 +84,7 @@ export default function App({ locale, onLocaleChange }: Props) {
   const active = shell.session?.active;
   // Signed in at a facility, rules and formats follow the tenant's country (from the server, never the client).
   const country = active?.country ?? signedOutCountry;
-  const first = shell.items[0];
+  const first = homeItem(shell.items, active ?? null);
   // After choosing, continue to the page that sent the user to the picker (F-05a: back to the previous route after re-sign-in).
   const from = (location.state as { from?: string } | null)?.from;
   const picker = (
@@ -119,14 +119,15 @@ export default function App({ locale, onLocaleChange }: Props) {
         <Route path="*" element={<SignInRoute switcher={switcher} />} />
       </>
     : !active ? <>
-        <Route path="/choose-facility" element={picker} />
+        <Route path="/choose-facility" element={shell.choosingOnly ? <ShellMessage standalone busy title={t('shell.loading')} /> : picker} />
         {/* Signed in with no clinic yet: the setup wizard (F-04). It scopes the session to the new practice when it finishes. */}
         <Route path="/onboarding" element={<OnboardingRoute switcher={switcher} onLater={() => shell.signOut()}
           onFinished={(r, to = '/') => shell.chooseFacility(r.membershipId, () => navigate(to, { replace: true }))} />} />
         <Route path="*" element={<Navigate to={shell.session.memberships.length === 0 ? '/onboarding' : '/choose-facility'} replace state={{ from: location.pathname }} />} />
       </>
     : <>
-        <Route path="/choose-facility" element={picker} />
+        {/* With one clinic there is no other to switch to: the picker (also reached right after the automatic choice) goes on to the screen asked for. */}
+        <Route path="/choose-facility" element={shell.session.memberships.length > 1 ? picker : <Navigate to={from ?? '/'} replace />} />
         <Route element={
           <AppShell {...account} role={active.role} facilityName={active.facilityName} groups={shell.groups} tabs={shell.tabs} searchPath={searchPath}
             globalSearch={searchPath && ['Read', 'Limited', 'Full', 'Sign'].includes(active.capabilities.Patient360Chart ?? 'None')
@@ -186,6 +187,8 @@ export default function App({ locale, onLocaleChange }: Props) {
             <Route path="/consult/:encounterId/medicines" element={<ReconciliationRoute boardPath={pathOf('frontDesk') ?? '/'} online={online} />} />
             <Route path="/consult/:encounterId/problems" element={<ProblemsRoute boardPath={pathOf('frontDesk') ?? '/'} online={online} />} />
           </>}
+          {/* Without Register patient (a nurse), /patients/new is not a patient id: say the role cannot register instead of "patient not found". */}
+          {!registerPath && <Route path="/patients/new" element={<ShellMessage title={t('nav.register')} body={t('registration.forbidden.body')} />} />}
           {/* Patient 360 (MDV-P2-004, E-01): same roles; /patients/new and /patients/directory are more specific and win. */}
           {['Read', 'Limited', 'Full', 'Sign'].includes(active.capabilities.Patient360Chart ?? 'None') &&
             <>
@@ -206,7 +209,7 @@ export default function App({ locale, onLocaleChange }: Props) {
               <Route path={`${searchPath}/:patientId/complete`} element={<CompleteRegistrationRoute country={country} />} />}
           </>}
           <Route path="/more" element={<MorePage {...account} role={active.role} facilityName={active.facilityName} groups={shell.groups} />} />
-          <Route path="*" element={<NotFoundPage onBackToToday={toHome} />} />
+          <Route path="*" element={<NotFoundPage onHome={toHome} />} />
         </Route>
       </>;
 

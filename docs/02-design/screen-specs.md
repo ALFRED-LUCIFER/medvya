@@ -57,7 +57,7 @@ Replaces the 6-step solo-doctor wizard. Eight steps: four of the **approval requ
 |---|---|---|---|
 | F-05a | Session expired | Your unsaved draft is kept on this device. Sign in again to continue; **you will be asked to confirm the patient.** | Sign in again |
 | F-05b | No access to this facility | You are signed in to {facility}. This record belongs to another facility. | Request access |
-| F-05c | Page not found | The link may be old. Nothing has been changed. | Back to Today |
+| F-05c | Page not found | The link may be old. Nothing has been changed. | Go to my start page (the first screen of the role; UX-08) |
 | F-05d | You are offline | Recording continues to the encrypted device buffer. Notes and orders will save when you reconnect. | Retry now |
 
 Microcopy key `err.403` = "You don’t have access to this facility."

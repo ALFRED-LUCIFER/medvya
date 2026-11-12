@@ -40,8 +40,8 @@ const Ltr = ({ children }: { children: ReactNode }) => <bdi dir="ltr">{children}
 /** An opened record for the front desk: registration data only, never clinical data. Opening it was audited by the server. */
 export default function PatientRecord(props: Props) {
   const { patient, state, onRetry, backPath } = props;
-  const { t, formatDate, locale, country } = useI18n();
-  const date = (iso: string) => formatDate(new Date(`${iso.slice(0, 10)}T00:00:00`));
+  const { t, formatCalendarDate, locale, country } = useI18n();
+  const date = formatCalendarDate;
   const back = (
     <Link to={backPath} className={cn(buttonVariants({ variant: 'ghost' }), 'self-start px-2')}>
       <ArrowLeft className="rtl:rotate-180" aria-hidden />{t('patients.record.back')}

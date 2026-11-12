@@ -13,7 +13,7 @@ type Props = { slip: OrderSlip | null; loading: boolean; nothingPlaced: boolean;
  * (MDV-P2-018, ADR-018).
  */
 export default function SlipPage(p: Props) {
-  const { t, formatDate, formatDay } = useI18n();
+  const { t, formatDate, formatCalendarDate } = useI18n();
   if (p.loading) return <p role="status">{t('orders.slip.loading')}</p>;
   if (p.nothingPlaced || p.failed || !p.slip) return <p role="alert" className="font-bold">{t(p.nothingPlaced ? 'orders.slip.notFound' : 'orders.slip.loadFailed')}</p>;
   const { slip } = p;
@@ -33,7 +33,7 @@ export default function SlipPage(p: Props) {
         <dl className="grid grid-cols-[max-content_1fr] gap-x-6 gap-y-1">
           <dt className="font-bold">{t('orders.slip.patient')}</dt><dd>{slip.patient.fullName}</dd>
           <dt className="font-bold">{t('orders.slip.mrn')}</dt><dd><bdi dir="ltr">{slip.patient.mrn}</bdi></dd>
-          <dt className="font-bold">{t('orders.slip.dob')}</dt><dd>{formatDay(slip.patient.dateOfBirth)}</dd>
+          <dt className="font-bold">{t('orders.slip.dob')}</dt><dd>{formatCalendarDate(slip.patient.dateOfBirth)}</dd>
           <dt className="font-bold">{t('orders.slip.sex')}</dt><dd>{t(`patients.sex.${slip.patient.sexAtBirth}`)}</dd>
           {slip.doctorName && <><dt className="font-bold">{t('orders.slip.doctor')}</dt><dd>{slip.doctorName}</dd></>}
           <dt className="font-bold">{t('orders.slip.date')}</dt><dd>{formatDate(new Date(slip.orderedAt))}</dd>

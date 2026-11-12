@@ -58,12 +58,46 @@ test('doctor sees Clinical and Practice items; flag-off items are not rendered',
   await expect(page.getByRole('main').getByRole('heading', { name: /^Today/ })).toBeVisible();
 });
 
-test('signed in without an active facility goes to the facility slot', async ({ page }) => {
-  // A member of one clinic who has not chosen it yet. (A user with no clinic at all is sent to the setup wizard, MDV-P1-004.)
-  await signInAs(page, { user: { id: 'u-rao', displayName: 'Dr. Arjun Rao' }, memberships: [membership('SoloDoctor')] });
+test('a member of one clinic who has not chosen it yet goes straight in: there is nothing to pick (UX-08)', async ({ page }) => {
+  // (A user with no clinic at all is sent to the setup wizard, MDV-P1-004; two or more see the picker, session-control.spec.ts.)
+  let chosen = false;
+  const posts: unknown[] = [];
+  await page.addInitScript(() => localStorage.setItem('medvya.locale', 'en'));
+  await page.route('**/v1/me/context', r => r.fulfill({ json: chosen ? doctor : { user: doctor.user, memberships: doctor.memberships, active: null } }));
+  await page.route('**/v1/me/facility', r => { posts.push(r.request().postDataJSON()); chosen = true; return r.fulfill({ status: 204 }); });
   await page.goto('/today');
-  await expect(page).toHaveURL('/choose-facility');
-  await expect(page.getByRole('heading', { name: 'Where are you working today?' })).toBeVisible();
+  await expect(page.getByRole('main').getByRole('heading', { name: /^Today/ })).toBeVisible();
+  await expect(page).toHaveURL('/today'); // back to the address asked for
+  await expect(page.getByRole('heading', { name: 'Where are you working today?' })).toHaveCount(0);
+  expect(posts).toEqual([{ membershipId: 'm-1' }]);
+});
+
+const nurse = {
+  user: { id: 'u-anu', displayName: 'Sister Anu' },
+  memberships: [membership('Nurse')],
+  active: {
+    membershipId: 'm-1', tenantId: 't-1', facilityId: 'f-1', role: 'Nurse', flags: ['clinical.nurse-intake'],
+    capabilities: { RegisterBookPatients: 'Read', CheckInQueue: 'Full', Patient360Chart: 'Limited', VitalsAllergiesEntry: 'Full', ClinicalNotes: 'Read', CareTasksPatientContact: 'Full' },
+  },
+};
+
+test('a nurse lands on the nurse queue, and /patients/new says the role cannot register instead of "patient not found" (UX-08)', async ({ page }) => {
+  await signInAs(page, nurse);
+  await page.route('**/v1/front-desk/board?*', r => r.fulfill({ json: { facilityId: 'f-1', timeZone: 'Asia/Kolkata', date: '2026-10-19', now: '2026-10-19T04:40:00Z', cards: [] } }));
+  await page.goto('/');
+  await expect(page).toHaveURL('/nurse');
+  await page.goto('/patients/new');
+  await expect(page.getByRole('heading', { name: 'Register patient' })).toBeVisible();
+  await expect(page.getByText('Your role at this facility cannot register patients.')).toBeVisible();
+  await expect(page.getByText('This patient was not found')).toHaveCount(0);
+});
+
+test('page not found offers the start page, not Today, to a role without Today (UX-08)', async ({ page }) => {
+  await signInAs(page, receptionist);
+  await page.goto('/no-such-page');
+  await expect(page.getByRole('heading', { name: 'Page not found' })).toBeVisible();
+  await page.getByRole('button', { name: 'Go to my start page' }).click();
+  await expect(page).toHaveURL('/front-desk');
 });
 
 for (const locale of ['en', 'ar']) {

@@ -72,7 +72,7 @@ test('the Doctors tab lists doctors with who attested the licence, and an expire
   await expect(page.getByText('Your organisation answers for this licence. Medvya does not check it.')).toBeVisible(); // MDV-P1-067 reminder
   await page.getByLabel(/I confirm this licence belongs to this doctor/).check();
   await page.getByRole('button', { name: 'Save and confirm' }).click();
-  await expect(page.getByText('Attested by the owner on 2026-11-10')).toBeVisible();
+  await expect(page.getByText('Attested by the owner on 10 Nov 2026')).toBeVisible();
   expect(state.resubmitted).toMatchObject({ authority: 'TNMC', number: '84213', category: 'Permanent', expiresOn: '2031-12-31', attested: true });
 });
 

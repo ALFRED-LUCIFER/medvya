@@ -25,7 +25,7 @@ type Props = {
  * state, and open a clean one in the watermarked viewer. The front desk uploads and sees the list but gets no Open button (the server refuses it too).
  */
 export default function DocumentsPage(p: Props) {
-  const { t } = useI18n();
+  const { t, formatCalendarDate } = useI18n();
   if (p.loading) return <p role="status">{t('documents.loading')}</p>;
   if (p.refusal) return <Message title={t('patient360.refused.title')} body={t(p.refusal.canRequest ? 'consult.refused.ask' : 'documents.refused.role')} backPath={p.backPath} />;
   if (p.notFound || p.failed || !p.patient) return <Message title={t(p.notFound ? 'patient360.notFound' : 'documents.loadFailed')} backPath={p.backPath} />;
@@ -34,7 +34,7 @@ export default function DocumentsPage(p: Props) {
       <section aria-label={t('consult.banner.label')} className="flex flex-wrap items-baseline gap-x-4 gap-y-1 rounded-xl border-2 border-brand-700 bg-card p-4">
         <h1 className="text-xl font-extrabold">{p.patient.fullName}</h1>
         <span>{t('consult.banner.mrn', { mrn: ltr(p.patient.mrn) })}</span>
-        <span>{t('documents.dob', { date: ltr(p.patient.dateOfBirth) })}</span>
+        <span>{t('documents.dob', { date: formatCalendarDate(p.patient.dateOfBirth) })}</span>
         <Link to={p.backPath} className={buttonVariants({ variant: 'outline', className: 'ms-auto min-h-11' })}>{t('documents.back')}</Link>
       </section>
       <h2 className="text-lg font-extrabold">{t('documents.title')}</h2>
@@ -110,14 +110,14 @@ function UploadPanel(p: Props) {
 }
 
 function Row({ doc: d, ...p }: Props & { doc: DocumentRow }) {
-  const { t, formatDate } = useI18n();
+  const { t, formatDate, formatCalendarDate } = useI18n();
   const open = canOpenDocument(d, p.canOpen);
   const editing = p.editing?.id === d.id ? p.editing : null;
   return (
     <li className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 border-b pb-3 last:border-b-0">
       <div className="flex flex-col">
         <strong>{t(`documents.type.${d.type}`)}</strong>
-        <span className="text-sm">{t('documents.documentDate', { date: formatDate(new Date(`${d.documentDate}T12:00:00Z`), 'UTC') })}</span>
+        <span className="text-sm">{t('documents.documentDate', { date: formatCalendarDate(d.documentDate) })}</span>
         <span className="text-sm text-muted-foreground">{[d.uploadedBy, formatDate(new Date(d.uploadedAt), p.timeZone), sizeLabel(d.sizeBytes)].filter(Boolean).join(' · ')}</span>
       </div>
       <div className="flex flex-wrap items-center gap-2">

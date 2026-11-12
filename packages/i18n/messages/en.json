@@ -2591,6 +2591,7 @@
   "patient360.trend.alt": "{name}: latest {value} on {date}, {count} readings",
   "patient360.trend.latest": "Latest {date}",
   "patient360.labs": "Results and trends",
+  "patient360.labs.table": "Results table, scrolls sideways",
   "patient360.labs.empty": "No results recorded.",
   "patient360.flag.High": "High, usual {range}",
   "patient360.flag.Low": "Low, usual {range}",

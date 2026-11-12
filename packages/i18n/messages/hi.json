@@ -2587,6 +2587,7 @@
   "patient360.trend.alt": "{name}: {date} को नवीनतम {value}, {count} रीडिंग",
   "patient360.trend.latest": "नवीनतम {date}",
   "patient360.labs": "परिणाम और रुझान",
+  "patient360.labs.table": "परिणाम तालिका, बगल में स्क्रॉल होती है",
   "patient360.labs.empty": "कोई परिणाम दर्ज नहीं।",
   "patient360.flag.High": "अधिक, सामान्य {range}",
   "patient360.flag.Low": "कम, सामान्य {range}",

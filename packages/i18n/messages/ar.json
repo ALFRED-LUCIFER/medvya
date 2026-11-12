@@ -2590,6 +2590,7 @@
   "patient360.trend.alt": "{name}: آخر قيمة {value} في {date}، {count} قراءات",
   "patient360.trend.latest": "الأحدث {date}",
   "patient360.labs": "النتائج والاتجاهات",
+  "patient360.labs.table": "جدول النتائج، يمرَّر أفقيًا",
   "patient360.labs.empty": "لا توجد نتائج مسجلة.",
   "patient360.flag.High": "مرتفع، المعتاد {range}",
   "patient360.flag.Low": "منخفض، المعتاد {range}",

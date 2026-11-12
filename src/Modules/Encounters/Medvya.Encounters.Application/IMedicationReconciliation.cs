@@ -1,3 +1,4 @@
+using System.Data.Common;
 using Medvya.Encounters.Domain;
 
 namespace Medvya.Encounters.Application;
@@ -68,8 +69,11 @@ public interface IReconciliationStops
 /// <summary>A substance on the chart (never a "no known allergies" entry, never one ruled "not an allergy"), with its status for the evidence.</summary>
 public sealed record ChartAllergy(Guid Id, string Substance, AllergyStatus Status);
 
-/// <summary>An active medicine on the chart, as named there, and when it was first recorded on the chart (the earliest the clinic knows it was taken).</summary>
-public sealed record ChartMedicine(Guid Id, string Name, DateTimeOffset RecordedAt);
+/// <summary>
+/// An active medicine on the chart, as named there, and when it was first recorded on the chart (the earliest the clinic knows it was taken).
+/// <see cref="EncounterId"/>: the visit whose authorised prescription put it there (MDV-1087), null for any other medicine.
+/// </summary>
+public sealed record ChartMedicine(Guid Id, string Name, DateTimeOffset RecordedAt, Guid? EncounterId = null);
 
 /// <summary>A reading on the chart: the value in hundredths of its unit (14.2 kg is 1420) and when it was taken.</summary>
 public sealed record ChartReading(int ValueHundredths, DateTimeOffset TakenAt);
@@ -98,3 +102,21 @@ public interface IPrescribingChart
 /// "not recorded", never "not pregnant".
 /// </summary>
 public sealed record ChartPregnancy(int? GestationWeeks, bool RuledOut);
+
+/// <summary>One prescribed line as the chart keeps it: the medicine (with its strength) and how it is taken, in words.</summary>
+public sealed record PrescribedMedicine(string Name, string? Dose);
+
+/// <summary>
+/// The chart side of an authorised prescription (MDV-1087): its lines are the chart's medicines, linked to the visit and the prescription version.
+/// Runs inside the prescription's transaction on its connection, so the prescription and the chart commit or roll back together. No access
+/// check and no audit event here: the prescribing use case has checked clinical access and audits its own step.
+/// </summary>
+public interface IPrescribedMedicines
+{
+    /// <summary>
+    /// The visit's prescribed medicines become <paramref name="medicines"/> from <paramref name="prescriptionId"/>: what an earlier version of this
+    /// visit put on the chart is marked stopped at <paramref name="at"/>. A null id with an empty list (a cancellation) only stops.
+    /// </summary>
+    Task ReplaceAsync(Guid patientId, Guid facilityId, Guid encounterId, Guid? prescriptionId, IReadOnlyList<PrescribedMedicine> medicines, Guid by, DateTimeOffset at,
+        DbTransaction transaction, CancellationToken cancellationToken = default);
+}

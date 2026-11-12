@@ -1,3 +1,4 @@
+using System.Data.Common;
 using Medvya.Audit.Application;
 using Medvya.Audit.Domain;
 using Medvya.BuildingBlocks.Domain;
@@ -71,7 +72,7 @@ public sealed class MedicationReconciliationService(
         var now = clock.GetUtcNow();
         await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
         db.MedicationReconciliations.Add(new MedicationReconciliation { Id = Guid.CreateVersion7(), TenantId = TenantId, PatientId = encounter.PatientId, EncounterId = encounter.Id, ConfirmedBy = Me, ConfirmedAt = now });
-        var chartRows = await ChartRowsAsync(encounter.PatientId, cancellationToken);
+        var chartRows = await ChartRowsAsync(encounter, cancellationToken);
         foreach (var row in rows)
         {
             var d = row.Decision!;
@@ -132,15 +133,17 @@ public sealed class MedicationReconciliationService(
     }
 
     /// <summary>The chart's medicine of each name (the latest), tracked so confirm can change it.</summary>
-    async Task<Dictionary<string, MedicationStatement>> ChartRowsAsync(Guid patientId, CancellationToken cancellationToken) =>
-        (await db.MedicationStatements.Where(m => m.PatientId == patientId && m.Source == ChartSource.ClinicianVerified).ToListAsync(cancellationToken))
+    async Task<Dictionary<string, MedicationStatement>> ChartRowsAsync(Encounter encounter, CancellationToken cancellationToken) =>
+        (await db.MedicationStatements.Where(m => m.PatientId == encounter.PatientId && m.Source == ChartSource.ClinicianVerified && (m.EncounterId == null || m.EncounterId != encounter.Id))
+            .ToListAsync(cancellationToken))
             .GroupBy(m => MedicationReconciliationRules.Key(m.Name)).ToDictionary(g => g.Key, g => g.OrderByDescending(m => m.RecordedAt).ThenByDescending(m => m.Id).First());
 
     async Task<List<MedicineRow>> RowsAsync(Encounter encounter, CancellationToken cancellationToken)
     {
         // A patient-reported medicine counts only for the visit it was said at; an old visit's list must not return as today's claim.
-        var all = await db.MedicationStatements.AsNoTracking().Where(m => m.PatientId == encounter.PatientId && (m.AppointmentId == null || m.AppointmentId == encounter.AppointmentId))
-            .ToListAsync(cancellationToken);
+        // This visit's own authorised prescription (MDV-1087) is what the doctor decided here, not a medicine the patient came in on.
+        var all = await db.MedicationStatements.AsNoTracking().Where(m => m.PatientId == encounter.PatientId && (m.AppointmentId == null || m.AppointmentId == encounter.AppointmentId)
+            && (m.EncounterId == null || m.EncounterId != encounter.Id)).ToListAsync(cancellationToken);
         var decisions = (await db.MedicationDecisions.AsNoTracking().Where(d => d.EncounterId == encounter.Id).ToListAsync(cancellationToken))
             .GroupBy(d => d.MedicineKey).ToDictionary(g => g.Key, g => g.OrderByDescending(d => d.DecidedAt).ThenByDescending(d => d.Id).First());
         var rows = new List<MedicineRow>();
@@ -202,7 +205,7 @@ public sealed class PrescribingChart(EncountersDbContext db, IPregnancies pregna
     {
         var allergies = await db.Allergies.AsNoTracking().Where(a => a.PatientId == patientId).OrderBy(a => a.RecordedAt).ThenBy(a => a.Id).ToListAsync(cancellationToken);
         var medicines = await db.MedicationStatements.AsNoTracking().Where(m => m.PatientId == patientId && m.State == MedicationState.Active)
-            .OrderBy(m => m.Name).ThenBy(m => m.Id).Select(m => new ChartMedicine(m.Id, m.Name, m.RecordedAt)).ToListAsync(cancellationToken);
+            .OrderBy(m => m.Name).ThenBy(m => m.Id).Select(m => new ChartMedicine(m.Id, m.Name, m.RecordedAt, m.EncounterId)).ToListAsync(cancellationToken);
         // A flagged reading the nurse has not kept may be a typing slip: a dose is never worked out from it.
         var weight = await db.Observations.AsNoTracking().Where(o => o.PatientId == patientId && o.Code == ObservationCode.Weight && (o.Flag == null || o.FlagKept))
             .OrderByDescending(o => o.TakenAt).ThenByDescending(o => o.Id).Select(o => new ChartReading(o.ValueHundredths, o.TakenAt)).FirstOrDefaultAsync(cancellationToken);
@@ -216,4 +219,28 @@ public sealed class PrescribingChart(EncountersDbContext db, IPregnancies pregna
     Task<ChartReading?> LatestAsync(Guid patientId, ObservationCode code, CancellationToken cancellationToken) =>
         db.Observations.AsNoTracking().Where(o => o.PatientId == patientId && o.Code == code)
             .OrderByDescending(o => o.TakenAt).ThenByDescending(o => o.Id).Select(o => new ChartReading(o.ValueHundredths, o.TakenAt)).FirstOrDefaultAsync(cancellationToken);
+}
+
+/// <summary>An authorised prescription's lines on the chart; see <see cref="IPrescribedMedicines"/>.</summary>
+public sealed class PrescribedMedicines(ICurrentTenant tenant) : IPrescribedMedicines
+{
+    public async Task ReplaceAsync(Guid patientId, Guid facilityId, Guid encounterId, Guid? prescriptionId, IReadOnlyList<PrescribedMedicine> medicines, Guid by, DateTimeOffset at,
+        DbTransaction transaction, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(medicines);
+        ArgumentNullException.ThrowIfNull(transaction);
+        await using var shared = new EncountersDbContext(new DbContextOptionsBuilder<EncountersDbContext>().UseNpgsql(transaction.Connection!).Options, tenant);
+        await shared.Database.UseTransactionAsync(transaction, cancellationToken);
+        // Clinical records are never deleted (the role has no DELETE): a replaced or cancelled version's lines are stopped, and the chart keeps them as history.
+        await shared.MedicationStatements.Where(m => m.EncounterId == encounterId && m.PrescriptionId != null && m.PrescriptionId != prescriptionId && m.State == MedicationState.Active)
+            .ExecuteUpdateAsync(s => s.SetProperty(m => m.State, MedicationState.Stopped).SetProperty(m => m.StoppedAt, at), cancellationToken);
+        if (prescriptionId is not { } rx) return;
+        var tenantId = tenant.TenantId ?? throw new InvalidOperationException("No tenant context.");
+        shared.MedicationStatements.AddRange(medicines.Select(m => new MedicationStatement
+        {
+            Id = Guid.CreateVersion7(), TenantId = tenantId, PatientId = patientId, FacilityId = facilityId, EncounterId = encounterId, PrescriptionId = rx, Name = m.Name, Dose = m.Dose,
+            State = MedicationState.Active, Source = ChartSource.ClinicianVerified, RecordedBy = by, RecordedAt = at, ReviewedBy = by, ReviewedAt = at,
+        }));
+        await shared.SaveChangesAsync(cancellationToken);
+    }
 }

@@ -37,6 +37,7 @@ public static class EncountersModule
             .AddScoped<IGeriatricAssessments, GeriatricAssessmentService>()
             .AddScoped<IChronicCare, ChronicCareService>()
             .AddScoped<IPrescribingChart, PrescribingChart>()
+            .AddScoped<IPrescribedMedicines, PrescribedMedicines>()
             .AddScoped<INoteTemplates, NoteTemplateService>()
             .AddScoped<IConsultNotes, ConsultNoteService>()
             .AddScoped<Medvya.Scheduling.Application.IHandoffGate, IntakeHandoffGate>()

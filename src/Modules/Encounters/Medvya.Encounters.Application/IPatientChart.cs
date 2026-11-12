@@ -13,7 +13,8 @@ public sealed record AllergyBanner(AllergyState State, IReadOnlyList<AllergyView
 public sealed record AllergyFlag(Guid PatientId, AllergyState State);
 
 public sealed record ProblemView(string? Icd10Code, string Description, ProblemVerification Verification, DateOnly? OnsetOn, ChartSource Source, ProblemStatus Status = ProblemStatus.Active);
-public sealed record MedicineView(string Name, string? Dose, MedicationState State, ChartSource Source, DateTimeOffset? StoppedAt = null);
+/// <summary><see cref="EncounterId"/>: the visit whose authorised prescription put it on the chart (MDV-1087); its printed prescription is that visit's.</summary>
+public sealed record MedicineView(string Name, string? Dose, MedicationState State, ChartSource Source, DateTimeOffset? StoppedAt = null, Guid? EncounterId = null);
 /// <summary>
 /// The latest reading of one code, a vital or a lab. <see cref="Flag"/> is High or Low against the adult <see cref="Range"/> (MDV-P2-031,
 /// awaiting clinical sign-off); a code without a range has neither.

@@ -12,7 +12,8 @@ export type ObservationCode =
 
 export type Allergy = { substance: string; reaction: string | null; status: AllergyStatus; source: ChartSource };
 export type Problem = { icd10Code: string | null; description: string; verification: 'Verified' | 'PatientReported' | 'Provisional'; onsetOn: string | null; source: ChartSource; status: 'Active' | 'Resolved' };
-export type Medicine = { name: string; dose: string | null; state: 'Active' | 'Stopped'; source: ChartSource; stoppedAt: string | null };
+/** `encounterId`: the visit whose authorised prescription put it on the chart (MDV-1087). */
+export type Medicine = { name: string; dose: string | null; state: 'Active' | 'Stopped'; source: ChartSource; stoppedAt: string | null; encounterId?: string | null };
 /** The latest reading of a vital or a lab; flag and range come from the server's adult reference range (null when the code has none). */
 export type Vital = { code: ObservationCode; value: number; unit: string; takenAt: string; source: ChartSource; flag: 'High' | 'Low' | null; range: string | null };
 /** BMI worked out by the server from the latest weight and height; the older of the two is named with its date. */

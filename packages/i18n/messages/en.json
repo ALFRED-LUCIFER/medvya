@@ -2591,6 +2591,8 @@
   "patient360.verification.PatientReported": "Patient reported",
   "patient360.verification.Provisional": "Provisional",
   "patient360.medicines": "Medicines",
+  "medicine.prescribed.visit": "Prescribed at this visit",
+  "medicine.prescribed.print": "Printed prescription",
   "patient360.medicines.empty": "No medicines recorded.",
   "patient360.medicineState.Active": "Active",
   "patient360.medicineState.Stopped": "Stopped",

@@ -2590,6 +2590,8 @@
   "patient360.verification.PatientReported": "أبلغ عنها المريض",
   "patient360.verification.Provisional": "مؤقت",
   "patient360.medicines": "الأدوية",
+  "medicine.prescribed.visit": "وُصف في هذه الزيارة",
+  "medicine.prescribed.print": "الوصفة المطبوعة",
   "patient360.medicines.empty": "لا توجد أدوية مسجّلة.",
   "patient360.medicineState.Active": "نشط",
   "patient360.medicineState.Stopped": "متوقف",

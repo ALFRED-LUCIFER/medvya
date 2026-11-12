@@ -70,6 +70,22 @@ export async function walkIn(page: Page, patient: ReturnType<typeof syntheticPat
   await expect(page.getByRole('heading', { name: `${patient.name} is checked in` })).toBeVisible();
 }
 
+/**
+ * In an open booking panel: waits for the slot hold, finds the patient, picks the result, waits until the pick took, sets the reason.
+ * The hold arriving late redraws the panel, so typing before it can lose the search or the pick.
+ */
+export async function choosePatient(page: Page, search: string, pick: RegExp) {
+  const panel = page.getByRole('complementary', { name: 'Book appointment' });
+  await expect(panel).toContainText('Held for you until');
+  await panel.getByRole('searchbox', { name: 'Name, MRN, phone or ID' }).fill(search);
+  await panel.getByRole('button', { name: 'Search' }).click();
+  await panel.getByRole('button', { name: pick }).click();
+  await expect(panel).toContainText(' · MRN');
+  await panel.getByRole('combobox', { name: 'Reason category' }).click();
+  await page.getByRole('option', { name: 'Long-term condition review' }).click();
+  return panel;
+}
+
 /** The owner switches nurse intake on or off in Settings (audited, MDV-P2-007), in a page of its own. Only an owner may. */
 export async function setNurseIntake(browser: Browser, enabled: boolean) {
   const admin = await browser.newPage();

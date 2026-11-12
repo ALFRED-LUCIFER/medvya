@@ -37,7 +37,8 @@ public sealed class OrganisationReviews(string connectionString, ICurrentUser us
                 where states.Contains(t.State)
                 orderby r.SubmittedAt, t.Name
                 select new { t.Id, t.Name, t.CountryCode, r.Type, t.State, r.SubmittedAt, r.LastReason, r.ItContactName, r.ItContactEmail }).ToListAsync(cancellationToken);
-            var documents = (await db.OrganisationDocuments.IgnoreQueryFilters().OrderBy(d => d.UploadedAt).ToListAsync(cancellationToken))
+            var listed = rows.Select(x => x.Id).ToList();
+            var documents = (await db.OrganisationDocuments.IgnoreQueryFilters().Where(d => listed.Contains(d.TenantId)).OrderBy(d => d.UploadedAt).ToListAsync(cancellationToken))
                 .ToLookup(d => d.TenantId, d => new OrganisationDocumentView(d.Id, d.Kind, d.ContentType, d.SizeBytes, d.UploadedAt));
             return [.. rows.Select(x => new QueueItem(x.Id, x.Name, x.CountryCode, x.Type, x.State, x.SubmittedAt, x.LastReason, x.ItContactName, x.ItContactEmail, [.. documents[x.Id]]))];
         }

@@ -84,6 +84,7 @@ public sealed class StaffRoster(TenancyDbContext db, ICurrentTenant tenant, ICur
     {
         reason = ValidReason(reason);
         // Serializable: two administrators offboarding each other at once must not both pass the last-administrator check.
+        // shortcut: the one PostgreSQL refuses (40001) gets a 500 and nothing is changed; retry it here once pilot owners report it.
         await using var tx = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, cancellationToken);
         var member = await db.Memberships.SingleOrDefaultAsync(m => m.Id == membershipId && m.Role != Role.Patient && m.Status != MembershipStatus.Offboarded, cancellationToken);
         // Only someone who administers staff at that member's facility offboards them (#877); elsewhere the member does not exist for them.

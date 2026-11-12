@@ -216,10 +216,11 @@ public sealed class PatientChartTests(PostgresFixture sql) : IClassFixture<Postg
         Assert.Equal("Listed", items[0].GetProperty("state").GetString());
         Assert.False(items[0].GetProperty("abnormalVitals").GetBoolean());
 
-        // MDV-1090: a nurse's out-of-range reading of the last day is a flag on the row; an older one, or a lab flag with no visit, is not. Remove the filter and this fails.
+        // MDV-1090: a nurse's out-of-range reading of the last day is a flag on the row; an older one, or one from another facility, is not. Remove the filter and this fails.
         await SeedAsync(db => db.Observations.AddRange(
-            new Observation { Id = Guid.NewGuid(), TenantId = h.Tenant, PatientId = h.Patient, FacilityId = h.Facility, AppointmentId = Guid.NewGuid(), Code = ObservationCode.Pulse, ValueHundredths = 11200, TakenAt = h.Clock.GetUtcNow().AddHours(-25), Source = ChartSource.ClinicianVerified, Flag = VitalAlert.High }));
-        using (var old = await Flags(h.Doctor, h.Patient)) Assert.False((await Json(old)).GetProperty("items")[0].GetProperty("abnormalVitals").GetBoolean());
+            new Observation { Id = Guid.NewGuid(), TenantId = h.Tenant, PatientId = h.Patient, FacilityId = h.Facility, AppointmentId = Guid.NewGuid(), Code = ObservationCode.Pulse, ValueHundredths = 11200, TakenAt = h.Clock.GetUtcNow().AddHours(-25), Source = ChartSource.ClinicianVerified, Flag = VitalAlert.High },
+            new Observation { Id = Guid.NewGuid(), TenantId = h.Tenant, PatientId = h.Patient, FacilityId = Guid.NewGuid(), AppointmentId = Guid.NewGuid(), Code = ObservationCode.Pulse, ValueHundredths = 11200, TakenAt = h.Clock.GetUtcNow().AddHours(-1), Source = ChartSource.ClinicianVerified, Flag = VitalAlert.High }));
+        using (var notYet = await Flags(h.Doctor, h.Patient)) Assert.False((await Json(notYet)).GetProperty("items")[0].GetProperty("abnormalVitals").GetBoolean());
         await SeedAsync(db => db.Observations.Add(
             new Observation { Id = Guid.NewGuid(), TenantId = h.Tenant, PatientId = h.Patient, FacilityId = h.Facility, AppointmentId = Guid.NewGuid(), Code = ObservationCode.Pulse, ValueHundredths = 11200, TakenAt = h.Clock.GetUtcNow().AddHours(-1), Source = ChartSource.ClinicianVerified, Flag = VitalAlert.High }));
         using (var fresh = await Flags(h.Doctor, h.Patient)) Assert.True((await Json(fresh)).GetProperty("items")[0].GetProperty("abnormalVitals").GetBoolean());

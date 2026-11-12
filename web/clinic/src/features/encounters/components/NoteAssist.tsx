@@ -1,3 +1,4 @@
+import { ArrowDown, ArrowUp, TriangleAlert } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
 import { Button } from '@medvya/ui';
 import { phraseKey, sectionLabelKey, snippetSections, type NoteSections, type NoteTemplate } from '../domain/note';
@@ -9,6 +10,19 @@ export type Assist = {
   previous: { id: string; signedAt: string; signedByName: string | null; sections: NoteSections }[];
   onInsertPhrase: (key: string) => void; onInsertVitals: () => void; onInsertSnippet: (noteId: string, sectionId: string) => void;
 };
+/** Each verified reading with the nurse's flag in words and an icon, never colour alone (MDV-1090). */
+export function VitalList({ vitals }: { vitals: Assist['vitals'] }) {
+  const { t } = useI18n();
+  return (
+    <ul className="list-disc ps-5 text-sm">
+      {vitals.map(v => (
+        <li key={v.line}>{v.line}{v.flag && <>{' '}<strong className="inline-flex items-center gap-1">
+          {v.flag === 'High' ? <ArrowUp aria-hidden className="size-4" /> : v.flag === 'Low' ? <ArrowDown aria-hidden className="size-4" /> : <TriangleAlert aria-hidden className="size-4" />}
+          {t(`noteAssist.flag.${v.flag}`)}</strong></>}</li>))}
+    </ul>
+  );
+}
+
 /** `showVitals` false: the one page shows the verified readings in its own Vitals section (MDV-P2-041). */
 type Props = { assist: Assist; template: NoteTemplate; timeZone: string | undefined; showVitals?: boolean };
 
@@ -28,7 +42,7 @@ export default function NoteAssist({ assist: a, template, timeZone, showVitals =
             ? <p className="text-sm text-muted-foreground">{t('noteAssist.vitals.empty')}</p>
             : (
               <>
-                <ul className="list-disc ps-5 text-sm">{a.vitals.map(line => <li key={line}>{line}</li>)}</ul>
+                <VitalList vitals={a.vitals} />
                 <div><Button variant="outline" className="min-h-11" onClick={a.onInsertVitals}>{t('noteAssist.vitals.insert')}</Button></div>
               </>
             )}

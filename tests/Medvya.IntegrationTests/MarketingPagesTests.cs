@@ -28,6 +28,17 @@ public sealed partial class MarketingPagesTests(WebApplicationFactory<Program> f
     public void MinorUnitsAreFormattedForTheBuyer(long minor, string currency, string shown) =>
         Assert.Equal(shown, PricingContent.Money(minor, currency));
 
+    // MDV-AUDIT-1112: features the product does not have yet are marked planned on the pages that mention them, in every language.
+    [Theory]
+    [InlineData("/", "Planned, not available yet: AI-drafted notes")]
+    [InlineData("/assist", "Planned, not available yet: AI-drafted notes")]
+    [InlineData("/pricing", "Planned, not available yet: AI-drafted notes")]
+    [InlineData("/ar/pricing", "مخطط له وغير متاح بعد")]
+    public async Task PagesThatMentionFeaturesNotBuiltYetSayTheyArePlanned(string path, string expected)
+    {
+        Assert.Contains(expected, await Get(path), StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task IndiaSeesRupeesAndIndianPaymentMethods()
     {

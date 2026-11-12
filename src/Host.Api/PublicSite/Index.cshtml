@@ -21,18 +21,18 @@
         ("18:00", p.T("site.home.day.close.title"), p.T("site.home.day.close.body")),
     };
     // Wide cards span two columns on a desktop, as in the design's grid.
-    var features = new (string Title, string Body, string Style)[]
+    var features = new (string Title, string Body, string Style, bool Planned)[]
     {
-        (p.T("site.home.features.frontDesk.title"), p.T("site.home.features.frontDesk.body"), "wide"),
-        (p.T("site.home.features.notes.title"), p.T("site.home.features.notes.body"), "ai"),
-        (p.T("site.home.features.booking.title"), p.T("site.home.features.booking.body"), ""),
-        (p.T("site.home.features.record.title"), p.T("site.home.features.record.body"), ""),
-        (p.TRegion("site.home.features.billing.title"), p.TRegion("site.home.features.billing.body"), ""),
-        (p.T("site.home.features.insurance.title"), p.TRegion("site.home.features.insurance.body"), ""),
-        (p.T("site.home.features.app.title"), p.T("site.home.features.app.body"), ""),
-        (p.T("site.home.features.reports.title"), p.T("site.home.features.reports.body"), "wide dark"),
-        (p.T("site.home.features.access.title"), p.T("site.home.features.access.body"), ""),
-        (p.T("site.home.features.video.title"), p.T("site.home.features.video.body"), ""),
+        (p.T("site.home.features.frontDesk.title"), p.T("site.home.features.frontDesk.body"), "wide", false),
+        (p.T("site.home.features.notes.title"), p.T("site.home.features.notes.body"), "ai", true),
+        (p.T("site.home.features.booking.title"), p.T("site.home.features.booking.body"), "", false),
+        (p.T("site.home.features.record.title"), p.T("site.home.features.record.body"), "", false),
+        (p.TRegion("site.home.features.billing.title"), p.TRegion("site.home.features.billing.body"), "", true),
+        (p.T("site.home.features.insurance.title"), p.TRegion("site.home.features.insurance.body"), "", true),
+        (p.T("site.home.features.app.title"), p.T("site.home.features.app.body"), "", true),
+        (p.T("site.home.features.reports.title"), p.T("site.home.features.reports.body"), "wide dark", false),
+        (p.T("site.home.features.access.title"), p.T("site.home.features.access.body"), "", false),
+        (p.T("site.home.features.video.title"), p.T("site.home.features.video.body"), "", true),
     };
     string[] assistPoints = ["consent", "approve", "linked", "interactions", "audio", "neverSigns"];
     var noteLines = new (string Letter, string Key, bool Accepted)[] { ("S", "lineS", true), ("O", "lineO", true), ("A", "lineA", false), ("P", "lineP", false) };
@@ -70,6 +70,7 @@
             <p class="eyebrow-pill"><span class="live-dot" aria-hidden="true"></span>@p.T("site.home.hero.eyebrow")</p>
             <h1 id="hero-title">@p.T("site.home.hero.titleStart") <span class="grad">@p.T("site.home.hero.titleEnd")</span></h1>
             <p class="home-lead">@p.TRegion("site.home.hero.body")</p>
+            <p class="note">@p.T("site.plannedNote")</p>
             <div class="ctas">
                 <a class="button button-primary" href="@p.Href(PublicSite.DoctorStart)">@p.T("site.shell.cta.trial")</a>
                 <a class="button button-outline" href="@p.Href(PublicSite.Demo)">@p.T("site.shell.demo")</a>
@@ -141,9 +142,9 @@
             <a class="button button-outline" href="@p.Href(PublicSite.Pricing)">@p.T("site.home.features.compare")</a>
         </div>
         <ul class="bento">
-            @foreach (var (title, body, style) in features)
+            @foreach (var (title, body, style, planned) in features)
             {
-                <li class="@style"><h3>@title</h3><p>@body</p></li>
+                <li class="@style"><h3>@title</h3>@if (planned) { <p class="chip chip-planned">@p.T("site.planned")</p> }<p>@body</p></li>
             }
         </ul>
     </div>
@@ -153,6 +154,7 @@
     <div class="home-wrap home-split">
         <div class="home-head">
             <p class="chip-ai">@p.T("site.home.assist.eyebrow")</p>
+            <p class="chip chip-planned">@p.T("site.planned")</p>
             <h2 id="assist-title"><span>@p.T("site.home.assist.title1")</span> <span>@p.T("site.home.assist.title2")</span> <span class="accent">@p.T("site.home.assist.title3")</span></h2>
             <p class="home-lead">@p.T("site.home.assist.body")</p>
             <ul class="checks checks-grid">
@@ -224,6 +226,7 @@
         </div>
         <div class="home-head">
             <p class="eyebrow eyebrow-patient">@p.T("site.home.app.eyebrow")</p>
+            <p class="chip chip-planned">@p.T("site.planned")</p>
             <h2 id="app-title">@p.T("site.home.app.title")</h2>
             <p class="home-lead">@p.T("site.home.app.body")</p>
             <ul class="points">

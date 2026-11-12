@@ -102,6 +102,8 @@ public enum ObservationCode
     // Vitals and bedside measures (MDV-P2-007, P2-031). Stored by name (at most 30 characters), so the order here is only the chart's order.
     BloodPressureSystolic, BloodPressureDiastolic, Pulse, Temperature, OxygenSaturation, Weight, RespiratoryRate, Height, PainScore,
     BloodPressureStandingSystolic, BloodPressureStandingDiastolic, FundalHeight, FetalHeartRate,
+    // Growth (MDV-P2-035): Height is a standing height (or, from nurse intake, a height in WHO's position for the age); Length is measured lying.
+    Length, HeadCircumference,
     // Key labs (MDV-P2-005, P2-031).
     HbA1c, LdlCholesterol, Egfr, UrineAlbuminCreatinineRatio, Haemoglobin, Ferritin, Potassium, Sodium, Tsh, VitaminD, Platelets,
 }
@@ -140,7 +142,7 @@ public sealed class Observation
         ObservationCode.Temperature => "°C",
         ObservationCode.OxygenSaturation or ObservationCode.HbA1c => "%",
         ObservationCode.Weight => "kg",
-        ObservationCode.Height or ObservationCode.FundalHeight => "cm",
+        ObservationCode.Height or ObservationCode.FundalHeight or ObservationCode.Length or ObservationCode.HeadCircumference => "cm",
         ObservationCode.PainScore => "/10",
         ObservationCode.LdlCholesterol => "mg/dL",
         ObservationCode.Egfr => "mL/min/1.73 m²",

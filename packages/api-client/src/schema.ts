@@ -1085,6 +1085,64 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/patients/{patientId}/growth": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    patientId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    patientId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["RecordGrowth"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/patients/{patientId}/geriatric-assessments": {
         parameters: {
             query?: never;
@@ -8136,6 +8194,8 @@ export interface components {
             /** @default false */
             unscheduled: boolean;
         };
+        /** @enum {unknown} */
+        BodyPosition: "Lying" | "Standing" | null;
         BookAppointment: {
             /** Format: uuid */
             holdId?: string;
@@ -8788,6 +8848,17 @@ export interface components {
             /** Format: int32 */
             phq2: null | number | string;
             nutritionNote: null | string;
+        };
+        RecordGrowth: {
+            /** Format: date */
+            takenOn: null | string;
+            /** Format: double */
+            weightKg: null | number | string;
+            /** Format: double */
+            lengthCm: null | number | string;
+            position: null | components["schemas"]["BodyPosition"];
+            /** Format: double */
+            headCm: null | number | string;
         };
         /** @enum {unknown} */
         RecordingConsent: "Agreed" | "Declined" | "Withdrawn" | null;

@@ -2,6 +2,8 @@ import type { ComponentType } from 'react';
 import { useParams } from 'react-router';
 import ChildHealthCard from '../features/child-health/components/ChildHealthCard';
 import { useChildHealthController } from '../features/child-health/hooks/useChildHealthController';
+import GrowthCard from '../features/child-health/components/GrowthCard';
+import { useGrowthController } from '../features/child-health/hooks/useGrowthController';
 import DocumentsSummary from '../features/documents/components/DocumentsSummary';
 import { useDocumentListController } from '../features/documents/hooks/useDocumentListController';
 import OpenReferrals from '../features/referrals/components/OpenReferrals';
@@ -27,7 +29,12 @@ type StageModuleProps = { patientId: string; canRecord: boolean; online: boolean
  * The life-stage modules (MDV-P2-034 to P2-038), by the life stage the server works out. Each is a route-level component that takes
  * StageModuleProps and fetches its own data; add it to its stage here and the chart shows it in the life-stage slot. A stage with none shows the empty card.
  */
-const stageModules: Record<LifeStage, ComponentType<StageModuleProps>[]> = { Adult: [], Child: [ChildHealth], Pregnancy: [], OlderAdult: [OlderAdult] };
+const stageModules: Record<LifeStage, ComponentType<StageModuleProps>[]> = { Adult: [], Child: [Growth, ChildHealth], Pregnancy: [], OlderAdult: [OlderAdult] };
+
+/** Growth with WHO centiles (MDV-P2-035), asked for only once the chart says the patient is a child. */
+function Growth({ patientId, canRecord, online }: StageModuleProps) {
+  return <GrowthCard {...useGrowthController(patientId, true)} canRecord={canRecord} online={online} />;
+}
 
 /** Immunisations and milestones (MDV-P2-036), asked for only once the chart says the patient is a child. */
 function ChildHealth({ patientId, canRecord, online }: StageModuleProps) {

@@ -19,6 +19,8 @@ type Props = {
   history?: ReactNode; timeline?: ReactNode; documents?: ReactNode;
   /** The life-stage module (pregnancy, growth, immunisations, older adult review): empty until one is built for this stage. */
   stageModule?: ReactNode;
+  /** "Start consultation" for the doctor's own waiting visit today (MDV-1089); without it the chart says to use the board. */
+  startConsult?: ReactNode;
   /** Care gaps and goals (MDV-P2-038): renders nothing until it exists. */
   carePlan?: ReactNode;
   /** Add medicine (MDV-P2-039) on the Medicines card, for a role that may prescribe. */
@@ -70,7 +72,7 @@ export default function Patient360Page(p: Props) {
         </span>
         {chart.openEncounterId
           ? <Link to={p.consultPath(chart.openEncounterId)} className={buttonVariants({ variant: 'default', className: 'min-h-11' })}>{t('consult.open')}</Link>
-          : <span className="text-muted-foreground">{t('patient360.startFromBoard')}</span>}
+          : p.startConsult ?? <span className="text-muted-foreground">{t('patient360.startFromBoard')}</span>}
         <Link to={p.backPath} className={buttonVariants({ variant: 'outline', className: 'min-h-11' })}>{t('patient360.back')}</Link>
       </div>
       <div role="group" aria-label={t('patient360.section.label')} className="sticky top-0 z-10 flex flex-wrap gap-2 bg-background py-1">

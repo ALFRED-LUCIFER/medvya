@@ -133,6 +133,32 @@ public sealed class EncounterTests(PostgresFixture sql) : IClassFixture<Postgres
         Assert.Null(await Encounters(h.Doctor).StartAsync(new StartEncounter(Guid.NewGuid())));
     }
 
+    async Task<Guid?> StartableAsync(Guid doctor) => (await h.Get<IPatientChart>(doctor).GetAsync(h.Patient, h.Facility)).StartableAppointmentId;
+
+    /// <summary>
+    /// MDV-1089, SAFETY, mutation check: drop the calendar filter and the colleague is offered this doctor's visit; drop the state filter and a booked
+    /// visit is offered; drop the date check and yesterday's is. Once started the chart offers the open consultation instead.
+    /// </summary>
+    [Fact]
+    public async Task TheChartOffersOnlyTheDoctorsOwnWaitingVisitOfToday()
+    {
+        await h.BookAsync(9);
+        Assert.Null(await StartableAsync(h.Doctor)); // not arrived
+        var visit = await ArrivedAsync(hour: 10);
+        Assert.Equal(visit, await StartableAsync(h.Doctor));
+        Assert.Null(await StartableAsync(h.SecondDoctor)); // another doctor's calendar
+        await Encounters(h.Doctor).StartAsync(new StartEncounter(visit));
+        Assert.Null(await StartableAsync(h.Doctor)); // in consult: the chart's open consultation is the offer
+    }
+
+    [Fact]
+    public async Task YesterdaysWaitingVisitIsNotOfferedFromTheChart()
+    {
+        await ArrivedAsync();
+        h.Clock.Advance(TimeSpan.FromDays(1));
+        Assert.Null(await StartableAsync(h.Doctor));
+    }
+
     [Fact]
     public async Task YesterdaysUnfinishedVisitIsNotCalledInToday()
     {

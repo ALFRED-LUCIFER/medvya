@@ -1,5 +1,7 @@
 import type { ComponentType } from 'react';
-import { useParams } from 'react-router';
+import { useNavigate, useParams } from 'react-router';
+import StartConsult from '../features/encounters/components/StartConsult';
+import { useStartConsultController } from '../features/encounters/hooks/useStartConsultController';
 import ChildHealthCard from '../features/child-health/components/ChildHealthCard';
 import { useChildHealthController } from '../features/child-health/hooks/useChildHealthController';
 import GrowthCard from '../features/child-health/components/GrowthCard';
@@ -78,6 +80,7 @@ function Chart({ patientId, backPath, canEditHistory, canManagePregnancy, canOrd
     <div className="flex flex-col gap-4">
       <Patient360Page {...chart} {...useChartSectionController(userId)} backPath={backPath} consultPath={consultPath} printRx={canOrder}
         addMedicine={canOrder && d && <AddMedicinePanel {...add} patient={{ ...d.patient, allergies: { state: d.chart.allergyState, allergies: d.chart.allergies } }} />}
+        startConsult={d?.chart.startableAppointmentId ? <ChartStart appointmentId={d.chart.startableAppointmentId} patientId={patientId} patientName={d.patient.fullName} online={online} /> : undefined}
         history={chart.data && <HistorySections {...history} />}
         stageModule={modules.length > 0 || (pregnant && pregnancy.shown) ? <div className="flex flex-col gap-4">
           {pregnant && pregnancyCard}
@@ -90,6 +93,13 @@ function Chart({ patientId, backPath, canEditHistory, canManagePregnancy, canOrd
       {!referrals.hidden && !referrals.loading && !referrals.failed && <OpenReferrals open={referrals.open} />}
     </div>
   );
+}
+
+/** The chart's "Start consultation" (MDV-1089): the board's start, for the doctor's own waiting visit; the server decides again. */
+function ChartStart({ appointmentId, patientId, patientName, online }: { appointmentId: string; patientId: string; patientName: string; online: boolean }) {
+  const navigate = useNavigate();
+  const consult = useStartConsultController(appointmentId, patientId, id => void navigate(`/consult/${id}`));
+  return <StartConsult {...consult} patientName={patientName} inConsult={false} online={online} />;
 }
 
 /** Targets, care gaps and goals (MDV-P2-038); a gap's action goes on the open consultation, and with none open it says so. */

@@ -27,6 +27,7 @@ public static class EncountersModule
             .AddScoped<IPatientHistory, PatientHistoryService>()
             .AddScoped<IPregnancies, PregnancyService>()
             .AddScoped<IPatientTimeline, PatientTimelineService>()
+            .AddScoped<IPatientVisits, PatientVisitsService>()
             .AddScoped<IDocuments, DocumentService>()
             .AddScoped<IIntake, IntakeService>()
             .AddScoped<IMedicationReconciliation, MedicationReconciliationService>()

@@ -30,6 +30,8 @@ type Props = {
   merges: MergeHistoryEntry[];
   /** Current consents and the change action (MDV-P1-019). Changing needs Register / book at Full, as the server checks. */
   consents: PatientConsents;
+  /** The visit list (MDV-1088): date and status only, composed by the route. */
+  visits: ReactNode;
   /** "Request merge review" with another record (MDV-P1-017); null when this role may not ask (Register / book at Full, as the server checks). */
   mergeRequest: { search: PatientSearchView; chosen: string; busy: boolean; refusal: Refusal | null; onRequest: () => void } | null;
 };
@@ -186,6 +188,8 @@ export default function PatientRecord(props: Props) {
         )}
         {props.consents.changeFailed && <p role="alert" className="mt-2 text-sm font-semibold text-danger-700">{t('patients.consents.changeFailed')}</p>}
       </section>
+
+      {props.visits}
 
       {props.merges.length > 0 && (
         <section aria-labelledby="merge-history" className="rounded-xl border bg-card p-4">

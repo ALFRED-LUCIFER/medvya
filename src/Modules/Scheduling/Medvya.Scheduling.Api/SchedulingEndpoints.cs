@@ -69,6 +69,11 @@ public static class SchedulingEndpoints
                 await service.FindPatientAsync(facilityId ?? Guid.Empty, patientId, ct) is { } p ? Results.Ok(p) : Results.NotFound())
             .AuditedWithErrors("patient.lookup", "patient", "registration", patientRouteKey: "patientId"); // the purpose front-desk search uses (MDV-P1-018)
 
+        // The desk record's visit list (MDV-1088): dates and status only. Opens the patient's record, so the id is in the route and the audit row.
+        schedule.MapGet("/patients/{patientId:guid}/visits", async (Guid patientId, Guid? facilityId, [FromServices] IBookingService service, CancellationToken ct) =>
+                await service.VisitsAsync(facilityId ?? Guid.Empty, patientId, ct) is { } visits ? Results.Ok(new { visits }) : Results.NotFound())
+            .AuditedWithErrors("patient.visits.list", "patient", "registration", patientRouteKey: "patientId");
+
         var holds = app.MapGroup("/v1/slot-holds").RequireAuthorization();
         holds.MapPost("/", (HoldSlot command, [FromServices] IBookingService service, CancellationToken ct) => service.HoldAsync(command, ct))
             .AuditedWriteWithErrors(SchedulingAudit.SlotHold, SchedulingAudit.HoldResource, SchedulingAudit.Treatment)

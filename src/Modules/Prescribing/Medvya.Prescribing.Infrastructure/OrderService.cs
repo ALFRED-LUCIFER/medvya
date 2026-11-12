@@ -213,6 +213,14 @@ public sealed class OrderTimelineSource(PrescribingDbContext db) : ITimelineSour
     }
 }
 
+/// <summary>The tests placed at these encounters, for the chart's Visits block (MDV-1088), through the Encounters contract. Drafts and switched-off orders are not tests of the visit.</summary>
+public sealed class VisitTests(PrescribingDbContext db) : Medvya.Encounters.Application.IVisitTests
+{
+    public async Task<IReadOnlyList<Medvya.Encounters.Application.PlacedTest>> ForEncountersAsync(IReadOnlyCollection<Guid> encounterIds, CancellationToken cancellationToken = default) =>
+        await db.Orders.AsNoTracking().Where(o => o.State == OrderState.Ordered && encounterIds.Contains(o.EncounterId))
+            .OrderBy(o => o.Name).Select(o => new Medvya.Encounters.Application.PlacedTest(o.EncounterId, o.Name)).ToListAsync(cancellationToken);
+}
+
 /// <summary>The patient's placed orders for the "ordered but never resulted" care gap (MDV-P2-038), through the Encounters contract.</summary>
 public sealed class PlacedOrders(PrescribingDbContext db) : IPlacedOrders
 {

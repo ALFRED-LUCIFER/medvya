@@ -41,6 +41,12 @@ public sealed record TimelineEntryView(Guid Id, TimelineKind Kind, DateTimeOffse
 /// <summary><see cref="Next"/> goes back as <c>before</c> for "Load earlier"; null at the end.</summary>
 public sealed record TimelineResponse(IReadOnlyList<TimelineEntryView> Entries, string? Next, string TimeZone);
 
+/// <summary>A past visit as the screen shows it: the doctor's name, never an id the screen would look up (MDV-1088).</summary>
+public sealed record VisitRow(Guid EncounterId, DateTimeOffset StartedAt, EncounterStatus Status, string? Doctor, bool NoteSigned,
+    IReadOnlyList<VisitDiagnosis> Diagnoses, IReadOnlyList<VisitMedicine> Medicines, IReadOnlyList<string> Tests);
+
+public sealed record VisitsResponse(IReadOnlyList<VisitRow> Visits, string TimeZone);
+
 public sealed record TrendsResponse(IReadOnlyList<TrendView> Trends, string TimeZone);
 
 public static class EncounterEndpoints
@@ -88,6 +94,11 @@ public static class EncounterEndpoints
             .RequireCapability(Capability.Patient360Chart, Access.Read, Access.Limited, Access.Full, Access.Sign)
             .AuditedByUseCase("patient.timeline.read", "patient", AuditPurpose.Treatment, patientRouteKey: "patientId")
             .AddEndpointFilter(MapErrors);
+        // The chart's Visits block (MDV-1088): same gate and audit as the timeline.
+        app.MapGet("/v1/patients/{patientId:guid}/visits", Visits)
+            .RequireCapability(Capability.Patient360Chart, Access.Read, Access.Limited, Access.Full, Access.Sign)
+            .AuditedByUseCase("patient.visits.read", "patient", AuditPurpose.Treatment, patientRouteKey: "patientId")
+            .AddEndpointFilter(MapErrors);
         app.MapGet("/v1/patients/{patientId:guid}/trends", Trends)
             .RequireCapability(Capability.Patient360Chart, Access.Read, Access.Limited, Access.Full, Access.Sign)
             .AuditedByUseCase("patient.trends.read", "patient", AuditPurpose.Treatment, patientRouteKey: "patientId")
@@ -128,6 +139,17 @@ public static class EncounterEndpoints
         return Results.Ok(new TimelineResponse(
             [.. page.Entries.Select(e => new TimelineEntryView(e.Id, e.Kind, e.At, e.Code, e.Title, e.Detail, e.AuthorUserId is { } a ? names.GetValueOrDefault(a) : null, e.Source, e.EncounterId))],
             last is null ? null : $"{last.At.UtcTicks}.{last.Id}", (await facilities.FindAsync(facilityId, ct) ?? throw new InvalidOperationException("Session facility not in this tenant.")).TimeZone));
+    }
+
+    static async Task<IResult> Visits(Guid patientId, [FromServices] IPatientVisits visits, [FromServices] IPatientDirectory patients, [FromServices] IStaffUsers users,
+        [FromServices] IFacilityDirectory facilities, [FromServices] ICurrentFacility current, CancellationToken ct)
+    {
+        if (current.FacilityId is not { } facilityId) return Results.Problem(statusCode: StatusCodes.Status403Forbidden, title: "No facility context");
+        if (!(await patients.SummariesAsync([patientId], ct)).ContainsKey(patientId)) return Results.NotFound();
+        var list = await visits.ListAsync(patientId, facilityId, ct);
+        var names = await users.DisplayNamesAsync([.. list.Select(v => v.LeadClinicianId).Distinct()], ct);
+        return Results.Ok(new VisitsResponse([.. list.Select(v => new VisitRow(v.EncounterId, v.StartedAt, v.Status, names.GetValueOrDefault(v.LeadClinicianId), v.NoteSigned, v.Diagnoses, v.Medicines, v.Tests))],
+            (await facilities.FindAsync(facilityId, ct) ?? throw new InvalidOperationException("Session facility not in this tenant.")).TimeZone));
     }
 
     static IResult BadFilter() => Results.ValidationProblem(new Dictionary<string, string[]> { ["filter"] = ["invalid"] });

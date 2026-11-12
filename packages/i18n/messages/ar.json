@@ -4745,5 +4745,18 @@
   "chronicCare.error.invalid": "أدخل رقماً، مثل 7.5.",
   "chronicCare.error.required": "مطلوب.",
   "chronicCare.error.too_long": "طويل جداً: 200 حرف كحد أقصى.",
-  "chronicCare.error.out_of_range": "أدخل من 0 إلى 100."
+  "chronicCare.error.out_of_range": "أدخل من 0 إلى 100.",
+  "visits.title": "الزيارات",
+  "visits.loading": "جارٍ تحميل الزيارات…",
+  "visits.loadFailed": "تعذّر تحميل الزيارات. حاول مرة أخرى.",
+  "visits.empty": "لا توجد زيارات بعد.",
+  "visits.status.signed": "الملاحظة موقّعة",
+  "visits.status.open": "قيد الإجراء",
+  "visits.status.unsigned": "الملاحظة غير موقّعة",
+  "visits.diagnosis": "التشخيص",
+  "visits.medicines": "الأدوية",
+  "visits.tests": "الفحوصات",
+  "visits.none": "لا شيء مسجّل",
+  "visits.openSigned": "فتح الملاحظة الموقّعة",
+  "visits.open": "فتح الزيارة"
 }

@@ -4722,5 +4722,18 @@
   "chronicCare.error.invalid": "एक संख्या दर्ज करें, जैसे 7.5।",
   "chronicCare.error.required": "आवश्यक।",
   "chronicCare.error.too_long": "बहुत लंबा: अधिकतम 200 अक्षर।",
-  "chronicCare.error.out_of_range": "0 से 100 दर्ज करें।"
+  "chronicCare.error.out_of_range": "0 से 100 दर्ज करें।",
+  "visits.title": "विज़िट",
+  "visits.loading": "विज़िट लोड हो रही हैं…",
+  "visits.loadFailed": "विज़िट लोड नहीं हो सकीं। फिर कोशिश करें।",
+  "visits.empty": "अभी कोई विज़िट नहीं।",
+  "visits.status.signed": "नोट पर हस्ताक्षर हो चुके",
+  "visits.status.open": "जारी है",
+  "visits.status.unsigned": "नोट पर हस्ताक्षर नहीं",
+  "visits.diagnosis": "निदान",
+  "visits.medicines": "दवाइयाँ",
+  "visits.tests": "जाँचें",
+  "visits.none": "कुछ दर्ज नहीं",
+  "visits.openSigned": "हस्ताक्षरित नोट खोलें",
+  "visits.open": "विज़िट खोलें"
 }

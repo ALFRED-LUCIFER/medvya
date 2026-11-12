@@ -37,6 +37,7 @@ async function deskWith(page: Page, search: (body: SearchBody) => { status?: num
     return r.fulfill({ status, json });
   });
   await page.route(`**/v1/patients/${meeraId}`, r => r.fulfill({ json: meera }));
+  await page.route(`**/v1/schedule/patients/${meeraId}/visits*`, r => r.fulfill({ json: { visits: [{ appointmentId: 'a-1', start: '2026-11-12T04:40:00Z', state: 'Done' }, { appointmentId: 'a-2', start: '2026-10-01T04:40:00Z', state: 'NoShow' }] } }));
   await page.route(`**/v1/patients/${meeraId}/consents`, r => r.fulfill({ json: { policyVersion: '2026-11-draft', decisions: [] } }));
   return searches;
 }
@@ -74,6 +75,12 @@ test('the desk finds a patient from the header, sees only initials and opens the
   await expect(page.getByRole('heading', { name: 'Meera Iyer (synthetic)', level: 1 })).toBeVisible();
   await expect(page.getByText('+919000000101')).toBeVisible();
   await expect(page.getByText('Clinical notes are never shown here.')).toBeVisible();
+  // MDV-1088: visit dates and status only; the desk has no diagnosis, medicines or note to open.
+  const visits = page.getByRole('region', { name: 'Visits' });
+  await expect(visits.getByRole('listitem')).toHaveCount(2);
+  await expect(visits).toContainText('Completed');
+  await expect(visits).toContainText('No-show');
+  await expect(visits.getByRole('link')).toHaveCount(0);
 });
 
 test('filters reset to page one and reach the server as a filter, not as text', async ({ page }) => {

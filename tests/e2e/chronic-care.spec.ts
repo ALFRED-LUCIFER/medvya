@@ -45,6 +45,7 @@ async function open(page: Page, { locale = 'en', role = 'SoloDoctor', openEncoun
   await page.route('**/v1/me/context', r => r.fulfill({ json: session(role) }));
   await page.route('**/v1/patients/p-1/chart', r => r.fulfill({ json: chart(openEncounterId) }));
   await page.route('**/v1/patients/p-1/timeline*', r => r.fulfill({ json: { entries: [], next: null, timeZone: 'Asia/Kolkata' } }));
+  await page.route('**/v1/patients/p-1/visits', r => r.fulfill({ json: { visits: [], timeZone: 'Asia/Kolkata' } }));
   await page.route('**/v1/patients/p-1/documents', r => r.fulfill({ json: { documents: [], timeZone: 'Asia/Kolkata' } }));
   await page.route('**/v1/patients/p-1/referrals', r => r.fulfill({ json: [] }));
   await page.route('**/v1/patients/p-1/chronic-care', r => { log(r); return r.fulfill({ json: care }); });

@@ -518,6 +518,29 @@
         }
       }
     },
+    "/v1/patients/{patientId}/visits": {
+      "get": {
+        "tags": [
+          "EncounterEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "patientId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/v1/patients/{patientId}/trends": {
       "get": {
         "tags": [
@@ -1860,6 +1883,37 @@
       }
     },
     "/v1/schedule/patients/{patientId}": {
+      "get": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "patientId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "facilityId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/schedule/patients/{patientId}/visits": {
       "get": {
         "tags": [
           "Host.Api"

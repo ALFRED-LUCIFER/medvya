@@ -204,6 +204,8 @@ public sealed class PrescriptionCheckTests(PostgresFixture sql) : IClassFixture<
         var stale = (await Rx(h.Doctor).CheckAsync(enc.Id))!;
         Assert.Equal(NotCheckedReason.NoRecentWeight, Assert.Single(stale.NotChecked, n => n.Id == paracetamol).Reason);
         Assert.Empty(stale.WeightDoses);
+        // #1085: no weight is severe and 500 mg is above the 4-5 year ceiling, so authorising waits for a weight or two reasons.
+        Assert.Equal((2, 2), (stale.Alerts.Count(a => a.Kind == RxAlertKind.ChildDose && a.ItemId == paracetamol), stale.Unresolved));
 
         await WeighAsync(1);
         var fresh = (await Rx(h.Doctor).CheckAsync(enc.Id))!;

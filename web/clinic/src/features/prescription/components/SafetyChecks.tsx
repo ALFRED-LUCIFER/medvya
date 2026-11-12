@@ -55,8 +55,9 @@ function alertText(t: T, a: SafetyAlert, doses: WeightDose[]): string {
       return t(`rx.check.alert.${a.kind}`, { ...base, measure: a.measure ?? '', rule: words(t, 'rx.check.rule', a.code) });
     case 'ChildDose': {
       const d = doses.find(w => w.itemId === a.itemId);
-      return t(`rx.check.alert.ChildDose.${a.code === 'doses_a_day' ? 'doses_a_day' : 'per_dose'}`, {
-        ...base, mgPerKg: d?.mgPerKg ?? '', kg: d ? kgOf(d.weightHundredthsKg) : '', doses: d?.maxDosesPerDay ?? '',
+      const code = a.code === 'doses_a_day' || a.code === 'no_weight' || a.code === 'age_ceiling' ? a.code : 'per_dose';
+      return t(`rx.check.alert.ChildDose.${code}`, {
+        ...base, mgPerKg: d?.mgPerKg ?? '', kg: d ? kgOf(d.weightHundredthsKg) : '', doses: a.measure ?? d?.maxDosesPerDay ?? '', age: a.measure ?? '',
       });
     }
   }

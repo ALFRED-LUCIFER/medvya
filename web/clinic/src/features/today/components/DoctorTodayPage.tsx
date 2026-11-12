@@ -162,26 +162,44 @@ function AllergyFlag({ state }: { state: AllergyState | undefined }) {
   return <span className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[13px] font-bold"><Icon aria-hidden className="size-4" />{t(key)}</span>;
 }
 
-/** Unsigned notes from today and earlier days (MDV-P2-002), so none is forgotten; a note leaves the list only when it is signed. */
+/**
+ * Unsigned notes from today and earlier days (MDV-P2-002), so none is forgotten; a note leaves the list only when it is signed. Below them,
+ * signed consultations still open from an earlier day (MDV audit UX-11), until they are ended.
+ */
 function PendingNotes(p: Props) {
-  const { t, tCount, formatDate } = useI18n();
+  const { t, tCount } = useI18n();
   if (p.pendingFailed) return <p role="alert" className="text-sm text-muted-foreground">{t('today.pending.error')}</p>;
-  if (p.pendingNotes.length === 0) return null;
+  const toSign = p.pendingNotes.filter(n => !n.noteSigned), open = p.pendingNotes.filter(n => n.noteSigned);
   return (
-    <section aria-labelledby="today-pending" className="flex flex-col gap-2">
-      <h2 id="today-pending" className="text-[15px] font-extrabold">{p.pendingMore ? t('today.pending.more', { count: p.pendingNotes.length }) : tCount('today.pending', p.pendingNotes.length)}</h2>
-      <ul className="flex flex-col gap-2">
-        {p.pendingNotes.map(n => (
-          <li key={n.encounterId} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-card px-3 py-2.5">
-            <span className="flex items-center gap-2 text-sm">
-              <FilePen aria-hidden className="size-4 shrink-0" />
-              <span className="font-bold">{n.patientName || t('board.unknownPatient')}</span>
-              <span className="text-muted-foreground">{formatDate(new Date(n.startedAt), p.timeZone ?? undefined)}{' · '}{t(n.drafted ? 'today.pending.draft' : 'today.pending.empty')}</span>
-            </span>
-            <Link to={p.consultPath(n.encounterId)} className={buttonVariants({ variant: 'outline', className: 'min-h-11' })}>{t('today.pending.open')}</Link>
-          </li>
-        ))}
-      </ul>
-    </section>
+    <>
+      {toSign.length > 0 && (
+        <section aria-labelledby="today-pending" className="flex flex-col gap-2">
+          <h2 id="today-pending" className="text-[15px] font-extrabold">{p.pendingMore ? t('today.pending.more', { count: toSign.length }) : tCount('today.pending', toSign.length)}</h2>
+          <ul className="flex flex-col gap-2">{toSign.map(n => <PendingRow key={n.encounterId} note={n} {...p} />)}</ul>
+        </section>
+      )}
+      {open.length > 0 && (
+        <section aria-labelledby="today-open" className="flex flex-col gap-2">
+          <h2 id="today-open" className="text-[15px] font-extrabold">{t('today.open.title')}</h2>
+          <ul className="flex flex-col gap-2">{open.map(n => <PendingRow key={n.encounterId} note={n} {...p} />)}</ul>
+        </section>
+      )}
+    </>
+  );
+}
+
+function PendingRow({ note: n, timeZone, consultPath }: Props & { note: PendingNote }) {
+  const { t, formatDate } = useI18n();
+  const state = n.noteSigned ? 'today.open.signed' : n.drafted ? 'today.pending.draft' : 'today.pending.empty';
+  return (
+    <li className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-card px-3 py-2.5">
+      <span className="flex flex-wrap items-center gap-2 text-sm">
+        {n.openPastDay ? <CircleAlert aria-hidden className="size-4 shrink-0" /> : <FilePen aria-hidden className="size-4 shrink-0" />}
+        <span className="font-bold">{n.patientName || t('board.unknownPatient')}</span>
+        <span className="text-muted-foreground">{formatDate(new Date(n.startedAt), timeZone ?? undefined)}{' · '}{t(state)}</span>
+        {n.openPastDay && <span className="font-bold">{t('today.open.pastDay')}</span>}
+      </span>
+      <Link to={consultPath(n.encounterId)} className={buttonVariants({ variant: 'outline', className: 'min-h-11' })}>{t(n.noteSigned ? 'today.open.action' : 'today.pending.open')}</Link>
+    </li>
   );
 }

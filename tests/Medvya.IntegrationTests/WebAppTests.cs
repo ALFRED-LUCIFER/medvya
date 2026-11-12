@@ -53,6 +53,22 @@ public sealed class WebAppTests(PostgresFixture sql) : IClassFixture<PostgresFix
         Assert.Equal(HttpStatusCode.NotFound, (await browser.GetAsync(new Uri("/app/assets/gone.js", UriKind.Relative))).StatusCode);
     }
 
+    /// <summary>MDV audit UX-12: the app's files go compressed; an API answer never does (BREACH). Mutation check: drop UseResponseCompression in WebApp.</summary>
+    [Fact]
+    public async Task TheAppsFilesAreCompressedAndApiAnswersAreNot()
+    {
+        using var browser = Browser();
+        File.WriteAllText(Path.Combine(webRoot, "app", "assets", "big-abc123.js"), string.Concat(Enumerable.Repeat("export const synthetic = 1;\n", 400)));
+        using var asset = new HttpRequestMessage(HttpMethod.Get, new Uri("/app/assets/big-abc123.js", UriKind.Relative));
+        asset.Headers.AcceptEncoding.ParseAdd("br, gzip");
+        var res = await browser.SendAsync(asset);
+        Assert.Equal((HttpStatusCode.OK, "br"), (res.StatusCode, res.Content.Headers.ContentEncoding.SingleOrDefault()));
+
+        using var api = new HttpRequestMessage(HttpMethod.Get, new Uri("/health", UriKind.Relative));
+        api.Headers.AcceptEncoding.ParseAdd("br, gzip");
+        Assert.Empty((await browser.SendAsync(api)).Content.Headers.ContentEncoding);
+    }
+
     [Fact]
     public async Task ThePublicSiteAndTheApiKeepTheirOwnPaths()
     {

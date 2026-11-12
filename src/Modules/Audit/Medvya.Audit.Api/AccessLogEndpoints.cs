@@ -23,8 +23,8 @@ public static class AccessLogEndpoints
 {
     const int DefaultPage = 50, MaxPage = 200, MaxExport = 10_000;
 
-    public sealed record Filters(Guid? ActorUserId, string? Action, DateTimeOffset? From, DateTimeOffset? To, string? After, int? Limit);
-    public sealed record ExportRequest(Guid? ActorUserId, Guid? PatientId, string? Action, DateTimeOffset? From, DateTimeOffset? To);
+    public sealed record Filters(Guid? ActorUserId, string? Action, DateTimeOffset? From, DateTimeOffset? To, string? After, int? Limit, bool? PatientRecords);
+    public sealed record ExportRequest(Guid? ActorUserId, Guid? PatientId, string? Action, DateTimeOffset? From, DateTimeOffset? To, bool? PatientRecords = null);
 
     sealed record Row(Guid Id, DateTimeOffset OccurredAt, Guid? ActorUserId, string? ActorName, string? Role, string? Location, string Action, string ResourceType,
         Guid? PatientId, string? PatientMrn, string? PatientName, string Purpose, string Outcome, string? Detail);
@@ -54,7 +54,7 @@ public static class AccessLogEndpoints
     static async Task<IResult> List(Guid? patientId, Filters f, ClaimsPrincipal user, ICurrentFacility facility, IServiceProvider sp, CancellationToken ct)
     {
         var limit = Math.Clamp(f.Limit ?? DefaultPage, 1, MaxPage);
-        var page = await QueryAsync(sp, new AuditQuery(f.ActorUserId, patientId, Clean(f.Action), f.From, f.To, f.After, limit) { FacilityId = await ScopeOf(sp, facility, ct) }, ct);
+        var page = await QueryAsync(sp, new AuditQuery(f.ActorUserId, patientId, Clean(f.Action), f.From, f.To, f.After, limit) { FacilityId = await ScopeOf(sp, facility, ct), PatientRecordsOnly = f.PatientRecords == true }, ct);
         if (page is null) return Results.ValidationProblem(new Dictionary<string, string[]> { ["after"] = ["invalid"] });
         var rows = await Enrich(sp, page.Items, withPatientName: patientId is not null, ct);
         return Results.Ok(new { items = rows, next = page.Next, actions = page.Actions });
@@ -65,9 +65,10 @@ public static class AccessLogEndpoints
         body ??= new(null, null, null, null, null);
         // The filters used travel with the export event: opaque ids, an action code and dates, nothing the log does not already show.
         http.Items["audit.detail"] = string.Join("; ", new[] { ("staff", body.ActorUserId?.ToString()), ("patient", body.PatientId?.ToString()), ("action", Clean(body.Action)),
-            ("from", body.From?.UtcDateTime.ToString("u", CultureInfo.InvariantCulture)), ("to", body.To?.UtcDateTime.ToString("u", CultureInfo.InvariantCulture)) }
+            ("from", body.From?.UtcDateTime.ToString("u", CultureInfo.InvariantCulture)), ("to", body.To?.UtcDateTime.ToString("u", CultureInfo.InvariantCulture)),
+            ("records", body.PatientRecords == true ? "patient" : null) }
             .Where(x => x.Item2 is not null).Select(x => $"{x.Item1}={x.Item2}").DefaultIfEmpty("none"));
-        var page = await QueryAsync(sp, new AuditQuery(body.ActorUserId, body.PatientId, Clean(body.Action), body.From, body.To, null, MaxExport) { FacilityId = await ScopeOf(sp, facility, ct) }, ct);
+        var page = await QueryAsync(sp, new AuditQuery(body.ActorUserId, body.PatientId, Clean(body.Action), body.From, body.To, null, MaxExport) { FacilityId = await ScopeOf(sp, facility, ct), PatientRecordsOnly = body.PatientRecords == true }, ct);
         var rows = await Enrich(sp, page!.Items, withPatientName: false, ct);
         var exporter = Guid.TryParse(principal.FindFirstValue(ClaimTypes.NameIdentifier), out var id)
             ? (await sp.GetRequiredService<IStaffUsers>().DisplayNamesAsync([id], ct)).GetValueOrDefault(id) ?? id.ToString() : "unknown";

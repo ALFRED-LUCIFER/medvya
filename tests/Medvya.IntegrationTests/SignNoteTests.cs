@@ -420,16 +420,39 @@ public sealed class SignNoteTests(PostgresFixture sql) : IClassFixture<PostgresF
         var version = await SaveDraftAsync(Complete);
         h.Clock.Advance(TimeSpan.FromDays(2));
         var later = Assert.Single(await PendingAsync(h.Doctor));
-        Assert.True(later.GetProperty("drafted").GetBoolean());
+        Assert.Equal((true, true), (later.GetProperty("drafted").GetBoolean(), later.GetProperty("openPastDay").GetBoolean()));
         Assert.DoesNotContain("cough", later.ToString(), StringComparison.Ordinal); // no note text in the list
 
         using (var signed = await SignAsync(h.Doctor, version)) Assert.True(signed.IsSuccessStatusCode, await signed.Content.ReadAsStringAsync());
+        // Signed, but the consultation from two days ago is still open (MDV audit UX-11): it leaves the list once ended.
+        using (var ended = await Client(h.Doctor).PostAsync(U($"/v1/encounters/{encounter}/end"), null)) Assert.True(ended.IsSuccessStatusCode, await ended.Content.ReadAsStringAsync());
         Assert.Empty(await PendingAsync(h.Doctor));
 
         await using var audit = sql.Audit(h.Tenant);
         var rows = await audit.Events.Where(e => e.Action == "note.pending").ToListAsync();
         Assert.Equal(2, rows.Count); // one per note answered, none for the empty answers
         Assert.All(rows, r => Assert.Equal((h.Patient, h.Doctor, AuditOutcome.Allowed), (r.PatientId!.Value, r.ActorUserId!.Value, r.Outcome)));
+    }
+
+    // MDV audit UX-11 SAFETY mutation checks: drop "e.Status == Active" in ConsultNoteService.PendingAsync and the ended consultation stays listed;
+    // drop "e.StartedAt < dayStart" and today's signed consultation is listed before its day is over.
+    [Fact]
+    public async Task ASignedConsultationStillOpenAfterItsFacilityDayIsFlaggedUntilEnded()
+    {
+        var first = Assert.Single(await PendingAsync(h.Doctor));
+        Assert.Equal((false, false), (first.GetProperty("noteSigned").GetBoolean(), first.GetProperty("openPastDay").GetBoolean()));
+
+        using (var signed = await SignAsync(h.Doctor, await SaveDraftAsync(Complete))) Assert.True(signed.IsSuccessStatusCode, await signed.Content.ReadAsStringAsync());
+        Assert.Empty(await PendingAsync(h.Doctor)); // signed and still the same facility day: nothing to flag yet
+
+        // The test clock starts Monday 08:00 in Asia/Kolkata; 18 h later is 02:00 on Tuesday there.
+        h.Clock.Advance(TimeSpan.FromHours(18));
+        var stale = Assert.Single(await PendingAsync(h.Doctor));
+        Assert.Equal((encounter, true, true), (stale.GetProperty("encounterId").GetGuid(), stale.GetProperty("noteSigned").GetBoolean(), stale.GetProperty("openPastDay").GetBoolean()));
+        Assert.Empty(await PendingAsync(h.SecondDoctor));
+
+        using (var ended = await Client(h.Doctor).PostAsync(U($"/v1/encounters/{encounter}/end"), null)) Assert.True(ended.IsSuccessStatusCode, await ended.Content.ReadAsStringAsync());
+        Assert.Empty(await PendingAsync(h.Doctor));
     }
 
     [Fact]

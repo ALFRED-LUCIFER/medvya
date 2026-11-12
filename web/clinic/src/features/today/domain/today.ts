@@ -31,8 +31,11 @@ export const MAX_FLAGS = 100;
 /** The distinct patients of the visits, in the order shown: the lookup's key, so it runs again only when the people change. */
 export const patientIdsOf = (visits: BoardCard[]): string[] => [...new Set(visits.map(v => v.patientId).filter(Boolean))];
 
-/** An unsigned note of the signed-in doctor's (MDV-P2-002): the consultation to finish it in. */
-export type PendingNote = { encounterId: string; startedAt: string; drafted: boolean; patientName: string | null };
+/**
+ * An unsigned note of the signed-in doctor's (MDV-P2-002): the consultation to finish it in. Or, once signed, a consultation still open after
+ * the facility's day it started on (MDV audit UX-11): it stays here until it is ended. The server decides both flags in the facility's time zone.
+ */
+export type PendingNote = { encounterId: string; startedAt: string; drafted: boolean; noteSigned: boolean; openPastDay: boolean; patientName: string | null };
 
 /** A nurse's urgent call to the treating doctor about a visit (MDV-P2-007), shown on that visit until the consultation starts. */
 export type Escalation = { id: string; appointmentId: string; reason: string; escalatedAt: string };

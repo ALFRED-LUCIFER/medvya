@@ -91,6 +91,26 @@ public sealed class AccessLogTests(PostgresFixture sql) : IClassFixture<Postgres
         Assert.Equal(["(none)", "Velachery (synthetic)"], rows.Select(l => l.ValueKind == JsonValueKind.Null ? "(none)" : l.GetString()!)); // newest first
     }
 
+    /// <summary>MDV audit UX-13: "patient records" leaves out settings page views, in the list and in the export. Mutation check: drop the filter in AuditTrail.</summary>
+    [Fact]
+    public async Task PatientRecordsLeavesOutPageViewsWithoutAPatient()
+    {
+        await Seed(h.Tenant, "patient.read", h.Patient, h.Doctor, Noon.AddMinutes(-9));
+        await Seed(h.Tenant, "schedule.template.read", null, h.Admin, Noon.AddMinutes(-8));
+        using var client = Client(Role.PracticeAdmin);
+
+        var actions = (await client.GetFromJsonAsync<JsonElement>("/v1/audit/access-log?patientRecords=true")).GetProperty("items").EnumerateArray()
+            .Select(i => i.GetProperty("action").GetString()).ToList();
+        Assert.Equal(["patient.read"], actions);
+        var everything = (await client.GetFromJsonAsync<JsonElement>("/v1/audit/access-log")).GetProperty("items").EnumerateArray().Select(i => i.GetProperty("action").GetString());
+        Assert.Contains("schedule.template.read", everything);
+
+        using var export = await client.PostAsJsonAsync("/v1/audit/access-log/export", new { patientRecords = true });
+        var csv = await export.Content.ReadAsStringAsync();
+        Assert.Contains("patient.read", csv, StringComparison.Ordinal);
+        Assert.DoesNotContain("schedule.template.read", csv, StringComparison.Ordinal);
+    }
+
     [Theory]
     [InlineData(Role.Receptionist)]
     [InlineData(Role.Nurse)]

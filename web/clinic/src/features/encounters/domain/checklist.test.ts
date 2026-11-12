@@ -4,7 +4,7 @@ import { signFailure } from './note';
 
 const ready: ChecklistInput = {
   identityShown: true, allergyState: 'NoKnownAllergies', reconciliation: { confirmedAt: null, total: 0 }, recordingConsent: 'Declined', undecidedAi: [],
-  sections: { chiefComplaint: 'Thirst', assessment: 'Review', plan: 'Rest' },
+  sections: { chiefComplaint: 'Thirst', assessment: 'Review', plan: 'Rest' }, diagnosisRecorded: true,
 };
 const state = (i: ChecklistInput) => Object.fromEntries(signChecklist(i).map(x => [x.id, x.state]));
 
@@ -36,6 +36,13 @@ describe('review and sign checklist (MDV-P2-044)', () => {
     const items = signChecklist({ ...ready, allergyState: 'NotRecorded', recordingConsent: 'Withdrawn' });
     expect(state({ ...ready, allergyState: 'NotRecorded' }).allergies).toBe('warn');
     expect(remainingItems(items)).toBe(0);
+  });
+
+  it('diagnoses are done only with a diagnosis on the problem list; an assessment without one is said, not locked (MDV audit UX-11)', () => {
+    expect(state({ ...ready, diagnosisRecorded: false }).diagnoses).toBe('warn');
+    expect(state({ ...ready, diagnosisRecorded: null }).diagnoses).toBe('warn');
+    expect(remainingItems(signChecklist({ ...ready, diagnosisRecorded: false }))).toBe(0);
+    expect(state({ ...ready, diagnosisRecorded: false, sections: { chiefComplaint: 'Thirst', plan: 'Rest' } }).diagnoses).toBe('todo');
   });
 
   it('reads the server\'s checklist gates as unreviewed, blank sections first', () => {

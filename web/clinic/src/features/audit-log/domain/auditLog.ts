@@ -31,6 +31,8 @@ export type AuditPage = { items: AuditRow[]; next: string | null; actions: strin
 export type AuditFilters = { actor: string; action: string; from: string; to: string; patientId: string | null; zone: string };
 
 export const all = 'all';
+/** The action filter's default (MDV audit UX-13): events about a patient's record only, so settings page views do not push them down. */
+export const patientRecords = 'patientRecords';
 
 /**
  * The words for an action code (MDV-P1-052), or null for a code the catalog does not know yet: the screen then shows the code
@@ -59,9 +61,9 @@ export function startOfDayIn(day: string, zone: string): Date {
   return new Date(wallClockAsUtc - offsetAt(guess));
 }
 
-/** The pilot's usual question: the last 30 days, counted in the clinic's time zone. */
+/** The pilot's usual question: who opened which patient's record in the last 30 days, counted in the clinic's time zone. */
 export const defaultFilters = (now = new Date(), zone = browserZone()): AuditFilters =>
-  ({ actor: all, action: all, from: dateIn(new Date(now.getTime() - 30 * DAY_MS), zone), to: dateIn(now, zone), patientId: null, zone });
+  ({ actor: all, action: patientRecords, from: dateIn(new Date(now.getTime() - 30 * DAY_MS), zone), to: dateIn(now, zone), patientId: null, zone });
 
 /** The day boundaries in the clinic's time zone, as instants. The range is [from 00:00, day after "to" 00:00). */
 export const rangeOf = (f: AuditFilters) => ({
@@ -73,7 +75,8 @@ export const rangeOf = (f: AuditFilters) => ({
 export function listQuery(f: AuditFilters, after: string | null): string {
   const q = new URLSearchParams();
   if (f.actor !== all) q.set('actorUserId', f.actor);
-  if (f.action !== all) q.set('action', f.action);
+  if (f.action === patientRecords) q.set('patientRecords', 'true');
+  else if (f.action !== all) q.set('action', f.action);
   const { from, to } = rangeOf(f);
   if (from) q.set('from', from);
   if (to) q.set('to', to);
@@ -84,7 +87,8 @@ export function listQuery(f: AuditFilters, after: string | null): string {
 export const exportBody = (f: AuditFilters) => ({
   actorUserId: f.actor === all ? null : f.actor,
   patientId: f.patientId,
-  action: f.action === all ? null : f.action,
+  action: f.action === all || f.action === patientRecords ? null : f.action,
+  patientRecords: f.action === patientRecords,
   ...rangeOf(f),
 });
 

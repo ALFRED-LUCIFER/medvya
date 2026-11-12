@@ -5,7 +5,7 @@ import { Field } from '../../settings/components/Field';
 import { Section } from '../../settings/components/Section';
 import { fieldError } from '../../settings/components/fieldStyles';
 import { PatientPicker, type PatientSearchView } from '../../schedule/components/BookingPanel';
-import { actionKey, all, type AuditFilters, type AuditRow } from '../domain/auditLog';
+import { actionKey, all, patientRecords, type AuditFilters, type AuditRow } from '../domain/auditLog';
 
 type Props = {
   filters: AuditFilters;
@@ -47,6 +47,7 @@ export default function AuditLogPanel(p: Props) {
           <Select value={p.filters.action} onValueChange={v => p.onFilters({ action: v })}>
             <SelectTrigger id="audit-action" className="h-11 w-full"><SelectValue /></SelectTrigger>
             <SelectContent>
+              <SelectItem value={patientRecords}>{t('audit.patientRecords')}</SelectItem>
               <SelectItem value={all}>{t('audit.anyAction')}</SelectItem>
               {p.actions.map(a => <SelectItem key={a} value={a}>{actionName(a)}</SelectItem>)}
             </SelectContent>

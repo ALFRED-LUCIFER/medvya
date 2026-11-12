@@ -72,6 +72,18 @@ test('the doctor starts the consultation from the board and sees who it is for',
   await expect(page).toHaveURL(/\/front-desk$/);
 });
 
+// MDV audit UX-11: a consultation nobody ended is flagged once the facility's day it started on is over (counted in Kolkata, not New York).
+test('a consultation still open after its facility day is flagged; the same evening it is not', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-10-19T18:00:00Z')); // 23:30 in Kolkata, 14:00 in New York
+  await open(page);
+  await page.goto('/consult/e-1');
+  await expect(page.getByRole('region', { name: 'Patient identity' })).toBeVisible();
+  await expect(page.getByText(/has been open since/)).toHaveCount(0);
+  await page.clock.setFixedTime(new Date('2026-10-19T18:35:00Z')); // 00:05 on the 20th in Kolkata, still the 19th in New York
+  await page.reload();
+  await expect(page.getByRole('status').filter({ hasText: 'has been open since' })).toHaveText('This consultation has been open since 19 Oct 2026. Finish the note and end the consultation.');
+});
+
 test('with another consultation open, the doctor returns to it or leaves it open', async ({ page }) => {
   const calls = await open(page, { start: { status: 409, json: { code: 'open_encounter', encounterId: 'e-1' } } });
   await page.getByRole('button', { name: 'Start consultation with Meera Iyer (synthetic)' }).click();

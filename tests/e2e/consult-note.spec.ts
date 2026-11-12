@@ -163,6 +163,16 @@ test('sign: blank required sections keep Sign locked and are named in the checkl
   await expect(note(page).getByLabel('Chief complaint')).toBeFocused();
 });
 
+// MDV audit UX-11: "Diagnoses reviewed" is Done only with a diagnosis on the problem list; an assessment without one is said, and does not lock Sign.
+test('checklist: an assessment with no diagnosis on the problem list is not Done', async ({ page }) => {
+  const mock = await open(page, { version: 1, sections: { chiefComplaint: 'Thirst', assessment: 'Review', plan: 'Rest' }, recordingConsent: 'Declined' });
+  mock.problems = [];
+  await page.reload();
+  const item = note(page).getByRole('region', { name: 'Review and sign' }).getByRole('listitem').filter({ hasText: 'Diagnoses reviewed' });
+  await expect(item).toHaveText('Diagnoses reviewedNo diagnosis on the problem list');
+  await expect(note(page).getByRole('button', { name: 'Sign note' })).toBeEnabled();
+});
+
 // MDV-P2-044: the checklist is worked out from the note, the banner and the reconciliation; the server holds the consent and AI gates as well.
 test('checklist: Sign stays locked until the recording consent is recorded; each item and the count are in words', async ({ page }) => {
   const mock = await open(page, { version: 1, sections: { chiefComplaint: 'Thirst', assessment: 'Review', plan: 'Rest' } });
@@ -186,7 +196,9 @@ test('checklist: Sign stays locked until the recording consent is recorded; each
   await sign.click();
   await page.getByRole('dialog').getByRole('button', { name: 'Sign as Dr Asha Raman (synthetic)' }).click();
   await expect(note(page)).toContainText('SIGNED v1 · read-only');
-  await expect(note(page).getByRole('radio', { name: 'Consent withdrawn during the visit' })).toBeDisabled();
+  // Signed (MDV audit UX-11): the answer it was signed with, in words; no radios that read as something still to choose.
+  await expect(note(page).getByRole('radio')).toHaveCount(0);
+  await expect(note(page)).toContainText('Recording consent for this visit: Consent withdrawn during the visit');
 });
 
 test('checklist: an undecided AI draft and an unconfirmed reconciliation lock Sign', async ({ page }) => {

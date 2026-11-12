@@ -27,5 +27,8 @@ export function createQueryClient() {
       },
     },
   });
+  // Practice settings change only by a save here, which updates or invalidates its own query: moving between Settings tabs (each tab mounts its
+  // panel afresh) reuses what was read in the last minute instead of reading and auditing it again (MDV audit UX-12, UX-13).
+  client.setQueryDefaults(['settings'], { staleTime: 60_000 });
   return client;
 }

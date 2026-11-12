@@ -11,8 +11,18 @@ public static class WebApp
 {
     public const string Path = "/app";
 
+    /// <summary>
+    /// Brotli or gzip for the web app's files (MDV audit UX-12): about 1.5 MB of script went over the wire uncompressed on every first visit, and App
+    /// Service on Linux does not compress for us. HTTPS compression is safe here because these files hold no secret and echo no input (BREACH);
+    /// API answers are never compressed. shortcut: compressed on each request (the hashed files are then cached for a year); precompress at build
+    /// time if the App Service CPU shows it.
+    /// </summary>
+    public static IServiceCollection AddWebApp(this IServiceCollection services) =>
+        services.AddResponseCompression(o => o.EnableForHttps = true);
+
     public static WebApplication UseWebApp(this WebApplication app)
     {
+        app.UseWhen(ctx => ctx.Request.Path.StartsWithSegments(Path, StringComparison.Ordinal), web => web.UseResponseCompression());
         app.UseStaticFiles(new StaticFileOptions
         {
             OnPrepareResponse = ctx =>

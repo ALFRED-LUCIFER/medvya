@@ -47,7 +47,9 @@ async function open(page: Page, locale = 'en') {
     { id: 'x-1', appointmentId: 'a1', patientId: 'p-a1', reason: 'BP 210/130 with headache (synthetic)', escalatedAt: ist('10:02') }] }));
   // An unsigned note from an earlier day (MDV-P2-002): the server lists only this doctor's own.
   await page.route('**/v1/notes/pending', r => r.fulfill({ json: { more: false, items: [
-    { encounterId: 'e-old', startedAt: '2026-10-16T06:30:00Z', drafted: true, patientName: 'Kavya Reddy (synthetic)' }] } }));
+    { encounterId: 'e-old', startedAt: '2026-10-16T06:30:00Z', drafted: true, noteSigned: false, openPastDay: true, patientName: 'Kavya Reddy (synthetic)' },
+    // Signed, but nobody pressed End (MDV audit UX-11): the server lists it until the consultation is ended.
+    { encounterId: 'e-open', startedAt: '2026-10-18T06:30:00Z', drafted: true, noteSigned: true, openPastDay: true, patientName: 'Deepak Nair (synthetic)' }] } }));
   await page.goto('/today');
 }
 
@@ -105,8 +107,19 @@ test('an unsigned note from an earlier day stays on Today and opens its consulta
   const pending = page.getByRole('region', { name: '1 note to sign' });
   await expect(pending).toContainText('Kavya Reddy (synthetic)');
   await expect(pending).toContainText('16 Oct 2026 · Draft, not signed');
+  await expect(pending).toContainText('Still open from an earlier day');
+  await expect(pending).not.toContainText('Deepak Nair');
   await pending.getByRole('link', { name: 'Open to finish' }).click();
   await expect(page).toHaveURL(/\/consult\/e-old$/);
+});
+
+test('a signed consultation still open from an earlier day is flagged until it is ended (MDV audit UX-11)', async ({ page }) => {
+  await open(page);
+  const open_ = page.getByRole('region', { name: 'Consultations still open from an earlier day' });
+  await expect(open_).toContainText('Deepak Nair (synthetic)');
+  await expect(open_).toContainText('18 Oct 2026 · Note signed, consultation not ended');
+  await open_.getByRole('link', { name: 'Open to end' }).click();
+  await expect(page).toHaveURL(/\/consult\/e-open$/);
 });
 
 test('on a phone the next patient and the consult button come first and the page does not scroll sideways', async ({ page }) => {

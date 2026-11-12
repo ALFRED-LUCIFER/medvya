@@ -121,6 +121,17 @@ export type CalendarTemplate = {
   appointmentsOutsideHours: { id: string; reference: string; start: string; end: string }[];
 };
 
+/**
+ * Saved sessions of doctors and rooms that fall outside the location's saved opening hours (MDV audit UX-13): patients can book them while the
+ * clinic says it is closed. One entry per calendar and weekday. Times are "HH:mm:ss" wall-clock strings, so they compare as text.
+ */
+export function sessionsOutsideHours(hours: DayHours[], calendars: CalendarTemplate[]): { name: string; weekday: Weekday }[] {
+  const outside = calendars.flatMap(c => c.hours
+    .filter(s => { const day = hours.find(h => h.weekday === s.weekday); return !day || s.start < day.opens || s.end > day.closes; })
+    .map(s => ({ name: c.name, weekday: s.weekday })));
+  return outside.filter((x, i) => outside.findIndex(y => y.name === x.name && y.weekday === x.weekday) === i);
+}
+
 /** A session being edited: times as "HH:mm", the room kept from the saved template so saving here never drops it. */
 export type SessionRow = { weekday: Weekday; start: string; end: string; room: string | null };
 

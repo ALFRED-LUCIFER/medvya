@@ -50,6 +50,8 @@ type Props = {
   timeZone?: string;
   /** Address, payer and emergency contact not entered, as sent. */
   missing: Missing[];
+  /** A draft from an earlier visit to this screen was put back. */
+  restored: boolean;
   onRegisterAnother: () => void;
   recordPath: (id: string) => string;
   bookPath: string | null;
@@ -112,6 +114,12 @@ export default function Registration(p: Props) {
             <Link to={p.fullPath} aria-current={p.quick ? undefined : 'page'} className={modeLink(false)}>{t('registration.mode.full')}</Link>
           </nav>} />
 
+      {p.restored && !p.result && (
+        <p role="status" className="flex flex-wrap items-center gap-3 rounded-md border bg-muted px-3 py-2 text-sm">
+          {t('registration.draft.restored')}
+          <Button type="button" variant="outline" size="sm" onClick={p.onRegisterAnother}>{t('registration.draft.startAgain')}</Button>
+        </p>
+      )}
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
         <form noValidate onSubmit={e => { e.preventDefault(); if (atReview) p.onSubmit(); else p.onContinue(); }} className="flex min-w-0 flex-col gap-5">
           {step && (

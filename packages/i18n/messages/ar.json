@@ -1286,6 +1286,8 @@
   "booking.rebook.body": "اختر موعدًا فارغًا. سيُعبأ المريض تلقائيًا.",
   "registration.full.intro.IN": "تسجيل كامل: أدخل ما يستطيع المريض تقديمه الآن. رقم ABHA اختياري ولا تعتمد الرعاية عليه أبدًا.",
   "registration.full.intro.AE": "تسجيل كامل: انسخ بيانات الهوية الإماراتية بعناية لتجنب أخطاء الكتابة.",
+  "registration.draft.restored": "تمت استعادة التسجيل غير المكتمل.",
+  "registration.draft.startAgain": "ابدأ من جديد",
   "registration.mode.label": "وضع التسجيل",
   "registration.mode.quick": "سريع (مكتب مزدحم)",
   "registration.mode.full": "تسجيل كامل",

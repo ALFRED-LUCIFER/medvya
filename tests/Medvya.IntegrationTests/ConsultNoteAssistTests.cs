@@ -28,6 +28,7 @@ public sealed class ConsultNoteAssistTests(PostgresFixture sql) : IClassFixture<
     public async Task InitializeAsync()
     {
         await h.SeedAsync();
+        await h.NoKnownAllergiesAsync(h.Patient);
         await h.DoctorTemplateAsync();
         factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b
             .UseSetting("ConnectionStrings:Medvya", sql.ConnectionString)
@@ -122,6 +123,7 @@ public sealed class ConsultNoteAssistTests(PostgresFixture sql) : IClassFixture<
         var (earlier, _) = await StartAsync(9, h.Patient);
         await SignAsync(earlier, "Synthetic earlier cough");
         using (await Client(h.Doctor).PostAsync(U($"/v1/encounters/{earlier}/end"), null)) { }
+        await h.NoKnownAllergiesAsync(h.SecondPatient); // signing needs the allergy state recorded (MDV audit P0-2)
         var (other, _) = await StartAsync(11, h.SecondPatient);
         await SignAsync(other, "Synthetic other patient's complaint");
 

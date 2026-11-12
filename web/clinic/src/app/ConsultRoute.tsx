@@ -29,6 +29,8 @@ import { useLetterController, useReferralsController } from '../features/referra
 import SlipPage from '../features/orders/components/SlipPage';
 import { useOrdersController, useSlipController } from '../features/orders/hooks/useOrdersController';
 import { useNoteController } from '../features/encounters/hooks/useNoteController';
+import ConsultEntry from '../features/nurse-intake/components/ConsultEntry';
+import { useIntakeController } from '../features/nurse-intake/hooks/useIntakeController';
 import { useNoteTemplatesController } from '../features/encounters/hooks/useNoteTemplatesController';
 import { useAddendumController, useNotePrintController } from '../features/encounters/hooks/useSignedNoteController';
 
@@ -48,10 +50,13 @@ function Consult({ encounterId, boardPath, online, canOrder, canReconcile, canSi
   const ended = consult.banner?.encounter.status === 'Ended';
   const patient = consult.banner && { ...consult.banner.patient, allergies: consult.banner.allergies };
   const plan = patient && <Plan encounterId={encounterId} ended={ended} online={online} canOrder={canOrder} canReconcile={canReconcile} patient={patient} />;
+  // Vitals, weight and allergies by the doctor (MDV audit P0-2): in the one page's Vitals section, above the note in the guided steps.
+  const entry = (titled: boolean) => consult.banner && !ended
+    && <Entry appointmentId={consult.banner.encounter.appointmentId} online={online} onChanged={consult.onChartChanged} titled={titled} />;
   return (
     <div className="flex flex-col gap-4">
       <ConsultPage {...consult} boardPath={boardPath} canReconcile={canReconcile}>
-        {consult.view === 'page' ? <ConsultStudio {...note} panel={consult.panel} onPanel={consult.onPanel} chart={consult.chart} plan={plan} /> : <NoteEditor {...note} />}
+        {consult.view === 'page' ? <ConsultStudio {...note} panel={consult.panel} onPanel={consult.onPanel} chart={consult.chart} plan={plan} entry={entry(false)} /> : <>{entry(true)}<NoteEditor {...note} /></>}
         <NoteHistory {...useAddendumController(encounterId, canSign)} timeZone={consult.banner?.timeZone} printPath={`/consult/${encounterId}/note/print`} />
         <NoteTemplateChoice {...useNoteTemplatesController()} />
       </ConsultPage>
@@ -79,6 +84,10 @@ function Plan({ encounterId, ended, online, canOrder, canReconcile, patient }: {
       {canOrder && <ReferralJump />}
     </div>
   );
+}
+
+function Entry({ appointmentId, online, onChanged, titled }: { appointmentId: string; online: boolean; onChanged: () => void; titled: boolean }) {
+  return <ConsultEntry {...useIntakeController(appointmentId, () => {}, onChanged)} online={online} titled={titled} />;
 }
 
 function Medicines({ encounterId, online }: { encounterId: string; online: boolean }) {

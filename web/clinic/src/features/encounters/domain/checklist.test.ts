@@ -32,10 +32,15 @@ describe('review and sign checklist (MDV-P2-044)', () => {
     expect(remainingItems(signChecklist({ ...ready, undecidedAi: ['subjective', 'plan'] }))).toBe(3);
   });
 
-  it('allergies not recorded are said but do not lock signing; withdrawn consent is a recorded answer', () => {
-    const items = signChecklist({ ...ready, allergyState: 'NotRecorded', recordingConsent: 'Withdrawn' });
-    expect(state({ ...ready, allergyState: 'NotRecorded' }).allergies).toBe('warn');
-    expect(remainingItems(items)).toBe(0);
+  it('allergies not recorded lock signing, so the sign message never says ready beside them (MDV audit P0-2)', () => {
+    expect(state({ ...ready, allergyState: 'NotRecorded' }).allergies).toBe('todo');
+    expect(state({ ...ready, allergyState: null }).allergies).toBe('todo');
+    expect(remainingItems(signChecklist({ ...ready, allergyState: 'NotRecorded' }))).toBe(1);
+    expect(state({ ...ready, allergyState: 'NoKnownAllergies' }).allergies).toBe('done');
+  });
+
+  it('withdrawn consent is a recorded answer', () => {
+    expect(remainingItems(signChecklist({ ...ready, recordingConsent: 'Withdrawn' }))).toBe(0);
   });
 
   it('diagnoses are done only with a diagnosis on the problem list; an assessment without one is said, not locked (MDV audit UX-11)', () => {

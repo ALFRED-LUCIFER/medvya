@@ -15,7 +15,7 @@ using Microsoft.EntityFrameworkCore.Storage;
 namespace Medvya.Encounters.Infrastructure;
 
 /// <summary>
-/// Nurse intake (MDV-P2-007). Clinical access first (role at Full for vitals and allergies entry, care relationship, facility of the visit),
+/// Nurse intake (MDV-P2-007), and the same entry from the consultation (MDV audit P0-2). Clinical access first (role at Full for vitals and allergies entry, care relationship, facility of the visit),
 /// then the work in one transaction with its audit event (purpose treatment, with the patient). Vitals are checked here, never only in the
 /// screen: an impossible value is refused, an out-of-range one is saved with its flag and blocks the handoff until the nurse re-measures or
 /// keeps it on purpose. Blanks stay blank. The handoff moves the board card in the same transaction and tells the boards after the commit.
@@ -43,7 +43,7 @@ public sealed class IntakeService(
         ArgumentNullException.ThrowIfNull(command);
         if (await visits.FindAsync(appointmentId, cancellationToken) is not { } visit) return null;
         await RequireAsync(visit, cancellationToken);
-        if (visit.State != AppointmentState.WithNurse) throw new IntakeConflictException("not_with_nurse");
+        if (!Open(visit)) throw new IntakeConflictException("visit_closed");
 
         var complaint = command.ChiefComplaint?.Trim();
         var errors = new List<(string, string)>();
@@ -96,7 +96,7 @@ public sealed class IntakeService(
     {
         if (await visits.FindAsync(appointmentId, cancellationToken) is not { } visit) return null;
         await RequireAsync(visit, cancellationToken);
-        if (visit.State != AppointmentState.WithNurse) throw new IntakeConflictException("not_with_nurse");
+        if (!Open(visit)) throw new IntakeConflictException("visit_closed");
         if (!Enum.IsDefined(kind)) throw new IntakeValidationException([("kind", "invalid")]);
         if (!(await CurrentAsync(appointmentId, cancellationToken)).TryGetValue(kind, out var latest) || latest.Flag is null)
             throw new IntakeValidationException([("kind", "not_flagged")]);
@@ -135,7 +135,7 @@ public sealed class IntakeService(
     public async Task<IntakeView?> AddAllergyAsync(Guid appointmentId, AddAllergy command, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
-        if (await WithNurseAsync(appointmentId, cancellationToken) is not { } visit) return null;
+        if (await OpenAsync(appointmentId, cancellationToken) is not { } visit) return null;
         var (substance, reaction) = (command.Substance?.Trim(), command.Reaction?.Trim());
         var errors = new List<(string, string)>();
         if (string.IsNullOrEmpty(substance)) errors.Add(("substance", "required"));
@@ -167,7 +167,7 @@ public sealed class IntakeService(
     public async Task<IntakeView?> SetAllergyStatusAsync(Guid appointmentId, Guid allergyId, SetAllergyStatus command, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
-        if (await WithNurseAsync(appointmentId, cancellationToken) is not { } visit) return null;
+        if (await OpenAsync(appointmentId, cancellationToken) is not { } visit) return null;
         // Only an allergy of this visit's patient: another patient's (or another clinic's) id is simply not found.
         if (!await db.Allergies.AnyAsync(a => a.Id == allergyId && a.PatientId == visit.PatientId && a.Kind == AllergyKind.Substance, cancellationToken)) return null;
         if (command.Status is not { } status || !Enum.IsDefined(status)) throw new IntakeValidationException([("status", "invalid")]);
@@ -183,7 +183,7 @@ public sealed class IntakeService(
 
     public async Task<IntakeView?> ConfirmNoKnownAllergiesAsync(Guid appointmentId, CancellationToken cancellationToken = default)
     {
-        if (await WithNurseAsync(appointmentId, cancellationToken) is not { } visit) return null;
+        if (await OpenAsync(appointmentId, cancellationToken) is not { } visit) return null;
         if (await db.Allergies.AnyAsync(a => a.PatientId == visit.PatientId && a.Kind == AllergyKind.Substance, cancellationToken)) throw new IntakeConflictException("has_allergies");
 
         var (now, me) = (clock.GetUtcNow(), user.UserId ?? throw new InvalidOperationException("No user."));
@@ -203,7 +203,7 @@ public sealed class IntakeService(
     public async Task<IntakeView?> AddMedicineAsync(Guid appointmentId, AddMedicine command, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
-        if (await WithNurseAsync(appointmentId, cancellationToken) is not { } visit) return null;
+        if (await OpenAsync(appointmentId, cancellationToken) is not { } visit) return null;
         var (name, dose, frequency) = (command.Name?.Trim(), command.Dose?.Trim(), command.Frequency?.Trim());
         var errors = new List<(string, string)>();
         if (string.IsNullOrEmpty(name)) errors.Add(("name", "required"));
@@ -225,13 +225,20 @@ public sealed class IntakeService(
         return await ViewAsync(visit, cancellationToken);
     }
 
-    /// <summary>The visit, once the caller may work its intake and the patient is with the nurse. Null: no such visit.</summary>
-    async Task<ConsultVisit?> WithNurseAsync(Guid appointmentId, CancellationToken cancellationToken)
+    /// <summary>The visit, once the caller may work its intake and the visit is still open (<see cref="Open"/>). Null: no such visit.</summary>
+    async Task<ConsultVisit?> OpenAsync(Guid appointmentId, CancellationToken cancellationToken)
     {
         if (await visits.FindAsync(appointmentId, cancellationToken) is not { } visit) return null;
         await RequireAsync(visit, cancellationToken);
-        return visit.State == AppointmentState.WithNurse ? visit : throw new IntakeConflictException("not_with_nurse");
+        return Open(visit) ? visit : throw new IntakeConflictException("visit_closed");
     }
+
+    /// <summary>
+    /// Vitals, weight, allergies and medicines are recorded with the nurse and again in the consultation until it ends, so a clinic without a
+    /// nurse (intake off) can still run the allergy check and weigh a child (MDV audit P0-2). Between the handoff and the consultation nothing
+    /// changes under the doctor's eyes. The escalation and the handoff stay the nurse's.
+    /// </summary>
+    static bool Open(ConsultVisit visit) => visit.State is AppointmentState.WithNurse or AppointmentState.InConsult;
 
     public async Task<IntakeView?> HandOffAsync(Guid appointmentId, CancellationToken cancellationToken = default)
     {

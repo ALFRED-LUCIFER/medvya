@@ -34,5 +34,10 @@ export function useConsultController(encounterId: string) {
     view, onView: (v: ConsultView) => { setView(v); saveConsultView(v); },
     panel, onPanel: setPanel,
     chart: { data: chart.data?.chart ?? null, loading: chart.isPending, failed: chart.isError },
+    /** Vitals or allergies were recorded in the consultation: everything that reads them asks the server again. */
+    onChartChanged: () => {
+      for (const k of [key, ['note-prefill', encounterId], ['prescription-checks', encounterId], ['prescription-authorisation', encounterId], ['patient360', patientId]])
+        void queryClient.invalidateQueries({ queryKey: k });
+    },
   };
 }

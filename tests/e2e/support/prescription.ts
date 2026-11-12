@@ -38,7 +38,7 @@ export type RxChecks = {
   weightDoses: Record<string, unknown>[];
 };
 export const clearChecks = (more: Partial<RxChecks> = {}): RxChecks => ({
-  ruleSet: 'medvya-curated', ruleSetVersion: '2026.11-draft-2', allergies: 'NoKnownAllergies', alerts: [], notChecked: [], overrides: [], unresolved: 0,
+  ruleSet: 'medvya-curated', ruleSetVersion: '2026.11-draft-3', allergies: 'NoKnownAllergies', alerts: [], notChecked: [], overrides: [], unresolved: 0,
   checkedAt: '2026-10-19T04:30:00Z', weightDoses: [], ...more,
 });
 export const penicillinAlert = (itemId: string) => ({

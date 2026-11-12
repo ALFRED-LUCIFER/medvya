@@ -4,12 +4,14 @@ import { isBlank, structuredIds, type NoteSections, type NoteTemplate, type Reco
 
 // The review-and-sign checklist (MDV-P2-044, E-04/E-06). Worked out from the note, the encounter banner and the reconciliation every time;
 // nothing of it is stored. The server refuses a signature without a recorded consent, with an undecided AI draft or a blank required section,
-// so the locked button is not the only control. Identity, allergies and medicines are checked here only (the server has no gate for them).
+// so the locked button is not the only control; it also refuses one while allergies are not recorded (MDV audit P0-2). Identity and medicines
+// are checked here only.
 export const checklistIds = ['identity', 'allergies', 'medicines', 'consent', 'history', 'ai', 'diagnoses', 'plan'] as const;
 export type ChecklistId = (typeof checklistIds)[number];
 /**
- * todo counts against signing; warn is said in words but does not lock (allergies not recorded: there is no way to record them in the consultation yet;
- * an assessment with no diagnosis on the problem list: a visit without a diagnosis is allowed, but it is never shown as "Done", MDV audit UX-11).
+ * todo counts against signing; warn is said in words but does not lock (an assessment with no diagnosis on the problem list: a visit without a
+ * diagnosis is allowed, but it is never shown as "Done", MDV audit UX-11). Allergies not recorded is todo: the doctor records them in the
+ * consultation, and the sign message never says "ready" beside it (MDV audit P0-2).
  */
 export type ChecklistState = 'done' | 'todo' | 'warn';
 export type ChecklistItem = { id: ChecklistId; state: ChecklistState };
@@ -47,7 +49,7 @@ export function signChecklist(i: ChecklistInput): ChecklistItem[] {
   };
   return checklistIds.map(id => ({
     id,
-    state: id === 'diagnoses' && done.diagnoses && !i.diagnosisRecorded ? 'warn' : done[id] ? 'done' : id === 'allergies' ? 'warn' : 'todo',
+    state: id === 'diagnoses' && done.diagnoses && !i.diagnosisRecorded ? 'warn' : done[id] ? 'done' : 'todo',
   }));
 }
 

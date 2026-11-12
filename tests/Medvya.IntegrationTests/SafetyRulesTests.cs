@@ -151,7 +151,7 @@ public sealed class SafetyRulesTests
     public void NotRecordedAllergiesAreSaidAndNeverReadAsNone()
     {
         var alert = Assert.Single(Run([Line("N02BE01")], state: ChartAllergies.NotRecorded).Alerts);
-        Assert.Equal((RxAlertKind.AllergiesNotRecorded, RxSeverity.Moderate, (Guid?)null), (alert.Kind, alert.Severity, alert.ItemId));
+        Assert.Equal((RxAlertKind.AllergiesNotRecorded, RxSeverity.Severe, (Guid?)null), (alert.Kind, alert.Severity, alert.ItemId));
         Assert.Empty(Run([Line("N02BE01")], state: ChartAllergies.NoKnownAllergies).Alerts);
         Assert.Empty(Run([], state: ChartAllergies.NotRecorded).Alerts); // nothing prescribed yet, nothing to say
     }

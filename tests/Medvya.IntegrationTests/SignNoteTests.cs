@@ -33,6 +33,7 @@ public sealed class SignNoteTests(PostgresFixture sql) : IClassFixture<PostgresF
     public async Task InitializeAsync()
     {
         await h.SeedAsync();
+        await h.NoKnownAllergiesAsync(h.Patient);
         await h.DoctorTemplateAsync();
         factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b
             .UseSetting("ConnectionStrings:Medvya", sql.ConnectionString)
@@ -66,6 +67,22 @@ public sealed class SignNoteTests(PostgresFixture sql) : IClassFixture<PostgresF
     static Uri U(string path) => new(path, UriKind.Relative);
 
     static async Task<JsonElement> Json(HttpResponseMessage r) => await r.Content.ReadFromJsonAsync<JsonElement>();
+
+    // MDV audit P0-2. SAFETY mutation check: drop the allergies gate in ConsultNoteService.SignAsync and this fails.
+    [Fact]
+    public async Task AllergiesNotRecordedBlockSigning()
+    {
+        // The second patient has nothing on the chart: no allergy, no "no known allergies". One open consultation at a time.
+        using (await Client(h.Doctor).PostAsync(U($"/v1/encounters/{encounter}/end"), null)) { }
+        var visit = await h.BookAsync(11, patient: h.SecondPatient);
+        await h.FrontDesk(h.Reception).CheckInAsync(visit.Id, new CheckIn());
+        using (var started = await Client(h.Doctor).PostAsJsonAsync(U("/v1/encounters"), new { appointmentId = visit.Id })) encounter = (await Json(started)).GetProperty("id").GetGuid();
+        var version = await SaveDraftAsync(new { chiefComplaint = "Thirst (synthetic)", assessment = "Review", plan = "Rest" });
+        using var refused = await SignAsync(h.Doctor, version, 1);
+        Assert.Equal(HttpStatusCode.BadRequest, refused.StatusCode);
+        Assert.Equal("not_recorded", (await Json(refused)).GetProperty("errors").GetProperty("allergies")[0].GetString());
+        Assert.Equal(0, await SignedRowsAsync());
+    }
 
     /// <summary>Saves the draft with the doctor's record of the recording consent (MDV-P2-044); "Declined" is the manual note path of today.</summary>
     async Task<int> SaveDraftAsync(object sections, int baseVersion = 0, string? recordingConsent = "Declined")

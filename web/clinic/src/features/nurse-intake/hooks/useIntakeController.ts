@@ -14,10 +14,10 @@ import { addAllergy, addMedicine, confirmNoKnownAllergies, escalateIntake, fetch
  * escalation with its reason, and the handoff. The server answers every call with the whole intake (flags, blockers), which replaces the
  * cached one; the screen never works out a flag or a blocker itself.
  */
-export function useIntakeController(appointmentId: string, onHandedOff: () => void) {
+export function useIntakeController(appointmentId: string, onHandedOff: () => void, onChanged?: () => void) {
   const queryClient = useQueryClient();
   const key = ['intake', appointmentId];
-  const query = useQuery({ queryKey: key, queryFn: () => fetchIntake(appointmentId), retry: false });
+  const query = useQuery({ queryKey: key, queryFn: () => fetchIntake(appointmentId), retry: false, enabled: !!appointmentId });
   const form = useForm<IntakeForm>({ resolver: zodResolver(intakeFormSchema), defaultValues: formOf(null) });
   const allergyForm = useForm<AllergyForm>({ resolver: zodResolver(allergySchema), defaultValues: emptyAllergy });
   const medicineForm = useForm<MedicineForm>({ resolver: zodResolver(medicineSchema), defaultValues: emptyMedicine });
@@ -37,6 +37,7 @@ export function useIntakeController(appointmentId: string, onHandedOff: () => vo
     setProblem(null);
     setBadKind(null);
     queryClient.setQueryData<IntakeScreen>(key, old => old && { ...old, intake });
+    onChanged?.(); // in the consultation: the banner, the checklist and the prescription checks read what was just recorded
   };
   const fail = (e: unknown) => {
     const p = e instanceof ApiError ? intakeProblem(e.status, e.code) : ({ kind: 'failed' } as const);

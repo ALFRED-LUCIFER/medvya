@@ -93,6 +93,8 @@ public sealed class ConsultNoteService(
         // MDV-P2-044: the checklist's server gates, so the locked Sign button is not the only control. Remove one and SignNoteTests fails.
         if (note?.RecordingConsent is null) blanks.Add(("recordingConsent", "required"));
         if (note?.UndecidedAi.Length > 0) blanks.Add(("undecidedAi", "undecided"));
+        // Allergies not recorded (no allergy and no "no known allergies" on the chart) is never signed past (MDV audit P0-2).
+        if (!await db.Allergies.AnyAsync(a => a.PatientId == encounter.PatientId, cancellationToken)) blanks.Add(("allergies", "not_recorded"));
         if (blanks.Count > 0) throw new NoteValidationException(blanks);
 
         var signed = new SignedNoteVersion

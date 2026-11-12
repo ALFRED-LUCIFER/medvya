@@ -124,7 +124,7 @@ test('a severe allergy alert is in words with its evidence and needs a reason; w
 
   await checks.getByText('About these checks').click();
   await expect(checks).toContainText("Source: Medvya's curated starter rules, not a licensed drug database, pending clinical safety sign-off.");
-  await expect(checks).toContainText('Version: 2026.11-draft-2');
+  await expect(checks).toContainText('Version: 2026.11-draft-3');
   await expect(checks).toContainText('These patient rules await clinical review.');
 });
 

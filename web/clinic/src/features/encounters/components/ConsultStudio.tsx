@@ -18,6 +18,8 @@ type Props = NoteEditorProps & {
   chart: { data: Patient360['chart'] | null; loading: boolean; failed: boolean };
   /** The plan's actions (MDV-P2-043): medicines, the prescription, tests, advice, follow-up and referral, composed in by the route. */
   plan?: ReactNode;
+  /** Vitals, weight and allergies recorded by the doctor (MDV audit P0-2), composed in by the route. */
+  entry?: ReactNode;
 };
 
 const heading = (id: StudioSection) => `studio-${id}`;
@@ -68,6 +70,7 @@ export default function ConsultStudio(p: Props) {
                 <div><Button variant="outline" className="min-h-11" onClick={p.assist.onInsertVitals}>{t('noteAssist.vitals.insert')}</Button></div>
               </>
               : <p className="text-sm text-muted-foreground">{t('noteAssist.vitals.empty')}</p>}
+            {p.entry}
           </Numbered>}
           <Numbered id="history" title={numbered}>{field('chiefComplaint')}{field('subjective')}{field('reviewOfSystems')}</Numbered>
           <Numbered id="template" title={numbered}>

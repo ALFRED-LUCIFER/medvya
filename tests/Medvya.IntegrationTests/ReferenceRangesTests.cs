@@ -51,7 +51,7 @@ public sealed class ReferenceRangesTests
     public void EveryCodeHasAUnitAndOnlyMeasuresWithoutAnAdultRangeHaveNone()
     {
         Assert.All(Enum.GetValues<ObservationCode>(), c => Assert.False(string.IsNullOrEmpty(Observation.Units(c))));
-        Assert.Equal([ObservationCode.Weight, ObservationCode.Height, ObservationCode.FundalHeight], Enum.GetValues<ObservationCode>().Where(c => ReferenceRanges.For(c) is null));
+        Assert.Equal([ObservationCode.Weight, ObservationCode.Height, ObservationCode.FundalHeight, ObservationCode.Length, ObservationCode.HeadCircumference], Enum.GetValues<ObservationCode>().Where(c => ReferenceRanges.For(c) is null));
         Assert.All(Enum.GetValues<ObservationCode>(), c => Assert.True(c.ToString().Length <= 30)); // the column holds 30 characters
     }
 

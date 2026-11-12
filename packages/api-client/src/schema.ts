@@ -1539,6 +1539,232 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/patients/{patientId}/pregnancy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    patientId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["StartPregnancy"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/patients/{patientId}/pregnancy/dating": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    patientId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["PregnancyDates"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/patients/{patientId}/pregnancy/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    patientId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["ClosePregnancy"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/patients/{patientId}/pregnancy/danger-signs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    patientId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/patients/{patientId}/pregnancy/ruled-out": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    patientId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/patients/{patientId}/pregnancy/readings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    patientId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["PregnancyReadings"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/prescriptions/verify": {
         parameters: {
             query?: never;
@@ -8582,6 +8808,9 @@ export interface components {
             doctors: components["schemas"]["DoctorLoad"][];
             waiting: components["schemas"]["WaitingVisit"][];
         };
+        ClosePregnancy: {
+            outcome: null | components["schemas"]["PregnancyOutcome"];
+        };
         ClosureBody: {
             /** Format: date */
             date: string;
@@ -9060,6 +9289,24 @@ export interface components {
         PlaceOrders: {
             destination: null | string;
         };
+        PregnancyDates: {
+            /** Format: date */
+            lmp: null | string;
+            /** Format: date */
+            scanDate: null | string;
+            /** Format: int32 */
+            scanWeeks: null | number | string;
+            /** Format: int32 */
+            scanDays: null | number | string;
+        };
+        /** @enum {unknown} */
+        PregnancyOutcome: "LiveBirth" | "Stillbirth" | "Miscarriage" | "Termination" | "Ectopic" | "EnteredInError" | null;
+        PregnancyReadings: {
+            /** Format: double */
+            fundalHeightCm: null | number | string;
+            /** Format: double */
+            fetalHeartRate: null | number | string;
+        };
         PreviewRequest: {
             token: string;
         };
@@ -9507,6 +9754,24 @@ export interface components {
             appointmentId: string;
             /** @default false */
             leaveOpen: boolean;
+        };
+        StartPregnancy: {
+            /** Format: date */
+            lmp: null | string;
+            /** Format: date */
+            scanDate: null | string;
+            /** Format: int32 */
+            scanWeeks: null | number | string;
+            /** Format: int32 */
+            scanDays: null | number | string;
+            /** Format: int32 */
+            gravida: null | number | string;
+            /** Format: int32 */
+            para: null | number | string;
+            /** Format: int32 */
+            abortions: null | number | string;
+            /** Format: int32 */
+            living: null | number | string;
         };
         StartRequest: {
             country: null | string;

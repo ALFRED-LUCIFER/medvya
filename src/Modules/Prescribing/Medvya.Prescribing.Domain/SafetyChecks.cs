@@ -29,12 +29,12 @@ public enum NotCheckedReason { FreeText, NoIngredientCode, NotOnFormulary, DoseN
 /// <summary>
 /// The patient facts the checks read (MDV-P2-040). Null is "not on the chart", never "normal": <see cref="WeightHundredthsKg"/> is the latest
 /// weight no older than one month (14.2 kg is 1420), <see cref="Egfr"/> the latest eGFR in mL/min/1.73 m², <see cref="GestationWeeks"/> the
-/// completed weeks of a current pregnancy.
+/// completed weeks of a current pregnancy, <see cref="PregnancyRuledOut"/> a "not pregnant" statement that holds today (MDV-P2-034).
 /// </summary>
 public sealed record PatientContext(
     [property: Classification(DataClass.SensitiveHealth)] int AgeYears, [property: Classification(DataClass.SensitiveHealth)] bool Female,
     [property: Classification(DataClass.SensitiveHealth)] int? WeightHundredthsKg, [property: Classification(DataClass.SensitiveHealth)] int? Egfr,
-    [property: Classification(DataClass.SensitiveHealth)] int? GestationWeeks);
+    [property: Classification(DataClass.SensitiveHealth)] int? GestationWeeks, [property: Classification(DataClass.SensitiveHealth)] bool PregnancyRuledOut = false);
 
 /// <summary>
 /// A child's dose worked out from the weight: <see cref="MgPerKg"/> a dose, so <see cref="DoseMicrograms"/> each time and, for a liquid,
@@ -245,10 +245,9 @@ public static class SafetyRules
             alerts.Add(new($"{kind.ToString().ToLowerInvariant()}:{code}:{line.Id}", kind, severity, line.Id, line.Name, null, false, code, null, null, null, null, measure));
         var nsaid = Starts(atc, Nsaid);
 
-        // shortcut: the chart records no pregnancy until MDV-P2-034, so null is "not recorded" and a woman 12-55 is reported as not checked; P2-034
-        // adds a recorded "not pregnant" state and the gestation feed.
+        // No open pregnancy and no "not pregnant" statement for today is "not recorded": a woman 12-55 is reported as not checked (MDV-P2-034).
         if (nsaid && patient.GestationWeeks is { } weeks) { if (weeks >= 20) Add(RxAlertKind.Pregnancy, RxSeverity.Severe, "nsaid_from_20_weeks", weeks); }
-        else if (nsaid && patient.Female && patient.AgeYears is >= 12 and <= 55) notChecked.Add(new(line.Id, line.Name, false, NotCheckedReason.PregnancyNotRecorded));
+        else if (nsaid && !patient.PregnancyRuledOut && patient.Female && patient.AgeYears is >= 12 and <= 55) notChecked.Add(new(line.Id, line.Name, false, NotCheckedReason.PregnancyNotRecorded));
 
         if (nsaid || atc == Metformin)
         {

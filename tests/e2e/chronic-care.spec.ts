@@ -14,7 +14,7 @@ const session = (role = 'SoloDoctor') => ({
 
 const chart = (openEncounterId: string | null) => ({
   patient: { id: 'p-1', fullName: 'Meera Iyer (synthetic)', mrn: '000001', dateOfBirth: '1972-03-12', ageYears: 54, sexAtBirth: 'Female', preferredLanguage: null },
-  treatmentConsent: true, timeZone: 'Asia/Kolkata', lifeStage: 'Adult', historySections: [],
+  treatmentConsent: true, timeZone: 'Asia/Kolkata', lifeStage: 'Adult', historySections: [], pregnancy: { open: null, ruledOut: null },
   chart: {
     allergyState: 'NoKnownAllergies', allergies: [], problems: [{ icd10Code: 'E11.9', description: 'Type 2 diabetes mellitus', verification: 'Verified', onsetOn: null, source: 'ClinicianVerified' }],
     medicines: [], lastVitals: [], trends: [], recentEncounters: [], openEncounterId, lastLabs: [], bmi: null, bloodGroup: null, careTeam: [], history: [],

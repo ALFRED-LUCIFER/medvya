@@ -35,7 +35,6 @@ public static class LifeStages
     /// Child under 18; an open pregnancy; older adult from 65; otherwise adult. Ages are whole years on <paramref name="today"/> (the
     /// facility's date), so the 18th birthday is the first adult day. An open pregnancy wins over every age, a pregnant adolescent too: the
     /// pregnancy module and its safety checks must not be hidden behind the child one.
-    /// shortcut: <paramref name="openPregnancy"/> is always false until the pregnancy record exists (MDV-P2-034), which passes it.
     /// </summary>
     public static LifeStage Of(DateOnly dateOfBirth, DateOnly today, bool openPregnancy) =>
         openPregnancy ? LifeStage.Pregnancy

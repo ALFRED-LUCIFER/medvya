@@ -30,9 +30,10 @@ public sealed record AllergyFlagsRequest(IReadOnlyList<Guid>? PatientIds);
 
 /// <summary>
 /// Patient 360 (MDV-P2-004): the banner identity and the verified chart, each fact with its source. The life stage and the history sections
-/// it offers (MDV-P2-032) are worked out from the date of birth on the facility's date.
+/// it offers (MDV-P2-032) are worked out from the date of birth and an open pregnancy (MDV-P2-034) on the facility's date.
 /// </summary>
-public sealed record Patient360(BannerPatient Patient, bool TreatmentConsent, string TimeZone, PatientChart Chart, LifeStage LifeStage, IReadOnlyList<HistorySection> HistorySections);
+public sealed record Patient360(BannerPatient Patient, bool TreatmentConsent, string TimeZone, PatientChart Chart, LifeStage LifeStage, IReadOnlyList<HistorySection> HistorySections,
+    PregnancyStatus Pregnancy);
 
 /// <summary>A timeline entry as the screen shows it: the author's name, never an id the screen would look up.</summary>
 public sealed record TimelineEntryView(Guid Id, TimelineKind Kind, DateTimeOffset At, string Code, string? Title, string? Detail, string? Author, ChartSource Source);
@@ -99,6 +100,7 @@ public static class EncounterEndpoints
         app.MapGeriatricEndpoints();
         app.MapChronicCareEndpoints();
         app.MapNoteEndpoints();
+        app.MapPregnancyEndpoints();
         return app;
     }
 
@@ -150,17 +152,19 @@ public static class EncounterEndpoints
     }
 
     static async Task<IResult> Chart(Guid patientId, [FromServices] IPatientChart chart, [FromServices] IPatientDirectory patients, [FromServices] IPatientConsents consents,
-        [FromServices] IStaffAccess staff, [FromServices] IFacilityDirectory facilities, [FromServices] ICurrentFacility current, [FromServices] TimeProvider clock, CancellationToken ct)
+        [FromServices] IStaffAccess staff, [FromServices] IFacilityDirectory facilities, [FromServices] ICurrentFacility current, [FromServices] TimeProvider clock,
+        [FromServices] IPregnancies pregnancies, CancellationToken ct)
     {
         if (current.FacilityId is not { } facilityId) return Results.Problem(statusCode: StatusCodes.Status403Forbidden, title: "No facility context");
         // Existence only comes before the access check; nothing about the patient is returned until it passes.
         if ((await patients.SummariesAsync([patientId], ct)).GetValueOrDefault(patientId) is not { } p) return Results.NotFound();
         var facts = await chart.GetAsync(patientId, facilityId, ct);
         var today = CountryRules.For(await staff.TenantCountryAsync(ct) ?? throw new InvalidOperationException("No tenant country.")).Today(clock.GetUtcNow());
-        var stage = LifeStages.Of(p.DateOfBirth, today, openPregnancy: false); // shortcut: no pregnancy record until MDV-P2-034, which passes the open one here
+        var pregnancy = await pregnancies.StatusAsync(patientId, facilityId, ct); // after the chart read, which checked access and audited
+        var stage = LifeStages.Of(p.DateOfBirth, today, openPregnancy: pregnancy.Open is not null);
         return Results.Ok(new Patient360(BannerOf(p, today), await consents.IsGrantedAsync(p.Id, ConsentType.Treatment, cancellationToken: ct),
             (await facilities.FindAsync(facilityId, ct) ?? throw new InvalidOperationException("Session facility not in this tenant.")).TimeZone, facts,
-            stage, HistoryRules.Sections(stage, female: p.SexAtBirth == SexAtBirth.Female)));
+            stage, HistoryRules.Sections(stage, female: p.SexAtBirth == SexAtBirth.Female), pregnancy));
     }
 
     internal static BannerPatient BannerOf(PatientSummary p, DateOnly today) =>

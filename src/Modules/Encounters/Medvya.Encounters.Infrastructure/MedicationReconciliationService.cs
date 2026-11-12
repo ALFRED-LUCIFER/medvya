@@ -190,8 +190,14 @@ public sealed class ReconciliationStops(EncountersDbContext db) : IReconciliatio
 }
 
 /// <summary>The allergies and active medicines of one patient for the prescription checks; see <see cref="IPrescribingChart"/>.</summary>
-public sealed class PrescribingChart(EncountersDbContext db) : IPrescribingChart
+public sealed class PrescribingChart(EncountersDbContext db, IPregnancies pregnancies) : IPrescribingChart
 {
+    public async Task<ChartPregnancy> PregnancyAsync(Guid patientId, Guid facilityId, CancellationToken cancellationToken = default)
+    {
+        var status = await pregnancies.StatusAsync(patientId, facilityId, cancellationToken);
+        return new(status.Open?.GestationDays / 7, status.RuledOut is not null);
+    }
+
     public async Task<PrescribingFacts> FactsAsync(Guid patientId, CancellationToken cancellationToken = default)
     {
         var allergies = await db.Allergies.AsNoTracking().Where(a => a.PatientId == patientId).OrderBy(a => a.RecordedAt).ThenBy(a => a.Id).ToListAsync(cancellationToken);

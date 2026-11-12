@@ -18,7 +18,7 @@ namespace Medvya.Encounters.Infrastructure;
 /// placed orders (<see cref="IPlacedOrders"/>). Input is validated here. Audit events carry no value.
 /// </summary>
 public sealed class ChronicCareService(
-    EncountersDbContext db, IClinicalAccess clinical, IChildHealth childHealth, IPlacedOrders orders, IPatientDirectory patients, IFacilityDirectory facilities,
+    EncountersDbContext db, IClinicalAccess clinical, IChildHealth childHealth, IPregnancies pregnancies, IPlacedOrders orders, IPatientDirectory patients, IFacilityDirectory facilities,
     ICurrentTenant tenant, ICurrentUser user, IAuditLog audit, TimeProvider clock) : IChronicCare
 {
     public const string ReadAction = "patient.care.read", TargetAction = "patient.care-target.set", CheckAction = "patient.care-check.record", GoalAction = "patient.care-goal.save";
@@ -54,10 +54,12 @@ public sealed class ChronicCareService(
         // Only a child has a schedule to be due on; asking for an adult would audit a child health read that never happened.
         var doses = born is { } b && LifeStages.Of(b, ChildHealthService.DayIn(zone, now), openPregnancy: false) == LifeStage.Child
             ? await childHealth.VaccinesDueAsync(patientId, facilityId, cancellationToken) : [];
-        // shortcut: no open pregnancy is known until the pregnancy record (MDV-P2-034) is on main, so the glucose tolerance test gap never opens;
-        // pass its gestation in days and whether an OGTT was placed since it began once that merges.
+        // The open pregnancy's gestation today (MDV-P2-034), and whether an OGTT was placed since it began (the due date less 40 weeks).
+        var open = (await pregnancies.StatusAsync(patientId, facilityId, cancellationToken)).Open;
+        var began = open is null ? (DateOnly?)null : open.DueDate.AddDays(-PregnancyRules.TermDays);
+        var ogttOrdered = began is { } from && placed.Any(o => CareGapRules.IsGlucoseTest(o.Name) && ChildHealthService.DayIn(zone, o.OrderedAt) >= from);
         var facts = new CareFacts(diabetes, checks.GetValueOrDefault(CareCheckKind.DiabeticEyeExam), new[] { checks.GetValueOrDefault(CareCheckKind.DiabeticFootExam), footByNote }.Max(), latest.ToDictionary(x => x.Key, x => x.Value.TakenAt),
-            placed, [.. doses.Select(d => new DueDoseFact(d.Vaccine, d.Dose, d.DueFrom))], GestationDays: null, GlucoseTestOrderedInPregnancy: false, falls);
+            placed, [.. doses.Select(d => new DueDoseFact(d.Vaccine, d.Dose, d.DueFrom))], open?.GestationDays, ogttOrdered, falls);
 
         var goals = await db.CareGoals.AsNoTracking().Where(g => g.PatientId == patientId).OrderBy(g => g.CreatedAt).ThenBy(g => g.Id).Take(IChronicCare.MaxGoals).ToListAsync(cancellationToken);
         return new(diabetes || codes.Any(CareGapRules.IsHypertension) || set.Count > 0,

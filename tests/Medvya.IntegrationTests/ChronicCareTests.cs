@@ -117,6 +117,38 @@ public sealed class ChronicCareTests(PostgresFixture sql) : IClassFixture<Postgr
         Assert.Equal(["DiabeticFootExam"], Gaps(await GetAsync(h.Doctor)));
     }
 
+    /// <summary>SAFETY (mutation check: pass no gestation from the open pregnancy, or count an OGTT placed before it began, and this fails).</summary>
+    [Fact]
+    public async Task TheGlucoseToleranceTestIsDueFrom24WeeksOfTheOpenPregnancyUntilOrdered()
+    {
+        var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(Now, TimeZoneInfo.FindSystemTimeZoneById("Asia/Kolkata")).DateTime);
+        await using (var db = sql.Encounters(h.Tenant))
+        {
+            // 23 weeks 6 days today: not due yet
+            db.PregnancyEpisodes.Add(new PregnancyEpisode { Id = Guid.NewGuid(), TenantId = h.Tenant, PatientId = h.Patient, Lmp = today.AddDays(-(24 * 7 - 1)), DueDate = today.AddDays(-(24 * 7 - 1)).AddDays(PregnancyRules.TermDays), DatedBy = DatingMethod.Lmp, DatingReason = DatingReason.LmpOnly, StartedBy = h.Doctor, StartedAt = Now.AddDays(-100) });
+            await db.SaveChangesAsync();
+        }
+        Assert.DoesNotContain("GlucoseToleranceTest", Gaps(await GetAsync(h.Doctor)));
+
+        h.Clock.Advance(TimeSpan.FromDays(1)); // 24 weeks 0 days
+        var due = (await GetAsync(h.Doctor)).GetProperty("gaps").EnumerateArray().Single(g => g.GetProperty("rule").GetString() == "GlucoseToleranceTest");
+        Assert.Equal(("Order", "Oral glucose tolerance test (75 g)"), (due.GetProperty("action").GetString(), due.GetProperty("item").GetString()));
+
+        await using (var rx = sql.Prescribing(h.Tenant))
+        {
+            // placed before this pregnancy began: does not count
+            rx.Orders.Add(new ClinicalOrder { Id = Guid.NewGuid(), TenantId = h.Tenant, FacilityId = h.Facility, PatientId = h.Patient, EncounterId = Guid.NewGuid(), Kind = OrderKind.Lab, Name = "OGTT", State = OrderState.Ordered, CreatedBy = h.Doctor, CreatedAt = Now.AddDays(-200), OrderedBy = h.Doctor, OrderedAt = Now.AddDays(-200) });
+            await rx.SaveChangesAsync();
+        }
+        Assert.Contains("GlucoseToleranceTest", Gaps(await GetAsync(h.Doctor)));
+        await using (var rx = sql.Prescribing(h.Tenant))
+        {
+            rx.Orders.Add(new ClinicalOrder { Id = Guid.NewGuid(), TenantId = h.Tenant, FacilityId = h.Facility, PatientId = h.Patient, EncounterId = Guid.NewGuid(), Kind = OrderKind.Lab, Name = "Oral glucose tolerance test (75 g)", State = OrderState.Ordered, CreatedBy = h.Doctor, CreatedAt = Now, OrderedBy = h.Doctor, OrderedAt = Now });
+            await rx.SaveChangesAsync();
+        }
+        Assert.DoesNotContain("GlucoseToleranceTest", Gaps(await GetAsync(h.Doctor))); // done: ordered in this pregnancy
+    }
+
     [Fact]
     public async Task AChildsVaccinesDueAreGaps()
     {

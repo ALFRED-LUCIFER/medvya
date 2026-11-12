@@ -87,7 +87,7 @@ test('a severe finding blocks the line until a reason is given; when needed is o
 
 const chart = (openEncounterId: string | null) => ({
   patient: { id: 'p-1', fullName: 'Meera Iyer (synthetic)', mrn: '000001', dateOfBirth: '1972-03-12', ageYears: 54, sexAtBirth: 'Female', preferredLanguage: null },
-  treatmentConsent: true, timeZone: 'Asia/Kolkata', lifeStage: 'Adult', historySections: [],
+  treatmentConsent: true, timeZone: 'Asia/Kolkata', lifeStage: 'Adult', historySections: [], pregnancy: { open: null, ruledOut: null },
   chart: {
     allergyState: 'Listed', allergies: [{ substance: 'Penicillin', reaction: 'Rash', status: 'Confirmed', source: 'ClinicianVerified' }], problems: [],
     medicines: [{ name: 'Metformin', dose: '500 mg', state: 'Active', source: 'Imported', stoppedAt: null }], lastVitals: [], lastLabs: [], bmi: null, trends: [], recentEncounters: [], openEncounterId,

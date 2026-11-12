@@ -30,6 +30,7 @@ SOFT_REFS = {
     'NoteId': ('encounters', 'ConsultNotes'), 'AmendsVersionId': ('encounters', 'SignedNoteVersions'), 'SignedBy': ('identity', 'Users'), 'RenderedBy': ('identity', 'Users'),
     'AuthorisedBy': ('identity', 'Users'), 'PrescriptionId': ('prescribing', 'AuthorisedPrescriptions'),
     'PdfId': ('prescribing', 'PrescriptionPdfs'), 'ShareId': ('prescribing', 'RxShares'), 'SharedBy': ('identity', 'Users'),
+    'StartedBy': ('identity', 'Users'), 'ClosedBy': ('identity', 'Users'), 'DangerSignsCounselledBy': ('identity', 'Users'),  # PregnancyEpisodes
     'DoctorId': ('identity', 'Users'),  # PrintedPapers: the doctor the slip or letter names (SourceId is the encounter or the referral, by Kind)
 }
 # CalendarId (and the from/to of a reschedule) is a doctor (a membership, inferred) or a room, told apart by CalendarKind.

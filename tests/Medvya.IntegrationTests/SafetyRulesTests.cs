@@ -201,6 +201,10 @@ public sealed class SafetyRulesTests
         Assert.Contains(For(new(31, true, null, 95, null), [ibuprofen]).NotChecked, n => n.Id == ibuprofen.Id && n.Reason == NotCheckedReason.PregnancyNotRecorded);
         Assert.DoesNotContain(For(new(31, false, null, 95, null), [ibuprofen]).NotChecked, n => n.Reason == NotCheckedReason.PregnancyNotRecorded);
         Assert.DoesNotContain(For(new(70, true, null, 95, null), [ibuprofen]).NotChecked, n => n.Reason == NotCheckedReason.PregnancyNotRecorded);
+        // MDV-P2-034: a "not pregnant" statement for today is a recorded state (mutation check: ignore PregnancyRuledOut, and this fails).
+        var ruledOut = For(new(31, true, null, 95, null, PregnancyRuledOut: true), [ibuprofen]);
+        Assert.DoesNotContain(ruledOut.NotChecked, n => n.Reason == NotCheckedReason.PregnancyNotRecorded);
+        Assert.DoesNotContain(ruledOut.Alerts, a => a.Kind == RxAlertKind.Pregnancy);
     }
 
     /// <summary>

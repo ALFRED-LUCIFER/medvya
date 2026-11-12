@@ -142,6 +142,36 @@ public sealed class PrescriptionCheckTests(PostgresFixture sql) : IClassFixture<
     }
 
     /// <summary>
+    /// MDV-P2-034 through the contract. SAFETY (mutation check: drop PregnancyRuledOut from the NSAID rule, pass no pregnancy from CheckAsync or
+    /// PrescribingChart, or let a statement hold past its day, and this fails). A woman of 54 recorded as not pregnant today gets no "pregnancy not
+    /// checked"; the next day she does again; an open pregnancy at 24 weeks makes ibuprofen severe.
+    /// </summary>
+    [Fact]
+    public async Task ANotPregnantStatementClearsTheNotCheckedFindingAndAnOpenPregnancyFeedsTheWeeks()
+    {
+        await ChartAsync([NoneKnown]);
+        var enc = await ConsultationAsync();
+        var ibuprofen = await AddAsync(enc.Id, "Ibuprofen");
+        async Task<RxCheckView> CheckAsync() => (await Rx(h.Doctor).CheckAsync(enc.Id))!;
+        bool NotChecked(RxCheckView c) => c.NotChecked.Any(n => n.Id == ibuprofen && n.Reason == NotCheckedReason.PregnancyNotRecorded);
+        Assert.True(NotChecked(await CheckAsync()));
+
+        var pregnancies = h.Get<IPregnancies>(h.Doctor);
+        await pregnancies.RuleOutAsync(h.Patient, h.Facility);
+        var ruledOut = await CheckAsync();
+        Assert.False(NotChecked(ruledOut));
+        Assert.DoesNotContain(ruledOut.Alerts, a => a.Kind == RxAlertKind.Pregnancy);
+        h.Clock.Advance(TimeSpan.FromDays(1));
+        Assert.True(NotChecked(await CheckAsync()));
+
+        await pregnancies.StartAsync(h.Patient, h.Facility, new StartPregnancy(SchedulingHarness.Monday.AddDays(1 - 171), null, null, null, null, null, null, null));
+        var pregnant = await CheckAsync();
+        var alert = Assert.Single(pregnant.Alerts, a => a.Kind == RxAlertKind.Pregnancy);
+        Assert.Equal((RxSeverity.Severe, "nsaid_from_20_weeks", (int?)24, (Guid?)ibuprofen), (alert.Severity, alert.Code, alert.Measure, alert.ItemId));
+        Assert.False(NotChecked(pregnant));
+    }
+
+    /// <summary>
     /// MDV-P2-040 through the contract. SAFETY (mutation check: pass no weight or eGFR from PrescribingChart, take an older eGFR, drop the one-month
     /// line in CheckAsync, or read the age from anything but the date of birth, and this fails). A child's weight older than one month is not used; a recent one works
     /// the dose out, and a 500 mg tablet is above 15 mg/kg at 14.2 kg. The 54-year-old woman's ibuprofen says what was not checked.

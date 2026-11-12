@@ -27,6 +27,9 @@ public sealed class RxShareLinks(PrescribingDbContext db, IEncounterDirectory en
         if (await LiveAsync(linkHash, cancellationToken) is not { } share) return false;
         var patient = await PatientAsync(share, cancellationToken);
         await RefuseIfReplacedAsync(share, patient, CodeAction, cancellationToken);
+        await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
+        // Parallel requests for one link wait here, so the limits below count every code the others sent.
+        await db.Database.ExecuteSqlAsync($"""SELECT 1 FROM prescribing."RxShares" WHERE "Id" = {share.Id} FOR UPDATE""", cancellationToken);
         var now = clock.GetUtcNow();
         var sent = await db.RxShareCodes.AsNoTracking().Where(c => c.ShareId == share.Id).Select(c => c.SentAt).ToListAsync(cancellationToken);
         if (sent.Count >= RxShareRules.MaxCodes) await RefuseAsync(share, patient, CodeAction, "code_limit", cancellationToken);
@@ -35,7 +38,6 @@ public sealed class RxShareLinks(PrescribingDbContext db, IEncounterDirectory en
         var code = RxShareRules.NewCode();
         var id = Guid.CreateVersion7();
         var row = new RxShareCode { Id = id, TenantId = share.TenantId, ShareId = share.Id, SentAt = now, ExpiresAt = now + RxShareRules.CodeLifetime, CodeHash = RxShareRules.HashCode(id, code) };
-        await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
         db.RxShareCodes.Add(row);
         await db.SaveChangesAsync(cancellationToken);
         try

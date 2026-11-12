@@ -19,7 +19,7 @@
     <!-- Test only: reads the text and pages back out of the server PDFs. Apache-2.0. -->
     <PackageVersion Include="PdfPig" Version="0.1.16" />
     <!-- Wraps per-tenant data keys with a Key Vault key (MDV-P0-035); already a transitive of the Always Encrypted provider. -->
-    <PackageVersion Include="Azure.Security.KeyVault.Keys" Version="4.7.0" />
+    <PackageVersion Include="Azure.Security.KeyVault.Keys" Version="4.10.2" />
     <!-- Email through Azure Communication Services (Email:Provider=Acs), passwordless with the app identity. -->
     <PackageVersion Include="Azure.Communication.Email" Version="1.1.0" />
         <!-- Transitive via Hangfire.Core 1.8; 11.0.1 has GHSA-5crp-9r3c-p9vr. -->
@@ -33,11 +33,11 @@
     <PackageVersion Include="Fido2" Version="4.3.2" />
     <PackageVersion Include="Hangfire.AspNetCore" Version="1.8.25" />
     <PackageVersion Include="Hangfire.PostgreSql" Version="1.21.1" />
-    <PackageVersion Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="10.0.14" />
-    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.14" />
-    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.14" />
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="10.0.15" />
+    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.15" />
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.15" />
     <!-- Tests only: a real SignalR client against the test host (board hub authorisation and delivery, MDV-P1-029). -->
-    <PackageVersion Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.14" />
+    <PackageVersion Include="Microsoft.AspNetCore.SignalR.Client" Version="11.0.0" />
     <PackageVersion Include="Microsoft.Extensions.ApiDescription.Server" Version="10.0.14" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.14" />
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />

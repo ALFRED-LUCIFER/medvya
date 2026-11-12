@@ -98,6 +98,7 @@ public static class EncounterEndpoints
         app.MapProblemEndpoints();
         app.MapChildHealthEndpoints();
         app.MapGeriatricEndpoints();
+        app.MapChronicCareEndpoints();
         app.MapNoteEndpoints();
         app.MapPregnancyEndpoints();
         return app;

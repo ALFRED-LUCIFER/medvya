@@ -35,7 +35,8 @@ export default function ConsultStudio(p: Props) {
   const { panel, onPanel } = p;
   useEffect(() => { if (!p.loading && !showAssist && panel === 'assist') onPanel('chart'); }, [p.loading, showAssist, panel, onPanel]);
   // Arriving from "Plan change" (MDV-P2-037): focus the Plan once the note is there.
-  useEffect(() => { if (!p.loading && window.location.hash === `#${planHeading}`) document.getElementById(planHeading)?.focus(); }, [p.loading]);
+  const ready = !p.loading && !!p.template && !!p.ticks;
+  useEffect(() => { if (ready && window.location.hash === `#${planHeading}`) document.getElementById(planHeading)?.focus(); }, [ready]);
   if (p.loading) return <p role="status">{t('noteEditor.loading')}</p>;
   if (p.loadFailed || !p.template || !p.templateKey || !p.ticks) return <p role="alert" className="font-bold text-danger-700">{t(p.forbidden ? 'noteEditor.forbidden' : 'noteEditor.loadFailed')}</p>;
   const { template, ticks } = p;

@@ -44,7 +44,7 @@ function Consult({ encounterId, boardPath, online, canOrder, canReconcile, canSi
   const consult = useConsultController(encounterId);
   // One controller for both views (MDV-P2-041): switching keeps the form, the autosave and every typed word.
   const note = { ...useNoteController(encounterId, canSign, consult.banner?.timeZone, consult.banner), timeZone: consult.banner?.timeZone,
-    patient: consult.banner && { name: consult.banner.patient.fullName, mrn: consult.banner.patient.mrn, dateOfBirth: consult.banner.patient.dateOfBirth, encounterId } };
+    patient: consult.banner && { name: consult.banner.patient.fullName, mrn: consult.banner.patient.mrn, dateOfBirth: consult.banner.patient.dateOfBirth } };
   const ended = consult.banner?.encounter.status === 'Ended';
   const patient = consult.banner && { ...consult.banner.patient, allergies: consult.banner.allergies };
   const plan = patient && <Plan encounterId={encounterId} ended={ended} online={online} canOrder={canOrder} canReconcile={canReconcile} patient={patient} />;

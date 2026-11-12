@@ -66,7 +66,7 @@ type Props = {
  * warning while typing and the decision before save (MDV-P1-016). Country rules follow the tenant.
  */
 export default function Registration(p: Props) {
-  const { t } = useI18n();
+  const { t, formatCalendarDate } = useI18n();
   const heading = useRef<HTMLHeadingElement>(null);
   const shownStep = useRef(p.step);
   useEffect(() => {
@@ -98,7 +98,7 @@ export default function Registration(p: Props) {
   const firstId = identifierInputs(p.values, p.country, p.quick)[0] ?? null;
   const entry = {
     fullName: p.values.fullName, mobile: p.values.mobile, identifier: firstId,
-    date: p.ageInstead ? t('registration.duplicates.age', { age: p.values.ageYears }) : p.values.dateOfBirth,
+    date: p.ageInstead ? t('registration.duplicates.age', { age: p.values.ageYears }) : p.values.dateOfBirth && formatCalendarDate(p.values.dateOfBirth),
   };
   const modeLink = (quick: boolean) => cn('flex min-h-11 items-center rounded-md px-3 text-sm font-bold',
     p.quick === quick ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground');

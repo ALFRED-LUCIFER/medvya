@@ -8,6 +8,8 @@ import { gestation, gpal, outcomes, type CloseForm, type PregnancyForm as Form, 
 
 type Props = {
   status: PregnancyStatus; timeZone: string; canManage: boolean; canRecord: boolean; form: Form | null;
+  /** Outside the core age band the card is folded under its heading until opened (UX-09). */
+  folded: boolean;
   startForm: UseFormReturn<StartForm>; closeForm: UseFormReturn<CloseForm>; readingsForm: UseFormReturn<ReadingsForm>;
   saving: boolean; problem: PregnancyProblem | null;
   onOpen: (f: Form) => void; onCancel: () => void; onStart: FormEventHandler; onClose: FormEventHandler; onReadings: FormEventHandler;
@@ -23,14 +25,26 @@ const stateIcon = { Done: CircleCheck, Today: CalendarClock, ToCome: CircleDashe
 export default function PregnancyCard(p: Props) {
   const { t } = useI18n();
   const open = p.status.open;
+  const title = <h2 className="inline-flex items-center gap-2 text-base font-extrabold"><HeartPulse aria-hidden className="size-5" />{t('pregnancy.title')}</h2>;
+  const body = <>
+    {p.problem && <p role="alert" className="font-bold">{t(`pregnancy.problem.${p.problem}`)}</p>}
+    {open ? <Open p={p} open={open} /> : <None p={p} />}
+  </>;
   return (
     <section aria-label={t('pregnancy.title')} className="flex flex-col gap-4 rounded-xl border bg-card p-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="inline-flex items-center gap-2 text-base font-extrabold"><HeartPulse aria-hidden className="size-5" />{t('pregnancy.title')}</h2>
-        {open && <span className="text-sm text-muted-foreground">{t(`pregnancy.dating.${open.datingReason}`)}</span>}
-      </div>
-      {p.problem && <p role="alert" className="font-bold">{t(`pregnancy.problem.${p.problem}`)}</p>}
-      {open ? <Open p={p} open={open} /> : <None p={p} />}
+      {p.folded ? (
+        // Kept open while a form is in use, so a save or a refusal is never hidden.
+        <details open={p.form !== null || undefined}>
+          <summary className="flex min-h-11 cursor-pointer items-center">{title}</summary>
+          <div className="mt-4 flex flex-col gap-4">{body}</div>
+        </details>
+      ) : <>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          {title}
+          {open && <span className="text-sm text-muted-foreground">{t(`pregnancy.dating.${open.datingReason}`)}</span>}
+        </div>
+        {body}
+      </>}
     </section>
   );
 }
@@ -45,7 +59,8 @@ function None({ p }: { p: Props }) {
         : t('pregnancy.none')}</p>
       {p.form === 'start' ? <StartFields p={p} /> : (
         <div className="flex flex-wrap gap-2">
-          {p.canManage && <Button type="button" className="min-h-11" onClick={() => p.onOpen('start')}>{t('pregnancy.start')}</Button>}
+          {/* Secondary, never the chart's one primary action (UX-09). */}
+          {p.canManage && <Button type="button" variant="outline" className="min-h-11" onClick={() => p.onOpen('start')}>{t('pregnancy.start')}</Button>}
           {p.canRecord && !ruled && <Button type="button" variant="outline" className="min-h-11" disabled={p.saving} onClick={p.onRuledOut}>{t('pregnancy.ruleOut')}</Button>}
         </div>
       )}
@@ -54,9 +69,9 @@ function None({ p }: { p: Props }) {
 }
 
 function Open({ p, open }: { p: Props; open: OpenPregnancy }) {
-  const { t, formatDate } = useI18n();
+  const { t, formatDate, formatCalendarDate } = useI18n();
   const g = gestation(open);
-  const day = (iso: string) => formatDate(new Date(`${iso}T00:00:00Z`), 'UTC');
+  const day = formatCalendarDate;
   const ga = t('pregnancy.ga', { weeks: g.weeks, days: g.days });
   return (
     <>

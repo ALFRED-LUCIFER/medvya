@@ -50,6 +50,13 @@ export function allows(active: Active, guard: Guard): boolean {
 /** Items this membership may see. Hiding is UX only; the API enforces. */
 export const visibleNav = (active: Active): NavItem[] => navItems.filter(i => allows(active, i));
 
+/** Where the start address lands: a nurse (vitals at Full, no full chart, no booking) on the nurse queue when it is on; everyone else on the first screen (UX-08). */
+export function homeItem(visible: NavItem[], active: Active): NavItem | undefined {
+  const c = active?.capabilities;
+  const intake = c?.VitalsAllergiesEntry === 'Full' && c.Patient360Chart !== 'Full' && c.RegisterBookPatients !== 'Full';
+  return (intake && visible.find(i => i.id === 'nurse')) || visible[0];
+}
+
 /**
  * Patient directory and search (MDV-P1-018), opened from the header search, not the sidebar, so every role that may look patients
  * up reaches it the same way. Same rule as the API policy: Register / book patients at Read or Full.

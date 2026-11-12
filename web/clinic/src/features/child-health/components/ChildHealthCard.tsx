@@ -169,6 +169,6 @@ function DoseForm(p: Props & { view: ChildHealth }) {
 
 /** A schedule day (no time of day): shown as the calendar day it is, whatever the device's zone. */
 function Day({ iso }: { iso: string }) {
-  const { formatDate } = useI18n();
-  return <time dateTime={iso}>{formatDate(new Date(`${iso}T00:00:00Z`), 'UTC')}</time>;
+  const { formatCalendarDate } = useI18n();
+  return <time dateTime={iso}>{formatCalendarDate(iso)}</time>;
 }

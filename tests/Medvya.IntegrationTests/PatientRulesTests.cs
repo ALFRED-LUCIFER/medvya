@@ -115,6 +115,12 @@ public class PatientRulesTests
         Assert.Contains(new ValidationError("emergencyContact.relationship", "not_allowed"), Errors(IndiaBase with { EmergencyContact = sponsor }));
         CountryRules.Uae.Validate(UaeBase with { DateOfBirth = Today.AddYears(-10), Guardian = sponsor with { Phone = "050 000 0011" } }, Today);
         Assert.Contains(new ValidationError("guardian.relationship", "required"), Errors(IndiaBase with { Guardian = new("A (synthetic)", null, "+91 90000 00012") }));
+        // UX-10: a minor's guardian can be named as mother, father or grandparent in both countries.
+        foreach (var kind in new[] { RelationshipKind.Mother, RelationshipKind.Father, RelationshipKind.Grandparent })
+        {
+            CountryRules.India.Validate(IndiaBase with { DateOfBirth = Today.AddYears(-10), Guardian = new("Ravi Nair (synthetic)", kind, "+91 90000 00010") }, Today);
+            CountryRules.Uae.Validate(UaeBase with { DateOfBirth = Today.AddYears(-10), Guardian = new("Ahmed Al Mansoori (synthetic)", kind, "050 000 0011") }, Today);
+        }
     }
 
     [Fact]

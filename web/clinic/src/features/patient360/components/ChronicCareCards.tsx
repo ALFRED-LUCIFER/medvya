@@ -107,10 +107,9 @@ function Targets(p: Props) {
 }
 
 function Gaps(p: Props) {
-  const { t, formatDate } = useI18n();
+  const { t, formatCalendarDate } = useI18n();
   const care = p.care!;
-  // A day (DateOnly) is shown as written: midnight UTC formatted in UTC never moves to the day before.
-  const day = (d: string) => formatDate(new Date(d), 'UTC');
+  const day = formatCalendarDate;
   const title = (g: CareGap) => t(`chronicCare.gap.${g.rule}`, { test: g.item, vaccine: g.vaccine ?? '', dose: g.dose ?? 0 });
   const detail = (g: CareGap) =>
     g.rule === 'OrderNotResulted' ? t('chronicCare.detail.ordered', { date: day(g.since!) })

@@ -6,6 +6,17 @@ import type { OpenPregnancy } from './chart';
 export const termDays = 280;
 export const outcomes = ['LiveBirth', 'Stillbirth', 'Miscarriage', 'Termination', 'Ectopic', 'EnteredInError'] as const;
 
+/**
+ * How the chart offers the pregnancy card (UX-09): an open pregnancy always in full; a patient who is not male aged 10 to 55, in full from
+ * 15 to 49 (WHO reproductive age) and folded under its heading outside that band; nobody else.
+ * shortcut: the 15 to 49 band is the WHO definition, not yet signed off by a clinician (#1121); change it here once they have.
+ */
+export function pregnancyOffer(sexAtBirth: string, ageYears: number, hasOpen: boolean): 'full' | 'folded' | null {
+  if (hasOpen) return 'full';
+  if (sexAtBirth === 'Male' || ageYears < 10 || ageYears > 55) return null;
+  return ageYears >= 15 && ageYears <= 49 ? 'full' : 'folded';
+}
+
 export type Trimester = 1 | 2 | 3;
 export type PregnancyForm = 'start' | 'close' | 'readings';
 export const pregnancyConflicts = ['already_open', 'no_open_pregnancy', 'pregnancy_open', 'no_open_visit'] as const;

@@ -113,14 +113,14 @@ function problemKey(p: IntakeProblem): MessageKey {
 }
 
 function Identity({ patient }: { patient: IntakeScreen['patient'] }) {
-  const { t, formatDate } = useI18n();
+  const { t, formatCalendarDate } = useI18n();
   return (
     <section aria-label={t('intake.identity.label')} className="flex flex-col gap-1 rounded-xl border-2 border-brand-700 bg-card p-4">
       <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
         <h1 className="text-xl font-extrabold">{patient.fullName}</h1>
         <span>{t('consult.banner.ageSex', { age: patient.ageYears, sex: t(`patients.sex.${patient.sexAtBirth}`) })}</span>
         <span>{t('consult.banner.mrn', { mrn: ltr(patient.mrn) })}</span>
-        <span>{t('consult.banner.dob', { date: formatDate(new Date(`${patient.dateOfBirth}T12:00:00Z`), 'UTC') })}</span>
+        <span>{t('consult.banner.dob', { date: formatCalendarDate(patient.dateOfBirth) })}</span>
       </div>
       <p className="text-sm text-muted-foreground">{t('intake.identity.check')}</p>
     </section>

@@ -173,14 +173,14 @@ function Column(props: Props & { state: BoardColumn; board: Board }) {
 }
 
 function Card({ card, board, steps, now, failedVisitIds, canMove, online, confirmingId, pendingId, failure, paymentAction, consultAction, nurseStep, onStartCheckIn, onConfirmCheckIn, onCancelCheckIn, onMove }: Props & { card: BoardCard; board: Board }) {
-  const { t, formatTime, formatDate } = useI18n();
+  const { t, formatTime, formatCalendarDate } = useI18n();
   const state = card.state as BoardColumn;
   const next = nextState(state, steps);
   const busy = pendingId === card.id;
   const nameId = `board-card-${card.id}`;
   const error = failure?.id === card.id ? failure.error : null;
   const confirming = confirmingId === card.id;
-  const dob = card.dateOfBirth ? formatDate(new Date(`${card.dateOfBirth}T12:00:00Z`)) : t('board.dobUnknown');
+  const dob = card.dateOfBirth ? formatCalendarDate(card.dateOfBirth) : t('board.dobUnknown');
 
   return (
     <article aria-labelledby={nameId} className="flex flex-col gap-1.5 rounded-lg border bg-card px-3 py-2.5">

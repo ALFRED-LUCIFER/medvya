@@ -20,7 +20,7 @@ journey('J3', {
   1: async ({ page }) => {
     await page.route('**/v1/me/context', r => r.fulfill({ json: reception }));
     await page.route('**/v1/schedule?*', r => r.fulfill({ json: { facilityId: 'f-1', timeZone: 'Asia/Kolkata', date: '2026-10-19', start: '2026-10-19T02:30:00Z', end: '2026-10-19T15:30:00Z',
-      columns: [{ calendarId: 'd-1', calendarKind: 'Doctor', name: 'Dr. Arjun Rao (synthetic)', slotMinutes: 20, hours: [], slots: [], unavailable: [], appointments: [], visitLengths: [], capacity: 0 }] } }));
+      columns: [{ calendarId: 'd-1', calendarKind: 'Doctor', name: 'Dr. Arjun Rao (synthetic)', slotMinutes: 20, hours: [{ start: '2026-10-19T03:30:00Z', end: '2026-10-19T07:30:00Z', room: null }], slots: [], unavailable: [], appointments: [], visitLengths: [], capacity: 0 }] } }));
     await page.route('**/v1/schedule/patients/p-1?*', r => r.fulfill({ json: { id: 'p-1', fullName: 'Farhan Qureshi (synthetic)', mrn: '000101' } }));
     await page.route('**/v1/appointments/walk-in', r => r.fulfill({ json: { id: 'a-1', calendarId: 'd-1', start: farhan.start, end: farhan.end, walkIn: true, unscheduled: false, patientName: farhan.patientName } }));
     await page.route('**/v1/appointments/a-1/check-in', r => r.fulfill({ json: { ...farhan, room: null, token: 'A-07', walkIn: true } }));
@@ -79,7 +79,7 @@ journey('J3', {
     const meeraId = '5e1d0001-0004-4000-8000-000000000001';
     await page.route('**/v1/me/context', r => r.fulfill({ json: { ...reception, active: { ...reception.active, facilityId: 'f-2' } } }));
     await page.route('**/v1/schedule?*', r => r.fulfill({ json: { facilityId: 'f-2', timeZone: 'Asia/Kolkata', date: '2026-10-19', start: '2026-10-19T02:30:00Z', end: '2026-10-19T15:30:00Z',
-      columns: [{ calendarId: 'd-1', calendarKind: 'Doctor', name: 'Dr. Arjun Rao (synthetic)', slotMinutes: 20, hours: [], slots: [], unavailable: [], appointments: [], visitLengths: [], capacity: 0 }] } }));
+      columns: [{ calendarId: 'd-1', calendarKind: 'Doctor', name: 'Dr. Arjun Rao (synthetic)', slotMinutes: 20, hours: [{ start: '2026-10-19T03:30:00Z', end: '2026-10-19T07:30:00Z', room: null }], slots: [], unavailable: [], appointments: [], visitLengths: [], capacity: 0 }] } }));
     await page.route(`**/v1/schedule/patients/${meeraId}?*`, r => r.fulfill({ json: { id: meeraId, fullName: 'Meera Iyer (synthetic)', mrn: '004482' } }));
     await page.route('**/v1/appointments/walk-in', r => r.fulfill({ json: { id: 'a-9', calendarId: 'd-1', start: farhan.start, end: farhan.end, walkIn: true, unscheduled: false, patientName: 'Meera Iyer (synthetic)' } }));
     await page.route('**/v1/appointments/a-9/check-in', r => r.fulfill({ json: { ...farhan, id: 'a-9', patientId: meeraId, patientName: 'Meera Iyer (synthetic)', room: null, token: 'A-03', walkIn: true } }));

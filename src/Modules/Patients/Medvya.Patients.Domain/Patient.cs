@@ -95,8 +95,11 @@ public sealed class PatientIdentifier
     public static bool IsDeskSearchKey(IdentifierScheme scheme) => scheme is IdentifierScheme.Abha or IdentifierScheme.AbhaAddress or IdentifierScheme.EmiratesId;
 }
 
-/// <summary>How a contact is related to the patient. Country-specific: Sponsor (of a dependant) is used in the UAE only.</summary>
-public enum RelationshipKind { Spouse, Parent, Child, Sibling, Friend, Sponsor, Other }
+/// <summary>
+/// How a contact is related to the patient. Country-specific: Sponsor (of a dependant) is used in the UAE only. Stored by name, so values are
+/// only appended: Mother, Father and Grandparent name a minor's guardian (UX-10); Parent stays valid for older records.
+/// </summary>
+public enum RelationshipKind { Spouse, Parent, Child, Sibling, Friend, Sponsor, Other, Mother, Father, Grandparent }
 
 /// <summary>
 /// An emergency contact or guardian of a patient (MDV-P1-020, PATIENT_RELATIONSHIP). A name to call, never a user: no account,

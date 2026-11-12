@@ -122,7 +122,9 @@ test('choose location: the last used facility is first and marked in words; "Not
 
 // #912: sign-out also ends the provider session, so a shared front-desk PC does not sign the last account straight back in.
 test('sign out goes on to the provider sign-out address the server returns', async ({ page }) => {
-  await page.route('**/v1/me/context', r => r.fulfill({ json: { user: { id: 'u-1', displayName: 'A. Joseph (synthetic)' }, memberships: [{ id: 'm-1', tenantId: 't-1', tenantName: 'Iyer Family Clinic', facilityId: 'f-1', facilityName: 'Adyar', role: 'Receptionist' }], active: null } }));
+  const membership = (id: string, facilityName: string) => ({ id, tenantId: 't-1', tenantName: 'Iyer Family Clinic', facilityId: `f-${id}`, facilityName, role: 'Receptionist' });
+  // Two clinics, so the picker shows (with one, the clinic is chosen automatically, UX-08).
+  await page.route('**/v1/me/context', r => r.fulfill({ json: { user: { id: 'u-1', displayName: 'A. Joseph (synthetic)' }, memberships: [membership('m-1', 'Adyar'), membership('m-2', 'Velachery')], active: null } }));
   await page.route('**/bff/logout', r => r.fulfill({ json: { location: '/provider/logout' } }));
   await page.route('**/provider/logout', r => r.fulfill({ body: 'provider signed out' }));
   await page.goto('/choose-facility');

@@ -17,8 +17,8 @@ const ist = (hhmm: string) => {
   const [h, m] = hhmm.split(':').map(Number);
   return new Date(Date.parse('2026-10-19T00:00:00Z') + ((h! * 60 + m!) - 330) * 60_000).toISOString();
 };
-const column = (calendarId: string, name: string) => ({
-  calendarId, calendarKind: 'Doctor', name, slotMinutes: 20, hours: [], slots: [], unavailable: [], appointments: [], visitLengths: [], capacity: 0,
+const column = (calendarId: string, name: string, hours = [{ start: ist('09:00'), end: ist('13:00'), room: null }]) => ({
+  calendarId, calendarKind: 'Doctor', name, slotMinutes: 20, hours, slots: [], unavailable: [], appointments: [], visitLengths: [], capacity: 0,
 });
 
 type Calls = { walkIns: Request[]; checkIns: Request[] };
@@ -30,7 +30,7 @@ async function desk(page: Page, { locale = 'en', walkInAnswer = (_: { calendarId
   await page.route('**/v1/me/context', r => r.fulfill({ json: reception }));
   await page.route('**/v1/schedule?*', r => r.fulfill({
     json: { facilityId: 'f-1', timeZone: 'Asia/Kolkata', date: '2026-10-19', start: ist('08:00'), end: ist('21:00'),
-      columns: [column('d-1', 'Dr. Arjun Rao (synthetic)'), column('d-2', 'Dr. S. Menon (synthetic)'), { ...column('r-1', 'Procedure room (synthetic)'), calendarKind: 'Resource' }] },
+      columns: [column('d-1', 'Dr. Arjun Rao (synthetic)'), column('d-2', 'Dr. S. Menon (synthetic)'), column('d-3', 'Dr. K. Pillai (synthetic)', []), { ...column('r-1', 'Procedure room (synthetic)'), calendarKind: 'Resource' }] },
   }));
   await page.route(`**/v1/schedule/patients/${patientId}?*`, r => r.fulfill({ json: { id: patientId, fullName: 'Arjun Nair (synthetic)', mrn: '000777' } }));
   await page.route('**/v1/patients/duplicate-check', r => r.fulfill({ json: { candidates: [] } }));
@@ -106,6 +106,8 @@ test('with no free slot today the desk chooses a doctor and the patient is queue
 
   await page.getByRole('combobox', { name: 'Doctor' }).click();
   await expect(page.getByRole('option', { name: 'Procedure room (synthetic)' })).toHaveCount(0); // doctors only
+  await expect(page.getByRole('option', { name: 'Dr. K. Pillai (synthetic)' })).toHaveCount(0); // UX-10: not in today (no hours)
+  await expect(page.getByRole('option', { name: 'Dr. S. Menon (synthetic)' })).toBeVisible();
   await page.getByRole('option', { name: 'Dr. Arjun Rao (synthetic)' }).click();
   await page.getByRole('button', { name: 'Check in now' }).click();
   await expect(page.getByText('No free slot today: queued for Dr. Arjun Rao (synthetic) without taking a slot.', { exact: false })).toBeVisible();

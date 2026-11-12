@@ -123,7 +123,8 @@ test('sign: confirms what signing means, saves first, then shows the signed note
   await note(page).getByLabel('Plan').fill('Rest and fluids'); // typed just before signing: saved first, then that version is signed
   await note(page).getByRole('button', { name: 'Sign note' }).click();
   const dialog = page.getByRole('dialog', { name: 'Sign note for Meera Iyer (synthetic)?' });
-  await expect(dialog).toContainText(/000001.* · 12 Mar 1972 · encounter .*e-1/); // who it is for, so a signature cannot land on the wrong chart
+  await expect(dialog).toContainText(/000001.* · 12 Mar 1972/); // who it is for, so a signature cannot land on the wrong chart
+  await expect(dialog).not.toContainText('encounter'); // UX-07: no internal visit id in the dialog
   await expect(dialog).toContainText('I have reviewed every section');
   await expect(dialog).toContainText('permanent and read-only');
   await expect(dialog).toContainText('addenda');

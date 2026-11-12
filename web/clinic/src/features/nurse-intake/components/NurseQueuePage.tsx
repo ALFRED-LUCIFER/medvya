@@ -1,11 +1,15 @@
 import { Link } from 'react-router';
 import { Syringe } from 'lucide-react';
-import { ltr, useI18n } from '@medvya/i18n';
+import { useI18n } from '@medvya/i18n';
 import { buttonVariants, PageContainer, PageHeader } from '@medvya/ui';
-import { minutesSince, type Board, type BoardCard, type LiveStatus, type MoveError } from '../../front-desk/domain/board';
+import type { Board, LiveStatus, MoveError } from '../../front-desk/domain/board';
+import type { QueueRow, QueueTableView } from '../../front-desk/domain/queueTable';
+import QueueTable from '../../front-desk/components/QueueTable';
 
 type Props = {
-  board: Board | null; cards: BoardCard[]; checkedIn: BoardCard[]; now: number; loading: boolean; offline: boolean; forbidden: boolean; failed: boolean; live: LiveStatus;
+  board: Board | null; now: number; loading: boolean; offline: boolean; forbidden: boolean; failed: boolean; live: LiveStatus;
+  /** The board's With nurse and Checked in visits, each with its own sort (useQueueTableController). */
+  withNurse: QueueTableView; checkedIn: QueueTableView;
   pendingId: string | null; failure: { id: string; error: MoveError } | null;
   intakePath: (appointmentId: string) => string;
   onRetry: () => void;
@@ -13,41 +17,40 @@ type Props = {
 };
 
 /**
- * N-01 queue (MDV-P2-007): the board's "With nurse" cards, longest wait first, each opening its intake; below them the "Checked in" cards the
+ * N-01 queue (MDV-P2-007): the board's "With nurse" visits, longest wait first, each opening its intake; below them the "Checked in" visits the
  * nurse may take to intake without waiting for reception (#956). Nothing clinical shows here.
  */
 export default function NurseQueuePage(p: Props) {
   const { t, tCount } = useI18n();
+  const name = (r: QueueRow) => r.patientName || t('board.unknownPatient');
+  const total = p.withNurse.rows.length + p.checkedIn.rows.length;
   let body;
   if (p.forbidden) body = <State title={t('err.403')} body={t('board.forbidden.body')} />;
   else if (p.offline) body = <State title={t('state.offline.title')} body={t('board.offline')} />;
-  else if (p.failed) body = <State title={t('board.error.title')} body={t('board.error.body')} action={<button type="button" className={buttonVariants({ variant: 'navy', className: 'min-h-11' })} onClick={p.onRetry}>{t('schedule.retry')}</button>} />;
+  else if (p.failed) body = <State title={t('board.error.title')} body={t('board.error.body')} action={<button type="button" className={buttonVariants({ className: 'min-h-11' })} onClick={p.onRetry}>{t('schedule.retry')}</button>} />;
   else if (p.loading || !p.board) body = <State busy title={t('intake.queue.loading')} />;
-  else if (p.cards.length === 0 && p.checkedIn.length === 0) body = <State title={t('intake.queue.empty.title')} body={t('intake.queue.empty.body')} />;
+  else if (total === 0) body = <State title={t('intake.queue.empty.title')} body={t('intake.queue.empty.body')} />;
   else body = (
     <>
-      {p.cards.length > 0 && (
+      {p.withNurse.rows.length > 0 && (
         <Section id="nq-with" title={t('intake.queue.withNurse')}>
-          {p.cards.map(c => (
-            <Card key={c.id} card={c} board={p.board!} waiting={t('intake.queue.waiting', { minutes: minutesSince(c.since, p.now) })}>
-              <Link to={p.intakePath(c.id)} className={buttonVariants({ variant: 'navy', className: 'min-h-11 whitespace-normal' })} aria-label={t('intake.queue.openFor', { name: c.patientName || t('board.unknownPatient') })}>
-                {t('intake.queue.open')}
-              </Link>
-            </Card>
-          ))}
+          <QueueTable {...p.withNurse} label={t('intake.queue.withNurse')} timeZone={p.board.timeZone} now={p.now} action={r => (
+            <Link to={p.intakePath(r.id)} className={buttonVariants({ className: 'min-h-11 whitespace-normal' })} aria-label={t('intake.queue.openFor', { name: name(r) })}>
+              {t('intake.queue.open')}
+            </Link>
+          )} />
         </Section>
       )}
-      {p.checkedIn.length > 0 && (
+      {p.checkedIn.rows.length > 0 && (
         <Section id="nq-in" title={t('intake.queue.checkedIn')}>
-          {p.checkedIn.map(c => (
-            <Card key={c.id} card={c} board={p.board!} waiting={t('board.waiting', { minutes: minutesSince(c.since, p.now) })}>
-              <button type="button" disabled={p.pendingId === c.id} onClick={() => p.onTake(c.id)} className={buttonVariants({ variant: 'outline', className: 'min-h-11 whitespace-normal' })}
-                aria-label={t('intake.queue.takeFor', { name: c.patientName || t('board.unknownPatient') })}>
+          <QueueTable {...p.checkedIn} label={t('intake.queue.checkedIn')} timeZone={p.board.timeZone} now={p.now}
+            action={r => (
+              <button type="button" disabled={p.pendingId === r.id} onClick={() => p.onTake(r.id)} className={buttonVariants({ variant: 'outline', className: 'min-h-11 whitespace-normal' })}
+                aria-label={t('intake.queue.takeFor', { name: name(r) })}>
                 {t('intake.queue.take')}
               </button>
-              {p.failure?.id === c.id && <p role="alert" className="text-xs font-bold text-danger-700">{t(`board.error.${p.failure.error}`)}</p>}
-            </Card>
-          ))}
+            )}
+            detail={r => p.failure?.id === r.id && <p role="alert" className="text-xs font-bold text-danger-700">{t(`board.error.${p.failure.error}`)}</p>} />
         </Section>
       )}
     </>
@@ -55,7 +58,7 @@ export default function NurseQueuePage(p: Props) {
   return (
     <PageContainer width="fluid">
       <PageHeader eyebrow={<span className="inline-flex items-center gap-1.5"><Syringe aria-hidden className="size-4" />{t('nav.nurse')}</span>} title={t('intake.queue.title')}
-        description={!p.loading && !p.forbidden && !p.offline && !p.failed && <span className="text-sm">{tCount('board.count', p.cards.length + p.checkedIn.length)}</span>} />
+        description={!p.loading && !p.forbidden && !p.offline && !p.failed && <span className="text-sm">{tCount('board.count', total)}</span>} />
       {body}
     </PageContainer>
   );
@@ -63,27 +66,11 @@ export default function NurseQueuePage(p: Props) {
 
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
   return (
-    <section aria-labelledby={id} className="flex flex-col gap-2">
+    // The table below is the named region (same name), so the wrapper is not a second one.
+    <div className="flex flex-col gap-2">
       <h2 id={id} className="text-lg font-extrabold">{title}</h2>
-      <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{children}</ul>
-    </section>
-  );
-}
-
-function Card({ card: c, board, waiting, children }: { card: BoardCard; board: Board; waiting: string; children: React.ReactNode }) {
-  const { t, formatTime } = useI18n();
-  return (
-    <li>
-      <article aria-labelledby={`nq-${c.id}`} className="flex flex-col gap-2 rounded-xl border bg-card p-4">
-        <div className="flex justify-between gap-2">
-          <h3 id={`nq-${c.id}`} className="text-base font-bold">{c.patientName || t('board.unknownPatient')}</h3>
-          <span className="font-mono text-sm text-muted-foreground">{formatTime(new Date(c.start), board.timeZone)}</span>
-        </div>
-        <p className="text-sm text-muted-foreground">{t('board.meta', { doctor: c.calendarName || t('schedule.doctor'), type: t(`visitType.${c.visitType}`) })}</p>
-        <p className="text-sm font-semibold">{waiting}{c.token ? ` · ${t('board.token', { token: ltr(c.token) })}` : ''}</p>
-        {children}
-      </article>
-    </li>
+      {children}
+    </div>
   );
 }
 

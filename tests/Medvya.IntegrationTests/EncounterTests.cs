@@ -146,8 +146,9 @@ public sealed class EncounterTests(PostgresFixture sql) : IClassFixture<Postgres
     [Fact]
     public async Task AVisitTheDeskAlreadyFinishedHasNoConsultation()
     {
+        await h.StepsAsync(nurse: false, billing: true);
         var visit = await ArrivedAsync();
-        foreach (var to in new[] { AppointmentState.WithNurse, AppointmentState.ReadyForDoctor, AppointmentState.InConsult, AppointmentState.Billing })
+        foreach (var to in new[] { AppointmentState.ReadyForDoctor, AppointmentState.InConsult, AppointmentState.Billing })
             await h.FrontDesk(h.Reception).MoveAsync(visit, new MoveVisit { State = to });
         Assert.Equal("finished", (await Assert.ThrowsAsync<VisitTransitionException>(() => Encounters(h.Doctor).StartAsync(new StartEncounter(visit)))).Code);
         Assert.Equal(0, await EncounterRowsAsync());
@@ -177,6 +178,7 @@ public sealed class EncounterTests(PostgresFixture sql) : IClassFixture<Postgres
     [Fact]
     public async Task EndingMovesTheVisitToBillingOnceAndTheVisitIsNotReopened()
     {
+        await h.StepsAsync(nurse: false, billing: true);
         var visit = await ArrivedAsync();
         var started = await Encounters(h.Doctor).StartAsync(new StartEncounter(visit));
         var ended = await Encounters(h.Doctor).EndAsync(started!.Id);
@@ -192,8 +194,19 @@ public sealed class EncounterTests(PostgresFixture sql) : IClassFixture<Postgres
     }
 
     [Fact]
+    public async Task WithBillingOffEndingFinishesTheVisit()
+    {
+        var visit = await ArrivedAsync();
+        var started = await Encounters(h.Doctor).StartAsync(new StartEncounter(visit));
+        await Encounters(h.Doctor).EndAsync(started!.Id);
+        Assert.Equal(AppointmentState.Done, (await VisitAsync(visit)).State);
+        Assert.Equal([AppointmentState.InConsult, AppointmentState.Done], pushes.Changes.Select(c => c.State));
+    }
+
+    [Fact]
     public async Task ADeskMoveBeforeTheEndLeavesTheVisitWhereTheDeskPutIt()
     {
+        await h.StepsAsync(nurse: false, billing: true);
         var visit = await ArrivedAsync();
         var started = await Encounters(h.Doctor).StartAsync(new StartEncounter(visit));
         await h.FrontDesk(h.Reception).MoveAsync(visit, new MoveVisit { State = AppointmentState.Billing });

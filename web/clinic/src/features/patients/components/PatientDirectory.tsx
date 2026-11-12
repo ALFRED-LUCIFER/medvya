@@ -1,10 +1,9 @@
 import { useRef } from 'react';
 import { Link } from 'react-router';
-import { ChevronLeft, ChevronRight, CircleAlert, Search } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CircleAlert, Search, TriangleAlert } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, Input, Label, buttonVariants, cn, PageContainer, PageHeader } from '@medvya/ui';
-import { directoryFilters, pageCount, type DirectoryFilter, type PatientSummary, type SearchErrorCode, type SearchResult } from '../domain/directory';
-import PatientSummaryLine from './PatientSummaryLine';
+import { Button, Input, Label, buttonVariants, cn, PageContainer, PageHeader, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@medvya/ui';
+import { directoryColumns, directoryFilters, pageCount, type DirectoryFilter, type PatientSummary, type SearchErrorCode, type SearchResult } from '../domain/directory';
 import PatientsMessage from './PatientsMessage';
 
 type Props = {
@@ -65,7 +64,7 @@ export default function PatientDirectory(p: Props) {
 
       <div role="group" aria-label={t('patients.filter.label')} className="flex flex-wrap gap-2">
         {directoryFilters.map(f => (
-          <Button key={f} variant={p.filter === f ? 'navy' : 'outline'} aria-pressed={p.filter === f} onClick={() => p.onFilterChange(f)}>
+          <Button key={f} variant={p.filter === f ? 'selected' : 'outline'} aria-pressed={p.filter === f} onClick={() => p.onFilterChange(f)}>
             {t(`patients.filter.${f}`)}
           </Button>
         ))}
@@ -103,9 +102,12 @@ function Results(p: Props) {
       <h2 id="patient-results" ref={heading} tabIndex={-1} className="text-sm font-bold text-muted-foreground focus:outline-none">
         {t(`patients.matchedOn.${r.matchedOn}`, { n: r.total })}
       </h2>
-      <ul className="flex flex-col divide-y rounded-xl border bg-card">
-        {r.items.map(row => <Row key={row.id} row={row} to={p.recordPath(row.id)} />)}
-      </ul>
+      <Table label={t('patients.tableLabel')} containerClassName="bg-card">
+        <TableHeader>
+          <TableRow>{directoryColumns.map(c => <TableHead key={c} scope="col">{t(`patients.col.${c}`)}</TableHead>)}</TableRow>
+        </TableHeader>
+        <TableBody>{r.items.map(row => <Row key={row.id} row={row} to={p.recordPath(row.id)} />)}</TableBody>
+      </Table>
       {pages > 1 && (
         <nav aria-label={t('patients.pagination')} className="flex flex-wrap items-center justify-between gap-2">
           <Button variant="outline" disabled={r.page <= 1 || p.updating} onClick={() => toPage(r.page - 1)}>
@@ -127,14 +129,27 @@ function Row({ row, to }: { row: PatientSummary; to: string }) {
   const sex = t(`patients.sex.${row.sexAtBirth}`);
   const incomplete = row.status === 'Incomplete';
   return (
-    <li>
-      <Link to={to} className="flex min-h-14 items-center gap-3 px-4 py-2 hover:bg-accent focus-visible:outline-offset-[-2px]">
-        <span className="sr-only">
-          {t('patients.row.label', { initials: row.initials.split('').join(' '), age, sex, mrn: row.mrnTail })}
-          {incomplete && t('patients.row.incomplete')}
-        </span>
-        <PatientSummaryLine row={row} />
-      </Link>
-    </li>
+    <TableRow>
+      <TableHead scope="row" className="p-0">
+        {/* The link's name reads the whole row, so the record opens from the first cell. */}
+        <Link to={to} className="flex min-h-11 items-center gap-2 px-3 py-1.5 hover:underline focus-visible:outline-offset-[-2px]">
+          <span aria-hidden className="grid size-8 shrink-0 place-items-center rounded-full bg-muted font-extrabold text-brand-700">{row.initials}</span>
+          <span className="sr-only">
+            {t('patients.row.label', { initials: row.initials.split('').join(' '), age, sex, mrn: row.mrnTail })}
+            {incomplete && t('patients.row.incomplete')}
+          </span>
+        </Link>
+      </TableHead>
+      <TableCell>{age}</TableCell>
+      <TableCell>{sex}</TableCell>
+      <TableCell className="font-mono"><bdi dir="ltr">{t('patients.mrnTail', { mrn: row.mrnTail })}</bdi></TableCell>
+      <TableCell>
+        {incomplete && (
+          <span className="inline-flex items-center gap-1 rounded-sm border bg-card px-2 py-1 text-xs font-bold text-warning-700">
+            <TriangleAlert className="size-3.5" aria-hidden />{t('patients.status.Incomplete')}
+          </span>
+        )}
+      </TableCell>
+    </TableRow>
   );
 }

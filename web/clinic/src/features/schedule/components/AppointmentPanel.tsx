@@ -78,7 +78,7 @@ export default function AppointmentPanel(p: Props) {
       {p.done && (
         <div role="status" className="flex flex-col items-start gap-2">
           <p className="flex items-center gap-2 text-sm font-bold text-success-700"><CircleCheck aria-hidden className="size-5" />{t(`appointment.done.${p.done.kind}`, { time: time(a.start), count: p.done.count })}</p>
-          {p.done.kind === 'noShow' && p.onRebook && <Button variant="navy" onClick={p.onRebook}>{t('appointment.rebook', { name: a.patientName })}</Button>}
+          {p.done.kind === 'noShow' && p.onRebook && <Button variant="default" onClick={p.onRebook}>{t('appointment.rebook', { name: a.patientName })}</Button>}
         </div>
       )}
 
@@ -96,7 +96,7 @@ export default function AppointmentPanel(p: Props) {
             const why = `appointment-why-${k}`;
             return (
               <li key={k} className="flex flex-col gap-1">
-                <Button variant={k === 'cancel' || k === 'noShow' ? 'outline' : 'navy'} disabled={!rule.allowed || p.working} onClick={run[k]}
+                <Button variant={k === 'cancel' || k === 'noShow' ? 'outline' : 'default'} disabled={!rule.allowed || p.working} onClick={run[k]}
                   aria-describedby={rule.allowed ? undefined : why}>
                   {t(actionKeys[k])}
                 </Button>
@@ -123,7 +123,7 @@ export default function AppointmentPanel(p: Props) {
             to: t('appointment.slot', { name: p.target.calendarName, day: day(p.target.start), time: time(p.target.start) }),
           })}</p>
           <div className="flex flex-wrap gap-2">
-            <Button variant="navy" disabled={p.working} onClick={p.onConfirmMove}>{t('appointment.move.confirm')}</Button>
+            <Button variant="default" disabled={p.working} onClick={p.onConfirmMove}>{t('appointment.move.confirm')}</Button>
             <Button variant="outline" disabled={p.working} onClick={p.onBack}>{t('appointment.back')}</Button>
           </div>
         </div>
@@ -163,9 +163,9 @@ function CancelForm(p: Props) {
         {noteError && <p id="cancel-note-error" className="text-xs font-bold text-danger-700">{t(noteError)}</p>}
       </div>
       <div className="flex flex-wrap gap-2">
-        <Button type="submit" variant="navy" disabled={p.working}>{t('appointment.cancel.confirm')}</Button>
+        <Button type="submit" variant="default" disabled={p.working}>{t('appointment.cancel.confirm')}</Button>
         {p.opened.appointment.seriesId && (
-          <Button type="button" variant="navy" disabled={p.working} onClick={p.onConfirmCancelFollowing}>{t('appointment.cancel.following')}</Button>
+          <Button type="button" variant="default" disabled={p.working} onClick={p.onConfirmCancelFollowing}>{t('appointment.cancel.following')}</Button>
         )}
         <Button type="button" variant="outline" disabled={p.working} onClick={p.onBack}>{t('appointment.back')}</Button>
       </div>

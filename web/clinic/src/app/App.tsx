@@ -148,7 +148,7 @@ export default function App({ locale, onLocaleChange }: Props) {
             : i.id === 'frontDesk' || (i.id === 'today' && pathOf('frontDesk'))
             ? <FrontDeskRoute facilityId={active.facilityId} online={online} canMove={active.capabilities.CheckInQueue === 'Full'}
                 registerPath={registerPath} walkInPath={walkInPath} waitlistPath={waitlistPath} billingPath={shell.items.find(b => b.id === 'billing')?.path ?? null}
-                canConsult={active.capabilities.Patient360Chart === 'Full'} nurseStepOn={active.flags.includes('clinical.nurse-intake')}
+                canConsult={active.capabilities.Patient360Chart === 'Full'} steps={{ nurse: active.flags.includes('clinical.nurse-intake'), billing: active.flags.includes('billing.invoices') }}
                 intakePath={nursePath && active.capabilities.VitalsAllergiesEntry === 'Full' ? (id: string) => `${nursePath}/${id}` : null} />
             : i.id === 'nurse' ? <NurseQueueRoute facilityId={active.facilityId} online={online} nursePath={i.path} />
             : i.id === 'settings' ? <SettingsRoute facilityId={active.facilityId} country={active.country ?? null} />

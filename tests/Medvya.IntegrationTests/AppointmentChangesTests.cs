@@ -85,6 +85,7 @@ public sealed class AppointmentChangesTests(PostgresFixture sql) : IClassFixture
         Assert.Equal(AppointmentState.Cancelled, (await Desk.CancelAsync(visit.Id, Because(CancelReason.PatientUnwell))).State);
         Assert.Equal("invalid_transition", await TransitionRefused(() => Desk.CancelAsync(visit.Id, Because(CancelReason.PatientRequest))));
 
+        await h.StepsAsync(nurse: true, billing: false);
         await h.FrontDesk(h.Reception).CheckInAsync(seen.Id, new CheckIn());
         await h.FrontDesk(h.Reception).MoveAsync(seen.Id, new MoveVisit { State = AppointmentState.WithNurse });
         Assert.Equal("invalid_transition", await TransitionRefused(() => Desk.CancelAsync(seen.Id, Because(CancelReason.PatientRequest))));

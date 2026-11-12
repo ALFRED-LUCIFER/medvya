@@ -34,7 +34,7 @@ export default function GrowthCard(p: Props) {
         {!v.noCentiles && (
           <div className="flex flex-wrap gap-2">
             {indicators.map(i => (
-              <Button key={i} type="button" variant={i === p.indicator ? 'navy' : 'outline'} className="min-h-11" aria-pressed={i === p.indicator} onClick={() => p.onIndicator(i)}>
+              <Button key={i} type="button" variant={i === p.indicator ? 'selected' : 'outline'} className="min-h-11" aria-pressed={i === p.indicator} onClick={() => p.onIndicator(i)}>
                 {t(`childHealth.growth.indicator.${i}`)}
               </Button>
             ))}

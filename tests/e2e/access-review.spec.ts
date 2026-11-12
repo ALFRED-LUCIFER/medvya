@@ -15,7 +15,7 @@ const members = () => [
   { membershipId: 'b', name: 'A. Joseph (synthetic)', role: 'Receptionist', facilityName: 'Adyar (synthetic)', lastSignIn: null, decision: null as string | null },
 ];
 
-async function open(page: Page, { locale = 'en', path = '/settings?tab=staff' } = {}) {
+async function open(page: Page, { locale = 'en', path = '/settings?tab=review' } = {}) {
   const state = { members: members(), completedAt: null as string | null, confirms: [] as { id: string; csrf: string | undefined }[] };
   await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
   await page.route('**/v1/me/context', r => r.fulfill({ json: admin }));
@@ -60,7 +60,7 @@ test('the bell lists the licence and review reminders and links to where they ar
   await expect(panel).toContainText("A doctor's registration (licence) expires in 7 days or less");
   await expect(panel).toContainText('The quarterly access review is due');
   await panel.getByRole('link').nth(1).click();
-  await expect(page).toHaveURL(/\/settings\?tab=staff$/);
+  await expect(page).toHaveURL(/\/settings\?tab=review$/);
 });
 
 test('an expired licence shows as Expired with Renew licence', async ({ page }) => {

@@ -61,19 +61,24 @@ journey('J3', {
     expect((await saved).status()).toBeLessThan(300);
     await expect(page.getByRole('heading', { name: 'Deepak Nair (synthetic) is registered' })).toBeVisible();
   },
-  // MDV-P1-028: reception sends a checked-in patient to the nurse; the card moves to "With nurse" and stays there after a reload.
-  4: async ({ page }) => {
+  // MDV-P1-028: with nurse intake on, reception sends a checked-in patient to the nurse; the card moves to "With nurse" and stays there after a reload.
+  4: async ({ page, browser }) => {
     const patient = syntheticPatient('Meenakshi', 'Sundaram');
-    await signIn(page, joseph);
-    await walkIn(page, patient, rao);
-    await page.goto(board);
-    await page.getByRole('article', { name: patient.name }).getByRole('button', { name: 'Send to nurse' }).click();
-    await expect(page.getByRole('region', { name: /^With nurse/ }).getByRole('article', { name: patient.name })).toBeVisible();
-    await page.reload();
-    await expect(page.getByRole('region', { name: /^With nurse/ }).getByRole('article', { name: patient.name })).toBeVisible();
+    await setNurseIntake(browser, true);
+    try {
+      await signIn(page, joseph); // after the switch: the screens learn of it from the session
+      await walkIn(page, patient, rao);
+      await page.goto(board);
+      await page.getByRole('article', { name: patient.name }).getByRole('button', { name: 'Send to nurse' }).click();
+      await expect(page.getByRole('region', { name: /^With nurse/ }).getByRole('article', { name: patient.name })).toBeVisible();
+      await page.reload();
+      await expect(page.getByRole('region', { name: /^With nurse/ }).getByRole('article', { name: patient.name })).toBeVisible();
+    } finally {
+      await setNurseIntake(browser, false);
+    }
   },
   // MDV-P2-007 / MDV-P2-008: the owner switches nurse intake on in Settings (audited), the nurse opens the intake from the With nurse card, records a vital,
-  // confirms "no known allergies" on purpose and hands off; the card is Ready for doctor. The flag is put back, so step 6's board move still works.
+  // confirms "no known allergies" on purpose and hands off; the card is Ready for doctor. The flag is put back for step 6, a clinic without the nurse step.
   5: async ({ page, browser }) => {
     const patient = syntheticPatient('Kavitha', 'Menon');
     await setNurseIntake(browser, true);
@@ -123,23 +128,17 @@ journey('J3', {
       await setNurseIntake(browser, false);
     }
   },
-  // MDV-P1-028 / MDV-P2-001: the nurse marks intake done; the card is Ready for doctor and the doctor can start the consultation from it.
+  // MDV-P1-028 / MDV-P2-001 / MDV audit UX-05: in a clinic without the nurse step (the shared database may still hold earlier steps' With nurse visits), the desk marks the patient
+  // Ready for doctor and the doctor can start the consultation from the card.
   // shortcut: the doctor sees it on the shared board, not on Today; Doctor Today (D-01) is MDV-P2-002.
   6: async ({ page, browser }) => {
     const patient = syntheticPatient('Revathi', 'Krishnan');
     await signIn(page, joseph);
     await walkIn(page, patient, rao);
     await page.goto(board);
-    await page.getByRole('article', { name: patient.name }).getByRole('button', { name: 'Send to nurse' }).click();
-    await expect(page.getByRole('region', { name: /^With nurse/ }).getByRole('article', { name: patient.name })).toBeVisible();
-
-    const nurse = await browser.newPage();
-    await signIn(nurse, /S\. Thomas/);
-    await nurse.goto(board);
-    await nurse.getByRole('region', { name: /^With nurse/ }).getByRole('article', { name: patient.name }).getByRole('button', { name: 'Intake done' }).click();
-    await expect(nurse.getByRole('region', { name: /^Ready for doctor/ }).getByRole('article', { name: patient.name })).toBeVisible();
-    await expectNoAxeViolations(nurse);
-    await nurse.close();
+    await page.getByRole('article', { name: patient.name }).getByRole('button', { name: 'Ready for doctor' }).click();
+    await expect(page.getByRole('region', { name: /^Ready for doctor/ }).getByRole('article', { name: patient.name })).toBeVisible();
+    await expectNoAxeViolations(page);
 
     const doctor = await browser.newPage();
     await signIn(doctor, rao);
@@ -148,27 +147,27 @@ journey('J3', {
     await expect(card.getByRole('button', { name: `Start consultation with ${patient.name}` })).toBeVisible();
     await doctor.close();
   },
-  // MDV-P1-030: the clinic overview shows the shared waiting room; the desk moves a waiting patient to another doctor with a reason.
+  // MDV-P1-030: the board's "By doctor" view shows the shared waiting room; the desk moves a waiting patient to another doctor with a reason.
   7: async ({ page, browser }) => {
     const patient = syntheticPatient('Sowmya', 'Raghavan');
     await signIn(page, joseph);
     await walkIn(page, patient, rao);
     await page.goto(board);
-    await page.getByRole('link', { name: 'Clinic overview' }).click();
-    await expect(page.getByRole('heading', { level: 1, name: 'Clinic overview' })).toBeVisible();
-    const waiting = page.getByRole('region', { name: /^Waiting room/ }).getByRole('listitem').filter({ hasText: patient.name });
-    await expect(waiting).toContainText(/With Dr\. Arjun Rao/);
+    await page.getByRole('group', { name: 'Board views' }).getByRole('link', { name: 'By doctor' }).click();
+    await expect(page).toHaveURL(/\/front-desk\/overview$/);
+    const waiting = page.getByRole('region', { name: /^Waiting room/ }).getByRole('row').filter({ hasText: patient.name });
+    await expect(waiting).toContainText(/Dr\. Arjun Rao/);
     await expectNoAxeViolations(page);
-    await waiting.getByRole('button', { name: 'Move to another doctor' }).click();
+    await waiting.getByRole('button', { name: `Move to another doctor: ${patient.name}` }).click();
     const move = page.getByRole('form', { name: `Move ${patient.name}` });
     await move.getByRole('combobox', { name: 'Move to' }).click();
     await page.getByRole('option', { name: /Dr\. S\. Menon/ }).click();
     await move.getByRole('combobox', { name: 'Reason' }).click();
     await page.getByRole('option', { name: 'Balance the queues' }).click();
     await move.getByRole('button', { name: 'Move patient' }).click();
-    await expect(waiting).toContainText(/With Dr\. S\. Menon/);
+    await expect(waiting).toContainText(/Dr\. S\. Menon/);
     await page.reload(); // the server, not the screen, holds the move
-    await expect(waiting).toContainText(/With Dr\. S\. Menon/);
+    await expect(waiting).toContainText(/Dr\. S\. Menon/);
     await expectArabicAxeClean(browser, joseph, '/app/front-desk/overview');
   },
 });

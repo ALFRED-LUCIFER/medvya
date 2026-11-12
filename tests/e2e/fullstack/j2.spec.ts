@@ -12,7 +12,7 @@ let chartPath = ''; // step 9's chart and consultation, which steps 10 to 12 sha
 let studioPath = '';
 
 /** Books Meera with Dr. Rao, takes her through the front desk and starts the consultation from her card (MDV-P2-001). `intake` stands for the
- * nurse's part when nurse intake is on; without it the desk marks intake done. */
+ * nurse's part when nurse intake is on; without it the desk marks the patient ready for the doctor. */
 async function startVisit(page: Page, intake?: () => Promise<void>) {
   await page.goto('/app/schedule');
   await page.getByRole('list', { name: rao }).getByRole('button', { name: /^Book / }).first().click();
@@ -24,11 +24,13 @@ async function startVisit(page: Page, intake?: () => Promise<void>) {
   const card = () => page.getByRole('article', { name: meera });
   await card().getByRole('button', { name: 'Check in' }).click();
   await card().getByRole('group', { name: 'Confirm identity' }).getByRole('button', { name: 'Confirm arrival' }).click();
-  await page.getByRole('region', { name: /^Checked in/ }).getByRole('article', { name: meera }).getByRole('button', { name: 'Send to nurse' }).click();
+  // With nurse intake on the patient goes to the nurse; without it the step is skipped (MDV audit UX-05).
+  const checkedIn = page.getByRole('region', { name: /^Checked in/ }).getByRole('article', { name: meera });
   if (intake) {
+    await checkedIn.getByRole('button', { name: 'Send to nurse' }).click();
     await intake();
     await page.goto('/app/front-desk');
-  } else await page.getByRole('region', { name: /^With nurse/ }).getByRole('article', { name: meera }).getByRole('button', { name: 'Intake done' }).click();
+  } else await checkedIn.getByRole('button', { name: 'Ready for doctor' }).click();
   await page.getByRole('region', { name: /^Ready for doctor/ }).getByRole('article', { name: meera })
     .getByRole('button', { name: `Start consultation with ${meera}` }).click();
   await expect(page).toHaveURL(/\/app\/consult\/[0-9a-f-]{36}$/); // an opaque id, never patient data

@@ -67,13 +67,13 @@ export default function Patient360Page(p: Props) {
           {treatmentConsent ? <><CircleCheck aria-hidden className="size-4" />{t('consult.banner.consentGiven')}</> : <><CircleAlert aria-hidden className="size-4" />{t('consult.banner.consentNotRecorded')}</>}
         </span>
         {chart.openEncounterId
-          ? <Link to={p.consultPath(chart.openEncounterId)} className={buttonVariants({ variant: 'navy', className: 'min-h-11' })}>{t('consult.open')}</Link>
+          ? <Link to={p.consultPath(chart.openEncounterId)} className={buttonVariants({ variant: 'default', className: 'min-h-11' })}>{t('consult.open')}</Link>
           : <span className="text-muted-foreground">{t('patient360.startFromBoard')}</span>}
         <Link to={p.backPath} className={buttonVariants({ variant: 'outline', className: 'min-h-11' })}>{t('patient360.back')}</Link>
       </div>
       <div role="group" aria-label={t('patient360.section.label')} className="sticky top-0 z-10 flex flex-wrap gap-2 bg-background py-1">
         {chartSections.map(s => (
-          <Button key={s} variant={s === p.section ? 'navy' : 'outline'} className="min-h-11" aria-pressed={s === p.section} onClick={() => p.onSection(s)}>
+          <Button key={s} variant={s === p.section ? 'selected' : 'outline'} className="min-h-11" aria-pressed={s === p.section} onClick={() => p.onSection(s)}>
             {t(s === 'stage' ? `patient360.section.stage.${lifeStage}` : `patient360.section.${s}`)}
           </Button>))}
       </div>

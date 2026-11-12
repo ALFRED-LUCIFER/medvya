@@ -54,10 +54,10 @@ function Filters(p: Props) {
   const all = p.filters.kinds.length === 0;
   return (
     <section aria-label={t('timeline.filters')} className="flex flex-wrap items-center gap-2">
-      <Button variant={all ? 'navy' : 'outline'} className="min-h-11" aria-pressed={all} onClick={p.onAllKinds}>{t('timeline.kind.All')}</Button>
+      <Button variant={all ? 'selected' : 'outline'} className="min-h-11" aria-pressed={all} onClick={p.onAllKinds}>{t('timeline.kind.All')}</Button>
       {timelineKinds.map(k => {
         const on = p.filters.kinds.includes(k);
-        return <Button key={k} variant={on ? 'navy' : 'outline'} className="min-h-11" aria-pressed={on} onClick={() => p.onKind(k)}>{t(`timeline.kind.${k}`)}</Button>;
+        return <Button key={k} variant={on ? 'selected' : 'outline'} className="min-h-11" aria-pressed={on} onClick={() => p.onKind(k)}>{t(`timeline.kind.${k}`)}</Button>;
       })}
       <Select value={p.filters.source ?? 'all'} onValueChange={v => p.onSource(v === 'all' ? null : (v as ChartSource))}>
         <SelectTrigger className="h-11 w-56" aria-label={t('timeline.source')}><SelectValue /></SelectTrigger>
@@ -109,7 +109,7 @@ function Trends(p: Props) {
       <h2 className="text-base font-extrabold">{t('patient360.trends')}</h2>
       <div className="flex flex-wrap gap-2">
         {trendChoices.map(c => (
-          <Button key={c} variant={c === p.choice ? 'navy' : 'outline'} className="min-h-11" aria-pressed={c === p.choice} onClick={() => p.onChoice(c)}>{t(`patient360.trend.${c}`)}</Button>
+          <Button key={c} variant={c === p.choice ? 'selected' : 'outline'} className="min-h-11" aria-pressed={c === p.choice} onClick={() => p.onChoice(c)}>{t(`patient360.trend.${c}`)}</Button>
         ))}
       </div>
       {p.trendsLoading ? <p role="status">{t('timeline.loading')}</p>

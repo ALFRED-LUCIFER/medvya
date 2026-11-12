@@ -56,6 +56,13 @@ export const minSlotPx = 48;
 
 const minutes = (from: string, to: string) => (Date.parse(to) - Date.parse(from)) / minute;
 
+/**
+ * The grid track of each column (MDV audit UX-05): a calendar not working that day and with no visits shrinks to a narrow
+ * labelled strip, so the doctors who are in get the width.
+ */
+export const columnTracks = (columns: ColumnLayout[]) =>
+  columns.map(c => (c.working || c.items.some(i => i.kind === 'appointment') ? 'minmax(168px, 1fr)' : '112px')).join(' ');
+
 /** Positions every block of the day on one vertical scale, set by the shortest slot length shown. */
 export function layoutDay(day: ScheduleDay): DayLayout {
   const shortest = Math.min(30, ...day.columns.flatMap(c => (c.slotMinutes ? [c.slotMinutes] : [])));

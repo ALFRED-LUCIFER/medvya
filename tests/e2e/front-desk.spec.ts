@@ -85,8 +85,8 @@ test('shows today\'s visits by status with nonclinical tags, in facility time', 
   await expect(meera).toContainText('Registration incomplete');
   await expect(cardOf(page, 'Farhan Qureshi (synthetic)')).toContainText('Waiting 12 min');
   await expect(cardOf(page, 'Farhan Qureshi (synthetic)')).toContainText('Token A-07'); // what the queue TV shows instead of the name
-  // Each column's action, as designed.
-  await expect(cardOf(page, 'Farhan Qureshi (synthetic)').getByRole('button')).toHaveText('Send to nurse');
+  // Each column's action, as designed. Nurse intake is off here, so a checked-in patient goes straight to the doctor (MDV audit UX-05).
+  await expect(cardOf(page, 'Farhan Qureshi (synthetic)').getByRole('button')).toHaveText('Ready for doctor');
   await expect(cardOf(page, 'Lakshmi Pillai (synthetic)').getByRole('button')).toHaveText('Intake done');
   await expect(cardOf(page, 'Vikram Desai (synthetic)').getByRole('button')).toHaveText('Consult done');
   const billing = cardOf(page, 'Rahul Menon (synthetic)');
@@ -113,9 +113,13 @@ test('a returning patient is checked in with two taps after confirming name and 
 
 test('moves follow the board and a conflict says the visit moved on', async ({ page }) => {
   const calls = await open(page);
-  await cardOf(page, 'Farhan Qureshi (synthetic)').getByRole('button', { name: 'Send to nurse' }).click();
-  await expect(column(page, 'With nurse').getByRole('article')).toHaveCount(2);
-  expect(calls.moves).toEqual([{ id: 'a2', state: 'WithNurse' }]);
+  await cardOf(page, 'Farhan Qureshi (synthetic)').getByRole('button', { name: 'Ready for doctor' }).click();
+  await expect(column(page, 'Ready for doctor').getByRole('article')).toHaveCount(1);
+  expect(calls.moves).toEqual([{ id: 'a2', state: 'ReadyForDoctor' }]);
+  // With nurse intake off, the With nurse column shows only while a visit is still in it.
+  await cardOf(page, 'Lakshmi Pillai (synthetic)').getByRole('button', { name: 'Intake done' }).click();
+  await expect(column(page, 'With nurse')).toHaveCount(0);
+  await expect(column(page, 'Ready for doctor').getByRole('article')).toHaveCount(2);
 
   await page.unrouteAll({ behavior: 'ignoreErrors' });
   await open(page, { moveCode: 'invalid_transition' });

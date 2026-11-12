@@ -1,15 +1,14 @@
-import { LayoutGrid } from 'lucide-react';
-import { Link } from 'react-router';
-import { useI18n } from '@medvya/i18n';
-import { buttonVariants } from '@medvya/ui';
 import ClinicOverviewPage from '../features/front-desk/components/ClinicOverviewPage';
+import FrontDeskViews from '../features/front-desk/components/FrontDeskViews';
 import { useOverviewController } from '../features/front-desk/hooks/useOverviewController';
+import { useQueueTableController } from '../features/front-desk/hooks/useQueueTableController';
 
 type Props = { facilityId: string; online: boolean; canMove: boolean; userId: string; boardPath: string };
 
-/** Composition only: the D-04 clinic overview of the active facility (MDV-P1-030). */
+/** Composition only: the board's "by doctor" view (D-04 clinic overview, MDV-P1-030) of the active facility. */
 export default function OverviewRoute({ facilityId, online, canMove, userId, boardPath }: Props) {
-  const { t } = useI18n();
-  const board = <Link to={boardPath} className={buttonVariants({ variant: 'outline' })}><LayoutGrid aria-hidden />{t('overview.toBoard')}</Link>;
-  return <ClinicOverviewPage {...useOverviewController(facilityId, online, userId)} canMove={canMove} boardAction={board} />;
+  const overview = useOverviewController(facilityId, online, userId);
+  const names = new Map(overview.overview?.doctors.map(d => [d.calendarId, d.name]));
+  const waiting = useQueueTableController((overview.overview?.waiting ?? []).map(w => ({ ...w, doctor: names.get(w.calendarId) ?? '' })));
+  return <ClinicOverviewPage {...overview} canMove={canMove} waiting={waiting} views={<FrontDeskViews boardPath={boardPath} doctorsPath={`${boardPath}/overview`} />} />;
 }

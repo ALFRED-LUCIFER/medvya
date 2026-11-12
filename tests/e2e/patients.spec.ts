@@ -64,7 +64,7 @@ test('the desk finds a patient from the header, sees only initials and opens the
   expect(last.postDataJSON()).toEqual({ query: 'meera', filter: 'All', page: 1 });
   expect(page.url()).not.toContain('meera');
 
-  const results = page.getByRole('main').getByRole('list');
+  const results = page.getByRole('main').getByRole('table');
   await expect(results).not.toContainText('Meera');
   await expect(page.getByRole('link', { name: /M I, 54 y, Female, MRN ending 4482/ })).toBeVisible();
   await expect(page.getByRole('link', { name: /D N, about 47 y, Male, MRN ending 4483.*incomplete registration/ })).toBeVisible();
@@ -116,6 +116,7 @@ test('keyboard only: search, then open the first result', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Name matches: 2' })).toBeVisible();
   await page.keyboard.press('Tab'); // Search button
   for (let i = 0; i < 3; i++) await page.keyboard.press('Tab'); // the three filters
+  await page.keyboard.press('Tab'); // the results table's scroll area (focusable so a wide table scrolls by keyboard)
   await page.keyboard.press('Tab');
   await expect(page.getByRole('link', { name: /M I, 54 y/ })).toBeFocused();
   await page.keyboard.press('Enter');
@@ -136,10 +137,10 @@ for (const locale of ['en', 'ar'])
       await deskWith(page, found, locale);
       await page.setViewportSize({ width, height: 900 });
       await page.goto('/patients/directory');
-      await expect(page.getByRole('main').getByRole('list').getByRole('link')).toHaveCount(2);
+      await expect(page.getByRole('main').getByRole('table').getByRole('link')).toHaveCount(2);
       expect(await page.evaluate(() => document.documentElement.dir)).toBe(locale === 'ar' ? 'rtl' : 'ltr');
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-      for (const link of await page.getByRole('main').getByRole('list').getByRole('link').all()) expect((await link.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+      for (const link of await page.getByRole('main').getByRole('table').getByRole('link').all()) expect((await link.boundingBox())!.height).toBeGreaterThanOrEqual(44);
       expect(await axe(page)).toEqual([]);
 
       await page.goto(`/patients/directory/${meeraId}`);
@@ -194,7 +195,7 @@ test('paging keeps the list on screen and focus on the results, with one live st
   await page.keyboard.press('Enter');
   await expect(page.getByRole('heading', { name: 'Patients: 45' })).toBeFocused();
   await expect(page.locator('section[aria-labelledby="patient-results"]')).toHaveAttribute('aria-busy', 'true');
-  await expect(page.getByRole('main').getByRole('list').getByRole('link')).toHaveCount(2); // the previous page stays
+  await expect(page.getByRole('main').getByRole('table').getByRole('link')).toHaveCount(2); // the previous page stays
   await expect(status).toHaveText('Searching…');
   release();
   await expect(page.getByText('Page 2 of 3')).toBeVisible();

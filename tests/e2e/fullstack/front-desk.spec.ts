@@ -72,7 +72,7 @@ test('front desk: register, book, check in, see the board, cancel', async ({ pag
     expect(await again.json()).toMatchObject({ id: first.id, reference: first.reference });
   });
 
-  await test.step('check in on the board after confirming name and date of birth, then send to the nurse', async () => {
+  await test.step('check in on the board after confirming name and date of birth, then mark ready for the doctor (no nurse step)', async () => {
     await page.getByRole('link', { name: 'Front desk' }).first().click();
     const card = page.getByRole('article', { name: patient.name });
     await expect(card).toBeVisible();
@@ -85,8 +85,8 @@ test('front desk: register, book, check in, see the board, cancel', async ({ pag
     await expectNoAxeViolations(page);
     await page.reload(); // the server, not the screen, holds the state
     await expect(page.getByRole('region', { name: /^Checked in/ }).getByRole('article', { name: patient.name })).toBeVisible();
-    await page.getByRole('region', { name: /^Checked in/ }).getByRole('article', { name: patient.name }).getByRole('button', { name: 'Send to nurse' }).click();
-    await expect(page.getByRole('region', { name: /^With nurse/ }).getByRole('article', { name: patient.name })).toBeVisible();
+    await page.getByRole('region', { name: /^Checked in/ }).getByRole('article', { name: patient.name }).getByRole('button', { name: 'Ready for doctor' }).click();
+    await expect(page.getByRole('region', { name: /^Ready for doctor/ }).getByRole('article', { name: patient.name })).toBeVisible();
   });
 
   await test.step('book a second visit and cancel it with a reason; the slot is free again', async () => {
@@ -105,7 +105,7 @@ test('front desk: register, book, check in, see the board, cancel', async ({ pag
     await visit.getByRole('button', { name: 'Cancel appointment' }).click();
     await expect(visit).toContainText('Appointment cancelled. The slot is free again.');
     await page.getByRole('link', { name: 'Front desk' }).first().click();
-    await expect(page.getByRole('region', { name: /^With nurse/ }).getByRole('article', { name: patient.name })).toBeVisible();
+    await expect(page.getByRole('region', { name: /^Ready for doctor/ }).getByRole('article', { name: patient.name })).toBeVisible();
     await expect(page.getByRole('article', { name: patient.name })).toHaveCount(1); // the cancelled visit left the board
   });
 

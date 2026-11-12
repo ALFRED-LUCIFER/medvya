@@ -1,12 +1,13 @@
-import { Footprints, ListChecks, ReceiptText, Stethoscope, UserPlus } from 'lucide-react';
+import { Footprints, ListChecks, ReceiptText, UserPlus } from 'lucide-react';
 import { Link, useNavigate } from 'react-router';
 import { useI18n } from '@medvya/i18n';
 import { buttonVariants } from '@medvya/ui';
 import StartConsult from '../features/encounters/components/StartConsult';
 import { canConsult } from '../features/encounters/domain/encounter';
 import { useStartConsultController } from '../features/encounters/hooks/useStartConsultController';
-import type { BoardCard } from '../features/front-desk/domain/board';
+import type { BoardCard, VisitSteps } from '../features/front-desk/domain/board';
 import BoardPage from '../features/front-desk/components/BoardPage';
+import FrontDeskViews from '../features/front-desk/components/FrontDeskViews';
 import { useBoardController } from '../features/front-desk/hooks/useBoardController';
 
 type Props = {
@@ -23,8 +24,8 @@ type Props = {
   canConsult: boolean;
   /** Where the nurse's intake of a visit opens, when the tenant has the nurse-intake step on and this role may work it (MDV-P2-007). */
   intakePath: ((appointmentId: string) => string) | null;
-  /** The nurse-intake step is on: a With nurse card is handed off from the intake, whoever looks at the board. */
-  nurseStepOn: boolean;
+  /** The optional visit steps on for the tenant. With the nurse step on, a With nurse card is handed off from the intake, whoever looks at the board. */
+  steps: VisitSteps;
 };
 
 export function Consult({ card, online }: { card: BoardCard; online: boolean }) {
@@ -34,7 +35,7 @@ export function Consult({ card, online }: { card: BoardCard; online: boolean }) 
 }
 
 /** Composition only: the board controller for the active facility, fed to the presentational P-01 page. */
-export default function FrontDeskRoute({ facilityId, online, canMove, registerPath, walkInPath, waitlistPath, billingPath, canConsult: doctor, intakePath, nurseStepOn }: Props) {
+export default function FrontDeskRoute({ facilityId, online, canMove, registerPath, walkInPath, waitlistPath, billingPath, canConsult: doctor, intakePath, steps }: Props) {
   const { t } = useI18n();
   const board = useBoardController(facilityId, online);
   const register = registerPath || walkInPath ? <>
@@ -44,12 +45,11 @@ export default function FrontDeskRoute({ facilityId, online, canMove, registerPa
   const payment = billingPath
     ? <Link to={billingPath} className={buttonVariants({ variant: 'outline', className: 'whitespace-normal' })}><ReceiptText aria-hidden />{t('board.action.takePayment')}</Link>
     : undefined;
-  const overview = <Link to="/front-desk/overview" className={buttonVariants({ variant: 'outline' })}><Stethoscope aria-hidden />{t('overview.title')}</Link>;
   const waitlist = waitlistPath ? <Link to={waitlistPath} className={buttonVariants({ variant: 'outline' })}><ListChecks aria-hidden />{t('waitlist.title')}</Link> : undefined;
   const consultAction = doctor ? (card: BoardCard) => (canConsult(card.state) ? <Consult key={card.id} card={card} online={online} /> : null) : undefined;
-  const nurseStep = nurseStepOn ? (card: BoardCard) => (intakePath
+  const nurseStep = steps.nurse ? (card: BoardCard) => (intakePath
     ? <Link to={intakePath(card.id)} className={buttonVariants({ variant: 'outline', className: 'mt-1 min-h-11 whitespace-normal' })}
         aria-label={t('intake.queue.openFor', { name: card.patientName || t('board.unknownPatient') })}>{t('intake.queue.open')}</Link>
     : null) : undefined;
-  return <BoardPage {...board} canMove={canMove} registerAction={register} paymentAction={payment} overviewAction={<>{overview}{waitlist}</>} consultAction={consultAction} nurseStep={nurseStep} />;
+  return <BoardPage {...board} steps={steps} canMove={canMove} registerAction={register} paymentAction={payment} overviewAction={waitlist} views={<FrontDeskViews boardPath="/front-desk" doctorsPath="/front-desk/overview" />} consultAction={consultAction} nurseStep={nurseStep} />;
 }

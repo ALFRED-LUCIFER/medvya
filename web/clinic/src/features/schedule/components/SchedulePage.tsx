@@ -97,7 +97,7 @@ export default function SchedulePage(props: Props) {
           </Button>
           <div role="group" aria-label={t('schedule.views')} className="flex gap-1">
             {scheduleViews.map(v => (
-              <Button key={v} variant={view === v ? 'navy' : 'outline'} aria-pressed={view === v} onClick={() => props.onView(v)}>{t(`schedule.view.${v}`)}</Button>
+              <Button key={v} variant={view === v ? 'selected' : 'outline'} aria-pressed={view === v} onClick={() => props.onView(v)}>{t(`schedule.view.${v}`)}</Button>
             ))}
           </div>
           {props.calendars.length > 1 && (
@@ -148,7 +148,7 @@ function Body(p: Props) {
     return (
       <div role="alert" className="flex flex-col items-start gap-3">
         <ShellMessage heading="h2" title={t('schedule.error.title')} body={t('schedule.error.body')} />
-        <Button variant="navy" onClick={p.onRetry}>{t('schedule.retry')}</Button>
+        <Button variant="default" onClick={p.onRetry}>{t('schedule.retry')}</Button>
       </div>
     );
   if (p.loading || !p.day || !p.timeZone) return <ShellMessage heading="h2" busy title={t('schedule.loading')} />;

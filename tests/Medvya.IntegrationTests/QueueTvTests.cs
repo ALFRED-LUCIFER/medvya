@@ -88,7 +88,7 @@ public sealed class QueueTvTests(PostgresFixture sql) : IClassFixture<PostgresFi
     {
         var (first, second, third) = (await h.BookAsync(9), await h.BookAsync(9, 20), await h.BookAsync(9, 40));
         foreach (var v in new[] { first, second, third }) await CheckIn(v.Id);
-        foreach (var state in new[] { "WithNurse", "ReadyForDoctor", "InConsult" }) await Move(first.Id, state); // called in
+        foreach (var state in new[] { "ReadyForDoctor", "InConsult" }) await Move(first.Id, state); // called in
         var (tv, _) = await Paired((await NewDisplay(h.Admin, h.Facility)).Token);
 
         using var response = await tv.GetAsync("/v1/queue/tv");
@@ -256,7 +256,6 @@ public sealed class QueueTvTests(PostgresFixture sql) : IClassFixture<PostgresFi
     {
         var visit = await h.BookAsync(9);
         await CheckIn(visit.Id);
-        await Move(visit.Id, "WithNurse");
         await Move(visit.Id, "ReadyForDoctor");
         var (_, cookie) = await Paired((await NewDisplay(h.Admin, h.Facility)).Token);
         var (_, pushes) = await Live(cookie, transport);

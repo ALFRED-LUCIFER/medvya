@@ -113,7 +113,7 @@ export function DecisionCell(p: DecisionProps & { row: MedicineRow; locked: bool
     <div className="flex flex-col gap-2">
       <div role="group" aria-label={t('reconcile.decisionFor', { name: row.name })} className="flex flex-wrap gap-2">
         {row.allowed.map(k => (
-          <Button key={k} type="button" size="sm" variant={(opening?.kind ?? row.decision?.kind) === k ? 'default' : 'outline'} className="min-h-11"
+          <Button key={k} type="button" size="sm" variant={(opening?.kind ?? row.decision?.kind) === k ? 'selected' : 'outline'} className="min-h-11"
             aria-pressed={(opening?.kind ?? row.decision?.kind) === k} disabled={p.saving || !p.online} onClick={() => p.onPick(row.key, k)}>{t(`reconcile.decision.${k}`)}</Button>
         ))}
       </div>

@@ -54,7 +54,7 @@ export default function DoctorTodayPage(p: Props) {
 
 function ScopeButton({ scope, active, onScope }: { scope: Scope; active: boolean; onScope: (s: Scope) => void }) {
   const { t } = useI18n();
-  return <Button variant={active ? 'navy' : 'outline'} className="min-h-11" aria-pressed={active} onClick={() => onScope(scope)}>{t(`today.scope.${scope}`)}</Button>;
+  return <Button variant={active ? 'selected' : 'outline'} className="min-h-11" aria-pressed={active} onClick={() => onScope(scope)}>{t(`today.scope.${scope}`)}</Button>;
 }
 
 function Message({ title, body, action, busy = false }: { title: string; body?: string; action?: { label: string; run: () => void }; busy?: boolean }) {
@@ -62,7 +62,7 @@ function Message({ title, body, action, busy = false }: { title: string; body?: 
     <div role={busy ? 'status' : 'alert'} className="flex max-w-[560px] flex-col items-start gap-2 rounded-xl border bg-card p-6">
       <h2 className="text-lg font-extrabold">{title}</h2>
       {body && <p className="text-muted-foreground">{body}</p>}
-      {action && <Button variant="navy" className="mt-2" onClick={action.run}>{action.label}</Button>}
+      {action && <Button variant="default" className="mt-2" onClick={action.run}>{action.label}</Button>}
     </div>
   );
 }

@@ -84,6 +84,7 @@ public sealed class FrontDeskServiceTests(PostgresFixture sql) : IClassFixture<P
     [Fact]
     public async Task ConcurrentDifferentMovesLeaveExactlyOneWinner()
     {
+        await h.StepsAsync(nurse: true, billing: false);
         var visit = await h.BookAsync(9);
         h.Clock.Advance(TimeSpan.FromMinutes(1));
         await h.FrontDesk(h.Reception).CheckInAsync(visit.Id, new CheckIn());
@@ -102,6 +103,8 @@ public sealed class FrontDeskServiceTests(PostgresFixture sql) : IClassFixture<P
     [Fact]
     public async Task MovesFollowTheStateMachineToDoneAndAnythingElseIsRefused()
     {
+        // The nurse step's way out is the nurse's handoff (IntakeTests); here it is off, so billing is the optional step walked.
+        await h.StepsAsync(nurse: false, billing: true);
         var visit = await h.BookAsync(9);
         var desk = h.FrontDesk(h.Reception);
         h.Clock.Advance(TimeSpan.FromMinutes(1));
@@ -110,7 +113,7 @@ public sealed class FrontDeskServiceTests(PostgresFixture sql) : IClassFixture<P
 
         await desk.CheckInAsync(visit.Id, new CheckIn());
         Assert.Equal("invalid_transition", await Code(desk.MoveAsync(visit.Id, new MoveVisit { State = AppointmentState.Booked }))); // never backwards
-        foreach (var state in new[] { AppointmentState.WithNurse, AppointmentState.ReadyForDoctor, AppointmentState.InConsult, AppointmentState.Billing, AppointmentState.Done })
+        foreach (var state in new[] { AppointmentState.ReadyForDoctor, AppointmentState.InConsult, AppointmentState.Billing, AppointmentState.Done })
         {
             h.Clock.Advance(TimeSpan.FromMinutes(1));
             var moved = await desk.MoveAsync(visit.Id, new MoveVisit { State = state });
@@ -121,9 +124,38 @@ public sealed class FrontDeskServiceTests(PostgresFixture sql) : IClassFixture<P
         Assert.Equal("invalid_transition", await Code(desk.CheckInAsync(visit.Id, new CheckIn()))); // check-in only from Booked
 
         Assert.Equal(
-            [AppointmentState.Booked, AppointmentState.CheckedIn, AppointmentState.WithNurse, AppointmentState.ReadyForDoctor, AppointmentState.InConsult, AppointmentState.Billing, AppointmentState.Done],
+            [AppointmentState.Booked, AppointmentState.CheckedIn, AppointmentState.ReadyForDoctor, AppointmentState.InConsult, AppointmentState.Billing, AppointmentState.Done],
             await Events(visit.Id));
         await Assert.ThrowsAsync<SchedulingValidationException>(() => desk.MoveAsync(visit.Id, new MoveVisit()));
+    }
+
+    [Fact]
+    public async Task StepsThePracticeHasOffAreSkipped()
+    {
+        await h.StepsAsync(nurse: false, billing: false);
+        var visit = await h.BookAsync(9);
+        var desk = h.FrontDesk(h.Reception);
+        h.Clock.Advance(TimeSpan.FromMinutes(1));
+        await desk.CheckInAsync(visit.Id, new CheckIn());
+        Assert.Equal("invalid_transition", await Code(desk.MoveAsync(visit.Id, new MoveVisit { State = AppointmentState.WithNurse })));
+        foreach (var state in new[] { AppointmentState.ReadyForDoctor, AppointmentState.InConsult })
+            Assert.Equal(state, (await desk.MoveAsync(visit.Id, new MoveVisit { State = state })).State);
+        Assert.Equal("invalid_transition", await Code(desk.MoveAsync(visit.Id, new MoveVisit { State = AppointmentState.Billing })));
+        Assert.Equal(AppointmentState.Done, (await desk.MoveAsync(visit.Id, new MoveVisit { State = AppointmentState.Done })).State);
+        Assert.Equal([AppointmentState.Booked, AppointmentState.CheckedIn, AppointmentState.ReadyForDoctor, AppointmentState.InConsult, AppointmentState.Done], await Events(visit.Id));
+    }
+
+    [Fact]
+    public async Task AVisitLeftInAStepTurnedOffStillMovesOn()
+    {
+        await h.StepsAsync(nurse: true, billing: false);
+        var visit = await h.BookAsync(9);
+        var desk = h.FrontDesk(h.Reception);
+        h.Clock.Advance(TimeSpan.FromMinutes(1));
+        await desk.CheckInAsync(visit.Id, new CheckIn());
+        await desk.MoveAsync(visit.Id, new MoveVisit { State = AppointmentState.WithNurse });
+        await h.StepsAsync(nurse: false, billing: false);
+        Assert.Equal(AppointmentState.ReadyForDoctor, (await desk.MoveAsync(visit.Id, new MoveVisit { State = AppointmentState.ReadyForDoctor })).State);
     }
 
     [Fact]

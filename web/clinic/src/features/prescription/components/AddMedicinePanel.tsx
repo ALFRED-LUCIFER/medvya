@@ -74,7 +74,7 @@ function Picks<K extends string>({ id, label, options, chosen, onPick, wordOf }:
       <span id={id} className="text-sm font-bold">{label}</span>
       <div role="group" aria-labelledby={id} className="flex flex-wrap gap-2">
         {options.map(k => (
-          <Button key={k} type="button" variant={chosen === k ? 'default' : 'outline'} aria-pressed={chosen === k} className="min-h-11" onClick={() => onPick(k)}>{wordOf(k)}</Button>
+          <Button key={k} type="button" variant={chosen === k ? 'selected' : 'outline'} aria-pressed={chosen === k} className="min-h-11" onClick={() => onPick(k)}>{wordOf(k)}</Button>
         ))}
       </div>
     </div>
@@ -99,7 +99,7 @@ function Body(p: Props & { language: PrintLanguage }) {
             const picked = !!m && m.generic === r.generic && m.form === r.form;
             return (
               <li key={r.id}>
-                <Button type="button" variant={picked ? 'default' : 'outline'} aria-pressed={picked} disabled={p.busy} className="h-auto min-h-11 w-full flex-col items-start py-2 text-start"
+                <Button type="button" variant={picked ? 'selected' : 'outline'} aria-pressed={picked} disabled={p.busy} className="h-auto min-h-11 w-full flex-col items-start py-2 text-start"
                   onClick={() => p.onMedicine(r)}>
                   <span className="inline-flex items-center gap-2 font-bold"><Pill aria-hidden className="size-4" />{t('rx.addMed.result', { generic: r.generic, form: r.form })}</span>
                   {r.brands.length > 0 && <span className="text-xs">{t('rx.addMed.brands', { list: r.brands.join(', ') })}</span>}

@@ -3,11 +3,17 @@ import IntakePage from '../features/nurse-intake/components/IntakePage';
 import NurseQueuePage from '../features/nurse-intake/components/NurseQueuePage';
 import { useIntakeController } from '../features/nurse-intake/hooks/useIntakeController';
 import { useBoardController } from '../features/front-desk/hooks/useBoardController';
+import { useQueueTableController } from '../features/front-desk/hooks/useQueueTableController';
+import type { BoardCard } from '../features/front-desk/domain/board';
+
+const row = (c: BoardCard) => ({ id: c.id, patientName: c.patientName, doctor: c.calendarName, state: c.state, start: c.start, since: c.since, token: c.token });
 
 /** Composition only: the nurse queue (MDV-P2-007) is the board's With nurse column, plus Checked in to take to intake (#956); opening a card opens its intake. */
 export function NurseQueueRoute({ facilityId, online, nursePath }: { facilityId: string; online: boolean; nursePath: string }) {
   const board = useBoardController(facilityId, online);
-  return <NurseQueuePage board={board.board} cards={board.columns.WithNurse} checkedIn={board.columns.CheckedIn} now={board.now} loading={board.loading}
+  const withNurse = useQueueTableController(board.columns.WithNurse.map(row));
+  const checkedIn = useQueueTableController(board.columns.CheckedIn.map(row));
+  return <NurseQueuePage board={board.board} withNurse={withNurse} checkedIn={checkedIn} now={board.now} loading={board.loading}
     offline={board.offline} forbidden={board.forbidden} failed={board.failed} live={board.live} pendingId={board.pendingId} failure={board.failure}
     intakePath={id => `${nursePath}/${id}`} onRetry={board.onRetry} onTake={id => board.onMove(id, 'WithNurse')} />;
 }

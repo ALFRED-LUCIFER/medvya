@@ -17,7 +17,7 @@ export default function StartConsult(p: Props) {
   const problem = p.problem;
   return (
     <div className="flex flex-col gap-2">
-      <Button variant="navy" className="min-h-11 whitespace-normal" loading={p.starting} disabled={!p.online}
+      <Button variant="default" className="min-h-11 whitespace-normal" loading={p.starting} disabled={!p.online}
         aria-label={t(p.inConsult ? 'consult.openFor' : 'consult.startFor', { name: p.patientName })} onClick={p.onStart}>{label}</Button>
       {problem?.kind === 'open' && (
         <div role="alert" className="flex flex-col gap-2 rounded-md border p-2 text-sm">

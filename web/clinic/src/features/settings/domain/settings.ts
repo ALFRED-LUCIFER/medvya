@@ -159,8 +159,27 @@ export const settingsError = (code: string | undefined): SettingsError =>
 /** The tenant's locations and the one a tab is looking at. */
 export type LocationChoice = { locations: Location[]; locationId: string; onLocation: (id: string) => void; locationsLoading: boolean; locationsFailed: boolean };
 
-export const settingsTabs = ['profile', 'locations', 'hours', 'holidays', 'staff', 'doctors', 'medicines', 'displays', 'audit', 'metrics', 'terms', 'notifications', 'data'] as const;
+export const settingsTabs = [
+  'profile', 'locations', 'hours', 'holidays', 'displays', 'metrics', 'terms',
+  'staff', 'doctors',
+  'nurse', 'medicines',
+  'notifications',
+  'requests', 'policy', 'review', 'audit', 'data',
+] as const;
 export type SettingsTab = (typeof settingsTabs)[number];
+
+/** Settings in five groups (MDV audit UX-04), each tab one subject; the tab id stays the address (?tab=hours), so old links keep working. */
+export const settingsGroups = {
+  practice: ['profile', 'locations', 'hours', 'holidays', 'displays', 'metrics', 'terms'],
+  people: ['staff', 'doctors'],
+  clinical: ['nurse', 'medicines'],
+  messages: ['notifications'],
+  security: ['requests', 'policy', 'review', 'audit', 'data'],
+} as const satisfies Record<string, readonly SettingsTab[]>;
+export type SettingsGroup = keyof typeof settingsGroups;
+export const settingsGroupIds = Object.keys(settingsGroups) as SettingsGroup[];
+export const groupOf = (tab: SettingsTab): SettingsGroup =>
+  settingsGroupIds.find(g => (settingsGroups[g] as readonly SettingsTab[]).includes(tab))!;
 
 /** The practice's acceptance of the Terms of Service and DPA (MDV-P1-019). Until accepted, booking and sending are refused by the server. */
 /** Where the owner accepts the terms; booking errors and the owner's banner link here. */

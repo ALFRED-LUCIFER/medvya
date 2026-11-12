@@ -51,7 +51,8 @@ async function open(page: Page, { as = reception, locale = 'en' } = {}) {
 
 test('lists each doctor working today with visits per state, delay and next patients, and the waiting room', async ({ page }) => {
   await open(page);
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Clinic overview');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Reception board');
+  await expect(page.getByRole('group', { name: 'Board views' }).getByRole('link', { name: 'By doctor' })).toHaveAttribute('aria-current', 'page');
   const rao = page.getByRole('article', { name: 'Dr. Arjun Rao (synthetic)' });
   await expect(rao).toContainText('Running 30 min late');
   await expect(rao.getByRole('list', { name: 'Visits by status' })).toContainText('Booked 1');
@@ -61,8 +62,8 @@ test('lists each doctor working today with visits per state, delay and next pati
   await expect(page.getByRole('article', { name: 'Dr. S. Menon (synthetic)' })).toContainText('On time');
   const room = page.getByRole('region', { name: 'Waiting room (1)' });
   await expect(room).toContainText('Deepak Nair (synthetic)');
-  await expect(room).toContainText('With Dr. Arjun Rao (synthetic)');
-  await expect(room).toContainText('Waiting 40 min');
+  await expect(room.getByRole('row', { name: /Deepak Nair/ })).toContainText('Dr. Arjun Rao (synthetic)');
+  await expect(room).toContainText('40 min');
 });
 
 test('reception moves a waiting patient to another doctor with a listed reason', async ({ page }) => {
@@ -76,7 +77,7 @@ test('reception moves a waiting patient to another doctor with a listed reason',
   await form.getByRole('combobox', { name: 'Reason' }).click();
   await page.getByRole('option', { name: 'Balance the queues' }).click();
   await form.getByRole('button', { name: 'Move patient' }).click();
-  await expect(page.getByRole('region', { name: 'Waiting room (1)' })).toContainText('With Dr. S. Menon (synthetic)');
+  await expect(page.getByRole('region', { name: 'Waiting room (1)' }).getByRole('row', { name: /Deepak Nair/ })).toContainText('Dr. S. Menon (synthetic)');
   expect(calls.moves).toEqual([{ id: 'a2', body: { calendarId: 'd-2', reason: 'BalanceWorkload' }, csrf: '1' }]);
   expect(page.url()).not.toMatch(/Deepak|Nair/);
 });
@@ -87,7 +88,7 @@ test('a doctor sees their own day first, read only', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Move to another doctor' })).toHaveCount(0);
 });
 
-test('the board shows each doctor\'s workload and links to the overview', async ({ page }) => {
+test('the board shows each doctor\'s workload and switches to the by-doctor view', async ({ page }) => {
   const card = (id: string, name: string, time: string, state: string, calendarId = 'd-1', calendarName = 'Dr. Arjun Rao (synthetic)') => ({
     id, reference: id, patientId: `p-${id}`, patientName: name, dateOfBirth: null, registrationIncomplete: false, calendarId, calendarName,
     visitType: 'FollowUp', reasonCategory: 'General', start: ist(time), end: ist(time), state, since: ist(time), room: null, token: null,
@@ -101,7 +102,7 @@ test('the board shows each doctor\'s workload and links to the overview', async 
   await expect(panel).toContainText('Dr. Arjun Rao (synthetic)');
   await expect(panel).toContainText('2 waiting · Running 30 min late');
   await expect(panel).toContainText('1 waiting · On time');
-  await page.getByRole('link', { name: 'Clinic overview' }).click();
+  await page.getByRole('group', { name: 'Board views' }).getByRole('link', { name: 'By doctor' }).click();
   await expect(page).toHaveURL(/\/front-desk\/overview$/);
 });
 

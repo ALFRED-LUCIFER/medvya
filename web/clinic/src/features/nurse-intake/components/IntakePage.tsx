@@ -81,7 +81,7 @@ export default function IntakePage(p: Props) {
         <div className="flex flex-col gap-3 rounded-xl border bg-card p-4">
           <div className="flex flex-wrap items-center gap-3">
             <Button variant="outline" className="min-h-11" aria-expanded={p.escalating} onClick={p.onToggleEscalate}>{t('intake.escalate')}</Button>
-            <Button variant="navy" className="min-h-11 whitespace-normal" loading={p.handingOff} disabled={blocked || !p.online} aria-describedby={blocked ? 'intake-handoff-why' : undefined} onClick={p.onHandOff}>
+            <Button variant="default" className="min-h-11 whitespace-normal" loading={p.handingOff} disabled={blocked || !p.online} aria-describedby={blocked ? 'intake-handoff-why' : undefined} onClick={p.onHandOff}>
               {t('intake.handOff')}
             </Button>
             <Link to={p.queuePath} className={buttonVariants({ variant: 'outline', className: 'min-h-11' })}>{t('intake.back')}</Link>

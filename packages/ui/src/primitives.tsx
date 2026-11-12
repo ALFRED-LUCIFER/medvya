@@ -187,7 +187,7 @@ export function SystemState({ state, onAction, facility = '' }: { state: keyof t
       <Icon className="size-7" style={{ color: s.color }} aria-hidden />
       <h1 className="text-[17px] font-extrabold">{t(s.title)}</h1>
       <p className="text-sm text-muted-foreground">{t(s.body, { facility })}</p>
-      <Button variant="navy" onClick={onAction} className="mt-2">{t(s.cta)}</Button>
+      <Button variant="default" onClick={onAction} className="mt-2">{t(s.cta)}</Button>
     </div>
   );
 }

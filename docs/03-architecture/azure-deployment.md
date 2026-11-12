@@ -31,7 +31,9 @@ Sources: PRD v2 §07/§07b (authoritative), Azure Architecture (stages, residenc
 | 3 Pooled stamps | IN-01/AE-01 for one-doctor clinics and clinics, RLS. New stamp at ~2,000 tenants or 60% sustained DB CPU | On evidence |
 | 4 Dedicated hospital stamps | Own compute + DB + Key Vault + storage, CMK (HSM), private link to the HIS, own upgrade ring | P7-06 |
 
-Azure Front Door Premium + WAF, Container Apps/AKS, Fleet Manager, Flux GitOps, KEDA and Sentinel come in with stages 3–4 (P7). They are not used earlier.
+Azure Front Door Premium + WAF is the production edge from the pilot ([azure-env-prod.md](azure-env-prod.md)). Container Apps/AKS, Fleet Manager, Flux GitOps, KEDA and Sentinel come in with stages 3–4 (P7). They are not used earlier.
+
+Environment records: [dev](azure-env-dev.md), [production target](azure-env-prod.md).
 
 ## Targets
 

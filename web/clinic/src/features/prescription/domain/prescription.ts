@@ -10,7 +10,7 @@ export const printLanguages = ['en', 'hi', 'ta', 'ar'] as const;
 export type PrintLanguage = (typeof printLanguages)[number];
 
 export type RxLine = {
-  id: string | null; kind: 'Prescribe' | 'Discontinue'; source: 'AddedByYou' | 'AddedByColleague' | 'ChartReconciliation';
+  id: string | null; kind: 'Prescribe' | 'Discontinue' | 'Change' | 'Taper'; source: 'AddedByYou' | 'AddedByColleague' | 'ChartReconciliation';
   formularyItemId: string | null; medicine: string; strength: string | null; form: string | null; freeText: boolean; included: boolean;
   dose: string | null; doseUnit: string | null; route: string | null; frequency: string | null; timing: string | null;
   durationDays: number | null; quantity: number | null; instructions: string | null; reason: string | null; sig: Record<string, string>;

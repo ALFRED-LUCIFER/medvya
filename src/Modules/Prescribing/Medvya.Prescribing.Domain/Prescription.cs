@@ -205,6 +205,28 @@ public static class Sig
 
     /// <summary>The discontinue line's instruction in <paramref name="language"/>.</summary>
     public static string Stop(string language) => ByLanguage[language].Stop;
+
+    // MDV-P2-043: a change or taper from the reconciliation. The doses are the doctor's own words, printed as written in every language.
+    static readonly Dictionary<string, (string ChangeFrom, string ChangeTo, string Taper, string Then)> Reconciled = new(StringComparer.Ordinal)
+    {
+        ["en"] = ("Change the dose from {0} to {1}.", "Change the dose to {0}.", "Reduce the dose step by step: {0}. Last dose on {1}.", ", then "),
+        ["hi"] = ("खुराक {0} से बदलकर {1} करें।", "खुराक बदलकर {0} करें।", "खुराक धीरे-धीरे कम करें: {0}। आख़िरी खुराक {1} को।", ", फिर "),
+        ["ta"] = ("அளவை {0} இலிருந்து {1} ஆக மாற்றவும்.", "அளவை {0} ஆக மாற்றவும்.", "அளவைப் படிப்படியாகக் குறைக்கவும்: {0}. கடைசி அளவு {1} அன்று.", ", பிறகு "),
+        ["ar"] = ("غيّر الجرعة من {0} إلى {1}.", "غيّر الجرعة إلى {0}.", "خفّض الجرعة تدريجيًا: {0}. آخر جرعة في {1}.", "، ثم "),
+    };
+
+    /// <summary>A change line's instruction: "Change the dose from 500 mg to 1000 mg." (without "from" when the chart had no dose).</summary>
+    public static string Change(string language, string? fromDose, string newDose) => string.IsNullOrEmpty(fromDose)
+        ? string.Format(CultureInfo.InvariantCulture, Reconciled[language].ChangeTo, newDose)
+        : string.Format(CultureInfo.InvariantCulture, Reconciled[language].ChangeFrom, fromDose, newDose);
+
+    /// <summary>A taper line's instruction: "Reduce the dose step by step: 20 mg for 5 days, then 10 mg for 5 days. Last dose on 05 Dec 2026."</summary>
+    public static string Taper(string language, IEnumerable<(string Dose, int Days)> steps, DateOnly endsOn)
+    {
+        var w = ByLanguage[language];
+        var text = string.Join(Reconciled[language].Then, steps.Select(s => $"{s.Dose} {string.Format(CultureInfo.InvariantCulture, s.Days == 1 ? w.Days.One : w.Days.Many, s.Days)}"));
+        return string.Format(CultureInfo.InvariantCulture, Reconciled[language].Taper, text, endsOn.ToString("dd MMM yyyy", CultureInfo.InvariantCulture));
+    }
 }
 
 /// <summary>
@@ -260,12 +282,35 @@ public sealed class AuthorisedPrescription
     [Classification(DataClass.Internal)] public Guid AuthorisedBy { get; init; }
     [Classification(DataClass.Internal)] public DateTimeOffset AuthorisedAt { get; init; }
 
-    public static string Hash(IReadOnlyList<AuthorisedLine> lines) =>
-        Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(
-            lines.Select(l => l with { Sig = new SortedDictionary<string, string>(l.Sig.ToDictionary(), StringComparer.Ordinal) }).ToList())));
+    /// <summary>The advice for the patient as authorised with the lines (MDV-P2-043); null: none. Covered by <see cref="ContentHash"/>.</summary>
+    [Classification(DataClass.SensitiveHealth)] public string? Advice { get; init; }
+
+    /// <summary>Advice joins the hash only when there is some, so every authorisation made before it existed keeps its hash.</summary>
+    public static string Hash(IReadOnlyList<AuthorisedLine> lines, string? advice = null)
+    {
+        byte[] json = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(
+            lines.Select(l => l with { Sig = new SortedDictionary<string, string>(l.Sig.ToDictionary(), StringComparer.Ordinal) }).ToList());
+        return Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(advice is null ? json : [.. json, .. System.Text.Encoding.UTF8.GetBytes("\nadvice:" + advice)]));
+    }
 
     /// <summary>The number printed on the paper ("RX-" and eight letters of the id's random part): a reference to read out, not a credential.</summary>
     public string Number() => "RX-" + Id.ToString("N")[^8..].ToUpperInvariant();
+}
+
+/// <summary>
+/// The advice for the patient in a consultation's plan (MDV-P2-043): written once, by the doctor, in English; one row per consultation, changed only
+/// while it is open. Authorising freezes it with the prescription, which prints it and shares it. Ids only: the encounter names the patient.
+/// </summary>
+public sealed class RxAdvice
+{
+    public const int MaxText = 1000;
+
+    [Classification(DataClass.Internal)] public Guid Id { get; init; }
+    [Classification(DataClass.Internal)] public Guid TenantId { get; init; }
+    [Classification(DataClass.Internal)] public Guid EncounterId { get; init; }
+    [Classification(DataClass.SensitiveHealth)] public string Text { get; set; } = "";
+    [Classification(DataClass.Internal)] public Guid UpdatedBy { get; set; }
+    [Classification(DataClass.Internal)] public DateTimeOffset UpdatedAt { get; set; }
 }
 
 /// <summary>

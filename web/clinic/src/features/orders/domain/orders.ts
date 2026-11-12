@@ -40,3 +40,22 @@ export function problemOf(code: string | undefined): OrderProblem {
   const reason = code?.includes(':') ? code.split(':')[1] : code;
   return reason && problems.includes(reason) ? (reason as OrderProblem) : 'failed';
 }
+
+/**
+ * The Plan's test toggles (MDV-P2-043, design `inv`): the clinic's order-set tests and the visit's own, once each by name (as the server
+ * matches them, ignoring case). `order` is the visit's row for that test, if any.
+ */
+export type TestToggle = { name: string; order: Order | null };
+export function testToggles(sets: OrderSetChoice[], orders: Order[]): TestToggle[] {
+  const byName = new Map<string, TestToggle>();
+  for (const o of orders) if (!byName.has(o.name.toLowerCase()) || o.state !== 'NotIncluded') byName.set(o.name.toLowerCase(), { name: o.name, order: o });
+  for (const name of sets.flatMap(s => s.items)) if (!byName.has(name.toLowerCase())) byName.set(name.toLowerCase(), { name, order: null });
+  return [...byName.values()];
+}
+export const isOn = (x: TestToggle) => !!x.order && x.order.state !== 'NotIncluded';
+/** On: re-include the visit's switched-off row, or add a new draft (once: the server refuses a second). Off: switch the draft off. An ordered test does not toggle. */
+export function toggleOf(x: TestToggle, on: boolean): { add: string } | { include: string; on: boolean } | null {
+  if (x.order?.state === 'Ordered') return null;
+  if (x.order) return { include: x.order.id, on };
+  return on ? { add: x.name } : null;
+}

@@ -7,6 +7,7 @@ import { CircleAlert, CircleCheck, Lightbulb } from 'lucide-react';
 import { Field } from '../../settings/components/Field';
 import { describedBy, fieldError } from '../../settings/components/fieldStyles';
 import { Section } from '../../settings/components/Section';
+import { planHeading } from '../../encounters/domain/encounter';
 import { geriatricFields, geriLines, type GeriError, type GeriatricAssessment, type GeriatricForm, type MedicineReview } from '../domain/olderAdult';
 
 type Props = {
@@ -107,7 +108,7 @@ function ReviewCard({ review, consultPath, planHint, onPlanChange }: { review: M
                 </span>
               </span>
               {consultPath
-                ? <Link to={consultPath} aria-label={t('olderAdult.review.planFor', { medicine: s.medicine })} className={buttonVariants({ variant: 'outline', className: 'min-h-11' })}>{t('olderAdult.review.plan')}</Link>
+                ? <Link to={`${consultPath}#${planHeading}`} aria-label={t('olderAdult.review.planFor', { medicine: s.medicine })} className={buttonVariants({ variant: 'outline', className: 'min-h-11' })}>{t('olderAdult.review.plan')}</Link>
                 : <Button variant="outline" className="min-h-11" aria-label={t('olderAdult.review.planFor', { medicine: s.medicine })} onClick={() => onPlanChange(s.medicine)}>{t('olderAdult.review.plan')}</Button>}
             </li>
           ))}

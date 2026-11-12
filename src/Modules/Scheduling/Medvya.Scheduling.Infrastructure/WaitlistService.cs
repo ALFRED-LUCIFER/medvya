@@ -54,21 +54,29 @@ public sealed class WaitlistService(
         var doctorIds = calendars.Values.Where(c => c.Kind == CalendarKind.Doctor).Select(c => c.Id).ToList();
         var doctors = await db.Templates.AsNoTracking().Where(t => t.FacilityId == facilityId && t.CalendarKind == CalendarKind.Doctor && doctorIds.Contains(t.CalendarId)).ToListAsync(cancellationToken);
         var today = ScheduleRules.LocalDate(now, zone);
-        var closures = await context.ClosuresAsync(facilityId, today, today.AddDays(HorizonDays - 1), cancellationToken);
-        var waiting = open.ToList();
-        for (var d = 0; d < HorizonDays && waiting.Count > 0; d++)
+        // A follow-up looks from its due day on (MDV-P2-043); everyone else from today. Each group scans its own horizon; a day's free slots are read once.
+        DateOnly From(WaitlistEntry w) => w.DueOn is { } due && due > today ? due : today;
+        var last = open.Max(From).AddDays(HorizonDays - 1);
+        var closures = await context.ClosuresAsync(facilityId, today, last, cancellationToken);
+        var freeOn = new Dictionary<(DateOnly, VisitType), IReadOnlyList<(Guid Calendar, DateTimeOffset Start)>>();
+        foreach (var group in open.GroupBy(From))
         {
-            var date = today.AddDays(d);
-            if (closures.ContainsKey(date)) continue;
-            foreach (var type in waiting.Select(w => w.VisitType).Distinct().ToList())
+            var waiting = group.ToList();
+            for (var d = 0; d < HorizonDays && waiting.Count > 0; d++)
             {
-                var free = await booking.FreeStartsAsync(facilityId, type, doctors, date, zone, now, me, int.MaxValue, cancellationToken);
-                foreach (var w in waiting.Where(w => w.VisitType == type).ToList())
+                var date = group.Key.AddDays(d);
+                if (closures.ContainsKey(date)) continue;
+                foreach (var type in waiting.Select(w => w.VisitType).Distinct().ToList())
                 {
-                    var slot = free.FirstOrDefault(f => w.Suits(f.Calendar, f.Start, zone));
-                    if (slot.Calendar == Guid.Empty) continue;
-                    found[w.Id] = new SlotMatch(slot.Calendar, calendars[slot.Calendar].Name, slot.Start);
-                    waiting.Remove(w);
+                    if (!freeOn.TryGetValue((date, type), out var free))
+                        freeOn[(date, type)] = free = await booking.FreeStartsAsync(facilityId, type, doctors, date, zone, now, me, int.MaxValue, cancellationToken);
+                    foreach (var w in waiting.Where(w => w.VisitType == type).ToList())
+                    {
+                        var slot = free.FirstOrDefault(f => w.Suits(f.Calendar, f.Start, zone));
+                        if (slot.Calendar == Guid.Empty) continue;
+                        found[w.Id] = new SlotMatch(slot.Calendar, calendars[slot.Calendar].Name, slot.Start);
+                        waiting.Remove(w);
+                    }
                 }
             }
         }
@@ -234,5 +242,5 @@ public sealed class WaitlistService(
     static WaitlistView Of(WaitlistEntry w, string name, string mrn, string? doctor, SlotMatch? offered, SlotMatch? match, DateTimeOffset now) => new(
         w.Id, w.PatientId, name, mrn, w.CalendarId, doctor, w.VisitType, w.ReasonCategory,
         [.. Enum.GetValues<DayOfWeek>().Where(d => (w.Days & WaitlistEntry.DayBit(d)) != 0)], w.From, w.Until,
-        w.Open(now) ? WaitlistState.Waiting : w.State, w.RequestedAt, offered, offered is null ? null : w.OfferExpiresAt, match);
+        w.Open(now) ? WaitlistState.Waiting : w.State, w.RequestedAt, offered, offered is null ? null : w.OfferExpiresAt, match, w.FollowUp, w.DueOn);
 }

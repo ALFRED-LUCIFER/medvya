@@ -19,7 +19,7 @@
     <!-- Test only: reads the text and pages back out of the server PDFs. Apache-2.0. -->
     <PackageVersion Include="PdfPig" Version="0.1.16" />
     <!-- Wraps per-tenant data keys with a Key Vault key (MDV-P0-035); already a transitive of the Always Encrypted provider. -->
-    <PackageVersion Include="Azure.Security.KeyVault.Keys" Version="4.7.0" />
+    <PackageVersion Include="Azure.Security.KeyVault.Keys" Version="4.10.2" />
     <!-- Email through Azure Communication Services (Email:Provider=Acs), passwordless with the app identity. -->
     <PackageVersion Include="Azure.Communication.Email" Version="1.1.0" />
         <!-- Transitive via Hangfire.Core 1.8; 11.0.1 has GHSA-5crp-9r3c-p9vr. -->

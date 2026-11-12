@@ -38,7 +38,7 @@ public static class SignedNotePdfDocument
         ];
         foreach (var section in template.Sections)
             if (original.Row.Sections.TryGetValue(section.Id, out var text))
-                body.AddRange([(Text($"noteTemplates.section.{section.Id}"), true), (text, false), ("", false)]);
+                body.AddRange([(Text($"noteTemplates.section.{section.Id}"), true), .. Lines(section, text), ("", false)]);
         foreach (var a in versions.Skip(1))
             body.AddRange([
                 (Text("notePdf.addendum", ("version", a.Row.VersionNo.ToString(CultureInfo.InvariantCulture)), ("name", a.SignerName), ("when", When(a.Row.SignedAt))), true),
@@ -62,6 +62,11 @@ public static class SignedNotePdfDocument
             throw new NotePdfUnsupportedTextException();
         }
     }
+
+    /// <summary>A text section as written; a structured one (MDV-P2-042) a line per answered item in words. An unanswered item is not printed.</summary>
+    static IEnumerable<(string, bool)> Lines(NoteSection section, string text) => section.Kind == SectionKind.Text ? [(text, false)]
+        : StructuredAnswers.Read(section, text).Select(a => (Text(a.Note is null ? "noteTemplates.answerLine" : "noteTemplates.answerLineNote", ("item", Text($"noteTemplates.item.{a.Item}")),
+            ("answer", Text($"noteTemplates.answer.{a.Value}")), ("note", a.Note ?? "")), false));
 
     static string Text(string key, params (string Name, string Value)[] values) =>
         values.Aggregate(Catalog.Value.GetValueOrDefault(key) ?? throw new KeyNotFoundException($"Message key '{key}' is not in en.json."),

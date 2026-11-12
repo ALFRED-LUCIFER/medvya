@@ -14,9 +14,9 @@ public sealed class NoteTemplateTests(PostgresFixture sql) : IClassFixture<Postg
     public Task DisposeAsync() => h.CloseAsync();
 
     [Fact]
-    public void TheSixDesignedTemplatesExistWithTheRequiredSections()
+    public void TheDesignedTemplatesExistWithTheRequiredSections()
     {
-        Assert.Equal(["general-opd", "diabetes-review", "hypertension", "paediatrics", "antenatal", "teleconsult"], NoteTemplates.Keys);
+        Assert.Equal(["general-opd", "diabetes-review", "hypertension", "paediatrics", "antenatal", "teleconsult", "older-adult-review"], NoteTemplates.Keys);
         foreach (var t in NoteTemplates.History)
             Assert.Equal(["chiefComplaint", "assessment", "plan"], t.Sections.Where(s => s.Required).Select(s => s.Id));
     }
@@ -33,8 +33,13 @@ public sealed class NoteTemplateTests(PostgresFixture sql) : IClassFixture<Postg
             ["paediatrics@1"] = "paediatrics@1|chiefComplaint!,subjective,growthAndDevelopment,immunisations,objective,assessment!,plan!|feedingDiscussed,immunisationsUpToDate,guardianUnderstands",
             ["antenatal@1"] = "antenatal@1|chiefComplaint!,subjective,obstetricHistory,fetalWellbeing,objective,assessment!,plan!|fetalMovementsFelt,supplementsContinued,dangerSignsExplained",
             ["teleconsult@1"] = "teleconsult@1|chiefComplaint!,subjective,remoteContext,objective,assessment!,plan!|identityConfirmed,limitsOfRemoteExam,inPersonIfWorse",
+            // MDV-P2-042: the structured review of systems and examination by system.
+            ["diabetes-review@2"] = "diabetes-review@2|chiefComplaint!,subjective,reviewOfSystems[ReviewOfSystems:tiredness;visionChange;chestPain;breathless;abdominalPain;nightUrination;tinglingFeet;footSores],selfMonitoring,footAndEyeCare,examination[Examination:general;heart;lungs;abdomen;feet;nervousSystem],objective,assessment!,plan!|adherenceDiscussed,dietAdvice,hba1cDue",
+            ["paediatrics@2"] = "paediatrics@2|chiefComplaint!,subjective,reviewOfSystems[ReviewOfSystems:fever;runnyNose;coughWheeze;earPain;vomitingDiarrhoea;lessUrine;rash;fitsOrDrowsy],growthAndDevelopment,immunisations,examination[Examination:general;ears;throat;lungs;heart;skin],objective,assessment!,plan!|feedingDiscussed,immunisationsUpToDate,guardianUnderstands",
+            ["antenatal@2"] = "antenatal@2|chiefComplaint!,subjective,reviewOfSystems[ReviewOfSystems:fever;headacheOrVision;palpitations;breathless;constipation;burningUrine;swellingFaceHands;vaginalBleeding],obstetricHistory,fetalWellbeing,examination[Examination:general;heart;lungs;abdomen;legs;breast],objective,assessment!,plan!|fetalMovementsFelt,supplementsContinued,dangerSignsExplained",
+            ["older-adult-review@1"] = "older-adult-review@1|chiefComplaint!,subjective,reviewOfSystems[ReviewOfSystems:weightLoss;dizzyOnStanding;breathless;indigestion;nightUrination;kneePain;weakness;lowMood],standingBloodPressure,walkingTest,frailty,homeSafety,examination[Examination:general;heart;lungs;joints;nervousSystem;feet],objective,assessment!,plan!|homeSafetyAdvice,medicineReviewDone,advanceCarePlanDiscussed",
         };
-        foreach (var t in NoteTemplates.History.Where(t => t.Version == 1)) Assert.Equal(pinned[$"{t.Key}@1"], t.Fingerprint);
+        foreach (var t in NoteTemplates.History) Assert.Equal(pinned[$"{t.Key}@{t.Version}"], t.Fingerprint);
         foreach (var g in NoteTemplates.History.GroupBy(t => t.Key)) Assert.Equal(Enumerable.Range(1, g.Count()), g.Select(t => t.Version).Order());
         Assert.Equal(NoteTemplates.History.Count, NoteTemplates.History.Select(t => (t.Key, t.Version)).Distinct().Count());
         Assert.Equal(1, NoteTemplates.Find("antenatal", 1)!.Version);
@@ -46,7 +51,7 @@ public sealed class NoteTemplateTests(PostgresFixture sql) : IClassFixture<Postg
     {
         var mine = h.Get<INoteTemplates>(h.Doctor);
         Assert.Equal(["general-opd"], (await mine.CatalogAsync()).Mine);
-        Assert.Equal(6, (await mine.CatalogAsync()).Templates.Count);
+        Assert.Equal(7, (await mine.CatalogAsync()).Templates.Count);
 
         Assert.Equal(["diabetes-review", "hypertension"], await mine.ChooseAsync(new(["hypertension", "diabetes-review", "hypertension"])));
         Assert.Equal(["hypertension"], await h.Get<INoteTemplates>(h.Doctor).ChooseAsync(new(["hypertension"])));

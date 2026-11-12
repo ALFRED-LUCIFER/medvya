@@ -18,7 +18,7 @@ const at = '2026-10-19T04:35:00Z';
 const side = (dose: string | null) => ({ dose, frequency: null, state: 'Active', needsClarification: false });
 type Decision = { kind: string; newDose: string | null; reason: string | null; decidedAt: string; fromDose: string | null; steps: { dose: string; days: number }[] | null; endsOn: string | null };
 
-async function open(page: Page, locale = 'en') {
+async function open(page: Page, locale = 'en', path = '/consult/e-1') {
   const calls = { decisions: [] as Record<string, unknown>[], advice: [] as unknown[], followUps: [] as unknown[] };
   const rx = await mockPrescription(page, { locale, lines: [line('rx-1', 'Metformin')] });
   await page.route('**/v1/me/context', r => r.fulfill({ json: doctor }));
@@ -56,7 +56,7 @@ async function open(page: Page, locale = 'en') {
     return r.fulfill({ json: followUp });
   });
   await page.route('**/v1/patients/p-1/referrals', r => r.fulfill({ json: [] }));
-  await page.goto('/consult/e-1');
+  await page.goto(path);
   return { calls, rx };
 }
 const plan = (page: Page) => page.locator('div:has(> #studio-plan)');
@@ -135,6 +135,11 @@ test('Referral moves focus to the visit\'s referrals, where the letter is writte
   await open(page);
   await plan(page).getByRole('link', { name: 'Referral' }).click();
   await expect(page.getByRole('heading', { name: 'Referrals' })).toBeFocused();
+});
+
+test('"Plan change" from the older adult medicine review lands on the Plan with focus', async ({ page }) => {
+  await open(page, 'en', '/consult/e-1#studio-plan');
+  await expect(page.getByRole('heading', { name: /^6 · / })).toBeFocused();
 });
 
 for (const locale of ['en', 'ar'])

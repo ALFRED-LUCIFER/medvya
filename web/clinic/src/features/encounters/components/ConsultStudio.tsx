@@ -4,11 +4,11 @@ import { useI18n, type MessageKey } from '@medvya/i18n';
 import { Button, Tabs, TabsContent, TabsList, TabsTrigger } from '@medvya/ui';
 import type { Patient360 } from '../../patient360/domain/chart';
 import { checklistIds, studioSections, templateOwnSections, type StudioSection } from '../domain/checklist';
-import type { StudioPanel } from '../domain/encounter';
+import { planHeading, type StudioPanel } from '../domain/encounter';
 import { templateNameKey } from '../domain/note';
 import NoteAssist from './NoteAssist';
 import type { NoteEditorProps } from './NoteEditor';
-import { SaveState, SectionField, SignedBanner, TemplatePicker } from './NoteParts';
+import { NoteSectionField, SaveState, SignedBanner, TemplatePicker } from './NoteParts';
 import { SignChecklist, SignedLine, SignNote } from './NoteSign';
 import RecordingConsentChoice from './RecordingConsentChoice';
 
@@ -25,8 +25,8 @@ const heading = (id: StudioSection) => `studio-${id}`;
 /**
  * E-04 one page (MDV-P2-041, CONSULTATION STUDIO): the recording consent first, a section bar that stays at the top, numbered sections over
  * today's template and a side panel (Assist, chart summary, checklist). The same form, autosave and sign as the guided steps.
- * shortcut: History and Examination hold today's text sections; the structured review of systems and examination (MDV-P2-042) go inside
- * them when they land. Plan holds its text and the plan's actions (MDV-P2-043).
+ * History holds the review of systems and Examination the examination by system when the template has them (MDV-P2-042).
+ * Plan holds its text and the plan's actions (MDV-P2-043), composed in by the route.
  */
 export default function ConsultStudio(p: Props) {
   const { t } = useI18n();
@@ -34,10 +34,13 @@ export default function ConsultStudio(p: Props) {
   const showAssist = !!p.assist && p.consent !== 'Declined';
   const { panel, onPanel } = p;
   useEffect(() => { if (!p.loading && !showAssist && panel === 'assist') onPanel('chart'); }, [p.loading, showAssist, panel, onPanel]);
+  // Arriving from "Plan change" (MDV-P2-037): focus the Plan once the note is there.
+  useEffect(() => { if (!p.loading && window.location.hash === `#${planHeading}`) document.getElementById(planHeading)?.focus(); }, [p.loading]);
   if (p.loading) return <p role="status">{t('noteEditor.loading')}</p>;
   if (p.loadFailed || !p.template || !p.templateKey || !p.ticks) return <p role="alert" className="font-bold text-danger-700">{t(p.forbidden ? 'noteEditor.forbidden' : 'noteEditor.loadFailed')}</p>;
   const { template, ticks } = p;
-  const field = (id: string) => template.sections.filter(s => s.id === id).map(s => <SectionField key={s.id} section={s} register={p.register} readOnly={p.readOnly} />);
+  const section = (s: (typeof template.sections)[number]) => <NoteSectionField key={s.id} section={s} register={p.register} readOnly={p.readOnly} answers={p.answers} onAnswers={p.onAnswers} />;
+  const field = (id: string) => template.sections.filter(s => s.id === id).map(section);
   const title = (id: StudioSection) => id === 'template' ? t(templateNameKey(template.key)) : t(`studio.section.${id}` as MessageKey);
   const done = p.checklist.filter(c => c.state !== 'todo').length;
   return (
@@ -62,15 +65,15 @@ export default function ConsultStudio(p: Props) {
               </>
               : <p className="text-sm text-muted-foreground">{t('noteAssist.vitals.empty')}</p>}
           </Numbered>
-          <Numbered id="history" title={title}>{field('chiefComplaint')}{field('subjective')}</Numbered>
+          <Numbered id="history" title={title}>{field('chiefComplaint')}{field('subjective')}{field('reviewOfSystems')}</Numbered>
           <Numbered id="template" title={title}>
-            <TemplatePicker templateKey={p.templateKey} choices={p.choices} readOnly={p.readOnly} pendingSwitch={p.pendingSwitch}
+            <TemplatePicker templateKey={p.templateKey} choices={p.choices} readOnly={p.readOnly} pendingSwitch={p.pendingSwitch} suggested={p.suggested}
               onRequestSwitch={p.onRequestSwitch} onCancelSwitch={p.onCancelSwitch} onConfirmSwitch={p.onConfirmSwitch} />
             {templateOwnSections(template).length === 0
               ? <p className="text-sm text-muted-foreground">{t('studio.template.none')}</p>
-              : templateOwnSections(template).map(s => <SectionField key={s.id} section={s} register={p.register} readOnly={p.readOnly} />)}
+              : templateOwnSections(template).map(section)}
           </Numbered>
-          <Numbered id="exam" title={title}>{field('objective')}</Numbered>
+          <Numbered id="exam" title={title}>{field('examination')}{field('objective')}</Numbered>
           <Numbered id="assessment" title={title}>{field('assessment')}</Numbered>
           <Numbered id="plan" title={title}>{field('plan')}{p.plan}</Numbered>
           <Numbered id="sign" title={title}>

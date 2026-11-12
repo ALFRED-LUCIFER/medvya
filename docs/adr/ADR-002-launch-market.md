@@ -1,6 +1,6 @@
 # ADR-002 · Launch market
 
-- **Status:** Accepted for India (founder, 2026-11-04): India first, Central India. UAE stays designed but not deployed. Azure OpenAI / AI Speech availability in Central India still to be confirmed (MDV-P0-003).
+- **Status:** Accepted for India (founder, 2026-11-04): India first, Central India. UAE stays designed but not deployed. Azure OpenAI and AI Speech are listed in Central India (checked 12 Nov 2026 with `az cognitiveservices`: gpt-4.1, gpt-4o, o4-mini, whisper; SpeechServices). Quota is requested when P3 starts. Founders Hub credits: not applied for now; revisit before production spend.
 - **Date:** 2026-10-20
 
 ## Context

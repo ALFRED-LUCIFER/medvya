@@ -312,9 +312,9 @@ public sealed class IntakeTests(PostgresFixture sql) : IClassFixture<PostgresFix
         await Intake(h.Nurse).RecordAsync(visit, Vitals(pulse: 70));
         await Intake(h.Nurse).ConfirmNoKnownAllergiesAsync(visit); // the allergy gate is its own tests; here the patient has none
         await Intake(h.Nurse).HandOffAsync(visit);
-        Assert.Equal("not_with_nurse", (await Assert.ThrowsAsync<IntakeConflictException>(() => Intake(h.Nurse).RecordAsync(visit, Vitals(pulse: 80)))).Code); // readings do not change after handoff
+        Assert.Equal("visit_closed", (await Assert.ThrowsAsync<IntakeConflictException>(() => Intake(h.Nurse).RecordAsync(visit, Vitals(pulse: 80)))).Code); // nothing changes between handoff and consultation
         var booked = await h.BookAsync(11);
-        Assert.Equal("not_with_nurse", (await Assert.ThrowsAsync<IntakeConflictException>(() => Intake(h.Nurse).RecordAsync(booked.Id, Vitals(pulse: 70)))).Code);
+        Assert.Equal("visit_closed", (await Assert.ThrowsAsync<IntakeConflictException>(() => Intake(h.Nurse).RecordAsync(booked.Id, Vitals(pulse: 70)))).Code);
     }
 
     [Fact]

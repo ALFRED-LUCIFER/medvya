@@ -62,6 +62,7 @@ public sealed partial class RxShareTests(PostgresFixture sql, AzuriteFixture blo
     public async Task InitializeAsync()
     {
         await h.SeedAsync();
+        await h.NoKnownAllergiesAsync(h.Patient);
         await h.DoctorTemplateAsync();
         await using (var db = sql.Context(h.Tenant))
         {

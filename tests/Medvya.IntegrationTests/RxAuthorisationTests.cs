@@ -40,6 +40,7 @@ public sealed class RxAuthorisationTests(PostgresFixture sql, AzuriteFixture blo
     public async Task InitializeAsync()
     {
         await h.SeedAsync();
+        await h.NoKnownAllergiesAsync(h.Patient);
         await h.DoctorTemplateAsync();
         // The doctor's profile and the licence the owner attested (ADR-016): what the paper prints.
         await using (var db = sql.Context(h.Tenant))
@@ -183,6 +184,25 @@ public sealed class RxAuthorisationTests(PostgresFixture sql, AzuriteFixture blo
         using var ok = await AuthoriseAsync(h.Doctor);
         Assert.Equal(HttpStatusCode.OK, ok.StatusCode);
         Assert.Single(await AuthorisedAsync());
+    }
+
+    // MDV audit P0-2. SAFETY mutation check: make AllergiesNotRecorded Moderate again in SafetyRules.Evaluate and this fails.
+    [Fact]
+    public async Task AllergiesNotRecordedNeedAReasonToAuthorise()
+    {
+        // The second patient has nothing on the chart: no allergy, no "no known allergies". One open consultation at a time.
+        await h.Get<IEncounters>(h.Doctor).EndAsync(encounter);
+        var visit = await h.BookAsync(11, patient: h.SecondPatient);
+        await h.FrontDesk(h.Reception).CheckInAsync(visit.Id, new CheckIn());
+        encounter = (await h.Get<IEncounters>(h.Doctor).StartAsync(new StartEncounter(visit.Id)))!.Id;
+        await PrescribeAsync("Metformin", Twice);
+        using (var refused = await AuthoriseAsync(h.Doctor))
+            Assert.Equal((HttpStatusCode.Conflict, "unresolved_alerts"), (refused.StatusCode, await Code(refused)));
+        Assert.Empty(await AuthorisedAsync());
+
+        await h.Get<IPrescriptions>(h.Doctor).OverrideAsync(encounter, new OverrideRxAlert("allergies:not_recorded", "Patient unconscious, no relative present (synthetic)"));
+        using var ok = await AuthoriseAsync(h.Doctor);
+        Assert.Equal(HttpStatusCode.OK, ok.StatusCode);
     }
 
     // SAFETY mutation check: drop the care-relationship check (RequireAsync in AuthoriseAsync) and the colleague case fails.
@@ -443,7 +463,7 @@ public sealed class RxAuthorisationTests(PostgresFixture sql, AzuriteFixture blo
                     Assert.Contains(marker, page.Text, StringComparison.Ordinal);
             });
             var text = string.Join(' ', pages.Select(x => x.Text));
-            foreach (var expected in new[] { "1. Metformin 500 mg Tablet", "Take 1 tablet by mouth twice a day after food", "Schedule H drug. Warning", "Allergies: not recorded" })
+            foreach (var expected in new[] { "1. Metformin 500 mg Tablet", "Take 1 tablet by mouth twice a day after food", "Schedule H drug. Warning", "Allergies: no known allergies" })
                 Assert.Contains(expected, text, StringComparison.Ordinal);
             Assert.Contains("https://clinic.test/app/verify/rx/", text.Replace(" ", "", StringComparison.Ordinal), StringComparison.Ordinal); // A5 wraps the long link
             Assert.True(pages[^1].Shapes > 200, "the QR code is drawn"); // a version 5+ code has hundreds of dark modules

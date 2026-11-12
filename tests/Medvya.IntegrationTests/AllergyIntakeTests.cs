@@ -214,8 +214,33 @@ public sealed class AllergyIntakeTests(PostgresFixture sql) : IClassFixture<Post
 
         await Intake(h.Nurse).SetAllergyStatusAsync(visit, allergy, new SetAllergyStatus(AllergyStatus.Confirmed));
         await Intake(h.Nurse).HandOffAsync(visit);
-        Assert.Equal("not_with_nurse", (await Assert.ThrowsAsync<IntakeConflictException>(() => Intake(h.Nurse).SetAllergyStatusAsync(visit, allergy, new SetAllergyStatus(AllergyStatus.Unknown)))).Code);
-        Assert.Equal("not_with_nurse", (await Assert.ThrowsAsync<IntakeConflictException>(() => Intake(h.Nurse).AddMedicineAsync(visit, new AddMedicine("X", null, null, false)))).Code);
+        Assert.Equal("visit_closed", (await Assert.ThrowsAsync<IntakeConflictException>(() => Intake(h.Nurse).SetAllergyStatusAsync(visit, allergy, new SetAllergyStatus(AllergyStatus.Unknown)))).Code);
+        Assert.Equal("visit_closed", (await Assert.ThrowsAsync<IntakeConflictException>(() => Intake(h.Nurse).AddMedicineAsync(visit, new AddMedicine("X", null, null, false)))).Code);
+    }
+
+    /// <summary>
+    /// MDV audit P0-2: a clinic with no nurse step. The doctor records "no known allergies", an allergy, vitals and a child's weight in the
+    /// consultation, and nothing once it has ended. SAFETY mutation check: drop InConsult from IntakeService.Open and this fails.
+    /// </summary>
+    [Fact]
+    public async Task TheDoctorRecordsAllergiesVitalsAndWeightInTheConsultationUntilItEnds()
+    {
+        await h.Get<IFeatureFlags>(h.Admin).SetAsync(IntakeFlag.Key, false, "clinical-team", "No nurse (synthetic test)");
+        var visit = await h.BookAsync(11);
+        await h.FrontDesk(h.Reception).CheckInAsync(visit.Id, new CheckIn());
+        Assert.Equal("visit_closed", (await Assert.ThrowsAsync<IntakeConflictException>(() => Intake(h.Doctor).ConfirmNoKnownAllergiesAsync(visit.Id))).Code); // not in the room yet
+        var encounter = await h.Get<IEncounters>(h.Doctor).StartAsync(new StartEncounter(visit.Id)) ?? throw new InvalidOperationException("No encounter.");
+
+        Assert.True((await Intake(h.Doctor).ConfirmNoKnownAllergiesAsync(visit.Id))!.NoKnownAllergiesConfirmed);
+        Assert.Equal(AllergyState.NoKnownAllergies, (await h.Get<IEncounters>(h.Doctor).AllergiesAsync(encounter.Id))!.State);
+        var view = (await Intake(h.Doctor).RecordAsync(visit.Id, new RecordIntake(null, [new(VitalKind.Weight, 18.4m), new(VitalKind.Pulse, 96m)])))!;
+        Assert.Equal(18.4m, view.Vitals.Single(v => v.Kind == VitalKind.Weight).Value);
+        var allergy = (await Intake(h.Doctor).AddAllergyAsync(visit.Id, new AddAllergy("Amoxicillin (synthetic)", null, AllergyStatus.Confirmed)))!.Allergies.Single();
+        Assert.Equal(AllergyState.Listed, (await h.Get<IEncounters>(h.Doctor).AllergiesAsync(encounter.Id))!.State);
+
+        await h.Get<IEncounters>(h.Doctor).EndAsync(encounter.Id);
+        Assert.Equal("visit_closed", (await Assert.ThrowsAsync<IntakeConflictException>(() => Intake(h.Doctor).SetAllergyStatusAsync(visit.Id, allergy.Id, new SetAllergyStatus(AllergyStatus.Unknown)))).Code);
+        Assert.Equal("visit_closed", (await Assert.ThrowsAsync<IntakeConflictException>(() => Intake(h.Doctor).RecordAsync(visit.Id, new RecordIntake(null, [new(VitalKind.Weight, 18.5m)])))).Code);
     }
 
     [Fact]

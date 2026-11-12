@@ -58,7 +58,7 @@ test('the nurse works the intake from the queue to the handoff', async ({ page }
   await expect(handOff).toBeDisabled();
   await expect(page.getByText('Confirm allergy status to hand off.')).toBeVisible();
   await page.getByRole('button', { name: 'Confirm: no known allergies' }).click();
-  await expect(page.getByText('No known allergies, confirmed by the nurse.')).toBeVisible();
+  await expect(page.getByText('No known allergies, confirmed at this visit.')).toBeVisible();
   await expect(handOff).toBeEnabled();
   await handOff.click();
   await expect(page).toHaveURL(/\/nurse$/);

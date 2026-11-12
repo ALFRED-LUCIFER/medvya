@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { MessageKey } from '@medvya/i18n';
 import type { SexAtBirth } from '../../patients/domain/directory';
 import type { ChartSource } from '../../patient360/domain/chart';
 
@@ -104,3 +105,15 @@ export function invalidKind(field: string, sent: readonly { kind: VitalKind }[])
   const m = /^vitals\[(\d+)\]/.exec(field);
   return m ? (sent[Number(m[1])]?.kind ?? null) : null;
 }
+
+/** Fields of the vitals form; other refused fields belong to the allergy and medicine forms. */
+export const isVitalsField = (field: string) => field.startsWith('vitals') || field === 'chiefComplaint';
+const knownCodes = ['has_allergies', 'implausible', 'too_precise', 'systolic_not_above_diastolic', 'not_with_nurse', 'visit_closed', 'handoff_blocked', 'not_flagged'] as const;
+
+export function problemKey(p: IntakeProblem): MessageKey {
+  if (p.kind === 'invalid' || p.kind === 'conflict') return (knownCodes as readonly string[]).includes(p.code) ? `intake.error.${p.code as (typeof knownCodes)[number]}` : 'intake.error.failed';
+  return p.kind === 'refused' ? 'intake.error.refused' : 'intake.error.failed';
+}
+
+/** The visit takes vitals and allergies with the nurse and again in the consultation (MDV audit P0-2); the server decides, this only shows it. */
+export const recordable = (state: string) => state === 'WithNurse' || state === 'InConsult';

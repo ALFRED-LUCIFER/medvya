@@ -170,6 +170,19 @@ internal sealed class SchedulingHarness(PostgresFixture sql)
         await flags.SetAsync(VisitStepFlags.Billing, billing, "practice", "Billing (synthetic test)");
     }
 
+    /// <summary>"No known allergies" on the chart: signing a note and authorising a prescription refuse an unrecorded allergy state (MDV audit P0-2).</summary>
+    public async Task NoKnownAllergiesAsync(Guid patient)
+    {
+        await using var db = sql.Encounters(Tenant);
+        var now = Clock.GetUtcNow();
+        db.Allergies.Add(new Medvya.Encounters.Domain.Allergy
+        {
+            Id = Guid.CreateVersion7(), TenantId = Tenant, FacilityId = Facility, PatientId = patient, Kind = Medvya.Encounters.Domain.AllergyKind.NoKnownAllergies,
+            Status = Medvya.Encounters.Domain.AllergyStatus.Confirmed, Source = Medvya.Encounters.Domain.ChartSource.ClinicianVerified, RecordedBy = Doctor, RecordedAt = now, StatusSetBy = Doctor, StatusSetAt = now,
+        });
+        await db.SaveChangesAsync();
+    }
+
     public IFrontDeskService FrontDesk(Guid user, Guid? inTenant = null) => Scope(user, inTenant).GetRequiredService<IFrontDeskService>();
 
     /// <summary>Reception books Dr. Rao for <paramref name="patient"/> at a Monday wall-clock time, or at <paramref name="start"/>.</summary>

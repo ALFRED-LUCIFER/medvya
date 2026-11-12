@@ -15,14 +15,14 @@ const at = '2026-10-19T04:35:00Z';
 const signer = 'Dr Asha Raman (synthetic)';
 
 // These specs cover the guided steps (the note as one card); the one-page view (MDV-P2-041) is consult-studio.spec.ts, over the same mocks.
-async function open(page: Page, seed: Parameters<typeof mockNote>[1] = {}, locale = 'en', context: typeof doctor = doctor) {
+async function open(page: Page, seed: Parameters<typeof mockNote>[1] = {}, locale = 'en', context: typeof doctor = doctor, allergies = 'NoKnownAllergies') {
   await page.addInitScript(l => { localStorage.setItem('medvya.locale', l); localStorage.setItem('medvya.consultView', 'steps'); }, locale);
   await page.route('**/v1/me/context', r => r.fulfill({ json: context }));
   await page.route('**/v1/encounters/e-1', r => r.fulfill({ json: {
     encounter: { id: 'e-1', appointmentId: 'a1', patientId: 'p-a1', facilityId: 'f-1', leadClinicianId: 'u-rao', status: 'Active', authorityMode: 'Medvya', startedAt: at, endedAt: null, room: 'Room 3' },
     timeZone: 'Asia/Kolkata', treatmentConsent: true,
     patient: { id: 'p-a1', fullName: 'Meera Iyer (synthetic)', mrn: '000001', dateOfBirth: '1972-03-12', ageYears: 54, sexAtBirth: 'Female' },
-    allergies: { state: 'NotRecorded', allergies: [] } } }));
+    allergies: { state: allergies, allergies: [] } } }));
   const mock = await mockNote(page, seed);
   await page.goto('/consult/e-1');
   return mock;
@@ -164,6 +164,18 @@ test('sign: blank required sections keep Sign locked and are named in the checkl
   await expect(note(page).getByLabel('Chief complaint')).toBeFocused();
 });
 
+// MDV audit P0-2: allergies not recorded lock Sign, and the sign message says so; it never reads "ready" beside them.
+test('checklist: allergies not recorded keep Sign locked', async ({ page }) => {
+  await open(page, { version: 1, sections: { chiefComplaint: 'Thirst', assessment: 'Review', plan: 'Rest' }, recordingConsent: 'Declined' }, 'en', doctor, 'NotRecorded');
+  const sign = note(page).getByRole('button', { name: 'Sign note' });
+  await expect(note(page).getByRole('region', { name: 'Review and sign' }).getByRole('listitem').filter({ hasText: 'Allergies reconciled' })).toHaveText('Allergies reconciledTo do');
+  await expect(sign).toBeDisabled();
+  await expect(sign).toHaveAccessibleDescription('1 item still needs your review before signing');
+  // The guided steps have the same entry above the note, so the doctor is never locked out without a way to record them.
+  await page.getByRole('region', { name: 'Vitals' }).getByRole('button', { name: 'Confirm: no known allergies' }).click();
+  await expect(page.getByRole('region', { name: 'Vitals' })).toContainText('No known allergies, confirmed at this visit.');
+});
+
 // MDV audit UX-11: "Diagnoses reviewed" is Done only with a diagnosis on the problem list; an assessment without one is said, and does not lock Sign.
 test('checklist: an assessment with no diagnosis on the problem list is not Done', async ({ page }) => {
   const mock = await open(page, { version: 1, sections: { chiefComplaint: 'Thirst', assessment: 'Review', plan: 'Rest' }, recordingConsent: 'Declined' });
@@ -183,7 +195,7 @@ test('checklist: Sign stays locked until the recording consent is recorded; each
   await expect(sign).toHaveAccessibleDescription('1 item still needs your review before signing');
   const checklist = note(page).getByRole('region', { name: 'Review and sign' });
   await expect(checklist.getByRole('listitem')).toHaveText([
-    'Identity confirmed (name and date of birth)Done', 'Allergies reconciledNot recorded: ask the patient', 'Medicines reconciledDone',
+    'Identity confirmed (name and date of birth)Done', 'Allergies reconciledDone', 'Medicines reconciledDone',
     'Recording consent recordedTo do', 'History reviewedDone', 'Every AI suggestion accepted or dismissedDone', 'Diagnoses reviewedDone', 'Plan reviewedDone',
   ]);
   const consent = note(page).getByRole('group', { name: 'Recording consent for this visit' });

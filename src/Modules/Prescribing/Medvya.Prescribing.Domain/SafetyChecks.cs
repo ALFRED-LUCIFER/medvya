@@ -106,7 +106,7 @@ public sealed record InteractionRule(
 public static class SafetyRules
 {
     /// <summary>The rule set's name (a code the screens translate) and version, recorded with every check and override.</summary>
-    public const string Source = "medvya-curated", Version = "2026.11-draft-3";
+    public const string Source = "medvya-curated", Version = "2026.11-draft-4";
 
     public static readonly IReadOnlyList<AllergyClass> Classes =
     [
@@ -184,9 +184,9 @@ public static class SafetyRules
         var notChecked = new List<NotChecked>();
         var doses = new List<WeightDose>();
         var onRaas = lines.Concat(chart).Any(m => !m.FreeText && m.Atc is { } a && Starts(a, Raas));
-        // Unknown is not "none": without a recorded allergy state the allergy check cannot run, and says so.
+        // Unknown is not "none": without a recorded allergy state the allergy check cannot run, so authorising needs a reason (MDV audit P0-2).
         if (state == ChartAllergies.NotRecorded && lines.Count > 0)
-            alerts.Add(new("allergies:not_recorded", RxAlertKind.AllergiesNotRecorded, RxSeverity.Moderate, null, null, null, false, null, null, null, null, null));
+            alerts.Add(new("allergies:not_recorded", RxAlertKind.AllergiesNotRecorded, RxSeverity.Severe, null, null, null, false, null, null, null, null, null));
 
         foreach (var line in lines)
         {

@@ -28,6 +28,7 @@ public sealed class StructuredNoteTests(PostgresFixture sql) : IClassFixture<Pos
     public async Task InitializeAsync()
     {
         await h.SeedAsync();
+        await h.NoKnownAllergiesAsync(h.Patient);
         await h.DoctorTemplateAsync();
         factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b
             .UseSetting("ConnectionStrings:Medvya", sql.ConnectionString)

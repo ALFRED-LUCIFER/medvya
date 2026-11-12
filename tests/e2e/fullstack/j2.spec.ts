@@ -106,9 +106,13 @@ journey('J2', {
     // immutable v1 and its signer line with the attested licence number are the server's.
     await note.getByLabel('Assessment').fill('Raised blood sugar, review (synthetic)');
     await note.getByLabel('Plan').fill('Diet advice, review in two weeks (synthetic)');
-    // MDV-P2-044: Sign stays locked until the recording consent is recorded (the server refuses it too); allergies not recorded are said, not a lock.
+    // MDV-P2-044: Sign stays locked until the recording consent is recorded (the server refuses it too). MDV audit P0-2: and until allergies are
+    // recorded; with no nurse step the doctor asks and records "no known allergies" in the Vitals section of the consultation.
     await expect(note.getByRole('button', { name: 'Sign note' })).toBeDisabled();
     await note.getByRole('radio', { name: 'Patient declined: I type the note' }).check();
+    await expect(note.getByRole('button', { name: 'Sign note' })).toBeDisabled();
+    await note.getByRole('button', { name: 'Confirm: no known allergies' }).click();
+    await expect(note).toContainText('No known allergies, confirmed at this visit.');
     await expect(note.getByRole('status').filter({ hasText: /^Saved$/ })).toBeVisible(); // the one-page view has a second status (the chart panel)
     await expect(note.getByRole('button', { name: 'Sign note' })).toHaveAccessibleDescription('Everything reviewed. Ready to sign.');
     await note.getByRole('button', { name: 'Sign note' }).click();

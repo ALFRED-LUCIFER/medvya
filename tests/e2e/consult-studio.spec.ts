@@ -13,14 +13,14 @@ const doctor = {
 };
 const at = '2026-10-19T04:35:00Z';
 
-async function open(page: Page, seed: Parameters<typeof mockNote>[1] = {}, locale = 'en') {
+async function open(page: Page, seed: Parameters<typeof mockNote>[1] = {}, locale = 'en', banner = () => ({ state: 'Listed', allergies: [{ substance: 'Amoxicillin', reaction: 'Rash', status: 'Confirmed', source: 'ClinicianVerified' }] })) {
   await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
   await page.route('**/v1/me/context', r => r.fulfill({ json: doctor }));
   await page.route('**/v1/encounters/e-1', r => r.fulfill({ json: {
     encounter: { id: 'e-1', appointmentId: 'a1', patientId: 'p-a1', facilityId: 'f-1', leadClinicianId: 'u-rao', status: 'Active', authorityMode: 'Medvya', startedAt: at, endedAt: null, room: 'Room 3' },
     timeZone: 'Asia/Kolkata', treatmentConsent: true,
     patient: { id: 'p-a1', fullName: 'Meera Iyer (synthetic)', mrn: '000001', dateOfBirth: '1972-03-12', ageYears: 54, sexAtBirth: 'Female' },
-    allergies: { state: 'Listed', allergies: [{ substance: 'Amoxicillin', reaction: 'Rash', status: 'Confirmed', source: 'ClinicianVerified' }] } } }));
+    allergies: banner() } }));
   await page.route('**/v1/patients/p-a1/chart', r => r.fulfill({ json: {
     patient: { id: 'p-a1', fullName: 'Meera Iyer (synthetic)', mrn: '000001', dateOfBirth: '1972-03-12', ageYears: 54, sexAtBirth: 'Female' }, treatmentConsent: true, timeZone: 'Asia/Kolkata',
     chart: { allergyState: 'Listed', allergies: [], lastVitals: [], trends: [], recentEncounters: [], openEncounterId: 'e-1',
@@ -216,3 +216,22 @@ for (const locale of ['en', 'ar'])
     }
     expect(await axe(page)).toEqual([]);
   });
+
+// MDV audit P0-2: a clinic with no nurse. The doctor records vitals and allergies in the Vitals section; "no known allergies" clears the checklist item.
+for (const locale of ['en', 'ar']) {
+  test(`the doctor confirms no known allergies in the Vitals section and the checklist follows (${locale})`, async ({ page }) => {
+    let mock: Awaited<ReturnType<typeof open>> | null = null;
+    mock = await open(page, { version: 1, sections: { chiefComplaint: 'Thirst', assessment: 'Review', plan: 'Rest' }, recordingConsent: 'Declined' }, locale,
+      () => (mock?.noKnownAllergies ? { state: 'NoKnownAllergies', allergies: [] } : { state: 'NotRecorded', allergies: [] }));
+    const vitals = page.locator('#studio-vitals').locator('..');
+    await expect(vitals.getByRole('textbox')).toHaveCount(10); // eight readings, the allergy substance and reaction
+    if (locale === 'en') {
+      const sign = note(page).getByRole('button', { name: 'Sign note' });
+      await expect(sign).toBeDisabled();
+      await vitals.getByRole('button', { name: 'Confirm: no known allergies' }).click();
+      await expect(vitals).toContainText('No known allergies, confirmed at this visit.');
+      await expect(sign).toBeEnabled();
+    }
+    expect(await axe(page)).toEqual([]);
+  });
+}

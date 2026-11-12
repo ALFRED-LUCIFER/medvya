@@ -1,13 +1,14 @@
 import type { FormEventHandler } from 'react';
 import { Link } from 'react-router';
 import type { UseFormReturn } from 'react-hook-form';
-import { CircleCheck, TriangleAlert } from 'lucide-react';
+import { TriangleAlert } from 'lucide-react';
 import { ltr, useI18n, type MessageKey } from '@medvya/i18n';
-import { Button, buttonVariants, Input, Label, Textarea, PageContainer } from '@medvya/ui';
+import { Button, buttonVariants, Label, Textarea, PageContainer } from '@medvya/ui';
 import AllergiesSection from './AllergiesSection';
 import MedicinesSection from './MedicinesSection';
+import VitalsForm from './VitalsForm';
 import {
-  allergyBlockers, undecided, vitalKinds, vitalUnits, weightChange, type IntakeForm, type AllergyForm, type AllergyStatus, type IntakeProblem, type IntakeScreen, type MedicineForm, type VitalKind, type VitalView,
+  allergyBlockers, isVitalsField, problemKey, type IntakeForm, type AllergyForm, type AllergyStatus, type IntakeProblem, type IntakeScreen, type MedicineForm, type VitalKind,
 } from '../domain/intake';
 
 type Props = {
@@ -38,7 +39,6 @@ export default function IntakePage(p: Props) {
     return <Message title={t(p.refused ? 'intake.refused' : p.notFound ? 'intake.notFound' : 'intake.loadFailed')} queuePath={p.queuePath} />;
   const { intake, patient, timeZone } = p.screen;
   const withNurse = intake.state === 'WithNurse';
-  const { errors } = p.form.formState;
   const readOnly = !withNurse;
   const blocked = intake.blockers.length > 0 || p.dirty;
   // Every reason the handoff waits, in words: the allergy gate first, as it is the one that must never be skipped.
@@ -52,22 +52,8 @@ export default function IntakePage(p: Props) {
     <PageContainer width="reading">
       <Identity patient={patient} />
       {readOnly && <p role="status" className="font-bold">{t('intake.handedOff')}</p>}
-      <form noValidate onSubmit={p.onSave} className="flex flex-col gap-4 rounded-xl border bg-card p-4">
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="intake-complaint" className="text-base font-bold">{t('intake.complaint')}</Label>
-          <Textarea id="intake-complaint" rows={2} maxLength={500} readOnly={readOnly} className="min-h-14 text-base" {...p.form.register('chiefComplaint')} />
-        </div>
-        <h2 className="text-lg font-extrabold">{t('intake.vitals')}</h2>
-        <div className="grid gap-4 sm:grid-cols-2">
-          {vitalKinds.map(kind => (
-            <VitalField key={kind} kind={kind} form={p.form} timeZone={timeZone} view={intake.vitals.find(v => v.kind === kind)} readOnly={readOnly}
-              invalid={errors[kind] !== undefined ? 'value' : p.badKind === kind && p.problem?.kind === 'invalid' ? p.problem.code : null}
-              keeping={p.keeping === kind} onKeep={p.onKeep} onRemeasure={p.onRemeasure} />
-          ))}
-        </div>
-        {p.problem?.kind === 'invalid' && p.badKind === null && isVitalsField(p.problem.field) && <p role="alert" className={fieldError}>{t(problemKey(p.problem))}</p>}
-        {!readOnly && <Button type="submit" className="min-h-11 self-start" loading={p.saving} disabled={!p.online}>{t('intake.save')}</Button>}
-      </form>
+      <VitalsForm form={p.form} vitals={intake.vitals} timeZone={timeZone} readOnly={readOnly} online={p.online} problem={p.problem} badKind={p.badKind}
+        saving={p.saving} keeping={p.keeping} onSave={p.onSave} onKeep={p.onKeep} onRemeasure={p.onRemeasure} withComplaint />
 
       <AllergiesSection allergies={intake.allergies} noKnownConfirmed={intake.noKnownAllergiesConfirmed} form={p.allergyForm} readOnly={readOnly} online={p.online}
         settingId={p.settingAllergy} adding={p.addingAllergy} confirmingNone={p.confirmingNone} onStatus={p.onAllergyStatus} onAdd={p.onAddAllergy} onNone={p.onNoKnownAllergies}
@@ -103,15 +89,6 @@ export default function IntakePage(p: Props) {
   );
 }
 
-/** Fields of the vitals form; other refused fields belong to the allergy and medicine forms. */
-const isVitalsField = (field: string) => field.startsWith('vitals') || field === 'chiefComplaint';
-const knownCodes = ['has_allergies', 'implausible', 'too_precise', 'systolic_not_above_diastolic', 'not_with_nurse', 'handoff_blocked', 'not_flagged'] as const;
-
-function problemKey(p: IntakeProblem): MessageKey {
-  if (p.kind === 'invalid' || p.kind === 'conflict') return (knownCodes as readonly string[]).includes(p.code) ? `intake.error.${p.code as (typeof knownCodes)[number]}` : 'intake.error.failed';
-  return p.kind === 'refused' ? 'intake.error.refused' : 'intake.error.failed';
-}
-
 function Identity({ patient }: { patient: IntakeScreen['patient'] }) {
   const { t, formatCalendarDate } = useI18n();
   return (
@@ -124,50 +101,6 @@ function Identity({ patient }: { patient: IntakeScreen['patient'] }) {
       </div>
       <p className="text-sm text-muted-foreground">{t('intake.identity.check')}</p>
     </section>
-  );
-}
-
-type FieldProps = {
-  kind: VitalKind; form: UseFormReturn<IntakeForm>; view: VitalView | undefined; timeZone: string; readOnly: boolean; invalid: string | null;
-  keeping: boolean; onKeep: (kind: VitalKind) => void; onRemeasure: (kind: VitalKind) => void;
-};
-
-/** One vital sign: a large input, the previous reading, and when the saved reading is flagged, the flag in words with its two ways forward. */
-function VitalField({ kind, form, view, timeZone, readOnly, invalid, keeping, onKeep, onRemeasure }: FieldProps) {
-  const { t, formatDate } = useI18n();
-  const name = t(`intake.vital.${kind}`);
-  const id = `intake-${kind}`;
-  const hint = `${id}-hint`;
-  const previous = view?.previousValue != null && view.previousAt
-    ? t('intake.previous', { value: ltr(String(view.previousValue)), unit: ltr(vitalUnits[kind]), date: formatDate(new Date(view.previousAt), timeZone) }) : t('intake.noPrevious');
-  const change = view ? weightChange(view) : null;
-  return (
-    <div className="flex flex-col gap-1.5">
-      <Label htmlFor={id} className="text-base font-bold">{name}</Label>
-      <div className="flex items-center gap-2">
-        <Input id={id} inputMode="decimal" autoComplete="off" readOnly={readOnly} className="h-14 max-w-[9rem] text-2xl font-bold" aria-invalid={invalid !== null}
-          aria-describedby={hint} {...form.register(kind)} />
-        <span className="text-base text-muted-foreground">{ltr(vitalUnits[kind])}</span>
-      </div>
-      <p id={hint} className="text-sm text-muted-foreground">{previous}</p>
-      {invalid && <p role="alert" className={fieldError}>{t(invalid === 'value' ? 'intake.error.value' : invalid === 'too_precise' ? 'intake.error.too_precise' : 'intake.error.implausible')}</p>}
-      {view && view.flag !== null && (
-        <div className="flex flex-col gap-2 rounded-md border-2 border-warning-700 p-2">
-          <p className="inline-flex items-center gap-1.5 font-bold">
-            <TriangleAlert aria-hidden className="size-4" />
-            {view.flag === 'Changed' ? t('intake.flag.Changed', { delta: ltr(change ?? ''), unit: ltr(vitalUnits[kind]), date: view.previousAt ? formatDate(new Date(view.previousAt), timeZone) : '' }) : t(`intake.flag.${view.flag}`)}
-          </p>
-          {view.flagKept
-            ? <p className="inline-flex items-center gap-1.5 text-sm font-semibold"><CircleCheck aria-hidden className="size-4" />{t('intake.flag.kept')}</p>
-            : undecided(view) && !readOnly && (
-              <div className="flex flex-wrap gap-2">
-                <Button type="button" variant="outline" className="min-h-11 whitespace-normal" aria-label={t('intake.action.remeasureFor', { name })} onClick={() => onRemeasure(kind)}>{t('intake.action.remeasure')}</Button>
-                <Button type="button" variant="outline" className="min-h-11 whitespace-normal" loading={keeping} aria-label={t('intake.action.keepFor', { name })} onClick={() => onKeep(kind)}>{t('intake.action.keep')}</Button>
-              </div>
-            )}
-        </div>
-      )}
-    </div>
   );
 }
 

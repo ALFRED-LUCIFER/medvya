@@ -40,7 +40,7 @@ async function open(page: Page, locale = 'en') {
   // The server answers only for patients this doctor may treat: Farah (a colleague's) is left out, so she shows no flag.
   await page.route('**/v1/chart/allergy-flags', r => {
     flagRequests.push(r.request().postDataJSON() as { patientIds: string[] });
-    return r.fulfill({ json: { items: [{ patientId: 'p-a1', state: 'Listed' }, { patientId: 'p-a2', state: 'NotRecorded' }] } });
+    return r.fulfill({ json: { items: [{ patientId: 'p-a1', state: 'Listed', abnormalVitals: true }, { patientId: 'p-a2', state: 'NotRecorded', abnormalVitals: false }] } });
   });
   // The nurse's urgent item for Meera's visit (MDV-P2-007); the server answers only for patients this doctor may treat.
   await page.route('**/v1/intake-escalations?*', r => r.fulfill({ json: [
@@ -78,6 +78,8 @@ test('each visit shows its allergy state in words and links to the chart; a pati
   await open(page);
   const list = page.getByRole('region', { name: "Today's visits" });
   await expect(page.getByRole('region', { name: 'Next patient' })).toContainText('Allergies listed');
+  await expect(page.getByRole('region', { name: 'Next patient' })).toContainText('Abnormal vitals today'); // MDV-1090: words and an icon
+  await expect(list.getByRole('article').filter({ hasText: 'Deepak Nair' })).not.toContainText('Abnormal vitals');
   await expect(list.getByRole('article').filter({ hasText: 'Deepak Nair' })).toContainText('Allergies not recorded'); // unknown is never "none"
   await page.getByRole('button', { name: 'Whole clinic' }).click();
   await expect(list.getByRole('article').filter({ hasText: 'Farah Ali' })).not.toContainText(/llergies/);

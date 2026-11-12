@@ -64,7 +64,7 @@ public sealed class StaleNoteException(int current) : Exception("The note change
 /// One reading offered to the Objective section (MDV-P2-009): taken and verified by a nurse at this visit's intake. The source says who and when;
 /// nothing is derived or filled in. <see cref="RecordedByName"/> is null when the staff member can no longer be named.
 /// </summary>
-public sealed record VerifiedVital(ObservationCode Code, decimal Value, string Unit, DateTimeOffset TakenAt, ChartSource Source, string? RecordedByName);
+public sealed record VerifiedVital(ObservationCode Code, decimal Value, string Unit, DateTimeOffset TakenAt, ChartSource Source, string? RecordedByName, VitalAlert? Flag);
 
 /// <summary>A signed note of the same patient, offered as snippets (MDV-P2-009). Version 1 only: an addendum is not a note of its own.</summary>
 public sealed record PreviousNote(Guid EncounterId, DateTimeOffset SignedAt, string? SignedByName, string TemplateKey, IReadOnlyDictionary<string, string> Sections);

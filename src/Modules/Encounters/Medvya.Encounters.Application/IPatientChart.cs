@@ -9,8 +9,8 @@ public sealed record AllergyView(string Substance, string? Reaction, AllergyStat
 /// <summary>The banner's allergy answer: the state and, when listed, the allergies (MDV-P2-004).</summary>
 public sealed record AllergyBanner(AllergyState State, IReadOnlyList<AllergyView> Allergies);
 
-/// <summary>One patient's allergy state, for a list of visits (Today). No substances: the list shows a flag, the chart shows the detail.</summary>
-public sealed record AllergyFlag(Guid PatientId, AllergyState State);
+/// <summary>One patient's allergy state and whether a nurse's reading in the last day was out of range (MDV-1090), for a list of visits (Today). No substances: the list shows a flag, the chart shows the detail.</summary>
+public sealed record AllergyFlag(Guid PatientId, AllergyState State, bool AbnormalVitals);
 
 public sealed record ProblemView(string? Icd10Code, string Description, ProblemVerification Verification, DateOnly? OnsetOn, ChartSource Source, ProblemStatus Status = ProblemStatus.Active);
 /// <summary><see cref="EncounterId"/>: the visit whose authorised prescription put it on the chart (MDV-1087); its printed prescription is that visit's.</summary>

@@ -47,7 +47,7 @@ test('a formulary medicine gets a dose that autosaves and reads in the chosen pr
   await expect(rx.getByRole('link', { name: 'Print prescription' })).toHaveCount(0);
 });
 
-test('an invalid dose is named and not saved; a switched-off line stays listed', async ({ page }) => {
+test('an invalid dose is named and not saved; a removed line leaves the list', async ({ page }) => {
   const { calls } = await mockPrescription(page, { lines: [line('rx-1', 'Metformin')] });
   await page.goto('/consult/e-1');
   const metformin = card(page, 'Metformin');
@@ -58,10 +58,9 @@ test('an invalid dose is named and not saved; a switched-off line stays listed',
   await expect(metformin.getByText('Saved')).toBeVisible();
   expect(calls.saved).toEqual([{ dose: '2', doseUnit: null, route: null, frequency: null, timing: null, durationDays: 5, quantity: null, instructions: null }]);
 
-  await metformin.getByRole('switch', { name: 'Include Metformin' }).click();
+  await metformin.getByRole('button', { name: 'Remove Metformin' }).click();
   expect(calls.included).toEqual([{ included: false }]);
-  await expect(metformin).toContainText('Not included');
-  await expect(metformin.getByLabel('Dose')).toBeDisabled();
+  await expect(metformin).toHaveCount(0);
 });
 
 test('a free-text medicine is flagged and a reconciliation stop is a discontinue line', async ({ page }) => {

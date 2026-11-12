@@ -158,7 +158,6 @@ public sealed class PrescriptionService(
     {
         // The endpoint already needs Sign on Prescriptions and orders; this adds the care relationship, then the step-up, as signing the note does.
         if (await RequireAsync(encounterId, cancellationToken) is not { } encounter) return null;
-        var now = RequireFreshReauth();
         // A paper prescription carries the doctor's licence (ADR-016): a member with no licence on record cannot authorise one.
         if (await facilities.PrescriberAsync(Me, encounter.FacilityId, cancellationToken) is null) throw new PrescriptionConflictException("no_licence");
         var lines = await DraftAsync(encounter.Id, cancellationToken);
@@ -167,6 +166,8 @@ public sealed class PrescriptionService(
         // The checks run again here, never trusted from the screen: a severe alert without a reason stops the authorisation.
         var checks = await ChecksAsync(encounter, cancellationToken);
         if (checks.Unresolved > 0) throw new PrescriptionConflictException("unresolved_alerts");
+        // MDV-AUDIT-1096: the step-up comes last, so a draft that cannot be authorised never costs the doctor a re-authentication.
+        var now = RequireFreshReauth();
 
         var advice = await AdviceTextAsync(encounter.Id, cancellationToken);
         var hash = AuthorisedPrescription.Hash(lines, advice);

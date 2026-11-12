@@ -90,8 +90,7 @@ public sealed class ConsultNoteService(
 
         var template = note is null ? NoteTemplates.Latest(NoteTemplates.Default) : NoteTemplates.Find(note.TemplateKey, note.TemplateVersion);
         var blanks = template!.Sections.Where(s => s.Required && string.IsNullOrWhiteSpace(note?.Sections.GetValueOrDefault(s.Id))).Select(s => ($"sections.{s.Id}", "required")).ToList();
-        // MDV-P2-044: the checklist's server gates, so the locked Sign button is not the only control. Remove one and SignNoteTests fails.
-        if (note?.RecordingConsent is null) blanks.Add(("recordingConsent", "required"));
+        // MDV-P2-044: the checklist's server gates (no recording consent until recording exists, MDV-AUDIT-1092), so the locked Sign button is not the only control. Remove one and SignNoteTests fails.
         if (note?.UndecidedAi.Length > 0) blanks.Add(("undecidedAi", "undecided"));
         // Allergies not recorded (no allergy and no "no known allergies" on the chart) is never signed past (MDV audit P0-2).
         if (!await db.Allergies.AnyAsync(a => a.PatientId == encounter.PatientId, cancellationToken)) blanks.Add(("allergies", "not_recorded"));

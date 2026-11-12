@@ -9,16 +9,16 @@ const ready: ChecklistInput = {
 const state = (i: ChecklistInput) => Object.fromEntries(signChecklist(i).map(x => [x.id, x.state]));
 
 describe('review and sign checklist (MDV-P2-044)', () => {
-  it('is complete for a reviewed note and lists the eight items in order', () => {
-    expect(signChecklist(ready).map(x => x.id)).toEqual(['identity', 'allergies', 'medicines', 'consent', 'history', 'ai', 'diagnoses', 'plan']);
+  it('is complete for a reviewed note and lists the seven items in order, with no recording consent row until recording exists (MDV-AUDIT-1092)', () => {
+    expect(signChecklist(ready).map(x => x.id)).toEqual(['identity', 'allergies', 'medicines', 'history', 'ai', 'diagnoses', 'plan']);
     expect(remainingItems(signChecklist(ready))).toBe(0);
   });
 
-  it('counts unrecorded consent, blank required sections and an unread reconciliation', () => {
+  it('counts blank required sections and an unread reconciliation', () => {
     const items = signChecklist({ ...ready, recordingConsent: null, sections: { chiefComplaint: ' ' }, reconciliation: null });
     expect(state({ ...ready, recordingConsent: null, sections: { chiefComplaint: ' ' }, reconciliation: null }))
-      .toMatchObject({ consent: 'todo', history: 'todo', diagnoses: 'todo', plan: 'todo', medicines: 'todo', identity: 'done' });
-    expect(remainingItems(items)).toBe(5);
+      .toMatchObject({ history: 'todo', diagnoses: 'todo', plan: 'todo', medicines: 'todo', identity: 'done' });
+    expect(remainingItems(items)).toBe(4);
   });
 
   it('a reconciliation with medicines is done only once confirmed', () => {
@@ -39,8 +39,8 @@ describe('review and sign checklist (MDV-P2-044)', () => {
     expect(state({ ...ready, allergyState: 'NoKnownAllergies' }).allergies).toBe('done');
   });
 
-  it('withdrawn consent is a recorded answer', () => {
-    expect(remainingItems(signChecklist({ ...ready, recordingConsent: 'Withdrawn' }))).toBe(0);
+  it('a missing recording consent never counts against signing (MDV-AUDIT-1092)', () => {
+    expect(remainingItems(signChecklist({ ...ready, recordingConsent: null }))).toBe(0);
   });
 
   it('diagnoses are done only with a diagnosis on the problem list; an assessment without one is said, not locked (MDV audit UX-11)', () => {

@@ -133,7 +133,9 @@ test('the follow-up is one choice the front desk books from its due day; picking
 
 test('Referral moves focus to the visit\'s referrals, where the letter is written', async ({ page }) => {
   await open(page);
+  await expect(page.getByRole('region', { name: 'Referrals' })).toBeHidden(); // closed until used (MDV audit P1-04)
   await plan(page).getByRole('link', { name: 'Referral' }).click();
+  await expect(page.getByRole('region', { name: 'Referrals' })).toBeVisible(); // the link opens it
   await expect(page.getByRole('heading', { name: 'Referrals' })).toBeFocused();
 });
 

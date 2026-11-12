@@ -655,6 +655,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/patients/{patientId}/history/{section}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    patientId: string;
+                    section: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["SaveHistory"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/chart/allergy-flags": {
         parameters: {
             query?: never;
@@ -932,6 +972,427 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/patients/{patientId}/child-health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    patientId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/patients/{patientId}/immunisations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    patientId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["RecordDose"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/patients/{patientId}/milestones": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    patientId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["AnswerMilestone"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/patients/{patientId}/growth": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    patientId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    patientId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["RecordGrowth"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/patients/{patientId}/geriatric-assessments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    patientId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    patientId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["RecordGeriatricAssessment"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/patients/{patientId}/chronic-care": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    patientId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/patients/{patientId}/care-targets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    patientId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["SetCareTarget"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/patients/{patientId}/care-checks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    patientId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["RecordCareCheck"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/patients/{patientId}/care-goals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    patientId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["AddCareGoal"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/patients/{patientId}/care-goals/{goalId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    patientId: string;
+                    goalId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["UpdateCareGoal"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/encounters/{encounterId}/note/sign": {
         parameters: {
             query?: never;
@@ -1072,6 +1533,232 @@ export interface paths {
         };
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/patients/{patientId}/pregnancy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    patientId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["StartPregnancy"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/patients/{patientId}/pregnancy/dating": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    patientId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["PregnancyDates"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/patients/{patientId}/pregnancy/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    patientId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["ClosePregnancy"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/patients/{patientId}/pregnancy/danger-signs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    patientId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/patients/{patientId}/pregnancy/ruled-out": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    patientId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/patients/{patientId}/pregnancy/readings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    patientId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["PregnancyReadings"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -5743,6 +6430,64 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/encounters/{encounterId}/follow-up": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    encounterId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    encounterId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["SetFollowUp"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/encounters/{encounterId}/problems": {
         parameters: {
             query?: never;
@@ -6902,6 +7647,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/patients/{patientId}/medicine-review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    patientId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/encounters/{encounterId}/prescription/checks": {
         parameters: {
             query?: never;
@@ -7063,6 +7843,64 @@ export interface paths {
                 };
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/encounters/{encounterId}/prescription/advice": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    encounterId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    encounterId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["SetRxAdvice"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -7651,6 +8489,12 @@ export interface components {
             reaction: null | string;
             status: null | components["schemas"]["AllergyStatus"];
         };
+        AddCareGoal: {
+            text: null | string;
+            target: null | string;
+            /** Format: int32 */
+            progressPercent: null | number | string;
+        };
         AddDoctor: {
             fullName?: null | string;
             email?: null | string;
@@ -7795,6 +8639,12 @@ export interface components {
             lastCompletedAt: null | string;
             members: null | components["schemas"]["AnonymousTypeOfGuidAndstringAndRoleAndstringAndDateTimeOffsetAndstring"][];
         };
+        AnswerMilestone: {
+            band: null | string;
+            milestone: null | string;
+            answer: null | components["schemas"]["MilestoneAnswer"];
+            answeredBy: null | components["schemas"]["MilestoneAnswerer"];
+        };
         AppointmentAction: {
             /** Format: uuid */
             appointmentId: string;
@@ -7884,6 +8734,8 @@ export interface components {
             /** @default false */
             unscheduled: boolean;
         };
+        /** @enum {unknown} */
+        BodyPosition: "Lying" | "Standing" | null;
         BookAppointment: {
             /** Format: uuid */
             holdId?: string;
@@ -7921,6 +8773,8 @@ export interface components {
         };
         /** @enum {unknown} */
         Capability: "RegisterBookPatients" | "CheckInQueue" | "InvoicesPayments" | "Patient360Chart" | "VitalsAllergiesEntry" | "ClinicalNotes" | "PrescriptionsOrders" | "RecordingConsentCapture" | "AiDraftsEvidence" | "ResultReviewAcknowledge" | "CareTasksPatientContact" | "ReleaseRecordsToPortal" | "DevicePairingFleet" | "StaffRolesIntegrations" | "AuditLog";
+        /** @enum {unknown} */
+        CareCheckKind: "DiabeticEyeExam" | "DiabeticFootExam" | null;
         CheckIn: {
             /** Format: int64 */
             elapsedMs?: null | number | string;
@@ -7953,6 +8807,9 @@ export interface components {
             now: string;
             doctors: components["schemas"]["DoctorLoad"][];
             waiting: components["schemas"]["WaitingVisit"][];
+        };
+        ClosePregnancy: {
+            outcome: null | components["schemas"]["PregnancyOutcome"];
         };
         ClosureBody: {
             /** Format: date */
@@ -8043,6 +8900,7 @@ export interface components {
             kind: null | components["schemas"]["MedicationDecisionKind"];
             newDose: null | string;
             reason: null | string;
+            steps?: null | components["schemas"]["TaperStep"][];
         };
         Decision: {
             reason: null | string;
@@ -8112,6 +8970,8 @@ export interface components {
         };
         /** @enum {unknown} */
         DocumentType: "LabReport" | "Imaging" | "Prescription" | "Referral" | "Other";
+        /** @enum {unknown} */
+        DoseOutcome: "Given" | "Deferred" | null;
         DuplicateCheckRequest: {
             fullName?: null | string;
             /** Format: date */
@@ -8272,7 +9132,7 @@ export interface components {
             timeZone: string;
         };
         /** @enum {unknown} */
-        MedicationDecisionKind: "Keep" | "Change" | "Stop" | "Add" | "Ignore" | null;
+        MedicationDecisionKind: "Keep" | "Change" | "Stop" | "Add" | "Ignore" | "Taper" | null;
         /** @enum {unknown} */
         MembershipStatus: "Invited" | "Active" | "Suspended" | "Offboarded";
         MergeRequestBody: {
@@ -8281,6 +9141,10 @@ export interface components {
             /** Format: uuid */
             otherPatientId: string;
         };
+        /** @enum {unknown} */
+        MilestoneAnswer: "Yes" | "No" | "Unsure" | null;
+        /** @enum {unknown} */
+        MilestoneAnswerer: "Parent" | "Clinician" | null;
         MoveVisit: {
             state?: null | components["schemas"]["AppointmentState"];
         };
@@ -8317,6 +9181,8 @@ export interface components {
         NurseIntakeBody: {
             enabled: boolean;
         };
+        /** @enum {unknown} */
+        ObservationCode: "BloodPressureSystolic" | "BloodPressureDiastolic" | "Pulse" | "Temperature" | "OxygenSaturation" | "Weight" | "RespiratoryRate" | "Height" | "PainScore" | "BloodPressureStandingSystolic" | "BloodPressureStandingDiastolic" | "FundalHeight" | "FetalHeartRate" | "Length" | "HeadCircumference" | "HbA1c" | "LdlCholesterol" | "Egfr" | "UrineAlbuminCreatinineRatio" | "Haemoglobin" | "Ferritin" | "Potassium" | "Sodium" | "Tsh" | "VitaminD" | "Platelets" | null;
         Offboard: {
             reason: null | string;
             /** @default false */
@@ -8423,6 +9289,24 @@ export interface components {
         PlaceOrders: {
             destination: null | string;
         };
+        PregnancyDates: {
+            /** Format: date */
+            lmp: null | string;
+            /** Format: date */
+            scanDate: null | string;
+            /** Format: int32 */
+            scanWeeks: null | number | string;
+            /** Format: int32 */
+            scanDays: null | number | string;
+        };
+        /** @enum {unknown} */
+        PregnancyOutcome: "LiveBirth" | "Stillbirth" | "Miscarriage" | "Termination" | "Ectopic" | "EnteredInError" | null;
+        PregnancyReadings: {
+            /** Format: double */
+            fundalHeightCm: null | number | string;
+            /** Format: double */
+            fetalHeartRate: null | number | string;
+        };
         PreviewRequest: {
             token: string;
         };
@@ -8495,6 +9379,60 @@ export interface components {
             /** Format: date */
             toDate?: null | string;
         };
+        RecordCareCheck: {
+            kind: null | components["schemas"]["CareCheckKind"];
+            /** Format: date */
+            doneOn: null | string;
+        };
+        RecordDose: {
+            vaccine: null | string;
+            /** Format: int32 */
+            dose: null | number | string;
+            outcome: null | components["schemas"]["DoseOutcome"];
+            /** Format: date */
+            givenOn: null | string;
+            batch: null | string;
+            givenBy: null | string;
+            reason: null | string;
+        };
+        RecordGeriatricAssessment: {
+            /** Format: int32 */
+            fallsLast12Months: null | number | string;
+            /** Format: double */
+            timedUpAndGoSeconds: null | number | string;
+            /** Format: int32 */
+            lyingSystolic: null | number | string;
+            /** Format: int32 */
+            lyingDiastolic: null | number | string;
+            /** Format: int32 */
+            standingSystolic: null | number | string;
+            /** Format: int32 */
+            standingDiastolic: null | number | string;
+            /** Format: int32 */
+            clinicalFrailtyScale: null | number | string;
+            /** Format: int32 */
+            miniCog: null | number | string;
+            /** Format: int32 */
+            adl: null | number | string;
+            /** Format: int32 */
+            iadl: null | number | string;
+            /** Format: int32 */
+            phq2: null | number | string;
+            nutritionNote: null | string;
+        };
+        RecordGrowth: {
+            /** Format: date */
+            takenOn: null | string;
+            /** Format: double */
+            weightKg: null | number | string;
+            /** Format: double */
+            lengthCm: null | number | string;
+            position: null | components["schemas"]["BodyPosition"];
+            /** Format: double */
+            headCm: null | number | string;
+        };
+        /** @enum {unknown} */
+        RecordingConsent: "Agreed" | "Declined" | "Withdrawn" | null;
         RecordIntake: {
             chiefComplaint: null | string;
             vitals: null | components["schemas"]["VitalReading"][];
@@ -8616,6 +9554,9 @@ export interface components {
             /** Format: int32 */
             manual: number | string;
         };
+        SaveHistory: {
+            text: null | string;
+        };
         SaveItContact: {
             name: null | string;
             email: null | string;
@@ -8633,6 +9574,7 @@ export interface components {
             sections: null | {
                 [key: string]: string;
             };
+            recordingConsent?: null | components["schemas"]["RecordingConsent"];
         };
         SaveProfile: {
             name?: null | string;
@@ -8756,9 +9698,20 @@ export interface components {
         SetAllergyStatus: {
             status: null | components["schemas"]["AllergyStatus"];
         };
+        SetCareTarget: {
+            code: null | components["schemas"]["ObservationCode"];
+            /** Format: double */
+            limit: null | number | string;
+        };
+        SetFollowUp: {
+            period: null | string;
+        };
         SetLocations: {
             facilityIds: null | string[];
             reason: null | string;
+        };
+        SetRxAdvice: {
+            text: null | string;
         };
         /** @enum {unknown} */
         SexAtBirth: "Female" | "Male" | "Other";
@@ -8802,8 +9755,31 @@ export interface components {
             /** @default false */
             leaveOpen: boolean;
         };
+        StartPregnancy: {
+            /** Format: date */
+            lmp: null | string;
+            /** Format: date */
+            scanDate: null | string;
+            /** Format: int32 */
+            scanWeeks: null | number | string;
+            /** Format: int32 */
+            scanDays: null | number | string;
+            /** Format: int32 */
+            gravida: null | number | string;
+            /** Format: int32 */
+            para: null | number | string;
+            /** Format: int32 */
+            abortions: null | number | string;
+            /** Format: int32 */
+            living: null | number | string;
+        };
         StartRequest: {
             country: null | string;
+        };
+        TaperStep: {
+            dose: string;
+            /** Format: int32 */
+            days: number | string;
         };
         TemplatePreview: {
             group: string;
@@ -8834,6 +9810,10 @@ export interface components {
         };
         /** @enum {unknown} */
         UnavailableReason: "NotWorking" | "Break" | "NoSchedule" | "Closed" | "Leave";
+        UpdateCareGoal: {
+            /** Format: int32 */
+            progressPercent: null | number | string;
+        };
         UpdateDispatch: {
             state: null | components["schemas"]["DispatchState"];
             pharmacyRef: null | string;
@@ -8874,7 +9854,7 @@ export interface components {
         /** @enum {unknown} */
         VisitType: "FollowUp" | "NewConsultation" | "Procedure" | "Teleconsult";
         /** @enum {unknown} */
-        VitalKind: "SystolicBp" | "DiastolicBp" | "Pulse" | "Temperature" | "OxygenSaturation" | "Weight" | null;
+        VitalKind: "SystolicBp" | "DiastolicBp" | "Pulse" | "Temperature" | "OxygenSaturation" | "Weight" | "Height" | "RespiratoryRate" | null;
         VitalReading: {
             kind: null | components["schemas"]["VitalKind"];
             /** Format: double */
@@ -8927,6 +9907,9 @@ export interface components {
             /** Format: date-time */
             offerExpiresAt: null | string;
             match: null | components["schemas"]["SlotMatch"];
+            followUp?: null | string;
+            /** Format: date */
+            dueOn?: null | string;
         };
         WalkIn: {
             /** Format: uuid */

@@ -69,7 +69,7 @@ public sealed class ConsultNoteAssistTests(PostgresFixture sql) : IClassFixture<
 
     async Task SignAsync(Guid id, string complaint)
     {
-        using var save = await Client(h.Doctor).PutAsJsonAsync(U($"/v1/encounters/{id}/note"), new { baseVersion = 0, sections = new { chiefComplaint = complaint, assessment = "Synthetic assessment", plan = "Synthetic plan" } });
+        using var save = await Client(h.Doctor).PutAsJsonAsync(U($"/v1/encounters/{id}/note"), new { baseVersion = 0, sections = new { chiefComplaint = complaint, assessment = "Synthetic assessment", plan = "Synthetic plan" }, recordingConsent = "Declined" });
         Assert.True(save.IsSuccessStatusCode, await save.Content.ReadAsStringAsync());
         using var signed = await Client(h.Doctor, reauth: true).PostAsJsonAsync(U($"/v1/encounters/{id}/note/sign"), new { baseVersion = 1 });
         Assert.True(signed.IsSuccessStatusCode, await signed.Content.ReadAsStringAsync());

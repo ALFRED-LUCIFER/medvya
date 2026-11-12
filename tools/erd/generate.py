@@ -22,7 +22,7 @@ SOFT_REFS = {
     'CustomRoleId': ('tenancy', 'CustomRoles'), 'PatientId': ('patients', 'Patients'), 'CandidatePatientId': ('patients', 'Patients'),
     'MergedIntoPatientId': ('patients', 'Patients'), 'MergedFromPatientId': ('patients', 'Patients'), 'MovedFromPatientId': ('patients', 'Patients'), 'EncounterId': ('encounters', 'Encounters'),
     'UserId': ('identity', 'Users'), 'ActorUserId': ('identity', 'Users'), 'RegisteredBy': ('identity', 'Users'), 'ChangedBy': ('identity', 'Users'),
-    'BookedBy': ('identity', 'Users'), 'DecidedBy': ('identity', 'Users'), 'RequestedBy': ('identity', 'Users'), 'LeadClinicianId': ('identity', 'Users'), 'EndedBy': ('identity', 'Users'), 'HeldBy': ('identity', 'Users'), 'VerifiedBy': ('identity', 'Users'), 'RecordedBy': ('identity', 'Users'), 'EscalatedBy': ('identity', 'Users'), 'HandedOffBy': ('identity', 'Users'), 'NoKnownAllergiesBy': ('identity', 'Users'), 'StatusSetBy': ('identity', 'Users'),
+    'BookedBy': ('identity', 'Users'), 'DecidedBy': ('identity', 'Users'), 'RequestedBy': ('identity', 'Users'), 'LeadClinicianId': ('identity', 'Users'), 'EndedBy': ('identity', 'Users'), 'HeldBy': ('identity', 'Users'), 'VerifiedBy': ('identity', 'Users'), 'RecordedBy': ('identity', 'Users'), 'EscalatedBy': ('identity', 'Users'), 'HandedOffBy': ('identity', 'Users'), 'NoKnownAllergiesBy': ('identity', 'Users'), 'StatusSetBy': ('identity', 'Users'), 'SetBy': ('identity', 'Users'),
     'AppointmentId': ('scheduling', 'Appointments'),
     'AddedBy': ('identity', 'Users'), 'OrderedBy': ('identity', 'Users'), 'SentBy': ('identity', 'Users'), 'CreatedBy': ('identity', 'Users'),
     'NotificationId': ('notifications', 'Notifications'), 'ReviewId': ('tenancy', 'AccessReviews'),
@@ -30,6 +30,7 @@ SOFT_REFS = {
     'NoteId': ('encounters', 'ConsultNotes'), 'AmendsVersionId': ('encounters', 'SignedNoteVersions'), 'SignedBy': ('identity', 'Users'), 'RenderedBy': ('identity', 'Users'),
     'AuthorisedBy': ('identity', 'Users'), 'PrescriptionId': ('prescribing', 'AuthorisedPrescriptions'),
     'PdfId': ('prescribing', 'PrescriptionPdfs'), 'ShareId': ('prescribing', 'RxShares'), 'SharedBy': ('identity', 'Users'),
+    'StartedBy': ('identity', 'Users'), 'ClosedBy': ('identity', 'Users'), 'DangerSignsCounselledBy': ('identity', 'Users'),  # PregnancyEpisodes
     'DoctorId': ('identity', 'Users'),  # PrintedPapers: the doctor the slip or letter names (SourceId is the encounter or the referral, by Kind)
 }
 # CalendarId (and the from/to of a reschedule) is a doctor (a membership, inferred) or a room, told apart by CalendarKind.

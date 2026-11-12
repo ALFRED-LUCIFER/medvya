@@ -1,18 +1,22 @@
 import { useEffect, useRef, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { useI18n } from '@medvya/i18n';
 import { ApiError } from '../../schedule/services/scheduleApi';
-import { autosaveDelayMs, defaultTargetSection, insertAt, inTemplateOrder, phraseKey, vitalNameKey, type PreviousNote, type VerifiedVital, missingRequired, noteFormSchema, signFailure, switchChoices, switchTemplate, type NoteForm, type NoteTemplate, type SavePhase, type SignFailure } from '../domain/note';
+import { fetchReconciliation } from '../../reconciliation/services/reconciliationApi';
+import { remainingItems, sectionTicks, signChecklist } from '../domain/checklist';
+import type { EncounterBanner } from '../domain/encounter';
+import { autosaveDelayMs, defaultTargetSection, insertAt, inTemplateOrder, phraseKey, vitalNameKey, type PreviousNote, type VerifiedVital, missingRequired, noteFormSchema, signFailure, switchChoices, switchTemplate, type NoteForm, type NoteSections, type NoteTemplate, type RecordingConsent, type SavePhase, type SignFailure } from '../domain/note';
 import { fetchNote, fetchNoteCatalog, fetchPrefill, fetchPrevious, saveNote, signNote, startReauth } from '../services/noteApi';
 import { createAutosaver } from '../services/noteAutosaver';
+import { forSave, unfinishedFindings } from '../domain/structured';
 
 /**
  * The consultation note editor (MDV-P2-009): template-driven sections, debounced autosave, template switch with a warning about text that has
  * no place in the new template, and conflict handling that keeps the doctor's text. The text lives in the form (memory) and on the server only.
  */
-export function useNoteController(encounterId: string, canSign: boolean, timeZone: string | undefined) {
+export function useNoteController(encounterId: string, canSign: boolean, timeZone: string | undefined, banner: EncounterBanner | null = null) {
   const { t, formatDate, formatTime } = useI18n();
   const queryClient = useQueryClient();
   const note = useQuery({ queryKey: ['note', encounterId], queryFn: () => fetchNote(encounterId), retry: false, staleTime: Infinity, refetchOnWindowFocus: false });
@@ -24,7 +28,7 @@ export function useNoteController(encounterId: string, canSign: boolean, timeZon
   const [reloading, setReloading] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [signing, setSigning] = useState(false);
-  const [signProblem, setSignProblem] = useState<SignFailure | { kind: 'unsaved' } | null>(null);
+  const [signProblem, setSignProblem] = useState<SignFailure | { kind: 'unsaved' } | { kind: 'finding' } | null>(null);
   const keyRef = useRef<string | null>(null);
   // Verified prefill, quick phrases and earlier-note snippets (MDV-P2-009): read for a draft only, and only ever added by a button the doctor presses.
   const isDraft = !!note.data && note.data.status === 'Draft';
@@ -36,6 +40,15 @@ export function useNoteController(encounterId: string, canSign: boolean, timeZon
   const cursor = useRef<{ id: string; start: number; end: number } | null>(null);
   const fields = useRef<Record<string, HTMLTextAreaElement | null>>({});
   const [saver] = useState(() => createAutosaver({ save: (d, v) => saveNote(encounterId, d, v), delayMs: autosaveDelayMs, onPhase: setPhase }));
+  // MDV-P2-044: the recording consent is part of the note and saved with it; the checklist reads it with the visit's reconciliation.
+  const [consent, setConsent] = useState<RecordingConsent | null>(null);
+  const reconciliation = useQuery({ queryKey: ['reconciliation', encounterId], queryFn: () => fetchReconciliation(encounterId), retry: false, enabled: isDraft && canSign });
+  const templateOf = (key: string | null) => catalog.data?.templates.find(t => t.key === key);
+  const draft = (sections: NoteSections, key = templateKey, recordingConsent = consent) => {
+    const to = templateOf(key);
+    return key ? { templateKey: key, sections: to ? forSave(to, sections) : sections, recordingConsent } : null;
+  };
+  const queue = (d: ReturnType<typeof draft>) => { if (d) saver.edit(d); };
 
   useEffect(() => {
     if (note.data && keyRef.current === null) {
@@ -43,6 +56,7 @@ export function useNoteController(encounterId: string, canSign: boolean, timeZon
       saver.setBase(note.data);
       form.reset({ sections: note.data.sections });
       setTemplateKey(note.data.templateKey);
+      setConsent(note.data.recordingConsent ?? null);
     }
   }, [note.data, form, saver]);
 
@@ -55,7 +69,7 @@ export function useNoteController(encounterId: string, canSign: boolean, timeZon
     return () => { window.removeEventListener('beforeunload', warn); window.removeEventListener('online', online); void saver.retry(); };
   }, [saver]);
 
-  const template = catalog.data?.templates.find(t => t.key === templateKey) ?? null;
+  const template = templateOf(templateKey) ?? null;
   const request = (key: string) => {
     const to = catalog.data?.templates.find(t => t.key === key);
     // Next tick: with Enter on the Select's option, the key's keypress lands on whatever has focus once the dialog opens, which would confirm the switch unseen.
@@ -64,7 +78,17 @@ export function useNoteController(encounterId: string, canSign: boolean, timeZon
 
   // Sign (MDV-P2-012): save what is typed, sign the version just saved, and on "reauth_required" send the doctor to confirm their identity.
   // The draft is on the server by then, so the redirect back reloads it and Sign is offered again.
+  const sections = useWatch({ control: form.control, name: 'sections' });
+  const checklist = isDraft && canSign ? signChecklist({
+    identityShown: !!banner, allergyState: banner?.allergies.state ?? null,
+    reconciliation: reconciliation.data ?? null, recordingConsent: consent, undecidedAi: note.data?.undecidedAi ?? [], sections,
+  }) : [];
+  const remaining = remainingItems(checklist);
   const requestSign = () => {
+    if (remaining > 0) return;
+    // MDV-P2-042: an abnormal finding without its note is not saved yet; signing points to it instead of signing without it.
+    const finding = template ? unfinishedFindings(template, form.getValues('sections'))[0] : undefined;
+    if (finding) { setSignProblem({ kind: 'finding' }); document.getElementById(`note-${finding.replace('.', '-')}-note`)?.focus(); return; }
     const blank = template ? inTemplateOrder(template, missingRequired(template, form.getValues('sections'))) : [];
     setSignProblem(blank.length ? { kind: 'blank', sections: blank } : null);
     if (blank.length) form.setFocus(`sections.${blank[0]!}`); else setConfirming(true);
@@ -79,7 +103,8 @@ export function useNoteController(encounterId: string, canSign: boolean, timeZon
     } catch (e) {
       const failure = e instanceof ApiError ? signFailure(e.status, e.body) : { kind: 'failed' as const };
       if (failure.kind === 'signed') void queryClient.invalidateQueries({ queryKey: ['note', encounterId] });
-      else if (failure.kind === 'stale' && templateKey) saver.markStale({ templateKey, sections: form.getValues('sections') });
+      else if (failure.kind === 'stale' && templateKey) saver.markStale({ templateKey, sections: form.getValues('sections'), recordingConsent: consent });
+      else if (failure.kind === 'unreviewed') void queryClient.invalidateQueries({ queryKey: ['note', encounterId] }); // the checklist shows what the server holds
       else if (failure.kind === 'blank' && template) { failure.sections = inTemplateOrder(template, failure.sections); form.setFocus(`sections.${failure.sections[0]!}`); }
       setSignProblem(failure.kind === 'signed' || failure.kind === 'stale' ? null : failure);
       if (failure.kind === 'reauth') {
@@ -105,7 +130,7 @@ export function useNoteController(encounterId: string, canSign: boolean, timeZon
     setTooLong(next === null);
     if (!next) return;
     form.setValue(`sections.${id}`, next.text);
-    saver.edit({ templateKey, sections: form.getValues('sections') });
+    queue(draft(form.getValues('sections')));
     cursor.current = { id, start: next.caret, end: next.caret };
     setTarget(id);
     const el = fields.current[id];
@@ -128,7 +153,11 @@ export function useNoteController(encounterId: string, canSign: boolean, timeZon
   };
 
   return {
-    form, assist,
+    form, assist, checklist, remaining,
+    // MDV-P2-041: the one page's section bar; worked out from the same form the guided steps edit.
+    ticks: template && note.data ? sectionTicks({ template, sections, undecidedAi: note.data.undecidedAi ?? [], vitals: prefill.data?.vitals.length ?? 0, signed: !isDraft }) : null,
+    consent,
+    onConsent: (value: RecordingConsent) => { setConsent(value); queue(draft(form.getValues('sections'), templateKey, value)); },
     canSign: canSign && !!note.data && note.data.status === 'Draft',
     signature: note.data?.signature ?? null,
     signAsName: note.data?.signAsName ?? null,
@@ -136,10 +165,15 @@ export function useNoteController(encounterId: string, canSign: boolean, timeZon
     onRequestSign: requestSign,
     onCancelSign: () => setConfirming(false),
     onConfirmSign: () => void confirmSign(),
+    // MDV-P2-042: a structured section's answers, set by the chips and rows and saved like typing.
+    answers: (id: string) => sections?.[id] ?? '',
+    onAnswers: (id: string, text: string) => { form.setValue(`sections.${id}`, text); queue(draft(form.getValues('sections'))); },
+    // Until the first save: from then on it is the doctor's note on the template they kept or chose.
+    suggested: phase === 'idle' && !!note.data && note.data.version === 0 && !!note.data.suggestedTemplateKey && note.data.suggestedTemplateKey === templateKey,
     // Registered per section so only typing (not a programmatic reset) queues a save.
     register: (id: string) => {
       const field = form.register(`sections.${id}`, {
-        onChange: () => { if (templateKey) saver.edit({ templateKey, sections: form.getValues('sections') }); },
+        onChange: () => queue(draft(form.getValues('sections'))),
         // Where the cursor was when the doctor left the field: the buttons that add text insert there.
         onBlur: e => { const el = e.target as HTMLTextAreaElement; cursor.current = { id, start: el.selectionStart, end: el.selectionEnd }; setTarget(id); },
       });
@@ -163,7 +197,7 @@ export function useNoteController(encounterId: string, canSign: boolean, timeZon
       keyRef.current = pendingSwitch.template.key;
       setTemplateKey(pendingSwitch.template.key);
       form.reset({ sections });
-      saver.edit({ templateKey: pendingSwitch.template.key, sections });
+      queue(draft(sections, pendingSwitch.template.key));
       setPendingSwitch(null);
     },
     onRetry: () => void saver.retry(),

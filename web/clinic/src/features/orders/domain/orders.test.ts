@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canSwitch, hasDrafts, hasPlaced, orderSchema, problemOf, toOrderBody, type Order } from './orders';
+import { canSwitch, hasDrafts, hasPlaced, isOn, orderSchema, problemOf, testToggles, toggleOf, toOrderBody, type Order } from './orders';
 
 const order = (state: Order['state']): Order => ({ id: state, kind: 'Lab', name: 'HbA1c', note: null, state, destination: null, orderedAt: null });
 
@@ -29,3 +29,22 @@ describe('order rules', () => {
     expect(problemOf(undefined)).toBe('failed');
   });
 });
+
+describe('plan test toggles (MDV-P2-043)', () => {
+  const o = (name: string, state: Order['state'], id = name): Order => ({ id, kind: 'Lab', name, note: null, state, destination: null, orderedAt: null });
+  const sets = [{ id: 's', name: 'Diabetes', items: ['HbA1c', 'Lipid profile', 'Urine albumin'] }];
+
+  it('lists each test once, the visit\'s own row first', () => {
+    const list = testToggles(sets, [o('hba1c', 'Draft'), o('Retinal photo', 'Ordered')]);
+    expect(list.map(x => [x.name, isOn(x)])).toEqual([['hba1c', true], ['Retinal photo', true], ['Lipid profile', false], ['Urine albumin', false]]);
+  });
+
+  it('on adds a draft once or re-includes it; off switches the draft off; an ordered test never toggles', () => {
+    expect(toggleOf({ name: 'Lipid profile', order: null }, true)).toEqual({ add: 'Lipid profile' });
+    expect(toggleOf({ name: 'Lipid profile', order: null }, false)).toBeNull();
+    expect(toggleOf({ name: 'HbA1c', order: o('HbA1c', 'NotIncluded', 'x') }, true)).toEqual({ include: 'x', on: true });
+    expect(toggleOf({ name: 'HbA1c', order: o('HbA1c', 'Draft', 'x') }, false)).toEqual({ include: 'x', on: false });
+    expect(toggleOf({ name: 'HbA1c', order: o('HbA1c', 'Ordered', 'x') }, false)).toBeNull();
+  });
+});
+

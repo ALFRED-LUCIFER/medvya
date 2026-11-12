@@ -86,6 +86,21 @@ export async function choosePatient(page: Page, search: string, pick: RegExp) {
   return panel;
 }
 
+/** The owner switches nurse intake on or off in Settings (audited, MDV-P2-007), in a page of its own. Only an owner may. */
+export async function setNurseIntake(browser: Browser, enabled: boolean) {
+  const admin = await browser.newPage();
+  try {
+    await signIn(admin, /K\. Lakshmi/);
+    await admin.goto('/app/settings?tab=staff');
+    const toggle = admin.getByRole('region', { name: 'Nurse intake' }).getByRole('switch', { name: /^Nurse intake before the doctor/ });
+    await expect(toggle).toBeVisible();
+    if ((await toggle.getAttribute('aria-checked')) !== String(enabled)) await toggle.click();
+    await expect(toggle).toHaveAttribute('aria-checked', String(enabled)); // shown from the server's answer, so the switch is saved
+  } finally {
+    await admin.close();
+  }
+}
+
 /** The same screen for the same user in Arabic: right to left and axe-clean. A page of its own, since signIn pins its page's locale. */
 export async function expectArabicAxeClean(browser: Browser, user: RegExp, path: string) {
   const page = await browser.newPage();

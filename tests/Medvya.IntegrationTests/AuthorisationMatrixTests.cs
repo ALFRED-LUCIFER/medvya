@@ -198,10 +198,24 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.Receptionist, new("POST", "/v1/patients/{patient}/documents?type=LabReport&date=2026-10-01&source=Imported")),
         (Role.SoloDoctor, new("GET", "/v1/patients/{patient}/timeline")),
         (Role.SoloDoctor, new("GET", "/v1/patients/{patient}/trends")),
+        (Role.SoloDoctor, new("PUT", "/v1/patients/{patient}/history/Social", """{"text":"Synthetic"}""")),
+        (Role.SoloDoctor, new("GET", "/v1/patients/{patient}/child-health")),
+        (Role.Nurse, new("POST", "/v1/patients/{patient}/immunisations", """{"vaccine":"BCG","dose":1,"outcome":"Deferred","reason":"Synthetic"}""")),
+        (Role.Nurse, new("POST", "/v1/patients/{patient}/milestones", """{"band":"y4","milestone":"tellsAStory","answer":"Yes","answeredBy":"Parent"}""")),
+        (Role.SoloDoctor, new("POST", "/v1/patients/{patient}/pregnancy", """{"lmp":"2026-08-01"}""")),
+        (Role.SoloDoctor, new("PUT", "/v1/patients/{patient}/pregnancy/dating", """{"lmp":"2026-08-01"}""")),
+        (Role.SoloDoctor, new("POST", "/v1/patients/{patient}/pregnancy/close", """{"outcome":"LiveBirth"}""")),
+        (Role.SoloDoctor, new("POST", "/v1/patients/{patient}/pregnancy/danger-signs")),
+        (Role.SoloDoctor, new("POST", "/v1/patients/{patient}/pregnancy/ruled-out")),
+        (Role.SoloDoctor, new("POST", "/v1/patients/{patient}/pregnancy/readings", """{"fundalHeightCm":22}""")),
+        (Role.SoloDoctor, new("GET", "/v1/patients/{patient}/growth")),
+        (Role.Nurse, new("POST", "/v1/patients/{patient}/growth", """{"takenOn":"2026-10-19","weightKg":4.0}""")),
         (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/end")),
         (Role.SoloDoctor, new("GET", "/v1/encounters/{encounter}/medicines/reconciliation")),
         (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/medicines/reconciliation/decisions", """{"key":"synthetic","kind":"Keep"}""")),
         (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/medicines/reconciliation/confirm")),
+        (Role.SoloDoctor, new("GET", "/v1/encounters/{encounter}/follow-up")),
+        (Role.SoloDoctor, new("PUT", "/v1/encounters/{encounter}/follow-up", """{"period":"P2W"}""")),
         (Role.SoloDoctor, new("GET", "/v1/encounters/{encounter}/problems")),
         (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/problems", """{"code":"I10","verification":"Verified"}""")),
         (Role.SoloDoctor, new("GET", "/v1/encounters/{encounter}/note")),
@@ -230,6 +244,8 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/prescription/authorisation")),
         (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/prescription/cancellation", """{"reason":"Synthetic"}""")),
         (Role.SoloDoctor, new("GET", "/v1/encounters/{encounter}/prescription/print")),
+        (Role.SoloDoctor, new("GET", "/v1/encounters/{encounter}/prescription/advice")),
+        (Role.SoloDoctor, new("PUT", "/v1/encounters/{encounter}/prescription/advice", """{"text":"Synthetic"}""")),
         (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/prescription/pdf")),
         (Role.SoloDoctor, new("GET", "/v1/encounters/{encounter}/prescription/shares")),
         (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/prescription/shares", """{"recipient":"Patient","channel":"Sms"}""")),
@@ -240,6 +256,13 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.SoloDoctor, new("GET", "/v1/referrals/{referral}/letter")),
         (Role.SoloDoctor, new("POST", "/v1/referrals/{referral}/letter/pdf")),
         (Role.SoloDoctor, new("GET", "/v1/patients/{patient}/referrals")),
+        (Role.SoloDoctor, new("GET", "/v1/patients/{patient}/geriatric-assessments")),
+        (Role.Nurse, new("POST", "/v1/patients/{patient}/geriatric-assessments", """{"clinicalFrailtyScale":4}""")),
+        (Role.SoloDoctor, new("GET", "/v1/patients/{patient}/medicine-review")),
+        (Role.Nurse, new("GET", "/v1/patients/{patient}/chronic-care")),
+        (Role.SoloDoctor, new("PUT", "/v1/patients/{patient}/care-targets", """{"code":"HbA1c","limit":7.5}""")),
+        (Role.SoloDoctor, new("POST", "/v1/patients/{patient}/care-checks", """{"kind":"DiabeticEyeExam","doneOn":"2026-10-01"}""")),
+        (Role.SoloDoctor, new("POST", "/v1/patients/{patient}/care-goals", """{"text":"Synthetic goal"}""")),
         (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/orders/from-set", """{"orderSetId":"{order}"}""")),
         (Role.Nurse, new("POST", "/v1/intake/{appointment}/escalate", """{"reason":"Synthetic"}""")),
         (Role.Nurse, new("POST", "/v1/intake/{appointment}/handoff")),
@@ -278,6 +301,7 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         ["/v1/patients/merge-requests/{requestId:guid}/request-approval"] = "as above",
         ["/v1/patients/merge-requests/{requestId:guid}/approve"] = "as above",
         ["/v1/patients/merge-requests/{requestId:guid}/undo"] = "as above",
+        ["/v1/patients/{patientId:guid}/history/{section}"] = "covered above as /history/Social: the section is a name, not an id",
         ["/v1/notifications/inbox/{id:guid}/read"] = "the inbox row is keyed by tenant and user; another user's id is a no-op (NotificationsTests)",
         ["/v1/me/sessions/{id:guid}"] = "own sessions only: the session row is matched on the caller's user id (SessionControlTests)",
         ["/v1/operations/organisations/{tenantId:guid}/documents/{documentId:guid}"] = "Medvya operations act on any organisation by design, behind the approval capability: a practice user gets 403 (OrganisationRequestTests)",
@@ -295,6 +319,7 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         ["/v1/waitlist/{id:guid}/offer"] = "as above",
         ["/v1/waitlist/{id:guid}/accept"] = "as above",
         ["/v1/waitlist/{id:guid}/decline"] = "as above",
+        ["/v1/patients/{patientId:guid}/care-goals/{goalId:guid}"] = "two ids: only a goal of the route's own patient is found, another's is not (ChronicCareTests, with row-level security); the patient's goal route is in the matrix",
     };
 
     /// <summary>
@@ -403,6 +428,19 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.HospitalIt, new("POST", "/v1/patients/{patient}/documents?type=LabReport&date=2026-10-01&source=Imported")),
         (Role.Receptionist, new("GET", "/v1/patients/{patient}/timeline")),
         (Role.Receptionist, new("GET", "/v1/patients/{patient}/trends")),
+        (Role.Receptionist, new("PUT", "/v1/patients/{patient}/history/Social", """{"text":"Synthetic"}""")), // Vitals & allergies entry: X
+        (Role.CareCoordinator, new("PUT", "/v1/patients/{patient}/history/Social", """{"text":"Synthetic"}""")),
+        (Role.Receptionist, new("GET", "/v1/patients/{patient}/child-health")), // Patient 360: X
+        (Role.CareCoordinator, new("POST", "/v1/patients/{patient}/immunisations", """{"vaccine":"BCG","dose":1,"outcome":"Deferred","reason":"Synthetic"}""")), // Vitals & allergies entry: X
+        (Role.Receptionist, new("POST", "/v1/patients/{patient}/milestones", """{"band":"y4","milestone":"tellsAStory","answer":"Yes","answeredBy":"Parent"}""")), // Vitals & allergies entry: X
+        (Role.Nurse, new("POST", "/v1/patients/{patient}/pregnancy", """{"lmp":"2026-08-01"}""")), // Clinical notes: R, not S
+        (Role.Nurse, new("POST", "/v1/patients/{patient}/pregnancy/close", """{"outcome":"LiveBirth"}""")),
+        (Role.CareCoordinator, new("PUT", "/v1/patients/{patient}/pregnancy/dating", """{"lmp":"2026-08-01"}""")),
+        (Role.Receptionist, new("POST", "/v1/patients/{patient}/pregnancy/ruled-out")), // Vitals & allergies entry: X
+        (Role.CareCoordinator, new("POST", "/v1/patients/{patient}/pregnancy/danger-signs")),
+        (Role.Receptionist, new("POST", "/v1/patients/{patient}/pregnancy/readings", """{"fundalHeightCm":22}""")),
+        (Role.Receptionist, new("GET", "/v1/patients/{patient}/growth")), // Patient 360: X
+        (Role.CareCoordinator, new("POST", "/v1/patients/{patient}/growth", """{"takenOn":"2026-10-19","weightKg":4.0}""")), // Vitals & allergies entry: X
         (Role.PracticeAdmin, new("GET", "/v1/patients/{patient}/chart")),
         (Role.PracticeAdmin, new("GET", "/v1/encounters/{encounter}")),
         (Role.Receptionist, new("POST", "/v1/encounters", """{"appointmentId":"{appointment}","leaveOpen":true}""")),
@@ -418,6 +456,13 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.PracticeAdmin, new("POST", "/v1/chart/allergy-flags", """{"patientIds":["{patient}"]}""")),
         (Role.Nurse, new("POST", "/v1/encounters/{encounter}/referrals", """{"provider":"Dr. Synthetic","urgency":"Routine","reason":"Synthetic","sections":[]}""")), // Prescriptions & orders: X
         (Role.Receptionist, new("GET", "/v1/patients/{patient}/referrals")), // Patient 360: X
+        (Role.Receptionist, new("GET", "/v1/patients/{patient}/geriatric-assessments")), // Patient 360: X
+        (Role.CareCoordinator, new("POST", "/v1/patients/{patient}/geriatric-assessments", """{"clinicalFrailtyScale":4}""")), // Vitals & allergies entry: X
+        (Role.Nurse, new("GET", "/v1/patients/{patient}/medicine-review")), // Prescriptions & orders: X
+        (Role.Receptionist, new("GET", "/v1/patients/{patient}/chronic-care")), // Patient 360: X
+        (Role.Nurse, new("PUT", "/v1/patients/{patient}/care-targets", """{"code":"HbA1c","limit":7.5}""")), // Patient 360: L
+        (Role.Nurse, new("POST", "/v1/patients/{patient}/care-checks", """{"kind":"DiabeticEyeExam","doneOn":"2026-10-01"}""")), // Patient 360: L
+        (Role.CareCoordinator, new("POST", "/v1/patients/{patient}/care-goals", """{"text":"Synthetic goal"}""")), // Patient 360: L
         (Role.Nurse, new("GET", "/v1/encounters/{encounter}/orders")), // Prescriptions & orders: X
         (Role.Nurse, new("GET", "/v1/encounters/{encounter}/prescription")), // Prescriptions & orders: X
         (Role.Receptionist, new("POST", "/v1/encounters/{encounter}/prescription/items", """{"medicine":"Synthetic medicine"}""")),

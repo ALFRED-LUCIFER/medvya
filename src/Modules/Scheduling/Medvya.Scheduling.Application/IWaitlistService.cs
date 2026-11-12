@@ -1,3 +1,4 @@
+using System.Data.Common;
 using Medvya.Scheduling.Domain;
 
 namespace Medvya.Scheduling.Application;
@@ -35,7 +36,7 @@ public sealed record SlotMatch(Guid CalendarId, string CalendarName, DateTimeOff
 public sealed record WaitlistView(
     Guid Id, Guid PatientId, string PatientName, string Mrn, Guid? CalendarId, string? CalendarName, VisitType VisitType, ReasonCategory ReasonCategory,
     IReadOnlyList<DayOfWeek> Days, TimeOnly? From, TimeOnly? Until, WaitlistState State, DateTimeOffset RequestedAt,
-    SlotMatch? Offered, DateTimeOffset? OfferExpiresAt, SlotMatch? Match);
+    SlotMatch? Offered, DateTimeOffset? OfferExpiresAt, SlotMatch? Match, string? FollowUp = null, DateOnly? DueOn = null);
 
 public sealed record WaitlistList(Guid FacilityId, string TimeZone, DateTimeOffset Now, IReadOnlyList<WaitlistView> Entries);
 
@@ -69,4 +70,21 @@ public interface IWaitlistService
 
     /// <summary>Takes the patient off the list, releasing any held slot.</summary>
     Task RemoveAsync(Guid id, CancellationToken cancellationToken = default);
+}
+
+/// <summary>A consultation's follow-up as the waitlist holds it: the period chosen, the day from which a slot suits, and where the desk is with it.</summary>
+public sealed record FollowUpBooking(string Period, DateOnly DueOn, WaitlistState State);
+
+/// <summary>
+/// The doctor's follow-up choice (MDV-P2-043) as a booking for the front desk to make: one waitlist entry per consultation, for the same doctor and
+/// reason, matched only to slots from its due day. The Encounters module never reads scheduling tables; it asks here. No access check: the
+/// consultation use case has checked clinical access and audits; writes run on its connection and transaction, so both commit together.
+/// </summary>
+public interface IFollowUpBookings
+{
+    Task<FollowUpBooking?> FindAsync(Guid encounterId, CancellationToken cancellationToken = default);
+
+    /// <summary>Sets the consultation's follow-up (re-opening one the desk removed), or with a null period takes it off the list.</summary>
+    /// <exception cref="VisitTransitionException">"follow_up_booked" (the desk already booked it) or "already_waiting" (the patient is on the waitlist for another reason).</exception>
+    Task<FollowUpBooking?> SetAsync(Guid appointmentId, Guid encounterId, string? period, DateOnly? dueOn, DbTransaction transaction, CancellationToken cancellationToken = default);
 }

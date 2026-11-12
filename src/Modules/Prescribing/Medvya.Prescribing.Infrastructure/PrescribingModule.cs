@@ -23,12 +23,14 @@ public static class PrescribingModule
             .AddScoped<IFormulary, FormularyService>()
             .AddScoped<IOrders, OrderService>()
             .AddScoped<IPrescriptions, PrescriptionService>()
+            .AddScoped<IMedicineReview, MedicineReviewService>()
             .AddScoped<IPrescriptionVerification, PrescriptionVerification>()
             .AddScoped<PaperIssuer>()
             .AddScoped<IPaperVerification, PaperVerification>()
             .AddScoped<IRxShareLinks, RxShareLinks>()
             .AddScoped<IReferrals, ReferralService>()
             .AddScoped<Medvya.Encounters.Application.ITimelineSource, OrderTimelineSource>()
+            .AddScoped<Medvya.Encounters.Application.IPlacedOrders, PlacedOrders>()
             .AddScoped<Medvya.Patients.Application.IPatientMergeParticipant, OrderMergeParticipant>();
     }
 }

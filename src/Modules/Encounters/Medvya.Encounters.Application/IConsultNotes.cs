@@ -4,9 +4,10 @@ namespace Medvya.Encounters.Application;
 
 /// <summary>
 /// An autosave. <see cref="BaseVersion"/> is the version the editor last saw (0 before the first save); a save on any other version is refused
-/// so a second tab or device never overwrites silently. <see cref="Sections"/> is the whole note: a section left out is cleared.
+/// so a second tab or device never overwrites silently. <see cref="Sections"/> is the whole note: a section left out is cleared, and so is a
+/// <see cref="RecordingConsent"/> left out.
 /// </summary>
-public sealed record SaveNote(string? TemplateKey, bool Manual, int BaseVersion, IReadOnlyDictionary<string, string>? Sections);
+public sealed record SaveNote(string? TemplateKey, bool Manual, int BaseVersion, IReadOnlyDictionary<string, string>? Sections, RecordingConsent? RecordingConsent = null);
 
 /// <summary>The signature of a signed note: who, when and the hash of what was signed. The signer's name is the doctor profile's, else the account's display name (never blank); the attested licence (authority and number) is null without a profile.</summary>
 public sealed record NoteSignature(int VersionNo, Guid SignedBy, DateTimeOffset SignedAt, string ContentHash, string? SignerName = null, string? SignerLicence = null);
@@ -17,10 +18,13 @@ public sealed record NoteAddendum(int VersionNo, int AmendsVersionNo, string Rea
 /// <summary>
 /// Version 0 and no sections: nothing saved yet (the default template is offered). <see cref="Signature"/> is set once signed; <see cref="Addenda"/>
 /// are the signed addenda in version order (empty until one is added). <see cref="SignAsName"/> is the name the current user's signature will show (unsigned notes only).
+/// <see cref="RecordingConsent"/> and <see cref="UndecidedAi"/> are what the review-and-sign checklist reads (MDV-P2-044); it is never stored.
+/// <see cref="SuggestedTemplateKey"/> (MDV-P2-042): on a note with nothing saved, the template picked from the patient's age and problems; the note starts on it.
 /// </summary>
 public sealed record NoteView(
     Guid EncounterId, string TemplateKey, int TemplateVersion, NoteStatus Status, bool Manual, IReadOnlyDictionary<string, string> Sections, int Version, DateTimeOffset? UpdatedAt,
-    NoteSignature? Signature = null, IReadOnlyList<NoteAddendum>? Addenda = null, string? SignAsName = null);
+    NoteSignature? Signature = null, IReadOnlyList<NoteAddendum>? Addenda = null, string? SignAsName = null, RecordingConsent? RecordingConsent = null, IReadOnlyList<string>? UndecidedAi = null,
+    string? SuggestedTemplateKey = null);
 
 /// <summary>An addendum to a signed note: the text and why it is added. Both are required.</summary>
 public sealed record AddNoteAddendum(string? Text, string? Reason);
@@ -83,10 +87,11 @@ public interface IConsultNotes
 
     /// <summary>
     /// Signs (MDV-P2-012): Sign on Clinical notes with a care relationship, a re-authentication in the last 5 minutes, every required section
-    /// filled. Freezes version 1. Signing a signed note again returns it unchanged.
+    /// filled, the recording consent recorded and no AI draft or suggestion undecided (MDV-P2-044). Freezes version 1. Signing a signed note again returns it unchanged.
     /// </summary>
     /// <exception cref="ReauthRequiredException"/>
-    /// <exception cref="NoteValidationException">A required section is blank (code <c>required</c> on <c>sections.&lt;id&gt;</c>).</exception>
+    /// <exception cref="NoteValidationException">A required section is blank (code <c>required</c> on <c>sections.&lt;id&gt;</c>), the consent is not
+    /// recorded (<c>required</c> on <c>recordingConsent</c>) or an AI draft is undecided (<c>undecided</c> on <c>undecidedAi</c>).</exception>
     /// <exception cref="StaleNoteException"/>
     Task<NoteView?> SignAsync(Guid encounterId, SignNote command, CancellationToken cancellationToken = default);
 

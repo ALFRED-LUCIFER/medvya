@@ -3,7 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { ApiError } from '../../schedule/services/scheduleApi';
-import { emptyOrder, orderSchema, problemOf, type Order, type OrderForm, type OrderProblem } from '../domain/orders';
+import { emptyOrder, orderSchema, problemOf, toggleOf, type Order, type OrderForm, type OrderProblem, type TestToggle } from '../domain/orders';
 import { usePaperPdf } from '../../prescription/hooks/useRxPrintController';
 import { addOrder, addOrderSet, downloadSlipPdf, fetchOrders, fetchOrderSets, fetchSlip, includeOrder, placeOrders, printPage } from '../services/ordersApi';
 
@@ -28,6 +28,11 @@ export function useOrdersController(encounterId: string) {
   const add = useMutation({ mutationFn: (v: OrderForm) => addOrder(encounterId, v), onSuccess: o => { done(o); form.reset(emptyOrder()); setPlaced(false); }, onError: failed });
   const addSet = useMutation({ mutationFn: () => addOrderSet(encounterId, setId), onSuccess: o => { done(o); setSetId(''); setPlaced(false); }, onError: failed });
   const include = useMutation({ mutationFn: (v: { id: string; included: boolean }) => includeOrder(v.id, v.included), onSuccess: done, onError: failed });
+  // The Plan's toggles (MDV-P2-043): on adds a Lab draft once (or re-includes it), off switches the draft off; the server refuses an ordered test.
+  const toggle = useMutation({
+    mutationFn: (a: NonNullable<ReturnType<typeof toggleOf>>) => 'add' in a ? addOrder(encounterId, { kind: 'Lab', name: a.add, note: '' }) : includeOrder(a.include, a.on),
+    onSuccess: done, onError: failed,
+  });
   const place = useMutation({ mutationFn: () => placeOrders(encounterId, destination), onSuccess: o => { done(o); setPlaced(true); setDestination(''); }, onError: failed });
 
   const error = list.error instanceof ApiError ? list.error : null;
@@ -42,11 +47,12 @@ export function useOrdersController(encounterId: string) {
     form,
     destination, onDestination: setDestination,
     problem, placed,
-    busy: add.isPending || addSet.isPending || include.isPending || place.isPending,
+    busy: add.isPending || addSet.isPending || include.isPending || place.isPending || toggle.isPending,
     onAdd: form.handleSubmit(v => add.mutate(v)),
     onAddSet: () => addSet.mutate(),
     onInclude: (id: string, included: boolean) => include.mutate({ id, included }),
     onPlace: () => place.mutate(),
+    onToggle: (x: TestToggle, on: boolean) => { const a = toggleOf(x, on); if (a) toggle.mutate(a); },
   };
 }
 

@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { amountOf, lineSafety, lookOf, overrideSchema, type RxChecks, type SafetyAlert } from './checks';
+import { amountOf, kgOf, lineSafety, lookOf, mlOf, overrideSchema, type RxChecks, type SafetyAlert } from './checks';
 
 const alert = (over: Partial<SafetyAlert>): SafetyAlert => ({
   key: 'k', kind: 'Allergy', severity: 'Severe', itemId: 'a', medicine: 'Amoxicillin', other: null, otherOnChart: false, code: 'penicillins',
-  substance: 'Penicillin', allergyStatus: 'Confirmed', dailyMicrograms: null, maxDailyMicrograms: null, ...over,
+  substance: 'Penicillin', allergyStatus: 'Confirmed', dailyMicrograms: null, maxDailyMicrograms: null, measure: null, ...over,
 });
 const checks = (over: Partial<RxChecks>): RxChecks => ({
-  ruleSet: 'medvya-curated', ruleSetVersion: 'v', allergies: 'Listed', alerts: [], notChecked: [], overrides: [], unresolved: 0, checkedAt: '', ...over,
+  ruleSet: 'medvya-curated', ruleSetVersion: 'v', allergies: 'Listed', alerts: [], notChecked: [], overrides: [], unresolved: 0, checkedAt: '', weightDoses: [], ...over,
 });
 
 describe('safety check wording', () => {
@@ -14,6 +14,10 @@ describe('safety check wording', () => {
     expect(amountOf(6_000_000)).toEqual({ unit: 'mg', value: '6000' });
     expect(amountOf(1500)).toEqual({ unit: 'mg', value: '1.5' });
     expect(amountOf(300)).toEqual({ unit: 'mcg', value: '300' });
+  });
+
+  it('shows a weight in kg and a liquid dose in mL from their stored tenths and hundredths', () => {
+    expect([kgOf(1420), kgOf(900), mlOf(89), mlOf(50)]).toEqual(['14.2', '9', '8.9', '5']);
   });
 
   it('paints a severe alert critical until overridden, and a moderate one as attention', () => {

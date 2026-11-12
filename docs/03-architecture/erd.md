@@ -34,8 +34,8 @@ flowchart LR
   api --> Identity["Identity<br/>schema identity<br/>3 tables"]
   api --> Patients["Patients<br/>schema patients<br/>7 tables"]
   api --> Scheduling["Scheduling<br/>schema scheduling<br/>15 tables"]
-  api --> Encounters["Encounters<br/>schema encounters<br/>15 tables"]
-  api --> Prescribing["Prescribing<br/>schema prescribing<br/>15 tables"]
+  api --> Encounters["Encounters<br/>schema encounters<br/>24 tables"]
+  api --> Prescribing["Prescribing<br/>schema prescribing<br/>16 tables"]
   api --> Notifications["Notifications<br/>schema notifications<br/>5 tables"]
   api --> Audit["Audit<br/>schema audit<br/>1 table"]
   api --> Leads["Leads<br/>schema leads<br/>2 tables"]
@@ -97,7 +97,7 @@ flowchart LR
   audit -.->|"ActorUserId"| identity
   audit -.->|"PatientId"| patients
   audit -.->|"FacilityId"| tenancy
-  encounters -.->|"ChangedBy, DecidedBy, EndedBy, ..."| identity
+  encounters -.->|"ChangedBy, ClosedBy, CreatedBy, ..."| identity
   encounters -.->|"MergedFromPatientId, PatientId"| patients
   encounters -.->|"AppointmentId"| scheduling
   encounters -.->|"FacilityId"| tenancy
@@ -112,6 +112,7 @@ flowchart LR
   prescribing -.->|"AddedBy, AuthorisedBy, ChangedBy, ..."| identity
   prescribing -.->|"MergedFromPatientId, PatientId"| patients
   prescribing -.->|"FacilityId"| tenancy
+  scheduling -.->|"EncounterId"| encounters
   scheduling -.->|"ActorUserId, BookedBy, ChangedBy, ..."| identity
   scheduling -.->|"MergedFromPatientId, PatientId"| patients
   scheduling -.->|"CalendarId, FacilityId, FromCalendarId, ..."| tenancy
@@ -915,9 +916,13 @@ erDiagram
     guid Id PK
     guid AppointmentId "id of scheduling.Appointments"
     guid CalendarId "doctor or room"
+    guid EncounterId "id of encounters.Encounters"
     guid FacilityId "id of tenancy.Facilities"
     guid PatientId "id of patients.Patients"
     guid RequestedBy "id of identity.Users"
+  }
+  encounters_Encounters {
+    guid Id PK "other module"
   }
   identity_Users {
     guid Id PK "other module"
@@ -978,6 +983,7 @@ erDiagram
   Appointments |o..o{ Waitlist : "AppointmentId, no FK"
   tenancy_Memberships |o..o{ Waitlist : "CalendarId (doctor calendar)"
   Resources |o..o{ Waitlist : "CalendarId (room calendar)"
+  encounters_Encounters |o..o{ Waitlist : "EncounterId"
   tenancy_Facilities ||..o{ Waitlist : "FacilityId"
   patients_Patients ||..o{ Waitlist : "PatientId"
   identity_Users |o..o{ Waitlist : "RequestedBy"
@@ -999,7 +1005,7 @@ erDiagram
 | `Templates` | 8 | Id | tenant-scoped |
 | `SlotHolds` | 9 | Id | tenant-scoped |
 | `VisitStatusEvents` | 9 | Id | tenant-scoped |
-| `Waitlist` | 18 | Id | tenant-scoped |
+| `Waitlist` | 21 | Id | tenant-scoped |
 
 <details><summary><code>scheduling.Appointments</code> columns</summary>
 
@@ -1235,7 +1241,10 @@ erDiagram
 | `CalendarId` | guid | yes | doctor or room (`CalendarKind`) |
 | `ChangedAt` | timestamptz |  |  |
 | `Days` | int |  |  |
+| `DueOn` | date | yes |  |
+| `EncounterId` | guid | yes | id of `encounters.Encounters` |
 | `FacilityId` | guid |  | id of `tenancy.Facilities` |
+| `FollowUp` | character varying(10) |  |  |
 | `From` | time | yes |  |
 | `OfferCalendarId` | guid | yes |  |
 | `OfferExpiresAt` | timestamptz | yes |  |
@@ -1251,7 +1260,7 @@ erDiagram
 
 </details>
 
-### Encounters (schema `encounters`, 15 tables)
+### Encounters (schema `encounters`, 24 tables)
 
 ```mermaid
 erDiagram
@@ -1262,6 +1271,25 @@ erDiagram
     guid PatientId "id of patients.Patients"
     guid RecordedBy "id of identity.Users"
     guid StatusSetBy "id of identity.Users"
+  }
+  CareChecks {
+    guid Id PK
+    guid FacilityId "id of tenancy.Facilities"
+    guid MergedFromPatientId "id of patients.Patients"
+    guid PatientId "id of patients.Patients"
+    guid RecordedBy "id of identity.Users"
+  }
+  CareGoals {
+    guid Id PK
+    guid CreatedBy "id of identity.Users"
+    guid MergedFromPatientId "id of patients.Patients"
+    guid PatientId "id of patients.Patients"
+  }
+  CareTargets {
+    guid Id PK
+    guid MergedFromPatientId "id of patients.Patients"
+    guid PatientId "id of patients.Patients"
+    guid SetBy "id of identity.Users"
   }
   ClinicalDocuments {
     guid Id PK
@@ -1285,6 +1313,26 @@ erDiagram
     guid LeadClinicianId "id of identity.Users"
     guid MergedFromPatientId "id of patients.Patients"
     guid PatientId "id of patients.Patients"
+  }
+  GeriatricAssessments {
+    guid Id PK
+    guid FacilityId "id of tenancy.Facilities"
+    guid MergedFromPatientId "id of patients.Patients"
+    guid PatientId "id of patients.Patients"
+    guid RecordedBy "id of identity.Users"
+  }
+  HistoryEntries {
+    guid Id PK
+    guid MergedFromPatientId "id of patients.Patients"
+    guid PatientId "id of patients.Patients"
+    guid RecordedBy "id of identity.Users"
+  }
+  Immunisations {
+    guid Id PK
+    guid FacilityId "id of tenancy.Facilities"
+    guid MergedFromPatientId "id of patients.Patients"
+    guid PatientId "id of patients.Patients"
+    guid RecordedBy "id of identity.Users"
   }
   Intakes {
     guid Id PK
@@ -1324,6 +1372,13 @@ erDiagram
     guid PatientId "id of patients.Patients"
     guid RecordedBy "id of identity.Users"
   }
+  MilestoneResponses {
+    guid Id PK
+    guid FacilityId "id of tenancy.Facilities"
+    guid MergedFromPatientId "id of patients.Patients"
+    guid PatientId "id of patients.Patients"
+    guid RecordedBy "id of identity.Users"
+  }
   Observations {
     guid Id PK
     guid AppointmentId "id of scheduling.Appointments"
@@ -1335,6 +1390,21 @@ erDiagram
   }
   OutboxEvents {
     guid Id PK
+  }
+  PregnancyEpisodes {
+    guid Id PK
+    guid ClosedBy "id of identity.Users"
+    guid DangerSignsCounselledBy "id of identity.Users"
+    guid MergedFromPatientId "id of patients.Patients"
+    guid PatientId "id of patients.Patients"
+    guid StartedBy "id of identity.Users"
+  }
+  PregnancyRuledOuts {
+    guid Id PK
+    guid FacilityId "id of tenancy.Facilities"
+    guid MergedFromPatientId "id of patients.Patients"
+    guid PatientId "id of patients.Patients"
+    guid RecordedBy "id of identity.Users"
   }
   Problems {
     guid Id PK
@@ -1372,6 +1442,16 @@ erDiagram
   patients_Patients ||..o{ Allergies : "PatientId"
   identity_Users |o..o{ Allergies : "RecordedBy"
   identity_Users |o..o{ Allergies : "StatusSetBy"
+  tenancy_Facilities ||..o{ CareChecks : "FacilityId"
+  patients_Patients |o..o{ CareChecks : "MergedFromPatientId"
+  patients_Patients ||..o{ CareChecks : "PatientId"
+  identity_Users ||..o{ CareChecks : "RecordedBy"
+  identity_Users ||..o{ CareGoals : "CreatedBy"
+  patients_Patients |o..o{ CareGoals : "MergedFromPatientId"
+  patients_Patients ||..o{ CareGoals : "PatientId"
+  patients_Patients |o..o{ CareTargets : "MergedFromPatientId"
+  patients_Patients ||..o{ CareTargets : "PatientId"
+  identity_Users ||..o{ CareTargets : "SetBy"
   identity_Users |o..o{ ClinicalDocuments : "ChangedBy"
   tenancy_Facilities ||..o{ ClinicalDocuments : "FacilityId"
   patients_Patients ||..o{ ClinicalDocuments : "PatientId"
@@ -1383,6 +1463,17 @@ erDiagram
   identity_Users ||..o{ Encounters : "LeadClinicianId"
   patients_Patients |o..o{ Encounters : "MergedFromPatientId"
   patients_Patients ||..o{ Encounters : "PatientId"
+  tenancy_Facilities ||..o{ GeriatricAssessments : "FacilityId"
+  patients_Patients |o..o{ GeriatricAssessments : "MergedFromPatientId"
+  patients_Patients ||..o{ GeriatricAssessments : "PatientId"
+  identity_Users ||..o{ GeriatricAssessments : "RecordedBy"
+  patients_Patients |o..o{ HistoryEntries : "MergedFromPatientId"
+  patients_Patients ||..o{ HistoryEntries : "PatientId"
+  identity_Users ||..o{ HistoryEntries : "RecordedBy"
+  tenancy_Facilities ||..o{ Immunisations : "FacilityId"
+  patients_Patients |o..o{ Immunisations : "MergedFromPatientId"
+  patients_Patients ||..o{ Immunisations : "PatientId"
+  identity_Users ||..o{ Immunisations : "RecordedBy"
   scheduling_Appointments ||..o{ Intakes : "AppointmentId"
   tenancy_Facilities ||..o{ Intakes : "FacilityId"
   identity_Users |o..o{ Intakes : "HandedOffBy"
@@ -1406,12 +1497,25 @@ erDiagram
   patients_Patients |o..o{ MedicationStatements : "MergedFromPatientId"
   patients_Patients ||..o{ MedicationStatements : "PatientId"
   identity_Users |o..o{ MedicationStatements : "RecordedBy"
+  tenancy_Facilities ||..o{ MilestoneResponses : "FacilityId"
+  patients_Patients |o..o{ MilestoneResponses : "MergedFromPatientId"
+  patients_Patients ||..o{ MilestoneResponses : "PatientId"
+  identity_Users ||..o{ MilestoneResponses : "RecordedBy"
   scheduling_Appointments |o..o{ Observations : "AppointmentId"
   tenancy_Facilities |o..o{ Observations : "FacilityId"
   patients_Patients |o..o{ Observations : "MergedFromPatientId"
   patients_Patients ||..o{ Observations : "PatientId"
   identity_Users |o..o{ Observations : "RecordedBy"
   identity_Users |o..o{ Observations : "VerifiedBy"
+  identity_Users |o..o{ PregnancyEpisodes : "ClosedBy"
+  identity_Users |o..o{ PregnancyEpisodes : "DangerSignsCounselledBy"
+  patients_Patients |o..o{ PregnancyEpisodes : "MergedFromPatientId"
+  patients_Patients ||..o{ PregnancyEpisodes : "PatientId"
+  identity_Users ||..o{ PregnancyEpisodes : "StartedBy"
+  tenancy_Facilities ||..o{ PregnancyRuledOuts : "FacilityId"
+  patients_Patients |o..o{ PregnancyRuledOuts : "MergedFromPatientId"
+  patients_Patients ||..o{ PregnancyRuledOuts : "PatientId"
+  identity_Users ||..o{ PregnancyRuledOuts : "RecordedBy"
   Encounters |o..o{ Problems : "EncounterId, no FK"
   patients_Patients |o..o{ Problems : "MergedFromPatientId"
   patients_Patients ||..o{ Problems : "PatientId"
@@ -1427,17 +1531,26 @@ erDiagram
 | Table | Columns | Primary key | Notes |
 |---|---|---|---|
 | `Allergies` | 14 | Id | tenant-scoped |
+| `CareChecks` | 9 | Id | tenant-scoped |
+| `CareGoals` | 11 | Id | tenant-scoped |
+| `CareTargets` | 8 | Id | tenant-scoped |
 | `ClinicalDocuments` | 16 | Id | tenant-scoped |
-| `ConsultNotes` | 11 | Id | tenant-scoped |
+| `ConsultNotes` | 12 | Id | tenant-scoped |
 | `DoctorNoteTemplates` | 3 | Id | tenant-scoped |
 | `Encounters` | 12 | Id | tenant-scoped |
+| `GeriatricAssessments` | 19 | Id | tenant-scoped |
+| `HistoryEntries` | 8 | Id | tenant-scoped |
+| `Immunisations` | 14 | Id | tenant-scoped |
 | `Intakes` | 12 | Id | tenant-scoped |
 | `IntakeEscalations` | 9 | Id | tenant-scoped |
-| `MedicationDecisions` | 13 | Id | tenant-scoped |
+| `MedicationDecisions` | 15 | Id | tenant-scoped |
 | `MedicationReconciliations` | 7 | Id | tenant-scoped |
 | `MedicationStatements` | 17 | Id | tenant-scoped |
+| `MilestoneResponses` | 11 | Id | tenant-scoped |
 | `Observations` | 16 | Id | tenant-scoped |
 | `OutboxEvents` | 7 | Id | tenant-scoped |
+| `PregnancyEpisodes` | 22 | Id | tenant-scoped |
+| `PregnancyRuledOuts` | 7 | Id | tenant-scoped |
 | `Problems` | 17 | Id | tenant-scoped |
 | `SignedNotePdfs` | 8 | Id | append-only ledger; tenant-scoped |
 | `SignedNoteVersions` | 14 | Id | append-only ledger; tenant-scoped |
@@ -1459,6 +1572,55 @@ erDiagram
 | `StatusSetAt` | timestamptz | yes |  |
 | `StatusSetBy` | guid | yes | id of `identity.Users` |
 | `Substance` | character varying(200) |  |  |
+| `TenantId` | guid |  | `tenancy.Tenants` |
+
+</details>
+
+<details><summary><code>encounters.CareChecks</code> columns</summary>
+
+| Column | Type | Null | Links to |
+|---|---|---|---|
+| `Id` | guid |  |  |
+| `DoneOn` | date |  |  |
+| `FacilityId` | guid |  | id of `tenancy.Facilities` |
+| `Kind` | character varying(30) |  |  |
+| `MergedFromPatientId` | guid | yes | id of `patients.Patients` |
+| `PatientId` | guid |  | id of `patients.Patients` |
+| `RecordedAt` | timestamptz |  |  |
+| `RecordedBy` | guid |  | id of `identity.Users` |
+| `TenantId` | guid |  | `tenancy.Tenants` |
+
+</details>
+
+<details><summary><code>encounters.CareGoals</code> columns</summary>
+
+| Column | Type | Null | Links to |
+|---|---|---|---|
+| `Id` | guid |  |  |
+| `CreatedAt` | timestamptz |  |  |
+| `CreatedBy` | guid |  | id of `identity.Users` |
+| `MergedFromPatientId` | guid | yes | id of `patients.Patients` |
+| `PatientId` | guid |  | id of `patients.Patients` |
+| `ProgressPercent` | int |  |  |
+| `Target` | character varying(200) |  |  |
+| `TenantId` | guid |  | `tenancy.Tenants` |
+| `Text` | character varying(200) |  |  |
+| `UpdatedAt` | timestamptz |  |  |
+| `UpdatedBy` | guid |  |  |
+
+</details>
+
+<details><summary><code>encounters.CareTargets</code> columns</summary>
+
+| Column | Type | Null | Links to |
+|---|---|---|---|
+| `Id` | guid |  |  |
+| `Code` | character varying(30) |  |  |
+| `LimitHundredths` | int |  |  |
+| `MergedFromPatientId` | guid | yes | id of `patients.Patients` |
+| `PatientId` | guid |  | id of `patients.Patients` |
+| `SetAt` | timestamptz |  |  |
+| `SetBy` | guid |  | id of `identity.Users` |
 | `TenantId` | guid |  | `tenancy.Tenants` |
 
 </details>
@@ -1493,6 +1655,7 @@ erDiagram
 | `Id` | guid |  |  |
 | `EncounterId` | guid |  | id of `encounters.Encounters` |
 | `Manual` | bool |  |  |
+| `RecordingConsent` | character varying(20) |  |  |
 | `Sections` | jsonb |  |  |
 | `Status` | character varying(20) |  |  |
 | `TemplateKey` | character varying(50) |  |  |
@@ -1530,6 +1693,68 @@ erDiagram
 | `StartedAt` | timestamptz |  |  |
 | `Status` | character varying(20) |  |  |
 | `TenantId` | guid |  | `tenancy.Tenants` |
+
+</details>
+
+<details><summary><code>encounters.GeriatricAssessments</code> columns</summary>
+
+| Column | Type | Null | Links to |
+|---|---|---|---|
+| `Id` | guid |  |  |
+| `Adl` | int | yes |  |
+| `AssessedAt` | timestamptz |  |  |
+| `ClinicalFrailtyScale` | int | yes |  |
+| `FacilityId` | guid |  | id of `tenancy.Facilities` |
+| `FallsLast12Months` | int | yes |  |
+| `Iadl` | int | yes |  |
+| `LyingDiastolic` | int | yes |  |
+| `LyingSystolic` | int | yes |  |
+| `MergedFromPatientId` | guid | yes | id of `patients.Patients` |
+| `MiniCog` | int | yes |  |
+| `NutritionNote` | character varying(500) |  |  |
+| `PatientId` | guid |  | id of `patients.Patients` |
+| `Phq2` | int | yes |  |
+| `RecordedBy` | guid |  | id of `identity.Users` |
+| `StandingDiastolic` | int | yes |  |
+| `StandingSystolic` | int | yes |  |
+| `TenantId` | guid |  | `tenancy.Tenants` |
+| `TimedUpAndGoTenths` | int | yes |  |
+
+</details>
+
+<details><summary><code>encounters.HistoryEntries</code> columns</summary>
+
+| Column | Type | Null | Links to |
+|---|---|---|---|
+| `Id` | guid |  |  |
+| `MergedFromPatientId` | guid | yes | id of `patients.Patients` |
+| `PatientId` | guid |  | id of `patients.Patients` |
+| `RecordedAt` | timestamptz |  |  |
+| `RecordedBy` | guid |  | id of `identity.Users` |
+| `Section` | character varying(20) |  |  |
+| `TenantId` | guid |  | `tenancy.Tenants` |
+| `Text` | character varying(2000) |  |  |
+
+</details>
+
+<details><summary><code>encounters.Immunisations</code> columns</summary>
+
+| Column | Type | Null | Links to |
+|---|---|---|---|
+| `Id` | guid |  |  |
+| `Batch` | character varying(50) |  |  |
+| `DeferReason` | character varying(500) |  |  |
+| `Dose` | int |  |  |
+| `FacilityId` | guid |  | id of `tenancy.Facilities` |
+| `GivenBy` | character varying(100) |  |  |
+| `GivenOn` | date | yes |  |
+| `MergedFromPatientId` | guid | yes | id of `patients.Patients` |
+| `Outcome` | character varying(20) |  |  |
+| `PatientId` | guid |  | id of `patients.Patients` |
+| `RecordedAt` | timestamptz |  |  |
+| `RecordedBy` | guid |  | id of `identity.Users` |
+| `TenantId` | guid |  | `tenancy.Tenants` |
+| `Vaccine` | character varying(20) |  |  |
 
 </details>
 
@@ -1576,6 +1801,7 @@ erDiagram
 | `DecidedAt` | timestamptz |  |  |
 | `DecidedBy` | guid |  | id of `identity.Users` |
 | `EncounterId` | guid |  | id of `encounters.Encounters` |
+| `EndsOn` | date | yes |  |
 | `FromDose` | character varying(100) |  |  |
 | `Kind` | character varying(20) |  |  |
 | `MedicineKey` | character varying(200) |  |  |
@@ -1584,6 +1810,7 @@ erDiagram
 | `NewDose` | character varying(100) |  |  |
 | `PatientId` | guid |  | id of `patients.Patients` |
 | `Reason` | character varying(500) |  |  |
+| `Steps` | jsonb |  |  |
 | `TenantId` | guid |  | `tenancy.Tenants` |
 
 </details>
@@ -1626,6 +1853,24 @@ erDiagram
 
 </details>
 
+<details><summary><code>encounters.MilestoneResponses</code> columns</summary>
+
+| Column | Type | Null | Links to |
+|---|---|---|---|
+| `Id` | guid |  |  |
+| `Answer` | character varying(20) |  |  |
+| `AnsweredBy` | character varying(20) |  |  |
+| `Band` | character varying(20) |  |  |
+| `FacilityId` | guid |  | id of `tenancy.Facilities` |
+| `MergedFromPatientId` | guid | yes | id of `patients.Patients` |
+| `Milestone` | character varying(50) |  |  |
+| `PatientId` | guid |  | id of `patients.Patients` |
+| `RecordedAt` | timestamptz |  |  |
+| `RecordedBy` | guid |  | id of `identity.Users` |
+| `TenantId` | guid |  | `tenancy.Tenants` |
+
+</details>
+
 <details><summary><code>encounters.Observations</code> columns</summary>
 
 | Column | Type | Null | Links to |
@@ -1660,6 +1905,49 @@ erDiagram
 | `PublishedAt` | timestamptz | yes |  |
 | `TenantId` | guid |  | `tenancy.Tenants` |
 | `Type` | character varying(100) |  |  |
+
+</details>
+
+<details><summary><code>encounters.PregnancyEpisodes</code> columns</summary>
+
+| Column | Type | Null | Links to |
+|---|---|---|---|
+| `Id` | guid |  |  |
+| `Abortions` | int | yes |  |
+| `ClosedAt` | timestamptz | yes |  |
+| `ClosedBy` | guid | yes | id of `identity.Users` |
+| `DangerSignsCounselledAt` | timestamptz | yes |  |
+| `DangerSignsCounselledBy` | guid | yes | id of `identity.Users` |
+| `DatedBy` | character varying(10) |  |  |
+| `DatingReason` | character varying(20) |  |  |
+| `DueDate` | date |  |  |
+| `Gravida` | int | yes |  |
+| `Living` | int | yes |  |
+| `Lmp` | date | yes |  |
+| `MergedFromPatientId` | guid | yes | id of `patients.Patients` |
+| `Outcome` | character varying(20) |  |  |
+| `Para` | int | yes |  |
+| `PatientId` | guid |  | id of `patients.Patients` |
+| `PreviousDueDate` | date | yes |  |
+| `ScanDate` | date | yes |  |
+| `ScanGestationDays` | int | yes |  |
+| `StartedAt` | timestamptz |  |  |
+| `StartedBy` | guid |  | id of `identity.Users` |
+| `TenantId` | guid |  | `tenancy.Tenants` |
+
+</details>
+
+<details><summary><code>encounters.PregnancyRuledOuts</code> columns</summary>
+
+| Column | Type | Null | Links to |
+|---|---|---|---|
+| `Id` | guid |  |  |
+| `FacilityId` | guid |  | id of `tenancy.Facilities` |
+| `MergedFromPatientId` | guid | yes | id of `patients.Patients` |
+| `PatientId` | guid |  | id of `patients.Patients` |
+| `RecordedAt` | timestamptz |  |  |
+| `RecordedBy` | guid |  | id of `identity.Users` |
+| `TenantId` | guid |  | `tenancy.Tenants` |
 
 </details>
 
@@ -1723,7 +2011,7 @@ erDiagram
 
 </details>
 
-### Prescribing (schema `prescribing`, 15 tables)
+### Prescribing (schema `prescribing`, 16 tables)
 
 ```mermaid
 erDiagram
@@ -1791,6 +2079,10 @@ erDiagram
   ReferralEvents {
     guid Id PK
   }
+  RxAdvice {
+    guid Id PK
+    guid EncounterId "id of encounters.Encounters"
+  }
   RxAlertOverrides {
     guid Id PK
     guid EncounterId "id of encounters.Encounters"
@@ -1857,6 +2149,7 @@ erDiagram
   patients_Patients |o..o{ Referrals : "MergedFromPatientId"
   patients_Patients ||..o{ Referrals : "PatientId"
   identity_Users |o..o{ Referrals : "SentBy"
+  encounters_Encounters ||..o{ RxAdvice : "EncounterId"
   encounters_Encounters ||..o{ RxAlertOverrides : "EncounterId"
   tenancy_Facilities ||..o{ RxAlertOverrides : "FacilityId"
   patients_Patients |o..o{ RxAlertOverrides : "MergedFromPatientId"
@@ -1872,7 +2165,7 @@ erDiagram
 
 | Table | Columns | Primary key | Notes |
 |---|---|---|---|
-| `AuthorisedPrescriptions` | 11 | Id | append-only ledger; tenant-scoped |
+| `AuthorisedPrescriptions` | 12 | Id | append-only ledger; tenant-scoped |
 | `Orders` | 15 | Id | tenant-scoped |
 | `FormularyItems` | 14 | Id | tenant-scoped |
 | `OrderSets` | 5 | Id | tenant-scoped |
@@ -1883,6 +2176,7 @@ erDiagram
 | `PrintedPapers` | 13 | Id | append-only ledger; tenant-scoped |
 | `Referrals` | 19 | Id | tenant-scoped |
 | `ReferralEvents` | 8 | Id | tenant-scoped |
+| `RxAdvice` | 6 | Id | tenant-scoped |
 | `RxAlertOverrides` | 12 | Id | tenant-scoped |
 | `RxLayoutApprovals` | 5 | Id | append-only ledger; tenant-scoped |
 | `RxShares` | 14 | Id | append-only ledger; tenant-scoped |
@@ -1893,6 +2187,7 @@ erDiagram
 | Column | Type | Null | Links to |
 |---|---|---|---|
 | `Id` | guid |  |  |
+| `Advice` | text |  |  |
 | `AuthorisedAt` | timestamptz |  |  |
 | `AuthorisedBy` | guid |  | id of `identity.Users` |
 | `ContentHash` | character varying(64) |  |  |
@@ -2092,6 +2387,19 @@ erDiagram
 | `ReferralId` | guid |  |  |
 | `State` | character varying(20) |  |  |
 | `TenantId` | guid |  | `tenancy.Tenants` |
+
+</details>
+
+<details><summary><code>prescribing.RxAdvice</code> columns</summary>
+
+| Column | Type | Null | Links to |
+|---|---|---|---|
+| `Id` | guid |  |  |
+| `EncounterId` | guid |  | id of `encounters.Encounters` |
+| `TenantId` | guid |  | `tenancy.Tenants` |
+| `Text` | character varying(1000) |  |  |
+| `UpdatedAt` | timestamptz |  |  |
+| `UpdatedBy` | guid |  |  |
 
 </details>
 
@@ -2640,13 +2948,13 @@ From `docs/03-architecture/data-model.md` (areas A to D). "Built" means a table 
 | D · Care, portal, integration, audit | `AUDIT_EVENT` | built | `audit.AuditEvents` |
 | D · Care, portal, integration, audit | `OUTBOX_EVENT` | built | `scheduling.OutboxEvents` |
 
-Tables that exist but were added while building (not named in the plan): `encounters.ConsultNotes`, `encounters.DoctorNoteTemplates`, `encounters.IntakeEscalations`, `encounters.Intakes`, `encounters.MedicationDecisions`, `encounters.MedicationReconciliations`, `encounters.OutboxEvents`, `encounters.SignedNotePdfs`, `encounters.SignedNoteVersions`, `identity.OnboardingDrafts`, `identity.Sessions`, `leads.DemoRequests`, `leads.Waitlist`, `notifications.Preferences`, `notifications.StaffNotificationReads`, `notifications.StaffNotifications`, `patients.DataKeys`, `patients.MergeRequests`, `platform.AuditEntries`, `platform.KeyLinks`, `platform.Members`, `platform.SecurityKeys`, `platform.Sessions`, `prescribing.PrescriptionCancellations`, `prescribing.PrescriptionPdfs`, `prescribing.PrintedPapers`, `prescribing.ReferralEvents`, `prescribing.RxAlertOverrides`, `prescribing.RxLayoutApprovals`, `prescribing.RxShareCodes`, `prescribing.RxShares`, `scheduling.AppointmentReschedules`, `scheduling.BookingConflicts`, `scheduling.MetricBaselines`, `scheduling.OutboxTenants`, `scheduling.QueueDisplays`, `scheduling.Resources`, `scheduling.SlotHolds`, `scheduling.VisitStatusEvents`, `tenancy.AccessRequests`, `tenancy.AccessReviewDecisions`, `tenancy.AccessReviews`, `tenancy.FeatureFlags`, `tenancy.Invitations`, `tenancy.OperatingHours`, `tenancy.OrganisationDocuments`, `tenancy.OrganisationRequests`, `tenancy.PracticeDefaults`, `tenancy.Profiles`, `tenancy.SettingsChanges`, `tenancy.TenantIndex`, `tenancy.TermsAcceptances`.
+Tables that exist but were added while building (not named in the plan): `encounters.CareChecks`, `encounters.CareGoals`, `encounters.CareTargets`, `encounters.ConsultNotes`, `encounters.DoctorNoteTemplates`, `encounters.GeriatricAssessments`, `encounters.HistoryEntries`, `encounters.Immunisations`, `encounters.IntakeEscalations`, `encounters.Intakes`, `encounters.MedicationDecisions`, `encounters.MedicationReconciliations`, `encounters.MilestoneResponses`, `encounters.OutboxEvents`, `encounters.PregnancyEpisodes`, `encounters.PregnancyRuledOuts`, `encounters.SignedNotePdfs`, `encounters.SignedNoteVersions`, `identity.OnboardingDrafts`, `identity.Sessions`, `leads.DemoRequests`, `leads.Waitlist`, `notifications.Preferences`, `notifications.StaffNotificationReads`, `notifications.StaffNotifications`, `patients.DataKeys`, `patients.MergeRequests`, `platform.AuditEntries`, `platform.KeyLinks`, `platform.Members`, `platform.SecurityKeys`, `platform.Sessions`, `prescribing.PrescriptionCancellations`, `prescribing.PrescriptionPdfs`, `prescribing.PrintedPapers`, `prescribing.ReferralEvents`, `prescribing.RxAdvice`, `prescribing.RxAlertOverrides`, `prescribing.RxLayoutApprovals`, `prescribing.RxShareCodes`, `prescribing.RxShares`, `scheduling.AppointmentReschedules`, `scheduling.BookingConflicts`, `scheduling.MetricBaselines`, `scheduling.OutboxTenants`, `scheduling.QueueDisplays`, `scheduling.Resources`, `scheduling.SlotHolds`, `scheduling.VisitStatusEvents`, `tenancy.AccessRequests`, `tenancy.AccessReviewDecisions`, `tenancy.AccessReviews`, `tenancy.FeatureFlags`, `tenancy.Invitations`, `tenancy.OperatingHours`, `tenancy.OrganisationDocuments`, `tenancy.OrganisationRequests`, `tenancy.PracticeDefaults`, `tenancy.Profiles`, `tenancy.SettingsChanges`, `tenancy.TenantIndex`, `tenancy.TermsAcceptances`.
 
-**Counts:** 89 tables across 11 schemas; 37 of 90 planned entities are built; 52 tables were added during the build.
+**Counts:** 99 tables across 11 schemas; 37 of 90 planned entities are built; 62 tables were added during the build.
 
 ## 6. Rules the model follows
 
-- **Tenant isolation:** 79 of 89 tables carry `TenantId` (EF query filter plus PostgreSQL forced row-level security on `medvya.tenant_id`). Without `TenantId`: `identity.OnboardingDrafts`, `identity.Users`, `leads.DemoRequests`, `leads.Waitlist`, `platform.AuditEntries`, `platform.KeyLinks`, `platform.Members`, `platform.SecurityKeys`, `platform.Sessions`, `tenancy.Tenants`. (`TenantId` present is not proof the row-level-security policy covers the table; see `docs/03-architecture/database-security.md`.)
+- **Tenant isolation:** 89 of 99 tables carry `TenantId` (EF query filter plus PostgreSQL forced row-level security on `medvya.tenant_id`). Without `TenantId`: `identity.OnboardingDrafts`, `identity.Users`, `leads.DemoRequests`, `leads.Waitlist`, `platform.AuditEntries`, `platform.KeyLinks`, `platform.Members`, `platform.SecurityKeys`, `platform.Sessions`, `tenancy.Tenants`. (`TenantId` present is not proof the row-level-security policy covers the table; see `docs/03-architecture/database-security.md`.)
 - **Append-only ledgers:** `audit.AuditEvents`, `encounters.SignedNotePdfs`, `encounters.SignedNoteVersions`, `patients.ConsentReceipts`, `prescribing.AuthorisedPrescriptions`, `prescribing.PharmacyDispatchEvents`, `prescribing.PrescriptionPdfs`, `prescribing.PrintedPapers`, `prescribing.RxLayoutApprovals`, `prescribing.RxShares`, `tenancy.TermsAcceptances` (hash-chained, MDV-P0-036; each also has ChainSeq, PrevHash and RowHash added by `LedgerSql`, outside the EF model).
 - **No cross-module foreign keys:** modules link by id and through application services (AGENTS.md 3.1).
 - **Country data plane:** one deployment and one database per country (ADR-003); this diagram is the same in each.

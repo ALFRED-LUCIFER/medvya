@@ -29,6 +29,9 @@ namespace Medvya.Prescribing.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Advice")
+                        .HasColumnType("text");
+
                     b.Property<DateTimeOffset>("AuthorisedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -631,6 +634,37 @@ namespace Medvya.Prescribing.Infrastructure.Persistence.Migrations
                     b.HasIndex("TenantId", "ReferralId", "At");
 
                     b.ToTable("ReferralEvents", "prescribing");
+                });
+
+            modelBuilder.Entity("Medvya.Prescribing.Domain.RxAdvice", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("EncounterId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "EncounterId")
+                        .IsUnique();
+
+                    b.ToTable("RxAdvice", "prescribing");
                 });
 
             modelBuilder.Entity("Medvya.Prescribing.Domain.RxAlertOverride", b =>

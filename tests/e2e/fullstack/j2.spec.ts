@@ -1,16 +1,19 @@
 import { readFile } from 'node:fs/promises';
 import { expect, type Page } from '@playwright/test';
 import { journey } from '../journeys/storyboard';
-import { choosePatient, expectArabicAxeClean, expectNoAxeViolations, signIn, watchUrls } from './support';
+import { choosePatient, expectArabicAxeClean, expectNoAxeViolations, setNurseIntake, signIn, watchUrls } from './support';
 
-// MDV-P0-023: journey J2 (returning diabetic patient, docs/02-design/journeys.md) through the real stack. Only the start of the visit is built;
-// every later step names the ticket that builds it. Meera Iyer is the seeded synthetic patient (docs/00-overview/personas.md).
+// MDV-P0-023: journey J2 (returning diabetic patient, docs/02-design/journeys.md) through the real stack. Steps not built yet
+// name the ticket that builds them. Meera Iyer is the seeded synthetic patient (docs/00-overview/personas.md).
 const rao = /Dr\. Arjun Rao/;
 const meera = 'Meera Iyer (synthetic)';
 let consultPath = ''; // step 6's consultation, which step 7 shares (the steps run in order on one database)
+let chartPath = ''; // step 9's chart and consultation, which steps 10 to 12 share
+let studioPath = '';
 
-/** Books Meera with Dr. Rao, takes her through the front desk and starts the consultation from her card (MDV-P2-001). */
-async function startVisit(page: Page) {
+/** Books Meera with Dr. Rao, takes her through the front desk and starts the consultation from her card (MDV-P2-001). `intake` stands for the
+ * nurse's part when nurse intake is on; without it the desk marks intake done. */
+async function startVisit(page: Page, intake?: () => Promise<void>) {
   await page.goto('/app/schedule');
   await page.getByRole('list', { name: rao }).getByRole('button', { name: /^Book / }).first().click();
   const panel = await choosePatient(page, 'Meera', /^M I, 54 y, Female/);
@@ -22,7 +25,10 @@ async function startVisit(page: Page) {
   await card().getByRole('button', { name: 'Check in' }).click();
   await card().getByRole('group', { name: 'Confirm identity' }).getByRole('button', { name: 'Confirm arrival' }).click();
   await page.getByRole('region', { name: /^Checked in/ }).getByRole('article', { name: meera }).getByRole('button', { name: 'Send to nurse' }).click();
-  await page.getByRole('region', { name: /^With nurse/ }).getByRole('article', { name: meera }).getByRole('button', { name: 'Intake done' }).click();
+  if (intake) {
+    await intake();
+    await page.goto('/app/front-desk');
+  } else await page.getByRole('region', { name: /^With nurse/ }).getByRole('article', { name: meera }).getByRole('button', { name: 'Intake done' }).click();
   await page.getByRole('region', { name: /^Ready for doctor/ }).getByRole('article', { name: meera })
     .getByRole('button', { name: `Start consultation with ${meera}` }).click();
   await expect(page).toHaveURL(/\/app\/consult\/[0-9a-f-]{36}$/); // an opaque id, never patient data
@@ -63,7 +69,7 @@ journey('J2', {
     // MDV-P2-009: the doctor types the note; it autosaves on the server and is still there after a reload.
     const note = page.getByRole('region', { name: 'Consultation note' });
     await note.getByLabel('Chief complaint').fill('Increased thirst for two weeks (synthetic)');
-    await expect(note.getByRole('status')).toHaveText('Saved');
+    await expect(note.getByRole('status').filter({ hasText: /^Saved$/ })).toBeVisible(); // the one-page view has a second status (the chart panel)
     await page.reload();
     await expect(note.getByLabel('Chief complaint')).toHaveValue('Increased thirst for two weeks (synthetic)');
 
@@ -85,7 +91,11 @@ journey('J2', {
     // immutable v1 and its signer line with the attested licence number are the server's.
     await note.getByLabel('Assessment').fill('Raised blood sugar, review (synthetic)');
     await note.getByLabel('Plan').fill('Diet advice, review in two weeks (synthetic)');
-    await expect(note.getByRole('status')).toHaveText('Saved');
+    // MDV-P2-044: Sign stays locked until the recording consent is recorded (the server refuses it too); allergies not recorded are said, not a lock.
+    await expect(note.getByRole('button', { name: 'Sign note' })).toBeDisabled();
+    await note.getByRole('radio', { name: 'Patient declined: I type the note' }).check();
+    await expect(note.getByRole('status').filter({ hasText: /^Saved$/ })).toBeVisible(); // the one-page view has a second status (the chart panel)
+    await expect(note.getByRole('button', { name: 'Sign note' })).toHaveAccessibleDescription('Everything reviewed. Ready to sign.');
     await note.getByRole('button', { name: 'Sign note' }).click();
     const dialog = page.getByRole('dialog', { name: `Sign note for ${meera}?` });
     await expect(dialog).toContainText('I have reviewed every section');
@@ -183,6 +193,154 @@ journey('J2', {
     await share.getByRole('button', { name: 'Send secure link' }).click();
     await expect(share.getByRole('row', { name: /Apollo Pharmacy Adyar/ })).toContainText('Sent to the pharmacy');
     await expectNoAxeViolations(page);
+    await page.goto(consultPath);
+    await page.getByRole('button', { name: 'End consultation' }).click(); // step 9 starts another; one open consultation at a time
+    await expect(page.getByRole('status').filter({ hasText: 'Consultation ended' })).toBeVisible();
   },
   8: 'MDV-P4-016', // C-02 care plan with an owner
+  // E-01 (MDV-P2-033): the nurse records Meera's penicillin allergy at intake (MDV-P2-008; the seed gives her none, and step 1 proves "not recorded"),
+  // Dr. Rao starts the consultation and opens her chart from the search: one page, the allergy in the banner, the section buttons.
+  // shortcut: the allergy stays recorded, so on a kept stack (E2E_REUSE_STACK) J2.1 and this step fail on a second run; CI always starts fresh. Upgrade if specs get a per-run reset.
+  9: async ({ page, browser }) => {
+    const watch = watchUrls(page);
+    await setNurseIntake(browser, true);
+    try {
+      await signIn(page, rao);
+      await startVisit(page, async () => {
+        const nurse = await browser.newPage();
+        try {
+          await signIn(nurse, /S\. Thomas/);
+          await nurse.goto('/app/front-desk');
+          await nurse.getByRole('region', { name: /^With nurse/ }).getByRole('link', { name: `Open intake for ${meera}` }).click();
+          const allergies = nurse.getByRole('region', { name: 'Allergies' });
+          await allergies.getByLabel('Allergic to').fill('Penicillin');
+          await allergies.getByLabel('Reaction').fill('Rash (synthetic)');
+          await allergies.getByRole('button', { name: 'Add allergy' }).click();
+          await expect(allergies.getByText('Penicillin · Rash (synthetic)')).toBeVisible();
+          await nurse.getByRole('button', { name: 'Hand off · Ready for doctor' }).click();
+          await expect(nurse).toHaveURL(/\/nurse$/);
+        } finally {
+          await nurse.close();
+        }
+      });
+    } finally {
+      await setNurseIntake(browser, false); // later journeys mark intake done from the board
+    }
+    studioPath = new URL(page.url()).pathname;
+    await expect(page.getByRole('region', { name: 'Patient identity' })).toContainText('Penicillin');
+
+    await page.getByRole('button', { name: 'Search patients' }).click();
+    const search = page.getByRole('dialog', { name: 'Search patients' });
+    const input = search.getByRole('combobox', { name: 'Name, MRN or phone' });
+    await input.fill('Meera');
+    await expect(search.getByRole('option')).toHaveCount(1);
+    await input.press('ArrowDown');
+    await input.press('Enter');
+    await expect(page).toHaveURL(/\/app\/patients\/[0-9a-f-]{36}$/);
+    chartPath = new URL(page.url()).pathname;
+    const banner = page.getByRole('region', { name: `Patient ${meera}` });
+    await expect(banner).toContainText(/Allergy: .?Penicillin.? · /);
+    await expect(page.getByRole('group', { name: 'Show part of the chart' }).getByRole('button', { name: 'Everything' })).toHaveAttribute('aria-pressed', 'true');
+    for (const card of ['Problems', 'Medicines', 'Last vitals', 'Results and trends']) await expect(page.getByRole('region', { name: card, exact: true })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Open consultation' })).toHaveAttribute('href', studioPath);
+    await expectNoAxeViolations(page);
+    await expectArabicAxeClean(browser, rao, chartPath);
+    expect(watch.leaks(['Meera', 'Iyer', '1972-03-12', 'DQ-10-4482', 'Penicillin', 'Rash'])).toEqual([]);
+  },
+  // E-05 / E-11 (MDV-P2-039, MDV-P2-016): Add medicine on the chart's Medicines card puts the line on the open consultation's draft. Amoxicillin is
+  // blocked by the penicillin allergy (the server's class rule); closing without a reason switches that line off. Metformin goes on the draft.
+  10: async ({ page, browser }) => {
+    expect(chartPath, 'step 9 opens the chart this step uses').not.toBe('');
+    const watch = watchUrls(page);
+    await signIn(page, rao);
+    await page.goto(chartPath);
+    const open = () => page.getByRole('region', { name: 'Medicines', exact: true }).getByRole('button', { name: 'Add medicine' }).click();
+    const panel = page.getByRole('dialog', { name: 'Add medicine' });
+    const choose = (group: string, option: string) => panel.getByRole('group', { name: group }).getByRole('button', { name: option, exact: true }).click();
+
+    await open();
+    await expect(panel.getByRole('region', { name: 'Patient' })).toContainText('Penicillin');
+    await panel.getByLabel('Search medicine').fill('amox');
+    await panel.getByRole('button', { name: /^Amoxicillin/ }).first().click();
+    await choose('How often', '1-1-1 · three times a day');
+    await choose('When', 'After food');
+    await choose('For how long', '5 days');
+    await expect(panel.getByText('A serious finding blocks this medicine.', { exact: false })).toBeVisible();
+    await expect(panel.getByRole('region', { name: 'Safety checks' })).toContainText(/Severe · .*Penicillin/);
+    await expect(panel.getByRole('button', { name: 'Add to prescription' })).toBeDisabled();
+    await expectNoAxeViolations(page);
+    await panel.getByRole('button', { name: 'Cancel' }).click();
+    await expect(panel).toBeHidden();
+
+    await open();
+    await panel.getByLabel('Search medicine').fill('metformin');
+    await panel.getByRole('button', { name: /^Metformin/ }).first().click();
+    await choose('How often', '1-0-1 · twice a day');
+    await choose('When', 'After food');
+    await choose('For how long', '1 month');
+    await expect(panel.getByText('Quantity: 60')).toBeVisible();
+    await panel.getByRole('button', { name: 'Add to prescription' }).click();
+    await expect(page.getByRole('status').filter({ hasText: 'Metformin is on the draft prescription of the open consultation.' })).toBeVisible();
+
+    await page.goto(studioPath); // the server holds the draft: the consultation shows the line, and the amoxicillin one is not included
+    const rx = page.getByRole('region', { name: 'Prescription' });
+    const lines = rx.getByRole('list', { name: 'Medicines to prescribe' });
+    await expect(lines.getByRole('listitem', { name: /^Metformin/ }).filter({ hasNotText: 'Not included' })).toHaveCount(1);
+    await expect(lines.getByRole('listitem', { name: /^Amoxicillin/ })).toContainText('Not included');
+    await expectArabicAxeClean(browser, rao, chartPath);
+    // The formulary search carries the typed medicine name (GET /v1/formulary?q=, by design), so medicine names are not in this list.
+    expect(watch.leaks(['Meera', 'Iyer', '1972-03-12', 'DQ-10-4482', 'Penicillin'])).toEqual([]);
+  },
+  // E-04 (MDV-P2-041, MDV-P2-044): the consultation opens on one page; the doctor writes it, and Sign stays locked until the checklist is complete.
+  11: async ({ page, browser }) => {
+    expect(studioPath, 'step 9 starts the consultation this step writes').not.toBe('');
+    await signIn(page, rao);
+    await page.goto(studioPath);
+    await expect(page.getByRole('button', { name: 'One page' })).toHaveAttribute('aria-pressed', 'true'); // the default view
+    const note = page.getByRole('region', { name: 'Consultation note' });
+    await expect(note.getByRole('navigation', { name: 'Note sections' }).getByRole('link')).toHaveCount(7);
+    const sign = note.getByRole('button', { name: 'Sign note' });
+    await expect(sign).toBeDisabled();
+    await expect(sign).toHaveAccessibleDescription(/^\d items? still needs? your review before signing$/);
+
+    // a returning patient: each section also offers an Insert button for the last signed note's text
+    await note.getByRole('textbox', { name: /^Chief complaint/ }).fill('Review of sugars (synthetic)');
+    await note.getByRole('textbox', { name: /^Assessment/ }).fill('Type 2 diabetes, fair control (synthetic)');
+    await note.getByRole('textbox', { name: /^Plan/ }).fill('Continue metformin, HbA1c in three months (synthetic)');
+    await expect(note.getByRole('status').filter({ hasText: /^Saved$/ })).toBeVisible();
+    await expect(sign).toBeDisabled(); // the recording consent is still to do (the server refuses it too)
+    await expect(sign).toHaveAccessibleDescription('1 item still needs your review before signing');
+    const tools = note.getByRole('complementary', { name: 'Consultation tools' });
+    await tools.getByRole('tab', { name: /^Checklist 7\/8$/ }).click();
+    await expect(tools.getByRole('region', { name: 'Review and sign' }).getByRole('listitem').filter({ hasText: 'Recording consent recorded' })).toContainText('To do');
+    await expect(tools.getByRole('region', { name: 'Review and sign' }).getByRole('listitem').filter({ hasText: 'Allergies reconciled' })).toContainText('Done');
+    await expectNoAxeViolations(page);
+
+    await note.getByRole('radio', { name: 'Patient declined: I type the note' }).check();
+    await expect(note.getByRole('status').filter({ hasText: /^Saved$/ })).toBeVisible();
+    await expect(sign).toBeEnabled();
+    await expect(sign).toHaveAccessibleDescription('Everything reviewed. Ready to sign.');
+    await expectArabicAxeClean(browser, rao, studioPath);
+  },
+  // E-06 (MDV-P2-012): signing asks for the step-up, then the note is v1 and read-only, on the server.
+  12: async ({ page }) => {
+    expect(studioPath, 'step 9 starts the consultation this step signs').not.toBe('');
+    const watch = watchUrls(page);
+    await signIn(page, rao);
+    await page.goto(studioPath);
+    const note = page.getByRole('region', { name: 'Consultation note' });
+    await note.getByRole('button', { name: 'Sign note' }).click();
+    await page.getByRole('dialog', { name: `Sign note for ${meera}?` }).getByRole('button', { name: /^Sign as Dr\. Arjun Rao/ }).click();
+    await stepUp(page);
+    await note.getByRole('button', { name: 'Sign note' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: /^Sign as Dr\. Arjun Rao/ }).click();
+    await expect(note).toContainText('SIGNED v1 · read-only');
+    await expect(note.getByRole('textbox', { name: /^Plan/ })).toHaveJSProperty('readOnly', true);
+    await page.reload();
+    await expect(note).toContainText('SIGNED v1 · read-only');
+    await expectNoAxeViolations(page);
+    await page.getByRole('button', { name: 'End consultation' }).click(); // leaves Dr. Rao no open consultation for the later journeys
+    await expect(page.getByRole('status').filter({ hasText: 'Consultation ended' })).toBeVisible();
+    expect(watch.leaks(['Meera', 'Iyer', '1972-03-12', 'DQ-10-4482', 'sugars'])).toEqual([]);
+  },
 });

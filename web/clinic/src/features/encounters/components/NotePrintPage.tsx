@@ -5,6 +5,8 @@ import { Button, buttonVariants } from '@medvya/ui';
 import type { EncounterBanner } from '../domain/encounter';
 import { sectionLabelKey, type NoteTemplate, type NoteView } from '../domain/note';
 import { Versions } from './NoteHistory';
+import { StructuredField } from './NoteParts';
+import { isStructured } from '../domain/structured';
 
 type Props = {
   banner: EncounterBanner | null; note: NoteView | null; template: NoteTemplate | null; loading: boolean; failed: boolean;
@@ -38,7 +40,9 @@ export default function NotePrintPage(p: Props) {
             <span>{t('consult.banner.dob', { date: formatDate(new Date(`${banner.patient.dateOfBirth}T12:00:00Z`), 'UTC') })}</span>
           </p>
         </header>
-        {p.template.sections.filter(s => note.sections[s.id]).map(s => (
+        {p.template.sections.filter(s => note.sections[s.id]).map(s => isStructured(s) ? (
+          <section key={s.id}><StructuredField section={s} text={note.sections[s.id]!} readOnly heading onChange={() => undefined} /></section>
+        ) : (
           <section key={s.id} aria-labelledby={`print-${s.id}`}>
             <h2 id={`print-${s.id}`} className="font-extrabold">{t(sectionLabelKey(s.id))}</h2>
             <p className="whitespace-pre-wrap">{note.sections[s.id]}</p>

@@ -15,6 +15,14 @@ public enum NoteStatus { Draft, Signed }
 #pragma warning restore CA1720
 
 /// <summary>
+/// What the doctor recorded about recording this visit (MDV-P2-044): the patient agreed, declined (the doctor types the note), or withdrew
+/// consent while being listened to. Null on a note: not recorded yet, and the note cannot be signed.
+/// shortcut: the doctor's word on the note only; the per-encounter consent receipt (who, script, people in the room) is MDV-P3-003.
+/// </summary>
+[JsonConverter(typeof(JsonStringEnumConverter<RecordingConsent>))]
+public enum RecordingConsent { Agreed, Declined, Withdrawn }
+
+/// <summary>
 /// CONSULT NOTE (MDV-P2-009): the one draft note of an encounter, written on a pinned template version. <see cref="Sections"/> are keyed by the
 /// template's section ids; a blank is absent, never guessed. The patient is the encounter's, so a patient merge needs nothing here.
 /// </summary>
@@ -31,6 +39,13 @@ public sealed class ConsultNote
     /// <summary>The doctor typed this note without a recording (consent declined or none made): the manual-note path.</summary>
     [Classification(DataClass.Internal)] public bool Manual { get; set; }
     [Classification(DataClass.SensitiveHealth)] public Dictionary<string, string> Sections { get; set; } = [];
+    /// <summary>Null until the doctor records the patient's answer (MDV-P2-044); signing refuses a note without one.</summary>
+    [Classification(DataClass.Internal)] public RecordingConsent? RecordingConsent { get; set; }
+    /// <summary>
+    /// Section ids that hold an AI draft or suggestion the doctor has not accepted or dismissed yet (MDV-P2-044); signing refuses while any is left.
+    /// shortcut: nothing writes it before AI drafting (MDV-P3-011, MDV-P3-012 add and resolve entries); a save never changes it.
+    /// </summary>
+    [Classification(DataClass.Internal)] public string[] UndecidedAi { get; set; } = [];
     /// <summary>Concurrency token and the ETag the editor sends back: 1 on the first save, +1 on every save.</summary>
     [Classification(DataClass.Internal)] public int Version { get; set; }
     [Classification(DataClass.Internal)] public Guid UpdatedBy { get; set; }

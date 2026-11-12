@@ -76,12 +76,25 @@ public sealed class IntakeTests(PostgresFixture sql) : IClassFixture<PostgresFix
     [InlineData(VitalKind.Pulse, 0)]
     [InlineData(VitalKind.Temperature, 98.6)] // Fahrenheit typed into a Celsius box
     [InlineData(VitalKind.Weight, -5)]
+    [InlineData(VitalKind.Height, 1750)] // millimetres typed into a centimetre box
+    [InlineData(VitalKind.RespiratoryRate, 0)]
     public async Task AnImpossibleValueIsRefusedAndNothingIsSaved(VitalKind kind, double value)
     {
         var visit = await WithNurseAsync();
         var refused = await Assert.ThrowsAsync<IntakeValidationException>(() => Intake(h.Nurse).RecordAsync(visit, new RecordIntake(null, [new(kind, (decimal)value)])));
         Assert.Contains(refused.Errors, e => e.Code == "implausible");
         Assert.Empty((await Intake(h.Nurse).GetAsync(visit))!.Vitals);
+    }
+
+    [Fact]
+    public async Task HeightAndRespiratoryRateAreSavedAsChartObservations()
+    {
+        var visit = await WithNurseAsync();
+        var saved = await Intake(h.Nurse).RecordAsync(visit, new RecordIntake(null, [new(VitalKind.Height, 162.5m), new(VitalKind.RespiratoryRate, 24)]));
+        Assert.Equal([(VitalKind.Height, 162.5m, (VitalAlert?)null), (VitalKind.RespiratoryRate, 24m, VitalAlert.High)], saved!.Vitals.Select(v => (v.Kind, v.Value, v.Flag)));
+        await using var db = sql.Encounters(h.Tenant);
+        Assert.Equal([(ObservationCode.Height, 16250), (ObservationCode.RespiratoryRate, 2400)],
+            (await db.Observations.AsNoTracking().Where(o => o.AppointmentId == visit).OrderBy(o => o.Code).ToListAsync()).Select(o => (o.Code, o.ValueHundredths)));
     }
 
     [Fact]
@@ -146,6 +159,16 @@ public sealed class IntakeTests(PostgresFixture sql) : IClassFixture<PostgresFix
     [InlineData(216, VitalKind.SystolicBp, 140, VitalAlert.High)]
     [InlineData(6, VitalKind.Temperature, 38.0, VitalAlert.High)] // fever and SpO2 lines are the same at every age
     [InlineData(600, VitalKind.OxygenSaturation, 93, VitalAlert.Low)]
+    [InlineData(6, VitalKind.RespiratoryRate, 40, null)] // infant: PALS 30–53
+    [InlineData(6, VitalKind.RespiratoryRate, 54, VitalAlert.High)]
+    [InlineData(12, VitalKind.RespiratoryRate, 40, VitalAlert.High)] // toddler: 22–37
+    [InlineData(48, VitalKind.RespiratoryRate, 19, VitalAlert.Low)] // preschool: 20–28
+    [InlineData(155, VitalKind.RespiratoryRate, 25, null)] // school age: 18–25
+    [InlineData(156, VitalKind.RespiratoryRate, 25, VitalAlert.High)] // 13: adolescent 12–20
+    [InlineData(216, VitalKind.RespiratoryRate, 20, null)]
+    [InlineData(216, VitalKind.RespiratoryRate, 21, VitalAlert.High)]
+    [InlineData(216, VitalKind.RespiratoryRate, 11, VitalAlert.Low)]
+    [InlineData(216, VitalKind.Height, 250, null)] // height is measured, never flagged
     public void UsualRangesFollowTheAgeBand(int ageInMonths, VitalKind kind, double value, VitalAlert? expected) =>
         Assert.Equal(expected, VitalRules.Flag(kind, (decimal)value, null, ageInMonths));
 

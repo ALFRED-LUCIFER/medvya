@@ -75,6 +75,13 @@ export default function RxPrintPage(p: Props) {
             </div>
           ))}
         </section>
+        {v.advice?.text && (
+          <section aria-labelledby="rx-print-advice">
+            <h2 id="rx-print-advice" className="mb-1 font-extrabold">{t('rxPrint.advice')}</h2>
+            <p lang="en" dir="ltr" className="whitespace-pre-line">{v.advice.text}</p>
+            {!v.advice.inPatientLanguage && <p className="text-sm">{t('rxPrint.adviceInEnglish')}</p>}
+          </section>
+        )}
         <footer className="flex flex-wrap items-end gap-4 border-t border-black pt-2">
           <svg role="img" aria-label={t('rxPrint.qr')} viewBox={`0 0 ${size} ${size}`} className="size-32 shrink-0" shapeRendering="crispEdges">
             <rect width={size} height={size} className="fill-white" />
@@ -117,6 +124,7 @@ function Medicine({ line, second }: { line: RxPrintLine; second: SecondLanguage 
       <p lang="en" dir="ltr">{line.sig.en}</p>
       {second !== 'none' && line.sig[second] && <p lang={second} dir={directionOf(second)}>{line.sig[second]}</p>}
       {line.printRequirements.map(r => <p key={r} className="text-sm">{t(`rxPrint.requirement.${r}`)}</p>)}
+      {line.reason && <p className="text-sm">{t('rxPrint.reason', { reason: line.reason })}</p>}
     </li>
   );
 }

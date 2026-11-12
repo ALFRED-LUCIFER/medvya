@@ -18,6 +18,7 @@ public sealed class PrescribingDbContext(DbContextOptions<PrescribingDbContext> 
     public DbSet<RxAlertOverride> RxAlertOverrides => Set<RxAlertOverride>();
     public DbSet<AuthorisedPrescription> AuthorisedPrescriptions => Set<AuthorisedPrescription>();
     public DbSet<PrescriptionCancellation> PrescriptionCancellations => Set<PrescriptionCancellation>();
+    public DbSet<RxAdvice> RxAdvice => Set<RxAdvice>();
     public DbSet<PrescriptionPdf> PrescriptionPdfs => Set<PrescriptionPdf>();
     public DbSet<PrintedPaper> PrintedPapers => Set<PrintedPaper>();
     public DbSet<RxLayoutApproval> RxLayoutApprovals => Set<RxLayoutApproval>();
@@ -116,6 +117,13 @@ public sealed class PrescribingDbContext(DbContextOptions<PrescribingDbContext> 
             e.Property(x => x.VerifyCode).HasMaxLength(22);
             e.HasIndex(x => new { x.TenantId, x.EncounterId, x.VersionNo }).IsUnique(); // two authorisations at once: the second loses here
             e.HasIndex(x => new { x.TenantId, x.VerifyCode }).IsUnique();
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<RxAdvice>(e =>
+        {
+            e.ToTable("RxAdvice");
+            e.Property(x => x.Text).HasMaxLength(Domain.RxAdvice.MaxText);
+            e.HasIndex(x => new { x.TenantId, x.EncounterId }).IsUnique(); // one per consultation
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         modelBuilder.Entity<PrescriptionCancellation>(e =>

@@ -95,6 +95,26 @@ public sealed class OrderTests(PostgresFixture sql) : IClassFixture<PostgresFixt
         Assert.Equal("not_draft", (await Assert.ThrowsAsync<OrdersConflictException>(() => Orders(h.Doctor).IncludeAsync(hba1c.Id, new IncludeOrder(true)))).Code);
     }
 
+    /// <summary>
+    /// MDV-P2-043 AC2, the Plan's test toggles: on adds one draft (a second add is refused, on again re-includes the same row), off takes the draft out,
+    /// and off never takes out an ordered test. SAFETY mutation check: drop "and o.State == from" in OrderService.IncludeAsync and the last part fails.
+    /// </summary>
+    [Fact]
+    public async Task ATestToggledOnIsOneDraftAndToggledOffNeverTakesOutAnOrderedTest()
+    {
+        var enc = await ConsultationAsync();
+        var hba1c = Assert.Single((await Orders(h.Doctor).AddAsync(enc.Id, Lab("HbA1c")))!);
+        Assert.Equal("already_listed", (await Assert.ThrowsAsync<OrdersConflictException>(() => Orders(h.Doctor).AddAsync(enc.Id, Lab("hba1c")))).Code);
+        Assert.Equal(OrderState.NotIncluded, Assert.Single((await Orders(h.Doctor).IncludeAsync(hba1c.Id, new IncludeOrder(false)))!).State);
+        var on = Assert.Single((await Orders(h.Doctor).IncludeAsync(hba1c.Id, new IncludeOrder(true)))!);
+        Assert.Equal((hba1c.Id, OrderState.Draft), (on.Id, on.State));
+
+        await Orders(h.Doctor).PlaceAsync(enc.Id, new PlaceOrders(null));
+        Assert.Equal("not_draft", (await Assert.ThrowsAsync<OrdersConflictException>(() => Orders(h.Doctor).IncludeAsync(hba1c.Id, new IncludeOrder(false)))).Code);
+        await using var db = sql.Prescribing(h.Tenant);
+        Assert.Equal(OrderState.Ordered, (await db.Orders.AsNoTracking().SingleAsync(o => o.Id == hba1c.Id)).State);
+    }
+
     [Fact]
     public async Task AnOrderSetAddsItsTestsAsDraftsOnceAndOrdersCanBeAddedByHand()
     {

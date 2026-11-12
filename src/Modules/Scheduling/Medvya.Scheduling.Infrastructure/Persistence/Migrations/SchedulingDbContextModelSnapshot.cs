@@ -633,8 +633,18 @@ namespace Medvya.Scheduling.Infrastructure.Persistence.Migrations
                     b.Property<int>("Days")
                         .HasColumnType("integer");
 
+                    b.Property<DateOnly?>("DueOn")
+                        .HasColumnType("date");
+
+                    b.Property<Guid?>("EncounterId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid>("FacilityId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("FollowUp")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
 
                     b.Property<TimeOnly?>("From")
                         .HasColumnType("time without time zone");
@@ -679,6 +689,10 @@ namespace Medvya.Scheduling.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(30)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "EncounterId")
+                        .IsUnique()
+                        .HasFilter("\"EncounterId\" IS NOT NULL");
 
                     b.HasIndex("TenantId", "PatientId");
 

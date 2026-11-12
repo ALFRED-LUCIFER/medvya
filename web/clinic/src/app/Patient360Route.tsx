@@ -6,11 +6,13 @@ import DocumentsSummary from '../features/documents/components/DocumentsSummary'
 import { useDocumentListController } from '../features/documents/hooks/useDocumentListController';
 import OpenReferrals from '../features/referrals/components/OpenReferrals';
 import { useOpenReferralsController } from '../features/referrals/hooks/useReferralsController';
+import ChronicCareCards from '../features/patient360/components/ChronicCareCards';
 import HistorySections from '../features/patient360/components/HistorySections';
 import OlderAdultCards from '../features/patient360/components/OlderAdultCards';
 import Patient360Page from '../features/patient360/components/Patient360Page';
 import type { LifeStage } from '../features/patient360/domain/chart';
 import { useChartSectionController } from '../features/patient360/hooks/useChartSectionController';
+import { useChronicCareController } from '../features/patient360/hooks/useChronicCareController';
 import { useHistoryController } from '../features/patient360/hooks/useHistoryController';
 import { useOlderAdultController } from '../features/patient360/hooks/useOlderAdultController';
 import { usePatient360Controller } from '../features/patient360/hooks/usePatient360Controller';
@@ -62,6 +64,7 @@ function Chart({ patientId, backPath, canEditHistory, canOrder, online, userId }
         addMedicine={canOrder && d && <AddMedicinePanel {...add} patient={{ ...d.patient, allergies: { state: d.chart.allergyState, allergies: d.chart.allergies } }} />}
         history={chart.data && <HistorySections {...history} />}
         stageModule={modules.length > 0 ? <div className="flex flex-col gap-4">{modules.map((M, i) => <M key={i} patientId={patientId} canRecord={canEditHistory} online={online} openConsultPath={openConsultPath} />)}</div> : undefined}
+        carePlan={d && <ChronicCare patientId={patientId} openEncounterId={d.chart.openEncounterId} canDecide={canOrder} />}
         timeline={chart.data && <Timeline patientId={patientId} />}
         documents={chart.data && <Documents patientId={patientId} />} />
       {!referrals.hidden && !referrals.loading && !referrals.failed && <OpenReferrals open={referrals.open} />}
@@ -69,5 +72,8 @@ function Chart({ patientId, backPath, canEditHistory, canOrder, online, userId }
   );
 }
 
+/** Targets, care gaps and goals (MDV-P2-038); a gap's action goes on the open consultation, and with none open it says so. */
+const ChronicCare = ({ patientId, openEncounterId, canDecide }: { patientId: string; openEncounterId: string | null; canDecide: boolean }) =>
+  <ChronicCareCards {...useChronicCareController(patientId, openEncounterId)} canDecide={canDecide} />;
 const Timeline = ({ patientId }: { patientId: string }) => <TimelinePreview {...useTimelinePreviewController(patientId)} timelinePath={`/patients/${patientId}/timeline`} />;
 const Documents = ({ patientId }: { patientId: string }) => <DocumentsSummary {...useDocumentListController(patientId)} documentsPath={`/patients/${patientId}/docs`} />;

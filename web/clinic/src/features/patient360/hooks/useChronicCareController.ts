@@ -100,5 +100,3 @@ export function useChronicCareController(patientId: string, openEncounterId: str
     onSubmitMove: progressForm.handleSubmit(v => { if (moving) progress.mutate({ id: moving, progress: Number(v.progress) }); }),
   };
 }
-
-export type ChronicCareController = ReturnType<typeof useChronicCareController>;

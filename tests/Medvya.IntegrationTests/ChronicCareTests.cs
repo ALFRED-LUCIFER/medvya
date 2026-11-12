@@ -227,6 +227,10 @@ public sealed class ChronicCareTests(PostgresFixture sql) : IClassFixture<Postgr
         using (var colleague = await Client(h.SecondDoctor).PostAsJsonAsync(Goals, new { text = "Synthetic" }))
             Assert.Equal((HttpStatusCode.Forbidden, "no_care_relationship"), (colleague.StatusCode, (await Json(colleague)).GetProperty("code").GetString()));
         using (var colleague = await Client(h.SecondDoctor).GetAsync(Care())) Assert.Equal(HttpStatusCode.Forbidden, colleague.StatusCode);
+        using (var colleague = await Client(h.SecondDoctor).PutAsJsonAsync(Targets, new { code = "HbA1c", limit = 8m })) Assert.Equal(HttpStatusCode.Forbidden, colleague.StatusCode);
+        using (var colleague = await Client(h.SecondDoctor).PostAsJsonAsync(Checks, new { kind = "DiabeticEyeExam", doneOn = "2026-10-01" })) Assert.Equal(HttpStatusCode.Forbidden, colleague.StatusCode);
+        using (var colleague = await Client(h.SecondDoctor).PutAsJsonAsync(new Uri($"/v1/patients/{h.Patient}/care-goals/{goal}", UriKind.Relative), new { progressPercent = 90 }))
+            Assert.Equal(HttpStatusCode.Forbidden, colleague.StatusCode);
         using (var missing = await Client(h.Doctor).GetAsync(Care(Guid.NewGuid()))) Assert.Equal(HttpStatusCode.NotFound, missing.StatusCode);
         await using (var db = sql.Encounters(h.Tenant)) Assert.Equal((1, 0, 0), (await db.CareGoals.CountAsync(), await db.CareTargets.CountAsync(), await db.CareChecks.CountAsync()));
 
@@ -234,7 +238,8 @@ public sealed class ChronicCareTests(PostgresFixture sql) : IClassFixture<Postgr
         var rows = await audit.Events.Where(e => e.Action.StartsWith("patient.care")).OrderBy(e => e.Id).Select(e => new { e.Action, e.Outcome, e.PatientId, e.Purpose }).ToListAsync();
         Assert.Equal([("patient.care-goal.save", AuditOutcome.Allowed), ("patient.care.read", AuditOutcome.Denied), ("patient.care-goal.save", AuditOutcome.Denied),
             ("patient.care-target.set", AuditOutcome.Denied), ("patient.care-check.record", AuditOutcome.Denied), ("patient.care-goal.save", AuditOutcome.Denied),
-            ("patient.care-goal.save", AuditOutcome.Denied), ("patient.care.read", AuditOutcome.Denied), ("patient.care.read", AuditOutcome.NotFound)],
+            ("patient.care-goal.save", AuditOutcome.Denied), ("patient.care.read", AuditOutcome.Denied), ("patient.care-target.set", AuditOutcome.Denied),
+            ("patient.care-check.record", AuditOutcome.Denied), ("patient.care-goal.save", AuditOutcome.Denied), ("patient.care.read", AuditOutcome.NotFound)],
             rows.Select(r => (r.Action, r.Outcome)));
         Assert.All(rows.SkipLast(1), r => Assert.Equal((h.Patient, AuditPurpose.Treatment), (r.PatientId!.Value, r.Purpose)));
     }

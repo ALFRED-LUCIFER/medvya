@@ -47,12 +47,12 @@ public sealed class WalkInTests(PostgresFixture sql) : IClassFixture<PostgresFix
 
         // Checked in with the board's own check-in (the same state machine), then on the board's Checked in column, tagged.
         var card = await h.FrontDesk(h.Reception).CheckInAsync(walkIn.Id, new CheckIn());
-        Assert.Equal((AppointmentState.CheckedIn, true), (card.State, card.WalkIn));
+        Assert.Equal((AppointmentState.ReadyForDoctor, true), (card.State, card.WalkIn)); // nurse step off
         var board = await h.FrontDesk(h.Reception).GetBoardAsync(h.Facility);
         Assert.True(board.Cards.Single(c => c.Id == walkIn.Id).WalkIn);
 
         // Each write audited once, in its own transaction (same instant on the test clock, so compared as a set).
-        Assert.Equal(["appointment.check_in:Allowed", "appointment.walk_in:Allowed"], (await Audit(walkIn.Id)).Order());
+        Assert.Equal(["appointment.check_in:Allowed", "appointment.status:Allowed", "appointment.walk_in:Allowed"], (await Audit(walkIn.Id)).Order());
     }
 
     /// <summary>The visit type decides the length, re-checked against the template under the lock: a new consultation takes two slots.</summary>
@@ -80,7 +80,7 @@ public sealed class WalkInTests(PostgresFixture sql) : IClassFixture<PostgresFix
         var column = (await h.Schedule(h.Reception).GetDayAsync(h.Facility, Monday)).Columns.Single(c => c.CalendarId == h.Doctor);
         Assert.DoesNotContain(column.Appointments, a => a.Id == queued.Id);
         var card = await h.FrontDesk(h.Reception).CheckInAsync(queued.Id, new CheckIn());
-        Assert.Equal((AppointmentState.CheckedIn, true, true), (card.State, card.WalkIn, card.Unscheduled));
+        Assert.Equal((AppointmentState.ReadyForDoctor, true, true), (card.State, card.WalkIn, card.Unscheduled));
     }
 
     /// <summary>
@@ -93,7 +93,7 @@ public sealed class WalkInTests(PostgresFixture sql) : IClassFixture<PostgresFix
         At(19, 45);
         var queued = await h.Booking(h.Reception).WalkInAsync(For(doctor: null) with { VisitType = VisitType.NewConsultation });
         Assert.Equal((h.Doctor, true, true), (queued.CalendarId, queued.WalkIn, queued.Unscheduled));
-        Assert.Equal(AppointmentState.CheckedIn, (await h.FrontDesk(h.Reception).CheckInAsync(queued.Id, new CheckIn())).State);
+        Assert.Equal(AppointmentState.ReadyForDoctor, (await h.FrontDesk(h.Reception).CheckInAsync(queued.Id, new CheckIn())).State);
     }
 
     /// <summary>With several doctors working today and none free, the one with the fewest open visits today takes the walk-in.</summary>

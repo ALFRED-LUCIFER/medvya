@@ -79,7 +79,7 @@ public sealed class ClinicOverviewTests(PostgresFixture sql) : IClassFixture<Pos
         Assert.Equal(["calendarId", "name", "counts", "delayMinutes", "next"], rao.EnumerateObject().Select(p => p.Name));
         Assert.Equal("Dr. Arjun Rao (synthetic)", rao.GetProperty("name").GetString());
         var counts = rao.GetProperty("counts");
-        Assert.Equal((1, 1, 1, 0), (counts.GetProperty("Booked").GetInt32(), counts.GetProperty("CheckedIn").GetInt32(), counts.GetProperty("InConsult").GetInt32(), counts.GetProperty("Done").GetInt32()));
+        Assert.Equal((1, 1, 1, 0), (counts.GetProperty("Booked").GetInt32(), counts.GetProperty("ReadyForDoctor").GetInt32(), counts.GetProperty("InConsult").GetInt32(), counts.GetProperty("Done").GetInt32()));
         Assert.Equal(30, rao.GetProperty("delayMinutes").GetInt32());
         Assert.Equal([waiting.Id, booked.Id], rao.GetProperty("next").EnumerateArray().Select(n => n.GetProperty("id").GetGuid()));
 
@@ -105,7 +105,7 @@ public sealed class ClinicOverviewTests(PostgresFixture sql) : IClassFixture<Pos
         using var response = await Desk(h.Reception).PostAsJsonAsync($"/v1/appointments/{visit.Id}/reassign", new { calendarId = h.SecondDoctor, reason = "DoctorRunningLate" });
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var card = JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement;
-        Assert.Equal((h.SecondDoctor, "CheckedIn", "A-01"), (card.GetProperty("calendarId").GetGuid(), card.GetProperty("state").GetString(), card.GetProperty("token").GetString()));
+        Assert.Equal((h.SecondDoctor, "ReadyForDoctor", "A-01"), (card.GetProperty("calendarId").GetGuid(), card.GetProperty("state").GetString(), card.GetProperty("token").GetString()));
 
         await using (var db = sql.Scheduling(h.Tenant))
         {

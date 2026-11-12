@@ -41,7 +41,7 @@ export function rulesFor(a: Appointment, ctx: { now: number; timeZone: string; c
     checkIn: !ctx.canCheckIn ? no('noCheckIn') : !booked ? no(over ?? 'onlyBooked')
       : localDate(a.start, ctx.timeZone) !== localDate(new Date(ctx.now).toISOString(), ctx.timeZone) ? no('notToday') : yes,
     reschedule: !ctx.canBook ? no('noAccess') : booked || rebooking ? yes : no(over ?? 'onlyBooked'),
-    cancel: !ctx.canBook ? no('noAccess') : booked || rebooking || a.state === 'CheckedIn' ? yes : no(over ?? 'inVisit'),
+    cancel: !ctx.canBook ? no('noAccess') : booked || rebooking || a.state === 'CheckedIn' || a.state === 'ReadyForDoctor' ? yes : no(over ?? 'inVisit'),
     noShow: !ctx.canBook ? no('noAccess') : !booked ? no(over ?? 'onlyBooked') : Date.parse(a.start) > ctx.now ? no('notStarted') : yes,
   };
 }

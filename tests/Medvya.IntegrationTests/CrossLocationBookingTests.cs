@@ -61,7 +61,7 @@ public sealed class CrossLocationBookingTests(PostgresFixture sql) : IClassFixtu
         h.Clock.Advance(TimeSpan.FromHours(1.4)); // 09:54 IST: check-in opens before the visit
         await h.FrontDesk(receptionB).CheckInAsync(visit.Id, new CheckIn());
         var card = Assert.Single((await h.FrontDesk(receptionB).GetBoardAsync(h.OtherFacility)).Cards);
-        Assert.Equal((h.Patient, "Meera Iyer (synthetic)", AppointmentState.CheckedIn), (card.PatientId, card.PatientName, card.State));
+        Assert.Equal((h.Patient, "Meera Iyer (synthetic)", AppointmentState.ReadyForDoctor), (card.PatientId, card.PatientName, card.State));
         Assert.Empty((await h.FrontDesk(h.Reception).GetBoardAsync(h.Facility)).Cards); // location A's board has none of it
     }
 

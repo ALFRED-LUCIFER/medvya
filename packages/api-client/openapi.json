@@ -782,6 +782,66 @@
         }
       }
     },
+    "/v1/patients/{patientId}/growth": {
+      "get": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "patientId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "patientId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/RecordGrowth"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/v1/patients/{patientId}/geriatric-assessments": {
       "get": {
         "tags": [
@@ -7349,6 +7409,13 @@
           }
         }
       },
+      "BodyPosition": {
+        "enum": [
+          "Lying",
+          "Standing",
+          null
+        ]
+      },
       "BookAppointment": {
         "type": "object",
         "properties": {
@@ -10125,6 +10192,62 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "RecordGrowth": {
+        "required": [
+          "takenOn",
+          "weightKg",
+          "lengthCm",
+          "position",
+          "headCm"
+        ],
+        "type": "object",
+        "properties": {
+          "takenOn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "weightKg": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "lengthCm": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "position": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/BodyPosition"
+              }
+            ]
+          },
+          "headCm": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
           }
         }
       },

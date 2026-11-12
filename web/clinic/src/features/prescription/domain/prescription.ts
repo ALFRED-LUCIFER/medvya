@@ -4,13 +4,13 @@ import { z } from 'zod';
 // The server is the authority and writes the readable instruction; these checks only save a round trip.
 export const doseUnits = ['tablet', 'capsule', 'ml', 'mg', 'drop', 'puff', 'unit', 'sachet', 'application'] as const;
 export const routes = ['oral', 'sublingual', 'topical', 'inhaled', 'eye', 'ear', 'nasal', 'rectal', 'subcutaneous', 'intramuscular', 'intravenous'] as const;
-export const frequencies = ['OD', 'BD', 'TDS', 'QID', 'SOS', 'STAT', 'WEEKLY'] as const;
+export const frequencies = ['OD', 'MORNING', 'NIGHT', 'BD', 'TDS', 'QID', 'SOS', 'STAT', 'WEEKLY'] as const;
 export const timings = ['before_food', 'after_food', 'with_food', 'empty_stomach', 'morning', 'with_breakfast', 'with_lunch', 'with_dinner', 'bedtime'] as const;
 export const printLanguages = ['en', 'hi', 'ta', 'ar'] as const;
 export type PrintLanguage = (typeof printLanguages)[number];
 
 export type RxLine = {
-  id: string | null; kind: 'Prescribe' | 'Discontinue'; source: 'AddedByYou' | 'AddedByColleague' | 'ChartReconciliation';
+  id: string | null; kind: 'Prescribe' | 'Discontinue' | 'Change' | 'Taper'; source: 'AddedByYou' | 'AddedByColleague' | 'ChartReconciliation';
   formularyItemId: string | null; medicine: string; strength: string | null; form: string | null; freeText: boolean; included: boolean;
   dose: string | null; doseUnit: string | null; route: string | null; frequency: string | null; timing: string | null;
   durationDays: number | null; quantity: number | null; instructions: string | null; reason: string | null; sig: Record<string, string>;

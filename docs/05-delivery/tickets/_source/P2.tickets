@@ -652,3 +652,349 @@ ac:
 - A start whose insert meets the unique index answers with the winner's encounter (row-level security still applies to the re-read).
 - The visit moves to In consult once and the board is told once.
 - The lost-race interleavings are forced in the test (not left to parallel timing) and the test fails when the fix is removed.
+
+@epic MDV-P2-E07 | Consultation and chart upgrade | P2-02, P2-04, P2-06 | One-page chart by life stage (adult, pregnancy, child, older adult), one-page consultation and a full Add medicine flow with patient-aware safety checks (design of 12 Nov 2026).
+
+=== MDV-P2-030
+title: Import the 12 Nov 2026 design (one-page chart, one-page consultation, Add medicine) and plan the upgrade epic
+type: Task
+epic: MDV-P2-E07
+prd: P2-02, P2-04
+priority: MUST
+roles: Founder
+labels: design, documentation
+estimate: 0.5
+weeks: 15
+confidence: 95 | The design files are complete and were compared line by line with the 10 Nov import.
+sources: docs/02-design/source/Medvya Web.dc.html (PATIENT CHART, CONSULTATION STUDIO, Add medicine drawer); docs/02-design/source/Medvya Foundations.dc.html (D-06, D-07, D-08, PT-09)
+desc:
+Replace Medvya Web, Admin, Mobile and Foundations with the 12 Nov design. Record the gap between what is built (P2-E02 to P2-E05) and the design in the screen specs, and plan the stories MDV-P2-031 to P2-045. List the clinical sign-offs the design asks for (growth curves, vaccine schedules, drug rules) in the session handoff.
+ac:
+- The four design files are the 12 Nov versions and the source README records the import and what changed.
+- The screen specs describe the one-page chart, the life-stage modules, the one-page consultation and Add medicine, with what is already built.
+- The session handoff lists the clinical sign-offs needed before the pilot uses the new rules.
+
+=== MDV-P2-031
+title: More vitals and key labs on the chart, each flagged against its reference range
+type: Story
+epic: MDV-P2-E07
+prd: P2-02, P2-03
+screens: E-01, N-01
+priority: MUST
+roles: Nurse, Doctor
+labels: chart, vitals, domain
+estimate: 2
+weeks: 15
+depends: MDV-P2-007
+confidence: 85 | Observation storage exists; new codes and adult reference ranges are a small extension. Ranges need clinical sign-off.
+sources: docs/02-design/source/Medvya Web.dc.html (chartVals vitals and labs); src/Modules/Encounters/Medvya.Encounters.Domain/ChartFacts.cs
+desc:
+Add observation codes for height, respiratory rate, pain score, standing blood pressure, fundal height and fetal heart rate, and the key labs LDL cholesterol, eGFR, urine albumin/creatinine ratio, haemoglobin, ferritin, potassium, sodium, TSH, vitamin D and platelets. BMI is calculated from the latest weight and height, never stored as typed. Each code has a fixed unit and a reference range; a reading outside it is flagged in words (High, Low, with the range) on the chart. Nurse intake can enter height and respiratory rate. Patient 360 returns the latest reading and the trend for every code that has readings.
+ac:
+- Every new code has one unit and a reference range, and a value outside the range is returned with a High or Low flag and the range text.
+- BMI is shown only when a weight and a height exist, uses the latest of each and states the date of the older one.
+- Nurse intake saves height and respiratory rate with the same refusal of impossible values as the other vitals.
+- Patient 360 returns a trend for each code with two or more readings, oldest first, with the source of each point.
+- shortcut: reference ranges are one adult set (children's vitals keep the age bands of #956) and wait for clinical sign-off.
+
+=== MDV-P2-032
+title: Life stage, history sections and the fuller chart banner
+type: Story
+epic: MDV-P2-E07
+prd: P2-02
+screens: E-01
+priority: MUST
+roles: Doctor, Nurse
+labels: chart, domain
+estimate: 2
+weeks: 15
+depends: MDV-P2-004
+confidence: 85 | Life stage is a pure rule on age and an open pregnancy; history is structured text with author and time.
+sources: docs/02-design/source/Medvya Web.dc.html (chartVals P.*.stage, hx, banner)
+desc:
+The chart works out the patient's life stage: child under 18, pregnancy while a pregnancy is open (MDV-P2-034), older adult from 65, otherwise adult. The life stage drives the chart module, the consultation template and the safety checks, and is shown as a label with an icon and words, not colour alone. History is kept in sections (past medical, surgical, family, social, women's health or obstetric, birth and feeding for a child, function and falls for an older adult), each with who wrote it and when. The banner adds blood group, preferred language, the care team and the consent state.
+ac:
+- The life stage rule is tested at the edges: 17 y 364 d is a child, 18 y is an adult, 65 y is an older adult, and an open pregnancy wins over adult.
+- A doctor or nurse can edit each history section; every save records the author and time and the previous text is kept.
+- The banner shows blood group and language only when recorded; nothing is guessed.
+- The history sections offered depend on the life stage (birth for a child, function for an older adult).
+
+=== MDV-P2-033
+title: Patient chart on one page (E-01 redesign) with section filters and a life-stage module
+type: Story
+epic: MDV-P2-E07
+prd: P2-02
+screens: E-01, E-02, E-03
+priority: MUST
+roles: Doctor, Nurse
+labels: chart, ui
+estimate: 3
+weeks: 15-16
+depends: MDV-P2-031, MDV-P2-032
+confidence: 82 | Hi-fi design exists for four sample patients; every block maps to data the chart already returns or a story in this epic.
+sources: docs/02-design/source/Medvya Web.dc.html (PATIENT CHART one page)
+desc:
+Patient 360 becomes one page: banner (name, age, date of birth, MRN, blood group, language, life-stage label, allergy chip, alerts, care team, consent); vitals strip of six tiles with a trend line and a flag; problems with ICD-10 codes; medicines with "Add medicine" (MDV-P2-039); the life-stage module; results and trends table; history; timeline; and a right column for care gaps, goals (MDV-P2-038) and documents. Section buttons show everything or one part. Empty, loading, error and no-access states as today.
+ac:
+- Every block shows its data source as today (provenance tags) and an empty state when there is nothing.
+- The section buttons filter the page and are keyboard operable; the choice is kept per user in the session only.
+- The page works at 375 px (one column), 200 % zoom and right to left in Arabic; axe has no violations.
+- A user without clinical access sees the banner and the locked notice only (server decides, as today).
+
+=== MDV-P2-034
+title: Pregnancy record: dates, gestation, obstetric history, antenatal contacts and danger signs
+type: Story
+epic: MDV-P2-E07
+prd: P2-02
+screens: E-01
+priority: MUST
+roles: Doctor, Nurse
+labels: chart, pregnancy, domain
+estimate: 3
+weeks: 16
+depends: MDV-P2-032
+confidence: 78 | Date rules are standard (Naegele, scan dating); the antenatal contact plan follows the WHO 8-contact model and needs clinical sign-off.
+sources: docs/02-design/source/Medvya Web.dc.html (chartVals preg, ANC, danger); Medvya Foundations (PREGNANCY_EPISODE)
+desc:
+PREGNANCY_EPISODE per patient: last menstrual period, dating scan date and gestation at the scan, due date (LMP + 280 days, or from the scan when the scan differs by more than the dating rule), gravida, para, abortions and living children, blood group and Rh, and an outcome that closes it. Gestation today is worked out from the due date in the facility time zone. Antenatal contacts (8, 12, 16, 20, 24, 28, 32, 36, 38, 40 weeks) show as done, today or to come, linked to visits. Danger signs counselled are recorded with who and when. The chart shows the pregnancy module and the life stage becomes Pregnancy.
+ac:
+- Due date and gestation are tested: LMP 19 May 2026 gives due date 23 Feb 2027 and 24 w 3 d on 06 Nov 2026.
+- A scan date that moves the due date records which date is used and why; the earlier date is kept.
+- Only one open pregnancy per patient; closing it needs an outcome and the life stage returns to adult.
+- Pregnancy data is SensitiveHealth, tenant isolated (EF filter and RLS) and never in logs or URLs.
+- shortcut: the dating rule and the contact plan are the WHO model and wait for clinical sign-off.
+
+=== MDV-P2-035
+title: Child growth: measurements and WHO centiles with a growth chart
+type: Story
+epic: MDV-P2-E07
+prd: P2-02
+screens: E-01
+priority: MUST
+roles: Doctor, Nurse
+labels: chart, paediatrics, domain
+estimate: 3
+weeks: 16
+depends: MDV-P2-031, MDV-P2-032
+confidence: 72 | The LMS method is standard; the reference tables must be the published WHO data, checked against WHO examples, and clinically signed off.
+sources: docs/02-design/source/Medvya Web.dc.html (growth chart, growthMeta); WHO Child Growth Standards (0–5 years)
+desc:
+GROWTH_MEASUREMENT: weight, length or height and head circumference with date, from nurse intake or the chart. Centiles and z-scores for weight-for-age, length/height-for-age and BMI-for-age from 0 to 5 years by sex use the WHO LMS tables. The chart draws the 3rd, 15th, 50th, 85th and 97th lines with the child's points, states the centile in words and flags a crossing of two major centile lines or a fall below the 3rd. Weight velocity is shown between the last two weights.
+ac:
+- The z-score calculation reproduces WHO's published examples to two decimals (test).
+- The growth chart has a text alternative stating the latest centile and the trend.
+- A child over 5 years shows the measurements without centiles and says why.
+- shortcut: 0–5 y WHO only; IAP 2015 (5–18 y, India) and UAE national charts when the clinical reviewer chooses them. The tables wait for clinical sign-off.
+
+=== MDV-P2-036
+title: Immunisations against the country schedule, and developmental milestones
+type: Story
+epic: MDV-P2-E07
+prd: P2-02
+screens: E-01
+priority: MUST
+roles: Doctor, Nurse
+labels: chart, paediatrics, domain
+estimate: 3
+weeks: 16
+depends: MDV-P2-032
+confidence: 70 | Recording is simple; the IAP 2023 and UAE schedules in the design are marked "verify" and need clinical sign-off before use.
+sources: docs/02-design/source/Medvya Web.dc.html (imm, miles); Medvya Foundations (IMMUNIZATION, DEVELOPMENTAL_MILESTONE)
+desc:
+IMMUNIZATION: vaccine, dose, date given, batch, who gave it, or deferred with a reason. The country schedule (India IAP 2023, UAE national) is a country rule class; the chart lists each age band as given, due now, overdue or upcoming from the child's date of birth. DEVELOPMENTAL_MILESTONE: per age band, each milestone answered yes, no or unsure, with who answered (parent or clinician). Vaccines due feed the care gaps (MDV-P2-038).
+ac:
+- The schedule is chosen by the facility's country through a country rule class, never an if on the country.
+- Due and overdue are worked out from the date of birth in the facility time zone and tested at the band edges.
+- Deferring a dose needs a reason; nothing is deleted.
+- shortcut: the schedules are the design's reading of IAP 2023 and the UAE schedule and are marked unverified until clinical sign-off.
+
+=== MDV-P2-037
+title: Older adult review: falls, walking test, standing blood pressure drop, frailty, memory, daily activities and a medicine review
+type: Story
+epic: MDV-P2-E07
+prd: P2-02
+screens: E-01
+priority: MUST
+roles: Doctor, Nurse
+labels: chart, geriatrics, domain
+estimate: 2.5
+weeks: 16
+depends: MDV-P2-031, MDV-P2-032
+confidence: 76 | Scores are standard instruments; flag lines (TUG over 12 s, a 20/10 mmHg drop) and the Beers subset need clinical sign-off.
+sources: docs/02-design/source/Medvya Web.dc.html (geri, deprescribe); Medvya Foundations (GERIATRIC_ASSESSMENT)
+desc:
+GERIATRIC_ASSESSMENT with date and author: falls in 12 months, Timed Up and Go seconds, lying and standing blood pressure (the drop is calculated and flagged as orthostatic at 20 systolic or 10 diastolic), Clinical Frailty Scale 1–9, Mini-Cog 0–5, ADL and IADL, PHQ-2 and a nutrition note. The medicine review lists suggestions from a small rule set (benzodiazepines, a proton pump inhibitor for more than 8 weeks, oral NSAIDs, and an ACE inhibitor or ARB with low eGFR and high potassium) as "suggestions, the doctor decides", each with a "plan change" action.
+ac:
+- Each score is refused outside its scale and the orthostatic drop is tested at the flag line.
+- The medicine review never changes a medicine by itself; a planned change goes to the consultation plan.
+- shortcut: the flag lines and the rule set wait for clinical sign-off.
+
+=== MDV-P2-038
+title: Chronic care targets, care gaps due today and care-plan goals
+type: Story
+epic: MDV-P2-E07
+prd: P2-02
+screens: E-01
+priority: SHOULD
+roles: Doctor
+labels: chart, care-gaps, domain
+estimate: 2.5
+weeks: 16
+depends: MDV-P2-031, MDV-P2-034, MDV-P2-036
+confidence: 74 | The gap rules are a short, explicit list; which ones the pilot doctors want is a clinical choice.
+sources: docs/02-design/source/Medvya Web.dc.html (targets, gaps, goals)
+desc:
+Targets per patient for HbA1c, blood pressure, LDL, eGFR and urine albumin, with defaults the doctor can change; the chart shows each latest value against its target. Care gaps come from rules: diabetic eye and foot checks once a year, urine albumin once a year for diabetes, a test ordered but never resulted, vaccines due (MDV-P2-036), the glucose tolerance test window at 24–28 weeks of pregnancy, and a falls review after a fall. Each gap has an action (add to today's visit, order, refer). Care-plan goals are text with a target and progress.
+ac:
+- Each gap rule is tested for due, not due and done.
+- A gap's action adds the item to the open consultation's plan; with no open consultation it says so.
+- shortcut: the gap rules are the design's list and wait for clinical sign-off.
+
+=== MDV-P2-039
+title: Add medicine panel from the chart and the consultation: strength, how often, when, how long, instructions, line and quantity
+type: Story
+epic: MDV-P2-E07
+prd: P2-06
+screens: E-05, E-11
+priority: MUST
+roles: Doctor
+labels: prescribing, ui
+estimate: 2.5
+weeks: 15
+depends: MDV-P2-015, MDV-P2-016
+confidence: 84 | The composer, sig and checks exist; this is a faster entry path over them.
+sources: docs/02-design/source/Medvya Web.dc.html (Add medicine drawer, medVals)
+desc:
+A side panel opened from the chart's Medicines card and the consultation plan: search the formulary (brand or generic), choose the strength, how often (1-0-0, 0-0-1, 1-0-1, 1-1-1, when needed, weekly), when (before food, after food, bedtime, any time), for how long (3 days, 5 days, 1 month, 3 months, ongoing) and the patient instructions. It shows the patient (name, age, the context that drives the checks) and the allergy chip, the safety checks for this line (MDV-P2-016, MDV-P2-040), the finished prescription line and the quantity. "Add to prescription" adds the line to the encounter's draft prescription; a severe finding blocks it until another medicine is chosen or an override reason is given.
+ac:
+- The quantity is calculated from frequency and duration (when needed: one pack) and tested.
+- The line uses the existing sig, so print and share are unchanged.
+- From the chart without an open consultation, the panel says a consultation must be started; nothing is prescribed outside an encounter.
+- Keyboard path, 44 px targets, English and Arabic right to left, axe clean.
+
+=== MDV-P2-040
+title: Patient-aware prescribing checks: pregnancy, weight-based child dose, kidney function and older adult
+type: Story
+epic: MDV-P2-E07
+prd: P2-06
+screens: E-11
+priority: MUST
+roles: Doctor
+labels: safety, prescribing
+estimate: 3
+weeks: 15-16
+depends: MDV-P2-016, MDV-P2-031, MDV-P2-032
+confidence: 70 | The check logic is clear; the rules are a curated pilot set, not a licensed knowledge base, and need clinical sign-off.
+sources: docs/02-design/source/Medvya Web.dc.html (medVals checks per patient); src/Modules/Prescribing/Medvya.Prescribing.Domain/SafetyChecks.cs
+desc:
+The safety checks read the patient context: pregnancy and gestation (NSAIDs from 20 weeks severe), the latest weight no older than one month for a child (dose per kg and per day, worked out in mg and, for a liquid, in mL; over the maximum is severe), the latest eGFR (NSAIDs and metformin thresholds), and age 65 or over (a small Beers subset as moderate). Missing context (no weight, no eGFR) is reported as "not checked" with the reason, never as safe. The rule set version is raised and recorded with each check and override.
+ac:
+- A seeded set (ibuprofen at 24 weeks, paracetamol 15 mg/kg at 14.2 kg = 213 mg = 8.9 mL of 120 mg/5 mL, diclofenac tablets with eGFR 52 and losartan, diazepam at 76) gives the expected finding in every case (automated test).
+- A child dose without a weight from the last month is not checked, and says so.
+- Each new finding is mutation checked: the test fails when the rule is removed.
+- shortcut: a curated pilot rule set waiting for the clinical safety reviewer (MDV-P2-028); a licensed knowledge base later.
+
+=== MDV-P2-041
+title: Consultation on one page (E-04 redesign) with the guided steps kept as an option
+type: Story
+epic: MDV-P2-E07
+prd: P2-04
+screens: E-04
+priority: MUST
+roles: Doctor
+labels: encounters, ui
+estimate: 3
+weeks: 15-16
+depends: MDV-P2-009, MDV-P2-012
+confidence: 82 | The note, autosave, consent, assist and sign already work; this is a new layout over them.
+sources: docs/02-design/source/Medvya Web.dc.html (CONSULTATION STUDIO, studioVals)
+desc:
+The consultation opens as one page: the patient strip with life stage and allergies, the recording consent bar first (patient agreed, declined so the doctor types, consent withdrawn while listening), then numbered sections Vitals, History, the adaptive template (MDV-P2-042), Examination, Assessment, Plan (MDV-P2-043) and Review and sign (MDV-P2-044), with a section bar that stays at the top and ticks each finished section. A switch flips to the existing guided steps; nothing of the old flow is lost. The right panel has Assist suggestions, a chart summary and the checklist.
+ac:
+- The one-page and guided views save the same note; switching keeps every typed word (autosave as today).
+- The section bar is a nav landmark with links that move focus to the section; ticks are icon and words.
+- Declined consent hides Assist and keeps the manual note path as today.
+- Desktop two columns, phone one column, Arabic right to left, axe clean.
+
+=== MDV-P2-042
+title: Structured review of systems and examination, and a template chosen by the patient
+type: Story
+epic: MDV-P2-E07
+prd: P2-04
+screens: E-04
+priority: MUST
+roles: Doctor
+labels: encounters, templates, domain
+estimate: 2.5
+weeks: 16
+depends: MDV-P2-025, MDV-P2-032
+confidence: 80 | Templates are versioned already; new versions carry the structured sections.
+sources: docs/02-design/source/Medvya Web.dc.html (ros, exam, tpl per patient)
+desc:
+New template versions add a review of systems (each symptom yes or no, unanswered stays blank) and an examination by body system (Normal, Abnormal with a note, Not examined). The consultation suggests a template from the life stage and problems: diabetes review for diabetes, antenatal for a pregnancy, paediatrics for a child and a new older-adult review (standing blood pressure, walking test, frailty, home safety) for an older adult; the doctor can change it. Released versions stay pinned on old notes. The signed note and its PDF show the structured answers in words.
+ac:
+- An unanswered symptom or system stays blank in the signed note; nothing defaults to normal.
+- Abnormal needs a note; Not examined is printed as such.
+- The suggested template is tested per life stage, and the doctor's choice wins.
+- Old notes keep their template version (fingerprint test unchanged for released versions).
+
+=== MDV-P2-043
+title: Plan section: medicine actions, tests to order, advice in the patient's language, follow-up and referral
+type: Story
+epic: MDV-P2-E07
+prd: P2-04, P2-06
+screens: E-04, E-05
+priority: MUST
+roles: Doctor
+labels: encounters, prescribing, ui
+estimate: 2.5
+weeks: 16
+depends: MDV-P2-011, MDV-P2-018, MDV-P2-019, MDV-P2-039
+confidence: 80 | Reconciliation, orders and referrals exist; change and taper are new reconciliation actions.
+sources: docs/02-design/source/Medvya Web.dc.html (rx, inv, advice, fu)
+desc:
+The plan shows the prescription with an action per medicine: continue, new, change (new dose), taper (a stepped dose with an end date) or stop, using the reconciliation and the composer. Tests are toggles that create draft orders. Advice for the patient is written once and printed and sent in the patient's language when a reviewed translation exists, otherwise in English with a note. Follow-up is a choice (for example 2 weeks, 1 month, 3 months) that the front desk sees as a booking to make. Referral opens the existing referral letter.
+ac:
+- Change and taper are recorded on the reconciliation with the old and new dose and print on the prescription.
+- A test toggled on creates a draft order once; toggling off removes the draft, not an ordered one.
+- The follow-up choice appears on the front desk's list for that patient.
+
+=== MDV-P2-044
+title: Review and sign checklist: signing stays locked until every item is reviewed
+type: Story
+epic: MDV-P2-E07
+prd: P2-05
+screens: E-04, E-06
+priority: MUST
+roles: Doctor
+labels: encounters, safety
+estimate: 1.5
+weeks: 16
+depends: MDV-P2-012, MDV-P2-041
+confidence: 84 | Signing and step-up exist; the checklist adds explicit gates the server checks.
+sources: docs/02-design/source/Medvya Web.dc.html (CK checklist, remLine, canSign)
+desc:
+The checklist: identity confirmed, allergies reconciled, medicines reconciled, recording consent recorded, history reviewed, every AI suggestion accepted or dismissed, diagnoses reviewed and plan reviewed. The Sign button stays locked and says how many items remain. The server refuses a signature while an AI draft or suggestion is still undecided or consent is unrecorded, so the lock is not only the screen. After signing, changes go in as an addendum, as today.
+ac:
+- Signing with an undecided AI suggestion is refused by the server (test, mutation checked).
+- The remaining count and each item are announced to screen readers.
+- The checklist state is derived from the note, never stored separately.
+
+=== MDV-P2-045
+title: J2 journey steps for the one-page chart, Add medicine and the one-page consultation on the real stack
+type: Task
+epic: MDV-P2-E07
+prd: P2-02, P2-04
+priority: MUST
+roles: Doctor
+labels: journeys, e2e
+estimate: 1
+weeks: 16
+depends: MDV-P2-033, MDV-P2-039, MDV-P2-041
+confidence: 85 | The full-stack harness exists (fullstack/j2.spec.ts).
+sources: docs/02-design/journeys.md; tests/e2e/fullstack/j2.spec.ts
+desc:
+Add J2 steps: the doctor opens Meera's one-page chart, adds a medicine from the chart into the open consultation and sees the allergy block for amoxicillin, writes the one-page consultation and signs after the checklist. Green on the real stack, English and Arabic, axe clean.
+ac:
+- The new J2 steps are in docs/02-design/journeys.md and green in the full-stack run.
+- The steps check the amoxicillin allergy block and the locked Sign until the checklist is complete.

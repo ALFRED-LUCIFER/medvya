@@ -37,6 +37,13 @@ public sealed class WaitlistEntry
     /// <summary>The appointment made when the offer was accepted.</summary>
     [Classification(DataClass.Internal)] public Guid? AppointmentId { get; set; }
     [Classification(DataClass.Internal)] public DateTimeOffset ChangedAt { get; set; }
+    /// <summary>
+    /// A doctor's follow-up (MDV-P2-043): the consultation that asked for it (at most one entry each), the period chosen ("P2W", "P1M", "P3M")
+    /// and the facility-local day from which a slot suits. Null on an entry the desk added.
+    /// </summary>
+    [Classification(DataClass.Internal)] public Guid? EncounterId { get; init; }
+    [Classification(DataClass.Internal)] public string? FollowUp { get; set; }
+    [Classification(DataClass.Internal)] public DateOnly? DueOn { get; set; }
 
     public const int AnyDay = 0, AllDays = 0b1111111;
 
@@ -45,12 +52,13 @@ public sealed class WaitlistEntry
     /// <summary>Waiting, or Offered with the offer run out: the entry can be offered a slot.</summary>
     public bool Open(DateTimeOffset now) => State == WaitlistState.Waiting || (State == WaitlistState.Offered && OfferExpiresAt <= now);
 
-    /// <summary>Whether a slot starting at this instant in this calendar suits the preferences, judged in the facility's time zone.</summary>
+    /// <summary>Whether a slot starting at this instant in this calendar suits the preferences (and is not before a follow-up's due day), judged in the facility's time zone.</summary>
     public bool Suits(Guid calendarId, DateTimeOffset start, TimeZoneInfo zone)
     {
         var local = TimeZoneInfo.ConvertTime(start, zone);
         var time = TimeOnly.FromDateTime(local.DateTime);
         return (CalendarId is null || CalendarId == calendarId) && (Days == AnyDay || (Days & DayBit(local.DayOfWeek)) != 0)
+            && (DueOn is null || DateOnly.FromDateTime(local.DateTime) >= DueOn)
             && (From is null || time >= From) && (Until is null || time <= Until);
     }
 }

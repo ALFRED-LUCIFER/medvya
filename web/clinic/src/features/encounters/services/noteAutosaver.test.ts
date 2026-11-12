@@ -5,7 +5,7 @@ import { createAutosaver } from './noteAutosaver';
 
 const view = (version: number, sections: Record<string, string>): NoteView =>
   ({ encounterId: 'e-1', templateKey: 'general-opd', templateVersion: 1, status: 'Draft', manual: true, sections, version, updatedAt: null });
-const draft = (sections: Record<string, string>): NoteDraft => ({ templateKey: 'general-opd', sections });
+const draft = (sections: Record<string, string>): NoteDraft => ({ templateKey: 'general-opd', sections, recordingConsent: null });
 const stale = (current: number) => new ApiError(409, 'stale_note', { code: 'stale_note', currentVersion: current });
 
 function setup(save: (d: NoteDraft, v: number) => Promise<NoteView>) {

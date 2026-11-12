@@ -4,7 +4,7 @@ using Medvya.BuildingBlocks.Domain;
 namespace Medvya.Encounters.Domain;
 
 [JsonConverter(typeof(JsonStringEnumConverter<VitalKind>))]
-public enum VitalKind { SystolicBp, DiastolicBp, Pulse, Temperature, OxygenSaturation, Weight }
+public enum VitalKind { SystolicBp, DiastolicBp, Pulse, Temperature, OxygenSaturation, Weight, Height, RespiratoryRate }
 
 /// <summary>Why a reading needs a decision: above or below the usual range, or a weight that moved a lot since the last one. Words in the UI, never colour alone.</summary>
 [JsonConverter(typeof(JsonStringEnumConverter<VitalAlert>))]
@@ -49,7 +49,8 @@ public sealed class IntakeEscalation
 /// What a reading may be and when it is flagged, by age band (MDV-P2-007, #956). A value no living person can have is refused; a usual-range
 /// miss is saved and flagged. Children: AHA PALS 2020 awake heart rate and blood pressure ranges, low systolic at the PALS hypotension line
 /// (under 1 month 60, under 1 year 70, then 70 + 2 x age to 90 from 10 years). Adults (18 and over): the ranges used since MDV-P2-007.
-/// Temperature and SpO2 use the same lines at every age. The references give no sex-specific values for these six measurements, so sex does
+/// Respiratory rate (MDV-P2-031): AHA PALS 2020 normal rates by age (infant 30–53, toddler 22–37, preschool 20–28, school age 18–25,
+/// adolescent 12–20); adults 12–20. Height is measured, never flagged. Temperature and SpO2 use the same lines at every age. The references give no sex-specific values for these six measurements, so sex does
 /// not change a range; sex- and height-specific blood-pressure centiles are not used.
 /// shortcut: one range set for every facility, no pregnancy ranges, and the weight-change line is 2 kg at every age; per-facility and
 /// pregnancy ranges and a relative weight line for children when the clinical reviewer asks for them.
@@ -68,6 +69,8 @@ public static class VitalRules
         VitalKind.Temperature => (30, 44),
         VitalKind.OxygenSaturation => (50, 100),
         VitalKind.Weight => (0.3m, 500),
+        VitalKind.Height => (20, 272),
+        VitalKind.RespiratoryRate => (4, 120),
         _ => throw new ArgumentOutOfRangeException(nameof(kind)),
     };
 
@@ -76,7 +79,12 @@ public static class VitalRules
     {
         (VitalKind.Temperature, _) => (36.0m, 38.0m),
         (VitalKind.OxygenSaturation, _) => (94, 101),
-        (VitalKind.Weight, _) => (decimal.MinValue, decimal.MaxValue),
+        (VitalKind.Weight or VitalKind.Height, _) => (decimal.MinValue, decimal.MaxValue),
+        (VitalKind.RespiratoryRate, < 12) => (30, 54),
+        (VitalKind.RespiratoryRate, < 36) => (22, 38),
+        (VitalKind.RespiratoryRate, < 72) => (20, 29),
+        (VitalKind.RespiratoryRate, < 156) => (18, 26),
+        (VitalKind.RespiratoryRate, _) => (12, 21),
         (_, < 1) => Band(kind, pulse: (100, 206), sys: (60, 85), dia: (31, 54)),
         (_, < 12) => Band(kind, pulse: (100, 181), sys: (70, 105), dia: (37, 57)),
         (_, < 36) => Band(kind, pulse: (98, 141), sys: (72, 107), dia: (42, 64)),
@@ -110,6 +118,8 @@ public static class VitalRules
         VitalKind.Temperature => ObservationCode.Temperature,
         VitalKind.OxygenSaturation => ObservationCode.OxygenSaturation,
         VitalKind.Weight => ObservationCode.Weight,
+        VitalKind.Height => ObservationCode.Height,
+        VitalKind.RespiratoryRate => ObservationCode.RespiratoryRate,
         _ => throw new ArgumentOutOfRangeException(nameof(kind)),
     };
 
@@ -129,8 +139,3 @@ public static class VitalRules
         return value < low ? VitalAlert.Low : value >= high ? VitalAlert.High : null;
     }
 }
-
-/// <summary>Who signed the vital ranges off clinically: name, registration number and the day.</summary>
-public sealed record ClinicalSignOff(
-    [property: Classification(DataClass.Personal)] string Reviewer, [property: Classification(DataClass.Personal)] string Registration,
-    [property: Classification(DataClass.Internal)] DateOnly SignedOn);

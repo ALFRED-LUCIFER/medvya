@@ -1,7 +1,7 @@
-import type { FormEventHandler } from 'react';
+import type { FormEventHandler, ReactNode } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { Link } from 'react-router';
-import { CircleAlert, CircleSlash, CircleX, FilePen, History, Plus, Printer, ShieldCheck, UserRound } from 'lucide-react';
+import { CircleAlert, CircleSlash, TrendingDown, CircleX, FilePen, History, Plus, Printer, ShieldCheck, UserRound } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
 import { Button, buttonVariants, ClinicalAlert, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Switch } from '@medvya/ui';
 import { isCurrent, type AuthoriseProblem, type RxAuthorisationState } from '../domain/authorisation';
@@ -45,6 +45,8 @@ type Props = SafetyProps & {
   onCancel: FormEventHandler<HTMLFormElement>;
   onConfirmIdentity: () => void;
   printPath: string;
+  /** The Add medicine panel (MDV-P2-039), opened from here while the consultation is open. */
+  addMedicine?: ReactNode;
 };
 
 const none = 'none';
@@ -58,7 +60,8 @@ const sourceIcon = { AddedByYou: UserRound, AddedByColleague: UserRound, ChartRe
 export default function PrescriptionPanel(p: Props) {
   const { t } = useI18n();
   const prescribed = p.lines.filter(l => l.kind === 'Prescribe');
-  const stopped = p.lines.filter(l => l.kind === 'Discontinue');
+  // Stops, changes and tapers follow the reconciliation (MDV-P2-011, MDV-P2-043): read here, decided there.
+  const stopped = p.lines.filter(l => l.kind !== 'Prescribe');
   const status = p.loading ? t('rx.loading') : p.failed ? t('rx.loadFailed') : p.lines.length === 0 ? t('rx.empty') : null;
 
   return (
@@ -71,6 +74,7 @@ export default function PrescriptionPanel(p: Props) {
           </Select>
         </Field>
         <AuthorisationState state={p.authorisation} />
+        {!p.ended && p.addMedicine}
       </div>
 
       {status && <p role="status">{status}</p>}
@@ -86,7 +90,10 @@ export default function PrescriptionPanel(p: Props) {
           {stopped.map(l => (
             <li key={l.medicine} className="flex flex-col gap-1 rounded-lg border p-4">
               <p className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 font-bold"><CircleSlash aria-hidden className="size-4" />{t('rx.discontinue')}</span>
+                <span className="inline-flex items-center gap-1.5 font-bold">
+                  {l.kind === 'Discontinue' ? <CircleSlash aria-hidden className="size-4" /> : <TrendingDown aria-hidden className="size-4" />}
+                  {t(l.kind === 'Change' ? 'rx.change' : l.kind === 'Taper' ? 'rx.taper' : 'rx.discontinue')}
+                </span>
                 <span className="font-bold">{l.medicine}</span>
                 <SourceChip line={l} />
               </p>

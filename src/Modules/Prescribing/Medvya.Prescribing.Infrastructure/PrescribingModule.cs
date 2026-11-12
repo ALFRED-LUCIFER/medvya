@@ -23,6 +23,7 @@ public static class PrescribingModule
             .AddScoped<IFormulary, FormularyService>()
             .AddScoped<IOrders, OrderService>()
             .AddScoped<IPrescriptions, PrescriptionService>()
+            .AddScoped<IMedicineReview, MedicineReviewService>()
             .AddScoped<IPrescriptionVerification, PrescriptionVerification>()
             .AddScoped<PaperIssuer>()
             .AddScoped<IPaperVerification, PaperVerification>()

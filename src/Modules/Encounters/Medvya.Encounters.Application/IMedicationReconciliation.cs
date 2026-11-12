@@ -2,9 +2,12 @@ using Medvya.Encounters.Domain;
 
 namespace Medvya.Encounters.Application;
 
-public sealed record DecideMedicine(string? Key, MedicationDecisionKind? Kind, string? NewDose, string? Reason);
+/// <summary><see cref="Steps"/>: a Taper's steps (MDV-P2-043); ignored for any other decision.</summary>
+public sealed record DecideMedicine(string? Key, MedicationDecisionKind? Kind, string? NewDose, string? Reason, IReadOnlyList<TaperStep>? Steps = null);
 
-public sealed record MedicineDecisionView(MedicationDecisionKind Kind, string? NewDose, string? Reason, DateTimeOffset DecidedAt);
+/// <summary><see cref="FromDose"/>: the chart's dose a Change or Taper moves from. <see cref="Steps"/> and <see cref="EndsOn"/>: a Taper's.</summary>
+public sealed record MedicineDecisionView(
+    MedicationDecisionKind Kind, string? NewDose, string? Reason, DateTimeOffset DecidedAt, string? FromDose = null, IReadOnlyList<TaperStep>? Steps = null, DateOnly? EndsOn = null);
 
 /// <summary>One medicine across the sources. A side is null when that source does not mention it. <see cref="Other"/> is an import; the HIS column arrives with P7.</summary>
 public sealed record MedicineRow(
@@ -47,29 +50,51 @@ public interface IMedicationReconciliation
 /// <summary>A medicine the doctor decided to stop in an encounter's reconciliation (its latest decision), with the reason given.</summary>
 public sealed record StoppedMedicine(string Name, string? Reason);
 
+/// <summary>A medicine the doctor decided to change (a new dose) or taper (steps to an end date) in an encounter's reconciliation (its latest decision).</summary>
+public sealed record ChangedMedicine(string Name, MedicationDecisionKind Kind, string? FromDose, string? NewDose, IReadOnlyList<TaperStep>? Steps, DateOnly? EndsOn, string? Reason);
+
 /// <summary>
-/// The stop decisions of an encounter's reconciliation, for the prescription composer (MDV-P2-015), which shows each as a discontinue line.
+/// The stop decisions of an encounter's reconciliation, for the prescription composer (MDV-P2-015), which shows each as a discontinue line; and
+/// (MDV-P2-043) its change and taper decisions, which the prescription prints as their own lines.
 /// No access check and no audit event here: the caller has already checked clinical access to the encounter's patient and audits its own read.
 /// </summary>
 public interface IReconciliationStops
 {
     Task<IReadOnlyList<StoppedMedicine>> StopsAsync(Guid encounterId, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<ChangedMedicine>> ChangesAsync(Guid encounterId, CancellationToken cancellationToken = default);
 }
 
 /// <summary>A substance on the chart (never a "no known allergies" entry, never one ruled "not an allergy"), with its status for the evidence.</summary>
 public sealed record ChartAllergy(Guid Id, string Substance, AllergyStatus Status);
 
-/// <summary>An active medicine on the chart, as named there.</summary>
-public sealed record ChartMedicine(Guid Id, string Name);
+/// <summary>An active medicine on the chart, as named there, and when it was first recorded on the chart (the earliest the clinic knows it was taken).</summary>
+public sealed record ChartMedicine(Guid Id, string Name, DateTimeOffset RecordedAt);
 
-/// <summary>What a prescription is checked against: the allergy state (three different things, never merged), the listed allergies and the active medicines.</summary>
-public sealed record PrescribingFacts(AllergyState AllergyState, IReadOnlyList<ChartAllergy> Allergies, IReadOnlyList<ChartMedicine> ActiveMedicines);
+/// <summary>A reading on the chart: the value in hundredths of its unit (14.2 kg is 1420) and when it was taken.</summary>
+public sealed record ChartReading(int ValueHundredths, DateTimeOffset TakenAt);
 
 /// <summary>
-/// The chart facts for the prescription safety checks (MDV-P2-016). No access check and no audit event here: the caller has already checked
+/// What a prescription is checked against: the allergy state (three different things, never merged), the listed allergies, the active medicines
+/// and the latest weight, eGFR and potassium (null: none on the chart; the checks decide whether a weight is recent enough).
+/// </summary>
+public sealed record PrescribingFacts(
+    AllergyState AllergyState, IReadOnlyList<ChartAllergy> Allergies, IReadOnlyList<ChartMedicine> ActiveMedicines, ChartReading? Weight, ChartReading? Egfr, ChartReading? Potassium);
+
+/// <summary>
+/// The chart facts for the prescription safety checks (MDV-P2-016, MDV-P2-040). No access check and no audit event here: the caller has already checked
 /// clinical access to the patient and audits its own check.
 /// </summary>
 public interface IPrescribingChart
 {
     Task<PrescribingFacts> FactsAsync(Guid patientId, CancellationToken cancellationToken = default);
+
+    /// <summary>The pregnancy state for the checks (MDV-P2-034), on the facility's date.</summary>
+    Task<ChartPregnancy> PregnancyAsync(Guid patientId, Guid facilityId, CancellationToken cancellationToken = default);
 }
+
+/// <summary>
+/// The pregnancy facts the checks read: the completed weeks of an open pregnancy, or a "not pregnant" statement that holds today. Neither is
+/// "not recorded", never "not pregnant".
+/// </summary>
+public sealed record ChartPregnancy(int? GestationWeeks, bool RuledOut);

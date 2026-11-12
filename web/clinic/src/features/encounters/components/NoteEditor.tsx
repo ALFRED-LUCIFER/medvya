@@ -1,12 +1,15 @@
-import { useEffect, useRef } from 'react';
 import type { UseFormRegisterReturn } from 'react-hook-form';
 import { useI18n } from '@medvya/i18n';
-import { Button, Dialog, DialogContent, DialogDescription, DialogTitle, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea } from '@medvya/ui';
-import { maxSectionLength, sectionLabelKey, templateNameKey, type NoteSignature, type NoteTemplate, type SavePhase, type SignPatient } from '../domain/note';
+import type { ChecklistItem } from '../domain/checklist';
+import type { NoteSignature, NoteTemplate, RecordingConsent, SavePhase, SignPatient } from '../domain/note';
 import NoteAssist, { type Assist } from './NoteAssist';
-import { SignedLine, SignNote, type SignProblem } from './NoteSign';
+import { NoteSectionField, SaveState, SignedBanner, TemplatePicker, type StructuredProps } from './NoteParts';
+import { SignChecklist, SignedLine, SignNote, type SignProblem } from './NoteSign';
+import RecordingConsentChoice from './RecordingConsentChoice';
 
-type Props = {
+export type NoteEditorProps = StructuredProps & {
+  /** MDV-P2-042: the note is on the template suggested for this patient and nothing is saved yet. */
+  suggested: boolean;
   register: (sectionId: string) => UseFormRegisterReturn;
   /** Null once the note is signed: nothing can be added to it any more. */
   assist: Assist | null;
@@ -19,91 +22,40 @@ type Props = {
   canSign: boolean; signing: boolean; confirming: boolean; signProblem: SignProblem; signature: NoteSignature | null;
   onRequestSign: () => void; onCancelSign: () => void; onConfirmSign: () => void;
   signAsName: string | null; timeZone: string | undefined; patient: SignPatient | null;
+  consent: RecordingConsent | null; onConsent: (value: RecordingConsent) => void;
+  /** Empty without Sign or once signed. */
+  checklist: ChecklistItem[]; remaining: number;
 };
 
 /** E-04: the consultation note. Sections come from the template; saving is automatic and its state is always shown. Read-only once not a draft. */
-export default function NoteEditor(p: Props) {
+export default function NoteEditor(p: NoteEditorProps) {
   const { t } = useI18n();
-  const templateRef = useRef<HTMLButtonElement>(null);
-  const signedRef = useRef<HTMLParagraphElement>(null);
-  const wasDraft = useRef(false);
-  // Signing removes the button the doctor pressed: move focus to the SIGNED banner (read out as it arrives) instead of losing it to the page.
-  useEffect(() => {
-    if (p.readOnly && wasDraft.current) signedRef.current?.focus();
-    wasDraft.current = !p.loading && !p.readOnly;
-  }, [p.loading, p.readOnly]);
   if (p.loading) return <p role="status">{t('noteEditor.loading')}</p>;
   if (p.loadFailed || !p.template || !p.templateKey) return <p role="alert" className="font-bold text-danger-700">{t(p.forbidden ? 'noteEditor.forbidden' : 'noteEditor.loadFailed')}</p>;
   return (
     <section aria-labelledby="note-title" className="flex flex-col gap-4 rounded-xl border bg-card p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 id="note-title" className="text-lg font-extrabold">{t('noteEditor.title')}</h2>
-        <div className="flex items-center gap-2">
-          <Label htmlFor="note-template">{t('noteEditor.template')}</Label>
-          <Select value={p.templateKey} onValueChange={p.onRequestSwitch} disabled={p.readOnly}>
-            <SelectTrigger ref={templateRef} id="note-template" className="min-h-11 min-w-48"><SelectValue /></SelectTrigger>
-            <SelectContent>{p.choices.map(c => <SelectItem key={c.key} value={c.key}>{t(templateNameKey(c.key))}</SelectItem>)}</SelectContent>
-          </Select>
-        </div>
+        <TemplatePicker templateKey={p.templateKey} choices={p.choices} readOnly={p.readOnly} pendingSwitch={p.pendingSwitch} suggested={p.suggested}
+          onRequestSwitch={p.onRequestSwitch} onCancelSwitch={p.onCancelSwitch} onConfirmSwitch={p.onConfirmSwitch} />
       </div>
+      <RecordingConsentChoice value={p.consent} readOnly={p.readOnly} onChange={p.onConsent} />
       <p className="text-sm text-muted-foreground">{t('noteEditor.manualBanner')}</p>
-      {p.readOnly && <p ref={signedRef} tabIndex={-1} role="status" className="font-bold focus:outline-none">{t('noteEditor.signed', { version: String(p.signature?.versionNo ?? 1) })}</p>}
+      <SignedBanner signed={p.readOnly} versionNo={p.signature?.versionNo ?? 1} />
       {p.signature && <SignedLine signature={p.signature} timeZone={p.timeZone} />}
       {!p.readOnly && <SaveState phase={p.phase} reloading={p.reloading} onRetry={p.onRetry} onReapply={p.onReapply} />}
       {p.assist && <NoteAssist assist={p.assist} template={p.template} timeZone={p.timeZone} />}
       <div className="flex flex-col gap-4">
-        {p.template.sections.map(s => (
-          <div key={s.id} className="flex flex-col gap-1.5">
-            <Label htmlFor={`note-${s.id}`}>
-              {t(sectionLabelKey(s.id))}
-              {s.required && <span className="ms-2 text-sm font-normal text-muted-foreground">{t('noteEditor.required')}</span>}
-            </Label>
-            <Textarea id={`note-${s.id}`} className="min-h-24" maxLength={maxSectionLength} readOnly={p.readOnly} aria-required={s.required} {...p.register(s.id)} />
-          </div>
-        ))}
+        {p.template.sections.map(s => <NoteSectionField key={s.id} section={s} register={p.register} readOnly={p.readOnly} answers={p.answers} onAnswers={p.onAnswers} />)}
       </div>
       {!p.readOnly && (
         <>
           {!p.canSign && <p className="text-sm text-muted-foreground">{t('noteSign.onlyDoctor')}</p>}
-          <SignNote canSign={p.canSign} patient={p.patient} doctorName={p.signAsName} signing={p.signing} confirming={p.confirming} problem={p.signProblem}
+          {p.checklist.length > 0 && <SignChecklist items={p.checklist} />}
+          <SignNote canSign={p.canSign} remaining={p.remaining} patient={p.patient} doctorName={p.signAsName} signing={p.signing} confirming={p.confirming} problem={p.signProblem}
             onRequest={p.onRequestSign} onCancel={p.onCancelSign} onConfirm={p.onConfirmSign} />
         </>
       )}
-      <Dialog open={p.pendingSwitch !== null} onOpenChange={open => { if (!open) p.onCancelSwitch(); }}>
-        <DialogContent closeLabel={t('noteEditor.switch.close')}
-          // Nothing opened this dialog by a click on a trigger (the Select that asked is already closed), so give focus back to the Select by hand.
-          onCloseAutoFocus={e => { e.preventDefault(); templateRef.current?.focus(); }}>
-          <DialogTitle>{t('noteEditor.switch.title')}</DialogTitle>
-          {p.pendingSwitch && (
-            <DialogDescription>
-              {t('noteEditor.switch.body', { template: t(templateNameKey(p.pendingSwitch.template.key)) })}
-              {p.pendingSwitch.dropped.length > 0 && ` ${t('noteEditor.switch.dropped', { sections: p.pendingSwitch.dropped.map(id => t(sectionLabelKey(id))).join(', ') })}`}
-            </DialogDescription>
-          )}
-          <div className="flex flex-wrap gap-3">
-            <Button className="min-h-11" onClick={p.onConfirmSwitch}>{t('noteEditor.switch.confirm')}</Button>
-            <Button variant="outline" className="min-h-11" onClick={p.onCancelSwitch}>{t('noteEditor.switch.cancel')}</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </section>
   );
-}
-
-/** Never colour alone: each state has words. A failure or conflict is an alert; the text stays on screen either way. */
-function SaveState({ phase, reloading, onRetry, onReapply }: { phase: SavePhase; reloading: boolean; onRetry: () => void; onReapply: () => void }) {
-  const { t } = useI18n();
-  if (phase === 'failed') return (
-    <div role="alert" className="flex flex-wrap items-center gap-3 font-bold text-danger-700">
-      <span>{t('noteEditor.save.failed')}</span>
-      <Button variant="outline" className="min-h-11" onClick={onRetry}>{t('noteEditor.save.retry')}</Button>
-    </div>
-  );
-  if (phase === 'conflict') return (
-    <div role="alert" className="flex flex-wrap items-center gap-3 font-bold text-danger-700">
-      <span>{t('noteEditor.save.conflict')}</span>
-      <Button variant="outline" className="min-h-11" loading={reloading} onClick={onReapply}>{t('noteEditor.save.reapply')}</Button>
-    </div>
-  );
-  return <p role="status" className="text-sm text-muted-foreground">{t(`noteEditor.save.${phase}`)}</p>;
 }

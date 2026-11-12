@@ -140,6 +140,8 @@ public sealed class SchedulingDbContext(DbContextOptions<SchedulingDbContext> op
             e.Property(x => x.VisitType).HasConversion<string>().HasMaxLength(30);
             e.Property(x => x.ReasonCategory).HasConversion<string>().HasMaxLength(30);
             e.Property(x => x.State).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.FollowUp).HasMaxLength(10);
+            e.HasIndex(x => new { x.TenantId, x.EncounterId }).IsUnique().HasFilter("\"EncounterId\" IS NOT NULL"); // one follow-up per consultation
             e.HasIndex(x => new { x.TenantId, x.FacilityId, x.State, x.RequestedAt });
             e.HasIndex(x => new { x.TenantId, x.PatientId });
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);

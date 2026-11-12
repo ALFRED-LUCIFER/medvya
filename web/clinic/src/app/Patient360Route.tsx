@@ -8,12 +8,14 @@ import DocumentsSummary from '../features/documents/components/DocumentsSummary'
 import { useDocumentListController } from '../features/documents/hooks/useDocumentListController';
 import OpenReferrals from '../features/referrals/components/OpenReferrals';
 import { useOpenReferralsController } from '../features/referrals/hooks/useReferralsController';
+import ChronicCareCards from '../features/patient360/components/ChronicCareCards';
 import HistorySections from '../features/patient360/components/HistorySections';
 import OlderAdultCards from '../features/patient360/components/OlderAdultCards';
 import Patient360Page from '../features/patient360/components/Patient360Page';
 import PregnancyCard from '../features/patient360/components/PregnancyCard';
 import type { LifeStage } from '../features/patient360/domain/chart';
 import { useChartSectionController } from '../features/patient360/hooks/useChartSectionController';
+import { useChronicCareController } from '../features/patient360/hooks/useChronicCareController';
 import { useHistoryController } from '../features/patient360/hooks/useHistoryController';
 import { useOlderAdultController } from '../features/patient360/hooks/useOlderAdultController';
 import { usePatient360Controller } from '../features/patient360/hooks/usePatient360Controller';
@@ -79,6 +81,7 @@ function Chart({ patientId, backPath, canEditHistory, canManagePregnancy, canOrd
           {pregnant && pregnancyCard}
           {modules.map((M, i) => <M key={i} patientId={patientId} canRecord={canEditHistory} online={online} openConsultPath={openConsultPath} />)}
         </div> : undefined}
+        carePlan={d && <ChronicCare patientId={patientId} openEncounterId={d.chart.openEncounterId} canDecide={canOrder} />}
         timeline={chart.data && <Timeline patientId={patientId} />}
         documents={chart.data && <Documents patientId={patientId} />} />
       {!pregnant && pregnancyCard}
@@ -87,5 +90,8 @@ function Chart({ patientId, backPath, canEditHistory, canManagePregnancy, canOrd
   );
 }
 
+/** Targets, care gaps and goals (MDV-P2-038); a gap's action goes on the open consultation, and with none open it says so. */
+const ChronicCare = ({ patientId, openEncounterId, canDecide }: { patientId: string; openEncounterId: string | null; canDecide: boolean }) =>
+  <ChronicCareCards {...useChronicCareController(patientId, openEncounterId)} canDecide={canDecide} />;
 const Timeline = ({ patientId }: { patientId: string }) => <TimelinePreview {...useTimelinePreviewController(patientId)} timelinePath={`/patients/${patientId}/timeline`} />;
 const Documents = ({ patientId }: { patientId: string }) => <DocumentsSummary {...useDocumentListController(patientId)} documentsPath={`/patients/${patientId}/docs`} />;

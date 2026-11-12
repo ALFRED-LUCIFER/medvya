@@ -37,6 +37,9 @@ public sealed class EncounterMergeParticipant(EncountersDbContext db, ICurrentTe
         || await db.Immunisations.AsNoTracking().AnyAsync(i => i.PatientId == patientId, cancellationToken)
         || await db.MilestoneResponses.AsNoTracking().AnyAsync(m => m.PatientId == patientId, cancellationToken)
         || await db.GeriatricAssessments.AsNoTracking().AnyAsync(g => g.PatientId == patientId, cancellationToken)
+        || await db.CareTargets.AsNoTracking().AnyAsync(c => c.PatientId == patientId, cancellationToken)
+        || await db.CareChecks.AsNoTracking().AnyAsync(c => c.PatientId == patientId, cancellationToken)
+        || await db.CareGoals.AsNoTracking().AnyAsync(c => c.PatientId == patientId, cancellationToken)
         || await db.PregnancyEpisodes.AsNoTracking().AnyAsync(p => p.PatientId == patientId, cancellationToken)
         || await db.PregnancyRuledOuts.AsNoTracking().AnyAsync(p => p.PatientId == patientId, cancellationToken);
 
@@ -70,6 +73,12 @@ public sealed class EncounterMergeParticipant(EncountersDbContext db, ICurrentTe
         await shared.MilestoneResponses.Where(e => e.PatientId == fromPatientId)
             .ExecuteUpdateAsync(s => s.SetProperty(e => e.PatientId, toPatientId).SetProperty(e => e.MergedFromPatientId, fromPatientId), cancellationToken);
         await shared.GeriatricAssessments.Where(e => e.PatientId == fromPatientId)
+            .ExecuteUpdateAsync(s => s.SetProperty(e => e.PatientId, toPatientId).SetProperty(e => e.MergedFromPatientId, fromPatientId), cancellationToken);
+        await shared.CareTargets.Where(e => e.PatientId == fromPatientId)
+            .ExecuteUpdateAsync(s => s.SetProperty(e => e.PatientId, toPatientId).SetProperty(e => e.MergedFromPatientId, fromPatientId), cancellationToken);
+        await shared.CareChecks.Where(e => e.PatientId == fromPatientId)
+            .ExecuteUpdateAsync(s => s.SetProperty(e => e.PatientId, toPatientId).SetProperty(e => e.MergedFromPatientId, fromPatientId), cancellationToken);
+        await shared.CareGoals.Where(e => e.PatientId == fromPatientId)
             .ExecuteUpdateAsync(s => s.SetProperty(e => e.PatientId, toPatientId).SetProperty(e => e.MergedFromPatientId, fromPatientId), cancellationToken);
         // shortcut: two records that both have an open pregnancy cannot merge (the unique index refuses and the merge rolls back); a clinician
         // closes one first. A merge step that asks which to keep when a real case needs it.
@@ -107,6 +116,12 @@ public sealed class EncounterMergeParticipant(EncountersDbContext db, ICurrentTe
         await shared.MilestoneResponses.Where(e => e.PatientId == toPatientId && e.MergedFromPatientId == fromPatientId)
             .ExecuteUpdateAsync(s => s.SetProperty(e => e.PatientId, fromPatientId).SetProperty(e => e.MergedFromPatientId, (Guid?)null), cancellationToken);
         await shared.GeriatricAssessments.Where(e => e.PatientId == toPatientId && e.MergedFromPatientId == fromPatientId)
+            .ExecuteUpdateAsync(s => s.SetProperty(e => e.PatientId, fromPatientId).SetProperty(e => e.MergedFromPatientId, (Guid?)null), cancellationToken);
+        await shared.CareTargets.Where(e => e.PatientId == toPatientId && e.MergedFromPatientId == fromPatientId)
+            .ExecuteUpdateAsync(s => s.SetProperty(e => e.PatientId, fromPatientId).SetProperty(e => e.MergedFromPatientId, (Guid?)null), cancellationToken);
+        await shared.CareChecks.Where(e => e.PatientId == toPatientId && e.MergedFromPatientId == fromPatientId)
+            .ExecuteUpdateAsync(s => s.SetProperty(e => e.PatientId, fromPatientId).SetProperty(e => e.MergedFromPatientId, (Guid?)null), cancellationToken);
+        await shared.CareGoals.Where(e => e.PatientId == toPatientId && e.MergedFromPatientId == fromPatientId)
             .ExecuteUpdateAsync(s => s.SetProperty(e => e.PatientId, fromPatientId).SetProperty(e => e.MergedFromPatientId, (Guid?)null), cancellationToken);
         await shared.PregnancyEpisodes.Where(e => e.PatientId == toPatientId && e.MergedFromPatientId == fromPatientId)
             .ExecuteUpdateAsync(s => s.SetProperty(e => e.PatientId, fromPatientId).SetProperty(e => e.MergedFromPatientId, (Guid?)null), cancellationToken);

@@ -30,6 +30,7 @@ public static class PrescribingModule
             .AddScoped<IRxShareLinks, RxShareLinks>()
             .AddScoped<IReferrals, ReferralService>()
             .AddScoped<Medvya.Encounters.Application.ITimelineSource, OrderTimelineSource>()
+            .AddScoped<Medvya.Encounters.Application.IPlacedOrders, PlacedOrders>()
             .AddScoped<Medvya.Patients.Application.IPatientMergeParticipant, OrderMergeParticipant>();
     }
 }

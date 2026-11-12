@@ -17,7 +17,7 @@ export function useTodayController(facilityId: string, online: boolean, userId: 
   const ids = useMemo(() => patientIdsOf(visits), [visits]);
   const flags = useQuery({
     queryKey: ['today-allergy-flags', facilityId, ids], enabled: online && ids.length > 0, retry: false, refetchOnWindowFocus: false,
-    queryFn: async () => Object.fromEntries((await fetchAllergyFlags(ids.slice(0, MAX_FLAGS))).items.map(i => [i.patientId, i.state])),
+    queryFn: async () => Object.fromEntries((await fetchAllergyFlags(ids.slice(0, MAX_FLAGS))).items.map(i => [i.patientId, i])),
   });
   // Unsigned notes stay here, from any day, until they are signed (the list is the server's; signing elsewhere drops them on the next read).
   // Not on window focus: every read audits each note; returning from a consultation remounts Today and reads it again.

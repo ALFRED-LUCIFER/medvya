@@ -376,8 +376,8 @@ test('a role without Sign sees no Sign button, only why', async ({ page }) => {
 // every added line says where it came from. Which readings are verified is decided on the server (ConsultNoteAssistTests, mutation-checked).
 const nurse = 'Anita Nair (synthetic)';
 const verified = [
-  { code: 'BloodPressureSystolic', value: 150, unit: 'mmHg', takenAt: at, source: 'ClinicianVerified', recordedByName: nurse },
-  { code: 'Pulse', value: 88, unit: '/min', takenAt: at, source: 'ClinicianVerified', recordedByName: null },
+  { code: 'BloodPressureSystolic', value: 150, unit: 'mmHg', takenAt: at, source: 'ClinicianVerified', recordedByName: nurse, flag: 'High' },
+  { code: 'Pulse', value: 88, unit: '/min', takenAt: at, source: 'ClinicianVerified', recordedByName: null, flag: null },
 ];
 const earlier = [{ encounterId: 'e-0', signedAt: '2026-09-02T05:30:00Z', signedByName: 'Dr. Arjun Rao (synthetic)', templateKey: 'general-opd', sections: { chiefComplaint: 'Thirst (synthetic)', plan: 'Review in a month' } }];
 
@@ -387,7 +387,7 @@ test('J2.5 (note assist, MDV-P2-009) E-04 · Doctor: verified vitals are added t
   await page.reload();
   const assist = note(page).getByRole('region', { name: 'Add to the note' });
   await expect(assist.getByRole('listitem')).toHaveText([
-    'Blood pressure, systolic 150 mmHg (Anita Nair (synthetic), nurse intake, verified 19 Oct 2026 10:05)',
+    'Blood pressure, systolic 150 mmHg (Anita Nair (synthetic), nurse intake, verified 19 Oct 2026 10:05) Flagged high by the nurse', // MDV-1090: words, not colour; the icon is decoration
     'Pulse 88 /min (nurse intake, verified 19 Oct 2026 10:05)', // no name known: the line says so by leaving it out, never guesses one
   ]);
   await expect(note(page).getByLabel('Objective')).toHaveValue(''); // shown, not added

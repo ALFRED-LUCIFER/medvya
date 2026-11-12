@@ -212,8 +212,18 @@ public sealed class PatientChartTests(PostgresFixture sql) : IClassFixture<Postg
         var items = (await Json(mine)).GetProperty("items").EnumerateArray().ToList();
         // One answer for the patient (a repeated id is one), none for an id nobody knows; the state only, never a substance.
         Assert.Equal((HttpStatusCode.OK, 1), (mine.StatusCode, items.Count));
-        Assert.Equal(["patientId", "state"], items[0].EnumerateObject().Select(x => x.Name).Order());
+        Assert.Equal(["abnormalVitals", "patientId", "state"], items[0].EnumerateObject().Select(x => x.Name).Order());
         Assert.Equal("Listed", items[0].GetProperty("state").GetString());
+        Assert.False(items[0].GetProperty("abnormalVitals").GetBoolean());
+
+        // MDV-1090: a nurse's out-of-range reading of the last day is a flag on the row; an older one, or one from another facility, is not. Remove the filter and this fails.
+        await SeedAsync(db => db.Observations.AddRange(
+            new Observation { Id = Guid.NewGuid(), TenantId = h.Tenant, PatientId = h.Patient, FacilityId = h.Facility, AppointmentId = Guid.NewGuid(), Code = ObservationCode.Pulse, ValueHundredths = 11200, TakenAt = h.Clock.GetUtcNow().AddHours(-25), Source = ChartSource.ClinicianVerified, Flag = VitalAlert.High },
+            new Observation { Id = Guid.NewGuid(), TenantId = h.Tenant, PatientId = h.Patient, FacilityId = Guid.NewGuid(), AppointmentId = Guid.NewGuid(), Code = ObservationCode.Pulse, ValueHundredths = 11200, TakenAt = h.Clock.GetUtcNow().AddHours(-1), Source = ChartSource.ClinicianVerified, Flag = VitalAlert.High }));
+        using (var notYet = await Flags(h.Doctor, h.Patient)) Assert.False((await Json(notYet)).GetProperty("items")[0].GetProperty("abnormalVitals").GetBoolean());
+        await SeedAsync(db => db.Observations.Add(
+            new Observation { Id = Guid.NewGuid(), TenantId = h.Tenant, PatientId = h.Patient, FacilityId = h.Facility, AppointmentId = Guid.NewGuid(), Code = ObservationCode.Pulse, ValueHundredths = 11200, TakenAt = h.Clock.GetUtcNow().AddHours(-1), Source = ChartSource.ClinicianVerified, Flag = VitalAlert.High }));
+        using (var fresh = await Flags(h.Doctor, h.Patient)) Assert.True((await Json(fresh)).GetProperty("items")[0].GetProperty("abnormalVitals").GetBoolean());
 
         using var colleague = await Flags(h.SecondDoctor, h.Patient);
         Assert.Equal((HttpStatusCode.OK, 0), (colleague.StatusCode, (await Json(colleague)).GetProperty("items").GetArrayLength()));
@@ -225,6 +235,6 @@ public sealed class PatientChartTests(PostgresFixture sql) : IClassFixture<Postg
 
         await using var audit = sql.Audit(h.Tenant);
         var rows = await audit.Events.Where(e => e.Action == "patient.chart.allergy-flag").Select(e => new { e.PatientId, e.Purpose, e.ActorUserId }).ToListAsync();
-        Assert.Equal([(h.Patient, AuditPurpose.Treatment, (Guid?)h.Doctor)], rows.Select(r => (r.PatientId, r.Purpose, r.ActorUserId)));
+        Assert.Equal([.. Enumerable.Repeat<(Guid?, string, Guid?)>((h.Patient, AuditPurpose.Treatment, h.Doctor), 3)], rows.Select(r => (r.PatientId, r.Purpose, r.ActorUserId)));
     }
 }

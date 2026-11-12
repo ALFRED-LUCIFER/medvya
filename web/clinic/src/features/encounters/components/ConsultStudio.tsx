@@ -6,7 +6,7 @@ import type { Patient360 } from '../../patient360/domain/chart';
 import { checklistIds, studioSections, templateOwnSections, type StudioSection } from '../domain/checklist';
 import { planHeading, type StudioPanel } from '../domain/encounter';
 import { templateNameKey } from '../domain/note';
-import NoteAssist from './NoteAssist';
+import NoteAssist, { VitalList } from './NoteAssist';
 import type { NoteEditorProps } from './NoteEditor';
 import { NoteSectionField, SaveState, SignedBanner, TemplatePicker } from './NoteParts';
 import { SignChecklist, SignedLine, SignNote } from './NoteSign';
@@ -66,7 +66,7 @@ export default function ConsultStudio(p: Props) {
           {!p.readOnly && <Numbered id="vitals" title={numbered}>
             {p.assist && p.assist.vitals.length > 0
               ? <>
-                <ul className="list-disc ps-5 text-sm">{p.assist.vitals.map(line => <li key={line}>{line}</li>)}</ul>
+                <VitalList vitals={p.assist.vitals} />
                 <div><Button variant="outline" className="min-h-11" onClick={p.assist.onInsertVitals}>{t('noteAssist.vitals.insert')}</Button></div>
               </>
               : <p className="text-sm text-muted-foreground">{t('noteAssist.vitals.empty')}</p>}

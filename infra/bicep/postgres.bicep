@@ -36,8 +36,8 @@ param skuName string = 'Standard_B1ms'
 param skuTier string = 'Burstable'
 param storageSizeGB int = 32
 param logAnalyticsId string
-@description('pgaudit classes. read, write and ddl cover every statement that touches or changes data; role covers grants.')
-param pgauditLog string = 'read, write, ddl, role'
+@description('pgaudit classes. write and ddl cover every change; role covers grants. read is off: it logged every SELECT (about 9 GB a month, over the 5 GB free Log Analytics tier) and patient reads are already in the app audit ledger. shortcut: DBA SELECTs are not logged, add read back when ingestion is paid for or logs go to Blob.')
+param pgauditLog string = 'write, ddl, role'
 
 // Azure fixes the geo-backup target as the paired region, so each region maps to its own country and its pair's country.
 var regions = {

@@ -208,6 +208,8 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.SoloDoctor, new("POST", "/v1/patients/{patient}/pregnancy/danger-signs")),
         (Role.SoloDoctor, new("POST", "/v1/patients/{patient}/pregnancy/ruled-out")),
         (Role.SoloDoctor, new("POST", "/v1/patients/{patient}/pregnancy/readings", """{"fundalHeightCm":22}""")),
+        (Role.SoloDoctor, new("GET", "/v1/patients/{patient}/growth")),
+        (Role.Nurse, new("POST", "/v1/patients/{patient}/growth", """{"takenOn":"2026-10-19","weightKg":4.0}""")),
         (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/end")),
         (Role.SoloDoctor, new("GET", "/v1/encounters/{encounter}/medicines/reconciliation")),
         (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/medicines/reconciliation/decisions", """{"key":"synthetic","kind":"Keep"}""")),
@@ -428,6 +430,8 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.Receptionist, new("POST", "/v1/patients/{patient}/pregnancy/ruled-out")), // Vitals & allergies entry: X
         (Role.CareCoordinator, new("POST", "/v1/patients/{patient}/pregnancy/danger-signs")),
         (Role.Receptionist, new("POST", "/v1/patients/{patient}/pregnancy/readings", """{"fundalHeightCm":22}""")),
+        (Role.Receptionist, new("GET", "/v1/patients/{patient}/growth")), // Patient 360: X
+        (Role.CareCoordinator, new("POST", "/v1/patients/{patient}/growth", """{"takenOn":"2026-10-19","weightKg":4.0}""")), // Vitals & allergies entry: X
         (Role.PracticeAdmin, new("GET", "/v1/patients/{patient}/chart")),
         (Role.PracticeAdmin, new("GET", "/v1/encounters/{encounter}")),
         (Role.Receptionist, new("POST", "/v1/encounters", """{"appointmentId":"{appointment}","leaveOpen":true}""")),

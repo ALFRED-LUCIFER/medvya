@@ -2,6 +2,8 @@ import type { ComponentType } from 'react';
 import { useParams } from 'react-router';
 import ChildHealthCard from '../features/child-health/components/ChildHealthCard';
 import { useChildHealthController } from '../features/child-health/hooks/useChildHealthController';
+import GrowthCard from '../features/child-health/components/GrowthCard';
+import { useGrowthController } from '../features/child-health/hooks/useGrowthController';
 import DocumentsSummary from '../features/documents/components/DocumentsSummary';
 import { useDocumentListController } from '../features/documents/hooks/useDocumentListController';
 import OpenReferrals from '../features/referrals/components/OpenReferrals';
@@ -31,7 +33,12 @@ type StageModuleProps = { patientId: string; canRecord: boolean; online: boolean
  * The pregnancy card (MDV-P2-034) takes the chart answer and the doctor's rights, so Chart places it: in the slot at the Pregnancy stage, and
  * below the chart for a woman of 10 to 55 at any other stage, so a doctor can start a pregnancy or a clinician record "not pregnant today".
  */
-const stageModules: Record<LifeStage, ComponentType<StageModuleProps>[]> = { Adult: [], Child: [ChildHealth], Pregnancy: [], OlderAdult: [OlderAdult] };
+const stageModules: Record<LifeStage, ComponentType<StageModuleProps>[]> = { Adult: [], Child: [Growth, ChildHealth], Pregnancy: [], OlderAdult: [OlderAdult] };
+
+/** Growth with WHO centiles (MDV-P2-035), asked for only once the chart says the patient is a child. */
+function Growth({ patientId, canRecord, online }: StageModuleProps) {
+  return <GrowthCard {...useGrowthController(patientId, true)} canRecord={canRecord} online={online} />;
+}
 
 /** Immunisations and milestones (MDV-P2-036), asked for only once the chart says the patient is a child. */
 function ChildHealth({ patientId, canRecord, online }: StageModuleProps) {

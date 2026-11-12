@@ -7,7 +7,7 @@ export type AllergyState = 'NotRecorded' | 'NoKnownAllergies' | 'Listed';
 export type AllergyStatus = 'Confirmed' | 'PatientReported' | 'Unknown' | 'NotAnAllergy';
 export type ObservationCode =
   | 'BloodPressureSystolic' | 'BloodPressureDiastolic' | 'Pulse' | 'Temperature' | 'OxygenSaturation' | 'Weight' | 'RespiratoryRate' | 'Height' | 'PainScore'
-  | 'BloodPressureStandingSystolic' | 'BloodPressureStandingDiastolic' | 'FundalHeight' | 'FetalHeartRate'
+  | 'BloodPressureStandingSystolic' | 'BloodPressureStandingDiastolic' | 'FundalHeight' | 'FetalHeartRate' | 'Length' | 'HeadCircumference'
   | 'HbA1c' | 'LdlCholesterol' | 'Egfr' | 'UrineAlbuminCreatinineRatio' | 'Haemoglobin' | 'Ferritin' | 'Potassium' | 'Sodium' | 'Tsh' | 'VitaminD' | 'Platelets';
 
 export type Allergy = { substance: string; reaction: string | null; status: AllergyStatus; source: ChartSource };

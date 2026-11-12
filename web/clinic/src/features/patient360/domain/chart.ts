@@ -53,7 +53,7 @@ export type Patient360 = {
   timeZone: string;
   chart: {
     allergyState: AllergyState; allergies: Allergy[]; problems: Problem[]; medicines: Medicine[]; lastVitals: Vital[]; trends: Trend[];
-    recentEncounters: RecentEncounter[]; openEncounterId: string | null; lastLabs: Vital[]; bmi: Bmi | null;
+    recentEncounters: RecentEncounter[]; openEncounterId: string | null; startableAppointmentId: string | null; lastLabs: Vital[]; bmi: Bmi | null;
     history: HistoryEntry[]; bloodGroup: string | null; careTeam: string[];
   };
 };

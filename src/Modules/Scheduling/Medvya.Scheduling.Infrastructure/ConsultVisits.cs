@@ -15,9 +15,22 @@ namespace Medvya.Scheduling.Infrastructure;
 /// </summary>
 public sealed class ConsultVisits(SchedulingDbContext db, SchedulingContext context, ICurrentTenant tenant, IBoardNotifier notifier, ILogger<ConsultVisits> log) : IConsultVisits
 {
+    // The states VisitFlow.CanReassign names, spelt out because EF cannot translate the method.
+    static readonly AppointmentState[] Waiting = [AppointmentState.CheckedIn, AppointmentState.WithNurse, AppointmentState.ReadyForDoctor];
+
     public Task<ConsultVisit?> FindAsync(Guid appointmentId, CancellationToken cancellationToken = default) =>
         db.Appointments.AsNoTracking().Where(a => a.Id == appointmentId)
             .Select(a => new ConsultVisit(a.Id, a.FacilityId, a.PatientId, a.State, a.Room, a.Start)).SingleOrDefaultAsync(cancellationToken);
+
+    public async Task<Guid?> StartableTodayAsync(Guid patientId, Guid facilityId, Guid calendarId, CancellationToken cancellationToken = default)
+    {
+        var (_, zone) = await context.FacilityAsync(facilityId, cancellationToken);
+        var today = ScheduleRules.LocalDate(context.Now, zone);
+        var waiting = await db.Appointments.AsNoTracking()
+            .Where(a => a.PatientId == patientId && a.FacilityId == facilityId && a.CalendarId == calendarId && Waiting.Contains(a.State)).OrderBy(a => a.Start)
+            .Select(a => new { a.Id, a.Start }).ToListAsync(cancellationToken);
+        return waiting.FirstOrDefault(a => ScheduleRules.LocalDate(a.Start, zone) == today)?.Id;
+    }
 
     public async Task<ConsultVisit> StartAsync(Guid appointmentId, DbTransaction transaction, CancellationToken cancellationToken = default)
     {

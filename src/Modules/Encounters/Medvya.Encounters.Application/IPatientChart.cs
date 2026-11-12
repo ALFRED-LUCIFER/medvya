@@ -30,13 +30,13 @@ public sealed record RecentEncounter(Guid Id, DateTimeOffset StartedAt, Encounte
 /// <summary>
 /// The verified chart of one patient (MDV-P2-004). Every fact carries its source; the AI summary is not part of it (P3). History is every saved
 /// version, newest first; <see cref="BloodGroup"/> is the current blood group, null when never recorded; <see cref="CareTeam"/> is the
-/// clinicians who led the patient's consultations, most recent first (MDV-P2-032).
+/// clinicians who led the patient's consultations, most recent first (MDV-P2-032). <see cref="StartableAppointmentId"/> is the signed-in doctor's own waiting visit with the patient today (MDV-1089), when none is open.
 /// </summary>
 public sealed record PatientChart(
     AllergyState AllergyState, IReadOnlyList<AllergyView> Allergies, IReadOnlyList<ProblemView> Problems, IReadOnlyList<MedicineView> Medicines,
     IReadOnlyList<VitalView> LastVitals, IReadOnlyList<TrendView> Trends, IReadOnlyList<RecentEncounter> RecentEncounters, Guid? OpenEncounterId,
     IReadOnlyList<VitalView> LastLabs, BmiView? Bmi,
-    IReadOnlyList<HistoryEntryView> History, string? BloodGroup, IReadOnlyList<string> CareTeam);
+    IReadOnlyList<HistoryEntryView> History, string? BloodGroup, IReadOnlyList<string> CareTeam, Guid? StartableAppointmentId);
 
 /// <summary>
 /// Patient 360's chart (MDV-P2-004). Needs clinical access to the patient at the given facility (role, care relationship, MDV-P2-024;

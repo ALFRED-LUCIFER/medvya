@@ -17,6 +17,12 @@ public interface IConsultVisits
     Task<ConsultVisit?> FindAsync(Guid appointmentId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// The visit the doctor could start now (MDV-1089): this patient's, at this facility, on this doctor's own calendar, today, and still waiting
+    /// (checked in, with the nurse or ready). Null when there is none; the earliest when there are several. The start itself checks clinical access again.
+    /// </summary>
+    Task<Guid?> StartableTodayAsync(Guid patientId, Guid facilityId, Guid calendarId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// The doctor calls the patient in: a waiting visit (checked in, with the nurse or ready) moves to In consult with the room of the
     /// doctor's session; a visit already in consult is left as it is.
     /// </summary>

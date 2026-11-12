@@ -5,6 +5,7 @@ using Medvya.Encounters.Application;
 using Medvya.Encounters.Domain;
 using Medvya.Encounters.Infrastructure.Persistence;
 using Medvya.Identity.Application;
+using Medvya.Scheduling.Application;
 using Medvya.Tenancy.Application;
 using Medvya.Tenancy.Domain;
 using Microsoft.EntityFrameworkCore;
@@ -15,7 +16,7 @@ namespace Medvya.Encounters.Infrastructure;
 /// Patient 360's chart (MDV-P2-004). Clinical access first (role, care relationship, facility), then the read, then the audit event with
 /// the patient: an unauthorised caller reads nothing. A fact with no source cannot exist (the column is required), so none is shown bare.
 /// </summary>
-public sealed class PatientChartService(EncountersDbContext db, IClinicalAccess clinical, ICurrentTenant tenant, ICurrentUser user, IAuditLog audit, TimeProvider clock, IStaffUsers staff) : IPatientChart
+public sealed class PatientChartService(EncountersDbContext db, IClinicalAccess clinical, ICurrentTenant tenant, ICurrentUser user, IAuditLog audit, TimeProvider clock, IStaffUsers staff, IConsultVisits visits) : IPatientChart
 {
     public const string ReadAction = "patient.chart.read", AllergyFlagAction = "patient.chart.allergy-flag";
     /// <summary>Every clinician who treats patients may read the chart; Patient 360 is not granted to the front desk at all.</summary>
@@ -68,6 +69,9 @@ public sealed class PatientChartService(EncountersDbContext db, IClinicalAccess 
         var open = await db.Encounters.AsNoTracking().Where(e => e.PatientId == patientId && e.LeadClinicianId == me && e.Status == EncounterStatus.Active)
             .Select(e => (Guid?)e.Id).FirstOrDefaultAsync(cancellationToken);
 
+        // The doctor's own waiting visit today, asked of Scheduling; the start (POST /v1/encounters) is where access is decided again. A calendar id is the doctor's user id.
+        var startable = open is null && me is { } doctor ? await visits.StartableTodayAsync(patientId, facilityId, doctor, cancellationToken) : null;
+
         await ChartReads.AuditAsync(audit, tenant, me, clock, ReadAction, patientId, cancellationToken);
 
         var banner = ChartReads.BannerOf(allergies);
@@ -76,7 +80,7 @@ public sealed class PatientChartService(EncountersDbContext db, IClinicalAccess 
         return new(banner.State, banner.Allergies, [.. problems.Select(p => new ProblemView(p.Icd10Code, p.Description, p.Verification, p.OnsetOn, p.Source, p.Status))],
             [.. medicines.Select(m => new MedicineView(m.Name, m.Dose, m.State, m.Source, m.StoppedAt, m.EncounterId))],
             [.. latest.Where(v => !Observation.IsLab(v.Code))], trends, encounters, open, [.. latest.Where(v => Observation.IsLab(v.Code))], BmiOf(latest),
-            history, history.FirstOrDefault(h => h.Section == HistorySection.BloodGroup)?.Text, [.. leads.Select(id => names.GetValueOrDefault(id)).OfType<string>()]);
+            history, history.FirstOrDefault(h => h.Section == HistorySection.BloodGroup)?.Text, [.. leads.Select(id => names.GetValueOrDefault(id)).OfType<string>()], startable);
     }
 
     static VitalView Latest(ObservationCode code, TrendPoint p)

@@ -288,6 +288,25 @@ for (const [locale, name] of [['en', 'Patient Meera Iyer (synthetic)'], ['ar', '
     expect(violations).toEqual([]);
   });
 
+// MDV-1089: the doctor's own waiting visit today (the server's startableAppointmentId; StartableTodayAsync tests on PostgreSQL) is started from the chart.
+for (const [locale, button] of [['en', 'Start consultation with Meera Iyer (synthetic)'], ['ar', 'بدء الاستشارة مع Meera Iyer (synthetic)']] as const)
+  test(`MDV-1089: the chart starts the waiting visit's consultation, axe clean (${locale})`, async ({ page }) => {
+    await open(page, { locale, response: { json: chart({ startableAppointmentId: 'a-1' }) } });
+    const start = page.getByRole('button', { name: button });
+    await expect(start).toBeVisible();
+    expect((await start.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    await expect(page.getByText('To start a consultation, use the visit on the board.')).toHaveCount(0);
+    await page.addScriptTag({ path: axePath });
+    const violations = await page.evaluate(async () =>
+      (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations.map(v => `${v.id} (${v.nodes.length})`));
+    expect(violations).toEqual([]);
+    await page.route('**/v1/encounters', r => r.fulfill({ status: 201, json: { id: 'e-5' } }));
+    const sent = page.waitForRequest(r => r.url().endsWith('/v1/encounters') && r.method() === 'POST');
+    await start.click();
+    expect((await sent).postDataJSON()).toEqual({ appointmentId: 'a-1', leaveOpen: false });
+    await expect(page).toHaveURL(/\/consult\/e-5/);
+  });
+
 // MDV-P2-034: the pregnancy card. Dates, gestation and contacts are the server's (PregnancyRulesTests, PregnancyTests on PostgreSQL).
 const contacts = [8, 12, 16, 20, 24, 28, 32, 36, 38, 40].map(week => ({ week, state: week < 24 ? (week === 16 ? 'Missed' : 'Done') : week === 24 ? 'Today' : 'ToCome', encounterId: week < 24 && week !== 16 ? `e-${week}` : null }));
 const pregnant = {

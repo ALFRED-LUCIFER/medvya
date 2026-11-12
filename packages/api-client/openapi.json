@@ -9407,6 +9407,8 @@
           "BloodPressureStandingDiastolic",
           "FundalHeight",
           "FetalHeartRate",
+          "Length",
+          "HeadCircumference",
           "HbA1c",
           "LdlCholesterol",
           "Egfr",

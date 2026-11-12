@@ -8836,7 +8836,7 @@ export interface components {
             enabled: boolean;
         };
         /** @enum {unknown} */
-        ObservationCode: "BloodPressureSystolic" | "BloodPressureDiastolic" | "Pulse" | "Temperature" | "OxygenSaturation" | "Weight" | "RespiratoryRate" | "Height" | "PainScore" | "BloodPressureStandingSystolic" | "BloodPressureStandingDiastolic" | "FundalHeight" | "FetalHeartRate" | "HbA1c" | "LdlCholesterol" | "Egfr" | "UrineAlbuminCreatinineRatio" | "Haemoglobin" | "Ferritin" | "Potassium" | "Sodium" | "Tsh" | "VitaminD" | "Platelets" | null;
+        ObservationCode: "BloodPressureSystolic" | "BloodPressureDiastolic" | "Pulse" | "Temperature" | "OxygenSaturation" | "Weight" | "RespiratoryRate" | "Height" | "PainScore" | "BloodPressureStandingSystolic" | "BloodPressureStandingDiastolic" | "FundalHeight" | "FetalHeartRate" | "Length" | "HeadCircumference" | "HbA1c" | "LdlCholesterol" | "Egfr" | "UrineAlbuminCreatinineRatio" | "Haemoglobin" | "Ferritin" | "Potassium" | "Sodium" | "Tsh" | "VitaminD" | "Platelets" | null;
         Offboard: {
             reason: null | string;
             /** @default false */

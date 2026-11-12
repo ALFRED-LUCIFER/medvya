@@ -5,7 +5,7 @@ import { phraseKey, sectionLabelKey, snippetSections, type NoteSections, type No
 export type Assist = {
   phrases: string[]; target: string; tooLong: boolean; loading: boolean; failed: boolean;
   /** Verified intake readings of this visit, each already worded with its source. Empty: nothing is verified, Objective stays blank. */
-  vitals: string[];
+  vitals: { line: string; flag: 'High' | 'Low' | 'Changed' | null }[];
   previous: { id: string; signedAt: string; signedByName: string | null; sections: NoteSections }[];
   onInsertPhrase: (key: string) => void; onInsertVitals: () => void; onInsertSnippet: (noteId: string, sectionId: string) => void;
 };

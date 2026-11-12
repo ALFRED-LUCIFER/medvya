@@ -118,7 +118,7 @@ export const pdfFailure = (status: number | undefined): 'unsupported' | 'failed'
 
 // Verified prefill, quick phrases and earlier-note snippets (MDV-P2-009). Nothing is added unless the doctor presses a button; the server decides what is verified.
 /** One verified nurse-intake reading of this visit with its source: who took it and when. `recordedByName` is null when unknown. */
-export type VerifiedVital = { code: string; value: number; unit: string; takenAt: string; source: string; recordedByName: string | null };
+export type VerifiedVital = { code: string; value: number; unit: string; takenAt: string; source: string; recordedByName: string | null; flag: 'High' | 'Low' | 'Changed' | null };
 /** A signed note of the same patient, offered as snippets. */
 export type PreviousNote = { encounterId: string; signedAt: string; signedByName: string | null; templateKey: string; sections: NoteSections };
 

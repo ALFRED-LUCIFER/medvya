@@ -145,7 +145,7 @@ export function useNoteController(encounterId: string, canSign: boolean, timeZon
   const assist = !isDraft ? null : {
     phrases: template?.quickPhrases ?? [], target, tooLong,
     loading: prefill.isPending || previous.isPending, failed: prefill.isError || previous.isError,
-    vitals: lines,
+    vitals: prefill.data?.vitals.map((v, i) => ({ line: lines[i]!, flag: v.flag })) ?? [],
     previous: (previous.data?.notes ?? []).map((n: PreviousNote) => ({ id: n.encounterId, signedAt: n.signedAt, signedByName: n.signedByName, sections: n.sections })),
     onInsertPhrase: (key: string) => insert(target, t(phraseKey(key))),
     onInsertVitals: () => insert('objective', lines.join('\n')),

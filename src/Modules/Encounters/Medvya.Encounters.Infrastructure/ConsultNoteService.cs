@@ -59,7 +59,7 @@ public sealed class ConsultNoteService(
             .GroupBy(o => o.Code).Select(g => g.OrderByDescending(o => o.TakenAt).ThenByDescending(o => o.Id).First()).ToListAsync(cancellationToken);
         var names = await staff.DisplayNamesAsync([.. rows.Select(o => o.RecordedBy ?? o.VerifiedBy!.Value).Distinct()], cancellationToken);
         await audit.WriteAsync(Event(PrefillAction, encounter, null), cancellationToken);
-        return [.. rows.OrderBy(o => o.Code).Select(o => new VerifiedVital(o.Code, o.ValueHundredths / 100m, Observation.Units(o.Code), o.TakenAt, o.Source, names.GetValueOrDefault(o.RecordedBy ?? o.VerifiedBy!.Value)))];
+        return [.. rows.OrderBy(o => o.Code).Select(o => new VerifiedVital(o.Code, o.ValueHundredths / 100m, Observation.Units(o.Code), o.TakenAt, o.Source, names.GetValueOrDefault(o.RecordedBy ?? o.VerifiedBy!.Value), o.Flag))];
     }
 
     public async Task<IReadOnlyList<PreviousNote>?> PreviousAsync(Guid encounterId, CancellationToken cancellationToken = default)

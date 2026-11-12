@@ -105,6 +105,7 @@ public sealed class ConsultNoteAssistTests(PostgresFixture sql) : IClassFixture<
         Assert.Equal([150m, 88m], vitals.Select(v => v.GetProperty("value").GetDecimal()));
         Assert.Equal([T0, T0.AddMinutes(5)], vitals.Select(v => v.GetProperty("takenAt").GetDateTimeOffset()));
         Assert.All(vitals, v => Assert.Equal("ClinicianVerified", v.GetProperty("source").GetString()));
+        Assert.Equal(["High", null], vitals.Select(v => v.GetProperty("flag").GetString())); // MDV-1090: the kept abnormal reading still says it was flagged
         Assert.All(vitals, v => Assert.Equal("Dr. S. Menon (synthetic)", v.GetProperty("recordedByName").GetString())); // who recorded it, named
     }
 

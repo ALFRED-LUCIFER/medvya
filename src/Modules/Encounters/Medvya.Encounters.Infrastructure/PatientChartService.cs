@@ -41,8 +41,12 @@ public sealed class PatientChartService(EncountersDbContext db, IClinicalAccess 
             }
         }
         var rows = (await db.Allergies.AsNoTracking().Where(a => allowed.Contains(a.PatientId)).ToListAsync(cancellationToken)).ToLookup(a => a.PatientId);
+        // shortcut: "today" is the last 24 hours, not the facility's day; exact day boundary when Today needs it.
+        var since = clock.GetUtcNow().AddHours(-24);
+        var abnormal = (await db.Observations.AsNoTracking().Where(o => allowed.Contains(o.PatientId) && o.AppointmentId != null && o.TakenAt >= since && (o.Flag == VitalAlert.High || o.Flag == VitalAlert.Low))
+            .Select(o => o.PatientId).Distinct().ToListAsync(cancellationToken)).ToHashSet();
         foreach (var id in allowed) await ChartReads.AuditAsync(audit, tenant, user.UserId, clock, AllergyFlagAction, id, cancellationToken);
-        return [.. allowed.Select(id => new AllergyFlag(id, ChartReads.BannerOf([.. rows[id]]).State))];
+        return [.. allowed.Select(id => new AllergyFlag(id, ChartReads.BannerOf([.. rows[id]]).State, abnormal.Contains(id)))];
     }
 
     public async Task<PatientChart> GetAsync(Guid patientId, Guid facilityId, CancellationToken cancellationToken = default)

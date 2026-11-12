@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
-import { CalendarCheck, FilePen, Siren, CircleAlert, CircleCheck, CircleHelp, ClipboardCheck, DoorOpen, ReceiptText, Syringe, UserCheck, type LucideIcon } from 'lucide-react';
+import { Activity, CalendarCheck, FilePen, Siren, CircleAlert, CircleCheck, CircleHelp, ClipboardCheck, DoorOpen, ReceiptText, Syringe, UserCheck, type LucideIcon } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
 import { Button, buttonVariants, FrontDeskTag, PageContainer, PageHeader } from '@medvya/ui';
 import type { BoardCard, BoardColumn, LiveStatus } from '../../front-desk/domain/board';
@@ -18,7 +18,7 @@ type Props = {
   /** Whole minutes since a visit entered its state, on the server's clock. */
   waitMinutes: (since: string) => number;
   /** Allergy state by patient, only for patients the clinician may treat; no entry shows no flag. */
-  allergyFlags: Record<string, AllergyState>;
+  allergyFlags: Record<string, { state: AllergyState; abnormalVitals: boolean }>;
   /** A nurse's urgent reason by visit (appointment id), only for patients the clinician may treat. */
   escalations: Record<string, string>; escalationsFailed: boolean;
   /** Patient 360 of a patient. */
@@ -115,7 +115,12 @@ function Chips(p: Props & { card: BoardCard }) {
           <Siren aria-hidden className="size-4" />{t('today.escalation', { reason: p.escalations[c.id]! })}
         </span>
       )}
-      <AllergyFlag state={p.allergyFlags[c.patientId]} />
+      <AllergyFlag state={p.allergyFlags[c.patientId]?.state} />
+      {p.allergyFlags[c.patientId]?.abnormalVitals && (
+        <span className="inline-flex items-center gap-1.5 rounded-full border-2 border-danger-700 px-2.5 py-1 text-danger-700 text-[13px] font-bold">
+          <Activity aria-hidden className="size-4" />{t('today.vitals.abnormal')}
+        </span>
+      )}
       {c.registrationIncomplete && <FrontDeskTag kind="incomplete" />}
       {c.walkIn && <FrontDeskTag kind="walkIn" />}
     </div>

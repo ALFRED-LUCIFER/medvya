@@ -21,6 +21,7 @@ jobs:
     outputs:
       backend: ${{ steps.f.outputs.backend }}
       web: ${{ steps.f.outputs.web }}
+      e2e: ${{ steps.f.outputs.e2e }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -34,7 +35,7 @@ jobs:
           # PR: HEAD is the merge commit, its first parent the base tip. Push to main: the commits the push added (squash merge = one).
           if [ "$EVENT" = "pull_request" ]; then base=HEAD^1; else base="$BEFORE"; fi
           if ! git cat-file -e "$base^{commit}" 2>/dev/null; then
-            echo "backend=true" >> "$GITHUB_OUTPUT"; echo "web=true" >> "$GITHUB_OUTPUT"; exit 0   # no usable base: run everything
+            echo "backend=true" >> "$GITHUB_OUTPUT"; echo "web=true" >> "$GITHUB_OUTPUT"; echo "e2e=true" >> "$GITHUB_OUTPUT"; exit 0   # no usable base: run everything
           fi
           files=$(git diff --name-only "$base" HEAD)
           echo "$files"
@@ -42,6 +43,8 @@ jobs:
           # infra/postgres only: the integration fixture applies roles.sql; Bicep and Entra scripts are not built or tested here.
           echo "backend=$(has '^(src/|tests/Medvya\.|Directory\.|global\.json|Medvya\.sln|dotnet-tools\.json|infra/postgres/|tools/erd/|docs/03-architecture/erd\.md|packages/api-client/|\.github/)')" >> "$GITHUB_OUTPUT"
           echo "web=$(has '^(web/|mobile/|packages/|tests/e2e/|package\.json|pnpm-|tools/check-synthetic/|\.github/)')" >> "$GITHUB_OUTPUT"
+          # The browser suite drives the web apps only; no web screen imports mobile/ (ADR-013), so a mobile-only change skips it (#1129).
+          echo "e2e=$(has '^(web/|packages/|tests/e2e/|package\.json|pnpm-|\.github/)')" >> "$GITHUB_OUTPUT"
 
   dotnet-checks:
     needs: changes
@@ -137,7 +140,7 @@ jobs:
     # Playwright split over 5 machines (one 14 min run, then 3 shards of 5-8 min). The performance budget runs alone on its own machine:
     # with project dependencies Playwright puts every test in shard 1, so shards pass --project=chromium.
     needs: changes
-    if: needs.changes.outputs.web == 'true'
+    if: needs.changes.outputs.e2e == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -172,9 +175,8 @@ jobs:
     steps:
       - run: |
           [ "${{ needs.changes.result }}" = success ] || exit 1
-          if [ "${{ needs.changes.outputs.web }}" = true ]; then
-            [ "${{ needs.web-checks.result }}" = success ] && [ "${{ needs.web-e2e.result }}" = success ]
-          fi
+          if [ "${{ needs.changes.outputs.web }}" = true ]; then [ "${{ needs.web-checks.result }}" = success ]; fi
+          if [ "${{ needs.changes.outputs.e2e }}" = true ]; then [ "${{ needs.web-e2e.result }}" = success ]; fi
 
   contract:
     # The generated TypeScript client must match what Host.Api exports (packages/api-client). Not a required check yet.

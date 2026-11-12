@@ -107,6 +107,14 @@ test('orders stay in a closed part of the consultation until the doctor opens it
   await expect(page.getByRole('region', { name: 'Orders' })).toBeVisible();
 });
 
+test('orders already placed are open without a click, so none is hidden from the doctor', async ({ page }) => {
+  const { orders } = await mockOrders(page);
+  orders.push({ id: 'o-1', kind: 'Lab', name: 'HbA1c', note: null, state: 'Ordered', destination: 'Metro Diagnostics', orderedAt: '2026-10-19T04:50:00Z' });
+  await page.goto('/consult/e-1');
+  await expect(page.getByRole('region', { name: 'Orders' })).toBeVisible();
+  await expect(page.getByText('HbA1c')).toBeVisible();
+});
+
 test('a role that may not order sees no orders panel', async ({ page }) => {
   await mockOrders(page, { allowed: false });
   await page.goto('/consult/e-1');

@@ -10,7 +10,7 @@ const screens: { name: string; path: string; as: Persona; width: 'fluid' | 'form
 ];
 const limit = { form: 768, reading: 1152 }; // max-w-3xl, max-w-6xl
 
-for (const [w, h] of [[1920, 1080], [1366, 768]]) {
+for (const { w, h } of [{ w: 1920, h: 1080 }, { w: 1366, h: 768 }]) {
   for (const s of screens) {
     test(`${s.name} at ${w}x${h} uses a ${s.width} container and the shared title size`, async ({ page }) => {
       await page.setViewportSize({ width: w, height: h });

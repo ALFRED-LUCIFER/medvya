@@ -1,11 +1,10 @@
 import { expect } from '@playwright/test';
 import { journey } from '../journeys/storyboard';
-import { expectArabicAxeClean, expectNoAxeViolations, signIn, syntheticPatient, walkIn, watchUrls } from './support';
+import { expectArabicAxeClean, expectNoAxeViolations, setNurseIntake, signIn, syntheticPatient, walkIn, watchUrls } from './support';
 
 // MDV-P0-023: journey J3 (busy reception → nurse handoff, docs/02-design/journeys.md) through the real stack, one test per storyboard step.
 // Each step makes its own synthetic walk-in, so a step runs alone. The register → book → check-in → cancel story is front-desk.spec.ts.
 const joseph = /A\. Joseph/;
-const owner = /K\. Lakshmi/; // the practice admin: only an owner switches nurse intake on
 const nurseUser = /S\. Thomas/;
 const rao = /Dr\. Arjun Rao/;
 const board = '/app/front-desk';
@@ -77,20 +76,7 @@ journey('J3', {
   // confirms "no known allergies" on purpose and hands off; the card is Ready for doctor. The flag is put back, so step 6's board move still works.
   5: async ({ page, browser }) => {
     const patient = syntheticPatient('Kavitha', 'Menon');
-    const switchIntake = async (enabled: boolean) => {
-      const admin = await browser.newPage();
-      try {
-        await signIn(admin, owner);
-        await admin.goto('/app/settings?tab=staff');
-        const toggle = admin.getByRole('region', { name: 'Nurse intake' }).getByRole('switch', { name: /^Nurse intake before the doctor/ });
-        await expect(toggle).toBeVisible();
-        if ((await toggle.getAttribute('aria-checked')) !== String(enabled)) await toggle.click();
-        await expect(toggle).toHaveAttribute('aria-checked', String(enabled)); // shown from the server's answer, so the switch is saved
-      } finally {
-        await admin.close();
-      }
-    };
-    await switchIntake(true);
+    await setNurseIntake(browser, true);
     try {
       await signIn(page, joseph);
       await walkIn(page, patient, rao);
@@ -134,7 +120,7 @@ journey('J3', {
       await expect(page.getByRole('region', { name: /^Ready for doctor/ }).getByRole('article', { name: patient.name })).toBeVisible();
       await expectArabicAxeClean(browser, nurseUser, '/app/nurse');
     } finally {
-      await switchIntake(false);
+      await setNurseIntake(browser, false);
     }
   },
   // MDV-P1-028 / MDV-P2-001: the nurse marks intake done; the card is Ready for doctor and the doctor can start the consultation from it.

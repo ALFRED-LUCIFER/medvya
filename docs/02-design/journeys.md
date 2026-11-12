@@ -29,6 +29,10 @@ Each step: who acts, on which screen, and what changes. 🔒 = clinician approva
 | 6 | E-05 | Doctor | Authorise Rx & orders | Separate approvals. | 🔒 |
 | 7 | E-10 | Doctor | Print / e-Rx to pharmacy | Generic names first; QR verify. |  |
 | 8 | C-02 | Care coordinator | Care plan created | Owner Priya; reminder ≠ done. |  |
+| 9 | E-01 | Doctor | One-page chart | Penicillin allergy in the banner; summary, vitals and labs, history on one page. |  |
+| 10 | E-05 | Doctor | Add medicine from the chart | Goes on the open consultation's draft; amoxicillin blocked by the penicillin allergy. | 🔒 |
+| 11 | E-04 | Doctor | One-page consultation | Seven numbered sections; Sign locked until the checklist is complete. | 🔒 |
+| 12 | E-06 | Doctor | Sign | Step-up, then signed v1 and read-only. | 🔒 |
 
 ## J3 · Busy reception → nurse handoff — Front desk · M1–M2
 
@@ -80,12 +84,12 @@ Each step: who acts, on which screen, and what changes. 🔒 = clinician approva
 
 ## Build status (not generated)
 
-Which steps run in the browser against the real stack (`pnpm e2e:fullstack`: real Host.Api, PostgreSQL, sign-in; `tests/e2e/fullstack/j1.spec.ts` to `j6.spec.ts`, `front-desk.spec.ts`), and which ticket builds the rest. A pending step is `fixme` in the full-stack spec, tagged with that ticket (`--grep @MDV-P2-007`). The mocked specs (`tests/e2e/journeys`) cover the same built steps without an API. Updated 7 Nov 2026 (MDV-P0-023).
+Which steps run in the browser against the real stack (`pnpm e2e:fullstack`: real Host.Api, PostgreSQL, sign-in; `tests/e2e/fullstack/j1.spec.ts` to `j6.spec.ts`, `front-desk.spec.ts`), and which ticket builds the rest. A pending step is `fixme` in the full-stack spec, tagged with that ticket (`--grep @MDV-P2-007`). The mocked specs (`tests/e2e/journeys`) cover the same built steps without an API. Updated 12 Nov 2026 (MDV-P2-045).
 
 | Journey | Green on the real stack | Pending (ticket that builds it) |
 |---|---|---|
 | J1 | 1, 3, 4 (one story test, `fullstack/j1.spec.ts`) | 2 MDV-P4-002 · 5 MDV-P3-003 · 6 MDV-P2-009 · 7 MDV-P3-012 · 8 MDV-P4-004 |
-| J2 | 1 | 2 MDV-P2-004 · 3 MDV-P3-005 · 4 MDV-P3-009 · 5 MDV-P3-012 · 6 MDV-P2-017 (green on the real stack, `fullstack/j2.spec.ts`: authorise with the step-up, place orders and download the slip's server PDF (MDV-P2-018), print, QR verify, cancel and authorise again) · 7 MDV-P2-020 (green on the real stack for the pharmacy link; the patient's link needs an SMS provider for the code, MDV-P1-045) · 8 MDV-P4-016 |
+| J2 | 1, 6 (authorise with the step-up, place orders and download the slip's server PDF (MDV-P2-018), print, QR verify, cancel and authorise again), 7 (the pharmacy link; the patient's link needs an SMS provider for the code, MDV-P1-045), 9 to 12 (MDV-P2-045: the nurse records Meera's penicillin allergy at intake, then the one-page chart, Add medicine from the chart with amoxicillin blocked, the one-page consultation with Sign locked until the checklist is complete, and signing; English and Arabic, axe clean) | 2 MDV-P2-004 · 3 MDV-P3-005 · 4 MDV-P3-009 · 5 MDV-P3-012 · 8 MDV-P4-016 |
 | J3 | 1, 2, 3, 4, 6 (doctor sees it on the board, not Today), 7, 8, 9 (mocked spec only: a second location exists on the real stack once MDV-P1-070 lands) | 5 MDV-P2-007, MDV-P2-008 (green in the mocked spec `journeys/j3.spec.ts` and on the real stack, `fullstack/j3.spec.ts`, after the owner switches nurse intake on (`PUT /v1/settings/nurse-intake`; there is no Settings screen for it yet)) |
 | J4 | none | 1 MDV-P6-002 · 2 MDV-P6-003 · 3 MDV-P6-004 · 4 MDV-P3-010 · 5 MDV-P3-009 · 6 MDV-P7-006 |
 | J5 | none | 1 MDV-P2-018 (green in the mocked spec `journeys/j5.spec.ts`; on the real stack once the seeded doctor's licence is attested by the owner (ADR-016; until MDV-P1-065 lands, verified by Medvya operations)) · 2 MDV-P4-014 · 3, 5 MDV-P4-015 · 4 MDV-P4-018 · 6 MDV-P4-019 · 7 MDV-P4-016 |

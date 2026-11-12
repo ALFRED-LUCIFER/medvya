@@ -3490,6 +3490,8 @@
   "rx.check.alert.OlderAdult": "बुज़ुर्ग, {measure} वर्ष: {medicine}। {rule}",
   "rx.check.alert.ChildDose.per_dose": "वज़न के अनुसार खुराक: {medicine} की एक खुराक {kg} कि.ग्रा. के लिए {mgPerKg} मि.ग्रा./कि.ग्रा. से अधिक है।",
   "rx.check.alert.ChildDose.doses_a_day": "वज़न के अनुसार खुराक: {medicine} दिन में {doses} बार से अधिक दी जा रही है।",
+  "rx.check.alert.ChildDose.no_weight": "वज़न के अनुसार खुराक: पिछले एक महीने का वज़न नहीं है, इसलिए {medicine} की खुराक की जाँच नहीं हो सकती। बच्चे का वज़न लें, या बिना वज़न के अधिकृत करने का कारण दें।",
+  "rx.check.alert.ChildDose.age_ceiling": "उम्र के अनुसार खुराक: {medicine} की एक खुराक बिना वज़न वाले {age} वर्ष के बच्चे की अधिकतम मात्रा से अधिक है।",
   "rx.check.rule.nsaid_from_20_weeks": "20 सप्ताह से NSAID नहीं दी जातीं: शिशु के गुर्दों और हृदय को जोखिम।",
   "rx.check.rule.nsaid_egfr_under_30": "eGFR 30 से कम पर NSAID नहीं दी जातीं।",
   "rx.check.rule.nsaid_egfr_under_60_raas": "सूची में ACE अवरोधक या ARB होने पर eGFR 60 से कम पर NSAID नहीं दी जातीं: गुर्दे को चोट का जोखिम।",

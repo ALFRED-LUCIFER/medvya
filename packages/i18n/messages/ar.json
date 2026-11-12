@@ -3497,6 +3497,8 @@
   "rx.check.alert.OlderAdult": "مريض مسن، {measure} سنة: {medicine}. {rule}",
   "rx.check.alert.ChildDose.per_dose": "الجرعة حسب الوزن: جرعة واحدة من {medicine} تتجاوز {mgPerKg} ملغ/كغ لوزن {kg} كغ.",
   "rx.check.alert.ChildDose.doses_a_day": "الجرعة حسب الوزن: يُعطى {medicine} أكثر من {doses} مرات يوميًا.",
+  "rx.check.alert.ChildDose.no_weight": "الجرعة حسب الوزن: لا وزن من الشهر الأخير، لذا لا يمكن فحص جرعة {medicine}. زِن الطفل، أو اذكر سببًا للاعتماد دون وزن.",
+  "rx.check.alert.ChildDose.age_ceiling": "الجرعة حسب العمر: جرعة واحدة من {medicine} تتجاوز الحد الأقصى لطفل عمره {age} دون وزن.",
   "rx.check.rule.nsaid_from_20_weeks": "تُتجنب مضادات الالتهاب غير الستيرويدية من الأسبوع 20: خطر على كلى الجنين وقلبه.",
   "rx.check.rule.nsaid_egfr_under_30": "لا تُستخدم مضادات الالتهاب غير الستيرويدية عندما يكون eGFR أقل من 30.",
   "rx.check.rule.nsaid_egfr_under_60_raas": "مع مثبط ACE أو ARB في القائمة، لا تُستخدم مضادات الالتهاب غير الستيرويدية عندما يكون eGFR أقل من 60: خطر إصابة الكلى.",

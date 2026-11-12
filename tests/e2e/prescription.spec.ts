@@ -146,16 +146,18 @@ test('the checks run again after a change, and "not recorded" allergies are said
 
 // MDV-P2-040: the patient-aware findings in words with the fact they rest on, a child's dose worked out by weight, and missing facts as not checked.
 const patientChecks = clearChecks({
-  unresolved: 2,
+  unresolved: 4,
   alerts: [
     patientAlert('rx-1', 'Ibuprofen', 'Pregnancy', 'Severe', 'nsaid_from_20_weeks', 24),
     patientAlert('rx-2', 'Diclofenac', 'Kidney', 'Severe', 'nsaid_egfr_under_60_raas', 52),
     patientAlert('rx-3', 'Diazepam', 'OlderAdult', 'Moderate', 'benzodiazepine', 76),
+    patientAlert('rx-5', 'Ibuprofen 400 mg', 'ChildDose', 'Severe', 'no_weight', null), // #1085: no weight is a stop, not a note
+    patientAlert('rx-5', 'Ibuprofen 400 mg', 'ChildDose', 'Severe', 'age_ceiling', 5),
   ],
-  notChecked: [{ id: 'rx-4', medicine: 'Metformin', onChart: false, reason: 'NoEgfr' }, { id: 'rx-5', medicine: 'Amoxicillin syrup', onChart: false, reason: 'NoRecentWeight' }],
+  notChecked: [{ id: 'rx-4', medicine: 'Metformin', onChart: false, reason: 'NoEgfr' }, { id: 'rx-5', medicine: 'Ibuprofen 400 mg', onChart: false, reason: 'NoRecentWeight' }],
   weightDoses: [paracetamolForWeight('rx-6')],
 });
-const patientLines = () => ['Ibuprofen', 'Diclofenac', 'Diazepam', 'Metformin', 'Amoxicillin syrup', 'Paracetamol syrup'].map((n, i) => line(`rx-${i + 1}`, n));
+const patientLines = () => ['Ibuprofen', 'Diclofenac', 'Diazepam', 'Metformin', 'Ibuprofen 400 mg', 'Paracetamol syrup'].map((n, i) => line(`rx-${i + 1}`, n));
 
 test('pregnancy, kidney and older-adult findings say the fact they rest on; a child dose is worked out by weight; a missing fact is not checked', async ({ page }) => {
   await mockPrescription(page, { lines: patientLines(), checks: patientChecks });
@@ -167,9 +169,11 @@ test('pregnancy, kidney and older-adult findings say the fact they rest on; a ch
   await expect(alerts).toContainText('Moderate · Older adult, 76 years: Diazepam. Beers criteria: benzodiazepines raise the risk of falls, confusion and fractures.');
   await expect(checks).toContainText('Paracetamol syrup: 15 mg/kg × 14.2 kg = 213 mg = 8.9 mL a dose, at most 4 doses (852 mg) a day.');
   await expect(checks).toContainText('Metformin: kidney function not checked, no eGFR on the chart.');
-  await expect(checks).toContainText('Amoxicillin syrup: dose for weight not checked, no weight from the last month. Weigh the child.');
+  await expect(checks).toContainText('Ibuprofen 400 mg: dose for weight not checked, no weight from the last month. Weigh the child.');
+  await expect(alerts).toContainText('Severe · Dose for weight: no weight from the last month, so the dose of Ibuprofen 400 mg cannot be checked.');
+  await expect(alerts).toContainText('Severe · Dose for age: one dose of Ibuprofen 400 mg is above the most for a child aged 5 with no weight.');
   await expect(card(page, 'Metformin')).toContainText('Safety: not fully checked');
-  await expect(checks.getByRole('button', { name: 'Give a reason to go ahead' })).toHaveCount(2); // the two severe findings
+  await expect(checks.getByRole('button', { name: 'Give a reason to go ahead' })).toHaveCount(4); // the four severe findings
 });
 
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');

@@ -8015,6 +8015,12 @@
           "unscheduled": {
             "type": "boolean",
             "default": false
+          },
+          "sex": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

@@ -24,7 +24,7 @@ const now = ist('10:32');
 type Card = Record<string, unknown> & { id: string; state: string };
 const card = (id: string, name: string, time: string, state: string, extra: Partial<Card> = {}): Card => ({
   id, reference: `APT-${id.toUpperCase()}`, patientId: `p-${id}`, patientName: name, dateOfBirth: '1972-03-12', registrationIncomplete: false,
-  calendarId: 'd-1', calendarName: 'Dr. Arjun Rao (synthetic)', visitType: 'FollowUp', reasonCategory: 'General',
+  calendarId: 'd-1', calendarName: 'Dr. Arjun Rao (synthetic)', visitType: 'FollowUp', reasonCategory: 'General', sex: 'Female',
   start: ist(time), end: ist(time), state, since: ist(time), ...extra,
 });
 const cards = () => [
@@ -37,9 +37,9 @@ const cards = () => [
 
 type Calls = { checkIns: { id: string; body: { elapsedMs: number }; csrf: string | undefined }[]; moves: { id: string; state: string }[]; boards: number };
 
-async function open(page: Page, { locale = 'en', as = reception, status = 200, moveCode = '', empty = false } = {}) {
+async function open(page: Page, { locale = 'en', as = reception, status = 200, moveCode = '', empty = false, only = null as string[] | null } = {}) {
   const calls: Calls = { checkIns: [], moves: [], boards: 0 };
-  const state = empty ? [] : cards();
+  const state = empty ? [] : cards().filter(c => !only || only.includes(c.state));
   await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
   await page.route('**/v1/me/context', r => r.fulfill({ json: as }));
   await page.route('**/v1/front-desk/board?*', r => {
@@ -80,8 +80,8 @@ test('shows today\'s visits by status with nonclinical tags, in facility time', 
 
   const meera = cardOf(page, 'Meera Iyer (synthetic)');
   await expect(meera).toContainText('11:00'); // 05:30Z shown in IST, not New York time
-  await expect(meera).toContainText('Dr. Arjun Rao (synthetic) · Follow-up');
-  await expect(meera).toContainText('Long-term condition review'); // the reason as its category only
+  await expect(meera).toContainText('54 y · Female'); // age and sex tell two patients of one name apart (MDV-AUDIT-1105)
+  await expect(meera).not.toContainText('Long-term condition review'); // compact card: no reason or doctor line
   await expect(meera).toContainText('Registration incomplete');
   await expect(cardOf(page, 'Farhan Qureshi (synthetic)')).toContainText('Waiting 12 min');
   await expect(cardOf(page, 'Farhan Qureshi (synthetic)')).toContainText('Token A-07'); // what the queue TV shows instead of the name
@@ -92,6 +92,13 @@ test('shows today\'s visits by status with nonclinical tags, in facility time', 
   const billing = cardOf(page, 'Rahul Menon (synthetic)');
   await expect(billing.getByRole('button', { name: 'Close visit' })).toBeEnabled();
   await expect(billing.getByRole('button', { name: 'Payment received' })).toBeDisabled(); // placeholder until P4
+});
+
+test('with the nurse and billing steps off the board fits a 1280 px laptop without sideways scrolling', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await open(page, { only: ['Booked', 'CheckedIn', 'InConsult'] });
+  await expect(page.getByRole('region', { name: 'Visits by status' }).getByRole('heading', { level: 2 })).toHaveCount(5); // Booked, Checked in, Ready, In consult, Done
+  expect(await page.getByRole('region', { name: 'Visits by status' }).evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
 });
 
 test('a returning patient is checked in with two taps after confirming name and date of birth', async ({ page }) => {

@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { ArrowLeft, Check, GitMerge, Undo2, X } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, cn, Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@medvya/ui';
+import { Button, buttonVariants, cn, Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow, PageContainer, PageHeader } from '@medvya/ui';
 import { availableActions, type MergeAction, type MergeQueueRow, type Refusal, type MergeReview as Review, type MergeSide } from '../domain/merge';
 
 type LoadState = 'loading' | 'ready' | 'invalid' | 'forbidden' | 'notFound' | 'error';
@@ -49,11 +49,11 @@ export default function MergeReview(props: Props) {
   ];
 
   return (
-    <div className="flex max-w-[960px] flex-col gap-4">
+    <PageContainer width="reading">
       <Link to={props.backPath} className={cn(buttonVariants({ variant: 'ghost' }), 'self-start px-2')}>
         <ArrowLeft className="rtl:rotate-180" aria-hidden />{t('patients.record.back')}
       </Link>
-      <h1 className="text-2xl font-extrabold">{t('merge.title')}</h1>
+      <PageHeader title={t('merge.title')} />
       <p role="status" className={cn('text-sm', props.refusal || loadError ? 'font-semibold text-danger-700' : 'text-muted-foreground')}>{status}</p>
       {loadError && <Button variant="outline" className="self-start" onClick={props.onRetry}>{t('patients.retry')}</Button>}
 
@@ -109,6 +109,6 @@ export default function MergeReview(props: Props) {
           )}
         </section>
       )}
-    </div>
+    </PageContainer>
   );
 }

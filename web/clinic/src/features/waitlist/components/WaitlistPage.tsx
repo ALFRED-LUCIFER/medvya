@@ -2,7 +2,7 @@ import { Link } from 'react-router';
 import type { UseFormReturn } from 'react-hook-form';
 import { ArrowLeft, CalendarClock, CircleAlert, CircleCheck, Clock, Send } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, cn, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
+import { Button, buttonVariants, cn, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, PageContainer, PageHeader } from '@medvya/ui';
 import PatientsMessage from '../../patients/components/PatientsMessage';
 import { PatientPicker, type PatientSearchView } from '../../schedule/components/BookingPanel';
 import { reasonCategories, visitTypes, type PatientMatch } from '../../schedule/domain/booking';
@@ -48,12 +48,9 @@ export default function WaitlistPage(p: Props) {
   const toggleDay = (d: DayName) => setValue('days', days.includes(d) ? days.filter(x => x !== d) : [...days, d], { shouldDirty: true });
 
   return (
-    <div className="flex max-w-[960px] flex-col gap-5">
+    <PageContainer width="reading" className="gap-5">
       <Link to={p.boardPath} className={cn(buttonVariants({ variant: 'ghost' }), 'self-start px-2')}><ArrowLeft className="rtl:rotate-180" aria-hidden />{t('walkIn.back')}</Link>
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-extrabold">{t('waitlist.title')}</h1>
-        <p className="text-muted-foreground">{t('waitlist.intro')}</p>
-      </div>
+      <PageHeader title={t('waitlist.title')} description={t('waitlist.intro')} />
 
       <div aria-live="polite">
         {p.outcome && (
@@ -170,6 +167,6 @@ export default function WaitlistPage(p: Props) {
         </div>
         <Button type="submit" className="self-start" disabled={!p.canAdd} loading={p.adding}>{t('waitlist.addSubmit')}</Button>
       </form>
-    </div>
+    </PageContainer>
   );
 }

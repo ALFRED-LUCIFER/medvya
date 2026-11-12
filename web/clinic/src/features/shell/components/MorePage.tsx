@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants } from '@medvya/ui';
+import { Button, buttonVariants, PageContainer, PageHeader } from '@medvya/ui';
 import type { Role } from '../../session/domain/session';
 import type { NavGroup, NavItem } from '../domain/navigation';
 import { navIcons } from './navIcons';
@@ -16,8 +16,8 @@ type Props = {
 export default function MorePage({ displayName, role, facilityName, groups, languageSwitcher, signingOut, canSwitchFacility, onSignOut }: Props) {
   const { t } = useI18n();
   return (
-    <div className="flex max-w-[560px] flex-col gap-5">
-      <h1 className="text-xl font-extrabold">{t('nav.more')}</h1>
+    <PageContainer width="form" className="gap-5">
+      <PageHeader title={t('nav.more')} />
       <div className="rounded-xl border bg-card p-4">
         <p className="font-bold">{displayName}</p>
         <p className="text-sm text-muted-foreground">{t('shell.roleAtFacility', { role: t(`role.${role}`), facility: facilityName })}</p>
@@ -42,6 +42,6 @@ export default function MorePage({ displayName, role, facilityName, groups, lang
       ))}
       {languageSwitcher}
       <Button variant="outline" className="min-h-12" loading={signingOut} onClick={onSignOut}>{t('session.signOut')}</Button>
-    </div>
+    </PageContainer>
   );
 }

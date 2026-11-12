@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { CalendarCheck, CalendarClock, CircleCheck, ClipboardCheck, DoorOpen, EyeOff, ReceiptText, Syringe, UserCheck, type LucideIcon } from 'lucide-react';
 import { useI18n, type MessageKey } from '@medvya/i18n';
-import { Button, FrontDeskTag } from '@medvya/ui';
+import { Button, FrontDeskTag, PageContainer, PageHeader } from '@medvya/ui';
 import type { workload } from '../domain/overview';
 import { boardColumns, minutesSince, needsRebooking, nextState, type Board, type BoardCard, type BoardColumn, type LiveStatus, type MoveError } from '../domain/board';
 
@@ -59,14 +59,10 @@ export default function BoardPage(props: Props) {
   const { board } = props;
   return (
     // A minmax(0, 1fr) track keeps the board's width out of the page's minimum width, so only the board scrolls sideways.
-    <div className="grid grid-cols-[minmax(0,1fr)] gap-4">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="text-[13px] font-bold text-action-600">{t('nav.frontDesk')}</p>
-          <h1 className="text-[26px] font-extrabold tracking-tight">{board ? t('board.title', { day: formatDay(board.date) }) : t('board.titleOnly')}</h1>
-          {board && <p className="text-[13px] text-muted-foreground">{t('schedule.facilityTime', { zone: board.timeZone })}</p>}
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
+    <PageContainer width="fluid">
+      <PageHeader eyebrow={t('nav.frontDesk')} title={board ? t('board.title', { day: formatDay(board.date) }) : t('board.titleOnly')}
+        description={board && <span className="text-[13px]">{t('schedule.facilityTime', { zone: board.timeZone })}</span>}
+        actions={<>
           {/* Live or paused: announced when it changes, in words and an icon, never colour alone. Nothing animates. */}
           {!props.forbidden && <p role="status" className="inline-flex min-h-9 items-center"><FrontDeskTag kind={props.live} /></p>}
           <p className="inline-flex min-h-9 items-center gap-1.5 rounded-md bg-muted px-3 text-[12.5px] font-bold text-ink-700">
@@ -74,11 +70,10 @@ export default function BoardPage(props: Props) {
           </p>
           {props.overviewAction}
           {props.registerAction}
-        </div>
-      </header>
+        </>} />
       {props.board && props.workload.length > 0 && <Workload rows={props.workload} />}
       <Body {...props} />
-    </div>
+    </PageContainer>
   );
 }
 

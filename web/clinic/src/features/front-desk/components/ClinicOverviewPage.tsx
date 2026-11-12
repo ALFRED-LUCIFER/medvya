@@ -2,7 +2,7 @@ import type { FormEventHandler, ReactNode } from 'react';
 import { Controller, type UseFormReturn } from 'react-hook-form';
 import { ArrowLeftRight, Clock, Stethoscope, Users } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, FrontDeskTag, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
+import { Button, FrontDeskTag, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, PageContainer, PageHeader } from '@medvya/ui';
 import { minutesSince, type LiveStatus, type MoveError } from '../domain/board';
 import { countsInOrder, reassignReasons, type ClinicOverview, type DoctorLoad, type ReassignInput } from '../domain/overview';
 
@@ -33,20 +33,15 @@ type Props = {
 export default function ClinicOverviewPage(props: Props) {
   const { t } = useI18n();
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)] gap-4">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="text-[13px] font-bold text-action-600">{t('nav.frontDesk')}</p>
-          <h1 className="text-[26px] font-extrabold tracking-tight">{t('overview.title')}</h1>
-          {props.overview && <p className="text-[13px] text-muted-foreground">{t('schedule.facilityTime', { zone: props.overview.timeZone })}</p>}
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
+    <PageContainer width="fluid">
+      <PageHeader eyebrow={t('nav.frontDesk')} title={t('overview.title')}
+        description={props.overview && <span className="text-[13px]">{t('schedule.facilityTime', { zone: props.overview.timeZone })}</span>}
+        actions={<>
           {!props.forbidden && <p role="status" className="inline-flex min-h-9 items-center"><FrontDeskTag kind={props.live} /></p>}
           {props.boardAction}
-        </div>
-      </header>
+        </>} />
       <Body {...props} />
-    </div>
+    </PageContainer>
   );
 }
 

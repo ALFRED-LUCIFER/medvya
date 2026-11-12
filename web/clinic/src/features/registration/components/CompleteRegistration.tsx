@@ -2,7 +2,7 @@ import type { UseFormReturn } from 'react-hook-form';
 import { Link } from 'react-router';
 import { ArrowLeft, CircleCheck, TriangleAlert } from 'lucide-react';
 import { useI18n, type Country } from '@medvya/i18n';
-import { Button, buttonVariants, cn } from '@medvya/ui';
+import { Button, buttonVariants, cn, PageContainer, PageHeader } from '@medvya/ui';
 import type { RegistrationStatus } from '../../patients/domain/directory';
 import PatientsMessage from '../../patients/components/PatientsMessage';
 import type { RegistrationForm } from '../domain/registration';
@@ -40,12 +40,9 @@ export default function CompleteRegistration(p: Props) {
   const { register, control, formState: { errors } } = p.form;
   const f = { register, control, errors };
   return (
-    <div className="flex max-w-[880px] flex-col gap-5">
+    <PageContainer width="reading" className="gap-5">
       {back}
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-extrabold">{t('registration.complete.title')}</h1>
-        <p className="text-muted-foreground">{t('registration.complete.intro')}</p>
-      </div>
+      <PageHeader title={t('registration.complete.title')} description={t('registration.complete.intro')} />
       {p.status ? (
         <p role="status" className={cn('flex items-center gap-2 rounded-xl border bg-card p-4 font-bold', p.status === 'Complete' ? 'text-success-700' : 'text-warning-700')}>
           {p.status === 'Complete' ? <CircleCheck className="size-5 shrink-0" aria-hidden /> : <TriangleAlert className="size-5 shrink-0" aria-hidden />}
@@ -78,6 +75,6 @@ export default function CompleteRegistration(p: Props) {
           </div>
         </form>
       )}
-    </div>
+    </PageContainer>
   );
 }

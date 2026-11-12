@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { CalendarCheck, FilePen, Siren, CircleAlert, CircleCheck, CircleHelp, ClipboardCheck, DoorOpen, ReceiptText, Syringe, UserCheck, type LucideIcon } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, FrontDeskTag } from '@medvya/ui';
+import { Button, buttonVariants, FrontDeskTag, PageContainer, PageHeader } from '@medvya/ui';
 import type { BoardCard, BoardColumn, LiveStatus } from '../../front-desk/domain/board';
 import { canConsult } from '../../encounters/domain/encounter';
 import type { AllergyState } from '../../patient360/domain/chart';
@@ -37,23 +37,18 @@ type Props = {
 export default function DoctorTodayPage(p: Props) {
   const { t, formatDay } = useI18n();
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)] gap-4">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="text-[13px] font-bold text-action-600">{t('nav.today')}</p>
-          <h1 className="text-[26px] font-extrabold tracking-tight">{p.day ? t('today.title', { day: formatDay(p.day) }) : t('nav.today')}</h1>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
+    <PageContainer width="fluid">
+      <PageHeader eyebrow={t('nav.today')} title={p.day ? t('today.title', { day: formatDay(p.day) }) : t('nav.today')}
+        actions={<>
           {!p.forbidden && <p role="status" className="inline-flex min-h-9 items-center"><FrontDeskTag kind={p.live} /></p>}
           <div role="group" aria-label={t('today.scope')} className="flex gap-1">
             {(['mine', 'clinic'] as const).map(s => <ScopeButton key={s} scope={s} active={p.scope === s} onScope={p.onScope} />)}
           </div>
-        </div>
-      </header>
+        </>} />
       {p.escalationsFailed && <p role="alert" className="text-sm font-semibold text-danger-700">{t('today.escalation.error')}</p>}
       <Body {...p} />
       <PendingNotes {...p} />
-    </div>
+    </PageContainer>
   );
 }
 

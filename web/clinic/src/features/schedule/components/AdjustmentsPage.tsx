@@ -2,7 +2,7 @@ import type { UseFormReturn } from 'react-hook-form';
 import { Link } from 'react-router';
 import { ArrowLeft, CircleAlert, CircleCheck } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, cn, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea } from '@medvya/ui';
+import { Button, buttonVariants, cn, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea, PageContainer, PageHeader } from '@medvya/ui';
 import { adjustmentKinds, type AdjustmentForm, rebookActions, type AdjustmentError, type RebookAction, type SaveResult, type SavedAdjustment } from '../domain/adjustments';
 import { localDate } from '../domain/changes';
 import type { Appointment } from '../domain/schedule';
@@ -50,14 +50,11 @@ export default function AdjustmentsPage(p: Props) {
   const control = 'min-h-11';
 
   return (
-    <div className="flex max-w-[760px] flex-col gap-5">
+    <PageContainer width="form" className="gap-5">
       <Link to={p.backPath} className={cn(buttonVariants({ variant: 'ghost' }), 'self-start px-2')}>
         <ArrowLeft className="rtl:rotate-180" aria-hidden />{t('adjustment.back')}
       </Link>
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-extrabold">{t('adjustment.title')}</h1>
-        <p className="text-muted-foreground">{t('adjustment.intro')}</p>
-      </div>
+      <PageHeader title={t('adjustment.title')} description={t('adjustment.intro')} />
 
       {p.result && (
         <div role="status" className="flex flex-col items-start gap-2 rounded-xl border bg-card p-4">
@@ -172,7 +169,7 @@ export default function AdjustmentsPage(p: Props) {
           </ul>
         )}
       </section>
-    </div>
+    </PageContainer>
   );
 }
 

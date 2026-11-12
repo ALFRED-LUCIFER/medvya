@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { ArrowLeft, ClipboardList, Eye, TriangleAlert } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, cn } from '@medvya/ui';
+import { Button, buttonVariants, cn, PageContainer } from '@medvya/ui';
 import { addressLines, missingParts, type ContactView, type PatientDetails, type RevealedIdentifiers } from '../domain/directory';
 import { consentPolicyVersion, genderIdentities, regionKey } from '../../registration/domain/registration';
 import type { MergeHistoryEntry, Refusal } from '../../merge/domain/merge';
@@ -55,14 +55,14 @@ export default function PatientRecord(props: Props) {
 
   if (!patient)
     return (
-      <div className="flex max-w-[880px] flex-col gap-4">
+      <PageContainer width="reading">
         {back}
         {live}
         {state === 'loading' ? <PatientsMessage pageHeading title={t('patients.record.loading')} />
           : state === 'forbidden' ? <PatientsMessage pageHeading title={t('err.403')} body={t('patients.forbidden.body')} />
           : state === 'notFound' ? <PatientsMessage pageHeading title={t('patients.record.notFound.title')} body={t('patients.record.notFound.body')} />
           : <PatientsMessage pageHeading title={t('patients.error.title')} body={t('patients.error.body')} action={{ label: t('patients.retry'), onClick: onRetry }} />}
-      </div>
+      </PageContainer>
     );
 
   const p = patient;
@@ -80,7 +80,7 @@ export default function PatientRecord(props: Props) {
   const full = (scheme: string) => props.revealed?.identifiers.find(i => i.scheme === scheme)?.value;
   const hasNumbers = p.identifiers.length > 0 || !!p.payer?.memberNumberLastFour;
   return (
-    <div className="flex max-w-[880px] flex-col gap-4">
+    <PageContainer width="reading">
       {back}
       {live}
       <header className="flex flex-col gap-1 rounded-xl border bg-card p-4">
@@ -220,7 +220,7 @@ export default function PatientRecord(props: Props) {
           {props.revealFailed && <p className="text-sm font-semibold text-danger-700">{t('patients.record.revealFailed')}</p>}
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }
 

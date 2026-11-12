@@ -1,7 +1,7 @@
 import { Link } from 'react-router';
 import { Syringe } from 'lucide-react';
 import { ltr, useI18n } from '@medvya/i18n';
-import { buttonVariants } from '@medvya/ui';
+import { buttonVariants, PageContainer, PageHeader } from '@medvya/ui';
 import { minutesSince, type Board, type BoardCard, type LiveStatus, type MoveError } from '../../front-desk/domain/board';
 
 type Props = {
@@ -53,14 +53,11 @@ export default function NurseQueuePage(p: Props) {
     </>
   );
   return (
-    <div className="flex flex-col gap-4">
-      <header>
-        <p className="inline-flex items-center gap-1.5 text-[13px] font-bold text-action-600"><Syringe aria-hidden className="size-4" />{t('nav.nurse')}</p>
-        <h1 className="text-[26px] font-extrabold tracking-tight">{t('intake.queue.title')}</h1>
-        {!p.loading && !p.forbidden && !p.offline && !p.failed && <p className="text-sm text-muted-foreground">{tCount('board.count', p.cards.length + p.checkedIn.length)}</p>}
-      </header>
+    <PageContainer width="fluid">
+      <PageHeader eyebrow={<span className="inline-flex items-center gap-1.5"><Syringe aria-hidden className="size-4" />{t('nav.nurse')}</span>} title={t('intake.queue.title')}
+        description={!p.loading && !p.forbidden && !p.offline && !p.failed && <span className="text-sm">{tCount('board.count', p.cards.length + p.checkedIn.length)}</span>} />
       {body}
-    </div>
+    </PageContainer>
   );
 }
 

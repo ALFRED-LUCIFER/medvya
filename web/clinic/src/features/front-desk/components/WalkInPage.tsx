@@ -1,7 +1,7 @@
 import { Link } from 'react-router';
 import { ArrowLeft, CircleAlert, CircleCheck, UserPlus } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, cn, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
+import { Button, buttonVariants, cn, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, PageContainer, PageHeader } from '@medvya/ui';
 import PatientsMessage from '../../patients/components/PatientsMessage';
 import { PatientPicker, type PatientSearchView } from '../../schedule/components/BookingPanel';
 import { reasonCategories, visitTypes, type PatientMatch } from '../../schedule/domain/booking';
@@ -42,7 +42,7 @@ export default function WalkInPage(p: Props) {
   if (p.result) {
     const doctor = p.doctors.find(d => d.id === p.result!.calendarId)?.name ?? '';
     return (
-      <div className="flex max-w-[720px] flex-col gap-4">
+      <PageContainer width="form">
         {back}
         <div role="status" className="flex flex-col items-start gap-3 rounded-xl border bg-card p-6">
           <CircleCheck className="size-8 text-success-700" aria-hidden />
@@ -52,17 +52,14 @@ export default function WalkInPage(p: Props) {
           <p>{p.result.unscheduled ? t('walkIn.done.queued', { doctor }) : t('walkIn.done.slot', { doctor, time: formatTime(new Date(p.result.start), p.timeZone ?? 'UTC') })}</p>
           <Link to={p.boardPath} className={buttonVariants()}>{t('walkIn.back')}</Link>
         </div>
-      </div>
+      </PageContainer>
     );
   }
 
   return (
-    <div className="flex max-w-[720px] flex-col gap-5">
+    <PageContainer width="form" className="gap-5">
       {back}
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-extrabold">{t('walkIn.title')}</h1>
-        <p className="text-muted-foreground">{t('walkIn.intro')}</p>
-      </div>
+      <PageHeader title={t('walkIn.title')} description={t('walkIn.intro')} />
       <form noValidate onSubmit={e => { e.preventDefault(); p.onConfirm(); }} className="flex flex-col gap-5 rounded-xl border bg-card p-4">
         <PatientPicker search={p.patientSearch} chosen={p.patientId} registerPath={null} invalid={false} />
         <div className="flex flex-col gap-1">
@@ -114,6 +111,6 @@ export default function WalkInPage(p: Props) {
         </div>
         <Button type="submit" className="self-start" disabled={!p.canConfirm} loading={p.saving}>{t('walkIn.confirm')}</Button>
       </form>
-    </div>
+    </PageContainer>
   );
 }

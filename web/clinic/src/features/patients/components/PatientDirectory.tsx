@@ -2,7 +2,7 @@ import { useRef } from 'react';
 import { Link } from 'react-router';
 import { ChevronLeft, ChevronRight, CircleAlert, Search } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, Input, Label, buttonVariants, cn } from '@medvya/ui';
+import { Button, Input, Label, buttonVariants, cn, PageContainer, PageHeader } from '@medvya/ui';
 import { directoryFilters, pageCount, type DirectoryFilter, type PatientSummary, type SearchErrorCode, type SearchResult } from '../domain/directory';
 import PatientSummaryLine from './PatientSummaryLine';
 import PatientsMessage from './PatientsMessage';
@@ -39,12 +39,10 @@ export default function PatientDirectory(p: Props) {
     : p.state === 'ready' && p.result ? (p.result.items.length === 0 ? t('patients.empty') : t(`patients.matchedOn.${p.result.matchedOn}`, { n: p.result.total }))
     : '';
   return (
-    <div className="flex max-w-[880px] flex-col gap-5">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-extrabold">{t('patients.directory.title')}</h1>
-        <p className="text-muted-foreground">{t('patients.directory.intro')}</p>
+    <PageContainer width="reading" className="gap-5">
+      <PageHeader title={t('patients.directory.title')} description={t('patients.directory.intro')}>
         {p.mergePath && <Link to={p.mergePath} className={cn(buttonVariants({ variant: 'link' }), 'self-start px-0')}>{t('merge.open')}</Link>}
-      </div>
+      </PageHeader>
 
       <form role="search" className="flex flex-col gap-2 rounded-xl border bg-card p-4" onSubmit={e => { e.preventDefault(); p.onSubmit(); }}>
         <Label htmlFor="patient-search">{t('patients.search.label')}</Label>
@@ -75,7 +73,7 @@ export default function PatientDirectory(p: Props) {
 
       <p role="status" className="sr-only">{status}</p>
       <Results {...p} />
-    </div>
+    </PageContainer>
   );
 }
 

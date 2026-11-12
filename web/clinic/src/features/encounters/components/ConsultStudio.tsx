@@ -8,7 +8,7 @@ import type { StudioPanel } from '../domain/encounter';
 import { templateNameKey } from '../domain/note';
 import NoteAssist from './NoteAssist';
 import type { NoteEditorProps } from './NoteEditor';
-import { SaveState, SectionField, SignedBanner, TemplatePicker } from './NoteParts';
+import { NoteSectionField, SaveState, SignedBanner, TemplatePicker } from './NoteParts';
 import { SignChecklist, SignedLine, SignNote } from './NoteSign';
 import RecordingConsentChoice from './RecordingConsentChoice';
 
@@ -23,8 +23,8 @@ const heading = (id: StudioSection) => `studio-${id}`;
 /**
  * E-04 one page (MDV-P2-041, CONSULTATION STUDIO): the recording consent first, a section bar that stays at the top, numbered sections over
  * today's template and a side panel (Assist, chart summary, checklist). The same form, autosave and sign as the guided steps.
- * shortcut: History, Examination and Plan hold today's text sections; the structured review of systems and examination (MDV-P2-042) and the
- * plan actions with Add medicine (MDV-P2-043, MDV-P2-039) go inside those sections when they land.
+ * History holds the review of systems and Examination the examination by system when the template has them (MDV-P2-042).
+ * shortcut: Plan holds today's text section; the plan actions with Add medicine (MDV-P2-043, MDV-P2-039) go inside it when they land.
  */
 export default function ConsultStudio(p: Props) {
   const { t } = useI18n();
@@ -35,7 +35,8 @@ export default function ConsultStudio(p: Props) {
   if (p.loading) return <p role="status">{t('noteEditor.loading')}</p>;
   if (p.loadFailed || !p.template || !p.templateKey || !p.ticks) return <p role="alert" className="font-bold text-danger-700">{t(p.forbidden ? 'noteEditor.forbidden' : 'noteEditor.loadFailed')}</p>;
   const { template, ticks } = p;
-  const field = (id: string) => template.sections.filter(s => s.id === id).map(s => <SectionField key={s.id} section={s} register={p.register} readOnly={p.readOnly} />);
+  const section = (s: (typeof template.sections)[number]) => <NoteSectionField key={s.id} section={s} register={p.register} readOnly={p.readOnly} answers={p.answers} onAnswers={p.onAnswers} />;
+  const field = (id: string) => template.sections.filter(s => s.id === id).map(section);
   const title = (id: StudioSection) => id === 'template' ? t(templateNameKey(template.key)) : t(`studio.section.${id}` as MessageKey);
   const done = p.checklist.filter(c => c.state !== 'todo').length;
   return (
@@ -60,15 +61,15 @@ export default function ConsultStudio(p: Props) {
               </>
               : <p className="text-sm text-muted-foreground">{t('noteAssist.vitals.empty')}</p>}
           </Numbered>
-          <Numbered id="history" title={title}>{field('chiefComplaint')}{field('subjective')}</Numbered>
+          <Numbered id="history" title={title}>{field('chiefComplaint')}{field('subjective')}{field('reviewOfSystems')}</Numbered>
           <Numbered id="template" title={title}>
-            <TemplatePicker templateKey={p.templateKey} choices={p.choices} readOnly={p.readOnly} pendingSwitch={p.pendingSwitch}
+            <TemplatePicker templateKey={p.templateKey} choices={p.choices} readOnly={p.readOnly} pendingSwitch={p.pendingSwitch} suggested={p.suggested}
               onRequestSwitch={p.onRequestSwitch} onCancelSwitch={p.onCancelSwitch} onConfirmSwitch={p.onConfirmSwitch} />
             {templateOwnSections(template).length === 0
               ? <p className="text-sm text-muted-foreground">{t('studio.template.none')}</p>
-              : templateOwnSections(template).map(s => <SectionField key={s.id} section={s} register={p.register} readOnly={p.readOnly} />)}
+              : templateOwnSections(template).map(section)}
           </Numbered>
-          <Numbered id="exam" title={title}>{field('objective')}</Numbered>
+          <Numbered id="exam" title={title}>{field('examination')}{field('objective')}</Numbered>
           <Numbered id="assessment" title={title}>{field('assessment')}</Numbered>
           <Numbered id="plan" title={title}>{field('plan')}</Numbered>
           <Numbered id="sign" title={title}>

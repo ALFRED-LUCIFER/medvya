@@ -1,9 +1,11 @@
 import { z } from 'zod';
 import type { MessageKey } from '@medvya/i18n';
+import { isStructured, keepItems } from './structured';
 
 // The consultation note draft (MDV-P2-009) and its templates (MDV-P2-025): what the server answers. The server decides access, structure and
 // versions; these rules only save a round trip and keep the doctor's text safe.
-export type NoteSection = { id: string; required: boolean };
+/** A structured section (MDV-P2-042) lists its symptoms or body systems in `items`; its text is the answers (domain/structured). */
+export type NoteSection = { id: string; required: boolean; kind?: 'Text' | 'ReviewOfSystems' | 'Examination'; items?: string[] | null };
 export type NoteTemplate = { key: string; version: number; sections: NoteSection[]; quickPhrases: string[] };
 export type NoteCatalog = { templates: NoteTemplate[]; mine: string[] };
 export type NoteSections = Record<string, string>;
@@ -26,6 +28,8 @@ export type NoteView = {
   recordingConsent?: RecordingConsent | null;
   /** Section ids with an AI draft or suggestion the doctor has not accepted or dismissed (written from MDV-P3 on). */
   undecidedAi?: string[];
+  /** MDV-P2-042: on a note with nothing saved, the template the server picked from the patient's age and problems (the note starts on it). */
+  suggestedTemplateKey?: string | null;
 };
 /** What an autosave sends besides the version: the template, the whole note (a section left out is cleared) and the recording consent. */
 export type NoteDraft = { templateKey: string; sections: NoteSections; recordingConsent: RecordingConsent | null };
@@ -50,9 +54,17 @@ export const missingRequired = (template: NoteTemplate, sections: NoteSections) 
 
 /** Switching keeps text in sections both templates have and names the sections whose text the new template has no place for. */
 export function switchTemplate(sections: NoteSections, to: NoteTemplate) {
-  const ids = new Set(to.sections.map(s => s.id));
-  const entries = Object.entries(sections).filter(([, v]) => !isBlank(v));
-  return { kept: Object.fromEntries(entries.filter(([id]) => ids.has(id))), dropped: entries.map(([id]) => id).filter(id => !ids.has(id)) };
+  const byId = new Map(to.sections.map(s => [s.id, s]));
+  const kept: NoteSections = {};
+  const dropped: string[] = [];
+  for (const [id, v] of Object.entries(sections).filter(([, v]) => !isBlank(v))) {
+    const s = byId.get(id);
+    // A structured section keeps the answers to items the new template also asks (MDV-P2-042); answers it does not ask are named as dropped.
+    const next = s && isStructured(s) ? keepItems(s, v) : { text: s ? v : '', dropped: !s };
+    if (next.text) kept[id] = next.text;
+    if (next.dropped) dropped.push(id);
+  }
+  return { kept, dropped };
 }
 
 /** After a stale save: the doctor's changes since `base` laid over the version that is now on the server, section by section. */
@@ -110,14 +122,17 @@ export type VerifiedVital = { code: string; value: number; unit: string; takenAt
 /** A signed note of the same patient, offered as snippets. */
 export type PreviousNote = { encounterId: string; signedAt: string; signedByName: string | null; templateKey: string; sections: NoteSections };
 
+/** The structured section ids every template version that has them uses (NoteTemplates.ReviewOfSystems and Examination on the server). */
+export const structuredIds = ['reviewOfSystems', 'examination'];
 export const phraseKey = (key: string) => `noteTemplates.phrase.${key}` as MessageKey;
 export const vitalNameKey = (code: string) => `noteAssist.vital.${code}` as MessageKey;
 /** Quick phrases and snippets go to the section last edited, else the plan. */
 export const defaultTargetSection = 'plan';
 
 /** The sections of an earlier note that have text, in the current template's order first, then any the template has no place for. */
+// Earlier answers to the review of systems and examination are not offered (MDV-P2-042): today's findings are asked and examined today.
 export function snippetSections(note: Pick<PreviousNote, 'sections'>, template: NoteTemplate) {
-  const ids = Object.keys(note.sections).filter(id => !isBlank(note.sections[id]));
+  const ids = Object.keys(note.sections).filter(id => !isBlank(note.sections[id]) && !structuredIds.includes(id));
   const order = template.sections.map(s => s.id);
   return [...order.filter(id => ids.includes(id)), ...ids.filter(id => !order.includes(id))];
 }

@@ -134,12 +134,12 @@ journey('J2', {
       chart: { allergyState: 'Listed', allergies: [{ substance: 'Penicillin', reaction: null, status: 'Confirmed', source: 'ClinicianVerified' }],
         problems: [{ icd10Code: 'E11.9', description: 'Type 2 diabetes mellitus', verification: 'Verified', onsetOn: null, source: 'ClinicianVerified' }],
         medicines: [{ name: 'Metformin', dose: '500 mg', state: 'Active', source: 'Imported' }], lastVitals: [],
-        trends: [{ code: 'HbA1c', unit: '%', points: [{ value: 7.4, takenAt: at, source: 'SyncedFromHis' }] }], recentEncounters: [], openEncounterId: null, lastLabs: [], bmi: null, history: [], bloodGroup: null, careTeam: [] } } }));
+        trends: [{ code: 'HbA1c', unit: '%', points: [{ value: 7.4, takenAt: at, source: 'SyncedFromHis' }] }], recentEncounters: [], openEncounterId: null, lastLabs: [{ code: 'HbA1c', value: 7.4, unit: '%', takenAt: at, source: 'SyncedFromHis', flag: null, range: null }], bmi: null, history: [], bloodGroup: null, careTeam: [] } } }));
     await page.goto('/patients/p-meera');
     const banner = page.getByRole('region', { name: 'Patient Meera Iyer' });
     await expect(banner).toContainText('Penicillin');
     await expect(page.getByRole('region', { name: 'Problems', exact: true })).toContainText('Clinician verified');
     await expect(page.getByRole('region', { name: 'Medicines', exact: true })).toContainText('Imported');
-    await expect(page.getByRole('img', { name: /HbA1c: latest .?7.4 %/ })).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Results and trends', exact: true }).getByRole('img', { name: /HbA1c: latest .?7.4 %/ })).toBeVisible();
   },
 });

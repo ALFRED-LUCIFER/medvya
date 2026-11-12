@@ -1,6 +1,6 @@
 import type { MessageKey } from '@medvya/i18n';
 import type { AllergyState } from '../../patient360/domain/chart';
-import { isBlank, type NoteSections, type NoteTemplate, type RecordingConsent } from './note';
+import { isBlank, structuredIds, type NoteSections, type NoteTemplate, type RecordingConsent } from './note';
 
 // The review-and-sign checklist (MDV-P2-044, E-04/E-06). Worked out from the note, the encounter banner and the reconciliation every time;
 // nothing of it is stored. The server refuses a signature without a recorded consent, with an undecided AI draft or a blank required section,
@@ -46,14 +46,14 @@ export function signChecklist(i: ChecklistInput): ChecklistItem[] {
 export const remainingItems = (items: ChecklistItem[]) => items.filter(x => x.state === 'todo').length;
 export const checklistKey = (id: ChecklistId) => `signChecklist.item.${id}` as MessageKey;
 
-// The one-page consultation (MDV-P2-041): numbered sections over today's template, each ticked once finished. P2-042 (structured review of
-// systems and examination) and P2-043 (plan actions) fill History, Examination and Plan in later; the ticks stay these rules until then.
+// The one-page consultation (MDV-P2-041): numbered sections over today's template, each ticked once finished. The review of systems sits in
+// History and the examination by system in Examination (MDV-P2-042); P2-043 (plan actions) fills Plan later.
 export const studioSections = ['vitals', 'history', 'template', 'exam', 'assessment', 'plan', 'sign'] as const;
 export type StudioSection = (typeof studioSections)[number];
 const soapSections = ['chiefComplaint', 'subjective', 'objective', 'assessment', 'plan'];
 
 /** The template's own sections (diabetes self-monitoring, antenatal obstetric history, ...): the Template section of the page. */
-export const templateOwnSections = (template: NoteTemplate) => template.sections.filter(s => !soapSections.includes(s.id));
+export const templateOwnSections = (template: NoteTemplate) => template.sections.filter(s => !soapSections.includes(s.id) && !structuredIds.includes(s.id));
 
 export type TickInput = { template: NoteTemplate; sections: NoteSections; undecidedAi: string[]; vitals: number; signed: boolean };
 
@@ -64,7 +64,7 @@ export function sectionTicks(i: TickInput): Record<StudioSection, boolean> {
     vitals: i.vitals > 0,
     history: reviewed(i.sections, i.undecidedAi, 'chiefComplaint', historySections),
     template: own.length === 0 || own.some(s => !isBlank(i.sections[s.id])),
-    exam: reviewed(i.sections, i.undecidedAi, 'objective', ['objective']),
+    exam: (reviewed(i.sections, i.undecidedAi, 'objective', ['objective', 'examination']) || reviewed(i.sections, i.undecidedAi, 'examination', ['objective', 'examination'])),
     assessment: reviewed(i.sections, i.undecidedAi, 'assessment', ['assessment']),
     plan: reviewed(i.sections, i.undecidedAi, 'plan', ['plan']),
     sign: i.signed,

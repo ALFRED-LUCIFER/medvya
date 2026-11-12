@@ -488,7 +488,7 @@ test('keyboard only: write, add a phrase, switch template, and sign, with a visi
   await expect(region.getByRole('region', { name: 'Add to the note' })).toContainText('02 Sept 2026'); // everything has loaded: nothing re-renders under the keyboard
 
   const plan = region.getByRole('textbox', { name: /^Plan/ });
-  await tabTo(page, plan);
+  await tabTo(page, plan, 'Tab', 120); // diabetes review 2 asks 8 symptoms and 6 systems on the way (MDV-P2-042); every stop still shows its ring
   await page.keyboard.type(' and fluids');
   await expect(region.getByRole('status')).toHaveText('Saved');
   expect(mock.puts.at(-1)!.sections.plan).toBe('Rest and fluids');

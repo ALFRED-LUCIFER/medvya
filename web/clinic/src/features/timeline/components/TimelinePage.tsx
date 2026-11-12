@@ -81,7 +81,7 @@ function Empty(p: Props) {
   );
 }
 
-function Entry({ entry: e, zone }: { entry: TimelineEntry; zone: string }) {
+export function Entry({ entry: e, zone }: { entry: TimelineEntry; zone: string }) {
   const { t, formatDate, formatTime } = useI18n();
   const when = new Date(e.at);
   const title = e.title ?? t(`timeline.code.${e.code}`);

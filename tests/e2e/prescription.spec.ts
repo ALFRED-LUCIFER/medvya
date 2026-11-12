@@ -1,6 +1,6 @@
 import { createRequire } from 'node:module';
 import { expect, test, type Page } from '@playwright/test';
-import { clearChecks, line, mockPrescription, penicillinAlert, stopLine } from './support/prescription';
+import { clearChecks, line, mockPrescription, paracetamolForWeight, patientAlert, penicillinAlert, stopLine } from './support/prescription';
 
 // MDV-P2-015 (E-05, E-11): the doctor adds a formulary medicine and builds its dose, which autosaves and shows the instruction in the chosen
 // print language; a free-text medicine is flagged; a reconciliation stop is a discontinue line. CI has no API: endpoints are mocked in the
@@ -124,8 +124,8 @@ test('a severe allergy alert is in words with its evidence and needs a reason; w
 
   await checks.getByText('About these checks').click();
   await expect(checks).toContainText("Source: Medvya's curated starter rules, not a licensed drug database, pending clinical safety sign-off.");
-  await expect(checks).toContainText('Version: 2026.11-draft-1');
-  await expect(checks).toContainText('Age, weight and kidney function are not taken into account.');
+  await expect(checks).toContainText('Version: 2026.11-draft-2');
+  await expect(checks).toContainText('These patient rules await clinical review.');
 });
 
 test('the checks run again after a change, and "not recorded" allergies are said, never read as none', async ({ page }) => {
@@ -144,7 +144,50 @@ test('the checks run again after a change, and "not recorded" allergies are said
   await expect.poll(() => calls.checked).toBeGreaterThan(before);
 });
 
+// MDV-P2-040: the patient-aware findings in words with the fact they rest on, a child's dose worked out by weight, and missing facts as not checked.
+const patientChecks = clearChecks({
+  unresolved: 2,
+  alerts: [
+    patientAlert('rx-1', 'Ibuprofen', 'Pregnancy', 'Severe', 'nsaid_from_20_weeks', 24),
+    patientAlert('rx-2', 'Diclofenac', 'Kidney', 'Severe', 'nsaid_egfr_under_60_raas', 52),
+    patientAlert('rx-3', 'Diazepam', 'OlderAdult', 'Moderate', 'benzodiazepine', 76),
+  ],
+  notChecked: [{ id: 'rx-4', medicine: 'Metformin', onChart: false, reason: 'NoEgfr' }, { id: 'rx-5', medicine: 'Amoxicillin syrup', onChart: false, reason: 'NoRecentWeight' }],
+  weightDoses: [paracetamolForWeight('rx-6')],
+});
+const patientLines = () => ['Ibuprofen', 'Diclofenac', 'Diazepam', 'Metformin', 'Amoxicillin syrup', 'Paracetamol syrup'].map((n, i) => line(`rx-${i + 1}`, n));
+
+test('pregnancy, kidney and older-adult findings say the fact they rest on; a child dose is worked out by weight; a missing fact is not checked', async ({ page }) => {
+  await mockPrescription(page, { lines: patientLines(), checks: patientChecks });
+  await page.goto('/consult/e-1');
+  const checks = page.getByRole('region', { name: 'Safety checks' });
+  const alerts = checks.getByRole('list', { name: 'Safety alerts' });
+  await expect(alerts).toContainText("Severe · Pregnancy: Ibuprofen at 24 weeks. NSAIDs are avoided from 20 weeks: a risk to the baby's kidneys and heart.");
+  await expect(alerts).toContainText('Severe · Kidney function: Diclofenac with eGFR 52. With an ACE inhibitor or ARB on the list, NSAIDs are not used under eGFR 60');
+  await expect(alerts).toContainText('Moderate · Older adult, 76 years: Diazepam. Beers criteria: benzodiazepines raise the risk of falls, confusion and fractures.');
+  await expect(checks).toContainText('Paracetamol syrup: 15 mg/kg × 14.2 kg = 213 mg = 8.9 mL a dose, at most 4 doses (852 mg) a day.');
+  await expect(checks).toContainText('Metformin: kidney function not checked, no eGFR on the chart.');
+  await expect(checks).toContainText('Amoxicillin syrup: dose for weight not checked, no weight from the last month. Weigh the child.');
+  await expect(card(page, 'Metformin')).toContainText('Safety: not fully checked');
+  await expect(checks.getByRole('button', { name: 'Give a reason to go ahead' })).toHaveCount(2); // the two severe findings
+});
+
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
+for (const locale of ['en', 'ar'])
+  test(`axe finds no violations on the patient-aware checks (${locale})`, async ({ page }) => {
+    await mockPrescription(page, { locale, lines: patientLines(), checks: patientChecks });
+    await page.goto('/consult/e-1');
+    const checks = page.getByRole('region', { name: locale === 'ar' ? 'فحوص السلامة' : 'Safety checks' });
+    await expect(checks).toContainText(locale === 'ar' ? 'الحمل: Ibuprofen في الأسبوع 24.' : 'Pregnancy: Ibuprofen at 24 weeks.');
+    await expect(checks).toContainText(locale === 'ar' ? '15 ملغ/كغ × 14.2 كغ = 213 ملغ = 8.9 مل للجرعة' : '= 8.9 mL a dose');
+    if (locale === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+    await page.locator('details summary').click();
+    await page.addScriptTag({ path: axePath });
+    const violations = await page.evaluate(async () =>
+      (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations.map(v => `${v.id} (${v.nodes.length})`));
+    expect(violations).toEqual([]);
+  });
+
 for (const locale of ['en', 'ar'])
   test(`axe finds no violations on the prescription composer (${locale})`, async ({ page }) => {
     await mockPrescription(page, { locale, lines: [

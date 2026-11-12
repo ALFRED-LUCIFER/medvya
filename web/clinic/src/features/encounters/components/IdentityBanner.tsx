@@ -7,6 +7,7 @@ import type { EncounterBanner } from '../domain/encounter';
  * The identity banner (MDV-P2-001) at the top of every clinical screen of an encounter: who it is for, so no note or order can land on the
  * wrong person. Allergy and consent state are words with an icon, never colour alone.
  * Allergies are the chart's: listed (with each status), no known allergies, or not recorded. Unknown is never worded as "none".
+ * shortcut: the one-page consultation's patient strip (MDV-P2-041) is this banner; the life stage joins it when MDV-P2-032 adds it to the encounter.
  */
 export default function IdentityBanner({ banner }: { banner: EncounterBanner }) {
   const { t, formatDate, formatTime } = useI18n();

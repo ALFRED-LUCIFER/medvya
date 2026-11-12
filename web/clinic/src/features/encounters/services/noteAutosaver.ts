@@ -44,7 +44,7 @@ export function createAutosaver({ save, delayMs, onPhase }: Options) {
     /** Lays the unsaved text over the server's newer version, saves that, and returns it for the editor to show. */
     resolve(theirs: NoteView): NoteDraft | null {
       if (!pending) return null;
-      const merged = { templateKey: pending.templateKey, sections: reapply(base.sections, pending.sections, theirs.sections) };
+      const merged = { ...pending, sections: reapply(base.sections, pending.sections, theirs.sections) };
       base = { version: theirs.version, sections: theirs.sections };
       pending = merged;
       phase = 'idle';

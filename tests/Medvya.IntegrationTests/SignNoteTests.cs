@@ -67,9 +67,10 @@ public sealed class SignNoteTests(PostgresFixture sql) : IClassFixture<PostgresF
 
     static async Task<JsonElement> Json(HttpResponseMessage r) => await r.Content.ReadFromJsonAsync<JsonElement>();
 
-    async Task<int> SaveDraftAsync(object sections, int baseVersion = 0)
+    /// <summary>Saves the draft with the doctor's record of the recording consent (MDV-P2-044); "Declined" is the manual note path of today.</summary>
+    async Task<int> SaveDraftAsync(object sections, int baseVersion = 0, string? recordingConsent = "Declined")
     {
-        using var r = await Client(h.Doctor).PutAsJsonAsync(U($"/v1/encounters/{encounter}/note"), new { baseVersion, sections });
+        using var r = await Client(h.Doctor).PutAsJsonAsync(U($"/v1/encounters/{encounter}/note"), new { baseVersion, sections, recordingConsent });
         Assert.True(r.IsSuccessStatusCode, await r.Content.ReadAsStringAsync());
         return (await Json(r)).GetProperty("version").GetInt32();
     }
@@ -208,6 +209,62 @@ public sealed class SignNoteTests(PostgresFixture sql) : IClassFixture<PostgresF
         Assert.Equal("required", errors.GetProperty("sections.assessment")[0].GetString());
         Assert.Equal("required", errors.GetProperty("sections.plan")[0].GetString());
         Assert.Equal((NoteStatus.Draft, 0), ((await NoteAsync()).Status, await SignedRowsAsync()));
+    }
+
+    [Fact]
+    public async Task AnUnrecordedRecordingConsentBlocksSigningAndEachAnswerIsKept()
+    {
+        var version = await SaveDraftAsync(Complete, recordingConsent: null);
+        using (var blocked = await SignAsync(h.Doctor, version))
+        {
+            Assert.Equal(HttpStatusCode.BadRequest, blocked.StatusCode);
+            var errors = (await Json(blocked)).GetProperty("errors");
+            Assert.Equal("required", errors.GetProperty("recordingConsent")[0].GetString());
+            Assert.False(errors.TryGetProperty("undecidedAi", out _));
+        }
+        Assert.Equal((NoteStatus.Draft, 0, (RecordingConsent?)null), ((await NoteAsync()).Status, await SignedRowsAsync(), (await NoteAsync()).RecordingConsent));
+        foreach (var answer in new[] { "Agreed", "Withdrawn" })
+        {
+            version = await SaveDraftAsync(Complete, version, answer);
+            using var read = await Client(h.Doctor).GetAsync(U($"/v1/encounters/{encounter}/note"));
+            Assert.Equal(answer, (await Json(read)).GetProperty("recordingConsent").GetString());
+        }
+        using (var bad = await Client(h.Doctor).PutAsJsonAsync(U($"/v1/encounters/{encounter}/note"), new { baseVersion = version, sections = Complete, recordingConsent = 7 }))
+            Assert.Equal(HttpStatusCode.BadRequest, bad.StatusCode); // not one of the three answers
+        using var signed = await SignAsync(h.Doctor, version);
+        Assert.True(signed.IsSuccessStatusCode, await signed.Content.ReadAsStringAsync()); // withdrawn is a recorded answer: the doctor typed the rest
+        Assert.Equal(RecordingConsent.Withdrawn, (await NoteAsync()).RecordingConsent);
+    }
+
+    [Fact]
+    public async Task AnUndecidedAiDraftBlocksSigningUntilItIsResolvedAndASaveCannotClearIt()
+    {
+        var version = await SaveDraftAsync(Complete);
+        // Nothing writes AI drafts before MDV-P3-011: the row is given one the way the drafting job will.
+        await using (var db = sql.Encounters(h.Tenant))
+        {
+            var row = await db.ConsultNotes.SingleAsync();
+            row.UndecidedAi = ["subjective"];
+            await db.SaveChangesAsync();
+        }
+        using (var read = await Client(h.Doctor).GetAsync(U($"/v1/encounters/{encounter}/note")))
+            Assert.Equal("subjective", (await Json(read)).GetProperty("undecidedAi")[0].GetString());
+        version = await SaveDraftAsync(Complete, version); // an ordinary autosave leaves the undecided draft as it is
+        using (var blocked = await SignAsync(h.Doctor, version))
+        {
+            Assert.Equal(HttpStatusCode.BadRequest, blocked.StatusCode);
+            Assert.Equal("undecided", (await Json(blocked)).GetProperty("errors").GetProperty("undecidedAi")[0].GetString());
+        }
+        Assert.Equal((NoteStatus.Draft, 0, "subjective"), ((await NoteAsync()).Status, await SignedRowsAsync(), (await NoteAsync()).UndecidedAi.Single()));
+
+        await using (var db = sql.Encounters(h.Tenant))
+        {
+            var row = await db.ConsultNotes.SingleAsync();
+            row.UndecidedAi = [];
+            await db.SaveChangesAsync();
+        }
+        using var signed = await SignAsync(h.Doctor, version);
+        Assert.True(signed.IsSuccessStatusCode, await signed.Content.ReadAsStringAsync());
     }
 
     [Fact]

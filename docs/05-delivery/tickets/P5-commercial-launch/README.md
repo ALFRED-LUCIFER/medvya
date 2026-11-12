@@ -8,9 +8,9 @@
 **Day one:** Switch from the old system without closing, with history migrated, insurance checked at the desk and a paid subscription.  
 **Goal:** Everything a clinic owner needs to say yes: their data moved, no downtime, regulator-ready, learnable in one shift, and no lock-in.
 
-**Tickets:** 50 · **Estimate:** 152 dev-days vs **45 working days** in the window (OVER by 107 days: needs scope trade-off or overlap) · **Average confidence:** 65%
+**Tickets:** 52 · **Estimate:** 156 dev-days vs **45 working days** in the window (OVER by 111 days: needs scope trade-off or overlap) · **Average confidence:** 65%
 
-**Status:** To do 50
+**Status:** To do 52
 
 ## Epics
 
@@ -76,6 +76,8 @@
 | [MDV-P5-026](MDV-P5-026.md) | To do | Support model: first response under 4 business hours, on-call rota and runbooks | Chore | MUST | P5-08 | — | 1 | 30–30 | 17 May → 21 May 2027 | 75% Medium |
 | [MDV-P5-038](MDV-P5-038.md) | To do | Private push notifications for both apps (IDs only, no health text on the lock screen) | Story | MUST | P8-06 | — | 2 | 30–32 | 17 May → 04 Jun 2027 | 70% Medium |
 | [MDV-P5-048](MDV-P5-048.md) | To do | Platform analytics, practice health score and scheduled reports with small-count hiding | Story | SHOULD | P5-08 | N-12 | 3.5 | 30–32 | 17 May → 04 Jun 2027 | 55% Low |
+| [MDV-P5-051](MDV-P5-051.md) | To do | Patient app trackers: BP and sugar log, a child's growth and vaccines, and a private cycle tracker (PT-09) | Story | SHOULD | P4-07 | — | 3 | 30–30 | 17 May → 21 May 2027 | 68% Medium |
+| [MDV-P5-052](MDV-P5-052.md) | To do | Platform console switches for the new chart sections and the patient-app trackers | Story | COULD | P5-07 | — | 1 | 30–30 | 17 May → 21 May 2027 | 80% Medium |
 | [MDV-P5-035](MDV-P5-035.md) | To do | Staff app: consent script, background recording with offline queue, AI note review and sign | Story | MUST | P8-06 | — | 5 | 31–33 | 24 May → 11 Jun 2027 | 50% Low |
 | [MDV-P5-037](MDV-P5-037.md) | To do | Patient app: results, prescriptions, messages, consents, payments and video visit | Story | MUST | P8-06, P4-07 | R-01, R-03 | 5 | 31–34 | 24 May → 18 Jun 2027 | 55% Low |
 | [MDV-P5-030](MDV-P5-030.md) | To do | v1.0 general availability gate and release notes | Gate | MUST | P5-10 | — | 1 | 32–32 | 31 May → 04 Jun 2027 | 62% Low |

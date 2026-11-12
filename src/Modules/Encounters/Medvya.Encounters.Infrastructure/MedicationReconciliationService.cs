@@ -4,6 +4,7 @@ using Medvya.BuildingBlocks.Domain;
 using Medvya.Encounters.Application;
 using Medvya.Encounters.Domain;
 using Medvya.Encounters.Infrastructure.Persistence;
+using Medvya.Patients.Application;
 using Medvya.Tenancy.Application;
 using Medvya.Tenancy.Domain;
 using Microsoft.EntityFrameworkCore;
@@ -17,7 +18,7 @@ namespace Medvya.Encounters.Infrastructure;
 /// other sources (imports). Decisions are validated here, never only in the screen, and confirm is refused until every row has one.
 /// </summary>
 public sealed class MedicationReconciliationService(
-    EncountersDbContext db, IClinicalAccess clinical, ICurrentTenant tenant, ICurrentUser user, IAuditLog audit, TimeProvider clock) : IMedicationReconciliation
+    EncountersDbContext db, IClinicalAccess clinical, ICurrentTenant tenant, ICurrentUser user, IAuditLog audit, TimeProvider clock, IStaffAccess staff) : IMedicationReconciliation
 {
     public const string ReadAction = "medication.reconcile.read", DecideAction = "medication.reconcile.decide", ConfirmAction = "medication.reconcile.confirm", Resource = "encounter";
     static readonly Access[] Doctors = [Access.Full];
@@ -39,15 +40,20 @@ public sealed class MedicationReconciliationService(
         if (row is null) throw new ReconciliationValidationException([("key", "unknown")]);
         if (command.Kind is not { } kind) throw new ReconciliationValidationException([("kind", "not_allowed")]);
         var (newDose, reason) = (command.NewDose?.Trim(), command.Reason?.Trim());
-        var errors = MedicationReconciliationRules.Validate(kind, row.Chart, newDose, reason);
+        var steps = kind == MedicationDecisionKind.Taper ? command.Steps?.Select(s => s is null ? null! : s with { Dose = s.Dose?.Trim() ?? "" }).ToList() : null;
+        var errors = MedicationReconciliationRules.Validate(kind, row.Chart, newDose, reason, steps);
         if (errors.Count > 0) throw new ReconciliationValidationException(errors);
+        var now = clock.GetUtcNow();
+        // shortcut: a taper starts on the day it is decided (in the tenant's country); a later start date when a doctor needs one.
+        DateOnly? endsOn = steps is null ? null
+            : MedicationReconciliationRules.TaperEnd(CountryRules.For(await staff.TenantCountryAsync(cancellationToken) ?? throw new InvalidOperationException("No tenant country.")).Today(now), steps);
 
         await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
         db.MedicationDecisions.Add(new MedicationDecision
         {
             Id = Guid.CreateVersion7(), TenantId = TenantId, PatientId = encounter.PatientId, EncounterId = encounter.Id, MedicineKey = row.Key, Name = row.Name, Kind = kind,
-            FromDose = kind == MedicationDecisionKind.Change ? row.Chart?.Dose : null, NewDose = kind == MedicationDecisionKind.Change ? newDose : null,
-            Reason = string.IsNullOrEmpty(reason) ? null : reason, DecidedBy = Me, DecidedAt = clock.GetUtcNow(),
+            FromDose = kind is MedicationDecisionKind.Change or MedicationDecisionKind.Taper ? row.Chart?.Dose : null, NewDose = kind == MedicationDecisionKind.Change ? newDose : null,
+            Steps = steps, EndsOn = endsOn, Reason = string.IsNullOrEmpty(reason) ? null : reason, DecidedBy = Me, DecidedAt = now,
         });
         await db.SaveChangesAsync(cancellationToken);
         await audit.WriteAsync(Event(DecideAction, encounter), tx.GetDbTransaction(), cancellationToken);
@@ -74,6 +80,8 @@ public sealed class MedicationReconciliationService(
             {
                 case MedicationDecisionKind.Keep: Review(chart!, now); break;
                 case MedicationDecisionKind.Change: chart!.Dose = d.NewDose; Review(chart, now); break;
+                // shortcut: the chart holds the first step's dose and is not stopped on the end date by itself; a scheduled step-down when the chart keeps dose history.
+                case MedicationDecisionKind.Taper: chart!.Dose = d.Steps![0].Dose; Review(chart, now); break;
                 case MedicationDecisionKind.Stop: (chart!.State, chart.StoppedAt) = (MedicationState.Stopped, now); Review(chart, now); break;
                 case MedicationDecisionKind.Add:
                     // What the patient (or the other source) says, blank where they said nothing: never a guessed dose.
@@ -146,7 +154,7 @@ public sealed class MedicationReconciliationService(
             var d = decisions.GetValueOrDefault(g.Key);
             if (d is null && new[] { chart, patient, other }.All(s => s is null or { State: MedicationState.Stopped })) continue;
             rows.Add(new MedicineRow(g.Key, (chartRow ?? patientRow ?? otherRow)!.Name, chart, patient, other, MedicationReconciliationRules.Conflict(chart, patient, other),
-                MedicationReconciliationRules.Allowed(chart), d is null ? null : new MedicineDecisionView(d.Kind, d.NewDose, d.Reason, d.DecidedAt)));
+                MedicationReconciliationRules.Allowed(chart), d is null ? null : new MedicineDecisionView(d.Kind, d.NewDose, d.Reason, d.DecidedAt, d.FromDose, d.Steps, d.EndsOn)));
         }
         return [.. rows.OrderBy(r => r.Name, StringComparer.OrdinalIgnoreCase)];
     }
@@ -166,25 +174,46 @@ public sealed class MedicationReconciliationService(
     Guid Me => user.UserId ?? throw new InvalidOperationException("No user.");
 }
 
-/// <summary>The current Stop decisions of one encounter (the latest decision per medicine); see <see cref="IReconciliationStops"/>.</summary>
+/// <summary>The current Stop, Change and Taper decisions of one encounter (the latest decision per medicine); see <see cref="IReconciliationStops"/>.</summary>
 public sealed class ReconciliationStops(EncountersDbContext db) : IReconciliationStops
 {
     public async Task<IReadOnlyList<StoppedMedicine>> StopsAsync(Guid encounterId, CancellationToken cancellationToken = default) =>
-        [.. (await db.MedicationDecisions.AsNoTracking().Where(d => d.EncounterId == encounterId).ToListAsync(cancellationToken))
-            .GroupBy(d => d.MedicineKey).Select(g => g.OrderByDescending(d => d.DecidedAt).ThenByDescending(d => d.Id).First())
-            .Where(d => d.Kind == MedicationDecisionKind.Stop).OrderBy(d => d.Name, StringComparer.OrdinalIgnoreCase).Select(d => new StoppedMedicine(d.Name, d.Reason))];
+        [.. (await CurrentAsync(encounterId, cancellationToken)).Where(d => d.Kind == MedicationDecisionKind.Stop).Select(d => new StoppedMedicine(d.Name, d.Reason))];
+
+    public async Task<IReadOnlyList<ChangedMedicine>> ChangesAsync(Guid encounterId, CancellationToken cancellationToken = default) =>
+        [.. (await CurrentAsync(encounterId, cancellationToken)).Where(d => d.Kind is MedicationDecisionKind.Change or MedicationDecisionKind.Taper)
+            .Select(d => new ChangedMedicine(d.Name, d.Kind, d.FromDose, d.NewDose, d.Steps, d.EndsOn, d.Reason))];
+
+    async Task<IEnumerable<MedicationDecision>> CurrentAsync(Guid encounterId, CancellationToken cancellationToken) =>
+        (await db.MedicationDecisions.AsNoTracking().Where(d => d.EncounterId == encounterId).ToListAsync(cancellationToken))
+            .GroupBy(d => d.MedicineKey).Select(g => g.OrderByDescending(d => d.DecidedAt).ThenByDescending(d => d.Id).First()).OrderBy(d => d.Name, StringComparer.OrdinalIgnoreCase);
 }
 
 /// <summary>The allergies and active medicines of one patient for the prescription checks; see <see cref="IPrescribingChart"/>.</summary>
-public sealed class PrescribingChart(EncountersDbContext db) : IPrescribingChart
+public sealed class PrescribingChart(EncountersDbContext db, IPregnancies pregnancies) : IPrescribingChart
 {
+    public async Task<ChartPregnancy> PregnancyAsync(Guid patientId, Guid facilityId, CancellationToken cancellationToken = default)
+    {
+        var status = await pregnancies.StatusAsync(patientId, facilityId, cancellationToken);
+        return new(status.Open?.GestationDays / 7, status.RuledOut is not null);
+    }
+
     public async Task<PrescribingFacts> FactsAsync(Guid patientId, CancellationToken cancellationToken = default)
     {
         var allergies = await db.Allergies.AsNoTracking().Where(a => a.PatientId == patientId).OrderBy(a => a.RecordedAt).ThenBy(a => a.Id).ToListAsync(cancellationToken);
         var medicines = await db.MedicationStatements.AsNoTracking().Where(m => m.PatientId == patientId && m.State == MedicationState.Active)
-            .OrderBy(m => m.Name).ThenBy(m => m.Id).Select(m => new ChartMedicine(m.Id, m.Name)).ToListAsync(cancellationToken);
+            .OrderBy(m => m.Name).ThenBy(m => m.Id).Select(m => new ChartMedicine(m.Id, m.Name, m.RecordedAt)).ToListAsync(cancellationToken);
+        // A flagged reading the nurse has not kept may be a typing slip: a dose is never worked out from it.
+        var weight = await db.Observations.AsNoTracking().Where(o => o.PatientId == patientId && o.Code == ObservationCode.Weight && (o.Flag == null || o.FlagKept))
+            .OrderByDescending(o => o.TakenAt).ThenByDescending(o => o.Id).Select(o => new ChartReading(o.ValueHundredths, o.TakenAt)).FirstOrDefaultAsync(cancellationToken);
+        var egfr = await LatestAsync(patientId, ObservationCode.Egfr, cancellationToken);
+        var potassium = await LatestAsync(patientId, ObservationCode.Potassium, cancellationToken);
         // The banner's rule decides the state, so the checks never read "not recorded" differently from the chart.
         return new(ChartReads.BannerOf(allergies).State,
-            [.. allergies.Where(a => a.Kind == AllergyKind.Substance && a.Status != AllergyStatus.NotAnAllergy).Select(a => new ChartAllergy(a.Id, a.Substance!, a.Status))], medicines);
+            [.. allergies.Where(a => a.Kind == AllergyKind.Substance && a.Status != AllergyStatus.NotAnAllergy).Select(a => new ChartAllergy(a.Id, a.Substance!, a.Status))], medicines, weight, egfr, potassium);
     }
+
+    Task<ChartReading?> LatestAsync(Guid patientId, ObservationCode code, CancellationToken cancellationToken) =>
+        db.Observations.AsNoTracking().Where(o => o.PatientId == patientId && o.Code == code)
+            .OrderByDescending(o => o.TakenAt).ThenByDescending(o => o.Id).Select(o => new ChartReading(o.ValueHundredths, o.TakenAt)).FirstOrDefaultAsync(cancellationToken);
 }

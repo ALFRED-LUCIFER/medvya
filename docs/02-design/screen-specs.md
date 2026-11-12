@@ -212,7 +212,7 @@ A "Clinic approval" demo switch (Approved, Waiting, Suspended). Waiting: after s
 ### N-01 Nurse intake
 - Queue: "With the nurse" cards open their intake; "Checked in" cards can be taken to intake by the nurse without waiting for reception.
 - Usual ranges follow the patient's age band (PALS for children, adult from 18); they are a draft until a clinician signs them off (`VitalRules.SignOff`).
-- Large vitals inputs: BP systolic/diastolic, pulse, temperature, SpO₂, weight. Each shows the previous value.
+- Large vitals inputs: BP systolic/diastolic, pulse, temperature, SpO₂, respiratory rate, weight, height (MDV-P2-031). Each shows the previous value.
 - Out-of-range values are flagged in words ("High · re-check", "Outside usual range", "+2.2 kg since 02 Oct"). **Re-measure prompt, then Escalate to doctor with a reason.**
 - Allergies: each must be set to **Confirmed / Patient reported / Unknown / Not an allergy**. Hand-off is disabled with "Confirm allergy status to hand off" until all are set.
 - Medicines are patient-reported vs confirmed. "Needs clarification" covers unknown names (e.g. "a white tablet for sugar").
@@ -223,6 +223,9 @@ A "Clinic approval" demo switch (Approved, Waiting, Suspended). Waiting: after s
 - Verified chart is kept separate from the AI summary (the AI part is P3).
 - Timeline filters: All, Encounters, Labs, Medicines, Documents. Each entry has a **provenance tag**: Medvya · signed, Clinician verified, Lab feed · HL7, Synced from HIS, Uploaded by patient. "Load earlier…".
 - Trends: HbA1c / BP / weight.
+- Life stage, banner details and history (MDV-P2-032): under the banner, the life stage as a label with an icon and words (Child under 18, Pregnancy while a pregnancy is open (MDV-P2-034), Older adult from 65, else Adult), then blood group, preferred language and care team only when recorded, and the treatment consent. A History card lists the sections the life stage offers (birth and feeding for a child, function and falls for an older adult, obstetric in pregnancy, women's health for a woman) plus any section already written, each with its author and date and its earlier versions; a doctor or nurse edits a section or the blood group and every save adds a version.
+- Pregnancy card (MDV-P2-034): shown for a patient who is not male and is 10 to 55, or while a pregnancy is open. With none open it says "No pregnancy recorded" (the medicine checks treat it as not known) or the "not pregnant" statement made today with who and when; a doctor starts a pregnancy (LMP, dating scan date and gestation, G P A L, a blank count stays unknown) and a doctor or nurse records "not pregnant today". With one open: gestation today in the facility's zone with the trimester, the due date with how it was dated (LMP + 280 days, or the scan when it differs by more than the dating rule) and any earlier due date it replaced, G P A L, a trimester bar with a text alternative, the antenatal contacts (8–40 weeks) each said in words as done, this week, to come or no visit, the danger signs with who counselled them and when, and actions: danger signs counselled and record fundal height and fetal heart (doctor or nurse, on the open consultation), close with an outcome (doctor). The rules are marked as a draft awaiting clinical review.
+- Last vitals and Results (MDV-P2-031): the latest reading of each code, flagged in words with an arrow (High or Low, with the usual adult range) and a line saying the ranges await clinical review. BMI is worked out from the latest weight and height and names the older of the two with its date. The full results table and trend lines per code are the one-page chart (MDV-P2-033).
 
 ### E-03 Documents
 - List with type and source. Secure viewer: watermarked, **no download for reception**, time-limited links.
@@ -255,6 +258,14 @@ A "Clinic approval" demo switch (Approved, Waiting, Suspended). Waiting: after s
 - Order states: Draft → Ordered.
 - Medicine not in the formulary → free text, flagged for review.
 - Printed Rx: generic names first, multilingual, QR verify. e-Rx to pharmacy.
+
+### One-page chart, life stages, Add medicine and one-page consultation (12 Nov 2026 design, epic MDV-P2-E07)
+Design ids D-06 (chart), D-07 (consultation), D-08 (Add medicine) and PT-09 (patient-app trackers) in Foundations; the product screens are E-01, E-04 and E-05. Built already: identity banner, allergies, problems with ICD-10, medicines and reconciliation, vitals with age-band flags, HbA1c/BP/weight trends, timeline, documents, note templates, consent and the manual note, Assist, signing and addenda, the Rx composer and its allergy, interaction, duplicate and adult dose checks. New in the design:
+- **Chart on one page (MDV-P2-033):** banner adds blood group, language, life-stage label, alerts, care team and consent; six vitals tiles with a trend line and a flag ("Above 130/80"); results table with reference range, trend and flag; history in sections; right column for care gaps, goals and documents; section buttons (Everything, Summary, Vitals and labs, the life-stage module, History, Timeline). New codes and labs: MDV-P2-031. Life stage and history: MDV-P2-032.
+- **Life-stage modules:** adult chronic targets and women's health (MDV-P2-038); pregnancy with gestation, due date (LMP + 280 days, confirmed by scan), G P A L, trimester bar, antenatal contacts and danger signs (MDV-P2-034); child growth chart with centile bands, immunisations and milestones (MDV-P2-035, P2-036); older adult falls, walking test, standing BP drop, frailty, memory, daily activities and medicine review (MDV-P2-037).
+- **Add medicine (MDV-P2-039, P2-040):** search, strength, how often (1-0-0, 0-0-1, 1-0-1, 1-1-1, when needed, weekly), when, how long, instructions in the patient's language, safety checks for this patient (allergy block, duplicate, pregnancy from 20 weeks, weight-based child dose in mg and mL, kidney with eGFR and an ARB, older adult), the finished line and the quantity.
+- **Consultation on one page (MDV-P2-041 to P2-044):** consent bar first, seven numbered sections with a sticky section bar and ticks, review of systems as yes/no chips, adaptive template by patient, examination Normal / Abnormal / Not examined per system, plan with continue / new / change / taper / stop, tests to tap, advice, follow-up and referral, and Sign locked until the checklist is complete. "Guided steps" keeps the old flow.
+- Clinical sign-off before use: growth curves (WHO, IAP, UAE), vaccine schedules (IAP 2023 marked "verify"), every drug rule and dose (session handoff).
 
 ### Sign modal (A-05/E-06)
 - "Sign note for {name}?" with MRN, DOB and encounter id.

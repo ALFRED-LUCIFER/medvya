@@ -72,8 +72,8 @@ public sealed class EncounterEndpointTests(PostgresFixture sql) : IClassFixture<
         Assert.Equal(HttpStatusCode.OK, opened.StatusCode);
         var banner = await Json(opened);
         var patient = banner.GetProperty("patient");
-        // Exactly these fields: identity for the banner, nothing from the registration record beyond it.
-        Assert.Equal(["ageYears", "dateOfBirth", "fullName", "id", "mrn", "sexAtBirth"], patient.EnumerateObject().Select(p => p.Name).Order());
+        // Exactly these fields: identity for the banner, nothing from the registration record beyond it (the language is a banner field, MDV-P2-032).
+        Assert.Equal(["ageYears", "dateOfBirth", "fullName", "id", "mrn", "preferredLanguage", "sexAtBirth"], patient.EnumerateObject().Select(p => p.Name).Order());
         Assert.Equal(("Meera Iyer (synthetic)", "000001", "1972-03-12", 54, "Female"),
             (patient.GetProperty("fullName").GetString(), patient.GetProperty("mrn").GetString(), patient.GetProperty("dateOfBirth").GetString(),
              patient.GetProperty("ageYears").GetInt32(), patient.GetProperty("sexAtBirth").GetString()));

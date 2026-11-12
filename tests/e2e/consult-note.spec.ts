@@ -14,8 +14,9 @@ const at = '2026-10-19T04:35:00Z';
 // One name per signature: the doctor profile's (the licence-bearing one), never the account's display name above (u-rao is signed in as Dr. Arjun Rao).
 const signer = 'Dr Asha Raman (synthetic)';
 
+// These specs cover the guided steps (the note as one card); the one-page view (MDV-P2-041) is consult-studio.spec.ts, over the same mocks.
 async function open(page: Page, seed: Parameters<typeof mockNote>[1] = {}, locale = 'en', context: typeof doctor = doctor) {
-  await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
+  await page.addInitScript(l => { localStorage.setItem('medvya.locale', l); localStorage.setItem('medvya.consultView', 'steps'); }, locale);
   await page.route('**/v1/me/context', r => r.fulfill({ json: context }));
   await page.route('**/v1/encounters/e-1', r => r.fulfill({ json: {
     encounter: { id: 'e-1', appointmentId: 'a1', patientId: 'p-a1', facilityId: 'f-1', leadClinicianId: 'u-rao', status: 'Active', authorityMode: 'Medvya', startedAt: at, endedAt: null, room: 'Room 3' },
@@ -34,7 +35,7 @@ test('typing autosaves, shows the state, and names the manual path and the requi
   await expect(note(page).getByText('(required)')).toHaveCount(3);
   await note(page).getByLabel('Chief complaint').fill('Thirst and tiredness (synthetic)');
   await expect(note(page).getByRole('status')).toHaveText('Saved');
-  expect(mock.puts).toEqual([{ templateKey: 'general-opd', manual: true, baseVersion: 0, sections: { chiefComplaint: 'Thirst and tiredness (synthetic)' } }]);
+  expect(mock.puts).toEqual([{ templateKey: 'general-opd', manual: true, recordingConsent: null, baseVersion: 0, sections: { chiefComplaint: 'Thirst and tiredness (synthetic)' } }]);
   await note(page).getByLabel('Plan').fill('Review in two weeks');
   await expect.poll(() => mock.puts.length).toBe(2);
   await expect(note(page).getByRole('status')).toHaveText('Saved');
@@ -68,7 +69,7 @@ test('a stale save keeps the doctor\'s text and offers reload and reapply, never
   await expect(note(page).getByRole('status')).toHaveText('Saved');
   await expect(note(page).getByLabel('Plan')).toHaveValue('My new plan');
   await expect(note(page).getByLabel('Assessment')).toHaveValue('Their assessment');
-  expect(mock.puts).toEqual([{ templateKey: 'general-opd', manual: true, baseVersion: 2, sections: { plan: 'My new plan', assessment: 'Their assessment' } }]);
+  expect(mock.puts).toEqual([{ templateKey: 'general-opd', manual: true, recordingConsent: null, baseVersion: 2, sections: { plan: 'My new plan', assessment: 'Their assessment' } }]);
 });
 
 test('switching template asks first, keeps shared sections and names the text that has no place', async ({ page }) => {
@@ -87,7 +88,7 @@ test('switching template asks first, keeps shared sections and names the text th
   await expect(note(page).getByRole('status')).toHaveText('Saved');
   await expect(note(page).getByLabel('Plan')).toHaveValue('Diet advice');
   await expect(note(page).getByLabel('Self-monitoring')).toHaveCount(0);
-  expect(mock.puts).toEqual([{ templateKey: 'general-opd', manual: true, baseVersion: 1, sections: { plan: 'Diet advice' } }]);
+  expect(mock.puts).toEqual([{ templateKey: 'general-opd', manual: true, recordingConsent: null, baseVersion: 1, sections: { plan: 'Diet advice' } }]);
 });
 
 test('a note that is not a draft is read-only', async ({ page }) => {
@@ -117,7 +118,7 @@ test('the doctor chooses which templates appear, and must keep at least one', as
 
 // MDV-P2-012: sign and finalise. The 403 reauth_required / 409 / 400 answers are mocked in the shapes the server sends (ConsultNoteTests prove the rules).
 test('sign: confirms what signing means, saves first, then shows the signed note read-only', async ({ page }) => {
-  const mock = await open(page, { version: 2, sections: { chiefComplaint: 'Thirst', assessment: 'Review', plan: 'Rest' } });
+  const mock = await open(page, { version: 2, sections: { chiefComplaint: 'Thirst', assessment: 'Review', plan: 'Rest' }, recordingConsent: 'Declined' });
   mock.reauthed = true;
   await note(page).getByLabel('Plan').fill('Rest and fluids'); // typed just before signing: saved first, then that version is signed
   await note(page).getByRole('button', { name: 'Sign note' }).click();
@@ -141,17 +142,20 @@ test('sign: confirms what signing means, saves first, then shows the signed note
   await expect(note(page).getByRole('button', { name: 'Sign note' })).toHaveCount(0);
 });
 
-test('sign: blank required sections are named in words and the first one is focused; nothing is sent', async ({ page }) => {
-  const mock = await open(page, { version: 1, sections: { assessment: 'Review' } });
+test('sign: blank required sections keep Sign locked and are named in the checklist; the server\'s refusal is named and focused', async ({ page }) => {
+  const mock = await open(page, { version: 1, sections: { assessment: 'Review' }, recordingConsent: 'Declined' });
   mock.reauthed = true;
-  await note(page).getByRole('button', { name: 'Sign note' }).click();
-  await expect(note(page).getByRole('alert')).toHaveText('These required sections are empty: Chief complaint, Plan. Fill them in, then sign.');
-  await expect(note(page).getByLabel('Chief complaint')).toBeFocused();
-  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(note(page).getByRole('button', { name: 'Sign note' })).toBeDisabled();
+  await expect(note(page).getByRole('button', { name: 'Sign note' })).toHaveAccessibleDescription('2 items still need your review before signing');
+  const list = note(page).getByRole('region', { name: 'Review and sign' }).getByRole('listitem');
+  await expect(list.filter({ hasText: 'History reviewed' })).toContainText('To do');
+  await expect(list.filter({ hasText: 'Plan reviewed' })).toContainText('To do');
+  await expect(list.filter({ hasText: 'Diagnoses reviewed' })).toContainText('Done');
   expect(mock.signs).toEqual([]);
   // The server's answer is trusted too (another tab cleared a section): same words, same focus.
   await note(page).getByLabel('Chief complaint').fill('Thirst');
   await note(page).getByLabel('Plan').fill('Rest');
+  await expect(note(page).getByText('Everything reviewed. Ready to sign.')).toBeVisible();
   mock.signNext = 'blank';
   await note(page).getByRole('button', { name: 'Sign note' }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Sign as Dr Asha Raman (synthetic)' }).click();
@@ -159,8 +163,56 @@ test('sign: blank required sections are named in words and the first one is focu
   await expect(note(page).getByLabel('Chief complaint')).toBeFocused();
 });
 
-test('sign: reauth_required sends the doctor to confirm identity, the draft survives, and signing works on return', async ({ page }) => {
+// MDV-P2-044: the checklist is worked out from the note, the banner and the reconciliation; the server holds the consent and AI gates as well.
+test('checklist: Sign stays locked until the recording consent is recorded; each item and the count are in words', async ({ page }) => {
   const mock = await open(page, { version: 1, sections: { chiefComplaint: 'Thirst', assessment: 'Review', plan: 'Rest' } });
+  mock.reauthed = true;
+  const sign = note(page).getByRole('button', { name: 'Sign note' });
+  await expect(sign).toBeDisabled();
+  await expect(sign).toHaveAccessibleDescription('1 item still needs your review before signing');
+  const checklist = note(page).getByRole('region', { name: 'Review and sign' });
+  await expect(checklist.getByRole('listitem')).toHaveText([
+    'Identity confirmed (name and date of birth)Done', 'Allergies reconciledNot recorded: ask the patient', 'Medicines reconciledDone',
+    'Recording consent recordedTo do', 'History reviewedDone', 'Every AI suggestion accepted or dismissedDone', 'Diagnoses reviewedDone', 'Plan reviewedDone',
+  ]);
+  const consent = note(page).getByRole('group', { name: 'Recording consent for this visit' });
+  await expect(consent.getByRole('radio')).toHaveCount(2); // withdrawn only once the patient had agreed
+  await consent.getByRole('radio', { name: 'Patient agreed to recording' }).check();
+  await expect(consent.getByRole('radio', { name: 'Consent withdrawn during the visit' })).toBeVisible();
+  await consent.getByRole('radio', { name: 'Consent withdrawn during the visit' }).check();
+  await expect.poll(() => mock.puts.at(-1)?.recordingConsent).toBe('Withdrawn'); // saved with the note by the autosave
+  await expect(sign).toBeEnabled();
+  await expect(sign).toHaveAccessibleDescription('Everything reviewed. Ready to sign.');
+  await sign.click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Sign as Dr Asha Raman (synthetic)' }).click();
+  await expect(note(page)).toContainText('SIGNED v1 · read-only');
+  await expect(note(page).getByRole('radio', { name: 'Consent withdrawn during the visit' })).toBeDisabled();
+});
+
+test('checklist: an undecided AI draft and an unconfirmed reconciliation lock Sign', async ({ page }) => {
+  const mock = await open(page, { version: 1, sections: { chiefComplaint: 'Thirst', assessment: 'Review', plan: 'Rest' }, recordingConsent: 'Declined', undecidedAi: ['subjective'] });
+  mock.reconciliation = { confirmedAt: null, total: 2 };
+  await page.reload();
+  const sign = note(page).getByRole('button', { name: 'Sign note' });
+  await expect(sign).toHaveAccessibleDescription('3 items still need your review before signing');
+  const list = note(page).getByRole('region', { name: 'Review and sign' }).getByRole('listitem');
+  for (const item of ['Medicines reconciled', 'History reviewed', 'Every AI suggestion accepted or dismissed']) await expect(list.filter({ hasText: item })).toContainText('To do');
+  await expect(sign).toBeDisabled();
+  expect(mock.signs).toEqual([]);
+});
+
+test('checklist: the server refusing an unreviewed note is said in words and the note stays a draft', async ({ page }) => {
+  const mock = await open(page, { version: 1, sections: { chiefComplaint: 'Thirst', assessment: 'Review', plan: 'Rest' }, recordingConsent: 'Declined' });
+  mock.reauthed = true;
+  mock.signNext = 'unreviewed'; // another device holds an AI draft this page has not loaded yet
+  await note(page).getByRole('button', { name: 'Sign note' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Sign as Dr Asha Raman (synthetic)' }).click();
+  await expect(note(page).getByRole('alert')).toHaveText('The note was not signed: some checklist items still need your review.');
+  await expect(note(page).getByLabel('Plan')).toBeEditable();
+});
+
+test('sign: reauth_required sends the doctor to confirm identity, the draft survives, and signing works on return', async ({ page }) => {
+  const mock = await open(page, { version: 1, sections: { chiefComplaint: 'Thirst', assessment: 'Review', plan: 'Rest' }, recordingConsent: 'Declined' });
   await note(page).getByLabel('Plan').fill('Rest and fluids (unsaved when Sign was pressed)');
   await note(page).getByRole('button', { name: 'Sign note' }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Sign as Dr Asha Raman (synthetic)' }).click();
@@ -178,7 +230,7 @@ test('sign: reauth_required sends the doctor to confirm identity, the draft surv
 });
 
 test('sign: a stale note keeps the doctor\'s text and uses the editor\'s reload and reapply', async ({ page }) => {
-  const mock = await open(page, { version: 1, sections: { chiefComplaint: 'Thirst', assessment: 'Review', plan: 'Rest' } });
+  const mock = await open(page, { version: 1, sections: { chiefComplaint: 'Thirst', assessment: 'Review', plan: 'Rest' }, recordingConsent: 'Declined' });
   mock.reauthed = true;
   mock.signNext = 'stale';
   await expect(note(page).getByLabel('Plan')).toHaveValue('Rest');
@@ -194,7 +246,7 @@ test('sign: a stale note keeps the doctor\'s text and uses the editor\'s reload 
 });
 
 test('sign: a refusal is said in words and the note stays a draft', async ({ page }) => {
-  const mock = await open(page, { version: 1, sections: { chiefComplaint: 'Thirst', assessment: 'Review', plan: 'Rest' } });
+  const mock = await open(page, { version: 1, sections: { chiefComplaint: 'Thirst', assessment: 'Review', plan: 'Rest' }, recordingConsent: 'Declined' });
   mock.reauthed = true;
   mock.signNext = 'denied';
   await note(page).getByRole('button', { name: 'Sign note' }).click();
@@ -375,7 +427,7 @@ for (const locale of ['en', 'ar'])
   test(`axe finds no violations on the note (${locale}); targets are 44 px`, async ({ page }) => {
     await open(page, { sections: { plan: 'x' }, version: 1 }, locale);
     await page.getByText(locale === 'ar' ? 'قوالبي' : 'My templates', { exact: true }).click();
-    await page.getByRole('button', { name: locale === 'ar' ? 'توقيع الملاحظة' : 'Sign note' }).click(); // blank required sections: the alert in words
+    await expect(page.getByRole('region', { name: locale === 'ar' ? 'المراجعة والتوقيع' : 'Review and sign' })).toBeVisible(); // the checklist with items to do
     await expect(page.locator('textarea').first()).toBeVisible();
     if (locale === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
     for (const target of await page.getByRole('main').locator('button:not([role=switch]), [role=combobox], label:has([role=switch]), textarea, summary').all()) expect((await target.boundingBox())!.height).toBeGreaterThanOrEqual(44);
@@ -428,7 +480,7 @@ async function tabTo(page: Page, target: ReturnType<Page['locator']>, key = 'Tab
 }
 
 test('keyboard only: write, add a phrase, switch template, and sign, with a visible focus ring, a focus trap and focus returned', async ({ page }) => {
-  const mock = await open(page, { version: 1, templateKey: 'diabetes-review', sections: { chiefComplaint: 'Thirst', assessment: 'Review', plan: 'Rest', selfMonitoring: 'Fasting readings' } });
+  const mock = await open(page, { version: 1, templateKey: 'diabetes-review', sections: { chiefComplaint: 'Thirst', assessment: 'Review', plan: 'Rest', selfMonitoring: 'Fasting readings' }, recordingConsent: 'Declined' });
   mock.reauthed = true;
   mock.previous = earlier;
   await page.reload();
@@ -436,7 +488,7 @@ test('keyboard only: write, add a phrase, switch template, and sign, with a visi
   await expect(region.getByRole('region', { name: 'Add to the note' })).toContainText('02 Sept 2026'); // everything has loaded: nothing re-renders under the keyboard
 
   const plan = region.getByRole('textbox', { name: /^Plan/ });
-  await tabTo(page, plan);
+  await tabTo(page, plan, 'Tab', 120); // diabetes review 2 asks 8 symptoms and 6 systems on the way (MDV-P2-042); every stop still shows its ring
   await page.keyboard.type(' and fluids');
   await expect(region.getByRole('status')).toHaveText('Saved');
   expect(mock.puts.at(-1)!.sections.plan).toBe('Rest and fluids');
@@ -489,7 +541,7 @@ test('keyboard only: write, add a phrase, switch template, and sign, with a visi
 });
 
 test('200% zoom: the note, the sign dialog and its buttons stay readable and reachable with no sideways scrolling', async ({ page }) => {
-  await open(page, { version: 1, sections: { chiefComplaint: 'Thirst', assessment: 'Review', plan: 'Rest' } });
+  await open(page, { version: 1, sections: { chiefComplaint: 'Thirst', assessment: 'Review', plan: 'Rest' }, recordingConsent: 'Declined' });
   await page.setViewportSize({ width: 640, height: 360 }); // 1280 x 720 at 200%: WCAG 1.4.4 and 1.4.10
   await expect(note(page)).toBeVisible();
   const fits = () => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth);
@@ -513,7 +565,7 @@ test('200% zoom: the note, the sign dialog and its buttons stay readable and rea
 for (const locale of ['en', 'ar'])
   test(`the sign dialog and the signed note: axe clean, 44 px targets, no animation under reduced motion (${locale})`, async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
-    const mock = await open(page, { version: 1, sections: { chiefComplaint: 'Thirst', assessment: 'Review', plan: 'Rest' } }, locale);
+    const mock = await open(page, { version: 1, sections: { chiefComplaint: 'Thirst', assessment: 'Review', plan: 'Rest' }, recordingConsent: 'Declined' }, locale);
     mock.reauthed = true;
     const ar = locale === 'ar';
     if (ar) await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
@@ -530,7 +582,7 @@ for (const locale of ['en', 'ar'])
 
 // MDV-P2-009 keyboard pass: focus never falls to the page, and a legal signature is never one Enter away.
 test('keyboard: the sign dialog opens with focus on the dialog, not on a button, so Enter on open signs nothing', async ({ page }) => {
-  const mock = await open(page, { version: 1, sections: { chiefComplaint: 'Thirst', assessment: 'Review', plan: 'Rest' } });
+  const mock = await open(page, { version: 1, sections: { chiefComplaint: 'Thirst', assessment: 'Review', plan: 'Rest' }, recordingConsent: 'Declined' });
   mock.reauthed = true;
   const sign = note(page).getByRole('button', { name: 'Sign note' });
   await tabTo(page, sign);
@@ -546,7 +598,7 @@ test('keyboard: the sign dialog opens with focus on the dialog, not on a button,
 });
 
 test('keyboard: focus lands on the SIGNED banner after signing, then the addendum field, the new version, and back to the button on cancel', async ({ page }) => {
-  const mock = await open(page, { version: 1, sections: { chiefComplaint: 'Thirst', assessment: 'Review', plan: 'Rest' } });
+  const mock = await open(page, { version: 1, sections: { chiefComplaint: 'Thirst', assessment: 'Review', plan: 'Rest' }, recordingConsent: 'Declined' });
   mock.reauthed = true;
   await tabTo(page, note(page).getByRole('button', { name: 'Sign note' }));
   await page.keyboard.press('Enter');

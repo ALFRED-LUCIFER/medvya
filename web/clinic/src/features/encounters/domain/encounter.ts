@@ -20,6 +20,11 @@ export type EncounterBanner = {
   allergies: { state: AllergyState; allergies: Allergy[] };
 };
 
+/** The consultation's two views (MDV-P2-041): one page, or the guided steps of before. Both edit the same note through the same autosave. */
+export type ConsultView = 'page' | 'steps';
+/** The one page's side panel: Assist (hidden when the patient declined recording), a chart summary, and the review-and-sign checklist. */
+export type StudioPanel = 'assist' | 'chart' | 'check';
+
 /** Visits a doctor can open a consultation for (the server's VisitFlow.CanStartConsult). */
 export const consultStates = ['CheckedIn', 'WithNurse', 'ReadyForDoctor', 'InConsult'] as const;
 export const canConsult = (state: string) => (consultStates as readonly string[]).includes(state);
@@ -43,3 +48,6 @@ export function startProblem(status: number | undefined, body: unknown): StartPr
   if (status === 409 && typeof b.code === 'string') return { kind: 'visit', code: (visitProblems as readonly string[]).includes(b.code) ? (b.code as VisitProblem) : 'changed' };
   return { kind: 'failed' };
 }
+
+/** The one page's Plan heading id (MDV-P2-043): "Plan change" in the older adult medicine review (MDV-P2-037) links to it. */
+export const planHeading = 'studio-plan';

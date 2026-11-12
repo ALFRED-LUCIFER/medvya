@@ -91,7 +91,7 @@ export async function setNurseIntake(browser: Browser, enabled: boolean) {
   const admin = await browser.newPage();
   try {
     await signIn(admin, /K\. Lakshmi/);
-    await admin.goto('/app/settings?tab=staff');
+    await admin.goto('/app/settings?tab=nurse');
     const toggle = admin.getByRole('region', { name: 'Nurse intake' }).getByRole('switch', { name: /^Nurse intake before the doctor/ });
     await expect(toggle).toBeVisible();
     if ((await toggle.getAttribute('aria-checked')) !== String(enabled)) await toggle.click();

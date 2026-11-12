@@ -32,8 +32,18 @@ export const retryDelay = (attempt: number) => Math.min(30_000, 500 * 2 ** attem
 export const boardColumns = ['Booked', 'CheckedIn', 'WithNurse', 'ReadyForDoctor', 'InConsult', 'Billing', 'Done'] as const satisfies readonly AppointmentState[];
 export type BoardColumn = (typeof boardColumns)[number];
 
-/** The next column, as the server's VisitFlow; null at Done. */
-export const nextState = (state: BoardColumn): BoardColumn | null => boardColumns[boardColumns.indexOf(state) + 1] ?? null;
+/** The optional visit steps the practice has on (flags clinical.nurse-intake and billing.invoices); as the server's VisitSteps. */
+export type VisitSteps = { nurse: boolean; billing: boolean };
+export const allSteps: VisitSteps = { nurse: true, billing: true };
+const hasStep = (state: BoardColumn, steps: VisitSteps) => (state === 'WithNurse' ? steps.nurse : state === 'Billing' ? steps.billing : true);
+
+/** The next column, as the server's VisitFlow: a step that is off is skipped (MDV audit UX-05); null at Done. */
+export const nextState = (state: BoardColumn, steps: VisitSteps = allSteps): BoardColumn | null =>
+  boardColumns.slice(boardColumns.indexOf(state) + 1).find(c => hasStep(c, steps)) ?? null;
+
+/** The columns to show: a step that is off is hidden, unless a visit is still in it (the step was turned off that day). */
+export const visibleColumns = (steps: VisitSteps, columns: Record<BoardColumn, BoardCard[]>) =>
+  boardColumns.filter(c => hasStep(c, steps) || columns[c].length > 0);
 
 export const isBoardColumn = (state: AppointmentState): state is BoardColumn => (boardColumns as readonly string[]).includes(state);
 

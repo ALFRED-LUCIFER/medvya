@@ -89,14 +89,20 @@ public static class VisitFlow
         AppointmentState.InConsult, AppointmentState.Billing, AppointmentState.Done,
     ];
 
-    /// <summary>The board's next column, or null at the end of the visit and for cancelled or no-show visits.</summary>
-    public static AppointmentState? Next(AppointmentState state)
+    /// <summary>
+    /// The board's next column, or null at the end of the visit and for cancelled or no-show visits. A step the practice has off is
+    /// skipped (MDV audit UX-05); a visit already in it (the step was turned off that day) still moves on.
+    /// </summary>
+    public static AppointmentState? Next(AppointmentState state, VisitSteps steps)
     {
         var i = Array.IndexOf(Order, state);
-        return i >= 0 && i < Order.Length - 1 ? Order[i + 1] : null;
+        if (i < 0) return null;
+        foreach (var next in Order.AsSpan(i + 1))
+            if (steps.Has(next)) return next;
+        return null;
     }
 
-    public static bool CanMove(AppointmentState from, AppointmentState to) => Next(from) == to;
+    public static bool CanMove(AppointmentState from, AppointmentState to, VisitSteps steps) => Next(from, steps) == to;
 
     /// <summary>The board's columns in order.</summary>
     public static IReadOnlyList<AppointmentState> BoardStates => Order;
@@ -118,6 +124,22 @@ public static class VisitFlow
 
     /// <summary>Waiting for a doctor (checked in, with the nurse or ready): may move to another doctor's queue (MDV-P1-030).</summary>
     public static bool CanReassign(AppointmentState state) => state is AppointmentState.CheckedIn or AppointmentState.WithNurse or AppointmentState.ReadyForDoctor;
+}
+
+/// <summary>The optional steps of a visit the practice has on: the nurse intake (clinical.nurse-intake) and billing (billing.invoices).</summary>
+public readonly record struct VisitSteps(bool Nurse, bool Billing)
+{
+    public static readonly VisitSteps All = new(true, true);
+
+    /// <summary>Only a move out of Checked in or In consult can land on an optional step; from any other state the steps change nothing.</summary>
+    public static bool Matter(AppointmentState from) => from is AppointmentState.CheckedIn or AppointmentState.InConsult;
+
+    public bool Has(AppointmentState state) => state switch
+    {
+        AppointmentState.WithNurse => Nurse,
+        AppointmentState.Billing => Billing,
+        _ => true,
+    };
 }
 
 /// <summary>

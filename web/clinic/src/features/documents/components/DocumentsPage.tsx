@@ -127,7 +127,7 @@ function Row({ doc: d, ...p }: Props & { doc: DocumentRow }) {
           {t(`documents.scan.${d.scanStatus}`)}
         </span>
         {p.canOpen && d.scanStatus !== 'Infected' && !editing && <Button variant="outline" className="min-h-11" onClick={() => p.onEdit(d)} aria-label={t('documents.editFor', { type: t(`documents.type.${d.type}`) })}><Pencil aria-hidden className="size-4" />{t('documents.edit')}</Button>}
-        {open && <Button variant="navy" className="min-h-11" loading={p.opening === d.id} onClick={() => p.onOpen(d.id)} aria-label={t('documents.openFor', { type: t(`documents.type.${d.type}`) })}>{t('documents.open')}</Button>}
+        {open && <Button variant="default" className="min-h-11" loading={p.opening === d.id} onClick={() => p.onOpen(d.id)} aria-label={t('documents.openFor', { type: t(`documents.type.${d.type}`) })}>{t('documents.open')}</Button>}
       </div>
       {editing && (
         <div role="group" aria-label={t('documents.editing')} className="flex w-full flex-wrap items-end gap-3 rounded-md border p-3">

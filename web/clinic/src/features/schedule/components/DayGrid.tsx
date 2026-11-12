@@ -1,7 +1,7 @@
 import type { DragEvent } from 'react';
 import { useI18n } from '@medvya/i18n';
 import { cn, scheduleLooks } from '@medvya/ui';
-import { hasStarted, type CalendarKind, type ColumnItem, type ColumnLayout, type DayLayout } from '../domain/schedule';
+import { columnTracks, hasStarted, type CalendarKind, type ColumnItem, type ColumnLayout, type DayLayout } from '../domain/schedule';
 import { hatched } from './looks';
 import { AppointmentChip } from './AppointmentChip';
 import { dragType, type DropHandler, type OpenHandler } from './dragDrop';
@@ -32,7 +32,7 @@ export default function DayGrid({ day, updating, now, ...actions }: { day: DayLa
   return (
     <section aria-label={t('schedule.grid')} aria-busy={updating || undefined} tabIndex={0}
       className={cn('max-h-[calc(100dvh-12rem)] min-h-80 overflow-auto rounded-lg border bg-card transition-opacity', updating && 'opacity-60')}>
-      <div className="grid" style={{ gridTemplateColumns: `56px repeat(${day.columns.length}, minmax(168px, 1fr))` }}>
+      <div className="grid" style={{ gridTemplateColumns: `56px ${columnTracks(day.columns)}` }}>
         <div className="sticky start-0 top-0 z-30 border-e border-b bg-card" />
         {day.columns.map(c => <ColumnHeader key={c.calendarId} column={c} />)}
         <div aria-hidden className="sticky start-0 z-10 border-e bg-card" style={{ height: day.height }}>

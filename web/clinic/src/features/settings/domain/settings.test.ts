@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { certificateProblem, closureSchema, locationProblem, hoursProblems, logoProblem, profileSchema, sessionProblem, settingsError, templateBody, toDayHours, toHoursRows, type CalendarTemplate } from './settings';
+import { groupOf, settingsGroups, settingsTabs, certificateProblem, closureSchema, locationProblem, hoursProblems, logoProblem, profileSchema, sessionProblem, settingsError, templateBody, toDayHours, toHoursRows, type CalendarTemplate } from './settings';
 
 describe('practice settings rules', () => {
   it('shows the week from Monday and sends only the open days', () => {
@@ -76,5 +76,14 @@ describe('practice settings rules', () => {
     expect(locationProblem('certificate:type')).toEqual({ field: 'certificate', key: 'settings.locations.error.certificate.type' });
     expect(locationProblem('countryCode:mismatch')).toEqual({ field: 'form', key: 'settings.locations.error.country' });
     expect(locationProblem(undefined)).toEqual({ field: 'form', key: 'settings.saveFailed' });
+  });
+});
+
+describe('settings groups (MDV audit UX-04)', () => {
+  it('puts every tab in exactly one group', () => {
+    expect(Object.values(settingsGroups).flat().sort()).toEqual([...settingsTabs].sort());
+  });
+  it('gives nurse intake its own place under Clinical, and access requests under Security', () => {
+    expect([groupOf('nurse'), groupOf('requests'), groupOf('staff')]).toEqual(['clinical', 'security', 'people']);
   });
 });

@@ -47,7 +47,7 @@ export default function UiGallery({ switcher }: { switcher: ReactNode }) {
         <Button variant="outline">Save draft</Button>
         <Button variant="ai"><Sparkles aria-hidden />Generate draft</Button>
         <Button variant="destructive"><CircleStop aria-hidden />Stop recording</Button>
-        <Button variant="navy">Request access</Button>
+        <Button variant="default">Request access</Button>
       </Section>
       <Section title="Closed-loop status">{keys(statusLooks).map(s => <StatusChip key={s} state={s} />)}</Section>
       <Section title="Provenance">{keys(provenanceLooks).map(s => <ProvenanceTag key={s} source={s} />)}</Section>

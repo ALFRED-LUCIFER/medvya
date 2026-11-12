@@ -162,6 +162,14 @@ internal sealed class SchedulingHarness(PostgresFixture sql)
 
     public IScheduleExceptionService Adjustments(Guid user, Guid? inTenant = null) => Scope(user, inTenant).GetRequiredService<IScheduleExceptionService>();
 
+    /// <summary>Turns the optional visit steps (nurse intake, billing) on or off for the tenant; both are off by default (MDV audit UX-05).</summary>
+    public async Task StepsAsync(bool nurse, bool billing)
+    {
+        var flags = Get<Medvya.Tenancy.Application.IFeatureFlags>(Admin);
+        await flags.SetAsync(VisitStepFlags.Nurse, nurse, "clinical-team", "Nurse intake (synthetic test)");
+        await flags.SetAsync(VisitStepFlags.Billing, billing, "practice", "Billing (synthetic test)");
+    }
+
     public IFrontDeskService FrontDesk(Guid user, Guid? inTenant = null) => Scope(user, inTenant).GetRequiredService<IFrontDeskService>();
 
     /// <summary>Reception books Dr. Rao for <paramref name="patient"/> at a Monday wall-clock time, or at <paramref name="start"/>.</summary>

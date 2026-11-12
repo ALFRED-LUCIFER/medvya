@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { workload } from '../domain/overview';
 import { groupByColumn, moveError, serverNow, type Board, type BoardCard, type BoardColumn, type LiveStatus, type MoveError } from '../domain/board';
 import { ApiError } from '../../schedule/services/scheduleApi';
+import { sessionQueryKey } from '../../session/hooks/useSessionController';
 import { watchBoard } from '../services/boardLive';
 import { checkIn, fetchBoard, fetchFailedVisits, monotonicNow, moveVisit } from '../services/frontDeskApi';
 
@@ -56,6 +57,8 @@ export function useBoardController(facilityId: string, online: boolean) {
     const error = moveError(e instanceof ApiError ? e.code : undefined);
     setFailure({ id, error });
     if (error !== 'failed') void queryClient.invalidateQueries({ queryKey: key }); // it moved on elsewhere: show where it is now
+    // Or the owner turned a visit step on or off since this session loaded: refetch the flags so the columns and buttons match the server.
+    if (error === 'invalid_transition') void queryClient.invalidateQueries({ queryKey: sessionQueryKey });
   };
 
   const arrive = useMutation({

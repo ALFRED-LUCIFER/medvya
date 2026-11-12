@@ -93,7 +93,7 @@ export default function ChildHealthCard(p: Props) {
                     {p.canRecord && (
                       <div role="group" aria-label={t('childHealth.answerFor', { name })} className="flex flex-wrap gap-2">
                         {answers.map(a => (
-                          <Button key={a} type="button" size="sm" variant={m.answer === a ? 'navy' : 'outline'} className="min-h-11" aria-pressed={m.answer === a}
+                          <Button key={a} type="button" size="sm" variant={m.answer === a ? 'selected' : 'outline'} className="min-h-11" aria-pressed={m.answer === a}
                             disabled={!p.online || p.answering} onClick={() => p.onAnswer(m.key, a)}>{t(`childHealth.answer.${a}`)}</Button>
                         ))}
                       </div>

@@ -6,6 +6,11 @@ export type RegistrationStatus = 'Complete' | 'Incomplete';
 export type IdentifierScheme = 'Abha' | 'AbhaAddress' | 'AadhaarLast4' | 'EmiratesId' | 'Passport' | 'Visa';
 export type PayerKind = 'SelfPay' | 'Corporate' | 'PrivateInsurance' | 'GovernmentScheme';
 
+/** Directory table columns; the label of each is the i18n key `patients.col.<key>`.
+ * shortcut: no column sort, since the server pages results by match relevance; add server-side sort if desks ask to order the whole list. */
+export const directoryColumns = ['patient', 'age', 'sex', 'mrn', 'status'] as const;
+export type DirectoryColumn = (typeof directoryColumns)[number];
+
 /** A privacy-safe result row: initials, age, sex and the MRN tail only, until the record is opened (audited). */
 export type PatientSummary = {
   id: string; initials: string; ageYears: number; ageEstimated: boolean; sexAtBirth: SexAtBirth; mrnTail: string; status: RegistrationStatus;

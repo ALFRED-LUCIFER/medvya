@@ -27,7 +27,7 @@ export default function TestToggles(p: Props) {
             const ordered = x.order?.state === 'Ordered';
             return (
               <li key={x.name}>
-                <Button type="button" size="sm" variant={on ? 'default' : 'outline'} className="min-h-11" aria-pressed={on} disabled={p.busy || p.ended || ordered}
+                <Button type="button" size="sm" variant={on ? 'selected' : 'outline'} className="min-h-11" aria-pressed={on} disabled={p.busy || p.ended || ordered}
                   onClick={() => p.onToggle(x, !on)}>
                   {on ? <Check aria-hidden className="size-4" /> : <Plus aria-hidden className="size-4" />}
                   {x.name}

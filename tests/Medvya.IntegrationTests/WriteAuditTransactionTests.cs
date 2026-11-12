@@ -140,7 +140,7 @@ public sealed class WriteAuditTransactionTests(PostgresFixture sql) : IClassFixt
             Assert.Equal((AppointmentState.Booked, 1), ((await db.Appointments.SingleAsync()).State, await db.StatusEvents.CountAsync(e => e.AppointmentId == visit)));
 
         (await desk.PostAsync($"/v1/appointments/{visit}/check-in", null)).EnsureSuccessStatusCode();
-        await FailsUnaudited(() => desk.PostAsJsonAsync($"/v1/appointments/{visit}/status", new { state = "WithNurse" }));
+        await FailsUnaudited(() => desk.PostAsJsonAsync($"/v1/appointments/{visit}/status", new { state = "ReadyForDoctor" }));
         await using (var db = sql.Scheduling(h.Tenant))
             Assert.Equal((AppointmentState.CheckedIn, 2), ((await db.Appointments.SingleAsync()).State, await db.StatusEvents.CountAsync(e => e.AppointmentId == visit)));
     }
@@ -159,7 +159,7 @@ public sealed class WriteAuditTransactionTests(PostgresFixture sql) : IClassFixt
         var visit = await Id(await desk.PostAsJsonAsync("/v1/appointments", new { holdId = hold, patientId = h.Patient, reasonCategory = "General", channel = "Phone" }));
         (await desk.PostAsync($"/v1/appointments/{visit}/check-in", null)).EnsureSuccessStatusCode();
         (await desk.PostAsync($"/v1/appointments/{visit}/check-in", null)).EnsureSuccessStatusCode(); // a repeat is an attempt too
-        (await desk.PostAsJsonAsync($"/v1/appointments/{visit}/status", new { state = "WithNurse" })).EnsureSuccessStatusCode();
+        (await desk.PostAsJsonAsync($"/v1/appointments/{visit}/status", new { state = "ReadyForDoctor" })).EnsureSuccessStatusCode();
 
         var events = (await Events()).Where(e => !before.Contains(e.Id)).ToList();
         // The test clock stands still, so the events are compared as a set of attempts, one each.

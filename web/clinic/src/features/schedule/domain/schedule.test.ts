@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, hasStarted, layoutDay, minSlotPx, stepDate, type ScheduleDay } from './schedule';
+import { addDays, columnTracks, hasStarted, layoutDay, minSlotPx, stepDate, type ScheduleDay } from './schedule';
 
 // 09:00–13:00 and 17:00–20:00 IST with 20-minute slots (UTC+05:30), as the API sends it.
 const day: ScheduleDay = {
@@ -88,4 +88,13 @@ describe('a slot that has started', () => {
     expect(hasStarted(kolkata, now)).toBe(true);
     expect(hasStarted(dubai, now)).toBe(false);
   });
+});
+
+describe('column tracks', () => {
+  const col = (working: boolean, appointment = false) => ({
+    calendarId: 'c', calendarKind: 'Doctor' as const, name: 'Dr', slotMinutes: 15, rooms: [], working, visitLengths: [],
+    items: appointment ? [{ kind: 'appointment' as const, id: 'a', reference: 'R', patientId: 'p', patientName: 'P', visitType: 'FollowUp' as const, state: 'Booked' as const, start: '', end: '', top: 0, height: 48, lane: 'full' as const }] : [],
+  });
+  it('narrows a doctor who is not in and has no visits', () => expect(columnTracks([col(true), col(false)])).toBe('minmax(168px, 1fr) 112px'));
+  it('keeps a doctor who is not in but still has visits at full width', () => expect(columnTracks([col(false, true)])).toBe('minmax(168px, 1fr)'));
 });

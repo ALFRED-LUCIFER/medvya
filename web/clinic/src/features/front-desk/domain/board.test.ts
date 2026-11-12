@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { groupByColumn, needsRebooking, minutesSince, moveError, nextState, serverNow, walkInError, type BoardCard } from './board';
+import { groupByColumn, needsRebooking, minutesSince, moveError, nextState, serverNow, visibleColumns, walkInError, type BoardCard } from './board';
 
 describe('walk-in (MDV-P1-025)', () => {
   it('tells "no free slot" (choose a doctor to queue with) and "busy" from other failures', () => {
@@ -18,6 +18,20 @@ describe('reception board', () => {
     expect(nextState('InConsult')).toBe('Billing');
     expect(nextState('Billing')).toBe('Done');
     expect(nextState('Done')).toBeNull();
+  });
+
+  it('skips the steps the practice has off, as the server does (MDV audit UX-05)', () => {
+    const off = { nurse: false, billing: false };
+    expect(nextState('CheckedIn', off)).toBe('ReadyForDoctor');
+    expect(nextState('InConsult', off)).toBe('Done');
+    expect(nextState('WithNurse', off)).toBe('ReadyForDoctor'); // a visit left there when the step was turned off
+    expect(nextState('CheckedIn', { nurse: true, billing: false })).toBe('WithNurse');
+  });
+
+  it('hides a step that is off unless a visit is still in it', () => {
+    const off = { nurse: false, billing: false };
+    expect(visibleColumns(off, groupByColumn([]))).toEqual(['Booked', 'CheckedIn', 'ReadyForDoctor', 'InConsult', 'Done']);
+    expect(visibleColumns(off, groupByColumn([card('n', 'WithNurse', '2026-10-19T04:00:00Z')]))).toContain('WithNurse');
   });
 
   it('groups cards per column in time order and leaves cancelled and no-show visits off the board', () => {

@@ -248,10 +248,11 @@ public sealed class IntakeTests(PostgresFixture sql) : IClassFixture<PostgresFix
         await Intake(h.Nurse).HandOffAsync(visit);
         Assert.Equal(AppointmentState.ReadyForDoctor, (await h.FrontDesk(h.Reception).MoveAsync(visit, new MoveVisit { State = AppointmentState.ReadyForDoctor })).State); // a repeat
 
-        // A clinic that has not turned the nurse step on keeps the board as it was.
+        // A clinic without the nurse step skips it: checked in goes straight to ready for the doctor (MDV audit UX-05).
         await h.Get<IFeatureFlags>(h.Admin).SetAsync(IntakeFlag.Key, false, "clinical-team", "Nurse intake (synthetic test)");
-        var other = await WithNurseAsync(h.SecondPatient, 10, 20);
-        Assert.Equal(AppointmentState.ReadyForDoctor, (await h.FrontDesk(h.Reception).MoveAsync(other, new MoveVisit { State = AppointmentState.ReadyForDoctor })).State);
+        var other = await h.BookAsync(10, 20, h.SecondPatient);
+        await h.FrontDesk(h.Reception).CheckInAsync(other.Id, new CheckIn());
+        Assert.Equal(AppointmentState.ReadyForDoctor, (await h.FrontDesk(h.Reception).MoveAsync(other.Id, new MoveVisit { State = AppointmentState.ReadyForDoctor })).State);
     }
 
     [Fact]

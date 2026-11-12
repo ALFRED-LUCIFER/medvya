@@ -15,7 +15,8 @@ const buttonVariants = cva(
         outline: "border border-input bg-card text-foreground hover:bg-accent",
         ai: "bg-ai-600 text-white hover:bg-ai-700",
         destructive: "bg-destructive text-destructive-foreground hover:bg-[#8a1626]",
-        navy: "bg-brand-950 text-white hover:bg-brand-900",
+        // The pressed state of a toggle or the current view (aria-pressed / aria-current): a thick border, never a second primary colour (MDV audit UX-03).
+        selected: "border-2 border-primary bg-brand-50 text-brand-900 hover:bg-brand-50",
         ghost: "text-foreground hover:bg-accent",
         link: "text-action-600 underline-offset-4 hover:underline",
       },

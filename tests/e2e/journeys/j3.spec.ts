@@ -30,9 +30,9 @@ journey('J3', {
     await expect(page.getByRole('heading', { name: 'Farhan Qureshi (synthetic) is checked in' })).toBeVisible();
     await expect(page.getByText('Token A-07')).toBeVisible();
   },
-  // MDV-P1-028: reception sends a checked-in patient to the nurse; the card moves to "With nurse".
+  // MDV-P1-028: reception sends a checked-in patient to the nurse; the card moves to "With nurse". The step exists while nurse intake is on (MDV audit UX-05).
   4: async ({ page }) => {
-    await page.route('**/v1/me/context', r => r.fulfill({ json: reception }));
+    await page.route('**/v1/me/context', r => r.fulfill({ json: { ...reception, active: { ...reception.active, flags: ['clinical.nurse-intake'] } } }));
     await page.route('**/v1/front-desk/board?*', r =>
       r.fulfill({ json: { facilityId: 'f-1', timeZone: 'Asia/Kolkata', date: '2026-10-19', now: '2026-10-19T05:02:00Z', cards: [farhan] } }));
     await page.route('**/v1/appointments/a-1/status', r => {

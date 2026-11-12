@@ -44,6 +44,7 @@ describe('clinical primitives', () => {
     // Filled buttons (white text) and outlined/link text on the canvas.
     for (const bg of ['primary', 'brand-800', 'ai-600', 'ai-700', 'destructive', 'brand-950'])
       expect(contrast('#FFFFFF', tokens[bg]), `white on ${bg}`).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(tokens['brand-900']!, tokens['brand-50']!), 'selected button text').toBeGreaterThanOrEqual(4.5);
     for (const fg of ['foreground', 'muted-foreground', 'action-600', 'primary'])
       expect(contrast(tokens[fg], tokens['background']), `${fg} on background`).toBeGreaterThanOrEqual(4.5);
     // Queue TV text on its page and on its panels (MDV-P1-031), white focus ring on both.

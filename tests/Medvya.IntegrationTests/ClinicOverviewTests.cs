@@ -70,7 +70,7 @@ public sealed class ClinicOverviewTests(PostgresFixture sql) : IClassFixture<Pos
         await To(seen.Id, "CheckedIn");
         await To(waiting.Id, "CheckedIn");
         h.Clock.Advance(TimeSpan.FromMinutes(75)); // 09:15 IST: Dr. Rao calls the 09:00 patient in, 15 minutes late
-        await To(seen.Id, "WithNurse", "ReadyForDoctor", "InConsult");
+        await To(seen.Id, "ReadyForDoctor", "InConsult");
         h.Clock.Advance(TimeSpan.FromMinutes(35)); // 09:50: the 09:20 patient has waited 30 minutes past their time
 
         var json = await Overview(h.SecondDoctor); // a doctor sees it too, read only

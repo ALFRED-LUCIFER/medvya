@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react';
 import { CalendarCheck, CalendarClock, CircleCheck, ClipboardCheck, DoorOpen, EyeOff, ReceiptText, Syringe, UserCheck, type LucideIcon } from 'lucide-react';
 import { useI18n, type MessageKey } from '@medvya/i18n';
-import { Button, FrontDeskTag } from '@medvya/ui';
+import { Button, FrontDeskTag, PageContainer, PageHeader } from '@medvya/ui';
 import type { workload } from '../domain/overview';
-import { boardColumns, minutesSince, needsRebooking, nextState, type Board, type BoardCard, type BoardColumn, type LiveStatus, type MoveError } from '../domain/board';
+import { minutesSince, needsRebooking, nextState, visibleColumns, type Board, type BoardCard, type BoardColumn, type LiveStatus, type MoveError, type VisitSteps } from '../domain/board';
 
 // Every column is words and an icon (never colour alone), following the Clinician App board (P-01).
 const columnIcons: Record<BoardColumn, LucideIcon> = {
@@ -18,6 +18,8 @@ const actionKeys: Record<Exclude<BoardColumn, 'Done'>, MessageKey> = {
 
 type Props = {
   board: Board | null;
+  /** The visit steps the practice has on: a step that is off has no column and is skipped (MDV audit UX-05). */
+  steps: VisitSteps;
   columns: Record<BoardColumn, BoardCard[]>;
   /** Visits with a message to the patient that failed or bounced (MDV-P1-034). */
   failedVisitIds: ReadonlySet<string>;
@@ -42,8 +44,10 @@ type Props = {
   onMove: (id: string, state: BoardColumn) => void;
   /** "Register patient", shown when the role may register. */
   registerAction?: ReactNode;
-  /** Link to the clinic overview (MDV-P1-030). */
+  /** Link to the waitlist. */
   overviewAction?: ReactNode;
+  /** The board's view switch (board / doctors, MDV audit UX-05). */
+  views?: ReactNode;
   workload: ReturnType<typeof workload>;
   /** Payment for Billing cards: present when billing is on (flag billing.invoices, P4); until then a disabled placeholder. */
   paymentAction?: ReactNode;
@@ -59,14 +63,10 @@ export default function BoardPage(props: Props) {
   const { board } = props;
   return (
     // A minmax(0, 1fr) track keeps the board's width out of the page's minimum width, so only the board scrolls sideways.
-    <div className="grid grid-cols-[minmax(0,1fr)] gap-4">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="text-[13px] font-bold text-action-600">{t('nav.frontDesk')}</p>
-          <h1 className="text-[26px] font-extrabold tracking-tight">{board ? t('board.title', { day: formatDay(board.date) }) : t('board.titleOnly')}</h1>
-          {board && <p className="text-[13px] text-muted-foreground">{t('schedule.facilityTime', { zone: board.timeZone })}</p>}
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
+    <PageContainer width="fluid">
+      <PageHeader eyebrow={t('nav.frontDesk')} title={board ? t('board.title', { day: formatDay(board.date) }) : t('board.titleOnly')}
+        description={board && <span className="text-[13px]">{t('schedule.facilityTime', { zone: board.timeZone })}</span>}
+        actions={<>
           {/* Live or paused: announced when it changes, in words and an icon, never colour alone. Nothing animates. */}
           {!props.forbidden && <p role="status" className="inline-flex min-h-9 items-center"><FrontDeskTag kind={props.live} /></p>}
           <p className="inline-flex min-h-9 items-center gap-1.5 rounded-md bg-muted px-3 text-[12.5px] font-bold text-ink-700">
@@ -74,11 +74,12 @@ export default function BoardPage(props: Props) {
           </p>
           {props.overviewAction}
           {props.registerAction}
-        </div>
-      </header>
+        </>}>
+        {props.views}
+      </PageHeader>
       {props.board && props.workload.length > 0 && <Workload rows={props.workload} />}
       <Body {...props} />
-    </div>
+    </PageContainer>
   );
 }
 
@@ -110,7 +111,7 @@ function Message({ title, body, action, busy = false }: { title: string; body?: 
     <div role={busy ? 'status' : 'alert'} className="flex max-w-[560px] flex-col items-start gap-2 rounded-xl border bg-card p-6">
       <h2 className="text-lg font-extrabold">{title}</h2>
       {body && <p className="text-muted-foreground">{body}</p>}
-      {action && <Button variant="navy" className="mt-2" onClick={action.run}>{action.label}</Button>}
+      {action && <Button variant="default" className="mt-2" onClick={action.run}>{action.label}</Button>}
     </div>
   );
 }
@@ -127,7 +128,7 @@ function Body(props: Props) {
     // The board scrolls sideways on its own at tablet width and 200 % zoom; the page never does.
     <section aria-label={t('board.region')} tabIndex={0} className="relative overflow-x-auto rounded-lg pb-2">
       <div className="grid auto-cols-[minmax(200px,1fr)] grid-flow-col gap-3">
-        {boardColumns.map(c => <Column key={c} state={c} {...props} board={board} />)}
+        {visibleColumns(props.steps, props.columns).map(c => <Column key={c} state={c} {...props} board={board} />)}
       </div>
       <Rebooking cards={needsRebooking(board.cards)} timeZone={board.timeZone} />
     </section>
@@ -171,10 +172,10 @@ function Column(props: Props & { state: BoardColumn; board: Board }) {
   );
 }
 
-function Card({ card, board, now, failedVisitIds, canMove, online, confirmingId, pendingId, failure, paymentAction, consultAction, nurseStep, onStartCheckIn, onConfirmCheckIn, onCancelCheckIn, onMove }: Props & { card: BoardCard; board: Board }) {
+function Card({ card, board, steps, now, failedVisitIds, canMove, online, confirmingId, pendingId, failure, paymentAction, consultAction, nurseStep, onStartCheckIn, onConfirmCheckIn, onCancelCheckIn, onMove }: Props & { card: BoardCard; board: Board }) {
   const { t, formatTime, formatDate } = useI18n();
   const state = card.state as BoardColumn;
-  const next = nextState(state);
+  const next = nextState(state, steps);
   const busy = pendingId === card.id;
   const nameId = `board-card-${card.id}`;
   const error = failure?.id === card.id ? failure.error : null;
@@ -209,7 +210,7 @@ function Card({ card, board, now, failedVisitIds, canMove, online, confirmingId,
       ) : nurseStep && state === 'WithNurse' ? nurseStep(card) : canMove && next && state !== 'Done' ? (
         <Button variant="outline" className="mt-1 whitespace-normal" loading={busy} disabled={!online}
           onClick={() => (state === 'Booked' ? onStartCheckIn(card.id) : onMove(card.id, next))}>
-          {t(actionKeys[state])}
+          {t(state === 'CheckedIn' && next === 'ReadyForDoctor' ? 'board.action.toDoctor' : actionKeys[state])}
         </Button>
       ) : null}
       {/* shortcut: with billing.invoices off (all of P1) payment is a disabled placeholder; P4 builds payments behind that flag. */}

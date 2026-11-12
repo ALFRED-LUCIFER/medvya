@@ -24,7 +24,7 @@ public sealed record Calendar(Guid Id, CalendarKind Kind, string Name);
 /// </summary>
 public sealed class SchedulingContext(
     SchedulingDbContext db, IFacilityDirectory facilities, IStaffUsers staff, IPatientDirectory patients,
-    ICurrentTenant tenant, ICurrentUser user, IStaffAccess access, TimeProvider clock, IAuditLog audit)
+    ICurrentTenant tenant, ICurrentUser user, IStaffAccess access, TimeProvider clock, IAuditLog audit, IFeatureFlags flags)
 {
     /// <summary>
     /// Writes the use case's audit event inside its open transaction, after its changes are saved and before the commit, so the
@@ -41,6 +41,10 @@ public sealed class SchedulingContext(
     }
 
     public DateTimeOffset Now => clock.GetUtcNow();
+
+    /// <summary>The visit steps the tenant has on (MDV audit UX-05): a step that is off is skipped on the board and by the consultation.</summary>
+    public async Task<VisitSteps> StepsAsync(CancellationToken cancellationToken) =>
+        new(await flags.IsEnabledAsync(VisitStepFlags.Nurse, cancellationToken), await flags.IsEnabledAsync(VisitStepFlags.Billing, cancellationToken));
 
     public Guid TenantId => tenant.TenantId ?? throw new InvalidOperationException("No tenant context.");
 

@@ -23,7 +23,7 @@ export default function FollowUpChoice(p: Props) {
       <div role="group" aria-labelledby="plan-follow-up" className="flex flex-wrap items-center gap-2">
         <span id="plan-follow-up" className="font-bold">{t('plan.followUp.title')}</span>
         {followUpPeriods.map(period => (
-          <Button key={period} type="button" size="sm" variant={f.period === period ? 'default' : 'outline'} className="min-h-11" aria-pressed={f.period === period}
+          <Button key={period} type="button" size="sm" variant={f.period === period ? 'selected' : 'outline'} className="min-h-11" aria-pressed={f.period === period}
             disabled={p.saving || p.ended || booked} onClick={() => p.onPick(period)}>{t(`plan.followUp.${period}`)}</Button>
         ))}
       </div>

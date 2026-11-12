@@ -163,7 +163,9 @@ public sealed partial class FrontDeskService(
             ?? throw new AppointmentNotFoundException();
         await context.RequireAsync(visit.FacilityId, SchedulingAccess.CanRunQueue, cancellationToken);
         if (visit.State == to) return (await RepeatAsync(visit, action, cancellationToken), false);
-        Guard(visit.State, to);
+        // Check-in is timed (exit gate 3), so the two flag reads happen only when they can change the answer.
+        var steps = VisitSteps.Matter(visit.State) ? await context.StepsAsync(cancellationToken) : VisitSteps.All;
+        Guard(visit.State, to, steps);
         // The nurse's handoff is its own action (MDV-P2-007): of the generic moves, none may skip the intake's checks.
         if (visit.State == AppointmentState.WithNurse && to == AppointmentState.ReadyForDoctor)
             foreach (var gate in handoffGates)
@@ -186,7 +188,7 @@ public sealed partial class FrontDeskService(
             await tx.RollbackAsync(cancellationToken);
             var current = await db.Appointments.AsNoTracking().SingleAsync(a => a.Id == appointmentId, cancellationToken);
             if (current.State == to) return (await RepeatAsync(current, action, cancellationToken), false);
-            Guard(current.State, to);
+            Guard(current.State, to, steps);
             throw new VisitTransitionException("invalid_transition");
         }
         db.StatusEvents.Add(new VisitStatusEvent
@@ -266,9 +268,9 @@ public sealed partial class FrontDeskService(
         return visit;
     }
 
-    static void Guard(AppointmentState from, AppointmentState to)
+    static void Guard(AppointmentState from, AppointmentState to, VisitSteps steps)
     {
-        if (!VisitFlow.CanMove(from, to)) throw new VisitTransitionException("invalid_transition");
+        if (!VisitFlow.CanMove(from, to, steps)) throw new VisitTransitionException("invalid_transition");
     }
 
     async Task<BoardCard> CardAsync(Appointment visit, CancellationToken cancellationToken)

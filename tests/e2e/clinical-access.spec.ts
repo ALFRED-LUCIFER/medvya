@@ -15,7 +15,7 @@ const pending = () => [
   { id: 'r-2', patientId: 'p-2', patientName: 'Deepak Nair (synthetic)', mrn: '000002', requestedBy: 'u-nurse', requesterName: 'R. Priya (synthetic)', reason: 'SeeingPatientToday', requestedAt: '2026-11-06T05:00:00Z' },
 ];
 
-async function open(page: Page, { locale = 'en', path = '/settings?tab=staff', refuse = '' } = {}) {
+async function open(page: Page, { locale = 'en', path = '/settings?tab=requests', refuse = '' } = {}) {
   const state = { requests: pending(), policy: 'AllFacilityClinicians', decisions: [] as { url: string; body: string; csrf: string | undefined }[], saved: [] as string[], intake: false, intakeSaves: [] as boolean[], contextLoads: 0 };
   await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
   await page.route('**/v1/me/context', r => {
@@ -79,7 +79,7 @@ test('an owner cannot decide their own request, and is told why', async ({ page 
 });
 
 test('the owner limits record opening to each patient\'s own clinicians', async ({ page }) => {
-  const state = await open(page);
+  const state = await open(page, { path: '/settings?tab=policy' });
   const policy = page.getByRole('region', { name: 'Who opens patient records' });
   await expect(policy.getByRole('radio', { name: /Every clinician of this clinic/ })).toBeChecked();
   await policy.getByRole('radio', { name: /Only the patient's own clinicians/ }).check();
@@ -91,7 +91,7 @@ test('the owner limits record opening to each patient\'s own clinicians', async 
 // MDV-P2-007: the owner turns nurse intake on from Settings (the server allows only an owner or practice admin and audits it); the session is
 // refetched so the nurse step shows at once.
 test('the owner turns nurse intake on', async ({ page }) => {
-  const state = await open(page);
+  const state = await open(page, { path: '/settings?tab=nurse' }); // its own tab under Clinical (MDV audit UX-04)
   const toggle = page.getByRole('region', { name: 'Nurse intake' }).getByRole('switch', { name: /^Nurse intake before the doctor/ });
   await expect(toggle).toHaveAttribute('aria-checked', 'false');
   const loads = state.contextLoads;
@@ -107,7 +107,7 @@ test('the bell points the owner at the request', async ({ page }) => {
   const panel = page.getByRole('dialog', { name: 'Notifications' });
   await expect(panel).toContainText("A clinician asked for access to a patient's record");
   await panel.getByRole('link').first().click();
-  await expect(page).toHaveURL(/\/settings\?tab=staff$/);
+  await expect(page).toHaveURL(/\/settings\?tab=requests$/);
 });
 
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');

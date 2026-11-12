@@ -4,7 +4,7 @@ import type { Missing } from '../../patients/domain/directory';
 import { Link } from 'react-router';
 import { Check, Loader2, UserSearch } from 'lucide-react';
 import { useI18n, type Country } from '@medvya/i18n';
-import { Button, cn } from '@medvya/ui';
+import { Button, cn, PageContainer, PageHeader } from '@medvya/ui';
 import PatientsMessage from '../../patients/components/PatientsMessage';
 import {
   identifierInputs, steps, type DuplicateCandidate, type DuplicateDecision, type RegistrationForm, type RegistrationResult, type Step,
@@ -104,17 +104,13 @@ export default function Registration(p: Props) {
     p.quick === quick ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground');
 
   return (
-    <div className="flex max-w-[1180px] flex-col gap-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-extrabold">{t('registration.title')}</h1>
-          <p className="text-muted-foreground">{t(p.quick ? 'registration.quick.intro' : `registration.full.intro.${p.country}`)}</p>
-        </div>
-        <nav aria-label={t('registration.mode.label')} className="flex gap-1 rounded-lg bg-muted p-1">
-          <Link to={p.quickPath} aria-current={p.quick ? 'page' : undefined} className={modeLink(true)}>{t('registration.mode.quick')}</Link>
-          <Link to={p.fullPath} aria-current={p.quick ? undefined : 'page'} className={modeLink(false)}>{t('registration.mode.full')}</Link>
-        </nav>
-      </div>
+    <PageContainer width="reading" className="gap-5">
+      <PageHeader title={t('registration.title')} description={t(p.quick ? 'registration.quick.intro' : `registration.full.intro.${p.country}`)}
+        actions={
+          <nav aria-label={t('registration.mode.label')} className="flex gap-1 rounded-lg bg-muted p-1">
+            <Link to={p.quickPath} aria-current={p.quick ? 'page' : undefined} className={modeLink(true)}>{t('registration.mode.quick')}</Link>
+            <Link to={p.fullPath} aria-current={p.quick ? undefined : 'page'} className={modeLink(false)}>{t('registration.mode.full')}</Link>
+          </nav>} />
 
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
         <form noValidate onSubmit={e => { e.preventDefault(); if (atReview) p.onSubmit(); else p.onContinue(); }} className="flex min-w-0 flex-col gap-5">
@@ -188,6 +184,6 @@ export default function Registration(p: Props) {
 
         <RegistrationSidePanel country={p.country} values={p.values} ageInstead={p.ageInstead} today={today} />
       </div>
-    </div>
+    </PageContainer>
   );
 }

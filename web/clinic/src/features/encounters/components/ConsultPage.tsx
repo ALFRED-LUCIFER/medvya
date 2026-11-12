@@ -18,7 +18,8 @@ type Props = {
 
 /**
  * The consultation (MDV-P2-001): the identity banner, then the work of the visit. Leaving keeps the consultation open (the doctor chose
- * to); ending it moves the visit on to Billing on the board. Notes and orders arrive here with MDV-P2-009 and MDV-P2-015.
+ * to); ending it moves the visit on the board (to Billing, or Done when billing is off). Ending is a secondary action under the note, beside Sign
+ * (MDV audit UX-03): the note is the work, the page's one primary is Sign. Notes and orders arrive here with MDV-P2-009 and MDV-P2-015.
  */
 export default function ConsultPage(p: Props) {
   const { t, formatTime } = useI18n();
@@ -31,21 +32,24 @@ export default function ConsultPage(p: Props) {
     <div className="flex flex-col gap-4">
       <IdentityBanner banner={p.banner} />
       <div className="flex flex-wrap items-center gap-3">
-        {ended
-          ? <p role="status" className="font-bold">{t('consult.ended', { time: formatTime(new Date(encounter.endedAt!), p.banner.timeZone) })}</p>
-          : <Button className="min-h-11" loading={p.ending} onClick={p.onEnd}>{t('consult.end')}</Button>}
+        {ended && <p role="status" className="font-bold">{t('consult.ended', { time: formatTime(new Date(encounter.endedAt!), p.banner.timeZone) })}</p>}
         {p.canReconcile && <Link to={`/consult/${encounter.id}/problems`} className={buttonVariants({ variant: 'outline', className: 'min-h-11' })}>{t('consult.codeProblems')}</Link>}
         {p.canReconcile && <Link to={`/consult/${encounter.id}/medicines`} className={buttonVariants({ variant: 'outline', className: 'min-h-11' })}>{t('consult.reconcileMedicines')}</Link>}
         <Link to={p.boardPath} className={buttonVariants({ variant: 'outline', className: 'min-h-11' })}>{t(ended ? 'consult.backToBoard' : 'consult.leave')}</Link>
         <div role="group" aria-label={t('studio.view.label')} className="ms-auto flex gap-1">
           {(['page', 'steps'] as const).map(v => (
-            <Button key={v} variant={p.view === v ? 'default' : 'outline'} className="min-h-11" aria-pressed={p.view === v} onClick={() => p.onView(v)}>{t(`studio.view.${v}`)}</Button>
+            <Button key={v} variant={p.view === v ? 'selected' : 'outline'} className="min-h-11" aria-pressed={p.view === v} onClick={() => p.onView(v)}>{t(`studio.view.${v}`)}</Button>
           ))}
         </div>
       </div>
       {!ended && <p className="text-sm text-muted-foreground">{t('consult.leaveNote')}</p>}
-      {p.endFailed && <p role="alert" className="font-bold text-danger-700">{t('consult.endFailed')}</p>}
       {p.children}
+      {!ended && (
+        <div className="flex flex-wrap items-center gap-3 border-t pt-4">
+          <Button variant="outline" className="min-h-11" loading={p.ending} onClick={p.onEnd}>{t('consult.end')}</Button>
+        </div>
+      )}
+      {p.endFailed && <p role="alert" className="font-bold text-danger-700">{t('consult.endFailed')}</p>}
     </div>
   );
 }

@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { CalendarCheck, FilePen, Siren, CircleAlert, CircleCheck, CircleHelp, ClipboardCheck, DoorOpen, ReceiptText, Syringe, UserCheck, type LucideIcon } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, FrontDeskTag } from '@medvya/ui';
+import { Button, buttonVariants, FrontDeskTag, PageContainer, PageHeader } from '@medvya/ui';
 import type { BoardCard, BoardColumn, LiveStatus } from '../../front-desk/domain/board';
 import { canConsult } from '../../encounters/domain/encounter';
 import type { AllergyState } from '../../patient360/domain/chart';
@@ -37,29 +37,24 @@ type Props = {
 export default function DoctorTodayPage(p: Props) {
   const { t, formatDay } = useI18n();
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)] gap-4">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="text-[13px] font-bold text-action-600">{t('nav.today')}</p>
-          <h1 className="text-[26px] font-extrabold tracking-tight">{p.day ? t('today.title', { day: formatDay(p.day) }) : t('nav.today')}</h1>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
+    <PageContainer width="fluid">
+      <PageHeader eyebrow={t('nav.today')} title={p.day ? t('today.title', { day: formatDay(p.day) }) : t('nav.today')}
+        actions={<>
           {!p.forbidden && <p role="status" className="inline-flex min-h-9 items-center"><FrontDeskTag kind={p.live} /></p>}
           <div role="group" aria-label={t('today.scope')} className="flex gap-1">
             {(['mine', 'clinic'] as const).map(s => <ScopeButton key={s} scope={s} active={p.scope === s} onScope={p.onScope} />)}
           </div>
-        </div>
-      </header>
+        </>} />
       {p.escalationsFailed && <p role="alert" className="text-sm font-semibold text-danger-700">{t('today.escalation.error')}</p>}
       <Body {...p} />
       <PendingNotes {...p} />
-    </div>
+    </PageContainer>
   );
 }
 
 function ScopeButton({ scope, active, onScope }: { scope: Scope; active: boolean; onScope: (s: Scope) => void }) {
   const { t } = useI18n();
-  return <Button variant={active ? 'navy' : 'outline'} className="min-h-11" aria-pressed={active} onClick={() => onScope(scope)}>{t(`today.scope.${scope}`)}</Button>;
+  return <Button variant={active ? 'selected' : 'outline'} className="min-h-11" aria-pressed={active} onClick={() => onScope(scope)}>{t(`today.scope.${scope}`)}</Button>;
 }
 
 function Message({ title, body, action, busy = false }: { title: string; body?: string; action?: { label: string; run: () => void }; busy?: boolean }) {
@@ -67,7 +62,7 @@ function Message({ title, body, action, busy = false }: { title: string; body?: 
     <div role={busy ? 'status' : 'alert'} className="flex max-w-[560px] flex-col items-start gap-2 rounded-xl border bg-card p-6">
       <h2 className="text-lg font-extrabold">{title}</h2>
       {body && <p className="text-muted-foreground">{body}</p>}
-      {action && <Button variant="navy" className="mt-2" onClick={action.run}>{action.label}</Button>}
+      {action && <Button variant="default" className="mt-2" onClick={action.run}>{action.label}</Button>}
     </div>
   );
 }

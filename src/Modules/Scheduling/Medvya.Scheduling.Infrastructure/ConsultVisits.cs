@@ -38,8 +38,9 @@ public sealed class ConsultVisits(SchedulingDbContext db, SchedulingContext cont
         await using var shared = await SharedAsync(transaction, cancellationToken);
         var visit = await shared.Appointments.AsNoTracking().SingleOrDefaultAsync(a => a.Id == appointmentId, cancellationToken) ?? throw new AppointmentNotFoundException();
         // The desk may already have moved it on (or back to the queue): the consultation still ends, the visit stays where it is.
+        // With billing off the visit is done when the consultation ends (MDV audit UX-05).
         return visit.State == AppointmentState.InConsult
-            ? await MoveAsync(shared, visit, AppointmentState.Billing, visit.Room, context.Now, cancellationToken)
+            ? await MoveAsync(shared, visit, VisitFlow.Next(visit.State, await context.StepsAsync(cancellationToken))!.Value, visit.Room, context.Now, cancellationToken)
             : View(visit);
     }
 

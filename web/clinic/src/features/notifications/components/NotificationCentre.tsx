@@ -21,7 +21,7 @@ type Props = {
 };
 
 /** Where each kind sends the reader (the board marks the visit whose message failed). */
-const targets: Record<NotificationKind, string> = { MessageFailed: '/front-desk', LicenceExpiring: '/settings?tab=doctors', AccessReviewDue: '/settings?tab=staff', AccessRequested: '/settings?tab=staff', RegistrationExpiring: '/settings?tab=profile' };
+const targets: Record<NotificationKind, string> = { MessageFailed: '/front-desk', LicenceExpiring: '/settings?tab=doctors', AccessReviewDue: '/settings?tab=review', AccessRequested: '/settings?tab=requests', RegistrationExpiring: '/settings?tab=profile' };
 
 /** The words of one item; a licence says how many days are left, or that it has expired. */
 const words = (t: ReturnType<typeof useI18n>['t'], n: StaffNotification) =>

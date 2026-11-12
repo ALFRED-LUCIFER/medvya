@@ -157,9 +157,11 @@ for (const locale of ['en', 'ar'])
     await page.setViewportSize({ width: 820, height: 1180 });
     await mockNurse(page, locale, { checkedIn: true });
     await page.goto('/nurse');
-    await expect(page.getByRole('main').getByRole('button')).toHaveCount(1);
+    const take = page.getByRole('main').getByRole('button', { name: locale === 'ar' ? /^.+: Meera Iyer/ : /^Take to intake/ });
+    await expect(take).toHaveCount(1);
     if (locale === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
-    expect((await page.getByRole('main').getByRole('button').boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    // Every button, the table's sort headers included, is a 44 px target.
+    for (const b of await page.getByRole('main').getByRole('button').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(44);
     await page.addScriptTag({ path: axePath });
     const violations = await page.evaluate(async () =>
       (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations

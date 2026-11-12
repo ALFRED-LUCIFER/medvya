@@ -155,7 +155,7 @@ public sealed class WalkInTests(PostgresFixture sql) : IClassFixture<PostgresFix
         Assert.NotEqual(first.Id, second.Id);
 
         // A finished visit does not count: the patient may come back the same day.
-        foreach (var state in new[] { AppointmentState.WithNurse, AppointmentState.ReadyForDoctor, AppointmentState.InConsult, AppointmentState.Billing, AppointmentState.Done })
+        foreach (var state in new[] { AppointmentState.ReadyForDoctor, AppointmentState.InConsult, AppointmentState.Done })
             await h.FrontDesk(h.Reception).MoveAsync(first.Id, new MoveVisit { State = state });
         await h.Booking(h.Reception).CancelAsync(second.Id, new CancelAppointment { Reason = CancelReason.BookedInError });
         Assert.True((await h.Booking(h.Reception).WalkInAsync(For(h.Doctor))).WalkIn);

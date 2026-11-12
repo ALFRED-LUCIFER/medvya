@@ -2,8 +2,10 @@ import type { FormEventHandler, ReactNode } from 'react';
 import { Controller, type UseFormReturn } from 'react-hook-form';
 import { ArrowLeftRight, Clock, Stethoscope, Users } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, FrontDeskTag, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
-import { minutesSince, type LiveStatus, type MoveError } from '../domain/board';
+import { Button, FrontDeskTag, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, PageContainer, PageHeader } from '@medvya/ui';
+import type { LiveStatus, MoveError } from '../domain/board';
+import type { QueueRow, QueueTableView } from '../domain/queueTable';
+import QueueTable from './QueueTable';
 import { countsInOrder, reassignReasons, type ClinicOverview, type DoctorLoad, type ReassignInput } from '../domain/overview';
 
 type Props = {
@@ -25,28 +27,26 @@ type Props = {
   onStartMove: (id: string) => void;
   onCancelMove: () => void;
   onConfirmMove: FormEventHandler<HTMLFormElement>;
-  /** Link back to the board. */
-  boardAction?: ReactNode;
+  /** The board's view switch (board / doctors). */
+  views?: ReactNode;
+  /** Sort state of the waiting-room table (useQueueTableController); its rows are the overview's waiting visits. */
+  waiting: QueueTableView;
 };
 
 /** D-04 Clinic overview: every doctor working today (visits per state, delay, next patients) and the shared waiting room. */
 export default function ClinicOverviewPage(props: Props) {
   const { t } = useI18n();
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)] gap-4">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="text-[13px] font-bold text-action-600">{t('nav.frontDesk')}</p>
-          <h1 className="text-[26px] font-extrabold tracking-tight">{t('overview.title')}</h1>
-          {props.overview && <p className="text-[13px] text-muted-foreground">{t('schedule.facilityTime', { zone: props.overview.timeZone })}</p>}
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
+    <PageContainer width="fluid">
+      <PageHeader eyebrow={t('nav.frontDesk')} title={t('board.titleOnly')}
+        description={props.overview && <span className="text-[13px]">{t('schedule.facilityTime', { zone: props.overview.timeZone })}</span>}
+        actions={<>
           {!props.forbidden && <p role="status" className="inline-flex min-h-9 items-center"><FrontDeskTag kind={props.live} /></p>}
-          {props.boardAction}
-        </div>
-      </header>
+        </>}>
+        {props.views}
+      </PageHeader>
       <Body {...props} />
-    </div>
+    </PageContainer>
   );
 }
 
@@ -55,7 +55,7 @@ function Message({ title, body, action, busy = false }: { title: string; body?: 
     <div role={busy ? 'status' : 'alert'} className="flex max-w-[560px] flex-col items-start gap-2 rounded-xl border bg-card p-6">
       <h2 className="text-lg font-extrabold">{title}</h2>
       {body && <p className="text-muted-foreground">{body}</p>}
-      {action && <Button variant="navy" className="mt-2" onClick={action.run}>{action.label}</Button>}
+      {action && <Button variant="default" className="mt-2" onClick={action.run}>{action.label}</Button>}
     </div>
   );
 }
@@ -78,14 +78,15 @@ function Body(props: Props) {
           {overview.doctors.map(d => <li key={d.calendarId}><Doctor doctor={d} timeZone={overview.timeZone} /></li>)}
         </ul>
       </section>
-      <section aria-labelledby="overview-waiting" className="flex flex-col gap-2">
+      {/* The table is the named region (same name as the heading), so the wrapper is not a second one. */}
+      <div className="flex flex-col gap-2">
         <h2 id="overview-waiting" className="flex items-center gap-1.5 text-lg font-extrabold"><Users aria-hidden className="size-5" />{t('overview.waitingRoom', { count: overview.waiting.length })}</h2>
         {overview.waiting.length === 0 ? <p className="text-muted-foreground">{t('overview.waitingEmpty')}</p> : (
-          <ul className="flex flex-col divide-y rounded-lg border bg-card">
-            {overview.waiting.map(w => <Waiting key={w.id} visit={w} now={now} {...props} overview={overview} />)}
-          </ul>
+          <QueueTable {...props.waiting} label={t('overview.waitingRoom', { count: overview.waiting.length })} timeZone={overview.timeZone} now={now}
+            action={r => <MoveButton visit={r} {...props} overview={overview} />}
+            detail={r => <MoveForm visit={r} {...props} overview={overview} />} />
         )}
-      </section>
+      </div>
     </>
   );
 }
@@ -121,31 +122,30 @@ function Doctor({ doctor, timeZone, mine = false }: { doctor: DoctorLoad; timeZo
   );
 }
 
-function Waiting({ visit, now, overview, canMove, online, form, movingId, moving, failure, onStartMove, onCancelMove, onConfirmMove }: Props & { visit: ClinicOverview['waiting'][number]; now: number; overview: ClinicOverview }) {
+type Row = Props & { visit: QueueRow; overview: ClinicOverview };
+/** Every doctor but the one the visit waits for. */
+const others = (overview: ClinicOverview, visit: QueueRow) => {
+  const current = overview.waiting.find(w => w.id === visit.id)?.calendarId;
+  return overview.doctors.filter(d => d.calendarId !== current);
+};
+
+function MoveButton({ visit, overview, canMove, online, movingId, onStartMove }: Row) {
   const { t } = useI18n();
-  const doctor = overview.doctors.find(d => d.calendarId === visit.calendarId)?.name ?? '';
-  const others = overview.doctors.filter(d => d.calendarId !== visit.calendarId);
-  const nameId = `waiting-${visit.id}`;
+  if (!canMove || others(overview, visit).length === 0 || movingId === visit.id) return null;
+  return (
+    <Button variant="outline" className="min-h-11" disabled={!online} aria-label={t('overview.moveFor', { name: visit.patientName || t('board.unknownPatient') })} onClick={() => onStartMove(visit.id)}>
+      <ArrowLeftRight aria-hidden />{t('overview.move')}
+    </Button>
+  );
+}
+
+function MoveForm({ visit, overview, canMove, online, form, movingId, moving, failure, onCancelMove, onConfirmMove }: Row) {
+  const { t } = useI18n();
   const error = failure?.id === visit.id ? failure.error : null;
   const { errors } = form.formState;
+  if (!(canMove && movingId === visit.id) && !error) return null;
   return (
-    <li className="flex flex-col gap-2 p-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="flex flex-col">
-          <span id={nameId} className="font-bold">{visit.patientName || t('board.unknownPatient')}</span>
-          <span className="text-sm text-muted-foreground">
-            {[visit.token && t('board.token', { token: visit.token }), t('overview.with', { doctor }), t(`board.column.${visit.state as 'CheckedIn'}`)].filter(Boolean).join(' · ')}
-          </span>
-        </span>
-        <span className="flex flex-wrap items-center gap-2">
-          <FrontDeskTag kind="waiting" text={t('board.waiting', { minutes: minutesSince(visit.since, now) })} />
-          {canMove && others.length > 0 && movingId !== visit.id && (
-            <Button variant="outline" className="min-h-11" disabled={!online} aria-describedby={nameId} onClick={() => onStartMove(visit.id)}>
-              <ArrowLeftRight aria-hidden />{t('overview.move')}
-            </Button>
-          )}
-        </span>
-      </div>
+    <>
       {canMove && movingId === visit.id && (
         <form noValidate onSubmit={onConfirmMove} aria-label={t('overview.moveTitle', { name: visit.patientName })} className="flex flex-wrap items-end gap-3 rounded-md border border-action-600 p-3">
           <div className="flex min-w-52 flex-col gap-1.5">
@@ -155,7 +155,7 @@ function Waiting({ visit, now, overview, canMove, online, form, movingId, moving
                 <SelectTrigger id={`move-to-${visit.id}`} className="h-11 w-full" aria-invalid={!!errors.calendarId}>
                   <SelectValue placeholder={t('overview.chooseDoctor')} />
                 </SelectTrigger>
-                <SelectContent>{others.map(d => <SelectItem key={d.calendarId} value={d.calendarId}>{d.name}</SelectItem>)}</SelectContent>
+                <SelectContent>{others(overview, visit).map(d => <SelectItem key={d.calendarId} value={d.calendarId}>{d.name}</SelectItem>)}</SelectContent>
               </Select>
             )} />
           </div>
@@ -174,6 +174,6 @@ function Waiting({ visit, now, overview, canMove, online, form, movingId, moving
         </form>
       )}
       {error && <p role="alert" className="text-sm font-bold text-danger-700">{t(`board.error.${error}`)}</p>}
-    </li>
+    </>
   );
 }

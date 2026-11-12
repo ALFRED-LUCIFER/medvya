@@ -26,3 +26,13 @@ public static class SchedulingAccess
     /// <summary>Change templates and resources: practice configuration (owner doctor, practice admin, hospital IT).</summary>
     public static readonly Need CanConfigure = new(Capability.StaffRolesIntegrations, Access.Config);
 }
+
+/// <summary>
+/// The tenant flags that switch the optional visit steps on (MDV audit UX-05). The keys are the ones the Encounters module
+/// (IntakeFlag) and the clinic navigation already use.
+/// </summary>
+public static class VisitStepFlags
+{
+    public const string Nurse = "clinical.nurse-intake";
+    public const string Billing = "billing.invoices";
+}

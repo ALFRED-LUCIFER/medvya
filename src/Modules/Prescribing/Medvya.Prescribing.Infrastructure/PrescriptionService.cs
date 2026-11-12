@@ -36,7 +36,7 @@ public sealed class PrescribingOptions
 public sealed class PrescriptionService(
     PrescribingDbContext db, IEncounterDirectory encounters, IReconciliationStops stops, IPrescribingChart chart, IClinicalAccess clinical, IStaffAccess staff,
     ICurrentTenant tenant, ICurrentUser user, IAuditLog audit, TimeProvider clock, IPatientDirectory patients, IFacilityDirectory facilities,
-    IOptions<PrescribingOptions> options, IPatientContacts contacts, ISecureLinkMessages links, IDocumentStore files) : IPrescriptions
+    IOptions<PrescribingOptions> options, IPatientContacts contacts, ISecureLinkMessages links, IDocumentStore files, IPrescribedMedicines charted) : IPrescriptions
 {
     public const string ReadAction = "rx.read", AddAction = "rx.add", UpdateAction = "rx.update", IncludeAction = "rx.include",
         CheckAction = "rx.check", OverrideAction = "rx.override", AuthorisationAction = "rx.authorisation", AuthoriseAction = "rx.authorise", CancelAction = "rx.cancel",
@@ -180,8 +180,12 @@ public sealed class PrescriptionService(
         };
         try
         {
+            // The prescribed lines go on the chart's medicines with the version (MDV-1087), replacing what an earlier version of this visit put there.
+            var prescribed = (await db.PrescriptionItems.AsNoTracking().Where(i => i.EncounterId == encounter.Id && i.Included).OrderBy(i => i.CreatedAt).ThenBy(i => i.Id).ToListAsync(cancellationToken))
+                .Select(Charted).ToList();
             await SaveAsync(encounter, AuthoriseAction, row.Id, $"version:{row.VersionNo};lines:{lines.Count};rules:{checks.RuleSetVersion};reauth:ok",
-                () => db.AuthorisedPrescriptions.Add(row), cancellationToken);
+                () => db.AuthorisedPrescriptions.Add(row), cancellationToken,
+                tx => charted.ReplaceAsync(encounter.PatientId, encounter.FacilityId, encounter.Id, row.Id, prescribed, Me, now, tx, cancellationToken));
         }
         // Another authorisation took this version number at the same moment: nothing of this one was written; the answer says what stands.
         catch (DbUpdateException e) when (e.InnerException is Npgsql.PostgresException { SqlState: Npgsql.PostgresErrorCodes.UniqueViolation })
@@ -206,7 +210,9 @@ public sealed class PrescriptionService(
         var row = new PrescriptionCancellation { Id = Guid.CreateVersion7(), TenantId = TenantId, PrescriptionId = latest.Id, Reason = reason!, CancelledBy = Me, CancelledAt = now };
         try
         {
-            await SaveAsync(encounter, CancelAction, latest.Id, $"version:{latest.VersionNo};reauth:ok", () => db.PrescriptionCancellations.Add(row), cancellationToken);
+            // A cancelled prescription's lines leave the chart's medicines (MDV-1087).
+            await SaveAsync(encounter, CancelAction, latest.Id, $"version:{latest.VersionNo};reauth:ok", () => db.PrescriptionCancellations.Add(row), cancellationToken,
+                tx => charted.ReplaceAsync(encounter.PatientId, encounter.FacilityId, encounter.Id, null, [], Me, now, tx, cancellationToken));
         }
         // Cancelled in another tab at the same moment: that cancellation stands.
         catch (DbUpdateException e) when (e.InnerException is Npgsql.PostgresException { SqlState: Npgsql.PostgresErrorCodes.UniqueViolation })
@@ -512,7 +518,7 @@ public sealed class PrescriptionService(
         var lines = items.Select(i => new CheckedMedicine(i.Id, i.Medicine, i.FormularyItemId is { } f ? atcOf.GetValueOrDefault(f) : null, i.Strength,
             new SigParts(i.Dose, i.DoseUnit, i.Route, i.Frequency, i.Timing, i.DurationDays, i.Quantity, i.Instructions), false, i.FormularyItemId is null)).ToList();
         // A chart medicine is checked only when its name names one formulary generic with one ATC code; otherwise it is reported as not checked.
-        var onChart = facts.ActiveMedicines.Where(m => !stopped.Contains(m.Name))
+        var onChart = facts.ActiveMedicines.Where(m => !stopped.Contains(m.Name) && m.EncounterId != encounter.Id)
             .Select(m => new CheckedMedicine(m.Id, m.Name, ChartMatch.Atc(m.Name, generics), null, null, true, false)).ToList();
         var state = facts.AllergyState switch
         {
@@ -546,11 +552,13 @@ public sealed class PrescriptionService(
         if (encounter.Status != EncounterStatus.Active) throw new PrescriptionConflictException("encounter_ended");
     }
 
-    async Task SaveAsync(EncounterView encounter, string action, Guid resourceId, string? detail, Action change, CancellationToken cancellationToken)
+    async Task SaveAsync(EncounterView encounter, string action, Guid resourceId, string? detail, Action change, CancellationToken cancellationToken,
+        Func<System.Data.Common.DbTransaction, Task>? alongside = null)
     {
         await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
         change();
         await db.SaveChangesAsync(cancellationToken);
+        if (alongside is not null) await alongside(tx.GetDbTransaction());
         await audit.WriteAsync(Event(action, encounter, resourceId, detail), tx.GetDbTransaction(), cancellationToken);
         await tx.CommitAsync(cancellationToken);
     }
@@ -574,6 +582,11 @@ public sealed class PrescriptionService(
                 RxSource.ChartReconciliation, null, c.Name, null, null, false, true, null, null, null, null, null, null, null, null, c.Reason, ChangeSig(c))),
         ];
     }
+
+    /// <summary>A prescribed line as the chart keeps it: name with strength, and the English instruction without quantity or free text (the chart is not translated).</summary>
+    static PrescribedMedicine Charted(PrescriptionItem i) => new(
+        (i.Strength is { } st && i.Medicine.Length + st.Length < MaxMedicine ? $"{i.Medicine} {st}" : i.Medicine),
+        Blank(Sig.Render(new SigParts(i.Dose, i.DoseUnit, i.Route, i.Frequency, i.Timing, i.DurationDays, null, null), "en")));
 
     static Dictionary<string, string> ChangeSig(ChangedMedicine c) => Sig.Languages.ToDictionary(l => l, l => c.Kind == MedicationDecisionKind.Taper
         ? Sig.Taper(l, c.Steps!.Select(s => (s.Dose, s.Days)), c.EndsOn!.Value)

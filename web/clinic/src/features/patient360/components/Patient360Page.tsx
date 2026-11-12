@@ -11,6 +11,8 @@ import { bannerAlerts, bannerAllergies, chartSections, otherVitals, pathOf, prov
 type Props = {
   data: Patient360 | null; loading: boolean; notFound: boolean; refusal: ClinicalRefusal | null; failed: boolean;
   backPath: string; consultPath: (encounterId: string) => string;
+  /** A role that prints prescriptions also gets a prescribed medicine's printed prescription. */
+  printRx?: boolean;
   reason: AccessReason; asking: boolean; askFailed: boolean; onReason: (r: AccessReason) => void; onRequestAccess: () => void;
   section: ChartSection; onSection: (s: ChartSection) => void;
   /** Slots the route fills from other features, so each can change without touching this layout. */
@@ -119,6 +121,7 @@ export default function Patient360Page(p: Props) {
                       <Item key={i} source={m.source}>
                         <strong>{m.name}</strong>
                         <span>{[m.dose && ltr(m.dose), t(`patient360.medicineState.${m.state}`)].filter(Boolean).join(' · ')}{m.stoppedAt && <>{' · '}<DateText iso={m.stoppedAt} zone={timeZone} /></>}</span>
+                        {m.encounterId && <PrescribedLinks encounterId={m.encounterId} consultPath={p.consultPath} printRx={!!p.printRx} />}
                       </Item>))}</List>}
               </Card>
             </div>
@@ -161,6 +164,18 @@ const List = ({ children }: { children: ReactNode }) => <ul className="flex flex
 const Empty = ({ text }: { text: string }) => <p className="text-muted-foreground">{text}</p>;
 
 /** A chart fact with its source tag: no value is shown without one. */
+/** Where a prescribed medicine came from (MDV-1087): its visit and, for a role that prints prescriptions, the printed prescription. */
+export function PrescribedLinks({ encounterId, consultPath, printRx }: { encounterId: string; consultPath: (encounterId: string) => string; printRx: boolean }) {
+  const { t } = useI18n();
+  const link = buttonVariants({ variant: 'link', className: 'min-h-11 px-0' });
+  return (
+    <span className="flex flex-wrap gap-x-4">
+      <Link to={consultPath(encounterId)} className={link}>{t('medicine.prescribed.visit')}</Link>
+      {printRx && <Link to={`${consultPath(encounterId)}/rx/print`} className={link}>{t('medicine.prescribed.print')}</Link>}
+    </span>
+  );
+}
+
 function Item({ source, children }: { source: keyof typeof provenanceOf; children: ReactNode }) {
   return (
     <li className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">

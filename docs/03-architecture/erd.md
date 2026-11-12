@@ -99,6 +99,7 @@ flowchart LR
   audit -.->|"FacilityId"| tenancy
   encounters -.->|"ChangedBy, ClosedBy, CreatedBy, ..."| identity
   encounters -.->|"MergedFromPatientId, PatientId"| patients
+  encounters -.->|"PrescriptionId"| prescribing
   encounters -.->|"AppointmentId"| scheduling
   encounters -.->|"FacilityId"| tenancy
   identity -.->|"MembershipId"| tenancy
@@ -1367,9 +1368,11 @@ erDiagram
   MedicationStatements {
     guid Id PK
     guid AppointmentId "id of scheduling.Appointments"
+    guid EncounterId "id of encounters.Encounters"
     guid FacilityId "id of tenancy.Facilities"
     guid MergedFromPatientId "id of patients.Patients"
     guid PatientId "id of patients.Patients"
+    guid PrescriptionId "id of prescribing.AuthorisedPrescriptions"
     guid RecordedBy "id of identity.Users"
   }
   MilestoneResponses {
@@ -1429,6 +1432,9 @@ erDiagram
     guid Id PK "other module"
   }
   patients_Patients {
+    guid Id PK "other module"
+  }
+  prescribing_AuthorisedPrescriptions {
     guid Id PK "other module"
   }
   scheduling_Appointments {
@@ -1493,9 +1499,11 @@ erDiagram
   patients_Patients |o..o{ MedicationReconciliations : "MergedFromPatientId"
   patients_Patients ||..o{ MedicationReconciliations : "PatientId"
   scheduling_Appointments |o..o{ MedicationStatements : "AppointmentId"
+  Encounters |o..o{ MedicationStatements : "EncounterId, no FK"
   tenancy_Facilities |o..o{ MedicationStatements : "FacilityId"
   patients_Patients |o..o{ MedicationStatements : "MergedFromPatientId"
   patients_Patients ||..o{ MedicationStatements : "PatientId"
+  prescribing_AuthorisedPrescriptions |o..o{ MedicationStatements : "PrescriptionId"
   identity_Users |o..o{ MedicationStatements : "RecordedBy"
   tenancy_Facilities ||..o{ MilestoneResponses : "FacilityId"
   patients_Patients |o..o{ MilestoneResponses : "MergedFromPatientId"
@@ -1545,7 +1553,7 @@ erDiagram
 | `IntakeEscalations` | 9 | Id | tenant-scoped |
 | `MedicationDecisions` | 15 | Id | tenant-scoped |
 | `MedicationReconciliations` | 7 | Id | tenant-scoped |
-| `MedicationStatements` | 17 | Id | tenant-scoped |
+| `MedicationStatements` | 19 | Id | tenant-scoped |
 | `MilestoneResponses` | 11 | Id | tenant-scoped |
 | `Observations` | 16 | Id | tenant-scoped |
 | `OutboxEvents` | 7 | Id | tenant-scoped |
@@ -1835,13 +1843,15 @@ erDiagram
 |---|---|---|---|
 | `Id` | guid |  |  |
 | `AppointmentId` | guid | yes | id of `scheduling.Appointments` |
-| `Dose` | character varying(100) |  |  |
+| `Dose` | character varying(200) |  |  |
+| `EncounterId` | guid | yes | id of `encounters.Encounters` |
 | `FacilityId` | guid | yes | id of `tenancy.Facilities` |
 | `Frequency` | character varying(50) |  |  |
 | `MergedFromPatientId` | guid | yes | id of `patients.Patients` |
 | `Name` | character varying(200) |  |  |
 | `NeedsClarification` | bool |  |  |
 | `PatientId` | guid |  | id of `patients.Patients` |
+| `PrescriptionId` | guid | yes | id of `prescribing.AuthorisedPrescriptions` |
 | `RecordedAt` | timestamptz |  |  |
 | `RecordedBy` | guid | yes | id of `identity.Users` |
 | `ReviewedAt` | timestamptz | yes |  |

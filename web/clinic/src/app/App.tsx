@@ -193,7 +193,7 @@ export default function App({ locale, onLocaleChange }: Props) {
           {['Read', 'Limited', 'Full', 'Sign'].includes(active.capabilities.Patient360Chart ?? 'None') &&
             <>
               <Route path="/patients/:patientId" element={<Patient360Route backPath={searchPath ?? '/'} canEditHistory={active.capabilities.VitalsAllergiesEntry === 'Full'} canManagePregnancy={active.capabilities.ClinicalNotes === 'Sign'} canOrder={active.capabilities.PrescriptionsOrders === 'Sign'} online={online} userId={shell.session?.user.id ?? ''} />} />
-              <Route path="/patients/:patientId/timeline" element={<TimelineRoute />} />
+              <Route path="/patients/:patientId/timeline" element={<TimelineRoute printRx={active.capabilities.PrescriptionsOrders === 'Sign'} />} />
             </>}
           {/* Documents (MDV-P2-006): clinicians, and the front desk (upload and list only; the server refuses it any file). */}
           {(['Read', 'Limited', 'Full', 'Sign'].includes(active.capabilities.Patient360Chart ?? 'None') || deskDocuments) &&

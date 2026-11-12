@@ -302,6 +302,49 @@ public sealed class RxAuthorisationTests(PostgresFixture sql, AzuriteFixture blo
         await Assert.ThrowsAsync<PostgresException>(() => new NpgsqlCommand("""DELETE FROM prescribing."PrescriptionCancellations" """, conn).ExecuteNonQueryAsync());
     }
 
+    // SAFETY mutation check (MDV-1087): drop the ReplaceAsync call in AuthoriseAsync and the chart, timeline and next-visit facts stay empty; drop it in
+    // CancelAsync and the cancelled lines stay active; drop the m.EncounterId != encounter.Id filter in ChecksAsync and the same visit's checks gain a duplicate.
+    [Fact]
+    public async Task AuthorisedLinesAreTheChartsMedicinesLinkedToTheVisitAndACancellationStopsThem()
+    {
+        // Clopidogrel with omeprazole is an interaction: on the chart the pair must not be found a second time against this visit's own lines.
+        var line = await PrescribeAsync("Clopidogrel", Twice);
+        await PrescribeAsync("Omeprazole", new("1", "capsule", "oral", "OD", null, 5, 5, null));
+        var rx = h.Get<IPrescriptions>(h.Doctor);
+        var before = (await rx.CheckAsync(encounter))!.Alerts.Select(a => a.Key).ToList();
+        using (await AuthoriseAsync(h.Doctor)) { }
+        var v1 = Assert.Single(await AuthorisedAsync()).Id;
+
+        async Task<List<MedicineView>> ChartAsync() => [.. (await h.Get<IPatientChart>(h.Doctor).GetAsync(h.Patient, h.Facility)).Medicines.Where(m => m.Name.StartsWith("Clopidogrel", StringComparison.Ordinal))];
+        Assert.Contains("interaction:clopidogrel_omeprazole", string.Join(' ', before), StringComparison.Ordinal);
+        var medicine = Assert.Single(await ChartAsync());
+        Assert.Equal("Clopidogrel 75 mg", medicine.Name); // with its strength
+        Assert.Equal(("Take 1 tablet by mouth twice a day after food for 5 days.", MedicationState.Active, ChartSource.ClinicianVerified, (Guid?)encounter),
+            (medicine.Dose, medicine.State, medicine.Source, medicine.EncounterId));
+        await using (var db = sql.Encounters(h.Tenant)) Assert.All(await db.MedicationStatements.ToListAsync(), m => Assert.Equal(v1, m.PrescriptionId));
+
+        using (var timeline = await Client(h.Doctor).GetAsync(U($"/v1/patients/{h.Patient}/timeline?kinds=Medicine")))
+        {
+            var entry = Assert.Single((await Json(timeline)).GetProperty("entries").EnumerateArray(), e => e.GetProperty("title").GetString() == medicine.Name);
+            Assert.Equal(("Medicine", medicine.Name, encounter), (entry.GetProperty("kind").GetString(), entry.GetProperty("title").GetString(), entry.GetProperty("encounterId").GetGuid()));
+        }
+        // What the next visit's checks compare against; this visit's own lines are not checked against themselves, nor reconciled as a medicine the patient came in on.
+        Assert.Equal([(medicine.Name, (Guid?)encounter), ("Omeprazole 20 mg", encounter)], (await h.Get<IPrescribingChart>(h.Doctor).FactsAsync(h.Patient)).ActiveMedicines.Select(m => (m.Name, m.EncounterId)));
+        Assert.Equal(before, (await rx.CheckAsync(encounter))!.Alerts.Select(a => a.Key));
+        Assert.Empty((await h.Get<IMedicationReconciliation>(h.Doctor).GetAsync(encounter))!.Rows);
+
+        // A changed draft authorised again: the old version's line is stopped, the new one is active.
+        await rx.UpdateAsync(line, Twice with { Dose = "2" });
+        using (await AuthoriseAsync(h.Doctor)) { }
+        var chart = await ChartAsync();
+        Assert.Equal([(MedicationState.Active, "Take 2 tablets by mouth twice a day after food for 5 days."), (MedicationState.Stopped, "Take 1 tablet by mouth twice a day after food for 5 days.")],
+            chart.Select(m => (m.State, m.Dose)));
+
+        using (var ok = await CancelAsync(h.Doctor, new { reason = "Wrong medicine (synthetic)" })) Assert.Equal(HttpStatusCode.OK, ok.StatusCode);
+        Assert.All(await ChartAsync(), m => Assert.Equal(MedicationState.Stopped, m.State));
+        Assert.Empty((await h.Get<IPrescribingChart>(h.Doctor).FactsAsync(h.Patient)).ActiveMedicines);
+    }
+
     /// <summary>MDV-P2-043 AC1: a change and a taper decided in the reconciliation are lines of the prescription, frozen at authorisation and printed in words with the reason.</summary>
     [Fact]
     public async Task AChangeAndATaperFromTheReconciliationPrintOnThePrescription()

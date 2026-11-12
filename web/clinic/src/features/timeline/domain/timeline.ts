@@ -12,6 +12,8 @@ export type TimelineEntry = {
   id: string; kind: TimelineKind; at: string;
   /** What it is, translated by the screen; `title` and `detail` are the data that go with it (a medicine's name and dose, a result's value). */
   code: TimelineCode; title: string | null; detail: string | null; author: string | null; source: ChartSource;
+  /** The visit a prescribed medicine comes from (MDV-1087). */
+  encounterId?: string | null;
 };
 export type TimelinePage = { entries: TimelineEntry[]; next: string | null; timeZone: string };
 export type TrendsAnswer = { trends: Trend[]; timeZone: string };

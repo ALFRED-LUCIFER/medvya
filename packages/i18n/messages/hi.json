@@ -2587,6 +2587,8 @@
   "patient360.verification.PatientReported": "मरीज़ द्वारा बताया गया",
   "patient360.verification.Provisional": "अस्थायी",
   "patient360.medicines": "दवाइयाँ",
+  "medicine.prescribed.visit": "इस विज़िट में लिखी गई",
+  "medicine.prescribed.print": "छपा हुआ पर्चा",
   "patient360.medicines.empty": "कोई दवा दर्ज नहीं है।",
   "patient360.medicineState.Active": "चालू",
   "patient360.medicineState.Stopped": "बंद",

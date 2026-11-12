@@ -74,7 +74,7 @@ function Chart({ patientId, backPath, canEditHistory, canManagePregnancy, canOrd
   // The timeline and documents are fetched only once the chart has opened, so a refused chart asks the server nothing more.
   return (
     <div className="flex flex-col gap-4">
-      <Patient360Page {...chart} {...useChartSectionController(userId)} backPath={backPath} consultPath={consultPath}
+      <Patient360Page {...chart} {...useChartSectionController(userId)} backPath={backPath} consultPath={consultPath} printRx={canOrder}
         addMedicine={canOrder && d && <AddMedicinePanel {...add} patient={{ ...d.patient, allergies: { state: d.chart.allergyState, allergies: d.chart.allergies } }} />}
         history={chart.data && <HistorySections {...history} />}
         stageModule={modules.length > 0 || (pregnant && pregnancy.shown) ? <div className="flex flex-col gap-4">
@@ -82,7 +82,7 @@ function Chart({ patientId, backPath, canEditHistory, canManagePregnancy, canOrd
           {modules.map((M, i) => <M key={i} patientId={patientId} canRecord={canEditHistory} online={online} openConsultPath={openConsultPath} />)}
         </div> : undefined}
         carePlan={d && <ChronicCare patientId={patientId} openEncounterId={d.chart.openEncounterId} canDecide={canOrder} />}
-        timeline={chart.data && <Timeline patientId={patientId} />}
+        timeline={chart.data && <Timeline patientId={patientId} printRx={canOrder} />}
         documents={chart.data && <Documents patientId={patientId} />} />
       {!pregnant && pregnancyCard}
       {!referrals.hidden && !referrals.loading && !referrals.failed && <OpenReferrals open={referrals.open} />}
@@ -93,5 +93,6 @@ function Chart({ patientId, backPath, canEditHistory, canManagePregnancy, canOrd
 /** Targets, care gaps and goals (MDV-P2-038); a gap's action goes on the open consultation, and with none open it says so. */
 const ChronicCare = ({ patientId, openEncounterId, canDecide }: { patientId: string; openEncounterId: string | null; canDecide: boolean }) =>
   <ChronicCareCards {...useChronicCareController(patientId, openEncounterId)} canDecide={canDecide} />;
-const Timeline = ({ patientId }: { patientId: string }) => <TimelinePreview {...useTimelinePreviewController(patientId)} timelinePath={`/patients/${patientId}/timeline`} />;
+const Timeline = ({ patientId, printRx }: { patientId: string; printRx: boolean }) =>
+  <TimelinePreview {...useTimelinePreviewController(patientId)} timelinePath={`/patients/${patientId}/timeline`} consultPath={id => `/consult/${id}`} printRx={printRx} />;
 const Documents = ({ patientId }: { patientId: string }) => <DocumentsSummary {...useDocumentListController(patientId)} documentsPath={`/patients/${patientId}/docs`} />;

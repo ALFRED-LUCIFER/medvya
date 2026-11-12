@@ -66,3 +66,16 @@ describe('an ended session or a lost membership (F-05)', () => {
     expect(await sessionReadsAfter(404, 'query')).toBe(1);
   });
 });
+
+describe('practice settings (MDV audit UX-12)', () => {
+  it('are read once when a Settings tab is opened again within the minute', async () => {
+    const client = createQueryClient();
+    const queryFn = vi.fn().mockResolvedValue([]);
+    await client.fetchQuery({ queryKey: ['settings', 'locations'], queryFn });
+    await client.fetchQuery({ queryKey: ['settings', 'locations'], queryFn });
+    await client.fetchQuery({ queryKey: ['patients', 'p-1'], queryFn });
+    await client.fetchQuery({ queryKey: ['patients', 'p-1'], queryFn });
+    expect(queryFn).toHaveBeenCalledTimes(3); // settings once; anything else is read each time
+    client.clear();
+  });
+});

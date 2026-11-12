@@ -6,6 +6,7 @@ using Medvya.Encounters.Domain;
 using Medvya.Encounters.Infrastructure.Persistence;
 using Medvya.Identity.Application;
 using Medvya.Patients.Application;
+using Medvya.Scheduling.Application;
 using Medvya.Tenancy.Application;
 using Medvya.Tenancy.Domain;
 using Microsoft.EntityFrameworkCore;
@@ -205,11 +206,19 @@ public sealed class ConsultNoteService(
     public async Task<(IReadOnlyList<PendingNote> Notes, bool More)> PendingAsync(Guid facilityId, CancellationToken cancellationToken = default)
     {
         var me = user.UserId ?? throw new InvalidOperationException("No user.");
+        // The facility's day started at its local midnight: a consultation still open from before then was never ended (MDV audit UX-11).
+        var zone = TimeZoneInfo.FindSystemTimeZoneById((await facilities.FindAsync(facilityId, cancellationToken) ?? throw new InvalidOperationException("Session facility not in this tenant.")).TimeZone);
+        var dayStart = new DateTimeOffset(TimeZoneInfo.ConvertTimeToUtc(ScheduleRules.LocalDate(clock.GetUtcNow(), zone).ToDateTime(TimeOnly.MinValue), zone), TimeSpan.Zero);
         var open = await db.Encounters.AsNoTracking()
-            .Where(e => e.LeadClinicianId == me && e.FacilityId == facilityId && !db.ConsultNotes.Any(n => n.EncounterId == e.Id && n.Status == NoteStatus.Signed))
+            .Where(e => e.LeadClinicianId == me && e.FacilityId == facilityId
+                && (!db.ConsultNotes.Any(n => n.EncounterId == e.Id && n.Status == NoteStatus.Signed) || (e.Status == EncounterStatus.Active && e.StartedAt < dayStart)))
             // shortcut: the oldest 50 only, flagged as "more"; page the list if a pilot doctor routinely carries more than 50 unsigned notes.
             .OrderBy(e => e.StartedAt).Take(IConsultNotes.MaxPending + 1)
-            .Select(e => new { Encounter = e, Drafted = db.ConsultNotes.Any(n => n.EncounterId == e.Id) }).ToListAsync(cancellationToken);
+            .Select(e => new
+            {
+                Encounter = e, Drafted = db.ConsultNotes.Any(n => n.EncounterId == e.Id),
+                Signed = db.ConsultNotes.Any(n => n.EncounterId == e.Id && n.Status == NoteStatus.Signed),
+            }).ToListAsync(cancellationToken);
         List<PendingNote> pending = [];
         foreach (var row in open.Take(IConsultNotes.MaxPending))
         {
@@ -223,7 +232,8 @@ public sealed class ConsultNoteService(
                 continue;
             }
             await audit.WriteAsync(Event(PendingAction, row.Encounter, null), cancellationToken);
-            pending.Add(new(row.Encounter.Id, row.Encounter.PatientId, row.Encounter.StartedAt, row.Drafted));
+            pending.Add(new(row.Encounter.Id, row.Encounter.PatientId, row.Encounter.StartedAt, row.Drafted, row.Signed,
+                row.Encounter.Status == EncounterStatus.Active && row.Encounter.StartedAt < dayStart));
         }
         return (pending, open.Count > IConsultNotes.MaxPending);
     }

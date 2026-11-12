@@ -1,16 +1,19 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { hoursProblems, sessionProblem, templateBody, toDayHours, toHoursRows, toSessionRows, type HoursRow, type SessionRow, type Weekday } from '../domain/settings';
+import { hoursProblems, sessionProblem, sessionsOutsideHours, templateBody, toDayHours, toHoursRows, toSessionRows, type HoursRow, type SessionRow, type Weekday } from '../domain/settings';
 import { fetchHours, fetchTemplates, saveHours, saveTemplate } from '../services/settingsApi';
 
 /**
- * Opening hours of a location: one row per weekday with an open toggle. They inform; bookable time comes from the schedules.
+ * Opening hours of a location: one row per weekday with an open toggle. They inform; bookable time comes from the schedules, so sessions outside
+ * the hours are warned about.
  * An edit belongs to the data it started from (`base`), so changing location or refetching drops a stale edit without an effect.
  */
 export function useOpeningHoursController(locationId: string) {
   const queryClient = useQueryClient();
   const key = ['settings', 'hours', locationId];
   const hours = useQuery({ queryKey: key, queryFn: () => fetchHours(locationId), enabled: !!locationId });
+  // The schedules below read the same query (one request): saved sessions are checked against the saved hours (MDV audit UX-13).
+  const calendars = useQuery({ queryKey: ['settings', 'templates', locationId], queryFn: () => fetchTemplates(locationId), enabled: !!locationId });
   const [edit, setEdit] = useState<{ base: unknown; rows: HoursRow[] } | null>(null);
   const edited = edit && edit.base === hours.data ? edit.rows : null;
   const rows = edited ?? toHoursRows(hours.data ?? []);
@@ -24,6 +27,8 @@ export function useOpeningHoursController(locationId: string) {
   return {
     rows,
     problems,
+    sessionsOutside: hours.data && calendars.data ? sessionsOutsideHours(hours.data, calendars.data) : [],
+    closedAllWeek: hours.data?.length === 0,
     loading: hours.isPending && !!locationId,
     loadFailed: hours.isError,
     dirty: edited !== null,

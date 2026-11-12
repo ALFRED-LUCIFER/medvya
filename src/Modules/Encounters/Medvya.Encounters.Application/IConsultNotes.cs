@@ -69,8 +69,11 @@ public sealed record VerifiedVital(ObservationCode Code, decimal Value, string U
 /// <summary>A signed note of the same patient, offered as snippets (MDV-P2-009). Version 1 only: an addendum is not a note of its own.</summary>
 public sealed record PreviousNote(Guid EncounterId, DateTimeOffset SignedAt, string? SignedByName, string TemplateKey, IReadOnlyDictionary<string, string> Sections);
 
-/// <summary>An encounter the signed-in doctor led whose note is not signed (MDV-P2-002, Today's pending notes). Ids and times only.</summary>
-public sealed record PendingNote(Guid EncounterId, Guid PatientId, DateTimeOffset StartedAt, bool Drafted);
+/// <summary>
+/// An encounter the signed-in doctor led whose note is not signed (MDV-P2-002, Today's pending notes), or whose consultation is still open
+/// after the facility's day it started on ended (MDV audit UX-11: signed but never ended). Ids, times and flags only.
+/// </summary>
+public sealed record PendingNote(Guid EncounterId, Guid PatientId, DateTimeOffset StartedAt, bool Drafted, bool NoteSigned, bool OpenPastDay);
 
 /// <summary>
 /// Consult notes (MDV-P2-009). Clinical access to the encounter's patient at its facility for Patient 360 at Full (role, care relationship,
@@ -128,8 +131,8 @@ public interface IConsultNotes
     public const int MaxPrevious = 5;
 
     /// <summary>
-    /// Today's pending notes (MDV-P2-002): encounters at this facility the signed-in clinician led whose note is not signed, oldest first, at
-    /// most <see cref="MaxPending"/>. Only patients the clinician may still treat; one audit event per encounter answered.
+    /// Today's pending notes (MDV-P2-002): encounters at this facility the signed-in clinician led whose note is not signed, or that are still
+    /// open from an earlier facility day (MDV audit UX-11), oldest first, at most <see cref="MaxPending"/>. Only patients the clinician may still treat; one audit event per encounter answered.
     /// </summary>
     /// <returns>The notes, and whether more were left out by the cap.</returns>
     Task<(IReadOnlyList<PendingNote> Notes, bool More)> PendingAsync(Guid facilityId, CancellationToken cancellationToken = default);

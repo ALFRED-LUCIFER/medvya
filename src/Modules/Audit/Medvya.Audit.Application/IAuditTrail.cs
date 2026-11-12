@@ -7,6 +7,9 @@ public sealed record AuditQuery(Guid? ActorUserId, Guid? PatientId, string? Acti
 {
     /// <summary>Only events at this facility (for staff limited to one facility). Events written before the facility was recorded are never matched.</summary>
     public Guid? FacilityId { get; init; }
+
+    /// <summary>Only events about a patient's record (MDV audit UX-13): settings and other page views do not push them down the list.</summary>
+    public bool PatientRecordsOnly { get; init; }
 }
 
 /// <summary>Newest first. <see cref="Actions"/> are the distinct action codes in the same date range, for the filter.</summary>

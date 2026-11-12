@@ -19,7 +19,8 @@ const codeOf = (e: FieldErrors<DoctorForm>[keyof DoctorForm]) => (e ? fieldProbl
 export function useDoctorsController(defaultFacilityId: string) {
   const queryClient = useQueryClient();
   const list = useQuery({ queryKey: ['settings', 'doctors'], queryFn: fetchDoctors });
-  const refresh = () => void queryClient.invalidateQueries({ queryKey: ['settings', 'doctors'] });
+  // A new or changed doctor also changes the bookable calendars the Hours tab reads (cached for a minute, MDV audit UX-12).
+  const refresh = () => void queryClient.invalidateQueries({ queryKey: ['settings'] });
 
   // ---- Add doctor wizard ----
   const [adding, setAdding] = useState(false);

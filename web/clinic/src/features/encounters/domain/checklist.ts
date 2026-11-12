@@ -7,7 +7,10 @@ import { isBlank, structuredIds, type NoteSections, type NoteTemplate, type Reco
 // so the locked button is not the only control. Identity, allergies and medicines are checked here only (the server has no gate for them).
 export const checklistIds = ['identity', 'allergies', 'medicines', 'consent', 'history', 'ai', 'diagnoses', 'plan'] as const;
 export type ChecklistId = (typeof checklistIds)[number];
-/** todo counts against signing; warn is said in words but does not lock (allergies not recorded: there is no way to record them in the consultation yet). */
+/**
+ * todo counts against signing; warn is said in words but does not lock (allergies not recorded: there is no way to record them in the consultation yet;
+ * an assessment with no diagnosis on the problem list: a visit without a diagnosis is allowed, but it is never shown as "Done", MDV audit UX-11).
+ */
 export type ChecklistState = 'done' | 'todo' | 'warn';
 export type ChecklistItem = { id: ChecklistId; state: ChecklistState };
 
@@ -21,6 +24,8 @@ export type ChecklistInput = {
   /** Section ids holding an AI draft or suggestion not yet accepted or dismissed (none before MDV-P3). */
   undecidedAi: string[];
   sections: NoteSections;
+  /** The problem list holds a diagnosis (added at this visit, or an active one); null when the list could not be read. */
+  diagnosisRecorded: boolean | null;
 };
 
 // The SOAP sections every template has (NoteTemplates.Soap): history is the chief complaint and subjective, diagnoses the assessment.
@@ -40,7 +45,10 @@ export function signChecklist(i: ChecklistInput): ChecklistItem[] {
     diagnoses: reviewed(i.sections, i.undecidedAi, 'assessment', ['assessment']),
     plan: reviewed(i.sections, i.undecidedAi, 'plan', ['plan']),
   };
-  return checklistIds.map(id => ({ id, state: done[id] ? 'done' : id === 'allergies' ? 'warn' : 'todo' }));
+  return checklistIds.map(id => ({
+    id,
+    state: id === 'diagnoses' && done.diagnoses && !i.diagnosisRecorded ? 'warn' : done[id] ? 'done' : id === 'allergies' ? 'warn' : 'todo',
+  }));
 }
 
 export const remainingItems = (items: ChecklistItem[]) => items.filter(x => x.state === 'todo').length;

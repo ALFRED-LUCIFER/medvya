@@ -1,6 +1,7 @@
 import { refusalOf, type ClinicalRefusal } from '../../clinical-access/domain/clinicalAccess';
 import type { SexAtBirth } from '../../patients/domain/directory';
 import type { Allergy, AllergyState } from '../../patient360/domain/chart';
+import { dateIn } from '../../audit-log/domain/auditLog';
 
 // Encounters (MDV-P2-001): what the server answers. The server decides every access; nothing here grants anything.
 export type EncounterStatus = 'Active' | 'Ended';
@@ -24,6 +25,10 @@ export type EncounterBanner = {
 export type ConsultView = 'page' | 'steps';
 /** The one page's side panel: Assist (hidden when the patient declined recording), a chart summary, and the review-and-sign checklist. */
 export type StudioPanel = 'assist' | 'chart' | 'check';
+
+/** Still open after the facility's day it started on (MDV audit UX-11): nobody pressed End. Days are counted in the facility's time zone. */
+export const openPastDay = (e: Pick<Encounter, 'status' | 'startedAt'>, timeZone: string, now = new Date()) =>
+  e.status === 'Active' && dateIn(new Date(e.startedAt), timeZone) < dateIn(now, timeZone);
 
 /** Visits a doctor can open a consultation for (the server's VisitFlow.CanStartConsult). */
 export const consultStates = ['CheckedIn', 'WithNurse', 'ReadyForDoctor', 'InConsult'] as const;

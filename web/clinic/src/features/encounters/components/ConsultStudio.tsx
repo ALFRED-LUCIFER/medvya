@@ -44,6 +44,9 @@ export default function ConsultStudio(p: Props) {
   const field = (id: string) => template.sections.filter(s => s.id === id).map(section);
   const title = (id: StudioSection) => id === 'template' ? t(templateNameKey(template.key)) : t(`studio.section.${id}` as MessageKey);
   const done = p.checklist.filter(c => c.state !== 'todo').length;
+  // Signed (MDV audit UX-11): only what was signed. Vitals is the draft's prefill (what was inserted is in Examination), and no section is "To do".
+  const shown: readonly StudioSection[] = p.readOnly ? studioSections.filter(s => s !== 'vitals') : studioSections;
+  const numbered = (id: StudioSection) => t('studio.numbered', { n: shown.indexOf(id) + 1, title: title(id) });
   return (
     <section aria-labelledby="note-title" className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -52,32 +55,32 @@ export default function ConsultStudio(p: Props) {
       </div>
       <div className="flex flex-col gap-2">
         <RecordingConsentChoice value={p.consent} readOnly={p.readOnly} onChange={p.onConsent} />
-        {p.consent && <p className="text-sm font-bold">{t(`studio.consent.${p.consent}`)}</p>}
-        <p className="text-sm text-muted-foreground">{t('noteEditor.manualBanner')}</p>
+        {!p.readOnly && p.consent && <p className="text-sm font-bold">{t(`studio.consent.${p.consent}`)}</p>}
+        {!p.readOnly && <p className="text-sm text-muted-foreground">{t('noteEditor.manualBanner')}</p>}
       </div>
-      <SectionBar ticks={ticks} title={title} />
+      <SectionBar sections={shown} ticks={p.readOnly ? null : ticks} title={title} />
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="flex min-w-0 flex-col gap-4">
-          <Numbered id="vitals" title={title}>
+          {!p.readOnly && <Numbered id="vitals" title={numbered}>
             {p.assist && p.assist.vitals.length > 0
               ? <>
                 <ul className="list-disc ps-5 text-sm">{p.assist.vitals.map(line => <li key={line}>{line}</li>)}</ul>
                 <div><Button variant="outline" className="min-h-11" onClick={p.assist.onInsertVitals}>{t('noteAssist.vitals.insert')}</Button></div>
               </>
               : <p className="text-sm text-muted-foreground">{t('noteAssist.vitals.empty')}</p>}
-          </Numbered>
-          <Numbered id="history" title={title}>{field('chiefComplaint')}{field('subjective')}{field('reviewOfSystems')}</Numbered>
-          <Numbered id="template" title={title}>
+          </Numbered>}
+          <Numbered id="history" title={numbered}>{field('chiefComplaint')}{field('subjective')}{field('reviewOfSystems')}</Numbered>
+          <Numbered id="template" title={numbered}>
             <TemplatePicker templateKey={p.templateKey} choices={p.choices} readOnly={p.readOnly} pendingSwitch={p.pendingSwitch} suggested={p.suggested}
               onRequestSwitch={p.onRequestSwitch} onCancelSwitch={p.onCancelSwitch} onConfirmSwitch={p.onConfirmSwitch} />
             {templateOwnSections(template).length === 0
               ? <p className="text-sm text-muted-foreground">{t('studio.template.none')}</p>
               : templateOwnSections(template).map(section)}
           </Numbered>
-          <Numbered id="exam" title={title}>{field('examination')}{field('objective')}</Numbered>
-          <Numbered id="assessment" title={title}>{field('assessment')}</Numbered>
-          <Numbered id="plan" title={title}>{field('plan')}{p.plan}</Numbered>
-          <Numbered id="sign" title={title}>
+          <Numbered id="exam" title={numbered}>{field('examination')}{field('objective')}</Numbered>
+          <Numbered id="assessment" title={numbered}>{field('assessment')}</Numbered>
+          <Numbered id="plan" title={numbered}>{field('plan')}{p.plan}</Numbered>
+          <Numbered id="sign" title={numbered}>
             <SignedBanner signed={p.readOnly} versionNo={p.signature?.versionNo ?? 1} />
             {p.signature && <SignedLine signature={p.signature} timeZone={p.timeZone} />}
             {!p.readOnly && !p.canSign && <p className="text-sm text-muted-foreground">{t('noteSign.onlyDoctor')}</p>}
@@ -103,7 +106,7 @@ export default function ConsultStudio(p: Props) {
 }
 
 /** A nav landmark that stays at the top; each link moves focus to its section's heading. Finished is an icon and words, never colour alone. */
-function SectionBar({ ticks, title }: { ticks: Record<StudioSection, boolean>; title: (id: StudioSection) => string }) {
+function SectionBar({ sections, ticks, title }: { sections: readonly StudioSection[]; ticks: Record<StudioSection, boolean> | null; title: (id: StudioSection) => string }) {
   const { t } = useI18n();
   const go = (e: MouseEvent<HTMLAnchorElement>, id: StudioSection) => {
     e.preventDefault();
@@ -112,12 +115,12 @@ function SectionBar({ ticks, title }: { ticks: Record<StudioSection, boolean>; t
   return (
     <nav aria-label={t('studio.nav')} className="sticky top-0 z-10 -mx-1 bg-background px-1 py-1">
       <ol className="flex gap-1.5 overflow-x-auto pb-1 lg:flex-wrap lg:overflow-visible">
-        {studioSections.map((id, i) => (
+        {sections.map((id, i) => (
           <li key={id} className="shrink-0">
             <a href={`#${heading(id)}`} onClick={e => go(e, id)} className="relative inline-flex min-h-11 items-center gap-1.5 rounded-full border bg-card px-3 text-sm font-bold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
-              {ticks[id] ? <CircleCheck aria-hidden className="size-4 text-success-700" /> : <Circle aria-hidden className="size-4 text-muted-foreground" />}
+              {ticks && (ticks[id] ? <CircleCheck aria-hidden className="size-4 text-success-700" /> : <Circle aria-hidden className="size-4 text-muted-foreground" />)}
               {t('studio.numbered', { n: i + 1, title: title(id) })}
-              <span className="sr-only">{t(ticks[id] ? 'signChecklist.state.done' : 'signChecklist.state.todo')}</span>
+              {ticks && <span className="sr-only">{t(ticks[id] ? 'signChecklist.state.done' : 'signChecklist.state.todo')}</span>}
             </a>
           </li>
         ))}
@@ -127,11 +130,10 @@ function SectionBar({ ticks, title }: { ticks: Record<StudioSection, boolean>; t
 }
 
 function Numbered({ id, title, children }: { id: StudioSection; title: (id: StudioSection) => string; children: ReactNode }) {
-  const { t } = useI18n();
   return (
     <div className="flex flex-col gap-3 rounded-xl border bg-card p-4">
       <h3 id={heading(id)} tabIndex={-1} className="scroll-mt-20 font-extrabold focus:outline-none focus-visible:outline-2 focus-visible:outline-ring">
-        {t('studio.numbered', { n: studioSections.indexOf(id) + 1, title: title(id) })}
+        {title(id)}
       </h3>
       {children}
     </div>

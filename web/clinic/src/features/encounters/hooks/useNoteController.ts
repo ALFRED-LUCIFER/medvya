@@ -5,6 +5,7 @@ import { useForm, useWatch } from 'react-hook-form';
 import { useI18n } from '@medvya/i18n';
 import { ApiError } from '../../schedule/services/scheduleApi';
 import { fetchReconciliation } from '../../reconciliation/services/reconciliationApi';
+import { fetchProblems } from '../../problems/services/problemsApi';
 import { remainingItems, sectionTicks, signChecklist } from '../domain/checklist';
 import type { EncounterBanner } from '../domain/encounter';
 import { autosaveDelayMs, defaultTargetSection, insertAt, inTemplateOrder, phraseKey, vitalNameKey, type PreviousNote, type VerifiedVital, missingRequired, noteFormSchema, signFailure, switchChoices, switchTemplate, type NoteForm, type NoteSections, type NoteTemplate, type RecordingConsent, type SavePhase, type SignFailure } from '../domain/note';
@@ -43,6 +44,8 @@ export function useNoteController(encounterId: string, canSign: boolean, timeZon
   // MDV-P2-044: the recording consent is part of the note and saved with it; the checklist reads it with the visit's reconciliation.
   const [consent, setConsent] = useState<RecordingConsent | null>(null);
   const reconciliation = useQuery({ queryKey: ['reconciliation', encounterId], queryFn: () => fetchReconciliation(encounterId), retry: false, enabled: isDraft && canSign });
+  // The visit's problem list (MDV audit UX-11): "Diagnoses reviewed" is done only once a diagnosis is on it. Same key as the problems page.
+  const problems = useQuery({ queryKey: ['problems', encounterId], queryFn: () => fetchProblems(encounterId), retry: false, enabled: isDraft && canSign });
   const templateOf = (key: string | null) => catalog.data?.templates.find(t => t.key === key);
   const draft = (sections: NoteSections, key = templateKey, recordingConsent = consent) => {
     const to = templateOf(key);
@@ -82,6 +85,7 @@ export function useNoteController(encounterId: string, canSign: boolean, timeZon
   const checklist = isDraft && canSign ? signChecklist({
     identityShown: !!banner, allergyState: banner?.allergies.state ?? null,
     reconciliation: reconciliation.data ?? null, recordingConsent: consent, undecidedAi: note.data?.undecidedAi ?? [], sections,
+    diagnosisRecorded: problems.data ? problems.data.rows.some(r => r.addedHere || r.status === 'Active') : null,
   }) : [];
   const remaining = remainingItems(checklist);
   const requestSign = () => {

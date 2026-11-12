@@ -118,6 +118,9 @@ journey('J2', {
     await note.getByRole('button', { name: 'Sign note' }).click();
     await page.getByRole('dialog').getByRole('button', { name: /^Sign as / }).click();
     await expect(note.getByRole('status').filter({ hasText: 'SIGNED v1' })).toBeVisible();
+    // Read-only content only (MDV audit UX-11): no section left "To do", the consent in words instead of radios.
+    await expect(note.getByRole('navigation', { name: 'Note sections' })).not.toContainText('To do');
+    await expect(note.getByRole('radio')).toHaveCount(0);
   },
   // E-05: the prescription and the orders are approved separately, each by its own action and neither by signing the note (MDV-P2-017, MDV-P2-018).
   // Authorising asks for the step-up first; the gates themselves are proven on PostgreSQL in RxAuthorisationTests.

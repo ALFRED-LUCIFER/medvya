@@ -68,7 +68,7 @@ public static class NoteEndpoints
         if (current.FacilityId is not { } facilityId) return Results.Problem(statusCode: StatusCodes.Status403Forbidden, title: "No facility context");
         var (pending, more) = await service.PendingAsync(facilityId, ct);
         var names = await patients.SummariesAsync([.. pending.Select(p => p.PatientId).Distinct()], ct);
-        return Results.Ok(new { more, items = pending.Select(p => new { p.EncounterId, p.StartedAt, p.Drafted, patientName = names.GetValueOrDefault(p.PatientId)?.FullName }) });
+        return Results.Ok(new { more, items = pending.Select(p => new { p.EncounterId, p.StartedAt, p.Drafted, p.NoteSigned, p.OpenPastDay, patientName = names.GetValueOrDefault(p.PatientId)?.FullName }) });
     }
 
     static async ValueTask<object?> MapErrors(EndpointFilterInvocationContext context, EndpointFilterDelegate next)

@@ -38,3 +38,29 @@ test('a failed schedule save says so and shows no Saved', async ({ page }) => {
   await expect(page.getByRole('alert').filter({ hasText: 'Nothing was changed' })).toBeVisible();
   await expect(page.getByRole('status').filter({ hasText: 'Saved.' })).toHaveCount(0);
 });
+
+async function openHours(page: Page, hours: () => unknown[]) {
+  await page.route('**/v1/me/context', r => r.fulfill({ json: admin }));
+  await page.route('**/v1/settings/locations', r => r.fulfill({ json: [{ id: 'f-1', name: 'Adyar (synthetic)', address: null, timeZone: 'Asia/Kolkata' }] }));
+  await page.route('**/v1/settings/locations/*/hours', r => r.fulfill({ json: hours() }));
+  await page.route('**/v1/schedule/templates*', r => r.fulfill({ json: [template] }));
+  await page.goto('/settings?tab=hours');
+  await expect(page.getByRole('heading', { name: 'Bookable schedules' })).toBeVisible();
+}
+
+// MDV audit UX-13: opening hours that contradict the doctors' bookable sessions are warned about, not silently kept.
+test('a location closed all week while a doctor has sessions says so and names the sessions', async ({ page }) => {
+  await openHours(page, () => []);
+  const warning = page.getByRole('status').filter({ hasText: 'closed every day' });
+  await expect(warning).toContainText('This location is closed every day, but doctors have bookable sessions. Set the opening hours.');
+  await expect(warning).toContainText('Dr. Arjun Rao (synthetic) (Monday)');
+});
+
+test('sessions inside the opening hours raise no warning; a session past closing time does', async ({ page }) => {
+  let closes = '17:00:00';
+  await openHours(page, () => [{ weekday: 'Monday', opens: '09:00:00', closes }]);
+  await expect(page.getByText('fall outside the opening hours')).toHaveCount(0);
+  closes = '12:00:00';
+  await page.reload();
+  await expect(page.getByRole('status').filter({ hasText: 'fall outside the opening hours' })).toContainText('Dr. Arjun Rao (synthetic) (Monday)');
+});

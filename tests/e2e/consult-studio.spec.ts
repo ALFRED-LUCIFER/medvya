@@ -123,7 +123,11 @@ test('verified vitals go into Objective from the Vitals section only on request;
   await note(page).getByRole('button', { name: 'Sign note' }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Sign as Dr Asha Raman (synthetic)' }).click();
   await expect(note(page).getByRole('status').filter({ hasText: 'SIGNED v1' })).toBeFocused();
-  await expect(bar(page).getByRole('link', { name: '7 · Review and sign Done' })).toBeVisible();
+  // Signed (MDV audit UX-11): only what was signed. No "To do" or "Done" on the sections, no Vitals prefill, the consent in words, not radios.
+  await expect(bar(page).getByRole('link')).toHaveText(['1 · History', '2 · General OPD', '3 · Examination', '4 · Assessment', '5 · Plan', '6 · Review and sign']);
+  await expect(note(page).getByRole('radio')).toHaveCount(0);
+  await expect(note(page)).toContainText('Recording consent for this visit: Patient declined: I type the note');
+  await expect(note(page)).not.toContainText('No recording for this visit');
 });
 
 test('phone: one column, the panel below the sections, no sideways scrolling', async ({ page }) => {

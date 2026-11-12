@@ -5423,6 +5423,7 @@ export interface paths {
                     To?: string;
                     After?: string;
                     Limit?: number | string;
+                    PatientRecords?: boolean;
                 };
                 header?: never;
                 path?: never;
@@ -5463,6 +5464,7 @@ export interface paths {
                     To?: string;
                     After?: string;
                     Limit?: number | string;
+                    PatientRecords?: boolean;
                 };
                 header?: never;
                 path: {
@@ -9018,6 +9020,7 @@ export interface components {
             from: null | string;
             /** Format: date-time */
             to: null | string;
+            patientRecords?: null | boolean;
         };
         FacilityBody: {
             /** Format: uuid */

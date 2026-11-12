@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { groupOf, settingsGroups, settingsTabs, certificateProblem, closureSchema, locationProblem, hoursProblems, logoProblem, profileSchema, sessionProblem, settingsError, templateBody, toDayHours, toHoursRows, type CalendarTemplate } from './settings';
+import { groupOf, settingsGroups, settingsTabs, certificateProblem, closureSchema, locationProblem, hoursProblems, logoProblem, profileSchema, sessionProblem, sessionsOutsideHours, settingsError, templateBody, toDayHours, toHoursRows, type CalendarTemplate } from './settings';
 
 describe('practice settings rules', () => {
   it('shows the week from Monday and sends only the open days', () => {
@@ -85,5 +85,25 @@ describe('settings groups (MDV audit UX-04)', () => {
   });
   it('gives nurse intake its own place under Clinical, and access requests under Security', () => {
     expect([groupOf('nurse'), groupOf('requests'), groupOf('staff')]).toEqual(['clinical', 'security', 'people']);
+  });
+});
+
+describe('sessionsOutsideHours (MDV audit UX-13)', () => {
+  const calendar = (name: string, hours: CalendarTemplate['hours']): CalendarTemplate =>
+    ({ calendarId: name, calendarKind: 'Doctor', name, slotMinutes: 20, hours, breaks: [], visitLengths: [], appointmentsOutsideHours: [] });
+  const s = (weekday: 'Monday' | 'Tuesday', start: string, end: string) => ({ weekday, start, end, room: null });
+  const open = [{ weekday: 'Monday' as const, opens: '09:00:00', closes: '17:00:00' }];
+
+  it('lists a session on a closed day or past the opening hours, once per doctor and day', () => {
+    const rao = calendar('Dr. Rao (synthetic)', [s('Monday', '08:00:00', '10:00:00'), s('Monday', '16:00:00', '18:00:00'), s('Tuesday', '09:00:00', '12:00:00')]);
+    expect(sessionsOutsideHours(open, [rao])).toEqual([{ name: 'Dr. Rao (synthetic)', weekday: 'Monday' }, { name: 'Dr. Rao (synthetic)', weekday: 'Tuesday' }]);
+  });
+
+  it('is empty when every session sits inside the hours, edges included', () => {
+    expect(sessionsOutsideHours(open, [calendar('Dr. Menon (synthetic)', [s('Monday', '09:00:00', '17:00:00')])])).toEqual([]);
+  });
+
+  it('a location closed all week makes every session outside', () => {
+    expect(sessionsOutsideHours([], [calendar('Dr. Menon (synthetic)', [s('Monday', '09:00:00', '12:00:00')])])).toHaveLength(1);
   });
 });

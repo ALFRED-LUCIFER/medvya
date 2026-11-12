@@ -40,7 +40,7 @@ export default function NoteEditor(p: NoteEditorProps) {
           onRequestSwitch={p.onRequestSwitch} onCancelSwitch={p.onCancelSwitch} onConfirmSwitch={p.onConfirmSwitch} />
       </div>
       <RecordingConsentChoice value={p.consent} readOnly={p.readOnly} onChange={p.onConsent} />
-      <p className="text-sm text-muted-foreground">{t('noteEditor.manualBanner')}</p>
+      {!p.readOnly && <p className="text-sm text-muted-foreground">{t('noteEditor.manualBanner')}</p>}
       <SignedBanner signed={p.readOnly} versionNo={p.signature?.versionNo ?? 1} />
       {p.signature && <SignedLine signature={p.signature} timeZone={p.timeZone} />}
       {!p.readOnly && <SaveState phase={p.phase} reloading={p.reloading} onRetry={p.onRetry} onReapply={p.onReapply} />}

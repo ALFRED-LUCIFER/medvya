@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { catalogs, loadCatalog } from '@medvya/i18n';
-import { actionKey, all, defaultFilters, exportBody, listQuery, rangeOf } from './auditLog';
+import { actionKey, all, defaultFilters, exportBody, listQuery, patientRecords, rangeOf } from './auditLog';
 
 describe('action names (MDV-P1-052)', () => {
   it('names a known action in every language and shows an unknown code as it is', async () => {
@@ -29,8 +29,16 @@ describe('access log filters', () => {
       .toEqual({ from: '2026-11-01T04:00:00.000Z', to: '2026-11-02T05:00:00.000Z' });
   });
 
+  it('starts on patient-record events, in the list and the export (MDV audit UX-13)', () => {
+    const f = { ...defaultFilters(), from: '', to: '' };
+    expect(f.action).toBe(patientRecords);
+    expect(listQuery(f, null)).toBe('patientRecords=true');
+    expect(exportBody(f)).toMatchObject({ action: null, patientRecords: true });
+    expect(exportBody({ ...f, action: all })).toMatchObject({ action: null, patientRecords: false });
+  });
+
   it('sends only the filters that were set, and never a name', () => {
-    const base = { ...defaultFilters(), from: '', to: '' };
+    const base = { ...defaultFilters(), action: all, from: '', to: '' };
     expect(listQuery({ ...base, actor: all }, null)).toBe('');
     expect(listQuery({ ...base, actor: 'u1', action: 'patient.read' }, 'c1')).toBe('actorUserId=u1&action=patient.read&after=c1');
     expect(exportBody({ ...base, patientId: 'p1' })).toMatchObject({ actorUserId: null, action: null, patientId: 'p1' });

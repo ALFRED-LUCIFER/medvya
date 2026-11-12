@@ -19,7 +19,10 @@ export function useStaffController(defaultFacilityId: string) {
   const staff = useQuery({ queryKey: ['staff', 'list'], queryFn: fetchStaff });
   const roles = useQuery({ queryKey: ['staff', 'roles'], queryFn: fetchRoles });
   const locations = useQuery({ queryKey: ['settings', 'locations'], queryFn: fetchLocations });
-  const refresh = () => void queryClient.invalidateQueries({ queryKey: ['staff'] }); // the list and this quarter's access review
+  const refresh = () => {
+    void queryClient.invalidateQueries({ queryKey: ['staff'] }); // the list and this quarter's access review
+    void queryClient.invalidateQueries({ queryKey: ['settings', 'templates'] }); // an offboarded or new doctor changes the bookable calendars
+  };
 
   const [step, setStep] = useState<Step | null>(null);
   const [choice, setChoice] = useState<RoleChoice | null>(null);

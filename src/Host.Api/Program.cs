@@ -146,6 +146,8 @@ builder.Services.AddUserRateLimit(PatientEndpoints.DuplicateCheckRateLimit, buil
 // Joining the live board: once per page load and per reconnect; a client looping on it is refused. Per user, after sign-in.
 builder.Services.AddUserRateLimit(BoardHub.WatchRateLimit, builder.Configuration.GetValue("RateLimiting:BoardWatchPerMinute", 30));
 
+builder.Services.AddWebApp();
+
 var app = builder.Build();
 
 app.UseForwardedHeaders(); // first, so every later step sees the client's address

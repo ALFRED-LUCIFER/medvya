@@ -4310,6 +4310,13 @@
               ],
               "format": "int32"
             }
+          },
+          {
+            "name": "PatientRecords",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
           }
         ],
         "responses": {
@@ -4382,6 +4389,13 @@
                 "string"
               ],
               "format": "int32"
+            }
+          },
+          {
+            "name": "PatientRecords",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
             }
           }
         ],
@@ -9142,6 +9156,12 @@
               "string"
             ],
             "format": "date-time"
+          },
+          "patientRecords": {
+            "type": [
+              "null",
+              "boolean"
+            ]
           }
         }
       },

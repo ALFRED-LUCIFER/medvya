@@ -61,7 +61,20 @@ test('the access log shows who did what, writes the outcome out, pages, and expo
   expect(urls.some(u => u.includes('after=c1'))).toBe(true);
 
   await page.getByRole('button', { name: 'Export CSV' }).click();
-  expect(JSON.parse((await exported).postData() ?? '{}')).toHaveProperty('patientId', null);
+  expect(JSON.parse((await exported).postData() ?? '{}')).toMatchObject({ patientId: null, patientRecords: true });
+});
+
+// MDV audit UX-13: the log opens on patient-record events, so settings page views do not push them down; "Any action" shows everything.
+test('the access log starts on patient records and widens to any action on request', async ({ page }) => {
+  await setUp(page);
+  const urls: string[] = [];
+  await page.route('**/v1/audit/access-log**', r => { urls.push(new URL(r.request().url()).search); return r.fulfill({ json: logPage([row({})]) }); });
+  await page.goto('/settings?tab=audit');
+  await expect(page.getByRole('combobox', { name: 'Action' })).toHaveText('Patient records');
+  await expect.poll(() => urls.at(-1)).toContain('patientRecords=true');
+  await page.getByRole('combobox', { name: 'Action' }).click();
+  await page.getByRole('option', { name: 'Any action' }).click();
+  await expect.poll(() => urls.at(-1)).not.toContain('patientRecords');
 });
 
 test('choosing a patient asks the per-patient route and shows the name only then', async ({ page }) => {

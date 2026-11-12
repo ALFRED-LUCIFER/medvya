@@ -17,6 +17,7 @@ public sealed class AuditTrail(AuditDbContext db) : IAuditTrail
         var events = inRange
             .Where(e => (query.ActorUserId == null || e.ActorUserId == query.ActorUserId)
                 && (query.PatientId == null || e.PatientId == query.PatientId)
+                && (!query.PatientRecordsOnly || e.PatientId != null)
                 && (query.Action == null || e.Action == query.Action));
         if (query.After is not null)
         {

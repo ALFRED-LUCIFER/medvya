@@ -9,6 +9,9 @@ import { Section } from './Section';
 type OpeningHours = {
   rows: HoursRow[];
   problems: Weekday[];
+  /** Saved sessions outside the saved hours (MDV audit UX-13). */
+  sessionsOutside: { name: string; weekday: Weekday }[];
+  closedAllWeek: boolean;
   loading: boolean;
   loadFailed: boolean;
   dirty: boolean;
@@ -52,6 +55,12 @@ export default function HoursPanel({ choice, hours, schedules }: Props) {
     <div className="flex flex-col gap-4">
       <LocationSelect id="hours-location" locations={choice.locations} value={choice.locationId} onChange={choice.onLocation} />
       <Section title={t('settings.hours.title')} intro={t('settings.hours.intro')}>
+        {hours.sessionsOutside.length > 0 && (
+          <div role="status" className="flex flex-col gap-1 rounded-lg border border-warning-700 p-3">
+            <p className="font-bold">{t(hours.closedAllWeek ? 'settings.hours.closedAllWeek' : 'settings.hours.sessionsOutside')}</p>
+            <p className="text-sm">{hours.sessionsOutside.map(x => t('settings.hours.sessionOnDay', { name: x.name, day: t(`settings.weekday.${x.weekday}`) })).join(', ')}</p>
+          </div>
+        )}
         {hours.loading ? <p role="status">{t('settings.loading')}</p> : hours.loadFailed ? <p role="alert" className={fieldError}>{t('settings.loadFailed')}</p> : (
           <ul className="flex flex-col divide-y rounded-lg border">
             {hours.rows.map(r => {

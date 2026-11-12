@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
+import { CircleAlert } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
 import { Button, buttonVariants } from '@medvya/ui';
 import type { ClinicalRefusal } from '../../clinical-access/domain/clinicalAccess';
-import type { ConsultView, EncounterBanner } from '../domain/encounter';
+import { openPastDay, type ConsultView, type EncounterBanner } from '../domain/encounter';
 import IdentityBanner from './IdentityBanner';
 
 type Props = {
@@ -22,7 +23,7 @@ type Props = {
  * (MDV audit UX-03): the note is the work, the page's one primary is Sign. Notes and orders arrive here with MDV-P2-009 and MDV-P2-015.
  */
 export default function ConsultPage(p: Props) {
-  const { t, formatTime } = useI18n();
+  const { t, formatDate, formatTime } = useI18n();
   if (p.loading) return <p role="status">{t('consult.loading')}</p>;
   if (p.refusal) return <Message title={t('consult.refused.title')} body={t(p.refusal.canRequest ? 'consult.refused.ask' : 'consult.refused.role')} boardPath={p.boardPath} />;
   if (p.notFound || p.failed || !p.banner) return <Message title={t(p.notFound ? 'consult.notFound' : 'consult.loadFailed')} boardPath={p.boardPath} />;
@@ -42,6 +43,11 @@ export default function ConsultPage(p: Props) {
           ))}
         </div>
       </div>
+      {openPastDay(encounter, p.banner.timeZone) && (
+        <p role="status" className="inline-flex items-center gap-2 rounded-lg border border-warning-700 p-3 font-bold">
+          <CircleAlert aria-hidden className="size-4 shrink-0" />{t('consult.openPastDay', { date: formatDate(new Date(encounter.startedAt), p.banner.timeZone) })}
+        </p>
+      )}
       {!ended && <p className="text-sm text-muted-foreground">{t('consult.leaveNote')}</p>}
       {p.children}
       {!ended && (

@@ -8,9 +8,10 @@ public enum TimelineKind { Encounter, Lab, Medicine, Document, Order }
 
 /// <summary>
 /// One line of the timeline (MDV-P2-005). <see cref="Code"/> names what it is (the screen translates it); <see cref="Title"/> and
-/// <see cref="Detail"/> are the data to show with it (a medicine's name and dose, a result's value and unit).
+/// <see cref="Detail"/> are the data to show with it (a medicine's name and dose, a result's value and unit). <see cref="EncounterId"/>: the visit a
+/// prescribed medicine comes from (MDV-1087), so the screen links to it and its printed prescription.
 /// </summary>
-public sealed record TimelineEntry(Guid Id, TimelineKind Kind, DateTimeOffset At, string Code, string? Title, string? Detail, Guid? AuthorUserId, ChartSource Source);
+public sealed record TimelineEntry(Guid Id, TimelineKind Kind, DateTimeOffset At, string Code, string? Title, string? Detail, Guid? AuthorUserId, ChartSource Source, Guid? EncounterId = null);
 
 /// <summary>Filters combine: kinds (none = all), one source (none = all). <see cref="Before"/> continues after the last entry of the previous page.</summary>
 public sealed record TimelineQuery(IReadOnlySet<TimelineKind> Kinds, ChartSource? Source, TimelineCursor? Before, int Limit = TimelineQuery.PageSize)

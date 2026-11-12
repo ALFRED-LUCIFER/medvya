@@ -70,7 +70,7 @@ public sealed class PatientChartService(EncountersDbContext db, IClinicalAccess 
         // The latest reading of each code is the last point of its trend, flagged against the code's adult range.
         var latest = trends.Select(t => Latest(t.Code, t.Points[^1])).ToList();
         return new(banner.State, banner.Allergies, [.. problems.Select(p => new ProblemView(p.Icd10Code, p.Description, p.Verification, p.OnsetOn, p.Source, p.Status))],
-            [.. medicines.Select(m => new MedicineView(m.Name, m.Dose, m.State, m.Source, m.StoppedAt))],
+            [.. medicines.Select(m => new MedicineView(m.Name, m.Dose, m.State, m.Source, m.StoppedAt, m.EncounterId))],
             [.. latest.Where(v => !Observation.IsLab(v.Code))], trends, encounters, open, [.. latest.Where(v => Observation.IsLab(v.Code))], BmiOf(latest),
             history, history.FirstOrDefault(h => h.Section == HistorySection.BloodGroup)?.Text, [.. leads.Select(id => names.GetValueOrDefault(id)).OfType<string>()]);
     }

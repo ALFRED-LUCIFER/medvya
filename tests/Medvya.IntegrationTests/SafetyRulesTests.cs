@@ -233,15 +233,33 @@ public sealed class SafetyRulesTests
         Assert.Equal("per_dose", Assert.Single(tablet.Alerts).Code); // 500 mg is above 213 mg though within the adult maximum
     }
 
-    /// <summary>SAFETY (mutation check: check a child's dose without a recent weight, or by the adult maximum alone, and this fails).</summary>
+    /// <summary>
+    /// SAFETY (#1085; mutation check: drop the no-weight finding, make it moderate, drop the age ceiling or read the wrong band, and this fails).
+    /// A child's dose with no weight from the last month is not checked, says so, and is a severe finding: authorising needs a weight or a
+    /// reason. The audit's case, paracetamol 500 mg x 2 four times a day for a 5-year-old, is also above the 4-5 year ceiling of 240 mg a dose.
+    /// </summary>
     [Fact]
-    public void AChildsDoseWithoutAWeightFromTheLastMonthIsNotCheckedAndSaysSo()
+    public void AChildsDoseWithoutAWeightFromTheLastMonthIsSevereAndHeldToTheAgeCeiling()
     {
-        var line = Line("N02BE01", "Paracetamol syrup", "120 mg/5 mL", Sig("20", "ml", "QID"));
-        var r = For(new(4, false, null, null, null), [line]);
+        var line = Line("N02BE01", "Paracetamol", "500 mg", Sig("2", "tablet", "QID"));
+        var r = For(new(5, false, null, null, null), [line]);
         Assert.Equal(NotCheckedReason.NoRecentWeight, Assert.Single(r.NotChecked).Reason);
-        Assert.Empty(r.Alerts);
         Assert.Empty(r.WeightDoses);
+        Assert.All(r.Alerts, a => Assert.Equal((RxAlertKind.ChildDose, RxSeverity.Severe, (Guid?)line.Id), (a.Kind, a.Severity, a.ItemId)));
+        Assert.Equal(["no_weight", "age_ceiling"], r.Alerts.Select(a => a.Code));
+        Assert.Equal(5, r.Alerts[1].Measure);
+
+        // Within the band it is still severe for want of a weight; a changed dose needs a new reason.
+        CheckedMedicine Syrup(string ml) => Line("N02BE01", "Paracetamol syrup", "120 mg/5 mL", Sig(ml, "ml", "QID"));
+        var within = Assert.Single(For(new(5, false, null, null, null), [Syrup("10")]).Alerts); // 240 mg, the top of 4-5 years
+        Assert.Equal("no_weight", within.Code);
+        Assert.NotEqual(within.Key, Assert.Single(For(new(5, false, null, null, null), [Syrup("5")]).Alerts).Key);
+        Assert.Contains(For(new(3, false, null, null, null), [Syrup("10")]).Alerts, a => a.Code == "age_ceiling"); // 2-3 years: 180 mg
+        Assert.Contains(For(new(0, false, null, null, null), [Line("M01AE01", "Ibuprofen syrup", "100 mg/5 mL", Sig("5", "ml", "TDS"))]).Alerts, a => a.Code == "age_ceiling"); // 100 mg, under one year: 50 mg
+        Assert.DoesNotContain(For(new(17, false, null, null, null), [Line("N02BE01", "Paracetamol", "500 mg", Sig("2", "tablet", "QID"))]).Alerts, a => a.Code == "age_ceiling"); // 16-17 years: 1 g
+        var often = For(new(5, false, null, null, null), [Line("M01AE01", "Ibuprofen syrup", "100 mg/5 mL", Sig("5", "ml", "QID"))]).Alerts; // 3 a day, without a weight too
+        Assert.Equal(3, Assert.Single(often, a => a.Code == "doses_a_day").Measure);
+        Assert.Equal(SafetyRules.ChildDoses.Keys.Order(), SafetyRules.ChildAgeCeilings.Keys.Order()); // every weight rule has an age ceiling
         // A medicine with no rule by weight is not checked for a child, even within the adult maximum.
         Assert.Equal(NotCheckedReason.DoseNotChecked, Assert.Single(For(new(4, false, 1420, null, null), [Line("J01CA04", "Amoxicillin", "250 mg", Sig("1", "tablet", "TDS"))]).NotChecked).Reason);
     }

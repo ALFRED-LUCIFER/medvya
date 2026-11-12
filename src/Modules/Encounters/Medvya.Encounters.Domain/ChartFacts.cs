@@ -72,7 +72,7 @@ public sealed class Problem
 [JsonConverter(typeof(JsonStringEnumConverter<MedicationState>))]
 public enum MedicationState { Active, Stopped }
 
-/// <summary>MEDICATION_STATEMENT: a medicine on the chart, active or stopped. The doctor's reconciliation (MDV-P2-011) is its only writer for chart medicines.</summary>
+/// <summary>MEDICATION_STATEMENT: a medicine on the chart, active or stopped. Written by the doctor's reconciliation (MDV-P2-011) and by an authorised prescription (MDV-1087).</summary>
 public sealed class MedicationStatement
 {
     [Classification(DataClass.Internal)] public Guid Id { get; init; }
@@ -94,6 +94,9 @@ public sealed class MedicationStatement
     [Classification(DataClass.Internal)] public DateTimeOffset? ReviewedAt { get; set; }
     [Classification(DataClass.Internal)] public Guid? ReviewedBy { get; set; }
     [Classification(DataClass.Internal)] public DateTimeOffset? StoppedAt { get; set; }
+    // Set only for a line of an authorised prescription (MDV-1087): the visit it was prescribed at and the prescription version that holds it.
+    [Classification(DataClass.Internal)] public Guid? EncounterId { get; init; }
+    [Classification(DataClass.Internal)] public Guid? PrescriptionId { get; init; }
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter<ObservationCode>))]

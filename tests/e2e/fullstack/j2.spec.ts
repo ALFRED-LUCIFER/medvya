@@ -13,6 +13,19 @@ let studioPath = '';
 
 /** Books Meera with Dr. Rao, takes her through the front desk and starts the consultation from her card (MDV-P2-001). `intake` stands for the
  * nurse's part when nurse intake is on; without it the desk marks the patient ready for the doctor. */
+/** Meera's chart from the patient search in the top bar. */
+async function openChart(page: Page) {
+  await page.getByRole('button', { name: 'Search patients' }).click();
+  const search = page.getByRole('dialog', { name: 'Search patients' });
+  const input = search.getByRole('combobox', { name: 'Name, MRN or phone' });
+  await input.fill('Meera');
+  await expect(search.getByRole('option')).toHaveCount(1);
+  await input.press('ArrowDown');
+  await input.press('Enter');
+  await expect(page).toHaveURL(/\/app\/patients\/[0-9a-f-]{36}$/);
+  return new URL(page.url()).pathname;
+}
+
 async function startVisit(page: Page, intake?: () => Promise<void>) {
   await page.goto('/app/schedule');
   await page.getByRole('list', { name: rao }).getByRole('button', { name: /^Book / }).first().click();
@@ -182,6 +195,24 @@ journey('J2', {
     await page.goto(consultPath);
     await rx.getByRole('button', { name: 'Authorise again' }).click();
     await expect(rx.getByRole('status').filter({ hasText: 'Authorised' })).toHaveText(/^Authorised · version 2 · RX-/);
+
+    // MDV-1087: the authorised line is on the chart's medicines and the timeline, linked to its visit and its printed prescription; the
+    // cancelled version's line stays as stopped history.
+    const chart = await openChart(page);
+    const prescribed = page.getByRole('region', { name: 'Medicines', exact: true }).getByRole('listitem').filter({ hasText: 'Metformin 500 mg' });
+    await expect(prescribed).toHaveCount(2);
+    await expect(prescribed.filter({ hasText: 'Stopped' })).toHaveCount(1);
+    const active = prescribed.filter({ hasText: 'Active' });
+    await expect(active).toContainText('Take 1 tablet by mouth twice a day.');
+    await expect(active.getByRole('link', { name: 'Prescribed at this visit' })).toHaveAttribute('href', consultPath);
+    await expect(active.getByRole('link', { name: 'Printed prescription' })).toHaveAttribute('href', `${consultPath}/rx/print`);
+    await page.goto(`${chart}/timeline`);
+    await page.getByRole('button', { name: 'Medicines', exact: true }).click();
+    const entries = page.getByRole('region', { name: 'Timeline entries' }).getByRole('listitem').filter({ hasText: 'Metformin 500 mg' });
+    await expect(entries).toHaveCount(2);
+    await expect(entries.first().getByRole('link', { name: 'Printed prescription' })).toHaveAttribute('href', `${consultPath}/rx/print`);
+    await expectNoAxeViolations(page);
+    await expectArabicAxeClean(browser, rao, chart);
     // The formulary search carries the medicine name the doctor types (GET /v1/formulary?q=, by design in prescriptionApi.ts), so it is not in this list.
     expect(watch.leaks(['Meera', 'Iyer', '1972-03-12', 'DQ-10-4482', 'HbA1c', 'wrong visit'])).toEqual([]);
   },
@@ -235,15 +266,7 @@ journey('J2', {
     studioPath = new URL(page.url()).pathname;
     await expect(page.getByRole('region', { name: 'Patient identity' })).toContainText('Penicillin');
 
-    await page.getByRole('button', { name: 'Search patients' }).click();
-    const search = page.getByRole('dialog', { name: 'Search patients' });
-    const input = search.getByRole('combobox', { name: 'Name, MRN or phone' });
-    await input.fill('Meera');
-    await expect(search.getByRole('option')).toHaveCount(1);
-    await input.press('ArrowDown');
-    await input.press('Enter');
-    await expect(page).toHaveURL(/\/app\/patients\/[0-9a-f-]{36}$/);
-    chartPath = new URL(page.url()).pathname;
+    chartPath = await openChart(page);
     const banner = page.getByRole('region', { name: `Patient ${meera}` });
     await expect(banner).toContainText(/Allergy: .?Penicillin.? · /);
     await expect(page.getByRole('group', { name: 'Show part of the chart' }).getByRole('button', { name: 'Everything' })).toHaveAttribute('aria-pressed', 'true');

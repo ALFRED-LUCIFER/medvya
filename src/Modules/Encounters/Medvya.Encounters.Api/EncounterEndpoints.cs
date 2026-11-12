@@ -36,7 +36,7 @@ public sealed record Patient360(BannerPatient Patient, bool TreatmentConsent, st
     PregnancyStatus Pregnancy);
 
 /// <summary>A timeline entry as the screen shows it: the author's name, never an id the screen would look up.</summary>
-public sealed record TimelineEntryView(Guid Id, TimelineKind Kind, DateTimeOffset At, string Code, string? Title, string? Detail, string? Author, ChartSource Source);
+public sealed record TimelineEntryView(Guid Id, TimelineKind Kind, DateTimeOffset At, string Code, string? Title, string? Detail, string? Author, ChartSource Source, Guid? EncounterId);
 
 /// <summary><see cref="Next"/> goes back as <c>before</c> for "Load earlier"; null at the end.</summary>
 public sealed record TimelineResponse(IReadOnlyList<TimelineEntryView> Entries, string? Next, string TimeZone);
@@ -126,7 +126,7 @@ public static class EncounterEndpoints
         var names = await users.DisplayNamesAsync([.. page.Entries.Where(e => e.AuthorUserId is not null).Select(e => e.AuthorUserId!.Value).Distinct()], ct);
         var last = page.HasMore ? page.Entries[^1] : null;
         return Results.Ok(new TimelineResponse(
-            [.. page.Entries.Select(e => new TimelineEntryView(e.Id, e.Kind, e.At, e.Code, e.Title, e.Detail, e.AuthorUserId is { } a ? names.GetValueOrDefault(a) : null, e.Source))],
+            [.. page.Entries.Select(e => new TimelineEntryView(e.Id, e.Kind, e.At, e.Code, e.Title, e.Detail, e.AuthorUserId is { } a ? names.GetValueOrDefault(a) : null, e.Source, e.EncounterId))],
             last is null ? null : $"{last.At.UtcTicks}.{last.Id}", (await facilities.FindAsync(facilityId, ct) ?? throw new InvalidOperationException("Session facility not in this tenant.")).TimeZone));
     }
 

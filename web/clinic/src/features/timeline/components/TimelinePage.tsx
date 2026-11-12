@@ -3,7 +3,7 @@ import { ltr, useI18n } from '@medvya/i18n';
 import { Button, buttonVariants, ProvenanceTag, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@medvya/ui';
 import type { ChartSource, ClinicalRefusal, Patient360 } from '../../patient360/domain/chart';
 import { pathOf, provenanceOf, sparkBox } from '../../patient360/domain/chart';
-import { PatientBanner } from '../../patient360/components/Patient360Page';
+import { PatientBanner, PrescribedLinks } from '../../patient360/components/Patient360Page';
 import { chartLines, hasFilters, timelineKinds, timelineSources, trendChoices, type TimelineEntry, type TimelineFilters, type TimelineKind, type TrendChoice, type TrendSeries } from '../domain/timeline';
 
 type Props = {
@@ -12,6 +12,8 @@ type Props = {
   canLoadMore: boolean; loadingMore: boolean; loadMoreFailed: boolean;
   choice: TrendChoice; series: TrendSeries | null; trendsLoading: boolean; trendsFailed: boolean;
   backPath: string;
+  /** Links from a prescribed medicine to its visit and (with `printRx`) its printed prescription (MDV-1087). */
+  consultPath: (encounterId: string) => string; printRx: boolean;
   onKind: (k: TimelineKind) => void; onAllKinds: () => void; onSource: (s: ChartSource | null) => void; onClear: () => void; onChoice: (c: TrendChoice) => void; onMore: () => void;
 };
 
@@ -36,7 +38,7 @@ export default function TimelinePage(p: Props) {
         <section aria-label={t('timeline.list')} className="flex flex-col gap-3 rounded-xl border bg-card p-4">
           {p.loading ? <p role="status">{t('timeline.loading')}</p>
             : p.entries.length === 0 ? <Empty {...p} />
-            : <ol className="flex flex-col gap-3">{p.entries.map(e => <Entry key={e.id} entry={e} zone={p.timeZone} />)}</ol>}
+            : <ol className="flex flex-col gap-3">{p.entries.map(e => <Entry key={e.id} entry={e} zone={p.timeZone} consultPath={p.consultPath} printRx={p.printRx} />)}</ol>}
           {p.canLoadMore && (
             <Button variant="outline" className="min-h-11 self-start" loading={p.loadingMore} onClick={p.onMore}>{t('timeline.loadEarlier')}</Button>
           )}
@@ -81,7 +83,7 @@ function Empty(p: Props) {
   );
 }
 
-export function Entry({ entry: e, zone }: { entry: TimelineEntry; zone: string }) {
+export function Entry({ entry: e, zone, consultPath, printRx }: { entry: TimelineEntry; zone: string; consultPath: (encounterId: string) => string; printRx: boolean }) {
   const { t, formatDate, formatTime, formatCalendarDate } = useI18n();
   const when = new Date(e.at);
   const title = e.title ?? t(`timeline.code.${e.code}`);
@@ -94,6 +96,7 @@ export function Entry({ entry: e, zone }: { entry: TimelineEntry; zone: string }
         <time dateTime={e.at} className="text-sm text-muted-foreground">{`${formatDate(when, zone)} ${formatTime(when, zone)}`}</time>
         <strong>{title}</strong>
         <span className="text-sm">{subtitle}</span>
+        {e.encounterId && <PrescribedLinks encounterId={e.encounterId} consultPath={consultPath} printRx={printRx} />}
       </div>
       <ProvenanceTag source={provenanceOf[e.source]} />
     </li>

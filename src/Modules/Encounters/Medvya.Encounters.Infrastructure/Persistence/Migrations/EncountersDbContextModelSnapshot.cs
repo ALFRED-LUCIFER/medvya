@@ -789,8 +789,11 @@ namespace Medvya.Encounters.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("Dose")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid?>("EncounterId")
+                        .HasColumnType("uuid");
 
                     b.Property<Guid?>("FacilityId")
                         .HasColumnType("uuid");
@@ -811,6 +814,9 @@ namespace Medvya.Encounters.Infrastructure.Persistence.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<Guid>("PatientId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("PrescriptionId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("RecordedAt")
@@ -844,6 +850,8 @@ namespace Medvya.Encounters.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("TenantId", "AppointmentId");
+
+                    b.HasIndex("TenantId", "EncounterId");
 
                     b.HasIndex("TenantId", "PatientId");
 

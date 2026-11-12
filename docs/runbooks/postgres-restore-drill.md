@@ -42,4 +42,4 @@ Source and restored server names, region, SKU, database size, restore point `T`,
 
 | Drill | Date (UTC) | Restore point `T` | Database size | Started | Ready | Elapsed | Row counts | Step 5 checks | Done by | Notes |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 1 | _pending: first drill after this is deployed to Azure_ | | | | | TBD | | | | |
+| 1 | 2026-11-12, three attempts, **all failed** | 18:52 to 18:53 | 32 GB (B1ms) | 19:07 to 19:13 | never | n/a | n/a | n/a | assistant with `az`, founder's account | Azure refused each restore with `SkuNotAvailable` (same VNet and subnet, with and without `--zone 2`, with the CMK key and identity) although `list-skus` shows Standard_B1ms in zones 1 to 3. The source server was untouched; the half-created drill server was removed each time. Next: open an Azure support request for new-server capacity in Central India, or retry with `--sku-name Standard_B2s`; add a `--backup-identity` (a second identity) only if geo backup is turned on |

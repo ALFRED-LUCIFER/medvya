@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { expectNoAxeViolations, signIn, syntheticPatient, watchUrls } from './support';
+import { choosePatient, expectNoAxeViolations, signIn, syntheticPatient, watchUrls } from './support';
 
 // MDV-P1-026: a recurring series through the real browser, Host.Api and PostgreSQL (no mocked API). A weekly series of four from today's first
 // free slot of Dr. Rao; the second week is already taken, so the review shows the conflict and the desk moves it a day later. Then "this and
@@ -14,17 +14,6 @@ const rao = (page: Page) => page.getByRole('list', { name: /Dr\. Arjun Rao/ });
 const slot = (page: Page, time: string) => rao(page).getByRole('button', { name: `Book ${doctor} at ${time}` });
 const visitOf = (page: Page) => rao(page).getByRole('button', { name: new RegExp(`^${patient.name} Booked`) });
 const bookingPanel = (page: Page) => page.getByRole('complementary', { name: 'Book appointment' });
-
-async function choosePatient(page: Page, search: string, pick: RegExp) {
-  const panel = bookingPanel(page);
-  await expect(panel).toContainText('Held for you until');
-  await panel.getByRole('searchbox', { name: 'Name, MRN, phone or ID' }).fill(search);
-  await panel.getByRole('button', { name: 'Search' }).click();
-  await panel.getByRole('button', { name: pick }).click();
-  await panel.getByRole('combobox', { name: 'Reason category' }).click();
-  await page.getByRole('option', { name: 'Long-term condition review' }).click();
-  return panel;
-}
 
 test('a weekly series: the review shows the conflict, the desk moves it, four visits are booked; this and following cancels the rest', async ({ page, browser }) => {
   const watch = watchUrls(page);

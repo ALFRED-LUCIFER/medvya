@@ -1,9 +1,10 @@
 import { createRequire } from 'node:module';
 import { expect, test } from '@playwright/test';
-import { browserNow, expectNoAxeViolations, signIn, watchUrls } from './support';
+import { browserNow, choosePatient, expectNoAxeViolations, signIn, watchUrls } from './support';
 
 // MDV-P0-029: journey J1 (first owner-doctor visit, docs/02-design/journeys.md) through the real stack: a brand-new person signs up at the
-// development identity provider, sets up a practice, then registers a patient, books and checks in. Step 2 (fees catalogue) and steps 5-8
+// development identity provider, sets up a practice, then registers a patient, books and checks in, and the patient's second visit is the
+// returning check-in the pilot metrics time (MDV-P1-041, exit gate 3). Step 2 (fees catalogue) and steps 5-8
 // (consent, recording, note, invoice) have no screens yet and are not faked here. Synthetic people only.
 const axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
 const n = Math.floor(Math.random() * 9000) + 1000;
@@ -12,7 +13,7 @@ const patient = {
   mobile: `+91 90000 0${n}`, emergency: 'Gopal Iyengar', emergencyMobile: `+91 90000 1${n}`,
 };
 
-test('J1: a new clinic owner sets up the practice, Medvya approves it, then a patient is registered, booked and checked in', async ({ page, browser }) => {
+test('J1: a new clinic owner sets up the practice, Medvya approves it, then a patient is registered, booked, checked in and comes back', async ({ page, browser }) => {
   const watch = watchUrls(page);
   await page.addInitScript({ path: axePath });
   await page.clock.setFixedTime(browserNow());
@@ -158,6 +159,44 @@ test('J1: a new clinic owner sets up the practice, Medvya approves it, then a pa
     await page.getByRole('button', { name: 'Record baseline' }).click();
     await expect(report).toContainText('Before Medvya: 22% (');
     await expectNoAxeViolations(page);
+  });
+
+  await test.step('J1.4 a second visit of the same patient is a returning check-in; its time is what exit gate 3 reads (MDV-P1-041)', async () => {
+    await page.getByRole('link', { name: 'Schedule' }).first().click();
+    // The clock is fixed and the first visit took the first free slot, so the first free slot now is later: this visit is the returning one.
+    await page.getByRole('list', { name: /Arjun Menon/ }).getByRole('button', { name: /^Book / }).first().click();
+    const panel = await choosePatient(page, patient.mobile, /^L I, \d+ y, Female/);
+    await expect(panel).toContainText(`${patient.name} · MRN`);
+    await panel.getByRole('button', { name: 'Confirm booking' }).click();
+    await expect(panel).toContainText('Appointment booked');
+    await page.getByRole('link', { name: 'Front desk' }).first().click();
+    const card = page.getByRole('region', { name: /^Booked/ }).getByRole('article', { name: patient.name }); // the first visit is already in Checked in
+    const checkIn = card.getByRole('button', { name: 'Check in' });
+    await expect(checkIn).toBeVisible();
+    const started = Date.now(); // the stopwatch: tap "Check in" to the card in Checked in
+    await checkIn.click();
+    await card.getByRole('group', { name: 'Confirm identity' }).getByRole('button', { name: 'Confirm arrival' }).click();
+    await expect(page.getByRole('region', { name: /^Checked in/ }).getByRole('article', { name: patient.name })).toHaveCount(2);
+    const stopwatchSeconds = (Date.now() - started) / 1000;
+
+    await page.goto('/app/settings?tab=metrics');
+    const report = page.getByRole('region', { name: 'Pilot metrics' });
+    await expect(report).toContainText('1 returning of 2 timed check-ins');
+    await expect(report).toContainText('Target of 60 s met.'); // a desk run by a script is well inside the gate; a gap would read "s over the 60 s target"
+    // The time the app recorded is the desk's real time: more than nothing, and never more than the stopwatch around it.
+    const facilityId = (await (await page.request.get('/v1/me/context')).json()).active.facilityId as string;
+    const metrics = await (await page.request.get(`/v1/schedule/metrics?facilityId=${facilityId}&days=14`)).json();
+    expect(metrics.checkIn.returningMedianSeconds).toBeGreaterThan(0);
+    expect(metrics.checkIn.returningMedianSeconds).toBeLessThanOrEqual(stopwatchSeconds);
+    await expectNoAxeViolations(page);
+    // The same report in Arabic: right to left and axe-clean (the owner signed up in this browser, so the locale is switched here).
+    await page.evaluate(() => localStorage.setItem('medvya.locale', 'ar'));
+    await page.reload();
+    await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+    await expect(page.getByRole('main')).toBeVisible();
+    await page.waitForLoadState('networkidle');
+    await expectNoAxeViolations(page);
+    await page.evaluate(() => localStorage.setItem('medvya.locale', 'en'));
   });
 
   expect(watch.leaks(['Latha', 'Iyengar', 'Gopal', patient.dob, `0${n}`])).toEqual([]);

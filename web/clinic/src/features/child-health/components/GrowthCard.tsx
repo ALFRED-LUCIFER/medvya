@@ -57,11 +57,11 @@ export default function GrowthCard(p: Props) {
 }
 
 function Chart({ series }: { series: GrowthSeries }) {
-  const { t, formatNumber, formatDate } = useI18n();
+  const { t, formatNumber, formatCalendarDate } = useI18n();
   const chart = growthChart(series);
   const name = t(`childHealth.growth.indicator.${series.indicator}`);
   const last = latestOf(series);
-  const day = (iso: string) => formatDate(new Date(`${iso}T00:00:00Z`), 'UTC');
+  const day = formatCalendarDate;
   const centile = last ? t('childHealth.growth.centile', { centile: centileWord(last.latest.centile) }) : '';
   const trend = !last ? '' : last.before
     ? t(`childHealth.growth.trend.${last.trend === 'single' ? 'same' : last.trend}`, { centile: centileWord(last.before.centile), date: day(last.before.takenOn) })
@@ -110,7 +110,7 @@ function Chart({ series }: { series: GrowthSeries }) {
 }
 
 function Measurements({ view }: { view: Growth }) {
-  const { t, formatNumber, formatDate } = useI18n();
+  const { t, formatNumber, formatCalendarDate } = useI18n();
   if (view.measurements.length === 0) return <p className="text-muted-foreground">{t('childHealth.growth.none')}</p>;
   const n = (x: number | null) => (x === null ? '' : formatNumber(x));
   return (
@@ -127,7 +127,7 @@ function Measurements({ view }: { view: Growth }) {
       <TableBody>
         {[...view.measurements].reverse().map(m => (
           <TableRow key={m.takenOn}>
-            <TableCell><time dateTime={m.takenOn}>{formatDate(new Date(`${m.takenOn}T00:00:00Z`), 'UTC')}</time></TableCell>
+            <TableCell><time dateTime={m.takenOn}>{formatCalendarDate(m.takenOn)}</time></TableCell>
             <TableCell>{n(m.weightKg)}</TableCell>
             <TableCell>{m.lengthCm !== null && <>{n(m.lengthCm)}{' · '}{t(m.position ? `childHealth.growth.position.${m.position}` : 'childHealth.growth.position.unstated')}</>}</TableCell>
             <TableCell>{n(m.headCm)}</TableCell>

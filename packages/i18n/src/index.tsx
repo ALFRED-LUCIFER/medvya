@@ -50,6 +50,8 @@ export function makeI18n(locale: Locale, country: Country) {
     formatNumber: (n: number) => new Intl.NumberFormat(tag).format(n),
     /** A day; pass the facility's zone for an instant, omit it for a calendar date built in local time. */
     formatDate: (d: Date, timeZone?: string) => new Intl.DateTimeFormat(tag, { day: '2-digit', month: 'short', year: 'numeric', timeZone }).format(d),
+    /** A calendar date (YYYY-MM-DD, or an ISO string's day part) in the same format as formatDate, e.g. "12 Mar 1972"; never shifts a day by zone. */
+    formatCalendarDate: (date: string) => new Intl.DateTimeFormat(tag, { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${date.slice(0, 10)}T12:00:00Z`)),
     /** 24-hour time in an IANA zone: schedules show facility time whatever the device's zone is. */
     formatTime: (d: Date, timeZone?: string) => new Intl.DateTimeFormat(tag, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone }).format(d),
     /** A calendar date (YYYY-MM-DD) as a long day, e.g. "Monday, 19 October 2026". */

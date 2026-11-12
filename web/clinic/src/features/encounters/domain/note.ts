@@ -12,7 +12,7 @@ export type NoteSections = Record<string, string>;
 /** Who signed, when, and the hash of what was signed (MDV-P2-012); the name is the doctor profile's, else the account's, one name on every surface; the licence the owner attested is absent without a profile. */
 export type NoteSignature = { versionNo: number; signedBy: string; signedAt: string; contentHash: string; signerName?: string | null; signerLicence?: string | null };
 /** The note is for this person: what the sign modal repeats so a signature cannot land on the wrong chart. */
-export type SignPatient = { name: string; mrn: string; dateOfBirth: string; encounterId: string };
+export type SignPatient = { name: string; mrn: string; dateOfBirth: string };
 /** "Dr. {name}" without doubling a title the profile already carries. */
 export const withTitle = (name: string) => (/^dr\.?\s/i.test(name) ? name : `Dr. ${name}`);
 /** A signed addendum (MDV-P2-013): version 2 and later, each following the version before it. */

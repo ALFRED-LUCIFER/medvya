@@ -13,7 +13,7 @@ type Props = { letter: Letter | null; loading: boolean; notFound: boolean; faile
  * hash and a QR code that verifies it (MDV-P2-019, ADR-018).
  */
 export default function LetterPage(p: Props) {
-  const { t, formatDate, formatDay } = useI18n();
+  const { t, formatDate, formatCalendarDate } = useI18n();
   if (p.loading) return <p role="status">{t('referrals.letter.loading')}</p>;
   if (p.notFound || p.failed || !p.letter) return <p role="alert" className="font-bold">{t(p.notFound ? 'referrals.letter.notFound' : 'referrals.letter.loadFailed')}</p>;
   const { letter } = p;
@@ -35,7 +35,7 @@ export default function LetterPage(p: Props) {
           <dt className="font-bold">{t('referrals.letter.urgency')}</dt><dd>{t(`referrals.urgency.${letter.urgency}`)}</dd>
           <dt className="font-bold">{t('referrals.letter.patient')}</dt><dd>{letter.patient.fullName}</dd>
           <dt className="font-bold">{t('referrals.letter.mrn')}</dt><dd><bdi dir="ltr">{letter.patient.mrn}</bdi></dd>
-          <dt className="font-bold">{t('referrals.letter.dob')}</dt><dd>{formatDay(letter.patient.dateOfBirth)}</dd>
+          <dt className="font-bold">{t('referrals.letter.dob')}</dt><dd>{formatCalendarDate(letter.patient.dateOfBirth)}</dd>
           <dt className="font-bold">{t('referrals.letter.sex')}</dt><dd>{t(`patients.sex.${letter.patient.sexAtBirth}`)}</dd>
           {letter.doctorName && <><dt className="font-bold">{t('referrals.letter.from')}</dt><dd>{letter.doctorName}</dd></>}
           <dt className="font-bold">{t('referrals.letter.date')}</dt><dd>{formatDate(new Date(letter.at))}</dd>

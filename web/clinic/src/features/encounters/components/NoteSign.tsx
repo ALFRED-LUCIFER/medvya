@@ -15,7 +15,7 @@ type Props = {
 
 /** E-06: Sign note, with a confirmation that says what signing means. Hidden without the capability (the server decides either way). */
 export function SignNote(p: Props) {
-  const { t, tCount, formatDate } = useI18n();
+  const { t, tCount, formatCalendarDate } = useI18n();
   const signRef = useRef<HTMLButtonElement>(null);
   return (
     <div className="flex flex-col gap-3">
@@ -35,7 +35,7 @@ export function SignNote(p: Props) {
           // Not when blank sections closed it: the editor has put focus on the first one.
           onCloseAutoFocus={e => { if (p.problem?.kind === 'blank') return; e.preventDefault(); signRef.current?.focus(); }}>
           <DialogTitle>{t('noteSign.confirm.title', { name: p.patient?.name ?? '' })}</DialogTitle>
-          {p.patient && <p className="font-bold">{t('noteSign.confirm.patient', { mrn: ltr(p.patient.mrn), dob: formatDate(new Date(`${p.patient.dateOfBirth}T12:00:00Z`), 'UTC'), encounter: ltr(p.patient.encounterId) })}</p>}
+          {p.patient && <p className="font-bold">{t('noteSign.confirm.patient', { mrn: ltr(p.patient.mrn), dob: formatCalendarDate(p.patient.dateOfBirth) })}</p>}
           <DialogDescription>{t('noteSign.confirm.body')}</DialogDescription>
           <p className="text-sm text-muted-foreground">{t('noteSign.confirm.stepUp')}</p>
           <div className="flex flex-wrap gap-3">

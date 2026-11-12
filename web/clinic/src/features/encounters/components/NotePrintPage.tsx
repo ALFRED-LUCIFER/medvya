@@ -19,7 +19,7 @@ type Props = {
  * in order, in black on white. Print uses the browser; the PDF is the server's stored copy with the identifiers on every page.
  */
 export default function NotePrintPage(p: Props) {
-  const { t, formatDate } = useI18n();
+  const { t, formatCalendarDate } = useI18n();
   if (p.loading) return <p role="status">{t('notePrint.loading')}</p>;
   if (p.failed || !p.note?.signature || !p.template || !p.banner) return <p role="alert" className="font-bold">{t('notePrint.loadFailed')}</p>;
   const { note, banner } = p;
@@ -37,7 +37,7 @@ export default function NotePrintPage(p: Props) {
           <p className="font-bold">{banner.patient.fullName}</p>
           <p className="flex flex-wrap gap-x-4">
             <span>{t('consult.banner.mrn', { mrn: ltr(banner.patient.mrn) })}</span>
-            <span>{t('consult.banner.dob', { date: formatDate(new Date(`${banner.patient.dateOfBirth}T12:00:00Z`), 'UTC') })}</span>
+            <span>{t('consult.banner.dob', { date: formatCalendarDate(banner.patient.dateOfBirth) })}</span>
           </p>
         </header>
         {p.template.sections.filter(s => note.sections[s.id]).map(s => isStructured(s) ? (

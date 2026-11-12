@@ -1,5 +1,5 @@
 import type { ReasonCategory } from '../../schedule/domain/booking';
-import type { AppointmentState, VisitType } from '../../schedule/domain/schedule';
+import type { AppointmentState, ScheduleColumn, VisitType } from '../../schedule/domain/schedule';
 
 // GET /v1/front-desk/board (src/Modules/Scheduling/Medvya.Scheduling.Application/IFrontDeskService.cs). Nonclinical only:
 // the reason is a category, never the patient's words. Instants are UTC; they are shown in the facility's zone.
@@ -83,6 +83,10 @@ export type WalkInVisit = { id: string; calendarId: string; start: string; end: 
 export const emptyWalkIn: WalkInChoice = { calendarId: '', visitType: 'FollowUp', reasonCategory: 'General' };
 /** Just registered at the desk: a first visit, not a follow-up. */
 export const newPatientWalkIn: WalkInChoice = { ...emptyWalkIn, visitType: 'NewConsultation' };
+
+/** A doctor the walk-in may name (UX-10): working hours today that leave and other blocks do not cover from start to end. */
+export const inToday = (c: Pick<ScheduleColumn, 'hours' | 'unavailable'>) =>
+  c.hours.some(h => !c.unavailable.some(u => Date.parse(u.start) <= Date.parse(h.start) && Date.parse(u.end) >= Date.parse(h.end)));
 
 /** 409 codes of a walk-in: nothing free today (the desk then chooses a doctor to queue with), or the calendar is busy. */
 // already_today: the patient has an open visit today; the desk confirms before a second one is made (MDV-P1-052).

@@ -363,10 +363,11 @@ test('registering a new patient from the booking panel comes back to the held sl
   await expect(page.getByRole('heading', { name: 'Deepak Nair is registered' })).toBeVisible();
   await page.getByRole('link', { name: 'Back to the booking' }).click();
 
-  await expect(panel).toContainText('Dr. Arjun Rao (synthetic) · 10:20–10:40');
+  // UX-10: a patient registered on the way is on a first visit, so the default Follow-up comes back as a (40-minute) New consultation.
+  await expect(panel).toContainText('Dr. Arjun Rao (synthetic) · 10:20–11:00');
   await expect(panel).toContainText('Held for you until');
   await expect(panel).toContainText('Deepak Nair (synthetic) · MRN 000002'); // chosen, confirmed by the audited lookup
-  expect(calls.holds.at(-1)).toEqual({ facilityId: 'f-1', calendarId: 'd-1', start: ist('2026-10-19', '10:20'), visitType: 'FollowUp' }); // held again
+  expect(calls.holds.at(-1)).toEqual({ facilityId: 'f-1', calendarId: 'd-1', start: ist('2026-10-19', '10:20'), visitType: 'NewConsultation' }); // held again
   await expect(page).toHaveURL(/\/schedule\?date=2026-10-19&view=day$/); // the slot and patient leave the address once resumed
   await panel.getByRole('button', { name: 'Confirm booking' }).click();
   await expect(panel).toContainText('Appointment booked');
@@ -893,6 +894,7 @@ test('a weekly series shows its conflict, lets the desk move it, then books the 
   await panel.getByRole('button', { name: 'Search' }).click();
   await panel.getByRole('button', { name: 'D N, 47 y, Male, MRN ending 0002. Choose for this booking' }).click();
   await expect(panel).toContainText('Deepak Nair (synthetic) · MRN 000002');
+  await panel.locator('summary').click(); // UX-10: repeating is folded until asked
   await panel.getByLabel('Number of visits').fill('3');
   await panel.getByRole('button', { name: 'Review series' }).click();
 
@@ -933,6 +935,7 @@ async function chooseNair(page: Page) {
 test('a weekday pattern sends the chosen days and needs at least one', async ({ page }) => {
   const calls = await open(page);
   const panel = await chooseNair(page);
+  await panel.locator('summary').click(); // UX-10: repeating is folded until asked
   await panel.getByLabel('Number of visits').fill('4');
   await panel.locator('#booking-unit').click();
   await page.getByRole('option', { name: 'Only on chosen days' }).click();
@@ -951,6 +954,7 @@ test('a series the server refuses saves nothing and returns to the review with t
     return r.fulfill({ json: { seriesId: 's-3', occurrences: body.starts.map((start, i) => ({ start, appointment: null, conflict: i === 1 ? 'slot_unavailable' : 'series_not_booked' })) } });
   });
   const panel = await chooseNair(page);
+  await panel.locator('summary').click(); // UX-10: repeating is folded until asked
   await panel.getByLabel('Number of visits').fill('3');
   await panel.getByRole('button', { name: 'Review series' }).click();
   await panel.getByRole('listitem').nth(1).getByRole('checkbox').check();
@@ -984,6 +988,7 @@ for (const locale of ['en', 'ar'] as const)
     await panel.getByRole('searchbox').fill('Nair');
     await panel.getByRole('searchbox').press('Enter');
     await panel.getByRole('list').last().getByRole('button').click();
+    await panel.locator('summary').click(); // UX-10: repeating is folded until asked
     await panel.locator('#booking-repeat').fill('3');
     await panel.locator('#booking-unit').click(); // MDV-P1-026: monthly repeat
     await page.getByRole('option', { name: locale === 'ar' ? 'كل شهر' : 'Every month' }).click();

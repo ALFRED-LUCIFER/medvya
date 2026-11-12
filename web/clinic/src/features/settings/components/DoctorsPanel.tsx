@@ -43,9 +43,9 @@ type Props = Wizard & {
 
 /** Who attested the licence and when, or that it has expired: words and an icon, never colour alone. Medvya does not check licences (ADR-016). */
 function LicenceBadge({ doctor: d }: { doctor: Doctor }) {
-  const { t } = useI18n();
+  const { t, formatDate } = useI18n();
   const Icon = d.expired ? CalendarX : BadgeCheck;
-  const date = d.attestedAt.slice(0, 10);
+  const date = formatDate(new Date(d.attestedAt));
   const label = d.expired ? t('doctors.licence.expired') : d.attestedByName ? t('doctors.licence.attestedBy', { name: d.attestedByName, date }) : t('doctors.licence.attestedByOwner', { date });
   return <span className="inline-flex items-center gap-1.5 font-bold"><Icon className="size-4 shrink-0" aria-hidden />{label}</span>;
 }

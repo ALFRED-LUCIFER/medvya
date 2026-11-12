@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { nextSession, toSession, type SessionStatus } from '../domain/session';
 import { chooseFacility, fetchMeContext, hadSession, rememberSession, SessionEndedError, signOut, startSignIn } from '../services/sessionApi';
@@ -29,8 +29,14 @@ export function useSessionController() {
   });
   const data = me.data;
   const session = useMemo(() => (data?.kind === 'signedIn' ? toSession(data.me) : null), [data]);
+  // One clinic means nothing to choose (UX-08): scope the session to it straight away. A failure shows the picker with its error and a retry.
+  const only = session && !session.active && session.memberships.length === 1 ? session.memberships[0]!.id : null;
+  const autoChoose = only !== null && choose.isIdle;
+  useEffect(() => { if (autoChoose) choose.mutate(only); }, [autoChoose, only, choose]);
   return {
     loading: me.isPending,
+    /** True while the one membership is being chosen for the user (no picker to show). */
+    choosingOnly: only !== null && !choose.isError,
     expired: data?.kind === 'expired',
     session,
     displayName: session?.user.displayName ?? null,

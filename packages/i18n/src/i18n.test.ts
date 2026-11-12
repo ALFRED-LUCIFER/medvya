@@ -23,6 +23,13 @@ describe('i18n', () => {
     }
   });
 
+  it('keeps internal requirement codes such as (P-03) out of user-facing text (UX-07)', () => {
+    for (const locale of ['en', 'hi', 'ar'] as const) {
+      const coded = Object.entries(catalogs[locale]!).filter(([, v]) => /\([A-Z]{1,2}-\d{2}\)/.test(v)).map(([k]) => k);
+      expect(coded, locale).toEqual([]);
+    }
+  });
+
   it('falls back to English and interpolates', () => {
     expect(translate('ar', 'consent.script')).toBe(translate('en', 'consent.script'));
     expect(translate('en', 'note.signBlocked', { n: 2 })).toBe('Sign note (2 unresolved)');
@@ -58,6 +65,9 @@ describe('i18n', () => {
     expect(makeI18n('en', 'IN').formatDate(nearMidnight, 'Asia/Dubai')).toBe('05 Nov 2026');
     expect(makeI18n('en', 'IN').formatDay('2026-10-19')).toContain('Monday');
     expect(makeI18n('en', 'IN').formatShortDay('2026-10-19')).toBe('Mon, 19 Oct');
+    // One date format everywhere (UX-06): a date of birth reads like any other date and never moves a day.
+    expect(makeI18n('en', 'IN').formatCalendarDate('1972-03-12')).toBe('12 Mar 1972');
+    expect(makeI18n('en', 'IN').formatCalendarDate('1972-03-12T00:00:00Z')).toBe('12 Mar 1972');
   });
 
   it('maps a device language to a supported locale, else English', () => {

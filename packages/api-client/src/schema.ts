@@ -9469,7 +9469,7 @@ export interface components {
             consents?: null | components["schemas"]["ConsentSet"];
         };
         /** @enum {unknown} */
-        RelationshipKind: "Spouse" | "Parent" | "Child" | "Sibling" | "Friend" | "Sponsor" | "Other" | null;
+        RelationshipKind: "Spouse" | "Parent" | "Child" | "Sibling" | "Friend" | "Sponsor" | "Other" | "Mother" | "Father" | "Grandparent" | null;
         RescheduleAppointment: {
             /** Format: uuid */
             calendarId?: string;

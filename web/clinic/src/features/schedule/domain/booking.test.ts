@@ -37,7 +37,8 @@ describe('back to the held slot after registering a new patient (MDV-P1-021)', (
   it('ignores an address that names no slot or a malformed one', () => {
     expect(pickSlot(new URLSearchParams('mode=quick'))).toBeNull();
     const good = { calendar, start: choice.start, visitType: 'FollowUp', patient };
-    expect(readSlotReturn(new URLSearchParams(good))).not.toBeNull();
+    expect(readSlotReturn(new URLSearchParams(good))?.visitType).toBe('NewConsultation'); // UX-10: a first visit is a new consultation
+    expect(readSlotReturn(new URLSearchParams({ ...good, visitType: 'Procedure' }))?.visitType).toBe('Procedure'); // a type the desk chose stays
     for (const bad of [{ calendar: '' }, { patient: '' }, { start: 'tomorrow' }, { visitType: 'Surgery' }])
       expect(readSlotReturn(new URLSearchParams({ ...good, ...bad }))).toBeNull();
   });

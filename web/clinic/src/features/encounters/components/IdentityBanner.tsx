@@ -10,7 +10,7 @@ import type { EncounterBanner } from '../domain/encounter';
  * shortcut: the one-page consultation's patient strip (MDV-P2-041) is this banner; the life stage joins it when MDV-P2-032 adds it to the encounter.
  */
 export default function IdentityBanner({ banner }: { banner: EncounterBanner }) {
-  const { t, formatDate, formatTime } = useI18n();
+  const { t, formatDate, formatTime, formatCalendarDate } = useI18n();
   const { patient, encounter, timeZone } = banner;
   const started = new Date(encounter.startedAt);
   const allergies = bannerAllergies({ allergyState: banner.allergies.state, allergies: banner.allergies.allergies });
@@ -20,7 +20,7 @@ export default function IdentityBanner({ banner }: { banner: EncounterBanner }) 
         <h1 className="text-xl font-extrabold">{patient.fullName}</h1>
         <span>{t('consult.banner.ageSex', { age: patient.ageYears, sex: t(`patients.sex.${patient.sexAtBirth}`) })}</span>
         <span>{t('consult.banner.mrn', { mrn: ltr(patient.mrn) })}</span>
-        <span>{t('consult.banner.dob', { date: formatDate(new Date(`${patient.dateOfBirth}T12:00:00Z`), 'UTC') })}</span>
+        <span>{t('consult.banner.dob', { date: formatCalendarDate(patient.dateOfBirth) })}</span>
       </div>
       <ul className="flex flex-wrap gap-x-5 gap-y-1 text-sm">
         <li className="inline-flex items-center gap-1.5 font-bold">

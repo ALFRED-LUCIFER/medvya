@@ -214,9 +214,13 @@ test('a minor needs a guardian before saving, in quick mode too, and the guardia
   expect(saves).toHaveLength(0);
 
   await page.getByLabel('Guardian (if under 18)').fill('Ravi Nair');
-  await choose(page, "Guardian's relationship", 'Parent');
+  // UX-10: a child's guardian is chosen from parents and family, never spouse or child.
+  await page.getByRole('combobox', { name: "Guardian's relationship", exact: true }).click();
+  await expect(page.getByRole('option', { name: 'Spouse' })).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await choose(page, "Guardian's relationship", 'Father');
   await page.getByLabel("Guardian's phone").fill('+91 90000 00414');
   await page.getByRole('button', { name: 'Register patient' }).click();
   await expect(page.getByRole('heading', { name: 'Arjun Nair is registered' })).toBeVisible();
-  expect(saves[0]!.postDataJSON()).toMatchObject({ quick: true, guardian: { name: 'Ravi Nair', relationship: 'Parent', phone: '+91 90000 00414' }, emergencyContact: null });
+  expect(saves[0]!.postDataJSON()).toMatchObject({ quick: true, guardian: { name: 'Ravi Nair', relationship: 'Father', phone: '+91 90000 00414' }, emergencyContact: null });
 });

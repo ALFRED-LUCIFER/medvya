@@ -81,7 +81,7 @@ test('a merge review request is sent as the decision; "Use existing record" regi
   const { saves } = await desk(page);
   await typeDeepak(page);
   const review = page.getByRole('region', { name: 'Attention · possible existing record' });
-  await review.getByRole('button', { name: 'Request merge review (P-03)' }).click();
+  await review.getByRole('button', { name: 'Request merge review' }).click();
   await page.getByRole('button', { name: 'Register patient' }).click();
   await expect(page.getByRole('heading', { name: 'Deepak Nair is registered' })).toBeVisible();
   expect(saves[0]!.postDataJSON()).toMatchObject({ duplicates: { decision: 'MergeReview', candidateIds: [existingId] } });

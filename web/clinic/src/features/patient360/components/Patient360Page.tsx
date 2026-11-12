@@ -123,12 +123,13 @@ export default function Patient360Page(p: Props) {
               </Card>
             </div>
           )}
+          {/* Visits sit right under the summary (UX-09): the most used part of the chart is not at the bottom. */}
+          {show('timeline') && p.timeline}
           {show('stage') && (p.stageModule ?? (
             <Card title={t(`patient360.section.stage.${lifeStage}`)}><Empty text={t('patient360.stage.empty')} /></Card>
           ))}
           {show('trends') && <Results chart={chart} zone={timeZone} />}
           {show('history') && p.history}
-          {show('timeline') && p.timeline}
         </div>
         <aside aria-label={t('patient360.aside')} className="flex min-w-0 flex-col gap-4">
           {p.carePlan}
@@ -141,8 +142,9 @@ export default function Patient360Page(p: Props) {
 
 /** The identity banner with the allergy state, shared by every Patient 360 screen (chart, timeline, documents). */
 export function PatientBanner({ data: { patient, chart } }: { data: Patient360 }) {
+  const { formatCalendarDate } = useI18n();
   return (
-    <IdentityBanner patient={{ name: patient.fullName, age: patient.ageYears, sex: sex[patient.sexAtBirth], mrn: patient.mrn, dob: patient.dateOfBirth, allergies: bannerAllergies(chart) }} />
+    <IdentityBanner patient={{ name: patient.fullName, age: patient.ageYears, sex: sex[patient.sexAtBirth], mrn: patient.mrn, dob: formatCalendarDate(patient.dateOfBirth), allergies: bannerAllergies(chart) }} />
   );
 }
 

@@ -29,8 +29,8 @@ const icons = { notSame: X, requestApproval: GitMerge, approve: Check, undo: Und
 /** P-03 merge review: the open requests and, for one, the two records side by side with the steps this role may take. */
 export default function MergeReview(props: Props) {
   const { review, queue } = props;
-  const { t, formatDate } = useI18n();
-  const date = (iso: string) => formatDate(new Date(`${iso.slice(0, 10)}T00:00:00`));
+  const { t, formatCalendarDate } = useI18n();
+  const date = formatCalendarDate;
   const actions = review ? availableActions(review, props.can) : [];
   const loadError = props.queueState === 'error' || props.reviewState === 'error';
   const status = props.queueState === 'loading' || props.reviewState === 'loading' ? t('merge.loading')

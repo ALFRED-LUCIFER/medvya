@@ -101,12 +101,13 @@ public enum CareGapAction { AddToVisit, Order, Refer }
 
 /// <summary>
 /// One gap due today. <see cref="Item"/> is the English text the action writes into the record (the plan line, the order's test, the
-/// referral's reason), the language of the printed papers. <see cref="LastDone"/> is the last record that would have closed it (null: never
+/// referral's reason), the language of the printed papers; <see cref="ReferTo"/> is the referral's provider. <see cref="LastDone"/> is the last record that would have closed it (null: never
 /// recorded); <see cref="Since"/> is when the order was placed or the dose fell due.
 /// </summary>
 public sealed record CareGap(
     [property: Classification(DataClass.SensitiveHealth)] CareGapRule Rule, [property: Classification(DataClass.Internal)] CareGapAction Action, [property: Classification(DataClass.SensitiveHealth)] string Item, [property: Classification(DataClass.SensitiveHealth)] DateOnly? LastDone = null,
-    [property: Classification(DataClass.SensitiveHealth)] DateOnly? Since = null, [property: Classification(DataClass.SensitiveHealth)] string? Vaccine = null, [property: Classification(DataClass.SensitiveHealth)] int? Dose = null);
+    [property: Classification(DataClass.SensitiveHealth)] DateOnly? Since = null, [property: Classification(DataClass.SensitiveHealth)] string? Vaccine = null, [property: Classification(DataClass.SensitiveHealth)] int? Dose = null,
+    [property: Classification(DataClass.Internal)] string? ReferTo = null);
 
 /// <summary>A placed order, read from Prescribing through <c>IPlacedOrders</c>.</summary>
 public sealed record PlacedOrderFact([property: Classification(DataClass.SensitiveHealth)] string Name, [property: Classification(DataClass.Internal)] DateTimeOffset OrderedAt);
@@ -178,7 +179,7 @@ public static class CareGapRules
         var yearAgoAt = now.AddYears(-1);
         if (f.Diabetes)
         {
-            if (f.LastEyeExam is not { } eye || eye < yearAgo) gaps.Add(new(CareGapRule.DiabeticEyeExam, CareGapAction.Refer, "Annual diabetic eye check", f.LastEyeExam));
+            if (f.LastEyeExam is not { } eye || eye < yearAgo) gaps.Add(new(CareGapRule.DiabeticEyeExam, CareGapAction.Refer, "Annual diabetic eye check", f.LastEyeExam, ReferTo: "Ophthalmology"));
             if (f.LastFootExam is not { } foot || foot < yearAgo) gaps.Add(new(CareGapRule.DiabeticFootExam, CareGapAction.AddToVisit, "Annual diabetic foot check", f.LastFootExam));
             var uacr = f.LatestTaken.GetValueOrDefault(ObservationCode.UrineAlbuminCreatinineRatio);
             if (uacr == default || uacr < yearAgoAt) gaps.Add(new(CareGapRule.UrineAlbumin, CareGapAction.Order, UacrName, uacr == default ? null : Day(uacr)));

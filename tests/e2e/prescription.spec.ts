@@ -5,7 +5,7 @@ import { clearChecks, line, mockPrescription, paracetamolForWeight, patientAlert
 // MDV-P2-015 (E-05, E-11): the doctor adds a formulary medicine and builds its dose, which autosaves and shows the instruction in the chosen
 // print language; a free-text medicine is flagged; a reconciliation stop is a discontinue line. CI has no API: endpoints are mocked in the
 // shapes the server sends. The readable instruction per language, the audit rows, access and the tenant are proven in PrescriptionTests.
-const card = (page: Page, name: string) => page.getByRole('list', { name: 'Medicines to prescribe' }).getByRole('listitem', { name });
+const card = (page: Page, name: string) => page.getByRole('region', { name: 'Medicines to prescribe' }).getByRole('row', { name });
 const pick = async (page: Page, scope: ReturnType<typeof card>, label: string, option: string) => {
   await scope.getByRole('combobox', { name: label }).click();
   await page.getByRole('option', { name: option, exact: true }).click();
@@ -185,7 +185,7 @@ for (const locale of ['en', 'ar'])
     await expect(checks).toContainText(locale === 'ar' ? 'الحمل: Ibuprofen في الأسبوع 24.' : 'Pregnancy: Ibuprofen at 24 weeks.');
     await expect(checks).toContainText(locale === 'ar' ? '15 ملغ/كغ × 14.2 كغ = 213 ملغ = 8.9 مل للجرعة' : '= 8.9 mL a dose');
     if (locale === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
-    await page.locator('details summary').click();
+    await page.locator('details:not(.group) > summary').click();
     await page.addScriptTag({ path: axePath });
     const violations = await page.evaluate(async () =>
       (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations.map(v => `${v.id} (${v.nodes.length})`));
@@ -205,7 +205,7 @@ for (const locale of ['en', 'ar'])
     if (locale === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
     await expect(page.getByRole('region', { name: locale === 'ar' ? 'فحوص السلامة' : 'Safety checks' })).toBeVisible();
     await page.getByRole('button', { name: locale === 'ar' ? 'اذكر سبب المتابعة' : 'Give a reason to go ahead' }).click(); // the reason form is checked too
-    await page.locator('details summary').click();
+    await page.locator('details:not(.group) > summary').click();
     await page.addScriptTag({ path: axePath });
     const violations = await page.evaluate(async () =>
       (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations.map(v => `${v.id} (${v.nodes.length})`));

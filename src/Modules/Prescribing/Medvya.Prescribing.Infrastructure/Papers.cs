@@ -7,6 +7,7 @@ using Medvya.BuildingBlocks.Domain;
 using Medvya.BuildingBlocks.Infrastructure;
 using Medvya.Encounters.Application;
 using Medvya.Identity.Application;
+using Medvya.Patients.Application;
 using Medvya.Prescribing.Application;
 using Medvya.Prescribing.Domain;
 using Medvya.Prescribing.Infrastructure.Persistence;
@@ -59,6 +60,10 @@ public sealed class PaperIssuer(
     /// <summary>A date and time on the paper, in the facility's zone.</summary>
     public static string When(DateTimeOffset at, string timeZone) =>
         TimeZoneInfo.ConvertTime(at, TimeZoneInfo.FindSystemTimeZoneById(timeZone)).ToString("dd MMM yyyy, HH:mm", CultureInfo.InvariantCulture);
+
+    /// <summary>The patient's age in whole years on the day the paper was issued, by the facility's calendar.</summary>
+    public static int Age(DateTimeOffset at, string timeZone, DateOnly dateOfBirth) =>
+        CountryRules.AgeOn(DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(at, TimeZoneInfo.FindSystemTimeZoneById(timeZone)).DateTime), dateOfBirth);
 }
 
 /// <summary>
@@ -98,8 +103,8 @@ public static class PaperPdfDocument
 {
     static string T(string key, params (string, string)[] values) => PaperText.Get(key, values);
 
-    static string Patient(string name, string sex, string mrn, DateOnly dob) =>
-        T("rxPrint.patient", ("name", name), ("sex", T($"rxPrint.sex.{sex}")), ("mrn", mrn), ("dob", dob.ToString("dd MMM yyyy", CultureInfo.InvariantCulture)));
+    static string Patient(string name, string sex, string mrn, DateOnly dob, int age) =>
+        T("rxPrint.patient", ("name", name), ("sex", T($"rxPrint.sex.{sex}")), ("age", age.ToString(CultureInfo.InvariantCulture)), ("mrn", mrn), ("dob", dob.ToString("dd MMM yyyy", CultureInfo.InvariantCulture)));
 
     static byte[] Write(string title, string[] header, List<(string, bool)> body, string signedLine, PaperIssuer.Paper paper)
     {
@@ -117,7 +122,7 @@ public static class PaperPdfDocument
     public static byte[] Slip(OrderSlip s, string timeZone, PaperIssuer.Paper paper)
     {
         var title = T("orders.slip.title");
-        var header = new List<string> { s.FacilityName, title, Patient(s.Patient.FullName, s.Patient.SexAtBirth, s.Patient.Mrn, s.Patient.DateOfBirth) };
+        var header = new List<string> { s.FacilityName, title, Patient(s.Patient.FullName, s.Patient.SexAtBirth, s.Patient.Mrn, s.Patient.DateOfBirth, PaperIssuer.Age(s.OrderedAt, timeZone, s.Patient.DateOfBirth)) };
         if (s.Destination is { } lab) header.Add(T("paper.slip.lab", ("lab", lab)));
         List<(string, bool)> body = [(T("orders.slip.tests"), true)];
         var n = 0;
@@ -134,7 +139,7 @@ public static class PaperPdfDocument
     public static byte[] Letter(ReferralLetter l, string timeZone, PaperIssuer.Paper paper)
     {
         var title = T("referrals.letter.title");
-        string[] header = [l.FacilityName, title, Patient(l.Patient.FullName, l.Patient.SexAtBirth, l.Patient.Mrn, l.Patient.DateOfBirth),
+        string[] header = [l.FacilityName, title, Patient(l.Patient.FullName, l.Patient.SexAtBirth, l.Patient.Mrn, l.Patient.DateOfBirth, PaperIssuer.Age(l.At, timeZone, l.Patient.DateOfBirth)),
             T("paper.letter.to", ("provider", l.Provider), ("urgency", T($"referrals.urgency.{l.Urgency}")))];
         List<(string, bool)> body = [];
         if (l.Reason is { } reason) body.AddRange([(T("referrals.letter.reason"), true), (reason, false), ("", false)]);

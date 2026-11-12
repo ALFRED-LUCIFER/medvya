@@ -56,13 +56,14 @@ export default function RxPrintPage(p: Props) {
           <h1 id="rx-print-title" className="text-xl font-extrabold">{v.clinic}</h1>
           <p className="font-bold">{v.qualifications ? t('rxPrint.doctor', { name: v.doctor, qualifications: v.qualifications }) : v.doctor}</p>
           <p>{t('rxPrint.licence', { number: ltr(v.licenceNumber), authority: v.licenceAuthority })}</p>
-          <p>{t('rxPrint.patient', { name: v.patient.fullName, sex: t(`rxPrint.sex.${v.patient.sexAtBirth}`), mrn: ltr(v.patient.mrn), dob: formatCalendarDate(v.patient.dateOfBirth) })}</p>
+          <p>{t('rxPrint.patient', { name: v.patient.fullName, sex: t(`rxPrint.sex.${v.patient.sexAtBirth}`), age: v.patientAge, mrn: ltr(v.patient.mrn), dob: formatCalendarDate(v.patient.dateOfBirth) })}</p>
           <p>{t('rxPrint.number', { number: ltr(v.authorisation.number), version: v.authorisation.versionNo, when, zone: v.timeZone })}</p>
         </header>
         <p className="font-bold">
           {v.allergies === 'Listed' ? t('rxPrint.allergies', { list: v.allergySubstances.join(', ') })
             : t(v.allergies === 'NoKnownAllergies' ? 'rxPrint.allergiesNone' : 'rxPrint.allergiesNotRecorded')}
         </p>
+        {v.diagnoses.length > 0 && <p>{t('rxPrint.diagnosis', { list: v.diagnoses.map(d => (d.provisional ? t('rxPrint.diagnosisProvisional', { name: d.description }) : d.description)).join(', ') })}</p>}
         <section aria-labelledby="rx-print-medicines">
           <h2 id="rx-print-medicines" className="mb-1 font-extrabold">{t('rxPrint.medicines')}</h2>
           <ol className="flex list-decimal flex-col gap-2 ps-6">
@@ -82,14 +83,15 @@ export default function RxPrintPage(p: Props) {
             {!v.advice.inPatientLanguage && <p className="text-sm">{t('rxPrint.adviceInEnglish')}</p>}
           </section>
         )}
+        {v.followUpOn && <p className="font-bold">{t('rxPrint.followUp', { date: formatCalendarDate(v.followUpOn) })}</p>}
         <footer className="flex flex-wrap items-end gap-4 border-t border-black pt-2">
           <svg role="img" aria-label={t('rxPrint.qr')} viewBox={`0 0 ${size} ${size}`} className="size-32 shrink-0" shapeRendering="crispEdges">
             <rect width={size} height={size} className="fill-white" />
             <g className="fill-black">{qrCells(v.qr).map(([x, y]) => <rect key={`${x}-${y}`} x={x} y={y} width={1} height={1} />)}</g>
           </svg>
           <div className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
+            <p>{t('rxPrint.signature')}</p>
             <p className="font-bold">{t('rxPrint.authorised', { name: v.doctor, when })}</p>
-            <p className="break-all">{t('rxPrint.hash', { hash: v.authorisation.contentHash })}</p>
             <p className="break-all">{t('rxPrint.verify', { url: v.verifyUrl })}</p>
           </div>
         </footer>

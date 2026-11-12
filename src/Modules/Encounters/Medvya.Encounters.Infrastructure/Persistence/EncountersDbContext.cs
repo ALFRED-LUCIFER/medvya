@@ -26,6 +26,8 @@ public sealed class EncountersDbContext(DbContextOptions<EncountersDbContext> op
     public DbSet<SignedNotePdf> SignedNotePdfs => Set<SignedNotePdf>();
     public DbSet<OutboxEvent> Outbox => Set<OutboxEvent>();
     public DbSet<HistoryEntry> HistoryEntries => Set<HistoryEntry>();
+    public DbSet<PregnancyEpisode> PregnancyEpisodes => Set<PregnancyEpisode>();
+    public DbSet<PregnancyRuledOut> PregnancyRuledOuts => Set<PregnancyRuledOut>();
     public DbSet<Immunisation> Immunisations => Set<Immunisation>();
     public DbSet<MilestoneResponse> MilestoneResponses => Set<MilestoneResponse>();
 
@@ -125,6 +127,19 @@ public sealed class EncountersDbContext(DbContextOptions<EncountersDbContext> op
         {
             e.Property(x => x.NutritionNote).HasMaxLength(GeriatricRules.MaxNutritionNote);
             e.HasIndex(x => new { x.TenantId, x.PatientId, x.AssessedAt }); // the patient's latest reviews
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<PregnancyEpisode>(e =>
+        {
+            e.Property(x => x.DatedBy).HasConversion<string>().HasMaxLength(10);
+            e.Property(x => x.DatingReason).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.Outcome).HasConversion<string>().HasMaxLength(20);
+            e.HasIndex(x => new { x.TenantId, x.PatientId }).IsUnique().HasFilter("\"Outcome\" IS NULL"); // one open pregnancy per patient
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+        modelBuilder.Entity<PregnancyRuledOut>(e =>
+        {
+            e.HasIndex(x => new { x.TenantId, x.PatientId, x.RecordedAt });
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
         modelBuilder.Entity<Intake>(e =>

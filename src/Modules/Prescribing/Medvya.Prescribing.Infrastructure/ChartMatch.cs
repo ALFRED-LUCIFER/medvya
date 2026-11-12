@@ -23,10 +23,10 @@ static class ChartMatch
 
     /// <summary>
     /// The patient facts the rules read. eGFR in whole units, rounded down so a reading just under a threshold counts as under it.
-    /// shortcut: the latest eGFR at any age, and no pregnancy until MDV-P2-034 feeds it (reported as not checked until then); an eGFR age limit
-    /// when the clinical reviewer sets one (MDV-P2-028).
+    /// The pregnancy weeks and a "not pregnant" statement for today come from the chart (MDV-P2-034).
+    /// shortcut: the latest eGFR at any age; an eGFR age limit when the clinical reviewer sets one (MDV-P2-028).
     /// </summary>
-    public static PatientContext Patient(PatientSummary patient, string country, PrescribingFacts facts, DateTimeOffset now) =>
+    public static PatientContext Patient(PatientSummary patient, string country, PrescribingFacts facts, ChartPregnancy pregnancy, DateTimeOffset now) =>
         new(CountryRules.AgeOn(CountryRules.For(country).Today(now), patient.DateOfBirth), patient.SexAtBirth == Medvya.Patients.Domain.SexAtBirth.Female,
-            facts.Weight is { } w && w.TakenAt >= now.AddMonths(-1) ? w.ValueHundredths : null, facts.Egfr?.ValueHundredths / 100, null);
+            facts.Weight is { } w && w.TakenAt >= now.AddMonths(-1) ? w.ValueHundredths : null, facts.Egfr?.ValueHundredths / 100, pregnancy.GestationWeeks, pregnancy.RuledOut);
 }

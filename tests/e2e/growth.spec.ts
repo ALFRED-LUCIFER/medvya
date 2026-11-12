@@ -12,7 +12,7 @@ const session = (vitals = 'Full') => ({
 
 const chart = (ageYears: number) => ({
   patient: { id: 'p-1', fullName: 'Aarav Iyer (synthetic)', mrn: '000003', dateOfBirth: '2022-07-19', ageYears, sexAtBirth: 'Male', preferredLanguage: null },
-  treatmentConsent: true, timeZone: 'Asia/Kolkata', lifeStage: ageYears < 18 ? 'Child' : 'Adult', historySections: ['PastMedical'],
+  treatmentConsent: true, timeZone: 'Asia/Kolkata', lifeStage: ageYears < 18 ? 'Child' : 'Adult', historySections: ['PastMedical'], pregnancy: { open: null, ruledOut: null },
   chart: { allergyState: 'NoKnownAllergies', allergies: [], problems: [], medicines: [], lastVitals: [], trends: [], recentEncounters: [], openEncounterId: null, lastLabs: [], bmi: null,
     history: [], bloodGroup: null, careTeam: [] },
 });

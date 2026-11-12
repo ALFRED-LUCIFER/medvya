@@ -13,7 +13,7 @@ const session = {
 
 const chart = (ageYears: number, openEncounterId: string | null = null) => ({
   patient: { id: 'p-1', fullName: 'Savitri Krishnan (synthetic)', mrn: '000873', dateOfBirth: '1950-06-22', ageYears, sexAtBirth: 'Female', preferredLanguage: null },
-  treatmentConsent: true, timeZone: 'Asia/Kolkata', lifeStage: ageYears >= 65 ? 'OlderAdult' : 'Adult', historySections: ['Function', 'Falls'],
+  treatmentConsent: true, timeZone: 'Asia/Kolkata', lifeStage: ageYears >= 65 ? 'OlderAdult' : 'Adult', historySections: ['Function', 'Falls'], pregnancy: { open: null, ruledOut: null },
   chart: {
     allergyState: 'NoKnownAllergies', allergies: [], problems: [], medicines: [{ name: 'Alprazolam 0.25 mg', dose: null, state: 'Active', source: 'ClinicianVerified', stoppedAt: null }],
     lastVitals: [], trends: [], recentEncounters: [], openEncounterId, lastLabs: [], bmi: null, bloodGroup: null, careTeam: [], history: [],

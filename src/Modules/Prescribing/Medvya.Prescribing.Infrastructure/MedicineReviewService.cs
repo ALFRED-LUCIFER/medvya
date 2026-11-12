@@ -27,7 +27,7 @@ public sealed class MedicineReviewService(
         var facts = await chart.FactsAsync(patientId, cancellationToken);
         var country = await staff.TenantCountryAsync(cancellationToken) ?? throw new InvalidOperationException("No tenant country.");
         var now = clock.GetUtcNow();
-        var context = ChartMatch.Patient(patient, country, facts, now);
+        var context = ChartMatch.Patient(patient, country, facts, await chart.PregnancyAsync(patientId, facilityId, cancellationToken), now);
         var generics = await ChartMatch.GenericsAsync(db, country, context.AgeYears >= SafetyRules.OlderAdultAge ? facts.ActiveMedicines.Count : 0, cancellationToken);
         var result = MedicineReview.Evaluate([.. facts.ActiveMedicines.Select(m => new ReviewMedicine(m.Id, m.Name, ChartMatch.Atc(m.Name, generics), m.RecordedAt))],
             context, facts.Potassium?.ValueHundredths, now);

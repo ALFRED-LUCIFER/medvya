@@ -3,18 +3,18 @@ import { expect, test, type Page } from '@playwright/test';
 
 // MDV-P2-004, MDV-P2-033: Patient 360 on one page (E-01). CI has no API: the session and the chart are mocked in the shapes the server sends. The care-relationship check,
 // the receptionist's 403, the audit rows and the source on every fact are covered by PatientChartTests on PostgreSQL.
-const session = (role: string, level: string, entry = 'None') => ({
+const session = (role: string, level: string, entry = 'None', notes = 'None') => ({
   user: { id: 'u-rao', displayName: 'Dr. Arjun Rao (synthetic)' },
   memberships: [{ id: 'm-1', tenantId: 't-1', tenantName: 'Iyer Family Clinic', facilityId: 'f-1', facilityName: 'Iyer Family Clinic · Adyar', role }],
   active: { membershipId: 'm-1', tenantId: 't-1', facilityId: 'f-1', role, flags: [] as string[], country: 'IN',
-    capabilities: { RegisterBookPatients: 'Read', CheckInQueue: 'Full', Patient360Chart: level, VitalsAllergiesEntry: entry } },
+    capabilities: { RegisterBookPatients: 'Read', CheckInQueue: 'Full', Patient360Chart: level, VitalsAllergiesEntry: entry, ClinicalNotes: notes } },
 });
 const at = (day: number) => `2026-10-${String(day).padStart(2, '0')}T04:30:00Z`;
 const points = (values: number[], source = 'ClinicianVerified') => values.map((value, i) => ({ value, takenAt: at(i + 1), source }));
 
 const chart = (over: Record<string, unknown> = {}) => ({
   patient: { id: 'p-1', fullName: 'Meera Iyer (synthetic)', mrn: '000001', dateOfBirth: '1972-03-12', ageYears: 54, sexAtBirth: 'Female', preferredLanguage: null },
-  treatmentConsent: true, timeZone: 'Asia/Kolkata', lifeStage: 'Adult', historySections: ['PastMedical', 'Surgical', 'Family', 'Social', 'WomensHealth'], 
+  treatmentConsent: true, timeZone: 'Asia/Kolkata', lifeStage: 'Adult', historySections: ['PastMedical', 'Surgical', 'Family', 'Social', 'WomensHealth'], pregnancy: { open: null, ruledOut: null }, 
   chart: {
     allergyState: 'Listed',
     allergies: [{ substance: 'Penicillin', reaction: 'Rash', status: 'Confirmed', source: 'ClinicianVerified' }],
@@ -43,9 +43,9 @@ const timeline = { entries: [{ id: 'x-1', kind: 'Encounter', at: at(3), code: 'C
 const documents = { patient: { id: 'p-1', fullName: 'Meera Iyer (synthetic)', mrn: '000001', dateOfBirth: '1972-03-12' }, canOpen: true, timeZone: 'Asia/Kolkata',
   documents: [{ id: 'd-1', type: 'LabReport', documentDate: '2026-10-01', source: 'Imported', scanStatus: 'Clean', contentType: 'application/pdf', sizeBytes: 2048, uploadedBy: 'Dr. Arjun Rao (synthetic)', uploadedAt: '2026-10-02T04:30:00Z' }] };
 
-async function open(page: Page, { locale = 'en', level = 'Full', entry = 'None', response = { json: chart() } as { status?: number; json: unknown }, path = '/patients/p-1', side = true } = {}) {
+async function open(page: Page, { locale = 'en', level = 'Full', entry = 'None', notes = 'None', response = { json: chart() } as { status?: number; json: unknown }, path = '/patients/p-1', side = true } = {}) {
   await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
-  await page.route('**/v1/me/context', r => r.fulfill({ json: session('SoloDoctor', level, entry) }));
+  await page.route('**/v1/me/context', r => r.fulfill({ json: session('SoloDoctor', level, entry, notes) }));
   await page.route('**/v1/patients/p-1/chart', r => r.fulfill(response));
   await page.route('**/v1/patients/p-1/timeline*', r => r.fulfill(side ? { json: timeline } : { json: { entries: [], next: null, timeZone: 'Asia/Kolkata' } }));
   await page.route('**/v1/patients/p-1/documents', r => r.fulfill(side ? { json: documents } : { json: { ...documents, documents: [] } }));
@@ -203,9 +203,10 @@ test('MDV-P2-033: the section buttons filter the page, work from the keyboard, a
 
 test('MDV-P2-033: the life-stage button and slot follow the stage, and every block has an empty state', async ({ page }) => {
   const empty = chart({ allergyState: 'NotRecorded', allergies: [], problems: [], medicines: [], lastVitals: [], trends: [], lastLabs: [], bmi: null, history: [] });
-  await open(page, { side: false, response: { json: { ...empty, lifeStage: 'Pregnancy', historySections: ['PastMedical', 'Obstetric'] } } });
-  await expect(page.getByRole('button', { name: 'Pregnancy' })).toBeVisible();
-  await expect(page.getByRole('region', { name: 'Pregnancy' })).toContainText('Nothing for this life stage is recorded yet.');
+  // An adult man with no module data: the stage button and the empty slot (a pregnancy shows its card, MDV-P2-034).
+  await open(page, { side: false, response: { json: { ...empty, lifeStage: 'Adult', patient: { ...empty.patient, sexAtBirth: 'Male' }, historySections: ['PastMedical'] } } });
+  await expect(page.getByRole('button', { name: 'Chronic care' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Chronic care' })).toContainText('Nothing for this life stage is recorded yet.');
   await expect(page.getByRole('region', { name: 'Problems', exact: true })).toContainText('No problems recorded.');
   await expect(page.getByRole('region', { name: 'Medicines', exact: true })).toContainText('No medicines recorded.');
   await expect(page.getByRole('region', { name: 'Last vitals', exact: true }).getByText('Not recorded')).toHaveCount(6);
@@ -256,5 +257,88 @@ for (const [locale, name] of [['en', 'Patient Meera Iyer (synthetic)'], ['ar', '
     await page.addScriptTag({ path: axePath });
     const violations = await page.evaluate(async () =>
       (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations.map(v => `${v.id} (${v.nodes.length})`));
+    expect(violations).toEqual([]);
+  });
+
+// MDV-P2-034: the pregnancy card. Dates, gestation and contacts are the server's (PregnancyRulesTests, PregnancyTests on PostgreSQL).
+const contacts = [8, 12, 16, 20, 24, 28, 32, 36, 38, 40].map(week => ({ week, state: week < 24 ? (week === 16 ? 'Missed' : 'Done') : week === 24 ? 'Today' : 'ToCome', encounterId: week < 24 && week !== 16 ? `e-${week}` : null }));
+const pregnant = {
+  ...chart(), lifeStage: 'Pregnancy', historySections: ['Obstetric', 'PastMedical'],
+  pregnancy: { ruledOut: null, open: {
+    id: 'pg-1', lmp: '2026-05-19', scanDate: '2026-07-10', scanGestationDays: 52, dueDate: '2027-02-23', datedBy: 'Lmp', datingReason: 'ScanAgrees', previousDueDate: null,
+    gestationDays: 171, gravida: 2, para: 1, abortions: 0, living: 1, startedBy: 'Dr. Arjun Rao (synthetic)', startedAt: at(1), contacts,
+    dangerSigns: ['VaginalBleeding', 'SevereHeadacheOrBlurredVision', 'SwellingOfFaceOrHands', 'LeakingFluid', 'FewerBabyMovements', 'FeverOrBurningUrine'],
+    dangerSignsCounselledBy: null, dangerSignsCounselledAt: null, rulesSignedOff: false } },
+};
+
+test('MDV-P2-034: an open pregnancy shows gestation, due date and its method, G P A L, the trimester bar in words, the contacts and the danger signs', async ({ page }) => {
+  await open(page, { entry: 'Full', notes: 'Sign', response: { json: pregnant } });
+  await expect(page.getByRole('list', { name: 'Patient details' }).getByRole('listitem').first()).toHaveText('Pregnancy');
+  const card = page.getByRole('region', { name: 'Pregnancy' });
+  await expect(card).toContainText('LMP + 280 days · the dating scan agrees');
+  await expect(card).toContainText('24 w 3 d');
+  await expect(card).toContainText('Second trimester');
+  await expect(card).toContainText('23 Feb 2027');
+  await expect(card).toContainText('LMP 19 May 2026');
+  await expect(card).toContainText('G2 P1 A0 L1');
+  await expect(card.getByRole('img', { name: '24 w 3 d of 40 weeks, Second trimester' })).toBeVisible();
+  await expect(card.getByRole('listitem').filter({ hasText: '24 w · this week' })).toBeVisible();
+  await expect(card.getByRole('listitem').filter({ hasText: '16 w · no visit' })).toBeVisible();
+  await expect(card.getByRole('listitem').filter({ hasText: '8 w · done' })).toBeVisible();
+  await expect(card).toContainText('Fewer baby movements');
+  await expect(card).toContainText('Not counselled yet.');
+  await expect(card).toContainText('The dating rule and the contact plan are a draft awaiting clinical review.');
+
+  const sent: unknown[] = [];
+  await page.route('**/v1/patients/p-1/pregnancy/readings', r => { sent.push(r.request().postDataJSON()); return r.fulfill({ json: pregnant.pregnancy }); });
+  await card.getByRole('button', { name: 'Record fundal height and fetal heart' }).click();
+  await card.getByRole('button', { name: 'Save' }).click();
+  await expect(card.getByText('Check this value.')).toBeVisible(); // nothing entered: refused before it is sent
+  await card.getByRole('spinbutton', { name: 'Fundal height (cm)' }).fill('24');
+  await card.getByRole('button', { name: 'Save' }).click();
+  await expect(card.getByRole('button', { name: 'Close pregnancy' })).toBeVisible();
+  expect(sent).toEqual([{ fundalHeightCm: 24, fetalHeartRate: null }]);
+});
+
+test('MDV-P2-034: a doctor starts a pregnancy; a nurse records "not pregnant" but is offered no start', async ({ page }) => {
+  let started = false;
+  const body: unknown[] = [];
+  await page.route('**/v1/patients/p-1/pregnancy', r => { started = true; body.push(r.request().postDataJSON()); return r.fulfill({ json: pregnant.pregnancy }); });
+  await page.addInitScript(() => localStorage.setItem('medvya.locale', 'en'));
+  await page.route('**/v1/me/context', r => r.fulfill({ json: session('SoloDoctor', 'Full', 'Full', 'Sign') }));
+  await page.route('**/v1/patients/p-1/chart', r => r.fulfill({ json: started ? pregnant : chart() }));
+  await page.goto('/patients/p-1');
+  const card = page.getByRole('region', { name: 'Pregnancy' });
+  await expect(card).toContainText('No pregnancy recorded. The medicine checks treat this as not known.');
+  await card.getByRole('button', { name: 'Start pregnancy' }).click();
+  await card.getByRole('button', { name: 'Save' }).click();
+  await expect(card.getByText('Check this value.').first()).toBeVisible();
+  await card.getByLabel('Last menstrual period').fill('2026-05-19');
+  await card.getByRole('spinbutton', { name: 'Gravida' }).fill('2');
+  await card.getByRole('button', { name: 'Save' }).click();
+  await expect(card).toContainText('24 w 3 d');
+  expect(body).toEqual([{ lmp: '2026-05-19', scanDate: null, scanWeeks: null, scanDays: null, gravida: 2, para: null, abortions: null, living: null }]);
+
+  await page.unroute('**/v1/me/context');
+  await page.unroute('**/v1/patients/p-1/chart');
+  await page.route('**/v1/me/context', r => r.fulfill({ json: session('Nurse', 'Limited', 'Full', 'Read') }));
+  await page.route('**/v1/patients/p-1/chart', r => r.fulfill({ json: chart() }));
+  await page.route('**/v1/patients/p-1/pregnancy/ruled-out', r => r.fulfill({ json: { open: null, ruledOut: { recordedBy: 'Sister Anu (synthetic)', recordedAt: at(19) } } }));
+  await page.reload();
+  await expect(card.getByRole('button', { name: 'Start pregnancy' })).toHaveCount(0);
+  await expect(card.getByRole('button', { name: 'Record not pregnant today' })).toBeVisible();
+});
+
+for (const [locale, title] of [['en', 'Pregnancy'], ['ar', 'الحمل']] as const)
+  test(`MDV-P2-034: the pregnancy card has no axe violations and 44 px targets (${locale})`, async ({ page }) => {
+    await open(page, { locale, entry: 'Full', notes: 'Sign', response: { json: pregnant } });
+    const card = page.getByRole('region', { name: title, exact: true });
+    await expect(card).toBeVisible();
+    if (locale === 'ar') await expect(card).toContainText('الثلث الثاني');
+    for (const b of await card.getByRole('button').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    await page.addScriptTag({ path: axePath });
+    // The card only: the page-wide axe run is the one-page chart's own test (MDV-P2-033).
+    const violations = await card.evaluate(async el =>
+      (await (window as unknown as { axe: { run: (c: Element) => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run(el)).violations.map(v => `${v.id} (${v.nodes.length})`));
     expect(violations).toEqual([]);
   });

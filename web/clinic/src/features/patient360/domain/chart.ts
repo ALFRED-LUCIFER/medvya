@@ -27,11 +27,26 @@ export type HistorySection = 'PastMedical' | 'Surgical' | 'Family' | 'Social' | 
 /** One saved version of a history section; lists are newest first. */
 export type HistoryEntry = { section: HistorySection; text: string; author: string | null; recordedAt: string };
 
+/** The pregnancy record (MDV-P2-034), as the server works it out on the facility's date. */
+export type ContactState = 'Done' | 'Today' | 'ToCome' | 'Missed';
+export type DangerSign = 'VaginalBleeding' | 'SevereHeadacheOrBlurredVision' | 'SwellingOfFaceOrHands' | 'LeakingFluid' | 'FewerBabyMovements' | 'FeverOrBurningUrine';
+export type PregnancyOutcome = 'LiveBirth' | 'Stillbirth' | 'Miscarriage' | 'Termination' | 'Ectopic' | 'EnteredInError';
+export type OpenPregnancy = {
+  id: string; lmp: string | null; scanDate: string | null; scanGestationDays: number | null; dueDate: string; datedBy: 'Lmp' | 'Scan';
+  datingReason: 'LmpOnly' | 'ScanOnly' | 'ScanAgrees' | 'ScanDiffers'; previousDueDate: string | null; gestationDays: number;
+  gravida: number | null; para: number | null; abortions: number | null; living: number | null; startedBy: string | null; startedAt: string;
+  contacts: { week: number; state: ContactState; encounterId: string | null }[]; dangerSigns: DangerSign[];
+  dangerSignsCounselledBy: string | null; dangerSignsCounselledAt: string | null; rulesSignedOff: boolean;
+};
+/** Neither: not recorded, never "not pregnant". */
+export type PregnancyStatus = { open: OpenPregnancy | null; ruledOut: { recordedBy: string | null; recordedAt: string } | null };
+
 export type Patient360 = {
   patient: { id: string; fullName: string; mrn: string; dateOfBirth: string; ageYears: number; sexAtBirth: SexAtBirth; preferredLanguage: string | null };
   lifeStage: LifeStage;
   /** The sections the chart offers at this life stage, in order (the server decides). */
   historySections: HistorySection[];
+  pregnancy: PregnancyStatus;
   treatmentConsent: boolean;
   /** The session facility's IANA zone: times show in it, whatever the device's zone. */
   timeZone: string;

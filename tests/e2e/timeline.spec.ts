@@ -16,7 +16,7 @@ const entry = (n: number, kind: string, source = 'ClinicianVerified') => kind ==
   : { id: `e${n}`, kind, at: day(n), code: 'MedicineActive', title: 'Metformin', detail: '500 mg', author: null, source };
 const points = (values: number[]) => values.map((value, i) => ({ value, takenAt: day(i + 1), source: 'ClinicianVerified' }));
 const chart = {
-  patient: { id: 'p-1', fullName: 'Meera Iyer (synthetic)', mrn: '000001', dateOfBirth: '1972-03-12', ageYears: 54, sexAtBirth: 'Female', preferredLanguage: null }, treatmentConsent: true, timeZone: 'Asia/Kolkata', lifeStage: 'Adult', historySections: ['PastMedical', 'Surgical', 'Family', 'Social', 'WomensHealth'], 
+  patient: { id: 'p-1', fullName: 'Meera Iyer (synthetic)', mrn: '000001', dateOfBirth: '1972-03-12', ageYears: 54, sexAtBirth: 'Female', preferredLanguage: null }, treatmentConsent: true, timeZone: 'Asia/Kolkata', lifeStage: 'Adult', historySections: ['PastMedical', 'Surgical', 'Family', 'Social', 'WomensHealth'], pregnancy: { open: null, ruledOut: null }, 
   chart: { allergyState: 'NoKnownAllergies', allergies: [], problems: [], medicines: [], lastVitals: [], trends: [], recentEncounters: [], openEncounterId: null, lastLabs: [], bmi: null, history: [], bloodGroup: null, careTeam: [] },
 };
 

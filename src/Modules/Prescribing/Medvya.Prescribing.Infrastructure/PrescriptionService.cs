@@ -522,7 +522,7 @@ public sealed class PrescriptionService(
         };
         var patient = (await patients.SummariesAsync([encounter.PatientId], cancellationToken)).GetValueOrDefault(encounter.PatientId) ?? throw new InvalidOperationException("Patient not in this tenant.");
         var now = clock.GetUtcNow();
-        var context = ChartMatch.Patient(patient, country, facts, now);
+        var context = ChartMatch.Patient(patient, country, facts, await chart.PregnancyAsync(encounter.PatientId, encounter.FacilityId, cancellationToken), now);
         var result = SafetyRules.Evaluate(lines, onChart, state, [.. facts.Allergies.Select(a => new CheckedAllergy(a.Id, a.Substance, a.Status.ToString()))], context);
 
         var keys = result.Alerts.Select(a => a.Key).ToList();

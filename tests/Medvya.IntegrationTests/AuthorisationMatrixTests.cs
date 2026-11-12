@@ -202,6 +202,12 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.SoloDoctor, new("GET", "/v1/patients/{patient}/child-health")),
         (Role.Nurse, new("POST", "/v1/patients/{patient}/immunisations", """{"vaccine":"BCG","dose":1,"outcome":"Deferred","reason":"Synthetic"}""")),
         (Role.Nurse, new("POST", "/v1/patients/{patient}/milestones", """{"band":"y4","milestone":"tellsAStory","answer":"Yes","answeredBy":"Parent"}""")),
+        (Role.SoloDoctor, new("POST", "/v1/patients/{patient}/pregnancy", """{"lmp":"2026-08-01"}""")),
+        (Role.SoloDoctor, new("PUT", "/v1/patients/{patient}/pregnancy/dating", """{"lmp":"2026-08-01"}""")),
+        (Role.SoloDoctor, new("POST", "/v1/patients/{patient}/pregnancy/close", """{"outcome":"LiveBirth"}""")),
+        (Role.SoloDoctor, new("POST", "/v1/patients/{patient}/pregnancy/danger-signs")),
+        (Role.SoloDoctor, new("POST", "/v1/patients/{patient}/pregnancy/ruled-out")),
+        (Role.SoloDoctor, new("POST", "/v1/patients/{patient}/pregnancy/readings", """{"fundalHeightCm":22}""")),
         (Role.SoloDoctor, new("GET", "/v1/patients/{patient}/growth")),
         (Role.Nurse, new("POST", "/v1/patients/{patient}/growth", """{"takenOn":"2026-10-19","weightKg":4.0}""")),
         (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/end")),
@@ -422,6 +428,12 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.Receptionist, new("GET", "/v1/patients/{patient}/child-health")), // Patient 360: X
         (Role.CareCoordinator, new("POST", "/v1/patients/{patient}/immunisations", """{"vaccine":"BCG","dose":1,"outcome":"Deferred","reason":"Synthetic"}""")), // Vitals & allergies entry: X
         (Role.Receptionist, new("POST", "/v1/patients/{patient}/milestones", """{"band":"y4","milestone":"tellsAStory","answer":"Yes","answeredBy":"Parent"}""")), // Vitals & allergies entry: X
+        (Role.Nurse, new("POST", "/v1/patients/{patient}/pregnancy", """{"lmp":"2026-08-01"}""")), // Clinical notes: R, not S
+        (Role.Nurse, new("POST", "/v1/patients/{patient}/pregnancy/close", """{"outcome":"LiveBirth"}""")),
+        (Role.CareCoordinator, new("PUT", "/v1/patients/{patient}/pregnancy/dating", """{"lmp":"2026-08-01"}""")),
+        (Role.Receptionist, new("POST", "/v1/patients/{patient}/pregnancy/ruled-out")), // Vitals & allergies entry: X
+        (Role.CareCoordinator, new("POST", "/v1/patients/{patient}/pregnancy/danger-signs")),
+        (Role.Receptionist, new("POST", "/v1/patients/{patient}/pregnancy/readings", """{"fundalHeightCm":22}""")),
         (Role.Receptionist, new("GET", "/v1/patients/{patient}/growth")), // Patient 360: X
         (Role.CareCoordinator, new("POST", "/v1/patients/{patient}/growth", """{"takenOn":"2026-10-19","weightKg":4.0}""")), // Vitals & allergies entry: X
         (Role.PracticeAdmin, new("GET", "/v1/patients/{patient}/chart")),

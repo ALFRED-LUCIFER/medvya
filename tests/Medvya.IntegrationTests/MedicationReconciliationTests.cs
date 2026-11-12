@@ -101,7 +101,7 @@ public sealed class MedicationReconciliationTests(PostgresFixture sql) : IClassF
         Assert.Equal(MedicineConflict.Dose, Row(view, "metformin").Conflict);
         Assert.Equal(MedicineConflict.NotOnChart, Row(view, "aspirin").Conflict);
         Assert.Equal(MedicineConflict.NotOnChart, Row(view, "ibuprofen").Conflict);
-        Assert.Equal([MedicationDecisionKind.Keep, MedicationDecisionKind.Change, MedicationDecisionKind.Stop], statin.Allowed);
+        Assert.Equal([MedicationDecisionKind.Keep, MedicationDecisionKind.Change, MedicationDecisionKind.Taper, MedicationDecisionKind.Stop], statin.Allowed);
         Assert.Equal([MedicationDecisionKind.Add, MedicationDecisionKind.Ignore], Row(view, "aspirin").Allowed); // patient-only items: Add or Ignore
         Assert.NotNull(Row(view, "ibuprofen").Other);
     }
@@ -179,6 +179,64 @@ public sealed class MedicationReconciliationTests(PostgresFixture sql) : IClassF
         Assert.Equal("kind:not_allowed", await Refused(D("atorvastatin", MedicationDecisionKind.Add)));
         Assert.Equal("key:unknown", await Refused(D("not-a-medicine", MedicationDecisionKind.Keep)));
         Assert.Equal("kind:not_allowed", await Refused(new DecideMedicine("atorvastatin", null, null, null)));
+        await using var db = sql.Encounters(h.Tenant);
+        Assert.Equal(0, await db.MedicationDecisions.CountAsync());
+    }
+
+    /// <summary>MDV-P2-043 AC1: change and taper keep the chart's old dose and the new one (a taper its steps and the day of the last dose), only in this tenant.</summary>
+    [Fact]
+    public async Task ChangeAndTaperAreRecordedWithTheOldAndNewDoseAndStayInTheTenant()
+    {
+        var (visit, encounter) = await InConsultAsync();
+        await SeedTableAsync(visit);
+        var rec = Rec(h.Doctor);
+        await rec.DecideAsync(encounter, D("metformin", MedicationDecisionKind.Change, " 1000 mg ", "HbA1c above target (synthetic)"));
+        var view = (await rec.DecideAsync(encounter, new DecideMedicine("atorvastatin", MedicationDecisionKind.Taper, null, "Leg aches (synthetic)", [new(" 10 mg ", 7), new("5 mg", 7)])))!;
+
+        var change = Row(view, "metformin").Decision!;
+        Assert.Equal((MedicationDecisionKind.Change, "500 mg", "1000 mg"), (change.Kind, change.FromDose, change.NewDose));
+        var taper = Row(view, "atorvastatin").Decision!;
+        Assert.Equal((MedicationDecisionKind.Taper, "20 mg", (string?)null), (taper.Kind, taper.FromDose, taper.NewDose));
+        Assert.Equal([new TaperStep("10 mg", 7), new TaperStep("5 mg", 7)], taper.Steps);
+        // The decision day (Monday 19 Oct in India) is day one of 14: the last dose is on 01 Nov.
+        Assert.Equal(new DateOnly(2026, 11, 1), taper.EndsOn);
+
+        var changes = await h.Get<IReconciliationStops>(h.Doctor).ChangesAsync(encounter);
+        Assert.Equal(["Atorvastatin", "Metformin"], changes.Select(c => c.Name));
+        Assert.Empty(await h.Get<IReconciliationStops>(h.Doctor).StopsAsync(encounter)); // a taper is not a stop
+
+        await rec.DecideAsync(encounter, D("aspirin", MedicationDecisionKind.Ignore));
+        await rec.DecideAsync(encounter, D("ibuprofen", MedicationDecisionKind.Ignore));
+        await rec.ConfirmAsync(encounter);
+        await using var db = sql.Encounters(h.Tenant);
+        var statin = await db.MedicationStatements.SingleAsync(m => m.Name == "Atorvastatin" && m.Source == ChartSource.ClinicianVerified);
+        Assert.Equal(("10 mg", MedicationState.Active), (statin.Dose, statin.State)); // tapering from the first step; still taken until the end date
+
+        // Tenant isolation: another clinic sees none of it, through the EF filter and row-level security alike.
+        await using var other = sql.Encounters(Guid.NewGuid());
+        Assert.Equal(0, await other.MedicationDecisions.CountAsync());
+        Assert.Equal(0, await other.MedicationDecisions.IgnoreQueryFilters().CountAsync());
+    }
+
+    [Fact]
+    public async Task ATaperNeedsStepsWithADoseAndDaysAndAReason()
+    {
+        var (visit, encounter) = await InConsultAsync();
+        await SeedTableAsync(visit);
+        async Task<string> Refused(IReadOnlyList<TaperStep>? steps, string? reason = "Synthetic")
+        {
+            var e = await Assert.ThrowsAsync<ReconciliationValidationException>(() => Rec(h.Doctor).DecideAsync(encounter, new("atorvastatin", MedicationDecisionKind.Taper, null, reason, steps)));
+            return string.Join(",", e.Errors.Select(x => $"{x.Field}:{x.Code}"));
+        }
+        Assert.Equal("steps:required", await Refused(null));
+        Assert.Equal("steps:required", await Refused([]));
+        Assert.Equal("reason:required", await Refused([new("10 mg", 5)], null));
+        Assert.Equal("steps:dose_required", await Refused([new("10 mg", 5), new(" ", 5)]));
+        Assert.Equal("steps:days_out_of_range", await Refused([new("10 mg", 0)]));
+        Assert.Equal("steps:days_out_of_range", await Refused([new("10 mg", 200), new("5 mg", 166)]));
+        Assert.Equal("steps:too_many", await Refused([.. Enumerable.Range(1, 9).Select(i => new TaperStep($"{i} mg", 1))]));
+        Assert.Equal(("kind", "not_allowed"), (await Assert.ThrowsAsync<ReconciliationValidationException>(() => // not on the chart: nothing to taper
+            Rec(h.Doctor).DecideAsync(encounter, new("aspirin", MedicationDecisionKind.Taper, null, "Synthetic", [new("1 mg", 1)])))).Errors.Single());
         await using var db = sql.Encounters(h.Tenant);
         Assert.Equal(0, await db.MedicationDecisions.CountAsync());
     }

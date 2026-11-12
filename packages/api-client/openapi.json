@@ -4901,6 +4901,66 @@
         }
       }
     },
+    "/v1/encounters/{encounterId}/follow-up": {
+      "get": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "encounterId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "encounterId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/SetFollowUp"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/v1/encounters/{encounterId}/problems": {
       "get": {
         "tags": [
@@ -6099,6 +6159,66 @@
                   },
                   {
                     "$ref": "#/components/schemas/CancelRx"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/encounters/{encounterId}/prescription/advice": {
+      "get": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "encounterId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Host.Api"
+        ],
+        "parameters": [
+          {
+            "name": "encounterId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/SetRxAdvice"
                   }
                 ]
               }
@@ -8332,6 +8452,15 @@
               "null",
               "string"
             ]
+          },
+          "steps": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/TaperStep"
+            }
           }
         }
       },
@@ -9203,6 +9332,7 @@
           "Stop",
           "Add",
           "Ignore",
+          "Taper",
           null
         ]
       },
@@ -11650,6 +11780,20 @@
           }
         }
       },
+      "SetFollowUp": {
+        "required": [
+          "period"
+        ],
+        "type": "object",
+        "properties": {
+          "period": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "SetLocations": {
         "required": [
           "facilityIds",
@@ -11668,6 +11812,20 @@
             }
           },
           "reason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "SetRxAdvice": {
+        "required": [
+          "text"
+        ],
+        "type": "object",
+        "properties": {
+          "text": {
             "type": [
               "null",
               "string"
@@ -11943,6 +12101,26 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "TaperStep": {
+        "required": [
+          "dose",
+          "days"
+        ],
+        "type": "object",
+        "properties": {
+          "dose": {
+            "type": "string"
+          },
+          "days": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -12487,6 +12665,19 @@
                 "$ref": "#/components/schemas/SlotMatch"
               }
             ]
+          },
+          "followUp": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "dueOn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
           }
         }
       },

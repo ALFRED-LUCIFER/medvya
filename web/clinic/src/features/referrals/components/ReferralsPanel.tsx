@@ -14,6 +14,7 @@ import {
   canSend, channels, evidenceOf, nextStates, referralColumns, sectionNames, urgencies,
   type AdvanceForm, type Channel, type FileInForm, type Referral, type ReferralForm, type ReferralProblem,
 } from '../domain/referrals';
+import { referralsHeading } from './ReferralJump';
 import { stateIcons } from './stateIcons';
 
 type Props = {
@@ -45,7 +46,7 @@ export default function ReferralsPanel(p: Props) {
 
   return (
     <div className="flex flex-col gap-4">
-      <Section title={t('referrals.title')} intro={t('referrals.intro')}>
+      <Section id={referralsHeading} title={t('referrals.title')} intro={t('referrals.intro')}>
         <TableState state={tableState} messages={{ loading: t('referrals.loading'), error: t('referrals.loadFailed'), empty: t('referrals.empty') }}>
           <Table label={t('referrals.tableLabel')} className="min-w-[640px]">
             <TableHeader>

@@ -15,6 +15,8 @@ export type WaitlistEntry = {
   offered: SlotMatch | null; offerExpiresAt: string | null;
   /** The earliest free slot that suits a waiting patient: what "Offer" holds. Null when none in the next two weeks. */
   match: SlotMatch | null;
+  /** A doctor's follow-up from a consultation (MDV-P2-043): the period chosen and the day from which a slot suits (YYYY-MM-DD). Null: the desk added it. */
+  followUp: string | null; dueOn: string | null;
 };
 /** The visit made when an offer is accepted (the booking answer; the desk sees the patient and the time). */
 export type BookedFromWaitlist = { id: string; calendarId: string; start: string; patientName: string };

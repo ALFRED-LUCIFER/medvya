@@ -41,7 +41,7 @@ public sealed class PrescriptionService(
     public const string ReadAction = "rx.read", AddAction = "rx.add", UpdateAction = "rx.update", IncludeAction = "rx.include",
         CheckAction = "rx.check", OverrideAction = "rx.override", AuthorisationAction = "rx.authorisation", AuthoriseAction = "rx.authorise", CancelAction = "rx.cancel",
         PrintAction = "rx.print", PdfAction = "rx.pdf", LayoutApproveAction = "rx.layout.approve", ShareAction = "rx.share", ShareReadAction = "rx.share.read",
-        DispatchAction = "rx.dispatch", Resource = "prescription";
+        DispatchAction = "rx.dispatch", AdviceReadAction = "rx.advice.read", AdviceSetAction = "rx.advice.set", Resource = "prescription";
     public const int MaxMedicine = 200, MaxStrength = 50, MaxReason = 200;
     static readonly Access[] Doctors = [Access.Sign];
 
@@ -168,14 +168,15 @@ public sealed class PrescriptionService(
         var checks = await ChecksAsync(encounter, cancellationToken);
         if (checks.Unresolved > 0) throw new PrescriptionConflictException("unresolved_alerts");
 
-        var hash = AuthorisedPrescription.Hash(lines);
+        var advice = await AdviceTextAsync(encounter.Id, cancellationToken);
+        var hash = AuthorisedPrescription.Hash(lines, advice);
         var latest = await LatestAsync(encounter.Id, cancellationToken);
         // A double click or retry: nothing new is written. A cancelled version authorised again is a new version.
         if (latest?.ContentHash == hash && await CancellationAsync(latest.Id, cancellationToken) is null) return await StateAsync(latest, cancellationToken);
         var row = new AuthorisedPrescription
         {
             Id = Guid.CreateVersion7(), TenantId = TenantId, FacilityId = encounter.FacilityId, EncounterId = encounter.Id, VersionNo = (latest?.VersionNo ?? 0) + 1,
-            Lines = lines, ContentHash = hash, RuleSetVersion = checks.RuleSetVersion, VerifyCode = RxVerifyToken.NewCode(), AuthorisedBy = Me, AuthorisedAt = now,
+            Lines = lines, Advice = advice, ContentHash = hash, RuleSetVersion = checks.RuleSetVersion, VerifyCode = RxVerifyToken.NewCode(), AuthorisedBy = Me, AuthorisedAt = now,
         };
         try
         {
@@ -390,7 +391,43 @@ public sealed class PrescriptionService(
     // until re-authorised (it fails safe: no print, never wrong text); hash the structured sig instead once the wording is signed off.
     async Task<RxAuthorisationState> StateAsync(AuthorisedPrescription? latest, CancellationToken cancellationToken) =>
         latest is null ? new(null, false) : new(View(latest, await CancellationAsync(latest.Id, cancellationToken)),
-            latest.ContentHash != AuthorisedPrescription.Hash(await DraftAsync(latest.EncounterId, cancellationToken)));
+            latest.ContentHash != AuthorisedPrescription.Hash(await DraftAsync(latest.EncounterId, cancellationToken), await AdviceTextAsync(latest.EncounterId, cancellationToken)));
+
+    Task<string?> AdviceTextAsync(Guid encounterId, CancellationToken cancellationToken) =>
+        db.RxAdvice.AsNoTracking().Where(a => a.EncounterId == encounterId).Select(a => a.Text).SingleOrDefaultAsync(cancellationToken);
+
+    public async Task<RxAdviceView?> AdviceAsync(Guid encounterId, CancellationToken cancellationToken = default)
+    {
+        if (await RequireAsync(encounterId, cancellationToken) is not { } encounter) return null;
+        await audit.WriteAsync(Event(AdviceReadAction, encounter, encounter.Id), cancellationToken);
+        return await AdviceViewAsync(encounter, await AdviceTextAsync(encounter.Id, cancellationToken), cancellationToken);
+    }
+
+    public async Task<RxAdviceView?> SetAdviceAsync(Guid encounterId, SetRxAdvice command, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        var errors = new List<(string, string)>();
+        var text = Text(command.Text, "text", RxAdvice.MaxText, false, errors);
+        if (errors.Count > 0) throw new PrescriptionValidationException(errors);
+        if (await RequireAsync(encounterId, cancellationToken) is not { } encounter) return null;
+        Open(encounter);
+        var row = await db.RxAdvice.SingleOrDefaultAsync(a => a.EncounterId == encounter.Id, cancellationToken);
+        await SaveAsync(encounter, AdviceSetAction, encounter.Id, text is null ? "advice:none" : "advice:set", () =>
+        {
+            if (text is null) { if (row is not null) db.RxAdvice.Remove(row); return; }
+            row ??= db.RxAdvice.Add(new RxAdvice { Id = Guid.CreateVersion7(), TenantId = TenantId, EncounterId = encounter.Id }).Entity;
+            (row.Text, row.UpdatedBy, row.UpdatedAt) = (text, Me, clock.GetUtcNow());
+        }, cancellationToken);
+        return await AdviceViewAsync(encounter, text, cancellationToken);
+    }
+
+    // shortcut: there are no reviewed translations of advice yet, so a patient whose language is not English gets English with a note; look the
+    // reviewed translation up here when a translation review flow exists. Never a machine translation.
+    async Task<RxAdviceView> AdviceViewAsync(EncounterView encounter, string? text, CancellationToken cancellationToken)
+    {
+        var language = (await patients.SummariesAsync([encounter.PatientId], cancellationToken)).GetValueOrDefault(encounter.PatientId)?.PreferredLanguage;
+        return new(text, language, language is null or "en");
+    }
 
     Task<PrescriptionCancellation?> CancellationAsync(Guid prescriptionId, CancellationToken cancellationToken) =>
         db.PrescriptionCancellations.AsNoTracking().SingleOrDefaultAsync(c => c.PrescriptionId == prescriptionId, cancellationToken);
@@ -422,12 +459,15 @@ public sealed class PrescriptionService(
         var classes = await db.FormularyItems.AsNoTracking().Where(f => ids.Contains(f.Id)).ToDictionaryAsync(f => f.Id, f => f.RegClass, cancellationToken);
         var rules = classes.Count == 0 ? null : FormularyRules.For(await staff.TenantCountryAsync(cancellationToken) ?? throw new InvalidOperationException("No tenant country."));
         var stopped = await stops.StopsAsync(encounterId, cancellationToken);
+        var changed = await stops.ChangesAsync(encounterId, cancellationToken);
         return
         [
             .. items.Select(i => new AuthorisedLine(false, i.Medicine, i.Strength, i.Form, i.FormularyItemId is null,
                 Sig.Languages.ToDictionary(l => l, l => Sig.Render(new SigParts(i.Dose, i.DoseUnit, i.Route, i.Frequency, i.Timing, i.DurationDays, i.Quantity, i.Instructions), l)),
                 i.FormularyItemId is { } f && classes.TryGetValue(f, out var c) ? [.. rules!.PrintRequirements(c)] : [], null)),
             .. stopped.Select(s => new AuthorisedLine(true, s.Name, null, null, false, Sig.Languages.ToDictionary(l => l, Sig.Stop), [], s.Reason)),
+            // A change or taper prints as a numbered line whose instruction says so in words, with the doctor's reason.
+            .. changed.Select(c => new AuthorisedLine(false, c.Name, null, null, false, ChangeSig(c), [], c.Reason)),
         ];
     }
 
@@ -442,7 +482,8 @@ public sealed class PrescriptionService(
         return new RxPrintView(View(rx), facility.Name, facility.TimeZone, doctor.FullName, doctor.Qualifications, doctor.LicenceNumber, doctor.LicenceAuthority,
             new SlipPatient(patient.FullName, patient.Mrn, patient.DateOfBirth, patient.SexAtBirth.ToString()), allergies,
             [.. facts.Allergies.Where(a => a.Status != AllergyStatus.NotAnAllergy && a.Substance is not null).Select(a => a.Substance!)],
-            [.. rx.Lines.Select(l => new RxPrintLine(l.Discontinue, l.Medicine, l.Strength, l.Form, l.Sig, l.PrintRequirements, l.Reason))], url, Qr(url), RxPdfDocument.LayoutVersion);
+            [.. rx.Lines.Select(l => new RxPrintLine(l.Discontinue, l.Medicine, l.Strength, l.Form, l.Sig, l.PrintRequirements, l.Reason))], url, Qr(url), RxPdfDocument.LayoutVersion,
+            rx.Advice is null ? null : new RxAdviceView(rx.Advice, patient.PreferredLanguage, patient.PreferredLanguage is null or "en"));
     }
 
     /// <summary>The QR code's modules, row by row ('1' dark), with its quiet zone; error correction M survives a crease or a stamp.</summary>
@@ -529,8 +570,14 @@ public sealed class PrescriptionService(
             }),
             .. stopped.Select(s => new RxLineView(null, RxLineKind.Discontinue, RxSource.ChartReconciliation, null, s.Name, null, null, false, true,
                 null, null, null, null, null, null, null, null, s.Reason, Sig.Languages.ToDictionary(l => l, Sig.Stop))),
+            .. (await stops.ChangesAsync(encounterId, cancellationToken)).Select(c => new RxLineView(null, c.Kind == MedicationDecisionKind.Taper ? RxLineKind.Taper : RxLineKind.Change,
+                RxSource.ChartReconciliation, null, c.Name, null, null, false, true, null, null, null, null, null, null, null, null, c.Reason, ChangeSig(c))),
         ];
     }
+
+    static Dictionary<string, string> ChangeSig(ChangedMedicine c) => Sig.Languages.ToDictionary(l => l, l => c.Kind == MedicationDecisionKind.Taper
+        ? Sig.Taper(l, c.Steps!.Select(s => (s.Dose, s.Days)), c.EndsOn!.Value)
+        : Sig.Change(l, c.FromDose, c.NewDose!));
 
     static string? Blank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 

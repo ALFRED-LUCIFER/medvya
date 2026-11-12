@@ -2,9 +2,12 @@ using Medvya.Encounters.Domain;
 
 namespace Medvya.Encounters.Application;
 
-public sealed record DecideMedicine(string? Key, MedicationDecisionKind? Kind, string? NewDose, string? Reason);
+/// <summary><see cref="Steps"/>: a Taper's steps (MDV-P2-043); ignored for any other decision.</summary>
+public sealed record DecideMedicine(string? Key, MedicationDecisionKind? Kind, string? NewDose, string? Reason, IReadOnlyList<TaperStep>? Steps = null);
 
-public sealed record MedicineDecisionView(MedicationDecisionKind Kind, string? NewDose, string? Reason, DateTimeOffset DecidedAt);
+/// <summary><see cref="FromDose"/>: the chart's dose a Change or Taper moves from. <see cref="Steps"/> and <see cref="EndsOn"/>: a Taper's.</summary>
+public sealed record MedicineDecisionView(
+    MedicationDecisionKind Kind, string? NewDose, string? Reason, DateTimeOffset DecidedAt, string? FromDose = null, IReadOnlyList<TaperStep>? Steps = null, DateOnly? EndsOn = null);
 
 /// <summary>One medicine across the sources. A side is null when that source does not mention it. <see cref="Other"/> is an import; the HIS column arrives with P7.</summary>
 public sealed record MedicineRow(
@@ -47,13 +50,19 @@ public interface IMedicationReconciliation
 /// <summary>A medicine the doctor decided to stop in an encounter's reconciliation (its latest decision), with the reason given.</summary>
 public sealed record StoppedMedicine(string Name, string? Reason);
 
+/// <summary>A medicine the doctor decided to change (a new dose) or taper (steps to an end date) in an encounter's reconciliation (its latest decision).</summary>
+public sealed record ChangedMedicine(string Name, MedicationDecisionKind Kind, string? FromDose, string? NewDose, IReadOnlyList<TaperStep>? Steps, DateOnly? EndsOn, string? Reason);
+
 /// <summary>
-/// The stop decisions of an encounter's reconciliation, for the prescription composer (MDV-P2-015), which shows each as a discontinue line.
+/// The stop decisions of an encounter's reconciliation, for the prescription composer (MDV-P2-015), which shows each as a discontinue line; and
+/// (MDV-P2-043) its change and taper decisions, which the prescription prints as their own lines.
 /// No access check and no audit event here: the caller has already checked clinical access to the encounter's patient and audits its own read.
 /// </summary>
 public interface IReconciliationStops
 {
     Task<IReadOnlyList<StoppedMedicine>> StopsAsync(Guid encounterId, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<ChangedMedicine>> ChangesAsync(Guid encounterId, CancellationToken cancellationToken = default);
 }
 
 /// <summary>A substance on the chart (never a "no known allergies" entry, never one ruled "not an allergy"), with its status for the evidence.</summary>

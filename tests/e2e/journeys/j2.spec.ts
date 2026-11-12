@@ -1,8 +1,7 @@
-import { expect } from '@playwright/test';
-import { test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { mockReconciliation } from '../support/reconciliation';
 import { mockNote } from '../support/note';
-import { authorised, clearChecks, line, mockPrescription, stopLine } from '../support/prescription';
+import { authorised, clearChecks, line, medicine, mockPrescription, penicillinAlert, stopLine } from '../support/prescription';
 import { mockShares } from '../support/share';
 import { mockProblems } from '../support/problems';
 import { journey } from './storyboard';
@@ -16,6 +15,17 @@ const doctor = {
     capabilities: { RegisterBookPatients: 'Full', CheckInQueue: 'Full', Patient360Chart: 'Full', ClinicalNotes: 'Sign' } },
 };
 const at = '2026-10-19T04:30:00Z'; // 10:00 IST
+
+// Steps 9 to 12 (MDV-P2-045): Meera's one-page chart with her penicillin allergy and the consultation e-1 open; on the real stack in fullstack/j2.spec.ts.
+const meera = { id: 'p-a1', fullName: 'Meera Iyer', mrn: '000001', dateOfBirth: '1972-03-14', ageYears: 54, sexAtBirth: 'Female', preferredLanguage: null };
+const penicillin = { substance: 'Penicillin', reaction: 'Rash', status: 'PatientReported', source: 'PatientReported' };
+async function mockChart(page: Page) {
+  await page.route('**/v1/me/context', r => r.fulfill({ json: doctor }));
+  await page.route('**/v1/patients/p-a1/chart', r => r.fulfill({ json: { patient: meera, treatmentConsent: true, timeZone: 'Asia/Kolkata', lifeStage: 'Adult', historySections: [],
+    chart: { allergyState: 'Listed', allergies: [penicillin], medicines: [], problems: [], lastVitals: [], lastLabs: [], bmi: null, trends: [], recentEncounters: [], openEncounterId: 'e-1', history: [], bloodGroup: null, careTeam: [] } } }));
+  await page.route('**/v1/encounters/e-1', r => r.fulfill({ json: { timeZone: 'Asia/Kolkata', treatmentConsent: true, patient: meera, allergies: { state: 'Listed', allergies: [penicillin] },
+    encounter: { id: 'e-1', appointmentId: 'a1', patientId: 'p-a1', facilityId: 'f-1', leadClinicianId: 'u-rao', status: 'Active', authorityMode: 'Medvya', startedAt: at, endedAt: null, room: 'Room 3' } } }));
+}
 
 // J2.5 is "Resolve conflicts & sign": signing is MDV-P2-012, so the step stays pending below. Its conflict half is built (MDV-P2-011, E-07):
 // the statin the chart says is active and the patient says stopped is decided before the note is signed.
@@ -60,6 +70,55 @@ test('J2.5 (coding half, MDV-P2-010) E-07 · Doctor: the diagnosis is coded with
 
 journey('J2', {
   5: 'MDV-P2-012',
+  // E-01 (MDV-P2-033): the chart on one page, the allergy in the banner, the section buttons, and the open consultation one click away.
+  9: async ({ page }) => {
+    await mockChart(page);
+    await page.goto('/patients/p-a1');
+    await expect(page.getByRole('region', { name: 'Patient Meera Iyer' })).toContainText('Penicillin');
+    await expect(page.getByRole('group', { name: 'Show part of the chart' }).getByRole('button', { name: 'Everything' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByRole('link', { name: 'Open consultation' })).toHaveAttribute('href', '/consult/e-1');
+  },
+  // E-05 / E-11 (MDV-P2-039): Add medicine on the Medicines card; amoxicillin is blocked by the penicillin allergy until a reason is given.
+  10: async ({ page }) => {
+    const formulary = [medicine('fi-amox', 'Amoxicillin', '500 mg', 'Capsule')];
+    await mockChart(page);
+    await mockPrescription(page, { formulary, checksOf: lines => {
+      const amox = lines.find(l => l.included);
+      return clearChecks({ allergies: 'Listed', alerts: amox ? [penicillinAlert(amox.id!)] : [], unresolved: amox ? 1 : 0 });
+    } }); // registered after the chart, so its session (which may prescribe) is the one answered
+    await page.goto('/patients/p-a1');
+    await page.getByRole('region', { name: 'Medicines', exact: true }).getByRole('button', { name: 'Add medicine' }).click();
+    const panel = page.getByRole('dialog', { name: 'Add medicine' });
+    await panel.getByLabel('Search medicine').fill('amox');
+    await panel.getByRole('button', { name: /Amoxicillin · Capsule/ }).click();
+    await panel.getByRole('group', { name: 'How often' }).getByRole('button', { name: '1-1-1 · three times a day', exact: true }).click();
+    await expect(panel.getByText('A serious finding blocks this medicine.', { exact: false })).toBeVisible();
+    await expect(panel.getByRole('button', { name: 'Add to prescription' })).toBeDisabled();
+  },
+  // E-04 (MDV-P2-041, MDV-P2-044): the one-page consultation; Sign stays locked until the checklist is complete (here, the recording consent).
+  11: async ({ page }) => {
+    await mockChart(page);
+    await mockNote(page, { version: 1, sections: { chiefComplaint: 'Review of sugars', assessment: 'Type 2 diabetes', plan: 'Continue metformin' } });
+    await page.goto('/consult/e-1');
+    const note = page.getByRole('region', { name: 'Consultation note' });
+    await expect(note.getByRole('navigation', { name: 'Note sections' }).getByRole('link')).toHaveCount(7);
+    const sign = note.getByRole('button', { name: 'Sign note' });
+    await expect(sign).toBeDisabled();
+    await expect(sign).toHaveAccessibleDescription('1 item still needs your review before signing');
+    await note.getByRole('radio', { name: 'Patient declined: I type the note' }).check();
+    await expect(sign).toHaveAccessibleDescription('Everything reviewed. Ready to sign.');
+  },
+  // E-06 (MDV-P2-012): signed after the step-up; the gates are proven on PostgreSQL in ConsultNoteTests.
+  12: async ({ page }) => {
+    await mockChart(page);
+    const mock = await mockNote(page, { version: 1, recordingConsent: 'Declined', sections: { chiefComplaint: 'Review of sugars', assessment: 'Type 2 diabetes', plan: 'Continue metformin' } });
+    mock.reauthed = true;
+    await page.goto('/consult/e-1');
+    const note = page.getByRole('region', { name: 'Consultation note' });
+    await note.getByRole('button', { name: 'Sign note' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: /^Sign as / }).click();
+    await expect(note.getByRole('status').filter({ hasText: 'SIGNED v1' })).toBeVisible();
+  },
   // E-05: the prescription and the orders are approved separately, each by its own action and neither by signing the note (MDV-P2-017, MDV-P2-018).
   // Authorising asks for the step-up first; the gates themselves are proven on PostgreSQL in RxAuthorisationTests.
   6: async ({ page }) => {

@@ -579,6 +579,15 @@ public sealed class BookingService(
         return (await context.PatientsAsync([patientId], cancellationToken)).TryGetValue(patientId, out var p) ? new(p.Id, p.FullName, p.Mrn) : null;
     }
 
+    // shortcut: the latest 30 visits only, no paging; the clinic's own chart has the full history.
+    public async Task<IReadOnlyList<DeskVisit>?> VisitsAsync(Guid facilityId, Guid patientId, CancellationToken cancellationToken = default)
+    {
+        await context.RequireAsync(facilityId, SchedulingAccess.CanView, cancellationToken); // whoever may see the calendar sees these rows there already
+        if (!(await context.PatientsAsync([patientId], cancellationToken)).ContainsKey(patientId)) return null;
+        return await db.Appointments.AsNoTracking().Where(a => a.PatientId == patientId).OrderByDescending(a => a.Start).ThenByDescending(a => a.Id).Take(30)
+            .Select(a => new DeskVisit(a.Id, a.Start, a.State)).ToListAsync(cancellationToken);
+    }
+
     /// <summary>
     /// End of a visit of this type starting at <paramref name="start"/>, after checking the calendar is active, the start is a
     /// slot of the template with enough back-to-back slots, and no appointment occupies any of them. When <paramref name="moving"/>

@@ -3,11 +3,11 @@ import { expect, test, type Page } from '@playwright/test';
 
 // MDV-P2-004, MDV-P2-033: Patient 360 on one page (E-01). CI has no API: the session and the chart are mocked in the shapes the server sends. The care-relationship check,
 // the receptionist's 403, the audit rows and the source on every fact are covered by PatientChartTests on PostgreSQL.
-const session = (role: string, level: string, entry = 'None', notes = 'None') => ({
+const session = (role: string, level: string, entry = 'None', notes = 'None', rx = 'None') => ({
   user: { id: 'u-rao', displayName: 'Dr. Arjun Rao (synthetic)' },
   memberships: [{ id: 'm-1', tenantId: 't-1', tenantName: 'Iyer Family Clinic', facilityId: 'f-1', facilityName: 'Iyer Family Clinic · Adyar', role }],
   active: { membershipId: 'm-1', tenantId: 't-1', facilityId: 'f-1', role, flags: [] as string[], country: 'IN',
-    capabilities: { RegisterBookPatients: 'Read', CheckInQueue: 'Full', Patient360Chart: level, VitalsAllergiesEntry: entry, ClinicalNotes: notes } },
+    capabilities: { RegisterBookPatients: 'Read', CheckInQueue: 'Full', Patient360Chart: level, VitalsAllergiesEntry: entry, ClinicalNotes: notes, PrescriptionsOrders: rx } },
 });
 const at = (day: number) => `2026-10-${String(day).padStart(2, '0')}T04:30:00Z`;
 const points = (values: number[], source = 'ClinicianVerified') => values.map((value, i) => ({ value, takenAt: at(i + 1), source }));
@@ -40,14 +40,20 @@ const chart = (over: Record<string, unknown> = {}) => ({
 });
 
 const timeline = { entries: [{ id: 'x-1', kind: 'Encounter', at: at(3), code: 'Consultation', title: null, detail: null, author: 'Dr. Arjun Rao (synthetic)', source: 'ClinicianVerified' }], next: null, timeZone: 'Asia/Kolkata' };
+const visits = { visits: [
+  { encounterId: 'e-7', startedAt: at(3), status: 'Ended', doctor: 'Dr. Arjun Rao (synthetic)', noteSigned: true, diagnoses: [{ description: 'Type 2 diabetes (synthetic)', code: 'E11' }],
+    medicines: [{ name: 'Metformin', dose: '500 mg' }], tests: ['HbA1c'] },
+  { encounterId: 'e-6', startedAt: '2026-09-10T04:30:00Z', status: 'Ended', doctor: 'Dr. Arjun Rao (synthetic)', noteSigned: false, diagnoses: [], medicines: [], tests: [] },
+], timeZone: 'Asia/Kolkata' };
 const documents = { patient: { id: 'p-1', fullName: 'Meera Iyer (synthetic)', mrn: '000001', dateOfBirth: '1972-03-12' }, canOpen: true, timeZone: 'Asia/Kolkata',
   documents: [{ id: 'd-1', type: 'LabReport', documentDate: '2026-10-01', source: 'Imported', scanStatus: 'Clean', contentType: 'application/pdf', sizeBytes: 2048, uploadedBy: 'Dr. Arjun Rao (synthetic)', uploadedAt: '2026-10-02T04:30:00Z' }] };
 
-async function open(page: Page, { locale = 'en', level = 'Full', entry = 'None', notes = 'None', response = { json: chart() } as { status?: number; json: unknown }, path = '/patients/p-1', side = true } = {}) {
+async function open(page: Page, { locale = 'en', level = 'Full', entry = 'None', notes = 'None', rx = 'None', response = { json: chart() } as { status?: number; json: unknown }, path = '/patients/p-1', side = true } = {}) {
   await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
-  await page.route('**/v1/me/context', r => r.fulfill({ json: session('SoloDoctor', level, entry, notes) }));
+  await page.route('**/v1/me/context', r => r.fulfill({ json: session('SoloDoctor', level, entry, notes, rx) }));
   await page.route('**/v1/patients/p-1/chart', r => r.fulfill(response));
   await page.route('**/v1/patients/p-1/timeline*', r => r.fulfill(side ? { json: timeline } : { json: { entries: [], next: null, timeZone: 'Asia/Kolkata' } }));
+  await page.route('**/v1/patients/p-1/visits', r => r.fulfill({ json: side ? visits : { visits: [], timeZone: 'Asia/Kolkata' } }));
   await page.route('**/v1/patients/p-1/documents', r => r.fulfill(side ? { json: documents } : { json: { ...documents, documents: [] } }));
   await page.goto(path);
 }
@@ -223,9 +229,31 @@ test('MDV-P2-033: the timeline and documents open from the chart', async ({ page
   await expect(page).toHaveURL(/\/patients\/p-1\/docs$/);
 });
 
+test('MDV-1088: the chart lists past visits with doctor, diagnosis, medicines and tests, and a row opens the signed note and its prescription', async ({ page }) => {
+  await open(page, { rx: 'Sign' });
+  const block = page.getByRole('region', { name: 'Visits', exact: true });
+  const [signed, unsigned] = [block.getByRole('listitem').first(), block.getByRole('listitem').nth(1)];
+  await expect(signed).toContainText('Dr. Arjun Rao (synthetic)');
+  await expect(signed).toContainText('Note signed');
+  await expect(signed).toContainText('Diagnosis: Type 2 diabetes (synthetic) (E11)');
+  await expect(signed).toContainText('Medicines: Metformin 500 mg');
+  await expect(signed).toContainText('Tests: HbA1c');
+  await expect(unsigned).toContainText('Note not signed');
+  await expect(unsigned).toContainText('Diagnosis: None recorded');
+  await expect(unsigned.getByRole('link', { name: 'Printed prescription' })).toHaveCount(0); // no medicines, no prescription to print
+  await expect(signed.getByRole('link', { name: 'Printed prescription' })).toHaveAttribute('href', '/consult/e-7/rx/print');
+  await signed.getByRole('link', { name: 'Open signed note' }).click();
+  await expect(page).toHaveURL(/\/consult\/e-7$/);
+});
+
+test('MDV-1088: a chart with no visits says so', async ({ page }) => {
+  await open(page, { side: false });
+  await expect(page.getByRole('region', { name: 'Visits', exact: true })).toContainText('No visits yet.');
+});
+
 test('a refused chart asks the server for nothing more than the chart', async ({ page }) => {
   const asked: string[] = [];
-  page.on('request', r => { if (/\/v1\/patients\/p-1\/(timeline|documents)/.test(r.url())) asked.push(r.url()); });
+  page.on('request', r => { if (/\/v1\/patients\/p-1\/(timeline|visits|documents)/.test(r.url())) asked.push(r.url()); });
   await open(page, { response: { status: 403, json: { code: 'no_access' } } });
   await expect(page.getByRole('alert')).toContainText('Your role cannot open patient charts.');
   expect(asked).toEqual([]);

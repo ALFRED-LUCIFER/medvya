@@ -202,6 +202,8 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.SoloDoctor, new("GET", "/v1/patients/{patient}/child-health")),
         (Role.Nurse, new("POST", "/v1/patients/{patient}/immunisations", """{"vaccine":"BCG","dose":1,"outcome":"Deferred","reason":"Synthetic"}""")),
         (Role.Nurse, new("POST", "/v1/patients/{patient}/milestones", """{"band":"y4","milestone":"tellsAStory","answer":"Yes","answeredBy":"Parent"}""")),
+        (Role.SoloDoctor, new("GET", "/v1/patients/{patient}/growth")),
+        (Role.Nurse, new("POST", "/v1/patients/{patient}/growth", """{"takenOn":"2026-10-19","weightKg":4.0}""")),
         (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/end")),
         (Role.SoloDoctor, new("GET", "/v1/encounters/{encounter}/medicines/reconciliation")),
         (Role.SoloDoctor, new("POST", "/v1/encounters/{encounter}/medicines/reconciliation/decisions", """{"key":"synthetic","kind":"Keep"}""")),
@@ -420,6 +422,8 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.Receptionist, new("GET", "/v1/patients/{patient}/child-health")), // Patient 360: X
         (Role.CareCoordinator, new("POST", "/v1/patients/{patient}/immunisations", """{"vaccine":"BCG","dose":1,"outcome":"Deferred","reason":"Synthetic"}""")), // Vitals & allergies entry: X
         (Role.Receptionist, new("POST", "/v1/patients/{patient}/milestones", """{"band":"y4","milestone":"tellsAStory","answer":"Yes","answeredBy":"Parent"}""")), // Vitals & allergies entry: X
+        (Role.Receptionist, new("GET", "/v1/patients/{patient}/growth")), // Patient 360: X
+        (Role.CareCoordinator, new("POST", "/v1/patients/{patient}/growth", """{"takenOn":"2026-10-19","weightKg":4.0}""")), // Vitals & allergies entry: X
         (Role.PracticeAdmin, new("GET", "/v1/patients/{patient}/chart")),
         (Role.PracticeAdmin, new("GET", "/v1/encounters/{encounter}")),
         (Role.Receptionist, new("POST", "/v1/encounters", """{"appointmentId":"{appointment}","leaveOpen":true}""")),

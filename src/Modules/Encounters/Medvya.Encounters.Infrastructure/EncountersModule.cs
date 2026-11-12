@@ -30,6 +30,7 @@ public static class EncountersModule
             .AddScoped<IIntake, IntakeService>()
             .AddScoped<IMedicationReconciliation, MedicationReconciliationService>()
             .AddScoped<IReconciliationStops, ReconciliationStops>()
+            .AddScoped<IFollowUps, FollowUpService>()
             .AddScoped<IProblemList, ProblemListService>()
             .AddScoped<IChildHealth, ChildHealthService>()
             .AddScoped<IGeriatricAssessments, GeriatricAssessmentService>()

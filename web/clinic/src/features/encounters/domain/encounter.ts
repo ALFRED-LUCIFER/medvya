@@ -48,3 +48,6 @@ export function startProblem(status: number | undefined, body: unknown): StartPr
   if (status === 409 && typeof b.code === 'string') return { kind: 'visit', code: (visitProblems as readonly string[]).includes(b.code) ? (b.code as VisitProblem) : 'changed' };
   return { kind: 'failed' };
 }
+
+/** The one page's Plan heading id (MDV-P2-043): "Plan change" in the older adult medicine review (MDV-P2-037) links to it. */
+export const planHeading = 'studio-plan';

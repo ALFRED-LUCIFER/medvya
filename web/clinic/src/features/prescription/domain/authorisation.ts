@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 // Mirrors the MDV-P2-017 records in src/Modules/Prescribing/Medvya.Prescribing.Application/IPrescriptions.cs.
 /** `cancellation`: the doctor cancelled this version without a replacement; it no longer prints or opens by link. */
 export type RxAuthorisation = {
@@ -16,7 +18,13 @@ export type RxPrint = {
   authorisation: RxAuthorisation; clinic: string; timeZone: string; doctor: string; qualifications: string | null; licenceNumber: string; licenceAuthority: string;
   patient: { fullName: string; mrn: string; dateOfBirth: string; sexAtBirth: 'Female' | 'Male' | 'Other' };
   allergies: 'NotRecorded' | 'NoKnownAllergies' | 'Listed'; allergySubstances: string[]; lines: RxPrintLine[]; verifyUrl: string; qr: string[]; layoutVersion: number;
+  advice: RxAdvice | null;
 };
+/** The advice for the patient (MDV-P2-043). `inPatientLanguage` false: it prints in English with a note (no reviewed translation exists). */
+export type RxAdvice = { text: string | null; patientLanguage: string | null; inPatientLanguage: boolean };
+/** RxAdvice.MaxText on the server. */
+export const adviceSchema = z.object({ text: z.string().max(1000) });
+export type AdviceForm = z.infer<typeof adviceSchema>;
 export type RxLayout = { layoutVersion: number; approvedAt: string | null };
 /** What the public QR check answers: validity and what the paper shows, never the patient or the medicines. */
 /** The public QR check of an investigation slip or referral letter (MDV-P2-018/019): what it is, when and from whom, how many items; never whose. */

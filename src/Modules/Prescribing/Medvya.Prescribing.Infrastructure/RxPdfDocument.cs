@@ -52,12 +52,20 @@ public static class RxPdfDocument
             body.Add(($"{++n}. {string.Join(' ', new[] { l.Medicine, l.Strength, l.Form }.Where(x => !string.IsNullOrEmpty(x)))}", true));
             body.Add((l.Sig["en"], false));
             body.AddRange(l.PrintRequirements.Select(r => (Text($"rxPrint.requirement.{r}"), false)));
+            if (l.Reason is { } why) body.Add((Text("rxPrint.reason", ("reason", why)), false)); // a change or taper from the reconciliation
             body.Add(("", false));
         }
         foreach (var l in v.Lines.Where(l => l.Discontinue))
         {
             body.Add((Text("rxPrint.stop", ("medicine", l.Medicine)), true));
             if (l.Reason is { } reason) body.Add((Text("rxPrint.reason", ("reason", reason)), false));
+            body.Add(("", false));
+        }
+        if (v.Advice is { Text: { } advice } a)
+        {
+            body.Add((Text("rxPrint.advice"), true));
+            body.Add((advice, false));
+            if (!a.InPatientLanguage) body.Add((Text("rxPrint.adviceInEnglish"), false));
             body.Add(("", false));
         }
         body.AddRange([

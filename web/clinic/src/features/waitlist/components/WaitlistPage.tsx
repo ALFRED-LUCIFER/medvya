@@ -1,6 +1,6 @@
 import { Link } from 'react-router';
 import type { UseFormReturn } from 'react-hook-form';
-import { ArrowLeft, CircleAlert, CircleCheck, Clock, Send } from 'lucide-react';
+import { ArrowLeft, CalendarClock, CircleAlert, CircleCheck, Clock, Send } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
 import { Button, buttonVariants, cn, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
 import PatientsMessage from '../../patients/components/PatientsMessage';
@@ -38,7 +38,7 @@ const control = 'min-h-11';
 
 /** P-05 Waitlist (MDV-P1-027): who wants a slot, the free slot that suits each, "Offer {time}", and the patient's answer. */
 export default function WaitlistPage(p: Props) {
-  const { t, formatTime, formatDate } = useI18n();
+  const { t, formatTime, formatDate, formatDay } = useI18n();
   if (p.forbidden) return <PatientsMessage pageHeading title={t('err.403')} body={t('waitlist.forbidden')} />;
   const zone = p.timeZone ?? 'UTC';
   const when = (start: string) => t('appointment.messages.at', { day: formatDate(new Date(start), zone), time: formatTime(new Date(start), zone) });
@@ -93,6 +93,7 @@ export default function WaitlistPage(p: Props) {
                     e.days.length ? weekDays.filter(d => e.days.includes(d)).map(d => t(`waitlist.day.${d}`)).join(', ') : t('waitlist.anyDay'),
                     e.from || e.until ? t('waitlist.window', { from: e.from?.slice(0, 5) ?? '…', until: e.until?.slice(0, 5) ?? '…' }) : t('waitlist.anyTime')].join(' · ')}
                 </p>
+                {e.dueOn && <p className="inline-flex items-center gap-1.5 text-sm font-semibold"><CalendarClock className="size-4" aria-hidden />{t('waitlist.followUp', { day: formatDay(e.dueOn) })}</p>}
                 <p className="text-xs text-muted-foreground">{t('waitlist.requested', { when: when(e.requestedAt) })}</p>
                 {e.offered && e.offerExpiresAt && <p className="text-sm font-semibold">{t('waitlist.heldUntil', { slot: slot(e.offered), until: formatTime(new Date(e.offerExpiresAt), zone) })}</p>}
                 {e.state === 'Waiting' && !e.match && <p className="text-sm text-muted-foreground">{t('waitlist.noMatch')}</p>}

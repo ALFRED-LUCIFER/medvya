@@ -68,6 +68,13 @@ public static class PrescriptionEndpoints
         g.MapPost("/encounters/{encounterId:guid}/prescription/cancellation", async (Guid encounterId, [FromBody] CancelRx? body, [FromServices] IPrescriptions service, CancellationToken ct) =>
                 await service.CancelAsync(encounterId, body ?? new CancelRx(null), ct) is { } v ? Results.Ok(v) : Results.NotFound())
             .AuditedByUseCase("rx.cancel", "prescription", AuditPurpose.Treatment).AddEndpointFilter(MapErrors);
+        // MDV-P2-043: the advice for the patient, frozen with the prescription when it is authorised.
+        g.MapGet("/encounters/{encounterId:guid}/prescription/advice", async (Guid encounterId, [FromServices] IPrescriptions service, CancellationToken ct) =>
+                await service.AdviceAsync(encounterId, ct) is { } v ? Results.Ok(v) : Results.NotFound())
+            .AuditedByUseCase("rx.advice.read", "prescription", AuditPurpose.Treatment).AddEndpointFilter(MapErrors);
+        g.MapPut("/encounters/{encounterId:guid}/prescription/advice", async (Guid encounterId, [FromBody] SetRxAdvice? body, [FromServices] IPrescriptions service, CancellationToken ct) =>
+                await service.SetAdviceAsync(encounterId, body ?? new SetRxAdvice(null), ct) is { } v ? Results.Ok(v) : Results.NotFound())
+            .AuditedByUseCase("rx.advice.set", "prescription", AuditPurpose.Treatment).AddEndpointFilter(MapErrors);
         g.MapGet("/encounters/{encounterId:guid}/prescription/print", async (Guid encounterId, [FromServices] IPrescriptions service, CancellationToken ct) =>
                 await service.PrintAsync(encounterId, ct) is { } v ? Results.Ok(v) : Results.NotFound())
             .AuditedByUseCase("rx.print", "prescription", AuditPurpose.Treatment).AddEndpointFilter(MapErrors);

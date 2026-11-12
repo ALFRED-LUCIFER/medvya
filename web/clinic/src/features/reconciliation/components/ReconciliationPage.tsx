@@ -9,10 +9,16 @@ import type { EncounterBanner } from '../../encounters/domain/encounter';
 import IdentityBanner from '../../encounters/components/IdentityBanner';
 import { canConfirm, disagreeing, type DecisionKind, type Draft, type MedicineRow, type MedicineSide, type Problem, type Reconciliation } from '../domain/reconciliation';
 
-type Props = {
+/** What deciding one row needs: the shared draft form (reason, new dose, a taper's steps) and its handlers. The Plan (MDV-P2-043) reuses it. */
+export type DecisionProps = {
+  form: UseFormReturn<Draft>; open: { key: string; kind: DecisionKind } | null; saving: boolean; online: boolean;
+  steps: string[]; canAddStep: boolean; onAddStep: () => void; onRemoveStep: (i: number) => void;
+  onPick: (key: string, kind: DecisionKind) => void; onCancel: () => void; onSave: FormEventHandler<HTMLFormElement>;
+};
+
+type Props = DecisionProps & {
   view: Reconciliation | null; banner: EncounterBanner | null; loading: boolean; notFound: boolean; refusal: ClinicalRefusal | null; failed: boolean;
-  form: UseFormReturn<Draft>; open: { key: string; kind: DecisionKind } | null; problem: Problem | null; saving: boolean; confirming: boolean; online: boolean;
-  onPick: (key: string, kind: DecisionKind) => void; onCancel: () => void; onSave: FormEventHandler<HTMLFormElement>; onConfirm: () => void;
+  problem: Problem | null; confirming: boolean; onConfirm: () => void;
   consultPath: string; boardPath: string;
 };
 
@@ -89,12 +95,20 @@ function ConflictText({ row }: { row: MedicineRow }) {
   return <span className="inline-flex items-start gap-1.5 font-semibold"><CircleAlert aria-hidden className="mt-0.5 size-4 shrink-0" />{text}</span>;
 }
 
-function DecisionCell(p: Props & { row: MedicineRow; locked: boolean }) {
+/** A decision in words after its label: the new dose or the taper's steps and last day, and why. */
+export function DecisionText({ label, decision }: { label: string; decision: NonNullable<MedicineRow['decision']> }) {
+  const { t, formatDay } = useI18n();
+  const steps = decision.steps?.map(s => t(s.days === 1 ? 'reconcile.taper.stepOne' : 'reconcile.taper.step', { dose: ltr(s.dose), days: s.days })).join(t('reconcile.taper.then'));
+  return <>{[label, decision.newDose && t('reconcile.changeTo', { from: decision.fromDose ? ltr(decision.fromDose) : t('reconcile.doseBlank'), to: ltr(decision.newDose) }),
+    steps, decision.endsOn && t('reconcile.taper.endsOn', { day: formatDay(decision.endsOn) }), decision.reason].filter(Boolean).join(' · ')}</>;
+}
+
+export function DecisionCell(p: DecisionProps & { row: MedicineRow; locked: boolean }) {
   const { t } = useI18n();
   const { row } = p;
   const opening = p.open?.key === row.key ? p.open : null;
   const { errors } = p.form.formState;
-  if (p.locked) return <span>{row.decision ? [t(`reconcile.decision.${row.decision.kind}`), row.decision.newDose && ltr(row.decision.newDose), row.decision.reason].filter(Boolean).join(' · ') : t('reconcile.notListed')}</span>;
+  if (p.locked) return <span>{row.decision ? <DecisionText label={t(`reconcile.decision.${row.decision.kind}`)} decision={row.decision} /> : t('reconcile.notListed')}</span>;
   return (
     <div className="flex flex-col gap-2">
       <div role="group" aria-label={t('reconcile.decisionFor', { name: row.name })} className="flex flex-wrap gap-2">
@@ -104,12 +118,31 @@ function DecisionCell(p: Props & { row: MedicineRow; locked: boolean }) {
         ))}
       </div>
       {row.decision && !opening && (
-        <p className="text-sm">
-          {[t('reconcile.decided', { decision: t(`reconcile.decision.${row.decision.kind}`) }), row.decision.newDose && ltr(row.decision.newDose), row.decision.reason].filter(Boolean).join(' · ')}
-        </p>
+        <p className="text-sm"><DecisionText label={t('reconcile.decided', { decision: t(`reconcile.decision.${row.decision.kind}`) })} decision={row.decision} /></p>
       )}
       {opening && (
         <form noValidate onSubmit={p.onSave} aria-label={t('reconcile.decisionFor', { name: row.name })} className="flex flex-col gap-2 rounded-md border p-3">
+          {opening.kind === 'Taper' && (
+            <fieldset className="flex flex-col gap-2">
+              <legend className="font-bold">{t('reconcile.taper.steps')}</legend>
+              {p.steps.map((id, i) => (
+                <div key={id} className="flex flex-wrap items-end gap-2">
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor={`step-dose-${row.key}-${i}`}>{t('reconcile.taper.dose', { n: i + 1 })}</Label>
+                    <Input id={`step-dose-${row.key}-${i}`} autoComplete="off" maxLength={100} className="h-11 w-40" {...p.form.register(`steps.${i}.dose`)} />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor={`step-days-${row.key}-${i}`}>{t('reconcile.taper.days', { n: i + 1 })}</Label>
+                    <Input id={`step-days-${row.key}-${i}`} autoComplete="off" inputMode="numeric" maxLength={3} className="h-11 w-24" {...p.form.register(`steps.${i}.days`)} />
+                  </div>
+                  {p.steps.length > 1 && <Button type="button" variant="ghost" className="min-h-11" onClick={() => p.onRemoveStep(i)}>{t('reconcile.taper.remove', { n: i + 1 })}</Button>}
+                </div>
+              ))}
+              {p.canAddStep && <Button type="button" variant="outline" className="min-h-11 self-start" onClick={p.onAddStep}>{t('reconcile.taper.add')}</Button>}
+              <p className="text-sm text-muted-foreground">{t('reconcile.taper.hint')}</p>
+              {errors.steps && <p role="alert" className="text-sm font-semibold text-danger-700">{t('reconcile.taper.stepsRequired')}</p>}
+            </fieldset>
+          )}
           {opening.kind === 'Change' && (
             <div className="flex flex-col gap-1.5">
               <Label htmlFor={`dose-${row.key}`} className="font-bold">{t('reconcile.newDose')}</Label>

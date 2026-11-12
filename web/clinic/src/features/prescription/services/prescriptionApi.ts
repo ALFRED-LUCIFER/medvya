@@ -1,6 +1,6 @@
 import { apiFetch } from '../../api/services/apiClient';
 import { ApiError, csrf, post, send } from '../../schedule/services/scheduleApi';
-import type { PaperVerify, RxAuthorisationState, RxLayout, RxPrint, RxVerify } from '../domain/authorisation';
+import type { PaperVerify, RxAdvice, RxAuthorisationState, RxLayout, RxPrint, RxVerify } from '../domain/authorisation';
 import type { RxChecks } from '../domain/checks';
 import { toShareBody, type RxShare, type ShareForm } from '../domain/share';
 import { toSigBody, type Medicine, type RxLine, type SigDraft } from '../domain/prescription';
@@ -25,6 +25,9 @@ export const authorise = (encounterId: string) => post<RxAuthorisationState>(`/v
 /** Cancel without a replacement (step-up as for authorising); the doctor's reason travels in the body. */
 export const cancelPrescription = (encounterId: string, reason: string) =>
   post<RxAuthorisationState>(`/v1/encounters/${encounterId}/prescription/cancellation`, { reason: reason.trim() });
+// The advice for the patient (MDV-P2-043): its text travels in the body.
+export const fetchAdvice = (encounterId: string) => send<RxAdvice>(`/v1/encounters/${encounterId}/prescription/advice`);
+export const saveAdvice = (encounterId: string, text: string) => put<RxAdvice>(`/v1/encounters/${encounterId}/prescription/advice`, { text: text.trim() || null });
 export const fetchRxPrint = (encounterId: string) => send<RxPrint>(`/v1/encounters/${encounterId}/prescription/print`);
 export const fetchLayout = () => send<RxLayout>('/v1/prescription-layout');
 export const approveLayout = () => post<RxLayout>('/v1/prescription-layout/approval', {});

@@ -80,7 +80,7 @@ test('the medicine review only suggests: "plan change" changes nothing and says 
 test('with an open consultation "plan change" opens it', async ({ page }) => {
   await open(page, { openEncounterId: 'e-9' });
   await page.getByRole('link', { name: 'Plan change: Losartan 50 mg' }).click();
-  await expect(page).toHaveURL(/\/consult\/e-9$/);
+  await expect(page).toHaveURL(/\/consult\/e-9#studio-plan$/); // the Plan of the one page (MDV-P2-043)
 });
 
 test('a new assessment refuses a score outside its scale, then saves as a new record with blanks as null', async ({ page }) => {

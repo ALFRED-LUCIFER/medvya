@@ -694,6 +694,9 @@ namespace Medvya.Encounters.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("EncounterId")
                         .HasColumnType("uuid");
 
+                    b.Property<DateOnly?>("EndsOn")
+                        .HasColumnType("date");
+
                     b.Property<string>("FromDose")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
@@ -726,6 +729,9 @@ namespace Medvya.Encounters.Infrastructure.Persistence.Migrations
                     b.Property<string>("Reason")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Steps")
+                        .HasColumnType("jsonb");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid");

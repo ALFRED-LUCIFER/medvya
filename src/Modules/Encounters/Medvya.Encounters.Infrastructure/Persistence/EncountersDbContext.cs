@@ -96,6 +96,8 @@ public sealed class EncountersDbContext(DbContextOptions<EncountersDbContext> op
             e.Property(x => x.FromDose).HasMaxLength(100);
             e.Property(x => x.NewDose).HasMaxLength(100);
             e.Property(x => x.Reason).HasMaxLength(500);
+            e.Property(x => x.Steps).HasColumnType("jsonb").HasConversion(
+                v => v == null ? null : JsonSerializer.Serialize(v, (JsonSerializerOptions?)null), v => v == null ? null : JsonSerializer.Deserialize<List<TaperStep>>(v, (JsonSerializerOptions?)null));
             e.HasIndex(x => new { x.TenantId, x.EncounterId, x.MedicineKey, x.DecidedAt });
             e.HasIndex(x => new { x.TenantId, x.PatientId });
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);

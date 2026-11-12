@@ -6204,6 +6204,64 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/encounters/{encounterId}/follow-up": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    encounterId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    encounterId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["SetFollowUp"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/encounters/{encounterId}/problems": {
         parameters: {
             query?: never;
@@ -7565,6 +7623,64 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/encounters/{encounterId}/prescription/advice": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    encounterId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    encounterId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["SetRxAdvice"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/encounters/{encounterId}/prescription/print": {
         parameters: {
             query?: never;
@@ -8555,6 +8671,7 @@ export interface components {
             kind: null | components["schemas"]["MedicationDecisionKind"];
             newDose: null | string;
             reason: null | string;
+            steps?: null | components["schemas"]["TaperStep"][];
         };
         Decision: {
             reason: null | string;
@@ -8786,7 +8903,7 @@ export interface components {
             timeZone: string;
         };
         /** @enum {unknown} */
-        MedicationDecisionKind: "Keep" | "Change" | "Stop" | "Add" | "Ignore" | null;
+        MedicationDecisionKind: "Keep" | "Change" | "Stop" | "Add" | "Ignore" | "Taper" | null;
         /** @enum {unknown} */
         MembershipStatus: "Invited" | "Active" | "Suspended" | "Offboarded";
         MergeRequestBody: {
@@ -9339,9 +9456,15 @@ export interface components {
             /** Format: double */
             limit: null | number | string;
         };
+        SetFollowUp: {
+            period: null | string;
+        };
         SetLocations: {
             facilityIds: null | string[];
             reason: null | string;
+        };
+        SetRxAdvice: {
+            text: null | string;
         };
         /** @enum {unknown} */
         SexAtBirth: "Female" | "Male" | "Other";
@@ -9387,6 +9510,11 @@ export interface components {
         };
         StartRequest: {
             country: null | string;
+        };
+        TaperStep: {
+            dose: string;
+            /** Format: int32 */
+            days: number | string;
         };
         TemplatePreview: {
             group: string;
@@ -9514,6 +9642,9 @@ export interface components {
             /** Format: date-time */
             offerExpiresAt: null | string;
             match: null | components["schemas"]["SlotMatch"];
+            followUp?: null | string;
+            /** Format: date */
+            dueOn?: null | string;
         };
         WalkIn: {
             /** Format: uuid */

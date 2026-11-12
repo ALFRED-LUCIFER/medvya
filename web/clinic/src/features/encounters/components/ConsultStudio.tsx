@@ -4,7 +4,7 @@ import { useI18n, type MessageKey } from '@medvya/i18n';
 import { Button, Tabs, TabsContent, TabsList, TabsTrigger } from '@medvya/ui';
 import type { Patient360 } from '../../patient360/domain/chart';
 import { checklistIds, studioSections, templateOwnSections, type StudioSection } from '../domain/checklist';
-import type { StudioPanel } from '../domain/encounter';
+import { planHeading, type StudioPanel } from '../domain/encounter';
 import { templateNameKey } from '../domain/note';
 import NoteAssist from './NoteAssist';
 import type { NoteEditorProps } from './NoteEditor';
@@ -16,6 +16,8 @@ type Props = NoteEditorProps & {
   ticks: Record<StudioSection, boolean> | null;
   panel: StudioPanel; onPanel: (panel: StudioPanel) => void;
   chart: { data: Patient360['chart'] | null; loading: boolean; failed: boolean };
+  /** The plan's actions (MDV-P2-043): medicines, the prescription, tests, advice, follow-up and referral, composed in by the route. */
+  plan?: ReactNode;
 };
 
 const heading = (id: StudioSection) => `studio-${id}`;
@@ -24,7 +26,7 @@ const heading = (id: StudioSection) => `studio-${id}`;
  * E-04 one page (MDV-P2-041, CONSULTATION STUDIO): the recording consent first, a section bar that stays at the top, numbered sections over
  * today's template and a side panel (Assist, chart summary, checklist). The same form, autosave and sign as the guided steps.
  * History holds the review of systems and Examination the examination by system when the template has them (MDV-P2-042).
- * shortcut: Plan holds today's text section; the plan actions with Add medicine (MDV-P2-043, MDV-P2-039) go inside it when they land.
+ * Plan holds its text and the plan's actions (MDV-P2-043), composed in by the route.
  */
 export default function ConsultStudio(p: Props) {
   const { t } = useI18n();
@@ -32,6 +34,9 @@ export default function ConsultStudio(p: Props) {
   const showAssist = !!p.assist && p.consent !== 'Declined';
   const { panel, onPanel } = p;
   useEffect(() => { if (!p.loading && !showAssist && panel === 'assist') onPanel('chart'); }, [p.loading, showAssist, panel, onPanel]);
+  // Arriving from "Plan change" (MDV-P2-037): focus the Plan once the note is there.
+  const ready = !p.loading && !!p.template && !!p.ticks;
+  useEffect(() => { if (ready && window.location.hash === `#${planHeading}`) document.getElementById(planHeading)?.focus(); }, [ready]);
   if (p.loading) return <p role="status">{t('noteEditor.loading')}</p>;
   if (p.loadFailed || !p.template || !p.templateKey || !p.ticks) return <p role="alert" className="font-bold text-danger-700">{t(p.forbidden ? 'noteEditor.forbidden' : 'noteEditor.loadFailed')}</p>;
   const { template, ticks } = p;
@@ -71,7 +76,7 @@ export default function ConsultStudio(p: Props) {
           </Numbered>
           <Numbered id="exam" title={title}>{field('examination')}{field('objective')}</Numbered>
           <Numbered id="assessment" title={title}>{field('assessment')}</Numbered>
-          <Numbered id="plan" title={title}>{field('plan')}</Numbered>
+          <Numbered id="plan" title={title}>{field('plan')}{p.plan}</Numbered>
           <Numbered id="sign" title={title}>
             <SignedBanner signed={p.readOnly} versionNo={p.signature?.versionNo ?? 1} />
             {p.signature && <SignedLine signature={p.signature} timeZone={p.timeZone} />}

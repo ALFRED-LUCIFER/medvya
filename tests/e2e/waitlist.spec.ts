@@ -21,9 +21,11 @@ const ist = (hhmm: string) => {
 const waiting = {
   id: 'w-1', patientId: 'p-1', patientName: 'Meera Iyer (synthetic)', mrn: '000001', calendarId: null, calendarName: null, visitType: 'FollowUp', reasonCategory: 'General',
   days: ['Monday', 'Wednesday'], from: '09:00:00', until: '11:00:00', state: 'Waiting', requestedAt: ist('08:10'), offered: null, offerExpiresAt: null,
-  match: { calendarId: 'd-1', calendarName: 'Dr. Arjun Rao (synthetic)', start: ist('09:40') },
+  match: { calendarId: 'd-1', calendarName: 'Dr. Arjun Rao (synthetic)', start: ist('09:40') }, followUp: null, dueOn: null,
 };
-const noMatch = { ...waiting, id: 'w-2', patientId: 'p-2', patientName: 'Deepak Nair (synthetic)', mrn: '000002', days: [], from: null, until: null, requestedAt: ist('08:20'), match: null };
+// A doctor's follow-up from the consultation's plan (MDV-P2-043): a booking to make from its due day.
+const noMatch = { ...waiting, id: 'w-2', patientId: 'p-2', patientName: 'Deepak Nair (synthetic)', mrn: '000002', days: [], from: null, until: null, requestedAt: ist('08:20'), match: null,
+  followUp: 'P1M', dueOn: '2026-11-19' };
 
 type Calls = { adds: Request[]; offers: Request[]; accepts: Request[]; declines: Request[] };
 
@@ -77,6 +79,8 @@ test('a freed slot is offered, held and messaged; the patient accepting books it
   await expect(entries.first()).toContainText('Meera Iyer (synthetic) · MRN 000001'); // request order
   await expect(entries.first()).toContainText('Any doctor · Follow-up · Monday, Wednesday · 09:00 to 11:00');
   await expect(entries.nth(1)).toContainText('No free slot that suits this patient');
+  await expect(entries.nth(1)).toContainText('Follow-up from the doctor: book from Thursday, 19 November 2026');
+  await expect(entries.first()).not.toContainText('Follow-up from the doctor');
   await expect(entries.nth(1).getByRole('button', { name: /^Offer/ })).toHaveCount(0);
 
   await entries.first().getByRole('button', { name: /^Offer 19 Oct 2026 09:40/ }).click();

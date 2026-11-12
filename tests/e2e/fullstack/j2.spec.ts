@@ -205,6 +205,7 @@ journey('J2', {
   8: 'MDV-P4-016', // C-02 care plan with an owner
   // E-01 (MDV-P2-033): the nurse records Meera's penicillin allergy at intake (MDV-P2-008; the seed gives her none, and step 1 proves "not recorded"),
   // Dr. Rao starts the consultation and opens her chart from the search: one page, the allergy in the banner, the section buttons.
+  // shortcut: the allergy stays recorded, so on a kept stack (E2E_REUSE_STACK) J2.1 and this step fail on a second run; CI always starts fresh. Upgrade if specs get a per-run reset.
   9: async ({ page, browser }) => {
     const watch = watchUrls(page);
     await setNurseIntake(browser, true);

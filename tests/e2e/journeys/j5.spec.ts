@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test';
+import { openPart } from '../support/disclosure';
 import { mockOrders } from '../support/orders';
 import { journey } from './storyboard';
 
@@ -10,6 +11,7 @@ journey('J5', {
   1: async ({ page }) => {
     await mockOrders(page);
     await page.goto('/consult/e-1');
+    await openPart(page, 'Orders');
     await page.getByLabel('Test', { exact: true }).fill('HbA1c');
     await page.getByRole('button', { name: 'Add test' }).click();
     await expect(page.getByRole('row', { name: /HbA1c/ })).toContainText('Draft');

@@ -54,6 +54,18 @@ test('opens on one page: the consent first, a section bar of seven numbered sect
   await expect(panel.getByRole('tab')).toHaveText(['Assist', 'Chart', 'Checklist 4/8']);
 });
 
+test('Sign note and End consultation are one bar that stays on screen however long the note is (MDV audit P1-04)', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await open(page);
+  const sign = note(page).getByRole('button', { name: 'Sign note' }), end = page.getByRole('button', { name: 'End consultation' });
+  await expect(end).toHaveCount(1); // one place for it, not two
+  for (const button of [sign, end]) await expect(button).toBeInViewport({ ratio: 1 }); // without scrolling
+  const [a, b] = [await sign.boundingBox(), await end.boundingBox()];
+  expect(Math.abs(a!.y - b!.y)).toBeLessThan(60); // side by side
+  await page.mouse.wheel(0, 600);
+  await expect(sign).toBeInViewport({ ratio: 1 }); // still there after scrolling the note
+});
+
 test('a section bar link moves focus to its section; a section is ticked in words once finished', async ({ page }) => {
   const mock = await open(page);
   await bar(page).getByRole('link', { name: /^6 · Plan/ }).click();

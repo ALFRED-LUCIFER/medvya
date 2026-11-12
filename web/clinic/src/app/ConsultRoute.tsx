@@ -1,6 +1,7 @@
 import { useParams } from 'react-router';
-import ConsultPage from '../features/encounters/components/ConsultPage';
+import ConsultPage, { EndConsultation } from '../features/encounters/components/ConsultPage';
 import ConsultStudio from '../features/encounters/components/ConsultStudio';
+import Disclosure from '../features/encounters/components/Disclosure';
 import NoteEditor from '../features/encounters/components/NoteEditor';
 import NoteHistory from '../features/encounters/components/NoteHistory';
 import NotePrintPage from '../features/encounters/components/NotePrintPage';
@@ -56,7 +57,8 @@ function Consult({ encounterId, boardPath, online, canOrder, canReconcile, canSi
   return (
     <div className="flex flex-col gap-4">
       <ConsultPage {...consult} boardPath={boardPath} canReconcile={canReconcile}>
-        {consult.view === 'page' ? <ConsultStudio {...note} panel={consult.panel} onPanel={consult.onPanel} chart={consult.chart} plan={plan} entry={entry(false)} /> : <>{entry(true)}<NoteEditor {...note} /></>}
+        {consult.view === 'page' ? <ConsultStudio {...note} panel={consult.panel} onPanel={consult.onPanel} chart={consult.chart} plan={plan} entry={entry(false)}
+          finish={!ended && <EndConsultation ending={consult.ending} onEnd={consult.onEnd} />} /> : <>{entry(true)}<NoteEditor {...note} /></>}
         <NoteHistory {...useAddendumController(encounterId, canSign)} timeZone={consult.banner?.timeZone} printPath={`/consult/${encounterId}/note/print`} />
         <NoteTemplateChoice {...useNoteTemplatesController()} />
       </ConsultPage>
@@ -125,13 +127,13 @@ function Prescription({ encounterId, ended, patient }: { encounterId: string; en
 /** Orders (MDV-P2-018) under the consultation, for a role with "Prescriptions and orders" at Sign; the server still decides for this clinician and patient. */
 function Orders({ encounterId, ended }: { encounterId: string; ended: boolean }) {
   const orders = useOrdersController(encounterId);
-  return orders.hidden ? null : <OrdersPanel {...orders} encounterId={encounterId} ended={ended} />;
+  return orders.hidden ? null : <Disclosure titleKey="orders.title"><OrdersPanel {...orders} encounterId={encounterId} ended={ended} /></Disclosure>;
 }
 
 /** Referrals out and in (MDV-P2-019) under the consultation; a clinician the server does not let write sees nothing here. */
 function Referrals({ patientId, encounterId, ended }: { patientId: string; encounterId: string; ended: boolean }) {
   const referrals = useReferralsController(patientId, encounterId);
-  return referrals.hidden ? null : <ReferralsPanel {...referrals} encounterId={encounterId} ended={ended} />;
+  return referrals.hidden ? null : <Disclosure titleKey="referrals.title"><ReferralsPanel {...referrals} encounterId={encounterId} ended={ended} /></Disclosure>;
 }
 
 /** The referral letter (MDV-P2-019), printable. */

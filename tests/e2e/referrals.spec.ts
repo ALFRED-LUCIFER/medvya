@@ -1,6 +1,7 @@
 import { createRequire } from 'node:module';
 import { expect, test, type Page } from '@playwright/test';
 import { mockOrders } from './support/orders';
+import { openPart } from './support/disclosure';
 
 // MDV-P2-019 (E-09): the doctor refers a patient from the consultation, chooses what the letter carries, sends it by a channel (an emailed letter
 // needs the patient's consent), moves it on with a document as evidence, and files a received letter. CI has no API: endpoints are mocked in the
@@ -61,6 +62,7 @@ async function open(page: Page, { locale = 'en', consent = true } = {}) {
 test('the doctor refers the patient, sends the letter and moves it on with a document as evidence', async ({ page }) => {
   const { calls } = await open(page);
   await page.goto('/consult/e-1');
+  await openPart(page, 'Referrals');
   await expect(page.getByText('No referrals yet.')).toBeVisible();
   await page.getByLabel('Doctor or facility').fill('Dr. S. Menon, Endocrinology (synthetic)');
   await page.getByLabel('Reason for the referral').first().fill('Uncontrolled HbA1c (synthetic)');
@@ -89,6 +91,7 @@ test('the doctor refers the patient, sends the letter and moves it on with a doc
 test('an emailed letter without the patient\'s consent is refused in words and stays a draft', async ({ page }) => {
   await open(page, { consent: false });
   await page.goto('/consult/e-1');
+  await openPart(page, 'Referrals');
   await page.getByLabel('Doctor or facility').fill('Dr. R. Kumar (synthetic)');
   await page.getByLabel('Reason for the referral').first().fill('Review (synthetic)');
   await page.getByRole('button', { name: 'Save the referral' }).click();
@@ -102,6 +105,7 @@ test('an emailed letter without the patient\'s consent is refused in words and s
 test('a received letter is filed with its document and the letter page prints only what was chosen', async ({ page }) => {
   const { calls } = await open(page);
   await page.goto('/consult/e-1');
+  await openPart(page, 'Referrals');
   await page.getByLabel('Referred by').fill('Dr. A. Rahman, Cardiology (synthetic)');
   await page.getByRole('combobox', { name: 'The letter' }).click();
   await page.getByRole('option', { name: 'Lab report, 2026-10-18' }).click();
@@ -142,6 +146,7 @@ for (const locale of ['en', 'ar'])
     for (const [path, ready] of [['/consult/e-1', 'Medicine list'], ['/consult/e-1/referrals/r-1/letter', ''], ['/patients/p-1', '']] as const) {
       await page.goto(path);
       if (ready === 'Medicine list') {
+        await openPart(page, locale === 'ar' ? 'الإحالات' : 'Referrals');
         await page.getByRole('button', { name: /Dr\. S\. Menon/ }).first().click();
         await expect(page.getByRole('list', { name: locale === 'ar' ? 'سجل الحالة' : 'Status history' })).toBeVisible();
       } else await expect(page.getByRole('article').or(page.getByRole('region', { name: locale === 'ar' ? 'الإحالات المفتوحة' : 'Open referrals' })).first()).toBeVisible();

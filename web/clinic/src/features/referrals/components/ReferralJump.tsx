@@ -11,7 +11,9 @@ export default function ReferralJump() {
   const { t } = useI18n();
   const go = (e: MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
-    document.getElementById(referralsHeading)?.focus();
+    const heading = document.getElementById(referralsHeading);
+    heading?.closest('details')?.setAttribute('open', ''); // the panel sits in a closed disclosure until used (MDV audit P1-04)
+    heading?.focus();
   };
   return <a href={`#${referralsHeading}`} onClick={go} className={buttonVariants({ variant: 'outline', className: 'min-h-11 self-start' })}><Send aria-hidden className="size-4" />{t('plan.referral')}</a>;
 }

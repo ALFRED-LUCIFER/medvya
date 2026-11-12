@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { openPart } from '../support/disclosure';
 import { mockReconciliation } from '../support/reconciliation';
 import { mockNote } from '../support/note';
 import { authorised, clearChecks, line, medicine, mockPrescription, penicillinAlert, stopLine } from '../support/prescription';
@@ -138,6 +139,7 @@ journey('J2', {
     await expect(rx).toContainText('Authorised · version 1');
     expect(orders.every(o => o.state === 'Draft')).toBe(true); // authorising the prescription placed nothing
 
+    await openPart(page, 'Orders');
     await page.getByLabel('Test', { exact: true }).fill('HbA1c');
     await page.getByRole('button', { name: 'Add test' }).click();
     await page.getByRole('button', { name: 'Place orders' }).click();

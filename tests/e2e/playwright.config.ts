@@ -11,7 +11,8 @@ export default defineConfig({
   projects: [
     { name: 'chromium', testIgnore: ['fullstack/**', /-performance\.spec\.ts/], use: { ...devices['Desktop Chrome'] } },
     // Time budgets run alone, after every other spec has finished: measured beside 250 parallel specs they test the runner, not the page.
-    { name: 'performance', testMatch: /-performance\.spec\.ts/, dependencies: ['chromium'], use: { ...devices['Desktop Chrome'] } },
+    // One at a time too: two budgets measured side by side share the CPU and the throttled link (MDV audit UX-12 added the second one).
+    { name: 'performance', testMatch: /-performance\.spec\.ts/, dependencies: ['chromium'], workers: 1, use: { ...devices['Desktop Chrome'] } },
   ],
   webServer: [
     {

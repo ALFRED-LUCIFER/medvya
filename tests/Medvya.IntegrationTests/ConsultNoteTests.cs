@@ -118,10 +118,11 @@ public sealed class ConsultNoteTests(PostgresFixture sql) : IClassFixture<Postgr
     [Fact]
     public async Task ANoteKeepsItsTemplateVersionAndRefusesSectionsOfAnotherTemplate()
     {
+        // A new note starts on the latest version (2 since MDV-P2-042); StructuredNoteTests pins an older note to version 1.
         using (var diabetes = await SaveAsync(h.Doctor, 0, new { chiefComplaint = Text, selfMonitoring = "Synthetic log" }, "diabetes-review"))
         {
             var v = await Json(diabetes);
-            Assert.Equal(("diabetes-review", 1), (v.GetProperty("templateKey").GetString(), v.GetProperty("templateVersion").GetInt32()));
+            Assert.Equal(("diabetes-review", 2), (v.GetProperty("templateKey").GetString(), v.GetProperty("templateVersion").GetInt32()));
         }
         using (var wrong = await SaveAsync(h.Doctor, 1, new { chiefComplaint = Text, homeBloodPressure = "x" })) // a hypertension section on a diabetes note
         {

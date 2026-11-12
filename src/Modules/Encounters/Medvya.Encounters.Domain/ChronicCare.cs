@@ -25,8 +25,8 @@ public enum CareCheckKind { DiabeticEyeExam, DiabeticFootExam }
 
 /// <summary>
 /// CARE_CHECK (MDV-P2-038): the doctor's record that a diabetic eye or foot check was done on a day (here or elsewhere). It is the only thing
-/// that closes those two gaps: no record, no "done". A record is never edited; a later check is a new row.
-/// shortcut: the structured foot examination of a signed note (MDV-P2-042) does not close the foot gap yet; read it here once that is on main.
+/// that closes the eye gap; the foot gap closes on it or on a signed note whose structured examination (MDV-P2-042) answered "feet" normal or
+/// abnormal. No record, no "done". A record is never edited; a later check is a new row.
 /// </summary>
 public sealed class CareCheck
 {
@@ -132,7 +132,7 @@ public sealed record CareFacts(
 /// <summary>
 /// The care gap rules (MDV-P2-038), the design's list. Unknown is due: a check is done only when a record says so.
 /// - Diabetes is an active problem coded E10–E14 (ICD-10), whatever its verification: a missed prompt is worse than an extra one.
-/// - Eye and foot checks: a <see cref="CareCheck"/> on or after the same day a year ago.
+/// - Eye and foot checks: a <see cref="CareCheck"/> on or after the same day a year ago; for the feet also a signed note that examined them.
 /// - Urine albumin: a UACR reading in the last year.
 /// - A test ordered but never resulted: an order placed <see cref="ResultWaitDays"/> days ago or more, in the last year, with no reading of its
 ///   test taken since. Only the tests in <see cref="ResultCodes"/> can be matched to a reading; any other is due until results arrive with
@@ -165,6 +165,20 @@ public static class CareGapRules
     /// <summary>I10–I15 (hypertensive diseases): with diabetes, what shows the targets card.</summary>
     public static bool IsHypertension(string? icd10) =>
         icd10?.Trim().ToUpperInvariant() is { Length: >= 3 } c && c[0] == 'I' && c[1] == '1' && c[2] is >= '0' and <= '5' && (c.Length == 3 || c[3] == '.' || char.IsDigit(c[3]));
+
+    /// <summary>A signed note's examination section (canonical JSON, <see cref="StructuredAnswers"/>) examined the feet: normal or abnormal, never "not examined".</summary>
+    public static bool FeetExamined(string? examination)
+    {
+        if (string.IsNullOrEmpty(examination)) return false;
+        try
+        {
+            return System.Text.Json.Nodes.JsonNode.Parse(examination)?["feet"]?["answer"]?.GetValue<string>() is StructuredAnswers.Normal or StructuredAnswers.Abnormal;
+        }
+        catch (Exception e) when (e is System.Text.Json.JsonException or InvalidOperationException)
+        {
+            return false; // not structured (a version 1 note): no record of a foot examination
+        }
+    }
 
     public static bool IsGlucoseTest(string name) => name.Contains("glucose tolerance", StringComparison.OrdinalIgnoreCase) || name.Contains("OGTT", StringComparison.OrdinalIgnoreCase);
 

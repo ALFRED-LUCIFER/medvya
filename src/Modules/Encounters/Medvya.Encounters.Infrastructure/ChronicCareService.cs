@@ -42,6 +42,13 @@ public sealed class ChronicCareService(
         var falls = await db.GeriatricAssessments.AsNoTracking().Where(a => a.PatientId == patientId && a.AssessedAt >= now.AddYears(-1))
             .Select(a => new FallsFact(a.AssessedAt, a.FallsLast12Months, a.TimedUpAndGoTenths != null, a.LyingSystolic != null && a.StandingSystolic != null))
             .ToListAsync(cancellationToken);
+        // A signed note of the last year whose structured examination looked at the feet (MDV-P2-042) is a foot check done on its signing day.
+        var examined = await (from v in db.SignedNoteVersions.AsNoTracking()
+                              join en in db.Encounters.AsNoTracking() on v.EncounterId equals en.Id
+                              where en.PatientId == patientId && v.SignedAt >= now.AddYears(-1)
+                              select new { v.SignedAt, v.Sections }).ToListAsync(cancellationToken);
+        var footByNote = examined.Where(x => CareGapRules.FeetExamined(x.Sections.GetValueOrDefault(NoteTemplates.Examination)))
+            .Select(x => (DateOnly?)ChildHealthService.DayIn(zone, x.SignedAt)).Max();
         var placed = await orders.SinceAsync(patientId, now.AddYears(-1), cancellationToken);
         var born = (await patients.SummariesAsync([patientId], cancellationToken)).GetValueOrDefault(patientId)?.DateOfBirth;
         // Only a child has a schedule to be due on; asking for an adult would audit a child health read that never happened.
@@ -49,7 +56,7 @@ public sealed class ChronicCareService(
             ? await childHealth.VaccinesDueAsync(patientId, facilityId, cancellationToken) : [];
         // shortcut: no open pregnancy is known until the pregnancy record (MDV-P2-034) is on main, so the glucose tolerance test gap never opens;
         // pass its gestation in days and whether an OGTT was placed since it began once that merges.
-        var facts = new CareFacts(diabetes, checks.GetValueOrDefault(CareCheckKind.DiabeticEyeExam), checks.GetValueOrDefault(CareCheckKind.DiabeticFootExam), latest.ToDictionary(x => x.Key, x => x.Value.TakenAt),
+        var facts = new CareFacts(diabetes, checks.GetValueOrDefault(CareCheckKind.DiabeticEyeExam), new[] { checks.GetValueOrDefault(CareCheckKind.DiabeticFootExam), footByNote }.Max(), latest.ToDictionary(x => x.Key, x => x.Value.TakenAt),
             placed, [.. doses.Select(d => new DueDoseFact(d.Vaccine, d.Dose, d.DueFrom))], GestationDays: null, GlucoseTestOrderedInPregnancy: false, falls);
 
         var goals = await db.CareGoals.AsNoTracking().Where(g => g.PatientId == patientId).OrderBy(g => g.CreatedAt).ThenBy(g => g.Id).Take(IChronicCare.MaxGoals).ToListAsync(cancellationToken);

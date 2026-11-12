@@ -51,6 +51,16 @@ public sealed class ChronicCareRulesTests
         Assert.DoesNotContain(CareGapRule.DiabeticFootExam, Rules(Facts(diabetes: true, foot: Today.AddDays(-3))));
     }
 
+    /// <summary>SAFETY (mutation check: count "not examined" or a text examination as a foot check, and this fails).</summary>
+    [Theory]
+    [InlineData("""{"feet":{"answer":"normal"}}""", true)]
+    [InlineData("""{"heart":{"answer":"normal"},"feet":{"answer":"abnormal","note":"Reduced monofilament sensation (synthetic)"}}""", true)]
+    [InlineData("""{"feet":{"answer":"notExamined"}}""", false)]
+    [InlineData("""{"heart":{"answer":"normal"}}""", false)]
+    [InlineData("Feet normal (a version 1 free-text note)", false)]
+    [InlineData(null, false)]
+    public void ASignedExaminationOfTheFeetIsAFootCheck(string? examination, bool examined) => Assert.Equal(examined, CareGapRules.FeetExamined(examination));
+
     /// <summary>SAFETY (mutation check: count a UACR older than a year, or ask for none, and this fails).</summary>
     [Fact]
     public void UrineAlbuminIsDueOnceAYearForDiabetes()

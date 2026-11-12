@@ -63,7 +63,8 @@ public sealed record CheckedAllergy(
 /// this finding and a changed dose needs a new one. <see cref="Medicine"/> is the prescribed line; <see cref="Other"/> the second medicine of a
 /// pair (on the chart when <see cref="OtherOnChart"/>). <see cref="Code"/>: the allergy class (or "ingredient"), the interaction's effect,
 /// or "same_medicine" / "same_class" for a duplicate, or the patient rule (Pregnancy, ChildDose, Kidney, OlderAdult). Amounts are micrograms a
-/// day. <see cref="Measure"/> is the patient fact a patient rule rests on: gestation weeks, eGFR or age in years.
+/// day. <see cref="Measure"/> is the patient fact a patient rule rests on: gestation weeks, eGFR or age in years (and, for a
+/// child given a medicine too often, the doses a day allowed).
 /// </summary>
 public sealed record SafetyAlert(
     [property: Classification(DataClass.Internal)] string Key, [property: Classification(DataClass.SensitiveHealth)] RxAlertKind Kind,
@@ -105,7 +106,7 @@ public sealed record InteractionRule(
 public static class SafetyRules
 {
     /// <summary>The rule set's name (a code the screens translate) and version, recorded with every check and override.</summary>
-    public const string Source = "medvya-curated", Version = "2026.11-draft-2";
+    public const string Source = "medvya-curated", Version = "2026.11-draft-3";
 
     public static readonly IReadOnlyList<AllergyClass> Classes =
     [
@@ -147,6 +148,18 @@ public static class SafetyRules
     public static readonly IReadOnlyDictionary<string, (int MgPerKg, int MaxDosesPerDay)> ChildDoses = new Dictionary<string, (int, int)>(StringComparer.Ordinal)
     {
         ["N02BE01"] = (15, 4), ["M01AE01"] = (10, 3),
+    };
+
+    /// <summary>
+    /// The most one dose may be, in mg, for a child with no weight from the last month (#1085), by ATC code: (from age in years, mg), youngest
+    /// first. The top of each BNF for Children oral age band (paracetamol 1-23 months to 16-17 years; ibuprofen 3 months to 17 years); under one
+    /// year takes the youngest band in the table. A child with no weight is a severe finding on its own; this adds the stop for an adult dose.
+    /// shortcut: whole-year bands (no 1-2 month or 3-5 month split, no neonates), pending the clinical safety reviewer (MDV-P2-028).
+    /// </summary>
+    public static readonly IReadOnlyDictionary<string, (int FromAge, int MaxMg)[]> ChildAgeCeilings = new Dictionary<string, (int, int)[]>(StringComparer.Ordinal)
+    {
+        ["N02BE01"] = [(0, 60), (1, 120), (2, 180), (4, 240), (6, 250), (8, 375), (10, 500), (12, 750), (16, 1000)],
+        ["M01AE01"] = [(0, 50), (1, 100), (4, 150), (7, 200), (10, 300), (12, 400)],
     };
 
     /// <summary>Under this age the weight-based dose applies (the BNF for Children covers to 18); from <see cref="OlderAdultAge"/> the Beers subset.</summary>
@@ -207,12 +220,27 @@ public static class SafetyRules
 
     /// <summary>
     /// A child's line against the dose by weight: the dose worked out (in mL of the line's concentration for a liquid, rounded to 0.1 mL as it is
-    /// measured), and a severe finding when one dose is above it or it is given more often than allowed. Returns why it was not checked, or null.
+    /// measured), and a severe finding when one dose is above it or it is given more often than allowed. With no weight the dose cannot be
+    /// checked, which is itself severe (a weight or a reason before authorising, #1085), and one dose is held to the age band's ceiling.
+    /// Returns why it was not checked, or null.
     /// </summary>
     static NotCheckedReason? ChildDoseReason(CheckedMedicine line, PatientContext patient, List<SafetyAlert> alerts, List<WeightDose> doses)
     {
         if (!ChildDoses.TryGetValue(line.Atc!, out var rule)) return NotCheckedReason.DoseNotChecked;
-        if (patient.WeightHundredthsKg is not { } weight) return NotCheckedReason.NoRecentWeight;
+        var given = DoseMicrograms(line);
+        var perDay = PerDay(line.Sig?.Frequency);
+        SafetyAlert Alert(string code, string amount, int? measure = null) =>
+            new($"child_dose:{code}:{line.Id}:{amount}", RxAlertKind.ChildDose, RxSeverity.Severe, line.Id, line.Name, null, false, code, null, null, null, null, measure);
+        string Text(long? n) => n?.ToString(CultureInfo.InvariantCulture) ?? "unknown";
+        if (perDay is { } n && n > rule.MaxDosesPerDay) alerts.Add(Alert("doses_a_day", Text(n), rule.MaxDosesPerDay));
+        if (patient.WeightHundredthsKg is not { } weight)
+        {
+            // The key carries the dose and frequency, so a reason given for one dose does not cover a changed one.
+            alerts.Add(Alert("no_weight", $"{Text(given)}:{line.Sig?.Frequency ?? "unknown"}"));
+            var ceiling = ChildAgeCeilings[line.Atc!].Last(b => b.FromAge <= patient.AgeYears).MaxMg;
+            if (given is { } over && over > ceiling * 1000L) alerts.Add(Alert("age_ceiling", Text(over), patient.AgeYears));
+            return NotCheckedReason.NoRecentWeight;
+        }
         var dose = (long)Math.Round(rule.MgPerKg * weight * 10m, MidpointRounding.AwayFromZero); // mg/kg x kg/100 x 1000 µg
         int? tenthsMl = null;
         var allowed = dose;
@@ -222,12 +250,7 @@ public static class SafetyRules
             allowed = (long)Math.Round(tenthsMl.Value * perMl / 10m, MidpointRounding.AwayFromZero);
         }
         doses.Add(new(line.Id, line.Name, weight, rule.MgPerKg, dose, tenthsMl, rule.MaxDosesPerDay, dose * rule.MaxDosesPerDay));
-        var given = DoseMicrograms(line);
-        var perDay = PerDay(line.Sig?.Frequency);
-        if (given is { } g && g > allowed)
-            alerts.Add(new($"child_dose:per_dose:{line.Id}:{g.ToString(CultureInfo.InvariantCulture)}", RxAlertKind.ChildDose, RxSeverity.Severe, line.Id, line.Name, null, false, "per_dose", null, null, null, null));
-        if (perDay is { } n && n > rule.MaxDosesPerDay)
-            alerts.Add(new($"child_dose:doses_a_day:{line.Id}:{n.ToString(CultureInfo.InvariantCulture)}", RxAlertKind.ChildDose, RxSeverity.Severe, line.Id, line.Name, null, false, "doses_a_day", null, null, null, null));
+        if (given is { } g && g > allowed) alerts.Add(Alert("per_dose", Text(g)));
         // "When needed" and weekly are within the doses a day by definition; a missing dose or frequency is not.
         return given is null || line.Sig?.Frequency is null ? NotCheckedReason.DoseNotChecked : null;
     }

@@ -3498,6 +3498,8 @@
   "rx.check.alert.OlderAdult": "Older adult, {measure} years: {medicine}. {rule}",
   "rx.check.alert.ChildDose.per_dose": "Dose for weight: one dose of {medicine} is above {mgPerKg} mg/kg for {kg} kg.",
   "rx.check.alert.ChildDose.doses_a_day": "Dose for weight: {medicine} is given more than {doses} times a day.",
+  "rx.check.alert.ChildDose.no_weight": "Dose for weight: no weight from the last month, so the dose of {medicine} cannot be checked. Weigh the child, or give a reason to authorise without a weight.",
+  "rx.check.alert.ChildDose.age_ceiling": "Dose for age: one dose of {medicine} is above the most for a child aged {age} with no weight.",
   "rx.check.rule.nsaid_from_20_weeks": "NSAIDs are avoided from 20 weeks: a risk to the baby's kidneys and heart.",
   "rx.check.rule.nsaid_egfr_under_30": "NSAIDs are not used under eGFR 30.",
   "rx.check.rule.nsaid_egfr_under_60_raas": "With an ACE inhibitor or ARB on the list, NSAIDs are not used under eGFR 60: a risk of kidney injury.",

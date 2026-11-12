@@ -22,6 +22,8 @@ import { usePatient360Controller } from '../features/patient360/hooks/usePatient
 import { usePregnancyController } from '../features/patient360/hooks/usePregnancyController';
 import AddMedicinePanel from '../features/prescription/components/AddMedicinePanel';
 import { useAddMedicineController } from '../features/prescription/hooks/useAddMedicineController';
+import VisitsCard from '../features/visits/components/VisitsCard';
+import { useVisitsController } from '../features/visits/hooks/useVisitsController';
 import TimelinePreview from '../features/timeline/components/TimelinePreview';
 import { useTimelinePreviewController } from '../features/timeline/hooks/useTimelinePreviewController';
 
@@ -82,7 +84,7 @@ function Chart({ patientId, backPath, canEditHistory, canManagePregnancy, canOrd
           {modules.map((M, i) => <M key={i} patientId={patientId} canRecord={canEditHistory} online={online} openConsultPath={openConsultPath} />)}
         </div> : undefined}
         carePlan={d && <ChronicCare patientId={patientId} openEncounterId={d.chart.openEncounterId} canDecide={canOrder} />}
-        timeline={chart.data && <Timeline patientId={patientId} printRx={canOrder} />}
+        timeline={chart.data && <><Visits patientId={patientId} printRx={canOrder} /><Timeline patientId={patientId} printRx={canOrder} /></>}
         documents={chart.data && <Documents patientId={patientId} />} />
       {!pregnant && pregnancyCard}
       {!referrals.hidden && !referrals.loading && !referrals.failed && <OpenReferrals open={referrals.open} />}
@@ -93,6 +95,8 @@ function Chart({ patientId, backPath, canEditHistory, canManagePregnancy, canOrd
 /** Targets, care gaps and goals (MDV-P2-038); a gap's action goes on the open consultation, and with none open it says so. */
 const ChronicCare = ({ patientId, openEncounterId, canDecide }: { patientId: string; openEncounterId: string | null; canDecide: boolean }) =>
   <ChronicCareCards {...useChronicCareController(patientId, openEncounterId)} canDecide={canDecide} />;
+const Visits = ({ patientId, printRx }: { patientId: string; printRx: boolean }) =>
+  <VisitsCard {...useVisitsController(patientId)} consultPath={id => `/consult/${id}`} printRx={printRx} />;
 const Timeline = ({ patientId, printRx }: { patientId: string; printRx: boolean }) =>
   <TimelinePreview {...useTimelinePreviewController(patientId)} timelinePath={`/patients/${patientId}/timeline`} consultPath={id => `/consult/${id}`} printRx={printRx} />;
 const Documents = ({ patientId }: { patientId: string }) => <DocumentsSummary {...useDocumentListController(patientId)} documentsPath={`/patients/${patientId}/docs`} />;

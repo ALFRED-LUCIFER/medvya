@@ -63,6 +63,9 @@ public sealed record AppointmentView(
 
 public sealed record PatientView(Guid Id, string FullName, string Mrn);
 
+/// <summary>One visit on the desk's patient record (MDV-1088): when and what state, never a reason or anything clinical.</summary>
+public sealed record DeskVisit(Guid AppointmentId, DateTimeOffset Start, AppointmentState State);
+
 /// <summary>Move a booked visit to another slot: a calendar of the same kind at the visit's facility, and a start of its template.</summary>
 public sealed record RescheduleAppointment
 {
@@ -147,6 +150,9 @@ public interface IBookingService
 
     /// <summary>Name and MRN of a patient of this tenant, to confirm the patient before booking; null when unknown.</summary>
     Task<PatientView?> FindPatientAsync(Guid facilityId, Guid patientId, CancellationToken cancellationToken = default);
+
+    /// <summary>The patient's latest visits at the organisation (shared record), newest first: date and status only. Needs "Register / book" at Read or Full, as the calendar does; null when there is no such patient in the organisation.</summary>
+    Task<IReadOnlyList<DeskVisit>?> VisitsAsync(Guid facilityId, Guid patientId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Moves a booked visit to another slot (MDV-P1-024) on the booking path: the doctor-days of both slots locked, the new slot

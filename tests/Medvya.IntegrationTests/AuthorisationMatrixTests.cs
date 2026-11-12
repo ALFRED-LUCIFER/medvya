@@ -180,6 +180,7 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.Receptionist, new("GET", "/v1/patients/{patient}/merges")),
         (Role.HospitalDoctor, new("POST", "/v1/patients/{patient}/access-requests", """{"reason":"CoveringColleague"}""")),
         (Role.Receptionist, new("GET", "/v1/schedule/patients/{patient}?facilityId={facility}")),
+        (Role.Receptionist, new("GET", "/v1/schedule/patients/{patient}/visits?facilityId={facility}")),
         (Role.PracticeAdmin, new("GET", "/v1/audit/access-log/patients/{patient}")),
         (Role.Receptionist, new("POST", "/v1/appointments/{appointment}/cancel", """{"reason":"PatientRequest"}""")),
         (Role.Receptionist, new("POST", "/v1/appointments/{appointment}/cancel-following", """{"reason":"PatientRequest"}""")),
@@ -198,6 +199,7 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.Receptionist, new("POST", "/v1/patients/{patient}/documents?type=LabReport&date=2026-10-01&source=Imported")),
         (Role.SoloDoctor, new("GET", "/v1/patients/{patient}/timeline")),
         (Role.SoloDoctor, new("GET", "/v1/patients/{patient}/trends")),
+        (Role.SoloDoctor, new("GET", "/v1/patients/{patient}/visits")),
         (Role.SoloDoctor, new("PUT", "/v1/patients/{patient}/history/Social", """{"text":"Synthetic"}""")),
         (Role.SoloDoctor, new("GET", "/v1/patients/{patient}/child-health")),
         (Role.Nurse, new("POST", "/v1/patients/{patient}/immunisations", """{"vaccine":"BCG","dose":1,"outcome":"Deferred","reason":"Synthetic"}""")),
@@ -428,6 +430,8 @@ public sealed class AuthorisationMatrixTests(PostgresFixture sql) : IClassFixtur
         (Role.HospitalIt, new("POST", "/v1/patients/{patient}/documents?type=LabReport&date=2026-10-01&source=Imported")),
         (Role.Receptionist, new("GET", "/v1/patients/{patient}/timeline")),
         (Role.Receptionist, new("GET", "/v1/patients/{patient}/trends")),
+        (Role.Receptionist, new("GET", "/v1/patients/{patient}/visits")),
+        (Role.HospitalIt, new("GET", "/v1/schedule/patients/{patient}/visits?facilityId={facility}")), // Register / book: X
         (Role.Receptionist, new("PUT", "/v1/patients/{patient}/history/Social", """{"text":"Synthetic"}""")), // Vitals & allergies entry: X
         (Role.CareCoordinator, new("PUT", "/v1/patients/{patient}/history/Social", """{"text":"Synthetic"}""")),
         (Role.Receptionist, new("GET", "/v1/patients/{patient}/child-health")), // Patient 360: X

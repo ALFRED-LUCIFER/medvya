@@ -204,7 +204,7 @@ export default function App({ locale, onLocaleChange }: Props) {
             <Route path={searchPath} element={<PatientDirectoryRoute registerPath={registerPath} mergePath={`${searchPath}/merge`} />} />
             <Route path={`${searchPath}/merge/:requestId?`} element={<MergeReviewRoute can={{ request: active.capabilities.RegisterBookPatients === 'Full',
               approve: active.capabilities.ClinicalNotes === 'Sign', undo: active.capabilities.StaffRolesIntegrations === 'Config' }} />} />
-            <Route path={`${searchPath}/:patientId`} element={<PatientRecordRoute canReveal={active.capabilities.RegisterBookPatients === 'Full'} canDocs={deskDocuments} />} />
+            <Route path={`${searchPath}/:patientId`} element={<PatientRecordRoute canReveal={active.capabilities.RegisterBookPatients === 'Full'} canDocs={deskDocuments} facilityId={active.facilityId} timeZone={active.timeZone} />} />
             {active.capabilities.RegisterBookPatients === 'Full' &&
               <Route path={`${searchPath}/:patientId/complete`} element={<CompleteRegistrationRoute country={country} />} />}
           </>}

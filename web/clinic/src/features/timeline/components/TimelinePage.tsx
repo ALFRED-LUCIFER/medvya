@@ -96,6 +96,7 @@ export function Entry({ entry: e, zone, consultPath, printRx }: { entry: Timelin
         <time dateTime={e.at} className="text-sm text-muted-foreground">{`${formatDate(when, zone)} ${formatTime(when, zone)}`}</time>
         <strong>{title}</strong>
         <span className="text-sm">{subtitle}</span>
+        {e.kind === 'Encounter' && <Link to={consultPath(e.id)} className={buttonVariants({ variant: 'link', className: 'min-h-11 px-0' })}>{t('visits.open')}</Link>}
         {e.encounterId && <PrescribedLinks encounterId={e.encounterId} consultPath={consultPath} printRx={printRx} />}
       </div>
       <ProvenanceTag source={provenanceOf[e.source]} />

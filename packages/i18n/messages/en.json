@@ -4748,5 +4748,18 @@
   "chronicCare.error.invalid": "Enter a number, for example 7.5.",
   "chronicCare.error.required": "Required.",
   "chronicCare.error.too_long": "Too long: 200 characters at most.",
-  "chronicCare.error.out_of_range": "Enter 0 to 100."
+  "chronicCare.error.out_of_range": "Enter 0 to 100.",
+  "visits.title": "Visits",
+  "visits.loading": "Loading visits…",
+  "visits.loadFailed": "Visits could not be loaded. Try again.",
+  "visits.empty": "No visits yet.",
+  "visits.status.signed": "Note signed",
+  "visits.status.open": "In progress",
+  "visits.status.unsigned": "Note not signed",
+  "visits.diagnosis": "Diagnosis",
+  "visits.medicines": "Medicines",
+  "visits.tests": "Tests",
+  "visits.none": "None recorded",
+  "visits.openSigned": "Open signed note",
+  "visits.open": "Open visit"
 }

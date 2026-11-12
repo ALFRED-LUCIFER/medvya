@@ -202,6 +202,18 @@ public sealed class BookingServiceTests(PostgresFixture sql) : IClassFixture<Pos
     }
 
     [Fact]
+    public async Task TheDeskSeesAPatientsVisitsAsDateAndStatusOnlyAndOnlyIfItMaySeeTheCalendar()
+    {
+        var hold = await h.Booking(h.Reception).HoldAsync(Slot(9));
+        var booked = await h.Booking(h.Reception).BookAsync(Book(hold.Id));
+        Assert.Equal([new DeskVisit(booked.Id, booked.Start, AppointmentState.Booked)], await h.Booking(h.Reception).VisitsAsync(h.Facility, h.Patient));
+        Assert.Empty((await h.Booking(h.Reception).VisitsAsync(h.Facility, h.SecondPatient))!);
+        Assert.Null(await h.Booking(h.Reception).VisitsAsync(h.Facility, Guid.NewGuid()));
+        Assert.Single((await h.Booking(h.Nurse).VisitsAsync(h.Facility, h.Patient))!); // Register / book at Read
+        await Assert.ThrowsAsync<SchedulingAccessDeniedException>(() => h.Booking(h.HospitalIt).VisitsAsync(h.Facility, h.Patient));
+    }
+
+    [Fact]
     public async Task APatientOfAnotherOrganisationIsNeitherFoundNorBookable()
     {
         await h.SeedOtherOrganisationPatientAsync();

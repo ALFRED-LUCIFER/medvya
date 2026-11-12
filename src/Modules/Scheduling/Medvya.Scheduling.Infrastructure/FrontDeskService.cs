@@ -163,7 +163,8 @@ public sealed partial class FrontDeskService(
             ?? throw new AppointmentNotFoundException();
         await context.RequireAsync(visit.FacilityId, SchedulingAccess.CanRunQueue, cancellationToken);
         if (visit.State == to) return (await RepeatAsync(visit, action, cancellationToken), false);
-        var steps = await context.StepsAsync(cancellationToken);
+        // Check-in is timed (exit gate 3), so the two flag reads happen only when they can change the answer.
+        var steps = VisitSteps.Matter(visit.State) ? await context.StepsAsync(cancellationToken) : VisitSteps.All;
         Guard(visit.State, to, steps);
         // The nurse's handoff is its own action (MDV-P2-007): of the generic moves, none may skip the intake's checks.
         if (visit.State == AppointmentState.WithNurse && to == AppointmentState.ReadyForDoctor)

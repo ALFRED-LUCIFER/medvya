@@ -41,7 +41,7 @@ Each step: who acts, on which screen, and what changes. 🔒 = clinician approva
 | 1 | P-01 | Reception | Walk-in arrives | Reception board, token issued. |  |
 | 2 | P-02 | Reception | Quick registration | 5 fields; completion task created. |  |
 | 3 | P-03 | Reception | Branch: possible duplicate | Name + DOB match; request merge review. | ↪ |
-| 4 | P-01 | Reception | Send to nurse | Card moves to “With nurse”. |  |
+| 4 | P-01 | Reception | Send to nurse | With nurse intake on, the card moves to “With nurse”. Without it the step and column are skipped: the card goes to “Ready for doctor”. |  |
 | 5 | N-01 | Nurse | Vitals & allergies | Open intake from the “With nurse” card; hand off returns to the board. |  |
 | 6 | P-01 | Nurse | Ready for doctor | Doctor sees it on Today. |  |
 | 7 | D-01 | Doctor | Clinic overview | Shared waiting room, reassign doctor. |  |
@@ -90,7 +90,7 @@ Which steps run in the browser against the real stack (`pnpm e2e:fullstack`: rea
 |---|---|---|
 | J1 | 1, 3, 4 (one story test, `fullstack/j1.spec.ts`) | 2 MDV-P4-002 · 5 MDV-P3-003 · 6 MDV-P2-009 · 7 MDV-P3-012 · 8 MDV-P4-004 |
 | J2 | 1, 6 (authorise with the step-up, place orders and download the slip's server PDF (MDV-P2-018), print, QR verify, cancel and authorise again), 7 (the pharmacy link; the patient's link needs an SMS provider for the code, MDV-P1-045), 9 to 12 (MDV-P2-045: the nurse records Meera's penicillin allergy at intake, then the one-page chart, Add medicine from the chart with amoxicillin blocked, the one-page consultation with Sign locked until the checklist is complete, and signing; English and Arabic, axe clean) | 2 MDV-P2-004 · 3 MDV-P3-005 · 4 MDV-P3-009 · 5 MDV-P3-012 · 8 MDV-P4-016 |
-| J3 | 1, 2, 3, 4, 6 (doctor sees it on the board, not Today), 7, 8, 9 (mocked spec only: a second location exists on the real stack once MDV-P1-070 lands) | 5 MDV-P2-007, MDV-P2-008 (green in the mocked spec `journeys/j3.spec.ts` and on the real stack, `fullstack/j3.spec.ts`, after the owner switches nurse intake on (`PUT /v1/settings/nurse-intake`; there is no Settings screen for it yet)) |
+| J3 | 1, 2, 3, 4, 6 (doctor sees it on the board, not Today), 7, 8, 9 (mocked spec only: a second location exists on the real stack once MDV-P1-070 lands) | 5 MDV-P2-007, MDV-P2-008 (green in the mocked spec `journeys/j3.spec.ts` and on the real stack, `fullstack/j3.spec.ts`, after the owner switches nurse intake on in Settings → Clinical → Nurse intake). Steps 4 and 5 run with nurse intake on; step 6 on the real stack is a clinic without it (Checked in → Ready for doctor) |
 | J4 | none | 1 MDV-P6-002 · 2 MDV-P6-003 · 3 MDV-P6-004 · 4 MDV-P3-010 · 5 MDV-P3-009 · 6 MDV-P7-006 |
 | J5 | none | 1 MDV-P2-018 (green in the mocked spec `journeys/j5.spec.ts`; on the real stack once the seeded doctor's licence is attested by the owner (ADR-016; until MDV-P1-065 lands, verified by Medvya operations)) · 2 MDV-P4-014 · 3, 5 MDV-P4-015 · 4 MDV-P4-018 · 6 MDV-P4-019 · 7 MDV-P4-016 |
 | J6 | none | 1 MDV-P7-002 · 2 to 5 MDV-P7-006 · 6 MDV-P7-008 |

@@ -172,10 +172,10 @@ public sealed class FrontDeskEndpointTests(PostgresFixture sql) : IClassFixture<
         Assert.Equal(HttpStatusCode.Conflict, skip.StatusCode);
         Assert.Equal("invalid_transition", JsonDocument.Parse(await skip.Content.ReadAsStringAsync()).RootElement.GetProperty("code").GetString());
 
-        using var next = await reception.PostAsJsonAsync($"/v1/appointments/{visit.Id}/status", new { state = "WithNurse" });
+        using var next = await reception.PostAsJsonAsync($"/v1/appointments/{visit.Id}/status", new { state = "ReadyForDoctor" });
         Assert.Equal(HttpStatusCode.OK, next.StatusCode);
 
-        using var unknown = await reception.PostAsJsonAsync($"/v1/appointments/{Guid.NewGuid()}/status", new { state = "WithNurse" });
+        using var unknown = await reception.PostAsJsonAsync($"/v1/appointments/{Guid.NewGuid()}/status", new { state = "ReadyForDoctor" });
         Assert.Equal(HttpStatusCode.NotFound, unknown.StatusCode);
 
         using var readOnly = await Client(h.SecondDoctor).PostAsJsonAsync($"/v1/appointments/{visit.Id}/status", new { state = "ReadyForDoctor" });

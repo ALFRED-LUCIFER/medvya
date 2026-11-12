@@ -129,6 +129,11 @@ public static class VisitFlow
 /// <summary>The optional steps of a visit the practice has on: the nurse intake (clinical.nurse-intake) and billing (billing.invoices).</summary>
 public readonly record struct VisitSteps(bool Nurse, bool Billing)
 {
+    public static readonly VisitSteps All = new(true, true);
+
+    /// <summary>Only a move out of Checked in or In consult can land on an optional step; from any other state the steps change nothing.</summary>
+    public static bool Matter(AppointmentState from) => from is AppointmentState.CheckedIn or AppointmentState.InConsult;
+
     public bool Has(AppointmentState state) => state switch
     {
         AppointmentState.WithNurse => Nurse,

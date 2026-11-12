@@ -7,6 +7,10 @@ public sealed record IdentifierInput(IdentifierScheme Scheme, string Value, Date
 /// <summary>An emergency contact or guardian: who to call. Name, relationship and phone are all needed.</summary>
 public sealed record ContactInput(string? Name, RelationshipKind? Relationship, string? Phone);
 
+/// <summary>A correction of the patient's own phones and email. A null part is left as it is.</summary>
+/// <remarks>shortcut: an alternate phone or email cannot be cleared here, only replaced; add an explicit clear when a desk needs it.</remarks>
+public sealed record ContactChange(string? Mobile, string? AlternatePhone, string? Email);
+
 public sealed record PayerInput(PayerKind Kind, string? PayerName = null, string? Plan = null, string? MemberNumber = null, DateOnly? ValidTo = null, string? Network = null);
 
 /// <summary>
@@ -145,5 +149,5 @@ public interface IPatientRegistry
     /// patient): nothing is changed or audited, and the endpoint answers 404.
     /// </summary>
     /// <exception cref="PatientValidationException">Nothing given ("completion"/"required"), or a part is invalid.</exception>
-    Task<RegistrationStatus?> CompleteRegistrationAsync(Guid patientId, PatientAddress? address, PayerInput? payer, ContactInput? emergencyContact = null, uint? expectedVersion = null, CancellationToken cancellationToken = default);
+    Task<RegistrationStatus?> CompleteRegistrationAsync(Guid patientId, PatientAddress? address, PayerInput? payer, ContactInput? emergencyContact = null, uint? expectedVersion = null, ContactChange? contact = null, CancellationToken cancellationToken = default);
 }

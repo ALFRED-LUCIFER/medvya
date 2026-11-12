@@ -239,7 +239,7 @@ function Results({ chart, zone }: { chart: Patient360['chart']; zone: string }) 
   return (
     <Card title={t('patient360.labs')}>
       {rows.length === 0 ? <Empty text={t('patient360.labs.empty')} /> : <>
-        <Table>
+        <Table label={t('patient360.labs.table')}>
           <TableCaption className="sr-only">{t('patient360.labs')}</TableCaption>
           <TableHeader>
             <TableRow>

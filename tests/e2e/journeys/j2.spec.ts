@@ -21,7 +21,7 @@ const meera = { id: 'p-a1', fullName: 'Meera Iyer', mrn: '000001', dateOfBirth: 
 const penicillin = { substance: 'Penicillin', reaction: 'Rash', status: 'PatientReported', source: 'PatientReported' };
 async function mockChart(page: Page) {
   await page.route('**/v1/me/context', r => r.fulfill({ json: doctor }));
-  await page.route('**/v1/patients/p-a1/chart', r => r.fulfill({ json: { patient: meera, treatmentConsent: true, timeZone: 'Asia/Kolkata', lifeStage: 'Adult', historySections: [],
+  await page.route('**/v1/patients/p-a1/chart', r => r.fulfill({ json: { patient: meera, treatmentConsent: true, timeZone: 'Asia/Kolkata', lifeStage: 'Adult', historySections: [], pregnancy: { open: null, ruledOut: null },
     chart: { allergyState: 'Listed', allergies: [penicillin], medicines: [], problems: [], lastVitals: [], lastLabs: [], bmi: null, trends: [], recentEncounters: [], openEncounterId: 'e-1', history: [], bloodGroup: null, careTeam: [] } } }));
   await page.route('**/v1/encounters/e-1', r => r.fulfill({ json: { timeZone: 'Asia/Kolkata', treatmentConsent: true, patient: meera, allergies: { state: 'Listed', allergies: [penicillin] },
     encounter: { id: 'e-1', appointmentId: 'a1', patientId: 'p-a1', facilityId: 'f-1', leadClinicianId: 'u-rao', status: 'Active', authorityMode: 'Medvya', startedAt: at, endedAt: null, room: 'Room 3' } } }));

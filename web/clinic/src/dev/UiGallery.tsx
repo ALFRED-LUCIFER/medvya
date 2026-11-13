@@ -7,6 +7,7 @@ import {
 } from '@medvya/ui';
 import PageComponentsGallery from './PageComponentsGallery';
 import FieldGallery from './FieldGallery';
+import ChipTagBannerSection from './gallery/ChipTagBannerSection';
 import PatientBannerSection from './gallery/PatientBannerSection';
 import ShellComponentsGallery from './ShellComponentsGallery';
 
@@ -145,6 +146,7 @@ export default function UiGallery({ switcher }: { switcher: ReactNode }) {
       </section>
       <PageComponentsGallery />
       <FieldGallery />
+      <ChipTagBannerSection />
       <PatientBannerSection />
       <ShellComponentsGallery />
     </main>

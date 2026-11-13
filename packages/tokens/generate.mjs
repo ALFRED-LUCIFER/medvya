@@ -6,16 +6,22 @@ import { fileURLToPath } from 'node:url';
 
 const dir = new URL('./src/', import.meta.url);
 const camel = s => s.replace(/-(\w)/g, (_, c) => c.toUpperCase());
-const px = v => (v.endsWith('px') ? Number(v.slice(0, -2)) : v);
+const num = v => (/^[\d.]+(px|ms)$/.test(v) ? parseFloat(v) : v);
+// Each group is a Tailwind theme namespace (--text-*, --spacing-*, --container-*, ...), so a token is also a utility.
+// `space` is not one: it names the allowed steps of Tailwind's own numeric scale, which a --spacing-<n> key would override.
+const groups = ['color', 'radius', 'font', 'breakpoint', 'text', 'space', 'spacing', 'container', 'shadow', 'ease', 'transition-duration'];
 
 export function render(t) {
   const cssVar = (g, k) => (g === 'radius' && k === 'default' ? '--radius' : `--${g}-${k}`);
-  const groups = ['color', 'radius', 'font', 'breakpoint'];
-  const lines = groups.flatMap(g =>
-    Object.entries(t[g]).map(([k, v]) => `  ${cssVar(g, k)}: ${v};${t.notes[`${g}-${k}`] ? ` /* ${t.notes[`${g}-${k}`]} */` : ''}`));
+  // A type token is an object: font-size is --text-<name>, the others are Tailwind's --text-<name>--<property> modifiers.
+  const decls = (g, k, v) => (typeof v === 'string' ? [[cssVar(g, k), v]]
+    : Object.entries(v).map(([p, x]) => [p === 'font-size' ? cssVar(g, k) : `${cssVar(g, k)}--${p}`, x]));
+  const lines = groups.flatMap(g => Object.entries(t[g]).flatMap(([k, v]) => decls(g, k, v).map(([name, value], i) =>
+    `  ${name}: ${value};${i === 0 && t.notes[`${g}-${k}`] ? ` /* ${t.notes[`${g}-${k}`]} */` : ''}`)));
   const css = `/* Generated from tokens.json by generate.mjs. Do not edit. */\n@theme static {\n${lines.join('\n')}\n}\n`;
-  const obj = g => Object.fromEntries(Object.entries(t[g]).map(([k, v]) => [camel(k), px(v)]));
-  const theme = `// Generated from tokens.json by generate.mjs. Do not edit. Plain values for React Native (px become numbers).\nexport const theme = ${JSON.stringify(Object.fromEntries(groups.map(g => [g, obj(g)])), null, 2)} as const;\n`;
+  const plain = v => (typeof v === 'string' ? num(v) : obj(v));
+  const obj = o => Object.fromEntries(Object.entries(o).map(([k, v]) => [camel(k), plain(v)]));
+  const theme = `// Generated from tokens.json by generate.mjs. Do not edit. Plain values for React Native (px and ms become numbers).\nexport const theme = ${JSON.stringify(Object.fromEntries(groups.map(g => [camel(g), obj(t[g])])), null, 2)} as const;\n`;
   return { css, theme };
 }
 

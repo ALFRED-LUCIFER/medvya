@@ -1,7 +1,7 @@
 import { useId, type FormEventHandler, type ReactNode } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { useI18n, type MessageKey } from '@medvya/i18n';
-import { Button, Label, Textarea } from '@medvya/ui';
+import { Button, Card, Label, Textarea } from '@medvya/ui';
 
 type Props = {
   title: string;
@@ -23,8 +23,7 @@ export default function ReasonPanel({ title, children, form, confirmLabel, destr
   const id = useId();
   const error = form.formState.errors.reason?.message;
   return (
-    <section aria-labelledby={`${id}-title`} className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4">
-      <h2 id={`${id}-title`} className="text-base font-bold">{title}</h2>
+    <Card title={title}>
       {children}
       <form onSubmit={onConfirm} noValidate className="flex flex-col gap-3">
         <div className="flex flex-col gap-1.5">
@@ -40,6 +39,6 @@ export default function ReasonPanel({ title, children, form, confirmLabel, destr
           <Button type="button" variant="outline" onClick={onCancel}>{t('platform.action.cancel')}</Button>
         </div>
       </form>
-    </section>
+    </Card>
   );
 }

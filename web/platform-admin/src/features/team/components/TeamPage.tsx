@@ -1,7 +1,7 @@
 import { useId } from 'react';
 import { Copy, FileCheck, KeyRound, UserPlus, UserX } from 'lucide-react';
 import { useI18n, type MessageKey } from '@medvya/i18n';
-import { Button, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState } from '@medvya/ui';
+import { Button, Card, Input, PageContainer, PageHeader, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState } from '@medvya/ui';
 import type { FormEventHandler } from 'react';
 import { Controller, type UseFormReturn } from 'react-hook-form';
 import ReasonPanel from '../../shell/components/ReasonPanel';
@@ -27,17 +27,11 @@ export default function TeamPage({ vm }: Props) {
   const e = vm.inviteForm.formState.errors;
 
   return (
-    <>
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-extrabold">{t('platform.team.title')}</h1>
-          <p className="text-sm text-muted-foreground">{t('platform.team.lead')}</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={() => vm.onStartAction({ kind: 'review' })}><FileCheck aria-hidden />{t('platform.team.startReview')}</Button>
-          <Button onClick={vm.onStartInvite}><UserPlus aria-hidden />{t('platform.team.invite')}</Button>
-        </div>
-      </div>
+    <PageContainer>
+      <PageHeader title={t('platform.team.title')} description={t('platform.team.lead')} actions={<>
+        <Button variant="outline" onClick={() => vm.onStartAction({ kind: 'review' })}><FileCheck aria-hidden />{t('platform.team.startReview')}</Button>
+        <Button onClick={vm.onStartInvite}><UserPlus aria-hidden />{t('platform.team.invite')}</Button>
+      </>} />
 
       {vm.team && (
         <p role="status" className={vm.reviewDue ? 'font-semibold text-danger-700' : 'text-sm text-muted-foreground'}>
@@ -47,20 +41,18 @@ export default function TeamPage({ vm }: Props) {
       )}
 
       {vm.issued && (
-        <section aria-labelledby="issued-link" className="flex flex-col gap-2 rounded-lg border border-border bg-card p-4">
-          <h2 id="issued-link" className="text-base font-bold">{t(vm.issued.purpose === 'invite' ? 'platform.link.inviteTitle' : 'platform.link.recoverTitle')}</h2>
+        <Card title={t(vm.issued.purpose === 'invite' ? 'platform.link.inviteTitle' : 'platform.link.recoverTitle')}>
           <p className="text-sm">{t('platform.link.body', { time: when(vm.issued.expiresAt) })}</p>
           <p dir="ltr" className="rounded-md bg-accent p-2 font-mono text-sm break-all">{vm.issued.url}</p>
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={vm.onCopyLink}><Copy aria-hidden />{t(vm.copied ? 'platform.link.copied' : 'platform.link.copy')}</Button>
             <Button variant="ghost" onClick={vm.onDismissLink}>{t('platform.link.done')}</Button>
           </div>
-        </section>
+        </Card>
       )}
 
       {vm.inviting && (
-        <section aria-labelledby="invite-title" className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4">
-          <h2 id="invite-title" className="text-base font-bold">{t('platform.team.inviteTitle')}</h2>
+        <Card title={t('platform.team.inviteTitle')}>
           <form onSubmit={vm.onInvite} noValidate className="grid gap-3 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor={ids.name}>{t('platform.team.name')}</Label>
@@ -97,7 +89,7 @@ export default function TeamPage({ vm }: Props) {
               <Button type="button" variant="outline" onClick={vm.onCancelInvite}>{t('platform.action.cancel')}</Button>
             </div>
           </form>
-        </section>
+        </Card>
       )}
 
       {vm.pending && (
@@ -147,6 +139,6 @@ export default function TeamPage({ vm }: Props) {
           </TableBody>
         </Table>
       </TableState>
-    </>
+    </PageContainer>
   );
 }

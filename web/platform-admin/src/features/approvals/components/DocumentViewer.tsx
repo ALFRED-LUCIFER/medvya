@@ -1,5 +1,5 @@
 import { useI18n } from '@medvya/i18n';
-import { Button } from '@medvya/ui';
+import { Button, Card } from '@medvya/ui';
 import type { DocumentView } from '../domain/approvals';
 
 /** The watermark as a tiled picture (not text in the page), so it marks the file without being content a reader or a contrast check has to read. */
@@ -18,7 +18,7 @@ export default function DocumentViewer({ file, operator, onClose }: { file: { do
   const mark = t('platform.approvals.viewer.watermark', { name: operator, when: `${formatDate(file.openedAt)} ${formatTime(file.openedAt)}` });
   const isPdf = file.contentType === 'application/pdf';
   return (
-    <section aria-label={t('platform.approvals.viewer.title')} className="flex flex-col gap-2 rounded-lg border border-border bg-card p-3" onContextMenu={e => e.preventDefault()}>
+    <Card size="item" aria-label={t('platform.approvals.viewer.title')} onContextMenu={e => e.preventDefault()}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-muted-foreground">{t('platform.approvals.viewer.note')}</p>
         <Button variant="outline" onClick={onClose}>{t('platform.approvals.viewer.close')}</Button>
@@ -29,6 +29,6 @@ export default function DocumentViewer({ file, operator, onClose }: { file: { do
           : <img src={file.url} alt={t('platform.approvals.viewer.title')} draggable={false} className="mx-auto max-h-[32rem] object-contain" />}
         <div aria-hidden className="pointer-events-none absolute inset-0" style={{ backgroundImage: watermark(mark) }} />
       </div>
-    </section>
+    </Card>
   );
 }

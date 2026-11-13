@@ -1,5 +1,5 @@
 import { useI18n, type MessageKey } from '@medvya/i18n';
-import { Button, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState, Tabs, TabsContent, TabsList, TabsTrigger, cn } from '@medvya/ui';
+import { Button, PageContainer, PageHeader, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState, Tabs, TabsContent, TabsList, TabsTrigger, cn } from '@medvya/ui';
 import { filters, waitDays, type Filter, type QueueItem } from '../domain/approvals';
 import ApprovalDetail, { type DetailVm } from './ApprovalDetail';
 
@@ -13,11 +13,8 @@ export default function ApprovalsPage({ vm, operator }: { vm: { queue: QueueVm; 
   const { t } = useI18n();
   const q = vm.queue;
   return (
-    <>
-      <div>
-        <h1 className="text-2xl font-extrabold">{t('platform.approvals.title')}</h1>
-        <p className="text-sm text-muted-foreground">{t('platform.approvals.lead')}</p>
-      </div>
+    <PageContainer>
+      <PageHeader title={t('platform.approvals.title')} description={t('platform.approvals.lead')} />
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)]">
         <section aria-labelledby="approvals-queue" className="flex min-w-0 flex-col gap-3">
           <h2 id="approvals-queue" className="sr-only">{t('platform.approvals.queue')}</h2>
@@ -57,6 +54,6 @@ export default function ApprovalsPage({ vm, operator }: { vm: { queue: QueueVm; 
           <ApprovalDetail vm={vm.detail} operator={operator} />
         </section>
       </div>
-    </>
+    </PageContainer>
   );
 }

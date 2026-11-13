@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Building2, KeyRound, ShieldCheck } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button } from '@medvya/ui';
+import { Button, Card, PageHeader } from '@medvya/ui';
 import type { Me, Stage } from '../domain/session';
 
 type Props = {
@@ -23,15 +23,15 @@ export default function SignInPage({ stage, me, hasLink, signOnFailed, keyFailed
   const { t } = useI18n();
   return (
     <main className="grid min-h-screen place-items-center bg-brand-950 p-4">
-      <div className="flex w-full max-w-md flex-col gap-5 rounded-xl bg-card p-6 shadow-lg">
-        <div className="flex items-center justify-between gap-3">
+      {/* Labels wrap on a phone: a one-line "Continue with company sign-on" is wider than 375 px in Arabic (MDV-P2-059). */}
+      <div className="flex w-full max-w-md flex-col gap-5 rounded-xl bg-card p-6 shadow-lg [&_[data-slot=button]]:whitespace-normal">
+        {/* Wraps at 375 px: the brand line and the language picker side by side are wider than a phone (MDV-P2-059). */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-xs font-bold tracking-[.09em] text-muted-foreground uppercase">{`${t('platform.brand.name')} · ${t('platform.brand.staffOnly')}`}</p>
           {languageSwitcher}
         </div>
-        <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-extrabold">{t('platform.signIn.title')}</h1>
-          <p className="text-sm text-muted-foreground">{t('platform.signIn.lead')}</p>
-        </div>
+        {/* The sign-in title wraps rather than truncates: nothing loads into this row, and on a phone the whole title must be read. */}
+        <PageHeader className="[&_h1]:whitespace-normal" title={t('platform.signIn.title')} description={t('platform.signIn.lead')} />
 
         {stage === 'signedOut' && (
           <div className="flex flex-col gap-3">
@@ -62,10 +62,7 @@ export default function SignInPage({ stage, me, hasLink, signOnFailed, keyFailed
           </div>
         )}
 
-        <section aria-labelledby="lost-key" className="flex flex-col gap-1 rounded-md border border-border p-3">
-          <h2 id="lost-key" className="text-sm font-bold">{t('platform.signIn.lostTitle')}</h2>
-          <p className="text-sm text-muted-foreground">{t('platform.signIn.lostBody')}</p>
-        </section>
+        <Card title={t('platform.signIn.lostTitle')} intro={t('platform.signIn.lostBody')} />
         <p className="flex items-start gap-2 text-sm text-muted-foreground">
           <ShieldCheck className="mt-0.5 size-4 shrink-0" aria-hidden />
           {t('platform.policy.long')}

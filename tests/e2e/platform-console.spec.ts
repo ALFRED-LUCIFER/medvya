@@ -101,3 +101,42 @@ test('a reviewer sees approvals but no team or audit pages', async ({ page }) =>
   await page.goto('/');
   await expect(page.getByRole('navigation').getByRole('link')).toHaveText(['Overview', 'Approvals']);
 });
+
+// MDV-P2-059 AC4: on a phone the sign-in is exactly as wide as the screen, in both directions, and every control is a 44 px target.
+for (const locale of ['en', 'ar']) {
+  test(`at 375 px the ${locale} sign-in does not scroll sideways and its controls are 44 px`, async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 740 });
+    await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
+    await page.route('**/v1/me', r => r.fulfill({ status: 401 }));
+    await page.goto('/?signin=failed');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(375);
+    for (const control of await page.locator('button, select, [role=combobox]').all())
+      expect((await control.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    expect(await axe(page)).toEqual([]);
+  });
+}
+
+// MDV-P2-059 AC1 and AC6: every console page has one h1, in the shared 44 px header row, at the same height, with content from 130 px.
+const consolePages = ['/', '/approvals', '/team', '/audit'];
+for (const locale of ['en', 'ar']) {
+  test(`every ${locale} console page puts its one title in the same 44 px row`, async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.addInitScript(l => localStorage.setItem('medvya.locale', l), locale);
+    await page.route('**/v1/me', r => r.fulfill({ json: owner({ keyVerified: true, hasKey: true, canRegister: false }) }));
+    await page.route('**/v1/team', r => r.fulfill({ json: team }));
+    await page.route('**/v1/audit**', r => r.fulfill({ json: audit }));
+    await page.route('**/v1/organisations/?filter=*', r => r.fulfill({ json: [] }));
+    const tops = new Set<number>();
+    for (const path of consolePages) {
+      await page.goto(path);
+      await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
+      const row = (await page.locator('[data-slot=page-header-row]').boundingBox())!;
+      expect(row.height, path).toBe(44);
+      expect(row.y + row.height + 12, path).toBeLessThanOrEqual(130); // 12 px gap below the header (DESIGN.md Layout)
+      tops.add(row.y);
+      expect(await axe(page), path).toEqual([]);
+    }
+    expect([...tops]).toHaveLength(1);
+  });
+}

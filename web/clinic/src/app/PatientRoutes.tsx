@@ -34,11 +34,12 @@ export function MergeReviewRoute({ can }: { can: { request: boolean; approve: bo
 const completePath = (id: string) => `${recordPath(id)}/complete`;
 
 // Revealing numbers and completing a registration both need Register / book patients at Full (the server checks the same).
-function Record({ patientId, canReveal, canDocs, facilityId, timeZone }: { patientId: string; canReveal: boolean; canDocs: boolean; facilityId: string; timeZone?: string }) {
+function Record({ patientId, canReveal, canDocs, facilityId, timeZone, bookPath, checkInPath }: { patientId: string; canReveal: boolean; canDocs: boolean; facilityId: string; timeZone?: string; bookPath: string | null; checkInPath: string | null }) {
   const navigate = useNavigate();
   const mergeRequest = useMergeRequest(patientId, id => void navigate(`${mergePath}/${id}`));
   return <PatientRecord {...usePatientRecordController(patientId)} merges={useMergeHistory(patientId)} consents={usePatientConsentsController(patientId)} backPath={patientDirectory.path} canReveal={canReveal}
-    completePath={canReveal ? completePath(patientId) : null} documentsPath={canDocs ? `/patients/${patientId}/docs` : null} visits={<DeskVisits {...useDeskVisitsController(facilityId, patientId)} timeZone={timeZone} />} mergeRequest={canReveal ? mergeRequest : null} />;
+    completePath={canReveal ? completePath(patientId) : null}
+    actions={{ bookPath: canReveal && bookPath ? `${bookPath}?patient=${patientId}` : null, checkInPath: checkInPath ? `${checkInPath}?patient=${patientId}` : null, editPath: canReveal ? completePath(patientId) : null }} documentsPath={canDocs ? `/patients/${patientId}/docs` : null} visits={<DeskVisits {...useDeskVisitsController(facilityId, patientId)} timeZone={timeZone} />} mergeRequest={canReveal ? mergeRequest : null} />;
 }
 
 type RegistrationLinks = { country: Country; scope: string; actorName: string; timeZone?: string; bookPath: string | null; checkInPath: string | null };
@@ -56,9 +57,9 @@ export function RegistrationRoute(links: RegistrationLinks) {
     slot={slot?.toString() ?? null} />;
 }
 
-export function PatientRecordRoute({ canReveal, canDocs, facilityId, timeZone }: { canReveal: boolean; canDocs: boolean; facilityId: string; timeZone?: string }) {
+export function PatientRecordRoute({ canReveal, canDocs, facilityId, timeZone, bookPath, checkInPath }: { canReveal: boolean; canDocs: boolean; facilityId: string; timeZone?: string; bookPath: string | null; checkInPath: string | null }) {
   const { patientId = '' } = useParams();
-  return <Record key={patientId} patientId={patientId} canReveal={canReveal} canDocs={canDocs} facilityId={facilityId} timeZone={timeZone} />;
+  return <Record key={patientId} patientId={patientId} canReveal={canReveal} canDocs={canDocs} facilityId={facilityId} timeZone={timeZone} bookPath={bookPath} checkInPath={checkInPath} />;
 }
 
 function Completion({ patientId, country }: { patientId: string; country: Country }) {

@@ -8896,6 +8896,7 @@ export interface components {
             emergencyContact?: null | components["schemas"]["ContactInput"];
             /** Format: uint32 */
             version?: null | number | string;
+            contact?: null | components["schemas"]["ContactChange"];
         };
         /** @enum {unknown} */
         ConsentChannel: "WhatsApp" | "Sms" | "Email" | null;
@@ -8910,6 +8911,11 @@ export interface components {
         };
         /** @enum {unknown} */
         ConsentType: "Treatment" | "Reminders" | "InformationExchange" | "Portal" | "Marketing";
+        ContactChange: {
+            mobile: null | string;
+            alternatePhone: null | string;
+            email: null | string;
+        };
         ContactInput: {
             name: null | string;
             relationship: null | components["schemas"]["RelationshipKind"];

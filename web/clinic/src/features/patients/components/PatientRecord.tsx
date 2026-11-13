@@ -24,6 +24,8 @@ type Props = {
   onReveal: () => void;
   /** "Complete registration" for an incomplete record; null when this role may not register (Register / book at Full). */
   completePath: string | null;
+  /** Book, Check in and Edit details: each null when this role may not (Register / book at Full; Check-in & queue at Full too for check-in). */
+  actions: { bookPath: string | null; checkInPath: string | null; editPath: string | null };
   /** The patient's documents (MDV-P2-006); null when this role may not use them (the desk uploads and lists, Register / book and Check-in at Full). */
   documentsPath: string | null;
   /** Merges this record took part in (MDV-P1-017); empty for most records. */
@@ -100,6 +102,14 @@ export default function PatientRecord(props: Props) {
         )}
         <p className="text-xs text-muted-foreground">{t('patients.record.noClinical')}</p>
       </header>
+
+      {(props.actions.bookPath || props.actions.checkInPath || props.actions.editPath) && (
+        <div className="flex flex-wrap gap-2">
+          {props.actions.bookPath && <Link to={props.actions.bookPath} className={buttonVariants({ className: 'min-h-11' })}>{t('patients.record.book')}</Link>}
+          {props.actions.checkInPath && <Link to={props.actions.checkInPath} className={buttonVariants({ variant: 'outline', className: 'min-h-11' })}>{t('patients.record.checkIn')}</Link>}
+          {props.actions.editPath && <Link to={props.actions.editPath} className={buttonVariants({ variant: 'outline', className: 'min-h-11' })}>{t('patients.record.edit')}</Link>}
+        </div>
+      )}
 
       {props.documentsPath && <Link to={props.documentsPath} className={buttonVariants({ variant: 'outline', className: 'min-h-11 self-start' })}>{t('documents.title')}</Link>}
 

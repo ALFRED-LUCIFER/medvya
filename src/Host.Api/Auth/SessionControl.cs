@@ -83,6 +83,8 @@ public static class SessionControl
             return Results.Ok(new
             {
                 user = new { user.Id, user.DisplayName },
+                // No active membership but a suspended or offboarded one: access was removed (F-05b), not "not set up yet".
+                accessEnded = memberships.Count == 0 && await directory.HasEndedMembershipAsync(ct),
                 memberships = memberships.Select(m => new { m.Id, m.TenantId, m.TenantName, m.FacilityId, m.FacilityName, Role = m.Role.ToString() }),
                 // The picker lists the last used facility first (MDV-P1-059); only ever one of the memberships above.
                 lastMembershipId = await sessions.LastMembershipAsync(user.Id, ct) is { } last && memberships.Any(m => m.Id == last) ? last : (Guid?)null,

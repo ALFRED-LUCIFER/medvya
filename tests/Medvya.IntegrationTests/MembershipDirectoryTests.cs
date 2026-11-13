@@ -52,6 +52,15 @@ public class MembershipDirectoryTests(PostgresFixture sql) : IClassFixture<Postg
         Assert.DoesNotContain(choices, c => c.TenantId == tenantC); // suspended
     }
 
+    [Fact]
+    public async Task EndedMembershipIsReportedOnlyToItsOwnerAndNeverListedAsAChoice()
+    {
+        Assert.True(await new MembershipDirectory(sql.ConnectionString, new FixedUser(user)).HasEndedMembershipAsync()); // suspended in tenant C
+        Assert.False(await new MembershipDirectory(sql.ConnectionString, new FixedUser(colleague)).HasEndedMembershipAsync()); // active only: nothing leaks across users
+        Assert.False(await new MembershipDirectory(sql.ConnectionString, new FixedUser(Guid.NewGuid())).HasEndedMembershipAsync()); // never had one
+        Assert.DoesNotContain(await new MembershipDirectory(sql.ConnectionString, new FixedUser(user)).ForCurrentUserAsync(), c => c.TenantId == tenantC);
+    }
+
     static async Task<List<Guid>> Ids(NpgsqlConnection conn, string sqlText)
     {
         await using var cmd = new NpgsqlCommand(sqlText, conn);
@@ -70,7 +79,7 @@ public class MembershipDirectoryTests(PostgresFixture sql) : IClassFixture<Postg
         var facilities = await Ids(conn, "SELECT \"Id\" FROM tenancy.\"Facilities\"");
         var tenants = await Ids(conn, "SELECT \"Id\" FROM tenancy.\"Tenants\"");
 
-        Assert.Equal(2, memberships.Count);
+        Assert.Equal(3, memberships.Count); // two active, and the suspended one (F-05b needs to know access ended)
         Assert.All(memberships, u => Assert.Equal(user, u)); // never a colleague's membership
         Assert.Equal(new[] { facilityA, facilityB }.Order(), facilities.Order()); // not the annexe, not the suspended tenant's facility
         Assert.DoesNotContain(otherFacilityA, facilities);

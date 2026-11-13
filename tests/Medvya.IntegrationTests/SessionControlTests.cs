@@ -224,6 +224,15 @@ public sealed class SessionControlTests(PostgresFixture sql) : IClassFixture<Pos
         var context = await Context(browser);
         Assert.Empty(context.GetProperty("memberships").EnumerateArray());
         Assert.Equal(JsonValueKind.Null, context.GetProperty("active").ValueKind);
+        Assert.True(context.GetProperty("accessEnded").GetBoolean()); // lost a membership: F-05b, not the setup wizard
+    }
+
+    [Fact]
+    public async Task AUserWhoNeverHadAMembershipIsNotToldAccessEnded()
+    {
+        await Clinics();
+        using var browser = await SignedIn(await Account("N. Newcomer"));
+        Assert.False((await Context(browser)).GetProperty("accessEnded").GetBoolean());
     }
 
     [Fact]

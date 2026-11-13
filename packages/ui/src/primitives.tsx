@@ -174,6 +174,7 @@ export function IdentityBanner({ patient }: { patient: BannerPatient }) {
 export const systemStates = {
   sessionExpired: { title: 'state.sessionExpired.title', body: 'state.sessionExpired.body', cta: 'state.sessionExpired.cta', icon: Clock, color: '#334E68' },
   noAccess:       { title: 'err.403', body: 'state.noAccess.body', cta: 'state.noAccess.cta', icon: Ban, color: '#8A1626' },
+  removed:        { title: 'err.403', body: 'state.removed.body', cta: 'session.signOut', icon: Ban, color: '#8A1626' },
   notFound:       { title: 'state.notFound.title', body: 'state.notFound.body', cta: 'state.notFound.cta', icon: SearchX, color: '#334E68' },
   offline:        { title: 'state.offline.title', body: 'state.offline.body', cta: 'state.offline.cta', icon: WifiOff, color: '#975A16' },
 } satisfies Record<string, { title: MessageKey; body: MessageKey; cta: MessageKey; icon: LucideIcon; color: string }>;

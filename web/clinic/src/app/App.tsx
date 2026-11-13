@@ -123,7 +123,10 @@ export default function App({ locale, onLocaleChange }: Props) {
         {/* Signed in with no clinic yet: the setup wizard (F-04). It scopes the session to the new practice when it finishes. */}
         <Route path="/onboarding" element={<OnboardingRoute switcher={switcher} onLater={() => shell.signOut()}
           onFinished={(r, to = '/') => shell.chooseFacility(r.membershipId, () => navigate(to, { replace: true }))} />} />
-        <Route path="*" element={<Navigate to={shell.session.memberships.length === 0 ? '/onboarding' : '/choose-facility'} replace state={{ from: location.pathname }} />} />
+        {/* Access removed from the only clinic (F-05b): the wizard is for people who never had one. */}
+        <Route path="*" element={shell.session.memberships.length === 0 && shell.session.accessEnded
+          ? <main className="grid min-h-screen place-items-center p-4"><SystemState state="removed" onAction={() => shell.signOut()} /></main>
+          : <Navigate to={shell.session.memberships.length === 0 ? '/onboarding' : '/choose-facility'} replace state={{ from: location.pathname }} />} />
       </>
     : <>
         {/* With one clinic there is no other to switch to: the picker (also reached right after the automatic choice) goes on to the screen asked for. */}

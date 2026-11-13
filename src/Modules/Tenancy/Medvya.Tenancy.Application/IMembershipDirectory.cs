@@ -9,4 +9,7 @@ public sealed record MembershipChoice(Guid Id, Guid TenantId, string TenantName,
 public interface IMembershipDirectory
 {
     Task<IReadOnlyList<MembershipChoice>> ForCurrentUserAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>True when the user has a suspended or offboarded membership: they lost access, as opposed to never having had any (F-05b).</summary>
+    Task<bool> HasEndedMembershipAsync(CancellationToken cancellationToken = default);
 }

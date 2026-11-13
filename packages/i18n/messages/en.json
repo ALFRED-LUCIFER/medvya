@@ -47,6 +47,7 @@
   "state.sessionExpired.cta": "Sign in again",
   "state.noAccess.body": "You are signed in to {facility}. This record belongs to another facility.",
   "state.noAccess.cta": "Request access",
+  "state.removed.body": "Your access to this clinic has ended. Ask the practice owner if you think this is a mistake.",
   "state.notFound.title": "Page not found",
   "state.notFound.body": "The link may be old. Nothing has been changed.",
   "state.notFound.cta": "Go to my start page",

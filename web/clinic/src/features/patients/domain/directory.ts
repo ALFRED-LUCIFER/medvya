@@ -1,3 +1,5 @@
+import type { MessageKey } from '@medvya/i18n';
+
 // Mirrors src/Modules/Patients (Medvya.Patients.Application / Medvya.Patients.Api); the server is the authority.
 export type DirectoryFilter = 'All' | 'Incomplete' | 'Recent';
 export type SearchKind = 'Directory' | 'Name' | 'Phone' | 'Mrn' | 'Identifier' | 'Number';
@@ -8,13 +10,36 @@ export type PayerKind = 'SelfPay' | 'Corporate' | 'PrivateInsurance' | 'Governme
 
 /** Directory table columns; the label of each is the i18n key `patients.col.<key>`.
  * shortcut: no column sort, since the server pages results by match relevance; add server-side sort if desks ask to order the whole list. */
-export const directoryColumns = ['patient', 'age', 'sex', 'mrn', 'phone', 'status'] as const;
+export const directoryColumns = ['patient', 'age', 'sex', 'dob', 'mrn', 'phone', 'lastVisit', 'status'] as const;
 export type DirectoryColumn = (typeof directoryColumns)[number];
 
-/** A result row for staff who register and book (MDV-AUDIT-1100): the full name tells two people apart; the phone and MRN show their last four only. The rest needs the record opened (audited). */
+export type DuplicateMark = 'MainRecord' | 'PossibleDuplicate';
+
+/**
+ * A result row for staff who register and book (MDV-AUDIT-1100, MDV-P1-101): the full name, date of birth, last visit and duplicate mark tell two
+ * people apart; the phone and MRN show their last four only. The rest needs the record opened (audited).
+ */
 export type PatientSummary = {
   id: string; initials: string; fullName: string; ageYears: number; ageEstimated: boolean; sexAtBirth: SexAtBirth; mrnTail: string; mobileTail: string; status: RegistrationStatus;
+  /** Calendar dates (yyyy-mm-dd). No date of birth when it was estimated from a stated age; no last visit when the patient never attended. */
+  dateOfBirth: string | null; lastVisitOn: string | null;
+  /** Set while a merge request is open: the record that would be merged away, or the older one that would stay. */
+  duplicate: DuplicateMark | null;
 };
+
+/**
+ * The parts of a row's spoken name that tell two same-name people apart (MDV-P1-101), in the order the row shows them: `born` goes before the
+ * MRN, `more` (last visit, duplicate mark) after the phone. A spoken name must hold the visible words in their order (axe label-content-name-mismatch).
+ */
+export function spokenExtras(row: Pick<PatientSummary, 'dateOfBirth' | 'lastVisitOn' | 'duplicate'>,
+  t: (key: MessageKey, vars?: Record<string, string | number>) => string, formatDate: (date: string) => string): { born: string; more: string } {
+  const extra = (text: string) => t('patients.row.extra', { text });
+  return {
+    born: row.dateOfBirth ? extra(t('patients.row.born', { date: formatDate(row.dateOfBirth) })) : '',
+    more: extra(row.lastVisitOn ? t('patients.row.lastVisit', { date: formatDate(row.lastVisitOn) }) : t('patients.row.noVisit'))
+      + (row.duplicate ? extra(t(`patients.duplicate.${row.duplicate}`)) : ''),
+  };
+}
 
 export type SearchResult = { matchedOn: SearchKind; items: PatientSummary[]; page: number; pageSize: number; total: number };
 

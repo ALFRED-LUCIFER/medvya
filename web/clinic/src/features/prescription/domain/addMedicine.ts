@@ -66,6 +66,20 @@ export function draftOf(medicine: Pick<Medicine, 'form'>, c: Choice): SigDraft {
 export const sameMedicine = (a: Medicine, b: Medicine) => a.generic === b.generic && a.form === b.form;
 export const medicinesOf = (results: Medicine[]) => results.filter((m, i) => results.findIndex(o => sameMedicine(o, m)) === i);
 
+/**
+ * MDV-P1-088, "Did you mean": for a typed name that matched nothing, the medicines whose generic or brand has a word sharing the longest
+ * start with it (at least three letters), best first, with every strength of each.
+ * shortcut: a shared start, so a slip in the first three letters finds nothing; an edit distance on the server when a register is loaded.
+ */
+export function closest(text: string, rows: Medicine[], max = 3): Medicine[] {
+  const typed = text.trim().toLowerCase();
+  const shared = (word: string) => { let n = 0; while (n < word.length && n < typed.length && word[n] === typed[n]) n++; return n; };
+  const score = (m: Medicine) => Math.max(...[m.generic, ...m.brands].flatMap(name => name.toLowerCase().split(/\s+/)).map(shared));
+  const ranked = rows.map(m => ({ m, score: score(m) })).filter(x => x.score >= 3).sort((a, b) => b.score - a.score).map(x => x.m);
+  const top = medicinesOf(ranked).slice(0, max);
+  return ranked.filter(m => top.some(t => sameMedicine(t, m)));
+}
+
 /** The checks that concern this line: its own findings, and those about the whole patient (allergies not recorded). */
 export function checksFor(checks: RxChecks, itemId: string): RxChecks {
   const alerts = checks.alerts.filter(a => a.itemId === itemId || a.itemId === null);

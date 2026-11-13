@@ -88,7 +88,7 @@ type Calls = {
 };
 
 // POST /v1/patients/search (MDV-P1-018): privacy-safe rows only. "Nair" finds Deepak Nair (synthetic), anything else nobody.
-const nair = { id: patientId, initials: 'DN', fullName: 'Deepak Nair (synthetic)', ageYears: 47, ageEstimated: false, sexAtBirth: 'Male', mrnTail: '0002', mobileTail: '0201', status: 'Complete' };
+const nair = { id: patientId, initials: 'DN', fullName: 'Deepak Nair (synthetic)', ageYears: 47, ageEstimated: false, sexAtBirth: 'Male', mrnTail: '0002', mobileTail: '0201', status: 'Complete', dateOfBirth: '1979-08-14', lastVisitOn: '2026-10-02', duplicate: null };
 
 /** Signs in and answers the scheduling API; returns what the page sent. `holdCode` makes holds fail with that 409 code. */
 async function open(page: Page, { locale = 'en', status = 200, as = reception, holdCode = '', delayMs = 0, changeCode = '', refusal = 409 } = {}) {
@@ -289,7 +289,7 @@ test('reception books an empty slot: hold, longer visit type, confirm the patien
     `/patients/new?date=2026-10-19&view=day&calendar=d-1&start=${encodeURIComponent(ist('2026-10-19', '10:00'))}&visitType=NewConsultation`);
   await search.fill('Nair');
   await panel.getByRole('button', { name: 'Search' }).click();
-  const row = panel.getByRole('button', { name: 'Deepak Nair (synthetic), 47 y, Male, MRN 0002, phone 0201. Choose for this booking' });
+  const row = panel.getByRole('button', { name: 'Deepak Nair (synthetic), 47 y, Male, Born 14 Aug 1979, MRN 0002, phone 0201, Last visit 02 Oct 2026. Choose for this booking' });
   await expect(row).toHaveAttribute('aria-pressed', 'false');
   await expect(panel.getByRole('list', { name: 'Patients found' })).toContainText('Deepak Nair (synthetic)'); // MDV-AUDIT-1100: the full name, never the whole phone
   await expect(panel.getByRole('list', { name: 'Patients found' })).not.toContainText('+91');
@@ -325,7 +325,7 @@ test('a patient who was never seen is booked as a New consultation, unless the d
   await expect(panel).toContainText('Held for you until');
   await panel.getByRole('searchbox', { name: 'Name, MRN, phone or ID' }).fill('Nair');
   await panel.getByRole('button', { name: 'Search' }).click();
-  await panel.getByRole('button', { name: 'Deepak Nair (synthetic), 47 y, Male, MRN 0002, phone 0201. Choose for this booking' }).click();
+  await panel.getByRole('button', { name: 'Deepak Nair (synthetic), 47 y, Male, Born 14 Aug 1979, MRN 0002, phone 0201, Last visit 02 Oct 2026. Choose for this booking' }).click();
   await expect(panel).toContainText('Deepak Nair (synthetic) · MRN 000002');
   await expect(panel).toContainText('10:00–10:40'); // held again for the longer first visit
   expect(calls.holds.map(h => h.visitType)).toEqual(['FollowUp', 'NewConsultation']);
@@ -345,7 +345,7 @@ test('where a first visit does not fit the slot, the booking stays a Follow-up i
   const panel = page.getByRole('complementary', { name: 'Book appointment' });
   await panel.getByRole('searchbox', { name: 'Name, MRN, phone or ID' }).fill('Nair');
   await panel.getByRole('button', { name: 'Search' }).click();
-  await panel.getByRole('button', { name: 'Deepak Nair (synthetic), 47 y, Male, MRN 0002, phone 0201. Choose for this booking' }).click();
+  await panel.getByRole('button', { name: 'Deepak Nair (synthetic), 47 y, Male, Born 14 Aug 1979, MRN 0002, phone 0201, Last visit 02 Oct 2026. Choose for this booking' }).click();
   await expect(panel).toContainText('Deepak Nair (synthetic) · MRN 000002');
   await expect(panel.getByRole('combobox', { name: 'Visit type' })).toContainText('Follow-up');
   await expect(panel.getByRole('alert')).toHaveCount(0);
@@ -965,7 +965,7 @@ test('a weekly series shows its conflict, lets the desk move it, then books the 
   const panel = page.getByRole('complementary', { name: 'Book appointment' });
   await panel.getByRole('searchbox', { name: 'Name, MRN, phone or ID' }).fill('Nair');
   await panel.getByRole('button', { name: 'Search' }).click();
-  await panel.getByRole('button', { name: 'Deepak Nair (synthetic), 47 y, Male, MRN 0002, phone 0201. Choose for this booking' }).click();
+  await panel.getByRole('button', { name: 'Deepak Nair (synthetic), 47 y, Male, Born 14 Aug 1979, MRN 0002, phone 0201, Last visit 02 Oct 2026. Choose for this booking' }).click();
   await expect(panel).toContainText('Deepak Nair (synthetic) · MRN 000002');
   await panel.locator('summary').click(); // UX-10: repeating is folded until asked
   await panel.getByLabel('Number of visits').fill('3');
@@ -1000,7 +1000,7 @@ async function chooseNair(page: Page) {
   const panel = page.getByRole('complementary', { name: 'Book appointment' });
   await panel.getByRole('searchbox', { name: 'Name, MRN, phone or ID' }).fill('Nair');
   await panel.getByRole('button', { name: 'Search' }).click();
-  await panel.getByRole('button', { name: 'Deepak Nair (synthetic), 47 y, Male, MRN 0002, phone 0201. Choose for this booking' }).click();
+  await panel.getByRole('button', { name: 'Deepak Nair (synthetic), 47 y, Male, Born 14 Aug 1979, MRN 0002, phone 0201, Last visit 02 Oct 2026. Choose for this booking' }).click();
   await expect(panel).toContainText('Deepak Nair (synthetic) · MRN 000002');
   return panel;
 }

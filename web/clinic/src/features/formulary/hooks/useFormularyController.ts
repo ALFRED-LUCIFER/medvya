@@ -3,8 +3,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { ApiError } from '../../schedule/services/scheduleApi';
-import { emptyMedicine, medicineSchema, orderSetSchema, splitProblem, type MedicineForm, type OrderSetForm, type ProblemCode } from '../domain/formulary';
-import { addMedicine, addOrderSet, fetchOrderSets, searchFormulary } from '../services/formularyApi';
+import {
+  brandProblems, brandRowsSchema, emptyMedicine, medicineSchema, orderSetSchema, parseBrandRows, splitProblem,
+  type BrandProblem, type BrandRowsForm, type MedicineForm, type OrderSetForm, type ProblemCode,
+} from '../domain/formulary';
+import { addBrands, addMedicine, addOrderSet, fetchOrderSets, searchFormulary } from '../services/formularyApi';
 
 const problemOf = (e: unknown) => splitProblem(e instanceof ApiError ? e.code : undefined);
 
@@ -45,6 +48,38 @@ export function useFormularyController() {
     saved,
     formError,
     onSubmit: form.handleSubmit(values => { setSaved(false); add.mutate(values); }),
+  };
+}
+
+/** Brand names in bulk (MDV-P1-088): the pasted rows go to the server, which adds all of them or none and names each row it refuses. */
+export function useBrandsController() {
+  const queryClient = useQueryClient();
+  const form = useForm<BrandRowsForm>({ resolver: zodResolver(brandRowsSchema), defaultValues: { rows: '' } });
+  const [added, setAdded] = useState<number | null>(null);
+  const [problems, setProblems] = useState<BrandProblem[]>([]);
+
+  const add = useMutation({
+    mutationFn: addBrands,
+    onSuccess: r => {
+      form.reset();
+      setAdded(r.added);
+      setProblems([]);
+      void queryClient.invalidateQueries({ queryKey: ['formulary'] });
+    },
+    onError: e => setProblems(brandProblems(e instanceof ApiError ? e.body : null)),
+  });
+
+  return {
+    form,
+    saving: add.isPending,
+    added,
+    problems,
+    onSubmit: form.handleSubmit(values => {
+      const parsed = parseBrandRows(values.rows);
+      setAdded(null);
+      setProblems(parsed.problems);
+      if (parsed.problems.length === 0) add.mutate(parsed.rows);
+    }),
   };
 }
 

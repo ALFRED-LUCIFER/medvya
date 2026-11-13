@@ -7,7 +7,7 @@ namespace Medvya.Scheduling.Application;
 public static class SchedulingAudit
 {
     public const string TemplateUpdate = "schedule.template.update", ResourceCreate = "schedule.resource.create",
-        SlotHold = "slot.hold", SlotRelease = "slot.release", Book = "appointment.book", CheckIn = "appointment.check_in", Status = "appointment.status",
+        SlotHold = "slot.hold", SlotRelease = "slot.release", Book = "appointment.book", CheckIn = "appointment.check_in", Status = "appointment.status", Undo = "appointment.undo", Left = "appointment.left",
         Reschedule = "appointment.reschedule", Cancel = "appointment.cancel", NoShow = "appointment.no_show", WalkIn = "appointment.walk_in",
         Reassign = "appointment.reassign", ExceptionCreate = "schedule.exception.create", ExceptionUpdate = "schedule.exception.update", ExceptionDelete = "schedule.exception.delete", NeedsRebooking = "appointment.needs_rebooking",
         DisplayCreate = "queue_display.create", DisplayRevoke = "queue_display.revoke", DisplayPair = "queue_display.pair",

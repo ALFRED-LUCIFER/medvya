@@ -71,7 +71,120 @@ public sealed class FormularyTests(PostgresFixture sql) : IClassFixture<Postgres
         var short2 = (await Doctor(india).SearchAsync("az", 25)).Select(r => r.Generic).ToList();
         Assert.Contains("Azithromycin", short2);
         Assert.All(short2, g => Assert.StartsWith("az", g, StringComparison.OrdinalIgnoreCase));
-        Assert.Contains("Gliclazide", (await Doctor(india).SearchAsync("clazi", 25)).Select(r => r.Generic)); // three characters or more also match inside a name
+        // MDV-P1-088: a longer term also matches the start of a word only, the second word of a name included.
+        Assert.Empty(await Doctor(india).SearchAsync("clazi", 25));
+        Assert.Empty(await Doctor(india).SearchAsync("maryl", 25)); // nor inside a brand
+        Assert.Equal(added.Id, (await Doctor(india).SearchAsync("(synth", 25)).Single().Id); // "Amaryl (synthetic brand)"
+    }
+
+    // MDV-P1-088. The brand pairs are test fixtures, not a reviewed list: Augmentin is the ticket's example, the others are marked synthetic.
+    static readonly AddMedicine CoAmoxiclav = new("Amoxicillin and clavulanate", "625 mg", "Tablet", null, null, RegulatoryClass.ScheduleH, "J01CR02", null);
+
+    static BrandRow Brand(string brand, string generic, string strength, string form, string allergyClass) => new(brand, generic, strength, form, allergyClass);
+
+    static readonly BrandRow Augmentin = Brand("Augmentin", "amoxicillin and clavulanate", "625 MG", "tablet", "Penicillins");
+
+    static async Task<IReadOnlyList<(string Field, string Code)>> BrandsRefused(SchedulingHarness h, params BrandRow[] rows) =>
+        (await Assert.ThrowsAsync<FormularyValidationException>(() => Admin(h).AddBrandsAsync(new AddBrands(rows)))).Errors;
+
+    [Fact]
+    public async Task BrandsAddedInBulkNameTheGenericsRowAndAreFoundAtTheStartOfAWord()
+    {
+        var generic = await Admin(india).AddAsync(CoAmoxiclav);
+        var done = await Admin(india).AddBrandsAsync(new AddBrands(
+        [
+            Augmentin, Brand(" Moxikind CV (synthetic) ", "Amoxicillin and clavulanate", "625 mg", "Tablet", "penicillins"),
+            Brand("Synthetic Para", "Paracetamol", "500 mg", "Tablet", "none"), // a starter row takes the clinic's brand too
+        ]));
+        Assert.Equal(3, done.Added);
+
+        var found = Assert.Single(await Doctor(india).SearchAsync("augm", 25)); // AC1: the brand finds the generic's own row, brand shown
+        Assert.Equal((generic.Id, "Amoxicillin and clavulanate", "J01CR02"), (found.Id, found.Generic, found.Atc));
+        Assert.Equal(["Augmentin", "Moxikind CV (synthetic)"], found.Brands);
+        Assert.Equal(generic.Id, (await Doctor(india).SearchAsync("cv", 25)).Single().Id); // the second word of a brand
+        Assert.Empty(await Doctor(india).SearchAsync("gmentin", 25)); // never inside a word
+        var paracetamol = Assert.Single(await Doctor(india).SearchAsync("synthetic para", 25));
+        Assert.Equal((FormularySource.Starter, "Synthetic Para"), (paracetamol.Source, paracetamol.Brands.Single()));
+
+        await using var audit = sql.Audit(india.Tenant);
+        var row = await audit.Events.SingleAsync(e => e.Action == "formulary.brands.add");
+        Assert.Equal((AuditOutcome.Allowed, AuditPurpose.Operations, (Guid?)india.Admin, (Guid?)null, "brands:3", "formulary"), (row.Outcome, row.Purpose, row.ActorUserId, row.PatientId, row.Detail, row.ResourceType));
+    }
+
+    /// <summary>
+    /// SAFETY (mutation checks: drop the "not_checked" branch, the "mismatch" branch or the exactly-one match in FormularyService.AddBrandsAsync
+    /// and this fails): a brand is added only to a listed medicine that is allergy-checked, in the class its reviewer stated, and one bad row
+    /// refuses the whole request.
+    /// </summary>
+    [Fact]
+    public async Task ABrandRowThatCannotBeResolvedRefusesTheWholeRequestWithACodePerRow()
+    {
+        await Admin(india).AddAsync(CoAmoxiclav);
+        await Admin(india).AddAsync(Valid("Uncoded (synthetic)") with { Atc = null });
+        var errors = await BrandsRefused(india,
+            Augmentin, // valid, and still not added
+            Brand("Synthetic A", "Not a listed generic", "1 mg", "Tablet", "none"),
+            Brand("Synthetic B", "Amoxicillin and clavulanate", "1 g", "Tablet", "penicillins"), // another strength is another medicine: not listed
+            Brand("Synthetic C", "Uncoded (synthetic)", "2 mg", "Tablet", "none"), // no ingredient code: it would not be allergy-checked
+            Augmentin with { Brand = "Synthetic D", AllergyClass = "none" }, // the safety rules say penicillins
+            Brand("Synthetic E", "Paracetamol", "500 mg", "Tablet", "penicillins"), // the safety rules give it no class
+            Brand("Synthetic F", "Amoxicillin", "500 mg", "Capsule", "antibiotic"), // not a class the rules know
+            Brand(" ", "Paracetamol", "500 mg", "Tablet", " "),
+            Augmentin with { Brand = "AUGMENTIN" }, // the same brand twice in one request
+            Brand("metformin", "Paracetamol", "500 mg", "Tablet", "none")); // another listed medicine's generic name, as when a column slips
+        Assert.Equal(
+        [
+            ("rows[1].generic", "not_listed"), ("rows[2].generic", "not_listed"), ("rows[3].generic", "not_checked"), ("rows[4].allergyClass", "mismatch"),
+            ("rows[5].allergyClass", "mismatch"), ("rows[6].allergyClass", "mismatch"), ("rows[7].brand", "required"), ("rows[7].allergyClass", "required"), ("rows[8].brand", "already_listed"),
+            ("rows[9].brand", "is_generic"),
+        ], errors);
+        Assert.Empty(await Doctor(india).SearchAsync("augmentin", 25)); // nothing is half-added
+        await using (var audit = sql.Audit(india.Tenant))
+            Assert.False(await audit.Events.AnyAsync(e => e.Action == "formulary.brands.add"));
+
+        Assert.Equal([("rows", "required")], await BrandsRefused(india));
+        Assert.Equal([("rows", "too_many")], await BrandsRefused(india, [.. Enumerable.Repeat(Augmentin, FormularyService.MaxBrandRows + 1)]));
+        await Admin(india).AddBrandsAsync(new AddBrands([Augmentin]));
+        Assert.Equal([("rows[0].brand", "already_listed")], await BrandsRefused(india, Augmentin with { Brand = "augmentin" })); // added before, any case
+        await Admin(india).AddAsync(Valid());
+        Assert.Equal([("rows[0].brand", "already_listed")], await BrandsRefused(india, Brand("amaryl (synthetic brand)", "Glimepiride", "2 mg", "Tablet", "none"))); // a brand the medicine was added with
+    }
+
+    /// <summary>
+    /// AC5. SAFETY (mutation check: remove migrationBuilder.Tenant("prescribing", "FormularyBrands") from the FormularyBrands migration and this
+    /// fails: the other clinic's search and list show the brand). The EF filter is the first layer; with row-level security on, as here, it cannot fail alone.
+    /// </summary>
+    [Fact]
+    public async Task AnotherClinicNeverSeesAClinicsBrandsInItsListItsSearchOrTheDatabase()
+    {
+        var second = new SchedulingHarness(sql); // a second clinic of the same country, so the starter rows are shared and only the brands differ
+        await second.SeedAsync();
+        try
+        {
+            await Admin(india).AddBrandsAsync(new AddBrands([Brand("Synthetic Mox", "Amoxicillin", "500 mg", "Capsule", "penicillins")]));
+            Assert.Equal(["Synthetic Mox"], (await Doctor(india).SearchAsync("amoxicillin", 25)).Single().Brands);
+
+            Assert.Empty(await Doctor(second).SearchAsync("synthetic mox", 25)); // its search
+            Assert.Empty((await Doctor(second).SearchAsync("amoxicillin", 25)).Single().Brands); // its list: the same starter row, without the brand
+            Assert.Empty((await Admin(second).SearchAsync("amoxicillin", 25)).Single().Brands);
+
+            // Row-level security alone (the model's filter off): the other clinic reads none of the rows and cannot write one for the first clinic.
+            await using var other = sql.Prescribing(second.Tenant);
+            Assert.Equal(0, await other.FormularyBrands.IgnoreQueryFilters().CountAsync());
+            var amoxicillin = (await Doctor(india).SearchAsync("amoxicillin", 1)).Single().Id;
+            other.FormularyBrands.Add(new FormularyBrand { Id = Guid.NewGuid(), TenantId = india.Tenant, FormularyItemId = amoxicillin, Name = "Sneaky (synthetic)", AddedAt = DateTimeOffset.UtcNow });
+            Assert.IsType<PostgresException>((await Assert.ThrowsAsync<DbUpdateException>(() => other.SaveChangesAsync())).InnerException);
+            await using var none = sql.Prescribing(null);
+            Assert.Equal(0, await none.FormularyBrands.IgnoreQueryFilters().CountAsync());
+            await using var own = sql.Prescribing(india.Tenant);
+            Assert.Equal(1, await own.FormularyBrands.IgnoreQueryFilters().CountAsync());
+
+            await Admin(second).AddBrandsAsync(new AddBrands([Brand("Synthetic Mox", "Amoxicillin", "500 mg", "Capsule", "penicillins")])); // its own list is its own
+        }
+        finally
+        {
+            await second.CloseAsync();
+        }
     }
 
     [Fact]

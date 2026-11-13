@@ -2830,6 +2830,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/appointments/{appointmentId}/left": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    appointmentId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CancelAppointment"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AppointmentChip"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/appointments/{appointmentId}/history": {
         parameters: {
             query?: never;
@@ -2970,6 +3011,47 @@ export interface paths {
             requestBody: {
                 content: {
                     "application/json": components["schemas"]["MoveVisit"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BoardCard"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/appointments/{appointmentId}/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    appointmentId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UndoMove"];
                 };
             };
             responses: {
@@ -7270,6 +7352,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/settings/formulary/brands": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["AddBrands"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/settings/order-sets": {
         parameters: {
             query?: never;
@@ -8563,6 +8682,9 @@ export interface components {
             reaction: null | string;
             status: null | components["schemas"]["AllergyStatus"];
         };
+        AddBrands: {
+            rows: null | components["schemas"]["BrandRow"][];
+        };
         AddCareGoal: {
             text: null | string;
             target: null | string;
@@ -8741,7 +8863,7 @@ export interface components {
             seriesId?: null | string;
         };
         /** @enum {unknown} */
-        AppointmentState: "Booked" | "CheckedIn" | "WithNurse" | "ReadyForDoctor" | "InConsult" | "Billing" | "Done" | "Cancelled" | "NoShow" | "NeedsRebooking";
+        AppointmentState: "Booked" | "CheckedIn" | "WithNurse" | "ReadyForDoctor" | "InConsult" | "Billing" | "Done" | "Cancelled" | "NoShow" | "NeedsRebooking" | "LeftWithoutBeingSeen";
         AppointmentView: {
             /** Format: uuid */
             id: string;
@@ -8808,6 +8930,8 @@ export interface components {
             /** @default false */
             unscheduled: boolean;
             sex?: null | string;
+            /** @default false */
+            withDoctor: boolean;
         };
         /** @enum {unknown} */
         BodyPosition: "Lying" | "Standing" | null;
@@ -8834,6 +8958,13 @@ export interface components {
             reasonText?: null | string;
             channel?: components["schemas"]["BookingChannel"];
             starts?: string[];
+        };
+        BrandRow: {
+            brand: null | string;
+            generic: null | string;
+            strength: null | string;
+            form: null | string;
+            allergyClass: null | string;
         };
         /** @enum {unknown} */
         CalendarKind: "Doctor" | "Resource";
@@ -9140,6 +9271,11 @@ export interface components {
             /** Format: date-time */
             now: string;
             cards: components["schemas"]["BoardCard"][];
+            /**
+             * Format: int32
+             * @default 0
+             */
+            leftWithoutBeingSeen: number | string;
         };
         GrantBody: {
             /** Format: int32 */
@@ -9894,6 +10030,9 @@ export interface components {
         };
         /** @enum {unknown} */
         UnavailableReason: "NotWorking" | "Break" | "NoSchedule" | "Closed" | "Leave";
+        UndoMove: {
+            state?: null | components["schemas"]["AppointmentState"];
+        };
         UpdateCareGoal: {
             /** Format: int32 */
             progressPercent: null | number | string;

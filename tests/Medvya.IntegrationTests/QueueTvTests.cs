@@ -108,6 +108,29 @@ public sealed class QueueTvTests(PostgresFixture sql) : IClassFixture<PostgresFi
             Assert.DoesNotContain(leak, body, StringComparison.OrdinalIgnoreCase);
     }
 
+    // MDV-P1-100: an undone call-in is back in the waiting list with its token, and a patient who left is called by no screen.
+    [Fact]
+    public async Task AnUndoneCallInWaitsAgainAndAPatientWhoLeftIsOffTheTv()
+    {
+        var (first, second) = (await h.BookAsync(9), await h.BookAsync(9, 20));
+        foreach (var v in new[] { first, second }) await CheckIn(v.Id);
+        foreach (var state in new[] { "ReadyForDoctor", "InConsult" }) await Move(first.Id, state);
+        var (tv, _) = await Paired((await NewDisplay(h.Admin, h.Facility)).Token);
+        async Task<string> Screen() // "called in | waiting"
+        {
+            var json = JsonDocument.Parse(await tv.GetStringAsync("/v1/queue/tv")).RootElement;
+            string Tokens(string list) => string.Join(',', json.GetProperty(list).EnumerateArray().Select(x => x.GetProperty("token").GetString()));
+            return $"{Tokens("now")} | {Tokens("next")}";
+        }
+        Assert.Equal("A-01 | A-02", await Screen());
+
+        (await Staff(h.Reception).PostAsJsonAsync($"/v1/appointments/{first.Id}/undo", new { state = "InConsult" })).EnsureSuccessStatusCode();
+        Assert.Equal(" | A-01,A-02", await Screen());
+
+        (await Staff(h.Reception).PostAsJsonAsync($"/v1/appointments/{first.Id}/left", new { reason = "PatientRequest" })).EnsureSuccessStatusCode();
+        Assert.Equal(" | A-02", await Screen());
+    }
+
     [Fact]
     public async Task CheckInIssuesOneTokenPerVisitAndNeverTheSameNumberTwice()
     {

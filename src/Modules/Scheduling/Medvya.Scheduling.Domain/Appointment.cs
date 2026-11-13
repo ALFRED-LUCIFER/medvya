@@ -5,7 +5,7 @@ namespace Medvya.Scheduling.Domain;
 
 /// <summary>Appointment / visit states (docs/03-architecture/state-machines.md). Reception sees them as nonclinical statuses.</summary>
 [JsonConverter(typeof(JsonStringEnumConverter<AppointmentState>))]
-public enum AppointmentState { Booked, CheckedIn, WithNurse, ReadyForDoctor, InConsult, Billing, Done, Cancelled, NoShow, NeedsRebooking }
+public enum AppointmentState { Booked, CheckedIn, WithNurse, ReadyForDoctor, InConsult, Billing, Done, Cancelled, NoShow, NeedsRebooking, LeftWithoutBeingSeen }
 
 /// <summary>How the booking reached the desk.</summary>
 [JsonConverter(typeof(JsonStringEnumConverter<BookingChannel>))]
@@ -73,8 +73,9 @@ public sealed class Appointment
     [Classification(DataClass.Internal)] public Guid? ChangedBy { get; set; }
     [Classification(DataClass.Internal)] public DateTimeOffset ChangedAt { get; set; }
 
-    /// <summary>States that occupy their slots; a cancelled, no-show or needs-rebooking visit frees them.</summary>
-    public static bool Occupies(AppointmentState state) => state is not (AppointmentState.Cancelled or AppointmentState.NoShow or AppointmentState.NeedsRebooking);
+    /// <summary>States that occupy their slots; a cancelled, no-show, needs-rebooking or left-without-being-seen visit frees them.</summary>
+    public static bool Occupies(AppointmentState state) =>
+        state is not (AppointmentState.Cancelled or AppointmentState.NoShow or AppointmentState.NeedsRebooking or AppointmentState.LeftWithoutBeingSeen);
 }
 
 /// <summary>
@@ -115,6 +116,24 @@ public static class VisitFlow
     /// seen (with nurse intake off, check-in lands in Ready for doctor). From With nurse on the visit is finished on the board, and a completed, cancelled or no-show visit cannot be cancelled.
     /// </summary>
     public static bool CanCancel(AppointmentState state) => state is AppointmentState.Booked or AppointmentState.CheckedIn or AppointmentState.ReadyForDoctor or AppointmentState.NeedsRebooking;
+
+    /// <summary>
+    /// Left without being seen (MDV-P1-100): the patient arrived and went before the doctor saw them, so only from a waiting state.
+    /// An end state of its own: not Done (no visit happened), not a no-show (they came), not a cancellation.
+    /// </summary>
+    public static bool CanLeave(AppointmentState state) => CanReassign(state);
+
+    /// <summary>How long after a move the desk may undo it (MDV-P1-100); the server refuses later.</summary>
+    public static readonly TimeSpan UndoWindow = TimeSpan.FromSeconds(30);
+
+    /// <summary>
+    /// A move is undone only backwards along the board, to Checked in, Ready for doctor, In consult or Billing: check-in itself (the token
+    /// and its timing stay) and an undo are not undone.
+    /// shortcut: a move out of With nurse is not undone (with the intake on it is the nurse's audited handoff); allow it if nurses ask.
+    /// </summary>
+    public static bool CanUndo(AppointmentState? from, AppointmentState current) =>
+        from is AppointmentState.CheckedIn or AppointmentState.ReadyForDoctor or AppointmentState.InConsult or AppointmentState.Billing
+        && Array.IndexOf(Order, current) > Array.IndexOf(Order, from.Value);
 
     /// <summary>Only a booked visit that never checked in is a no-show (and only once it has started: see the use case).</summary>
     public static bool CanMarkNoShow(AppointmentState state) => state == AppointmentState.Booked;
@@ -190,9 +209,11 @@ public sealed class VisitStatusEvent
     [Classification(DataClass.Internal)] public Guid TenantId { get; init; }
     [Classification(DataClass.Internal)] public Guid AppointmentId { get; init; }
     [Classification(DataClass.Internal)] public AppointmentState State { get; init; }
+    /// <summary>The state the visit left (MDV-P1-100): what an undo goes back to. Null on rows written before it was recorded, and on a booking.</summary>
+    [Classification(DataClass.Internal)] public AppointmentState? FromState { get; init; }
     [Classification(DataClass.Internal)] public Guid? ActorUserId { get; init; }
     [Classification(DataClass.Internal)] public DateTimeOffset OccurredAt { get; init; }
-    /// <summary>Why, for a cancellation (MDV-P1-024).</summary>
+    /// <summary>Why, for a cancellation (MDV-P1-024) or a patient who left without being seen (MDV-P1-100).</summary>
     [Classification(DataClass.Internal)] public CancelReason? CancelReason { get; init; }
     /// <summary>The desk's note on a cancellation; it may mention health, so it is never on reception screens, in logs or in events.</summary>
     [Classification(DataClass.SensitiveHealth)] public string? Note { get; init; }

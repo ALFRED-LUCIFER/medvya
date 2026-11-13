@@ -4908,7 +4908,7 @@
   "followUpDue.reason.NotReachable": "تعذّر الوصول إلى المريض",
   "followUpDue.reason.Other": "أخرى",
   "staff.changeRole": "تغيير الدور",
-  "staff.changeRoleNamed": "تغيير دور {name}",
+  "staff.changeRoleNamed": "تغيير الدور لـ {name}",
   "staff.changeRoleTitle": "تغيير دور {name}",
   "staff.changeRoleIntro": "يسري الدور الجديد فورًا. يُسجَّل خروجه الآن ويسجّل الدخول مجددًا بالدور الجديد. يُسجَّل التغيير في سجل التدقيق.",
   "staff.changeRoleTo": "الدور الجديد",

@@ -285,8 +285,8 @@ for (const locale of ['en', 'ar'])
     await page.goto('/settings?tab=staff');
     await expect(page.getByRole('row', { name: /A\. Joseph/ })).toBeVisible();
     if (locale === 'en') {
-      for (const [name, why] of [['Dr. Arjun Rao', 'Only an owner can offboard an owner.'], ['Dr. R. Menon', 'Only an owner can offboard a doctor.'], ['R. Iyer', 'You cannot offboard yourself.']]) {
-        const row = page.getByRole('row', { name: new RegExp(name.replace(/\./g, '\\.')) });
+      for (const [name, why] of [['Dr. Arjun Rao', 'Only an owner can offboard an owner.'], ['Dr. R. Menon', 'Only an owner can offboard a doctor.'], ['R. Iyer', 'You cannot offboard yourself.']] as const) {
+        const row = page.getByRole('row', { name });
         await expect(row.getByRole('button', { name: /^Offboard/ })).toHaveCount(0);
         await expect(row).toContainText(why);
       }

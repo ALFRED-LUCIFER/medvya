@@ -1,7 +1,6 @@
 import { Link } from 'react-router';
-import { Syringe } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { buttonVariants, PageContainer, PageHeader } from '@medvya/ui';
+import { buttonVariants, PageContainer, PageHeader, PageMessage } from '@medvya/ui';
 import type { Board, LiveStatus, MoveError } from '../../front-desk/domain/board';
 import type { QueueRow, QueueTableView } from '../../front-desk/domain/queueTable';
 import QueueTable from '../../front-desk/components/QueueTable';
@@ -25,11 +24,11 @@ export default function NurseQueuePage(p: Props) {
   const name = (r: QueueRow) => r.patientName || t('board.unknownPatient');
   const total = p.withNurse.rows.length + p.checkedIn.rows.length;
   let body;
-  if (p.forbidden) body = <State title={t('err.403')} body={t('board.forbidden.body')} />;
-  else if (p.offline) body = <State title={t('state.offline.title')} body={t('board.offline')} />;
-  else if (p.failed) body = <State title={t('board.error.title')} body={t('board.error.body')} action={<button type="button" className={buttonVariants()} onClick={p.onRetry}>{t('schedule.retry')}</button>} />;
-  else if (p.loading || !p.board) body = <State busy title={t('intake.queue.loading')} />;
-  else if (total === 0) body = <State title={t('intake.queue.empty.title')} body={t('intake.queue.empty.body')} />;
+  if (p.forbidden) body = <PageMessage kind="denied" title={t('err.403')}>{t('board.forbidden.body')}</PageMessage>;
+  else if (p.offline) body = <PageMessage kind="error" title={t('state.offline.title')}>{t('board.offline')}</PageMessage>;
+  else if (p.failed) body = <PageMessage kind="error" title={t('board.error.title')} action={<button type="button" className={buttonVariants()} onClick={p.onRetry}>{t('schedule.retry')}</button>}>{t('board.error.body')}</PageMessage>;
+  else if (p.loading || !p.board) body = <PageMessage kind="busy">{t('intake.queue.loading')}</PageMessage>;
+  else if (total === 0) body = <PageMessage kind="empty" title={t('intake.queue.empty.title')}>{t('intake.queue.empty.body')}</PageMessage>;
   else body = (
     <>
       {p.withNurse.rows.length > 0 && (
@@ -57,8 +56,8 @@ export default function NurseQueuePage(p: Props) {
   );
   return (
     <PageContainer width="fluid">
-      <PageHeader eyebrow={<span className="inline-flex items-center gap-1.5"><Syringe aria-hidden className="size-4" />{t('nav.nurse')}</span>} title={t('intake.queue.title')}
-        description={!p.loading && !p.forbidden && !p.offline && !p.failed && <span className="text-sm">{tCount('board.count', total)}</span>} />
+      {/* No eyebrow repeating the menu item; the count is secondary text that arrives without moving the row (MDV-P2-059). */}
+      <PageHeader title={t('intake.queue.title')} meta={!p.loading && !p.forbidden && !p.offline && !p.failed && tCount('board.count', total)} />
       {body}
     </PageContainer>
   );
@@ -70,16 +69,6 @@ function Section({ id, title, children }: { id: string; title: string; children:
     <div className="flex flex-col gap-2">
       <h2 id={id} className="text-lg font-extrabold">{title}</h2>
       {children}
-    </div>
-  );
-}
-
-function State({ title, body, action, busy = false }: { title: string; body?: string; action?: React.ReactNode; busy?: boolean }) {
-  return (
-    <div role={busy ? 'status' : 'alert'} className="flex max-w-[560px] flex-col items-start gap-2 rounded-xl border bg-card p-6">
-      <h2 className="text-lg font-extrabold">{title}</h2>
-      {body && <p className="text-muted-foreground">{body}</p>}
-      {action}
     </div>
   );
 }

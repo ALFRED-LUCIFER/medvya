@@ -1,7 +1,7 @@
 import { Link } from 'react-router';
 import { FileDown, Printer } from 'lucide-react';
 import { ltr, useI18n } from '@medvya/i18n';
-import { Button, buttonVariants } from '@medvya/ui';
+import { Button, buttonVariants, PageContainer, PageHeader, PageMessage } from '@medvya/ui';
 import type { EncounterBanner } from '../domain/encounter';
 import { sectionLabelKey, type NoteTemplate, type NoteView } from '../domain/note';
 import { Versions } from './NoteHistory';
@@ -20,8 +20,9 @@ type Props = {
  */
 export default function NotePrintPage(p: Props) {
   const { t, formatCalendarDate } = useI18n();
-  if (p.loading) return <p role="status">{t('notePrint.loading')}</p>;
-  if (p.failed || !p.note?.signature || !p.template || !p.banner) return <p role="alert" className="font-bold">{t('notePrint.loadFailed')}</p>;
+  if (p.loading) return <PageContainer width="form"><PageHeader title={t('notePrint.title')} /><PageMessage kind="busy">{t('notePrint.loading')}</PageMessage></PageContainer>;
+  if (p.failed || !p.note?.signature || !p.template || !p.banner)
+    return <PageContainer width="form"><PageHeader title={t('notePrint.title')} /><PageMessage kind="error">{t('notePrint.loadFailed')}</PageMessage></PageContainer>;
   const { note, banner } = p;
   return (
     <div className="flex max-w-[720px] flex-col gap-4">
@@ -31,15 +32,14 @@ export default function NotePrintPage(p: Props) {
         <Link to={p.consultPath} className={buttonVariants({ variant: 'outline' })}>{t('notePrint.back')}</Link>
       </div>
       {p.pdfProblem && <p role="alert" className="font-bold text-danger-700 print:hidden">{t(p.pdfProblem === 'unsupported' ? 'notePrint.pdfUnsupported' : 'notePrint.pdfFailed')}</p>}
-      <article aria-labelledby="note-print-title" className="flex flex-col gap-4 rounded-xl border bg-white p-6 text-black print:rounded-none print:border-0 print:p-0">
-        <header className="flex flex-col gap-1 border-b-2 border-black pb-2">
-          <h1 id="note-print-title" className="text-xl font-extrabold">{t('notePrint.title')}</h1>
+      <article aria-label={t('notePrint.title')} className="flex flex-col gap-4 rounded-xl border bg-white p-6 text-black print:rounded-none print:border-0 print:p-0">
+        <PageHeader title={t('notePrint.title')} className="border-b-2 border-black pb-2">
           <p className="font-bold">{banner.patient.fullName}</p>
           <p className="flex flex-wrap gap-x-4">
             <span>{t('consult.banner.mrn', { mrn: ltr(banner.patient.mrn) })}</span>
             <span>{t('consult.banner.dob', { date: formatCalendarDate(banner.patient.dateOfBirth) })}</span>
           </p>
-        </header>
+        </PageHeader>
         {p.template.sections.filter(s => note.sections[s.id]).map(s => isStructured(s) ? (
           <section key={s.id}><StructuredField section={s} text={note.sections[s.id]!} readOnly heading onChange={() => undefined} /></section>
         ) : (

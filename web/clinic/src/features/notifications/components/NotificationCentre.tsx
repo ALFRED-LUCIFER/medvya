@@ -46,7 +46,7 @@ export default function NotificationCentre(props: Props) {
       </Button>
       {open && (
         <div id="notification-panel" ref={panel} role="dialog" aria-label={t('shell.notifications')} tabIndex={-1}
-          className="absolute end-0 top-full z-20 mt-2 flex max-h-[70vh] w-[min(22rem,calc(100vw-2rem))] flex-col gap-2 overflow-y-auto rounded-xl border bg-card p-3 shadow-lg focus:outline-none">
+          className="absolute end-0 top-full z-20 mt-2 flex max-h-[70vh] w-[min(22rem,calc(100vw-2rem))] flex-col gap-2 overflow-y-auto rounded-lg border bg-popover p-3 text-popover-foreground shadow-popover focus:outline-none">
           <div className="flex items-center justify-between gap-2">
             <h2 className="text-[15px] font-extrabold">{t('shell.notifications')}</h2>
             <Button variant="outline" disabled={unread === 0 || props.marking || !props.online} onClick={props.onMarkAllRead}>{t('notifications.markAllRead')}</Button>

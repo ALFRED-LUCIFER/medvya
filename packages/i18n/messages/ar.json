@@ -3254,7 +3254,6 @@
   "globalSearch.startVisit": "بدء الزيارة",
   "globalSearch.book": "حجز",
   "globalSearch.noAccess": "دورك لا يتيح فتح ملفات المرضى.",
-  "today.title": "اليوم · {day}",
   "today.scope": "زيارات من",
   "today.scope.mine": "مرضاي",
   "today.scope.clinic": "العيادة كلها",

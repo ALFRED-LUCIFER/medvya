@@ -3257,7 +3257,6 @@
   "globalSearch.startVisit": "Start visit",
   "globalSearch.book": "Book",
   "globalSearch.noAccess": "Your role cannot open patient charts.",
-  "today.title": "Today · {day}",
   "today.scope": "Whose visits",
   "today.scope.mine": "My patients",
   "today.scope.clinic": "Whole clinic",

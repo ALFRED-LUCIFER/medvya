@@ -60,14 +60,14 @@ test('Today shows my visits first, the clinic when toggled, and starts the consu
   const hero = page.getByRole('region', { name: 'Next patient' });
   await expect(hero).toContainText('Meera Iyer (synthetic)');
   const list = page.getByRole('region', { name: "Today's visits" });
-  await expect(list.getByRole('article')).toHaveCount(3); // mine only
+  await expect(list.getByRole('listitem')).toHaveCount(3); // mine only
   await expect(list).not.toContainText('Farah Ali');
-  await expect(list.getByRole('article').filter({ hasText: 'Deepak Nair' })).toContainText('Booked');
-  await expect(list.getByRole('article').filter({ hasText: 'Deepak Nair' })).toContainText('Registration incomplete');
+  await expect(list.getByRole('listitem').filter({ hasText: 'Deepak Nair' })).toContainText('Booked');
+  await expect(list.getByRole('listitem').filter({ hasText: 'Deepak Nair' })).toContainText('Registration incomplete');
   await expect(list).toContainText('54 y');
   await page.getByRole('button', { name: 'Whole clinic' }).click();
-  await expect(list.getByRole('article')).toHaveCount(4);
-  await expect(list.getByRole('article').filter({ hasText: 'Farah Ali' })).toContainText('Dr. Sana Khan');
+  await expect(list.getByRole('listitem')).toHaveCount(4);
+  await expect(list.getByRole('listitem').filter({ hasText: 'Farah Ali' })).toContainText('Dr. Sana Khan');
   await page.getByRole('button', { name: 'My patients' }).click();
   await hero.getByRole('button', { name: 'Start consultation with Meera Iyer (synthetic)' }).click();
   await expect(page).toHaveURL(/\/consult\/e-1$/);
@@ -81,10 +81,10 @@ test('each visit shows its allergy state in words and links to the chart; a pati
   const list = page.getByRole('region', { name: "Today's visits" });
   await expect(page.getByRole('region', { name: 'Next patient' })).toContainText('Allergies listed');
   await expect(page.getByRole('region', { name: 'Next patient' })).toContainText('Abnormal vitals today'); // MDV-1090: words and an icon
-  await expect(list.getByRole('article').filter({ hasText: 'Deepak Nair' })).not.toContainText('Abnormal vitals');
-  await expect(list.getByRole('article').filter({ hasText: 'Deepak Nair' })).toContainText('Allergies not recorded'); // unknown is never "none"
+  await expect(list.getByRole('listitem').filter({ hasText: 'Deepak Nair' })).not.toContainText('Abnormal vitals');
+  await expect(list.getByRole('listitem').filter({ hasText: 'Deepak Nair' })).toContainText('Allergies not recorded'); // unknown is never "none"
   await page.getByRole('button', { name: 'Whole clinic' }).click();
-  await expect(list.getByRole('article').filter({ hasText: 'Farah Ali' })).not.toContainText(/llergies/);
+  await expect(list.getByRole('listitem').filter({ hasText: 'Farah Ali' })).not.toContainText(/llergies/);
   // The ids go in the body, once each, never the address.
   expect(flagRequests.at(-1)!.patientIds.sort()).toEqual(['p-a1', 'p-a2', 'p-a3', 'p-a4']);
   await expect(list.getByRole('link', { name: 'Deepak Nair (synthetic)' })).toHaveAttribute('href', '/patients/p-a2');
@@ -105,7 +105,7 @@ test("a nurse's escalation is pinned above Next patient in words, and the day fo
   expect(pin.y + pin.height).toBeLessThanOrEqual(hero.y);
   expect(pin.y + pin.height).toBeLessThanOrEqual(768);
   await expect(page.getByRole('region', { name: 'Next patient' })).toContainText('Meera Iyer (synthetic)'); // the next one who is not escalated
-  const rows = page.getByRole('region', { name: "Today's visits" }).getByRole('article');
+  const rows = page.getByRole('region', { name: "Today's visits" }).getByRole('listitem');
   await expect(rows.first()).toContainText('Lakshmi Rajan (synthetic)'); // row 1, though her slot is 19:00
   await expect(rows.nth(0)).toContainText('A-05');
   await expect(rows.nth(1)).toContainText('A-03');

@@ -63,7 +63,7 @@ test('the nurse works the intake from the queue to the handoff', async ({ page }
   await handOff.click();
   await expect(page).toHaveURL(/\/nurse$/);
   expect(calls.handoffs).toBe(1);
-  await expect(page.getByRole('heading', { name: 'No one is with the nurse' })).toBeVisible();
+  await expect(page.getByText('No one is with the nurse')).toBeVisible(); // the empty queue's PageMessage title
 });
 
 // #956: the nurse need not wait for reception; a Checked in patient is taken to intake from the queue.

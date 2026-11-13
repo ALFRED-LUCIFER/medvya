@@ -140,9 +140,9 @@ public sealed class WriteAuditTransactionTests(PostgresFixture sql) : IClassFixt
             Assert.Equal((AppointmentState.Booked, 1), ((await db.Appointments.SingleAsync()).State, await db.StatusEvents.CountAsync(e => e.AppointmentId == visit)));
 
         (await desk.PostAsync($"/v1/appointments/{visit}/check-in", null)).EnsureSuccessStatusCode();
-        await FailsUnaudited(() => desk.PostAsJsonAsync($"/v1/appointments/{visit}/status", new { state = "ReadyForDoctor" }));
+        await FailsUnaudited(() => desk.PostAsJsonAsync($"/v1/appointments/{visit}/status", new { state = "InConsult" }));
         await using (var db = sql.Scheduling(h.Tenant))
-            Assert.Equal((AppointmentState.CheckedIn, 2), ((await db.Appointments.SingleAsync()).State, await db.StatusEvents.CountAsync(e => e.AppointmentId == visit)));
+            Assert.Equal((AppointmentState.ReadyForDoctor, 3), ((await db.Appointments.SingleAsync()).State, await db.StatusEvents.CountAsync(e => e.AppointmentId == visit)));
     }
 
     [Fact]
@@ -165,7 +165,7 @@ public sealed class WriteAuditTransactionTests(PostgresFixture sql) : IClassFixt
         // The test clock stands still, so the events are compared as a set of attempts, one each.
         Assert.Equal(
             ((string[])["schedule.template.update", "schedule.resource.create", "slot.hold", "slot.release", "slot.hold", "appointment.book",
-             "appointment.check_in", "appointment.check_in", "appointment.status"]).Order(StringComparer.Ordinal),
+             "appointment.check_in", "appointment.check_in", "appointment.status", "appointment.status"]).Order(StringComparer.Ordinal),
             events.Select(e => e.Action).Order(StringComparer.Ordinal));
         Assert.All(events, e => Assert.Equal(AuditOutcome.Allowed, e.Outcome));
         // Written by the use case, so a booking and its visit moves now name the patient; the request's origin is kept.

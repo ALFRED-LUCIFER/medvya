@@ -170,7 +170,7 @@ public sealed class BookingIdempotencyTests(PostgresFixture sql) : IClassFixture
 
         Assert.Equal(first.State, again.State);
         await using var db = sql.Scheduling(h.Tenant);
-        Assert.Equal(2, await db.StatusEvents.CountAsync(e => e.AppointmentId == visit.Id)); // Booked, CheckedIn: no third event
+        Assert.Equal(3, await db.StatusEvents.CountAsync(e => e.AppointmentId == visit.Id)); // Booked, CheckedIn, ReadyForDoctor (nurse step off): nothing more
     }
 }
 

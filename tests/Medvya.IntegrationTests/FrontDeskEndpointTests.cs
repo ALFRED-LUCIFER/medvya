@@ -164,11 +164,11 @@ public sealed class FrontDeskEndpointTests(PostgresFixture sql) : IClassFixture<
 
         using var checkIn = await reception.PostAsJsonAsync($"/v1/appointments/{visit.Id}/check-in", new { elapsedMs = 9000 });
         Assert.Equal(HttpStatusCode.OK, checkIn.StatusCode);
-        Assert.Equal("CheckedIn", JsonDocument.Parse(await checkIn.Content.ReadAsStringAsync()).RootElement.GetProperty("state").GetString());
+        Assert.Equal("ReadyForDoctor", JsonDocument.Parse(await checkIn.Content.ReadAsStringAsync()).RootElement.GetProperty("state").GetString());
         using var repeat = await reception.PostAsync($"/v1/appointments/{visit.Id}/check-in", null);
         Assert.Equal(HttpStatusCode.OK, repeat.StatusCode); // a double tap is answered, not refused
 
-        using var skip = await reception.PostAsJsonAsync($"/v1/appointments/{visit.Id}/status", new { state = "InConsult" });
+        using var skip = await reception.PostAsJsonAsync($"/v1/appointments/{visit.Id}/status", new { state = "Done" }); // nurse step off: check-in already landed in Ready for doctor
         Assert.Equal(HttpStatusCode.Conflict, skip.StatusCode);
         Assert.Equal("invalid_transition", JsonDocument.Parse(await skip.Content.ReadAsStringAsync()).RootElement.GetProperty("code").GetString());
 
@@ -182,7 +182,7 @@ public sealed class FrontDeskEndpointTests(PostgresFixture sql) : IClassFixture<
         Assert.Equal(HttpStatusCode.Forbidden, readOnly.StatusCode);
 
         // One event per attempt. Moves are audited by the use case on the test's stopped clock, so they are compared as a set.
-        Assert.Equal(["appointment.check_in", "appointment.check_in", "appointment.status", "appointment.status", "appointment.status", "appointment.status"],
+        Assert.Equal(["appointment.check_in", "appointment.check_in", "appointment.status", "appointment.status", "appointment.status", "appointment.status", "appointment.status"],
             (await AuditActions()).Where(a => a.StartsWith("appointment.", StringComparison.Ordinal) && a != "appointment.book").Order(StringComparer.Ordinal));
     }
 }

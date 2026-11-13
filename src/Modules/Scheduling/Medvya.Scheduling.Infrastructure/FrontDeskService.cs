@@ -52,6 +52,9 @@ public sealed partial class FrontDeskService(
         int? timed = command.ElapsedMs is long ms && ms > 0 && TimeSpan.FromMilliseconds(ms) <= MaxCheckIn ? (int)ms : null;
         var (visit, moved) = await MoveAsync(appointmentId, AppointmentState.CheckedIn, SchedulingAudit.CheckIn, cancellationToken, timed);
         if (moved && timed is int t) CheckInSeconds.Record(t / 1000d, new KeyValuePair<string, object?>("tenant_id", visit.TenantId));
+        // No nurse step: the patient is ready for the doctor on arrival (MDV-AUDIT-1104).
+        if (moved && !(await context.StepsAsync(cancellationToken)).Nurse)
+            (visit, _) = await MoveAsync(appointmentId, AppointmentState.ReadyForDoctor, SchedulingAudit.Status, cancellationToken);
         return await CardAsync(visit, cancellationToken);
     }
 
@@ -162,7 +165,7 @@ public sealed partial class FrontDeskService(
         var visit = await db.Appointments.AsNoTracking().SingleOrDefaultAsync(a => a.Id == appointmentId, cancellationToken)
             ?? throw new AppointmentNotFoundException();
         await context.RequireAsync(visit.FacilityId, SchedulingAccess.CanRunQueue, cancellationToken);
-        if (visit.State == to) return (await RepeatAsync(visit, action, cancellationToken), false);
+        if (IsRepeat(visit.State, to, action)) return (await RepeatAsync(visit, action, cancellationToken), false);
         // Check-in is timed (exit gate 3), so the two flag reads happen only when they can change the answer.
         var steps = VisitSteps.Matter(visit.State) ? await context.StepsAsync(cancellationToken) : VisitSteps.All;
         Guard(visit.State, to, steps);
@@ -187,7 +190,7 @@ public sealed partial class FrontDeskService(
             // Someone else moved it first: the same move is a repeat, anything else conflicts.
             await tx.RollbackAsync(cancellationToken);
             var current = await db.Appointments.AsNoTracking().SingleAsync(a => a.Id == appointmentId, cancellationToken);
-            if (current.State == to) return (await RepeatAsync(current, action, cancellationToken), false);
+            if (IsRepeat(current.State, to, action)) return (await RepeatAsync(current, action, cancellationToken), false);
             Guard(current.State, to, steps);
             throw new VisitTransitionException("invalid_transition");
         }
@@ -267,6 +270,10 @@ public sealed partial class FrontDeskService(
         await tx.CommitAsync(cancellationToken);
         return visit;
     }
+
+    // A check-in that finds the visit already moved on to Ready for doctor (nurse step off) is a repeat, not a conflict (MDV-AUDIT-1104).
+    static bool IsRepeat(AppointmentState current, AppointmentState to, string action) =>
+        current == to || (action == SchedulingAudit.CheckIn && current == AppointmentState.ReadyForDoctor);
 
     static void Guard(AppointmentState from, AppointmentState to, VisitSteps steps)
     {

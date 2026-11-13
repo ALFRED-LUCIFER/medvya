@@ -53,6 +53,7 @@ public sealed class FrontDeskServiceTests(PostgresFixture sql) : IClassFixture<P
     [Fact]
     public async Task CheckInIsOneStepAndATapRepeatedChangesNothing()
     {
+        await h.StepsAsync(nurse: true, billing: false); // check-in stops at Checked in
         var visit = await h.BookAsync(9);
         h.Clock.Advance(TimeSpan.FromMinutes(50));
 
@@ -68,9 +69,28 @@ public sealed class FrontDeskServiceTests(PostgresFixture sql) : IClassFixture<P
         Assert.Equal((AppointmentState.CheckedIn, h.Reception), (row.State, row.ChangedBy!.Value));
     }
 
+    // SAFETY-adjacent flow rule (MDV-AUDIT-1104), mutation check: removing the advance in CheckInAsync leaves the nurse-off visit in CheckedIn and fails this.
+    [Fact]
+    public async Task WithNurseIntakeOffCheckInLandsInReadyForDoctorAndWithItOnInCheckedIn()
+    {
+        var off = await h.BookAsync(9);
+        var on = await h.BookAsync(10, 0, h.SecondPatient);
+        h.Clock.Advance(TimeSpan.FromMinutes(50));
+        var desk = h.FrontDesk(h.Reception);
+
+        await h.StepsAsync(nurse: true, billing: false);
+        Assert.Equal(AppointmentState.CheckedIn, (await desk.CheckInAsync(on.Id, new CheckIn())).State);
+        await h.StepsAsync(nurse: false, billing: false);
+        var card = await desk.CheckInAsync(off.Id, new CheckIn());
+
+        Assert.Equal((AppointmentState.ReadyForDoctor, true), (card.State, card.Token is not null));
+        Assert.Equal([AppointmentState.Booked, AppointmentState.CheckedIn, AppointmentState.ReadyForDoctor], await Events(off.Id));
+    }
+
     [Fact]
     public async Task ConcurrentCheckInsFromSeveralDesksCheckInOnce()
     {
+        await h.StepsAsync(nurse: true, billing: false); // check-in stops at Checked in
         var visit = await h.BookAsync(9);
         h.Clock.Advance(TimeSpan.FromMinutes(1));
         var desks = Enumerable.Range(0, 8).Select(i => h.FrontDesk(i % 2 == 0 ? h.Reception : h.Nurse)).ToList();
@@ -169,6 +189,7 @@ public sealed class FrontDeskServiceTests(PostgresFixture sql) : IClassFixture<P
     [Fact]
     public async Task OnlyRolesThatRunTheQueueAtThisFacilityMoveVisits()
     {
+        await h.StepsAsync(nurse: true, billing: false); // check-in stops at Checked in
         var visit = await h.BookAsync(9);
         h.Clock.Advance(TimeSpan.FromMinutes(1));
         // A hospital doctor reads the queue; the portal user and an admin of another facility see nothing.

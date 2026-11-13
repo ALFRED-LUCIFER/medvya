@@ -111,10 +111,10 @@ public static class VisitFlow
     public static bool CanReschedule(AppointmentState state) => state is AppointmentState.Booked or AppointmentState.NeedsRebooking;
 
     /// <summary>
-    /// Cancel before the clinical part of the visit: Booked, or Checked in when the patient leaves before being seen. From With
-    /// nurse on the visit is finished on the board, and a completed, cancelled or no-show visit cannot be cancelled.
+    /// Cancel before the clinical part of the visit: Booked, or Checked in or Ready for doctor when the patient leaves before being
+    /// seen (with nurse intake off, check-in lands in Ready for doctor). From With nurse on the visit is finished on the board, and a completed, cancelled or no-show visit cannot be cancelled.
     /// </summary>
-    public static bool CanCancel(AppointmentState state) => state is AppointmentState.Booked or AppointmentState.CheckedIn or AppointmentState.NeedsRebooking;
+    public static bool CanCancel(AppointmentState state) => state is AppointmentState.Booked or AppointmentState.CheckedIn or AppointmentState.ReadyForDoctor or AppointmentState.NeedsRebooking;
 
     /// <summary>Only a booked visit that never checked in is a no-show (and only once it has started: see the use case).</summary>
     public static bool CanMarkNoShow(AppointmentState state) => state == AppointmentState.Booked;

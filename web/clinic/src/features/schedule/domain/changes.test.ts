@@ -14,7 +14,8 @@ describe('appointment actions', () => {
     const now = at('2026-10-19T05:00:00Z'); // 10:30 IST, after the start
     expect(allowed(rulesFor(visit('Booked'), { ...desk, now }))).toEqual(['checkIn', 'reschedule', 'cancel', 'noShow']);
     expect(allowed(rulesFor(visit('CheckedIn'), { ...desk, now }))).toEqual(['cancel']); // left before being seen
-    for (const s of ['WithNurse', 'ReadyForDoctor', 'InConsult', 'Billing'] as const) expect(allowed(rulesFor(visit(s), { ...desk, now }))).toEqual([]);
+    for (const s of ['WithNurse', 'InConsult', 'Billing'] as const) expect(allowed(rulesFor(visit(s), { ...desk, now }))).toEqual([]);
+    expect(allowed(rulesFor(visit('ReadyForDoctor'), { ...desk, now }))).toEqual(['cancel']); // nurse step off: arrival lands here
     expect(rulesFor(visit('WithNurse'), { ...desk, now }).cancel).toEqual({ allowed: false, why: 'inVisit' });
     expect(rulesFor(visit('Done'), { ...desk, now }).reschedule).toEqual({ allowed: false, why: 'completed' });
     expect(rulesFor(visit('Cancelled'), { ...desk, now }).cancel).toEqual({ allowed: false, why: 'cancelled' });

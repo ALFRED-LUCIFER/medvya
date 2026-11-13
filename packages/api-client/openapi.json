@@ -2756,6 +2756,13 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "name": "reason",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/FollowUpDismissReason"
+            }
           }
         ],
         "responses": {
@@ -8151,6 +8158,16 @@
           "withDoctor": {
             "type": "boolean",
             "default": false
+          },
+          "followUp": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/FollowUpDue"
+              }
+            ]
           }
         }
       },
@@ -9547,6 +9564,47 @@
               "string"
             ],
             "format": "uuid"
+          }
+        }
+      },
+      "FollowUpDismissReason": {
+        "enum": [
+          "PatientDeclined",
+          "BookedElsewhere",
+          "NotReachable",
+          "Other",
+          null
+        ]
+      },
+      "FollowUpDue": {
+        "required": [
+          "id",
+          "dueOn",
+          "calendarId",
+          "calendarName"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "dueOn": {
+            "type": "string",
+            "format": "date"
+          },
+          "calendarId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "calendarName": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

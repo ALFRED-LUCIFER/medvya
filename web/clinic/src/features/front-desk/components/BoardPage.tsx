@@ -74,6 +74,10 @@ type Props = {
   consultAction?: (card: BoardCard) => ReactNode;
   /** With the nurse-intake step on (MDV-P2-007) a With nurse card leaves the nurse by the nurse's handoff, not by this board's move: shown instead of "Intake done". */
   nurseStep?: (card: BoardCard) => ReactNode;
+  /** On a Done card with the doctor's follow-up still to book: "Follow-up due" with Book (MDV-P1-102). */
+  followUp?: (card: BoardCard) => ReactNode;
+  /** The follow-up's dismiss dialog, one for the board. */
+  followUpDialog?: ReactNode;
 };
 
 /** P-01 Reception board: today's visits by state, one tap per step, nonclinical information only. */
@@ -100,6 +104,7 @@ export default function BoardPage(props: Props) {
       <StatusLine {...props} />
       <Body {...props} />
       <EndVisit {...props} />
+      {props.followUpDialog}
     </PageContainer>
   );
 }
@@ -244,7 +249,7 @@ function Column(props: Props & { state: BoardColumn; board: Board }) {
   );
 }
 
-function Card({ card, board, steps, now, failedVisitIds, canMove, canCancel, online, confirmingId, pendingId, failure, paymentAction, consultAction, nurseStep, onStartCheckIn, onConfirmCheckIn, onCancelCheckIn, onMove, onStartEnd }: Props & { card: BoardCard; board: Board }) {
+function Card({ card, board, steps, now, failedVisitIds, canMove, canCancel, online, confirmingId, pendingId, failure, paymentAction, consultAction, nurseStep, followUp, onStartCheckIn, onConfirmCheckIn, onCancelCheckIn, onMove, onStartEnd }: Props & { card: BoardCard; board: Board }) {
   const { t, formatTime, formatCalendarDate } = useI18n();
   const state = card.state as BoardColumn;
   const next = nextState(state, steps);
@@ -297,6 +302,7 @@ function Card({ card, board, steps, now, failedVisitIds, canMove, canCancel, onl
         </>
       ))}
       {consultAction?.(card)}
+      {state === 'Done' && card.followUp && followUp?.(card)}
       {ends.length > 0 && (
         <Button id={`board-more-${card.id}`} variant="ghost" className="whitespace-normal" disabled={!online}
           aria-label={t('board.more.for', { name: card.patientName || t('board.unknownPatient') })} onClick={() => onStartEnd(card, ends.length === 1 ? ends[0]! : null)}>

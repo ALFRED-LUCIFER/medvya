@@ -207,8 +207,9 @@ public sealed class WaitlistService(
         return await booking.ViewAsync(visit, patient, now);
     }
 
-    public async Task RemoveAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task RemoveAsync(Guid id, FollowUpDismissReason? reason = null, CancellationToken cancellationToken = default)
     {
+        if (reason is { } r && !Enum.IsDefined(r)) throw new SchedulingValidationException([new("reason", "invalid")]);
         var entry = await FindAsync(id, cancellationToken);
         var now = context.Now;
         await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
@@ -216,7 +217,8 @@ public sealed class WaitlistService(
                 .ExecuteUpdateAsync(s => s.SetProperty(w => w.State, WaitlistState.Removed).SetProperty(w => w.ChangedAt, now), cancellationToken) == 0)
             throw new VisitTransitionException("invalid_transition");
         await db.SlotHolds.Where(h => h.HeldBy == id).ExecuteDeleteAsync(cancellationToken);
-        await context.AuditAsync(SchedulingAudit.WaitlistRemove, SchedulingAudit.WaitlistResource, SchedulingAudit.Treatment, id, entry.PatientId, cancellationToken);
+        await context.AuditAsync(SchedulingAudit.WaitlistRemove, SchedulingAudit.WaitlistResource, SchedulingAudit.Treatment, id, entry.PatientId, cancellationToken,
+            reason is { } why ? $"reason:{why}" : null);
         await tx.CommitAsync(cancellationToken);
     }
 

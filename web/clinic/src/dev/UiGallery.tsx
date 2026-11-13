@@ -7,6 +7,7 @@ import {
 } from '@medvya/ui';
 import PageComponentsGallery from './PageComponentsGallery';
 import FieldGallery from './FieldGallery';
+import StickyActionBarSection from './gallery/StickyActionBarSection';
 
 const keys = <T extends object>(o: T) => Object.keys(o) as (keyof T)[];
 
@@ -143,6 +144,7 @@ export default function UiGallery({ switcher }: { switcher: ReactNode }) {
       </section>
       <PageComponentsGallery />
       <FieldGallery />
+      <StickyActionBarSection />
     </main>
   );
 }

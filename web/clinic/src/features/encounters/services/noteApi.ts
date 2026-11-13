@@ -2,14 +2,15 @@ import { apiFetch } from '../../api/services/apiClient';
 import { ApiError, csrf, post, send } from '../../schedule/services/scheduleApi';
 import type { AddendumForm, NoteCatalog, NoteDraft, NoteView, PreviousNote, VerifiedVital } from '../domain/note';
 
-const put = <T>(url: string, body: unknown) =>
-  send<T>(url, { method: 'PUT', headers: { 'X-Medvya-Csrf': '1', 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+const put = <T>(url: string, body: unknown, keepalive = false) =>
+  send<T>(url, { method: 'PUT', headers: { 'X-Medvya-Csrf': '1', 'Content-Type': 'application/json' }, body: JSON.stringify(body), keepalive });
 
 // Consult note (MDV-P2-009). The note text travels only in the body; ids only in paths.
 export const fetchNote = (encounterId: string) => send<NoteView>(`/v1/encounters/${encounterId}/note`);
 /** `manual` is true: there is no recording to draft from until MDV-P3, so every note is typed by the doctor. */
-export const saveNote = (encounterId: string, draft: NoteDraft, baseVersion: number) =>
-  put<NoteView>(`/v1/encounters/${encounterId}/note`, { templateKey: draft.templateKey, manual: true, recordingConsent: draft.recordingConsent, baseVersion, sections: Object.fromEntries(Object.entries(draft.sections).filter(([, v]) => v.trim())) });
+/** `keepalive`: sent as the page goes away (MDV-P1-089), so the browser finishes it after the page is gone. */
+export const saveNote = (encounterId: string, draft: NoteDraft, baseVersion: number, keepalive = false) =>
+  put<NoteView>(`/v1/encounters/${encounterId}/note`, { templateKey: draft.templateKey, manual: true, recordingConsent: draft.recordingConsent, baseVersion, sections: Object.fromEntries(Object.entries(draft.sections).filter(([, v]) => v.trim())) }, keepalive);
 
 // What the doctor may copy into the note (MDV-P2-009): verified intake vitals of this visit, and earlier signed notes of the patient. Each read is audited.
 export const fetchPrefill = (encounterId: string) => send<{ vitals: VerifiedVital[] }>(`/v1/encounters/${encounterId}/note/prefill`);

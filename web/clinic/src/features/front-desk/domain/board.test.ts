@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { inToday, groupByColumn, needsRebooking, minutesSince, moveError, nextState, serverNow, visibleColumns, walkInError, type BoardCard } from './board';
+import { inToday, groupByColumn, needsRebooking, minutesSince, ageYears, moveError, nextState, serverNow, visibleColumns, walkInError, type BoardCard } from './board';
 
 describe('walk-in (MDV-P1-025)', () => {
   it('tells "no free slot" (choose a doctor to queue with) and "busy" from other failures', () => {
@@ -55,6 +55,14 @@ describe('reception board', () => {
     const cards = [card('b', 'NeedsRebooking', '2026-10-19T05:00:00Z'), card('a', 'NeedsRebooking', '2026-10-19T04:00:00Z'), card('c', 'Booked', '2026-10-19T03:00:00Z')];
     expect(needsRebooking(cards).map(c => c.id)).toEqual(['a', 'b']);
     expect(Object.values(groupByColumn(cards)).flat().map(c => c.id)).toEqual(['c']);
+  });
+
+  it('ages in whole years on the server clock and is null without a date of birth', () => {
+    const now = Date.parse('2026-10-19T04:00:00Z');
+    expect(ageYears('1972-10-19', now)).toBe(54);
+    expect(ageYears('1972-10-20', now)).toBe(53);
+    expect(ageYears('2026-12-01', now)).toBe(0);
+    expect(ageYears(null, now)).toBeNull();
   });
 
   it('counts whole waiting minutes on the server clock, never below zero', () => {

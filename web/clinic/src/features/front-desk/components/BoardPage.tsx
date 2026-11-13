@@ -3,7 +3,7 @@ import { CalendarCheck, CalendarClock, CircleCheck, ClipboardCheck, DoorOpen, Ey
 import { useI18n, type MessageKey } from '@medvya/i18n';
 import { Button, FrontDeskTag, PageContainer, PageHeader } from '@medvya/ui';
 import type { workload } from '../domain/overview';
-import { minutesSince, needsRebooking, nextState, visibleColumns, type Board, type BoardCard, type BoardColumn, type LiveStatus, type MoveError, type VisitSteps } from '../domain/board';
+import { ageYears, minutesSince, needsRebooking, nextState, visibleColumns, type Board, type BoardCard, type BoardColumn, type LiveStatus, type MoveError, type VisitSteps } from '../domain/board';
 
 // Every column is words and an icon (never colour alone), following the Clinician App board (P-01).
 const columnIcons: Record<BoardColumn, LucideIcon> = {
@@ -127,7 +127,7 @@ function Body(props: Props) {
   return (
     // The board scrolls sideways on its own at tablet width and 200 % zoom; the page never does.
     <section aria-label={t('board.region')} tabIndex={0} className="relative overflow-x-auto rounded-lg pb-2">
-      <div className="grid auto-cols-[minmax(200px,1fr)] grid-flow-col gap-3">
+      <div className="grid auto-cols-[minmax(156px,1fr)] grid-flow-col gap-3">
         {visibleColumns(props.steps, props.columns).map(c => <Column key={c} state={c} {...props} board={board} />)}
       </div>
       <Rebooking cards={needsRebooking(board.cards)} timeZone={board.timeZone} />
@@ -180,6 +180,7 @@ function Card({ card, board, steps, now, failedVisitIds, canMove, online, confir
   const nameId = `board-card-${card.id}`;
   const error = failure?.id === card.id ? failure.error : null;
   const confirming = confirmingId === card.id;
+  const age = ageYears(card.dateOfBirth, now);
   const dob = card.dateOfBirth ? formatCalendarDate(card.dateOfBirth) : t('board.dobUnknown');
 
   return (
@@ -188,9 +189,8 @@ function Card({ card, board, steps, now, failedVisitIds, canMove, online, confir
         <h3 id={nameId} className="text-sm font-bold">{card.patientName || t('board.unknownPatient')}</h3>
         <span className="font-mono text-xs text-muted-foreground">{formatTime(new Date(card.start), board.timeZone)}</span>
       </div>
-      <p className="text-xs text-muted-foreground">{t('board.meta', { doctor: card.calendarName || t('schedule.doctor'), type: t(`visitType.${card.visitType}`) })}</p>
+      {age !== null && <p className="text-xs text-muted-foreground">{t('patients.row.ageSex', { age: t('patients.age', { age }), sex: card.sex ? t(`patients.sex.${card.sex}`) : '' })}</p>}
       <div className="flex flex-wrap gap-1">
-        <FrontDeskTag kind="reason" text={t(`reasonCategory.${card.reasonCategory}`)} />
         {failedVisitIds.has(card.id) && <FrontDeskTag kind="messageFailed" />}
         {card.walkIn && <FrontDeskTag kind="walkIn" />}
         {card.registrationIncomplete && <FrontDeskTag kind="incomplete" />}

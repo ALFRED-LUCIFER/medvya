@@ -1,14 +1,16 @@
+import type { ReactNode } from 'react';
 import { useI18n } from '@medvya/i18n';
 import type { DeskVisit } from '../domain/visits';
 
-type Props = { visits: DeskVisit[]; timeZone?: string; loading: boolean; failed: boolean };
+type Props = { visits: DeskVisit[]; timeZone?: string; loading: boolean; failed: boolean; followUp?: ReactNode };
 
-/** The desk record's visits (MDV-1088): when and what state, never a reason, diagnosis or note. */
+/** The desk record's visits (MDV-1088): when and what state, never a reason, diagnosis or note; first, the doctor's follow-up still to book (MDV-P1-102). */
 export default function DeskVisits(p: Props) {
   const { t, formatDate, formatTime } = useI18n();
   return (
     <section aria-labelledby="desk-visits" className="rounded-xl border bg-card p-4">
       <h2 id="desk-visits" className="mb-3 text-base font-extrabold">{t('visits.title')}</h2>
+      {p.followUp && <div className="mb-3">{p.followUp}</div>}
       {p.loading ? <p role="status">{t('visits.loading')}</p>
         : p.failed ? <p role="alert" className="text-sm font-semibold text-danger-700">{t('visits.loadFailed')}</p>
         : p.visits.length === 0 ? <p className="text-muted-foreground">{t('visits.empty')}</p>

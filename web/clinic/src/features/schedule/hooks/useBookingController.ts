@@ -90,6 +90,18 @@ export function useBookingController(facilityId: string, timeZone: string | null
   // An audited read (patient.lookup): fetched once per id, never again on focus or remount while cached.
   const patient = useQuery({ queryKey: ['booking-patient', facilityId, patientId], queryFn: () => findPatient(facilityId, patientId), enabled: validId, staleTime: Infinity });
 
+  // UX-10: a patient who has never been seen starts at New consultation, unless the desk already picked a visit type for this slot.
+  const typePicked = useRef(false);
+  const holdFor = hold.mutate;
+  useEffect(() => {
+    if (!choice || !patient.data || patient.data.hasVisited !== false || choice.visitType !== 'FollowUp' || typePicked.current) return;
+    const next = { ...choice, visitType: 'NewConsultation' as const };
+    setChoice(next);
+    // The longer visit holds its own slots; the server replaces this user's previous hold. Where it does not fit (the last slot of a session),
+    // the booking stays a Follow-up rather than becoming impossible, and the desk can still pick the type by hand.
+    holdFor(next, { onError: () => { typePicked.current = true; setChoice(choice); holdFor(choice); } });
+  }, [choice, patient.data, holdFor]);
+
   const search = usePatientSearch(id => form.setValue('patientId', id, { shouldValidate: true }));
   const clearSearch = search.clear;
 
@@ -148,8 +160,8 @@ export function useBookingController(facilityId: string, timeZone: string | null
     onBackToForm: () => { setPlan(null); bookMany.reset(); },
     onDismissSeries: () => setSeriesDone(null),
     booked,
-    onSlot: (calendarId: string, calendarName: string, start: string) => choose({ calendarId, calendarName, start, visitType: 'FollowUp' }),
-    onVisitType: (visitType: VisitType) => choice && choose({ ...choice, visitType }),
+    onSlot: (calendarId: string, calendarName: string, start: string) => { typePicked.current = false; choose({ calendarId, calendarName, start, visitType: 'FollowUp' }); },
+    onVisitType: (visitType: VisitType) => { typePicked.current = true; if (choice) choose({ ...choice, visitType }); },
     onConfirm: form.handleSubmit(values => (plan ? bookMany.mutate(values) : repeat > 1 ? preview.mutate() : book.mutate(values))),
     onClose: () => {
       if (hold.data) release.mutate(hold.data.id);

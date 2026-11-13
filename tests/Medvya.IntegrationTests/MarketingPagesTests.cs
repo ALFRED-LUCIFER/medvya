@@ -125,7 +125,8 @@ public sealed partial class MarketingPagesTests(WebApplicationFactory<Program> f
     {
         var html = await Get("/pricing");
         Assert.Contains("<th scope=\"col\">Clinic</th>", html, StringComparison.Ordinal);
-        Assert.Contains("<th scope=\"row\">UPI QR, links and AutoPay</th>", html, StringComparison.Ordinal);
+        Assert.Contains("<th scope=\"row\">UPI QR, links and AutoPay (planned)</th>", html, StringComparison.Ordinal); // not built yet, so it says so (#1112)
+        Assert.DoesNotContain("Online booking and WhatsApp reminders", html, StringComparison.Ordinal); // only SMS and email reminders exist today
         Assert.Contains("If a payment fails", html, StringComparison.Ordinal);
         Assert.Contains("Free migration", html, StringComparison.Ordinal);
         Assert.Equal(4, Summary().Count(html));

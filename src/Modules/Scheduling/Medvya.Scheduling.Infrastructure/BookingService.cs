@@ -572,11 +572,15 @@ public sealed class BookingService(
     static SeriesResult Refused(Guid seriesId, List<DateTimeOffset> starts, List<string?> conflicts) =>
         new(seriesId, [.. starts.Select((s, i) => new SeriesBooked(s, null, conflicts[i] ?? "series_not_booked"))]);
 
+    static readonly AppointmentState[] Attended = [AppointmentState.CheckedIn, AppointmentState.WithNurse, AppointmentState.ReadyForDoctor, AppointmentState.InConsult, AppointmentState.Billing, AppointmentState.Done];
+
     public async Task<PatientView?> FindPatientAsync(Guid facilityId, Guid patientId, CancellationToken cancellationToken = default)
     {
         await context.RequireAsync(facilityId, SchedulingAccess.CanBook, cancellationToken);
         // Any patient of the organisation, as front-desk search (MDV-P1-072); another organisation's is "not found" (tenant filter and RLS).
-        return (await context.PatientsAsync([patientId], cancellationToken)).TryGetValue(patientId, out var p) ? new(p.Id, p.FullName, p.Mrn) : null;
+        if (!(await context.PatientsAsync([patientId], cancellationToken)).TryGetValue(patientId, out var p)) return null;
+        var visited = await db.Appointments.AsNoTracking().AnyAsync(a => a.PatientId == patientId && Attended.Contains(a.State), cancellationToken);
+        return new(p.Id, p.FullName, p.Mrn, visited);
     }
 
     // shortcut: the latest 30 visits only, no paging; the clinic's own chart has the full history.

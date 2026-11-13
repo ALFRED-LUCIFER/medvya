@@ -9,7 +9,7 @@ namespace Medvya.Prescribing.Infrastructure;
 /// <summary>
 /// The authorised prescription as an English PDF on A4 or A5 (MDV-P2-017, E-10): clinic, doctor with qualifications and licence on every page with
 /// the patient's identifiers and the Rx number, then the chart's allergies, each medicine by its generic name with its instruction and the notes its
-/// regulatory class needs, the medicines to stop, the authorisation with its content hash, and the QR code that verifies it.
+/// regulatory class needs, the medicines to stop, the diagnoses, advice, follow-up, a signature line, the authorisation and the QR code that verifies it (its content hash is on that page, not on the paper).
 /// Copy comes from the shared English catalogue (packages/i18n/messages/en.json); the server never invents wording.
 /// Written by <see cref="PlainPdf"/>: names, medicines and notes in Hindi, Tamil or Arabic print shaped; text no embedded font has is refused.
 /// shortcut: the PDF's instructions are English only (owner decision 11 Nov 2026: the pharmacist explains them); add a translator-reviewed
@@ -20,7 +20,7 @@ namespace Medvya.Prescribing.Infrastructure;
 public static class RxPdfDocument
 {
     /// <summary>The layout a doctor approves (exit gate 4): raise it whenever what the paper shows or where changes, so each doctor approves again.</summary>
-    public const int LayoutVersion = 2; // 2: the logo and the signature image
+    public const int LayoutVersion = 3; // 2: the logo and the signature image; 3: age, diagnosis, follow-up, a signature line, the hash on the verify page
 
     /// <exception cref="PdfUnsupportedTextException"/>
     public static byte[] Render(RxPrintView v, PlainPdf.Paper paper, PrintImages images)
@@ -32,7 +32,7 @@ public static class RxPdfDocument
             v.Clinic,
             v.Qualifications is null ? v.Doctor : Text("rxPrint.doctor", ("name", v.Doctor), ("qualifications", v.Qualifications)),
             Text("rxPrint.licence", ("number", v.LicenceNumber), ("authority", v.LicenceAuthority)),
-            Text("rxPrint.patient", ("name", v.Patient.FullName), ("sex", Text($"rxPrint.sex.{v.Patient.SexAtBirth}")), ("mrn", v.Patient.Mrn),
+            Text("rxPrint.patient", ("name", v.Patient.FullName), ("sex", Text($"rxPrint.sex.{v.Patient.SexAtBirth}")), ("age", v.PatientAge.ToString(CultureInfo.InvariantCulture)), ("mrn", v.Patient.Mrn),
                 ("dob", v.Patient.DateOfBirth.ToString("dd MMM yyyy", CultureInfo.InvariantCulture))),
             Text("rxPrint.number", ("number", v.Authorisation.Number), ("version", v.Authorisation.VersionNo.ToString(CultureInfo.InvariantCulture)), ("when", when), ("zone", zone.Id)),
         ];
@@ -46,6 +46,11 @@ public static class RxPdfDocument
             }, true),
             ("", false),
         ];
+        if (v.Diagnoses is { Count: > 0 } diagnoses)
+        {
+            body.Add((Text("rxPrint.diagnosis", ("list", string.Join(", ", diagnoses.Select(d => d.Provisional ? Text("rxPrint.diagnosisProvisional", ("name", d.Description)) : d.Description)))), false));
+            body.Add(("", false));
+        }
         var n = 0;
         foreach (var l in v.Lines.Where(l => !l.Discontinue))
         {
@@ -68,10 +73,11 @@ public static class RxPdfDocument
             if (!a.InPatientLanguage) body.Add((Text("rxPrint.adviceInEnglish"), false));
             body.Add(("", false));
         }
+        if (v.FollowUpOn is { } due) body.AddRange([(Text("rxPrint.followUp", ("date", due.ToString("dd MMM yyyy", CultureInfo.InvariantCulture))), true), ("", false)]);
         body.AddRange([
-            (Text("rxPrint.hash", ("hash", v.Authorisation.ContentHash)), false),
             (Text("rxPrint.verify", ("url", v.VerifyUrl)), false),
             ("", false),
+            (Text("rxPrint.signature"), false), // the line to sign; the signature image, when uploaded, follows the authorisation line
             (Text("rxPrint.authorised", ("name", v.Doctor), ("when", when)), true), // the signature image follows it
         ]);
         return PlainPdf.Write(header, body, (page, pages) => Text("rxPrint.footer", ("number", v.Authorisation.Number),

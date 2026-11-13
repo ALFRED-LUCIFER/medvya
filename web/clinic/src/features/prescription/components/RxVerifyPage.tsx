@@ -28,6 +28,7 @@ export default function RxVerifyPage(p: Props) {
             <p>{t('rxVerify.number', { number: ltr(r.number), version: r.versionNo })}</p>
             <p>{t('rxVerify.issued', { doctor: r.doctor, clinic: r.clinic, date: formatDate(new Date(r.authorisedAt), r.timeZone) })}</p>
             <p>{tCount('rxVerify.lines', r.lines)}</p>
+            <p className="break-all text-sm">{t('rxVerify.hash', { hash: r.contentHash })}</p>
           </>
         )}
         <p className="text-sm text-muted-foreground">{t('rxVerify.privacy')}</p>

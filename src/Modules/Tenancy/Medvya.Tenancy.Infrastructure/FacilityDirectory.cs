@@ -9,9 +9,13 @@ public sealed class FacilityDirectory(TenancyDbContext db, ILogoStore store) : I
 {
     static readonly Role[] Doctors = [Role.SoloDoctor, Role.HospitalDoctor];
 
-    public Task<FacilityInfo?> FindAsync(Guid facilityId, CancellationToken cancellationToken = default) =>
-        db.Facilities.AsNoTracking().Where(f => f.Id == facilityId)
-            .Select(f => new FacilityInfo(f.Id, f.Name, f.TimeZone)).SingleOrDefaultAsync(cancellationToken);
+    public async Task<FacilityInfo?> FindAsync(Guid facilityId, CancellationToken cancellationToken = default)
+    {
+        var facility = await db.Facilities.AsNoTracking().Where(f => f.Id == facilityId).Select(f => new { f.Id, f.Name, f.TimeZone }).SingleOrDefaultAsync(cancellationToken);
+        if (facility is null) return null;
+        // The tenant filter and row-level security leave exactly this tenant's row.
+        return new FacilityInfo(facility.Id, facility.Name, facility.TimeZone, await db.Tenants.AsNoTracking().Select(t => t.Name).SingleAsync(cancellationToken));
+    }
 
     public Task<Role?> ActiveRoleAsync(Guid userId, Guid facilityId, CancellationToken cancellationToken = default) =>
         db.Memberships.AsNoTracking()

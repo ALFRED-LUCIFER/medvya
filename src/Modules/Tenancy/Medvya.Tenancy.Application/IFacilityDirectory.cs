@@ -2,8 +2,8 @@ using Medvya.Tenancy.Domain;
 
 namespace Medvya.Tenancy.Application;
 
-/// <summary>A facility of the current tenant. TimeZone is an IANA id (Asia/Kolkata, Asia/Dubai).</summary>
-public sealed record FacilityInfo(Guid Id, string Name, string TimeZone);
+/// <summary>A facility of the current tenant, with the tenant's (clinic's) name. TimeZone is an IANA id (Asia/Kolkata, Asia/Dubai).</summary>
+public sealed record FacilityInfo(Guid Id, string Name, string TimeZone, string TenantName);
 
 /// <summary>What a printed prescription shows about its doctor (MDV-P2-017): the profile's name and qualifications and the licence the owner attested (ADR-016).</summary>
 public sealed record PrescriberInfo(string FullName, string? Qualifications, string LicenceNumber, string LicenceAuthority);

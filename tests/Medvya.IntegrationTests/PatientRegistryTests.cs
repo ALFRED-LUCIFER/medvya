@@ -434,7 +434,7 @@ public class PatientRegistryTests(PostgresFixture sql) : IClassFixture<PostgresF
     internal sealed class FacilityZone(string zone) : Medvya.Tenancy.Application.IFacilityDirectory
     {
         public Task<Medvya.Tenancy.Application.FacilityInfo?> FindAsync(Guid facilityId, CancellationToken cancellationToken = default) =>
-            Task.FromResult<Medvya.Tenancy.Application.FacilityInfo?>(new(facilityId, "Synthetic facility", zone));
+            Task.FromResult<Medvya.Tenancy.Application.FacilityInfo?>(new(facilityId, "Synthetic facility", zone, "Synthetic clinic"));
         public Task<Medvya.Tenancy.Domain.Role?> ActiveRoleAsync(Guid userId, Guid facilityId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<IReadOnlyList<Guid>> ActiveDoctorsAsync(Guid facilityId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<Medvya.Tenancy.Application.PrescriberInfo?> PrescriberAsync(Guid userId, Guid facilityId, CancellationToken cancellationToken = default) => throw new NotSupportedException();

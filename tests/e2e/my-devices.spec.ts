@@ -47,6 +47,7 @@ test('lists this device first without a Sign out, and ends another device', asyn
 
 test('every staff role reaches it from the header', async ({ page }) => {
   await open(page);
+  await page.setViewportSize({ width: 1366, height: 800 }); // the header link shows from 1024 px; narrower screens use More
   await page.goto('/schedule');
   await page.getByRole('link', { name: 'My devices' }).click();
   await expect(page).toHaveURL(/\/account\/devices$/);

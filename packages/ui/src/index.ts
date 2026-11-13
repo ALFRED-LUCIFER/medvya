@@ -11,6 +11,11 @@ export { Dialog, DialogTrigger, DialogContent, DialogTitle, DialogDescription } 
 export { Switch } from '#components/ui/switch';
 export { ChoiceRow } from '#components/ui/choice-row';
 export { Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TableRow, TableState, type SortDirection } from '#components/ui/table';
+export { Card, Section, type CardProps } from '#components/ui/card';
+export { PageMessage, EmptyState, type PageMessageProps } from '#components/ui/page-message';
+export { SegmentedControl, type SegmentedControlProps } from '#components/ui/segmented-control';
+export { Sheet, SheetTrigger, SheetContent, SheetTitle, SheetDescription } from '#components/ui/sheet';
+export { SplitLayout } from '#components/ui/split-layout';
 // Radix's focus scope (the one Dialog uses), for a panel that is modal only at some widths (the schedule's tablet drawer).
 import { FocusScope as FocusScopePrimitive } from 'radix-ui/internal';
 export const FocusScope = FocusScopePrimitive.FocusScope;

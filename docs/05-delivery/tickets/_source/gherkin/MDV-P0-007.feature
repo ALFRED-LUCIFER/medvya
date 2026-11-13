@@ -1,4 +1,4 @@
-Feature: GitHub OIDC federation to Azure and tagged deploy to staging
+Feature: GitHub OIDC federation to Azure and tagged deploy to dev
   As a developer, I want GitHub Actions to deploy to Azure without stored secrets, so that releases are safe and repeatable.
 
   # chunk: Federate GitHub to Azure without stored secrets
@@ -7,11 +7,11 @@ Feature: GitHub OIDC federation to Azure and tagged deploy to staging
     Then no Azure client secret or publish profile exists in GitHub secrets
     And only federated credentials are used
 
-  # chunk: Deploy a signed tag from main to staging
+  # chunk: Deploy a tag on main to dev
   @todo
-  Scenario: Tag on main deploys to staging
+  Scenario: Tag on main deploys to dev
     When I push tag v0.0.1 on main
-    Then staging deploys end-to-end
+    Then dev deploys end-to-end
     And the health endpoint returns 200 with the tag version
 
   @todo

@@ -1,7 +1,7 @@
 // MDV-P0-006: India dev environment, cheapest viable. Resource-group scope.
 // MDV-P0-038: the database is PostgreSQL Flexible Server, private (VNet-integrated), Entra-only login, customer-managed key.
 // shortcut: dev only. No Defender plans, no staging slot, Storage keeps a public endpoint (private endpoints cost money).
-// Add them before any real patient data or a staging/prod environment.
+// Add them before any real patient data or a staging/prod environment (MDV-P1-039).
 targetScope = 'resourceGroup'
 
 param location string = 'centralindia'
@@ -41,7 +41,8 @@ param deployPrincipalId string
 param oidcClientId string
 @description('Monthly budget in the billing currency (INR).')
 param budgetAmount int = 3500
-param budgetStart string = utcNow('yyyy-MM-01')
+@description('First day of the budget. Fixed: Azure refuses to move the start date of an existing budget, so utcNow() broke every re-apply in a later month.')
+param budgetStart string = '2026-11-01'
 @description('B1 or higher: VNet integration (the app reaching the private database) is not available on F1.')
 param appServiceSku string = 'B1'
 @description('Days a ledger digest cannot be changed or deleted (time-based immutability on ledger-digests). Once the policy is locked it can only grow.')

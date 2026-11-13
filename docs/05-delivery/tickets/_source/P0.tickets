@@ -4,7 +4,7 @@
 # pkg:  1 staging URL + seeded synthetic tenant · 2 ADR set, threat model, role matrix, data map · 3 R0 release notes
 # dep:  1 Azure subscription + launch region · 2 founder decision on launch market (ADR-002)
 
-@epic MDV-P0-E01 | Repository, CI/CD and environments | P0-01, P0-02 | A deployable .NET 10 + React monorepo with green CI and tagged deploys to staging.
+@epic MDV-P0-E01 | Repository, CI/CD and environments | P0-01, P0-02 | A deployable .NET 10 + React monorepo with green CI and tagged deploys to the India dev environment, where the pilot runs (staging and production: MDV-P1-039).
 @epic MDV-P0-E02 | Identity, tenancy and authorisation | P0-03, P0-04, P0-05 | Staff sign in with MFA into the right facility and only see what their role allows, enforced on the server and in SQL.
 @epic MDV-P0-E03 | Audit, data security and observability | P0-06, P0-09, P0-10 | Every patient-data access is provable; national IDs are unreadable to admins; nothing sensitive leaks into logs.
 @epic MDV-P0-E04 | Design system and journeys | P0-07 | The Medvya theme, clinical primitives and i18n/RTL pipeline in code; the six journeys signed off.
@@ -167,12 +167,12 @@ depends: MDV-P0-003
 confidence: 80 | Resources are explicit; private networking cost and region SKU availability still need confirming in the subscription.
 sources: PRD v2 P0-02, §07b; docs/03-architecture/azure-deployment.md
 desc:
-infra/bicep/main.bicep + modules (network, appservice, postgres, storage, keyvault, monitoring, defender, budgets) and parameter files for dev, staging and prod in the launch country (UAE parameter files created but not deployed unless ADR-002 says UAE). App Service (Linux, .NET 10) with VNet integration and a staging slot; Azure Database for PostgreSQL Flexible Server with Entra-only auth, private access (VNet-integrated), public network access disabled; Storage with private endpoint and no public blob access; Key Vault with RBAC, soft delete and purge protection; Application Insights + Log Analytics; Defender for Cloud plans; budgets and cost alerts per environment; Azure Policy denying resources outside the allowed region(s).
+infra/bicep/main.bicep (+ postgres.bicep) for the India dev environment, which is the pilot target. Staging and production parameters, the staging slot, Defender plans and a Storage private endpoint move to MDV-P1-039 (decided 13 Nov 2026). App Service (Linux, .NET 10) with VNet integration; Azure Database for PostgreSQL Flexible Server with Entra-only auth, private access (VNet-integrated), public network access disabled; Storage with private endpoint and no public blob access; Key Vault with RBAC, soft delete and purge protection; Application Insights + Log Analytics; Defender for Cloud plans; budgets and cost alerts per environment; Azure Policy denying resources outside the allowed region(s).
 ac:
-- `az deployment sub what-if` and a real deployment of dev succeed from CI with no manual portal steps.
+- `az deployment group what-if` and, after a reviewer approves, a real deployment of dev succeed from CI (`infra-dev` workflow) with no manual portal steps.
 - The PostgreSQL server `publicNetworkAccess` is Disabled and only reachable from the VNet (verified by a connectivity test from outside the VNet failing).
 - Key Vault has purge protection enabled; Storage has `allowBlobPublicAccess=false`.
-- A budget with email alerts at 50/80/100 % exists for each environment.
+- A budget with email alerts at 50/80/100 % exists for the dev environment.
 - Azure Policy assignment denies creating resources in any region other than the configured country region(s).
 - No secret value appears in any Bicep or parameter file.
 notes:
@@ -186,7 +186,7 @@ progress:
 - Workflow `.github/workflows/deploy-dev.yml` (tag `v*` or manual) signs in with GitHub OIDC and deploys the API to the India dev web app; Entra app "Medvya CI deploy (dev, India)" has a federated credential for environment `dev`; repo environment `dev` holds the non-secret ids as variables
 - First tagged run `v0.0.1` succeeded on 2026-11-04 and `/health` answers 200 on the India dev web app
 - Left: staging slot, SQL migration step and web app deploy (shortcut in the workflow); Hangfire tables are created only in Development, so the deploy must create them (MDV-P1-032)
-title: GitHub OIDC federation to Azure and tagged deploy to staging
+title: GitHub OIDC federation to Azure and tagged deploy to dev
 type: Task
 epic: MDV-P0-E01
 prd: P0-01, P0-02
@@ -200,10 +200,10 @@ depends: MDV-P0-004, MDV-P0-006
 confidence: 88 | Standard pattern; only App Service slot swap specifics to tune.
 sources: PRD v2 P0-01, P0-02, §08
 desc:
-Federated credentials (one app identity per environment) so GitHub Actions deploys without stored cloud secrets. deploy-staging.yml runs on a signed tag `v0.*`: build once, run EF Core migration bundle with the migration identity, deploy to the staging slot, smoke test, swap. Production workflow exists but requires a manual approval and only accepts tags from main.
+Federated credentials (one app identity per environment) so GitHub Actions deploys without stored cloud secrets. deploy-dev.yml runs on a tag `v*` that points at a commit on main (main only takes GitHub-signed squash merges, so the main-only check is the control; tags themselves are not signed): build once, run migrations inside the VNet with the migration identity, deploy, smoke test. The staging slot with swap and the approved production workflow move to MDV-P1-039 (decided 13 Nov 2026).
 ac:
 - No Azure client secret or publish profile exists in GitHub secrets (only federated credentials).
-- Pushing tag v0.0.1 on main deploys to staging end-to-end and the health endpoint returns 200 with the tag version.
+- Pushing a tag on main deploys to dev end-to-end and the health endpoint returns 200 with the tag version.
 - A tag on a non-main commit is rejected by the workflow.
 - Migrations run with the dedicated migration database user, not the app identity.
 - Deploy is repeatable: re-running the same tag is idempotent.

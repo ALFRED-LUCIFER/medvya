@@ -29,7 +29,7 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | Key | Title | Phase | Window | Confidence |
 |---|---|---|---|---|
 | [MDV-P0-006](P0-foundation/MDV-P0-006.md) | Azure environments as code (Bicep): App Service, PostgreSQL private access, Blob, Key Vault, App Insights, Defender, budgets | P0 | wk 1–2 | 80% |
-| [MDV-P0-007](P0-foundation/MDV-P0-007.md) | GitHub OIDC federation to Azure and tagged deploy to staging | P0 | wk 2–2 | 88% |
+| [MDV-P0-007](P0-foundation/MDV-P0-007.md) | GitHub OIDC federation to Azure and tagged deploy to dev | P0 | wk 2–2 | 88% |
 | [MDV-P0-008](P0-foundation/MDV-P0-008.md) | Database security baseline part 1: Entra-only auth, managed identity, least-privilege users per module and for migrations | P0 | wk 2–2 | 85% |
 | [MDV-P0-009](P0-foundation/MDV-P0-009.md) | Database security baseline part 2: national/insurance ID encryption, masked access, storage encryption with a customer-managed key | P0 | wk 2–3 | 72% |
 | [MDV-P0-010](P0-foundation/MDV-P0-010.md) | Tenancy model with EF Core global filters and PostgreSQL row-level security (cross-tenant test in CI) | P0 | wk 2–2 | 88% |
@@ -166,7 +166,7 @@ Week 1 = Monday 26 Oct 2026. A ticket appears in every week of its window. Load 
 | [MDV-P1-036](P1-front-desk/MDV-P1-036.md) | Tablet-responsive reception views (desk tablet) | P1 | wk 9–9 | 88% |
 | [MDV-P1-037](P1-front-desk/MDV-P1-037.md) | Performance budget and load test for booking and calendar | P1 | wk 9–9 | 86% |
 | [MDV-P1-038](P1-front-desk/MDV-P1-038.md) | P1 security review: threat-model update, ASVS checks, authorisation tests, dependency scan — no open high/critical | P1 | wk 9–9 | 80% |
-| [MDV-P1-039](P1-front-desk/MDV-P1-039.md) | Production deployment for the launch country and a production tenant per pilot clinic | P1 | wk 9–9 | 82% |
+| [MDV-P1-039](P1-front-desk/MDV-P1-039.md) | Production deployment for the launch country and a production tenant per pilot clinic | P1 | wk 9–9 | 70% |
 | [MDV-P1-040](P1-front-desk/MDV-P1-040.md) | Reception training (30 min), one-page desk card and support channel with named contact | P1 | wk 9–9 | 88% |
 | [MDV-P1-041](P1-front-desk/MDV-P1-041.md) | Baseline metrics capture and in-product measurement (check-in time, no-shows, double bookings, reminder delivery) | P1 | wk 9–10 | 84% |
 | [MDV-P2-001](P2-doctor-workspace/MDV-P2-001.md) | Encounters module: start a consultation from the board/Today, bound to one patient and appointment | P2 | wk 9–9 | 88% |

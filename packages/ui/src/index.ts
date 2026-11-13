@@ -16,6 +16,8 @@ export { PageMessage, EmptyState, type PageMessageProps } from '#components/ui/p
 export { SegmentedControl, type SegmentedControlProps } from '#components/ui/segmented-control';
 export { Sheet, SheetTrigger, SheetContent, SheetTitle, SheetDescription } from '#components/ui/sheet';
 export { SplitLayout } from '#components/ui/split-layout';
+export { Field, FieldMarks, type FieldProps, type FieldMark } from '#components/ui/field';
+export { ErrorSummary, type ErrorSummaryProps } from '#components/ui/error-summary';
 // Radix's focus scope (the one Dialog uses), for a panel that is modal only at some widths (the schedule's tablet drawer).
 import { FocusScope as FocusScopePrimitive } from 'radix-ui/internal';
 export const FocusScope = FocusScopePrimitive.FocusScope;

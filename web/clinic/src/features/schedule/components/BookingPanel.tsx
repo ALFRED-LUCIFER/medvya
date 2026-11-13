@@ -3,7 +3,7 @@ import type { UseFormReturn } from 'react-hook-form';
 import { Link } from 'react-router';
 import { ChevronLeft, ChevronRight, CircleAlert, CircleCheck, Hourglass, Search } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, Card, cn, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea } from '@medvya/ui';
+import { Button, ChoiceRow, buttonVariants, Card, cn, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea } from '@medvya/ui';
 import PatientSummaryLine from '../../patients/components/PatientSummaryLine';
 import { pageCount, spokenExtras, type SearchErrorCode, type SearchResult } from '../../patients/domain/directory';
 import { channels, reasonCategories, visitTypes, type BookedAppointment, type BookingForm, type Hold, type PatientMatch, type SlotChoice, type SlotError } from '../domain/booking';
@@ -124,10 +124,9 @@ export default function BookingPanel(p: Props) {
                 </span>
               </div>
               <div className="flex flex-wrap items-end gap-3">
-                <label className="flex min-h-11 items-center gap-2 text-sm">
-                  <input type="checkbox" className="size-5" checked={row.include} onChange={() => p.onToggleOccurrence(i)} />
+                <ChoiceRow className="gap-2 text-sm [&>input]:size-5" type="checkbox" checked={row.include} onChange={() => p.onToggleOccurrence(i)}>
                   {t('series.row.include')}
-                </label>
+                </ChoiceRow>
                 {(row.conflict || row.moved) && (
                   <>
                     <div className="flex flex-col gap-1">
@@ -226,10 +225,9 @@ export default function BookingPanel(p: Props) {
                 <legend className="text-sm font-bold">{t('series.weekdays')}</legend>
                 <div className="flex flex-wrap gap-2">
                   {weekdayOrder.map(d => (
-                    <label key={d} className="flex min-h-11 items-center gap-2 rounded-md border px-3 text-sm">
-                      <input type="checkbox" className="size-5" checked={p.days.includes(d)} onChange={() => p.onToggleDay(d)} />
+                    <ChoiceRow key={d} className="gap-2 rounded-md border px-3 text-sm [&>input]:size-5" type="checkbox" checked={p.days.includes(d)} onChange={() => p.onToggleDay(d)}>
                       {t(`series.weekday.${d}`)}
-                    </label>
+                    </ChoiceRow>
                   ))}
                 </div>
               </fieldset>

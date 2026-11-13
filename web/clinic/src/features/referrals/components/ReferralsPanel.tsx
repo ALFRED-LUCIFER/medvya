@@ -3,7 +3,7 @@ import { Link } from 'react-router';
 import { Controller, type FieldError, type UseFormReturn } from 'react-hook-form';
 import { CircleCheck, Send } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState, Textarea } from '@medvya/ui';
+import { Button, ChoiceRow, buttonVariants, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableState, Textarea } from '@medvya/ui';
 import type { DocumentRow } from '../../documents/domain/documents';
 import { fieldError } from '../../settings/components/fieldStyles';
 import { Section } from '../../settings/components/Section';
@@ -144,10 +144,9 @@ export default function ReferralsPanel(p: Props) {
                 <legend className="mb-1 font-bold">{t('referrals.field.sections')}</legend>
                 <p className="text-sm text-muted-foreground">{t('referrals.field.sections.hint')}</p>
                 {sectionNames.map(s => (
-                  <label key={s} className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border p-3 has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring/50">
-                    <input type="checkbox" value={s} className="size-4" {...p.createForm.register('sections')} />
+                  <ChoiceRow key={s} className="gap-3 rounded-lg border p-3 has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring/50" type="checkbox" value={s} {...p.createForm.register('sections')}>
                     <span>{t(`referrals.section.${s}`)}</span>
-                  </label>
+                  </ChoiceRow>
                 ))}
               </fieldset>
               <Button type="submit" className="self-start" disabled={p.busy}>{t('referrals.add.submit')}</Button>

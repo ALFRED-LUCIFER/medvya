@@ -2,7 +2,7 @@ import type { FormEventHandler } from 'react';
 import { Controller, type FieldValues, type UseFormReturn } from 'react-hook-form';
 import { Info } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, ErrorSummary, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
+import { Button, ChoiceRow, ErrorSummary, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
 import { doctorSteps, stepFields, type Authority, type FieldProblem, type DoctorForm, type DoctorStep, type LicenceForm } from '../domain/doctors';
 import type { Location } from '../domain/settings';
 import { fieldError } from './fieldStyles';
@@ -81,11 +81,10 @@ export function LicenceFields<T extends FieldValues>({ form, errors, authorities
         <Input autoComplete="off" {...f.register('certificateName')} />
       </Field>
       <div className="flex flex-col gap-2 sm:col-span-2">
-        <label className="flex min-h-11 items-start gap-3 text-sm font-semibold">
-          <input id={l.attested![0]} type="checkbox" className="mt-1 size-4 accent-brand-700" aria-invalid={errors.attested ? true : undefined}
-            aria-describedby={errors.attested ? `${l.attested![0]}-error` : undefined} {...f.register('attested')} />
+        <ChoiceRow className="items-start gap-3 text-sm font-semibold [&>input]:mt-1" id={l.attested![0]} type="checkbox" aria-invalid={errors.attested ? true : undefined}
+            aria-describedby={errors.attested ? `${l.attested![0]}-error` : undefined} {...f.register('attested')}>
           {t('doctors.licence.attest')}
-        </label>
+        </ChoiceRow>
         <p className="text-sm">{t('doctors.licence.reminder')}</p>
         {error('attested') && <p id={`${l.attested![0]}-error`} role="alert" className={fieldError}>{error('attested')}</p>}
       </div>
@@ -179,11 +178,10 @@ export default function DoctorWizard(p: Props) {
                   <fieldset className="flex flex-col gap-2 sm:col-span-2">
                     <legend className="mb-1 font-bold">{t('staff.alsoAt')}</legend>
                     {p.locations.filter(l => l.id !== watch('facilityId')).map(l => (
-                      <label key={l.id} className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border p-3 has-[:checked]:border-primary has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring/50">
-                        <input type="checkbox" className="size-4 accent-brand-700" checked={field.value.includes(l.id)}
-                          onChange={() => field.onChange(field.value.includes(l.id) ? field.value.filter(x => x !== l.id) : [...field.value, l.id])} />
+                      <ChoiceRow key={l.id} className="gap-3 rounded-lg border p-3 has-[:checked]:border-primary has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring/50" type="checkbox" checked={field.value.includes(l.id)}
+                          onChange={() => field.onChange(field.value.includes(l.id) ? field.value.filter(x => x !== l.id) : [...field.value, l.id])}>
                         <span className="font-semibold">{l.name}</span>
-                      </label>
+                      </ChoiceRow>
                     ))}
                     <p className="text-sm text-muted-foreground">{t('doctors.alsoAtHint')}</p>
                   </fieldset>

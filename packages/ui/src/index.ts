@@ -13,6 +13,7 @@ export { ChoiceRow } from '#components/ui/choice-row';
 export { Chip, toneClasses, type Tone, type ChipProps } from '#components/ui/chip';
 export { Tag, type TagProps } from '#components/ui/tag';
 export { Banner, type BannerProps } from '#components/ui/banner';
+export { PatientBanner, AllergyBlock, bannerFields, allergiesInWords, type AllergyState, type BannerAllergy, type BannerClinical, type BannerDeskPatient, type BannerIdentity } from '#components/ui/patient-banner';
 export { Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TableRow, TableState, type SortDirection } from '#components/ui/table';
 export { Card, Section, type CardProps } from '#components/ui/card';
 export { PageMessage, EmptyState, type PageMessageProps } from '#components/ui/page-message';
@@ -21,6 +22,9 @@ export { Sheet, SheetTrigger, SheetContent, SheetTitle, SheetDescription } from 
 export { SplitLayout } from '#components/ui/split-layout';
 export { Field, FieldMarks, type FieldProps, type FieldMark } from '#components/ui/field';
 export { ErrorSummary, type ErrorSummaryProps } from '#components/ui/error-summary';
+export { AccountMenu, type AccountMenuProps } from '#components/ui/account-menu';
+export { NavRailItem, type NavRailItemProps } from '#components/ui/nav-rail-item';
+export { Tooltip, type TooltipProps } from '#components/ui/tooltip';
 // Radix's focus scope (the one Dialog uses), for a panel that is modal only at some widths (the schedule's tablet drawer).
 import { FocusScope as FocusScopePrimitive } from 'radix-ui/internal';
 export const FocusScope = FocusScopePrimitive.FocusScope;

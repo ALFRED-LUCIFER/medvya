@@ -1,5 +1,6 @@
 import type { ReasonCategory } from '../../schedule/domain/booking';
 import type { AppointmentState, ScheduleColumn, VisitType } from '../../schedule/domain/schedule';
+import type { FollowUpDue } from './followUpDue';
 
 // GET /v1/front-desk/board (src/Modules/Scheduling/Medvya.Scheduling.Application/IFrontDeskService.cs). Nonclinical only:
 // the reason is a category, never the patient's words. Instants are UTC; they are shown in the facility's zone.
@@ -23,6 +24,8 @@ export type BoardCard = {
   sex?: 'Female' | 'Male' | 'Other' | null;
   /** A consultation is open for the visit (MDV-P1-100): the doctor's End moves it, the desk has no action. */
   withDoctor?: boolean;
+  /** On a Done card: the doctor's follow-up still to book, date and doctor only (MDV-P1-102). */
+  followUp?: FollowUpDue | null;
 };
 /** leftWithoutBeingSeen: today's patients who left before being seen; they are off the board and never in Done. */
 export type Board = { facilityId: string; timeZone: string; date: string; now: string; cards: BoardCard[]; leftWithoutBeingSeen?: number };

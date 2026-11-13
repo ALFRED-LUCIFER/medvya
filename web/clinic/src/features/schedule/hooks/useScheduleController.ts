@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { useSearchParams } from 'react-router';
 import { keepPreviousData, useMutation, useQuery } from '@tanstack/react-query';
+import { z } from 'zod';
 import type { DaySheet } from '../domain/daySheet';
 import { layoutDay, stepDate } from '../domain/schedule';
 import { agenda, filterColumns, firstFreeSlot, readAddress, weekDays, weekSpan, type ScheduleAddress, type ScheduleView } from '../domain/views';
@@ -42,7 +43,8 @@ export function useScheduleController(facilityId: string, userId: string) {
   };
   const setDate = (next: (requested: string | null) => string | null) => change(a => ({ date: next(a.date) }));
   const setView = (next: ScheduleView) => change(() => ({ view: next }));
-  const [chosen, setChosen] = useState<string | null | undefined>(undefined); // undefined: nothing chosen yet
+  // undefined: nothing chosen yet. A follow-up's Book names its doctor (?doctor=<id>, MDV-P1-102): that column is chosen.
+  const [chosen, setChosen] = useState<string | null | undefined>(() => { const d = params.get('doctor'); return d && z.uuid().safeParse(d).success ? d : undefined; });
 
   // The day answers the calendar list, the zone and "today" in every view; the week view reads its week beside it.
   const query = useQuery({

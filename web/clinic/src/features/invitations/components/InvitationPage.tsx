@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Check, Link2Off, Mail, X } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button } from '@medvya/ui';
+import { Button, PageHeader, PageMessage } from '@medvya/ui';
 import AuthFrame from '../../session/components/AuthFrame';
 import { isAllowed, type InvitationPreview } from '../domain/invitation';
 
@@ -11,20 +11,14 @@ type Props = { languageSwitcher: ReactNode; loading: boolean; failed: boolean; i
 export default function InvitationPage({ languageSwitcher, loading, failed, invitation, onJoin, onRetry }: Props) {
   const { t, formatDate } = useI18n();
   let body;
-  if (loading) body = <p aria-busy="true">{t('invite.loading')}</p>;
-  else if (failed)
-    body = (
-      <div role="alert" className="flex flex-col items-start gap-3">
-        <p>{t('invite.error')}</p>
-        <Button variant="outline" onClick={onRetry}>{t('invite.retry')}</Button>
-      </div>
-    );
+  if (loading) body = <PageMessage kind="busy">{t('invite.loading')}</PageMessage>;
+  else if (failed) body = <PageMessage kind="error" action={<Button variant="outline" onClick={onRetry}>{t('invite.retry')}</Button>}>{t('invite.error')}</PageMessage>;
   else if (!invitation)
     body = (
       <div role="alert" className="flex flex-col items-start gap-2.5">
         <Link2Off className="size-7 text-ink-600" aria-hidden />
-        <h1 className="text-xl font-extrabold">{t('invite.expired.title')}</h1>
-        <p className="text-sm text-muted-foreground">{t('invite.expired.body')}</p>
+        {/* Wraps rather than truncates: nothing loads into this title, and on a phone it must be read whole. */}
+        <PageHeader className="[&_h1]:whitespace-normal" title={t('invite.expired.title')} description={t('invite.expired.body')} />
       </div>
     );
   else {
@@ -34,10 +28,9 @@ export default function InvitationPage({ languageSwitcher, loading, failed, invi
         <span className="inline-flex items-center gap-1.5 self-start rounded-full bg-brand-50 px-2.5 py-1 text-xs font-bold text-brand-700">
           <Mail className="size-4" aria-hidden />{t('signin.invite.tag')}
         </span>
-        <h1 className="text-[28px] font-bold text-brand-950">{t('invite.title', { clinic: invitation.clinic })}</h1>
-        <p className="text-muted-foreground">
-          {invitation.inviter ? t('invite.invitedBy', { name: invitation.inviter, role }) : t('invite.invited', { role })}
-        </p>
+        {/* Wraps rather than truncates: nothing loads into this title, and on a phone it must be read whole. */}
+        <PageHeader className="[&_h1]:whitespace-normal" title={t('invite.title', { clinic: invitation.clinic })}
+          description={invitation.inviter ? t('invite.invitedBy', { name: invitation.inviter, role }) : t('invite.invited', { role })} />
         <section aria-labelledby="invite-capabilities" className="flex flex-col gap-2 rounded-lg bg-muted p-3 text-sm">
           <h2 id="invite-capabilities" className="font-bold">{t('invite.capabilities')}</h2>
           <ul className="flex flex-col gap-1.5">

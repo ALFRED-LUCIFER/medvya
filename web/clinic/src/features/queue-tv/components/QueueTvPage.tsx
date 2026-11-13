@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Bell, BellOff, MonitorX, Radio, WifiOff } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
+import { PageHeader } from '@medvya/ui';
 import type { LiveStatus } from '../../front-desk/domain/board';
 import type { QueueTv, Unpaired } from '../domain/queueTv';
 
@@ -28,7 +29,8 @@ export default function QueueTvPage(props: Props) {
   const { tv } = props;
   return (
     <main className="flex min-h-dvh flex-col gap-6 bg-tv-bg p-6 text-white lg:p-10">
-      <h1 className="sr-only">{t('queueTv.title')}</h1>
+      {/* The TV names itself for screen readers only; the room reads the tokens. */}
+      <PageHeader className="sr-only" title={t('queueTv.title')} />
       {props.unpaired ? <Notice icon={<MonitorX aria-hidden className="size-14" />} title={t(`queueTv.unpaired.${props.unpaired}.title`)} body={t(`queueTv.unpaired.${props.unpaired}.body`)} />
         : props.pairing ? <Notice busy title={t('queueTv.pairing')} />
         : props.failed ? <Notice title={t('queueTv.error.title')} body={t('queueTv.error.body')} />

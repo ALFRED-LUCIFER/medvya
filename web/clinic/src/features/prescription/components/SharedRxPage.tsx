@@ -2,7 +2,7 @@ import type { FormEventHandler, ReactNode } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { CircleAlert, CircleCheck, FileDown, MessageSquare } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Button, Input } from '@medvya/ui';
+import { Button, Input, PageHeader } from '@medvya/ui';
 import AuthFrame from '../../session/components/AuthFrame';
 import { describedBy } from '../../settings/components/fieldStyles';
 import { Field } from '../../settings/components/Field';
@@ -23,8 +23,9 @@ export default function SharedRxPage(p: Props) {
   const invalid = !!p.form.formState.errors.code;
   return (
     <AuthFrame languageSwitcher={p.languageSwitcher}>
-      <section aria-labelledby="shared-rx-title" className="flex flex-col gap-3">
-        <h1 id="shared-rx-title" className="text-xl font-extrabold">{t('sharedRx.title')}</h1>
+      <section aria-label={t('sharedRx.title')} className="flex flex-col gap-3">
+        {/* Wraps rather than truncates: nothing loads into this title, and on a phone it must be read whole. */}
+        <PageHeader className="[&_h1]:whitespace-normal" title={t('sharedRx.title')} />
         <p>{t('sharedRx.intro')}</p>
         <Button type="button" variant={p.codeSent ? 'outline' : 'default'} className="self-start" loading={p.sending} onClick={p.onSendCode}>
           <MessageSquare aria-hidden className="size-4" />{t(p.codeSent ? 'sharedRx.resend' : 'sharedRx.sendCode')}

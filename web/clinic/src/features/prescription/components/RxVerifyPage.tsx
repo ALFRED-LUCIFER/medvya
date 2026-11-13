@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { CircleAlert, ShieldCheck } from 'lucide-react';
 import { ltr, useI18n } from '@medvya/i18n';
+import { PageHeader } from '@medvya/ui';
 import AuthFrame from '../../session/components/AuthFrame';
 import type { RxVerify } from '../domain/authorisation';
 
@@ -15,8 +16,9 @@ export default function RxVerifyPage(p: Props) {
   const r = p.result;
   return (
     <AuthFrame languageSwitcher={p.languageSwitcher}>
-      <section aria-labelledby="rx-verify-title" className="flex flex-col gap-3">
-        <h1 id="rx-verify-title" className="text-xl font-extrabold">{t('rxVerify.title')}</h1>
+      <section aria-label={t('rxVerify.title')} className="flex flex-col gap-3">
+        {/* Wraps rather than truncates: nothing loads into this title, and on a phone it must be read whole. */}
+        <PageHeader className="[&_h1]:whitespace-normal" title={t('rxVerify.title')} />
         {p.loading && <p role="status">{t('rxVerify.loading')}</p>}
         {(p.unknown || p.failed) && <p role="alert" className="flex items-start gap-2 font-bold"><CircleAlert aria-hidden className="mt-0.5 size-5 shrink-0" />{t(p.unknown ? 'rxVerify.unknown' : 'rxVerify.failed')}</p>}
         {r && (

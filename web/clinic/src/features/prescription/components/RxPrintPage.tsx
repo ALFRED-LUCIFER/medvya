@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { FileDown, Printer, ShieldCheck } from 'lucide-react';
 import { ltr, useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
+import { Button, buttonVariants, PageHeader, PageMessage, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
 import { Field } from '../../settings/components/Field';
 import { qrCells, secondLanguages, type RxLayout, type RxPrint, type RxPrintLine, type SecondLanguage } from '../domain/authorisation';
 import { directionOf } from '../domain/prescription';
@@ -24,9 +24,15 @@ type Props = {
  */
 export default function RxPrintPage(p: Props) {
   const { t, formatDate, formatTime, formatCalendarDate } = useI18n();
-  if (p.loading) return <p role="status">{t('rxPrint.loading')}</p>;
-  if (p.notAuthorised) return <div className="flex flex-col gap-3"><p role="alert" className="font-bold">{t(p.cancelled ? 'rxPrint.cancelled' : 'rxPrint.notAuthorised')}</p><Back {...p} /></div>;
-  if (p.failed || !p.print) return <p role="alert" className="font-bold">{t('rxPrint.loadFailed')}</p>;
+  if (p.loading || p.notAuthorised || p.failed || !p.print)
+    return (
+      <div className="flex max-w-[720px] flex-col gap-4">
+        <PageHeader title={t('rxPrint.title')} />
+        {p.loading ? <PageMessage kind="busy">{t('rxPrint.loading')}</PageMessage>
+          : p.notAuthorised ? <PageMessage kind="error" action={<Back {...p} />}>{t(p.cancelled ? 'rxPrint.cancelled' : 'rxPrint.notAuthorised')}</PageMessage>
+          : <PageMessage kind="error">{t('rxPrint.loadFailed')}</PageMessage>}
+      </div>
+    );
   const v = p.print;
   const at = new Date(v.authorisation.authorisedAt);
   const when = `${formatDate(at, v.timeZone)} ${formatTime(at, v.timeZone)}`;
@@ -51,14 +57,14 @@ export default function RxPrintPage(p: Props) {
       {p.second !== 'none' && <p className="text-sm print:hidden">{t('rxPrint.pdfEnglish', { language: t(`rx.lang.${p.second}`) })}</p>}
       {p.pdfProblem && <p role="alert" className="font-bold text-danger-700 print:hidden">{t(p.pdfProblem === 'unsupported' ? 'rxPrint.pdfUnsupported' : 'rxPrint.pdfFailed')}</p>}
 
-      <article aria-labelledby="rx-print-title" className="flex flex-col gap-4 rounded-xl border bg-white p-6 text-black print:rounded-none print:border-0 print:p-0">
-        <header className="flex flex-col gap-1 border-b-2 border-black pb-2">
-          <h1 id="rx-print-title" className="text-xl font-extrabold">{v.clinic}</h1>
+      <article aria-label={v.clinic} className="flex flex-col gap-4 rounded-xl border bg-white p-6 text-black print:rounded-none print:border-0 print:p-0">
+        {/* On paper the clinic name wraps; it is never cut. */}
+        <PageHeader className="border-b-2 border-black pb-2 [&_h1]:whitespace-normal" title={v.clinic}>
           <p className="font-bold">{v.qualifications ? t('rxPrint.doctor', { name: v.doctor, qualifications: v.qualifications }) : v.doctor}</p>
           <p>{t('rxPrint.licence', { number: ltr(v.licenceNumber), authority: v.licenceAuthority })}</p>
           <p>{t('rxPrint.patient', { name: v.patient.fullName, sex: t(`rxPrint.sex.${v.patient.sexAtBirth}`), age: v.patientAge, mrn: ltr(v.patient.mrn), dob: formatCalendarDate(v.patient.dateOfBirth) })}</p>
           <p>{t('rxPrint.number', { number: ltr(v.authorisation.number), version: v.authorisation.versionNo, when, zone: v.timeZone })}</p>
-        </header>
+        </PageHeader>
         <p className="font-bold">
           {v.allergies === 'Listed' ? t('rxPrint.allergies', { list: v.allergySubstances.join(', ') })
             : t(v.allergies === 'NoKnownAllergies' ? 'rxPrint.allergiesNone' : 'rxPrint.allergiesNotRecorded')}

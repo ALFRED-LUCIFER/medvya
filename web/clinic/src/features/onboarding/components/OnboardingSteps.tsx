@@ -11,8 +11,9 @@ import { Field, FieldError, SelectField, TextField, type FormProps } from './Fie
 
 const grid = 'grid gap-4 md:grid-cols-2';
 // A choice drawn as a card or chip: the native input stays (keyboard, screen reader), the label carries the look and the focus ring.
-const card = 'flex min-h-11 cursor-pointer gap-3 rounded-xl border bg-card p-4 text-sm has-[:checked]:border-2 has-[:checked]:border-brand-700 has-[:checked]:bg-brand-50 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-ring';
-const chip = 'inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border bg-card px-4 text-sm font-semibold has-[:checked]:border-brand-700 has-[:checked]:bg-brand-50 has-[:checked]:text-brand-800 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-ring';
+// No fill of its own: the steps sit on the wizard's Card, and a choice is a control, not a card in a card (MDV-P2-059).
+const card = 'flex min-h-11 cursor-pointer gap-3 rounded-xl border p-4 text-sm has-[:checked]:border-2 has-[:checked]:border-brand-700 has-[:checked]:bg-brand-50 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-ring';
+const chip = 'inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border px-4 text-sm font-semibold has-[:checked]:border-brand-700 has-[:checked]:bg-brand-50 has-[:checked]:text-brand-800 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-ring';
 
 type StepProps = FormProps & { country: Country; rules: Rules };
 

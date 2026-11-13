@@ -2,7 +2,7 @@ import type { FormEventHandler, ReactNode } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { Link } from 'react-router';
 import { useI18n } from '@medvya/i18n';
-import { Button, buttonVariants, Input, Label } from '@medvya/ui';
+import { Button, buttonVariants, Input, Label, PageHeader } from '@medvya/ui';
 import { Building2, CircleAlert, KeyRound } from 'lucide-react';
 import { securityInfoUrl, type SignInFailure, type SignInForm } from '../domain/signIn';
 import AuthFrame from './AuthFrame';
@@ -21,10 +21,8 @@ export default function SignInPage({ languageSwitcher, form, failure, onSubmit, 
   const error = form.formState.errors.email;
   return (
     <AuthFrame languageSwitcher={languageSwitcher}>
-      <div className="flex flex-col gap-1.5">
-        <h1 className="text-[28px] font-bold text-brand-950">{t('signin.title')}</h1>
-        <p className="text-[15px] text-muted-foreground">{t('signin.body')}</p>
-      </div>
+      {/* Wraps rather than truncates: nothing loads into this title, and on a phone it must be read whole. */}
+      <PageHeader className="[&_h1]:whitespace-normal" title={t('signin.title')} description={t('signin.body')} />
       {failure === 'failed' && (
         <p role="alert" className="flex items-start gap-2 rounded-lg border border-danger-700 bg-danger-50 p-3 text-sm font-semibold text-danger-700">
           <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />{t('session.failed')}

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { useI18n } from '@medvya/i18n';
-import { Button } from '@medvya/ui';
+import { Button, PageHeader } from '@medvya/ui';
 import { ChevronRight, Store } from 'lucide-react';
 import type { Membership } from '../domain/session';
 import AuthFrame from './AuthFrame';
@@ -25,10 +25,8 @@ export default function FacilityPicker({ displayName, memberships, lastMembershi
   const { t } = useI18n();
   return (
     <AuthFrame languageSwitcher={languageSwitcher}>
-      <div className="flex flex-col gap-1.5">
-        <h1 className="text-[28px] font-bold text-brand-950">{t('signin.loc.title')}</h1>
-        <p className="text-[15px] text-muted-foreground">{t('signin.loc.body')}</p>
-      </div>
+      {/* Wraps rather than truncates: nothing loads into this title, and on a phone it must be read whole. */}
+      <PageHeader className="[&_h1]:whitespace-normal" title={t('signin.loc.title')} description={t('signin.loc.body')} />
       {failed && <p role="alert" className="text-sm font-semibold text-danger-700">{t('session.picker.failed')}</p>}
       {memberships.length === 0
         ? <p role="status">{t('session.picker.none')}</p>

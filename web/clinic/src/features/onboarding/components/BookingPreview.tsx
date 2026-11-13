@@ -1,5 +1,6 @@
 import { CalendarClock, Wallet } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
+import { Card } from '@medvya/ui';
 import { specialtyIdOf, type Mode, type preview, type Rules } from '../domain/onboarding';
 
 type Props = { view: ReturnType<typeof preview>; mode: Mode; currency: Rules['currency'] };
@@ -13,7 +14,7 @@ export default function BookingPreview({ view, mode, currency }: Props) {
   return (
     <div className="flex flex-col gap-3">
       <p className="text-xs font-bold text-muted-foreground">{t('onboarding.preview.label')}</p>
-      <div aria-hidden className="flex flex-col gap-3 rounded-2xl border bg-card p-5 shadow-sm">
+      <Card aria-hidden className="rounded-2xl p-5 shadow-sm">
         <span className="flex size-12 items-center justify-center rounded-xl bg-brand-700 text-lg font-extrabold text-white">{view.initials}</span>
         <strong className="text-lg">{view.name || t('onboarding.preview.unnamed')}</strong>
         <span className="text-sm text-muted-foreground">{[view.city, t(`onboarding.mode.${mode}`)].filter(Boolean).join(' · ')}</span>
@@ -32,7 +33,7 @@ export default function BookingPreview({ view, mode, currency }: Props) {
           ))}
         </div>
         <span className="rounded-lg bg-brand-700 py-2.5 text-center text-sm font-bold text-white">{t('onboarding.preview.book')}</span>
-      </div>
+      </Card>
       <p className="text-xs text-muted-foreground">{t('onboarding.preview.note')}</p>
     </div>
   );

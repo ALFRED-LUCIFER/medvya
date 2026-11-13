@@ -325,7 +325,7 @@ test('a patient who was never seen is booked as a New consultation, unless the d
   await expect(panel).toContainText('Held for you until');
   await panel.getByRole('searchbox', { name: 'Name, MRN, phone or ID' }).fill('Nair');
   await panel.getByRole('button', { name: 'Search' }).click();
-  await panel.getByRole('button', { name: 'D N, 47 y, Male, MRN ending 0002. Choose for this booking' }).click();
+  await panel.getByRole('button', { name: 'Deepak Nair (synthetic), 47 y, Male, MRN 0002, phone 0201. Choose for this booking' }).click();
   await expect(panel).toContainText('Deepak Nair (synthetic) · MRN 000002');
   await expect(panel).toContainText('10:00–10:40'); // held again for the longer first visit
   expect(calls.holds.map(h => h.visitType)).toEqual(['FollowUp', 'NewConsultation']);
@@ -345,7 +345,7 @@ test('where a first visit does not fit the slot, the booking stays a Follow-up i
   const panel = page.getByRole('complementary', { name: 'Book appointment' });
   await panel.getByRole('searchbox', { name: 'Name, MRN, phone or ID' }).fill('Nair');
   await panel.getByRole('button', { name: 'Search' }).click();
-  await panel.getByRole('button', { name: 'D N, 47 y, Male, MRN ending 0002. Choose for this booking' }).click();
+  await panel.getByRole('button', { name: 'Deepak Nair (synthetic), 47 y, Male, MRN 0002, phone 0201. Choose for this booking' }).click();
   await expect(panel).toContainText('Deepak Nair (synthetic) · MRN 000002');
   await expect(panel.getByRole('combobox', { name: 'Visit type' })).toContainText('Follow-up');
   await expect(panel.getByRole('alert')).toHaveCount(0);

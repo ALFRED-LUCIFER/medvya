@@ -19,7 +19,7 @@ journey('J3', {
     await expect(page.getByText(/^Token /)).toContainText(/[A-Z]-\d+/);
     await expectNoAxeViolations(page);
     await page.getByRole('link', { name: 'Back to the board' }).first().click();
-    const card = page.getByRole('region', { name: /^Checked in/ }).getByRole('article', { name: patient.name });
+    const card = page.getByRole('region', { name: /^Ready for doctor/ }).getByRole('article', { name: patient.name }); // nurse intake is off (the default): check-in goes straight to Ready for doctor (#1104)
     await expect(card.getByText('Walk-in', { exact: true })).toBeVisible();
     await expect(card.getByText(/^Token [A-Z]-\d+$/)).toBeVisible();
     await expect(card.getByText('Registration incomplete')).toBeVisible(); // quick-registered at the desk (J3.2)
@@ -128,15 +128,14 @@ journey('J3', {
       await setNurseIntake(browser, false);
     }
   },
-  // MDV-P1-028 / MDV-P2-001 / MDV audit UX-05: in a clinic without the nurse step (the shared database may still hold earlier steps' With nurse visits), the desk marks the patient
+  // MDV-P1-028 / MDV-P2-001 / MDV audit UX-05: in a clinic without the nurse step (the shared database may still hold earlier steps' With nurse visits), check-in puts the patient
   // Ready for doctor and the doctor can start the consultation from the card.
   // shortcut: the doctor sees it on the shared board, not on Today; Doctor Today (D-01) is MDV-P2-002.
   6: async ({ page, browser }) => {
     const patient = syntheticPatient('Revathi', 'Krishnan');
     await signIn(page, joseph);
     await walkIn(page, patient, rao);
-    await page.goto(board);
-    await page.getByRole('article', { name: patient.name }).getByRole('button', { name: 'Ready for doctor' }).click();
+    await page.goto(board); // no nurse step: the walk-in is already Ready for doctor (#1104)
     await expect(page.getByRole('region', { name: /^Ready for doctor/ }).getByRole('article', { name: patient.name })).toBeVisible();
     await expectNoAxeViolations(page);
 

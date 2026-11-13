@@ -490,13 +490,13 @@ test('MDV-P1-104 E-04 · Doctor: a blank Chief complaint holds the nurse\'s text
   const complaint = note(page).getByRole('textbox', { name: /^Chief complaint/ });
   await expect(complaint).toHaveValue(fromNurse.text);
   await expect(complaint).toHaveAccessibleDescription(`From nurse intake Saved by ${nurse} · 19 Oct 2026 10:05`); // a screen reader hears the source on focus
-  await expect(note(page).getByRole('status')).toHaveText('Saved'); // saved like typing, so the server records the source
+  await expect(note(page).getByRole('status')).toHaveText(/^Saved \d\d:\d\d$/); // saved like typing, so the server records the source
   expect(mock.puts.at(-1)!.sections.chiefComplaint).toBe(fromNurse.text);
   expect(mock.note.chiefComplaintSource?.source).toBe('NurseIntake');
   await complaint.fill(`${fromNurse.text}, worse at night`);
   await expect(complaint).toHaveAccessibleDescription(/^From nurse intake · edited by the doctor/);
   await expect.poll(() => mock.note.chiefComplaintSource?.source).toBe('EditedByDoctor');
-  await expect(note(page).getByRole('status')).toHaveText('Saved');
+  await expect(note(page).getByRole('status')).toHaveText(/^Saved \d\d:\d\d$/);
   await expect(complaint).toHaveAccessibleDescription(/^From nurse intake · edited by the doctor/); // the server's answer keeps the mark
 });
 

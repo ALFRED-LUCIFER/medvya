@@ -38,7 +38,10 @@ test('the record shows the completion task; completing it sends address and paye
   await expect(page).toHaveURL(`/patients/directory/${id}/complete`);
 
   await page.getByRole('button', { name: 'Save' }).click();
-  await expect(page.getByText('Add the address, the payer or the emergency contact.')).toBeVisible();
+  // MDV-P2-058: the failed save puts focus on the error summary, which names the field.
+  const summary = page.getByRole('group', { name: 'There is a problem' });
+  await expect(summary).toBeFocused();
+  await expect(summary.getByRole('link')).toHaveText(['House / flat, building: Add the address, the payer or the emergency contact.']);
   expect(saves).toHaveLength(0);
 
   await page.getByLabel('House / flat, building').fill('4 Synthetic Street');
@@ -184,7 +187,8 @@ test('the record offers Book, Check in and Edit details; editing a phone sends o
 
   await page.getByLabel('Mobile', { exact: true }).fill('12');
   await page.getByRole('button', { name: 'Save' }).click();
-  await expect(page.getByText('Check the mobile number: every digit, with or without the country code.')).toBeVisible();
+  await expect(page.getByRole('group', { name: 'There is a problem' })).toBeFocused();
+  await expect(page.getByLabel('Mobile', { exact: true })).toHaveAccessibleDescription('Check the mobile number: every digit, with or without the country code.');
   expect(saves).toHaveLength(0);
 
   await page.getByLabel('Mobile', { exact: true }).fill('+91 90000 00152');

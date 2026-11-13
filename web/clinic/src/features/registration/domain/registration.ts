@@ -86,6 +86,22 @@ export function payerLabel(country: Country, kind: PayerKind | '', field: PayerF
   return (kind === 'PrivateInsurance' ? `registration.payer.${field}.insurance.${country}` : `registration.payer.${field}.${kind}`) as MessageKey;
 }
 
+/** Label key of a field as the form shows it, for the error summary's links (keys tested). */
+export function fieldLabel(field: FormField, country: Country, v: Pick<RegistrationForm, 'otherIdType' | 'payerKind'>, quick: boolean): MessageKey {
+  if (quick && field === quickIdentifier[country].field) return `registration.field.identifier.${quickIdentifier[country].scheme}`;
+  switch (field) {
+    case 'fullName': return country === 'AE' ? 'registration.field.fullName.AE' : 'registration.field.fullName';
+    case 'abha': return 'registration.field.identifier.Abha';
+    case 'otherIdValue': return v.otherIdType === 'Passport' ? 'registration.field.otherIdValue.Passport' : 'registration.field.otherIdValue.AadhaarLast4';
+    case 'guardianName': return `registration.field.guardianName.${country}`;
+    case 'line1': case 'line2': return `registration.field.${field}.${country}`;
+    case 'region': return country === 'IN' ? 'registration.field.state' : 'registration.field.emirate';
+    case 'postalCode': return 'registration.field.pin';
+    case 'payerName': case 'plan': case 'memberNumber': case 'validTo': case 'network': return payerLabel(country, v.payerKind as PayerKind | '', field);
+    default: return `registration.field.${field}` as MessageKey;
+  }
+}
+
 /** Translation key of a stored state/UT or emirate, or null for a value outside the list. */
 export function regionKey(country: Country, region: string): MessageKey | null {
   if (country === 'IN') return (indiaStates as readonly string[]).includes(region) ? `registration.state.${region as (typeof indiaStates)[number]}` : null;
@@ -163,6 +179,11 @@ export const stepFields: Record<Exclude<Step, 'review'>, readonly FormField[]> =
   payer: ['payerKind', 'payerName', 'plan', 'memberNumber', 'validTo', 'network'],
   consents: ['consentWhatsApp', 'consentSms', 'consentEmail', 'consentExchange', 'consentPortal', 'consentMarketing'],
 };
+
+/** Quick mode's fields in screen order; the error summary lists only these, in this order. */
+export const quickFields: readonly FormField[] = ['fullName', 'mobile', 'dateOfBirth', 'ageYears', 'sexAtBirth', 'abha', 'emiratesId', 'guardianName', 'guardianRelationship', 'guardianPhone'];
+/** "Complete registration" fields in screen order: phones, address, emergency contact, payer. */
+export const completionFields: readonly FormField[] = [...stepFields.contact, 'ecName', 'ecRelationship', 'ecPhone', ...stepFields.payer];
 
 /** The step that shows a field (for jumping to the first error). Quick mode shows mobile on its single screen. */
 export const stepOf = (field: FormField): Step =>

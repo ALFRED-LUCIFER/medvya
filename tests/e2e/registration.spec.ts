@@ -43,7 +43,7 @@ async function desk(page: Page, { locale = 'en', register }: { locale?: string; 
 async function typeDeepak(page: Page) {
   await page.getByLabel('Full name').fill('Deepak Nair');
   await page.getByLabel('Mobile').fill('+91 90000 00201');
-  await page.getByRole('textbox', { name: 'Date of birth', exact: true }).fill('1979-08-14');
+  await page.getByRole('textbox', { name: 'Date of birth (required)', exact: true }).fill('1979-08-14');
   await page.getByRole('radio', { name: 'Male', exact: true }).check();
 }
 
@@ -131,11 +131,11 @@ test('required fields are announced, and a match found only at save time is show
   await desk(page, { register: () => ({ status: 400, json: { errors: [{ field: 'duplicates', code: 'unresolved' }] } }) });
   await page.getByRole('button', { name: 'Register patient' }).click();
   await expect(page.getByLabel('Full name')).toHaveAttribute('aria-invalid', 'true');
-  await expect(page.getByText('Required.')).toHaveCount(4);
+  await expect(page.locator('main [id$="-error"]', { hasText: 'Required.' })).toHaveCount(4);
 
   await page.getByLabel('Full name').fill('Lakshmi Pillai');
   await page.getByLabel('Mobile').fill('+91 90000 00202');
-  await page.getByRole('textbox', { name: 'Date of birth', exact: true }).fill('1981-02-03');
+  await page.getByRole('textbox', { name: 'Date of birth (required)', exact: true }).fill('1981-02-03');
   await page.getByRole('radio', { name: 'Female', exact: true }).check();
   await page.getByRole('button', { name: 'Register patient' }).click();
   await expect(page.getByText('A possible existing record was found while saving.', { exact: false })).toHaveCount(0); // nothing to show: no candidate
@@ -157,6 +157,37 @@ for (const locale of ['en', 'ar'])
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
       for (const b of await page.locator('main button, main a, main input:not([type=radio]):not([type=checkbox])').all())
         if (await b.isVisible()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+      await page.addScriptTag({ path: axePath });
+      const violations = await page.evaluate(async () =>
+        (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations
+          .map(v => `${v.id} (${v.nodes.length})`));
+      expect(violations).toEqual([]);
+    });
+
+// MDV-P2-058: after an empty submit the error summary takes focus, in view on a phone and a desktop; each link focuses its field.
+// Required is marked in words, never by an asterisk alone; axe is clean with the errors showing (en and ar).
+for (const locale of ['en', 'ar'])
+  for (const width of [375, 1440])
+    test(`an empty submit focuses the error summary, whose links focus the fields (${locale}, ${width}px)`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 800 });
+      await desk(page, { locale });
+      const en = locale === 'en';
+      expect(await page.locator('main form label, main form legend').allTextContents()).not.toContainEqual(expect.stringContaining('*'));
+      await expect(page.locator('#fullName')).toHaveAccessibleName(en ? 'Full name (required)' : /\(مطلوب\)$/);
+      await expect(page.getByRole('group', { name: en ? 'Sex at birth (required)' : /\(مطلوب\)$/ })).toBeVisible();
+
+      await page.locator('form button[type=submit]').click();
+      const summary = page.getByRole('group', { name: en ? 'There is a problem' : 'توجد مشكلة' });
+      await expect(summary).toBeFocused();
+      await expect(summary).toBeInViewport();
+      const links = summary.getByRole('link');
+      if (en) await expect(links).toHaveText(['Full name: Required.', 'Mobile: Required.', 'Date of birth: Required.', 'Sex at birth: Required.']);
+      const ids = ['fullName', 'mobile', 'dateOfBirth', 'sexAtBirth'];
+      await expect(links).toHaveCount(ids.length);
+      for (const [i, id] of ids.entries()) {
+        await links.nth(i).click();
+        await expect(page.locator(`#${id}`)).toBeFocused();
+      }
       await page.addScriptTag({ path: axePath });
       const violations = await page.evaluate(async () =>
         (await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe.run()).violations

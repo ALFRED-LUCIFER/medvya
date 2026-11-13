@@ -174,8 +174,8 @@ export function AddressFields({ f, country, values }: { f: FormProps; country: C
         <>
           <SelectField f={f} name="region" label={t('registration.field.emirate')} options={emirates} optionLabel={e => t(`registration.emirate.${e}`)}
             placeholder={t('registration.choose')} hint={hie ? t('registration.hint.hieSelected', { hie: t(`registration.hie.${hie}`) }) : t('registration.hint.emirate')} />
-          <TextField f={f} name="makani" label={t('registration.field.makani')} ltr inputMode="numeric" hint={t('registration.hint.optional')} />
-          <TextField f={f} name="poBox" label={t('registration.field.poBox')} ltr inputMode="numeric" hint={t('registration.hint.optional')} />
+          <TextField f={f} name="makani" label={t('registration.field.makani')} ltr inputMode="numeric" />
+          <TextField f={f} name="poBox" label={t('registration.field.poBox')} ltr inputMode="numeric" />
         </>
       )}
     </>

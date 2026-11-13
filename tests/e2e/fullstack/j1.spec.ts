@@ -118,13 +118,13 @@ test('J1: a new clinic owner sets up the practice, Medvya approves it, then a pa
     await expect(panel).toContainText('Held for you until');
     await panel.getByRole('link', { name: 'Register a new patient' }).click();
     await page.getByLabel('Full name').fill(patient.name);
-    await page.getByRole('textbox', { name: 'Date of birth', exact: true }).fill(patient.dob);
+    await page.getByRole('textbox', { name: 'Date of birth (required)', exact: true }).fill(patient.dob);
     await page.getByRole('radio', { name: 'Female', exact: true }).check();
     await page.getByRole('button', { name: 'Continue' }).click();
     await page.getByLabel('Mobile').fill(patient.mobile);
     await page.getByRole('button', { name: 'Continue' }).click();
     await page.getByLabel('Emergency contact name').fill(patient.emergency);
-    await page.getByRole('combobox', { name: 'Relationship', exact: true }).click();
+    await page.getByRole('combobox', { name: 'Relationship (required)', exact: true }).click();
     await page.getByRole('option', { name: 'Spouse', exact: true }).click();
     await page.getByLabel('Emergency contact phone').fill(patient.emergencyMobile);
     for (let i = 0; i < 3; i++) await page.getByRole('button', { name: 'Continue' }).click();

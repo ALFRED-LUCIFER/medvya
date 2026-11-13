@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useForm, useWatch, type FieldErrors } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import type { Country } from '@medvya/i18n';
 import {
-  duplicateQuery, emptyForm, formField, isMinor, isoDay, messageFor, registrationSchema, resolves, stepFields, stepOf, steps, toRegisterRequest,
+  duplicateQuery, emptyForm, formField, isMinor, isoDay, messageFor, quickFields, registrationSchema, resolves, stepFields, stepOf, steps, toRegisterRequest,
   type DuplicateDecision, type DuplicateQuery, type DuplicateResolution, type FormField, type RegisterRequest, type RegistrationForm,
   type RegistrationResult, type Step,
 } from '../domain/registration';
@@ -13,6 +13,8 @@ import { forgetKey, type HeldKey, keyFor } from '../../api/services/idempotencyK
 import { ApiError } from '../../patients/services/patientsApi';
 import { checkDuplicates, registerPatient } from '../services/registrationApi';
 import { patientDataGcTime } from '../../patients/hooks/usePatientDirectoryController';
+
+type FormStep = Exclude<Step, 'review'>;
 
 /** Typing pauses this long before the duplicate check runs; each check is audited and rate-limited. */
 export const duplicateCheckDelayMs = 500;
@@ -46,7 +48,9 @@ export function useRegistrationController(country: Country, quick: boolean, scop
   const [today] = useState(() => isoDay(new Date()));
   const schema = useMemo(() => registrationSchema(country, quick, today), [country, quick, today]);
   const [restored] = useState(() => draftFor(scope));
-  const form = useForm<RegistrationForm>({ resolver: zodResolver(schema), defaultValues: restored?.values ?? emptyForm, mode: 'onTouched' });
+  const form = useForm<RegistrationForm>({
+    resolver: zodResolver(schema), defaultValues: restored?.values ?? emptyForm, mode: 'onTouched', shouldFocusError: false, // the error summary takes focus
+  });
   const values = useWatch({ control: form.control }) as RegistrationForm;
   const query = duplicateQuery(values, country, quick);
   const key = JSON.stringify(query);
@@ -54,6 +58,9 @@ export function useRegistrationController(country: Country, quick: boolean, scop
   const debounced = useMemo(() => JSON.parse(debouncedKey) as DuplicateQuery | null, [debouncedKey]);
   const [step, setStep] = useState<Step>(restored?.step ?? 'identity');
   const [reached, setReached] = useState(restored?.reached ?? 0);
+  // Each failed submit or Continue: the error summary takes focus once and lists the errors of the step it happened on (null: quick mode).
+  const [failed, setFailed] = useState<{ count: number; step: FormStep | null }>({ count: 0, step: null });
+  const fail = (s: FormStep | null) => setFailed(f => ({ count: f.count + 1, step: s }));
 
   const duplicates = useQuery({
     queryKey: ['patients', 'duplicates', debounced],
@@ -70,9 +77,14 @@ export function useRegistrationController(country: Country, quick: boolean, scop
     setStep(s);
     setReached(r => Math.max(r, steps.indexOf(s)));
   };
-  const firstErrorStep = (errors: FieldErrors<RegistrationForm>) => {
-    const fields = Object.keys(errors) as FormField[];
-    return steps.find(s => fields.some(f => stepOf(f) === s)) ?? 'identity';
+  const firstErrorStep = (fields: FormField[]): FormStep => {
+    const first = steps.find(s => fields.some(f => stepOf(f) === s));
+    return first && first !== 'review' ? first : 'identity';
+  };
+  const failAt = (fields: FormField[]) => {
+    const s = quick ? null : firstErrorStep(fields);
+    if (s) goTo(s);
+    fail(s);
   };
 
   const saveKey: HeldKey = useRef(null); // one key per submission, kept across retries and taps
@@ -87,12 +99,12 @@ export function useRegistrationController(country: Country, quick: boolean, scop
         const field = formField(e.field, request, country);
         if (field) { form.setError(field, { message: messageFor(field, e.code) }); fields.push(field); }
       }
-      if (!quick && fields.length > 0) goTo(steps.find(s => fields.some(f => stepOf(f) === s)) ?? 'identity');
+      if (fields.length > 0) failAt(fields);
     },
   });
   const submit = form.handleSubmit(
     v => save.mutate(toRegisterRequest(v, country, quick, current.length > 0 ? resolution : null)),
-    errors => { if (!quick) goTo(firstErrorStep(errors)); },
+    errors => failAt(Object.keys(errors) as FormField[]),
   );
 
   // Keep the draft when leaving the screen; a saved or cleared form leaves none.
@@ -106,6 +118,8 @@ export function useRegistrationController(country: Country, quick: boolean, scop
 
   const failure = save.error instanceof ApiError ? save.error : save.error ? new ApiError(0) : null;
   const index = steps.indexOf(step);
+  const errors = form.formState.errors;
+  const summaryShown = failed.count > 0 && (quick || failed.step === step);
   return {
     form,
     /** A draft from an earlier visit to this screen was put back. */
@@ -126,6 +140,13 @@ export function useRegistrationController(country: Country, quick: boolean, scop
     onContinue: async () => {
       if (step === 'review') return;
       if (await form.trigger([...stepFields[step]])) goTo(steps[index + 1]!);
+      else fail(step);
+    },
+    /** After a failed submit: the fields in error on this screen, in screen order; focusKey changes once per failure. */
+    errorSummary: {
+      // RHF renders a failed submit's errors one render after its invalid callback: the submit count moves the key again then.
+      focusKey: `${failed.count}:${form.formState.submitCount}`,
+      fields: summaryShown ? (quick ? quickFields : failed.step ? stepFields[failed.step] : []).filter(f => errors[f]) : [],
     },
     checking: debounced !== null && (duplicates.isFetching || debouncedKey !== key),
     /** The check could not run; saving still re-checks on the server, which refuses an unresolved match. */
@@ -143,7 +164,7 @@ export function useRegistrationController(country: Country, quick: boolean, scop
     result: save.data ?? null as RegistrationResult | null,
     registeredName: save.variables?.fullName ?? '',
     missing: save.variables ? missingParts(save.variables) : [],
-    onRegisterAnother: () => { draft = null; save.reset(); setResolution(null); form.reset(emptyForm); setStep('identity'); setReached(0); },
+    onRegisterAnother: () => { draft = null; save.reset(); setResolution(null); form.reset(emptyForm); setStep('identity'); setReached(0); setFailed({ count: 0, step: null }); },
   };
 }
 

@@ -33,13 +33,13 @@ journey('J1', {
     }));
     await page.goto('/patients/new');
     await page.getByLabel('Full name').fill('Meera Iyer');
-    await page.getByRole('textbox', { name: 'Date of birth', exact: true }).fill('1972-03-14');
+    await page.getByRole('textbox', { name: 'Date of birth (required)', exact: true }).fill('1972-03-14');
     await page.getByRole('radio', { name: 'Female', exact: true }).check();
     await page.getByRole('button', { name: 'Continue' }).click();
     await page.getByLabel('Mobile').fill('+91 90000 00501');
     await page.getByRole('button', { name: 'Continue' }).click();
     await page.getByLabel('Emergency contact name').fill('Arun Iyer');
-    await page.getByRole('combobox', { name: 'Relationship', exact: true }).click();
+    await page.getByRole('combobox', { name: 'Relationship (required)', exact: true }).click();
     await page.getByRole('option', { name: 'Spouse', exact: true }).click();
     await page.getByLabel('Emergency contact phone').fill('+91 90000 00502');
     await page.getByRole('button', { name: 'Continue' }).click();

@@ -1,9 +1,9 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useForm, useWatch, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Country } from '@medvya/i18n';
-import { completionSchema, emptyForm, formField, messageFor, toCompletionRequest, type CompletionRequest, type RegistrationForm } from '../domain/registration';
+import { completionFields, completionSchema, emptyForm, formField, messageFor, toCompletionRequest, type CompletionRequest, type RegistrationForm } from '../domain/registration';
 import { ApiError, fetchPatient } from '../../patients/services/patientsApi';
 import { completeRegistration } from '../services/registrationApi';
 
@@ -15,7 +15,10 @@ export function useCompletionController(patientId: string, country: Country) {
   // The completion schema checks only address and payer, so it parses those fields of the shared registration form;
   // the cast states that, and toCompletionRequest sends nothing else.
   const resolver = useMemo(() => zodResolver(completionSchema(country)) as unknown as Resolver<RegistrationForm>, [country]);
-  const form = useForm<RegistrationForm>({ resolver, defaultValues: emptyForm, mode: 'onTouched' });
+  const form = useForm<RegistrationForm>({ resolver, defaultValues: emptyForm, mode: 'onTouched', shouldFocusError: false }); // the error summary takes focus
+  // Each failed save (the client's check or the server's): the error summary takes focus once.
+  const [failures, setFailures] = useState(0);
+  const fail = () => setFailures(n => n + 1);
   const values = useWatch({ control: form.control }) as RegistrationForm;
   const queryClient = useQueryClient();
 
@@ -29,10 +32,12 @@ export function useCompletionController(patientId: string, country: Country) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['patients'] }),
     onError: error => {
       if (!(error instanceof ApiError) || error.status !== 400) return;
+      let shown = false;
       for (const e of error.errors) {
         const field = formField(e.field, { identifiers: [] }, country);
-        if (field) form.setError(field, { message: messageFor(field, e.code) });
+        if (field) { form.setError(field, { message: messageFor(field, e.code) }); shown = true; }
       }
+      if (shown) fail();
     },
   });
 
@@ -43,7 +48,9 @@ export function useCompletionController(patientId: string, country: Country) {
     values,
     loading: record.isPending,
     saving: save.isPending,
-    onSubmit: form.handleSubmit(v => { if (record.data) save.mutate(toCompletionRequest(v, country)); }),
+    onSubmit: form.handleSubmit(v => { if (record.data) save.mutate(toCompletionRequest(v, country)); }, fail),
+    /** After a failed save: the fields in error, in screen order; focusKey changes once per failure. */
+    errorSummary: { focusKey: failures, fields: failures > 0 ? completionFields.filter(f => form.formState.errors[f]) : [] },
     // After "changed": drop what was typed and read the record again, so the next save starts from what the other person saved.
     onReload: () => { save.reset(); form.reset(emptyForm); void record.refetch(); },
     status: save.data?.status ?? null,

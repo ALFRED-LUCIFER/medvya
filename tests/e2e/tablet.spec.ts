@@ -83,7 +83,7 @@ test.describe('touch tablet', () => {
     await page.getByLabel('Full name').tap();
     await page.keyboard.type('Kavya Iyer');
     await page.getByLabel('Mobile').fill('+91 90000 00202');
-    await page.getByRole('textbox', { name: 'Date of birth', exact: true }).fill('1990-02-03');
+    await page.getByRole('textbox', { name: 'Date of birth (required)', exact: true }).fill('1990-02-03');
     await page.getByRole('radio', { name: 'Female', exact: true }).tap();
     await page.getByRole('button', { name: 'Register patient' }).tap();
     await expect(page.getByRole('heading', { name: 'Kavya Iyer is registered' })).toBeVisible();

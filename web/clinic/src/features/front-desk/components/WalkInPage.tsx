@@ -113,7 +113,11 @@ export default function WalkInPage(p: Props) {
             </div>
           )}
         </div>
-        <Button type="submit" className="self-start" disabled={!p.canConfirm} loading={p.saving}>{t('walkIn.confirm')}</Button>
+        {/* Disabled until a patient is chosen, and says so in words beside it (MDV-P2-058). */}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <Button type="submit" disabled={!p.canConfirm} loading={p.saving} aria-describedby={p.patientId ? undefined : 'walk-in-confirm-reason'}>{t('walkIn.confirm')}</Button>
+          {!p.patientId && <p id="walk-in-confirm-reason" className="text-body text-muted-foreground">{t('walkIn.confirmReason')}</p>}
+        </div>
       </form>
     </PageContainer>
   );

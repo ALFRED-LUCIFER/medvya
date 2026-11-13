@@ -153,7 +153,6 @@
     "web/clinic/src/features/onboarding/components/Fields.tsx": 1,
     "web/clinic/src/features/patient360/components/PregnancyCard.tsx": 1,
     "web/clinic/src/features/patients/components/PatientRecord.tsx": 1,
-    "web/clinic/src/features/registration/components/FormFields.tsx": 1,
     "web/clinic/src/features/settings/components/Field.tsx": 1
   },
   "localCard": {

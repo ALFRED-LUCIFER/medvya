@@ -395,7 +395,7 @@ test('registering a new patient from the booking panel comes back to the held sl
   await expect(page.getByText('Quick (busy desk): the minimum safe fields')).toBeVisible();
   await page.getByLabel('Full name').fill('Deepak Nair');
   await page.getByLabel('Mobile').fill('+91 90000 00201');
-  await page.getByRole('textbox', { name: 'Date of birth', exact: true }).fill('1979-08-14');
+  await page.getByRole('textbox', { name: 'Date of birth (required)', exact: true }).fill('1979-08-14');
   await page.getByRole('radio', { name: 'Male', exact: true }).check();
   await page.getByRole('button', { name: 'Register patient' }).click();
   await expect(page.getByRole('heading', { name: 'Deepak Nair is registered' })).toBeVisible();

@@ -2,41 +2,30 @@ import type { ReactNode } from 'react';
 import { Controller, type Control, type FieldErrors, type UseFormRegister } from 'react-hook-form';
 import { CircleAlert } from 'lucide-react';
 import { useI18n } from '@medvya/i18n';
-import { Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
-import { errorCode, sexes, type FormField, type RegistrationForm } from '../domain/registration';
-
-export const Required = () => {
-  const { t } = useI18n();
-  return <span className="text-danger-700" aria-hidden>{t('registration.requiredMark')}</span>;
-};
-
-export function FieldError({ id, code }: { id: string; code: string | undefined }) {
-  const { t } = useI18n();
-  if (!code) return null;
-  return (
-    <p id={id} className="flex items-center gap-1.5 text-sm font-semibold text-danger-700">
-      <CircleAlert className="size-4 shrink-0" aria-hidden />{t(`registration.error.${errorCode(code)}`)}
-    </p>
-  );
-}
-
-type InputA11y = { id: string; 'aria-invalid'?: true; 'aria-describedby'?: string; 'aria-required'?: true };
-
-export function Field({ id, label, required = false, error, hint, wide = false, children }: {
-  id: string; label: string; required?: boolean; error?: string; hint?: ReactNode; wide?: boolean; children: (a: InputA11y) => ReactNode;
-}) {
-  const described = [hint && `${id}-hint`, error && `${id}-error`].filter(Boolean).join(' ') || undefined;
-  return (
-    <div className={wide ? 'flex flex-col gap-1.5 md:col-span-2' : 'flex flex-col gap-1.5'}>
-      <Label htmlFor={id}>{label} {required && <Required />}</Label>
-      {children({ id, 'aria-invalid': error ? true : undefined, 'aria-describedby': described, 'aria-required': required || undefined })}
-      {hint && <p id={`${id}-hint`} className="text-xs text-muted-foreground">{hint}</p>}
-      <FieldError id={`${id}-error`} code={error} />
-    </div>
-  );
-}
+import { ErrorSummary, Field, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@medvya/ui';
+import type { Country } from '@medvya/i18n';
+import { errorCode, fieldLabel, sexes, type FormField, type RegistrationForm } from '../domain/registration';
 
 type FormProps = { register: UseFormRegister<RegistrationForm>; control: Control<RegistrationForm>; errors: FieldErrors<RegistrationForm> };
+
+/** The translated message for a field's error code (client schema or server), or undefined when the field is valid. */
+function useFieldError(f: FormProps, name: FormField): string | undefined {
+  const { t } = useI18n();
+  const code = f.errors[name]?.message;
+  return code ? t(`registration.error.${errorCode(code)}`) : undefined;
+}
+
+/** After a failed submit: each field in error as "label: what is wrong", linked to the field; it takes focus when focusKey changes. */
+export function FormErrorSummary({ f, summary, country, values, quick }: {
+  f: FormProps; summary: { focusKey: number; fields: FormField[] }; country: Country; values: RegistrationForm; quick: boolean;
+}) {
+  const { t } = useI18n();
+  const errors = summary.fields.map(field => ({
+    id: field,
+    message: t('field.errorItem', { field: t(fieldLabel(field, country, values, quick)), error: t(`registration.error.${errorCode(f.errors[field]?.message)}`) }),
+  }));
+  return <ErrorSummary title={t('field.errorSummary')} focusKey={summary.focusKey} errors={errors} />;
+}
 
 /** A text input bound to one form field; LTR for numbers and codes so they read the same in Arabic. */
 export function TextField({ f, name, label, required, hint, ltr, wide, type = 'text', inputMode, dir }: {
@@ -44,9 +33,9 @@ export function TextField({ f, name, label, required, hint, ltr, wide, type = 't
   type?: 'text' | 'tel' | 'email' | 'date'; inputMode?: 'numeric' | 'tel' | 'email'; dir?: 'rtl';
 }) {
   return (
-    <Field id={name} label={label} required={required} error={f.errors[name]?.message} hint={hint} wide={wide}>
-      {a => <Input {...a} {...f.register(name)} type={type} inputMode={inputMode} dir={dir ?? (ltr ? 'ltr' : undefined)}
-        lang={dir === 'rtl' ? 'ar' : undefined} autoComplete="off" spellCheck={false} />}
+    <Field id={name} label={label} required={required} error={useFieldError(f, name)} hint={hint} className={wide ? 'md:col-span-2' : undefined}>
+      <Input {...f.register(name)} type={type} inputMode={inputMode} dir={dir ?? (ltr ? 'ltr' : undefined)}
+        lang={dir === 'rtl' ? 'ar' : undefined} autoComplete="off" spellCheck={false} />
     </Field>
   );
 }
@@ -56,36 +45,42 @@ export function SelectField<T extends string>({ f, name, label, required, hint, 
   f: FormProps; name: FormField; label: string; required?: boolean; hint?: ReactNode; options: readonly T[];
   optionLabel: (value: T) => string; placeholder: string; wide?: boolean;
 }) {
-  const error = f.errors[name]?.message;
+  const error = useFieldError(f, name);
   return (
-    <Field id={name} label={label} required={required} error={error} hint={hint} wide={wide}>
-      {a => (
-        <Controller control={f.control} name={name} render={({ field }) => (
-          <Select value={field.value as string} onValueChange={field.onChange}>
-            <SelectTrigger {...a} className="w-full" onBlur={field.onBlur}><SelectValue placeholder={placeholder} /></SelectTrigger>
-            <SelectContent>{options.map(o => <SelectItem key={o} value={o}>{optionLabel(o)}</SelectItem>)}</SelectContent>
-          </Select>
-        )} />
-      )}
-    </Field>
+    <Controller control={f.control} name={name} render={({ field }) => (
+      <Select value={field.value as string} onValueChange={field.onChange}>
+        <Field id={name} label={label} required={required} error={error} hint={hint} className={wide ? 'md:col-span-2' : undefined}>
+          <SelectTrigger className="w-full" onBlur={field.onBlur}><SelectValue placeholder={placeholder} /></SelectTrigger>
+        </Field>
+        <SelectContent>{options.map(o => <SelectItem key={o} value={o}>{optionLabel(o)}</SelectItem>)}</SelectContent>
+      </Select>
+    )} />
   );
 }
 
+/** Radio buttons, so a fieldset rather than a Field; the same words and error styling as Field. The first radio carries the id the error summary links to. */
 export function SexField({ f }: { f: FormProps }) {
   const { t } = useI18n();
-  const error = f.errors.sexAtBirth?.message;
+  const error = useFieldError(f, 'sexAtBirth');
   return (
-    <fieldset aria-describedby={error ? 'sexAtBirth-error' : undefined} className="flex flex-col gap-2">
-      <legend className="mb-2 text-sm font-bold">{t('registration.field.sexAtBirth')} <Required /></legend>
+    <fieldset aria-describedby={error ? 'sexAtBirth-error' : undefined} className="flex min-w-0 flex-col gap-1.5">
+      <legend className="mb-1.5 text-label">
+        {t('registration.field.sexAtBirth')} <span className="font-normal text-muted-foreground">{t('field.required')}</span>
+      </legend>
       <div className="flex flex-wrap gap-2">
-        {sexes.map(s => (
+        {sexes.map((s, i) => (
           <label key={s} className="flex min-h-11 cursor-pointer items-center gap-2 rounded-md border border-input px-3 has-[:checked]:border-brand-700 has-[:checked]:bg-accent">
-            <input type="radio" value={s} {...f.register('sexAtBirth')} aria-invalid={error ? true : undefined} className="size-4 accent-brand-700" />
+            <input id={i === 0 ? 'sexAtBirth' : undefined} type="radio" value={s} {...f.register('sexAtBirth')} aria-invalid={error ? true : undefined}
+              className="size-4 accent-brand-700" />
             {t(`patients.sex.${s}`)}
           </label>
         ))}
       </div>
-      <FieldError id="sexAtBirth-error" code={error} />
+      {error && (
+        <p id="sexAtBirth-error" className="flex items-start gap-1.5 text-label text-danger-text">
+          <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />{error}
+        </p>
+      )}
     </fieldset>
   );
 }

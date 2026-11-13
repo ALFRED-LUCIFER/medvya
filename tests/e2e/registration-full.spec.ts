@@ -36,6 +36,13 @@ async function choose(page: Page, label: string, option: string) {
 }
 
 const next = (page: Page) => page.getByRole('button', { name: 'Continue' }).click();
+// MDV-P2-058: a failed Continue or save puts focus on the error summary, whose links name each field and what is wrong.
+const summary = (page: Page) => page.getByRole('group', { name: 'There is a problem' });
+async function expectSummary(page: Page, items: string[]) {
+  await expect(summary(page)).toBeFocused();
+  await expect(summary(page)).toBeInViewport();
+  await expect(summary(page).getByRole('link')).toHaveText(items);
+}
 
 test('India: full registration in steps, with Aadhaar last 4 only, the PIN rule and the payer, saved once from Review', async ({ page }) => {
   const saves = await desk(page, 'IN');
@@ -43,13 +50,16 @@ test('India: full registration in steps, with Aadhaar last 4 only, the PIN rule 
   await expect(page.getByText('Verify with ABHA · coming later.')).toBeVisible();
 
   await page.getByLabel('Full name').fill('Lakshmi Pillai');
-  await page.getByRole('textbox', { name: 'Date of birth', exact: true }).fill('1984-05-09');
+  await page.getByRole('textbox', { name: 'Date of birth (required)', exact: true }).fill('1984-05-09');
   await page.getByRole('radio', { name: 'Female', exact: true }).check();
-  await page.getByLabel('ABHA number (optional)').fill('91-0000-0000-0411');
+  await page.getByLabel('ABHA number', { exact: true }).fill('91-0000-0000-0411');
   await choose(page, 'Other ID type', 'Aadhaar (last 4 only)');
   await page.getByLabel('Last 4 digits of Aadhaar').fill('0000 1111 2222');
   await next(page);
-  await expect(page.getByText('Enter only the last 4 digits. The full Aadhaar number is never stored.')).toBeVisible();
+  await expectSummary(page, ['Last 4 digits of Aadhaar: Enter only the last 4 digits. The full Aadhaar number is never stored.']);
+  await expect(page.getByLabel('Last 4 digits of Aadhaar')).toHaveAccessibleDescription('Enter only the last 4 digits. The full Aadhaar number is never stored.');
+  await summary(page).getByRole('link').click();
+  await expect(page.getByLabel('Last 4 digits of Aadhaar')).toBeFocused();
   await page.getByLabel('Last 4 digits of Aadhaar').fill('0411');
   await next(page);
 
@@ -61,23 +71,23 @@ test('India: full registration in steps, with Aadhaar last 4 only, the PIN rule 
   await choose(page, 'State / UT', 'Kerala');
   await page.getByLabel('PIN code').fill('68200');
   await next(page);
-  await expect(page.getByText('PIN code must be 6 digits')).toBeVisible();
+  await expectSummary(page, ['PIN code: PIN code must be 6 digits']);
   await page.getByLabel('PIN code').fill('682001');
   await next(page);
 
   // Family & emergency (MDV-P1-020): the emergency contact is required for full registration; an adult needs no guardian.
   await expect(page.getByText('Not required · adult.')).toBeVisible();
   await next(page);
-  await expect(page.getByText('Required.')).toBeVisible();
+  await expectSummary(page, ['Emergency contact name: Required.', 'Relationship: Required.', 'Emergency contact phone: Required.']);
   await page.getByLabel('Emergency contact name').fill('Suresh Pillai');
-  await choose(page, 'Relationship', 'Spouse');
+  await choose(page, 'Relationship (required)', 'Spouse');
   await page.getByLabel('Emergency contact phone').fill('+91 90000 00412');
   await expect(page.getByText('Emergency contacts are not given portal access.', { exact: false })).toBeVisible();
   await next(page);
 
   await choose(page, 'Payment type', 'Insurance');
   await page.getByLabel('Insurer').fill('Synthetic Health');
-  await page.getByLabel('TPA (optional)').fill('Synthetic TPA');
+  await page.getByLabel('TPA', { exact: true }).fill('Synthetic TPA');
   await page.getByLabel('Policy / member number').fill('SYN-23-000411-01');
   await next(page);
 
@@ -130,10 +140,10 @@ test('UAE: Arabic name typed right to left, an expired Emirates ID warns, the em
   await expect(arabic).toHaveAttribute('dir', 'rtl');
   await arabic.fill('فاطمة المنصوري');
   await expect(page.locator('aside p[dir="rtl"]')).toHaveText('فاطمة المنصوري'); // preview card
-  await page.getByRole('textbox', { name: 'Date of birth', exact: true }).fill('1988-02-03');
+  await page.getByRole('textbox', { name: 'Date of birth (required)', exact: true }).fill('1988-02-03');
   await page.getByRole('radio', { name: 'Female', exact: true }).check();
   await next(page);
-  await expect(page.getByText('Enter the Emirates ID, or a passport for visitors.')).toBeVisible();
+  await expectSummary(page, ['Emirates ID: Enter the Emirates ID, or a passport for visitors.']);
   await page.getByLabel('Emirates ID', { exact: true }).fill('784-1988-123');
   await next(page);
   await expect(page.getByText('Format 784-YYYY-NNNNNNN-N').last()).toBeVisible();
@@ -148,7 +158,7 @@ test('UAE: Arabic name typed right to left, an expired Emirates ID warns, the em
   await expect(page.getByText('Health information exchange for this emirate: NABIDH. No connection is made at registration.')).toBeVisible();
   await next(page);
   await page.getByLabel('Emergency contact name').fill('Ahmed Al Mansoori');
-  await choose(page, 'Relationship', 'Spouse');
+  await choose(page, 'Relationship (required)', 'Spouse');
   await page.getByLabel('Emergency contact phone').fill('050 000 0459');
   await next(page);
   await next(page); // payer left for later
@@ -210,19 +220,19 @@ test('a minor needs a guardian before saving, in quick mode too, and the guardia
   await expect(page.getByRole('heading', { name: 'Identity', exact: true, level: 2 })).toBeVisible();
   await page.getByLabel('Full name').fill('Arjun Nair');
   await page.getByLabel('Mobile').fill('+91 90000 00413');
-  await page.getByRole('textbox', { name: 'Date of birth', exact: true }).fill('2016-05-01');
+  await page.getByRole('textbox', { name: 'Date of birth (required)', exact: true }).fill('2016-05-01');
   await page.getByRole('radio', { name: 'Male', exact: true }).check();
   await expect(page.getByText('Required: the patient is under 18.')).toBeVisible();
   await page.getByRole('button', { name: 'Register patient' }).click();
-  await expect(page.getByText('A guardian is required: the patient is under 18.')).toBeVisible();
+  await expectSummary(page, ['Guardian (if under 18): A guardian is required: the patient is under 18.']);
   expect(saves).toHaveLength(0);
 
   await page.getByLabel('Guardian (if under 18)').fill('Ravi Nair');
   // UX-10: a child's guardian is chosen from parents and family, never spouse or child.
-  await page.getByRole('combobox', { name: "Guardian's relationship", exact: true }).click();
+  await page.getByRole('combobox', { name: "Guardian's relationship (required)", exact: true }).click();
   await expect(page.getByRole('option', { name: 'Spouse' })).toHaveCount(0);
   await page.keyboard.press('Escape');
-  await choose(page, "Guardian's relationship", 'Father');
+  await choose(page, "Guardian's relationship (required)", 'Father');
   await page.getByLabel("Guardian's phone").fill('+91 90000 00414');
   await page.getByRole('button', { name: 'Register patient' }).click();
   await expect(page.getByRole('heading', { name: 'Arjun Nair is registered' })).toBeVisible();

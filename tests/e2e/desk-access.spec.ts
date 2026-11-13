@@ -145,7 +145,7 @@ test('a quick registration by keyboard alone', async ({ page }) => {
   await page.keyboard.type('Kavya Iyer');
   await tabTo(page, page.getByLabel('Mobile'));
   await page.keyboard.type('+91 90000 00202');
-  await tabTo(page, page.getByRole('textbox', { name: 'Date of birth', exact: true }));
+  await tabTo(page, page.getByRole('textbox', { name: 'Date of birth (required)', exact: true }));
   await page.keyboard.type('1990-02-03');
   // A radio group is one tab stop; the arrow keys choose within it.
   const sex = page.getByRole('radio');

@@ -27,7 +27,7 @@ test('a weekly series: the review shows the conflict, the desk moves it, four vi
     await page.getByRole('link', { name: 'New patient: quick registration' }).click();
     await page.getByLabel('Full name').fill(patient.name);
     await page.getByLabel('Mobile').fill(patient.mobile);
-    await page.getByRole('textbox', { name: 'Date of birth', exact: true }).fill(patient.dob);
+    await page.getByRole('textbox', { name: 'Date of birth (required)', exact: true }).fill(patient.dob);
     await page.getByRole('radio', { name: 'Female', exact: true }).check();
     await page.getByRole('button', { name: 'Register patient' }).click();
     await expect(page.getByRole('link', { name: 'Check in now (walk-in)' })).toBeVisible();

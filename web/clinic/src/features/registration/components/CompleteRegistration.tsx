@@ -5,8 +5,8 @@ import { useI18n, type Country } from '@medvya/i18n';
 import { Button, buttonVariants, cn, PageContainer, PageHeader } from '@medvya/ui';
 import type { RegistrationStatus } from '../../patients/domain/directory';
 import PatientsMessage from '../../patients/components/PatientsMessage';
-import type { RegistrationForm } from '../domain/registration';
-import { TextField } from './FormFields';
+import type { FormField, RegistrationForm } from '../domain/registration';
+import { FormErrorSummary, TextField } from './FormFields';
 import { AddressFields, EmergencyContactFields, PayerStep } from './RegistrationSteps';
 
 type Props = {
@@ -16,6 +16,8 @@ type Props = {
   loading: boolean;
   saving: boolean;
   onSubmit: () => void;
+  /** After a failed save: the fields in error, in screen order; focusKey changes once per failure. */
+  errorSummary: { focusKey: number; fields: FormField[] };
   onReload: () => void;
   /** Set after a save: Complete closes the desk's completion task. */
   status: RegistrationStatus | null;
@@ -51,6 +53,7 @@ export default function CompleteRegistration(p: Props) {
         </p>
       ) : (
         <form noValidate onSubmit={e => { e.preventDefault(); p.onSubmit(); }} className="flex flex-col gap-5">
+          <FormErrorSummary f={f} summary={p.errorSummary} country={p.country} values={p.values} quick={false} />
           <section aria-labelledby="complete-phones" className="flex flex-col gap-4 rounded-xl border bg-card p-4">
             <h2 id="complete-phones" className="text-base font-extrabold">{t('registration.complete.phones')}</h2>
             <p className="text-sm text-muted-foreground">{t('registration.complete.phones.note')}</p>

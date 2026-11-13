@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { catalogs, loadCatalog, type Country } from '@medvya/i18n';
 import {
-  ageOn, completionSchema, consentPolicyVersion, duplicateQuery, guardianRelationships, isMinor, eidExpired, emirates, emptyForm, errorCode, formField, hieFor, indiaStates, knownErrors, messageFor, payerFields,
+  ageOn, completionSchema, consentPolicyVersion, duplicateQuery, fieldLabel, guardianRelationships, isMinor, eidExpired, emirates, emptyForm, errorCode, formField, hieFor, indiaStates, knownErrors, messageFor, payerFields,
   payerKinds, payerLabel, regionKey, registrationSchema, relationships, resolves, rules, stepOf, toCompletionRequest, toRegisterRequest, type DuplicateCandidate, type RegistrationForm,
 } from './registration';
 
@@ -160,6 +160,11 @@ describe('server errors and display', () => {
       ...(['IN', 'AE'] as const).flatMap(c => payerKinds[c].flatMap(k => payerFields(c, k).map(f => payerLabel(c, k, f)))),
       ...indiaStates.map(s => regionKey('IN', s)), ...emirates.map(e => regionKey('AE', e)),
       ...[...rules.IN, ...rules.AE].map(r => `registration.rules.${r}`),
+      // Every field that can carry an error has a label for the error summary, in both countries, modes, ID types and payer types.
+      ...(['IN', 'AE'] as const).flatMap(c => [true, false].flatMap(quick => ['AadhaarLast4', 'Passport'].flatMap(otherIdType => payerKinds[c].flatMap(payerKind =>
+        (Object.keys(emptyForm) as (keyof RegistrationForm)[]).filter(f => !f.startsWith('consent') && f !== 'ageInstead')
+          .filter(f => !['payerName', 'plan', 'memberNumber', 'validTo', 'network'].includes(f) || (payerFields(c, payerKind) as readonly string[]).includes(f))
+          .map(f => fieldLabel(f, c, { otherIdType, payerKind }, quick)))))),
     ];
     for (const locale of ['en', 'hi', 'ar'] as const)
       expect(keys.filter(k => !k || !(k in catalogs[locale]!)), locale).toEqual([]);

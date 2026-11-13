@@ -7,12 +7,13 @@ import { useI18n, type Country } from '@medvya/i18n';
 import { Button, cn, PageContainer, PageHeader } from '@medvya/ui';
 import PatientsMessage from '../../patients/components/PatientsMessage';
 import {
-  identifierInputs, steps, type DuplicateCandidate, type DuplicateDecision, type RegistrationForm, type RegistrationResult, type Step,
+  identifierInputs, steps, type DuplicateCandidate, type FormField, type DuplicateDecision, type RegistrationForm, type RegistrationResult, type Step,
 } from '../domain/registration';
 import DuplicateReview from './DuplicateReview';
 import RegistrationSidePanel from './RegistrationSidePanel';
 import RegistrationSuccess from './RegistrationSuccess';
 import ConsentsStep, { TreatmentConsent } from './ConsentsStep';
+import { FormErrorSummary } from './FormFields';
 import { ContactStep, FamilyStep, IdentityStep, PayerStep, QuickFields, ReviewStep } from './RegistrationSteps';
 
 type Props = {
@@ -30,6 +31,8 @@ type Props = {
   onGoTo: (s: Step) => void;
   onBack: () => void;
   onContinue: () => void;
+  /** After a failed submit or Continue: the fields in error on this screen; focusKey changes once per failure. */
+  errorSummary: { focusKey: number; fields: FormField[] };
   checking: boolean;
   checkFailed: boolean;
   candidates: DuplicateCandidate[];
@@ -70,12 +73,13 @@ type Props = {
 export default function Registration(p: Props) {
   const { t, formatCalendarDate } = useI18n();
   const heading = useRef<HTMLHeadingElement>(null);
-  const shownStep = useRef(p.step);
+  const shown = useRef({ step: p.step, failure: p.errorSummary.focusKey });
   useEffect(() => {
-    // Moving between steps puts focus on the new step's heading, so keyboard and screen-reader users start at its top.
-    if (shownStep.current !== p.step) heading.current?.focus();
-    shownStep.current = p.step;
-  }, [p.step]);
+    // Moving between steps puts focus on the new step's heading, so keyboard and screen-reader users start at its top;
+    // a failed save that moves back to a step leaves focus on the error summary instead.
+    if (shown.current.step !== p.step && shown.current.failure === p.errorSummary.focusKey) heading.current?.focus();
+    shown.current = { step: p.step, failure: p.errorSummary.focusKey };
+  }, [p.step, p.errorSummary.focusKey]);
 
   // "Register another" puts the cursor in the first field, so a busy desk can type the next patient without touching the mouse.
   const hadResult = useRef(false);
@@ -122,6 +126,7 @@ export default function Registration(p: Props) {
       )}
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
         <form noValidate onSubmit={e => { e.preventDefault(); if (atReview) p.onSubmit(); else p.onContinue(); }} className="flex min-w-0 flex-col gap-5">
+          <FormErrorSummary f={f} summary={p.errorSummary} country={p.country} values={p.values} quick={p.quick} />
           {step && (
             <ol aria-label={t('registration.steps.label')} className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
               {steps.map((s, i) => {

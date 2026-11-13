@@ -41,6 +41,12 @@ public sealed class AuditEvent
 /// Purposes of use (MDV-P2-024): every audited read and write records one, and only these exist. Operations is running the practice
 /// (schedules, staff, settings); support is Medvya's own work on the tenant (provisioning, flags, terms).
 /// </summary>
+/// <summary>
+/// Events with no tenant (a signed-in caller refused before any facility is chosen) go in one reserved "platform" chain of the same ledger:
+/// same hash chain, row-level security and digests, and no practice can read it. The id is never a real tenant's.
+/// </summary>
+public static class PlatformTenant { public static readonly Guid Id = Guid.Empty; }
+
 public static class AuditPurpose
 {
     public const string Treatment = "treatment", Registration = "registration", Billing = "billing", Audit = "audit", Operations = "operations", Support = "support";

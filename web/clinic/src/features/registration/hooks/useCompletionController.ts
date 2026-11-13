@@ -50,7 +50,7 @@ export function useCompletionController(patientId: string, country: Country) {
     saving: save.isPending,
     onSubmit: form.handleSubmit(v => { if (record.data) save.mutate(toCompletionRequest(v, country)); }, fail),
     /** After a failed save: the fields in error, in screen order; focusKey changes once per failure. */
-    errorSummary: { focusKey: failures, fields: failures > 0 ? completionFields.filter(f => form.formState.errors[f]) : [] },
+    errorSummary: { focusKey: `${failures}:${form.formState.submitCount}`, fields: failures > 0 ? completionFields.filter(f => form.formState.errors[f]) : [] },
     // After "changed": drop what was typed and read the record again, so the next save starts from what the other person saved.
     onReload: () => { save.reset(); form.reset(emptyForm); void record.refetch(); },
     status: save.data?.status ?? null,

@@ -17,7 +17,7 @@ type Props = {
   saving: boolean;
   onSubmit: () => void;
   /** After a failed save: the fields in error, in screen order; focusKey changes once per failure. */
-  errorSummary: { focusKey: number; fields: FormField[] };
+  errorSummary: { focusKey: string; fields: FormField[] };
   onReload: () => void;
   /** Set after a save: Complete closes the desk's completion task. */
   status: RegistrationStatus | null;

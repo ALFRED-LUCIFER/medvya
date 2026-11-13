@@ -32,7 +32,7 @@ type Props = {
   onBack: () => void;
   onContinue: () => void;
   /** After a failed submit or Continue: the fields in error on this screen; focusKey changes once per failure. */
-  errorSummary: { focusKey: number; fields: FormField[] };
+  errorSummary: { focusKey: string; fields: FormField[] };
   checking: boolean;
   checkFailed: boolean;
   candidates: DuplicateCandidate[];

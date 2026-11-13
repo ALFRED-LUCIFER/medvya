@@ -141,7 +141,7 @@ for (const name of ['iPad (gen 7)', 'iPad Pro 11', 'Galaxy Tab S4'].flatMap(d =>
         await page.goto('/patients/new?mode=quick');
         await page.getByLabel(t(locale, 'registration.field.fullName')).fill('Kavya Iyer');
         await page.getByLabel(t(locale, 'registration.field.mobile')).fill('+91 90000 00202');
-        await page.getByRole('textbox', { name: t(locale, 'registration.field.dateOfBirth'), exact: true }).fill('1990-02-03');
+        await page.getByRole('textbox', { name: `${t(locale, 'registration.field.dateOfBirth')} ${t(locale, 'field.required')}`, exact: true }).fill('1990-02-03');
         await page.getByRole('radio', { name: t(locale, 'patients.sex.Female'), exact: true }).tap();
         expect(await problems(page)).toEqual([]);
         await shot('registration');

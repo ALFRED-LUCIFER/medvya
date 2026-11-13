@@ -144,7 +144,8 @@ export function useRegistrationController(country: Country, quick: boolean, scop
     },
     /** After a failed submit: the fields in error on this screen, in screen order; focusKey changes once per failure. */
     errorSummary: {
-      focusKey: failed.count,
+      // RHF renders a failed submit's errors one render after its invalid callback: the submit count moves the key again then.
+      focusKey: `${failed.count}:${form.formState.submitCount}`,
       fields: summaryShown ? (quick ? quickFields : failed.step ? stepFields[failed.step] : []).filter(f => errors[f]) : [],
     },
     checking: debounced !== null && (duplicates.isFetching || debouncedKey !== key),

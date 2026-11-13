@@ -84,7 +84,7 @@ test('create account: two steps feed the setup, the email becomes the login hint
   // The sign-in page also has a Continue button: wait for the sign-up step before pressing it.
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Your practice');
   await page.getByRole('button', { name: 'Continue' }).click();
-  await expect(page.getByText('Fill this in to continue.')).toHaveCount(2); // practice name and city
+  await expect(page.locator('[id$="-error"]', { hasText: 'Fill this in to continue.' })).toHaveCount(2); // practice name and city, under each field
   await page.getByRole('radio', { name: /United Arab Emirates/ }).check();
   await page.getByLabel('Practice name').fill('Lakeside Clinic (synthetic)');
   await page.getByRole('textbox', { name: 'Emirate' }).fill('Abu Dhabi');

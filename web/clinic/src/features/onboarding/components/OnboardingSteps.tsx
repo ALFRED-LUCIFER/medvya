@@ -5,9 +5,9 @@ import {
   Trash2, UserPlus, UserRound, ArrowLeftRight, Headset, type LucideIcon,
 } from 'lucide-react';
 import { useI18n, type Country, type MessageKey } from '@medvya/i18n';
-import { Button, Input } from '@medvya/ui';
-import { connections, patientStarts, specialtyIdOf, weekDays, type Rules } from '../domain/onboarding';
-import { Field, FieldError, SelectField, TextField, type FormProps } from './Fields';
+import { Button, Field, Input } from '@medvya/ui';
+import { connections, errorCode, patientStarts, specialtyIdOf, weekDays, type Rules } from '../domain/onboarding';
+import { FieldError, SelectField, TextField, type FormProps } from './Fields';
 
 const grid = 'grid gap-4 md:grid-cols-2';
 // A choice drawn as a card or chip: the native input stays (keyboard, screen reader), the label carries the look and the focus ring.
@@ -17,10 +17,12 @@ const chip = 'inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-ful
 
 type StepProps = FormProps & { country: Country; rules: Rules };
 
-function Group({ legend, children, error }: { legend: string; children: ReactNode; error?: { id: string; code: string | undefined } }) {
+/** A group of radios or checkboxes. The wizard marks optional answers in words (most are required); its first choice carries the id the error summary links to. */
+function Group({ legend, children, error, optional }: { legend: string; children: ReactNode; error?: { id: string; code: string | undefined }; optional?: boolean }) {
+  const { t } = useI18n();
   return (
     <fieldset className="flex flex-col gap-3" aria-describedby={error?.code ? error.id : undefined}>
-      <legend className="mb-1 text-sm font-bold">{legend}</legend>
+      <legend className="mb-1 text-sm font-bold">{legend}{optional && <span className="font-normal text-muted-foreground"> {t('field.optional')}</span>}</legend>
       {children}
       {error && <FieldError id={error.id} code={error.code} />}
     </fieldset>
@@ -40,9 +42,9 @@ export function PracticeStep({ form, country, rules }: StepProps) {
     <div className="flex flex-col gap-6">
       <Group legend={t('onboarding.orgType.legend')} error={{ id: 'orgType-error', code: errors.orgType?.message }}>
         <div className={grid}>
-          {(['Clinic', 'Hospital'] as const).map(k => (
+          {(['Clinic', 'Hospital'] as const).map((k, i) => (
             <label key={k} className={card}>
-              <input type="radio" value={k} {...form.register('orgType')} className="mt-0.5 size-4 accent-brand-700" />
+              <input id={i === 0 ? 'orgType' : undefined} type="radio" value={k} {...form.register('orgType')} className="mt-0.5 size-4 accent-brand-700" />
               <span className="flex flex-col gap-0.5">
                 <strong className="flex items-center gap-1.5"><Building2 className="size-4" aria-hidden />{t(`onboarding.orgType.${k}`)}</strong>
                 <span className="text-muted-foreground">{t(`onboarding.orgType.${k}.hint`)}</span>
@@ -53,9 +55,9 @@ export function PracticeStep({ form, country, rules }: StepProps) {
       </Group>
       <Group legend={t('onboarding.mode.legend')}>
         <div className={grid}>
-          {(['Solo', 'Clinic'] as const).map(m => (
+          {(['Solo', 'Clinic'] as const).map((m, i) => (
             <label key={m} className={card}>
-              <input type="radio" value={m} {...form.register('mode')} className="mt-0.5 size-4 accent-brand-700" />
+              <input id={i === 0 ? 'mode' : undefined} type="radio" value={m} {...form.register('mode')} className="mt-0.5 size-4 accent-brand-700" />
               <span className="flex flex-col gap-0.5">
                 <strong className="flex items-center gap-1.5">
                   {m === 'Solo' ? <Stethoscope className="size-4" aria-hidden /> : <Building2 className="size-4" aria-hidden />}{t(`onboarding.mode.${m}`)}
@@ -74,9 +76,9 @@ export function PracticeStep({ form, country, rules }: StepProps) {
       </div>
       <Group legend={t('onboarding.specialties.legend')} error={{ id: 'specialties-error', code: errors.specialties?.message }}>
         <div className="flex flex-wrap gap-2">
-          {rules.specialties.map(s => specialtyIdOf(s.code)).filter(id => id !== undefined).map(id => (
+          {rules.specialties.map(s => specialtyIdOf(s.code)).filter(id => id !== undefined).map((id, i) => (
             <label key={id} className={chip}>
-              <input type="checkbox" value={id} {...form.register('specialties')} className="size-4 accent-brand-700" />{t(`onboarding.specialty.${id}`)}
+              <input id={i === 0 ? 'specialties' : undefined} type="checkbox" value={id} {...form.register('specialties')} className="size-4 accent-brand-700" />{t(`onboarding.specialty.${id}`)}
             </label>
           ))}
         </div>
@@ -91,7 +93,7 @@ export function PracticeStep({ form, country, rules }: StepProps) {
           </div>
           <Group legend={t('onboarding.attest.legend')} error={{ id: 'attested-error', code: errors.attested?.message }}>
             <label className={chip}>
-              <input type="checkbox" {...form.register('attested')} className="size-4 accent-brand-700" />{t('onboarding.attest.label')}
+              <input id="attested" type="checkbox" {...form.register('attested')} className="size-4 accent-brand-700" />{t('onboarding.attest.label')}
             </label>
           </Group>
           <Note>{t('onboarding.attest.notice')}</Note>
@@ -100,24 +102,24 @@ export function PracticeStep({ form, country, rules }: StepProps) {
       <details className="rounded-xl border p-4" open={Boolean(errors.taxId || errors.registrationNumber || errors.qualifications || errors.languages)}>
         <summary className="flex min-h-11 cursor-pointer items-center text-sm font-bold">{t('onboarding.more.legend')}</summary>
         <div className={`${grid} pt-3`}>
-          {mode === 'Solo' && <TextField form={form} name="qualifications" label={t('onboarding.field.qualifications')} optional />}
-          {mode === 'Solo' && <TextField form={form} name="languages" label={t('onboarding.field.languages')} optional hint={t('onboarding.hint.languages')} />}
-          <TextField form={form} name="registrationNumber" label={t(`onboarding.field.registration.${country}`)} optional ltr />
-          <TextField form={form} name="taxId" label={t(`onboarding.field.taxId.${country}`)} optional ltr hint={t(`onboarding.hint.taxId.${country}`)} />
+          {mode === 'Solo' && <TextField form={form} name="qualifications" label={t('onboarding.field.qualifications')} />}
+          {mode === 'Solo' && <TextField form={form} name="languages" label={t('onboarding.field.languages')} hint={t('onboarding.hint.languages')} />}
+          <TextField form={form} name="registrationNumber" label={t(`onboarding.field.registration.${country}`)} ltr />
+          <TextField form={form} name="taxId" label={t(`onboarding.field.taxId.${country}`)} ltr hint={t(`onboarding.hint.taxId.${country}`)} />
         </div>
       </details>
     </div>
   );
 }
 
-function TimeRange({ form, from, to, label }: FormProps & { from: 'weekdayStart1' | 'weekdayStart2' | 'saturdayStart'; to: 'weekdayEnd1' | 'weekdayEnd2' | 'saturdayEnd'; label: string }) {
+function TimeRange({ form, from, to, label, required }: FormProps & { from: 'weekdayStart1' | 'weekdayStart2' | 'saturdayStart'; to: 'weekdayEnd1' | 'weekdayEnd2' | 'saturdayEnd'; label: string; required?: boolean }) {
   const { t } = useI18n();
   return (
     <fieldset className="flex flex-col gap-1.5">
       <legend className="text-sm font-semibold">{label}</legend>
       <div className="grid grid-cols-2 gap-3">
-        <TextField form={form} name={from} label={t('onboarding.field.from')} type="time" ltr />
-        <TextField form={form} name={to} label={t('onboarding.field.to')} type="time" ltr />
+        <TextField form={form} name={from} label={t('onboarding.field.from')} required={required} type="time" ltr />
+        <TextField form={form} name={to} label={t('onboarding.field.to')} required={required} type="time" ltr />
       </div>
     </fieldset>
   );
@@ -136,11 +138,11 @@ export function HoursStep({ form, rules }: StepProps) {
     <div className="flex flex-col gap-6">
       <Group legend={t('onboarding.days.legend')} error={{ id: 'days-error', code: errors.days?.message }}>
         <div className="flex flex-col divide-y rounded-xl border">
-          {weekDays.map(d => {
+          {weekDays.map((d, i) => {
             const open = days.includes(d);
             return (
               <label key={d} className="flex min-h-12 cursor-pointer items-center gap-3 px-4 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-ring">
-                <input type="checkbox" role="switch" value={d} {...form.register('days')} className="size-5 accent-brand-700" />
+                <input id={i === 0 ? 'days' : undefined} type="checkbox" role="switch" value={d} {...form.register('days')} className="size-5 accent-brand-700" />
                 <strong className="w-28 text-sm">{t(`onboarding.day.${d}`)}</strong>
                 <span dir="ltr" className={`text-sm ${open ? '' : 'text-muted-foreground'}`}>{open ? (d === 'Saturday' ? saturday : usual) : t('onboarding.closed')}</span>
               </label>
@@ -149,7 +151,7 @@ export function HoursStep({ form, rules }: StepProps) {
         </div>
       </Group>
       <div className={grid}>
-        <TimeRange form={form} from="weekdayStart1" to="weekdayEnd1" label={t('onboarding.hours.morning')} />
+        <TimeRange form={form} from="weekdayStart1" to="weekdayEnd1" label={t('onboarding.hours.morning')} required />
         <TimeRange form={form} from="weekdayStart2" to="weekdayEnd2" label={t('onboarding.hours.evening')} />
         {days.includes('Saturday') && <TimeRange form={form} from="saturdayStart" to="saturdayEnd" label={t('onboarding.hours.saturdayOwn')} />}
       </div>
@@ -157,9 +159,9 @@ export function HoursStep({ form, rules }: StepProps) {
       {windowError && <FieldError id="hours-window-error" code={windowError} />}
       <Group legend={t('onboarding.field.slot')} error={{ id: 'slot-error', code: errors.slotMinutes?.message }}>
         <div className="flex flex-wrap gap-2">
-          {rules.slotMinutes.map(String).map(m => (
+          {rules.slotMinutes.map(String).map((m, i) => (
             <label key={m} className={chip}>
-              <input type="radio" value={m} {...form.register('slotMinutes')} className="size-4 accent-brand-700" />{t('onboarding.slotOption', { n: m })}
+              <input id={i === 0 ? 'slotMinutes' : undefined} type="radio" value={m} {...form.register('slotMinutes')} className="size-4 accent-brand-700" />{t('onboarding.slotOption', { n: m })}
             </label>
           ))}
         </div>
@@ -211,9 +213,9 @@ export function TeamStep({ form, onInvite, onRemove }: TeamProps) {
       ) : <p className="text-sm text-muted-foreground">{t('onboarding.team.empty')}</p>}
       <fieldset className="flex flex-col gap-3 rounded-xl border p-4">
         <legend className="px-1 text-sm font-bold">{t('onboarding.team.invite')}</legend>
-        <Field id="inviteEmail" label={t('onboarding.field.inviteEmail')} error={inviteError} hint={t('onboarding.team.sent')}>
-          {a => <Input {...a} {...form.register('inviteEmail')} type="email" inputMode="email" dir="ltr" autoComplete="off" spellCheck={false}
-            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); onInvite(); } }} />}
+        <Field id="inviteEmail" label={t('onboarding.field.inviteEmail')} error={inviteError && t(`onboarding.error.${errorCode(inviteError)}`)} hint={t('onboarding.team.sent')}>
+          <Input {...form.register('inviteEmail')} type="email" inputMode="email" dir="ltr" autoComplete="off" spellCheck={false}
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); onInvite(); } }} />
         </Field>
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={t('onboarding.field.inviteRole')}>
@@ -250,14 +252,14 @@ export function PatientsStep({ form }: FormProps) {
   const choice = useWatch({ control: form.control, name: 'patients' });
   return (
     <div className="flex flex-col gap-4">
-      <Group legend={t('onboarding.patients.legend')} error={{ id: 'patients-error', code: form.formState.errors.patients?.message }}>
+      <Group legend={t('onboarding.patients.legend')} optional error={{ id: 'patients-error', code: form.formState.errors.patients?.message }}>
         <div className="grid gap-3 md:grid-cols-3">
-          {patientStarts.map(p => {
+          {patientStarts.map((p, i) => {
             const Icon = startIcons[p];
             return (
               <label key={p} className={`${card} flex-col`}>
                 <span className="flex items-center gap-2">
-                  <input type="radio" value={p} {...form.register('patients')} className="size-4 accent-brand-700" />
+                  <input id={i === 0 ? 'patients' : undefined} type="radio" value={p} {...form.register('patients')} className="size-4 accent-brand-700" />
                   <Icon className="size-5" aria-hidden />
                 </span>
                 <strong>{t(`onboarding.patients.${p}`)}</strong>

@@ -31,6 +31,8 @@ export function useOnboardingController(initialCountry: Country, onFinished: (re
   const [country, setCountry] = useState<Country>(initialCountry);
   const [saveState, setSaveState] = useState<SaveState>('idle');
   const [problem, setProblem] = useState<'check' | 'finish' | 'later' | null>(null);
+  // Each failed Continue (the step's own check or the server's): the error summary takes focus once.
+  const [failures, setFailures] = useState(0);
   const [done, setDone] = useState<FinishResult | null>(null);
   const saved = useRef<string | null>(null); // the step and data the server holds, so nothing is saved twice
   const snapshot = (at: number, f: WizardForm) => JSON.stringify({ step: at, data: toData(f) });
@@ -85,7 +87,7 @@ export function useOnboardingController(initialCountry: Country, onFinished: (re
 
   const next = async () => {
     setProblem(null);
-    if (!(await form.trigger(stepFields[step]))) { setProblem('check'); return; }
+    if (!(await form.trigger(stepFields[step]))) { setProblem('check'); setFailures(n => n + 1); return; }
     try {
       const at = last ? step : steps[index + 1]!;
       // An earlier finish may have completed on the server after the page gave up (#205): the draft is gone, so finish again directly.
@@ -101,6 +103,7 @@ export function useOnboardingController(initialCountry: Country, onFinished: (re
         const first = mapErrors(e);
         if (first !== null && first !== step) setStep(first);
         setProblem('check');
+        setFailures(n => n + 1);
       } else setProblem('finish');
     }
   };
@@ -120,6 +123,7 @@ export function useOnboardingController(initialCountry: Country, onFinished: (re
     step, steps, index, last,
     saveState,
     problem,
+    errorFocusKey: failures,
     working: save.isPending,
     done,
     next,

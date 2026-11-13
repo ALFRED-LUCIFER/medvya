@@ -9,6 +9,6 @@ export default function SignUpRoute({ switcher }: { switcher: ReactNode }) {
   const { country: fallback } = useI18n();
   const asked = useSearchParams()[0].get('country');
   const vm = useSignUpController(asked === 'IN' || asked === 'AE' ? asked : fallback);
-  return <SignUpPage languageSwitcher={switcher} form={vm.form} step={vm.step} country={vm.country} onCountry={vm.chooseCountry}
+  return <SignUpPage languageSwitcher={switcher} form={vm.form} step={vm.step} country={vm.country} errorFocusKey={vm.errorFocusKey} onCountry={vm.chooseCountry}
     onNext={() => void vm.next()} onBack={vm.back} />;
 }

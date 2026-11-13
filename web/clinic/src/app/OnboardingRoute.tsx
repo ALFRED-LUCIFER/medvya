@@ -24,7 +24,7 @@ export default function OnboardingRoute({ switcher, onFinished, onLater }: Props
     return <StartPage languageSwitcher={switcher} country={vm.country} onCountry={vm.chooseCountry} onStart={vm.start} starting={vm.starting} failed={vm.startFailed} />;
   return (
     <OnboardingWizard languageSwitcher={switcher} form={vm.form} country={vm.country} rules={vm.rules} step={vm.step} steps={vm.steps} index={vm.index}
-      last={vm.last} saveState={vm.saveState} problem={vm.problem} working={vm.working} done={vm.done}
+      last={vm.last} saveState={vm.saveState} problem={vm.problem} errorFocusKey={vm.errorFocusKey} working={vm.working} done={vm.done}
       homeLabel={vm.form.getValues('mode') === 'Solo' ? 'today' : 'frontDesk'} onNext={() => void vm.next()} onSkip={vm.skip} onBack={vm.back} onGoTo={vm.goTo}
       onLater={() => void vm.later()} onInvite={vm.invite} onRemoveMember={vm.removeMember} onBook={() => vm.open(organisationPath)} onHome={() => vm.open()} />
   );

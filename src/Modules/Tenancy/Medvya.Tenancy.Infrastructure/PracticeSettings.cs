@@ -96,7 +96,8 @@ public sealed class PracticeSettings(
         db.Facilities.Add(site);
         // The creator works at the new location with the role they hold at the current one (a membership is what grants access there).
         if (user.UserId is { } userId && currentFacility.FacilityId is { } here && await facilities.ActiveRoleAsync(userId, here, cancellationToken) is { } role)
-            db.Memberships.Add(new Membership { Id = Guid.CreateVersion7(), TenantId = TenantId, UserId = userId, FacilityId = site.Id, Role = role, Status = MembershipStatus.Active });
+            db.Memberships.Add(new Membership { Id = Guid.CreateVersion7(), TenantId = TenantId, UserId = userId, FacilityId = site.Id, Role = role, Status = MembershipStatus.Active,
+                IsOwner = await db.Memberships.AnyAsync(m => m.UserId == userId && m.FacilityId == here && m.IsOwner, cancellationToken) }); // MDV-P1-107
         var view = new LocationView(site.Id, site.Name, site.Address, site.TimeZone);
         try
         {

@@ -5272,7 +5272,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["AnonymousTypeOfGuidAndGuidAndstringAndstringAndRoleAndGuidAndstringAndGuidAndstringAndstringAndstringAndGuidAndstringAndDateTimeOffset"][];
+                        "application/json": components["schemas"]["AnonymousTypeOfGuidAndGuidAndstringAndstringAndRoleAndGuidAndstringAndGuidAndstringAndstringAndstringAndGuidAndstringAndDateTimeOffsetAndboolean"][];
                     };
                 };
             };
@@ -5522,6 +5522,45 @@ export interface paths {
                 };
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/staff/{membershipId}/role": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    membershipId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ChangeRole"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -8855,7 +8894,7 @@ export interface components {
         };
         /** @enum {unknown} */
         AllergyStatus: "Confirmed" | "PatientReported" | "Unknown" | "NotAnAllergy" | null;
-        AnonymousTypeOfGuidAndGuidAndstringAndstringAndRoleAndGuidAndstringAndGuidAndstringAndstringAndstringAndGuidAndstringAndDateTimeOffset: {
+        AnonymousTypeOfGuidAndGuidAndstringAndstringAndRoleAndGuidAndstringAndGuidAndstringAndstringAndstringAndGuidAndstringAndDateTimeOffsetAndboolean: {
             /** Format: uuid */
             membershipId: string;
             /** Format: uuid */
@@ -8876,6 +8915,7 @@ export interface components {
             invitationState: null | string;
             /** Format: date-time */
             invitationExpiresAt: null | string;
+            isOwner: boolean;
         };
         AnonymousTypeOfGuidAndstringAndRoleAndstringAndDateTimeOffsetAndstring: {
             /** Format: uuid */
@@ -9044,6 +9084,11 @@ export interface components {
         Capability: "RegisterBookPatients" | "CheckInQueue" | "InvoicesPayments" | "Patient360Chart" | "VitalsAllergiesEntry" | "ClinicalNotes" | "PrescriptionsOrders" | "RecordingConsentCapture" | "AiDraftsEvidence" | "ResultReviewAcknowledge" | "CareTasksPatientContact" | "ReleaseRecordsToPortal" | "DevicePairingFleet" | "StaffRolesIntegrations" | "AuditLog";
         /** @enum {unknown} */
         CareCheckKind: "DiabeticEyeExam" | "DiabeticFootExam" | null;
+        ChangeRole: {
+            role: null | components["schemas"]["Role"];
+            /** Format: uuid */
+            customRoleId: null | string;
+        };
         CheckIn: {
             /** Format: int64 */
             elapsedMs?: null | number | string;

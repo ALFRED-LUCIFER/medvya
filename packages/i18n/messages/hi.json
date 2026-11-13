@@ -4878,5 +4878,22 @@
   "followUpDue.reason.PatientDeclined": "मरीज़ ने मना किया",
   "followUpDue.reason.BookedElsewhere": "पहले ही दूसरे तरीके से बुक है",
   "followUpDue.reason.NotReachable": "मरीज़ से संपर्क नहीं हो सका",
-  "followUpDue.reason.Other": "अन्य"
+  "followUpDue.reason.Other": "अन्य",
+  "staff.changeRole": "भूमिका बदलें",
+  "staff.changeRoleNamed": "{name} की भूमिका बदलें",
+  "staff.changeRoleTitle": "{name} की भूमिका बदलें",
+  "staff.changeRoleIntro": "नई भूमिका तुरंत लागू होती है। उन्हें अभी साइन आउट किया जाता है और वे नई भूमिका के साथ फिर से साइन इन करते हैं। यह बदलाव ऑडिट लॉग में दर्ज होता है।",
+  "staff.changeRoleTo": "नई भूमिका",
+  "staff.changeRoleConfirm": "भूमिका बदलें",
+  "staff.changeRoleError.lastAdmin": "स्टाफ़ संभालने वाले यही आख़िरी व्यक्ति हैं। पहले किसी और को यह भूमिका दें।",
+  "staff.changeRoleError.failed": "भूमिका नहीं बदली जा सकी। फिर से कोशिश करें।",
+  "staff.notice.role": "भूमिका बदल गई। उन्हें साइन आउट कर दिया गया है और वे नई भूमिका के साथ फिर से साइन इन करेंगे।",
+  "staff.offboardBlocked.self": "आप ख़ुद को ऑफ़बोर्ड नहीं कर सकते।",
+  "staff.offboardBlocked.owner": "केवल मालिक ही किसी मालिक को ऑफ़बोर्ड कर सकते हैं।",
+  "staff.offboardBlocked.doctor": "केवल मालिक ही किसी डॉक्टर को ऑफ़बोर्ड कर सकते हैं।",
+  "staff.offboardError.reauth": "पहले अपनी पहचान की पुष्टि करें, फिर से ऑफ़बोर्ड दबाएँ। कुछ नहीं बदला है।",
+  "staff.offboardError.ownerOnly": "केवल मालिक ही किसी मालिक या डॉक्टर को ऑफ़बोर्ड कर सकते हैं।",
+  "staff.offboardError.lastOwner": "प्रैक्टिस को एक मालिक चाहिए, और यह आख़िरी मालिक हैं।",
+  "staff.stepUp": "अपनी पहचान की पुष्टि करें",
+  "staff.stepUpFailed": "पहचान जाँच शुरू नहीं हो सकी। फिर से कोशिश करें।"
 }

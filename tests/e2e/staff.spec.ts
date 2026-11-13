@@ -21,10 +21,10 @@ const roles = {
 };
 const member = (over: object) => ({
   membershipId: 'x', name: null, email: null, role: 'Receptionist', customRoleId: null, customRoleName: null, facilityId: facility, facilityName: 'Adyar (synthetic)',
-  status: 'Active', mfa: 'enrolled', invitationId: null, invitationState: null, invitationExpiresAt: null, ...over,
+  status: 'Active', mfa: 'enrolled', invitationId: null, invitationState: null, invitationExpiresAt: null, isOwner: false, ...over,
 });
 const staff = [
-  member({ membershipId: 'a', name: 'K. Lakshmi (synthetic)', role: 'PracticeAdmin' }),
+  member({ membershipId: 'a', userId: 'u-lakshmi', name: 'K. Lakshmi (synthetic)', role: 'PracticeAdmin', isOwner: true }),
   member({ membershipId: 'b', email: 'joseph@example.test', status: 'Invited', mfa: 'pending', invitationId: 'i-1', invitationState: 'pending', invitationExpiresAt: '2026-11-12T10:00:00Z' }),
   member({ membershipId: 'c', email: 'revoked@example.test', status: 'Invited', mfa: 'pending', invitationId: 'i-3', invitationState: 'revoked', invitationExpiresAt: '2026-11-12T10:00:00Z' }),
 ];
@@ -113,10 +113,11 @@ test('a custom role offers only the rows the server allows, and Arabic lays the 
 test('offboarding asks for a reason, confirms, and says the last administrator cannot go', async ({ page }) => {
   await setUp(page);
   const desk = member({ membershipId: 'c', name: 'A. Joseph (synthetic)' });
-  await page.route('**/v1/staff', r => r.request().method() === 'GET' ? r.fulfill({ json: [staff[0], desk] }) : r.fallback());
+  const otherAdmin = member({ membershipId: 'e', userId: 'u-e', name: 'R. Iyer (synthetic)', role: 'PracticeAdmin' });
+  await page.route('**/v1/staff', r => r.request().method() === 'GET' ? r.fulfill({ json: [staff[0], desk, otherAdmin] }) : r.fallback());
   let body = '';
   await page.route('**/v1/staff/c/offboard', r => { body = r.request().postData() ?? ''; return r.fulfill({ json: { openVisits: 0 } }); });
-  await page.route('**/v1/staff/a/offboard', r => r.fulfill({ status: 400, json: { errors: { membershipId: ['last_admin'] } } }));
+  await page.route('**/v1/staff/e/offboard', r => r.fulfill({ status: 400, json: { errors: { membershipId: ['last_admin'] } } }));
   await page.goto('/settings?tab=staff');
   await page.getByRole('button', { name: 'Offboard A. Joseph (synthetic)' }).click();
   // #912: the form opens below the table; it is brought into view with the reason field focused.
@@ -131,7 +132,7 @@ test('offboarding asks for a reason, confirms, and says the last administrator c
   expect(JSON.parse(body)).toEqual({ reason: 'Left the practice', offerRebooking: false });
   await expect(page.getByText(/Patients already checked in/)).toHaveCount(0);
 
-  await page.getByRole('button', { name: 'Offboard K. Lakshmi (synthetic)' }).click();
+  await page.getByRole('button', { name: 'Offboard R. Iyer (synthetic)' }).click();
   await page.getByLabel('Reason (kept in the audit trail)').fill('Testing');
   await page.getByRole('button', { name: 'Offboard and sign out everywhere' }).click();
   // scoped: the page can also show an unrelated 'settings could not be loaded' alert while its request fails
@@ -267,3 +268,65 @@ for (const [locale, button, reasonLabel, saved] of [
     await expect(page.getByText(saved)).toBeVisible();
     expect(body).toEqual({ facilityIds: [facility], reason: 'Moved to Adyar' });
   });
+
+// MDV-P1-107: the row offers only what the signed-in user may do; the server refuses the same (SessionControlTests, on PostgreSQL).
+const hired = { ...admin, user: { id: 'u-hired', displayName: 'R. Iyer (synthetic)' } };
+const owners = [
+  member({ membershipId: 'o', userId: 'u-rao', name: 'Dr. Arjun Rao (synthetic)', role: 'SoloDoctor', isOwner: true }),
+  member({ membershipId: 'd', userId: 'u-menon', name: 'Dr. R. Menon (synthetic)', role: 'HospitalDoctor' }),
+  member({ membershipId: 'h', userId: 'u-hired', name: 'R. Iyer (synthetic)', role: 'PracticeAdmin' }),
+  member({ membershipId: 'c', userId: 'u-joseph', name: 'A. Joseph (synthetic)' }),
+];
+for (const locale of ['en', 'ar'])
+  test(`a practice admin is offered no Offboard on the owner, a doctor or their own row, with the reason in words (${locale})`, async ({ page }) => {
+    await setUp(page, locale);
+    await page.route('**/v1/me/context', r => r.fulfill({ json: hired }));
+    await page.route('**/v1/staff', r => r.request().method() === 'GET' ? r.fulfill({ json: owners }) : r.fallback());
+    await page.goto('/settings?tab=staff');
+    await expect(page.getByRole('row', { name: /A\. Joseph/ })).toBeVisible();
+    if (locale === 'en') {
+      for (const [name, why] of [['Dr. Arjun Rao', 'Only an owner can offboard an owner.'], ['Dr. R. Menon', 'Only an owner can offboard a doctor.'], ['R. Iyer', 'You cannot offboard yourself.']]) {
+        const row = page.getByRole('row', { name: new RegExp(name.replace(/\./g, '\\.')) });
+        await expect(row.getByRole('button', { name: /^Offboard/ })).toHaveCount(0);
+        await expect(row).toContainText(why);
+      }
+      await expect(page.getByRole('row', { name: /Dr\. Arjun Rao/ }).getByRole('button', { name: /^Change role/ })).toHaveCount(0); // an owner's role stays
+      await expect(page.getByRole('button', { name: 'Offboard A. Joseph (synthetic)' })).toBeVisible();
+    }
+    expect(await axe(page)).toEqual([]);
+  });
+
+test('an owner changes a receptionist to a nurse in place', async ({ page }) => {
+  await setUp(page);
+  const desk = member({ membershipId: 'c', userId: 'u-joseph', name: 'A. Joseph (synthetic)' });
+  await page.route('**/v1/staff', r => r.request().method() === 'GET' ? r.fulfill({ json: [staff[0], desk] }) : r.fallback());
+  let body: unknown = null;
+  await page.route('**/v1/staff/c/role', r => { body = r.request().postDataJSON(); return r.fulfill({ status: 204 }); });
+  await page.goto('/settings?tab=staff');
+  await expect(page.getByRole('row', { name: /K\. Lakshmi/ }).getByRole('button', { name: /^Change role/ })).toHaveCount(0); // not on your own row
+  await page.getByRole('button', { name: 'Change role for A. Joseph (synthetic)' }).click();
+  await expect(page.getByRole('button', { name: 'Change role', exact: true })).toBeDisabled(); // the same role is no change
+  await page.getByRole('combobox', { name: 'New role' }).click();
+  await page.getByRole('option', { name: 'Nurse' }).click();
+  expect(await axe(page)).toEqual([]);
+  await page.getByRole('button', { name: 'Change role', exact: true }).click();
+  await expect(page.getByText('Role changed. They were signed out and sign in again with the new role.')).toBeVisible();
+  expect(body).toEqual({ role: 'Nurse', customRoleId: null });
+});
+
+test('an offboarding without a recent step-up asks to confirm identity first, and nothing changes', async ({ page }) => {
+  await setUp(page);
+  const desk = member({ membershipId: 'c', userId: 'u-joseph', name: 'A. Joseph (synthetic)' });
+  await page.route('**/v1/staff', r => r.request().method() === 'GET' ? r.fulfill({ json: [staff[0], desk] }) : r.fallback());
+  await page.route('**/v1/staff/c/offboard', r => r.fulfill({ status: 403, contentType: 'application/problem+json', json: { title: 'Confirm your identity to offboard', code: 'reauth_required' } }));
+  let asked: unknown = null;
+  await page.route('**/bff/reauth', r => { asked = r.request().postDataJSON(); return r.fulfill({ json: { location: '/settings?tab=staff' } }); });
+  await page.goto('/settings?tab=staff');
+  await page.getByRole('button', { name: 'Offboard A. Joseph (synthetic)' }).click();
+  await page.getByLabel('Reason (kept in the audit trail)').fill('Left the practice');
+  await page.getByRole('button', { name: 'Offboard and sign out everywhere' }).click();
+  await expect(page.getByRole('alert').filter({ hasText: 'Confirm your identity first, then press Offboard again. Nothing has changed.' })).toBeVisible();
+  expect(await axe(page)).toEqual([]);
+  await page.getByRole('button', { name: 'Confirm your identity' }).click();
+  await expect.poll(() => asked).toEqual({ returnUrl: '/settings?tab=staff' });
+});

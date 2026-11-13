@@ -46,6 +46,7 @@ public static class SyntheticSeed
         var members = people.Select((p, i) => new CastMember(Id(t, 2, i + 1), p.Name + Marker, new Membership
         {
             Id = Id(t, 3, i + 1), TenantId = tenant.Id, UserId = Id(t, 2, i + 1), FacilityId = site.Id, Role = p.Role, Status = MembershipStatus.Active,
+            IsOwner = p.Role is Role.SoloDoctor or Role.PracticeAdmin, // as the MembershipOwner backfill marks a practice set up without invitations (MDV-P1-107)
         })).ToList();
         return new(tenant, site, members);
     }

@@ -44,7 +44,7 @@ public sealed class PracticeProvisioning(IServiceScopeFactory scopes, ICurrentUs
         });
         db.OrganisationRequests.Add(new OrganisationRequest { TenantId = tenantId, Type = Enum.Parse<OrganisationType>(clinic.Type!) });
         db.Facilities.Add(new Facility { Id = facilityId, TenantId = tenantId, Name = clinic.Name!.Trim(), TimeZone = rules.TimeZone });
-        db.Memberships.Add(new Membership { Id = membershipId, TenantId = tenantId, UserId = owner, FacilityId = facilityId, Role = role, Status = MembershipStatus.Active });
+        db.Memberships.Add(new Membership { Id = membershipId, TenantId = tenantId, UserId = owner, FacilityId = facilityId, Role = role, Status = MembershipStatus.Active, IsOwner = true });
         db.Profiles.Add(new PracticeProfile
         {
             Id = Guid.CreateVersion7(), TenantId = tenantId, Address = clinic.Address!.Trim(), RegistrationNumber = Clean(clinic.RegistrationNumber),

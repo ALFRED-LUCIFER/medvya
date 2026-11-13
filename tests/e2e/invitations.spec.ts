@@ -62,30 +62,11 @@ test('an expired, revoked or used link shows the expired state and nothing to jo
   await expect(page.getByRole('button', { name: 'Sign in & join' })).toHaveCount(0);
 });
 
-test('admin invites a colleague by email with role and facility', async ({ page }) => {
+// MDV-P1-107 (C-15): /admin/staff was a second invite flow reachable only by typing it. Settings, Staff is the one way to add staff.
+test('/admin/staff answers Page not found; staff are added from Settings', async ({ page }) => {
   await page.route('**/v1/me/context', r => r.fulfill({ json: admin }));
-  await page.route('**/v1/invitations/facilities', r => r.fulfill({ json: [{ id: '5e1d0001-0001-4000-8000-000000000001', name: 'Adyar (synthetic)' }] }));
-  let sent: unknown;
-  await page.route('**/v1/invitations', r => {
-    sent = r.request().postDataJSON();
-    return r.fulfill({ status: 201, json: { id: 'i-1', expiresAt: '2026-10-28T10:00:00Z', licenceVerificationRequired: true } });
-  });
   await page.goto('/admin/staff');
-
-  await page.getByRole('button', { name: 'Send invitation' }).click();
-  await expect(page.getByText('Enter one valid email address.')).toBeVisible();
-  await expect(page.getByText('Choose a facility.')).toBeVisible();
-
-  await page.getByLabel('Email').fill('joseph@example.test');
-  await page.getByRole('combobox', { name: 'Role' }).click();
-  await page.getByRole('option', { name: 'Doctor', exact: true }).click();
-  await page.getByRole('combobox', { name: 'Facility' }).click();
-  await page.getByRole('option', { name: 'Adyar (synthetic)' }).click();
-  await page.getByRole('button', { name: 'Send invitation' }).click();
-
-  await expect(page.getByText('Invitation sent. It expires 28 Oct 2026.')).toBeVisible();
-  await expect(page.getByText('You enter this doctor’s licence and confirm it yourself; Medvya does not check it.')).toBeVisible();
-  expect(sent).toEqual({ email: 'joseph@example.test', role: 'HospitalDoctor', facilityId: '5e1d0001-0001-4000-8000-000000000001' });
+  await expect(page.getByRole('heading', { name: /not found/i })).toBeVisible();
   expect(await axe(page)).toEqual([]);
 });
 

@@ -4901,5 +4901,22 @@
   "followUpDue.reason.PatientDeclined": "رفض المريض",
   "followUpDue.reason.BookedElsewhere": "محجوزة بطريقة أخرى",
   "followUpDue.reason.NotReachable": "تعذّر الوصول إلى المريض",
-  "followUpDue.reason.Other": "أخرى"
+  "followUpDue.reason.Other": "أخرى",
+  "staff.changeRole": "تغيير الدور",
+  "staff.changeRoleNamed": "تغيير دور {name}",
+  "staff.changeRoleTitle": "تغيير دور {name}",
+  "staff.changeRoleIntro": "يسري الدور الجديد فورًا. يُسجَّل خروجه الآن ويسجّل الدخول مجددًا بالدور الجديد. يُسجَّل التغيير في سجل التدقيق.",
+  "staff.changeRoleTo": "الدور الجديد",
+  "staff.changeRoleConfirm": "تغيير الدور",
+  "staff.changeRoleError.lastAdmin": "هذا آخر شخص يدير الموظفين. امنح هذا الدور لشخص آخر أولًا.",
+  "staff.changeRoleError.failed": "تعذّر تغيير الدور. حاول مرة أخرى.",
+  "staff.notice.role": "تم تغيير الدور. سُجّل خروجه وسيسجّل الدخول مجددًا بالدور الجديد.",
+  "staff.offboardBlocked.self": "لا يمكنك إنهاء خدمتك بنفسك.",
+  "staff.offboardBlocked.owner": "لا يُنهي خدمة المالك إلا مالك.",
+  "staff.offboardBlocked.doctor": "لا يُنهي خدمة الطبيب إلا مالك.",
+  "staff.offboardError.reauth": "أكّد هويتك أولًا، ثم اضغط إنهاء الخدمة مرة أخرى. لم يتغير شيء.",
+  "staff.offboardError.ownerOnly": "لا يُنهي خدمة المالك أو الطبيب إلا مالك.",
+  "staff.offboardError.lastOwner": "تحتاج العيادة إلى مالك، وهذا آخر مالك.",
+  "staff.stepUp": "أكّد هويتك",
+  "staff.stepUpFailed": "تعذّر بدء التحقق من الهوية. حاول مرة أخرى."
 }

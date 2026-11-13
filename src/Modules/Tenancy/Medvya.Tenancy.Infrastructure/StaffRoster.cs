@@ -38,7 +38,7 @@ public sealed class StaffRoster(TenancyDbContext db, ICurrentTenant tenant, ICur
             var pending = x.m.Status == MembershipStatus.Invited ? x.latest : null; // the email is shown only until the person has joined
             var state = pending is null ? null : pending.RevokedAt is not null ? "revoked" : pending.ExpiresAt <= now ? "expired" : "pending";
             return new StaffRow(x.m.Id, x.m.UserId, pending?.Email, x.m.Role, x.m.CustomRoleId, x.custom, x.m.FacilityId, x.Facility,
-                x.m.Status, pending?.Id, state, pending?.ExpiresAt);
+                x.m.Status, pending?.Id, state, pending?.ExpiresAt, x.m.IsOwner);
         })];
     }
 
@@ -96,6 +96,12 @@ public sealed class StaffRoster(TenancyDbContext db, ICurrentTenant tenant, ICur
             foreach (var other in await db.Memberships.Where(m => m.UserId == person && m.Id != membershipId && m.Role != Role.Patient && m.Status != MembershipStatus.Offboarded).ToListAsync(cancellationToken))
                 if (await access.AccessAsync(Capability.StaffRolesIntegrations, other.FacilityId, cancellationToken) == Access.Config) leaving.Add(other);
         var ids = leaving.Select(m => m.Id).ToList();
+        // MDV-P1-107: an owner or a doctor leaves only by an owner's decision (validation-plan question 18, the stricter answer), and the practice
+        // always keeps an owner. SAFETY: both are mutation-checked in SessionControlTests.
+        if (leaving.Any(m => m.IsOwner || m.Role is Role.SoloDoctor or Role.HospitalDoctor) && !await CallerIsOwnerAsync(cancellationToken))
+            return new(OffboardOutcome.NotOwner);
+        if (leaving.Any(m => m.IsOwner) && !await db.Memberships.AnyAsync(m => m.IsOwner && m.Status == MembershipStatus.Active && !ids.Contains(m.Id), cancellationToken))
+            return new(OffboardOutcome.LastOwner);
         if (leaving.Any(m => m.Status == MembershipStatus.Active && RoleMatrix.Of(m.Role, Capability.StaffRolesIntegrations) == Access.Config))
         {
             var others = await db.Memberships.Where(m => m.Status == MembershipStatus.Active && !ids.Contains(m.Id)).Select(m => m.Role).ToListAsync(cancellationToken);
@@ -186,7 +192,9 @@ public sealed class StaffRoster(TenancyDbContext db, ICurrentTenant tenant, ICur
         foreach (var m in remove)
         {
             var result = await OffboardCoreAsync(m.Id, reason, false, false, cancellationToken);
-            if (result.Outcome != OffboardOutcome.Done) return new(result.Outcome == OffboardOutcome.LastAdmin ? LocationsOutcome.LastAdmin : LocationsOutcome.NotFound, source.UserId, ended);
+            if (result.Outcome != OffboardOutcome.Done)
+                return new(result.Outcome switch { OffboardOutcome.LastAdmin => LocationsOutcome.LastAdmin, OffboardOutcome.NotOwner => LocationsOutcome.NotOwner, _ => LocationsOutcome.NotFound },
+                    source.UserId, ended);
             ended.Add(m.Id);
         }
         return new(LocationsOutcome.Done, source.UserId, ended);
@@ -220,6 +228,49 @@ public sealed class StaffRoster(TenancyDbContext db, ICurrentTenant tenant, ICur
         await tx.CommitAsync(cancellationToken);
         return ReactivateOutcome.Done;
     }
+
+    public async Task<ChangeRoleResult> ChangeRoleAsync(Guid membershipId, Role role, Guid? customRoleId, CancellationToken cancellationToken = default)
+    {
+        // Serializable, as offboarding: two administrators demoting each other at once must not both pass the last-administrator check.
+        await using var tx = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, cancellationToken);
+        var member = await db.Memberships.SingleOrDefaultAsync(m => m.Id == membershipId && m.Role != Role.Patient && m.Status == MembershipStatus.Active, cancellationToken);
+        if (member is null || await access.AccessAsync(Capability.StaffRolesIntegrations, member.FacilityId, cancellationToken) != Access.Config)
+            return new(ChangeRoleOutcome.NotFound);
+        // A doctor is added and removed with their licence (Settings, Doctors); an owner stays an owner.
+        if (member.IsOwner || !CustomRoleRules.Assignable.Contains(member.Role) || !CustomRoleRules.Assignable.Contains(role)) return new(ChangeRoleOutcome.NotAssignable);
+        var extras = customRoleId is { } id
+            ? await db.CustomRoles.Where(r => r.Id == id && r.BaseRole == role).Select(r => r.Capabilities).SingleOrDefaultAsync(cancellationToken)
+                ?? throw new SettingsValidationException([new("customRoleId", "invalid")])
+            : null;
+        // Granting a role: the same ceiling as inviting someone to it (#875).
+        if (await GranterAsync(cancellationToken) is not { } granter || !InvitationRules.CanGrant(granter, c => CustomRoleRules.Effective(role, extras, c)))
+            return new(ChangeRoleOutcome.AboveGranter);
+        if (RoleMatrix.Of(member.Role, Capability.StaffRolesIntegrations) == Access.Config && RoleMatrix.Of(role, Capability.StaffRolesIntegrations) != Access.Config
+            && !(await db.Memberships.Where(m => m.Id != membershipId && m.Status == MembershipStatus.Active).Select(m => m.Role).ToListAsync(cancellationToken))
+                .Any(r => RoleMatrix.Of(r, Capability.StaffRolesIntegrations) == Access.Config))
+            return new(ChangeRoleOutcome.LastAdmin);
+        var (from, fromCustom) = (member.Role, member.CustomRoleId);
+        if ((from, fromCustom) == (role, customRoleId)) return new(ChangeRoleOutcome.Done); // no change: nothing recorded, nobody signed out
+        (member.Role, member.CustomRoleId) = (role, customRoleId);
+        var now = clock.GetUtcNow();
+        db.SettingsChanges.Add(new SettingsChange
+        {
+            Id = Guid.CreateVersion7(), TenantId = TenantId, ActorUserId = user.UserId, Section = "staff.member.role", ResourceId = membershipId, OccurredAt = now,
+            Before = JsonSerializer.Serialize(new { role = from, customRoleId = fromCustom }, Json), After = JsonSerializer.Serialize(new { role, customRoleId }, Json),
+        });
+        await db.SaveChangesAsync(cancellationToken);
+        await audit.WriteAsync(new AuditEvent
+        {
+            Id = Guid.CreateVersion7(), TenantId = TenantId, ActorUserId = user.UserId, Action = "staff.role.change", ResourceType = "membership", ResourceId = membershipId,
+            FacilityId = member.FacilityId, Purpose = "operations", Outcome = AuditOutcome.Allowed, OccurredAt = now, Detail = $"from:{from};to:{role}", // role names only
+        }, tx.GetDbTransaction(), cancellationToken);
+        await tx.CommitAsync(cancellationToken);
+        return new(ChangeRoleOutcome.Done, member.UserId);
+    }
+
+    /// <summary>The caller holds an active owner membership of this practice (MDV-P1-107).</summary>
+    Task<bool> CallerIsOwnerAsync(CancellationToken cancellationToken) =>
+        user.UserId is { } me ? db.Memberships.AnyAsync(m => m.UserId == me && m.IsOwner && m.Status == MembershipStatus.Active, cancellationToken) : Task.FromResult(false);
 
     async Task<(string Name, IReadOnlyList<Capability> Extras)> ValidAsync(SaveCustomRole command, Guid? self, CancellationToken cancellationToken)
     {

@@ -82,6 +82,7 @@ public sealed partial class StaffLocationsTests(PostgresFixture sql) : IClassFix
         client.DefaultRequestHeaders.Add(HeaderAuth.User, user.ToString());
         client.DefaultRequestHeaders.Add(StaffPolicies.TenantClaim, tenant.ToString());
         client.DefaultRequestHeaders.Add(HeaderAuth.Facility, at.ToString());
+        client.DefaultRequestHeaders.Add(HeaderAuth.Reauth, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture)); // a fresh step-up (MDV-P1-107)
         return client;
     }
 
@@ -284,12 +285,12 @@ public sealed partial class StaffLocationsTests(PostgresFixture sql) : IClassFix
     sealed class HeaderAuth(IOptionsMonitor<AuthenticationSchemeOptions> options, ILoggerFactory logger, UrlEncoder encoder)
         : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
     {
-        public const string Name = "test-headers", User = "X-Test-User", Facility = "facility_id";
+        public const string Name = "test-headers", User = "X-Test-User", Facility = "facility_id", Reauth = "reauth_at";
 
         protected override Task<AuthenticateResult> HandleAuthenticateAsync()
         {
             var claims = new[] { new Claim(ClaimTypes.NameIdentifier, Request.Headers[User].ToString()) }
-                .Concat(new[] { StaffPolicies.TenantClaim, Facility }.Where(Request.Headers.ContainsKey).Select(c => new Claim(c, Request.Headers[c].ToString())));
+                .Concat(new[] { StaffPolicies.TenantClaim, Facility, Reauth }.Where(Request.Headers.ContainsKey).Select(c => new Claim(c, Request.Headers[c].ToString())));
             return Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(new ClaimsPrincipal(new ClaimsIdentity(claims, Name)), Name)));
         }
     }

@@ -55,6 +55,11 @@ public sealed class Membership
     [Classification(DataClass.Internal)] public MembershipStatus Status { get; set; }
     /// <summary>The practice-defined role this person holds (its base role is <see cref="Role"/>); null for a built-in role (MDV-P1-008).</summary>
     [Classification(DataClass.Internal)] public Guid? CustomRoleId { get; set; }
+    /// <summary>
+    /// The person who set the practice up, at each location they work (MDV-P1-107). Only an owner offboards an owner or a doctor, never the last
+    /// owner, and an owner's role is not changed from the staff table.
+    /// </summary>
+    [Classification(DataClass.Internal)] public bool IsOwner { get; set; }
 }
 
 /// <summary>

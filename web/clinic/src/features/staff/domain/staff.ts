@@ -25,6 +25,8 @@ export type StaffMember = {
   invitationId: string | null;
   invitationState: InvitationState | null;
   invitationExpiresAt: string | null;
+  /** Set the practice up (MDV-P1-107): only an owner offboards an owner or a doctor. */
+  isOwner: boolean;
 };
 
 /** One matrix row of a built-in role. `extra` is the access a custom role could add here (practice admin's level), or null. */
@@ -75,6 +77,30 @@ export const canRevoke = (m: StaffMember) => m.status === 'Invited' && m.invitat
 
 /** Offboarding applies to someone who has joined; a pending invitation is revoked instead. */
 export const canOffboard = (m: StaffMember) => m.status === 'Active' || m.status === 'Suspended';
+/**
+ * Why this signed-in user is not offered Offboard on a row they could otherwise offboard (MDV-P1-107), in words on the row; null when offered.
+ * The server refuses the same: only an owner offboards an owner or a doctor (validation-plan question 18, the stricter answer).
+ */
+export function offboardBlock(m: StaffMember, me: string, iAmOwner: boolean): 'self' | 'owner' | 'doctor' | null {
+  if (m.userId !== null && m.userId === me) return 'self';
+  if (iAmOwner) return null;
+  return m.isOwner ? 'owner' : isDoctor(m) ? 'doctor' : null;
+}
+/** The signed-in user owns the practice: one of their rows is an owner's. */
+export const isOwnerAmong = (rows: StaffMember[], me: string) => rows.some(r => r.userId === me && r.isOwner && r.status === 'Active');
+
+/** Change role in place (MDV-P1-107): an active member with a role the staff table assigns, never an owner or oneself. */
+export const canChangeRole = (m: StaffMember, me: string) =>
+  m.status === 'Active' && !m.isOwner && m.userId !== me && (assignableRoles as readonly string[]).includes(m.role);
+/** The role picked, as one value: "builtIn:Nurse" or "custom:<id>". */
+export const roleValue = (m: Pick<StaffMember, 'role' | 'customRoleId'>) => (m.customRoleId ? `custom:${m.customRoleId}` : `builtIn:${m.role}`);
+export const roleOfValue = (catalogue: RoleCatalogue, value: string): { role: AssignableRole; customRoleId: string | null } | null => {
+  const [kind, id] = value.split(':') as [string, string];
+  if (kind === 'builtIn' && (assignableRoles as readonly string[]).includes(id)) return { role: id as AssignableRole, customRoleId: null };
+  const custom = kind === 'custom' ? catalogue.custom.find(c => c.id === id) : undefined;
+  return custom ? { role: custom.baseRole, customRoleId: custom.id } : null;
+};
+
 /** A doctor's future visits move to "needs rebooking": the admin says whether patients are offered new slots or called (#225). */
 export const isDoctor = (m: StaffMember) => m.role === 'SoloDoctor' || m.role === 'HospitalDoctor';
 export const offboardSchema = z.object({ reason: z.string().trim().min(1).max(500), rebooking: z.enum(['offer', 'call']).nullable() });

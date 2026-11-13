@@ -8,7 +8,7 @@ namespace Medvya.Tenancy.Application;
 /// </summary>
 public sealed record StaffRow(
     Guid MembershipId, Guid? UserId, string? Email, Role Role, Guid? CustomRoleId, string? CustomRoleName, Guid FacilityId, string FacilityName,
-    MembershipStatus Status, Guid? InvitationId, string? InvitationState, DateTimeOffset? InvitationExpiresAt);
+    MembershipStatus Status, Guid? InvitationId, string? InvitationState, DateTimeOffset? InvitationExpiresAt, bool IsOwner = false);
 
 public sealed record CustomRoleView(Guid Id, string Name, Role BaseRole, IReadOnlyList<Capability> Capabilities);
 
@@ -27,11 +27,20 @@ public sealed record OffboardResult(OffboardOutcome Outcome, Guid? UserId = null
 /// <summary>Another module's share of an offboarding: what to run after the commit, and how many open items it left for reception.</summary>
 public sealed record OffboardingShare(Func<Task>? AfterCommit, int OpenItems = 0);
 
-public enum OffboardOutcome { Done, NotFound, LastAdmin }
+/// <summary>NotOwner: an owner or a doctor, offboarded by someone who is not an owner (MDV-P1-107). LastOwner: nobody would own the practice.</summary>
+public enum OffboardOutcome { Done, NotFound, LastAdmin, NotOwner, LastOwner }
 
 public enum ReactivateOutcome { Done, NotFound, AboveGranter }
 
-public enum LocationsOutcome { Done, NotFound, AboveGranter, LastAdmin }
+public enum LocationsOutcome { Done, NotFound, AboveGranter, LastAdmin, NotOwner }
+
+/// <summary>
+/// How a role change ended (MDV-P1-107). NotAssignable: the person is an owner or a doctor, or the new role is not one the staff table assigns;
+/// the caller ends the person's sessions on that membership when Done.
+/// </summary>
+public enum ChangeRoleOutcome { Done, NotFound, NotAssignable, AboveGranter, LastAdmin }
+
+public sealed record ChangeRoleResult(ChangeRoleOutcome Outcome, Guid? UserId = null);
 
 /// <param name="Removed">Memberships ended by taking locations away, whose sessions the caller must now end for <paramref name="UserId"/>.</param>
 public sealed record LocationsResult(LocationsOutcome Outcome, Guid? UserId = null, IReadOnlyList<Guid>? Removed = null);
@@ -73,6 +82,14 @@ public interface IStaffRoster
     /// </summary>
     /// <exception cref="SettingsValidationException">No reason, or one over 500 characters.</exception>
     Task<ReactivateOutcome> ReactivateAsync(Guid membershipId, string? reason, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Changes an active member's role in place (MDV-P1-107): receptionist, nurse, care coordinator or practice admin, with an optional practice-defined
+    /// role on that base. Same ceiling as inviting; never the last staff administrator; never an owner or a doctor. Before/after (SettingsChange
+    /// "staff.member.role") and the audit event "staff.role.change" (from and to) commit with it. Access follows on the next request (roles are read live).
+    /// </summary>
+    /// <exception cref="SettingsValidationException">A practice-defined role that is not the tenant's or not on that base role.</exception>
+    Task<ChangeRoleResult> ChangeRoleAsync(Guid membershipId, Role role, Guid? customRoleId, CancellationToken cancellationToken = default);
 }
 
 /// <summary>

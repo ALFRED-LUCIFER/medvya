@@ -53,6 +53,7 @@ public sealed class EndpointAuditTests(PostgresFixture sql) : IClassFixture<Post
         "POST /v1/staff/{membershipId:guid}/offboard", // MDV-P1-009: audited as staff.offboard in the same transaction (SessionControlTests)
         "PUT /v1/staff/{membershipId:guid}/locations", // MDV-P1-071: audited as staff.locations.add and staff.offboard per location taken away, in the roster transaction (StaffLocationsTests)
         "POST /v1/staff/{membershipId:guid}/reactivate", // MDV-P1-009: audited as staff.reactivate in the same transaction (SessionControlTests)
+        "PUT /v1/staff/{membershipId:guid}/role", // MDV-P1-107: audited as staff.role.change (from and to) in the same transaction (SessionControlTests)
         // Practice settings (MDV-P1-005): business details only; every change is audited inside the service with before/after (PracticeSettingsTests).
         "GET /v1/settings/profile",
         "PUT /v1/settings/profile",

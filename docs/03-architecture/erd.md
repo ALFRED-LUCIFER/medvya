@@ -256,7 +256,7 @@ erDiagram
 | `Facilities` | 8 | Id | tenant-scoped |
 | `FeatureFlags` | 10 | Id | tenant-scoped |
 | `Invitations` | 11 | Id | tenant-scoped |
-| `Memberships` | 7 | Id | tenant-scoped |
+| `Memberships` | 8 | Id | tenant-scoped |
 | `OperatingHours` | 6 | Id | tenant-scoped |
 | `OrganisationDocuments` | 8 | Id | tenant-scoped |
 | `OrganisationRequests` | 6 | TenantId | tenant-scoped |
@@ -427,6 +427,7 @@ erDiagram
 | `Id` | guid |  |  |
 | `CustomRoleId` | guid | yes | FK to `CustomRole` |
 | `FacilityId` | guid |  | FK to `Facility` |
+| `IsOwner` | bool |  |  |
 | `Role` | character varying(40) |  |  |
 | `Status` | character varying(20) |  |  |
 | `TenantId` | guid |  | `tenancy.Tenants` |

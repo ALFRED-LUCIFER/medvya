@@ -18,6 +18,11 @@ public static class StaffEndpoints
     /// <param name="OfferRebooking">True: the doctor's moved patients get the rebooking message; false: reception calls them (#225).</param>
     public sealed record Offboard(string? Reason, bool OfferRebooking = false);
     public sealed record Reactivate(string? Reason);
+    /// <param name="CustomRoleId">A practice-defined role on <paramref name="Role"/>; null for the built-in role.</param>
+    public sealed record ChangeRole(Role? Role, Guid? CustomRoleId);
+
+    /// <summary>How long an identity step-up counts for an offboarding (MDV-P1-107): the same five minutes as signing a note.</summary>
+    public static readonly TimeSpan StepUpWindow = TimeSpan.FromMinutes(5);
     /// <param name="FacilityIds">Every location the member works at afterwards; one left out is taken away and needs <paramref name="Reason"/>.</param>
     public sealed record SetLocations(IReadOnlyList<Guid>? FacilityIds, string? Reason);
     public sealed record Row(Capability Capability, Access Access, Access? Extra);
@@ -40,6 +45,7 @@ public static class StaffEndpoints
                 // Sign-in refuses an account without MFA (StaffAuthentication), so anyone who has signed in is enrolled.
                 Mfa = r.UserId is null ? "pending" : "enrolled",
                 r.InvitationId, r.InvitationState, r.InvitationExpiresAt,
+                r.IsOwner, // MDV-P1-107: the screen offers Offboard on an owner's or a doctor's row only to an owner; the server decides again
             });
         });
 
@@ -87,13 +93,20 @@ public static class StaffEndpoints
         // and the facility picker no longer offers it); the person's sessions on that membership end right after. Their other facilities and
         // other tenants are untouched (#877).
         g.MapPost("/{membershipId:guid}/offboard", async (Guid membershipId, Offboard body, ClaimsPrincipal principal, [FromServices] IStaffRoster roster,
-            [FromServices] IStaffSessions sessions, [FromServices] IAccessReviews reviews, CancellationToken ct) =>
+            [FromServices] IStaffSessions sessions, [FromServices] IAccessReviews reviews, [FromServices] Medvya.BuildingBlocks.Domain.ICurrentUser me,
+            [FromServices] TimeProvider clock, CancellationToken ct) =>
         {
+            // MDV-P1-107: ending someone's access asks for the identity step-up first, as signing does. SAFETY: mutation-checked in SessionControlTests.
+            var now = clock.GetUtcNow();
+            if (me.ReauthenticatedAt is not { } at || now - at > StepUpWindow || at > now.AddMinutes(1))
+                return Results.Problem(statusCode: StatusCodes.Status403Forbidden, title: "Confirm your identity to offboard", extensions: new Dictionary<string, object?> { ["code"] = "reauth_required" });
             // A doctor's future visits go to reception's "needs rebooking" lane inside the same transaction (IStaffOffboardingParticipant).
             var result = await roster.OffboardAsync(membershipId, body.Reason, body.OfferRebooking, ct);
             // shortcut: recorded after the offboarding commits (not one transaction); if it fails the offboarding stands and the owner is asked about that person only if they were still active.
             if (result.Outcome == OffboardOutcome.NotFound) return Results.NotFound();
             if (result.Outcome == OffboardOutcome.LastAdmin) return Problem("membershipId", "last_admin");
+            if (result.Outcome == OffboardOutcome.LastOwner) return Problem("membershipId", "last_owner");
+            if (result.Outcome == OffboardOutcome.NotOwner) return OwnersOnly;
             if (result.UserId is { } userId)
             {
                 var tenantId = Guid.Parse(principal.FindFirstValue(StaffPolicies.TenantClaim)!);
@@ -122,6 +135,7 @@ public static class StaffEndpoints
                 LocationsOutcome.Done => Results.NoContent(),
                 LocationsOutcome.AboveGranter => Problem("membershipId", "above_granter"),
                 LocationsOutcome.LastAdmin => Problem("membershipId", "last_admin"),
+                LocationsOutcome.NotOwner => OwnersOnly,
                 _ => Results.NotFound(),
             };
         });
@@ -134,6 +148,25 @@ public static class StaffEndpoints
                 ReactivateOutcome.AboveGranter => Problem("membershipId", "above_granter"),
                 _ => Results.NotFound(),
             });
+
+        // Change role in place (MDV-P1-107): the next request has the new role's access (roles are read live), and the person's sessions on that
+        // membership end so no screen keeps showing the old one.
+        g.MapPut("/{membershipId:guid}/role", async (Guid membershipId, ChangeRole body, ClaimsPrincipal principal, [FromServices] IStaffRoster roster,
+            [FromServices] IStaffSessions sessions, CancellationToken ct) =>
+        {
+            if (body.Role is not { } role || !Enum.IsDefined(role)) return Problem("role", "required");
+            var result = await roster.ChangeRoleAsync(membershipId, role, body.CustomRoleId, ct);
+            if (result.Outcome == ChangeRoleOutcome.Done && result.UserId is { } user)
+                await sessions.RevokeForMembershipAsync(user, Guid.Parse(principal.FindFirstValue(StaffPolicies.TenantClaim)!), membershipId, ct);
+            return result.Outcome switch
+            {
+                ChangeRoleOutcome.Done => Results.NoContent(),
+                ChangeRoleOutcome.NotAssignable => Problem("role", "not_assignable"),
+                ChangeRoleOutcome.AboveGranter => Problem("role", "above_granter"),
+                ChangeRoleOutcome.LastAdmin => Problem("membershipId", "last_admin"),
+                _ => Results.NotFound(),
+            };
+        });
 
         // What each assignable role holds (locked: from the role-permission matrix) and which rows a custom role may add.
         g.MapGet("/roles", async ([FromServices] IStaffRoster roster, CancellationToken ct) => Results.Ok(new
@@ -149,6 +182,9 @@ public static class StaffEndpoints
 
         return app;
     }
+
+    static readonly IResult OwnersOnly = Results.Problem(statusCode: StatusCodes.Status403Forbidden, title: "Only an owner can do this",
+        extensions: new Dictionary<string, object?> { ["code"] = "owner_only" });
 
     static IResult Problem(string field, string code) => Results.ValidationProblem(new Dictionary<string, string[]> { [field] = [code] });
 

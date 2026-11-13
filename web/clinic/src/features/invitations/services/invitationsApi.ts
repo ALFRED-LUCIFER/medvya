@@ -1,5 +1,5 @@
 import { apiFetch } from '../../api/services/apiClient';
-import type { Facility, InvitationCreated, InvitationPreview, InviteInput } from '../domain/invitation';
+import type { InvitationPreview } from '../domain/invitation';
 
 /** A failed API call; status lets the controller tell "no access" (401/403) from other failures. */
 export class HttpError extends Error {
@@ -20,16 +20,4 @@ export async function previewInvitation(token: string): Promise<InvitationPrevie
 /** Join: sign in with MFA; the server accepts the invitation during sign-in and returns to the app. */
 export function joinWithInvitation(token: string) {
   window.location.assign(`/bff/login?returnUrl=${encodeURIComponent(import.meta.env.BASE_URL)}&invitation=${encodeURIComponent(token)}`);
-}
-
-export async function fetchFacilities(): Promise<Facility[]> {
-  const res = await apiFetch('/v1/invitations/facilities', { credentials: 'same-origin' });
-  if (!res.ok) throw new HttpError(res.status, 'facilities');
-  return res.json() as Promise<Facility[]>;
-}
-
-export async function createInvitation(input: InviteInput): Promise<InvitationCreated> {
-  const res = await apiFetch('/v1/invitations', { method: 'POST', credentials: 'same-origin', headers: json, body: JSON.stringify(input) });
-  if (!res.ok) throw new HttpError(res.status, 'invite');
-  return res.json() as Promise<InvitationCreated>;
 }

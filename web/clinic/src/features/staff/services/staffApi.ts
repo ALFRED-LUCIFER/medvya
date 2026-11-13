@@ -22,6 +22,14 @@ export const offboardStaff = (membershipId: string, reason: string, offerRebooki
 /** Sets every location the member works at; one left out is taken away and needs a reason (MDV-P1-071). */
 export const setStaffLocations = (membershipId: string, facilityIds: string[], reason: string) =>
   send<void>(`/v1/staff/${membershipId}/locations`, json('PUT', { facilityIds, reason }));
+/** Changes the member's role in place (MDV-P1-107); their sessions end and the next sign-in has the new role. */
+export const changeStaffRole = (membershipId: string, role: AssignableRole, customRoleId: string | null) =>
+  send<void>(`/v1/staff/${membershipId}/role`, json('PUT', { role, customRoleId }));
+/** The identity step-up before an offboarding (MDV-P1-107): the provider asks again, then returns to this page. */
+export async function startStepUp() {
+  const { location } = await post<{ location: string }>('/bff/reauth', { returnUrl: `${window.location.pathname}${window.location.search}` });
+  window.location.assign(location);
+}
 export const reactivateStaff = (membershipId: string, reason: string) => post<void>(`/v1/staff/${membershipId}/reactivate`, { reason });
 
 // Quarterly access review (MDV-P1-010). Offboarding a person in the review uses offboardStaff above, which the server also records as their decision.

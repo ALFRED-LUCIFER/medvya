@@ -42,7 +42,7 @@ function Record({ patientId, canReveal, canDocs, facilityId, timeZone, bookPath,
     actions={{ bookPath: canReveal && bookPath ? `${bookPath}?patient=${patientId}` : null, checkInPath: checkInPath ? `${checkInPath}?patient=${patientId}` : null, editPath: canReveal ? completePath(patientId) : null }} documentsPath={canDocs ? `/patients/${patientId}/docs` : null} visits={<DeskVisits {...useDeskVisitsController(facilityId, patientId)} timeZone={timeZone} />} mergeRequest={canReveal ? mergeRequest : null} />;
 }
 
-type RegistrationLinks = { country: Country; actorName: string; timeZone?: string; bookPath: string | null; checkInPath: string | null };
+type RegistrationLinks = { country: Country; scope: string; actorName: string; timeZone?: string; bookPath: string | null; checkInPath: string | null };
 
 /**
  * ?mode=quick opens quick registration (the busy desk, walk-ins); without it, the full flow. The mode is not patient data.
@@ -53,7 +53,7 @@ export function RegistrationRoute(links: RegistrationLinks) {
   const quick = params.get('mode') === 'quick';
   const slot = pickSlot(params);
   const withMode = (mode: string) => `?${new URLSearchParams([...(slot ?? []), ['mode', mode]])}`;
-  return <Registration {...useRegistrationController(links.country, quick)} {...links} recordPath={recordPath} quickPath={withMode('quick')} fullPath={withMode('full')}
+  return <Registration {...useRegistrationController(links.country, quick, links.scope)} {...links} recordPath={recordPath} quickPath={withMode('quick')} fullPath={withMode('full')}
     slot={slot?.toString() ?? null} />;
 }
 

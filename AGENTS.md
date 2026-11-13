@@ -53,6 +53,18 @@ src/features/<feature>/components/ presentational: props in, events out (no serv
 - **No hard-coded user-facing text** (`react/jsx-no-literals`). Every string is a key in `packages/i18n/messages/{en,hi,ar}.json`. Arabic must work right-to-left.
 - Accessibility: keyboard path, visible focus ring, screen-reader labels, 44px targets (48px in the patient portal), 200% zoom, reduced motion.
 
+**Design rules** ([DESIGN.md](DESIGN.md), [PRODUCT.md](PRODUCT.md)). New code follows them now. Where the existing code does not, the ticket in brackets makes it true; do not copy the old pattern.
+
+- **44 px is the library default** for Input, Select, Textarea and buttons. A feature never patches a control height (`h-11`, `min-h-11`) (MDV-P1-077, MDV-P1-078).
+- **Two densities.** Comfortable (44 px controls, 48 px rows) is the default and is mandatory for every control that changes state, every row that picks a patient, medicine lines, and any device with a coarse pointer (`any-pointer: coarse`). Compact 36 px rows are allowed only on the audit log, formulary, order sets and staff tables, as an explicit per-table choice (MDV-P2-054). Any other row under 44 px needs this section amended in the same change.
+- **Typed clinical text is 16 px.** Body text is 14/20; no arbitrary font sizes (MDV-P1-079, MDV-P2-057).
+- **1024 px is a named layout tier** for two-pane layouts. `sm:grid-cols-*` is not used for column changes (MDV-P1-079, MDV-P2-057).
+- **Use the shared component once it exists; never build a local copy:** PatientBanner (MDV-P1-081); StickyActionBar and SaveStatus (MDV-P1-082); Chip, Tag and Banner (MDV-P1-083); AccountMenu, PageHeader and Tooltip (MDV-P1-084); Field and ErrorSummary (MDV-P1-085); Card, Section, PageMessage, EmptyState, SegmentedControl, SplitLayout and Sheet (MDV-P1-086). No raw `h1` in a feature once PageHeader exists. Every `Table` has a `label` (MDV-P1-077).
+- **One primary (filled) button per view.**
+- **Pinned chrome** (top bar, patient strip, section anchors, action footer) takes at most 30 % of the viewport height, and nothing focusable sits under it. The action footer is part of the layout, never an overlay (MDV-P1-082, MDV-P1-092).
+- **Motion** uses the two tokens (ease-out `cubic-bezier(0.23, 1, 0.32, 1)`, 150 ms; MDV-P1-079) and named transition properties, never `transition-all` (MDV-P2-056). Never: page transitions, sliding cards between columns, staggered lists, animating the Ctrl+K search, anything that moves while a doctor types, animated counters, toasts over the patient strip.
+- **A new shared component is not done until it is in the `/__ui` gallery in English and Arabic.**
+
 ## 5 · Definition of Done (every PR)
 
 - [ ] Ticket acceptance criteria met and demonstrated
@@ -84,6 +96,8 @@ src/features/<feature>/components/ presentational: props in, events out (no serv
 |---|---|
 | What to build, acceptance criteria | `tickets/` (source: `docs/05-delivery/tickets/_source`) |
 | Requirements, phases, exit gates | `docs/01-prd/` |
+| Who the product is for, principles, device strategy | [`PRODUCT.md`](PRODUCT.md) |
+| Design rules: layout, density, type, tone, components, motion | [`DESIGN.md`](DESIGN.md) |
 | Screens, tokens, copy, permissions | `docs/02-design/`, `design/` (read-only imports) |
 | Architecture, data model, classification | `docs/03-architecture/` |
 | Security, compliance, threat model | `docs/04-security-compliance/`, `docs/compliance/` |

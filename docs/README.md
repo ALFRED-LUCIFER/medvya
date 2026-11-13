@@ -6,6 +6,8 @@ These docs were built from the Claude Design project **"DOQVI UI mockups and fou
 
 > All patient data in the designs and in these docs is **synthetic**. Hosting on Azure does not make Medvya compliant by itself. Real patient data needs qualified legal and clinical review in each market first: P1 for demographics, P2 for clinical data, P3 for audio.
 
+The product brief is [`PRODUCT.md`](../PRODUCT.md) and the design rules are [`DESIGN.md`](../DESIGN.md), both at the repository root. `DESIGN.md` describes the build and wins over the generated [02-design](02-design) reference where they differ.
+
 ## Map
 
 | Folder | What is inside |

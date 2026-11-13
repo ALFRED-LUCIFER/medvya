@@ -23,6 +23,7 @@ def write(name, text):
 
 # ---------- tokens ----------
 L = ["# Design tokens (Foundations §02–§04)\n",
+     "> [DESIGN.md](../../DESIGN.md) describes the build and wins where the two differ. This file is the original design reference.\n",
      "## Colour tokens (light / dark, contrast on white)\n",
      "| Token | Light | Dark | Contrast | Use |\n|---|---|---|---|---|"]
 for c in F["colors"]:

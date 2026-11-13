@@ -2,6 +2,8 @@
 
 # Design tokens (Foundations §02–§04)
 
+> [DESIGN.md](../../DESIGN.md) describes the build and wins where the two differ. This file is the original design reference.
+
 ## Colour tokens (light / dark, contrast on white)
 
 | Token | Light | Dark | Contrast | Use |

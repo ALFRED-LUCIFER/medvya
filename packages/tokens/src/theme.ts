@@ -1,4 +1,4 @@
-// Generated from tokens.json by generate.mjs. Do not edit. Plain values for React Native (px become numbers).
+// Generated from tokens.json by generate.mjs. Do not edit. Plain values for React Native (px and ms become numbers).
 export const theme = {
   "color": {
     "brand950": "#102a43",
@@ -64,7 +64,8 @@ export const theme = {
     "sm": 6,
     "md": 10,
     "lg": 12,
-    "xl": 16
+    "xl": 16,
+    "full": 9999
   },
   "font": {
     "sans": "\"Manrope Variable\", Manrope, \"Noto Sans Arabic\", system-ui, sans-serif",
@@ -73,7 +74,99 @@ export const theme = {
   "breakpoint": {
     "sm": 360,
     "md": 768,
+    "wide": 1024,
     "lg": 1280,
     "xl": 1600
+  },
+  "text": {
+    "display": {
+      "fontSize": 30,
+      "lineHeight": 36,
+      "fontWeight": "800"
+    },
+    "title": {
+      "fontSize": 20,
+      "lineHeight": 28,
+      "fontWeight": "700"
+    },
+    "heading": {
+      "fontSize": 18,
+      "lineHeight": 26,
+      "fontWeight": "700"
+    },
+    "subheading": {
+      "fontSize": 16,
+      "lineHeight": 24,
+      "fontWeight": "700"
+    },
+    "body": {
+      "fontSize": 14,
+      "lineHeight": 20,
+      "fontWeight": "500"
+    },
+    "bodyLarge": {
+      "fontSize": 16,
+      "lineHeight": 24,
+      "fontWeight": "500"
+    },
+    "label": {
+      "fontSize": 14,
+      "lineHeight": 20,
+      "fontWeight": "600"
+    },
+    "caption": {
+      "fontSize": 12,
+      "lineHeight": 16,
+      "fontWeight": "600"
+    },
+    "mono": {
+      "fontSize": 13,
+      "lineHeight": 20,
+      "fontWeight": "500"
+    }
+  },
+  "space": {
+    "2": 2,
+    "4": 4,
+    "6": 6,
+    "8": 8,
+    "12": 12,
+    "16": 16,
+    "24": 24,
+    "32": 32,
+    "48": 48,
+    "64": 64
+  },
+  "spacing": {
+    "topbar": 48,
+    "topbarPhone": 56,
+    "rail": 72,
+    "sidebar": 232,
+    "header": 44,
+    "gutter": 16,
+    "gutterMd": 24,
+    "gutterXl": 32,
+    "control": 44,
+    "controlCompact": 36,
+    "row": 48,
+    "rowCompact": 36
+  },
+  "container": {
+    "page": 1600,
+    "reading": 1152,
+    "measure": "72ch",
+    "form": 768,
+    "panel": 320,
+    "panelChart": 360
+  },
+  "shadow": {
+    "popover": "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
+    "dialog": "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)"
+  },
+  "ease": {
+    "out": "cubic-bezier(0.23, 1, 0.32, 1)"
+  },
+  "transitionDuration": {
+    "fast": 150
   }
 } as const;

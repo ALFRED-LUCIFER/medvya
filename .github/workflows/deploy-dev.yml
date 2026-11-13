@@ -13,6 +13,7 @@ on:
 permissions:
   contents: read
   id-token: write
+  checks: read
 
 concurrency:
   group: deploy-dev
@@ -24,7 +25,7 @@ jobs:
     timeout-minutes: 30
     environment: dev # the federated credential trusts this environment only
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0 # the guard below needs main's history
       # Only code that is on main ships: a tag on another commit, or a manual run from a branch, stops here before any Azure sign-in.
@@ -34,13 +35,22 @@ jobs:
           # A manual run from main is named after the last release and the commits since (0.0.19-24-g5955422), never 0.0.0-main (UX-08).
           if [ "$GITHUB_REF_TYPE" = tag ]; then v="$GITHUB_REF_NAME"; else v=$(git describe --tags --match 'v[0-9]*' 2>/dev/null || echo v0.0.0-main); fi
           echo "VERSION=${v#v}" >> "$GITHUB_ENV"
+      # main can hold a commit CI never passed (a merge that was not up to date, a run still going): only a verified commit ships (#1249).
+      - name: Refuse a commit whose CI is not green
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for check in dotnet web secrets; do
+            got=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/check-runs?check_name=$check" --jq '.check_runs|sort_by(.started_at)|last|.conclusion // "not finished or never run"')
+            [ "$got" = success ] || { echo "::error::check '$check' on $GITHUB_SHA is '$got'; deploy a commit on main whose pr run is green"; exit 1; }
+          done
       # Copy this workflow for another environment and the draft terms stop it (counsel sign-off, MDV-P1-044).
       - run: bash tools/check-legal-marker.sh dev
-      - uses: actions/setup-dotnet@v6
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
         with:
           global-json-file: global.json
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
           cache: pnpm
@@ -55,7 +65,7 @@ jobs:
       - run: |
           dotnet publish tools/db-migrate -c Release -r linux-x64 --self-contained -o db-migrate
           tar -czf db-migrate.tar.gz -C db-migrate .
-      - uses: azure/login@v3
+      - uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
         with:
           client-id: ${{ vars.AZURE_CLIENT_ID }}
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
@@ -78,7 +88,7 @@ jobs:
             sleep 10
           done
           echo "::error::Database job $execution did not finish in 20 minutes"; exit 1
-      - uses: azure/webapps-deploy@v3
+      - uses: azure/webapps-deploy@02a81bead70021f5284939794bcec79c271ab383 # v3.0.8
         with:
           app-name: ${{ vars.AZURE_WEBAPP_NAME }}
           package: publish

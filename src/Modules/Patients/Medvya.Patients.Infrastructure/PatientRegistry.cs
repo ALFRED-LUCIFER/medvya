@@ -311,20 +311,23 @@ public sealed class PatientRegistry(PatientsDbContext db, ICurrentTenant tenant,
     static string Tail(string value) => value.Length <= 4 ? value : value[^4..];
 
     public async Task<RegistrationStatus?> CompleteRegistrationAsync(Guid patientId, PatientAddress? address, PayerInput? payer, ContactInput? emergencyContact = null,
-        uint? expectedVersion = null, CancellationToken cancellationToken = default)
+        uint? expectedVersion = null, ContactChange? contact = null, CancellationToken cancellationToken = default)
     {
         var tenantId = TenantId();
         var patient = await db.Patients.SingleOrDefaultAsync(p => p.Id == patientId, cancellationToken);
         if (patient is null) return null;
         // The save is refused (DbUpdateConcurrencyException) if the row moved on since the caller read it at this version (#889).
         if (expectedVersion is { } seen) db.Entry(patient).Property<uint>("xmin").OriginalValue = seen;
-        if (address is null && payer is null && emergencyContact is null) throw new PatientValidationException([new("completion", "required")]);
-        var (validAddress, validPayer, emergency) = CountryRules.For(patient.CountryCode).ValidateCompletion(address, payer, emergencyContact);
+        if (address is null && payer is null && emergencyContact is null && contact is null) throw new PatientValidationException([new("completion", "required")]);
+        var (validAddress, validPayer, emergency, validContact) = CountryRules.For(patient.CountryCode).ValidateCompletion(address, payer, emergencyContact, contact);
         (address, payer) = (validAddress, validPayer);
         var now = clock.GetUtcNow();
 
         await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
         if (address is not null) patient.Address = address;
+        if (validContact?.Mobile is { } mobile) patient.Mobile = mobile;
+        if (validContact?.AlternatePhone is { } alternate) patient.AlternatePhone = alternate;
+        if (validContact?.Email is { } email) patient.Email = email;
         var current = await db.PayerCoverages.SingleOrDefaultAsync(p => p.PatientId == patientId, cancellationToken);
         if (payer is not null)
         {

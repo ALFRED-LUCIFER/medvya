@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { checksFor, draftOf, medicinesOf, quantityOf, unitOf } from './addMedicine';
+import { checksFor, draftOf, medicinesOf, quantityOf, unitOf, withDefaults } from './addMedicine';
 import type { RxChecks, SafetyAlert } from './checks';
-import { invalidFields, type Medicine } from './prescription';
+import { invalidFields, type Medicine, type SigDraft, type SigField } from './prescription';
 
 const med = (id: string, generic: string, strength: string, form = 'Tablet'): Medicine => ({ id, generic, strength, form, brands: [] });
 
@@ -59,5 +59,29 @@ describe('add medicine checks', () => {
     expect(mine.weightDoses).toEqual([]);
     expect(mine.unresolved).toBe(1);
     expect(checksFor({ ...all, overrides: [{ key: 'mine', reason: 'r', ruleSetVersion: 'v', overriddenBy: 'u', overriddenAt: '' }] }, 'a').unresolved).toBe(0);
+  });
+});
+
+describe('composer defaults (MDV-AUDIT-1094)', () => {
+  const blank: SigDraft = { dose: '', doseUnit: '', route: '', frequency: '', timing: '', durationDays: '', quantity: '', instructions: '' };
+  const edit = (form: string | null, before: SigDraft, field: SigField, value: string) => withDefaults({ form }, before, { ...before, [field]: value }, field);
+
+  it('fills the unit and the oral route of a tablet or capsule, and leaves other forms and a chosen route alone', () => {
+    expect(edit('Capsule', blank, 'dose', '1')).toMatchObject({ dose: '1', doseUnit: 'capsule', route: 'oral' });
+    expect(edit('Syrup', blank, 'dose', '5')).toMatchObject({ doseUnit: '', route: '' });
+    expect(edit('Tablet', { ...blank, route: 'sublingual' }, 'dose', '1')).toMatchObject({ doseUnit: '', route: 'sublingual' });
+  });
+
+  it('calculates the quantity from dose, frequency and days, rounded up, and never overwrites a typed one', () => {
+    let d = edit('Tablet', blank, 'dose', '1');
+    d = edit('Tablet', d, 'frequency', 'TDS');
+    d = edit('Tablet', d, 'durationDays', '5');
+    expect(d.quantity).toBe('15');
+    d = edit('Tablet', d, 'dose', '0.5');
+    expect(d.quantity).toBe('8'); // follows while it is the calculated one
+    d = edit('Tablet', d, 'quantity', '20');
+    d = edit('Tablet', d, 'durationDays', '7');
+    expect(d.quantity).toBe('20'); // typed: stays
+    expect(edit('Tablet', { ...blank, dose: '1', doseUnit: 'tablet', frequency: 'SOS', durationDays: '5' }, 'timing', 'after_food').quantity).toBe(''); // when needed: no count
   });
 });

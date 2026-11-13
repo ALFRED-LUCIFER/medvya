@@ -6,6 +6,7 @@ import { Button, buttonVariants, cn, PageContainer, PageHeader } from '@medvya/u
 import type { RegistrationStatus } from '../../patients/domain/directory';
 import PatientsMessage from '../../patients/components/PatientsMessage';
 import type { RegistrationForm } from '../domain/registration';
+import { TextField } from './FormFields';
 import { AddressFields, EmergencyContactFields, PayerStep } from './RegistrationSteps';
 
 type Props = {
@@ -50,6 +51,15 @@ export default function CompleteRegistration(p: Props) {
         </p>
       ) : (
         <form noValidate onSubmit={e => { e.preventDefault(); p.onSubmit(); }} className="flex flex-col gap-5">
+          <section aria-labelledby="complete-phones" className="flex flex-col gap-4 rounded-xl border bg-card p-4">
+            <h2 id="complete-phones" className="text-base font-extrabold">{t('registration.complete.phones')}</h2>
+            <p className="text-sm text-muted-foreground">{t('registration.complete.phones.note')}</p>
+            <div className="grid gap-4 md:grid-cols-2">
+              <TextField f={f} name="mobile" label={t('registration.field.mobile')} ltr type="tel" inputMode="tel" />
+              <TextField f={f} name="alternatePhone" label={t('registration.field.alternatePhone')} ltr type="tel" inputMode="tel" />
+              <TextField f={f} name="email" label={t('registration.field.email')} ltr type="email" inputMode="email" wide />
+            </div>
+          </section>
           <section aria-labelledby="complete-address" className="flex flex-col gap-4 rounded-xl border bg-card p-4">
             <h2 id="complete-address" className="text-base font-extrabold">{t('registration.complete.address')}</h2>
             <div className="grid gap-4 md:grid-cols-2"><AddressFields f={f} country={p.country} values={p.values} /></div>

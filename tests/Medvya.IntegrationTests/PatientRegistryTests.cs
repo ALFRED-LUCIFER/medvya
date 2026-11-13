@@ -289,6 +289,21 @@ public class PatientRegistryTests(PostgresFixture sql) : IClassFixture<PostgresF
         Assert.Equal(1, await check.Patients.CountAsync(p => p.FacilityId == other));
     }
 
+    /// <summary>MDV-AUDIT-1101: the desk corrects the phone and email; a bad number saves nothing; another tenant's patient is not found and stays as it was.</summary>
+    [Fact]
+    public async Task AContactCorrectionIsValidatedAsAtRegistrationAndStopsAtTheTenant()
+    {
+        var quick = await Registry(tenantA).RegisterAsync(UaeQuick(facility));
+
+        await Assert.ThrowsAsync<PatientValidationException>(() => Registry(tenantA).CompleteRegistrationAsync(quick.PatientId, null, null, contact: new("12", null, "no-at-sign")));
+        Assert.Null(await Registry(tenantB).CompleteRegistrationAsync(quick.PatientId, null, null, contact: new("+971 50 123 4567", null, null)));
+
+        Assert.NotNull(await Registry(tenantA).CompleteRegistrationAsync(quick.PatientId, null, null, contact: new("+971 50 123 4567", null, "synthetic@example.test")));
+        await using var db = sql.Patients(tenantA);
+        var row = await db.Patients.SingleAsync(p => p.Id == quick.PatientId);
+        Assert.Equal(("+971501234567", "synthetic@example.test"), (row.Mobile, row.Email));
+    }
+
     [Fact]
     public async Task AnotherTenantNeverFindsThePatientEvenWithQueryFiltersOff()
     {
@@ -419,7 +434,7 @@ public class PatientRegistryTests(PostgresFixture sql) : IClassFixture<PostgresF
     internal sealed class FacilityZone(string zone) : Medvya.Tenancy.Application.IFacilityDirectory
     {
         public Task<Medvya.Tenancy.Application.FacilityInfo?> FindAsync(Guid facilityId, CancellationToken cancellationToken = default) =>
-            Task.FromResult<Medvya.Tenancy.Application.FacilityInfo?>(new(facilityId, "Synthetic facility", zone));
+            Task.FromResult<Medvya.Tenancy.Application.FacilityInfo?>(new(facilityId, "Synthetic facility", zone, "Synthetic clinic"));
         public Task<Medvya.Tenancy.Domain.Role?> ActiveRoleAsync(Guid userId, Guid facilityId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<IReadOnlyList<Guid>> ActiveDoctorsAsync(Guid facilityId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<Medvya.Tenancy.Application.PrescriberInfo?> PrescriberAsync(Guid userId, Guid facilityId, CancellationToken cancellationToken = default) => throw new NotSupportedException();

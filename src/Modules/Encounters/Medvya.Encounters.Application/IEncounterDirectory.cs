@@ -1,5 +1,11 @@
 namespace Medvya.Encounters.Application;
 
+/// <summary>A diagnosis recorded in a consultation; <see cref="Provisional"/> until the doctor verifies it.</summary>
+public sealed record PlanDiagnosis(string Description, bool Provisional);
+
+/// <summary>What the consultation recorded for the patient's paper: its diagnoses and the day the follow-up is due (null: none).</summary>
+public sealed record EncounterPlan(IReadOnlyList<PlanDiagnosis> Diagnoses, DateOnly? FollowUpOn);
+
 /// <summary>
 /// Encounters for other modules (orders, referrals): which patient, facility and clinician an encounter belongs to. Not audited here and
 /// no access check: the calling use case checks clinical access to the patient and writes its own audit event, as with the patient directory.
@@ -8,6 +14,9 @@ namespace Medvya.Encounters.Application;
 public interface IEncounterDirectory
 {
     Task<EncounterView?> FindAsync(Guid encounterId, CancellationToken cancellationToken = default);
+
+    /// <summary>The consultation's diagnoses and follow-up, for a printed paper.</summary>
+    Task<EncounterPlan> PlanAsync(Guid encounterId, CancellationToken cancellationToken = default);
 }
 
 /// <summary>

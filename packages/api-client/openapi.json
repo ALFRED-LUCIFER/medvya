@@ -8389,6 +8389,16 @@
               "string"
             ],
             "format": "uint32"
+          },
+          "contact": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ContactChange"
+              }
+            ]
           }
         }
       },
@@ -8452,6 +8462,34 @@
           "Portal",
           "Marketing"
         ]
+      },
+      "ContactChange": {
+        "required": [
+          "mobile",
+          "alternatePhone",
+          "email"
+        ],
+        "type": "object",
+        "properties": {
+          "mobile": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "alternatePhone": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "email": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
       },
       "ContactInput": {
         "required": [

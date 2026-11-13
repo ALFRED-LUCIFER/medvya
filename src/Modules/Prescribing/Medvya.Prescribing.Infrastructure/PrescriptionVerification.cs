@@ -35,6 +35,6 @@ public sealed class PrescriptionVerification(PrescribingDbContext db, IEncounter
             ResourceId = rx.Id, PatientId = encounter?.PatientId, FacilityId = rx.FacilityId, Purpose = AuditPurpose.Treatment, Outcome = AuditOutcome.Allowed,
             OccurredAt = clock.GetUtcNow(), Detail = $"status:{status};version:{rx.VersionNo}",
         }, cancellationToken);
-        return new RxVerifyView(status, rx.Number(), rx.VersionNo, rx.AuthorisedAt, facility.TimeZone, facility.Name, doctor?.FullName ?? "", rx.Lines.Count(l => !l.Discontinue));
+        return new RxVerifyView(status, rx.Number(), rx.VersionNo, rx.AuthorisedAt, facility.TimeZone, facility.Name, doctor?.FullName ?? "", rx.Lines.Count(l => !l.Discontinue), rx.ContentHash);
     }
 }

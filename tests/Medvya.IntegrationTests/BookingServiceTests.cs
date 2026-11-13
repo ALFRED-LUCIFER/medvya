@@ -214,6 +214,18 @@ public sealed class BookingServiceTests(PostgresFixture sql) : IClassFixture<Pos
     }
 
     [Fact]
+    public async Task ABookedPatientHasNotVisitedUntilCheckedIn()
+    {
+        // UX-10: a first booking defaults to New consultation; only an attended visit makes the next one a follow-up.
+        var hold = await h.Booking(h.Reception).HoldAsync(Slot(9));
+        var booked = await h.Booking(h.Reception).BookAsync(Book(hold.Id));
+        Assert.False((await h.Booking(h.Reception).FindPatientAsync(h.Facility, h.Patient))!.HasVisited);
+        await h.FrontDesk(h.Reception).CheckInAsync(booked.Id, new CheckIn());
+        Assert.True((await h.Booking(h.Reception).FindPatientAsync(h.Facility, h.Patient))!.HasVisited);
+        Assert.False((await h.Booking(h.Reception).FindPatientAsync(h.Facility, h.SecondPatient))!.HasVisited);
+    }
+
+    [Fact]
     public async Task APatientOfAnotherOrganisationIsNeitherFoundNorBookable()
     {
         await h.SeedOtherOrganisationPatientAsync();

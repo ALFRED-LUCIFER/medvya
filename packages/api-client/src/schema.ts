@@ -8807,6 +8807,7 @@ export interface components {
             walkIn: boolean;
             /** @default false */
             unscheduled: boolean;
+            sex?: null | string;
         };
         /** @enum {unknown} */
         BodyPosition: "Lying" | "Standing" | null;

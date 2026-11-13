@@ -2,6 +2,7 @@ using System.Data.Common;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Medvya.Audit.Application;
 using Medvya.Audit.Domain;
 using Medvya.Audit.Infrastructure;
@@ -192,5 +193,42 @@ public sealed class WriteAuditTransactionTests(PostgresFixture sql) : IClassFixt
         Assert.Null(row.PatientId); // nothing was done for any patient
         await using var db = sql.Scheduling(h.Tenant);
         Assert.False(await db.Appointments.AnyAsync());
+    }
+
+    /// <summary>Every text a row can carry except the client address (kept on purpose): names, phone numbers, emails and long digit runs are PHI.</summary>
+    static readonly Regex PhiShape = new(@"@|\+?\d[\d\s-]{7,}\d", RegexOptions.Compiled);
+
+    static IEnumerable<string> Leaks(IEnumerable<AuditEvent> events, IReadOnlyCollection<string> patientValues) =>
+        events.SelectMany(e => new[] { e.Action, e.ResourceType, e.Purpose, e.Role, e.Detail, e.CorrelationId }.Where(t => t is not null).Select(t => (e.Action, Text: t!)))
+            .Where(x => PhiShape.IsMatch(x.Text) || patientValues.Any(v => x.Text.Contains(v, StringComparison.OrdinalIgnoreCase)))
+            .Select(x => $"{x.Action}: {x.Text}");
+
+    [Fact]
+    public async Task AuditRowsHoldOpaqueIdsAndCodesNeverPatientValues()
+    {
+        var desk = Desk(h.Reception);
+        var hold = await Id(await desk.PostAsJsonAsync("/v1/slot-holds", Hold(9)));
+        var visit = await Id(await desk.PostAsJsonAsync("/v1/appointments", new { holdId = hold, patientId = h.Patient, reasonCategory = "General", channel = "Phone", reasonText = "Synthetic: chest tightness" }));
+        (await desk.PostAsync($"/v1/appointments/{visit}/check-in", null)).EnsureSuccessStatusCode();
+        var second = await Id(await desk.PostAsJsonAsync("/v1/slot-holds", Hold(10)));
+        using var rejected = await desk.PostAsJsonAsync("/v1/appointments", new { holdId = second, patientId = Guid.NewGuid(), reasonCategory = "General", channel = "Phone", reasonText = "Synthetic: chest tightness" });
+        Assert.Equal(HttpStatusCode.BadRequest, rejected.StatusCode);
+
+        // The seeded patients' own names, split into words, and their phone numbers.
+        await using var patients = sql.Patients(h.Tenant);
+        var values = (await patients.Patients.Select(p => new { p.FullName, p.Mobile }).ToListAsync())
+            .SelectMany(p => p.FullName.Split(' ', StringSplitOptions.RemoveEmptyEntries).Where(w => w.Length > 3 && w != "(synthetic)").Append(p.Mobile)).Append("chest").ToList();
+
+        var events = await Events();
+        Assert.True(events.Count >= 4);
+        Assert.Empty(Leaks(events, values));
+    }
+
+    [Fact]
+    public void ThePhiScanFailsWhenARowCarriesAName()
+    {
+        var tainted = new AuditEvent { Id = Guid.NewGuid(), TenantId = h.Tenant, Action = "appointment.book", ResourceType = "appointment", Purpose = "treatment", Detail = "for Meera Iyer" };
+        Assert.Single(Leaks([tainted], ["Meera"]));
+        Assert.Single(Leaks([new AuditEvent { Id = Guid.NewGuid(), TenantId = h.Tenant, Action = "x", ResourceType = "y", Purpose = "z", Detail = "+91 98765 43210" }], []));
     }
 }

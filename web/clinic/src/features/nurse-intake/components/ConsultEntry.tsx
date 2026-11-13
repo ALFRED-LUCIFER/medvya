@@ -1,9 +1,10 @@
 import type { FormEventHandler } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { useI18n } from '@medvya/i18n';
+import Disclosure from '../../encounters/components/Disclosure';
 import AllergiesSection from './AllergiesSection';
 import VitalsForm, { type VitalsFormProps } from './VitalsForm';
-import { isVitalsField, problemKey, recordable, type AllergyForm, type AllergyStatus, type IntakeScreen } from '../domain/intake';
+import { isVitalsField, problemKey, recordable, undecided, type AllergyForm, type AllergyStatus, type IntakeScreen } from '../domain/intake';
 
 type Props = Omit<VitalsFormProps, 'vitals' | 'timeZone' | 'readOnly' | 'withComplaint'> & {
   screen: IntakeScreen | null; loading: boolean; refused: boolean; failed: boolean;
@@ -27,7 +28,12 @@ export default function ConsultEntry(p: Props) {
   return (
     <section aria-labelledby={p.titled ? 'consult-entry-title' : undefined} className="flex flex-col gap-3">
       {p.titled && <h2 id="consult-entry-title" className="text-lg font-extrabold">{t('intake.vitals')}</h2>}
-      <VitalsForm {...p} vitals={intake.vitals} timeZone={timeZone} readOnly={readOnly} withComplaint={false} />
+      {/* MDV-AUDIT-1091: the readings are optional, so they stay folded until a flagged reading needs a decision or a field has a problem; the allergy check below is never folded. */}
+      {readOnly
+        ? <VitalsForm {...p} vitals={intake.vitals} timeZone={timeZone} readOnly withComplaint={false} />
+        : <Disclosure titleKey="intake.record" filled={intake.vitals.some(undecided) || (p.problem?.kind === 'invalid' && isVitalsField(p.problem.field))}>
+          <VitalsForm {...p} vitals={intake.vitals} timeZone={timeZone} readOnly={false} withComplaint={false} />
+        </Disclosure>}
       <AllergiesSection allergies={intake.allergies} noKnownConfirmed={intake.noKnownAllergiesConfirmed} form={p.allergyForm} readOnly={readOnly} online={p.online}
         settingId={p.settingAllergy} adding={p.addingAllergy} confirmingNone={p.confirmingNone} onStatus={p.onAllergyStatus} onAdd={p.onAddAllergy} onNone={p.onNoKnownAllergies}
         invalid={p.problem?.kind === 'invalid' ? p.problem : null} />

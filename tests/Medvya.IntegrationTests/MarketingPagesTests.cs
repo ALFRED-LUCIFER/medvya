@@ -28,6 +28,17 @@ public sealed partial class MarketingPagesTests(WebApplicationFactory<Program> f
     public void MinorUnitsAreFormattedForTheBuyer(long minor, string currency, string shown) =>
         Assert.Equal(shown, PricingContent.Money(minor, currency));
 
+    // MDV-AUDIT-1112: features the product does not have yet are marked planned on the pages that mention them, in every language.
+    [Theory]
+    [InlineData("/", "Planned, not available yet: AI-drafted notes")]
+    [InlineData("/assist", "Planned, not available yet: AI-drafted notes")]
+    [InlineData("/pricing", "Planned, not available yet: AI-drafted notes")]
+    [InlineData("/ar/pricing", "مخطط له وغير متاح بعد")]
+    public async Task PagesThatMentionFeaturesNotBuiltYetSayTheyArePlanned(string path, string expected)
+    {
+        Assert.Contains(expected, await Get(path), StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task IndiaSeesRupeesAndIndianPaymentMethods()
     {
@@ -114,7 +125,8 @@ public sealed partial class MarketingPagesTests(WebApplicationFactory<Program> f
     {
         var html = await Get("/pricing");
         Assert.Contains("<th scope=\"col\">Clinic</th>", html, StringComparison.Ordinal);
-        Assert.Contains("<th scope=\"row\">UPI QR, links and AutoPay</th>", html, StringComparison.Ordinal);
+        Assert.Contains("<th scope=\"row\">UPI QR, links and AutoPay (planned)</th>", html, StringComparison.Ordinal); // not built yet, so it says so (#1112)
+        Assert.DoesNotContain("Online booking and WhatsApp reminders", html, StringComparison.Ordinal); // only SMS and email reminders exist today
         Assert.Contains("If a payment fails", html, StringComparison.Ordinal);
         Assert.Contains("Free migration", html, StringComparison.Ordinal);
         Assert.Equal(4, Summary().Count(html));
